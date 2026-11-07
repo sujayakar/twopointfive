@@ -312,19 +312,6 @@ export function gpDiceEdge(u: number, v: number, grain: number, seed: number): n
   return (f2 - f1) * 0.5 * grain;
 }
 
-/** convex hull (Andrew's chain), anticlockwise — the crater's outline for the release hook */
-export function gpHull(pts: Pt[]): Pt[] {
-  const P = pts.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]); if (P.length < 3) return P;
-  const cr = (o: Pt, a: Pt, b: Pt) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
-  const lo: Pt[] = []; for (const p of P) { while (lo.length >= 2 && cr(lo[lo.length - 2], lo[lo.length - 1], p) <= 0) lo.pop(); lo.push(p); }
-  const up: Pt[] = []; for (let k = P.length - 1; k >= 0; k--) { const p = P[k]; while (up.length >= 2 && cr(up[up.length - 2], up[up.length - 1], p) <= 0) up.pop(); up.push(p); }
-  lo.pop(); up.pop(); return lo.concat(up);
-}
-export function gpClipRect(pts: Pt[], hu: number, hv: number): Pt[] {
-  let P: Poly = { pts, tags: pts.map(() => 0 as Tag) };
-  P = clip(P.pts, P.tags, 0, -1, hv); P = clip(P.pts, P.tags, 1, 0, hu); P = clip(P.pts, P.tags, 0, 1, hv); P = clip(P.pts, P.tags, -1, 0, hu);
-  return P.pts;
-}
 export function gpPolyArea(pts: Pt[]): { area: number; cen: Pt } {
   let area = 0, cx = 0, cy = 0;
   for (let k = 0; k < pts.length; k++) { const p = pts[k], q = pts[(k + 1) % pts.length]; const cr = p[0] * q[1] - q[0] * p[1]; area += cr; cx += (p[0] + q[0]) * cr; cy += (p[1] + q[1]) * cr; }

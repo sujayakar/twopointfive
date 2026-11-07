@@ -27,6 +27,7 @@ import { snowFieldAt, digSnowField, restoreSnowField } from '../render/snowField
 import { pressCrater } from './snowTracks';
 import { airPuff } from './airSim';
 import { wispLookByte } from './snowFx';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 /** The blast's numbers in snow. Authored data, not player switches — all LIVE (a blast reads them when it goes off). */
 export const SNOWBLAST = {
@@ -139,7 +140,7 @@ export function stepSnowDigs(g: Game, dt: number): [number, number, number, numb
 }
 
 /** A blast of destruction radius `radius` at `at`: mark the snow if it went off over lying snow, low enough. True = it did. */
-export function snowBlastAt(g: Game, at: ArrayLike<number>, radius: number): boolean {
+export function snowBlastAt(g: Game, at: ArrayLike<number>, radius: number): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('snowBlastAt', undefined, [g, at, radius]); if (__r !== RUST_PASS) return __r as any; } }
   const K = SNOWBLAST; const s = stateOf(g); const S = s.stats;
   const F = g.snowField;
   if (!SNOW_LOOK.blast || !F) return false;

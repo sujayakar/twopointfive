@@ -6,6 +6,18 @@ running this elsewhere". The game's update (`Game.update`, about 100,000 lines o
 time. What is built so far is the ground: the crate, its build, its one way into the page, the server and the tools, the switch table, the checks, and the
 first system across (the game's own maths). No rule of play has changed and nothing a player sees is different.
 
+**THE WHOLE TICK IS IN RUST AND THE PAGE PLAYS IT (2026-11-07).** `rust/game` is the game's tick in Rust (hand-written bodies over a generated skeleton),
+`rust/game_face` its WebAssembly face, `rust/game_run` a native runner. The page's game is the Rust game with no address word (`src/host/rustgame.ts`,
+`tools/blitz/PAGE.md`): the TypeScript `Game` stays as a puppet that the picture, the sound, the HUD and the menus read, and the TypeScript tick is not called.
+`?rust=0` is the TypeScript game for as long as it is still in the tree; a page with `?net=`, `?join=` or `?playtape=` stays with it until those have been
+played on the Rust game. A headless tool plays the Rust game under `TPS_GAME=rust` (`tools/blitz/PLAY.md`, `rust.sh`); with no word a tool still stands the
+TypeScript game (`tools/blitz/word.ts DEFAULT_WORD`). A built module is checked in (`rust/game_face/prebuilt/`, with a hash of its sources; ANY change under
+`rust/` stales it: `bun run tools/blitz/face-build.ts --prebuilt`, then `--where` must say it is of these sources); a hosted build compiles its own
+(`tools/host/build.sh`) and fails if it cannot. Checked: every tick of 159 scripted runs held to the TypeScript tick (`tools/blitz/run.sh`), a differential
+fuzz of the solo night and of squad missions on Hard (`fuzz.sh`, `fuzz-squad.sh`), the page walked in headless Chromium on the software adapter, and the
+maintainer played a tutorial and a few levels on his own machine. Not checked: co-op and tapes on the Rust game, a hosted build, most page checks of
+`tools/qa` on the new default, and nothing of it has been seen on a GPU by a tool.
+
 **The rows and the maths are NOT SWITCHES any more** (the bullet "Not switches", near the end, 2026-11-05). Every `TPS_RUST`, `TPS_RUST<ROW>`, `TPS_EXACT`,
 `?rust`, `?rust<row>` and `?noexact` in the bullets below is how that step was measured on its day. None of them is a word now: in a tool's environment
 one stops the tool by name, on an address one does nothing and says so in the console. What a check still needs of them is its own arm, `QA_HOLD`.

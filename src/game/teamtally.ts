@@ -8,31 +8,9 @@
 //   partner's whoever is named — no defender lays a hand on his own. A defender's stray round into his own side stays on nobody's card, as it was.
 //   SWITCH: TEAMTALLY.on — ON in the page (`?noteamtally` = only the player's own are counted, as it was), OFF here and on the frozen stand
 //   (TPS_TEAMTALLY=1 raises it there): off = the card as it was, by run digest. The maintainer's yes: 15:33Z 10-13.
-import type { Game, Guard } from './game';
-import { teamOf } from './scenarioRun';
-import { hostileTo } from './teams';
-import { missionLive, tally } from './mission';
-import { chronicle } from './chronicle';
+import './teams';
+import './mission';
+import './chronicle';
 
 export const TEAMTALLY = { on: false };
 
-/** Is this man's down one the card counts as the partner's — the test `teamTallyTick` makes the step a man goes down, asked of him later (frag.ts: a burst
- *  that kills a man already down and breathing swaps his knockout for a kill, and a partner's burst is on the card as the player's own is). */
-export function teamTallied(g: Game, gd: Guard): boolean {
-  if (!TEAMTALLY.on || !g.quiet?.active || gd.state !== 'dead' || gd.downBy !== 'guard' || gd.civ || gd.team === 'operative' || !hostileTo(gd, 'player')) return false;
-  return !(gd.downKind === 'shot' || gd.downKind === 'wounded') || teamOf(g).some(m => m.char.id === gd.killerId);
-}
-/** game.ts, at the end of a step (before the checkpoint and the journal close the frame): the defenders the partner put down in it */
-export function teamTallyTick(g: Game): void {
-  if (!TEAMTALLY.on || !g.quiet?.active || !missionLive(g)) return;
-  const mates = teamOf(g); if (!mates.length) return;
-  for (const gd of g.guards) {
-    if (gd.state !== 'dead' || gd.diedAt !== g.time || gd.downBy !== 'guard' || gd.civ || gd.team === 'operative' || !hostileTo(gd, 'player')) continue;
-    const how = gd.downKind, round = how === 'shot' || how === 'wounded', mate = mates.find(m => m.char.id === gd.killerId);
-    if (round && !mate) continue;   // (a round none of the team fired: his own side's)
-    tally(g, how === 'shot' ? 'kills' : 'knockouts');
-    if (round) g.chronicle.counts.shotsNearMen++;
-    if (how === 'shot') chronicle(g, 'kill', { who: gd.callsign, weapon: `${mate!.callsign}'s round` }, gd.char.pos);
-    else chronicle(g, 'ko', { who: gd.callsign, method: how === 'wounded' ? 'wounded' : how === 'choked' ? 'choke' : 'takedown' }, gd.char.pos);
-  }
-}

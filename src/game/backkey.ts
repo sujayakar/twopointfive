@@ -12,10 +12,5 @@
 // of the game is changed between ticks for it. The order menu and a running verb are still there after the pause.
 // Tab's trial choices (ui/tabkey.ts) keep the key whenever there is nothing to back out of (Game.backable). Imports nothing.
 export const BACKKEY = { tab: false };
-interface Keys { hit(code: string): boolean; pressed: Set<string> }
-/** the back key went down this tick (read, not taken) */
-export function backHit(input: Keys): boolean { return input.hit('Escape') || (BACKKEY.tab && input.hit('Tab')); }
-/** …taken out of the frame: whoever answers to it, nobody after does */
-export function backTake(input: Keys): boolean { const esc = input.pressed.delete('Escape'), tab = BACKKEY.tab && input.pressed.delete('Tab'); return esc || tab; }
 /** the name a hint row shows */
 export function backName(): string { return BACKKEY.tab ? 'Tab' : 'Esc'; }

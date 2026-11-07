@@ -14,6 +14,7 @@
 //
 // The record's contract (type, packing, limits) is written up in rebuild/cut-pieces/contract.md; the layout below is version 1.
 import type { Vec3, Quat } from '../math/vec';
+import { RUST_PASS, RUST_SURFACE } from '../game/crossing';
 
 /** one cutting plane in the box's LOCAL frame: the box KEEPS the side n · p ≤ d (n unit, d metres from the box centre along n; what lies beyond is gone) */
 export interface CutPlane { n: Vec3; d: number }
@@ -232,7 +233,7 @@ export function packCut(cut: readonly CutPlane[], dst: Float32Array, o: number, 
  *  CUT_CLIP: { t0, t1, k = the plane the line ENTERS the solid through at t0 (−1 = t0 was not moved: the box's own face, or the origin) }; false = nothing left.
  *  The same planes in the same order as common.wgsl isectCut, which takes them four at a time with no loop (tools/qa/cut-rule.ts holds the two together). */
 export const CUT_CLIP = { t0: 0, t1: 0, k: -1 };
-export function cutClip(cut: readonly CutPlane[], ox: number, oy: number, oz: number, dx: number, dy: number, dz: number, t0: number, t1: number): boolean {
+export function cutClip(cut: readonly CutPlane[], ox: number, oy: number, oz: number, dx: number, dy: number, dz: number, t0: number, t1: number): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('cutClip', undefined, [cut, ox, oy, oz, dx, dy, dz, t0, t1]); if (__r !== RUST_PASS) return __r as any; } }
   let k = -1;
   for (let i = 0; i < cut.length && i < MAX_CUT_PLANES; i++) {
     const n = cut[i].n; if (n[0] === 0 && n[1] === 0 && n[2] === 0) break;

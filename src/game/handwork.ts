@@ -21,17 +21,18 @@
 //
 // State: none of its own beyond two fields on the Player (breakerMove, handWait — a save is refused while either runs: savestate.ts playerBusy); everything else
 // is fed a frame at a time and lives in the animator, like every other layer's clocks.
-import type { Game, Guard, Player } from './game';
+import type { Game, Guard } from './game';
 import type { Character, WorkKind, WorkPose } from './character';
-import { SWAP, workKeyBeat } from './character';
-import { Vec3, v3 } from '../math/vec';
+import './character';
+import { Vec3 } from '../math/vec';
 import { Box, BoxFlag, makeBox } from '../scene/boxes';
-import { cancelDrive } from './mission';
+import './mission';
 import { quietOf } from './quiet';
-import { breakerResetNear } from './lighting';
-import { switchHand, switchLetGo } from './lightswitch';
-import { samStaggered } from './samstun';
+import './lighting';
+import { switchHand } from './lightswitch';
+import './samstun';
 import { INHAND, BELT_TORCH } from './inhand';
+import { goneWithTick } from './crossing';
 
 export const HANDWORK = {
   /** THE switch — the page: on (`?nohandwork` off); the frozen stand: off (`TPS_HANDWORK=1` on) */
@@ -63,60 +64,13 @@ export function workAt(c: Character, kind: WorkKind, p: Vec3, n: Vec3, t: number
 }
 /** a level normal out of a thing's face toward a man, when the code that owns the thing keeps none: the axis nearest the line from the spot to him */
 export function faceToward(spot: Vec3, from: Vec3): Vec3 { const dx = from[0] - spot[0], dz = from[2] - spot[2]; return Math.abs(dx) > Math.abs(dz) ? [Math.sign(dx) || 1, 0, 0] : [0, 0, Math.sign(dz) || 1]; }
-/** his right as he faces a face whose normal (toward him) is n */
-const rightOf = (n: Vec3): Vec3 => [n[2], 0, -n[0]];
-/** Walk a man the step in to arm's length of the thing and say which way he is to face: toward the point standM off its face, the working shoulder before the
- *  spot. Position only (level) — the caller settles him against the world after, as the lock's plant does. */
-export function workStand(c: Character, p: Vec3, n: Vec3, dt: number, hand: 0 | 1 = 1, pace = HANDWORK.stepPace): number {
-  const K = HANDWORK, r = rightOf(n), s = hand ? -K.standSide : K.standSide;
-  const tx = p[0] + n[0] * K.standM + r[0] * s, tz = p[2] + n[2] * K.standM + r[2] * s;
-  const d = Math.hypot(tx - c.pos[0], tz - c.pos[2]), k = d > 1e-4 ? Math.min(1 - Math.exp(-K.stepRate * dt), pace * dt / d) : 0;
-  if (d < 1.8) { c.pos[0] += (tx - c.pos[0]) * k; c.pos[2] += (tz - c.pos[2]) * k; }
-  return Math.atan2(-n[0], -n[2]);
-}
-/** has his hand got to the thing (p, n: its spot and face)? A verb's clock waits for it — handWait counts the wait (slowly while he is still walking in) and gives
- *  up at waitSecs: a hand that cannot get there holds nothing up for long */
-function handThere(pl: Player, dt: number, p: Vec3, n: Vec3): boolean {
-  const c = pl.char; if (c.anim.workInfo().w > 0.85) return true;
-  const off = (c.pos[0] - p[0]) * n[0] + (c.pos[2] - p[2]) * n[2];
-  pl.handWait += off > HANDWORK.standM + 0.15 ? dt * 0.35 : dt; return pl.handWait > HANDWORK.waitSecs;
-}
 /** WHICH OF SAM'S HANDS works a thing — the one rule, for the step in (workStand) and the pose (as the hint: the animator cannot tell a pistol in a hand that
  *  a plant has lowered): the left while the right has the pistol, the rifle's grip or a can in its fist, else the right */
 export const samWorkHand = (g: Game): 0 | 1 => { const pl = g.player; return pl.pistolUp || pl.rifleUp || pl.char.anim.grip[1] ? 0 : 1; };
 /** …as workAt is told it: the off hand named where his own is full (a plant puts his gun's pose away, so the picture cannot tell by itself) */
 export const samHand = (g: Game): 0 | undefined => samWorkHand(g) ? undefined : 0;
-/** rad/s: how fast a plant squares him to the thing (player.ts updateWorkPlant; lightswitch.ts counts his turn's time by it) */
-export const WORK_TURN = 10;
 
-// ---------------------------------------------------------------- the keypad
-/** where the pad's keys are on its face, m right / up of its centre as he sees it (devices.ts draws the block: three across, four down — 1 2 3 / 4 5 6 / 7 8 9 / * 0 #) */
-const KEY_AT: Record<string, readonly [number, number]> = (() => { const o: Record<string, [number, number]> = {}; ['123', '456', '789', '*0#'].forEach((row, r) => [...row].forEach((ch, c) => { o[ch] = [(c - 1) * 0.02, -0.015 + (1.5 - r) * 0.0175]; })); return o; })();
-/** the four keys a code presses (a code of another length is gone through in turn) */
-export function padKeys(code: string): (readonly [number, number])[] { const ks = [...String(code)].map(ch => KEY_AT[ch] ?? KEY_AT['5']); return ks.length ? [0, 1, 2, 3].map(k => ks[k % ks.length]) : [KEY_AT['5']]; }
-/** devices.ts updateCoding, once a frame while the code goes in: his finger is fed onto the pad; returns the seconds the code's clock may run this frame (none
- *  until the hand is there) and plays each key's beep — and lights the key — on its press. `secs` = the whole entry (CODE_SECS). */
-export function padHands(g: Game, pad: { def: { pos: Vec3; code: string; yaw: number }; n: Vec3 }, dt: number, secs: number): number {
-  const pl = g.player, keys = padKeys(pad.def.code);
-  workAt(pl.char, 'keys', pad.def.pos, pad.n, pl.codeT, secs, { keys, hand: samHand(g) });
-  if (pl.codeT <= 0 && !handThere(pl, dt, pad.def.pos, pad.n)) return 0;
-  const before = pl.codeT, after = before + dt, r = rightOf(pad.n);
-  for (let k = 0; k < 4; k++) { const at = workKeyBeat(k, secs); if (before < at && after >= at) {
-    g.audio.play('padBeep', pad.def.pos, 0.5, { rate: 1 + 0.03 * k });
-    const [x, y] = keys[k]; const c: Vec3 = [pad.def.pos[0] + pad.n[0] * 0.03 + r[0] * x, pad.def.pos[1] + y, pad.def.pos[2] + pad.n[2] * 0.03 + r[2] * x];
-    g.fx.push({ box: makeBox({ c, h: [0.008, 0.007, 0.002], yaw: pad.def.yaw, albedo: [0.2, 0.16, 0.05], emissive: [2.4, 1.5, 0.3], flags: BoxFlag.Dynamic | BoxFlag.NoShadow }), ttl: 0.11 });   // the key lights under the finger
-  } }
-  return dt;
-}
 
-// ---------------------------------------------------------------- a charge going on
-/** a setter's hands on the charge while he sets it (doortools.ts / wallcharge.ts, once a frame of the setting): the pose, and the slab under his palms from when
- *  they have pressed it there (the set charge — with its light — is drawn by its owner once it IS set) */
-export function chargeHands(g: Game, c: Character, p: Vec3, n: Vec3, t: number, dur: number, hand?: 0) {
-  if (!live('work')) return;
-  workAt(c, 'charge', p, n, t, dur, { hand });
-  if (t > 0.35 && c.anim.workInfo().w > 0.5) g.fx.push({ box: makeBox({ c: v3.mad(p, n, 0.02), h: [0.07, 0.11, 0.02], yaw: Math.atan2(n[0], n[2]), albedo: [0.09, 0.1, 0.08], flags: BoxFlag.Dynamic, owner: c.id & 0xff }), ttl: 1e-3 });
-}
 
 // ---------------------------------------------------------------- Sam's plants: the breaker, the drive, a wall charge
 export interface SamWork { kind: 'breaker' | 'drive' | 'wall' | 'door' | 'defuse' | 'switch'; p: Vec3; n: Vec3; /** where the verb's owner thinks he stands (the wall charge breaks off if he shifts from it): kept on him as he is walked in */ at?: Vec3 }
@@ -148,54 +102,10 @@ export function samWork(g: Game): SamWork | null {
   return null;
 }
 
-/** the 'breaker' rows (game.ts updateDoors): with the switch on the mains do not flip on the frame — his hand goes to the lever and throws it. True = taken here. */
-export function breakerStart(g: Game, on: boolean): boolean {
-  if (!live('work') || g.puppet) return false;
-  const pl = g.player; if (pl.breakerMove) return true;
-  pl.breakerMove = { on, t: 0, thrown: false }; pl.handWait = 0; HANDWORK_STATS.levers++;
-  return true;
-}
-/** once a frame (game.ts, after the rows are read): the lever's move — it waits for the hand, the mains go over at leverAt, the hand comes away at leverSecs */
-export function breakerTick(g: Game, dt: number) {
-  const pl = g.player, M = pl.breakerMove; if (!M) return;
-  const bo = g.blackout, bp = g.level.breaker.pos;
-  if (!live('work') || pl.down || pl.holding || pl.takedown || pl.dragging || samStaggered(g) || v3.distXZ(bp, pl.char.pos) > 1.6 || (bo.active && bo.permanent)) { pl.breakerMove = null; return; }
-  const F = breakerFace(g, pl.char.pos);
-  workAt(pl.char, 'lever', F.p, F.n, M.t, HANDWORK.leverSecs, { dir: M.on ? -1 : 1, hand: samHand(g) });
-  if (M.t <= 0 && !handThere(pl, dt, F.p, F.n)) return;
-  M.t += dt;
-  if (!M.thrown && M.t >= Math.min(HANDWORK.leverAt, HANDWORK.leverSecs - 0.1)) { M.thrown = true;
-    if (M.on) { if (bo.active && !bo.permanent) g.endBlackout(); } else if (!bo.active) g.setBlackout(86400, 'hand'); }
-  if (M.t >= HANDWORK.leverSecs) pl.breakerMove = null;
-}
-/** player.ts: a click while a plant runs lets go of it (the click is then his to shoot with) — the drive and a wall charge; the breaker's half second is
- *  COMMITTED like a kick (its row's deed was filed on the tap — the lessons, the chronicle — so the mains must follow it): false = not let go of */
-export function samWorkLetGo(g: Game, W: SamWork): boolean { if (W.kind === 'breaker') return false; if (W.kind === 'switch') switchLetGo(g); else if (W.kind === 'drive') cancelDrive(g); else if (W.kind === 'defuse') g.defuse?.cancel(); else if (W.kind === 'door') g.doorTools?.cancelSam(); else g.wallCharge?.cancel(); return true; }
 /** lighting.ts: a guard at the thrown breaker, re-arming it — his hand on the lever for the `dur` he fumbles, the throw at the end */
 export function leverHands(g: Game, c: Character, t: number, dur: number) { if (!live('work')) return; const F = breakerFace(g, c.pos); workAt(c, 'lever', F.p, F.n, t, dur, { dir: -1 }); }
 
-/** A TEAMMATE SENT TO WORK A THING — the join for a module that owns WHEN and WHERE and keeps a door-hand style record for it ({ p: the thing's face point,
- *  n: its normal out toward him, w: 1 while he works, 0 as the hand comes off }): the work pose in the door hand's place. True = this layer has the hand (the
- *  caller then feeds no door hand for it); false = no record, or the switch off: the caller's own feed stands. `kind` 'lever' (a breaker — dir −1 re-arms it)
- *  or 'take' (the mission's thing); t / dur = s into the work and how long it takes, when the caller knows (the lever goes over just before `dur`; left at
- *  0 / 1 the hand simply rests on it). A teammate's right hand has his gun: his left works. */
-export function teamWorkHand(c: Character, h: { p: Vec3; n: Vec3; w: number } | null, kind: 'lever' | 'take' = 'lever', t = 0, dur = 1, dir = 1): boolean {
-  if (!h || !live('work')) return false;
-  if (h.w > 0) workAt(c, kind, h.p, h.n, t, dur, { dir, hand: 0 });
-  return true;
-}
 
-/** guards.ts, the man sent to the breaker (his errand, the mains out and resettable): once he is in the re-arm's own reach of the panel he steps up to it and
- *  squares to it instead of looking round from a stride off — the way he is to face and the pace of the step, or null (not there yet / the switch off / the
- *  panel dead: the AI has him as ever). The clock and the reset stay lighting.ts's. */
-export function leverStand(g: Game, gd: Guard, dt: number): { yaw: number; speed: number } | null {
-  if (!live('work')) return null;
-  const c = gd.char;
-  if (!breakerResetNear(g, gd)) return null;
-  const F = breakerFace(g, c.pos), x = c.pos[0], z = c.pos[2];
-  const yaw = workStand(c, F.p, F.n, dt, 0, 1.3)   // (a guard's right hand has his torch or his sidearm: the left works);
-  return { yaw, speed: dt > 0 ? Math.hypot(c.pos[0] - x, c.pos[2] - z) / dt : 0 };
-}
 
 /** mission.ts, once a frame of the drive stage: both hands in the rack while it comes out, then the thing put away at his hip; `pulled` = this is the frame it came free */
 export function driveHands(g: Game, secs: number, pulled: boolean) {
@@ -207,15 +117,7 @@ export function driveHands(g: Game, secs: number, pulled: boolean) {
   workAt(c, 'take', F.p, F.n, m.driveT, secs, { hand: samHand(g) });
 }
 /** the thing in his hand while it comes out and is put away: a caddy-sized box off the working hand (combat.ts handProps calls it for Sam) */
-export function workProps(c: Character, out: Box[]) {
-  if (!live('work')) return;
-  const I = c.anim.workInfo(), L = I.pose; if (!L || L.kind !== 'take' || I.w < 0.4) return;
-  const u = L.t / L.dur; if (u < 0.5 || L.t > L.dur + HANDWORK.stowSecs * 0.8) return;
-  const h = I.hand ? c.bones.handR : c.bones.handL; if (!h) return;
-  const f = c.forward(), r: Vec3 = [-f[2], 0, f[0]], s = I.two ? (I.hand ? 0.045 : -0.045) : 0;   // between the two hands while both have it
-  const done = L.t > L.dur;
-  out.push(makeBox({ c: done ? [h[0], h[1] - 0.07, h[2]] : [h[0] + f[0] * 0.09 - r[0] * s, h[1], h[2] + f[2] * 0.09 - r[2] * s], h: [0.05, 0.013, 0.07], yaw: Math.atan2(f[0], f[2]), albedo: [0.13, 0.14, 0.15], rough: 0.4, metal: true, flags: BoxFlag.Dynamic | BoxFlag.NoShadow, owner: c.id & 0xff }));
-}
+export function workProps(c: Character, out: Box[]): void { return goneWithTick('workProps') as any; }
 
 // ---------------------------------------------------------------- the radio hand
 /** guards.ts say, a line that goes over the net: his hand goes to the handset for about as long as the line stands (`secs` = its time on screen) */
@@ -225,23 +127,10 @@ export function radioHand(gd: Guard, secs: number) {
   gd.char.anim.radio(Math.min(HANDWORK.radioMax, Math.max(HANDWORK.radioMin, secs * HANDWORK.radioK)));
 }
 
-// ---------------------------------------------------------------- the guard's torch ↔ sidearm swap
-/** game.ts, once a frame per man before anybody is posed: what the rule has in his gun hand (guards.ts inHand) — the animator makes a move of a change. Only a
- *  man who carries the plain sidearm and a hand torch has anything to swap. */
-export function swapFeed(gd: Guard, held: 'torch' | 'weapon' | null, plain: boolean) {
-  if (!live('swap') || !plain || gd.state === 'dead' || gd.held) return;
-  const an = gd.char.anim;
-  an.swapLag = SWAP.lag * ((gd.char.id * 0.6180339887) % 1);   // (each man his own beat before his hand starts, off his id: never a die)
-  const si = an.swapInfo();
-  if (held && si.a < 0 && !si.pending && an.swapHeld(held) !== held) HANDWORK_STATS.swaps++;   // (his hand still shows the other thing: the move starts with this frame's pose)
-  an.carry = held;
-}
 /** what his gun hand VISIBLY holds this frame (combat.ts handProps, guards.ts for the light): the rule's answer, but for the frames of a swap */
 export function swapHeld(gd: Guard, held: 'torch' | 'weapon' | null): 'torch' | 'weapon' | null {
   return live('swap') ? gd.char.anim.swapHeld(held) : held;
 }
-/** is a swap running on him (0‥1 through it; −1 none) */
-export const swapping = (gd: Guard): number => live('swap') ? gd.char.anim.swapInfo().a : -1;
 /** the torch on his belt while the sidearm is out (and for the beat of the swap the hand is empty): hung at the front of the right hip, lens down, dark */
 export function beltTorch(c: Character, out: Box[]) {
   const hp = c.bones.hips; if (!hp) return;

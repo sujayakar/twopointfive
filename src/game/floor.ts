@@ -7,6 +7,7 @@
 import { Vec3 } from '../math/vec';
 import type { Game } from './game';
 import type { SurfacesData } from '../scene/levelData';
+import { crossToRust } from './crossing';
 
 /** what the level actually has underfoot: the carpet base of every office room, sheet lino (corridor, break room), the lobby's stone, the server room's
  *  raised access floor (hollow steel-cored tiles: 'tile'), the lot's asphalt and the lawn strips */
@@ -69,11 +70,4 @@ export function floorOf(g: Game, pos: Vec3): FloorMat { const L = g.level; retur
 /** One footfall, for the mixer and the model alike: resolves the material, scales the step's base hearing level by its loudness, plays it (audio.footstep gets
  *  the scaled level AND the material: sample choice and brightness follow it) and returns the level — what the caller pushes as the 'step' GameEvent's level
  *  and into player.noise (player.ts), or nothing more for a guard's tread (presentation only: guards.ts / squad.ts). */
-export function tread(g: Game, pos: Vec3, base: number, isPlayer: boolean): number {
-  // materials ON: one level for the ears, the meter and the mixer. OFF (the A/B): the MODEL hears lino everywhere (base level unscaled), but the mixer keeps
-  // what it always had — the real material picks the sample and the old flat ×0.8 on soft floors — so 'off' is exactly the build before floor.ts, by ear too
-  if (!g.tune.floorMaterials) { const real = floorOf(g, pos); g.audio.footstep(pos, base * (FLOOR[real].hard ? 1 : 0.8), isPlayer, real); return g.shards ? g.shards.step(pos, base) : base; }
-  const mat = floorOf(g, pos); const level = base * FLOOR[mat].loud;
-  g.audio.footstep(pos, level, isPlayer, mat);
-  return g.shards ? g.shards.step(pos, level) : level;   // broken glass underfoot crunches and carries (shards.ts; the level back untouched off the litter / with the model not live)
-}
+export function tread(g: Game, pos: Vec3, base: number, isPlayer: boolean): number { return crossToRust('tread', undefined, [g, pos, base, isPlayer]) as any; }

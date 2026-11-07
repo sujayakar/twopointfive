@@ -1,0 +1,11 @@
+# KNOWN ONLY AFTER A LOAD (tools/blitz/fuzz-dumps.ts adds this list for a whole state taken after the run's first load of a save): `<regex of paths><TAB><why>`.
+# The TypeScript's put-back of a save (rollback.ts restoreInPlace) writes back the objects the game reaches and the weak tables' rows under them. A module's
+# own log or tally is a plain table of the process: it keeps what the abandoned future wrote. The Rust game holds the same tables inside the game, so its
+# kept clone takes them back to the saved moment. No rule reads one (they are the tallies' and the debugger's). WHAT THIS HIDES: every such log and tally,
+# from the first load of a run to its end.
+^g\.stats\.	the modules' tallies (a STATS table a module): the process's on the TypeScript side, the saved moment's plus what followed on the Rust side
+^g\.m\.\w+\.(\w+_)?log(\.len$|\[)	a module's own log of what it did and why (nvg, digin, holdfire, netquiet, silent, wallpen …)
+^g\.m\.\w+\.\w+_why(\.len$|\{)	a module's count of its refusals by reason (frag, coverfire)
+^g\.m\.scene_collision\.sensed\.	counts of the senses' asks of the box world
+^g\.m\.scene_box_mirror\.things\.n$	a count of the box mirror's copies
+^g\.m\.doorway\.stack_own\.	a tally of the stack's own queue

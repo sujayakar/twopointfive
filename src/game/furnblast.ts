@@ -44,7 +44,7 @@ import { hash01 } from './debris';
 import { NOBODY_ID } from './consts';
 import { cutBoxesOn } from '../scene/cut';
 import { BREAKS } from './breakTable';
-import { FURNBLAST, BLAST_PACE, DESTRUCTION, DEBRIS } from './destructionSwitch';   // the knob: FURNBLAST.on (default on; inert unless THE ONE SWITCH of the destruction goal is on too)
+import { FURNBLAST, DESTRUCTION, DEBRIS } from './destructionSwitch';   // the knob: FURNBLAST.on (default on; inert unless THE ONE SWITCH of the destruction goal is on too)
 import { snowPaintOf } from '../render/snowField';
 
 export type BlastSource = 'wall' | 'door' | 'frag';
@@ -220,9 +220,6 @@ export class Furniture {
     out.sort((p, q) => p.id - q.id);
     return this.groups = out;
   }
-  /** BLAST_PACE: the index made AHEAD of the blast (wallcharge.ts, as a wall charge is set) — the same index whenever it is made (see index()), and its
-   *  millisecond or two off the frame the wall goes on */
-  warm() { if (BLAST_PACE.on && FURNBLAST.on && DESTRUCTION.on) this.index(); }
   /** counts for the panel / probes; `list` = every group (id = its lowest static index) with its bounds and members */
   inventory() { const G = this.index(); return { groups: G.length, members: G.reduce((s, x) => s + x.members.length, 0), hidden: this.hidden.size, goneProps: this.goneProps, list: G.map(x => ({ id: x.id, members: x.members.map(m => m.i), a: x.a, heavy: x.heavy, surf: x.surf })) }; }
   /** does this part still stand (a cover panel: while any cell of it does) */
@@ -678,5 +675,4 @@ export class Furniture {
     const W = this.destr.walls, last = W.changes[W.changes.length - 1];
     if (!last || last.kind !== 'reset' || last.t !== this.g.time || (cause === 'load' && last.cause !== 'load')) W.note({ kind: 'reset', cause, id: -1, pos: [0, 0, 0], rect: [WORLD.min[0], WORLD.min[2], WORLD.max[0], WORLD.max[2]], opened: [], walkable: false, sight: false, dead: false, who: NOBODY_ID });
   }
-  summary(): string { const s = FURN_STATS; return `furniture ${FURNBLAST.on ? 'on' : 'off'} · ${s.blasts} blasts · ${s.groups} broken (${s.statics} statics, ${s.razed} panels, ${s.items} things on them) · props ${s.propsThrown} thrown ${s.propsBroken} broken · chunks ${s.chunks} (+${s.demoted} as chips) · shielded ${s.shielded + s.propsShielded}`; }
 }

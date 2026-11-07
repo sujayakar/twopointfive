@@ -48,8 +48,6 @@ export const AIRDUST = {
 };
 
 const N = AIR_W * AIR_H;
-/** the renderer's copy is sent again once the cells have moved this far (summed over the steps since it last was): the picture never stands further than this from the men's eyes */
-const SEND = 2e-4;
 
 export interface AirDustSnap { acc: number; cur: number; /** [cell, share, cell, share …] for the roofed cells off the leak */ s: number[]; /** the statics' half of the openings, a bit an edge of `edges`, as hex */ stat: string }
 
@@ -120,18 +118,6 @@ export class AirDust {
   /** the level as authored again (game.ts resetLevelState, after the doors and the walls are back) */
   reset() { this.reseed(); }
 
-  /** once a frame, after the doors and whatever breaks have moved (game.ts): through the openings as they stand (rust/sim/src/air.rs update) */
-  update(dt: number) {
-    this.ensure(); if (!this.on) return;
-    const g = this.g; WX_KNOBS.here();
-    g.col.rule(() => {
-      const M = g.col.ruleOpen();
-      sim().air_update(g.sim.bind(), g.sim.stamp, M.slot, M.ruleSet, M.rulePanes, dt);
-      const t = said(); this.drift += t[0]; this.tally(t);
-      if (WX_WATCH.on) WX_WATCH.saidMany('air.update', this.tale(t), [dt]);
-    });
-    if (this.drift > SEND) this.send();
-  }
 
   /** the field as it stands, written again (host/putback.ts: a save put back in memory took the field back, not the GPU's copy of it); no book of this module moves */
   resend() { if (!this.on) return; const s = this.s, o = this.gpu; for (let i = 0; i < N; i++) o[i] = s[i]; this.g.engine.world.setAirGrid(o); }

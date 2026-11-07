@@ -37,6 +37,7 @@ import { f64, sim as simX } from '../sim/sim';
 import { panesUntouched } from './glassbreak';
 import type { Game } from './game';
 import type { BlastEvent } from './wallbreak';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 /** the numbers (constants until somebody has played it) */
 export const WINBARS = {
@@ -87,7 +88,7 @@ export function bootBars(g: Game) {
 export interface BarMet { index: number; /** metres of the round's path to it */ t: number; at: Vec3; dir: Vec3; /** its flags as it stood */ flags: number }
 /** fireWeapon: the round would stop in bar `index`, `t` metres along its path at `at` flying `dir` — the bar is hidden from the rest of this round's flight.
  *  PROVISIONAL: no piece, no sound, no row; barsSettle breaks it or stands it up again before fireWeapon returns. */
-export function barMeet(g: Game, index: number, t: number, at: Vec3, dir: Vec3): BarMet {
+export function barMeet(g: Game, index: number, t: number, at: Vec3, dir: Vec3): BarMet { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('barMeet', undefined, [g, index, t, at, dir]); if (__r !== RUST_PASS) return __r as any; } }
   const b = g.col.boxes[index], m: BarMet = { index, t, at, dir, flags: b.flags }; b.flags |= HIDE; g.col.wrote(); stateOf(g).met.push(m); return m;
 }
 /** fireWeapon's way out, whatever happened in between: a bar still out of a round's way stands as it stood (a throw between barMeet and barsSettle must not
@@ -95,7 +96,7 @@ export function barMeet(g: Game, index: number, t: number, at: Vec3, dir: Vec3):
 export function barsUnmeet(g: Game) { const S = STATE.get(g); if (!S || !S.met.length) return; for (const m of S.met) g.col.boxes[m.index].flags = m.flags; g.col.wrote(); S.met.length = 0; }
 /** fireWeapon, the round's end known (`tHit` metres of path): every bar it reached is broken, every other stands as it stood. `lead`: fireWeapon's own (a
  *  shell's later pellets are quiet). Returns how many it broke. */
-export function barsSettle(g: Game, met: BarMet[], tHit: number, who: number, lead: boolean): number {
+export function barsSettle(g: Game, met: BarMet[], tHit: number, who: number, lead: boolean): number { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('barsSettle', undefined, [g, met, tHit, who, lead]); if (__r !== RUST_PASS) return __r as any; } }
   let n = 0; stateOf(g).met.length = 0;
   for (const m of met) g.col.boxes[m.index].flags = m.flags;
   g.col.wrote();
@@ -146,7 +147,7 @@ function changed(g: Game, b: Box) {
  *  not hang in the hole. ALL the bars in reach are judged first, each as if the others were not there (a bar is no shield for the bar behind it, and which
  *  goes does not depend on the order they stand in the level file), then the ones the blast reaches are broken. A bar is asked at three heights — a burst on
  *  the floor at the wall's foot has no line to a bar's foot past its own sill, and has one to its middle. */
-export function barsBlast(g: Game, ev: BlastEvent) {
+export function barsBlast(g: Game, ev: BlastEvent) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('barsBlast', undefined, [g, ev]); if (__r !== RUST_PASS) return __r as any; } }
   if (!barsLive(g) || WINBARS.blastK <= 0) return;
   const R = ev.radius * WINBARS.blastK, from: Vec3 = [ev.at[0], Math.max(0.3, ev.at[1]), ev.at[2]], B = g.col.boxes;
   const took = g.glassBreak.asking((x) => { const n = x.bars_blast(from[0], from[1], from[2], R, Math.min(B.length, g.level.boxes.length)), m = f64(), o = x.sim_scratch() / 8, out: { i: number; at: Vec3 }[] = []; for (let k = 0; k < n; k++) out.push({ i: m[o + 4 * k], at: [m[o + 4 * k + 1], m[o + 4 * k + 2], m[o + 4 * k + 3]] }); return out; });
@@ -155,7 +156,7 @@ export function barsBlast(g: Game, ev: BlastEvent) {
 
 // ---------------------------------------------------------------- reset, checkpoints
 /** Game.resetLevelState: every bar stands again (before the destruction's own reset: the walls' re-bake in there sees the level whole) */
-export function resetBars(g: Game) {
+export function resetBars(g: Game) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('resetBars', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } }
   const S = STATE.get(g); if (S) S.met.length = 0; if (panesUntouched(g.sim)) return; const x = simX(), s = g.sim.bind();
   for (let k = 0, n = x.bars_gone(s); k < n; k++) { const b = g.col.boxes[x.bar_gone(s, k)]; if (b) { b.flags = x.bar_flags(s, k); changed(g, b); } }
   x.bars_clear(s);
@@ -176,10 +177,3 @@ export function barsRestore(g: Game, s: BarsSave | undefined) {
   for (const i of s.s) { const b = g.col.boxes[i]; if (!b || !g.glassBreak.asking((x) => x.bars_take(i, b.flags) === 1)) continue; b.flags |= HIDE; changed(g, b); }
 }
 
-/** panel / console line */
-export function winBarsSummary(g: Game): string {
-  const st = WINBARS_STATS, up = barsStanding(g).length, gone = barsGone(g).length;
-  return `window bars ${WINBARS.on ? (barsLive(g) ? 'ON' : 'on — inert while a showcase runs') : 'off (a bar stops a round like a wall)'} ▸ ${up} standing, ${gone} gone · ${st.byRound} by a round, ${st.byBlast} by a blast · ${st.chunks} pieces (+${st.demoted} as chips)${LOG.length ? ` · last: ${LOG[LOG.length - 1]}` : ''}`;
-}
-/** QA: the last breaks filed, oldest first */
-export function winBarsLog(): readonly string[] { return LOG; }

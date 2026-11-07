@@ -31,6 +31,7 @@ import { BOTH, noNumber } from '../scene/collision';
 import type { BoxMirror } from '../scene/boxMirror';
 import { ItemStore, ITF, IC, ITEM_KINDS, ITEM_CAP, ITEM_ROWS, ITEM_ROOFS, IP, IE, IEK, ITEM_EV, ITEMS_HOST, ITEMS_STEPPED, itemIo, itemMem, itemDiff } from '../sim/itemshome';
 import { SimState } from '../sim/state';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 export type ItemKind = (typeof ITEM_KINDS)[number];   // 'smoke' | 'mag' | 'flash' | 'frag' | 'pistol' | 'torch' | 'rifle' | 'ring' | 'shell' (sim/itemshome.ts: a kind is its place in that list)   // pistol / torch / rifle: dropped from a dying hand (combat.ts dropFromHand — the rifle is what the long-gun rows let go of, weapons.ts WeaponDef.drop: a rifleman's whole AKS-74U, or with fill 1 Sam's FN2000) — physical like the rest (tumble, bounce, settle, nudge props), and set dressing once down: nobody picks them up (a guard's magazines would not fit the Five-seveN anyway, and nothing on the floor is ammunition); ring: a spent ring airfoil (launcher.ts hands it over the moment its flight ends — off a wall, off a man — to clatter down and lie there: not retrievable either)
 
@@ -138,8 +139,6 @@ export class Item implements ItemFields {
   private hand?: boolean;
   /** `things`: the level's furniture by id (PropSystem.all), for `on` */
   constructor(S: ItemStore, r: number, private readonly things: readonly Prop[]) { this.S = S; this.r = r; }
-  /** THE POOL'S OWN (Throwables): which row it stands in; out of the pool with its numbers; its numbers as they stand; into row `r` */
-  get row(): number { return this.kept === null ? this.r : -1; }
   leave(): void { if (this.kept === null) { this.kept = this.S.rowOut(this.r); this.r = -1; } }
   numbers(): number[] { return this.kept ?? this.S.rowOut(this.r); }
   stand(r: number): void { this.kept = null; this.r = r; }
@@ -235,7 +234,7 @@ export class Throwables {
     this.rows = L.slice();
   }
 
-  spawn(kind: ItemKind, pos: Vec3, vel: Vec3, opts: Partial<ItemFields> = {}): Item {
+  spawn(kind: ItemKind, pos: Vec3, vel: Vec3, opts: Partial<ItemFields> = {}): Item { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Throwables.spawn', this, [kind, pos, vel, opts]); if (__r !== RUST_PASS) return __r as any; } }
     const can = kind === 'smoke' || kind === 'flash';   // smoke and stun canisters share the body: same arc, same bounces
     const R = RIFLE_ITEM, rifle = kind === 'rifle', ring = kind === 'ring', G = RING_ITEM, frag = kind === 'frag', F = FRAG_ITEM, shell = kind === 'shell', S = SHELL_ITEM;
     const radius = can ? CAN_ITEM.radius : frag ? F.radius : kind === 'pistol' ? 0.05 : kind === 'torch' ? 0.045 : rifle ? R.radius : ring ? G.radius : shell ? S.radius : 0.03; const restitution = can ? CAN_ITEM.restitution : frag ? F.restitution : kind === 'mag' ? 0.25 : rifle ? R.restitution : ring ? G.restitution : shell ? S.restitution : 0.22;
@@ -289,7 +288,7 @@ export class Throwables {
   }
 
   /** `g`: the Game the items are in, handed to a bounce's callback (the model viewer's stage has none, and no item of its own has a callback) */
-  update(dt: number, g: Game | null = null) {   // (null: the viewer's stage, which has no game)
+  update(dt: number, g: Game | null = null) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Throwables.update', this, [dt, g]); if (__r !== RUST_PASS) return __r as any; } }   // (null: the viewer's stage, which has no game)
     this.sync();
     let r = this.items.length - 1; if (r < 0) return;
     const M = this.world(g), ev: number[] = [];   // (the Rust module's world, where the walk is the module's to take; what the steps list for after)
@@ -434,7 +433,7 @@ export class Throwables {
   }
 
   /** Boxes for rendering / RT (small; canisters cast shadows, mags do not to keep the grid lean). */
-  boxes(out: Box[]) {
+  boxes(out: Box[]) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Throwables.boxes', this, [out]); if (__r !== RUST_PASS) return __r as any; } }
     for (const it of this.items) {
       const P = it.pos, kind = it.kind, settled = it.settled, yaw = it.yaw, tumble = it.tumble, radius = it.radius, fill = it.fill, serial = it.serial;   // (its row, read once)
       const n0 = out.length;   // (motion identity: every part this item emits below is keyed off its serial — tagged after the chain)

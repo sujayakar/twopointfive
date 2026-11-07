@@ -55,6 +55,7 @@ import type { Team } from './teams';
 import type { Game } from './game';
 import type { Character } from './character';
 import type { WeaponDef } from './weapons';
+import { RUST_PASS, RUST_SURFACE, crossToRust, goneWithTick } from './crossing';
 
 export type PaneType = 'annealed' | 'tempered' | 'laminated';
 /** the numbers (Tab ▸ Renderer fx ▸ Glass has the switch; the rest are constants until somebody has played it) */
@@ -133,9 +134,7 @@ export function roundEnergyOf(g: Game, c: Character): number {
 /** The energy a line-of-fire question about a SIDE is asked with when no man is to hand (a corner to hold, a spot to stand off at): undefined = the model's
  *  cautious default, as ever; 0 = no standing pane is crossed, for a side hostile to Sam while `foesThrough` is off (shotEnergy's rule, for the places picked
  *  ahead of the shot). */
-export function sideShotEnergy(g: Game, team: Team): number | undefined {
-  return glassPenLive(g) && !GLASSPEN.foesThrough && isHostile(team, 'player') ? 0 : undefined;
-}
+export function sideShotEnergy(g: Game, team: Team): number | undefined { return goneWithTick('sideShotEnergy') as any; }
 
 /** the energy a line-of-fire question about THIS man's gun is asked with (undefined while the switch is off: nothing is looked up) */
 export function shotEnergy(g: Game, c: Character, def?: WeaponDef): number | undefined {
@@ -145,14 +144,14 @@ export function shotEnergy(g: Game, c: Character, def?: WeaponDef): number | und
 }
 
 /** the pane's type — the FRACTURE model's own word for it (glassbreak.ts typeOf), so what a round pays and how the pane fails are one typing */
-export function paneType(g: Game, b: Box, bi = g.level.boxes.indexOf(b)): PaneType { const gb = g.glassBreak; return (gb ? gb.typeOfPane(bi) ?? gb.typeOf(b) : null) ?? 'annealed'; }   // (bi: the caller's index of b when it has one — the toll does — so nothing is searched per pane per question)
+export function paneType(g: Game, b: Box, bi = g.level.boxes.indexOf(b)): PaneType { return crossToRust('paneType', undefined, [g, b, bi]) as any; }   // (bi: the caller's index of b when it has one — the toll does — so nothing is searched per pane per question)
 
 // ---------------------------------------------------------------- holes: where rounds have already gone through each pane (per Game; gone with the encounter)
 interface PenState { log: string[]; /** counts every change to the holes (one made, all cleared, a file's put back) */ rev: number }
 const states = new GameSideMap<Game, PenState>('glasspen.states');
 function stateOf(g: Game): PenState { let s = states.get(g); if (!s) { s = { log: [], rev: 0 }; states.set(g, s); } return s; }
 /** Game.resetLevelState, beside resetGlass: the holes go with the stars */
-export function resetGlassPen(g: Game) { const s = states.get(g); if (s) { s.log.length = 0; s.rev++; } if (!panesUntouched(g.sim)) simX().pen_clear_holes(g.sim.bind()); }
+export function resetGlassPen(g: Game) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('resetGlassPen', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } } const s = states.get(g); if (s) { s.log.length = 0; s.rev++; } if (!panesUntouched(g.sim)) simX().pen_clear_holes(g.sim.bind()); }
 /** A number that moves whenever what a round has to pay at ANY pane may have moved: a through-hole made or cleared here, a piece out of a pane / a pane gone /
  *  every pane whole again in the fracture model. For whoever keeps an answer that was worked out through the toll (orders.ts behindGlass). */
 export function glassTollSig(g: Game): number { return (states.get(g)?.rev ?? 0) * 65537 + (g.glassBreak ? g.glassBreak.openSig() : 0); }
@@ -179,10 +178,7 @@ export function holeCount(g: Game, bi: number): number { if (panesUntouched(g.si
 export interface PaneToll { type: PaneType; n: Vec3; cos: number; take: number; eOut: number; hole: boolean }
 /** What sheet `bi` takes from a round of energy `e` meeting it at `at` flying `d` (unit), the `nth` pane of its flight (0 = the first) — or null: the round is
  *  spent in it (not a sheet, a graze, too little left, one pane too many). Pure: fireWeapon's path and every line-of-fire question read this one function. */
-export function paneToll(g: Game, bi: number, at: Vec3, d: Vec3, e: number, nth = 0): PaneToll | null {
-  const r = g.glassBreak.asking((x): PaneToll | null => { if (!x.pen_toll(bi, at[0], at[1], at[2], d[0], d[1], d[2], e, nth)) return null; const m = f64(), o = x.sim_scratch() / 8; return { type: PANE_TYPES[m[o]], n: [m[o + 1], m[o + 2], m[o + 3]], cos: m[o + 4], take: m[o + 5], eOut: m[o + 6], hole: m[o + 7] !== 0 }; });
-  return r;
-}
+export function paneToll(g: Game, bi: number, at: Vec3, d: Vec3, e: number, nth = 0): PaneToll | null { return crossToRust('paneToll', undefined, [g, bi, at, d, e, nth]) as any; }
 const PANE_TYPES: readonly PaneType[] = ['annealed', 'tempered', 'laminated'];
 /** a crossing as the module lists it (rust/sim/src/pen.rs write_cross) */
 function crossAt(m: Float64Array, o: number, into: number): PaneCross {
@@ -203,7 +199,7 @@ export interface PaneCross extends PaneToll {
   into: number;
 }
 /** one pane on a round's flight: what it takes and where the round leaves it — or null: spent in it (roundPath below; wallpen.ts thinPath, the flight over panes and thin walls alike) */
-export function paneCrossing(g: Game, bi: number, o: Vec3, d: Vec3, t: number, e: number, nth: number): PaneCross | null {
+export function paneCrossing(g: Game, bi: number, o: Vec3, d: Vec3, t: number, e: number, nth: number): PaneCross | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('paneCrossing', undefined, [g, bi, o, d, t, e, nth]); if (__r !== RUST_PASS) return __r as any; } }
   const r = g.glassBreak.asking((x): PaneCross | null => { if (!x.pen_cross(bi, o[0], o[1], o[2], d[0], d[1], d[2], t, e, nth)) return null; const m = f64(), a = x.sim_scratch() / 8; return crossAt(m, a, m[a + CROSS]); });
   return r;
 }
@@ -223,7 +219,7 @@ type StaticHit = { t: number; index: number; n: Vec3 } | null;
  *  the legs between them. Null = it crosses no pane (it stops in the first thing it meets, or flies clear) — the caller's old straight line stands, untouched.
  *  `first` = the caller's own col.raycast(from, dir, range) if it has one. PURE: nothing is filed until commitCrossings — a body on the near side of the glass
  *  stops the round before the pane ever hears of it. */
-export function roundPath(g: Game, from: Vec3, dir: Vec3, range: number, energy: number, first?: StaticHit, nth0 = 0): RoundPath | null {
+export function roundPath(g: Game, from: Vec3, dir: Vec3, range: number, energy: number, first?: StaticHit, nth0 = 0): RoundPath | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('roundPath', undefined, [g, from, dir, range, energy, first, nth0]); if (__r !== RUST_PASS) return __r as any; } }
   const hit: StaticHit = first === undefined ? g.col.raycast(from, dir, range) : first;
   if (!hit || hit.index >= 1e6 || !isSheet(g.level.boxes[hit.index])) return null;   // (the common round: no pane first — not one allocation more than before)
   const r = g.glassBreak.asking((x): RoundPath | null => {
@@ -263,7 +259,7 @@ function shellMark(shell: ShellGlass, bi: number, at: Vec3, through: boolean): '
   return join ? 'join' : marks === 0 ? 'first' : 'more';
 }
 /** The round got as far as `tHit` metres of path: every pane it crossed before that is filed — the impact call, the hole remembered, the hook. */
-export function commitCrossings(g: Game, cross: PaneCross[], tHit: number, who: number, shell?: ShellGlass) {
+export function commitCrossings(g: Game, cross: PaneCross[], tHit: number, who: number, shell?: ShellGlass) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('commitCrossings', undefined, [g, cross, tHit, who, shell]); if (__r !== RUST_PASS) return __r as any; } }
   for (const x of cross) {
     if (x.t > tHit + 1e-6) break;   // (a man, a prop on the near side: the round never reached this pane)
     const mark = shell ? shellMark(shell, x.bi, x.at, true) : 'first';
@@ -293,7 +289,7 @@ export function spentInPane(g: Game, bi: number, at: Vec3, dir: Vec3, energy: nu
  *  armThrough tests the pane's box and still says 'a panel', the arm's ray sees the open cell and meets nothing): nothing to pay and nothing to file, the round
  *  flies on from the muzzle whole. (It used to be put into 'the panel' at the muzzle: the second round through one's own hole, and a shell's pellets two to
  *  nine, went nowhere.) */
-export function armThroughGlass(g: Game, c: Character, dir: Vec3, energy: number, shell?: ShellGlass): { e: number; panes: number } | null {
+export function armThroughGlass(g: Game, c: Character, dir: Vec3, energy: number, shell?: ShellGlass): { e: number; panes: number } | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('armThroughGlass', undefined, [g, c, dir, energy, shell]); if (__r !== RUST_PASS) return __r as any; } }
   if (!glassPenLive(g)) return null;
   const from = c.bones.upperArmR ?? v3.add(c.pos, [0, 1.4, 0]), mz = c.muzzle, L = v3.len(v3.sub(mz, from));
   const w = g.glassBreak.asking((x): { e: number; cross: PaneCross[] } | null => { const n = x.pen_arm(from[0], from[1], from[2], mz[0], mz[1], mz[2], dir[0], dir[1], dir[2], energy); if (n < 0) return null; const m = f64(), a = x.sim_scratch() / 8, cross: PaneCross[] = []; for (let i = 0; i < n; i++) cross.push(crossAt(m, a + i * CROSS, -1)); return { e: m[a + x.sim_scratch_len() - 1], cross }; });
@@ -305,7 +301,7 @@ export function armThroughGlass(g: Game, c: Character, dir: Vec3, energy: number
 
 /** StaticCollision.glassPen.passes — the line of FIRE across the panes a segment meets (in order, nothing else in the way): does a round of `energy` get
  *  through every one of them? The toll fireWeapon pays, on the straight line (the turn is the round's business, not the question's). */
-export function shotPasses(g: Game, a: Vec3, rd: Vec3, panes: { bi: number; t: number }[], energy = GLASSPEN.defaultEnergy): boolean {
+export function shotPasses(g: Game, a: Vec3, rd: Vec3, panes: { bi: number; t: number }[], energy = GLASSPEN.defaultEnergy): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('shotPasses', undefined, [g, a, rd, panes, energy]); if (__r !== RUST_PASS) return __r as any; } }
   GLASSPEN_STATS.shotAsked++;
   const ok = g.glassBreak.asking((x) => { const m = f64(), o = x.sim_scratch() / 8; for (let k = 0; k < panes.length; k++) { m[o + 2 * k] = panes[k].bi; m[o + 2 * k + 1] = panes[k].t; } return x.pen_passes(a[0], a[1], a[2], rd[0], rd[1], rd[2], panes.length, energy) === 1; });
   if (ok) GLASSPEN_STATS.shotThrough++; else GLASSPEN_STATS.shotRefused++;
@@ -315,7 +311,7 @@ export function shotPasses(g: Game, a: Vec3, rd: Vec3, panes: { bi: number; t: n
 /** GLASS IS NOT COVER — how many of `eyes` have a line of fire to `p` that goes THROUGH GLASS: nothing a round stops in on the line (the toll above, for a round
  *  of `energy`), and a pane's box across it (whole, starred or with a piece out: a window is a window). The level's statics alone — the leaves are taken out
  *  for the asking, so the answer is the place's, not this second's. 0 while the rule is not live (a pane is then a wall to a round, as it was). Pure. */
-export function shotThroughGlass(g: Game, eyes: Vec3[], p: Vec3, energy = GLASSPEN.stackEnergy): number {
+export function shotThroughGlass(g: Game, eyes: Vec3[], p: Vec3, energy = GLASSPEN.stackEnergy): number { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('shotThroughGlass', undefined, [g, eyes, p, energy]); if (__r !== RUST_PASS) return __r as any; } }
   if (!glassPenLive(g)) return 0;
   const panes = glassPanes(g), leaves = g.col.dynamicBoxes; let n = 0; g.col.dynamicBoxes = [];
   try {
@@ -328,17 +324,6 @@ export function shotThroughGlass(g: Game, eyes: Vec3[], p: Vec3, energy = GLASSP
   return n;
 }
 
-const linePanes: { bi: number; t: number }[] = [];
-/** IS THERE STANDING GLASS ON THIS LINE OF FIRE — a pane a round from `a` to `b` would have to go through (a piece already out of it where the line crosses is
- *  open air, as it is to the round). Asked by a rule that cares WHAT the round would break on its way, not whether it gets there (silent.ts: glass going is
- *  heard across the floor whatever the gun) — and asked of a line the shot test has ALREADY PASSED (silent.ts: clearShot's own line, taken on to the point on the man), so
- *  nothing solid ends the walk before a pane on it is met. False while rounds stop in glass (the switch off, a showcase: a pane is then a wall and there is no
- *  such shot). Pure. */
-export function glassOnLine(g: Game, a: Vec3, b: Vec3): boolean {
-  if (!glassPenLive(g)) return false;
-  linePanes.length = 0; g.col.segmentBlocked(a, b, 0.02, 0, linePanes);
-  return linePanes.length > 0;
-}
 
 /** panel / console line */
 export function glassPenSummary(g: Game): string {

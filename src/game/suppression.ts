@@ -6,21 +6,22 @@
 // behind whatever he stands at, a shift to cover when it will not stop — all behind Game.tune.suppression); Sam's own rounds open up with his (player.ts, the
 // one mechanical effect this lane gives him; his picture / mix / reticle are lane R4's, reading the same Player.sup). What the player learns by feel — two close
 // rounds put a man's head down for a second and a half — is literally the guards' rule with these constants.
-import { men, isManId } from './seats';
+import { men } from './seats';
 import { SideMap } from '../math/side';
-import { conditionSup } from './condition';
+import './condition';
 import { Vec3, v3, clamp } from '../math/vec';
 import type { Game, Guard } from './game';
 import { TEMPERAMENT } from './game';
 import type { Character } from './character';
 import { temperamentOf } from './dialogue';
-import { isHostile, teamOfChar, teamOfId, type Team } from './teams';
+import { isHostile, teamOfChar, type Team } from './teams';
 import { WORDS } from './words';
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import { PICTURE, PICTURE_STATS, ideasOf, exposedAt } from './picture';
 import { wallMenLive, thinLine, topEnergy, WALLPEN_STATS } from './wallpen';
-import { flinchRound, flinchScale, flinchInside } from './flinch';
+import { flinchRound, flinchInside } from './flinch';
 import { runnerMute } from './runner';   // (asked inside a tick only: false with its switch off)
+import { RUST_PASS, RUST_SURFACE, goneWithTick } from './crossing';
 
 /** Every number of the model and of the guards' reactions, in one place (panel-tunable; the QA probes read them rather than copy them). */
 export const SUPPRESSION = {
@@ -91,8 +92,6 @@ export class Sup {
   barkT = -100; barkWas: SupMoment | null = null; pending: SupMoment | null = null; pendingT = -100;
   /** was over `pinned` at some point and has not been under 0.02 since (the hard man's 'that all you've got?' when it drains without him being hit) */
   wasPinned = false;
-  /** everything the reactions keep, back to rest (a man no longer alert, the flag off, the AI off) — the scalar itself is physics and stays */
-  clearReactions() { this.downT = 0; this.latched = false; this.pinnedT = 0; this.cover = null; this.coverUntil = -1; }
 }
 
 /** QA hook: set `log` and every add, edge, head-down decision and cover search says what it did */
@@ -113,7 +112,7 @@ function keenOf(g: Game, c: Character): number {
 /** One round has just been traced (combat.ts fireWeapon, after the hit scan): `from` = the muzzle, `to` = where it stopped (a wall, a leaf, a prop nobody stood
  *  behind, a man, or 60 m out), `hit` = the character it went into if any (he is shot, not suppressed). Every OTHER living, free character whose chest the segment
  *  passed within nearR of — or stopped within hitR of — accrues; the shooter never does, nor anybody the round reached inside minTravel of the muzzle. */
-export function noteRound(g: Game, shooter: Character, from: Vec3, to: Vec3, hit: Character | null) {
+export function noteRound(g: Game, shooter: Character, from: Vec3, to: Vec3, hit: Character | null) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('noteRound', undefined, [g, shooter, from, to, hit]); if (__r !== RUST_PASS) return __r as any; } }
   const S = SUPPRESSION; const seg = v3.sub(to, from); const tHit = v3.len(seg); if (tHit < 1e-3) return;   // (into the panel at the muzzle: nobody)
   const dir = v3.scale(seg, 1 / tHit); const dbg = SUPPRESSION_DEBUG.log;
   const shooterTeam = teamOfChar(g, shooter);   // (teams: whose side's round — a round of a side NOT hostile to yours going past rattles at friendlyK; an enemy's pins at full weight, as Sam's always did)
@@ -176,86 +175,13 @@ function supBark(g: Game, gd: Guard, moment: SupMoment, force = false): boolean 
 /** the suppression lines — every moment's, or one moment's (the QA probes check a bark came from this pool; the soak that a 'recover' line is the only one said at rest) */
 export function suppressionLines(moment?: SupMoment): string[] { return (moment ? [SUP_LINES[moment]] : Object.values(SUP_LINES)).flatMap(m => Object.values(m).flatMap(x => x ?? [])); }
 
-/** may this man's behaviour react at all this frame (the scalar integrates regardless): the flag, the AI on, alive, free, not choreographed */
-function reacts(g: Game, gd: Guard): boolean { return g.tune.suppression && g.aiEnabled && gd.state !== 'dead' && !gd.held && !gd.script; }
 
-/** Once a frame, ahead of the player and the guards (game.ts update): decay everybody's scalar and pulse; zero the men who accrue nothing (dead, held); and the
- *  guards' EDGES — over `flinch`: the start (anim.flinch), the next round a beat late, a line ('taking fire!' at Sam's rounds, 'watch your fire!' at a colleague's);
- *  over `pinned`: the line; two men pinned inside pairSecs of each other: one floor line. The head-down state itself is the alert branch's (headDown below). */
-export function updateSuppression(g: Game, dt: number) {
-  const S = SUPPRESSION; const k = Math.pow(2, -dt / S.halfLife), kk = Math.exp(-S.kickDecay * dt);
-  const decay = (sup: Sup) => { sup.v *= k; sup.kick *= kk; if (sup.v < 1e-5) sup.v = 0; if (sup.kick < 1e-5) sup.kick = 0; };
-  for (const pl of men(g)) { const P = pl.sup; if (pl.down) { P.v = 0; P.kick = 0; } else decay(P); }   // (down: nothing sticks on the death screen — R4's post effect reads this)
-  for (const gd of g.guards) {
-    const sup = gd.sup;
-    if (gd.state === 'dead' || gd.held) { sup.v = 0; sup.kick = 0; sup.band = 0; sup.wasPinned = false; sup.clearReactions(); continue; }
-    decay(sup);
-    if (gd.state !== 'alert' || !reacts(g, gd)) sup.clearReactions();   // (the head-down clocks belong to the fight; a man talked calm, scripted, or with the flag / the AI off carries none)
-    // his band, with hysteresis (pinned holds down to `release`, flinch to a hair under its line): a scalar hovering about a line under a steady volley is ONE
-    // episode — one start, one line — not an edge every other round
-    const v = sup.v; const band = v >= S.pinned || (sup.band === 2 && v >= S.release) ? 2 : v >= S.flinch || (sup.band >= 1 && v >= S.flinch - 0.05) ? 1 : 0;
-    if (band > sup.band && sup.band < 1 && !reacts(g, gd) && gd.script?.flinch && g.tune.suppression) gd.char.anim.flinchFrom(sup.src ? v3.sub(sup.src, gd.char.pos) : null, flinchScale(g, gd));   // a CHOREOGRAPHED man ordered to (GuardScript.flinch — the day showcase's firefight): the start alone on the rising edge, none of the AI's reactions below; nothing for any other scripted man, as ever
-    if (band > sup.band && reacts(g, gd)) {
-      const friendly = !isManId(sup.srcId) && sup.srcId >= 0 && !isHostile(gd.team, teamOfId(g, sup.srcId));   // a colleague's rounds past his head: he says so to HIM, not 'taking fire' (teams: an enemy unit's rounds are fire taken, whatever his id)
-      if (sup.band < 1) {   // over the flinch line: the start, the next round a beat late, a word (unless the head is going down this same frame: that line instead)
-        sup.flinchAt = g.time; gd.char.anim.flinchFrom(sup.src ? v3.sub(sup.src, gd.char.pos) : null, flinchScale(g, gd)); gd.fireCd = Math.max(gd.fireCd, S.flinchDelay);
-        if (band < 2) supBark(g, gd, friendly ? 'friendly' : 'flinch');
-        SUPPRESSION_DEBUG.log?.(`#${gd.char.id} ${gd.callsign} FLINCH at ${sup.v.toFixed(2)} (${friendly ? 'a colleague\'s round' : 'the player\'s'})`);
-      }
-      if (band === 2) {   // over the pinned line: the line (past his own clock if his flinch line was a couple of seconds back) — and a second man pinned within pairSecs of another makes it the floor's
-        sup.pinnedAt = g.time; sup.wasPinned = true;
-        const other = g.guards.find(o => o !== gd && o.state !== 'dead' && g.time - o.sup.pinnedAt < S.pairSecs && (!WORDS.on || o.team === gd.team) && !runnerMute(o));   // ('us' is two men of ONE side: words.ts — and never a man who has given up: runner.ts nobody)
-        if (other && !runnerMute(gd) && g.time - (floorLineT.get(g) ?? -100) > S.floorLineSecs) { floorLineT.set(g, g.time); sup.barkT = g.time; sup.barkWas = 'pinned'; floorBarkT.set(g, g.time); g.say(gd, WORDS.on && gd.team !== 'guard' ? 'they\'ve got us pinned!' : 'he\'s got us pinned!', true); }
-        else supBark(g, gd, friendly ? 'friendly' : 'pinned', sup.barkWas === 'flinch' && g.time - sup.barkT > 1.5);   // (over his own clock only to top a 'taking fire' of a moment ago with the worse news — never pinned on pinned)
-        SUPPRESSION_DEBUG.log?.(`#${gd.char.id} ${gd.callsign} PINNED at ${sup.v.toFixed(2)}`);
-      }
-    }
-    if (sup.wasPinned && sup.v < 0.02) { sup.wasPinned = false; if (reacts(g, gd) && gd.state === 'alert' && TEMPERAMENT[gd.callsign] === 'hard') supBark(g, gd, 'recover'); }   // drained right out without him being hit: the hard man has something to say about that
-    if (sup.pending) {   // a line the clocks held back: said now if it still applies (still at least that rattled, still in the fight), dropped after two seconds
-      const P = sup.pending; const still = reacts(g, gd) && g.time - sup.pendingT < 2 && (P === 'displace' ? !!sup.cover : P === 'pinned' ? band === 2 : band >= 1);
-      if (!still) sup.pending = null; else supBark(g, gd, P, P === 'displace');
-    }
-    sup.band = band;
-  }
-}
 
-/** The alert branch's question each frame (guards.ts updateGuard, ahead of everything else in `case 'alert'`): is this man's head down, or is he shifting to
- *  cover — and the clocks that decide it. 'down': crouch behind what he stands at, gun low, feet still, no round (the caller floors fireCd), eyes still toward the
- *  threat; entered on s ≥ pinned (a drawn headDown seconds owed), held while that runs or s ≥ release. 'displace': displaceAfter seconds of that without s ever
- *  dropping under flinch and he goes for `sup.cover` instead (coverFrom: a couple of strides off the line of fire, crouched-chest hidden from where the rounds
- *  come from) — the caller walks him; endDisplace when he is there or it is going nowhere. 'none': the plain fight (which still reads the flinch factors). */
-export function headDown(g: Game, gd: Guard, dt: number): 'none' | 'down' | 'displace' {
-  const S = SUPPRESSION, sup = gd.sup;
-  if (!reacts(g, gd)) { sup.clearReactions(); return 'none'; }
-  if (sup.cover) return 'displace';
-  if (sup.v < S.flinch) sup.pinnedT = 0;
-  if (sup.v >= S.pinned) { if (!sup.latched && sup.downT <= 0) { sup.downT = S.headDown[0] + simRandom() * (S.headDown[1] - S.headDown[0]); SUPPRESSION_DEBUG.log?.(`#${gd.char.id} ${gd.callsign} head DOWN for ${sup.downT.toFixed(2)} s (s ${sup.v.toFixed(2)})`); } sup.latched = true; }
-  else if (sup.v < S.release) sup.latched = false;
-  const down = sup.downT > 0 || sup.latched;
-  if (!down) { if (sup.downT <= 0 && sup.pinnedT > 0 && sup.v < S.release) sup.pinnedT = Math.max(0, sup.pinnedT - dt); return 'none'; }   // (up again: the displace clock unwinds rather than banks half-seconds across separate volleys under the flinch line — reset outright once s < flinch, above)
-  sup.downT = Math.max(0, sup.downT - dt); sup.pinnedT += dt;
-  if (sup.pinnedT > S.displaceAfter && !gd.pinned && !gd.standoff && g.time - sup.displacedAt > S.displaceCooldown) {   // (a tour-pinned man shoots from where he was put and squats where he was put; a man in the standoff does not leave it — his colleague is still in Sam's arm — he stays down and keeps talking)
-    const threat = sup.src && g.time - sup.srcT < S.srcMemorySecs ? sup.src : gd.lastKnown;
-    const p = threat ? coverFrom(g, gd, threat) : null;
-    if (p) { sup.cover = p; sup.displacedAt = g.time; sup.displaces++; sup.pinnedT = 0; sup.downT = 0; sup.latched = false; gd.path = []; gd.pathGoal = null; gd.stallRef = null; supBark(g, gd, 'displace', true); SUPPRESSION_DEBUG.log?.(`#${gd.char.id} ${gd.callsign} DISPLACES to (${p[0].toFixed(2)}, ${p[2].toFixed(2)}), ${v3.distXZ(p, gd.char.pos).toFixed(2)} m, threat at (${threat![0].toFixed(1)}, ${threat![2].toFixed(1)})`); return 'displace'; }
-    sup.pinnedT = S.displaceAfter - 1.5; SUPPRESSION_DEBUG.log?.(`#${gd.char.id} ${gd.callsign} would displace: no cover found from (${gd.char.pos[0].toFixed(1)}, ${gd.char.pos[2].toFixed(1)}) — stays down, looks again in 1.5 s`);   // nowhere to go from here: stay down, look again shortly
-  }
-  return 'down';
-}
-/** The shift is over — he is there, or it went nowhere, or it has taken too long: hold the spot a few seconds (coverUntil: the plain fight does not run him
- *  straight back out), the first round from there a beat late. */
-export function endDisplace(g: Game, gd: Guard, why: string) {
-  const sup = gd.sup; sup.cover = null; sup.coverUntil = g.time + SUPPRESSION.coverHold; sup.pinnedT = 0; sup.downT = 0; sup.latched = false;
-  gd.path = []; gd.pathGoal = null; gd.stallRef = null; gd.fireCd = Math.max(gd.fireCd, SUPPRESSION.headDownDelay);
-  SUPPRESSION_DEBUG.log?.(`#${gd.char.id} ${gd.callsign} shift over (${why}) at (${gd.char.pos[0].toFixed(2)}, ${gd.char.pos[2].toFixed(2)})`);
-}
-/** may the plain fight close on Sam right now, or is he holding the cover he has just reached */
-export function holdingCover(g: Game, gd: Guard): boolean { return g.tune.suppression && g.time < gd.sup.coverUntil; }
 
 /** Where a pinned man shifts to: a free cell displaceMin‥Max metres off — to either SIDE of the line the rounds come down for choice (off it), else back, never
  *  toward — that he can walk to without a tour of the floor or a leg toward the shooter, where a crouched chest is hidden from the shooter's by something solid,
  *  and that no colleague stands on or is heading for. Preference order, first fit (coverSpot's pattern); a dozen path plans at most. null = nothing: he stays down. */
-export function coverFrom(g: Game, gd: Guard, threat: Vec3): Vec3 | null {
+export function coverFrom(g: Game, gd: Guard, threat: Vec3): Vec3 | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('coverFrom', undefined, [g, gd, threat]); if (__r !== RUST_PASS) return __r as any; } }
   // (picture.ts PICTURE.cover: the man whose rounds came in is one of several he knows of — the first fit hidden from EVERY one of them is taken; the first
   // fit of all, the place as it was dealt, is kept meanwhile and is his if there is no such place. One pass, the same dozen plans. With both rules on, a
   // place that STOPS the shooter's round but is in another known man's line is kept over one a round goes through: the place as wallpen.ts alone deals it.)
@@ -295,14 +221,9 @@ export function coverFrom(g: Game, gd: Guard, threat: Vec3): Vec3 | null {
 }
 
 /** What suppression does to a guard's NEXT round (the two fire sites read it, flag off = nothing): extra cone on top of his row's spread, and × the cadence he draws after it. */
-export function guardFireMods(g: Game, gd: Guard): { spread: number; gap: number } {
-  if (!g.tune.suppression) return { spread: 0, gap: 1 };
-  return { spread: SUPPRESSION.guardSpread * conditionSup(g, gd, gd.sup.v), gap: 1 + SUPPRESSION.gapK * gd.sup.v };   // (condition.ts: a hurt man's rounds go wider, as if fire were on him; how fast he fires is the fire's alone)
-}
-/** is he rattled (s ≥ flinch, reactions on): the closing run drops to a jog, the standoff's orbit to half pace */
-export function flinching(g: Game, gd: Guard): boolean { return reacts(g, gd) && gd.sup.v >= SUPPRESSION.flinch; }
+export function guardFireMods(g: Game, gd: Guard): { spread: number; gap: number } { return goneWithTick('guardFireMods') as any; }
 /** Extra cone on Sam's own round for HIS suppression (player.ts, both fire sites): 0 with the flag off, and 0 under the tour's puppet (its scripted rounds must land). */
-export function samSpread(g: Game): number { return g.tune.suppression && !g.puppet ? SUPPRESSION.samSpread * conditionSup(g, g.player, g.player.sup.v) : 0; }
+export function samSpread(g: Game): number { return goneWithTick('samSpread') as any; }
 
 /** Panel / QA: 'suppression ▸ Sam 0.00 · Reyes 0.71 head-down 0.6 s (pinned 2.1 s) · …' — Sam, then every living man with anything on him (or the nearest, at rest). */
 export function suppressionSummary(g: Game): string {

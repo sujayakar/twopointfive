@@ -202,7 +202,7 @@ export function pinned(env?: string): boolean { return harnessProfile() === 'fro
 export const RETIRED_SAID = new Set<string>();
 export function pageRows(q: URLSearchParams): void {
   mathsUp(); rowsUp();
-  for (const k of q.keys()) if (retiredAddressWord(k) && !RETIRED_SAID.has(k)) { RETIRED_SAID.add(k); console.info(`?${k}: the Rust module's rows and the game's own maths are not switches any more; the word does nothing`); }
+  for (const k of q.keys()) if (retiredAddressWord(k) && !(k === 'rust' && q.get('rust') === '1') && !RETIRED_SAID.has(k)) { RETIRED_SAID.add(k); console.info(`?${k}: the Rust module's rows and the game's own maths are not switches any more; the word does nothing`); }
   { const f = q.get('fell'); if (f !== null) fellWord(f); }   // (?fell: the count of questions the TypeScript answered while its row was up, from the first box asked as the level is built — sim.ts FELL; `window.__sim.fell()` reads it)
 }
 export function pageSwitches(q: URLSearchParams): void {

@@ -16,7 +16,8 @@
 // (Imports sim.ts, state.ts and colstore.ts alone: like the rest of src/sim, this is below the game.)
 import { sim, f64, type SimExports } from './sim';
 import { simRoom, P_SLABS, type SimState } from './state';
-import { ColStore, colsOf, colDiff, type ColsOf } from './colstore';
+import { ColStore, colsOf, type ColsOf } from './colstore';
+import { goneWithTick } from '../game/crossing';
 
 /** slabs a level can have and still keep them in the module: one a door (rust/sim/src/slabs.rs CAP = doors.rs CAP) */
 export const SLAB_CAP = 64;
@@ -57,7 +58,7 @@ export class SlabStore extends ColStore<(typeof SLAB_F64)[number], (typeof SLAB_
   /** where door `door`'s slab is, or −1 */
   rowOf(door: number): number { return this.u[this.b4 + this.O.row + door] - 1; }
   /** whose leaf row `r` is */
-  doorAt(r: number): number { return this.u[this.b4 + this.O.door + r]; }
+  doorAt(r: number): number { return goneWithTick('SlabStore.doorAt') as any; }
   private swap(a: number, b: number): void {   // (rows a and b change places, every column; the table follows)
     if (a === b) return;
     this.swapCols(a, b, SLAB_F64, SWAPPED);
@@ -135,9 +136,4 @@ export const slabMem = f64;
 export const SLABS_STEPPED = { there: 0, here: 0, host: 0, asked: 0, differ: 0, first: '', rays: 0, gathers: 0, substeps: 0, landed: 0, rested: 0 };
 
 /** WHERE TWO TAKES OF A STORE'S BYTES DIFFER, in words (`bytes()` of the same store, twice). → at most `most` lines, none if they are the same state */
-export function slabDiff(S: SlabStore, a: Uint8Array, b: Uint8Array, most = 4): string[] {
-  const O = S.O, ua = new Uint32Array(a.buffer, a.byteOffset, O.bytes >>> 2), ub = new Uint32Array(b.buffer, b.byteOffset, O.bytes >>> 2), out: string[] = [];
-  if (ua[0] !== ub[0] || ua[1] !== ub[1]) out.push(`${ua[0]} slabs, ${ua[1]} in the air | ${ub[0]}, ${ub[1]}`);
-  for (let k = 0; k < S.doors && out.length < most; k++) if (ua[O.row + k] !== ub[O.row + k]) out.push(`door ${k}'s row (plus one) ${ua[O.row + k]} | ${ub[O.row + k]}`);
-  return colDiff(O, SLAB_F64, SWAPPED, a, b, Math.max(ua[0], ub[0]), (u, r) => `door ${u[O.door + r]}`, most, out);
-}
+export function slabDiff(S: SlabStore, a: Uint8Array, b: Uint8Array, most = 4): string[] { return goneWithTick('slabDiff') as any; }

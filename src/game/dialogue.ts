@@ -33,14 +33,14 @@
 // ============================================================================================================================================================
 import { men } from './seats';
 import { SideMap } from '../math/side';
-import { v3, approachAngle } from '../math/vec';
+import { v3 } from '../math/vec';
 import type { Vec3 } from '../math/vec';
 import type { Level } from '../scene/level';
 import type { Door } from './doors';
 import type { Game, Guard, Temperament, Talk } from './game';
 import type { HoldVariant } from './character';
-import { TEMPERAMENT, isBreathing } from './game';
-import { rollcallState, escalationOf, bubbleSecs } from './guards';
+import { TEMPERAMENT } from './game';
+import { rollcallState, escalationOf } from './guards';
 import { CUES } from './cues';
 import { CLOSE } from './close';   // (read inside a function only: src/game is one import cycle)
 import { simRandom, hashStr } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
@@ -48,7 +48,8 @@ import { defenderWords } from './teams';
 import { takeTold } from './takecheck';   // (a leaf: was anybody told the thing is gone)
 import { WORDS, w, wg } from './words';   // (a leaf: the dialogue pass's one switch)
 import { shakenOf } from './morale';   // (read inside agitationTerms only)
-import { hasHim, OWN } from './owner';
+import './owner';
+import { RUST_PASS, RUST_SURFACE, crossToRust, goneWithTick } from './crossing';
 
 // ---------------------------------------------------------------- axes
 export type Knowledge = 'none' | 'heard' | 'glimpsed' | 'saw' | 'sawHurt';
@@ -117,7 +118,7 @@ export function knowledgeOf(g: Game, gd: Guard): Knowledge {
  *   pressed         +0.03 per press past the third (cap +0.15): the exhausted pool gets rawer the longer you lean
  *   bias            nervy +0.15 · hard −0.10 · steady 0                                                          (TEMPERAMENT)
  */
-export function agitationOf(g: Game, gd: Guard): number { return agitationTerms(g, gd).a; }
+export function agitationOf(g: Game, gd: Guard): number { return goneWithTick('agitationOf') as any; }
 function agitationTerms(g: Game, gd: Guard): { a: number; why: string[] } {
   const W = gd.witness, H = W.heard, t = temperamentOf(gd), talk = gd.talk; const why: string[] = []; let a = 0;
   const add = (v: number, label: string) => { if (Math.abs(v) < 1e-6) return; a += v; if (Math.abs(v) >= 0.005) why.push(`${label} ${v > 0 ? '+' : ''}${v.toFixed(2)}`); };
@@ -378,7 +379,7 @@ const OFFICE_AREAS: Rect[] = [{ name: 'the corridor', x0: 4, x1: 36, z0: 10, z1:
  *  keeps it). A floor with NAMES OF ITS OWN (levelRects: the structure's rooms — the block, the depot, the warehouse… — and the level's `scenarios.places`) has
  *  no car park and no back offices: there a point is in one of the level's own rooms or places, or 'outside' the nearest of them (cues.ts — a line that names
  *  a place names a real one). The office, a level that names nothing, or the cues off: roomName. */
-export function placeName(level: Level, p: Vec3): string { return (CUES.on ? ownName(level, p) : null) ?? roomName(level, p); }
+export function placeName(level: Level, p: Vec3): string { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('placeName', undefined, [level, p]); if (__r !== RUST_PASS) return __r as any; } } return (CUES.on ? ownName(level, p) : null) ?? roomName(level, p); }
 /** a named rectangle of floor: `name` as a line says it ('the front hall'), `id` = the structure room's id (null: a place nobody holds, or one of the office's areas) */
 export interface PlaceRect extends Rect { id: string | null }
 /** the level the game was written on (its three patrol routes): the one floor the office's own room tables below, and chronicle.ts's, are true of */
@@ -426,35 +427,9 @@ export function watchedPlace(level: Level, from: Vec3, p: Vec3): string | null {
 function ownName(level: Level, p: Vec3): string | null { const w = ownPlace(level, p); return !w ? null : w.d === 0 ? w.rect.name : `outside ${w.rect.name}`; }
 /** WHERE A MAN STANDS, for a line that has to be true of the spot ('still up — in the front hall'; laststand.ts): the named rectangle he is INSIDE — one of
  *  the level's own (levelRects), on the office one of roomName's — or null (open ground the level has no word for: the caller says 'outside the …') */
-export function placeIn(level: Level, p: Vec3): PlaceRect | null {
-  const w = ownPlace(level, p); if (w) return w.d === 0 ? w.rect : null;
-  if (!isOffice(level)) return null;
-  roomName(level, p); for (const r of roomRects.get(level)!.rooms) if (p[0] >= r.x0 && p[0] <= r.x1 && p[2] >= r.z0 && p[2] <= r.z1) return { ...r, id: null };
-  return null;
-}
-/** THE WAY A WALK COMES BY, for a line on the net ('coming to you through the north gallery'): the last of the level's own rooms or places the plain nav
- *  path from `a` to `b` crosses before the one it ends in — 'through the …' — or 'from the …' when that is the place the walk starts in (he walks straight in
- *  from where he stands). `into` = the name of the room the walk is bound for, when the caller knows it (b may lie on its threshold). null with the cues off,
- *  on the office and on a level that names none of its floor (levelRects), with no path, or when the walk crosses no named floor on its way. WORDS ONLY: the
- *  search is asked and thrown away — the man's own route is the fight AI's, which on plain floor is this same search (guards.ts goTo). */
-export function wayName(level: Level, nav: { findPath(a: Vec3, b: Vec3, maxIter?: number): Vec3[] | null }, a: Vec3, b: Vec3, into: string | null = null): string | null {
-  if (!CUES.on || !levelRects(level)) return null;
-  const at = (p: Vec3) => { const w = ownPlace(level, p); return w && w.d === 0 ? w.rect.name : null; };
-  const room = into ? withThe(into) : null, end = at(b), from = at(a), path = nav.findPath(a, b, 6000); if (!path) return null;
-  if (from && (from === room || from === end)) return null;   // (he is already where he is called to: no way to name)
-  let way: string | null = from, prev = a;
-  walk: for (const q of path) {   // (the walk ends at the room he is called to or at the named floor the fix lies on, whichever it meets first — a fix out on a gallery is never the way to itself)
-    const n = Math.max(1, Math.ceil(v3.dist(prev, q) / 0.5));
-    for (let i = 1; i <= n; i++) { const r = at(v3.lerp(prev, q, i / n)); if (r && (r === room || r === end)) break walk; if (r) way = r; }
-    prev = q;
-  }
-  return !way ? null : way === from ? `from ${way}` : `through ${way}`;
-}
+export function placeIn(level: Level, p: Vec3): PlaceRect | null { return crossToRust('placeIn', undefined, [level, p]) as any; }
 /** every rectangle placeIn answers by: the level's own (levelRects), on the office roomName's tables (no ids) — for a reader of the lines (the QA commander) */
-export function placeRects(level: Level): PlaceRect[] {
-  const R = levelRects(level); if (R) return R; if (!isOffice(level)) return [];
-  roomName(level, [0, 0, 0]); return roomRects.get(level)!.rooms.map(r => ({ ...r, id: null }));
-}
+export function placeRects(level: Level): PlaceRect[] { return crossToRust('placeRects', undefined, [level]) as any; }
 const OFFICE_WALLS: Rect = { name: 'inside', x0: 4, x1: 36, z0: 4, z1: 24 };
 /** what a level that names none of its floor is called in a line ('in the building', 'by the building'): never a room of the office's */
 const NAMELESS = 'the building';
@@ -463,7 +438,7 @@ const NAMELESS = 'the building';
  *  park'. ON ANY OTHER LEVEL those words are not its own (the registry's captor 'holding the server room' — its mission's reach area — on a floor with no
  *  server room): there it is the level's own name for the spot (levelRects: its structure's rooms and its `scenarios.places`), 'outside' the nearest of them,
  *  or — a level that names nothing — 'this floor'. */
-export function roomName(level: Level, p: Vec3): string {
+export function roomName(level: Level, p: Vec3): string { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('roomName', undefined, [level, p]); if (__r !== RUST_PASS) return __r as any; } }
   let R = roomRects.get(level);
   if (!R) {
     const rooms: Rect[] = [], office = isOffice(level);
@@ -563,7 +538,7 @@ export function heldSinceOf(g: Game, gd: Guard): number {
 }
 
 /** Read the game into a DialogueCtx for this man (the only function past the axes that touches Game). */
-export function gather(g: Game, gd: Guard): DialogueCtx {
+export function gather(g: Game, gd: Guard): DialogueCtx { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('gather', undefined, [g, gd]); if (__r !== RUST_PASS) return __r as any; } }
   const W = gd.witness, H = W.heard, L = g.level, R = rollcallState(g), lvl = escalationOf(g);
   const k = knowledgeOf(g, gd); const { a, why } = agitationTerms(g, gd); const band = bandOf(a); const t = temperamentOf(gd);
   const hs = heldSinceOf(g, gd); const held = hs >= 0 ? g.time - hs : 0;
@@ -698,7 +673,7 @@ function swallowed(sc: Script | null, s: StageKey, ctx: DialogueCtx, talk: Talk)
  *  beat's `take` as Sam's rejoinder, else the beat's own answer with its `after`; presses past the fourth, a beat whose token went null, and a man with no
  *  script go to the pools: a dry cell widens temperament, then agitation, at the staged presses, and at 'nothing left' repeats his own brush-offs (least-said
  *  first) before borrowing anyone else's. */
-export function pickLine(ctx: DialogueCtx, talk: Talk, rnd: () => number): DialoguePick {
+export function pickLine(ctx: DialogueCtx, talk: Talk, rnd: () => number): DialoguePick { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('pickLine', undefined, [ctx, talk, rnd]); if (__r !== RUST_PASS) return __r as any; } }
   const sc0 = scriptFor(ctx, talk);
   const stageN = talk.stage + 1; const s = stageKeyOf(stageN);
   talk.stage = stageN; talk.presses++; talk.lastT = ctx.time;
@@ -761,7 +736,7 @@ export function pickLine(ctx: DialogueCtx, talk: Talk, rnd: () => number): Dialo
  *  past the man's own Talk: Sam's rejoinder to THIS answer (the beat's `after` / `take`), queued on the hold to go up when the man's line is down (player.ts
  *  Hold.after → sayAfter — the key remark takes its place when the answer gave the keyed door: game.ts interrogate → takeKey runs after this) and put in Sam's
  *  memory under '<pick id>+' so the probes can name it; only for the man actually in his arm (the sandbox's bare exchange has no Sam side). */
-export function interrogate(g: Game, gd: Guard, rnd: () => number = simRandom): DialoguePick | null {
+export function interrogate(g: Game, gd: Guard, rnd: () => number = simRandom): DialoguePick | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('interrogate', undefined, [g, gd, rnd]); if (__r !== RUST_PASS) return __r as any; } }
   if (gd.state === 'dead' || !g.guards.includes(gd)) return null;
   const talk = gd.talk;
   if (!gd.held && (talk.heldSince < 0 || (talk.lastT >= 0 && g.time - talk.lastT > HOLD_LAPSE_SECS))) talk.heldSince = g.time;
@@ -771,18 +746,8 @@ export function interrogate(g: Game, gd: Guard, rnd: () => number = simRandom): 
   return pick;
 }
 
-/** The VERB on the held man's question row for the next exchange (design §1.4) — what it will put to him, by stage, greyed once he has nothing left; and, off the
- *  same peek Sam's own line takes (peekGive: the one giving test pickLine uses), 'ask what he knows' whenever the man is about to GIVE — a nervy man at his second
- *  exchange, a late give at the fourth — so the row never says 'lean on him' over the pointed question and the intel that lands. What Sam actually SAYS comes
- *  from SAM_LINES (samLineFor). Only the arm hold carries it (player.ts buildInteractables: with the gun at his head there is no question row). DRAFT strings like the rest. */
-export function promptFor(g: Game, gd: Guard): { text: string; spent: boolean } {
-  const next = stageKeyOf(gd.talk.stage + 1);
-  if (next === 1) return { text: 'make him talk', spent: false };   // (nobody gives at the first exchange — givesAt starts at 2 — and the opener is the opener regardless)
-  if (peekGive(gather(g, gd), gd.talk)) return { text: 'ask what he knows', spent: false };
-  return next === 2 ? { text: 'lean on him', spent: false } : next === 3 ? { text: 'ask what he knows', spent: false } : { text: "he's got nothing left", spent: true };
-}
 /** One line for the panel / probes: who, temperament, his cell now with the agitation terms, the stage the NEXT press would be, what he has said, the useful thing he would give next. */
-export function dialogueSummary(g: Game, gd: Guard): string {
+export function dialogueSummary(g: Game, gd: Guard): string { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('dialogueSummary', undefined, [g, gd]); if (__r !== RUST_PASS) return __r as any; } }
   const ctx = gather(g, gd), talk = gd.talk; const next = stageKeyOf(talk.stage + 1);
   const sc = peekScript(talk); const it = intelFor(ctx, talk, sc && scriptLive(sc, ctx) ? sc : null);
   return `${gd.callsign} (${ctx.t}${gd.state === 'dead' ? ', down' : ''}) · cell ${ctx.k}·${ctx.band}·${ctx.t} · A ${ctx.a.toFixed(2)} [${ctx.why.join(', ') || '—'}] · script ${sc ? `${sc.id} (${sc.shape})` : '—'} · next press: stage ${next}${givesAt(ctx.t, ctx.band).includes(next) ? ' (gives)' : ''} · said ${talk.said.size}${talk.given.size ? ` · gave ${[...talk.given].join('/')}` : ''} · next intel: ${it ? it.kind : '—'}${talk.last ? ` · last: ${talk.last.id} @${talk.last.cell} s${talk.last.stage}` : ''}`;
@@ -940,13 +905,9 @@ export interface SamPick {
 /** What the man would give at the COMING exchange as things stand — the useful thing's kind — or null. Read-only (intelFor over the same giving test pickLine
  *  uses, the same script and the rambler's same swallow): Sam words his question to it, and the answer a beat later agrees unless the man's heat crossed a band
  *  in that second (then he asked and got a refusal, which reads fine too). */
-export function peekGive(ctx: DialogueCtx, talk: Talk): IntelKind | null {
-  const stageN = talk.stage + 1, s = stageKeyOf(stageN);
-  const sc0 = scriptFor(ctx, talk); const sc = sc0 && stageN <= 4 && scriptLive(sc0, ctx) ? sc0 : null;
-  return givingStage(ctx.t, ctx.band, s, stageN, talk.given.size === 0) && !swallowed(sc, s, ctx, talk) ? intelFor(ctx, talk, sc)?.kind ?? null : null;
-}
+export function peekGive(ctx: DialogueCtx, talk: Talk): IntelKind | null { return crossToRust('peekGive', undefined, [ctx, talk]) as any; }
 /** the category for the exchange at stage s: the opener, then — unless he is about to give (ask him for it) — pressure at 2, the ask at 3, the last word at x */
-export function samStageOf(s: StageKey, gives: boolean): SamStage { return s === 1 ? 'open' : gives ? 'ask' : s === 2 ? 'press' : s === 3 ? 'ask' : 'dry'; }
+export function samStageOf(s: StageKey, gives: boolean): SamStage { return goneWithTick('samStageOf') as any; }
 /** Sam's facts for SAM_NEEDS, off the same context the man's answer is read from plus the hold's variant */
 export function samFacts(ctx: DialogueCtx, variant: HoldVariant): Record<SamNeed, boolean> {
   const alarm = !!(ctx.facts.floorUp || ctx.facts.episode || ctx.facts.lockdown);
@@ -986,36 +947,13 @@ function chooseSamLine(tiers: SamLine[][], ctx: DialogueCtx, facts: Record<SamNe
 /** Sam's line for the coming exchange with this man: the category by the stage it will be — and if he is about to give, FIRST the questions written for that
  *  very thing (the 'q' tier), the plain asks only once those have all been said lately — the pool narrowed by the hold's variant, the floor and the man, fresh
  *  lines before anything said within SAM_RECENT_SECS, the specific outweighing the neutral. Pure over ctx / talk but for Sam's memory. */
-export function pickSamLine(ctx: DialogueCtx, talk: Talk, variant: HoldVariant, mem: SamMemory | null, rnd: () => number): SamPick {
-  const stageN = talk.stage + 1, s = stageKeyOf(stageN);
-  const q = s === 1 ? null : peekGive(ctx, talk); const cat = samStageOf(s, !!q);   // (nobody gives at the first exchange — givesAt starts at 2 — and the opener is the opener regardless)
-  // the hold's script first: the beat's own line — its `ask` when the man is about to give (peek), else its `sam` — remembered like any line of his
-  const sc0 = scriptFor(ctx, talk); const sc = sc0 && stageN <= 4 && scriptLive(sc0, ctx) ? sc0 : null;
-  if (sc) {
-    const beat = beatFor(sc, s, ctx); const text = expand(q && beat.ask ? beat.ask : wg(beat.samNow ?? beat.sam, beat.sam), ctx.tokens);
-    if (text && text.length <= SAM_MAX_CHARS) { const id = `S:${sc.id}:${String(s)}${q && beat.ask ? '?' : ''}`; if (mem) { mem.said.set(id, ctx.time); mem.last = id; } return { text, id, s: cat, q, stage: s, fresh: true, script: sc.id }; }
-  }
-  const tiers: SamLine[][] = q ? [SAM_LINES.filter(l => l.s === 'q' && l.q === q), SAM_LINES.filter(l => l.s === 'ask')] : [SAM_LINES.filter(l => l.s === cat)];
-  const c = chooseSamLine(tiers, ctx, samFacts(ctx, variant), mem, rnd);
-  return c ? { text: c.text, id: c.l.id, s: cat, q, stage: s, fresh: c.fresh, script: null } : { text: '…', id: '-', s: cat, q, stage: s, fresh: false, script: null };
-}
-/** Sam's line for the next exchange with a real man in his arm (gather → pickSamLine, remembered on the Game). Says nothing itself: player.ts askHeld puts it up. */
-export function samLineFor(g: Game, gd: Guard, variant: HoldVariant, rnd: () => number = simRandom): SamPick { return pickSamLine(gather(g, gd), gd.talk, variant, samMemoryOf(g), rnd); }
+export function pickSamLine(ctx: DialogueCtx, talk: Talk, variant: HoldVariant, mem: SamMemory | null, rnd: () => number): SamPick { return crossToRust('pickSamLine', undefined, [ctx, talk, variant, mem, rnd]) as any; }
 /** Sam's word as he pockets the key a man has just given up with the keyed door (player.ts takeKey): the 'key' lines, narrowed by the man and the floor like
  *  any other, fresh ones first, remembered like the rest — a remark, not an exchange: nobody answers and no stage moves. null if nothing fits (never, for the
  *  shipped table: lintDialogue keeps SAM_KEY_MIN of them free of conditions). */
 export function samKeyLineFor(g: Game, gd: Guard, variant: HoldVariant, rnd: () => number = simRandom): { text: string; id: string } | null {
   const ctx = gather(g, gd);
   const c = chooseSamLine([SAM_LINES.filter(l => l.s === 'key')], ctx, samFacts(ctx, variant), samMemoryOf(g), rnd);
-  return c ? { text: c.text, id: c.l.id } : null;
-}
-/** One of Sam's PISTOL lines as a remark, for the moment he draws on a man already in his arm (player.ts swapHold, E): the [gun] openers — written as his
- *  first words with the muzzle at the man's temple, which is what that moment is — narrowed by the man and the floor like any line, fresh ones first,
- *  remembered like the rest. Nobody answers it and no stage moves. Questions are put with the arm on him now, so this is where the [gun] lines are still
- *  heard (the pool keeps them in every category against the day the pistol hold questions again). null if nothing fits (never, for the shipped table). */
-export function samRemarkFor(g: Game, gd: Guard, rnd: () => number = simRandom): { text: string; id: string } | null {
-  const ctx = gather(g, gd);
-  const c = chooseSamLine([SAM_LINES.filter(l => l.s === 'open' && !!l.needs?.includes('gun'))], ctx, samFacts(ctx, 'gun'), samMemoryOf(g), rnd);
   return c ? { text: c.text, id: c.l.id } : null;
 }
 
@@ -1276,7 +1214,7 @@ export interface Script {
 const scriptByTalk = new SideMap<Talk, Script | null>('dialogue.scriptByTalk');
 const forcedByTalk = new SideMap<Talk, string | null>('dialogue.forcedByTalk');
 /** QA: make this man's NEXT deal a named script (or null = the pools), whatever would have been dealt. Cleared by the deal it forces. */
-export function forceScript(talk: Talk, id: string | null) { scriptByTalk.delete(talk); forcedByTalk.set(talk, id); }
+export function forceScript(talk: Talk, id: string | null) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('forceScript', undefined, [talk, id]); if (__r !== RUST_PASS) return __r as any; } } scriptByTalk.delete(talk); forcedByTalk.set(talk, id); }
 /** the deal forced on this man and not yet made (a checkpoint carries it on: game/savestate.ts), undefined = none pending */
 export function forcedScriptOf(talk: Talk): string | null | undefined { return forcedByTalk.has(talk) ? forcedByTalk.get(talk)! : undefined; }
 /** the script this man's hold plays, if one has been dealt (read-only peek: never deals) */
@@ -1667,8 +1605,6 @@ function registerScriptLines() {
 // ================================================================================================================================================================
 export const HANDLER_TAG = 'handler';
 export const RADIO_REPLY_SECS = 1.7;
-/** seconds after the guards' own radio line that an edge-read beat waits (the strip shows three lines: theirs first, then hers, then his) */
-export const RADIO_EDGE_DELAY = 2.6;
 export const HANDLER_BEATS = ['server', 'drive', 'rack', 'alarm', 'lockdown', 'blackout', 'bodyKo', 'bodyDead'] as const;
 export type HandlerBeat = typeof HANDLER_BEATS[number];
 /** her line (h), his answer (s). {rack} = the mission rack's number. Dry; the joke is usually his age, her hours, or the building. A man found dead is not a joke beat.
@@ -1725,7 +1661,7 @@ function radioClear(g: Game): boolean { return !g.guards.some(x => x.state === '
 /** Sound a beat now (delay 0) or queue it `delay` seconds out (re-checked when it comes due). False if it will never sound: said already this run, the run is
  *  not live, or — for an immediate one — the moment is wrong (a fight, a man in his arm, another beat too close). Deterministic: the variant is dealt off the
  *  beat and the run's start, so a probe hears the same two lines every time and a player different ones most nights. */
-export function handlerBeat(g: Game, beat: HandlerBeat, delay = 0): boolean {
+export function handlerBeat(g: Game, beat: HandlerBeat, delay = 0): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('handlerBeat', undefined, [g, beat, delay]); if (__r !== RUST_PASS) return __r as any; } }
   const R = radioState(g);
   if (!radioLive(g) || R.done.has(beat)) return false;
   if (delay > 0) { if (!R.queue.some(q => q.beat === beat)) R.queue.push({ at: g.time + delay, beat }); return true; }
@@ -1738,20 +1674,6 @@ export function handlerBeat(g: Game, beat: HandlerBeat, delay = 0): boolean {
   g.msg(`radio: ${HANDLER_TAG} ▸ ${h.replace(/\{rack\}/g, rack)}`); g.audio.play('radio', null, 0.3, { rate: 1.12 });
   R.reply = { at: g.time + RADIO_REPLY_SECS, text: s.replace(/\{rack\}/g, rack) };
   return true;
-}
-/** Once a frame (updateAmbient): the edges she reacts to on her own — the floor going up a level, the lights dying, a body found (breathing or not) — queued a
- *  beat behind the guards' own call; queued beats coming due; and his reply when its moment comes (dropped, not delayed, if a fight broke out meanwhile). */
-function tickRadio(g: Game) {
-  const R = radioState(g);
-  const esc = escalationOf(g); if (esc > R.esc) handlerBeat(g, esc >= 2 ? 'lockdown' : 'alarm', RADIO_EDGE_DELAY); R.esc = esc;
-  const bo = g.blackout.active; if (bo && !R.blackout) handlerBeat(g, 'blackout', RADIO_EDGE_DELAY); R.blackout = bo;
-  let found = 0, ko = false; for (const x of g.guards) if (x.found) { found++; if (found > R.found && isBreathing(x)) ko = true; }
-  if (found > R.found) handlerBeat(g, ko ? 'bodyKo' : 'bodyDead', RADIO_EDGE_DELAY + 0.6); R.found = found;
-  for (let i = R.queue.length - 1; i >= 0; i--) { const q = R.queue[i]; if (g.time < q.at) continue; if (!radioLive(g) || R.done.has(q.beat)) { R.queue.splice(i, 1); continue; } if (handlerBeat(g, q.beat)) R.queue.splice(i, 1); else if (g.time - q.at > 20) R.queue.splice(i, 1); }   // (a beat that cannot find a quiet moment inside twenty seconds has missed it)
-  if (R.reply && g.time >= R.reply.at) {
-    const p = R.reply; R.reply = null;
-    if (radioLive(g) && radioClear(g) && !(g.player.bubble && g.time - g.player.bubble.t < g.player.bubble.dur)) { g.player.bubble = { text: p.text, t: g.time, dur: Math.min(2.4, Math.max(1.3, 0.9 + 0.025 * p.text.length)), radio: true }; g.msg(`radio: you ▸ ${p.text}`); }
-  }
 }
 
 // ================================================================================================================================================================
@@ -2000,62 +1922,12 @@ export function snatchLines(): string[] { return Object.values(SNATCH_LINES).fla
 interface AmbientState { next: number; run: AmbientRun | null; played: Map<string, number>; count: number; }
 const ambientByGame = new SideMap<object, AmbientState>('dialogue.ambientByGame');
 export function ambientState(g: Game): AmbientState { let S = ambientByGame.get(g); if (!S) { S = { next: -1, run: null, played: new Map(), count: 0 }; ambientByGame.set(g, S); } return S; }
-function ambientLive(g: Game): boolean { return g.aiEnabled && !g.quietUtility && !g.puppet && !g.touring && escalationOf(g) === 0 && !g.alarm.episode && !g.blackout.active && !men(g).some(pl => pl.holding || pl.down); }
-/** a calm patrolling staff man with nothing on his hands or his mind, not already talking, not held still by anybody's script */
-function chatty(g: Game, x: Guard): boolean { return x.team === 'guard' && !x.unit && x.state === 'patrol' && !x.held && !x.script && !x.task && !x.bodyDuty && !x.pinned && !x.hold && !x.leader && !x.post && x.awareness < 0.15 && !(x.bubble && g.time - x.bubble.t < x.bubble.dur + 1) && !hasHim(x, OWN.needs) && g.guards.includes(x); }   // (needsBusy: a man telling the floor he is off for a coffee, or away on one — game/needs.ts — is not stopping to chat)
-/** still fit to keep talking (the hold flag is ours by now) */
-function stillChatty(g: Game, x: Guard): boolean { return x.state === 'patrol' && !x.held && !x.script && !x.task && !x.bodyDuty && x.awareness < 0.3 && g.guards.includes(x); }
-function endAmbient(g: Game, S: AmbientState) { const r = S.run; if (!r) return; if (!r.held[0]) r.a.hold = false; if (!r.held[1]) r.b.hold = false; S.run = null; S.next = g.time + AMBIENT.cooldown; }
 /** A RESTART (game.ts restartEncounter): the pairs' clock starts over, as on a floor just stood up — the first chat is AMBIENT.firstAfter from the restart, and a
  *  conversation under way went with the old shift (left to the per-frame hook it would end a frame later and set the cooldown against the new one). It used to
  *  keep the `next` of the page's first frame: after twenty calm seconds and a restart the first pair to meet stopped to talk at once, where a freshly stood-up
  *  floor's walk on (tools/qa/restart-probes.ts). The played ledger stays on the office (and everywhere with words.ts off): each conversation once before any repeats, across
  *  restarts too. Off the office, under the dialogue pass, a pair is heard once a RUN, so there a restart clears it. */
 export function ambientRestart(g: Game) { const S = ambientByGame.get(g); if (!S) return; S.run = null; S.next = -1; if (WORDS.on && !isOffice(g.level)) S.played.clear(); }   // (words.ts: off the office a chat is heard once a RUN, so there the ledger is the run's — a load puts the file's back after this)
-/** the line of a pair as it will be said: its `own` wording off the office (words.ts), else its text */
-const pairSaid = (l: PairTalk['lines'][number], own: boolean) => own ? l.own ?? l.text : l.text;
-/** The one per-frame hook (guards.ts updateEscalation): the handler's radio, then the pairs — advance a conversation under way (or drop it the frame either
- *  man stops being a calm patrol), else look for two chatty men within AMBIENT.pairM with a clear line between them and start the least-played conversation. */
-export function updateAmbient(g: Game, dt: number) {
-  tickRadio(g);
-  const S = ambientState(g);
-  if (S.run) {
-    const r = S.run;
-    if (!ambientLive(g) || !stillChatty(g, r.a) || !stillChatty(g, r.b)) { endAmbient(g, S); return; }
-    for (const [me, him] of [[r.a, r.b], [r.b, r.a]] as const) { const c = me.char; c.bodyYaw = approachAngle(c.wantBody, Math.atan2(him.char.pos[0] - c.pos[0], him.char.pos[2] - c.pos[2]), AMBIENT.faceRate * dt); }   // half turned to each other while it lasts (the patrol's hold branch keeps their feet)
-    if (g.time < r.at) return;
-    if (r.i >= r.talk.lines.length) { endAmbient(g, S); return; }
-    const L = r.talk.lines[r.i++]; const who = L.who === 0 ? r.a : r.b;
-    const pad = r.pad;
-    const raw = pairSaid(L, WORDS.on && !isOffice(g.level));
-    const text = raw.replace(/\{Other\}/g, r.other ?? '').replace(/\{other\}/g, r.other ?? '').replace(/\{Code\}|\{code\}/g, pad?.code ?? '').replace(/\{PadDoor\}/g, pad ? pad.door[0].toUpperCase() + pad.door.slice(1) : '').replace(/\{padDoor\}/g, pad?.door ?? '');
-    g.say(who, text);
-    if (pad && /\{code\}/i.test(raw)) g.devices?.overhearSaid(g, who, pad.lockId);   // the digits are in the air: Sam has them if they carried to him (devices.ts overhear — the propagation, not a radius)
-    r.at = g.time + bubbleSecs(text) + AMBIENT.gap;   // (say's own bubble length, then a breath)
-    return;
-  }
-  if (!ambientLive(g)) { S.next = -1; return; }
-  if (S.next < 0) { S.next = g.time + AMBIENT.firstAfter; return; }
-  if (g.time < S.next) return;
-  S.next = g.time + 1;   // (look again in a second if nothing pairs up now)
-  const men = g.guards.filter(x => chatty(g, x));
-  for (let i = 0; i < men.length; i++) for (let j = i + 1; j < men.length; j++) {
-    const a = men[i], b = men[j];
-    if (v3.distXZ(a.char.pos, b.char.pos) > AMBIENT.pairM) continue;
-    if (g.col.solidBlocked([a.char.pos[0], 1.4, a.char.pos[2]], [b.char.pos[0], 1.4, b.char.pos[2]])) continue;
-    const third = g.guards.find(x => x !== a && x !== b && !x.unit && x.state !== 'dead' && !knownDown(g, a).has(x.callsign)) ?? null;
-    const K = g.devices?.padNear(a.char.pos) ?? null; const pad = K ? { code: K.def.code, door: doorName(K.door.def.name), lockId: K.def.name } : null;   // the pad they would mean (a level with none: no sticky-note talk)
-    const own = WORDS.on && !isOffice(g.level);   // (words.ts, off the office: the building's own chats are out, the tokens are asked of the line that will be SAID, and — three chats left — each is heard once a run: silence after them, not a loop)
-    const fits = AMBIENT_PAIRS.filter(p => (third || !p.lines.some(l => /\{other\}/i.test(pairSaid(l, own)))) && (pad || !p.lines.some(l => /\{code\}|\{padDoor\}/i.test(pairSaid(l, own)))) && !(own && (p.office || (S.played.get(p.id) ?? 0) >= 1)));
-    if (!fits.length) return;
-    fits.sort((p, q) => ((S.played.get(p.id) ?? 0) - (S.played.get(q.id) ?? 0)) || (hashStr(`${a.callsign}|${b.callsign}|${S.count}|${p.id}`) - hashStr(`${a.callsign}|${b.callsign}|${S.count}|${q.id}`)));
-    const talk = fits[0]; S.played.set(talk.id, (S.played.get(talk.id) ?? 0) + 1); S.count++;
-    const opener = hashStr(`${a.callsign}${b.callsign}${S.count}`) & 1 ? a : b; const other2 = opener === a ? b : a;
-    S.run = { a: opener, b: other2, talk, i: 0, at: g.time + 0.3, other: third?.callsign ?? null, pad, held: [opener.hold, other2.hold] };
-    opener.hold = true; other2.hold = true;
-    return;
-  }
-}
 
 // ================================================================================================================================================================
 // CHECKPOINTS (game/savestate.ts): the floor-wide line ledger, Sam's remark memory, the handler's radio state and the ambient pairs' ledger — plain data. A

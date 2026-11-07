@@ -172,6 +172,8 @@ export interface Headless {
   /** one frame exactly as main.ts steps it (minus rendering): game.update → camera → lights → box upload → input.endFrame. `follow` is what main.ts calls
    *  demoPos: the showcase tour's camera look-at for this frame (Demo.update's return, called BEFORE this) — the camera then follows it and drops the aim lead */
   step(dt: number, follow?: Vec3 | null): void;
+  /** n steps with none of the tool's code between them (the same as `step` n times) */
+  steps(n: number, dt: number, follow?: Vec3 | null): void;
   /** put the cursor on a world point (what the automation hooks' __mouse does after projecting) */
   cursorAt(p: [number, number, number]): boolean;
 }
@@ -201,6 +203,8 @@ let stoodBefore = false;
 export async function standUp(opts: { uploadEvery?: number; env?: any; level?: any; cast?: boolean; ch?: any; seed?: number | null; seats?: number; /** the address the game is stood up from, for the words standGame reads off it (`seats=2`) */ search?: string; /** stand the picture's keeper of the lights' reach masks up too (render/reachKeep.ts), as a page's engine has one, and step it once a frame: for the tools that read masks. Absent = none, and no mask is ever made */ reach?: boolean } = {}): Promise<Headless> {
   if (STANDUP_COLLECTS && stoodBefore) Bun.gc(true); stoodBefore = true;
   if (harnessProfile() !== STAND_AT_LOAD) throw new Error(`the stand was '${STAND_AT_LOAD}' when tools/qa/headless.ts loaded and is '${harnessProfile()}' now: TPS_PROFILE was set after the harness was imported (a static import loads before the file's first line). Set it before the import: \`const { standUp } = await import('./headless.ts')\` below the line that sets it`);
+  // (a game with no word stood after one under the word in the same process finds the process's dress rows as they were, BEFORE it is built: tools/blitz/rust-host.ts `dressDown`)
+  if ((globalThis as any).__tpsDressBack && !(await import('../blitz/word.ts')).resolve(STAND_AT_LOAD === 'frozen').word) (globalThis as any).__tpsDressBack();
   const ch = opts.ch ?? await (opts.cast ? loadCastCharacter() : loadCharacter());
   { const force = process.env.CUTBOXES ?? process.env.CUT_BOXES;   // CUTBOXES=1 | 0 in front of any headless tool forces the cut switch (CUT_BOXES is read too); a replay's env wins
     if (opts.env || force !== undefined) { const { cutConfig } = await import(`${ROOT}/src/scene/cut.ts`); cutConfig.on = opts.env ? !!opts.env.cutBoxes : /^(1|on|true)$/i.test(force!); }
@@ -238,15 +242,47 @@ export async function standUp(opts: { uploadEvery?: number; env?: any; level?: a
     step(dt: number, follow: Vec3 | null = null) {
       game.update(dt, input, cam, canvas);
       if (opts.reach) engine.reach.tick();   // (a page's engine steps its keeper of the reach masks once each render, on the clock where the frame has the planners' pace: here on the count, only where a tool asked for one, and never a real engine's, which steps its own)
-      { const me = game.hostSeat().view; cam.update(dt, follow ?? me.followPos(), follow || game.spectate >= 0 ? null : me.aimPoint); }   // (main.ts: demoPos ?? followPos, and no aim lead while the tour frames the shot)
+      { const me = game.hostSeat().view, look = (game as any).rustHost?.look?.();   // (a game that steps somewhere else, in a quiet run of steps: the camera's two inputs asked of it, tools/blitz/PLAY.md)
+        cam.update(dt, follow ?? look?.follow ?? me.followPos(), follow || game.spectate >= 0 ? null : look?.aim ?? me.aimPoint); }   // (main.ts: demoPos ?? followPos, and no aim lead while the tour frames the shot)
       engine.lights.update(dt, game.time);
       engine.world.dynamics = game.dynBoxes;
       if (frame++ % uploadEvery === 0) engine.world.upload();   // CPU pack + grid (what the cursor's raycast and the lasers read); the GPU writes go nowhere
       input.endFrame();
     },
+    // N STEPS WITH NONE OF THE TOOL'S CODE BETWEEN THEM. The same as calling `step` n times; a tool that says so lets a host whose game steps somewhere
+    // else (TPS_GAME, tools/blitz/PLAY.md) bring the game's state across once, as the run ends, where `step` brings it across after every tick.
+    steps(n: number, dt: number, follow: Vec3 | null = null) { const H = (game as any).rustHost, q = n > 1 && !!H?.quietBegin?.();
+      try { for (let i = 0; i < n; i++) W.step(dt, follow); } finally { if (q) H.quietEnd(); } },
     cursorAt(p) { const [sx, sy, front] = cam.project(p, canvas.clientWidth, canvas.clientHeight); if (front) { input.mouseX = sx; input.mouseY = sy; } return front; },
-    snapshot(label = 'harness', force = true) { return saveState(game, { label, kind: 'harness', force }); },
-    restore(s) { loadState(game, s); cam.target = v3.copy(game.player.char.pos); input.keys.clear(); input.pressed.clear(); input.buttons = 0; input.clicked = 0; },
+    // (a game that steps somewhere else, TPS_GAME: the host keeps that game beside the file, and the same file put back unchanged is that game standing again; tools/blitz/PLAY.md)
+    snapshot(label = 'harness', force = true) { const s = saveState(game, { label, kind: 'harness', force }); (game as any).rustHost?.keptFor?.(s); return s; },
+    restore(s) { if (!(game as any).rustHost?.backFor?.(s)) loadState(game, s); cam.target = v3.copy(game.player.char.pos); input.keys.clear(); input.pressed.clear(); input.buttons = 0; input.clicked = 0; },
   };
+  // TPS_GAME in front of any headless tool (tools/blitz/PLAY.md): the game stood here is a PUPPET of the Rust game, which steps in its place from the first
+  // `game.update` (`rust`; `audit`), or it is stood the same way and stepped by the TypeScript tick (`ts`: the other side of a tally). Unset: nothing is loaded.
+  // WHICH is tools/blitz/word.ts's to say, the one switch (the word asked for, its table, a frozen run forced to the TypeScript tick).
+  { const S = (await import('../blitz/word.ts')).stand(STAND_AT_LOAD === 'frozen'); if (S.word) await (await import(RUST_HOST)).standRust(game, S.word); }
+  // QA_PERTURB=<seed> in front of any headless tool: a seeded stream of the things a person does between two ticks (orders, throws, kills, saves and loads)
+  // laid over the tool's own play (tools/blitz/perturb.ts; PLAY.md, "The fuzz"). Unset: nothing is loaded.
+  if (process.env.QA_PERTURB) await (await import('../blitz/perturb.ts')).lay(W);
   return W;
 }
+
+// (the host is named by a value, not a literal: the tools' type check (tools/qa/tsconfig.json) then stops at this file and does not walk into the state bridge's
+// generated files behind the host, which it does not own)
+const RUST_HOST: string = '../blitz/rust-host.ts';
+
+// A TOOL SEEDS THE GAME'S STREAM AFTER THE GAME IS STOOD. With no word a game the harness stood has no die of its own and draws `Math.random` (src/math/dice.ts), so
+// a tool names the stream by putting a seeded die in `Math.random`'s place: `Math.random = seeded(7)`. Under any word (tools/blitz/PLAY.md) THE GAME OWNS ITS DIE,
+// as the page's game does, and the Rust tick cannot draw a function of the tool's: such a site says what it means through these two instead.
+/** `Math.random = die`, and under a word the game's own die put at the start of `seed`'s stream (`die` should be the seeded die of the same seed: the game then
+ *  rolls the numbers it rolled with no word, where the tool draws none itself). With no word this is the assignment and nothing else. Returns the put-back. */
+export function seedGame(game: any, die: () => number, seed: number): () => void {
+  const was = Math.random; Math.random = die;
+  if (game?.gameWord) { const d = game.dice;
+    if (d) { d.s = seed | 0; d.n = 0; d.seed = seed >>> 0; d.sys = die; }   // (in place: the die's word and count may live in the game's block; `sys`: the game draws its own die only while Math.random is the function its die knows, dice.ts)
+    game.rustHost?.seedDie(seed); }
+  return () => dieBack(game, was); }
+/** `Math.random = was` (a die put back after a stretch under the tool's own), and under a word the game goes on with its OWN die, where with no word it goes back
+ *  to drawing `was` */
+export function dieBack(game: any, was: () => number): void { Math.random = was; if (game?.gameWord && game.dice) game.dice.sys = was; }

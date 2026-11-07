@@ -32,6 +32,7 @@ import { gpuFx } from './particleFx';
 import { SNOW_LOOK, snowLevel } from './weatherKinds';
 import { levelNameOf } from '../scene/levelLoad';
 import { civiliansShown } from './civilians';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 /** The numbers (judged on software-rendered stills only, never seen moving — the maintainer's to move; `__snow.breath` on the console, live with the next breath).
  *  Authored data, not player switches. */
@@ -123,8 +124,6 @@ export function breathStats(g: Game): BreathStats {
 }
 /** reseed (probes / captures: same seed → the same breaths), every man's rhythm dealt again */
 export function seedBreath(g: Game, n: number) { const s = stateOf(g); s.seed = n >>> 0; s.men = new SideMap(); s.stats = fresh(); if (g.engine.hostBooks) g.engine.hostBooks.breath = undefined; }
-/** does breath steam here (the switch, on a level built for snow — it asks nothing of the lying snow's surface)? */
-export function breathOn(g: Game): boolean { return SNOW_LOOK.breath && snowLevel(levelNameOf(g.level)); }
 
 function manOf(s: BreathState, c: Character): Man {
   let m = s.men.get(c);
@@ -153,7 +152,7 @@ function mouthOf(c: Character): { pos: Vec3; dir: Vec3 } {
 }
 
 /** Once a frame, after the characters and the wind (game.ts, beside the rain / snow recycler). Picture only. */
-export function updateSnowBreath(g: Game, dt: number) {
+export function updateSnowBreath(g: Game, dt: number) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('updateSnowBreath', undefined, [g, dt]); if (__r !== RUST_PASS) return __r as any; } }
   const st = stateOf(g); const S = st.stats; const K = SNOWBREATH;
   const P: Particles | null = gpuFx(g);
   const why = !SNOW_LOOK.breath ? 'the switch is off' : !snowLevel(levelNameOf(g.level)) ? 'not a snow level' : '';

@@ -16,7 +16,6 @@ import { hashStr } from '../math/dice';
 
 interface Tidy { pairs: [decal: number, walls: number[]][]; flags0: number[]; serial: number; rest?: boolean }
 const tidies = new WeakMap<object, Tidy | null>();
-const HIDE = BoxFlag.NoPrimary | BoxFlag.NoShadow;
 
 /** the wall decals of a level and the wall(s) each lies on: a thin upright NoShadow sheet standing on the floor, flat against a BROAD face of a solid box (never
  *  the end face of a wall that meets its plane at a corner); a hand-laid sheet may run along several wall boxes. (A sheet on the GROUND is not this file's: what lies flat follows its ground wet and dry in

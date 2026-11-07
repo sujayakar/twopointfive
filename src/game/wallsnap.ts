@@ -20,9 +20,9 @@
 //
 // This file is the table and its arithmetic only (nothing of the game is imported: src/game is one import cycle); the hold's code is where the hold is.
 
-const clamp01 = (x: number) => x < 0 ? 0 : x > 1 ? 1 : x;
 
 /** WALLSNAP.leanGun as the page has it (m) */
+import { goneWithTick } from './crossing';
 export const LEAN_GUN_M = 0.42;
 export const WALLSNAP = {
   on: false,
@@ -106,22 +106,5 @@ export const WALLSNAP = {
 };
 
 /** seconds the take runs for a glide of `dist` metres and a turn of `turn` radians */
-export function wsTakeSecs(dist: number, turn: number): number {
-  const W = WALLSNAP; const t = W.takeBase + W.takePerM * dist + W.takePerTurn * Math.abs(turn) / Math.PI;
-  return Math.min(W.takeMax, Math.max(W.takeMin, t)) * (W.slow ? Math.max(0.25, W.slowTake) : 1);
-}
-/** How far out (m between his body and the face) the key-less take's clock starts for a man closing on the face at `into` m/s. pressNear, and with pressRun
- *  further for a man who would cover more than that inside the wait: pressSecs of his pace short of pressFlow, so the wait is done as he gets there (a walk
- *  of 1.55 m/s is inside pressNear either way; a sprint of 4.7 is counted from 1.05 m). */
-export function wsPressNear(into: number): number { const W = WALLSNAP; return W.pressRun ? Math.max(W.pressNear, W.pressFlow + W.pressSecs * Math.max(0, into)) : W.pressNear; }
-/** ease-out by power p: 0 → 0, 1 → 1, fastest at the start */
-export function wsEase(s: number, p: number): number { return 1 - Math.pow(1 - clamp01(s), p); }
-/** the landing's settle, t seconds after the back arrived: 0 → 1 at hitPeak → gone by ~6 × that */
-export function wsHit(t: number): number { const a = WALLSNAP.hitPeak; return t < 0 || t > 8 * a ? 0 : (t / a) * Math.exp(1 - t / a); }
+export function wsTakeSecs(dist: number, turn: number): number { return goneWithTick('wsTakeSecs') as any; }
 
-/** Where the cursor's point is about a wall's end, in the corner's own frame: `a` on along the wall past the end (+ = beyond it), `b` off the plane (+ = the
- *  room he stands in, − = behind the wall). Returns the angle about the corner from the wall's own line carried on, + = round behind it (degrees, −180‥180),
- *  and the distance from the corner. */
-export function wsCornerAngle(a: number, b: number): { deg: number; dist: number } { return { deg: Math.atan2(-b, a) * 180 / Math.PI, dist: Math.hypot(a, b) }; }
-/** The angle (degrees, as wsCornerAngle) up to which a man standing `back` short of the end and `off` the plane already sees past the corner without moving */
-export function wsSeenDeg(back: number, off: number): number { return Math.atan2(off, back) * 180 / Math.PI; }
