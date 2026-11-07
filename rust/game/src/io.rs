@@ -5619,4 +5619,4 @@ mod bridge_test {
     /// BRIDGE_BLOB=<a file of tools/blitz/export.ts> cargo test --lib bridge_round_trip
     #[test] fn bridge_round_trip() { let Ok(p) = std::env::var("BRIDGE_BLOB") else { return; }; let t = std::thread::Builder::new().stack_size(1 << 28).spawn(move || { let b = std::fs::read(&p).unwrap(); let g = super::import(&b); let c = super::export(&g); { let mut h = super::import(&b); super::import_into(&mut h, &b); assert!(super::export(&h) == b, "import_into differs"); } if let Ok(out) = std::env::var("BRIDGE_OUT") { std::fs::write(out, &c).unwrap(); } assert!(c == b, "the bytes differ: {} against {}, first at {:?}", c.len(), b.len(), c.iter().zip(b.iter()).position(|(x, y)| x != y)); }).unwrap(); t.join().unwrap(); }
 }
-pub const LAYOUT: u32 = 344637842;
+pub const LAYOUT: u32 = 3276491727;
