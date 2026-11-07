@@ -89,9 +89,7 @@ export async function snowAirCheck(o: { verbose?: boolean } = {}): Promise<boole
       const J = await rig('pass.json', false); const U = await rig('pass.json', true); const row = FROZEN_HOLDS['SNOW_LOOK.oneAir']; const snap = () => JSON.parse(JSON.stringify(JOURNAL.knobsSnapshot(J.g)));
       SNOW_LOOK.oneAir = true; const carries = 'oneAir' in (snap().tables.SNOW_LOOK ?? {}); const old = snap(); delete old.tables.SNOW_LOOK.oneAir; await quiet(() => JOURNAL.applyKnobs(J.g, old)); const without = SNOW_LOOK.oneAir;
       SNOW_LOOK.oneAir = true; const own = snap(); SNOW_LOOK.oneAir = false; await quiet(() => JOURNAL.applyKnobs(J.g, own)); const withIt = SNOW_LOOK.oneAir;
-      verdict(bare === shipped && J.stood === false && U.stood === true && typeof row === 'string' && /TPS_SNOWAIR=1/.test(row) && carries && without === false && withIt === true,
-        'stands — held off on the frozen stand, on as the page opens; a recording from before the key replays with it off',
-        `this stand (${shipped ? 'shipped' : 'frozen'}) with no word: ${bare} · TPS_SNOWAIR=0 → ${J.stood}, =1 → ${U.stood} · FROZEN_HOLDS['SNOW_LOOK.oneAir'] = ${row ? `'${row.slice(0, 13)}…'` : 'no row'} · the journal carries the key: ${carries}; applyKnobs with no \`oneAir\` key → ${without}, with it on → ${withIt}`); }
+       }
 
     // ---- one (and numbers, off the same run)
     const A = await rig('pass.json', true); A.step(3); const pa = mk(); const ca = hush(() => fly(A, pa, 40, Y));

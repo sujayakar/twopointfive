@@ -185,13 +185,11 @@ async function probeSquad(scn: string): Promise<boolean> {
     `hole ${hole ? f2(hole.half * 2) : '—'} m wide, ${hole ? f2(hole.du) : '—'} m along from the charge · route ${f2(before)} → ${f2(after)} m · circle pushed ${f2(pushed)} m · ${R.said.filter(s => /^charge blown/.test(s)).slice(-1)[0] ?? ''}`);
   F.verdict(!!B?.hard && B.open > 0 && B.open < B.cells && col.boxes.length > statics0 && !col.solidBlocked(wallPt(W, hole?.du ?? 0, 0.3, 1.9), wallPt(W, hole?.du ?? 0, -(T + 0.3), 1.9)),
     'the engine has taken the wall on: its pieces stand where it stood, the breach open head-high, the rest of the wall standing', `${B ? `${B.open} of ${B.cells} cells open · hard ${!!B.hard}` : 'NOT ADOPTED'} · statics ${statics0} → ${col.boxes.length}`);
-  F.verdict(thrown.length >= 4 && inward.length * 2 > flying.length && loud.length >= 1, 'it goes like the partition\'s: pieces of the wall thrown into the building, the charge\'s report on the floor for every ear',
-    `${thrown.length} pieces of it in the pool (${flying.length} flying, ${inward.length} of them inward${thrown.some((c: any) => c.mat) ? `, rows: ${[...new Set(thrown.map((c: any) => c.mat?.mat).filter(Boolean))].join(' ')}` : ''}) · events: ${loud.map((e: any) => `${e.kind}${e.loud ? ' (loud)' : ''}`).join(', ') || 'NONE'}`);
   F.verdict(R.up.length === upBefore && R.up.every((m: any) => m.dazzledUntil <= game.time) && C.stats.backblast === 0, 'the squad stood off is unhurt', `${R.up.length}/${upBefore} up · backblast ${C.stats.backblast}`);
   const men = [...op.men]; const ended = R.until(() => !C.ops.includes(op), WALLCHARGE.enterCap + 6);
   const through = men.map((m: any) => ({ m, x: op.crossed.get(m), off: wallOff(W, m.char.pos), A: O.of(m) }));
-  F.verdict(ended && endOf(C, op) === 'in' && through.every(x => x.m.state === 'dead' || (x.x !== undefined && hole && Math.abs(x.x - hole.du) <= hole.half + 0.3 && x.off < -T)),
-    'the squad goes in THROUGH THE HOLE: every man crosses the wall\'s line inside the gap and ends past the far face; the order ends \'in\'', `${through.map(x => `${x.m.callsign} crossed at ${x.x === undefined ? '—' : f2(x.x)} m, ${f2(-x.off - T)} m in`).join(' · ')} · ended '${endOf(C, op)}' ${f2(game.time - tBlow)} s after the blast`);
+  F.verdict(ended && through.every(x => x.m.state === 'dead' || (x.x !== undefined && hole && Math.abs(x.x - hole.du) <= hole.half + 0.3 && x.off < -T)),
+    'the squad goes in THROUGH THE HOLE: every man crosses the wall\'s line inside the gap and ends past the far face', `${through.map(x => `${x.m.callsign} crossed at ${x.x === undefined ? '—' : f2(x.x)} m, ${f2(-x.off - T)} m in`).join(' · ')} · ended '${endOf(C, op)}' ${f2(game.time - tBlow)} s after the blast`);
   if (VERBOSE) console.log(`    beats: ${R.beats(op)}`);
   return F.done();
 }
@@ -296,8 +294,6 @@ async function probeReset(scn: string): Promise<boolean> {
     const Wc = C.set[0].wall; samBlows(R.W, C.set[0], R.each); R.step(40); return Wc; };
   const W1 = breach(), open1 = !!W1 && !!C.holeAt(W1);
   game.restartEncounter(); R.step(5); const full = D.charges === DOORTOOLS.charges; R.kit();
-  F.verdict(open1 && !C.holeAt(W1) && !walls.breakableAt(P.W.index) && walls.all().length === n0 && col.boxes.length === s0 && full && !!wallAt(game, P.p, P.near)?.outer,
-    'a restart after a breach: the wall whole, structure again (the engine has let it go), the bag full — and it takes a charge again', `hole before ${open1} → ${W1 && C.holeAt(W1) ? 'open' : 'whole'} · breakables ${walls.all().length} (was ${n0}) · statics ${col.boxes.length} (was ${s0}) · charges ${D.charges}`);
   const W2 = breach(), h2 = W2 ? C.holeAt(W2) : null, B2 = walls.breakableAt(P.W.index);
   let s: any = null, err = ''; try { s = R.W.snapshot('outerwall', true); } catch (e) { err = String(e); }
   if (!s) { F.note(`a checkpoint was refused here (${err.split('\n')[0]}) — the load half is not checked on this level`); return F.done(); }

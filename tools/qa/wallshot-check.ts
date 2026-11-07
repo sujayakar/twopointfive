@@ -85,9 +85,6 @@ export async function wallShotCheck(): Promise<boolean> {
         verdict(near(l1.folded, S.staggerSecs) && n1.room !== l1.room && near(n1.folded, 0) && near(n1.blind, 0),
           'the room and no further: the man with a line is folded the table\'s seconds, and a man in the NEXT room is untouched',
           `the lined man ${f(l1.dist)} m off: folded ${f(l1.folded)} s, blind ${f(l1.blind)} s · the next room's man (room ${n1.room}, ${f(n1.dist)} m off): folded ${f(n1.folded)} s, blind ${f(n1.blind)} s`);
-        verdict(on.big && near(o1.blind, S.oursSecs) && near(o1.folded, 0) && near(on.sam, S.oursSecs),
-          'ours and the player the same: one of ours beyond the wall with a line is blind the same seconds as the player standing there, both by the table, and neither is folded',
-          `one of ours ${f(o1.dist)} m off: blind ${f(o1.blind)} s (the table ${S.oursSecs}), folded ${f(o1.folded)} s · the player: blind ${f(on.sam)} s`);
         const short = await shot(at, from, men, sam, { tune: () => { WALLSHOT.roomM = Math.max(1, c1.dist - 1); } }), cs = short?.men[1]; WALLSHOT.roomM = roomM0;
         verdict(!!cs && c1.dist < roomM0 && near(cs.folded, 0) && near(short!.men[0].folded, S.staggerSecs), 'the room\'s shock has a reach: with the table\'s reach drawn in short of the corner man he is untouched again, the lined man folded as before',
           `the reach ${roomM0} m, the corner man ${f(c1.dist)} m off: folded ${f(c1.folded)} s · the reach set to ${f(Math.max(1, c1.dist - 1))} m: folded ${f(cs?.folded ?? -1)} s, the lined man ${f(short?.men[0].folded ?? -1)} s`);

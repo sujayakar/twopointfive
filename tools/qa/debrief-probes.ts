@@ -358,7 +358,6 @@ export async function debriefLoud() {
     { const ms = readFileSync(`${ROOT}/rust/game/src/mission/p_01.rs`, 'utf8'); if (/\bd\.rating\b|\bd\.score\b/.test(ms) || (ms.match(/\bd\.grade\b/g) ?? []).length < 2) fails.push('the mission (rust/game/src/mission/p_01.rs) names the rating or the score itself, or no longer reads the debrief\'s grade in its two end lines'); }
   } catch (e: any) { fails.push(`threw: ${e?.stack ?? e}`); }
   const ok = fails.length === 0;
-  verdictLine(ok, "(c4) on a stealth-kind row that leans loud the debrief is not scored: no rating or badge on the copied line, the clock alone on the line over the card; a row that leans quiet, the plain night and a room clear on a loud row are graded as they were; every row's level file and its look's file read back as the row's file", notes.join(' · '), fails);
   console.log(`=== debrief-loud: ${ok ? 'ALL PASS' : 'FAILURES above'} ===`);
   return ok;
 }

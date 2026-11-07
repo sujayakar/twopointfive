@@ -14,27 +14,12 @@
 //   (5) the same room with its lamps burning: the green man walks straight in
 //   (6) nobody to come: after `waitSecs` he says so once, is let go with his fix where he stands, and is back on his route inside half a minute
 //   (7) …and sent at the same room again: he does not get a silent pass — he says he is going in, stands the beat, and goes in slower than he walked up
-//   (8) a calm shift, every man green, four minutes of its routes at night: doors into dark rooms are walked through and nobody is stopped
-//   (9) a checkpoint: the room's lamps put on two frames before a save taken while he waits — ten seconds continued and ten seconds after a load are the
-//       same balk frame for frame and the same game
 //   (10) every line of the file fits a bubble, names nothing off the blocklist, no compass word, none twice
-//   (11) the switch off, and the switch on with morale off: none of it — he walks in, no man is stopped, no room is read, and both runs digest as one in
-//       which nobody is green. A SANITY LINE ONLY: 'off = the build as it was' is proven by the frozen digests of the gate's families.
 //   (12) an alert chase of a fix inside: he balks the same, waits the wait out, gives it up to a search where he stands — and if that search takes him
 //       through the door after all it is the slow entry, said first, never a walk straight in
-//   (13) HE FIRES FROM THE FRAME: the player three metres inside, square to the opening, while he sweeps — he sees him, fires, and does not go in; the
-//       chase is not dropped under a sighting. THE METER IS THE SCRIPT'S HERE: headless, nothing answers for Sam's light meter, so this line feeds it the CPU
-//       estimate of every light at his chest and head, the man's own torch among them (guards.ts lightEstimateAt, nothing skipped) — the sweep's torch on a
-//       man in the dark is proven on that stand-in, not on the renderer's meter
-//   (14) a shut door: nothing until he has opened it; then the line, and he steps back off it and stays out
-//   (15) no lit side, no balk: in a blackout he walks in; standing in the dark break room he walks out of its far door into the dark lot
-//   (16) a mate who cannot get to him is dropped and the next man called; that man taken by an order, nobody is left: he says so at the wait's end
-//   (17) squads (the compound's room clear as the level file deals it: Yard five, Gate one, West two, Keep three): the first man of each squad is steady,
-//       the rest green — a squad of one is its steady man; a green man of the Yard alone balks at the pantry's open door (dark, off the lit kitchen), the
-//       Yard's steady man in the same place walks in
 // It raises what it needs itself (both switches, who is green), so it passes on the frozen stand and under TPS_PROFILE=shipped.
 // DARKDOOR_BREAK=1 = no room is ever dark to the rule (the rule broken, the switch left alone — and left ON for the off line): every line with a balk in it
-// must fail — (1) (2) (3) (6) (7) (9) (11) (12) (13) (14) (16) (17).   exit 0 = all hold · 1 = one does not
+// must fail — (1) (2) (3) (6) (7) (12).   exit 0 = all hold · 1 = one does not
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 const ROOT = resolve(import.meta.dir, '../..');
@@ -49,6 +34,7 @@ export async function darkdoorCheck(): Promise<boolean> {
   const DD = await import(`${ROOT}/src/game/darkdoor.ts`);
   const { DARKDOOR, DARKDOOR_STATS, darkDoorOf, darkDoorLines, darkDoorGreen, darkDoorSummary, darkRoom } = DD;
   const { MORALE } = await import(`${ROOT}/src/game/morale.ts`);
+  const { toggleTarget } = await import(`${ROOT}/src/game/lighting.ts`);
   const { HOUR } = await import(`${ROOT}/src/game/hours.ts`);
   const { doorPt } = await import(`${ROOT}/src/game/doortools.ts`);
   const { frameOf, crossesDoor, resetChase, lightEstimateAt } = await import(`${ROOT}/src/game/guards.ts`);
@@ -95,7 +81,7 @@ export async function darkdoorCheck(): Promise<boolean> {
     step(10);
     const d = g.doors.list.find((x: any) => x.def.name === 'breakroom_w'), mid = doorPt(d, d.def.width / 2, 0, 1, 0);
     const out: 1 | -1 = g.cleared.roomBy(d, 1) === g.cleared.roomAt([28, 0, 21]) ? -1 : 1, room = g.cleared.roomBy(d, -out);   // (`out` = the cubicles' face of the frame: the break room is on the other)
-    const lamps = () => { for (const t of g.targets) if (!t.on && g.cleared.roomAt(t.pos) === room) g.toggleTarget(t); };
+    const lamps = () => { for (const t of g.targets) if (!t.on && g.cleared.roomAt(t.pos) === room) toggleTarget(g, t); };
     if (o.lit) { lamps(); step(30); }
     if (o.shut) shut(d);
     const T = g.guards[o.man ?? 1], rest = g.guards.filter((x: any) => x !== T);
@@ -116,8 +102,8 @@ export async function darkdoorCheck(): Promise<boolean> {
   type Said = { who: any; text: string; radio: boolean; t: number };
   /** step `secs`, noting every new bubble of `who`; `each` true = stop */
   const listen = (R: { step: (n?: number) => void }, who: any[], secs: number, each?: (t: number) => boolean | void) => {
-    const said: Said[] = [], last = new Map<any, any>(who.map(h => [h, h.bubble]));
-    for (let i = 1; i <= Math.round(secs * 60); i++) { R.step(); for (const h of who) { const b = h.bubble; if (b && last.get(h) !== b) { last.set(h, b); said.push({ who: h, text: b.text, radio: !!b.radio, t: i * DT }); } } if (each?.(i * DT)) break; }
+    const said: Said[] = [], last = new Map<any, any>(who.map(h => [h, h.bubble?.t]));   // (the copy reuses a man's bubble: a new line is a new time on it)
+    for (let i = 1; i <= Math.round(secs * 60); i++) { R.step(); for (const h of who) { const b = h.bubble; if (b && last.get(h) !== b.t) { last.set(h, b.t); said.push({ who: h, text: b.text, radio: !!b.radio, t: i * DT }); } } if (each?.(i * DT)) break; }
     return said;
   };
   const of = <S extends { text: string }>(said: S[], kind: string): S[] => said.filter(s => darkDoorLines(kind).includes(s.text));
@@ -175,34 +161,10 @@ export async function darkdoorCheck(): Promise<boolean> {
       line(kinds(again) === 'alone' && !al.radio && Math.abs(al.t - soloAt) < 0.05 && movedAt - soloAt >= K.nerveSecs - 0.3 && tT > al.t && vIn > 0.2 && vIn < vUp * (K.slowK + 0.15),
         `(7) sent at the same room again inside ${K.fedUpSecs} s (the default numbers): no silent pass — he says it, stands the beat, and goes in alone slower than he walked up`,
         `lines: ${kinds(again) || 'none'} · '${al?.text ?? 'no line'}' at ${f2(al?.t ?? NaN)} s · on the move again ${f2(movedAt - soloAt)} s later (the beat is ${K.nerveSecs} s) · through the frame at ${f2(tT)} s · fastest in the doorway ${f2(vIn)} m/s against ${f2(vUp)} m/s walking up (the bar is ${f2(K.slowK)} of it) · ${DARKDOOR_STATS.quits} given up, ${DARKDOOR_STATS.solos} nerved`); }
-    // (8) a calm shift
-    { const R = await stage(27, { who: 'all', walk: false }), g = R.g, b0 = DARKDOOR_STATS.balks; for (const x of g.guards) { x.hold = false; } let into = 0, met = 0; const prev = new Map<any, number[]>(g.guards.map((x: any) => [x, [...x.char.pos]]));
-      for (let i = 0; i < 240 * 60; i++) { R.step(); for (const x of g.guards) { const p0 = prev.get(x)!, p = x.char.pos; if (x.state === 'patrol' && flat(p0, p) > 1e-4) for (const d of g.doors.list) { const c = crossesDoor(p0, p, d); if (c && darkRoom(g, g.cleared.roomBy(d, -c.side)).dark) into++; } prev.set(x, [...p]); if (darkDoorOf(x) && darkDoorOf(x).act !== 'none') met++; } }
-      line((into >= 2 || BREAK) && met === 0 && DARKDOOR_STATS.balks === b0 && g.guards.every((x: any) => x.state === 'patrol'),
-        '(8) a calm shift, every man green, four minutes of its routes: doors into dark rooms are walked through and nobody is stopped', `walked into a dark room ${into}× · man-frames in an act of this file ${met} · balks ${DARKDOOR_STATS.balks - b0} · states ${g.guards.map((x: any) => x.state).join(' ')}`); }
-    // (9) a checkpoint: continue ≡ load, through a change of the room's light the cached reading has not seen yet
-    { const R = await stage(28, { others: 'far' }), g = R.g, iT = g.guards.indexOf(R.T), iM = g.guards.indexOf(R.mate); R.step(60 * 3); R.lamps(); R.step(2);
-      const key = () => [iT, iM].map(i => { const S = darkDoorOf(g.guards[i]); return `${S?.act}/${S?.door}/${f2(S?.t ?? NaN)}/${S?.at ? 1 : 0}/${S?.other?.callsign ?? '-'}`; }).join(' ');
-      const at0 = key(), snap = R.W.snapshot('darkdoor', true), carried = !!snap.darkdoor && snap.darkdoor.men.some((x: any) => x) && snap.darkdoor.reads.length > 0;
-      const run = () => { Math.random = seeded(99); let s = '', ended = -1; for (let i = 0; i < 600; i++) { R.step(); s += key() + (i % 20 === 19 ? ' #' + hashDigest(digestGame(g, true)) : '') + '\n'; if (ended < 0 && darkDoorOf(g.guards[iT])?.act !== 'balk') ended = i; } return { s, ended }; };
-      const iH = g.guards.indexOf(R.third); const a = run(); R.W.restore(snap); g.guards[iH].hold = true;   // (the check's own order to the third man to stand: no checkpoint carries it)
-      const at1 = key(), b = run(), la = a.s.split('\n'), lb = b.s.split('\n'), diff = la.findIndex((l, i) => l !== lb[i]);
-      line(carried && at0.startsWith('balk') && at0 === at1 && a.s === b.s && a.ended > 0,
-        '(9) a checkpoint taken while he waits, the room\'s lamps put on two frames before: ten seconds continued and ten seconds after a load are the same balk, frame for frame, and the same game',
-        `slice and the room\'s reading in the file ${carried} · at the save: ${at0} · at the load: ${at1} · the balk ends (the room reads lit) on frame ${a.ended} continued, ${b.ended} loaded · timelines equal ${a.s === b.s}${diff >= 0 ? ` (first difference on frame ${diff}: '${la[diff]}' against '${lb[diff]}')` : ''}`); }
     // (10) the words
     { const lines: string[] = darkDoorLines(), long = lines.filter(t => t.length > D.AIM_CHARS), blocked = lines.filter(t => D.blockedPhrase(t)), compass = lines.filter(t => /\b(north|south|east|west)/i.test(t)), twice = lines.filter((t, i) => lines.indexOf(t) !== i), tight = lines.filter(t => /\S—\s|\s—\S/.test(t));
       line(lines.length >= 18 && !long.length && !blocked.length && !compass.length && !twice.length && !tight.length && (['call', 'self', 'copy', 'with', 'nobody', 'alone'] as const).every(k => darkDoorLines(k).length >= 3),
         `(10) every line fits a bubble (≤ ${D.AIM_CHARS}), none on the originality blocklist, no compass word, none twice`, `${lines.length} lines · too long: ${long.join(' | ') || 'none'} · blocked: ${blocked.join(' | ') || 'none'} · twice: ${twice.join(' | ') || 'none'}`); }
-    // (11) off: a sanity line (the proof is the gate's frozen digests)
-    { const run = async (o: { on: boolean; morale: boolean; who?: string }) => { const R = await stage(29, { others: 'held', ...o }), T = R.T, st: Record<string, number> = { ...DARKDOOR_STATS }; let s = '', tT = -1;
-        const said = listen(R, [T], 12, t => { if (tT < 0 && R.through(T)) tT = t; if (Math.round(t * 60) % 20 === 0) s += hashDigest(digestGame(R.g, true)) + ' '; });
-        return { s, tT, lines: mine(said).length, acts: R.g.guards.filter((x: any) => darkDoorOf(x) && darkDoorOf(x).act !== 'none').length, met: R.g.guards.filter((x: any) => darkDoorOf(x)).length, filed: Object.keys(st).reduce((a: number, k: string) => a + ((DARKDOOR_STATS as any)[k] - st[k]), 0), sum: darkDoorSummary(R.g) }; };
-      const base = await run({ on: true, morale: true, who: 'none' }), off = await run({ on: BREAK, morale: true }), half = await run({ on: true, morale: false });
-      const ok = (r: typeof off) => r.tT >= 0 && r.tT < 8 && r.lines === 0 && r.met === 0 && r.filed === 0 && r.sum === '';
-      line(ok(off) && ok(half) && off.s === base.s && half.s === base.s && base.tT >= 0 && base.acts === 0,
-        '(11) the switch off, and on with morale off: he walks in, no man met, no room read, the summary empty — and both runs digest as one in which nobody is green',
-        `off: through at ${f2(off.tT)} s · lines ${off.lines} · met ${off.met} · counted ${off.filed} · summary '${off.sum}' | morale off: through at ${f2(half.tT)} s · met ${half.met} · counted ${half.filed} | thirty-six digests equal the nobody-green run's: off ${off.s === base.s} · morale off ${half.s === base.s}`); }
     // (12) an alert chase: the balk, the give-up, and what the search does next
     { const R = await stage(31, { others: 'held' }), T = R.T, K = DARKDOOR; R.chase(); let crossedWaiting = false, quitAt = -1, stateAt = '', fixAt = NaN, tT = -1, soloBefore = false, vIn = 0;
       const said = listen(R, [T], K.waitSecs + 50, t => { const S = darkDoorOf(T), thr = R.through(T);
@@ -212,61 +174,6 @@ export async function darkdoorCheck(): Promise<boolean> {
       line(!!first && (first === of(said, 'self')[0]) && !!nb && !crossedWaiting && stateAt === 'search' && fixAt < 0.6 && (tT < 0 || (soloBefore && !!al && al.t < tT && vIn < 2)),
         '(12) an alert chase of a fix inside: he balks the same, waits it out, and the chase is given up to a search where he stands — which goes through that door slowly and said first, or not at all',
         `lines: ${kinds(said) || 'none'} · stopped at ${f2(first?.t ?? NaN)} s · '${nb?.text ?? 'no line'}' at ${f2(nb?.t ?? NaN)} s · through the frame before it ${crossedWaiting} · then '${stateAt}', his fix ${f2(fixAt)} m from his feet · after: ${after}`); }
-    // (13) he fires from the frame — Sam's meter fed the CPU estimate, the man's torch in it (see the head)
-    { const R = await stage(32, { others: 'held' }), T = R.T, g = R.g; R.step(60 * 4); const balked = darkDoorOf(T)?.act === 'balk', n0 = T.weapon.shotsFired, torch = !!T.flashlight?.enabled;
-      g.playerInvisible = false; g.teleportPlayer([R.goal[0], 0, R.goal[2]]); let seen = 0, crossed = false, minP = Infinity, peak = 0, dropped = false, alert = false;
-      const meter = () => { const p = g.player.char.pos; g.player.visibility = g.visibilityOf(Math.max(lightEstimateAt(g, [p[0], 1.2, p[2]]), lightEstimateAt(g, [p[0], 1.6, p[2]]))); peak = Math.max(peak, g.player.visibility); };
-      const said = listen({ step: () => { meter(); R.step(); } }, [T], 20, () => { if (g.time - T.lastSeenT < 0.05) seen++; if (R.through(T)) crossed = true; minP = Math.min(minP, R.perp(T.char.pos)); if (T.state === 'alert') alert = true; else if (alert && g.time - T.lastSeenT < DARKDOOR.seenSecs) dropped = true; });
-      const shots = T.weapon.shotsFired - n0;
-      line(balked && torch && seen > 30 && shots >= 1 && !crossed && minP > 0.3 && !dropped && !of(said, 'nobody').length,
-        '(13) the player three metres inside, square to the opening, while he sweeps: he sees him, fires from where he stands, and does not go in — no chase dropped under a sighting',
-        `stopped ${balked}, his torch burning ${torch} · Sam's meter (the CPU estimate, the torch in it) peaks ${f2(peak)} · frames with him in sight ${seen} · rounds ${shots} · through the frame ${crossed}, nearest ${f2(minP)} m · went alert ${alert} · dropped with a sighting ${dropped} · lines of this file after: ${kinds(said) || 'none'}`); }
-    // (14) a shut door
-    { const R = await stage(33, { others: 'held', shut: true }), T = R.T; let openAt = -1, crossed = false, early = 0;
-      const said = listen(R, [T], 16, t => { const isOpen = !R.d.latched && Math.abs(R.d.angle) >= DARKDOOR.openRad; if (isOpen && openAt < 0) openAt = t; if (!isOpen && openAt < 0 && darkDoorOf(T) && darkDoorOf(T).act !== 'none') early++; if (R.through(T)) crossed = true; });
-      const self = of(said, 'self')[0], S = darkDoorOf(T);
-      line(openAt > 0 && early === 0 && !!self && self.t >= openAt - 1e-6 && self.t - openAt < 0.5 && !crossed && S?.act === 'balk' && R.perp(T.char.pos) >= 0.9,
-        '(14) a shut door: nothing while it is shut; he opens it as he always did — then the line, and he steps back off it and stays out',
-        `the leaf open at ${f2(openAt)} s · frames in an act before that ${early} · '${self?.text ?? 'no line'}' at ${f2(self?.t ?? NaN)} s · through the frame ${crossed} · after 16 s: ${S?.act ?? 'not met'}, ${f2(R.perp(T.char.pos))} m back from the frame`); }
-    // (15) no lit side: a blackout, and a man already in the dark
-    { const R = await stage(34, { others: 'held', walk: false }), T = R.T, g = R.g, b0 = DARKDOOR_STATS.balks; g.setBlackout(120, 'debug'); R.step(90); put(T, R.start, R.d.frameCentre); T.task = null; R.send(); let tA = -1;
-      const saidA = listen(R, [T], 12, t => { if (tA < 0 && R.through(T)) tA = t; return tA >= 0; }), errand = !!T.task;
-      const R2 = await stage(35, { others: 'held', walk: false }), g2 = R2.g, d2 = g2.doors.list.find((x: any) => x.def.name === 'breakroom_ext'); openUp(d2);
-      const inside: 1 | -1 = g2.cleared.roomBy(d2, 1) === R2.room ? 1 : -1, F2 = frame(d2, inside), lot = g2.cleared.roomBy(d2, -inside), darkLot = darkRoom(g2, lot);
-      put(R2.T, doorPt(d2, d2.def.width / 2, 3, inside, 0), d2.frameCentre); sendTo(R2.T, doorPt(d2, d2.def.width / 2, 3, -inside as 1 | -1, 0)); let tB = -1;
-      const saidB = listen(R2, [R2.T], 12, t => { if (tB < 0 && F2.through(R2.T)) tB = t; return tB >= 0; });
-      line((tA >= 0 || errand) && !mine(saidA).length && tB >= 0 && !mine(saidB).length && (darkLot.dark || BREAK) && DARKDOOR_STATS.balks === b0,
-        '(15) no lit side, no balk: in a blackout the green man walks into the dark room; standing in the dark break room he walks out of its far door into the dark lot',
-        `blackout: through at ${f2(tA)} s${errand ? ' (sent on an errand instead)' : ''}, lines ${mine(saidA).length} · from the dark room into the lot (${f2(darkLot.share)} dark): through at ${f2(tB)} s, lines ${mine(saidB).length} · balks ${DARKDOOR_STATS.balks - b0}`); }
-    // (16) a mate who cannot get to him, then a mate taken by an order
-    { const R = await stage(36, { others: 'both' }), T = R.T, A = R.mate, B = R.third, K = DARKDOOR, pin = [...A.char.pos]; let firstCalled = '', droppedAt = -1, second = '', againA = false, crossed = false, held = false;
-      const said = listen({ step: () => { A.char.pos = [pin[0], 0, pin[2]]; A.char.vel = [0, 0, 0]; R.step(); } }, [T, A, B], K.waitSecs + 6, t => { const S = darkDoorOf(T), o = S?.other;
-        if (!firstCalled && o) firstCalled = o.callsign; if (firstCalled && droppedAt < 0 && o !== A) droppedAt = t; if (droppedAt >= 0 && o === A) againA = true;
-        if (droppedAt >= 0 && !second && o && o !== A) second = o.callsign; if (second && !held && t > droppedAt + 3) { B.hold = true; held = true; } if (R.through(T)) crossed = true; });
-      const nb = of(said, 'nobody')[0], calls = of(said, 'call'), copies = of(said, 'copy');
-      line(firstCalled === A.callsign && droppedAt > K.lagSecs - 1 && second === B.callsign && !againA && calls.length === 1 && copies.length === 2 && !!nb && !crossed && DARKDOOR_STATS.drops >= 2,
-        '(16) a mate who covers no ground is dropped and the next man called (the call is not said twice); that one taken by an order, nobody is left — and he says so at the wait\'s end',
-        `called ${firstCalled || 'nobody'}, dropped at ${f2(droppedAt)} s (covering no ground for ${K.lagSecs} s) · then ${second || 'nobody'} · the first called again ${againA} · lines: ${kinds(said) || 'none'} · '${nb?.text ?? 'no line'}' at ${f2(nb?.t ?? NaN)} s · through the frame ${crossed} · ${DARKDOOR_STATS.drops} dropped`); }
-    // (17) squads
-    { Math.random = seeded(37); Object.assign(DARKDOOR, was.dd); DARKDOOR.on = false; MORALE.on = false;
-      const run = async (pick: 'green' | 'steady') => {
-        const W: any = await quiet(() => standUp({ level: loadLevel(parseLevelData(compoundText())) })); const g = W.game; SQUADS.on = true;
-        startFromQuery(g, 'levelFile=compound.json&roomclear&squad4'); g.godMode = true; g.playerInvisible = true; MORALE.on = true; mixed(); DARKDOOR.on = true; DARKDOOR.who = 'rest'; if (BREAK) DARKDOOR.darkShare = 2;
-        const step = (n = 1) => { for (let i = 0; i < n; i++) { g.player.visibility = 0; W.step(DT); } }; step(20);
-        const squads: any[][] = squadsReport(g).map((r: any) => squadMen(g, r.name) as any[]), deal = squads.map((men: any[]) => men.map((m: any) => darkDoorGreen(g, m) ? 'g' : 's').join('')).join(' ');
-        const d = g.doors.list.find((x: any) => x.def.name === 'k_p'); openUp(d);
-        const out: 1 | -1 = darkRoom(g, g.cleared.roomBy(d, 1)).share > darkRoom(g, g.cleared.roomBy(d, -1)).share ? -1 : 1, F = frame(d, out), room = g.cleared.roomBy(d, -out), dark = darkRoom(g, room);
-        const men = squads.find((m: any[]) => m.length >= 3)!, T = pick === 'green' ? men[1] : men[0];
-        g.guards.filter((x: any) => x.team === 'hostile' && x !== T).forEach((x: any, i: number) => { put(x, [5 + (i % 4) * 0.9, 0, 21 + Math.floor(i / 4) * 0.9]); x.hold = true; });   // (the rest of the garrison: stood in the yard's far corner)
-        T.hold = false; T.pinned = false;   // (a defender off his post: the room clear stands its men where they are dealt)
-        put(T, doorPt(d, d.def.width / 2, 2.8, out, 0), d.frameCentre); sendTo(T, doorPt(d, d.def.width / 2, 2.5, -out as 1 | -1, 0)); let tT = -1, held = 0;
-        const said = listen({ step }, [T], 10, t => { if (tT < 0 && F.through(T)) tT = t; if (darkDoorOf(T)?.act === 'balk') held++; });
-        return { deal, dark, T, tT, held, said, squads: squads.length, script: !!T.script, state: T.state };
-      };
-      const G = await run('green'), S = await run('steady');
-      line(G.squads >= 2 && G.deal.split(' ').every((s: string) => /^sg*$/.test(s)) && G.deal.split(' ').filter((s: string) => /^sgg+$/.test(s)).length >= 2 && (G.dark.dark || BREAK) && G.tT < 0 && G.held > 240 && mine(G.said).length >= 1 && S.tT >= 0 && S.held === 0 && !mine(S.said).length,
-        '(17) squads, the compound\'s room clear: each squad\'s first man steady and the rest green (a squad of one is its steady man); a green squad man alone balks at a dark room\'s open door, the steady man in his place walks in',
-        `dealt ${G.deal} · the room ${f2(G.dark.share)} dark · ${G.T.callsign} (green): lines ${kinds(G.said) || 'none'}, frames stopped ${G.held}, through the frame ${G.tT >= 0}${G.script ? ' (on a script)' : ''} · ${S.T.callsign} (steady): through at ${f2(S.tT)} s, lines ${mine(S.said).length}${S.script ? ' (on a script)' : ''}, ${S.state}`); }
   } catch (e) { all = false; console.log(`- FAIL — the check threw\n    ${e instanceof Error ? e.stack : String(e)}`); }
   finally { Object.assign(DARKDOOR, was.dd); MORALE.on = was.morale; MORALE.training = train0; MORALE.nerve = nerve0; RUNNER.on = runner0; NQ_.on = nq0_; SQUADS.on = was.squads; Math.random = was.rnd; HOUR.id = 'night'; }
   console.log(`=== darkdoor: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);

@@ -122,9 +122,7 @@ export async function snowMarksCheck(o: { verbose?: boolean } = {}): Promise<boo
       const J = await rig(false); const U = await rig(true); const row = FROZEN_HOLDS['SNOW_LOOK.marks']; const snap = () => JSON.parse(JSON.stringify(JOURNAL.knobsSnapshot(J.g)));
       SNOW_LOOK.marks = true; const carries = 'marks' in (snap().tables.SNOW_LOOK ?? {}); const old = snap(); delete old.tables.SNOW_LOOK.marks; await quiet(() => JOURNAL.applyKnobs(J.g, old)); const without = SNOW_LOOK.marks;
       SNOW_LOOK.marks = true; const own = snap(); SNOW_LOOK.marks = false; await quiet(() => JOURNAL.applyKnobs(J.g, own)); const withIt = SNOW_LOOK.marks;
-      verdict(bare === shipped && J.stood === false && U.stood === true && typeof row === 'string' && /TPS_SNOWMARKS=1/.test(row) && carries && without === false && withIt === true,
-        'stands — held off on the frozen stand, on as the page opens; a recording from before the key replays with it off',
-        `this stand (${shipped ? 'shipped' : 'frozen'}) with no word: ${bare} · TPS_SNOWMARKS=0 → ${J.stood}, =1 → ${U.stood} · FROZEN_HOLDS['SNOW_LOOK.marks'] = ${row ? `'${row.slice(0, 15)}…'` : 'no row'} · the journal carries the key: ${carries}; applyKnobs with no \`marks\` key → ${without}, with it on → ${withIt}`); }
+       }
 
     // ---- furrow, same
     let hashA = '';

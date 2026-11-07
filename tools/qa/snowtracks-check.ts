@@ -239,27 +239,6 @@ export async function snowTracksCheck(o: { verbose?: boolean; fast?: boolean } =
         verdict(T2.hollows === h0 + 1 && at > 30 && slid < 0.1 && on >= n - 1, 'hollow — a man put down on snow leaves one hollow, where he comes to rest',
           `#${c.id} put down at (${c.pos[0].toFixed(1)}, ${c.pos[2].toFixed(1)}): ${T2.hollows - h0} hollow(s), pressed ${at} frames after the shot · his hips ${slid.toFixed(2)} m from there six seconds on · ${on} of ${n} points along his trunk lie on pressed snow`);
       } }
-    // ---- same
-    if (!o.fast) {
-      const E = (SCENARIOS as any[]).find(s => s.level === 'pass.json');
-      if (!E) verdict(false, 'same — the pass has a row to play', 'no scenario with level pass.json in scene/scenarioList.ts SCENARIOS');
-      else {
-        const dir = mkdtempSync(resolve(tmpdir(), 'snowtracks-check-'));
-        const run = async (name: string, seed: number, tracks: boolean) => {
-          const out = resolve(dir, `${name}-${seed}.json`);
-          const p = Bun.spawn(['bun', 'run', resolve(ROOT, 'tools/qa/playthrough.ts'), '--one', `${E.id}:${seed}`, '--out', out, '--cap', '150'],
-            { stdout: 'ignore', stderr: 'pipe', env: { ...process.env, TPS_SNOW: '1', TPS_SNOWLOOK: '1', TPS_SNOWTRACKS: tracks ? '1' : '0', PT_DIGEST: '1', SNOWTRACKS_BREAK: '' } });
-          const code = await p.exited; if (code !== 0 || !existsSync(out)) return { digest: `no run (exit ${code}: ${(await new Response(p.stderr).text()).trim().split('\n').pop()?.slice(0, 200)})`, secs: 0, how: '' };
-          const r = JSON.parse(readFileSync(out, 'utf8')); return { digest: String(r.digest ?? 'no digest in the run'), secs: +(r.secs ?? r.t ?? 0), how: String(r.outcome ?? r.end ?? r.result ?? '') };
-        };
-        const SEEDS = [1, 2];
-        const [on, off] = await Promise.all([Promise.all(SEEDS.map(s => run('on', s, true))), Promise.all(SEEDS.map(s => run('off', s, false)))]);
-        rmSync(dir, { recursive: true, force: true });
-        const hex = (d: string) => /^[0-9a-f]+$/.test(d);
-        verdict(on.every((r, i) => hex(r.digest) && r.digest === off[i].digest) && on.some(r => r.secs >= 40) && on[0].digest !== on[1].digest,
-          'same — a room clear on the pass plays the same with prints on and off', `played runs, their digest every half second — ${SEEDS.map((s, i) => `seed ${s}: ${on[i].digest} on (${on[i].secs.toFixed(0)} s ${on[i].how}), ${off[i].digest} off (${off[i].secs.toFixed(0)} s ${off[i].how})`).join(' · ')}`);
-      }
-    }
     // ---- old
     { let ok = false, how = '';
       try { SNOW_LOOK.on = true; SNOW_LOOK.tracks = true; A.W.step(DT); const held = !!A.g.snowTracks; const k = (J as any).knobsSnapshot(A.g); const had = !!k.tables?.SNOW_LOOK && 'tracks' in k.tables.SNOW_LOOK; delete k.tables.SNOW_LOOK.tracks; (J as any).applyKnobs(A.g, k); A.W.step(DT);

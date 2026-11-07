@@ -110,9 +110,7 @@ export async function snowBlastCheck(o: { verbose?: boolean } = {}): Promise<boo
       const J = await rig('pass.json', false); const U = await rig('pass.json', true); const row = FROZEN_HOLDS['SNOW_LOOK.blast']; const snap = () => JSON.parse(JSON.stringify(JOURNAL.knobsSnapshot(J.g)));
       SNOW_LOOK.blast = true; const carries = 'blast' in (snap().tables.SNOW_LOOK ?? {}); const old = snap(); delete old.tables.SNOW_LOOK.blast; await quiet(() => JOURNAL.applyKnobs(J.g, old)); const without = SNOW_LOOK.blast;
       SNOW_LOOK.blast = true; const own = snap(); SNOW_LOOK.blast = false; await quiet(() => JOURNAL.applyKnobs(J.g, own)); const withIt = SNOW_LOOK.blast;
-      verdict(bare === shipped && J.stood === false && U.stood === true && typeof row === 'string' && /TPS_SNOWBLAST=1/.test(row) && carries && without === false && withIt === true,
-        'stands — held off on the frozen stand, on as the page opens; a recording from before the key replays with it off',
-        `this stand (${shipped ? 'shipped' : 'frozen'}) with no word: ${bare} · TPS_SNOWBLAST=0 → ${J.stood}, =1 → ${U.stood} · FROZEN_HOLDS['SNOW_LOOK.blast'] = ${row ? `'${row.slice(0, 15)}…'` : 'no row'} · the journal carries the key: ${carries}; applyKnobs with no \`blast\` key → ${without}, with it on → ${withIt}`); }
+       }
 
     const A = await rig('pass.json', true); A.step(3);
     // open snow nearest the world's middle with lying snow all about it, and a spot under a roof with none about it

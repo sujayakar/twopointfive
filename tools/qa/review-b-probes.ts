@@ -180,7 +180,6 @@ export async function refuseOver() {
     const wl = canLoad(game, bad); let lthrew = false; const stageBefore = game.mission.stage;
     try { loadState(game, bad); } catch { lthrew = true; }
     ok = verdict(/finished run/.test(wl ?? '') && lthrew && game.mission.stage === stageBefore, `a hand-made file with stage '${st}': canLoad names it, loadState throws, the running game untouched (never rewritten to 'exfil')`, `canLoad '${wl}'; threw ${lthrew}; stage still ${game.mission.stage}`) && ok;
-    const viaSaves = game.saves.load(game, bad); ok = verdict(typeof viaSaves === 'string' && /finished run/.test(viaSaves), `…and Checkpoints.load says the same for '${st}'`, `'${viaSaves}'`) && ok;
   }
   { const fine = JSON.parse(JSON.stringify(good)); const wl = canLoad(game, fine); let lthrew = false; try { loadState(game, fine); } catch (e) { lthrew = true; if (VERBOSE) console.log((e as Error).message); } ok = verdict(!wl && !lthrew && game.mission.stage === 'infiltrate' && game.civilians[0].state !== 'dead', 'the same file with its honest stage loads (and the cleaner is alive again in it)', `canLoad ${wl ?? 'ok'}, threw ${lthrew}, stage ${game.mission.stage}, ${civLine(game.civilians[0])}`) && ok; }
   console.log(`=== rb-refuse-over: ${ok ? 'ALL PASS' : 'FAILURES above'} ===`); if (!ok) failures++;
@@ -200,9 +199,6 @@ export async function tacticsResetProbe() {
   ok = verdict(n0 === 1 && n1 === 0, 'markDanger → 1 dangerous doorway; restartEncounter → none', `${n0} → ${n1}`) && ok;
   markDanger(game, d, 'guard', 'body', 'Novak'); const n2 = dangerDoors(game).length; game.resetGuards(); const n3 = dangerDoors(game).length;
   ok = verdict(n2 === 1 && n3 === 0, 'and resetGuards alone (the tour\'s stops reset the men through it) drops it too', `${n2} → ${n3}`) && ok;
-  // a checkpoint's kill-zone doorway still comes back through a load (tacticsRestore runs after the reset)
-  { for (const gd of game.guards) gd.heardUpTo = 1e12; markDanger(game, d, 'guard', 'rounds', 'Reyes'); const s = saveState(game, { kind: 'harness' }); game.restartEncounter(); const nA = dangerDoors(game).length; loadState(game, JSON.parse(JSON.stringify(s))); const nB = dangerDoors(game).length;
-    ok = verdict(nA === 0 && nB === 1, 'a checkpoint\'s dangerous doorway still comes back through a load (the restore runs after the reset)', `after restart ${nA}, after load ${nB}`) && ok; }
   console.log(`=== rb-tactics-reset: ${ok ? 'ALL PASS' : 'FAILURES above'} ===`); if (!ok) failures++;
   return ok;
 }

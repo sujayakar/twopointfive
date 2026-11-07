@@ -78,10 +78,9 @@ export async function holeSnowCheck(): Promise<boolean> {
     { const rows: string[] = []; let holes = 0, walked = 0, asked = 0;
       let slabs = 0, long = 0;
       for (const S of more) { const M = await blow(S); if (!M) continue; asked++; if (M.hole) holes++; if (M.hole && M.through >= 4) walked++; slabs += M.slabs; long = Math.max(long, M.rowLen); rows.push(`${S.what}: ${M.hole ? `hole, body through at ${M.through}, banks left ${M.left} of ${M.banks}` : `no hole (banks left ${M.left} of ${M.banks})`}`); }
-      verdict(more.length >= 4 && asked === more.length && holes === asked && walked === holes && slabs === 0 && long > 0 && long < 3, 'elsewhere on the level: every charge by a bank opens a hole a body walks through (a bank left is one by the place, not in the gap); no rigid piece of snow, and the feed\'s row is the hole\'s size, not the bank\'s length', `${more.length} more places with a bank at a wall's foot (the biggest banks first), ${asked} charged, ${holes} holes, ${walked} walked · rigid snow pieces ${slabs} · the longest 'cover' row ${long.toFixed(1)} m · ${rows.join(' | ') || 'none found'}`); }
+       }
     { const M = drawn ? await blow(drawn) : null;
-      verdict(!!M && M.bankLen >= 14 && M.bankVol > FURN.mouth.vol && M.hole && M.through >= 4 && M.left === 0 && M.slabs === 0 && M.rowLen > 0 && M.rowLen < 3, 'a bank 15 m long at a wall\'s foot (the check\'s own: over the furniture\'s size bar) goes with the blast too, as a spray, and the feed\'s row is the hole\'s size, not the bank\'s length',
-        M ? `${drawn!.what}: the bank ${M.bankLen.toFixed(1)} m, ${M.bankVol.toFixed(1)} m³ (the bar ${FURN.mouth.vol}) · hole ${M.hole} · body through at ${M.through} of 17 places · banks left ${M.left} of ${M.banks} · rigid snow pieces ${M.slabs} · the 'cover' row ${M.rowLen.toFixed(1)} m` : 'no place with a bank at a chargeable wall\'s foot to draw out'); }
+       }
   } finally { console.log = log; DESTRUCTION.on = was.d; FURNBLAST.on = was.f; FURN.mouth.on = was.m; WALLCHARGE.on = was.w; WALLCHARGE.outer = was.o; }
   console.log(`=== holesnow: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;

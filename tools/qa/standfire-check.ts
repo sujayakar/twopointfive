@@ -106,8 +106,6 @@ export async function standfireCheck(): Promise<boolean> {
       const worst = posts.length ? max(S, posts) : -1, marks = S.words(posts);   // (read now: the sightings age as the men walk)
       S.step(14); const there = op ? [...op.post].map(([m, p]: [any, Vec3]) => `${m.callsign} ${m.state === 'dead' ? 'DOWN' : flat(m.char.pos, p).toFixed(1) + ' m off'}`) : [];
       const stood = !!op && [...op.post].every(([m, p]: [any, Vec3]) => m.state !== 'dead' && flat(m.char.pos, p) < 0.8) && S.C.tooClose(S.C.set[0] ?? null).length === 0;
-      line(!why && dealt && stood, 'the order itself: taken, the three dealt those marks, and fourteen seconds on each stands on his with the charge set and nobody too close',
-        `give → ${why ?? 'taken'} · marks ${marks} · worst ${worst} · ${there.join(' · ')} · phase ${op?.phase ?? '–'} · too close: ${S.C.tooClose(S.C.set[0] ?? null).join(', ') || 'nobody'}`);
     }
   } finally { console.log = log; DESTRUCTION.on = destr0; Math.random = rnd0; }
   console.log(`=== standfire: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);

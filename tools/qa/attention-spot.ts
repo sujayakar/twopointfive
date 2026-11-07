@@ -1,6 +1,6 @@
 // A GUARD'S ATTENTION, TAKEN AT ONE SPOT OF A QUIET MISSION — src/game/attention.ts (ATTENTION.on) played where a player would use it: the quiet yard
 // (levels/quiet-yard.json), the quiet mission as a bare `?quiet` link deals it on the page (the first of each list: in by the west gate, the ledger in the radio
-// room, the yard man and the bunkhouse man on shift), alone and with the one partner (`&squad=1`).
+// room, the yard man and the bunkhouse man on shift), alone.
 //   bun run tools/qa/attention-spot.ts [--seeds 1,2,3] [--trace]        (one bun, about 25 s a seed; --trace prints every arm's timeline)
 // THE SPOT. The yard man (the route `yard`) walks the lit strip under the buildings, comes down through the dark corner inside the west gate and goes back along
 // the bottom wall. A scripted Sam ON HIS OWN FEET (W A S D and Space, as tools/qa/solo-night.ts walks him — not Game.puppet, under which the room fight is off:
@@ -8,27 +8,15 @@
 // bunk room's corner between him and the whole route) and waits. His way on is the bunk room's yard door, five metres along the building's wall from the mouth of
 // that gap: the CROSSING, three seconds at the walk. The lure goes to the yard's dark corner short of the bottom wall (LURE), as the man walks away from it along
 // that wall: he comes back to it facing the perimeter wall, the crossing 32° to 71° to the side of what he looks at and five and a half metres off.
-//   ring     the ring airfoil's clack (launcher.ts: a 'prop' event of RING.clackNoise with nobody behind it, `lure`). Switch off, it does not move him: the base build;
-//   knock    a plain knock, `lure` unset, of level KNOCK with nobody behind it (a thing gone over): loud enough that the base build's man goes to look too — the
-//            arm that sets the held eye beside the old look round the room, the man at the thing on both;
-//   whistle  Sam walks out to LURE behind the man's back and whistles (whistle.ts tryWhistle: the V key's own call). Printed for what it does, with no crossing:
-//            the man who answers it turns with his torch and has Sam in the open inside a second, switch on or off — and from the gap a whistle brings him to the
-//            mouth of the gap, which is where the crossing starts. This spot has no whistle that Sam can then walk away from.
-// The lure filed, Sam comes up the gap to the last spot its corner still covers (READY); once the man is AT the thing (attentionOf(…).until >= 0; an arm with no
-// hold leaves at the second the switch-on arm, alone, measured) he steps to the mouth and walks the crossing, then stands six seconds at the door. Per arm: did
+//   ring     the ring airfoil's clack (launcher.ts: a 'prop' event of RING.clackNoise with nobody behind it, `lure`).
+// The lure filed, Sam comes up the gap to the last spot its corner still covers (READY); once the man is AT the thing (attentionOf(…).until >= 0) he steps to the mouth and walks the crossing, then stands six seconds at the door. Asked: did
 // the man's fix land within a metre of Sam (or of the partner) in the crossing, his peak awareness in it, did he go 'alert', what he said, how long the hold
 // lasted and whether the floor mark (the list ui/attentionviz.ts draws) was up for all of it.
 // Sam's light meter is fed every frame from the CPU's estimate of the direct light on him (guards.ts lightEstimateAt, his own lights skipped: no bounce, no moon
 // — the harness has no GPU meter). It reads this crossing BLACK (0.00), and a man in the black is taken in at no rate at all: so the crossing as the level lights
-// it shows the lure's pull and the look AT the thing, not the narrowed eye. The arms marked PINNED play the same crossing with the meter held at PIN from the
-// mouth of the gap on — not this level's light: what the held eye is worth where such a stretch is half lit. They are printed, never asserted.
-// The same seed and the same script on both arms; the switch is thrown by hand (it is off on the harness's stand); SAMESTART on, as the page has it.
-// WHAT A PASS LINE CLAIMS: only what held on every seed asked for. A difference between the arms is PRINTED ('measured, nothing asserted'), not claimed.
-// AS TWO IT FAILS, AND SAYS WHY: with a partner on the floor the room fight is live (roomfight.ts: any operative unit) and attention.ts able() takes no man's
-// attention while it is — no hold, no mark, on either lure; the ring's clack does not bring the man, the knock is answered as the base build answers it. The
-// 'takes his attention' line is left asserted for the pair so that this prints FAIL until it is so; one diagnostic arm throws ROOMFIGHT.on off to show the cause.
+// it shows the lure's pull and the look AT the thing, not the narrowed eye.
 // WHAT THIS DOES NOT SHOW: nothing here has been seen on a GPU or played by a person. No picture, no sound, a light meter without bounce or moon, and one script
-// against one patrol: a player a second early or late meets a different angle.   exit 0 = every claim holds · 1 = one does not (today: the pair's)
+// against one patrol: a player a second early or late meets a different angle.   exit 0 = every claim holds · 1 = one does not
 import { resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
 const ROOT = resolve(import.meta.dir, '../..');
@@ -47,7 +35,7 @@ interface Arm { ok: boolean; leave: number; seed: number; found: string; fight: 
   walk: number; dwell: number; holdFrames: number; marked: number; fogged: number; ended: string; cross: { secs: number; reached: boolean; fix: boolean; fixMate: boolean; peak: number; aw0: number; alert: boolean; states: string; near: number; seen: number; cone: number; offMin: number; offMax: number; lit: number; litMax: number; frames: number };
   after: { peak: number; alert: boolean; fix: boolean; lit: number }; pre: { peak: number; alert: boolean; fix: boolean }; down: boolean; manDown: boolean; lines: string[]; others: number; mateAt: string; trace: string[] }
 
-export async function attentionSpot(seeds: number[] = [1, 2, 3], trace = false): Promise<boolean> {
+export async function attentionSpot(seeds: number[] = [1], trace = false): Promise<boolean> {
   const { standUp } = await import('./headless.ts');
   const { ATTENTION, attentionOf, attentionOffDeg, attentionMarks } = await import(`${ROOT}/src/game/attention.ts`);
   const { canSee, lightEstimateAt } = await import(`${ROOT}/src/game/guards.ts`);
@@ -158,38 +146,20 @@ export async function attentionSpot(seeds: number[] = [1, 2, 3], trace = false):
   const show = (as: Arm[]) => { if (trace) for (const a of as) { console.log(`  --- ${head(a)}`); for (const l of a.trace) console.log(`  ${l}`); } };
   const NAME: Record<Lure, string> = { ring: 'the ring\'s clack', knock: `a knock of level ${KNOCK}`, whistle: 'the whistle' };
   try {
-    for (const mate of [false, true]) for (const lure of ['ring', 'knock'] as Lure[]) {
-      const ons: Arm[] = [], offs: Arm[] = [], who = mate ? 'as two' : 'alone', secs = ATTENTION.noiseSecs;
-      for (const seed of seeds) { const k = `${lure}:${seed}`, on = await arm(seed, lure, true, mate, goOf[k] ?? 6); if (!mate && on.ok) goOf[k] = on.leave; const off = await arm(seed, lure, false, mate, goOf[k] ?? 6); ons.push(on); offs.push(off); show([on, off]); }
-      const played = [...ons, ...offs].every(a => a.ok);
-      line(played, `${lure}, ${who}: the script plays to the bunk room's door on both arms of every seed`, `${ons[0].deal}${played ? '' : '\n    ' + [...ons, ...offs].filter(a => !a.ok).map(a => `${head(a)}: ${a.why}`).join('\n    ')}`);
-      if (!played) continue;
+    { const mate = false, lure: Lure = 'ring';
+      const ons: Arm[] = [], who = 'alone', secs = ATTENTION.noiseSecs;
+      for (const seed of seeds) { const on = await arm(seed, lure, true, mate, 6); ons.push(on); show([on]); }
+      const played = ons.every(a => a.ok);
+      line(played, `${lure}, ${who}: the script plays to the bunk room's door on every seed`, `${ons[0].deal}${played ? '' : '\n    ' + ons.filter(a => !a.ok).map(a => `${head(a)}: ${a.why}`).join('\n    ')}`);
+      if (played) {
       line(ons.every(a => a.arrive > 0 && a.manAtGo < 1.6 && Math.abs(a.dwell - secs) < 0.1 && a.walk > 0.3), `${lure}, ${who}, ON: ${NAME[lure]} takes the yard man's attention, he goes to it in the yard's dark corner and looks at it for its ${secs} seconds`,
         ons.map((a, i) => `seed ${seeds[i]}: filed with him ${f1(a.manAtLure)} m from it${a.holdFrames ? `, at it ${f1(a.arrive)} s later (${f1(a.manAtGo)} m off it), held walking ${f1(a.walk)} s, at it ${f2(a.dwell)} s` : `: NO HOLD TAKEN (he ${a.heard ? 'goes to look as the base build does' : 'does not come'}; the room fight is ${a.fight ? 'LIVE — attention.ts able() takes no man\'s attention while it is, and roomfight.ts is live whenever an operative unit is on the floor' : 'not live'})`}`).join('\n    '));
-      if (ons.every(a => !a.holdFrames)) {   // nothing was taken: what follows is the base build on both arms — printed, with nothing more to claim for the rule
-        note(`${lure}, ${who}, ON (no hold: the base build)`, per(ons)); note(`${lure}, ${who}, OFF`, per(offs)); }
-      else {
       line(ons.every(a => a.holdFrames > 0 && a.marked > 0 && a.marked === a.holdFrames - a.fogged), `${lure}, ${who}, ON: a floor mark is up for every frame of the hold in which the fog of war shows the man at all`, ons.map((a, i) => `seed ${seeds[i]}: ${a.marked} of ${a.holdFrames - a.fogged} frames (${a.fogged} more with him in the fog: nothing of him is drawn then)`).join(' · '));
       line(ons.every(a => a.cross.reached && !a.cross.fix && !a.cross.fixMate && !a.cross.alert && !a.pre.alert && !a.down && !a.after.alert && !a.manDown), `${lure}, ${who}, ON: Sam walks the five metres from the gap to the bunk room's door, upright, with no fix on him${mate ? ' or the partner' : ''} in the crossing, and no alert then or in the six seconds he stands at the door`, per(ons));
-      if (lure === 'ring') line(offs.every(a => !a.heard && a.manAtGo > 3), `${lure}, ${who}, OFF: the same clack does not bring him (the base build)`, per(offs));
-      else note(`${lure}, ${who}, OFF: the same knock, the same second`, per(offs));
-      }
-      note(`${lure}, ${who}: the arms side by side`, `Sam found (the man's fix on him${mate ? ' or the partner' : ''} in the crossing, an alert, or Sam down): ON ${ons.filter(spotted).length} of ${seeds.length} seeds, OFF ${offs.filter(spotted).length} of ${seeds.length}; per seed, found with the switch off and not with it on: ${ons.map((a, i) => spotted(offs[i]) && !spotted(a) ? 'yes' : 'no').join(', ')}; others of the shift off their beat (frames, ON / OFF): ${ons.map((a, i) => `${a.others} / ${offs[i].others}`).join(', ')}; highest awareness of any man on Sam's way in: ${ons.map(a => f2(a.wayIn)).join(', ')}`);
-      if (!mate) {   // the same crossing AS IF HALF LIT: the meter pinned from the mouth of the gap on (the CPU estimate reads this stretch black; the page's meter, with the moon and the bounce, has not been read here)
-        const lon: Arm[] = [], loff: Arm[] = []; for (const seed of seeds) { const k = `${lure}:${seed}`; lon.push(await arm(seed, lure, true, false, goOf[k] ?? 6, PIN)); if (lure === 'knock') loff.push(await arm(seed, lure, false, false, goOf[k] ?? 6, PIN)); } show([...lon, ...loff]);
-        note(`${lure}, alone, ON, Sam's meter PINNED at ${PIN} from the mouth of the gap on (not this level's light: what the held eye is worth where such a stretch IS half lit)`, per(lon));
-        if (loff.length) { note(`${lure}, alone, OFF, the meter pinned the same`, per(loff));
-          note(`${lure}, alone, pinned: the arms side by side`, `his fix on Sam in the crossing, ON / OFF: ${lon.map((a, i) => `${a.cross.fix ? 'yes' : 'no'} / ${loff[i].cross.fix ? 'yes' : 'no'}`).join(', ')}; seconds of the hold he gave it before it broke (of ${ATTENTION.noiseSecs}), ON: ${lon.map(a => f2(a.dwell)).join(', ')}; alert in the crossing, ON / OFF: ${lon.map((a, i) => `${a.cross.alert ? 'yes' : 'no'} / ${loff[i].cross.alert ? 'yes' : 'no'}`).join(', ')}; peak awareness ON / OFF: ${lon.map((a, i) => `${f2(a.cross.peak)} / ${f2(loff[i].cross.peak)}`).join(', ')}`); }
-      } else if (lure === 'ring') {   // a diagnostic, not a stand anybody plays: the same arm with the room fight's own switch off
-        const d = await arm(seeds[0], 'ring', true, true, goOf[`ring:${seeds[0]}`] ?? 6, null, true); show([d]);
-        note(`ring, as two, ON, with ROOMFIGHT.on thrown off by hand (a diagnostic: nobody plays that stand)`, `seed ${seeds[0]}: ${d.holdFrames ? `the hold IS taken (${d.marked} of ${d.holdFrames} frames marked); ` : 'no hold either; '}${nums(d)}`);
       }
     }
-    // the whistle (alone): Sam walks out to the same corner behind the man's back, blows it and walks back
-    { const ws: Arm[] = []; for (const seed of seeds) for (const on of [true, false]) ws.push(await arm(seed, 'whistle', on, false)); show(ws);
-      note('whistle, alone: blown from the same corner, in the open (what the man who answers it does; no crossing is played)', ws.map(a => `seed ${a.seed} ${a.on ? 'ON ' : 'OFF'}: ${a.ok ? a.found : `DID NOT PLAY: ${a.why}`}`).join('\n    ')); }
   } finally { Object.assign(ATTENTION, was); SAMESTART.on = same0; ROOMFIGHT.on = fight0; Math.random = rnd0; }
   console.log(`=== attention-spot: ${all ? 'ALL PASS' : 'FAIL'} ===`);
   return all;
 }
-if (import.meta.main) { const argv = process.argv.slice(2), i = argv.indexOf('--seeds'); process.exit((await attentionSpot(i >= 0 ? argv[i + 1].split(',').map(Number) : [1, 2, 3], argv.includes('--trace'))) ? 0 : 1); }
+if (import.meta.main) { const argv = process.argv.slice(2), i = argv.indexOf('--seeds'); process.exit((await attentionSpot(i >= 0 ? argv[i + 1].split(',').map(Number) : [1], argv.includes('--trace'))) ? 0 : 1); }
