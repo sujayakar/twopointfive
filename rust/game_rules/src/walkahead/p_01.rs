@@ -96,13 +96,7 @@ fn walk_records(g: &mut Game, seat: SeatId, pl: PlayerId, ch: CharId, cmds: &[cr
             && (has(&r.keys, "ShiftLeft") || has(&r.keys, "ShiftRight"))
             && ml > 0.0;
         crate::player::sprint_stance(g, m, want_sprint, false);
-        if g.k.tapstep.on && m.crouch && !want_sprint {
-            // tapstep.ts: a crouch that begins inside the records; his keys are steps from here, not walked
-            m.char.vel = [0.0, 0.0, 0.0];
-            m.speed_sm = 0.0;
-        } else {
-            crate::player::stride_step(g, m, mx, mz, ml, None, None, dt, Some(now));
-        }
+        crate::player::stride_step(g, m, mx, mz, ml, None, dt, Some(now));
         // his facing: the run's in a sprint, else the aim's swing to the cursor and the hips after it
         if m.sprinting {
             crate::player::sprint_facing(g, m, dt, Some(now));

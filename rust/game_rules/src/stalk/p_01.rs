@@ -326,11 +326,6 @@ pub fn stalk_step(g: &mut crate::game::Game, lmb: bool, lmb_hit: bool, own_keys:
         let pace = g.k.stalk.pace;
         return Some(orbited(g, me, gd, &p, at, dist, k.mx / l, k.mz / l, pace, k.dt));
     }
-    if g.k.stalk.drag {
-        if let (Some(st), Some(mid)) = (stick, g.m.stalk.state.get(me).unwrap().stick) {
-            return Some(dragged(g, me, gd, &p, at, dist, st, mid, 1.0 / 60.0));
-        }
-    }
     // toward the point behind his back
     let yaw = g.ch[c].body_yaw;
     let station = g.k.stalk.station_m;
