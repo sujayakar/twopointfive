@@ -68,7 +68,7 @@ export const DEFAULT_WASM = new URL('../../rust/game_face/target/wasm32-unknown-
 export function loadFace(wasm = DEFAULT_WASM, fresh = false): Face {
   let F = fresh ? undefined : FACES.get(wasm); if (F) return F;
   if (!existsSync(wasm)) throw new Error(`rust-host: no module at ${wasm} (cd rust/game_face && cargo build --target wasm32-unknown-unknown --release)`);
-  const X: any = new WebAssembly.Instance(new WebAssembly.Module(new Uint8Array(readFileSync(wasm))), {}).exports, mem: WebAssembly.Memory = X.memory, dec = new TextDecoder();
+  const X: any = new WebAssembly.Instance(new WebAssembly.Module(new Uint8Array(readFileSync(wasm))), { env: { face_roll: () => (globalThis as any).__tpsRoll() } }).exports, mem: WebAssembly.Memory = X.memory, dec = new TextDecoder();
   const u8 = () => new Uint8Array(mem.buffer), u32 = () => new Uint32Array(mem.buffer);
   // (an address past 2 GB comes back from the module as a negative number: `>>> 0`)
   const outView = () => { const p = X.face_out_ptr() >>> 0; return u8().subarray(p, p + (X.face_out_len() >>> 0)); };

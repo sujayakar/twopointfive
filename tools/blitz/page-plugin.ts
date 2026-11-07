@@ -40,7 +40,14 @@ const plugin: BunPlugin = {
       return { contents: text, loader: 'ts' };
     });
     build.onLoad({ filter: /[\\/]src[\\/](game|anim|scene|sim|math|smoke)[\\/].*\.ts$/ }, async ({ path }) => {
-      const text = await Bun.file(path).text(), rel = path.slice(path.lastIndexOf('/src/') + 1).split('\\').join('/'), names: string[] = SCHEMA.top[rel] ?? [];
+      let text = await Bun.file(path).text(); const rel = path.slice(path.lastIndexOf('/src/') + 1).split('\\').join('/'), names: string[] = SCHEMA.top[rel] ?? [];
+      // EVERY CLASS'S OWN NAME, kept beside the class: the bridge tells some classes by `constructor.name` (a firearm's kind, a variant's arm, a side
+      // table of the game's, a once-keyed table's key), and a minified bundle has renamed every class, so on the built page a rifle crossed as a plain
+      // firearm and a whole apply then made the page's rifle one (seen: the weapon card threw after a restart). One line a file that declares classes:
+      // a thunk on globalThis.__tpsClasses that answers [class, name] pairs; the Rust host gives each class its name back as it boots
+      // (src/host/rustgame.ts `rustBoot`), and nothing calls the thunks otherwise.
+      { const classes = [...text.matchAll(/^(?:export )?(?:abstract )?class ([A-Za-z_$][\w$]*)/gm)].map(m => m[1]);
+        if (classes.length) text += `\n;((globalThis as any).__tpsClasses ??= []).push(() => [${classes.map(c => `[${c}, ${JSON.stringify(c)}]`).join(', ')}]);\n`; }
       if (!names.length) return { contents: text, loader: 'ts' };
       const isLet = (n: string) => new RegExp(`^(?:export )?let [^\\n]*\\b${n}\\b\\s*(?:[:=,;])`, 'm').test(text);
       const body = names.map(n => `get ${n}() { return ${n}; }` + (isLet(n) ? `, set ${n}(v) { ${n} = v; }` : '')).join(', ');
