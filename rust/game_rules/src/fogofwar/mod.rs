@@ -6,3 +6,5 @@ pub mod p_02;
 pub use p_02::*;
 pub mod p_03;
 pub use p_03::*;
+pub mod picture;
+pub use picture::*;
