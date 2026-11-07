@@ -224,7 +224,11 @@ function applyGameNow(g: any, blob: Uint8Array, knobs: Record<string, unknown>, 
     if (T.k === 'struct') { const o = cur && typeof cur === 'object' ? cur : newOf(T); const K = keep; if (K && !K.desc(n)) { keep = null; I.K = null; readStruct(T, o); keep = K; I.K = pup ? K : null; return o; } readStruct(T, o); return o; }
     if (T.k === 'enum') { const w = dv.getUint16(I.p, true); I.p += 2; return T.words[w] ?? cur; }   /* (0xffff: an arm the schema does not know: the page keeps what it had) */
     const a = dv.getUint16(I.p, true); I.p += 2; if (a === 0xffff) return cur;
-    if (T.k === 'wordEnum') { for (const f of T.arms[a].fields) sk(parse(f.ty)); return cur; }   // (authored: a lesson's test stands in the TypeScript as it was written)
+    // (authored: a lesson's test stands in the TypeScript as it was written. WHERE NOTHING STANDS the value is made, in the shape the export reads one in: its
+    //  word and its arm's fields, a number that is 0 kept as 0. What a smoke source rides is such a value, new with each out event: without it every source
+    //  that rides a barrel, an ejection port or a spark stayed where it was filed)
+    if (T.k === 'wordEnum') { const A = T.arms[a]; if (cur !== null && cur !== undefined && cur !== FRESH) { for (const f of A.fields) sk(parse(f.ty)); return cur; }
+      const o: any = { [T.word]: A.word }; for (const f of A.fields) { const N = parse(f.ty); o[f.ts] = read(N, N.k === 'f64' || N.k === 'f32' || N.k === 'usize' || N.k === 'u32' ? 0 : N.k === 'bool' ? false : N.k === 'str' ? '' : FRESH); } return o; }
     if (T.k === 'handEnum') { const t = armType(T, a); if (t) { sk(parse(t)); return cur; } return T.words ? T.words[a] : cur; }
     const A = T.vars[a]; if (!A.ty) return A.str ?? (cur && typeof cur === 'object' && (cur.kind ?? cur.type) === A.kw ? cur : A.kw !== undefined ? { kind: A.kw } : cur);
     const AT = SCHEMA.types[A.ty]; const same = (() => { if (cur === null || cur === undefined || typeof cur !== 'object') return false; if (AT?.k === 'struct') { if (A.kw !== undefined) return (cur.kind ?? cur.type) === A.kw; if (A.sn && classWord(cur) === A.sn) return true; return AT.fields.filter((f: any) => f.ts).every((f: any) => f.ts in cur); } return true; })();
