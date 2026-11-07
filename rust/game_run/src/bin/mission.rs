@@ -171,7 +171,7 @@ fn main() {
             // (BLITZ_STATE=<file>: the game's state words after every tick, a line a tick, for two processes or two games to be held word by word)
             if let Some(f) = state_file.as_mut() { use std::io::Write; game::state_words::state_words(&mut g, &mut sw_o, &mut sw); let mut l = format!("{}", k); for w in &sw { l.push(' '); l.push_str(&format!("{:08x}", w)); } writeln!(f, "{}", l).unwrap(); f.flush().unwrap(); }
             // (the mission's verdict as the game itself answers it, game::verdict::verdict_ended: the first tick it does, once)
-            if !verdict_said { if let Some((won, word, why)) = game::verdict::verdict_ended(&mut g) { verdict_said = true; println!("VERDICT at tick {}: {} {}{}", k, if won { "won" } else { "lost" }, word, if why.is_empty() { String::new() } else { format!(" ({})", why) }); } }
+            if !verdict_said { if let Some((won, word, why)) = game::verdict::verdict_ended(&g).map(|(a, b, c)| (a, b.to_string(), c.to_string())) { verdict_said = true; println!("VERDICT at tick {}: {} {}{}", k, if won { "won" } else { "lost" }, word, if why.is_empty() { String::new() } else { format!(" ({})", why) }); } }
             // (a level script's beats as they stand: every beat this game started, how many resumes it has had, where it is)
             if std::env::var("BLITZ_BEATS").is_ok() { for b in g.tab.director_live_beat.ids().collect::<Vec<_>>() { let lb = &g.tab.director_live_beat[b]; println!("  beat after tick {}: {} {:?} step {} waiting {:?} it {:?}", k, lb.name, lb.state, lb.step, lb.waiting, lb.it); } }
             for l in hostwrites.iter().filter(|l| game_run::line_of(l, k)) { if let Some(t) = game_run::write_after(&mut g, k, l) { println!("{}", t); } }
