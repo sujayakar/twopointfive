@@ -52,7 +52,7 @@ export type ModelCol = 'black' | 'metal' | 'steel' | 'poly' | 'furn' | 'brass' |
 /** One box of a model: a stick part along its frame's z in the group's axes (rigProps.ts Seg: l0‥l1 along z, half extents `thick` across and `tall` up, its own
  *  adjustment), what it is made of, and what it is — `mag`: left out while the magazine / the belt box is off the gun (gunreload.ts reloadShow, the player's
  *  KitDraw.noMag); `cover`: swung up about the model's `hinge` while the feed cover is lifted; `lens`: lit with his light's colour while the light is on;
- *  `grip`: the pistol grip his trigger hand is on (nothing in the game reads it: the kit figure's check finds the fist's place by it). */
+ *  `grip`: the pistol grip his trigger hand is on (nothing in the game reads it). */
 export interface ModelPart { s: Seg; col: ModelCol; is?: 'mag' | 'cover' | 'lens' | 'grip' }
 /** A long gun's model. `ahead`: the far face of its foremost part along the bore from the group's origin — its muzzle (rigProps.ts modelMuzzleAhead adds the
  *  group's own offset from the wrist). `gripL`: where the support hand takes it, in the group's axes — the left wrist's point and the directions its fingers
@@ -194,11 +194,3 @@ export interface GunLook { hand: GunModelId | null; long: GunModelId | null; sid
   /** his long gun / his sidearm is a row WITH ITS SUPPRESSOR OFF that has no model of its own (weapons.ts mk18bare, g19bare: the same gun, drawn by the group
    *  that draws it with the can on): rigProps.ts leaves the can off — a bare barrel to the same muzzle on the long gun, nothing ahead of the slide on the pistol */
   bareLong?: boolean; bareSide?: boolean }
-/** … from the rows he carries: the one in his hands and the other one (null: none) */
-export function gunLookOf(into: GunLook | null, inHands: WeaponDef | null, other: WeaponDef | null, third: WeaponDef | null = null): GunLook | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('gunLookOf', undefined, [into, inHands, other, third]); if (__r !== RUST_PASS) return __r as any; } }
-  if (!gunLookOn()) return null;
-  const L = into ?? { hand: null, long: null, side: null }; L.hand = inHands?.own?.model ?? null; L.long = null; L.side = null; L.bareLong = false; L.bareSide = false;
-  for (const d of [third, other, inHands]) { if (!d) continue; const m = d.own?.model ?? null, bare = !m && !d.suppressed && (d.rig === 'sc20k' || d.rig === 'pistol');   // (bare: the two groups that draw a can, on a row that says it has none)
-    if (d.cls === 'pistol') { L.side = m; L.bareSide = bare; } else if (!(d === inHands && third && d.id === 'm870')) { L.long = m; L.bareLong = bare; } }   // (the big slot's pump gun in his hands is not his long gun: that one, `third`, is on its sling)   // (the big slot's pump gun is nobody's long gun: his own hangs down his front while it is out)
-  return L;
-}

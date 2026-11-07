@@ -35,13 +35,10 @@ import { difficultyNow, leversMixed, leversBase, leversHref } from '../game/diff
 import { quietFogAside } from '../game/quietfog';
 import { quietGear } from './kitNoise';
 import type { HourId } from '../game/hours';
-import { WEATHER_PRESETS, snowLevel } from '../game/weatherKinds';
 import { squadOfQuery, sizeWords, kitAsIssued, type SquadSize } from '../game/loadout';
 import { menuTheme } from './theme';
-import { mountKitFigure, type KitFigure } from './kitFigure';
-import { KIT_VIEW, mountKitView, type KitViewFrame } from './kitView';
+import { mountKitView, type KitViewFrame } from './kitView';
 import { KIT_CLIP } from './kitCard';
-import { LOOK, placeOfQuery } from '../scene/look';
 import { mountKitBrief, type KitBrief } from './kitBrief';
 import { mountKitGuide, type KitGuide } from './kitGuide';
 import { KIT_PLANS } from './kitPlan';
@@ -193,11 +190,10 @@ const CSS = `
 #missions.one #loadout .lo-ic.n svg { width: 1em; }
 #missions.one #loadout .lo-ic b { font: 600 0.706em/1 var(--m-mono); color: var(--m-text); }
 #missions.one #loadout .lo-slot.pick .lo-ics { color: var(--m-text); }   /* (a man's pouches are on his kit card, when he is the one picked) */
-/* in the kit (pane-loadout) the briefing folds to the mission's name and what is set, and the picked man stands where the list was */
+/* in the kit (pane-loadout) the briefing folds to the mission's name and what is set, and the team's picture stands where the list was */
 #missions.one .onefig { display: none; }
 #missions.one.pane-loadout .mlist { display: none; }
 #missions.one.pane-loadout .onefig { display: block; grid-column: 1; grid-row: 1; min-height: 0; overflow: hidden; border-right: 1px solid rgba(var(--m-edge),0.12); }
-#missions.one .onefig canvas { display: block; width: 100%; height: 100%; cursor: ew-resize; touch-action: none; }
 #missions.one.pane-loadout .msheet { grid-template-rows: auto 1fr; padding-top: 20px; }
 #missions.one.pane-loadout .mbrief { grid-column: 1 / -1; max-width: none; flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; margin-bottom: 16px; }
 #missions.one.pane-loadout .mfacts, #missions.one.pane-loadout .mmap, #missions.one.pane-loadout .mblurb, #missions.one.pane-loadout .mrail, #missions.one.pane-loadout .mtop .tag { display: none; }
@@ -415,17 +411,15 @@ export function openStartPage(opts: StartPageOpts = {}): StartPage | null {
   let playerHour: HourId | null = null;   // (the hour the page stood at before a short-list row put its own on — null: the hour on the row IS the player's)
   const host = el('div', 'onehost'), tip = el('div', 'mtip');
   // THE COLUMN WHERE THE MISSION LIST WAS, on the Team & kit step: the team at the mission's own door, the real renderer's picture (ui/kitView.ts) — and nothing
-  // else. The standing man (ui/kitFigure.ts) is not on the page any more (the maintainer, 10-20: "we show the original gear screen before the new one fades
-  // in. let's just remove the old one with the figure?" — he stood in while the picture booted, and wherever a level stages none): the column waits EMPTY
-  // for the picture and stays empty where there is none. He is mounted, and drawn, only under `?oldfigure` (KIT_VIEW.on off: no picture, the page as it was).
-  const figHost = el('div', 'onefig'); let fig: KitFigure | null = null, kview: KitViewFrame | null = null;
+  // else (the maintainer, 10-20: "we show the original gear screen before the new one fades in. let's just remove the old one with the figure?"): the column
+  // waits EMPTY for the picture and stays empty where there is none.
+  const figHost = el('div', 'onefig'); let kview: KitViewFrame | null = null;
   // THE KIT STEP'S BRIEF AND ITS WALKTHROUGH (ui/kitBrief.ts `?kitbrief=0`, ui/kitGuide.ts `?kitguide=0`): the job, the map and what the place asks stay in
   // sight over the kit, and a first visit is walked through the step row by row. Both are this page's alone; each is null with its switch off.
   let kbrief: KitBrief | null = null, kguide: KitGuide | null = null;
   const guideOn = () => (pane === 'loadout' && L?.open ? L : null);
-  const paintFigure = (s: LoadoutScreen) => { if (shut || !kview) return; if (pane !== 'loadout' || s !== L) { kview.show(null); fig?.show(null); return; }
-    if (kview.show({ search: s.search(), kind: s.entry.kind, level: s.entry.level, way: ready ? M.way : 0, squad: s.squad, member: s.member, row: s.card?.at() ?? -1 }) || !fig) { fig?.show(null); return; }   // (where the mission's level stages it: the team at its way-in door, the real renderer's picture — ui/kitView.ts; `?oldfigure` = the standing man everywhere)
-    const k = s.entry.kind; fig.show({ member: s.member, squad: s.squad, suit: LOOK.on && LOOK.suit && (k === 'quiet' || k === 'solo'), look: LOOK.on && placeOfQuery(new URLSearchParams(s.search().replace(/^[^?]*\?/, ''))), card: s.worn(), hour: ready ? M.startHour : undefined, cloud: !ready ? 0 : snowLevel(s.entry.level?.replace(/\.json$/, '')) ? WEATHER_PRESETS.snow.cloud : M.startWeather ? WEATHER_PRESETS[M.startWeather].cloud : 0 }); };   // (he stands in the light of the hour the mission is set for, under the cloud of its weather: a snow level's own, whatever the hidden pick remembers)
+  const paintFigure = (s: LoadoutScreen) => { if (shut || !kview) return; if (pane !== 'loadout' || s !== L) { kview.show(null); return; }
+    kview.show({ search: s.search(), kind: s.entry.kind, level: s.entry.level, way: ready ? M.way : 0, squad: s.squad, member: s.member, row: s.card?.at() ?? -1 }); };   // (where the mission's level stages it: the team at its way-in door, the real renderer's picture — ui/kitView.ts)
 
   /** the short list's settings are what the page shows for `m`: its pick, else null */
   const asPick = (m: Mission): Pick | null => { const p = pickOfMission(m.id); if (!p) return null; const d = quietFogAside(() => leversMixed() ? leversBase() : difficultyNow());   // (levers moved to a mix of their own: the level they stand over)
@@ -528,7 +522,7 @@ export function openStartPage(opts: StartPageOpts = {}): StartPage | null {
   M = openMissions({ root: opts.root, list, keep: true, planPx: GROUPS_UI.on ? 640 : 1320, select: opts.select, first: PICKS_UI.on ? PICKS[0]?.mission : undefined, fold: GROUPS_UI.on, tiles: GROUPS_UI.on, heads: GROUPS_UI.on ? undefined : first > 0 && first < list.length ? { [first]: 'Every other mission' } : {},   // (the groups, folded — ui/missions.ts groupHeads / `fold`; a visit that names no row opens on the short list's first, wherever its group stands; ?nogroups = the short list on top and the one heading it had)
     onPick: onward,
     onPaint: () => { if (ready) onPaint(); },
-    onClose: () => { shut = true; if (L?.open) L.close(); L = null; fig?.close(); fig = null; kview?.close(); kview = null; kguide?.close(); kguide = null; kbrief?.close(); kbrief = null; figHost.remove?.(); root.classList.remove('one', 'tiles', 'pane-list', 'pane-loadout', 'quiet'); MISSIONS.keysAway = null; if (page === P) page = null;
+    onClose: () => { shut = true; if (L?.open) L.close(); L = null; kview?.close(); kview = null; kguide?.close(); kguide = null; kbrief?.close(); kbrief = null; figHost.remove?.(); root.classList.remove('one', 'tiles', 'pane-list', 'pane-loadout', 'quiet'); MISSIONS.keysAway = null; if (page === P) page = null;
       root.removeEventListener?.('click', onClick, true); for (const v of vals) if (v.lit) clearTimeout(v.lit);
       if (playerHour !== null) try { M.hour(playerHour); } catch { /* the list is gone */ }   // (the list remembers the PLAYER's hour, not one a short-list row put on)
       setTimeout(() => { const m = document.getElementById?.('menu'), b = m?.classList.contains('on') && !m.hasAttribute('inert') ? m.querySelector?.('.actions button.primary') as HTMLElement | null : null; if (b && !currentMissions()) b.focus?.(); }, 0); } });   // (the card behind has the keys again: Enter is its 'Play ›')
@@ -542,7 +536,7 @@ export function openStartPage(opts: StartPageOpts = {}): StartPage | null {
   // the rail down the right (Setup, the team, the readout), the loadout across the foot. The list's setting rows are parked in a store nobody sees.
   if (sheet) {
     sheetEl = sheet;
-    if (sheet.parentElement) { sheet.parentElement.insertBefore(figHost, sheet); fig = KIT_VIEW.on ? null : mountKitFigure(figHost); kview = mountKitView(root, sheet.parentElement, figHost, () => { if (L) paintFigure(L); }); }
+    if (sheet.parentElement) { sheet.parentElement.insertBefore(figHost, sheet); kview = mountKitView(root, sheet.parentElement, figHost, () => { if (L) paintFigure(L); }); }
     const brief = el('div', 'mbrief'), map = el('div', 'mmap'), rail = el('div', 'mrail'), store = el('div', 'mstore');
     const top = q('.mtop'), facts = q('.mfacts'), place = q('.mplace');
     if (top) brief.append(top, csum); if (facts) brief.appendChild(facts);
