@@ -29,7 +29,7 @@ impl Know {
 impl Default for Know { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: a union)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Hash)]
 pub enum Who {
     Guard(GuardId),
     Player,

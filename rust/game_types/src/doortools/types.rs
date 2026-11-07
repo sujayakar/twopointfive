@@ -523,7 +523,7 @@ impl DoorToolsDoneItemLaneBackTriesOn {
 impl Default for DoorToolsDoneItemLaneBackTriesOn { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum Phase {
     Slice,
     Kick,
