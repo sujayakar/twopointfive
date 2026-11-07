@@ -62,6 +62,11 @@ const _: () = assert!(core::mem::offset_of!(Bench, pose) % 16 == 0 && (MAX_NODES
 pub fn bench() -> &'static mut Bench {
     unsafe { &mut *core::ptr::addr_of_mut!(BENCH) }
 }
+/// the bench, to read
+#[inline(always)]
+pub fn bench_read() -> &'static Bench {
+    unsafe { &*core::ptr::addr_of!(BENCH) }
+}
 /// where a table of the bench is (a byte address): 0 rot · 1 pos · 2 args · 3 pose · 4 mask · 5 parent · 6 order
 pub fn addr(table: u32) -> usize {
     let b = bench();
