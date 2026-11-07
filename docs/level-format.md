@@ -247,7 +247,8 @@ stages, walks and finishes each scenario the file carries (pair, four, rescue) u
 - `par` — a PAR CLOCK over this level's room clear (`game/par.ts`; needs a `roomClear` block): `{ gold, silver, bronze, lossSecs }`, seconds, with
   gold < silver < bronze and `lossSecs` ≥ 0. The run is timed from the first order, Sam's first stride off his start mark or his first round or throw to
   the room clear's 'taken'; every teammate down at the end adds `lossSecs`; the total, in whole seconds as shown, earns the medal. The clock leads the
-  objective row and the result is said once on the HUD log. It only READS the game: the same keys play the same run with `?nopar` (`PAR.on` false). Set
+  objective row and the result is said once on the HUD log. The Rust game keeps the clock (`rust/game_rules/src/par`); it moves nobody. `PAR.on` is a settled row, on:
+  there is no way to play the level untimed (`?nopar` is gone). Set
   the bars from measured runs (`tools/qa/ships.ts --scn <row> --seeds 1-24 --json f`: each run's `par` = secs, lost, total, medal). Today:
   `levels/killhouse.json`. Check: `bun run tools/qa/par-check.ts` (`probes.ts par`).
 - `defuse` — TIMED CHARGES on one clock over this level's room clear (`game/defuse.ts`, `Game.defuse`; `levels/defuse.json`, row `defuse-four` 'The two
