@@ -66,7 +66,7 @@ export async function quietfogCheck(): Promise<boolean> {
     { fresh();
       const cases: [string, boolean, string][] = [
         ['levelFile=bazaar.json&quiet&quietfog=team', true, 'all round'], ['levelFile=bazaar.json&quiet=3&quietfog=cones', true, 'cones'],
-        ['levelFile=quiet-yard.json&quiet&squad=1&quietfog=own', true, 'own eyes, as two'], ['levelFile=bazaar.json&quiet&quietfog=off', false, 'the off rung named'],
+        ['levelFile=lights-out.json&quiet&squad=1&quietfog=own', true, 'own eyes, as two'], ['levelFile=bazaar.json&quiet&quietfog=off', false, 'the off rung named'],
         ['levelFile=tut-quiet.json&quiet&quietfog=cones', false, 'a tutorial mission'], ['levelFile=bazaar.json&quiet&quietfog=cones&nofow', false, '?nofow beside it'],
         ['quietfog=cones', false, 'the solo night'], ['roomclear&quietfog=cones', true, 'a room clear (its own fog)'], ['nightbreach&quietfog=cones', false, 'the night breach'], ['levelFile=bazaar.json&quiet&fow', true, '?fow beside a quiet mission, as ever'],
       ];
@@ -119,7 +119,7 @@ export async function quietfogCheck(): Promise<boolean> {
       L.close?.(); QF.setQuietFog('off'); fresh(); M.MISSIONS.onPick = pickWas;
     }); });
     // ───────────────────────────── runs
-    for (const [file, two] of [['bazaar.json', false], ['quiet-yard.json', true]] as [string, boolean][]) {
+    for (const [file, two] of [['bazaar.json', false], ['lights-out.json', true]] as [string, boolean][]) {
       const lines: string[] = []; let ok = true;
       for (const rung of ['team', 'cones', 'own'] as const) {
         fresh(); const W = await stand(3, file), g = W.game;

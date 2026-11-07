@@ -325,7 +325,7 @@ export async function debriefLoud() {
   const graded = (t: string) => BANDS.some((b: any) => t.includes(b.word)); void VERDICT;
   try {
     // ---- the tutorial's solo fight: the stealth game's kind, a row that leans loud
-    { const row = LOUD_BREAK ? 'tut-quiet.json' : 'tut-solo.json', W = await standRow(row, `?levelFile=${row}&quiet`), g = W.game, D = debriefOf(g);   // (LOUDCARD_BREAK=1: the row that leans quiet stood in its place — must fail)
+    { const row = LOUD_BREAK ? 'tut-quiet.json' : 'tut-road.json', W = await standRow(row, `?levelFile=${row}&quiet`), g = W.game, D = debriefOf(g);   // (LOUDCARD_BREAK=1: the row that leans quiet stood in its place — must fail)
       if (W.why) fails.push(`the solo tutorial did not start: ${W.why}`);
       if (!loudRow(g)) fails.push('the solo tutorial (kind quiet, leans loud): loudRow says no');
       if (D.scored) fails.push('…and its debrief is still scored'); if (graded(D.summary)) fails.push(`…and its copied line carries a rating: "${D.summary}"`);
@@ -352,7 +352,7 @@ export async function debriefLoud() {
       finally { console.log = log; console.warn = warn; }
       { const W = await standUp(); if (rowFile(W.game) !== null) off.push(`the bundled office reads back as ${rowFile(W.game)} (want none)`); }
       if (off.length) fails.push(`level files that do not read back as their row's file: ${off.join(' · ')}`); notes.push(`${files.length} row files + ${looks} look files read back`);
-      const loud = (ALL_MISSIONS as any[]).filter(e => e.kind === 'quiet' && e.lean === 'loud').map(e => e.id); notes.push(`rows on the stealth game's card that lean loud: ${loud.join(', ') || 'none'}`); if (!loud.includes('tut-solo')) fails.push('the solo tutorial no longer leans loud on the list'); }
+      const loud = (ALL_MISSIONS as any[]).filter(e => e.kind === 'quiet' && e.lean === 'loud').map(e => e.id); notes.push(`rows on the stealth game's card that lean loud: ${loud.join(', ') || 'none'}`); if (!loud.includes('tut-road')) fails.push('the solo tutorial no longer leans loud on the list'); }
     // ---- the mission's own end lines name the grade through Debrief.grade ('' when not scored), never the rating itself (the 'exfiltrated' line is said on the frame he walks out: not played here)
     //      (read off the Rust game's own source since 2026-11-07: the TypeScript of those two lines went with the tick)
     { const ms = readFileSync(`${ROOT}/rust/game/src/mission/p_01.rs`, 'utf8'); if (/\bd\.rating\b|\bd\.score\b/.test(ms) || (ms.match(/\bd\.grade\b/g) ?? []).length < 2) fails.push('the mission (rust/game/src/mission/p_01.rs) names the rating or the score itself, or no longer reads the debrief\'s grade in its two end lines'); }
@@ -445,7 +445,7 @@ export async function debriefDom() {
         notes.push(`door row: ${row.slice(-44)}`); } }
     // and a row that leans loud draws no rating, no score, no docked line, no badges, and its numbers untoned (ui/debrief.ts over Debrief.scored — debrief-loud has the rule)
     {
-      { const row4 = LOUD_BREAK ? 'tut-quiet.json' : 'tut-solo.json', W4 = await standRow(row4, `?levelFile=${row4}&quiet`), cells = (r: El) => r.all(e => e.cls.has('st') && /^(seen|alarms|floor up|bodies found|kills|doors kicked|called in|checkpoint loads|civilians saw you|…and told them)/.test(e.textContent)), toned = (r: El) => cells(r).filter(e => e.cls.has('good') || e.cls.has('bad') || e.cls.has('warn')).length;
+      { const row4 = LOUD_BREAK ? 'tut-quiet.json' : 'tut-road.json', W4 = await standRow(row4, `?levelFile=${row4}&quiet`), cells = (r: El) => r.all(e => e.cls.has('st') && /^(seen|alarms|floor up|bodies found|kills|doors kicked|called in|checkpoint loads|civilians saw you|…and told them)/.test(e.textContent)), toned = (r: El) => cells(r).filter(e => e.cls.has('good') || e.cls.has('bad') || e.cls.has('warn')).length;
         { const st = W4.game.mission.stats, n = W4.game.chronicle.counts; st.bodies = 1; st.kills = 2; n.kicked = 1; n.devices = 1; n.loads = 1; n.civSeen = 1; n.hits = 1; }   // (a run that would tone every one of them, and one cell that keeps its red: a hit taken)
         const h4 = new El('DIV'); const ui4 = renderDebrief(h4 as any, W4.game); const r4: El = h4.children[0];
         const drawn = ['db-rating', 'db-score', 'db-t3', 'chip'].filter(c => r4.all(e => e.cls.has(c)).length), t2 = r4.all(e => e.cls.has('db-t2'))[0]?.textContent ?? '';

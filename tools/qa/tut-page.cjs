@@ -12,7 +12,7 @@ const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow
 const OUT = process.env.OUT || fs.mkdtempSync(path.join(os.tmpdir(), 'tut-page-')), STEPS = +(process.env.STEPS || 99), PICS = process.env.PICS ? process.env.PICS.split(',') : null;
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage textures \(5\) in the Compute stage/;
-const name = process.argv[2] || 'tut-sky';
+const name = process.argv[2] || 'tut-team';
 const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
 let failed = false;
 const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
