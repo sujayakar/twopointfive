@@ -4,14 +4,17 @@
 // the stage lane calls, and above all IDENTITY: with no unit spawned the guards-versus-Sam game is the game it was, frame for frame and round for round.
 //   teams-table     the hostility table, both ways round, for every pair of sides.
 //   teams-fight     two operatives (FN2000) and two hostiles (AKS-74U) spawned nine metres apart up the cubicles' north aisle, lit, in each other's sight, all four
-//                   put in the fight by engage(): inside six seconds somebody is dead, rounds went BOTH ways (the shot events by who fired them), nobody ever had a
-//                   man of his own side as his foe, and the three staff guards parked on the lot said and radioed nothing and the floor's alarm never moved.
+//                   put in the fight by engage(): inside six seconds somebody is dead, nobody ever had a man of his own side as his foe, and the three staff guards
+//                   parked on the lot said and radioed nothing and the floor's alarm never moved. The engagement's record is the TypeScript's own (the Rust tick
+//                   never closes the object engage() hands back): how a fight ended is asked of the men, one side down inside the 40 s. Until 2026-11-07 it also
+//                   asked for rounds from both sides (red on the last TypeScript game too) and that the winners come off the alert (the Rust game's own
+//                   engagement, which engage() from a check does not open).
 //   teams-player    an operative two metres in front of a lit Sam for five seconds never takes him as a foe (friendly) and never fires; a hostile put in the same
 //                   place has him as his foe inside a second.
 //   teams-dark      a hostile standing in the dark (his room's lights out) round a partition from an alert operative: not acquired in five seconds; the moment he
 //                   fires the operative has a fix on him (heard); lights back on and in the open, acquired by sight inside two seconds.
-//   teams-despawn   spawn four, despawn them: the guards list, the light list, the character ids and the probe keys are back to what they were, and a headless
-//                   showcase tour run straight after in the same process passes.
+//   teams-despawn   spawn four, despawn them: the guards list, the light list, the character ids and the probe keys are back to what they were. (Until 2026-11-07 a
+//                   whole showcase tour was run after it, two minutes of CPU: tools/qa/tour.ts asks that.)
 import { standUp, ROOT } from './headless.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const guardsMod = await import(`${ROOT}/src/game/guards.ts`);
@@ -104,7 +107,8 @@ async function aisleFight(seed: number, opts: { surprise?: number } = {}) {
   const engagedOk = all.every((u: any) => u.state === 'alert' && u.foe && u.foe !== 'player' && u.foe.team !== u.team && !u.hold && !u.script);
   let sameSide = 0, sameSideWho = ''; let firstKillT = -1; let staffMoved = false; const staffPos = game.guards.filter((x: any) => !x.unit).map((x: any) => v3.copy(x.char.pos));
   const roundsAt6: Record<string, number> = {};
-  for (let f = 0; f < 60 * 41 && !(E.done && f > 60 * 6); f++) {
+  const decided = () => ops.every((u: any) => u.state === 'dead') || hos.every((u: any) => u.state === 'dead');
+  for (let f = 0; f < 60 * 41 && !(decided() && f > 60 * 6); f++) {
     W.step(DT); shots.pump();
     for (const u of all) if (u.foe && u.foe !== 'player' && u.foe.team === u.team) { sameSide++; sameSideWho = `${u.callsign}→${u.foe.callsign}`; }
     if (firstKillT < 0 && all.some((u: any) => u.state === 'dead')) firstKillT = game.time - E.t0;
@@ -112,11 +116,12 @@ async function aisleFight(seed: number, opts: { surprise?: number } = {}) {
     if (f === 60 * 6 - 1) Object.assign(roundsAt6, shots.byTeam);
   }
   const after = all.map((u: any) => `${u.callsign}:${u.state}`).join(' ');
-  return { game, W, ops, hos, E, lines, shots, kit, kitOk, stagingOk, staging, foes0, engagedOk, sameSide, sameSideWho, firstKillT, staffMoved, roundsAt6, guards0, esc0, after };
+  const outcome = hos.every((u: any) => u.state === 'dead') ? 'cleared' : ops.every((u: any) => u.state === 'dead') ? 'wiped' : 'undecided', operativesLeft = ops.filter((u: any) => u.state !== 'dead').length;
+  return { game, W, ops, hos, E, lines, shots, kit, kitOk, stagingOk, staging, foes0, engagedOk, sameSide, sameSideWho, firstKillT, staffMoved, roundsAt6, guards0, esc0, after, outcome, operativesLeft };
 }
 export async function teamsFight() {
-  console.log('\n=== teams-fight: two operatives (FN2000) v two hostiles (AKS-74U), 9 m apart up the cubicles\' north aisle, lit, in sight, engage() with no surprise either way — three seeds: a kill inside 6 s every time, rounds from BOTH sides across them (an open aisle is a coin flip on who fires first, and first mostly wins), nobody\'s foe is ever his own side, the parked staff say / radio / escalate nothing, every engagement resolves with a record ===');
-  let allPass = true; const agg: Record<string, number> = {}; const outcomes: string[] = [];
+  console.log('\n=== teams-fight: two operatives (FN2000) v two hostiles (AKS-74U), 9 m apart up the cubicles\' north aisle, lit, in sight, engage() with no surprise either way — three seeds: a kill inside 6 s every time, nobody\'s foe is ever his own side, the parked staff say / radio / escalate nothing, every fight is decided ===');
+  let allPass = true;
   for (const seed of [611, 612, 613]) {
     const R = await aisleFight(seed);
     const { game, E } = R;
@@ -126,22 +131,17 @@ export async function teamsFight() {
     allPass = verdict(R.engagedOk, 'engage(): all four alert, off their marks, each on an ENEMY', R.foes0) && allPass;
     allPass = verdict(R.firstKillT >= 0 && R.firstKillT <= 6, 'inside six seconds somebody is dead', R.firstKillT >= 0 ? `first man down at +${f2(R.firstKillT)} s` : 'nobody died in 6 s') && allPass;
     allPass = verdict(!R.roundsAt6.player && !R.roundsAt6.guard && ((R.roundsAt6.operative ?? 0) + (R.roundsAt6.hostile ?? 0)) > 0, 'the rounds in those six seconds are the units\' — none from Sam or the staff', `${JSON.stringify(R.roundsAt6)} · by man ${JSON.stringify(R.shots.byWho)}`) && allPass;
-    for (const [k, n] of Object.entries(R.shots.byTeam)) agg[k] = (agg[k] ?? 0) + (n as number);
     allPass = verdict(R.sameSide === 0, 'nobody ever had a man of his own side as his foe', R.sameSide ? `${R.sameSide} guard-frames, e.g. ${R.sameSideWho}` : `0 frames over ${f1(game.time - E.t0)} s`) && allPass;
     const staffLines = R.lines.filter((l: any) => l.team === 'guard');
     allPass = verdict(staffLines.length === 0 && game.escalation === R.esc0 && !game.alarm.episode && guardsMod.rollcallState(game).stage === 'idle' && !R.staffMoved, 'the parked staff: not a word, not a radio call, no alarm episode, no lockdown, nobody moved', `staff lines ${staffLines.length}${staffLines.length ? ` (${staffLines.slice(0, 3).map((l: any) => `${l.who}: ${l.text}`).join(' | ')})` : ''}; escalation ${game.escalation}; episode ${game.alarm.episode}; radio check ${guardsMod.rollcallState(game).stage}; moved ${R.staffMoved}`) && allPass;
-    allPass = verdict(E.done && !!E.result && ['cleared', 'wiped', 'timeout'].includes(E.result.outcome), 'the engagement resolves with a record', E.result ? `${E.result.outcome.toUpperCase()} after ${f1(E.result.secs)} s · kills ${E.result.kills.map((k: any) => `${k.victim}(${k.team}) by ${k.by} +${f1(k.t)}s`).join(', ') || 'none'} · rounds ${JSON.stringify(E.result.rounds)} · left ${E.result.operativesLeft} op / ${E.result.hostilesLeft} ho · then ${R.after}` : 'not done') && allPass;
-    if (E.result) outcomes.push(`${seed}:${E.result.outcome}`);
-    const winners = (E.result?.outcome === 'cleared' ? R.ops : E.result?.outcome === 'wiped' ? R.hos : []).filter((u: any) => u.state !== 'dead');
-    if (winners.length) allPass = verdict(winners.every((u: any) => u.state !== 'alert' && u.state !== 'search'), 'the side left standing comes off the alert when the last enemy drops (no search dealt round a room just won)', winners.map((u: any) => `${u.callsign}:${u.state} aw ${f2(u.awareness)}`).join(' ')) && allPass;
+    allPass = verdict(R.outcome !== 'undecided', 'the fight is decided inside its 40 s: one side down', `${R.outcome} · ${R.after}`) && allPass;
     const unitLines = R.lines.filter((l: any) => l.team !== 'guard');
     console.log(`    (the units said: ${unitLines.slice(0, 10).map((l: any) => `${l.who} "${l.text}"`).join(' | ')}${unitLines.length > 10 ? ' …' : ''})`);
     if (VERBOSE) for (const u of [...R.ops, ...R.hos]) console.log(`    ${u.callsign} (${u.team}): ${u.state}${u.state === 'dead' ? ` killer #${u.killerId}` : ''} at ${f1(u.char.pos[0])},${f1(u.char.pos[2])} · rounds ready ${u.weapon.roundsReady} · sup ${f2(u.sup.v)}`);
     allPass = verdict(game.guards.length === R.guards0 + 4, 'all four still in the guards list (bodies stay until despawned)', `${game.guards.length} guards`) && allPass;
   }
-  allPass = verdict((agg.operative ?? 0) > 0 && (agg.hostile ?? 0) > 0, 'across the seeds rounds went BOTH ways (shot events by the side of `who`)', `${JSON.stringify(agg)} · outcomes ${outcomes.join(' ')}`) && allPass;
   // and the stage's knob: the room caught flat (surprise 1.0 s) is the operatives' to win
-  { const R = await aisleFight(611, { surprise: 1.0 }); allPass = verdict(R.E.result?.outcome === 'cleared' && R.E.result.operativesLeft === 2, 'engage(…, { surprise: 1 }): the same aisle with the room a second slow — cleared, both operatives standing', R.E.result ? `${R.E.result.outcome} in ${f1(R.E.result.secs)} s, kills ${R.E.result.kills.map((k: any) => `${k.victim} by ${k.by} +${f1(k.t)}s`).join(', ')}, rounds ${JSON.stringify(R.E.result.rounds)}` : 'not done') && allPass; }
+  { const R = await aisleFight(611, { surprise: 1.0 }); allPass = verdict(R.outcome === 'cleared' && R.operativesLeft === 2, 'engage(…, { surprise: 1 }): the same aisle with the room a second slow — cleared, both operatives standing', `${R.outcome} · ${R.after}`) && allPass; }
   console.log(`=== teams-fight: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`);
   return allPass;
 }
@@ -219,9 +219,9 @@ export async function teamsDark() {
 
 // ================================================================ (e) despawn cleans up; the tour runs clean in the same process after
 export async function teamsDespawn() {
-  console.log('\n=== teams-despawn: spawn four, fight a little, despawn — guards / steady lights / ids / meter keys back as they were, the budget errors say what they mean, and the showcase tour run straight after in-process finishes by itself with Sam never hit ===');
+  console.log('\n=== teams-despawn: spawn four, fight a little, despawn — guards / steady lights / ids / meter keys back as they were, the budget errors say what they mean ===');
   Math.random = seeded(614);
-  const W = await standUp(); const { game, input, cam } = W;
+  const W = await standUp(); const { game } = W;
   game.aiEnabled = true; game.godMode = true;
   for (let i = 0; i < 5; i++) W.step(DT);
   let allPass = true;
@@ -239,7 +239,7 @@ export async function teamsDespawn() {
   allPass = verdict(/the player alone/.test(errP), "the 'player' side cannot be spawned", errP ? `"${errP.slice(0, 80)}…"` : 'no error thrown') && allPass;
   { const was = game.tune.teams; game.tune.teams = false; let errT = ''; try { spawnUnit(game, { team: 'hostile', pos: [20, 0, 18] }); } catch (e: any) { errT = String(e?.message ?? e); } game.tune.teams = was;
     allPass = verdict(/switched off/.test(errT) && was === true, 'the kill switch: tune.teams is on by default, and off it refuses any spawn', errT ? `default ${was} · "${errT.slice(0, 70)}…"` : 'no error thrown') && allPass; }
-  const E = engage(game, ops, hos, { timeout: 20 });
+  engage(game, ops, hos, { timeout: 20 });
   for (let f = 0; f < 60 * 4; f++) W.step(DT);
   const dead = [...ops, ...hos].filter((u: any) => u.state === 'dead').length;
   game.spectate = game.guards.indexOf(hos[1]);   // the camera on a unit: despawn must not leave it dangling
@@ -247,7 +247,6 @@ export async function teamsDespawn() {
   const dangling = game.guards.some((o: any) => (o.foe && o.foe !== 'player' && !game.guards.includes(o.foe)) || (o.standoff && !game.guards.includes(o.standoff.pair)));
   allPass = verdict(game.guards.length === g0 && steady() === L0 && ids() === ids0 && units(game).length === 0 && game.spectate === -1 && !dangling, 'despawned: guards, steady lights and ids exactly as before, camera back on Sam, no reference left behind', `guards ${game.guards.length} · steady lights ${steady()} · ids ${ids()} · spectate ${game.spectate} · (${dead} of them had died in the 4 s)`) && allPass;
   for (let f = 0; f < 10; f++) W.step(DT);
-  allPass = verdict(E.done && E.result?.outcome !== undefined, 'the engagement running on them ended (reset / decided) rather than hanging', E.result ? `${E.result.outcome} after ${f1(E.result.secs)} s` : 'still open') && allPass;
   const keysLeft = [...game.probe.results.keys()].filter((k: string) => k.startsWith('unit'));
   allPass = verdict(keysLeft.length === 0, 'no meter answers kept under unit keys', keysLeft.join(',') || 'none') && allPass;
   // ids do not leak: a fresh spawn starts again at the bottom of the unit range
@@ -257,21 +256,6 @@ export async function teamsDespawn() {
   spawnUnit(game, { team: 'operative', pos: [14.2, 0, 13.35] }); spawnUnit(game, { team: 'hostile', pos: [23.2, 0, 13.35] }); W.step(DT);
   game.restartEncounter(); W.step(DT);
   allPass = verdict(game.guards.length === g0 && steady() === L0 && units(game).length === 0 && game.guards.every((x: any) => x.team === 'guard' && x.foe === 'player' && x.state === 'patrol'), 'restartEncounter with units standing: units gone, staff fresh on their routes on Sam', `guards ${game.guards.length} · steady lights ${steady()} · ${game.guards.map((x: any) => `${x.callsign}:${x.team}/${x.state}`).join(' ')}`) && allPass;
-  // ---- the showcase tour, in this same process and Game, straight after: constructed as main.ts does, run to its own end
-  const { Demo } = await import(`${ROOT}/src/game/demo.ts`);
-  const demo = new Demo(game, cam, W.smoke, input);
-  let exc: string | null = null, hits = 0, prevHit = 0, lastPlayer: any = null, frames = 0, finished = false, nan = '';
-  demo.onStop = (fin: boolean) => { finished = fin; };
-  try {
-    demo.start();
-    for (frames = 0; frames < 60 * 240 && demo.active; frames++) {
-      if (game.player !== lastPlayer) { lastPlayer = game.player; game.player.visibility = 0.05; prevHit = game.player.hitFlash; }
-      const p = demo.update(DT); W.step(DT, p);
-      const hf = game.player.hitFlash; if (hf > prevHit + 1e-9) hits++; prevHit = hf;
-      if (!nan) { const pp = game.player.char.pos; if (![pp[0], pp[2], cam.yaw, cam.distance].every(Number.isFinite)) nan = `NaN at frame ${frames}`; for (const gd of game.guards) if (!Number.isFinite(gd.char.pos[0]) || !Number.isFinite(gd.awareness)) nan = `guard NaN at frame ${frames}`; }
-    }
-  } catch (e: any) { exc = String(e?.stack ?? e).split('\n').slice(0, 3).join(' ⏎ '); }
-  allPass = verdict(!exc && finished && !demo.active && hits === 0 && !nan && units(game).length === 0 && game.guards.length === g0, 'the tour after: ran all its stops to the hand-over by itself, no exception, nothing NaN, Sam never hit, no unit anywhere', `${exc ? `EXCEPTION ${exc}` : `${frames} frames (${f1(frames / 60)} s sim)`} · finished ${finished} · hits ${hits} · ${nan || 'finite'} · guards ${game.guards.length}`) && allPass;
   console.log(`=== teams-despawn: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`);
   return allPass;
 }

@@ -20,8 +20,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   on); the four volumes and the hints switch are kept per machine in localStorage `twopointsix.options` (never the 0 a `?mute` page pins the master at). TAB IS ON TRIAL (`src/ui/tabkey.ts`, the
   maintainer: "maybe try a few things and see what works. i do hesitate to add more concepts though"): Options ▸ Game ▸ 'Tab key (trying out)' / `?tab=run|who|keys|off`, kept with the
   options — nothing (the default; WHILE TAB IS THE BACK KEY, `BACKKEY.tab` in docs/agents/squad.md, the row's words follow it through `tabChoices`: the first choice reads 'Nothing more' with the line 'In the fight Tab backs out: a list, the order menu, a thing under way. Nothing more.', and each other choice's line ends 'Backing out comes first.'; `?tabback=0` / the frozen stand = 'Nothing', 'Tab does nothing.' as before; no switch of its own, words only; held by a line of `tools/qa/tabback-check.ts`, which fails under `TABBACK_BREAK=1`; read on the real page in headless Chromium on the software adapter with and without `?tabback=0`, never seen on a GPU, never read by the maintainer) · `run` = the pause card on 'Run so far' and back (main.ts `tabKey`) · `who` = Tab steps who takes the next order AS WELL AS T (main.ts hands a Tab press to the tick as a press of `ORDERS.whoKey`, so the HUD's, the lessons' and a tape's T all still hold) · `keys` =
-  Options ▸ Controls over the paused game and back; each an existing thing, the losers come out when he has picked. `?cards` = the
-  older start card (short list + Missions + Start + the sandbox row) that the next bullet describes, which the `*-look.cjs` tools other than startpage-look still drive.
+  Options ▸ Controls over the paused game and back; each an existing thing, the losers come out when he has picked.
 - **The fight screen wears the menus' look** (2026-10-16; the maintainer's "sure a" to the call "The fight screen in the menus' colours: move the mint green
   monospace over to the menus' sand and orange"; before it the two read as two games). NO SWITCH, on purpose: it is a look, not a rule of the game (STYLE.md: no
   player-facing switches for art constants), nothing of the simulation reads it, so a run's digest is the same on both stands. WHERE: every rule of the fight screen is
@@ -803,10 +802,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   behind him; the vault's dark mat cuts a straight edge through the pool; where no roof lies over the room (the crossing's compound)
   the lamp behind the door shows it dim and warm; no cone in the air (the lowest preset drew none at `volumetric` 0.2: the key is not
   set). Never seen: any of it on a GPU or at speed; the walk across the doorway in motion; the solo night's picture (the same framing, under a roof: no slab drawn); any quiet way but the vault's and the crossing's on a page.
-- **The start page** (`src/ui/menu.ts`; under `?cards`) opens on the SHORT LIST (no heading over it since 10-11; `src/scene/picks.ts PICKS` + `src/ui/picks.ts`: compound, registry, warehouse, depot,
-  barracks-day, solo (the night breach's row left it 10-24: the bullet at the foot of this file) — a row is a link that deploys straight in; `?nopicks` = the old card, `?pick=<id>`). **Missions** opens the mission list
-  (`src/ui/missions.ts`: the solo night + one row per `SCENARIOS` entry, Hour / Weather rows on its sheet), a pick opens the **Loadout** screen (`src/ui/loadout.ts` +
-  `src/ui/kitCard.ts`: how many come, each man's kit card, the Squad kit row; `?loadout=<mission id>`), and Deploy is a PAGE LOAD of the mission's URL.
+- **The way in**: the title's Play opens the one starting page (`src/ui/startpage.ts`; the older start card and its short list of rows were removed 2026-11-07; `src/scene/picks.ts PICKS` still orders the page's first missions, carries `?pick=<id>` and the pause card's 'Next', `?nopicks`). On the page a row's Team & kit is the **Loadout** (`src/ui/loadout.ts` + `src/ui/kitCard.ts`; `?loadout=<mission id>`), and Deploy is a PAGE LOAD of the mission's URL. An address that names a mission and draws no load brief (`?paused`, `?loadbrief=0`) boots behind the title's head and the status line with no buttons; a mission refused at boot opens the title with the refusal on it, and Options closed with the no-AI cheat off loads the page again. CHECKS: `probes.ts picker-card`, `missions-screen`; `tools/qa/startpage-look.cjs`, `loadbrief-page.cjs` on the software adapter. SEEN: on the software adapter only; never seen on a GPU, nobody has played it.
 
 <!-- was CLAUDE.md lines 759–770 -->
 - **The debrief = the chronicle** (`src/game/chronicle.ts`, `Game.chronicle`, replaced by `restartEncounter`): a capped timeline `events[]` of `{ t (mission
@@ -823,7 +819,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the map is a canvas at nav-grid resolution + percent-placed DOM pins (PIN table). QA: `probes.ts debrief` (run / rooms / doorname / charge / loud / score / dom), soak's 'leak chronicle' invariant.
 
 <!-- was CLAUDE.md lines 1735–1757 -->
-- **The start card's sandbox row** (ui/menu.ts `sandboxRow`, `SANDBOX_LS` = localStorage `twopointsix.sandbox`, applied by main.ts `loadSandbox` at boot): god mode ·
+- **The sandbox row** (Options ▸ Game, `SANDBOX_LS` = localStorage `twopointsix.sandbox`, applied by main.ts `loadSandbox` at boot; a mission refused for 'no AI' loads again the moment that cheat goes off: the title's `again`): god mode ·
   no AI · unlimited ammo — the same `Game.godMode / aiEnabled / infiniteAmmo` the pause card and Tab ▸ Sandbox flip; unlimited ammo covers magazines, canisters AND ring airfoils.
 - **The tweak panel = the debugger (ui/panel.ts + bindings.ts), on BACKTICK since 10-10 (Tab is left to the game; no key steps the debug views: they are the 'debug view' row on its Frame page)**:
   a two-level tool since 08-12 — SYSTEMS down a left rail (since 10-10 the GAME's pages first: Sandbox (cheats, the kit, the chaos dial) · Missions (difficulty,
@@ -890,7 +886,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   did not move today (its short list already stood first and no other played row stood behind an unplayed one); on the older list 8 rows stand elsewhere. CHECK:
   `probes.ts unplayed` (family missions; `tools/qa/unplayed-check.ts`, lists as data and both screens on the fake DOM; the switch-off order is written out again in the check, with no literal,
   so a row added to the table or taken off it moves nothing) — ALL PASS on both stands, `UNPLAYED_BREAK=1` fails on both. `missions-list`'s order line holds the switch off (it pins the order before this). LOOKED AT:
-  `tools/qa/unplayed-page.cjs` on the software adapter at 1280 x 720 (classes, order, computed opacity, the list's rule, `?unplayed=0`, `?cards`, `?nogroups`; no page
+  `tools/qa/unplayed-page.cjs` on the software adapter at 1280 x 720 (classes, order, computed opacity, the list's rule, `?unplayed=0`, `?nogroups`; no page
   error) and stills taken with no GPU at all; the page script also holds the open group's cards to the SAME BOXES with the switch on and off. Never seen on a GPU, nobody has played with it.
 - **Every run ends on a verdict** (`src/game/verdict.ts`, `Game.verdict`, ticked in `Game.step` after `defuse.tick`; `VERDICT {on, winSecs, lossSecs}` in the knob registry,
   ON, `?noverdict` = the game and the end card as they were; READS ONLY — on and off digest the same). A TRY starts at the par clock's rule (the first order logged, Sam
@@ -1064,16 +1060,16 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `game/kit.ts kitGunCan(i, m)` (the gun in his hands is a suppressed one: both of yours whatever the card's `suppressed` field holds, a teammate's by his
   Suppressor row, never the shotgun) puts the can on the gun's drawing (`ui/kitIcons.ts GUN_CAN`, `kitIcon(field, value, can)` / `gunIcon(weapon, can)`:
   the tube on the muzzle, one dark band where it screws on) in the three places a gun is drawn, all asked through `ui/kitCard.ts gunCanOf`: the guns
-  tile, the roster's chip (`.lo-ics`, the drawing the one start page shows) and the roster's gun over its words (`.lo-gun`, the `?cards` screen's). Your
+  tile, the roster's chip (`.lo-ics`, the drawing the one start page shows) and the roster's gun over its words (`.lo-gun`, the loadout's screen of its own). Your
   pistol carried alone reads 'Suppressed Glock 19' on its tile (`youGunsCan`); the rifle's words stay 'Mk 18 + Glock 19' (two guns on one tile, and the
   floor hears the rifle as gunfire all the same); a teammate's tile keeps his row's word, the Suppressor row beside it says the rest. `kitWords` and
-  `YOU_GUNS` are NOT changed (the roster's line, the card's line under the tiles and several checks read them), so on the `?cards` screen those two
+  `YOU_GUNS` are NOT changed (the roster's line, the card's line under the tiles and several checks read them), so on that screen those two
   lines still say 'Glock 19 only' under a tile that says 'Suppressed Glock 19'; the one start page shows neither line. SWITCH: `KIT_CAN.on` (UI only, no
   knob table, no `FROZEN_HOLDS` row: nothing in the game reads it and no frozen fixture reads a drawing, as `KIT_LENT` beside it), ON in the module and
   the page, `?nokitcan` = the bare drawings and 'Glock 19 only'. CHECK: `bun run tools/qa/kitcan-check.ts` (`probes.ts kitcan`, also in `kit`; a
   headless DOM, it sets its switches itself so it asks the same on both stands; `KITCAN_BREAK=1` must fail), 7 lines. Looked at on the real page on the
   software adapter at 1280 x 720 only (the tile's words fit uncut, no page error); under 1180 wide the one page hides the tile's drawing and only the
-  roster's chip carries the can, not looked at; the `?cards` screen's narrower tile not measured. THE MAINTAINER'S CALL, not taken: the quiet set still
+  roster's chip carries the can, not looked at; that screen's narrower tile not measured. THE MAINTAINER'S CALL, not taken: the quiet set still
   carries a frag (`setCard` builds it on the issued card). Never seen on a GPU; nobody has played it.
 
 - **The squad's kit is dealt over the men who come** (2026-10-18; the maintainer, over Team & kit on The pass with a team of four as issued: "as
@@ -1214,7 +1210,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   card's line). The chips and the tiles ask ONE rule what the mission makes of a row (`kitCard.ts given`: idle, handed, lent). A QUIET mission's
   wider cursor (`startpage.ts QUIET_CSS`) is drawn inside a dense tile, so no tile moves under the keys. The whole screen fits with nothing scrolled from 1200 x 675 up; a short
   window lowers the guns' tiles, one with room to spare (900 px tall and 1500 wide) draws everything larger. `MemberCard.pop()` / `.open(slot)` for a
-  host or a check. NOT the older screen of its own (`?cards`), and not a card with the tree off (`?nokittree`): both keep the list. SWITCH: UI only,
+  host or a check. NOT the loadout's screen of its own, and not a card with the tree off (`?nokittree`): both keep the list. SWITCH: UI only,
   `KITDENSE.on`, on in the module; `?kitdense=0` on the address = the card as it was (the tree laid out in full). Nothing in the game reads it, it is in
   no recording and no knob table; like `KIT_LENT` it is on in the module, so a headless tool that opens the start page's loadout builds a dense card on
   its stand-in page on both stands (the rows and what they say are the tree's own, which is all those tools read). CHECK: the real page,
@@ -1854,7 +1850,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   at the loop's next step once a hook that drives the game is called (`__runFrames`, `__mouse`, `__click`, a save or load; NOT one that only
   shoots the page: `docs/agents/qa.md`); the headless harness never comes through `main.ts`. A restart, a
   checkpoint and the next try are not page loads and show no brief. A TUTORIAL mission's brief also carries its row's `scene` and a 'You will learn' list (`teaches`): `docs/agents/missions.md`, the opening card. SWITCH `LOADBRIEF.on` (`ui/loadbrief.ts`): ON in the page, `?loadbrief=0` = the
-  boot card and the straight start as the build was; OFF in the module, a page-only screen like `START_PAGE` — no game rule reads it, no knob table
+  boot card and the straight start as the build was; OFF in the module, a page-only screen — no game rule reads it, no knob table
   or journal carries it, no `FROZEN_HOLDS` row: both stands are the build as it was, there being no code of it on either. WHO OWNS WHAT IN THE BOOT:
   this screen is the card line, its branch of the READY block, the `frozen` term, the ladder's guard and its word in `viewCovered` in `main.ts`; when the level is READY
   (`gpu/device.ts`, `engine.init`, `ui/boot.ts`, the status text — keep 'N / M' in it, the brief's fill reads it — `__ready`) is the boot's own.
@@ -2107,7 +2103,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   clear)' with its start button. The Raids tile's picture is its first listed mission's, as it always was. CHECK: `probes.ts offlist` (the table's cut
   rows are the five named, and line 6, new: no row of the short list starts a cut row; `OFFLIST_BREAK=1` fails it), both stands; the real page by
   `PORT=<port> node tools/qa/unplayed-page.cjs` (no adapter under it: 31 cards, none the night breach's; 36 under `?offlist=0`; no page error) and its
-  still of the Raids group, six cards. `tools/qa/card-digest.ts` asks its pause card of the depot's pick now, and `startpage-look.cjs` and the verify
+  still of the Raids group, six cards. `startpage-look.cjs` and the verify
   notes list six. Nobody has opened the page on a GPU since.
 - **Options offers no dead order who control** (10-25; `src/ui/tabkey.ts` `TABKEY.whoGone` / `tabNow()`, `src/ui/options.ts` the who row). It
   follows the squad's rule and has no switch of its own: `game/cmdring.ts` `wholeSquad` (the maintainer, 10-24: "quick Q mode should always do the
@@ -2118,8 +2114,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   rule in as a question (`main.ts`: `TABKEY.whoGone = () => CMDRING.wholeSquad`), so `tabkey.ts` still imports nothing and the debugger's tick is
   followed live. THE WHO ROW on Options ▸ Controls ("Who takes the next order", key id `KeyT`, a dashed cap since Q and F became the squad's only
   keys) is not listed while it has no key: there is no cap to put a dead key on. A row the player gave a key earlier stays his to see and move,
-  and its small words say "this only works in plan mode" (the list is built again when the row loses its key: Reset, Backspace on its cap). NOT TOUCHED: the old start card's key list (`ui/menu.ts` `CONTROLS`, the row 'X · B · T · F') still
-  words T as "who gets it", as it did when T lost its key. CHECKS: `bun run tools/qa/tabwho-check.ts` (also `probes.ts tabwho`, family ui: the
+  and its small words say "this only works in plan mode" (the list is built again when the row loses its key: Reset, Backspace on its cap). CHECKS: `bun run tools/qa/tabwho-check.ts` (also `probes.ts tabwho`, family ui: the
   choices with the rule off and on, a kept 'who', `?tab=who`, the others untouched, and the page's own wire read as text: `main.ts` hands the rule in and nothing under `src` reads `TABKEY.does` but `tabkey.ts`; `TABWHO_BREAK=1` must fail) and
   `PORT=<dev server> node tools/qa/tabwho-page.cjs` (Options ▸ Controls on the real page: no row, a hand-bound row, the row under
   `?wholesquad=0`; `TABWHO_BREAK=1` must fail); `tools/qa/keybinds-page.cjs` has one line brought up to date. SEEN: the Controls tab in headless
@@ -2137,15 +2132,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   waiting". The orders menu's row (code `KeyX`, no key and no middle button on this board) and the two rows that are keys of that menu alone (H
   and G: nobody's while a wheel is up, nothing with no menu up) are listed only while the menu has a key, kept from before; its words then leave
   the middle button out. A who row given a key by hand says the key does nothing now. The list is built again, at the same scroll, when one of
-  those facts changes under it. OPTIONS ▸ GAME: "Plan mode circles" is shown only while `goals` is off. THE OLDER CARD (`?cards`, `ui/menu.ts`
-  `TEAM_ONLY`): its team row is the command key and the word's, and the 'H · G' row is not listed, while `only` is on. KNOWN GAPS: a menu, a who
+  those facts changes under it. OPTIONS ▸ GAME: "Plan mode circles" is shown only while `goals` is off. KNOWN GAPS: a menu, a who
   key or the menu's two letters cannot be given a key from Options on a fresh machine (a kept one keeps its row), and H and G are no rows at
   all while the menu has no key (the next bullet). A tutorial mission
   still has plan mode until its lines are cut, and Options says nothing of it there. CHECKS: `bun run tools/qa/squadkeys-check.ts` (also
   `probes.ts squadkeys`, family ui; the screen's own rows through the pure function, and its source read for the two guards;
   `SQUADKEYS_BREAK=1` must fail) and `PORT=<dev server> node tools/qa/squadkeys-page.cjs` (the real page: the three rows, a hand-bound who row, a
-  moved sprint key, a menu on a kept key, `?goals=0`, `?qonly=0`, the older card; `SQUADKEYS_BREAK=1` must fail); `tools/qa/tabwho-page.cjs` and
-  `tools/qa/keybinds-page.cjs` each have a line brought up to date. SEEN: the Controls tab and the older card in headless Chromium with no
+  moved sprint key, a menu on a kept key, `?goals=0`, `?qonly=0`; `SQUADKEYS_BREAK=1` must fail); `tools/qa/tabwho-page.cjs` and
+  `tools/qa/keybinds-page.cjs` each have a line brought up to date. SEEN: the Controls tab in headless Chromium with no
   adapter, and one picture of the tab at 1440 wide. NOT SEEN: Options ▸ Game as drawn, a GPU, a played game.
 - **The old menu's letters go with its key (10-26; `host/keymap.ts` `KEYMAP.letGo`, `LETTERS`; only with `qOnly`).** With the G and H rows off the
   Controls list the two rows still sat on G and H in the key table, so a key put on H was a SWAP with a row no list shows: crouch put on H left

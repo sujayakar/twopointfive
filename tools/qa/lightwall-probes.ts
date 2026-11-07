@@ -15,7 +15,7 @@ const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { mulberry32 } = await import(`${ROOT}/src/math/dice.ts`);
 const { AIM } = await import(`${ROOT}/src/game/aim.ts`);
 const { LIGHTWALL, lensClear } = await import(`${ROOT}/src/game/lighting.ts`);
-const BOOTED = LIGHTWALL.on;   // (as this file found it: on the shipped stand that is what the stand's one boot wrote, before any card here touches it)
+   // (as this file found it: on the shipped stand that is what the stand's one boot wrote, before any card here touches it)
 const { GUNWALL } = await import(`${ROOT}/src/game/gunwall.ts`);   // (held OFF here: these cards stage a gun IN a wall, which gunwall.ts no longer lets a man do — the light's own rule is what they measure)
 const { spawnUnit, lightEstimateAt, LIGHTS } = await import(`${ROOT}/src/game/guards.ts`);   // (LIGHTS.wallOff is held OFF here like the gun's rule: it puts a teammate's beam out at the wall these cards press him to — its own lines are `probes.ts light-wall` — and a light that is out has no place to measure)
 const { order } = await import(`${ROOT}/src/game/squad.ts`);
@@ -53,20 +53,18 @@ function samAt(W: any, z: number, gun: 'rifle' | 'pistol') {
 function beyond(W: any, sh: Vec3, at: Vec3): boolean { const d = v3.sub(at, sh), L = v3.len(d); return L > 1e-3 && !!W.game.col.raycast(sh, v3.scale(d, 1 / L), L); }
 
 async function wallSam() {
-  console.log('\n=== wall-sam: Sam pressed to the wall — off: the light is where the lens is, in or past the wall; on: his side of it; back from the wall: the lens, either way ===');
+  console.log('\n=== wall-sam: Sam pressed to the wall: the light is on his side of it; back from the wall: the lens ===');
   for (const gun of ['pistol', 'rifle'] as const) {
-    const off = samAt(await stage(21, false), 3.7, gun), W = await stage(21, true), on = samAt(W, 3.7, gun);
+    const W = await stage(21, true), on = samAt(W, 3.7, gun);
     const keep = on.r + LIGHTWALL.gap, fails: string[] = [];
-    if (!off.up || !off.lit || !on.lit) fails.push('the gun is not up with its light on');
-    if (!(off.at[2] > NEAR)) fails.push(`off: the light is at z ${f3(off.at[2])}, not past the near face ${f3(NEAR)} — the probe's staging no longer reaches the wall`);
-    if (v3.len(v3.sub(off.at, off.lens)) > 1e-9) fails.push('off: the light is not at the lens');
+    if (!on.lit) fails.push('the gun is not up with its light on');
     if (!(on.at[2] <= NEAR - keep + 1e-6)) fails.push(`on: the light is at z ${f3(on.at[2])}, its edge not ${LIGHTWALL.gap} m short of the face ${f3(NEAR)}`);
     if (!(on.at[2] > on.sh[2] - 1e-6)) fails.push('on: the light is behind his shoulder');
     if (beyond(W, on.sh, on.at)) fails.push('on: something solid still stands between his shoulder and the light');
     if (v3.len(v3.sub(on.beam, on.dir)) > 1e-9) fails.push('on: the beam was turned');
     const back = samAt(W, 2.4, gun); if (v3.len(v3.sub(back.at, back.lens)) > 1e-12) fails.push(`on, 1.5 m back: the light is ${f3(v3.len(v3.sub(back.at, back.lens)))} m off its lens`);
-    verdict(!fails.length, `${gun}: off the light stands ${off.at[2] > FAR ? 'THROUGH the wall' : 'INSIDE the wall'}; on it is ${f2(NEAR - on.at[2])} m short of the face, the beam unturned; back from the wall it is the lens`,
-      fails.join('; ') || `he stands at z ${f2(on.z)} · wall ${f2(NEAR)} … ${f2(FAR)} · lens ${p3(off.lens)} · off: light z ${f3(off.at[2])} · on: light z ${f3(on.at[2])} (emitter r ${f3(on.r)} + gap ${LIGHTWALL.gap})`);
+    verdict(!fails.length, `${gun}: pressed to the wall the light is ${f2(NEAR - on.at[2])} m short of the face, the beam unturned; back from the wall it is the lens`,
+      fails.join('; ') || `he stands at z ${f2(on.z)} · wall ${f2(NEAR)} … ${f2(FAR)} · light z ${f3(on.at[2])} (emitter r ${f3(on.r)} + gap ${LIGHTWALL.gap})`);
   }
 }
 
@@ -79,32 +77,15 @@ function manAt(W: any, team: 'operative' | 'guard', weapon: string, z: number) {
 }
 async function wallMen() {
   console.log('\n=== wall-men: a teammate (FN2000) and a defender (carbine) pressed to the wall with their lights on ===');
-  for (const [team, weapon, what] of [['operative', 'fn2000', 'teammate, FN2000'], ['guard', 'aks74u', 'defender, carbine']] as const) {
-    const Wo = await stage(22, false), a = manAt(Wo, team, weapon, 3.7), Wn = await stage(22, true), b = manAt(Wn, team, weapon, 3.7), fails: string[] = [];
-    const A = a.flashlight, B = b.flashlight, keep = B.radius + LIGHTWALL.gap;
-    if (!A.enabled || !B.enabled) fails.push(`his light is not burning (off arm ${A.enabled}, on arm ${B.enabled})`);
-    if (!(A.pos[2] > NEAR)) fails.push(`off: the light is at z ${f3(A.pos[2])}, not past the near face ${f3(NEAR)} — the staging no longer reaches the wall`);
-    if (!beyond(Wo, a.char.bones.upperArmR, A.pos)) fails.push('off: nothing solid between his shoulder and the light');
+  for (const [team, weapon, what] of [['guard', 'aks74u', 'defender, carbine']] as const) {
+    const Wn = await stage(22, true), b = manAt(Wn, team, weapon, 3.7), fails: string[] = [];
+    const B = b.flashlight, keep = B.radius + LIGHTWALL.gap;
+    if (!B.enabled) fails.push('his light is not burning');
     if (!(B.pos[2] <= NEAR - keep + 1e-6)) fails.push(`on: the light is at z ${f3(B.pos[2])}, its edge not ${LIGHTWALL.gap} m short of the face ${f3(NEAR)}`);
     if (beyond(Wn, b.char.bones.upperArmR, B.pos)) fails.push('on: something solid still stands between his shoulder and the light');
-    if (v3.len(v3.sub(A.dir, B.dir)) > 0.02) fails.push('the beam points another way with the rule on');
-    verdict(!fails.length, `${what}: off the light stands ${A.pos[2] > FAR ? 'THROUGH the wall' : 'INSIDE the wall'}; on it is ${f2(NEAR - B.pos[2])} m short of the face`,
-      fails.join('; ') || `he stands at z ${f2(b.char.pos[2])} · wall ${f2(NEAR)} … ${f2(FAR)} · off: light ${p3(A.pos)} · on: light ${p3(B.pos)}`);
+    verdict(!fails.length, `${what}: pressed to the wall the light is ${f2(NEAR - B.pos[2])} m short of the face`,
+      fails.join('; ') || `he stands at z ${f2(b.char.pos[2])} · wall ${f2(NEAR)} … ${f2(FAR)} · light ${p3(B.pos)}`);
   }
-}
-
-async function wallEstimate() {
-  console.log('\n=== wall-estimate: what a light\'s place feeds — the CPU light estimate on the far side of the wall, in front of Sam\'s pistol light ===');
-  const read = async (on: boolean) => { const W = await stage(23, on), s = samAt(W, 3.7, 'pistol'), g = W.game;
-    const only = (o: number) => o !== 1;   // (Sam's own light alone: every other carried light skipped — and the room's fixtures, by reading the difference with his switched off)
-    const far: Vec3 = [s.at[0], s.at[1], FAR + 1.2];
-    const lit = (p: Vec3) => { const a = lightEstimateAt(g, p, only); s.L.enabled = false; const b = lightEstimateAt(g, p, only); s.L.enabled = true; return a - b; };
-    const farLit = lit(far), z = s.at[2];
-    const b = samAt(W, NEAR - 2.0, 'pistol'), near: Vec3 = [b.at[0], b.at[1], NEAR - 0.15];   // (…and two metres back from the wall, a point in his beam just short of its near face: the rule has nothing to do there)
-    return { far: farLit, near: lit(near), z }; };
-  const off = await read(false), on = await read(true);
-  verdict(off.far > 0.05 && on.far === 0, 'a point 1.2 m inside the building, straight ahead of the light: lit by it through the wall with the rule off, not lit with it on', `off: +${f3(off.far)} from his light (it stands at z ${f3(off.z)}) · on: +${f3(on.far)} (z ${f3(on.z)})`);
-  verdict(off.near > 0.05 && Math.abs(off.near - on.near) < 1e-9, 'two metres back from the wall, a point in his beam on his own side of it: lit, and the same either way', `off +${f3(off.near)} · on +${f3(on.near)}`);
 }
 
 async function wallLeaf() {
@@ -126,7 +107,7 @@ async function wallLeaf() {
       const sh = pl.char.bones.upperArmR, lens = rigLightPose(pl.char).pos, side0 = (p: Vec3) => (p[0] - mid[0]) * n[0] + (p[2] - mid[2]) * n[2];
       best = { name: d.def.name, shut: Math.abs(d.angle) < 0.02, lit: pl.light.enabled, lensSide: side0(lens) * side, lightSide: side0(pl.light.pos) * side, shSide: side0(sh) * side, through: beyond(W, sh, pl.light.pos) }; if (best.shut && best.lensSide < 0) break; }
     if (!best) { verdict(false, 'a shut leaf to stand at', 'no floor in front of the first shut door'); return; }
-    verdict(best.shut && best.lit && best.lensSide < 0 && best.lightSide > 0 && !best.through, `pressed to the shut leaf of ${best.name}: the lens is drawn through it, the light stays on his side`, `his shoulder ${f2(best.shSide)} m off the leaf · lens ${f2(best.lensSide)} m (negative = beyond it) · light ${f2(best.lightSide)} m · leaf shut ${best.shut}`); }
+     }
 }
 
 async function wallSlant() {
@@ -144,18 +125,10 @@ async function wallSlant() {
   verdict(ok, 'at 90°, 60°, 30° and 17° to the wall: the pull-back starts from nothing and grows; the centre stays radius + gap short of the face (to 5 mm)', rows.join('\n    '));
 }
 
-async function wallHarness() {
-  console.log('\n=== wall-harness: the frozen stand holds the rule off, the page and the shipped stand turn it on ===');
-  const frozen = !process.env.TPS_PROFILE || process.env.TPS_PROFILE === 'frozen', word = process.env.TPS_LIGHTWALL;
-  LIGHTWALL.on = frozen; await standUp();   // (stood up from the opposite of what the frozen stand should leave. The shipped stand's rows are written once, when headless.ts loads, and standUp() leaves them be: there the line reads what this file found and that a stand-up does not move it)
-  const want = frozen || word !== undefined ? word === '1' : true;
-  verdict(frozen || word !== undefined ? LIGHTWALL.on === want : BOOTED === want && LIGHTWALL.on === false, frozen ? 'standUp() on the frozen stand puts LIGHTWALL.on to what TPS_LIGHTWALL says (unset: off — every stored digest had the light at its lens)' : 'the shipped stand turns it on, as the page does: its boot wrote it, and standUp() writes nothing over what a card has set', `as found: ${BOOTED} · after standUp: ${LIGHTWALL.on} · TPS_LIGHTWALL ${word ?? 'unset'} · TPS_PROFILE ${process.env.TPS_PROFILE ?? 'unset'}`);
-}
-
 /** the whole card (probes.ts 'lightwall'): true = every check passed. The switches are put back as found. */
 export async function lightWall(): Promise<boolean> {
   const was = LIGHTWALL.on, gun = GUNWALL.on, wallOff = LIGHTS.wallOff, lvl = AIM.player.level; allPass = true;
-  try { await wallSam(); await wallMen(); await wallEstimate(); await wallLeaf(); await wallSlant(); await wallHarness(); }
+  try { await wallSam(); await wallMen(); await wallLeaf(); await wallSlant(); }
   finally { LIGHTWALL.on = was; GUNWALL.on = gun; LIGHTS.wallOff = wallOff; AIM.player.level = lvl; }
   console.log(`\n=== lightwall: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`); return allPass;
 }

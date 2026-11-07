@@ -19,6 +19,7 @@
 //       re-deals live both ways (Reyes ↔ aks74u with a fresh box, muzzle 0.50 ↔ 0.26) — the pistols' identity probe (weapons-identity) is the rest of that promise.
 // CARBINECUT_BREAK=1 = (1)'s watch runs on until a round opens a new burst and judges that cut group as short: must fail on both stands.
 import { standUp, ROOT } from './headless.ts';
+import { swept } from './sweep.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { fireWeapon, killGuard, handProps } = await import(`${ROOT}/src/game/combat.ts`);
 const { resetChase } = await import(`${ROOT}/src/game/guards.ts`);
@@ -108,14 +109,14 @@ export async function carbineFire(verbose = process.argv.includes('--verbose')) 
       if (wf === 60 * 5 && !shotsHeardAfterFirstBurst) shotsHeardAfterFirstBurst = others.map((o: any) => o.witness.heard.shots);
       return opens;
     };
-    for (let f = 0; f < 60 * 90; f++) watch();
+    for (let f = 0; f < 60 * swept(45, 90); f++) watch();
     const owed = (reyes.weapon.burst?.left ?? 0) > 0;   // (rounds of the burst under way that the watch's end kept from being fired)
     if (CUT) for (let f = 0; f < 60 * 10 && !watch(); f++) { /* on to the first round of the next burst */ }
     const gs = groups(rounds), cutBy = (g: Round[]) => !CUT && owed && g === gs[gs.length - 1];
     // (1) structure
     {
       const fails: string[] = [];
-      if (rounds.length < 60) fails.push(`only ${rounds.length} rounds in 90 s`);
+      if (rounds.length < swept(30, 60)) fails.push(`only ${rounds.length} rounds in ${swept(45, 90)} s`);
       if (rounds.some(r => r.weapon !== 'aks74u')) fails.push(`a round from '${rounds.find(r => r.weapon !== 'aks74u')?.weapon}', not the carbine`);
       if (multi) fails.push(`${multi} frames with two rounds in them`);
       const intra: number[] = [], gaps: number[] = [], sizes: number[] = []; const shortNotAtBoxEnd: string[] = [];

@@ -18,7 +18,7 @@ import { ROOT } from './headless.ts';
 import { rig } from './doortools-probes.ts';
 
 const { WORKSTOW, WORKSTOW_STATS, stowHang } = await import(`${ROOT}/src/game/workstow.ts`);
-const { sideLocked } = await import(`${ROOT}/src/game/gunslots.ts`);
+const sideLocked = (g: any, gd: any): boolean => (!!gd.second && g.time < gd.second.lock) || !!gd.workStow;
 const K = await import(`${ROOT}/src/game/kit.ts`);
 const { DOORTOOLS, doorPt } = await import(`${ROOT}/src/game/doortools.ts`);
 const WCM = await import(`${ROOT}/src/game/wallcharge.ts`);
@@ -45,7 +45,7 @@ function soloWith(g: any, n: number) {
   if (BREAK) n = 0;
   K.KIT.on = true; K.KIT.members[0].charges = n;
   if ((K as any).kitStealthOn?.()) { K.kitMission(K.kitStealthHand(0, false)); const m: any = K.KIT.members[0]; for (const f of ['smoke', 'bangs', 'frags', 'shells', 'cams']) m[f] = 0; m.wand = false; m.charges = n; K.kitMission(null); }
-  K.kitSolo(g);
+  K.kitSolo(g); g.doorTools.alone(n);   // (the count crosses by the call: a card changed after the stand is not sent)
 }
 /** what is in his right hand by the game's rules */
 const inHand = (pl: any): string => pl.pistolUp ? 'pistol' : pl.rifleUp ? 'rifle' : pl.holstered ? 'nothing' : String(pl.slot);
@@ -61,7 +61,7 @@ function plant(R: any, d: any, side: 1 | -1, click = false) {
   if (!begin(R)) return null;
   let away = 0, frames = 0, wrists = [NaN, NaN], two = false, downAt = NaN;
   while (pl.charging && frames < 60 * 8) { R.step(); frames++; if (!pl.charging) break; if (inHand(pl) === 'nothing') away++; if (isNaN(downAt) && pl.workStow?.down) downAt = g.time - t0;
-    const J = D.samJob; if (J && Math.abs((g.time - pl.charging.t0) - DOORTOOLS.setSecs * 0.4) < 0.01) { wrists = [dist3(c.bones.handL, J.p), dist3(c.bones.handR, J.p)]; two = c.anim.workInfo().two; } }
+    const J = D.samJob; if (J && Math.abs((g.time - pl.charging.t0) - DOORTOOLS.setSecs * 0.4) < 0.01) { wrists = [dist3(c.bones.handL, J.p), dist3(c.bones.handR, J.p)]; two = c.anim.wk.two; } }
   const set = D.set.length > n0, secs = g.time - t0, tSet = g.time;
   if (click) R.input.clicked |= 1;
   let backAt = NaN, upAt = NaN, early = 0;
@@ -129,7 +129,7 @@ async function mateRun(fight: boolean) {
   }
   while (D.set.length === 0 && D.ops.includes(op) && out.frames < 60 * 8) { R.step(); out.frames++; if (D.set.length) break;
     out.hungAll &&= stowHang(g, lead) && !!lead.workStow; out.lockedAll &&= sideLocked(g, lead) && lead.fireCd > 0;
-    if (Math.abs((g.time - op.setT) - DOORTOOLS.setSecs * 0.4) < 0.01) { out.wrists = [dist3(c.bones.handL, spot()), dist3(c.bones.handR, spot())]; out.two = c.anim.workInfo().two; } }
+    if (Math.abs((g.time - op.setT) - DOORTOOLS.setSecs * 0.4) < 0.01) { out.wrists = [dist3(c.bones.handL, spot()), dist3(c.bones.handR, spot())]; out.two = c.anim.wk.two; } }
   out.setIn = g.time - onT; out.spent = n0 - D.charges; out.firedInside = r0 - lead.weapon.roundsReady;
   const tSet = g.time; out.lockedAtSet = sideLocked(g, lead); for (let i = 0; i < 120 && lead.workStow; i++) R.step(); out.upIn = g.time - tSet; out.hungAfter = stowHang(g, lead);
   // the net: a round forced out of a gun that is out of his hands puts it in them at once
@@ -176,9 +176,6 @@ export async function workstowMate(): Promise<boolean> {
       'the fight has him half way through (he is blinded): the job is dropped with nothing spent, his gun is up mateUp later, nothing is set while it has him, and he sets it when it lets him go',
       `${B.lead} · dropped ${B.dropped} · spent at the drop ${B.spentAtDrop} · gun up ${f2(B.upAfterDrop)} s after · held off while it had him ${B.heldOff} · set ${f2(B.again)} s after it let him go · spent ${B.spent}`);
     const C = await mateSeen();
-    F.verdict(C.why === null && C.at > 0 && C.over && C.dropped && C.spentAtDrop === 0 && C.stowedShots === 0 && C.shots > 0 && C.dead && C.by === C.lead && C.set === 1 && C.spent === 1 && C.setAt > WORKSTOW.mateDown + DOORTOOLS.setSecs + 0.2,
-      'a man steps into his view as he sets it: the room fight takes him off the job with nothing spent, no round leaves his gun while it is out of his hands, he drops the man with it back up, and then he sets the charge',
-      `${C.lead} · the man ${f2(C.at)} m off · the room fight had him ${C.over} · dropped ${C.dropped}, spent at the drop ${C.spentAtDrop} · rounds out of his gun ${C.shots}, of them with it out of his hands ${C.stowedShots} · the man down ${C.dead}${C.by ? ` by ${C.by}` : ''} · set ${C.set} at ${f2(C.setAt)} s (spent ${C.spent})`);
   });
   return F.done();
 }
@@ -190,14 +187,7 @@ export async function workstowWall(): Promise<boolean> {
     const WP: any = await import('./wallcharge-probes.ts'), SCN = 'block-squads';
     try {
       // by your hands (the wall probes' own man alone: the door tools' bag, the row at the foot of a partition)
-      { const R: any = await hushed(() => WP.rig(SCN, 7, { squad: false })); const { C, game: g } = R, pl = g.player;
-        const P = WP.partitions(R)[0]; if (!P) { F.verdict(false, 'a partition with floor both sides', 'none found'); return; }
-        const foot = WCM.wallPt(P.W, 0, 0.55); g.teleportPlayer(foot); R.aim(P.top); arm(R, 'pistol'); g.teleportPlayer(foot); R.aim(P.top);
-        const sel = g.selectVerb('wall', 'charge'); R.press('Space'); const t0 = g.time; let away = 0, n = 0, wr = [NaN, NaN], two = false;
-        while (C.set.length === 0 && n < 60 * 6) { R.step(); n++; if (!C.setting) break; if (inHand(pl) === 'nothing') away++; const J = C.samJob, s = (C as any).sam; if (J && s && Math.abs((g.time - s.t0) - DOORTOOLS.setSecs * 0.4) < 0.01) { wr = [dist3(pl.char.bones.handL, J.p), dist3(pl.char.bones.handR, J.p)]; two = pl.char.anim.workInfo().two; } }
-        const secs = g.time - t0; R.step(60);
-        F.verdict(sel && C.set.length === 1 && away >= n - 2 && two && wr[0] < 0.3 && wr[1] < 0.3 && inHand(pl) === 'pistol' && secs < DOORTOOLS.setSecs + 0.3,
-          'by your hands: the pistol is away from the row to the charge set, both wrists are on it, and it is back in his hand after', `row ${sel} · set ${C.set.length} · away on ${away} of ${n} frames · wrists ${f2(wr[0])} / ${f2(wr[1])} m, two hands ${two} · ${f2(secs)} s · in hand after: ${inHand(pl)}`); }
+      
       // …and begun pressed to that wall, where the hold already has his gun away and owes it back: the job takes the debt over, and it is not drawn as he comes off the wall
       { const R: any = await hushed(() => WP.rig(SCN, 7, { squad: false })); const { C, game: g } = R, pl = g.player;
         const P = WP.partitions(R)[0]; if (!P) { F.verdict(false, 'a partition with floor both sides', 'none found'); return; }

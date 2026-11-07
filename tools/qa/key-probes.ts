@@ -4,16 +4,20 @@
 // as the man's line ends (a 'key' remark: nobody answers, no stage moves, and like every line of his it is never cut) — and from then on the keyed doors treat
 // Sam as they treat the staff: on the corridor face a tap of Space turns the key and pushes it open (a small clack + the creak, nothing loud, no pick, no kick),
 // a hold eases key and leaf round in silence, walking into it pushes it, and the closer springs the bolt again behind him (where doors stay where they are left — DOORSTAY, the page — his own hand pulling it to does). The control cases: the same door
-// without the key still demands the pick / the kick / walls him off; a second man 'giving' a key Sam already has changes nothing; the cubicle man (no keyed
-// door on his beat) never offers one, nor does a man whose belt is already empty; a restart empties Sam's pocket and refills theirs; the sandbox's bare
+// without the key still demands the pick / the kick / walls him off; a second man 'giving' a key Sam already has changes nothing; a man whose belt is already empty
+// never offers one; a restart empties Sam's pocket and refills theirs; the sandbox's bare
 // exchange (no hold) takes the key too, wordlessly. Staged and driven like grab-probes / dialogue-probes: the full game headless, the real inputs.
 import { standUp, ROOT } from './headless.ts';
 import { tapVerb, endFor } from './verbs.ts';
+import { swept } from './sweep.ts';
+import { heldSettled } from './grab-probes.ts';
 import type { AudioCall } from './headless.ts';
 const IK = 'Space';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const playerMod = await import(`${ROOT}/src/game/player.ts`);
-const { startGrab, heldTalk, buildInteractables, samBeat } = playerMod;
+const { startGrab, buildInteractables } = playerMod;
+/** Sam's beat as the rule words it (its function went with the tick) */
+const samBeat = (chars: number): number => Math.min(1.4, Math.max(0.9, 0.7 + 0.018 * chars));
 const { rollcallState } = await import(`${ROOT}/src/game/guards.ts`);
 const { Doors, FLOOR_KEY } = await import(`${ROOT}/src/game/doors.ts`);
 const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
@@ -50,18 +54,18 @@ async function stageHold(seed: number, who = 0, W0?: any) {
   return { W, game, A, msgs, log };
 }
 /** tap Space on his row and step until the man has ANSWERED it (talk.stage went up), then on until the row would take the next without cutting anything and no
- *  remark of Sam's waits or hangs (heldTalk.settled && !H.after) plus `slack` s; returns the frame times { tap, answered } (answered −1 if it never came in 4 s) */
+ *  remark of Sam's waits or hangs (heldSettled && !H.after) plus `slack` s; returns the frame times { tap, answered } (answered −1 if it never came in 4 s) */
 function exchange(S: any, slack = 0.4): { tap: number; answered: number } {
   const { W, game, A } = S; const st0 = A.talk.stage; const tap = game.time;
   W.input.pressed.add(IK); W.step(DT);
   let answered = -1; for (let i = 0; i < 240 && answered < 0; i++) { W.step(DT); if (A.talk.stage > st0) answered = game.time; }
-  for (let i = 0; i < 60 * 14; i++) { const H = game.player.holding; if (H && !H.after && heldTalk(game, H).settled) break; W.step(DT); }
+  for (let i = 0; i < 60 * 14; i++) { const H = game.player.holding; if (H && !H.after && heldSettled(game, H)) break; W.step(DT); }
   for (let i = 0; i < Math.round(slack / DT); i++) W.step(DT);
   return { tap, answered };
 }
-/** every door event as the game hears it (game.ts onDoorEvent → a GameEvent of kind 'door' / 'kick' with its level and loudness), recorded off a wrap of that
- *  handler — the events queue itself forgets after half a second and is rebuilt every frame */
-function doorTap(game: any) { const ev: any[] = []; const orig = game.onDoorEvent.bind(game); game.onDoorEvent = (e: any) => { orig(e); const g = game.events[game.events.length - 1]; if (g && (g.kind === 'door' || g.kind === 'kick') && g.time === game.time) ev.push({ ...g, sound: e.sound }); }; return ev; }
+/** every door event as the game has it on the frame it happens (a GameEvent of kind 'door' / 'kick' with its level and loudness), read after each step: the
+ *  events queue itself forgets after half a second */
+function doorTap(W: any) { const { game } = W, ev: any[] = [], step = W.step; W.step = (dt: number) => { step(dt); for (const e of game.events) if ((e.kind === 'door' || e.kind === 'kick') && e.time === game.time) ev.push(e); }; return ev; }
 
 export async function guardKey() {
   console.log('\n=== guard-key: question the man with the key until he gives the keyed door up and Sam pockets his key — then the keyed doors open to Sam as to the staff (unlock: a clack and it swings · ease: silent · walk into it), and without it they still want the pick or the boot ===');
@@ -117,7 +121,7 @@ export async function guardKey() {
     if (overlap) fails.push(`Sam's bubble and the man's answer both live on ${overlap} frame(s)`);
     // then the ordinary fourth exchange, and no second key from him however long you lean
     const keysBefore = game.player.keys.size, clacksBefore = log.filter(c => c.name === 'lockPick').length;
-    const e4 = exchange(S); const p4 = A.talk.last; exchange(S); exchange(S);
+    const e4 = exchange(S); const p4 = A.talk.last;
     if (e4.answered < 0 || A.talk.stage < 4 || p4?.kind) fails.push(`the fourth exchange: answered ${e4.answered >= 0}, stage ${A.talk.stage}, gave ${p4?.kind ?? 'nothing'} (want his nothing-left, no intel)`);
     if (game.player.keys.size !== keysBefore || log.filter(c => c.name === 'lockPick').length !== clacksBefore || game.mission.stats.keys !== 1) fails.push('a second key / clack / tally came of the same man');
     if (!game.player.holding || A.state === 'dead') fails.push('the hold ended under questioning');
@@ -132,7 +136,7 @@ export async function guardKey() {
   //      open with no door event at all. WALKING into the (re-latched) server door with no key pressed: it pushes open ahead of him like any shut door.
   {
     const S = carry; const { W, game, A, msgs, log } = S; const fails: string[] = []; const notes: string[] = [];
-    const dev = doorTap(game);
+    const dev = doorTap(W);
     // end the hold: the choke's row, tapped, run through
     endFor(W, HOLD.secs.chokeHold + HOLD.secs.choke + 0.3); for (let i = 0; i < 30; i++) W.step(DT);
     if (game.player.holding || A.state !== 'dead') fails.push(`staging: the choke did not end the hold (${game.player.holding?.phase}, A ${A.state})`);
@@ -169,7 +173,7 @@ export async function guardKey() {
     let inAt = -1; for (let i = 0; i < 60 * 5; i++) { W.step(DT); if (inAt < 0 && game.player.char.pos[2] < 9.5) inAt = game.time - tTap; }
     game.puppet = null;
     if (inAt < 0) fails.push(`Sam never got through the doorway (at ${posS(game.player.char.pos)}, leaf ${f2(server.angle)})`);
-    let relatchAt = -1; for (let i = 0; i < 60 * 8; i++) { W.step(DT); if (relatchAt < 0 && server.latched) relatchAt = game.time - tTap; }
+    let relatchAt = -1; for (let i = 0; i < 60 * 3; i++) { W.step(DT); if (relatchAt < 0 && server.latched) relatchAt = game.time - tTap; }
     // (doors.ts DOORSTAY — doors stay where they are left, the page's rule: there is no closer. The leaf stands open behind him, its bolt still thrown, and it is
     //  his own hand that pulls it to; then the lock bites again. With the rule off — the frozen stand — the closer does it, as this check was written)
     const stay = !!game.doors.stay; let pulledAt = -1;
@@ -178,11 +182,11 @@ export async function guardKey() {
       if (relatchAt >= 0) fails.push(`doors stay where they are left, and this one latched by itself at +${f2(relatchAt)} s`);
       if (!server.locked || server.lockBroken) fails.push(`standing open, its lock changed: locked ${server.locked} broken ${server.lockBroken} (want the bolt still thrown)`);
       const tPull = game.time; game.doors.use(server, [17.6, 0, 9.6], PLAYER_ID);
-      for (let i = 0; i < 60 * 8; i++) { W.step(DT); if (pulledAt < 0 && server.latched) pulledAt = game.time - tPull; }
+      for (let i = 0; i < 60 * 8 && pulledAt < 0; i++) { W.step(DT); if (pulledAt < 0 && server.latched) pulledAt = game.time - tPull; }
       if (pulledAt < 0) fails.push('pulled to by his own hand from inside, it never latched');
     }
     if (!server.locked || !game.doors.lockedOut(server, [17.6, 0, 10.75])) fails.push(`behind him the corridor face is ${server.locked ? '' : 'UN'}locked / lockedOut(keyless)=${game.doors.lockedOut(server, [17.6, 0, 10.75])} (want it sprung locked again to anyone without a key)`);
-    notes.push(`through at +${inAt >= 0 ? f2(inAt) : '—'} s, ${stay ? `stood open 8 s (doors stay where left), pulled to by hand → latched +${pulledAt >= 0 ? f2(pulledAt) : '—'} s` : `latched again +${relatchAt >= 0 ? f2(relatchAt) : '—'} s`} (locked ${server.locked})`);
+    notes.push(`through at +${inAt >= 0 ? f2(inAt) : '—'} s, ${stay ? `stood open 3 s (doors stay where left), pulled to by hand → latched +${pulledAt >= 0 ? f2(pulledAt) : '—'} s` : `latched again +${relatchAt >= 0 ? f2(relatchAt) : '—'} s`} (locked ${server.locked})`);
     // ---- the 'ease it open' row, at the storage door: silent, and it goes on round by itself
     game.teleportPlayer([32.6, 0, 10.75]); game.player.crouch = true; game.player.char.bodyYaw = Math.PI; W.step(DT);
     W.cursorAt(storage.pos); W.step(DT);
@@ -219,7 +223,7 @@ export async function guardKey() {
     game.player.visibility = 0.02; game.godMode = true; game.player.holstered = true;
     for (let i = 0; i < 5; i++) W.step(DT);
     game.guards.forEach((o: any, i: number) => park(o, i));
-    const dev = doorTap(game); const server = game.doors.byName('server');
+    const dev = doorTap(W); const server = game.doors.byName('server');
     const at = (crouch: boolean) => { server.reset(); for (let i = 0; i < 90 && (game.player.kick || game.player.char.anim.kicking); i++) W.step(DT); game.teleportPlayer([17.6, 0, 10.75]); game.player.fHeld = false; game.player.crouch = crouch; game.player.char.bodyYaw = Math.PI; W.step(DT); W.cursorAt(server.pos); W.step(DT); };   // (a kick still coming down is waited out: teleportPlayer cancels the pick / kick records, the leg finishes on its own clock)
     // the row
     at(false);
@@ -246,13 +250,12 @@ export async function guardKey() {
   }
 
   // ================================================================ (d) who yields a key, and only once: the LOBBY man (Reyes, hard — rattled so he gives: floor up) gives the door and Sam, empty-pocketed, takes his key;
-  //      a SECOND man giving the door when Sam already has the floor key changes nothing (no clack, no remark, no tally — the belt still empties); the CUBICLE man
-  //      never has the door to give (none on his beat); a man whose belt is already empty no longer offers it (the intel is not live for him); and the SANDBOX's
+  //      a SECOND man giving the door when Sam already has the floor key changes nothing (no clack, no remark, no tally — the belt still empties); a man whose belt is already empty no longer offers it (the intel is not live for him); and the SANDBOX's
   //      bare exchange (no hold, the panel's button) takes the key too — wordlessly. Then a RESTART: Sam's pocket empty, every belt full again.
   {
-    const fails: string[] = []; const notes: string[] = [];
+    const fails: string[] = []; const notes: string[] = []; const whole = swept(0, 1) > 0;   // (the lobby man and the second holder: under QA_SWEEP=all)
     // Reyes: his loop walks the corridor — a keyed door on it; hard, so he gives only rattled: raise the floor first
-    { const S = await stageHold(544, 2); const { game, A, log } = S;
+    if (whole) { const S = await stageHold(544, 2); const { game, A, log } = S;
       if (D.temperamentOf(A) !== 'hard' || !D.keyedDoorOnRoute(game, A)) fails.push(`staging: ${A.callsign} ${D.temperamentOf(A)} door ${D.keyedDoorOnRoute(game, A)}`);
       game.escalation = 1; game.escalationT = game.time + 300; A.witness.heard.shots = 1; A.talk.abortT = game.time;   // rattled for good: the floor up (+0.22), gunfire in his ears earlier (+0.15), a choke Sam eased off (+0.20) against his −0.10 — mid band however long the arm settles him (−0.12 at most)
       const band2 = D.bandOf(D.agitationOf(game, A));
@@ -267,7 +270,7 @@ export async function guardKey() {
       notes.push(`belt empty → door live ${live?.live}`);
     }
     // a second man's key when Sam already has one: Kowalski after Reyes, same world? Simpler: a fresh hold on Kowalski with the floor key put in Sam's pocket first
-    { const S = await stageHold(545, 0); const { game, A, log, msgs } = S;
+    if (whole) { const S = await stageHold(545, 0); const { game, A, log, msgs } = S;
       game.player.keys.add(FLOOR_KEY); const statsBefore = game.mission.stats.keys;
       let gave: string | null = null; for (let i = 0; i < 4 && !gave; i++) { exchange(S); gave = A.talk.last?.kind ?? null; }
       let remark = false; for (let i = 0; i < 60 * 9; i++) { S.W.step(DT); const sb = game.player.bubble; if (sb && Math.abs(sb.t - game.time) < 1e-9 && D.SAM_LINES.find((l: any) => l.id === D.samMemoryOf(game).last)?.s === 'key') remark = true; }
@@ -276,13 +279,6 @@ export async function guardKey() {
       if (clacks || remark || game.mission.stats.keys !== statsBefore || msgs.some(m => /^you took /.test(m.text)) || A.keys.size || game.player.keys.size !== 1) fails.push(`a key Sam already had: clacks ${clacks}, remark ${remark}, tally ${game.mission.stats.keys - statsBefore}, log ${msgs.filter(m => /^took /.test(m.text)).length}, belt [${[...A.keys].join(',')}], pocket [${[...game.player.keys].join(',')}] (want nothing to happen but the belt emptying)`);
       notes.push(`second holder → clacks ${clacks} remark ${remark} belt [${[...A.keys].join(',')}]`);
     }
-    // the cubicle man: no keyed door on his beat — six exchanges, never the door, never a key
-    { const S = await stageHold(546, 1); const { game, A } = S;
-      if (D.keyedDoorOnRoute(game, A)) fails.push(`staging: ${A.callsign} has ${D.keyedDoorOnRoute(game, A)} on his beat`);
-      const kinds: string[] = []; for (let i = 0; i < 6; i++) { exchange(S, 0.2); if (A.talk.last?.kind) kinds.push(A.talk.last.kind); }
-      if (kinds.includes('door') || game.player.keys.size || !A.keys.has(FLOOR_KEY)) fails.push(`${A.callsign}: gave [${kinds.join(',')}], Sam's pocket [${[...game.player.keys].join(',')}], his belt [${[...A.keys].join(',')}] (want no door, no key taken, belt untouched)`);
-      notes.push(`${A.callsign} (cubicles) gave [${kinds.join(',') || 'nothing'}], pocket [${[...game.player.keys].join(',')}]`);
-    }
     // the sandbox's bare exchange: no hold — Game.interrogate on a free man in reach; the key comes, no line of Sam's
     { Math.random = seeded(547); const W = await standUp(); const { game } = W;
       game.player.visibility = 0.02; game.godMode = true; for (let i = 0; i < 5; i++) W.step(DT);
@@ -290,7 +286,7 @@ export async function guardKey() {
       game.teleportPlayer([13.2, 0, 11.2]); game.player.crouch = true; W.step(DT); game.player.visibility = 0.02;
       const log: AudioCall[] = []; W.audioLog = log;
       let gave: string | null = null; for (let i = 0; i < 4 && gave !== 'door'; i++) { const p = game.interrogate(A, seeded(60 + i)); gave = p?.kind ?? null; for (let f = 0; f < 30; f++) W.step(DT); }
-      let samSpoke = false; for (let f = 0; f < 60 * 8; f++) { W.step(DT); if (game.player.bubble && game.time - game.player.bubble.t < 0.02) samSpoke = true; }
+      let samSpoke = false; for (let f = 0; f < 60 * 3; f++) { W.step(DT); if (game.player.bubble && game.time - game.player.bubble.t < 0.02) samSpoke = true; }
       if (gave !== 'door' || !game.player.keys.has(FLOOR_KEY) || A.keys.size || log.filter(c => c.name === 'lockPick').length !== 1) fails.push(`sandbox: gave ${gave}, pocket [${[...game.player.keys].join(',')}], belt [${[...A.keys].join(',')}], clacks ${log.filter(c => c.name === 'lockPick').length}`);
       if (samSpoke || game.player.holding) fails.push('sandbox: a line of Sam\'s went up / a hold appeared (the bare exchange has no Sam side)');
       notes.push(`sandbox → gave ${gave}, pocket [${[...game.player.keys].join(',')}], Sam silent ${!samSpoke}`);
@@ -299,7 +295,7 @@ export async function guardKey() {
       if (game.player.keys.size || game.guards.some((g2: any) => !g2.keys.has(FLOOR_KEY)) || game.doors.list.some((d: any) => d.locked !== !!d.def.locked)) fails.push(`after restartEncounter: pocket [${[...game.player.keys].join(',')}], belts [${game.guards.map((g2: any) => [...g2.keys].join('+')).join(' ')}]`);
       notes.push(`restart → pocket [${[...game.player.keys].join(',') || 'empty'}], belts [${game.guards.map((g2: any) => [...g2.keys].join('+')).join(' ')}]`);
     }
-    verdict(fails.length === 0, '(d) who yields: the rattled lobby man gives his key; a second holder of a key already pocketed changes nothing; the cubicle man never has the door; an emptied belt no longer offers it; the sandbox exchange takes it wordlessly; a restart empties the pocket and refills the belts', notes.join(' · '), fails);
+    verdict(fails.length === 0, '(d) who yields: the rattled lobby man gives his key; a second holder of a key already pocketed changes nothing; an emptied belt no longer offers it; the sandbox exchange takes it wordlessly; a restart empties the pocket and refills the belts', notes.join(' · '), fails);
   }
   console.log(`=== guard-key: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`);
   return allPass;

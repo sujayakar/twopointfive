@@ -32,6 +32,7 @@
 // opened. A FILE is the bridge's bytes of a kept game and its block under a version word (`rustFile` / `rustFileIn`).
 //
 // Every special case here is marked STAND-IN with its reason and where it belongs.
+import { FaceError, fetchFace } from './face';
 import { simAdopt, type SimExports } from '../sim/sim';
 import { BoxMirror } from '../scene/boxMirror';
 import { PUT_BACKS } from '../math/side';
@@ -44,6 +45,7 @@ import type { Snapshot } from '../game/rollback';
 import type { Game } from '../game/game';
 import { NO_VIEW, type TickView } from '../view/seatview';
 import { heardOf, type WorldAsk } from '../view/worldask';
+import { pageSay } from '../view/pagesaid';
 import { CharacterAnimator } from '../game/character';
 import { SkeletonInstance } from '../anim/skeleton';
 import { sampleCmd, stillCmd, type PlayerCmd } from '../game/cmd';
@@ -281,38 +283,19 @@ export function rustSettledLine(): string {
 }
 /** THE MODULE, fetched and compiled off the page's thread (Chrome compiles nothing over 8 MB on it), started, and handed to src/sim as the simulation's
  *  one instance. Before anything has asked src/sim for its module. Throws in plain words where there is no module to fetch. */
-/** a failure of the Rust game's own that the page says in its plain words (main.ts shows `message` alone, no stack) */
-export class RustGameError extends Error { constructor(m: string) { super(m); this.name = 'RustGameError'; } }
 export async function rustBoot(): Promise<void> {
-  const t0 = performance.now();
   const say = (line: string) => { const el = typeof document !== 'undefined' ? document.getElementById('loading') : null; if (el) el.textContent = line; };
-  const NOT = 'Without the word the page plays the TypeScript game.';
-  let res: Response;
-  // (the dev server builds the module where it is stale and does not hold the request while it does: 202 and a line to show, asked again every two
-  //  seconds, for as long as the build takes. A static host answers the file or 404.)
-  for (let asked = 0; ; asked++) {
-    try { res = await fetch(new URL('game_face.wasm', location.href), { cache: 'no-store' }); } catch (e) { throw new RustGameError(`?rust=1: the Rust game's module could not be fetched (${String((e as Error)?.message ?? e)}). Is the dev server still running? ${NOT}`); }
-    if (res.status !== 202) break;
-    const line = (await res.text().catch(() => '')).slice(0, 400) || 'Building the Rust game \u2026';
-    say(line); if (asked === 0) console.info(`rust=1: ${line}`);
-    await new Promise(r => setTimeout(r, 2000));
-  }
-  if (!res.ok) { const why = (await res.text().catch(() => '')).slice(0, 900); throw new RustGameError(`?rust=1: there is no Rust game to play here. ${res.status === 404 ? 'This build was made without game_face.wasm (cargo and the wasm32-unknown-unknown target build it: tools/blitz/face-build.ts).' : why} ${NOT}`); }
-  say('loading the Rust game \u2026');
-  let mod: WebAssembly.Module;
-  const t1 = performance.now();
-  if (typeof WebAssembly.compileStreaming === 'function' && (res.headers.get('content-type') ?? '').startsWith('application/wasm')) { RUST_GAME.bytes = Number(res.headers.get('content-length') ?? 0); mod = await WebAssembly.compileStreaming(res); }
-  else { const b = await res.arrayBuffer(); RUST_GAME.bytes = b.byteLength; mod = await WebAssembly.compile(b); }
-  const inst = await WebAssembly.instantiate(mod, { env: { face_roll: () => { throw new Error('rust=1: the Rust game asked a die the page never hands in'); } } });
-  RUST_GAME.fetchMs = t1 - t0; RUST_GAME.compileMs = performance.now() - t1;
+  // (the module asks no die of a page)
+  const M = await fetchFace(say, () => { throw new Error('rust=1: the Rust game asked a die the page never hands in'); });
+  RUST_GAME.bytes = M.bytes; RUST_GAME.fetchMs = M.fetchMs; RUST_GAME.compileMs = M.compileMs;
   // (every export of the face goes through `guard`: a trap stops the game and shows the card; rust/sim's own exports, called a thousand times a frame
   //  by the page's readers, are handed on as they are)
-  { const raw = inst.exports as unknown as Record<string, unknown>, W: Record<string, unknown> = {}; for (const k of Object.keys(raw)) { const f = raw[k]; W[k] = typeof f === 'function' && k.startsWith('face_') ? guard(k, f as (...a: number[]) => number) : f; } X = W as unknown as Face; }
+  { const raw = M.exports as unknown as Record<string, unknown>, W: Record<string, unknown> = {}; for (const k of Object.keys(raw)) { const f = raw[k]; W[k] = typeof f === 'function' && k.startsWith('face_') ? guard(k, f as (...a: number[]) => number) : f; } X = W as unknown as Face; }
   MEM = X.memory; BUF = MEM.buffer;
-  for (const n of ['face_new_at', 'face_show_seat', 'face_puppet', 'face_host_half', 'face_step', 'face_ask', 'face_tick_view', 'face_line', 'face_ray', 'face_hear', 'face_probe_asks', 'face_poke', 'face_write', 'face_keep', 'face_back', 'face_loaded', 'face_saves_in', 'face_saves_asked']) if (typeof X[n] !== 'function') throw new RustGameError(`?rust=1: game_face.wasm has no ${n}: it was built from another tree (tools/blitz/face-build.ts builds this one's)`);
-  { const no = drawRefused(X as unknown as DrawFace); if (no) throw new RustGameError(`?rust=1: ${no} (tools/blitz/face-build.ts builds this checkout's)`); }
+  for (const n of ['face_new_at', 'face_show_seat', 'face_puppet', 'face_host_half', 'face_step', 'face_ask', 'face_tick_view', 'face_line', 'face_ray', 'face_hear', 'face_probe_asks', 'face_poke', 'face_write', 'face_keep', 'face_back', 'face_loaded', 'face_saves_in', 'face_saves_asked']) if (typeof X[n] !== 'function') throw new FaceError(`?rust=1: game_face.wasm has no ${n}: it was built from another tree (tools/blitz/face-build.ts builds this one's)`);
+  { const no = drawRefused(X as unknown as DrawFace); if (no) throw new FaceError(`?rust=1: ${no} (tools/blitz/face-build.ts builds this checkout's)`); }
   // (the module and this page's half of the bridge must be of one generation: a module of another reads garbage)
-  if ((X.face_layout?.() >>> 0) !== SCHEMA.layout) throw new RustGameError(`?rust=1: game_face.wasm is of another generation than this page's bridge (its layout ${(X.face_layout?.() ?? 0) >>> 0}, the page's ${SCHEMA.layout}): the checkout's module is stale, tools/blitz/face-build.ts builds this one's`);
+  if ((X.face_layout?.() >>> 0) !== SCHEMA.layout) throw new FaceError(`?rust=1: game_face.wasm is of another generation than this page's bridge (its layout ${(X.face_layout?.() ?? 0) >>> 0}, the page's ${SCHEMA.layout}): the checkout's module is stale, tools/blitz/face-build.ts builds this one's`);
   // STAND-IN: EVERY CLASS OF THE SIMULATION'S FOLDERS GETS ITS OWN NAME BACK (tools/blitz/page-plugin.ts keeps each beside its class). The bridge tells
   // some classes by `constructor.name`, and a minified bundle has renamed them all: a rifle crossed as a plain firearm, and a whole apply (a restart,
   // a load) then made the page's rifle a plain one, whose weapon card threw. On the dev server's bundle the names are already theirs and nothing is
@@ -647,8 +630,6 @@ function settle(S: Held): void {
   pokes(S);
   call('face_loaded', () => hand(enc.encode(b.label), (p, n) => X!.face_loaded(S.h, p, n, b.loads, b.saves))); grown(g);
   apply(S, true);
-  // (the HUD's lines are the saved moment's again, by the long list; the controller's own line of the load, savestate.ts:1132, said after them)
-  { const M = (g as unknown as Record<string, any>).messages as { text: string; t: number }[]; M.push({ text: `checkpoint loaded${b.label ? ` \u2014 ${b.label}` : ''}`, t: g.time }); if (M.length > 5) M.shift(); }
   RUST_GAME.backMs.hand = performance.now() - t;
 }
 /** THE HOST'S SWITCHES written between ticks (the options' and the pause card's god mode / AI / ammunition rows; the pause card letting go of the launcher's
@@ -677,11 +658,11 @@ function toStart(S: Held, said?: string): void {
   // puppet after the start stands, and sent to the Rust game by the write by path (`pokes`).
   const mine = watched(g).filter(w => w[0] === g && w[1][0] !== 'engine');
   stoodAgain(S, S.startKept);
-  if (G.saves) G.saves.missionRef = null;   // (the controller's word for 'a fresh run': a new name, an empty shelf, its triggers from nothing. savestate.ts:983)
+  G.saves?.startedAgain();   // (a fresh run: a new name, an empty shelf, its triggers from nothing)
   apply(S, true); sweep(S);   // (what the filtered export last sent was forgotten with the game that stood: the long list again, the HUD's lines as the start had them)
   for (const [, path, v] of mine) { let o: any = g; for (let i = 0; i < path.length - 1 && o; i++) o = o[path[i]]; if (o && !Object.is(o[path[path.length - 1]], v)) o[path[path.length - 1]] = v; }
   pokes(S);
-  if (said) g.msg(said);
+  if (said) pageSay(said);
   try { G.saves?.onPutBack?.({ key: '', slot: 'auto', n: 0, label: 'the start', kind: 'auto', savedAt: 0, missionT: 0, stage: String(G.mission?.stage ?? ''), runId: '', bytes: 0, mem: true }); } catch (e) { RUST_GAME.outThrew['restart.host'] ??= String((e as Error)?.stack ?? e).slice(0, 600); }
   G.engine?.restartPicture?.('level restarted');
   RUST_GAME.restarts++;

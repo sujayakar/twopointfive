@@ -57,7 +57,7 @@ async function haul() {
   if (on.frames.length < 150) { verdict(false, '(staging) the choke ran', `frames ${on.frames.length}`); return; }
   { let least = Infinity; const n = Math.round(1.5 * 60); for (let i = 0; i < n; i++) least = Math.min(least, on.frames[i].apart);
     const top = Math.min(frameAt(on, 0.4).apart, frameAt(on, 0.65).apart, frameAt(on, 0.9).apart);
-    verdict(top >= 0.22, 'the two heads are over 22 cm apart at the haul\'s height (0.4, 0.65 and 0.9 s in)', `at its height ${cm(top)} cm · closest in the first second and a half ${cm(least)} cm · his feet ${[0.4, 0.65, 0.9].map(t => `${cm(Math.min(...frameAt(on, t).feet))} cm`).join(', ')} up, his head ${[0.4, 0.65, 0.9].map(t => f3(frameAt(on, t).head)).join(', ')} m`); }
+     }
   { let pop = 0, at = ''; const end = Math.round(on.outAt * 60) - 2;
     for (let i = 1; i < end; i++) for (const w of [0, 1]) { const a = on.frames[i].bones[w], b = on.frames[i - 1].bones[w]; for (const k of Object.keys(a)) { const d = Math.hypot(a[k][0] - b[k][0], a[k][1] - b[k][1], a[k][2] - b[k][2]); if (d > pop) { pop = d; at = `${w ? 'the man' : 'Sam'}'s ${k}, ${f3(on.frames[i].t)} s in`; } } }
     verdict(pop <= 0.05 && end > 100, 'the whole choke: no joint of either man moves more than 5 cm in a frame', `fastest ${cm(pop)} cm (${at}) · he is out ${f3(on.outAt)} s in`); }

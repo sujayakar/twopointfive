@@ -76,76 +76,12 @@ export async function civiliansSpots() {
   return ok;
 }
 
-// ================================================================ sight → alarmed → flee → report
-/** run to Marta WALKING down to her second bin (heading south-west across the farm) with a metre and a half of clear floor ahead of her and Novak six metres or
- *  more off: Sam is then stood in her way (seed 77: about 30 s in) */
-async function toWalk(seed = 77): Promise<ReturnType<typeof stage> extends Promise<infer T> ? T & { ahead: Vec3 } : never> {
-  const S = await stage(seed); const nav = S.game.col.nav;
-  let ahead: Vec3 = [0, 0, 0];
-  for (let i = 0; i < 60 * 90; i++) {
-    S.step();
-    const M = S.M, c = M.char, sp = Math.hypot(c.vel[0], c.vel[2]);
-    if (M.wp === 2 && M.wait <= 0 && M.civ.state === 'work' && sp > 0.8 && c.pos[2] > 18.6) {
-      ahead = [c.pos[0] + c.vel[0] / sp * 1.5, 0, c.pos[2] + c.vel[2] / sp * 1.5];
-      if (!nav.isBlocked(ahead[0], ahead[2]) && !nav.isBlocked(ahead[0] + 0.3, ahead[2]) && !nav.isBlocked(ahead[0] - 0.3, ahead[2]) && !nav.isBlocked(ahead[0], ahead[2] + 0.3) && !nav.isBlocked(ahead[0], ahead[2] - 0.3) && nav.walkable(c.pos, ahead) && v3.distXZ(S.N.char.pos, ahead) > 6) break;
-    }
-  }
-  return Object.assign(S, { ahead }) as any;
-}
-async function sightRun(gun: boolean) {
-  const S = await toWalk(); const { game, pl, M, N } = S;
-  const t0 = game.time; const novak0 = { state: N.state, pos: v3.copy(N.char.pos) };
-  game.playerInvisible = false; game.teleportPlayer(S.ahead); pl.holstered = !gun; pl.slot = 'pistol'; pl.char.bodyYaw = M.char.bodyYaw + Math.PI; pl.crouch = true; pl.pistol.lightOn = false;   // a metre and a half dead ahead of her on the floor she is walking, facing her, crouched in the dark
-  const at = v3.copy(pl.char.pos);
-  if (VERBOSE) console.log(`    staged at ${f1(t0)} s: Marta ${posS(M.char.pos)} → Sam ${posS(at)}, Novak ${posS(N.char.pos)} ${N.state}`);
-  let startledAt = -1, alarmedAt = -1, fleeAt = -1, reportAt = -1, toldAt = -1, cowerAt = -1; let target = ''; const noticed: string[] = [];
-  let novakFix: Vec3 | null = null, novakStateAtTell = '', escAtTell = 0, escMax = 0, novakMaxAw = 0;
-  const clog0 = S.clog.length;
-  for (let f = 0; f < 60 * 40; f++) {
-    S.step(1, 0.12);
-    if (f === 60 * 4) { game.teleportPlayer([2, 0, 2]); game.playerInvisible = true; }   // he slips away after four seconds: what the men do is off her word alone
-    const C = M.civ; const t = game.time - t0;
-    if (startledAt < 0 && C.state === 'startled') startledAt = t;
-    if (alarmedAt < 0 && C.state === 'alarmed') alarmedAt = t;
-    if (fleeAt < 0 && C.state === 'flee') { fleeAt = t; target = C.target?.name ?? '?'; }
-    if (reportAt < 0 && C.state === 'report') reportAt = t;
-    if (toldAt < 0 && C.reported) { toldAt = t; novakFix = N.lastKnown ? v3.copy(N.lastKnown) : null; novakStateAtTell = N.state; escAtTell = game.escalation; }
-    if (cowerAt < 0 && C.state === 'cower') cowerAt = t;
-    escMax = Math.max(escMax, game.escalation); novakMaxAw = Math.max(novakMaxAw, N.awareness);
-    if (VERBOSE && f % 60 === 0) console.log(`    ${f1(t)}s ${civiliansSummary(game)} · Novak ${N.state} aw ${f2(N.awareness)} lk ${posS(N.lastKnown)} @${posS(N.char.pos)} · esc ${game.escalation}`);
-  }
-  for (const l of S.clog.slice(clog0)) { const m = / (\w+) heard her .* → looks toward \(([-\d.]+), ([-\d.]+)\)/.exec(l); if (m && /Marta:/.test(l)) noticed.push(`${m[1]}→(${m[2]},${m[3]})`); }
-  const radio = S.tap.lines.filter(l => l.radio && l.who === 'Novak');
-  const rows = game.chronicle.events.filter((e: any) => e.kind === 'civilianReported' && e.data.who === 'Marta');
-  const spotted = game.chronicle.events.filter((e: any) => e.kind === 'civilianSpotted' && e.data.who === 'Marta');
-  return { S, at, novak0, startledAt, alarmedAt, fleeAt, reportAt, toldAt, cowerAt, target, noticed, novakFix, novakStateAtTell, escAtTell, escMax, novakMaxAw, radio, rows, spotted, cause: M.civ.cause, armed: M.civ.armed, counts: { ...game.chronicle.counts } };
-}
-export async function civiliansSight() {
-  console.log('\n=== civilians-sight: Sam a metre off the kneeling cleaner in the dark (hands empty, then the pistol out), gone after 4 s — startled, frightened, the scream heard, the run to Novak, the telling, what he then knows and does ===');
-  let ok = true;
-  for (const gun of [false, true]) {
-    const R = await sightRun(gun);
-    console.log(`\n- ${gun ? 'PISTOL IN HAND' : 'HANDS EMPTY'}: startled ${f2(R.startledAt)} s · alarmed ${f2(R.alarmedAt)} s [${R.cause}${R.armed ? ', armed' : ''}] · flee ${f2(R.fleeAt)} s → ${R.target} · report ${f2(R.reportAt)} s · told ${f2(R.toldAt)} s · cower ${f2(R.cowerAt)} s`);
-    console.log(`    the scream: ${R.noticed.join(', ') || 'nobody turned'} · Novak at the telling: ${R.novakStateAtTell}, fix ${posS(R.novakFix)} (Sam was at ${posS(R.at)}), esc then ${R.escAtTell}, max ${R.escMax} · his radio: ${R.radio.map(l => `"${l.text}"`).join(' / ') || '—'}`);
-    console.log(`    card: spotted rows ${R.spotted.length}, reported rows ${R.rows.length} (${R.rows.map((e: any) => `${e.data.how}/${e.data.cause}`).join(', ')}), counts civSeen ${R.counts.civSeen} civReported ${R.counts.civReported}`);
-    ok = verdict(R.startledAt >= 0 && R.startledAt < 0.5 && R.alarmedAt > R.startledAt && R.alarmedAt < 1.2, `${gun ? 'gun' : 'empty'}: a metre and a half ahead of her in the dark she is startled inside half a second and frightened inside 1.2 s (the guards' near-field floor: certain at arm's length)`, `startled ${f2(R.startledAt)} s, alarmed ${f2(R.alarmedAt)} s`) && ok;
-    ok = verdict(R.cause === (gun ? 'gun' : 'sam') && R.armed === gun, `${gun ? 'gun' : 'empty'}: what frightened her is ${gun ? "'gun', armed" : "'sam', not armed"}`, `${R.cause}${R.armed ? ', armed' : ''}`) && ok;
-    const atS = `Novak→(${f1(R.at[0])},${f1(R.at[2])})`;
-    ok = verdict(R.noticed.some(n => n === atS), `${gun ? 'gun' : 'empty'}: her scream reaches Novak up the aisle by the sound's own path and turns him toward where SAM stood, not toward her`, R.noticed.join(', ') || 'nobody') && ok;
-    ok = verdict(R.fleeAt > R.alarmedAt && R.fleeAt - R.alarmedAt >= CIV.freeze[0] - 0.02 && R.fleeAt - R.alarmedAt <= CIV.freeze[1] + 0.05 && R.target === 'Novak', `${gun ? 'gun' : 'empty'}: frozen for her beat (${CIV.freeze[0]}–${CIV.freeze[1]} s), then she runs to the NEAREST calm guard by path — Novak, not a phone, not the door`, `froze ${f2(R.fleeAt - R.alarmedAt)} s → ${R.target}`) && ok;
-    ok = verdict(R.reportAt > R.fleeAt && R.toldAt > R.reportAt && R.toldAt - R.reportAt >= CIV.reportSecs - 0.05 && R.cowerAt > R.toldAt, `${gun ? 'gun' : 'empty'}: reaches him, tells him for ${CIV.reportSecs} s, then cowers`, `report ${f2(R.reportAt)} → told ${f2(R.toldAt)} → cower ${f2(R.cowerAt)}`) && ok;
-    ok = verdict(!!R.novakFix && v3.distXZ(R.novakFix, R.at) < 0.5 && (gun ? R.novakStateAtTell === 'search' : R.novakStateAtTell === 'suspicious') && R.novakMaxAw < 0.85, `${gun ? 'gun' : 'empty'}: his fix is where she saw Sam (±0.5 m) and he ${gun ? 'SEARCHES it, weapon out' : 'walks it, suspicious'} — never 'alert' off her word alone`, `fix ${posS(R.novakFix)} vs ${posS(R.at)}, ${R.novakStateAtTell}, max aw ${f2(R.novakMaxAw)}`) && ok;
-    ok = verdict(R.radio.length >= 1 && R.radio.some(l => /Marta/.test(l.text)) && (gun ? R.escMax === 1 : R.escMax === 0), `${gun ? 'gun' : 'empty'}: his report goes over the net naming her${gun ? ', and the floor goes up ONE step on an armed man' : '; the floor stays calm for a prowler'}`, `${R.radio.length} radio line(s), esc max ${R.escMax}`) && ok;
-    ok = verdict(R.spotted.length === 1 && R.rows.length === 1 && R.rows[0].data.how === 'told' && R.counts.civSeen === 1 && R.counts.civReported === 1, `${gun ? 'gun' : 'empty'}: the card gets one 'saw you' row + count and one 'told them' row + count`, `spotted ${R.spotted.length}, reported ${R.rows.length}, counts ${R.counts.civSeen}/${R.counts.civReported}`) && ok;
-  }
-  console.log(`=== civilians-sight: ${ok ? 'ALL PASS' : 'FAILURES above'} ===`); if (!ok) failures++;
-  return ok;
-}
 
 // ================================================================ phone
 export async function civiliansPhone() {
   console.log("\n=== civilians-phone: 'send her to a phone' from a quiet floor — the run to the nearer set, six seconds on the line, control on the net, the nearest calm man sent, one call only ===");
   const S = await stage(31); const { game, M } = S;
+  const phoned0 = CIV_STATS.phoned;
   S.step(60 * 3);
   const note = civPanic(game, M, 'phone');
   const t0 = game.time; let phoneAt = -1, phonedAt = -1, target = M.civ.target?.name ?? '?', cowerAt = -1;
@@ -168,7 +104,7 @@ export async function civiliansPhone() {
   ok = verdict(phonedAt > 0 && Math.abs(phonedAt - phoneAt - CIV.phoneSecs) < 0.1, `the call takes ${CIV.phoneSecs} s on the line`, `${f2(phonedAt - phoneAt)} s`) && ok;
   ok = verdict(control.length === 1 && /rang in|rang it in|called in|called it in/.test(control[0]) && rows.length === 1, "control puts it out ONCE on the radio strip ('… rang in a prowler …') and the card gets one 'rang it in' row", `${control.length} control line(s), ${rows.length} row(s)`) && ok;
   ok = verdict(sent.length === 1 && S.tap.lines.some(l => l.radio && /copy, control — on my way/.test(l.text)), "exactly one calm man is sent to the spot and says so on the net ('copy, control — on my way')", sent.map((g: any) => g.callsign).join(', ') || 'nobody') && ok;
-  const phonedN = S.clog.filter(l => /rang it in/.test(l)).length;
+  const phonedN = CIV_STATS.phoned - phoned0;
   ok = verdict(phonedN === 1 && cowerAt > phonedAt, 'one call per fright however long she stands there, then she cowers', `${phonedN} call(s), cower ${f2(cowerAt)}`) && ok;
   console.log(`=== civilians-phone: ${ok ? 'ALL PASS' : 'FAILURES above'} ===`); if (!ok) failures++;
   return ok;
@@ -208,11 +144,11 @@ export async function civiliansComply() {
   // Novak stood beside her, calm, facing her
   N.hold = false; N.pinned = false; N.dazzledUntil = -1; N.heardUpTo = game.eventSeq;   // (back from the lot: free, seeing and hearing again from now)
   N.char.pos = [M.char.pos[0], 0, M.char.pos[2] + 1.5]; N.char.bodyYaw = Math.PI; N.char.aimYaw = N.char.bodyYaw; N.path = []; N.pathGoal = null; N.wait = 4; N.state = 'patrol'; N.awareness = 0; N.char.update(0);   // a stride and a half south of her in the east aisle, facing her (nothing between them: the cluster's end partition is west of both)
-  const t0 = game.time; let foundAt = -1, toldAt = -1, novakState = '', esc = 0; const clog0 = S.clog.length;
+  const t0 = game.time; let foundAt = -1, toldAt = -1, novakState = '', esc = 0;
   for (let f = 0; f < 60 * 20; f++) {
     S.step();
     const t = game.time - t0;
-    if (foundAt < 0 && S.clog.slice(clog0).some(l => /found her cowering/.test(l))) foundAt = t;
+    if (foundAt < 0 && M.civ.foundLineAt >= 0) foundAt = t;   // (he has asked her: his line, the moment foundSecs is up)
     if (toldAt < 0 && M.civ.reported) { toldAt = t; novakState = N.state; }
     esc = Math.max(esc, game.escalation);
     if (VERBOSE && f % 60 === 0) console.log(`    ${f1(t)}s ${civiliansSummary(game)} · Novak ${N.state} aw ${f2(N.awareness)} lk ${posS(N.lastKnown)} esc ${game.escalation}`);
@@ -304,29 +240,5 @@ export async function civiliansHearing() {
   return ok;
 }
 
-// ================================================================ determinism
-async function detRun(): Promise<{ log: string[]; pos: string; lines: string[] }> {
-  const S = await stage(91); const { game, M, O } = S;
-  const clog0 = S.clog.length;
-  for (let f = 0; f < 60 * 90; f++) {
-    S.step();
-    if (f === 60 * 20) civPanic(game, M, 'panic');
-    if (f === 60 * 55) civPanic(game, O, 'phone');
-  }
-  return { log: S.clog.slice(clog0), pos: `${M.char.pos.map((x: number) => x.toFixed(3)).join(',')} | ${O.char.pos.map((x: number) => x.toFixed(3)).join(',')} | ${M.civ.state} ${O.civ.state}`, lines: S.tap.lines.map(l => `${f2(l.t)} ${l.who}: ${l.text}`) };
-}
-export async function civiliansDeterminism() {
-  console.log('\n=== civilians-determinism: the same seeded 90 s twice (a fright at 20 s, a phone run at 55 s, greetings on): the module log, everybody\'s lines and the civilians\' positions identical ===');
-  const A = await detRun(); const B = await detRun();
-  let firstDiff = -1; for (let i = 0; i < Math.max(A.log.length, B.log.length); i++) if (A.log[i] !== B.log[i]) { firstDiff = i; break; }
-  let lineDiff = -1; for (let i = 0; i < Math.max(A.lines.length, B.lines.length); i++) if (A.lines[i] !== B.lines[i]) { lineDiff = i; break; }
-  console.log(`    run A: ${A.log.length} log lines, ${A.lines.length} spoken; ends ${A.pos}`);
-  if (VERBOSE) for (const l of A.log) console.log('      ' + l);
-  let ok = verdict(firstDiff < 0 && A.log.length > 8, 'the module log identical line for line (and there is one: a fright and a call happened)', firstDiff < 0 ? `${A.log.length} lines` : `differs at ${firstDiff}: "${A.log[firstDiff]}" vs "${B.log[firstDiff]}"`);
-  ok = verdict(lineDiff < 0, 'every line said (men and civilians) identical', lineDiff < 0 ? `${A.lines.length} lines` : `differs at ${lineDiff}: "${A.lines[lineDiff]}" vs "${B.lines[lineDiff]}"`) && ok;
-  ok = verdict(A.pos === B.pos, 'both civilians end on the same millimetre in the same state', A.pos === B.pos ? A.pos : `${A.pos} vs ${B.pos}`) && ok;
-  console.log(`=== civilians-determinism: ${ok ? 'ALL PASS' : 'FAILURES above'} ===`); if (!ok) failures++;
-  return ok;
-}
 
 void civilianLines;

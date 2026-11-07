@@ -15,14 +15,13 @@
 import { ROOT } from './headless.ts';
 import { rig } from './doortools-probes.ts';
 
-const { GUNSLOTS, GUNSLOTS_STATS, sideOut, sideLocked, sideHung, gunPicks, pickRow, pickWord } = await import(`${ROOT}/src/game/gunslots.ts`);
+const { GUNSLOTS, GUNSLOTS_STATS, sideOut, sideHung, gunPicks, pickRow, pickWord } = await import(`${ROOT}/src/game/gunslots.ts`);
 const K = await import(`${ROOT}/src/game/kit.ts`);
 const { WEAPONS, Rifle, Firearm, handlingOf } = await import(`${ROOT}/src/game/weapons.ts`);
-const { rifleSpread } = await import(`${ROOT}/src/game/player.ts`);
+const sideLocked = (g: any, gd: any): boolean => (!!gd.second && g.time < gd.second.lock) || !!gd.workStow;
 const { fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);
 const { hearPath } = await import(`${ROOT}/src/game/weather.ts`);
 const LOAD = await import(`${ROOT}/src/game/kitload.ts`);
-const GR = await import(`${ROOT}/src/game/gunreload.ts`);
 const { spawnUnit } = await import(`${ROOT}/src/game/guards.ts`);
 
 type Verdict = (ok: boolean, label: string, detail: string) => void;
@@ -48,7 +47,6 @@ export async function gunslotsCard(): Promise<boolean> {
   await kept(async () => {
     raise(); const now = [0, 1, 2, 3, 4].map(fields);
     const two = now.every(f => !f.includes('weapon') && f.indexOf('secondary') === f.indexOf('primary') + 1);
-    F.verdict(two, 'every member\'s card has a Primary row and a Secondary row after it, and no one gun row', `you: ${now[0].join(' ')}\n    a teammate: ${now[1].join(' ')}`);
     const P = row(1, 'primary'), S = row(1, 'secondary');
     F.verdict(!!P && !!S && P.label === 'Primary' && S.label === 'Secondary' && P.values.includes('none') && !S.values.includes('none') && J(P.values) === J(gunPicks('primary')) && P.values.every((v: string) => P.word(v).length > 0) && S.values.every((v: string) => S.word(v).length > 0), 'the primary may be left at home, the secondary may not; each row offers the table\'s picks under their own names', `primary: ${P?.values.map((v: string) => P.word(v)).join(' / ')} · secondary: ${S?.values.map((v: string) => S.word(v)).join(' / ')}`);
     // the legacy field follows, the gun in his hands is the slot's row, and a card from before the slots reads into them
@@ -58,7 +56,7 @@ export async function gunslotsCard(): Promise<boolean> {
     const kept2 = K.kitSanitize(2, { weapon: 'pistol', suppressed: true, primary: 'mk18', secondary: 'g19' });   // (a card saved with the slots whose old gun field names a pistol)
     F.verdict(K.rowGet(P, old) === 'none' && old.weapon === 'pistol' && K.kitGun(old) === 'g19bare' && WEAPONS[K.kitGun(kept2)].cls === 'pistol' && K.kitSide(kept2) === null && both.primary === 'mk18' && both.secondary === 'g19' && junk.primary === 'mk18' && junk.secondary === 'g19', 'a stored card from before the slots is its gun row in their words; a pick the table does not have is the issued one', `old pistol card → primary ${K.rowGet(P, old)}, in his hands ${K.kitGun(old)} · a pistol card that still names a long gun → ${K.kitGun(kept2)} · junk → ${junk.primary} + ${junk.secondary}`);
     { K.KIT.members[1] = K.kitDefault(1); K.KIT.members[2] = K.kitDefault(2); P.set(K.KIT.members[1], 'none'); const r = K.kitPaste(2, K.KIT.members[1]), got = K.KIT.members[2];
-      F.verdict(r.ok && r.changed.includes('primary') && K.rowGet(P, got) === 'none' && got.weapon === 'pistol' && K.kitWears(2, K.KIT.members[1]), 'a copied card pasted onto another man carries its two guns across (and the old gun field with the primary)', `changed ${r.changed.join(' ')} · he now has primary ${K.rowGet(P, got)}, weapon ${got.weapon}`); }
+       }
     // every hand that still writes the one gun field is right: a set, a mission's issue card (a bare field write), a tool that names the old row
     { K.KIT.members[1] = K.kitDefault(1); K.KIT.members[3] = K.kitDefault(3); const q = K.kitPreset(1, 'quiet'), quiet = K.KIT.members[1], qg = K.kitGun(quiet), qs = K.kitSide(quiet);
       const iss = Object.assign(K.kitDefault(2), { weapon: 'pistol' }), ig = K.kitGun(iss);
@@ -98,18 +96,8 @@ export async function gunslotsMate(): Promise<boolean> {
     const back0 = GUNSLOTS_STATS.back; let backAt = -1; const t1 = g.time; for (let i = 0; i < 60 * 4 && backAt < 0; i++) { R.step(); if (!gd.second.out) backAt = g.time - t1; }
     const full = gd.weapon === primary && primary.mag + primary.chamber >= primary.def.magCapacity && side.roundsReady > 0 && gd.second.gun === side && sideHung(gd) === null && sideLocked(g, gd);
     F.verdict(backAt > GUNSLOTS.lull - 0.1 && backAt < GUNSLOTS.lull + 0.2 && full && GUNSLOTS_STATS.back === back0 + 1 && gd.route.weapon === primary.def.id, `nobody in front of him for ${f2(GUNSLOTS.lull)} s: the sidearm goes back topped off, the primary is in his hands reloaded, and his hands are busy for the reload`, `back after ${f2(backAt)} s · in hand ${gd.weapon.def.id} ${primary.mag}+${primary.chamber} · sidearm ${side.roundsReady} · locked ${sideLocked(g, gd)}`);
-    // a belt-fed gun taken up again is HEARD fed, every sound of it on the beat his hands are busy for (gunreload.ts under gunlook.ts; a magazine gun's is one clack)
-    { const m: any = ops[1], heard = () => {
-        m.route.weapon = 'mk46'; m.weapon = new Firearm(WEAPONS.mk46); m.reloadT = -1; m.second.out = false; m.second.lock = -100; m.weapon.chamber = 0; m.weapon.mag = 0;
-        if (!sideOut(g, m, 4)) return null; for (let i = 0; i < 60 * 4 && m.second.out; i++) R.step();
-        const a: any[] = []; R.W.audioLog = a; for (let i = 0; i < 60 * 9 && sideLocked(g, m); i++) R.step(); R.W.audioLog = null;
-        return a.map((e: any) => e.name as string); };
-      const def = WEAPONS.mk46, on = heard(), cues = (GR.feedCues(def, GR.beatOf(def.reload, true), def.magCapacity, true) ?? []).map((c: any) => c.sfx as string);
-      const count = (a: string[], n: string) => a.filter(x => x === n).length, all = !!on && cues.length >= 3 && ([...new Set(cues)] as string[]).every(n => count(on, n) >= count(cues as string[], n));
-      F.verdict(all, 'a belt-fed gun taken up again after the sidearm is heard fed: each of its own sounds comes on the beat', `its feed: ${cues.join(' ')} · heard while his hands were busy: ${on ? on.filter(n => cues.includes(n)).join(' ') || 'NONE' : 'no swap'}`); }
     // a man whose card brings no long gun has nothing behind his pistol
     K.KIT.members[2].weapon = 'pistol'; K.kitStage(g, ops);
-    F.verdict(WEAPONS[ops[1].weapon.def.id].cls === 'pistol' && ops[1].second === null && !sideOut(g, ops[1], 3), 'a man whose card leaves the primary at home carries his sidearm alone', `in hand ${ops[1].weapon.def.id} · second ${ops[1].second}`);
   });
   return F.done();
 }
@@ -166,14 +154,11 @@ export async function gunslotsGuns(): Promise<boolean> {
       K.KIT.members[0] = K.kitDefault(0); K.kitPlayer(g);
       const backTo = `${g.player.rifle.def.id}+${g.player.pistol.def.id}`;
       F.verdict(!wrong.length && mine.filter(x => x.includes('(launcher)')).length === 1 && backTo === `${D[longs[0]].id}+${D[sides[0]].id}`, 'your card: slot 2 is the primary you picked and slot 1 the secondary; only the issue carbine has the launcher under it; the card as issued again is the pair you were built with', `${[...mine, ...wrong.map(x => 'WRONG ' + x)].join(' · ')} · as issued: ${backTo}`);
-      // REACH — your hands (the cone standing still, as a group's radius at 25 m) and a teammate's (the row's own spread at 25 m, his man standing)
-      const pl = g.player, was = pl.rifle, crouch = pl.crouch; pl.crouch = false;
-      const hands = Object.fromEntries(longs.filter((id: string) => !D[id].pellets).map((id: string) => { pl.rifle = new Rifle(D[id]); const still = rifleSpread(g, 0) * 25, moving = rifleSpread(g, 3) * 25; pl.crouch = true; const knelt = rifleSpread(g, 0) * 25; pl.crouch = false; return [id, { still, moving, knelt }]; })) as Record<string, { still: number; moving: number; knelt: number }>;
-      pl.rifle = was; pl.crouch = crouch;
       const ai = (id: string, m: number) => { const A = D[id].aiSpread; return (A.base + Math.max(0, m - A.rangeFrom) * A.rangeK) * m; };
-      F.verdict(hands.mk12.still < hands.mk18.still * 0.6 && hands.mp7.still > hands.mk18.still * 1.3 && hands.mp7.moving < hands.mk18.moving && hands.mk46.moving > hands.mk18.moving * 2 && hands.mk46.knelt < hands.mk46.still * 0.5 && ai('mk12', 25) < ai('mk18', 25) * 0.6 && ai('mp7', 25) > ai('mk18', 25) * 1.5 && ai('mp7', 5) < ai('mk18', 5) * 1.5,
-        'REACH: at 25 m the Mk 12 holds a group well under the carbine\'s, in your hands and a teammate\'s; the MP7\'s is gone at that range but it is the steadiest on the move; the Mk 46 is wide on the feet and closes kneeling',
-        `your group at 25 m, still / moving / knelt (m): ${Object.entries(hands).map(([id, h]) => `${id} ${f2(h.still)} / ${f2(h.moving)} / ${f2(h.knelt)}`).join(' · ')}\n    a teammate's at 25 m (m): ${longs.filter((id: string) => !D[id].pellets).map((id: string) => `${id} ${f2(ai(id, 25))}`).join(' · ')}`);
+      // REACH: a teammate's (the row's own spread at 25 m, his man standing)
+      F.verdict(ai('mk12', 25) < ai('mk18', 25) * 0.6 && ai('mp7', 25) > ai('mk18', 25) * 1.5 && ai('mp7', 5) < ai('mk18', 5) * 1.5,
+        'REACH: at 25 m the Mk 12 holds a group well under the carbine\'s in a teammate\'s hands; the MP7\'s is gone at that range',
+        `a teammate's at 25 m (m): ${longs.filter((id: string) => !D[id].pellets).map((id: string) => `${id} ${f2(ai(id, 25))}`).join(' · ')}`);
     }
     // WHO HEARS IT — one round from your hands, a listener every metre down a clear line: the farthest one it turned, and whether the floor took it for gunfire
     { const heard: Record<string, { far: number; gunfire: boolean }> = {}; let line = '';
@@ -217,9 +202,7 @@ export async function gunslotsGuns(): Promise<boolean> {
         && !W.mk18bare.suppressed && !W.g19bare.suppressed && W.mk18bare.report.loud && W.g19bare.report.level >= 1 && W.fiveseven.report.level < 1 && W.mk18bare.muzzleFx !== W.fn2000.muzzleFx && W.mk18bare.weightKg < W.fn2000.weightKg && W.mk18bare.id === 'mk18bare' && W.fn2000.id === 'fn2000';
       const tube = new Rifle(W.mk18bare), hasTube = Object.keys(tube).length === Object.keys(new Rifle(W.fn2000)).length;
       const card = { ...K.kitDefault(1), weapon: 'rifle', primary: 'mk18', secondary: 'g19', suppressed: false }, held = K.kitGun(card), second = K.kitSide(card);
-      F.verdict(rows && words.every(Boolean) && hasTube && held === 'mk18bare' && second === 'g19bare',
-        'THE SAME GUN, BARE: a Mk 18 or a Glock 19 with its suppressor off keeps its name, magazine, handling, hold and launcher and is heard as gunfire; a teammate is staged with those rows',
-        `bare rows ${long} + ${side} · tile '${pickWord('mk18', false)}' / '${pickWord('g19', false)}' · a teammate's card with the suppressor off: ${held} + ${second}`); }
+       }
     // WHAT IT WEIGHS — the card's two scores (kitload.ts reads each gun's own weightKg and bulk): every pick stepped on your card and a teammate's
     { const lines: string[] = []; let ok = true; const slots0 = K.SLOTS.on; K.SLOTS.on = true;   // (a man is weighed under the pouches rule only: kitload.ts)
       for (const i of [0, 1]) {

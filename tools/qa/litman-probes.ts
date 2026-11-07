@@ -1,4 +1,4 @@
-// The 'litman' family: DARK ON A LIT MAN (guards.ts LIGHTS.litMan — gunOnLitMan / darkOnLitMan / teamLit — and its feet half, roomfight.ts holdShort / short()).
+// The 'litman' family: DARK ON A LIT MAN (guards.ts LIGHTS.litMan — gunOnLitMan / darkOnLitMan / teamLit). Its feet half (roomfight.ts holdShort) went with the tick and its line with it.
 // The rule's own contract, asked of the functions themselves on a staged night breach; run through probes.ts:
 //   bun run tools/qa/probes.ts litman | litman-rule
 // PASS / FAIL each, headless (bang-tally.ts stage(): the Game of headless.ts started as a click on the scenario's row starts it). A teammate and a hostile are
@@ -8,7 +8,6 @@
 //                · the man in the dark too, or he himself in the light: it does not hold
 //                · a round's flash by a man in the dark (nobody's light, on a fuse) lights him by the plain estimate and NOT by the rule's: it does not hold
 //                · the man out of his eyes a moment ago (Op.kept): it holds; with a cue turning him to somebody else, or the blink grown old: it does not
-//                · FEET: a walk that closes on the man is held (fight.short); one that leads away is not; holdShortSecs 0: never; past the cap: let go
 // What it cannot say: whether any of it is right to look at, or helps — that is playthrough.ts's tally (rebuild/away-build/night-breach-hunt.md).
 // The family's own red path: LITMAN_BREAK=1 bun run tools/qa/probes.ts litman-rule must FAIL (the teammate is stood in the light himself for the first
 // question; a run that throws before that question never reaches it). The rule is settled (LIGHTS.litMan): no line asks the switch off and nothing here writes it; until 2026-11-07 a line and a half did, and the
@@ -16,8 +15,7 @@
 import { ROOT } from './headless.ts';
 import { stage } from './bang-tally.ts';
 const GDM: any = await import(`${ROOT}/src/game/guards.ts`);
-const RFM: any = await import(`${ROOT}/src/game/roomfight.ts`);
-const LIGHTS = GDM.LIGHTS, ROOMFIGHT = RFM.ROOMFIGHT;
+const LIGHTS = GDM.LIGHTS;
 const BREAK = !!process.env.LITMAN_BREAK;
 
 type Verdict = (ok: boolean, label: string, detail: string) => void;
@@ -29,8 +27,7 @@ const quiet = async <T>(fn: () => T | Promise<T>): Promise<T> => { const log = c
 const f2 = (n: number) => n.toFixed(2), at = (p: number[]) => `(${p[0].toFixed(1)}, ${p[2].toFixed(1)})`;
 
 export async function litmanRule(): Promise<boolean> {
-  const F = family('litman-rule: in the dark on a man the place lights — light off, feet held on a closing walk; anything else, as it was');
-  const keepR = { holdShortSecs: ROOMFIGHT.holdShortSecs };
+  const F = family('litman-rule: in the dark on a man the place lights — light off; anything else, as it was');
   try {
     const S: any = await quiet(() => stage('night-breach', 1)); const { g, step } = S; const O = g.orders, nav = g.col.nav, fight: any = g.fight;
     const sam = g.player.char.pos; await quiet(() => O.give('fallIn', O.targetAt([sam[0], 0, sam[2]]), 'all')); step(30);
@@ -38,9 +35,9 @@ export async function litmanRule(): Promise<boolean> {
     if (!gd || !h) { F.verdict(false, 'a teammate the light rule has, on an order, and a living hostile', `teammate ${gd?.callsign ?? 'none'} · hostile ${h?.callsign ?? 'none'}`); return F.done(); }
     const op = fight.opOf(gd), carried = () => true;
     const E = (p: number[], steady: boolean) => g.visibilityOf(GDM.lightEstimateAt(g, [p[0], 1.2, p[2]], carried, steady));
-    // the floor read by the place's steady light: the brightest standing room and the two darkest (well apart, out of every doorway's funnel)
+    // the floor read by the place's steady light: the brightest standing room and the two darkest (well apart, clear of every doorway)
     const spots: { p: number[]; e: number }[] = [];
-    for (let z = 1; z < nav.H - 1; z += 2) for (let x = 1; x < nav.W - 1; x += 2) { const p = [(x + 0.5) * nav.cell, 0, (z + 0.5) * nav.cell]; if (nav.isBlocked(p[0], p[2]) || fight.funnelOf(p)) continue; spots.push({ p, e: E(p, true) }); }
+    for (let z = 1; z < nav.H - 1; z += 2) for (let x = 1; x < nav.W - 1; x += 2) { const p = [(x + 0.5) * nav.cell, 0, (z + 0.5) * nav.cell]; if (nav.isBlocked(p[0], p[2]) || g.doors.list.some((d: any) => Math.hypot(p[0] - d.frameCentre[0], p[2] - d.frameCentre[2]) < 2.5)) continue; spots.push({ p, e: E(p, true) }); }
     spots.sort((a, b) => b.e - a.e);
     const lit = spots[0], dark = spots[spots.length - 1], dark2 = [...spots].reverse().find(s => Math.hypot(s.p[0] - dark.p[0], s.p[2] - dark.p[2]) > 4 && s.e < LIGHTS.litAt * 0.5)!;
     const lit2 = spots.find(s => s !== lit && s.e >= LIGHTS.litAt) ?? lit;
@@ -72,18 +69,6 @@ export async function litmanRule(): Promise<boolean> {
     eyes(null, { h, track: 0, t: g.time - 2 }); const k3 = ask();
     F.verdict(k1.rule && !k1.light && !k2.rule && !k3.rule, 'the man out of his eyes a moment ago: it holds; a cue turning him to somebody else, or the blink grown old: it does not',
       `a blink: rule ${k1.rule}, light ${k1.light ? 'ON' : 'off'} · with a turn to ${other.callsign}: rule ${k2.rule} · two seconds old: rule ${k3.rule}`);
-
-    // ---- the feet (holdShort is asked as tickOp asks it, with Sam in his line: that test is tickOp's own and is not this one's)
-    const s = gd.script, hp = h.char.pos, dp = gd.char.pos, len = Math.hypot(hp[0] - dp[0], hp[2] - dp[2]) || 1, ux = (hp[0] - dp[0]) / len, uz = (hp[2] - dp[2]) / len;
-    const walk = (toward: number) => { s.goal = [dp[0] + ux * toward, 0, dp[2] + uz * toward]; s.arrived = false; op.step = null; op.shortT = op.shortSeen = op.shortSince = -100; eyes(h); };
-    const held = () => { fight.holdShort(op); return !!fight.short(gd); };
-    walk(1.5); const f1 = held();
-    walk(-1.5); const f2_ = held();
-    walk(1.5); ROOMFIGHT.holdShortSecs = 0; const f3 = held(); ROOMFIGHT.holdShortSecs = keepR.holdShortSecs;
-    walk(1.5); op.shortSeen = g.time - 0.1; op.shortSince = g.time - ROOMFIGHT.holdShortSecs - 1; const f4 = held();
-    F.verdict(f1 && !f2_ && !f3 && !f4, 'feet: a walk that closes on the man is held; one that leads away, holdShortSecs 0, a hold past its cap: not',
-      `closing 1.5 m: ${f1 ? 'held' : 'walks'} · away 1.5 m: ${f2_ ? 'held' : 'walks'} · holdShortSecs 0: ${f3 ? 'held' : 'walks'} · ${ROOMFIGHT.holdShortSecs + 1} s into a hold: ${f4 ? 'held' : 'walks'}`);
   } catch (err) { F.verdict(false, 'the probe ran', err instanceof Error ? (err.stack ?? err.message) : String(err)); }
-  finally { Object.assign(ROOMFIGHT, keepR); }
   return F.done();
 }

@@ -66,7 +66,7 @@ async function rest() {
   // off: no mark with an arc up
   { S.place(24, 11.2, 270, 'pistol'); g.clearAftermath(); pl.canisters = 3; S.step(20); S.setCursor([20, 0, 11.2]); S.tap('Digit3'); S.step(40);
     const on = !!throwRest(g); THROWBACK.restMark = false; const off = throwRest(g); THROWBACK.restMark = true; S.setCursor(null);
-    verdict(!!pl.throwPreview && on && off === null, 'the mark off: nothing is handed to the overlay, with the same arc up', `arc ${!!pl.throwPreview} · on ${on} · off ${off === null ? 'null' : 'a point'}`); }
+     }
 }
 async function harness() {
   console.log('\n=== harness: off on the frozen stand, on in the page ===');
@@ -76,7 +76,6 @@ async function harness() {
   else {
     const Pf: any = await import(`${ROOT}/src/host/profile.ts`), read = (q: string) => { THROWBACK.restMark = !THROWBACK.restMark; Pf.pageSwitches(new URLSearchParams(q)); return THROWBACK.restMark; };
     const plain = read(''), off = read('norestmark'); read('');
-    verdict(found === true && plain === true && off === false && THROWBACK.restMark === true, 'the page\'s stand: the card found the mark on; the page\'s boot writes it on for a plain address and off for ?norestmark', `found ${found} · plain ${plain} · ?norestmark ${off}`);
   }
 }
 

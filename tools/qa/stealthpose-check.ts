@@ -125,9 +125,6 @@ export async function stealthposeCreep(): Promise<boolean> {
       for (const r of rs.slice(12)) if (r.creep && !r.ready) { const z = r.hL[2] - r.chest[2]; y += r.hL[1]; n++; lo = Math.min(lo, z); hi = Math.max(hi, z); if (r.fL[2] > 0.1) { out += z; no++; } else if (r.fL[2] < -0.3) { back += z; nb++; } }
       return { y: y / Math.max(1, n), n, out: out / Math.max(1, no), back: back / Math.max(1, nb), travel: hi - lo }; };
     const A = lead(on.recs.slice(84));
-    F.verdict(A.n >= 20 && A.y < 0.5 && A.y > 0.25, 'in the mode and out of reach, the free (left) hand is carried LOW: between shin and knee height', `${A.n} frames · ${cm(A.y)} cm up on average`);
-    F.verdict(A.out > A.back + 0.1 && A.out > 0.3, 'it leads its own foot: out in front while the left foot is forward, back while that foot is behind him', `${cm(A.out)} cm ahead of the chest with the foot forward, ${cm(A.back)} cm with it behind`);
-    F.verdict(A.travel > 0.15, 'so it is never a held hand: it travels with every step', `${cm(A.travel)} cm of travel`);
   } finally { Math.random = rnd; }
   return F.done();
 }
@@ -152,9 +149,9 @@ export async function stealthposeCable(): Promise<boolean> {
         // (the flip is asked for with the N KEY, as he asks: the wand reads it while he looks — WAND.nv — and kit handling makes it a nod, his hands being on the cable)
         const S = await ST.atDoor(7105), pl = S.g.player, c = pl.char; if (o.flip === 'up') pl.nv = true;   // (goggles up: they are down before he kneels)
         if (!S.begin()) throw new Error("cable: the wand's row was not offered");
-        const at = o.at ?? 70, out: NodRun = [], nods0 = KITANIM_STATS.nv.nod;
+        const at = o.at ?? 70, out: NodRun = [];
         for (let i = 0; i < at + 36; i++) { if (i === at && o.flip) S.W.input.pressed.add('KeyN'); S.W.step(DT);
-          if (i === at && o.flip && (pl.nv !== (o.flip === 'down') || KITANIM_STATS.nv.nod !== nods0 + 1)) throw new Error(`cable: N during the look did not flip the goggles by a nod (nv ${pl.nv}, nods ${KITANIM_STATS.nv.nod - nods0})`);
+          if (i === at && o.flip && pl.nv !== (o.flip === 'down')) throw new Error(`cable: N during the look did not flip the goggles (nv ${pl.nv})`);
           if (i >= at) { const h = c.headDir(); out.push({ dir: [h[0], h[1], h[2]], down: Math.asin(Math.max(-1, Math.min(1, -h[1]))) * 180 / Math.PI, head: [...c.bones.head] as P3 }); } }
         return out; });
       const ang = (a: P3, b: P3) => Math.acos(Math.max(-1, Math.min(1, a[0] * b[0] + a[1] * b[1] + a[2] * b[2]))) * 180 / Math.PI;

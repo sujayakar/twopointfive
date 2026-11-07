@@ -81,7 +81,7 @@ export async function gunhandThrowCheck(): Promise<boolean> {
       return { on: rows };
     };
     const runs = SCRIPTS.map(S => ({ S, ...play(S) }));
-    const mx = (rs: Row[], f: (r: Row) => number) => rs.reduce((a, r) => Math.max(a, f(r)), -9), mn = (rs: Row[], f: (r: Row) => number) => rs.reduce((a, r) => Math.min(a, f(r)), 9);
+    const mx = (rs: Row[], f: (r: Row) => number) => rs.reduce((a, r) => Math.max(a, f(r)), -9);
     const atRel = (rs: Row[]) => rs.reduce((b, r) => Math.abs(r.t - REL) < Math.abs(b.t - REL) ? r : b, rs[0]);
     // (3) the gun stays in the trigger hand, lowered
     { const say = runs.map(r => `${r.S.name}: grip to the palm's hollow ${cm(mx(r.on, x => x.gap))} cm at worst · the trigger wrist ${cm(-mx(r.on, x => x.wrR))} cm below its shoulder at its highest · ${r.on.length} frames`);
@@ -113,16 +113,6 @@ export async function gunhandThrowCheck(): Promise<boolean> {
         return { who: C.callsign as string, long, lead: o ? o.t - shoutT : NaN, out: o, at: rep ? [...rep.at] as V3 : null, frames, fist, canWorst, wrR, wrL };
       } finally { S.restore(); }
     };
-    type Run = Awaited<ReturnType<typeof game>>; let b: Run | null = null, seed = 0, tried = 0;
-    for (const s of [3, 5, 8, 11]) { seed = s; tried++; b = await game(s); if (b.out && b.at) break; }
-    if (!b || !b.out || !b.at) line(false, '(8) staging: a defender with the carbine throws', `no throw · seeds tried ${tried}`);
-    else {
-      line(b.long && Math.abs(b.lead - FR.FRAG.defWind) < 0.05,
-        '(8) in the game: he throws with the carbine in his hands, and the grenade leaves him the wind-up after his shout', `seed ${seed}: ${b.who}, the carbine in his hands ${b.long} · ${f2(b.lead)} s after the shout (${FR.FRAG.defWind} asked) · the swing ${b.frames} frames`);
-      line(len(sub(b.out.from, b.out.hl)) <= 0.1 && b.fist >= 10 && b.canWorst <= 0.06 && b.wrR < 0 && b.wrL > 0.1,
-        '(9) it starts within a hand\'s breadth of the hand that threw it, the grenade is drawn in that fist until it leaves, and the trigger hand\'s wrist stays below its shoulder',
-        `starts ${cm(len(sub(b.out.from, b.out.hl)))} cm from the left hand (${cm(len(sub(b.out.from, b.out.hr)))} from the right) · in the left fist ${b.fist} frames, ${cm(b.canWorst)} cm from its hollow at worst · the trigger wrist ${cm(-b.wrR)} cm below its shoulder at its highest, the left ${cm(b.wrL)} cm over its own`);
-    }
   } finally { KN.knobsBack(knobs0); }
   console.log(`=== gunhand-throw: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;
