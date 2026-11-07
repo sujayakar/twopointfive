@@ -316,27 +316,10 @@ export async function rustBoot(): Promise<void> {
 }
 
 // ---- a game
-/** what a slot of the save controller holds here in a snapshot's place: the number of a game kept in the module, and the records of the game that are
- *  the PAGE'S OWN (`OWN`, below), which no kept Rust game holds */
-interface KeptGame { game: Game; rust: number; own: unknown[] }
-/** THE RECORDS OF THE GAME THAT ONLY THE PAGE WRITES (the dress step's: the verdict; the par clock was one until the Rust tick took it): the Rust game does not hold them and no apply
- *  writes them, so a game kept without them comes back under the verdict of the moment that was abandoned (seen: after a load the save
- *  controller refused every save, 'the run is over', by the verdict of the death the load undid). Each is copied with a kept game and written back with
- *  it: its own numbers, lists, maps and sets by value; what it holds OF the game (a man, the mission, a row of the orders' log) by reference. */
-const OWN = ['verdict'] as const;
-function ownCopy(v: any, depth = 0): any {
-  if (v === null || typeof v !== 'object') return v;
-  if (Array.isArray(v)) return depth > 4 ? v : v.map(x => ownCopy(x, depth + 1));
-  if (ArrayBuffer.isView(v)) return (v as unknown as { slice(): unknown }).slice();
-  if (v instanceof Map) return new Map([...v].map(([k, x]) => [k, ownCopy(x, depth + 1)]));
-  if (v instanceof Set) return new Set(v);
-  const P = Object.getPrototypeOf(v); if ((P === Object.prototype || P === null) && depth <= 4) { const o: Record<string, unknown> = {}; for (const k of Object.keys(v)) o[k] = ownCopy(v[k], depth + 1); return o; }
-  return v;
-}
-function ownKeep(g: Game): unknown[] { const G = g as unknown as Record<string, any>; return OWN.map(name => { const o = G[name]; if (!o) return null; const c: Record<string, unknown> = {}; for (const k of Object.keys(o)) if (k !== 'g') c[k] = ownCopy(o[k]); return c; }); }
-function ownPut(g: Game, K: unknown[] | undefined): void { const G = g as unknown as Record<string, any>; OWN.forEach((name, i) => { const o = G[name], c = K?.[i] as Record<string, unknown> | null | undefined; if (!o || !c) return; for (const k of Object.keys(c)) o[k] = ownCopy(c[k]); }); }
+/** what a slot of the save controller holds here in a snapshot's place: the number of a game kept in the module */
+interface KeptGame { game: Game; rust: number }
 let SETTLED_SAID = false;
-interface Held { /** how many applies there have been, the count the view was asked at, and the view */ applies: number; viewAt: number; view: TickView; told: number; toolScan: boolean; inRun: boolean; settings?: { flush(): void; rebase(): void; stats(): { settledLeft: number } & Record<string, unknown> } | null; g: Game; lastCmds: readonly PlayerCmd[] | null; kept: Set<number>; startKept: number; startOwn: unknown[]; back: { label: string; loads: number; saves: number } | null; took: boolean; saves: number; shelfSig: string; doorKept: number[]; poke: ((obj: unknown, path: string | (string | number)[], value: unknown) => void) | null; watch: Watched[]; launch: unknown; putBacks: number; loads: number; h: number; slot: number; stale: string; uploaded: boolean; ctx: { p: number }; rows: unknown; inStep: boolean; side: { list: unknown[]; of: unknown; base: number }; asks: { after(): void; give(S: any, id: string, t?: any, who?: any, o?: any): string | null; refused: { n: number; rows: Record<string, string> } } | null; quiet: boolean; owed: number; quietDt: number }
+interface Held { /** how many applies there have been, the count the view was asked at, and the view */ applies: number; viewAt: number; view: TickView; told: number; toolScan: boolean; inRun: boolean; settings?: { flush(): void; rebase(): void; stats(): { settledLeft: number } & Record<string, unknown> } | null; g: Game; lastCmds: readonly PlayerCmd[] | null; kept: Set<number>; startKept: number; back: { label: string; loads: number; saves: number } | null; took: boolean; saves: number; shelfSig: string; doorKept: number[]; poke: ((obj: unknown, path: string | (string | number)[], value: unknown) => void) | null; watch: Watched[]; launch: unknown; putBacks: number; loads: number; h: number; slot: number; stale: string; uploaded: boolean; ctx: { p: number }; rows: unknown; inStep: boolean; side: { list: unknown[]; of: unknown; base: number }; asks: { after(): void; give(S: any, id: string, t?: any, who?: any, o?: any): string | null; refused: { n: number; rows: Record<string, string> } } | null; quiet: boolean; owed: number; quietDt: number }
 let H: Held | null = null;
 const REG = { v: null as Record<string, object> | null };
 const reg = (): Record<string, unknown> => (REG.v ??= knobRegistry()) as Record<string, unknown>;
@@ -384,13 +367,11 @@ function grown(g: Game): void {
 export function rustAttach(g: Game): void {
   if (!X) throw new Error('rustAttach before rustBoot');
   const G = g as unknown as Record<string, any>;
-  H = { applies: 0, viewAt: -1, view: NO_VIEW, told: -1, toolScan: false, inRun: false, g, lastCmds: null, kept: new Set(), startKept: 0, startOwn: [], back: null, took: false, saves: 0, shelfSig: '', doorKept: [], poke: null, watch: [], launch: null, putBacks: -1, loads: 0, h: 0, slot: -1, stale: 'the game was stood', uploaded: true, ctx: { p: 0 }, rows: null, inStep: false, side: { list: [], of: null, base: 0 }, asks: null, quiet: false, owed: 0, quietDt: 1 / 60 };
+  H = { applies: 0, viewAt: -1, view: NO_VIEW, told: -1, toolScan: false, inRun: false, g, lastCmds: null, kept: new Set(), startKept: 0, back: null, took: false, saves: 0, shelfSig: '', doorKept: [], poke: null, watch: [], launch: null, putBacks: -1, loads: 0, h: 0, slot: -1, stale: 'the game was stood', uploaded: true, ctx: { p: 0 }, rows: null, inStep: false, side: { list: [], of: null, base: 0 }, asks: null, quiet: false, owed: 0, quietDt: 1 / 60 };
   const held = H;
   G.stepSeats = (dt: number, cmds: readonly PlayerCmd[]) => step(held, dt, cmds);
   // (for a networked game, src/net/step.ts: a quiet run of steps, and the game's own words for its state, as `rustHashes` reads them by name for a check)
   G.quietRun = rustQuiet;
-  // (src/game/thisrun.ts: the mission that is up, by the serial the Rust game has for it; the bridge's book knows it from the start)
-  G.runSerial = () => bookOf(G)?.serial.get(G.mission);
   G.wholeWords = () => { if (!X || !held.h || typeof X.face_state_words !== 'function') return null; X.face_state_words(held.h); return new Uint32Array(outBytes().slice().buffer); };
   { let names: string[] | null = null; G.wholeNames = () => { if (!X || typeof X.face_state_n !== 'function') return []; if (!names) { names = []; for (let i = 0; i < X.face_state_n(); i++) { X.face_state_name(i); names.push(outText()); } } return names; }; }
   G.stateWords = () => { if (!X || !held.h) return null; const n = X.face_parts(), at = X.face_part_hashes(held.slot) >>> 0; return { die: X.face_die_n(held.h), parts: new Uint32Array(MEM!.buffer, at, n) }; };
@@ -481,7 +462,7 @@ function start(S: Held): void {
   apply(S, true);
   // THE START KEPT: what a restart goes back to. (Every game kept of the Rust game that stood before is gone with it: a slot that still names one is refused.)
   for (const k of S.kept) X!.face_kept_drop(k); S.kept.clear();
-  S.startKept = keep(S); S.startOwn = ownKeep(g);
+  S.startKept = keep(S);
   // (the menu's questions: asked of this Rust game by its rows' IDs in this book, so installed anew at every start)
   S.asks = installAsks(g, reg(), (kind, row, seat, b) => { if (RUST_PANIC.dead) return askNothing(kind, '');
     // (the HUD asks every drawn frame: a trap inside a question stops the game and answers "nothing", and is no throw of the frame's)
@@ -594,12 +575,12 @@ function take(S: Held): KeptGame {
   if (C && (C.saves | 0) !== S.saves) { const E = G.chronicle.events, e = E[E.length - 1], label = e?.kind === 'checkpoint' ? String(e.label ?? e.data?.label ?? '') : '';
     call('face_checkpoint', () => hand(enc.encode(label), (p, n) => X!.face_checkpoint(S.h, p, n))); grown(g); S.took = true; }
   sweep(S);
-  const k: KeptGame = { game: g, rust: keep(S), own: ownKeep(g) };
+  const k: KeptGame = { game: g, rust: keep(S) };
   if (S.took && !S.inStep) { S.took = false; apply(S, false); }   // (a save from a panel, between ticks: the row comes back to the puppet now)
   return k;
 }
-/** THE KEPT GAME STANDS AGAIN and the puppet takes its whole state: ONE whole apply. The page's own records of the game (`OWN`) go back with it. */
-function stoodAgain(S: Held, k: number, own?: unknown[]): void {
+/** THE KEPT GAME STANDS AGAIN and the puppet takes its whole state: ONE whole apply. */
+function stoodAgain(S: Held, k: number): void {
   const g = S.g, G = g as unknown as Record<string, any>;
   let t = performance.now();
   revive(S);   // (stopped by a panic: the game of the trapped call is gone, and a new one stands for the kept game to be put back over)
@@ -609,7 +590,6 @@ function stoodAgain(S: Held, k: number, own?: unknown[]): void {
   RUST_GAME.backMs.back = performance.now() - t; t = performance.now();
   S.uploaded = true; S.shelfSig = '';   // (the kept game's own `g.saves` is the shelf as it was handed over before that save: the shelf as it stands is handed over again)
   whole(S);
-  ownPut(g, own);
   RUST_GAME.backMs.whole = performance.now() - t; RUST_GAME.backs++;
 }
 /** A LOAD (savestate.ts loadMem, through SNAPS.put). The controller goes on to write the puppet (this run's counts of saves and loads, the chronicle's
@@ -620,7 +600,7 @@ function put(S: Held, k: KeptGame): void {
   const G = S.g as unknown as Record<string, any>, C = G.chronicle?.counts, e = shelfOf(S)?.all().find(x => x.snap === (k as unknown));
   // (the counts of the moment that is being abandoned: the run's, not the saved moment's. Read before the kept game's are on the puppet.)
   const back = { label: String(e?.info.label ?? ''), loads: C?.loads | 0, saves: C?.saves | 0 };
-  stoodAgain(S, k.rust, k.own);
+  stoodAgain(S, k.rust);
   S.back = back;
 }
 /** WHAT FOLLOWS A LOAD ON THE RUST SIDE, as the controller's own lines have by now run on the puppet: the host's switches as they stand now (the
@@ -667,7 +647,7 @@ function toStart(S: Held, said?: string): void {
   // loadMem). Seen on the page: god mode ticked, the pause card's restart, and the next frag killed him. They are read here, written back on the
   // puppet after the start stands, and sent to the Rust game by the write by path (`pokes`).
   const mine = watched(g).filter(w => w[0] === g && w[1][0] !== 'engine');
-  stoodAgain(S, S.startKept, S.startOwn);
+  stoodAgain(S, S.startKept);
   if (G.saves) G.saves.missionRef = null;   // (the controller's word for 'a fresh run': a new name, an empty shelf, its triggers from nothing. savestate.ts:983)
   apply(S, true); sweep(S);   // (what the filtered export last sent was forgotten with the game that stood: the long list again, the HUD's lines as the start had them)
   for (const [, path, v] of mine) { let o: any = g; for (let i = 0; i < path.length - 1 && o; i++) o = o[path[i]]; if (o && !Object.is(o[path[path.length - 1]], v)) o[path[path.length - 1]] = v; }
@@ -713,7 +693,7 @@ OUT_HOST.checkpoint = (g, what, e) => { if (what === 'keep') g.saves?.keep?.(e.l
  *  object `poke` takes, its path and its value now. A step opens by sending what differs from what the last apply left, by the generated write by path
  *  (tools/blitz/poke.ts → `io::poke`): no call of the face a field. A write that has no way there is named once in `RUST_GAME.pokeRefused`. */
 type Watched = [unknown, (string | number)[], unknown];
-const GAME_FIELDS = ['godMode', 'aiEnabled', 'infiniteAmmo', 'playerInvisible', 'clearRooms', 'spectate', 'showDebug'];
+const GAME_FIELDS = ['godMode', 'aiEnabled', 'infiniteAmmo', 'playerInvisible', 'clearRooms', 'spectate', 'showDebug', 'touring', 'quietUtility', 'missionInTour'];   // (the last three say whose run this is: the Rust game's verdict asks them)
 function watched(g: Game): Watched[] {
   const G = g as unknown as Record<string, any>, L: Watched[] = [];
   for (const k of GAME_FIELDS) L.push([g, [k], G[k]]);
@@ -907,7 +887,7 @@ export function rustFileIn(b: Uint8Array): SlotInfo | string {
   const L = levelFingerprint(g); if (!head.level || head.level.fp !== L.fp) return `made on another level (${head.level?.boxes ?? '?'} boxes / ${head.level?.doors ?? '?'} doors; this one ${L.boxes} / ${L.doors})`;
   const k = call('face_keep_given', () => hand(parts[1], (p, n) => hand(parts[2], (q, m) => X!.face_keep_given(p, n, q, m)))); if (!k) return 'the module kept nothing';
   S.kept.add(k); RUST_GAME.kept = S.kept.size;
-  return G.saves.shelve(g, { game: g, rust: k, own: ownKeep(g) } as unknown as Snapshot, String(head.label ?? 'from a file'), Number(head.missionT) || 0, String(head.stage ?? ''));
+  return G.saves.shelve(g, { game: g, rust: k } as unknown as Snapshot, String(head.label ?? 'from a file'), Number(head.missionT) || 0, String(head.stage ?? ''));
 }
 
 // ---- before play

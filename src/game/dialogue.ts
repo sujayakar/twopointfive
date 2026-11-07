@@ -31,7 +31,6 @@
 //   token went null mid-hold, a synthetic context nothing fits. lintDialogue() holds every speaker to the same rules: ≤ MAX_CHARS (aim ≤ AIM_CHARS) after the
 //   longest token expansion, Sam ≤ SAM_MAX_CHARS, tokens only from TOKENS, needs only from NEEDS, and not one phrase off the ORIGINALITY_BLOCKLIST.
 // ============================================================================================================================================================
-import { ofThisMission } from './thisrun';   // (the same mission by its serial, as the Rust game asks it)
 import { men } from './seats';
 import { SideMap } from '../math/side';
 import { v3 } from '../math/vec';
@@ -1654,7 +1653,7 @@ interface RadioState { run: object | null; done: Set<HandlerBeat>; queue: { at: 
 const radioByGame = new SideMap<object, RadioState>('dialogue.radioByGame');
 function radioState(g: Game): RadioState {
   let R = radioByGame.get(g); if (!R) { R = { run: null, done: new Set(), queue: [], reply: null, lastAt: -100, esc: 0, blackout: false, found: 0 }; radioByGame.set(g, R); }
-  if (!ofThisMission(g, R.run)) { R.run = g.mission; R.done.clear(); R.queue.length = 0; R.reply = null; R.lastAt = -100; R.esc = escalationOf(g); R.blackout = g.blackout.active; R.found = g.guards.filter(x => x.found).length; }   // a fresh run (restartEncounter makes a new Mission): every beat may sound again, and the edges start from where the floor stands
+  if (R.run !== g.mission) { R.run = g.mission; R.done.clear(); R.queue.length = 0; R.reply = null; R.lastAt = -100; R.esc = escalationOf(g); R.blackout = g.blackout.active; R.found = g.guards.filter(x => x.found).length; }   // a fresh run (restartEncounter makes a new Mission): every beat may sound again, and the edges start from where the floor stands
   return R;
 }
 /** the run is really the player's and still going (mission.ts missionLive's test, without the import cycle), and Sam is on his feet — and (words.ts) it is the night
@@ -1946,7 +1945,7 @@ export function dialogueSnapshot(g: Game): DialogueSnap {
   const R = radioByGame.get(g); const A = ambientByGame.get(g);
   return {
     recent: [...(recentByGame.get(g) ?? [])], sam: { said: [...(samMemByGame.get(g)?.said ?? [])], last: samMemByGame.get(g)?.last ?? null },
-    radio: R && ofThisMission(g, R.run) ? { done: [...R.done], queue: R.queue.map(q => ({ at: q.at, beat: q.beat })), reply: R.reply ? { ...R.reply } : null, lastAt: R.lastAt, esc: R.esc, blackout: R.blackout, found: R.found } : null,
+    radio: R && R.run === g.mission ? { done: [...R.done], queue: R.queue.map(q => ({ at: q.at, beat: q.beat })), reply: R.reply ? { ...R.reply } : null, lastAt: R.lastAt, esc: R.esc, blackout: R.blackout, found: R.found } : null,
     ambient: { next: A ? (A.run ? g.time + AMBIENT.cooldown : A.next) : -1, played: [...(A?.played ?? [])], count: A?.count ?? 0 },
   };
 }
