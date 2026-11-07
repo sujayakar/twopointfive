@@ -1,10 +1,12 @@
 //! The compiler's own reading of what the game never runs.
 //!
 //! `prep` writes a copy of rust/ in which every item of a body file is private to the crate, unless its name
-//! stands in the crates that use the game (rust/game_face, rust/game_run) or in a unit test of a body file.
+//! stands in the crates that use the game (rust/game_face, rust/game_run).
 //! With the crate's `allow(dead_code)` lifted, `cargo check` on that copy names every function, constant and
 //! static that nothing live reaches: the generated call surface, the wire and the tables stay public, so
-//! what they reach is live. `apply` deletes what the check named from the real body files.
+//! what they reach is live. Checked with `--tests`, the unit tests are live too, so what only a test uses
+//! stays; checked without, it is named. `apply` deletes what the check named from the real body files,
+//! never an item inside a test module.
 //!
 //! A line of the copy is the same line of the real file: `prep` changes words inside lines, never their count.
 
@@ -32,29 +34,6 @@ fn idents(src: &str, out: &mut HashSet<String>) {
 
 fn is_test_mod(m: &syn::ItemMod) -> bool {
     m.attrs.iter().any(|a| a.path().is_ident("cfg") && a.meta.require_list().map(|l| l.tokens.to_string().contains("test")).unwrap_or(false))
-}
-
-fn is_test_item(attrs: &[syn::Attribute]) -> bool {
-    attrs.iter().any(|a| a.path().is_ident("cfg") && a.meta.require_list().map(|l| l.tokens.to_string().contains("test")).unwrap_or(false))
-}
-
-/// The names the unit tests of a body file use: its `#[cfg(test)]` modules and any other item under that word.
-fn test_names(src: &str, out: &mut HashSet<String>) {
-    let Ok(f) = syn::parse_file(src) else { return };
-    for it in &f.items {
-        let test = match it {
-            syn::Item::Mod(m) => is_test_mod(m),
-            syn::Item::Fn(x) => is_test_item(&x.attrs),
-            syn::Item::Const(x) => is_test_item(&x.attrs),
-            syn::Item::Static(x) => is_test_item(&x.attrs),
-            syn::Item::Impl(x) => is_test_item(&x.attrs),
-            syn::Item::Use(x) => is_test_item(&x.attrs),
-            _ => false,
-        };
-        if test {
-            idents(&src[it.span().byte_range()], out);
-        }
-    }
 }
 
 fn is_body(p: &Path) -> bool {
@@ -151,8 +130,8 @@ fn copy_tree(from: &Path, to: &Path) -> std::io::Result<()> {
     Ok(())
 }
 
-/// Write the private copy under `scratch/rust`. `tests`: also keep public what a unit test names.
-pub fn prep(root: &Path, scratch: &Path, tests: bool) -> Result<String, String> {
+/// Write the private copy under `scratch/rust`.
+pub fn prep(root: &Path, scratch: &Path) -> Result<String, String> {
     let to = scratch.join("rust");
     let _ = std::fs::remove_dir_all(&to);
     copy_tree(&root.join("rust"), &to).map_err(|e| format!("cannot copy rust/ to {}: {e}", to.display()))?;
@@ -169,13 +148,6 @@ pub fn prep(root: &Path, scratch: &Path, tests: bool) -> Result<String, String> 
     let from_users = keep.len();
     let mut all = Vec::new();
     crate::dead::rs_files(&to.join("game/src"), &mut all);
-    if tests {
-        for p in all.iter().filter(|p| is_body(p)) {
-            if let Ok(t) = std::fs::read_to_string(p) {
-                test_names(&t, &mut keep);
-            }
-        }
-    }
     let mut n = 0;
     for p in &all {
         let Ok(t) = std::fs::read_to_string(p) else { continue };
@@ -195,7 +167,7 @@ pub fn prep(root: &Path, scratch: &Path, tests: bool) -> Result<String, String> 
             std::fs::write(p, out).map_err(|e| format!("cannot write {}: {e}", p.display()))?;
         }
     }
-    Ok(format!("the private copy is {} ({n} files changed in it; {} names kept public for rust/game_face and rust/game_run{})", to.display(), from_users, if tests { format!(", {} more for unit tests", keep.len() - from_users) } else { String::new() }))
+    Ok(format!("the private copy is {} ({n} files changed in it; {} names kept public for rust/game_face and rust/game_run)", to.display(), from_users))
 }
 
 #[derive(Default)]

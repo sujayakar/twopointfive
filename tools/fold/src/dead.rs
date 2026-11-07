@@ -210,6 +210,9 @@ pub fn drop_use_name(text: &str, name: &str, part: &str) -> String {
 pub struct Swept {
     /// (module, function) deleted
     pub deleted: Vec<(String, String)>,
+    /// of the deleted, those the first look found (nothing named them as the files stood); the rest were named
+    /// only by a function deleted before them
+    pub first: HashSet<(String, String)>,
     /// (module, function) that only the tools' call surface names
     pub surface_only: Vec<(String, String)>,
     /// module -> its mod.rs, where a deleted function's name left it
@@ -228,7 +231,9 @@ pub fn fixpoint(w: &World, base: &Cache, modules: &[String], stems: &[String], t
     }
     let mut modrs: HashMap<String, String> = HashMap::new();
     let mut out = Swept::default();
+    let mut round = 0;
     loop {
+        round += 1;
         // the mod.rs files as they stand
         let mut mc = Counts::default();
         let mut handed: HashMap<String, i64> = HashMap::new();
@@ -277,6 +282,9 @@ pub fn fixpoint(w: &World, base: &Cache, modules: &[String], stems: &[String], t
                     if &next != text {
                         modrs.insert(modules[bi].clone(), next);
                     }
+                }
+                if round == 1 {
+                    out.first.insert((modules[bi].clone(), name.clone()));
                 }
                 out.deleted.push((modules[bi].clone(), name));
             }
