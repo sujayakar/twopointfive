@@ -25,9 +25,9 @@
 //     devices: devices-camera devices-editor devices-keypad devices-laser
 //     dialogue: dialogue-exchange dialogue-heard dialogue-intel dialogue-lint dialogue-none dialogue-radio dialogue-sawhurt dialogue-seed dialogue-shapes
 //     director: director-lint director-scheduler director-showcase-scan
-//     hands: hands-body hands-door hands-team hands-harness
+//     hands: hands-body hands-door hands-team
 //     workthings: work-breaker work-four work-objective work-edges work-posted work-face work-held work-walk work-defuse work-harness
-//     handwork: handwork-work handwork-radio handwork-swap handwork-harness
+//     handwork: handwork-work handwork-radio handwork-swap
 //     wand: wand-kit wand-tile wand-look wand-costs wand-doors wand-mate wand-quick wand-off
 //     sticky: sticky-kit sticky-fly sticky-fog sticky-save sticky-ways sticky-default sticky-take sticky-wand
 //     owncharge: owncharge-kit owncharge-door owncharge-squad owncharge-save
@@ -2450,7 +2450,6 @@ if (on('close-duo', 'close', 'all')) await run('close-duo', async () => (await i
 if (on('hands-body', 'hands', 'all')) await run('hands-body', async () => (await import('./hands-probes.ts')).handsBody());   // a body is taken from the end he is at, by its beats, hauled with both hands on it, laid down, taken again from the other end
 if (on('hands-door', 'hands', 'all')) await run('hands-door', async () => (await import('./hands-probes.ts')).handsDoor());   // a door row brings the leaf round under his hand with him stepped clear of its swing; it never passes through him
 if (on('hands-team', 'hands', 'all')) await run('hands-team', async () => (await import('./hands-probes.ts')).handsTeam());   // a door somebody else works: the ordered lead's hand on the leaf as his shove moves it, a hand on a leaf pulled to
-if (on('hands-harness', 'hands', 'all')) await run('hands-harness', async () => (await import('./hands-probes.ts')).handsHarness());   // the two stands, the page switch, the knob table
 // ---------------------------------------------------------------- a teammate works a thing in the level (workthings-probes.ts; src/game/workthings.ts): 'workthings' = the family
 if (on('work-breaker', 'workthings', 'all')) await run('work-breaker', async () => (await import('./workthings-probes.ts')).workBreaker());   // X on the breaker: its own order on 1; a teammate goes, throws it, holds; it stays thrown; B re-arms
 if (on('work-four', 'workthings', 'all')) await run('work-four', async () => (await import('./workthings-probes.ts')).workFour());   // the four: one pair goes, the other is left as it was
@@ -2466,7 +2465,6 @@ if (on('work-harness', 'workthings', 'all')) await run('work-harness', async () 
 if (on('handwork-work', 'handwork', 'all')) await run('handwork-work', async () => (await import('./handwork-probes.ts')).handworkWork());   // a hand on the thing while the verb runs and gone after, at each of the four, for Sam, a teammate and the guard at the breaker
 if (on('handwork-radio', 'handwork', 'all')) await run('handwork-radio', async () => (await import('./handwork-probes.ts')).handworkRadio());   // a radio line lifts the left hand to the handset and it comes down after; a reload, a long gun up, have the arm first
 if (on('handwork-swap', 'handwork', 'all')) await run('handwork-swap', async () => (await import('./handwork-probes.ts')).handworkSwap());   // the swap takes its time both ways, the torch on his belt meanwhile, the first round no later
-if (on('handwork-harness', 'handwork', 'all')) await run('handwork-harness', async () => (await import('./handwork-probes.ts')).handworkHarness());   // the two stands, the page switch, the knob table
 // ---------------------------------------------------------------- the optical wand (src/game/wand.ts, wand-check.ts): a piece of your kit; carrying it, a look under a shut door where the fog of war hides the room
 // A PRIMARY AND A SECONDARY FOR EVERY MAN (src/game/gunslots.ts; tools/qa/gunslots-check.ts raises the switch itself, so it asks the same on either stand; GUNSLOTS_BREAK=1 must fail)
 if (on('gunslots-card', 'gunslots', 'kit', 'all')) await run('gunslots-card', async () => (await import('./gunslots-check.ts')).gunslotsCard());     // two gun rows where the one stood, the old gun field following, a card from before them, off = the rows before
