@@ -167,6 +167,7 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     crate::lighting::lens_recheck(g);
     crate::irlight::ir_light_tick(g);
     in_seat(g, seats[0], |g| crate::mission::update_mission(g, dt, input));
+    crate::par::par_tick(g);   // (right after the mission's update: this tick's orders and the room clear's end are in)
     crate::lesson::lesson_tick(g, dt);
     crate::rails::rails_tick(g, dt);
     crate::snatch::snatch_tick(g, dt);

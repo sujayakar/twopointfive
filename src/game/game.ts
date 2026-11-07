@@ -966,7 +966,7 @@ export class Game {
   lesson!: Lesson;
   /** a tutorial mission's frame over the lesson (rails.ts): locked actions, cues to the level's script, authored checkpoints, the sky seat; inert on a level without a lesson.rails record */
   rails!: Rails;
-  /** a room clear against a clock (par.ts): reads the game, writes nothing of it; inert on a level without a scenarios.par block */
+  /** a room clear against a clock: the Rust game's record, written by the bridge (par.ts is how the page reads it); blank on a level without a scenarios.par block */
   par!: Par;
   /** how the run went, said once it is over (verdict.ts): reads only — the end card's record */
   verdict!: Verdict;

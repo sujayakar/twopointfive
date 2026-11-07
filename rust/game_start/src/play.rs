@@ -31,8 +31,10 @@ pub struct Opts {
     /// THE SENSES WORKED OUT BY THE GAME ITSELF (game/sense.ts SENSE.cpu, with the sky's light in the estimate): what a host with no picture
     /// has for eyes. On here, because with them off no light meter is ever fed and "lit" and "dark" are one thing. The page plays with them off.
     pub cpu_senses: bool,
+    /// how many players sit in the game (1; a second is stood beside the first, each with his own orders)
+    pub seats: u32,
 }
-impl Default for Opts { fn default() -> Self { Opts { seed: 1, squad: 4, cpu_senses: true } } }
+impl Default for Opts { fn default() -> Self { Opts { seed: 1, squad: 4, cpu_senses: true, seats: 1 } } }
 
 /// What stands on a level's floor: its boxes (the round things, the boxes that stand shaped and the pieces of trim among them), and who and what
 /// the game made of the file's civilians, devices and vents.
@@ -77,7 +79,7 @@ fn start_by(data: &Json, room_clear: bool, link: Option<&str>, o: &Opts) -> Play
     let one = ONE_GAME.lock().unwrap_or_else(|p| p.into_inner());
     let ch = CHARACTER.get_or_init(files::CharacterFiles::read);
     let scenario = if room_clear { Some(game::scene_scenario_list::ScenarioSpec { kind: game::scene_scenario_list::ScenarioSpecKind::Roomclear, squad: o.squad as f64, level: None, seed: None }) } else { None };
-    let Stood { mut game, host, .. } = stand::stand(data, ch.assets(), &StartOpts { seed: o.seed, scenario, link: link.map(String::from), cpu_senses: o.cpu_senses, ..Default::default() });
+    let Stood { mut game, host, .. } = stand::stand(data, ch.assets(), &StartOpts { seed: o.seed, scenario, link: link.map(String::from), cpu_senses: o.cpu_senses, seats: o.seats, ..Default::default() });
     game.out.clear();
     HOLDS.with(|h| h.set(true));   // (only once a Play exists to put it down: a stand that panicked holds nothing)
     let mut p = Play { g: game, host, frames: 0, said: Vec::new(), sounds: Vec::new(), cursor: None, spoke: Vec::new(), _one: one };
@@ -191,6 +193,23 @@ impl Play {
         if let Some(why) = game::orders::squad_orders_give(&mut self.g, id, Some(&t), Some(who), None) { panic!("the order '{}' at ({}, {}) was refused: {}", id, at[0], at[1], why); }
     }
 
+    /// THE SAME ORDER FROM ANOTHER SEAT (0 = the first player): given as that player gives it, on his own menu and to his own men.
+    pub fn seat_orders(&mut self, seat: usize, id: &str, at: [f64; 2], who: game::orders::Who) {
+        let s = self.g.seats[seat];
+        let why = game::seats::with_seat(&mut self.g, s, &mut |g| { let t = game::orders::squad_orders_target_at(g, [at[0], 0.0, at[1]]); game::orders::squad_orders_give(g, id, Some(&t), Some(who), None) });
+        if let Some(why) = why { panic!("seat {}'s order '{}' at ({}, {}) was refused: {}", seat, id, at[0], at[1], why); }
+    }
+    /// A PLAYER IS SET DOWN `metres` along x from where he stands (the sandbox's own teleport, `Game.teleportPlayer`, in his seat): a stride of a
+    /// known length, where walking him there by his keys would be a test of the keys.
+    pub fn seat_steps(&mut self, seat: usize, metres: f64) {
+        let s = self.g.seats[seat];
+        game::seats::with_seat(&mut self.g, s, &mut |g| { let at = g.ch[g.pl[g.player].ch].pos; game::game::game_teleport_player(g, [at[0] + metres, 0.0, at[2]]); });
+    }
+    /// where a seat's player stands
+    pub fn seat_at(&mut self, seat: usize) -> [f64; 2] { let s = self.g.seats[seat]; game::seats::with_seat(&mut self.g, s, &mut |g| { let p = g.ch[g.pl[g.player].ch].pos; [p[0], p[2]] }) }
+    /// A MAN GOES DOWN by combat's own call (`killGuard`: shot, by `by`'s hand), for a test of what follows a death and not of the shot.
+    pub fn falls(&mut self, gd: GuardId, by: game::game::DownBy) { game::combat::kill_guard(&mut self.g, gd, [1.0, 0.0, 0.0], Some(false), Some(game::game::DownKind::Shot), Some(by), None, None); }
+
     /// A live fragmentation grenade lands at `at` (the sandbox's own call, `Game.dropThrowable`: an armed can as if just thrown from where Sam stands).
     pub fn frag_lands(&mut self, at: [f64; 2]) { game::game::game_drop_throwable(&mut self.g, game::game::ThrowKind::Frag, [at[0], 0.0, at[1]]); }
     /// how long a thrown grenade's fuse is, seconds
@@ -217,6 +236,24 @@ impl Play {
         let v = self.hostiles_by(at);
         match v.first() { Some(&gd) if dist(self.at(gd), at) < 1.0 => gd, _ => panic!("no defender stands within a metre of ({}, {}) (the guards: {})", at[0], at[1], self.roll()) }
     }
+    /// THE PAR CLOCK, as the game keeps it. Is one live (the level has a par and its room clear is up) …
+    pub fn par_live(&self) -> bool { self.g.par.live }
+    /// … the level's bars (gold, silver, bronze, seconds a man lost costs) …
+    pub fn par_bars(&self) -> Option<game::scene_scenarios::ParData> { game::par::par_data(&self.g) }
+    /// … when it started on the game's clock (None: armed and waiting for somebody to do something) …
+    pub fn par_started(&self) -> Option<f64> { if game::par::par_started(&self.g) { Some(self.g.par.t0) } else { None } }
+    /// … how many times a clock has started and a run has been filed, over the game's life …
+    pub fn par_counts(&self) -> (i32, i32) { (self.g.stats.par.started, self.g.stats.par.finished) }
+    /// … and the finished run (None: not taken yet, or wiped).
+    pub fn par_result(&self) -> Option<game::par::ParResult> { game::par::par_result_now(&self.g).cloned() }
+    /// the objective row, as a HUD is given it
+    pub fn objective(&mut self) -> String { game::mission::objective_text(&mut self.g) }
+    /// the lines on the game's log now, oldest first (it keeps the last five)
+    pub fn log(&self) -> Vec<&str> { self.g.messages.iter().map(|m| m.text.as_str()).collect() }
+    /// how the room clear ended and when, on the game's clock (None: it is on)
+    pub fn room_clear_end(&self) -> Option<(game::roomclear::RoomClearEnd, f64)> { self.g.room_clear.end.map(|e| (e, self.g.room_clear.end_at)) }
+    /// the men of the other side who are up
+    pub fn hostiles(&self) -> Vec<GuardId> { let at = self.sam_at(); self.hostiles_by(at) }
     /// Sam's teammates, in the order the game made them
     pub fn mates(&self) -> Vec<GuardId> { self.g.guards.iter().copied().filter(|&gd| self.g.gd[gd].team == game::teams::Team::Operative).collect() }
     /// every man of the game's list in a line, for a failure's message

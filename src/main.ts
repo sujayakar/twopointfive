@@ -137,7 +137,6 @@ import { SQUAD40, SQUAD40_STATS, SQUAD40_LOG, squad40Left, squad40Brought, squad
 import { squadSmokeStage } from './game/squadsmoke';   // (the same: game/kit.ts has loaded it)
 import { checkQuiet } from './game/quiet';
 import { LESSON, LESSON_STATS, checkLesson } from './game/lesson';
-import { PAR, type ParResult } from './game/par';
 import { parBest } from './ui/parBest';
 import { VERDICT } from './game/verdict';
 import { verdictKey, recordOf, tryStarted, runEnded, APPROACHES, type MissionRecord } from './ui/verdictStore';
@@ -654,7 +653,6 @@ async function main() {
   (window as any).__picks = { ui: PICKS_UI, list: PICKS, current: () => pickOfQuery(location.search), href: (id: string) => { const p = PICKS.find(x => x.id === id); return p ? pickHref(p, location.search) : null; }, silent: () => ({ start: SILENT.start, squad: squadSilent(game) }), difficulty: () => difficultyNow() };   // the short list (scene/picks.ts): the table, the row this page is, a row's URL, the team's posture (?silentstart) and the difficulty in force
   (window as any).__scenarios = { list: SCENARIOS, all: ALL_MISSIONS, current: scenario.current, quit: scenario.quit, pick: (id: string) => { const e = ALL_MISSIONS.find(x => x.id === id); if (e) { const to = location.pathname + pickSearch(e, location.search) + location.hash; if (to === location.pathname + location.search + location.hash) location.reload(); else location.assign(to); } return !!e; } };   // the picker for the console / automation: .list, .current(), .pick(id) (a page load), .quit()
   (window as any).__quiet = { get on() { return game.quiet.active; }, get deal() { return game.quiet.deal; }, get ops() { return game.quiet.ops; }, summary: () => game.quiet.summary(), log: game.quiet.log, check: () => checkQuiet(game), restage: () => game.quiet.restage() };   // the quiet mission (game/quiet.ts): what this run was dealt, the level's block against its floor
-  if (q.has('nopar')) PAR.on = false;   // ?nopar: a par level plays as its room clear alone — no clock (game/par.ts reads only: the run is the same either way)
   if (q.has('noissue')) ISSUE.on = false;   // ?noissue: a mission that issues kit of its own (scenarios.issue — game/kit.ts kitIssue) is staged with the cards this machine keeps
   if (q.has('nosnatch')) SNATCH.on = false;   // ?nosnatch: a snatch level plays as its room clear alone (game/snatch.ts)
   (window as any).__snatch = { knobs: SNATCH, get man() { return game.snatch.man; }, get end() { return game.snatch.end; }, get log() { return game.snatch.log; }, summary: () => game.snatch.summary(), check: () => checkSnatch(game), out: SNATCHOUT, get exfil() { return game.snatch.out; } };
@@ -1032,7 +1030,6 @@ async function main() {
     fire: (man, at) => { const c = man ? man.char : game.player.char, w = firearmOf(game, c, !man); if (!w.fire()) { w.rearm(); w.fire(); }   // (as every fire site: Firearm.fire() cycles the round out FIRST — the gun's own counters are what tracers.ts isTracerRound reads; a dry or reloading gun is stood up fresh for it. The view tops the magazine up as the row ends)
       fireWeapon(game, c, at, !man, { steady: true }); }, panes: () => glassMod.glassPanes(game).map(i => game.level.boxes[i]),
     mendGlass: () => { glassMod.resetGlass(game); resetGlassPen(game); } }) : null;
-  let parSeen: ParResult | null = null;   // (the par result the page last saw: filed once, the frame it first appears)
   let parCheat = false;   // (a sandbox flag was on at some frame while this run's par clock ran: its time is not filed)
   // the verdict's bookkeeping (game/verdict.ts names how a run went; what this MACHINE keeps of it is the page's: ui/verdictStore.ts): `vRun` = the run the
   // three below belong to, `vKey` = the key it is kept under (mission + difficulty, read when the try starts), `vStreak` = which try of the streak it is
@@ -1065,11 +1062,11 @@ async function main() {
     modelErrFrame();   // (?modelerr: a return on its first line otherwise)
     perfrec.cpuUpdate = loop.updateMs;
     // a par run just ended (game/par.ts): this machine's best for THIS run — level file, way in, squad size, difficulty — is filed here, the page's side,
-    // and its words go on the HUD line the game already said. Never under a sandbox flag (god mode, no AI, unlimited ammo): that time is not a record —
+    // and its words ride the result where this page shows it (the end row, the card, the debrief). Never under a sandbox flag (god mode, no AI, unlimited ammo): that time is not a record —
     // and the flag counts if it was on at ANY frame while the clock ran (`parCheat`), not only on the frame the result appears.
     if (!tape && !net && !kitViewOn) { const R = game.par.result();
       if (!game.par.started) parCheat = false; else if (game.godMode || !game.aiEnabled || game.infiniteAmmo) parCheat = true;
-      if (R !== parSeen) { parSeen = R; if (R && !parCheat) game.par.best(parBest(`${levelFileQ ?? 'office'}|way${(game.roomClear.way ?? 0) + 1}|squad${game.nightBreach.ops.length}|${difficultyNow()}`, R.shown)); } }
+      if (R && !game.par.bestSaid) game.par.best(parCheat ? '' : parBest(`${levelFileQ ?? 'office'}|way${(game.roomClear.way ?? 0) + 1}|squad${game.nightBreach.ops.length}|${difficultyNow()}`, R.shown)); }   // (once a run: the words are kept with the run they are about)
     vBooks();   // (the verdict's bookkeeping again, for a try that started this frame and an end no card followed)
     simSm = simSm * 0.95 + loop.updateMs * 0.05;   // (the read-out's 'sim ms': Game.update on the CPU, eased as the fps row is)
 

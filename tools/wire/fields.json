@@ -7594,7 +7594,14 @@
 "thinline::Thin.e",
 "irlaser::IrlaserMod.ir_made",
 "game::Mods.thinline",
-"game::Mods.irlaser"
+"game::Mods.irlaser",
+"par::Par.live",
+"par::Par.run",
+"par::Par.marks",
+"par::Par.fired0",
+"par::Par.t0",
+"par::Par.res",
+"game::Game.par"
 ],
 "everyTickNotCarried": [
 {
@@ -12819,6 +12826,13 @@
 "thinline::Thin.e",
 "irlaser::IrlaserMod.ir_made",
 "game::Mods.thinline",
-"game::Mods.irlaser"
+"game::Mods.irlaser",
+"par::Par.live",
+"par::Par.run",
+"par::Par.marks",
+"par::Par.fired0",
+"par::Par.t0",
+"par::Par.res",
+"game::Game.par"
 ]
 }
