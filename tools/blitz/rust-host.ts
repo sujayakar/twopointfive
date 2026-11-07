@@ -211,13 +211,11 @@ export class RustHost {
   /** after the host's half is taken: the view's matrix is the host camera's as the host left it (game_run::view_live), so a call made between two
    *  ticks (an order: on-screen-or-not) reads the camera of now and not the record of the tick before */
   private viewLive(): void { const X = this.F.X; if (!X.face_view_live || OFF.has('view')) return; try { X.face_view_live(this.h); } catch (e) { throw new Error(`the Rust game panicked taking the host's view (face_view_live): ${this.F.panicText() || String(e)}`); } }
-  // STAND-IN: THE SURFACE FINDS A CALL'S GAME BY ITS RECEIVER ONLY WHERE THE RECEIVER IS THE GAME (surface.ts `hostOf`: `self.rustSurface`, an argument's,
-  // else the host that attached last). A method of a module's own object (`g.quiet.current()`, the first line of every `Game.update`) so crossed to
-  // ANOTHER game of the process: the sixth game stood took the first game's call, from inside the first game's own update. Here: nothing crosses while
-  // any hosted game of the process is inside its update or the host's own lines (`BUSY`), and the surface's fallback host is the game that stepped last
-  // (`step`), not the one that attached last. A tool's call on an object of a game that is not the one it last stepped still goes to the wrong game.
-  // Belongs in surface.ts: the host by the receiver's game (49 classes hold `g`), never a fallback.
+  // A call's game is named by the call (surface.ts `hostOf`). Nothing crosses while any hosted game of the process is inside its update or the host's own lines (`BUSY`): the modules' tables are one, and they hold that game's state.
   surfaceOpen(): boolean { return !!this.h && this.busy === 0 && BUSY.n === 0 && !this.audit && !this.startDue; }
+  /** A CALL TO A FUNCTION WITH NO TYPESCRIPT BODY on a game that stands and has never started starts it, then crosses. A function with a body runs on the puppet, which the start takes across, and a game that has given up its slot or whose puppet has taken over starts by its own road. */
+  surfaceStart(): boolean { if (this.starting || this.busy !== 0 || BUSY.n !== 0 || this.audit || this.h || this.starts > 0) return false; this.startNow(); return this.surfaceOpen(); }
+  private starting = false;
   /** the Rust game stands and is this puppet's game (not let go, not waiting for a new start) */
   private live(): boolean { return !!this.h && !this.startDue; }
   surfaceDispatching(): boolean { return false; }
@@ -459,7 +457,9 @@ export class RustHost {
 
   // ---- a start: the puppet as it stands is the game. The first tick's; and again wherever the TypeScript round a step has put another game in the
   // puppet's place (a checkpoint put back, a restart): no stepper can follow that from its own state.
-  private start(why = 'the first step'): void {
+  /** the host's own lines: what they call runs on the puppet, and starts nothing */
+  private start(why = 'the first step'): void { const was = this.starting; this.starting = true; try { this.startBody(why); } finally { this.starting = was; } }
+  private startBody(why: string): void {
     const g = this.g, X = this.F.X, B = this.B, t = now();
     // (iii) A GAME WHOSE KEPT BYTES WERE LET GO (it gave its slot up more than a few games ago) IS NOT STEPPED AGAIN: its puppet is what the last whole
     // apply left, and a start from it would be another game than the one that stood
@@ -470,7 +470,7 @@ export class RustHost {
       for (const x of (g.guards ?? []) as any[]) look(x, x.callsign ?? x.name ?? 'a man'); for (const s of (g.seats ?? []) as any[]) look(s.player ?? s.own?.player, 'a seat\'s player'); look(g.player, 'the player');
       if (men.length) throw new Error(`rust-host: a new start is asked for (${why}) from a puppet that holds ${men.length} men the apply made (${[...new Set(men)].slice(0, 6).join(', ')}): a man the Rust game made has no store row or pose store on the TypeScript side, so this puppet cannot be the start of a game. Asked by ${toolLine()}`); }
     this.startDue = false; this.dueWhy = ''; this.unkeepAll(); if (this.keptOff > 0) { X.face_kept_drop(this.keptOff); const i = OFF_KEPT.indexOf(this.cell); if (i >= 0) OFF_KEPT.splice(i, 1); } this.keptOff = 0; this.made = {};
-    this.taps(g);   // (the tool may have started another mission since the game was stood: its menu, its fight and its saves are new objects)
+    this.B.surfaceHost(this); this.taps(g);   // (the tool may have started another mission since the game was stood: its menu, its fight and its saves are new objects)
     // (ANOTHER GAME OF THIS PROCESS STEPPED LAST: the modules' own tables and variables, which every game of a process shares and a start reads, hold what
     // the filtered apply left of it. Its puppet takes the whole state first, so that this start reads what the TypeScript tick would have left there.)
     { const L = RustHost.last; if (L && L !== this && L.h && !L.audit && !OFF.has('last')) try { L.applyWhole('another game of the process starts'); } catch (e) { L.count(`THE WHOLE APPLY THREW as another game started: ${String((e as any)?.message ?? e).slice(0, 100)}`); } }
