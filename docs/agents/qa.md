@@ -336,6 +336,17 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `lesson-check.ts`, gone), the notes were not swept. `holds-check` (3) asks 'the name's other words held all the same' only where a probe is owed
   two rows, and none is now; (5) reads the mains of the files that still hold a table probe, 2 of 5 where it read 24 of 41: a main of the other
   files that stops running its parts through `asProbe` is red nowhere.
+  THE RUNNER SAYS WHICH SIDE A RED PROBE'S LINES ASKED (2026-11-07; `fold.ts foldOtherSide`, `probes.ts sideTag`). A refused write leaves a settled
+  row at its page value, so a check's "with the rule off" arm runs with the rule on and its line means nothing either way. The fold now keeps what a
+  check WANTED: the rows written off their page value and not written back, and the rows refused since the last verdict line. As each `- PASS` /
+  `- FAIL` line is printed the runner asks it; a line with a row there was made with the other side of a settled switch wanted. After a probe, one
+  line `{"sides":{"probe","fail","failOtherSide","passOtherSide","rows"[,"threw"]}}`; in the closing table a red carries a tag: `[OTHER SIDE ONLY:
+  …]` (every failing line was such a line. Where the rows are an ARM of the question, "with the rule off …", the line or its off half is to DELETE;
+  where they are the check's STAGING, a pin written before the rule, every line of the probe is such a line and the probe is to restage or delete), `[n of its m failing lines …]` (the rest are of the page's
+  own side: read those), or `[THREW: …]` (the first line of what it threw, the runner's catch or the check's own; 'went with the tick' = it calls a
+  function the deletion took). WHAT IT CANNOT SEE: a child process's writes (they are in the probe's fold line), and a check that works both sides
+  out first and prints afterwards (only its first line is marked). A tag is a reading aid: the probe is as red as before and exits the same.
+  `fold-check` (11) holds it on `selftest-side`; `SIDES_BREAK=1` in front fails that line.
   EVERY RUN OF A STAND AS IT OPENS IS READ AGAINST THE LIST OF EXPECTED REDS, FOLDED OR NOT (2026-11-07; `probes.ts`). The runner had read a folded
   probe's red against no row; since the deletion that was every probe of every run with no word, so nothing read the list on the named build:
   no EXPECTED RED / NEW RED / GREEN AGAIN, and a break word's closing line could not say whether it bit (`holds-check` (9), red by it). The
