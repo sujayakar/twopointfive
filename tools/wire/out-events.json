@@ -808,6 +808,43 @@
 "sig": "pub fn wall_feel(g: &mut crate::game::Game, at: V3)",
 "mode": "push",
 "hostArm": "wallFeel"
+},
+{
+"call": "floormess#messEvicted",
+"rust": "crate::floormess::mess_evicted",
+"sites": 1,
+"ts": "messEvicted",
+"of": null,
+"file": "src/game/floormess.ts",
+"why": "param",
+"params": [
+{
+"ts": "c",
+"rust": "c"
+},
+{
+"ts": "h",
+"rust": "h"
+},
+{
+"ts": "yaw",
+"rust": "yaw"
+},
+{
+"ts": "rot",
+"rust": "rot"
+},
+{
+"ts": "mat",
+"rust": "mat"
+},
+{
+"ts": "kind",
+"rust": "kind"
+}
+],
+"sig": "pub fn mess_evicted(g: &mut crate::game::Game, c: V3, h: V3, yaw: f64, rot: Option<Quat>, mat: Option<crate::break_table::Mat>, kind: crate::debris::ChunkKind)",
+"mode": "push"
 }
 ],
 "listed": [

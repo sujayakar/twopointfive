@@ -210,8 +210,6 @@ pub struct RearwatchStats {
     pub pinned: i32,
     pub no_line: i32,
     pub pins: i32,
-    pub held: i32,
-    pub late: i32,
     pub last: i32,
     pub rooms: i32,
     pub room_late: i32,
