@@ -28,7 +28,6 @@ const { scenarioQuery } = await import(`${ROOT}/src/scene/scenarios.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { withOfficeScript, isOfficeFamily } = await import(`${ROOT}/src/scene/level.ts`);
 const { rollcallState } = await import(`${ROOT}/src/game/guards.ts`);
 const { ambientState } = await import(`${ROOT}/src/game/dialogue.ts`);
 const { MOVES, TURN } = await import(`${ROOT}/src/game/character.ts`);
@@ -39,7 +38,7 @@ const { hostileTo } = await import(`${ROOT}/src/game/teams.ts`);
 const DT = 1 / 60, BREAK = process.env.SAVETIMELINE_BREAK === '1', VERBOSE = !!process.env.SAVETIMELINE_VERBOSE, P = 'twopointsix.save.';
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 async function hushed<T>(f: () => T | Promise<T>): Promise<T> { const log = console.log, warn = console.warn; if (!VERBOSE) console.log = console.warn = () => { }; try { return await f(); } finally { console.log = log; console.warn = warn; } }
-const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data); };
+const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return loadLevel(data); };
 const steps = (W: any, secs: number) => { const n = Math.round(secs / DT); for (let i = 0; i < n; i++) W.step(DT); };
 /** THE CAMERA IS THE HOST'S: no save holds it, and the aim is read through it — so 'plays on as its save did' is held with the camera as it stood at the save
  *  (kept here, put back after the load; the page cuts it onto the man instead, and the first frames of his aim ease from there) */

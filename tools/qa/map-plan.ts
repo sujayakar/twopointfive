@@ -17,7 +17,6 @@ const ROOT = resolve(import.meta.dir, '../..');
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
-const { withOfficeScript, isOfficeFamily } = await import(`${ROOT}/src/scene/level.ts`);
 
 /** `block` · `levels/block.json` · `block.json` · `block-four` (a row's id) → the level's name, or null. A PATH must be this checkout's own levels/<name>.json:
  *  the tools read the level from there and nowhere else, so another tree's file of the same name is refused, not quietly swapped for ours. */
@@ -28,7 +27,7 @@ export function mapName(arg: string): string | null {
   return arg.includes('/') && resolve(process.cwd(), arg) !== file ? null : n;
 }
 /** the level as the game loads it (an office-family file gets the office's script and scenarios, as main.ts and the harness give it) */
-export function loadMap(name: string): any { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', `${name}.json`), 'utf8')); return isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data); }
+export function loadMap(name: string): any { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', `${name}.json`), 'utf8')); return loadLevel(data); }
 
 const SQUAD_COLOURS = ['#ff6b6b', '#ffb347', '#c792ea', '#5ad1c8', '#f78fb3', '#9bd35a'];
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');

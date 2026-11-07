@@ -38,7 +38,6 @@ export async function showWhyCheck(o: { verbose?: boolean; only?: string } = {})
   const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-  const { withOfficeScript, isOfficeFamily } = await import(`${ROOT}/src/scene/level.ts`);
   const { SHOWWHY, SHOWWHY_LINES, showWhyOf, showWhyLog, showWhyStats } = await import(`${ROOT}/src/game/showwhy.ts`);
   const { REARWATCH, roomKept } = await import(`${ROOT}/src/game/rearwatch.ts`);
   const { CONDITION, conditionHurt } = await import(`${ROOT}/src/game/condition.ts`);
@@ -63,7 +62,7 @@ export async function showWhyCheck(o: { verbose?: boolean; only?: string } = {})
   const d3 = (a: ArrayLike<number>, b: ArrayLike<number>) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
   function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
   const E = (ALL_MISSIONS as any[]).find(x => x.id === 'warehouse-four');
-  const levelOf = (): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', E.level), 'utf8')); return isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data); };
+  const levelOf = (): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', E.level), 'utf8')); return loadLevel(data); };
   const shut = (d: any) => { d.angle = 0; d.vel = 0; d.latched = true; d.closing = false; d.quietT = 10; d.locked = false; d.place(); };
   const put = (m: any, p: ArrayLike<number>, yaw: number) => { m.char.pos = [p[0], 0, p[2]]; m.char.vel = [0, 0, 0]; m.speed = 0; m.char.bodyYaw = m.char.aimYaw = yaw; m.path = []; m.pathGoal = null; m.char.update(0); };
 

@@ -28,7 +28,6 @@ const { scenarioQuery } = await import(`${ROOT}/src/scene/scenarios.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { withOfficeScript, isOfficeFamily } = await import(`${ROOT}/src/scene/level.ts`);
 const { STACKLINE, STACKLINE_STATS } = await import(`${ROOT}/src/game/stackline.ts`);
 const { farFloor, cellsOnLine, LINE_CELL_M2, LINE_MIN_CELLS } = await import('./stackline-watch.ts');
 const { stackRoomProbe } = await import(`${ROOT}/src/game/stackroom.ts`);
@@ -45,7 +44,7 @@ if (args.includes('--knobs')) Object.assign(STACKLINE, JSON.parse(args[args.inde
 const FORM_K = 1.5, FORM_S = 2, WAIT = 26, SHORT_M = 0.45, LEAF_RAD = 0.1, TAIL = 30, OVER_M = 0.1, SPAN_M = 0.05, AGAIN = 3, SHORT_MORE = 0.25, SHOVE_M = 0.7;
 const flat = (a: V, b: V) => Math.hypot(a[0] - b[0], a[2] - b[2]), f1 = (x: number) => x.toFixed(1), f2 = (x: number) => x.toFixed(2);
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
-const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data); };
+const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return loadLevel(data); };
 const hush = async <T>(fn: () => T | Promise<T>): Promise<T> => { if (VERBOSE) return await fn(); const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } };
 async function stage(E: any, seed = 1) {
   Math.random = seeded(0xba46 + seed * 7919);

@@ -13,7 +13,6 @@ import officeReliefData from '../../levels/office-relief.json' with { type: 'jso
 import type { WeaponId } from '../game/weapons';   // (type only: what a route may hand its man — erased at runtime, so the scene layer still loads below the game's)
 import type { LevelScriptFn } from '../game/director';   // (type only, likewise: the level's script is a plain function handed to game/director.ts)
 import type { LevelScenarios } from './scenarios';
-import { OFFICE_SCENARIOS } from '../../levels/office.scenarios';   // the office's scenario data (plain literals, type-only imports): what the night breach / room clear / rescue take from this level
 
 export interface LightDef {
   kind: 'point' | 'spot' | 'dir';
@@ -175,7 +174,7 @@ export interface Level {
   /** this level's SCRIPT (game/director.ts runs it: bespoke set pieces as named programs); absent = no Director programs, the game exactly as it is — no shipped level has one today */
   script?: LevelScriptFn;
   /** what the playtest SCENARIOS take from this level (scene/scenarios.ts: the room clear's rooms, the rescue's hostage room and marks, where the team starts) —
-   *  the level file's own `scenarios` block; for the office, levels/office.scenarios.ts attached at load. Absent = no scenario can be staged on this level */
+   *  the level file's own `scenarios` block. Absent = no scenario can be staged on this level */
   scenarios?: LevelScenarios;
   /** what is underfoot (game/floor.ts: which footstep, how far it carries) — the level file's own `surfaces` block, attached by loadLevel NON-ENUMERABLY (it is
    *  an annotation of the file, like its ids: nothing that walks a Level as data sees it). Absent = the office's map, as on every level before this field */
@@ -211,7 +210,7 @@ export function buildLevel(): Level {
   // ?level=local: boot on the level EDITOR's current document (editor ▶ writes it to localStorage 'twopointsix.editorLevel' and opens /?level=local — src/editor)
   bootedLocalLevel = false;
   if (typeof location !== 'undefined' && typeof localStorage !== 'undefined' && new URLSearchParams(location.search).get('level') === 'local') {
-    try { const t = localStorage.getItem('twopointsix.editorLevel'); if (t) { const data = parseLevelData(t), lvl = isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data); bootedLocalLevel = true; return lvl; } }   // (the editor's document is the office being edited: its scenario data comes with it)
+    try { const t = localStorage.getItem('twopointsix.editorLevel'); if (t) { const lvl = loadLevel(parseLevelData(t)); bootedLocalLevel = true; return lvl; } }
     catch (e) { console.error('?level=local: falling back to the bundled office —', e); }
   }
   return buildBundledLevel();
@@ -219,24 +218,12 @@ export function buildLevel(): Level {
 /** The bundled office whatever the stash holds (?level=relief still honoured): the ordinary boot, and the fallback above. */
 export function buildBundledLevel(): Level {
   bootedLocalLevel = false;
-  if (typeof location !== 'undefined' && new URLSearchParams(location.search).get('level') === 'relief') return withOfficeScript(loadLevel(OFFICE_RELIEF_DATA));   // ?level=relief: the pre-demotion office (main's geometry, no markings)
-  return withOfficeScript(loadLevel(OFFICE_DATA));
+  if (typeof location !== 'undefined' && new URLSearchParams(location.search).get('level') === 'relief') return loadLevel(OFFICE_RELIEF_DATA);   // ?level=relief: the pre-demotion office (main's geometry, no markings)
+  return loadLevel(OFFICE_DATA);
 }
-/** attach what the office keeps OUTSIDE its level file to a Level of the office family (the bundled file, relief, a texel variant off the dev server, the editor's document) —
- *  loadLevel itself stays pure data → Level. Today that is its scenario data (its named marks are in its file, like any level's: LevelData.marks): the office's level script (the night and day showcases) was removed, so the office has no
- *  script and the Director no program (the name stays: every tool that loads a level file calls this). */
-export function withOfficeScript(level: Level): Level { return withScenarios(level, OFFICE_SCENARIOS); }
 /** attach a level SCRIPT to a Level. The script is CODE, not level data: it rides on the Level as a non-enumerable property, so everything that walks the Level's keys as data
  *  (tools/qa level-identity's generator ≡ JSON diff and key order, levelToData, structuralDiff) sees the level exactly as before, while game/director.ts reads level.script like any field. */
 export function withScript(level: Level, script: LevelScriptFn): Level { Object.defineProperty(level, 'script', { value: script, enumerable: false, writable: true, configurable: true }); return level; }
-/** the office's scenario data (levels/office.scenarios.ts), unless the file carried a `scenarios` block of its own (loadLevel has put that on the Level as
- *  ordinary data): non-enumerable for the same reason — levels/office.json and everything that walks the office as data stay exactly as they were. */
-export function withScenarios(level: Level, scenarios: LevelScenarios): Level { if (!level.scenarios) Object.defineProperty(level, 'scenarios', { value: scenarios, enumerable: false, writable: true, configurable: true }); return level; }
-/** is this level file one of the OFFICE family (the bundled file, relief, the texel variants, the editor's document of it) — the levels the office's
- *  scenario data belongs to? Anything else off the dev server (?levelFile=) is its own level: its scenarios are its file's. */
-export function isOfficeFamily(data: { name?: string }): boolean { return typeof data.name !== 'string' || data.name === 'office' || data.name.startsWith('office-'); }
-/** the office's scenario data (levels/office.scenarios.ts), for whoever must read the office's blocks before a Level is built (main.ts: ?kitview's set loader) */
-export { OFFICE_SCENARIOS };
 /** the office's level data as bundled (read-only: loadLevel copies everything it hands out) */
 export const OFFICE_DATA: LevelData = officeData as unknown as LevelData;
 /** the office as it was before the markings lane demoted face relief to markings (levels/office-relief.json — regenerated beside office.json; main's boxes exactly, digest-identical to main's file) */

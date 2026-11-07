@@ -1,7 +1,8 @@
 // The OFFICE's scenario data (src/scene/scenarios.ts LevelScenarios): what the night breach, the room clear and the hostage rescue take from this level — the
-// tables that lived in game/nightbreach.ts, roomclear.ts, rescue.ts and rescueflow.ts, moved here number for number. Attached to the office at load
-// (scene/level.ts withOfficeScript), so levels/office.json itself is unchanged; a level made after this one carries the same block in its own file.
-// Plain literals and type-only imports: nothing here is built from another module's exports (src/game is one import cycle — this is imported at its top).
+// tables that lived in game/nightbreach.ts, roomclear.ts, rescue.ts and rescueflow.ts, moved here number for number. THE OFFICE GENERATOR'S INPUT, and nobody
+// else's: scene/officeGen.ts puts the block on the Level it builds and tools/level-export.ts writes it into levels/office.json, where the game, the page and
+// every tool read it as they read any level's (as tools/levels/<name>.ts holds another level's). Change a number here, then run the export.
+// Plain literals and type-only imports: nothing here is built from another module's exports.
 import type { Vec3 } from '../src/math/vec';
 import type { LevelScenarios, StructureData, RescueData, NightBreachData, KitViewData, ResponseData } from '../src/scene/scenarios';
 import type { MarkDef } from '../src/scene/level';

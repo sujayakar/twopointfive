@@ -43,7 +43,7 @@ export async function levelOf(file: string): Promise<any> {
   const L = await import(`${ROOT}/src/scene/level.ts`), look = await import(`${ROOT}/src/scene/look.ts`).catch(() => null);
   const named = resolve(ROOT, 'levels', file), lk = look?.lookLevelFile ? resolve(ROOT, 'levels', look.lookLevelFile(file)) : named;
   const data = parseLevelData(readFileSync(existsSync(lk) ? lk : named, 'utf8'));
-  return L.isOfficeFamily?.(data) ? L.withOfficeScript(loadLevel(data)) : loadLevel(data);
+  return loadLevel(data);
 }
 
 /** walk a fresh headless game through the replay's run up to step `toN` (a sample's / a note's `n`; default: the replay's last sample). `each` is called after every step. */
