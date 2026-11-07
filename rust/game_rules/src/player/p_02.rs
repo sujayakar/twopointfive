@@ -885,7 +885,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
     // the weapon light: its position and direction are the gun's
     let infinite = g.infinite_ammo;
     g.fa[gun].infinite = infinite; g.fa[rifle].infinite = infinite;
-    let (light, power, radius) = (g.pl[pl].light, g.tune.player_light, g.engine.settings.flashlight_radius * 0.7);
+    let (light, power, radius) = (g.pl[pl].light, g.tune.player_light, crate::guards::FLASHLIGHT_RADIUS * 0.7);
     { let l = &mut g.tab.light[light]; l.peak_intensity = power; l.intensity = power; l.radius = radius; }
     pose_gun_light(g);
     // footsteps, for audio and the AI's hearing

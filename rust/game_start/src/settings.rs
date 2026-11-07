@@ -105,7 +105,6 @@ pub fn default_settings() -> RenderSettings {
     s.direct_history = 1.0;
     s.direct_blur_cap = 10.0;
     s.sec_min_e = 0.006;
-    s.flashlight_radius = 0.07;
     s.light_reach = true;
     s.gi_firefly_k = 4.0;
     s.gather_third = false;
@@ -125,7 +124,6 @@ pub fn default_settings() -> RenderSettings {
     s.smoke_multi_scatter = 0.0;
     s.smoke_shadow_steps = 8.0;
     s.particle_births = 6144.0;
-    s.debris_cap = 64.0;
     s.torch_bounce_cards = false;
     s.gloss = false;
     s.decals = true;

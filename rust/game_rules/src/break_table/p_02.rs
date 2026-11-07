@@ -86,9 +86,6 @@ pub fn breaks_reset(g: &mut crate::game::Game) {
     s.kink_t = -1e9;
 }
 
-/// (breakTable.ts Breaks.small)
-pub fn breaks_small(g: &crate::game::Game) -> bool { crate::debris::debris_cap(g) < 64.0 }
-
 /// A chunk's serial counted from the pool's last clear. (breakTable.ts Breaks.rel)
 pub fn breaks_rel(g: &crate::game::Game, c_2: DebrisChunkId) -> f64 {
     g.tab.debris_chunk[c_2].serial - g.destr.debris.serial0 + 1.0
@@ -312,7 +309,7 @@ pub fn breaks_break_again(g: &mut crate::game::Game, c_2: DebrisChunkId) {
     let b = g.tab.debris_chunk[c_2].box_;
     let h = seam_box(g, b).h;
     let gone = again.is_none() || (me.mat == Mat::Plastic && max3(h) <= g.k.breaks.china_max);
-    if gone || crate::debris::debris_moving(g) > crate::debris::debris_cap(g) / 2.0 {
+    if gone || crate::debris::debris_moving(g) > crate::debris::DEBRIS_CAP / 2.0 {
         g.destr.debris.list.remove(i);
         let count = match again { Some(a) => [a.chips + 4.0, a.chips + 6.0], None => [8.0, 10.0] };
         breaks_crumble(g, c_2, count, 1.2);
@@ -705,7 +702,7 @@ pub fn breaks_shed_cell(g: &mut crate::game::Game, surf: crate::scene_materials:
         res.thrown += 1.0;
         if has_cut { g.stats.break_table.shaped += 1; g.stats.break_table.planes += planes; } else { g.stats.break_table.plain += 1; }
     }
-    let chip_n = m::round(row.small.n * (if breaks_small(g) { g.k.breaks.small_pool_chip_k } else { 1.0 }));
+    let chip_n = m::round(row.small.n);
     let up: V3 = [0.0, 1.0, 0.0];
     let chip_dir = if dir.is_some() { v3::normalize(v3::add(out, [0.0, 0.5, 0.0])) } else { up };
     breaks_chips(g, row, paint, cell_c, chip_dir, chip_n, 2.4, m::max(cell_h[0], cell_h[2]) * 0.6, who, None);
