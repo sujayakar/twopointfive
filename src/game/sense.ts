@@ -1,65 +1,17 @@
-// THE SENSES ON THE CPU (`SENSE.cpu`; DEFAULT OFF — the page's `?cpusense`, the harness's `TPS_CPUSENSE=1`): everything the simulation takes off the renderer
-// (sensors.ts: the light meters, the smoke along a sight line) worked out by the game itself instead, in the step that asks, from nothing but the game's own state.
-// WHY: a value off the GPU arrives a drawn frame or two after it was asked and is the renderer's — so a fight on the page is its seed, its inputs AND a stream of
-// readbacks (the run tape keeps them: a re-run needs the file). With this on, a fight is its seed and its inputs and nothing else: a machine with no GPU plays the
-// very same one, which is what a server that will not trust its clients has to do. Engine groundwork; nothing networked.
-//
-// What stands in:
-//   light   — nothing is asked of the probe and no answer is served, so every meter falls to the estimate it already had for 'no answer yet' (guards.ts
-//             lightEstimateAt: the direct light of every lamp with the walls between, the hour's sun and sky, a stroke of lightning) — what the harness has always
-//             run on. Sam's own meter, which had no stand-in (headless it never moved), reads the same estimate at his chest and head (game.ts lightMeter).
-//             NOT in the estimate: bounced light, and smoke's own shadow. A place lit only by bounce reads darker to the men than the picture shows it.
-//   the light model — `SENSE.bounce` (off): those two, on the coarse grid: a lamp is dimmed by the grid's smoke on the way, and the lamps' light off
-//             the walls is kept a square metre of the plan and added to the estimate (rust/sim/src/glow.rs). Where no grid stands, the estimate above.
-//   smoke   — `CpuSmoke` below: every emitter the game hands the solver also feeds a blob here (what was let out, spreading and thinning at the solver's own decay),
-//             and a sight line's transmittance is the blobs' sum along it, answered in the step that asks. It is a MODEL of the solver's picture, not a copy: a
-//             canister shuts a doorway and a room as the picture's does, the edges and the minute-old wisps will not match cell for cell.
-//   smoke on a grid — `SENSE.grid` (off): the same emitters let out into half-metre cells that the walls and the doors hold (`SmokeGrid`; the cells live
-//             in the game's block of the Rust module and are stepped there, rust/sim/src/bricks.rs), and a sight line is answered from the cells. Where no
-//             grid stands the blobs answer.
-//   the solver's CPU-side fact the game reads to decide how much MORE to emit (`budget`: its emitter list ages by the drawn frame) is answered from a count of
-//             the game's own, aged by the step — the page at any frame rate and a machine with no solver at all let out the same puffs.
-//   A solver the picture has turned off or frozen takes no emitter; the game's own smoke does not ask: with this on, the fight is the same whatever is drawn.
-// One model for presentation and AI is what this trades against: OFF, the men see by the renderer's own values; ON, by the stand-ins above. Whether the page plays
-// on them is the maintainer's call — the switch ships off, and tools/qa/sense-check.ts holds it either way.
+// THE GAME SENSES FOR ITSELF: how lit a point is and how much smoke is on a line are worked out by the simulation, the same on a page, a server and a bare
+// machine (rust/game_rules/src/sense, guards; rust/sim/src/bricks.rs, glow.rs, light.rs). The picture is asked nothing. What is here is the table of the
+// model's numbers, and what the page's own tools still hold of it (the error tool's grids).
 // (src/game is one import cycle: nothing here is built from another game module's export as the file loads.)
 import type { Vec3 } from '../math/vec';
 import type { SmokeEmitter, SmokeSystemLike } from '../smoke/types';
 import { type StaticCollision, type GridWind, type LampRows } from '../scene/collision';
 import { FACE } from '../scene/boxMirror';
 import { sim, simWhyNot } from '../sim/sim';
-import { simTenant, simPart, P_SMOKE, SimState } from '../sim/state';
-import { goneWithTick } from './crossing';
+import { simPart, P_SMOKE, SimState } from '../sim/state';
+import type { Game } from './game';
+import { RUST_PASS, RUST_SURFACE, goneWithTick } from './crossing';
 
 export const SENSE = {
-  /** the senses worked out by the game itself (see the head). Off = the renderer's values through Game.sensors, as ever. */
-  cpu: false,
-  /** THE GAME'S OWN SMOKE ON A COARSE GRID (`SmokeGrid` below; DEFAULT OFF — the page's `?smokegrid`, the harness's `TPS_SMOKEGRID=1`; read only under
-   *  `cpu`): what the senses see through is density in half-metre cells that the walls and the doors hold, in place of a blob an emitter that no wall
-   *  shapes. Off = the blobs, as they were. */
-  grid: false,
-  /** THE LIGHT MODEL (DEFAULT OFF — the page's `?cpulight`, the harness's `TPS_CPULIGHT=1`; it stands on the coarse grid, so it is read only where
-   *  `grid` has one standing): the two things the estimate of the light on a man has never had (guards.ts lightEstimateAt). THE SMOKE'S SHADOW: a lamp
-   *  no wall hides is dimmed by the grid's smoke between it and him. THE LIGHT THAT COMES ROUND: the lamps' light off the walls, one number a
-   *  square metre of the plan, stepped with the grid (rust/sim/src/glow.rs) and added to the brightest face. Off = the estimate as it was. */
-  bounce: false,
-  /** THE COARSE GRID'S SMOKE DRIFTS WITH THE WIND (DEFAULT OFF — the page's `?smokedrift`, the harness's `TPS_SMOKEDRIFT=1`; it is the grid's, so it
-   *  acts only where `grid` has one standing): under the open sky the smoke is carried along by the weather's own wind and does little of its own —
-   *  it spreads less by the share of the wind a place has (`smoke.inWind` of it sideways, none of it upward: in the open it stays as low as it
-   *  was let out) — as the picture's does
-   *  (smoke/wind_force.wgsl pulls the smoke's whole velocity toward the wind's), where the grid's used to spread and rise in still air out of
-   *  doors as it does in a room. The weather's vector as the game holds it (weather.ts `wind`; wind.ts stormDrift) and the footprints the
-   *  picture's wind keeps out of (stormShare): no gust, no vent, no draught at a door, and none of a machine's own wind settings. Off, a level
-   *  with no wind, or under a roof = the step as it was, to the bit. */
-  drift: false,
-  /** THE NIGHT'S LIGHT FROM THE SKY IN THE ESTIMATE (DEFAULT OFF — the page's `?moonlight`, the harness's `TPS_MOONLIGHT=1`): the estimate of the light
-   *  on a man (guards.ts lightEstimateAt) reads the level's night as it reads an hour (game/hours.ts moonLight): the moon where the point has a line
-   *  to it, the level's own sky through what is open above it, one bounce off ground they light. Off = none of it, as it was: a man under the open
-   *  sky at night read as standing in the dark where the picture's meter had him lit. IT ACTS WHEREVER THE ESTIMATE IS READ, ON EVERY HOST: the
-   *  senses on the CPU, the headless stand, the page's first frames, and every rule that asks what a PLACE lights (the team's weapon lights and
-   *  goggles, the calm torch, a search in the dark, the pair's orders, the lights-out mission). So it comes on with the senses on the CPU and is
-   *  tallied and played with them, not before. */
-  moon: false,
   /** the light that comes round, its numbers (glow.rs): how much of the light in a square leaves its surfaces again · how much of that a square hands
    *  across each open side · how many times a step relaxes it · the steps a sweep of the whole plan takes (a step is a tenth of a second) */
   glow: { albedo: 0.3, share: 0.1, passes: 2, sweep: 32 },
@@ -164,27 +116,17 @@ export class SmokeGrid {
     return 0;
   }
 }
-/** who has a grid: a game, in its own smoke (`game.cpuSmoke`) */
-interface GridOwner { cpuSmoke: { grid: SmokeGrid | null } }
-// THE GRID'S STATE IS AT HOME IN A GAME'S BLOCK while the game's senses are its own and stand on the grid, and the module runs: a rule that lives only
-// in the module, so its switches are its whole reason (sim/state.ts SimTenant). As a tick opens the grid comes (empty) or goes (its part zeros again,
-// and the blobs answer); there is no TypeScript copy of its state to move.
-// (a top-level statement that uses src/sim's export alone: no part of src/game's import cycle is touched as this module loads)
-simTenant({ name: 'smoke', bit: 16,
-  wants(_g: GridOwner) { return SENSE.cpu && SENSE.grid && !simWhyNot(); },
-  into(g: GridOwner, st: SimState) { sim().grid_reset(st.bind(), 1); g.cpuSmoke.grid = new SmokeGrid(st); },
-  outOf(g: GridOwner, st: SimState) { g.cpuSmoke.grid = null; sim().grid_reset(st.bind(), 0); } });
 /** THE GRID'S OWN NUMBERS as rust/sim/src/bricks.rs has them (tools/qa/smokegrid-check.ts reads that file and is red where one differs): seconds a step, and
  *  the state row's layout for whoever reads it: doubles in the head, emitters and doubles an emitter, bricks, cells a brick, m³ a cell, and where in the head
  *  the book of the smoke is kept (let out · given back with thin bricks, and what the wind carried over the plan's edge · refused for want of a brick) */
-export const GRID = { step: 0.1, head: 6, emitters: 64, emit: 7, bricks: 512, cells: 128, vol: 0.125, out: 4, given: 5,
+export const GRID = { step: 0.1, head: 8, emitters: 64, emit: 7, bricks: 512, cells: 128, vol: 0.125, out: 4, given: 5,
   /** …the plan in squares (the head), a square's side (m), and the light that comes round (glow.rs), a number a square metre: the most metres it holds,
    *  the height it is read at, and where its four columns start: the lamps' light · the bounce · the way open toward +x · toward +z */
-  nbx: 2, nbz: 3, side: 2, glowMax: 2048, chest: 1.2, glowD: 6 + 64 * 7 + 512 * 2, glowB: 6 + 64 * 7 + 512 * 2 + 2048, glowX: 6 + 64 * 7 + 512 * 2 + 2 * 2048,
-  glowZ: 6 + 64 * 7 + 512 * 2 + 3 * 2048,
+  nbx: 2, nbz: 3, side: 2, glowMax: 2048, chest: 1.2, glowD: 8 + 64 * 7 + 512 * 2, glowB: 8 + 64 * 7 + 512 * 2 + 2048, glowX: 8 + 64 * 7 + 512 * 2 + 2 * 2048,
+  glowZ: 8 + 64 * 7 + 512 * 2 + 3 * 2048,
   /** …after them the word of the lamps the plan is swept under, where the sweep is and how much of it is still to go quickly, and then, last, the cells:
    *  a brick's after another's */
-  glowLamps: 6 + 64 * 7 + 512 * 2 + 4 * 2048, rho: 6 + 64 * 7 + 512 * 2 + 4 * 2048 + 3 };
+  glowLamps: 8 + 64 * 7 + 512 * 2 + 4 * 2048, rho: 8 + 64 * 7 + 512 * 2 + 4 * 2048 + 3 };
 /** THE LIGHT MODEL'S FIELD as the estimate of the light on a man takes it (guards.ts lightEstimateAt): a game's own smoke with a grid standing. The grid
  *  holds the light that comes round; the smoke answers what dims a lamp on its way (the grid's cells, and the blobs where the grid cannot answer). */
 export type LightField = CpuSmoke & { grid: SmokeGrid };
@@ -247,3 +189,8 @@ export class CpuSmoke {
  *  button, the page's warm-up) — also feeds `own`, a clear clears both, and what the game asks back to decide how much more to emit is `own`'s answer. Done on the
  *  solver object itself, so nobody is left holding an unwatched one; the solver's own working is called as it was. Returns the undo. */
 export function ownSmoke(real: SmokeSystemLike, own: CpuSmoke): () => void { return goneWithTick('ownSmoke') as any; }
+
+/** FOR A TOOL THAT HOLDS THE SENSES TO THE PICTURE (host/modelerr.ts), between ticks: 0 the light on points (`xs`: whose carried lamps are left out, then
+ *  x y z each) · 1 how much of the light along lines the smoke lets through (six numbers each) · 2 a canister's smoke let out at x y z, to the game and the
+ *  picture alike · 3 the smoke cleared, the same */
+export function senseTool(g: Game, what: 0 | 1 | 2 | 3, xs: number[]): number[] { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('senseTool', undefined, [g, what, xs]); if (__r !== RUST_PASS) return __r as any; } } return goneWithTick('senseTool') as any; }

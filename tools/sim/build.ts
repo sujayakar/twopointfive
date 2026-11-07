@@ -177,6 +177,7 @@ const STATICS: Readonly<Record<string, string>> = {
   'sim/src/air.rs PLANS': 'COPY · which cells are roofed, the lists over them and which edges a leaf stands across, a set a slot of the blocks, made again from the block\'s roofs and the leaves whenever the block that stands there is another or was written wholesale (the stamp)',
   'sim/src/air.rs NEXT': 'SCRATCH · one step of the dust\'s field, written before any of it is read back',
   'sim/src/weather.rs ROOF_LIST': 'SCRATCH · a level\'s roofs as its boxes are handed over, read back at the end of that one question',
+  'sim/src/state.rs PUTS': 'SCRATCH · how many times a slot was written whole: whose the tables beside a block are',
   'sim/src/glow.rs SWEPT': 'SCRATCH · how many metres the last step of the light field swept; read by a test, by nothing of a game',
   'sim/src/glow.rs NEXT': 'SCRATCH · one pass of the bounce, written before any of it is read back',
   'sim/src/bricks.rs DELTA': 'SCRATCH · one step\'s flows', 'sim/src/bricks.rs WIND': 'SCRATCH · the wind\'s share of each square metre of the plan, written by the host before a step that has wind', 'sim/src/bricks.rs THIN': 'SCRATCH · one step\'s thin bricks', 'sim/src/bricks.rs HELD': 'SCRATCH · one step\'s sum a brick',

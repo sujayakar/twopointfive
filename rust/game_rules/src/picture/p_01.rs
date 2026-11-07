@@ -103,7 +103,7 @@ pub fn made_out(g: &mut crate::game::Game, gd: GuardId, p: V3) -> bool {
     if flat(g.ch[g.gd[gd].ch].pos, p) <= g.k.picture.made_out_m {
         return true;
     }
-    let e = crate::guards::light_estimate_at(g, [p[0], 1.1, p[2]], None, None, None, None, None);
+    let e = crate::guards::light_estimate_at(g, [p[0], 1.1, p[2]], None, None, None);
     crate::game::game_visibility_of(g, e) >= g.k.picture.made_out
 }
 

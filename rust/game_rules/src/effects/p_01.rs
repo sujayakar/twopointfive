@@ -202,7 +202,7 @@ pub fn spawn_burst(g: &mut crate::game::Game, at: V3, seed: f64, o: Option<crate
         let k = sparks();
         let idx = crate::sparks::sparks_emit_burst(g, at, crate::sparks::SparksEmitBurstO { count: spark_count, speed: k.speed, spread: k.spread, lift: k.lift, life: k.life }, seed);
         let n = if flags().trails {
-            let room = crate::smoke_types::smoke_system_like_budget(g).unwrap_or(b.trail_count) - b.trail_reserve;
+            let room = crate::smoke_types::smoke_system_like_budget(g) - b.trail_reserve;
             m::max(0.0, m::min_n(&[b.trail_count, idx.len() as f64, room]))
         } else {
             0.0

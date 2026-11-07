@@ -37,7 +37,7 @@ import { resolve } from 'path';
 import { readdirSync, readFileSync, writeFileSync, existsSync } from 'fs';
 import { standUp } from './headless.ts';
 const ROOT = resolve(import.meta.dir, '../..');
-const ME: any = await import(`${ROOT}/src/host/modelerr.ts`), S: any = await import(`${ROOT}/src/game/sense.ts`), SIM: any = await import(`${ROOT}/src/sim/sim.ts`), PROFILE: any = await import(`${ROOT}/src/host/profile.ts`);
+const ME: any = await import(`${ROOT}/src/host/modelerr.ts`), SIM: any = await import(`${ROOT}/src/sim/sim.ts`), PROFILE: any = await import(`${ROOT}/src/host/profile.ts`);
 /** the red paths: the word, and what must fail under it */
 const BREAKS: Record<string, string> = { '1': '`budget` must be one of them', move: '`waits` must be one of them', turns: '`waits` must be one of them', look: 'on the page\'s stand every kept report must be one of them' };
 const BROKEN = process.env.MODELERR_BREAK ?? '', SHIPPED = PROFILE.harnessProfile() === 'shipped';
@@ -71,15 +71,15 @@ const seedOf = (scene: string) => { const v = new URLSearchParams(scene).get('se
 const A = await walk(PLAN, planName), A2 = await walk(PLAN, planName);
 {
   const light = A.samples.filter((s: any) => s.k === 'light'), smoke = A.samples.filter((s: any) => s.k === 'smoke');
-  const answered = light.every((s: any) => Number.isFinite(s.m.estimate)) && smoke.every((s: any) => Number.isFinite(s.m.blobs) && Number.isFinite(s.m.grid));
+  const answered = light.every((s: any) => Number.isFinite(s.m.light)) && smoke.every((s: any) => Number.isFinite(s.m.smoke));
   const same = JSON.stringify(A) === JSON.stringify(A2), eyes: number[] = ME.eyesOf(A);
   // (a height at a time: the lines asked there, and how many of them the grid has smoke on — a plan whose low lines all run under the smoke, or over it, measures nothing of that height)
-  const at = PLAN.eyes.map((h: number) => { const L = smoke.filter((s: any) => s.a[1] === h && s.b[1] === h); return { h, n: L.length, smoked: L.filter((s: any) => s.m.grid < 0.999).length }; });
+  const at = PLAN.eyes.map((h: number) => { const L = smoke.filter((s: any) => s.a[1] === h && s.b[1] === h); return { h, n: L.length, smoked: L.filter((s: any) => s.m.smoke < 0.999).length }; });
   const heights = eyes.length === PLAN.eyes.length && at.every((e: any) => e.n >= ME.LEAST && e.smoked >= ME.LEAST / 2) && at.reduce((n: number, e: any) => n + e.n, 0) === smoke.length;
   // (…and no line twice: of one station's lines at one age, no two are one pair of ends, either way round)
   const ends = (s: any) => { const a = s.a.join(','), b = s.b.join(','); return `${s.s}:${s.t}:${a < b ? a + '|' + b : b + '|' + a}`; }, twice = smoke.length - new Set(smoke.map(ends)).size;
-  verdict(A.stations.length === PLAN.stations && light.length >= ME.LEAST && heights && twice === 0 && answered && same, 'walks: the plan stands at every station and asks its lines at every height, every model answers, and a second walk is the first to the bit',
-    `${A.stations.length} of ${PLAN.stations} stations · ${light.length} light points, ${smoke.length} sight lines: ${at.map((e: any) => `${e.n} at ${e.h} m (${e.smoked} with smoke on them by the grid)`).join(', ')} · ${twice} asked twice · ${answered ? 'every model answered' : 'A MODEL DID NOT ANSWER'} · a second walk ${same ? 'the same' : 'DIFFERS'} · world ${A.world} · the stand ${PROFILE.harnessProfile()}`);
+  verdict(A.stations.length === PLAN.stations && light.length >= ME.LEAST && heights && twice === 0 && answered && same, 'walks: the plan stands at every station and asks its lines at every height, every question is answered, and a second walk is the first to the bit',
+    `${A.stations.length} of ${PLAN.stations} stations · ${light.length} light points, ${smoke.length} sight lines: ${at.map((e: any) => `${e.n} at ${e.h} m (${e.smoked} with smoke on them)`).join(', ')} · ${twice} asked twice · ${answered ? 'every question answered' : 'A QUESTION WAS NOT ANSWERED'} · a second walk ${same ? 'the same' : 'DIFFERS'} · world ${A.world} · the stand ${PROFILE.harnessProfile()}`);
 }
 // ---- spread
 for (const l of ME.reportText(A)) log(`    ${l}`);
@@ -87,26 +87,21 @@ if (arg('--write')) { writeFileSync(arg('--write')!, JSON.stringify(A)); log(`  
 
 // ---- planted
 {
-  const P = clone(A); P.picture = true; for (const s of P.samples) s.pic = s.k === 'light' ? s.m.estimate : s.m.grid;
-  const e0 = row(P, 'estimate'), g0 = row(P, 'grid'), b0 = row(P, 'blobs'), bg = row(A, 'blobs', 'grid');
-  const exact = e0.n > 0 && g0.n > 0 && e0.max === 0 && g0.max === 0 && e0.flips === 0 && g0.flips === 0 && b0.n === bg.n && b0.p95 === bg.p95 && b0.flips === bg.flips;
-  const Q = clone(A); Q.picture = true; for (const s of Q.samples) s.pic = s.k === 'light' ? s.m.estimate / 4 : Math.max(0, s.m.grid - 0.25);
-  const e1 = row(Q, 'estimate'), g1 = row(Q, 'grid');
-  const stops = Math.abs(e1.stops95 - 2) < 1e-9 && e1.bias > 0, quarter = Math.abs(g1.max - 0.25) < 1e-12 && g1.bias > 0 && g1.bias <= 0.25;
+  const P = clone(A); P.picture = true; for (const s of P.samples) s.pic = s.m[s.k];
+  const l0 = row(P, 'light'), s0 = row(P, 'smoke'), exact = [l0, s0].every(r => r.n > 0 && r.max === 0 && r.flips === 0);
+  const Q = clone(A); Q.picture = true; for (const s of Q.samples) s.pic = s.k === 'light' ? s.m.light / 4 : Math.max(0, s.m.smoke - 0.25);
+  const l1 = row(Q, 'light'), s1 = row(Q, 'smoke'), stops = Math.abs(l1.stops95 - 2) < 1e-9 && l1.bias > 0, quarter = Math.abs(s1.max - 0.25) < 1e-12 && s1.bias > 0 && s1.bias <= 0.25;
   verdict(exact && stops && quarter, 'planted: a planted picture is read back as it was planted',
-    `the walk as its own picture: estimate off by ${e0.max}, grid by ${g0.max}, blobs as against the grid (${b0.p95.toFixed(4)} at the 95th on ${b0.n}) · two stops darker planted: ${e1.stops95.toFixed(6)} stops, the model leaning ${e1.bias.toFixed(3)} brighter on the meter · a quarter of the light taken: ${g1.max.toFixed(6)} at worst, leaning ${g1.bias.toFixed(3)}`);
+    `the walk as its own picture: light off by ${l0.max}, smoke by ${s0.max} · two stops darker planted: ${l1.stops95.toFixed(6)} stops, the game leaning ${l1.bias.toFixed(3)} brighter on the meter · a quarter of the light taken: ${s1.max.toFixed(6)} at worst, leaning ${s1.bias.toFixed(3)}`);
 }
 // ---- budget (and the red path)
 {
-  const sigma = S.SENSE.smoke.sigma; if (BREAK) S.SENSE.smoke.sigma = sigma * 3;
-  let B: any; try { B = await walk(PLAN, planName); } finally { S.SENSE.smoke.sigma = sigma; }
-  const aligned = B.samples.length === A.samples.length && B.world === A.world;
-  B.picture = true; if (aligned) for (let i = 0; i < B.samples.length; i++) { const s = A.samples[i]; B.samples[i].pic = s.k === 'light' ? s.m.estimate : s.m.grid; }
-  const row1 = { p50: 0.01, p95: 0.01, flips: 0.01 }, parts = ME.partsOf(B), tight: Record<string, any> = {};   // (a walk says where its samples stand, and is judged a part at a time: a tight row for each part of the two models)
-  for (const m of ['estimate', 'grid']) if (parts.length) for (const p of parts) tight[`${m}:${p.key}`] = row1; else tight[m] = row1;
-  const v = ME.judge(B, tight), each = ['estimate', 'grid'].every(m => v.lines.some((l: string) => l.includes(`${m} (`) && /budget .*: inside$/.test(l)));   // (each of the two judged in a part at least: a part with too few samples of a kind judges nothing)
-  verdict(aligned && v.ok && each, 'budget: a walk judged against the first walk as its picture is inside a tight budget',
-    `${v.lines.filter((l: string) => /budget/.test(l)).join('\n    ')}${BREAK ? '\n    THE SMOKE WAS THREE TIMES AS THICK ON THIS WALK' : ''}`);
+  const B = clone(A2); B.picture = true; for (let i = 0; i < B.samples.length; i++) { const s = A.samples[i]; B.samples[i].pic = s.k === 'smoke' && BREAK ? s.m.smoke ** 3 : s.m[s.k]; }
+  const row1 = { p50: 0.01, p95: 0.01, flips: 0.01 }, parts = ME.partsOf(B), tight: Record<string, any> = {};   // (a walk says where its samples stand, and is judged a part at a time)
+  for (const m of ['light', 'smoke']) if (parts.length) for (const p of parts) tight[`${m}:${p.key}`] = row1; else tight[m] = row1;
+  const v = ME.judge(B, tight), each = ['light', 'smoke'].every(m => v.lines.some((l: string) => l.includes(`${m} (`) && /budget .*: inside$/.test(l)));   // (each judged in a part at least: a part with too few samples of a kind judges nothing)
+  verdict(v.ok && each, 'budget: a walk judged against the first walk as its picture is inside a tight budget',
+    `${v.lines.filter((l: string) => /budget/.test(l)).join('\n    ')}${BREAK ? '\n    THE PLANTED PICTURE\'S SMOKE WAS THREE TIMES AS THICK' : ''}`);
 }
 // ---- waits
 {
@@ -163,7 +158,6 @@ const PLAIN = new Set(['seed', 'solo', 'paused', 'mute', 'quality']);
     let R: any; try { R = JSON.parse(readFileSync(f, 'utf8')); } catch (e) { verdict(false, `report ${f}`, `not read: ${e}`); continue; }
     const name = f.startsWith(ROOT) ? f.slice(ROOT.length + 1) : f, was = ME.judge(R);
     log(`- report ${name}: ${R.scene || 'the plain page'} · plan ${R.plan} · world ${R.world} · ${R.picture ? `${R.samples.filter((s: any) => s.pic !== null).length} of ${R.samples.length} answered by the picture` : 'NO PICTURE IN IT'}${R.where ? ` · ${Object.entries(R.where).map(([k, v]) => `${k} ${v}`).join(', ')}` : ''}`);
-    for (const l of was.lines) log(`    as recorded: ${l}`);
     let now: any = null; const isKept = f.startsWith(`${dir}/`); if (R.picture) pictures++;
     if (BREAK_LOOK && R.look) R.look = `${R.look}?`;
     // WHY IT IS NOT ASKED AGAIN HERE, if it is not (null: it is, if its questions look out here on the world they did — the walk says)

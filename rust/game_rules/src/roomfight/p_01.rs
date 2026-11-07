@@ -43,18 +43,13 @@ pub fn chest_of(g: &crate::game::Game, c_2: CharId) -> V3 {
     }
 }
 
-/// The sensor key of a pair of bodies, whichever way round it is asked.   (roomfight.ts pairKey)
-pub fn pair_key(a: f64, b: f64) -> String {
-    if a < b { alloc::format!("fightS{}_{}", a, b) } else { alloc::format!("fightS{}_{}", b, a) }
-}
-
-/// The smoke between two AI men as last answered (1 = clear air), a picked weather's fog on top.   (roomfight.ts pairSmoke)
+/// What of the light from `a`'s eye to `b`'s chest comes through the smoke, a picked weather's fog on top.   (roomfight.ts pairSmoke)
 pub fn pair_smoke(g: &mut crate::game::Game, a: CharId, b: CharId) -> f64 {
-    let key = pair_key(g.ch[a].id, g.ch[b].id);
-    let t = match g.fight.trans.get(key) { Some(v) => *v, None => 1.0 };
+    let (eye, chest) = (eye_of(g, a), chest_of(g, b));
+    let t = crate::sense::smoke_between(g, eye, chest);
     if crate::weather::weather_fog(g).is_some() {
-        let (ca, cb) = (chest_of(g, a), chest_of(g, b));
-        t * crate::weather::air_trans(g, ca, cb)
+        let ca = chest_of(g, a);
+        t * crate::weather::air_trans(g, ca, chest)
     } else {
         t
     }
@@ -203,13 +198,6 @@ pub fn room_fight_sight_on(g: &mut crate::game::Game, viewer: GuardId, target: G
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn a_pair_has_one_key_whichever_way_it_is_asked() {
-        assert_eq!(pair_key(3.0, 12.0), "fightS3_12");
-        assert_eq!(pair_key(12.0, 3.0), "fightS3_12");
-        assert_eq!(pair_key(5.0, 5.0), "fightS5_5");
-    }
 
     #[test]
     fn flat_ignores_height() {

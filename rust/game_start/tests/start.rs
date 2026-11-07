@@ -30,7 +30,7 @@ fn a_game_stood_again_is_the_same_game() {
 /// A FAILURE MEANS: the plain start of a real level (the constructor, the solo night's card, the host's first frames) no longer runs.
 #[test]
 fn a_level_stands_as_its_file_has_it() {
-    let mut p = Play::level("kit-yard.json", false, &Opts { cpu_senses: false, ..Default::default() });
+    let mut p = Play::level("kit-yard.json", false, &Opts::default());
     assert!(p.mates().is_empty(), "no mission was started, so nobody was staged: {}", p.roll());
     p.run(10.0);
     assert!((p.time() - 10.0).abs() < 1e-6 && p.frames == 600);
@@ -58,7 +58,7 @@ fn a_mission_starts_from_its_link_as_the_page_starts_it() {
 #[test]
 fn what_a_level_file_says_is_on_the_floor() {
     use game_start::play::Floor;
-    let plain = Opts { cpu_senses: false, ..Default::default() };
+    let plain = Opts::default();
     // the pass: 89 boxes say a shape, 12 of them tilted (a tilted box keeps its plain shape and has no trim), and they say 134 pieces of trim
     let mut p = Play::level("pass.json", false, &plain);
     let f = p.floor();

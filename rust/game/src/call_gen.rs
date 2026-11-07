@@ -848,7 +848,6 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 855 => { let a1: GuardId = Io::r(&mut i); let a2: bool = Io::r(&mut i); crate::fogofwar::fog_of_war_show(g, a1, a2);  }
 856 => {  crate::fogofwar::fog_of_war_page_look(g);  }
 857 => { let a1: f64 = Io::r(&mut i); crate::fogofwar::fog_of_war_update(g, a1);  }
-858 => {  crate::fogofwar::fog_of_war_flush_asks(g);  }
 859 => {  crate::fogofwar::fog_of_war_reset(g);  }
 860 => { let mut a1: Vec<BoxId> = Io::r(&mut i); crate::fogofwar::fog_of_war_door_boxes(g, &mut a1); a1.w(&mut o); }
 861 => { let a1: FixtureId = Io::r(&mut i); let r = crate::fogofwar::fog_of_war_lamp_seen(g, a1); r.w(&mut o);  }
@@ -1080,5 +1079,6 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 1093 => { let a1: FirearmId = Io::r(&mut i); let r = crate::weapons::rifle_cycle_attachment(g, a1); r.w(&mut o);  }
 1094 => { let a1: SeatId = Io::r(&mut i); let a2: Vec<crate::cmd::PlayerCmd> = Io::r(&mut i); let a3: f64 = Io::r(&mut i); let mut a4: Option<Vec<V3>> = Io::r(&mut i); let r = crate::walkahead::walk_ahead(g, a1, &a2, a3, a4.as_mut()); r.w(&mut o); a4.w(&mut o); }
 1095 => { let a1: Option<bool> = Io::r(&mut i); let r = crate::doortools::door_tools_together(g, a1); r.w(&mut o);  }
+1096 => { let a1: f64 = Io::r(&mut i); let a2: Vec<f64> = Io::r(&mut i); let r = crate::sense::sense_tool(g, a1, &a2); r.w(&mut o);  }
 _ => panic!("bridge: no call of row {}", f),
 } assert!(i.p == args.len(), "bridge: {} bytes left over in the call of row {}", args.len() - i.p, f); o.b }

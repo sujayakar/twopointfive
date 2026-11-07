@@ -935,7 +935,7 @@ export function crossesDoor(a: Vec3, b: Vec3, d: Door): { t: number; side: 1 | -
  *  square metre the point stands in is added. null = the estimate as above, whatever the switch says (the error tool asks both). `moon` = the level's
  *  moon is in it too (the switch's word unless the asker says). `leave` = lamps of the level's own the asker leaves out, by what feeds them
  *  (sim/lightshome.ts ROW_BIT: a sleeper's face leaves the screens'). */
-export function lightEstimateAt(g: Game, P: Vec3, skipOwner?: (owner: number) => boolean, steadyOnly = false, field: LightField | null = lightField(g), moon: boolean = SENSE.moon, leave = 0): number {
+export function lightEstimateAt(g: Game, P: Vec3, skipOwner?: (owner: number) => boolean, steadyOnly = false, field: LightField | null = lightField(g), moon = true, leave = 0): number {
   // (the lamps are one question in several calls, and the sun's, the moon's and the stroke's lines follow it: asked outside a tick — an order given
   //  between ticks prices its walk by the light of the floor — the whole of it stands in one window over the module's copy, scene/collision.ts window)
   return g.col.mirror.live ? lightEstimateIn(g, P, skipOwner, steadyOnly, field, moon, leave) : g.col.window(() => lightEstimateIn(g, P, skipOwner, steadyOnly, field, moon, leave));
@@ -951,7 +951,7 @@ function lightEstimateIn(g: Game, P: Vec3, skipOwner: ((owner: number) => boolea
 }
 /** THE LIGHT MODEL'S FIELD for this game (sense.ts SENSE.bounce): its own smoke, where the senses are the game's, the switch is up and a grid stands.
  *  With it the estimate above has the smoke's shadow on every lamp and the light that comes round; null = the estimate as it always was. */
-export function lightField(g: Game): LightField | null { const C = g.cpuSmoke; return SENSE.cpu && SENSE.grid && SENSE.bounce && C.grid && C.grid.stands ? C as LightField : null; }
+export function lightField(g: Game): LightField | null { const C = g.cpuSmoke; return C.grid && C.grid.stands ? C as LightField : null; }
 type Lamp = Game['engine']['lights']['lights'][number];
 /** WHICH OF THE LAMPS NO FIXTURE FEEDS IS ONE OF A LIGHT QUESTION'S (a man's torch, a flash, a tracer's lamp): on, not the moon,
  *  not one of an owner the asker leaves out, and, to who asks what the PLACE lights (`steadyOnly`, LIGHTS.litMan), nobody's passing flash: a round's

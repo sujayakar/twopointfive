@@ -221,7 +221,6 @@ pub mod render_meshbvh { pub mod types; pub use types::*; }
 pub mod render_particles { pub mod types; pub use types::*; }
 pub mod render_passes { pub mod types; pub use types::*; }
 pub mod render_place_field { pub mod types; pub use types::*; }
-pub mod render_probe { pub mod types; pub use types::*; }
 pub mod render_reach { pub mod types; pub use types::*; }
 pub mod render_reach_keep { pub mod types; pub use types::*; }
 pub mod render_sdfrig { pub mod types; pub use types::*; }

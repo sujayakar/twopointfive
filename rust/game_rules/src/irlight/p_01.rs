@@ -107,183 +107,21 @@ pub fn fan_dark(g: &mut crate::game::Game, at: V3, yaw: f64) -> bool {
     false
 }
 
-/// The sensors' key of one carrier's slot. (irlight.ts skey)
-pub fn skey(key: f64, i: f64) -> String {
-    alloc::format!("irl{}:{}", key, i)
-}
-
-/// What he asked of the renderer is forgotten, every slot. (irlight.ts forget)
-pub fn forget(g: &mut crate::game::Game, key: f64) {
-    let slots = irl_meter().slots;
-    let mut i = 0.0;
-    while i <= slots {
-        crate::game::game_light_forget(g, &skey(key, i));
-        i += 1.0;
-    }
-}
-
-/// Every point of his fan the CPU's direct light leaves under the picture's line, in the fan's order: x, z and the CPU's light there. (irlight.ts fanDarks)
-pub fn fan_darks(g: &mut crate::game::Game, at: V3, yaw: f64) -> Vec<f64> {
-    let eye: V3 = [at[0], 1.5, at[2]];
-    let mut out_pts: Vec<f64> = Vec::new();
-    for off in fan_deg() {
-        let fx = m::sin(yaw + off * v3::DEG);
-        let fz = m::cos(yaw + off * v3::DEG);
-        for r in fan_m() {
-            let p: V3 = [eye[0] + fx * r, 1.2, eye[2] + fz * r];
-            if crate::scene_collision::segment_blocked(g, eye, p, None, None, None) {
-                break;
-            }
-            let e = crate::nvg::nvg_place_light(g, p);
-            if crate::nvg::tube_sig(g, e) < g.k.irlight.show {
-                out_pts.push(p[0]);
-                out_pts.push(p[2]);
-                out_pts.push(e);
-            }
-        }
-    }
-    out_pts
-}
-
-/// Is a place the CPU calls dark (its direct light `cpu`) dark in the picture, by the renderer's answer? None: no answer yet. (irlight.ts shownDark)
-pub fn shown_dark(g: &crate::game::Game, cpu: f64, e: Option<f64>) -> Option<bool> {
-    let e = match e {
-        Some(e) if e.is_finite() => e,
-        _ => return None,
-    };
-    let s = g.engine.settings.indirect_scale;
-    let sig = crate::nvg::tube_sig(g, cpu + (if s >= 0.0 { s } else { 1.0 }) * m::max(e - cpu, 0.0));
-    Some(sig < g.k.irlight.show)
-}
-
-/// His reading is over: what he asked of the renderer is forgotten with it. (irlight.ts drop)
-pub fn drop(g: &mut crate::game::Game, key: f64) {
-    let asked = match kit_of(g).need.get(crate::Num(key)) {
-        Some(n) => n.since.iter().any(|t| *t != f64::INFINITY),
-        None => return,
-    };
-    if asked {
-        forget(g, key);
-    }
-    kit_of(g).need.delete(crate::Num(key));
-}
-
-/// One slot's word: whether the renderer's answer, or the CPU's word after the wait, calls it dark; waiting sets `pending`. (irlight.ts burn: word)
-fn word(g: &mut Game, cpu: f64, e: Option<f64>, since: f64, used: bool, pending: &mut bool) -> bool {
-    if !used {
-        return false;
-    }
-    if let Some(d) = shown_dark(g, cpu, e) {
-        return d;
-    }
-    if g.time - since < irl_meter().wait {
-        *pending = true;
-        return false;
-    }
-    true
-}
-
-/// How much of his light burns this frame, 0‥1: `at` / `yaw` where his flood starts and looks, `each` the floor under him is read every frame, `live` the renderer answers and is asked, `own_key` the meter key that already reads his floor. (irlight.ts burn)
-pub fn burn(g: &mut crate::game::Game, key: f64, at: V3, yaw: f64, each: bool, live: bool, own_key: Option<&str>) -> f64 {
+/// How much of his light burns this frame, 0‥1: `at` / `yaw` where his flood starts and looks, `each` the floor under him is read every frame and not on his beat alone. (irlight.ts burn)
+pub fn burn(g: &mut crate::game::Game, key: f64, at: V3, yaw: f64, each: bool) -> f64 {
     let k_key = crate::Num(key);
     let time = g.time;
-    let had_t = kit_of(g).need.get(k_key).map(|n| n.t);
-    let born = match had_t {
+    let born = match kit_of(g).need.get(k_key).map(|n| n.t) {
         None => true,
         Some(t) => t > time,
     };
-    let s = irl_meter().slots as usize;
     if born {
-        if had_t.is_some() {
-            forget(g, key);
-        }
-        kit_of(g).need.set(k_key, crate::irlight::Need {
-            read_t: f64::NEG_INFINITY,
-            dark_t: f64::NEG_INFINITY,
-            k: 0.0,
-            t: time,
-            fresh: true,
-            t0: time,
-            own: -1.0,
-            pts: Vec::new(),
-            since: vec![f64::INFINITY; s + 1],
-        });
+        kit_of(g).need.set(k_key, crate::irlight::Need { read_t: f64::NEG_INFINITY, dark_t: f64::NEG_INFINITY, k: 0.0, t: time, fresh: true });
     }
     let beat = time - need_row(g, key).read_t >= READ_EVERY;
-    let mut dark;
-    let mut pending = false;
-    if !live {
-        // the CPU's rule, whole
-        let n = need_row(g, key);
-        if !n.pts.is_empty() || n.own >= 0.0 || n.since.iter().any(|t| *t != f64::INFINITY) {
-            forget(g, key);
-            let n = need_row(g, key);
-            n.pts.clear();
-            n.own = -1.0;
-            n.since.fill(f64::INFINITY);
-        }
-        dark = each && dark_at(g, at[0], at[2]);
-        if beat {
-            dark = dark || (!each && dark_at(g, at[0], at[2])) || fan_dark(g, at, yaw);
-        }
-    } else {
-        // the CPU's word: the floor under him, and on his beat the dark points of his fan, a spread of them put to the renderer
-        if each || beat {
-            let e = crate::nvg::nvg_place_light(g, [at[0], 1.2, at[2]]);
-            let own = if crate::nvg::tube_sig(g, e) < g.k.irlight.show { e } else { -1.0 };
-            need_row(g, key).own = own;
-        }
-        if beat {
-            let d = fan_darks(g, at, yaw);
-            let count = d.len() / 3;
-            let take = if (count as f64) < FAN_NEED { 0 } else { core::cmp::min(count, s) };
-            need_row(g, key).pts.clear();
-            for i in 0..s {
-                if i >= take {
-                    // (a slot out of use: its answer is of another place when it is used again)
-                    if need_row(g, key).since[i] != f64::INFINITY {
-                        crate::game::game_light_forget(g, &skey(key, i as f64));
-                        need_row(g, key).since[i] = f64::INFINITY;
-                    }
-                    continue;
-                }
-                let j = 3 * (if take == count { i } else { m::round(i as f64 * (count as f64 - 1.0) / (take as f64 - 1.0)) as usize });
-                need_row(g, key).pts.extend_from_slice(&[d[j], d[j + 1], d[j + 2]]);
-                crate::game::game_light_query(g, &skey(key, i as f64), [d[j], 1.2, d[j + 1]], None);
-                let n = need_row(g, key);
-                if n.since[i] == f64::INFINITY {
-                    n.since[i] = time;
-                }
-            }
-        }
-        if own_key.is_none() && need_row(g, key).own >= 0.0 {
-            crate::game::game_light_query(g, &skey(key, s as f64), [at[0], 1.2, at[2]], None);
-            let n = need_row(g, key);
-            if n.since[s] == f64::INFINITY {
-                n.since[s] = time;
-            }
-        }
-        // the renderer's: every key read every frame, in use or not (one read sequence a frame)
-        let own = need_row(g, key).own;
-        let answer = match own_key {
-            Some(own) => crate::game::game_light_at(g, own),
-            None => crate::game::game_light_at(g, &skey(key, s as f64)),
-        };
-        let n = need_row(g, key);
-        let since = if own_key.is_some() { n.t0 } else { n.since[s] };
-        dark = word(g, m::max(own, 0.0), answer, since, own >= 0.0, &mut pending);
-        let mut hits = 0.0;
-        for i in 0..s {
-            let n = need_row(g, key);
-            let used = 3 * i < n.pts.len();
-            let cpu = if used { n.pts[3 * i + 2] } else { 0.0 };
-            let since = n.since[i];
-            let answer = crate::game::game_light_at(g, &skey(key, i as f64));
-            if word(g, cpu, answer, since, used, &mut pending) {
-                hits += 1.0;
-            }
-        }
-        dark = dark || hits >= FAN_NEED;
+    let mut dark = each && dark_at(g, at[0], at[2]);
+    if beat {
+        dark = dark || (!each && dark_at(g, at[0], at[2])) || fan_dark(g, at, yaw);
     }
     let hold = g.k.irlight.hold;
     let n = need_row(g, key);
@@ -299,7 +137,7 @@ pub fn burn(g: &mut crate::game::Game, key: f64, at: V3, yaw: f64, each: bool, l
     n.t = time;
     if n.fresh {
         n.k = if on { 1.0 } else { 0.0 };
-        n.fresh = pending;
+        n.fresh = false;
     } else {
         n.k = v3::clamp(n.k + (if on { dt / FADE_IN } else { -dt / FADE_OUT }), 0.0, 1.0);
     }
@@ -366,17 +204,14 @@ pub fn ir_near_of(g: &crate::game::Game, key: f64) -> f64 {
     }
 }
 
-/// His light posed, and in the list if any of it burns. `live` is read once a frame and only when somebody's goggles are down. (irlight.ts irLightTick: lit)
-fn lit(g: &mut Game, live: &mut Option<bool>, l: LightId, key: f64, at: V3, yaw: f64, each: bool, own_key: Option<&str>) {
-    let is_live = match *live {
-        Some(v) => v,
-        None => {
-            let v = !g.k.sense.cpu && crate::game::game_light_at(g, "playerChest").is_some();
-            *live = Some(v);
-            v
-        }
-    };
-    let k = burn(g, key, at, yaw, each, is_live, own_key);
+/// His reading is over. (irlight.ts drop)
+pub fn drop(g: &mut crate::game::Game, key: f64) {
+    kit_of(g).need.delete(crate::Num(key));
+}
+
+/// His light posed, and in the list if any of it burns. (irlight.ts irLightTick: lit)
+fn lit(g: &mut Game, l: LightId, key: f64, at: V3, yaw: f64, each: bool) {
+    let k = burn(g, key, at, yaw, each);
     if k > 0.0 {
         let was = g.tab.light[l].intensity;
         let near = near_k(g, key, l);
@@ -390,7 +225,7 @@ fn lit(g: &mut Game, live: &mut Option<bool>, l: LightId, key: f64, at: V3, yaw:
 }
 
 /// One seat's man, over that seat's view (`g` has the seat's set in): his own lamp, or the lens's while the wand is under a door. (irlight.ts irLightTick: eachSeat's closure)
-fn seat_light(g: &mut Game, host: PlayerId, live: &mut Option<bool>) {
+fn seat_light(g: &mut Game) {
     let pl = g.player;
     let sc = g.pl[pl].ch;
     let index = g.tab.cmd_seat[g.seat].index;
@@ -421,12 +256,12 @@ fn seat_light(g: &mut Game, host: PlayerId, live: &mut Option<bool>) {
         }
         if let Some(e) = &eye {
             drop(g, id);
-            lit(g, live, l, wand_key, [e.pos[0] + e.look[0] * 0.7, 0.0, e.pos[2] + e.look[2] * 0.7], m::atan2(e.look[0], e.look[2]), true, None);
+            lit(g, l, wand_key, [e.pos[0] + e.look[0] * 0.7, 0.0, e.pos[2] + e.look[2] * 0.7], m::atan2(e.look[0], e.look[2]), true);
         } else {
             drop(g, wand_key);
             let at = g.ch[sc].pos;
             let yaw = g.ch[sc].aim_yaw;
-            lit(g, live, l, id, at, yaw, true, if pl == host { Some("playerChest") } else { None });
+            lit(g, l, id, at, yaw, true);
         }
     } else {
         let had = if first { kit_of(g).sam } else { kit_of(g).more.get(crate::Num(id)).copied() };
@@ -440,9 +275,7 @@ fn seat_light(g: &mut Game, host: PlayerId, live: &mut Option<bool>) {
 pub fn ir_light_tick(g: &mut crate::game::Game) {
     g.engine.lights.ir.clear();
     kit_of(g).seen.clear();
-    let mut live: Option<bool> = None;
-    let host = crate::seats::host_man(g);
-    crate::seats::each_seat(g, &mut |g: &mut Game| seat_light(g, host, &mut live));
+    crate::seats::each_seat(g, &mut |g: &mut Game| seat_light(g));
     for gd in kit_of(g).men.keys() {
         if !g.guards.contains(&gd) {
             kit_of(g).men.delete(gd);
@@ -473,8 +306,7 @@ pub fn ir_light_tick(g: &mut crate::game::Game) {
         pose(g, l, c);
         let at = g.ch[c].pos;
         let yaw = g.ch[c].aim_yaw;
-        // (his own meter's chest key: guards.ts meterOf)
-        lit(g, &mut live, l, id, at, yaw, false, Some(&alloc::format!("unitC{}", id)));
+        lit(g, l, id, at, yaw, false);
     }
 }
 
@@ -581,13 +413,6 @@ pub fn ir_carried(g: &crate::game::Game) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    /// a key is a number written as JavaScript writes it: no ".0", the minus kept (the sensors' journal lists these strings)
-    #[test]
-    fn skey_writes_numbers_as_the_typescript_does() {
-        assert_eq!(skey(-1.0, 5.0), "irl-1:5");
-        assert_eq!(skey(42.0, 0.0), "irl42:0");
-    }
 
     fn test_light(pos: V3, dir: V3, intensity: f64, radius: f64, owner: f64, range: f64, outer_deg: f64, inner_deg: f64, enabled: bool) -> crate::render_lights::RtLight {
         crate::render_lights::RtLight { pos, dir, intensity, radius, owner, range, outer_deg, inner_deg, enabled, ..crate::render_lights::RtLight::zeroed() }
