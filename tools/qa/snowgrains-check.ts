@@ -183,7 +183,7 @@ export async function snowGrainsCheck(o: { verbose?: boolean } = {}): Promise<bo
           if (block >= 0 && indent >= 0 && indent <= block) block = -1;
           if (/SNOW_GRAINS/.test(code) && /\{\s*$/.test(code)) { block = indent; return; }
           if (inGrain || block >= 0) return;
-          if (/\bgrain[A-Z]\w*\(|\bairAt\(|\bgrain\.[ab]\b|\bairTex\b|\bGRAIN_[A-Z]/.test(code) && !/SNOW_GRAINS/.test(code)) bad.push(`${f}:${i + 1}`);
+          if (/\bgrain[A-Z]\w*\(|\bairAt\(|\bgrain\.[ab]\b|\bairTex\b|\bGRAIN_[A-Z]/.test(code) && !/SNOW_GRAINS/.test(code) && !/^\s*if \(req\.act == RS_GRAIN\) \{/.test(code)) bad.push(`${f}:${i + 1}`);   // (the one shading call's grain line stands behind the step's own word, RS_GRAIN, which only grainStep, itself behind the switch, hands back: the constant does not cut it from a level with no snow)
         }); }
       const common = read('particles_common.wgsl'), sim = read('particles.wgsl');
       const gate = /fn grainIs\(aux: u32\) -> bool \{ return SNOW_GRAINS && snowNow\(\) && /.test(common), rec = /let grainRec = SNOW_GRAINS && snowNow\(\) && rec\.posB\.y > 2\.5;/.test(sim);

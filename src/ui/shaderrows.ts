@@ -1,41 +1,32 @@
-// SHADERS · ROWS ON TRIAL (Options > Graphics, the last section; 2026-10-26). Chrome on Windows compiles every shader through DXC, which pastes each call into its caller: the
-// big kernels take 5–25 s apiece there (gpu/device.ts THE COMPILE QUEUE has the measure), where Metal takes a fraction of that. Each row here is one way of spending less of
-// that time, and each is read ONCE, when this module is imported: the pipelines are made before any menu can open, so a
-// row moved in Options is the NEXT load's. A switch of the page, not a rule of the game (no knob, no FROZEN_HOLDS row: every stand boots with all of them off).
-// THREE ROWS START ON IN A BROWSER (2026-10-27, `on`). Compact shaders and Separate shadow rays first, then Start on first frame shaders; the
-// maintainer's picks, asked each time whether in a Windows browser only, everywhere, or not yet ("i'd generally prefer to have a single path when possible").
+// SHADERS · THE ROW ON TRIAL (Options > Graphics, the last section; 2026-10-26). Chrome on Windows compiles every shader through DXC, which pastes each call into its caller: the
+// big kernels take 5–25 s apiece there (gpu/device.ts THE COMPILE QUEUE has the measure), where Metal takes a fraction of that. A row here is one way of spending less of
+// that time, and it is read ONCE, when this module is imported: the pipelines are made before any menu can open, so a
+// row moved in Options is the NEXT load's. A switch of the page, not a rule of the game (no knob, no FROZEN_HOLDS row).
+// ONE ROW IS LEFT (2026-11-07). Compact shaders and Separate shadow rays started on in every browser from 2026-10-27 (the maintainer's pick, "Everywhere"; "i'd generally
+// prefer to have a single path when possible"), and since 2026-11-07 they are not rows: the ten big kernels have the one writing (each heavy function called from one
+// place; shaders/compact/ and render/kernels.ts are gone) and the gather is its two programs (render/gatherSplit.ts). The harness, which had every row off, now compiles
+// what the page compiles. Their words on an address (`?compactshaders`, `?splitrays`) and a choice kept under either key do nothing and are dropped the next time a row is moved.
 // THE FIRST-FRAME ROW STARTS ON ONLY WHERE A PERSON SITS (`on: 'person'`): a browser a script drives (navigator.webdriver, every page tool) starts with it off,
 // as the harness does, because a tool's first picture and first timing must be the settings' own and not a stand-in's (some forty tools poll for a hook and
-// begin at once). A tool that wants the player's start asks for it: `?firstframe=1`.
-// What the first two rest on: a Windows machine loaded the two together fourteen times with no error, and a Mac drew each alone at the frame cost of the plain
-// build. What nobody has: a plain load from a Windows machine to set the wait against, the two together timed on a Mac, any AMD or Intel card, and ANY time on
-// a real GPU for the first-frame start in this build (docs/agents/render.md has what was seen on its author's Windows machine, and the mend made since).
-// On every stand of the harness (it is no browser) they start off as before. `?compactshaders=0&splitrays=0&firstframe=0` is a load as it was; a row turned
-// off in Options is kept off.
-// TWO ROWS ARE OUT (2026-10-27): Wall cut shaders when needed and Other shaders when needed built a shader the first time a frame asked for it, and the maintainer
-// does not want a compile that waits for play to ask ("i think we shouldn't do truly lazy compilation where then have stutters during gameplay"). A choice kept
-// under either old key is read past and dropped the next time a row is moved.
-//   compact        ?compactshaders=1   render/kernels.ts: the ten kernels written a second way (one call site per heavy function), compiled instead of today's
+// begin at once). A tool that wants the player's start asks for it: `?firstframe=1`. `?firstframe=0` is a load that waits for every pipeline; the row turned
+// off in Options is kept off. What nobody has: ANY time on a real GPU for the first-frame start in this build (docs/agents/render.md has what was seen on its
+// author's Windows machine, and the mend made since).
+// TWO MORE ROWS WENT EARLIER (2026-10-27): Wall cut shaders when needed and Other shaders when needed built a shader the first time a frame asked for it, and the maintainer
+// does not want a compile that waits for play to ask ("i think we shouldn't do truly lazy compilation where then have stutters during gameplay").
 //   firstFrame     ?firstframe=1       gpu/device.ts PIPE_QUEUE.later: the start waits only for the pipelines the first frame draws
-//   splitRays      ?splitrays=1        render/gatherSplit.ts: the final gather as two smaller programs (its rays, then the light at what they hit) instead of one
 // KEPT under its own key on this machine (only the rows that are not where they start); a URL word wins for that visit and is never written (as `?quality=` does). A row is LISTED only in a build that carries the code
 // which reads it: that code says so with useShaderRow() when it is imported, so a build that has one part of the trial does not show a row that would do nothing.
-// THE HARNESS (no browser): every row off, unless the environment gives a row's word as a held rule's is given, the URL word in capitals: TPS_COMPACTSHADERS=1,
-// TPS_FIRSTFRAME=1, TPS_SPLITRAYS=1 in front of a headless tool.
+// THE HARNESS (no browser): the row off, unless the environment gives its word as a held rule's is given, the URL word in capitals: TPS_FIRSTFRAME=1 in front of a headless tool.
 // THIS MODULE IMPORTS NOTHING: gpu/ and render/ read it while they are themselves being imported, so it must always be whole before them.
-export type ShaderRowKey = 'compact' | 'firstFrame' | 'splitRays';
+export type ShaderRowKey = 'firstFrame';
 /** `on`: the row starts ON in a browser when nothing is kept and no word is given (never in the harness); 'person' = …and only in one no script is driving */
 interface ShaderRow { key: ShaderRowKey; url: string; label: string; describe: string; on?: true | 'person' }
 const NEXT = 'This starts the next time you load the page.';
 /** added to a row the address names: the address wins on every load of it, whatever the row is moved to */
 const ADDRESS = 'This page\'s address is setting this for now. Take it out of the address to use what you choose here.';
 const ROWS: ShaderRow[] = [
-  { key: 'compact', url: 'compactshaders', label: 'Compact shaders', on: true,
-    describe: `The renderer's biggest shaders are written so that each heavy step appears in them once, which makes them faster to build on Windows. The picture should look the same. Turn this off to use the older shaders. ${NEXT}` },
   { key: 'firstFrame', url: 'firstframe', label: 'Start on first frame shaders', on: 'person',
     describe: `The game starts as soon as the shaders for the first picture are ready and builds the rest behind it right away, so you wait less at the start. The picture is a little simpler until the rest are ready. ${NEXT}` },
-  { key: 'splitRays', url: 'splitrays', label: 'Separate shadow rays', on: true,
-    describe: `The bounce light is worked out by two smaller shaders instead of one big one, which makes them faster to build on Windows. The picture should look the same, except on Ultra, where you'll lose its extra bounce light pass while this is on. ${NEXT}` },
 ];
 const LS = 'twopointsix.shaderrows';
 type Kept = Partial<Record<ShaderRowKey, boolean>>;
@@ -61,7 +52,7 @@ function urlWord(r: ShaderRow): boolean | null { try { const v = new URLSearchPa
 function envWord(r: ShaderRow): boolean | null { const v = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.[`TPS_${r.url.toUpperCase()}`]; return v === undefined ? null : v !== '0'; }
 
 /** what THIS load was started with: the URL's word, else the environment's, else the kept choice, else where the row starts. Read by the code each row switches (never written after the import) */
-export const SHADER_ROWS: Record<ShaderRowKey, boolean> = { compact: false, firstFrame: false, splitRays: false };
+export const SHADER_ROWS: Record<ShaderRowKey, boolean> = { firstFrame: false };
 { const k = kept(); for (const r of ROWS) SHADER_ROWS[r.key] = urlWord(r) ?? envWord(r) ?? chosen(k, r); }
 
 const used = new Set<ShaderRowKey>();
@@ -72,7 +63,11 @@ export const SHADER_ROW_WORDS: readonly string[] = ROWS.map(r => r.url);
 /** the rows THIS load was started with, by their URL words, of the ones this build carries: what a report says its numbers were taken under (ui/bench.ts) */
 export function shaderRowsOn(): string[] { return ROWS.filter(r => used.has(r.key) && SHADER_ROWS[r.key]).map(r => r.url); }
 /** the name Options shows for a row's URL word (the word itself where this build has no such row: a report from another build still reads) */
-export function shaderRowLabel(word: string): string { return ROWS.find(r => r.url === word)?.label ?? word; }
+export function shaderRowLabel(word: string): string { return ROWS.find(r => r.url === word)?.label ?? RETIRED.get(word) ?? word; }
+/** the rows that are no longer rows, by their old URL words: a report made before 2026-11-07 names them, and still reads */
+const RETIRED = new Map([['compactshaders', 'Compact shaders'], ['splitrays', 'Separate shadow rays']]);
+/** …their words: what a reader of an OLD record's address still takes for a shader row (tools/cloud/errors.ts) */
+export const RETIRED_ROW_WORDS: readonly string[] = [...RETIRED.keys()];
 
 /** rows flipped in this visit (a flipped row shows the kept choice from then on; until then one the address names shows the address's word) */
 const flipped = new Set<ShaderRowKey>();

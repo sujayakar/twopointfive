@@ -3,7 +3,6 @@
 // irradiance and its specular field at gather res). The WGSL is shaders/denoise.wgsl (one module, five entry points); this file owns its pipelines,
 // layouts, the small parameter uniform and a bind-group cache, and encodes a client's chain into an open compute pass with the texture views
 // render/passes.ts hands it (passes.ts owns every texture: they go through its pool / resample-on-resize machinery like the legacy histories).
-// settings.denoiser = 'legacy' never constructs a dispatch from here: passes.ts runs dtemporal / softblur / temporal / giblur exactly as before.
 import { makeBuffer, makeShader, computePipelineAsync, writeWordsIfChanged } from '../gpu/device';
 import { scenePrelude } from './frame';
 import denoiseSrc from './shaders/denoise.wgsl' with { type: 'text' };
@@ -11,7 +10,9 @@ import denoiseSrc from './shaders/denoise.wgsl' with { type: 'text' };
 const CS = GPUShaderStage.COMPUTE;
 /** à-trous strides by iteration (1-based i → STRIDES[i-1]); the shadow chain's total travel after N iterations = Σ = 2^N − 1 px */
 export const DN_STRIDES = [1, 2, 4, 8, 16];
-export const dnTravel = (iters: number) => DN_STRIDES.slice(0, Math.max(1, Math.min(5, Math.round(iters)))).reduce((a, b) => a + b, 0);
+/** the iteration count a chain runs for a knob's value (1 ‥ the stride table's length): the ONE clamp — the encoder, the tile mask's thresholds and the stats all ask here */
+export const dnIters = (iters: number) => Math.max(1, Math.min(DN_STRIDES.length, Math.round(iters)));
+export const dnTravel = (iters: number) => DN_STRIDES.slice(0, dnIters(iters)).reduce((a, b) => a + b, 0);
 
 /** Every knob of the three clients (engine settings dn* mirror into this each frame; ui/quality.ts presets place the per-tier ones). */
 export interface DenoiseKnobs {
@@ -35,7 +36,7 @@ export const defaultDenoiseKnobs = (): DenoiseKnobs => ({
   shIters: 3, shCap: 12, shClampK: 1.25, shSigmaL: 4, shPrior: true, shLitAlike: true, shOccl: true, shMoveCap: 3, shMoveThresh: 0.04, shJump: 0.5,
   giIters: 4, giCap: 24, giClampK: 1.0, giSigmaL: 4, giFast: 3, giFirefly: 0, giClampCut: 0, giYoungWiden: 0,
   spIters: 1, spCap: 16, spClampK: 1.0, spSigmaL: 2, spRough: 0.08, spVirtual: -1, spMaxRough: 0.45, rfIters: 3, rfCap: 32,
-  depthK: 0.004, normalPow: 12, motionVectors: true, ratioHi: 1,
+  depthK: 0.004, normalPow: 12, motionVectors: true, ratioHi: 4,   // ratioHi = direct_common.wgsl RATIO_HI, which sharp direct clamps by (tools/qa/frame-layout.ts holds the two equal)
 });
 
 /** What one shadow-chain encode needs (views named by role; passes.ts decides which of its textures play them this frame). */
@@ -224,7 +225,7 @@ export class Denoiser {
   /** SHADOW chain into the open pass `p`: pack → (the caller's tileDistances between, via `tileDist`) → temporal → N à-trous, the last writing S = U × r̂ into v.S.
    *  `wx, wy` = the full-res 8×8 dispatch grid. Returns the dispatch count. */
   encodeShadow(p: GPUComputePassEncoder, sceneBG: GPUBindGroup, v: ShadowViews, wx: number, wy: number, tileDist: (() => void) | null): number {
-    const N = Math.max(1, Math.min(5, Math.round(this.knobs.shIters)));
+    const N = dnIters(this.knobs.shIters);
     let n = 0;
     p.setBindGroup(0, sceneBG);
     // pack: S, U → (ratio, hint) per class into cur[], (hints, lumU) into shared[0], per-tile hint flags

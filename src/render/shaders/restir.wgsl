@@ -1,4 +1,4 @@
-// ReSTIR DI direct lighting (renderer v3 Phase 2a) — settings.restir ON (the default); direct.wgsl is the OFF path, untouched.
+// ReSTIR DI direct lighting (renderer v3 Phase 2a): the direct-light estimator (the leader / tail one it replaced, direct.wgsl, went 2026-11-07).
 // Same inputs, same four outputs (per emitter class c ∈ {0 sharp, 1 broad}: S = shadowed estimate + signed penumbra hint, U = exact unshadowed
 // total), so dtemporal / softblur / composite consume it unchanged. What differs is how S is estimated:
 //
@@ -83,8 +83,8 @@
 //                there (spatialAll — and wider — where the history is being handed about anyway, nothing extra at rest). U, the beliefs, the hint, the held / transient strata are untouched by all three.
 //   The reservoir written for next frame is the TEMPORAL stage's (spatial output feeds shading only: no M inflation loop).
 // Kept from direct.wgsl: the tile light list (FLAG_TILECULL, verbatim), reach masks (a walled-off light is in U, never a candidate, dark in S), glass
-// transmit on the shaded sample, the owner byte, mesh shadows (inside occludedT), the sun / moon as an ordinary candidate (kind 2). Ignored here:
-// FLAG_CHECKER_DIRECT, dimRays, the leader ray budgets (directCfg.xy) — the ray budget is ru.cfg.x, per pixel, whatever the light count.
+// transmit on the shaded sample, the owner byte, mesh shadows (inside occludedT), the sun / moon as an ordinary candidate (kind 2). The ray budget is
+// ru.cfg.x, per pixel, whatever the light count.
 const Z_RELEASE: f32 = 2.0;   // (see 'trailing edge' in phase 2)
 const MOTION_RAMP: f32 = 1.6;  // MOTION (b): the confidence cut ramps from none at ru.mot.x px a frame to its floor at MOTION_RAMP × that
 /** the light bypasses the reservoirs this frame: a transient always; under the HYBRID (header HELD) every light a character carries (owner byte ≠ 0) */
@@ -695,8 +695,9 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
                 let qW = rW(qb); let qPh = rPh(qb);
                 if (cs != 255u && qW > 0.0 && qPh > 0.0) {
                   // p̂_c(x_i): the neighbour's light at OUR point now; p̂_i(y_c): our light at ITS point (its stored p̂ is p̂_i(x_i))
-                  let pcx = targetAt(cs, P, N, true);
-                  let piy = targetAt(ySlot, Pq, Nq, false);
+                  var tq: array<f32, 2>;   // (both through ONE targetAt call, p̂_c(x_i) first: DXC — Chrome's compiler on Windows — inlines each call it meets)
+                  for (var q = 0u; q < 2u; q++) { tq[q] = targetAt(select(ySlot, cs, q == 0u), select(Pq, P, q == 0u), select(Nq, N, q == 0u), q == 0u); }
+                  let pcx = tq[0]; let piy = tq[1];
                   let Mi = min(rM(qa), mCap);
                   mc += (Mck * yP) / (Mi * piy + Mck * yP + 1e-12) / kf;
                   let wi = (Mi * qPh) / (Mi * qPh + Mck * pcx + 1e-12) / kf * pcx * rV(qa) * qW;
@@ -751,21 +752,29 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
     }
     // + the TRANSIENT stratum (header): E × V of the picked transient ÷ its pick probability = Wt × V, in its own hue, through its own panes — exact in expectation, no history either way
     //   (under the hybrid this is the held TAIL: the carried lights past the two leaders, one importance-picked ray a class)
-    for (var c = 0u; c < 2u; c++) {
-      if (pickT[c] == 255u || VTr[c] <= 0.0) { continue; }
-      var tt = vec3f(1.0); let gm = wgGlass[pickT[c]]; if (gm != 0u) { tt = glassVis(wgLights[pickT[c]], gm, P); }
-      S[c] += hueOf(pickT[c]) * tt * (Wt[c] * VTr[c]);
-      if (Wl[c] <= 0.0) { aOut[c] = -clamp(min(blurPx[c], frame.directCfg.z) / MAX_BLUR_PX, 0.0, 1.0); }   // (a class lit here by the transient alone still hands its ray's penumbra hint on)
-    }
     // + the HELD leaders (header): each shaded EXACTLY — its irradiance here × the mean visibility of its K strata, through its own panes; a class lit by carried light alone hands its rays' hint on
-    for (var h = 0u; h < 2u; h++) {
-      if (hS[h] == 255u) { continue; }
-      let li = wgLights[hS[h]]; let c = select(0u, 1u, lightBroad(li));
-      if (Wl[c] <= 0.0) { aOut[c] = -clamp(min(blurPx[c], frame.directCfg.z) / MAX_BLUR_PX, 0.0, 1.0); }
-      if (hV[h] <= 0.0) { continue; }
-      var tt = vec3f(1.0); let gm = wgGlass[hS[h]]; if (gm != 0u) { tt = glassVis(li, gm, P); }
-      var hDiv = f32(heldK); if (heldAdapt) { hDiv = hN[h]; }   // (TRADE held adaptive: the mean is over the strata actually traced)
-      S[c] += select(hE1, hE0, h == 0u) * tt * (hV[h] / hDiv);
+    // (turns 0, 1 = the transient stratum's two classes, turns 2, 3 = the two held leaders: ONE glassVis call for the four — DXC inlines each call it meets)
+    for (var q = 0u; q < 4u; q++) {
+      var slot = 0u; var c = q;
+      if (q < 2u) {
+        if (pickT[c] == 255u || VTr[c] <= 0.0) { continue; }
+        slot = pickT[c];
+      } else {
+        let h = q - 2u;
+        if (hS[h] == 255u) { continue; }
+        slot = hS[h]; c = select(0u, 1u, lightBroad(wgLights[slot]));
+        if (Wl[c] <= 0.0) { aOut[c] = -clamp(min(blurPx[c], frame.directCfg.z) / MAX_BLUR_PX, 0.0, 1.0); }
+        if (hV[h] <= 0.0) { continue; }
+      }
+      var tt = vec3f(1.0); let gm = wgGlass[slot]; if (gm != 0u) { tt = glassVis(wgLights[slot], gm, P); }
+      if (q < 2u) {
+        S[c] += hueOf(slot) * tt * (Wt[c] * VTr[c]);
+        if (Wl[c] <= 0.0) { aOut[c] = -clamp(min(blurPx[c], frame.directCfg.z) / MAX_BLUR_PX, 0.0, 1.0); }   // (a class lit here by the transient alone still hands its ray's penumbra hint on)
+      } else {
+        let h = q - 2u;
+        var hDiv = f32(heldK); if (heldAdapt) { hDiv = hN[h]; }   // (TRADE held adaptive: the mean is over the strata actually traced)
+        S[c] += select(hE1, hE0, h == 0u) * tt * (hV[h] / hDiv);
+      }
     }
   }
   // ---- store: reservoirs (temporal stage) with the depth signature and the pixel's darkSlot, the two S textures (U went out after scoring) ----

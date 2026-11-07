@@ -5,9 +5,9 @@
 // dt → the engine's own read-back → PNG. Then per variant an amplified |variant − reference| image (reference = the same boot with the torch dark) and the mean /
 // max of that difference over a rectangle of far-side floor chosen by projecting world points through the camera (never by eye).
 //
-//   node tools/qa/torch-leak-stills.cjs --out DIR [--quality high] [--scale 0.5] [--w 1566 --h 1000] [--q 'extra&query'] [--staging face|end|…] [--variants a,b,c,d,e,move] [--settle 12]
+//   node tools/qa/torch-leak-stills.cjs --out DIR [--quality high] [--scale 0.5] [--w 1566 --h 1000] [--q 'extra&query'] [--staging face|end|…] [--variants a,b,c,move] [--settle 12]
 //        [--explore]   one boot, the level's guards / lights printed and one overview still (leak_explore.png) — for choosing a staging
-// Variants: a = default · b = the torch dark (THE REFERENCE) · c = &nosharp · d = &legacydenoise · e = &norestir · a and b also in debug views 3 (direct only) and
+// Variants: a = default · b = the torch dark (THE REFERENCE) · c = &nosharp · a and b also in debug views 3 (direct only) and
 // 4 (indirect only) · move = a and b again with the guard's yaw swept 40° over 20 frames at 1/60 s, read back on the frame the sweep ends (and 6 frames later).
 // The dev server is started from this checkout on a free port and stopped by pid.
 // The stagings stand on levels/train-silent.json (the play-style levels' quiet training level): run it from a checkout that has that level. `pair` = the one that shows the leak —
@@ -16,7 +16,7 @@ const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const { spawn, execSync, spawnSync } = require('child_process'); const net = require('net'), path = require('path'), fs = require('fs');
 const ROOT = path.resolve(__dirname, '../..'); const argv = process.argv.slice(2), flag = (n, d) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : d; }, has = n => argv.includes(n);
 const OUT = path.resolve(flag('--out', path.join(ROOT, 'docs/shots'))), QUALITY = flag('--quality', 'high'), SCALE = +flag('--scale', 0.5), VW = +flag('--w', 1566), VH = +flag('--h', 1000);
-const SETTLE = +flag('--settle', 12), STAGING = flag('--staging', 'face'), EXTRA = flag('--q', ''), VARIANTS = flag('--variants', 'b,a,c,d,e,move').split(',').filter(Boolean), TAG = flag('--tag', ''), VIEWS = flag('--views', 'direct,indirect').split(','), DSETTLE = +flag('--dsettle', 6);
+const SETTLE = +flag('--settle', 12), STAGING = flag('--staging', 'face'), EXTRA = flag('--q', ''), VARIANTS = flag('--variants', 'b,a,c,move').split(',').filter(Boolean), TAG = flag('--tag', ''), VIEWS = flag('--views', 'direct,indirect').split(','), DSETTLE = +flag('--dsettle', 6);
 const FLAGS = ['--js-flags=--no-use-libm-trig-functions --no-use-std-math-pow', '--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const NOISE = /smoke|number of storage textures \(5\) in the Compute stage|Failed to load resource/;
 const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
@@ -80,7 +80,7 @@ async function boot(port, name, o, errors) {
     return { roster, gi, pin: st.pin, guard: { pos: r3(gd.char.pos), bodyYaw: gd.char.bodyYaw, aimYaw: gd.char.aimYaw, state: gd.state, hold: gd.hold },
       torch: { enabled: !!fl.enabled, pos: r3(fl.pos), dir: r3(fl.dir), intensity: fl.intensity, innerDeg: fl.innerDeg, outerDeg: fl.outerDeg, range: fl.range, radius: fl.radius, owner: fl.owner },
       others: g.guards.filter((x, i) => i !== gi && x.flashlight.enabled).length, torchB: gj >= 0 ? { enabled: !!g.guards[gj].flashlight.enabled, pos: r3(g.guards[gj].flashlight.pos), dir: r3(g.guards[gj].flashlight.dir) } : null, cardsSetting: E.settings.torchBounceCards, playerPos: r3(g.player.char.pos), invisible: g.playerInvisible,
-      quality: window.__quality && window.__quality.current, auto: window.__quality && window.__quality.auto, settings: { renderScale: E.settings.renderScale, maxInternalHeight: E.settings.maxInternalHeight, taau: E.settings.taau, sharpDirect: E.settings.sharpDirect, sharpDecouple: E.settings.sharpDecouple, gbaa: E.settings.gbaa, restir: E.settings.restir, denoiser: E.settings.denoiser, heldRays: E.settings.heldRays, froxelVol: E.settings.froxelVol, debugView: E.settings.debugView } };
+      quality: window.__quality && window.__quality.current, auto: window.__quality && window.__quality.auto, settings: { renderScale: E.settings.renderScale, maxInternalHeight: E.settings.maxInternalHeight, taau: E.settings.taau, sharpDirect: E.settings.sharpDirect, sharpDecouple: E.settings.sharpDecouple, gbaa: E.settings.gbaa, heldRays: E.settings.heldRays, froxelVol: E.settings.froxelVol, debugView: E.settings.debugView } };
   }, [ST, o, SCALE]);
   if (info.err) throw new Error(info.err);
   const out = { name, url, info, shots: {} };
@@ -143,9 +143,9 @@ function diffs(jobs) { const r = spawnSync('python3', ['-c', PY], { input: JSON.
   const errors = [], R = {};
   if (has('--explore')) { await boot(port, 'explore', { explore: true, torch: true }, errors); }
   else {
-    const TABLE = { a: { q: '', torch: true, debug: true }, b: { q: '', torch: false, debug: true }, c: { q: 'nosharp', torch: true }, d: { q: 'legacydenoise', torch: true }, e: { q: 'norestir', torch: true },
-      bc: { q: 'nosharp', torch: false }, bd: { q: 'legacydenoise', torch: false }, be: { q: 'norestir', torch: false },   // (each switch's OWN torch-off reference: --variants …,bc,bd,be)
-      f: { q: '', torch: true, cards: false, debug: true }, n: { q: 'noleakfix', torch: true, debug: true }, cn: { q: 'nosharp&noleakfix', torch: true }, dn: { q: 'legacydenoise&noleakfix', torch: true },
+    const TABLE = { a: { q: '', torch: true, debug: true }, b: { q: '', torch: false, debug: true }, c: { q: 'nosharp', torch: true },
+      bc: { q: 'nosharp', torch: false },   // (each switch's OWN torch-off reference: --variants …,bc)
+      f: { q: '', torch: true, cards: false, debug: true }, n: { q: 'noleakfix', torch: true, debug: true }, cn: { q: 'nosharp&noleakfix', torch: true },
       moven: { q: 'noleakfix', torch: true, sweep: true, debug: true }, move: { q: '', torch: true, sweep: true, debug: true }, moveb: { q: '', torch: false, sweep: true, debug: true } };
     const want = has('--diff-only') ? [] : VARIANTS;
     for (const v of want) { if (!TABLE[v]) { log('unknown variant', v); continue; } try { R[v] = await boot(port, v, TABLE[v], errors); } catch (e) { log(v, 'FAILED', String(e && e.stack || e).slice(0, 600)); errors.push(`${v}: ${e}`); } }
@@ -153,7 +153,7 @@ function diffs(jobs) { const r = spawnSync('python3', ['-c', PY], { input: JSON.
     const jobs = [], f = (v, k = 'final') => { const x = path.join(OUT, `leak_${TAG}${v}${k === 'final' ? '' : '_' + k}.png`); return fs.existsSync(x) ? x : null; };
     const job = (name, a, b) => { if (a && b && pr) jobs.push({ name, a, b, out: path.join(OUT, `leak_${TAG}diff_${name}.png`), W: pr.W, H: pr.H, far: pr.far.inner, ctl: pr.ctl.inner }); };
     // every torch-on take against the torch-off reference of the SAME call sequence (b for the plain boots, moveb for the sweep boots, b<x> for a switch's own reference when it was taken)
-    for (const v of ['a', 'n', 'f', 'c', 'cn', 'd', 'dn', 'e']) { const own = { c: 'bc', cn: 'bc', d: 'bd', dn: 'bd', e: 'be' }[v]; const ref = own && f(own) ? own : f('b') ? 'b' : 'moveb'; job(`${v}_vs_${ref}`, f(v), f(ref)); for (const k of ['direct', 'indirect']) job(`${v}_${k}_vs_${ref}`, f(v, k), f(ref, k)); }
+    for (const v of ['a', 'n', 'f', 'c', 'cn']) { const own = { c: 'bc', cn: 'bc' }[v]; const ref = own && f(own) ? own : f('b') ? 'b' : 'moveb'; job(`${v}_vs_${ref}`, f(v), f(ref)); for (const k of ['direct', 'indirect']) job(`${v}_${k}_vs_${ref}`, f(v, k), f(ref, k)); }
     for (const v of ['move', 'moven']) for (const k of ['final', 'swept', 'swept6', 'direct']) job(`${v}_${k}_vs_moveb`, f(v, k), f('moveb', k));
     job('n_vs_a', f('n'), f('a')); job('moven_swept_vs_move', f('moven', 'swept'), f('move', 'swept')); job('noise_moveb_vs_b', f('moveb'), f('b'));
     const dres = diffs(jobs);

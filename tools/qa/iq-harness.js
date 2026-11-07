@@ -36,7 +36,8 @@
   const KEEP = ['renderScale', 'maxInternalHeight'];   // (a variant may set the scale explicitly; otherwise the tier's own)
   const VARIANTS = {
     main: {},                                                     // this tree's defaults = main @ 6551c66 + the port with sharp direct off
-    old: { taau: false, restir: false, denoiser: 'legacy', froxelVol: false, rtReflect: false, detail: 0, renderScale: 1.0 },   // THE OLD RENDERER (pre-v3 chain, native rows, FXAA)
+    // (SINCE 2026-11-07 `old` keeps ReSTIR and the shared denoiser: the old estimator and denoiser are gone, so it is no longer the pre-v3 chain)
+    old: { taau: false, froxelVol: false, rtReflect: false, detail: 0, renderScale: 1.0 },   // THE OLD RENDERER (pre-v3 chain, native rows, FXAA)
     sharp: { sharpDirect: true },                                 // B: decoupled resolution
     s085: { renderScale: 0.85 }, s09: { renderScale: 0.9 }, s10: { renderScale: 1.0 }, s077: { renderScale: 0.77 }, s067: { renderScale: 0.67 }, s07: { renderScale: 0.7 }, s06: { renderScale: 0.6 },   // A: resolution policy
     sharp085: { sharpDirect: true, renderScale: 0.85 }, sharp09: { sharpDirect: true, renderScale: 0.9 },
@@ -52,7 +53,7 @@
     c4: { gbaa: true }, c4s: { gbaa: true, sharpDirect: true },
     // D: ReSTIR dim-penumbra grain — the estimator's existing levers first
     d_r5: { restirRays: 5 }, d_r6: { restirRays: 6 }, d_m8: { restirHistory: 8 }, d_m30: { restirHistory: 30 }, d_spAll: { restirSpatialAll: true }, d_sp5: { restirSpatial: 5, restirSpatialAll: true },
-    d_noKD: { restirKnownDark: false }, d_aud1: { restirAudit: 1.0 }, d_gradOff: { restirGradient: false }, d_coh: { restirCoherent: true }, d_leader: { restir: false },
+    d_noKD: { restirKnownDark: false }, d_aud1: { restirAudit: 1.0 }, d_gradOff: { restirGradient: false }, d_coh: { restirCoherent: true },
     // E: motion identity off (= main's index rule) for the churn scene
     e_nomv: { motionIds: false },
     // the finalists (docs/internal/image-quality.md §3): C2 = the history de-blur; C3jh = sharp direct + GBAA + decoupled jitter + de-blur; c3u = GBAA + jitter off at scale 1.0 (ultra: no internal / output split to decouple)
@@ -71,9 +72,9 @@
     for (const k of Object.keys(S0)) { if (typeof S0[k] === 'object' && S0[k] !== null) continue; s[k] = S0[k]; }   // scalars back to the boot defaults (flags / arrays are never touched by a variant)
     for (const [k, val] of Object.entries({ ...v, ...extra })) { if (!(k in s)) throw new Error('unknown setting ' + k); s[k] = val; }
     if (window.__tj) window.__tj.rescale?.();
-    return { name: typeof name === 'string' ? name : 'custom', scale: s.renderScale, sharp: s.sharpDirect, taau: s.taau, restir: s.restir, dn: s.denoiser, froxel: s.froxelVol, gbaa: s.gbaa ?? null, phases: s.taauPhases };
+    return { name: typeof name === 'string' ? name : 'custom', scale: s.renderScale, sharp: s.sharpDirect, taau: s.taau, froxel: s.froxelVol, gbaa: s.gbaa ?? null, phases: s.taauPhases };
   }
-  function describe() { const s = S(); const e = E(); return { res: [e.width, e.height, e.outWidth, e.outHeight], q: window.__quality?.current, scale: s.renderScale, sharp: s.sharpDirect, sharpLive: e.sharpOn, taau: s.taau, phases: s.taauPhases, restir: s.restir, dn: s.denoiser, froxel: s.froxelVol, rt: s.rtReflect, gbaa: s.gbaa ?? null, motionIds: s.motionIds ?? null, motionA: s.taauMotionAlpha, sharpen: s.taauSharpen, sharpenMotion: s.taauSharpenMotion, restirRays: s.restirRays, errs: (window.__errs || []).slice(0, 3) }; }
+  function describe() { const s = S(); const e = E(); return { res: [e.width, e.height, e.outWidth, e.outHeight], q: window.__quality?.current, scale: s.renderScale, sharp: s.sharpDirect, sharpLive: e.sharpOn, taau: s.taau, phases: s.taauPhases, restir: s.restir, froxel: s.froxelVol, rt: s.rtReflect, gbaa: s.gbaa ?? null, motionIds: s.motionIds ?? null, motionA: s.taauMotionAlpha, sharpen: s.taauSharpen, sharpenMotion: s.taauSharpenMotion, restirRays: s.restirRays, errs: (window.__errs || []).slice(0, 3) }; }
 
   // ------------------------------------------------------------------ CRAWL: edge-following statistics through the orbit
   // World-space edges (a → b along the edge; found by projecting the level's boxes onto the sharp lane's hand-placed pixel edges — docs/internal/image-quality.md §1):
@@ -221,11 +222,11 @@
     return out;
   }
   async function ensureTj() { if (!window.__tj) { await import('/qa/tjank-scenes.js'); for (let i = 0; i < 100 && !window.__tj; i++) await yieldTask(); await window.__tj.boot(); } pinHidden(); window.__tj.rescale(); }
-  /** the tjank variant whose four switches (restir / denoiser / froxel / taau) match the CURRENT settings — tj's run() re-applies them by name, so a variant of ours with one of them off must run
+  /** the tjank variant whose two switches (froxel / taau) match the CURRENT settings — tj's run() re-applies them by name, so a variant of ours with one of them off must run
    *  under the matching tj name or it would be measured with the switch back on (every other setting persists through tj's run untouched) */
   function tjVariant() {
-    const s = S(); const key = `${s.restir ? 1 : 0}${s.denoiser === 'v3' ? 1 : 0}${s.froxelVol ? 1 : 0}${s.taau ? 1 : 0}`;
-    return ({ '1111': 'v3', '0111': 'noRestir', '1011': 'legacyDn', '1101': 'noFroxel', '1110': 'noTaau', '0001': 'taauOnly', '0000': 'allOff' })[key] ?? 'v3';
+    const s = S(); const key = `${s.froxelVol ? 1 : 0}${s.taau ? 1 : 0}`;
+    return ({ '11': 'v3', '01': 'noFroxel', '10': 'noTaau', '00': 'allOff' })[key] ?? 'v3';
   }
   /** the noise battery: still tiles on five views + tjank A (sq4) desk / rugN lit · dim grain + tjank D lamp-lit floor crawl — all under the CURRENT settings */
   async function noise(opts = {}) {
@@ -234,7 +235,7 @@
     for (const v of views) out.tiles[v] = await tileNoise(v, frames);
     if (tj) {
       await ensureTj(); const T = window.__tj;
-      const keep = { restir: S().restir, denoiser: S().denoiser, froxelVol: S().froxelVol, taau: S().taau, renderScale: S().renderScale };
+      const keep = { froxelVol: S().froxelVol, taau: S().taau, renderScale: S().renderScale };
       const tv = tjVariant();
       // the GRAIN at rest: scene A's tube held STEADY at its dim level (0.15) and at full — the sd within a level then is the estimator's own noise on the desk / rug / chair under it, with none of a
       // strobe's transition dynamics mixed in (dyn() runs the strobing patterns for the tracking numbers)
@@ -253,7 +254,7 @@
   /** the dynamic-light scenes (tjank A game pattern, B, C) under the current settings → the tracking numbers the tjank doc tabulates */
   async function dyn(opts = {}) {
     await ensureTj(); const T = window.__tj; const out = { desc: describe() };
-    const keep = { restir: S().restir, denoiser: S().denoiser, froxelVol: S().froxelVol, taau: S().taau, renderScale: S().renderScale };
+    const keep = { froxelVol: S().froxelVol, taau: S().taau, renderScale: S().renderScale };
     const tv = tjVariant();
     const A = await T.run('A', tv, { shots: false, pattern: 'game', as: 'iq' });
     const lv = (t, key) => t?.byLevel?.[key] ?? {};

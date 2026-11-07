@@ -125,7 +125,7 @@ row on his machine is the answer, and the word puts the count back on any machin
 <!-- was CLAUDE.md lines 2403–2406 -->
 - **Markings = object legibility** — palette-indexed bitmaps on box faces, packed in the tail of `boxMat` (no texture); `settings.markings` default ON, `?nomarkings` (+ `?level=relief` = main's frame), `__mark`; emissive markings are LIGHTS; the art rules (flat colour per cell, ≤ 3 entries, no gradients, no baked lighting) — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
 - **Materials, RT reflections, the detail layer** (renderer v3 phase 4) — every box carries a finish (`Box.rough / metal / aniso`), `reflect.wgsl` traces under `settings.rtReflect` (`?nortreflect`, `frame.rtCfg.w` 0 = off), the detail layer under `settings.detail` (`?detail=0‥1`; art rule: variation from geometry, never a painted texture); `__rt`, `__hotReflect` — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
-- **The ultra-only extras** (renderer v3 phase 5) — `settings.giResample` / `rtMeshHits` / `rtHitReuse`, only the ultra preset raises them, `?nop5` vetoes; `__gi`, `__hotGather`; TRAP kept here: `reflect_p5.wgsl` is a separate program from `reflect.wgsl` on purpose (main's text) — keep the two files in step — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
+- **The ultra-only extras** (renderer v3 phase 5) — `settings.rtMeshHits` / `rtHitReuse` (the third, `giResample`, and the `__gi` hook went 2026-11-07), only the ultra preset raises them, `?nop5` vetoes; `__hotGather`; TRAP kept here: `reflect_p5.wgsl` is a separate program from `reflect.wgsl` on purpose (main's text) — keep the two files in step — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
 - **Character proxies = the SDF character rig** — every mannequin's 15 shadow / reflection proxies are round cones fitted at load (`render/sdfrig.ts`, `shaders/sdfrig.wgsl`), no switch; extras in `frame.rigCfg` (`settings.charSelfShadow` default ON, `?noselfshadow`; `?sdfsmooth` / `?charsoft` / `?charsoftmarch` experiments); `__sdfrig`, `__rigTrace` — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
 
 <!-- was CLAUDE.md lines 2658–2728 -->
@@ -137,9 +137,9 @@ row on his machine is the answer, and the word puts the count back on any machin
   don't bring it back. The `Cutaway` box flag + `cutHeight` primitive survives only for the viewer stage's back wall.
   Debug/sandbox actions are debugger (tweak panel) buttons, not hotkeys.
 - **Quality**: `ui/quality.ts` presets (ultra / high / medium / low / verylow) set resolution scale + internal-height cap, beam steps,
-  cache grid, smoke iterations, the direct-light ray budget (8/4/3 · 8/4/3 · 6/3/3 · 4/2/2 · 1/1/2), `directHistory` (0.5; high and verylow 0.7)
-  AND the lossy trade-offs below (ultra none · high checker + third-res gather + dimRays · medium/low/verylow those + quarter-res beams, with
-  staggered cascade refresh `rcPeriods` in place of `rcHalfRate`; low/verylow with `dimRaysBelow` 0.02) AND the final gather's relative firefly bound `settings.giFireflyK` (4 on high‥verylow; 0 = off on ultra:
+  cache grid, smoke iterations, the estimator's rays per pixel (`Preset.restir`)
+  AND the lossy trade-offs below (ultra none · high third-res gather · medium/low/verylow that + quarter-res beams, with
+  staggered cascade refresh `rcPeriods` in place of `rcHalfRate`) AND the final gather's relative firefly bound `settings.giFireflyK` (4 on high‥verylow; 0 = off on ultra:
   the bound is a one-sided clamp — it cut the boil round a torch on a wall by ~40 % but costs up to a quarter of the bounce within ~0.6 m
   of an intense hotspot — so the reference preset runs without it; Tab ▸ Indirect light slider for A/B) — applying a preset writes those
   settings exactly as the menu rows do; a row flipped by hand sticks until the next preset change. `auto` first CALIBRATES behind the start card (a couple of seconds of GPU compute-pass timings → a per-pass
@@ -396,14 +396,12 @@ row on his machine is the answer, and the word puts the count back on any machin
   → `__stress.setup()` / `.record(n)` / `.ab(applyA, applyB)` / `.caps(on)` / `.table(r)`, serialized frames, orbiting camera) and `__hotVol(src?)` (recompile
   volumetrics.wgsl from disk — the dev server serves src/render/shaders under /qa/shader/ — and swap the pipeline in without rebooting a staged scene).
 - **Froxel volumetrics** (renderer v3 Phase 2b) — `settings.froxelVol` per tier (`quality.ts Caps.vol`: ultra / high 'classic', medium and below 'froxel'), `?nofroxel` / `?froxel` force either; `settings.smokeMarchLights`; `__froxel`, `__hotFroxel` — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
-- **Lossy options** (engine settings, default OFF in `defaultSettings`, switched ON by the presets as above; pause menu *Graphics —
-  trade-offs* + `LOSSY:` rows in the Tab panel for A/B): `settings.checkerDirect` (frame flag 65536: shadow rays on a checkerboard
-  half per frame, direct.wgsl), `gatherThird` / `volQuarter` (gather at 1/3, volumetrics at 1/4 res: `passes.setDivisors`, divisors
-  in `frame.lossyCfg.xy`), `rcHalfRate` (`rc.halfRate`: uppers even frames, c0 + bake odd), `dimRays` + `dimRaysBelow`
-  (`frame.lossyCfg.z`: one emitter sample per leader under that unshadowed luminance). `engine.render` mirrors the booleans every
+- **Lossy options** (engine settings, default OFF in `defaultSettings`, switched ON by the presets as above; `LOSSY:` rows in the
+  Tab panel for A/B; `checkerDirect` and `dimRays`, which only the old estimator read, went with it 2026-11-07): `gatherThird` / `volQuarter` (gather at 1/3, volumetrics at 1/4 res: `passes.setDivisors`, divisors
+  in `frame.lossyCfg.xy`), `rcHalfRate` (`rc.halfRate`: uppers even frames, c0 + bake odd). `engine.render` mirrors the booleans every
   frame, so they are the single source of truth. Off must stay the untouched path — A/B them one at a time (pin `?quality=ultra` AND set `settings.volLightCap = 0`
   — every preset, ultra included, carries the Phase 0 volumetric cap; `__stress.caps(false)` puts both caps back to the untouched paths).
-- **ReSTIR DI = the direct-light estimator** (renderer v3 phase 2a) — `settings.restir` default ON, `?norestir` = direct.wgsl's leader / tail path; the hybrid held-light path `settings.heldRays`; the motion twin `settings.restirMotion`, `?norestirmotion`; `__hotRestir` / `__hotDirect`, debug views 11 / 12 — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
+- **ReSTIR DI = the direct-light estimator** (renderer v3 phase 2a) — the only one since 2026-11-07 (`settings.restir`, `?norestir` and direct.wgsl's leader / tail path went); the hybrid held-light path `settings.heldRays`; the motion twin `settings.restirMotion`, `?norestirmotion`; `__hotRestir`, debug views 11 / 12 — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
 - **TAAU** (renderer v3 phase 1) — `settings.taau` default ON, `?notaau` = the old chain; `__taa`; RULE kept here: `frame.viewProj / invViewProj / prevViewProj` ARE the jittered matrices — never build a screen ray from `cam.*` on the GPU side — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
 - **Sharp direct** (decoupled resolution) — `settings.sharpDirect`, switched on per tier by `quality.ts Preset.iq`, `?sharp` / `?nosharp` force it; live only under TAAU below scale 1.0; `__sharp` — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
 - **The resolve configuration per tier** (image-quality program) — `quality.ts IqTier` on `Preset.iq` (sharp direct + decoupled jitter + GBAA + history de-blur), `?noiq` = the resolve as it was, `?gbaa`, `?nomv` (`settings.motionIds`); harness `__iq` — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
@@ -422,7 +420,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   `lighting_common diceIrradianceFrom(Ph, n, P0, N0)` — one probe spacing off the hit face like any dice read, but never past the plane of the surface the ray LEFT (P0, N0), and no trilinear
   neighbour from behind that plane (they collapse to the home cell) — the fix for indirect light 'leaking' behind the manager's shelves (the cartons' backs 12 cm off the wall read the lit
   storage room next door: 26–50 → 5); a new bounce read at a hit takes the receiver's plane the same way, never the bare `diceIrradiance(Ph + n·1 m)`.
-- **The denoiser** (renderer v3 phase 3) — `settings.denoiser` `'v3'` default | `'legacy'`, `?legacydenoise`; one core (`render/shaders/denoise.wgsl`), three clients (shadow / diffuse / specular); `__dn`, `__hotDenoise`, debug view 13 — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
+- **The denoiser** (renderer v3 phase 3) — the only one since 2026-11-07 (`settings.denoiser`, `?legacydenoise` and the three old chains went); one core (`render/shaders/denoise.wgsl`), three clients (shadow / diffuse / specular); `__dn`, `__hotDenoise`, debug view 13 — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
 
 <!-- was CLAUDE.md lines 2979–3015 -->
 - **Smoke = one pool of bricks** (THE smoke solver since 2026-10-10, no switch; the maintainer on the eight 64³ boxes it replaced: "let's just remove the box smoke if this is the way we want to do it" · "we can always revive from
@@ -775,6 +773,43 @@ row on his machine is the answer, and the word puts the count back on any machin
   fallback frames themselves (a `?nogatherstrata` / `?norestir` / `?norefract` visit, ultra's phase-5 pair, a froxel tier, scale 1 — for the seconds before their twin is in).
   Left: vol's two smoke marches (the classic and the froxel-lit one are one march apart from their light — ~1.2 s of each program), the rain splash's second `rainLight`,
   restir's two `traceSample`s across its barriers, and the page script's own ~0.7 s.
+- **THE TEN BIG KERNELS HAVE ONE WRITING AND THE GATHER IS ITS TWO PROGRAMS (2026-11-07; the maintainer on the shaders: "let's do it", of cleaning up what the
+  survey found; his rule: "single path when possible").** Compact shaders and Separate shadow rays were Shaders rows from 2026-10-26, on in every browser since
+  2026-10-27 ("Everywhere"), and `render/kernels.ts` said the second copy "goes (one set or the other) when the default is decided". It went: `shaders/compact/` is
+  moved up over the ten files it copied (fgather, gather_common, reflect_p5, volumetrics, composite, particles, direct, sharp_direct, restir, sdfrig),
+  `render/kernels.ts` is gone, and `ui/shaderrows.ts` has ONE row left, Start on first frame shaders. **No switch and no word:** `?compactshaders`, `?splitrays`,
+  `TPS_COMPACTSHADERS`, `TPS_SPLITRAYS` and a choice kept under either key do nothing (a kept line loses the two entries the next time a row is moved; a report
+  made before today still names the rows: `shaderRowLabel`). **The harness now compiles what the page compiles**: it had every row off and so sized, trimmed and
+  folded the writing no player ran. **The gather**: `shaders/fgather.wgsl` is the gather's helpers, constants and bindings and has no entry point (843 lines to
+  190: `main`, `mainGi`, the resampling gather's helpers, the young-history rays, and glossReflection / glassShade, which `gather_split.wgsl` writes as
+  glossReflectionX / glassShadeX); `render/gatherSplit.ts` builds `trace` and `light` from it. Ultra's resampling gather was never built beside the two programs
+  (the maintainer, 10-27: "we pretty much have no one using ultra, so i think it's fine?"); its plumbing went the same day: the reservoir textures and
+  their layouts, `setGi`, the young-rays counter and its hold, settings `giResample*` and `giYoungRays / giYoungCap / giYoungLen`, their debugger rows, the `__gi`
+  hook, `P5Tier.gi / giRays` and `Dn.giYoungK`. Frame words `giCfg` (four) and `p5Cfg.x, .y` are FREE: still in the layout, read by no shader. The same module
+  hashes held after it. **THE OLD DENOISER WENT TOO** (same day): dtemporal + softblur, temporal + giblur and the gloss chain, thirteen pipelines and four modules of every
+  boot that ran only under `?legacydenoise`; with them `settings.denoiser`, the debugger's core switch, `__dn.mode`, `directPasses`, the depth history only
+  dtemporal read, `softtile.wgsl markTiles` (the denoiser's pack writes the tile flags) and the adaptive-history trial (`giAdaptiveHistory`, it lived in
+  temporal.wgsl). The tile mask's thresholds come from the shadow client's own strides (`allSkipT`, the same 2, 3, 5). 41 module hashes held, the three tile
+  mask modules lost an entry point. **AND THE OLD DIRECT ESTIMATOR** (same day): `direct.wgsl`, `settings.restir`, `?norestir`, `__hotDirect`, and everything
+  only it read: `directSamplesTop / Other`, `directAdaptiveMin`, `checkerDirect`, `dimRays / dimRaysBelow`, `directSeedHold`, the tail's chroma flag, the presets'
+  `ds` rows and the cost model's leader / tail branch, `LightSet.dirMasks` (the directional masks always ride now). Frame flags Restir, TailChroma, CheckerDirect
+  and DirectSeedHold are gone, so `sharp_direct.wgsl` says `let hiR = 4.0` where it read two of them (the ONLY shader text this changed: sharpU and sharpUE;
+  41 other hashes held) and the denoiser's ratio clamp is 4 always. Frame words `directCfg.x, .y`, `rcJitter.z` and `lossyCfg.z` are FREE; `directCfg.w` is
+  still written and read by nobody. `settings.directHistory` is a switch now (above 0 = the shadow client's history on), not a weight. The debugger lost
+  24 rows: `panel-inventory.ts --gone --only labels.json` takes deleted rows out of its fixture (and `--reword --only` rewords named ones) without touching
+  another lane's missing rows. **ONE KERNEL IS STILL IN TWO WRITINGS**: `shaders/gather_split_common.wgsl` (the gather's: directAtPoint as `light` calls it) beside
+  `shaders/gather_common.wgsl` (the reflection passes': one call site a heavy function). Making them one changes the gather's text, so it waits for a same-frame
+  comparison. **What was measured**: `tools/qa/shaderinline-check.ts --json` before the change with the two rows' words in front and after it with none, on the
+  title, a snow level and the look's page: all 66, 66 and 67 module texts the boot hands the browser are the same by their hashes, in both sets, and the same
+  127, 129 and 130 kernels are asked for at the same sizes. So the page as it opens compiles character for character what it did. **What changed for a
+  tool**: `shaderinline-check` has one budget table; `shaderrows-check` has two arms (off, first) and its store cases are the one row's (its stand-in device
+  now has room for the gather's points buffer); `splitrays-check` holds who reaches the light loop, the buffer's layout, the refusal's report and what a load
+  compiles (`SPLITRAYS_BREAK=1` writes a second call site of the light loop into `light`); `wgsl-compile.cjs` dumps each setting once; `splitrays-twin.cjs` and `fixtures/compact-kernels.json` are gone; the checks that held a rule "in both writings" (highlights, huesplit, reflup,
+  rolled, sunglint, sharpcap, snowglow, wallsides, lookexpo, lookveil, plainair, portal, bouncewalls) read the one, and three of them count the gather's sites
+  in `trace` (bouncewalls: one walled read, its mirror rays keep the old one; portal: one `skyThrough`). Every one passes and its break word bites.
+  **Credit: Stephen Jayakar, from his pull request 1**, which wrote the ten kernels this way in place. **Never seen on a GPU.** Nobody has drawn a frame of
+  this tree on a card: that the picture is the one of the build before rests on the texts being equal, and on a software-adapter boot. A load with the old
+  words at 0 (the plain kernels, the one-kernel gather) no longer exists to compare against.
 - **START ON FIRST FRAME SHADERS STARTS ON IN EVERY BROWSER A PERSON SITS AT (2026-10-27, the third row that starts on, `on: 'person'`; the maintainer:
   "should we do background compiles on all platforms? i'd generally prefer to have a single path when possible", and "i think we shouldn't do truly lazy
   compilation where then have stutters during gameplay").** (10-28: a mission's brief no longer goes live on that card's terms. Its Start waits for the
@@ -804,7 +839,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   seconds draws whole for longer; (b) a debug view or TAAU off while no fragment composite is in draws black until one lands (no preset and no Options row
   does either); (c) what a page tool draws is no longer the first seconds a player sees: only `shaderrows-page.cjs` looks at those; (d) a later pipeline that
   fails is one error record (the console's line) and its pass keeps the stand-in for the visit, counted nowhere in `__boot.pipelines`.
-- **TWO SHADERS ROWS START ON IN EVERY BROWSER (2026-10-27; `src/ui/shaderrows.ts`, a row's `on: true`): Compact shaders and Separate shadow rays.** The
+- **(SINCE 2026-11-07 NEITHER IS A ROW: the bullet 'THE TEN BIG KERNELS HAVE ONE WRITING' above. What follows is the record of when they were.) TWO SHADERS ROWS START ON IN EVERY BROWSER (2026-10-27; `src/ui/shaderrows.ts`, a row's `on: true`): Compact shaders and Separate shadow rays.** The
   maintainer's pick, asked whether to turn them on in a Windows browser only, everywhere, or not yet ("we pretty much have no one using ultra, so i think it's
   fine?" of Ultra losing its resampling gather under the split, below). **Off:** `?compactshaders=0&splitrays=0` on the address = a load as it was (the address
   for a PLAIN load to set a wait against; with the bullet above, `&firstframe=0` too), or either row turned off in Options > Graphics > Shaders, which is KEPT off (the kept line holds a row only while it
@@ -827,7 +862,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   browser with no storage shows a row turned off as still on. **Checks:** `shaderrows-check.ts` (cases `starts`, `offkept`, `plain` beside the harness's; `SHADERROWS_BREAK=1` fails `starts` and `offkept`, and `plain`, a load with both words at 0, reads the same under it),
   `splitrays-check.ts` (the refusal's line, and the size tool with both rows on), on the page `shaderrows-page.cjs` (walk `starts`). The ten kernels still exist twice: taking today's writing out
   is the next step, not done here.
-- **Shader rows on trial: Compact shaders and Start on first frame shaders (2026-10-26; Options > Graphics > Shaders, `src/ui/shaderrows.ts`).** The two levers of the
+- **(SINCE 2026-11-07 Compact shaders is not a row and its writing is the only one: the bullet 'THE TEN BIG KERNELS HAVE ONE WRITING' above.) Shader rows on trial: Compact shaders and Start on first frame shaders (2026-10-26; Options > Graphics > Shaders, `src/ui/shaderrows.ts`).** The two levers of the
   bullet above, each a row that was OFF by default when this was written (Compact shaders has started on in a browser since 2026-10-27: the bullet above) and is the NEXT load's (read once, when its module is imported: the pipelines are made before a menu can open). Kept
   under `twopointsix.shaderrows`; a URL word wins for the visit and is never written; a row is listed only in a build whose code reads it (`useShaderRow`). Switches of
   the page, not rules of the game: no knob, no `FROZEN_HOLDS` row, off on BOTH stands; the harness's words are `TPS_COMPACTSHADERS=1` / `TPS_FIRSTFRAME=1` in front of
@@ -891,7 +926,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   is the one path: the later set compiled behind the start (the first-frame row above), the cut set built in the background after the boot (`cutSwap.start()`), and
   the ladder's hold while a later program compiles (`ui/quality.ts STANDS_IN`, at most 30 s in one wait; `quality-plan` case D1, `LADDERHOLD_BREAK=1`). **Checked:**
   `shaderrows-check.ts --dump` on the off, compact, first, both and all-three arms is line for line that of the tree before. Nothing of it was run on a page.
-- **Separate shadow rays (a Shaders row, 2026-10-26; OFF on both stands of the harness and, since 2026-10-27, ON in every browser, the bullet above; the next load's; `?splitrays=1`, `TPS_SPLITRAYS=1` in front of a headless
+- **(SINCE 2026-11-07 this is the only gather and no row: the bullet 'THE TEN BIG KERNELS HAVE ONE WRITING' above.) Separate shadow rays (a Shaders row, 2026-10-26; OFF on both stands of the harness and, since 2026-10-27, ON in every browser, the bullet above; the next load's; `?splitrays=1`, `TPS_SPLITRAYS=1` in front of a headless
   tool; `render/gatherSplit.ts`, `shaders/gather_split.wgsl`).** A trial for the Windows shader wait: the final gather stops being one megakernel. Today
   `fgather.wgsl`'s `main` lights every point its rays land on inside itself, so `directAtPoint` (the light loop and its three shadow rays, 123 KB a copy as DXC
   pastes it) is written at four places and `main` is 780 KB out of a 92 KB module. With the row on the same frame is two programs made from the same helpers:

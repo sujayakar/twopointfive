@@ -7,7 +7,7 @@
 //       drawn frames (each waited for), read back at two checkpoints (`--frames a,b`: after drawn frame a and after drawn frame b). Writes, per checkpoint,
 //       <view>-a.png / .rgba (w·h·4 bytes, alpha 255) / .json { sha256 of the rgba, w, h, boot pipelines, errors, env, facts } and <outDir>/index.json.
 //       Exit 0 = every view captured with no console / page error and every view's subject proven on screen (json.unmet empty); 1 = not; 2 = the driver died.
-//       --with 'compactshaders=1' = those words on every view's address too: ONE build drawn with a switch of the page off and on (two captures, one server), where
+//       --with 'shaderfold=0' = those words on every view's address too: ONE build drawn with a switch of the page off and on (two captures, one server), where
 //       the switch is read from the address and not from the tree.
 //   node tools/qa/draw-equal.cjs compare <dirA> <dirB> [--diff <dir>]
 //       per capture: EQUAL, or the number of differing pixels + the largest channel delta + their bounding box (from the .rgba files; --diff writes an amplified
@@ -121,8 +121,8 @@ const ENV = () => {
   const E = window.__engine, lim = E.device.limits, s = E.settings, pick = {};
   for (const k of ['maxStorageBuffersPerShaderStage', 'maxStorageTexturesPerShaderStage', 'maxSampledTexturesPerShaderStage', 'maxBindingsPerBindGroup', 'maxTextureDimension2D', 'maxComputeInvocationsPerWorkgroup']) pick[k] = lim[k];
   return { adapter: E.gpu && E.gpu.adapterInfo, limits: pick, features: [...E.device.features], meshShadowsAvailable: E.meshShadowsAvailable, meshShadowsOn: !!E.meshShadowsOn, sharpOn: !!E.sharpOn, particlesOn: !!E.particlesOn, glassFracture: E.glassFracture, timer: !!(E.timer && E.timer.enabled),
-    settings: { renderScale: s.renderScale, maxInternalHeight: s.maxInternalHeight, restir: s.restir, restirRays: s.restirRays, heldRays: s.heldRays, taau: s.taau, sharpDirect: s.sharpDirect, gbaa: s.gbaa, froxelVol: s.froxelVol, volumetrics: s.volumetrics, rtReflect: s.rtReflect, rtReflectDiv: s.rtReflectDiv, meshShadows: s.meshShadows, meshShadowsNear: s.meshShadowsNear,
-      gatherThird: s.gatherThird, volQuarter: s.volQuarter, checkerDirect: s.checkerDirect, giResample: s.giResample, gatherStrata: s.gatherStrata, denoiser: s.denoiser, gpuParticles: s.gpuParticles, particleRain: s.particleRain, decals: s.decals, glass: s.glass, glassRefract: s.glassRefract, markings: s.markings, charMats: s.charMats, wetChars: s.wetChars, charSelfShadow: s.charSelfShadow, debugView: s.debugView },
+    settings: { renderScale: s.renderScale, maxInternalHeight: s.maxInternalHeight, restirRays: s.restirRays, heldRays: s.heldRays, taau: s.taau, sharpDirect: s.sharpDirect, gbaa: s.gbaa, froxelVol: s.froxelVol, volumetrics: s.volumetrics, rtReflect: s.rtReflect, rtReflectDiv: s.rtReflectDiv, meshShadows: s.meshShadows, meshShadowsNear: s.meshShadowsNear,
+      gatherThird: s.gatherThird, volQuarter: s.volQuarter, gatherStrata: s.gatherStrata, gpuParticles: s.gpuParticles, particleRain: s.particleRain, decals: s.decals, glass: s.glass, glassRefract: s.glassRefract, markings: s.markings, charMats: s.charMats, wetChars: s.wetChars, charSelfShadow: s.charSelfShadow, debugView: s.debugView },
     quality: window.__quality ? { current: window.__quality.current, label: window.__quality.label, adaptive: window.__quality.adaptive } : null, ua: navigator.userAgent };
 };
 
@@ -292,7 +292,7 @@ async function captureView(name, opt, outDir) {
     R.pipelines = ready.pipelines; R.seconds.boot = +((Date.now() - t0) / 1000).toFixed(0); if (ready.fatal) R.errors.push('fatal: ' + ready.fatal);
     R.prep = await page.evaluate(PREP, opt.seed);
     log(name, `ready in ${R.seconds.boot} s`, JSON.stringify(ready.pipelines));
-    if (process.env.DRAW_EQUAL_AFTER_READY) {   // a step of the caller's own on the booted page, before anything is staged: a module { fn, arg } run as page.evaluate(fn, arg); a result with ok === false is an error of the view (tools/qa/splitrays-twin.cjs)
+    if (process.env.DRAW_EQUAL_AFTER_READY) {   // a step of the caller's own on the booted page, before anything is staged: a module { fn, arg } run as page.evaluate(fn, arg); a result with ok === false is an error of the view (a twin text swapped in through a dev hook, say)
       const M = require(path.resolve(process.env.DRAW_EQUAL_AFTER_READY)); R.afterReady = await page.evaluate(M.fn, M.arg);
       if (R.afterReady && R.afterReady.ok === false) R.errors.push('after-ready: ' + JSON.stringify(R.afterReady).slice(0, 600));
       log(name, 'after-ready', String(JSON.stringify(R.afterReady)).slice(0, 200));

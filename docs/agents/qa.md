@@ -460,9 +460,9 @@ plus a clean typecheck — the harness cannot see rendering, the light meter, sm
 
 ## Driving the app headlessly (Browser pane / any automation)
 
-`src/main.ts` exposes hooks on `window`: `__game __engine __cam __demo __input __smoke __menu __audio __quality __marks __particles __weather __findme __glass __wet __froxel __rt __gi __mark __save __sharp __civ __sdfrig __wind __qrf __needs __destr __taa __dn __attract __stage __meshTrace __boot __ready __perfrec __journal __replay __prewarm __anim __killGuard __readout`
+`src/main.ts` exposes hooks on `window`: `__game __engine __cam __demo __input __smoke __menu __audio __quality __marks __particles __weather __findme __glass __wet __froxel __rt __mark __save __sharp __civ __sdfrig __wind __qrf __needs __destr __taa __dn __attract __stage __meshTrace __boot __ready __perfrec __journal __replay __prewarm __anim __killGuard __readout`
 (+ since the rebuild, the squad game's: `__orders __roomclear __nightbreach __rescue __scenarios __picks __doortools __doors __doorblast __fight __wallcharge __glassbreak __director __pair __wounds __hour __fow __extra`)
-(+ the hot-swap hooks `__hotVol __hotDirect __hotRestir __hotFroxel __hotDenoise __hotReflect __hotGather`: recompile a pass from source WITH its real preludes — prefer them to `__wgsl` for the big kernels;
+(+ the hot-swap hooks `__hotVol __hotRestir __hotFroxel __hotDenoise __hotReflect __hotGather`: recompile a pass from source WITH its real preludes — prefer them to `__wgsl` for the big kernels;
 `__hotCommon(src?, variant?)` swaps an edited common.wgsl / `TRACE_VARIANT` into EVERY tracing pipeline at once — the ray-traversal lab's hook, see the *Stratified gather directions + the trace lab* bullet)
 (+ URL flags `?sharp` / `?nosharp` / `?noiq` / `?gbaa` / `?nomv` from the image-quality program, `?sdfsmooth` / `?charsoft` / `?charsoftmarch` + `__rigTrace(rays)` from the SDF character rig),
 `__runFrames(n, dt=1/60, keys=[], draw=true)` (fixed-step frames with synthetic keys held; `draw` false = only the burst's last step is drawn, the others pack the world as a draw would and go on — what a script on the software adapter wants, and NOT a check of the drawn-every-step path: the GPU's senses then answer once a burst), `__mouse(x, y, buttons?)`,
@@ -1191,7 +1191,7 @@ but synthetic writes still work.
   `tools/qa/plainair-check.ts` (the Engine built on a stand-in device as any load and in plain air: one plain module, no text of the real march, no twin asked for,
   every other program as ever; the plain module AS CUT declares no walking function and is a third of the real one or less; the numbers it copies from the real march
   are still the real march's, and on any load the weight of a lamp's glow through smoke (the look's row, `Engine.smokeDraw.ahead`) reaches the frame at 0 with
-  only its two writers naming it, so the real march's cut is the plain one's; `TPS_COMPACTSHADERS=1` in front for the page's writing; `PLAINAIR_BREAK=1` fails five
+  only its two writers naming it, so the real march's cut is the plain one's; (since 2026-11-07 the march has one writing and no word is needed: `PLAINAIR_BREAK=1` fails seven) `TPS_COMPACTSHADERS=1` in front for the page's writing; `PLAINAIR_BREAK=1` fails five
   lines, seven with the compact set); and
   `tools/qa/plainair-page.cjs` on the real page (headless Chromium, software adapter, `?plainair=1`: every program made, 117 where the page makes 118; the browser is
   handed `volumetricsPlain` and no text of the real march, no twin is asked for, the warning is printed, a canister's plume shows in the picture and in the volumetric
@@ -1272,7 +1272,7 @@ but synthetic writes still work.
   word, 0 with it. Making it the default is open: 84 files of `tools/qa` lean on this commander, and every table before it was made with the walker.
 - **Every shader text compiled in twenty seconds: `node tools/qa/wgsl-compile.cjs`** (11-01; `tools/qa/wgsl-dump.ts` writes the texts). The Engine and the smoke
   solver are built on a stand-in device that records every module's text, as a plain boot makes them and again as the look page builds them (its prelude consts
-  up), in TWO runs: bare, and with every shader row's word in the environment (`TPS_COMPACTSHADERS=1` and the rest: the rows are read once at import, and a first
+  up), in TWO runs: bare, and with every shader row's word in the environment (since 2026-11-07 that is `TPS_FIRSTFRAME=1` alone; before, `TPS_COMPACTSHADERS=1` and the rest: the rows are read once at import, and a first
   writing that flipped the row after the import compiled none of the compact writings and said nothing). Each distinct text (68 today) goes to headless
   Chromium's `createShaderModule` and its errors are printed with the line. Parse and type errors only: it makes no pipeline and draws nothing, so it does not replace a page boot (see the first-frame bullet in `render.md`).
   `WGSL_BREAK=1` adds a function that names nothing declared and must fail.
