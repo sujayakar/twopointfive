@@ -690,6 +690,32 @@ pub fn restore(root: &Path, state: &Path, diag: Option<&str>, taint: bool) -> Re
         }
     }
     let mut soft_back: BTreeSet<String> = BTreeSet::new();
+    // each file's own macros: (name, its lines), for a softened place inside one
+    let mut macros_of: Vec<Vec<(String, (usize, usize))>> = Vec::new();
+    for (fi, (_, _, src)) in files.iter().enumerate() {
+        fn walk(items: &[syn::Item], src: &str, out: &mut Vec<(String, (usize, usize))>) {
+            for it in items {
+                match it {
+                    syn::Item::Macro(m) => {
+                        if let Some(id) = &m.ident {
+                            let r = it.span().byte_range();
+                            out.push((id.to_string(), (line_of(src, r.start), line_of(src, r.end))));
+                        }
+                    }
+                    syn::Item::Mod(m) => {
+                        if let Some((_, inner)) = &m.content {
+                            walk(inner, src, out);
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+        let mut v = Vec::new();
+        walk(&parsed[fi].items, src, &mut v);
+        macros_of.push(v);
+    }
+    let src_lines: Vec<Vec<&str>> = files.iter().map(|f| f.2.lines().collect()).collect();
     // every function, by file
     let all: Vec<Vec<FnAt>> = files.iter().zip(parsed.iter()).map(|((_, _, src), f)| fns_of(src, f)).collect();
     let rel_ix: HashMap<&str, usize> = files.iter().enumerate().map(|(i, (_, rel, _))| (rel.as_str(), i)).collect();
@@ -752,10 +778,27 @@ pub fn restore(root: &Path, state: &Path, diag: Option<&str>, taint: bool) -> Re
                     }
                 }
                 for k in at.iter().filter_map(|k| soft_at.get(k)).flatten() {
-                    if !soft_back.contains(k) {
-                        soft_back.insert(k.clone());
-                    }
+                    soft_back.insert(k.clone());
                     placed = true;
+                }
+                // a macro of the file called on one of those lines (`let st = stand!(g, gd);` and then `st.to = …`): the softened
+                // places inside that macro
+                if !placed {
+                    for &(fj, l) in &at {
+                        let text = src_lines[fj].get(l.wrapping_sub(1)).copied().unwrap_or("");
+                        for (name, (a, b)) in &macros_of[fj] {
+                            if text.contains(&format!("{name}!")) {
+                                for ml in *a..=*b {
+                                    if let Some(ks) = soft_at.get(&(fj, ml)) {
+                                        for k in ks {
+                                            soft_back.insert(k.clone());
+                                            placed = true;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
                 if placed {
                     continue;
@@ -778,6 +821,22 @@ pub fn restore(root: &Path, state: &Path, diag: Option<&str>, taint: bool) -> Re
                                 for k in ks {
                                     soft_back.insert(k.clone());
                                     any = true;
+                                }
+                            }
+                        }
+                        // none in the function: then in a macro of the file it calls
+                        if !any {
+                            let body = src_lines[fi][f.lines.0 - 1..f.lines.1.min(src_lines[fi].len())].join("\n");
+                            for (name, (a, b)) in &macros_of[fi] {
+                                if body.contains(&format!("{name}!")) {
+                                    for ml in *a..=*b {
+                                        if let Some(ks) = soft_at.get(&(fi, ml)) {
+                                            for k in ks {
+                                                soft_back.insert(k.clone());
+                                                any = true;
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -823,6 +882,37 @@ pub fn restore(root: &Path, state: &Path, diag: Option<&str>, taint: bool) -> Re
                         for p in demoted_params(fj, f, &demoted, &BTreeSet::new()) {
                             back.insert(key(sf, &f.name, f.ord, &p));
                             placed = true;
+                        }
+                    }
+                }
+            }
+            // a function handed on as a value, named whole in a note: "found fn item `… {control::runner::transition}`"
+            {
+                let mut texts: Vec<&str> = vec![msg];
+                if let Some(c) = v["message"]["children"].as_array() {
+                    texts.extend(c.iter().filter_map(|c| c["message"].as_str()));
+                }
+                for t in texts {
+                    let mut rest = t;
+                    while let Some(i) = rest.find('{') {
+                        let Some(j) = rest[i..].find('}') else { break };
+                        let path: Vec<&str> = rest[i + 1..i + j].split("::").collect();
+                        rest = &rest[i + j + 1..];
+                        if path.len() < 2 || !path.iter().all(|p| !p.is_empty() && p.chars().all(|c| c.is_alphanumeric() || c == '_')) {
+                            continue;
+                        }
+                        let (name, q) = (path[path.len() - 1], path[path.len() - 2]);
+                        if let Some(list) = by_name.get(name) {
+                            for &(fj, k) in list {
+                                let rel = &files[fj].1;
+                                let stem = Path::new(rel).file_stem().and_then(|n| n.to_str()).unwrap_or("");
+                                if stem == q || module_of(rel) == q {
+                                    for p in demoted_params(fj, &all[fj][k], &demoted, &BTreeSet::new()) {
+                                        back.insert(key(rel, &all[fj][k].name, all[fj][k].ord, &p));
+                                        placed = true;
+                                    }
+                                }
+                            }
                         }
                     }
                 }
