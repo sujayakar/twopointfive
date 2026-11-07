@@ -361,8 +361,8 @@ pub fn calm_back(g: &mut crate::game::Game, d: RoomfightDefId, c_2: &crate::powe
         crate::squad::end_guard_script(g, gd, Some(state));
     }
     g.gd[gd].awareness = if wary { m::min(0.45, m::max(c_2.awareness, 0.35)) } else { c_2.awareness };
-    g.gd[gd].hold = c_2.hold;
-    g.gd[gd].pinned = c_2.pinned;
+    crate::control::set_hold(g, gd, c_2.hold, "powerout");
+    crate::control::set_pinned(g, gd, c_2.pinned, "powerout");
     let state: String = g.gd[gd].state.as_str().into();
     let seen = g.gd[gd].last_seen_t;
     let row = &mut g.tab.roomfight_def[d];

@@ -167,8 +167,8 @@ pub fn end_ambient(g: &mut crate::game::Game) {
     let s = ambient_state(g);
     let Some(r) = s.run.take() else { return; };
     s.next = time + crate::dialogue::ambient().cooldown;
-    if !r.held[0] { g.gd[r.a].hold = false; }
-    if !r.held[1] { g.gd[r.b].hold = false; }
+    if !r.held[0] { crate::control::set_hold(g, r.a, false, "dialogue"); }
+    if !r.held[1] { crate::control::set_hold(g, r.b, false, "dialogue"); }
 }
 
 /// A restart: the pairs' clock starts over; off the office the ledger is the run's, so it clears. The men's holds stay as they are, as in the TypeScript. (dialogue.ts ambientRestart)
@@ -303,8 +303,8 @@ pub fn update_ambient(g: &mut crate::game::Game, dt: f64) {
             let a_opens = js::to_i32(crate::math_dice::hash_str(&format!("{}{}{}", csa, csb, s.count))) & 1 != 0;
             let (opener, other2, held) = if a_opens { (a, b, [hold_a, hold_b]) } else { (b, a, [hold_b, hold_a]) };
             s.run = Some(AmbientRun { a: opener, b: other2, talk, i: 0, at: time + 0.3, other, pad, held });
-            g.gd[opener].hold = true;
-            g.gd[other2].hold = true;
+            crate::control::set_hold(g, opener, true, "dialogue");
+            crate::control::set_hold(g, other2, true, "dialogue");
             return;
         }
     }

@@ -154,9 +154,9 @@ mod tests {
         g.gd[gd].sight_t = 10.0;
         g.gd[gd].covers = Some(cv);
         assert_eq!(gun_point(&mut g, gd), Some(lk)); // off his post: no duty
-        g.gd[gd].hold = true;
+        crate::control::set_hold(g, gd, true, "belief");
         assert_eq!(gun_point(&mut g, gd), Some(lk)); // both are asked
-        g.gd[gd].pinned = true;
+        crate::control::set_pinned(g, gd, true, "belief");
         assert_eq!(gun_point(&mut g, gd), Some(lk)); // his eyes this tick beat his duty
         g.gd[gd].sight_t = 10.0 - 1.0 / 60.0;
         assert_eq!(gun_point(&mut g, gd), Some(cv)); // last tick's eyes do not

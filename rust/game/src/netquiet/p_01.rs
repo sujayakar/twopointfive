@@ -993,7 +993,7 @@ fn tick_man(g: &mut Game, gd: GuardId, dt: f64) {
             def.stall_at = v3::copy(here);
             def.stall_t = 0.0;
             def.rally_at = f64::NAN;
-            g.gd[gd].pinned = false;
+            crate::control::set_pinned(g, gd, false, "netquiet");
             crate::squad::order(
                 g,
                 gd,

@@ -76,8 +76,8 @@ pub fn room_fight_plant(g: &mut crate::game::Game, d: RoomfightDefId, why: &str)
     if g.gd[gd].script.is_some() { crate::squad::end_guard_script(g, gd, Some(crate::squad::EndGuardScriptState::Alert)); }
     g.gd[gd].state = crate::game::GuardState::Alert;
     g.gd[gd].awareness = m::max(g.gd[gd].awareness, 0.92);
-    g.gd[gd].hold = true;
-    g.gd[gd].pinned = true;
+    crate::control::set_hold(g, gd, true, "roomfight");
+    crate::control::set_pinned(g, gd, true, "roomfight");
     let was = g.tab.roomfight_def[d].room;
     let pos = g.ch[c].pos;
     let room = room_fight_room_at(g, pos);
@@ -175,8 +175,8 @@ pub fn room_fight_rally(g: &mut crate::game::Game, d: RoomfightDefId) {
         def.free_at = time;
         def.rally_at = f64::NAN;
     }
-    g.gd[gd].hold = false;
-    g.gd[gd].pinned = false;
+    crate::control::set_hold(g, gd, false, "roomfight");
+    crate::control::set_pinned(g, gd, false, "roomfight");
     g.gd[gd].state = crate::game::GuardState::Alert;
     g.gd[gd].awareness = m::max(g.gd[gd].awareness, 0.92);
     g.gd[gd].last_known = Some(v3::copy(at));
@@ -225,8 +225,8 @@ pub fn room_fight_tick_free(g: &mut crate::game::Game, d: RoomfightDefId) {
         def.home = [pos[0] + f[0] * 6.0, 0.0, pos[2] + f[2] * 6.0];
         def.moved_at = time;
     }
-    g.gd[gd].hold = true;
-    g.gd[gd].pinned = true;
+    crate::control::set_hold(g, gd, true, "roomfight");
+    crate::control::set_pinned(g, gd, true, "roomfight");
     let room_id = match room { Some(r) => alloc::format!("{}", g.tab.roomfight_room[r].id), None => String::from("-") };
     room_fight_note(g, Some(gd), &alloc::format!("holds where he ended up (room {})", room_id));
 }
