@@ -54,6 +54,7 @@ import { readFileSync, writeFileSync, readdirSync, mkdtempSync, renameSync, rmSy
 import { tmpdir } from 'node:os';
 import { resolve, basename } from 'node:path';
 import { DEFAULT_WORD } from '../blitz/word.ts';
+import { markHeld } from '../../src/host/held.ts';
 
 export const SWITCH_KINDS = ['settled', 'open decision', "player's or run-time"] as const;
 export type SwitchKind = typeof SWITCH_KINDS[number];
@@ -119,7 +120,7 @@ export function foldStartsOn(env: Record<string, string | undefined> = process.e
 }
 let active = foldStartsOn();
 function lay(L: Laid, host: Record<string, unknown>): void {
-  const d = Object.getOwnPropertyDescriptor(host, L.key)!;
+  const d = Object.getOwnPropertyDescriptor(host, L.key)!; markHeld(host, L.key);   // (src/host/held.ts: what a panel's row builders ask before they build a box over it; said of a laid row even while the fold is off)
   Object.defineProperty(host, L.key, { enumerable: d.enumerable, configurable: true, get: () => !active || through ? L.now : L.held,
     set: (v: unknown) => { if (!active) { L.now = v; return; } if (!sameValue(v, L.held)) count(L.row, v); if (through) L.now = v; } });
 }
