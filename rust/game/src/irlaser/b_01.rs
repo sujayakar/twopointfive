@@ -10,7 +10,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// Sam's laser is on: a scenario's team on the floor, his goggles down, a gun in his hands and up at the aim, hands not on a lock or round a man, not
 /// down.   (irlaser.ts samLaserOn)
-pub fn sam_laser_on(g: &crate::game::Game) -> bool {
+pub fn sam_laser_on(g: &mut crate::game::Game) -> bool {
     let pl = g.player;
     if !crate::roomfight::fight_live(g) || !g.pl[pl].nv { return false; }
     if !(crate::game::player_pistol_up(g, pl) || crate::game::player_rifle_up(g, pl)) { return false; }
@@ -37,7 +37,7 @@ pub fn ir_note(g: &mut crate::game::Game, b: BoxId) -> BoxId { g.m.irlaser.ir_ma
 pub fn ir_forget(g: &mut crate::game::Game, b: BoxId) { if !g.m.irlaser.ir_made.is_empty() { g.m.irlaser.ir_made.delete(b); } }
 
 /// The picture is the tube's: an infrared laser shows in it; a replay viewer's own tube, while one is set, answers instead.   (irlaser.ts irViewer)
-pub fn ir_viewer(g: &crate::game::Game) -> bool {
+pub fn ir_viewer(g: &mut crate::game::Game) -> bool {
     if let Some(t) = g.m.irlaser.view_tube { return t; }
     let man = crate::seats::host_man(g);
     g.pl[man].nv_amount > 0.5 && !(g.engine.settings.debug_view > 0.0)
@@ -58,12 +58,12 @@ pub fn ir_made(g: &mut crate::game::Game, b: BoxId) -> bool {
 }
 
 /// The band of a man's weapon laser this frame. IR.on is settled on.   (irlaser.ts laserBand)
-pub fn laser_band(g: &crate::game::Game, gd: GuardId) -> crate::irlaser::LaserBand {
+pub fn laser_band(g: &mut crate::game::Game, gd: GuardId) -> crate::irlaser::LaserBand {
     if crate::nvg::nvg_worn(g, gd) && crate::nvg::nvg_down(g, gd) { LaserBand::Ir } else { LaserBand::Visible }
 }
 
 /// A teammate's laser is on this frame. IR.on and IR.carry are settled on, IR.teamOff settled on, BREAK false.   (irlaser.ts laserOn)
-pub fn laser_on(g: &crate::game::Game, gd: GuardId) -> bool {
+pub fn laser_on(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if g.gd[gd].muzzle_down || g.gd[gd].held.is_some() || crate::rails::rails_no_lasers(g) { return false; }
     let team = g.gd[gd].team;
     if !crate::teams::is_hostile(g, team, crate::teams::Team::Player) { return false; }

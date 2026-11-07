@@ -699,7 +699,7 @@ pub fn update_takedown(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// Which hold a grab made now would be to begin with.   (player.ts grabVariant)
-pub fn grab_variant(g: &crate::game::Game) -> crate::character::HoldVariant {
+pub fn grab_variant(g: &mut crate::game::Game) -> crate::character::HoldVariant {
     let p = g.player;
     if crate::game::player_pistol_up(g, p) { crate::character::HoldVariant::Gun } else { crate::character::HoldVariant::Arm }
 }
@@ -768,8 +768,8 @@ pub fn start_grab(g: &mut crate::game::Game, gd: GuardId, way: Option<crate::clo
             g.clearing = None;
             if let Some(o) = other {
                 if g.gd[o].state != crate::game::GuardState::Dead && g.gd[o].held.is_none() {
-                    g.gd[o].state = crate::game::GuardState::Suspicious;
-                    g.gd[o].awareness = m::max(g.gd[o].awareness, 0.6);
+                    crate::mind::set_state(g, o, crate::game::GuardState::Suspicious, "player");
+                    crate::mind::raise(g, o, 0.6, "player");
                     let at = g.ch[gc].pos;
                     crate::belief::word(g, o, at);
                     g.gd[o].react_t = 0.7;

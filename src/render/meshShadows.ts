@@ -22,6 +22,7 @@ import { scenePrelude } from './frame';
 export { MESH_MAX_CHARS };
 export const NODE_BASE = 4;          // vec4u elements before the first node
 const LEVEL_HDR = 64;                // u32 words of level offsets before the level-ordered node list in `levels`
+const LEVEL_SIZES = LEVEL_HDR - 4;   // …the last four of them: the mesh's own sizes (levels, nodes, triangles, where the corners start), which the two kernels read
 const REFIT_WG = 256;                // one workgroup of this size refits one character's tree, level by level
 
 const bvhCache = new WeakMap<MeshData, MeshBvh>();   // one build per mesh per process (the headless QA harness constructs many Games)
@@ -32,9 +33,12 @@ export function meshBvhFor(mesh: MeshData): MeshBvh {
   return b;
 }
 
-const skinRefitSrc = (N: number, T: number, LEVELS: number, TRI_BASE: number) => /* wgsl */`
-const N: u32 = ${N}u; const T: u32 = ${T}u; const LEVELS: u32 = ${LEVELS}u;
-const NODE_BASE: u32 = ${NODE_BASE}u; const TRI_BASE: u32 = ${TRI_BASE}u; const LEVEL_HDR: u32 = ${LEVEL_HDR}u;
+// (THE MESH'S OWN SIZES ARE DATA: nodes, triangles, levels and where the corners start are the last four words of the level list's header (LEVEL_SIZES),
+// where they were constants of this text. A level whose men are another cast is then the SAME module and the same two programs, and compiles nothing.
+// They are read from the level list and not from the mesh buffer's own header because that buffer is written here: a loop bound read from it would not
+// be uniform to the compiler, and the refit's barrier must stand in uniform control flow.)
+const skinRefitSrc = () => /* wgsl */`
+const NODE_BASE: u32 = ${NODE_BASE}u; const LEVEL_HDR: u32 = ${LEVEL_HDR}u; const LEVEL_SIZES: u32 = ${LEVEL_SIZES}u;
 const JOINT_STRIDE: u32 = ${JOINT_STRIDE}u; const LEAF_PAD: f32 = ${LEAF_PAD};
 @group(0) @binding(0) var<storage, read_write> mbuf: array<vec4u>;
 @group(0) @binding(1) var<storage, read> rest: array<vec4u>;         // 2 per vertex: (rest pos.xyz bits, joints j0 | j1<<8 | j2<<16 | j3<<24), (weights.xyzw bits)
@@ -43,11 +47,12 @@ const JOINT_STRIDE: u32 = ${JOINT_STRIDE}u; const LEAF_PAD: f32 = ${LEAF_PAD};
 const INST_ROWS: u32 = ${CHAR_INST_BYTES / 16}u;
 @group(0) @binding(3) var<storage, read> jointMats: array<mat4x4f>;  // CharacterRenderer.jointMats: instance k's skinning matrices at k·JOINT_STRIDE (what vsSkin rasterises with)
 @group(0) @binding(4) var<storage, read> topo: array<vec4u>;         // N: (skip, triStart, triCount, right child)
-@group(0) @binding(5) var<storage, read> levels: array<u32>;         // [0, LEVELS]: offsets into the node list at LEVEL_HDR.., deepest level first
+@group(0) @binding(5) var<storage, read> levels: array<u32>;         // [0, LEVELS]: offsets into the node list at LEVEL_HDR.., deepest level first; [LEVEL_SIZES ..+3]: LEVELS, N, T, TRI_BASE
 
 // one thread per triangle corner per character (gid.y): the same linear blend vsSkin does, so the traced mesh is the rasterised one
 @compute @workgroup_size(64) fn skin(@builtin(global_invocation_id) gid: vec3u) {
   let c = gid.x; let k = gid.y;
+  let T = levels[LEVEL_SIZES + 2u]; let TRI_BASE = levels[LEVEL_SIZES + 3u];   // (triangles per tree, where the corners start)
   if (c >= 3u * T) { return; }
   let cv = cornerVert[c]; let vi = cv & 0xffffffu;
   // THE CAST: a part this man does not wear is not there to cast a shadow — its corners go to one far point (a zero-area triangle no ray hits: meshTri's det test) flagged in .w, and
@@ -66,6 +71,7 @@ const INST_ROWS: u32 = ${CHAR_INST_BYTES / 16}u;
 // are final by the time it is their parent's turn. Leaves box their corners (+ LEAF_PAD), internal nodes union their two children.
 @compute @workgroup_size(${REFIT_WG}) fn refit(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lid: u32) {
   let k = wid.x;
+  let LEVELS = levels[LEVEL_SIZES]; let N = levels[LEVEL_SIZES + 1u]; let T = levels[LEVEL_SIZES + 2u]; let TRI_BASE = levels[LEVEL_SIZES + 3u];   // (the tree's levels, nodes and triangles per tree, where the corners start)
   let nb = NODE_BASE + k * N * 2u; let tb = TRI_BASE + k * T * 3u;
   for (var L = 0u; L < LEVELS; L++) {
     let s = levels[L]; let e = levels[L + 1u];
@@ -124,7 +130,7 @@ export class MeshShadows {
   constructor(private device: GPUDevice, ch: GltfCharacter, private jointMats: GPUBuffer, charInsts: GPUBuffer) {
     const mesh = ch.mesh; const bvh = this.bvh = meshBvhFor(mesh); this.digest = topologyDigest(bvh);
     const N = bvh.numNodes, T = bvh.numTris, V = mesh.vertexCount, LEVELS = bvh.maxDepth + 1;
-    if (LEVELS + 1 > LEVEL_HDR) throw new Error(`mesh shadows: ${LEVELS} tree levels do not fit the ${LEVEL_HDR}-word level header`);
+    if (LEVELS + 1 > LEVEL_SIZES) throw new Error(`mesh shadows: ${LEVELS} tree levels do not fit the ${LEVEL_SIZES} words of the level header before its sizes`);
     if (ch.skin.joints.length > 256 || JOINT_STRIDE > 256) throw new Error('mesh shadows: joint indices are packed as bytes');
     if (T >= 1 << 24 || LEAF_MAX > 255) throw new Error('mesh shadows: triStart | count << 24 packing');
     this.triBase = NODE_BASE + MESH_MAX_CHARS * N * 2;
@@ -145,7 +151,7 @@ export class MeshShadows {
     const rest = new Uint32Array(V * 8); { const f = new Float32Array(rest.buffer); const jn = mesh.joints;
       for (let v = 0; v < V; v++) { f[v * 8] = mesh.positions[v * 3]; f[v * 8 + 1] = mesh.positions[v * 3 + 1]; f[v * 8 + 2] = mesh.positions[v * 3 + 2]; rest[v * 8 + 3] = (jn[v * 4] | (jn[v * 4 + 1] << 8) | (jn[v * 4 + 2] << 16) | (jn[v * 4 + 3] << 24)) >>> 0; f.set(mesh.weights.subarray(v * 4, v * 4 + 4), v * 8 + 4); } }
     const topo = new Uint32Array(N * 4); for (let i = 0; i < N; i++) { topo[i * 4] = bvh.skip[i]; topo[i * 4 + 1] = bvh.triStart[i]; topo[i * 4 + 2] = bvh.triCount[i]; topo[i * 4 + 3] = Math.max(0, bvh.right[i]); }
-    const levels = new Uint32Array(LEVEL_HDR + N); levels.set(bvh.levelOff, 0); levels.set(bvh.levelNodes, LEVEL_HDR);
+    const levels = new Uint32Array(LEVEL_HDR + N); levels.set(bvh.levelOff, 0); levels.set(bvh.levelNodes, LEVEL_HDR); levels.set([LEVELS, N, T, this.triBase], LEVEL_SIZES);
     let corners = bvh.corners;   // (+ each corner's cast part in the top byte: the skin kernel's test against the man's mask; the mannequin has no parts and uploads the list as it is)
     if (mesh.part) { if (V >= 1 << 24) throw new Error('mesh shadows: vertex | part << 24 packing'); corners = new Uint32Array(bvh.corners.length); for (let c = 0; c < corners.length; c++) { const vi = bvh.corners[c]; corners[c] = (vi | (mesh.part[vi] << 24)) >>> 0; } }
     const restBuf = makeBufferWithData(device, rest, S, 'meshRest'), cornerBuf = makeBufferWithData(device, corners, S, 'meshCorners'), topoBuf = makeBufferWithData(device, topo, S, 'meshTopo'), levelBuf = makeBufferWithData(device, levels, S, 'meshLevels');
@@ -156,7 +162,7 @@ export class MeshShadows {
       { binding: 4, visibility: CS, buffer: { type: 'read-only-storage' } }, { binding: 5, visibility: CS, buffer: { type: 'read-only-storage' } },
       { binding: 6, visibility: CS, buffer: { type: 'read-only-storage' } },
     ] });
-    this.mod = makeShader(device, skinRefitSrc(N, T, LEVELS, this.triBase), 'meshShadows');
+    this.mod = makeShader(device, skinRefitSrc(), 'meshShadows');
     this.pl = device.createPipelineLayout({ bindGroupLayouts: [layout] });   // (skin + refit: init(), awaited by main.ts / the viewer before the first frame)
     this.bg = device.createBindGroup({ label: 'meshShadowsBG', layout, entries: [
       { binding: 0, resource: { buffer: this.buf } }, { binding: 1, resource: { buffer: restBuf } }, { binding: 2, resource: { buffer: cornerBuf } },
@@ -174,7 +180,7 @@ export class MeshShadows {
   }
 
   /** WGSL source of the two passes (for a compile check through the page's __wgsl with no prelude) */
-  source(): string { return skinRefitSrc(this.bvh.numNodes, this.bvh.numTris, this.bvh.maxDepth + 1, this.triBase); }
+  source(): string { return skinRefitSrc(); }
 
   /** Skin + refit the first `numChars` characters' trees (their joint matrices must already be in jointMats for this frame — CharacterRenderer.finish).
    *  Encode BEFORE any pass that traces (the cascades come first in engine.render). */

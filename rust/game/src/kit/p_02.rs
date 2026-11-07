@@ -73,10 +73,10 @@ fn table(g: &Game) -> SlotTable { g.k.slots.table.clone() }
 // ---------------------------------------------------------------- lines 384 to 460
 
 /// (kit.ts moreOn; KITDEAL.more settled on, the check's break word never set in the game)
-pub fn more_on(g: &crate::game::Game) -> bool { true }
+pub fn more_on(g: &mut crate::game::Game) -> bool { true }
 
 /// (kit.ts stealthOn; KITDEAL.stealth settled on)
-pub fn stealth_on(g: &crate::game::Game) -> bool { tree_up(g) }
+pub fn stealth_on(g: &mut crate::game::Game) -> bool { tree_up(g) }
 
 /// A run tape's stealth card put back for its replay (kit.ts kitStealthSet)
 pub fn kit_stealth_set(g: &mut crate::game::Game, raw: Option<&JsMap<String, crate::kit::KitValue>>) {
@@ -84,7 +84,7 @@ pub fn kit_stealth_set(g: &mut crate::game::Game, raw: Option<&JsMap<String, cra
 }
 
 /// The loud card as issued, whatever mission the table is for (kit.ts loudIssue)
-pub fn loud_issue(g: &crate::game::Game) -> crate::kit::MemberKit {
+pub fn loud_issue(g: &mut crate::game::Game) -> crate::kit::MemberKit {
     let mut m = issued_at(0);
     if !rule_is_on(g) {
         let b = built();
@@ -191,7 +191,7 @@ pub fn for_run(g: &mut crate::game::Game, f: &mut dyn FnMut(&mut crate::game::Ga
 }
 
 /// The kit a run's stealth mission is played with (kit.ts handOf; WAND.on settled on)
-pub fn hand_of(g: &crate::game::Game) -> Option<crate::kit::KitHand> {
+pub fn hand_of(g: &mut crate::game::Game) -> Option<crate::kit::KitHand> {
     let rings = if stealth_run(g) { g.k.kittree.lend } else { 0.0 };
     let cams = if cam_row(g) { crate::stickycam::sticky_visit(g) } else { 0.0 };
     let wand = crate::quietfog::quiet_wand(g);
@@ -199,7 +199,7 @@ pub fn hand_of(g: &crate::game::Game) -> Option<crate::kit::KitHand> {
 }
 
 /// (kit.ts dealing; KITDEAL.on settled on)
-pub fn dealing(g: &crate::game::Game) -> bool { rule_is_on(g) && g.m.kit.kit.on }
+pub fn dealing(g: &mut crate::game::Game) -> bool { rule_is_on(g) && g.m.kit.kit.on }
 
 /// The teammates' counted things, as one word (kit.ts dealWord)
 pub fn deal_word(cards: &[crate::kit::MemberKit]) -> String {
@@ -479,7 +479,7 @@ pub fn set_card_base(g: &mut crate::game::Game, i: f64, p: crate::kit::KitPreset
 }
 
 /// The pouches `n` of one item fill (kit.ts slotCost)
-pub fn slot_cost(g: &crate::game::Game, item: &str, n: f64, t: Option<&crate::kit::SlotTable>) -> f64 {
+pub fn slot_cost(g: &mut crate::game::Game, item: &str, n: f64, t: Option<&crate::kit::SlotTable>) -> f64 {
     let it = match t { Some(t) => self::item(t, item).cloned(), None => self::item(&g.k.slots.table, item).cloned() };
     pouches_of(g, it.as_ref(), n)
 }
@@ -533,29 +533,29 @@ pub fn kit_team(g: &mut crate::game::Game, n: Option<f64>) -> f64 {
 }
 
 /// The most of a counted row member i may carry (kit.ts slotMax)
-pub fn slot_max(g: &crate::game::Game, item: &str, i: f64, own: f64) -> f64 {
+pub fn slot_max(g: &mut crate::game::Game, item: &str, i: f64, own: f64) -> f64 {
     if rule_is_on(g) { max_or(&g.k.slots.table, item, i as usize, own) } else { own }
 }
 
 /// The wall charge has a row on member i's card (kit.ts wallRow; OWNCHARGE.on settled on)
-pub fn wall_row(g: &crate::game::Game, i: f64) -> bool {
+pub fn wall_row(g: &mut crate::game::Game, i: f64) -> bool {
     let iu = i as usize;
     rule_is_on(g) && wall_here() && max_or(&g.k.slots.table, "walls", iu, 0.0) > 0.0 && (!big_is_on(g) || big_slots(&g.k.slots.table, iu) > 0.0)
 }
 
 /// Door charges have a row on member i's card (kit.ts chargeRow; OWNCHARGE.on settled on)
-pub fn charge_row(g: &crate::game::Game, i: f64) -> bool {
+pub fn charge_row(g: &mut crate::game::Game, i: f64) -> bool {
     i > 0.0 || slot_max(g, "charges", 0.0, CHARGES_MAX) > 0.0
 }
 
 /// The optical wand has a row on a card (kit.ts wandRow; WAND.on and WAND.mate settled on)
-pub fn wand_row(g: &crate::game::Game, i: Option<f64>) -> bool {
+pub fn wand_row(g: &mut crate::game::Game, i: Option<f64>) -> bool {
     let i = i.unwrap_or(0.0) as usize;
     !rule_is_on(g) || max_or(&g.k.slots.table, "wand", i, 0.0) > 0.0
 }
 
 /// The sticky cameras have a row on your card (kit.ts camRow; STICKY.on settled on)
-pub fn cam_row(g: &crate::game::Game) -> bool {
+pub fn cam_row(g: &mut crate::game::Game) -> bool {
     !rule_is_on(g) || max_or(&g.k.slots.table, "cams", 0, 0.0) > 0.0
 }
 
@@ -732,7 +732,7 @@ pub fn loadout_cards(g: &mut crate::game::Game, id_2: &str, looks: Option<&[crat
 }
 
 /// The stealth kit where no mission says (kit.ts QUIET_HAND; WAND.on settled on)
-pub fn quiet_hand(g: &crate::game::Game) -> crate::kit::KitHand {
+pub fn quiet_hand(g: &mut crate::game::Game) -> crate::kit::KitHand {
     crate::kit::KitHand { rings: g.k.kittree.lend, cams: 2.0, wand: true }
 }
 
@@ -806,7 +806,7 @@ pub fn kit_loadout_of(g: &mut crate::game::Game, only: Option<f64>) -> Option<St
 /// A row is on a card as it stands (kit.ts rowHas: `!r.has || r.has(m)`). Only the TREE's rows carry a `has` (kit.ts buildRowsTree): its suppressor
 /// over the long gun (`slot === 'secondary' || long(m)`, :904) and the launcher's three loads (`tubed`, :910). The same fields on a card that is no
 /// tree are rows with no `has`. The row holds no function here, so the game says which card it is: the skeleton's line has no `g`.
-pub fn row_has(g: &crate::game::Game, r: &crate::kit::KitRow, m: &crate::kit::MemberKit) -> bool {
+pub fn row_has(g: &mut crate::game::Game, r: &crate::kit::KitRow, m: &crate::kit::MemberKit) -> bool {
     match r.field {
         KitField::Suppressed => !tree_up(g) || long_gun(m),
         KitField::Rings | KitField::Shells | KitField::Cams => !tree_up(g) || tubed(g, m),
@@ -815,7 +815,7 @@ pub fn row_has(g: &crate::game::Game, r: &crate::kit::KitRow, m: &crate::kit::Me
 }
 
 /// A row's value on a card (kit.ts rowGet): the row's own get if it has one (kit.ts:808, 837, 889, 892, 907), else the card's field of that name
-pub fn row_get(g: &crate::game::Game, r: &crate::kit::KitRow, m: &mut crate::kit::MemberKit) -> crate::kit::KitValue {
+pub fn row_get(g: &mut crate::game::Game, r: &crate::kit::KitRow, m: &mut crate::kit::MemberKit) -> crate::kit::KitValue {
     let t = |s: &str| KitValue::Text(String::from(s));
     match &r.get {
         Some(KitRowGet::Mix) => t(mix_of(m).map_or("own", |x| x.as_str())),
@@ -857,7 +857,7 @@ fn v_bool(v: &KitValue) -> bool { match v { KitValue::Bool(b) => *b, _ => unreac
 fn v_text(v: &KitValue) -> &str { match v { KitValue::Text(s) => s.as_str(), _ => unreachable!("a row of words has a word") } }
 
 /// (kit.ts rowSet) The field stands for the row: 'cans', 'big' and the gun rows write through their own set (kit.ts:808, 837, 889, 892, 907, 917)
-pub fn row_set(g: &crate::game::Game, r: &crate::kit::KitRow, m: &mut crate::kit::MemberKit, v: &crate::kit::KitValue) {
+pub fn row_set(g: &mut crate::game::Game, r: &crate::kit::KitRow, m: &mut crate::kit::MemberKit, v: &crate::kit::KitValue) {
     match r.field {
         KitField::Smoke => m.smoke = v_num(v),
         KitField::Light => m.light = v_bool(v),

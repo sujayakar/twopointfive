@@ -13,21 +13,21 @@ const CARDS: usize = KIT_MEMBERS as usize;
 // ------------------------------------------------------------ small asks of this file
 
 /// `issuing` as a condition (true and 'own' both hold)
-fn issuing_on(g: &Game) -> bool { !matches!(g.m.kit.issuing, KitModIssuing::Bool(false)) }
+fn issuing_on(g: &mut Game) -> bool { !matches!(g.m.kit.issuing, KitModIssuing::Bool(false)) }
 /// `WEAPONS[w]`, a copy to hand on while `g` is lent
-fn weapon_row(g: &Game, w: crate::weapons::WeaponId) -> crate::weapons::WeaponDef { g.m.weapons.weapons.get(w).unwrap().clone() }
+fn weapon_row(g: &mut Game, w: crate::weapons::WeaponId) -> crate::weapons::WeaponDef { g.m.weapons.weapons.get(w).unwrap().clone() }
 /// `gd.weapon.def.cls === 'pistol'`, of a gun's row
-fn is_pistol(g: &Game, w: crate::weapons::WeaponId) -> bool { g.m.weapons.weapons.get(w).unwrap().cls == crate::weapons::WeaponClass::Pistol }
+fn is_pistol(g: &mut Game, w: crate::weapons::WeaponId) -> bool { g.m.weapons.weapons.get(w).unwrap().cls == crate::weapons::WeaponClass::Pistol }
 /// `SUITS[s].tint`
 fn suit_tint(s: SuitId) -> V3 { suits().get(String::from(s.as_str())).unwrap().tint }
 /// `TRIMS[t].tint`
 fn trim_tint(t: TrimId) -> V3 { trims().get(String::from(t.as_str())).unwrap().tint }
 /// `g.guards.some(gd => !!gd.unit && gd.team === 'operative')`
-fn team_on_floor(g: &Game) -> bool {
+fn team_on_floor(g: &mut Game) -> bool {
     g.guards.iter().any(|&gd| g.gd[gd].unit.is_some() && g.gd[gd].team == crate::teams::Team::Operative)
 }
 /// `kitIssueWhole(g.level.scenarios?.issue?.members)`
-fn issue_names_you(g: &Game) -> bool {
+fn issue_names_you(g: &mut Game) -> bool {
     let members = g.level.scenarios.as_ref().and_then(|s| s.issue.as_ref()).map(|d| d.members.clone());
     kit_issue_whole(g, members.as_ref())
 }
@@ -52,7 +52,7 @@ fn assign_card(m: &mut MemberKit, c: &crate::scene_scenarios::IssueCard) {
 pub fn kit_issued_page(g: &mut crate::game::Game, on: Option<bool>) { g.m.kit.issued_page = on.unwrap_or(true); }
 
 /// This row's lesson is packed for by the player.   (kit.ts kitPacks)
-pub fn kit_packs(g: &crate::game::Game, e: Option<crate::kit::KitPacksE>) -> bool { e.map_or(false, |e| e.packs.is_some()) }
+pub fn kit_packs(g: &mut crate::game::Game, e: Option<crate::kit::KitPacksE>) -> bool { e.map_or(false, |e| e.packs.is_some()) }
 
 /// The page of a lesson says which row it is.   (kit.ts kitLessonPage)
 pub fn kit_lesson_page(g: &mut crate::game::Game, row: Option<crate::kit::KitLessonPageRow>) {
@@ -60,23 +60,23 @@ pub fn kit_lesson_page(g: &mut crate::game::Game, row: Option<crate::kit::KitLes
 }
 
 /// `kitPacks(lessonRow)`, for a row that is there
-fn lesson_packs(g: &Game, row: KitModLessonRow) -> bool { kit_packs(g, Some(KitPacksE { packs: row.packs })) }
+fn lesson_packs(g: &mut Game, row: KitModLessonRow) -> bool { kit_packs(g, Some(KitPacksE { packs: row.packs })) }
 
 /// Every staging on this page wears the issue cards.   (kit.ts pageIssued)
-pub fn page_issued(g: &crate::game::Game) -> bool {
+pub fn page_issued(g: &mut crate::game::Game) -> bool {
     if g.m.kit.issued_page { return true; }
     let Some(row) = g.m.kit.lesson_row else { return false; };
     !lesson_packs(g, row)
 }
 
 /// The least frags he carries on this page (0: no such page).   (kit.ts pageFrags)
-pub fn page_frags(g: &crate::game::Game) -> f64 {
+pub fn page_frags(g: &mut crate::game::Game) -> f64 {
     let Some(row) = g.m.kit.lesson_row else { return 0.0; };
     if lesson_packs(g, row) { row.packs.and_then(|p| p.frags).unwrap_or(0.0) } else { 0.0 }
 }
 
 /// The level's block names a card for you: nothing is handed over it.   (kit.ts kitIssueWhole)
-pub fn kit_issue_whole(g: &crate::game::Game, members: Option<&JsMap<String, crate::scene_scenarios::IssueCard>>) -> bool {
+pub fn kit_issue_whole(g: &mut crate::game::Game, members: Option<&JsMap<String, crate::scene_scenarios::IssueCard>>) -> bool {
     members.map_or(false, |m| m.has(String::from("0")))
 }
 
@@ -139,23 +139,23 @@ pub fn kit_reset(g: &mut crate::game::Game) {
 // ------------------------------------------------------------ on the floor
 
 /// The card a staged teammate was staged with (a copy taken then).   (kit.ts kitOf)
-pub fn kit_of(g: &crate::game::Game, gd: GuardId) -> Option<crate::kit::MemberKit> { g.m.kit.man_of.get(gd).map(|e| e.kit.clone()) }
+pub fn kit_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::kit::MemberKit> { g.m.kit.man_of.get(gd).map(|e| e.kit.clone()) }
 
 /// Which member a staged teammate is (1 to 4), or 0.   (kit.ts kitIndex)
-pub fn kit_index(g: &crate::game::Game, gd: GuardId) -> f64 { g.m.kit.man_of.get(gd).map_or(0.0, |e| e.i) }
+pub fn kit_index(g: &mut crate::game::Game, gd: GuardId) -> f64 { g.m.kit.man_of.get(gd).map_or(0.0, |e| e.i) }
 
 /// He wears goggles.   (kit.ts kitGoggles)
-pub fn kit_goggles(g: &crate::game::Game, gd: GuardId) -> bool { !g.m.kit.bare_eyed.has(gd) }
+pub fn kit_goggles(g: &mut crate::game::Game, gd: GuardId) -> bool { !g.m.kit.bare_eyed.has(gd) }
 
 /// One of a staged team, and his card has him carry a pistol.   (kit.ts kitPistol)
-pub fn kit_pistol(g: &crate::game::Game, gd: GuardId) -> bool {
+pub fn kit_pistol(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if !g.m.kit.man_of.has(gd) { return false; }
     let w = g.fa[g.gd[gd].weapon].def;
     is_pistol(g, w)
 }
 
 /// The breaching shotgun or the hammer in a staged teammate's big slot.   (kit.ts kitBig)
-pub fn kit_big(g: &crate::game::Game, gd: GuardId) -> crate::kit::BigKit {
+pub fn kit_big(g: &mut crate::game::Game, gd: GuardId) -> crate::kit::BigKit {
     if !g.k.bigslot.on { return BigKit::None; }
     match g.m.kit.man_of.get(gd) {
         Some(e) if !js::truthy(e.kit.walls) => e.kit.big,
@@ -164,17 +164,17 @@ pub fn kit_big(g: &crate::game::Game, gd: GuardId) -> crate::kit::BigKit {
 }
 
 /// Your card left you the weapon light (L works).   (kit.ts kitYouLight)
-pub fn kit_you_light(g: &crate::game::Game, pl: PlayerId) -> bool {
+pub fn kit_you_light(g: &mut crate::game::Game, pl: PlayerId) -> bool {
     !g.m.kit.you_bare.get(pl).map_or(false, |b| b.light)
 }
 
 /// Your card left you the goggles (N works).   (kit.ts kitYouNvg)
-pub fn kit_you_nvg(g: &crate::game::Game, pl: PlayerId) -> bool {
+pub fn kit_you_nvg(g: &mut crate::game::Game, pl: PlayerId) -> bool {
     !g.m.kit.you_bare.get(pl).map_or(false, |b| b.nvg)
 }
 
 /// A run that is played quietly: a quiet mission, or the plain night alone off the loadout screen.   (kit.ts stealthRun)
-pub fn stealth_run(g: &crate::game::Game) -> bool {
+pub fn stealth_run(g: &mut crate::game::Game) -> bool {
     g.quiet.active || (g.m.kit.kit_solo.on && !team_on_floor(g))
 }
 
@@ -469,7 +469,7 @@ pub fn kit_stage(g: &mut crate::game::Game, ops: &[GuardId]) {
 }
 
 /// The wall charges you and the `n` teammates who come carry between you.   (kit.ts kitWalls)
-pub fn kit_walls(g: &crate::game::Game, n: f64) -> f64 {
+pub fn kit_walls(g: &mut crate::game::Game, n: f64) -> f64 {
     if !g.m.kit.kit.on { return 0.0; }
     let mut w = 0.0;
     let top = m::min(n, KIT_MEMBERS - 1.0);
@@ -506,7 +506,7 @@ pub fn kit_pool(g: &mut crate::game::Game, n: f64, issued: Option<crate::kit::Ki
 }
 
 /// The smoke canisters the squad brings to a run of `n` teammates.   (kit.ts kitSmokes)
-pub fn kit_smokes(g: &crate::game::Game, n: f64) -> f64 {
+pub fn kit_smokes(g: &mut crate::game::Game, n: f64) -> f64 {
     let mut s = 0.0;
     if g.m.kit.kit.on {
         let mut i = 1usize;

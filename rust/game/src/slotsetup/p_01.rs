@@ -31,7 +31,7 @@ fn gun_of(g: &Game, pl: PlayerId, gun: SetupGun) -> FirearmId {
 }
 
 /// the gun in his hands, as the setup names it; None: none (slotsetup.ts setupGun)
-pub fn setup_gun(g: &crate::game::Game, pl: PlayerId) -> Option<crate::slotsetup::SetupGun> {
+pub fn setup_gun(g: &mut crate::game::Game, pl: PlayerId) -> Option<crate::slotsetup::SetupGun> {
     let f = crate::game::player_gun_in_hand(g, pl);
     let f = match f {
         Some(f) if !g.pl[pl].down => f,
@@ -47,7 +47,7 @@ pub fn setup_gun(g: &crate::game::Game, pl: PlayerId) -> Option<crate::slotsetup
 }
 
 /// what can be set on one of his guns, as it stands now (slotsetup.ts setupRows)
-pub fn setup_rows(g: &crate::game::Game, pl: PlayerId, gun: crate::slotsetup::SetupGun) -> Vec<crate::slotsetup::SetupRow> {
+pub fn setup_rows(g: &mut crate::game::Game, pl: PlayerId, gun: crate::slotsetup::SetupGun) -> Vec<crate::slotsetup::SetupRow> {
     let mut rows: Vec<SetupRow> = Vec::new();
     let f = gun_of(g, pl, gun);
     let def = g.fa[f].def;
@@ -86,7 +86,7 @@ pub fn setup_rows(g: &crate::game::Game, pl: PlayerId, gun: crate::slotsetup::Se
 }
 
 /// is the setup of the gun in his hands up; nothing touched (slotsetup.ts slotSetupOpen)
-pub fn slot_setup_open(g: &crate::game::Game) -> bool {
+pub fn slot_setup_open(g: &mut crate::game::Game) -> bool {
     let pl = g.player;
     let s = match g.pl[pl].setup {
         Some(s) => s,
@@ -96,7 +96,7 @@ pub fn slot_setup_open(g: &crate::game::Game) -> bool {
 }
 
 /// how much of its time the open setup has left: 1 with no clock on it, 0 = not up (slotsetup.ts slotSetupLeft)
-pub fn slot_setup_left(g: &crate::game::Game) -> f64 {
+pub fn slot_setup_left(g: &mut crate::game::Game) -> f64 {
     let pl = g.player;
     if g.pl[pl].setup.is_none() || !slot_setup_open(g) {
         return 0.0;
@@ -115,12 +115,12 @@ pub fn slot_setup_shut(g: &mut crate::game::Game) -> bool {
 }
 
 /// the presses that put the next load on the launcher, in words (slotsetup.ts loadKeys)
-pub fn load_keys(g: &crate::game::Game) -> String {
+pub fn load_keys(g: &mut crate::game::Game) -> String {
     String::from("press 2, then 2")
 }
 
 /// presses of the launcher's own step from the load that is up to the next one he has any of; 0: none but the one up (slotsetup.ts loadSteps)
-pub fn load_steps(g: &crate::game::Game, pl: PlayerId) -> f64 {
+pub fn load_steps(g: &mut crate::game::Game, pl: PlayerId) -> f64 {
     let rf = g.pl[pl].rifle;
     let a = g.fa[rf].attachments.clone();
     let n = a.len();

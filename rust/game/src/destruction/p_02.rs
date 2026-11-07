@@ -680,7 +680,7 @@ pub fn destruction_pall_take(g: &mut crate::game::Game, always: Option<bool>) ->
 }
 
 /// The pall's dice: a hash of the place, the moment and `k`; none of the lane's own are drawn.   (destruction.ts pallHash)
-pub fn destruction_pall_hash(g: &crate::game::Game, at: V3, k: f64) -> f64 {
+pub fn destruction_pall_hash(g: &mut crate::game::Game, at: V3, k: f64) -> f64 {
     crate::debris::hash01(pall_hash_word(at, g.time, k) as f64)
 }
 

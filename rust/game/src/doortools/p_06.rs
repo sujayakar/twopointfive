@@ -70,7 +70,7 @@ pub fn door_tools_spare_rear(g: &mut crate::game::Game, op: DoorOpId) {
 }
 
 /// is a walk to the marks still worth waiting on (doortools.ts DoorTools.waiting)
-pub fn door_tools_waiting(g: &crate::game::Game, op: DoorOpId, el: f64) -> bool {
+pub fn door_tools_waiting(g: &mut crate::game::Game, op: DoorOpId, el: f64) -> bool {
     if el >= g.k.doortools.stack_cap { return false; }
     if el < g.k.doortools.still_secs { return true; }
     let men = o!(g, op).men.clone();
@@ -78,7 +78,7 @@ pub fn door_tools_waiting(g: &crate::game::Game, op: DoorOpId, el: f64) -> bool 
 }
 
 /// somebody not yet on his mark is held by the fight, or blind (doortools.ts DoorTools.busy)
-pub fn door_tools_busy(g: &crate::game::Game, op: DoorOpId, el: f64) -> bool {
+pub fn door_tools_busy(g: &mut crate::game::Game, op: DoorOpId, el: f64) -> bool {
     if !(el < g.k.doortools.stack_cap) { return false; }
     let men = o!(g, op).men.clone();
     men.iter().any(|&gd| { let a = o!(g, op).mine.get(gd).copied().unwrap(); !asg!(g, a).arrived && (asg!(g, a).yield_t >= 0.0 || g.time < g.gd[gd].dazzled_until) })
@@ -559,7 +559,7 @@ fn step_wait(g: &mut Game, op: DoorOpId) {
 }
 
 /// the room's id and name, of the mission's own rooms, at a point (`roomOf` in the entry's end)
-fn room_of(g: &Game, p: V3) -> Option<(String, String)> {
+fn room_of(g: &mut Game, p: V3) -> Option<(String, String)> {
     if !crate::roomclear::room_clear_scenario_active(g) { return None; }
     let at = crate::roomclear::room_clear_scenario_room_at(g, p);
     g.room_clear.rooms.iter().find(|r| Some(&r.def.id) == at.as_ref()).map(|r| (r.def.id.clone(), r.def.name.clone()))

@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// A new record: empty maps, frame 0; its one argument was the game.   (floorseen.ts FloorSeen.constructor)
-pub fn floor_seen_new(g: &crate::game::Game) -> crate::floorseen::FloorSeen {
+pub fn floor_seen_new(g: &mut crate::game::Game) -> crate::floorseen::FloorSeen {
     crate::floorseen::FloorSeen::blank()
 }
 
@@ -83,7 +83,7 @@ pub fn floor_seen_tick(g: &mut crate::game::Game, men: &[GuardId], reach: f64) {
 }
 
 /// How many of `cells` (nav cell indices) `gd` has seen since game time `since`.   (floorseen.ts FloorSeen.count)
-pub fn floor_seen_count(g: &crate::game::Game, gd: GuardId, cells: &[f64], since: f64) -> f64 {
+pub fn floor_seen_count(g: &mut crate::game::Game, gd: GuardId, cells: &[f64], since: f64) -> f64 {
     let s = g.door_tools.seen.as_ref().unwrap();
     let Some(a) = s.at.get(gd) else { return 0.0 };
     let mut n = 0.0;

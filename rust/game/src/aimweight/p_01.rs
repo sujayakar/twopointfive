@@ -19,7 +19,7 @@ pub fn aim_weighs(g: &mut Game) -> bool {
 }
 
 /// The top rate his gun's heading turns at, rad/s, by what is in his hands.   (aimweight.ts aimTop)
-pub fn aim_top(g: &Game, pl: PlayerId) -> f64 {
+pub fn aim_top(g: &mut Game, pl: PlayerId) -> f64 {
     let gun = crate::game::player_gun_in_hand(g, pl);
     let scale = match gun {
         Some(gun) => m::pow(crate::weapons::handling_of(g.m.weapons.weapons.get(g.fa[gun].def).unwrap()), m::max(0.0, g.k.aimweight.heft)),
@@ -58,7 +58,7 @@ fn swing(smooth: f64, vel: &mut f64, err: f64, top: f64, dt: f64) -> f64 {
 }
 
 /// THE SWING: a heading `err` off the cursor's bearing, turning at `w.vel`, stepped `dt` on: what is still left to turn.   (aimweight.ts aimSwing)
-pub fn aim_swing(g: &Game, w: &mut AimSwingW, err: f64, top: f64, dt: f64) -> f64 {
+pub fn aim_swing(g: &mut Game, w: &mut AimSwingW, err: f64, top: f64, dt: f64) -> f64 {
     swing(g.k.aimweight.smooth, &mut w.vel, err, top, dt)
 }
 

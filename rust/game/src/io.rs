@@ -5496,7 +5496,6 @@ pub fn deal_closures(g: &mut crate::game::Game) {
             "silent" => { d.label = OrderLabel::Text { text: String::from("go silent") }; d.can = None; d.only = Some(OrderOnly::SilentAll); d.valid = None; d.issue = OrderIssue::Silent; d.tick = None; d.gone = None; }
             "loud" => { d.label = OrderLabel::Text { text: String::from("go loud") }; d.can = None; d.only = Some(OrderOnly::SilentAll); d.valid = None; d.issue = OrderIssue::Loud; d.tick = None; d.gone = None; if let Some(s) = d.stands_in.as_mut() { s.when = OrderWhen::Loud; } }
             "wandLook" => { d.label = OrderLabel::Text { text: String::from("look under it · wand") }; d.can = None; d.only = Some(OrderOnly::Wand); d.valid = Some(OrderValid::Wand); d.issue = OrderIssue::Wand; d.tick = Some(OrderTick::Wand); d.gone = None; }
-            "shellThere" => { d.label = OrderLabel::Shell40; d.can = None; d.only = Some(OrderOnly::Shell40); d.valid = Some(OrderValid::Shell40); d.issue = OrderIssue::Shell40; d.tick = Some(OrderTick::Shell40); d.gone = None; }
             "smokeThere" => { d.label = OrderLabel::Smoke; d.can = None; d.only = Some(OrderOnly::Smoke); d.valid = Some(OrderValid::Smoke); d.issue = OrderIssue::Smoke; d.tick = None; d.gone = None; }
             "fragThere" => { d.label = OrderLabel::ThrowRow { kind: F }; d.can = None; d.only = Some(OrderOnly::ThrowRow { kind: F }); d.valid = Some(OrderValid::ThrowRow { kind: F }); d.issue = OrderIssue::ThrowRow { kind: F }; d.tick = Some(OrderTick::ThrowRow); d.gone = None; }
             "stunThere" => { d.label = OrderLabel::ThrowRow { kind: S }; d.can = None; d.only = Some(OrderOnly::ThrowRow { kind: S }); d.valid = Some(OrderValid::ThrowRow { kind: S }); d.issue = OrderIssue::ThrowRow { kind: S }; d.tick = Some(OrderTick::ThrowRow); d.gone = None; }
@@ -5506,7 +5505,7 @@ pub fn deal_closures(g: &mut crate::game::Game) {
             "pairDark" => { d.label = OrderLabel::Text { text: String::from("move there · hold in the dark") }; d.can = Some(OrderCan::PairDark); d.only = None; d.valid = None; d.issue = OrderIssue::PairDark; d.tick = Some(OrderTick::PairDark); d.gone = None; if let Some(s) = d.stands_in.as_mut() { s.when = OrderWhen::PairDark; } }
             "pairGo" => { d.label = OrderLabel::PairGo; d.can = None; d.only = Some(OrderOnly::PairGo); d.valid = Some(OrderValid::PairGo); d.issue = OrderIssue::PairGo; d.tick = None; d.gone = None; }
             "go" => { if small { d.label = OrderLabel::DoorGoSmall; d.only = Some(OrderOnly::DoorGoSmall); d.valid = Some(OrderValid::DoorGoSmall); d.issue = OrderIssue::DoorGoSmall; } else { d.label = OrderLabel::DoorGoBig; d.only = Some(OrderOnly::DoorGoBig); d.valid = Some(OrderValid::DoorGoBig); d.issue = OrderIssue::DoorGoBig; } }
-            _ => {}
+            other => if let Some(r) = rows::by_id(other) { let data = d.clone(); *d = rows::def(r, data); d.gone = None; },
         }
     }
 }
@@ -5564,9 +5563,13 @@ pub fn stats_as_counted(g: &crate::game::Game) -> crate::game::Stats { let mut s
 
 impl Io for crate::Opaque { fn w(&self, _: &mut W) {} fn r(_: &mut R) -> Self { crate::Opaque } }
 // AN ADDRESS'S WORDS ARE NOT ON THE WIRE: the table declares the `URLSearchParams` arm of a `string | URLSearchParams` argument as holding nothing
-// (tools/blitz/schema.json, where it was `crate::Opaque`), and the TypeScript writes nothing for it. So this side writes nothing and reads no words:
-// a host that has an address hands its TEXT across (the `Text` arm), and the game reads the words itself (query.rs).
-impl Io for crate::query::Query { fn w(&self, _: &mut W) {} fn r(_: &mut R) -> Self { crate::query::Query::default() } }
+// (tools/blitz/schema.json), and the TypeScript writes nothing for it. A host that has an address hands its TEXT across (the `Text` arm) and the
+// game reads the words itself (query.rs). Words that came or went this way would be an address with no words in it, read without a sign: the
+// mission not started, the fog off, and nothing said. So both ends stop, by name.
+impl Io for crate::query::Query {
+    fn w(&self, _: &mut W) { panic!("an address's words are not on the wire: hand the address's text across (the Text arm)") }
+    fn r(_: &mut R) -> Self { panic!("an address's words are not on the wire: hand the address's text across (the Text arm)") }
+}
 impl Poke for crate::Opaque {}
 impl Poke for crate::director::CondTest {}
 impl Poke for crate::director::BeatFrame {}
@@ -5599,4 +5602,4 @@ mod bridge_test {
     /// BRIDGE_BLOB=<a file of tools/blitz/export.ts> cargo test --lib bridge_round_trip
     #[test] fn bridge_round_trip() { let Ok(p) = std::env::var("BRIDGE_BLOB") else { return; }; let t = std::thread::Builder::new().stack_size(1 << 28).spawn(move || { let b = std::fs::read(&p).unwrap(); let g = super::import(&b); let c = super::export(&g); { let mut h = super::import(&b); super::import_into(&mut h, &b); assert!(super::export(&h) == b, "import_into differs"); } if let Ok(out) = std::env::var("BRIDGE_OUT") { std::fs::write(out, &c).unwrap(); } assert!(c == b, "the bytes differ: {} against {}, first at {:?}", c.len(), b.len(), c.iter().zip(b.iter()).position(|(x, y)| x != y)); }).unwrap(); t.join().unwrap(); }
 }
-pub const LAYOUT: u32 = 3279324791;
+pub const LAYOUT: u32 = 175250117;

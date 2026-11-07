@@ -11,4 +11,4 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 pub fn w<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, now: &T, was: &T) -> T { now.clone() }
 
 /// A line as the writing guide has it; `on` and `guide` are settled true on the page.   (words.ts wg)
-pub fn wg<T: Clone + core::fmt::Debug>(g: &crate::game::Game, now: &T, was: &T) -> T { now.clone() }
+pub fn wg<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, now: &T, was: &T) -> T { now.clone() }

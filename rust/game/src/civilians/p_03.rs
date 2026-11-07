@@ -54,10 +54,9 @@ fn replace_ci(text: &str, pat: &str, with: &str) -> String {
 /// a man about to be told about a spot: suspicious toward it, rooted for `beat` seconds (civilians.ts primeGuard)
 pub fn prime_guard(g: &mut crate::game::Game, o: GuardId, pos: V3, beat: f64) {
     if g.gd[o].state == GuardState::Dead || g.gd[o].held.is_some() || g.gd[o].state == GuardState::Alert { return; }
-    g.gd[o].awareness = m::max(g.gd[o].awareness, 0.5); crate::belief::word(g, o, pos);
-    let man = &mut g.gd[o];
-    if man.state == GuardState::Patrol { man.state = GuardState::Suspicious; man.search_t = 0.0; man.body_duty = None; }
-    man.react_t = m::max(man.react_t, beat);
+    crate::mind::raise(g, o, 0.5, "civilians"); crate::belief::word(g, o, pos);
+    if g.gd[o].state == GuardState::Patrol { crate::mind::set_state(g, o, GuardState::Suspicious, "civilians"); g.gd[o].search_t = 0.0; g.gd[o].body_duty = None; }
+    g.gd[o].react_t = m::max(g.gd[o].react_t, beat);
     crate::game::guard_set_path(g, o, Vec::new()); crate::guards::guard_set_path_goal(g, o, None); g.gd[o].stall_ref = None;
 }
 
@@ -90,14 +89,13 @@ pub fn deliver_report(g: &mut crate::game::Game, gd: GuardId, o: GuardId, how: c
     let cause = g.cv[cid].cause;
     let at = g.ch[g.gd[gd].ch].pos;
     let pos = g.cv[cid].cause_pos.unwrap_or(at); let armed = g.cv[cid].armed || cause == Some(CivCause::Body);
-    g.gd[o].awareness = m::max(g.gd[o].awareness, if armed { 0.8 } else { 0.55 }); crate::belief::word(g, o, pos);
+    crate::mind::raise(g, o, if armed { 0.8 } else { 0.55 }, "civilians"); crate::belief::word(g, o, pos);
     g.gd[o].body_duty = None; g.gd[o].task = None;
     crate::game::guard_set_path(g, o, Vec::new());
     {
-        let man = &mut g.gd[o];
-        man.path_goal = None; man.path_goal_orbit = false;   // (guard_set_path_goal's rule, for the row in hand) man.stall_ref = None;
-        if armed { man.state = GuardState::Search; man.search_t = 0.0; man.search_plan = None; man.react_t = 0.6; }
-        else { if man.state == GuardState::Patrol || man.state == GuardState::Suspicious { man.state = GuardState::Suspicious; man.search_t = 0.0; } man.react_t = 0.9; }
+        g.gd[o].path_goal = None; g.gd[o].path_goal_orbit = false;   // (guard_set_path_goal's rule, for the row in hand) g.gd[o].stall_ref = None;
+        if armed { crate::mind::set_state(g, o, GuardState::Search, "civilians"); g.gd[o].search_t = 0.0; g.gd[o].search_plan = None; g.gd[o].react_t = 0.6; }
+        else { if g.gd[o].state == GuardState::Patrol || g.gd[o].state == GuardState::Suspicious { crate::mind::set_state(g, o, GuardState::Suspicious, "civilians"); g.gd[o].search_t = 0.0; } g.gd[o].react_t = 0.9; }
     }
     let now = g.time; crate::game::guard_track_fix(g, o, now);
     let lines = crate::dialogue::civ_lines();
@@ -207,7 +205,7 @@ pub fn to_gone(g: &mut crate::game::Game, gd: GuardId, evac: bool) {
 }
 
 /// the free nav cell near her with the most wall about it, away from the fright; her own spot if nothing better (civilians.ts cornerSpot)
-pub fn corner_spot(g: &crate::game::Game, gd: GuardId) -> V3 {
+pub fn corner_spot(g: &mut crate::game::Game, gd: GuardId) -> V3 {
     use crate::scene_collision::{nav_grid_idx, nav_grid_walkable};
     let cid = g.gd[gd].civ.unwrap();
     let cs = g.col.nav.cell; let from = g.ch[g.gd[gd].ch].pos; let threat = g.cv[cid].cause_pos;
@@ -512,8 +510,7 @@ pub fn civilian_down(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: boo
     }
     let now = g.time;
     {
-        let man = &mut g.gd[gd];
-        man.state = GuardState::Dead; man.speed = 0.0; man.died_at = now; man.down_kind = Some(how); man.down_by = Some(by); man.script = None;
+        crate::mind::set_state(g, gd, GuardState::Dead, "civilians"); g.gd[gd].speed = 0.0; g.gd[gd].died_at = now; g.gd[gd].down_kind = Some(how); g.gd[gd].down_by = Some(by); g.gd[gd].script = None;
     }
     if g.gd[gd].held.is_some() { g.gd[gd].held = None; g.ch[c].anim.held_pose = None; }
     g.ch[c].anim.act = None; g.cv[cid].target = None; g.cv[cid].report_to = None;
@@ -584,7 +581,7 @@ pub fn civ_point_in_view(g: &mut crate::game::Game, gd: GuardId, p: V3, range: f
 }
 
 /// living staff, free, on the shift's list (civilians.ts staffCalm)
-pub fn staff_calm(g: &crate::game::Game, o: GuardId) -> bool {
+pub fn staff_calm(g: &mut crate::game::Game, o: GuardId) -> bool {
     g.gd[o].state != GuardState::Dead && g.gd[o].team == Team::Guard && g.gd[o].held.is_none() && g.gd[o].script.is_none() && g.guards.contains(&o)
 }
 
@@ -641,11 +638,10 @@ fn notice_panic(g: &mut Game, cv: GuardId, cid: CivId, c: CharId, dt: f64) {
         if !heard && !seen { continue; }
         g.cv[cid].told.set(o, alarm_n); g.stats.civilians.noticed += 1;
         let from = g.cv[cid].cause_pos.unwrap_or(g.ch[c].pos);
-        g.gd[o].awareness = m::max(g.gd[o].awareness, 0.5);
+        crate::mind::raise(g, o, 0.5, "civilians");
         if g.gd[o].last_known.is_none() || g.gd[o].state == GuardState::Patrol { crate::belief::word(g, o, from); }
         if g.gd[o].state == GuardState::Patrol {
-            let man = &mut g.gd[o];
-            man.state = GuardState::Suspicious; man.search_t = 0.0; man.react_t = m::max(man.react_t, 0.7);
+            crate::mind::set_state(g, o, GuardState::Suspicious, "civilians"); g.gd[o].search_t = 0.0; g.gd[o].react_t = m::max(g.gd[o].react_t, 0.7);
             crate::game::guard_set_path(g, o, Vec::new()); crate::guards::guard_set_path_goal(g, o, None); g.gd[o].stall_ref = None;
         }
         if !bubble_within(g, o, 1.5) {
@@ -728,11 +724,10 @@ pub fn found_down(g: &mut crate::game::Game, cv: GuardId, o: GuardId) {
     let now = g.time;
     g.gd[o].witness.saw_body = Some(WitnessSawBody { victim: name.clone(), t: now, breathing: !dead });
     if g.gd[o].script.is_none() {
-        g.gd[o].awareness = m::max(g.gd[o].awareness, 0.7); crate::belief::word(g, o, body);
+        crate::mind::raise(g, o, 0.7, "civilians"); crate::belief::word(g, o, body);
         g.gd[o].react_t = 1.2; g.gd[o].body_duty = None; g.gd[o].task = None;
         crate::game::guard_set_path(g, o, Vec::new()); crate::guards::guard_set_path_goal(g, o, None);
-        let man = &mut g.gd[o];
-        if man.state == GuardState::Patrol || man.state == GuardState::Search { man.state = GuardState::Suspicious; man.search_t = 0.0; man.search_plan = None; man.pieing = None; }
+        if g.gd[o].state == GuardState::Patrol || g.gd[o].state == GuardState::Search { crate::mind::set_state(g, o, GuardState::Suspicious, "civilians"); g.gd[o].search_t = 0.0; g.gd[o].search_plan = None; g.gd[o].pieing = None; }
     }
     let lines = crate::dialogue::civ_lines();
     let text = if dead { lines.found_down.dead.clone() } else if away(g) { lines.guide.own.found_cold.clone() } else { lines.found_down.cold.clone() };
@@ -745,11 +740,10 @@ pub fn found_down(g: &mut crate::game::Game, cv: GuardId, o: GuardId) {
     while i < g.guards.len() {
         let other = g.guards[i]; i += 1;
         if other == o || g.gd[other].state == GuardState::Dead || g.gd[other].team != Team::Guard || g.gd[other].held.is_some() { continue; }
-        let man = &mut g.gd[other];
-        man.witness.called_to_body = Some(WitnessCalledToBody { victim: name.clone(), t: now, breathing: !dead });
-        if man.script.is_some() { continue; }
-        man.awareness = m::max(man.awareness, 0.45);
-        if man.task.is_none() && man.state != GuardState::Alert { man.last_known = Some(body); man.fix_stamp = man.fix_stamp.wrapping_add(1); }
+        g.gd[other].witness.called_to_body = Some(WitnessCalledToBody { victim: name.clone(), t: now, breathing: !dead });
+        if g.gd[other].script.is_some() { continue; }
+        crate::mind::raise(g, other, 0.45, "civilians");
+        if g.gd[other].task.is_none() && g.gd[other].state != GuardState::Alert { crate::mind::fix(g, other, Some(body), "civilians"); }
     }
     if !g.quiet_utility {
         g.alarm.pos[0] = body[0]; g.alarm.pos[1] = 0.0; g.alarm.pos[2] = body[2]; g.alarm.placed = true;
@@ -784,7 +778,7 @@ pub fn hear_scream(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// a calm patrolling staff man with nothing on his hands or mind and no line in the air (civilians.ts chattyEnough)
-pub fn chatty_enough(g: &crate::game::Game, x: GuardId) -> bool {
+pub fn chatty_enough(g: &mut crate::game::Game, x: GuardId) -> bool {
     let up = match &g.gd[x].bubble { Some(b) => g.time - b.t < b.dur + 1.0, None => false };
     let man = &g.gd[x];
     man.team == Team::Guard && man.unit.is_none() && man.state == GuardState::Patrol && man.held.is_none() && man.script.is_none() && man.task.is_none() && man.body_duty.is_none() && !man.pinned && !man.hold && man.leader.is_none() && man.post.is_none() && man.awareness < 0.15 && !up && g.guards.contains(&x)
@@ -861,10 +855,10 @@ pub fn evacuation_check(g: &mut crate::game::Game) {
 }
 
 /// the switch and the fail rule, kept on the machine: the browser's storage is the host's, and with no storage the TypeScript's own try does nothing (civilians.ts saveCivTune)
-pub fn save_civ_tune(g: &crate::game::Game) {}
+pub fn save_civ_tune(g: &mut crate::game::Game) {}
 
 /// the stored switch and `?nocivilians`: the browser's storage and the address are the host's, which sets g.tune; with neither the TypeScript's own tries do nothing (civilians.ts loadCivTune)
-pub fn load_civ_tune(g: &crate::game::Game) {}
+pub fn load_civ_tune(g: &mut crate::game::Game) {}
 
 /// the switch flipped live (civilians.ts setCivilians)
 pub fn set_civilians(g: &mut crate::game::Game, on: bool) {

@@ -45,7 +45,7 @@
     window.__testVisible = true; window.__shotPort = window.__shPort ?? (parseInt(location.port, 10) + 1);
     seed(); window.__menu?.close();
     if (window.__weather) { try { window.__weather.setEnabled(false); } catch { /* */ } }   // rain off unless a take says otherwise (the storm's dice would otherwise schedule strokes into a capture)
-    return { ok: true, res: [E().width, E().height, E().outWidth, E().outHeight], q: window.__quality?.current, taau: S().taau, restir: S().restir, dn: S().denoiser, froxel: S().froxelVol, rt: S().rtReflect, detail: S().detail, scale: S().renderScale, sharp: S().sharpDirect, hidden: document.hidden };
+    return { ok: true, res: [E().width, E().height, E().outWidth, E().outHeight], q: window.__quality?.current, taau: S().taau, froxel: S().froxelVol, rt: S().rtReflect, detail: S().detail, scale: S().renderScale, sharp: S().sharpDirect, hidden: document.hidden };
   }
   let fixed = null;   // the harness's own fixed spot (V2), added to the engine's light list once and switched per view
   function stage(view, yaw = null) {
@@ -82,7 +82,7 @@
   async function capAll(tag, views = ['v1', 'v2', 'v3']) {
     const out = [];
     for (const v of views) { out.push(await capStatic(tag, v)); out.push(await capMotion(tag, v)); }
-    out.push(JSON.stringify({ tag, res: [E().width, E().height, E().outWidth, E().outHeight], taau: S().taau, sharpen: S().taauSharpen, restir: S().restir, dn: S().denoiser, froxel: S().froxelVol, rt: S().rtReflect, detail: S().detail, scale: S().renderScale, sharp: S().sharpDirect ?? null, errs: (window.__errs || []).slice(0, 3) }));
+    out.push(JSON.stringify({ tag, res: [E().width, E().height, E().outWidth, E().outHeight], taau: S().taau, sharpen: S().taauSharpen, froxel: S().froxelVol, rt: S().rtReflect, detail: S().detail, scale: S().renderScale, sharp: S().sharpDirect ?? null, errs: (window.__errs || []).slice(0, 3) }));
     return out;
   }
   /** one serialized offscreen render → { passes, sum, union } */

@@ -8,12 +8,12 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 /// A bone of a body, if the body has it (the TypeScript's `c.bones.x`).
-fn bone(g: &Game, c: CharId, b: crate::character::Bone) -> Option<V3> {
+fn bone(g: &mut Game, c: CharId, b: crate::character::Bone) -> Option<V3> {
     g.ch[c].bones.get(b).copied()
 }
 
 /// Is the shield up: a living man in Sam's arm, Sam on his feet, in any phase of the hold. (guards.ts shieldUp)
-pub fn shield_up(g: &crate::game::Game) -> bool {
+pub fn shield_up(g: &mut crate::game::Game) -> bool {
     let p = g.player;
     let held = match &g.pl[p].holding {
         Some(h) => h.g,
@@ -30,7 +30,7 @@ pub fn shield_up(g: &crate::game::Game) -> bool {
 }
 
 /// The pair as the observers reason about it this frame; None when nobody is held. `key` is the hold's serial. (guards.ts pairOf)
-pub fn pair_of(g: &crate::game::Game) -> Option<crate::guards::Pair> {
+pub fn pair_of(g: &mut crate::game::Game) -> Option<crate::guards::Pair> {
     let p = g.player;
     if g.pl[p].holding.is_none() || !shield_up(g) {
         return None;
@@ -168,11 +168,6 @@ pub fn held_visibility(g: &mut crate::game::Game, p: &crate::guards::Pair) -> f6
     vis
 }
 
-/// `gd.lastKnown = at`, a whole write: the stamp says so (doze.ts asks by identity).
-fn fix_on(g: &mut Game, gd: GuardId, at: V3) {
-    g.gd[gd].last_known = Some(v3::copy(at));
-    g.gd[gd].fix_stamp = g.gd[gd].fix_stamp.wrapping_add(1);
-}
 
 /// Perception's share: is a held colleague in his view this frame? If so he is in the standoff and all his eyes-on-Sam is refreshed off the pair. (guards.ts standoffPerceive)
 pub fn standoff_perceive(g: &mut crate::game::Game, gd: GuardId, dt: Option<f64>) -> bool {
@@ -209,9 +204,9 @@ pub fn standoff_perceive(g: &mut crate::game::Game, gd: GuardId, dt: Option<f64>
             return false;
         }
         let was = g.gd[gd].awareness;
-        g.gd[gd].awareness = v3::clamp(was + rate * dt, 0.0, 1.0);
+        crate::mind::set(g, gd, v3::clamp(was + rate * dt, 0.0, 1.0), "guards");
         if !far_faint(g, gd, dist, was) {
-            fix_on(g, gd, pp);
+            crate::mind::fix(g, gd, Some(v3::copy(pp)), "guards");
         }
         if g.gd[gd].awareness < 0.8 {
             return rate > 0.25;
@@ -261,8 +256,8 @@ pub fn standoff_perceive(g: &mut crate::game::Game, gd: GuardId, dt: Option<f64>
         g.tab.guards_standoff[s].seen_t = now;
     }
     crate::gunhold::gun_hold_see(g, gd, p);
-    g.gd[gd].awareness = 1.0;
-    fix_on(g, gd, pp);
+    crate::mind::set(g, gd, 1.0, "guards");
+    crate::mind::fix(g, gd, Some(v3::copy(pp)), "guards");
     let me = &mut g.gd[gd];
     me.last_seen_t = now;
     me.sight_pos = v3::copy(pp);
@@ -303,7 +298,7 @@ pub fn hostage_call(g: &mut crate::game::Game, gd: GuardId, p: crate::guards::Pa
         }
         let state = g.gd[o].state;
         let was_calm = state == crate::game::GuardState::Patrol || state == crate::game::GuardState::Suspicious;
-        g.gd[o].awareness = m::max(g.gd[o].awareness, 0.92);
+        crate::mind::raise(g, o, 0.92, "guards");
         crate::belief::word(g, o, p.sam);
         if was_calm {
             let d = v3::dist(g.ch[g.gd[o].ch].pos, p.sam);
@@ -384,7 +379,7 @@ fn axis_measure(from: V3, to: V3, ax: f64, az: f64, y0: f64, y1: f64) -> f64 {
 }
 
 /// Metres between colleague `o`'s body axis and the segment `from` → `to`. (guards.ts axisToSegment)
-pub fn axis_to_segment(g: &crate::game::Game, from: V3, to: V3, o: GuardId) -> f64 {
+pub fn axis_to_segment(g: &mut crate::game::Game, from: V3, to: V3, o: GuardId) -> f64 {
     let c = g.gd[o].ch;
     let pos = g.ch[c].pos;
     let h = bone(g, c, crate::character::Bone::Hips).unwrap_or(pos);

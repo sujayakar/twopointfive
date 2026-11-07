@@ -70,7 +70,7 @@ fn variants_of(g: &Game, cast: AnimGltfCastInfoId, side: CastSide) -> Vec<AnimGl
 }
 
 /// The variants of one side; a side with none falls back to all of them, the responders to the defenders first.   (gltf.ts castSide)
-pub fn cast_side(g: &crate::game::Game, cast: AnimGltfCastInfoId, side: crate::anim_gltf::CastSide) -> Vec<AnimGltfCastVariantId> {
+pub fn cast_side(g: &mut crate::game::Game, cast: AnimGltfCastInfoId, side: crate::anim_gltf::CastSide) -> Vec<AnimGltfCastVariantId> {
     let v = variants_of(g, cast, side);
     if !v.is_empty() {
         return v;

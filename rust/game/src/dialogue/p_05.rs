@@ -13,7 +13,7 @@ fn row(g: &mut Game) -> &mut crate::dialogue::RadioState {
 }
 
 /// `g.guards.filter(x => x.found).length`
-fn found_count(g: &Game) -> f64 {
+fn found_count(g: &mut Game) -> f64 {
     let mut n = 0.0;
     for &x in g.guards.iter() { if g.gd[x].found { n += 1.0; } }
     n
@@ -44,7 +44,7 @@ pub fn radio_state<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::dialogue:
 }
 
 /// The run is really the player's and still going, Sam is on his feet, and it is the night she talks him through.   (dialogue.ts radioLive)
-pub fn radio_live(g: &crate::game::Game) -> bool {
+pub fn radio_live(g: &mut crate::game::Game) -> bool {
     let s = g.mission.stage;
     !g.quiet_utility && g.puppet.is_none() && !g.touring && g.ai_enabled
         && s != crate::game::MissionStage::Done && s != crate::game::MissionStage::Failed
@@ -54,7 +54,7 @@ pub fn radio_live(g: &crate::game::Game) -> bool {
 }
 
 /// Nobody is fighting, and Sam's mouth and hands are free.   (dialogue.ts radioClear)
-pub fn radio_clear(g: &crate::game::Game) -> bool {
+pub fn radio_clear(g: &mut crate::game::Game) -> bool {
     !g.guards.iter().any(|&x| g.gd[x].state == crate::game::GuardState::Alert)
         && g.pl[g.player].holding.is_none()
         && g.pl[g.player].takedown.is_none()

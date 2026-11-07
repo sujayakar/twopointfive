@@ -28,7 +28,7 @@ fn unit_frame() -> Frame {
 }
 
 /// The rifle's base place in the back's frame, slung behind or hung in front. (rigProps.ts slungBase)
-pub fn slung_base(g: &crate::game::Game, c_2: CharId, p: crate::rig_props::RigSc20kSlung, front: bool, rest: Option<f64>) -> crate::rig_props::SlungBase {
+pub fn slung_base(g: &mut crate::game::Game, c_2: CharId, p: crate::rig_props::RigSc20kSlung, front: bool, rest: Option<f64>) -> crate::rig_props::SlungBase {
     let (b_hips, b_thigh_l, b_thigh_r, b_ua_l, b_ua_r, b_spine2) = (bone(g, c_2, crate::character::Bone::Hips), bone(g, c_2, crate::character::Bone::ThighL), bone(g, c_2, crate::character::Bone::ThighR), bone(g, c_2, crate::character::Bone::UpperArmL), bone(g, c_2, crate::character::Bone::UpperArmR), bone(g, c_2, crate::character::Bone::Spine2));
     let joints = match (b_hips, b_thigh_l, b_thigh_r, b_ua_l, b_ua_r, b_spine2) {
         (Some(_), Some(tl), Some(tr), Some(al), Some(ar), Some(_)) => Some((tl, tr, al, ar)),
@@ -68,7 +68,7 @@ pub fn slung_base(g: &crate::game::Game, c_2: CharId, p: crate::rig_props::RigSc
 }
 
 /// How far a rifle hanging in front must swing forward to lie over both thighs as posed. (rigProps.ts slingSwing)
-pub fn sling_swing(g: &crate::game::Game, c_2: CharId, cf: crate::rig_props::Frame, o: V3, z: V3) -> f64 {
+pub fn sling_swing(g: &mut crate::game::Game, c_2: CharId, cf: crate::rig_props::Frame, o: V3, z: V3) -> f64 {
     let (thigh_l, thigh_r, shin_l, shin_r) = match (bone(g, c_2, crate::character::Bone::ThighL), bone(g, c_2, crate::character::Bone::ThighR), bone(g, c_2, crate::character::Bone::ShinL), bone(g, c_2, crate::character::Bone::ShinR)) {
         (Some(a), Some(b), Some(c), Some(d)) => (a, b, c, d),
         _ => return 0.0,
@@ -107,7 +107,7 @@ fn swing_ang(f: f64, u: f64) -> f64 {
 }
 
 /// The swing a front-slung rifle wants on this pose. (rigProps.ts slingRestWant)
-pub fn sling_rest_want(g: &crate::game::Game, c_2: CharId) -> f64 {
+pub fn sling_rest_want(g: &mut crate::game::Game, c_2: CharId) -> f64 {
     slung_base(g, c_2, sling_front(), true, None).want
 }
 
@@ -220,7 +220,7 @@ fn stamp_owner(g: &mut Game, c: CharId) {
 }
 
 /// The 2010s carbine's parts (GEAR.on is settled on). (rigProps.ts rifleM4)
-pub fn rifle_m4(g: &crate::game::Game, rig: Option<crate::rig_props::Rig>) -> Option<crate::rig_props::RigM4> {
+pub fn rifle_m4(g: &mut crate::game::Game, rig: Option<crate::rig_props::Rig>) -> Option<crate::rig_props::RigM4> {
     let rig = rig.unwrap_or_else(crate::rig_props::rig);
     Some(rig.m4)
 }
@@ -291,7 +291,7 @@ pub fn sc20k_launcher_muzzle(g: &mut crate::game::Game, c_2: CharId, rig: Option
 }
 
 /// The carbine's weapon light: at the lens part, pointing down the bore. (rigProps.ts carbineLightPose)
-pub fn carbine_light_pose(g: &crate::game::Game, c_2: CharId, rig: Option<crate::rig_props::Rig>) -> crate::rig_props::CarbineLightPose {
+pub fn carbine_light_pose(g: &mut crate::game::Game, c_2: CharId, rig: Option<crate::rig_props::Rig>) -> crate::rig_props::CarbineLightPose {
     let rig = rig.unwrap_or_else(crate::rig_props::rig);
     let cb = rig.carbine;
     let hand = hand_or_muzzle(g, c_2);
@@ -301,7 +301,7 @@ pub fn carbine_light_pose(g: &crate::game::Game, c_2: CharId, rig: Option<crate:
 }
 
 /// The player's rail light: its position and direction are the gun's. (rigProps.ts rigLightPose)
-pub fn rig_light_pose(g: &crate::game::Game, c_2: CharId, rig: Option<crate::rig_props::Rig>) -> crate::rig_props::RigLightPose {
+pub fn rig_light_pose(g: &mut crate::game::Game, c_2: CharId, rig: Option<crate::rig_props::Rig>) -> crate::rig_props::RigLightPose {
     let rig = rig.unwrap_or_else(crate::rig_props::rig);
     let hand = hand_or_muzzle(g, c_2);
     let fr = pistol_frame(g, c_2, hand, PistolFrameP { adj: rig.pistol.adj }, None).g;
@@ -341,7 +341,7 @@ fn torch_light(name: &str, owner: f64, intensity: f64, inner_deg: f64, outer_deg
 }
 
 /// The relaxed torch carry's beam, eased from last frame's. (rigProps.ts torchCarryDir)
-pub fn torch_carry_dir(g: &crate::game::Game, c_2: CharId, prev: V3, dt: Option<f64>, low: Option<crate::rig_props::TorchCarryDirLow>) -> V3 {
+pub fn torch_carry_dir(g: &mut crate::game::Game, c_2: CharId, prev: V3, dt: Option<f64>, low: Option<crate::rig_props::TorchCarryDirLow>) -> V3 {
     let dt = dt.unwrap_or(1.0 / 60.0);
     let want = torch_carry_want(g, c_2, low.map(|l| -l.tan));
     let rate = match low { Some(l) => l.rate, None => TORCH_CARRY_RATE };
@@ -349,7 +349,7 @@ pub fn torch_carry_dir(g: &crate::game::Game, c_2: CharId, prev: V3, dt: Option<
 }
 
 /// Where the relaxed carry is easing to: half his aim heading, half his chest. (rigProps.ts torchCarryWant)
-pub fn torch_carry_want(g: &crate::game::Game, c_2: CharId, tan: Option<f64>) -> V3 {
+pub fn torch_carry_want(g: &mut crate::game::Game, c_2: CharId, tan: Option<f64>) -> V3 {
     let (aim_yaw, aim_pitch, chest) = (g.ch[c_2].aim_yaw, g.ch[c_2].aim_pitch, g.ch[c_2].chest_dir);
     let f: V3 = [m::sin(aim_yaw), 0.0, m::cos(aim_yaw)];
     let y = match tan { Some(t) => t, None => m::tan(aim_pitch) };
@@ -357,7 +357,7 @@ pub fn torch_carry_want(g: &crate::game::Game, c_2: CharId, tan: Option<f64>) ->
 }
 
 /// How far off his back the big slot's tool rides with his rifle slung under it. (rigProps.ts bigClearOf)
-pub fn big_clear_of(g: &crate::game::Game, c_2: CharId, kind: crate::rig_props::BigClearOfKind, rig: Option<crate::rig_props::Rig>) -> f64 {
+pub fn big_clear_of(g: &mut crate::game::Game, c_2: CharId, kind: crate::rig_props::BigClearOfKind, rig: Option<crate::rig_props::Rig>) -> f64 {
     let rig = rig.unwrap_or_else(crate::rig_props::rig);
     let p = rig.sc20k.slung;
     let s = slung_base(g, c_2, p, false, None);
@@ -367,7 +367,7 @@ pub fn big_clear_of(g: &crate::game::Game, c_2: CharId, kind: crate::rig_props::
 }
 
 /// The sizes of the thing the pack-side rule stands at a pack's side. (rigProps.ts packSideDims)
-pub fn pack_side_dims(g: &crate::game::Game, what: crate::rig_props::PackSideDimsWhat, rig: Option<crate::rig_props::Rig>) -> crate::rig_props::PackSideDims {
+pub fn pack_side_dims(g: &mut crate::game::Game, what: crate::rig_props::PackSideDimsWhat, rig: Option<crate::rig_props::Rig>) -> crate::rig_props::PackSideDims {
     let rig = rig.unwrap_or_else(crate::rig_props::rig);
     if what == PackSideDimsWhat::Hammer {
         let h = bigrig().hammer;

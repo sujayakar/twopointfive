@@ -556,7 +556,7 @@ fn body_reach(g: &mut crate::game::Game, a: V3, p: V3, q: Option<V3>, add: f64, 
 }
 
 /// Throw origin, right hand-ish.   (player.ts throwOrigin)
-pub fn throw_origin(g: &crate::game::Game) -> V3 {
+pub fn throw_origin(g: &mut crate::game::Game) -> V3 {
     let pl = g.player;
     let c = g.pl[pl].ch;
     let f = crate::character::character_forward(g, c);
@@ -608,7 +608,7 @@ pub fn cursor_hit(g: &mut crate::game::Game, ray: crate::player::CursorHitRay, o
 }
 
 /// The point the cursor's ray gives: where it hit, else the floor under it, else None.   (player.ts cursorPoint)
-pub fn cursor_point(g: &crate::game::Game, cam: CameraId, u: f64, v: f64, ray: crate::player::CursorPointRay, hit: Option<crate::player::CursorPointHit>) -> Option<V3> {
+pub fn cursor_point(g: &mut crate::game::Game, cam: CameraId, u: f64, v: f64, ray: crate::player::CursorPointRay, hit: Option<crate::player::CursorPointHit>) -> Option<V3> {
     match hit {
         Some(h) => Some(v3::mad(ray.ro, ray.rd, h.t)),
         None => crate::camera::follow_camera_ground_point(g, cam, u, v, Some(0.0)),

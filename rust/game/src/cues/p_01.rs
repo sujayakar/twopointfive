@@ -319,7 +319,7 @@ pub fn flat(a: V3, b: V3) -> f64 {
 }
 
 /// A new Cues: the field initialisers, nothing more.   (cues.ts Cues.constructor)
-pub fn cues_new(g: &crate::game::Game) -> crate::cues::Cues {
+pub fn cues_new(g: &mut crate::game::Game) -> crate::cues::Cues {
     Cues::blank()
 }
 
@@ -525,7 +525,7 @@ pub fn cues_overheard(g: &mut crate::game::Game, gd: GuardId, text: &str) -> boo
 }
 
 /// Seconds until the strip would take a line of this class without dropping it for the class's gap (0 = now).   (cues.ts Cues.netWait)
-pub fn cues_net_wait(g: &crate::game::Game, cls: f64) -> f64 {
+pub fn cues_net_wait(g: &mut crate::game::Game, cls: f64) -> f64 {
     let c = cls as usize;
     let t = g.time;
     match sparse_get(&g.cues.class_t, c) {
@@ -673,7 +673,7 @@ pub fn cues_tick(g: &mut crate::game::Game) {
         let still = m::hyp2(g.ch[c].vel[0], g.ch[c].vel[2]) < 0.3;
         let hold = g.tab.roomfight_def[d].mode == crate::roomfight::DefMode::Hold;
         let on_player = matches!(g.gd[gd].foe, Some(crate::game::Foe::Player));
-        let faced_down = |g: &Game| -> Option<PlayerId> {
+        let faced_down = |g: &mut Game| -> Option<PlayerId> {
             let f = crate::seats::faced_man(g, gd);
             if g.pl[f].down { Some(f) } else { None }
         };
@@ -812,7 +812,7 @@ pub fn cues_note(g: &mut crate::game::Game, who: &str, what: &str) {
 }
 
 /// The panel's line.   (cues.ts Cues.summary)
-pub fn cues_summary(g: &crate::game::Game) -> String {
+pub fn cues_summary(g: &mut crate::game::Game) -> String {
     let S = &g.cues.stats;
     let (drawn, of) = (S.heard_drawn + S.cue_drawn, S.heard + S.cue_net);
     let held = if js::truthy(S.dup + S.gap + S.full) { alloc::format!(" · held back: {} said already, {} too soon, {} outranked", js::num_str(S.dup), js::num_str(S.gap), js::num_str(S.full)) } else { String::new() };
@@ -820,7 +820,7 @@ pub fn cues_summary(g: &crate::game::Game) -> String {
 }
 
 /// The strip's rows this frame as 'radio: …' rows, and at most one 'heard: …' row in a place no other row wants, oldest first.   (cues.ts stripRows)
-pub fn strip_rows(g: &crate::game::Game) -> Vec<crate::cues::StripRowsItem> {
+pub fn strip_rows(g: &mut crate::game::Game) -> Vec<crate::cues::StripRowsItem> {
     let (t, secs, most) = (g.time, g.k.cues.secs, g.k.cues.rows);
     let live: Vec<&CueRow> = g.cues.rows.iter().filter(|r| r.t <= t && t - r.t < secs).collect();
     let from = tail_from(live.len(), most);

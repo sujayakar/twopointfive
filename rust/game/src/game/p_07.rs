@@ -39,7 +39,7 @@ pub fn game_fog_lift(g: &mut crate::game::Game, want: bool, tube: Option<bool>, 
     g.fog_held = Some(crate::game::GameFogHeld { dyn_: g.engine.world.dynamics.clone(), on: g.fog_of_war.frame.on });
     if bare {
         crate::combat::hidden_props(g, &mut b);
-        if g.men_statured { let all = g.men_all.clone(); crate::stature::drawn_boxes(g, &all, &b, n0 as f64); }
+        if g.men_statured { let all = g.men_all.clone(); crate::stature::drawn_boxes(g, &all, &mut b, n0 as f64); }
         g.fog_of_war.frame.on = false; g.fog_of_war.bared = true;
         crate::fogofwar::fog_of_war_faces_lift(g);
     }
@@ -179,7 +179,7 @@ pub fn game_escape(g: &mut crate::game::Game) -> bool {
 }
 
 /// the light meter's mapping, irradiance → 0‥1 visibility   (game.ts visibilityOf)
-pub fn game_visibility_of(g: &crate::game::Game, e: f64) -> f64 {
+pub fn game_visibility_of(g: &mut crate::game::Game, e: f64) -> f64 {
     visibility_sum(g.tune.vis_slope, g.tune.vis_floor, e)
 }
 /// visibilityOf's sum
@@ -341,7 +341,7 @@ pub fn game_door_contact(g: &mut crate::game::Game) -> Option<crate::doors::Door
 
 
 /// the row a click with empty hands is on: the first guard in reach who is no hostage and nobody the snatch has out (game.ts:2192)
-fn click_row(g: &Game) -> Option<Interactable> {
+fn click_row(g: &mut Game) -> Option<Interactable> {
     let mut i = 0;
     while i < g.nearby.len() {
         if g.nearby[i].kind == InteractableKind::Guard && g.nearby[i].in_reach {

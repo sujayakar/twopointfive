@@ -31,7 +31,7 @@ pub fn shape(g: &mut crate::game::Game, i: f64) -> f64 {
 }
 
 /// The master as the systems read it, clamped 0‥1. (wind.ts windOf)
-pub fn wind_of(g: &crate::game::Game) -> f64 {
+pub fn wind_of(g: &mut crate::game::Game) -> f64 {
     m::max(0.0, m::min(1.0, g.tune.wind))
 }
 
@@ -342,7 +342,7 @@ pub fn wind_sync_field(g: &mut crate::game::Game) {
 }
 
 /// The roofs the storm blows between one by one, where the switch is up and the level has three or four of its own. (wind.ts Wind.fieldRoofs)
-pub fn wind_field_roofs(g: &crate::game::Game) -> Option<Vec<Vec<f64>>> {
+pub fn wind_field_roofs(g: &mut crate::game::Game) -> Option<Vec<Vec<f64>>> {
     match &g.wind.lv_roofs {
         Some(r) if r.len() > 2 => Some(r.clone()),
         _ => None,
@@ -575,7 +575,7 @@ pub fn wind_at(g: &mut crate::game::Game, p: V3, out: Option<&mut V3>) -> V3 {
 }
 
 /// The source called `name`. (wind.ts Wind.byName)
-pub fn wind_by_name(g: &crate::game::Game, name: &str) -> Option<WindWindSourceId> {
+pub fn wind_by_name(g: &mut crate::game::Game, name: &str) -> Option<WindWindSourceId> {
     g.wind.all.iter().copied().find(|&s| g.tab.wind_wind_source[s].name == name)
 }
 
@@ -592,7 +592,7 @@ pub fn wind_fresh(g: &mut crate::game::Game) {
 }
 
 /// One line per source for the panel. (wind.ts Wind.describe)
-pub fn wind_describe(g: &crate::game::Game) -> Vec<String> {
+pub fn wind_describe(g: &mut crate::game::Game) -> Vec<String> {
     g.wind
         .all
         .iter()

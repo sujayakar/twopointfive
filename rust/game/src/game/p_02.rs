@@ -8,13 +8,13 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// The selector open as a list, not up as a ring. (game.ts Player.listOpen)
-pub fn player_list_open(g: &crate::game::Game, id: PlayerId) -> bool {
+pub fn player_list_open(g: &mut crate::game::Game, id: PlayerId) -> bool {
     let sel = &g.pl[id].sel;
     sel.open && sel.ring.is_none()
 }
 
 /// The selector open with his hand on it: a list, or a ring whose key is still down. (game.ts Player.choosing)
-pub fn player_choosing(g: &crate::game::Game, id: PlayerId) -> bool {
+pub fn player_choosing(g: &mut crate::game::Game, id: PlayerId) -> bool {
     let sel = &g.pl[id].sel;
     sel.open && !sel.ring.as_ref().and_then(|r| r.free).unwrap_or(false)
 }
@@ -45,7 +45,7 @@ pub fn player_new(g: &mut crate::game::Game, men: crate::Opaque, ch: RigId, pos:
 }
 
 /// What is physically in the gun hand right now. (game.ts Player.gunInHand)
-pub fn player_gun_in_hand(g: &crate::game::Game, id: PlayerId) -> Option<FirearmId> {
+pub fn player_gun_in_hand(g: &mut crate::game::Game, id: PlayerId) -> Option<FirearmId> {
     if g.pl[id].holstered {
         None
     } else if g.pl[id].slot == crate::game::SlotKind::Pistol {
@@ -58,33 +58,33 @@ pub fn player_gun_in_hand(g: &crate::game::Game, id: PlayerId) -> Option<Firearm
 }
 
 /// The Five-seveN is the selected item and drawn. (game.ts Player.pistolUp)
-pub fn player_pistol_up(g: &crate::game::Game, id: PlayerId) -> bool {
+pub fn player_pistol_up(g: &mut crate::game::Game, id: PlayerId) -> bool {
     g.pl[id].slot == crate::game::SlotKind::Pistol && !g.pl[id].holstered
 }
 
 /// The FN2000 is the selected item and the kit has it. (game.ts Player.rifleSel)
-pub fn player_rifle_sel(g: &crate::game::Game, id: PlayerId) -> bool {
+pub fn player_rifle_sel(g: &mut crate::game::Game, id: PlayerId) -> bool {
     g.pl[id].slot == crate::game::SlotKind::Rifle && g.pl[id].has_rifle
 }
 
 /// The FN2000 is in both hands. (game.ts Player.rifleUp)
-pub fn player_rifle_up(g: &crate::game::Game, id: PlayerId) -> bool {
+pub fn player_rifle_up(g: &mut crate::game::Game, id: PlayerId) -> bool {
     player_rifle_sel(g, id) && !g.pl[id].holstered && g.pl[id].dragging.is_none() && !g.pl[id].down
 }
 
 /// Braced on the foregrip, on his own legs this tick. (game.ts Player.braced)
-pub fn player_braced(g: &crate::game::Game, id: PlayerId) -> bool {
+pub fn player_braced(g: &mut crate::game::Game, id: PlayerId) -> bool {
     let sprinting = g.pl[id].sprinting;
     player_braced_at(g, id, sprinting)
 }
 
 /// Braced, asked of legs that are or are not at a run. (game.ts Player.bracedAt)
-pub fn player_braced_at(g: &crate::game::Game, id: PlayerId, sprinting: bool) -> bool {
+pub fn player_braced_at(g: &mut crate::game::Game, id: PlayerId, sprinting: bool) -> bool {
     player_rifle_up(g, id) && !sprinting && g.pl[id].kick.is_none()
 }
 
 /// The canister the selected slot puts in the fist, None with a gun selected. (game.ts Player.canisterSel)
-pub fn player_canister_sel(g: &crate::game::Game, id: PlayerId) -> Option<crate::game::ThrowKind> {
+pub fn player_canister_sel(g: &mut crate::game::Game, id: PlayerId) -> Option<crate::game::ThrowKind> {
     match g.pl[id].slot {
         crate::game::SlotKind::Smoke => Some(crate::game::ThrowKind::Smoke),
         crate::game::SlotKind::Flash => Some(crate::game::ThrowKind::Flash),
@@ -94,7 +94,7 @@ pub fn player_canister_sel(g: &crate::game::Game, id: PlayerId) -> Option<crate:
 }
 
 /// A living friend stands in the lane his gun points down. Geometry only. (game.ts friendBeforeMuzzle)
-pub fn friend_before_muzzle(g: &crate::game::Game, gd: GuardId) -> bool {
+pub fn friend_before_muzzle(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let c = g.gd[gd].ch;
     let y = crate::character::character_gun_yaw(g, c);
     let at = g.ch[c].pos;
@@ -117,7 +117,7 @@ fn in_lane(p: V3, at: V3, y: f64) -> bool {
 }
 
 /// Down but breathing: put out cold, not shot. False for a living man and for a corpse. (game.ts isBreathing)
-pub fn is_breathing(g: &crate::game::Game, gd: GuardId) -> bool {
+pub fn is_breathing(g: &mut crate::game::Game, gd: GuardId) -> bool {
     g.gd[gd].state == crate::game::GuardState::Dead
         && g.gd[gd].down_kind.is_some()
         && g.gd[gd].down_kind != Some(crate::game::DownKind::Shot)

@@ -1177,8 +1177,7 @@ pub fn report(root: &Path, state: &Path, bare: Option<&str>, calls_json: Option<
         let _ = with_game;
         let mut all_keys: Vec<&String> = keys.iter().chain(pure_keys.iter()).collect();
         all_keys.sort();
-        let note = "The keys of calls.json's rows whose Rust function cannot write the game: it takes the game by a shared borrow, has no `&mut` anywhere in its parameters, and neither it nor anything it uses is unsafe, names a static or a cell, or is handed a block of the sim to write (the compiler's proof, then the taint of tools/fold/readers.sh). After a crossing of one the host exports and applies nothing. Written by `tools/fold/readers.sh --reads`: run it again when bodies change.";
-        reads_json = Some(format!("{{\"_\": {}, \"rows\": [\n{}\n]}}\n", serde_json::to_string(note).unwrap(), all_keys.iter().map(|k| format!("  {}", serde_json::to_string(k).unwrap())).collect::<Vec<_>>().join(",\n")));
+        reads_json = Some(format!("{{\"rows\": [\n{}\n]}}\n", all_keys.iter().map(|k| format!("  {}", serde_json::to_string(k).unwrap())).collect::<Vec<_>>().join(",\n")));
     }
     // the compiler's bare answer, taken before the taint: a map of who touches the Game struct, not a proof of who moves nothing
     if let Some(b) = bare {

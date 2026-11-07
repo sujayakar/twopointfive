@@ -27,7 +27,7 @@ fn along_of(f: &crate::doorway::RelF, p: V3) -> f64 {
     (p[0] - f.hx) * f.ux + (p[2] - f.hz) * f.uz
 }
 /// `const past`, of nearStand.
-fn past_jamb(g: &Game, d: DoorId, side: f64, min: f64, in_off: f64, a: f64, off: f64) -> V3 {
+fn past_jamb(g: &mut Game, d: DoorId, side: f64, min: f64, in_off: f64, a: f64, off: f64) -> V3 {
     if a >= min { pt_of(g, d, a, off, side) } else { pt_of(g, d, min, m::min(off, in_off), side) }
 }
 /// `const line`, of gate: his walk through the handle half, bent onto its line from afar, his feet put on it up close. True = the new row is in the table.
@@ -64,25 +64,25 @@ pub fn fresh(g: &mut crate::game::Game, st: Option<&crate::handleside::St>) -> b
 }
 
 /// Which face of the closed leaf `p` is on. (handleside.ts sideAt)
-pub fn side_at(g: &crate::game::Game, d: DoorId, p: V3) -> f64 {
+pub fn side_at(g: &mut crate::game::Game, d: DoorId, p: V3) -> f64 {
     let f = crate::guards::frame_of(g, d);
     if (p[0] - f.hx) * f.nx + (p[2] - f.hz) * f.nz >= 0.0 { 1.0 } else { -1.0 }
 }
 
 /// How far `p` stands off the frame's line. (handleside.ts offAt)
-pub fn off_at(g: &crate::game::Game, d: DoorId, p: V3) -> f64 {
+pub fn off_at(g: &mut crate::game::Game, d: DoorId, p: V3) -> f64 {
     let f = crate::guards::frame_of(g, d);
     m::abs((p[0] - f.hx) * f.nx + (p[2] - f.hz) * f.nz)
 }
 
 /// The floor point `along` the leaf from its hinge, `off` it on face `side`. (handleside.ts ptOf)
-pub fn pt_of(g: &crate::game::Game, d: DoorId, along: f64, off: f64, side: f64) -> V3 {
+pub fn pt_of(g: &mut crate::game::Game, d: DoorId, along: f64, off: f64, side: f64) -> V3 {
     let f = crate::guards::frame_of(g, d);
     [f.hx + f.ux * along + f.nx * side * off, 0.0, f.hz + f.uz * along + f.nz * side * off]
 }
 
 /// The handle, on the floor. (handleside.ts handleAt)
-pub fn handle_at(g: &crate::game::Game, d: DoorId) -> V3 {
+pub fn handle_at(g: &mut crate::game::Game, d: DoorId) -> V3 {
     let along = g.dr[d].def.width - g.k.handle.handle_in;
     pt_of(g, d, along, 0.0, 1.0)
 }
@@ -237,7 +237,7 @@ pub fn wants_hand(g: &mut crate::game::Game, gd: GuardId, d: DoorId, from: V3) -
 }
 
 /// The first leaf his walk goes through within `look` metres. (handleside.ts ahead)
-pub fn ahead(g: &crate::game::Game, gd: GuardId) -> Option<crate::handleside::Ahead> {
+pub fn ahead(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::handleside::Ahead> {
     let c = g.gd[gd].ch;
     let look = g.k.handle.look;
     let mut a = g.ch[c].pos;
@@ -316,7 +316,7 @@ pub fn handle_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, 
 }
 
 /// Did this file have his feet this frame or the last. (handleside.ts handleGateStopped)
-pub fn handle_gate_stopped(g: &crate::game::Game, gd: GuardId) -> bool {
+pub fn handle_gate_stopped(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let t = g.gd[gd].handle_gate_t;
     g.time >= t && g.time - t < 0.05
 }

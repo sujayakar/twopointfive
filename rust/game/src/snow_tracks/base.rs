@@ -7,4 +7,4 @@ use alloc::{string::String, vec::Vec};
 
 
 /// (src/game/snowTracks.ts:175 clearSnowTracks)
-pub fn clear_snow_tracks(g: &mut crate::game::Game, t: &crate::snow_tracks::SnowTracks) { g.out.push(crate::out_events::OutEvent::ClearSnowTracks); }
+pub fn clear_snow_tracks(g: &mut crate::game::Game, t: &mut crate::snow_tracks::SnowTracks) { g.out.push(crate::out_events::OutEvent::ClearSnowTracks); }

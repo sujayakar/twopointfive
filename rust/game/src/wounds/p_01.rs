@@ -50,7 +50,7 @@ fn line(bones: &JsMap<crate::character::Bone, V3>, a: V3, b: V3, k: &[crate::cha
 }
 
 /// Where the round landed, measured against his bones as they stand this frame. (wounds.ts hitZone)
-pub fn hit_zone(g: &crate::game::Game, c_2: CharId, ro: V3, rd: V3, t_hit: f64) -> crate::wounds::HitZone {
+pub fn hit_zone(g: &mut crate::game::Game, c_2: CharId, ro: V3, rd: V3, t_hit: f64) -> crate::wounds::HitZone {
     let k = g.k.wound;
     let a = v3::mad(ro, rd, m::max(0.0, t_hit - k.lead));
     let b = v3::mad(ro, rd, t_hit + k.depth);

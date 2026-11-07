@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 /// the character budget a script's spawn is held to on a tutorial mission; anywhere else none.   (director.ts liftedBudget)
-pub fn lifted_budget(g: &crate::game::Game) -> Option<f64> {
+pub fn lifted_budget(g: &mut crate::game::Game) -> Option<f64> {
     if crate::rails::rails_live(g) { Some(16.0) } else { None }
 }
 
@@ -122,7 +122,7 @@ fn device_group(d: &crate::scene_level::DeviceDef) -> String {
 fn door_is_in(level: &LintManifestLevel, name: &str) -> bool { level.doors.iter().any(|d| d.name == name) }
 
 /// The define-time lint: every name the script uses exists in the level, loadouts are spawnable, triggers name declared beats, waits are finite. Errors disarm the script.   (director.ts lintManifest)
-pub fn lint_manifest(g: &crate::game::Game, m: &crate::director::Manifest, level: &crate::director::LintManifestLevel) -> Vec<crate::director::LintProblem> {
+pub fn lint_manifest(g: &mut crate::game::Game, m: &crate::director::Manifest, level: &crate::director::LintManifestLevel) -> Vec<crate::director::LintProblem> {
     let route_names: Vec<String> = level.routes.iter().map(|r| g.tab.route[*r].name.clone()).collect();
     lint_with_routes(m, level, &route_names)
 }

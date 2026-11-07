@@ -42,7 +42,7 @@ fn has_bearing(s: &str) -> bool {
 }
 
 /// True = this door id is its author's shorthand, not words to say. (doornames.ts shorthandId)
-pub fn shorthand_id(g: &crate::game::Game, id_2: &str) -> bool {
+pub fn shorthand_id(g: &mut crate::game::Game, id_2: &str) -> bool {
     id_is_shorthand(id_2)
 }
 
@@ -130,7 +130,7 @@ fn names_of(level: &crate::scene_level::Level, ids: &[String], written: Option<&
 }
 
 /// The said name of every shorthand door the level's structure lists, by door id. (doornames.ts doorNamesOf)
-pub fn door_names_of(g: &crate::game::Game, ids: &[String], written: Option<&JsMap<String, String>>) -> JsMap<String, String> {
+pub fn door_names_of(g: &mut crate::game::Game, ids: &[String], written: Option<&JsMap<String, String>>) -> JsMap<String, String> {
     names_of(&g.level, ids, written)
 }
 
@@ -147,7 +147,7 @@ fn authored_of(level: &crate::scene_level::Level, ids: &[String]) -> JsMap<Strin
 }
 
 /// The names the level gives its own doors (scenarios.doorNames); a door's first usable row wins. (doornames.ts authoredDoorNames)
-pub fn authored_door_names(g: &crate::game::Game, ids: &[String]) -> JsMap<String, String> {
+pub fn authored_door_names(g: &mut crate::game::Game, ids: &[String]) -> JsMap<String, String> {
     authored_of(&g.level, ids)
 }
 
@@ -178,12 +178,12 @@ pub fn name_doors(g: &mut crate::game::Game, office: bool, doors: &[DoorId]) {
 }
 
 /// The name its LEVEL wrote for this door. (doornames.ts doorWrittenName)
-pub fn door_written_name(g: &crate::game::Game, d: DoorId) -> Option<String> {
+pub fn door_written_name(g: &mut crate::game::Game, d: DoorId) -> Option<String> {
     g.m.doornames.written.get(d).cloned()
 }
 
 /// The name nameDoors gave this door: its level's written one first. (doornames.ts doorSaidName)
-pub fn door_said_name(g: &crate::game::Game, d: DoorId) -> Option<String> {
+pub fn door_said_name(g: &mut crate::game::Game, d: DoorId) -> Option<String> {
     match g.m.doornames.written.get(d) {
         Some(n) => Some(n.clone()),
         None => g.m.doornames.said_up.get(d).cloned(),

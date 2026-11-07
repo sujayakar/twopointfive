@@ -264,7 +264,7 @@ pub fn kneel_toward(g: &mut crate::game::Game, gd: GuardId, dt: f64, at: V3, out
 }
 
 /// the flankers of a plan are all set (or there are none), or somebody has eyes on the man   (tactics.ts readyToGo)
-pub fn ready_to_go(g: &crate::game::Game, plan: TacticsPlanId) -> bool {
+pub fn ready_to_go(g: &mut crate::game::Game, plan: TacticsPlanId) -> bool {
     if g.tab.tactics_plan[plan].contact {
         return true;
     }
@@ -290,7 +290,7 @@ pub fn ready_to_go(g: &crate::game::Game, plan: TacticsPlanId) -> bool {
 }
 
 /// some flanker of the plan is not yet set but still covering ground toward his corner   (tactics.ts flankersRunning)
-pub fn flankers_running(g: &crate::game::Game, plan: TacticsPlanId) -> bool {
+pub fn flankers_running(g: &mut crate::game::Game, plan: TacticsPlanId) -> bool {
     let row = &g.tab.tactics_plan[plan];
     for (m, r) in row.roles.iter() {
         let r = &g.tab.tactics_role[*r];
@@ -460,7 +460,7 @@ pub fn move_role(g: &mut crate::game::Game, gd: GuardId, role: TacticsRoleId, dt
 }
 
 /// (tactics.ts presserOf)
-pub fn presser_of(g: &crate::game::Game, plan: TacticsPlanId) -> Option<GuardId> {
+pub fn presser_of(g: &mut crate::game::Game, plan: TacticsPlanId) -> Option<GuardId> {
     let row = &g.tab.tactics_plan[plan];
     for (m, r) in row.roles.iter() {
         if g.tab.tactics_role[*r].kind == RoleKind::Presser && row.members.contains(&m) {
@@ -476,7 +476,7 @@ pub fn role_of_man(g: &mut crate::game::Game, gd: GuardId) -> Option<TacticsRole
 }
 
 /// Is the man this guard is after ARMED, as far as he can know   (tactics.ts armedIntruder)
-pub fn armed_intruder(g: &crate::game::Game, gd: GuardId) -> bool {
+pub fn armed_intruder(g: &mut crate::game::Game, gd: GuardId) -> bool {
     match g.gd[gd].foe {
         Some(crate::game::Foe::Player) => {}
         foe => return foe.is_some(),
@@ -598,7 +598,7 @@ pub fn lone_call(g: &mut crate::game::Game, gd: GuardId, l: &mut crate::tactics:
             continue;
         }
         let was_calm = matches!(man.state, crate::game::GuardState::Patrol | crate::game::GuardState::Suspicious | crate::game::GuardState::Search);
-        g.gd[o].awareness = m::max(g.gd[o].awareness, 0.92);
+        crate::mind::raise(g, o, 0.92, "tactics");
         if was_calm || g.gd[o].last_known.is_none() {
             crate::belief::word(g, o, l.fix);
         }
@@ -773,13 +773,13 @@ pub fn side_of(g: &mut crate::game::Game, d: DoorId, p: V3) -> f64 {
 }
 
 /// how far along hinge → latch   (tactics.ts alongOf)
-pub fn along_of(g: &crate::game::Game, d: DoorId, p: V3) -> f64 {
+pub fn along_of(g: &mut crate::game::Game, d: DoorId, p: V3) -> f64 {
     let f = crate::guards::frame_of(g, d);
     (p[0] - f.hx) * f.ux + (p[2] - f.hz) * f.uz
 }
 
 /// a point in the door's frame: `a` along hinge → latch, `b` out from the frame line on side sg   (tactics.ts doorPt)
-pub fn door_pt(g: &crate::game::Game, d: DoorId, a: f64, b: f64, sg: f64, y: Option<f64>) -> V3 {
+pub fn door_pt(g: &mut crate::game::Game, d: DoorId, a: f64, b: f64, sg: f64, y: Option<f64>) -> V3 {
     let y = y.unwrap_or(0.0);
     let f = crate::guards::frame_of(g, d);
     [f.hx + f.ux * a + f.nx * sg * b, y, f.hz + f.uz * a + f.nz * sg * b]
@@ -834,7 +834,7 @@ pub fn stack_spot(g: &mut crate::game::Game, d: DoorId, sg: f64, near_a: f64, k:
 }
 
 /// the slice: stations across the opening as far back as the floor allows, each with the point in the room his muzzle is on   (tactics.ts sliceStations)
-pub fn slice_stations(g: &crate::game::Game, d: DoorId, sg: f64, near_a: f64) -> Option<crate::tactics::SliceStations> {
+pub fn slice_stations(g: &mut crate::game::Game, d: DoorId, sg: f64, near_a: f64) -> Option<crate::tactics::SliceStations> {
     let w = g.dr[d].def.width;
     let dir = if near_a <= 0.0 { 1.0 } else { -1.0 };
     let a0 = near_a - dir * 0.2;
@@ -1072,28 +1072,26 @@ pub fn gate_call(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::tactic
     let marks = plan_for(g, door_id, g_2.side, g_2.near_a);
     let spot = stack_spot(g, door_id, g_2.side, g_2.near_a, 1.0, marks.as_ref()).pos;
     {
-        let b = &mut g.gd[best];
-        b.last_known = Some(v3::copy(spot));
-        b.fix_stamp = b.fix_stamp.wrapping_add(1);
-        b.awareness = m::max(b.awareness, 0.5);
-        b.search_t = 0.0;
-        b.path = Vec::new();
-        b.path_serial = b.path_serial.wrapping_add(1);
-        b.path_goal = None;
-        b.path_goal_orbit = false;
-        b.stall_ref = None;
-        b.body_duty = None;
-        b.search_plan = None;
-        b.task = None;
-        if b.state == crate::game::GuardState::Patrol {
-            b.state = crate::game::GuardState::Suspicious;
-            b.react_t = 0.5;
-        } else if b.state == crate::game::GuardState::Search {
-            b.state = crate::game::GuardState::Suspicious;
-            b.react_t = 0.3;
-            b.pieing = None; // (his own update may already have run this frame: the doorway he was slicing is let go of here)
+        crate::mind::fix(g, best, Some(v3::copy(spot)), "tactics");
+        crate::mind::raise(g, best, 0.5, "tactics");
+        g.gd[best].search_t = 0.0;
+        g.gd[best].path = Vec::new();
+        g.gd[best].path_serial = g.gd[best].path_serial.wrapping_add(1);
+        g.gd[best].path_goal = None;
+        g.gd[best].path_goal_orbit = false;
+        g.gd[best].stall_ref = None;
+        g.gd[best].body_duty = None;
+        g.gd[best].search_plan = None;
+        g.gd[best].task = None;
+        if g.gd[best].state == crate::game::GuardState::Patrol {
+            crate::mind::set_state(g, best, crate::game::GuardState::Suspicious, "tactics");
+            g.gd[best].react_t = 0.5;
+        } else if g.gd[best].state == crate::game::GuardState::Search {
+            crate::mind::set_state(g, best, crate::game::GuardState::Suspicious, "tactics");
+            g.gd[best].react_t = 0.3;
+            g.gd[best].pieing = None; // (his own update may already have run this frame: the doorway he was slicing is let go of here)
         } else {
-            b.react_t = m::max(b.react_t, 0.3);
+            g.gd[best].react_t = m::max(g.gd[best].react_t, 0.3);
         }
     }
     g.tab.tactics_danger_rec[rec].summoned = Some(best);

@@ -61,7 +61,7 @@ pub fn slab_cols(cap: f64) -> crate::sim_slabshome::SlabCols {
 }
 
 /// The columns of a level's slabs, over its game's block; a level of more doors than SLAB_CAP is not loaded. (slabshome.ts SlabStore.constructor)
-pub fn slab_store_new(g: &crate::game::Game, st: crate::Opaque, doors: f64) -> crate::sim_slabshome::SlabStore {
+pub fn slab_store_new(g: &mut crate::game::Game, st: crate::Opaque, doors: f64) -> crate::sim_slabshome::SlabStore {
     if doors > SLAB_CAP {
         panic!("a level of {} doors: the game holds {} leaves off their hinges (sim/slabshome.ts SLAB_CAP, rust/sim/src/slabs.rs CAP)", doors, SLAB_CAP);
     }
@@ -72,27 +72,27 @@ pub fn slab_store_new(g: &crate::game::Game, st: crate::Opaque, doors: f64) -> c
 }
 
 /// Slabs in all. (slabshome.ts SlabStore.n)
-pub fn slab_store_n(g: &crate::game::Game) -> f64 {
-    cols_read(g).n as f64
+pub fn slab_store_n(g: &mut crate::game::Game) -> f64 {
+    cols(g).n as f64
 }
 
 /// How many of them are in the air. (slabshome.ts SlabStore.fly)
-pub fn slab_store_fly(g: &crate::game::Game) -> f64 {
-    cols_read(g).fly as f64
+pub fn slab_store_fly(g: &mut crate::game::Game) -> f64 {
+    cols(g).fly as f64
 }
 
 /// Where door `door`'s slab is, or -1. (slabshome.ts SlabStore.rowOf)
-pub fn slab_store_row_of(g: &crate::game::Game, door: f64) -> f64 {
-    cols_read(g).row[door as usize] as f64 - 1.0
+pub fn slab_store_row_of(g: &mut crate::game::Game, door: f64) -> f64 {
+    cols(g).row[door as usize] as f64 - 1.0
 }
 
 /// Whose leaf row `r` is. (slabshome.ts SlabStore.doorAt)
-pub fn slab_store_door_at(g: &crate::game::Game, r: f64) -> f64 {
-    cols_read(g).door[r as usize] as f64
+pub fn slab_store_door_at(g: &mut crate::game::Game, r: f64) -> f64 {
+    cols(g).door[r as usize] as f64
 }
 
 /// Rows a and b change places, every column; the table follows. (slabshome.ts SlabStore.swap)
-pub fn slab_store_swap(g: &crate::game::Game, a: f64, b: f64) {
+pub fn slab_store_swap(g: &mut crate::game::Game, a: f64, b: f64) {
     if a == b { return; }
     let (a, b) = (a as usize, b as usize);
     let s = cols(g);
@@ -102,7 +102,7 @@ pub fn slab_store_swap(g: &crate::game::Game, a: f64, b: f64) {
 }
 
 /// A leaf comes off: a row for its slab, in its door's place among those in the air, or behind them if it lies at rest from the start. Returns the row. (slabshome.ts SlabStore.enter)
-pub fn slab_store_enter(g: &crate::game::Game, door: f64, flying: bool) -> f64 {
+pub fn slab_store_enter(g: &mut crate::game::Game, door: f64, flying: bool) -> f64 {
     if slab_store_row_of(g, door) >= 0.0 { slab_store_leave(g, door); }
     let s = cols(g);
     let (n, fly) = (s.n, s.fly);
@@ -113,7 +113,7 @@ pub fn slab_store_enter(g: &crate::game::Game, door: f64, flying: bool) -> f64 {
     slab_store_swap(g, n as f64, fly as f64);
     cols(g).fly = fly + 1;
     let mut r = fly as usize;
-    while r > 0 && cols_read(g).door[r - 1] as f64 > door {
+    while r > 0 && cols(g).door[r - 1] as f64 > door {
         slab_store_swap(g, r as f64, (r - 1) as f64);
         r -= 1;
     }
@@ -121,7 +121,7 @@ pub fn slab_store_enter(g: &crate::game::Game, door: f64, flying: bool) -> f64 {
 }
 
 /// A slab in the air came to rest: its row goes behind those still in the air, they closing up in their order. (slabshome.ts SlabStore.rest)
-pub fn slab_store_rest(g: &crate::game::Game, door: f64) {
+pub fn slab_store_rest(g: &mut crate::game::Game, door: f64) {
     let fly = slab_store_fly(g);
     let mut r = slab_store_row_of(g, door);
     if r < 0.0 || r >= fly { return; }
@@ -133,7 +133,7 @@ pub fn slab_store_rest(g: &crate::game::Game, door: f64) {
 }
 
 /// A door is hung again: its slab's row is given up and is zeros again. False if it had none. (slabshome.ts SlabStore.leave)
-pub fn slab_store_leave(g: &crate::game::Game, door: f64) -> bool {
+pub fn slab_store_leave(g: &mut crate::game::Game, door: f64) -> bool {
     if slab_store_row_of(g, door) < 0.0 { return false; }
     slab_store_rest(g, door);
     let n = slab_store_n(g);
@@ -151,7 +151,7 @@ pub fn slab_store_leave(g: &crate::game::Game, door: f64) -> bool {
 /// A slab's numbers out of row `r`. (slabshome.ts SlabStore.load)
 pub fn slab_store_load(g: &mut crate::game::Game, r: f64) -> crate::sim_slabshome::SlabNow {
     let r = r as usize;
-    let s = cols_read(g);
+    let s = cols(g);
     let f = s.flags[r];
     SlabNow {
         p: [s.px[r], s.py[r], s.pz[r]],
@@ -172,7 +172,7 @@ pub fn slab_store_load(g: &mut crate::game::Game, r: f64) -> crate::sim_slabshom
 }
 
 /// A slab's numbers into row `r`; the row stays where it is. (slabshome.ts SlabStore.save)
-pub fn slab_store_save(g: &crate::game::Game, r: f64, s: crate::sim_slabshome::SlabNow) {
+pub fn slab_store_save(g: &mut crate::game::Game, r: f64, s: crate::sim_slabshome::SlabNow) {
     let r = r as usize;
     let c = cols(g);
     c.px[r] = s.p[0]; c.py[r] = s.p[1]; c.pz[r] = s.p[2]; c.vx[r] = s.v[0]; c.vy[r] = s.v[1]; c.vz[r] = s.v[2];
@@ -235,7 +235,7 @@ fn col_diff_slabs(o: &SlabStoreO, a: &[u8], b: &[u8], rows: f64, most: f64, mut 
 }
 
 /// Where two takes of a store's bytes differ, in words: at most `most` lines, none if they are the same state. (slabshome.ts slabDiff)
-pub fn slab_diff(g: &crate::game::Game, a: &[u8], b: &[u8], most: Option<f64>) -> Vec<String> {
+pub fn slab_diff(g: &mut crate::game::Game, a: &[u8], b: &[u8], most: Option<f64>) -> Vec<String> {
     let most = most.unwrap_or(4.0);
     let (o, doors) = (g.doors.slabs.o, g.doors.slabs.doors);
     let (ua0, ub0) = (word(a, 0), word(b, 0));

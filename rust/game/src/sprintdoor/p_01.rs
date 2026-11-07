@@ -100,13 +100,13 @@ pub fn sprint_door_pace(g: &mut crate::game::Game, pl: crate::sprintdoor::DoorSt
 }
 
 /// Is the turn of his shoulder into a leaf (or his head coming back off it) still running.   (sprintdoor.ts sprintDoorTurning)
-pub fn sprint_door_turning(g: &crate::game::Game, pl: crate::sprintdoor::DoorStamps, now: Option<f64>) -> bool {
+pub fn sprint_door_turning(g: &mut crate::game::Game, pl: crate::sprintdoor::DoorStamps, now: Option<f64>) -> bool {
     let now = now.unwrap_or(g.time);
     g.k.sprintdoor.lean_secs > 0.0 && now - pl.door_bash_at < g.k.sprintdoor.lean_secs + SETTLE
 }
 
 /// Radians added to the yaw his body runs at: the shoulder turned into the leaf, easing back square. None = no turn running and none just ended.   (sprintdoor.ts sprintDoorLean)
-pub fn sprint_door_lean(g: &crate::game::Game, pl: crate::sprintdoor::DoorStamps, now: Option<f64>) -> Option<f64> {
+pub fn sprint_door_lean(g: &mut crate::game::Game, pl: crate::sprintdoor::DoorStamps, now: Option<f64>) -> Option<f64> {
     let now = now.unwrap_or(g.time);
     if !sprint_door_turning(g, pl, Some(now)) { return None; }
     let t = (now - pl.door_bash_at) / g.k.sprintdoor.lean_secs;

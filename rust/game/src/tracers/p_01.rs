@@ -20,9 +20,9 @@ fn noted_thin(g: &mut Game, b: BoxId, hw0: f64, k: f64, r: f64, g_2: f64, bl: f6
 #[cfg(test)]
 fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { tests::row(b) }
 #[cfg(test)]
-fn made_box(g: &Game, p: &crate::scene_boxes::MakeBoxP) -> BoxId { tests::made(p) }
+fn made_box(g: &mut Game, p: &crate::scene_boxes::MakeBoxP) -> BoxId { tests::made(p) }
 #[cfg(test)]
-fn noted_thin(g: &Game, b: BoxId, hw0: f64, k: f64, r: f64, g_2: f64, bl: f64) {}
+fn noted_thin(g: &mut Game, b: BoxId, hw0: f64, k: f64, r: f64, g_2: f64, bl: f64) {}
 
 /// A slot's streak: one thin emissive box, dynamic and shadowless, parked under the floor. (tracers.ts:72)
 fn streak_box_p() -> crate::scene_boxes::MakeBoxP {
@@ -99,7 +99,7 @@ pub fn tracers_new(g: &mut crate::game::Game, params: Option<crate::tracers::Tra
 }
 
 /// Every live streak, copied. (tracers.ts Tracers.each)
-pub fn tracers_each(g: &crate::game::Game) -> Vec<crate::tracers::Tracer> {
+pub fn tracers_each(g: &mut crate::game::Game) -> Vec<crate::tracers::Tracer> {
     g.tracers.pool.iter().filter(|t| t.alive).copied().collect()
 }
 

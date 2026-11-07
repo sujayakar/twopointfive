@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// this teammate's pace is the rule's this frame   (teampace.ts teamSlow)
-pub fn team_slow(g: &crate::game::Game, gd: GuardId) -> bool {
+pub fn team_slow(g: &mut crate::game::Game, gd: GuardId) -> bool {
     crate::guards::team_paced(g, gd)
 }
 
@@ -38,7 +38,7 @@ pub fn walk_lead(g: &mut crate::game::Game, gd: GuardId, aim: V3) -> Option<V3> 
 }
 
 /// a teammate's walk, m/s   (teampace.ts teamWalk)
-pub fn team_walk(g: &crate::game::Game) -> f64 {
+pub fn team_walk(g: &mut crate::game::Game) -> f64 {
     g.tune.player_walk * g.k.teampace.k
 }
 
@@ -49,7 +49,7 @@ fn toward(s: V3, vx: f64, vz: f64, v: f64, pace_cos: f64, x: f64, z: f64) -> boo
 }
 
 /// THIS teammate's walk this frame, m/s: paced on the player   (teampace.ts teamWalkOf)
-pub fn team_walk_of(g: &crate::game::Game, gd: GuardId) -> f64 {
+pub fn team_walk_of(g: &mut crate::game::Game, gd: GuardId) -> f64 {
     let slow = team_walk(g);
     if !g.k.teampace.pacing { return slow; }
     let own = g.tune.player_walk;
@@ -118,7 +118,7 @@ pub fn live(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::teampace::L
 }
 
 /// the fight has his legs: a man in his sights, or one lost `fightSecs` ago   (teampace.ts fighting)
-pub fn fighting(g: &crate::game::Game, gd: GuardId) -> bool {
+pub fn fighting(g: &mut crate::game::Game, gd: GuardId) -> bool {
     match crate::roomfight::room_fight_op_of(g, gd) {
         Some(o) => g.tab.roomfight_op[o].tgt.is_some() || g.time - g.tab.roomfight_op[o].lost_at < g.k.teampace.fight_secs,
         None => false,
@@ -126,7 +126,7 @@ pub fn fighting(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// he may run from the grenade he is leaving   (teampace.ts blastRun)
-pub fn blast_run(g: &crate::game::Game, gd: GuardId) -> bool {
+pub fn blast_run(g: &mut crate::game::Game, gd: GuardId) -> bool {
     !crate::condition::is_hurt(g, crate::condition::Man::Guard(gd), None)
 }
 
@@ -186,7 +186,7 @@ pub fn team_ran(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// seconds since he last had a reason to run (infinity: never, or the rule is off)   (teampace.ts teamRunAgo)
-pub fn team_run_ago(g: &crate::game::Game, gd: GuardId) -> f64 {
+pub fn team_run_ago(g: &mut crate::game::Game, gd: GuardId) -> f64 {
     match g.m.teampace.reason_t.get(gd).copied() {
         Some(t) if !(t > g.time) => g.time - t,
         _ => m::INF,
@@ -194,7 +194,7 @@ pub fn team_run_ago(g: &crate::game::Game, gd: GuardId) -> f64 {
 }
 
 /// × his card for a leg asked at `speed`: at a run a card weighs as it does on the player's sprint. None = as it was   (teampace.ts teamRunLegs)
-pub fn team_run_legs(g: &crate::game::Game, gd: GuardId, speed: f64) -> Option<f64> {
+pub fn team_run_legs(g: &mut crate::game::Game, gd: GuardId, speed: f64) -> Option<f64> {
     if speed < g.k.teampace.run_at || !team_slow(g, gd) { return None; }
     let k = crate::kitload::load_pace_on(g, crate::kitload::LoadPaceOnWho::Guard(gd));
     Some(speed * (1.0 + (k - 1.0) * g.k.kitload.sprint))
@@ -206,7 +206,7 @@ pub fn team_accel(g: &mut crate::game::Game, gd: GuardId) -> f64 {
 }
 
 /// he is at a run this frame: gun low, nothing fired, a sprinter's boots   (teampace.ts teamSprinting)
-pub fn team_sprinting(g: &crate::game::Game, gd: GuardId) -> bool {
+pub fn team_sprinting(g: &mut crate::game::Game, gd: GuardId) -> bool {
     g.gd[gd].speed >= g.k.teampace.run_at && team_slow(g, gd)
 }
 
@@ -297,7 +297,7 @@ pub fn team_told(g: &mut crate::game::Game, gd: GuardId) -> Option<f64> {
 }
 
 /// the pace a teammate leaves a grenade at   (teampace.ts teamBlastPace)
-pub fn team_blast_pace(g: &crate::game::Game, gd: GuardId, run: f64) -> f64 {
+pub fn team_blast_pace(g: &mut crate::game::Game, gd: GuardId, run: f64) -> f64 {
     if g.gd[gd].team != crate::teams::Team::Operative { return run; }
     if blast_run(g, gd) { run } else { m::min(run, g.k.pace.max) }
 }

@@ -8,12 +8,15 @@
 //   bun run tools/qa/panel-inventory.ts --write [--ref R]  (re)write the fixture from ref R (default HEAD) — only when a row is renamed ON PURPOSE
 //   --reword [map.json]                                    a row reworded ON PURPOSE: rewrite ONLY the fixture's missing rows, each from the live row of the same kind + label (map.json = { "old label": "new label" }
 //                                                          for a renamed one), every other fixture row left as it is (unlike --write, which re-freezes the lot and so holds rows other lanes added)
+//   --gone --only labels.json                              rows DELETED on purpose: the listed labels' fixture rows that are still missing after --reword and have no live row of their kind + label go out of the fixture
+//   --only labels.json                                     with --reword too: only the rows whose labels the file lists (a JSON array), so another lane's missing row stays missing
 //   --print                                                dump the live inventory grouped by path
 import { mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { ROOT, standUp, fake } from './headless.ts';
 
-export interface Row { path: string; kind: string; label: string; min?: number; max?: number; step?: number; title: string; def: boolean; extra: string; adv?: boolean }
+export interface Row { path: string; kind: string; label: string; min?: number; max?: number; step?: number; title: string; def: boolean; extra: string; adv?: boolean;
+  /** a toggle's own get and set, for panelDead below (functions: never in the fixture, JSON drops them) */ get?: () => boolean; set?: (v: boolean) => void }
 const FIXTURE = join(ROOT, 'tools/qa/fixtures/panel-inventory-main.json');
 const SCRATCH = join(ROOT, 'tools/qa/.panel-inventory-scratch');
 
@@ -87,8 +90,10 @@ function installGlobals(): () => void {
 }
 
 // ---------------------------------------------------------------- instrument a Panel class: every row-building call lands in `rows` with the section it went to
-function instrument(P: any, rows: Row[]) {
-  const proto = P.prototype; if (proto.__inventoried) return; proto.__inventoried = true;
+const SINKS = new WeakMap<object, { rows: Row[] }>();   // (a Panel class is patched ONCE a process; each build points its sink at its own list)
+function instrument(P: any, into: Row[]) {
+  const proto = P.prototype, had = SINKS.get(proto); if (had) { had.rows = into; return; } const sink = { rows: into }; SINKS.set(proto, sink);
+  const rows = { push: (r: Row) => sink.rows.push(r) };
   const secName = new WeakMap<object, string>();
   const pathOf = (self: any, sec: any): string => { const n = secName.get(sec) ?? '?'; return typeof self.pathOf === 'function' ? (self.pathOf(sec) || n) : n; };
   const advOf = (self: any): boolean | undefined => typeof self.advanced === 'boolean' ? self.advanced : undefined;
@@ -97,7 +102,7 @@ function instrument(P: any, rows: Row[]) {
   const o = { section: proto.section, slider: proto.slider, toggleBox: proto.toggleBox, select: proto.select, buttons: proto.buttons, text: proto.text, number: proto.number, numbers: proto.numbers };
   proto.section = function (name: string, ...rest: any[]) { const el = o.section.call(this, name, ...rest); secName.set(el, name); return el; };
   proto.slider = function (sec: any, label: string, min: number, max: number, step: number, _g: any, _s: any, title?: string, def?: any) { rows.push({ path: pathOf(this, sec), kind: 'slider', label, min: num(min), max: num(max), step: num(step), title: title ?? '', def: def !== undefined, extra: '', adv: advOf(this) }); return o.slider.apply(this, arguments as any); };
-  proto.toggleBox = function (sec: any, label: string, _g: any, _s: any, title?: string, def?: any) { rows.push({ path: pathOf(this, sec), kind: 'toggle', label, title: title ?? '', def: def !== undefined, extra: '', adv: advOf(this) }); return o.toggleBox.apply(this, arguments as any); };
+  proto.toggleBox = function (sec: any, label: string, _g: any, _s: any, title?: string, def?: any) { rows.push({ path: pathOf(this, sec), kind: 'toggle', label, title: title ?? '', def: def !== undefined, extra: '', adv: advOf(this), get: _g, set: _s }); return o.toggleBox.apply(this, arguments as any); };
   proto.select = function (sec: any, label: string, options: string[], _g: any, _s: any, title?: string) { rows.push({ path: pathOf(this, sec), kind: 'select', label, title: title ?? '', def: false, extra: (options ?? []).join(' / '), adv: advOf(this) }); return o.select.apply(this, arguments as any); };
   proto.buttons = function (sec: any, label: string, btns: any[]) { rows.push({ path: pathOf(this, sec), kind: 'buttons', label, title: '', def: false, extra: btxt(btns), adv: advOf(this) }); return o.buttons.apply(this, arguments as any); };
   proto.text = function (sec: any, get: () => string) { let first = ''; try { first = String(get()); } catch (e) { first = `(threw: ${(e as Error)?.message})`; } rows.push({ path: pathOf(this, sec), kind: 'text', label: '', title: '', def: false, extra: first.slice(0, 60), adv: advOf(this) }); return o.text.apply(this, arguments as any); };
@@ -113,7 +118,7 @@ function materialise(ref: string): { bindings: string; dir: string } {
   const show = (p: string) => { const r = Bun.spawnSync(['git', '-C', ROOT, 'show', `${ref}:${p}`]); if (!r.success) throw new Error(`git show ${ref}:${p} failed: ${new TextDecoder().decode(r.stderr)}`); return new TextDecoder().decode(r.stdout); };
   const dir = join(SCRATCH, ref.replace(/[^\w.-]/g, '_')); mkdirSync(dir, { recursive: true });
   const rewrite = (src: string) => src.replace(/from\s+'\.\/panel'/g, `from './panel.ts'`).replace(/from\s+'\.\.\/([^']+)'/g, (_m, p) => `from '${ROOT}/src/${p}.ts'`).replace(/from\s+'\.\/(?!panel\.ts)([^']+)'/g, (_m, p) => `from '${ROOT}/src/ui/${p}.ts'`);
-  writeFileSync(join(dir, 'panel.ts'), show('src/ui/panel.ts')); writeFileSync(join(dir, 'bindings.ts'), rewrite(show('src/ui/bindings.ts')));
+  writeFileSync(join(dir, 'panel.ts'), rewrite(show('src/ui/panel.ts')));   // (its own imports re-pointed too: it has had some since the text size, and --ref died on them) writeFileSync(join(dir, 'bindings.ts'), rewrite(show('src/ui/bindings.ts')));
   return { bindings: join(dir, 'bindings.ts'), dir };
 }
 
@@ -166,12 +171,20 @@ export async function panelInventory(argv: string[] = process.argv.slice(2)): Pr
     console.log(`\n  added: ${added.length} row(s) not in the reference`); for (const r of added) console.log('    + ' + show(r));
     // near-misses: for each missing row, the live row with the same kind + label (a range / tooltip / button reworded) — the usual slip
     if (missing.length) { console.log(`\n  MISSING: ${missing.length} reference row(s) with no equal in the live panel`); for (const r of missing) { console.log('    - ' + show(r)); const near = live.find(x => x.kind === r.kind && x.label === r.label && rowKey(x) !== rowKey(r)); if (near) console.log(`        nearest live: ${show(near)}\n        differs in:${near.min !== r.min || near.max !== r.max || near.step !== r.step ? ' range/step' : ''}${near.title !== r.title ? ' tooltip' : ''}${near.extra !== r.extra ? ' buttons/options' : ''}${near.def !== r.def ? ' revert-dot' : ''}`); } }
+    const onlyI = argv.indexOf('--only'); const only: Set<string> | null = onlyI >= 0 ? new Set(JSON.parse(readFileSync(argv[onlyI + 1], 'utf8')) as string[]) : null;   // (--only labels.json: --reword and --gone touch these labels' rows and no other lane's)
     const rwI = argv.indexOf('--reword');
     if (rwI >= 0 && !ref && missing.length) {
       const mapPath = argv[rwI + 1] && !argv[rwI + 1].startsWith('--') ? argv[rwI + 1] : null; const ren: Record<string, string> = mapPath ? JSON.parse(readFileSync(mapPath, 'utf8')) : {};
       const pool = [...added]; let n = 0; const left: Row[] = [];
-      for (const r of missing) { const want = ren[r.label] ?? r.label; const i = pool.findIndex(x => x.kind === r.kind && x.label === want); if (i < 0) { left.push(r); continue; } const [x] = pool.splice(i, 1); const { adv: _a, ...row } = x; before[before.indexOf(r)] = row as Row; n++; console.log(`    reworded in the fixture: ${show(r)}  →  ${x.label}`); }
+      for (const r of missing) { if (only && !only.has(r.label)) { left.push(r); continue; } const want = ren[r.label] ?? r.label; const i = pool.findIndex(x => x.kind === r.kind && x.label === want); if (i < 0) { left.push(r); continue; } const [x] = pool.splice(i, 1); const { adv: _a, ...row } = x; before[before.indexOf(r)] = row as Row; n++; console.log(`    reworded in the fixture: ${show(r)}  →  ${x.label}`); }
       writeFileSync(FIXTURE, JSON.stringify(before, null, 1) + '\n'); console.log(`  --reword: ${n} fixture row(s) rewritten, ${left.length} still missing`); missing.length = 0; missing.push(...left);
+    }
+    const goneI = argv.indexOf('--gone');
+    if (goneI >= 0 && !only) console.log('  --gone: needs --only labels.json (the rows deleted on purpose, by label): nothing taken out');
+    if (goneI >= 0 && only && !ref && missing.length) {   // rows DELETED on purpose: the listed rows that are still missing AFTER --reword (so a renamed row is rewritten, not dropped) go out of the fixture
+      const dead = missing.filter(r => only.has(r.label) && !live.some(x => x.kind === r.kind && x.label === r.label));
+      for (const r of dead) { before.splice(before.indexOf(r), 1); console.log(`    out of the fixture: ${show(r)}`); }
+      writeFileSync(FIXTURE, JSON.stringify(before, null, 1) + '\n'); console.log(`  --gone: ${dead.length} fixture row(s) taken out, ${missing.length - dead.length} still missing`); const left = missing.filter(r => !dead.includes(r)); missing.length = 0; missing.push(...left);
     }
     const ok = missing.length === 0;
     console.log(`\n- ${ok ? 'PASS' : 'FAIL'} — ${missing.length} missing of ${before.length} reference rows · ${live.length} live (${added.length} added, ${moved} moved)`);
@@ -179,4 +192,47 @@ export async function panelInventory(argv: string[] = process.argv.slice(2)): Pr
   } finally { restore(); try { rmSync(SCRATCH, { recursive: true, force: true }); } catch { /* */ } }
 }
 
-if (import.meta.main) { const ok = await panelInventory(); process.exit(ok ? 0 : 1); }
+// ---------------------------------------------------------------- THE DEBUGGER HAS NO DEAD BOX (probes.ts panel-dead, family 'ui')
+// Every yes/no box of the live panel is clicked: what it shows must change, and it is put back. A box over a row the page holds at one value cannot move
+// (a settled switch: src/host/rustgame.ts rustSettledHold on the page, tools/qa/fold.ts here), and such a row gets no box: 256 written by hand left
+// src/ui/bindings.ts on 2026-11-07, and the row helpers (knobRows, and feelRows through it) and the two labs build none (ui/panel.ts rowHeld).
+// This probe is what keeps one from coming back: a new box for a settled row, or a row ruled settled whose box stayed. It runs on the page's stand, where the
+// fold is laid in every tool with no word; on the old stand nothing is held and the line is not asked (it says so).
+// NOT CLICKED, each named below with why: a box that reloads the page (it is judged by the ROW it shows: settled = dead, as two such boxes were), and two
+// that show a page object the harness only fakes. A '(reloads)' box that is not named below fails the line: name it, with its row.
+//   PANELDEAD_BREAK=1 = the probe adds a box over a settled row to the panel itself before it clicks: the line must fail and name it.
+const NOT_CLICKED: Record<string, { why: string; row?: string }> = {
+  'debug read-out': { why: "the read-out object is the page's; the harness's keeps nothing" },
+  'motion-calm rows (shipped on)': { why: "the quality object is the page's; the harness has none" },
+  'boxes say their shapes (reloads)': { why: 'it reloads the page with ?shapes=0', row: 'SHAPES.on' } };
+export async function panelDead(): Promise<boolean> {
+  console.log('\n=== panel-dead: no yes/no box of the debugger is dead (every one clicked: what it shows changes, and it is put back) ===');
+  const BREAK = process.env.PANELDEAD_BREAK === '1', restore = installGlobals();
+  try {
+    const { FOLD, foldActive, switchRows, settledYesNo, settledOf } = await import('./fold.ts'), { coneVisitNow, setConeVisit } = await import(`${ROOT}/src/game/difficulty.ts`);
+    // (THE OLD STAND holds nothing, so no box there is over a held row, and its switches stand otherwise: two boxes that need a master switch the old stand has
+    //  off cannot be ticked there. The line is of the page's stand alone.)
+    if (!(FOLD.on && foldActive())) { console.log('- PASS — not asked here: nothing is held on this stand (no fold is laid, or it is off), so no box can be over a held row'); return true; }
+    const log = console.log; console.log = () => {}; let rows: Row[];
+    try { rows = await inventoryOf(`${ROOT}/src/ui/bindings.ts`, `${ROOT}/src/ui/panel.ts`, await standUp());
+      if (BREAK) { const { knobRegistry } = await import(`${ROOT}/src/game/knobs.ts`), R = settledYesNo(switchRows(), 2)!, [t, k] = R.row.split('.'), T = (knobRegistry() as Record<string, Record<string, unknown>>)[t];
+        rows.push({ path: '?', kind: 'toggle', label: `(the break word's) a box over ${R.row}`, title: '', def: false, extra: '', get: () => !!T[k], set: v => { T[k] = v; } }); }
+    } finally { console.log = log; }
+    const boxes = rows.filter(r => r.kind === 'toggle' && r.get && r.set), dead: string[] = [], threw: string[] = [], stuck: string[] = []; let skipped = 0, faked = 0;
+    const settled = settledOf(switchRows()), cone = coneVisitNow();   // (a click on the fog cone's box pins it for the visit, in difficulty.ts and not in a knob table: put back below)
+    console.log = () => {};   // (a setter says what it did: not this probe's to print)
+    try { for (const r of boxes) { const nc = NOT_CLICKED[r.label];
+        if (nc) { skipped++; if (nc.row && nc.row in settled) dead.push(`'${r.label}' @ ${r.path} (not clicked: ${nc.why}; the row it shows, ${nc.row}, is settled)`); continue; }
+        if (/\(reloads\)$/.test(r.label)) { dead.push(`'${r.label}' @ ${r.path} (a box that reloads the page and is not named in NOT_CLICKED with its row: name it)`); continue; }
+        try { const v0 = r.get!(); if (typeof v0 !== 'boolean') { faked++; continue; }   // (not a yes or no: the box shows a thing of the engine's or the page's that the harness answers with a stand-in)
+          r.set!(!v0); const v1 = r.get!(); r.set!(v0); if (v1 === v0) dead.push(`'${r.label}' @ ${r.path}`); else if (r.get!() !== v0) stuck.push(`'${r.label}' @ ${r.path}`); }
+        catch (e) { threw.push(`'${r.label}': ${String((e as Error)?.message ?? e).slice(0, 80)}`); } }
+    } finally { console.log = log; setConeVisit(cone); }
+    const few = (xs: string[]) => xs.length ? xs.slice(0, 6).join(' · ') + (xs.length > 6 ? ` … (${xs.length})` : '') : 'none';
+    const FLOOR = 100, judged = boxes.length - skipped - faked, ok = !dead.length && !threw.length && judged > FLOOR;
+    console.log(`- ${ok ? 'PASS' : 'FAIL'} — every yes/no box of the debugger moves when it is clicked — ${boxes.length} boxes, ${judged} judged${judged > FLOOR ? '' : ` (THE LINE WANTS MORE THAN ${FLOOR}: a panel this small is not the debugger, or the floor is to be moved)`}: ${skipped} named and not clicked (${Object.keys(NOT_CLICKED).join(', ')}), ${faked} answer no yes or no here (a stand-in of the harness's) · dead: ${few(dead)} · threw: ${few(threw)} · moved and would not go back (said, not judged): ${few(stuck)}`);
+    return ok;
+  } finally { restore(); }
+}
+
+if (import.meta.main) { const ok = process.argv.includes('--dead') ? await panelDead() : await panelInventory(); process.exit(ok ? 0 : 1); }

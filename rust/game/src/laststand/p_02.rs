@@ -196,7 +196,7 @@ fn decide_on(g: &mut Game, c: RoomfightDefId, heard: &[RoomfightDefId], stand: &
     }
 }
 
-fn dig_in_phase_is(g: &Game, gd: GuardId, word: &str) -> bool { crate::digin::dig_in_phase(g, gd) == word }
+fn dig_in_phase_is(g: &mut Game, gd: GuardId, word: &str) -> bool { crate::digin::dig_in_phase(g, gd) == word }
 
 /// One man on his way to the stand; true = he is off the movers' list. `m` is his row, lent out of `s` by the walk: `s.movers` here still holds the row as it was.   (laststand.ts tickMover)
 pub fn tick_mover(g: &mut crate::game::Game, s: &mut crate::laststand::Stand, m: &mut crate::laststand::Mover) -> bool {
@@ -508,7 +508,7 @@ pub fn dissolve(g: &mut crate::game::Game, s: &crate::laststand::Stand) {
 }
 
 /// Who the stand has: in the room, on his way to it, or told to hold where he is.   (laststand.ts ofStand)
-pub fn of_stand(g: &crate::game::Game, s: &crate::laststand::Stand, gd: GuardId) -> bool {
+pub fn of_stand(g: &mut crate::game::Game, s: &crate::laststand::Stand, gd: GuardId) -> bool {
     for d in s.in_.iter() { if g.tab.roomfight_def[d].gd == gd { return true; } }
     for d in s.out.iter() { if g.tab.roomfight_def[d].gd == gd { return true; } }
     s.movers.iter().any(|x| g.tab.roomfight_def[x.d].gd == gd)

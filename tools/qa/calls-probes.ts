@@ -52,7 +52,7 @@ export const callsShipped = guarded(async () => {
   const src = readFileSync(`${ROOT}/src/ui/bindings.ts`, 'utf8'), rows = new Map<string, Set<string>>();
   for (const m of src.matchAll(/feelRows\('([A-Z]+)', \[([\s\S]*?)\n\s*\]/g)) { const set = rows.get(m[1]) ?? new Set<string>(); rows.set(m[1], set); for (const k of m[2].matchAll(/\bk: '([\w.]+)'/g)) set.add(k[1]); }
   for (const [t, k, want, other] of SHIPPED) { const got = D[t]?.[k], range = feelRange(t, k), row = rows.get(t)?.has(k) ?? false;
-    verdict(got === want && range !== undefined && row, `${t}.${k} ships ${JSON.stringify(want)}, is kept per machine, and has a Team feel row`, `shipped ${JSON.stringify(got)} · ${range === undefined ? 'NOT KEPT (teamfeel.ts)' : range === null ? 'a switch' : `a slider ${JSON.stringify(range)}`} · ${row ? 'a row in bindings.ts' : 'NO ROW in bindings.ts'} · the other side — ${other}`); }
+    verdict(got === want && range !== undefined && row, `${t}.${k} ships ${JSON.stringify(want)}, is kept per machine, and is written as a Team feel row (BUILT only while it is still a switch: knobRows builds none for a settled row, 2026-11-07)`, `shipped ${JSON.stringify(got)} · ${range === undefined ? 'NOT KEPT (teamfeel.ts)' : range === null ? 'a switch' : `a slider ${JSON.stringify(range)}`} · ${row ? 'a row in bindings.ts' : 'NO ROW in bindings.ts'} · the other side — ${other}`); }
   return done();
 });
 

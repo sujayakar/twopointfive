@@ -20,7 +20,7 @@ pub fn edge_colour(tint: V3, k: f64) -> V3 {
 }
 
 /// a CUT plate's face colour: dark body in the air, lifted toward the edge at rest, the floor through the tint when opaque at rest.   (shards.ts cutFaceAlbedo)
-pub fn cut_face_albedo(g: &crate::game::Game, tint: V3, under: V3, type_: crate::glasspen::PaneType, resting: bool) -> V3 {
+pub fn cut_face_albedo(g: &mut crate::game::Game, tint: V3, under: V3, type_: crate::glasspen::PaneType, resting: bool) -> V3 {
     let k = g.k.shards.cut_body;
     if !(k > 0.0) {
         return plate_albedo(tint, under, type_);
@@ -214,10 +214,10 @@ pub fn signed_area(p: &[[f64; 2]]) -> f64 {
 }
 
 /// what fragment_of_box reads of a box: (c, h, yaw, rot, albedo). With a table of Box rows the body is `let x = &g.tab.boxes[b]; (x.c, x.h, x.yaw, x.rot, x.albedo)`.
-fn seam_box_read(g: &Game, b: BoxId) -> (V3, V3, f64, Option<Quat>, V3) { let x = &g.tab.boxes[b]; (x.c, x.h, x.yaw, x.rot, x.albedo) }
+fn seam_box_read(g: &mut Game, b: BoxId) -> (V3, V3, f64, Option<Quat>, V3) { let x = &g.tab.boxes[b]; (x.c, x.h, x.yaw, x.rot, x.albedo) }
 
 /// the base's shard BOX read back as the fragment it stands for: its long sides the outline, its thin one the pane's normal, signed as thrown.   (shards.ts fragmentOfBox)
-pub fn fragment_of_box(g: &crate::game::Game, box_: BoxId, v: V3, w: V3, who: f64, seed: f64) -> crate::shards::GlassFragmentLike {
+pub fn fragment_of_box(g: &mut crate::game::Game, box_: BoxId, v: V3, w: V3, who: f64, seed: f64) -> crate::shards::GlassFragmentLike {
     let (c, h, yaw, rot, albedo) = seam_box_read(g, box_);
     let rot = match rot {
         Some(r) => r,

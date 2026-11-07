@@ -96,7 +96,7 @@ pub fn pack_mask(g: &mut Game, ch: RigId, mask: f64, carries: bool) -> f64 {
     ((mk & !ram) | pack) as f64
 }
 /// A thing's place at a pack's side, in the mesh's bind space.   (packside.ts sideBind)
-pub fn side_bind(g: &Game, e: PackExt, what: SideBindWhat, dims: SideBindDims) -> SidePlace {
+pub fn side_bind(g: &mut Game, e: PackExt, what: SideBindWhat, dims: SideBindDims) -> SidePlace {
     let t = g.k.packside;
     if what == SideBindWhat::Hammer {
         let head = dims.head.unwrap_or([0.085, 0.045, 0.035]);

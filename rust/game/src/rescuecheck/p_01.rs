@@ -22,30 +22,30 @@ pub fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 pub fn frac(x: f64) -> f64 { x - m::floor(x) }
 
 /// Up, on his feet and still in the level.   (rescuecheck.ts alive)
-pub fn alive(g: &Game, gd: GuardId) -> bool {
+pub fn alive(g: &mut Game, gd: GuardId) -> bool {
     let c = g.gd[gd].ch;
     g.gd[gd].state != crate::game::GuardState::Dead && g.ch[c].alive && !g.gd[gd].fled
 }
 
 /// Alive, not held, not dazzled, not staggered: he can speak on the net.   (rescuecheck.ts fit)
-pub fn fit(g: &Game, gd: GuardId) -> bool {
+pub fn fit(g: &mut Game, gd: GuardId) -> bool {
     alive(g, gd) && g.gd[gd].held.is_none() && g.time >= g.gd[gd].dazzled_until && g.time >= g.gd[gd].stagger_until
 }
 
 /// Alert or searching.   (rescuecheck.ts roused)
-pub fn roused(g: &Game, gd: GuardId) -> bool {
+pub fn roused(g: &mut Game, gd: GuardId) -> bool {
     let s = g.gd[gd].state;
     s == crate::game::GuardState::Alert || s == crate::game::GuardState::Search
 }
 
 /// The loud things he has heard, as a running count.   (rescuecheck.ts loudHeard)
-pub fn loud_heard(g: &Game, gd: GuardId) -> f64 {
+pub fn loud_heard(g: &mut Game, gd: GuardId) -> f64 {
     let h = &g.gd[gd].witness.heard;
     h.shots + h.kick + h.bang
 }
 
 /// His row on the room fight's roster.   (rescuecheck.ts defOf)
-pub fn def_of(g: &Game, gd: GuardId) -> Option<RoomfightDefId> {
+pub fn def_of(g: &mut Game, gd: GuardId) -> Option<RoomfightDefId> {
     for i in 0..g.fight.defs.len() {
         let d = g.fight.defs[i];
         if g.tab.roomfight_def[d].gd == gd { return Some(d); }
@@ -80,14 +80,14 @@ pub fn event(g: &mut Game, what: RescueCheckEventWhat, gd: Option<GuardId>, why:
 }
 
 /// The rule's floor: a rescue staged or running, in live play.   (rescuecheck.ts ruled)
-pub fn ruled(g: &Game) -> bool {
+pub fn ruled(g: &mut Game) -> bool {
     if !g.rescue.active || g.touring || crate::director::director_showing(g) { return false; }
     let s = crate::rescue::rescue_state(g);
     s == crate::rescue::RescueState::Staged || s == crate::rescue::RescueState::Running
 }
 
 /// This man is out on the check's errand and has noticed nothing: his walk is not word of the team.   (rescuecheck.ts walking)
-pub fn walking(g: &Game, gd: GuardId) -> bool {
+pub fn walking(g: &mut Game, gd: GuardId) -> bool {
     let out = match &g.m.rescuecheck.states { Some(st) => st.out.as_ref().map(|o| o.gd), None => None };
     out == Some(gd) && !roused(g, gd) && g.gd[gd].state != crate::game::GuardState::Suspicious && g.gd[gd].awareness < 0.3
 }
@@ -295,7 +295,7 @@ pub fn step_check(g: &mut Game, _dt: f64) {
 }
 
 /// Who calls: the captor if he can, else the first man who can.   (the closure at rescuecheck.ts:158)
-fn caller(g: &Game, cast: &[CastItem]) -> Option<GuardId> {
+fn caller(g: &mut Game, cast: &[CastItem]) -> Option<GuardId> {
     for c in cast.iter() {
         if c.role == crate::rescue::Role::Captor && fit(g, c.gd) { return Some(c.gd); }
     }
@@ -368,10 +368,9 @@ pub fn tick_out(g: &mut Game, cast: &[CastItem], fight: bool) {
         g.gd[gd].witness.saw_body = Some(crate::game::WitnessSawBody { victim, t: g.time, breathing });
         if g.gd[gd].script.is_some() { crate::squad::end_guard_script(g, gd, Some(crate::squad::EndGuardScriptState::Alert)); }
         {
-            let man = &mut g.gd[gd];
-            man.state = crate::game::GuardState::Alert;
-            man.awareness = 1.0;
-            man.react_t = 0.0;
+            crate::mind::set_state(g, gd, crate::game::GuardState::Alert, "rescuecheck");
+            crate::mind::set(g, gd, 1.0, "rescuecheck");
+            g.gd[gd].react_t = 0.0;
         }
         crate::control::set_hold(g, gd, false, "rescuecheck"); crate::control::set_pinned(g, gd, false, "rescuecheck");
         crate::belief::word(g, gd, [body[0], 0.0, body[2]]);

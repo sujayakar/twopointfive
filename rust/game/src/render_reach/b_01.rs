@@ -9,7 +9,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// The cells under a ceiling or roof slab, from the level's ceiling-height statics; the game's own rules read them.   (reach.ts buildInteriorCells)
-pub fn build_interior_cells(g: &crate::game::Game, statics: &[BoxId]) -> Vec<u8> {
+pub fn build_interior_cells(g: &mut crate::game::Game, statics: &[BoxId]) -> Vec<u8> {
     let world = crate::scene_world::world();
     let (w, h) = (world.grid_w, world.grid_h);
     let mut inside = vec![0u8; (w * h) as usize];

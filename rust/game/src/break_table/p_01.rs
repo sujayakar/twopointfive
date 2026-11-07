@@ -27,7 +27,7 @@ pub fn mat_of_surf(s: crate::scene_materials::Surf) -> crate::break_table::Mat {
 }
 
 /// The row a pool chunk reads: by what the lane knows the thing is, else by what its box does.   (breakTable.ts matOf)
-pub fn mat_of(g: &crate::game::Game, kind: crate::debris::ChunkKind, box_: &crate::break_table::MatOfBox) -> crate::break_table::Mat {
+pub fn mat_of(g: &mut crate::game::Game, kind: crate::debris::ChunkKind, box_: &crate::break_table::MatOfBox) -> crate::break_table::Mat {
     use crate::debris::ChunkKind;
     use crate::scene_materials::Surf;
     if kind == ChunkKind::Shard { return Mat::Glass; }
@@ -315,14 +315,14 @@ fn wall_normal_at(yaw: f64, h: V3, c: V3, toward: V3, keep: f64) -> V3 {
 }
 
 /// The horizontal unit normal of a wall-like box on the side `toward` points to, with `keep` of `toward` mixed back in.   (breakTable.ts wallNormal)
-pub fn wall_normal(g: &crate::game::Game, b: BoxId, toward: V3, keep: Option<f64>) -> V3 {
+pub fn wall_normal(g: &mut crate::game::Game, b: BoxId, toward: V3, keep: Option<f64>) -> V3 {
     let keep = keep.unwrap_or(0.0);
     let (yaw, h, c) = seam_box_numbers(g, b);
     wall_normal_at(yaw, h, c, toward, keep)
 }
 
 /// A box's yaw, half sizes and centre. Once `g.col.boxes` is the `Tab<BoxId, Box>` the index says, the body is: `let x = &g.col.boxes[b]; (x.yaw, x.h, x.c)`.
-fn seam_box_numbers(g: &crate::game::Game, b: BoxId) -> (f64, V3, V3) { let x = &g.tab.boxes[b]; (x.yaw, x.h, x.c) }
+fn seam_box_numbers(g: &mut crate::game::Game, b: BoxId) -> (f64, V3, V3) { let x = &g.tab.boxes[b]; (x.yaw, x.h, x.c) }
 
 #[cfg(test)]
 mod tests {

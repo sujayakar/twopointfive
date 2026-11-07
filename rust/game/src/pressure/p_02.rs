@@ -30,9 +30,9 @@ fn door_name(g: &Game, door: DoorId) -> String { g.dr[door].def.name.clone() }
 #[inline]
 fn in_cells(g: &Game, t: RoomfightRoomId, cell: f64) -> bool { g.tab.roomfight_room[t].cells.has(crate::Num(cell)) }
 #[inline]
-fn is_blocked(g: &Game, x: f64, z: f64) -> bool { crate::scene_collision::nav_grid_is_blocked(g, x, z) }
+fn is_blocked(g: &mut Game, x: f64, z: f64) -> bool { crate::scene_collision::nav_grid_is_blocked(g, x, z) }
 /// a live man of the fight other than `d` stands within 0.9 m of p
-fn someone_at(g: &Game, d: RoomfightDefId, p: V3) -> bool {
+fn someone_at(g: &mut Game, d: RoomfightDefId, p: V3) -> bool {
     for i in 0..g.fight.defs.len() {
         let x = g.fight.defs[i];
         if x != d && alive(g, x) && flat(pos_of(g, gd_of(g, x)), p) < 0.9 { return true; }
@@ -225,7 +225,7 @@ pub fn team_stands(g: &mut crate::game::Game, r: RoomfightRoomId) -> bool {
     in_room(g, r, p)
 }
 /// the last of his side alive: nobody left to go to. (pressure.ts lastAlone)
-pub fn last_alone(g: &crate::game::Game, d: RoomfightDefId) -> bool {
+pub fn last_alone(g: &mut crate::game::Game, d: RoomfightDefId) -> bool {
     for i in 0..g.fight.defs.len() {
         let x = g.fight.defs[i];
         if x != d && alive(g, x) { return false; }
@@ -359,10 +359,9 @@ pub fn loose(g: &mut crate::game::Game, d: RoomfightDefId, at: V3) {
     let de = dfm(g, d);
     de.mode = crate::roomfight::DefMode::Free; de.free_at = now; de.rally_at = m::NAN;
     crate::control::set_hold(g, gd, false, "pressure"); crate::control::set_pinned(g, gd, false, "pressure");
-    let man = &mut g.gd[gd];
-    man.state = crate::game::GuardState::Alert;
-    man.awareness = m::max(man.awareness, 0.92);
-    if now - man.last_seen_t > 1.0 { crate::belief::word(g, gd, at); }
+    crate::mind::set_state(g, gd, crate::game::GuardState::Alert, "pressure");
+    crate::mind::raise(g, gd, 0.92, "pressure");
+    if now - g.gd[gd].last_seen_t > 1.0 { crate::belief::word(g, gd, at); }
     crate::game::guard_set_path(g, gd, Vec::new());
     let man = &mut g.gd[gd];
     man.path_goal = None; man.path_goal_orbit = false;
@@ -419,7 +418,7 @@ pub fn told_of(g: &mut crate::game::Game, d: RoomfightDefId) -> Option<crate::pr
     match state_of(g).told.get(d) { Some(t) if now - t.t < memory => Some(*t), _ => None }
 }
 /// PRESSURE.byWay: his room and the room being fought over share a door. (pressure.ts nextDoor)
-pub fn next_door(g: &crate::game::Game, r: Option<RoomfightRoomId>, t: RoomfightRoomId) -> bool {
+pub fn next_door(g: &mut crate::game::Game, r: Option<RoomfightRoomId>, t: RoomfightRoomId) -> bool {
     let r = match r { Some(r) => r, None => return false };
     let (a, b) = (&g.tab.roomfight_room[r].entries, &g.tab.roomfight_room[t].entries);
     a.iter().any(|e| b.iter().any(|x| x.door == e.door))
@@ -478,7 +477,7 @@ pub fn consider(g: &mut crate::game::Game, d: RoomfightDefId) {
         Some(th) if th.room == tt => th,
         _ => {
             let beat = crate::roomfight::fight_skill().get(String::from("hostile")).unwrap().rally;
-            let at = g.time + pick(g, beat) * g.k.pressure.organise_k;
+            let at = g.time + pick(g, crate::dice::Who::Def(d), beat) * g.k.pressure.organise_k;
             state_of(g).think.set(d, crate::pressure::StateThinkValue { room: tt, at, held: None });
             // PRESSURE.byWay, a fight that is not next door: he says what he has placed, and the men of his room who heard it and could not place it know it from him
             if g.k.pressure.by_way && heard.is_some() && told.map(|t| t.room) != heard.map(|h| h.t) && my_room.is_some() && !next_door(g, my_room, tt) {
@@ -1040,7 +1039,7 @@ pub fn last_man(g: &mut crate::game::Game, d: RoomfightDefId) {
         Some(at) => at,
         None => {
             let range = if why == HookedWhy::Seen { g.k.pressure.last_man_secs } else { g.k.pressure.out_secs };
-            let at = g.time + pick(g, range);
+            let at = g.time + pick(g, crate::dice::Who::Def(d), range);
             state_of(g).last.set(d, at);
             return;
         }

@@ -40,7 +40,7 @@ pub fn fin(p: &crate::scene_stuff::Paint) -> String {
 }
 
 /// A second saying of one array is refused: thrown where ONE_PAINT says so; otherwise passed over, and false = the caller leaves the paint as it was. (stuff.ts refuse)
-pub fn refuse(g: &crate::game::Game, row: &[f64], was: &crate::scene_stuff::Paint, next: &crate::scene_stuff::Paint) -> bool {
+pub fn refuse(g: &mut crate::game::Game, row: &[f64], was: &crate::scene_stuff::Paint, next: &crate::scene_stuff::Paint) -> bool {
     if one_paint().refuses {
         let mut nums = String::new();
         for (i, n) in row.iter().enumerate() {
@@ -92,7 +92,7 @@ pub fn made_of(g: &mut crate::game::Game, stuff: crate::scene_stuff::BoxStuff, c
 }
 
 /// The paint this array is, if anybody said so. (stuff.ts paintOf)
-pub fn paint_of(g: &crate::game::Game, albedo: Option<&[f64]>) -> Option<crate::scene_stuff::Paint> {
+pub fn paint_of(g: &mut crate::game::Game, albedo: Option<&[f64]>) -> Option<crate::scene_stuff::Paint> {
     match albedo {
         Some(row) => seam_paints_get(g, row),
         None => None,
@@ -100,7 +100,7 @@ pub fn paint_of(g: &crate::game::Game, albedo: Option<&[f64]>) -> Option<crate::
 }
 
 /// The words a box made with `albedo` carries: the maker's ('plain' = nothing, said over a paint that says something), else the paint's. (stuff.ts wordFor)
-pub fn word_for(g: &crate::game::Game, albedo: Option<&[f64]>, said: Option<crate::scene_stuff::BoxStuff>, does: Option<crate::scene_materials::DoesWord>) -> crate::scene_stuff::WordFor {
+pub fn word_for(g: &mut crate::game::Game, albedo: Option<&[f64]>, said: Option<crate::scene_stuff::BoxStuff>, does: Option<crate::scene_materials::DoesWord>) -> crate::scene_stuff::WordFor {
     let p = paint_of(g, albedo);
     let p_stuff = p.as_ref().and_then(|p| p.stuff);
     let p_does = p.as_ref().and_then(|p| p.does);
@@ -114,7 +114,7 @@ pub fn word_for(g: &crate::game::Game, albedo: Option<&[f64]>, said: Option<crat
 
 /// PAINTS.get(row) (stuff.ts:110, 141, 196): skeleton 5.1's table, keyed by the colour's bits (review 5's ruling: the TypeScript keys by the ARRAY's identity, so
 /// two paints of one colour are one here, and a colour written out as numbers that happens to equal a paint's is that paint).
-fn seam_paints_get(g: &Game, row: &[f64]) -> Option<Paint> {
+fn seam_paints_get(g: &mut Game, row: &[f64]) -> Option<Paint> {
     if row.len() < 3 { return None; }
     g.m.scene_stuff.paints.get([row[0].to_bits(), row[1].to_bits(), row[2].to_bits()]).cloned()
 }

@@ -23,12 +23,9 @@ fn capitalised(w: &str) -> String {
 
 /// The query's level is a Training lesson's.   (scenarioRun.ts lessonLevel)
 pub fn lesson_level(q: &crate::query::Query) -> bool {
-    let level_file = q.get("levelFile").map(String::from);
     // A row with no level is `undefined`, which is never `===` the `null` of a query with no levelFile.
-    crate::scene_scenario_list::lesson_missions().iter().any(|e| match (&e.level, &level_file) {
-        (Some(a), Some(b)) => a == b,
-        _ => false,
-    })
+    let Some(level_file) = q.get("levelFile") else { return false };
+    crate::scene_scenario_list::lesson_missions().iter().any(|e| e.level.as_deref() == Some(level_file))
 }
 
 /// Fog of war on a page with no scenario up: only if the URL asks.   (scenarioRun.ts plainFog)
@@ -37,15 +34,15 @@ pub fn plain_fog(q: &crate::query::Query) -> bool {
 }
 
 /// The link is one the quiet fog reads: a quiet mission's, or the solo night's own.   (scenarioRun.ts quietLike)
-pub fn quiet_like(g: &crate::game::Game, q: &crate::query::Query) -> bool {
-    match crate::scene_scenario_list::spec_of_query(&crate::scene_scenario_list::SpecOfQuerySearch::URLSearchParams(q.clone())) {
+pub fn quiet_like(g: &mut crate::game::Game, q: &crate::query::Query) -> bool {
+    match crate::scene_scenario_list::spec_of(q) {
         Some(s) => s.kind == crate::scene_scenario_list::ScenarioSpecKind::Quiet,
         None => crate::quietfog::solo_fog_link(g, q),
     }
 }
 
 /// The sticky cameras a link hands the player for the visit where its fog runs.   (scenarioRun.ts quietCamsOfLink)
-pub fn quiet_cams_of_link(g: &crate::game::Game, q: &crate::query::Query) -> f64 {
+pub fn quiet_cams_of_link(g: &mut crate::game::Game, q: &crate::query::Query) -> f64 {
     if quiet_like(g, q) {
         let lesson = lesson_level(q);
         crate::quietfog::quiet_cams_of_query(g, q, Some(lesson))
@@ -55,7 +52,7 @@ pub fn quiet_cams_of_link(g: &crate::game::Game, q: &crate::query::Query) -> f64
 }
 
 /// The rung of the fog lever a quiet mission's query asks to be played under.   (scenarioRun.ts quietRungOfQuery)
-pub fn quiet_rung_of_query(g: &crate::game::Game, q: &crate::query::Query) -> crate::quietfog::QuietRung {
+pub fn quiet_rung_of_query(g: &mut crate::game::Game, q: &crate::query::Query) -> crate::quietfog::QuietRung {
     if quiet_like(g, q) {
         let lesson = lesson_level(q);
         crate::quietfog::quiet_fog_of_query(g, q, Some(lesson))
@@ -65,7 +62,7 @@ pub fn quiet_rung_of_query(g: &crate::game::Game, q: &crate::query::Query) -> cr
 }
 
 /// Fog of war as a query string asks for it, the squad's fog lever heard.   (scenarioRun.ts fogOfQuery)
-pub fn fog_of_query(g: &crate::game::Game, q: &crate::query::Query) -> bool {
+pub fn fog_of_query(g: &mut crate::game::Game, q: &crate::query::Query) -> bool {
     if crate::difficulty::fog_off_now(g) && !quiet_like(g, q) && !lesson_level(q) && !plain_fog(q) {
         return false;
     }
@@ -73,7 +70,7 @@ pub fn fog_of_query(g: &crate::game::Game, q: &crate::query::Query) -> bool {
 }
 
 /// Fog of war as the link alone asks, whatever the squad's fog lever says.   (scenarioRun.ts fogOfLink)
-pub fn fog_of_link(g: &crate::game::Game, q: &crate::query::Query) -> bool {
+pub fn fog_of_link(g: &mut crate::game::Game, q: &crate::query::Query) -> bool {
     if q.has("nofow") || q.has("nofogofwar") {
         return false;
     }
@@ -129,12 +126,12 @@ pub fn start_from_query(g: &mut crate::game::Game, search: &crate::scenario_run:
     g.fog_of_war.on = fog;
     let rung = if g.fog_of_war.on { quiet_rung_of_query(g, q) } else { crate::quietfog::QuietRung::Off };
     crate::quietfog::quiet_fog_start(g, q, rung);
-    if let Some(wx) = crate::weather_kinds::weather_of_search(&crate::weather_kinds::WeatherOfSearchSearch::URLSearchParams(q.clone())) {
+    if let Some(wx) = crate::weather_kinds::weather_of(q) {
         if crate::weather::weather_kind(g) != Some(wx) {
             crate::weather::weather_set_kind_2(g, Some(wx));
         }
     }
-    let spec = crate::scene_scenario_list::spec_of_query(&crate::scene_scenario_list::SpecOfQuerySearch::URLSearchParams(q.clone()));
+    let spec = crate::scene_scenario_list::spec_of(q);
     let cams = if g.fog_of_war.on { quiet_cams_of_link(g, q) } else { 0.0 };
     crate::stickycam::sticky_visit_set(g, cams);
     let why = match &spec {
@@ -154,7 +151,7 @@ pub fn start_from_query(g: &mut crate::game::Game, search: &crate::scenario_run:
 }
 
 /// Which scenario is up on this game right now; the room clear is asked first, being the night breach on its own layout.   (scenarioRun.ts activeScenario)
-pub fn active_scenario(g: &crate::game::Game) -> Option<crate::scenario_run::ActiveScenario> {
+pub fn active_scenario(g: &mut crate::game::Game) -> Option<crate::scenario_run::ActiveScenario> {
     if crate::roomclear::room_clear_scenario_active(g) {
         Some(ActiveScenario::Roomclear)
     } else if g.night_breach.active {
@@ -169,7 +166,7 @@ pub fn active_scenario(g: &crate::game::Game) -> Option<crate::scenario_run::Act
 }
 
 /// The teammates the scenario that is up has staged, dead or alive: a copy of its list.   (scenarioRun.ts teamOf)
-pub fn team_of(g: &crate::game::Game) -> Vec<GuardId> {
+pub fn team_of(g: &mut crate::game::Game) -> Vec<GuardId> {
     if g.rescue.active {
         g.rescue.ops.clone()
     } else if g.night_breach.active {
@@ -200,7 +197,7 @@ fn quit_kind(kind: ActiveScenario) -> QuitScenario {
 }
 
 /// The scenario that is up, in the picker's words. None: none is up.   (scenarioRun.ts runningScenario)
-pub fn running_scenario(g: &crate::game::Game, level_file: Option<&str>, list: Option<&[crate::scene_scenarios::ScenarioEntry]>) -> Option<crate::scenario_run::RunningScenario> {
+pub fn running_scenario(g: &mut crate::game::Game, level_file: Option<&str>, list: Option<&[crate::scene_scenarios::ScenarioEntry]>) -> Option<crate::scenario_run::RunningScenario> {
     let kind = active_scenario(g)?;
     let squad = if kind == ActiveScenario::Quiet { g.quiet.squad } else { m::min(4.0, team_of(g).len() as f64) };
     let all;

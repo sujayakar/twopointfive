@@ -117,7 +117,7 @@ fn the_word(n: &str) -> String {
 /// `+x.toFixed(2)` (:213)
 fn to_fixed2(x: f64) -> f64 { js::to_fixed(x, 2).parse().unwrap_or(f64::NAN) }
 /// the cell's number as a Set's key: -0 is 0 to a JavaScript Set
-fn room_has(g: &Game, r: RoomfightRoomId, p: V3) -> bool {
+fn room_has(g: &mut Game, r: RoomfightRoomId, p: V3) -> bool {
     let c = cell_of(g, p);
     g.tab.roomfight_room[r].cells.has(crate::Num(c + 0.0))
 }
@@ -149,7 +149,7 @@ pub fn pick(g: &mut crate::game::Game, r: [f64; 2]) -> f64 {
 }
 
 /// the nav cell of a point (laststand.ts cellOf)
-pub fn cell_of(g: &crate::game::Game, p: V3) -> f64 {
+pub fn cell_of(g: &mut crate::game::Game, p: V3) -> f64 {
     let cell = g.col.nav.cell;
     crate::scene_collision::nav_grid_idx(g, m::floor(p[0] / cell), m::floor(p[2] / cell))
 }
@@ -472,7 +472,7 @@ pub fn home_room(g: &mut crate::game::Game, d: RoomfightDefId, known: &[V3]) -> 
 }
 
 /// a room's name as a line says it (laststand.ts theOf)
-pub fn the_of(g: &crate::game::Game, id_2: &str) -> String {
+pub fn the_of(g: &mut crate::game::Game, id_2: &str) -> String {
     match g.room_clear.rooms.iter().find(|r| r.def.id == id_2) {
         Some(r) => the_word(&r.def.name),
         None => the_word(id_2),
@@ -655,7 +655,7 @@ pub fn tell_only(g: &mut crate::game::Game, c_2: RoomfightDefId) {
 }
 
 /// a new stand (laststand.ts newStand)
-pub fn new_stand(g: &crate::game::Game, room: Option<RoomfightRoomId>, id_2: Option<&str>, the: &str, anchor: V3) -> crate::laststand::Stand {
+pub fn new_stand(g: &mut crate::game::Game, room: Option<RoomfightRoomId>, id_2: Option<&str>, the: &str, anchor: V3) -> crate::laststand::Stand {
     Stand {
         room, id: id_2.map(String::from), the: String::from(the), anchor: v3::copy(anchor), t: g.time,
         in_: JsSet::new(), out: JsSet::new(), movers: Vec::new(),
@@ -672,7 +672,7 @@ pub fn anchor_of(g: &mut crate::game::Game, s: &crate::laststand::Stand) -> V3 {
 }
 
 /// is he of this stand (laststand.ts member)
-pub fn member(g: &crate::game::Game, s: &crate::laststand::Stand, d: RoomfightDefId) -> bool { stand_has(s, d) }
+pub fn member(g: &mut crate::game::Game, s: &crate::laststand::Stand, d: RoomfightDefId) -> bool { stand_has(s, d) }
 
 /// told to hold where he is: he says so, once, with where (laststand.ts holdsOwn)
 pub fn holds_own(g: &mut crate::game::Game, s: &mut crate::laststand::Stand, d: RoomfightDefId, say: Option<crate::laststand::LineKind>) {

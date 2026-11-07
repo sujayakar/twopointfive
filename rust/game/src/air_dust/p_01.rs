@@ -21,7 +21,7 @@ fn air_read(g: &Game) -> &'static ::sim::air::Air {
 /// The slot's tables, made if they are owed. (rust/sim/src/lib.rs air_of)
 fn plan(g: &mut Game) -> &'static mut ::sim::air::Plan {
     let stamp = g.sim_stamp;
-    let wx = ::sim::weather::of_read(g.sim);
+    let wx = ::sim::weather::of(g.sim);
     ::sim::air::plan(g.sim, stamp, &wx.air, &wx.roofs, wx.roofs_n as usize)
 }
 
@@ -50,17 +50,17 @@ pub fn air_dust_ready(g: &mut crate::game::Game) {
 
 /// The module's switch. (airDust.ts AirDust.on)
 pub fn air_dust_on(g: &mut crate::game::Game) -> bool {
-    air_read(g).on != 0.0
+    air(g).on != 0.0
 }
 
 /// The module's leak. (airDust.ts AirDust.leak)
 pub fn air_dust_leak(g: &mut crate::game::Game) -> f64 {
-    air_read(g).leak
+    air(g).leak
 }
 
 /// The roofed cells, a copy for the asker. (airDust.ts AirDust.cells)
 pub fn air_dust_cells(g: &mut crate::game::Game) -> Vec<u32> {
-    let n = air_read(g).n_cells as usize;
+    let n = air(g).n_cells as usize;
     plan(g).cells[..n].to_vec()
 }
 
@@ -96,7 +96,7 @@ pub fn air_dust_share_at(g: &mut crate::game::Game, x: f64, z: f64) -> f64 {
     if ix.is_nan() || iz.is_nan() {
         return m::NAN;
     }
-    air_read(g).s[(ix + iz * w) as usize]
+    air(g).s[(ix + iz * w) as usize]
 }
 
 /// The roofs or the weather changed: marks the field stale, the first reader builds it. (airDust.ts AirDust.reseed)
@@ -145,8 +145,8 @@ pub fn air_dust_build(g: &mut crate::game::Game) {
     crate::weather::weather_roofs_now(g);
     let stamp = g.sim_stamp;
     ::sim::air_seed(g.sim, stamp, leak);
-    g.air_dust.stats.roofed = air_read(g).n_cells;
-    g.air_dust.stats.edges = air_read(g).n_edges;
+    g.air_dust.stats.roofed = air(g).n_cells;
+    g.air_dust.stats.edges = air(g).n_edges;
     if on {
         knobs_here(g);
         crate::scene_collision::rule(g, &mut |g: &mut Game| {
@@ -205,7 +205,7 @@ pub fn air_dust_send(g: &mut crate::game::Game) {
 
 /// `gpu` written from the field, a Float32Array store per cell. (airDust.ts:137, 139)
 fn copy_to_gpu(g: &mut Game) {
-    let s = &air_read(g).s;
+    let s = &air(g).s;
     let o = &mut g.air_dust.gpu;
     for i in 0..n() as usize {
         o[i] = s[i] as f32;
@@ -221,7 +221,7 @@ pub fn air_dust_summary(g: &mut crate::game::Game) -> String {
         return String::from("no weather in the air");
     }
     let c = air_dust_cells(g);
-    let s = &air_read(g).s;
+    let s = &air(g).s;
     let mut mx = 0.0;
     let mut sum = 0.0;
     for &i in &c {

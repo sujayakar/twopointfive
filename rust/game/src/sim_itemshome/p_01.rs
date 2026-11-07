@@ -97,7 +97,7 @@ pub fn item_cols() -> crate::sim_itemshome::ItemCols {
 }
 
 /// The columns of one pool over its game's block; ColStore's constructor folded in. (itemshome.ts ItemStore.constructor)
-pub fn item_store_new(g: &crate::game::Game, st: crate::Opaque) -> crate::sim_itemshome::ItemStore {
+pub fn item_store_new(g: &mut crate::game::Game, st: crate::Opaque) -> crate::sim_itemshome::ItemStore {
     // `st.keep(ITEM_BIT, 'thrown things')` is not in the game (notInTheGame.txt); rust/sim's State holds the part from the start.
     let o = o_of(item_cols());
     let part = crate::sim_state::sim_part(crate::sim_state::P_ITEMS);
@@ -112,19 +112,19 @@ pub fn item_store_new(g: &crate::game::Game, st: crate::Opaque) -> crate::sim_it
 }
 
 /// `n` rows fit, or it is a fault. (itemshome.ts ItemStore.room)
-pub fn item_store_room(g: &crate::game::Game, n: f64) {
+pub fn item_store_room(g: &mut crate::game::Game, n: f64) {
     if n > g.items.store.cap {
         panic!("a pool of {} thrown things: its columns hold {} (sim/itemshome.ts ITEM_ROWS, rust/sim/src/items.rs CAP; game/throwables.ts spawn gives one up for each new one past {})", n, g.items.store.cap, ITEM_CAP);
     }
 }
 
 /// Things in the pool. (itemshome.ts ItemStore.n)
-pub fn item_store_n(g: &crate::game::Game) -> f64 {
-    sim::state::state_read(g.sim).items.n as f64
+pub fn item_store_n(g: &mut crate::game::Game) -> f64 {
+    sim::state::state(g.sim).items.n as f64
 }
 
 /// One more thing, behind the last: its row (zeros, the caller's to write). (itemshome.ts ItemStore.enter)
-pub fn item_store_enter(g: &crate::game::Game) -> f64 {
+pub fn item_store_enter(g: &mut crate::game::Game) -> f64 {
     let n = item_store_n(g);
     item_store_room(g, n + 1.0);
     sim::state::state(g.sim).items.n = js::to_u32(n + 1.0);
@@ -132,7 +132,7 @@ pub fn item_store_enter(g: &crate::game::Game) -> f64 {
 }
 
 /// Row `r`'s numbers, by their places (IC). (itemshome.ts ItemStore.rowOut)
-pub fn item_store_row_out(g: &crate::game::Game, r: f64) -> Vec<f64> {
+pub fn item_store_row_out(g: &mut crate::game::Game, r: f64) -> Vec<f64> {
     let c = &mut sim::state::state(g.sim).items;
     let row = r as usize;
     let mut out = vec![0.0; COLS_ALL];
@@ -142,7 +142,7 @@ pub fn item_store_row_out(g: &crate::game::Game, r: f64) -> Vec<f64> {
 }
 
 /// …and into it; a word takes its number as a Uint32Array does. (itemshome.ts ItemStore.rowIn)
-pub fn item_store_row_in(g: &crate::game::Game, r: f64, v: &[f64]) {
+pub fn item_store_row_in(g: &mut crate::game::Game, r: f64, v: &[f64]) {
     let c = &mut sim::state::state(g.sim).items;
     let row = r as usize;
     for k in 0..COLS_F { double_col(c, k)[row] = v[k]; }
@@ -150,7 +150,7 @@ pub fn item_store_row_in(g: &crate::game::Game, r: f64, v: &[f64]) {
 }
 
 /// A row is given up: those behind it close up in their order, the last is zeros again. (itemshome.ts ItemStore.close)
-pub fn item_store_close(g: &crate::game::Game, r: f64) {
+pub fn item_store_close(g: &mut crate::game::Game, r: f64) {
     let n = item_store_n(g);
     if r < 0.0 || r >= n { return; }
     let c = &mut sim::state::state(g.sim).items;
@@ -171,7 +171,7 @@ pub fn item_store_close(g: &crate::game::Game, r: f64) {
 }
 
 /// The pool laid out anew: these rows, in this order, and zeros behind them. (itemshome.ts ItemStore.lay)
-pub fn item_store_lay(g: &crate::game::Game, rows: &[Vec<f64>]) {
+pub fn item_store_lay(g: &mut crate::game::Game, rows: &[Vec<f64>]) {
     let was = item_store_n(g) as usize;
     item_store_room(g, rows.len() as f64);
     for (r, row) in rows.iter().enumerate() {
@@ -201,7 +201,7 @@ fn same_double(x: f64, y: f64) -> bool {
 }
 
 /// Where two takes of the store's bytes differ, in words: at most `most` lines, none if they are the same state. (itemshome.ts itemDiff)
-pub fn item_diff(g: &crate::game::Game, a: &[u8], b: &[u8], most: Option<f64>) -> Vec<String> {
+pub fn item_diff(g: &mut crate::game::Game, a: &[u8], b: &[u8], most: Option<f64>) -> Vec<String> {
     let most = most.unwrap_or(4.0);
     let o = g.items.store.o;
     let (ua0, ub0) = (word_of(a, 0), word_of(b, 0));

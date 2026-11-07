@@ -68,14 +68,14 @@ fn tube_curve_of(exposure: f64, gain: f64, albedo: f64, e: f64) -> (f64, f64) {
 }
 
 /// The curve at the game's own exposure (hours.ts exposureOf) and tube gain (env.ts tubeGain).
-fn tube_curve(g: &Game, e: f64) -> (f64, f64) {
+fn tube_curve(g: &mut Game, e: f64) -> (f64, f64) {
     let exposure = crate::hours::exposure_of(g);
     let gain = crate::env::tube_gain(g);
     tube_curve_of(exposure, gain, g.k.nvg.albedo, e)
 }
 
 /// The meter's 0..1 for a man under irradiance `e` seen through the goggles.   (nvg.ts tubeVis)
-pub fn tube_vis(g: &crate::game::Game, e: f64) -> f64 {
+pub fn tube_vis(g: &mut crate::game::Game, e: f64) -> f64 {
     let (k, sig) = tube_curve(g, e);
     if sig > 0.0 {
         let seen = crate::game::game_visibility_of(g, sig / k);
@@ -86,12 +86,12 @@ pub fn tube_vis(g: &crate::game::Game, e: f64) -> f64 {
 }
 
 /// The tube's picture of a matte floor under irradiance `e`, 0..1 of its range.   (nvg.ts tubeSig)
-pub fn tube_sig(g: &crate::game::Game, e: f64) -> f64 {
+pub fn tube_sig(g: &mut crate::game::Game, e: f64) -> f64 {
     tube_curve(g, e).1
 }
 
 /// A living operative with a unit whose card left him his goggles.   (nvg.ts isMate)
-pub fn is_mate(g: &crate::game::Game, gd: GuardId) -> bool {
+pub fn is_mate(g: &mut crate::game::Game, gd: GuardId) -> bool {
     g.gd[gd].team == crate::teams::Team::Operative
         && g.gd[gd].unit.is_some()
         && g.gd[gd].state != crate::game::GuardState::Dead
@@ -99,7 +99,7 @@ pub fn is_mate(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// When the other side last gave the team reason to think it knows.   (nvg.ts loudT)
-pub fn loud_t(g: &crate::game::Game) -> f64 {
+pub fn loud_t(g: &mut crate::game::Game) -> f64 {
     let t = g.m.nvg.teams.as_ref().unwrap();   // (only the tick and nvgState ask, each with the team in hand)
     let mut last = m::max_n(&[t.hunt_t, t.alarm_t, g.fight.hot_t]);
     for &o in &g.fight.ops {
@@ -202,7 +202,7 @@ pub fn read_place(g: &mut crate::game::Game, gd: GuardId, m: &mut crate::nvg::Ma
 }
 
 /// Is the light switched on on the gun in this player's hands.   (nvg.ts:166)
-fn lead_lit(g: &Game, pl: PlayerId) -> bool {
+fn lead_lit(g: &mut Game, pl: PlayerId) -> bool {
     let (pistol, rifle) = (g.pl[pl].pistol, g.pl[pl].rifle);
     (crate::game::player_pistol_up(g, pl) && g.fa[pistol].light_on) || (crate::game::player_rifle_up(g, pl) && g.fa[rifle].light_on)
 }
@@ -343,12 +343,12 @@ pub fn nvg_tick(g: &mut crate::game::Game) {
 }
 
 /// His weapon light is held off this frame.   (nvg.ts nvgDark)
-pub fn nvg_dark(g: &crate::game::Game, gd: GuardId) -> bool {
+pub fn nvg_dark(g: &mut crate::game::Game, gd: GuardId) -> bool {
     live_man(g, gd).map_or(false, |row| row.dark)
 }
 
 /// He wears the goggles at all.   (nvg.ts nvgWorn)
-pub fn nvg_worn(g: &crate::game::Game, gd: GuardId) -> bool {
+pub fn nvg_worn(g: &mut crate::game::Game, gd: GuardId) -> bool {
     g.gd[gd].team == crate::teams::Team::Operative
         && g.gd[gd].unit.is_some()
         && crate::kit::kit_goggles(g, gd)
@@ -356,12 +356,12 @@ pub fn nvg_worn(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// His goggles are over his eyes.   (nvg.ts nvgDown)
-pub fn nvg_down(g: &crate::game::Game, gd: GuardId) -> bool {
+pub fn nvg_down(g: &mut crate::game::Game, gd: GuardId) -> bool {
     live_man(g, gd).map_or(false, |row| row.down)
 }
 
 /// What he is looking at shows nothing even through the tube.   (nvg.ts nvgBlack)
-pub fn nvg_black(g: &crate::game::Game, gd: GuardId) -> bool {
+pub fn nvg_black(g: &mut crate::game::Game, gd: GuardId) -> bool {
     live_man(g, gd).map_or(false, |row| row.black)
 }
 

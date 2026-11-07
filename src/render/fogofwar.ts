@@ -9,7 +9,7 @@
 // (`?fogpass=old`, or `__fow.frame.pass = 'old'` live) is the kernel as it always was, token for token but for the soft edge's one call (fowEdge: 1 while FOG.edge is 0 or no sight table is written). While the program asked for is still compiling the other
 // one draws the frame — the picture is the same — so a flip never leaves a frame without its fog.
 import { cutSwap, ProgramSet, type CutSwappable } from './cutSwap';
-import { makeShader } from '../gpu/device';
+import { makeShader, laterHold } from '../gpu/device';
 import { scenePrelude } from './frame';
 import fogSrc from './shaders/fogofwar.wgsl' with { type: 'text' };
 import sightSrc from './shaders/fogsight.wgsl' with { type: 'text' };
@@ -155,11 +155,17 @@ export class FogPass {
   private async program(mode: FogPassMode, text: string, label: string): Promise<FogProgram> {
     const d = this.device, mod = makeShader(d, text, label);
     const pl = (l: GPUBindGroupLayout) => d.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, l] });
-    const [main, pre] = await Promise.all([d.createComputePipelineAsync({ label, layout: pl(this.layout!), compute: { module: mod, entryPoint: 'main' } }),
-      mode === 'hint' ? d.createComputePipelineAsync({ label: label + 'Pre', layout: pl(this.layoutPre!), compute: { module: mod, entryPoint: 'pre' } }) : null]);
-    return { main, pre };
+    const letGo = laterHold();   // (A PROGRAM OF THE FOG BEING COMPILED IS ONE OF THE LATER SET'S: a brief's Start, `__ready` and auto quality's measure wait for it — gpu/device.ts laterHold. Asked for at every boot now (warm below), it was counted by nobody, and a mission begun on a slow compiler drew its first frames with no fog)
+    try {
+      const [main, pre] = await Promise.all([d.createComputePipelineAsync({ label, layout: pl(this.layout!), compute: { module: mod, entryPoint: 'main' } }),
+        mode === 'hint' ? d.createComputePipelineAsync({ label: label + 'Pre', layout: pl(this.layoutPre!), compute: { module: mod, entryPoint: 'pre' } }) : null]);
+      return { main, pre };
+    } finally { letGo(); }
   }
   private put(mode: FogPassMode, P: FogProgram, into: Record<string, unknown>) { if (mode === 'old') into.pipeOld = P.main; else { into.pipeHint = P.main; into.pipePre = P.pre; } }
+  /** ASKED FOR AHEAD OF ITS FIRST USE (engine.ts warmFirstUse, once a page's boot is in): the pass made its program the first frame a mission drew the fog,
+   *  so the title never built it and the first squad mission of a visit compiled it under play. Nothing waits for it. */
+  warm(mode: FogPassMode = 'hint') { this.build(mode); }
   private build(mode: FogPassMode = 'hint') {
     if (this.built[mode] || this.building[mode] || this.bad[mode]) return;
     this.building[mode] = true; this.resources();
@@ -290,9 +296,11 @@ export class FogSight implements CutSwappable {
   /** the program's text as compiled (the compile check reads the same string) */
   static source(cut?: boolean): string { return (cut === undefined ? scenePrelude() : scenePrelude(cut)) + sightSrc; }
   private program(text: string, label: string): Promise<GPUComputePipeline> {
-    const d = this.device;
-    return d.createComputePipelineAsync({ label, layout: d.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.layout] }), compute: { module: makeShader(d, text, label), entryPoint: 'main' } });
+    const d = this.device, letGo = laterHold();   // (one of the later set's while it compiles, as the pass's own programs are: FogPass.program)
+    return d.createComputePipelineAsync({ label, layout: d.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.layout] }), compute: { module: makeShader(d, text, label), entryPoint: 'main' } }).finally(letGo);
   }
+  /** asked for ahead of its first use, like the pass's own (FogPass.warm) */
+  warm() { this.build(); }
   private build() {
     if (this.pipe || this.building || this.bad) return;
     this.building = true;

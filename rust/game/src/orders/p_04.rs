@@ -30,7 +30,7 @@ fn buttons_off(g: &mut Game, input: InputId, bits: i32) {
     i.buttons = (js::to_i32(i.buttons) & !bits) as f64;
 }
 /// `input.down('ShiftLeft') || input.down('ShiftRight')`
-fn shift_down(g: &Game, input: InputId) -> bool {
+fn shift_down(g: &mut Game, input: InputId) -> bool {
     crate::input::input_down(g, input, "ShiftLeft") || crate::input::input_down(g, input, "ShiftRight")
 }
 /// `if (input === g.seat.input) g.seat.swallow(1)`
@@ -315,7 +315,7 @@ pub fn squad_orders_ring_input(g: &mut crate::game::Game, input: InputId, cam: C
 }
 
 /// A digit a ring carries went down this frame. (orders.ts ringDigit)
-pub fn squad_orders_ring_digit(g: &crate::game::Game, input: InputId) -> bool {
+pub fn squad_orders_ring_digit(g: &mut crate::game::Game, input: InputId) -> bool {
     let mut d = 1.0;
     while d <= g.k.cmdring.wedges {
         if pressed_has(g, input, &format!("Digit{}", d as i32)) { return true; }
@@ -382,17 +382,17 @@ pub fn squad_orders_goal_part(g: &mut crate::game::Game, t: &crate::orders::Orde
 }
 
 /// The ring's key would open a ring now. (orders.ts ringFree)
-pub fn squad_orders_ring_free(g: &crate::game::Game, input: InputId) -> bool {
+pub fn squad_orders_ring_free(g: &mut crate::game::Game, input: InputId) -> bool {
     !crate::planmode::goal_shift(g, input) && squad_orders_back_free(g)
 }
 
 /// The ring's key is free: no menu up and nothing the key backs out of instead. (orders.ts backFree)
-pub fn squad_orders_back_free(g: &crate::game::Game) -> bool {
+pub fn squad_orders_back_free(g: &mut crate::game::Game) -> bool {
     g.orders.menu.is_none() && g.pl[g.player].launch_held.is_none() && !crate::interact::hands_busy(g)
 }
 
 /// What the key would open on, for a hint: CMDRING.bareHint draws none. (orders.ts hintView)
-pub fn squad_orders_hint_view(g: &crate::game::Game, kept: Option<&mut crate::orders::HoverKept>) -> Option<crate::orders::SquadOrdersHintView> {
+pub fn squad_orders_hint_view(g: &mut crate::game::Game, kept: Option<&mut crate::orders::HoverKept>) -> Option<crate::orders::SquadOrdersHintView> {
     None
 }
 
@@ -488,7 +488,7 @@ pub fn squad_orders_tap_give(g: &mut crate::game::Game, t: &crate::orders::Order
 }
 
 /// CMDRING.twice is asked here: the ring's key, and on a tutorial mission only from a step that lists it. (orders.ts twiceOn)
-pub fn squad_orders_twice_on(g: &crate::game::Game) -> bool {
+pub fn squad_orders_twice_on(g: &mut crate::game::Game) -> bool {
     g.k.cmdring.twice && !crate::rails::rails_locks(g, "twice")
 }
 
@@ -698,7 +698,7 @@ pub fn squad_orders_sync(g: &mut crate::game::Game) -> Vec<GuardId> {
 }
 
 /// Sam is standing. (orders.ts samStopped)
-pub fn squad_orders_sam_stopped(g: &crate::game::Game) -> bool {
+pub fn squad_orders_sam_stopped(g: &mut crate::game::Game) -> bool {
     g.orders.sam_v <= 0.3
 }
 

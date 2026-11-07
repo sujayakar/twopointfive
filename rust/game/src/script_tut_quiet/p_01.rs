@@ -94,7 +94,7 @@ fn gone() -> crate::director::Cond {
 }
 
 /// he has come round the long wall's end (tut-quiet.script.ts:52 inStrip)
-fn in_strip(g: &Game, r: DirectorRunId, u: &crate::director::UnitRef) -> Result<bool, String> {
+fn in_strip(g: &mut Game, r: DirectorRunId, u: &crate::director::UnitRef) -> Result<bool, String> {
     Ok(crate::director::director_query_pos_unit(g, r, u)?[2] < 18.5)
 }
 
@@ -115,7 +115,7 @@ fn sam_inside(g: &mut Game, r: DirectorRunId, v: &Option<crate::director::Volume
 }
 
 /// what turns him from his smoke (tut-quiet.script.ts:80 heard, :82 turns)
-fn turns(g: &Game, r: DirectorRunId, u: &crate::director::UnitRef) -> Vec<crate::director::Cond> {
+fn turns(g: &mut Game, r: DirectorRunId, u: &crate::director::UnitRef) -> Vec<crate::director::Cond> {
     let heard = crate::director::EventFilter::Heard { by: u.clone(), run_level: RUN_LEVEL, run_within: RUN_WITHIN, walk_level: WALK_LEVEL, walk_within: WALK_WITHIN };
     vec![
         crate::director::director_beat_until(crate::director::CondTest::Script { id: TEST_PAST }, Some("the player is past him")),

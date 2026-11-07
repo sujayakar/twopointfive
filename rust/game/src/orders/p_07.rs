@@ -17,7 +17,7 @@ enum Pen<'a> {
     Dear(&'a crate::cleared::DearPrice),
     Walk { dear: &'a JsSet<crate::Num>, wall: f64, unk: Option<&'a crate::cleared::DearPrice> },
 }
-fn price(g: &Game, pen: Pen<'_>, ix: f64, iz: f64) -> f64 {
+fn price(g: &mut Game, pen: Pen<'_>, ix: f64, iz: f64) -> f64 {
     match pen {
         Pen::Dear(u) => crate::cleared::dear_price(g, u, ix, iz),
         Pen::Walk { dear, wall, unk } => {
@@ -42,13 +42,13 @@ fn along_lanes(g: &mut Game, from: V3, path: &[V3], lanes: &mut crate::doorway::
 fn along_seen(g: &mut Game, from: V3, path: &[V3], seen: &crate::seenwalk::SeenPrice) -> f64 {
     crate::cleared::cleared_rooms_dear_along(g, from, path, &mut |g: &mut Game, x: f64, z: f64| crate::seenwalk::seen_price_at(g, seen, x, z))
 }
-fn is_blocked(g: &Game, x: f64, z: f64) -> bool { crate::scene_collision::nav_grid_is_blocked(g, x, z) }
+fn is_blocked(g: &mut Game, x: f64, z: f64) -> bool { crate::scene_collision::nav_grid_is_blocked(g, x, z) }
 /// `nav.isBlocked(p) ? this.freeSpot(p) ?? p : p`
-fn free_from(g: &Game, p: V3) -> V3 {
+fn free_from(g: &mut Game, p: V3) -> V3 {
     if is_blocked(g, p[0], p[2]) { squad_orders_free_spot(g, p).unwrap_or(p) } else { p }
 }
 /// the cells of a doorway's width, made all but a wall (sideFor's and route's `dear`)
-fn doorway_cells(g: &Game, o: DoorId, dear: &mut JsSet<crate::Num>) {
+fn doorway_cells(g: &mut Game, o: DoorId, dear: &mut JsSet<crate::Num>) {
     let (h, a, width) = (g.dr[o].def.hinge, g.dr[o].def.closed_dir, g.dr[o].def.width);
     let (x, z) = (m::cos(a), m::sin(a));
     let mut s = 0.0;
@@ -158,7 +158,7 @@ pub fn squad_orders_worked_marks(g: &mut crate::game::Game, d: DoorId, side: f64
 }
 
 /// The marks teammates outside `men` hold on this door under an order.   (orders.ts SquadOrders.heldOn)
-pub fn squad_orders_held_on(g: &crate::game::Game, d: DoorId, men: &[GuardId], ignore: Option<&[GuardId]>) -> Vec<V3> {
+pub fn squad_orders_held_on(g: &mut crate::game::Game, d: DoorId, men: &[GuardId], ignore: Option<&[GuardId]>) -> Vec<V3> {
     let ignore = ignore.unwrap_or(&[]);
     let mut out = Vec::new();
     for (gd, &a) in g.orders.asg.iter() {
@@ -209,7 +209,7 @@ pub fn squad_orders_worked_stack(g: &mut crate::game::Game, d: DoorId, side: f64
 }
 
 /// Is this place the mark a man of the order already stands on, on this door?   (orders.ts SquadOrders.stoodOn)
-pub fn squad_orders_stood_on(g: &crate::game::Game, d: DoorId, men: &[GuardId], p: V3) -> bool {
+pub fn squad_orders_stood_on(g: &mut crate::game::Game, d: DoorId, men: &[GuardId], p: V3) -> bool {
     for (gd, &a) in g.orders.asg.iter() {
         let row = &g.tab.orders_assignment[a];
         if men.contains(&gd) && g.gd[gd].state != crate::game::GuardState::Dead && row.door == Some(d) {
@@ -787,7 +787,7 @@ pub fn squad_orders_round_rooms(g: &mut crate::game::Game, gd: GuardId, to: V3) 
 }
 
 /// The crumb of the trail that a place `back` metres behind the player lies just past: the index of the older end of its stretch; -1 off the trail's end.   (orders.ts SquadOrders.slotCrumb)
-pub fn squad_orders_slot_crumb(g: &crate::game::Game, back: f64) -> f64 {
+pub fn squad_orders_slot_crumb(g: &mut crate::game::Game, back: f64) -> f64 {
     let sam = g.ch[g.pl[g.player].ch].pos;
     let t = &g.orders.trail;
     let (mut prev, mut left): (V3, f64) = ([sam[0], 0.0, sam[2]], back);
@@ -802,7 +802,7 @@ pub fn squad_orders_slot_crumb(g: &crate::game::Game, back: f64) -> f64 {
 }
 
 /// The doors a walk ends on the far side of (through one and back is no door; a corner on a door's line is stepped over).   (trailWay's `doorsOn`)
-fn trail_doors_on(g: &Game, w: &[V3]) -> JsSet<DoorId> {
+fn trail_doors_on(g: &mut Game, w: &[V3]) -> JsSet<DoorId> {
     let mut out: JsSet<DoorId> = JsSet::new();
     for i in 0..g.doors.list.len() {
         let d = g.doors.list[i];

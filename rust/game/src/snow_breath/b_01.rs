@@ -9,4 +9,4 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/game/snowBreath.ts:156 updateSnowBreath)
-pub fn update_snow_breath(g: &crate::game::Game, dt: f64) {}
+pub fn update_snow_breath(g: &mut crate::game::Game, dt: f64) {}

@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 /// Live: a run is on and it really is the player playing. (mission.ts missionLive)
-pub fn mission_live(g: &crate::game::Game) -> bool {
+pub fn mission_live(g: &mut crate::game::Game) -> bool {
     let s = g.mission.stage;
     !g.quiet_utility && g.puppet.is_none() && s != crate::game::MissionStage::Done && s != crate::game::MissionStage::Failed
 }
@@ -49,7 +49,7 @@ fn rack_dist_plain(front: V3, half_w: f64, p: V3) -> f64 {
 }
 
 /// Out through the mission's exit, or any exit of a quiet mission. (mission.ts outNow)
-pub fn out_now(g: &crate::game::Game, p: V3) -> bool {
+pub fn out_now(g: &mut crate::game::Game, p: V3) -> bool {
     if crate::quiet::quiet_of(g) {
         let exits = crate::quiet::quiet_mission_exits(g);
         return exits.iter().any(|x| crate::quiet::out_through(x, p));
@@ -300,17 +300,15 @@ pub fn send_rack_check(g: &mut crate::game::Game) {
     }
     let Some(best) = best else { return };
     {
-        let b = &mut g.gd[best];
-        b.task = Some(GuardTask::Arm0(GuardTaskArm0 { kind: GuardTaskArm0Kind::Rack, pos: goal }));
-        b.last_known = Some(v3::copy(goal));
-        b.fix_stamp = b.fix_stamp.wrapping_add(1);
-        b.awareness = m::max(b.awareness, 0.42);
-        b.state = GuardState::Suspicious;
-        b.react_t = 1.2;
-        b.search_t = 0.0;
-        b.path = Vec::new();
-        b.path_serial = b.path_serial.wrapping_add(1);
-        b.path_goal = None; b.path_goal_orbit = false;   // (guard_set_path_goal's rule, for the row in hand)
+        g.gd[best].task = Some(GuardTask::Arm0(GuardTaskArm0 { kind: GuardTaskArm0Kind::Rack, pos: goal }));
+        crate::mind::fix(g, best, Some(v3::copy(goal)), "mission");
+        crate::mind::raise(g, best, 0.42, "mission");
+        crate::mind::set_state(g, best, GuardState::Suspicious, "mission");
+        g.gd[best].react_t = 1.2;
+        g.gd[best].search_t = 0.0;
+        g.gd[best].path = Vec::new();
+        g.gd[best].path_serial = g.gd[best].path_serial.wrapping_add(1);
+        g.gd[best].path_goal = None; g.gd[best].path_goal_orbit = false;   // (guard_set_path_goal's rule, for the row in hand)
     }
     if let Some(w) = &w {
         crate::game::game_say(g, best, &format!("something's tripped in {} — going to take a look", w.place), Some(true), None, None);
@@ -438,7 +436,7 @@ fn drive_percent(drive_t: f64) -> String {
 }
 
 /// `g.doors.byName(name)?.frameCentre ?? null` (mission.ts:150).
-fn door_centre(g: &Game, name: &str) -> Option<V3> {
+fn door_centre(g: &mut Game, name: &str) -> Option<V3> {
     crate::doors::doors_by_name(g, name).map(|d| g.dr[d].frame_centre)
 }
 

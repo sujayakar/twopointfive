@@ -31,20 +31,20 @@ pub fn state_of<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate:
 pub fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 
 /// The two sides whose men keep these manners.   (doorway.ts ours)
-pub fn ours(g: &crate::game::Game, gd: GuardId) -> bool {
+pub fn ours(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let team = g.gd[gd].team;
     team == crate::teams::Team::Operative || team == crate::teams::Team::Hostile
 }
 
 /// `p` in `d`'s frame's own axes.   (doorway.ts rel)
-pub fn rel(g: &crate::game::Game, d: DoorId, p: V3) -> crate::doorway::Rel {
+pub fn rel(g: &mut crate::game::Game, d: DoorId, p: V3) -> crate::doorway::Rel {
     let f = crate::guards::frame_of(g, d);
     let (x, z) = (p[0] - f.hx, p[2] - f.hz);
     Rel { along: x * f.ux + z * f.uz, perp: x * f.nx + z * f.nz, f }
 }
 
 /// `p` in `d`'s opening: inside the leaf's span, within `half` of the frame line.   (doorway.ts inOpening)
-pub fn in_opening(g: &crate::game::Game, d: DoorId, p: V3, half: Option<f64>) -> bool {
+pub fn in_opening(g: &mut crate::game::Game, d: DoorId, p: V3, half: Option<f64>) -> bool {
     let half = half.unwrap_or(g.k.doormanners.half);
     let r = rel(g, d, p);
     r.along >= -0.05 && r.along <= r.f.w + 0.05 && m::abs(r.perp) <= half
@@ -176,7 +176,7 @@ fn leaf_cuts(w: f64, angle: f64, along: f64, perp: f64) -> bool {
 }
 
 /// `leafRound`: does this man go round a leaf standing open across his walk.   (doorway.ts roundsLeaves)
-pub fn rounds_leaves(g: &crate::game::Game, gd: GuardId) -> bool { g.gd[gd].team == crate::teams::Team::Operative }
+pub fn rounds_leaves(g: &mut crate::game::Game, gd: GuardId) -> bool { g.gd[gd].team == crate::teams::Team::Operative }
 
 /// leafStall: he is walking on the spot by a leaf standing open (or was, less than `leafStallPush` ago): this frame the leaf is his to push.   (doorway.ts leafStalled)
 pub fn leaf_stalled(g: &mut crate::game::Game, gd: GuardId) -> bool {
@@ -217,10 +217,10 @@ pub fn leaf_stalled(g: &mut crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// STAND: is the file's switch on: settled, always.   (doorway.ts doorwayFile)
-pub fn doorway_file(g: &crate::game::Game) -> bool { true }
+pub fn doorway_file(g: &mut crate::game::Game) -> bool { true }
 
 /// The first frame his walk goes through within `reach`.   (doorway.ts doorAhead)
-pub fn door_ahead(g: &crate::game::Game, gd: GuardId) -> Option<crate::doorway::DoorAhead> {
+pub fn door_ahead(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::doorway::DoorAhead> {
     let pos = g.ch[g.gd[gd].ch].pos;
     let reach = g.k.doormanners.reach;
     let (mut a, mut run) = (pos, 0.0);
@@ -285,7 +285,7 @@ pub fn step_to(g: &mut crate::game::Game, gd: GuardId, p: V3, pace: f64, dt: f64
 }
 
 /// Is `p` floor nobody has, by `apart`, nor is waiting at.   (doorway.ts spotFree)
-pub fn spot_free(g: &crate::game::Game, gd: GuardId, p: V3, apart: f64) -> bool {
+pub fn spot_free(g: &mut crate::game::Game, gd: GuardId, p: V3, apart: f64) -> bool {
     if nav_blocked(g, p[0], p[2]) { return false; }
     if g.gd[gd].team == crate::teams::Team::Operative && !g.pl[g.player].down && flat(g.ch[g.pl[g.player].ch].pos, p) < apart { return false; }
     let t = g.time;
@@ -362,13 +362,13 @@ fn gap_k(g: &crate::game::Game, d: f64) -> f64 {
 }
 
 /// The mark his order gave him, if any.   (doorway.ts:340, 344 `g.orders.of(x)?.post`)
-fn order_post(g: &crate::game::Game, gd: GuardId) -> Option<V3> {
+fn order_post(g: &mut crate::game::Game, gd: GuardId) -> Option<V3> {
     let a = crate::orders::squad_orders_of(g, gd)?;
     g.tab.orders_assignment[a].post
 }
 
 /// On the mark his order gave him.   (doorway.ts:344 onOwn)
-fn on_own(g: &crate::game::Game, o: Option<GuardId>) -> bool {
+fn on_own(g: &mut crate::game::Game, o: Option<GuardId>) -> bool {
     let Some(o) = o else { return false };
     let Some(post) = order_post(g, o) else { return false };
     flat(g.ch[g.gd[o].ch].pos, post) < g.k.doormanners.own_m
@@ -566,7 +566,7 @@ pub fn doorway_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64)
 }
 
 /// `g.col.nav.isBlocked`.
-fn nav_blocked(g: &crate::game::Game, x: f64, z: f64) -> bool {
+fn nav_blocked(g: &mut crate::game::Game, x: f64, z: f64) -> bool {
     crate::scene_collision::nav_grid_is_blocked(g, x, z)
 }
 

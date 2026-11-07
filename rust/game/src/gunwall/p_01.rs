@@ -39,7 +39,7 @@ pub fn fight_on(g: &mut crate::game::Game) -> bool {
 }
 
 /// A showcase has the floor (the tour, a Director showcase). (gunwall.ts showing)
-pub fn showing(g: &crate::game::Game) -> bool {
+pub fn showing(g: &mut crate::game::Game) -> bool {
     g.touring || crate::director::director_showing(g)
 }
 
@@ -121,7 +121,7 @@ pub fn gun_clear_from(g: &mut crate::game::Game, c_2: CharId, x: f64, z: f64, to
 }
 
 /// How far ahead of his feet the low ready leaves the muzzle, untucked. (gunwall.ts lowReach)
-pub fn low_reach(g: &crate::game::Game, c_2: CharId) -> f64 {
+pub fn low_reach(g: &mut crate::game::Game, c_2: CharId) -> f64 {
     let ahead = g.ch[c_2].muzzle_ahead;
     if g.ch[c_2].anim.long_gun { 0.145 + 0.7 * ahead } else { 0.241 + 0.74 * ahead }
 }
@@ -266,7 +266,7 @@ pub fn gun_walled(g: &mut crate::game::Game, c_2: CharId, up: Option<crate::gunw
 }
 
 /// The last answer, read only, if it is this frame's or the last's. (gunwall.ts gunWallIs)
-pub fn gun_wall_is(g: &crate::game::Game, c_2: CharId) -> bool {
+pub fn gun_wall_is(g: &mut crate::game::Game, c_2: CharId) -> bool {
     match g.m.gunwall.st.get(c_2) {
         Some(s) => s.low && g.time - s.t < FRESH_S,
         None => false,

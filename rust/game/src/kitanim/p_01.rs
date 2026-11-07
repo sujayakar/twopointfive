@@ -92,7 +92,7 @@ pub fn kit_nv_eye(g: &mut crate::game::Game) -> bool {
 }
 
 /// `handsOff(pl.char.anim)` from inside this file: the stub's `an` cannot be lent beside `g`.
-fn hands_off_c(g: &crate::game::Game, c: CharId) -> bool {
+fn hands_off_c(g: &mut crate::game::Game, c: CharId) -> bool {
     let b = g.ch[c].anim.big_tool.as_ref().map(big_off_of);
     match b {
         Some(b) if crate::bigkit::big_weighed(g) => crate::character::big_off(b),
@@ -106,7 +106,7 @@ fn big_off_of(b: &crate::character::AnimBigTool) -> crate::character::BigOffB {
 }
 
 /// What the game's own rules put in Sam's right hand this frame.   (kitanim.ts kitInHand)
-pub fn kit_in_hand(g: &crate::game::Game) -> Option<crate::character::KitItem> {
+pub fn kit_in_hand(g: &mut crate::game::Game) -> Option<crate::character::KitItem> {
     let p = g.player;
     let c = g.pl[p].ch;
     if g.pl[p].down {
@@ -182,7 +182,7 @@ pub fn kit_sling_rest(g: &mut crate::game::Game) -> Option<f64> {
 }
 
 /// How close a man `d` metres off is: 0 at the close-in mode's edge, 1 in the knife's reach.   (kitanim.ts kitCloseness)
-pub fn kit_closeness(g: &crate::game::Game, d: f64) -> f64 {
+pub fn kit_closeness(g: &mut crate::game::Game, d: f64) -> f64 {
     let mode_m = g.k.close.mode_m;
     m::max(0.0, m::min(1.0, (mode_m - d) / m::max(0.1, mode_m - g.k.kitanim.close_near)))
 }
@@ -437,7 +437,7 @@ pub fn kit_show(g: &mut crate::game::Game, v: &mut crate::kitanim::KitShowV) -> 
 }
 
 /// No errand has the hands: the gun the light rides is up.   (kitanim.ts kitGunUp)
-pub fn kit_gun_up(g: &crate::game::Game) -> bool {
+pub fn kit_gun_up(g: &mut crate::game::Game) -> bool {
     let c = g.pl[g.player].ch;
     g.ch[c].anim.kit_hold.is_none()
 }

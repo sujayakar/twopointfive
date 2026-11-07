@@ -61,13 +61,13 @@ pub fn sam_stow_tick(g: &mut crate::game::Game, holster: &mut dyn FnMut(&mut cra
 }
 
 /// The thing is still on its way out of his hand: the job's clock has not started.   (workstow.ts samStowing)
-pub fn sam_stowing(g: &crate::game::Game) -> bool {
+pub fn sam_stowing(g: &mut crate::game::Game) -> bool {
     let pl = g.player;
     match g.pl[pl].work_stow { Some(s) => !s.down, None => false }
 }
 
 /// Seconds a teammate's job waits, from the frame he is on it, for his hands to be free of his gun.   (workstow.ts mateStowLead)
-pub fn mate_stow_lead(g: &crate::game::Game) -> f64 { g.k.workstow.mate_down }
+pub fn mate_stow_lead(g: &mut crate::game::Game) -> f64 { g.k.workstow.mate_down }
 
 /// Once a frame of a teammate's two-handed job, by its owner: his gun is out of his hands.   (workstow.ts mateStow)
 pub fn mate_stow(g: &mut crate::game::Game, gd: GuardId) {
@@ -109,7 +109,7 @@ pub fn mate_stow_tick(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// His gun is drawn out of his hands this frame (hung on its sling, or on his thigh).   (workstow.ts stowHang)
-pub fn stow_hang(g: &crate::game::Game, gd: GuardId) -> bool {
+pub fn stow_hang(g: &mut crate::game::Game, gd: GuardId) -> bool {
     match g.gd[gd].work_stow {
         Some(s) => g.gd[gd].state != crate::game::GuardState::Dead
             && (s.up_t < 0.0 || s.up_t - g.time > g.k.workstow.mate_up * (1.0 - g.k.workstow.show)),
@@ -126,7 +126,7 @@ pub fn stow_fired(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// The fight has him: the job is dropped and waits, for `fightCap` at most at a stretch.   (workstow.ts stowFight)
-pub fn stow_fight(g: &crate::game::Game, gd: GuardId, a: Option<crate::workstow::StowFightA>, op: &mut crate::workstow::StowFightOp) -> bool {
+pub fn stow_fight(g: &mut crate::game::Game, gd: GuardId, a: Option<crate::workstow::StowFightA>, op: &mut crate::workstow::StowFightOp) -> bool {
     let has = a.map_or(false, |a| a.yield_t >= 0.0)
         || g.time < g.gd[gd].dazzled_until
         || g.time < g.gd[gd].stagger_until

@@ -53,28 +53,28 @@ pub fn bark(g: &mut crate::game::Game, gd: GuardId, kind: crate::morale::LineKin
 pub fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 
 /// his chest, or where it would be (morale.ts chestOf)
-pub fn chest_of(g: &crate::game::Game, c_2: CharId) -> V3 {
+pub fn chest_of(g: &mut crate::game::Game, c_2: CharId) -> V3 {
     let c = &g.ch[c_2];
     match c.bones.get(crate::character::Bone::Chest) { Some(b) => *b, None => [c.pos[0], c.pos[1] + 1.2, c.pos[2]] }
 }
 
 /// his head, or where it would be (morale.ts headOf)
-pub fn head_of(g: &crate::game::Game, c_2: CharId) -> V3 {
+pub fn head_of(g: &mut crate::game::Game, c_2: CharId) -> V3 {
     let c = &g.ch[c_2];
     match c.bones.get(crate::character::Bone::Head) { Some(b) => *b, None => [c.pos[0], c.pos[1] + 1.6, c.pos[2]] }
 }
 
 /// a man this file is about at all: a living defender or a man of the night staff (morale.ts ours)
-pub fn ours(g: &crate::game::Game, gd: GuardId) -> bool {
+pub fn ours(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let m_ = &g.gd[gd];
     m_.state != crate::game::GuardState::Dead && m_.civ.is_none() && (m_.team == crate::teams::Team::Hostile || m_.team == crate::teams::Team::Guard)
 }
 
 /// a man of the hostage rescue's cast (morale.ts rescued)
-pub fn rescued(g: &crate::game::Game, gd: GuardId) -> bool { g.rescue.active && g.rescue.hostiles.contains(&gd) }
+pub fn rescued(g: &mut crate::game::Game, gd: GuardId) -> bool { g.rescue.active && g.rescue.hostiles.contains(&gd) }
 
 /// may a sequence have him this frame (morale.ts reacts)
-pub fn reacts(g: &crate::game::Game, gd: GuardId) -> bool {
+pub fn reacts(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if !g.ai_enabled || g.touring || g.quiet_utility || g.gd[gd].held.is_some() { return false; }
     g.gd[gd].script.is_none() || g.fight.defs.iter().any(|d| g.tab.roomfight_def[*d].gd == gd)
 }
@@ -124,7 +124,7 @@ pub fn has_mate(g: &mut crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// the men he is counted with: his squad's, else his room's (morale.ts bandOf)
-pub fn band_of(g: &crate::game::Game, gd: GuardId) -> Option<Vec<GuardId>> {
+pub fn band_of(g: &mut crate::game::Game, gd: GuardId) -> Option<Vec<GuardId>> {
     if let Some(q) = crate::enemysquads::squad_of(g, gd) { return Some(q.men); }
     if g.gd[gd].team != crate::teams::Team::Hostile { return None; }
     g.room_clear.rooms.iter().find(|r| r.defenders.contains(&gd)).map(|r| r.defenders.clone())
@@ -180,7 +180,7 @@ pub fn leader_of(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
 pub fn folds(g: &mut crate::game::Game, gd: GuardId) -> bool { now(g, gd).green || g.k.morale.training == Training::None }
 
 /// what a shock of `x` is to these men (morale.ts nerved)
-pub fn nerved(g: &crate::game::Game, x: f64) -> f64 {
+pub fn nerved(g: &mut crate::game::Game, x: f64) -> f64 {
     let n = g.k.morale.nerve_k;
     x * match g.k.morale.nerve { Nerve::Brittle => n.brittle, Nerve::Normal => n.normal, Nerve::Steady => n.steady }
 }
@@ -277,7 +277,7 @@ pub fn morale_man_down(g: &mut crate::game::Game, victim: GuardId) {
 }
 
 /// seconds since he saw his leader go down (morale.ts sawLeaderFall)
-pub fn saw_leader_fall(g: &crate::game::Game, gd: GuardId) -> f64 {
+pub fn saw_leader_fall(g: &mut crate::game::Game, gd: GuardId) -> f64 {
     match g.m.morale.state_of.get(gd) { Some(s) if s.fall >= 0.0 => s.fall, _ => f64::INFINITY }
 }
 
@@ -469,7 +469,7 @@ pub fn clear_run(g: &mut crate::game::Game, gd: GuardId, dx: f64, dz: f64, max: 
 }
 
 /// the way off the hole from where he stands, a unit vector on the floor (morale.ts awayFrom)
-pub fn away_from(g: &crate::game::Game, c_2: CharId, hole: V3) -> [f64; 2] {
+pub fn away_from(g: &mut crate::game::Game, c_2: CharId, hole: V3) -> [f64; 2] {
     let p = g.ch[c_2].pos;
     let (dx, dz) = (p[0] - hole[0], p[2] - hole[2]);
     let l = m::hyp2(dx, dz);

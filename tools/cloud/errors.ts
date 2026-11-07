@@ -13,7 +13,7 @@
 import { keyUrl, localKey } from './local.ts';
 import { wire } from '../../src/cloud/wire.ts';
 import { LOADTIME } from '../../src/cloud/loadtime.ts';
-import { SHADER_ROW_WORDS } from '../../src/ui/shaderrows.ts';
+import { SHADER_ROW_WORDS, RETIRED_ROW_WORDS } from '../../src/ui/shaderrows.ts';
 
 export interface Rec { sid: string; pid: string; at: number; kind: string; build?: string; scenario?: string; data: any }
 export interface ErrGroup { kind: 'fatal' | 'error' | 'warning'; wheres: string[]; message: string; count: number; visits: number; browsers: number; builds: string[]; gpus: string[]; stages: string[]; scenarios: string[]; first: number; last: number; stack: string[]; sid: string; data?: unknown; pages: string[]; pageLoads: number }
@@ -149,7 +149,7 @@ export function loadLines(rows: Rec[]): LoadLine[] {
   const rowsOf = (r: Rec): string => {
     if (Array.isArray(r.data?.rows)) return [...r.data.rows].map(String).sort().join(' + ');
     const q = bySid.get(r.sid)?.data?.query; if (typeof q !== 'string') return '?';
-    const on: string[] = []; try { for (const [k, v] of new URLSearchParams(q)) if (v !== '0' && SHADER_ROW_WORDS.includes(k)) on.push(k); } catch { /* */ }
+    const on: string[] = []; try { for (const [k, v] of new URLSearchParams(q)) if (v !== '0' && (SHADER_ROW_WORDS.includes(k) || RETIRED_ROW_WORDS.includes(k))) on.push(k);   /* (a record this old may be from a build that still had the two retired rows) */ } catch { /* */ }
     return `by the address alone: ${on.sort().join(' + ') || 'none'}`;
   };
   // the kind of load: a reload; else, where the record counts the tab's loads (`nth`), the tab's FIRST load or a LATER one (a mission start is a page

@@ -17,7 +17,7 @@ fn name_of(g: &Game, q: EnemysquadsSquadId) -> String { g.tab.enemysquads_squad[
 fn door_name(g: &Game, d: DoorId) -> String { g.dr[d].def.name.clone() }
 fn def_gd(g: &Game, d: RoomfightDefId) -> GuardId { g.tab.roomfight_def[d].gd }
 /// `X.men.some(m => !offNet(m))`: anybody of it answers   (netCheck's answers)
-fn answers(g: &Game, x: EnemysquadsSquadId) -> bool {
+fn answers(g: &mut Game, x: EnemysquadsSquadId) -> bool {
     let men = g.tab.enemysquads_squad[x].men.clone();
     for m in men { if !crate::guards::off_net(g, m) { return true; } }
     false
@@ -75,7 +75,7 @@ pub fn key_up(g: &mut crate::game::Game, q: EnemysquadsSquadId, m: GuardId, at: 
 }
 
 /// is a man of the squad on the air about this mate's body   (enemysquads.ts callAbout)
-pub fn call_about(g: &crate::game::Game, q: EnemysquadsSquadId, body: GuardId) -> bool {
+pub fn call_about(g: &mut crate::game::Game, q: EnemysquadsSquadId, body: GuardId) -> bool {
     match &g.tab.enemysquads_squad[q].calls {
         Some(l) => l.iter().any(|c| c.body == Some(body)),
         None => false,
@@ -198,7 +198,7 @@ pub fn cut_ask(g: &mut crate::game::Game, q: EnemysquadsSquadId, m: GuardId) -> 
 }
 
 /// off the net, and nobody knows or has given up on him   (enemysquads.ts owedOf)
-pub fn owed_of(g: &crate::game::Game, who: GuardId, q: EnemysquadsSquadId) -> bool {
+pub fn owed_of(g: &mut crate::game::Game, who: GuardId, q: EnemysquadsSquadId) -> bool {
     if !crate::guards::off_net(g, who) { return false; }
     let c = g.tab.enemysquads_squad[q].rc.as_ref().unwrap();
     !c.known.has(who) && !c.looked.has(who)
@@ -287,7 +287,7 @@ pub fn net_say(g: &mut crate::game::Game, after: f64, gd: GuardId, text: &str, c
 }
 
 /// men a squad has asked for or sent, with no answer and no end heard   (enemysquads.ts waitsOn)
-pub fn waits_on(g: &crate::game::Game, q: EnemysquadsSquadId) -> Vec<GuardId> {
+pub fn waits_on(g: &mut crate::game::Game, q: EnemysquadsSquadId) -> Vec<GuardId> {
     let mut out = Vec::new();
     if g.tab.enemysquads_squad[q].rc.is_none() { return out; }
     let men = g.tab.enemysquads_squad[q].men.clone();
@@ -302,7 +302,7 @@ pub fn waits_on(g: &crate::game::Game, q: EnemysquadsSquadId) -> Vec<GuardId> {
 }
 
 /// trouble of its own: a man asked for, men out, a call that broke off, or men it sent not heard of since (netSend's test)
-fn own_trouble(g: &Game, q: EnemysquadsSquadId) -> bool {
+fn own_trouble(g: &mut Game, q: EnemysquadsSquadId) -> bool {
     let s = &g.tab.enemysquads_squad[q];
     if let Some(c) = &s.rc {
         if !c.look.is_empty() || c.stage == CheckStage::Asked || c.cut.as_ref().map_or(false, |l| !l.is_empty()) { return true; }
@@ -371,7 +371,7 @@ fn nc_idle(g: &mut Game, after: f64) {
     n.stage = NetCheckStage::Idle; n.about = None; n.caller = None; n.next_at = t + after;
 }
 /// `st.squads.filter(answers).length`
-fn answering(g: &Game) -> usize {
+fn answering(g: &mut Game) -> usize {
     let squads = the_state(g).squads.clone();
     let mut n = 0;
     for q in squads { if answers(g, q) { n += 1; } }
@@ -393,7 +393,7 @@ fn out_for(g: &Game, x: EnemysquadsSquadId) -> bool {
     the_state(g).squads.iter().any(|&q| g.tab.enemysquads_squad[q].rc.as_ref().map_or(false, |c| c.look.iter().any(|l| l.about == Some(x) && !l.back)))
 }
 /// not answering, and nobody knows why   (netCheck's silent)
-fn nc_silent(g: &Game, x: EnemysquadsSquadId) -> bool {
+fn nc_silent(g: &mut Game, x: EnemysquadsSquadId) -> bool {
     !answers(g, x) && g.tab.enemysquads_squad[x].called_t <= -100.0 && !net_of(g).done.has(x) && !out_for(g, x)
 }
 /// (netCheck's posts) the places of X's men, as its own side knows them
@@ -641,7 +641,7 @@ fn nc_stage_asked(g: &mut Game) {
 }
 
 /// a squad's men by its name, the fallen among them   (enemysquads.ts squadMen)
-pub fn squad_men(g: &crate::game::Game, name: &str) -> Vec<GuardId> {
+pub fn squad_men(g: &mut crate::game::Game, name: &str) -> Vec<GuardId> {
     if let Some(st) = g.m.enemysquads.states.as_ref() {
         for &q in st.squads.iter() {
             let s = &g.tab.enemysquads_squad[q];
@@ -652,7 +652,7 @@ pub fn squad_men(g: &crate::game::Game, name: &str) -> Vec<GuardId> {
 }
 
 /// (squadsTick's lostWhy) a man who went round is down: where and when, for the squad's timeline
-fn lost_why(g: &Game, s: &Sent) -> String {
+fn lost_why(g: &mut Game, s: &Sent) -> String {
     let there = s.there.is_some();
     let spot_near = match s.spot { Some(p) if there => flat(pos_of(g, s.gd), p) < 4.0, _ => false };
     let how = if s.back == Some(true) { "on his way back to his post" }
@@ -857,7 +857,7 @@ fn tick_news(g: &mut Game, q: EnemysquadsSquadId) {
         g.k.squads.ready_beat
     } else {
         let think = g.k.squads.think;
-        pick(g, think) * beat
+        pick(g, crate::dice::Who::Group(q.0), think) * beat
     };
     let decide_at = now + wait;
     let s = &mut g.tab.enemysquads_squad[q];
@@ -1004,9 +1004,8 @@ fn tick_run(g: &mut Game, q: EnemysquadsSquadId, i: usize, s: Sent, d: Roomfight
             }
             let (home_at, was) = { let x = &g.tab.roomfight_def[d]; (x.home, x.pt) };
             let to: V3 = [home_at[0], was[1], home_at[2]];
-            crate::roomfight::def_move_pt(g, d, to);   // (D.pt moved in place: his fix, if it is D.pt, moves with it)
+            crate::roomfight::def_move_pt(g, d, to);
             if !seen {
-                // `cover(gd, D.pt)`. Rule off it is `gd.lastKnown = D.pt`, and only the Def's own call keeps pt_stamp for def_fix_is_pt
                 crate::belief::cover(g, gd, to);
             } else if g.gd[gd].covers == Some(was) {
                 g.gd[gd].covers = Some(to);   // (`covers` IS D.pt in the TypeScript, and D.pt has just moved)

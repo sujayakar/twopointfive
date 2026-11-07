@@ -79,7 +79,7 @@ pub fn wall_charge_shock(g: &mut crate::game::Game, gd: GuardId, secs: f64, at: 
     g.gd[gd].react_t = m::max(g.gd[gd].react_t, secs);
     let fa = g.gd[gd].weapon;
     g.fa[fa].burst = None;
-    g.gd[gd].awareness = m::max(g.gd[gd].awareness, 0.6);
+    crate::mind::raise(g, gd, 0.6, "wallcharge");
     if g.gd[gd].state != crate::game::GuardState::Alert { crate::belief::word(g, gd, at); }
     crate::game::guard_set_path(g, gd, Vec::new());
     crate::guards::guard_set_path_goal(g, gd, None);
@@ -93,7 +93,7 @@ pub fn wall_charge_dazzle(g: &mut crate::game::Game, gd: GuardId, secs: f64, at:
     let now = g.time;
     g.gd[gd].dazzled_until = m::max(g.gd[gd].dazzled_until, now + secs);
     g.gd[gd].react_t = m::max(g.gd[gd].react_t, secs);
-    g.gd[gd].awareness = m::max(g.gd[gd].awareness, 0.6);
+    crate::mind::raise(g, gd, 0.6, "wallcharge");
     if g.gd[gd].state != crate::game::GuardState::Alert { crate::belief::word(g, gd, at); }
     if g.ai_enabled { g.gd[gd].witness.dazzled += 1.0; }
     crate::game::guard_set_path(g, gd, Vec::new());
@@ -134,7 +134,7 @@ pub fn wall_charge_draw(g: &mut crate::game::Game, c_2: WallChargeId) {
 }
 
 /// Is this set charge the squad's key's to blow: one the squad set, or his own while an order of theirs is on that wall (wallcharge.ts WallCharge.keyIs)
-pub fn wall_charge_key_is(g: &crate::game::Game, c_2: WallChargeId) -> bool {
+pub fn wall_charge_key_is(g: &mut crate::game::Game, c_2: WallChargeId) -> bool {
     let c = &g.tab.wallcharge_set_wall_charge[c_2];
     c.by != crate::ownblow::SAM_BY
         || g.wall_charge.ops.iter().any(|&o| same_wall(&g.tab.wallcharge_wall_op[o].wall, &c.wall))
@@ -303,7 +303,7 @@ pub fn wall_charge_sam_tick(g: &mut crate::game::Game) {
 }
 
 /// Is Sam setting one right now (wallcharge.ts WallCharge.setting)
-pub fn wall_charge_setting(g: &crate::game::Game) -> bool {
+pub fn wall_charge_setting(g: &mut crate::game::Game) -> bool {
     g.wall_charge.sam.is_some()
 }
 

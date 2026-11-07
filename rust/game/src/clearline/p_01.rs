@@ -47,7 +47,7 @@ pub fn mem_of<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate::c
 }
 
 /// What a living man on a script is doing about it. (clearline.ts liveDoing)
-pub fn live_doing(g: &crate::game::Game, gd: GuardId) -> Option<crate::clearline::Doing> {
+pub fn live_doing(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::clearline::Doing> {
     if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].script.is_none() {
         return None;
     }
@@ -55,13 +55,13 @@ pub fn live_doing(g: &crate::game::Game, gd: GuardId) -> Option<crate::clearline
 }
 
 /// (clearline.ts chestOf)
-pub fn chest_of(g: &crate::game::Game, h: GuardId) -> V3 {
+pub fn chest_of(g: &mut crate::game::Game, h: GuardId) -> V3 {
     let p = g.ch[g.gd[h].ch].pos;
     [p[0], 1.2, p[2]]
 }
 
 /// The point on the man this was begun on: his chest, or his head. (clearline.ts aimOf)
-pub fn aim_of(g: &crate::game::Game, d: crate::clearline::Doing) -> V3 {
+pub fn aim_of(g: &mut crate::game::Game, d: crate::clearline::Doing) -> V3 {
     if !d.head {
         return chest_of(g, d.of);
     }

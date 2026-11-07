@@ -53,7 +53,7 @@ pub fn area(r: crate::doorswing::Rect) -> f64 {
 type BoxNumbers = (V3, V3, f64, f64);
 
 /// A static's numbers by its ID (doorswing.ts:56 `level.boxes`, which is `g.col.boxes`).
-fn seam_box_numbers(g: &Game, b: BoxId) -> BoxNumbers { let x = &g.tab.boxes[b]; (x.c, x.h, x.yaw, x.flags) }
+fn seam_box_numbers(g: &mut Game, b: BoxId) -> BoxNumbers { let x = &g.tab.boxes[b]; (x.c, x.h, x.yaw, x.flags) }
 
 /// roofOver's count over the statics' numbers.
 fn roof_points(boxes: &[BoxNumbers], def: &crate::doors::DoorDef, s: f64) -> f64 {
@@ -87,7 +87,7 @@ fn roof_points(boxes: &[BoxNumbers], def: &crate::doors::DoorDef, s: f64) -> f64
 }
 
 /// How many of ROOF_PTS points just off face `s` of a door have a roof over them.   (doorswing.ts roofOver)
-pub fn roof_over(g: &crate::game::Game, d: DoorId, s: f64) -> f64 {
+pub fn roof_over(g: &mut crate::game::Game, d: DoorId, s: f64) -> f64 {
     let list = g.col.boxes.clone();
     let boxes: Vec<BoxNumbers> = list.iter().map(|&b| seam_box_numbers(g, b)).collect();
     roof_points(&boxes, &g.dr[d].def, s)
@@ -107,7 +107,7 @@ fn outside_side(p: f64, mi: f64) -> f64 {
 }
 
 /// The open-air side of an outside door, 0 for one not marked `exterior`, or roofed on both faces or neither.   (doorswing.ts outsideOf)
-pub fn outside_of(g: &crate::game::Game, d: DoorId) -> f64 {
+pub fn outside_of(g: &mut crate::game::Game, d: DoorId) -> f64 {
     if !g.dr[d].def.exterior.unwrap_or(false) {
         return 0.0;
     }

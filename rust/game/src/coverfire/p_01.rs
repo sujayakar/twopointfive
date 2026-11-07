@@ -64,7 +64,7 @@ fn say_line(g: &mut Game, gd: GuardId) {
     crate::game::game_say(g, gd, &line, None, None, None);
 }
 /// hit: is this body in the lane (coverfire.ts:191)
-fn lane_hit(g: &Game, ch: CharId, from: V3, dx: f64, dz: f64, l2: f64, t_max: f64, l: f64) -> bool {
+fn lane_hit(g: &mut Game, ch: CharId, from: V3, dx: f64, dz: f64, l2: f64, t_max: f64, l: f64) -> bool {
     let h = match g.ch[ch].bones.get(crate::character::Bone::Hips) { Some(h) => *h, None => g.ch[ch].pos };
     let t = v3::clamp(((h[0] - from[0]) * dx + (h[2] - from[2]) * dz) / l2, 0.0, t_max);
     m::hyp2(from[0] + dx * t - h[0], from[2] + dz * t - h[2]) < g.k.coverfire.lane + g.k.coverfire.cone_k * t * l
@@ -115,7 +115,7 @@ pub fn bump(g: &mut crate::game::Game, k: crate::coverfire::BumpK) {
 }
 
 /// the engine's half: walls and cover give under rounds (coverfire.ts chewLive)
-pub fn chew_live(g: &crate::game::Game) -> bool {
+pub fn chew_live(g: &mut crate::game::Game) -> bool {
     crate::wallbreak::wall_break_on(g) && crate::destruction::chaos_of(g) > 0.0
 }
 
@@ -164,7 +164,7 @@ pub fn flat(a: V3, b: V3) -> f64 {
 }
 
 /// whose body (coverfire.ts charOf)
-pub fn char_of(g: &crate::game::Game, who: crate::game::Foe) -> CharId {
+pub fn char_of(g: &mut crate::game::Game, who: crate::game::Foe) -> CharId {
     match who {
         crate::game::Foe::Player => g.pl[g.player].ch,
         crate::game::Foe::Guard(x) => g.gd[x].ch,
@@ -172,7 +172,7 @@ pub fn char_of(g: &crate::game::Game, who: crate::game::Foe) -> CharId {
 }
 
 /// his name (coverfire.ts nameOf)
-pub fn name_of(g: &crate::game::Game, who: crate::game::Foe) -> String {
+pub fn name_of(g: &mut crate::game::Game, who: crate::game::Foe) -> String {
     match who {
         crate::game::Foe::Player => String::from("Player"),
         crate::game::Foe::Guard(x) => g.gd[x].callsign.clone(),
@@ -188,7 +188,7 @@ pub fn log(g: &mut crate::game::Game, s: &str) {
 }
 
 /// this gun's round in the engine's units (coverfire.ts weightOf)
-pub fn weight_of(g: &crate::game::Game, gd: GuardId) -> f64 {
+pub fn weight_of(g: &mut crate::game::Game, gd: GuardId) -> f64 {
     let cls = g.m.weapons.weapons.get(g.fa[g.gd[gd].weapon].def).unwrap().cls;
     let k = if cls == crate::weapons::WeaponClass::Pistol { g.k.walls.pistol_k } else { 1.0 };
     k * crate::destruction::chaos_of(g) * 2.0
@@ -421,7 +421,7 @@ pub fn worth(g: &mut crate::game::Game, gd: GuardId, to: V3, rounds: f64) -> boo
 }
 
 /// rounds he will spend on it: a chew gets slack, a burst through is what it is (coverfire.ts budgetOf)
-pub fn budget_of(g: &crate::game::Game, kind: &str, rounds: f64) -> f64 {
+pub fn budget_of(g: &mut crate::game::Game, kind: &str, rounds: f64) -> f64 {
     if kind == "thru" { rounds } else { m::ceil(rounds * g.k.coverfire.slack_k) + g.k.coverfire.slack }
 }
 
@@ -949,7 +949,7 @@ pub fn coverfire_saw(g: &mut crate::game::Game, gd: GuardId, who: crate::game::F
 }
 
 /// QA: what `gd` is on this frame (coverfire.ts coverfireOn)
-pub fn coverfire_on(g: &crate::game::Game, gd: GuardId) -> Option<crate::coverfire::CoverfireOn> {
+pub fn coverfire_on(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::coverfire::CoverfireOn> {
     let cw = g.m.coverfire.states.as_ref()?.men.get(gd)?.chew.as_ref()?;
     Some(CoverfireOn { id: cw.id, kind: cw.kind.clone(), fired: cw.fired, want: cw.want, to: v3::copy(cw.to) })
 }

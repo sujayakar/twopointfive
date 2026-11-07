@@ -16,13 +16,13 @@ fn new_state(cast: Vec<GuardId>, since: f64) -> State {
 }
 
 /// the roster's own test for one man   (silent.ts mate)
-pub fn mate(g: &crate::game::Game, gd: GuardId) -> bool { g.gd[gd].team == crate::teams::Team::Operative && g.gd[gd].unit.is_some() }
+pub fn mate(g: &mut crate::game::Game, gd: GuardId) -> bool { g.gd[gd].team == crate::teams::Team::Operative && g.gd[gd].unit.is_some() }
 
 /// the squad of this seat   (silent.ts castOf)
-pub fn cast_of(g: &crate::game::Game) -> Vec<GuardId> { crate::orders::squad_orders_squad(g) }
+pub fn cast_of(g: &mut crate::game::Game) -> Vec<GuardId> { crate::orders::squad_orders_squad(g) }
 
 /// is the squad silent right now   (silent.ts squadSilent)
-pub fn squad_silent(g: &crate::game::Game) -> bool {
+pub fn squad_silent(g: &mut crate::game::Game) -> bool {
     if !g.k.silent.on { return false; }
     let key = crate::seats::view_key(g);
     match g.m.silent.states.get(key) {
@@ -141,10 +141,10 @@ pub fn silent_boot(g: &mut crate::game::Game, d: DoorId) -> Option<crate::silent
 }
 
 /// the canisters stay in the kit   (silent.ts silentNoCans)
-pub fn silent_no_cans(g: &crate::game::Game) -> bool { squad_silent(g) }
+pub fn silent_no_cans(g: &mut crate::game::Game) -> bool { squad_silent(g) }
 
 /// is his gun quiet: by the weapon's own report   (silent.ts quietGun)
-pub fn quiet_gun(g: &crate::game::Game, gd: GuardId) -> bool {
+pub fn quiet_gun(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let def = g.fa[g.gd[gd].weapon].def;
     let r = &g.m.weapons.weapons.get(def).unwrap().report;
     !r.loud && r.level < 1.0
@@ -210,7 +210,7 @@ pub fn silent_tool(g: &mut crate::game::Game, loud: bool) {
 }
 
 /// is the silent squad compromised right now   (silent.ts silentCompromised)
-pub fn silent_compromised(g: &crate::game::Game) -> bool {
+pub fn silent_compromised(g: &mut crate::game::Game) -> bool {
     if !squad_silent(g) { return false; }
     let key = crate::seats::view_key(g);
     match g.m.silent.states.get(key) { Some(s) => s.hot, None => false }
@@ -289,7 +289,7 @@ pub fn posture_word(g: &mut crate::game::Game) -> Option<String> {
     Some(loud_word(w.as_deref()))
 }
 /// `posture.mark`   (silent.ts:248): what the posture's seam should call
-pub fn posture_mark(g: &crate::game::Game, def: OrdersOrderDefId) -> &'static str {
+pub fn posture_mark(g: &mut crate::game::Game, def: OrdersOrderDefId) -> &'static str {
     if squad_silent(g) && is_loud_row(&g.tab.orders_order_def[def].id) { " · LOUD" } else { "" }
 }
 /// `posture.given`   (silent.ts:249): what the posture's seam should call

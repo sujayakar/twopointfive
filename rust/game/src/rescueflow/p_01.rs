@@ -18,7 +18,7 @@ fn blocked(g: &mut Game, a: V3, b: V3) -> bool {
 }
 
 /// The door of an opening, if it names one and the level has it.
-fn door_of(g: &Game, o: &crate::scene_scenarios::RouteOpening) -> Option<DoorId> {
+fn door_of(g: &mut Game, o: &crate::scene_scenarios::RouteOpening) -> Option<DoorId> {
     match &o.door {
         Some(n) if !n.is_empty() => crate::doors::doors_by_name(g, n),
         _ => None,
@@ -40,12 +40,12 @@ pub fn flat(a: V3, b: V3) -> f64 {
 }
 
 /// The level's route data; None = this level's rescue has no flow. (rescueflow.ts RescueFlow.F)
-pub fn rescue_flow_f(g: &crate::game::Game) -> Option<crate::scene_scenarios::RescueFlowData> {
+pub fn rescue_flow_f(g: &mut crate::game::Game) -> Option<crate::scene_scenarios::RescueFlowData> {
     crate::rescue::rescue_data(g).and_then(|d| d.flow)
 }
 
 /// (rescueflow.ts RescueFlow.constructor)
-pub fn rescue_flow_new(g: &crate::game::Game) -> crate::rescueflow::RescueFlow {
+pub fn rescue_flow_new(g: &mut crate::game::Game) -> crate::rescueflow::RescueFlow {
     RescueFlow::blank()
 }
 
@@ -66,7 +66,7 @@ pub fn rescue_flow_reset(g: &mut crate::game::Game) {
 }
 
 /// Is this assignment one the flow gave. (rescueflow.ts RescueFlow.gave)
-pub fn rescue_flow_gave(g: &crate::game::Game, a: Option<OrdersAssignmentId>) -> bool {
+pub fn rescue_flow_gave(g: &mut crate::game::Game, a: Option<OrdersAssignmentId>) -> bool {
     match a {
         Some(a) => g.rescue.flow.mine.has(a),
         None => false,
@@ -166,7 +166,7 @@ pub fn rescue_flow_open(g: &mut crate::game::Game, o: &crate::scene_scenarios::R
 }
 
 /// The team's eyes this moment: Sam's, and every living operative's who is not blind. (rescueflow.ts RescueFlow.eyes)
-pub fn rescue_flow_eyes(g: &crate::game::Game) -> Vec<V3> {
+pub fn rescue_flow_eyes(g: &mut crate::game::Game) -> Vec<V3> {
     let mut out: Vec<V3> = Vec::new();
     let pl = g.player;
     if !g.pl[pl].down {
@@ -204,7 +204,7 @@ pub fn rescue_flow_sees(g: &mut crate::game::Game, eyes: &[V3], h: GuardId) -> b
 }
 
 /// (rescueflow.ts RescueFlow.regionAt)
-pub fn rescue_flow_region_at(g: &crate::game::Game, p: V3) -> Option<RescueflowRegionId> {
+pub fn rescue_flow_region_at(g: &mut crate::game::Game, p: V3) -> Option<RescueflowRegionId> {
     g.rescue.flow.regions.values().copied().find(|&r| in_rect(p, &g.tab.rescueflow_region[r].rect))
 }
 
@@ -388,7 +388,7 @@ pub fn rescue_flow_sense(g: &mut crate::game::Game) {
 }
 
 /// The man posted on this opening: on a mark of his own with his gun on it, the flow's cover or a menu order of Sam's. (rescueflow.ts RescueFlow.holder)
-pub fn rescue_flow_holder(g: &crate::game::Game, o: &crate::scene_scenarios::RouteOpening) -> Option<GuardId> {
+pub fn rescue_flow_holder(g: &mut crate::game::Game, o: &crate::scene_scenarios::RouteOpening) -> Option<GuardId> {
     let mut i = 0;
     while i < g.rescue.ops.len() {
         let op = g.rescue.ops[i];
@@ -723,7 +723,7 @@ pub fn rescue_flow_tick(g: &mut crate::game::Game) {
 }
 
 /// Nothing for a man to do at it: the room behind it is cleared, or a man Sam posted has it already. (rescueflow.ts RescueFlow.settled)
-pub fn rescue_flow_settled(g: &crate::game::Game, o: &crate::scene_scenarios::RouteOpening) -> bool {
+pub fn rescue_flow_settled(g: &mut crate::game::Game, o: &crate::scene_scenarios::RouteOpening) -> bool {
     let Some(k) = g.rescue.flow.known.iter().find(|x| x.o.id == o.id) else { return false };
     if g.tab.rescueflow_region[k.region].cleared {
         return true;
@@ -735,12 +735,12 @@ pub fn rescue_flow_settled(g: &crate::game::Game, o: &crate::scene_scenarios::Ro
 }
 
 /// pairup.ts 'stay': one partner, silent, not found out: the flow sends nobody. (rescueflow.ts RescueFlow.stays)
-pub fn rescue_flow_stays(g: &crate::game::Game) -> bool {
+pub fn rescue_flow_stays(g: &mut crate::game::Game) -> bool {
     crate::pairup::pair_up(g, crate::pairup::PairUpRule::Stay) && crate::orders::squad_orders_squad(g).len() == 1 && crate::silent::squad_silent(g) && !crate::silent::silent_compromised(g)
 }
 
 /// The men the flow may send: alive, falling in, not F's, not in a fight, not blind; the LAST in the file first. (rescueflow.ts RescueFlow.free)
-pub fn rescue_flow_free(g: &crate::game::Game) -> Vec<GuardId> {
+pub fn rescue_flow_free(g: &mut crate::game::Game) -> Vec<GuardId> {
     let mut out: Vec<(GuardId, f64)> = Vec::new();
     let mut i = 0;
     while i < g.rescue.ops.len() {

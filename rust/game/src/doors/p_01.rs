@@ -8,20 +8,20 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// A door's slab as its row holds it: the handle's ID is the door's number, and the row is found at each read.   (doors.ts SlabRow.constructor)
-pub fn slab_row_new(g: &crate::game::Game, door: f64) -> SlabRowId {
+pub fn slab_row_new(g: &mut crate::game::Game, door: f64) -> SlabRowId {
     SlabRowId(door as u32)
 }
 
 /// One double of the slab's row, as it stands now.   (doors.ts SlabRow.g)
 pub fn slab_row_g(g: &mut crate::game::Game, id: SlabRowId, k: crate::doors::SlabRowGK) -> f64 {
     let r = row_now(g, id);
-    slab_col(&::sim::state::state_read(g.sim).slabs, k, r)
+    slab_col(&::sim::state::state(g.sim).slabs, k, r)
 }
 
 /// The slab row's word of truths.   (doors.ts SlabRow.f)
 pub fn slab_row_f(g: &mut crate::game::Game, id: SlabRowId) -> f64 {
     let r = row_now(g, id);
-    ::sim::state::state_read(g.sim).slabs.flags[r] as f64
+    ::sim::state::state(g.sim).slabs.flags[r] as f64
 }
 
 /// Its centre.   (doors.ts SlabRow.p)
@@ -96,7 +96,7 @@ pub fn slab_row_landed(g: &mut crate::game::Game, id: SlabRowId) -> bool {
 /// Whose doing it was.   (doors.ts SlabRow.who)
 pub fn slab_row_who(g: &mut crate::game::Game, id: SlabRowId) -> f64 {
     let r = row_now(g, id);
-    ::sim::state::state_read(g.sim).slabs.who[r] as f64
+    ::sim::state::state(g.sim).slabs.who[r] as f64
 }
 
 /// The lock rail of a leaf gunfire took apart: half width, half length, where its handles are.   (doors.ts SlabRow.bits)
@@ -113,13 +113,13 @@ pub fn slab_row_bits(g: &mut crate::game::Game, id: SlabRowId) -> Option<[f64; 4
 }
 
 /// A door's drive as its columns hold it: the handle's ID is the door's number.   (doors.ts DriveCols.constructor)
-pub fn drive_cols_new(g: &crate::game::Game, i: f64) -> DriveColsId {
+pub fn drive_cols_new(g: &mut crate::game::Game, i: f64) -> DriveColsId {
     DriveColsId(i as u32)
 }
 
 /// One column of this door.   (doors.ts DriveCols.g)
 pub fn drive_cols_g(g: &mut crate::game::Game, id: DriveColsId, k: f64) -> f64 {
-    ::sim::state::state_read(g.sim).doors.c[k as usize][id.0 as usize]
+    ::sim::state::state(g.sim).doors.c[k as usize][id.0 as usize]
 }
 
 /// Write one column of this door.   (doors.ts DriveCols.p)

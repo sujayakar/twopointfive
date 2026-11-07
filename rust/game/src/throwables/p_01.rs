@@ -121,7 +121,7 @@ pub fn item_new(g: &mut crate::game::Game, r: f64) -> ItemId {
 }
 
 /// Which row it stands in, -1 out of the pool. (throwables.ts Item.row)
-pub fn item_row(g: &crate::game::Game, id: ItemId) -> f64 {
+pub fn item_row(g: &mut crate::game::Game, id: ItemId) -> f64 {
     if g.tab.item[id].kept.is_none() { g.tab.item[id].r } else { -1.0 }
 }
 
@@ -175,7 +175,7 @@ pub fn item_w(g: &mut crate::game::Game, id: ItemId, c_2: f64) -> f64 {
         return k[c_2 as usize];
     }
     let r = g.tab.item[id].r as usize;
-    word_of(&sim::state::state_read(g.sim).items, c_2 as usize, r) as f64
+    word_of(&sim::state::state(g.sim).items, c_2 as usize, r) as f64
 }
 
 /// …and written: ToUint32 both ways, by `>>> 0` kept and by the Uint32Array's store in a row. (throwables.ts Item.pw)
@@ -391,7 +391,7 @@ pub fn item_set_fired(g: &mut crate::game::Game, id: ItemId, v: bool) {
 }
 
 /// As it was last set (unset is not false to a save file); the step reads its bit. (throwables.ts Item.carried)
-pub fn item_carried(g: &crate::game::Game, id: ItemId) -> Option<bool> {
+pub fn item_carried(g: &mut crate::game::Game, id: ItemId) -> Option<bool> {
     g.tab.item[id].hand
 }
 
@@ -452,17 +452,17 @@ pub fn item_box(g: &mut crate::game::Game, c_2: V3, h: V3, yaw: f64, rot: Quat, 
 }
 
 /// The share of its slide a thing keeps on lying snow. (throwables.ts bogSlide)
-pub fn bog_slide(g: &crate::game::Game, bog: f64) -> f64 {
+pub fn bog_slide(g: &mut crate::game::Game, bog: f64) -> f64 {
     1.0 - bog * g.k.snowbog.grip
 }
 
 /// The share of its bounce. (throwables.ts bogBounce)
-pub fn bog_bounce(g: &crate::game::Game, bog: f64) -> f64 {
+pub fn bog_bounce(g: &mut crate::game::Game, bog: f64) -> f64 {
     1.0 - bog * g.k.snowbog.dead
 }
 
 /// How much faster than on a floor it may still be going and stop dead. (throwables.ts bogStick)
-pub fn bog_stick(g: &crate::game::Game, bog: f64) -> f64 {
+pub fn bog_stick(g: &mut crate::game::Game, bog: f64) -> f64 {
     bog * g.k.snowbog.stick
 }
 

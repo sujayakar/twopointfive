@@ -132,7 +132,7 @@ pub fn line_box(g: &mut crate::game::Game, a: V3, rd: V3, b: BoxId) -> Option<cr
 }
 
 /// where a span's foot is asked from: a test that begins at the feet begins at the bake's height. UNDERFOOT.on is settled on. (collision.ts footBand)
-pub fn foot_band(g: &crate::game::Game, y0: f64) -> f64 {
+pub fn foot_band(g: &mut crate::game::Game, y0: f64) -> f64 {
     if y0 >= FEET_Y && y0 < BAKE_Y { BAKE_Y } else { y0 }
 }
 
@@ -326,17 +326,17 @@ pub fn rule<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, fn_: &mut dy
 }
 
 /// the pane rule as a rule's step takes it. (collision.ts StaticCollision.rulesPanes)
-pub fn rules_panes(g: &crate::game::Game) -> f64 {
+pub fn rules_panes(g: &mut crate::game::Game) -> f64 {
     pane_ask(g)
 }
 
 /// why the copy is not answering now, for the count of questions the TypeScript took. (collision.ts StaticCollision.fellWhy)
-pub fn fell_why(g: &crate::game::Game) -> String {
+pub fn fell_why(g: &mut crate::game::Game) -> String {
     String::from(if g.col.mirror.live { "the row was not up when the tick opened" } else { "outside a tick" })
 }
 
 /// the foot of a span as the statics are asked it. (collision.ts StaticCollision.footOf)
-pub fn foot_of(g: &crate::game::Game, y0: f64) -> f64 {
+pub fn foot_of(g: &mut crate::game::Game, y0: f64) -> f64 {
     foot_band(g, y0)
 }
 
@@ -415,7 +415,7 @@ pub fn gather_ask(g: &mut crate::game::Game, x0: f64, z0: f64, x1: f64, z1: f64,
 pub fn gather_here(g: &mut crate::game::Game, x0: f64, z0: f64, x1: f64, z1: f64, y0: f64, y1: f64, out: &mut Vec<i32>) -> f64 {
     let w = slot(g);
     let n = sim::collide::gather(w, x0, z0, x1, z1, y0, y1, out.len());
-    let list = &sim::world::world_read(w).list;
+    let list = &sim::world::world(w).list;
     for i in 0..n {
         out[i] = list[i] as i32;
     }
@@ -446,7 +446,7 @@ pub fn circle_touches_here(g: &mut crate::game::Game, x: f64, z: f64, r: f64, y0
     let v = sim::collide::touches(w, x, z, r, y0, y1, cap);
     let full = v < 0;
     let (n, k) = if full { (cap, -1.0) } else { ((v as u32 & 0xffff) as usize, (v as u32 >> 16) as f64) };
-    let list = &sim::world::world_read(w).list;
+    let list = &sim::world::world(w).list;
     for i in 0..n {
         out[i] = list[i] as i32;
     }
@@ -475,14 +475,14 @@ pub fn collide_circle_here(g: &mut crate::game::Game, p: &mut V3, r: f64, y0: f6
     let w = slot(g);
     let y0 = foot_band(g, y0);
     let hit = sim::collide::circle(w, p[0], p[2], r, y0, y1, js::to_u32(iterations)) != 0;
-    let pt = sim::world::world_read(w).pt;
+    let pt = sim::world::world(w).pt;
     p[0] = pt[0];
     p[2] = pt[1];
     hit
 }
 
 /// a circle kept on the world's floor rectangle; true = it had to move. (collision.ts StaticCollision.clampToWorld)
-pub fn clamp_to_world(g: &crate::game::Game, p: &mut V3, r: f64) -> bool {
+pub fn clamp_to_world(g: &mut crate::game::Game, p: &mut V3, r: f64) -> bool {
     let wd = crate::scene_world::world();
     let x = m::min(wd.max[0] - r, m::max(wd.min[0] + r, p[0]));
     let z = m::min(wd.max[2] - r, m::max(wd.min[2] + r, p[2]));
@@ -539,7 +539,7 @@ pub fn pane_open(g: &mut crate::game::Game, bi: f64, p: V3) -> bool {
 }
 
 /// the pane rule as a question takes it: 0 none, 1 it has one and rows behind it, −1 a rule with no rows. EXACT.on is settled for the module, so no −2. (collision.ts StaticCollision.paneAsk)
-pub fn pane_ask(g: &crate::game::Game) -> f64 {
+pub fn pane_ask(g: &mut crate::game::Game) -> f64 {
     if g.col.pane_rule.is_none() {
         0.0
     } else if g.col.pane_rows.is_some() {
@@ -560,7 +560,7 @@ fn leaves_set(g: &mut Game) -> i32 {
     set as i32
 }
 /// the pane rule for a question that will be answered; below nought there is nobody else to answer
-fn ask_of(g: &Game) -> u32 {
+fn ask_of(g: &mut Game) -> u32 {
     let ask = pane_ask(g);
     if ask < 0.0 { panic!("a pane's rule the module cannot judge by: no glass stands behind it"); }
     ask as u32
@@ -725,7 +725,7 @@ fn line(g: &mut Game, a: V3, b: V3, shrink: f64, through: f64, panes: Option<&mu
     if r == -2 { panic!("more glass on one line than the box world lists ({})", sim::world::MAX_PANES); }
     if r > 0 {
         if let Some(out) = panes {
-            let o = sim::world::world_read(w);
+            let o = sim::world::world(w);
             for i in 0..r as usize {
                 out.push(SegmentBlockedPanesItem { bi: o.pane_bi[i] as f64, t: o.pane_t[i] });
             }
@@ -837,7 +837,7 @@ pub fn sense_panes(g: &mut crate::game::Game, row: &str) -> f64 {
 }
 
 /// an eye's line, and the fog's: it passes glass, and is asked by flags the copy keeps. (collision.ts StaticCollision.eyeLine)
-pub fn eye_line(g: &crate::game::Game, row: &str, through: f64) {
+pub fn eye_line(g: &mut crate::game::Game, row: &str, through: f64) {
     if js::to_u32(through) & !js::to_u32(crate::scene_box_mirror::mirrored()) != 0 || js::to_u32(through) & sim::world::F_GLASS == 0 {
         panic!("{}: an eye's line passes glass and names only flags the copy keeps (asked through {}): one that stops at glass is no eye's, and is asked as a line (segmentBlocked)", row, js::num_str(through));
     }
@@ -999,7 +999,7 @@ pub fn blobs_begin(g: &mut crate::game::Game, n: f64) {
 }
 
 /// a game keeps no more blobs than the module's table: more is a mistake, by name. (collision.ts StaticCollision.blobsFit)
-pub fn blobs_fit(g: &crate::game::Game, n: f64) {
+pub fn blobs_fit(g: &mut crate::game::Game, n: f64) {
     if n > sim::smoke::MAX_BLOBS as f64 {
         panic!("{} blobs of smoke and the Rust module's table holds {}: a game keeps no more than that (sense.ts CpuSmoke.emit), so somebody else filled the list", js::num_str(n), sim::smoke::MAX_BLOBS);
     }
@@ -1115,7 +1115,7 @@ pub fn grid_step(g: &mut crate::game::Game, st: &mut crate::Opaque, pending: &[f
 // ---- how a sound reaches a listener
 
 /// (collision.ts SoundPaths.constructor)
-pub fn sound_paths_new(g: &crate::game::Game) -> crate::scene_collision::SoundPaths {
+pub fn sound_paths_new(g: &mut crate::game::Game) -> crate::scene_collision::SoundPaths {
     SoundPaths::blank()
 }
 
@@ -1258,7 +1258,7 @@ pub fn nav_grid_rebake(g: &mut crate::game::Game, x0: f64, z0: f64, x1: f64, z1:
 }
 
 /// (collision.ts NavGrid.idx)
-pub fn nav_grid_idx(g: &crate::game::Game, x: f64, z: f64) -> f64 {
+pub fn nav_grid_idx(g: &mut crate::game::Game, x: f64, z: f64) -> f64 {
     z * g.col.nav.w + x
 }
 
@@ -1271,7 +1271,7 @@ pub fn nav_grid_cell_blockers(g: &mut crate::game::Game, wx: f64, wz: f64, out: 
 }
 
 /// (collision.ts NavGrid.isBlocked)
-pub fn nav_grid_is_blocked(g: &crate::game::Game, wx: f64, wz: f64) -> bool {
+pub fn nav_grid_is_blocked(g: &mut crate::game::Game, wx: f64, wz: f64) -> bool {
     let (cell, nw, nh) = (g.col.nav.cell, g.col.nav.w, g.col.nav.h);
     let (x, z) = (m::floor(wx / cell), m::floor(wz / cell));
     if x < 0.0 || z < 0.0 || x >= nw || z >= nh { return true; }
@@ -1390,7 +1390,7 @@ pub fn nav_grid_nearest_free_point(g: &mut crate::game::Game, wx: f64, wz: f64) 
 }
 
 /// conservative straight-line walkability. (collision.ts NavGrid.walkable)
-pub fn nav_grid_walkable(g: &crate::game::Game, a: V3, b: V3) -> bool {
+pub fn nav_grid_walkable(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
     let cell = g.col.nav.cell;
     let (dx, dz) = (b[0] - a[0], b[2] - a[2]);
     let len = m::hyp2(dx, dz);

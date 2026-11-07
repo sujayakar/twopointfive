@@ -124,7 +124,7 @@ pub fn watchables_at(g: &mut crate::game::Game, p: V3, front: f64, reach: f64, b
 }
 
 /// Is `q` in the funnel of this way, on the space's own face of it. (roomfit.ts inFunnel)
-pub fn in_funnel(g: &crate::game::Game, q: V3, w: crate::roomread::RoomWay) -> bool {
+pub fn in_funnel(g: &mut crate::game::Game, q: V3, w: crate::roomread::RoomWay) -> bool {
     let k = g.k.roomfit;
     let (o_at, o_half) = { let o = &g.tab.cover_opening[w.o]; (o.at, o.half) };
     let x = q[0] - o_at[0];
@@ -184,12 +184,12 @@ fn clear(g: &mut Game, q: V3) -> bool {
 }
 
 /// A wall or furniture `d` metres off along `yaw`. (roomfit.ts fitSpots wallAt)
-fn wall_at(g: &Game, q: V3, yaw: f64, d: f64) -> bool {
+fn wall_at(g: &mut Game, q: V3, yaw: f64, d: f64) -> bool {
     crate::scene_collision::nav_grid_is_blocked(g, q[0] + m::sin(yaw) * d, q[2] + m::cos(yaw) * d)
 }
 
 /// How good `q` is for a man whose job is `t`; `out` without its row `me` is the others. (roomfit.ts fitSpots score)
-fn score(g: &Game, r: &crate::roomread::RoomRead, at: V3, front: f64, bodies: &[V3], q: V3, t: Option<&crate::roomfit::Threat>, out: &[Option<crate::roomfit::Fit>], me: usize) -> f64 {
+fn score(g: &mut Game, r: &crate::roomread::RoomRead, at: V3, front: f64, bodies: &[V3], q: V3, t: Option<&crate::roomfit::Threat>, out: &[Option<crate::roomfit::Fit>], me: usize) -> f64 {
     let k = g.k.roomfit;
     let mut s0 = 0.0;
     for b in bodies.iter() {

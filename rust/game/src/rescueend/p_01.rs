@@ -14,7 +14,7 @@ pub fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 pub fn who(g: &mut crate::game::Game) -> PlayerId { g.player }
 
 /// Nobody led, nobody counted.   (rescueend.ts RescueEnd.constructor)
-pub fn rescue_end_new(g: &crate::game::Game) -> crate::rescueend::RescueEnd { crate::rescueend::RescueEnd::blank() }
+pub fn rescue_end_new(g: &mut crate::game::Game) -> crate::rescueend::RescueEnd { crate::rescueend::RescueEnd::blank() }
 
 /// A fresh staging: nobody led, nobody counted.   (rescueend.ts RescueEnd.reset)
 pub fn rescue_end_reset(g: &mut crate::game::Game) {
@@ -25,13 +25,13 @@ pub fn rescue_end_reset(g: &mut crate::game::Game) {
 }
 
 /// The way out: the mark the team was staged on.   (rescueend.ts RescueEnd.out)
-pub fn rescue_end_out(g: &crate::game::Game) -> Option<V3> {
+pub fn rescue_end_out(g: &mut crate::game::Game) -> Option<V3> {
     let d = crate::rescue::rescue_data(g)?;
     Some([d.team.sam[0], 0.0, d.team.sam[2]])
 }
 
 /// The men of theirs still to be dealt with: not down, and not run off with the gun dropped.   (rescueend.ts RescueEnd.left)
-pub fn rescue_end_left(g: &crate::game::Game) -> Vec<GuardId> {
+pub fn rescue_end_left(g: &mut crate::game::Game) -> Vec<GuardId> {
     let all = g.guards.clone();
     let mut left = Vec::new();
     for h in all {
@@ -47,7 +47,7 @@ pub fn rescue_end_left(g: &crate::game::Game) -> Vec<GuardId> {
 }
 
 /// The hostages still alive.   (rescueend.ts RescueEnd.alive)
-pub fn rescue_end_alive(g: &crate::game::Game) -> Vec<GuardId> {
+pub fn rescue_end_alive(g: &mut crate::game::Game) -> Vec<GuardId> {
     let mut alive = Vec::new();
     for &h in g.rescue.hostages.iter() {
         if g.gd[h].state != crate::game::GuardState::Dead { alive.push(h); }

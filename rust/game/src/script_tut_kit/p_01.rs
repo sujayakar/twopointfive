@@ -120,7 +120,7 @@ fn until(id: u32, label: &str) -> crate::director::Cond {
 }
 
 /// `c.on('bang', filter)`
-fn on_bang(g: &Game, r: DirectorRunId, filter: crate::director::EventFilter) -> crate::director::Cond {
+fn on_bang(g: &mut Game, r: DirectorRunId, filter: crate::director::EventFilter) -> crate::director::Cond {
     crate::director::director_beat_on(g, r, crate::director::CondArm3Kind::Bang, None, Some(filter))
 }
 
@@ -404,7 +404,7 @@ pub fn tut_kit_loose_step(g: &mut crate::game::Game, r: DirectorRunId, b: Direct
 }
 
 /// how many of the two are still up   (tut-kit.script.ts:138 up)
-fn trucks_up(g: &Game, r: DirectorRunId, two: &[crate::script_tut_kit::TutKitTrucksTwo]) -> f64 {
+fn trucks_up(g: &mut Game, r: DirectorRunId, two: &[crate::script_tut_kit::TutKitTrucksTwo]) -> f64 {
     let mut n = 0.0;
     for m in two { if crate::director::director_query_alive(g, r, m.u.as_ref().unwrap()) { n += 1.0; } }
     n
@@ -500,7 +500,7 @@ pub fn tut_kit_trucks_step(g: &mut crate::game::Game, r: DirectorRunId, b: Direc
 }
 
 /// (tut-kit.script.ts:132-150) the c.until tests of 'trucks'
-pub fn tut_kit_trucks_test(g: &crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_kit::TutKitTrucksFrame, id: u32) -> Result<bool, String> {
+pub fn tut_kit_trucks_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_kit::TutKitTrucksFrame, id: u32) -> Result<bool, String> {
     match id {
         TRUCKS_IN_DOORWAY => {
             for m in &f.two {

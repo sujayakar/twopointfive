@@ -10,7 +10,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 // ---------------------------------------------------------------- seams: what skeleton 5 cannot give yet
 
 /// A static box's `c`, `h`, `yaw` and whether it has a `rot` (handwork.ts:126). Once a table of Box rows stands, the body is that row's four fields.
-fn seam_box_read(g: &Game, b: BoxId) -> (V3, V3, f64, bool) { let x = &g.tab.boxes[b]; (x.c, x.h, x.yaw, x.rot.is_some()) }
+fn seam_box_read(g: &mut Game, b: BoxId) -> (V3, V3, f64, bool) { let x = &g.tab.boxes[b]; (x.c, x.h, x.yaw, x.rot.is_some()) }
 
 // ---------------------------------------------------------------- private helpers
 
@@ -73,14 +73,14 @@ pub fn hand_there(g: &mut crate::game::Game, pl: PlayerId, dt: f64, p: V3, n: V3
 }
 
 /// Which of Sam's hands works a thing: the left while the right is full, else the right. (handwork.ts samWorkHand)
-pub fn sam_work_hand(g: &crate::game::Game) -> f64 {
+pub fn sam_work_hand(g: &mut crate::game::Game) -> f64 {
     let pl = g.player;
     let full = crate::game::player_pistol_up(g, pl) || crate::game::player_rifle_up(g, pl) || { let c = g.pl[pl].ch; g.ch[c].anim.grip[1] };
     if full { 0.0 } else { 1.0 }
 }
 
 /// As workAt is told it: the off hand named where his own is full. (handwork.ts samHand)
-pub fn sam_hand(g: &crate::game::Game) -> Option<f64> {
+pub fn sam_hand(g: &mut crate::game::Game) -> Option<f64> {
     if js::truthy(sam_work_hand(g)) { None } else { Some(0.0) }
 }
 
@@ -154,7 +154,7 @@ pub fn charge_hands(g: &mut crate::game::Game, c_2: CharId, p: V3, n: V3, t: f64
 // ---------------------------------------------------------------- Sam's plants: the breaker, the drive, a wall charge
 
 /// The face of the breaker panel toward a man: the panel box's thin axis when it has one, else the axis nearest him. (handwork.ts breakerFace)
-pub fn breaker_face(g: &crate::game::Game, from: V3) -> crate::handwork::BreakerFace {
+pub fn breaker_face(g: &mut crate::game::Game, from: V3) -> crate::handwork::BreakerFace {
     let pos = g.level.breaker.pos;
     // `statics[boxes[0]]`: undefined past the end, or with no boxes at all
     let b = match g.level.breaker.boxes.first().copied() {
@@ -172,7 +172,7 @@ pub fn breaker_face(g: &crate::game::Game, from: V3) -> crate::handwork::Breaker
 }
 
 /// The face of the objective's holder toward a man: the office's rack faces ±z; a quiet mission's holder faces the way he came at it. (handwork.ts rackFace)
-pub fn rack_face(g: &crate::game::Game, from: V3) -> crate::handwork::RackFace {
+pub fn rack_face(g: &mut crate::game::Game, from: V3) -> crate::handwork::RackFace {
     let rf = g.level.mission.rack.front;
     let n = if crate::quiet::quiet_of(g) { face_toward(rf, from) } else { [0.0, 0.0, js::or(m::sign(from[2] - rf[2]), 1.0)] };
     RackFace { p: rf, n }
@@ -379,7 +379,7 @@ pub fn swap_feed(g: &mut crate::game::Game, gd: GuardId, held: Option<crate::han
 }
 
 /// What his gun hand visibly holds this frame: the rule's answer, but for the frames of a swap. (handwork.ts swapHeld)
-pub fn swap_held(g: &crate::game::Game, gd: GuardId, held: Option<crate::handwork::SwapHeldHeld>) -> Option<crate::handwork::SwapHeld> {
+pub fn swap_held(g: &mut crate::game::Game, gd: GuardId, held: Option<crate::handwork::SwapHeldHeld>) -> Option<crate::handwork::SwapHeld> {
     let c = g.gd[gd].ch;
     let rule = held.map(|h| match h {
         SwapHeldHeld::Torch => crate::character::AnimCarry::Torch,

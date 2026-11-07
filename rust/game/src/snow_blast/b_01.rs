@@ -10,4 +10,4 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 
 /// BOUNDARY NO-OP (dress, row DRESS.snow: a blast digs the drawn snow)   (snowBlast.ts:142 snowBlastAt)
-pub fn snow_blast_at(g: &crate::game::Game, at: &[f64], radius: f64) -> bool { false }
+pub fn snow_blast_at(g: &mut crate::game::Game, at: &[f64], radius: f64) -> bool { false }

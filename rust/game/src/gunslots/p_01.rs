@@ -18,7 +18,7 @@ pub fn guns_broken() -> bool {
 }
 
 /// hearingCheck: a teammate's quiet report counts, as yours does. GUNSLOTS.on and .heard are settled true. (gunslots.ts quietHeard)
-pub fn quiet_heard(g: &crate::game::Game) -> bool {
+pub fn quiet_heard(g: &mut crate::game::Game) -> bool {
     true
 }
 
@@ -28,7 +28,7 @@ pub fn gun_pick(id_2: &str) -> Option<crate::gunslots::GunPick> {
 }
 
 /// What a slot's row steps through, in order; a primary may be left at home. (gunslots.ts gunPicks)
-pub fn gun_picks(g: &crate::game::Game, slot: crate::gunslots::GunSlot) -> Vec<String> {
+pub fn gun_picks(g: &mut crate::game::Game, slot: crate::gunslots::GunSlot) -> Vec<String> {
     let mut ids: Vec<String> = Vec::new();
     for p in picks() {
         if p.slot == slot && [p.can, p.bare].iter().any(|w| w.map_or(false, |w| weapon_row(g, w).enabled)) {
@@ -40,14 +40,14 @@ pub fn gun_picks(g: &crate::game::Game, slot: crate::gunslots::GunSlot) -> Vec<S
 }
 
 /// The weapons.ts row a pick is on a card with / without the suppressor; the other one where it cannot be had that way or is not enabled. GUNSLOTS.bare is settled true. (gunslots.ts pickRow)
-pub fn pick_row(g: &crate::game::Game, id_2: &str, suppressed: bool) -> Option<crate::weapons::WeaponId> {
+pub fn pick_row(g: &mut crate::game::Game, id_2: &str, suppressed: bool) -> Option<crate::weapons::WeaponId> {
     let p = gun_pick(id_2)?;
     let order = if suppressed { [p.can, p.bare] } else { [p.bare, p.can] };
     order.into_iter().flatten().find(|&w| weapon_row(g, w).enabled)
 }
 
 /// The pick's name on its tile: its row's short name. (gunslots.ts pickWord)
-pub fn pick_word(g: &crate::game::Game, id_2: &str, suppressed: Option<bool>) -> String {
+pub fn pick_word(g: &mut crate::game::Game, id_2: &str, suppressed: Option<bool>) -> String {
     let suppressed = suppressed.unwrap_or(true);
     if id_2 == NO_PRIMARY { return String::from("none"); }
     match pick_row(g, id_2, suppressed) {
@@ -57,7 +57,7 @@ pub fn pick_word(g: &crate::game::Game, id_2: &str, suppressed: Option<bool>) ->
 }
 
 /// Which of the card's gun drawings stands for a pick, by its row's class; None: none carried. (gunslots.ts pickIcon)
-pub fn pick_icon(g: &crate::game::Game, id_2: &str) -> Option<crate::kit::KitWeapon> {
+pub fn pick_icon(g: &mut crate::game::Game, id_2: &str) -> Option<crate::kit::KitWeapon> {
     let w = match pick_row(g, id_2, true) {
         Some(w) => w,
         None => pick_row(g, id_2, false)?,
@@ -141,12 +141,12 @@ pub fn side_seen(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// His hands are between guns, or off his gun for a two-handed job: no round. (gunslots.ts sideLocked)
-pub fn side_locked(g: &crate::game::Game, gd: GuardId) -> bool {
+pub fn side_locked(g: &mut crate::game::Game, gd: GuardId) -> bool {
     g.gd[gd].second.map_or(false, |s| g.time < s.lock) || g.gd[gd].work_stow.is_some()
 }
 
 /// The long gun he let go of hangs down his front: its rig, while the sidearm is out. (gunslots.ts sideHung)
-pub fn side_hung(g: &crate::game::Game, gd: GuardId) -> Option<crate::gunslots::SideHung> {
+pub fn side_hung(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::gunslots::SideHung> {
     let s = g.gd[gd].second?;
     if !s.out || g.gd[gd].state == crate::game::GuardState::Dead { return None; }
     let def = g.fa[s.gun].def;

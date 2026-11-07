@@ -8,31 +8,31 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// The item is still in the hand.   (character.ts throwing)
-pub fn anim_throwing(g: &crate::game::Game, c: CharId) -> bool {
+pub fn anim_throwing(g: &mut crate::game::Game, c: CharId) -> bool {
     let t = g.ch[c].anim.throw_t;
     t >= 0.0 && t < THROW_RELEASE + 0.05
 }
 /// The throw one-shot is playing at all.   (character.ts inThrow)
-pub fn anim_in_throw(g: &crate::game::Game, c: CharId) -> bool { g.ch[c].anim.throw_t >= 0.0 }
+pub fn anim_in_throw(g: &mut crate::game::Game, c: CharId) -> bool { g.ch[c].anim.throw_t >= 0.0 }
 /// The throw under way is the free (left) hand's.   (character.ts throwOff)
-pub fn anim_throw_off(g: &crate::game::Game, c: CharId) -> bool { g.ch[c].anim.throw_t >= 0.0 && g.ch[c].anim.thr_off }
+pub fn anim_throw_off(g: &mut crate::game::Game, c: CharId) -> bool { g.ch[c].anim.throw_t >= 0.0 && g.ch[c].anim.thr_off }
 /// How much of the pistol's aim clip the pose shows, 0..1.   (character.ts aimShown)
-pub fn anim_aim_shown(g: &crate::game::Game, c: CharId) -> f64 { g.ch[c].anim.upper_w.aim }
+pub fn anim_aim_shown(g: &mut crate::game::Game, c: CharId) -> f64 { g.ch[c].anim.upper_w.aim }
 /// How far the torch is up in the hand that holds it, 0..1.   (character.ts torchUp)
-pub fn anim_torch_up(g: &crate::game::Game, c: CharId) -> f64 { g.ch[c].anim.tu_k }
+pub fn anim_torch_up(g: &mut crate::game::Game, c: CharId) -> f64 { g.ch[c].anim.tu_k }
 /// His long gun is off its line and his eyes are at its magazine well.   (character.ts atWell)
-pub fn anim_at_well(g: &crate::game::Game, c: CharId) -> bool { m::max(g.ch[c].anim.rlc.k, g.ch[c].anim.rlc.h) > 0.5 }
+pub fn anim_at_well(g: &mut crate::game::Game, c: CharId) -> bool { m::max(g.ch[c].anim.rlc.k, g.ch[c].anim.rlc.h) > 0.5 }
 /// Nothing but the aim or the carry has the gun arm this frame.   (character.ts gunArmOwn)
-pub fn anim_gun_arm_own(g: &crate::game::Game, c: CharId) -> bool {
+pub fn anim_gun_arm_own(g: &mut crate::game::Game, c: CharId) -> bool {
     let a = &g.ch[c].anim;
     let taken = a.hold_pose.is_some() || a.held_pose.is_some() || a.haul.is_some() || a.lockpick || a.act.is_some() || a.wound.is_some() || a.kit.is_some() || a.sw.shown || a.hide_held_item || a.throw_t >= 0.0 || a.strike_t >= 0.0
         || a.hit_t >= 0.0 || a.reload_t >= 0.0 || a.sig_t >= 0.0 || a.tell_t >= 0.0;
     !(taken || anim_mv_busy(g, c) || g.ch[c].anim.mvs.ts_t >= 0.0)
 }
 /// Seconds into the throw, -1 when not throwing.   (character.ts throwTime)
-pub fn anim_throw_time(g: &crate::game::Game, c: CharId) -> f64 { g.ch[c].anim.throw_t }
+pub fn anim_throw_time(g: &mut crate::game::Game, c: CharId) -> f64 { g.ch[c].anim.throw_t }
 /// A shot's first 0.35 s.   (character.ts shooting)
-pub fn anim_shooting(g: &crate::game::Game, c: CharId) -> bool {
+pub fn anim_shooting(g: &mut crate::game::Game, c: CharId) -> bool {
     let t = g.ch[c].anim.shoot_t;
     t >= 0.0 && t < 0.35
 }
@@ -50,11 +50,11 @@ pub fn anim_kick_door(g: &mut crate::game::Game, c: CharId, opts: Option<crate::
     }
 }
 /// The kick is playing.   (character.ts kicking)
-pub fn anim_kicking(g: &crate::game::Game, c: CharId) -> bool { g.ch[c].anim.kick_t >= 0.0 }
+pub fn anim_kicking(g: &mut crate::game::Game, c: CharId) -> bool { g.ch[c].anim.kick_t >= 0.0 }
 /// Seconds into the kick, -1 when not kicking.   (character.ts kickTime)
-pub fn anim_kick_time(g: &crate::game::Game, c: CharId) -> f64 { g.ch[c].anim.kick_t }
+pub fn anim_kick_time(g: &mut crate::game::Game, c: CharId) -> f64 { g.ch[c].anim.kick_t }
 /// True for exactly the update in which the sole reached the door.   (character.ts kickImpact)
-pub fn anim_kick_impact(g: &crate::game::Game, c: CharId) -> bool { g.ch[c].anim.kick_hit }
+pub fn anim_kick_impact(g: &mut crate::game::Game, c: CharId) -> bool { g.ch[c].anim.kick_hit }
 /// Starts a left-hand signal, unless one is playing.   (character.ts signal)
 pub fn anim_signal(g: &mut crate::game::Game, c: CharId, kind: crate::character::SignalKind, side: Option<f64>) {
     let side = side.unwrap_or(1.0);
@@ -64,9 +64,9 @@ pub fn anim_signal(g: &mut crate::game::Game, c: CharId, kind: crate::character:
     if a.sig_t < 0.0 { a.sig_t = 0.0; a.sig_kind = kind; a.sig_side = side; }
 }
 /// A signal is playing.   (character.ts signalling)
-pub fn anim_signalling(g: &crate::game::Game, c: CharId) -> bool { g.ch[c].anim.sig_t >= 0.0 }
+pub fn anim_signalling(g: &mut crate::game::Game, c: CharId) -> bool { g.ch[c].anim.sig_t >= 0.0 }
 /// His left hand is his own this frame.   (character.ts signalFree)
-pub fn anim_signal_free(g: &crate::game::Game, c: CharId) -> bool {
+pub fn anim_signal_free(g: &mut crate::game::Game, c: CharId) -> bool {
     if !anim_gun_arm_own(g, c) { return false; }
     let a = &g.ch[c].anim;
     a.kick_t < 0.0 && a.dazzle.is_none() && a.reload_at < 0.0 && a.rl_t < 0.0
@@ -95,7 +95,7 @@ fn clip_dur(g: &Game, c: CharId, name: &'static str) -> f64 { g.tab.clip[clip_of
 /// `bigOff(this.bigTool)`: the skeleton's parameter is the fields it reads.
 fn big_off_tool(b: &AnimBigTool) -> bool { big_off(BigOffB { t: b.t, equip: b.equip, stow: b.stow, end: b.end, snug: b.snug }) }
 /// What the goggles' flip and a smoke both ask of the hands (lines 2585 and 2588 share every term after `!this.nv`).
-fn left_hand_clear(g: &Game, c: CharId, w_hd: f64, w_he: f64, w_lp: f64, w_hl: f64, w_lg: f64, w_wall_arms: f64, w_act: f64, w_strike: f64, kt: f64) -> bool {
+fn left_hand_clear(g: &mut Game, c: CharId, w_hd: f64, w_he: f64, w_lp: f64, w_hl: f64, w_lg: f64, w_wall_arms: f64, w_act: f64, w_strike: f64, kt: f64) -> bool {
     let a = &g.ch[c].anim;
     let first = w_hd < 0.05 && w_he < 0.05 && w_lp < 0.05 && w_hl < 0.05 && w_lg < 0.05 && w_wall_arms < 0.05 && w_act <= 0.0 && w_strike <= 0.0 && kt < 0.0 && a.throw_t < 0.0 && a.reload_t < 0.0 && a.hit_t < 0.0 && a.tell_t < 0.0
         && a.upper_w.aim < 0.3 && a.kit.is_none() && a.ready.is_none() && a.wound.is_none() && a.dazzle.is_none();

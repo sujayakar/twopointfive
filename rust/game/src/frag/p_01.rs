@@ -153,7 +153,7 @@ pub fn same_side(a: crate::teams::Team, b: crate::teams::Team) -> bool {
 }
 
 /// A man a burst can still kill where he lies: down and breathing, the player's enemy, never a civilian. (frag.ts downAsked)
-pub fn down_asked(g: &crate::game::Game, gd: GuardId) -> bool {
+pub fn down_asked(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if !crate::game::is_breathing(g, gd) || g.gd[gd].god || g.gd[gd].civ.is_some() {
         return false;
     }
@@ -162,7 +162,7 @@ pub fn down_asked(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// The points of a lying man a burst is asked for: hips, chest, head, a shin, none under the floor's skin. (frag.ts lying)
-pub fn lying(g: &crate::game::Game, gd: GuardId) -> Vec<V3> {
+pub fn lying(g: &mut crate::game::Game, gd: GuardId) -> Vec<V3> {
     use crate::character::Bone;
     let c = g.gd[gd].ch;
     let pos = g.ch[c].pos;

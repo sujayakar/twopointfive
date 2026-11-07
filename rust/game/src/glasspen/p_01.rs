@@ -10,7 +10,7 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 // ---------------------------------------------------------------- local helpers
 
 /// `g.level.boxes[bi]`: an index with no box is undefined there, None here. That list and `g.col.boxes` are one array in the TypeScript, and an index is a place in it, not a BoxId
-fn level_box(g: &Game, bi: f64) -> Option<BoxId> {
+fn level_box(g: &mut Game, bi: f64) -> Option<BoxId> {
     let ix = bi as usize;
     if ix as f64 != bi { return None; }
     g.col.boxes.get(ix).copied()
@@ -30,7 +30,7 @@ fn cast(g: &mut Game, ro: V3, rd: V3, tmax: f64) -> Option<RoundPathSt> {
 /// a new state: no log, rev 0 (glasspen.ts stateOf)
 fn fresh_state() -> PenState { PenState { log: Vec::new(), rev: 0.0 } }
 /// `panesUntouched(g.sim)`: the part's first word. The skeleton's `panes_untouched(b: Opaque)` cannot carry the slot, and the slot is `g.sim`
-fn untouched(g: &Game) -> bool { ::sim::state::state_read(g.sim).panes.used == 0 }
+fn untouched(g: &Game) -> bool { ::sim::state::state(g.sim).panes.used == 0 }
 /// `PANE_TYPES[i]`, the module's number for a glass (rust/sim/src/panes.rs ANNEALED, TEMPERED, LAMINATED)
 fn pane_type_word(i: f64) -> PaneType {
     if i == 1.0 { PaneType::Tempered } else if i == 2.0 { PaneType::Laminated } else { PaneType::Annealed }
@@ -72,15 +72,15 @@ fn crossed_hook(g: &mut Game, x: &PaneCross, who: f64) {
 // ---------------------------------------------------------------- host work: nothing here on the page's path
 
 /// the switch kept per machine: browser storage, and the rows it wrote are settled (glasspen.ts loadGlassPen)
-pub fn load_glass_pen(g: &crate::game::Game) {}
+pub fn load_glass_pen(g: &mut crate::game::Game) {}
 
 // ---------------------------------------------------------------- the switch, a round's energy
 
 /// the one gate: no showcase running (glasspen.ts glassPenLive)
-pub fn glass_pen_live(g: &crate::game::Game) -> bool { !g.touring }
+pub fn glass_pen_live(g: &mut crate::game::Game) -> bool { !g.touring }
 
 /// a round's energy as it leaves this row's muzzle (glasspen.ts roundEnergy)
-pub fn round_energy(g: &crate::game::Game, def: crate::weapons::WeaponId) -> f64 {
+pub fn round_energy(g: &mut crate::game::Game, def: crate::weapons::WeaponId) -> f64 {
     let cls = g.m.weapons.weapons.get(def).map(|d| d.cls);
     energy_by(&g.k.glasspen, def, cls)
 }
@@ -103,7 +103,7 @@ pub fn round_energy_of(g: &mut crate::game::Game, c_2: CharId) -> f64 {
 }
 
 /// the energy a line-of-fire question about a SIDE is asked with: the model's default, foesThrough being on (glasspen.ts sideShotEnergy)
-pub fn side_shot_energy(g: &crate::game::Game, team: crate::teams::Team) -> Option<f64> { None }
+pub fn side_shot_energy(g: &mut crate::game::Game, team: crate::teams::Team) -> Option<f64> { None }
 
 /// the energy a line-of-fire question about THIS man's gun is asked with (glasspen.ts shotEnergy)
 pub fn shot_energy(g: &mut crate::game::Game, c_2: CharId, def: Option<crate::weapons::WeaponId>) -> Option<f64> {
@@ -231,7 +231,7 @@ pub fn pane_impact(g: &mut crate::game::Game, bi: f64, at: V3, dir: V3, energy: 
 }
 
 /// the shell rule's one question: did this pellet land on a mark its own shell made, else book it (glasspen.ts shellMark)
-pub fn shell_mark(g: &crate::game::Game, shell: &mut crate::glasspen::ShellGlass, bi: f64, at: V3, through: bool) -> crate::glasspen::ShellMark {
+pub fn shell_mark(g: &mut crate::game::Game, shell: &mut crate::glasspen::ShellGlass, bi: f64, at: V3, through: bool) -> crate::glasspen::ShellMark {
     let shell_r = g.k.glasspen.shell_r;
     mark_on(shell.glass.get_or_insert_with(crate::Num(bi), Vec::new), at, through, shell_r * shell_r)
 }

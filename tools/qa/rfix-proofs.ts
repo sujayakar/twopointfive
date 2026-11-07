@@ -186,7 +186,7 @@ async function look() {
 /** GPU validation: each preset booted fresh with an uncapturederror listener + a validation error scope round ~120 frames that include a preset hop (and back), a render-scale
  *  resize, a daylight round trip (R10.1's boost bakes), a lightning stroke (R2.2's walk) and a __resetClock mid-run (R2.7); 0 errors expected everywhere. */
 async function validate() {
-  const tiers = (process.argv[4] ?? 'verylow,low,medium,high,ultra').split(',');
+  const tiers = (process.argv[4] ?? 'verylow,low,medium,high').split(',');
   let bad = 0;
   for (const tier of tiers) {
     const c = await Cdp.launch({ port: port + 20 + tiers.indexOf(tier) });

@@ -360,7 +360,7 @@
     sharpOff:  { sharpDirect: false },                        // (the internal path: TAAU upscale of the internal composite)
     held0:     { heldRays: 0 }, held2: { heldRays: 2 }, held3: { heldRays: 3 }, held8: { heldRays: 8 },   // the hybrid's K alone (0 = the transient stratum as it was)
   };
-  const BASE_KEYS = ['sharpSliver', 'sharpSliverCap', 'sharpDiag', 'gbaaClamp', 'gbaa', 'sharpDecouple', 'sharpDirect', 'heldRays', 'restirHueSplit', 'meshShadows', 'restir', 'denoiser', 'froxelVol', 'taau', 'renderScale'];
+  const BASE_KEYS = ['sharpSliver', 'sharpSliverCap', 'sharpDiag', 'gbaaClamp', 'gbaa', 'sharpDecouple', 'sharpDirect', 'heldRays', 'restirHueSplit', 'meshShadows', 'froxelVol', 'taau', 'renderScale'];
   let base = null;
   function apply(name, extra = {}) {
     const s = S(); if (!base) { base = {}; for (const k of BASE_KEYS) base[k] = s[k]; }
@@ -372,7 +372,8 @@
   /** after a preset hop: forget the captured base (its renderScale / K belong to the old tier) so the next apply() re-reads the tier's own */
   function rebase() { base = null; return apply('ship'); }
   /** the OLD renderer for the flash / strobe references: every v3 system off, scale 1.0 (tjank's allOff) */
-  function oldRenderer(on) { const s = S(); if (!base) apply('ship'); if (on) { s.restir = false; s.denoiser = 'legacy'; s.froxelVol = false; s.taau = false; s.renderScale = 1.0; s.sharpDirect = false; } else { for (const k of BASE_KEYS) s[k] = base[k]; } return { restir: s.restir, denoiser: s.denoiser, froxelVol: s.froxelVol, taau: s.taau, scale: s.renderScale }; }
+  // (SINCE 2026-11-07 this keeps ReSTIR and the shared denoiser: the old estimator and denoiser are gone, so 'old' is only froxels, TAAU and sharp direct off)
+  function oldRenderer(on) { const s = S(); if (!base) apply('ship'); if (on) { s.froxelVol = false; s.taau = false; s.renderScale = 1.0; s.sharpDirect = false; } else { for (const k of BASE_KEYS) s[k] = base[k]; } return { froxelVol: s.froxelVol, taau: s.taau, scale: s.renderScale }; }
   const T = { SCENES, VARIANTS, res: {}, sweeps: {}, tiers: {}, boot, stage, cap, apply, oldRenderer, census, survey, flashLight, noise, flashFrames, sweep, sweepCompare, torchLight, torchPose, costHeld, tierRun, saveJson, rebase, s3Lights, readback, tileRect, postCrop, postFrame, postCanvas, dirTerm, dirTermInternal, tileStats, seed, pinViewport, get steadyLight() { return steadyLight; }, set steadyLight(v) { steadyLight = v; }, setFakeHidden(v) { fakeHidden = !!v; } };
   window.__dq = T;
   return 'dq ready: __dq.{boot, stage(S1|S1b|S1c|S2|S2b|S3|S4), cap(tag, scene), apply(variant), tileStats(scene), dirTerm()}';

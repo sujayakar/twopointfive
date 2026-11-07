@@ -8,18 +8,18 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// The team has that man in sight: the fog of war's answer where it runs, the room fight's otherwise.   (autopilot.ts inSight)
-pub fn in_sight(g: &crate::game::Game, o: GuardId) -> bool {
+pub fn in_sight(g: &mut crate::game::Game, o: GuardId) -> bool {
     if crate::fogofwar::fog_of_war_active(g) { crate::fogofwar::fog_of_war_seen(g, o) } else { crate::roomfight::room_fight_team_sees(g, o) }
 }
 
 /// The entries the squad would take on a door it is stacked on, first choice first. AUTOPILOT.plain is settled on: the key never picks a tool.   (autopilot.ts autoEntries)
-pub fn auto_entries(g: &crate::game::Game, t: crate::orders::OrderTargetDoor, shut: Option<bool>) -> crate::autopilot::AutoEntries {
+pub fn auto_entries(g: &mut crate::game::Game, t: crate::orders::OrderTargetDoor, shut: Option<bool>) -> crate::autopilot::AutoEntries {
     let why = if crate::silent::squad_silent(g) { crate::autopilot::AutoPickWhy::Silent } else { crate::autopilot::AutoPickWhy::Known };
     crate::autopilot::AutoEntries { ids: vec![String::from("openClear")], why, kept: None }
 }
 
 /// `S.defs.find(x => x.id === id)`
-fn def_of(g: &Game, id: &str) -> Option<OrdersOrderDefId> {
+fn def_of(g: &mut Game, id: &str) -> Option<OrdersOrderDefId> {
     let mut i = 0;
     while i < g.orders.defs.len() {
         let d = g.orders.defs[i];

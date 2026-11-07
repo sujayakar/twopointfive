@@ -236,7 +236,7 @@ pub fn follow_camera_rotate(g: &mut Game, id: CameraId, d_yaw: f64) {
 }
 
 /// World point to CSS pixels of a w×h view, and whether it is showable. (camera.ts FollowCamera.project)
-pub fn follow_camera_project(g: &Game, id: CameraId, p: V3, w: f64, h: f64, margin: Option<f64>, min_w: Option<f64>) -> (f64, f64, bool) {
+pub fn follow_camera_project(g: &mut Game, id: CameraId, p: V3, w: f64, h: f64, margin: Option<f64>, min_w: Option<f64>) -> (f64, f64, bool) {
     project(&g.tab.camera[id], p, w, h, margin, min_w)
 }
 fn project(c: &FollowCamera, p: V3, w: f64, h: f64, margin: Option<f64>, min_w: Option<f64>) -> (f64, f64, bool) {
@@ -256,7 +256,7 @@ fn project(c: &FollowCamera, p: V3, w: f64, h: f64, margin: Option<f64>, min_w: 
 }
 
 /// World-space ray through a pixel in [0,1]² UV, origin top-left. (camera.ts FollowCamera.ray)
-pub fn follow_camera_ray(g: &Game, id: CameraId, u: f64, v: f64) -> FollowCameraRay {
+pub fn follow_camera_ray(g: &mut Game, id: CameraId, u: f64, v: f64) -> FollowCameraRay {
     ray(&g.tab.camera[id], u, v)
 }
 fn ray(c: &FollowCamera, u: f64, v: f64) -> FollowCameraRay {
@@ -267,7 +267,7 @@ fn ray(c: &FollowCamera, u: f64, v: f64) -> FollowCameraRay {
 }
 
 /// A UV ray against the plane y = h. (camera.ts FollowCamera.groundPoint)
-pub fn follow_camera_ground_point(g: &Game, id: CameraId, u: f64, v: f64, h: Option<f64>) -> Option<V3> {
+pub fn follow_camera_ground_point(g: &mut Game, id: CameraId, u: f64, v: f64, h: Option<f64>) -> Option<V3> {
     ground_point(&g.tab.camera[id], u, v, h)
 }
 fn ground_point(c: &FollowCamera, u: f64, v: f64, h: Option<f64>) -> Option<V3> {
@@ -284,7 +284,7 @@ fn ground_point(c: &FollowCamera, u: f64, v: f64, h: Option<f64>) -> Option<V3> 
 }
 
 /// Camera-relative planar basis for WASD. (camera.ts FollowCamera.planarBasis)
-pub fn follow_camera_planar_basis(g: &Game, id: CameraId) -> FollowCameraPlanarBasis {
+pub fn follow_camera_planar_basis(g: &mut Game, id: CameraId) -> FollowCameraPlanarBasis {
     planar_basis(&g.tab.camera[id])
 }
 fn planar_basis(c: &FollowCamera) -> FollowCameraPlanarBasis {

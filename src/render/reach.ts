@@ -324,7 +324,7 @@ function derive(solid: Uint8Array, pos: Vec3, dir: Vec3, radius: number, interio
 /** Reach mask of a DIRECTIONAL light (the moon; the breach's sun): every cell NOT under the ceiling slab reaches at full weight; a cell under it reaches (level 3)
  *  iff one of its looks — the five sub-cell points of SUBS at floor, desk and head height — has an unblocked 3D path toward the light through the level's
  *  statics (`blocked(from, dirToLight, dist)` is the caller's raycast: the window strips, the fire exit, the lobby's glazing), else 0. Only the ReSTIR estimator
- *  consumes it (lights.ts LightSet.dirMasks): scored unshadowed everywhere, the moon out-draws a dim desk lamp for the fresh candidate on every indoor floor and the
+ *  consumes it: scored unshadowed everywhere, the moon out-draws a dim desk lamp for the fresh candidate on every indoor floor and the
  *  ray then dies in the ceiling — wasted rays, a penumbra hint everywhere, and torch light indoors starving for fresh samples under a daytime sun. Errs toward
  *  'reaches' like the rest (three heights, five points; a strip between them stays dark — the moon through a 10 cm slit). ~1700 cells × ≤ 15 rays, once.
  *  A LOOK STANDS IN OPEN AIR (`free`, the caller's: the point itself, the nearest point of its own cell outside the solid it fell in, or null where the cell has none).

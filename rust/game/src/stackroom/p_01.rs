@@ -14,7 +14,7 @@ fn flat(a: V3, b: V3) -> f64 { v3::dist_xz(a, b) }
 // ---------------------------------------------------------------- the book
 
 /// keeps which of the book's floors and doorway cells have been read, for an ask made only to be looked at   (stackroom.ts stackRoomBookKeep)
-pub fn stack_room_book_keep(g: &crate::game::Game) -> crate::stackroom::StackRoomBookKeep {
+pub fn stack_room_book_keep(g: &mut crate::game::Game) -> crate::stackroom::StackRoomBookKeep {
     let Some(k) = &g.m.stackroom.books else { return crate::stackroom::StackRoomBookKeep::Forget };
     let mut floors: JsMap<DoorId, [bool; 2]> = JsMap::new();
     for (d, pair) in k.floors.iter() { floors.set(d, [pair[0].is_some(), pair[1].is_some()]); }
@@ -60,7 +60,7 @@ pub fn centre(g: &mut crate::game::Game, c_2: f64) -> V3 {
 }
 
 /// some doorway's frame line lies between a and b inside its opening, or one of them is on it   (stackroom.ts doorBetween)
-pub fn door_between(g: &crate::game::Game, a: V3, b: V3) -> bool {
+pub fn door_between(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
     for n in 0..g.doors.list.len() {
         let o = g.doors.list[n];
         let width = g.dr[o].def.width;
@@ -77,12 +77,12 @@ pub fn door_between(g: &crate::game::Game, a: V3, b: V3) -> bool {
 
 /// nav.idx(x, z)
 #[inline]
-fn nav_idx(g: &Game, x: f64, z: f64) -> f64 { crate::scene_collision::nav_grid_idx(g, x, z) }
+fn nav_idx(g: &mut Game, x: f64, z: f64) -> f64 { crate::scene_collision::nav_grid_idx(g, x, z) }
 /// nav.isBlocked(x, z)
 #[inline]
-fn nav_blocked(g: &Game, x: f64, z: f64) -> bool { crate::scene_collision::nav_grid_is_blocked(g, x, z) }
+fn nav_blocked(g: &mut Game, x: f64, z: f64) -> bool { crate::scene_collision::nav_grid_is_blocked(g, x, z) }
 /// a cell on the grid and not blocked   (stackroom.ts floorOf's free)
-fn cell_free(g: &Game, x: f64, z: f64) -> bool {
+fn cell_free(g: &mut Game, x: f64, z: f64) -> bool {
     if !(x >= 0.0 && z >= 0.0 && x < g.col.nav.w && z < g.col.nav.h) { return false; }
     let i = nav_idx(g, x, z) as usize;
     g.col.nav.blocked[i] != 1
@@ -233,7 +233,7 @@ pub fn stack_room_keeps(g: &mut crate::game::Game, d: DoorId, side: f64, p: V3) 
 }
 
 /// is `q` the mark a man of the squad already stands on at this door   (stackroom.ts stoodAt)
-pub fn stood_at(g: &crate::game::Game, d: DoorId, q: V3) -> bool {
+pub fn stood_at(g: &mut crate::game::Game, d: DoorId, q: V3) -> bool {
     for man in crate::orders::squad_orders_squad(g) {
         let a = crate::orders::squad_orders_of(g, man);
         let Some(a) = a else { continue };
@@ -255,16 +255,16 @@ pub fn furnished(g: &mut crate::game::Game, d: DoorId, q: V3) -> bool {
 /// nothing solid between two places, at knee height   (stackroom.ts stackRoomFix's sees)
 fn sees(g: &mut Game, a: V3, q: V3) -> bool { !crate::scene_collision::solid_blocked(g, [a[0], 0.45, a[2]], [q[0], 0.45, q[2]], None) }
 /// off the opening's own lane   (stackroom.ts stackRoomFix's offLane)
-fn off_lane(g: &Game, d: DoorId, w: f64, q: V3) -> bool { m::abs(crate::doortools::along_of(g, d, q) - w / 2.0) >= w / 2.0 + 0.25 }
+fn off_lane(g: &mut Game, d: DoorId, w: f64, q: V3) -> bool { m::abs(crate::doortools::along_of(g, d, q) - w / 2.0) >= w / 2.0 + 0.25 }
 /// the hand of the opening a place is on   (stackroom.ts handOf)
-fn hand_of(g: &Game, d: DoorId, w: f64, q: V3) -> f64 { if crate::doortools::along_of(g, d, q) > w / 2.0 { 1.0 } else { -1.0 } }
+fn hand_of(g: &mut Game, d: DoorId, w: f64, q: V3) -> f64 { if crate::doortools::along_of(g, d, q) > w / 2.0 { 1.0 } else { -1.0 } }
 /// a place along the door's wall: faced down the wall at the doorway, and the shoulder the wall is on (face, stackSide)   (stackroom.ts onWall)
 fn on_wall(th: f64, side: f64, hand: f64) -> (f64, f64) {
     let (fx, fz, nx, nz) = (-m::cos(th) * hand, -m::sin(th) * hand, -m::sin(th) * side, m::cos(th) * side);
     (m::atan2(fx, fz), if nx * fz - nz * fx >= 0.0 { 1.0 } else { -1.0 })
 }
 /// a cell's middle not up against the furniture   (stackroom.ts stackRoomFix's clear)
-fn clear_of_props(g: &Game, q: V3) -> bool {
+fn clear_of_props(g: &mut Game, q: V3) -> bool {
     for n in 0..g.props.props.len() {
         let pr = g.props.props[n];
         let p = &g.tab.props_prop[pr];
@@ -441,7 +441,7 @@ pub fn in_view(g: &mut crate::game::Game, d: DoorId, far: &[V3], p: V3) -> bool 
 }
 
 /// the nav cells within `viewFar` of the doorway on the face the men are NOT on   (stackroom.ts farCells)
-pub fn far_cells(g: &crate::game::Game, d: DoorId, side: f64) -> Vec<V3> {
+pub fn far_cells(g: &mut crate::game::Game, d: DoorId, side: f64) -> Vec<V3> {
     let view_far = g.k.stackroom.view_far;
     let cell = g.col.nav.cell;
     let c = g.dr[d].frame_centre;

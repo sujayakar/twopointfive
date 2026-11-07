@@ -11,16 +11,16 @@ type Ray = crate::scene_collision::Raycast;
 
 // ---------------------------------------------------------------- seam: what the skeleton still cannot do (notes.md, Skeleton)
 /// `g.level.boxes[i]`: a level box's half size, its centre and its flags, by its place in the level's list. That list is `g.col.boxes` (game.ts:1219).
-fn seam_level_box(g: &Game, i: usize) -> (V3, V3, f64) { let x = &g.tab.boxes[g.col.boxes[i]]; (x.c, x.h, x.flags) }
+fn seam_level_box(g: &mut Game, i: usize) -> (V3, V3, f64) { let x = &g.tab.boxes[g.col.boxes[i]]; (x.c, x.h, x.flags) }
 
 // ---------------------------------------------------------------- finding them
 /// Is the rule running: nothing under a show. (lightswitch.ts switchesLive)
-pub fn switches_live(g: &crate::game::Game) -> bool {
+pub fn switches_live(g: &mut crate::game::Game) -> bool {
     !g.touring && !crate::director::director_showing(g)
 }
 
 /// Is this fixture one a wall switch works: on the mains and a light of the room. (lightswitch.ts roomLight)
-pub fn room_light(g: &crate::game::Game, t: FixtureId) -> bool {
+pub fn room_light(g: &mut crate::game::Game, t: FixtureId) -> bool {
     let f = &g.tab.sim_lightshome_fixture[t];
     if !f.mains || f.group == "exterior" || f.group == "emergency" { return false; }
     if f.kind == crate::sim_lightshome::FixtureKind::Analytic { return f.light.is_some(); }
@@ -171,7 +171,7 @@ fn fewest_of(ps: &[Plate], per_room: f64, apart_m: f64) -> Vec<Plate> {
 }
 
 /// Of a circuit's plates, the `perRoom` to keep: the first found, then each time the furthest from those kept, while far enough. (lightswitch.ts fewest)
-pub fn fewest(g: &crate::game::Game, ps: &[crate::lightswitch::Plate]) -> Vec<crate::lightswitch::Plate> {
+pub fn fewest(g: &mut crate::game::Game, ps: &[crate::lightswitch::Plate]) -> Vec<crate::lightswitch::Plate> {
     fewest_of(ps, g.k.lightswitch.per_room, g.k.lightswitch.apart_m)
 }
 
@@ -281,7 +281,7 @@ pub fn switch_lit(g: &mut crate::game::Game, sw: &crate::lightswitch::WallSwitch
 }
 
 /// May Sam be planted at a plate for his hand's move: not from a wall hold. (lightswitch.ts plants)
-pub fn plants(g: &crate::game::Game, by: CharId) -> bool {
+pub fn plants(g: &mut crate::game::Game, by: CharId) -> bool {
     let pl = g.player;
     by == g.pl[pl].ch && g.puppet.is_none() && g.pl[pl].wall.is_none()
 }
@@ -347,7 +347,7 @@ pub fn flip_switch(g: &mut crate::game::Game, sw: &crate::lightswitch::WallSwitc
 
 // ---------------------------------------------------------------- Sam's row and its deed
 /// (lightswitch.ts handsFree)
-pub fn hands_free(g: &crate::game::Game, pl: PlayerId) -> bool {
+pub fn hands_free(g: &mut crate::game::Game, pl: PlayerId) -> bool {
     let p = &g.pl[pl];
     p.dragging.is_none() && !p.sprinting && p.takedown.is_none() && p.holding.is_none()
 }
@@ -418,7 +418,7 @@ pub fn switch_act(g: &mut crate::game::Game, pl: PlayerId, verb: crate::game::Ve
 
 // ---------------------------------------------------------------- once a frame
 /// Can this man put a room's lights back: a living defender on his own feet and his own business. (lightswitch.ts putsBack)
-pub fn puts_back(g: &crate::game::Game, gd: GuardId) -> bool {
+pub fn puts_back(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let time = g.time;
     let man = &g.gd[gd];
     let team = man.team;

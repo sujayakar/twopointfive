@@ -30,13 +30,13 @@ fn lights_of(g: &Game) -> bool { g.door_tools.lights.unwrap_or(true) }
 /// `gd.callsign ?? 'a man'`: a man with no callsign has an empty String in Rust
 fn callsign_or(g: &Game, gd: GuardId) -> String { if g.gd[gd].callsign.is_empty() { String::from("a man") } else { g.gd[gd].callsign.clone() } }
 fn names(g: &Game, men: &[GuardId]) -> String { men.iter().map(|m| g.gd[*m].callsign.clone()).collect::<Vec<String>>().join(", ") }
-fn nav_blocked(g: &Game, x: f64, z: f64) -> bool { crate::scene_collision::nav_grid_is_blocked(g, x, z) }
+fn nav_blocked(g: &mut Game, x: f64, z: f64) -> bool { crate::scene_collision::nav_grid_is_blocked(g, x, z) }
 /// the `floor` closure of pieSet, toThreshold and thrFar's test: floor there and a clear step to it
 fn floor_ok(g: &mut Game, from: V3, p: V3) -> bool { !nav_blocked(g, p[0], p[2]) && !crate::scene_collision::solid_blocked(g, [from[0], 0.45, from[2]], [p[0], 0.45, p[2]], None) }
 /// the `mark` closure: his post of the order, or where he stands
 fn mark_of(g: &Game, op: DoorOpId, gd: GuardId) -> V3 { match o!(g, op).post.get(gd) { Some(p) => p.pos, None => { let p = pos_of(g, gd); [p[0], 0.0, p[2]] } } }
 /// the `hi` closure: is his mark on the latch half of the opening
-fn hi_of(g: &Game, op: DoorOpId, gd: GuardId) -> bool { let d = o!(g, op).door; let w = g.dr[d].def.width; let k = mark_of(g, op, gd); super::along_of(g, d, k) > w / 2.0 }
+fn hi_of(g: &mut Game, op: DoorOpId, gd: GuardId) -> bool { let d = o!(g, op).door; let w = g.dr[d].def.width; let k = mark_of(g, op, gd); super::along_of(g, d, k) > w / 2.0 }
 /// The charge goes: the leaf, the blast, who it hurts by his side of the door, the order behind it.   (doortools.ts DoorTools.blowRaw)
 pub fn door_tools_blow_raw(g: &mut crate::game::Game, c_2: Option<ChargeId>) -> Option<crate::doortools::DoorToolsBlowRaw> {
     let c = c_2?;
@@ -159,11 +159,10 @@ fn blow_seat(g: &mut Game, d: DoorId, side: f64, fc: V3, inn: V3, out: V3) -> bo
 pub fn door_tools_dazzle(g: &mut crate::game::Game, gd: GuardId, secs: f64, at: V3) {
     let until = g.time + secs;
     let ai = g.ai_enabled;
-    let r = &mut g.gd[gd];
-    r.dazzled_until = m::max(r.dazzled_until, until);
-    r.react_t = m::max(r.react_t, secs);
-    r.awareness = m::max(r.awareness, 0.6);
-    if r.state != crate::game::GuardState::Alert { crate::belief::word(g, gd, at); }
+    g.gd[gd].dazzled_until = m::max(g.gd[gd].dazzled_until, until);
+    g.gd[gd].react_t = m::max(g.gd[gd].react_t, secs);
+    crate::mind::raise(g, gd, 0.6, "doortools");
+    if g.gd[gd].state != crate::game::GuardState::Alert { crate::belief::word(g, gd, at); }
     if ai { g.gd[gd].witness.dazzled += 1.0; }
     crate::game::guard_set_path(g, gd, Vec::new());
     let r = &mut g.gd[gd];
@@ -235,8 +234,8 @@ pub fn door_tools_pie_off(g: &mut crate::game::Game, op: DoorOpId) {
     }
 }
 
-fn pie_in(g: &Game, d: DoorId, w: f64, sgn: f64, p: V3) -> f64 { let a = super::along_of(g, d, p); if sgn < 0.0 { a } else { w - a } }
-fn pie_at(g: &Game, d: DoorId, w: f64, sgn: f64, side: f64, a: f64, b: f64) -> V3 { door_pt(g, d, if sgn < 0.0 { a } else { w - a }, b, side, None) }
+fn pie_in(g: &mut Game, d: DoorId, w: f64, sgn: f64, p: V3) -> f64 { let a = super::along_of(g, d, p); if sgn < 0.0 { a } else { w - a } }
+fn pie_at(g: &mut Game, d: DoorId, w: f64, sgn: f64, side: f64, a: f64, b: f64) -> V3 { door_pt(g, d, if sgn < 0.0 { a } else { w - a }, b, side, None) }
 
 /// a jamb man's stations: `first`, then the cuts of thrPieArc further in, each with floor and a clear step; his row of the slice is set   (doortools.ts DoorTools.pieSet)
 pub fn door_tools_pie_set(g: &mut crate::game::Game, op: DoorOpId, gd: GuardId, sgn: f64, first: &[V3], off: &[V3]) -> Vec<V3> {
@@ -286,7 +285,7 @@ pub fn door_tools_pie_set(g: &mut crate::game::Game, op: DoorOpId, gd: GuardId, 
     pts
 }
 
-fn looks_through(g: &Game, d: DoorId, side: f64, p: V3, a: f64) -> V3 {
+fn looks_through(g: &mut Game, d: DoorId, side: f64, p: V3, a: f64) -> V3 {
     let deep = g.k.doortools.slice_deep;
     let e = door_pt(g, d, a, 0.0, side, None);
     let (dx, dz) = (e[0] - p[0], e[2] - p[2]);
@@ -294,7 +293,7 @@ fn looks_through(g: &Game, d: DoorId, side: f64, p: V3, a: f64) -> V3 {
     [e[0] + dx / l * deep, 1.1, e[2] + dz / l * deep]
 }
 /// what a station shows through the frame: past the far jamb, the middle, past the near jamb   (doortools.ts DoorTools.sliceLooks)
-pub fn door_tools_slice_looks(g: &crate::game::Game, op: DoorOpId, p: V3, sgn: f64) -> Vec<V3> {
+pub fn door_tools_slice_looks(g: &mut crate::game::Game, op: DoorOpId, p: V3, sgn: f64) -> Vec<V3> {
     let (d, side) = (o!(g, op).door, o!(g, op).side);
     let w = g.dr[d].def.width;
     let into = -side;
@@ -497,7 +496,7 @@ pub fn door_tools_last_stack(g: &mut crate::game::Game, op: DoorOpId) {
 }
 
 /// (thrDark, thrLight, thrPieOne: one light on the door, the one man cutting's)
-fn thr_lit(g: &Game, gd: GuardId, lead: GuardId) -> bool {
+fn thr_lit(g: &mut Game, gd: GuardId, lead: GuardId) -> bool {
     if crate::nvg::nvg_worn(g, gd) { return false; }
     let n = g.k.doortools.thr_light;
     n >= 2.0 || (n == 1.0 && gd == lead)
@@ -611,7 +610,7 @@ pub fn door_tools_can_first(g: &mut crate::game::Game, op: DoorOpId) -> bool {
 }
 
 /// behind a bang: has the blind burst it drew run dry   (doortools.ts DoorTools.burstDry)
-pub fn door_tools_burst_dry(g: &crate::game::Game, op: DoorOpId) -> bool {
+pub fn door_tools_burst_dry(g: &mut crate::game::Game, op: DoorOpId) -> bool {
     let t = g.time;
     let bang_t = o!(g, op).bang_t;
     let since = t - bang_t;
@@ -744,7 +743,7 @@ pub fn door_tools_thr_watch(g: &mut crate::game::Game, op: DoorOpId) {
 }
 
 /// the cans this stage may spend on its door (outsidePlain: one a door)   (doortools.ts DoorTools.thrCans)
-pub fn door_tools_thr_cans(g: &crate::game::Game, t: &crate::doortools::Threshold) -> f64 {
+pub fn door_tools_thr_cans(g: &mut crate::game::Game, t: &crate::doortools::Threshold) -> f64 {
     if !t.force && crate::silent::silent_no_cans(g) { return 0.0; }
     m::min(1.0, g.k.doortools.thr_bangs)
 }

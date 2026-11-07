@@ -21,7 +21,7 @@ fn lists_none(listed: &Option<Vec<String>>, targets: &[String]) -> bool {
 }
 
 /// How much larger than CMDRING's px a ring stands in a view this size. The tick's ringOpen reads it, so it is translated.   (cmdring.ts ringZoom)
-pub fn ring_zoom(g: &crate::game::Game, w: f64, h: f64) -> f64 {
+pub fn ring_zoom(g: &mut crate::game::Game, w: f64, h: f64) -> f64 {
     zoom_of(&g.k.cmdring, w, h)
 }
 /// ringZoom on the knobs alone.
@@ -53,7 +53,7 @@ fn ring_open_at(c: &crate::knobs::CmdringK, mouse_x: f64, mouse_y: f64, w: f64, 
     }
 }
 /// A ring opened at the cursor, whole inside the view's edge; a cursor then out of its middle lights nothing until it has come back.   (cmdring.ts ringOpen)
-pub fn ring_open(g: &crate::game::Game, input: InputId, w: f64, h: f64, time: f64, lit: Option<f64>) -> crate::cmdring::RingState {
+pub fn ring_open(g: &mut crate::game::Game, input: InputId, w: f64, h: f64, time: f64, lit: Option<f64>) -> crate::cmdring::RingState {
     let lit = lit.unwrap_or(1.0);
     let (mouse_x, mouse_y) = (g.tab.input[input].mouse_x, g.tab.input[input].mouse_y);
     ring_open_at(&g.k.cmdring, mouse_x, mouse_y, w, h, time, lit)
@@ -65,7 +65,7 @@ fn ring_pin_on(c: &crate::knobs::CmdringK, r: &mut RingState, sx: f64, sy: f64, 
     r.ay = cl(sy + r.oy.unwrap_or(0.0), c.edge_y * r.z, h);
 }
 /// The ring put back over its place, whole inside the view's edge.   (cmdring.ts ringPin)
-pub fn ring_pin(g: &crate::game::Game, r: &mut crate::cmdring::RingState, sx: f64, sy: f64, w: f64, h: f64) {
+pub fn ring_pin(g: &mut crate::game::Game, r: &mut crate::cmdring::RingState, sx: f64, sy: f64, w: f64, h: f64) {
     ring_pin_on(&g.k.cmdring, r, sx, sy, w, h);
 }
 
@@ -115,7 +115,7 @@ fn ring_want_on(c: &crate::knobs::CmdringK, r: &mut RingState, mouse_x: f64, mou
     if pill { lone } else { at }
 }
 /// The wedge this frame asks for (0: none): a digit's own, which disarms the cursor, else the one the cursor is out toward or on.   (cmdring.ts ringWant)
-pub fn ring_want(g: &crate::game::Game, r: &mut crate::cmdring::RingState, input: InputId, digit: f64, time: f64, lone: Option<f64>, shapes: Option<f64>) -> f64 {
+pub fn ring_want(g: &mut crate::game::Game, r: &mut crate::cmdring::RingState, input: InputId, digit: f64, time: f64, lone: Option<f64>, shapes: Option<f64>) -> f64 {
     let (lone, shapes) = (lone.unwrap_or(0.0), shapes.unwrap_or(0.0));
     let (mouse_x, mouse_y) = (g.tab.input[input].mouse_x, g.tab.input[input].mouse_y);
     let wedges = g.k.cmdring.wedges;
@@ -124,7 +124,7 @@ pub fn ring_want(g: &crate::game::Game, r: &mut crate::cmdring::RingState, input
 }
 
 /// Which row is on which wedge (CMDRING.only, the page's way): the rows with digits keep them, the rest take the spare wedges, the last spare is 'more'.   (cmdring.ts ringSeats)
-pub fn ring_seats(g: &crate::game::Game, rows: &[crate::cmdring::SeatRow], place: bool, word_key: &str, first: Option<bool>) -> crate::cmdring::RingSeats {
+pub fn ring_seats(g: &mut crate::game::Game, rows: &[crate::cmdring::SeatRow], place: bool, word_key: &str, first: Option<bool>) -> crate::cmdring::RingSeats {
     ring_seats_of(g.k.cmdring.wedges, rows, place, word_key, first.unwrap_or(true))
 }
 /// ringSeats on the number of wedges alone.
@@ -174,7 +174,7 @@ fn ring_seats_of(wedges: f64, rows: &[SeatRow], place: bool, word_key: &str, fir
 }
 
 /// Which row is on which wedge of the flat tree: FLAT_TOP's rows on their wedges, the rest on what is left or behind one 'more'.   (cmdring.ts flatSeats)
-pub fn flat_seats(g: &crate::game::Game, rows: &[crate::cmdring::FlatRow], kind: &str, word_key: &str, lead: f64) -> crate::cmdring::FlatSeats {
+pub fn flat_seats(g: &mut crate::game::Game, rows: &[crate::cmdring::FlatRow], kind: &str, word_key: &str, lead: f64) -> crate::cmdring::FlatSeats {
     flat_seats_of(g.k.cmdring.wedges, rows, kind, word_key, lead)
 }
 /// flatSeats on the number of wedges alone.
@@ -244,7 +244,7 @@ fn flat_seats_of(wedges: f64, rows: &[FlatRow], kind: &str, word_key: &str, lead
 }
 
 /// How long the key is kept down before its ring goes up (CMDRING.stay, the page's way: a ring that stays).   (cmdring.ts ringHoldSecs)
-pub fn ring_hold_secs(g: &crate::game::Game) -> f64 {
+pub fn ring_hold_secs(g: &mut crate::game::Game) -> f64 {
     g.k.cmdring.stay_hold_secs
 }
 

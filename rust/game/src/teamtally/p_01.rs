@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// Is this man's down one the card counts as the partner's: the tick's test, asked of him later.   (teamtally.ts teamTallied)
-pub fn team_tallied(g: &crate::game::Game, gd: GuardId) -> bool {
+pub fn team_tallied(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if !g.quiet.active
         || g.gd[gd].state != crate::game::GuardState::Dead
         || g.gd[gd].down_by != Some(crate::game::DownBy::Guard)

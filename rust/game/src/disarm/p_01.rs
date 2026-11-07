@@ -38,7 +38,7 @@ pub fn disarm_catch(g: &mut crate::game::Game, at: V3) {
 }
 
 /// The disarm leads for this move: a gun to take with an empty hand, not the pistol hold's rap. (disarm.ts leads)
-pub fn leads(g: &crate::game::Game, s: Option<crate::disarm::Strip>) -> bool {
+pub fn leads(g: &mut crate::game::Game, s: Option<crate::disarm::Strip>) -> bool {
     match s { Some(s) => !s.rap, None => false }
 }
 
@@ -58,7 +58,7 @@ pub fn disarm_pose(s: crate::disarm::Strip) -> crate::character::StripPose {
 }
 
 /// Sam's right fist is the gun's, not yet the knife's (combat.ts handProps). (disarm.ts disarmHand)
-pub fn disarm_hand(g: &crate::game::Game, h: &crate::player::Hold) -> bool {
+pub fn disarm_hand(g: &mut crate::game::Game, h: &crate::player::Hold) -> bool {
     match h.strip { Some(s) => s.t < g.k.hold.strip.knife, None => false }
 }
 
@@ -126,7 +126,7 @@ pub fn disarm_tick(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// (disarm.ts handOf)
-pub fn hand_of(g: &crate::game::Game, gd: GuardId) -> V3 {
+pub fn hand_of(g: &mut crate::game::Game, gd: GuardId) -> V3 {
     let c = g.gd[gd].ch;
     let hand = g.ch[c].bones.get(crate::character::Bone::HandR).copied();
     v3::copy(match hand { Some(w) => w, None => v3::add(g.ch[c].pos, [0.0, 1.05, 0.0]) })

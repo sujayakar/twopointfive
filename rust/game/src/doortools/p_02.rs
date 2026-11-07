@@ -23,15 +23,15 @@ fn frame_off(th: f64, h: [f64; 2], p: V3, side: f64) -> f64 {
     (m::cos(th) * (p[2] - h[1]) - m::sin(th) * (p[0] - h[0])) * side
 }
 /// a point in a door's frame: `a` m along hinge → latch, `b` out from the frame line on face `side`   (doortools.ts doorPt)
-pub fn door_pt(g: &crate::game::Game, d: DoorId, a: f64, b: f64, side: f64, y: Option<f64>) -> V3 {
+pub fn door_pt(g: &mut crate::game::Game, d: DoorId, a: f64, b: f64, side: f64, y: Option<f64>) -> V3 {
     frame_pt(g.dr[d].def.closed_dir, g.dr[d].def.hinge, a, b, side, y.unwrap_or(0.0))
 }
 /// metres along the frame, hinge → latch   (doortools.ts alongOf)
-pub fn along_of(g: &crate::game::Game, d: DoorId, p: V3) -> f64 {
+pub fn along_of(g: &mut crate::game::Game, d: DoorId, p: V3) -> f64 {
     frame_along(g.dr[d].def.closed_dir, g.dr[d].def.hinge, p)
 }
 /// metres off the frame line on face `side` (negative: the other face)   (doortools.ts offOf)
-pub fn off_of(g: &crate::game::Game, d: DoorId, p: V3, side: f64) -> f64 {
+pub fn off_of(g: &mut crate::game::Game, d: DoorId, p: V3, side: f64) -> f64 {
     frame_off(g.dr[d].def.closed_dir, g.dr[d].def.hinge, p, side)
 }
 /// unlatched and swung past OPEN_RAD   (doortools.ts isOpen)
@@ -305,7 +305,7 @@ pub fn door_tools_set_back(g: &mut crate::game::Game, d: DoorId, side: f64) {
 }
 
 /// the charge set on this door, if any   (doortools.ts DoorTools.chargeOn)
-pub fn door_tools_charge_on(g: &crate::game::Game, d: DoorId) -> Option<ChargeId> {
+pub fn door_tools_charge_on(g: &mut crate::game::Game, d: DoorId) -> Option<ChargeId> {
     g.door_tools.set.iter().copied().find(|&c| g.tab.doortools_set_charge[c].door == d)
 }
 

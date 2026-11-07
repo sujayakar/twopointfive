@@ -55,7 +55,7 @@ pub fn column_entry(ro: V3, rd: V3, tmax: f64, cx: f64, cz: f64, r: f64, bot: f6
 }
 
 /// How far down he is, 0 on his feet to 1 on the floor. (character.ts CharacterAnimator.woundDown)
-pub fn anim_wound_down(g: &crate::game::Game, c: CharId) -> f64 {
+pub fn anim_wound_down(g: &mut crate::game::Game, c: CharId) -> f64 {
     let a = &g.ch[c].anim;
     let Some(wd) = a.wound else { return 0.0 };
     if a.wd_clip.is_none() { return 0.0; }
@@ -65,18 +65,18 @@ pub fn anim_wound_down(g: &crate::game::Game, c: CharId) -> f64 {
 }
 
 /// The action layer's weight this frame. (character.ts CharacterAnimator.actShown)
-pub fn anim_act_shown(g: &crate::game::Game, c: CharId) -> f64 {
+pub fn anim_act_shown(g: &mut crate::game::Game, c: CharId) -> f64 {
     g.ch[c].anim.act_w
 }
 
 /// A MOVES reaction has the trunk and head this frame. (character.ts CharacterAnimator.mvBusy)
-pub fn anim_mv_busy(g: &crate::game::Game, c: CharId) -> bool {
+pub fn anim_mv_busy(g: &mut crate::game::Game, c: CharId) -> bool {
     let m = &g.ch[c].anim.mvs;
     m.fl_t >= 0.0 || m.st_t >= 0.0 || m.ht_t >= 0.0 || m.dz.x > 0.0 || m.cf.x > 0.0
 }
 
 /// A MOVES reaction that also has his arms: all of them but a soft duck. (character.ts CharacterAnimator.mvHands)
-pub fn anim_mv_hands(g: &crate::game::Game, c: CharId) -> bool {
+pub fn anim_mv_hands(g: &mut crate::game::Game, c: CharId) -> bool {
     let m = &g.ch[c].anim.mvs;
     (m.fl_t >= 0.0 && !m.fl_soft) || m.st_t >= 0.0 || m.ht_t >= 0.0 || m.dz.x > 0.0 || m.cf.x > 0.0
 }

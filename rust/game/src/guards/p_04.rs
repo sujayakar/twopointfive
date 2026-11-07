@@ -365,7 +365,7 @@ pub fn can_see_char(g: &mut crate::game::Game, gd: GuardId, pc: CharId, is_playe
 }
 
 /// How far a man's eye reaches for a man with `lit` on him.   (guards.ts eyeReach)
-pub fn eye_reach(g: &crate::game::Game, lit: f64) -> f64 {
+pub fn eye_reach(g: &mut crate::game::Game, lit: f64) -> f64 {
     let k = g.k.guard_eye;
     if g.touring { return k.range; }
     reach_of(&k, lit)
@@ -377,7 +377,7 @@ fn reach_of(k: &crate::knobs::GuardEyeK, lit: f64) -> f64 {
 }
 
 /// …for the man `pc` in this man's view.   (guards.ts reachFor)
-pub fn reach_for(g: &crate::game::Game, gd: GuardId, pc: CharId, is_player: bool, eye: V3) -> f64 {
+pub fn reach_for(g: &mut crate::game::Game, gd: GuardId, pc: CharId, is_player: bool, eye: V3) -> f64 {
     if g.touring { return g.k.guard_eye.range; }
     if is_player {
         let vis = g.pl[g.player].visibility;
@@ -401,7 +401,7 @@ pub fn reach_for(g: &crate::game::Game, gd: GuardId, pc: CharId, is_player: bool
 }
 
 /// True = this glimpse from past `range` feeds his awareness and writes no fix.   (guards.ts farFaint)
-pub fn far_faint(g: &crate::game::Game, gd: GuardId, dist: f64, was: f64) -> bool {
+pub fn far_faint(g: &mut crate::game::Game, gd: GuardId, dist: f64, was: f64) -> bool {
     let k = g.k.guard_eye;
     faint_of(&k, g.gd[gd].state, g.gd[gd].awareness, dist, was)
 }
@@ -415,7 +415,7 @@ fn faint_of(k: &crate::knobs::GuardEyeK, state: crate::game::GuardState, awarene
 }
 
 /// The distance term of a sighting's rate.   (guards.ts distTerm)
-pub fn dist_term(g: &crate::game::Game, dist: f64) -> f64 {
+pub fn dist_term(g: &mut crate::game::Game, dist: f64) -> f64 {
     let k = g.k.guard_eye;
     dist_term_of(&k, dist)
 }
@@ -427,12 +427,12 @@ fn dist_term_of(k: &crate::knobs::GuardEyeK, dist: f64) -> f64 {
 }
 
 /// What the team's own eyes pass (FOG.mates on: what the fog's lines pass).   (guards.ts teamThrough)
-pub fn team_through(g: &crate::game::Game) -> f64 {
+pub fn team_through(g: &mut crate::game::Game) -> f64 {
     crate::fogofwar::fog_through(g)
 }
 
 /// What a man's eye passes: the team's for an operative, glass alone for every other side.   (guards.ts eyeThrough)
-pub fn eye_through(g: &crate::game::Game, gd: GuardId) -> f64 {
+pub fn eye_through(g: &mut crate::game::Game, gd: GuardId) -> f64 {
     if g.gd[gd].team == crate::teams::Team::Operative { team_through(g) } else { crate::scene_boxes::box_flag().glass }
 }
 
@@ -457,7 +457,7 @@ pub fn eye_contact(g: &mut crate::game::Game, e: crate::guards::Eye, pc: CharId,
 }
 
 /// Is the nav cell under (x, z) one no plan can leave?   (guards.ts strandedAt)
-pub fn stranded_at(g: &crate::game::Game, x: f64, z: f64) -> bool {
+pub fn stranded_at(g: &mut crate::game::Game, x: f64, z: f64) -> bool {
     let cs = g.col.nav.cell;
     crate::scene_collision::nav_grid_is_blocked(g, x, z)
         && crate::scene_collision::nav_grid_is_blocked(g, x + cs, z)

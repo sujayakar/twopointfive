@@ -128,7 +128,7 @@ pub fn take_begin(g: &mut crate::game::Game, by: CharId, gd: GuardId, kind: Opti
 }
 
 /// How far a fall wants clear floor, by its style and which way: direction, metres. (takedown.ts fallWay)
-pub fn fall_way(g: &crate::game::Game, vic: CharId, from: Option<V3>, style: crate::character::FallStyle) -> (V3, f64) {
+pub fn fall_way(g: &mut crate::game::Game, vic: CharId, from: Option<V3>, style: crate::character::FallStyle) -> (V3, f64) {
     fall_way_of(g.ch[vic].pos, g.ch[vic].body_yaw, from, style)
 }
 

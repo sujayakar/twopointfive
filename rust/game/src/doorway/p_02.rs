@@ -122,7 +122,7 @@ pub fn doorway_in_way(g: &mut crate::game::Game, p: V3) -> bool {
 }
 
 /// Who the PASS gate has `gd` held for this frame: 'Player', a man's callsign, or None when he is not held short of a man. (doorway.ts doorwayHeldBy)
-pub fn doorway_held_by(g: &crate::game::Game, gd: GuardId) -> Option<String> {
+pub fn doorway_held_by(g: &mut crate::game::Game, gd: GuardId) -> Option<String> {
     let time = g.time;
     match g.m.doorway.states.get(gd) {
         Some(st) if time - st.t <= 0.25 && time >= st.t && st.held_t > 0.0 => st.by.clone(),
@@ -131,7 +131,7 @@ pub fn doorway_held_by(g: &crate::game::Game, gd: GuardId) -> Option<String> {
 }
 
 /// The PASS gate has `gd` held this frame: short of a frame for a man in it, or stepped off to a jamb. (doorway.ts doorGateStopped)
-pub fn door_gate_stopped(g: &crate::game::Game, gd: GuardId) -> bool {
+pub fn door_gate_stopped(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let time = g.time;
     match g.m.doorway.states.get(gd) {
         Some(st) => time - st.t <= 0.25 && time >= st.t && (st.held_t > 0.0 || st.spot.is_some()),

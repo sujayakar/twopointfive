@@ -9,7 +9,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/host/api.ts:75 HostApi.invalidateWorldCache)
-pub fn host_api_invalidate_world_cache(g: &crate::game::Game) {}
+pub fn host_api_invalidate_world_cache(g: &mut crate::game::Game) {}
 
 
 /// HARNESS STAND-IN FOR A BRIDGE GAP (tools/blitz/README.md "Host steps"): called by the tick loop's runner between two ticks, never by the game.

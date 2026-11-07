@@ -18,7 +18,7 @@ pub fn flat(a: V3, b: V3) -> f64 {
 }
 
 /// A floor point in the door's frame: `along` from the hinge, `off` out on face `side`. (shutdoor.ts ptOf)
-pub fn pt_of(g: &crate::game::Game, d: DoorId, along: f64, off: f64, side: f64) -> V3 {
+pub fn pt_of(g: &mut crate::game::Game, d: DoorId, along: f64, off: f64, side: f64) -> V3 {
     let f = crate::guards::frame_of(g, d);
     [f.hx + f.ux * along + f.nx * side * off, 0.0, f.hz + f.uz * along + f.nz * side * off]
 }
@@ -151,7 +151,7 @@ pub fn walk(g: &mut crate::game::Game, gd: GuardId, p: V3) -> f64 {
 }
 
 /// Was he taken from Sam's file (or from another door of this order's, taken from the file for that one). (shutdoor.ts fromFile)
-pub fn from_file(g: &crate::game::Game, gd: GuardId) -> bool {
+pub fn from_file(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let a = match crate::orders::squad_orders_of(g, gd) { Some(a) => a, None => return false };
     let row = &g.tab.orders_assignment[a];
     row.post.is_none() || (row.order == SHUT_ID && g.m.shutdoor.jobs.get(gd).map_or(false, |j| j.back))

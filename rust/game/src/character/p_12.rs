@@ -20,7 +20,7 @@ fn ov_set(ov: &mut Vec<Option<crate::anim_skeleton::NodeOverride>>, i: usize, o:
     ov[i] = Some(o);
 }
 /// skel.nodePos(node)
-fn node_pos(g: &Game, id: CharId, node: usize) -> V3 { crate::anim_skeleton::skeleton_instance_node_pos(&g.ch[id].skel, node as f64) }
+fn node_pos(g: &mut Game, id: CharId, node: usize) -> V3 { crate::anim_skeleton::skeleton_instance_node_pos(&mut g.ch[id].skel, node as f64) }
 /// skel.update(pose, world, twists?, ov), the skeleton and the twists out of `g` while `g` is lent: the update reads neither through g
 fn skel_update(g: &mut Game, id: CharId, pose: crate::anim_skeleton::Pose, world: &crate::v3::m4::Mat4, twisted: bool, ov: Option<&[Option<crate::anim_skeleton::NodeOverride>]>) {
     let mut sk = core::mem::replace(&mut g.ch[id].skel, crate::anim_skeleton::SkeletonInstance::blank());
@@ -110,18 +110,18 @@ pub fn character_new(g: &mut crate::game::Game, ch: RigId, d: crate::character::
 }
 
 /// (Character.forward)
-pub fn character_forward(g: &crate::game::Game, id: CharId) -> V3 {
+pub fn character_forward(g: &mut crate::game::Game, id: CharId) -> V3 {
     let y = g.ch[id].body_yaw;
     [m::sin(y), 0.0, m::cos(y)]
 }
 /// (Character.aimDir)
-pub fn character_aim_dir(g: &crate::game::Game, id: CharId) -> V3 {
+pub fn character_aim_dir(g: &mut crate::game::Game, id: CharId) -> V3 {
     let (p, y) = (g.ch[id].aim_pitch, g.ch[id].aim_yaw);
     let cp = m::cos(p);
     [m::sin(y) * cp, m::sin(p), m::cos(y) * cp]
 }
 /// The right hand's frame in the world; `sim`: as the animator posed it, a game rule's. (Character.handFrameR)
-pub fn character_hand_frame_r(g: &crate::game::Game, id: CharId, sim: Option<bool>) -> crate::character::CharacterHandFrameR {
+pub fn character_hand_frame_r(g: &mut crate::game::Game, id: CharId, sim: Option<bool>) -> crate::character::CharacterHandFrameR {
     let sim = sim.unwrap_or(false);
     let c = &g.ch[id];
     let n = c.anim.nodes.hand_r;
@@ -130,26 +130,26 @@ pub fn character_hand_frame_r(g: &crate::game::Game, id: CharId, sim: Option<boo
     CharacterHandFrameR { fingers: v3::quat::rotate(r, [0.0, 1.0, 0.0]), back: v3::quat::rotate(r, c.hand_r_back), thumb: v3::quat::rotate(r, c.hand_r_thumb) }
 }
 /// The frame a gun in the right hand is rigid in, as the hand is drawn. (Character.gripFrameR)
-pub fn character_grip_frame_r(g: &crate::game::Game, id: CharId) -> crate::character::CharacterGripFrameR {
+pub fn character_grip_frame_r(g: &mut crate::game::Game, id: CharId) -> crate::character::CharacterGripFrameR {
     let c = &g.ch[id];
     let r = v3::quat::mul(v3::quat::yaw(c.body_yaw), c.skel.global_rot[c.anim.nodes.hand_r]);
     CharacterGripFrameR { bore: v3::quat::rotate(r, c.hand_r_bore), top: v3::quat::rotate(r, c.hand_r_top) }
 }
 /// How a gun on a kit errand lies off the right hand, in the world. (Character.kitLieWorld)
-pub fn character_kit_lie_world(g: &crate::game::Game, id: CharId) -> Option<Quat> {
+pub fn character_kit_lie_world(g: &mut crate::game::Game, id: CharId) -> Option<Quat> {
     let c = &g.ch[id];
     let d = c.anim.kit_lie?;
     let r = v3::quat::mul(v3::quat::yaw(c.body_yaw), c.skel.global_rot[c.anim.nodes.hand_r]);
     Some(v3::quat::mul(v3::quat::mul(r, d), v3::quat::conj(r)))
 }
 /// (Character.handFrameL)
-pub fn character_hand_frame_l(g: &crate::game::Game, id: CharId) -> crate::character::CharacterHandFrameL {
+pub fn character_hand_frame_l(g: &mut crate::game::Game, id: CharId) -> crate::character::CharacterHandFrameL {
     let c = &g.ch[id];
     let r = v3::quat::mul(v3::quat::yaw(c.body_yaw), c.skel.global_rot[c.anim.nodes.hand_l]);
     CharacterHandFrameL { fingers: v3::quat::rotate(r, [0.0, 1.0, 0.0]), back: v3::quat::rotate(r, c.hand_l_back), thumb: v3::quat::rotate(r, c.hand_l_thumb) }
 }
 /// The chest's frame in the world; None before his first update. (Character.chestFrame)
-pub fn character_chest_frame(g: &crate::game::Game, id: CharId) -> Option<crate::character::CharacterChestFrame> {
+pub fn character_chest_frame(g: &mut crate::game::Game, id: CharId) -> Option<crate::character::CharacterChestFrame> {
     let c = &g.ch[id];
     let o = *c.bones.get(Bone::Chest)?;
     let r = v3::quat::mul(v3::quat::yaw(c.body_yaw), v3::quat::mul(c.skel.global_rot[c.anim.nodes.spine3], c.rest_chest_inv));
@@ -409,7 +409,7 @@ pub fn character_turn_weigh_ask(g: &mut crate::game::Game, id: CharId, dt: f64) 
     anim_rule_ran(g, id, code as f64);
     // Character.turnCols.put
     let mut c = [0.0f64; 12];
-    c.copy_from_slice(&::sim::skeleton::bench_read().args[TURN_COLS_AT..TURN_COLS_AT + 12]);
+    c.copy_from_slice(&::sim::skeleton::bench().args[TURN_COLS_AT..TURN_COLS_AT + 12]);
     let ch = &mut g.ch[id];
     ch.tn = if js::truthy(c[0]) { Some(CharacterTn { body: c[1], aim: c[2], wb: c[3], wa: c[4], ib: c[5], ia: c[6], x: c[7], z: c[8] }) } else { None };
     ch.anim.turn_lead = c[9]; ch.body_yaw = c[10]; ch.aim_yaw = c[11];
@@ -428,12 +428,12 @@ pub fn character_turn_begin(g: &mut crate::game::Game, id: CharId) {
     if c.aim_yaw == t.aim { c.aim_yaw = t.ia; }
 }
 /// Where his gun is in yaw, for a fire gate inside his own AI update. (Character.gunYaw)
-pub fn character_gun_yaw(g: &crate::game::Game, id: CharId) -> f64 {
+pub fn character_gun_yaw(g: &mut crate::game::Game, id: CharId) -> f64 {
     let c = &g.ch[id];
     match c.tn { Some(t) if c.ragdoll.is_none() => t.aim, _ => c.aim_yaw }
 }
 /// Where his AI wants his body, for an easing outside his own update. (Character.wantBody)
-pub fn character_want_body(g: &crate::game::Game, id: CharId) -> f64 {
+pub fn character_want_body(g: &mut crate::game::Game, id: CharId) -> f64 {
     let c = &g.ch[id];
     match c.tn { Some(t) if c.body_yaw == t.body => t.ib, _ => c.body_yaw }
 }
@@ -441,14 +441,14 @@ pub fn character_want_body(g: &crate::game::Game, id: CharId) -> f64 {
 // ---- joints ----
 
 /// A joint as the game reads it: under the moves' look-only arms while one shows. (Character.jointUnder)
-pub fn character_joint_under(g: &crate::game::Game, id: CharId, name: &str) -> Option<V3> {
+pub fn character_joint_under(g: &mut crate::game::Game, id: CharId, name: &str) -> Option<V3> {
     let k = bone_of(name)?;
     let c = &g.ch[id];
     if let Some(v) = c.sim_bones.as_ref().and_then(|m| m.get(k)) { return Some(*v); }
     c.bones.get(k).copied()
 }
 /// The world-space joints off the skeleton's current globals, into `b`. (Character.joints)
-pub fn character_joints(g: &crate::game::Game, id: CharId, b: &mut JsMap<crate::character::Bone, V3>) {
+pub fn character_joints(g: &mut crate::game::Game, id: CharId, b: &mut JsMap<crate::character::Bone, V3>) {
     let n = g.ch[id].anim.nodes;
     let world = g.ch[id].world;
     let rows: [(Bone, usize); 21] = [
@@ -911,22 +911,22 @@ pub fn character_breath_end(g: &mut crate::game::Game, id: CharId, pose: bool) {
 // ---- what the rules ask of the body ----
 
 /// Unit vector 'down' out of the underside of the gun. (Character.gunUnder)
-pub fn character_gun_under(g: &crate::game::Game, id: CharId) -> V3 {
+pub fn character_gun_under(g: &mut crate::game::Game, id: CharId) -> V3 {
     let v = g.ch[id].gun_dir; let gu = v[1];   // g × (g × up) = (g·up) g − up
     v3::normalize([v[0] * gu, v[1] * gu - 1.0, v[2] * gu])
 }
 /// Head rotation (world), from rest-pose model vectors. (Character.headRot)
-pub fn character_head_rot(g: &crate::game::Game, id: CharId) -> Quat {
+pub fn character_head_rot(g: &mut crate::game::Game, id: CharId) -> Quat {
     let c = &g.ch[id];
     v3::quat::mul(v3::quat::yaw(c.body_yaw), v3::quat::mul(c.skel.global_rot[c.anim.nodes.head], c.rest_head_inv))
 }
 /// Head look direction (world). (Character.headDir)
-pub fn character_head_dir(g: &crate::game::Game, id: CharId) -> V3 {
+pub fn character_head_dir(g: &mut crate::game::Game, id: CharId) -> V3 {
     let r = character_head_rot(g, id);
     v3::normalize(v3::quat::rotate(r, [0.0, 0.0, 1.0]))
 }
 /// Capsule proxies in world space and a bounding sphere; devices test laser trips on these. (Character.capsules)
-pub fn character_capsules(g: &crate::game::Game, id: CharId) -> crate::character::CharacterCapsules {
+pub fn character_capsules(g: &mut crate::game::Game, id: CharId) -> crate::character::CharacterCapsules {
     let hr = character_head_rot(g, id);
     let c = &g.ch[id];
     let b = |k: Bone| -> V3 { *c.bones.get(k).unwrap() };
@@ -948,7 +948,7 @@ pub fn character_capsules(g: &crate::game::Game, id: CharId) -> crate::character
     CharacterCapsules { caps, bound: [o[0], o[1], o[2], 1.5] }
 }
 /// A point inside the body: the hips' column soles to crown, or the chest's when the trunk leans off it. (Character.insideBody)
-pub fn character_inside_body(g: &crate::game::Game, id: CharId, p: V3, crown_pad: Option<f64>) -> bool {
+pub fn character_inside_body(g: &mut crate::game::Game, id: CharId, p: V3, crown_pad: Option<f64>) -> bool {
     let crown_pad = crown_pad.unwrap_or(0.0);
     let c = &g.ch[id];
     if !c.alive { return false; }
@@ -966,7 +966,7 @@ pub fn character_inside_body(g: &crate::game::Game, id: CharId, p: V3, crown_pad
     false
 }
 /// Ray test against the body's columns: t or -1. (Character.rayHit)
-pub fn character_ray_hit(g: &crate::game::Game, id: CharId, ro: V3, rd: V3, tmax: f64) -> f64 {
+pub fn character_ray_hit(g: &mut crate::game::Game, id: CharId, ro: V3, rd: V3, tmax: f64) -> f64 {
     let c = &g.ch[id];
     if !c.alive { return -1.0; }
     let top = match c.bones.get(Bone::HeadTop) { Some(v) => v[1], None => c.pos[1] + 1.75 };

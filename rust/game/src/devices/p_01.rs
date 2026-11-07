@@ -108,7 +108,7 @@ pub fn devices_new(g: &mut crate::game::Game) -> crate::devices::Devices {
     this
 }
 /// The keypad on this door, if it is a keypad door.   (devices.ts Devices.padOf)
-pub fn devices_pad_of(g: &crate::game::Game, d: DoorId) -> Option<crate::devices::KeypadRt> {
+pub fn devices_pad_of(g: &mut crate::game::Game, d: DoorId) -> Option<crate::devices::KeypadRt> {
     g.devices.pad_by_door.get(d).cloned()
 }
 /// `speaker` has just said the code of `lock_id` aloud.   (devices.ts Devices.overhearSaid)
@@ -116,7 +116,7 @@ pub fn devices_overhear_said(g: &mut crate::game::Game, speaker: GuardId, lock_i
     overhear(g, speaker, lock_id)
 }
 /// The keypad whose door stands nearest a floor point.   (devices.ts Devices.padNear)
-pub fn devices_pad_near(g: &crate::game::Game, p: V3) -> Option<crate::devices::KeypadRt> {
+pub fn devices_pad_near(g: &mut crate::game::Game, p: V3) -> Option<crate::devices::KeypadRt> {
     let mut best: Option<usize> = None;
     let mut bd = f64::INFINITY;
     for (i, k) in g.devices.keypads.iter().enumerate() {
@@ -163,11 +163,11 @@ pub fn alive(g: &mut crate::game::Game, t: FixtureId) -> bool {
     crate::sim_lightshome::fixture_factor(g, t) > 0.05 && !crate::sim_lightshome::fixture_broken(g, t)
 }
 /// Live play: devices sense.   (devices.ts sensing)
-pub fn sensing(g: &crate::game::Game) -> bool {
+pub fn sensing(g: &mut crate::game::Game) -> bool {
     g.ai_enabled && !g.quiet_utility && !g.touring && g.tune.devices && !g.night_breach.active && !g.rescue.active
 }
 /// Lit-seconds per second a camera's integrator fills at.   (devices.ts lensGain)
-pub fn lens_gain(g: &crate::game::Game, dist: f64, range: f64, smoke_trans: f64) -> f64 {
+pub fn lens_gain(g: &mut crate::game::Game, dist: f64, range: f64, smoke_trans: f64) -> f64 {
     let pl = g.player;
     let light = g.pl[pl].visibility;
     let dist_f = v3::clamp(1.0 - (dist - 3.0) / m::max(1.0, range - 3.0), 0.2, 1.0);
@@ -249,16 +249,15 @@ pub fn camera_alarm(g: &mut crate::game::Game, c_2: CameraRtId) {
         let id = g.guards[i];
         if g.gd[id].state != crate::game::GuardState::Dead && g.gd[id].held.is_none() && g.gd[id].unit.is_none() {
             crate::belief::word(g, id, p);
-            let gd = &mut g.gd[id];
-            gd.awareness = m::max(gd.awareness, 0.5);
-            if gd.state == crate::game::GuardState::Patrol {
-                gd.state = crate::game::GuardState::Suspicious;
-                gd.react_t = 0.8;
-                gd.search_t = 0.0;
-                gd.path = Vec::new();
-                gd.path_serial = gd.path_serial.wrapping_add(1);
-                gd.path_goal = None;
-                gd.path_goal_orbit = false;
+            crate::mind::raise(g, id, 0.5, "devices");
+            if g.gd[id].state == crate::game::GuardState::Patrol {
+                crate::mind::set_state(g, id, crate::game::GuardState::Suspicious, "devices");
+                g.gd[id].react_t = 0.8;
+                g.gd[id].search_t = 0.0;
+                g.gd[id].path = Vec::new();
+                g.gd[id].path_serial = g.gd[id].path_serial.wrapping_add(1);
+                g.gd[id].path_goal = None;
+                g.gd[id].path_goal_orbit = false;
             }
         }
     }
@@ -339,7 +338,7 @@ pub fn update_laser(g: &mut crate::game::Game, l: LaserRtId, dt: f64, live: bool
     }
 }
 /// Does any capsule of `c` cross the beam a→b: the point on the beam where it does.   (devices.ts bodyBreaks)
-pub fn body_breaks(g: &crate::game::Game, c_2: CharId, a: V3, b: V3) -> Option<V3> {
+pub fn body_breaks(g: &mut crate::game::Game, c_2: CharId, a: V3, b: V3) -> Option<V3> {
     let h = match g.ch[c_2].bones.get(crate::character::Bone::Hips) { Some(h) => *h, None => return None };
     let along = v3::clamp(((h[0] - a[0]) * (b[0] - a[0]) + (h[2] - a[2]) * (b[2] - a[2])) / m::max(1e-6, m::pow(v3::dist_xz(a, b), 2.0)), 0.0, 1.0);
     if v3::dist_xz(h, v3::lerp3(a, b, along)) > 1.6 { return None; }
@@ -405,18 +404,16 @@ pub fn send_to_look(g: &mut crate::game::Game, pos: V3, what: &str) -> Option<Gu
     }
     let id = best?;
     {
-        let gd = &mut g.gd[id];
-        gd.task = Some(crate::game::GuardTask::Arm0(crate::game::GuardTaskArm0 { kind: crate::game::GuardTaskArm0Kind::Device, pos: v3::copy(goal) }));
-        gd.last_known = Some(v3::copy(goal));
-        gd.fix_stamp = gd.fix_stamp.wrapping_add(1);
-        gd.awareness = m::max(gd.awareness, errand().awareness);
-        gd.state = crate::game::GuardState::Suspicious;
-        gd.react_t = errand().react_t;
-        gd.search_t = 0.0;
-        gd.path = Vec::new();
-        gd.path_serial = gd.path_serial.wrapping_add(1);
-        gd.path_goal = None;
-        gd.path_goal_orbit = false;
+        g.gd[id].task = Some(crate::game::GuardTask::Arm0(crate::game::GuardTaskArm0 { kind: crate::game::GuardTaskArm0Kind::Device, pos: v3::copy(goal) }));
+        crate::mind::fix(g, id, Some(v3::copy(goal)), "devices");
+        crate::mind::raise(g, id, errand().awareness, "devices");
+        crate::mind::set_state(g, id, crate::game::GuardState::Suspicious, "devices");
+        g.gd[id].react_t = errand().react_t;
+        g.gd[id].search_t = 0.0;
+        g.gd[id].path = Vec::new();
+        g.gd[id].path_serial = g.gd[id].path_serial.wrapping_add(1);
+        g.gd[id].path_goal = None;
+        g.gd[id].path_goal_orbit = false;
     }
     crate::game::game_say(g, id, "copy, control — on my way", Some(true), None, None);
     let c = g.gd[id].ch;
@@ -505,7 +502,7 @@ pub fn spell(code: &str) -> String {
     out
 }
 /// What a pad's door is called on the HUD.   (devices.ts padDoorName)
-pub fn pad_door_name(g: &crate::game::Game, k: &crate::devices::KeypadRt) -> String {
+pub fn pad_door_name(g: &mut crate::game::Game, k: &crate::devices::KeypadRt) -> String {
     let name = &g.dr[k.door].def.name;
     if name == "server_manager" { String::from("side door") } else { format!("{} door", name.replace('_', " ")) }
 }
@@ -654,7 +651,7 @@ pub fn device_boxes_raw(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
 
 // ---------------------------------------------------------------- the panel's knobs (their storage is the host's: lights.md trap 12)
 /// `localStorage` is the host's: what it keeps arrives written in `g.tune`, so nothing here reads.   (devices.ts loadDeviceTune)
-pub fn load_device_tune(g: &crate::game::Game) {}
+pub fn load_device_tune(g: &mut crate::game::Game) {}
 // ---------------------------------------------------------------- geometry
 /// Closest points between segments p and b: the distance and the point on b.   (devices.ts segSegClosest)
 pub fn seg_seg_closest(p0: V3, p1: V3, b0: V3, b1: V3) -> crate::devices::SegSegClosest {

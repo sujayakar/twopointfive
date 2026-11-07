@@ -83,8 +83,8 @@ export class ReachKeep extends HostOwned {
   of(l: RtLight): Uint32Array | undefined { return this.point.get(l); }
   /** a directional light's mask (undefined = it has none) */
   dirOf(l: RtLight): Uint32Array | undefined { return this.dirs.get(l); }
-  /** the row the light set sends for a light: a directional light's own mask only where `dirMasks` (the reservoirs), else the lamp's, else none (anywhere) */
-  row(l: RtLight, dirMasks: boolean): Uint32Array | undefined { return (dirMasks ? this.dirs.get(l) : undefined) ?? this.point.get(l); }
+  /** the row the light set sends for a light: a directional light's own mask, else the lamp's, else none (anywhere) */
+  row(l: RtLight): Uint32Array | undefined { return this.dirs.get(l) ?? this.point.get(l); }
   /** a mask its maker decided itself (the picture's own lights: daylight at an opening, engine.ts); undefined = none */
   give(l: RtLight, m: Uint32Array | undefined): void { if (m) this.point.set(l, m); else this.point.delete(l); }
   /** lights still waiting, and changes still to be read (none before a level stands) */

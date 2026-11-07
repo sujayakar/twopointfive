@@ -139,7 +139,7 @@ pub fn box_world_ray_aside<T: Clone + core::fmt::Debug>(g: &mut crate::game::Gam
 }
 
 /// The world's buffers and tables. (boxes.ts BoxWorld.constructor)
-pub fn box_world_new(g: &crate::game::Game, device: crate::Opaque, max_boxes: Option<f64>) -> crate::scene_boxes::BoxWorld {
+pub fn box_world_new(g: &mut crate::game::Game, device: crate::Opaque, max_boxes: Option<f64>) -> crate::scene_boxes::BoxWorld {
     let wd = crate::scene_world::world();
     let max_boxes = max_boxes.unwrap_or(wd.max_boxes);
     let mut w = crate::scene_boxes::BoxWorld::blank();
@@ -802,4 +802,4 @@ fn seam_box_push_no_g(b: Bx) -> BoxId {
     TEST_ROWS.with(|r| { let mut r = r.borrow_mut(); r.push(row); BoxId::from_ix(r.len() - 1) })
 }
 #[cfg(test)]
-fn seam_box_push(g: &Game, b: Bx) -> BoxId { seam_box_push_no_g(b) }
+fn seam_box_push(g: &mut Game, b: Bx) -> BoxId { seam_box_push_no_g(b) }

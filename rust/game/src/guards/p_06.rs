@@ -56,7 +56,7 @@ pub fn search_probes(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// scoreSpots on the plan in hand.   (guards.ts scoreSpots)
-fn score_into(g: &Game, gd: GuardId, p: &mut crate::guards::SearchPlan, walk: Option<&[f32]>) {
+fn score_into(g: &mut Game, gd: GuardId, p: &mut crate::guards::SearchPlan, walk: Option<&[f32]>) {
     let elapsed = g.time - p.t0;
     let team = g.gd[gd].team;
     let others: Vec<GuardId> = g.guards.iter().copied().filter(|&o| o != gd && g.gd[o].state == crate::game::GuardState::Search && g.gd[o].script.is_none() && g.gd[o].search_plan.is_some() && g.gd[o].team == team).collect();   // (teams: spots are split over HIS side's net)
@@ -84,7 +84,7 @@ pub fn score_spots(g: &mut crate::game::Game, gd: GuardId, walk: Option<&[f32]>)
 }
 
 /// A spot some other searcher is walking to or looking into right now (within a spot's spacing of it): his, not ours.   (guards.ts spotTaken)
-pub fn spot_taken(g: &crate::game::Game, gd: GuardId, s: &crate::guards::SearchSpot) -> bool {
+pub fn spot_taken(g: &mut crate::game::Game, gd: GuardId, s: &crate::guards::SearchSpot) -> bool {
     let team = g.gd[gd].team;
     let spacing = SEARCH_SPACING_M;
     for &o in g.guards.iter() {
@@ -146,7 +146,7 @@ pub fn pick_next_spot(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// The closed frame of a door: hinge, unit along the frame hinge → latch, unit normal (+ = CCW side), width.   (guards.ts frameOf)
-pub fn frame_of(g: &crate::game::Game, d: DoorId) -> crate::doorway::RelF {
+pub fn frame_of(g: &mut crate::game::Game, d: DoorId) -> crate::doorway::RelF {
     let def = &g.dr[d].def;
     frame_from(def.closed_dir, def.hinge, def.width)
 }
@@ -158,7 +158,7 @@ fn frame_from(closed_dir: f64, hinge: [f64; 2], width: f64) -> crate::doorway::R
 }
 
 /// Where segment a→b crosses d's frame line within the opening: t along the segment, the side a is on, the crossing point, or None.   (guards.ts crossesDoor)
-pub fn crosses_door(g: &crate::game::Game, a: V3, b: V3, d: DoorId) -> Option<crate::guards::CrossesDoor> {
+pub fn crosses_door(g: &mut crate::game::Game, a: V3, b: V3, d: DoorId) -> Option<crate::guards::CrossesDoor> {
     let f = frame_of(g, d);
     crosses_frame(&f, a, b)
 }
@@ -307,7 +307,7 @@ pub fn pie_doorway(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, 
 }
 
 /// Does the man's remaining path still run through this door.   (guards.ts pathCrosses)
-pub fn path_crosses(g: &crate::game::Game, gd: GuardId, d: DoorId) -> bool {
+pub fn path_crosses(g: &mut crate::game::Game, gd: GuardId, d: DoorId) -> bool {
     let mut prev = g.ch[g.gd[gd].ch].pos;
     let mut i = g.gd[gd].path_i;
     while i < g.gd[gd].path.len() {

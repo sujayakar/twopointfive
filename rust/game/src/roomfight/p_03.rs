@@ -48,17 +48,9 @@ fn line_by(f: RoomFightFriendInLine) -> OpLineBy {
 fn clear_by(f: RoomFightFriendInLine) -> crate::clearline::LeadsBy {
     match f { RoomFightFriendInLine::Guard(x) => crate::clearline::LeadsBy::Guard(x), RoomFightFriendInLine::Player => crate::clearline::LeadsBy::Player }
 }
-/// `gd.lastKnown === D.pt` (off the page's path: with BELIEF.on nothing writes pt as the fix). The body of def_fix_is_pt, whose stub has no owner
-fn fix_is_pt(g: &Game, d: RoomfightDefId) -> bool { let def = &g.tab.roomfight_def[d]; def.pt_stamp == Some(g.gd[def.gd].fix_stamp) && g.gd[def.gd].last_known == Some(def.pt) }
-/// D.pt moved in place: a fix or a cover that is that object moves with it, with no new fix (def_move_pt's body, and `covers`)
-fn move_pt(g: &mut Game, d: RoomfightDefId, to: V3) {
-    let same = fix_is_pt(g, d);
-    let (gd, old) = (g.tab.roomfight_def[d].gd, g.tab.roomfight_def[d].pt);
-    g.tab.roomfight_def[d].pt = to;
-    if same { g.gd[gd].last_known = Some(to); }
-    if g.gd[gd].covers == Some(old) { g.gd[gd].covers = Some(to); }
-}
-/// `cover(gd, D.pt)` (belief.ts cover): rule off that is `gd.lastKnown = D.pt`, a new fix only if it was not that object already (def_fix_to_pt's body)
+/// His watched point moves: what his duty has his gun on moves with it. His fix does not.
+fn move_pt(g: &mut Game, d: RoomfightDefId, to: V3) { crate::roomfight::def_move_pt(g, d, to); }
+/// His duty has his gun on his watched point.
 fn cover_pt(g: &mut Game, d: RoomfightDefId) {
     let (gd, pt) = (g.tab.roomfight_def[d].gd, g.tab.roomfight_def[d].pt);
     crate::belief::cover(g, gd, pt);
@@ -71,8 +63,8 @@ pub fn room_fight_plant(g: &mut crate::game::Game, d: RoomfightDefId, why: &str)
     let c = g.gd[gd].ch;
     let threat = v3::copy(room_fight_threat_of(g, d));
     if g.gd[gd].script.is_some() { crate::squad::end_guard_script(g, gd, Some(crate::squad::EndGuardScriptState::Alert)); }
-    g.gd[gd].state = crate::game::GuardState::Alert;
-    g.gd[gd].awareness = m::max(g.gd[gd].awareness, 0.92);
+    crate::mind::set_state(g, gd, crate::game::GuardState::Alert, "roomfight");
+    crate::mind::raise(g, gd, 0.92, "roomfight");
     crate::control::set_hold(g, gd, true, "roomfight");
     crate::control::set_pinned(g, gd, true, "roomfight");
     let was = g.tab.roomfight_def[d].room;
@@ -152,7 +144,7 @@ pub fn room_fight_rally(g: &mut crate::game::Game, d: RoomfightDefId) {
     }
     if !posted { return; }
     if g.tab.roomfight_def[d].rally_at.is_nan() {
-        let t = g.time + pick(g, skill.rally);
+        let t = g.time + pick(g, crate::dice::Who::Def(d), skill.rally);
         g.tab.roomfight_def[d].rally_at = t;
         let go = crate::math_dice::sim_random(g) < skill.rally_chance * g.k.roomfight.rally_k;
         g.tab.roomfight_def[d].rally_go = go;
@@ -174,10 +166,9 @@ pub fn room_fight_rally(g: &mut crate::game::Game, d: RoomfightDefId) {
     }
     crate::control::set_hold(g, gd, false, "roomfight");
     crate::control::set_pinned(g, gd, false, "roomfight");
-    g.gd[gd].state = crate::game::GuardState::Alert;
-    g.gd[gd].awareness = m::max(g.gd[gd].awareness, 0.92);
-    g.gd[gd].last_known = Some(v3::copy(at));
-    g.gd[gd].fix_stamp = g.gd[gd].fix_stamp.wrapping_add(1); // a new object: a whole write of the fix (doze.ts:244)
+    crate::mind::set_state(g, gd, crate::game::GuardState::Alert, "roomfight");
+    crate::mind::raise(g, gd, 0.92, "roomfight");
+    crate::mind::fix(g, gd, Some(v3::copy(at)), "roomfight"); // a new object: a whole write of the fix (doze.ts:244)
     g.gd[gd].path = Vec::new();
     g.gd[gd].path_serial = g.gd[gd].path_serial.wrapping_add(1); // a whole replacement of the path
     g.gd[gd].path_goal = None;
@@ -312,7 +303,7 @@ pub fn room_fight_speak(g: &mut crate::game::Game, o: RoomfightOpId, text: &str,
 }
 
 /// True of an enemy who is NOT this covering man's: off his ordered way, and a mate has him. (roomfight.ts coverPasses)
-pub fn room_fight_cover_passes(g: &crate::game::Game, o: RoomfightOpId, h: GuardId) -> bool {
+pub fn room_fight_cover_passes(g: &mut crate::game::Game, o: RoomfightOpId, h: GuardId) -> bool {
     let r = g.k.roomfight;
     let a = match crate::orders::squad_orders_of(g, g.tab.roomfight_op[o].gd) { Some(a) => a, None => return false };
     let (watch, post) = {
@@ -473,12 +464,12 @@ fn tick_op_in_view(g: &mut Game, o: RoomfightOpId, dt: f64) {
             let off = m::abs(v3::wrap_angle(v3::yaw_to(cp, bp) - g.ch[c].aim_yaw));
             let t = g.time;
             let beat = if g.tab.roomfight_op[o].tgt.is_some() || t - g.tab.roomfight_op[o].lost_at < 1.5 {
-                pick(g, sk.shift)
+                pick(g, crate::dice::Who::Op(o), sk.shift)
             } else if off > sk.sector_deg * crate::v3::DEG && !g.tab.roomfight_op[o].turn.map_or(false, |u| u.to == b && t >= u.at) {
-                let a = pick(g, sk.react);
-                a + pick(g, sk.surprise)
+                let a = pick(g, crate::dice::Who::Op(o), sk.react);
+                a + pick(g, crate::dice::Who::Op(o), sk.surprise)
             } else {
-                pick(g, sk.react) * sk.ready
+                pick(g, crate::dice::Who::Op(o), sk.react) * sk.ready
             };
             g.tab.roomfight_op[o].ready_at = t + beat;
             g.tab.roomfight_op[o].track = 0.0;
@@ -491,7 +482,7 @@ fn tick_op_in_view(g: &mut Game, o: RoomfightOpId, dt: f64) {
                 if k.h == b && t - k.t < 1.5 { // the man he was on a moment ago: neither his track nor the beat starts from nothing
                     let gap = (t - k.t) / 1.5;
                     g.tab.roomfight_op[o].track = k.track * (1.0 - gap);
-                    g.tab.roomfight_op[o].ready_at = t + pick(g, sk.shift) * gap;
+                    g.tab.roomfight_op[o].ready_at = t + pick(g, crate::dice::Who::Op(o), sk.shift) * gap;
                 }
             }
             if !g.fight.called.has(b) {
@@ -670,9 +661,9 @@ fn tick_op_in_view(g: &mut Game, o: RoomfightOpId, dt: f64) {
     g.tab.roomfight_op[o].n += 1.0;
     g.fight.stats.op_rounds += 1.0;
     let gap = if js::truthy(string) {
-        if js::rem(g.tab.roomfight_op[o].n, string) == 0.0 { pick(g, sk.shift) } else { crate::gunroles::gun_string_gap(g, gd) }
+        if js::rem(g.tab.roomfight_op[o].n, string) == 0.0 { pick(g, crate::dice::Who::Op(o), sk.shift) } else { crate::gunroles::gun_string_gap(g, gd) }
     } else if js::rem(g.tab.roomfight_op[o].n, 2.0) == 0.0 {
-        pick(g, sk.shift)
+        pick(g, crate::dice::Who::Op(o), sk.shift)
     } else {
         sk.pair
     };
@@ -828,7 +819,7 @@ pub fn room_fight_cue(g: &mut crate::game::Game, o: RoomfightOpId) {
         let same = look.filter(|l| l.to == w || (shot_door.is_some() && l.door == shot_door)); // the man he was already looking for by ear: no second beat
         let at = match same {
             Some(l) => if door.is_some() { l.at } else { m::min(l.at, g.time) },
-            None => { let t = g.time; t + pick(g, sk.react) + if call { 0.25 } else { 0.0 } }
+            None => { let t = g.time; t + pick(g, crate::dice::Who::Op(o), sk.react) + if call { 0.25 } else { 0.0 } }
         };
         g.tab.roomfight_op[o].turn = Some(OpTurn { to: w, at, until: g.time + secs, pt, t0: Some(g.time), door });
     }

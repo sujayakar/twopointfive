@@ -124,7 +124,7 @@ fn running_cb(_g: &mut Game, base: crate::game::Interactable, verb: crate::game:
 /// `${Math.min(99, Math.round(x * 100))}`
 fn pct(x: f64) -> String { js::num_str(m::min(99.0, m::round(x * 100.0))) }
 /// a civilian's possessive for 'gun to … head' with the row of WORDS.on
-fn civ_whose(g: &Game, cv: CivId) -> String {
+fn civ_whose(g: &mut Game, cv: CivId) -> String {
     if g.cv[cv].she == "he" { String::from("his") } else { g.cv[cv].her.clone() }
 }
 
@@ -746,7 +746,7 @@ pub fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: f64, my
 }
 
 /// identity of a row: the thing and the verb   (player.ts rowKey)
-pub fn row_key(g: &crate::game::Game, r: &crate::game::Interactable) -> String {
+pub fn row_key(g: &mut crate::game::Game, r: &crate::game::Interactable) -> String {
     let who = match (r.door, r.guard) {
         (Some(d), _) => g.dr[d].def.name.clone(),
         (None, Some(gd)) => g.gd[gd].callsign.clone(),
@@ -773,7 +773,7 @@ pub fn pick_hover(g: &mut crate::game::Game) {
 }
 
 /// the selector's bottom row while it is open: letting go of Space on it does nothing   (player.ts cancelRow)
-pub fn cancel_row(g: &crate::game::Game) -> crate::game::Interactable {
+pub fn cancel_row(g: &mut crate::game::Game) -> crate::game::Interactable {
     let p = g.ch[g.pl[g.player].ch].pos;
     let mut it = mark(crate::game::InteractableKind::Cancel, [p[0], 1.3, p[2]], String::from("cancel"), String::from("let go here — nothing happens"), true, false);
     it.verb = Some(crate::game::Verb::Cancel);
@@ -782,7 +782,7 @@ pub fn cancel_row(g: &crate::game::Game) -> crate::game::Interactable {
 }
 
 /// how far a thing is from him, as its reach is measured: a door by its leaf or its doorway's centre, whichever is nearer   (player.ts thingDist)
-pub fn thing_dist(g: &crate::game::Game, it: &crate::game::Interactable, p: V3) -> f64 {
+pub fn thing_dist(g: &mut crate::game::Game, it: &crate::game::Interactable, p: V3) -> f64 {
     let d = v3::dist_xz(it.pos, p);
     match it.door {
         Some(door) => m::min(d, v3::dist_xz(g.dr[door].frame_centre, p)),
@@ -791,7 +791,7 @@ pub fn thing_dist(g: &crate::game::Game, it: &crate::game::Interactable, p: V3) 
 }
 
 /// how many of a kind are on the belt   (player.ts throwCount)
-pub fn throw_count(g: &crate::game::Game, kind: crate::game::ThrowKind) -> f64 {
+pub fn throw_count(g: &mut crate::game::Game, kind: crate::game::ThrowKind) -> f64 {
     let pl = g.player;
     match kind {
         crate::game::ThrowKind::Frag => g.pl[pl].frags,

@@ -58,12 +58,12 @@ pub fn forget_meter(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// Are the civilians on the floor at all right now.   (civilians.ts civiliansOnFloor)
-pub fn civilians_on_floor(g: &crate::game::Game) -> bool {
+pub fn civilians_on_floor(g: &mut crate::game::Game) -> bool {
     !g.civilians.is_empty() && !g.quiet_utility && !g.touring && !crate::lighting::is_daylight(g)
 }
 
 /// The ones to draw and collide with this frame.   (civilians.ts civiliansShown)
-pub fn civilians_shown(g: &crate::game::Game) -> Vec<GuardId> {
+pub fn civilians_shown(g: &mut crate::game::Game) -> Vec<GuardId> {
     if !civilians_on_floor(g) { return crate::civilians::none(); }
     let mut out = Vec::new();
     for &cv in g.civilians.iter() { if g.cv[civ_of(g, cv)].state != CivState::Gone { out.push(cv); } }
@@ -84,7 +84,7 @@ pub fn civilian_bodies(g: &mut crate::game::Game) -> Vec<GuardId> {
 }
 
 /// Their door contacts: a standing civilian pushes a leaf like anybody.   (civilians.ts civilianDoorContacts)
-pub fn civilian_door_contacts(g: &crate::game::Game, contacts: &mut Vec<crate::doors::DoorContact>) {
+pub fn civilian_door_contacts(g: &mut crate::game::Game, contacts: &mut Vec<crate::doors::DoorContact>) {
     for cv in civilians_shown(g) {
         if g.gd[cv].state == crate::game::GuardState::Dead || g.gd[cv].held.is_some() { continue; }
         let c = g.gd[cv].ch;
@@ -269,7 +269,7 @@ pub fn pick(g: &mut crate::game::Game, gd: GuardId, pool: &[String]) -> String {
 pub fn away(g: &mut crate::game::Game) -> bool { !crate::dialogue::is_office(g) }
 
 /// What she tells the man she reaches, by cause.   (civilians.ts reportPool)
-pub fn report_pool(g: &crate::game::Game, cause: Option<&str>) -> Vec<String> {
+pub fn report_pool(g: &mut crate::game::Game, cause: Option<&str>) -> Vec<String> {
     let lines = crate::dialogue::civ_lines();
     let k = match cause { Some(c) if lines.report.has(String::from(c)) => c, _ => "sam" };
     let was = lines.report.get(String::from(k));
@@ -405,7 +405,7 @@ pub fn update_one(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
         return;
     }
     if g.cv[cv].state == CivState::Held { released(g, gd); }
-    if g.ai_enabled { see(g, gd, dt); hear(g, gd); bodies(g, gd); } else { g.gd[gd].awareness = m::max(0.0, g.gd[gd].awareness - dt * 0.5); }
+    if g.ai_enabled { see(g, gd, dt); hear(g, gd); bodies(g, gd); } else { let to = m::max(0.0, g.gd[gd].awareness - dt * 0.5); crate::mind::set(g, gd, to, "civilians"); }
     let mut move_ = 0.0;
     let mut crouch = 0.0;
     match g.cv[cv].state {
@@ -477,7 +477,7 @@ pub fn step_sound(g: &mut crate::game::Game, gd: GuardId, move_: f64) {
 
 // ---------------------------------------------------------------- perception
 /// Her eye this frame: busy at a task, scanning once frightened, else the walking-about eye.   (civilians.ts eyeOf)
-pub fn eye_of(g: &crate::game::Game, gd: GuardId) -> crate::knobs::CivKEye {
+pub fn eye_of(g: &mut crate::game::Game, gd: GuardId) -> crate::knobs::CivKEye {
     use crate::knobs::CivKEye;
     let st = g.cv[civ_of(g, gd)].state;
     if st != CivState::Work && st != CivState::Held {
@@ -510,13 +510,13 @@ pub fn see(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     let smoke = g.gd[gd].smoke_trans;
     let vis = crate::guards::eye_contact(g, crate::guards::Eye { pos: eye, look, range: e.range, half_deg: e.half_deg, near_m: e.near_m, near_deg: e.near_deg, v_half_deg: None }, pc, true, false, smoke, None);
     let decay = if g.cv[cv].state == CivState::Work { 0.08 } else { 0.05 };
-    if !vis.visible { g.gd[gd].awareness = m::max(0.0, g.gd[gd].awareness - dt * decay); return; }
+    if !vis.visible { { let to = m::max(0.0, g.gd[gd].awareness - dt * decay); crate::mind::set(g, gd, to, "civilians"); } return; }
     let holding_other = g.pl[pl].holding.as_ref().map_or(false, |h| h.g != gd);
     let violent = crate::game::player_gun_in_hand(g, pl).is_some() || g.pl[pl].takedown.is_some() || holding_other || g.time - g.pl[pl].last_fire_t < 2.0;
     let gun = violent && vis.dist < g.k.civ.gun_m;
     let rate = crate::guards::sight_gain(g, gd, vis.dist) * g.k.civ.keen_k * (if gun { g.k.civ.gun_k } else { 1.0 });
-    if rate <= 0.05 { g.gd[gd].awareness = m::max(0.0, g.gd[gd].awareness - dt * decay); return; }
-    g.gd[gd].awareness = v3::clamp(g.gd[gd].awareness + rate * dt, 0.0, 1.0);
+    if rate <= 0.05 { { let to = m::max(0.0, g.gd[gd].awareness - dt * decay); crate::mind::set(g, gd, to, "civilians"); } return; }
+    { let to = v3::clamp(g.gd[gd].awareness + rate * dt, 0.0, 1.0); crate::mind::set(g, gd, to, "civilians"); }
     if rate > 0.25 {
         let at = g.ch[pc].pos;
         let now = g.time;
@@ -640,21 +640,21 @@ pub fn civ_visibility(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> f64 {
 
 // ---------------------------------------------------------------- WORK: the loop and its tasks
 /// The task at her current mark.   (civilians.ts taskAt)
-pub fn task_at(g: &crate::game::Game, gd: GuardId) -> crate::scene_level::CivilianTask {
+pub fn task_at(g: &mut crate::game::Game, gd: GuardId) -> crate::scene_level::CivilianTask {
     let wp = g.gd[gd].wp;
     let cv = civ_of(g, gd);
     match g.cv[cv].def.tasks.as_ref().and_then(|t| t.get(wp)) { Some(t) => *t, None => crate::scene_level::CivilianTask::Stand }
 }
 
 /// Does this civilian shove the furniture this frame: not while calm.   (civilians.ts civilianPushesProps)
-pub fn civilian_pushes_props(g: &crate::game::Game, gd: GuardId) -> bool {
+pub fn civilian_pushes_props(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let cv = match g.gd[gd].civ { Some(c) => c, None => return true };
     let st = g.cv[cv].state;
     st != CivState::Work && st != CivState::Startled && st != CivState::Gone
 }
 
 /// A civilian heading for / in his chair is no contact for the furniture.   (civilians.ts civilianSeated)
-pub fn civilian_seated(g: &crate::game::Game, gd: GuardId) -> bool {
+pub fn civilian_seated(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let cv = match g.gd[gd].civ { Some(c) => c, None => return false };
     if g.cv[cv].state != CivState::Work { return false; }
     if g.cv[cv].seated { return true; }
@@ -805,7 +805,7 @@ pub fn to_work(g: &mut crate::game::Game, gd: GuardId, line: bool) {
     g.ch[c].anim.act = None;
     let x = &mut g.cv[cv];
     x.look_at = None; x.target = None; x.report_to = None; x.settle_t = -1.0; x.rise_t = 0.0; x.seated = false;
-    g.gd[gd].awareness = m::min(g.gd[gd].awareness, 0.1);
+    crate::mind::cap(g, gd, 0.1, "civilians");
     if line {
         let lines = crate::dialogue::civ_lines();
         let s = pick(g, gd, &lines.settle);
@@ -929,7 +929,7 @@ pub fn to_alarmed(g: &mut crate::game::Game, gd: GuardId, cause: crate::civilian
         let pos = g.ch[c].pos;
         crate::chronicle::chronicle_n(g, ChronKind::CivilianSpotted, ChronCountKey::CivSeen, Some(&data), Some(pos));
     }
-    g.gd[gd].awareness = m::max(g.gd[gd].awareness, if saw_him { 1.0 } else { 0.5 });
+    crate::mind::raise(g, gd, if saw_him { 1.0 } else { 0.5 }, "civilians");
     set_state(g, gd, CivState::Alarmed);
     let lines = crate::dialogue::civ_lines();
     let pool = match lines.gasp.get(String::from(cause.as_str())) { Some(p) => p, None => lines.gasp.get(String::from("sam")).unwrap() };
@@ -980,7 +980,7 @@ pub fn path_metres(g: &mut crate::game::Game, from: V3, to: V3) -> crate::civili
 }
 
 /// May this man be run to and told.   (civilians.ts tellable)
-pub fn tellable(g: &crate::game::Game, o: GuardId) -> bool {
+pub fn tellable(g: &mut crate::game::Game, o: GuardId) -> bool {
     let x = &g.gd[o];
     x.state != crate::game::GuardState::Dead && x.team == crate::teams::Team::Guard && x.held.is_none() && x.script.is_none() && x.state != crate::game::GuardState::Alert && g.guards.contains(&o)
 }

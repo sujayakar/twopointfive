@@ -97,7 +97,7 @@ pub fn place_read(g: &mut crate::game::Game, gd: GuardId) -> f64 {
 }
 
 /// Is his torch this rule's to decide this frame: a staff man's hand torch on a plain patrol with nothing on his mind. (calmtorch.ts calmTorchRuled)
-pub fn calm_torch_ruled(g: &crate::game::Game, gd: GuardId) -> bool {
+pub fn calm_torch_ruled(g: &mut crate::game::Game, gd: GuardId) -> bool {
     !g.touring
         && !g.quiet_utility
         && g.gd[gd].unit.is_none()

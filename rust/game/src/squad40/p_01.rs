@@ -33,10 +33,10 @@ fn at_of(t: &crate::orders::OrderTarget) -> V3 {
 }
 
 /// A TEAMMATE'S 40 MM WORKS IN THIS BUILD: settled on the page. (squad40.ts squad40Here)
-pub fn squad40_here(g: &crate::game::Game) -> bool { true }
+pub fn squad40_here(g: &mut crate::game::Game) -> bool { true }
 
 /// the launcher is under the gun in his hands: a long gun whose row has one. (squad40.ts tubeUp)
-pub fn tube_up(g: &crate::game::Game, gd: GuardId) -> bool {
+pub fn tube_up(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let d = g.fa[g.gd[gd].weapon].def;
     let r = g.m.weapons.weapons.get(d).unwrap();
     r.cls != crate::weapons::WeaponClass::Pistol && r.pellets.is_none() && r.launcher != Some(false)
@@ -52,14 +52,14 @@ fn left_in(g: &Game, s: &State) -> f64 {
 }
 
 /// the rounds the squad's men on their feet have between them. (squad40.ts squad40Left)
-pub fn squad40_left(g: &crate::game::Game) -> f64 {
+pub fn squad40_left(g: &mut crate::game::Game) -> f64 {
     let key = crate::seats::view_key(g);
     let g: &Game = g;
     match g.m.squad40.states.get(key) { Some(s) => left_in(g, s), None => 0.0 }
 }
 
 /// the words the throws' row adds while the order is on the page. (squad40.ts squad40Word)
-pub fn squad40_word(g: &crate::game::Game) -> String {
+pub fn squad40_word(g: &mut crate::game::Game) -> String {
     let key = crate::seats::view_key(g);
     let brought = g.m.squad40.states.get(key).map(|s| s.brought);
     match brought {
@@ -119,13 +119,13 @@ pub fn bodies(g: &mut crate::game::Game) -> crate::squad40::Bodies {
 }
 
 /// he faces the spot. (squad40.ts onIt)
-pub fn on_it(g: &crate::game::Game, gd: GuardId, at: V3) -> bool {
+pub fn on_it(g: &mut crate::game::Game, gd: GuardId, at: V3) -> bool {
     let c = g.gd[gd].ch;
     m::abs(v3::wrap_angle(g.ch[c].aim_yaw - v3::yaw_to(g.ch[c].pos, at))) < g.k.squad40.aim_rad
 }
 
 /// his gun is UP and on the spot: in a fight, or under an order that has it at his shoulder. (squad40.ts gunOn)
-pub fn gun_on(g: &crate::game::Game, gd: GuardId, at: V3) -> bool {
+pub fn gun_on(g: &mut crate::game::Game, gd: GuardId, at: V3) -> bool {
     if !on_it(g, gd, at) { return false; }
     if g.gd[gd].state == crate::game::GuardState::Alert { return true; }
     if let Some(o) = crate::roomfight::room_fight_op_of(g, gd) {
@@ -356,7 +356,7 @@ pub fn turn_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) 
     if let Some(w) = g.m.squad40.states.get_mut(key).and_then(|s| s.turns.get_mut(gd)) { w.fired_t = now; }
 }
 
-/// the arm `OrderIssue::Shell40`: a refusal's words, or None (the floor as it stands NOW: nothing is spent on a refusal)
+/// the order's `issue` (orders/rows/shell40.rs): a refusal's words, or None (the floor as it stands NOW: nothing is spent on a refusal)
 pub fn row_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> Option<String> {
     let at = at_of(t);
     let a = match plan(g, men, at, None) {
@@ -395,18 +395,13 @@ pub fn row_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget) 
 
 /// the order's row on the throws' page. (squad40.ts row)
 pub fn row(g: &mut crate::game::Game) -> OrdersOrderDefId {
-    g.tab.orders_order_def.push(crate::orders::OrderDef {
-        id: String::from(SHELL_THERE),
+    let def = crate::orders::rows::def(&crate::orders::rows::shell40::ORDER, crate::orders::OrderDef {
         page: Some(String::from(crate::squadthrow::THROW_PAGE)),
         targets: vec![crate::orders::TargetKind::Floor],
         free: Some(true),
-        label: crate::orders::OrderLabel::Shell40,
-        only: Some(crate::orders::OrderOnly::Shell40),
-        valid: Some(crate::orders::OrderValid::Shell40),
-        issue: crate::orders::OrderIssue::Shell40,
-        tick: Some(crate::orders::OrderTick::Shell40),
         ..Default::default()
-    })
+    });
+    g.tab.orders_order_def.push(def)
 }
 
 /// the squad's HUD block: what is left while this staging brought any, and the shot just made. (squad40.ts notes)

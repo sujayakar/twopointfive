@@ -8,12 +8,12 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// Is the rule running: nobody's show on the stage; a show's rounds are its script's. (friendlyfire.ts ffLive)
-pub fn ff_live(g: &crate::game::Game) -> bool {
+pub fn ff_live(g: &mut crate::game::Game) -> bool {
     !g.touring && !crate::director::director_showing(g) && !g.puppet.is_some()
 }
 
 /// A man of Sam's own side whose body a round of that side can find: living, on his feet, not a show's cast. (friendlyfire.ts ffBody)
-pub fn ff_body(g: &crate::game::Game, gd: GuardId) -> bool {
+pub fn ff_body(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let c = g.gd[gd].ch;
     if !(g.gd[gd].state != crate::game::GuardState::Dead && g.ch[c].alive && !g.gd[gd].god && !g.gd[gd].civ.is_some()) {
         return false;
@@ -23,7 +23,7 @@ pub fn ff_body(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// Is this shooter's side Sam's: an operative, never the night staff or a defender. (friendlyfire.ts ffSide)
-pub fn ff_side(g: &crate::game::Game, sg: Option<GuardId>) -> bool {
+pub fn ff_side(g: &mut crate::game::Game, sg: Option<GuardId>) -> bool {
     let Some(sg) = sg else { return false };
     if g.gd[sg].civ.is_some() {
         return false;

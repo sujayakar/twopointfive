@@ -70,7 +70,7 @@ pub fn same_wall(a: &crate::wallcharge::WallSpot, b: &crate::wallcharge::WallSpo
 }
 
 /// Is the wall charge live in this game right now: the walls' switch, outside a show, chaos above 0.   (wallcharge.ts wallChargeOn)
-pub fn wall_charge_on(g: &crate::game::Game) -> bool {
+pub fn wall_charge_on(g: &mut crate::game::Game) -> bool {
     crate::wallbreak::wall_break_on(g) && crate::destruction::chaos_of(g) > 0.0
 }
 

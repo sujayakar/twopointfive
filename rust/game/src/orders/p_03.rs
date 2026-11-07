@@ -24,7 +24,7 @@ fn at_of(t: &OrderTarget) -> V3 {
     }
 }
 /// `recipients(t)` with its `who` left to the standing choice
-fn recipients_of(g: &Game, t: &OrderTarget) -> Vec<GuardId> {
+fn recipients_of(g: &mut Game, t: &OrderTarget) -> Vec<GuardId> {
     squad_orders_recipients(g, Some(t), None)
 }
 fn on(b: Option<bool>) -> bool {
@@ -43,7 +43,7 @@ fn player_ch(g: &Game) -> CharId {
 fn press_delete(g: &mut Game, input: InputId, code: &str) -> bool {
     g.tab.input[input].pressed.delete(String::from(code))
 }
-fn press_has(g: &Game, input: InputId, code: &str) -> bool {
+fn press_has(g: &mut Game, input: InputId, code: &str) -> bool {
     g.tab.input[input].pressed.has(String::from(code))
 }
 /// `input.clicked &= ~bit`
@@ -83,9 +83,9 @@ fn drop_stock_word(s: &str) -> &str {
 
 // ---- what skeleton 5 still cannot reach ----
 /// `b.owner`. Once the table of Box rows is there, the body is that row's field
-fn seam_box_owner(g: &Game, b: BoxId) -> f64 { g.tab.boxes[b].owner }
+fn seam_box_owner(g: &mut Game, b: BoxId) -> f64 { g.tab.boxes[b].owner }
 /// `b.flags`. As seam_box_owner
-fn seam_box_flags(g: &Game, b: BoxId) -> f64 { g.tab.boxes[b].flags }
+fn seam_box_flags(g: &mut Game, b: BoxId) -> f64 { g.tab.boxes[b].flags }
 // BRING-UP: THE DOOR ROWS' CLOSURES (doortools.ts:808-846 the constructor's rows, :864 thrRows on the page's `outsidePlain`, :908-938 sync's `go` and the big
 // slot's row). The skeleton has their arms and no named function for their bodies, so the first door order given stopped here (room-clear-four tick 1009, 'bangClear').
 // SKELETON-GAP: a public name in doortools for each Door* arm's body (label / valid / issue), as squadthrow has row_label / row_valid / row_issue; then these are calls.
@@ -114,7 +114,7 @@ fn door_can_then(g: &mut Game, what: crate::doortools::DoorToolsCanThresholdThen
     }
 }
 /// `who === 'you' ? wg(…) : `${who} is behind that door.``
-fn behind_words(g: &Game, who: String) -> String {
+fn behind_words(g: &mut Game, who: String) -> String {
     if who == "you" { let (now, was) = (String::from("you're behind that door."), String::from("you are behind that door.")); crate::words::wg(g, &now, &was) } else { format!("{} is behind that door.", who) }
 }
 fn seam_arm_label(g: &mut Game, arm: &OrderLabel, t: &OrderTarget) -> String {
@@ -167,7 +167,7 @@ fn seam_arm_label(g: &mut Game, arm: &OrderLabel, t: &OrderTarget) -> String {
             if w.is_empty() { String::from("go") } else { format!("go · {}", w) }
         }
         // (the arms order_label takes itself, named so that a new row of the enum is a build error here and never a stop in play)
-        OrderLabel::Text { .. } | OrderLabel::Cover | OrderLabel::WallRow | OrderLabel::ThrowRow { .. } | OrderLabel::ThrowOpen | OrderLabel::Shell40 | OrderLabel::Work | OrderLabel::Smoke | OrderLabel::PairGo => unreachable!("order_label answers this arm itself"),
+        OrderLabel::Text { .. } | OrderLabel::Cover | OrderLabel::WallRow | OrderLabel::ThrowRow { .. } | OrderLabel::ThrowOpen | OrderLabel::Row(_) | OrderLabel::Work | OrderLabel::Smoke | OrderLabel::PairGo => unreachable!("order_label answers this arm itself"),
     }
 }
 /// Err(None): false, Err(Some): the word for why not
@@ -245,7 +245,7 @@ fn seam_arm_valid(g: &mut Game, arm: &OrderValid, t: &OrderTarget, men: &[GuardI
             Err(Some(crate::words::wg(g, &now, &was)))
         }
         // (the arms order_valid takes itself, named so that a new row of the enum is a build error here and never a stop in play)
-        OrderValid::Move | OrderValid::Stack | OrderValid::WallRow | OrderValid::ShutDoor | OrderValid::ThrowRow { .. } | OrderValid::Wand | OrderValid::Shell40 | OrderValid::Work | OrderValid::Smoke | OrderValid::PairTake | OrderValid::PairWatch | OrderValid::PairGo => unreachable!("order_valid answers this arm itself"),
+        OrderValid::Move | OrderValid::Stack | OrderValid::WallRow | OrderValid::ShutDoor | OrderValid::ThrowRow { .. } | OrderValid::Wand | OrderValid::Row(_) | OrderValid::Work | OrderValid::Smoke | OrderValid::PairTake | OrderValid::PairWatch | OrderValid::PairGo => unreachable!("order_valid answers this arm itself"),
     }
 }
 /// Some: refused, in those words
@@ -290,13 +290,12 @@ fn seam_arm_issue(g: &mut Game, arm: &OrderIssue, men: &[GuardId], t: &OrderTarg
         // doortools.ts:938 `(S.big ? this.goMen(men) : this.pairWord(men) ? null : 'nobody\'s waiting for you to say go.') ?? undefined`
         OrderIssue::DoorThrWord => if squad_orders_big(g) { crate::doortools::door_tools_go_men(g, men, None) } else if crate::doortools::door_tools_pair_word(g, men) { None } else { Some(String::from("nobody's waiting for you to say go.")) },
         // squad40.ts:208, squadsmoke.ts:135, pairorders.ts:211 / :227 / :240. These bodies are not in the skeleton's sig.rs: the paths resolve only in the joined crate
-        OrderIssue::Shell40 => crate::squad40::p_01::row_issue(g, men, t),
         OrderIssue::Smoke => crate::squadsmoke::p_01::row_smoke_issue(g, men, t, o),
         OrderIssue::PairTake { mode } => crate::pairorders::p_01::take_issue(g, *mode, men, t),
         OrderIssue::PairWatch => crate::pairorders::p_01::watch_issue(g, men, t),
         OrderIssue::PairDark => crate::pairorders::p_01::dark_issue(g, men, t),
         // (the arms order_issue takes itself, named so that a new row of the enum is a build error here and never a stop in play)
-        OrderIssue::Nothing | OrderIssue::Move | OrderIssue::Stack | OrderIssue::Cover | OrderIssue::FallIn | OrderIssue::Hold | OrderIssue::Silent | OrderIssue::Loud | OrderIssue::ShutDoor | OrderIssue::ThrowRow { .. } | OrderIssue::WallRow | OrderIssue::Wand | OrderIssue::Work | OrderIssue::PairGo => unreachable!("order_issue answers this arm itself"),
+        OrderIssue::Nothing | OrderIssue::Move | OrderIssue::Stack | OrderIssue::Cover | OrderIssue::FallIn | OrderIssue::Hold | OrderIssue::Silent | OrderIssue::Loud | OrderIssue::ShutDoor | OrderIssue::ThrowRow { .. } | OrderIssue::WallRow | OrderIssue::Wand | OrderIssue::Work | OrderIssue::PairGo | OrderIssue::Row(_) => unreachable!("order_issue answers this arm itself"),
     }
 }
 
@@ -320,7 +319,7 @@ pub fn order_label(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::or
             let stun = crate::squadthrow::left(g, crate::squadthrow::SquadThrowKind::Stun);
             format!("throw · frag {} · bang {}{}", frag, stun, crate::squad40::squad40_word(g))
         }
-        OrderLabel::Shell40 => format!("40 mm there · {} left", crate::squad40::squad40_left(g)),
+        OrderLabel::Row(r) => (r.label)(g, t),
         OrderLabel::Work => match t {
             OrderTarget::Floor(OrderTargetFloor { thing: Some(th), .. }) => crate::workthings::work_things_words(g, th),
             _ => String::from("work it"),
@@ -344,6 +343,7 @@ pub fn order_can(g: &mut crate::game::Game, d: OrdersOrderDefId, gd: GuardId, t:
     let Some(arm) = g.tab.orders_order_def[d].can else { return None };
     let at = at_of(t);
     match arm {
+        OrderCan::Row(r) => match r.can { Some(f) => f(g, gd, t), None => None },
         OrderCan::Move => row_move_can(g, gd, t),
         OrderCan::Cover => row_cover_can(g, gd, t),
         OrderCan::WallRow => match crate::wallcharge::wall_charge_can_of(g, gd, t) {
@@ -411,14 +411,11 @@ pub fn order_only(g: &mut crate::game::Game, d: OrdersOrderDefId, men: &[GuardId
             let OrderTarget::Door(x) = t else { return Vec::new() };
             for side in [x.side, -x.side] {
                 let mut there = OrderTarget::Door(OrderTargetDoor { side, ..*x });
-                if let crate::wandorder::Pick::Arm1(p) = crate::wandorder::pick(g, men, &there) { return vec![p.gd]; }
+                if let crate::wandorder::Pick::Arm1(p) = crate::wandorder::pick(g, men, &mut there) { return vec![p.gd]; }
             }
             Vec::new()
         }
-        OrderOnly::Shell40 => match crate::squad40::plan(g, men, at, Some(crate::squad40::Asker::Only)) {
-            crate::squad40::Plan::Text(_) => Vec::new(),
-            crate::squad40::Plan::Arm1(a) => vec![a.a.gd],
-        },
+        OrderOnly::Row(r) => match r.only { Some(f) => f(g, men, t), None => men.to_vec() },
         OrderOnly::Work => crate::workthings::work_things_pick(g, men, t),
         OrderOnly::Smoke => match crate::squadsmoke::squad_smoke_thrower(g, men, at) { Some(th) => vec![th.gd], None => Vec::new() },
         OrderOnly::PairTake => {
@@ -452,14 +449,11 @@ pub fn order_valid(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::or
             plain_valid(crate::shutdoor::why_not_shut(g, x.door, men))
         }
         OrderValid::ThrowRow { kind } => crate::squadthrow::row_valid(g, men, at, kind).map_err(Some),
-        OrderValid::Wand => match crate::wandorder::pick(g, men, &t.clone()) {
+        OrderValid::Wand => match crate::wandorder::pick(g, men, &mut t.clone()) {
             crate::wandorder::Pick::Text(w) => Err(Some(w)),
             crate::wandorder::Pick::Arm1(_) => Ok(()),
         },
-        OrderValid::Shell40 => match crate::squad40::plan(g, men, at, Some(crate::squad40::Asker::Valid)) {
-            crate::squad40::Plan::Text(w) => Err(Some(w)),
-            crate::squad40::Plan::Arm1(a) => plain_valid(a.who),
-        },
+        OrderValid::Row(r) => match r.valid { Some(f) => f(g, t, men), None => Ok(()) },
         OrderValid::Work => {
             let OrderTarget::Floor(OrderTargetFloor { thing: Some(th), .. }) = t else { return Err(Some(String::from("nothing to work there."))) };
             if th.stand.is_none() { return Err(Some(String::from("can't get a hand on it."))); }
@@ -513,7 +507,7 @@ pub fn order_issue(g: &mut crate::game::Game, d: OrdersOrderDefId, men: &[GuardI
             crate::wallcharge::WallChargeIssue::Text(w) => Some(w),
             crate::wallcharge::WallChargeIssue::Arm1(()) => None,
         },
-        OrderIssue::Wand => match crate::wandorder::issue(g, men, &t.clone()) {
+        OrderIssue::Wand => match crate::wandorder::issue(g, men, &mut t.clone()) {
             crate::wandorder::Issue::Text(w) => Some(w),
             crate::wandorder::Issue::Arm1(()) => None,
         },
@@ -522,6 +516,7 @@ pub fn order_issue(g: &mut crate::game::Game, d: OrdersOrderDefId, men: &[GuardI
             crate::workthings::WorkThingsIssue::Arm1(()) => None,
         },
         OrderIssue::PairGo => { crate::pairorders::pair_orders_mark(g, Some(crate::pairorders::PairOrdersMarkBy::Row)); None }
+        OrderIssue::Row(r) => (r.issue)(g, men, t, o),
         arm => seam_arm_issue(g, &arm, men, t, o),
     }
 }
@@ -692,7 +687,7 @@ pub fn squad_orders_rows_for(g: &mut crate::game::Game, t: &crate::orders::Order
 }
 
 /// A ring put up now is one of the flat tree (orders.ts SquadOrders.flatRing)
-pub fn squad_orders_flat_ring(g: &crate::game::Game) -> bool {
+pub fn squad_orders_flat_ring(g: &mut crate::game::Game) -> bool {
     !crate::rails::rails_live(g) || crate::rails::rails_flat_ring(g)
 }
 
@@ -744,7 +739,7 @@ pub fn squad_orders_seat(g: &mut crate::game::Game, def: OrdersOrderDefId, stood
 }
 
 /// Is the 'wait for my word' row offered under these rows (orders.ts SquadOrders.wordRowOf)
-pub fn squad_orders_word_row_of(g: &crate::game::Game, t: &crate::orders::OrderTarget, rows: &[OrdersOrderDefId]) -> bool {
+pub fn squad_orders_word_row_of(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, rows: &[OrdersOrderDefId]) -> bool {
     if matches!(t, OrderTarget::Foe(_)) { return false; }
     rows.iter().any(|&d| crate::planlay::layable(g, d))
 }
@@ -763,7 +758,7 @@ pub fn squad_orders_word_page(g: &mut crate::game::Game, m: &crate::orders::Menu
 }
 
 /// The digit the open menu's 'wait for my word' row is on (orders.ts SquadOrders.waitDigit)
-pub fn squad_orders_wait_digit(g: &crate::game::Game, m: &crate::orders::Menu) -> f64 {
+pub fn squad_orders_wait_digit(g: &mut crate::game::Game, m: &crate::orders::Menu) -> f64 {
     let k = crate::orders::digit_of(&g.k.orders.wait_key);
     if m.word_row && k <= crate::orders::ORDER_DIGITS && !m.rows.iter().any(|&d| g.tab.orders_order_def[d].key == Some(k)) { k } else { 0.0 }
 }
@@ -1198,7 +1193,7 @@ pub fn squad_orders_part_give(g: &mut crate::game::Game, m: &crate::orders::Menu
 }
 
 /// The open menu's target as its men will work it (orders.ts SquadOrders.menuTarget)
-pub fn squad_orders_menu_target(g: &crate::game::Game) -> Option<crate::orders::OrderTarget> {
+pub fn squad_orders_menu_target(g: &mut crate::game::Game) -> Option<crate::orders::OrderTarget> {
     g.orders.menu.as_ref().map(menu_target_of)
 }
 

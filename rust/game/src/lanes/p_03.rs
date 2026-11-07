@@ -244,7 +244,7 @@ pub fn mouth_of(g: &mut crate::game::Game, l: LanesLaneId, p: V3) -> V3 {
 }
 
 /// the price of a walk with this mask's floor made dear, on top of `base` (lanes.ts priceOf)
-pub fn price_of(g: &crate::game::Game, m: Option<&[u8]>, base: Option<&crate::tactics::TacticsPenalty>) -> Option<crate::lanes::LanePenalty> {
+pub fn price_of(g: &mut crate::game::Game, m: Option<&[u8]>, base: Option<&crate::tactics::TacticsPenalty>) -> Option<crate::lanes::LanePenalty> {
     use crate::lanes::LanePenalty;
     let Some(mask) = m else { return base.map(|b| LanePenalty::Base { base: b.clone() }) };
     let (w, dear) = (g.col.nav.w, g.k.lanes.dear);
@@ -336,7 +336,7 @@ pub fn lane_gate(g: &mut crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// The point `m` metres on along his way. (lanes.ts along)
-pub fn along(g: &crate::game::Game, gd: GuardId, m: f64) -> V3 {
+pub fn along(g: &mut crate::game::Game, gd: GuardId, m: f64) -> V3 {
     let mut a = pos_of(g, gd);
     let mut left = m;
     let mut i = g.gd[gd].path_i;
@@ -374,7 +374,7 @@ pub fn plant_short(g: &mut crate::game::Game, gd: GuardId, lane: f64, look: V3) 
 }
 
 /// The first point of a known lane on the next `aheadM` of his way; `inside`: he stands in one, and None means his way leaves it for good within reach. (lanes.ts ahead)
-pub fn ahead(g: &crate::game::Game, m: &[u8], gd: GuardId, inside: bool) -> Option<V3> {
+pub fn ahead(g: &mut crate::game::Game, m: &[u8], gd: GuardId, inside: bool) -> Option<V3> {
     let mut a = pos_of(g, gd);
     let mut left = g.k.lanes.ahead_m;
     let mut was = inside;

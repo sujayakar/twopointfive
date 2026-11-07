@@ -27,7 +27,7 @@ pub fn glance_toward(g: &mut crate::game::Game, gd: GuardId, at: V3, secs: Optio
 }
 
 /// Read-only peek for the panel / the QA harness (None: no whistle has ever concerned this man).   (whistle.ts whistleMem)
-pub fn whistle_mem(g: &crate::game::Game, gd: GuardId) -> Option<crate::whistle::WhistleMem> {
+pub fn whistle_mem(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::whistle::WhistleMem> {
     g.m.whistle.mem_of.get(gd).copied()
 }
 
@@ -87,14 +87,14 @@ pub fn try_whistle(g: &mut crate::game::Game) -> bool {
 }
 
 /// Mouth height off the event's floor position (a crouched man whistles from lower).   (whistle.ts mouthOf)
-pub fn mouth_of(g: &crate::game::Game, e: crate::game::GameEvent) -> V3 {
+pub fn mouth_of(g: &mut crate::game::Game, e: crate::game::GameEvent) -> V3 {
     let man = crate::seats::man_by_id(g, e.who.unwrap_or(crate::consts::PLAYER_ID));
     let crouched = man.map_or(false, |p| g.pl[p].crouch);
     [e.pos[0], if crouched { 1.0 } else { 1.55 }, e.pos[2]]
 }
 
 /// Can this man be the one who ANSWERS: calm, free, on nobody's errand, of a side that minds the player.   (whistle.ts canAnswer)
-pub fn can_answer(g: &crate::game::Game, gd: GuardId, who: f64) -> bool {
+pub fn can_answer(g: &mut crate::game::Game, gd: GuardId, who: f64) -> bool {
     let state = g.gd[gd].state;
     if state != crate::game::GuardState::Patrol && state != crate::game::GuardState::Suspicious { return false; }
     if g.gd[gd].held.is_some() || g.gd[gd].script.is_some() || g.gd[gd].task.is_some() { return false; }
@@ -145,12 +145,6 @@ pub fn resolve<'g>(g: &'g mut crate::game::Game, e: crate::game::GameEvent, keen
     g.m.whistle.res_of.get_mut(key).unwrap()
 }
 
-/// `gd.lastKnown = v3.copy(at)`, a new object in the TypeScript: every whole write bumps `fix_stamp` (doze.ts:244's identity question).
-fn write_fix(g: &mut crate::game::Game, gd: GuardId, at: V3) {
-    let man = &mut g.gd[gd];
-    man.last_known = Some(v3::copy(at));
-    man.fix_stamp = man.fix_stamp.wrapping_add(1);
-}
 
 /// hearingCheck, for a whistle inside the horizon: what it does to THIS man. `small` = hearingCheck's note of a small noise.   (whistle.ts hearWhistle)
 pub fn hear_whistle(g: &mut crate::game::Game, gd: GuardId, e: crate::game::GameEvent, keen: f64, small: &mut dyn FnMut(&mut crate::game::Game, V3)) {
@@ -168,9 +162,9 @@ pub fn hear_whistle(g: &mut crate::game::Game, gd: GuardId, e: crate::game::Game
     if state == GuardState::Alert || state == GuardState::Search || g.gd[gd].awareness >= 0.85 {
         // (a word on the radio this tick stands over what he hears: belief.ts wordNow)
         if !crate::belief::word_now(g, gd) && (state != GuardState::Alert || g.gd[gd].last_known.is_none() || g.time - g.gd[gd].last_seen_t > 1.0) {
-            write_fix(g, gd, h.at);
+            crate::mind::fix(g, gd, Some(v3::copy(h.at)), "whistle");
         }
-        g.gd[gd].awareness = m::max(g.gd[gd].awareness, knob_aw);
+        crate::mind::raise(g, gd, knob_aw, "whistle");
         let row = mem(g, gd);
         row.cues += 1.0;
         row.soft = false;
@@ -196,17 +190,16 @@ pub fn hear_whistle(g: &mut crate::game::Game, gd: GuardId, e: crate::game::Game
     row.responses += 1.0;
     resolve(g, e, keen).answered_by = Some(gd);
     g.stats.whistle.answered += 1;
-    if !crate::belief::word_now(g, gd) { write_fix(g, gd, h.at); }
+    if !crate::belief::word_now(g, gd) { crate::mind::fix(g, gd, Some(v3::copy(h.at)), "whistle"); }
     {
-        let man = &mut g.gd[gd];
-        man.path = Vec::new();
-        man.path_serial = man.path_serial.wrapping_add(1);
-        man.path_goal = None;
-        man.path_goal_orbit = false;
-        man.stall_ref = None;
-        man.stall_t = 0.0;
-        man.search_t = 0.0;
-        man.awareness = m::max(man.awareness, knob_aw);
+        g.gd[gd].path = Vec::new();
+        g.gd[gd].path_serial = g.gd[gd].path_serial.wrapping_add(1);
+        g.gd[gd].path_goal = None;
+        g.gd[gd].path_goal_orbit = false;
+        g.gd[gd].stall_ref = None;
+        g.gd[gd].stall_t = 0.0;
+        g.gd[gd].search_t = 0.0;
+        crate::mind::raise(g, gd, knob_aw, "whistle");
     }
     let callsign = g.gd[gd].callsign.clone();
     if let Some(log) = g.m.whistle.whistle_log.last_mut() {
@@ -216,12 +209,11 @@ pub fn hear_whistle(g: &mut crate::game::Game, gd: GuardId, e: crate::game::Game
     if twice {
         // the second inside the window: a proper search of the place, gun out, no more 'hello?'
         {
-            let man = &mut g.gd[gd];
-            man.state = GuardState::Search;
-            man.search_plan = None;
-            man.pieing = None;
-            man.body_duty = None;
-            man.react_t = 0.0;
+            crate::mind::set_state(g, gd, GuardState::Search, "whistle");
+            g.gd[gd].search_plan = None;
+            g.gd[gd].pieing = None;
+            g.gd[gd].body_duty = None;
+            g.gd[gd].react_t = 0.0;
         }
         let row = mem(g, gd);
         row.searches += 1.0;
@@ -235,7 +227,7 @@ pub fn hear_whistle(g: &mut crate::game::Game, gd: GuardId, e: crate::game::Game
         crate::game::game_say(g, gd, &line, None, None, None);
     } else {
         // the first: over to it for a look, torch in hand
-        if g.gd[gd].state == GuardState::Patrol { g.gd[gd].state = GuardState::Suspicious; }
+        if g.gd[gd].state == GuardState::Patrol { crate::mind::set_state(g, gd, GuardState::Suspicious, "whistle"); }
         g.gd[gd].react_t = g.k.whistle.react_t;
         let row = mem(g, gd);
         row.soft = true;
@@ -264,7 +256,7 @@ pub fn pick(g: &mut crate::game::Game, pool: &[String], gd: GuardId, key: crate:
 }
 
 /// Is this man's suspicion (still) only a whistle's?   (whistle.ts whistleSoft)
-pub fn whistle_soft(g: &crate::game::Game, gd: GuardId) -> bool {
+pub fn whistle_soft(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let Some(row) = g.m.whistle.mem_of.get(gd) else { return false };
     row.soft
         && g.gd[gd].state == crate::game::GuardState::Suspicious

@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// A new tracker: nothing known. (entrypoints.ts EntryPoints.constructor)
-pub fn entry_points_new(g: &crate::game::Game) -> crate::entrypoints::EntryPoints {
+pub fn entry_points_new(g: &mut crate::game::Game) -> crate::entrypoints::EntryPoints {
     EntryPoints::blank()
 }
 
@@ -77,7 +77,7 @@ pub fn entry_points_sees(g: &mut crate::game::Game, p: V3, o: CoverOpeningId, sg
 }
 
 /// Has one of the squad been on the side of `o` that `p` is NOT on. (entrypoints.ts EntryPoints.farKnown)
-pub fn entry_points_far_known(g: &crate::game::Game, o: CoverOpeningId, p: V3) -> bool {
+pub fn entry_points_far_known(g: &mut crate::game::Game, o: CoverOpeningId, p: V3) -> bool {
     let (at, n, _) = opening_shape(g, o);
     let s = (p[0] - at[0]) * n[0] + (p[2] - at[2]) * n[1];
     let had = js::to_i32(g.entry.been.get(o).copied().unwrap_or(0.0));
@@ -187,7 +187,7 @@ pub fn entry_points_clear_of(g: &mut crate::game::Game, d: DoorId, pods: &[crate
 }
 
 /// A search point taken over a better-seeing one by an uncleared opening: it counts as moved. (entrypoints.ts EntryPoints.swapped)
-pub fn entry_points_swapped(g: &crate::game::Game, pod: &mut crate::entrypoints::Pod) {
+pub fn entry_points_swapped(g: &mut crate::game::Game, pod: &mut crate::entrypoints::Pod) {
     pod.moved = true;
 }
 
@@ -204,7 +204,7 @@ pub fn entry_points_dealt(g: &mut crate::game::Game, pod: crate::entrypoints::Po
 }
 
 /// The tallies in a line. (entrypoints.ts EntryPoints.summary)
-pub fn entry_points_summary(g: &crate::game::Game) -> String {
+pub fn entry_points_summary(g: &mut crate::game::Game) -> String {
     let s = g.entry.stats;
     let n = g.entry.been.values().filter(|&&v| js::truthy(v)).count();
     alloc::format!(

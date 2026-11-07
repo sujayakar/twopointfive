@@ -208,7 +208,7 @@ pub fn tut_road_road_step(g: &mut crate::game::Game, r: DirectorRunId, b: Direct
 }
 
 /// (levels/tut-road.script.ts:76) id 0: the sentry is down.
-pub fn tut_road_road_test(g: &crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_road::TutRoadRoadFrame, id: u32) -> Result<bool, String> {
+pub fn tut_road_road_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_road::TutRoadRoadFrame, id: u32) -> Result<bool, String> {
     match id {
         0 => Ok(!crate::director::director_query_alive(g, r, f.s.as_ref().expect("set at 0"))),
         _ => Err(format!("tut_road 'road': no c.until of id {}", id)),
@@ -296,7 +296,7 @@ pub fn tut_road_hut_step(g: &mut crate::game::Game, r: DirectorRunId, b: Directo
 }
 
 /// (levels/tut-road.script.ts:90) id 0: he is at the boards, or down.
-pub fn tut_road_hut_test(g: &crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_road::TutRoadHutFrame, id: u32) -> Result<bool, String> {
+pub fn tut_road_hut_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_road::TutRoadHutFrame, id: u32) -> Result<bool, String> {
     match id {
         0 => {
             let u = f.u.as_ref().expect("set at 0");
@@ -501,7 +501,7 @@ pub fn tut_road_gate_step(g: &mut crate::game::Game, r: DirectorRunId, b: Direct
 }
 
 /// (levels/tut-road.script.ts:137, :141, :143, :144) id 0: each of the men has arrived or is down; ids 1 to 3: one of them is down.
-pub fn tut_road_gate_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_road::TutRoadGateFrame, id: u32) -> Result<bool, String> {
+pub fn tut_road_gate_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_road::TutRoadGateFrame, id: u32) -> Result<bool, String> {
     match id {
         0 => {
             for m in &f.men {

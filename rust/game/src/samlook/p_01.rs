@@ -31,7 +31,7 @@ pub fn free(g: &mut crate::game::Game) -> bool {
 }
 
 /// A man who is onto him, or has him in view this moment with his notice risen.   (samlook.ts samLookNoticed)
-pub fn sam_look_noticed(g: &crate::game::Game, gd: GuardId) -> bool {
+pub fn sam_look_noticed(g: &mut crate::game::Game, gd: GuardId) -> bool {
     use crate::game::GuardState;
     let man = &g.gd[gd];
     man.state == GuardState::Alert || man.state == GuardState::Search || man.state == GuardState::Suspicious || (man.awareness > 0.08 && g.time - man.sight_t < 0.4)
@@ -143,7 +143,7 @@ pub fn slip_now(g: &mut crate::game::Game) -> Option<crate::samlook::SlipNow> {
 }
 
 /// A point `up` metres over a man's feet.   (samlook.ts headOf)
-pub fn head_of(g: &crate::game::Game, gd: GuardId, up: f64) -> V3 {
+pub fn head_of(g: &mut crate::game::Game, gd: GuardId, up: f64) -> V3 {
     let q = g.ch[g.gd[gd].ch].pos;
     [q[0], q[1] + up, q[2]]
 }

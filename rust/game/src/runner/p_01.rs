@@ -36,49 +36,49 @@ pub fn bark(g: &mut crate::game::Game, gd: GuardId, kind: crate::runner::LineKin
 pub fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 
 /// the chest bone, or where it would be   (runner.ts chestOf)
-pub fn chest_of(g: &crate::game::Game, c_2: CharId) -> V3 {
+pub fn chest_of(g: &mut crate::game::Game, c_2: CharId) -> V3 {
     if let Some(b) = g.ch[c_2].bones.get(crate::character::Bone::Chest) { return *b; }
     let p = g.ch[c_2].pos;
     [p[0], p[1] + 1.2, p[2]]
 }
 
 /// the head bone, or where it would be   (runner.ts headOf)
-pub fn head_of(g: &crate::game::Game, c_2: CharId) -> V3 {
+pub fn head_of(g: &mut crate::game::Game, c_2: CharId) -> V3 {
     if let Some(b) = g.ch[c_2].bones.get(crate::character::Bone::Head) { return *b; }
     let p = g.ch[c_2].pos;
     [p[0], p[1] + 1.6, p[2]]
 }
 
 /// a living defender or a man of the night staff: never a civilian, an operative, a body   (runner.ts ours)
-pub fn ours(g: &crate::game::Game, gd: GuardId) -> bool {
+pub fn ours(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let o = &g.gd[gd];
     o.state != crate::game::GuardState::Dead && o.civ.is_none() && (o.team == crate::teams::Team::Hostile || o.team == crate::teams::Team::Guard)
 }
 
 /// nobody's to take: the hostage rescue's cast and the response team   (runner.ts spoken)
-pub fn spoken(g: &crate::game::Game, gd: GuardId) -> bool {
+pub fn spoken(g: &mut crate::game::Game, gd: GuardId) -> bool {
     (g.rescue.active && g.rescue.hostiles.contains(&gd)) || crate::qrf::qrf_owns(g, gd)
 }
 
 /// may the sequence start on him this frame   (runner.ts reacts)
-pub fn reacts(g: &crate::game::Game, gd: GuardId) -> bool {
+pub fn reacts(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if !g.ai_enabled || g.touring || g.quiet_utility || g.gd[gd].held.is_some() { return false; }
     g.gd[gd].script.is_none() || g.fight.defs.iter().any(|d| g.tab.roomfight_def[*d].gd == gd)
 }
 
 /// a living armed man of his own side, on his feet: somebody to run to, somebody to tell   (runner.ts mateOf)
-pub fn mate_of(g: &crate::game::Game, gd: GuardId, o: GuardId) -> bool {
+pub fn mate_of(g: &mut crate::game::Game, gd: GuardId, o: GuardId) -> bool {
     o != gd && ours(g, o) && g.gd[o].team == g.gd[gd].team && g.gd[o].held.is_none() && !g.m.runner.state_of.has(o)
 }
 
 /// an enemy as a run reckons with him   (runner.ts foeAt)
-pub fn foe_at(g: &crate::game::Game, c_2: CharId, who: crate::picture::Who) -> crate::runner::Foe {
+pub fn foe_at(g: &mut crate::game::Game, c_2: CharId, who: crate::picture::Who) -> crate::runner::Foe {
     let eye = head_of(g, c_2);
     Foe { pos: g.ch[c_2].pos, eye, who }
 }
 
 /// his enemies on the floor: the player and every living man of a side hostile to his   (runner.ts foes)
-pub fn foes(g: &crate::game::Game, gd: GuardId) -> Vec<crate::runner::Foe> {
+pub fn foes(g: &mut crate::game::Game, gd: GuardId) -> Vec<crate::runner::Foe> {
     let mut out = Vec::new();
     let team = g.gd[gd].team;
     if crate::teams::is_hostile(g, team, crate::teams::Team::Player) && !g.pl[g.player].down {
@@ -99,7 +99,7 @@ pub fn foes(g: &crate::game::Game, gd: GuardId) -> Vec<crate::runner::Foe> {
 }
 
 /// is a run planned from the man's own picture: a show keeps no pictures   (runner.ts byPicture)
-pub fn by_picture(g: &crate::game::Game) -> bool { !g.touring }
+pub fn by_picture(g: &mut crate::game::Game) -> bool { !g.touring }
 
 /// the enemies a run is planned round: the men he knows of, each where he believes him to be   (runner.ts known)
 pub fn known(g: &mut crate::game::Game, gd: GuardId) -> Vec<crate::runner::Foe> {
@@ -403,7 +403,7 @@ pub fn pick_mate(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
 }
 
 /// is there an enemy in the `aheadM` of his way in front of him, nearer to it than to him   (runner.ts wayBarred)
-pub fn way_barred(g: &crate::game::Game, gd: GuardId, e: &[crate::runner::Foe]) -> bool {
+pub fn way_barred(g: &mut crate::game::Game, gd: GuardId, e: &[crate::runner::Foe]) -> bool {
     if e.is_empty() { return false; }
     let (shy, ahead) = (g.k.runner.shy_m, g.k.runner.ahead_m);
     let pos = g.ch[g.gd[gd].ch].pos;
@@ -455,15 +455,14 @@ pub fn drop(g: &mut crate::game::Game, gd: GuardId) {
     crate::owner::claim_man(g, gd, rule, now, Some(1.0));
     g.stats.runner.dropped += 1;
     {
-        let o = &mut g.gd[gd];
-        o.state = crate::game::GuardState::Patrol;
-        o.awareness = 0.0;
-        o.foe = None;
-        crate::aim::aim_state_clear(&mut o.aim);
-        o.pieing = None;
-        o.search_plan = None;
-        o.standoff = None;
-        o.muzzle_down = false;
+        crate::mind::set_state(g, gd, crate::game::GuardState::Patrol, "runner");
+        crate::mind::set(g, gd, 0.0, "runner");
+        g.gd[gd].foe = None;
+        crate::aim::aim_state_clear(&mut g.gd[gd].aim);
+        g.gd[gd].pieing = None;
+        g.gd[gd].search_plan = None;
+        g.gd[gd].standoff = None;
+        g.gd[gd].muzzle_down = false;
     }
     crate::control::set_hold(g, gd, true, "runner"); crate::control::set_pinned(g, gd, true, "runner");
     let e = known(g, gd);
@@ -568,7 +567,7 @@ pub fn tell(g: &mut crate::game::Game, gd: GuardId) {
             crate::digin::dig_in_order(g, d.unwrap(), from, tell_beat);
         } else {
             crate::belief::word(g, o, from);
-            g.gd[o].awareness = m::max(g.gd[o].awareness, tell_aware);
+            crate::mind::raise(g, o, tell_aware, "runner");
         }
         run!(g, gd).told += 1.0;
         g.stats.runner.told += 1;
@@ -645,8 +644,8 @@ pub fn step(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     g.fa[w].burst = None;
     crate::control::set_hold(g, gd, true, "runner");
     crate::control::set_pinned(g, gd, true, "runner");
-    if g.gd[gd].state != crate::game::GuardState::Patrol { g.gd[gd].state = crate::game::GuardState::Patrol; }
-    g.gd[gd].awareness = 0.0;
+    if g.gd[gd].state != crate::game::GuardState::Patrol { crate::mind::set_state(g, gd, crate::game::GuardState::Patrol, "runner"); }
+    crate::mind::set(g, gd, 0.0, "runner");
     g.gd[gd].foe = None;
     if g.gd[gd].held.is_some() { return; }
     let e = known(g, gd);
@@ -829,10 +828,10 @@ pub fn runner_propose(g: &crate::game::Game, gd: GuardId) -> Option<crate::game:
 }
 
 /// and his sidearm with it   (runner.ts runnerBare)
-pub fn runner_bare(g: &crate::game::Game, gd: GuardId) -> bool { g.m.runner.state_of.get(gd).map_or(false, |r| r.bare) }
+pub fn runner_bare(g: &mut crate::game::Game, gd: GuardId) -> bool { g.m.runner.state_of.get(gd).map_or(false, |r| r.bare) }
 
 /// counts for nothing, from the drop   (runner.ts runnerNobody)
-pub fn runner_nobody(g: &crate::game::Game, gd: GuardId) -> bool { g.gd[gd].fled }
+pub fn runner_nobody(g: &mut crate::game::Game, gd: GuardId) -> bool { g.gd[gd].fled }
 
 /// speaks for nobody, from the shout   (runner.ts runnerMute)
 pub fn runner_mute(g: &mut crate::game::Game, gd: GuardId) -> bool { let rule = crate::owner::own().runner; crate::owner::has_him(g, gd, rule) }

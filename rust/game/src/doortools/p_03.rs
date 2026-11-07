@@ -10,12 +10,12 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 // ------------------------------------------------------------ small readers of this file
 
 fn pos_of(g: &mut Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
-fn is_dead(g: &Game, gd: GuardId) -> bool { g.gd[gd].state == crate::game::GuardState::Dead }
-fn is_steel(g: &Game, d: DoorId) -> bool { g.dr[d].def.steel.unwrap_or(false) }
-fn is_wedge(g: &Game, d: DoorId) -> bool { g.dr[d].lock_id.starts_with("wedge:") }
+fn is_dead(g: &mut Game, gd: GuardId) -> bool { g.gd[gd].state == crate::game::GuardState::Dead }
+fn is_steel(g: &mut Game, d: DoorId) -> bool { g.dr[d].def.steel.unwrap_or(false) }
+fn is_wedge(g: &mut Game, d: DoorId) -> bool { g.dr[d].lock_id.starts_with("wedge:") }
 
 /// `g.orders.of(m) === op.mine.get(m)`: `of` says null and `get` undefined for a man with neither, and those are not equal
-fn still_mine(g: &Game, op: DoorOpId, m: GuardId) -> bool {
+fn still_mine(g: &mut Game, op: DoorOpId, m: GuardId) -> bool {
     let now = crate::orders::squad_orders_of(g, m);
     now.is_some() && now == g.tab.doortools_door_op[op].mine.get(m).copied()
 }
@@ -140,7 +140,7 @@ fn post_at(posts: &[crate::orders::StackPost], used: &mut [bool], p: V3) -> crat
 // ------------------------------------------------------------ the frame, the boot
 
 /// what a man says to an entry order there when no pick opens it (doortools.ts DoorTools.noBoot)
-pub fn door_tools_no_boot(g: &crate::game::Game, d: DoorId) -> String {
+pub fn door_tools_no_boot(g: &mut crate::game::Game, d: DoorId) -> String {
     let s = if door_tools_charge_on(g, d).is_some() { "opens toward us. no boot. blow the charge." } else if g.door_tools.charges > 0.0 { "opens toward us. no boot. charge it." } else { "opens toward us. no boot, no charge." };
     String::from(s)
 }
@@ -212,7 +212,7 @@ pub fn door_tools_boot_spot(g: &mut crate::game::Game, d: DoorId, side: f64) -> 
 // ------------------------------------------------------------ what the team knows of a door
 
 /// the team knows this face of the door: shut, or (`free`) tried and found free (doortools.ts DoorTools.knows)
-pub fn door_tools_knows(g: &crate::game::Game, d: DoorId, side: f64, free: bool) -> bool {
+pub fn door_tools_knows(g: &mut crate::game::Game, d: DoorId, side: f64, free: bool) -> bool {
     let was = g.door_tools.tried.get(d).copied().unwrap_or(0.0);
     (js::to_i32(was) & know_mask(side, free)) != 0
 }
@@ -224,7 +224,7 @@ pub fn door_tools_learn(g: &mut crate::game::Game, d: DoorId, side: f64, free: O
 }
 
 /// why a hand does not open it, in a man's words (doortools.ts DoorTools.shutWhy)
-pub fn door_tools_shut_why(g: &crate::game::Game, d: DoorId) -> String {
+pub fn door_tools_shut_why(g: &mut crate::game::Game, d: DoorId) -> String {
     let s = if is_steel(g, d) { "steel, and locked" } else if door_tools_pickable(g, d) { "locked" } else if is_wedge(g, d) { "wedged from inside" } else { "keypad lock, no code" };
     String::from(s)
 }
@@ -264,7 +264,7 @@ pub fn door_tools_test(g: &mut crate::game::Game, d: DoorId, side: f64, gd: Guar
 }
 
 /// a man of the stack on that door stood, at the orders' last tick, on his mark with a man in his sight whom hold fire holds (doortools.ts DoorTools.stackHeld)
-pub fn door_tools_stack_held(g: &crate::game::Game, d: DoorId) -> bool {
+pub fn door_tools_stack_held(g: &mut crate::game::Game, d: DoorId) -> bool {
     let roster = g.door_tools.roster.clone();
     for m in roster {
         if is_dead(g, m) { continue; }
@@ -344,7 +344,7 @@ fn walker_on(g: &mut Game, m: GuardId) -> bool {
 }
 
 /// (doortools.ts:1085 `marks`) each walker's mark on the door he came to
-fn walk_marks(g: &Game, men: &[GuardId]) -> JsMap<GuardId, crate::doortools::DoorToolsStackLeftPostValue> {
+fn walk_marks(g: &mut Game, men: &[GuardId]) -> JsMap<GuardId, crate::doortools::DoorToolsStackLeftPostValue> {
     let mut out = JsMap::new();
     for &m in men {
         let b = crate::orders::squad_orders_of(g, m).unwrap();
@@ -490,7 +490,7 @@ pub fn door_tools_entry_verb(g: &mut crate::game::Game, t: &crate::orders::Order
 }
 
 /// men these rows go to are holding that door from outside (doortools.ts DoorTools.heldPlain)
-pub fn door_tools_held_plain(g: &crate::game::Game, t: &crate::orders::OrderTarget, men: &[GuardId]) -> bool {
+pub fn door_tools_held_plain(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, men: &[GuardId]) -> bool {
     if door_of_t(t).is_none() { return false; }
     let mut up = Vec::new();
     for &m in men {
@@ -669,7 +669,7 @@ pub fn door_tools_threshold_on(g: &mut crate::game::Game, door: &str, who: Optio
 }
 
 /// the rooms being worked from the threshold whose men are still outside on the jambs, among these men (doortools.ts DoorTools.thresholdHeld)
-pub fn door_tools_threshold_held(g: &crate::game::Game, men: &[GuardId], door: Option<DoorId>) -> Vec<DoorOpId> {
+pub fn door_tools_threshold_held(g: &mut crate::game::Game, men: &[GuardId], door: Option<DoorId>) -> Vec<DoorOpId> {
     let mut out = Vec::new();
     for &o in &g.door_tools.ops {
         let op = &g.tab.doortools_door_op[o];
@@ -679,7 +679,7 @@ pub fn door_tools_threshold_held(g: &crate::game::Game, men: &[GuardId], door: O
 }
 
 /// on the door a menu is up on (none off a door) (doortools.ts DoorTools.heldOn)
-pub fn door_tools_held_on(g: &crate::game::Game, t: &crate::orders::OrderTarget, men: &[GuardId]) -> Vec<DoorOpId> {
+pub fn door_tools_held_on(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, men: &[GuardId]) -> Vec<DoorOpId> {
     match door_of_t(t) {
         Some(d) => door_tools_threshold_held(g, men, Some(d)),
         None => Vec::new(),
@@ -687,7 +687,7 @@ pub fn door_tools_held_on(g: &crate::game::Game, t: &crate::orders::OrderTarget,
 }
 
 /// the men among these who hold it: who the held page's rows go to (doortools.ts DoorTools.heldMen)
-pub fn door_tools_held_men(g: &crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> Vec<GuardId> {
+pub fn door_tools_held_men(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> Vec<GuardId> {
     let ops = door_tools_held_on(g, t, men);
     men.iter().copied().filter(|m| ops.iter().any(|&o| g.tab.doortools_door_op[o].men.contains(m))).collect()
 }

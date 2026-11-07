@@ -11,7 +11,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 /// The run-on a thing keeps past its landing where the ground bogs by `bog`, of a hard floor's. (snowBog.ts bogRun)
-pub fn bog_run(g: &crate::game::Game, bog: f64) -> f64 {
+pub fn bog_run(g: &mut crate::game::Game, bog: f64) -> f64 {
     run_on(bog, g.k.snowbog.run)
 }
 
@@ -48,7 +48,7 @@ pub fn ground(g: &mut crate::game::Game) -> crate::snow_bog::Ground {
 }
 
 /// May the ground bog anything in this game now. (snowBog.ts snowBogMay)
-pub fn snow_bog_may(g: &crate::game::Game) -> bool {
+pub fn snow_bog_may(g: &mut crate::game::Game) -> bool {
     let name = crate::scene_level_load::level_name_of(g);
     crate::weather_kinds::snow_level(g, name.as_deref())
 }

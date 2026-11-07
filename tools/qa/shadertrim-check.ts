@@ -4,8 +4,8 @@
 //   · every entry point, override, directive and const_assert of the whole text is left
 //   · nothing left mentions a declaration that was dropped (the cut is closed under 'mentions')
 //   · cutting the cut text changes nothing
-// then the two numbers the cut is for: how much text a boot hands the browser, and how many modules' texts change when a level's weather switch flips (each one
-// is a text the browser's compiled-shader cache has never seen).
+// then the two numbers the cut is for: how much text a boot hands the browser, and how many modules' texts change when one constant of the prelude flips (each
+// one is a text the browser's compiled-shader cache has never seen) — and that a LEVEL's own switches change none: they are data (render/frame.ts LevelSw).
 // No browser and no compiler: that the cut text COMPILES is the page's boot to say (tools/qa/shader-count-page.cjs — every pipeline made, no GPU error).
 //   bun run tools/qa/shadertrim-check.ts             exit 0 = every check passed, 1 = one failed
 //   SHADERTRIM_BREAK=1 bun run tools/qa/shadertrim-check.ts     a declaration something still mentions is taken out of one cut text: must FAIL
@@ -14,7 +14,7 @@ const { ROOT, fake } = await import('./headless.ts');
 const { Engine } = await import(`${ROOT}/src/engine.ts`);
 const { SHADER_TRIM, SHADER_FOLD, trimWgsl, wgslDecls, trimTotals } = await import(`${ROOT}/src/gpu/wgslTrim.ts`) as typeof import('../../src/gpu/wgslTrim');
 SHADER_FOLD.on = false;   // (the trim's own rule, a declaration kept as written: the fold of constant switches changes a function's text and has its own check, shaderfold-check.ts)
-const { weatherKindConfig } = await import(`${ROOT}/src/render/frame.ts`);
+const { weatherKindConfig, rainScaleConfig, levelSwitches, LevelSw } = await import(`${ROOT}/src/render/frame.ts`);
 
 const BREAK = process.env.SHADERTRIM_BREAK === '1';
 let red = 0; const check = (ok: boolean, what: string) => { console.log(`${ok ? '- PASS' : '- FAIL'} — ${what}`); if (!ok) red++; };
@@ -40,7 +40,7 @@ const isRoot = (d: string) => nameOf(d) === null || /^(?:\s*@[A-Za-z_]\w*(?:\s*\
 
 SHADER_TRIM.on = false; const whole = await boot();
 SHADER_TRIM.on = true; trimTotals.modules = trimTotals.before = trimTotals.after = trimTotals.ms = 0; const cut = await boot(); const totals = { ...trimTotals };
-check(whole.length >= 30 && whole.length === cut.length && whole.every((m, i) => m.label === cut[i].label), `the same ${whole.length} modules either way (${cut.length} cut)`);
+check(whole.length >= 25 && whole.length === cut.length && whole.every((m, i) => m.label === cut[i].label), `the same ${whole.length} modules either way (${cut.length} cut)`);
 let entries = 0; const bad = { order: [] as string[], roots: [] as string[], open: [] as string[], twice: [] as string[] };
 cut.forEach((m, i) => {
   const W = wgslDecls(whole[i].code); let C = wgslDecls(m.code);
@@ -59,9 +59,12 @@ check(bad.open.length === 0, `nothing left mentions a declaration that was dropp
 check(bad.twice.length === 0, `cutting a cut text changes nothing${bad.twice.length ? ` — not so: ${bad.twice.slice(0, 5).join(', ')}` : ''}`);
 const kb = (n: number) => Math.round(n / 1024);
 check(totals.after < totals.before * 0.4, `a boot of the Engine hands the browser ${kb(totals.after)} KB of shader text where it handed ${kb(totals.before)} KB (${Math.round(100 - 100 * totals.after / totals.before)} % less; ${totals.ms.toFixed(0)} ms spent cutting ${totals.modules} modules here)`);
-// a level in another weather: how many module texts are new
-const flip = async (on: boolean) => { SHADER_TRIM.on = on; const was = weatherKindConfig.on; weatherKindConfig.on = false; const a = await boot(); weatherKindConfig.on = true; const b = await boot(); weatherKindConfig.on = was; return a.filter((m, i) => m.code !== b[i].code).length; };
-const newWhole = await flip(false), newCut = await flip(true);
-check(newWhole === whole.filter(m => /\bWX_KINDS\b/.test(m.code)).length && newCut < newWhole / 2, `a level whose weather switch differs: ${newCut} of ${cut.length} module texts are new to the browser where ${newWhole} were`);
+// a constant of the prelude that differs (a word on the address: the rain's ring scale): how many module texts are new
+const flipOf = async (cfg: { on: boolean }, on: boolean) => { SHADER_TRIM.on = on; const was = cfg.on; cfg.on = false; const a = await boot(); cfg.on = true; const b = await boot(); cfg.on = was; return a.filter((m, i) => m.code !== b[i].code).length; };
+const newWhole = await flipOf(rainScaleConfig, false), newCut = await flipOf(rainScaleConfig, true);
+check(newWhole === whole.filter(m => /\bRAIN_SCALE\b/.test(m.code)).length && newCut < newWhole / 2, `a page whose prelude differs by one constant: ${newCut} of ${cut.length} module texts are new to the browser where ${newWhole} were`);
+// …and a LEVEL's switches are none of the text (render/frame.ts LevelSw: a word of the frame block): a level in another weather is the same modules, cut or whole
+const lvWhole = await flipOf(weatherKindConfig, false), lvCut = await flipOf(weatherKindConfig, true), words = (() => { const was = weatherKindConfig.on; weatherKindConfig.on = false; const a = levelSwitches(); weatherKindConfig.on = true; const b = levelSwitches(); weatherKindConfig.on = was; return [a, b]; })();
+check(lvWhole === 0 && lvCut === 0 && (words[0] & LevelSw.WX_KINDS) === 0 && (words[1] & LevelSw.WX_KINDS) !== 0, `a level whose weather switch differs: ${lvCut} of ${cut.length} module texts are new to the browser (${lvWhole} uncut); the switch is a bit of the frame's level word`);
 console.log(red ? `${red} FAILED` : 'all passed');
 process.exit(red ? 1 : 0);

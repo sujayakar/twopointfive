@@ -42,7 +42,7 @@ fn script_smokes(g: &Game, gd: GuardId) -> bool {
 }
 
 /// Is this man smoking now: a script that says so, on his feet where it sent him, nobody's arm round him.   (smokebreak.ts smoking)
-pub fn smoking(g: &crate::game::Game, gd: GuardId) -> bool {
+pub fn smoking(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let Some(s) = g.gd[gd].script.as_ref() else { return false };
     s.smoke.unwrap_or(false)
         && g.gd[gd].state != crate::game::GuardState::Dead
@@ -66,12 +66,12 @@ fn hand_of(k: &crate::knobs::SmokebreakK, t: f64) -> HandAt {
 }
 
 /// How far up his hand is asked this second of his smoke (0‥1), and whether the end is at his mouth.   (smokebreak.ts handAt)
-pub fn hand_at(g: &crate::game::Game, t: f64) -> crate::smokebreak::HandAt {
+pub fn hand_at(g: &mut crate::game::Game, t: f64) -> crate::smokebreak::HandAt {
     hand_of(&g.k.smokebreak, t)
 }
 
 /// His mouth, off the head joint, and the way his breath leaves it.   (smokebreak.ts mouthOf)
-pub fn mouth_of(g: &crate::game::Game, c_2: CharId) -> crate::smokebreak::MouthOf {
+pub fn mouth_of(g: &mut crate::game::Game, c_2: CharId) -> crate::smokebreak::MouthOf {
     let c = c_2;
     let hd = crate::character::character_head_dir(g, c);
     let head = *g.ch[c].bones.get(crate::character::Bone::Head).unwrap();
@@ -88,7 +88,7 @@ pub fn mouth_of(g: &crate::game::Game, c_2: CharId) -> crate::smokebreak::MouthO
 }
 
 /// The lit end: off the left hand's joint along the forearm's line, a little up.   (smokebreak.ts tipOf)
-pub fn tip_of(g: &crate::game::Game, c_2: CharId) -> Option<V3> {
+pub fn tip_of(g: &mut crate::game::Game, c_2: CharId) -> Option<V3> {
     let c = c_2;
     let h = *g.ch[c].bones.get(crate::character::Bone::HandL)?;
     let e = g.ch[c].bones.get(crate::character::Bone::ForearmL).copied();

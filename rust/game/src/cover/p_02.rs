@@ -61,7 +61,7 @@ pub fn cover_reset(g: &mut Game) {
 }
 
 /// What he was dealt. (cover.ts of)
-pub fn cover_of(g: &Game, gd: GuardId) -> Option<CoverJob> { g.cover.jobs.get(gd).copied() }
+pub fn cover_of(g: &mut Game, gd: GuardId) -> Option<CoverJob> { g.cover.jobs.get(gd).copied() }
 
 /// The level's openings, built if they are not yet. (cover.ts ready)
 pub fn cover_ready(g: &mut Game) -> Vec<CoverOpeningId> {
@@ -176,7 +176,7 @@ pub fn cover_read_rear(g: &mut Game, gd: GuardId, a: OrdersAssignmentId, list: &
 }
 
 /// A stack's rear man still on the walk to his mark, further out than the last steps. (cover.ts walkOnly)
-pub fn cover_walk_only(g: &Game, gd: GuardId, a: OrdersAssignmentId) -> bool {
+pub fn cover_walk_only(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) -> bool {
     let row = &g.tab.orders_assignment[a];
     if !yes(row.spare) || row.from.is_none() { return false; }
     match row.post {
@@ -197,7 +197,7 @@ pub fn cover_walk_door(g: &mut Game, o: CoverOpeningId, a: OrdersAssignmentId) -
 }
 
 /// His eye over a spot. (cover.ts eyeOf)
-pub fn cover_eye_of(g: &Game, p: V3) -> V3 { [p[0], EYE, p[2]] }
+pub fn cover_eye_of(g: &mut Game, p: V3) -> V3 { [p[0], EYE, p[2]] }
 
 /// The point of this opening a man stood at `p` can watch. (cover.ts sightFrom)
 pub fn cover_sight_from(g: &mut Game, p: V3, o: CoverOpeningId) -> Option<V3> {
@@ -891,7 +891,7 @@ pub fn cover_step_spot(g: &mut Game, gd: GuardId, from: V3, o: CoverOpeningId, b
 }
 
 /// Where the cover has this man step to under the order he has now. (cover.ts stepOf)
-pub fn cover_step_of(g: &Game, gd: GuardId, a: OrdersAssignmentId) -> Option<V3> {
+pub fn cover_step_of(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) -> Option<V3> {
     match g.cover.steps.get(gd) { Some(s) if s.a == a => Some(s.q), _ => None }
 }
 
@@ -961,7 +961,7 @@ pub fn cover_turn_from(g: &mut Game, gd: GuardId, j: CoverJob) {
 }
 
 /// The way he goes: at the corner of his path he is walking to, else the way he is moving. (cover.ts wayOf)
-pub fn cover_way_of(g: &Game, gd: GuardId) -> f64 {
+pub fn cover_way_of(g: &mut Game, gd: GuardId) -> f64 {
     let c = g.gd[gd].ch;
     let p = g.ch[c].pos;
     if let Some(&wp) = g.gd[gd].path.get(g.gd[gd].path_i) {
@@ -971,7 +971,7 @@ pub fn cover_way_of(g: &Game, gd: GuardId) -> f64 {
 }
 
 /// Is he still coming out of a back-pedal. (cover.ts turning)
-pub fn cover_turning(g: &Game, gd: GuardId, still: bool, pace: f64) -> bool {
+pub fn cover_turning(g: &mut Game, gd: GuardId, still: bool, pace: f64) -> bool {
     let o = match g.cover.outs.get(gd) { Some(o) => *o, None => return false };
     let k = g.k.cover;
     let t = g.time;
@@ -1130,10 +1130,10 @@ pub fn cover_name_of(g: &mut Game, o: CoverOpeningId, from: Option<V3>) -> Strin
 }
 
 /// Has he an opening dealt, and is on it. (cover.ts has)
-pub fn cover_has(g: &Game, gd: GuardId) -> bool { cover_on_of(g, gd).map_or(false, |j| !j.off) }
+pub fn cover_has(g: &mut Game, gd: GuardId) -> bool { cover_on_of(g, gd).map_or(false, |j| !j.off) }
 
 /// The opening his gun is on: dealt, or let go of and still his for the moment. (cover.ts onOf)
-pub fn cover_on_of(g: &Game, gd: GuardId) -> Option<CoverJob> {
+pub fn cover_on_of(g: &mut Game, gd: GuardId) -> Option<CoverJob> {
     match g.cover.jobs.get(gd) { Some(j) => Some(*j), None => g.cover.kept.get(gd).map(|k| k.j) }
 }
 

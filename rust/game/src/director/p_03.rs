@@ -63,12 +63,12 @@ pub fn director_beat_order(g: &mut crate::game::Game, r: DirectorRunId, b: Direc
 
 // ---- waiting (ts 888)
 /// c.wait (director.ts:888)
-pub fn director_beat_wait(g: &crate::game::Game, r: DirectorRunId, secs: f64, label: Option<&str>) -> Result<crate::director::Cond, String> {
+pub fn director_beat_wait(g: &mut crate::game::Game, r: DirectorRunId, secs: f64, label: Option<&str>) -> Result<crate::director::Cond, String> {
     if !secs.is_finite() { return Err(format!("wait({}): not a finite number of seconds", js::num_str(secs))); }
     Ok(Cond::Arm0(CondArm0 { k: CondArm0K::Time, until: g.tab.director_run[r].t + m::max(0.0, secs), label: label.map(String::from) }))
 }
 /// c.frames (director.ts:889)
-pub fn director_beat_frames(g: &crate::game::Game, r: DirectorRunId, n: Option<f64>) -> crate::director::Cond {
+pub fn director_beat_frames(g: &mut crate::game::Game, r: DirectorRunId, n: Option<f64>) -> crate::director::Cond {
     let n = n.unwrap_or(1.0);
     Cond::Arm1(CondArm1 { k: CondArm1K::Frames, due: g.tab.director_run[r].tick_n + m::max(1.0, m::floor(n)) })
 }
@@ -77,7 +77,7 @@ pub fn director_beat_until(test: crate::director::CondTest, label: Option<&str>)
     Cond::Arm2(CondArm2 { k: CondArm2K::Pred, test, label: String::from(label.unwrap_or("until")) })
 }
 /// c.on: the union `filterOrName` comes resolved, a name or a filter (director.ts:891)
-pub fn director_beat_on(g: &crate::game::Game, r: DirectorRunId, kind: crate::director::CondArm3Kind, name: Option<&str>, filter: Option<crate::director::EventFilter>) -> crate::director::Cond {
+pub fn director_beat_on(g: &mut crate::game::Game, r: DirectorRunId, kind: crate::director::CondArm3Kind, name: Option<&str>, filter: Option<crate::director::EventFilter>) -> crate::director::Cond {
     Cond::Arm3(CondArm3 { k: CondArm3K::Event, kind, name: name.map(String::from), filter, got: None, tick0: g.tab.director_run[r].tick_n })
 }
 /// c.done, of a beat's name (of a drill: its `.beat`)
@@ -138,7 +138,7 @@ pub fn director_beat_spawn(g: &mut crate::game::Game, r: DirectorRunId, b: Direc
     Ok(ref_)
 }
 /// c.unit (director.ts:917)
-pub fn director_beat_unit(g: &crate::game::Game, r: DirectorRunId, callsign: &str) -> Option<crate::director::UnitRef> {
+pub fn director_beat_unit(g: &mut crate::game::Game, r: DirectorRunId, callsign: &str) -> Option<crate::director::UnitRef> {
     let mut found = g.guards.iter().copied().find(|x| g.gd[*x].callsign == callsign);
     if found.is_none() {
         if let Some(benched) = g.tab.director_run[r].show.as_ref().and_then(|s| s.benched.as_ref()) { found = benched.iter().copied().find(|x| g.gd[*x].callsign == callsign); }
@@ -321,7 +321,7 @@ fn view_kind(k: crate::director::EventKind) -> EventViewKind {
     }
 }
 /// What a script sees of a hearing event. (director.ts viewOf)
-pub fn view_of(g: &crate::game::Game, r: DirectorRunId, e: crate::game::GameEvent) -> crate::director::EventView {
+pub fn view_of(g: &mut crate::game::Game, r: DirectorRunId, e: crate::game::GameEvent) -> crate::director::EventView {
     EventView {
         kind: view_kind(e.kind),
         pos: v3::copy(e.pos),
@@ -333,7 +333,7 @@ pub fn view_of(g: &crate::game::Game, r: DirectorRunId, e: crate::game::GameEven
     }
 }
 /// What a script sees of a signal: where the player stands. (director.ts signalView)
-pub fn signal_view(g: &crate::game::Game, r: DirectorRunId, s: &crate::director::SignalViewS) -> crate::director::EventView {
+pub fn signal_view(g: &mut crate::game::Game, r: DirectorRunId, s: &crate::director::SignalViewS) -> crate::director::EventView {
     let c = g.pl[g.player].ch;
     EventView {
         kind: EventViewKind::Signal,

@@ -10,14 +10,14 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 // ---------------------------------------------------------------- the switch every site routes by
 
 /// Whether the live particle system is on: one attached and the setting on. Off, the caller keeps to the CPU path. (particleFx.ts gpuFx)
-pub fn gpu_fx(g: &crate::game::Game) -> bool {
+pub fn gpu_fx(g: &mut crate::game::Game) -> bool {
     g.engine.particles.is_some() && g.engine.settings.gpu_particles
 }
 
 // ---------------------------------------------------------------- dust: every puff goes through one table
 
 /// Nothing of the game's: the table is kept in the browser's storage, the host's; with no storage the TypeScript's own try does nothing. (particleFx.ts loadDust)
-pub fn load_dust(g: &crate::game::Game) {}
+pub fn load_dust(g: &mut crate::game::Game) {}
 
 /// The shipped table back, the look onto the live system. Forgetting the kept copy is the host's. (particleFx.ts resetDust)
 pub fn reset_dust(g: &mut crate::game::Game) {
@@ -343,7 +343,7 @@ pub fn ember_fx(g: &mut crate::game::Game, at: V3, dir: V3, o: crate::particle_f
 // ---------------------------------------------------------------- spent cases
 
 /// The empty a row's gun throws, or None. (particleFx.ts casingOf)
-pub fn casing_of(g: &crate::game::Game, def: &crate::weapons::WeaponDef) -> Option<crate::particle_fx::CasingSpec> {
+pub fn casing_of(g: &mut crate::game::Game, def: &crate::weapons::WeaponDef) -> Option<crate::particle_fx::CasingSpec> {
     let c = casing_row(def.id)?;
     if def.id == crate::weapons::WeaponId::M1014 && !crate::gunlook::gun_look_on(g) { None } else { Some(c) }
 }

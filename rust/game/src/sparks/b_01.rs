@@ -14,7 +14,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 // would have left every trail standing at the burst point. `tracker` itself is effects' Track::Spark { slot, gen_ } (p_effects_01 track_at): its stub stays.
 
 /// a free slot, else the spark nearest its end   (sparks.ts Sparks.slot)
-pub fn sparks_slot(g: &crate::game::Game) -> f64 {
+pub fn sparks_slot(g: &mut crate::game::Game) -> f64 {
     let n = m::min(js::to_i32(g.sparks.params.max_live) as f64, g.sparks.pool.len() as f64);
     let (mut worst, mut wf) = (0usize, -1.0);
     let mut i = 0usize;

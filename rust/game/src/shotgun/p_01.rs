@@ -110,7 +110,7 @@ pub fn fire_shell(g: &mut crate::game::Game, shooter: CharId, target: V3, is_pla
 }
 
 /// He carries a gun that takes a lock, in hand or in his big slot. (shotgun.ts carriesBreacher)
-pub fn carries_breacher(g: &crate::game::Game, gd: GuardId) -> bool {
+pub fn carries_breacher(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if g.gd[gd].state == crate::game::GuardState::Dead { return false; }
     let def = g.fa[g.gd[gd].weapon].def;
     let breach = match g.m.weapons.weapons.get(def).unwrap().pellets { Some(p) => p.breach.is_some(), None => false };
@@ -118,7 +118,7 @@ pub fn carries_breacher(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// The lock as a man on face `side` shoots it: a hand in from the latch edge, lever high, just proud of the leaf. (shotgun.ts lockPoint)
-pub fn lock_point(g: &crate::game::Game, d: DoorId, side: f64) -> V3 {
+pub fn lock_point(g: &mut crate::game::Game, d: DoorId, side: f64) -> V3 {
     let a = g.dr[d].def.width - g.k.shotgun.lock_in;
     let y = g.k.shotgun.lock_h;
     crate::doortools::door_pt(g, d, a, LOCK_PROUD, side, Some(y))
@@ -196,13 +196,13 @@ fn stands(g: &mut Game, at: V3, pos: V3) -> bool {
 }
 
 /// On top of one of the other men's marks. (breachSpot's `crowds`)
-fn crowds(g: &Game, avoid: &[V3], pos: V3) -> bool {
+fn crowds(g: &mut Game, avoid: &[V3], pos: V3) -> bool {
     let clear = g.k.shotgun.clear;
     avoid.iter().any(|&p| v3::dist_xz(p, pos) < clear)
 }
 
 /// A mate's mark (or you) on the line from `pos` to the lock. (breachSpot's `across`)
-fn across(g: &Game, at: V3, avoid: &[V3], pos: V3) -> bool {
+fn across(g: &mut Game, at: V3, avoid: &[V3], pos: V3) -> bool {
     let line = g.k.shotgun.line;
     let ax = at[0] - pos[0];
     let az = at[2] - pos[2];
@@ -214,7 +214,7 @@ fn across(g: &Game, at: V3, avoid: &[V3], pos: V3) -> bool {
 }
 
 /// The bore's line from `pos` through the lock point lands on the leaf's face. (breachSpot's `onLeaf`)
-fn on_leaf(g: &Game, d: DoorId, side: f64, w: f64, pos: V3) -> bool {
+fn on_leaf(g: &mut Game, d: DoorId, side: f64, w: f64, pos: V3) -> bool {
     let o = crate::doortools::off_of(g, d, pos, side) - LOCK_PROUD;
     let a = w - g.k.shotgun.lock_in;
     let hit = a + LOCK_PROUD * (a - crate::doortools::along_of(g, d, pos)) / o;

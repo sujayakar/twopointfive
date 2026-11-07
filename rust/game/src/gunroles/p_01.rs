@@ -55,14 +55,14 @@ fn held_row(g: &Game, gd: GuardId) -> &crate::weapons::WeaponDef {
 }
 
 /// What his primary is for. (gunroles.ts gunRole)
-pub fn gun_role(g: &crate::game::Game, gd: GuardId) -> crate::gunroles::GunRole {
+pub fn gun_role(g: &mut crate::game::Game, gd: GuardId) -> crate::gunroles::GunRole {
     let d = primary_id(g, gd);
     if row(g, d).cls == crate::weapons::WeaponClass::Pistol { return GunRole::Pistol; }
     role_row(d).unwrap_or(GunRole::Rifle)
 }
 
 /// His place through a door. (gunroles.ts rankOf)
-pub fn rank_of(g: &crate::game::Game, gd: GuardId) -> f64 {
+pub fn rank_of(g: &mut crate::game::Game, gd: GuardId) -> f64 {
     rank_row(gun_role(g, gd))
 }
 
@@ -172,7 +172,7 @@ pub fn gun_keeps_post(g: &mut crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// What this dealing of men to stack marks costs for the guns in it. (gunroles.ts gunFileCost)
-pub fn gun_file_cost(g: &crate::game::Game, r: &[f64], spots: &[V3], front: V3) -> f64 {
+pub fn gun_file_cost(g: &mut crate::game::Game, r: &[f64], spots: &[V3], front: V3) -> f64 {
     let d: Vec<f64> = spots.iter().map(|s| m::hyp2(s[0] - front[0], s[2] - front[2])).collect();
     let file_cost = g.k.gunroles.file_cost;
     let mut c = 0.0;
@@ -185,7 +185,7 @@ pub fn gun_file_cost(g: &crate::game::Game, r: &[f64], spots: &[V3], front: V3) 
 }
 
 /// The men's ranks for that price: None for men whose guns are all of one kind. (gunroles.ts gunFileRanks)
-pub fn gun_file_ranks(g: &crate::game::Game, men: &[GuardId]) -> Option<Vec<f64>> {
+pub fn gun_file_ranks(g: &mut crate::game::Game, men: &[GuardId]) -> Option<Vec<f64>> {
     if men.len() < 2 { return None; }
     let r: Vec<f64> = men.iter().map(|&x| rank_of(g, x)).collect();
     if r.iter().all(|&x| x == r[0]) { None } else { Some(r) }
@@ -203,7 +203,7 @@ pub fn gun_first(g: &mut crate::game::Game, men: &[GuardId]) -> Vec<GuardId> {
 }
 
 /// Why he went ahead of the lead: his gun goes through a door before the lead's. (gunroles.ts gunBefore)
-pub fn gun_before(g: &crate::game::Game, first: GuardId, lead: GuardId) -> bool {
+pub fn gun_before(g: &mut crate::game::Game, first: GuardId, lead: GuardId) -> bool {
     rank_of(g, first) < rank_of(g, lead)
 }
 
@@ -234,13 +234,13 @@ pub fn gun_last(g: &mut crate::game::Game, men: &[GuardId]) -> Vec<GuardId> {
 }
 
 /// The gap between a blinded defender's rounds: the staging's own for an automatic, the gun's own rate for one that fires a round a pull. (gunroles.ts gunBlindGap)
-pub fn gun_blind_gap(g: &crate::game::Game, gd: GuardId, every: f64) -> f64 {
+pub fn gun_blind_gap(g: &mut crate::game::Game, gd: GuardId, every: f64) -> f64 {
     let d = held_row(g, gd);
     if d.modes.contains(&crate::weapons::FireMode::Auto) { every } else { m::max(every, d.cd) }
 }
 
 /// What an opening `d` metres off is worth to him over another man, for his gun. (gunroles.ts gunLane)
-pub fn gun_lane(g: &crate::game::Game, gd: GuardId, d: f64, reach: f64) -> f64 {
+pub fn gun_lane(g: &mut crate::game::Game, gd: GuardId, d: f64, reach: f64) -> f64 {
     let r = gun_role(g, gd);
     let k = m::min(1.0, m::max(0.0, d / m::max(reach, 0.1)));
     let lane_k = g.k.gunroles.lane_k;
@@ -253,7 +253,7 @@ pub fn gun_lane(g: &crate::game::Game, gd: GuardId, d: f64, reach: f64) -> f64 {
 }
 
 /// How many rounds his trigger sends before the beat between strings; 0 is the controlled pair. (gunroles.ts gunString)
-pub fn gun_string(g: &crate::game::Game, gd: GuardId) -> f64 {
+pub fn gun_string(g: &mut crate::game::Game, gd: GuardId) -> f64 {
     let w = g.gd[gd].weapon;
     let d = g.fa[w].def;
     if d != primary_id(g, gd) { return 0.0; }
@@ -265,7 +265,7 @@ pub fn gun_string(g: &crate::game::Game, gd: GuardId) -> f64 {
 }
 
 /// The seconds to the next round inside a string. (gunroles.ts gunStringGap)
-pub fn gun_string_gap(g: &crate::game::Game, gd: GuardId) -> f64 {
+pub fn gun_string_gap(g: &mut crate::game::Game, gd: GuardId) -> f64 {
     let d = held_row(g, gd);
     match &d.burst {
         Some(b) => b.interval,
@@ -274,7 +274,7 @@ pub fn gun_string_gap(g: &crate::game::Game, gd: GuardId) -> f64 {
 }
 
 /// How much wider than his hands the k-th round of a string is drawn. (gunroles.ts gunStringGrow)
-pub fn gun_string_grow(g: &crate::game::Game, gd: GuardId, k: f64) -> f64 {
+pub fn gun_string_grow(g: &mut crate::game::Game, gd: GuardId, k: f64) -> f64 {
     match &held_row(g, gd).burst {
         Some(b) => m::min(b.spread_cap, b.spread_per_round * k),
         None => 0.0,

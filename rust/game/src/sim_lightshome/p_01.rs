@@ -45,7 +45,7 @@ fn lamp_row(g: &Game, l: LightId) -> Option<usize> {
 }
 
 /// Where the columns stand is the block's own struct here: what is left of the TypeScript's reading of them is that the module and this file agree on how much a part holds. (lightshome.ts columns)
-pub fn columns(g: &crate::game::Game) {
+pub fn columns(g: &mut crate::game::Game) {
     let (cols, caps) = (light_cols().len(), light_caps());
     if rs::cap(14) != cols || rs::cap(0) as f64 != caps.targets || rs::cap(1) as f64 != caps.rows || rs::cap(2) as f64 != caps.beacons || rs::cap(3) as f64 != caps.cameras || rs::cap(4) as f64 != caps.lasers {
         panic!("the Rust module lays the lights out as {} columns and src/sim/lightshome.ts as {}: bun run tools/sim/build.ts", rs::cap(14), cols);
@@ -79,79 +79,79 @@ pub fn fixture_new(g: &mut crate::game::Game, i: f64, st: crate::Opaque, def: &c
 }
 
 /// its switch (lightshome.ts Fixture.on)
-pub fn fixture_on(g: &crate::game::Game, id: FixtureId) -> bool {
-    lights_read(g).bits[fix_i(g, id)] & T_ON != 0
+pub fn fixture_on(g: &mut crate::game::Game, id: FixtureId) -> bool {
+    lights(g).bits[fix_i(g, id)] & T_ON != 0
 }
 
 /// (lightshome.ts Fixture.broken)
-pub fn fixture_broken(g: &crate::game::Game, id: FixtureId) -> bool {
-    lights_read(g).bits[fix_i(g, id)] & T_BROKEN != 0
+pub fn fixture_broken(g: &mut crate::game::Game, id: FixtureId) -> bool {
+    lights(g).bits[fix_i(g, id)] & T_BROKEN != 0
 }
 
 /// an OCP's blind runs to here, and a strike's restrike from here; −1: neither (lightshome.ts Fixture.disabledUntil)
-pub fn fixture_disabled_until(g: &crate::game::Game, id: FixtureId) -> f64 {
-    lights_read(g).blind_until[fix_i(g, id)]
+pub fn fixture_disabled_until(g: &mut crate::game::Game, id: FixtureId) -> f64 {
+    lights(g).blind_until[fix_i(g, id)]
 }
 
 /// what it burns at this tick, 0‥1 (lightshome.ts Fixture.factor)
-pub fn fixture_factor(g: &crate::game::Game, id: FixtureId) -> f64 {
-    lights_read(g).factor[fix_i(g, id)]
+pub fn fixture_factor(g: &mut crate::game::Game, id: FixtureId) -> f64 {
+    lights(g).factor[fix_i(g, id)]
 }
 
 /// the game time a hand put it out at its wall switch; None: no hand did (lightshome.ts Fixture.handOff)
-pub fn fixture_hand_off(g: &crate::game::Game, id: FixtureId) -> Option<f64> {
-    let (l, i) = (lights_read(g), fix_i(g, id));
+pub fn fixture_hand_off(g: &mut crate::game::Game, id: FixtureId) -> Option<f64> {
+    let (l, i) = (lights(g), fix_i(g, id));
     if l.bits[i] & T_HAND != 0 { Some(l.hand[i]) } else { None }
 }
 
 /// on in the level as authored (lightshome.ts Fixture.authored)
-pub fn fixture_authored(g: &crate::game::Game, id: FixtureId) -> bool {
-    lights_read(g).bits[fix_i(g, id)] & T_AUTHORED != 0
+pub fn fixture_authored(g: &mut crate::game::Game, id: FixtureId) -> bool {
+    lights(g).bits[fix_i(g, id)] & T_AUTHORED != 0
 }
 
 /// (lightshome.ts Fixture.baseIntensity)
-pub fn fixture_base_intensity(g: &crate::game::Game, id: FixtureId) -> f64 {
-    lights_read(g).base[fix_i(g, id)]
+pub fn fixture_base_intensity(g: &mut crate::game::Game, id: FixtureId) -> f64 {
+    lights(g).base[fix_i(g, id)]
 }
 
 /// (lightshome.ts Fixture.stagger)
-pub fn fixture_stagger(g: &crate::game::Game, id: FixtureId) -> f64 {
-    lights_read(g).stagger[fix_i(g, id)]
+pub fn fixture_stagger(g: &mut crate::game::Game, id: FixtureId) -> f64 {
+    lights(g).stagger[fix_i(g, id)]
 }
 
 /// The mains, read. (lightshome.ts Mains.constructor)
-pub fn mains_new(g: &crate::game::Game, st: crate::Opaque) -> crate::sim_lightshome::Mains {
+pub fn mains_new(g: &mut crate::game::Game, st: crate::Opaque) -> crate::sim_lightshome::Mains {
     Mains { st }
 }
 
 /// (lightshome.ts Mains.active)
-pub fn mains_active(g: &crate::game::Game) -> bool {
-    lights_read(g).mains & M_ACTIVE != 0
+pub fn mains_active(g: &mut crate::game::Game) -> bool {
+    lights(g).mains & M_ACTIVE != 0
 }
 
 /// (lightshome.ts Mains.permanent)
-pub fn mains_permanent(g: &crate::game::Game) -> bool {
-    lights_read(g).mains & M_PERMANENT != 0
+pub fn mains_permanent(g: &mut crate::game::Game) -> bool {
+    lights(g).mains & M_PERMANENT != 0
 }
 
 /// (lightshome.ts Mains.until)
-pub fn mains_until(g: &crate::game::Game) -> f64 {
-    lights_read(g).until
+pub fn mains_until(g: &mut crate::game::Game) -> f64 {
+    lights(g).until
 }
 
 /// (lightshome.ts Mains.since)
-pub fn mains_since(g: &crate::game::Game) -> f64 {
-    lights_read(g).since
+pub fn mains_since(g: &mut crate::game::Game) -> f64 {
+    lights(g).since
 }
 
 /// (lightshome.ts Mains.restoredAt)
-pub fn mains_restored_at(g: &crate::game::Game) -> f64 {
-    lights_read(g).restored_at
+pub fn mains_restored_at(g: &mut crate::game::Game) -> f64 {
+    lights(g).restored_at
 }
 
 /// how long a man of theirs has been at the panel (lightshome.ts Mains.fixT)
-pub fn mains_fix_t(g: &crate::game::Game) -> f64 {
-    lights_read(g).fix_t
+pub fn mains_fix_t(g: &mut crate::game::Game) -> f64 {
+    lights(g).fix_t
 }
 
 /// A camera's own machine is the base of its CameraRt: this stands the row, whose other fields camera_rt_new fills. (lightshome.ts CameraMachine.constructor)
@@ -163,18 +163,18 @@ pub fn camera_machine_new(g: &mut crate::game::Game, slot: f64, st: crate::Opaqu
 }
 
 /// the lens's yaw this frame (lightshome.ts CameraMachine.yaw)
-pub fn camera_machine_yaw(g: &crate::game::Game, id: CameraRtId) -> f64 {
-    lights_read(g).cam_yaw[cam_slot(g, id)]
+pub fn camera_machine_yaw(g: &mut crate::game::Game, id: CameraRtId) -> f64 {
+    lights(g).cam_yaw[cam_slot(g, id)]
 }
 
 /// the integrator: lit-seconds of Sam in the picture (lightshome.ts CameraMachine.seen)
-pub fn camera_machine_seen(g: &crate::game::Game, id: CameraRtId) -> f64 {
-    lights_read(g).cam_seen[cam_slot(g, id)]
+pub fn camera_machine_seen(g: &mut crate::game::Game, id: CameraRtId) -> f64 {
+    lights(g).cam_seen[cam_slot(g, id)]
 }
 
 /// idle → suspect → alarm, by the module's number (the enum's order is not that) (lightshome.ts CameraMachine.state)
-pub fn camera_machine_state(g: &crate::game::Game, id: CameraRtId) -> crate::sim_lightshome::CameraState {
-    match lights_read(g).cam_state[cam_slot(g, id)] {
+pub fn camera_machine_state(g: &mut crate::game::Game, id: CameraRtId) -> crate::sim_lightshome::CameraState {
+    match lights(g).cam_state[cam_slot(g, id)] {
         S_IDLE => CameraState::Idle,
         S_SUSPECT => CameraState::Suspect,
         S_ALARM => CameraState::Alarm,
@@ -183,23 +183,23 @@ pub fn camera_machine_state(g: &crate::game::Game, id: CameraRtId) -> crate::sim
 }
 
 /// (lightshome.ts CameraMachine.reportedAt)
-pub fn camera_machine_reported_at(g: &crate::game::Game, id: CameraRtId) -> f64 {
-    lights_read(g).cam_reported[cam_slot(g, id)]
+pub fn camera_machine_reported_at(g: &mut crate::game::Game, id: CameraRtId) -> f64 {
+    lights(g).cam_reported[cam_slot(g, id)]
 }
 
 /// where the picture last had him (lightshome.ts CameraMachine.lastSeen)
-pub fn camera_machine_last_seen(g: &crate::game::Game, id: CameraRtId) -> Option<V3> {
-    let (l, s) = (lights_read(g), cam_slot(g, id));
+pub fn camera_machine_last_seen(g: &mut crate::game::Game, id: CameraRtId) -> Option<V3> {
+    let (l, s) = (lights(g), cam_slot(g, id));
     if l.cam_bits[s] & C_LAST != 0 { Some([l.cam_lx[s], l.cam_ly[s], l.cam_lz[s]]) } else { None }
 }
 
 /// a dead camera has been called in, once per death (lightshome.ts CameraMachine.deadCalled)
-pub fn camera_machine_dead_called(g: &crate::game::Game, id: CameraRtId) -> bool {
-    lights_read(g).cam_bits[cam_slot(g, id)] & C_DEAD != 0
+pub fn camera_machine_dead_called(g: &mut crate::game::Game, id: CameraRtId) -> bool {
+    lights(g).cam_bits[cam_slot(g, id)] & C_DEAD != 0
 }
 
 /// all of it as a file has it, or a fresh encounter (lightshome.ts CameraMachine.put)
-pub fn camera_machine_put(g: &crate::game::Game, id: CameraRtId, yaw: f64, phase: f64, seen: f64, state: crate::sim_lightshome::CameraState, reported_at: f64, last_seen: Option<V3>, dead_called: bool) {
+pub fn camera_machine_put(g: &mut crate::game::Game, id: CameraRtId, yaw: f64, phase: f64, seen: f64, state: crate::sim_lightshome::CameraState, reported_at: f64, last_seen: Option<V3>, dead_called: bool) {
     let (l, s) = (lights(g), cam_slot(g, id));
     l.cam_yaw[s] = yaw;
     l.cam_phase[s] = phase;
@@ -226,32 +226,32 @@ pub fn laser_machine_new(g: &mut crate::game::Game, slot: f64, st: crate::Opaque
 }
 
 /// (lightshome.ts LaserMachine.lastTripAt)
-pub fn laser_machine_last_trip_at(g: &crate::game::Game, id: LaserRtId) -> f64 {
-    lights_read(g).las_last[las_slot(g, id)]
+pub fn laser_machine_last_trip_at(g: &mut crate::game::Game, id: LaserRtId) -> f64 {
+    lights(g).las_last[las_slot(g, id)]
 }
 
 /// (lightshome.ts LaserMachine.trips)
-pub fn laser_machine_trips(g: &crate::game::Game, id: LaserRtId) -> f64 {
-    lights_read(g).las_trips[las_slot(g, id)] as f64
+pub fn laser_machine_trips(g: &mut crate::game::Game, id: LaserRtId) -> f64 {
+    lights(g).las_trips[las_slot(g, id)] as f64
 }
 
 /// drawn length this frame (lightshome.ts LaserMachine.cut)
-pub fn laser_machine_cut(g: &crate::game::Game, id: LaserRtId) -> f64 {
-    lights_read(g).las_cut[las_slot(g, id)]
+pub fn laser_machine_cut(g: &mut crate::game::Game, id: LaserRtId) -> f64 {
+    lights(g).las_cut[las_slot(g, id)]
 }
 
 /// (lightshome.ts LaserMachine.deadCalled)
-pub fn laser_machine_dead_called(g: &crate::game::Game, id: LaserRtId) -> bool {
-    lights_read(g).las_bits[las_slot(g, id)] & L_DEAD != 0
+pub fn laser_machine_dead_called(g: &mut crate::game::Game, id: LaserRtId) -> bool {
+    lights(g).las_bits[las_slot(g, id)] & L_DEAD != 0
 }
 
 /// something is breaking it right now (lightshome.ts LaserMachine.held)
-pub fn laser_machine_held(g: &crate::game::Game, id: LaserRtId) -> bool {
-    lights_read(g).las_bits[las_slot(g, id)] & L_HELD != 0
+pub fn laser_machine_held(g: &mut crate::game::Game, id: LaserRtId) -> bool {
+    lights(g).las_bits[las_slot(g, id)] & L_HELD != 0
 }
 
 /// the machine's own as a file has it, or a fresh encounter (lightshome.ts LaserMachine.put)
-pub fn laser_machine_put(g: &crate::game::Game, id: LaserRtId, last_trip_at: f64, trips: f64, dead_called: bool, held: bool) {
+pub fn laser_machine_put(g: &mut crate::game::Game, id: LaserRtId, last_trip_at: f64, trips: f64, dead_called: bool, held: bool) {
     let (l, s) = (lights(g), las_slot(g, id));
     l.las_last[s] = last_trip_at;
     l.las_trips[s] = js::to_u32(trips);
@@ -259,7 +259,7 @@ pub fn laser_machine_put(g: &crate::game::Game, id: LaserRtId, last_trip_at: f64
 }
 
 /// One game's lights: the block's part is this game's for its life, and the mains as a new level has them. (lightshome.ts LightHome.constructor)
-pub fn light_home_new(g: &crate::game::Game, st: crate::Opaque) -> crate::sim_lightshome::LightHome {
+pub fn light_home_new(g: &mut crate::game::Game, st: crate::Opaque) -> crate::sim_lightshome::LightHome {
     columns(g);
     let bit = LIGHTS_BIT as u32;
     let head = &mut ::sim::state::state(g.sim).head;
@@ -295,7 +295,7 @@ pub fn light_home_add(g: &mut crate::game::Game, def: &crate::sim_lightshome::Fi
 }
 
 /// A camera more, at rest (`sweep`: its two yaws, none = it does not pan): its machine and the level's facts of it. (lightshome.ts LightHome.camera)
-pub fn light_home_camera(g: &crate::game::Game, target: FixtureId, rest: f64, sweep: Option<[f64; 2]>, period: f64, pitch: f64, pos: V3) -> f64 {
+pub fn light_home_camera(g: &mut crate::game::Game, target: FixtureId, rest: f64, sweep: Option<[f64; 2]>, period: f64, pitch: f64, pos: V3) -> f64 {
     let t = fix_i(g, target) as u32;
     let l = lights(g);
     let s = l.cameras as usize;
@@ -319,7 +319,7 @@ pub fn light_home_camera(g: &crate::game::Game, target: FixtureId, rest: f64, sw
 }
 
 /// A tripwire more. (lightshome.ts LightHome.laser)
-pub fn light_home_laser(g: &crate::game::Game, target: FixtureId, len: f64) -> f64 {
+pub fn light_home_laser(g: &mut crate::game::Game, target: FixtureId, len: f64) -> f64 {
     let t = fix_i(g, target) as u32;
     let l = lights(g);
     let s = l.lasers as usize;
@@ -335,7 +335,7 @@ pub fn light_home_laser(g: &crate::game::Game, target: FixtureId, len: f64) -> f
 }
 
 /// a lamp's row, which the module writes: it must have one (lightshome.ts stand's rowOf)
-fn row_of(g: &Game, l: LightId) -> u32 {
+fn row_of(g: &mut Game, l: LightId) -> u32 {
     match lamp_row(g, l) {
         Some(r) => r as u32,
         None => panic!("the lamp '{}' has an owner or is not in the list, and the module writes it: a beacon's spot and a camera's cone must each have a row", g.tab.light[l].name),
@@ -406,7 +406,7 @@ pub fn light_home_stand(g: &mut crate::game::Game, list: &[LightId], targets: &[
 }
 
 /// A lamp's whole record into its row, as the lamp stands. Nothing for a lamp with no row. (lightshome.ts LightHome.feed)
-pub fn light_home_feed(g: &crate::game::Game, l: LightId) {
+pub fn light_home_feed(g: &mut crate::game::Game, l: LightId) {
     let r = match lamp_row(g, l) {
         Some(r) => r,
         None => return,
@@ -448,7 +448,7 @@ pub fn light_home_feed(g: &crate::game::Game, l: LightId) {
 }
 
 /// …of a lamp somebody moves each tick (a fire's): only while it burns; out, its record is the picture's alone. (lightshome.ts LightHome.feedBurning)
-pub fn light_home_feed_burning(g: &crate::game::Game, l: LightId) {
+pub fn light_home_feed_burning(g: &mut crate::game::Game, l: LightId) {
     if g.tab.light[l].enabled {
         light_home_feed(g, l);
         return;
@@ -459,7 +459,7 @@ pub fn light_home_feed_burning(g: &crate::game::Game, l: LightId) {
 }
 
 /// Every event from outside: a kind, a fixture where it has one, its numbers. → the kind's own answer. (lightshome.ts LightHome.in)
-pub fn light_home_in(g: &crate::game::Game, kind: f64, t: Option<FixtureId>, a: Option<f64>, b: Option<f64>, c_2: Option<f64>, d: Option<f64>) -> f64 {
+pub fn light_home_in(g: &mut crate::game::Game, kind: f64, t: Option<FixtureId>, a: Option<f64>, b: Option<f64>, c_2: Option<f64>, d: Option<f64>) -> f64 {
     let i = match t {
         Some(t) => fix_i(g, t),
         None => 0,
@@ -468,7 +468,7 @@ pub fn light_home_in(g: &crate::game::Game, kind: f64, t: Option<FixtureId>, a: 
 }
 
 /// A wall switch's circuit flipped. (lightshome.ts LightHome.flip)
-pub fn light_home_flip(g: &crate::game::Game, targets: &[FixtureId], on: bool, time: f64, strike: bool) {
+pub fn light_home_flip(g: &mut crate::game::Game, targets: &[FixtureId], on: bool, time: f64, strike: bool) {
     // rust/sim takes the circuit from its own scratch table, as the TypeScript writes it (one thread: see notes)
     let ids = unsafe { core::slice::from_raw_parts_mut(rs::ids_addr() as *mut u32, targets.len()) };
     for (i, &t) in targets.iter().enumerate() {
@@ -480,7 +480,7 @@ pub fn light_home_flip(g: &crate::game::Game, targets: &[FixtureId], on: bool, t
 /// What the module worked out, to what the picture reads: a lamp's burning, and a beacon's turn. (lightshome.ts LightHome.paint)
 pub fn light_home_paint(g: &mut crate::game::Game) {
     for r in 0..g.light_home.lamps.len() {
-        let c = lights_read(g);
+        let c = lights(g);
         let b = c.row_bits[r];
         let role = b & R_ROLE;
         if role == R_CONE {
@@ -503,7 +503,7 @@ pub fn light_home_paint(g: &mut crate::game::Game) {
 pub fn light_home_camera_pan(g: &mut crate::game::Game, slot: f64, cone: LightId, dt: f64, live: bool, cones: bool) -> f64 {
     let out = rs::camera_pan(g.sim, slot as usize, dt, live, cones);
     if let Some(r) = lamp_row(g, cone) {
-        let c = lights_read(g);
+        let c = lights(g);
         let lamp = &mut g.tab.light[cone];
         lamp.enabled = c.row_bits[r] & R_ON != 0;
         lamp.pos = [c.x[r], c.y[r], c.z[r]];
@@ -513,22 +513,22 @@ pub fn light_home_camera_pan(g: &mut crate::game::Game, slot: f64, cone: LightId
 }
 
 /// …and after it. → CAM bits. (lightshome.ts LightHome.cameraSee)
-pub fn light_home_camera_see(g: &crate::game::Game, slot: f64, time: f64, dt: f64, visible: bool, gain: f64, p: V3, suspicion: f64, alarm: f64) -> f64 {
+pub fn light_home_camera_see(g: &mut crate::game::Game, slot: f64, time: f64, dt: f64, visible: bool, gain: f64, p: V3, suspicion: f64, alarm: f64) -> f64 {
     rs::camera_see(g.sim, slot as usize, time, dt, visible, gain, p, suspicion, alarm) as f64
 }
 
 /// A tripwire before what is in its beam. → LASER bits. (lightshome.ts LightHome.laserOpen)
-pub fn light_home_laser_open(g: &crate::game::Game, slot: f64) -> f64 {
+pub fn light_home_laser_open(g: &mut crate::game::Game, slot: f64) -> f64 {
     rs::laser_open(g.sim, slot as usize) as f64
 }
 
 /// …and after it. → LASER bits. (lightshome.ts LightHome.laserClose)
-pub fn light_home_laser_close(g: &crate::game::Game, slot: f64, time: f64, live: bool, cut: f64, sense: f64, held: bool) -> f64 {
+pub fn light_home_laser_close(g: &mut crate::game::Game, slot: f64, time: f64, live: bool, cut: f64, sense: f64, held: bool) -> f64 {
     rs::laser_close(g.sim, slot as usize, time, live, cut, sense, held) as f64
 }
 
 /// The block (a check's, and the reader's `rowsOf`): `st` is what the TypeScript's getter hands back; the slot it stands for is `g.sim`. (lightshome.ts LightHome.block)
-pub fn light_home_block(g: &crate::game::Game) -> crate::Opaque {
+pub fn light_home_block(g: &mut crate::game::Game) -> crate::Opaque {
     g.light_home.st
 }
 

@@ -1,16 +1,14 @@
-// FALLEN GLASS AS CUT PLATES (src/game/shards.ts under the cut switch, scene/cut.ts; rebuild/cut-pieces/glass/notes.md) — headless verdicts:
-//   cutglass-shape         a pane shot and blasted until pieces let go, the cut switch ON: every piece / dagger that becomes a plate is ONE box (two when its cell has more
+// FALLEN GLASS AS CUT PLATES (src/game/shards.ts, scene/cut.ts; rebuild/cut-pieces/glass/notes.md) — headless verdicts. Cut boxes are a settled rule: nothing
+// here asks the rectangles of before or writes the switch (until 2026-11-07 a probe `cutglass-off` did, and a line each of `shape` and `gone`):
+//   cutglass-shape         a pane shot and blasted until pieces let go: every piece / dagger that becomes a plate is ONE box (two when its cell has more
 //                          edges than a record holds) cut along its cell's edges — every corner of the cell is on a plate, every corner of a plate is inside the cell, the
-//                          plates' area is the cell's, the record is ≤ 8 unit in-plane planes — still clear, polished, glass contact, inside glass's share of the pool; and
-//                          never more plates than the rectangles made for the same shots
+//                          plates' area is the cell's, the record is ≤ 8 unit in-plane planes — still clear, polished, glass contact, inside glass's share of the pool
 //   cutglass-break         a cut plate landing hard breaks into CUT children (the parent's outline in two or three: their area is never more than the parent's, never past
 //                          generation 2), everything comes to rest, the rest crumbs lie round the real outlines; a twelve-sided cell leaves as two halves; the polygon helpers
-//   cutglass-gone          a glass plate the POOL drops (evicted at rest to make room for another chunk) goes as grains of its own glass under the switch; switch off: nothing
+//   cutglass-gone          a glass plate the POOL drops (evicted at rest to make room for another chunk) goes as grains of its own glass
 //   cutglass-look          a cut plate carries the GLASS LOOK (shards.ts SHARDS.cut*: a pale edge colour, see-through faces inside a rim, a dark polished body); the four
 //                          look knobs at zero = the plate as it first went in; the record's last row as the cut pass decodes it (scene/cut.ts packCut)
-//   cutglass-determinism   the seeded volley twice with the switch on: digest, events, audio, particle records, debris and every cut record identical
-//   cutglass-off           THE SWITCH OFF = THE RECTANGLES: no plate carries a record, the cut counters stay at zero — and, when CUTGLASS_BASE names a checkout of the base
-//                          build, the same seeded volley there is identical: run digest, rounds, events, audio, particle records, debris
+//   cutglass-determinism   the seeded volley twice: digest, events, audio, particle records, debris and every cut record identical
 import { standUp, ROOT, fake } from './headless.ts';
 import { CONF_PANE, floatPartition } from './office-pane.ts';
 const { v3, quat } = await import(`${ROOT}/src/math/vec.ts`);
@@ -20,7 +18,7 @@ const GBM = await import(`${ROOT}/src/game/glassbreak.ts`);
 const SM = await import(`${ROOT}/src/game/shards.ts`);
 const CM = await import(`${ROOT}/src/scene/cut.ts`);
 const { BoxFlag, makeBox } = await import(`${ROOT}/src/scene/boxes.ts`);
-const { GB_STATS } = GBM; const { SHARDS, SHARD_STATS, polyArea, clipHalf } = SM; const { cutConfig, cutVerts, cutContains, MAX_CUT_PLANES } = CM;
+const { GB_STATS } = GBM; const { SHARDS, SHARD_STATS, polyArea, clipHalf } = SM; const { cutVerts, cutContains, MAX_CUT_PLANES } = CM;
 
 type Vec3 = [number, number, number];
 const DT = 1 / 60;
@@ -32,11 +30,6 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
   return { verdict: (ok, label, detail) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); }, done: () => { const ok = all; console.log(`=== ${title.split(':')[0]}: ${ok ? 'ALL PASS' : 'FAILURES above'} ===`); if (!ok) process.exitCode = 1; return ok; } };
 }
 const resetStats = () => { for (const k of Object.keys(GB_STATS)) (GB_STATS as any)[k] = 0; for (const k of Object.keys(SHARD_STATS)) (SHARD_STATS as any)[k] = 0; };
-/** run `fn` with the cut switch at `on`, and put it back whatever happens (the switch is a module global: the next probe must find it as it was) */
-// (headless.ts lets CUTBOXES=1|0 pin the switch at every stand-up, and with no word the shipped stand raises it as the page does: these probes set it
-//  themselves, so the word is given for their length whether the run came with one or not)
-function pinEnv(on: boolean): () => void { const keys = ['CUTBOXES', 'CUT_BOXES'], had = keys.map(k => process.env[k]); process.env.CUTBOXES = on ? '1' : '0'; if (had[1] !== undefined) process.env.CUT_BOXES = on ? '1' : '0'; return () => { keys.forEach((k, i) => { if (had[i] === undefined) delete process.env[k]; else process.env[k] = had[i]; }); }; }   // (both spellings: headless.ts reads either)
-async function withCut<T>(on: boolean, fn: () => Promise<T>): Promise<T> { const was = cutConfig.on; const unpin = pinEnv(on); cutConfig.on = on; try { return await fn(); } finally { cutConfig.on = was; unpin(); } }
 
 // the pane (by where it stands: office-pane.ts) = the conference partition's second sheet (shards-probes.ts): c (7.5, 1.5, 10), annealed; Sam in the corridor south of it
 const PANE = CONF_PANE;
@@ -47,7 +40,7 @@ const SHOTS: [number, number][] = [[0.1, 0.1], [0.11, 0.1], [0.12, 0.11], [-0.5,
 
 async function stage(seed: number) {
   Math.random = seeded(seed);
-  const W = await standUp(); const { game, engine } = W; floatPartition(game);
+  const W = await standUp({ dress: true }); const { game, engine } = W; floatPartition(game);
   engine.particles = new Particles(fake('device'), fake('sceneLayout')); engine.settings.gpuParticles = true;
   game.godMode = true; game.player.visibility = 0.02; game.tune.chaos = 0.5; game.tune.glassBreak = true; game.tune.glassShards = true; resetStats();
   for (let i = 0; i < 5; i++) W.step(DT);
@@ -78,15 +71,11 @@ function breakPane(W: any, game: any, flush: () => any[]) {
 
 // ================================================================ the shape
 export async function cutglassShape() {
-  const F = family('cutglass-shape: under the cut switch a fallen piece is its cell — one plate cut along the cell\'s edges');
-  const on = await withCut(true, async () => {
+  const F = family('cutglass-shape: a fallen piece is its cell — one plate cut along the cell\'s edges');
+  const on = await (async () => {
     const { W, game, flush } = await stage(9301); const rel = watchReleases(game); const r = breakPane(W, game, flush);
     return { rel, r, stats: { ...SHARD_STATS }, cap: game.destr.debris.cap(), game };
-  });
-  const off = await withCut(false, async () => {
-    const { W, game, flush } = await stage(9301); const rel = watchReleases(game); const r = breakPane(W, game, flush);
-    return { rel, r, stats: { ...SHARD_STATS } };
-  });
+  })();
   const plated = on.rel.filter(x => x.plates.length > 0 && x.f.kind !== 'sheet');
   const bad: string[] = []; let nPlates = 0, nCut = 0, planes = 0, maxPlanes = 0, corners = 0, worstArea = 0, split = 0, pointed = 0;
   for (const { f, plates } of plated) {
@@ -118,10 +107,9 @@ export async function cutglassShape() {
     `${plated.length} plated fragments → ${nPlates} plates (${nCut} with a record, ${nPlates - nCut} whose cell was its own rectangle), ${(planes / Math.max(1, nCut)).toFixed(1)} planes a record (most ${maxPlanes}), ${(corners / Math.max(1, nPlates)).toFixed(1)} corners a plate, ${pointed} with a corner under 60°, ${split} cells left in two, ${on.stats.cutDropped} edges left out, worst area error ${(100 * worstArea).toFixed(2)} %${bad.length ? ' · ' + bad.slice(0, 4).join(' · ') : ''}`);
   const all = plated.flatMap(x => x.plates);
   F.verdict(all.length > 0 && all.every(pl => (pl.flags & BoxFlag.NoShadow) && (pl.flags & BoxFlag.Dynamic) && pl.rough === 0.05 && pl.contact === SHARDS.contact), 'still glass: clear (no shadow, no ray), polished, sliding on a floor like glass', `${all.length} plates checked`);
-  const share = Math.max(2, Math.floor(on.cap * SHARDS.plateShare)); const offPlates = off.rel.reduce((a, x) => a + (x.f.kind !== 'sheet' ? x.plates.length : 0), 0);
-  F.verdict(on.r.peak <= on.cap && on.r.peakGlass <= share && nPlates <= offPlates && on.stats.fragments === off.stats.fragments && off.rel.every(x => x.plates.every(pl => !pl.cut && !pl.poly)),
-    'inside the pool: never over its cap nor glass\'s share of it, and never more plates than the rectangles made of the same fragments (switch off: no plate carries a record)',
-    `switch on: ${on.stats.fragments} fragments → ${nPlates} plates, pool peak ${on.r.peak}/${on.cap}, glass peak ${on.r.peakGlass}/${share}, ${on.stats.platesRefused} refused · switch off: ${off.stats.fragments} fragments → ${offPlates} rectangles, pool peak ${off.r.peak}`);
+  const share = Math.max(2, Math.floor(on.cap * SHARDS.plateShare));
+  F.verdict(on.r.peak <= on.cap && on.r.peakGlass <= share, 'inside the pool: never over its cap nor glass\'s share of it',
+    `${on.stats.fragments} fragments → ${nPlates} plates, pool peak ${on.r.peak}/${on.cap}, glass peak ${on.r.peakGlass}/${share}, ${on.stats.platesRefused} refused`);
   return F.done();
 }
 
@@ -133,7 +121,7 @@ export async function cutglassBreak() {
     const a = clipHalf(hex, 0.8, 0.6, 0.03), b = clipHalf(hex, -0.8, -0.6, -0.03); const none = clipHalf(hex, 1, 0, -1), whole = clipHalf(hex, 1, 0, 1);
     F.verdict(Math.abs(polyArea(a) + polyArea(b) - polyArea(hex)) < 1e-12 && a.length >= 3 && b.length >= 3 && none.length === 0 && Math.abs(polyArea(whole) - polyArea(hex)) < 1e-12,
       'a line cuts an outline into two that add up to it; a line that misses takes nothing / everything', `hexagon ${(polyArea(hex) * 1e4).toFixed(1)} cm² = ${(polyArea(a) * 1e4).toFixed(1)} + ${(polyArea(b) * 1e4).toFixed(1)}; ${a.length} and ${b.length} corners`); }
-  await withCut(true, async () => {
+  await (async () => {
     const { W, game, flush } = await stage(9302); const D = game.destr.debris; const S = game.shards;
     const outl = (pts: [number, number][], at: Vec3) => pts.map(p => [at[0] + p[0], at[1] + p[1], at[2]] as Vec3);
     const frag = (pts: [number, number][], at: Vec3, vel: Vec3, seed: number) => ({ pane: -1, type: 'annealed', kind: 'piece', outline: outl(pts, at), centre: at.slice(), normal: [0, 0, 1], thickness: 0.006, area: polyArea(pts), velocity: vel, spin: [2, 0.5, -1.5], tint: [0.72, 0.8, 0.82], grain: 0, cause: 'support', who: 1, seed });
@@ -158,14 +146,14 @@ export async function cutglassBreak() {
     // the crumbs a resting cut plate sheds lie round ITS outline (inside 1.08 × + the jitter), not round its bounding rectangle's corners
     let far = 0; for (const e of crumbs) { let best = 1e9; for (const c of glass) { const m = c.glass; if (!m.poly) continue; const l = quat.rotate(conj(c.box.rot), v3.sub(e.pos, c.box.c)); let out = -1e9; const P = m.poly; for (let i = 0; i < P.length; i++) { const a = P[i], b = P[(i + 1) % P.length]; const ex = b[0] - a[0], ey = b[1] - a[1]; const L = Math.hypot(ex, ey) || 1; out = Math.max(out, ((l[0] - a[0]) * ey - (l[1] - a[1]) * ex) / L); } best = Math.min(best, Math.max(out, Math.abs(l[2]) - 0.05)); } if (best > 0.035) far++; }
     F.verdict(restAll && finite && glass.length > 0 && crumbs.length > 0 && far === 0, 'everything comes to rest on the floor, finite; the rest crumbs lie along the plates\' real outlines', `${glass.length} plates at rest, ${crumbs.length} crumb records, ${far} further than 3.5 cm outside every outline`);
-  });
+  })();
   return F.done();
 }
 
 // ================================================================ leaving the pool
 export async function cutglassGone() {
-  const F = family('cutglass-gone: a plate the pool drops goes as grains of its own glass (switch on); as nothing, as it was (switch off)');
-  const run = (on: boolean) => withCut(on, async () => {
+  const F = family('cutglass-gone: a plate the pool drops goes as grains of its own glass');
+  const a = await (async () => {
     const { W, game, engine, flush } = await stage(9303); const D = game.destr.debris; const S = game.shards; resetStats();
     const sq: [number, number][] = [[-0.12, -0.1], [0.14, -0.08], [0.1, 0.12], [-0.1, 0.09]];
     for (let i = 0; i < 4; i++) S.release({ pane: -1, type: 'annealed', kind: 'piece', outline: sq.map(p => [OPEN[0] + i * 0.7 + p[0], 0.3 + p[1], OPEN[2]]), centre: [OPEN[0] + i * 0.7, 0.3, OPEN[2]], normal: [0, 0, 1], thickness: 0.006, area: polyArea(sq), velocity: [0, 0, 0.3], spin: [1, 0, 0], tint: [0.5, 0.8, 0.6], grain: 0, cause: 'support', who: 1, seed: 700 + i });
@@ -177,23 +165,21 @@ export async function cutglassGone() {
     const gone = glass0.length - D.list.filter((c: any) => c.glass).length;
     const near = recs.filter(e => where.some((p: Vec3) => Math.hypot(e.pos[0] - p[0], e.pos[2] - p[2]) < 0.05)); const tinted = recs.every(e => Math.abs(e.o.color[0] - 0.5) < 1e-9 && Math.abs(e.o.color[1] - 0.8) < 1e-9);
     return { n: glass0.length, rest0, gone, recs: recs.length, born: recs.reduce((a, e) => a + e.count, 0), near: near.length, tinted, crumbled: SHARD_STATS.crumbled - cr0, len: D.list.length, cap: D.cap(), evicted: D.stats.evicted };
-  });
-  const a = await run(true), b = await run(false);
+  })();
   F.verdict(a.n >= 4 && a.rest0 === a.n && a.gone === 2 && a.recs === 2 && a.near === 2 && a.tinted && a.born >= 6 && a.crumbled === 2 && a.len <= a.cap,
-    'switch on: each plate evicted at rest leaves a record of grains where it lay, in its own tint; the pool stays at its cap', `${a.n} plates at rest, pool full (${a.len}/${a.cap}); 2 chunks spawned → ${a.gone} plates evicted → ${a.recs} records, ${a.born} grains, ${a.near} at a plate's place`);
-  F.verdict(b.gone === 2 && b.recs === 0 && b.crumbled === 0, 'switch off: the evicted plates vanish as they always did (no record, no count)', `${b.gone} plates evicted → ${b.recs} records`);
+    'each plate evicted at rest leaves a record of grains where it lay, in its own tint; the pool stays at its cap', `${a.n} plates at rest, pool full (${a.len}/${a.cap}); 2 chunks spawned → ${a.gone} plates evicted → ${a.recs} records, ${a.born} grains, ${a.near} at a plate's place`);
   return F.done();
 }
 
-// ================================================================ the seeded volley (any checkout: `root`), for determinism and the switch-off identity
+// ================================================================ the seeded volley, for determinism
 const VOLLEY = [[7.4, 1.3, 10], [7.42, 1.31, 10], [6.3, 1.0, 10], [7.9, 0.7, 10], [8.8, 1.5, 10], [6.6, 1.6, 10], [7.1, 0.5, 10], [8.9, 1.52, 10], [9.3, 0.9, 10], [7.6, 1.9, 10]];
 // ================================================================ the look
 export async function cutglassLook() {
   const F = family('cutglass-look: a cut plate is drawn as glass — dark polished faces that are seen through, a pale edge — and with the look knobs at zero it is the plate as it first went in');
   const lum = (a: number[]) => 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2];
-  const take = async () => withCut(true, async () => { const { W, game, flush } = await stage(9301); const rel = watchReleases(game); breakPane(W, game, flush);
+  const take = async () => { const { W, game, flush } = await stage(9301); const rel = watchReleases(game); breakPane(W, game, flush);
     const made = rel.flatMap(x => x.plates).filter((p: any) => p.cut); const lying = game.destr.debris.list.filter((c: any) => c.glass && c.rest && c.box.cut);
-    return { made, lying: lying.map((c: any) => ({ albedo: c.box.albedo.slice(), glassLook: c.box.cutGlass })) }; });
+    return { made, lying: lying.map((c: any) => ({ albedo: c.box.albedo.slice(), glassLook: c.box.cutGlass })) }; };
   const A = await take();
   const okA = A.made.length >= 3 && A.made.every((p: any) => p.core && p.core.every((x: number) => x >= 0.7) && p.glassLook && p.glassLook.see === SHARDS.cutSee && p.glassLook.rim === SHARDS.cutRim && p.glassLook.anim === SHARDS.cutAnim
     && lum(p.albedo) < 0.15 && p.rough === 0.05 && (p.flags & BoxFlag.NoShadow) !== 0);
@@ -218,15 +204,13 @@ export async function cutglassLook() {
     'the record: no core = 0, a core colour = 1 exactly (as before), glass = + 2, + 4 stepping, + 8 × the rim in quarter pixels, the see-through share as the fraction (clamped)', `w = ${w0} · ${w1} · ${w2.toFixed(4)} · ${w3.toFixed(4)}`);
   return F.done();
 }
-export async function volley(root: string, seed: number, cut: boolean) {
+export async function volley(root: string, seed: number) {
   const H = await import(`${root}/tools/qa/headless.ts`); const V = await import(`${root}/src/math/vec.ts`); void V;
   const { fireWeapon } = await import(`${root}/src/game/combat.ts`); const { WEAPONS } = await import(`${root}/src/game/weapons.ts`); const PMr = await import(`${root}/src/render/particles.ts`);
   const { digestGame } = await import(`${root}/src/game/digest.ts`); const { tread } = await import(`${root}/src/game/floor.ts`);
-  let C: any = null; try { C = await import(`${root}/src/scene/cut.ts`); } catch { /* the base build: no cut boxes at all */ }
-  const was = C ? C.cutConfig.on : false; const unpin = pinEnv(cut); if (C) C.cutConfig.on = cut;
   try {
     Math.random = seeded(seed);
-    const W = await H.standUp(); const { game, engine } = W; floatPartition(game);
+    const W = await H.standUp({ dress: true }); const { game, engine } = W; floatPartition(game);
     engine.particles = new PMr.Particles(H.fake('device'), H.fake('sceneLayout')); engine.settings.gpuParticles = true;
     game.godMode = true; game.player.visibility = 0.02; game.tune.chaos = 0.5; game.tune.glassBreak = true; game.tune.glassShards = true;
     for (let i = 0; i < 5; i++) W.step(DT);
@@ -250,25 +234,14 @@ export async function volley(root: string, seed: number, cut: boolean) {
     const cuts = L.map((c: any) => c.box.cut ? c.box.cut.map((k: any) => `${k.n.map((x: number) => x.toFixed(5))}:${k.d.toFixed(5)}`).join('|') : '-');
     return { digest: hash(JSON.stringify(digestGame(game, true))), rounds: hash(rounds.join()), events: hash(events.join()), nEvents: events.length, audio: hash(audio.join()), nAudio: audio.length, emits: hash(emits.join()), nEmits: emits.length,
       debris: hash(debris.join()), nDebris: debris.length, cuts: hash(cuts.join()), nCut: L.filter((c: any) => c.box.cut).length, nPoly: L.filter((c: any) => c.glass?.poly).length, nGlass: L.filter((c: any) => c.glass).length, peak, peakGlass, cap: game.destr.debris.cap() };
-  } finally { if (C) C.cutConfig.on = was; unpin(); }
+  } finally { /* (nothing of the stand's to put back) */ }
 }
 const line = (r: any) => `digest ${r.digest} · rounds ${r.rounds} · events ${r.events} (${r.nEvents}) · audio ${r.audio} (${r.nAudio}) · emits ${r.emits} (${r.nEmits}) · debris ${r.debris} (${r.nDebris}, ${r.nGlass} glass, ${r.nCut} cut)`;
 const same = (a: any, b: any, keys = ['digest', 'rounds', 'events', 'audio', 'emits', 'debris']) => keys.every(k => a[k] === b[k]);
 
 export async function cutglassDeterminism() {
-  const F = family('cutglass-determinism: the seeded volley twice with the cut switch on is one run');
-  const a = await volley(ROOT, 4201, true), b = await volley(ROOT, 4201, true);
+  const F = family('cutglass-determinism: the seeded volley twice is one run');
+  const a = await volley(ROOT, 4201), b = await volley(ROOT, 4201);
   F.verdict(same(a, b, ['digest', 'rounds', 'events', 'audio', 'emits', 'debris', 'cuts']) && a.nCut > 0 && a.peak <= a.cap, 'two runs of the seeded volley agree on everything, the cut records included; the pool inside its cap', `${line(a)} · cuts ${a.cuts} · pool peak ${a.peak}/${a.cap}, glass peak ${a.peakGlass}`);
-  return F.done();
-}
-export async function cutglassOff() {
-  const F = family('cutglass-off: the cut switch off = the rectangles (and, with CUTGLASS_BASE, the base build run for run)');
-  resetStats(); const off = await volley(ROOT, 4201, false); const st = { ...SHARD_STATS };
-  F.verdict(off.nCut === 0 && off.nPoly === 0 && st.cutPlates === 0 && st.cutSplit === 0 && st.cutDropped === 0 && off.nGlass > 0, 'switch off: no plate carries a record or an outline, the cut counters stay at zero', `${line(off)}`);
-  const on = await volley(ROOT, 4201, true);
-  F.verdict(on.nCut > 0 && on.rounds === off.rounds, 'the switch is live: the same volley with it on makes cut plates (the fracture itself — the rounds, what they hit — is the same)', `${line(on)}`);
-  const base = process.env.CUTGLASS_BASE;
-  if (base) { const b = await volley(base, 4201, false); F.verdict(same(off, b), `switch off is the base build (${base}) run for run: digest, rounds, events, audio, particle records, debris`, `base: ${line(b)}`); }
-  else console.log('    (CUTGLASS_BASE not set: the cross-build identity was not run — CUTGLASS_BASE=<a checkout of the base build> bun run tools/qa/probes.ts cutglass-off)');
   return F.done();
 }

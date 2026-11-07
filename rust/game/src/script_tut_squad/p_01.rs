@@ -44,7 +44,7 @@ fn release_alert(g: &mut Game, r: DirectorRunId, b: DirectorLiveBeatId, u: &crat
     crate::director::director_beat_release(g, r, b, u, Some(crate::squad::EndGuardScriptState::Alert))
 }
 /// the closure `alive` (tut-squad.script.ts:67)
-fn alive(g: &Game, r: DirectorRunId, u: &Option<crate::director::UnitRef>) -> bool {
+fn alive(g: &mut Game, r: DirectorRunId, u: &Option<crate::director::UnitRef>) -> bool {
     match u {
         Some(u) => crate::director::director_query_alive(g, r, u),
         None => false,
@@ -60,7 +60,7 @@ fn open_cond(id: u32) -> crate::director::Cond {
     until(id, "a door of his opens")
 }
 /// c.unit of each callsign, the living ones (tut-squad.script.ts:79, :144, :206)
-fn living(g: &Game, r: DirectorRunId, names: &[&str]) -> Vec<crate::director::UnitRef> {
+fn living(g: &mut Game, r: DirectorRunId, names: &[&str]) -> Vec<crate::director::UnitRef> {
     let mut men = Vec::new();
     for cs in names {
         let u = crate::director::director_beat_unit(g, r, cs);
@@ -69,7 +69,7 @@ fn living(g: &Game, r: DirectorRunId, names: &[&str]) -> Vec<crate::director::Un
     men
 }
 /// the men of a list still alive
-fn up_of(g: &Game, r: DirectorRunId, men: &[crate::director::UnitRef]) -> Vec<crate::director::UnitRef> {
+fn up_of(g: &mut Game, r: DirectorRunId, men: &[crate::director::UnitRef]) -> Vec<crate::director::UnitRef> {
     let mut out = Vec::new();
     for u in men {
         if crate::director::director_query_alive(g, r, u) { out.push(u.clone()); }
@@ -668,7 +668,7 @@ fn gun_nest_down() -> crate::director::Cond {
     until(GUN_FEWER + 1, "the nest is down")
 }
 /// the closure `cue` (:255)
-fn gun_cue(g: &Game, r: DirectorRunId, k: &str) -> bool {
+fn gun_cue(g: &mut Game, r: DirectorRunId, k: &str) -> bool {
     crate::director::director_query_signalled(g, r, &format!("lesson:{}", k))
 }
 /// the closure `left` (:256)

@@ -111,17 +111,17 @@ fn squad(g: &mut Game, r: DirectorRunId) -> Vec<crate::director::UnitRef> {
     out
 }
 /// inside the bunkhouse's own walls (tut-team.script.ts:68 inBunk)
-fn in_bunk(g: &Game, r: DirectorRunId, u: &crate::director::UnitRef) -> Result<bool, String> {
+fn in_bunk(g: &mut Game, r: DirectorRunId, u: &crate::director::UnitRef) -> Result<bool, String> {
     let p = crate::director::director_query_pos_unit(g, r, u)?;
     Ok(p[0] > 29.1 && p[0] < 35.9 && p[2] > 13.6 && p[2] < 19.9)
 }
 /// (tut-team.script.ts:69 inKitchen)
-fn in_kitchen(g: &Game, r: DirectorRunId, u: &crate::director::UnitRef) -> Result<bool, String> {
+fn in_kitchen(g: &mut Game, r: DirectorRunId, u: &crate::director::UnitRef) -> Result<bool, String> {
     let p = crate::director::director_query_pos_unit(g, r, u)?;
     Ok(p[0] > 14.0 && p[0] < 22.0 && p[2] > 4.0 && p[2] < 11.5)
 }
 /// (tut-team.script.ts:70 inYard)
-fn in_yard(g: &Game, r: DirectorRunId, u: &crate::director::UnitRef) -> Result<bool, String> {
+fn in_yard(g: &mut Game, r: DirectorRunId, u: &crate::director::UnitRef) -> Result<bool, String> {
     let p = crate::director::director_query_pos_unit(g, r, u)?;
     Ok(p[0] > YARD_X0 && p[0] < YARD_X1 && p[2] > YARD_Z0 && p[2] < YARD_Z1)
 }
@@ -144,7 +144,7 @@ fn until(id: u32) -> crate::director::Cond {
     crate::director::director_beat_until(crate::director::CondTest::Script { id }, None)
 }
 /// c.any(c.wait(secs), c.until(<the id>))
-fn wait_or(g: &Game, r: DirectorRunId, secs: f64, id: u32) -> Result<crate::director::Cond, String> {
+fn wait_or(g: &mut Game, r: DirectorRunId, secs: f64, id: u32) -> Result<crate::director::Cond, String> {
     let wait = crate::director::director_beat_wait(g, r, secs, None)?;
     Ok(crate::director::director_beat_any(vec![wait, until(id)]))
 }
@@ -398,7 +398,7 @@ pub fn tut_team_pinned_step(g: &mut crate::game::Game, r: DirectorRunId, b: Dire
 }
 
 /// (P.beat 'pinned') 1: smoke or broke
-pub fn tut_team_pinned_test(g: &crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_team::TutTeamPinnedFrame, id: u32) -> Result<bool, String> {
+pub fn tut_team_pinned_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_team::TutTeamPinnedFrame, id: u32) -> Result<bool, String> {
     match id {
         1 => Ok(flag(g, r, "smoke") || flag(g, r, "broke")),
         _ => Err(String::from("tut-team pinned: no such test")),
@@ -475,7 +475,7 @@ pub fn tut_team_smoke_step(g: &mut crate::game::Game, r: DirectorRunId, b: Direc
 }
 
 /// (P.beat 'smoke') 1: broke
-pub fn tut_team_smoke_test(g: &crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_team::TutTeamSmokeFrame, id: u32) -> Result<bool, String> {
+pub fn tut_team_smoke_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_team::TutTeamSmokeFrame, id: u32) -> Result<bool, String> {
     match id {
         1 => Ok(flag(g, r, "broke")),
         _ => Err(String::from("tut-team smoke: no such test")),
@@ -510,7 +510,7 @@ pub fn tut_team_break_step(g: &mut crate::game::Game, r: DirectorRunId, b: Direc
 }
 
 /// (P.beat 'break') 1: broke; 2: every man of the squad in the yard
-pub fn tut_team_break_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_team::TutTeamBreakFrame, id: u32) -> Result<bool, String> {
+pub fn tut_team_break_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_team::TutTeamBreakFrame, id: u32) -> Result<bool, String> {
     match id {
         1 => Ok(flag(g, r, "broke")),
         2 => {
@@ -610,7 +610,7 @@ pub fn tut_team_linger_step(g: &mut crate::game::Game, r: DirectorRunId, b: Dire
 }
 
 /// (P.beat 'linger') 1: through or pushed; 2: pushed
-pub fn tut_team_linger_test(g: &crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_team::TutTeamLingerFrame, id: u32) -> Result<bool, String> {
+pub fn tut_team_linger_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_team::TutTeamLingerFrame, id: u32) -> Result<bool, String> {
     match id {
         1 => Ok(flag(g, r, "through") || flag(g, r, "pushed")),
         2 => Ok(flag(g, r, "pushed")),

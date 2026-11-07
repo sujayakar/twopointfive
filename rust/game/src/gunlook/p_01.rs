@@ -8,15 +8,15 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// The switch as every reader asks it: settled on, on the page.   (gunlook.ts gunLookOn)
-pub fn gun_look_on(g: &crate::game::Game) -> bool { true }
+pub fn gun_look_on(g: &mut crate::game::Game) -> bool { true }
 
 /// What a row has of its own; None: its stand-in fields are the gun.   (gunlook.ts gunOwn)
-pub fn gun_own(g: &crate::game::Game, def: &crate::weapons::WeaponDef) -> Option<crate::weapons::WeaponDefOwn> {
+pub fn gun_own(g: &mut crate::game::Game, def: &crate::weapons::WeaponDef) -> Option<crate::weapons::WeaponDefOwn> {
     def.own.clone()
 }
 
 /// The voice its report is played with.   (gunlook.ts voiceOf)
-pub fn voice_of(g: &crate::game::Game, def: &crate::weapons::WeaponDef) -> String {
+pub fn voice_of(g: &mut crate::game::Game, def: &crate::weapons::WeaponDef) -> String {
     match gun_own(g, def).and_then(|own| own.voice) {
         Some(voice) => voice,
         None => def.report.voice.clone(),
@@ -24,7 +24,7 @@ pub fn voice_of(g: &crate::game::Game, def: &crate::weapons::WeaponDef) -> Strin
 }
 
 /// The flame and the flash's light gain it fires with.   (gunlook.ts flameOf)
-pub fn flame_of(g: &crate::game::Game, def: &crate::weapons::WeaponDef) -> crate::effects::MuzzleFxKey {
+pub fn flame_of(g: &mut crate::game::Game, def: &crate::weapons::WeaponDef) -> crate::effects::MuzzleFxKey {
     match gun_own(g, def).and_then(|own| own.flame) {
         Some(flame) => flame,
         None => def.muzzle_fx,
@@ -39,17 +39,17 @@ pub fn under(z: f64, x: Option<f64>, y: Option<f64>) -> crate::gunlook::LongMode
 }
 
 /// A long gun's model by its id; None: the group draws its own parts.   (gunlook.ts longModel)
-pub fn long_model(g: &crate::game::Game, id_2: Option<crate::weapons::GunModelId>) -> Option<crate::gunlook::LongModel> {
+pub fn long_model(g: &mut crate::game::Game, id_2: Option<crate::weapons::GunModelId>) -> Option<crate::gunlook::LongModel> {
     long_row(id_2?)
 }
 
 /// A hand gun's model by its id.   (gunlook.ts pistolModel)
-pub fn pistol_model(g: &crate::game::Game, id_2: Option<crate::weapons::GunModelId>) -> Option<crate::gunlook::PistolModel> {
+pub fn pistol_model(g: &mut crate::game::Game, id_2: Option<crate::weapons::GunModelId>) -> Option<crate::gunlook::PistolModel> {
     pistol_row(id_2?)
 }
 
 /// Which models are on a man, from the rows he carries: the one in his hands and the others.   (gunlook.ts gunLookOf)
-pub fn gun_look_of(g: &crate::game::Game, into: Option<crate::gunlook::GunLook>, in_hands: Option<&crate::weapons::WeaponDef>, other: Option<&crate::weapons::WeaponDef>, third: Option<&crate::weapons::WeaponDef>) -> Option<crate::gunlook::GunLook> {
+pub fn gun_look_of(g: &mut crate::game::Game, into: Option<crate::gunlook::GunLook>, in_hands: Option<&crate::weapons::WeaponDef>, other: Option<&crate::weapons::WeaponDef>, third: Option<&crate::weapons::WeaponDef>) -> Option<crate::gunlook::GunLook> {
     use crate::weapons::{WeaponClass, WeaponDefRig, WeaponId};
     let mut l = into.unwrap_or(GunLook { hand: None, long: None, side: None, bare_long: None, bare_side: None });
     l.hand = in_hands.and_then(|d| d.own.as_ref()).map(|own| own.model);

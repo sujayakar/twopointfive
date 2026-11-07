@@ -38,10 +38,10 @@ pub fn rescue_once(g: &mut crate::game::Game, key: &str, text: &str) {
 }
 
 /// (rescue.ts Rescue.over)
-pub fn rescue_over(g: &crate::game::Game) -> bool { g.rescue.result.is_some() }
+pub fn rescue_over(g: &mut crate::game::Game) -> bool { g.rescue.result.is_some() }
 
 /// Dynamic tempo: the clock is running. (rescue.ts Rescue.dynamic)
-pub fn rescue_dynamic(g: &crate::game::Game) -> bool { !g.rescue.t0.is_nan() }
+pub fn rescue_dynamic(g: &mut crate::game::Game) -> bool { !g.rescue.t0.is_nan() }
 
 /// What F does for a caller that is not the key. (rescue.ts Rescue.press)
 pub fn rescue_press(g: &mut crate::game::Game) -> Option<crate::rescue::RescuePress> {
@@ -124,14 +124,14 @@ pub fn rescue_order_door(g: &mut crate::game::Game) -> Option<crate::rescue::Res
 }
 
 /// Sam put him there himself. (rescue.ts Rescue.pick, its `posted`)
-fn posted(g: &Game, o: GuardId) -> bool {
+fn posted(g: &mut Game, o: GuardId) -> bool {
     let a = match crate::orders::squad_orders_of(g, o) { Some(a) => a, None => return false };
     if g.tab.orders_assignment[a].post.is_none() { return false; }
     if g.rescue.auto.has(a) { return false; }
     !crate::rescueflow::rescue_flow_gave(g, Some(a))
 }
 /// posted, and on a 'cover' of his own: he stays on it. (rescue.ts Rescue.pick)
-fn posted_cover(g: &Game, o: GuardId) -> bool {
+fn posted_cover(g: &mut Game, o: GuardId) -> bool {
     if !posted(g, o) { return false; }
     let a = crate::orders::squad_orders_of(g, o).unwrap();
     g.tab.orders_assignment[a].order == "cover"
@@ -396,8 +396,8 @@ pub fn rescue_defenders(g: &mut crate::game::Game) {
                 if g.gd[h].script.is_some() { crate::squad::end_guard_script(g, h, Some(crate::squad::EndGuardScriptState::Alert)); }
                 if g.gd[h].state != GuardState::Alert || g.gd[h].foe.is_none() || g.time - g.gd[h].last_seen_t > 1.0 {
                     let to = match g.rescue.noise { Some(n) => n, None => rescue_room_point(g, RescueRoomPointWhich::Outside) };
-                    g.gd[h].state = GuardState::Alert;
-                    g.gd[h].awareness = 1.0;
+                    crate::mind::set_state(g, h, GuardState::Alert, "rescue");
+                    crate::mind::set(g, h, 1.0, "rescue");
                     g.gd[h].react_t = 0.0;
                     crate::belief::word(g, h, to);
                     crate::guards::reset_chase(g, h);
@@ -493,8 +493,8 @@ fn crew_on_row(g: &mut Game, h: GuardId, d: Def, f: Option<RoomfightDefId>) -> b
             if flat(x, pos_of(g, h)) > 0.4 {
                 rescue_crew_move(g, h, f, x, None);
             } else {
-                g.gd[h].state = GuardState::Alert;
-                g.gd[h].awareness = m::max(g.gd[h].awareness, 0.92);
+                crate::mind::set_state(g, h, GuardState::Alert, "rescue");
+                crate::mind::raise(g, h, 0.92, "rescue");
             }
             let noise = g.rescue.noise_serial;
             let row = g.rescue.defs.get_mut(h).unwrap();
@@ -529,8 +529,8 @@ fn crew_on_row(g: &mut Game, h: GuardId, d: Def, f: Option<RoomfightDefId>) -> b
             if let Some(y) = y {
                 rescue_crew_move(g, h, f, y, None);
             } else {
-                g.gd[h].state = GuardState::Alert;
-                g.gd[h].awareness = m::max(g.gd[h].awareness, 0.92);
+                crate::mind::set_state(g, h, GuardState::Alert, "rescue");
+                crate::mind::raise(g, h, 0.92, "rescue");
             }
             let noise = g.rescue.noise_serial;
             let row = g.rescue.defs.get_mut(h).unwrap();
@@ -595,8 +595,8 @@ fn crew_on_row(g: &mut Game, h: GuardId, d: Def, f: Option<RoomfightDefId>) -> b
         fd.mode = DefMode::Free; fd.free_at = now; fd.rally_at = f64::NAN;
         if g.gd[h].script.is_some() { crate::squad::end_guard_script(g, h, Some(crate::squad::EndGuardScriptState::Alert)); }
         if g.gd[h].state != GuardState::Alert || g.gd[h].foe.is_none() || g.time - g.gd[h].last_seen_t > 1.0 {
-            g.gd[h].state = GuardState::Alert;
-            g.gd[h].awareness = 1.0;
+            crate::mind::set_state(g, h, GuardState::Alert, "rescue");
+            crate::mind::set(g, h, 1.0, "rescue");
             g.gd[h].react_t = 0.0;
             crate::belief::word(g, h, pt);
             crate::guards::reset_chase(g, h);
@@ -784,7 +784,7 @@ pub fn rescue_crew_hide(g: &mut crate::game::Game, h: GuardId, f: RoomfightDefId
 }
 
 /// A man with the stack in his line of fire rests his gun on the floor outside the hostage door. (rescue.ts Rescue.crewLook)
-pub fn rescue_crew_look(g: &crate::game::Game, gd: GuardId, pt: &mut V3) {
+pub fn rescue_crew_look(g: &mut crate::game::Game, gd: GuardId, pt: &mut V3) {
     let look = match g.rescue.defs.get(gd) { Some(d) if d.crew == DefCrew::Cross => d.look, _ => None };
     if let Some(look) = look {
         if rescue_crew_on(g) { pt[0] = look[0]; pt[2] = look[2]; }
@@ -792,7 +792,7 @@ pub fn rescue_crew_look(g: &crate::game::Game, gd: GuardId, pt: &mut V3) {
 }
 
 /// A man of Hard's crew lying in wait, whose place the net must not give away. (rescue.ts Rescue.crewHides)
-pub fn rescue_crew_hides(g: &crate::game::Game, gd: GuardId) -> bool {
+pub fn rescue_crew_hides(g: &mut crate::game::Game, gd: GuardId) -> bool {
     match g.rescue.defs.get(gd).map(|d| d.crew) {
         Some(DefCrew::Cross) | Some(DefCrew::Wait) => rescue_crew_on(g),
         _ => false,
@@ -800,7 +800,7 @@ pub fn rescue_crew_hides(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// Hard's rescue crew is on: Hard writes both rows, so they stay tests. (rescue.ts Rescue.crewOn)
-pub fn rescue_crew_on(g: &crate::game::Game) -> bool { g.k.pressure.on && g.k.pressure.rescue_crew }
+pub fn rescue_crew_on(g: &mut crate::game::Game) -> bool { g.k.pressure.on && g.k.pressure.rescue_crew }
 
 /// A man sent to the corridor door from inside the server room goes out the way he came in. (rescue.ts Rescue.roundBy)
 pub fn rescue_round_by(g: &mut crate::game::Game, op: GuardId) {
@@ -1042,10 +1042,10 @@ pub fn rescue_end_entry(g: &mut crate::game::Game, called: bool) {
 }
 
 /// The last loud thing the team did. (rescue.ts Rescue.noiseAt)
-pub fn rescue_noise_at(g: &crate::game::Game) -> Option<V3> { g.rescue.noise }
+pub fn rescue_noise_at(g: &mut crate::game::Game) -> Option<V3> { g.rescue.noise }
 
 /// The living and the dead of the cast as their radio check reads them. (rescue.ts Rescue.cast)
-pub fn rescue_cast(g: &crate::game::Game) -> Vec<crate::rescuecheck::CastItem> {
+pub fn rescue_cast(g: &mut crate::game::Game) -> Vec<crate::rescuecheck::CastItem> {
     g.rescue.hostiles.iter().map(|&gd| {
         let d = def_of(g, gd);
         crate::rescuecheck::CastItem { gd, role: d.role, in_room: d.in_room, post: d.mark.pos, learned_at: d.learned, released: d.released, crewed: d.crew != DefCrew::Empty }

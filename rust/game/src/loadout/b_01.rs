@@ -11,13 +11,17 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 /// The squad size a query string asks for: `squad=N` (0 to 4), else `squad4` = 4 unless `flag4` is false, else None. (loadout.ts squadOfQuery)
 pub fn squad_of_query(search: &crate::loadout::SquadOfQuerySearch, flag4: Option<bool>) -> Option<f64> {
     let flag4 = flag4.unwrap_or(true);
-    let q = match search {
-        SquadOfQuerySearch::Text(s) => crate::query::Query::parse(s).words().to_vec(),
-        SquadOfQuerySearch::URLSearchParams(p) => p.words().to_vec(),
-    };
-    let asked = q.iter().find(|(k, _)| k == "squad").and_then(|(_, v)| size_of_text(v));
+    match search {
+        SquadOfQuerySearch::Text(s) => squad_of(&crate::query::Query::parse(s), flag4),
+        SquadOfQuerySearch::URLSearchParams(q) => squad_of(q, flag4),
+    }
+}
+
+/// `squad_of_query` of words already read.
+pub fn squad_of(q: &crate::query::Query, flag4: bool) -> Option<f64> {
+    let asked = q.get("squad").and_then(size_of_text);
     if asked.is_some() { return asked; }
-    if flag4 && q.iter().any(|(k, _)| k == "squad4") { Some(4.0) } else { None }
+    if flag4 && q.has("squad4") { Some(4.0) } else { None }
 }
 
 /// The words for a size: 'solo', 'you + one', 'you + the pair', 'you + three', 'you + four'. (loadout.ts sizeWords)
@@ -28,7 +32,7 @@ pub fn size_words(n: f64) -> String {
 
 /// `asSquadSize` of a string: one digit once trimmed as the language trims, and a size only if 0 to 4. (loadout.ts:31)
 fn size_of_text(v: &str) -> Option<f64> {
-    let mut chars = v.trim_matches(crate::query::is_js_space).chars();
+    let mut chars = v.trim_matches(js::is_space).chars();
     let (d, rest) = (chars.next()?, chars.next());
     if rest.is_some() || !d.is_ascii_digit() { return None; }
     let n = d as u32 - '0' as u32;

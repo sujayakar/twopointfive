@@ -285,7 +285,7 @@ pub fn tick_gates(g: &mut crate::game::Game) {
 }
 
 /// A gated man's eyes and muzzle and how low he is; None for everybody else.   (tactics.ts tacticsLook)
-pub fn tactics_look(g: &crate::game::Game, gd: GuardId) -> Option<crate::tactics::TacticsLook> {
+pub fn tactics_look(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::tactics::TacticsLook> {
     if !g.tune.tactics { return None; }
     let row = g.m.tactics.states.as_ref()?.gates.get(gd)?;
     Some(TacticsLook { aim: row.look?, crouch: row.crouch })

@@ -33,7 +33,7 @@ pub fn order_tick(g: &mut crate::game::Game, d: OrdersOrderDefId, gd: GuardId, a
         OrderTick::ShutDoor => crate::shutdoor::tick(g, gd, a),
         OrderTick::ThrowRow => crate::squadthrow::walk_tick(g, gd, a),
         OrderTick::Wand => crate::wandorder::tick(g, gd, a),
-        OrderTick::Shell40 => crate::squad40::turn_tick(g, gd, a),
+        OrderTick::Row(r) => if let Some(f) = r.tick { f(g, gd, a) },
         OrderTick::Work => crate::workthings::work_things_tick(g, gd, a),
         OrderTick::PairTake => crate::pairorders::pair_orders_take_tick(g, gd, a),
         OrderTick::PairWatch => pair_watch_tick(g, gd, a),
@@ -100,7 +100,7 @@ pub fn squad_orders_tick(g: &mut crate::game::Game) {
             let hot = g.gd[gd].reload_t >= 0.0
                 || g.time - m::max(m::max(g.gd[gd].last_seen_t, g.gd[gd].witness.heard.last_shot_t), g.tab.orders_assignment[a].yield_t) < g.k.orders.cold_secs;
             if hot { continue; }
-            g.gd[gd].state = crate::game::GuardState::Search;
+            crate::mind::set_state(g, gd, crate::game::GuardState::Search, "orders");
         }
         if g.tab.orders_assignment[a].yield_t >= 0.0 {   // back on his order, by the way an order walks him, from wherever the fight left him
             let (now, here) = (g.time, g.ch[c].pos);
@@ -504,7 +504,7 @@ fn mark_clocks(g: &mut Game, a: OrdersAssignmentId, p: V3) {
 }
 
 /// The spot he was already stepping to, while Sam has not got past him. (orders.ts aside's `held`)
-fn aside_held(g: &Game, gd: GuardId) -> Option<V3> {
+fn aside_held(g: &mut Game, gd: GuardId) -> Option<V3> {
     let (sam, p) = (g.ch[g.pl[g.player].ch].pos, g.ch[g.gd[gd].ch].pos);
     let row = match g.orders.aside_mem.get(gd) { Some(x) => x, None => return None };
     if g.time - row.t > g.k.orders.aside_hold || g.time < row.t { return None; }
@@ -564,7 +564,7 @@ pub fn squad_orders_crumb(g: &mut crate::game::Game, p: V3, men: &[GuardId]) {
 }
 
 /// Where the men ahead of him in the fall-in file are bound. (orders.ts SquadOrders.ahead)
-pub fn squad_orders_ahead(g: &crate::game::Game, gd: GuardId, a: OrdersAssignmentId) -> Vec<V3> {
+pub fn squad_orders_ahead(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) -> Vec<V3> {
     let mut out: Vec<V3> = Vec::new();
     let follow = g.tab.orders_assignment[a].follow;
     for (o, &b) in g.orders.asg.iter() {
@@ -575,7 +575,7 @@ pub fn squad_orders_ahead(g: &crate::game::Game, gd: GuardId, a: OrdersAssignmen
 }
 
 /// doorway.ts STAND: stopped 'near enough' within a body and a bit of a man ahead of him, or one on a post. (orders.ts SquadOrders.onTop)
-pub fn squad_orders_on_top(g: &crate::game::Game, gd: GuardId, a: OrdersAssignmentId) -> bool {
+pub fn squad_orders_on_top(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) -> bool {
     let follow = g.tab.orders_assignment[a].follow;
     let (mine, apart) = (g.ch[g.gd[gd].ch].pos, g.k.doormanners.apart);
     for (o, &b) in g.orders.asg.iter() {
@@ -606,7 +606,7 @@ pub fn squad_orders_in_frame(g: &mut crate::game::Game, p: V3) -> bool {
 /// (orders.ts restClear's `bad`)
 fn rest_bad(g: &mut Game, q: V3) -> bool { squad_orders_in_frame(g, q) || crate::doorway::doorway_in_way(g, q) || crate::doorway::doorway_lane(g, q, None).is_some() }
 /// (orders.ts restClear's `others`)
-fn rest_others(g: &Game, gd: GuardId) -> Vec<V3> {
+fn rest_others(g: &mut Game, gd: GuardId) -> Vec<V3> {
     let mut out: Vec<V3> = vec![squad_orders_sam_stood(g)];
     for (o, &b) in g.orders.asg.iter() {
         if o != gd && g.gd[o].state != crate::game::GuardState::Dead { out.push(g.ch[g.gd[o].ch].pos); out.push(g.tab.orders_assignment[b].goal); }
@@ -745,7 +745,7 @@ pub fn squad_orders_clear_back(g: &mut crate::game::Game, follow: f64) -> f64 {
 }
 
 /// A follower's place in the file, in metres back along the trail. (orders.ts SquadOrders.backOf)
-pub fn squad_orders_back_of(g: &crate::game::Game, follow: f64) -> f64 {
+pub fn squad_orders_back_of(g: &mut crate::game::Game, follow: f64) -> f64 {
     let list = &g.k.orders.follow_back;
     let n = list.len() as f64;
     list[m::min(follow, n - 1.0) as usize] + m::max(0.0, follow - n + 1.0) * 1.1
@@ -885,7 +885,7 @@ pub fn squad_orders_slot(g: &mut crate::game::Game, back: f64) -> V3 {
 // ------------------------------------------------------------ geometry
 
 /// The free floor at p, else the nearest within floorSnapM (the candidate nearest Sam among equals). None: nowhere. (orders.ts SquadOrders.freeSpot)
-pub fn squad_orders_free_spot(g: &crate::game::Game, p: V3) -> Option<V3> {
+pub fn squad_orders_free_spot(g: &mut crate::game::Game, p: V3) -> Option<V3> {
     if !crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) { return Some([p[0], 0.0, p[2]]); }
     let sam = g.ch[g.pl[g.player].ch].pos;
     let (mut best, mut bs): (Option<V3>, f64) = (None, f64::INFINITY);

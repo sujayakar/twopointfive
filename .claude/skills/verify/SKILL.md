@@ -60,7 +60,7 @@ Surface: a WebGPU canvas app (GUI). Verification = load it in a WebGPU-capable b
   `window.__res`, return immediately, then poll `window.__res` in a second call (a `setTimeout` poll is fine there).
 - `__demo` (the OLD showcase tour, no longer on any card: `.start()/.stop()`, jump with `__demo.shotI = k-1; __demo.shotT = 999`),
   `__quality`
-  (`.apply('verylow'|'low'|'medium'|'high'|'ultra')`, `.sample(dt)`), `__audio` (`.stats`).
+  (`.apply('verylow'|'low'|'medium'|'high')`, `.sample(dt)`), `__audio` (`.stats`).
 - Squad hooks: `__orders` (`.open(target?)`, `.pick(i?)`, `.give(id, target?, who?)`, `.close()`, `.menu`, `.who`, `.cycleWho()`,
   `.log`, `.summary()`), `__roomclear` / `__nightbreach` / `__rescue` (`.start()`, `.stop()`, `.restage()`, `.state`,
   `.summary()`, `.log`), `__scenarios` (`.list`, `.current()`, `.pick(id)`, `.quit()`), `__picks` (`.list`, `.current()`, `.href(id)`).

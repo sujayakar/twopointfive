@@ -22,6 +22,7 @@ export function fake(name = 'gpu'): any {
       if (p === 'toString' || p === Symbol.toStringTag) return () => `[fake ${name}]`;
       if (p === 'getCompilationInfo') return () => Promise.resolve({ messages: [] });
       if (p === 'mapAsync') return () => new Promise(() => { /* never resolves: no readbacks headless */ });
+      if (p === 'popErrorScope') return () => Promise.resolve(null);   // (an error scope closes with no error: the gather's points buffer is made inside one, render/passes.ts ensureSplitBG)
       if (p === 'label') return name;
       return fake(`${name}.${String(p)}`);
     },

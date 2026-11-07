@@ -12,7 +12,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 // against a stray string has nothing to catch.
 
 /// The rung in force: Bare while the lever is off.   (told.ts toldNow)
-pub fn told_now(g: &crate::game::Game) -> crate::told::ToldRung {
+pub fn told_now(g: &mut crate::game::Game) -> crate::told::ToldRung {
     g.k.told.rung
 }
 

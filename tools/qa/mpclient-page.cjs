@@ -3,7 +3,7 @@
 // sends its player's records and walks the server's confirmed ticks; a scripted watcher (tools/mp/bot.ts, bun) walks the same game beside it.
 //   PORT=5231 node tools/qa/mpclient-page.cjs [--ticks 600] [--setup '{"scenario":"?rescue&levelFile=consulate.json","seed":3}']     (a dev server on that port)
 //   --seats 2             a game of TWO players: the page sits in the SECOND seat (its own man, its own pair, its own records) and the bun client plays the first
-//   MPCLIENT_BREAK=1 …    the red path: after tick 90 the page flips the last bit of its own man's place — its state words must part from the server's and the check FAIL
+//   MPCLIENT_BREAK=1 …    the red path: after tick 90 the page steps one record with another walk key than the server ran — its state words must part from the server's and the check FAIL
 //   MPCLIENT_BREAK=way    the Network page's red path: the check picks the connection as it is where it should pick a long one — the `network page` line must FAIL
 //   MPCLIENT_BREAK=ahead  the look ahead's red path: the page is opened with netpredict=0 (its own man drawn where the game has him) — the `ahead` line must FAIL
 // PASS = the page was moved to the recipe's address, the seat's key no longer on it · it took the seat and the fight started only after it stood · every state word of N ticks was the
@@ -87,7 +87,8 @@ const health = async () => { try { return await (await fetch(`http://127.0.0.1:$
         window.__runFrames(10, 1 / 60, keys, 'none');
         if (!S().far) { const a = S().ahead; ahead.samples++; if (a && a.move > 0.02) ahead.on++; if (a && a.move > ahead.most) ahead.most = a.move; }
         if (n % 20 === 0) console.log('[mpc] main', n, S().confirmed, S().behind, S().far, S().wordsOk, JSON.stringify(S().bad), JSON.stringify(S().ahead), Math.round(performance.now() - tm));
-        if (BREAK && !broke && S().confirmed >= base + 90) { broke = true; const p = g.player.char.pos, f = new Float64Array([p[0]]), u = new Uint32Array(f.buffer); u[0] ^= 1; const why = window.__rust.poke(g.player.char, ['pos', 0], f[0]); if (why) console.log('[mpc] THE BREAK DID NOT REACH THE GAME: ' + why); }   // (the puppet and the Rust game at once: a write to the puppet alone is the picture's and no state word would say so)
+        if (BREAK && !broke && S().confirmed >= base + 90) { broke = true; const was = g.stepSeats; let once = false;   // (ONE record stepped with another walk key than the server ran: the hook the host of the game hangs is wrapped for one tick. A write to the page's copy of the game would be the picture's alone, and no state word could say so)
+          g.stepSeats = function (dt, cmds) { if (!once) { once = true; const i = Math.max(0, S().seat), c = cmds[i]; cmds = cmds.slice(); cmds[i] = { ...c, keys: c.keys.includes('KeyA') ? ['KeyD'] : ['KeyA'] }; g.stepSeats = was; } return was.call(this, dt, cmds); }; }
         await tick0();
       }
       const rowsOf = () => { const R = {}; for (const r of document.querySelectorAll('#panel .row')) { const l = r.querySelector('label'); if (l) R[l.textContent.trim()] = r; } return R; };
@@ -113,7 +114,9 @@ const health = async () => { try { return await (await fetch(`http://127.0.0.1:$
       const BACK = { KeyW: 'KeyS', KeyS: 'KeyW', KeyA: 'KeyD', KeyD: 'KeyA' };
       const nap = async rest => {
         let out = 'KeyW', room = -1; for (const k of ['KeyW', 'KeyD', 'KeyS', 'KeyA']) { const d = await walk(k, 12); if (d > room) { room = d; out = k; } if (d >= 2) break; }
-        const key = BACK[out]; await walk(key, 2);
+        // (turned back for two bursts and asleep AT ONCE: `walk` would go on with the key down until the page is level with its server, and a page that
+        //  takes a while over that walks all the way back to the wall he started from; asleep there he walks nowhere, whatever the server holds)
+        const key = BACK[out]; for (let i = 0; i < 2; i++) { window.__runFrames(10, 1 / 60, [key], 'none'); await yieldNow(); }
         const a = at(), down = !!g.player.down; if (rest) window.__net.client.rest(performance.now());
         await new Promise(r => setTimeout(r, 3500));
         const behind = S().behind, far = await level([]), b = at();

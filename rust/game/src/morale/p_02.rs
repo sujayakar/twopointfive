@@ -252,7 +252,7 @@ pub fn shaken_of(g: &mut crate::game::Game, gd: GuardId) -> f64 {
 }
 
 /// his rung: 0 steady, 1 jumpy, 2 broken (morale.ts rungOf)
-pub fn rung_of(g: &crate::game::Game, gd: GuardId) -> f64 {
+pub fn rung_of(g: &mut crate::game::Game, gd: GuardId) -> f64 {
     match g.m.morale.state_of.get(gd) { Some(s) => s.rung, None => 0.0 }
 }
 

@@ -24,7 +24,7 @@ fn same_team_start(a: &crate::scene_scenarios::TeamStart, b: &crate::scene_scena
 }
 
 /// orders.ts doorWords, by id, or the name its level wrote for it (rescue.ts doorName)
-pub fn door_name(g: &crate::game::Game, id_2: &str) -> String {
+pub fn door_name(g: &mut crate::game::Game, id_2: &str) -> String {
     let d = crate::doors::doors_by_name(g, id_2);
     let written = match d { Some(d) => crate::doornames::door_written_name(g, d), None => None };
     match written { Some(s) => s, None => crate::orders::door_id_words(g, id_2) }
@@ -130,7 +130,7 @@ pub fn check_rescue(g: &mut crate::game::Game, s: Option<&crate::scene_scenarios
 }
 
 /// A new one: the field initialisers, and its three helpers. (rescue.ts Rescue.constructor)
-pub fn rescue_new(g: &crate::game::Game) -> crate::rescue::Rescue {
+pub fn rescue_new(g: &mut crate::game::Game) -> crate::rescue::Rescue {
     let mut r = Rescue::blank();
     r.flow = Box::new(crate::rescueflow::rescue_flow_new(g));
     r.ending = crate::rescueend::rescue_end_new(g);
@@ -139,12 +139,12 @@ pub fn rescue_new(g: &crate::game::Game) -> crate::rescue::Rescue {
 }
 
 /// What the scenario takes from the level it stands on. (rescue.ts Rescue.data)
-pub fn rescue_data(g: &crate::game::Game) -> Option<crate::scene_scenarios::RescueData> {
+pub fn rescue_data(g: &mut crate::game::Game) -> Option<crate::scene_scenarios::RescueData> {
     g.level.scenarios.as_ref().and_then(|c| c.rescue.clone())
 }
 
 /// The hostage room's floor inside its walls. (rescue.ts Rescue.bounds)
-pub fn rescue_bounds(g: &crate::game::Game) -> Option<crate::scene_scenarios::Rect> {
+pub fn rescue_bounds(g: &mut crate::game::Game) -> Option<crate::scene_scenarios::Rect> {
     let s = rescue_data(g);
     if let Some(b) = s.as_ref().and_then(|s| s.room.bounds) { return Some(b); }
     if let Some(p) = &g.rescue.plan { return p.bounds.map(rect_of); }
@@ -152,7 +152,7 @@ pub fn rescue_bounds(g: &crate::game::Game) -> Option<crate::scene_scenarios::Re
 }
 
 /// The room the side door is taken from. (rescue.ts Rescue.fromBounds)
-pub fn rescue_from_bounds(g: &crate::game::Game) -> Option<crate::scene_scenarios::Rect> {
+pub fn rescue_from_bounds(g: &mut crate::game::Game) -> Option<crate::scene_scenarios::Rect> {
     let s = rescue_data(g)?;
     let f = s.side.as_ref()?.from.as_ref()?;
     match f.bounds { Some(b) => Some(b), None => clear_plan_bounds(g, &f.door) }
@@ -188,7 +188,7 @@ pub fn rescue_room_point(g: &mut crate::game::Game, which: crate::rescue::Rescue
 }
 
 /// Why it cannot start right now (None = it can). (rescue.ts Rescue.canStart)
-pub fn rescue_can_start(g: &crate::game::Game) -> Option<String> {
+pub fn rescue_can_start(g: &mut crate::game::Game) -> Option<String> {
     let s = rescue_data(g);
     if g.quiet.active { return Some(String::from("a quiet mission is up on this floor (quit it first)")); }
     let Some(s) = s else { return Some(String::from("this level has no hostage rescue data (its scenarios.rescue block)")); };
@@ -267,12 +267,12 @@ pub fn rescue_on_encounter_restart(g: &mut crate::game::Game) {
 }
 
 /// Who has the pair. (rescue.ts Rescue.mode)
-pub fn rescue_mode(g: &crate::game::Game) -> crate::rescue::RescueMode {
+pub fn rescue_mode(g: &mut crate::game::Game) -> crate::rescue::RescueMode {
     if g.rescue.entry.is_some() { RescueMode::Door } else { RescueMode::Free }
 }
 
 /// F's entry has this man right now. (rescue.ts Rescue.owns)
-pub fn rescue_owns(g: &crate::game::Game, gd: GuardId) -> bool {
+pub fn rescue_owns(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if !g.rescue.active { return false; }
     let Some(e) = &g.rescue.entry else { return false; };
     e.ops.iter().any(|x| x.ended.is_none() && g.tab.doortools_door_op[x.op].men.contains(&gd))
@@ -291,7 +291,7 @@ pub fn rescue_call_off(g: &mut crate::game::Game) -> Option<String> {
 }
 
 /// Is this civilian one of the scenario's hostages. (rescue.ts Rescue.isHostage)
-pub fn rescue_is_hostage(g: &crate::game::Game, gd: GuardId) -> bool {
+pub fn rescue_is_hostage(g: &mut crate::game::Game, gd: GuardId) -> bool {
     g.rescue.active && g.rescue.hostages.contains(&gd)
 }
 
@@ -584,7 +584,7 @@ fn stage_tried(g: &mut Game) -> Result<(), String> {
 }
 
 /// The hostage room in words. (rescue.ts Rescue.place)
-pub fn rescue_place(g: &crate::game::Game) -> String {
+pub fn rescue_place(g: &mut crate::game::Game) -> String {
     let Some(s) = rescue_data(g) else { return String::from("hostage room"); };
     match s.room.where_.as_deref() {
         Some(w) if !w.is_empty() => format!("{}, {}", s.room.name, w),

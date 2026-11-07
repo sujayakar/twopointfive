@@ -22,7 +22,7 @@ fn does_of_box(g: &mut Game, b: BoxId) -> crate::scene_materials::Does {
 }
 
 /// The knob as the systems read it: a showcase program's own, 0 under the tour, else tune.chaos clamped.   (destruction.ts chaosOf)
-pub fn chaos_of(g: &crate::game::Game) -> f64 {
+pub fn chaos_of(g: &mut crate::game::Game) -> f64 {
     if let Some(s) = g.destr.show_chaos {
         return m::max(0.0, m::min(1.0, s));
     }
@@ -34,12 +34,12 @@ pub fn chaos_of(g: &crate::game::Game) -> f64 {
 }
 
 /// The loud levels' rules are live: a scenario is up.   (destruction.ts loudNow)
-pub fn loud_now(g: &crate::game::Game) -> bool {
+pub fn loud_now(g: &mut crate::game::Game) -> bool {
     crate::roomclear::room_clear_scenario_active(g) || g.night_breach.active || g.rescue.active
 }
 
 /// Impulses at all: chaos above 0 and the switch.   (destruction.ts impulsesOn)
-pub fn impulses_on(g: &crate::game::Game) -> bool {
+pub fn impulses_on(g: &mut crate::game::Game) -> bool {
     chaos_of(g) > 0.0 && g.tune.debris_impulses
 }
 
@@ -49,7 +49,7 @@ pub fn load_chaos(g: &mut crate::game::Game) {
 }
 
 /// The impulses' strength scale off the knob.   (destruction.ts impK)
-pub fn imp_k(g: &crate::game::Game, chaos: f64) -> f64 {
+pub fn imp_k(g: &mut crate::game::Game, chaos: f64) -> f64 {
     if chaos <= 0.5 { 1.0 } else { 1.0 + (g.k.chaos.imp.chaos_k - 1.0) * (chaos - 0.5) * 2.0 }
 }
 
@@ -340,7 +340,7 @@ pub fn destruction_roof_y(g: &mut crate::game::Game, x: f64, z: f64) -> Option<f
 }
 
 /// Destructibles registered in the 3×3 cells round p, hidden ones left out.   (destruction.ts Destruction.near)
-pub fn destruction_near(g: &crate::game::Game, p: V3, out: &mut Vec<crate::destruction::Destructible>) -> Vec<crate::destruction::Destructible> {
+pub fn destruction_near(g: &mut crate::game::Game, p: V3, out: &mut Vec<crate::destruction::Destructible>) -> Vec<crate::destruction::Destructible> {
     out.clear();
     let world = crate::scene_world::world();
     let cx = m::floor((p[0] - world.min[0]) / g.destr.cs);
@@ -365,12 +365,12 @@ pub fn destruction_near(g: &crate::game::Game, p: V3, out: &mut Vec<crate::destr
 }
 
 /// The destructible at a static's index.   (destruction.ts Destruction.itemOf)
-pub fn destruction_item_of(g: &crate::game::Game, i: f64) -> Option<crate::destruction::Destructible> {
+pub fn destruction_item_of(g: &mut crate::game::Game, i: f64) -> Option<crate::destruction::Destructible> {
     g.destr.items.get(crate::Num(i)).cloned()
 }
 
 /// The heat cell of a point, clamped to the grid.   (destruction.ts Destruction.hidx)
-pub fn destruction_hidx(g: &crate::game::Game, p: V3) -> f64 {
+pub fn destruction_hidx(g: &mut crate::game::Game, p: V3) -> f64 {
     let world = crate::scene_world::world();
     let cell = g.k.chaos.cell;
     let x = m::min(g.destr.hw - 1.0, m::max(0.0, m::floor((p[0] - world.min[0]) / cell)));

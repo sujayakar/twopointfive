@@ -302,7 +302,7 @@ pub fn check_squads(g: &mut crate::game::Game, s: &crate::roomclear::CheckSquads
 }
 
 /// the floor a stride either side of a door's opening   (roomclear.ts doorSides)
-pub fn door_sides(g: &crate::game::Game, d: DoorId) -> Vec<V3> {
+pub fn door_sides(g: &mut crate::game::Game, d: DoorId) -> Vec<V3> {
     let f = crate::guards::frame_of(g, d);
     let cx = f.hx + f.ux * f.w / 2.0;
     let cz = f.hz + f.uz * f.w / 2.0;
@@ -332,7 +332,7 @@ pub fn wall_between(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
 }
 
 /// the level's own stack-and-enter plan for a door, where it has one   (roomclear.ts doorPlan)
-pub fn door_plan(g: &crate::game::Game, door: &str) -> Option<crate::scene_level::RoomClearPlan> {
+pub fn door_plan(g: &mut crate::game::Game, door: &str) -> Option<crate::scene_level::RoomClearPlan> {
     if let Some(p) = g.level.clear_plans.as_ref().and_then(|v| v.iter().find(|p| p.door == door)) {
         return Some(p.clone());
     }
@@ -425,7 +425,7 @@ pub fn clear_words(g: &mut crate::game::Game, rooms: &[crate::scene_scenarios::S
 }
 
 /// the structure of the level this game stands on   (roomclear.ts RoomClearScenario.structure)
-pub fn room_clear_scenario_structure(g: &crate::game::Game) -> Option<crate::scene_scenarios::StructureData> {
+pub fn room_clear_scenario_structure(g: &mut crate::game::Game) -> Option<crate::scene_scenarios::StructureData> {
     g.level.scenarios.as_ref().and_then(|c| c.room_clear.clone())
 }
 
@@ -454,12 +454,12 @@ pub fn room_clear_scenario_start_now(g: &mut crate::game::Game) -> Option<crate:
 }
 
 /// the scenario, its layout named   (roomclear.ts RoomClearScenario.constructor)
-pub fn room_clear_scenario_new(g: &crate::game::Game) -> crate::roomclear::RoomClearScenario {
+pub fn room_clear_scenario_new(g: &mut crate::game::Game) -> crate::roomclear::RoomClearScenario {
     crate::roomclear::RoomClearScenario::blank()
 }
 
 /// the layout's budget getter: a structure with maxMen holds Sam, the four and its men   (roomclear.ts:268 layout.budget)
-pub fn room_clear_scenario_budget(g: &crate::game::Game) -> Option<f64> {
+pub fn room_clear_scenario_budget(g: &mut crate::game::Game) -> Option<f64> {
     let n = match room_clear_scenario_structure(g) {
         Some(s) if s.max_men.map_or(false, js::truthy) => s.rooms.iter().fold(0.0, |k, r| k + r.garrison),
         _ => 0.0,
@@ -468,7 +468,7 @@ pub fn room_clear_scenario_budget(g: &crate::game::Game) -> Option<f64> {
 }
 
 /// the line the staging says   (roomclear.ts:270 layout.stagedLine)
-pub fn room_clear_scenario_staged_line(g: &crate::game::Game) -> String {
+pub fn room_clear_scenario_staged_line(g: &mut crate::game::Game) -> String {
     let names: Vec<String> = g.room_clear.rooms.iter().map(|r| r.def.name.clone()).collect();
     let what = if !g.night_breach.no_drill {
         let room = room_clear_scenario_drill_room(g).map_or(String::from("door"), |r| r.name);
@@ -482,7 +482,7 @@ pub fn room_clear_scenario_staged_line(g: &crate::game::Game) -> String {
 }
 
 /// up: the night breach is staged on THIS scenario's floor   (roomclear.ts RoomClearScenario.active)
-pub fn room_clear_scenario_active(g: &crate::game::Game) -> bool {
+pub fn room_clear_scenario_active(g: &mut crate::game::Game) -> bool {
     // (`nb.layout === this.layout`: this scenario's is the only layout there is)
     g.night_breach.active && g.night_breach.layout.is_some()
 }
@@ -608,7 +608,7 @@ pub fn room_clear_scenario_deal(g: &mut crate::game::Game) -> Vec<crate::nightbr
 }
 
 /// the room behind the breach plan's door   (roomclear.ts RoomClearScenario.drillRoom)
-pub fn room_clear_scenario_drill_room(g: &crate::game::Game) -> Option<crate::scene_scenarios::StructureRoom> {
+pub fn room_clear_scenario_drill_room(g: &mut crate::game::Game) -> Option<crate::scene_scenarios::StructureRoom> {
     let door = g.level.breach.as_ref()?.door.clone();
     room_clear_scenario_structure(g)?.rooms.into_iter().find(|r| r.doors.iter().any(|d| d.id == door))
 }
@@ -830,7 +830,7 @@ pub fn room_clear_scenario_finish(g: &mut crate::game::Game, end: crate::roomcle
 }
 
 /// the room a floor point is in   (roomclear.ts RoomClearScenario.roomAt)
-pub fn room_clear_scenario_room_at(g: &crate::game::Game, p: V3) -> Option<String> {
+pub fn room_clear_scenario_room_at(g: &mut crate::game::Game, p: V3) -> Option<String> {
     room_clear_scenario_structure(g)?.rooms.into_iter().find(|r| in_rect(p, r.bounds)).map(|r| r.id)
 }
 
@@ -894,7 +894,7 @@ pub fn room_clear_scenario_objective(g: &mut crate::game::Game) -> Option<crate:
 }
 
 /// the room the marker stands on: the first still held, on a second way in the one nearest that start   (roomclear.ts RoomClearScenario.firstOpen)
-pub fn room_clear_scenario_first_open(g: &crate::game::Game) -> Option<crate::roomclear::RoomState> {
+pub fn room_clear_scenario_first_open(g: &mut crate::game::Game) -> Option<crate::roomclear::RoomState> {
     let open: Vec<crate::roomclear::RoomState> = g.room_clear.rooms.iter().filter(|r| !r.cleared).cloned().collect();
     let way = g.room_clear.way;
     let t = if way > 0.0 {

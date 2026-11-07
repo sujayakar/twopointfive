@@ -48,7 +48,7 @@ pub fn ghost_box(g: &mut crate::game::Game, s: BoxId) -> BoxId {
 }
 
 /// What the team's sight lines pass: glass and the statics marked thin. (fogofwar.ts fogThrough)
-pub fn fog_through(g: &crate::game::Game) -> f64 {
+pub fn fog_through(g: &mut crate::game::Game) -> f64 {
     let f = crate::scene_boxes::box_flag();
     (js::to_i32(f.glass) | js::to_i32(f.thin)) as f64
 }
@@ -64,17 +64,17 @@ pub fn fog_of_war_page_look(g: &mut crate::game::Game) {
 }
 
 /// `blank` is the field initialisers, and the TypeScript's constructor only keeps `g`. (FogOfWar constructor)
-pub fn fog_of_war_new(g: &crate::game::Game) -> crate::fogofwar::FogOfWar {
+pub fn fog_of_war_new(g: &mut crate::game::Game) -> crate::fogofwar::FogOfWar {
     crate::fogofwar::FogOfWar::blank()
 }
 
 /// The switch, and no show running. (FogOfWar.active)
-pub fn fog_of_war_active(g: &crate::game::Game) -> bool {
+pub fn fog_of_war_active(g: &mut crate::game::Game) -> bool {
     g.fog_of_war.on && !g.touring && !g.quiet_utility
 }
 
 /// Is this man on the team whose sight it is. (FogOfWar.onTeam)
-pub fn fog_of_war_on_team(g: &crate::game::Game, gd: GuardId) -> bool {
+pub fn fog_of_war_on_team(g: &mut crate::game::Game, gd: GuardId) -> bool {
     g.gd[gd].team == crate::teams::Team::Operative
 }
 
@@ -455,7 +455,7 @@ fn judge(g: &mut crate::game::Game, gd: GuardId, lines: &JsMap<GuardId, bool>, v
 }
 
 /// A man as an eye: off his head, looking between his chest and his head. (FogOfWar.eyeOf)
-pub fn fog_of_war_eye_of(g: &crate::game::Game, c_2: CharId) -> crate::fogofwar::FogEye {
+pub fn fog_of_war_eye_of(g: &mut crate::game::Game, c_2: CharId) -> crate::fogofwar::FogEye {
     let pos = bone_or(g, c_2, crate::character::Bone::Head, 1.65);
     let look = if g.k.fog.cone { gaze_of(g, c_2) } else {
         let hd = crate::character::character_head_dir(g, c_2);
@@ -605,7 +605,7 @@ pub fn fog_of_war_tell_calls(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// Is `p` inside this eye's field in plan. (FogOfWar.inField)
-pub fn fog_of_war_in_field(g: &crate::game::Game, e: crate::fogofwar::FogEye, p: V3) -> bool {
+pub fn fog_of_war_in_field(g: &mut crate::game::Game, e: crate::fogofwar::FogEye, p: V3) -> bool {
     let fov = match e.fov { Some(f) => f, None => field_deg(g) };
     if fov >= 360.0 { return true; }
     let (dx, dz) = (p[0] - e.pos[0], p[2] - e.pos[2]);
@@ -769,7 +769,7 @@ pub fn fog_of_war_door_shown(g: &mut crate::game::Game, d: DoorId) -> f64 {
 }
 
 /// The door a box in the picture's list is the remembered leaf of. (FogOfWar.doorOfBox)
-pub fn fog_of_war_door_of_box(g: &crate::game::Game, box_: BoxId) -> Option<DoorId> {
+pub fn fog_of_war_door_of_box(g: &mut crate::game::Game, box_: BoxId) -> Option<DoorId> {
     for (d, r) in g.fog_of_war.door_recs.iter() {
         if let Some(gh) = r.ghost.as_ref() {
             if gh[0] == box_ { return Some(d); }

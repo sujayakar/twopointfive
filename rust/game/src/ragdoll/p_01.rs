@@ -109,9 +109,9 @@ pub fn ragdoll_new(g: &mut crate::game::Game, pts: &[V3], vel: Option<&[V3]>, wo
 }
 
 /// (Ragdoll.point)
-pub fn ragdoll_point(g: &crate::game::Game, id: RagdollId, i: f64, out: Option<&mut V3>) -> V3 { rd_point(&g.tab.ragdoll[id], i, out) }
+pub fn ragdoll_point(g: &mut crate::game::Game, id: RagdollId, i: f64, out: Option<&mut V3>) -> V3 { rd_point(&mut g.tab.ragdoll[id], i, out) }
 /// (Ragdoll.radius)
-pub fn ragdoll_radius(g: &crate::game::Game, id: RagdollId, i: f64) -> f64 { rd_radius(&g.tab.ragdoll[id], i) }
+pub fn ragdoll_radius(g: &mut crate::game::Game, id: RagdollId, i: f64) -> f64 { rd_radius(&mut g.tab.ragdoll[id], i) }
 /// (Ragdoll.addVelocity)
 pub fn ragdoll_add_velocity(g: &mut crate::game::Game, id: RagdollId, i: f64, v: V3, scale: Option<f64>) { rd_add_velocity(&mut g.tab.ragdoll[id], i, v, scale) }
 /// (Ragdoll.addRigidVelocity)
@@ -125,7 +125,7 @@ pub fn ragdoll_set_pin(g: &mut crate::game::Game, id: RagdollId, i: f64, target:
 /// (Ragdoll.unpin)
 pub fn ragdoll_unpin(g: &mut crate::game::Game, id: RagdollId, i: f64) { rd_unpin(&mut g.tab.ragdoll[id], i) }
 /// (Ragdoll.isPinned)
-pub fn ragdoll_is_pinned(g: &crate::game::Game, id: RagdollId, i: f64) -> bool { rd_is_pinned(&g.tab.ragdoll[id], i) }
+pub fn ragdoll_is_pinned(g: &mut crate::game::Game, id: RagdollId, i: f64) -> bool { rd_is_pinned(&mut g.tab.ragdoll[id], i) }
 /// (Ragdoll.clearPins)
 pub fn ragdoll_clear_pins(g: &mut crate::game::Game, id: RagdollId) { rd_clear_pins(&mut g.tab.ragdoll[id]) }
 /// (Ragdoll.ride)
@@ -135,14 +135,14 @@ pub fn ragdoll_settle_at(g: &mut crate::game::Game, id: RagdollId, xs: &[f64], r
 /// (Ragdoll.takeImpact)
 #[doc(hidden)] pub fn ragdoll_take_impact__body(g: &mut crate::game::Game, id: RagdollId, min: Option<f64>, gap: Option<f64>) -> f64 { rd_take_impact(&mut g.tab.ragdoll[id], min, gap) }
 /// Distance between two particles.   (ragdoll.ts Ragdoll.dist)
-fn rd_dist(this: &crate::ragdoll::Ragdoll, i: f64, j: f64) -> f64 {
+fn rd_dist(this: &mut crate::ragdoll::Ragdoll, i: f64, j: f64) -> f64 {
     let (i, j) = (i as usize, j as usize);
     let x = &this.x;
     m::hyp3(x[j * 3] - x[i * 3], x[j * 3 + 1] - x[i * 3 + 1], x[j * 3 + 2] - x[i * 3 + 2])
 }
 
 /// World position of particle i (into `out` if given, and returned).   (ragdoll.ts Ragdoll.point)
-fn rd_point(this: &crate::ragdoll::Ragdoll, i: f64, out: Option<&mut V3>) -> V3 {
+fn rd_point(this: &mut crate::ragdoll::Ragdoll, i: f64, out: Option<&mut V3>) -> V3 {
     let i = i as usize;
     let p = [this.x[i * 3], this.x[i * 3 + 1], this.x[i * 3 + 2]];
     if let Some(o) = out { *o = p; }
@@ -150,7 +150,7 @@ fn rd_point(this: &crate::ragdoll::Ragdoll, i: f64, out: Option<&mut V3>) -> V3 
 }
 
 /// Collision radius of particle i.   (ragdoll.ts Ragdoll.radius)
-fn rd_radius(this: &crate::ragdoll::Ragdoll, i: f64) -> f64 {
+fn rd_radius(this: &mut crate::ragdoll::Ragdoll, i: f64) -> f64 {
     RADIUS[i as usize]
 }
 
@@ -214,7 +214,7 @@ fn rd_unpin(this: &mut crate::ragdoll::Ragdoll, i: f64) {
 }
 
 /// Is this particle pinned.   (ragdoll.ts Ragdoll.isPinned)
-fn rd_is_pinned(this: &crate::ragdoll::Ragdoll, i: f64) -> bool {
+fn rd_is_pinned(this: &mut crate::ragdoll::Ragdoll, i: f64) -> bool {
     this.pinned[i as usize] != 0
 }
 
@@ -627,7 +627,7 @@ pub fn ragdoll_gather_near(g: &mut crate::game::Game, id: RagdollId) {
 }
 
 /// True if particle i's centre is inside one of the gathered statics (bind-time check only).   (ragdoll.ts Ragdoll.buried)
-fn rd_buried(this: &crate::ragdoll::Ragdoll, i: f64) -> bool {
+fn rd_buried(this: &mut crate::ragdoll::Ragdoll, i: f64) -> bool {
     if !this.world { return false; }
     let o = i as usize * 3;
     let x = &this.x;
