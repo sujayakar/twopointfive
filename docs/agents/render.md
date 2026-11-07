@@ -144,6 +144,23 @@ row on his machine is the answer, and the word puts the count back on any machin
   flags and debugger rows are gone. Free frame-flag bits: `bun run tools/qa/frame-layout.ts` prints them (eleven). **BOTH CHANGE SHADER TEXT** (the tracers are
   in every ray program): all 121 boot texts and the four made on first use (fog of war's two, the sight table, the trace lab) compile in Chromium's compiler with no
   warning. Whether the picture is the same to the pixel is draw-equal's to say: see the line under this one when it is written. **Never seen on a GPU.**
+- **TRIALS NO TIER TURNED ON ARE GONE (2026-11-07; the cleanup's rule: a switch nothing sets is deleted, a switch everything sets is plain code).** Each was a
+  debugger row or an address word only: no preset, no weather, no sweep row and no mission set it. **The drawn soft character shadow** (`charSoftShadow` and its six
+  rows, the smooth-union march, `render/rigDebug.ts`, `__rigTrace`): `sdfrig.wgsl` is the round-cone primitive alone and `frame.rigCfg` holds two bits (64 self
+  shadow, 128 mesh shadows near only). **Bounce light denoised at the internal size** (`giFullRes`, `giFullIters`, `Preset.dn.giFull`, `?nogim`, the eight
+  internal-size textures made on first use, `giUpsample` / `giTemporalF`, the denoiser's third parameter block, the composite's branch for an internal-sized
+  texture): measured at +0.85 ms and +64 MB when it was written and never placed. `__gimo` keeps the ladder's climb and the motion-calm rows. **The gather's plain
+  ray pattern** (`gatherStrata` off, `?nogatherstrata`, `?gatherStrata`, `__gs`, the second `trace` program compiled after every boot): stratified directions were
+  on in every preset since 08-12; `cosineDirK` is the gather's one direction rule, the module is `gatherSplit` and its pipelines `gatherTrace` and `gatherLight`
+  (the label `gatherTraceS` is gone: one program fewer in the boot set and in the cut set, and one fewer compiled after the boot). **The sharp pass's edge rays**
+  (`sharpEdgeRays`, its spread and hint rows, `sharp_edge.wgsl`, the mask texture every sharp frame allocated, binding 11): the sharp kernel's traced twin is
+  the sliver rule's alone and its const is `SLIVER_RAYS`; `frame.sharpCfgB` holds the same-plane k in `.w` and nothing else. **Five A/B bits of the estimator**
+  (`restirCoherent` and its tile-shared random stream, `restirPermute`, `restirRatioRaw`, `restirSampleHue`, `restirMotionDither`): `RestirU.cfg.w` bits 4, 8,
+  32, 64 and `mot.w` are free. **KEPT ON PURPOSE**: every row of the performance sweep (`src/ui/perfsweep.ts`: it is how a slow machine sheds work), the glossy
+  floors (a storm turns them on where the tier has no traced reflections: `game/weather.ts`), the estimator's motion twin. **THESE CHANGE SHADER TEXT** (denoise,
+  the four composites, restir and its twin, the gather, both sharp kernels): all 115 boot texts and the four made on first use compile in Chromium's compiler with
+  no warning; the other 31 modules are the same text by hash. The Rust crate's mirror of the settings (`rust/game/src/root_settings`) still lists the removed
+  fields: the port's to regenerate. **Never seen on a GPU.**
 - **Character proxies = the SDF character rig** — every mannequin's 15 shadow / reflection proxies are round cones fitted at load (`render/sdfrig.ts`, `shaders/sdfrig.wgsl`), no switch; extras in `frame.rigCfg` (`settings.charSelfShadow` default ON, `?noselfshadow`; `?sdfsmooth` / `?charsoft` / `?charsoftmarch` experiments); `__sdfrig`, `__rigTrace` — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
 
 <!-- was CLAUDE.md lines 2658–2728 -->
@@ -424,7 +441,7 @@ row on his machine is the answer, and the word puts the count back on any machin
 - **Sharp direct** (decoupled resolution) — `settings.sharpDirect`, switched on per tier by `quality.ts Preset.iq`, `?sharp` / `?nosharp` force it; live only under TAAU below scale 1.0; `__sharp` — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
 - **The resolve configuration per tier** (image-quality program) — `quality.ts IqTier` on `Preset.iq` (sharp direct + decoupled jitter + GBAA + history de-blur), `?noiq` = the resolve as it was, `?gbaa`, `?nomv` (`settings.motionIds`); harness `__iq` — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
 - **Stratified gather directions + the trace lab** (ported from exp/trace-perf; the notebook is docs/internal/trace-perf.md, the page docs/review/trace-perf.html): `settings.gatherStrata`
-  (default ON since 08-12 — the maintainer liked it; `?nogatherstrata` = the iid gather, `__gs {on, summary()}`, Tab ▸ Indirect light ▸ 'EXP: stratified gather directions') draws the final gather's k-th ray of four from
+  (THE ONLY PATTERN since 2026-11-07: the switch, `?nogatherstrata` and `__gs` are gone; before that default ON since 08-12 — the maintainer liked it; `?nogatherstrata` = the iid gather, `__gs {on, summary()}`, Tab ▸ Indirect light ▸ 'EXP: stratified gather directions') draws the final gather's k-th ray of four from
   STRATUM (k + frame) mod 4 of the cosine hemisphere (fgather.wgsl `cosineDirK`: azimuth half × cos²θ half; mainGi's two fresh rays a Latin square over the same cells; the young-history
   extras a complete stratified set of their own) instead of iid — UNBIASED (tile means within ±0.5 %, temporal sd equal or lower) but a whole 8×8 tile's k-th rays share a quarter of direction
   space and walk the grid coherently: gather 2.03 → 1.70 ms at high 1368×770 (−16 %), −0.8 ms at ultra. passes.ts compiles the gather module TWICE behind a prepended `const GATHER_STRATA`
