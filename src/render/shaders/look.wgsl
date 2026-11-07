@@ -306,7 +306,7 @@ fn lookSurface(cls0: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, al
     tilt = tn * k.y;
     // ---- a snow level's bare ground (earth a man cleared, a rut): within a stride of lying snow it is frozen — ice in the low places, dark and smooth enough to
     // show a lamp, and frost grains over the rest, thinning away from the snow
-    if (SNOW_SURF && lookCfg.e.w > 0.0 && snowCfg.p[1].z > 0.5 && lying && n.y > 0.0 && wp.y < LOOK_GROUND.y && thing.z > 0.5) {   // (the stuff's `ground`)
+    if (GBUF_SNOW && lookCfg.e.w > 0.0 && snowCfg.p[1].z > 0.5 && lying && n.y > 0.0 && wp.y < LOOK_GROUND.y && thing.z > 0.5) {   // (the stuff's `ground`)
       let e = 0.3;   // (the field knows no roof here: a floor of earth inside an outer wall takes a hand's width of this along the wall — known, left)
       let near = max(max(snowField(wp.xz + vec2f(e, 0.0)).y, snowField(wp.xz - vec2f(e, 0.0)).y), max(snowField(wp.xz + vec2f(0.0, e)).y, snowField(wp.xz - vec2f(0.0, e)).y));
       if (near > 0.02) {
@@ -741,7 +741,7 @@ fn lookMan(code: u32, mp: vec3f, dmx: vec3f, dmy: vec3f, dwx: vec3f, dwy: vec3f,
   let T = min(lookCfg.g.y, 1.0) * min(K, 1.0); let op = side == 0u || side == 4u;
   let seed = f32(owner) * 0.618; let own = fract(seed); let own2 = fract(f32(owner) * 0.3819 + 0.27);
   let ridge = max(-cavity, 0.0);
-  let cold = SNOW_SURF && snowCfg.p[1].z > 0.5;
+  let cold = lv(SNOW_SURF) && snowCfg.p[1].z > 0.5;
   var alb = albedoIn; var rough = roughIn; var gain = gainIn;
   if (slot == 1u || slot == 2u || slot == 3u) {
     let tile = select(0.3, 0.16, slot == 3u);                                               // (webbing's thread is coarser)

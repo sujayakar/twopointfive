@@ -9,10 +9,6 @@
 "word": "ts",
 "why": "calls the tick's rules between ticks and wraps a rule's tick (kind iv-a)"
 },
-"tools/qa/coop-check.ts": {
-"word": "none",
-"why": "it holds two TypeScript engines (bun and node) to each other bit for bit, and node has no bridge preload: a check of the TypeScript tick's arithmetic"
-},
 "tools/qa/exact-check.ts": {
 "word": "none",
 "why": "it holds the game's own maths under bun to the same under node, and node has no bridge preload: a check of the TypeScript tick's arithmetic"
