@@ -3788,7 +3788,7 @@ if (which === 'list') {   // `probes.ts list`: the name index (grouped by name P
     if (other) { if (FAILED.length) console.log(`  the reds are not read against the list (tools/qa/expected-red.ts): ${other}`); }
     else if (old.length || fresh.length || back.length) {
       console.log(`  the reds against the list (tools/qa/expected-red.ts${STAND === 'shipped' ? '' : ", the rows that are red on the old stand"}): ${old.length} expected · ${fresh.length} NEW · ${back.length} listed and green again`);
-      if (LIST_READ_ON && STAND === 'shipped' && (old.length || back.length)) console.log(`    (${LIST_READ_ON})`);
+      if (LIST_READ_ON && STAND === 'shipped' && [...old, ...back].some(n => !LIST[n].rust)) console.log(`    (${LIST_READ_ON}${[...old, ...back].some(n => LIST[n].rust) ? ' · not so of a row that says ON THE RUST GAME: that one was read on it' : ''})`);
       for (const n of old) console.log(`    EXPECTED RED  ${n}${sideTag(n)} — ${rowSays(LIST[n])}`);
       for (const n of fresh) console.log(`    NEW RED       ${n}${sideTag(n)}`);
       for (const n of back) console.log(`    GREEN AGAIN   ${n} — listed as an expected red and it passed here: ${mend(n)}`);
