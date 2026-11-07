@@ -52,6 +52,35 @@ pose store on the TypeScript side).
 the module; stepped again, the game stands again from it (`restep`). Only the last six games that gave a slot up keep theirs: an older one's re-step
 THROWS and names the tool's line. `tools/blitz/keep-check.ts` holds all of this under either word.
 
+## The fuzz: one soak seed on both games, tick for tick
+
+The scripted missions drive little of the game from outside the tick; `tools/qa/soak.ts` drives a lot: a seeded schedule of random stimuli (gunshot,
+kick and bang events, kills, the player teleported onto men, doors picked, kicked and flung, blackouts, restarts, mission steps, grabs, interrogations,
+saves and loads). `tools/blitz/fuzz.sh` plays one seed twice and holds the two plays to each other:
+
+```sh
+tools/blitz/fuzz.sh <seed> [--minutes 3] [--hard] [--skip a,b] [--only a,b] [--out DIR]
+bun run tools/blitz/fuzz-diff.ts DIR [--json] [--but-panes]
+```
+
+- **The reference** is the `ts` word UNDER THE FOLD (`QA_FOLD=1`): the same stand, the settled switch rows at their page values, the game owning its
+  die (the soak puts its seeded die in `Math.random`'s place before the stand, and the stand seeds the game's die off one draw of it, the same on
+  both sides). Under `ts` every save is the TypeScript's snapshot in memory, as under `rust` every save is the Rust game's clone: a FILE's load stages
+  the encounter again and pours the file in, which is not the saved moment to the bit.
+- **A line a tick on each side** (`RH_TICKS`: `ts-run.txt`, `rust-run.txt`): the tick, the die's count, a hash of the host's half as handed in and of
+  the orders given, a hash of each of the block's parts but `poses` (head, dice, doors, falls, props, slabs, items, men, lights, weather, smoke,
+  panes). A tick a kept game stood again in is written twice; its last line counts.
+- **`fuzz-diff.ts`** names the first tick the die or the block parts, the first tick the host's half differs, where the two timelines first say
+  another thing and where the DRIVER'S OWN ACTS first differ (the schedule reads the game it is given: once the driver takes another road the two
+  sides are no longer the same experiment), the soak's own invariants that are red on the Rust side only, and the call surface's exit line.
+- **The whole states as the last tick returns** are diffed by path (`end-diff.txt`). THE DIE AND THE BLOCK ARE THE BODIES AND THE DICE: a call that ran
+  in TypeScript on the puppet and never reached the Rust game (an interrogation: a talk's record, the chronicle, a door's code) leaves them equal for
+  minutes. After a restart that diff is noisy: the TypeScript's book still numbers the players and guns of before the restart, so rows keyed by a
+  player compare crosswise.
+- **To look closer**: `RH_SAY='<an expression of g>'` writes what the tool would read, a line a tick on each side (`<word>-say.txt`; `RH_SAY=digest` the
+  game's digest); `RH_DUMP=<ticks>` keeps the whole state of each side at those ticks for `diff.ts`; `RH_HALF=<ticks>` prints the host's half a field a
+  line under either word.
+
 ## Two ways
 
 **Fast (the default).** After a step the FILTERED export is applied (`face_puppet` → `applyGame(… puppet …)`: the listed fields of what changed, and
