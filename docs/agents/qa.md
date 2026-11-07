@@ -315,6 +315,25 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the door tools' owner's to say which line is promised).
   `orderui-door` (11-06): read, NOT mended, its row put right. One blue man's fall-in mark is dealt 0.31 m from Sam on the page's stand; he stands
   0.68 m short of it, called arrived, for as long as he is watched (not a settle). Could be real: the squad's owner's.
+  SINCE THE TYPESCRIPT TICK WAS DELETED (2026-11-07) A TOOL WITH NO WORD IS FOLDED: it stands the Rust game (tools/blitz/word.ts, the default word),
+  which has the settled rows as constants, so `foldWanted()` is true with nothing in front and the fold is laid as the harness loads on the page's
+  stand. WHERE THE PARAGRAPH BELOW SAYS OTHERWISE IT IS OF BEFORE THE DELETION ('NOT THE DEFAULT YET', 'a run without the fold', (1)'s 'plain'):
+  not rewritten here. `fold-check` lines (1), (7) and (8) had asked that no word means no fold and were red on every tree since the deletion. They
+  pin the new state now: (1) reads each settled row's OWN value with the laid fold put off (`QA_FOLD_FOR=0`) and asks that the fold laid every one
+  and each still answers through it after the stand; (7) that a run with no word says the same notice and the same probe's line as one under
+  `QA_FOLD=1`; (8) that `foldWanted` is true for nothing and for `QA_FOLD=0`. A default word that stops folding turns them red.
+  WHAT THE FOLD IS FOR NOW: it is the harness's hold of the settled rows (the page's is `src/host/rustgame.ts rustSettledHold`), and its line a
+  probe names every check that still writes a settled row: the list to restage or delete from. `QA_FOLD_FOR=0` / `foldFor(false)` stays the one
+  way a tool reads a settled row's own value.
+  STILL RED IN all-quick FROM THE SAME CAUSE, NOT MENDED HERE: `holds` (holds-check (2), (3), (9)). Its table holds rows OFF for probes written for
+  older builds; nearly all those rows are settled, so under the fold every such hold is refused (101 of them), and (9) is red because of the rule
+  below. The table has no job on the Rust game: to retire, with its 119 probe names as the restaging list.
+  WHAT HAS NO JOB LEFT and is still in the tree: `QA_FOLD=1` itself on the page's stand; `QA_FOLD_ONLY` and the check-by-check start under
+  `TPS_GAME=table` (fold-check (10)), there being no unfolded game to stand a check on; `QA_VERDICTS` and the `plain` line (they need a run with no
+  fold); THE RUNNER'S RULE THAT A FOLDED RUN'S REDS ARE READ AGAINST NO ROW: on a run with no word on the page's stand that is now every run, so the
+  list of expected reds is not read there (an old-stand run and a run with the laid fold off still read it), and a break word's closing line cannot
+  say whether it bit. KNOWN AND NOT MENDED: an old-stand runner says 'NOT FOLDED' and takes `QA_FOLD` out of what its children inherit, which no
+  longer unfolds them: a page-stand arm it starts is folded, with no notice.
   THE SETTLED ROWS, FOLDED (11-06; `tools/qa/fold.ts`, the list `tools/qa/switches.json`, its maker `tools/qa/switch-list.ts`, the check
   `tools/qa/fold-check.ts` = `probes.ts fold`, in all-quick). WHY: the Rust game has every settled switch row as a constant (the page's branch
   translated, the other dropped), and of 255 probes that step a game in the gate's families 186 did so with a settled row pinned off its page
@@ -346,9 +365,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   it are plain until the next look, which lays them again and names them `lost`; the fence looks before and after it puts the tables back); a
   row a module copied into a local before the fold was laid; a child killed before it ends hands over nothing. UNDER IT `holds` IS RED: every
   hold of `holds.ts` over a settled row is refused, which is the point; those holds go as their checks are re-aimed or deleted.
-  THE LIST: 992 rows, each `row`, `page` (its value on the page) and `kind`: 866 settled, 85 open decision (stays a switch), 41 player's or
-  run-time (stays a variable; eight of them were called open until 2026-11-07: Hard turns PRESSURE.on and DIGIN.on on, a quiet mission with a squad
-  turns on PAIRUP.on, PAIR.on, SNEAK.on and SPOTTED.on, WALLSNAP.press is an Options row, POSEMATH.singles is written inside the tick). It is WRITTEN from the port's switch list (project files, `rebuild/rust-sim/port/blitz/port-list.json`: the
+  THE LIST: 992 rows, each `row`, `page` (its value on the page) and `kind`: settled, open decision (stays a switch), player's or run-time
+  (stays a variable). THE COUNTS ARE THE FILE'S OWN (`counts` at its head) and move as rows are ruled: 866 / 85 / 41 on the morning of 2026-11-07,
+  with the port's ruling of the open rows about to settle more (project files `rebuild/rust-sim/port/cleanup/OPEN-ROWS-RULING.md`). Of the run-time
+  rows, eight were called open until 2026-11-07: Hard turns PRESSURE.on and DIGIN.on on, a quiet mission with a squad
+  turns on PAIRUP.on, PAIR.on, SNEAK.on and SPOTTED.on, WALLSNAP.press is an Options row, POSEMATH.singles is written inside the tick. It is WRITTEN from the port's switch list (project files, `rebuild/rust-sim/port/blitz/port-list.json`: the
   source; a row changes kind there): `bun run tools/qa/switch-list.ts make <that list>`, and `… same <that list>` says whether the two agree.
   A NEW RULE'S SWITCH joins by `bun run tools/qa/switch-list.ts new` (an open decision at its page value; needs no list from outside; `make`
   keeps such a row until the port's list has it): without it `fold` line (2) is red, since every true/false row of the tables must be on the

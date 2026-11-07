@@ -2,7 +2,9 @@
 //   bun run tools/qa/fold-check.ts        exit 0 = all hold · 1 = one does not      (probes.ts fold; the same on both stands: every game here is stood in a
 //                                          child on the page's stand, where the fold lives)
 //   FOLD_BREAK=1 in front = the fold is laid to COUNT a write and let it through: lines (3), (6) and (9) must FAIL.
-// (1) every settled row of the list is in the knob tables, a plain value, and at the list's value on a game the page's stand stood.
+// (1) every settled row of the list is in the knob tables, with no getter or setter of its own, and at the list's value on a game the page's stand stood with
+//     no word in front: that game is folded (the default word, tools/blitz/word.ts), so the value is read with the laid fold put off (the table's own
+//     answer, not the list's), and every row must be one the fold laid and still answers through after the stand.
 // (2) every yes/no row of the tables is on the list: a new switch says its kind, or this line is red. THE MEND for a new rule's switch:
 //     `bun run tools/qa/switch-list.ts new` (it joins as an open decision at its page value; the port's list is told after).
 // (3) under the fold a settled row answers its page value whatever is written; the write is counted once, by row, value and writer; writing the page's own
@@ -33,21 +35,25 @@
 // repository); a write through a road (6) does not walk (a menu's own row: the fold names it when a check walks it); a row read into a local before the
 // fold is laid.
 import { resolve } from 'node:path';
-import { switchRows, settledOf, settledYesNo, unlistedYesNo, hostOf, sameValue, type Refused } from './fold.ts';
+import { switchRows, settledOf, settledYesNo, unlistedYesNo, hostOf, sameValue, FOLD, type Refused } from './fold.ts';
+/** WITH NO WORD IN FRONT a tool stands the Rust game (tools/blitz/word.ts, the default word), which has the settled rows as constants: so a tool with no word
+ *  is FOLDED. Lines (1), (7) and (8) pin that (until 2026-11-07 they asked that no word means no fold, and were red on every tree since the TypeScript tick
+ *  was deleted). A default word that stops folding turns them red: that is their job. */
 
 const ME = resolve(import.meta.dir, 'fold-check.ts'), mode = process.argv[2] ?? '';
 const cell = (reg: Record<string, unknown>, row: string): { host: Record<string, unknown>; key: string } | null => { const [t, ...p] = row.split('.'), key = p[p.length - 1], host = hostOf(reg[t], p.slice(0, -1)); return host && key in host ? { host, key } : null; };
 const quiet = async <T>(fn: () => T | Promise<T>): Promise<T> => { const log = console.log; console.log = () => {}; try { return await fn(); } finally { console.log = log; } };
 
 // ---------------------------------------------------------------- the children (each a fresh process on the page's stand)
-if (mode === '--rows') {   // no fold: the list against a stood game
+if (mode === '--rows') {   // the list against a stood game with no word in front: the fold is laid (the default word), and put OFF by the parent (QA_FOLD_FOR=0) so a row answers the table's own value, not the list's
   const { standUp, ROOT } = await import('./headless.ts'), { knobRegistry, NOT_KNOBS } = await import(`${ROOT}/src/game/knobs.ts`);
   await quiet(() => standUp());
-  const reg = knobRegistry() as Record<string, unknown>, L = switchRows(), missing: string[] = [], off: string[] = [], own: string[] = [];
+  const reg = knobRegistry() as Record<string, unknown>, L = switchRows(), missing: string[] = [], off: string[] = [], own: string[] = [], notLaid: string[] = [];
   for (const r of L) { if (r.kind !== 'settled') continue; const c = cell(reg, r.row); if (!c) { missing.push(r.row); continue; }
-    const d = Object.getOwnPropertyDescriptor(c.host, c.key); if (d?.get || d?.set) own.push(r.row); if (!sameValue(c.host[c.key], r.page)) off.push(`${r.row} (the game ${JSON.stringify(c.host[c.key])}, the list ${JSON.stringify(r.page)})`); }
+    const d = Object.getOwnPropertyDescriptor(c.host, c.key); if (FOLD.skipped.includes(r.row)) own.push(r.row); else if (!d?.get) notLaid.push(r.row);   // (a row with an accessor of its OWN is one the fold could not lay; after the stand every other must still answer through the fold's)
+    if (!sameValue(c.host[c.key], r.page)) off.push(`${r.row} (the game ${JSON.stringify(c.host[c.key])}, the list ${JSON.stringify(r.page)})`); }
   const unlisted = unlistedYesNo(reg, L, NOT_KNOBS).map(r => r.row), yesNo = unlistedYesNo(reg, [], NOT_KNOBS).length;
-  console.log(JSON.stringify({ rows: { settled: L.filter(r => r.kind === 'settled').length, missing, off, own, yesNo, unlisted } })); process.exit(0);
+  console.log(JSON.stringify({ rows: { settled: L.filter(r => r.kind === 'settled').length, missing, off, own, notLaid, yesNo, unlisted, laid: FOLD.on ? FOLD.rows : -1 } })); process.exit(0);
 }
 if (mode === '--fold') {   // QA_FOLD=1: what the fold does
   const H = await import('./headless.ts'), F = await import('./fold.ts'), { knobRegistry, knobsCopy, knobsBack } = await import(`${H.ROOT}/src/game/knobs.ts`), { asProbe } = await import('./holds.ts');
@@ -124,9 +130,9 @@ const L = switchRows(), settled = Object.keys(settledOf(L));
 // must be settled; the red path of (6) lays PRESSURE.second, which must NOT be. A list that changes one of them asks for another row here, and says so.)
 { const kind = (row: string): string => L.find(r => r.row === row)?.kind ?? 'not on the list', wrong = [['DOORWAY.oneWay', 'settled'], ['GLASSFX.on', 'settled'], ['PRESSURE.second', "player's or run-time"]].filter(([r, k]) => kind(r) !== k);
   if (wrong.length) line(false, `(0) the rows this check itself names are of the kind it needs`, wrong.map(([r, k]) => `${r} is '${kind(r)}', the check wants '${k}': pick another row in fold-check.ts`).join(' · ')); }
-{ const r = await child([ME, '--rows'], {}), R = jsons<{ settled: number; missing: string[]; off: string[]; own: string[]; yesNo: number; unlisted: string[] }>(r.out, 'rows')[0];
-  line(!!R && R.settled === settled.length && R.settled > 0 && !R.missing.length && !R.off.length && !R.own.length, `(1) the list's ${settled.length} settled rows are in the knob tables, plain values, and at the list's value on a game the page's stand stood`,
-    R ? `not in the tables: ${few(R.missing)} · not at the list's value: ${few(R.off)} · with a getter or setter of their own: ${few(R.own)}` : said(r));
+{ const r = await child([ME, '--rows'], { QA_FOLD_FOR: '0' }), R = jsons<{ settled: number; missing: string[]; off: string[]; own: string[]; notLaid: string[]; yesNo: number; unlisted: string[]; laid: number }>(r.out, 'rows')[0];
+  line(!!R && R.settled === settled.length && R.settled > 0 && !R.missing.length && !R.off.length && !R.own.length && !R.notLaid.length && R.laid === R.settled, `(1) the list's ${settled.length} settled rows are in the knob tables, at the list's value by the tables' own answer, none with a getter or setter of its own, and every one laid by the fold a game stood with no word has`,
+    R ? `not in the tables: ${few(R.missing)} · not at the list's value: ${few(R.off)} · with a getter or setter of their own: ${few(R.own)} · laid by the fold: ${R.laid < 0 ? 'NO FOLD ✗' : `${R.laid} of ${R.settled}`} · not answering through it after the stand: ${few(R.notLaid)}` : said(r));
   line(!!R && !R.unlisted.length, `(2) every yes/no row of the knob tables is on the list (${R?.yesNo ?? '?'} rows), so a new switch says its kind`,
     R ? `on no list: ${few(R.unlisted, 12)}${R.unlisted.length ? ' — a new rule\'s switch joins by `bun run tools/qa/switch-list.ts new`' : ''}` : 'no reading'); }
 
@@ -155,9 +161,11 @@ const L = switchRows(), settled = Object.keys(settledOf(L));
   const H = jsons<Line>(hand.out, 'fold'), before = H.find(x => x.outside === 'before selftest-pass'), hw = (before?.refused ?? []).map(x => `${x.row}=${String(x.value)} @${x.writer.replace(/:\d+$/, '')}`);
   const ok = P.length === 1 && !!own && own.red === false && w.length === 2 && w[0] === `${A.row} @tools/qa/fold-check.ts ×1` && w[1] === `${A.row} @tools/qa/probes.ts ×1` && /^THE SETTLED ROWS ARE FOLDED: /m.test(page.err);
   const laid = (e: string): string => /^THE SETTLED ROWS ARE FOLDED: .*$/m.exec(e)?.[0] ?? '', okHand = H.length === 2 && hw.length === 1 && hw[0] === 'DOORWAY.oneWay=false @tools/qa/headless.ts' && !H.find(x => x.probe === 'selftest-pass')!.refused.length && /GLASSFX\.on=false/.test(laid(hand.err)) && !/GLASSFX/.test(laid(page.err));
-  line(ok && okHand && !jsons(old.out, 'fold').length && /^THE SETTLED ROWS ARE NOT FOLDED: /m.test(old.err) && !jsons(plain.out, 'fold').length && !/SETTLED ROWS/.test(plain.err),
-    `(7) the runner under QA_FOLD=1 says one line for the probe with its own write and its child's; a word given by hand over a settled row is said before the first probe, or in the notice where its module read it before the fold; on the old stand nothing is folded and that is said; with no word nothing is said`,
-    `the probe: ${own ? few(w) : 'no line'} · ONEWAY=0 by hand: ${before ? few(hw) : 'no line before the probe'} · GLASSFX=off by hand (read as its module loads): ${/GLASSFX\.on=false/.test(laid(hand.err)) ? 'named in the notice' : 'NOT named ✗'} · the old stand: ${jsons(old.out, 'fold').length ? 'a line ✗' : 'no line'}, ${/NOT FOLDED/.test(old.err) ? 'said' : 'NOT said ✗'} · no word: ${jsons(plain.out, 'fold').length ? 'a line ✗' : 'no line'}`); }
+  const PL = jsons<Line>(plain.out, 'fold'), pw = (PL.find(x => x.probe === 'selftest-fold')?.refused ?? []).map(x => `${x.row} @${x.writer.replace(/:\d+$/, '')} ×${x.n}`);
+  const okPlain = PL.length === 1 && PL[0].probe === 'selftest-fold' && PL[0].red === false && JSON.stringify(pw) === JSON.stringify(w) && /^THE SETTLED ROWS ARE FOLDED: /m.test(plain.err);   // (no word = the default word = the same run, line for line)
+  line(ok && okHand && !jsons(old.out, 'fold').length && /^THE SETTLED ROWS ARE NOT FOLDED: /m.test(old.err) && okPlain,
+    `(7) the runner under QA_FOLD=1 says one line for the probe with its own write and its child's; a word given by hand over a settled row is said before the first probe, or in the notice where its module read it before the fold; on the old stand nothing is folded and that is said; with no word the run is the same as under QA_FOLD=1: the notice, and the probe's line with both writes`,
+    `the probe: ${own ? few(w) : 'no line'} · ONEWAY=0 by hand: ${before ? few(hw) : 'no line before the probe'} · GLASSFX=off by hand (read as its module loads): ${/GLASSFX\.on=false/.test(laid(hand.err)) ? 'named in the notice' : 'NOT named ✗'} · the old stand: ${jsons(old.out, 'fold').length ? 'a line ✗' : 'no line'}, ${/NOT FOLDED/.test(old.err) ? 'said' : 'NOT said ✗'} · no word: ${PL.length} line(s), ${pw.length ? few(pw) : 'no write in it'}, ${/^THE SETTLED ROWS ARE FOLDED: /m.test(plain.err) ? 'the FOLDED notice' : 'NOT the FOLDED notice ✗'}`); }
 
 { const F = await import('./fold.ts'), top = await child([ME, '--write'], { QA_FOLD: '1' }), offNow = /reads it from now on: (.*)$/m.exec(top.err)?.[1] ?? '';
   type Line = { probe?: string; process?: string; refused: Refused[] };
@@ -171,8 +179,8 @@ const L = switchRows(), settled = Object.keys(settledOf(L));
       && !jsons(top.out, 'fold').length && alone.length === 1 && alone[0].process === 'tools/qa/fold-check.ts' && alone[0].refused.length === 1
       && !/SETTLED ROWS/.test(other.err) && !jsons(other.err, 'fold').length && other.code === 0 && fresh.code === 2
       && /this child was given a word its parent was not: GLASSFX\.on=false/.test(word.err) && !!W && W.refused.some(x => x.row === 'GLASSFX.on' && x.writer === '(a word read before the fold)')
-      && words === 'false false true stops true true true false',
-    `(8) who speaks: a check file's own main run alone says its probe's line with its child's write in it; a process alone says its own on stderr; an arm on the old stand under a folded parent is not folded and says nothing; a child given a word its parent was not has the row counted; the words that ask are QA_FOLD=1 and TPS_GAME = rust, audit or table; switch-list.ts new refuses a word by hand`,
+      && words === 'true true true stops true true true false',
+    `(8) who speaks: a check file's own main run alone says its probe's line with its child's write in it; a process alone says its own on stderr; an arm on the old stand under a folded parent is not folded and says nothing; a child given a word its parent was not has the row counted; the words that ask are QA_FOLD=1 and TPS_GAME = rust, audit or table, and no word (or QA_FOLD=0 alone) asks too, by the default word; switch-list.ts new refuses a word by hand`,
     `a main alone: ${M.length} line(s), writers ${few(mw)} · a process alone: ${alone.length} line(s) on stderr, ${jsons(top.out, 'fold').length} on stdout · an old-stand arm of a folded parent: ${!/SETTLED ROWS/.test(other.err) && !jsons(other.err, 'fold').length ? 'silent, nothing counted' : 'spoke ✗'} · switch-list.ts new under TPS_GEAR=0: exit ${fresh.code} · GLASSFX=off given to a child: ${W ? refusedText(W.refused.filter(x => x.row === 'GLASSFX.on')) : 'no line'} · nothing / QA_FOLD=0 / 1 / on / TPS_GAME=rust / audit / table / ts: ${words}`); }
 
 { const run = resolve(import.meta.dir, 'probes.ts'), some = await child([run, 'selftest'], { QA_FOLD: '1', QA_FOLD_ONLY: 'selftest-fail' }), none = await child([run, 'selftest-pass'], { QA_FOLD: '1', QA_FOLD_ONLY: 'selftest' });
