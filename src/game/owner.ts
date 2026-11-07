@@ -108,7 +108,9 @@ export function ownerSummary(men: readonly Guard[], t: number): string {
 /** what a rule's own state says, one line in the rule's file: tools/qa/owner-check.ts holds the record to it at every read. Nothing in the game calls these */
 const WITNESSES: { rule: number; name: string; says: (gd: Guard, g: never) => boolean; atRead: boolean }[] = [];
 /** `atRead`: the rule's answer turns on what moves between its reads (a man's awareness), so the rule says it just before they come and it is held to its state only there */
-export function ownerWitness<G>(name: OwnerRule, says: (gd: Guard, g: G) => boolean, atRead = false): void { WITNESSES.push({ rule: OWN[name], name, says: says as (gd: Guard, g: never) => boolean, atRead }); }
+/** (THE LIST IS KEPT IN THE RULES' OWN ORDER, by `rule` and then by name, not in the order the rules' files happened to load: it is part of the game's
+ *  state, and a list whose order follows the bundle's would move with every change of who imports whom. Two witnesses of one rule keep the order their file wrote them in) */
+export function ownerWitness<G>(name: OwnerRule, says: (gd: Guard, g: G) => boolean, atRead = false): void { WITNESSES.push({ rule: OWN[name], name, says: says as (gd: Guard, g: never) => boolean, atRead }); WITNESSES.sort((x, y) => x.rule - y.rule || (x.name < y.name ? -1 : x.name > y.name ? 1 : 0)); }
 /** every rule the record and its own state disagree about for this man */
 export function ownerDisagrees<G>(gd: Guard, g: G, rules = ~0, reading = true): { name: string; record: boolean; rule: boolean }[] {
   const out: { name: string; record: boolean; rule: boolean }[] = [];
