@@ -47,7 +47,6 @@ import { SNEAK } from './sneak';
 import { AIR_SIM } from './airSim';
 import { WALLSNAP } from './wallsnap';
 import { STALK } from './stalk';
-import { TAPSTEP } from './tapstep';
 import { STICKY } from './stickycam';
 import { BIGSLOT } from './kit';
 import { SQUADTHROW } from './squadthrow';
@@ -172,9 +171,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (typeof (k.tables.HOLD as { strip?: { fall?: number } } | undefined)?.strip?.fall !== 'number') HOLD.strip.fall = 0;   // (a file from before the stripped gun's fall was timed: thrown down at the fixed push, wherever that landed it)
   if (!k.tables.BIGSLOT) BIGSLOT.on = false;   // (a file from before the big slot: the shotgun was a man's gun, a wall charge was pouches, nobody carried a hammer)
   if (!k.tables.SQUADTHROW) SQUADTHROW.on = false;   // (a file from before teammates threw a frag or a stun canister on order: the floor's menu had no such row)
-  if (!k.tables.TAPSTEP) TAPSTEP.on = false;   // (a file from before the steps: a crouch walked)
   if (k.tables.STALK) { const T = k.tables.STALK as Partial<typeof STALK>;
-    if (T.drag === undefined) STALK.drag = false;   // (…and from before the mouse could steer the creep: the hold walks him in)
     if (T.orbitSnap === undefined) STALK.orbitSnap = 0;   // (…and from before a key nearly across him was taken as across him)
     if (T.wideLead === undefined) STALK.wideLead = 0;   // (…and from before the left hand led the right: both as far ahead)
     if (T.widePole === undefined) STALK.widePole = [0.75, 0.1, -0.65];   // (…and with the elbows out to the side, as the arms first went out)

@@ -56,7 +56,6 @@ import { wandDrop } from './wand';
 import './wallcharge';
 import './defuse';
 import { STALK, stalkOn } from './stalk';
-import { TAPSTEP } from './tapstep';
 import { closeLive, closeAt, closeKindOf, closeStation, closeTook, closeSeated, closeUnseat } from './close';
 import './kitanim';
 import type { CloseKind } from './close';
@@ -224,7 +223,7 @@ function cancelReloads(pl: Player) { pl.pistol.cancelReload(); pl.rifle.cancelRe
 export function legsOwn(g: Game): boolean {
   const pl = g.player;
   return !(pl.down || pl.takedown || pl.holding || pl.kick || pl.picking || pl.wanding || pl.coding || pl.wall || pl.dragging || pl.haul || pl.doorMove || g.puppet || g.touring
-    || samWork(g) || (STALK.on && stalkOn(g)) || (TAPSTEP.on && pl.crouch) || g.rails?.allowed());   // (tapstep.ts: crouched, his keys are steps with a rhythm of their own · rails.ts: a lesson's gate takes keys out of the tick)
+    || samWork(g) || (STALK.on && stalkOn(g)) || g.rails?.allowed());   // (rails.ts: a lesson's gate takes keys out of the tick)
 }
 /** THE TOP PACE OF A WALK OF HIS OWN this tick, before a tap step, a creep or a door in his hand have their say: by what his legs are doing (`m`: the
  *  player's own flags in the tick; a look ahead's scratch flags — walkahead.ts) and what his card weighs. One working for both. */
