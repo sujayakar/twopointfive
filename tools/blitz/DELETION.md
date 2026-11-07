@@ -31,6 +31,7 @@ The simulation's folders are `src/game`, `src/anim`, `src/math`, `src/sim` and `
 | the page | every file of `src/` outside the simulation's folders: the game's page, and the pages with no Rust game (the workbench with its viewer and editor, the replay viewer, the sound and music pages) | its body, and everything that body reaches. The page has no call surface: what it calls on the puppet runs as TypeScript |
 | the hosts | the files of `tools/` that a page or a host loads, found by following imports from the entry points in `HOST_ENTRIES` | its body. They run inside the host's own lines (a start, the apply, the out events, the dress step), where nothing crosses |
 | the module | a simulation file's own top-level statements, and the names the bridge's schema reads through its window | all of it |
+| a file a tool writes | a simulation file whose first line says a tool writes it, never a hand (`src/sim/built.ts`, `src/sim/men/cols.ts`) | all of it: its own check reads the file's shape |
 | a tool | every other file of `tools/` (the checks) | with a row on the call surface: its signature, and the body becomes the crossing. The tick's own function with no row: its signature, which throws by name. Any other function with no row: its body |
 | the census | a function seen to run as TypeScript while the Rust game stepped | its body, however it was reached |
 | `Game.stepSeats` | the tick | nothing: its body goes, and a host hangs its own step on the game object |
@@ -140,7 +141,7 @@ Each is anchored on one line of the file as it stood, and the program stops with
 
 Tree `43d8a9cf4be7d603` (a hash of the simulation's files). Census: 2183 functions seen to run as TypeScript in 1539 plays of the Rust game.
 
-The simulation's folders hold 126856 lines before and 97021 after (29835 fewer). Of their 8383 functions (67040 lines of them):
+The simulation's folders hold 126856 lines before and 97024 after (29832 fewer). Of their 8383 functions (67040 lines of them):
 
 | class | functions | lines | what becomes of it |
 |---|---|---|---|
@@ -150,7 +151,7 @@ The simulation's folders hold 126856 lines before and 97021 after (29835 fewer).
 | kept | 5355 | 34615 | the body stays: a start, the picture's step, a reader over the puppet, or a function the Rust game has no row for |
 | gone | 189 | 1248 | the signature stays and the body throws by name (`Game.stepSeats`, and a declaration an override that stays still needs) |
 
-Other declarations (classes as data, tables, types): 6715 stay, 525 go (578 lines).
+Other declarations (classes as data, tables, types): 6717 stay, 523 go (576 lines).
 
 ### What keeps the kept bodies
 
