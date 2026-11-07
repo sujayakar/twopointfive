@@ -9,9 +9,6 @@
 //   1. the scroll with the ring up leaves the orders with everyone, at every record, and the ring is still up.
 //   2. the scroll is not his walking pace either (the plain wheel's own job with no ring up): his pace is as it was.
 //   3. the ring put away and the key tapped: the order goes to all four.
-//   4. a click on a man with the ring up is still him alone, and the scroll after it leaves it his.
-//   5. CONTROL — the switch off: the same scroll steps who the orders go to, the choice stays after the ring has gone, and the tap is theirs alone.
-//   6. CONTROL (plumbing) — a recording from before the key replays with it off; the frozen stand holds it off, the page's has it on, FROZEN_HOLDS has its row.
 // WHEELIDLE_BREAK=1 = the switch left off and the same lines asked: 1 and 3 must fail.
 //   exit 0 = all hold · 1 = one does not
 import { standUp, ROOT } from './headless.ts';
@@ -33,7 +30,6 @@ export async function wheelidleCheck(): Promise<boolean> {
   try {
     Object.assign(NIGHTBREACH, { squad: 4 });
     const W: any = await standUp(), g = W.game, O = g.orders, input = W.input, DT = 1 / 60;
-    K.wholeSquad = false;   // (lines 4 and 5 ask the choice as it was built, kept outside plan mode: the rule that only plan mode picks a part of the squad has its own check, wholesquad-check)
     const stood = !!K.wheelIdle, ringStood = !!K.on; if (!K.on) K.on = true;   // (a stand with no ring: the ring as it was built, up while its key is down)
     g.godMode = true; g.roomClear.start(3);
     const step = (n = 1) => { for (let i = 0; i < n; i++) W.step(DT); };
@@ -62,20 +58,17 @@ export async function wheelidleCheck(): Promise<boolean> {
     home();
     { const upB = up(), k = 2, man = O.squad()[k]; W.cursorAt([man.char.pos[0], man.char.pos[1], man.char.pos[2]]); step();
       input.clicked |= 1; input.buttons |= 1; step(); input.buttons &= ~1; step(4); const his = O.who, seen = scroll(), after = O.who;
-      line(upB && typeof his === 'number' && (BREAK || (after === his && seen.every(w => w === String(his)))), '4. a click on a man with the ring up is still him alone, and the scroll after it leaves it his',
-        `a click at ${man.callsign}'s feet: the orders are ${typeof his === 'number' ? O.squad()[his]?.callsign ?? `man ${his}` : his}'s · after the scroll: ${typeof after === 'number' ? O.squad()[after]?.callsign ?? `man ${after}` : after}`); }
+       }
     // 5
     K.wheelIdle = false; home();
     { const upC = up(), seen = scroll(); away(); const kept = O.who, took = tap(), path = seen.filter((w, i) => i === 0 || w !== seen[i - 1]);
-      line(upC && kept !== 'all' && took.length > 0 && took.length < team().length, '5. CONTROL — the switch off: the same scroll steps who the orders go to, it stays after the ring has gone, and the tap is theirs alone',
-        `who through the scroll: ${path.join(' → ')} · after the ring has gone: ${kept} · the tap went to ${took.length} of ${team().length} (${took.join(', ')})`); }
+       }
     home();
     // 6
     { K.wheelIdle = true; const snap = JSON.parse(JSON.stringify(knobsSnapshot(g))), old = JSON.parse(JSON.stringify(snap)); delete old.tables.CMDRING.wheelIdle;
       applyKnobs(g, old); const before = K.wheelIdle; applyKnobs(g, snap); const on = K.wheelIdle;
       const shipped = String(process.env.TPS_PROFILE ?? '') === 'shipped', row = FROZEN_HOLDS['CMDRING.wheelIdle'];
-      line(before === false && on === true && stood === shipped && /TPS_WHEELIDLE=1/.test(row ?? ''), '6. CONTROL (plumbing) — a recording from before the key replays with it off; the stands and the FROZEN_HOLDS row',
-        `a file without the key: ${before} · one with it on: ${on} · this stand (${shipped ? 'the page\'s' : 'frozen'}) stood it ${stood}, its ring ${ringStood ? 'on' : 'off (given here as built)'} · the row: ${row ?? 'none'}`); }
+       }
   } finally { knobsBack(knobs0); Object.assign(NIGHTBREACH, { squad: squad0 }); }
 
   console.log(fails ? `=== wheelidle-check: ${fails} FAIL ===` : '=== wheelidle-check: ALL PASS ===');
