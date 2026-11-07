@@ -178,7 +178,24 @@ known in the whole states every half minute), both sides played from one tree, H
   record, an order's words, a gun's rows). A change to the schema or the export's order moves every hash and no line: pack again, having seen the
   lines equal.
 - SHOWN: the Rust game's four whole-state hashes of `depot-four-2-r2` were the same in three separate plays, and each packed file here is THE SAME
-  PLAY as its own folder. NOT YET SHOWN: a whole `fuzz-replay.sh` play of each packed run from a clean tree (the box was not free to run it).
+  PLAY as its own folder. A whole `fuzz-replay.sh` play of each packed run has been made since (the retake, below).
+- A PACKED RUN IS OF ONE LAYOUT OF THE WIRE, and says which (`layout`, the stamp `schema.layout` that the module is held to as it loads). The line's
+  host-half word is a hash of the host's parts and a whole state's hash is of its bytes, so a field added to either moves them with no play moved.
+  Held to a packed run of another layout, `fuzz-replay` says THE WIRE'S LAYOUT MOVED by name (exit 4 where the ticks played and the die's count are
+  still the packed run's), not "differs first in ticks 1 to 600".
+- THE PLAY'S OWN WORDS (`play`) are in a packed file beside the lines': the same ten-second windows over each line without the host-half word, so
+  the die's count and the block's parts alone, which no layout of the wire touches. After a change of the wire, ONE COMMAND takes every packed run
+  again: `tools/blitz/fuzz-retake.sh` plays each, holds the new play to the `play` words, and only where they are equal writes the file again from the
+  new play (its lines, its states, the tree, the layout). A run whose play differs is left alone and named, with the ten seconds. With the layout
+  unchanged it is `fuzz-replay.sh` over all of them and writes nothing.
+- THE SIX WERE TAKEN AGAIN after the TypeScript tick went, on the tree their `tree` line names, and each time this was seen first: every tick's line
+  of the new play IDENTICAL to the kept folder's own line (the one that was equal to the TypeScript tick) in the die's count and all twelve parts of
+  the block, on all 35,659 ticks; only the host-half word differed, by the capability part the host's half gained. The whole states had differed from
+  the kept ones in ONE list alone, by `diff.ts` on two runs at three ticks (20 paths, every one `g.m.owner.witnesses[k]`): the owner check's
+  witnesses, filled as each rule's file loaded and so in the bundle's order, which moved when the tick's files went. That list is kept in the rules'
+  order now (owner.ts `ownerWitness`). So the lines of the packed files are still the TypeScript tick's play; their half words and state hashes pin
+  the Rust game to itself. The three records runs were played twice on that tree: lines and state hashes the same both times. On the tree the files
+  name, `fuzz-retake.sh` over the six said "of this layout already, and the same play" of each: every line and all 17 whole states' hashes.
 - A run packed AFTER the TypeScript tick is gone was held to nothing: it pins the Rust game to itself, which is worth having and is another thing.
 - The scripts stand the Rust game by the harness's word (`TPS_GAME=rust`, `QA_FOLD=1` in fuzz.sh and fuzz-squad.sh). When the word goes with the
   TypeScript tick, `--side rust` is what stays and the two variables go.

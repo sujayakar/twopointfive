@@ -1,13 +1,21 @@
 cmd FUZZ_CAP=2400 tools/blitz/fuzz-squad.sh records-pair 2 --hard --rate 2 --alarm 130 --god all --skip kill,fire
-tree eafbb1875
+tree a174fbc4f
+layout 2871794000
 ticks 4005
 die 532
-lines 600 2fvnfg6fg2bhv
-lines 1200 3hh8wvk0cgj7f
-lines 1800 2mtln08dmj6g0
-lines 2400 edgv57x3up6z
-lines 3000 r37uqnuu7yfg
-lines 3600 3c31t4o5ymxir
-lines 4005 16nq8uu5nou6z
-state 1800 7379445 4swbts45dlgl
-state 3600 7784876 1bamn48p38iru
+lines 600 3v6nvoheq50p1
+lines 1200 qtxgkpey7nw
+lines 1800 1rphj9dli00qn
+lines 2400 8pjy9hcnnm8f
+lines 3000 2ezccdlgstfma
+lines 3600 1nnp9q5aj8u9u
+lines 4005 2f6yxq5xpaz93
+play 600 1apymqfoqhy4g
+play 1200 bus7sfx0lhh3
+play 1800 x1n07ixwf4xg
+play 2400 3ohq9u0f235ay
+play 3000 1un29etzyvppo
+play 3600 200ibwsyfhs2b
+play 4005 2711eswcfjgc5
+state 1800 7379502 22pbupkqadt1b
+state 3600 7784933 1zi9p5v98zsp6
