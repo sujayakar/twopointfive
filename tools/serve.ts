@@ -6,6 +6,7 @@ import viewer from "../viewer.html";   // a FORWARD into /workbench#mode=chars (
 import editor from "../editor.html";   // a FORWARD into /workbench#mode=level (the level editor is its Level mode) — see docs/level-format.md 'Editor'
 import replay from "../replay.html";   // the REPLAY VIEWER (src/replay/viewer.ts): a replay saved with F7 as a map with a scrubber and notes
 import sounds from "../sounds.html";   // the LISTENING PAGE (src/sounds/main.ts): every sound the game makes, one row each, through the game's own mixer graph
+import draw from "../draw.html";   // THE PAGE THAT DRAWS A GAME IT DOES NOT HOLD (src/host/drawpage.ts)
 import music from "../music.html";   // the SCORE'S LISTENING PAGE (src/music/main.ts): every piece of the score on one row, played by the game's own sequencer and voices
 import workbench from "../workbench.html";   // the WORKBENCH: editor + viewer in one shell (src/workbench.ts → src/workbench/, src/editor/, src/viewer/)
 import { handleLevels } from "./levels-api.ts";
@@ -23,7 +24,7 @@ const server = Bun.serve({
   port, hostname, maxRequestBodySize: 512 << 20,   // (a frame capture of a whole 4K frame, gzipped: POST /capture below, which says who may send one)
   development: { hmr: false, console: true },
   routes: {
-    "/": index, "/viewer": viewer, "/editor": editor, "/workbench": workbench, "/replay": replay, "/sounds": sounds, "/music": music,
+    "/": index, "/viewer": viewer, "/editor": editor, "/workbench": workbench, "/replay": replay, "/sounds": sounds, "/music": music, "/draw": draw,
     "/look": req => { const u = new URL(req.url); return Response.redirect("/?look&" + (u.searchParams.has("levelFile") ? "" : "roomclear&squad4&levelFile=pass.json&hud&") + u.search.slice(1), 302); },   // THE LOOK PROTOTYPE (src/render/shaders/look.wgsl): the game's page with ?look, on the pass unless the link names its own mission
     "/sneaklab": req => { const q = new URL(req.url).search.slice(1); return Response.redirect("/?levelFile=sneak-lab.json&solo&sneaklab" + (q ? "&" + q : ""), 302); },   // the sneak lab: the close-in on a man, its numbers live (src/host/sneaklab.ts)
     "/firelab": req => { const q = new URL(req.url).search.slice(1); return Response.redirect("/?levelFile=pass.json&roomclear&squad4&nofow&firelab" + (q ? "&" + q : ""), 302); },   // the fire lab: beside the pass's brazier, the flame's numbers live (src/host/firelab.ts)
@@ -39,6 +40,7 @@ const server = Bun.serve({
     if (path === "/editor.html" || path === "/editor/") return Response.redirect("/editor" + url.search + url.hash, 302);
     if (path === "/replay.html" || path === "/replay/") return Response.redirect("/replay" + url.search, 302);
     if (path === "/sounds.html" || path === "/sounds/") return Response.redirect("/sounds" + url.search, 302);
+    if (path === "/draw.html" || path === "/draw/") return Response.redirect("/draw" + url.search, 302);
     if (path === "/music.html" || path === "/music/") return Response.redirect("/music" + url.search, 302);
     if (path === "/workbench.html" || path === "/workbench/") return Response.redirect("/workbench" + url.search + url.hash, 302);
     if (path === "/gaitlab.html" || path === "/gait/") return Response.redirect("/workbench" + url.search + "#mode=chars&scene=sam/walk", 302);

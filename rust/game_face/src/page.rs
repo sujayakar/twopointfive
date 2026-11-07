@@ -19,9 +19,15 @@
 //!   face_probe_took(h)                 the host's frame has sent the table to the GPU: it is empty again here, and whose turn it is on a full frame is
 //!                                      kept (`probe_like_take_asks`)
 //!   face_probe_results(h, p, n)        the answers the host holds now, before a step: u32 count, each a key and its three numbers
+//!   face_hand(h, seat, p, pn, keys, n) WHAT A PLAYER DID, for the next step: `HAND` numbers (`pn` bytes; src/draw/hand.ts says them in the same order) and his keys' codes as
+//!                                      text, those held and, after a line feed, those that went down. A seat nobody hands is as it last was, with
+//!                                      nothing pressed.
 //!   face_draw(h, want) -> p            WHAT THE LAST TICK LEFT TO BE DRAWN (the crate game_draw): the sections of `want` made again from the game as it
 //!                                      stands, which is not written. `p` is a table of two words a section, its address and its rows; they lie here
 //!                                      until the next call. Once a tick.
+//!   face_frame(h, a, x, y, z) -> p     A FRAME IS DRAWN, `a` of the way from the tick before to the last (1 = where the last left everything), looking at
+//!                                      x y z: the rows that move stand there, and the table again
+//!   face_draw_look(h, p, n)                 what the page says of its look (game_draw::LOOK numbers), once and when it changes
 //!   face_draw_layout() -> stamp        the stamp of the sections' declarations (and their text at face_out): a page whose offsets are of another is refused
 //!   face_poke(h, what, v) -> 1 | 0     a host's switch written between ticks, by number: 0 god mode · 1 the AI on · 2 infinite ammunition · 3 the
 //!                                      player unseen · 4 the launcher's held button let go unsent (the pause card: host/loop.ts). `v` != 0 = on.
@@ -85,7 +91,12 @@ pub unsafe extern "C" fn face_start(p: *const u8, n: usize, slot: i32, seed: u32
     let slot = if slot < 0 { match super::free_slot() { Some(s) => s, None => return 0 } } else { slot as usize };
     if slot >= sim::state::GAMES { return 0; }
     let o = game_start::stand::StartOpts { seed, seats, slot, dress: flags & 1 != 0, cpu_senses: flags & 2 != 0, ..Default::default() };
-    let stood = game_start::handed::stand_handed(super::bytes(p, n), &o);
+    let mut stood = game_start::handed::stand_handed(super::bytes(p, n), &o);
+    // (a host that draws has a particle pool, and keeps the lights' reach: the tick asks only whether they are there)
+    if o.dress {
+        stood.game.engine.particles = Some(game::render_particles::Particles { collide: true, spark_bounce: true, ..game::render_particles::Particles::blank() });
+        stood.game.engine.reach = Some(game::render_reach_keep::ReachKeep::blank());
+    }
     let h = super::put(super::Held::new(stood.game));
     crate::memo::forget(h);
     h
@@ -155,9 +166,46 @@ pub unsafe extern "C" fn face_probe_results(h: u32, p: *const u8, n: usize) {
         }
     });
 }
+/// the numbers of a hand: buttons clicked wheel, cursor x y, the view's size in CSS pixels and in its own, the view-projection and its inverse, the eye, where it
+/// looks, the look-at, yaw pitch distance, field of view, aspect, how far it leads the aim
+const HAND: usize = 56;
+/// # Safety
+/// `p`, `pn` and `keys`, `n` name bytes the host wrote into memory from face_alloc.
+#[no_mangle]
+pub unsafe extern "C" fn face_hand(h: u32, seat: usize, p: *const f64, pn: usize, keys: *const u8, n: usize) {
+    use game::cmd::{PlayerCmd, PlayerCmdView};
+    if pn != HAND * 8 { panic!("face_hand: {} bytes, and a hand is {} numbers", pn, HAND); }
+    let v = std::slice::from_raw_parts(p, HAND);
+    let text = super::text(keys, n);
+    let mut lines = text.split('\n');
+    let mut codes = || lines.next().unwrap_or("").split(' ').filter(|k| !k.is_empty()).map(String::from).collect::<Vec<String>>();
+    let three = |i: usize| [v[i], v[i + 1], v[i + 2]];
+    let cmd = PlayerCmd {
+        keys: codes(), pressed: codes(), buttons: v[0], clicked: v[1], wheel: v[2], mx: v[3], my: v[4], w: v[5], h: v[6], pw: v[7], ph: v[8],
+        view: PlayerCmdView { vp: v[9..25].to_vec(), ivp: v[25..41].to_vec(), pos: three(41), forward: three(44), target: three(47), yaw: v[50], pitch: v[51], distance: v[52], fov: v[53], aspect: v[54], aim_lead: v[55] },
+    };
+    super::with(h, |x| {
+        let still = |s: game::ids::SeatId| { let c = x.g.tab.cmd_seat[s].cmd.as_ref().unwrap_or(&cmd); PlayerCmd { keys: Vec::new(), pressed: Vec::new(), buttons: 0.0, clicked: 0.0, wheel: 0.0, ..c.clone() } };
+        let mut cmds = x.cmds.take().unwrap_or_else(|| x.g.seats.iter().map(|&s| still(s)).collect());
+        cmds[seat] = cmd;
+        x.cmds = Some(cmds);
+    });
+}
 #[no_mangle]
 pub extern "C" fn face_draw(h: u32, want: u32) -> *const u32 {
     super::with(h, |x| { x.drawn.take(&x.g, want); x.drawn.table().as_ptr() })
+}
+#[no_mangle]
+pub extern "C" fn face_frame(h: u32, a: f64, x: f64, y: f64, z: f64) -> *const u32 {
+    super::with(h, |k| { k.drawn.frame(&k.g, a, [x, y, z]); k.drawn.table().as_ptr() })
+}
+/// # Safety
+/// `p` names `n` numbers the host wrote into memory from face_alloc.
+#[no_mangle]
+pub unsafe extern "C" fn face_draw_look(h: u32, p: *const f64, n: usize) {
+    if n != game_draw::LOOK { panic!("face_draw_look: {} numbers, and a look is {}", n, game_draw::LOOK); }
+    let v = std::slice::from_raw_parts(p, n);
+    super::with(h, |k| k.drawn.look(v));
 }
 #[no_mangle]
 pub extern "C" fn face_draw_layout() -> u32 {
@@ -237,7 +285,7 @@ pub extern "C" fn face_back(h: u32, k: u32) -> u32 {
     // (…and the box world's copy with it: it stands again, of this moment, before anybody asks)
     game::scene_collision::unstand(&mut g);
     game::scene_collision::stands(&mut g);
-    super::with(h, |x| { x.g = g; x.cmd = None; x.cmds = None; x.after.clear(); });
+    super::with(h, |x| { x.g = g; x.cmd = None; x.cmds = None; x.after.clear(); x.drawn.cut(); });
     crate::memo::forget(h);
     1
 }
