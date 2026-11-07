@@ -136,18 +136,6 @@ export class Denoiser {
     if (!p) { p = computePipelineAsync(this.device, { label: `dnRadAtrous${key}`, layout: this.layRadAtrous, compute: { module: this.mod, entryPoint: 'radAtrous', constants: { STRIDE: stride, FIRST: first ? 1 : 0, SPEC: spec ? 1 : 0 } } }).then(pl => { this.pRadAtrous.set(key, pl); this.pending.delete('R' + key); return pl; }); this.pending.set('R' + key, p); }
     return p;
   }
-  /** Dev / measurement hook (main.ts __hotDenoise): rebuild every pipeline from `src` (a denoise.wgsl variant; the scene prelude is prepended) so an edited core can be A/B'd against a
-   *  staged scene without a reboot. Resolves to the compiler's messages; nothing is swapped if there is an error. */
-  async hotSwap(src: string): Promise<{ ok: boolean; messages: string[] }> {
-    const mod = this.device.createShaderModule({ code: scenePrelude() + src, label: 'denoise-hot' });
-    const info = await mod.getCompilationInfo();
-    const off = scenePrelude().split('\n').length - 1;
-    const messages = info.messages.map(m => `${m.type} ${m.lineNum - off}:${m.linePos} ${m.message}`);
-    if (info.messages.some(m => m.type === 'error')) return { ok: false, messages };
-    const four = await this.buildFixed(mod);   // built off the NEW module first; then the swap is one synchronous step (no frame sees a mix, overlapping swaps end on the last to install)
-    this.mod = mod; this.pShAtrous.clear(); this.pRadAtrous.clear(); this.pending.clear(); [this.pPack, this.pShTemp, this.pGiTemp, this.pSpecTemp] = four;   // (the à-trous variants re-make themselves lazily off the new module, as before)
-    return { ok: true, messages };
-  }
   private shAtrous(stride: number, final: boolean, first: boolean): GPUComputePipeline {
     const key = `${stride}/${final ? 1 : 0}/${first ? 1 : 0}`; let p = this.pShAtrous.get(key);
     if (!p) { p = this.device.createComputePipeline({ label: `dnShAtrous${key}`, layout: this.layShAtrous, compute: { module: this.mod, entryPoint: 'shAtrous', constants: { STRIDE: stride, FINAL: final ? 1 : 0, FIRST: first ? 1 : 0 } } }); this.pShAtrous.set(key, p); }
