@@ -665,7 +665,6 @@ export class Engine {
     this.passes.setFires(this.settings.debugView === 0 ? this.fires : null);   // the open fires' flames (game/fire.ts), behind the beams in the same uniform
     this.passes.setRt(this.settings.rtReflect, this.settings.rtReflectDiv);   // (likewise before resize: the reflection targets' divisor — pooled + re-made on change like the gather's — and the switch that first allocates them at all)
     this.passes.setGiFull(!!this.settings.giFullRes, this.settings.giFullIters);   // (GI in motion, likewise before resize: the diffuse client's INTERNAL-res set exists from the first frame it is asked for; the v3 core only)
-    this.passes.setHitReuse(this.settings.rtHitReuse);      // (phase 5: the reflection pass's hit-record pair, made on first use the same way)
     this.resize();
     cam.aspect = this.width / this.height;
     cam.rebuild();
@@ -765,9 +764,7 @@ export class Engine {
     const decalsOn = this.decalsOn;      // FrameFlags.Decals this frame (setting ∧ a list attached ∧ something in it)
     const partOn = this.particlesOn;     // FrameFlags.Particles this frame (setting ∧ a Particles attached): its emits are dealt slots and uploaded now, stepped after the cascades, drawn after the composite
     const rtOn = s.rtReflect;            // RT reflections this frame (frame.rtCfg.w = the divisor, 0 while off) — and Gloss is then held DOWN whatever settings.gloss says (the reflection pass covers the polished floors: rtReflect ⊃ gloss)
-    const rtP5Bits = (s.rtMeshHits && meshOn ? 1 : 0) | (s.rtHitReuse ? 2 : 0);   // phase 5: the reflection pass's bits (frame.p5Cfg.z) — any of them up dispatches the reflect_p5.wgsl variant, none = main's reflect.wgsl, the same program as before the phase
-    const rigBits = (s.sdfRigSmooth ? 2 : 0) | (s.charSoftShadow ? 4 : 0) | (s.charSoftShadow && s.charSoftAnalytic ? 8 : 0) | (s.charSoftSmooth ? 16 : 0) | (s.charSoftBroad ? 32 : 0) | (s.charSelfShadow ? 64 : 0) | (s.meshShadowsNear ? 128 : 0);   // the SDF character rig's EXTRAS this frame (frame.rigCfg.x: 2 smooth-union closest hit · 4/8/16/32 the soft character query · 64 character self-shadow · 128 mesh shadows near-only; bit 1 retired — the round cones themselves are unconditional)
-    this.passes.rtP5 = rtP5Bits !== 0 || (rigBits & 2) !== 0;   // (the rig's smooth closest hit rides in the same variant's tracer tail — reflect.wgsl stays main's program)
+    const rigBits = (s.charSoftShadow ? 4 : 0) | (s.charSoftShadow && s.charSoftAnalytic ? 8 : 0) | (s.charSoftSmooth ? 16 : 0) | (s.charSoftBroad ? 32 : 0) | (s.charSelfShadow ? 64 : 0) | (s.meshShadowsNear ? 128 : 0);   // the SDF character rig's EXTRAS this frame (frame.rigCfg.x: 4/8/16/32 the soft character query · 64 character self-shadow · 128 mesh shadows near-only; bits 1 and 2 retired — the round cones themselves are unconditional)
     this.particles?.prepare(dt, partOn, s.particleBirths);
     // froxel volumetrics (Phase 2b): the grid follows the preset's rows / slices and the window's aspect (a preset hop or a reshape re-makes it and restarts its history; the render scale never
     // touches it); a spell off lets the volumes go after ten seconds. FrameFlags.FroxelVol is up exactly while a grid is dispatched.
@@ -847,10 +844,7 @@ export class Engine {
       rtCfg: [Math.max(0, Math.min(1, s.rtMaxRough)), Math.max(0, Math.min(4, Math.round(s.rtRays))), Math.max(0, Math.min(1, s.rtAniso)) + 2 * Math.round(10 * Math.max(0, Math.min(1, s.wetBreakup ?? 0))), rtOn ? this.passes.rtDiv : 0],   // .z = the anisotropy 0‥1 + 2 × the wet ground's break-up in tenths (0 = .z is the anisotropy alone, as it always was)
         // .w = 0: the reflection pass is off this frame (nothing reads the rest then)
       matCfg: [Math.max(0, s.rtGlints), Math.max(0, s.rtStrength), 60, Math.max(0, Math.min(1, s.detail))],   // .w = the g-buffer's detail-layer amount (0 = fsBox as it was)
-      // phase 5 (ultra extras): the gather's resampling mode + its packed numbers, the reflection pass's mesh / hit-reuse bits — every field 0 = the passes as they were. The mesh bit rides only while
-      // the mesh-shadow trees are actually skinned this frame (meshOn): with meshShadows off / unavailable the reflections keep the capsules, as asked
-      p5Cfg: [0, 0,   // (.x and .y were the resampling gather's mode and numbers: free since that gather went, 2026-11-07)
-        rtP5Bits, firstTransientNow],
+      p5Cfg: [0, 0, 0, firstTransientNow],   // (.x‥.z free: the resampling gather's and the reflection twin's bits until 2026-11-07; .w = the first transient light's slot)
       jitter: [this.jitter[0], this.jitter[1], this.prevJitter[0], this.prevJitter[1]],
       markCfg: [s.markings ? this.world.markingTexel : 0, Math.max(0, Math.min(1, s.markingContrast)), Math.max(0, s.markingEmissive), s.markingReflect ? (s.markingReflPattern === false ? -1 : 1) * (1 + Math.max(0, Math.min(4, s.markingReflCone))) : 0],   // markings: .x 0 = off everywhere; .w 0 = not at reflection hits, else ±(1 + the traced-hit cone's lobe share) — negative = the analytic highlight left uniform (markings.wgsl markConeK / reflect.wgsl)
       sharpCfg: this.sharpOn ? [this.width, this.height, this.outWidth, this.outHeight] : [0, 0, 0, 0],   // sharp direct: the two sizes every twin kernel maps between (z 0 = off: every pass as it was)
@@ -859,7 +853,7 @@ export class Engine {
         (Math.max(0, Math.min(3, Math.round(s.sharpSliver))) & 3) | ((Math.max(0, Math.min(3, Math.round(s.sharpDiag))) & 3) << 4) | ((Math.max(0, Math.min(64, Math.round(s.sharpSliverCap))) & 127) << 8) | (s.dnShadowOccl ? 1 << 15 : 0),   // .z = the SLIVER rule | diag paint << 4 | per-tile ray cap << 8 (sharp_direct.wgsl; 0 = the fallback as it was) — an exact small integer
         s.gbaaClamp ? 1 : 0],   // .w = GBAA's same-surface clamp (gbaa.wgsl; 0 = the blend as it was)
       rigCfg: [rigBits, Math.max(4, Math.min(64, Math.round(s.charSoftSteps ?? 20))), Math.max(0.05, s.charSoftK ?? 1), Math.tan(Math.max(0.02, Math.min(5, s.charSoftMinDeg ?? 0.35)) * Math.PI / 180)],   // the SDF character rig: the extras' bits (0 = the plain round-cone loops) + the soft query's numbers
-      rigCfgB: [Math.max(0, Math.min(3, s.sdfRigK ?? 1)), Math.max(4, Math.min(64, Math.round(s.sdfRigSteps ?? 24))), 0.0015, 0.012],   // × the joint blend radii, closest-hit steps, its epsilon, the soft march's smallest step,
+      rigCfgB: [Math.max(0, Math.min(3, s.sdfRigK ?? 1)), 0, 0, 0.012],   // × the joint blend radii, closest-hit steps, its epsilon, the soft march's smallest step,
     };
     this.froxelPrevNear = froxNear;
     this.passes.smokeSlots = fp.numSmoke;   // (what the shaders are told: 0 = no smoke march anywhere this frame, so the smoke diffusion's blur chain has no reader — passes.ts)

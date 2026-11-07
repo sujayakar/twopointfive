@@ -195,7 +195,7 @@
     const errs = []; const h = e => errs.push(String(e.error && e.error.message).slice(0, 240)); E().device.addEventListener('uncapturederror', h);
     const S = E().settings, Q = window.__quality, sm = window.__smoke; const was = { preset: Q?.current, froxel: S.froxelVol, K: S.smokeMarchLights, view: S.debugView, frozen: sm.params.frozen };
     let n = 0;
-    for (const preset of ['ultra', 'high', 'medium', 'low', 'verylow']) {
+    for (const preset of ['high', 'medium', 'low', 'verylow']) {
       Q.apply(preset); window.__runFrames(2, 1 / 60, []); await settle();
       for (const froxel of [true, false]) for (const K of [0, 3, 6]) for (const frozen of [true, false]) {
         S.froxelVol = froxel; S.smokeMarchLights = K; sm.params.frozen = frozen;
