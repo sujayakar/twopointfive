@@ -3491,6 +3491,7 @@ if (on('level-lint', 'all')) { const m = await import('./editor-probes.ts'); con
 // ---------------------------------------------------------------- the Tab tweak panel (panel-inventory.ts): 'ui' = the family — every row bindings.ts builds (label, kind, range, tooltip, buttons) held
 //                                                                  against main's frozen inventory: the two-level redo may move / add rows, never lose or reword one
 if (on('panel-inventory', 'ui', 'all')) await run('panel-inventory', async () => (await import('./panel-inventory.ts')).panelInventory(process.argv.slice(3)));
+if (on('panel-dead', 'ui', 'all')) await run('panel-dead', async () => (await import('./panel-inventory.ts')).panelDead());   // no yes/no box of the debugger is dead: each is clicked and must move (a box over a settled row cannot). PANELDEAD_BREAK=1 must fail
 // ---------------------------------------------------------------- pursuit tactics (tactics-probes.ts): 'tactics' = the family — the flanking approach, the lone man's angle, the kill-zone doorway; its
 // identity card (tune.tactics off = the old chase, byte for byte) is the AI passes' business too
 if (on('tactics-flank', 'tactics', 'ai-pass', 'all')) await run('tactics-flank', async () => (await import('./tactics-probes.ts')).tacticsFlank());
