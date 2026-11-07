@@ -12,8 +12,8 @@
 //   cable      the look under a door: the pose itself — the drawn skeleton and `bones` are one (what is drawn is what the game reads), the head below the
 //              shoulder line, the right wrist low at the gap, the lock work's flag and the wand's look up; a goggle nod inside the look shows
 //   standdown  the pistol drawn from the crouch: the layer is out inside 0.3 s
-// STEALTHPOSE_BREAK=1 = Sam is stood on his feet where a part asks for the crouch, and at the door the wand's row is never taken: idle, walk, creep, cable
-// and standdown must fail. The stagings are tools/qa/stealth-strip.ts's own.
+// STEALTHPOSE_BREAK=1 = Sam is stood on his feet where a part asks for the crouch, and at the door the wand's row is never taken: idle, walk, creep and cable
+// must fail (rise and standdown ask nothing of the crouch: on his feet with empty hands the layer is in all the same). The stagings are tools/qa/stealth-strip.ts's own.
 import { ROOT } from './headless.ts';
 import { asProbes, exitCode, wanted } from './holds.ts';   // (run alone, each part runs as the probe the runner calls it by: one stand both ways)
 const { KITANIM_STATS } = await import(`${ROOT}/src/game/kitanim.ts`);
@@ -188,7 +188,7 @@ export async function stealthposeStanddown(): Promise<boolean> {
 /** the file's probes, by the names the runner calls them */
 const SUBS: Record<string, () => Promise<boolean>> = { 'stealthpose-idle': stealthposeIdle, 'stealthpose-walk': stealthposeWalk, 'stealthpose-rise': stealthposeRise, 'stealthpose-creep': stealthposeCreep, 'stealthpose-cable': stealthposeCable, 'stealthpose-standdown': stealthposeStanddown };
 if (import.meta.main) {
-  if (BREAK) console.log("STEALTHPOSE_BREAK=1: Sam is on his feet where a part asks for the crouch, the wand's row never taken — idle / walk / creep / cable / standdown must fail");
+  if (BREAK) console.log("STEALTHPOSE_BREAK=1: Sam is on his feet where a part asks for the crouch, the wand's row never taken — idle / walk / creep / cable must fail");
   const ok = await asProbes(SUBS, wanted());   // (a name the file has not: said, nothing run, exit 2)
   if (ok !== null) console.log(ok ? '\n=== stealthpose: ALL PASS ===' : '\n=== stealthpose: FAILED ===');
   process.exit(exitCode(ok));
