@@ -103,7 +103,7 @@ pub fn default_settings() -> RenderSettings {
     s.restir_motion_px = 0.5;
     s.restir_motion_taps = 6.0;
     s.restir_motion_static = false;
-    s.direct_history = 0.5;
+    s.direct_history = 1.0;
     s.direct_blur_cap = 10.0;
     s.sec_min_e = 0.006;
     s.flashlight_radius = 0.07;
