@@ -92,8 +92,7 @@ export interface WeatherFrame {
 export const noWeather = (): WeatherFrame => ({ rain: 0, shearX: 0, shearZ: 0, wet: 0, flash: [0, 0, 0], rainTop: 4.5, interior: [0, 0, 0, 0], annex: [0, 0, 0, 0], nearFade: [0, 0, 0, 0] });
 
 export const FrameFlags = {
-  Direct: 1, Indirect: 2, Volumetrics: 4, Smoke: 8, RcVisWeight: 16, ReachMask: 32 /* direct pass + secondary vertices: skip lights whose CPU reach mask (reach.ts) excludes the shading point's cell — set from settings.lightReach */, SmokeShadows: 64, Bounce: 128, Dither: 256, SoftShadow: 512, NightVision: 1024, Temporal: 2048, TileCull: 4096 /* direct pass: lossless per-tile light culling (set from settings.tileCull, not settings.flags) */, SoftTileSkip: 8192 /* penumbra filter: lossless tile-level pass-through (set from settings.softTileSkip) */, TailChroma: 16384, RcRoom: 32768 /* THE LOOK PROTOTYPE, light keeps to its room (engine.ts, the look panel's row `rooms`): a cache ray's hit takes its bounced light from the cell the ray itself came through (lighting_common.wgsl hitRadiance), beside the cascades' hand-over overlap (render/rc.ts overlap) */,
-  CheckerDirect: 65536 /* LOSSY: shadow rays on half the pixels per frame, checkerboard (set from settings.checkerDirect) */,
+  Direct: 1, Indirect: 2, Volumetrics: 4, Smoke: 8, RcVisWeight: 16, ReachMask: 32 /* direct pass + secondary vertices: skip lights whose CPU reach mask (reach.ts) excludes the shading point's cell — set from settings.lightReach */, SmokeShadows: 64, Bounce: 128, Dither: 256, SoftShadow: 512, NightVision: 1024, Temporal: 2048, TileCull: 4096 /* direct pass: lossless per-tile light culling (set from settings.tileCull, not settings.flags) */, SoftTileSkip: 8192 /* penumbra filter: lossless tile-level pass-through (set from settings.softTileSkip) */, RcRoom: 32768 /* THE LOOK PROTOTYPE, light keeps to its room (engine.ts, the look panel's row `rooms`): a cache ray's hit takes its bounced light from the cell the ray itself came through (lighting_common.wgsl hitRadiance), beside the cascades' hand-over overlap (render/rc.ts overlap) */,
   GridSkip: 131072 /* trace grid: DDA runs past provably empty cells without loads — lossless (set from settings.gridSkip) */,
   GridYCull: 262144 /* trace grid: cells / boxes / globals outside the ray's remaining height span are not slab-tested — lossless (set from settings.gridYCull) */,
   AxisBox: 524288 /* slab test: unrotated boxes skip the yaw rotation and its three divisions — lossless (set from settings.axisBoxFast) */,
@@ -103,8 +102,6 @@ export const FrameFlags = {
   MeshShadows: 8388608 /* EXPERIMENT: every shadow / occlusion ray (direct pass, gather hits, cascades, beams, probes) tests characters against their skinned triangle mesh — a per-character refit BVH written by render/meshShadows.ts each frame, walked in common.wgsl meshShadowT — instead of the 15 analytic capsules; primary visibility and closest-hit shading (gather / gloss hits) stay as they are. Default off (settings.meshShadows); needs meshBinding.enabled; off is the untouched capsule path. */,
   Particles: 16777216 /* GPU particles (E4) (render/particles.ts — sparks, debris chips, dust, casings simulated in a compute pass and splatted into the HDR target after the composite). Set from settings.gpuParticles ∧ a Particles attached; no scene shader reads it (the pass graph does) — it rides in the flags word so the HUD / captures say which path drew the sparks. Off = the CPU box sparks exactly as they were. */,
   BounceCards: 33554432 /* torch bounce cards (settings.torchBounceCards): each carried spot light's footprint on the surface it hits is rebuilt every frame as a one-sided analytic emitter (cards.wgsl) that the final gather samples with one shadow ray instead of discovering the hotspot with its cosine rays — which exclude that light's direct term where they land inside the footprint, so nothing is counted twice (fgather.wgsl). Off = no card pass, nothing sampled or excluded: bit-identical. */,
-  DirectSeedHold: 67108864 /* direct pass: the per-pixel sampling pattern advances every OTHER frame while direct-light history is on (settings.directSeedHold) — an A/B knob for the torch-shadow boil study (docs/internal/perf-2026-08-10.md), default off = the pattern advances every frame as before */,
-  Restir: 1073741824 /* ReSTIR DI is the direct-light estimator this frame (settings.restir; render/shaders/restir.wgsl) — the pass graph picks the pipeline; the one scene shader that reads it is softblur.wgsl (its per-channel ratio clamp opens to 4× for the per-light hues, as for TailChroma); it also lets the HUD / captures / dumps say which estimator drew the frame. Off = direct.wgsl's leader / tail path bit for bit */,
   Glass: 268435456 /* glass panes (E3) — boxes flagged BoxFlag.Glass are kept out of the raster and the trace grid and listed in SceneInfo.glass; composite lays Fresnel reflection (traced in the final gather like the gloss floors, sharing their specular texture + history + à-trous pass), the pane's tint and a dust glow over what the G-buffer shows behind them, and the direct pass tints light that crossed a pane (set from settings.glass; off = no pane list at all: empty openings, the level as it was) */,
   FroxelVol: 536870912 /* froxel volumetrics (renderer v3 Phase 2b, render/froxels.ts): haze + smoke in-scatter injected per froxel of a camera-frustum grid with k shadow rays, temporally accumulated, integrated front to back; composite / particles read one trilinear sample, volumetrics.wgsl keeps only the rain (set from settings.froxelVol while a grid exists; off = the per-pixel march exactly as it was) */,
 } as const;
@@ -121,12 +118,11 @@ export interface FrameParams {
   capColor: [number, number, number, number];
   post: [number, number, number, number];
   rcJitter: [number, number];
-  directCfg: [number, number, number, number];   // samplesTop, samplesOther, blurCapPx, historyWeight
-  directAdaptiveMin: number;
+  directCfg: [number, number, number, number];   // free, free (the old estimator's ray budgets until 2026-11-07), blurCapPx, historyWeight
   numTransient: number;        // transient (ttl) lights alive this frame — lets the gather skip its subtraction loop
   secMinE: number;             // shadow-ray threshold for lights at cascade interval hits (W/m², unshadowed)
   glassCfg: [number, number, number, number];   // glass experiment: x = reflection strength (× the physical Fresnel term), y = tint depth (exponent on the pane's albedo per crossing), z = dust glow gain, w = refraction: the index of refraction while settings.glassRefract (≥ 1), 0 = off (composite.wgsl glassRefractPath)
-  lossyCfg: [number, number, number, number];   // lossy options: gather divisor (2|3), volumetric divisor (2|4), dim-ray luminance threshold (0 = off), the gather's relative firefly bound K (0 = off) — see RenderSettings
+  lossyCfg: [number, number, number, number];   // lossy options: gather divisor (2|3), volumetric divisor (2|4), free (the old estimator's dim-ray threshold until 2026-11-07), the gather's relative firefly bound K (0 = off) — see RenderSettings
   /** torch bounce cards this frame (FrameFlags.BounceCards): the light SLOTS (indices into this frame's uploaded light list) whose footprint cards.wgsl rebuilds, ≤ MAX_CARDS; empty = the card pass is not dispatched and the gather touches nothing */
   cardSlots: number[];
   weather: WeatherFrame;       // rain / splashes / sky flash in the outdoor air (volumetrics.wgsl (c)); noWeather() = nothing drawn
@@ -202,7 +198,7 @@ export function writeFrame(dst: ArrayBuffer, p: FrameParams) {
   f[80] = p.indirectScale; f[81] = p.emissiveScale; u[82] = p.volSteps; f[83] = p.secMinE;
   f[84] = p.capColor[0]; f[85] = p.capColor[1]; f[86] = p.capColor[2]; f[87] = p.capColor[3];
   f[88] = p.post[0]; f[89] = p.post[1]; f[90] = p.post[2]; f[91] = p.post[3];
-  f[92] = p.rcJitter[0]; f[93] = p.rcJitter[1]; f[94] = p.directAdaptiveMin; f[95] = p.numTransient;
+  f[92] = p.rcJitter[0]; f[93] = p.rcJitter[1]; f[94] = 0;   /* (free: the old estimator's adaptive minimum until 2026-11-07) */ f[95] = p.numTransient;
   f[96] = p.directCfg[0]; f[97] = p.directCfg[1]; f[98] = p.directCfg[2]; f[99] = p.directCfg[3];
   f[100] = p.lossyCfg[0]; f[101] = p.lossyCfg[1]; f[102] = p.lossyCfg[2]; f[103] = p.lossyCfg[3];
   const nc = Math.min(p.cardSlots.length, MAX_CARDS);

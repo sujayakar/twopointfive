@@ -1,4 +1,4 @@
-// ReSTIR DI direct lighting (renderer v3 Phase 2a) — settings.restir ON (the default); direct.wgsl is the OFF path, untouched.
+// ReSTIR DI direct lighting (renderer v3 Phase 2a): the direct-light estimator (the leader / tail one it replaced, direct.wgsl, went 2026-11-07).
 // Same inputs, same four outputs (per emitter class c ∈ {0 sharp, 1 broad}: S = shadowed estimate + signed penumbra hint, U = exact unshadowed
 // total), so dtemporal / softblur / composite consume it unchanged. What differs is how S is estimated:
 //
@@ -83,8 +83,8 @@
 //                there (spatialAll — and wider — where the history is being handed about anyway, nothing extra at rest). U, the beliefs, the hint, the held / transient strata are untouched by all three.
 //   The reservoir written for next frame is the TEMPORAL stage's (spatial output feeds shading only: no M inflation loop).
 // Kept from direct.wgsl: the tile light list (FLAG_TILECULL, verbatim), reach masks (a walled-off light is in U, never a candidate, dark in S), glass
-// transmit on the shaded sample, the owner byte, mesh shadows (inside occludedT), the sun / moon as an ordinary candidate (kind 2). Ignored here:
-// FLAG_CHECKER_DIRECT, dimRays, the leader ray budgets (directCfg.xy) — the ray budget is ru.cfg.x, per pixel, whatever the light count.
+// transmit on the shaded sample, the owner byte, mesh shadows (inside occludedT), the sun / moon as an ordinary candidate (kind 2). The ray budget is
+// ru.cfg.x, per pixel, whatever the light count.
 const Z_RELEASE: f32 = 2.0;   // (see 'trailing edge' in phase 2)
 const MOTION_RAMP: f32 = 1.6;  // MOTION (b): the confidence cut ramps from none at ru.mot.x px a frame to its floor at MOTION_RAMP × that
 /** the light bypasses the reservoirs this frame: a transient always; under the HYBRID (header HELD) every light a character carries (owner byte ≠ 0) */

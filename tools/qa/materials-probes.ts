@@ -165,7 +165,7 @@ export async function materialsFrame() {
     viewProj: ident(1), invViewProj: ident(2), prevViewProj: ident(3), camPos: [20, 6, 14], camDir: [0, -0.7, -0.7], time: 12.5, dt: 1 / 60, width: 1777, height: 1000,
     frameIdx: 77, numLights: 33, flags: 0x1234abcd, exposure: 2, skyZenith: [0.01, 0.02, 0.05], skyHorizon: [0.04, 0.05, 0.08], hazeDensity: 0.035,
     rcInterval0: 1, rcC0Dims: [40, 4, 28], rcNumCascades: 4, rcD0: 6, rcFrameParity: 1, numSmoke: 2, debugView: 0, indirectScale: 0.35, emissiveScale: 1, volSteps: 20,
-    capColor: [0.01, 0.012, 0.016, 0.3], post: [0, 475, 0, 0.4], rcJitter: [0.3, 0.6], directCfg: [8, 4, 10, 0.5], directAdaptiveMin: 3, numTransient: 1, secMinE: 0.006,
+    capColor: [0.01, 0.012, 0.016, 0.3], post: [0, 475, 0, 0.4], rcJitter: [0.3, 0.6], directCfg: [8, 4, 10, 0.5], numTransient: 1, secMinE: 0.006,
     glassCfg: [1, 1, 1, 0], lossyCfg: [2, 2, 0, 4], cardSlots: [3, 5], weather: { ...noWeather(), rain: 0.5, wet: 1, flash: [0.1, 0.1, 0.2] },
     volCfg: [4, 2, 15, 0], froxelA: [0.5, 56, 2, 0.93], froxelB: [240, 135, 64, 4], froxelC: [0.1, 0.2, 0.3, 0], prevCamPos: [19, 6, 15], froxelPrevNear: 0.5,
     rtCfg: [0.45, 1, 0.7, 2], matCfg: [1, 1, 60, 0.35], p5Cfg: [17, 0x0a031402, 3, 0], jitter: [0.25, -0.125, 0.5, 0.375], markCfg: [0.025, 1, 1.5, 1],

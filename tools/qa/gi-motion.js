@@ -58,7 +58,7 @@
 
   // ------------------------------------------------------------------ variants: settings bundles over the boot defaults
   let S0 = null;
-  const OLD = { taau: false, restir: false, froxelVol: false, rtReflect: false, detail: 0, renderScale: 1.0, sharpDirect: false, sharpDecouple: false, gbaa: false, taauHistSharp: 0 };   // THE OLD RENDERER (pre-v3 chain at native rows, FXAA, the resolve configuration off)
+  const OLD = { taau: false, froxelVol: false, rtReflect: false, detail: 0, renderScale: 1.0, sharpDirect: false, sharpDecouple: false, gbaa: false, taauHistSharp: 0 };   // THE OLD RENDERER (pre-v3 chain at native rows, FXAA, the resolve configuration off)
   const VARIANTS = {
     main: {}, old: OLD,
     // B = the diffuse GI denoised at INTERNAL res (settings.giFullRes; B2 / B3 = fewer internal-res à-trous iterations, the cost tiers) (C, the young-history gather rays, went with the one-kernel gather 2026-11-07),
@@ -70,9 +70,8 @@
     // D = the diffuse client's follow-ups: the clamp-cut history length (dnGiClampCut) and the young-texel à-trous allowance (dnGiYoungWiden), alone and on top of B
     D1: { dnGiClampCut: 1.0 }, D2: { dnGiYoungWiden: 2.0 }, BD: { giFullRes: true, dnGiClampCut: 1.0, dnGiYoungWiden: 2.0 },
     // direct-side diagnostics (not this lane's files — attribution only): the leader / tail estimator instead of ReSTIR, the shadow client's occluder cue off
-    dLeader: { restir: false }, dNoMoveCue: { dnShadowMoveCap: 0 },
+    dNoMoveCue: { dnShadowMoveCap: 0 },
     // the FLOOR = what the old renderer's calm-in-motion look amounts to inside v3: the leader / tail estimator + the resolve without its motion terms
-    floor: { restir: false, taauMotionAlpha: 0.1, taauSharpenMotion: 0 },
     // the direct chain's and the resolve's own rows, retuned for motion (§2b's sweep): c3 = ReSTIR rows only, tOnly = the resolve's motion terms only, c4 = both
     c3: { restirHistory: 6, restirSpatialAll: true, restirPenRays: true },
     tOnly: { taauMotionAlpha: 0.25, taauSharpenMotion: 0.15 },

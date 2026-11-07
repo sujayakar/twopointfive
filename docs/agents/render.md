@@ -396,14 +396,12 @@ row on his machine is the answer, and the word puts the count back on any machin
   → `__stress.setup()` / `.record(n)` / `.ab(applyA, applyB)` / `.caps(on)` / `.table(r)`, serialized frames, orbiting camera) and `__hotVol(src?)` (recompile
   volumetrics.wgsl from disk — the dev server serves src/render/shaders under /qa/shader/ — and swap the pipeline in without rebooting a staged scene).
 - **Froxel volumetrics** (renderer v3 Phase 2b) — `settings.froxelVol` per tier (`quality.ts Caps.vol`: ultra / high 'classic', medium and below 'froxel'), `?nofroxel` / `?froxel` force either; `settings.smokeMarchLights`; `__froxel`, `__hotFroxel` — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
-- **Lossy options** (engine settings, default OFF in `defaultSettings`, switched ON by the presets as above; pause menu *Graphics —
-  trade-offs* + `LOSSY:` rows in the Tab panel for A/B): `settings.checkerDirect` (frame flag 65536: shadow rays on a checkerboard
-  half per frame, direct.wgsl), `gatherThird` / `volQuarter` (gather at 1/3, volumetrics at 1/4 res: `passes.setDivisors`, divisors
-  in `frame.lossyCfg.xy`), `rcHalfRate` (`rc.halfRate`: uppers even frames, c0 + bake odd), `dimRays` + `dimRaysBelow`
-  (`frame.lossyCfg.z`: one emitter sample per leader under that unshadowed luminance). `engine.render` mirrors the booleans every
+- **Lossy options** (engine settings, default OFF in `defaultSettings`, switched ON by the presets as above; `LOSSY:` rows in the
+  Tab panel for A/B; `checkerDirect` and `dimRays`, which only the old estimator read, went with it 2026-11-07): `gatherThird` / `volQuarter` (gather at 1/3, volumetrics at 1/4 res: `passes.setDivisors`, divisors
+  in `frame.lossyCfg.xy`), `rcHalfRate` (`rc.halfRate`: uppers even frames, c0 + bake odd). `engine.render` mirrors the booleans every
   frame, so they are the single source of truth. Off must stay the untouched path — A/B them one at a time (pin `?quality=ultra` AND set `settings.volLightCap = 0`
   — every preset, ultra included, carries the Phase 0 volumetric cap; `__stress.caps(false)` puts both caps back to the untouched paths).
-- **ReSTIR DI = the direct-light estimator** (renderer v3 phase 2a) — `settings.restir` default ON, `?norestir` = direct.wgsl's leader / tail path; the hybrid held-light path `settings.heldRays`; the motion twin `settings.restirMotion`, `?norestirmotion`; `__hotRestir` / `__hotDirect`, debug views 11 / 12 — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
+- **ReSTIR DI = the direct-light estimator** (renderer v3 phase 2a) — the only one since 2026-11-07 (`settings.restir`, `?norestir` and direct.wgsl's leader / tail path went); the hybrid held-light path `settings.heldRays`; the motion twin `settings.restirMotion`, `?norestirmotion`; `__hotRestir`, debug views 11 / 12 — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
 - **TAAU** (renderer v3 phase 1) — `settings.taau` default ON, `?notaau` = the old chain; `__taa`; RULE kept here: `frame.viewProj / invViewProj / prevViewProj` ARE the jittered matrices — never build a screen ray from `cam.*` on the GPU side — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
 - **Sharp direct** (decoupled resolution) — `settings.sharpDirect`, switched on per tier by `quality.ts Preset.iq`, `?sharp` / `?nosharp` force it; live only under TAAU below scale 1.0; `__sharp` — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
 - **The resolve configuration per tier** (image-quality program) — `quality.ts IqTier` on `Preset.iq` (sharp direct + decoupled jitter + GBAA + history de-blur), `?noiq` = the resolve as it was, `?gbaa`, `?nomv` (`settings.motionIds`); harness `__iq` — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
@@ -422,7 +420,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   `lighting_common diceIrradianceFrom(Ph, n, P0, N0)` — one probe spacing off the hit face like any dice read, but never past the plane of the surface the ray LEFT (P0, N0), and no trilinear
   neighbour from behind that plane (they collapse to the home cell) — the fix for indirect light 'leaking' behind the manager's shelves (the cartons' backs 12 cm off the wall read the lit
   storage room next door: 26–50 → 5); a new bounce read at a hit takes the receiver's plane the same way, never the bare `diceIrradiance(Ph + n·1 m)`.
-- **The denoiser** (renderer v3 phase 3) — `settings.denoiser` `'v3'` default | `'legacy'`, `?legacydenoise`; one core (`render/shaders/denoise.wgsl`), three clients (shadow / diffuse / specular); `__dn`, `__hotDenoise`, debug view 13 — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
+- **The denoiser** (renderer v3 phase 3) — the only one since 2026-11-07 (`settings.denoiser`, `?legacydenoise` and the three old chains went); one core (`render/shaders/denoise.wgsl`), three clients (shadow / diffuse / specular); `__dn`, `__hotDenoise`, debug view 13 — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
 
 <!-- was CLAUDE.md lines 2979–3015 -->
 - **Smoke = one pool of bricks** (THE smoke solver since 2026-10-10, no switch; the maintainer on the eight 64³ boxes it replaced: "let's just remove the box smoke if this is the way we want to do it" · "we can always revive from
@@ -788,7 +786,18 @@ row on his machine is the answer, and the word puts the count back on any machin
   (the maintainer, 10-27: "we pretty much have no one using ultra, so i think it's fine?"); its plumbing went the same day: the reservoir textures and
   their layouts, `setGi`, the young-rays counter and its hold, settings `giResample*` and `giYoungRays / giYoungCap / giYoungLen`, their debugger rows, the `__gi`
   hook, `P5Tier.gi / giRays` and `Dn.giYoungK`. Frame words `giCfg` (four) and `p5Cfg.x, .y` are FREE: still in the layout, read by no shader. The same module
-  hashes held after it. **ONE KERNEL IS STILL IN TWO WRITINGS**: `shaders/gather_split_common.wgsl` (the gather's: directAtPoint as `light` calls it) beside
+  hashes held after it. **THE OLD DENOISER WENT TOO** (same day): dtemporal + softblur, temporal + giblur and the gloss chain, thirteen pipelines and four modules of every
+  boot that ran only under `?legacydenoise`; with them `settings.denoiser`, the debugger's core switch, `__dn.mode`, `directPasses`, the depth history only
+  dtemporal read, `softtile.wgsl markTiles` (the denoiser's pack writes the tile flags) and the adaptive-history trial (`giAdaptiveHistory`, it lived in
+  temporal.wgsl). The tile mask's thresholds come from the shadow client's own strides (`allSkipT`, the same 2, 3, 5). 41 module hashes held, the three tile
+  mask modules lost an entry point. **AND THE OLD DIRECT ESTIMATOR** (same day): `direct.wgsl`, `settings.restir`, `?norestir`, `__hotDirect`, and everything
+  only it read: `directSamplesTop / Other`, `directAdaptiveMin`, `checkerDirect`, `dimRays / dimRaysBelow`, `directSeedHold`, the tail's chroma flag, the presets'
+  `ds` rows and the cost model's leader / tail branch, `LightSet.dirMasks` (the directional masks always ride now). Frame flags Restir, TailChroma, CheckerDirect
+  and DirectSeedHold are gone, so `sharp_direct.wgsl` says `let hiR = 4.0` where it read two of them (the ONLY shader text this changed: sharpU and sharpUE;
+  41 other hashes held) and the denoiser's ratio clamp is 4 always. Frame words `directCfg.x, .y`, `rcJitter.z` and `lossyCfg.z` are FREE; `directCfg.w` is
+  still written and read by nobody. `settings.directHistory` is a switch now (above 0 = the shadow client's history on), not a weight. The debugger lost
+  24 rows: `panel-inventory.ts --gone --only labels.json` takes deleted rows out of its fixture (and `--reword --only` rewords named ones) without touching
+  another lane's missing rows. **ONE KERNEL IS STILL IN TWO WRITINGS**: `shaders/gather_split_common.wgsl` (the gather's: directAtPoint as `light` calls it) beside
   `shaders/gather_common.wgsl` (the reflection passes': one call site a heavy function). Making them one changes the gather's text, so it waits for a same-frame
   comparison. **What was measured**: `tools/qa/shaderinline-check.ts --json` before the change with the two rows' words in front and after it with none, on the
   title, a snow level and the look's page: all 66, 66 and 67 module texts the boot hands the browser are the same by their hashes, in both sets, and the same

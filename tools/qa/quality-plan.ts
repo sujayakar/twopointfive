@@ -53,7 +53,7 @@ console.log(`Cost model (src/ui/quality.ts COST): modelled compute ms on the ref
 console.log(`  preset    direct softbl gather tempor volume bloom | cascad probe |  pixel (rel)   fixed (rel)   what it switches`);
 for (const n of QUALITY_NAMES) {
   const c = COST[n], P = c.passes, p = withSmoke(PRESETS[n], SMOKE_KEEP_DEFAULT), L = p.lossy;   // (the rows as the page runs them: SMOKE KEEP)
-  const sw = [`${p.ds.join('/')} rays`, `hist ${p.hist}`, `maxH ${p.maxH}`, `scale ${p.scale}`, ...(['checkerDirect', 'gatherThird', 'rcHalfRate', 'volQuarter', 'dimRays'] as const).filter(k => L[k]).map(k => k === 'dimRays' ? `dimRays<${L.dimBelow}` : k)].join(', ');
+  const sw = [`${p.restir.rays} rays`, `hist ${p.hist}`, `maxH ${p.maxH}`, `scale ${p.scale}`, ...(['gatherThird', 'rcHalfRate', 'volQuarter'] as const).filter(k => L[k])].join(', ');
   console.log(`  ${n.padEnd(8)} ${f1(P.direct)}  ${f1(P.softblur)}  ${f1(P.gather)}  ${f1(P.temporal)}  ${f1(P.volumetrics)} ${f1(P.bloom)} | ${f1(P.rc)}  ${f1(P.probe)} | ${f1(c.pixel)} (${f2(c.pixel / COST.ultra.pixel)})  ${f1(c.fixed)} (${f2(c.fixed / COST.ultra.fixed)})   ${sw}`);
 }
 // what each preset renders on the two window classes, old vs new semantics (the visible consequence of 'scale is relative to the cap, presets all 1.0')
@@ -121,7 +121,7 @@ if (gridMisses) console.log(`  *** ${gridMisses} pick(s) off the ${SCALE_STEP} g
   let defaults: () => Record<string, unknown>;
   try { defaults = (await import('../../src/engine.ts')).defaultSettings as unknown as () => Record<string, unknown>; }
   catch (e) { console.log(`  (engine.ts did not import here — ${(e as Error).message}; the stub starts from empty settings instead of defaultSettings())`); defaults = () => ({}); }
-  const KEYS = ['renderScale', 'maxInternalHeight', 'volSteps', 'directSamplesTop', 'directSamplesOther', 'directAdaptiveMin', 'directHistory', 'checkerDirect', 'gatherThird', 'rcHalfRate', 'volQuarter', 'dimRays', 'dimRaysBelow', 'giFireflyK'];
+  const KEYS = ['renderScale', 'maxInternalHeight', 'volSteps', 'restirRays', 'directHistory', 'gatherThird', 'rcHalfRate', 'volQuarter', 'giFireflyK'];
   const engine = { settings: defaults(), rc: { cfg: { ...defaultRcConfig } }, rebuilds: 0, rebuildRc(cfg: Record<string, unknown>) { this.rc.cfg = cfg as typeof this.rc.cfg; this.rebuilds++; }, effectiveScale: 1, capScale: 1 };
   const smoke = { params: { rbIters: 4 } };
   const q = new Quality(engine as never, smoke as never);   // (no localStorage / document here: the constructor's try/catch covers the first, calibration is never ticked)
