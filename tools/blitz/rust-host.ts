@@ -263,7 +263,7 @@ export class RustHost {
     if (o.die !== null && !g.dice) g.dice = B.newDice(o.die ?? 20942);
     // (hung as fields no walk of the game's own keys meets: rollback.ts `stateHash` walks them, and a stand's word must not change for being a puppet)
     hang(g, 'stepSeats', function (dt: number, cmds: readonly any[]) { H.step(dt, cmds); });
-    hang(g, 'rustHost', H); hang(g, 'rustSurface', H); hang(g, 'stateWords', () => ({ die: H.dieN(), parts: H.hashes() })); hang(g, 'wholeWords', () => H.wholeWords()); hang(g, 'wholeNames', () => H.wholeNames()); hang(g, 'verdictNow', () => H.verdict()); hang(g, 'quietRun', (on: boolean) => { if (on) H.quietBegin(); else H.quietEnd(); }); B.surfaceHost(H); (globalThis as any).__tpsCall.inHook = () => H.inHook(); { const up = g.update; hang(g, 'update', function (this: any, ...a: any[]) { H.busy++; BUSY.n++; try { return up.apply(this, a); } finally { H.busy--; BUSY.n--; H.auditGap = SCAN_AUDIT > 0 && H.k % SCAN_AUDIT === 0; H.scanRebase(); } }); } H.taps(g);
+    hang(g, 'rustHost', H); hang(g, 'rustSurface', H); hang(g, 'stateWords', () => ({ die: H.dieN(), parts: H.hashes() })); hang(g, 'wholeWords', () => H.wholeWords()); hang(g, 'wholeNames', () => H.wholeNames()); hang(g, 'verdictNow', () => H.verdict()); hang(g, 'quietRun', (on: boolean) => { if (on) H.quietBegin(); else H.quietEnd(); }); B.surfaceHost(H); (globalThis as any).__tpsCall.inHook = () => H.inHook(); { const up = g.update; hang(g, 'update', function (this: any, ...a: any[]) { H.busy++; BUSY.n++; try { return up.apply(this, a); } finally { H.busy--; BUSY.n--; H.auditGap = SCAN_AUDIT > 0 && H.k % SCAN_AUDIT === 0; H.scanRebase(); if (STALE_EVERY && process.env.RH_STALE && H.k > 0 && H.k % STALE_EVERY === 0 && H.busy === 0) H.staleLook(); } }); } H.taps(g);
     if (process.env.TPS_GAME_SAY) process.on('exit', () => { const L = [...H.calls].sort((a, b) => b[1] - a[1]).slice(0, 60); process.stderr.write(`rust-host: ${H.k} ticks; scan ${(H.T.scan / Math.max(1, H.k)).toFixed(2)} ms a tick; ${H.pokeSyncs} exports after a walk that poked; ${H.scan?.stats?.().deepMissed ?? 0} WRITES THE WALK'S CHEAP WORD DID NOT SEE (found by its audit: ${(H.scan?.stats?.().missed ?? []).join(', ')}); ${H.asksRefused} asks refused; ${H.scan?.stats?.().refused ?? 0} WRITES NOT SENT (a leaf that named a row the Rust game has not got: ${(H.scan?.stats?.().refusedLeaves ?? []).join(', ')}); ${JSON.stringify(H.scan?.stats?.() ?? null)}\n` + L.map(([n, c]) => `  ${c} ${n}\n`).join('')); });
     if (o.out) for (const f of ['writeback.txt', 'gives.txt']) writeFileSync(`${o.out}/${f}`, '');
     return H; }
@@ -394,6 +394,14 @@ export class RustHost {
   /** RH_TRACE=<file>: a line a game as the process ends (who stood it, how far it stepped, what it took), for a table of what a tool does with its games */
   rec: any = null;
 
+  /** the puppet exported whole and held to the Rust game's whole state, the fields in which they differ added to this game's tally (the host's own half
+   *  and the bridge's serials left out). A whole apply puts every field back, so the look is taken every `RH_STALE_EVERY` ticks and not only at the end */
+  private staleT = new Map<string, { n: number; looks: number; eg: string }>(); private staleLooks = 0;
+  staleLook(): void { if (!this.h || this.audit || this.startDue || !this.k || this.inApply) return; const X = this.F.X, B = this.B, A = B.A; X.face_export(this.h); const rust = this.F.outView().slice(), mine: Uint8Array = B.exportGame(this.g, B.reg), seen = new Set<string>(); this.staleLooks++;
+    for (const x of A.fieldsDiffering(rust, mine, [], 400000) as { q: string; path: string }[]) { if (A.HOST_Q(x) || A.OWN_Q(x)) continue; let e = this.staleT.get(x.q); if (!e) this.staleT.set(x.q, e = { n: 0, looks: 0, eg: x.path }); e.n++; if (!seen.has(x.q)) { seen.add(x.q); e.looks++; } } }
+  staleSaid(): string { const tool = `${(process.argv[1] ?? '').split('/').pop()} ${process.argv.slice(2).filter(a => !a.includes('/')).join(' ').slice(0, 80)}`; this.staleLook();
+    if (!this.staleLooks) return `# game\t${tool}\tticks ${this.k}\tnot held: ${!this.k ? 'never stepped' : 'no Rust game stood for it at a look'}\n`;
+    return `# game\t${tool}\tticks ${this.k}\t${this.staleLooks} looks\n` + [...this.staleT].map(([q, e]) => `${q}\t${e.n}\t${e.eg}\t${e.looks}\n`).join(''); }
   private count(name: string) { this.calls.set(name, (this.calls.get(name) ?? 0) + 1); }
   private tsBlock(): Uint8Array { const w: Uint32Array = this.g.sim.w; return new Uint8Array(w.buffer, w.byteOffset, w.byteLength); }
   rustBlock(): Uint8Array { const X = this.F.X, at = X.state_addr(this.slot) >>> 0; return this.F.u8().subarray(at, at + X.state_len()); }
@@ -863,10 +871,21 @@ export async function standRust(g: any, word: string): Promise<RustHost | null> 
   await RustHost.ready(); const H = RustHost.attach(g, { audit: word === 'audit', quiet: true, die, wholeEvery: +(process.env.TPS_GAME_WHOLE ?? 0) });
   if (process.env.RH_TRACE) trace(H, word);
   if (process.env.RH_TIMES) timed(H);
+  if (process.env.RH_STALE) staleAtEnd(H);
   return H;
 }
 // ---- RH_TIMES=<file>: as the process ends, a line a game stood on the Rust game: the ticks it stepped, the clock from its first step to its last (the
 // tool's own code between two steps is in it), and every ms the host spent by what it did (the same sums `times()` prints per tick)
+// ---- RH_STALE=<file>: WHAT THE PUPPET HAS LET FALL BEHIND. As the process ends, every game that still stands on the Rust game has its puppet exported
+// whole and held to the Rust game's whole state, and so every RH_STALE_EVERY ticks before it (300; a whole apply puts every field back, so the end alone
+// would miss what fell behind between two): a line a field in which the two differed (how many places, one of them, in how many looks). A field on the every-tick list
+// should never be there; a field on no list that something outside the tick reads is a fault waiting (tools/blitz/stale.ts makes the table).
+// (The games are held here until the end: with this word a process frees none.)
+const STALE: RustHost[] = [];
+const STALE_EVERY = +(process.env.RH_STALE_EVERY ?? 300);
+function staleAtEnd(H: RustHost): void {
+  if (!STALE.length) process.on('exit', () => { for (const h of STALE) { let t: string; try { t = h.staleSaid(); } catch (e) { t = `# threw\t${String((e as Error)?.message ?? e).split('\n')[0].slice(0, 200)}\n`; } try { appendFileSync(process.env.RH_STALE!, t); } catch { /* the file is not the tool's */ } } });
+  STALE.push(H); }
 const TIMED: RustHost[] = [];
 function timed(H: RustHost): void {
   if (!TIMED.length) { process.on('SIGTERM', () => process.exit(143)); process.on('exit', () => { try { appendFileSync(process.env.RH_TIMES!, TIMED.filter(h => h.k > 0).map(h => JSON.stringify({ pid: process.pid, tool: (process.argv[1] ?? '').split('/').pop(), args: process.argv.slice(2, 6).join(' ').slice(0, 80), probe: (globalThis as any).__probeNow ?? process.env.RH_PROBE ?? null,
