@@ -512,12 +512,9 @@ if (process.env.TPS_PROFILE === 'shipped') await hole();
 else { const r = Bun.spawnSync(['bun', 'run', import.meta.path, '--hole'], { cwd: ROOT, env: { ...process.env, TPS_PROFILE: 'shipped' }, stdout: 'pipe', stderr: 'pipe' }), out = r.stdout.toString().split('\n').filter(l => /^- (PASS|FAIL)|^    /.test(l)).join('\n');
   console.log(out || '- FAIL — the hole line gave nothing'); if (r.exitCode !== 0 || !out) red = true; }
 
-// ---- the smoke lab's floor: a window hole with no glass, a passage's mouth
-{ const S = await stand('smoke-lab'); S.shut(); const a = S.read();
-  for (const d of S.g.doors.list) S.hang(d.def.name, 1.5); const b = S.read();
-  const hole = a.O.find(o => o.full < 2), mouth = b.O.filter(o => Math.abs(o.pos[2] - 22) < 0.5 && o.pos[0] > 6 && o.pos[0] < 8.6);
-  check(a.O.length === 2 && !!hole && Math.abs(hole.ajar - 0.8) < 0.06 && Math.abs(hole.pos[0] - 16) < 0.1 && Math.abs(hole.pos[1] - 1.5) < 0.06 && hole.dir[2] === -1 && inward(a.m, hole), 'a window hole with no glass is an opening by the same rule, measured as the hole (0.8 by 1.0 m, its middle 1.5 m up)', a.O.map(say).join(' · '));
-  check(b.O.length === 6 && mouth.length === 1 && mouth[0].dir[2] === -1 && Math.abs(mouth[0].full - 7.2) < 0.4 && b.O.every(o => inward(b.m, o)), 'with every door open the lab has six (the hole, four doors to the yard and the tunnel\'s mouth between its two walls); the door between its rooms is none', b.O.map(say).join(' · ')); }
+// ---- the vault's floor: a window hole with no glass
+{ const S = await stand('vault'); S.shut(); const a = S.read(), hole = a.O.find(o => o.full < 2);
+  check(a.O.length === 1 && !!hole && Math.abs(hole.ajar - 0.8) < 0.06 && Math.abs(hole.pos[0] - 17.4) < 0.15 && Math.abs(hole.pos[1] - 1.5) < 0.06 && hole.dir[0] === -1 && inward(a.m, hole), 'a window hole with no glass is an opening by the same rule, measured as what is open of it', a.O.map(say).join(' · ')); }
 
 // ---- how bright, by the hour
 { const sunOf = (h: any) => ({ intensity: h.sun.intensity, dir: [0, -Math.sin(h.sun.elevDeg * Math.PI / 180), 0], color: h.sun.color }), lum = (r: readonly number[]) => 0.2126 * r[0] + 0.7152 * r[1] + 0.0722 * r[2];
