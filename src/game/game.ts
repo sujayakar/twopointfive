@@ -1467,9 +1467,12 @@ export class Game {
     this.hostBefore(input);
     this.director?.attach({ cam, input });   // (a showcase locks the HOST's keys and pins the HOST's camera: the director keeps those two, the step hands it neither)
     this.cmdBuf = sampleCmd(me.view, input, cam, canvas, this.cmdBuf);
-    if (this.seats.length === 1) this.step(dt, this.cmdBuf); else this.stepSeats(dt, this.seats.map(s => s === this.localSeat ? this.cmdBuf! : s.handed(this.cmdBuf!)));
+    const cmds: readonly PlayerCmd[] = this.seats.length === 1 ? (this.stepBuf[0] = this.cmdBuf, this.stepBuf) : this.seats.map(s => s === this.localSeat ? this.cmdBuf! : s.handed(this.cmdBuf!));
+    this.replayTap?.(dt, cmds[0]);   // the replay buffer's run tape (runtape.ts): this step's dt and the first seat's record, before anything of it has run — reads only
+    this.stepSeats(dt, cmds);
     this.hostAfter(input, cam, canvas);
     this.journal.frameEnd();     // the session journal closes the frame (the sensors' reads folded in, a digest on the beat): after everything, so a digest is the whole settled frame
+    this.replayTap?.(dt);        // the replay buffer (replaybuf.ts): the settled frame read into its ring — reads only, after the journal has closed the frame
   }
   /** THE HOST'S HALF OF A TICK, round the step — `update`'s own lines, named for a host that steps the game by records it did not sample itself (a networked
    *  page: net/page.ts). Before: what the host's INPUT is told. After: what the tick hands back for the camera of the seat this host shows (`hostSeat`), and
