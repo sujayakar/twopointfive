@@ -1,6 +1,6 @@
 // DECLARATIONS NO PROGRAM OF THE BOOT CONTAINS. Every .wgsl file under src/render/shaders is cut into its module-scope declarations (gpu/wgslTrim.ts wgslDecls) and
-// each one's name is looked for, as a declaration, in every shader text the page's boot makes (tools/qa/wgsl-dump.ts, the three settings: title, snow, the look's
-// page). The trim already keeps an unreachable declaration out of the browser's compiler, so this costs a player nothing: it is the SOURCE that carries what a
+// each one's name is looked for, as a declaration, in every shader text the page's boot makes (tools/qa/wgsl-dump.ts, every setting: title, snow, the smoke lab's
+// page, the walls' row down). The trim already keeps an unreachable declaration out of the browser's compiler, so this costs a player nothing: it is the SOURCE that carries what a
 // deleted pass or a folded switch left behind, and a reader cannot tell it from code that runs.
 //   bun run tools/qa/shaderdead.ts            the list, by file (exit 0 always: a report)
 //   bun run tools/qa/shaderdead.ts --json f   the same as JSON: [{ file, name, lines }]
@@ -14,7 +14,7 @@ import { wgslDecls } from '../../src/gpu/wgslTrim';
 const ROOT = join(import.meta.dir, '../..'), DIR = join(ROOT, 'src/render/shaders');
 const nameOf = (d: string): string | null => (/^(?:@[a-z_]+(?:\([^)]*\))?\s*)*(?:fn|struct|alias)\s+(\w+)/.exec(d) ?? /^(?:@[a-z_]+(?:\([^)]*\))?\s*)*(?:const|override|var(?:<[^>]*>)?)\s+(\w+)/.exec(d))?.[1] ?? null;
 const tmp = mkdtempSync(join(tmpdir(), 'shaderdead-')); let code = '';
-for (const s of ['title', 'snow', 'look']) {
+for (const s of ['title', 'snow', 'smokelab', 'nowalls']) {
   const out = join(tmp, `${s}.json`); const r = Bun.spawnSync(['bun', 'run', join(ROOT, 'tools/qa/wgsl-dump.ts'), out, '--setting', s], { cwd: ROOT, stdout: 'pipe', stderr: 'pipe' });
   if (r.exitCode !== 0) { console.error(`shaderdead: the dump of '${s}' failed: ${r.stderr.toString().slice(0, 400)}`); process.exit(2); }
   for (const m of JSON.parse(readFileSync(out, 'utf8')) as { code: string }[]) code += '\n' + m.code;
