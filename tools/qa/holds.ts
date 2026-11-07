@@ -77,17 +77,23 @@ export async function holdOff(holds: readonly Hold[]): Promise<() => void> {
  *  loud card first in the table again (kit.ts kitMission: a probe that staged a quiet run leaves your stealth card first). Throws, after everything else is
  *  back, if the tables cannot be put back. */
 let fenceDepth = 0;
+/** mulberry32, the harness's die (headless.ts `seeded`; said again here because this file loads before the harness may) */
+function mulberry(a: number): () => number { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 export async function asProbe<T>(name: string, fn: () => T | Promise<T>): Promise<T> {
   const { knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`), kit = await import(`${ROOT}/src/game/kit.ts`);
   // (tools/qa/fold.ts: one line a probe from whoever runs the probes, the outermost. Under the runner, whose run() says it, this says nothing.)
   const says = fenceDepth === 0 && foldSpeaker('probe'); if (says) { const o = foldOutside(`before ${name}`); if (o) console.log(o); }   // (a probe run inside another's fence is the outer one's)
   const foldWas = fenceDepth === 0 ? foldMode() : null;   // (fold.ts foldFor: the fold on or off as this fence opens, put back FIRST as it closes, so the tables go back in the mode they were copied in)
   const soloOn = kit.KIT_SOLO.on, knobs = knobsCopy(), release = await holdOff(holdsOf(name));
+  // (THE DIE IS PART OF THE FENCE: every probe begins on die 1 and whatever die it leaves in `Math.random` is taken out after it, so a probe that stands a game
+  // with no seed stands the same game alone, after any other probe, and on every run — headless.ts ENTROPY)
+  const dieWas = Math.random; if (fenceDepth === 0) Math.random = mulberry(1);
   let threw: unknown, failed = false, red = false; fenceDepth++;
   try { const r = await fn(); red = (r as unknown) === false; return r; }
   catch (e) { failed = true; red = true; threw = e; throw e; }
   finally {
     foldFor(foldWas);
+    if (fenceDepth === 1) Math.random = dieWas;
     try { kit.kitMission(null); } catch { /* (as the runner always ran it: a throw here is not the probe's verdict) */ }
     release(); kit.KIT_SOLO.on = soloOn;
     fenceDepth--; if (FOLD.on) { try { foldLost(); } catch { /* the put-back below still runs */ } }   // (tools/qa/fold.ts: a settled row's hold lost to a branch replaced whole is found BEFORE the tables go back, so it is named with the value the probe left it at)
