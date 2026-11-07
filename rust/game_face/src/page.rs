@@ -95,6 +95,13 @@
 //!                                      the regret's words where the byte is 1.
 //!   face_saves_asked(h) -> bits        what the tick asked of the controller, read once: 1 a save in memory is due back (its key at face_out) ·
 //!                                      2 the player restarted (`game_restart` ran: the host's camera owes a cut)
+//!
+//! AFTER A PANIC. The module aborts on a panic and the host sees a trap; the game of that call is gone (lib.rs `with` takes it out for the call, so no
+//! borrow is left behind), and every game KEPT is still whole. The host goes on in the same instance:
+//!   face_stand(k, slot) -> h | 0       A NEW GAME that is kept `k`, standing in `slot` (as `face_back`, with no game to stand it in). Its serial counter
+//!                                      starts no lower than the highest any export has shown the host (`serial_seen`): a number means one thing.
+//!   face_debug_panic(h, how)           A PLANTED PANIC, for the check of that road (the page's `?rustpanic=<tick>`): how 0 inside the borrow of game `h`,
+//!                                      as a rule of the tick would (the game is lost); how 1 outside any game (nothing is lost but the call).
 use std::cell::RefCell;
 
 /// a game kept: its own value, or the bridge's bytes of it; and its block
@@ -384,7 +391,7 @@ pub extern "C" fn face_kept_n() -> usize {
 }
 #[no_mangle]
 pub extern "C" fn face_back(h: u32, k: u32) -> u32 {
-    let slot = super::with(h, |x| x.g.sim);
+    let (slot, serial_next) = super::with(h, |x| (x.g.sim, x.g.serial_next));
     let made: Option<Box<game::game::Game>> = KEPT.with(|v| match v.borrow().get((k as usize).wrapping_sub(1)).and_then(|x| x.as_ref()) {
         Some(Kept::Own(g, block)) => {
             unsafe { core::ptr::copy_nonoverlapping(block.as_ptr(), sim::state::addr(slot) as *mut u8, block.len().min(block_len())); }
@@ -398,10 +405,53 @@ pub extern "C" fn face_back(h: u32, k: u32) -> u32 {
         Some(Kept::Bytes(state, block)) => Some(game_run::start(state, block, slot).0),
         None => None,
     });
-    let Some(g) = made else { return 0 };
+    let Some(mut g) = made else { return 0 };
+    // (the serial counter never goes back in a game: what was dealt after the save is still held on the host's side, and a number means one thing)
+    g.serial_next = g.serial_next.max(serial_next);
     super::with(h, |x| { x.g = g; x.cmd = None; x.cmds = None; x.after.clear(); });
     crate::memo::forget(h);
     1
+}
+
+thread_local! {
+    /// the highest serial counter any export has shown the host
+    static SERIAL_SEEN: core::cell::Cell<u32> = const { core::cell::Cell::new(0) };
+}
+/// an export is about to show the host this game: its serial counter is noted (what the host holds was dealt below it)
+pub fn serial_seen(next: u32) { SERIAL_SEEN.with(|s| if next > s.get() { s.set(next) }); }
+
+#[no_mangle]
+pub extern "C" fn face_stand(k: u32, slot: usize) -> u32 {
+    super::hook();
+    if slot >= sim::state::GAMES { return 0; }
+    let made: Option<Box<game::game::Game>> = KEPT.with(|v| match v.borrow().get((k as usize).wrapping_sub(1)).and_then(|x| x.as_ref()) {
+        Some(Kept::Own(g, block)) => {
+            unsafe { core::ptr::copy_nonoverlapping(block.as_ptr(), sim::state::addr(slot) as *mut u8, block.len().min(block_len())); }
+            let mut g = g.clone();
+            game::io::set_slot(&mut g, slot);
+            g.col.mirror.put_backs = -1.0;
+            Some(g)
+        }
+        Some(Kept::Bytes(state, block)) => Some(game_run::start(state, block, slot).0),
+        None => None,
+    });
+    let Some(mut g) = made else { return 0 };
+    g.serial_next = g.serial_next.max(SERIAL_SEEN.with(|s| s.get()));
+    let h = super::put(super::Held { g, cmd: None, cmds: None, after: Vec::new() });
+    crate::memo::forget(h);
+    h
+}
+#[no_mangle]
+pub extern "C" fn face_debug_panic(h: u32, how: u32) {
+    super::hook();
+    if how != 0 { panic!("a planted panic, outside any game (face_debug_panic)"); }
+    super::with(h, |x| {
+        // (half a write, as a rule that panics leaves one: the clock moved and nothing else)
+        x.g.time += 1.0 / 60.0;
+        let none: Option<u32> = None;
+        let at = x.g.time;
+        if none.is_none() { panic!("a planted panic, inside the game at {at:.3} s (face_debug_panic)"); }
+    });
 }
 
 /// # Safety

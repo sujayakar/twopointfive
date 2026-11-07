@@ -178,11 +178,7 @@ pub fn rescue_end_objective(g: &mut crate::game::Game) -> crate::rescueend::Resc
     }
 }
 
-/// Not translated: a save is a clone of Game (conventions 6).   (rescueend.ts RescueEnd.snapshot)
-pub fn rescue_end_snapshot(g: &mut crate::game::Game) -> crate::rescueend::RescueEndSnap { todo!("not translated: checkpoint, a clone of Game replaces it") }
 
-/// Not translated: a save is a clone of Game (conventions 6).   (rescueend.ts RescueEnd.restore)
-pub fn rescue_end_restore(g: &mut crate::game::Game, s: crate::rescueend::RescueEndSnap) { todo!("not translated: checkpoint, a clone of Game replaces it") }
 
 /// The hostages' rows, from player.ts buildInteractables.   (rescueend.ts rescueEndRows)
 pub fn rescue_end_rows_2(g: &mut crate::game::Game, p: V3, busy: bool, row: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, crate::game::Verb, String, Option<String>, Option<crate::rescueend::RescueEndRows2RowOver>) -> crate::game::Interactable, offer: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, Vec<crate::game::Interactable>)) {

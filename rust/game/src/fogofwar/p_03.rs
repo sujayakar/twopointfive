@@ -119,15 +119,7 @@ pub fn fog_of_war_faces_back(g: &mut crate::game::Game) {
     }
 }
 
-/// NOT TRANSLATED: a checkpoint is a clone of Game (conventions 6).   (fogofwar.ts FogOfWar.snapshot)
-pub fn fog_of_war_snapshot(g: &mut crate::game::Game) -> Option<crate::fogofwar::FogSnap> {
-    todo!("not translated: a checkpoint is a clone of Game (conventions 6)")
-}
 
-/// NOT TRANSLATED: a checkpoint is a clone of Game (conventions 6).   (fogofwar.ts FogOfWar.restore)
-pub fn fog_of_war_restore(g: &mut crate::game::Game, s: Option<&crate::fogofwar::FogSnap>) {
-    todo!("not translated: a checkpoint is a clone of Game (conventions 6)")
-}
 
 /// Is the fixture lit, as it stands.   (fogofwar.ts FogOfWar.lampLit)
 pub fn fog_of_war_lamp_lit(g: &mut crate::game::Game, t: FixtureId) -> bool {

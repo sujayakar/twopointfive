@@ -4,6 +4,8 @@
 #   cargo build --target wasm32-unknown-unknown                    dev: the game at opt-level 1 with no debug info (a panic still names its file and line)
 #   cargo build --target wasm32-unknown-unknown --release          opt-level 3
 #   cargo build --target wasm32-unknown-unknown --profile small    opt-level "s"
+#   cargo build --target wasm32-unknown-unknown --profile play     opt-level 3 with NO link-time optimisation: what the dev server builds (tools/blitz/face-build.ts).
+#                                                                  The release profile's fat link needs over 10.5 GB of memory and many minutes; this one about 7 GB.
 [workspace]
 
 [package]
@@ -39,3 +41,7 @@ debug = false
 [profile.small]
 inherits = "release"
 opt-level = "s"
+
+[profile.play]
+inherits = "release"
+lto = false

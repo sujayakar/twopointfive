@@ -11,9 +11,6 @@ import { sim } from '../sim/sim';
 import { WX_WATCH } from '../sim/weatherhome';
 
 export type Rect = [number, number, number, number];   // x0, z0, x1, z1
-/** THE ROOFS A WEATHER HAS IN FORCE, AT MOST (weather.ts roofsOf keeps a level's biggest; the picture's frame has a slot each; a thrown thing's walk in the
- *  Rust module is handed as many: sim/itemshome.ts ITEM_ROOFS, rust/sim/src/items.rs MAX_ROOFS — tools/qa/rust-check.ts holds the three to one number) */
-export const MAX_ROOFS = 4;
 export type WeatherKind = 'clear' | 'overcast' | 'rain' | 'downpour' | 'fog' | 'dust' | 'snow';
 /** the kinds a level can be STARTED in — the Weather row, `?weather=`. NOT 'snow': snow is a LEVEL's own weather (SNOW_LEVELS below), never picked for another */
 export const WEATHER_KINDS: readonly WeatherKind[] = ['clear', 'overcast', 'rain', 'downpour', 'fog', 'dust'];
@@ -122,13 +119,6 @@ export function packFog(f: FogSpec | null): number {
   const s = Math.max(1, q(f.sigma, 0.001, 255)), h = q(f.H, 0.5, 31), l = q(f.leak, 1 / 7, 7), g = q(f.gain, 0.25, 15);
   const t = (i: number) => q(f.tint[i], 1 / 15, 15);
   return (s | h << 8 | l << 13 | t(0) << 16 | t(1) << 20 | t(2) << 24 | g << 28) >>> 0;
-}
-/** the fog's 32 bits with its GLOW (the gain) × k, on the gain's own 0.25 steps and never to nothing — hours.ts: by day the veil glows with the daylight there
- *  is, not with the sky a cloud deck brightens. The picture's alone: σ, H, the leak and the tint — everything an eye is tested through — are as packed. */
-export function fogGlowWord(w: number, k: number): number {
-  w >>>= 0; if (!w || k === 1) return w;
-  const g = Math.max(1, Math.min(15, Math.round((w >>> 28) * k)));
-  return ((w & 0x0FFFFFFF) | g << 28) >>> 0;
 }
 export function unpackFog(w: number): FogSpec | null {
   w >>>= 0; if (!w) return null;

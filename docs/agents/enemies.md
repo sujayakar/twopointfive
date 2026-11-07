@@ -1230,7 +1230,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   NOT BUILT, on purpose: no gun holds its fire for range (a man who will not shoot reads as dumb; range is the rows' own spread and the cover's deal);
   the belt-fed man still falls back or takes cover when the squad is in his room (the room fight's own moves are not gated).
   Check: `bun run tools/qa/gunroles-check.ts` (families `gunroles-deal -entry -fight -lanes -off`, in `all-quick`), 23 lines on each stand (it raises the
-  switch by the stand's own word before a floor is stood up); `GUNROLES_BREAK=1` fails every family. `gunroles-off`: ten seconds of the staged room clear
+  switch by the stand's own word before a floor is stood up); `GUNROLES_BREAK=1` fails every family. `gunroles-off` (deleted 2026-11-06 with the off side: qa.md): ten seconds of the staged room clear
   digest the same off and on with nobody dealt and the cards as issued.
   MEASURED (headless, before = the commit this was built on, after = this one). The mission tally (`command-tally.ts --hands b`, the page's stand,
   room-clear-four, depot-four, warehouse-four and killhouse-four over seeds 1 to 4, sixteen floors): taken 15 → 16, clean 6 → 8, wiped 3 → 3, men lost a
@@ -1335,7 +1335,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `hearingCheck` and the alert branch), `coverfire.ts` (`lane` exported as `coverLane`), `digin.ts` (`digInSetOn`, the question `digInBraced` asks with
   nothing counted), `game.ts` (tick and reset). KNOWN: the trigger in `doorForce` is `coverBlind`'s, copied — one helper for both is that file's to make.
   A locked door of theirs booted by one of them reads as 'forced' to `doorTamper`.
-  CHECK `tools/qa/doorforce-check.ts` (`probes.ts doorforce`, family `doors`; 15 lines green on both stands, `DOORFORCE_BREAK=1` fails 8 on both): on the
+  CHECK `tools/qa/doorforce-check.ts` (`probes.ts doorforce`, family `doors`; 15 lines green on both stands, `DOORFORCE_BREAK=1` fails 8 on both; since 2026-11-06
+  every world of it is on the game's own die, seed 2 or `TPS_SEED=n`: with none one tree said 6 rounds or 7 in its first line; one die is one sample): on the
   office, a posted man hears walked footfalls behind a shut wooden door, becomes sure at 1.83 s, fires at 2.17 s, 7 rounds in 8 s all across the leaf,
   0.00 m off his post, no boot; the same sounds to a calm man, an alert man with nothing known, and a crouched tread: nothing; a free man stands, puts 4
   through, walks 1.9 m up and boots it 5.95 s after he began (the keep torn, the leaf flung; his fix 0.12 m from the player; the boot heard as an

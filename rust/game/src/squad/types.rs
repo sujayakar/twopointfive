@@ -42,6 +42,8 @@ pub struct Clearing {
     pub rooms: Vec<Vec<crate::scene_level::RoomClearPlan>>,
     pub a: GuardId,
     pub b: Option<GuardId>,
+    /// INVENTED: g.serial() where a clear is begun (guards.ts planClears): a reader holds it by identity to know a new one began
+    pub serial: u32,
 }
 impl Clearing {
     /// what a new one holds: the TypeScript's field initialisers, before its constructor
@@ -62,6 +64,7 @@ impl Clearing {
             rooms: Vec::new(),
             a: GuardId(0),
             b: None,
+            serial: 0,
         }
     }
 }

@@ -9,6 +9,7 @@ import type { Door } from './doors';
 import type { WeaponDef } from './weapons';
 import * as fx from './effects';
 import { solidGlass, SOLID_GLASS_CRACK } from './particleFx';   // (read inside bulletMark only)
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 /** What a CPU ray reported hitting, in the terms the three ray casters use: a static by index (col.raycast < 1e6), a door leaf (col.raycast ≥ 1e6), a prop part box. */
 export type Surface = { box: Box; dynamic: boolean } | null;
@@ -48,7 +49,7 @@ export function bulletMark(g: Game, hitP: Vec3, n: Vec3, s: Surface, def: Weapon
 
 /** The stun charge went off at `at` (combat.ts detonateStun: a hand above the resting can): the big scorch on whatever it lay on — the floor, a desk, the seat of a
  *  chair (that one rides the chair) — and weaker splashes up the statics / leaves / furniture standing within a metre, fading with distance. */
-export function bangScorch(g: Game, at: Vec3) {
+export function bangScorch(g: Game, at: Vec3) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('bangScorch', undefined, [g, at]); if (__r !== RUST_PASS) return __r as any; } }
   if (!g.decals.enabled) return;
   const from: Vec3 = [at[0], at[1] + 0.25, at[2]]; const down: Vec3 = [0, -1, 0];
   // what it lay on: the nearer of a static / leaf under it and a prop part under it (a can that came to rest on a carton scorches the carton)

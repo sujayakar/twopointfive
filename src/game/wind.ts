@@ -24,7 +24,6 @@ import type { Door } from './doors';
 import type { VentDef } from '../scene/level';
 import { VENT_DEFAULTS } from '../scene/levelData';
 import type { WindGpuSource } from '../smoke/types';
-import { WIND_GPU_MAX } from '../smoke/types';
 import { INTERIOR, ANNEX } from './weather';
 import { WX_OWN } from './weatherKinds';
 import { isDaylight } from './lighting';
@@ -32,6 +31,7 @@ import { gpuFx } from './particleFx';
 import type { GridWind } from '../scene/collision';
 import { sim, f64 } from '../sim/sim';
 import { WX_WATCH, wxScratch } from '../sim/weatherhome';
+import { RUST_PASS, RUST_SURFACE, crossToRust, goneWithTick } from './crossing';
 
 /** the field's shape constants — their one home is rust/sim/src/wind.rs SHAPE (this is its order); render/shaders/wind_field.wgsl carries the same five under WIND_* (tools/qa wind-probes compares), + how a vent record becomes a jet */
 export const WIND_FIELD = { get deflectH() { return shape(0); }, get deflectLoss() { return shape(1); }, get supportSigma() { return shape(2); }, get stormTop() { return shape(3); }, get stormLee() { return shape(4); }, /** the storm's share of its own speed at the ground, what it gains by `stormFullAt` metres up, and that height (wind_field.wgsl windStorm has the same three) */ get stormLow() { return shape(5); }, get stormGain() { return shape(6); }, get stormFullAt() { return shape(7); }, /** dMax = cutK × reach */ get cutK() { return shape(8); }, /** r0 = coreK × the face's size */ get coreK() { return shape(9); } };
@@ -92,10 +92,7 @@ export function stormVelRoofs(wind: Vec3, roofs: readonly (readonly number[])[],
   return out;
 }
 /** smooth value noise in [−1, 1] at x, one lattice value per integer, per seed (no dice: a pure function of game time and a seed) */
-export function vnoise(seed: number, x: number): number {
-  const r = sim().wind_noise(seed, x);
-  return WX_WATCH.on ? WX_WATCH.said('wind.noise', r, [seed, x]) : r;
-}
+export function vnoise(seed: number, x: number): number { return goneWithTick('vnoise') as any; }
 
 // ------------------------------------------------------------------ sources
 export type WindWhy = 'vent' | 'storm' | 'door' | 'glass';   // (glass: the gust through a shot-out EXTERIOR pane — game/glassbreak.ts pushes the record onto Wind.all and writes its `base` off the storm × the open share each frame)
@@ -191,7 +188,7 @@ export class Wind {
   private fieldRoofs(): readonly (readonly number[])[] | undefined { const R = this.lvRoofs; return WX_OWN.wind && R && R.length > 2 ? R : undefined; }
   /** the share 0‥1 of its own vector the storm's field has at GROUND point (x, z) under the roofs in force: 0 under one, easing to 1 over the lee off it — what
    *  the wisps' births are weighed by (snowFx.ts; particles.wgsl wispShare is this on the GPU) */
-  stormShare(x: number, z: number): number { return this.shareUnder(x, z, this.storm.roofs); }
+  stormShare(x: number, z: number): number { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Wind.stormShare', this, [x, z]); if (__r !== RUST_PASS) return __r as any; } } return this.shareUnder(x, z, this.storm.roofs); }
   /** …under the roofs given (none = the storm record's two rectangles, which `reroof` writes and no frame's step does) */
   private shareUnder(x: number, z: number, roofs: readonly (readonly number[])[] | undefined): number {
     const s = this.storm, p = SCRATCH_P, q = SCRATCH_Q; p[0] = x; p[1] = 0; p[2] = z;
@@ -203,7 +200,7 @@ export class Wind {
    *  it at the ground, `gain` more by `fullAt` metres up). It is the game's, so none of a machine's own wind settings is in it (the master,
    *  `WIND.storm`, `WIND.stormK`, the weather's own on / off: what a player turns down is his picture), and no gust: one vector, from what a
    *  snapshot carries, the same on every machine that plays the game. */
-  stormDrift(): GridWind | null {
+  stormDrift(): GridWind | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Wind.stormDrift', this, []); if (__r !== RUST_PASS) return __r as any; } }
     const W = this.g.weather; if (!this.blows(false)) return null;
     const x = W.wind[0], z = W.wind[1]; if (x === 0 && z === 0) return null;
     // (the footprints as the weather's roofs and the switch give them NOW, not as the storm's record last had them: that record is refreshed by the
@@ -222,65 +219,10 @@ export class Wind {
     return !!W.kind || W.rainRate > 0.001 || W.storm > 0.01;
   }
   /** the storm's wind vector when it should be felt (weather on, night, the storm knob up, rain or storm actually running, a real speed) — null otherwise; glassbreak's gusts through shot-out panes ask the same question (one test) */
-  stormWind(): Vec3 | null {
-    const W = this.g.weather;
-    if (!this.blows(true) || !WIND.storm) return null;
-    const wx = W.wind[0] * WIND.stormK, wz = W.wind[1] * WIND.stormK; if (!(Math.hypot(wx, wz) >= 0.05)) return null;   // (× stormK FIRST: a zero knob is a dead calm, not a NaN direction)
-    return [wx, 0, wz];
-  }
+  stormWind(): Vec3 | null { if (RUST_SURFACE?.tapFiring('Wind.stormWind')) return RUST_SURFACE.tapAnswer() as any; return goneWithTick('Wind.stormWind') as any; }
 
   /** Once a frame (game.ts, after the weather and the doors): every source's speed for this frame, the active list, and the hand-off to both GPU consumers. */
-  update(dt: number) {
-    const g = this.g; const master = windOf(g);
-    const P = gpuFx(g); const S = g.smoke;
-    this.active.length = 0; this.forParticles.length = 0;
-    if (master <= 0) { P?.setWind(this.forParticles, KNOBS0); S.setWind?.(this.active, WIND.smokeRelax); return; }   // 0 = still air everywhere: nothing packed, nothing forced, nothing evaluated
-    WIND_STATS.frames++; this.syncField();
-    const t = g.time; const gustOn = WIND.gusts;
-    const sw = this.stormWind(); const stormSpeed = sw ? Math.hypot(sw[0], sw[2]) : 0;
-    if (sw) WIND_STATS.stormFrames++;
-    for (const s of this.all) {
-      let base = 0, target = 1;
-      if (s.why === 'vent') {
-        const v = s.vent!;
-        base = WIND.vents ? v.speed * WIND.ventK : 0;
-        if (!ventDue(v, t)) target = 0;   // cycling: on for `duty` of each period from `phase`
-        if ((v.mains ?? VENT_DEFAULTS.mains) && g.blackout.active) target = 0;                                                                                     // the air handler is on the breaker
-        const rate = target > s.on ? 1 / Math.max(0.1, WIND.rampUp) : 1 / Math.max(0.1, WIND.rampDown);
-        s.on += Math.max(-rate * dt, Math.min(rate * dt, target - s.on));
-        s.gust = gustOn ? 1 + WIND.gustAmp * vnoise(s.seed, t / WIND.gustPeriod) : 1;
-      } else if (s.why === 'storm') {
-        if (!sw) { s.speed = 0; s.base = 0; continue; }
-        base = stormSpeed; s.dir[0] = sw[0] / stormSpeed; s.dir[1] = 0; s.dir[2] = sw[2] / stormSpeed; s.on = 1;
-        s.gust = gustOn ? 1 + WIND.stormGustAmp * vnoise(s.seed, t / WIND.stormGustPeriod) : 1;
-      } else if (s.why === 'glass') {   // GLASS BREAKING: a jet in through a shot-out exterior pane — its speed this frame is what glassbreak.ts last wrote into `base` (0 while the pane is under a quarter open or the storm is still); gusting like a vent
-        base = s.base; s.on = 1;
-        s.gust = gustOn ? 1 + WIND.gustAmp * vnoise(s.seed, t / (0.6 * WIND.gustPeriod)) : 1;
-      } else {   // a door: ∝ how far its leaf stands open × the storm at that face (a third of it whatever the bearing: an open door in a gale draws)
-        const d = s.door!;
-        if (!sw || !WIND.doors) { s.speed = 0; s.base = 0; continue; }
-        const open = Math.min(1, Math.abs(d.angle) / WIND.doorOpenRad); if (open < 0.04) { s.speed = 0; s.base = 0; continue; }
-        const facing = Math.max(0, (sw[0] * s.dir[0] + sw[2] * s.dir[2]) / stormSpeed);
-        base = stormSpeed * WIND.doorK * open * (0.35 + 0.65 * facing); s.on = 1;
-        s.gust = gustOn ? 1 + WIND.stormGustAmp * vnoise(s.seed, t / WIND.stormGustPeriod) : 1;
-        WIND_STATS.doorGusts++;
-      }
-      s.base = base; s.speed = base * s.on * s.gust * master;
-      if (s.speed > 0.005) this.active.push(s); else s.speed = 0;
-    }
-    WIND_STATS.active += this.active.length;
-    // the particles get the jets nearest the view's look-at point (their particles are where the camera is; a leaf trembling off screen is nobody's loss) + the storm; the
-    // solver gets every active source and keeps the ones over its smoke (smoke off screen still bends — a guard may be looking through it)
-    if (P) {
-      const f = g.engine.viewFocus ?? g.player.char.pos;
-      for (const s of this.active) if (s.kind === 'jet' && v3.dist(s.bound.c, f) < WIND.nearM + s.bound.r) this.forParticles.push(s);
-      if (this.forParticles.length > WIND_GPU_MAX - (sw ? 1 : 0)) { this.forParticles.sort((a, b) => v3.dist(a.bound.c, f) - v3.dist(b.bound.c, f)); this.forParticles.length = WIND_GPU_MAX - (sw ? 1 : 0); }
-      if (sw && this.storm.speed > 0) this.forParticles.push(this.storm);
-      P.setWind(this.forParticles, [WIND.sheetWake, WIND.sheetKick, WIND.debrisK]);
-      WIND_STATS.toParticles += this.forParticles.length;
-    }
-    if (S.setWind) { S.setWind(this.active, WIND.smokeRelax); WIND_STATS.toSmoke += this.active.length; }
-  }
+  update(dt: number): void { return crossToRust('Wind.update', this, [dt]) as any; }
 
   /** The air's velocity at p this frame (m/s): the sum over every active source — what the GPU consumers evaluate, on the CPU (the moths, the panel, the probes). */
   at(p: Vec3, out: Vec3 = [0, 0, 0]): Vec3 {

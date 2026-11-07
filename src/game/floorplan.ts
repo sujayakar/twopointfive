@@ -54,7 +54,7 @@ import { wallPt } from './wallcharge';
 import { squadThrowPlans, squadThrowKept, type SquadThrowKept } from './squadthrow';
 import { FRAG } from './frag';
 import { AUTOPILOT, showSecsOf } from './autopilot';   // (read inside floorPlan only)
-import { PLANLAY, layMen, layPoint, layKey, layPending } from './planlay';   // (the same)
+import { layMen, layPoint, layKey, layPending } from './planlay';   // (the same)
 import { teamPaired } from './seats';   // (the same)
 
 export const PLAN = {
@@ -339,9 +339,3 @@ export function floorPlan(g: Game, kept: PlanKept = planKept(), who: PlanFor = M
   return out;
 }
 
-/** one line for the console and the panel */
-export function planSummary(g: Game): string {
-  if (!PLAN.on) return 'off';
-  const P = floorPlan(g); if (!P.men.length && !P.who.length && !P.you && !P.doors.length && !P.throws.length && !P.laid.length) return 'nothing to draw';
-  return `${P.men.filter(m => m.path.length).length} on their way · ${P.men.filter(m => m.there).length} on a mark${P.who.length ? ` · menu: ${P.who.length} ringed` : ''}${P.doors.length ? ` · ${P.doors.length} on the key` : ''}${P.throws.length ? ` · ${P.throws.length} throw${P.throws.length > 1 ? 's' : ''}${P.throws.every(t => t.preview) ? ' offered' : ''}` : ''}${P.laid.length ? ` · ${P.laid.length} laid` : ''}`;
-}

@@ -56,7 +56,7 @@ if (flag('--census-merge')) { const i = ARGV.indexOf('--census-merge'), rest = A
   const seen = new Map<number, { n: number; page: number; perFrame: number }>(), runs: string[] = [];
   for (const f of rest.slice(1)) for (const line of readFileSync(f, 'utf8').split('\n')) { if (!line) continue; const r = JSON.parse(line); runs.push(`${r.page ? `page ${r.frames} frames ` : ''}${String(r.argv).replace(/\/tmp\/[^ ]*/g, '…').replace(/^.*\/tools\//, 'tools/')}`);
     for (const [id, n] of r.ran) { let s = seen.get(id); if (!s) seen.set(id, s = { n: 0, page: 0, perFrame: 0 }); s.n += n; if (r.page) { s.page += n; if (r.frames > 0) s.perFrame = Math.max(s.perFrame, n / r.frames); } } }
-  const out = { fingerprint: ids.fingerprint, runs: runs.sort(), seen: [...seen].map(([id, s]) => ({ file: name.get(id)![0], key: name.get(id)![1], n: s.n, ...(s.page ? { page: s.page, perFrame: Math.round(s.perFrame * 100) / 100 } : {}) })).sort((a, b) => a.file < b.file ? -1 : a.file > b.file ? 1 : a.key < b.key ? -1 : a.key > b.key ? 1 : 0) };
+  /* (a run is named by its tool and words: no path of the machine it ran on, no address of its server) */ const out = { fingerprint: ids.fingerprint, runs: runs.map(r => r.replace(/https?:\/\/[^/ ]+/g, '').replace(/(^|[ =])\/[^ ]*\/([^ /]+)/g, '$1$2')).sort(), seen: [...seen].map(([id, s]) => ({ file: name.get(id)![0], key: name.get(id)![1], n: s.n, ...(s.page ? { page: s.page, perFrame: Math.round(s.perFrame * 100) / 100 } : {}) })).sort((a, b) => a.file < b.file ? -1 : a.file > b.file ? 1 : a.key < b.key ? -1 : a.key > b.key ? 1 : 0) };
   const to = opt('--census') ?? join(ROOT, 'tools/blitz/delete-census.json'); writeFileSync(to, JSON.stringify(out, null, 0).replace(/\},\{/g, '},\n{') + '\n'); say(`the census: ${out.seen.length} functions seen in ${runs.length} runs → ${to}`); process.exit(0); }
 
 // ---- the tree
@@ -81,7 +81,7 @@ const simFiles = program.getSourceFiles().filter((sf: any) => SIM.test(rel(sf.fi
 /** the tree this plan was read from: every simulation file's bytes. A census names it, and is refused on another. */
 const FINGERPRINT = (() => { const h = createHash('sha256'); for (const sf of [...simFiles].sort((a: any, b: any) => a.fileName < b.fileName ? -1 : 1)) { if (rel(sf.fileName) === CROSSING) continue; h.update(rel(sf.fileName)); h.update('\0'); h.update(sf.text); h.update('\0'); } return h.digest('hex').slice(0, 16); })();
 
-// ---- the tables the surface was generated with
+// ---- the tables the surface was made from
 const CALLS = JSON.parse(readFileSync(join(ROOT, 'tools/blitz/calls.json'), 'utf8'));
 const SCHEMA = JSON.parse(readFileSync(join(ROOT, 'tools/blitz/schema.json'), 'utf8'));
 const TAPS: any[] = JSON.parse(readFileSync(join(ROOT, 'tools/blitz/taps.json'), 'utf8'));
@@ -633,8 +633,16 @@ function writeOut(mode: Mode): void {
   patch('tools/blitz/preload.ts', "await import('./expose.ts');", "await import('./expose.ts'); await import('./crossing-keys.ts');", T);
   // THE RUST GAME IS THE ONLY GAME (not in the census's tree, which plays under the word as the tree before it does): the page loads its host with no
   // word, behind the card a browser with no WebAssembly already gets, and a headless tool's `standUp` stands the Rust game with no word
+  if (mode === 'delete') {
+    // (the stubs' own module has one module variable: its row in the list of what a rollback snapshot need not hold)
+    patch('tools/qa/rollback-exempt.ts', "export const ROLLBACK_EXEMPT: Record<string, string> = {\n", "export const ROLLBACK_EXEMPT: Record<string, string> = {\n  'src/game/crossing.ts RUST_SURFACE': 'CONFIG · the call surface a tool\\'s preload hands in once, before any game is stood (tools/blitz/crossing-keys.ts); null in the page; no rule reads it, a stub calls through it',\n", T); }
   if (mode === 'delete' && !flag('--keep-word')) {
-    patch('src/main.ts', "  const rustGame = q.get('rust') === '1' ? await import('./host/rustgame') : null;\n  if (rustGame) await rustGame.rustBoot();", "  if (noWasm()) throw new NoWasmError('this browser runs no WebAssembly here, and the game is a WebAssembly module');\n  const rustGame = await import('./host/rustgame');\n  await rustGame.rustBoot();", T);
+    // THE WORD GOES. The Rust game is the page's game whatever the address says. The three addresses whose step was the TypeScript tick's (a co-op game
+    // hosted or joined, a tape played back) have no game on this build until their Rust paths are here: one plain card, before anything boots.
+    patch('src/main.ts', "  const rustWord = q.get('rust'), rustGame = rustWord === '1' || (rustWord !== '0' && ![NETPLAY, NET_JOIN, PLAYTAPE].some(k => q.has(k))) ? await import('./host/rustgame') : null;\n  if (rustGame) await rustGame.rustBoot();",
+      "  // (THE ONLY GAME. A co-op game hosted or joined and a tape played back each stepped the TypeScript tick, which is gone, and their own paths onto the Rust game are\n  // not here yet: those three addresses get a plain card before anything boots)\n  if ([NETPLAY, NET_JOIN, PLAYTAPE].some(k => q.has(k))) throw Object.assign(new Error('this address has no game on this build yet'), { name: 'NoGameHere' });\n  const rustGame = await import('./host/rustgame');\n  await rustGame.rustBoot();", T);
+    try { patch('src/main.ts', "`?rust=0` = the TypeScript game, for as long as that is still here (nothing of the\n  // module is loaded then). A page that is a game server's client or its door (`?net=`, `?join=`) or that plays a tape (`?playtape=`) is the TypeScript game's as\n  // well until those have been played on the Rust one: `?rust=1` asks it of them all the same\n", "There is no other game.\n", T); } catch { /* (a comment: its wording is not the program's to insist on) */ }
+    patch('src/main.ts', "if (e instanceof NoWasmError) showFatal(NO_WASM_WORDS,", "if ((e as Error)?.name === 'NoGameHere') showFatal(\"This link opens a co-op game or a replay, and this build can't play those yet. You can still play every mission on your own from the title.\"); else if (e instanceof NoWasmError) showFatal(NO_WASM_WORDS,", T);
     patch('tools/blitz/word.ts', "export const DEFAULT_WORD: string = 'none';", "export const DEFAULT_WORD: string = 'rust';", T); }
   if (mode === 'instrument') { T.set('tools/blitz/delete-census-preload.ts', CENSUS_PRELOAD_TS); T.set('tools/blitz/delete-census-ids.json', JSON.stringify(W.ids));
     patch('bunfig.toml', 'preload = ["./tools/blitz/preload.ts"]', 'preload = ["./tools/blitz/delete-census-preload.ts", "./tools/blitz/preload.ts"]', T); }

@@ -8,6 +8,7 @@
 //   CONST     filled while the module loads, never written after
 // The line numbers in a reason are the ones it was judged at.
 export const ROLLBACK_EXEMPT: Record<string, string> = {
+  'src/game/crossing.ts RUST_SURFACE': 'CONFIG · the call surface a tool\'s preload hands in once, before any game is stood (tools/blitz/crossing-keys.ts); null in the page; no rule reads it, a stub calls through it',
   'src/game/rollback.ts MAKES': 'CACHE · an object\'s make (its keys in order) → the three functions written for those keys; rebuilt from the keys, the same whatever game asks',
   'src/scene/library.ts watch': 'CONFIG · the catalogue tool\'s listener for the pieces a kit lays (tools/levels/library.ts sets it before it builds a generator); null in the page and in every run, and the simulation never reads it',
   'src/game/rollback.ts written': 'CONFIG · goes down once, the first time the page refuses a function made from text; never read by the simulation',

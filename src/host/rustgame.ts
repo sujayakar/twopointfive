@@ -1,5 +1,6 @@
-// THE PAGE PLAYS THE RUST GAME (`?rust=1`). The simulation's tick is the Rust game's (rust/game, in the module rust/game_face builds: tools/blitz/FACE.md);
-// the TypeScript `Game` stays as a PUPPET that everything outside the tick goes on reading: the picture, the sound, the HUD, the menus. Without the word
+// THE PAGE PLAYS THE RUST GAME (the page's game with no word; `?rust=0` = the TypeScript game while that is still here; src/main.ts says which pages
+// stay with it). The simulation's tick is the Rust game's (rust/game, in the module rust/game_face builds: tools/blitz/FACE.md);
+// the TypeScript `Game` stays as a PUPPET that everything outside the tick goes on reading: the picture, the sound, the HUD, the menus. Under `?rust=0`
 // nothing here is loaded and the page is the page it was.
 //
 // A STEP (`Game.update` runs its own host lines as ever: the record sampled from the Input and the camera, hostBefore, hostAfter. The step between them,
@@ -51,11 +52,12 @@ import { classTable, valueTable } from 'tps-bridge/classes';
 import { puppetRows, SLOW, VALS } from 'tps-bridge/puppet-apply';
 import { OUT, OUT_HOST } from 'tps-bridge/out-dispatch';
 import { makePoke } from 'tps-bridge/poke';
+import { makeScan } from 'tps-bridge/scan';
 import { installAsks } from 'tps-bridge/ask';
+import { crossing, surfaceHost } from 'tps-bridge/surface';
 import LISTS from 'tps-bridge/puppet-lists.json';
+import SWITCHES from 'tps-bridge/switches.json';
 
-/** the address word: `?rust=1` (any other value, or no word: the TypeScript game) */
-export const rustAsked = (q: URLSearchParams): boolean => q.get('rust') === '1';
 
 type Face = SimExports & Record<string, (...a: number[]) => number>;
 let X: Face | null = null, MEM: WebAssembly.Memory | null = null, BUF: ArrayBufferLike | null = null;
@@ -71,15 +73,174 @@ const outBytes = (): Uint8Array => { const p = X!.face_out_ptr() >>> 0, n = X!.f
 const outText = (): string => dec.decode(outBytes());
 const panicText = (): string => { try { const p = X!.face_panic_ptr() >>> 0, n = X!.face_panic_len() >>> 0; return dec.decode(u8().subarray(p, p + n)); } catch { return ''; } };
 function hand<T>(b: Uint8Array, f: (p: number, n: number) => T): T { const p = X!.face_alloc(b.length) >>> 0; u8().set(b, p); try { return f(p, b.length); } finally { X!.face_free(p, b.length); } }
+/** AN ASK THE RUST GAME REFUSED (`face_ask` answered 1: it has no such order row; 2: no such seat; 3: no such question): the page holds a row the Rust
+ *  game has not got. No index was taken there. The row's closure (tools/blitz/ask.ts) reads these bytes as "nothing": the label is the row's own name, no
+ *  man can, none fit, the row is not offered and is gone, an order through it is refused. One console line a row. */
+const ASKS = ['label', 'can', 'only', 'valid', 'when', 'gone', 'word', 'mark', 'given', 'issue', 'give'], askSaid = new Set<string>();
+function askNone(g: Game, kind: number, row: number, seat: number, why: number): Uint8Array {
+  const d = why === 1 ? (bookOf(g)?.listOf('OrdersOrderDefId') as Record<string, any>[] | undefined)?.[row] : undefined, name = String(d?.name ?? d?.id ?? '');
+  const key = `${why}/${why === 2 ? seat : row}`; RUST_GAME.asksRefused++;
+  if (!askSaid.has(key)) { askSaid.add(key); RUST_GAME.askRefused[key] = `${ASKS[kind] ?? kind}${name ? ` of '${name}'` : ''}`;
+    console.warn(`rust=1: the page asked '${ASKS[kind] ?? kind}' of ${why === 2 ? `seat ${seat}` : why === 3 ? `a question ${kind}` : `order row ${row}${name ? ` ('${name}')` : ''}`}, which the Rust game has not got: answered as nothing (the row is not offered)`); }
+  return askNothing(kind, name);
+}
+/** the bytes of "nothing" for each question (and what a stopped game answers: no row is offered, no order goes through) */
+function askNothing(kind: number, name: string): Uint8Array {
+  const str = (s: string) => { const u = enc.encode(s), o = new Uint8Array(4 + u.length); new DataView(o.buffer).setUint32(0, u.length, true); o.set(u, 4); return o; };
+  const some = (s: string) => { const t = str(s), o = new Uint8Array(1 + t.length); o[0] = 1; o.set(t, 1); return o; };
+  switch (kind) {
+    case 0: return str(name);                    // label: the row's own name
+    case 1: return some('not available');        // can: no, with the reason
+    case 2: return new Uint8Array(4);            // only: no man
+    case 3: return Uint8Array.of(1);             // valid: no, no words
+    case 4: return Uint8Array.of(0);             // when: not offered
+    case 5: return Uint8Array.of(1);             // gone
+    case 6: return Uint8Array.of(0);             // the posture's word: none
+    case 7: return str('');                      // the posture's mark: none
+    case 8: return new Uint8Array(0);            // given: nothing to answer
+    default: return some('not available');       // issue, give: refused
+  } }
 /** a call into the face: a trap is the module's abort on a panic, whose words it kept */
-function call<T>(what: string, f: () => T): T { try { return f(); } catch (e) { const w = panicText(); throw new Error(w ? `the Rust game panicked in ${what}: ${w}` : `${what}: ${String((e as Error)?.message ?? e)}`); } }
+function call<T>(what: string, f: () => T): T { try { return f(); } catch (e) { if (e instanceof RustStopped) throw e; const w = panicText(); throw new Error(w ? `the Rust game panicked in ${what}: ${w}` : `${what}: ${String((e as Error)?.message ?? e)}`); } }
+
+// ---- a panic
+// A PANIC IN THE RUST GAME DOES NOT END THE SESSION. The module aborts on a panic (an index past a table, an `unwrap` on nothing, a `todo!()` body) and
+// the host sees a trap. What is lost by it is the game of that call alone: the face takes a game out of its table for the length of a call, so no
+// borrow is left behind, and every game KEPT in the module (the start, the checkpoints) is whole. So:
+//   · every export of the face is called through `guard`: a trap is noted ONCE (the panic's own words, the call, the tick, the mission's clock, the
+//     address, the last second of input: one line in the console that a person can paste), the game is STOPPED, and the page shows a card;
+//   · while it is stopped nothing calls into the module (a call answers `RustStopped`; a step is no step; the menu's questions answer "nothing"), and the
+//     puppet stands as the last apply left it, so the picture is still drawn;
+//   · Enter on the card (the tick's own record of the keys) puts the run's newest checkpoint back, through the save controller's own load; with none,
+//     or with Shift held, or where that same checkpoint has already led to a panic once, the mission's start; where the start has too, or there is
+//     nothing kept, the page is loaded again. The pause card's Restart and its checkpoint row do the same by their own roads;
+//   · the game that stands again is a NEW game of the same module made from the kept start (`face_stand`), and whoever asked puts the kept game back
+//     over it (`face_back`: the clone, nothing lost of it) and applies it whole.
+// WHAT IS LOST: the play since that checkpoint. NO LOOP: nothing is put back without a key, and a kept game that leads straight back to a panic (inside
+// two seconds of play) is not tried a second time.
+// A THROW OF THE APPLY (the bridge's own, in JavaScript: a value the puppet cannot take) is not a panic: the Rust game is whole. The puppet takes the
+// whole state once; if that throws too, the game is stopped like a panic.
+export class RustStopped extends Error { constructor(what: string) { super(`the Rust game is stopped after a panic (${what} was not called)`); this.name = 'RustStopped'; } }
+interface Dead { text: string; what: string; tick: number; clock: number; stage: string; line: string; key: string }
+export const RUST_PANIC = {
+  /** the panic the game is stopped by, or null */
+  dead: null as Dead | null,
+  /** how many panics, how many put right, every one's line; applies that threw and were made whole */
+  n: 0, recovered: 0, lines: [] as string[], applyThrew: 0, applyLast: '', applyRow: 0, applyAt: -9, frozen: 0,
+  /** what the last recovery put back ('' = the start) and how often each kept game has led to a panic again with nothing newer kept since */
+  last: null as { key: string; tick: number } | null, again: {} as Record<string, number>,
+  /** the planted panics still to come (`?rustpanic=<tick>[,<tick>…]`, `window.__rust.panic.plant(tick, how)`): the step that would be that tick panics instead */
+  planted: [] as { tick: number; how: number }[],
+  plant(tick: number, how = 0): void { RUST_PANIC.planted.push({ tick, how }); },
+  /** what Enter on the card would do now: 'checkpoint' | 'start' | 'reload', and the checkpoint's row */
+  plan: null as { way: 'checkpoint' | 'start' | 'reload'; label: string; lost: number } | null,
+};
+/** the last second of input (the tick's own records, newest last) */
+const INPUT_RING: PlayerCmd[] = [];
+/** the exports a stopped game may still be asked: the panic's words, the last answer's bytes, the count of kept games */
+const STOPPED_OK = new Set(['face_panic_ptr', 'face_panic_len', 'face_out_ptr', 'face_out_len', 'face_kept_n', 'face_mem']);
+function guard(name: string, f: (...a: number[]) => number): (...a: number[]) => number {
+  return (...a: number[]) => {
+    if (RUST_PANIC.dead && !STOPPED_OK.has(name)) throw new RustStopped(name);
+    try { return f(...a); } catch (e) { if (e instanceof WebAssembly.RuntimeError || e instanceof RangeError) died(name, e); throw e; }   // (a trap; or the stack run out inside the module)
+  };
+}
+function inputLine(): string {
+  let was = '', out = ''; let run = 0;
+  for (const c of INPUT_RING) { const k = `${c.keys.join('+')}${c.pressed.length ? ` !${c.pressed.join('+')}` : ''}${c.buttons ? ` b${c.buttons}` : ''}${c.clicked ? ` c${c.clicked}` : ''}${c.wheel ? ` w${c.wheel}` : ''} @${Math.round(c.mx)},${Math.round(c.my)}`; if (k === was) { run++; continue; } if (was) out += `[${was}]x${run} `; was = k; run = 1; }
+  return was ? `${out}[${was}]x${run}` : 'none';
+}
+/** A TRAP: noted once, the game stopped, the card shown */
+function died(what: string, e: unknown): void {
+  if (RUST_PANIC.dead) return;
+  const S = H, G = (S?.g ?? {}) as unknown as Record<string, any>;
+  const text = panicText() || String((e as Error)?.message ?? e), clock = Number(G.mission?.stats?.elapsed ?? G.time ?? 0);
+  const where = typeof location !== 'undefined' ? location.search : '';
+  const line = `rust=1 PANIC | ${text} | in ${what} | tick ${RUST_GAME.ticks} | mission clock ${clock.toFixed(2)} s, stage ${String(G.mission?.stage ?? '?')} | ${where || '(no address words)'} | the last second of input, oldest first: ${inputLine()}`;
+  const L = RUST_PANIC.last;
+  // (the game put back last led STRAIGHT back here, inside two seconds of play and with nothing newer kept: it is not tried a second time. A panic that
+  //  comes later is another one, and the same checkpoint is offered again: the card always needs a key, so nothing loops)
+  if (L && RUST_GAME.ticks - L.tick < 120) { let newest = ''; try { const ck = G.saves?.newest?.(true); newest = ck && G.saves.isThisRun(ck) ? ck.key : ''; } catch { /* the controller is the puppet's */ } if (newest === L.key) RUST_PANIC.again[L.key] = (RUST_PANIC.again[L.key] ?? 0) + 1; }
+  RUST_PANIC.dead = { text, what, tick: RUST_GAME.ticks, clock, stage: String(G.mission?.stage ?? ''), line, key: '' };
+  RUST_PANIC.n++; RUST_PANIC.lines.push(line); if (RUST_PANIC.lines.length > 16) RUST_PANIC.lines.shift();
+  console.error(line);
+  if (S) { S.inStep = false; panicCard(S); }
+}
+/** what Enter would put back now */
+function panicPlan(S: Held): { way: 'checkpoint' | 'start' | 'reload'; key: string; label: string; lost: number } {
+  const G = S.g as unknown as Record<string, any>, D = RUST_PANIC.dead, A = RUST_PANIC.again;
+  if (!S.startKept || !S.kept.has(S.startKept) || typeof X!.face_stand !== 'function') return { way: 'reload', key: '', label: '', lost: D?.clock ?? 0 };
+  let ck: SlotInfo | null = null; try { const n = G.saves?.newest?.(true) as SlotInfo | null; if (n && G.saves.isThisRun(n) && shelfOf(S)?.all().some(e => e.info.key === n.key && S.kept.has((e.snap as KeptGame)?.rust | 0))) ck = n; } catch { ck = null; }
+  if (ck && !(A[ck.key] > 0)) return { way: 'checkpoint', key: ck.key, label: String(ck.label ?? ''), lost: Math.max(0, (D?.clock ?? 0) - Number(ck.missionT)) };
+  if (!(A[''] > 0)) return { way: 'start', key: '', label: '', lost: D?.clock ?? 0 };
+  return { way: 'reload', key: '', label: '', lost: D?.clock ?? 0 };
+}
+/** THE CARD, in the menu's own colours (index.html's `--m-` rows): the panic's words, what is lost, what Enter does. It stands over the HUD and UNDER the
+ *  pause card (`#menu`, 20), so Esc still brings that card up over it and its Restart is the way back to the start */
+function panicCard(S: Held): void {
+  const D = RUST_PANIC.dead; if (!D) return;
+  const P = panicPlan(S); RUST_PANIC.plan = { way: P.way, label: P.label, lost: P.lost };
+  if (typeof document === 'undefined') return;
+  let el = document.getElementById('rustpanic');
+  if (!el) { el = document.createElement('div'); el.id = 'rustpanic';
+    el.style.cssText = 'position:absolute;inset:0;z-index:19;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 55%, rgba(var(--m-base-rgb, 12,11,9),0.4), rgba(var(--m-base-rgb, 12,11,9),0.88) 70%);color:var(--m-text, #d8d2c4);font:13px/1.45 var(--m-font, system-ui, sans-serif);';
+    (document.getElementById('app') ?? document.body).appendChild(el); }
+  el.textContent = ''; el.style.display = 'flex';
+  const card = document.createElement('div');
+  card.style.cssText = 'box-sizing:border-box;width:min(620px,calc(100% - 40px));max-height:calc(100% - 48px);overflow:auto;padding:24px 28px 16px;background:rgba(var(--m-panel-rgb, 21,19,16),0.95);border:1px solid rgba(var(--m-edge, 255,255,255),0.24);border-top:3px solid var(--m-accent, #c8a04a);box-shadow:0 18px 60px rgba(0,0,0,0.6);border-radius:2px;';
+  const row = (css: string, text: string) => { const d = document.createElement('div'); d.style.cssText = css; d.textContent = text; card.appendChild(d); return d; };
+  row('font:700 30px/1 var(--m-head, inherit);letter-spacing:0.02em;text-transform:uppercase;color:var(--m-bright, #fff);', 'The game stopped');
+  row('margin-top:8px;color:var(--m-soft, #b8b2a4);', `The simulation hit a fault it could not go on from${RUST_PANIC.n > 1 ? ` (the ${RUST_PANIC.n === 2 ? 'second' : RUST_PANIC.n === 3 ? 'third' : `${RUST_PANIC.n}th`} this session)` : ''}. Nothing kept is lost.`);
+  row('margin-top:14px;padding:8px 10px;font:11px/1.4 var(--m-mono, ui-monospace, monospace);color:var(--m-text, #d8d2c4);background:rgba(0,0,0,0.35);white-space:pre-wrap;word-break:break-word;user-select:text;', `${D.text}\n(in ${D.what}, tick ${D.tick}, ${D.clock.toFixed(1)} s into the mission; the whole line is in the console)`);
+  const secs = `${P.lost < 10 ? P.lost.toFixed(1) : Math.round(P.lost)} s of play`;
+  row('margin-top:14px;color:var(--m-bright, #fff);', P.way === 'checkpoint' ? `Enter: back to the last checkpoint${P.label ? ` (${P.label})` : ''}. ${secs} since it are lost.` : P.way === 'start' ? `Enter: the mission from its start${RUST_PANIC.again[RUST_PANIC.last?.key ?? '\u0000'] > 0 ? ' (the last checkpoint led straight back here)' : ' (no checkpoint of this run is kept)'}. ${secs} are lost.` : 'Enter: load the page again (nothing kept can be put back).');
+  row('margin-top:12px;font:11px var(--m-mono, ui-monospace, monospace);color:var(--m-faint, #8a8474);letter-spacing:0.06em;', P.way === 'checkpoint' ? 'ENTER  the checkpoint  \u00b7  SHIFT+ENTER  the mission from its start' : 'ENTER');
+  el.appendChild(card);
+}
+/** THE GAME OF THE TRAPPED CALL IS GONE: a new game of this module stands in its slot, made from the kept start, under a new number. Whoever called goes
+ *  on to put a kept game back over it (`stoodAgain`). The planted panics that are due by now are let go: the same tick is never planted twice. */
+function revive(S: Held): void {
+  const D = RUST_PANIC.dead; if (!D) return;
+  RUST_PANIC.dead = null;
+  try {
+    X!.face_panic_clear();
+    // (the game of the trapped call is already out of the face's table; one stopped for a fault outside the module still stands there, and two games
+    //  would share the slot: it is let go either way, with what its host was last sent)
+    X!.face_drop(S.h); X!.face_puppet_drop(S.h);
+    const h = X!.face_stand(S.startKept, S.slot);
+    if (!h) throw new Error('rust=1: the kept start is gone: no game could be stood after the panic');
+    S.h = h; RUST_GAME.handle = h; S.back = null; S.took = false; S.uploaded = true; S.shelfSig = ''; S.lightsWas = null; S.pictureWas = null;
+    grown(S.g);
+  } catch (e) { RUST_PANIC.dead ??= D; throw e; }
+}
+/** ENTER ON THE CARD (Shift: the mission's start) */
+function recover(S: Held, shift: boolean): void {
+  const D = RUST_PANIC.dead; if (!D) return;
+  const G = S.g as unknown as Record<string, any>, P = panicPlan(S), way = shift && P.way === 'checkpoint' ? 'start' : P.way, key = way === 'checkpoint' ? P.key : '';
+  if (way === 'reload') { if (typeof location !== 'undefined') location.reload(); return; }
+  const t = performance.now();
+  try {
+    if (way === 'checkpoint') { const why = G.saves.load(S.g, key) as string | null; if (why) throw new Error(`the checkpoint would not load: ${why}`); }
+    else toStart(S, 'the mission from its start');
+    if (RUST_PANIC.dead) throw new Error('the game was not stood again');
+    RUST_PANIC.last = { key, tick: RUST_GAME.ticks }; RUST_PANIC.recovered++; RUST_PANIC.plan = null;
+    const el = typeof document !== 'undefined' ? document.getElementById('rustpanic') : null; if (el) el.style.display = 'none';
+    console.info(`rust=1: after the panic at tick ${D.tick}: ${way === 'checkpoint' ? `the checkpoint '${P.label}' stands again` : 'the mission stands again from its start'} (${(performance.now() - t).toFixed(0)} ms); ${P.lost.toFixed(1)} s of play were lost`);
+  } catch (e) {
+    // (the way back failed: that kept game is not tried again, and the card says what Enter does next)
+    RUST_PANIC.again[key] = (RUST_PANIC.again[key] ?? 0) + 1;
+    RUST_PANIC.dead ??= { ...D, text: `${D.text}\nand the way back failed: ${String((e as Error)?.message ?? e).slice(0, 300)}` };
+    console.error(`rust=1: the way back after the panic failed (${way}): ${String((e as Error)?.stack ?? e).slice(0, 900)}`);
+    S.inStep = false; panicCard(S);
+  }
+}
 
 /** what the page says of the Rust game, on `window.__rust` */
 export const RUST_GAME = {
   on: false, bytes: 0, fetchMs: 0, compileMs: 0, startMs: 0, startBytes: 0, handle: 0, slot: -1, ticks: 0, starts: 0, grew: 0, memory: 0,
   /** ms of the last step and summed over every step: the host's half, the tick, the filtered export, the apply, the out events, the dress step */
   last: { host: 0, step: 0, export: 0, apply: 0, out: 0, dress: 0, bytes: 0 }, sum: { host: 0, step: 0, export: 0, apply: 0, out: 0, dress: 0, bytes: 0 }, worst: { step: 0, apply: 0, at: 0 },
-  hostHas: 0, wind: [0, 0], probeForgot: 0, oursMissed: 0, smokeMissed: 0, wallFeels: 0, pictureWritten: 0, notes: 0, pokes: 0, poked: {} as Record<string, number>, pokeRefused: {} as Record<string, string>, lightsMade: 0, wholes: 0, wholeMs: 0, rowsKept: 0, nulls: 0, lightsWritten: 0,
+  hostHas: 0, wind: [0, 0], probeForgot: 0, oursMissed: 0, smokeMissed: 0, wallFeels: 0, pictureWritten: 0, notes: 0, pokes: 0, poked: {} as Record<string, number>, pokeRefused: {} as Record<string, string>, asksRefused: 0, askRefused: {} as Record<string, string>, asksTwin: 0, crossed: {} as Record<string, number>, named: 0, lightsMade: 0, wholes: 0, wholeMs: 0, rowsKept: 0, nulls: 0, lightsWritten: 0,
   /** games kept (a save, the start) and their cost: how many were taken, ms of the last take and the worst, how many the module holds now; games put back,
    *  ms of the last (the kept game stood again, the whole apply, the hand-over of the controller's lines) */
   /** the warm-up behind a start card (`rustWarm`): ms of the Rust game's start, of the applies and of the ticks stepped and thrown away, and how many */
@@ -94,23 +255,77 @@ export const RUST_GAME = {
   dress: DRESS_MS,
   /** what the forward export could not carry at the last start (the bridge's own report) */
   notCarried: [] as string[],
+  /** a panic in the module: whether the game is stopped by one, how many there were and were put right, the planted ones (above: RUST_PANIC) */
+  panic: RUST_PANIC,
 };
 
+/** THE SETTLED ROWS, HELD (tools/qa/switches.json, kind "settled": 866 switch rows of the knob tables that are constants of the game now; the Rust game has
+ *  no such row, only the branch the page takes). The TypeScript page still has them as switches, and three things can move one on a player's machine: a
+ *  row of the debugger's panel KEPT in the browser's store and read back at every visit (teamfeel.ts, pressure.ts, digin.ts and the rest of game.ts's
+ *  loaders), a word on the address (`?noautopilot`), a click in the panel. On a puppet such a row would turn only the half of the game the page still
+ *  runs (the HUD's rows, the menu, the picture's dressing) and not the tick. So under the word each settled row is held at its value on the page, as
+ *  tools/qa/fold.ts holds it for a headless run: a read answers that value, a write of another is refused, and what was refused or stood off its value
+ *  is named ONCE in the console and stays on the debugger panel's first line. Rows that are still switches (an open decision, a player's own, the
+ *  difficulty's) are not touched: they cross to the Rust game with the knob tables as a game starts.
+ *  Laid by main.ts after the address's own switches are written and before the game is stood (the kept rows are read as the Game is made).
+ *  What it cannot hold (as the fold): a table replaced whole, a row that is already an accessor, a value a module copied before this ran. */
+export const RUST_SETTLED = { held: 0, absent: 0, skipped: 0, off: [] as string[], refused: new Map<string, { value: unknown; n: number }>(), said: 0 };
+const sameRow = (a: unknown, b: unknown): boolean => Object.is(a, b) || (typeof a === 'object' && typeof b === 'object' && JSON.stringify(a) === JSON.stringify(b));
+const rowWord = (v: unknown): string => typeof v === 'number' || typeof v === 'boolean' || typeof v === 'string' ? String(v) : JSON.stringify(v);
+export function rustSettledHold(): void {
+  const R = RUST_SETTLED, tables = knobRegistry() as Record<string, any>;
+  for (const r of (SWITCHES as { rows: { row: string; page: unknown; kind: string }[] }).rows) { if (r.kind !== 'settled') continue;
+    const path = r.row.split('.'), key = path.pop()!; let o: any = tables[path[0]]; for (let i = 1; i < path.length && o; i++) o = o[path[i]];
+    if (!o || typeof o !== 'object' || !(key in o)) { R.absent++; continue; }
+    const d = Object.getOwnPropertyDescriptor(o, key); if (!d || d.get || d.set || !d.configurable) { R.skipped++; continue; }
+    const page = r.page; if (!sameRow(d.value, page)) R.off.push(`${r.row} (${rowWord(d.value)}; held at ${rowWord(page)})`);
+    Object.defineProperty(o, key, { enumerable: true, configurable: true, get: () => page, set: (v: unknown) => { if (sameRow(v, page)) return; const e = R.refused.get(r.row) ?? { value: v, n: 0 }; e.value = v; e.n++; R.refused.set(r.row, e); } });
+    R.held++; }
+}
+/** what the hold has turned away so far, in a line (the debugger panel's first; '' with nothing), said in the console once each time it grows */
+export function rustSettledLine(): string {
+  const R = RUST_SETTLED, n = R.off.length + R.refused.size; if (!n) return '';
+  const names = [...R.off, ...[...R.refused].map(([row, e]) => `${row} (${rowWord(e.value)})`)];
+  const line = `${n} kept row${n === 1 ? '' : 's'} or address word${n === 1 ? '' : 's'} ${n === 1 ? 'is' : 'are'} settled in this build and ${n === 1 ? 'is' : 'are'} not applied: ${names.slice(0, 12).join(', ')}${names.length > 12 ? `, and ${names.length - 12} more (window.__rust.settled)` : ''}`;
+  if (R.said !== n) { R.said = n; console.info(`rust=1: ${line}`); }
+  return line;
+}
 /** THE MODULE, fetched and compiled off the page's thread (Chrome compiles nothing over 8 MB on it), started, and handed to src/sim as the simulation's
  *  one instance. Before anything has asked src/sim for its module. Throws in plain words where there is no module to fetch. */
+/** a failure of the Rust game's own that the page says in its plain words (main.ts shows `message` alone, no stack) */
+export class RustGameError extends Error { constructor(m: string) { super(m); this.name = 'RustGameError'; } }
 export async function rustBoot(): Promise<void> {
   const t0 = performance.now();
+  const say = (line: string) => { const el = typeof document !== 'undefined' ? document.getElementById('loading') : null; if (el) el.textContent = line; };
+  const NOT = 'Without the word the page plays the TypeScript game.';
   let res: Response;
-  try { res = await fetch(new URL('game_face.wasm', location.href), { cache: 'no-store' }); } catch (e) { throw new Error(`?rust=1: the Rust game's module could not be fetched (${String((e as Error)?.message ?? e)}). Without the word the page plays the TypeScript game.`); }
-  if (!res.ok) { const why = (await res.text().catch(() => '')).slice(0, 400); throw new Error(`?rust=1: there is no Rust game to play here. ${res.status === 404 ? 'This build was made without game_face.wasm (cargo and the wasm32-unknown-unknown target build it: tools/blitz/face-build.ts).' : why} Without the word the page plays the TypeScript game.`); }
+  // (the dev server builds the module where it is stale and does not hold the request while it does: 202 and a line to show, asked again every two
+  //  seconds, for as long as the build takes. A static host answers the file or 404.)
+  for (let asked = 0; ; asked++) {
+    try { res = await fetch(new URL('game_face.wasm', location.href), { cache: 'no-store' }); } catch (e) { throw new RustGameError(`?rust=1: the Rust game's module could not be fetched (${String((e as Error)?.message ?? e)}). Is the dev server still running? ${NOT}`); }
+    if (res.status !== 202) break;
+    const line = (await res.text().catch(() => '')).slice(0, 400) || 'Building the Rust game \u2026';
+    say(line); if (asked === 0) console.info(`rust=1: ${line}`);
+    await new Promise(r => setTimeout(r, 2000));
+  }
+  if (!res.ok) { const why = (await res.text().catch(() => '')).slice(0, 900); throw new RustGameError(`?rust=1: there is no Rust game to play here. ${res.status === 404 ? 'This build was made without game_face.wasm (cargo and the wasm32-unknown-unknown target build it: tools/blitz/face-build.ts).' : why} ${NOT}`); }
+  say('loading the Rust game \u2026');
   let mod: WebAssembly.Module;
   const t1 = performance.now();
   if (typeof WebAssembly.compileStreaming === 'function' && (res.headers.get('content-type') ?? '').startsWith('application/wasm')) { RUST_GAME.bytes = Number(res.headers.get('content-length') ?? 0); mod = await WebAssembly.compileStreaming(res); }
   else { const b = await res.arrayBuffer(); RUST_GAME.bytes = b.byteLength; mod = await WebAssembly.compile(b); }
-  const inst = await WebAssembly.instantiate(mod, {});
+  const inst = await WebAssembly.instantiate(mod, { env: { face_roll: () => { throw new Error('rust=1: the Rust game asked a die the page never hands in'); } } });
   RUST_GAME.fetchMs = t1 - t0; RUST_GAME.compileMs = performance.now() - t1;
-  X = inst.exports as unknown as Face; MEM = X.memory; BUF = MEM.buffer;
-  for (const n of ['face_new_at', 'face_puppet', 'face_host_half', 'face_host_has', 'face_step', 'face_ask', 'face_probe_asks', 'face_lights_out', 'face_poke', 'face_write', 'face_keep', 'face_back', 'face_loaded', 'face_saves_in', 'face_saves_asked']) if (typeof X[n] !== 'function') throw new Error(`?rust=1: game_face.wasm has no ${n}: it was built from another tree (tools/blitz/face-build.ts builds this one's)`);
+  // (every export of the face goes through `guard`: a trap stops the game and shows the card; rust/sim's own exports, called a thousand times a frame
+  //  by the page's readers, are handed on as they are)
+  { const raw = inst.exports as unknown as Record<string, unknown>, W: Record<string, unknown> = {}; for (const k of Object.keys(raw)) { const f = raw[k]; W[k] = typeof f === 'function' && k.startsWith('face_') ? guard(k, f as (...a: number[]) => number) : f; } X = W as unknown as Face; }
+  MEM = X.memory; BUF = MEM.buffer;
+  for (const n of ['face_new_at', 'face_puppet', 'face_host_half', 'face_host_has', 'face_step', 'face_ask', 'face_probe_asks', 'face_lights_out', 'face_poke', 'face_write', 'face_keep', 'face_back', 'face_loaded', 'face_saves_in', 'face_saves_asked']) if (typeof X[n] !== 'function') throw new RustGameError(`?rust=1: game_face.wasm has no ${n}: it was built from another tree (tools/blitz/face-build.ts builds this one's)`);
+  // STAND-IN: EVERY CLASS OF THE SIMULATION'S FOLDERS GETS ITS OWN NAME BACK (tools/blitz/page-plugin.ts keeps each beside its class). The bridge tells
+  // some classes by `constructor.name`, and a minified bundle has renamed them all: a rifle crossed as a plain firearm, and a whole apply (a restart,
+  // a load) then made the page's rifle a plain one, whose weapon card threw. On the dev server's bundle the names are already theirs and nothing is
+  // written. Belongs in the bridge: a class told by the class table's own entry, never by its name.
+  { let n = 0; for (const f of ((globalThis as any).__tpsClasses ?? []) as (() => [Function, string][])[]) for (const [c, name] of f()) if (c.name !== name) { Object.defineProperty(c, 'name', { value: name, configurable: true }); n++; } RUST_GAME.named = n; }
   simAdopt(X, RUST_GAME.compileMs);
   PLACE = new BoxMirror(); (PLACE as unknown as { take(): boolean }).take();
   RUST_GAME.on = true; RUST_GAME.memory = MEM.buffer.byteLength;
@@ -137,7 +352,8 @@ function ownCopy(v: any, depth = 0): any {
 }
 function ownKeep(g: Game): unknown[] { const G = g as unknown as Record<string, any>; return OWN.map(name => { const o = G[name]; if (!o) return null; const c: Record<string, unknown> = {}; for (const k of Object.keys(o)) if (k !== 'g') c[k] = ownCopy(o[k]); return c; }); }
 function ownPut(g: Game, K: unknown[] | undefined): void { const G = g as unknown as Record<string, any>; OWN.forEach((name, i) => { const o = G[name], c = K?.[i] as Record<string, unknown> | null | undefined; if (!o || !c) return; for (const k of Object.keys(c)) o[k] = ownCopy(c[k]); }); }
-interface Held { g: Game; lastCmds: readonly PlayerCmd[] | null; lightsWas: Uint8Array | null; pictureWas: Float64Array | null; thinSerial: number; noted: object[]; kept: Set<number>; startKept: number; startOwn: unknown[]; back: { label: string; loads: number; saves: number } | null; took: boolean; saves: number; shelfSig: string; doorKept: number[]; lightOf: Map<number, Record<string, any>>; poke: ((obj: unknown, path: string | (string | number)[], value: unknown) => void) | null; watch: Watched[]; launch: unknown; putBacks: number; loads: number; h: number; slot: number; stale: string; uploaded: boolean; ctx: { p: number }; rows: unknown; inStep: boolean; side: { list: unknown[]; of: unknown; base: number }; asks: { after(): void } | null }
+let SETTLED_SAID = false;
+interface Held { settings?: { flush(): void; rebase(): void; stats(): { settledLeft: number } & Record<string, unknown> } | null; g: Game; lastCmds: readonly PlayerCmd[] | null; lightsWas: Uint8Array | null; pictureWas: Float64Array | null; thinSerial: number; noted: object[]; kept: Set<number>; startKept: number; startOwn: unknown[]; back: { label: string; loads: number; saves: number } | null; took: boolean; saves: number; shelfSig: string; doorKept: number[]; lightOf: Map<number, Record<string, any>>; poke: ((obj: unknown, path: string | (string | number)[], value: unknown) => void) | null; watch: Watched[]; launch: unknown; putBacks: number; loads: number; h: number; slot: number; stale: string; uploaded: boolean; ctx: { p: number }; rows: unknown; inStep: boolean; side: { list: unknown[]; of: unknown; base: number }; asks: { after(): void } | null }
 let H: Held | null = null;
 const REG = { v: null as Record<string, object> | null };
 const reg = (): Record<string, unknown> => (REG.v ??= knobRegistry()) as Record<string, unknown>;
@@ -161,6 +377,9 @@ export function rustAttach(g: Game): void {
   H = { g, lastCmds: null, lightsWas: null, pictureWas: null, thinSerial: -1, noted: [], kept: new Set(), startKept: 0, startOwn: [], back: null, took: false, saves: 0, shelfSig: '', doorKept: [], lightOf: new Map(), poke: null, watch: [], launch: null, putBacks: -1, loads: 0, h: 0, slot: -1, stale: 'the game was stood', uploaded: true, ctx: { p: 0 }, rows: null, inStep: false, side: { list: [], of: null, base: 0 }, asks: null };
   const held = H;
   G.stepSeats = (dt: number, cmds: readonly PlayerCmd[]) => step(held, dt, cmds);
+  // (`?rustpanic=<tick>[,<tick>…]`: a panic planted in the step that would be that tick, for the check of the way back. A tick with `x` after it is
+  //  planted outside any game.)
+  if (typeof location !== 'undefined') for (const w of (new URLSearchParams(location.search).get('rustpanic') ?? '').split(',')) { const n = parseInt(w, 10); if (Number.isFinite(n) && n >= 0 && !RUST_PANIC.planted.some(p => p.tick === n)) RUST_PANIC.plant(n, /x$/.test(w) ? 1 : 0); }
   // A START FROM OUTSIDE A TICK: the TypeScript stands or restores the game on the puppet as it always did; the Rust game is started again from it as the
   // next step opens. (Inside a step these are the Rust game's own and never run here.)
   // (`restartEncounter` from outside a tick, while a Rust game stands, is the restart below and the TypeScript's lines do not run: they make the player's
@@ -169,11 +388,12 @@ export function rustAttach(g: Game): void {
   for (const name of ['restartEncounter', 'loadState']) {
     const was = G[name]; if (typeof was !== 'function') continue;
     G[name] = function (this: unknown, ...a: unknown[]) {
+      if (RUST_PANIC.dead && !held.inStep) { if (name === 'restartEncounter') recover(held, true); return; }   // (stopped by a panic: the restart is the card's Shift+Enter; a state poured over the puppet would be over a game that is gone)
       if (name === 'restartEncounter' && !held.inStep && held.h && !held.stale && held.startKept) { toStart(held); return; }
       const r = was.apply(this, a); if (!held.inStep) held.stale = name; return r; };
   }
   // THE PLAYER'S RESTART (a card's button, the panel's: `Game.restart`): the game kept as the first step opened stands again
-  { const was = G.restart; G.restart = function (this: unknown, said?: string) { if (held.inStep || !held.h || held.stale || !held.startKept) return was.call(this, said); toStart(held, said); }; }
+  { const was = G.restart; G.restart = function (this: unknown, said?: string) { if (RUST_PANIC.dead && !held.inStep) { recover(held, true); return; } if (held.inStep || !held.h || held.stale || !held.startKept) return was.call(this, said); toStart(held, said); }; }
   // A SAVE AND A LOAD are the Rust game's (game/savestate.ts SNAPS): the controller's slot holds the number of a game kept in the module
   SNAPS.own = true;
   SNAPS.take = gg => { if (gg !== g) throw new Error('rust=1: a save of another game than the one the Rust game steps'); return take(held) as unknown as Snapshot; };
@@ -185,7 +405,8 @@ export function rustAttach(g: Game): void {
   // the one block, so made here too it would be made twice
   { const L = G.engine.lights; L.update = function () { /* the Rust side made it */ }; }
   // THE LIGHT PROBE'S FRAME (render/probe.ts encode: the table sent to the GPU and emptied): the Rust game's table is emptied with it
-  { const P = G.sensors?.probeOf?.(); if (P && typeof P.encode === 'function') { const was = P.encode; P.encode = function (this: any, ...a: unknown[]) { const n = this.pending.length; const r = was.apply(this, a); if (n && held.h) call('face_probe_took', () => X!.face_probe_took(held.h)); return r; }; } }
+  { const P = G.sensors?.probeOf?.(); if (P && typeof P.encode === 'function') { const was = P.encode; P.encode = function (this: any, ...a: unknown[]) { const n = this.pending.length; const r = was.apply(this, a); if (n && held.h && !RUST_PANIC.dead) { try { call('face_probe_took', () => X!.face_probe_took(held.h)); } catch (e) { if (!RUST_PANIC.dead) throw e; } }   // (this is the frame's own GPU pass: a trap here stops the game, never the frame)
+      return r; }; } }
   // AN ORDER GIVEN FROM OUTSIDE A TICK (a tool's `__orders.give`, a panel's button) goes to the Rust game at once, in the words the headless host gives
   // it (rust/game_run `give`), and the puppet takes the state again. Inside a tick the menu's own keys are in the record and are the Rust game's.
   // A thing, options and one man by object have no words there: such an order runs through the menu's own `give` on the puppet, whose rows ask the
@@ -193,6 +414,7 @@ export function rustAttach(g: Game): void {
   // line of the log, a man's word) is then the puppet's alone until the next apply. STAND-IN for a `give` of the face that takes a target as bytes.
   { const O = G.orders, give = O.give; O.give = function (this: any, id: string, t: any, who: any, opts: any) {
       if (held.inStep) return give.call(this, id, t, who, opts);
+      if (RUST_PANIC.dead) return 'the game is stopped';
       // (before the Rust game is started, and while it waits to be started again, the puppet IS the game: a mission's own staging gives its orders
       //  here, and the start takes them across with everything else)
       if (held.stale || !held.h) return give.call(this, id, t, who, opts);
@@ -201,11 +423,19 @@ export function rustAttach(g: Game): void {
       const tail = T0.kind === 'door' ? ` door ${g.doors.list.indexOf(T0.door)} ${T0.side} book${bookOf(g).ids.get('DoorId')?.get(T0.door)}` : T0.kind === 'none' && T0.man ? ` man ${g.guards.indexOf(T0.man)}` : T0.kind === 'foe' ? ` man ${g.guards.indexOf(T0.foe)}` : T0.thing ? ' UNSUPPORTED-thing' : T0.wall ? wallTail(g, T0.wall) : '';
       const line = `${RUST_GAME.ticks + 1} ${id} ${w} ${T0.kind} ${T0.at.join(' ')}${tail}${opts ? ' UNSUPPORTED-opts' : ''}`;
       if (line.includes('UNSUPPORTED') || /^g\d/.test(w)) { RUST_GAME.gives.push(`BY THE MENU'S QUESTIONS ${line}`); return give.call(this, id, t, who, opts); }
-      call('face_give', () => hand(enc.encode(line), (p, n) => X!.face_give(held.h, RUST_GAME.ticks + 1, p, n)));
+      try { call('face_give', () => hand(enc.encode(line), (p, n) => X!.face_give(held.h, RUST_GAME.ticks + 1, p, n))); } catch (e) { if (RUST_PANIC.dead) return 'the game is stopped'; throw e; }
       const said = outText(), m = said.match(/-> (None|Some\("((?:[^"\\]|\\.)*)"\))\s*$/);
       RUST_GAME.gives.push(`${line} ${said.trim().split('->').pop()}`); if (RUST_GAME.gives.length > 64) RUST_GAME.gives.shift();
       grown(g); apply(held, false);
       return m && m[1] !== 'None' ? JSON.parse(`"${m[2]}"`) : null; }; }
+  // THE MENU'S OWN CALLS FROM OUTSIDE A TICK (a tool's `__orders.open()`, `.pick()`, `.close()`, a panel): the same road as the key. The key's press is in
+  // the record and the Rust tick opens the menu; a call from outside ran the TypeScript on the puppet, which built rows of its own that the Rust game had
+  // never seen (and asked it about them). Each now crosses by the call table's row (tools/blitz/surface.ts) to the Rust function the tick itself runs, and
+  // the puppet takes the state again. Inside a tick, and while the puppet IS the game (before a start, while one is due), the method runs as it was.
+  { const O = G.orders; surfaceHost({ g, knobs: reg(), surfaceOpen: () => !!held.h && !held.inStep && !held.stale, surfaceDispatching: () => false,
+      surfaceCall: (row: number, bytes: Uint8Array) => { settle(held); pokes(held); held.settings?.flush(); handHost(held); call('face_call', () => hand(bytes, (p, n) => X!.face_call(held.h, row, p, n))); const out = outBytes().slice(); grown(g); apply(held, false); return out; } });
+    for (const m of ['open', 'close', 'turn', 'pageBack', 'pick', 'cycleWho', 'address']) { const was = O[m]; if (typeof was !== 'function') continue;
+      O[m] = function (this: any, ...a: unknown[]) { if (RUST_PANIC.dead) return undefined; if (held.inStep || held.stale || !held.h) return was.apply(this, a); RUST_GAME.crossed[m] = (RUST_GAME.crossed[m] ?? 0) + 1; try { return crossing(`SquadOrders.${m}`, this, a); } catch (e) { if (RUST_PANIC.dead) return undefined; throw e; } }; } }
 }
 
 /** THE RUST GAME STARTED FROM THE PUPPET AS IT STANDS: the whole state across once, over the block that already stands in the puppet's slot */
@@ -231,9 +461,18 @@ function start(S: Held): void {
   for (const k of S.kept) X!.face_kept_drop(k); S.kept.clear();
   S.startKept = keep(S); S.startOwn = ownKeep(g);
   // (the menu's questions: asked of this Rust game by its rows' IDs in this book, so installed anew at every start)
-  S.asks = installAsks(g, reg(), (kind, row, seat, b) => { call('face_ask', () => hand(b, (p, n) => X!.face_ask(S.h, kind, row, seat, p, n))); return outBytes().slice(); }, () => { grown(g); if (!S.inStep) apply(S, false); });
+  S.asks = installAsks(g, reg(), (kind, row, seat, b) => { if (RUST_PANIC.dead) return askNothing(kind, '');
+    // (the HUD asks every drawn frame: a trap inside a question stops the game and answers "nothing", and is no throw of the frame's)
+    const one = (r: number) => { try { return call('face_ask', () => hand(b, (p, n) => X!.face_ask(S.h, kind, r, seat, p, n))) | 0; } catch (e) { if (RUST_PANIC.dead) return 3; throw e; } }; let no = one(row);
+    if (RUST_PANIC.dead) return askNothing(kind, '');
+    // (a row object the page made itself — the menu opened by a tool's call builds its own — asks by the Rust game's row of the same id, where it has one)
+    if (no === 1) { const L = bookOf(g)?.listOf('OrdersOrderDefId') as Record<string, any>[] | undefined, id = L?.[row]?.id, twin = id === undefined || !L ? -1 : L.findIndex((x, i) => i !== row && x?.id === id); if (twin >= 0 && one(twin) === 0) { RUST_GAME.asksTwin++; return outBytes().slice(); } no = 1; }
+    return no ? askNone(g, kind, row, seat, no) : outBytes().slice(); }, () => { if (RUST_PANIC.dead) return; try { grown(g); if (!S.inStep) apply(S, false); } catch (e) { if (!RUST_PANIC.dead) throw e; } });
   // (the write by path: by the rows' IDs in this book too)
   S.poke = makePoke(g, reg(), b => { call('face_write', () => hand(b, (p, n) => X!.face_write(S.h, p, n))); });
+  // THE SETTINGS, written here by whatever writes them (a panel's row, a lever, a difficulty, an address word) and read by the Rust game: held to what the last walk saw, as a tick opens. A settled row is no setting and is not walked
+  { const scan = makeScan(g, reg(), (b: Uint8Array) => { call('face_write', () => hand(b, (p, n) => X!.face_write(S.h, p, n))); }, () => {}, true); scan.rebase(); S.settings = scan;
+  if (!SETTLED_SAID) { SETTLED_SAID = true; console.info(`rust=1: ${scan.stats().settledLeft} settled rows of the knob tables are the game's constants, and what a page writes to them does not reach it`); } }
   // (room asked for and given back once the game stands: the allocator keeps it, so a step seldom has to grow the memory, which detaches every view over it)
   X!.face_reserve(64 * 1048576); grown(g);
   RUST_GAME.handle = h; RUST_GAME.slot = slot; RUST_GAME.starts++; RUST_GAME.startMs = performance.now() - t0; RUST_GAME.startBytes = state.length;
@@ -337,6 +576,7 @@ function take(S: Held): KeptGame {
 function stoodAgain(S: Held, k: number, own?: unknown[]): void {
   const g = S.g, G = g as unknown as Record<string, any>;
   let t = performance.now();
+  revive(S);   // (stopped by a panic: the game of the trapped call is gone, and a new one stands for the kept game to be put back over)
   if (!S.kept.has(k) || !call('face_back', () => X!.face_back(S.h, k))) throw new Error('rust=1: that kept game is gone (it was of a game that has been stood again since)');
   grown(g);
   RUST_GAME.backMs.back = performance.now() - t; t = performance.now();
@@ -349,7 +589,7 @@ function stoodAgain(S: Held, k: number, own?: unknown[]): void {
  *  row, the rings put away, a tutorial's program to be started again: savestate.ts:1124 to 1134): those lines are made on the Rust side too
  *  (`face_loaded`, in `settle`) before anything else is asked of the Rust game. */
 function put(S: Held, k: KeptGame): void {
-  if (S.stale || !S.h) start(S);
+  if (!RUST_PANIC.dead && (S.stale || !S.h)) start(S);
   const G = S.g as unknown as Record<string, any>, C = G.chronicle?.counts, e = shelfOf(S)?.all().find(x => x.snap === (k as unknown));
   // (the counts of the moment that is being abandoned: the run's, not the saved moment's. Read before the kept game's are on the puppet.)
   const back = { label: String(e?.info.label ?? ''), loads: C?.loads | 0, saves: C?.saves | 0 };
@@ -395,9 +635,16 @@ function pokes(S: Held): void {
  *  mission afresh; this one is the same deal again, from the same die. Belongs in the Rust game (`game_restart`), once a new man has his hook. */
 function toStart(S: Held, said?: string): void {
   const g = S.g, G = g as unknown as Record<string, any>;
+  // WHAT IS NOT THE START'S TO TAKE BACK: the switches the player and this machine set on the game since (god mode, the AI, unlimited ammunition, the
+  // tune's rows, the furniture's friction, the fog's switch): the TypeScript's restart leaves them as they are now, and so does a load (savestate.ts
+  // loadMem). Seen on the page: god mode ticked, the pause card's restart, and the next frag killed him. They are read here, written back on the
+  // puppet after the start stands, and sent to the Rust game by the write by path (`pokes`).
+  const mine = watched(g).filter(w => w[0] === g && w[1][0] !== 'engine');
   stoodAgain(S, S.startKept, S.startOwn);
   if (G.saves) G.saves.missionRef = null;   // (the controller's word for 'a fresh run': a new name, an empty shelf, its triggers from nothing. savestate.ts:983)
   apply(S, true); sweep(S);   // (what the filtered export last sent was forgotten with the game that stood: the long list again, the HUD's lines as the start had them)
+  for (const [, path, v] of mine) { let o: any = g; for (let i = 0; i < path.length - 1 && o; i++) o = o[path[i]]; if (o && !Object.is(o[path[path.length - 1]], v)) o[path[path.length - 1]] = v; }
+  pokes(S);
   if (said) g.msg(said);
   try { G.saves?.onPutBack?.({ key: '', slot: 'auto', n: 0, label: 'the start', kind: 'auto', savedAt: 0, missionT: 0, stage: String(G.mission?.stage ?? ''), runId: '', bytes: 0, mem: true }); } catch (e) { RUST_GAME.outThrew['restart.host'] ??= String((e as Error)?.stack ?? e).slice(0, 600); }
   if (CLEANRESTART.on && CLEANRESTART.picture) G.engine?.restartPicture?.('level restarted');
@@ -594,8 +841,30 @@ function hostHas(S: Held): void {
   X!.face_host_has(S.h, bits); RUST_GAME.hostHas = bits;   // (every step: a kept game stood again holds the moment it was kept in, a game from bytes neither)
 }
 const LIGHTS = 2, VIEW = 4, UPLOAD = 1;
-/** ONE TICK, in place of `Game.stepSeats` */
+/** ONE TICK, in place of `Game.stepSeats`: no tick while the game is stopped by a panic (Enter in the tick's own record puts a kept game back); a trap
+ *  inside it stops the game and is no throw of the frame's; a throw of the apply is answered by the whole state once */
 function step(S: Held, dt: number, cmds: readonly PlayerCmd[]): void {
+  const mine = cmds[S.g.seats.indexOf(S.g.hostSeat())] ?? cmds[0];
+  if (RUST_PANIC.dead) { RUST_PANIC.frozen++; if (mine?.pressed.includes('Enter')) recover(S, mine.keys.includes('ShiftLeft') || mine.keys.includes('ShiftRight')); return; }
+  if (mine) { INPUT_RING.push(mine); if (INPUT_RING.length > 60) INPUT_RING.shift(); }
+  try {
+    { const P = RUST_PANIC.planted, i = P.findIndex(p => p.tick <= RUST_GAME.ticks); if (i >= 0 && S.h && !S.stale) { const how = P[i].how; P.splice(i, 1); X!.face_debug_panic(S.h, how); } }
+    stepOne(S, dt, cmds);
+  } catch (e) {
+    S.inStep = false;
+    if (RUST_PANIC.dead) return;
+    if (e instanceof WebAssembly.RuntimeError || e instanceof RustStopped) { died('a step', e); return; }
+    // (not a trap: the Rust game stands. The puppet takes the whole state, once; the fault is named in the console and counted)
+    RUST_PANIC.applyThrew++; RUST_PANIC.applyLast = String((e as Error)?.stack ?? e).slice(0, 900);
+    const row = RUST_PANIC.applyAt === RUST_GAME.ticks - 1 ? RUST_PANIC.applyRow + 1 : 1; RUST_PANIC.applyRow = row; RUST_PANIC.applyAt = RUST_GAME.ticks;
+    if (row <= 3) console.error(`rust=1: a step threw outside the module at tick ${RUST_GAME.ticks} (${RUST_PANIC.applyThrew} so far); the puppet takes the whole state: ${RUST_PANIC.applyLast}`);
+    if (!S.h || S.stale) throw e;
+    // (three steps in a row: the whole state does not mend it, and the game is stopped as by a panic, with these words)
+    if (row >= 3) { died(`a step, three times running: ${String((e as Error)?.message ?? e).slice(0, 200)}`, e); return; }
+    try { whole(S); RUST_GAME.ticks++; } catch (e2) { if (!RUST_PANIC.dead) died('the whole apply after a step threw', e2); }
+  }
+}
+function stepOne(S: Held, dt: number, cmds: readonly PlayerCmd[]): void {
   const g = S.g, G = g as unknown as Record<string, any>;
   // (a kept game stood again since the last step: what the controller wrote on the puppet after it goes across first, and is then no sign of a stranger's write)
   settle(S);
@@ -612,7 +881,7 @@ function step(S: Held, dt: number, cmds: readonly PlayerCmd[]): void {
     knobsToRust();
     if (PF.on) { const n = performance.now(); PF.knobs += n - tp; tp = n; }
     { const L = (G.doors?.list ?? []) as Record<string, any>[]; for (let i = 0; i < L.length && i < S.doorKept.length; i++) if (!Object.is(L[i].g(DC.posAngle), S.doorKept[i])) L[i].p(DC.posAngle, NaN); }
-    pokes(S);
+    pokes(S); if ((RUST_GAME.ticks & 15) === 0) S.settings?.flush();   // (a walk of the tables is about a millisecond, and a person's hand on a panel or a lever does not need it sooner than a quarter of a second)
     // the light probe's answers, as the GPU has handed them back by now
     { const P = G.sensors?.probeOf?.(), Rm: Map<string, number[]> | undefined = P?.results;
       if (Rm && Rm.size) { let n = 4; const keys: Uint8Array[] = []; for (const k of Rm.keys()) { const b = enc.encode(k); keys.push(b); n += 4 + b.length + 24; }

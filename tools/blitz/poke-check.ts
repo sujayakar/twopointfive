@@ -5,11 +5,12 @@ import { readFileSync } from 'node:fs';
 import { exportGame, SCHEMA, parse, bookOf } from './export';
 import { makePoke } from './poke';
 import { decode } from './paths';
+import { faceHere, FACE_WASM } from './face-build.ts';
 const argv = process.argv.slice(2); const [scn, seed, F] = argv[0].split(':'); const arg = (n: string, d: string) => { const i = argv.indexOf(n); return i < 0 ? d : argv[i + 1]; };
 const { knobRegistry } = await import('../../src/game/knobs.ts'); const reg = knobRegistry();
 const { Game } = await import('../../src/game/game.ts'); const { play } = await import('../qa/playthrough.ts'); class Stop extends Error {}
-const WASM = arg('--wasm', new URL('../../rust/game_face/target/wasm32-unknown-unknown/release/game_face.wasm', import.meta.url).pathname);
-const X: any = new WebAssembly.Instance(new WebAssembly.Module(readFileSync(WASM)), {}).exports; const u8 = () => new Uint8Array(X.memory.buffer);
+const WASM = arg('--wasm', faceHere() ?? FACE_WASM);
+const X: any = new WebAssembly.Instance(new WebAssembly.Module(readFileSync(WASM)), { env: { face_roll: () => 0 } }).exports; const u8 = () => new Uint8Array(X.memory.buffer);
 const hand = <T>(b: Uint8Array, f: (p: number, n: number) => T): T => { const p = X.face_alloc(b.length || 1); u8().set(b, p); try { return f(p, b.length); } finally { X.face_free(p, b.length || 1); } };
 const say = (x: string) => process.stdout.write(x + '\n'); let code = 0;
 function check(g: any) { g.sim.settle?.(g); const start = exportGame(g, reg), w: Uint32Array = g.sim.w, block = new Uint8Array(w.buffer, w.byteOffset, w.byteLength).slice();

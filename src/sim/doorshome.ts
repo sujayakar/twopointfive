@@ -22,10 +22,6 @@ export const DC = { angle: 0, vel: 1, quietT: 2, latched: 3, lastWho: 4, sinceBa
 export const DOOR_COLS = 48;
 /** DoorDrive.kind as a column holds it (its place here) */
 export const DRIVE_KINDS = ['boot', 'swing', 'body', 'hand'] as const;
-/** DoorSound as an event of the module's names it (its place here: doors.ts DoorSound's own order) */
-export const DOOR_SOUNDS = ['creak', 'bang', 'latch', 'bash', 'rattle', 'pick', 'unlock', 'kick', 'clang', 'thud'] as const;
-/** DoorStrike.tier, the same way */
-export const STRIKE_TIERS = ['open', 'slam', 'boot'] as const;
 
 /** the doors' bit in the head of a game's block (sim/state.ts: one a family, never reused), and how long their part is */
 const DOOR_BIT = 4;
@@ -43,24 +39,14 @@ export class DoorStore {
   get d(): Float64Array { return this.home.d; }
 }
 
-// ---- the hand-over of one step (rust/sim/src/doors.rs: its tables and their columns, by the same numbers)
-/** the level's facts of a door */
-export const DD = { hx: 0, hz: 1, closed: 2, width: 3, height: 4, thick: 5, minAuth: 6, maxAuth: 7, keySide: 8, closer: 9, slab: 10, slabAng: 11, fcx: 12, fcz: 13, manLast: 14 } as const;
 /** what comes back of a door */
 export const DO = { placed: 0, h1x: 1, h1z: 2, h2x: 3, h2z: 4 } as const;
 /** a contact, in and out */
 export const DK = { x: 0, y: 1, z: 2, radius: 3, flags: 4, who: 5, hand: 6, runBash: 7, runRip: 8, runLevel: 9, vx: 10, vz: 11, man: 12, opens: 13, opensHi: 14,
   blockedBy: 15, bashed: 16, ripped: 17, bashedAt: 18, struck: 19, struckBy: 20, struckTier: 21, struckFloor: 22, struckDx: 23, struckDz: 24, moved: 25, manAsked: 26 } as const;
-export const KF = { bash: 1, quiet: 2, weak: 4, key: 8, solid: 16, round: 32, vel: 64, run: 128, hand: 256 } as const;
-/** a noise */
-export const DE = { door: 0, sound: 1, who: 2, level: 3, fresh: 4, px: 5, pz: 6 } as const;
-export const DOOR_EV = 7;
 /** the step's numbers, in and out */
 export const DP = { dt: 0, doors: 1, contacts: 2, flags: 3, handRate: 4, minSpeed: 5, floorRad: 6, rate: 7, slide: 8, again: 9, wminX: 10, wmaxX: 11, wminZ: 12, wmaxZ: 13, foot: 14, settleY1: 15,
   events: 16, carried: 17, stopped: 18, passed: 19, reached: 20, held: 21, aside: 22, rounds: 23, wrong: 24, turned: 25 } as const;
-export const DF = { oneWay: 1, exitsOut: 2, leafWay: 4, stay: 8, throws: 16, soft: 32, standable: 64, settle: 128 } as const;
-/** the man of a door's last hand was not asked of the game (no rule of this step can want him) */
-export const MAN_UNASKED = -1;
 
 /** how wide the hand-over's tables are: what comes back of a door, a contact's numbers, the rules' numbers (doors.rs NOUT, NCON, NPAR) */
 export const DOOR_OUTS = 5;

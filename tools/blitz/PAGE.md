@@ -1,23 +1,56 @@
-# The page plays the Rust game (`?rust=1`)
+# The page plays the Rust game
 
-With the word, the game's tick is the Rust game's (`rust/game`, in the module `rust/game_face` builds) and the TypeScript `Game` stays as a puppet that the
-picture, the sound, the HUD and the menus go on reading. Without the word nothing of this is loaded and the page is the page it was. The host is
+The Rust game is the page's game: no address word is needed. `?rust=0` opens the TypeScript game for as long as that is still in the tree, and a page that
+is a game server's client or its door (`?net=`, `?join=`) or that plays a tape (`?playtape=`) stays with the TypeScript game until those have been played on the
+Rust one (`?rust=1` asks it of them all the same; `src/main.ts` holds the rule). The words below that say "under the word" or `?rust=1` were written while the
+Rust game was behind that word, and read the same for the page with no word.
+
+On the Rust game, the game's tick is the Rust game's (`rust/game`, in the module `rust/game_face` builds) and the TypeScript `Game` stays as a puppet that the
+picture, the sound, the HUD and the menus go on reading. Under `?rust=0` nothing of this is loaded and the page is the page it was. The host is
 `src/host/rustgame.ts` (its head says what a step is); the lines of the TypeScript tick that are for the picture only are `src/host/rustdress.ts`; the face's
 exports for a host that shows the game are `rust/game_face/src/page.rs`.
 
-## Building
+## Building, and a first run
 
-`rust/game_face` is built by `tools/blitz/face-build.ts` (the dev server and `bun run build` both call it when a source under `rust/` is newer than the
-module). The file is about 24 MB and is never checked in. Where it cannot be built the reason is said in plain words, and the page shows it under the word:
+`rust/game_face` is built by `tools/blitz/face-build.ts`. The file is 25 to 27 MB; a built one is checked in beside its sources' hash (`rust/game_face/prebuilt/`, served where no build of the machine is fresh and the hash is the checkout's; a hosted build never takes it). Two profiles (`rust/game_face/Cargo.toml`):
 
-| the machine | what is said |
+| profile | what it is | who builds it | measured here (3 jobs, from nothing) |
+|---|---|---|---|
+| `play` | opt-level 3, one unit, NO link-time optimisation | the dev server (`bun run dev`), when a source under `rust/` is newer than the module | 7 min 33 s, rustc peaking at 6.2 GB, 25.1 MB |
+| `release` | the same with the fat link | `bun run build` (`FACE_PROFILE=play` in front builds the other) | the link alone passed 10.5 GB and was killed in a 12 GB box three times |
+
+A module of either profile that is newer than the sources is served as it is. **A first `bun run dev` builds nothing.** The first page opened with
+`?rust=1` asks for `/game_face.wasm`; the server starts the build and does not hold the request: it answers 202 with a line, the page shows that line
+where `loading…` stands and asks again every two seconds, and cargo's own lines (each crate as it compiles, what rustup fetches) go to the server's
+terminal. When the build ends the page starts by itself. `rust/rust-toolchain.toml` names the compiler (1.97.0) and the wasm32-unknown-unknown target:
+with rustup installed the first build fetches both.
+
+| the machine | what the page says (the fatal card, in these words; the terminal says the same) |
 |---|---|
-| no cargo, no built module | The Rust game is not built, and this machine has no cargo to build it (rustup, then the wasm32-unknown-unknown target). |
+| no cargo, never built | The Rust game is not built, and this machine has no cargo to build it. Install Rust with rustup (one line in a terminal: `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \| sh` ), then load this page again: the dev server builds the module itself … |
 | no cargo, a module older than its sources | the file as it stands is served, and the server says so |
-| a cargo that cannot link wasm (no `lld`, no target) | The Rust game did not build: `linker lld not found` …, and that rustup's pinned toolchain brings both |
+| a cargo that cannot build for wasm (no `lld`, no target) | The Rust game did not build: … This cargo (its path) cannot build for wasm32-unknown-unknown. If it is rustup's: `rustup target add wasm32-unknown-unknown` . If it is not (a system package): install rustup … |
+| the compiler killed (memory) | The Rust game did not build: … The compiler was killed, most likely for memory (this build needs about 7 GB free): close what else is running and load the page again. |
 | a build without `game_face.wasm` (a static host) | `?rust=1: there is no Rust game to play here. This build was made without game_face.wasm …` |
 
+Shown with a stand-in for cargo (the four answers of the server and its terminal's lines); a real first build through the dev server and the two
+lines on the screen have not been run in a browser.
+
+## The switches that are constants now
+
+866 switch rows of the knob tables are settled (`tools/qa/switches.json`): the Rust game has only the branch the page takes. On the TypeScript page
+they are still switches, moved by a row of the debugger's panel kept in the browser's store, by a word on the address, by a click. Under `?rust=1`
+each is held at its page value from before the level is built (`rustSettledHold`, as `tools/qa/fold.ts` holds them for a headless run): a read answers
+that value, a write of another is refused, and what was refused is named once in the console and stays on the debugger panel's first line ("N kept
+rows or address words are settled in this build and are not applied: …"; `window.__rust.settled`). So the half of the game the page still runs (the
+HUD, the menus, the picture's dressing) and the tick agree. Rows that are still switches (open decisions, the player's own, the difficulty's) cross
+to the Rust game with the knob tables AS A GAME STARTS; one changed in the middle of a mission (the debugger's Difficulty row) does not reach the
+Rust game until the next start.
+
 ## A game kept: saves, loads, the restart
+
+**A save of the Rust page does not survive a reload today.** Every save, by hand or by the game, lives in the page's memory (a game kept inside the
+module) and is gone with the tab. The design for saves that outlive the page is in the line's log, not in the tree.
 
 The save controller (`src/game/savestate.ts`) runs on the puppet with its slots, labels and rhythm as ever. What it keeps is not the puppet:
 
@@ -60,6 +93,50 @@ Left: saves do not outlive the page (the store is the browser's, a few megabytes
 - **The options' particle row** (`engine.settings.gpuParticles`) is among the watched writes: the tick reads it (`gpuFx`).
 - **Not covered:** a panel's row that calls a method (it runs a rule on the puppet only), and a write to a field outside the list in
   `src/host/rustgame.ts` `watched` (the next apply may put the Rust game's value back over it).
+
+## A call from outside a tick
+
+The keys are in the input record and the Rust tick acts on them. A call made between ticks is another matter: a tool's `__orders.open()`, a panel's
+button. Run as TypeScript on the puppet it would build state the Rust game never sees, and the next question about that state names a row the Rust game
+has not got.
+
+- **The orders menu's own calls** (`open`, `close`, `turn`, `pageBack`, `pick`, `cycleWho`, `address`) cross to the Rust functions the tick itself runs,
+  by the call table (`tools/blitz/surface.ts` `crossing`; the page stands as a surface host): the writes made between ticks go first, then the host's half
+  (the cursor, the cameras), `face_call`, and the puppet takes the state again. Inside a tick, and while the puppet is the game (before a start, while
+  one is due), the method runs as it was. `__rust.crossed` counts them. `give` goes by its own line (above).
+- **A question about a row or a seat the Rust game has not got is refused, not indexed.** `face_ask` measures the row against the order table and the
+  seat against the seats before it asks, and answers 1 (no such row), 2 (no such seat) or 3 (no such question) with no bytes; an index past a table is a
+  panic, and a panic is the game lost. The host then asks by the Rust game's own row of the same id where there is one (a copy of a row), and otherwise
+  hands the row's closure "nothing": its label is its name, no man can, it is not offered, an order through it is refused. One console line a row;
+  `__rust.asksRefused`, `__rust.askRefused`.
+- The page's bundle carries the call table for this (about half a megabyte). `tools/blitz/page-plugin.ts` names the bridge's files: after a pull that
+  adds one, a running dev server must be started again.
+
+## A panic does not end the session
+
+The module aborts on a panic (an index past a table, an `unwrap` on nothing, a `todo!()` body) and the page sees a trap. It used to be the red card and a
+stopped frame loop. Now (`src/host/rustgame.ts`, "a panic"; `rust/game_face/src/page.rs`, "after a panic"):
+
+- **What is lost is the game of that call alone.** The face takes a game out of its table for the length of a call, so a panic leaves no borrow behind,
+  and every game KEPT in the module (the start, each checkpoint) is whole. The page goes on in the same instance of the module.
+- **The game is stopped and a card says so**, in the menu's colours: the panic's own words, the call and the tick, what Enter does and how many seconds
+  of play are lost by it. The console gets ONE line a person can paste: the words, the call, the tick, the mission's clock and stage, the address, and
+  the last second of input (the tick's own records, runs folded). While it is stopped nothing calls into the module: a step is no step, the HUD's
+  questions answer "nothing", an order from a tool answers `the game is stopped`. The puppet stands as the last apply left it and is still drawn.
+- **Enter** (read from the tick's own record of the keys) puts the run's newest checkpoint back through the save controller's own load; with none kept,
+  or with Shift, the mission from its start. The pause card's Restart does the same as Shift+Enter. The game that stands is a new game of the module
+  made from the kept start (`face_stand`), and the load or the restart puts the kept game back over it as ever (`face_back`: the clone, nothing of it
+  lost) and applies it whole.
+- **No loop.** Nothing is put back without a key. A kept game that leads straight back to a panic (inside two seconds of play, nothing newer kept) is
+  not tried twice: the card then offers the mission's start, and after that the page loaded again. A panic that comes later offers the same
+  checkpoint again.
+- **A throw of the apply** (JavaScript, outside the module) is not a panic, the Rust game is whole: the puppet takes the whole state once and play goes
+  on; the fault is named in the console and counted (`__rust.panic.applyThrew`). Three steps running: stopped, as by a panic.
+- **For a check:** `?rustpanic=<tick>[,<tick>…]` plants a panic in the step that would be that tick (`x` after the number: outside any game), and
+  `window.__rust.panic.plant(tick, how)` does it from the console (`face_debug_panic`). `window.__rust.panic`: `dead`, `n`, `recovered`, `lines`, `plan`.
+
+What it does not cover: a panic while a game is being kept or put back (the kept games' own table would be left borrowed: the card then offers the page
+again); a save asked from a panel while the card is up (it throws to the page's red card); a fault that leaves the Rust game wrong without a panic.
 
 ## What a step costs, and what stands in the way
 

@@ -55,6 +55,43 @@ the same chronicle. A game of two seats takes BLITZ_CALL by number (seats.ts).
 `BLITZ_CALL="<k> restart_encounter|reset_guards [start]"` in front of run.sh calls that rule before tick k on both sides (with `start` the Rust game
 takes the TypeScript's state after the call as a new start instead of calling its own rule).
 
+### The difficulty, a lever, a quiet mission
+
+`--hard` stands the player's difficulty at Hard; `--set '<json>'` hands the scripted player's own `--set` rows on (a lever alone:
+`'{"DIFFICULTY":{"fog":"cones"}}'`, `{"ai":"hard"}`, `{"kit":"stuns"}`); `--lever told=guided|standard|bare` moves the fourth lever on the standing game
+before the first tick (it is a lever only once the page's switches are up, so `--set` cannot name it).
+
+A name `quiet-<plan>:<seed>` or `solo-<plan>:<seed>` (plan: walk, sneak, careful, rush, loud) is played by `tools/qa/solo-night.ts`'s scripted Sam, one
+man through the input, mortal and seen: `quiet-` the level's quiet mission, `solo-` the plain office after dark. `BLITZ_SOLO="…"` hands that tool more of
+its own options (`--level quiet-yard.json`, `--unseen`, `--god`, `--squad 1`, `--cap 200`); the office carries no quiet mission, so a `quiet-` run names
+a level. `BLITZ_QUIETFOG=off|team|cones|own` is the quiet mission's rung of the fog (given as the default the bare link plays, held through the stand;
+on the page the rung rides the link).
+
+The scripted player's option words reach the Rust side as `call` lines of the record: `PT_BREAKER=sam` (the mains cut by hand, `set_blackout_hand`),
+`PT_NV=1` (`nv_on`), `PT_NOISE=1` (`noise_shot x y z`). `PT_MORTAL=1` needs nothing handed over.
+
+### What the save controller does inside a tick
+
+The save controller is the host's. Two of its doings write the game and are handed over through `hostwrites.txt`:
+
+- `<k> save_breath`: a save taken by CAPTURE (no team on the floor: the solo night, a quiet mission alone) asks every module for its part, and the
+  whistle's part asks the player's breath, which makes its row. The runner makes the row (`write_after`).
+- `<k> load_in_step`: the down card's bare Enter loaded a FILE save inside the tick. The Rust tick's store is a boundary that holds nothing, so it finds
+  no checkpoint and restarts the mission. The runner does not compare that tick, says so, and takes the next tick's opening state as a new start.
+  A run with this line has NOT shown the Rust game loading a save: it has shown the game in step before the load and after it.
+
+## Kept runs
+
+```sh
+tools/blitz/keep.sh <a run's --out folder> runs/room-clear-four-1.tar.zst "tools/blitz/run.sh room-clear-four:1 --every 500"
+tools/blitz/hold.sh runs/            # or one file; exit 0 = every run the same series after every tick
+```
+
+A run that was in step can be kept as one file (about 3 MB): the start, the host's half of every tick, the driver's record and `post.txt`, the die's
+count and a hash of each part of the block after every tick. `hold.sh` steps the Rust game through it again on the runner alone and compares after every
+tick, with no TypeScript side. It sees the block and the die, not the paths of the game's own state (those needed the TypeScript's whole states), and it
+reads the start with the import as it is built: a change of the wire needs the runs kept again.
+
 ## A game of two seats
 
 ```sh
@@ -224,6 +261,15 @@ The runner's last lines include `TAPS name count · …`: counters of the Rust p
 them) at places that were mended by reading, to say whether a run reaches them. `--case pie | orbit | boot` makes one write between two ticks that no
 seed makes, on both sides (mission.ts `caseStep`; a line of gives.txt and of case.txt); `BLITZ_CASE_RAW=1` in front of a `--no-ts` run makes the Rust
 side's write as it was before the mend.
+
+Two more cases reach reads that were restored by reading (their counters are `digin_keeper_*` and `sticky_eyes_cone*`):
+
+- `--case keeper` (with `--hard`): a man a press left to keep his room, idle and out of contact, hears a fight outside it; with DIGIN.keeper off he lets
+  it lie (digin.ts:705). No scripted play on Hard leaves such a man (a far room goes together, a stood-to floor keeps nobody), so `--case keeper-left`
+  first makes the press's own two writes for one defender who has a mate of his room up (pressure.ts:668, :698).
+- `--case sticky`: the player's tube sends up to three sticky cameras over the nearest hostile (stickycam.ts fireCam). Under the fog's cone a camera's
+  wedge is no wider than an eye's (stickycam.ts:195); at the page's numbers the cone (120) is wider than the camera's own 110, so the read only counts
+  with a number moved: `--set '{"DIFFICULTY":{"level":"hard"},"FOG":{"coneDeg":40}}'`.
 
 ## Files
 

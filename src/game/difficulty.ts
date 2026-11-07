@@ -35,6 +35,7 @@ import { DIGIN, DIGIN_DEFAULTS, saveDigIn, resetDigIn } from './digin';
 import { FOG } from './fogofwar';   // (the one row hard writes outside the two tables: the fog of war's cone — read inside setDifficulty only)
 import { TOLD, toldNow, toldOfLevel, type ToldRung } from './told';   // (the fourth lever's table: read and written inside functions only — told.ts imports nothing)
 import { SQUADDEAL } from './squaddeal';   // (read inside squadsHeld only: squaddeal.ts imports nothing but types)
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 export type Difficulty = 'standard' | 'hard';
 export const DIFFICULTIES: Difficulty[] = ['standard', 'hard'];
@@ -146,13 +147,13 @@ const SET: Partial<Levers> = {};
 const anySet = () => SET.fog !== undefined || SET.ai !== undefined || SET.kit !== undefined || SET.told !== undefined;
 const isRung = (k: LeverKey, v: unknown): boolean => typeof v === 'string' && !!leversNow().find(l => l.key === k)?.rungs.some(r => r.id === v);
 /** WHERE A LEVEL PUTS EVERY LEVER, on the structure the game stands on (the kit is hard's on one level: HARD_AT) */
-export function presetLevers(level: Difficulty, structure = HERE): Levers {
+export function presetLevers(level: Difficulty, structure = HERE): Levers { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('presetLevers', undefined, [level, structure]); if (__r !== RUST_PASS) return __r as any; } }
   const L: Levers = level === 'hard' ? { fog: HARD.cone ? 'cones' : 'team', ai: 'hard', kit: (HARD_AT[structure]?.stuns ?? HARD.stuns) > 0 ? 'stuns' : 'none' } : { fog: 'team', ai: 'standard', kit: 'none' };
   if (TOLD.on) L.told = toldOfLevel(level);   // (the fourth lever: standard's is Standard, hard's is Bare — told.ts)
   return L;
 }
 /** the structure the game stands on now ('' = one with no rows of its own). Tables standing at hard are written again for it; standard and custom are left as they are */
-export function difficultyHere(structure: string) {
+export function difficultyHere(structure: string) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('difficultyHere', undefined, [structure]); if (__r !== RUST_PASS) return __r as any; } }
   if (structure === HERE) return;
   const was = difficultyNow(), levers = anySet() && tablesStand() && fogStands(); HERE = structure;
   if (anySet()) { if (levers) write(); }   // (levers moved by hand: the same rungs on this structure — a level's own kit follows it where the kit lever was left alone. Tables another road has moved since — a harness's put-back, rows moved in the Tab panel — are left as they stand)
@@ -169,13 +170,13 @@ function tablesOf(level: Difficulty, set: Partial<Levers> = {}): { P: typeof PRE
   return { P, D };
 }
 /** the level the two tables stand at now (with a lever moved: the level whose rungs the levers shown ARE, here — else custom) */
-export function difficultyNow(): Difficulty | 'custom' {
+export function difficultyNow(): Difficulty | 'custom' { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('difficultyNow', undefined, []); if (__r !== RUST_PASS) return __r as any; } }
   if (anySet()) { const S = leversShown(); return DIFFICULTIES.find(lv => same(presetLevers(lv), S)) ?? 'custom'; }
   if (!PRESSURE.on && !DIGIN.on) return PRESSURE.stuns > 0 ? 'custom' : 'standard';   // (the stun charges are carried with the press off too — the kit lever's row: set by hand under standard, it is no level's)
   const T = tablesOf('hard'); return same(T.P, PRESSURE) && same(T.D, DIGIN) ? 'hard' : 'custom';
 }
 /** THE LEVERS AS THEY STAND, each read off its table (null: a row under it was moved by hand in the debugger and it stands on no rung) */
-export function leversShown(structure?: string): { fog: FogRung | FogOff | null; ai: AiRung | null; kit: KitRung | null; told?: ToldRung } {
+export function leversShown(structure?: string): { fog: FogRung | FogOff | null; ai: AiRung | null; kit: KitRung | null; told?: ToldRung } { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('leversShown', undefined, [structure]); if (__r !== RUST_PASS) return __r as any; } }
   const noKit = (P: typeof PRESSURE) => ({ ...P, stuns: 0 }), H = tablesOf('hard');
   if (structure !== undefined && structure !== HERE && SET.kit === undefined && tablesStand()) { const S = leversShown(); return S.kit ? { ...S, kit: presetLevers(BASE, structure).kit } : S; }   // (a mission sheet's row: the kit the LEVEL carries on that mission's structure — one each on The block's hard — where the lever was left alone)
   return { fog: fogOffNow() ? 'off' : FOG.cone ? (FOG.own ? 'own' : 'cones') : FOG.own ? null : 'team',   // (the bottom rung is the lever's own word, read first: a mission starts with no fog under it whatever the fog's two rows say)
@@ -199,7 +200,7 @@ const shownWhole = () => { const S = leversShown(); return !!S.fog && !!S.ai && 
 export function leversSet(): Partial<Levers> { return { ...SET }; }
 export function leversBase(): Difficulty { return BASE; }
 /** levers are moved and every one stands on a rung, but on no level's: 'your own mix' (false at a level's own setting, and with rows moved under a lever by hand) */
-export function leversMixed(): boolean { return anySet() && shownWhole() && difficultyNow() === 'custom'; }
+export function leversMixed(): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('leversMixed', undefined, []); if (__r !== RUST_PASS) return __r as any; } } return anySet() && shownWhole() && difficultyNow() === 'custom'; }
 let coneVisit: boolean | null = null;   // (setConeVisit, below: the fog's cone for this visit; null = the level decides)
 let ownWas: boolean | null = null;      // (FOG.own as it stood before the fog lever wrote it — the kept option, teamfeel.ts — put back when the lever lets go)
 let ownFor: FogRung | FogOff | null = null;      // (the rung FOG.own was last written for: written again only when the lever MOVES, so a ?fogown visit or the Tab row flipped over the lever stands through a later write of the tables — a scenario's start)
@@ -222,14 +223,14 @@ function storeLevers(all = false) { try { const S = all ? SET : { ...keptHidden(
 /** set the level: both tables written whole, at the build's rows, EVERY LEVER BACK ON THE LEVEL'S OWN RUNG. `keep` (the UI) stores the level's NAME on this
  *  machine and drops the two tables' own stored copies and the kept levers (standard stores nothing: a fresh machine and a machine put back to standard are
  *  the same thing); the harness and a ?flag visit pass false */
-export function setDifficulty(level: Difficulty, keep = true) {
+export function setDifficulty(level: Difficulty, keep = true) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('setDifficulty', undefined, [level, keep]); if (__r !== RUST_PASS) return __r as any; } }
   BASE = level; delete SET.fog; delete SET.ai; delete SET.kit; delete SET.told; if (keep) HELD = null;
   if (keep) { resetPressure(); resetDigIn(); storeLevers(true); storeName(level); }
   write();
 }
 /** THE LEVEL UNDER THE LEVERS, for this page only (a short-list row opened on its own difficulty — ui/loadout.ts): the levers moved by hand stay over it.
  *  With none moved it is setDifficulty(level, false) */
-export function setBase(level: Difficulty) { BASE = level; write(); }
+export function setBase(level: Difficulty) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('setBase', undefined, [level]); if (__r !== RUST_PASS) return __r as any; } } BASE = level; write(); }
 /** THE LEVEL UNDER THE LEVERS AS THE TABLES STAND, before a lever is moved: BASE is what setDifficulty was last given, and the tables can have been moved by
  *  another road since (the Tab rows, their section's ↺, a ?flag). Where they no longer stand on BASE and the levers, the level and the kit are read back OFF
  *  them (leversShown). Returns whether they stand on a level and levers now (false: rows under a lever were moved by hand — custom) */
@@ -248,7 +249,7 @@ let HELD: Partial<Levers> | null = null;   // (the kept levers a `plain` page di
  *  a lever put on the rung the level itself has there is let go of, not pinned — its row reads as the level's again and follows the next level picked */
 /** a lever that writes nothing of the defenders' two tables: the fog's, and how much you're told */
 const own = (key: LeverKey) => key === 'fog' || key === 'told';
-export function setLever<K extends LeverKey>(key: K, rung: Levers[K] | null, keep = true, structure?: string) {
+export function setLever<K extends LeverKey>(key: K, rung: Levers[K] | null, keep = true, structure?: string) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('setLever', undefined, [key, rung, keep, structure]); if (__r !== RUST_PASS) return __r as any; } }
   if (rung !== null && !isRung(key, rung)) return;
   if (keep && HELD) { for (const L of leversNow()) if (HELD[L.key] !== undefined && SET[L.key] === undefined) (SET as Record<string, string>)[L.key] = HELD[L.key]!; write(HELD.ai === undefined && HELD.kit === undefined); HELD = null; }
   const stood = adopt();
@@ -264,12 +265,12 @@ export function leversFog(load: () => void) {
 }
 /** THE CONE FOR THIS VISIT, whatever the level and through every later write of it (a scenario's start writes hard's rows again — difficultyHere; the mission
  *  sheet's click writes a level): ?fogcone / ?fogcone=0, and the Tab row flipped by hand. null = the level decides (HARD.cone). Not stored: the next page load asks again. */
-export function setConeVisit(v: boolean | null) { coneVisit = v; FOG.cone = v ?? (SET.fog ? coneOf(SET.fog) : (anySet() ? BASE : difficultyNow()) === 'hard' && HARD.cone); }
+export function setConeVisit(v: boolean | null) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('setConeVisit', undefined, [v]); if (__r !== RUST_PASS) return __r as any; } } coneVisit = v; FOG.cone = v ?? (SET.fog ? coneOf(SET.fog) : (anySet() ? BASE : difficultyNow()) === 'hard' && HARD.cone); }
 /** the fog's cone as pinned for this visit (null: the level decides) — for a caller that lays its own pin over it for a while and must put this one back (quietfog.ts) */
 export const coneVisitNow = (): boolean | null => coneVisit;
 /** a row UNDER the switch was moved by hand (the Tab rows' save, a section's ↺): the stored name no longer says what this machine plays — both tables go to
  *  their own stores as they stand (a table standing at the build's rows stores nothing), and the name is dropped */
-export function difficultyCustom() {
+export function difficultyCustom() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('difficultyCustom', undefined, []); if (__r !== RUST_PASS) return __r as any; } }
   if (same(PRESSURE, PRESSURE_DEFAULTS)) resetPressure(); else savePressure();
   if (same(DIGIN, DIGIN_DEFAULTS)) resetDigIn(); else saveDigIn();
   try { globalThis.localStorage?.removeItem(LS); } catch { /* no store */ }
@@ -307,7 +308,7 @@ function leversKept(): boolean { const K = keptLevers(); return leversNow().ever
  *  nothing can be stored — and over a ?hard the visitor arrived with). Standard on a link that names no level is left alone, and so is any link while the tables read
  *  custom (whatever made them so — the visit's flags, or stored rows — is still there after the load). WITH LEVERS MOVED the link names the level they stand
  *  over, drops whatever levers it carried, and carries the moved ones itself only where this machine could not keep them (kept, the page it loads reads them back) */
-export function difficultyHref(href: string): string {
+export function difficultyHref(href: string): string { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('difficultyHref', undefined, [href]); if (__r !== RUST_PASS) return __r as any; } }
   const now = difficultyNow(), [path, query = ''] = href.split('?'), all = query.split('&').filter(k => k), keys = all.filter(k => !/^(hard|difficulty)(=|$)/.test(k));
   if (anySet()) return shownWhole() ? leversHref(`${path}?${[...keys, `difficulty=${BASE}`].join('&')}`) : href;
   if (now === 'custom') return href;
@@ -316,7 +317,7 @@ export function difficultyHref(href: string): string {
 }
 /** a link that names its OWN level (a short-list row: scene/picks.ts) with the moved levers put right on it: whatever levers it carried are dropped, and the
  *  moved ones ride on it only where this machine could not keep them. No lever moved = the link with no lever on it (one the visitor arrived with — ?fog= — and has since let go of does not ride on) */
-export function leversHref(href: string): string {
+export function leversHref(href: string): string { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('leversHref', undefined, [href]); if (__r !== RUST_PASS) return __r as any; } }
   if (anySet() && !shownWhole()) return href;
   const [path, query = ''] = href.split('?'), all = query.split('&').filter(k => k), now = leversNow(), keys = all.filter(k => !now.some(L => k.split('=')[0] === L.param));   // (`told=0`, the fourth lever's off switch, rides on: with it the lever is not in this list)
   if (!anySet() && keys.length === all.length) return href;
@@ -342,7 +343,7 @@ const SQUAD_HARD: { file: string; structure: string; words: string }[] = [
   { file: 'block.json', structure: 'the block', words: '' },   // (the rebuilt block: eight men, four stay-put squads of two, a room each. Scripted team, seeds 1–12 by the go-round route and 1–8 by the hall doors: hard is standard's run, save one where a man put his stun charge down a covered lane)
 ];
 /** `squads`: the level file or the structure's name of a squad map (false / '' = not one; true = one, not said which) */
-export function difficultyWords(level: Difficulty | 'custom' = difficultyNow(), squads: string | boolean = false): string {
+export function difficultyWords(level: Difficulty | 'custom' = difficultyNow(), squads: string | boolean = false): string { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('difficultyWords', undefined, [level, squads]); if (__r !== RUST_PASS) return __r as any; } }
   if (level === 'custom' && leversMixed()) return `your own mix: ${leversLine(true)}`;   // (levers moved by hand to no level's setting: each said by its rung)
   const cone = HARD.cone ? "under the fog of war each teammate sees only the cone he's looking down, so the floor behind everyone's back is dark, and they call out what you can't see" : '';   // (the fog of war's cone: hard's on every level the fog is up on)
   const Cone = cone && ` ${cone[0].toUpperCase()}${cone.slice(1)}`;
@@ -357,7 +358,7 @@ export function difficultyWords(level: Difficulty | 'custom' = difficultyNow(), 
 /** the rung of one lever in a line (its `words`; '' = it stands on none) — the screens' note beside a lever's buttons */
 export function leverWords(key: LeverKey, rung: string | null): string { return leversNow().find(L => L.key === key)?.rungs.find(r => r.id === rung)?.words ?? ''; }
 /** the levers in a line — 'fog of war: your own eyes · enemy AI: standard · enemy kit: stun charges'. `all` false: only the ones moved by hand ('' = none) */
-export function leversLine(all = false): string {
+export function leversLine(all = false): string { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('leversLine', undefined, [all]); if (__r !== RUST_PASS) return __r as any; } }
   const S = leversShown() as Record<LeverKey, string | null>;
   return leversNow().filter(L => all || SET[L.key] !== undefined).map(L => `${L.label[0].toLowerCase()}${L.label.slice(1)}: ${L.rungs.find(r => r.id === S[L.key])?.label ?? 'custom'}`).join(' · ');
 }

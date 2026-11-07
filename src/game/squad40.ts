@@ -39,16 +39,16 @@ import type { Vec3 } from '../math/vec';
 import { v3, wrapAngle } from '../math/vec';
 import type { Character } from './character';
 import type { Game, Guard } from './game';
-import type { Assignment, OrderDef, OrderNote, OrderTarget, SquadOrders } from './orders';
 import type { ThrowSolution } from './throwables';
-import { HE40, arcLength, fireShell, shellSolve } from './he40';
+import { HE40, arcLength, shellSolve } from './he40';
 import { civilianBodies } from './civilians';
 import { FRAG } from './frag';
 import { LAUNCHER40 } from './weapons';
 import { squadHandFree } from './squadsmoke';
-import { THROW_OPEN, THROW_PAGE, handsAtWork, mayWalk, squadFragCatches, squadHandBack, squadLend, squadLogRow, type Lent } from './squadthrow';
+import { handsAtWork, mayWalk, squadFragCatches, type Lent } from './squadthrow';
 import { isHostile } from './teams';
 import { wg } from './words';   // (a leaf: the dialogue pass's one switch)
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 export const SQUAD40 = {
   on: false,
@@ -97,12 +97,10 @@ export function squad40Left(g: Game): number { const s = states.get(g); let n = 
 export function squad40Brought(g: Game): number { return states.get(g)?.brought ?? 0; }
 /** one man's rounds left */
 export function squad40Of(g: Game, gd: Guard): number { return states.get(g)?.rounds.get(gd) ?? 0; }
-/** the words the throws' row adds while the order is on the page (squadthrow.ts: 'throw · frag 2 · bang 3 · 40 mm 2') */
-export function squad40Word(g: Game): string { const s = states.get(g); return s && s.brought > 0 && squad40Here() ? ` · 40 mm ${squad40Left(g)}` : ''; }
 
 /** A SCENARIO HAS JUST STAGED ITS TEAM (kit.ts kitStage, every staging): each man's rounds for this run are what his card carries — none for a man whose
  *  gun has no launcher under it. With nobody carrying one, and never one on this Game: nothing kept. */
-export function squad40Stage(g: Game, carried: readonly (readonly [Guard, number])[]) {
+export function squad40Stage(g: Game, carried: readonly (readonly [Guard, number])[]) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('squad40Stage', undefined, [g, carried]); if (__r !== RUST_PASS) return __r as any; } }
   const rounds = new Map<Guard, number>(); let n = 0;
   for (const [gd, c] of carried) { const k = tubeUp(gd) ? Math.max(0, Math.floor(c) || 0) : 0; if (k) { rounds.set(gd, k); n += k; } }
   let s = states.get(g);
@@ -172,79 +170,13 @@ function plan(g: Game, men: Guard[], at: Vec3, asker: Asker | null): { a: Shot; 
   return dirty ? keep(dirty.a, dirty.who) : keep(!any ? wg("nobody's carrying one.", 'none with them.') : !asked ? 'not ready.' : close ? 'too close to arm.' : 'no shot from here.');
 }
 
-/** the round leaves his tube */
-function fire(g: Game, s: State, a: Shot, at: Vec3, turned: boolean) {
-  const gd = a.gd; s.rounds.set(gd, Math.max(0, (s.rounds.get(gd) ?? 0) - 1)); s.last.set(gd, g.time); s.kept.clear();
-  fireShell(g, gd.char, a.from, a.to); gd.char.anim.fire(); g.say(gd, 'forty out!');
-  s.shown = { t: g.time, text: `${gd.callsign} · 40 mm out` };
-  SQUAD40_STATS.fired++; if (turned) SQUAD40_STATS.turned++;
-  SQUAD40_LOG.push({ t: g.time, who: gd.callsign, from: a.from, at: v3.copy(at), burst: a.burst, left: squad40Left(g), turned }); if (SQUAD40_LOG.length > 100) SQUAD40_LOG.splice(0, 50);
-}
-/** A MAN TURNING TO HIS SHOT, each frame (the row's `tick`: orders.ts calls it while he is under the row's id and the fight does not have him) */
-function turnTick(g: Game, S: SquadOrders, gd: Guard, A: Assignment) {
-  const K = SQUAD40, s = states.get(g), W = s?.turns.get(gd), now = g.time, p = gd.char.pos;
-  if (!s || !W || W.A !== A) {   // (under the row's id with no turn of ours behind it — a hand-made assignment: he holds where he is)
-    if (W) s!.turns.delete(gd);
-    S.assign(gd, { order: 'hold', post: [p[0], 0, p[2]], face: gd.char.bodyYaw, stance: 'lowReady', upper: 'none', going: 'holding', there: 'holding', setLine: null }); return; }
-  const end = (line: string | null) => { if (line) { g.say(gd, line); SQUAD40_STATS.gaveUp++; } s.turns.delete(gd); squadHandBack(g, S, W, true); };
-  if (W.firedT >= 0) { if (now < W.firedT || now - W.firedT >= K.afterSecs) end(null); return; }
-  if (!squad40Here()) return end(null);
-  if (now < W.t0 || now - W.t0 > K.aimSecs) return end('no shot from here.');
-  if (!squadHandFree(g, gd) || handsAtWork(g, gd) || !tubeUp(gd)) return;   // (blinded, reeling, a magazine out, his sidearm up: he waits — the clock runs)
-  if (!onIt(gd, W.at) || now - W.t0 < K.raiseSecs) return;   // (turning, his gun coming up)
-  // the order's own sense, asked of the floor as it stands NOW — nothing is spent on a refusal
-  if (!(s.rounds.get(gd)! > 0)) return end(none);
-  const a = shotOf(g, gd, W.at); if (!a || a === 'close') return end(a ? 'too close to arm.' : 'no shot from here.');
-  const who = caught(g, a, W.at); if (who) { SQUAD40_STATS.refused++; return end(who); }
-  fire(g, s, a, W.at, true); W.firedT = now;
-}
 
-function row(g: Game): OrderDef {
-  return { id: SHELL_THERE, page: THROW_PAGE, targets: ['floor'], free: true,
-    label: () => `40 mm there · ${squad40Left(g)} left`,
-    // (the order is one man's — the man who fires: nobody else answers, and no drill is asked to let go of anybody; a man a drill owns is never turned: mayWalk)
-    only: (_S, men, t) => { const a = plan(g, men, t.at, 'only'); return typeof a === 'string' ? [] : [a.a.gd]; },
-    valid: (_S, t, men) => { const a = plan(g, men, t.at, 'valid'); return typeof a === 'string' ? a : a.who ?? true; },
-    issue: (S, men, t) => {
-      const s = states.get(g), a = s ? plan(g, men, t.at, null) : none;
-      if (!s || typeof a === 'string' || a.who) { SQUAD40_STATS.refused++; return typeof a === 'string' ? a : a.who!; }   // (through the menu `valid` has said it first: this is the floor as it stands NOW — nothing is spent)
-      const gd = a.a.gd, p = gd.char.pos;
-      squadLogRow(g, S, gd, SHELL_THERE, t.at);
-      if (a.a.aimed) return fire(g, s, a.a, t.at, false);
-      const W: Turn = { ...squadLend(g, S, gd, t), at: v3.copy(t.at), t0: g.time, firedT: -1, shot: a.a };
-      S.assign(gd, { order: SHELL_THERE, post: [p[0], 0, p[2]], face: v3.yawTo(p, t.at), watch: v3.copy(a.a.to), stance: 'none', upper: 'aim', going: 'turning to fire · 40 mm', there: 'aiming · 40 mm', setLine: null });
-      W.A = S.of(gd); s.turns.set(gd, W); s.kept.clear();
-    },
-    tick: (S, gd, A) => turnTick(g, S, gd, A) };
-}
-/** the squad's HUD block: what is left while this staging brought any, and the shot just made */
-function notes(g: Game): OrderNote[] {
-  const s = states.get(g); if (!s || !s.brought || !g.orders.defs.some(d => d.id === SHELL_THERE)) return [];
-  const w = s.shown; return w && g.time >= w.t && g.time - w.t < SQUAD40.shownSecs ? [w.text, `40 mm ${squad40Left(g)}`] : [`40 mm ${squad40Left(g)}`];
-}
 
-/** Once a frame straight after the menu's own input (game.ts, after squadthrow.ts's own): the row kept in step with the switch, with what this staging
- *  brought and with the throws' page (its third row; with the throws off there is no page and no row), and a turn whose man is down or under another
- *  order ended — nothing fired, nothing spent. One map read and a return on a Game no card ever brought a round to. */
-export function squad40Tick(g: Game) {
-  const s = states.get(g); if (!s) return;
-  const S = g.orders, on = squad40Here();
-  for (const [gd, W] of s.turns) {
-    if (gd.state === 'dead' || S.of(gd) !== W.A) s.turns.delete(gd);
-    else if (!on || g.time < W.t0 || g.time - W.t0 > SQUAD40.aimSecs + 1) { s.turns.delete(gd); squadHandBack(g, S, W, true); }   // (the switch thrown off, or the fight has had him since: he goes back)
-  }
-  const has = S.defs.some(d => d.id === SHELL_THERE), want = on && s.brought > 0 && S.defs.some(d => d.id === THROW_OPEN);
-  if (has === want) return;
-  if (S.menu) S.close();
-  if (!want) { S.unregister(SHELL_THERE); return; }
-  S.register(row(g));
-  if (s.noted !== S) { s.noted = S; S.notes.push(() => notes(g)); }
-}
 
 /** WHAT THE PICTURE DRAWS (ui/squadthrowviz.ts): `gd` who fires, `points` the arc, `land` where it goes off — for a man turning to his shot until it goes,
  *  and a `preview` for the highlighted row while its page is up. Empty otherwise. Reads only: it asks the floor afresh and keeps nothing. */
 export interface Squad40Plan { gd: Guard; from: Vec3; points: Vec3[]; land: Vec3; kind: 'shell'; preview?: true; walk?: undefined }
-export function squad40Plans(g: Game): Squad40Plan[] {
+export function squad40Plans(g: Game): Squad40Plan[] { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('squad40Plans', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } }
   const s = states.get(g), out: Squad40Plan[] = []; if (!s || !squad40Here()) return out;
   const of = (a: Shot, preview?: true): Squad40Plan => ({ gd: a.gd, from: [a.gd.char.pos[0], 0, a.gd.char.pos[2]], points: a.sol.points, land: a.burst, kind: 'shell', preview });
   for (const W of s.turns.values()) if (W.firedT < 0 && W.gd.state !== 'dead' && g.orders.of(W.gd) === W.A) out.push(of(W.shot));

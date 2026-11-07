@@ -29,7 +29,7 @@ fn export(h: u32, start: bool, spoil: bool) -> Vec<u8> {
     if start { let wide = memo.wide; memo = Default::default(); memo.wide = wide; }
     // (a row or a field with no bytes on the every-tick list is never sent, and stays so)
     if spoil { memo.all = true; }
-    let b = super::with(h, |x| game::puppet::export_puppet(&x.g, &mut memo, start));
+    let b = super::with(h, |x| { crate::page::serial_seen(x.g.serial_next); game::puppet::export_puppet(&x.g, &mut memo, start) });
     MEMO.with(|m| m.borrow_mut().insert(h, memo));
     b
 }

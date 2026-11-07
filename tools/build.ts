@@ -15,7 +15,9 @@ if (!res.success) { for (const m of res.logs) console.error(m); process.exit(1);
 await $`cp -R public/. dist/`;
 await $`mkdir -p dist/levels`; await $`cp ${(await Array.fromAsync(new Bun.Glob("levels/*.json").scan())).sort()} dist/levels/`;   // (every mission's level file, fetched as /levels/<file>: without them a mission with a level of its own fell back to the office on a static host)
 { const face = await faceWasm(l => console.log(l));   // THE RUST GAME'S MODULE (?rust=1): copied beside the page where it is built or can be; a build without it plays the TypeScript game, and says so under the word
-  if ("path" in face) await $`cp ${face.path} dist/game_face.wasm`; else console.log(`game_face.wasm: not in this build (${face.why})`); }
+  if ("path" in face) await $`cp ${face.path} dist/game_face.wasm`;
+  else if (process.env.FACE_BUILD === "1") { console.error(`build — FACE_BUILD=1 and the Rust game's module could not be built on this machine: ${face.why}`); process.exit(1); }   // (a hosted build makes its own module or fails: it never goes out without one, and never with the checked-in one)
+  else console.log(`game_face.wasm: not in this build (${face.why})`); }
 await Bun.write("dist/look.html", `<!doctype html><meta charset="utf-8"><title>twopointsix — materials prototype</title>
 <script>location.replace('index.html?look&' + (new URLSearchParams(location.search).has('levelFile') ? '' : 'roomclear&squad4&levelFile=pass.json&hud&') + location.search.slice(1))</script>`);   // THE LOOK PROTOTYPE: the game's page with ?look (tools/serve.ts /look)
 await Bun.write("dist/gaitlab.html", `<!doctype html><meta charset="utf-8"><title>twopointsix — gait lab → workbench</title>

@@ -101,9 +101,7 @@ export class Input {
   lmb() { return (this.buttons & 1) !== 0; }
   rmb() { return (this.buttons & 4) !== 0; }
   lmbHit() { return (this.clicked & 1) !== 0; }
-  rmbHit() { return (this.clicked & 4) !== 0; }
   mmb() { return (this.buttons & 2) !== 0; }
-  mmbHit() { return (this.clicked & 2) !== 0; }
   endFrame() { this.pressed.clear(); this.clicked = 0; this.wheel = 0; this.wheelCtrl = 0; this.orbitDX = 0; }
   /** between two game ticks of one drawn frame (host/loop.ts, the fixed step): the one-frame edges were the first tick's — what is held stays held */
   endTick() { this.pressed.clear(); this.clicked = 0; this.wheel = 0; }

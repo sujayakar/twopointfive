@@ -56,7 +56,6 @@ export class SideMap<K extends object, V> extends WeakMap<K, V> {
 export class SideSet<K extends object> extends WeakSet<K> {
   readonly sideName: string | undefined;
   sideMemo = false;
-  asMemo(): this { this.sideMemo = true; memos++; return this; }
   private readonly sideKeys = new Keys();
   private readonly sideHas = (k: object): boolean => super.has(k as K);
   constructor(name?: string) { super(); this.sideName = name; if (name !== undefined) named(this as unknown as Table, name); }

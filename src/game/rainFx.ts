@@ -36,6 +36,7 @@ import { BoxFlag } from '../scene/boxes';
 import { WORLD } from '../scene/world';
 import { BLAST_PACE } from './destructionSwitch';
 import { snowing, updateSnowFx } from './snowFx';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 /** v2's LOOK + WIND knobs (Tab ▸ Weather ▸ p-rain rows; kept per machine: localStorage twopointsix.prain; `__rain.look`). Every one rides to the GPU each frame in the emit block's
  *  tail (render/particles.ts RainLook → particles_common.wgsl EmitBlock.rainCfg‥rainCfgD) or the Frame (weatherF: the phase the LATTICE shares), so every row is live. */
@@ -150,7 +151,7 @@ const ZERO4 = Object.freeze([0, 0, 0, 0]) as unknown as [number, number, number,
 const rimTaper = (r01: number) => { const t = clamp((r01 - 0.7) / 0.3, 0, 1); return 1 - t * t * (3 - 2 * t); };   // = the emit kernel's 1 − smoothstep(0.7, 1, r) acceptance and volumetrics.wgsl rainNearKeep's ease
 
 /** Once a frame (game.ts, after the weather has written this frame's rain and before render): the recycler + the drips + frame.weatherE. */
-export function updateRainFx(g: Game, dt: number, cam: FollowCamera) {
+export function updateRainFx(g: Game, dt: number, cam: FollowCamera) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('updateRainFx', undefined, [g, dt, cam]); if (__r !== RUST_PASS) return __r as any; } }
   if (snowing(g)) { updateSnowFx(g, dt, cam); return; }   // a level built for snow (snowFx.ts): the ring holds flakes — no rain is drawn there, so nothing below has anything to do
   const st = stateOf(g); const S = st.stats;
   { const W = g.weather; const k = W?.levelRoofs ? W.kind ?? 'own' : null; roofW = k ? W : null; if (k !== (st.kind ?? null)) { st.kind = k; st.edges = null; st.job = null; } }   // (a weather kind's roofs are the level's own: the drip edges are found again under them)

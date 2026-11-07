@@ -528,7 +528,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   from `litAt`, whole for a man alert / searching and inside `touchM` 0.55; Sam only (the pair's partner keeps sneak.ts's own rule and waits short). `player.visibility` is the GPU
   meter: headless feed it (close-probes do); in the page a room lit only by the men's own torches reads 0.17–0.45 on Sam between them (bounce), 0.85+ in a beam. Floor marks
   (`CLOSE.marks`, overlay `.closewin`) ship off. Tab ▸ 'Closer than ever' section. NOT saved in checkpoints (the mode's hysteresis and the held gait's clock restart on a load). QA:
-  `probes.ts close` (14 probes incl. close-off = the switch off is the build, close-duo = beside a partner under `PAIRUP`; rides all-quick), `bun run tools/qa/ready-pose-probes.ts
+  `probes.ts close` (14 probes incl. close-off (deleted 2026-11-06 with the off side: qa.md) = the switch off is the build, close-duo = beside a partner under `PAIRUP`; rides all-quick), `bun run tools/qa/ready-pose-probes.ts
   poses | ease | identity | knife | creep | gait | strips --out DIR` (the animator alone: identity hash = the base's with nothing asked).
 - **Close-up takedowns as moves** (`src/game/takedown.ts` = the game's half, `character.ts` `BLOW` / `TAKEN` / `KNIFE_SLASH` + `blow() / taken() / takePre / blowTrunk / blowArms /
   takenLayer` = the poses, `Character.fallAs / breathe` + `guideStep / breathFrame` = the fall and the breath; `TAKEDOWN.on` — ON in the page, `?notakedown` = every takedown as it

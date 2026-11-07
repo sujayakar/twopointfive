@@ -3,6 +3,8 @@
 //! host step `game_run`'s.
 //!
 //!   face_follow(h)               the host's camera asked the game where to look (`game_run::follow`): after a tick, for every seat
+//!   face_view_live(h)            after the host's half is taken: the view's matrix is the host camera's as the host left it (`game_run::view_live`), so a
+//!                                call made between two ticks (an order: on-screen-or-not) reads the camera of now, not the record of the tick before
 //!   face_look(h) -> p                six numbers: where the seat's camera is to follow, and the seat's aim point (a host stepping without an apply)
 //!   face_room_at(h, x, y, z) -> 1 | 0   the driver's question that floods a room and keeps it (`roomfight.roomAt` between two ticks): 1 where it
 //!                                flooded one (the list of rooms grew)
@@ -12,6 +14,10 @@
 #[no_mangle]
 pub extern "C" fn face_follow(h: u32) {
     super::with(h, |x| game_run::follow(&mut x.g));
+}
+#[no_mangle]
+pub extern "C" fn face_view_live(h: u32) {
+    super::with(h, |x| game_run::view_live(&mut x.g));
 }
 thread_local! { static LOOK: core::cell::Cell<[f64; 6]> = const { core::cell::Cell::new([0.0; 6]) }; }
 /// WHERE THE HOST'S CAMERA IS TO LOOK, for a host that steps without applying the state (a quiet run of steps: tools/blitz/PLAY.md): the seat on the

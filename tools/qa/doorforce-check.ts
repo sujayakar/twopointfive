@@ -1,6 +1,6 @@
 // AN ALERTED MAN DOES NOT WAIT AT A SHUT DOOR — the check behind src/game/doorforce.ts (DOORFORCE.on: on in the page, ?doorforce=0; off on the frozen
 // stand, TPS_DOORFORCE=1).
-//   bun run tools/qa/doorforce-check.ts [--verbose]      (also `probes.ts doorforce`, family doors; run it on BOTH stands: plain, and TPS_PROFILE=shipped in front)
+//   bun run tools/qa/doorforce-check.ts [--verbose]      (also `probes.ts doorforce`, family doors; run it on BOTH stands: with no word, the page's, and TPS_PROFILE=frozen in front)
 // Headless, on the office: one of its own staff stood a few metres off a shut door, alert; the player stood close behind the leaf, hidden by it. What the
 // man hears is real: footfalls filed where the player stands at the level his own walk files them, through the hearing model and the shut leaf. His rounds
 // are real rounds (combat.ts fireWeapon), his boot the door's own kickIn. The check sets the rule, rounds through thin things (wallpen.ts) and the door
@@ -22,10 +22,16 @@
 // DOORFORCE_BREAK=1 = the module answers as if the switch were off: lines 1, 5, 6, 7, 8, 8b, 9 and 10 must fail.   exit 0 = all hold · 1 = one does not
 type Vec3 = [number, number, number];
 const VERBOSE = process.argv.includes('--verbose');
+/** EVERY WORLD OF THIS CHECK IS STOOD UP ON ONE DIE OF THE GAME'S OWN (src/math/dice.ts), as the page's game is: two runs of one tree say the same numbers.
+ *  With none the game drew the process's Math.random, and one tree said 6 rounds or 7 in line 1 (the men's cooldowns are rolled). `TPS_SEED=n` in front is
+ *  the harness's own word and still names the die (headless.ts): a sweep over dice is that word in a loop. ONE DIE IS ONE SAMPLE: a rule that breaks on one
+ *  stream in ten is green here for ever, where the unseeded check went red now and then. */
+const SEED = 2;
 
 export async function doorforceCheck(): Promise<boolean> {
   const { standUp, ROOT } = await import('./headless.ts');
   const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
+  const { useDice } = await import(`${ROOT}/src/math/dice.ts`);
   const { DOORFORCE, DOORFORCE_STATS, DOORFORCE_LOG, doorForceBelief, doorForceOn, doorForceSaw } = await import(`${ROOT}/src/game/doorforce.ts`);
   const { DOORSHOT } = await import(`${ROOT}/src/game/doorblast.ts`);
   const { DOORWAY } = await import(`${ROOT}/src/game/doors.ts`);
@@ -42,7 +48,7 @@ export async function doorforceCheck(): Promise<boolean> {
 
   /** a fresh office: the rule as asked, rounds through thin things on, the splinter rule as asked, every man but the one staged parked blind and deaf */
   const world = async (on: boolean, splinter = false) => {
-    const W: any = await quiet(() => standUp()); const g = W.game;
+    const W: any = await quiet(() => standUp(process.env.TPS_SEED ? {} : { seed: SEED })); const g = W.game;
     DOORFORCE.on = on; WALLPEN.on = true; WALLPEN.men = true; DOORSHOT.on = splinter; if (splinter) DESTRUCTION.on = true;   // AFTER standUp: the stand-up lines would otherwise write them back
     g.godMode = true; g.aiEnabled = true; g.playerInvisible = false; g.tune.tactics = false; zero();
     return W;
@@ -198,7 +204,8 @@ export async function doorforceCheck(): Promise<boolean> {
       DOORFORCE.on = false; const own = snap(); own.tables.DOORFORCE.on = true; applyKnobs(g, own); const carried = DOORFORCE.on;
       line(before === false && carried === true, `a recording from before the table replays with the rule off (journal.ts applyKnobs): ${before} · one that carries it keeps its own word: ${carried}`); }
   } catch (err) { line(false, `threw: ${(err as Error)?.stack ?? err}`); }
-  finally { DOORFORCE.on = was.on; DOORFORCE.kickSecs = was.kickSecs; WALLPEN.on = was.pen; WALLPEN.men = was.men; DOORSHOT.on = was.shot; DESTRUCTION.on = was.destr; DOORWAY.oneWay = was.oneWay; DOORWAY.frameHolds = was.frame; }
+  finally { DOORFORCE.on = was.on; DOORFORCE.kickSecs = was.kickSecs; WALLPEN.on = was.pen; WALLPEN.men = was.men; DOORSHOT.on = was.shot; DESTRUCTION.on = was.destr; DOORWAY.oneWay = was.oneWay; DOORWAY.frameHolds = was.frame;
+    useDice(null); }   // (the last world's die is not left as the process's: a tool that builds a man with no stand-up after this draws Math.random, as before the seed)
   console.log(failed ? '=== doorforce-check: FAIL ===' : '=== doorforce-check: ALL PASS ===');
   return !failed;
 }

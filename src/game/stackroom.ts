@@ -34,7 +34,7 @@
 // turns it on for any headless tool), the shipped stand has it on; a recording carries it. Nothing here is state the game depends on: the floods are worked out
 // again from the nav grid whenever its cells change (a wall blown, furniture gone), so there is nothing to save. Nothing is rolled: no die.
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load.)
-import { SideMap, GameSideMap } from '../math/side';
+import { GameSideMap } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
 import type { Game } from './game';
 import type { Door } from './doors';
@@ -44,6 +44,7 @@ import { doorPt, alongOf, offOf } from './doortools';
 import { propGap } from './roomclear';
 import { crossesDoor } from './guards';
 import { REARWATCH, rearWays, rearSees } from './rearwatch';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 export const STACKROOM = {
   /** THE switch: off = every door order's marks as they were dealt before this file */
@@ -153,7 +154,7 @@ function onFloor(g: Game, F: Floor, p: Vec3): boolean {
 
 /** is `p` on the floor of face `side` of `d` — the room (or the space) that face is in. True with the switch off, and for a face with no floor at all
  *  (nothing to hold a mark to: the makers' own answer stands). */
-export function stackRoomHas(g: Game, d: Door, side: 1 | -1, p: Vec3): boolean {
+export function stackRoomHas(g: Game, d: Door, side: 1 | -1, p: Vec3): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('stackRoomHas', undefined, [g, d, side, p]); if (__r !== RUST_PASS) return __r as any; } }
   if (!STACKROOM.on) return true; const F = floorOf(g, d, side); return !F || onFloor(g, F, p);
 }
 /** … the same, counted: a tuck or a step back that was not taken for it (doortools.ts) */
@@ -257,11 +258,9 @@ export function stackViewOpen(d: Door): boolean { return !!d.off || (!d.latched 
 /** doortools.ts `holders`: how far from the frame's centre a plain stack's mark on this door can be — the makers' 2.6 m, and with the leaf standing open as far
  *  along the wall as this rule deals (a man waiting out of view down the wall still holds the door, and steps back with his mate when a tool comes onto it) */
 export function stackViewReach(d: Door): number { return STACKROOM.on && STACKROOM.view && stackViewOpen(d) ? Math.max(2.6, d.def.width / 2 + STACKROOM.viewPast + 0.7) : 2.6; }
-/** QA: is this place in the view the rule measures (whatever the switches say) */
-export function stackViewSees(g: Game, d: Door, side: 1 | -1, p: Vec3): boolean { return inView(g, d, farCells(g, d, side), p); }
 /** orders.ts, the plain 'stack up': `posts` as the room rule left them → the same marks with the ones in view (and, `viewHand`, the ones across the opening
  *  from `men`) dealt again along the door's wall. Returned as they came when the leaf does not stand open, with the switch off, or with nothing to move. */
-export function stackViewFix<P extends StackPost>(g: Game, d: Door, side: 1 | -1, posts: P[] | null, taken: Vec3[], men: { char: { pos: Vec3 } }[]): P[] | null {
+export function stackViewFix<P extends StackPost>(g: Game, d: Door, side: 1 | -1, posts: P[] | null, taken: Vec3[], men: { char: { pos: Vec3 } }[]): P[] | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('stackViewFix', undefined, [g, d, side, posts, taken, men]); if (__r !== RUST_PASS) return __r as any; } }
   const S = STACKROOM; if (!posts || !S.on || !S.view || !stackViewOpen(d)) return posts;
   const F = floorOf(g, d, side); if (!F) return posts;
   const T = STACKROOM_STATS, K = g.orders.knobs, w = d.def.width, c = d.frameCentre, th = d.def.closedDir, far = farCells(g, d, side); T.viewAsked++;
@@ -369,9 +368,8 @@ function nextRoom(g: Game, d: Door, side: 1 | -1, F: Floor, used: Vec3[], minM: 
 
 /** QA (tools/qa/stackroom-check.ts): the floor of a face as the rule reads it, whatever the switch says — is `p` on it · steps of walking to it · the middles
  *  of its cells between `lo` and `hi` steps from the doorway, the nearest first · where it was flooded from */
-export function stackRoomProbe(g: Game, d: Door, side: 1 | -1) {
+export function stackRoomProbe(g: Game, d: Door, side: 1 | -1) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('stackRoomProbe', undefined, [g, d, side]); if (__r !== RUST_PASS) return __r as any; } }
   const F = floorOf(g, d, side);
   return { floor: !!F, cells: F ? F.cells.length : 0, seed: F ? centre(g, F.seed) : null, has: (p: Vec3) => !!F && onFloor(g, F, p), steps: (p: Vec3) => F ? stepsTo(g, F, p) : -1,
     spots: (lo: number, hi: number): Vec3[] => F ? F.cells.filter(c => F.dist[c] >= lo && F.dist[c] <= hi).map(c => centre(g, c)) : [] };
 }
-export function stackRoomSummary(): string { const T = STACKROOM_STATS; return `stack rooms: ${T.off} of ${T.asked} marks off the face's floor · dealt again ${T.other} other jamb, ${T.behind} behind the file, ${T.rear} back, ${T.floor} floor, ${T.next} next room, ${T.squeezed} squeezed, ${T.lane} down the passage · ${T.none} no room · ${T.kept} tucks/step-backs not taken · ${T.unled} jamb men dealt again gave the door to the other jamb`; }

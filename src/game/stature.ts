@@ -21,6 +21,7 @@ import type { Character } from './character';
 import type { Box } from '../scene/boxes';
 import type { Vec3 } from '../math/vec';
 import { castVariantOf } from './cast';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 /** drawn height ÷ the skeleton's, by variant name (absent = 1) */
 export const STATURE: Record<string, number> = {
@@ -91,7 +92,7 @@ export function drawnFit(c: Character, fit: Fit, s: number): Fit {
   fits.set(c, { of: fit, s, fit: out }); return out;
 }
 /** the boxes out[from‥] that carry a drawn man's owner byte (his rig, a can in his fist): where the GPU is to draw them (Box.dc / dh). The Box itself is not moved. */
-export function drawnBoxes(g: Game, men: Character[], out: Box[], from: number) {
+export function drawnBoxes(g: Game, men: Character[], out: Box[], from: number) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('drawnBoxes', undefined, [g, men, out, from]); if (__r !== RUST_PASS) return __r as any; } }
   let any = false; for (const c of men) if (statureOf(c) !== 1) { byId[c.id & 0xff] = c; any = true; }
   for (let k = from; k < out.length; k++) {
     const b = out[k]; const c = any && b.owner ? byId[b.owner & 0xff] : undefined;
