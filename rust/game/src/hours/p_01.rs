@@ -43,12 +43,12 @@ fn hour_row(g: &mut Game) -> &mut HourState {
 }
 
 /// The hour this game stands at; Night = the level as authored. (hours.ts hourOf)
-pub fn hour_of(g: &mut crate::game::Game) -> crate::hours::HourId {
+pub fn hour_of(g: &crate::game::Game) -> crate::hours::HourId {
     match &g.m.hours.states { Some(st) => st.def.id, None => HourId::Night }
 }
 
 /// The exposure the game's scene is taken at now: the show's day's while it is in, else the hour's own, else the level's night's. Never 0: a sum divides by it. (hours.ts exposureOf)
-pub fn exposure_of(g: &mut crate::game::Game) -> f64 {
+pub fn exposure_of(g: &crate::game::Game) -> f64 {
     let own = if crate::lighting::is_daylight(g) {
         g.level.daylight.as_ref().map(|d| d.exposure)
     } else {
@@ -59,17 +59,17 @@ pub fn exposure_of(g: &mut crate::game::Game) -> f64 {
 }
 
 /// (hours.ts isHourSun)
-pub fn is_hour_sun(g: &mut crate::game::Game, l: LightId) -> bool {
+pub fn is_hour_sun(g: &crate::game::Game, l: LightId) -> bool {
     g.m.hours.states.as_ref().map(|st| st.sun) == Some(l)
 }
 
 /// Is this directional light already in the estimate, so nobody counts it twice. (hours.ts inEstimate)
-pub fn in_estimate(g: &mut crate::game::Game, l: LightId) -> bool {
+pub fn in_estimate(g: &crate::game::Game, l: LightId) -> bool {
     is_hour_sun(g, l) || (g.k.sense.moon && g.m.hours.states.is_none() && sky_lamp_of(g) == Some(l))
 }
 
 /// The level's brightest steady directional light that is up, when no hour is laid over it. (hours.ts skyLampOf)
-pub fn sky_lamp_of(g: &mut crate::game::Game) -> Option<LightId> {
+pub fn sky_lamp_of(g: &crate::game::Game) -> Option<LightId> {
     if g.m.hours.states.is_some() { return None; }
     let mut moon: Option<LightId> = None;
     let mut best = 0.002;
@@ -86,12 +86,12 @@ pub fn sky_lamp_of(g: &mut crate::game::Game) -> Option<LightId> {
 }
 
 /// The sun's strength 0‥1 on this game; 1 at night. (hours.ts sunStrength)
-pub fn sun_strength(g: &mut crate::game::Game) -> f64 {
+pub fn sun_strength(g: &crate::game::Game) -> f64 {
     match &g.m.hours.states { Some(st) => st.sun_k, None => 1.0 }
 }
 
 /// Was the sun's strength set by hand rather than left to the cloud. (hours.ts sunGiven)
-pub fn sun_given(g: &mut crate::game::Game) -> bool {
+pub fn sun_given(g: &crate::game::Game) -> bool {
     match &g.m.hours.states { Some(st) => st.given, None => false }
 }
 
@@ -371,7 +371,7 @@ pub fn casters_of(g: &mut crate::game::Game) -> f64 {
 // ---------------------------------------------------------------- the meter's stand-in
 
 /// The sky's luminance at height y, off the live sky or the dome given. (hours.ts skyLum)
-pub fn sky_lum(g: &mut crate::game::Game, y: f64, sky: Option<crate::hours::SkyStateDome>) -> f64 {
+pub fn sky_lum(g: &crate::game::Game, y: f64, sky: Option<crate::hours::SkyStateDome>) -> f64 {
     let (zen, hor) = match sky {
         Some(d) => (lum(d.zenith), lum(d.horizon)),
         None => (lum(g.engine.settings.sky_zenith), lum(g.engine.settings.sky_horizon)),

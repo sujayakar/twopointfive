@@ -13,7 +13,7 @@ pub fn new_stats() -> crate::squadnet::SquadNetStats {
 }
 
 /// The net as a game starts it; the class's constructor adds nothing to its initialisers. (squadnet.ts SquadNet.constructor)
-pub fn squad_net_new(g: &mut crate::game::Game) -> crate::squadnet::SquadNet {
+pub fn squad_net_new(g: &crate::game::Game) -> crate::squadnet::SquadNet {
     crate::squadnet::SquadNet::blank()
 }
 
@@ -75,7 +75,7 @@ pub fn squad_net_tick(g: &mut crate::game::Game) {
 }
 
 /// What a quick-key pick that is not a plain open adds: the end of its row and the answer. (squadnet.ts whyWords)
-pub fn why_words(g: &mut crate::game::Game, p: &crate::autopilot::AutoPick) -> Option<crate::squadnet::WhyWords> {
+pub fn why_words(g: &crate::game::Game, p: &crate::autopilot::AutoPick) -> Option<crate::squadnet::WhyWords> {
     use crate::autopilot::AutoPickWhy;
     if p.word || !matches!(p.t, crate::orders::OrderTarget::Door(_)) { return None; }
     let id = p.id.as_deref();

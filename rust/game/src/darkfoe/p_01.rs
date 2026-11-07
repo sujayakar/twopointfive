@@ -13,19 +13,19 @@ pub fn frac(x: f64) -> f64 {
 }
 
 /// His id's share of 0..1: neighbours in the roster differ, no dice.   (darkfoe.ts idShare)
-pub fn id_share(g: &mut crate::game::Game, gd: GuardId, salt: Option<f64>) -> f64 {
+pub fn id_share(g: &crate::game::Game, gd: GuardId, salt: Option<f64>) -> f64 {
     let salt = salt.unwrap_or(0.0);
     let c = g.gd[gd].ch;
     frac((g.ch[c].id + salt) * 0.6180339887)
 }
 
 /// Does he carry a light of his own to switch on.   (darkfoe.ts carriesDarkLamp)
-pub fn carries_dark_lamp(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn carries_dark_lamp(g: &crate::game::Game, gd: GuardId) -> bool {
     g.gd[gd].unit.is_some() && id_share(g, gd, None) < g.k.darkfoe.carry
 }
 
 /// Is he this rule's: a living enemy unit whose light the mission left off, in live play.   (darkfoe.ts darkFoeRuled)
-pub fn dark_foe_ruled(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn dark_foe_ruled(g: &crate::game::Game, gd: GuardId) -> bool {
     match &g.gd[gd].unit {
         None => return false,
         Some(u) if u.light => return false,
@@ -43,7 +43,7 @@ pub fn dark_foe_ruled(g: &mut crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// His lamp burns by this rule this frame: a read, nothing counted.   (darkfoe.ts darkFoeLit)
-pub fn dark_foe_lit(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn dark_foe_lit(g: &crate::game::Game, gd: GuardId) -> bool {
     g.m.darkfoe.state_of.get(gd).map_or(false, |s| s.lit) && carries_dark_lamp(g, gd) && dark_foe_ruled(g, gd)
 }
 
@@ -86,7 +86,7 @@ pub fn dark_foe_blind(g: &mut crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// Has it reached him for good: alert or searching, or his ears counted gunfire, a kick or a bang.   (darkfoe.ts learns)
-pub fn learns(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn learns(g: &crate::game::Game, gd: GuardId) -> bool {
     let man = &g.gd[gd];
     let h = &man.witness.heard;
     man.state == crate::game::GuardState::Alert
@@ -166,7 +166,7 @@ pub fn in_room(g: &mut crate::game::Game, d: RoomfightDefId, p: V3) -> bool {
 }
 
 /// Where the trouble is, as the room fight reads it for him.   (darkfoe.ts threatOf)
-pub fn threat_of(g: &mut crate::game::Game, d: RoomfightDefId) -> V3 {
+pub fn threat_of(g: &crate::game::Game, d: RoomfightDefId) -> V3 {
     let gd = g.tab.roomfight_def[d].gd;
     if g.time - g.gd[gd].sight_t < 6.0 { return g.gd[gd].sight_pos; }
     if let Some(src) = g.gd[gd].sup.src {
@@ -188,7 +188,7 @@ pub fn threat_of(g: &mut crate::game::Game, d: RoomfightDefId) -> V3 {
 }
 
 /// His room is his fence: always, `roam` being off on the page.   (darkfoe.ts fenced)
-pub fn fenced(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn fenced(g: &crate::game::Game, gd: GuardId) -> bool {
     true
 }
 

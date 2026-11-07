@@ -250,7 +250,7 @@ pub fn chronicle_bind_heard(g: &mut crate::game::Game, e: u32, row: usize) {
 }
 
 /// (chronicle.ts Chronicle.heardCounted)
-pub fn chronicle_heard_counted(g: &mut crate::game::Game, e: u32) -> bool {
+pub fn chronicle_heard_counted(g: &crate::game::Game, e: u32) -> bool {
     g.chronicle.heard_no_row.has(e)
 }
 
@@ -267,7 +267,7 @@ pub fn chronicle_sample(g: &mut crate::game::Game, x: f64, z: f64, t: f64) {
 // ------------------------------------------------------------ writing
 
 /// The mission clock.   (chronicle.ts nowOf)
-pub fn now_of(g: &mut crate::game::Game) -> f64 { g.mission.stats.elapsed }
+pub fn now_of(g: &crate::game::Game) -> f64 { g.mission.stats.elapsed }
 
 /// The first player's feet.   (chronicle.ts posOf)
 pub fn pos_of(g: &mut crate::game::Game) -> V3 {
@@ -621,7 +621,7 @@ pub fn chron_checkpoint(g: &mut crate::game::Game, what: crate::chronicle::Chron
 // ------------------------------------------------------------ reading
 
 /// Everything the card and the score read, in one flat record.   (chronicle.ts runCounts)
-pub fn run_counts(g: &mut crate::game::Game) -> crate::chronicle::RunCounts {
+pub fn run_counts(g: &crate::game::Game) -> crate::chronicle::RunCounts {
     use crate::game::MissionStage;
     let st = g.mission.stage;
     let s = &g.mission.stats;
@@ -682,7 +682,7 @@ fn score_of(s: &crate::knobs::ScoreK, c: &RunCounts) -> StealthScore {
     StealthScore { score: v3::clamp(m::round(100.0 - off), 0.0, 100.0), lines }
 }
 /// 0..100 and the itemised deductions that made it, largest first.   (chronicle.ts stealthScore)
-pub fn stealth_score(g: &mut crate::game::Game, c_2: &crate::chronicle::RunCounts) -> crate::chronicle::StealthScore {
+pub fn stealth_score(g: &crate::game::Game, c_2: &crate::chronicle::RunCounts) -> crate::chronicle::StealthScore {
     score_of(&g.k.score, c_2)
 }
 
@@ -718,7 +718,7 @@ fn badges_for(b: &crate::knobs::BadgeK, c: &RunCounts) -> Vec<Badge> {
     ]
 }
 /// The run's badges, each a plain yes / no off the counts.   (chronicle.ts badgesOf)
-pub fn badges_of(g: &mut crate::game::Game, c_2: &crate::chronicle::RunCounts) -> Vec<crate::chronicle::Badge> {
+pub fn badges_of(g: &crate::game::Game, c_2: &crate::chronicle::RunCounts) -> Vec<crate::chronicle::Badge> {
     badges_for(&g.k.badge, c_2)
 }
 
@@ -729,7 +729,7 @@ pub fn fmt_mmss(sec: f64) -> String {
 }
 
 /// The whole debrief in one record. mission.ts reads its `grade` for the end line.   (chronicle.ts debriefOf)
-pub fn debrief_of(g: &mut crate::game::Game) -> crate::chronicle::Debrief {
+pub fn debrief_of(g: &crate::game::Game) -> crate::chronicle::Debrief {
     let counts = run_counts(g);
     let StealthScore { score, lines } = stealth_score(g, &counts);
     let r = rating_of(score);
@@ -780,7 +780,7 @@ pub fn summary_line(c_2: &crate::chronicle::RunCounts, score: f64, word: &str, b
 }
 
 /// The name a door row's door was WRITTEN, asked when the row is read; `None`: the row reads its id's words.   (chronicle.ts doorWritten)
-pub fn door_written(g: &mut crate::game::Game, door: &str) -> Option<String> {
+pub fn door_written(g: &crate::game::Game, door: &str) -> Option<String> {
     let d = match crate::doors::doors_by_name(g, door) {
         Some(d) => Some(d),
         None => crate::doors::doors_by_name(g, &door.replace(' ', "_")),

@@ -25,14 +25,14 @@ fn quarter(p: V3) -> String {
 }
 
 /// this view's row asks `tossing`: `states.get(g)`, which makes no row, and `tossing` takes no row out of `g` while it holds `g`
-fn tossing_here(g: &mut Game, gd: GuardId) -> bool {
+fn tossing_here(g: &Game, gd: GuardId) -> bool {
     let key = crate::seats::view_key(g);
     let t = g.m.squadthrow.states.get(key).and_then(|s| s.last.get(gd).copied()).unwrap_or(-1e9);
     toss_window(g, t)
 }
 
 /// `s?.walks.has(gd)`: on his way to a throw already (makes no row)
-fn walking_here(g: &mut Game, gd: GuardId) -> bool {
+fn walking_here(g: &Game, gd: GuardId) -> bool {
     let key = crate::seats::view_key(g);
     g.m.squadthrow.states.get(key).map_or(false, |s| s.walks.has(gd))
 }
@@ -339,7 +339,7 @@ pub fn row_of(kind: crate::squadthrow::SquadThrowKind) -> crate::squadthrow::Row
 }
 
 /// how far it runs on past its landing: a frag's own, a canister the smoke can's (squadthrow.ts rollOf)
-pub fn roll_of(g: &mut crate::game::Game, kind: crate::squadthrow::SquadThrowKind) -> Option<f64> {
+pub fn roll_of(g: &crate::game::Game, kind: crate::squadthrow::SquadThrowKind) -> Option<f64> {
     if kind == SquadThrowKind::Frag { Some(g.k.squadthrow.frag_roll_k) } else { None }
 }
 
@@ -488,7 +488,7 @@ pub fn stun_in(g: &mut crate::game::Game, pts: &[V3], eye: V3, full: bool) -> bo
 }
 
 /// may this man be walked off to a throw: no drill, door tool, wall charge or fight has him, and his order can be handed back (squadthrow.ts mayWalk)
-pub fn may_walk(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn may_walk(g: &crate::game::Game, gd: GuardId) -> bool {
     let a = crate::orders::squad_orders_of(g, gd);
     if !g.orders.owners.is_empty() && crate::orders::nightbreach_owns(g, gd) { return false; }   // (`S.owners.some(o => o.owns(gd))`: the one row there is)
     if g.door_tools.ops.iter().any(|&o| g.tab.doortools_door_op[o].men.contains(&gd)) || g.wall_charge.ops.iter().any(|&o| g.tab.wallcharge_wall_op[o].men.contains(&gd)) { return false; }
@@ -747,7 +747,7 @@ pub fn squad_frag_on_sam(g: &mut crate::game::Game, rest: V3, at: V3) -> bool {
 }
 
 /// … and never his call inside what it kills at (squadthrow.ts samNear)
-pub fn sam_near(g: &mut crate::game::Game, pts: &[V3]) -> bool {
+pub fn sam_near(g: &crate::game::Game, pts: &[V3]) -> bool {
     let p = sam_pos(g);
     pts.iter().any(|l| v3::dist_xz(p, *l) < g.k.squadthrow.duck_min_m)
 }

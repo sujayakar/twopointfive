@@ -34,7 +34,7 @@ pub fn flat(a: V3, b: V3) -> f64 {
 }
 
 /// The men of the standoff on this held man, living, in roster order. (gunhold.ts menOn)
-pub fn men_on(g: &mut crate::game::Game, held: GuardId) -> Vec<GuardId> {
+pub fn men_on(g: &crate::game::Game, held: GuardId) -> Vec<GuardId> {
     let mut out = Vec::new();
     for &o in &g.guards {
         if g.gd[o].state == crate::game::GuardState::Dead {
@@ -217,7 +217,7 @@ pub fn expo(g: &mut crate::game::Game, k: &mut crate::gunhold::Known, i: f64) ->
 }
 
 /// The nav cell under a point, −1 off the grid. (gunhold.ts cellOf)
-pub fn cell_of(g: &mut crate::game::Game, p: V3) -> f64 {
+pub fn cell_of(g: &crate::game::Game, p: V3) -> f64 {
     let n = &g.col.nav;
     let x = m::floor(p[0] / n.cell);
     let z = m::floor(p[2] / n.cell);
@@ -235,12 +235,12 @@ pub fn centre(g: &mut crate::game::Game, i: f64) -> V3 {
 }
 
 /// Is the pistol turned this man's way: within faceDeg of where the pair faces. (gunhold.ts facesHim)
-pub fn faces_him(g: &mut crate::game::Game, k: &crate::gunhold::Known, p: V3) -> bool {
+pub fn faces_him(g: &crate::game::Game, k: &crate::gunhold::Known, p: V3) -> bool {
     m::abs(v3::wrap_angle(m::atan2(p[0] - k.sam[0], p[2] - k.sam[2]) - k.facing)) < g.k.gunhold.face_deg * v3::DEG
 }
 
 /// Forward of Sam's rear arc. (gunhold.ts front)
-pub fn front(g: &mut crate::game::Game, k: &crate::gunhold::Known, p: V3) -> bool {
+pub fn front(g: &crate::game::Game, k: &crate::gunhold::Known, p: V3) -> bool {
     m::abs(v3::wrap_angle(m::atan2(p[0] - k.sam[0], p[2] - k.sam[2]) - (k.facing + m::PI))) > g.k.gunhold.rear_deg * v3::DEG
 }
 
@@ -557,7 +557,7 @@ pub fn plan_round(g: &mut crate::game::Game, gd: GuardId, s: GuardsStandoffId, k
 }
 
 /// Does this man go round, or stay behind his cover in front: a lone man goes; of two or more the man most in front of Sam stays. (gunhold.ts goesRound)
-pub fn goes_round(g: &mut crate::game::Game, gd: GuardId, s: GuardsStandoffId, k: &mut crate::gunhold::Known) -> bool {
+pub fn goes_round(g: &crate::game::Game, gd: GuardId, s: GuardsStandoffId, k: &mut crate::gunhold::Known) -> bool {
     let pair = g.tab.guards_standoff[s].pair;
     let men = men_on(g, pair);
     if men.len() <= 1 {
@@ -581,7 +581,7 @@ pub fn goes_round(g: &mut crate::game::Game, gd: GuardId, s: GuardsStandoffId, k
 // ---------------------------------------------------------------- the lines
 
 /// The pool a man draws one of the four moments from: a defender's own, else the staff's. (gunhold.ts gunHoldPool)
-pub fn gun_hold_pool(g: &mut crate::game::Game, gd: GuardId, kind: crate::gunhold::GunHoldPoolKind) -> Vec<String> {
+pub fn gun_hold_pool(g: &crate::game::Game, gd: GuardId, kind: crate::gunhold::GunHoldPoolKind) -> Vec<String> {
     let own = if crate::teams::defender_words(g, gd) { gunhold_defender_lines().get(String::from(kind.as_str())).cloned() } else { None };
     match own {
         Some(own) if !own.is_empty() => own,
@@ -639,7 +639,7 @@ fn stand(g: &mut Game, f: Feet) {
 }
 
 /// gunHoldFeet's `alongPath`: on a run, eyes and gun on where Sam is while the way keeps him anywhere ahead, else up the way
-fn along_path(g: &mut Game, f: Feet, k: &Known) -> V3 {
+fn along_path(g: &Game, f: Feet, k: &Known) -> V3 {
     let (path_i, len) = (g.gd[f.gd].path_i, g.gd[f.gd].path.len());
     if path_i >= len {
         return f.look;

@@ -113,7 +113,7 @@ fn watch_cols_get(g: &Game, c: CharId) {
 }
 /// watchCols.put off the bench (character.ts:3579)
 fn watch_cols_put(g: &mut Game, c: CharId) {
-    let v = &args()[COLS..];
+    let v = &args_read()[COLS..];
     let t = &mut g.ch[c].anim.wt;
     t.sw = v[0]; t.sx = v[1]; t.sz = v[2]; t.side = if js::truthy(v[3]) { 1.0 } else { 0.0 }; t.sl = v[4]; t.w = v[5]; t.yaw = v[6]; t.pitch = v[7];
 }
@@ -251,7 +251,7 @@ pub fn anim_creep_body_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, e: f6
     let code = sim::layers::creep_body(g_2 as usize, g.ch[c].anim.p_a.at as usize) as f64;
     crate::anim_skeleton::layer_ran(g, code, c);
     creep_cols_put(g, c);
-    let b = args();
+    let b = args_read();
     vec![b[0], b[1]]
 }
 
@@ -263,7 +263,7 @@ fn creep_cols_get(g: &Game, c: CharId) {
 }
 /// creepCols.put off the bench (character.ts:3663)
 fn creep_cols_put(g: &mut Game, c: CharId) {
-    let v = &args()[COLS..];
+    let v = &args_read()[COLS..];
     let h = &mut g.ch[c].anim.hf;
     h.t = v[0]; h.s = v[1]; h.sv = v[2]; h.a = v[3]; h.av = v[4]; h.w = v[5]; h.wv = v[6]; h.v = v[7]; h.vv = v[8];
 }
@@ -287,7 +287,7 @@ fn stealth_cols_get(g: &Game, c: CharId) {
 }
 /// stealthCols.put off the bench (character.ts:3678)
 fn stealth_cols_put(g: &mut Game, c: CharId) {
-    let v = &args()[COLS..];
+    let v = &args_read()[COLS..];
     let s = g.ch[c].anim.sp.as_mut().unwrap();
     s.w_a = v[0]; s.t = v[1]; s.cr = v[2]; s.fl = v[3]; s.lead = v[4]; s.fz = v[5]; s.sw = v[6];
 }
@@ -351,7 +351,7 @@ fn cable_cols_get(g: &Game, c: CharId) {
 }
 /// cableCols.put off the bench (character.ts:3709)
 fn cable_cols_put(g: &mut Game, c: CharId) {
-    let v = &args()[COLS..];
+    let v = &args_read()[COLS..];
     let an = &mut g.ch[c].anim;
     an.sp.as_mut().unwrap().nod_up = if v[0] < 0.0 { None } else { Some(v[0] > 0.0) };
     an.nv_a = v[1];
@@ -381,7 +381,7 @@ pub fn anim_cable_pose_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, pic: 
 // ---- the twist's inverse
 
 /// The chest twist run backwards for a point; fk must be current on the pose asked about. (character.ts CharacterAnimator.untwist)
-pub fn anim_untwist(g: &mut crate::game::Game, c: CharId, tw_y: f64, tw_p: f64) -> crate::character::Untwist {
+pub fn anim_untwist(g: &crate::game::Game, c: CharId, tw_y: f64, tw_p: f64) -> crate::character::Untwist {
     if !js::truthy(tw_y) && !js::truthy(tw_p) { return Untwist::Same; }
     let an = &g.ch[c].anim;
     let (p1, p2, p3) = (an.fk.pos[an.nodes.spine1], an.fk.pos[an.nodes.spine2], an.fk.pos[an.nodes.spine3]);
@@ -423,7 +423,7 @@ pub fn anim_kit_layer(g: &mut crate::game::Game, c: CharId, dt: f64, tw_y: f64, 
 
 /// kitCols.put off the bench (character.ts:3742)
 fn kit_cols_put(g: &mut Game, c: CharId) {
-    let v = &args()[COLS..];
+    let v = &args_read()[COLS..];
     let hold = if v[0] < 0.0 { None } else { Some(kit_item_of(v[0])) };
     let an = &mut g.ch[c].anim;
     an.kit_hold = hold;
@@ -526,7 +526,7 @@ fn rd_cols_get(g: &Game, c: CharId) {
 }
 /// rdCols.put off the bench (character.ts:3795)
 fn rd_cols_put(g: &mut Game, c: CharId) {
-    let v = &args()[COLS..];
+    let v = &args_read()[COLS..];
     let an = &mut g.ch[c].anim;
     for i in 0..RD { an.rd[i] = v[i]; }
     an.cl_l = v[RD]; an.reach_shown = v[RD + 1]; an.rd_live = v[RD + 2] != 0.0;
@@ -636,7 +636,7 @@ pub fn anim_take_pre(g: &mut crate::game::Game, c: CharId, dt: f64, cp: f64) -> 
 }
 
 /// How far into the move's tail he is, 0 to 1; let go of as he walks off. (character.ts CharacterAnimator.blowTail)
-pub fn anim_blow_tail(g: &mut crate::game::Game, c: CharId, b: &crate::character::BlowRun) -> f64 {
+pub fn anim_blow_tail(g: &crate::game::Game, c: CharId, b: &crate::character::BlowRun) -> f64 {
     let x = b.end + b.tail;
     let w = crate::character::blow().walk;
     bump(b.t, b.hit + 0.08, b.end + 0.1, x - 0.45, x) * (1.0 - v3::smoothstep(w[0], w[1], m::abs(g.ch[c].anim.speed)))
@@ -697,7 +697,7 @@ pub fn anim_blow_arms_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, b: &cr
     }
     let (slot, at, at_b, at_rest) = { let p = places(g, c); (g_2 as usize, p.0, p.1, p.2) };
     anim_hands_ask(g, c, &mut |_g: &mut Game| sim::layers::blow_arms(slot, at, at_b, at_rest) as f64);
-    args()[COLS]
+    args_read()[COLS]
 }
 
 /// The man a takedown is done to, still on his feet. (character.ts CharacterAnimator.takenLayer)
@@ -818,20 +818,20 @@ fn to_model_d_of(yaw: f64, wd: V3) -> V3 {
 }
 
 /// The controller's world placement to the model space the layers pose in: a point. (character.ts CharacterAnimator.toModelP)
-pub fn anim_to_model_p(g: &mut crate::game::Game, c: CharId, wp: V3) -> V3 {
+pub fn anim_to_model_p(g: &crate::game::Game, c: CharId, wp: V3) -> V3 {
     let p0 = crate::character::anim_pos_in(g, c);   // (`this.posIn`: the array handed in at the last update, not the body's place now)
     to_model_p_of(g.ch[c].anim.body_yaw_in, p0, wp)
 }
 
 /// The same for a direction. (character.ts CharacterAnimator.toModelD)
-pub fn anim_to_model_d(g: &mut crate::game::Game, c: CharId, wd: V3) -> V3 {
+pub fn anim_to_model_d(g: &crate::game::Game, c: CharId, wd: V3) -> V3 {
     to_model_d_of(g.ch[c].anim.body_yaw_in, wd)
 }
 
 // ---- the door hand
 
 /// The door hand's eased weights per arm and which arm is the wanted one. (character.ts CharacterAnimator.doorHands)
-pub fn anim_door_hands(g: &mut crate::game::Game, c: CharId) -> crate::character::AnimDoorHands {
+pub fn anim_door_hands(g: &crate::game::Game, c: CharId) -> crate::character::AnimDoorHands {
     let dp = &g.ch[c].anim.dp;
     AnimDoorHands { l: v3::clamp(dp.w_l.x, 0.0, 1.0), r: v3::clamp(dp.w_r.x, 0.0, 1.0), right: dp.right }
 }

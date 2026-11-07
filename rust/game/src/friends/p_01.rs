@@ -8,17 +8,17 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 /// The reticle passes this man over: he is not the player's enemy.   (friends.ts friendNoSnap)
-pub fn friend_no_snap(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn friend_no_snap(g: &crate::game::Game, gd: GuardId) -> bool {
     !crate::teams::hostile_to(g, gd, crate::teams::HostileToO::Player)
 }
 
 /// A man of his own side whose body the cursor's ray should know it landed on.   (friends.ts friendOnRay)
-pub fn friend_on_ray(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn friend_on_ray(g: &crate::game::Game, gd: GuardId) -> bool {
     !crate::teams::hostile_to(g, gd, crate::teams::HostileToO::Player)
 }
 
 /// Is anybody in a fight, as far as Sam's own gun is concerned.   (friends.ts friendsInFight)
-pub fn friends_in_fight(g: &mut crate::game::Game) -> bool {
+pub fn friends_in_fight(g: &crate::game::Game) -> bool {
     let quiet_s = g.k.friends.quiet_s;
     if g.time - g.pl[g.player].last_fire_t < quiet_s { return true; }
     let mut i = 0;

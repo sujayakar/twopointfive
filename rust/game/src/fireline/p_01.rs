@@ -74,7 +74,7 @@ pub fn lane_of(g: &mut crate::game::Game) -> Option<crate::fireline::Lane> {
 }
 
 /// Is this point of floor inside the lane by its shape alone. (fireline.ts inShape)
-pub fn in_shape(g: &mut crate::game::Game, l: crate::fireline::Lane, x: f64, z: f64, more: Option<f64>) -> bool {
+pub fn in_shape(g: &crate::game::Game, l: crate::fireline::Lane, x: f64, z: f64, more: Option<f64>) -> bool {
     let more = more.unwrap_or(0.0);
     let rx = x - l.m[0];
     let rz = z - l.m[2];
@@ -134,7 +134,7 @@ pub fn door_at(g: &mut crate::game::Game, from: V3, pts: &[V3], far: f64) -> f64
 }
 
 /// Is this point of floor in a door's opening. (fireline.ts inDoorway)
-pub fn in_doorway(g: &mut crate::game::Game, x: f64, z: f64) -> bool {
+pub fn in_doorway(g: &crate::game::Game, x: f64, z: f64) -> bool {
     let mut i = 0;
     while i < g.doors.list.len() {
         let d = g.doors.list[i];
@@ -151,7 +151,7 @@ pub fn in_doorway(g: &mut crate::game::Game, x: f64, z: f64) -> bool {
 }
 
 /// The corners of the walk he is on to `goal`: the runner's own path while it is for that goal, else the straight leg if short, else None. (fireline.ts walkOf)
-pub fn walk_of(g: &mut crate::game::Game, gd: GuardId, goal: V3) -> Option<Vec<V3>> {
+pub fn walk_of(g: &crate::game::Game, gd: GuardId, goal: V3) -> Option<Vec<V3>> {
     let p = g.ch[g.gd[gd].ch].pos;
     if let Some(pg) = g.gd[gd].path_goal {
         if m::hyp2(pg[0] - goal[0], pg[2] - goal[2]) < 0.75 && g.gd[gd].path.len() > g.gd[gd].path_i {
@@ -381,7 +381,7 @@ pub fn fire_line_feet(g: &mut crate::game::Game, gd: GuardId, goal: Option<V3>, 
 }
 
 /// Is this rule holding him where he stands: nobody calls him stuck. (fireline.ts fireLineLive)
-pub fn fire_line_live(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn fire_line_live(g: &crate::game::Game, gd: GuardId) -> bool {
     match g.m.fireline.states.get(gd) {
         Some(st) => st.way.is_none() && st.go_t < 0.0 && g.time >= st.t && g.time - st.t <= 0.25,
         None => false,

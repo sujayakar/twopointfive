@@ -64,7 +64,7 @@ pub fn legs_own(g: &mut crate::game::Game) -> bool {
 }
 
 /// The top pace of a walk of his own this tick, by what his legs are doing and what his card weighs.   (player.ts freePace)
-pub fn free_pace(g: &mut crate::game::Game, m: crate::player::Legs, ml: f64) -> f64 {
+pub fn free_pace(g: &crate::game::Game, m: crate::player::Legs, ml: f64) -> f64 {
     let mut max_speed = if ml == 0.0 { 0.0 }
         else if m.sprinting { g.tune.player_sprint }
         else if m.dragging.is_some() { if m.haul.is_some() { crate::hands::haul_speed(g) } else { g.tune.player_crouch * 0.6 } }
@@ -124,7 +124,7 @@ pub fn stride_step(g: &mut crate::game::Game, m: &mut crate::player::Legs, mx: f
 }
 
 /// Is his gun up to aim: the pistol just fired or with its light on, the rifle braced.   (player.ts gunRaised)
-pub fn gun_raised(g: &mut crate::game::Game, pl: PlayerId, now: Option<f64>, m: Option<crate::player::GunRaisedM>) -> bool {
+pub fn gun_raised(g: &crate::game::Game, pl: PlayerId, now: Option<f64>, m: Option<crate::player::GunRaisedM>) -> bool {
     let now = now.unwrap_or(g.time);
     let sprinting = match m { Some(m) => m.sprinting, None => g.pl[pl].sprinting };
     let pistol = g.pl[pl].pistol;
@@ -139,7 +139,7 @@ pub fn leaf_facing(dp: Option<&crate::player::LeafFacingDp>, aiming: bool) -> Op
 }
 
 /// A sprint's facing: gun down, the body follows the run and the aim is the body's. Returns the shoulder's turn into a door just run open.   (player.ts sprintFacing)
-pub fn sprint_facing(g: &mut crate::game::Game, m: &mut crate::player::Legs, dt: f64, now: Option<f64>) -> Option<f64> {
+pub fn sprint_facing(g: &crate::game::Game, m: &mut crate::player::Legs, dt: f64, now: Option<f64>) -> Option<f64> {
     let now = now.unwrap_or(g.time);
     let lean = crate::sprintdoor::sprint_door_lean(g, door_stamps(m), Some(now));
     m.char.body_yaw = v3::approach_angle(m.char.body_yaw, v3::yaw_of(m.char.vel) + lean.unwrap_or(0.0), 14.0 * dt);
@@ -191,7 +191,7 @@ fn draw(g: &mut Game, pl: PlayerId, name: &str) {
 }
 
 /// updatePlayer's `cursorPitch`: gun pitch onto what the reticle has, else level along the cursor's heading.   (player.ts:620)
-fn cursor_pitch(g: &mut Game, pl: PlayerId, c: CharId, ap: V3, aim_dist: f64) -> f64 {
+fn cursor_pitch(g: &Game, pl: PlayerId, c: CharId, ap: V3, aim_dist: f64) -> f64 {
     let mut target_y = ap[1] + 0.03;
     if let Some(t) = g.aim_target { target_y = v3::clamp(g.tab.sim_lightshome_fixture[t].pos[1], 0.3, 2.95); }
     else if let Some(gd) = g.aim_guard {
@@ -206,7 +206,7 @@ fn cursor_pitch(g: &mut Game, pl: PlayerId, c: CharId, ap: V3, aim_dist: f64) ->
 }
 
 /// What a round goes at: the puppet's man, a fixture under the reticle, a man under the cursor, else level along the heading.   (player.ts:717, 742)
-fn shot_target(g: &mut Game) -> V3 {
+fn shot_target(g: &Game) -> V3 {
     let pt = g.puppet.as_ref().and_then(|p| p.target);
     if let Some(t) = pt {
         if g.gd[t].state != crate::game::GuardState::Dead { return v3::add(g.ch[g.gd[t].ch].pos, [0.0, 1.25, 0.0]); }
@@ -903,7 +903,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
 }
 
 /// What is said when 2 flips the launcher's load.   (player.ts:544)
-fn load_flip_line(g: &mut Game, rifle: FirearmId, a: Option<crate::weapons::RifleAttachment>) -> String {
+fn load_flip_line(g: &Game, rifle: FirearmId, a: Option<crate::weapons::RifleAttachment>) -> String {
     use crate::weapons::RifleAttachment;
     match a {
         Some(RifleAttachment::Ring) => {
@@ -925,7 +925,7 @@ fn load_flip_line(g: &mut Game, rifle: FirearmId, a: Option<crate::weapons::Rifl
 }
 
 /// The launcher's dry click, and why: nothing left of this load, or the tube still closing.   (player.ts:763)
-fn launcher_dry_line(g: &mut Game, rifle: FirearmId, load: crate::weapons::RifleAttachment) -> String {
+fn launcher_dry_line(g: &Game, rifle: FirearmId, load: crate::weapons::RifleAttachment) -> String {
     use crate::weapons::RifleAttachment;
     match load {
         RifleAttachment::Cam => String::from(if g.fa[rifle].cams > 0.0 { "loading the launcher…" } else { "no sticky cameras left" }),

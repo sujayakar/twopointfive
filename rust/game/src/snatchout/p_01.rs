@@ -14,7 +14,7 @@ pub fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 pub fn who(g: &mut crate::game::Game) -> PlayerId { g.player }
 
 /// Nothing led, nobody planted: the field initialisers; the constructor only keeps `g` and `S`. (snatchout.ts SnatchOut.constructor)
-pub fn snatch_out_new(g: &mut crate::game::Game) -> crate::snatchout::SnatchOut { SnatchOut::blank() }
+pub fn snatch_out_new(g: &crate::game::Game) -> crate::snatchout::SnatchOut { SnatchOut::blank() }
 
 /// A fresh staging: nobody led, nobody planted. (snatchout.ts SnatchOut.reset)
 pub fn snatch_out_reset(g: &mut crate::game::Game) {
@@ -34,27 +34,27 @@ pub fn snatch_out_reset(g: &mut crate::game::Game) {
 }
 
 /// The spot at the van's open doors (None: this level's block names no van). (snatchout.ts SnatchOut.van)
-pub fn snatch_out_van(g: &mut crate::game::Game) -> Option<V3> {
+pub fn snatch_out_van(g: &crate::game::Game) -> Option<V3> {
     crate::snatch::snatch_block(g).and_then(|n| n.van).map(|v| v.pos)
 }
 
 /// This level's snatch ends in the van. (snatchout.ts SnatchOut.on)
-pub fn snatch_out_on(g: &mut crate::game::Game) -> bool { snatch_out_van(g).is_some() }
+pub fn snatch_out_on(g: &crate::game::Game) -> bool { snatch_out_van(g).is_some() }
 
 /// ...and it is running. (snatchout.ts SnatchOut.ruled)
-pub fn snatch_out_ruled(g: &mut crate::game::Game) -> bool {
+pub fn snatch_out_ruled(g: &crate::game::Game) -> bool {
     snatch_out_van(g).is_some() && crate::snatch::snatch_active(g)
 }
 
 /// He can be given the word: tied, on his feet or down, in nobody's arm. (snatchout.ts SnatchOut.free)
-pub fn snatch_out_free(g: &mut crate::game::Game) -> bool {
+pub fn snatch_out_free(g: &crate::game::Game) -> bool {
     if !snatch_out_ruled(g) { return false; }
     let Some(gd) = g.snatch.man else { return false; };
     g.snatch.end.is_none() && g.snatch.tied && g.gd[gd].state != crate::game::GuardState::Dead && g.gd[gd].held.is_none()
 }
 
 /// The civilians' own rows on him stand down once the word can be given. (snatchout.ts SnatchOut.owns)
-pub fn snatch_out_owns(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn snatch_out_owns(g: &crate::game::Game, gd: GuardId) -> bool {
     g.snatch.man == Some(gd) && snatch_out_free(g)
 }
 
@@ -161,7 +161,7 @@ pub fn snatch_out_downed(g: &mut crate::game::Game, c_2: CharId) -> bool {
 }
 
 /// The debugger panel's switch thrown mid-run: SNATCHOUT.on is settled on, so its first line always returned. (snatchout.ts SnatchOut.switched)
-pub fn snatch_out_switched(g: &mut crate::game::Game) {}
+pub fn snatch_out_switched(g: &crate::game::Game) {}
 
 /// He is in the van: the mission is won. (snatchout.ts SnatchOut.into)
 pub fn snatch_out_into(g: &mut crate::game::Game, walked: bool) {
@@ -179,7 +179,7 @@ pub fn snatch_out_into(g: &mut crate::game::Game, walked: bool) {
 }
 
 /// (snatchout.ts SnatchOut.fighting)
-pub fn snatch_out_fighting(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn snatch_out_fighting(g: &crate::game::Game, gd: GuardId) -> bool {
     (g.gd[gd].script.is_none() && g.gd[gd].state == crate::game::GuardState::Alert) || crate::roomfight::room_fight_engaged(g, gd)
 }
 
@@ -484,7 +484,7 @@ pub fn snatch_out_rows_2(g: &mut crate::game::Game, p: V3, busy: bool, row: &mut
 }
 
 /// `ok` in spot: free floor, in no doorway or gap, off his way out, on no mate's spot.
-fn spot_ok(g: &mut Game, q: V3, route: &[V3], taken: &[V3], open: &[CoverOpeningId]) -> bool {
+fn spot_ok(g: &Game, q: V3, route: &[V3], taken: &[V3], open: &[CoverOpeningId]) -> bool {
     if crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) { return false; }
     let off_m = g.k.snatchout.off_m;
     let in_opening = open.iter().any(|o| {
@@ -534,7 +534,7 @@ fn far(g: &Game, men: &[GuardId], van: V3) -> f64 {
 fn held(g: &Game, men: &[GuardId]) -> bool { men.iter().any(|x| g.snatch.out.jobs.has(*x)) }
 
 /// `m.some(x => this.fighting(x))` in bound.
-fn any_fighting(g: &mut Game, men: &[GuardId]) -> bool {
+fn any_fighting(g: &Game, men: &[GuardId]) -> bool {
     for &gd in men {
         if snatch_out_fighting(g, gd) { return true; }
     }

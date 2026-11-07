@@ -102,7 +102,7 @@ pub fn cleared_rooms_build(g: &mut crate::game::Game) {
 }
 
 /// What `dearFor`'s price list answers for a cell. The room map and what is known are read live, as the closure's shared arrays were.   (cleared.ts:102)
-pub fn dear_price(g: &mut crate::game::Game, price: &crate::cleared::DearPrice, ix: f64, iz: f64) -> f64 {
+pub fn dear_price(g: &crate::game::Game, price: &crate::cleared::DearPrice, ix: f64, iz: f64) -> f64 {
     let crate::cleared::DearPrice::Rooms { dear, from_room, mark_rooms, also } = price;
     let i = crate::scene_collision::nav_grid_idx(g, ix, iz);
     match cell_at(grid(g), i) {
@@ -112,7 +112,7 @@ pub fn dear_price(g: &mut crate::game::Game, price: &crate::cleared::DearPrice, 
 }
 
 /// A new one: the field initialisers, nothing more.   (cleared.ts ClearedRooms.constructor)
-pub fn cleared_rooms_new(g: &mut crate::game::Game) -> crate::cleared::ClearedRooms {
+pub fn cleared_rooms_new(g: &crate::game::Game) -> crate::cleared::ClearedRooms {
     crate::cleared::ClearedRooms::blank()
 }
 
@@ -180,7 +180,7 @@ pub fn cleared_rooms_rooms_of(g: &mut crate::game::Game, p: V3) -> Vec<f64> {
 }
 
 /// Has the team been in this room (no room: yes).   (cleared.ts ClearedRooms.isKnown)
-pub fn cleared_rooms_is_known(g: &mut crate::game::Game, room: f64) -> bool {
+pub fn cleared_rooms_is_known(g: &crate::game::Game, room: f64) -> bool {
     !js::truthy(room) || known_flag(g, room)
 }
 

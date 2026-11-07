@@ -74,12 +74,12 @@ pub fn wall_react_new(g: &mut Game) -> WallReact {
 }
 
 /// (wallreact.ts WallReact.live)
-pub fn wall_react_live(g: &mut Game) -> bool {
+pub fn wall_react_live(g: &Game) -> bool {
     g.m.wallreact.wall_react.unsub && g.ai_enabled && !g.quiet_utility && !g.touring
 }
 
 /// (wallreact.ts WallReact.defOf)
-pub fn wall_react_def_of(g: &mut Game, gd: GuardId) -> Option<RoomfightDefId> {
+pub fn wall_react_def_of(g: &Game, gd: GuardId) -> Option<RoomfightDefId> {
     g.fight.defs.iter().copied().find(|d| g.tab.roomfight_def[*d].gd == gd)
 }
 
@@ -158,7 +158,7 @@ pub fn wall_react_tick(g: &mut Game) {
 // ================================================================ the feed
 
 /// (wallreact.ts:208 own) the man whose aimed fire opened it: it is not his cover that went
-fn take_own(g: &mut Game, gd: GuardId, row: &crate::wallbreak::LevelChange) -> bool {
+fn take_own(g: &Game, gd: GuardId, row: &crate::wallbreak::LevelChange) -> bool {
     row.cause == crate::wallbreak::LevelChangeCause::Fire && char_id(g, gd) == row.who && crate::coverfire::coverfire_on(g, gd).is_some()
 }
 
@@ -215,7 +215,7 @@ pub fn wall_react_take(g: &mut Game, row: &crate::wallbreak::LevelChange) {
 }
 
 /// what a question keeps behind its newest: past goneMax - 1 the furthest is let go, the oldest of two as far   (wallreact.ts WallReact.kept)
-pub fn wall_react_kept(g: &mut Game, at: V3, list: &mut Vec<Gone>) -> Vec<Gone> {
+pub fn wall_react_kept(g: &Game, at: V3, list: &mut Vec<Gone>) -> Vec<Gone> {
     let n = g.k.wallreact.gone_max - 1.0;
     if n <= 0.0 { return Vec::new(); }
     while list.len() as f64 > n {
@@ -278,7 +278,7 @@ fn cause_of(c: crate::wallbreak::LevelChangeCause) -> BreachCause {
 }
 
 /// `W.box`: its centre, half sizes and yaw (wallreact.ts:239-240). The body is one read of the box's row, once a table holds the rows.
-fn seam_box(g: &mut Game, b: BoxId) -> (V3, V3, f64) { let x = &g.tab.boxes[b]; (x.c, x.h, x.yaw) }
+fn seam_box(g: &Game, b: BoxId) -> (V3, V3, f64) { let x = &g.tab.boxes[b]; (x.c, x.h, x.yaw) }
 
 /// the breach a wall's row belongs to: a new one, or the one on that wall it widens   (wallreact.ts WallReact.upsert)
 pub fn wall_react_upsert(g: &mut Game, row: &crate::wallbreak::LevelChange) -> Option<WallreactBreachId> {
@@ -531,13 +531,13 @@ pub fn wall_react_reflood(g: &mut Game, opened: &[f64]) {
 // ================================================================ (b) noticing
 
 /// (wallreact.ts WallReact.head)
-pub fn wall_react_head(g: &mut Game, gd: WallReactHeadGd) -> V3 {
+pub fn wall_react_head(g: &Game, gd: WallReactHeadGd) -> V3 {
     let p = match gd { WallReactHeadGd::Sam => player_pos(g), WallReactHeadGd::Guard(gd) => pos_of(g, gd) };
     [p[0], EYE, p[2]]
 }
 
 /// (wallreact.ts WallReact.faceOf)
-pub fn wall_react_face_of(g: &mut Game, b: WallreactBreachId, from: V3, y: Option<f64>) -> V3 {
+pub fn wall_react_face_of(g: &Game, b: WallreactBreachId, from: V3, y: Option<f64>) -> V3 {
     let y = y.unwrap_or(1.3);
     let r = &g.tab.wallreact_breach[b];
     let s = if (from[0] - r.at[0]) * r.n[0] + (from[2] - r.at[2]) * r.n[1] >= 0.0 { 1.0 } else { -1.0 };
@@ -774,7 +774,7 @@ pub fn wall_react_evidence(g: &mut Game, dt: f64) {
 }
 
 /// does the plan line p → q go through the breach   (wallreact.ts WallReact.through)
-pub fn wall_react_through(g: &mut Game, b: WallreactBreachId, p: V3, q: V3) -> bool {
+pub fn wall_react_through(g: &Game, b: WallreactBreachId, p: V3, q: V3) -> bool {
     let r = &g.tab.wallreact_breach[b];
     let sp = (p[0] - r.at[0]) * r.n[0] + (p[2] - r.at[2]) * r.n[1];
     let sq = (q[0] - r.at[0]) * r.n[0] + (q[2] - r.at[2]) * r.n[1];
@@ -846,7 +846,7 @@ pub fn wall_react_posts(g: &mut Game) -> Vec<WallReactPostsItem> {
 }
 
 /// (wallreact.ts WallReact.charOf)
-pub fn wall_react_char_of(g: &mut Game, id_2: f64) -> Option<WallReactCharOf> {
+pub fn wall_react_char_of(g: &Game, id_2: f64) -> Option<WallReactCharOf> {
     if let Some(pl) = crate::seats::man_by_id(g, id_2) {
         if g.pl[pl].down { return None; }
         return Some(WallReactCharOf { pos: g.ch[g.pl[pl].ch].pos, team: crate::teams::Team::Player });
@@ -874,7 +874,7 @@ pub fn wall_react_threat_for(g: &mut Game, gd: GuardId, x: Gone, at: V3) -> Opti
 }
 
 /// what a question is about, in the order it is asked   (wallreact.ts WallReact.things)
-pub fn wall_react_things(g: &mut Game, p: &Pend) -> Vec<Gone> {
+pub fn wall_react_things(g: &Game, p: &Pend) -> Vec<Gone> {
     let mut out = vec![Gone { rect: p.rect, b: p.b, who: p.who }];
     if let Some(also) = &p.also { out.extend(also.iter().copied()); }
     out
@@ -936,7 +936,7 @@ fn walk_len(from: V3, path: &[V3]) -> (f64, V3) {
 }
 
 /// `dc.has(nav.idx(floor(x / cell), floor(z / cell)))`, or a blocked cell: no floor   (wallreact.ts:481, 523)
-fn no_floor(g: &mut Game, dc: &JsMap<crate::Num, DoorId>, p: V3) -> bool {
+fn no_floor(g: &Game, dc: &JsMap<crate::Num, DoorId>, p: V3) -> bool {
     if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) { return true; }
     let cell = g.col.nav.cell;
     let i = crate::scene_collision::nav_grid_idx(g, m::floor(p[0] / cell), m::floor(p[2] / cell));
@@ -1027,7 +1027,7 @@ pub fn wall_react_open_through(g: &mut Game, b: WallreactBreachId, p: V3, h: f64
 }
 
 /// the breaches a man knows of (his side's book for a teammate)   (wallreact.ts WallReact.known)
-pub fn wall_react_known(g: &mut Game, gd: GuardId) -> Vec<WallreactBreachId> {
+pub fn wall_react_known(g: &Game, gd: GuardId) -> Vec<WallreactBreachId> {
     let op = is_op(g, gd);
     breaches_of(g).into_iter().filter(|b| {
         let r = &g.tab.wallreact_breach[*b];

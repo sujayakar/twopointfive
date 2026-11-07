@@ -14,7 +14,7 @@ fn num_key(x: f64) -> crate::Num { crate::Num(x + 0.0) }
 pub fn clamp(x: f64, a: f64, b: f64) -> f64 { m::max(a, m::min(b, x)) }
 
 /// The panel's rows kept in the browser's storage: host work, nothing of the game moves. pairup.ts:85 calls it, so it answers rather than panics. (sneak.ts saveSneak)
-pub fn save_sneak(g: &mut crate::game::Game) {}
+pub fn save_sneak(g: &crate::game::Game) {}
 
 /// Was this leaf seen to move inside the settle time? Read at the plan's rate, for the doors Sam is at. (sneak.ts leafMoved)
 pub fn leaf_moved(g: &mut crate::game::Game, d: DoorId) -> bool {
@@ -75,7 +75,7 @@ fn sneak_live_now(g: &mut Game) -> bool {
 }
 
 /// (sneak.ts mate)
-pub fn mate(g: &mut crate::game::Game, gd: GuardId) -> bool { g.gd[gd].team == crate::teams::Team::Operative && g.gd[gd].unit.is_some() }
+pub fn mate(g: &crate::game::Game, gd: GuardId) -> bool { g.gd[gd].team == crate::teams::Team::Operative && g.gd[gd].unit.is_some() }
 
 /// This teammate is under the sneak this frame. (sneak.ts sneaking)
 pub fn sneaking(g: &mut crate::game::Game, gd: GuardId) -> bool { g.k.sneak.on && mate(g, gd) && sneak_live(g) }
@@ -153,7 +153,7 @@ pub fn sneak_word(g: &mut crate::game::Game, gd: GuardId) -> Option<String> {
 }
 
 /// The defenders whose eyes matter to this man: alive, his enemies, inside an eye's reach of him, not dazzled, not asleep. (sneak.ts eyesFor)
-pub fn eyes_for(g: &mut crate::game::Game, gd: GuardId) -> Vec<GuardId> {
+pub fn eyes_for(g: &crate::game::Game, gd: GuardId) -> Vec<GuardId> {
     let mut out = Vec::new();
     let c = g.gd[gd].ch;
     let p = g.ch[c].pos;
@@ -198,7 +198,7 @@ pub fn lit_at(g: &mut crate::game::Game, c_2: &mut crate::sneak::Crumb, low: boo
 }
 
 /// A defender's eye exactly as guards.ts canSeeChar builds it, its cones `wide` degrees wider. (sneak.ts eyeFor)
-pub fn eye_for(g: &mut crate::game::Game, h: GuardId, wide: f64) -> crate::guards::Eye {
+pub fn eye_for(g: &crate::game::Game, h: GuardId, wide: f64) -> crate::guards::Eye {
     let c = g.gd[h].ch;
     let pos = match g.ch[c].bones.get(crate::character::Bone::Head) { Some(&b) => b, None => v3::add(g.ch[c].pos, [0.0, 1.65, 0.0]) };
     let chest_dir = g.ch[c].chest_dir;
@@ -273,7 +273,7 @@ pub fn exposure_of(g: &mut crate::game::Game, eyes: &[GuardId], gd: GuardId) -> 
 }
 
 /// The eye's rate on a man on a step: guards.ts sightGainOn's arithmetic. (sneak.ts eyeRate)
-pub fn eye_rate(g: &mut crate::game::Game, h: GuardId, lit: f64, dist: f64, keen: f64, low: Option<bool>) -> f64 {
+pub fn eye_rate(g: &crate::game::Game, h: GuardId, lit: f64, dist: f64, keen: f64, low: Option<bool>) -> f64 {
     let low = low.unwrap_or(true);
     let mut rate = g.tune.detect_rate * m::pow(lit, 1.5) * clamp(1.0 - (dist - 3.0) / 13.0, 0.2, 1.0) * (if low { 0.75 } else { 1.0 }) * keen;
     if dist < 1.8 { rate = m::max(rate, 3.5); }
@@ -282,7 +282,7 @@ pub fn eye_rate(g: &mut crate::game::Game, h: GuardId, lit: f64, dist: f64, keen
 }
 
 /// Does this eye gain on a man on a spot this lit, this far off. (sneak.ts eyeGains)
-pub fn eye_gains(g: &mut crate::game::Game, h: GuardId, lit: f64, dist: f64, keen: f64, low: bool, card: Option<f64>, pad: Option<f64>) -> bool {
+pub fn eye_gains(g: &crate::game::Game, h: GuardId, lit: f64, dist: f64, keen: f64, low: bool, card: Option<f64>, pad: Option<f64>) -> bool {
     let card = card.unwrap_or(1.0);
     let pad = pad.unwrap_or(0.0);
     eye_rate(g, h, m::min(1.0, lit + pad), dist, keen, Some(low)) * card > g.k.sneak.seen_rate

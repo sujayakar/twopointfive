@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 /// Would this player's gun (the one in his hands) start its reload by itself this frame? (autoreload.ts autoReloadDue)
-pub fn auto_reload_due(g: &mut crate::game::Game, pl: PlayerId, gun: FirearmId) -> bool {
+pub fn auto_reload_due(g: &crate::game::Game, pl: PlayerId, gun: FirearmId) -> bool {
     if g.touring || g.puppet.is_some() || g.pl[pl].equip_t > 0.0 || g.pl[pl].dragging.is_some() { return false; }
     // The chamber, not the rounds: a full magazine under an empty chamber cannot fire.
     if g.fa[gun].chamber != 0.0 || crate::weapons::firearm_reloading(g, gun) || (g.fa[gun].spare.is_empty() && !(g.fa[gun].mag.unwrap_or(0.0) > 0.0)) || (g.fa[gun].infinite && g.fa[gun].mag.is_some()) { return false; }
@@ -17,6 +17,6 @@ pub fn auto_reload_due(g: &mut crate::game::Game, pl: PlayerId, gun: FirearmId) 
 }
 
 /// The words for a gun just gone dry: the reload is coming, so R is not asked for. (autoreload.ts autoReloads)
-pub fn auto_reloads(g: &mut crate::game::Game, gun: FirearmId) -> bool {
+pub fn auto_reloads(g: &crate::game::Game, gun: FirearmId) -> bool {
     !g.touring && !g.puppet.is_some() && !g.fa[gun].spare.is_empty()
 }

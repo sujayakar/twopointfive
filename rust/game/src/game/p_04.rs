@@ -29,7 +29,7 @@ pub fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Option<crate::game::
     g.tune.wind = g.k.wind.def;   // (loadWind's first line; the rest of it is storage and it left the game)
     crate::glass::load_glass_fx(g);
     let mut gb = crate::glassbreak::GbTune { glass_break: Some(g.tune.glass_break) };   // (lent and written back: `tune` is this.tune)
-    crate::glassbreak::load_glass_break(g, &mut gb);
+    crate::glassbreak::load_glass_break(g, &gb);
     if let Some(on) = gb.glass_break { g.tune.glass_break = on; }
     crate::particle_fx::load_dust(g);
     crate::devices::load_device_tune(g);

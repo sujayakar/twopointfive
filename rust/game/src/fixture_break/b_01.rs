@@ -29,7 +29,7 @@ pub fn h01(x: f64) -> f64 {
 fn static_box(g: &Game, t: FixtureId) -> Option<BoxId> { let i = *g.tab.sim_lightshome_fixture[t].boxes.first()?; g.engine.world.statics.get(i as usize).copied() }
 
 /// 1 = a ceiling panel (the full look), 2 = a lamp with a light of its own (sparks only), 0 = not this lane's. (src/game/fixtureBreak.ts:68 kindOf)
-pub fn kind_of(g: &mut crate::game::Game, t: FixtureId) -> f64 {
+pub fn kind_of(g: &crate::game::Game, t: FixtureId) -> f64 {
     use crate::sim_lightshome::FixtureKind as K;
     let (interactive, kind, light, n_boxes) = { let f = &g.tab.sim_lightshome_fixture[t]; (f.interactive, f.kind, f.light, f.boxes.len()) };
     if !interactive { return 0.0; }
@@ -69,7 +69,7 @@ pub fn rest_on(g: &mut crate::game::Game, x: f64, z: f64, ux: f64, uz: f64, l: f
 }
 
 /// Where the blast or the round that just killed it came from, if this frame's events say. (src/game/fixtureBreak.ts:98 causeOf)
-pub fn cause_of(g: &mut crate::game::Game, at: V3) -> Option<V3> {
+pub fn cause_of(g: &crate::game::Game, at: V3) -> Option<V3> {
     use crate::director::EventKind as E;
     let n = g.events.len(); let (mut best, mut bd): (Option<V3>, f64) = (None, 12.0);
     let mut i = n as i64 - 1;
@@ -195,7 +195,7 @@ pub fn land(r: &mut crate::fixture_break::Rec, s: f64) {
 
 /// The arc at the torn lead `a` seconds after the light died: 0‥1, and whether a pop or a spit STARTS inside this frame (→ sparks).
 /// (src/game/fixtureBreak.ts:185 glowAt)
-pub fn glow_at(g: &mut crate::game::Game, r: &mut crate::fixture_break::Rec, a: f64, out: &mut crate::fixture_break::GlowAtOut) -> f64 {
+pub fn glow_at(g: &crate::game::Game, r: &mut crate::fixture_break::Rec, a: f64, out: &mut crate::fixture_break::GlowAtOut) -> f64 {
     let f = g.m.fixture_break.fixlook.clone(); let mut gl = 0.0; out.sparks = 0.0;
     for k in 0..f.pops.len() {
         let tk = f.pops[k] * (0.85 + 0.3 * h01(r.seed + 11.0 * k as f64 + 5.0)); if a < tk { break; }

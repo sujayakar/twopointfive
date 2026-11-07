@@ -14,7 +14,7 @@ pub fn fits(g: &mut crate::game::Game) -> bool {
 }
 
 /// The flame's own middle `up` metres over its mouth: how far downwind (x, z) and its slope there.   (fire.ts axisAt)
-pub fn axis_at(g: &mut crate::game::Game, up: f64, wind: [f64; 2]) -> [f64; 4] {
+pub fn axis_at(g: &crate::game::Game, up: f64, wind: [f64; 2]) -> [f64; 4] {
     axis_with(&g.k.fire, up, wind)
 }
 fn axis_with(k: &crate::knobs::FireK, up: f64, wind: [f64; 2]) -> [f64; 4] {
@@ -38,7 +38,7 @@ pub fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::fire::FireSt
 }
 
 /// The counts to read now and not to keep: a game the fire has not run in gets a blank row, and none is made for it.   (fire.ts fireStats)
-pub fn fire_stats(g: &mut crate::game::Game) -> crate::fire::FireStats {
+pub fn fire_stats(g: &crate::game::Game) -> crate::fire::FireStats {
     match g.m.fire.states {
         Some(s) => s,
         None => fresh(),
@@ -55,7 +55,7 @@ pub fn h01(x: f64) -> f64 {
 }
 
 /// Is this light target an open fire, by its name.   (fire.ts isFire)
-pub fn is_fire(g: &mut crate::game::Game, t: FixtureId) -> bool {
+pub fn is_fire(g: &crate::game::Game, t: FixtureId) -> bool {
     let row = &g.tab.sim_lightshome_fixture[t];
     if row.kind != crate::sim_lightshome::FixtureKind::Analytic || row.light.is_none() {
         return false;
@@ -69,7 +69,7 @@ pub fn is_fire(g: &mut crate::game::Game, t: FixtureId) -> bool {
 }
 
 /// A fire's own seed, 0 to 1, off where it stands.   (fire.ts fireSeed)
-pub fn fire_seed(g: &mut crate::game::Game, t: FixtureId) -> f64 {
+pub fn fire_seed(g: &crate::game::Game, t: FixtureId) -> f64 {
     let p = g.tab.sim_lightshome_fixture[t].pos;
     seed_at(p)
 }
@@ -78,7 +78,7 @@ fn seed_at(p: V3) -> f64 {
 }
 
 /// The cracks of the wood near `time`, the latest first, none older than `back` s.   (fire.ts firePops)
-pub fn fire_pops(g: &mut crate::game::Game, seed: f64, time: f64, back: f64) -> Vec<crate::fire::FirePopsItem> {
+pub fn fire_pops(g: &crate::game::Game, seed: f64, time: f64, back: f64) -> Vec<crate::fire::FirePopsItem> {
     pops_with(&g.k.fire, seed, time, back)
 }
 fn pops_with(fk: &crate::knobs::FireK, seed: f64, time: f64, back: f64) -> Vec<crate::fire::FirePopsItem> {
@@ -108,7 +108,7 @@ fn pops_with(fk: &crate::knobs::FireK, seed: f64, time: f64, back: f64) -> Vec<c
 }
 
 /// The light's flicker at `time`: what the authored strength is multiplied by.   (fire.ts fireFlicker)
-pub fn fire_flicker(g: &mut crate::game::Game, seed: f64, time: f64) -> f64 {
+pub fn fire_flicker(g: &crate::game::Game, seed: f64, time: f64) -> f64 {
     flicker_with(&g.k.fire, seed, time)
 }
 fn flicker_with(fk: &crate::knobs::FireK, seed: f64, time: f64) -> f64 {
@@ -133,7 +133,7 @@ fn flicker_with(fk: &crate::knobs::FireK, seed: f64, time: f64) -> f64 {
 }
 
 /// `statics[ix]`: none past the list's end, as an array read gives undefined there.
-fn static_at(g: &mut Game, ix: f64) -> Option<BoxId> {
+fn static_at(g: &Game, ix: f64) -> Option<BoxId> {
     if !(ix >= 0.0) || m::floor(ix) != ix {
         return None;
     }
@@ -180,7 +180,7 @@ pub fn wind_at(g: &mut crate::game::Game, mouth: V3) -> crate::fire::WindAt {
 }
 
 /// Whether a round or a blast leaves `t` burning: to the fixture rules such a fire is no fixture at all.   (fire.ts fireHolds)
-pub fn fire_holds(g: &mut crate::game::Game, t: FixtureId) -> bool {
+pub fn fire_holds(g: &crate::game::Game, t: FixtureId) -> bool {
     is_fire(g, t)
 }
 
@@ -448,7 +448,7 @@ mod tests_need_box_rows {
     fn the_mouth_is_the_lid_of_its_box() {
         let (mut g, t) = stand();
         let mouth = g.k.fire.mouth;
-        let a = mouth_of(&mut g, t);
+        let a = mouth_of(&g, t);
         assert_eq!((a.pos, a.r, a.lid), ([1.0, 2.0 + 0.1, 3.0], 0.25 * mouth, 0.25));
     }
 
@@ -459,10 +459,10 @@ mod tests_need_box_rows {
         drum.c = [1.0, 1.0, 3.0];
         let id = g.tab.boxes.push(drum);
         g.engine.world.statics.push(id);
-        assert!(fire_struck(&mut g, t, [1.2, 1.5, 3.0], 1.0));
-        assert!(!fire_struck(&mut g, t, [1.0, 2.2, 3.0], 1.0)); // above the mouth
-        assert!(!fire_struck(&mut g, t, [1.5, 1.5, 3.0], 1.0)); // outside the wall
+        assert!(fire_struck(&g, t, [1.2, 1.5, 3.0], 1.0));
+        assert!(!fire_struck(&g, t, [1.0, 2.2, 3.0], 1.0)); // above the mouth
+        assert!(!fire_struck(&g, t, [1.5, 1.5, 3.0], 1.0)); // outside the wall
         g.tab.boxes[id].c = [2.0, 1.0, 3.0];
-        assert!(!fire_struck(&mut g, t, [1.2, 1.5, 3.0], 1.0)); // off the axis
+        assert!(!fire_struck(&g, t, [1.2, 1.5, 3.0], 1.0)); // off the axis
     }
 }

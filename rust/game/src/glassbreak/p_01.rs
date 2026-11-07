@@ -8,9 +8,9 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// the switch + knobs kept per machine: with no storage the defaults stand. The storage is the host's (glassbreak.ts loadGlassBreak)
-pub fn load_glass_break(g: &mut crate::game::Game, tune: &mut crate::glassbreak::GbTune) {}
+pub fn load_glass_break(g: &crate::game::Game, tune: &crate::glassbreak::GbTune) {}
 /// the one gate every entry point takes first (glassbreak.ts glassBreakLive). GLASSFX.on is settled on.
-pub fn glass_break_live(g: &mut crate::game::Game) -> bool {
+pub fn glass_break_live(g: &crate::game::Game) -> bool {
     g.tune.glass_break && crate::destruction::chaos_of(g) > 0.0 && g.engine.glass_fracture != Some(false)
 }
 
