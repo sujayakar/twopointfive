@@ -63,7 +63,7 @@
 //     sdfrig: sdfrig-fit sdfrig-pack
 //     cast: cast-loader cast-file cast-fit cast-game cast-look cast-beam   (the look switch: both files, OFF = today's masks, one digest under either look;  a statured man's laser leaves his drawn muzzle;  the operators' and defenders' meshes: the loader's contract, the shipped file, each variant's proxy fit, the game on it)
 //     selector: selector-input selector-noise selector-rows selector-sustained
-//     selftest: selftest-fail selftest-fold selftest-holds selftest-knobs selftest-pass selftest-quiet selftest-side selftest-throw   (selftest-fold and selftest-side by their own names only)
+//     selftest: selftest-fail selftest-fold selftest-holds selftest-pass selftest-quiet selftest-side selftest-throw   (selftest-fold and selftest-side by their own names only)
 //     snap: snap-bites snap-page   (+ snap-open, by its own name only: red today)
 //     standoff: standoff-discipline standoff-door standoff-end standoff-ff standoff-flank standoff-lost standoff-see standoff-tour
 //     tactics: tactics-decay tactics-door tactics-flank tactics-lone tactics-rounds tactics-single
@@ -93,7 +93,6 @@ const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { killGuard, dropFromHand, hitPlayer } = await import(`${ROOT}/src/game/combat.ts`);
 const { bodyPos, resetChase } = await import(`${ROOT}/src/game/guards.ts`);
 const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
-const { knobTables } = await import(`${ROOT}/src/game/journal.ts`);   // what a recording carries of the knob tables (the journal probes read it)
 const { cutConfig: CUT_SWITCH } = await import(`${ROOT}/src/scene/cut.ts`);   // the cut-pieces switch is a module global like the destruction switch: put back round every probe the same (a probe that raised it and threw, or replayed a file recorded with it on, must not hand it to the next)
 if (process.env.CUT_BOXES === '1') CUT_SWITCH.on = true;   // the cut-pieces switch (scene/cut.ts) for a whole run: `CUT_BOXES=1 bun run tools/qa/probes.ts destruction` = that family with cut pieces on (a probe that needs it raises it itself)
 
@@ -121,6 +120,36 @@ function foldOnlyErrors(): string[] {
   return [...FOLD_ONLY].filter(n => !FOLD_MET.has(n)).map(n => `QA_FOLD_ONLY names ${n}, and no probe of this run has that name (a probe's own name, not a family's): nothing was folded for it`);
 }
 const FAILED: string[] = []; let RAN = 0, CHECKED = 0; const RAN_NAMES: string[] = [], RAN_CHECKED = new Set<string>();
+// ---- EVERY PROBE RUNS IN A PROCESS OF ITS OWN. Asked for a probe by its own name, the runner runs it here. Asked for a family ('all' and 'all-quick' too),
+// it runs none itself: each probe the family's lines reach is started as a child (`probes.ts <the same word>` with QA_PROBE_CHILD=<the probe>, which runs
+// that probe alone), QA_JOBS at a time (default: the machine's cores), and each child's output is printed whole, in the order of the lines below. So a
+// probe reads the same alone, in its family and whatever ran before it: nothing ran before it. (It also begins on die 1, holds.ts asProbe, so it reads
+// the same on every run.) Until 2026-11-07 a family was one process, a fence of copied knob tables stood between two probes, and the kit family's
+// answers hung on the order of the run all the same. QA_PROBE_CAP=<seconds> (default 600) stops a probe that runs longer: it is red, and said so.
+const CHILD: string | null = process.env.QA_PROBE_CHILD || null; delete process.env.QA_PROBE_CHILD;   // (not handed on: a probe that starts a runner of its own starts a whole one)
+const QUEUE: string[] = [], CHILD_TAG = new Map<string, string>(), SECS = new Map<string, number>();
+const RESULT_MARK = '@@probe ';
+const envNum = (k: string, d: number): number => { const v = process.env[k]; if (v === undefined || v === '') return d; if (!/^\d+$/.test(v) || +v < 1) throw new Error(`${k}=${v}: want a whole number of 1 or more`); return +v; };
+async function runChild(name: string, cap: number): Promise<{ name: string; ok: boolean; checked: boolean; tag: string; secs: number; out: string }> {
+  // (the fold's log is one runner's: a child handed the parent's would say nothing of its own refused writes — tools/qa/fold.ts foldSpeaker)
+  const env: Record<string, string | undefined> = { ...process.env, QA_PROBE_CHILD: name }; delete env.QA_FOLD_LOG; delete env.QA_FOLD_LOG_OWNER;
+  const t0 = performance.now(), c = Bun.spawn([process.execPath, ...process.execArgv, import.meta.path, ...process.argv.slice(2)], { stdout: 'pipe', stderr: 'pipe', env });   // (as this process was started: its preloads are the child's too)
+  let capped = false; const timer = setTimeout(() => { capped = true; c.kill(9); }, cap * 1000);
+  const [out, err] = await Promise.all([new Response(c.stdout).text(), new Response(c.stderr).text()]); const code = await c.exited; clearTimeout(timer);
+  const lines = (out + err).split('\n'), at = lines.findLastIndex(l => l.startsWith(RESULT_MARK));
+  let r: { ok: boolean; checked: boolean; tag: string } | null = null; if (at >= 0) { try { r = JSON.parse(lines[at].slice(RESULT_MARK.length)); } catch { /* said below */ } lines.splice(at, 1); }
+  let text = lines.join('\n').replace(/\n+$/, '');
+  if (capped) text += `\n- FAIL — ${name}: stopped at the cap of ${cap} s (QA_PROBE_CAP): a probe that long is cut down or split, not waited for`;
+  else if (!r) text += `\n- FAIL — ${name}: its process ended (exit ${code}) without a result: it crashed or was killed`;
+  return { name, ok: !capped && !!r && r.ok && code === 0, checked: capped || !r || r.checked, tag: capped ? ` [OVER THE CAP: ${cap} s]` : r?.tag ?? '', secs: (performance.now() - t0) / 1000, out: text };
+}
+async function runQueue(): Promise<void> {
+  const jobs = Math.min(QUEUE.length, envNum('QA_JOBS', Math.max(1, (await import('node:os')).cpus().length))), cap = envNum('QA_PROBE_CAP', 600);
+  const done: Awaited<ReturnType<typeof runChild>>[] = new Array(QUEUE.length); let next = 0, said = 0;
+  const say = () => { while (said < QUEUE.length && done[said]) { const d = done[said++]; rawLog(`\n# ${d.name} · ${d.secs.toFixed(1)} s${d.ok ? '' : ' · RED'}`); if (d.out) rawLog(d.out);
+    RAN++; RAN_NAMES.push(d.name); SECS.set(d.name, d.secs); if (d.checked) { CHECKED++; RAN_CHECKED.add(d.name); } if (!d.ok && !FAILED.includes(d.name)) FAILED.push(d.name); if (d.tag) CHILD_TAG.set(d.name, d.tag); } };
+  await Promise.all(Array.from({ length: jobs }, async () => { for (;;) { const i = next++; if (i >= QUEUE.length) return; done[i] = await runChild(QUEUE[i], cap); say(); } }));
+}
 /** The dispatch condition: registers `names` as known and says whether this invocation (`which`) is one of them. List 'all' explicitly where 'all' should run it; 'all-quick' follows QUICK. */
 function on(...names: string[]): boolean { for (const n of names) KNOWN.add(n); return names.includes(which) || (which === 'all-quick' && names.some(n => QUICK.has(n))); }
 /** The FAIL / PASS line shapes the probe files print (and gate.sh counts): a family banner with FAIL in it, a '- FAIL —' case line, a two-space '  FAIL …' check
@@ -145,7 +174,7 @@ function scan(args: unknown[]): string[] { const s = args.map(a => typeof a === 
   }
   return said; }
 /** the tag a red probe's row of the closing table carries, '' where it has none */
-function sideTag(n: string): string { const s = SIDES.get(n); if (!s) return '';
+function sideTag(n: string): string { const t = CHILD_TAG.get(n); if (t !== undefined) return t; const s = SIDES.get(n); if (!s) return '';
   const rows = [...s.rows.keys()], named = `${rows.slice(0, 4).join(', ')}${rows.length > 4 ? ` and ${rows.length - 4} more` : ''}`;
   if (s.threw) return ` [THREW: ${s.threw}]`;
   if (s.failOff && !s.failOn) return ` [OTHER SIDE ONLY: its ${s.failOff} failing line${s.failOff > 1 ? 's' : ''} made with the other side of a settled switch wanted (${named}): an arm or a staging the page no longer has]`;
@@ -161,7 +190,8 @@ console.error = (...args: unknown[]) => { const said = tapDepth ? scan(args) : [
  *  next probe of the same process — an identity digest silently depending on the previous family's leftovers), with the cut-pieces switch, the plain night's card
  *  and the loud card first in the table. */
 async function run(name: string, fn: () => unknown, standOf = name): Promise<boolean> {   // (standOf: the probe whose stand it runs on — its own, but for selftest-holds)
-  RAN++; RAN_NAMES.push(name); (globalThis as any).__probeNow = name; process.env.RH_PROBE = name;   /* (read by tools/blitz/rust-host.ts, which probe stood a game: its trace, RH_TRACE, and its table of which game a check is stood on, TPS_GAME=table; the environment's copy is for a probe that runs as a child) */ const f0 = tapFails, p0 = tapPasses; tapDepth++;
+  if (CHILD !== null ? name !== CHILD : name !== which) { if (CHILD === null && !QUEUE.includes(name)) QUEUE.push(name); return true; }   // (a family's probe: a child's to run — EVERY PROBE RUNS IN A PROCESS OF ITS OWN, above)
+  const t0 = performance.now(); RAN++; RAN_NAMES.push(name); (globalThis as any).__probeNow = name; process.env.RH_PROBE = name;   /* (read by tools/blitz/rust-host.ts, which probe stood a game: its trace, RH_TRACE, and its table of which game a check is stood on, TPS_GAME=table; the environment's copy is for a probe that runs as a child) */ const f0 = tapFails, p0 = tapPasses; tapDepth++;
   const mine: Sides = { failOn: 0, failOff: 0, passOn: 0, passOff: 0, rows: new Map() }, outer = sides; sides = mine; FOLDM.foldOtherSideClear();
   let ok = true, ret: unknown; const plainSays = process.env.QA_VERDICTS === '1' && !FOLDM.FOLD.on && (process.env.QA_VERDICTS_BY ??= String(process.pid)) === String(process.pid), speaks = FOLDM.foldSpeaker('runner');
   if (speaks) { const o = FOLDM.foldOutside(`before ${name}`); if (o) console.log(o); }   // (tools/qa/fold.ts: what was refused before this probe began is not its own, and is said)
@@ -178,6 +208,7 @@ async function run(name: string, fn: () => unknown, standOf = name): Promise<boo
   if (tapFails > f0) ok = false;
   if (typeof ret === 'boolean' || tapFails > f0 || tapPasses > p0) { CHECKED++; RAN_CHECKED.add(name); }
   if (!ok && !FAILED.includes(name)) FAILED.push(name);
+  SECS.set(name, (performance.now() - t0) / 1000);
   return ok;
 }
 /** Several sub-runs in one probe: false if any returned false. */
@@ -190,7 +221,7 @@ function ranAtLeast(what: string, n: number, min: number): boolean {
   console.log(`- FAIL — ${what}: only ${n} ran, the floor is ${min} — the staging drifted and a PASS here would be vacuous`); return false;
 }
 /** A family's own closing banner off its failure counter (kept for gate.sh's per-family lines); a non-zero count also lands in the verdict under the family's name. */
-function familyBanner(fam: string, nFail: number) { CHECKED++; console.log(`\n=== ${fam}: ${nFail ? `${nFail} FAIL` : 'ALL PASS'} ===`); if (nFail && !FAILED.includes(fam)) FAILED.push(fam); }
+function familyBanner(fam: string, nFail: number) { if (CHILD !== null || QUEUE.length) return;   /* (the probes ran, or will run, each in a process of its own: a count kept in this one says nothing, and every red is said by its probe's own lines) */ CHECKED++; console.log(`\n=== ${fam}: ${nFail ? `${nFail} FAIL` : 'ALL PASS'} ===`); if (nFail && !FAILED.includes(fam)) FAILED.push(fam); }
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 
 /** A door leaf standing at (or pushed to) its stop across a walking line: an alert guard whose nav path runs through it. Does he ever get past? */
@@ -3701,11 +3732,6 @@ if (on('selftest-side')) await run('selftest-side', async () => { const F = awai
   if (process.env.SIDES_BREAK === '1') console.log('- FAIL — deliberately (SIDES_BREAK=1): a line made with the row back at its page value');
   return false; });
 if (on('selftest-quiet')) await run('selftest-quiet', () => { console.log('  (a probe that prints no check and returns nothing)'); });
-if (on('selftest-knobs', 'selftest')) {   // run() puts the knob singletons back: one probe scribbles on three tables and 'forgets', the next finds them as they were
-  const T = knobTables() as any; const before = JSON.stringify([T.WHISTLE?.twiceWindow, T.CIV?.greet, T.NEEDS?.dwell]);
-  await run('selftest-knobs-scribble', () => { T.WHISTLE.twiceWindow = 12345; T.CIV.greet = !T.CIV.greet; if (T.NEEDS?.dwell) for (const k of Object.keys(T.NEEDS.dwell)) T.NEEDS.dwell[k] = -1; console.log('- PASS — scribbled on WHISTLE.twiceWindow, CIV.greet, NEEDS.dwell.* and returned without restoring'); return true; });
-  await run('selftest-knobs', () => { const after = JSON.stringify([T.WHISTLE?.twiceWindow, T.CIV?.greet, T.NEEDS?.dwell]); const ok = after === before; console.log(`- ${ok ? 'PASS' : 'FAIL'} — the next probe sees the tables as they were: ${before} → ${after}`); return ok; });
-}
 if (on('selftest-holds', 'selftest')) {   // run() holds a probe's words by its name (tools/qa/holds.ts): a body that reads them, run on the stand of the first held name. A word set to 1 by hand in front is left as set, so this goes red under one (holds-check.ts's break path)
   const held = [...KNOWN].sort().find(n => holdsOf(n).length) ?? '', hs = holdsOf(held);
   await run('selftest-holds', () => { const ok = hs.length > 0 && hs.every(h => process.env[h.word] === '0'); console.log(`- ${ok ? 'PASS' : 'FAIL'} — run() holds a probe's words by its name: on the stand of '${held}' ${hs.map(h => `${h.word}=${process.env[h.word] ?? 'unset'}`).join(' ') || 'no name of the table is known'}`); return ok; }, held);
@@ -3728,9 +3754,17 @@ if (which === 'list') {   // `probes.ts list`: the name index (grouped by name P
   const names = [...KNOWN].sort();
   console.log(`error: unknown probe / family '${which}' — nothing ran. The ${names.length} known names:\n  ${names.join(' ')}`);
   process.exitCode = 2;
+} else if (CHILD !== null) {   // a family's child: its one probe ran above (or the word asked for never reaches it), and the result is one line for the runner that started it
+  if (process.exitCode && !FAILED.length) FAILED.push('(a probe set the exit code itself)');
+  if (!RAN) console.log(`- FAIL — ${CHILD}: no line of the runner runs a probe of that name under '${which}'`);
+  rawLog(RESULT_MARK + JSON.stringify({ ok: RAN > 0 && !FAILED.length, checked: !RAN || RAN_CHECKED.has(CHILD) || CHECKED > 0, tag: sideTag(CHILD) }));
+  process.exitCode = RAN > 0 && !FAILED.length ? 0 : 1;
 } else {
+  const wall0 = performance.now(); if (QUEUE.length) await runQueue();
   if (process.exitCode && !FAILED.length) FAILED.push('(a probe set the exit code itself)');   // a module that flags failure without printing a line for it still fails the run
   console.log(`\n=== probes.ts ${which}: ${FAILED.length ? `${FAILED.length} FAIL — ${FAILED.join(', ')}` : CHECKED ? 'ALL PASS' : 'NO VERDICT (nothing it ran printed a check)'} · ${RAN} probe${RAN === 1 ? '' : 's'} run ===`);
+  if (RAN > 1) { const slow = [...SECS].sort((a, b) => b[1] - a[1]).slice(0, 5);   // (what the run cost, and where: a probe nobody can wait for gets cut down)
+    console.log(`  ${[...SECS.values()].reduce((x, y) => x + y, 0).toFixed(0)} s of probes in ${((performance.now() - wall0) / 1000).toFixed(0)} s of wall · slowest: ${slow.map(([n, t]) => `${n} ${t.toFixed(0)} s`).join(' · ')}`); }
   { // THE REDS AGAINST THE LIST (tools/qa/expected-red.ts): which of this run's red PROBES are old and explained, which are NEW, and which listed red came back green.
     // A table for the reader — the exit code is the verdict's, unchanged: red is red. By probe name: a family's own banner name in the verdict line (it counts its
     // members) is not a row here unless no probe of the run is red to account for it; GREEN AGAIN wants a probe that checked something (a NO VERDICT is not green).

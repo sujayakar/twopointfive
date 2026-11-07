@@ -600,7 +600,6 @@
 "selftest-fail",
 "selftest-fold",
 "selftest-side",
-"selftest-knobs",
 "selftest-pass",
 "selftest-quiet",
 "selftest-throw",
