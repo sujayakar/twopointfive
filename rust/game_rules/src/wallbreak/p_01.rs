@@ -407,7 +407,7 @@ pub fn wall_break_rebuild(g: &mut crate::game::Game, b: WallbreakBreakableId) ->
             let p = at(g, g.tab.wallbreak_breakable[b].slots[k]);
             let had_cut = { let x = seam_box(g, p); x.c = c; x.h = h; x.flags = flags0; x.cut.is_some() };
             if cut.is_some() || had_cut {
-                let core = if cut.is_some() { crate::break_table::breaks_end_core(g, surf.as_str(), albedo) } else { None };
+                let core = if cut.is_some() { crate::break_table::breaks_end_core(g, surf.as_str(), stuff, albedo) } else { None };
                 let x = seam_box(g, p); x.cut = cut; x.cut_core = core;
             }
             let x = seam_box(g, p);
@@ -420,7 +420,7 @@ pub fn wall_break_rebuild(g: &mut crate::game::Game, b: WallbreakBreakableId) ->
             let mp = crate::scene_boxes::MakeBoxP { c, h, yaw: Some(yaw), albedo: Some(v3::copy(albedo)), flags: Some(flags0), name: Some(String::from("piece")), rough, metal, aniso, stuff: w.stuff, does: w.does, ..Default::default() };
             let p = crate::scene_boxes::make_box(g, &mp);
             if cut.is_some() {
-                let core = crate::break_table::breaks_end_core(g, surf.as_str(), albedo);
+                let core = crate::break_table::breaks_end_core(g, surf.as_str(), stuff, albedo);
                 let x = seam_box(g, p); x.cut = cut; x.cut_core = core;
             }
             let i = crate::scene_collision::add_static(g, p, Some(bx));
