@@ -26,8 +26,8 @@ G.__ownerEnd = g => {
     for (const name of ownerWitnessed()) if (gd.owner & (OWN as Record<string, number>)[name]) out.held[name] = (out.held[name] ?? 0) + 1;
   }
 };
-// (a line a process: a family of probes is a process a probe, and each adds its own — tools/qa/owner-check.ts `auditOf` sums them)
-process.on('exit', () => { if (process.env.OWNER_OUT) appendFileSync(process.env.OWNER_OUT, JSON.stringify(out) + '\n'); });
+// (a line a process that stepped a game: a family of probes is a process a probe, and each adds its own — tools/qa/owner-check.ts `auditOf` sums them)
+process.on('exit', () => { if (process.env.OWNER_OUT && G.__ownerGame) appendFileSync(process.env.OWNER_OUT, JSON.stringify(out) + '\n'); });   // (a process that stepped no game says nothing: a family's runner, whose probes are its children)
 plugin({ name: 'owner-audit', setup(b) { b.onLoad({ filter: /src\/game\/game\.ts$/ }, async (a: { path: string }) => {
   let t = await Bun.file(a.path).text();
   if (!t.includes('this.ticking = true;') || !t.includes('\n    this.ticking = false;')) throw new Error('owner-audit: game.ts no longer has the lines it hangs on (this.ticking = true / false)');

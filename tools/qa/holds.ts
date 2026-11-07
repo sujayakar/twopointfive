@@ -12,6 +12,7 @@
 // the pacing on (and `TPS_PACING=0` in front is the hold itself, said by hand: a stand-up raises a row for '1' alone).
 import { resolve } from 'node:path';
 import { FOLD, foldLost, foldSpeaker, foldOutside, foldLine, foldFor, foldMode } from './fold.ts';
+import { harnessDie } from './die.ts';
 const ROOT = resolve(import.meta.dir, '../..');   // (not the harness's own: a tool that names its stand before it loads the harness can still import this file first)
 
 /** One held row: the stand word, the knob table and the row's key (src/game/knobs.ts's registry), and whether the row is put off at once as well as the word
@@ -77,8 +78,6 @@ export async function holdOff(holds: readonly Hold[]): Promise<() => void> {
  *  loud card first in the table again (kit.ts kitMission: a probe that staged a quiet run leaves your stealth card first). Throws, after everything else is
  *  back, if the tables cannot be put back. */
 let fenceDepth = 0;
-/** mulberry32, the harness's die (headless.ts `seeded`; said again here because this file loads before the harness may) */
-function mulberry(a: number): () => number { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 export async function asProbe<T>(name: string, fn: () => T | Promise<T>): Promise<T> {
   const { knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`), kit = await import(`${ROOT}/src/game/kit.ts`);
   // (tools/qa/fold.ts: one line a probe from whoever runs the probes, the outermost. Under the runner, whose run() says it, this says nothing.)
@@ -86,8 +85,8 @@ export async function asProbe<T>(name: string, fn: () => T | Promise<T>): Promis
   const foldWas = fenceDepth === 0 ? foldMode() : null;   // (fold.ts foldFor: the fold on or off as this fence opens, put back FIRST as it closes, so the tables go back in the mode they were copied in)
   const soloOn = kit.KIT_SOLO.on, knobs = knobsCopy(), release = await holdOff(holdsOf(name));
   // (THE DIE IS PART OF THE FENCE: every probe begins on die 1 and whatever die it leaves in `Math.random` is taken out after it, so a probe that stands a game
-  // with no seed stands the same game alone, after any other probe, and on every run — headless.ts ENTROPY)
-  const dieWas = Math.random; if (fenceDepth === 0) Math.random = mulberry(1);
+  // with no seed stands the same game alone, after any other probe, and on every run — tools/qa/die.ts)
+  const dieWas = Math.random; if (fenceDepth === 0) Math.random = harnessDie() ?? dieWas;
   let threw: unknown, failed = false, red = false; fenceDepth++;
   try { const r = await fn(); red = (r as unknown) === false; return r; }
   catch (e) { failed = true; red = true; threw = e; throw e; }
