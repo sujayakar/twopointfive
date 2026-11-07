@@ -561,12 +561,15 @@ pub fn doors_side(g: &mut crate::game::Game, d: DoorId, from: V3) -> f64 {
     if u[0] * pz - u[1] * px >= 0.0 { 1.0 } else { -1.0 }
 }
 /// The lock is against you: latched, still locked, you on the keyed side, and nothing on your ring fits it   (doors.ts Doors.lockedOut)
+// (a ring is asked through `squadcast::ring_has`, the one way to ask it: a cast that carries the building's keys holds the ring that answers
+//  yes to every lock, squadcast.ts:17 EVERY_KEY, and a plain `has` of the lock's name answered no for it: the response team's lead booted a
+//  door his keys open where the TypeScript's lead goes to the handle)
 pub fn doors_locked_out(g: &mut crate::game::Game, d: DoorId, from: V3, keys: Option<&JsSet<String>>) -> bool {
-    door_locked(g, d) && door_latched(g, d) && doors_side(g, d, from) == g.dr[d].key_side && !(match keys { Some(k) => k.has(g.dr[d].lock_id.clone()), None => false })
+    door_locked(g, d) && door_latched(g, d) && doors_side(g, d, from) == g.dr[d].key_side && !(match keys { Some(k) => crate::squadcast::ring_has(k, &g.dr[d].lock_id), None => false })
 }
 /// The lock is against you BUT for the key you carry   (doors.ts Doors.keyOpens)
 pub fn doors_key_opens(g: &mut crate::game::Game, d: DoorId, from: V3, keys: Option<&JsSet<String>>) -> bool {
-    (match keys { Some(k) => k.has(g.dr[d].lock_id.clone()), None => false }) && doors_locked_out(g, d, from, None)
+    (match keys { Some(k) => crate::squadcast::ring_has(k, &g.dr[d].lock_id), None => false }) && doors_locked_out(g, d, from, None)
 }
 /// DOORTHROW as it applies right now: no showcase on the stage   (doors.ts Doors.throws)
 pub fn doors_throws(g: &mut crate::game::Game) -> bool { !doors_staged(g) }
@@ -692,7 +695,7 @@ pub fn doors_hand_over(g: &mut crate::game::Game, dt: f64, contacts: &[crate::do
             if keys.len() > 0 {
                 for i in 0..n {
                     let d = g.doors.list[i];
-                    if keys.has(g.dr[d].lock_id.clone()) {
+                    if crate::squadcast::ring_has(keys, &g.dr[d].lock_id) {
                         if i < 32 { lo |= 1u32 << i; } else { hi |= 1u32 << (i - 32); }
                     }
                 }

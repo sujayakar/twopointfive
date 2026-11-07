@@ -565,7 +565,7 @@ pub fn squad_orders_route(g: &mut crate::game::Game, gd: GuardId, to: V3, shy: O
     let mut dear: JsSet<crate::Num> = JsSet::new();   // every doorway locked against him (and the one he is shy of), made all but a wall
     for i in 0..g.doors.list.len() {
         let d = g.doors.list[i];
-        if !(round && Some(d) == shy) && (!crate::doors::door_locked(g, d) || !crate::doors::door_latched(g, d) || ring.has(g.dr[d].lock_id.clone())) { continue; }
+        if !(round && Some(d) == shy) && (!crate::doors::door_locked(g, d) || !crate::doors::door_latched(g, d) || crate::squadcast::ring_has(&ring, &g.dr[d].lock_id)) { continue; }
         doorway_cells(g, d, &mut dear);
     }
     let plain = path;

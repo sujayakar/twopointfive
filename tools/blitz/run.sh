@@ -14,23 +14,25 @@
 # --die N: the game's die is seeded with N (mission.ts's own is 20942); the start the Rust side imports carries the die, so one option serves both sides.
 # --die tool: the die and the stand of a tally's run of this mission and seed (mission.ts; the die is written to die.txt in --out).
 # --hard: the player's difficulty at Hard (mission.ts; the tables it lays are in the start and in knobs.bin). --set '<json>': the scripted player's own --set rows (a lever alone).
+# --lever told=guided: a lever moved on the standing game before the first tick (mission.ts; for the fourth lever, which the scripted player's --set cannot name).
+# --case keeper | keeper-left | sticky: a staged case (mission.ts). A name solo-<plan> | quiet-<plan> is tools/qa/solo-night.ts's scripted Sam (BLITZ_SOLO for its options).
 # --dress: both sides stand with the DRESSING ROWS UP, as the page has them (dress.ts; README "The dressing rows up"); --dress-rows "moths,fx" raises only those.
 # --no-ts takes the TypeScript side as --out already holds it (the same mission, ticks and kept ticks); --no-build takes the runner as it is built.
 cd "$(dirname "$0")/../.." || exit 64
 unset BUN_OPTIONS
 M=$1; shift
 case "$M" in ''|--*) sed -n '2,3p' "$0"; exit 64;; esac
-TICKS=; KEEP=; ASKS=; WALL=; DRESSW=; CASEW=; DIE=; HARD=; SETW=; EVERY=0; OPEN=; AFTER=0; OUT=; SHOW=12; TS=1; BUILD=1; BLOBS=
+TICKS=; KEEP=; ASKS=; WALL=; DRESSW=; CASEW=; DIE=; HARD=; SETW=; LEVERW=; EVERY=0; OPEN=; AFTER=0; OUT=; SHOW=12; TS=1; BUILD=1; BLOBS=
 while [ $# -gt 0 ]; do case "$1" in
   --ticks) TICKS=$2; shift 2;; --keep) KEEP=$2; shift 2;; --every) EVERY=$2; shift 2;; --open) OPEN=$2; shift 2;; --after) AFTER=$2; shift 2;;
-  --out) OUT=$2; shift 2;; --show) SHOW=$2; shift 2;; --blobs) BLOBS=1; shift;; --no-ts) TS=; shift;; --no-build) BUILD=; shift;; --asks) ASKS=1; shift;; --wall) WALL=1; shift;; --dress) DRESSW=all; shift;; --dress-rows) DRESSW=$2; shift 2;; --case) CASEW=$2; shift 2;; --die) DIE=$2; shift 2;; --hard) HARD=1; shift;; --set) SETW=$2; shift 2;; *) echo "run.sh: no option $1"; exit 64;; esac; done
+  --out) OUT=$2; shift 2;; --show) SHOW=$2; shift 2;; --blobs) BLOBS=1; shift;; --no-ts) TS=; shift;; --no-build) BUILD=; shift;; --asks) ASKS=1; shift;; --wall) WALL=1; shift;; --dress) DRESSW=all; shift;; --dress-rows) DRESSW=$2; shift 2;; --case) CASEW=$2; shift 2;; --die) DIE=$2; shift 2;; --hard) HARD=1; shift;; --set) SETW=$2; shift 2;; --lever) LEVERW=$2; shift 2;; *) echo "run.sh: no option $1"; exit 64;; esac; done
 [ -n "$OUT" ] || OUT="${TMPDIR:-/tmp}/blitz-$(echo "$M" | tr ':/' '--')"
 mkdir -p "$OUT" || exit 3
 echo "run.sh: $M; blobs in $OUT"
 if [ -n "$TS" ]; then
   SIDE=mission.ts; case "$M" in two-*) SIDE=seats.ts;; esac
   rm -f "$OUT"/[hacnL]*.bin "$OUT"/s[0-9]*.bin "$OUT"/ns*.bin "$OUT"/*.txt "$OUT"/*.tsv "$OUT"/*.json
-  bun run --preload ./tools/blitz/expose.ts tools/blitz/$SIDE "$M" --out "$OUT" ${TICKS:+--ticks $TICKS} ${ASKS:+--asks} ${WALL:+--wall} ${DRESSW:+--dress $DRESSW} ${CASEW:+--case $CASEW} ${DIE:+--die $DIE} ${HARD:+--hard} ${SETW:+--set "$SETW"} --keep "$KEEP" --every "$EVERY" --open "$OPEN" 2>&1 | tail -${ASKS:+4}4 | cut -c1-400
+  bun run --preload ./tools/blitz/expose.ts tools/blitz/$SIDE "$M" --out "$OUT" ${TICKS:+--ticks $TICKS} ${ASKS:+--asks} ${WALL:+--wall} ${DRESSW:+--dress $DRESSW} ${CASEW:+--case $CASEW} ${DIE:+--die $DIE} ${HARD:+--hard} ${SETW:+--set "$SETW"} ${LEVERW:+--lever "$LEVERW"} --keep "$KEEP" --every "$EVERY" --open "$OPEN" 2>&1 | tail -${ASKS:+4}4 | cut -c1-400
   [ -s "$OUT/ticks.txt" ] || { echo "run.sh: the TypeScript side did not finish"; exit 3; }
 fi
 N=$(cat "$OUT/ticks.txt"); [ -n "$TICKS" ] && [ "$TICKS" -lt "$N" ] && N=$TICKS

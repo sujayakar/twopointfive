@@ -168,8 +168,14 @@ fn main() {
             let mut off: Vec<&str> = Vec::new();
             if let Some(p) = p { for (i, P) in sim::state::PARTS.iter().enumerate() { if p.get(4 + i).map(|s| s.as_str()) != Some(part_hash(&w[P.off / 4..(P.off + P.len) / 4]).to_string().as_str()) { off.push(NAMES[i]); } } } else { off.push("no line of post.txt"); }
             // (the pose pool is IN the alarm, like every other part: the bridge carries which sets are at home and what each animator holds)
+            // THE TYPESCRIPT'S HOST LOADED A FILE SAVE INSIDE THIS TICK (`<k> load_in_step`: the down card's bare Enter with no team on the floor,
+            // player.ts:495 → savestate.ts loadInStep, "a file is poured in at once"). The save store is the host's: the Rust tick's boundary holds
+            // nothing, finds no checkpoint and RESTARTS the mission in its place. The two games are different games after this tick by design of
+            // the boundary, so the tick is not compared; the next tick opens on the TypeScript's state as a new start (its `chron_load` line).
+            let loaded_in = hostwrites.iter().any(|l| game_run::line_of(l, k) && l.split(' ').nth(1) == Some("load_in_step"));
+            if loaded_in { off.clear(); println!("TICK {}: THE HOST LOADED A FILE SAVE INSIDE THIS TICK on the TypeScript side; the Rust tick has no store and did what it does with none ({} guards, time {:.4}, die n={}): NOT COMPARED, a new start follows", k, g.guards.len(), g.time, d.n); }
             let same = off.is_empty();
-            let die_same = p.map(|p| p[1] == d.n.to_string()).unwrap_or(false);
+            let die_same = loaded_in || p.map(|p| p[1] == d.n.to_string()).unwrap_or(false);
             if !die_same && die_parted == 0 { die_parted = k; }
             let first_part = !same && parted == 0; if first_part { parted = k; }
             if !same { n_parted += 1; if n_parted <= 40 && !first_part { println!("TICK {}: the block PARTS in {:?} (die n={} / {})", k, off, d.n, p.map(|p| p[1].as_str()).unwrap_or("?")); } } else if n_parted > 0 && !was_same { println!("TICK {}: the block is the same again", k); }
