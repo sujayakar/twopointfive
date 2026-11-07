@@ -118,6 +118,17 @@ mod tests {
         }
     }
 
+    /// A look is a bearing: a head bowed to the floor does not tip it, and one with no bearing at all is his facing.
+    #[test]
+    fn a_look_is_level_whatever_the_pose() {
+        // (kneeling with the gun low, as measured: the head 45 degrees down and ahead)
+        let l = gaze_from(-0.14, -0.72, 1.0, None);
+        assert_eq!(l[1], 0.0);
+        assert!((m::hyp2(l[0], l[2]) - 1.0).abs() < 1e-12 && l[2] < -0.95, "he looks the way his head is turned: {:?}", l);
+        // (straight down: no bearing in it, so his facing)
+        assert_eq!(gaze_from(0.0, 0.0, 0.5, None), [m::sin(0.5), 0.0, m::cos(0.5)]);
+    }
+
     #[test]
     fn eye_count_clamps_as_the_typescript_does() {
         for (v, want) in [(f64::NAN, 5.0), (f64::NEG_INFINITY, 5.0), (0.0, 5.0), (4.9, 5.0), (5.0, 5.0), (6.9, 6.0), (7.0, 7.0), (7.5, 7.0), (f64::INFINITY, 7.0)] {
