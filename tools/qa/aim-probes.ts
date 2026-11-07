@@ -6,7 +6,7 @@
 //               remembered); the target term off a synthetic bearing rate; Sam's track: caps at a sprint / walking, a new man resets it, off him and straight
 //               back keeps it, crouched climbs quicker; his cone's terms; the ring's pixels follow the cone.
 //   aim-first   a FREE alert man 8.5 m up the corridor from a lit standing god-mode Sam, from first sight: no round before the beat + acquireMin·settleSecs (± a
-//               frame; the beat is reactT, or the startle's beat and draw where that rule is on and longer: AIMFIRST_BREAK=1 must fail both lines), the first round's cone ≥ 1.8× a settled one's and — over eight seeds — the first rounds miss by more than the settled ones; then the
+//               frame; the beat is reactT, or the startle's beat and draw where longer: AIMFIRST_BREAK=1 must fail both lines), the first round's cone ≥ 1.8× a settled one's and — over eight seeds — the first rounds miss by more than the settled ones; then the
 //               weapons-identity staging (6.5 m, gun round in 0.3 s) with the man FREE, model off vs on over 45 s: rounds, how many found Sam, first round.
 //   aim-motion  a pinned (settled, planted) man and a god-mode Sam 8 m off: standing / sprinting ACROSS his front / running straight AT him — hit fractions:
 //               across ≤ 0.4 × standing, at him ≥ 0.8 × standing; the cones and bearing rates printed; the three canonical cones before → after.
@@ -16,23 +16,24 @@
 //   aim-off     tune.aimModel = false: tracks rest at 0, the gate is open, guardRound hands { spread } untouched (no steady), samAim 0, no braking, no ◎ —
 //               and weapons-identity (run in the same families) stays green.
 //   aim-snap    what the reticle TAKES (player.ts updateAim): a light only with the cursor on its dot (AIM.player.lightSnapPx) — every aimable light in the lobby
-//               view swept on rings from the dot out to 58 px, against the same sweep at 60 (the reach it had, and what the harness stands at); a man standing
-//               under a ceiling panel's picture with the cursor beside him, nearer the panel's dot than his chest: the reticle is on HIM and the clicked round
-//               drops him — at 60 the panel takes it and the round goes into the ceiling; a light taken is kept while the camera's lead slides its dot from
+//               view swept on rings from the dot out to 58 px; a man standing under a ceiling panel's picture with the cursor beside him, nearer the panel's
+//               dot than his chest: the reticle is on HIM and the clicked round drops him; a light taken is kept while the camera's lead slides its dot from
 //               under a cursor left where it was, the right button then OCPs it, and moving the cursor off lets go; a drawn fixture is taken anywhere on its box.
+// SINCE 2026-11-07 NOTHING HERE WRITES A SETTLED ROW. The reticle's reach for a light is a constant of the game: aim-snap's second sweep and its control
+// man "with the reach back at 60" are cut (the half of two lines), and the reach is no longer written. aim-unit no longer holds the turn weight and the
+// feet's cost off for its stand-ups (both are constants, on): it throws at a function that went with the tick before its one line, and when it runs
+// again five of its numbers are the ones its old red path (AIMUNIT_BREAK, both rules on) failed. That word is gone with the holds. The model's own flag
+// (Game.tune.aimModel) is still a variable of a game: the "model off" lines stand.
 import { standUp, ROOT } from './headless.ts';
-import { underWord } from './stand.ts';
 const { v3, DEG, wrapAngle, lerp } = await import(`${ROOT}/src/math/vec.ts`);
 const { updateAim } = await import(`${ROOT}/src/game/player.ts`);
 const { resetChase, playerGroundVel } = await import(`${ROOT}/src/game/guards.ts`);
 const Aim = await import(`${ROOT}/src/game/aim.ts`);
 const { AIM, trackGuard, trackPlayer, aimReady, guardRound, handsCone, aimBrake, playerAim, samAim, guardAcquired, noteBore, boreFouled, AIM_DEBUG } = Aim;
 const { STARTLE, STARTLE_STATS } = await import(`${ROOT}/src/game/startle.ts`);
-const { AIMCOST } = await import(`${ROOT}/src/game/aimcost.ts`);
-const { TURN } = await import(`${ROOT}/src/game/character.ts`);
-/** what the startle holds a man's first round by, from first sight, where its rule is on (startle.ts: the beat, then the draw — no round leaves him in either).
- *  Read after a game is stood up. AIMFIRST_BREAK=1, the red path: a second more than the rule says — aim-first's two lines must fail on either stand. */
-const startleLead = (): number => (STARTLE.on ? STARTLE.beat + STARTLE.draw : 0) + (process.env.AIMFIRST_BREAK === '1' ? 1 : 0);
+/** what the startle holds a man's first round by, from first sight (startle.ts: the beat, then the draw — no round leaves him in either).
+ *  AIMFIRST_BREAK=1, the red path: a second more than the rule says — aim-first's two lines must fail. */
+const startleLead = (): number => STARTLE.beat + STARTLE.draw + (process.env.AIMFIRST_BREAK === '1' ? 1 : 0);
 const { aimRingPx } = await import(`${ROOT}/src/ui/overlay.ts`);
 
 type Vec3 = [number, number, number];
@@ -52,16 +53,11 @@ function missAngle(e: any, at: Vec3): number { const d = v3.normalize(v3.sub(e.t
 const trunkOf = (game: any): Vec3 => { const pc = game.player.char; const t = pc.bones.spine2 ?? pc.bones.hips; return [t ? t[0] : pc.pos[0], pc.pos[1] + (game.player.crouch ? 0.8 : 1.25), t ? t[2] : pc.pos[2]]; };
 
 // ================================================================ (a) the model, driven
-/** THE MODEL'S UNIT NUMBERS ARE ASKED WITHOUT TWO RULES THAT MOVE WHAT THE PROBE STAGES, on either stand: the turn weight (character.ts TURN.on, on in
- *  the page) keeps a weighted gun on the man through the six frames the drain line takes it off him ('drained to 1 (want 0.7)'), and the aim cost of moving
- *  (aimcost.ts AIMCOST.move, on in the page) opens every cone the feet touch (the running cone, the remembered run and sprint, the walking feet's term).
- *  The weight is snap-probes' to hold and the feet's cost is aimcost-check.ts's line 5, each on both stands. Both are held off by their words for the
- *  probe's stand-ups and put back after it. AIMUNIT_BREAK=1 = the red path: both are held ON instead (five lines' numbers FAIL, on either stand). */
-export async function aimUnit(): Promise<boolean> {
-  const on = process.env.AIMUNIT_BREAK === '1';
-  return underWord('TPS_TURN', on, () => underWord('TPS_MOVECOST', on, aimUnitAsked, { table: AIMCOST, key: 'move' }), { table: TURN, key: 'on' });
-}
-async function aimUnitAsked() {
+/** THE MODEL'S UNIT NUMBERS WERE ASKED WITHOUT TWO RULES THAT MOVE WHAT THE PROBE STAGES: the turn weight (character.ts TURN.on) keeps a weighted gun
+ *  on the man through the six frames the drain line takes it off him ('drained to 1 (want 0.7)'), and the aim cost of moving (aimcost.ts AIMCOST.move)
+ *  opens every cone the feet touch (the running cone, the remembered run and sprint, the walking feet's term). Both are constants of the game now and
+ *  are no longer held off here: those five numbers are the page's side, to restage on the game as it is. */
+export async function aimUnit() {
   console.log('\n=== aim-unit: the model driven directly — a guard\'s track (climb / drain / hold / gone / jump / capped / pinned), the cone × at track 0 · 0.5 · 1, the feet and target terms; Sam\'s track (caps, a new man, back onto him, crouched) and cone; the ring\'s pixels ===');
   Math.random = seeded(901);
   const W = await standUp(); const { game } = W; const G = AIM.guard, Y = AIM.player;
@@ -468,10 +464,10 @@ export async function aimOff() {
 
 // ================================================================ (g) what the reticle takes: a light only on its dot, a man beside one
 export async function aimSnap() {
-  console.log('\n=== aim-snap: the reticle takes a light only with the cursor on it (its dot ± lightSnapPx, or its own drawn box) — swept over every aimable light in view, against the reach it had (60 px); a man under a ceiling panel\'s picture, the cursor beside him and nearer the panel\'s dot: he is taken and the round drops him; a light taken is kept while the camera settles ===');
-  const L0: number = Aim.AIM_DEFAULTS.player.lightSnapPx, SNAP: number = Aim.SNAP_PX; let allPass = true;   // (the SHIPPED reach: the harness itself stands at SNAP — src/host/standup.ts)
-  const stage = async (seed: number, at: Vec3, reach: number) => {
-    Math.random = seeded(seed); const W = await standUp(); const { game, input, cam, canvas } = W; AIM.player.lightSnapPx = reach;
+  console.log('\n=== aim-snap: the reticle takes a light only with the cursor on it (its dot ± lightSnapPx, or its own drawn box) — swept over every aimable light in view; a man under a ceiling panel\'s picture, the cursor beside him and nearer the panel\'s dot: he is taken and the round drops him; a light taken is kept while the camera settles ===');
+  const L0: number = Aim.AIM_DEFAULTS.player.lightSnapPx, SNAP: number = Aim.SNAP_PX; let allPass = true;   // (L0: the reach as the game has it; SNAP: the men's reach, which a light had too until the rule)
+  const stage = async (seed: number, at: Vec3) => {
+    Math.random = seeded(seed); const W = await standUp(); const { game, input, cam, canvas } = W;
     game.godMode = true; game.player.visibility = 0; for (let i = 0; i < 5; i++) W.step(DT);
     game.guards.forEach((gd: any, i: number) => park(gd, i));
     const pl = game.player; game.teleportPlayer(at); pl.slot = 'pistol'; pl.holstered = false; pl.crouch = false;
@@ -481,13 +477,13 @@ export async function aimSnap() {
     const takes = (x: number, y: number) => { input.mouseX = x; input.mouseY = y; game.aimTarget = null; updateAim(game, input, cam, canvas); return game.aimTarget; };
     return { W, game, input, cam, canvas, pl, px, takes };
   };
-  try {
+  {
     { // ---- the sweep: the camera still, the cursor on rings round each light's dot
-      const { game, input, px, takes } = await stage(941, [8.4, 0, 21.2], L0); const fails: string[] = [];
+      const { game, input, px, takes } = await stage(941, [8.4, 0, 21.2]); const fails: string[] = [];
       const lights = game.targets.filter((t: any) => t.interactive && !t.broken).map((t: any) => ({ t, at: px(t.pos) })).filter((x: any) => x.at[2] && x.at[0] > 80 && x.at[0] < 1520 && x.at[1] > 80 && x.at[1] < 920);
       const radii = [0, L0 - 2, L0 + 2, Math.round((L0 + SNAP) / 2), SNAP - 2];
       const sweep = (reach: number) => {
-        AIM.player.lightSnapPx = reach; const took = radii.map(() => 0), any = radii.map(() => 0), tried = radii.map(() => 0); let ceiling = 0;
+        const took = radii.map(() => 0), any = radii.map(() => 0), tried = radii.map(() => 0); let ceiling = 0;
         for (const { t, at } of lights) radii.forEach((r, k) => { for (let a = 0; a < (r ? 8 : 1); a++) {
           const got = takes(at[0] + r * Math.cos(a * Math.PI / 4), at[1] + r * Math.sin(a * Math.PI / 4)); tried[k]++;
           if (got === t) took[k]++; if (got) any[k]++; if (got && game.aimPoint[1] > 2.5) ceiling++;
@@ -496,16 +492,15 @@ export async function aimSnap() {
         } });
         return { took, any, tried, ceiling };
       };
-      const now = sweep(L0), was = sweep(SNAP);
+      const now = sweep(L0);
       const row = (R: ReturnType<typeof sweep>) => radii.map((r, k) => `${r} px ${R.took[k]}/${R.tried[k]}${R.any[k] > R.took[k] ? ` (+${R.any[k] - R.took[k]} a neighbour's nearer dot)` : ''}`).join(' · ');
       if (lights.length < 3) fails.push(`staging: only ${lights.length} aimable lights in the lobby view`);
       if (now.any[0] !== now.tried[0] || now.any[1] !== now.tried[1]) fails.push('on / just inside the dot a light was not taken'); if (now.took[2] + now.took[3] + now.took[4] !== 0) fails.push('a light taken from outside lightSnapPx');
-      if (was.any[3] !== was.tried[3]) fails.push(`the knob at ${SNAP} does not give the old reach back (${radii[3]} px: a light taken ${was.any[3]}/${was.tried[3]})`);
-      allPass = verdict(!fails.length, `${lights.length} aimable lights in the lobby view (none of them drawn: ceiling panels, a beacon), the cursor on rings round each dot: taken on the dot and at ${radii[1]} px, never at ${radii[2]} / ${radii[3]} / ${radii[4]} px — and the knob back at ${SNAP} takes them from there as it did`, fails.slice(0, 4).join('; ') || `lightSnapPx ${L0}: ${row(now)} (the gun at the ceiling on ${now.ceiling} of ${now.tried.reduce((a, b) => a + b, 0)} cursor spots) · at ${SNAP}: ${row(was)} (${was.ceiling})`) && allPass;
+      allPass = verdict(!fails.length, `${lights.length} aimable lights in the lobby view (none of them drawn: ceiling panels, a beacon), the cursor on rings round each dot: taken on the dot and at ${radii[1]} px, never at ${radii[2]} / ${radii[3]} / ${radii[4]} px`, fails.slice(0, 4).join('; ') || `lightSnapPx ${L0}: ${row(now)} (the gun at the ceiling on ${now.ceiling} of ${now.tried.reduce((a, b) => a + b, 0)} cursor spots)`) && allPass;
     }
     // ---- the man under a panel's picture: his chest L0 + 42 px to the side of the panel's dot, the cursor between them L0 + 8 px from the dot (beside him, not on him)
-    const man = async (reach: number) => {
-      const { W, game, input, cam, canvas, pl, px } = await stage(942, [8.6, 0, 23.3], reach); const A = game.guards[0]; const dDot = L0 + 8;
+    const man = async () => {
+      const { W, game, input, cam, canvas, pl, px } = await stage(942, [8.6, 0, 23.3]); const A = game.guards[0]; const dDot = L0 + 8;
       const panel = game.targets.filter((t: any) => t.interactive && /^panel_/.test(t.name)).sort((a: any, b: any) => v3.distXZ(a.pos, pl.char.pos) - v3.distXZ(b.pos, pl.char.pos))[0];
       const chest = (): Vec3 => A.char.bones.chest ?? v3.add(A.char.pos, [0, 1.2, 0]);
       const spot = (): Vec3 => { const q = px(panel.pos); const r = cam.ray((q[0] - (L0 + 42)) / canvas.clientWidth, q[1] / canvas.clientHeight); const t = (1.2 - r.ro[1]) / r.rd[1]; return [r.ro[0] + r.rd[0] * t, 0, r.ro[2] + r.rd[2] * t]; };
@@ -520,14 +515,13 @@ export async function aimSnap() {
       frame(true); seen(); for (let i = 0; i < 20; i++) { frame(false, false); seen(); }   // (the round away; what the reticle does over a body afterwards is not counted)
       return { panel: panel.name, onHim, onPanel, onBody, n, dDot, dChest, clear: !game.col.segmentBlocked(v3.add(pl.char.pos, [0, 1.3, 0]), chest()), dead: A.state === 'dead', toY: shot?.to ? shot.to[1] : NaN, fired: !!shot, range: v3.distXZ(pl.char.pos, A.char.pos) };
     };
-    { const now = await man(L0), was = await man(SNAP); const fails: string[] = [];
+    { const now = await man(); const fails: string[] = [];
       if (!now.clear || now.onBody || now.dChest < now.dDot + 8 || now.dChest > SNAP - 8) fails.push(`staging: line clear ${now.clear}, cursor on his body ${now.onBody} frames, ${f1(now.dChest)} px off his chest / ${now.dDot} off the dot`);
       if (now.onHim !== now.n || now.onPanel) fails.push(`the reticle on him ${now.onHim}/${now.n} frames, on the panel ${now.onPanel}`); if (!now.fired || !now.dead) fails.push(`fired ${now.fired}, he is ${now.dead ? 'down' : 'standing'} (the round ended at y ${f2(now.toY)})`);
-      if (was.onPanel !== was.n || was.dead || !(was.toY > 2.5)) fails.push(`the control at ${SNAP} px: the panel had the reticle ${was.onPanel}/${was.n} frames, he is ${was.dead ? 'down' : 'standing'}, the round ended at y ${f2(was.toY)} (want the old miss into the ceiling)`);
-      allPass = verdict(!fails.length, `a man ${f1(now.range)} m off under ${now.panel}'s picture, the cursor beside him — ${f1(now.dChest)} px from his chest, ${now.dDot} from the panel's dot: the reticle is on him every frame and the round drops him; with the reach back at ${SNAP} the panel takes it and the round goes into the ceiling`, fails.join('; ') || `lightSnapPx ${L0}: on him ${now.onHim}/${now.n}, down ${now.dead} (round to y ${f2(now.toY)}) · at ${SNAP}: on the panel ${was.onPanel}/${was.n}, down ${was.dead} (round to y ${f2(was.toY)})`) && allPass;
+      allPass = verdict(!fails.length, `a man ${f1(now.range)} m off under ${now.panel}'s picture, the cursor beside him — ${f1(now.dChest)} px from his chest, ${now.dDot} from the panel's dot: the reticle is on him every frame and the round drops him`, fails.join('; ') || `lightSnapPx ${L0}: on him ${now.onHim}/${now.n}, down ${now.dead} (round to y ${f2(now.toY)})`) && allPass;
     }
     { // ---- kept while the camera settles: the cursor flicked onto a panel's dot and LEFT there — the aim point going up to the panel pans the picture under it
-      const { W, game, input, pl, px } = await stage(943, [8.6, 0, 23.3], L0); const fails: string[] = [];
+      const { W, game, input, pl, px } = await stage(943, [8.6, 0, 23.3]); const fails: string[] = [];
       const panel = game.targets.filter((t: any) => t.interactive && /^panel_/.test(t.name)).sort((a: any, b: any) => v3.distXZ(a.pos, pl.char.pos) - v3.distXZ(b.pos, pl.char.pos))[0];
       game.lightHome.stage(panel, true, null); W.step(DT);   // (the lobby's panels are switched off at night: lit, so the OCP below has something to put out)
       const q0 = px(panel.pos); input.mouseX = q0[0]; input.mouseY = q0[1]; let had = 0, drift = 0; const N = 90;
@@ -540,7 +534,7 @@ export async function aimSnap() {
       allPass = verdict(!fails.length, `the cursor put on ${panel.name}'s dot and left there: the camera's lead slides the dot ${f1(drift)} px from under it (reach ${L0}) and the panel keeps the reticle all ${N} frames, the right button OCPs it; the cursor moved ${L0 + 6} px further off lets it go at once`, fails.join('; ') || `kept ${had}/${N} · drift ${f1(drift)} px · OCP ${zapped} · let go ${let_go}`) && allPass;
     }
     { // ---- a DRAWN fixture is taken by pointing at it anywhere: the vending front, well off its dot
-      const { game, input, px, takes } = await stage(944, [29.4, 0, 16.2], L0); const fails: string[] = [];
+      const { game, input, px, takes } = await stage(944, [29.4, 0, 16.2]); const fails: string[] = [];
       const v = game.targets.find((t: any) => t.name === 'vending'), b = W0(game).statics[v.boxes[0]];
       const on: Vec3 = [b.c[0] + b.h[0] * 0.6, b.c[1] + b.h[1], b.c[2] + b.h[2] * 0.6], q = px(on), dot = px(v.pos); const dOn = Math.hypot(q[0] - dot[0], q[1] - dot[1]);
       const got = takes(q[0], q[1]); const beside = takes(dot[0], dot[1] - (dOn + 40));   // on its top face; then the same distance and more off the dot, past the box
@@ -548,7 +542,7 @@ export async function aimSnap() {
       void input;
       allPass = verdict(!fails.length, `the cursor ON the vending machine ${f1(dOn)} px off its dot takes it (it is drawn: pointing at it is pointing at it); off the box it does not`, fails.join('; ') || `on it: ${got?.name} · off it: ${beside?.name ?? 'nothing'}`) && allPass;
     }
-  } finally { AIM.player.lightSnapPx = L0; }
+  }
   console.log(`=== aim-snap: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`);
   return allPass;
 }

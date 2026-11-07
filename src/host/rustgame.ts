@@ -412,6 +412,8 @@ export function rustAttach(g: Game): void {
   G.stepSeats = (dt: number, cmds: readonly PlayerCmd[]) => step(held, dt, cmds);
   // (for a networked game, src/net/step.ts: a quiet run of steps, and the game's own words for its state, as `rustHashes` reads them by name for a check)
   G.quietRun = rustQuiet;
+  // (src/game/thisrun.ts: the mission that is up, by the serial the Rust game has for it; the bridge's book knows it from the start)
+  G.runSerial = () => bookOf(G)?.serial.get(G.mission);
   G.wholeWords = () => { if (!X || !held.h || typeof X.face_state_words !== 'function') return null; X.face_state_words(held.h); return new Uint32Array(outBytes().slice().buffer); };
   { let names: string[] | null = null; G.wholeNames = () => { if (!X || typeof X.face_state_n !== 'function') return []; if (!names) { names = []; for (let i = 0; i < X.face_state_n(); i++) { X.face_state_name(i); names.push(outText()); } } return names; }; }
   G.stateWords = () => { if (!X || !held.h) return null; const n = X.face_parts(), at = X.face_part_hashes(held.slot) >>> 0; return { die: X.face_die_n(held.h), parts: new Uint32Array(MEM!.buffer, at, n) }; };

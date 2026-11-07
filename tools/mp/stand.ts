@@ -77,6 +77,8 @@ export interface Stood {
   word(): string;
   /** how the mission ended, by the game's own verdict (game/verdict.ts): null while it is being played */
   ended(): Outcome | null;
+  /** the wider word after the last word tick (src/net/step.ts netWatch): null before the first, and where the host has no whole words */
+  watch(): string | null;
   /** the game that steps makes its start NOW (the host's `startNow`), so that the first tick costs a tick. Called once by whoever stood the game, after
    *  the last thing it sets on it before play (a client: the seat it shows) */
   begin(): void;
@@ -95,21 +97,23 @@ export async function standRecipe(recipe: Recipe): Promise<Stood> {
   // (`dress: true`: A NETWORKED GAME STANDS AS A PAGE DOES ON EVERY MACHINE. The harness's own stand puts the dressing rows down (src/game/dress.ts), and
   //  in the Rust game those rows are not picture alone: with them down the debris pool hands out no chunk and no glass plate, which are rows of the game's
   //  box table, and a storm's wind source reads nothing. A player's page has them up, and no recipe carries them)
-  const R = await rerun(F as never, { toN: 0, scan: false, dress: true });
+  //  (`draws: false`: the rows are up for the game's sake. Nothing is drawn here, so the page's dress step, which hands the men, the wind and the air
+  //  to a renderer, is not run on this process's copy: it cost a two-seat client most of its tick)
+  const R = await rerun(F as never, { toN: 0, scan: false, dress: true, draws: false });
   if (R.refuse || !R.W) throw new Error(`the game could not be stood from its recipe: ${R.refuse}`);
   const W = R.W, g = W.game;
   { const S = g.sensors as object; if (Object.hasOwn(S, 'read')) delete (S as { read?: unknown }).read; }   // (the re-run serves the sensors off its tape; this game answers its own, SENSE.cpu)
-  const { netStep, netStand, netWord, netQuiet, netWhole, wordTick, NET_WORD_SEED } = await import(`${ROOT}/src/net/step.ts`), { activeScenario } = await import(`${ROOT}/src/game/scenarioRun.ts`);
+  const { netStep, netStand, netWord, netWatch, netQuiet, netWhole, wordTick, NET_WORD_SEED } = await import(`${ROOT}/src/net/step.ts`), { activeScenario } = await import(`${ROOT}/src/game/scenarioRun.ts`);
   if (activeScenario(g) !== recipe.scenario) throw new Error(`the recipe's mission (${recipe.scenario}) did not come up here (${activeScenario(g) ?? 'none'} is up): ${(R.report?.warnings ?? []).find((w: string) => w.includes('did not start')) ?? 'another build or level than the recipe\'s'}`);
   netStand(g);
   // (MP_WORDS=<a file's path up to its last dot>: this process writes the whole game's words after every word tick to `<that>.<pid>.words`, a line a tick
   //  with the parts' names first, for two machines' files to be held to each other: tools/mp/words-diff.ts)
   const WORDS = process.env.MP_WORDS ? `${process.env.MP_WORDS}.${process.pid}.words` : ''; let named = false;
   const keep = (): void => { const A = netWhole(g); if (!A) return; if (!named) { named = true; appendFileSync(WORDS, `names ${A.names.join(' ')}\n`); } appendFileSync(WORDS, `${out.ticks} ${A.words.map((x: number) => x.toString(36)).join(' ')}\n`); };
-  let word: number = NET_WORD_SEED;
+  let word: number = NET_WORD_SEED, watch: string | null = null;
   const out: Stood = { W, warnings: R.report?.warnings ?? [], ticks: 0,
-    step(cmds) { netStep(g, W.engine, cmds); word = netWord(g, word); out.ticks++; if (WORDS && wordTick(out.ticks - 1)) keep(); },
-    quiet: on => netQuiet(g, on),
+    step(cmds) { netStep(g, W.engine, cmds); word = netWord(g, word); out.ticks++; if (wordTick(out.ticks - 1)) { watch = netWatch(g); if (WORDS) keep(); } },
+    quiet: on => netQuiet(g, on), watch: () => watch,
     begin: () => { (g as unknown as { rustHost?: { startNow?(): void } }).rustHost?.startNow?.(); },
     word: () => word.toString(36), ended: () => { const V = g.verdict.result; return V ? { won: V.won, end: V.word, why: V.why } : null; } };
   return out;

@@ -1,6 +1,7 @@
 // THE RESPONSE TEAM IS THE LEVEL'S OWN — the check behind qrf.ts `RESPONSE` (scenarios.response in a level's file; scene/scenarios.ts ResponseData).
 //   bun run tools/qa/response-check.ts   (`probes.ts response`, in the `qrf` family)     exit 0 = all hold · 1 = one does not
-// The switch (and the picture's, which the net's word reads) is raised here, so the lines hold on BOTH stands (run it plain and under TPS_PROFILE=shipped).
+// The switch, its three rules and the picture's are settled on: the check asks the page's side alone and no longer writes them (until 2026-11-07 its
+// rig raised all five, and the break word was the switch left off).
 // Headless: nothing here has been seen on a GPU, and nobody has played a run with a team on any of these levels.
 //   (1) the files: exactly the levels chosen carry a block, each with its reason; the validator refuses a block with three muster marks, five men, a door
 //       the level has not got
@@ -31,7 +32,7 @@
 //   (20) a team still on the road when the last defender falls never arrives: the place is taken and the call is called off
 //   (21) the records office's raid: the way in decides it — from the lot the desk is the first man met (a call, or the desk down inside its six seconds); from the
 //        other way in the desk calls the patrol. With it every level on the WITH list has a call played through by its own mission
-// RESPONSE_BREAK=1 = the switch left off for the 'on' lines (and on for the 'off' lines): every line but (1) and (2), which read files and floors, must fail.
+// RESPONSE_BREAK=1 = the floor is stood with no response team at all (tune.qrf off) for the lines that want one: every line but (1), (2) and (18) must fail.
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
@@ -40,7 +41,7 @@ const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const Qm = await import(`${ROOT}/src/game/qrf.ts`);
 const { RESPONSE, QRF_MARKS, requestQrf, resetQrf, checkResponse, hasResponse, responseWordSnapshot, responseWordRestore } = Qm;
-const { PICTURE, ideasOf } = await import(`${ROOT}/src/game/picture.ts`);
+const { ideasOf } = await import(`${ROOT}/src/game/picture.ts`);
 const { fireWeapon, killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 /** the way a round was going when it put a man down (combat.ts killGuard's third argument is a direction: a word there leaves his body at no place at all) */
 const SHOT: Vec3 = [1, 0, 0];
@@ -60,14 +61,14 @@ const text = (file: string) => readFileSync(resolve(ROOT, 'levels', file), 'utf8
 /** …with its block held to one answer, for a line whose subject is not the deal: the first way, the most men, the middle of the time (RESPONSE.deal is settled on) */
 async function stand1(file: string | null, seed: number, on: boolean, q: string | null = '?quiet=1', way = 0) { oneAnswer = true; try { return await stand(file, seed, on, q, way); } finally { oneAnswer = false; } }
 let oneAnswer = false;
-/** a level stood up with the switch as the line wants it; `q` starts its mission */
+/** a level stood up, with a response team to call (`on`; false = RESPONSE_BREAK's floor without one); `q` starts its mission */
 async function stand(file: string | null, seed: number, on: boolean, q: string | null = '?quiet=1', way = 0) {
   Math.random = seeded(0x7e5 + seed * 7919);
   const W: any = await hushed(() => standUp({ uploadEvery: 4, seed, ...(file ? { level: loadLevel(parseLevelData(text(file))) } : {}) }));
-  const g = W.game; RESPONSE.on = on; RESPONSE.deal = true; RESPONSE.net = true; RESPONSE.raid = true; PICTURE.on = true;
+  const g = W.game;
   if (way) ROOMCLEAR.way = way;   // (the room clear's way in: 2 = the level's first other start)
   if (q && (g.level.scenarios?.quiet || /roomclear|rescue/.test(q))) await hushed(() => startFromQuery(g, q));
-  g.godMode = true; g.aiEnabled = true; g.tune.qrf = true; g.tune.perimeter = false;
+  g.godMode = true; g.aiEnabled = true; g.tune.qrf = on; g.tune.perimeter = false;
   if (oneAnswer) { const R = g.level.scenarios.response, e = (R.eta[0] + R.eta[1]) / 2; R.men = [R.men[1], R.men[1]]; R.eta = [e, e]; R.ways = [R.ways[0]]; }
   W.steps(20, DT);
   return W;
@@ -87,10 +88,10 @@ const staff = (g: any) => g.guards.filter((x: any) => !x.unit && x.team === 'gua
 function inFrontOf(g: any, m: any, d: number): Vec3 | null { const f = m.char.forward(); for (const k of [d, d - 1, d + 1, d - 2, d - 2.5]) for (const s of [0, 0.5, -0.5, 1, -1]) { const p: Vec3 = [m.char.pos[0] + f[0] * k - f[2] * s, 0, m.char.pos[2] + f[2] * k + f[0] * s]; if (!g.col.nav.isBlocked(p[0], p[2]) && !g.col.segmentBlocked([m.char.pos[0], 1.5, m.char.pos[2]], [p[0], 1.2, p[2]])) return p; } return null; }
 
 export async function responseCheck(): Promise<boolean> {
-  let all = true; const was = { ...RESPONSE }, picWas = PICTURE.on;   // (put back at the end: a runner that goes on in this process finds its stand as it left it)
+  let all = true; const was = { ...RESPONSE };   // (put back at the end: a runner that goes on in this process finds its stand as it left it)
   const line = (ok: boolean, label: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
   const ON = !BREAK;
-  console.log(`\n=== response-check: the response team is the level's own — where it comes in, who it is, what it was told (RESPONSE)${BREAK ? ' · RESPONSE_BREAK: the switch left off' : ''} ===`);
+  console.log(`\n=== response-check: the response team is the level's own — where it comes in, who it is, what it was told (RESPONSE)${BREAK ? ' · RESPONSE_BREAK: no response team on the floor' : ''} ===`);
 
   // ---- (1) the files
   { const files = readdirSync(resolve(ROOT, 'levels')).filter(f => f.endsWith('.json') && !f.endsWith('.lint.json')).sort();
@@ -133,8 +134,8 @@ export async function responseCheck(): Promise<boolean> {
       `${Q.state}/${Q.reason} · dealt ${D ? `way ${D.way + 1} '${y!.name}', ${D.men} men, ${D.eta} s` : 'nothing'} · stood up ${men.map(m => m.callsign).join(' ')} · way in thrown at ${f1(tDoor)} s · on the fan ${onFan} (${men.map(m => at(m.char.pos)).join(' ')}) · the level's words ${own}: “${(rx.find(l => /send the picket/.test(l.text))?.text ?? '').slice(0, 90)}” “${(rx.find(l => /rolling/.test(l.text))?.text ?? '').slice(0, 130)}”`); }
 
   // ---- (5) no two calls alike
-  { const deals = async (seed: number, n: number, deal = true) => { const W = await stand('bazaar.json', seed, ON); const g = W.game; hideSam(g); RESPONSE.deal = deal; const out: string[] = [];
-      for (let i = 0; i < n; i++) { requestQrf(g, 'gunfire'); const D = dealOf(g); out.push(D ? `${D.way}/${D.men}/${D.eta}` : '-'); resetQrf(g); } RESPONSE.deal = true; return { out, R: g.level.scenarios.response }; };
+  { const deals = async (seed: number, n: number) => { const W = await stand('bazaar.json', seed, ON); const g = W.game; hideSam(g); const out: string[] = [];
+      for (let i = 0; i < n; i++) { requestQrf(g, 'gunfire'); const D = dealOf(g); out.push(D ? `${D.way}/${D.men}/${D.eta}` : '-'); resetQrf(g); } return { out, R: g.level.scenarios.response }; };
     const A = await deals(5, 16), B = await deals(5, 6), C = await deals(6, 6), R = A.R;
     const P = A.out.map(s => s.split('/').map(Number)), ways = new Set(P.map(p => p[0])), sizes = new Set(P.map(p => p[1])), etas = new Set(P.map(p => p[2]));
     const inside = P.every(p => p[0] >= 0 && p[0] < R.ways.length && p[1] >= R.men[0] && p[1] <= R.men[1] && p[2] >= R.eta[0] && p[2] <= R.eta[1] && p[2] % RESPONSE.etaStep === 0);
@@ -296,7 +297,7 @@ export async function responseCheck(): Promise<boolean> {
     line(honest && ok, '(21) a raid on the records office: from the lot the night desk is the first man met, and a start is a call or the desk down inside its six seconds; from the other way in a man of the desk asks for the patrol, and it comes on the defenders\' side, two men, by a way neither of the pair stands at, inside the eleven',
       `${tale.join(' · ')} · the other way in: ${got}`); }
 
-  Object.assign(RESPONSE, was); PICTURE.on = picWas;
+  Object.assign(RESPONSE, was);
   console.log(`\n=== response-check: ${all ? 'ALL PASS' : 'SOME FAILED'} ===`);
   return all;
 }

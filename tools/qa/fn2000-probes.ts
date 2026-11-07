@@ -46,7 +46,6 @@ const { ocpable } = await import(`${ROOT}/src/game/lighting.ts`);
 const fxm = await import(`${ROOT}/src/game/effects.ts`);
 const { Overlay } = await import(`${ROOT}/src/ui/overlay.ts`);
 const { closeLethal, closeBare } = await import(`${ROOT}/src/game/close.ts`);   // (kit-slots (e): where the blow is the player's choice the knockout is the RIGHT click and the row says so)
-const { TORCH } = await import(`${ROOT}/src/game/calmtorch.ts`);   // (kit-slots (d): a calm man in a lit corridor has his torch out under the calm torch rule — held off while the line stages a man with it lit)
 const { KIT: CARDS, KIT_SOLO } = await import(`${ROOT}/src/game/kit.ts`);
 const { KITANIM, KITANIM_LOG, kitReload } = await import(`${ROOT}/src/game/kitanim.ts`);
 const { WALLSNAP } = await import(`${ROOT}/src/game/wallsnap.ts`);   // (rifle-slot / rifle-carry at the wall: where the wall's feel pass is live, Q with the rifle in hand STACKS on it — the rifle stays in his hands at the low ready, not on the sling)
@@ -532,12 +531,12 @@ export async function kitSlots() {
     tr.push(`pistol+man(torch out): snapped ${snapped}, ocpable ${ableOff}, charge ${f2(pl.ocp.charge)}, sounds ${JSON.stringify(noise)}, msgs ${msgs.length}`);
     if (!snapped) fails.push('staging: the reticle did not snap to the man');
     if (ableOff || pl.ocp.charge < 0.99 || noise.length || msgs.length || A.lightDeadUntil > 0) fails.push(`pistol + a man with no light: ocpable ${ableOff}, charge ${f2(pl.ocp.charge)}, sounds ${JSON.stringify(noise)}, "${msgs.at(-1) ?? ''}" (want no affordance and NOTHING happening)`);
-    const calm0 = TORCH.calmOff; TORCH.calmOff = false;   // (this line stages a man with his torch LIT: the calm torch rule puts a calm man's out in a lit corridor like this one — its own check's question, calmtorch-check.ts — so it is held off while the torch comes back on)
-    A.torchLostAt = -1; for (let f = 0; f < 3 || (calm0 && f < 90 && !A.flashlight.enabled); f++) { W.cursorAt(chestA()); W.step(DT); }   // the torch back in his hand and lit
+    // (this line stages a man with his torch LIT. The calm torch rule — settled on, its own check calmtorch-check.ts — puts a calm man's out in a lit corridor like this one: until 2026-11-07 the rule was held off here while the torch came back on; now the line waits a second and a half for it and asks the game as it is)
+    A.torchLostAt = -1; for (let f = 0; f < 3 || (f < 90 && !A.flashlight.enabled); f++) { W.cursorAt(chestA()); W.step(DT); }   // the torch back in his hand and lit
     const ableOn = ocpable(game); msgs.length = 0; W.cursorAt(chestA()); input.clicked |= 4; W.step(DT);
     tr.push(`pistol+man(torch lit): ocpable ${ableOn}, charge ${f2(pl.ocp.charge)}, "${msgs.at(-1) ?? ''}"`);
     if (!ableOn || pl.ocp.charge > 0.05 || !(A.lightDeadUntil > game.time) || !msgs.some(m => /flashlight fried/.test(m))) fails.push(`pistol + a man with his torch lit: ocpable ${ableOn}, charge ${f2(pl.ocp.charge)}, lightDeadUntil ${f2(A.lightDeadUntil)}, "${msgs.at(-1) ?? ''}" (want his torch knocked out — it is a light)`);
-    pl.ocp.charge = 1; A.lightDeadUntil = -1; TORCH.calmOff = calm0;
+    pl.ocp.charge = 1; A.lightDeadUntil = -1;
     // rifle + RING on him: the press frame holds the arc and sends nothing, the next frame (the button up) sends one ring; a round on the left
     pl.slot = 'rifle'; pl.holstered = false; rf.attIdx = 0; settle(40);
     const headA = () => A.char.bones.head; for (let f = 0; f < 3; f++) { W.cursorAt(headA()); W.step(DT); }

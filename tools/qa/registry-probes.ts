@@ -341,8 +341,8 @@ export const registryStage = guarded(async () => {
   }
   verdict(bad.length === 0, 'staged on eight seeds: the pair and Sam inside the front door, two hostages and the captor in the registrar\'s office, the door man behind the hall\'s counter, every inside door shut but the copy room\'s hall door (left standing open)', bad.length ? bad.slice(0, 6).join(' · ') : `${chars} characters at most (the shadow budget is 8)`);
   const nc = where.filter(w => w === 'copy').length, nr = where.filter(w => w === 'reading').length;
-  // (the same start rule on = the roamer on the level's own mark on every seed, no coin; off = the coin, both rooms seen. ROAMER_BREAK=1 asks for the other stand's stage: the line must FAIL)
-  if (SAMESTART.on !== (process.env.ROAMER_BREAK === '1')) verdict(where.length > 0 && (nc === where.length || nr === where.length), 'the one roamer stands in the same room on every seed (every mission starts the same way: the scenario\'s coin is not thrown)', `copy room ${nc} · reading room ${nr} of ${where.length}`);
+  // (every mission starts the same way: the roamer on the level's own mark on every seed, no coin. ROAMER_BREAK=1 asks for the coin's stage, both rooms seen: the line must FAIL)
+  if (process.env.ROAMER_BREAK !== '1') verdict(where.length > 0 && (nc === where.length || nr === where.length), 'the one roamer stands in the same room on every seed (every mission starts the same way: the scenario\'s coin is not thrown)', `copy room ${nc} · reading room ${nr} of ${where.length}`);
   else verdict(nc > 0 && nr > 0, 'the one roamer stands behind the blind wall on some seeds and behind the glass on others (the scenario\'s own coin)', `copy room ${nc} · reading room ${nr} of ${where.length}`);
   verdict(rounds === 0 && clocks === 0, 'five seconds with Sam standing: nobody fires and the captor\'s clock has not started', `${rounds} rounds · the clock running on ${clocks} seeds`);
   return done();

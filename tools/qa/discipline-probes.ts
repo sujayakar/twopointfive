@@ -8,19 +8,15 @@
 //   (b) then Space held on the man's row — the choke, in front of them, Sam lit: nothing while the elbow closes (he is still up), and the first round ≥ 0.35 s and
 //       ≤ 4 s after he folds;
 //   (c) the same staging with tune.muzzleDiscipline = false: a round DURING the hold (the flag is live, and (a) would catch a regression);
-//   (d) the gun variant with the gun-hold rule OFF (gunhold.ts GUNHOLD.on false: `?nogunhold`, the frozen stand): Sam turns the pair onto Kowalski and fires past
-//       Novak's head at him — kills him, and keeps firing into the room — while Reyes, watching all of it and free to work round to a line of his own, still never
-//       puts a round past his colleague while he is up (Chaos Theory's answer: they do not shoot through their own man to answer fire);
-//   (e) the same staging with the rule ON (the page as it ships): the discipline is what the rule left of it. Nobody fires before Sam has; the man in front of
+//   (e) the gun variant (Sam turns the pair onto Kowalski and fires past Novak's head at him, and on into the room): the discipline is what the gun-hold rule left of it. Nobody fires before Sam has; the man in front of
 //       the gun never fires at all; the one man who answers is Reyes, from the clean line at Sam's back (within 70° of dead astern), single rounds on the
 //       standoff's slow cadence, and Novak never dies to his own side. What the men in FRONT do (run for cover, go round, look) is gunhold-check's.
-// (d) and (e) set the switch themselves after the stand-up, so the probe asks the same on the frozen and the shipped stand.
 import { ROOT } from './headless.ts';
 import { stageHold, bringIn, bearingPoint } from './standoff-probes.ts';
 const IK = 'Space';
 const { v3, DEG } = await import(`${ROOT}/src/math/vec.ts`);
 const { pairOf, flankShot, colleagueInLine, standoffSummary } = await import(`${ROOT}/src/game/guards.ts`);
-const { GUNHOLD, gunHoldStats } = await import(`${ROOT}/src/game/gunhold.ts`);
+const { gunHoldStats } = await import(`${ROOT}/src/game/gunhold.ts`);
 
 type Vec3 = [number, number, number];
 const DT = 1 / 60;
@@ -54,7 +50,7 @@ export function observe(game: any, men: any[], obs: Map<any, Obs>, P: any) {
 const obsLine = (m: any, O: Obs, t0: number) => `${m.callsign}: entered +${O.enterT >= 0 ? f2(O.enterT - t0) : '—'} s, alert ${O.frames - O.notAlert}/${O.frames} fr, pose aim ${O.poseAim} · low-for-colleague ${O.poseLow} · other ${O.poseBad}, line held ${f1(O.lineFrames * DT)} s (gun up on Sam ${f1(O.aimOnLine * DT)} s), ${O.shots.length} rounds${O.shots.length ? ' [' + O.shots.map(t => f2(t - t0) + 's').join(' ') + ']' : ''}, fireCd ${f2(m.fireCd)}`;
 
 export async function standoffDiscipline() {
-  console.log('\n=== standoff-discipline: Sam holds Novak in the break room, facing frozen, Kowalski + Reyes free to get round him — (a) 20 s: they point, talk, flank, and fire NOTHING; (b) the choke in front of them: the first round ≥ 0.35 s and ≤ 4 s after he folds; (c) tune.muzzleDiscipline=false: rounds during the hold; (d) gun hold, gun-hold rule off, Sam shoots Kowalski past Novak\'s head and keeps firing: Reyes still holds his; (e) the same with the rule on: nobody fires first, nobody in front fires, Reyes answers from the clean line behind at a slow cadence ===');
+  console.log('\n=== standoff-discipline: Sam holds Novak in the break room, facing frozen, Kowalski + Reyes free to get round him — (a) 20 s: they point, talk, flank, and fire NOTHING; (b) the choke in front of them: the first round ≥ 0.35 s and ≤ 4 s after he folds; (c) tune.muzzleDiscipline=false: rounds during the hold; (e) gun hold, Sam shoots Kowalski past Novak\'s head and keeps firing: nobody fires first, nobody in front fires, Reyes answers from the clean line behind at a slow cadence ===');
   let allPass = true;
   // ================================================================ (a) + (b)
   {
@@ -157,58 +153,12 @@ export async function standoffDiscipline() {
     const ok = fails.length === 0; allPass &&= ok;
     console.log(`- ${ok ? 'PASS' : 'FAIL'} — (c) tune.muzzleDiscipline = false: ${shots} round(s) during the hold, the first +${firstT >= 0 ? f2(firstT - t0) : '—'} s in; ${men.map(m => obsLine(m, obs.get(m)!, t0)).join(' · ')}${holdEnded ? '; hold ended ' + holdEnded : ''}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
   }
-  // ================================================================ (d) the gun hold, the gun-hold rule OFF: Sam fires past the man at Kowalski, and on into the room — Reyes, BEHIND the pair with the flank line his from the first second, holds it through all of it
-  {
-    const S = await stageHold(385, 1, AT, FACE * DEG, false, true); const { W, game, victim, lines, msgs, faceDeg } = S;   // (not frozen: Sam steers the pair onto Kowalski with the cursor, as a player lining up the shot does)
-    const rule = { on: GUNHOLD.on, fire: GUNHOLD.fire }; GUNHOLD.on = false;   // after the stand-up (which writes the stand's own value): this case is the standoff WITHOUT the rule, on either stand — (e) is the one with it
-    const A = game.guards[0], C = game.guards[2]; const men = [A, C]; const obs = new Map<any, Obs>(men.map(m => [m, newObs()]));
-    const P0 = pairOf(game)!; const centre = v3.copy(P0.centre);
-    bringIn(game, A, bearingPoint(centre, faceDeg + 15, 4.6), centre); bringIn(game, C, bearingPoint(centre, faceDeg + 180 - 12, 4.4), centre);   // Kowalski front-right at 4.6 m; Reyes a dozen degrees west of dead astern at 4.4 — the one place a round stops in Sam clear of Novak, and it stays his as Sam turns the pair the 15° onto Kowalski
-    const variant = game.player.holding?.variant;
-    const t0 = game.time; let exc = '', holdEnded = ''; let guardShots = 0, samShots = 0, hits = 0, prevHit = game.player.hitFlash, aDeadT = -1, clicks = 0, nextClick = 3.0; const log: string[] = [];
-    let aimAtA: Vec3 = v3.add(A.char.pos, [0, 1.25, 0]);
-    try {
-      for (let f = 0; f < 60 * 16; f++) {
-        if (A.state !== 'dead') aimAtA = v3.add(A.char.pos, [0, 1.25, 0]);   // on Kowalski's chest while he stands; where it was once he is down (the rounds go on past Novak into the room)
-        W.cursorAt(aimAtA);
-        const t = game.time - t0;
-        if (t >= nextClick && clicks < 9) { W.input.clicked |= 1; clicks++; nextClick = t + 1.0; }
-        W.step(DT); const P = pairOf(game);
-        if (game.player.hitFlash > prevHit + 1e-9) hits++; prevHit = game.player.hitFlash;
-        if (!P) { holdEnded = `${f2(game.time - t0)}s: victim ${victim.state}/${victim.downKind ?? '-'}/${victim.downBy ?? '-'}, holding ${game.player.holding?.phase ?? 'null'}, Sam down ${game.player.down}`; break; }
-        guardShots += observe(game, men.filter(m => m.state !== 'dead'), obs, P);
-        samShots += game.events.filter((e: any) => e.kind === 'shot' && e.time === game.time).length;
-        if (aDeadT < 0 && A.state === 'dead') aDeadT = game.time;
-        if (f % 90 === 0) log.push(`${f2(game.time - t0)}s ${standoffSummary(game) || '—'} · Sam's rounds ${samShots} · ${men.map(m => `${m.callsign} ${m.state}${m.standoff ? '/so' : ''} ${m.char.anim.upper}/${m.char.anim.stance}${m.muzzleDown ? '(down)' : ''} fireCd ${f2(m.fireCd)}`).join(' ')}`);
-      }
-    } catch (e: any) { exc = String(e?.stack ?? e); }
-    game.puppet = null; GUNHOLD.on = rule.on; GUNHOLD.fire = rule.fire;
-    const OC = obs.get(C)!;
-    const fails: string[] = [];
-    if (exc) fails.push('exception: ' + exc.split('\n')[0]);
-    if (variant !== 'gun') fails.push(`staging: the hold is the '${variant}' variant (want gun: pistol drawn at the grab)`);
-    if (holdEnded) fails.push('the hold ended: ' + holdEnded);
-    if (samShots < 5) fails.push(`Sam got only ${samShots} round(s) off past him in ${clicks} clicks (want ≥ 5: the clicks must take)`);
-    if (guardShots) fails.push(`${guardShots} guard round(s) answered Sam's fire with Novak alive in his arm: ${men.map(m => `${m.callsign} ${obs.get(m)!.shots.map(t => f2(t - t0) + 's').join(' ')}`).join(' · ')}`);
-    if (aDeadT < 0 || A.downBy !== 'player') fails.push(`Kowalski ${A.state}/${A.downKind ?? '-'}/${A.downBy ?? '-'} at the end (want shot dead by Sam's rounds past the man — the point of the case)`);
-    if (OC.enterT < 0) fails.push('Reyes never entered the standoff');
-    else {
-      if (OC.notAlert) fails.push(`Reyes not alert on ${OC.notAlert}/${OC.frames} frames`); if (OC.lost) fails.push(`Reyes' record dropped on ${OC.lost} frame(s)`); if (OC.poseBad > 2) fails.push(`Reyes posed neither aiming nor low-ready on ${OC.poseBad} frames`);
-      if (OC.lineFrames * DT < 8) fails.push(`Reyes had a clean flank line for only ${f1(OC.lineFrames * DT)} s of 16 (want ≥ 8: he was put behind them for exactly that)`);
-      if (OC.lineFrames >= 30 && OC.aimOnLine < 0.9 * OC.lineFrames) fails.push(`Reyes had a clean line ${f1(OC.lineFrames * DT)} s, pistol up on Sam only ${f1(OC.aimOnLine * DT)} s of it (point, don't fire)`);
-    }
-    if (victim.state === 'dead') fails.push(`Novak died in the arm: ${victim.downKind}/${victim.downBy}`);
-    if (hits) fails.push(`Sam was hit ${hits}×`);
-    const ok = fails.length === 0; allPass &&= ok;
-    console.log(`- ${ok ? 'PASS' : 'FAIL'} — (d) gun hold (${variant}), gun-hold rule off, Sam fires ${samShots} round(s) past Novak (${clicks} clicks): Kowalski ${A.state}${aDeadT >= 0 ? ` (shot by ${A.downBy} +${f2(aDeadT - t0)} s)` : ''}; guard rounds ${guardShots}; Sam hit ${hits}×; Novak ${victim.state}; ${men.map(m => obsLine(m, obs.get(m)!, t0)).join(' · ')}\n    lines: ${lines.filter(l => l.t > t0 && !l.radio).map(l => `${f1(l.t - t0)}s ${l.who}: "${l.text}"`).join(' · ') || '—'}\n    ${log.join('\n    ')}\n    log tail: ${msgs.slice(-4).map(m => m.text).join(' | ')}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
-  }
-  // ================================================================ (e) the same gun hold with the gun-hold rule ON: what is left of the discipline once men answer a gun in the hold
+  // ================================================================ (e) the gun hold: what is left of the discipline once men answer a gun in the hold
   {
     const S = await stageHold(385, 1, AT, FACE * DEG, false, true); const { W, game, victim, lines, msgs, faceDeg } = S;
-    const rule = { on: GUNHOLD.on, fire: GUNHOLD.fire }; GUNHOLD.on = true; GUNHOLD.fire = true;
     const A = game.guards[0], C = game.guards[2]; const men = [A, C]; const obs = new Map<any, Obs>(men.map(m => [m, newObs()]));
     const P0 = pairOf(game)!; const centre = v3.copy(P0.centre);
-    bringIn(game, A, bearingPoint(centre, faceDeg + 15, 4.6), centre); bringIn(game, C, bearingPoint(centre, faceDeg + 180 - 12, 4.4), centre);   // (d)'s marks: Kowalski in front of the gun, Reyes a dozen degrees off dead astern
+    bringIn(game, A, bearingPoint(centre, faceDeg + 15, 4.6), centre); bringIn(game, C, bearingPoint(centre, faceDeg + 180 - 12, 4.4), centre);   // Kowalski in front of the gun, Reyes a dozen degrees off dead astern
     const variant = game.player.holding?.variant;
     const t0 = game.time; let exc = '', holdEnded = ''; let samShots = 0, firstSam = -1, hits = 0, prevHit = game.player.hitFlash, clicks = 0, nextClick = 3.0; const log: string[] = [];
     const rounds: { t: number; who: string; rear: number }[] = [];   // every guard round: when, whose, and how far off dead astern of Sam he stood (degrees)
@@ -229,7 +179,7 @@ export async function standoffDiscipline() {
       }
     } catch (e: any) { exc = String(e?.stack ?? e); }
     const stats = gunHoldStats(game);
-    game.puppet = null; GUNHOLD.on = rule.on; GUNHOLD.fire = rule.fire;
+    game.puppet = null;
     const fails: string[] = [];
     if (exc) fails.push('exception: ' + exc.split('\n')[0]);
     if (variant !== 'gun') fails.push(`staging: the hold is the '${variant}' variant (want gun: pistol drawn at the grab)`);
