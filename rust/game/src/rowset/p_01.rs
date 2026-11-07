@@ -10,15 +10,6 @@ fn live(g: &Game) -> bool { !BREAK }
 fn own(e: &ScenarioEntry) -> bool { e.level.as_deref().is_some_and(|l| !l.is_empty()) && (e.hour.is_some() || e.weather.is_some()) }
 
 /// The row whose own hour or weather a query is started in, or none: the first row of the query's level file that names one (THE HOUR IS THE
-/// LEVEL'S). (rowset.ts rowOfQuery)
-pub fn row_of_query(g: &Game, search: &RowOfQuerySearch) -> Option<ScenarioEntry> {
-    match search {
-        RowOfQuerySearch::Text(s) => row_of(g, &Query::parse(s)),
-        RowOfQuerySearch::URLSearchParams(q) => row_of(g, q),
-    }
-}
-
-/// The row whose own hour or weather a query is started in, or none: the first row of the query's level file that names one (THE HOUR IS THE
 /// LEVEL'S). (rowset.ts rowOfQuery, of words already read)
 pub fn row_of(g: &Game, q: &Query) -> Option<ScenarioEntry> {
     if !live(g) { return None; }
