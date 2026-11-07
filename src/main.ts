@@ -965,7 +965,6 @@ async function main() {
       else if (savePend) { if (savePending()) input.pressed.add('F5'); else savePend = null; }   // (…handed over on every live frame until a tick has moved the clock: a frame with no tick keeps the press for the next one — host/loop.ts — and a card that came up again before any tick still has it)
       if (FRAMECAP.on && input.hit('F6')) framecap.start({ whole: !capShift, at: capAt() });   // a frame capture (render/framecap.ts): frozen or not
       if (input.hit('F9')) perfrec.toggle();   // the perf recorder: works frozen or not (a pause-menu frame is data too)
-      if (input.hit('F10')) sessionrec.toggle();   // the session journal: asks now, starts at the top of the next live update it may (a paused card holds it pending), stops at the end of one
       if (!frozen && input.hit('KeyP') && (game.director.showing || game.director.handedOver)) endShow();   // P: over a level-script program stops it to the start card — and starts nothing: the showcases it once started are gone
     },
     postUpdate: () => {
