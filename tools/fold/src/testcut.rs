@@ -60,7 +60,7 @@ fn item_lines(src: &str, r: Range<usize>) -> Range<usize> {
 
 /// How a name is written where it is used.
 #[derive(Clone, PartialEq, Eq, Hash)]
-enum Via {
+pub enum Via {
     /// `f(…)`, `NAME`
     Bare,
     /// `q::f(…)`: the word before the `::`
@@ -70,7 +70,7 @@ enum Via {
 }
 
 /// Every name a piece of source uses, each with how it is written and whether it is called (a parenthesis follows).
-fn uses(src: &str) -> HashSet<(Via, String, bool)> {
+pub fn uses(src: &str) -> HashSet<(Via, String, bool)> {
     fn walk(ts: TokenStream, out: &mut HashSet<(Via, String, bool)>) {
         let v: Vec<TokenTree> = ts.into_iter().collect();
         let punct = |i: usize, c: char| matches!(v.get(i), Some(TokenTree::Punct(p)) if p.as_char() == c);

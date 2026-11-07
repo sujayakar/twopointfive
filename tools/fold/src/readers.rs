@@ -39,6 +39,8 @@ struct FnAt<'a> {
     lines: (usize, usize),
     /// the lines of its signature, up to where its body opens
     sig_lines: (usize, usize),
+    /// a function of an `impl`
+    method: bool,
 }
 
 fn line_of(src: &str, at: usize) -> usize {
@@ -55,7 +57,7 @@ fn fns_of<'a>(src: &str, file: &'a syn::File) -> Vec<FnAt<'a>> {
                     let name = f.sig.ident.to_string();
                     let ord = *seen.entry(name.clone()).and_modify(|n| *n += 1).or_insert(0);
                     let r = it.span().byte_range();
-                    out.push(FnAt { name, ord, sig: &f.sig, block: &f.block, lines: (line_of(src, r.start), line_of(src, r.end)), sig_lines: (line_of(src, r.start), line_of(src, f.block.span().byte_range().start)) });
+                    out.push(FnAt { name, ord, sig: &f.sig, block: &f.block, lines: (line_of(src, r.start), line_of(src, r.end)), sig_lines: (line_of(src, r.start), line_of(src, f.block.span().byte_range().start)), method: false });
                 }
                 syn::Item::Impl(x) if x.trait_.is_none() => {
                     for ii in &x.items {
@@ -63,7 +65,7 @@ fn fns_of<'a>(src: &str, file: &'a syn::File) -> Vec<FnAt<'a>> {
                             let name = f.sig.ident.to_string();
                             let ord = *seen.entry(name.clone()).and_modify(|n| *n += 1).or_insert(0);
                             let r = ii.span().byte_range();
-                            out.push(FnAt { name, ord, sig: &f.sig, block: &f.block, lines: (line_of(src, r.start), line_of(src, r.end)), sig_lines: (line_of(src, r.start), line_of(src, f.block.span().byte_range().start)) });
+                            out.push(FnAt { name, ord, sig: &f.sig, block: &f.block, lines: (line_of(src, r.start), line_of(src, r.end)), sig_lines: (line_of(src, r.start), line_of(src, f.block.span().byte_range().start)), method: true });
                         }
                     }
                 }
@@ -213,10 +215,24 @@ fn calls_of(all: &[Vec<FnAt>]) -> CallsOf {
 }
 
 /// What can write without `&mut`: a function that names `sim::` (the block behind the slot), a static or a cell, or
-/// hands back a `&mut`; and, to a fixed point, every function that calls one. By (module, name): two functions of
-/// a module that share a name taint each other.
-fn tainted_fns(files: &[(PathBuf, String, String)], all: &[Vec<FnAt>], calls: &CallsOf) -> HashSet<(String, String)> {
-    let mut tainted: HashSet<(String, String)> = HashSet::new();
+/// hands back a `&mut`; and, to a fixed point, everything that uses one. A use is read off the function's own words,
+/// inside a macro's too: `f` its own module's (else any module's of that name), `m::f` module m's, `T::f` and `x.f(…)`
+/// any method of that name. A `macro_rules!` of the file is followed like a function. It errs toward the taint.
+fn tainted_fns(files: &[(PathBuf, String, String)], parsed: &[syn::File], all: &[Vec<FnAt>]) -> HashSet<(String, String)> {
+    use crate::testcut::{uses, Via};
+    struct Node {
+        module: String,
+        name: String,
+        file: usize,
+        uses: HashSet<(Via, String, bool)>,
+        text: String,
+        tainted: bool,
+    }
+    let dirty = |text: &str| text.contains("sim::") || TAINT.iter().any(|t| text.contains(t));
+    let mut nodes: Vec<Node> = Vec::new();
+    let mut fn_keys: HashSet<(String, String)> = HashSet::new();
+    let mut methods: HashSet<(String, String)> = HashSet::new();
+    let modules: HashSet<String> = files.iter().map(|f| module_of(&f.1)).collect();
     for (fi, fns) in all.iter().enumerate() {
         let src = &files[fi].2;
         let m = module_of(&files[fi].1);
@@ -226,37 +242,75 @@ fn tainted_fns(files: &[(PathBuf, String, String)], all: &[Vec<FnAt>], calls: &C
                 syn::ReturnType::Type(_, t) => src[t.span().byte_range()].contains("mut"),
                 _ => false,
             };
-            if ret || body.contains("sim::") || TAINT.iter().any(|t| body.contains(t)) {
-                tainted.insert((m.clone(), f.name.clone()));
+            fn_keys.insert((m.clone(), f.name.clone()));
+            if f.method {
+                methods.insert((m.clone(), f.name.clone()));
             }
+            nodes.push(Node { module: m.clone(), name: f.name.clone(), file: fi, uses: uses(body), text: body.to_string(), tainted: ret || dirty(body) });
+        }
+        // the file's own macros: `macro_rules! name { … }`, as a function named `name!`
+        fn macros(items: &[syn::Item], src: &str, out: &mut Vec<(String, String)>) {
+            for it in items {
+                match it {
+                    syn::Item::Macro(x) => {
+                        if let Some(id) = &x.ident {
+                            out.push((format!("{id}!"), src[it.span().byte_range()].to_string()));
+                        }
+                    }
+                    syn::Item::Mod(md) => {
+                        if let Some((_, inner)) = &md.content {
+                            macros(inner, src, out);
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+        let mut ms = Vec::new();
+        macros(&parsed[fi].items, src, &mut ms);
+        for (name, text) in ms {
+            nodes.push(Node { module: m.clone(), name, file: fi, uses: uses(&text), tainted: dirty(&text), text });
+        }
+    }
+    // the macros of each file, to look for `name!` in a body
+    let mut file_macros: HashMap<usize, Vec<usize>> = HashMap::new();
+    for (i, n) in nodes.iter().enumerate() {
+        if n.name.ends_with('!') {
+            file_macros.entry(n.file).or_default().push(i);
         }
     }
     loop {
-        let mut grew = false;
-        for (fi, fns) in all.iter().enumerate() {
-            let m = module_of(&files[fi].1);
-            for (k, f) in fns.iter().enumerate() {
-                if tainted.contains(&(m.clone(), f.name.clone())) {
-                    continue;
+        let tainted: HashSet<(String, String)> = nodes.iter().filter(|n| n.tainted).map(|n| (n.module.clone(), n.name.clone())).collect();
+        let free_names: HashSet<&String> = tainted.iter().filter(|k| !methods.contains(*k)).map(|k| &k.1).collect();
+        let method_names: HashSet<&String> = tainted.iter().filter(|k| methods.contains(*k)).map(|k| &k.1).collect();
+        let mut grew: Vec<usize> = Vec::new();
+        for (i, n) in nodes.iter().enumerate() {
+            if n.tainted {
+                continue;
+            }
+            let by_macro = file_macros.get(&n.file).map(|v| v.iter().any(|&j| nodes[j].tainted && j != i && n.text.contains(nodes[j].name.as_str()))).unwrap_or(false);
+            // (a bare word that is not called is one of the module's own functions handed on as a value, or a local: only the first counts)
+            let by_use = n.uses.iter().any(|(via, name, called)| match via {
+                Via::Dot => *called && method_names.contains(name),
+                Via::Path(q) if q == "super" || q == "self" || *q == n.module => tainted.contains(&(n.module.clone(), name.clone())),
+                Via::Path(q) if modules.contains(q) => tainted.contains(&(q.clone(), name.clone())),
+                Via::Path(_) => method_names.contains(name),
+                Via::Bare => {
+                    let own = (n.module.clone(), name.clone());
+                    if fn_keys.contains(&own) { tainted.contains(&own) } else { *called && free_names.contains(name) }
                 }
-                let hit = calls[fi][k].iter().any(|(cm, cn, _)| {
-                    let target = match cm.as_deref() {
-                        None | Some("super") | Some("self") => (m.clone(), cn.clone()),
-                        Some(x) => (x.to_string(), cn.clone()),
-                    };
-                    tainted.contains(&target)
-                });
-                if hit {
-                    tainted.insert((m.clone(), f.name.clone()));
-                    grew = true;
-                }
+            });
+            if by_macro || by_use {
+                grew.push(i);
             }
         }
-        if !grew {
-            break;
+        if grew.is_empty() {
+            return tainted.into_iter().filter(|k| !k.1.ends_with('!')).collect();
+        }
+        for i in grew {
+            nodes[i].tainted = true;
         }
     }
-    tainted
 }
 
 pub struct Restored {
@@ -413,7 +467,7 @@ pub fn restore(root: &Path, state: &Path, diag: Option<&str>, taint: bool) -> Re
     //    cell, or hands back a `&mut`; and, to a fixed point, every function that calls one. By (module, name): two
     //    functions of a module that share a name taint each other.
     if taint {
-        let tainted = tainted_fns(&files, &all, &calls);
+        let tainted = tainted_fns(&files, &parsed, &all);
         for (fi, fns) in all.iter().enumerate() {
             let m = module_of(&files[fi].1);
             for f in fns {
@@ -545,7 +599,7 @@ pub fn report(root: &Path, state: &Path, bare: Option<&str>, calls_json: Option<
     let files = bodies(root);
     let parsed: Vec<syn::File> = files.iter().map(|(_, rel, src)| syn::parse_file(src).map_err(|e| format!("{rel} does not parse: {e}"))).collect::<Result<_, _>>()?;
     let all: Vec<Vec<FnAt>> = files.iter().zip(parsed.iter()).map(|((_, _, src), f)| fns_of(src, f)).collect();
-    let tainted = tainted_fns(&files, &all, &calls_of(&all));
+    let tainted = tainted_fns(&files, &parsed, &all);
     // by module: functions, taking the game, of those `&Game`, of those sure readers
     let mut by_module: BTreeMap<String, (usize, usize, usize, usize)> = BTreeMap::new();
     // a name is a reader only if every function of that module and name is one
