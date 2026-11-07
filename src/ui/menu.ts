@@ -8,9 +8,6 @@
 // the down card (Restart): the rating word and score, the numbers, the badges, the floor map with his path and the pins, the timeline. While any of them is
 // open main.ts freezes the simulation and keeps rendering the frozen frame underneath. Plain DOM, styled in index.html (#menu…) with ui/theme.ts's tokens.
 import { saveSandbox } from '../game/sandbox';
-import { SAVETIMELINE, type SlotInfo } from '../game/savestate';
-import { HANDRING } from '../game/handring';
-import { TWOGEARS, CROUCHRUN } from '../game/player';
 import { gearText } from '../game/gear';   // (the controls list names the kit: shown in the kit's words as issued)
 export { loadSandbox, saveSandbox, SANDBOX_LS } from '../game/sandbox';
 import { Engine } from '../engine';
@@ -27,9 +24,6 @@ import { quitSearch } from '../scene/scenarioList';
 import { openList, openStartPage, startPageWanted, startPageFromQuery } from './startpage';
 import { menuTheme } from './theme';
 import { tabNow } from './tabkey';
-import { SLOTSETUP } from '../game/slotsetup';
-import { AUTOCAM } from '../host/autocam';
-import { CMDRING } from '../game/cmdring';
 import { keyText, keysOf, slotNow, camKey, typedInto } from '../host/keymap';   // (the player's own keys: the list names them as they are bound)
 import { openOptions, closeOptions, optionsOpen, setOptionsDeps, refreshOptions, wallWay } from './options';
 import { cloudNote } from './cloudnote';
@@ -61,10 +55,6 @@ const KIT_SET: [string, string] = ['1 2 3 4 5', 'Five-seveN · FN2000 · smoke �
 const R_ROW: [string, string] = ['R', 'reload'];
 const NV_ROW: [string, string] = ['N · V', 'night vision · whistle (the nearest guard will come to look)'];
 const MOVE_ROW: [string, string] = ['W A S D', 'move · Shift sprint · C crouch · wheel = walking pace (slower is quieter)'];
-/** …with two gears (game/player.ts TWOGEARS): the wheel is nobody's pace and the crouch is the sneak */
-const MOVE_GEARS: [string, string] = ['W A S D', 'move · Shift sprint · C crouch (slower and quiet)'];
-/** …and both while Shift in a crouch is a fast crouch walk (game/player.ts CROUCHRUN): what Shift does crouched, and that it's heard */
-const MOVE_ROW_RUN: [string, string] = ['W A S D', "move · Shift sprint · C crouch, and Shift while you're crouched to hurry (it's louder) · wheel = walking pace (slower is quieter)"];
 const MOVE_GEARS_RUN: [string, string] = ['W A S D', "move · Shift sprint · C crouch (slower and quiet), and Shift while you're crouched to hurry (it's louder)"];
 const TEAM_KEYS = 'X · B · T · F';
 export const CONTROLS: [string, string][] = [   // (the options screen draws its own grouped copy, ui/options.ts KEYS: a key that changes is changed in both) ONE short line per key (playtest 08-09: 'the start page is WAY too wordy')
@@ -88,15 +78,15 @@ export const CONTROLS: [string, string][] = [   // (the options screen draws its
 /** the list as the board is (ui/options.ts wallWay): the wall hold's row with no key is the row of walking into one; with no key and no walk-in, no row */
 const WALL_ROW: [string, string] = ['Wall', 'walk into one to put your back to it, then slide and peek around its end · step away or press Shift to let go'];
 /** the move row as the game is: with two gears, and while Shift in a crouch is a fast crouch walk (game/player.ts CROUCHRUN) saying so */
-export function moveRowNow(): [string, string] { return TWOGEARS.on ? CROUCHRUN.on ? MOVE_GEARS_RUN : MOVE_GEARS : CROUCHRUN.on ? MOVE_ROW_RUN : MOVE_ROW; }
+export function moveRowNow(): [string, string] { return MOVE_GEARS_RUN; }
 /** the squad's keys on the older card while the command key and the word's are its only keys (game/cmdring.ts `only`; the codes are written, the list names the keys) */
 const TEAM_ONLY: [string, string] = ['B · F', "with a team, tap B for the usual order or hold it to open the wheel, and press F to send in everyone who's waiting"];
 const controlRows = (): [string, string][] => CONTROLS.flatMap(r => {
-  if (CMDRING.only && r[0] === TEAM_KEYS) return [TEAM_ONLY]; if (CMDRING.only && r[0] === 'H · G') return [];   // (game/cmdring.ts only: the squad's keys are the command key and the word's)
+  if (r[0] === TEAM_KEYS) return [TEAM_ONLY]; if (r[0] === 'H · G') return [];   // (game/cmdring.ts only: the squad's keys are the command key and the word's)
   if (r === MOVE_ROW) return [moveRowNow()];
-  if (HANDRING.on && r === SPACE_ROW) return [RING_ROW]; if (r === CAM_ROW) return AUTOCAM.on ? [camKey() ? CAM_SPACE : r, CAM_AUTO(camKey() ? 'Space' : 'Ctrl')] : [camKey() ? CAM_SPACE : r];
-  if (SLOTSETUP.on && r === KIT_ROW) return [KIT_SET]; if (SLOTSETUP.on && r === ZR_ROW && !keysOf('KeyZ').length) return [R_ROW];
-  if (r === LNV_ROW) { const l = !(SLOTSETUP.on && !keysOf('KeyL').length), v = !(HANDRING.on && !keysOf('KeyV').length); return [l && v ? r : l ? LN_ROW : v ? NV_ROW : N_ROW]; }   // (the light is a row of the gun's setup, the whistle a wedge of his ring: a key given back to either keeps its place here)
+  if (r === SPACE_ROW) return [RING_ROW]; if (r === CAM_ROW) return [camKey() ? CAM_SPACE : r, CAM_AUTO(camKey() ? 'Space' : 'Ctrl')];
+  if (r === KIT_ROW) return [KIT_SET]; if (r === ZR_ROW && !keysOf('KeyZ').length) return [R_ROW];
+  if (r === LNV_ROW) { const l = keysOf('KeyL').length > 0, v = keysOf('KeyV').length > 0; return [l && v ? r : l ? LN_ROW : v ? NV_ROW : N_ROW]; }   // (the light is a row of the gun's setup, the whistle a wedge of his ring: a key given back to either keeps its place here)
   if (r === E_ROW) return slotNow() ? (keysOf('KeyE').length ? [SLOT_ROW, r] : [SLOT_ROW]) : [r]; if (r !== Q_ROW) return [r]; const w = wallWay(); return w === 'key' ? [r] : w === 'walk' ? [WALL_ROW] : []; });
 
 const TAGLINE = 'a ray-traced stealth sandbox where every light, shadow and wisp of smoke is live';
@@ -141,7 +131,7 @@ export function bootCard(): { status(text: string): void; off(): void } {
     for (const t of picks ? PICKS_NOTES : START_NOTES) { const n = el('div', 'note'); n.textContent = t; card.appendChild(n); }
     const body = el('div', 'body'); card.appendChild(body);
     const list = el('div', 'controls');
-    for (const [k, v] of controlRows()) { if (k === 'F5' && !SAVETIMELINE.on) continue; const row = el('div', 'row'); const kk = el('div', 'k'); kk.textContent = keyCol(k); const vv = el('div', 'v'); vv.textContent = keyText(gearText(v)); row.append(kk, vv); list.appendChild(row); }
+    for (const [k, v] of controlRows()) { const row = el('div', 'row'); const kk = el('div', 'k'); kk.textContent = keyCol(k); const vv = el('div', 'v'); vv.textContent = keyText(gearText(v)); row.append(kk, vv); list.appendChild(row); }
     body.appendChild(list);
     const foot = el('div', 'foot'); foot.textContent = keyText('Esc pauses · ` opens the debugger (every knob)'); card.appendChild(foot);
   }
@@ -380,14 +370,14 @@ export class Menu {
   private checkpointInfo() {
     const g = this.d.game; if (!this.d.loadCheckpoint) return null;
     const scn = this.d.scenario?.current() ?? null, n = g.saves.offer(g, g.mission.stats.elapsed);
-    if (scn && !scn.saves) return SAVETIMELINE.on && n && g.saves.isThisRun(n) ? n : null;   // (a scenario with a team: no file is written there and a solo run's is refused — but under SAVETIMELINE this run's own saves, kept in memory, are offered)
+    if (scn && !scn.saves) return n && g.saves.isThisRun(n) ? n : null;   // (a scenario with a team: no file is written there and a solo run's is refused — but this run's own saves, kept in memory, are offered)
     return n;
   }   // (savestate.ts offer: an earlier run's slot only if this game would load it)
   /** THE STRIP (savestate.ts SAVETIMELINE): this run's saves in the order they were made, each a tile — its picture, how long ago, a mark on the ones made by
    *  hand, a regretted autosave dimmed. A click, or Enter on the tile the arrows (A D too) have walked to, goes back to it. Null with the switch off, no loader,
    *  or fewer than two saves (one save is the button above it) unless one is asked for on this card. */
   private saveStrip(armed: () => boolean = () => true): HTMLElement | null {
-    const g = this.d.game, load = this.d.loadCheckpoint; if (!SAVETIMELINE.on || !load) return null;
+    const g = this.d.game, load = this.d.loadCheckpoint; if (!load) return null;
     const due = this.mode === 'pause' && !!this.d.saveDue?.();   // (a save asked for on this card: its tile stands where the save will, empty until play goes on and writes it)
     const line = g.saves.timeline(); if (line.length < 2 && !due) return null;
     const now = g.mission.stats.elapsed, offered = this.checkpointInfo();
@@ -419,7 +409,7 @@ export class Menu {
 
   private controls() {
     const list = el('div', 'controls');
-    for (const [k, v] of controlRows()) { if (k === 'F5' && !SAVETIMELINE.on) continue; const row = el('div', 'row'); const kk = el('div', 'k'); kk.textContent = keyCol(k); const vv = el('div', 'v'); vv.textContent = keyText(gearText(v)); row.append(kk, vv); list.appendChild(row); }
+    for (const [k, v] of controlRows()) { const row = el('div', 'row'); const kk = el('div', 'k'); kk.textContent = keyCol(k); const vv = el('div', 'v'); vv.textContent = keyText(gearText(v)); row.append(kk, vv); list.appendChild(row); }
     this.body.appendChild(list);
   }
 

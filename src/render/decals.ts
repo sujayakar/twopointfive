@@ -160,7 +160,7 @@ export class Decals {
     let radius = size ?? def.radius;
     if (kind === 'scuff') radius = 0.5 * param + SCUFF_HALF_W + 0.06;   // the streak + its echo mark (decals.wgsl scuffMark) inside one bounding circle
     let p = v3.copy(pos);
-    if (opts.clampTo) p = clampToFace(opts.clampTo, p, n, kind === 'scuff' ? 0.5 * param : radius, MARKCUT.on);
+    if (opts.clampTo) p = clampToFace(opts.clampTo, p, n, kind === 'scuff' ? 0.5 * param : radius, true);
     const full = this.list.length >= DECAL_CAP, lookAt = full ? this.list.findIndex(x => x.look) : -1;
     if (full && opts.look && lookAt < 0) return null;   // (a full ring of play's marks takes no mark laid only for the picture)
     const serial = ++this.serial;
