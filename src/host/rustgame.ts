@@ -80,7 +80,7 @@ export const RUST_GAME = {
   on: false, bytes: 0, fetchMs: 0, compileMs: 0, startMs: 0, startBytes: 0, handle: 0, slot: -1, ticks: 0, starts: 0, grew: 0, memory: 0,
   /** ms of the last step and summed over every step: the host's half, the tick, the filtered export, the apply, the out events, the dress step */
   last: { host: 0, step: 0, export: 0, apply: 0, out: 0, dress: 0, bytes: 0 }, sum: { host: 0, step: 0, export: 0, apply: 0, out: 0, dress: 0, bytes: 0 }, worst: { step: 0, apply: 0, at: 0 },
-  hostHas: 0, wind: [0, 0], probeForgot: 0, oursMissed: 0, smokeMissed: 0, wallFeels: 0, pictureWritten: 0, notes: 0, pokes: 0, poked: {} as Record<string, number>, pokeRefused: {} as Record<string, string>, lightsMade: 0, wholes: 0, wholeMs: 0, rowsKept: 0, nulls: 0, lightsWritten: 0,
+  hostHas: 0, wind: [0, 0], probeForgot: 0, oursMissed: 0, smokeMissed: 0, wallFeels: 0, pictureWritten: 0, notes: 0, pokes: 0, poked: {} as Record<string, number>, pokeRefused: {} as Record<string, string>, named: 0, lightsMade: 0, wholes: 0, wholeMs: 0, rowsKept: 0, nulls: 0, lightsWritten: 0,
   /** games kept (a save, the start) and their cost: how many were taken, ms of the last take and the worst, how many the module holds now; games put back,
    *  ms of the last (the kept game stood again, the whole apply, the hand-over of the controller's lines) */
   /** the warm-up behind a start card (`rustWarm`): ms of the Rust game's start, of the applies and of the ticks stepped and thrown away, and how many */
@@ -156,6 +156,11 @@ export async function rustBoot(): Promise<void> {
   RUST_GAME.fetchMs = t1 - t0; RUST_GAME.compileMs = performance.now() - t1;
   X = inst.exports as unknown as Face; MEM = X.memory; BUF = MEM.buffer;
   for (const n of ['face_new_at', 'face_puppet', 'face_host_half', 'face_host_has', 'face_step', 'face_ask', 'face_probe_asks', 'face_lights_out', 'face_poke', 'face_write', 'face_keep', 'face_back', 'face_loaded', 'face_saves_in', 'face_saves_asked']) if (typeof X[n] !== 'function') throw new RustGameError(`?rust=1: game_face.wasm has no ${n}: it was built from another tree (tools/blitz/face-build.ts builds this one's)`);
+  // STAND-IN: EVERY CLASS OF THE SIMULATION'S FOLDERS GETS ITS OWN NAME BACK (tools/blitz/page-plugin.ts keeps each beside its class). The bridge tells
+  // some classes by `constructor.name`, and a minified bundle has renamed them all: a rifle crossed as a plain firearm, and a whole apply (a restart,
+  // a load) then made the page's rifle a plain one, whose weapon card threw. On the dev server's bundle the names are already theirs and nothing is
+  // written. Belongs in the bridge: a class told by the class table's own entry, never by its name.
+  { let n = 0; for (const f of ((globalThis as any).__tpsClasses ?? []) as (() => [Function, string][])[]) for (const [c, name] of f()) if (c.name !== name) { Object.defineProperty(c, 'name', { value: name, configurable: true }); n++; } RUST_GAME.named = n; }
   simAdopt(X, RUST_GAME.compileMs);
   PLACE = new BoxMirror(); (PLACE as unknown as { take(): boolean }).take();
   RUST_GAME.on = true; RUST_GAME.memory = MEM.buffer.byteLength;
