@@ -132,6 +132,31 @@ impl Play {
             match at { Some(k) => self.spoke[k] = (gd, b.t, b.text.clone()), None => self.spoke.push((gd, b.t, b.text.clone())) }
         }
     }
+    /// ONE FRAME OF A NETWORKED MACHINE THAT SHOWS THE SEAT `shown`: it is handed every seat's command and steps on them all, so two machines' games
+    /// get the same hands and only the shown seat differs. Each seat's command is sampled from its own Input through its own camera (idle, unless
+    /// a test writes them). Between frames the first seat stands on the game, for the test to read.
+    pub fn net_frame(&mut self, shown: usize) {
+        let seats = self.g.seats.clone();
+        let canvas = self.host.canvas;
+        let cmds: Vec<game::cmd::PlayerCmd> = seats.iter().map(|&s| {
+            let (input, cam) = (self.g.tab.cmd_seat[s].input, self.g.tab.cmd_seat[s].cam);
+            game::seats::with_seat(&mut self.g, s, &mut |g| game::cmd::sample_cmd(g, input, cam, canvas, None))
+        }).collect();
+        game::seats::show_seat(&mut self.g, seats[shown]);
+        game::game::game_step_seats(&mut self.g, DT, &cmds);
+        let now = self.g.time;
+        game::render_lights::light_set_update(&mut self.g, DT, now);
+        game::host_api::host_world_upload(&mut self.g);
+        game::seats::show_seat(&mut self.g, seats[0]);
+        self.g.out.clear();
+        self.frames += 1;
+    }
+    /// Every part of the game's state, a word a part (`game::state_words::STATE_NAMES` names them): what two machines of one game must agree on.
+    pub fn words(&mut self) -> Vec<u32> {
+        let (mut w, mut out) = (game::io::W::new(), Vec::new());
+        game::state_words::state_words(&mut self.g, &mut w, &mut out);
+        out
+    }
     /// Run `secs` of game time.
     pub fn run(&mut self, secs: f64) { for _ in 0..(secs * 60.0).round() as usize { self.frame(); } }
     /// Run until `p` holds, for at most `secs`: the seconds it took, or None if it never held. `p` is asked before the first frame and after
@@ -341,6 +366,13 @@ pub fn nudge(seed: u32, k: u32) -> f64 {
     let mut x = seed.wrapping_mul(0x9E37_79B9) ^ k.wrapping_mul(0x85EB_CA6B);
     x ^= x >> 16; x = x.wrapping_mul(0x7FEB_352D); x ^= x >> 15; x = x.wrapping_mul(0x846C_A68B); x ^= x >> 16;
     x as f64 / 2_147_483_648.0 - 1.0
+}
+
+/// The first frame at which two games' words differ, and the parts of the state that do.
+pub fn parting(a: &[Vec<u32>], b: &[Vec<u32>]) -> Option<(usize, String)> {
+    let k = a.iter().zip(b).position(|(x, y)| x != y)?;
+    let parts: Vec<&str> = game::state_words::STATE_NAMES.iter().zip(a[k].iter().zip(&b[k])).filter(|(_, (x, y))| x != y).map(|(n, _)| *n).collect();
+    Some((k, parts.join(", ")))
 }
 
 /// metres between two places in plan
