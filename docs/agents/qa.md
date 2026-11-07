@@ -347,6 +347,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   function the deletion took). WHAT IT CANNOT SEE: a child process's writes (they are in the probe's fold line), and a check that works both sides
   out first and prints afterwards (only its first line is marked). A tag is a reading aid: the probe is as red as before and exits the same.
   `fold-check` (11) holds it on `selftest-side`; `SIDES_BREAK=1` in front fails that line.
+  HOW A CHECK IS MENDED BY IT, the first two as the model (2026-11-07): `farcalm-check.ts` and `farsight-check.ts`. Every "rule off" half of a line
+  is cut and the line keeps what it says of the page's side; a line that asked only the other side goes (the far sight off, on and off alike, a
+  recording from before the key, the old stand's word and the page's off flag); the switch is no longer written at all. THE BREAK WORD CANNOT BE THE
+  RULE LEFT OFF ANY MORE, so it breaks the staging: `FARCALM_BREAK=1` stands Sam at 12 m, inside the old reach, where a faint glimpse is a fix (4
+  lines red); `FARSIGHT_BREAK=1` feeds a dark meter wherever the check lights a man (4 lines red). Both families ALL PASS with nothing refused.
   EVERY RUN OF A STAND AS IT OPENS IS READ AGAINST THE LIST OF EXPECTED REDS, FOLDED OR NOT (2026-11-07; `probes.ts`). The runner had read a folded
   probe's red against no row; since the deletion that was every probe of every run with no word, so nothing read the list on the named build:
   no EXPECTED RED / NEW RED / GREEN AGAIN, and a break word's closing line could not say whether it bit (`holds-check` (9), red by it). The
