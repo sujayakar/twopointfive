@@ -226,8 +226,9 @@ export async function pickerCard(): Promise<boolean> {
         const eq = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
         const was = lit(), n = db().length, now0 = difficultyNow();
         db().find((e: El) => e.attrs['data-difficulty'] === 'hard')?.onclick?.(); const hard = lit(), nowH = difficultyNow(), onH = PRESSURE.on && DIGIN.on && DIGIN.reachM === HARD.reachM && DIGIN.keeper === HARD.keeperDigs && PRESSURE.warned === HARD.warned && PRESSURE.second === HARD.second && PRESSURE.picket === HARD.picket && PRESSURE.byWay === HARD.byWay && PRESSURE.wayOut === HARD.wayOut && PRESSURE.drilled === HARD.drilled && !DIGIN.stay && !DIGIN.gather, hrefH = mrowsOf(mroot).map(r => r.href);
-        PRESSURE.flank = !PRESSURE.flank; const nowC = difficultyNow(), litC = lit(); PRESSURE.flank = !PRESSURE.flank;
-        DIGIN.cover = !DIGIN.cover; const nowOff = (PRESSURE.on = false, DIGIN.on = false, difficultyNow()); PRESSURE.on = DIGIN.on = true; DIGIN.cover = !DIGIN.cover;
+        // (THE ROW MOVED BY HAND IS A NUMBER OF THE LEVEL'S: the dig-in's reach. Until 2026-11-07 it was PRESSURE.flank and DIGIN.cover, two settled rows: the write was refused, nothing moved, and the line read 'hard')
+        const reach0 = DIGIN.reachM; DIGIN.reachM = reach0 + 1; const nowC = difficultyNow(), litC = lit();
+        const nowOff = (PRESSURE.on = false, DIGIN.on = false, difficultyNow()); PRESSURE.on = DIGIN.on = true; DIGIN.reachM = reach0;
         db().find((e: El) => e.attrs['data-difficulty'] === 'standard')?.onclick?.(); const back = lit(), nowS = difficultyNow(), hrefS = mrowsOf(mroot).map(r => r.href);
         F.verdict(n === 2 && was === 'standard' && now0 === 'standard', 'the mission list carries the difficulty switch: two buttons, standard lit as shipped', `${n} buttons · lit: ${was} · tables read: ${now0}`);
         F.verdict(hard === 'hard' && nowH === 'hard' && onH, 'one press on hard: both harder-defender tables on (press + dig-in, stay and gather off), hard lit', `lit: ${hard} · tables read: ${nowH}`);
