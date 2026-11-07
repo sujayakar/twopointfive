@@ -7,7 +7,7 @@
 // highlight followed the floor's roughness map pixel for pixel (r = −0.72 in a still): the reflection term, rays and highlights in one texel, was faded to
 // nothing over the 0.12 of roughness under the rays' cut-off by each pixel's own roughness, so a grain a twentieth smoother than its neighbour was lit and
 // the neighbour was not.
-// WHAT THIS CAN AND CANNOT SAY. No shader runs here. Line 1 holds the rule BY ITS TEXT in the three writings of the reflection pass, the two of the composite
+// WHAT THIS CAN AND CANNOT SAY. No shader runs here. Line 1 holds the rule BY ITS TEXT in the two reflection passes and the composite
 // and the passes' layouts. Lines 2 to 7 are second writings of the shaders' arithmetic, each held to the shader by the text of the lines it writes again:
 // the fade's pair and the page's word; a floor of grains under the old fade and the new; the texel's roughness and the nine-texel read; an opening counted
 // once (a statement of the split and the text of its two halves: the sum is an identity, it cannot fail by itself); a metal's highlights. Whether a second writing is the first is as good as its pins. What the picture looks like is the
@@ -22,7 +22,7 @@ export async function highlightsCheck(): Promise<boolean> {
   const src = (f: string) => readFileSync(resolve(ROOT, 'src', f), 'utf8'), sh = (f: string) => src(`render/shaders/${f}`);
   const count = (t: string, s: string) => t.split(s).length - 1;
   const ss = (e0: number, e1: number, x: number) => { const u = Math.min(Math.max((x - e0) / (e1 - e0), 0), 1); return u * u * (3 - 2 * u); };
-  const passes = ['reflect.wgsl', 'reflect_p5.wgsl', 'compact/reflect_p5.wgsl'], comps = ['composite.wgsl', 'compact/composite.wgsl'];
+  const passes = ['reflect.wgsl', 'reflect_p5.wgsl'], comps = ['composite.wgsl'];
   const cuts = [...src('ui/quality.ts').matchAll(/^  (ultra|high|medium):[^\n]*?rt: \{ on: true, div: \d+, rays: \d+, maxRough: ([0-9.]+),/gm)].map(x => [x[1], +x[2]] as [string, number]).sort((x, y) => x[1] - y[1]), high = cuts.findIndex(x => x[0] === 'high'), HI = high >= 0 ? cuts[high][1] : NaN;   // (the presets' cut-offs, off their table)
   // 1. the text
   const mainOf = (t: string) => { const k = t.indexOf('\nfn main('), j = t.indexOf('\n}\n', k); return k < 0 ? '' : t.slice(k, j < 0 ? undefined : j); };
@@ -49,7 +49,7 @@ export async function highlightsCheck(): Promise<boolean> {
     && pt.includes('{ binding: 12, resource: this.reflHiView } ];') && src('engine.ts').includes('K.spMaxRough = s.rtMaxRough;')
     && src('gpu/device.ts').includes("!lang.has('readonly_and_readwrite_storage_textures')");
   verdict(heldP.every(Boolean) && heldC.every(Boolean) && wired,
-    'the three writings of the reflection pass write the rays to the mirror\'s target and the highlights to their own, each by its own test of the finish, the highlights made with the mean roughness of the texel\'s own block and that roughness handed on, and no way out of the pass leaves either target unwritten; both writings of the composite read the highlights once, fade both terms by the roughness that read hands back and add each by its own share; the passes bind the target to both, the denoiser\'s bound is the mirror\'s cut-off, and a browser whose shader language cannot read a storage texture is told so',
+    'the two reflection passes write the rays to the mirror\'s target and the highlights to their own, each by its own test of the finish, the highlights made with the mean roughness of the texel\'s own block and that roughness handed on, and no way out of the pass leaves either target unwritten; both writings of the composite read the highlights once, fade both terms by the roughness that read hands back and add each by its own share; the passes bind the target to both, the denoiser\'s bound is the mirror\'s cut-off, and a browser whose shader language cannot read a storage texture is told so',
     [...passes.map((n, k) => `${n}: ${heldP[k] ? 'held' : 'NOT held'}`), ...comps.map((n, k) => `${n}: ${heldC[k] ? 'held' : 'NOT held'}`), `passes, engine and device: ${wired ? 'held' : 'NOT held'}`].join('; '));
   // 2. the pair and the page's word. The shader's own two lines are read; the prelude is asked for its constant with the word and without
   const cw = sh('common.wgsl'), pm = /^const RT_HI_FADE = vec2f\(([0-9.]+), ([0-9.]+)\);$/m.exec(cw), P0 = pm ? +pm[1] : NaN, P1 = pm ? +pm[2] : NaN;
@@ -102,16 +102,16 @@ export async function highlightsCheck(): Promise<boolean> {
       'a texel\'s highlights are made with its block\'s mean roughness of its own finish, and a pixel reads them off nine texels by weights that sum to one and are never negative, by which a hard edge on the texels is a ramp two texels wide with no step over an eighth; a texel of another finish in the same plane has no say, and a sliver of a neighbour\'s highlight is not scaled up to a whole one',
       `the spline's sums ${sums.map(s => s.toFixed(3)).join(' ')} · its least weight ${least.toFixed(3)} · the edge read at every tenth of a texel: from ${vals[0].toFixed(2)} to ${vals[30].toFixed(2)}, never rising, largest step ${big.toFixed(3)} · a grain 0.07 off its finish counts ${like(0.44, 0.51)}, a polish beside satin ${like(0.1, 0.45)} · the skim's block ${grain.toFixed(3)}, a polish at a matte wall's foot ${seam.toFixed(2)}, a texel alone in its block ${alone} · a floor's highlight read from a table's edge over it ${sliver.toFixed(4)}, from the floor's own corner ${corner}`); }
   // 5. AN OPENING'S SKY IS IN THE MIRROR OR IN THE HIGHLIGHTS, NEVER WHOLE IN BOTH (the text of the two halves; the sum below is the split said as arithmetic and
-  //    is 1 by construction: what can fail here is a missed ray's line, in any of its four writings). The sky a ray leaves by a lit opening: the share of it the portal's light covers
+  //    is 1 by construction: what can fail here is a missed ray's line, in either reflection pass). The sky a ray leaves by a lit opening: the share of it the portal's light covers
   //    (common.wgsl skyKeep: 1 − its window) goes to the highlights on a finish that takes its lit panels from their analytic image (1 − kEmit), and the mirror
   //    keeps the rest. Written again from the shaders' two lines
   { const sites = passes.map(n => count(sh(n), 'skyRadiance(dir) * (1.0 - (1.0 - kEmit) * (1.0 - skyKeep(Po, dir))) + frame.weatherB.xyz;')), plain = passes.map(n => count(sh(n), 'skyRadiance(dir) + frame.weatherB.xyz;'));
     const keepLine = cw.includes('      keep = 1.0 - lightWindow(distance(O, lights[i].pos), lights[i].range); break;') && passes.every(n => sh(n).includes('fn emitTraceK(rough: f32) -> f32 { return 1.0 - smoothstep(0.2, 0.3, rough); }'));
     const kEmit = (r: number) => 1 - ss(0.2, 0.3, r), mirror = (r: number, w: number) => (PB ? 1 : 1 - (1 - kEmit(r)) * (1 - (1 - w))), hl = (r: number, w: number) => (1 - kEmit(r)) * w;   // (w = the portal's window at the point: what its analytic image is drawn by)
     const rows = [0.1, 0.25, 0.3, 0.45].flatMap(r => [0, 0.4, 1].map(w => mirror(r, w) + hl(r, w)));
-    verdict(sites[0] === 1 && sites[1] === 2 && sites[2] === 1 && plain.every(v => v === 0) && keepLine && rows.every(v => Math.abs(v - 1) < 1e-9),
+    verdict(sites.length === 2 && sites[0] === 1 && sites[1] === 1 && plain.every(v => v === 0) && keepLine && rows.every(v => Math.abs(v - 1) < 1e-9),
       'the sky a ray leaves by an opening that is a light is counted once between the two terms: every writing of a missed ray takes off the share the portal\'s light covers, by the finish\'s share of analytic image, and the two add up to the sky on a polish and on a satin floor, by the door and past the reach of its light',
-      `the missed ray's line: ${sites.join(', ')} of 1, 2, 1 (none left plain: ${plain.every(v => v === 0)}) · the shares at finishes 0.1, 0.25, 0.3, 0.45 × the light's window 0, 0.4, 1: ${rows.map(v => v.toFixed(2)).join(' ')}`); }
+      `the missed ray's line: ${sites.join(', ')} of 1, 1 (none left plain: ${plain.every(v => v === 0)}) · the shares at finishes 0.1, 0.25, 0.3, 0.45 × the light's window 0, 0.4, 1: ${rows.map(v => v.toFixed(2)).join(' ')}`); }
   // 6. A METAL'S HIGHLIGHTS ARE A CONDUCTOR'S ONLY AS FAR AS ITS PAINT IS STEPPED BACK (reflect.wgsl F0h; composite.wgsl metalK: the same fade, strength and
   //    test of rays, written again from both)
   { const pin = passes.every(n => sh(n).includes('  let F0h = mix(vec3f(coat), base, metalness * select(0.0, (1.0 - smoothstep(maxR - 0.12, maxR + 0.001, roughH)) * min(frame.matCfg.y, 1.0), frame.rtCfg.y >= 1.0));'))

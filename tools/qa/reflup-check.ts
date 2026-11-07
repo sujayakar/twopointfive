@@ -16,13 +16,13 @@ export async function reflUpCheck(): Promise<boolean> {
   const BRK = process.env.REFLUP_BREAK === '1'; let all = true;
   const verdict = (ok: boolean, what: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}\n    ${detail}`); };
   console.log(`\n=== reflup: a reflection texel of another surface has no say${BRK ? ' (the plain bilinear blend: must fail)' : ''} ===`);
-  const read = (f: string) => readFileSync(resolve(ROOT, 'src/render/shaders', f), 'utf8'), texts = [read('composite.wgsl'), read('compact/composite.wgsl')];
-  // 1. the text, in both writings: one function, asked with the read pixel's own distance and stored normal, four texels, the three weights, the fallback
+  const read = (f: string) => readFileSync(resolve(ROOT, 'src/render/shaders', f), 'utf8'), texts = [read('composite.wgsl')];
+  // 1. the text: one function, asked with the read pixel's own distance and stored normal, four texels, the three weights, the fallback
   const W = 'let dz = (zs - z) / max(z * 0.02, 0.02);\n    let w = (select(1.0 - f.x, f.x, o.x == 1) * select(1.0 - f.y, f.y, o.y == 1) + 1e-4) * exp(-dz * dz) * pow(max(dot(textureLoad(gNormal, gpx(src), 0).xyz * 2.0 - 1.0, N), 0.0), 8.0);';
   const held = texts.map(t => t.split('fn upsampleRefl(pixf: vec2f, z: f32, N: vec3f) -> vec3f {').length === 2 && t.includes(W) && t.includes('let src = min(h * di + gi, inHi());') && t.includes('if (ds >= 1.0) { continue; }')
     && t.includes('return (acc + textureSampleLevel(reflTex, linSamp, (t + 0.5) / vec2f(dims), 0.0).xyz * 1e-5) / (wsum + 1e-5);') && t.includes('let t = (pf - 0.5 - goff) / rdiv;') && t.includes('let b = floor(t); let f = t - b; let di = i32(rdiv); let gi = i32(goff);') && t.includes('let o = vec2i(k & 1, k >> 1); let h = clamp(vec2i(b) + o, vec2i(0), dims - 1);') && t.includes('acc += textureLoad(reflTex, h, 0).xyz * w; wsum += w;') && t.includes('      if (reflK > 0.0) { Lr += upsampleRefl(sPixf, z, Nl) * reflK; }') && t.includes('upsampleRefl(sPixf, z, Nl) + hi4.xyz, frame.rtCfg.w >= 1.0)') && (t.match(/upsampleRefl\(/g) ?? []).length === 3);
-  verdict(held.every(Boolean), 'both writings of the composite blend the four reflection texels round a pixel by bilinear weight, depth nearness and stored-normal likeness, asked with the read pixel\'s own distance and normal, and fall back to the plain fetch only where none is its surface',
-    ['composite.wgsl', 'compact/composite.wgsl'].map((n, k) => `${n}: ${held[k] ? 'held' : 'NOT held'}`).join('; '));
+  verdict(held.every(Boolean), 'the composite blends the four reflection texels round a pixel by bilinear weight, depth nearness and stored-normal likeness, asked with the read pixel\'s own distance and normal, and falls back to the plain fetch only where none is its surface',
+    ['composite.wgsl'].map((n, k) => `${n}: ${held[k] ? 'held' : 'NOT held'}`).join('; '));
   // 2. the arithmetic at a jamb: a pixel of the jamb's dark face 8 m from the eye, a third of the way between two columns of texels. The near column was
   //    traced on the jamb (its reflection 1 in the room's units), the far column on the sunlit ground 1.5 m further, a thousand times brighter. And a brick's
   //    face beside its bevelled edge: the same distance, the normal 25° off, ten times brighter.
