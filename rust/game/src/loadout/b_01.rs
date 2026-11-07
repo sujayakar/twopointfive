@@ -8,15 +8,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// The squad size a query string asks for: `squad=N` (0 to 4), else `squad4` = 4 unless `flag4` is false, else None. (loadout.ts squadOfQuery)
-pub fn squad_of_query(search: &crate::loadout::SquadOfQuerySearch, flag4: Option<bool>) -> Option<f64> {
-    let flag4 = flag4.unwrap_or(true);
-    match search {
-        SquadOfQuerySearch::Text(s) => squad_of(&crate::query::Query::parse(s), flag4),
-        SquadOfQuerySearch::URLSearchParams(q) => squad_of(q, flag4),
-    }
-}
-
 /// The squad size a query asks for: `squad=N` (0 to 4), else `squad4` = 4 unless `flag4` is false, else None. (loadout.ts squadOfQuery, of
 /// words already read)
 pub fn squad_of(q: &crate::query::Query, flag4: bool) -> Option<f64> {
