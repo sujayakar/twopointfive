@@ -78,32 +78,50 @@ export const LOOK_DOORS: Readonly<Record<string, { out: readonly [number, number
 /** the file to LOAD for a level the URL / a mission row names: the look's while the switch is on and the level has one, else the file itself */
 export function lookLevelFile(file: string): string { return LOOK.on ? LOOK_LEVELS[file] ?? file : file; }
 /** what a page's query says: on unless `?look=plain` (or `?look=0` / `?look=off` / `?nolook`) */
-export function lookOfQuery(q: URLSearchParams): boolean { const v = q.get('look'); return !(q.has('nolook') || dressOff(v)); }
+export function lookOfQuery(q: URLSearchParams): boolean { return !(q.has('nolook') || q.getAll('look').some(dressOff)); }   // (any `look` word of the address: the picture's own off word, LOOK_OLD below, may stand beside the dress's in either order)
 function dressOff(v: string | null): boolean { return v === 'plain' || v === '0' || v === 'off'; }
 /** a value of `look` on an address is the DRESS's off word (the level a run plays), not a row of the look prototype's page: the two share the word */
 export const lookDressWord = (v: string | null): boolean => dressOff(v);
 /** …and of the sneaking suit: on unless `?suit=0` (or `?suit=off` / `?nosuit`) */
 export function suitOfQuery(q: URLSearchParams): boolean { const v = q.get('suit'); return !(q.has('nosuit') || v === '0' || v === 'off'); }
 
-// THE LOOK PROTOTYPE's page (`?look`, main.ts; not the dress above, though they share the word): what on an address is that page's. One reader, so that the page
-// and a run of several pages that is to be ONE look from its first page to its last (ui/benchrun.ts) cannot come to read an address two ways.
-/** its rows (`?look`, `?look=key:value`): every `look` value that is not one of the dress's three words */
-export function lookPageRows(q: URLSearchParams): string[] { return q.getAll('look').filter(v => !dressOff(v)); }
-/** the page is the look's: a row on the address, or the tag a one-file build of it carries (where the address takes no flags) */
-export function lookPageOn(q: URLSearchParams): boolean { return lookPageRows(q).length > 0 || (typeof document !== 'undefined' && !!document.querySelector?.('meta[name="tps-look"]')); }
+// THE LOOK (the material picture: render/frame.ts lookConfig, shaders/look.wgsl; not the dress above, though they share the word): what on an address is its.
+// One reader, so that the page and a run of several pages that is to be ONE look from its first page to its last (ui/benchrun.ts) cannot come to read an
+// address two ways. A `look` value is one of three things: the DRESS's off word (above), the PICTURE's off word, or a ROW of the look.
+/** THE PICTURE'S OFF WORD, `?look=old`: the picture as it was drawn before the look became every page's (2026-11-07). A temporary word: it goes with the
+ *  commit that deletes that second way to draw */
+export const LOOK_OLD = 'old';
+/** a `look` value that is a row of the look's (bare, or `key:value`) */
+const lookRow = (v: string): boolean => !dressOff(v) && v !== LOOK_OLD;
+/** its rows (`?look`, `?look=key:value`) */
+export function lookPageRows(q: URLSearchParams): string[] { return q.getAll('look').filter(lookRow); }
+/** THE PICTURE IS THE LOOK'S ON EVERY PAGE unless the address says `?look=old` (2026-11-07, the maintainer: "should we work on merging the new look too?";
+ *  until then only with a row on the address or a one-file build's tag). Read once, at boot: the look is a constant of the shader text. THE PICTURE ONLY:
+ *  nothing a step of the game reads follows it (what the look's own page added to PLAY is the lab's, below) */
+export function lookPageOn(q: URLSearchParams): boolean { return !q.getAll('look').includes(LOOK_OLD); }
+/** THE LOOK LAB: the page that asks for the look BY NAME (a row on the address: `/look`, `/smokelab`, `?look`, `?look=key:value`; or the tag a one-file build
+ *  carries, where the address takes no flags), which is what the look's own page was before the picture became every page's. What that page did beyond the
+ *  picture stays the lab's and is on no other page: its panel opened over the game, its kit and the fog put down (`?lookkit=0`), the trials that rewrite the
+ *  level as it loads (`geo`, `lorry`), the seated posts (`?seat=0`) and a snow level's broken cloud. Each of those changes what the page's game PLAYS, and a
+ *  co-op server, a headless run and a check all play the level as its file has it. main.ts reads this once at boot into LOOK_LAB */
+export function lookLabOn(q: URLSearchParams): boolean { return lookPageOn(q) && (lookPageRows(q).length > 0 || (typeof document !== 'undefined' && !!document.querySelector?.('meta[name="tps-look"]'))); }
+/** …as this page booted (main.ts pageSwitches; false on every stand without a page) */
+export const LOOK_LAB = { on: false };
 /** ITS TRIALS: the address's word of each, and the key under which the look panel's button keeps it on this machine */
 export const LOOK_TRIALS = { geo: 'twopointsix.geotry', hills: 'twopointsix.hillrays', lorry: 'twopointsix.lorrytry' } as const;
 export type LookTrial = keyof typeof LOOK_TRIALS;
 /** a trial's switch: the address's own word wins; else what the panel's button last kept on this machine (on, where it kept nothing) */
 export function lookTrialOn(q: URLSearchParams, word: LookTrial): boolean { if (q.has(word)) return q.get(word) !== '0'; try { return localStorage.getItem(LOOK_TRIALS[word]) !== '0'; } catch { return true; } }
 /** the trials this machine keeps OFF and the address does not name, as the address would say them: with these on it, another page is the look this one shows */
-export function lookTrialsKept(q: URLSearchParams): string[] { const off = (Object.keys(LOOK_TRIALS) as LookTrial[]).filter(w => !q.has(w) && !lookTrialOn(q, w)).map(w => `${w}=0`);
+export function lookTrialsKept(q: URLSearchParams): string[] { const lab = lookLabOn(q), off = (Object.keys(LOOK_TRIALS) as LookTrial[]).filter(w => (lab || w === 'hills') && !q.has(w) && !lookTrialOn(q, w)).map(w => `${w}=0`);   // (`geo` and `lorry` are the lab's: on a page that is not the lab they are off whatever was kept, and no word says so)
   let cut: string | null = null; try { cut = localStorage.getItem('twopointsix.cutboxes'); } catch { /* no store: on */ }   // (…and the cut boxes' own switch, which four of the five stand on: scene/cut.ts initCutSwitch)
   return cut === '0' && !q.has('cutboxes') && !q.has('nocutboxes') ? [...off, 'cutboxes=0'] : off; }
 /** the other words the page reads once, at boot, into its shader text and its level (main.ts, scene/cut.ts: the look's geometry is cut boxes) */
 const LOOK_PAGE_WORDS: ReadonlySet<string> = new Set([...Object.keys(LOOK_TRIALS), 'roll', 'lorrykit', 'seat', 'firefit', 'longfoot', 'walked', 'firesnow', 'firesoot', 'emberfog', 'cutboxes', 'nocutboxes', 'smokelook', 'nosunglint', 'glintpick', 'holedepth', 'portalworth', 'kept', 'lookworkers']);
+/** a word of an address, decoded, is the picture's off word: a run of several pages asked for on the old picture carries it, so that every page of it is that picture */
+export const lookOldWord = (k: string, v: string): boolean => k === 'look' && v === LOOK_OLD;
 /** a word of an address, decoded, is the look page's own */
-export function lookPageWord(k: string, v: string): boolean { return k === 'look' ? !dressOff(v) : k === 'round' ? v === '1' : LOOK_PAGE_WORDS.has(k); }   // (`round=1` is the page's: its round test compiled beside a trial's cut boxes; `round=0` is a rule's off switch, another fight)
+export function lookPageWord(k: string, v: string): boolean { return k === 'look' ? lookRow(v) : k === 'round' ? v === '1' : LOOK_PAGE_WORDS.has(k); }   // (`round=1` is the page's: its round test compiled beside a trial's cut boxes; `round=0` is a rule's off switch, another fight)
 /** HOW KEPT THE PLACE IS, for the frame (render/frame.ts lookConfig.kept → look.wgsl lookKept): the address's `&kept=<0‥1>` for the visit, else the level's
  *  own word (its file's meta.kept), else 0, which is every level as it was drawn before the word. 0 = left to the weather and the years: a stuff that fades
  *  blotches and drifts, one that soaks has its damp foot and its runs, old paint is rubbed thin and gone a shade into its wall. 1 = cleaned and painted last
