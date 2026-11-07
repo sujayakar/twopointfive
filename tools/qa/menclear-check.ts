@@ -10,12 +10,14 @@
 //   (5) Sam back at the wall: they stand off again;
 //   (5b) a second charge on the wall beside their marks: dealt again, out of both blasts;
 //   (6) a man on an order of his own keeps it: told to hold inside the radius, he holds, and the row names him;
-//   (7) the charge gone off the wall: nobody is kept on a mark, and the file closes up on Sam;
+//   (7) the charge gone off the wall (set off by his own action from out of its blast: the only way one leaves a wall): nobody is kept on a mark, and the
+//       file closes up on Sam;
 // (1) the stand's line, (2) the rule off 'the fault as he met it' and (8) the recording from before the key and the page's flag went on 2026-11-07: the rule's
 // off side cannot be staged any more.
 // MENCLEAR_BREAK=1 = the four are told to HOLD where they are bunched, not to fall in (the rule is for the men on fall in): the lines must fail.   exit 0 = all hold · 1 = one does not
 // Headless: lines are the collision's own. Never seen on a GPU; nobody has played it.
 import { standUp, ROOT } from './headless.ts';
+import { samSets, samBlows } from './charge-rig.ts';
 import { readFileSync } from 'node:fs';
 const { WALLCHARGE, wallAt, wallPt, safeRadius } = await import(`${ROOT}/src/game/wallcharge.ts`);
 const { DESTRUCTION } = await import(`${ROOT}/src/game/destructionSwitch.ts`);
@@ -55,10 +57,13 @@ export async function menclearCheck(): Promise<boolean> {
       const bunch = () => men.forEach((m, i) => { const b = BUNCH[i % BUNCH.length], q = nav.nearestFreePoint(spot[0] + b[0], spot[2] + b[1]); put(m, [q[0], 0, q[2]]); });
       const sam = (p: Vec3) => { g.teleportPlayer(p); };
       sam(spot); bunch(); step(0.5); O.give(BREAK ? 'hold' : 'fallIn', O.targetAt(g.player.char.pos), 'all'); bunch(); step(1.5); peak.clear();
-      const set = () => { const c = { wall: Wl, t: g.time, by: 'Sam', paid: 0 }; C.set.push(c); return c; };
+      /** his charge on the wall, by his own hands (charge-rig.ts: one pushed onto the tools' copy by hand is a write the Rust game never gets); `at` = another place on it */
+      const set = (at: any = Wl) => { const r = samSets(W, at); if (!r.charge && at === Wl) throw new Error(`Sam could not set his charge: ${r.why}`); set.why = r.why; return r.charge; }; set.why = '';
+      /** …and off it again the only way a charge leaves a wall: set off by his own action, from out of its blast */
+      const off = (c: any) => { const r = samBlows(W, c); if (!r.blown) throw new Error(`Sam could not set his charge off: ${r.why}`); };
       const hit = (p: number[]) => C.blastShare(Wl, p, undefined, false) > 0;
       const where = () => men.map(m => `${m.callsign} ${at(m.char.pos)}${hit(m.char.pos) ? ' IN' : ''}`).join(' · ');
-      return { W, g, O, C, men, Wl, spot, step, put, sam, set, hit, where, peak };
+      return { W, g, O, C, men, Wl, spot, step, put, sam, set, off, hit, where, peak };
     };
 
     const S = await stage(); if (!S) { line(false, 'the bunk room\'s long wall takes a charge from the yard'); return false; }
@@ -89,17 +94,19 @@ export async function menclearCheck(): Promise<boolean> {
       { let at2: Vec3 = [S.men[0].char.pos[0], 0, CHARGE[2]], W2 = wallAt(S.g, at2); const was = S.C.stats.cleared;
         for (let x = at2[0]; x < CHARGE[0] - 1.5 && !(W2 && W2.ok); x += 0.3) { at2 = [x, 0, CHARGE[2]]; W2 = wallAt(S.g, at2); }   // (the first place along the wall from their marks that takes one)
         if (!W2 || !W2.ok) line(false, 'a second place on the wall, by the men\'s marks, takes a charge', `wall at ${at(at2)}: ${W2 ? `${W2.index} ok ${W2.ok} ${W2.why ?? ''}` : 'none'}`);
-        else { const c2 = { wall: W2, t: S.g.time, by: 'Sam', paid: 0 }, in2 = S.men.filter(m => S.C.blastShare(W2, m.char.pos, undefined, false) > 0).length; S.C.set.push(c2); S.step(9);
+        else { const in2 = S.men.filter(m => S.C.blastShare(W2, m.char.pos, undefined, false) > 0).length, c2 = S.set(W2);
+          if (!c2) line(false, 'a second charge on the wall beside their marks: Sam sets it', `not set: ${S.set.why} (until 2026-11-07 the check pushed this second charge onto the wall by hand)`);
+          else { S.step(9);
           const closeA: string[] = S.C.tooClose(c), closeB: string[] = S.C.tooClose(c2), mates = [...closeA, ...closeB].filter(n => n !== 'you');
           line(in2 >= 1 && mates.length === 0 && S.C.stats.cleared > was, 'a second charge on the wall beside their marks: nine seconds later no man of his is in either blast', `in the second blast before: ${in2} · too close to the first: ${closeA.join(', ') || 'nobody'} · to the second: ${closeB.join(', ') || 'nobody'} · ${S.men.map(m => `${m.callsign} ${at(m.char.pos)}`).join(' · ')} · dealt again ${S.C.stats.cleared - was} · the second charge at ${at(wallPt(W2, 0, 0))} · marks: ${S.men.map(m => { const a = (S.C as any).away.get(m); return a ? at(a.at) : '–'; }).join(' ')}`);
-          S.C.set.splice(S.C.set.indexOf(c2), 1); S.step(6); } }
+          S.off(c2); S.sam(S.spot); S.step(6); } } }
       // (6) a man on an order of his own keeps it
       { const one = S.men[0], q = S.g.col.nav.nearestFreePoint(S.spot[0] - 1.0, S.spot[2] + 0.9), mark: Vec3 = [q[0], 0, q[2]], was = S.hit(mark);
         S.put(one, mark); const why = S.O.give('hold', S.O.targetAt(mark), S.O.squad().indexOf(one)); S.step(5); const off = flat(one.char.pos, mark), close3: string[] = S.C.tooClose(c);
         line(was && !why && off < 0.6 && close3.includes(one.callsign), 'a man told to hold inside the radius holds, and the row names him: the rule is for the men on fall in', `hold → ${why ?? 'taken'} · mark ${at(mark)} in the blast: ${was} · ${one.callsign} ${off.toFixed(1)} m off it five seconds on · too close: ${close3.join(', ') || 'nobody'}`);
         S.O.give('fallIn', S.O.targetAt(S.g.player.char.pos), 'all'); S.step(6); }
       // (7) the charge gone off the wall
-      { const before = (S.C as any).away.size; S.C.set.splice(S.C.set.indexOf(c), 1); S.step(8); const held2 = (S.C as any).away.size, far2 = S.men.map(m => flat(m.char.pos, S.g.player.char.pos));
+      { const before = (S.C as any).away.size; S.off(c); S.sam(S.spot); S.step(8); const held2 = (S.C as any).away.size, far2 = S.men.map(m => flat(m.char.pos, S.g.player.char.pos));
         line(before >= 2 && held2 === 0 && Math.min(...far2) < 2.5 && far2.every(d => d < 6), 'the charge off the wall: nobody is kept on a mark, and eight seconds later the file has closed up on him at the wall\'s foot', `kept on marks before: ${before} · after: ${held2} · from Sam: ${far2.map(d => d.toFixed(1)).join(', ')} m`); } }
   } finally { console.log = log; DESTRUCTION.on = destr0; Math.random = rnd0; }
   console.log(`=== menclear: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
