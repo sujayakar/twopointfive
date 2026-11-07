@@ -815,3 +815,53 @@ machine with the dressing rows up, so the question only matters to a host that d
 Not part of this: what the smoke along a sight line reads. `fog_of_war_pass` asks the sensors (`sensors_read`),
 and a machine whose senses are the host's probe may answer differently from one whose senses are the game's
 own. That is a question about which senses a networked game stands on, not about this record.
+
+## 16. Plan: a seat is a value (not built)
+
+**Today.** A seat's own things are nineteen fields of `Game` (`seat`, `player`, `orders`, `door_tools`, `work`,
+`wall_charge`, five of the aim, `hover`, `interactables`, `nearby`, `act`, `use_door`, `view_proj`,
+`threat_proximity`, `torch_on_t`), and they are those of whichever seat STANDS on the game. Every other seat's are
+kept aside (`cmd_seat[s].own`), and a pass about another seat changes the nineteen over and back
+(`seats::with_seat`, which needs `&mut`). So a function that reads `g.orders` answers for the seat that happens to
+stand, and nothing in its signature says so; and a read-only caller, such as one record of what a seat is shown,
+cannot ask about any seat but the standing one.
+
+**The form.** `seats::SeatRef<'a>`: one seat's things, borrowed (`seat`, `man`, `orders`, `tools`, `work`,
+`charge`, the aim's five, `hover`, `near`, `act`, `use_door`, `view_proj`, `threat`, `torch_t`). There are two
+ways to get one, both on `&Game`: `seats::seat(g, s)` for any seat (from the game where it stands, from
+`cmd_seat[s].own` where it is kept), and `seats::here(g)` for the seat a pass is about. A reader that depends on
+the seat takes `s: &SeatRef` and reads `s.orders`, never `g.orders`; the eighteen tables kept per view, keyed
+today by `view_key(g)`, it asks by `s.man`. A tick function that calls such a reader passes `&seats::here(g)`:
+each of those is then a place where the tick SAYS whose seat it means, which is silent today and is where a
+co-op fault hides.
+
+**What does not change.** The tick's writers keep the nineteen fields and `with_seat`. The change-over stays as
+how a tick stands on a seat and as what the page reads of the shown seat (the wire's rows are those fields).
+Moving every seat's set into one table would rename 1,669 uses in 686 functions and every row the page reads a
+seat by, and once the readers take a `SeatRef` nothing needs it. Decided against here; to be overruled if a later
+piece wants it.
+
+**Size**, by a rough pass over `rust/game_rules/src` (9,762 functions, 2,311 of which hold the game shared; the
+pass is `seat-size.py`, kept beside the design in the project's files, and reads text, not types): 194 shared
+readers name a seat field themselves (260 names in 63 modules: `player` 116, `orders` 47, `door_tools` 27,
+`wall_charge` 12, the rest 58). With the shared readers that call them, 318 functions in 79 modules gain the
+parameter. They are called from 916 pairs of an exclusive function and a reader, each of which gets
+`&seats::here(g)`, and from 204 shared pairs, each of which passes `s` on. A pair can be several call sites, so
+the edits are more than 1,120.
+
+**How.** A program in two parts. The definitions: the parameter, and `g.<field>` to `s.<field>` inside the 194.
+The callers: by the compiler's own list. `cargo check --message-format=json` names every call that now has an
+argument too few and where it goes; the program writes `s` where the caller has one and
+`&crate::seats::here(g)` where it has not, and runs again until the list is empty. A function called through a
+table of function pointers (an order's `Row`, the call dispatch, a tap's wrapper) keeps its shape and says
+`here(g)` inside.
+
+**Proof.** That it is the same game: `hold check`, every part. That it does what it is for: a native test with
+two seats, the second NOT standing, in which a handful of readers (the menu's rows, a door's tool rows, the men
+an order would go to, the TOO CLOSE words) asked with `seats::seat(g, second)` answer as they do inside
+`with_seat(second)`. And the program's `--check`: no function that holds the game shared names one of the
+nineteen.
+
+**What it does not reach.** A reader that is exclusive today only because of how it was ported (every line test
+takes `&mut`) is not a shared reader until the world's questions can be asked of a shared game. It joins then,
+by the same program, so the count grows as the page's judging moves into Rust.
