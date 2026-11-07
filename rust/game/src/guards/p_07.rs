@@ -114,6 +114,7 @@ pub fn update_guard(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
         St::Dead => {}
     }
     pose(g, gd, dt, &mut f);
+    crate::control::settle(g, gd);
 }
 
 /// Dead or held: his body is settled here and nothing else of his frame runs.
@@ -121,7 +122,7 @@ fn incapable(g: &mut Game, gd: GuardId, dt: f64) -> bool {
     use crate::game::GuardState as St;
     let c = g.gd[gd].ch;
     if g.gd[gd].state == St::Dead {
-        crate::control::note(g, gd, crate::control::Holder::Dead, 0);
+        crate::control::record(g, gd, crate::control::Holder::Dead);
         let m = &mut g.gd[gd];
         m.muzzle_down = false; m.pieing = None; m.search_plan = None; m.held = None; m.standoff = None; m.speed = 0.0;
         g.ch[c].vel = [0.0, 0.0, 0.0];
@@ -133,7 +134,7 @@ fn incapable(g: &mut Game, gd: GuardId, dt: f64) -> bool {
         return true;
     }
     if g.gd[gd].held.is_some() {
-        crate::control::note(g, gd, crate::control::Holder::Held, 0);
+        crate::control::record(g, gd, crate::control::Holder::Held);
         {
             let m = &mut g.gd[gd];
             m.pieing = None; m.search_plan = None; m.body_duty = None; m.standoff = None; m.muzzle_down = false; m.saw_player_this_frame = false;
@@ -160,13 +161,14 @@ fn incapable(g: &mut Game, gd: GuardId, dt: f64) -> bool {
 fn lent(g: &mut Game, gd: GuardId, dt: f64) -> bool {
     use crate::character::UpperMode;
     // WHO HAS HIS BODY (control/): the rules of the list are asked from the top; below them his own script, below that his own state
-    let granted = crate::control::grant(g, gd);
-    if let crate::control::Grant::Lent { rule, script } = granted {
+    if let Some((rule, crate::control::Intent::Script(script))) = crate::control::grant(g, gd, dt, crate::control::Stage::Body) {
+        crate::control::record(g, gd, crate::control::Holder::Rule(rule));
         let ran = run_lent_script(g, gd, script, dt);
-        (crate::control::BODY_RULES[rule].commit)(g, gd, ran);
+        crate::control::commit(g, gd, rule, crate::control::Outcome::Script(ran));
         return true;
     }
-    if let crate::control::Grant::Script = granted {
+    if g.gd[gd].script.is_some() {
+        crate::control::record(g, gd, crate::control::Holder::Script);
         {
             let m = &mut g.gd[gd];
             m.pieing = None; m.search_plan = None; m.standoff = None;
@@ -662,7 +664,7 @@ fn suspicious(g: &mut Game, gd: GuardId, dt: f64, f: &mut Frame) {
     *f = Frame { c, route, staff, lvl, seen, dist, prev, pair, dazzled, staggered, p0x, p0z, move_speed, upper, aim_at, crouch, duck, pied };
 }
 
-/// ALERT: the fight. His legs may be a rule's (control/ LEGS_RULES); else he reacts, stands off, shoots, closes, or goes to the man he dropped.
+/// ALERT: the fight. A rule of the list's cover stage may have him first (control/); else he reacts, stands off, shoots, closes, or goes to the man he dropped.
 #[allow(unused_variables, unused_mut, unused_assignments, unused_labels, unused_imports)]
 fn alert(g: &mut Game, gd: GuardId, dt: f64, f: &mut Frame) {
     use crate::game::GuardState as St;
@@ -676,10 +678,11 @@ fn alert(g: &mut Game, gd: GuardId, dt: f64, f: &mut Frame) {
         let can_shoot = pc.is_some() && !down && !dazzled && !staggered && (g.time - g.gd[gd].last_seen_t < 0.5);
         if g.gd[gd].react_t > 0.0 || !can_shoot { g.gd[gd].shot_blocked_t = 0.0; g.gd[gd].line_in_t = 0.0; }
         if g.gd[gd].react_t > 0.0 || down || g.gd[gd].pinned { g.gd[gd].stall_ref = None; g.gd[gd].chase_t = 0.0; }
-        // HIS LEGS (control/): a rule of the legs list may take them while his own fight keeps his gun on the danger; the first row is a man getting his head down
-        let legs = crate::control::grant_legs(g, gd, dt);
+        // TAKING COVER (control/): a rule of the list's cover stage may have him before his fight does; the first is a man getting his head down
+        let cover = match crate::control::grant(g, gd, dt, crate::control::Stage::Cover) { Some((rule, crate::control::Intent::Cover(want))) => Some((rule, want)), _ => None };
         let in_standoff = g.gd[gd].standoff.is_some() && pair.is_some();
-        if let Some((rule, want)) = legs {
+        if let Some((rule, want)) = cover {
+            crate::control::record(g, gd, crate::control::Holder::Rule(rule));
             duck = true;
             g.gd[gd].shot_blocked_t = 0.0; g.gd[gd].line_in_t = 0.0; g.gd[gd].chase_t = 0.0;
             g.gd[gd].fire_cd = m::max(g.gd[gd].fire_cd, want.fire_wait);
@@ -700,18 +703,18 @@ fn alert(g: &mut Game, gd: GuardId, dt: f64, f: &mut Frame) {
                     brake(g, gd, 8.0, dt);
                     g.ch[c].vel = [0.0, 0.0, 0.0];
                     g.gd[gd].stall_ref = None;
-                    crate::control::LegsOutcome::Down
+                    crate::control::Outcome::Down
                 }
                 Some(spot) => {
                     go_to(g, gd, spot, None);
                     let arrived = follow_path(g, gd, dt, want.pace);
                     move_speed = g.gd[gd].speed;
-                    if arrived { crate::control::LegsOutcome::Arrived }
-                    else if not_getting_anywhere(g, gd, dt, 1.5) { crate::control::LegsOutcome::GoingNowhere }
-                    else { crate::control::LegsOutcome::Moving }
+                    if arrived { crate::control::Outcome::Arrived }
+                    else if not_getting_anywhere(g, gd, dt, 1.5) { crate::control::Outcome::GoingNowhere }
+                    else { crate::control::Outcome::Moving }
                 }
             };
-            (crate::control::LEGS_RULES[rule].ran)(g, gd, outcome);
+            crate::control::commit(g, gd, rule, outcome);
         } else if g.gd[gd].react_t > 0.0 {
             g.gd[gd].react_t -= dt;
             let gp = if dazzled || g.time - g.gd[gd].last_seen_t > 0.5 { crate::belief::gun_point(g, gd) } else { None };
