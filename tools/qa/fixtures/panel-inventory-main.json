@@ -566,14 +566,6 @@
  },
  {
   "path": "Direct light ▸ Estimator — ReSTIR DI",
-  "kind": "toggle",
-  "label": "ReSTIR DI (v3 Phase 2a)",
-  "title": "the direct-light ESTIMATOR. On: ReSTIR DI (render/shaders/restir.wgsl) — every light the tile can see is still scored unshadowed per pixel (that is U, exact, and the candidate pdf), but instead of K leaders × stratified rays + a tail ray each pixel keeps ONE reservoir per emitter class (a light + a point on its emitter, with an unbiased contribution weight), re-traces it, draws a fresh candidate ∝ its unshadowed light, MIS-combines them against last frame's light list (a light new this frame enters at full weight — flashes light instantly), taps its neighbours' reservoirs, and shades S = U × the estimated visible fraction: a FIXED shadow-ray budget per pixel however many lights are on. Off (?norestir): direct.wgsl's leader / tail estimator exactly as it was. Same four outputs, same penumbra filter after it",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Direct light ▸ Estimator — ReSTIR DI",
   "kind": "slider",
   "label": "restir: HYBRID — held-light rays K (0 = off)",
   "min": 0,
@@ -838,52 +830,11 @@
  {
   "path": "Direct light ▸ Shadow rays & penumbra filter",
   "kind": "slider",
-  "label": "rays: strongest light",
-  "min": 1,
-  "max": 8,
-  "step": 1,
-  "title": "stratified emitter samples per pixel for each class's strongest light (noise ~ 1/sqrt(n); cost ~ n). Leader / tail estimator only: nothing while ReSTIR is on (?norestir)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Direct light ▸ Shadow rays & penumbra filter",
-  "kind": "slider",
-  "label": "rays: other leaders",
-  "min": 1,
-  "max": 4,
-  "step": 1,
-  "title": "samples for the 2nd (and, broad class, 3rd) strongest light. Leader / tail estimator only: nothing while ReSTIR is on",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Direct light ▸ Shadow rays & penumbra filter",
-  "kind": "slider",
   "label": "temporal reuse",
   "min": 0,
   "max": 0.95,
   "step": 0.05,
   "title": "0 = history-free. Otherwise the per-class estimate is blended with reprojected, depth-validated, variance-clipped history (0.7 ≈ 3 frames). Transient lights change the estimate abruptly, which the clip follows — no lingering flashes",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Direct light ▸ Shadow rays & penumbra filter",
-  "kind": "toggle",
-  "label": "A/B: hold the sampling pattern 2 frames",
-  "title": "torch-shadow boil study knob: with temporal reuse on, the per-pixel emitter-sampling pattern normally advances every frame (so the history integrates different samples); on = it advances every other frame. Default off (frame flag 67108864; docs/internal/perf-2026-08-10.md). Leader / tail estimator only: nothing while ReSTIR is on",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Direct light ▸ Shadow rays & penumbra filter",
-  "kind": "slider",
-  "label": "spatial passes",
-  "min": 0,
-  "max": 6,
-  "step": 1,
-  "title": "à-trous passes of the ratio (visibility) filter per class: strides 1,2,4,8,16,1 — fewer = sharper/grainier. Legacy denoiser only (?legacydenoise)",
   "def": false,
   "extra": ""
  },
@@ -901,30 +852,11 @@
  {
   "path": "Direct light ▸ Shadow rays & penumbra filter",
   "kind": "slider",
-  "label": "adaptive: min agreeing rays",
-  "min": 2,
-  "max": 4,
-  "step": 1,
-  "title": "stop sampling a light after this many stratified samples all came back lit (or all blocked); the full ray budget is only spent where they disagree, i.e. in penumbrae. 2 = cheapest, 4 = safest. Leader / tail estimator only: nothing while ReSTIR is on",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Direct light ▸ Shadow rays & penumbra filter",
-  "kind": "slider",
   "label": "cascade hit light threshold",
   "min": 0.001,
   "max": 0.1,
   "step": 0.001,
   "title": "W/m² (unshadowed): at cascade interval hits a light dimmer than this gets no shadow ray and is dropped — raises bounce-lighting cost/accuracy trade (default 0.006)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Direct light ▸ Shadow rays & penumbra filter",
-  "kind": "toggle",
-  "label": "tail: chroma-exact (experimental)",
-  "title": "direct-light tail estimator: off = luminance-unbiased, bounded (the tail keeps its aggregate hue); on = per-channel unbiased E_pick·V/p (two differently coloured lights cast two coloured shadows) at the price of chroma noise where hues mix — the filter's ratio clamp opens to 4× for it. Leader / tail estimator only (?norestir): under ReSTIR the clamp is already 4× and the flag moves nothing",
   "def": false,
   "extra": ""
  },
@@ -1032,33 +964,6 @@
   "kind": "toggle",
   "label": "penumbra filter: skip hint-free tiles (lossless)",
   "title": "the à-trous penumbra filter only ever changes pixels within reach of a blur hint (a shadow-ray blocker measurement); two tiny pre-passes flag the 8×8 tiles holding a hint and measure every tile's distance to the nearest one, and the filter steps copy whole tiles straight through when they are further away than a hint can travel over the entire chain — those provably pass through unchanged anyway, so the image is bit-identical while lit floors, unlit rooms and sky stop paying for the 3×3 hint scan. Off = every pixel decides for itself (A/B, frame flag 8192)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Direct light ▸ LOSSY trade-offs",
-  "kind": "toggle",
-  "label": "LOSSY: checkerboard shadow rays",
-  "title": "only the checkerboard half of the pixels with (x + y + frame) even trace shadow rays; the other half keeps its exact unshadowed light U and takes S = U × the visibility ratio S/U of its traced 4-neighbours in the tile (weighted by same plane / same normal / lit alike, hint = the widest in reach). Pixels on a hard shadow edge (neighbour ratios > 0.35 apart under < 2 px hints) or without a usable neighbour trace anyway, after the exchange. Lanes are dealt so whole SIMD groups skip the ray phase. Off = untouched path (frame flag 65536). Read only by the leader / tail estimator: nothing while ReSTIR is on (?norestir)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Direct light ▸ LOSSY trade-offs",
-  "kind": "toggle",
-  "label": "LOSSY: 1 ray per leader in near-black",
-  "title": "luminance-adaptive shadow rays: a pixel whose total UNshadowed irradiance (both classes, exact) is under the threshold below takes one stratified emitter sample per leader instead of the strongest/other budgets — its penumbrae come out grainier, but at that level the AgX curve puts the whole pixel within a few 8-bit steps of black. Off = untouched (frame.lossyCfg.z = 0). Read only by the leader / tail estimator: nothing while ReSTIR is on (?norestir)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Direct light ▸ LOSSY trade-offs",
-  "kind": "slider",
-  "label": "near-black threshold (E)",
-  "min": 0.002,
-  "max": 0.05,
-  "step": 0.002,
-  "title": "unshadowed irradiance luminance under which dimRays applies: 0.01 ≈ 2 % of display white for a mid-grey surface at exposure 2 (0.005 ≈ 1 %, 0.02 ≈ 4 %); only read while the toggle above is on",
   "def": false,
   "extra": ""
  },
@@ -1313,14 +1218,6 @@
  {
   "path": "Indirect light ▸ Final gather",
   "kind": "toggle",
-  "label": "LOSSY: variance-guided history",
-  "title": "the indirect's temporal pass normally clips the reprojected history to this frame's 3×3 neighbourhood (mean ± σ) and blends it at a fixed 0.86. On: the history is weighed by how CONSISTENT it is with that neighbourhood — within its spread (+5 %) it is kept unclipped at 0.93 (≈ 14 frames: smoother wherever nothing changes, and no energy shaved off the estimate), well outside it is clipped as before and blended at 0.7 (≈ 3 frames: a moved torch or a switched panel converges faster than today). Off = untouched (frame flag 134217728; docs/internal/perf-2026-08-10.md). Legacy denoiser only (?legacydenoise): the v3 denoiser never reads it",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Indirect light ▸ Final gather",
-  "kind": "toggle",
   "label": "stratified gather directions (−13 % gather)",
   "title": "the final gather's k-th ray of four drawn from STRATUM (k + frame) mod 4 of the cosine hemisphere — (azimuth half) × (cos²θ half), each pixel jittering inside it with its own two random numbers as before — instead of independently (the resampling gather's two fresh rays: a Latin square over the same four cells). Every pixel still covers all four strata every frame, so it is plain stratified sampling: the same expectation, temporal noise equal or lower; but the k-th rays of a whole 8×8 tile now share a quarter of direction space and walk the trace grid coherently — the gather pass −13‥16 % at high, −0.8 ms at ultra (exp/trace-perf E8, docs/internal/trace-perf.md §2.10). A different sample pattern, so NOT hash-identical to off. ON by default; off (?nogatherstrata, __gs.on = false) = the gather module exactly as it was. A second pipeline pair compiled at boot; flips live",
   "def": false,
@@ -1371,39 +1268,6 @@
  },
  {
   "path": "Indirect light ▸ GI in motion",
-  "kind": "slider",
-  "label": "young-history gather rays ×",
-  "min": 1,
-  "max": 4,
-  "step": 1,
-  "title": "GI in motion (C): a gather texel whose point had no usable diffuse history last frame — off the screen (a pan's incoming edge), on another surface (what a walking man or the player uncovers), or a history the denoiser calls young — traces this many TIMES the rays for the frames it stays young, so the frames the temporal filter can only show the raw estimate in get a better one; a settled texel costs two loads. First come first served past the cap below; a camera cut stands it down (everything is young then). 1 = off: the gather byte for byte as it was",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Indirect light ▸ GI in motion",
-  "kind": "slider",
-  "label": "· young cap (share of the grid)",
-  "min": 0.01,
-  "max": 0.3,
-  "step": 0.01,
-  "title": "the most texels a frame may take the extra rays, as a fraction of the gather grid (8 %: a walking pan brings in 1–3 % a frame, a man's wake ~1 %); past it, first come",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Indirect light ▸ GI in motion",
-  "kind": "slider",
-  "label": "· young = history under (frames)",
-  "min": 1,
-  "max": 8,
-  "step": 1,
-  "title": "a texel counts as young while its diffuse history is shorter than this",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Indirect light ▸ GI in motion",
   "kind": "text",
   "label": "",
   "title": "",
@@ -1412,77 +1276,9 @@
  },
  {
   "path": "Indirect light ▸ GI in motion",
-  "kind": "buttons",
-  "label": "young texels",
-  "title": "",
-  "def": false,
-  "extra": "[count (last frame) — reads back how many gather texels asked for the extra rays last frame (the counter counts past the cap)]"
- },
- {
-  "path": "Indirect light ▸ GI in motion",
   "kind": "text",
   "label": "",
   "title": "",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Indirect light ▸ ULTRA: gather resampling (ReSTIR GI)",
-  "kind": "select",
-  "label": "ULTRA: gather resampling (ReSTIR GI)",
-  "title": "renderer v3 phase 5 (docs/internal/p5-ultra.md): each gather texel keeps ONE secondary sample {hit point, normal, its outgoing radiance} in a reservoir chosen by resampled importance sampling (target = the sample's luminance × cos): its own reservoir of last frame (reprojected with the motion vectors, validated by depth + normal, confidence capped, its radiance re-shaded when \"revalidate\" is on) combined with a couple of FRESH cosine rays instead of the plain gather's four — the estimate is the weighted sum over every sample seen, so the luminance carries the history's ~M samples of evidence while the fresh rays keep their chroma. \"+ spatial\" also borrows k neighbours' reservoirs on the same plane (pairwise MIS, Jacobian-reweighted, no extra visibility ray: the biased-but-bounded variant). Feeds the same diffuse denoiser client. Ultra only (2 fresh rays: gather ≈ half the cost at equal-or-better noise); off = the 4-ray gather exactly as it was. Debug view \"gi reservoirs\": r = M ÷ cap, g = history taken, b = spatial taps accepted (the plain indirect with it off)",
-  "def": false,
-  "extra": "off (4 cosine rays) / temporal reservoir reuse / temporal + spatial"
- },
- {
-  "path": "Indirect light ▸ ULTRA: gather resampling (ReSTIR GI)",
-  "kind": "slider",
-  "label": "· fresh rays per texel",
-  "min": 1,
-  "max": 4,
-  "step": 1,
-  "title": "cosine rays traced and shaded per gather texel per frame under resampling (2 at ultra; the plain gather traces 4): the pass's cost is nearly linear in it",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Indirect light ▸ ULTRA: gather resampling (ReSTIR GI)",
-  "kind": "slider",
-  "label": "· confidence cap M",
-  "min": 2,
-  "max": 64,
-  "step": 1,
-  "title": "the temporal reservoir's confidence cap in candidate-equivalents: 20 with 2 fresh rays ≈ ten frames of memory in the resampled luminance — higher = quieter walls, slower where only re-shading (revalidate) or the denoiser's clamp can follow a change",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Indirect light ▸ ULTRA: gather resampling (ReSTIR GI)",
-  "kind": "toggle",
-  "label": "· revalidate (re-shade the history sample)",
-  "title": "every frame the reused sample's outgoing radiance is recomputed at its stored point (its box's paint and emission, one direct-light estimate + the cache's bounce there — about a third of a traced ray): a light switched on or a torch swept across the wall the samples sit on reaches the history that same frame. Off = the radiance found when the sample was traced is reused as is (plain ReSTIR GI: cheaper; a moving light lags by up to the cap)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Indirect light ▸ ULTRA: gather resampling (ReSTIR GI)",
-  "kind": "slider",
-  "label": "· spatial taps k",
-  "min": 1,
-  "max": 8,
-  "step": 1,
-  "title": "neighbours combined per texel in \"temporal + spatial\" (3): each is two texture reads + a re-target, no ray",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Indirect light ▸ ULTRA: gather resampling (ReSTIR GI)",
-  "kind": "slider",
-  "label": "· spatial radius (texels)",
-  "min": 2,
-  "max": 32,
-  "step": 1,
-  "title": "radius of the golden-angle disc the spatial taps are drawn on, in gather texels (10 ≈ 20 internal px at half res ≈ 0.3–0.6 m on the floor from up here): wider = smoother and more borrowed light where a neighbour sees round a corner this texel does not",
   "def": false,
   "extra": ""
  },
@@ -2272,14 +2068,6 @@
  },
  {
   "path": "Denoiser ▸ Core",
-  "kind": "toggle",
-  "label": "v3 shared denoiser (off = the three legacy chains)",
-  "title": "ONE core — reprojection with the g-buffer's motion vectors + per-tap depth validation, luminance moments → variance, history length, neighbourhood clamp, variance-guided edge-stopped à-trous — behind the direct pass's shadow ratio (per emitter class, full res), the gather's diffuse irradiance and its specular field. Off = dtemporal + softblur, temporal + giblur and the gloss chain exactly as they were (?legacydenoise). Under v3 Direct light ▸ Shadow rays & penumbra filter ▸ \"temporal reuse\" is the shadow client's temporal switch (0 = none) and \"penumbra filter cap\" its width cap; \"spatial passes\" is legacy only",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Denoiser ▸ Core",
   "kind": "text",
   "label": "",
   "title": "",
@@ -2290,7 +2078,7 @@
   "path": "Denoiser ▸ Core",
   "kind": "toggle",
   "label": "reproject with motion vectors",
-  "title": "the g-buffer's per-pixel object motion (TAAU's gVel) added to the camera reprojection: a walking man's lit side and the bounce on him find their own history. Off = camera-only reprojection (what the legacy chains did); needs TAAU on (the vectors are written for its resolve)",
+  "title": "the g-buffer's per-pixel object motion (TAAU's gVel) added to the camera reprojection: a walking man's lit side and the bounce on him find their own history. Off = camera-only reprojection; needs TAAU on (the vectors are written for its resolve)",
   "def": false,
   "extra": ""
  },
@@ -2300,7 +2088,7 @@
   "label": "histories",
   "title": "",
   "def": false,
-  "extra": "[restart — zero every screen-space history (both denoisers', the reflection chain's, the TAAU resolve's, the ReSTIR reservoirs): the next frame starts from raw estimates (the same button as Frame ▸ Quality & resolution ▸ histories)]"
+  "extra": "[restart — zero every screen-space history (the denoiser's, the reflection chain's, the TAAU resolve's, the ReSTIR reservoirs): the next frame starts from raw estimates (the same button as Frame ▸ Quality & resolution ▸ histories)]"
  },
  {
   "path": "Denoiser ▸ Shadow client",

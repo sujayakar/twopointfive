@@ -47,7 +47,6 @@ const BUDGET: [RegExp, number][] = [
   [/^volumetricsF? \/ main$/, 382],
   [/^particles \/ update$/, 356],
   [/^restirM? \/ main$/, 336],   // (295 + an opening's light in this writing, 38 KB: as the table above)
-  [/^direct \/ main$/, 282],   // (248 + an opening's light in this writing, 31 KB)
   [/^reflectP5 \/ main$/, 253],
   [/^froxel \/ injectJ$/, 210],
   [/^reflect \/ main$/, 204],

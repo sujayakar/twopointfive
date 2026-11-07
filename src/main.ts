@@ -1440,17 +1440,15 @@ function soloNightHooks(game: Game) {
   (window as any).__needs = { send: (i = 0, kind: NeedKind = 'coffee') => needsSend(game, game.guards.filter(x => x.team === 'guard' && !x.unit)[i], kind), trip: (i = 0) => needsTrip(game.guards.filter(x => x.team === 'guard' && !x.unit)[i]), knobs: NEEDS, stats: NEEDS_STATS, log: NEEDS_LOG, summary: () => game.needsSummary() };   // automation / console: the needs (needs.ts) — __needs.send(0) = 'send Kowalski for a coffee' with the whole telegraph, .trip(0) his trip record, .log the last things that happened
 }
 
-/** the renderer URL flags that stood above `new Quality` (?norestir ?norestirmotion ?restirmotion ?nofroxel ?froxel ?nosmokediffuse ?gatherStrata ?nogatherstrata) and the __hot* shader swaps they sat among, __froxel, __rt, __gs */
+/** the renderer URL flags that stood above `new Quality` (?norestirmotion ?restirmotion ?nofroxel ?froxel ?nosmokediffuse ?gatherStrata ?nogatherstrata) and the __hot* shader swaps they sat among, __froxel, __rt, __gs */
 function rendererFlagsAndHotSwaps(engine: Engine) {
   // __hotVol(src?): recompile the volumetric pass from a volumetrics.wgsl variant against the live device and swap it in (passes.hotSwapVol) — no src = refetch
   // the file as it is on disk from the dev server (/qa/shader/volumetrics.wgsl), so an edit can be timed against a staged stress scene without rebooting it
   (window as any).__hotVol = async (src?: string) => engine.passes.hotSwapVol(src ?? await (await fetch('/qa/shader/volumetrics.wgsl', { cache: 'no-store' })).text());
-  const hotCommon = async () => (await fetch('/qa/shader/direct_common.wgsl', { cache: 'no-store' })).text();   // both direct-light estimators get direct_common.wgsl prepended, as passes.ts builds them
-  (window as any).__hotDirect = async (src?: string) => engine.passes.hotSwapDirect(src ?? await (await fetch('/qa/shader/direct.wgsl', { cache: 'no-store' })).text(), 'direct', await hotCommon());   // the same for the direct-light pass (direct.wgsl variants — the settings.restir OFF path)
-  (window as any).__hotRestir = async (src?: string) => engine.passes.hotSwapDirect(src ?? await (await fetch('/qa/shader/restir.wgsl', { cache: 'no-store' })).text(), 'restir', await hotCommon());   // … and for restir.wgsl (the ON path)
+  const hotCommon = async () => (await fetch('/qa/shader/direct_common.wgsl', { cache: 'no-store' })).text();   // the direct-light estimator gets direct_common.wgsl prepended, as passes.ts builds it
+  (window as any).__hotRestir = async (src?: string) => engine.passes.hotSwapDirect(src ?? await (await fetch('/qa/shader/restir.wgsl', { cache: 'no-store' })).text(), await hotCommon());   // the same for the direct-light pass (restir.wgsl variants)
   (window as any).__hotSharp = async (src?: string) => engine.passes.hotSwapSharp(src ?? await (await fetch('/qa/shader/sharp_direct.wgsl', { cache: 'no-store' })).text(), await hotCommon());   // … sharp_direct.wgsl (both variants; direct-quality lane)
   (window as any).__hotGbaa = async (src?: string) => engine.passes.hotSwapGbaa(src ?? await (await fetch('/qa/shader/gbaa.wgsl', { cache: 'no-store' })).text());   // … gbaa.wgsl
-  if (new URLSearchParams(location.search).has('norestir')) engine.settings.restir = false;   // ?norestir: the leader / tail direct-light estimator (direct.wgsl) from boot — renderer v3 Phase 2a's untouched path, for A/B
   { const q = new URLSearchParams(location.search); if (q.get('holedepth') === '0') engine.settings.portalHole = false;   // &holedepth=0: an opening's daylight is its whole rectangle again (settings.portalHole)
     { const pw = Number(q.get('portalworth')); if (pw > 0) engine.settings.portalWorth = pw; }   // &portalworth=<number>: how far an opening's own light reaches, for the visit (settings.portalWorth; 0.003 = until 11-05)
     if (q.has('norestirmotion')) engine.settings.restirMotion = 0; const rm = q.get('restirmotion'); if (rm !== null && rm !== '') engine.settings.restirMotion = Math.max(0, Math.min(7, parseInt(rm, 10) || 0)); }   // ?norestirmotion / ?restirmotion=N: the direct-motion lane's reservoir-reprojection levers from boot (docs/internal/direct-motion.md; 0 = the estimator's program byte for byte)
@@ -1513,8 +1511,7 @@ function traceLabHooks(engine: Engine, game: Game) {
     const t0 = performance.now(); const P = engine.passes; const out: Record<string, { ok: boolean; messages: string[] }> = {};
     const dc = await shader('direct_common');
     const jobs: [string, Promise<{ ok: boolean; messages: string[] }>][] = [
-      ['direct', P.hotSwapDirect(await shader('direct'), 'direct', dc)],
-      ['restir', P.hotSwapDirect(await shader('restir'), 'restir', dc)],
+      ['restir', P.hotSwapDirect(await shader('restir'), dc)],
       ['gather', P.hotSwapGather(await shader('fgather'), await shader('gather_split_common'))],
       ['reflect', P.hotSwapReflect(await shader(P.rtP5 ? 'reflect_p5' : 'reflect'))],
       ['vol', P.hotSwapVol(await shader('volumetrics'))],
@@ -1545,7 +1542,7 @@ function giMotionHooks(engine: Engine) {
     knobs: () => { const S = engine.settings; return { motion: S.restirMotion, v: S.restirMotionV, min: S.restirMotionMin, px: S.restirMotionPx, dither: S.restirMotionDither, taps: S.restirMotionTaps, static: S.restirMotionStatic, live: engine.passes.restirMotionLive }; },
     set: (k: Partial<{ motion: number; v: number; min: number; px: number; dither: boolean; taps: number; static: boolean }>) => { const S = engine.settings; if (k.motion !== undefined) S.restirMotion = Math.max(0, Math.min(7, k.motion | 0)); if (k.v !== undefined) S.restirMotionV = k.v; if (k.min !== undefined) S.restirMotionMin = k.min; if (k.px !== undefined) S.restirMotionPx = k.px; if (k.dither !== undefined) S.restirMotionDither = !!k.dither; if (k.taps !== undefined) S.restirMotionTaps = k.taps; if (k.static !== undefined) S.restirMotionStatic = !!k.static; return (window as any).__dmo.knobs(); },
     get on() { return engine.settings.restirMotion; }, set on(v: number) { engine.settings.restirMotion = Math.max(0, Math.min(7, v | 0)); },
-    summary: () => { const S = engine.settings; const m = S.restirMotion; return m ? `restir motion ${m} = ${[m & 1 ? 'stochastic-bilinear reprojection' : '', m & 2 ? `confidence whole under ${S.restirMotionV} px @1000 rows, × ${S.restirMotionMin} past ${(S.restirMotionV * 1.6).toFixed(2)}` : '', m & 4 ? `spatial past ${S.restirMotionPx} px${S.restirMotionTaps ? ` × ≥ ${S.restirMotionTaps} taps` : ''}` : ''].filter(Boolean).join(' + ')} · ${engine.passes.restirMotionLive ? 'LIVE this frame' : S.restirMotionStatic ? 'live' : 'the camera is still: main\'s program'}${S.restir ? '' : ' (restir itself is OFF)'}` : 'restir motion off — the reservoir reprojection as it was (nearest texel, full confidence)'; },
+    summary: () => { const S = engine.settings; const m = S.restirMotion; return m ? `restir motion ${m} = ${[m & 1 ? 'stochastic-bilinear reprojection' : '', m & 2 ? `confidence whole under ${S.restirMotionV} px @1000 rows, × ${S.restirMotionMin} past ${(S.restirMotionV * 1.6).toFixed(2)}` : '', m & 4 ? `spatial past ${S.restirMotionPx} px${S.restirMotionTaps ? ` × ≥ ${S.restirMotionTaps} taps` : ''}` : ''].filter(Boolean).join(' + ')} · ${engine.passes.restirMotionLive ? 'LIVE this frame' : S.restirMotionStatic ? 'live' : 'the camera is still: main\'s program'}` : 'restir motion off — the reservoir reprojection as it was (nearest texel, full confidence)'; },
   };
 }
 
