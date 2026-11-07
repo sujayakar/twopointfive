@@ -200,7 +200,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 <!-- was CLAUDE.md lines 1308–1391 -->
 - **Night vision for the team** (`src/game/nvg.ts`, 10-06; the maintainer: "the squad members should have night vision and use it accordingly. this could
   either be following your lead or knowing when they haven't been compromised and flashlight would ruin that" — "but the lights make sense too, especially when
-  things are loud"; `NVG.on` default ON, a Team feel switch — **OFF = the build before it frame for frame**: `bun run tools/qa/nvg-probes.ts digest` here and
+  things are loud"; `NVG.on` default ON, a Team feel switch — **OFF = the build before it frame for frame**: `bun run tools/qa/nvg-probes.ts digest` (the file has no main since 11-07: the switch is settled and its off side is not stood) here and
   the same file in a checkout of af55d89 print the same seven hashes). Per frame (`nvgTick`, game.ts right after `fight.tick`), for operative units while
   `fightLive`: the TEAM is `dark` or `free` — THE LEAD (`NVG.lead`): Sam's light switched on with that gun in his hands (the switch, not `pl.light.enabled`: a
   sprint lowers the beam) → free; his goggles down, light off → dark, quiet or loud; else THEIR OWN JUDGEMENT (`NVG.own`): dark until COMPROMISED = a loud thing in
@@ -358,7 +358,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **An IR light on the goggles** (`src/game/irlight.ts`, 10-15; the maintainer, of a depot whose rooms were flat black noise through the tube: "maybe we should
   model IR lights on the nvg so even totally dark rooms are visible. and we can assume enemies never have nvg"). SWITCH `IRLIGHT.on`: ON in the page
   (`?noirlight` puts it off), OFF in the module and on the frozen stand (`TPS_IRLIGHT=1` raises it; `FROZEN_HOLDS`, standup pin, standEnv); registered in
-  knobs.ts and carried by the journal (a recording from before the key replays with it off). **Off = the build before it**: `nvg-probes.ts digest` and
+  knobs.ts and carried by the journal (a recording from before the key replays with it off). **Off = the build before it**: `nvg-probes.ts digest` (gone 11-07 with the off side) and
   `irlaser-probes.ts digest` (both pin it off) print the hashes a checkout of 93bb1005 prints. WHO: Sam, whenever the picture is the tube's (on exactly
   while `Player.nvAmount` > 0.5, post.wgsl's own swap — no tube frame without it, no bare-eyed frame with it; no key, it is part of the goggles; at a
   door with the wand under it and `WAND.nv`, the flood is the lens's); with `IRLIGHT.team` (on) every teammate whose goggles are down (`nvgDown`). Enemies
