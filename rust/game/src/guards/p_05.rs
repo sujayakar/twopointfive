@@ -309,7 +309,7 @@ pub fn team_lit(g: &mut crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// is this man one of the team whose pace PACE governs right now (guards.ts teamPaced)
-pub fn team_paced(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn team_paced(g: &crate::game::Game, gd: GuardId) -> bool {
     g.gd[gd].team == crate::teams::Team::Operative && g.gd[gd].unit.is_some() && crate::roomfight::fight_live(g)
 }
 
@@ -321,7 +321,7 @@ pub fn team_pace(g: &mut crate::game::Game, gd: GuardId, speed: f64) -> f64 {
 }
 
 /// the speed his legs get for a leg asked at `speed`: one call a leg (guards.ts teamLegs)
-pub fn team_legs(g: &mut crate::game::Game, gd: GuardId, speed: f64) -> f64 {
+pub fn team_legs(g: &crate::game::Game, gd: GuardId, speed: f64) -> f64 {
     match crate::teampace::team_run_legs(g, gd, speed) {
         Some(legs) => legs,
         None => crate::kitload::load_pace(g, gd, speed),
@@ -329,7 +329,7 @@ pub fn team_legs(g: &mut crate::game::Game, gd: GuardId, speed: f64) -> f64 {
 }
 
 /// where his muzzle is this frame, wanting yaw `to`: the team's comes round at PACE.turn, round his front (guards.ts teamTurn)
-pub fn team_turn(g: &mut crate::game::Game, gd: GuardId, to: f64, dt: f64) -> f64 {
+pub fn team_turn(g: &crate::game::Game, gd: GuardId, to: f64, dt: f64) -> f64 {
     if !(g.k.pace.turn > 0.0) || !team_paced(g, gd) {
         return to;
     }
@@ -477,7 +477,7 @@ pub fn door_cells(g: &mut crate::game::Game) -> JsMap<crate::Num, DoorId> {
 }
 
 /// the nav grid's cell index, as a list index (NavGrid.idx)
-fn nav_cell(g: &mut Game, x: f64, z: f64) -> usize {
+fn nav_cell(g: &Game, x: f64, z: f64) -> usize {
     crate::scene_collision::nav_grid_idx(g, x, z) as usize
 }
 

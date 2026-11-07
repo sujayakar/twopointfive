@@ -343,7 +343,7 @@ pub fn game_update_props(g: &mut crate::game::Game, dt: f64) {
 pub fn game_drop_throwable(g: &mut crate::game::Game, kind: crate::game::ThrowKind, p: V3) { crate::combat::drop_throwable(g, kind, p) }
 
 /// (game.ts Game.throwCount)
-pub fn game_throw_count(g: &mut crate::game::Game, kind: crate::game::ThrowKind) -> f64 { crate::player::throw_count(g, kind) }
+pub fn game_throw_count(g: &crate::game::Game, kind: crate::game::ThrowKind) -> f64 { crate::player::throw_count(g, kind) }
 
 /// (game.ts Game.objectivePos)
 pub fn game_objective_pos(g: &mut crate::game::Game) -> Option<V3> { crate::mission::objective_pos(g) }

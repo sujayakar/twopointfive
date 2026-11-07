@@ -61,16 +61,16 @@ pub fn hash01(x: f64) -> f64 {
 }
 
 /// A new pool.   (debris.ts Debris.constructor)
-pub fn debris_new(g: &mut crate::game::Game) -> crate::debris::Debris { crate::debris::Debris::blank() }
+pub fn debris_new(g: &crate::game::Game) -> crate::debris::Debris { crate::debris::Debris::blank() }
 
 /// The pool's size on this tier; 64 without one.   (debris.ts Debris.cap)
-pub fn debris_cap(g: &mut crate::game::Game) -> f64 {
+pub fn debris_cap(g: &crate::game::Game) -> f64 {
     let c = g.engine.settings.debris_cap;
     m::max(4.0, m::floor(c))
 }
 
 /// Thrown and not yet down; a piece a boot slid is not counted.   (debris.ts Debris.moving)
-pub fn debris_moving(g: &mut crate::game::Game) -> f64 {
+pub fn debris_moving(g: &crate::game::Game) -> f64 {
     let mut n = 0.0;
     for &c in g.destr.debris.list.iter() {
         let ch = &g.tab.debris_chunk[c];
@@ -852,7 +852,7 @@ pub fn support_along(g: &mut crate::game::Game, b: BoxId, n: V3) -> f64 {
 }
 
 /// A slot the pool may take: at rest, or one only a boot has set sliding.   (debris.ts evictable)
-pub fn evictable(g: &mut crate::game::Game, c_2: DebrisChunkId) -> bool {
+pub fn evictable(g: &crate::game::Game, c_2: DebrisChunkId) -> bool {
     let ch = &g.tab.debris_chunk[c_2];
     ch.rest || ch.foot == Some(true)
 }

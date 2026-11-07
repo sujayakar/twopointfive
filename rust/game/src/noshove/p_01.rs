@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// Is this a man the rule has: one of the player's own under 'fall in', on his order's legs, not on a live grenade's. (noshove.ts fallingInYields)
-pub fn falling_in_yields(g: &mut Game, gd: GuardId) -> bool {
+pub fn falling_in_yields(g: &Game, gd: GuardId) -> bool {
     if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].script.is_none() { return false; }
     match crate::orders::squad_orders_of(g, gd) {
         Some(a) => g.tab.orders_assignment[a].post.is_none() && !crate::frag::frag_running(g, gd),
@@ -59,7 +59,7 @@ fn note_on(shoved: &mut [f64; 2], shoved_t: &mut f64, shoved_from: &mut [f64; 2]
 }
 
 /// player.ts keepOffGuards, of a man the rule has at (mx, mz), `l` from the player: how far the player is put back, what his OWN legs closed on the man and no more. (noshove.ts noShoveBack)
-pub fn no_shove_back(g: &mut Game, mx: f64, mz: f64, l: f64, pl: Option<&crate::player::Legs>) -> f64 {
+pub fn no_shove_back(g: &Game, mx: f64, mz: f64, l: f64, pl: Option<&crate::player::Legs>) -> f64 {
     let (shoved, shoved_t, shoved_from) = match pl {
         Some(pl) => (pl.shoved, pl.shoved_t, pl.shoved_from),
         None => { let r = &g.pl[g.player]; (r.shoved, r.shoved_t, r.shoved_from) }

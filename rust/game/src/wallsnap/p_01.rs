@@ -13,7 +13,7 @@ pub fn clamp01(x: f64) -> f64 {
 }
 
 /// Seconds the take runs for a glide of `dist` metres and a turn of `turn` radians. (wallsnap.ts wsTakeSecs)
-pub fn ws_take_secs(g: &mut crate::game::Game, dist: f64, turn: f64) -> f64 {
+pub fn ws_take_secs(g: &crate::game::Game, dist: f64, turn: f64) -> f64 {
     take_secs(&g.k.wallsnap, dist, turn)
 }
 
@@ -23,7 +23,7 @@ fn take_secs(w: &crate::knobs::WallsnapK, dist: f64, turn: f64) -> f64 {
 }
 
 /// How far out (m) the key-less take's clock starts for a man closing on the face at `into` m/s. (wallsnap.ts wsPressNear)
-pub fn ws_press_near(g: &mut crate::game::Game, into: f64) -> f64 {
+pub fn ws_press_near(g: &crate::game::Game, into: f64) -> f64 {
     press_near(&g.k.wallsnap, into)
 }
 
@@ -37,7 +37,7 @@ pub fn ws_ease(s: f64, p: f64) -> f64 {
 }
 
 /// The landing's settle, t seconds after the back arrived. (wallsnap.ts wsHit)
-pub fn ws_hit(g: &mut crate::game::Game, t: f64) -> f64 {
+pub fn ws_hit(g: &crate::game::Game, t: f64) -> f64 {
     hit(g.k.wallsnap.hit_peak, t)
 }
 

@@ -34,44 +34,44 @@ fn has_data(g: &Game) -> bool {
 }
 
 /// A new overlay with its van rule. (snatch.ts Snatch.constructor)
-pub fn snatch_new(g: &mut crate::game::Game) -> crate::snatch::Snatch {
+pub fn snatch_new(g: &crate::game::Game) -> crate::snatch::Snatch {
     let mut s = Snatch::blank();
     s.out = Box::new(crate::snatchout::snatch_out_new(g));
     s
 }
 
 /// This level's block. (snatch.ts Snatch.block)
-pub fn snatch_block(g: &mut crate::game::Game) -> Option<crate::scene_scenarios::SnatchData> {
+pub fn snatch_block(g: &crate::game::Game) -> Option<crate::scene_scenarios::SnatchData> {
     snatch_data(g)
 }
 
 /// The mission still hangs on him: loose, or where he is to be driven off, not yet in the van. (snatch.ts Snatch.owes)
-pub fn snatch_owes(g: &mut crate::game::Game) -> bool {
+pub fn snatch_owes(g: &crate::game::Game) -> bool {
     g.snatch.end.is_none() && (crate::snatchout::snatch_out_ruled(g) || !snatch_in_hand(g))
 }
 
 /// This level's block. (snatch.ts Snatch.data)
-pub fn snatch_data(g: &mut crate::game::Game) -> Option<crate::scene_scenarios::SnatchData> {
+pub fn snatch_data(g: &crate::game::Game) -> Option<crate::scene_scenarios::SnatchData> {
     g.level.scenarios.as_ref().and_then(|s| s.snatch.clone())
 }
 
 /// He is staged on a level with the block, in a live room clear. (snatch.ts Snatch.active)
-pub fn snatch_active(g: &mut crate::game::Game) -> bool {
+pub fn snatch_active(g: &crate::game::Game) -> bool {
     g.snatch.man.is_some() && has_data(g) && crate::roomclear::room_clear_scenario_active(g)
 }
 
 /// Is this the man? (snatch.ts Snatch.isMan)
-pub fn snatch_is_man(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn snatch_is_man(g: &crate::game::Game, gd: GuardId) -> bool {
     g.snatch.man == Some(gd)
 }
 
 /// The wrists-behind pose is his once he is tied. (snatch.ts Snatch.isTied)
-pub fn snatch_is_tied(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn snatch_is_tied(g: &crate::game::Game, gd: GuardId) -> bool {
     g.snatch.man == Some(gd) && g.snatch.tied
 }
 
 /// Alive and in the team's hands: tied, in Sam's arm, or out cold by Sam's hands. (snatch.ts Snatch.inHand)
-pub fn snatch_in_hand(g: &mut crate::game::Game) -> bool {
+pub fn snatch_in_hand(g: &crate::game::Game) -> bool {
     let Some(m) = g.snatch.man else { return false };
     if g.gd[m].state == crate::game::GuardState::Dead {
         g.gd[m].down_kind != Some(crate::game::DownKind::Shot)
@@ -81,7 +81,7 @@ pub fn snatch_in_hand(g: &mut crate::game::Game) -> bool {
 }
 
 /// What he says in place of a civilian's line; a line already his passes as it is. No die: the pick is off the clock. (snatch.ts Snatch.voice)
-pub fn snatch_voice(g: &mut crate::game::Game, gd: GuardId, text: &str) -> Option<String> {
+pub fn snatch_voice(g: &crate::game::Game, gd: GuardId, text: &str) -> Option<String> {
     if crate::dialogue::snatch_lines().iter().any(|l| l == text) { return Some(String::from(text)); }
     let l = crate::dialogue::snatch_lines_table();
     let s = g.cv[g.gd[gd].civ.unwrap()].state;
@@ -111,7 +111,7 @@ pub fn snatch_round_on(g: &mut crate::game::Game, gd: GuardId, shooter: Option<G
 }
 
 /// The team's living characters: Sam and every operative unit that is up. (snatch.ts Snatch.teamOf)
-pub fn snatch_team_of(g: &mut crate::game::Game) -> Vec<crate::snatch::SnatchTeamOfItem> {
+pub fn snatch_team_of(g: &crate::game::Game) -> Vec<crate::snatch::SnatchTeamOfItem> {
     let mut out = Vec::new();
     let p = g.player;
     if !g.pl[p].down { out.push(SnatchTeamOfItem { c: g.pl[p].ch, gd: None }); }

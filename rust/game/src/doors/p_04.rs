@@ -306,7 +306,7 @@ pub fn doors_thread_path(g: &mut crate::game::Game, path: &[V3], start: V3, is_f
 }
 
 /// Every leaf's box and its two handles, for the picture's list (the fog's doorBoxes asks it).   (doors.ts Doors.boxes)
-pub fn doors_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
+pub fn doors_boxes(g: &crate::game::Game, out: &mut Vec<BoxId>) {
     for d in g.doors.list.iter() {
         let dr = &g.dr[*d];
         out.push(dr.box_);
@@ -316,7 +316,7 @@ pub fn doors_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
 }
 
 /// Leaf boxes, for registering as dynamic occluders with the collision layer.   (doors.ts Doors.leafBoxes)
-pub fn doors_leaf_boxes(g: &mut crate::game::Game) -> Vec<BoxId> {
+pub fn doors_leaf_boxes(g: &crate::game::Game) -> Vec<BoxId> {
     g.doors.list.iter().map(|d| g.dr[*d].box_).collect()
 }
 

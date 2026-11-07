@@ -62,7 +62,7 @@ fn land_sfx(row: &BreakRow) -> Vec<crate::debris::ChunkSfxItem> { row.land.sfx.i
 /// what a breaching charge is to the furniture, by its breaking radius (furnblast.ts chargeSource)
 pub fn charge_source(radius: f64) -> crate::furnblast::BlastSource { if radius >= 1.5 { BlastSource::Wall } else { BlastSource::Door } }
 /// which row of the break table a box is: its word's (furnblast.ts breakClassOf)
-pub fn break_class_of(g: &mut crate::game::Game, b: &crate::furnblast::BreakClassOfB) -> crate::scene_materials::BreakClass { crate::scene_materials::does_of_word(g, b.does.as_deref()).breaks }
+pub fn break_class_of(g: &crate::game::Game, b: &crate::furnblast::BreakClassOfB) -> crate::scene_materials::BreakClass { crate::scene_materials::does_of_word(g, b.does.as_deref()).breaks }
 /// a box's bounds, its yaw taken in (furnblast.ts aabbOf)
 pub fn aabb_of(g: &mut crate::game::Game, b: BoxId) -> crate::furnblast::AABB {
     let (c, h, yaw) = { let r = seam_box(g, b); (r.c, r.h, r.yaw) };
@@ -80,7 +80,7 @@ pub fn has(_j: f64) -> bool { false }
 
 // ---------------------------------------------------------------- class Furniture: g.destr.furn
 /// (furnblast.ts Furniture.constructor)
-pub fn furniture_new(g: &mut crate::game::Game) -> crate::furnblast::Furniture { Furniture::blank() }
+pub fn furniture_new(g: &crate::game::Game) -> crate::furnblast::Furniture { Furniture::blank() }
 /// its own deterministic stream (furnblast.ts Furniture.hash)
 pub fn furniture_hash(g: &mut crate::game::Game) -> f64 {
     let c = g.destr.furn.counter; g.destr.furn.counter = c + 1.0;
@@ -271,7 +271,7 @@ pub fn furniture_row_fall(g: &mut crate::game::Game, standing: &[FurnblastMember
     gone
 }
 /// is static `i` one this module has broken (furnblast.ts Furniture.broken)
-pub fn furniture_broken(g: &mut crate::game::Game, i: f64) -> bool { g.destr.furn.hidden.has(Num(i)) }
+pub fn furniture_broken(g: &crate::game::Game, i: f64) -> bool { g.destr.furn.hidden.has(Num(i)) }
 /// a clear line of blast: furniture is no shield, anything else is (furnblast.ts Furniture.clear)
 pub fn furniture_clear(g: &mut crate::game::Game, o: V3, p: V3) -> bool {
     let d = v3::sub(p, o); let l = v3::len(d); if l < 0.05 { return true; } let rd = v3::scale(d, 1.0 / l);
@@ -601,7 +601,7 @@ fn break_prop_in(g: &mut Game, p: PropId, at: V3, fall: f64, who: f64, budget: &
     crate::scene_collision::sound_paths_invalidate(g);
 }
 /// under a roof? (furnblast.ts Furniture.roofed; index()'s own closure is the same test)
-pub fn furniture_roofed(g: &mut crate::game::Game, x: f64, z: f64) -> bool {
+pub fn furniture_roofed(g: &crate::game::Game, x: f64, z: f64) -> bool {
     let i = match &g.reach_interior { Some(i) => i, None => return true };
     let w = crate::scene_world::world();
     let cx = m::floor(x - w.min[0]); let cz = m::floor(z - w.min[2]);

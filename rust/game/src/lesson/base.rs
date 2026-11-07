@@ -15,7 +15,7 @@ pub mod flags {
     pub fn crouch(g: &mut crate::game::Game) -> bool { todo!() }
 
     /// (src/game/lesson.ts:134 FLAGS.sprint)
-    pub fn sprint(g: &mut crate::game::Game) -> bool { todo!() }
+    pub fn sprint(g: &crate::game::Game) -> bool { todo!() }
 
     /// (src/game/lesson.ts:135 FLAGS.wall)
     pub fn wall(g: &mut crate::game::Game) -> bool { todo!() }
@@ -30,13 +30,13 @@ pub mod flags {
     pub fn light(g: &mut crate::game::Game) -> bool { todo!() }
 
     /// (src/game/lesson.ts:140 FLAGS.holstered)
-    pub fn holstered(g: &mut crate::game::Game) -> bool { todo!() }
+    pub fn holstered(g: &crate::game::Game) -> bool { todo!() }
 
     /// (src/game/lesson.ts:141 FLAGS.gun)
     pub fn gun(g: &mut crate::game::Game) -> bool { todo!() }
 
     /// (src/game/lesson.ts:147 FLAGS.setup)
-    pub fn setup(g: &mut crate::game::Game) -> bool { todo!() }
+    pub fn setup(g: &crate::game::Game) -> bool { todo!() }
 
     /// (src/game/lesson.ts:150 FLAGS.dark)
     pub fn dark(g: &mut crate::game::Game) -> bool { todo!() }

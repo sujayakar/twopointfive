@@ -92,13 +92,13 @@ pub fn startle_sight(g: &mut crate::game::Game, gd: GuardId, prev: crate::game::
 }
 
 /// updateGuard, at the pose write: his gun is held down this frame.   (startle.ts startleGunDown)
-pub fn startle_gun_down(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn startle_gun_down(g: &crate::game::Game, gd: GuardId) -> bool {
     let now = g.time;
     match g.m.startle.state_of.get(gd) { Some(s) => now < s.until || s.pre || s.run.is_some(), None => false }
 }
 
 /// handCarry: the hand torch is still what he carries (he had it when the start took him).   (startle.ts startleTorch)
-pub fn startle_torch(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn startle_torch(g: &crate::game::Game, gd: GuardId) -> bool {
     let Some(s) = g.m.startle.state_of.get(gd) else { return false };
     s.torch && (g.gd[gd].state == crate::game::GuardState::Alert || g.gd[gd].state == crate::game::GuardState::Suspicious) && g.gd[gd].script.is_none()
 }
@@ -110,14 +110,14 @@ pub fn startled(g: &mut crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// The seconds of a start still on him, and of the draw after it (0: none): the least his reaction clock may read.   (startle.ts startleLeft)
-pub fn startle_left(g: &mut crate::game::Game, gd: GuardId) -> f64 {
+pub fn startle_left(g: &crate::game::Game, gd: GuardId) -> f64 {
     let now = g.time;
     let Some(s) = g.m.startle.state_of.get(gd) else { return 0.0 };
     if now < s.until { s.until - now } else if now < s.draw_until { s.draw_until - now } else { 0.0 }
 }
 
 /// Is he running for cover off a start.   (startle.ts startleRunning)
-pub fn startle_running(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn startle_running(g: &crate::game::Game, gd: GuardId) -> bool {
     match g.m.startle.state_of.get(gd) { Some(s) => s.run.is_some(), None => false }
 }
 

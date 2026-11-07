@@ -42,10 +42,10 @@ fn budget_of(chunks: f64) -> crate::break_table::ShedBudget { crate::break_table
 
 // ------------------------------------------------------------------ the switch and the plain boxes
 /// Is the engine on: tune.wallBreak not put off, outside the showcases. DESTRUCTION.on is settled on. (wallbreak.ts wallBreakOn)
-pub fn wall_break_on(g: &mut crate::game::Game) -> bool { g.tune.wall_break && g.destr.show_chaos.is_none() }
+pub fn wall_break_on(g: &crate::game::Game) -> bool { g.tune.wall_break && g.destr.show_chaos.is_none() }
 
 /// A box's world bounds. (wallbreak.ts aabbOf)
-pub fn aabb_of(g: &mut crate::game::Game, b: &crate::scene_boxes::Box) -> crate::wallbreak::AABB {
+pub fn aabb_of(g: &crate::game::Game, b: &crate::scene_boxes::Box) -> crate::wallbreak::AABB {
     let cs = m::abs(m::cos(b.yaw)); let sn = m::abs(m::sin(b.yaw));
     let ex = cs * b.h[0] + sn * b.h[2]; let ez = sn * b.h[0] + cs * b.h[2];
     AABB { x0: b.c[0] - ex, x1: b.c[0] + ex, y0: b.c[1] - b.h[1], y1: b.c[1] + b.h[1], z0: b.c[2] - ez, z1: b.c[2] + ez }
@@ -180,7 +180,7 @@ pub fn wall_break_index(g: &mut crate::game::Game) {
 }
 
 /// The breakable a static index belongs to, an authored box or one of its pieces: what a round met. (WallBreak.breakableAt)
-pub fn wall_break_breakable_at(g: &mut crate::game::Game, index: f64) -> Option<crate::wallbreak::WallBreakBreakableAt> {
+pub fn wall_break_breakable_at(g: &crate::game::Game, index: f64) -> Option<crate::wallbreak::WallBreakBreakableAt> {
     let b = &g.tab.wallbreak_breakable[owner_of(g, index)?];
     Some(WallBreakBreakableAt { id: b.id, kind: b.kind, surf: b.surf, open: b.n_open, cells: b.open.len() as f64, hard: if is_hard(b) { Some(true) } else { None } })
 }
@@ -258,7 +258,7 @@ pub fn wall_break_work_left(g: &mut crate::game::Game, index: f64, hit_p: V3, di
 }
 
 /// Every breakable: the panel, the probes, the AI part. (WallBreak.all)
-pub fn wall_break_all(g: &mut crate::game::Game) -> Vec<crate::wallbreak::WallBreakAllItem> {
+pub fn wall_break_all(g: &crate::game::Game) -> Vec<crate::wallbreak::WallBreakAllItem> {
     g.destr.walls.list.iter().map(|&x| { let b = &g.tab.wallbreak_breakable[x]; WallBreakAllItem { id: b.id, kind: b.kind, surf: b.surf, box_: b.box_, open: b.n_open, cells: b.open.len() as f64 } }).collect()
 }
 
@@ -284,7 +284,7 @@ pub fn wall_break_to_world(g: &mut crate::game::Game, b: WallbreakBreakableId, l
 }
 
 /// A cell's index. (WallBreak.ci)
-pub fn wall_break_ci(g: &mut crate::game::Game, b: WallbreakBreakableId, ix: f64, iy: f64, iz: f64) -> f64 { let r = &g.tab.wallbreak_breakable[b]; (iy * r.nz + iz) * r.nx + ix }
+pub fn wall_break_ci(g: &crate::game::Game, b: WallbreakBreakableId, ix: f64, iy: f64, iz: f64) -> f64 { let r = &g.tab.wallbreak_breakable[b]; (iy * r.nz + iz) * r.nx + ix }
 
 /// (WallBreak.xb)
 pub fn wall_break_xb(g: &mut crate::game::Game, b: WallbreakBreakableId, ix: f64) -> f64 { let h = own_box(g, b).h; let nx = g.tab.wallbreak_breakable[b].nx; -h[0] + 2.0 * h[0] * ix / nx }
@@ -533,7 +533,7 @@ pub fn wall_break_open_cells(g: &mut crate::game::Game, b: WallbreakBreakableId,
 }
 
 /// The flags authored static `i` was loaded with, if this module has changed them. (WallBreak.flags0)
-pub fn wall_break_flags0(g: &mut crate::game::Game, i: f64) -> Option<f64> {
+pub fn wall_break_flags0(g: &crate::game::Game, i: f64) -> Option<f64> {
     if let Some(f) = g.destr.walls.hidden.get(crate::Num(i)) { return Some(*f); }
     let b = &g.tab.wallbreak_breakable[owner_of(g, i)?];
     if b.id == i { Some(b.flags0) } else { None }
@@ -613,7 +613,7 @@ pub fn wall_break_note(g: &mut crate::game::Game, c_2: &crate::wallbreak::WallBr
 pub fn wall_break_on_change(g: &mut crate::game::Game, fn_: crate::wallbreak::ChangeListener) { g.destr.walls.listeners.push(fn_); }
 
 /// The rows after `serial`; None = the ring has already dropped some of them: re-read the level. (WallBreak.since)
-pub fn wall_break_since(g: &mut crate::game::Game, serial: f64) -> Option<Vec<crate::wallbreak::LevelChange>> {
+pub fn wall_break_since(g: &crate::game::Game, serial: f64) -> Option<Vec<crate::wallbreak::LevelChange>> {
     let w = &*g.destr.walls;
     if serial >= w.serial { return Some(Vec::new()); }
     let first = if !w.changes.is_empty() { w.changes[0].serial } else { w.serial + 1.0 };

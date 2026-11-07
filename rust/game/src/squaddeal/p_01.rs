@@ -25,7 +25,7 @@ fn span(rooms: &[crate::scene_scenarios::StructureRoom], ax: usize) -> f64 {
 
 /// The structure as the squads are staged on it: as it is when its file has a squads block (an empty one too), on a lesson, or with fewer than two men
 /// dealt; else a copy with a block cut from its rooms (`rooms[i]` = the room defender i was dealt into).   (squaddeal.ts squadDeal)
-pub fn squad_deal(g: &mut crate::game::Game, s: Option<&crate::scene_scenarios::StructureData>, rooms: &[String], lesson: Option<bool>) -> Option<crate::scene_scenarios::StructureData> {
+pub fn squad_deal(g: &crate::game::Game, s: Option<&crate::scene_scenarios::StructureData>, rooms: &[String], lesson: Option<bool>) -> Option<crate::scene_scenarios::StructureData> {
     deal_with(&g.k.squaddeal, s, rooms, lesson)
 }
 

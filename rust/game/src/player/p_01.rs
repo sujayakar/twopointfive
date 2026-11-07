@@ -18,7 +18,7 @@ fn def_of(g: &crate::game::Game, def: crate::weapons::WeaponId) -> &crate::weapo
 pub fn sam_beat(chars: f64) -> f64 { v3::clamp(0.7 + 0.018 * chars, 0.9, 1.4) }
 
 /// he is as wide as his shoulders in a door frame: BODY_R narrows to DOOR_R on a doorway's middle line (player.ts bodyR)
-pub fn body_r(g: &mut crate::game::Game, p: V3) -> f64 {
+pub fn body_r(g: &crate::game::Game, p: V3) -> f64 {
     let fit = door_fit();
     let mut k: f64 = 0.0;
     for i in 0..g.doors.list.len() {
@@ -106,10 +106,10 @@ pub fn settle_player(g: &mut crate::game::Game) {
 }
 
 /// the crouch-walk's top speed: the sneak's own (player.ts crouchPace; TWOGEARS.on settled)
-pub fn crouch_pace(g: &mut crate::game::Game) -> f64 { g.k.twogears.crouch }
+pub fn crouch_pace(g: &crate::game::Game) -> f64 { g.k.twogears.crouch }
 
 /// one notch of the wheel on his pace: under TWOGEARS.on (settled) the wheel is nobody's pace (player.ts wheelPace)
-pub fn wheel_pace(g: &mut crate::game::Game, wheel: f64) {}
+pub fn wheel_pace(g: &crate::game::Game, wheel: f64) {}
 
 /// asked once a frame by both places a footfall is filed: 0 none, 1 at an edge of the cycle, 2 one the legs owe (player.ts footfallDue; FOOTFALL.once and .owed settled)
 pub fn footfall_due(g: &mut crate::game::Game, dt: f64, phase: f64, speed: f64) -> f64 {
@@ -135,7 +135,7 @@ fn footfall_on(p: &mut crate::game::Player, time: f64, travel: f64, owe: f64, dt
 }
 
 /// what the selected slot puts in his hand, for the HUD line (player.ts itemName)
-pub fn item_name(g: &mut crate::game::Game, pl: PlayerId) -> String {
+pub fn item_name(g: &crate::game::Game, pl: PlayerId) -> String {
     match g.pl[pl].slot {
         crate::game::SlotKind::Pistol => { let def = g.fa[g.pl[pl].pistol].def; def_of(g, def).short.clone() }
         crate::game::SlotKind::Smoke => String::from("smoke canister"),
@@ -146,7 +146,7 @@ pub fn item_name(g: &mut crate::game::Game, pl: PlayerId) -> String {
 }
 
 /// what 2 pressed again puts on the right button after the load that is up (player.ts nextLoad)
-pub fn next_load(g: &mut crate::game::Game, rf: FirearmId) -> String {
+pub fn next_load(g: &crate::game::Game, rf: FirearmId) -> String {
     let a = next_attachment(&g.fa[rf].attachments, g.fa[rf].att_idx);
     String::from(match a {
         Some(crate::weapons::RifleAttachment::Cam) => "the sticky cameras",
@@ -162,7 +162,7 @@ fn next_attachment(attachments: &[crate::weapons::RifleAttachment], att_idx: i32
 }
 
 /// the rifle as the HUD line names it (player.ts rifleName)
-pub fn rifle_name(g: &mut crate::game::Game, pl: PlayerId) -> String {
+pub fn rifle_name(g: &crate::game::Game, pl: PlayerId) -> String {
     let rifle = g.pl[pl].rifle;
     let def = g.fa[rifle].def;
     let short = def_of(g, def).short.clone();
@@ -216,7 +216,7 @@ pub fn cancel_reloads(g: &mut crate::game::Game, pl: PlayerId) {
 }
 
 /// where the round and the gun's pitch go on a man: `h` over his feet, brought down onto him when his head is low (player.ts manAim; AIM.player.low settled)
-pub fn man_aim(g: &mut crate::game::Game, gd: GuardId, h: f64) -> V3 {
+pub fn man_aim(g: &crate::game::Game, gd: GuardId, h: f64) -> V3 {
     use crate::character::Bone;
     let c = g.gd[gd].ch;
     let pos = g.ch[c].pos;
@@ -237,12 +237,12 @@ pub fn man_aim(g: &mut crate::game::Game, gd: GuardId, h: f64) -> V3 {
 }
 
 /// the level aim holds this frame: no script holds his aim (player.ts levelOn; AIM.player.level settled)
-pub fn level_on(g: &mut crate::game::Game) -> bool {
+pub fn level_on(g: &crate::game::Game) -> bool {
     match &g.puppet { Some(p) => p.aim.is_none(), None => true }
 }
 
 /// the point his fire sites send a round at with nothing under the reticle (player.ts freeAim)
-pub fn free_aim(g: &mut crate::game::Game, keep: Option<f64>) -> V3 {
+pub fn free_aim(g: &crate::game::Game, keep: Option<f64>) -> V3 {
     let keep = keep.unwrap_or(0.25);
     let c = g.pl[g.player].ch;
     let ap = g.aim_point;

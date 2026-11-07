@@ -17,13 +17,13 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 pub fn smoke_system_like_emit(g: &mut crate::game::Game, e: &crate::smoke_types::SmokeEmitter) { if g.smoke_owned { crate::sense::cpu_smoke_emit(g, e); } }
 
 /// how many more emitters would still be packed this step: the game's own count where it owns the smoke, else the host's solver's (none here)   (types.ts:74; sense.ts:256)
-pub fn smoke_system_like_budget(g: &mut crate::game::Game) -> Option<f64> { if g.smoke_owned { Some(crate::sense::cpu_smoke_budget(g)) } else { None } }
+pub fn smoke_system_like_budget(g: &crate::game::Game) -> Option<f64> { if g.smoke_owned { Some(crate::sense::cpu_smoke_budget(g)) } else { None } }
 /// the host's solver's answer; with no solver, false   (types.ts:67 inSmokeDomain)
-pub fn smoke_system_like_in_smoke_domain(g: &mut crate::game::Game, p: V3) -> bool { false }
+pub fn smoke_system_like_in_smoke_domain(g: &crate::game::Game, p: V3) -> bool { false }
 /// the host's solver's answer; with no solver it did not take the round as a line   (types.ts:70 round)
-pub fn smoke_system_like_round(g: &mut crate::game::Game, from: V3, dir: V3, len: f64) -> bool { false }
+pub fn smoke_system_like_round(g: &crate::game::Game, from: V3, dir: V3, len: f64) -> bool { false }
 /// the host's solver's answer; absent = no   (types.ts:77 drawing)
-pub fn smoke_system_like_drawing(g: &mut crate::game::Game) -> bool { false }
+pub fn smoke_system_like_drawing(g: &crate::game::Game) -> bool { false }
 
 
 
@@ -32,5 +32,5 @@ pub fn smoke_system_like_clear_all(g: &mut crate::game::Game) { if g.smoke_owned
 
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/smoke/types.ts:86 SmokeSystemLike.setWind)
-pub fn smoke_system_like_set_wind(g: &mut crate::game::Game, srcs: &[crate::smoke_types::WindGpuSource], relax: f64) {}
+pub fn smoke_system_like_set_wind(g: &crate::game::Game, srcs: &[crate::smoke_types::WindGpuSource], relax: f64) {}
 

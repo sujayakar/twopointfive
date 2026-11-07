@@ -9,7 +9,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 // ---- a seam: the one step the skeleton still cannot give (notes.md, ## Skeleton)
 /// `col.boxes[i]`'s centre, half sizes and yaw: g.col.boxes is Vec<BoxId> and no table holds the rows, while the index says g.col.boxes[id].c (faceAt, player.ts:964)
-fn seam_box_c_h_yaw(g: &mut Game, b: BoxId) -> (V3, V3, f64) { let x = &g.tab.boxes[b]; (x.c, x.h, x.yaw) }
+fn seam_box_c_h_yaw(g: &Game, b: BoxId) -> (V3, V3, f64) { let x = &g.tab.boxes[b]; (x.c, x.h, x.yaw) }
 
 // ---- the body keepOffGuards keeps off: the player's own (None) or a look ahead's copy (Some)
 fn legs_pos(g: &Game, m: &Option<&mut Legs>) -> V3 {
@@ -42,7 +42,7 @@ fn legs_collide(g: &mut Game, m: &mut Option<&mut Legs>, y1: f64) {
 }
 
 /// The cone Sam's next rifle round is drawn with for how he stands. (player.ts rifleSpread)
-pub fn rifle_spread(g: &mut crate::game::Game, speed: f64) -> f64 {
+pub fn rifle_spread(g: &crate::game::Game, speed: f64) -> f64 {
     let pl = g.player;
     let gun = g.pl[pl].rifle;
     let def = g.fa[gun].def;
@@ -482,7 +482,7 @@ pub fn press_face(g: &mut crate::game::Game, mx: f64, mz: f64) -> Option<crate::
 }
 
 /// the move keys that are down, as bits (W 1, A 2, S 4, D 8). (player.ts moveKeysDown)
-pub fn move_keys_down(g: &mut crate::game::Game, input: InputId) -> f64 {
+pub fn move_keys_down(g: &crate::game::Game, input: InputId) -> f64 {
     let w = if crate::input::input_down(g, input, "KeyW") { 1 } else { 0 };
     let a = if crate::input::input_down(g, input, "KeyA") { 2 } else { 0 };
     let s = if crate::input::input_down(g, input, "KeyS") { 4 } else { 0 };
@@ -561,7 +561,7 @@ pub fn wall_press(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Camer
 }
 
 /// Does the rifle, drawn on this hold, stack on it? (player.ts wallStacks)
-pub fn wall_stacks(g: &mut crate::game::Game, w: crate::player::WallHold) -> bool {
+pub fn wall_stacks(g: &crate::game::Game, w: crate::player::WallHold) -> bool {
     g.k.wallsnap.on && w.take_t.is_some()
 }
 

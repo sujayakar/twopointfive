@@ -165,11 +165,11 @@ pub fn flash_of(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> O
 pub fn lum(r: f64, g_2: f64, b: f64) -> f64 { 0.2126 * r + 0.7152 * g_2 + 0.0722 * b }
 
 /// one representable number up or down (x > 0)   (blastLook.ts:229 nudge)
-pub fn nudge(_g: &mut crate::game::Game, x: f64, up: bool) -> f64 { let bits = x.to_bits(); f64::from_bits(if up { bits.wrapping_add(1) } else { bits.wrapping_sub(1) }) }
+pub fn nudge(_g: &crate::game::Game, x: f64, up: bool) -> f64 { let bits = x.to_bits(); f64::from_bits(if up { bits.wrapping_add(1) } else { bits.wrapping_sub(1) }) }
 
 /// WALL_FLASH's hue at `c`'s luminance, the meter's sum kept TO THE BIT: red and blue scaled, green solved for, then green (failing that, blue) walked
 /// one representable number at a time until the sum lands; a colour it cannot land stays as it was.   (blastLook.ts:230 warmOf)
-pub fn warm_of(g: &mut crate::game::Game, c_2: V3) -> V3 {
+pub fn warm_of(g: &crate::game::Game, c_2: V3) -> V3 {
     let t = WALL_FLASH_COLOR;
     let l0 = lum(c_2[0], c_2[1], c_2[2]);
     let k = l0 / lum(t[0], t[1], t[2]);
@@ -204,7 +204,7 @@ pub fn hash_u(n: f64) -> f64 {
 }
 
 /// (blastLook.ts:156 thick)
-pub fn thick(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> f64 { let h = g.tab.boxes[w.box_].h; 2.0 * (if w.along_x { h[2] } else { h[0] }) }
+pub fn thick(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> f64 { let h = g.tab.boxes[w.box_].h; 2.0 * (if w.along_x { h[2] } else { h[0] }) }
 
 /// is the wall open at the charge (the blast made its hole)? one segment through it at the slab's height   (blastLook.ts:216 holed)
 pub fn holed(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> bool {

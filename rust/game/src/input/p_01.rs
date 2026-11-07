@@ -18,42 +18,42 @@ pub fn input_new(g: &mut Game, el: Option<crate::Opaque>) -> InputId {
 }
 
 /// Is this key held?   (input.ts Input.down)
-pub fn input_down(g: &mut Game, id: InputId, code: &str) -> bool {
+pub fn input_down(g: &Game, id: InputId, code: &str) -> bool {
     g.tab.input[id].keys.has(String::from(code))
 }
 
 /// Did this key go down this frame?   (input.ts Input.hit)
-pub fn input_hit(g: &mut Game, id: InputId, code: &str) -> bool {
+pub fn input_hit(g: &Game, id: InputId, code: &str) -> bool {
     g.tab.input[id].pressed.has(String::from(code))
 }
 
 /// Left button held.   (input.ts Input.lmb)
-pub fn input_lmb(g: &mut Game, id: InputId) -> bool {
+pub fn input_lmb(g: &Game, id: InputId) -> bool {
     bit(g.tab.input[id].buttons, 1)
 }
 
 /// Right button held.   (input.ts Input.rmb)
-pub fn input_rmb(g: &mut Game, id: InputId) -> bool {
+pub fn input_rmb(g: &Game, id: InputId) -> bool {
     bit(g.tab.input[id].buttons, 4)
 }
 
 /// Left button went down this frame.   (input.ts Input.lmbHit)
-pub fn input_lmb_hit(g: &mut Game, id: InputId) -> bool {
+pub fn input_lmb_hit(g: &Game, id: InputId) -> bool {
     bit(g.tab.input[id].clicked, 1)
 }
 
 /// Right button went down this frame.   (input.ts Input.rmbHit)
-pub fn input_rmb_hit(g: &mut Game, id: InputId) -> bool {
+pub fn input_rmb_hit(g: &Game, id: InputId) -> bool {
     bit(g.tab.input[id].clicked, 4)
 }
 
 /// Middle button held.   (input.ts Input.mmb)
-pub fn input_mmb(g: &mut Game, id: InputId) -> bool {
+pub fn input_mmb(g: &Game, id: InputId) -> bool {
     bit(g.tab.input[id].buttons, 2)
 }
 
 /// Middle button went down this frame.   (input.ts Input.mmbHit)
-pub fn input_mmb_hit(g: &mut Game, id: InputId) -> bool {
+pub fn input_mmb_hit(g: &Game, id: InputId) -> bool {
     bit(g.tab.input[id].clicked, 2)
 }
 

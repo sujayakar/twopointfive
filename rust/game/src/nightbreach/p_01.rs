@@ -286,7 +286,7 @@ fn live_stun_off(g: &mut Game) {
 }
 
 /// Every man of the list down or fled. (nightbreach.ts:352, 381)
-fn all_taken(g: &mut Game) -> bool {
+fn all_taken(g: &Game) -> bool {
     for h in g.night_breach.hostiles.clone() {
         if !(g.gd[h].state == crate::game::GuardState::Dead || g.gd[h].fled) { return false; }
     }
@@ -331,13 +331,13 @@ pub fn blind_turn(g: &mut crate::game::Game, h: GuardId, k: f64, b: &mut crate::
 }
 
 /// The two men F's drill moves. (nightbreach.ts NightBreach.drillOps)
-pub fn night_breach_drill_ops(g: &mut crate::game::Game) -> Vec<GuardId> {
+pub fn night_breach_drill_ops(g: &crate::game::Game) -> Vec<GuardId> {
     if g.night_breach.no_drill { return Vec::new(); }
     g.night_breach.ops.iter().take(2).copied().collect()
 }
 
 /// A new one: its initialisers. (nightbreach.ts NightBreach.constructor)
-pub fn night_breach_new(g: &mut crate::game::Game) -> crate::nightbreach::NightBreach {
+pub fn night_breach_new(g: &crate::game::Game) -> crate::nightbreach::NightBreach {
     NightBreach::blank()
 }
 
@@ -520,7 +520,7 @@ pub fn night_breach_order(g: &mut crate::game::Game) -> Option<crate::nightbreac
 }
 
 /// Is the drill moving the pair right now. (nightbreach.ts NightBreach.ownsPair)
-pub fn night_breach_owns_pair(g: &mut crate::game::Game) -> bool {
+pub fn night_breach_owns_pair(g: &crate::game::Game) -> bool {
     if !g.night_breach.active { return false; }
     match g.night_breach.drill.as_ref() {
         Some(d) => d.phase != crate::breach::Phase::Wait && d.phase != crate::breach::Phase::Done,
@@ -712,7 +712,7 @@ pub fn night_breach_objective(g: &mut crate::game::Game) -> Option<crate::nightb
 }
 
 /// Where the breach stands, in one word. (nightbreach.ts NightBreach.state)
-pub fn night_breach_state(g: &mut crate::game::Game) -> crate::nightbreach::NightBreachState {
+pub fn night_breach_state(g: &crate::game::Game) -> crate::nightbreach::NightBreachState {
     if !g.night_breach.active { return NightBreachState::Off; }
     let Some(d) = g.night_breach.drill.as_ref() else {
         return if g.night_breach.no_drill { NightBreachState::Staged } else { NightBreachState::Off };

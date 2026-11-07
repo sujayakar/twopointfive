@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// This view's row for `gd`, a copy (`states.get(g)?.jobs.get(gd)`). The TypeScript's `J` is the row itself: `put_job` after a write, `lens_out` included.
-fn job(g: &mut Game, gd: GuardId) -> Option<Job> {
+fn job(g: &Game, gd: GuardId) -> Option<Job> {
     let k = crate::seats::view_key(g);
     g.m.wandorder.states.get(k).and_then(|st| st.jobs.get(gd).copied())
 }
@@ -32,7 +32,7 @@ pub fn live(g: &mut crate::game::Game) -> bool {
 }
 
 /// Is a wand in his kit. (wandorder.ts carries)
-pub fn carries(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn carries(g: &crate::game::Game, gd: GuardId) -> bool {
     crate::kit::kit_of(g, gd).map_or(false, |k| k.wand)
 }
 

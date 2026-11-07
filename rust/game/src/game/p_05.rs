@@ -186,7 +186,7 @@ pub fn game_body_light_summary(g: &mut crate::game::Game) -> String {
 }
 
 /// Is this record somebody on the floor right now: a man of the shift, a unit or a civilian? (game.ts Game.onFloor)
-pub fn game_on_floor(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn game_on_floor(g: &crate::game::Game, gd: GuardId) -> bool {
     g.guards.contains(&gd) || g.civilians.contains(&gd)
 }
 
@@ -237,7 +237,7 @@ pub fn game_free_held(g: &mut crate::game::Game, why: crate::game::GameFreeHeldW
 }
 
 /// The living man nearest Sam within `reach` metres; `foe`: only men hostile to the player. (game.ts Game.nearestLivingGuard)
-pub fn game_nearest_living_guard(g: &mut crate::game::Game, reach: Option<f64>, foe: Option<bool>) -> Option<GuardId> {
+pub fn game_nearest_living_guard(g: &crate::game::Game, reach: Option<f64>, foe: Option<bool>) -> Option<GuardId> {
     let foe = foe.unwrap_or(false);
     let mut best: Option<GuardId> = None;
     let mut bd = reach.unwrap_or(m::INF);
@@ -384,7 +384,7 @@ pub fn game_reset_level_state(g: &mut crate::game::Game) {
     crate::snow_blast::clear_snow_blast(g);
     crate::snow_marks::clear_snow_marks(g);
     if let Some(mut t) = g.snow_tracks.take() {   // (the stub takes g and the tracks inside it: out of g for the call)
-        crate::snow_tracks::clear_snow_tracks(g, &mut t);
+        crate::snow_tracks::clear_snow_tracks(g, &t);
         g.snow_tracks = Some(t);
     }
     crate::hours::hour_after_reset(g);
@@ -395,7 +395,7 @@ pub fn game_reset_level_state(g: &mut crate::game::Game) {
 pub fn game_crack_test(g: &mut crate::game::Game) -> f64 { crate::glass::crack_test(g) }
 
 /// (game.ts wetSummary)
-pub fn game_wet_summary(g: &mut crate::game::Game) -> String { crate::wet::wet_summary(g) }
+pub fn game_wet_summary(g: &crate::game::Game) -> String { crate::wet::wet_summary(g) }
 
 /// The clocks the last try left running, as a new Game has them.   (game.ts cleanSlate)
 pub fn game_clean_slate(g: &mut crate::game::Game) {
@@ -589,7 +589,7 @@ pub fn game_step(g: &mut crate::game::Game, dt: f64, cmd: &crate::cmd::PlayerCmd
 }
 
 /// The local seat, or the first for a host that shows nobody.   (game.ts hostSeat)
-pub fn game_host_seat(g: &mut crate::game::Game) -> SeatId { g.local_seat.unwrap_or(g.seats[0]) }
+pub fn game_host_seat(g: &crate::game::Game) -> SeatId { g.local_seat.unwrap_or(g.seats[0]) }
 
 /// The world asked aside: `fn_` leaves nothing on the game's scratch.   (game.ts aside)
 pub fn game_aside<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {

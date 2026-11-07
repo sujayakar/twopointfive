@@ -133,7 +133,7 @@ pub fn light_estimate_in(g: &mut crate::game::Game, p: V3, skip_owner: Option<&m
 }
 
 /// The light model's field for this game, where the senses are the game's, the switch is up and a grid stands. Some = g.cpu_smoke. (guards.ts lightField)
-pub fn light_field(g: &mut crate::game::Game) -> Option<crate::sense::LightField> {
+pub fn light_field(g: &crate::game::Game) -> Option<crate::sense::LightField> {
     let stands = match g.cpu_smoke.grid.as_ref() {
         Some(grid) => grid.stands,
         None => false,
@@ -361,7 +361,7 @@ pub fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// Nobody calls a floor clear with an enemy still up on it. (guards.ts:2729, WORDS.on settled on)
-fn enemy_up_on_floor(g: &mut Game, team: crate::teams::Team) -> bool {
+fn enemy_up_on_floor(g: &Game, team: crate::teams::Team) -> bool {
     let mut i = 0;
     while i < g.guards.len() {
         let o = g.guards[i];
@@ -387,7 +387,7 @@ fn floor_called_clear(g: &Game, gd: GuardId, team: crate::teams::Team) -> bool {
 // ------------------------------------------------------------ the right hand
 
 /// Which rig is in his hands. (guards.ts rigOf)
-pub fn rig_of(g: &mut crate::game::Game, gd: GuardId) -> crate::guards::RigOf {
+pub fn rig_of(g: &crate::game::Game, gd: GuardId) -> crate::guards::RigOf {
     use crate::weapons::WeaponDefRig;
     let def = g.fa[g.gd[gd].weapon].def;
     let rig = g.m.weapons.weapons.get(def).unwrap().rig;
@@ -401,7 +401,7 @@ pub fn rig_of(g: &mut crate::game::Game, gd: GuardId) -> crate::guards::RigOf {
 }
 
 /// Which long gun that is; None = the sidearm. (guards.ts longRigOf)
-pub fn long_rig_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::guards::LongRigOf> {
+pub fn long_rig_of(g: &crate::game::Game, gd: GuardId) -> Option<crate::guards::LongRigOf> {
     match rig_of(g, gd) {
         crate::guards::RigOf::Pistol => None,
         crate::guards::RigOf::Carbine => Some(crate::guards::LongRigOf::Carbine),
@@ -410,7 +410,7 @@ pub fn long_rig_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::guar
 }
 
 /// What his state has him carry in the gun hand. (guards.ts handCarry)
-pub fn hand_carry(g: &mut crate::game::Game, gd: GuardId) -> crate::guards::HandCarry {
+pub fn hand_carry(g: &crate::game::Game, gd: GuardId) -> crate::guards::HandCarry {
     use crate::game::GuardState;
     let torch = crate::startle::startle_torch(g, gd)
         || ((g.gd[gd].state == GuardState::Patrol || (g.gd[gd].state == GuardState::Suspicious && crate::whistle::whistle_soft(g, gd)))
@@ -435,7 +435,7 @@ pub fn gun_back(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// What is physically in the hand. (guards.ts inHand)
-pub fn in_hand(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::guards::InHand> {
+pub fn in_hand(g: &crate::game::Game, gd: GuardId) -> Option<crate::guards::InHand> {
     if g.gd[gd].fled { return None; }
     if g.gd[gd].gun_lost_at >= 0.0 { return None; }
     if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].civ.is_some() { return None; }

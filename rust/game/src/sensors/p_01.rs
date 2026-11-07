@@ -32,12 +32,12 @@ pub fn probe_like_query(g: &mut crate::game::Game, key: &str, pos: V3, skip_owne
 }
 
 /// The last answer the host filed under `key`: [maxAxis, mean, up]. (sensors.ts ProbeLike.get, render/probe.ts 76)
-pub fn probe_like_get(g: &mut crate::game::Game, key: &str) -> Option<Vec<f64>> {
+pub fn probe_like_get(g: &crate::game::Game, key: &str) -> Option<Vec<f64>> {
     g.probe.results.get(String::from(key)).map(|r| r.to_vec())
 }
 
 /// Free places in the frame's table of asks. (render/probe.ts IrradianceProbe.room)
-pub fn probe_like_room(g: &mut crate::game::Game) -> f64 {
+pub fn probe_like_room(g: &crate::game::Game) -> f64 {
     crate::render_probe::MAX_QUERIES - g.probe.pending.len() as f64
 }
 
@@ -159,7 +159,7 @@ pub fn same_value(a: Option<f64>, b: Option<f64>) -> bool {
 }
 
 /// (sensors.ts Sensors.stats)
-pub fn sensors_stats(g: &mut crate::game::Game) -> crate::sensors::SensorStats {
+pub fn sensors_stats(g: &crate::game::Game) -> crate::sensors::SensorStats {
     g.sensors.s.stats
 }
 

@@ -15,7 +15,7 @@ fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { 
 // ---- private helpers ----
 
 /// `g.level.boxes[i]`: undefined off the list, as JavaScript's (a negative, fractional or NaN index included). That list and `g.col.boxes` are one array in the TypeScript (game.ts:1219): the box at place i
-fn box_at(g: &mut Game, i: f64) -> Option<BoxId> {
+fn box_at(g: &Game, i: f64) -> Option<BoxId> {
     let ix = i as usize;
     if ix as f64 != i { return None; }
     g.col.boxes.get(ix).copied()
@@ -52,7 +52,7 @@ fn blast_step(s: u32) -> u32 {
 // ---- the part ----
 
 /// the choice kept on this machine: the browser's storage is the host's, which sets g.k.glassfx and g.k.glass.crack_gap; with no storage the TypeScript's own try does nothing (glass.ts loadGlassFx)
-pub fn load_glass_fx(g: &mut crate::game::Game) {}
+pub fn load_glass_fx(g: &crate::game::Game) {}
 
 /// per-Game glass bookkeeping, made at first asking: the row itself (glass.ts glassState)
 pub fn glass_state<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::glass::GlassState {

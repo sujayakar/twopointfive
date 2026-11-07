@@ -14,7 +14,7 @@ fn rag_char(g: &Game, gd: GuardId) -> Option<RagdollId> { g.ch[g.gd[gd].ch].ragd
 /// `rag.point(i)`
 fn pt(g: &mut Game, rc: RagdollId, i: f64) -> V3 { crate::ragdoll::ragdoll_point(g, rc, i, None) }
 /// `rag.radius(i)`
-fn rad(g: &mut Game, rc: RagdollId, i: f64) -> f64 { crate::ragdoll::ragdoll_radius(g, rc, i) }
+fn rad(g: &Game, rc: RagdollId, i: f64) -> f64 { crate::ragdoll::ragdoll_radius(g, rc, i) }
 /// `rag.setPin(i, p)`
 fn pin(g: &mut Game, rc: RagdollId, i: f64, p: V3) { crate::ragdoll::ragdoll_set_pin(g, rc, i, p) }
 /// `rag.wake()`
@@ -25,7 +25,7 @@ fn hinge(g: &Game, d: DoorId) -> [f64; 2] { g.dr[d].def.hinge }
 // ------------------------------------------------------------------------------------------------ a body
 
 /// His hands or feet are spoken for by something else: no door is worked by hand. (hands.ts handsBusy)
-pub fn hands_busy(g: &mut crate::game::Game) -> bool {
+pub fn hands_busy(g: &crate::game::Game) -> bool {
     let pl = g.player;
     let p = &g.pl[pl];
     if p.down
@@ -228,7 +228,7 @@ fn lie_pins_g(g: &mut Game, r: RagdollId, dim: [f64; 4], l: crate::hands::Lie) {
 }
 
 /// Over his left shoulder, face down. (hands.ts shoulderLie)
-pub fn shoulder_lie(g: &mut crate::game::Game) -> crate::hands::Lie {
+pub fn shoulder_lie(g: &crate::game::Game) -> crate::hands::Lie {
     let c = g.pl[g.player].ch;
     let f = crate::character::character_forward(g, c);
     let l: V3 = [f[2], 0.0, -f[0]];
@@ -266,7 +266,7 @@ pub fn lay_lie(g: &mut crate::game::Game) -> Option<crate::hands::LayLie> {
 }
 
 /// Is he walking with it on his shoulder? (hands.ts haulUpright)
-pub fn haul_upright(g: &mut crate::game::Game) -> bool {
+pub fn haul_upright(g: &crate::game::Game) -> bool {
     match g.pl[g.player].haul {
         Some(h) => h.carry.is_some() && h.phase == crate::hands::HaulPhase::Carry,
         None => false,
@@ -284,7 +284,7 @@ pub fn haul_crouch(g: &mut crate::game::Game) -> bool {
 }
 
 /// The facing he keeps through the lift and the laying-down of a carried body. (hands.ts haulYaw)
-pub fn haul_yaw(g: &mut crate::game::Game) -> Option<f64> {
+pub fn haul_yaw(g: &crate::game::Game) -> Option<f64> {
     use crate::hands::HaulPhase as P;
     let h = g.pl[g.player].haul?;
     let k = h.carry?;
@@ -292,7 +292,7 @@ pub fn haul_yaw(g: &mut crate::game::Game) -> Option<f64> {
 }
 
 /// The two spots in front of him the held limbs are carried at (left hand's, right hand's). (hands.ts carrySpots)
-pub fn carry_spots(g: &mut crate::game::Game, h: crate::hands::Haul) -> [V3; 2] {
+pub fn carry_spots(g: &crate::game::Game, h: crate::hands::Haul) -> [V3; 2] {
     let c = g.pl[g.player].ch;
     let f = crate::character::character_forward(g, c);
     let feet = h.end == crate::hands::HaulEnd::Feet;
@@ -516,7 +516,7 @@ pub fn haul_set_done(g: &mut crate::game::Game) -> bool {
 }
 
 /// How fast his feet may go with a body, as a share of the crouch. (hands.ts haulPace)
-pub fn haul_pace(g: &mut crate::game::Game) -> f64 {
+pub fn haul_pace(g: &crate::game::Game) -> f64 {
     use crate::hands::HaulPhase as P;
     match g.pl[g.player].haul {
         None => 0.6,
@@ -527,20 +527,20 @@ pub fn haul_pace(g: &mut crate::game::Game) -> f64 {
 }
 
 /// The same in m/s; over his shoulder he walks, at carryPace × his walk. (hands.ts haulSpeed)
-pub fn haul_speed(g: &mut crate::game::Game) -> f64 {
+pub fn haul_speed(g: &crate::game::Game) -> f64 {
     if haul_upright(g) { g.tune.player_walk * g.k.hands.carry_pace } else { let k = g.tune.player_crouch; k * haul_pace(g) }
 }
 
 // ------------------------------------------------------------------------------------------------ a door
 
 /// The unit line of the leaf were it at `angle`. (hands.ts leafU)
-pub fn leaf_u(g: &mut crate::game::Game, d: DoorId, angle: f64) -> [f64; 2] {
+pub fn leaf_u(g: &crate::game::Game, d: DoorId, angle: f64) -> [f64; 2] {
     let a = g.dr[d].def.closed_dir + angle;
     [m::cos(a), m::sin(a)]
 }
 
 /// Floor distance from q to the leaf's centre line were it at `angle`. (hands.ts leafDist)
-pub fn leaf_dist(g: &mut crate::game::Game, d: DoorId, angle: f64, q: V3) -> f64 {
+pub fn leaf_dist(g: &crate::game::Game, d: DoorId, angle: f64, q: V3) -> f64 {
     let u = leaf_u(g, d, angle);
     let h = hinge(g, d);
     let (vx, vz) = (q[0] - h[0], q[2] - h[1]);
@@ -549,17 +549,17 @@ pub fn leaf_dist(g: &mut crate::game::Game, d: DoorId, angle: f64, q: V3) -> f64
 }
 
 /// Which side of the leaf's line at `angle` q is on, and how far off it. (hands.ts leafPerp)
-pub fn leaf_perp(g: &mut crate::game::Game, d: DoorId, angle: f64, q: V3) -> f64 {
+pub fn leaf_perp(g: &crate::game::Game, d: DoorId, angle: f64, q: V3) -> f64 {
     let u = leaf_u(g, d, angle);
     let h = hinge(g, d);
     u[0] * (q[2] - h[1]) - u[1] * (q[0] - h[0])
 }
 
 /// How far his centre stays off the leaf's line. (hands.ts bodyR)
-pub fn body_r(g: &mut crate::game::Game, d: DoorId) -> f64 { 0.34 + g.dr[d].thick / 2.0 + g.k.hands.clear_m }
+pub fn body_r(g: &crate::game::Game, d: DoorId) -> f64 { 0.34 + g.dr[d].thick / 2.0 + g.k.hands.clear_m }
 
 /// The nearest the leaf's line comes to q anywhere on its way from a0 to a1. (hands.ts sweepDist)
-pub fn sweep_dist(g: &mut crate::game::Game, d: DoorId, a0: f64, a1: f64, q: V3) -> f64 {
+pub fn sweep_dist(g: &crate::game::Game, d: DoorId, a0: f64, a1: f64, q: V3) -> f64 {
     let n = m::max(1.0, m::ceil(m::abs(a1 - a0) / 0.1));
     let mut best = m::INF;
     let mut k = 0.0;
@@ -571,7 +571,7 @@ pub fn sweep_dist(g: &mut crate::game::Game, d: DoorId, a0: f64, a1: f64, q: V3)
 }
 
 /// Does the floor segment p → q cross the leaf's line as it stands at `angle`? (hands.ts crossesLeaf)
-pub fn crosses_leaf(g: &mut crate::game::Game, d: DoorId, angle: f64, p: V3, q: V3) -> bool {
+pub fn crosses_leaf(g: &crate::game::Game, d: DoorId, angle: f64, p: V3, q: V3) -> bool {
     let (s0, s1) = (leaf_perp(g, d, angle, p), leaf_perp(g, d, angle, q));
     if s0 * s1 > 0.0 { return false; }
     let t = s0 / js::or(s0 - s1, 1e-9);
@@ -583,7 +583,7 @@ pub fn crosses_leaf(g: &mut crate::game::Game, d: DoorId, angle: f64, p: V3, q: 
 }
 
 /// The side of the line the leaf will STAND on at a1 that q is on: > 0 = the opening's, < 0 = the pocket behind the leaf. (hands.ts openSide)
-pub fn open_side(g: &mut crate::game::Game, d: DoorId, a1: f64, q: V3) -> f64 {
+pub fn open_side(g: &crate::game::Game, d: DoorId, a1: f64, q: V3) -> f64 {
     let u = leaf_u(g, d, 0.0);
     let h = hinge(g, d);
     let w = g.dr[d].def.width;
