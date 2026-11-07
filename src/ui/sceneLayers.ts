@@ -25,6 +25,7 @@ import { SNOWTRACKS, TRACK_RES } from '../game/snowTracks';
 import { SNOWMARKS } from '../game/snowMarks';
 import { SNOWBREATH, BREATHSTEAM, breathStats, steamOn } from '../game/snowBreath';
 import { HARDBREATH } from '../game/character';   // (read inside a row's own closure only)
+import { rowHeld } from '../host/held';
 import { AIR_SIM, airSimStats } from '../game/airSim';
 import { SNOW_LOOK, snowLevel } from '../game/weatherKinds';
 import { levelNameOf } from '../scene/levelLoad';
@@ -120,6 +121,7 @@ function table(name: string, t: object, src: string, o: { only?: readonly string
   const T = t as Record<string, unknown>; const out: TweakVar[] = [];
   for (const k of Object.keys(T)) {
     if (o.only ? !o.only.includes(k) : o.skip?.includes(k)) continue;
+    if (rowHeld(T, k)) continue;   // (a settled row is held at its page value: a slider over it could not move, so none is made; src/host/held.ts)
     const x = T[k]; const r: Row = { when: o.when, ...o.rows?.[k] };
     if (typeof x === 'number') out.push(mk(`${name}.${k}`, k, src, () => T[k] as number, v => { T[k] = v; }, r, SCENE_NOTES[`${name}.${k}`]));
     else if (Array.isArray(x) && x.length >= 2 && x.length <= 4 && x.every(n => typeof n === 'number')) {

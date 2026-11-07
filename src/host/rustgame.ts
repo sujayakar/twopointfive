@@ -42,8 +42,12 @@ import { SNAPS, SAVETIMELINE, levelFingerprint, type SlotInfo } from '../game/sa
 import { CLEANRESTART } from '../game/cleanrestart';
 import type { Snapshot } from '../game/rollback';
 import type { Game } from '../game/game';
+import { Character } from '../game/character';
+import { Firearm } from '../game/weapons';
+import { loneMen } from '../sim/men/store';
 import { sampleCmd, stillCmd, type PlayerCmd } from '../game/cmd';
 import { dressStep, DRESS_MS } from './rustdress';
+import { markHeld } from './held';
 import { wallFeelPicture } from '../game/blastFeel';
 import { sideRegistry } from '../math/side';
 import { exportGame, hostHalf, bookOf, report, SCHEMA } from 'tps-bridge/export';
@@ -238,6 +242,10 @@ function recover(S: Held, shift: boolean): void {
 /** what the page says of the Rust game, on `window.__rust` */
 export const RUST_GAME = {
   on: false, bytes: 0, fetchMs: 0, compileMs: 0, startMs: 0, startBytes: 0, handle: 0, slot: -1, ticks: 0, starts: 0, grew: 0, memory: 0,
+  /** rows the game MADE at run time, counted by class over the steps' applies; what the made men and guns took from a twin of their class's own
+   *  constructor (fields and classes of parts the bridge does not carry); a class whose twin could not be built, and why */
+  made: {} as Record<string, number>, madeTook: {} as Record<string, number>, madeThrew: {} as Record<string, string>,
+  madeLast: {} as Record<string, object>, madeAtRunTime: (row: object): boolean => MADE_ROWS.has(row),
   /** ms of the last step and summed over every step: the host's half, the tick, the filtered export, the apply, the out events, the dress step */
   last: { host: 0, step: 0, export: 0, apply: 0, out: 0, dress: 0, bytes: 0 }, sum: { host: 0, step: 0, export: 0, apply: 0, out: 0, dress: 0, bytes: 0 }, worst: { step: 0, apply: 0, at: 0 },
   hostHas: 0, wind: [0, 0], probeForgot: 0, oursMissed: 0, smokeMissed: 0, wallFeels: 0, pictureWritten: 0, notes: 0, pokes: 0, poked: {} as Record<string, number>, pokeRefused: {} as Record<string, string>, asksRefused: 0, askRefused: {} as Record<string, string>, asksTwin: 0, crossed: {} as Record<string, number>, named: 0, lightsMade: 0, wholes: 0, wholeMs: 0, rowsKept: 0, nulls: 0, lightsWritten: 0,
@@ -280,7 +288,7 @@ export function rustSettledHold(): void {
     const d = Object.getOwnPropertyDescriptor(o, key); if (!d || d.get || d.set || !d.configurable) { R.skipped++; continue; }
     const page = r.page; if (!sameRow(d.value, page)) R.off.push(`${r.row} (${rowWord(d.value)}; held at ${rowWord(page)})`);
     Object.defineProperty(o, key, { enumerable: true, configurable: true, get: () => page, set: (v: unknown) => { if (sameRow(v, page)) return; const e = R.refused.get(r.row) ?? { value: v, n: 0 }; e.value = v; e.n++; R.refused.set(r.row, e); } });
-    R.held++; }
+    markHeld(o, key); R.held++; }
 }
 /** what the hold has turned away so far, in a line (the debugger panel's first; '' with nothing), said in the console once each time it grows */
 export function rustSettledLine(): string {
@@ -357,7 +365,49 @@ interface Held { settings?: { flush(): void; rebase(): void; stats(): { settledL
 let H: Held | null = null;
 const REG = { v: null as Record<string, object> | null };
 const reg = (): Record<string, unknown> => (REG.v ??= knobRegistry()) as Record<string, unknown>;
-let HOOKS: { classes: Record<string, { prototype: object }>; values: Record<string, unknown> } | null = null;
+let HOOKS: { classes: Record<string, { prototype: object }>; values: Record<string, unknown>; made: Record<string, (row: any, g: any) => void> } | null = null;
+
+/** A ROW THE APPLY MAKES IS ITS CLASS'S PROTOTYPE AND ITS CARRIED FIELDS: the picture's half of it (a man's skeleton and its buffers, his animator's springs
+ *  and node table, a gun's event list) is not carried, being no part of the game's state. The start has that half from the class's own constructor; a row
+ *  made at run time takes it here from a TWIN the SAME constructor builds: every field the row lacks, and the class of every part the apply made plain.
+ *  Nothing the apply wrote is overwritten, and a man's columns row is never the twin's (the twin stands on a lone store of its own). */
+function completeFrom(row: any, twin: any, skip: readonly string[], depth = 0, seen: Set<object> = new Set()): number {
+  if (depth > 8 || seen.has(twin)) return 0;
+  seen.add(twin); let n = 0;
+  for (const k of Object.keys(twin)) {
+    if (skip.includes(k)) continue;
+    const a = row[k], b = twin[k];
+    if (a === undefined) { if (b !== undefined) { row[k] = b; n++; } continue; }
+    if (a === null || b === null || typeof a !== 'object' || typeof b !== 'object' || a === b) continue;
+    if (Array.isArray(a) || Array.isArray(b) || ArrayBuffer.isView(a) || ArrayBuffer.isView(b) || a instanceof Map || a instanceof Set) continue;
+    const pa = Object.getPrototypeOf(a), pb = Object.getPrototypeOf(b);
+    if (pa !== pb) { if (pa !== Object.prototype && pa !== null) continue; Object.setPrototypeOf(a, pb); n++; }
+    n += completeFrom(a, b, NO_SKIP, depth + 1, seen);
+  }
+  return n;
+}
+const NO_SKIP: readonly string[] = [];
+/** what each class's made rows took from their twins (`__rust.madeTook`), and a made row the twin could not be built for, said once a class */
+function madeHooks(): Record<string, (row: any, g: any) => void> {
+  const took = (cls: string, n: number) => { RUST_GAME.madeTook[cls] = (RUST_GAME.madeTook[cls] ?? 0) + n; };
+  const guard = (cls: string, f: (row: any, g: any) => number) => (row: any, g: any) => { try { took(cls, f(row, g)); } catch (e) { const why = String((e as Error)?.message ?? e).slice(0, 300); if (!RUST_GAME.madeThrew[cls]) console.error(`rust=1: a ${cls} the game made could not be given its picture half: ${why}`); RUST_GAME.madeThrew[cls] = why; } };
+  const own: Record<string, (row: any, g: any) => void> = {
+    // (the SAME constructor the start calls for every man: character.ts. His columns row, `S` and `r`, is the game's own and stays)
+    Character: guard('Character', (row, g) => {
+      const twin = new Character(row.ch ?? g.ch, { id: row.id, tint: row.tint, tint2: row.tint2, pos: row.pos, yaw: row.bodyYaw ?? 0, men: loneMen() }) as any;
+      const n = completeFrom(row, twin, ['S', 'r']);
+      // (what a posing layer is handed with the rig, character.ts `cast`: the constructor's own record, naming THIS man's node table and poses)
+      if (row.anim && twin.anim?.cast) row.anim.cast = { ...twin.anim.cast, nodes: row.anim.nodes, poses: row.anim.poses };
+      return n;
+    }),
+    Firearm: guard('Firearm', row => row.def ? completeFrom(row, new Firearm(row.def), NO_SKIP) : 0),
+  };
+  // (every class the apply makes a row of is told here, whether or not it has a twin: the last made row of each is kept for a reader, and which rows were
+  //  made at run time can be asked: `__rust.madeLast`, `__rust.madeAtRunTime(row)`)
+  const all: Record<string, (row: any, g: any) => void> = {};
+  return new Proxy(own, { get: (_t, cls) => typeof cls !== 'string' ? undefined : (all[cls] ??= (row: any, g: any) => { RUST_GAME.madeLast[cls] = row; MADE_ROWS.add(row); own[cls]?.(row, g); }) });
+}
+const MADE_ROWS = new WeakSet<object>();
 const PUP = { step: null as Set<string> | null, start: null as Set<string> | null };
 const lists = () => ({ step: PUP.step ??= new Set<string>(LISTS.step), start: PUP.start ??= new Set<string>(LISTS.start) });
 
@@ -441,7 +491,7 @@ export function rustAttach(g: Game): void {
 /** THE RUST GAME STARTED FROM THE PUPPET AS IT STANDS: the whole state across once, over the block that already stands in the puppet's slot */
 function start(S: Held): void {
   const g = S.g, t0 = performance.now();
-  HOOKS ??= { classes: classTable(), values: valueTable() };
+  HOOKS ??= { classes: classTable(), values: valueTable(), made: madeHooks() };
   g.sim.settle(g);   // (as a tick's own opening: the men's poses at home, the block bound)
   const slot = g.sim.bind();
   if ((PLACE as unknown as { slot: number }).slot !== slot) throw new Error(`rust=1: the game's block stands in slot ${slot} of the module and the world kept for the Rust game is ${(PLACE as unknown as { slot: number }).slot}: the two must be one number (rust/game box_mirror_take)`);
@@ -526,6 +576,7 @@ function apply(S: Held, first: boolean): { ex: number; ap: number; out: number; 
   const blob = outBytes(), ex = performance.now() - t;
   t = performance.now();
   const R = applyGame(g, blob, reg(), { hooks: HOOKS, puppet: { lists: lists(), start: first, rows: S.rows, ctx: S.ctx, slowTable: SLOW, vals: VALS } });
+  if (!first) for (const k in R.made) if (R.made[k]) RUST_GAME.made[k] = (RUST_GAME.made[k] ?? 0) + R.made[k];   // (rows the game made at run time, by class: `__rust.made`)
   if (RUST_GAME.prof.on && !first) { const PF = RUST_GAME.prof, ph = R.phases ?? {}; PF.applyWalk += R.ms ?? 0; PF.applyRows += ph.makeRows ?? 0; PF.applyMain += ph.main ?? 0; PF.applyTables += ph.tables ?? 0; for (const k in ph) PF.phases[k] = (PF.phases[k] ?? 0) + ph[k]; }
   after(S);
   const ap = performance.now() - t; t = performance.now();

@@ -127,14 +127,20 @@ export async function sceneTweakCheck(o: { verbose?: boolean } = {}): Promise<bo
         finally { e.particles = had.p; e.settings.gpuParticles = had.gp; c.vel[0] = had.v[0]; c.vel[2] = had.v[1]; }
         return recs.length + '|' + recs.join('|'); };
       const moved = (rows: any[], on: boolean) => { rows.forEach(v => T.moveVar(v, v.def === v.max ? v.min : v.max)); try { return fly(on); } finally { T.resetAll(layers); } };
-      let dims = true, a = '', b = '', a1 = '', a2 = '', b1 = '', b2 = '';
+      // (the rule's switch is a settled row wherever rows are held: there the one side the page plays is asked, and no write of the other is tried. Where it is
+      //  still a switch, both sides, as this line always asked)
+      const { rowHeld } = await import(`${ROOT}/src/host/held.ts`);
+      const sides: boolean[] = rowHeld(HARDBREATH, 'on') ? [!!HARDBREATH.on] : [true, false];
+      let dims = true; const rec: { on: boolean; plain: string; soft: string; hard: string }[] = [];
       try {
-        for (const on of [true, false]) { HARDBREATH.on = on; if (!soft.every((v: any) => !!v.idle?.() === on) || !hard.every((v: any) => !!v.idle?.() === !on) || rest.some((v: any) => v.idle?.())) dims = false; }
-        a = fly(true); b = fly(false); a1 = moved(soft, true); a2 = moved(hard, true); b1 = moved(soft, false); b2 = moved(hard, false);
-      } finally { HARDBREATH.on = hb0; SNOW_LOOK.breath = look0; seedBreath(R.g, 1); }
-      const filed = a.length > 2 && b.length > 2;
-      verdict(dims && filed && a !== b && a1 === a && a2 !== a && b1 !== b && b2 === b && snap() === before, 'breath — a blown man\'s steam: the rows the hard breath rule leaves unread are the dimmed ones, either way, and a dimmed row moved files the same records',
-        `rows ${dims ? 'agree' : 'DISAGREE'} · ten seconds at a sprint, records ${a.split('|')[0]} with the rule on / ${b.split('|')[0]} off · rule on: the breath's four moved ${a1 === a ? 'change nothing' : 'CHANGE THE STEAM'}, the rule's eight moved ${a2 !== a ? 'change it' : 'CHANGE NOTHING'} · rule off: the four ${b1 !== b ? 'change it' : 'CHANGE NOTHING'}, the eight ${b2 === b ? 'change nothing' : 'CHANGE THE STEAM'}`); }
+        for (const on of sides) { if (sides.length > 1) HARDBREATH.on = on; if (!soft.every((v: any) => !!v.idle?.() === on) || !hard.every((v: any) => !!v.idle?.() === !on) || rest.some((v: any) => v.idle?.())) dims = false; }
+        for (const on of sides) rec.push({ on, plain: fly(on), soft: moved(soft, on), hard: moved(hard, on) });
+      } finally { if (sides.length > 1) HARDBREATH.on = hb0; SNOW_LOOK.breath = look0; seedBreath(R.g, 1); }
+      const filed = rec.every(r => r.plain.length > 2), apart = rec.length < 2 || rec[0].plain !== rec[1].plain;
+      // with the rule on its own eight are read and the breath's four are not; with it off, the other way about
+      const right = rec.every(r => (r.soft === r.plain) === r.on && (r.hard === r.plain) === !r.on);
+      verdict(dims && filed && apart && right && snap() === before, `breath — a blown man's steam: the rows the hard breath rule leaves unread are the dimmed ones${sides.length > 1 ? ', either way' : ' (the rule is held ' + (sides[0] ? 'on' : 'off') + ' here: that side)'}, and a dimmed row moved files the same records`,
+        `rows ${dims ? 'agree' : 'DISAGREE'} · ten seconds at a sprint` + rec.map(r => ` · rule ${r.on ? 'on' : 'off'}: ${r.plain.split('|')[0]} records, the breath's four moved ${(r.soft === r.plain) === r.on ? (r.on ? 'change nothing' : 'change it') : (r.on ? 'CHANGE THE STEAM' : 'CHANGE NOTHING')}, the rule's eight moved ${(r.hard === r.plain) === !r.on ? (r.on ? 'change it' : 'change nothing') : (r.on ? 'CHANGE NOTHING' : 'CHANGE THE STEAM')}`).join('') + (apart ? '' : ' · THE TWO SIDES FILE THE SAME RECORDS')); }
 
     // ---- mute
     { const L = layers.find(x => x.id === 'grains'); const v = L.vars.find((x: any) => x.id === 'SNOWGRAINS.opacity'); const d = FX.SNOWGRAINS.opacity;
