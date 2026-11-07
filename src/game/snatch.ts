@@ -74,6 +74,8 @@ export class Snatch {
 
   /** this level's block while the overlay's switch is up (snatchout.ts reads the van off it) */
   get block(): SnatchData | null { return this.data; }
+  /** the mission still hangs on him: loose — or, where he is to be driven off (snatchout.ts), not yet in the van (roomclear.ts: the house taken is not the end) */
+  get owes(): boolean { return !this.end && (this.out.ruled || !this.inHand); }
   private get data(): SnatchData | null { return SNATCH.on ? this.g.level.scenarios?.snatch ?? null : null; }
   get active(): boolean { return !!this.man && !!this.data && !!this.g.roomClear?.active; }
   isMan(gd: Guard): boolean { return gd === this.man; }

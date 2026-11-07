@@ -8,14 +8,16 @@
 // docs/agents/enemies.md has the rule's words, stands and measurements; tools/qa/belief-check.ts is its check. No top-level statement here uses another module.
 import type { Game, Guard } from './game';
 import { v3, type Vec3 } from '../math/vec';
-import { RUST_PASS, RUST_SURFACE, crossToRust, goneWithTick } from './crossing';
+import { RUST_PASS, RUST_SURFACE, goneWithTick } from './crossing';
 
 export const BELIEF = {
   on: false,
 };
 
 /** the room fight (and the rules that hand a man back to it): his duty has his gun on `pt`, kept by reference, moved in place as his watch moves */
-export function cover(gd: Guard, pt: Vec3): void { return crossToRust('cover', undefined, [gd, pt]) as any; }
+export function cover(gd: Guard, pt: Vec3) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('cover', undefined, [gd, pt]); if (__r !== RUST_PASS) return __r as any; } }
+  if (BELIEF.on) gd.covers = pt; else gd.lastKnown = pt;
+}
 
 /** his fix is the spot his eyes last had the man (guards.ts asks this before it leads a fix; a noise or a word since has moved it off that) */
 export function fixAtSight(gd: Guard): boolean { return !!gd.lastKnown && v3.distXZ(gd.lastKnown, gd.sightPos) < 0.01; }

@@ -21,14 +21,15 @@
 //
 // Nobody notices a lens; it files no sound; no dice; nothing reads the camera. No state in a checkpoint: an order is not saved (a checkpoint is refused
 // with a squad on the floor), and after a load he simply is not looking.
-import './seats';
+import { viewOf } from './seats';
 import { SideMap } from '../math/side';
 import { Vec3 } from '../math/vec';
 import type { Game, Guard } from './game';
 import type { Door } from './doors';
+import type { FogEye } from './fogofwar';
 import type { Assignment } from './orders';
 import './orders';
-import './wand';
+import { WAND, wandFits, wandLens, wandFov, wandPanMax } from './wand';
 import './kit';
 
 export const WAND_ORDER = 'wandLook';
@@ -54,6 +55,7 @@ interface Job {
 interface State { jobs: Map<Guard, Job> }
 const states = new SideMap<Game, State>('wandorder.states');
 
+const live = (g: Game) => WAND.on && WAND.mate && g.fogOfWar.active;
 
 
 
@@ -61,6 +63,22 @@ const states = new SideMap<Game, State>('wandorder.states');
 
 
 
+/** HIS LENS AS HIS EYE among the fog's (fogofwar.ts), or null while he is not looking: the player's lens by every number, swept over its arc on the
+ *  game's clock */
+export function mateWandEye(g: Game, gd: Guard): FogEye | null {
+  g = viewOf(g, gd);   // (his seat's jobs: seats.ts)
+  const st = states.get(g); if (!st || !st.jobs.size) return null;
+  const J = st.jobs.get(gd); if (!J || !J.live || !live(g)) return null;
+  const now = g.time; if (gd.state === 'dead' || now - J.lastT > 0.25 || now < gd.dazzledUntil || gd.script?.over || !wandFits(J.door)) return null;
+  const L = wandLens(J.door, J.side), ph = ((now - J.liveT) / Math.max(0.5, WAND.sweepSecs) + 0.25) % 1, a = L.yaw + wandPanMax() * (1 - 4 * Math.abs(ph - 0.5));
+  return { id: gd.char.id, pos: L.pos, look: [Math.sin(a), 0, Math.cos(a)], at: L.pos, fov: wandFov(), near: 0, wand: true };
+}
+/** every teammate's live lens (fogofwar.ts under 'only my own eyes': a lens is a device feed there, like a sticky camera's) */
+export function mateWandEyes(g: Game): FogEye[] {
+  const st = states.get(g); if (!st || !st.jobs.size) return [];
+  const out: FogEye[] = []; for (const gd of st.jobs.keys()) { const e = mateWandEye(g, gd); if (e) out.push(e); }
+  return out;
+}
 /** who is looking under what, for the checks and the debugger */
 export function wandOrderJobs(g: Game): { gd: Guard; door: Door; side: 1 | -1; live: boolean; knelt: boolean }[] {
   const st = states.get(g); return st ? [...st.jobs].map(([gd, J]) => ({ gd, door: J.door, side: J.side, live: J.live, knelt: J.knelt })) : [];

@@ -28,7 +28,7 @@
 //
 // With the flag off none of this runs: tick() returns on its first line and the layout seam is null. (src/game is one import cycle: the tables below are plain
 // literals, nothing here is built from another game module's exports at module load.)
-import './seats';
+import { allDown } from './seats';
 import { Vec3, v3 } from '../math/vec';
 import { mulberry32 } from '../math/dice';
 import type { Game, Guard } from './game';
@@ -316,6 +316,14 @@ export class RoomClearScenario {
   /** A man the night breach adopted after the staging (stress.ts — extra enemies) is this structure's too: a row of the placement and a man of his room, so the
    *  room is not clear and the structure not taken while he is up. After nightBreach.adopt, the same frame (tick holds while the two lists differ in length). */
   adopt(gd: Guard, p: Placement) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('RoomClearScenario.adopt', this, [gd, p]); if (__r !== RUST_PASS) return __r as any; } } const R = this.rooms.find(r => r.def.id === p.room); if (!this.active || !R || R.defenders.includes(gd)) return; this.placement.push(p); R.defenders.push(gd); }
+  private finish(end: RoomClearEnd, why: string) {
+    this.end = end; this.endAt = this.g.time; this.endWhy = why; this.obj = null; this.note(`end:${end}`);
+    this.endSay = w(end === 'wiped' && allDown(this.g) && this.g.nightBreach.ops.some(o => o.state !== 'dead') ? 'player down' : 'team wiped', 'team wiped');
+    const loose = end === 'taken' && this.g.snatch?.active && this.g.snatch.owes ? this.g.snatch.objective()?.text.replace(/^objective ▸ /, '') : null;   // (a snatch level, snatch.ts: the house is the team's and the man is not — it is not over)
+    // (a defuse mission whose charge has gone off stays FAILED — defuse.ts: the house taken after that is said as what it is, never as a win)
+    if (end === 'taken' && this.g.defuse?.active && this.g.defuse.end === 'failed') { this.g.msg(`you took the house too late. a charge went off, so you still failed the mission. press Shift+Enter to restart`); return; }
+    this.g.msg(loose ? `structure taken — ${why}. it's not over yet: ${loose}` : end === 'taken' ? `structure taken — ${why}. press Shift+Enter to restart` : this.endSay === 'player down' ? 'the mission is over. press Enter to restart' : `team wiped — ${why}. press ${allDown(this.g) ? 'Enter' : 'Shift+Enter'} to restart`);
+  }
 
   /** where it stands, in one word */
   get state(): RoomClearState { return !this.active ? 'off' : this.end ?? 'live'; }

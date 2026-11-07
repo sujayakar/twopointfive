@@ -129,6 +129,8 @@ export const RAYS = { n: 0, host: 0 };
  *  came back for prices, and how many cells were priced for them. `waits` = one is waiting for prices NOW: the module has one set of tables, so a search
  *  asked from inside a price is an error, not a question */
 export const PRICED = { n: 0, needs: 0, cells: 0, waits: false };
+/** eyes one question of a sight pass can name (four bits each, and the count above them: rust/sim/src/fog.rs) */
+const SIGHT_EYES = 7;
 const bothPanes: { bi: number; t: number }[] = [];   // (the check's: the panes the module listed for the question in hand)
 /** THE WIND THE COARSE GRID'S SMOKE DRIFTS BY (`gridStep`; game/wind.ts stormDrift): the vector (m/s), its rise with height (`low` of it at the ground,
  *  `gain` more by `fullAt` metres up) and the share of it each square metre of the plan has (0 under a roof … 1 in the open) */
@@ -574,6 +576,28 @@ export class StaticCollision {
   /** an eye's line, and the fog's: it passes glass, and is asked by flags the copy keeps */
   private eyeLine(row: string, through: number): void {
     if (((through | 0) & ~MIRRORED) !== 0 || !(through & BoxFlag.Glass)) throw new Error(`${row}: an eye's line passes glass and names only flags the copy keeps (asked through ${through}): one that stops at glass is no eye's, and is asked as a line (segmentBlocked)`);
+  }
+  /** A SIGHT PASS OPENS (game/fogofwar.ts update; rust/sim/src/fog.rs): the caller writes its `n` eyes (`sightEye`) and asks with `eyesSee`. A question
+   *  names seven eyes (four bits each, and the count above them), which is the fog's own most (render/fogofwar.ts FOG_EYES): more is a mistake by name. */
+  sightOpen(n: number): void {
+    this.sense('fog');
+    if (n > SIGHT_EYES) throw new Error(`fog: a sight pass of ${n} eyes, and a question names ${SIGHT_EYES} (rust/sim/src/fog.rs; the fog's own most is render/fogofwar.ts FOG_EYES)`);
+  }
+  /** eye `k` of the pass: where it is, where it looks in plan and that look's length (or 1), the cosine of half its field, its near field, and whether it sees all round */
+  sightEye(k: number, pos: Vec3, look: Vec3, lookLen: number, cosHalf: number, near: number, full: boolean): void {
+    const m = f64(), o = this.mirror.eyes + k * 9;
+    m[o] = pos[0]; m[o + 1] = pos[1]; m[o + 2] = pos[2]; m[o + 3] = look[0]; m[o + 4] = look[2]; m[o + 5] = lookLen; m[o + 6] = cosHalf; m[o + 7] = near; m[o + 8] = full ? 1 : 0;
+  }
+  /** WHICH EYES HAVE A LINE: the `n` eyes named four bits each in `order` are tried in that order until `want` have one. `kind` 0 = to the point `a`; 1 = to a
+   *  man down or gone (`a` his chest: only an eye over him has one); 3 = to a living man (`a` his chest, `b` his head, asked behind a blocked chest).
+   *  The answer: how many × 2²⁸ + those eyes, four bits each in the order found. */
+  eyesSee(order: number, n: number, want: number, kind: number, through: number, a: Vec3, b: Vec3): number {
+    this.eyeLine('fog', through);
+    const set = this.sense('fog'), M = this.mirror;
+    const r = M.x.fog_see(M.slot, set, order, n, want, kind, through, a[0], a[1], a[2], b[0], b[1], b[2]);
+    if (r === -1) throw handedBack('fog', 'a length that is no length of this world\'s, or more eyes than a question names', a, b);
+    if (SENSE_WATCH.see) SENSE_WATCH.see('fog', [r >>> 0]);
+    return r >>> 0;
   }
   /** AN EYE ON A MAN (game/guards.ts eyeContact; rust/sim/src/sight.rs): the eye `E` on his `chest` and `head`. `unseen` = nothing is seen whatever the
    *  lines say (he is hidden, down or dead; the eye is out), `smoked` = the smoke between them hides him. Asked alone between ticks (a tool's eye, a

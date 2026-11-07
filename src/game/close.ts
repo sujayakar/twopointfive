@@ -220,7 +220,7 @@ export function closeAt(g: Game, gd: Guard, p: ArrayLike<number>): CloseOffer { 
 /** the two-button blow is live (CLOSE.lethal, the switch on, no show running): left = the knife, right = the knockout */
 export function closeLethal(g: Game): boolean { return goneWithTick('closeLethal') as any; }
 /** …and there is no knife (CLOSE.noKnife, the switch on, no show running): the right click is the knockout, the left click no blow */
-export function closeBare(g: Game): boolean { return goneWithTick('closeBare') as any; }
+export function closeBare(g: Game): boolean { return CLOSE.on && CLOSE.noKnife && !g.touring; }
 /** the windows are live: the switch on and no show running (under a show Sam's hands are the build's: one way in, from behind) */
 export function closeLive(g: Game): boolean { return CLOSE.on && !g.touring; }
 export function closeKindOf(o: CloseOffer | null): CloseKind { return o?.win?.kind ?? 'behind'; }
@@ -247,6 +247,13 @@ export function closeNearK(g: Game, gd: Guard, dist: number): number {
   return k;
 }
 
+// ------------------------------------------------------------ lining up: where Sam stands for a strike
+/** Where Sam stands to strike from a side / the front / over a chair — on his own bearing off the man, `strikeDist` (`seatDist`) out — and the way he faces (at him). */
+export function closeStation(gd: Guard, kind: CloseKind, bearing: number): { pos: Vec3; yaw: number } {
+  const gp = gd.char.pos; const a = gd.char.bodyYaw + bearing; const r = kind === 'seat' ? CLOSE.seatDist : CLOSE.strikeDist;
+  const pos: Vec3 = [gp[0] + Math.sin(a) * r, 0, gp[2] + Math.cos(a) * r];
+  return { pos, yaw: Math.atan2(gp[0] - pos[0], gp[2] - pos[2]) };
+}
 /** the fall's hearing level for a way in (+ his shout if he was onto Sam) */
 export function closeNoise(kind: CloseKind, wasAlert: boolean): number { return goneWithTick('closeNoise') as any; }
 /** the tallies (player.ts startTakedown / startGrab report what they made) */
