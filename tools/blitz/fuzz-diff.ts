@@ -51,6 +51,7 @@ const name = (r?: { s: string }) => r ? r.s.replace(/^STIM /, '').split(':')[0].
 const kind = !first ? 'none' : panic ? 'a panic'
   : excR && !excT ? 'a throw in the host'
   : pressAt ? `the driver's ${pressAt.s.replace(/\s*\(.*$/, '')}`
+  : acted && acted.f >= 0 && acted.f <= at && /STIM /.test(acted.ts) ? `the stimulus ${acted.ts.replace(/^.*STIM /, '').split(':')[0].trim()} (the driver's acts differ from frame ${acted.f})`
   : stimAt ? `the stimulus ${name(stimAt)}` : lastStim && at - lastStim.f <= 60 ? `within a second of the stimulus ${name(lastStim)}` : 'a difference in play';
 const out = { dir, ran: true, ticks: { ts: T.length, rust: R.length, compared: n }, parted: first, halfParted: half, parts: parts.map(j => j < 0 ? 'the die' : `part ${j}`), kind, stimAt: pressAt ? `f${pressAt.f} ${pressAt.s}`.slice(0, 200) : stimAt ? `f${stimAt.f} ${stimAt.s}`.slice(0, 200) : '', lastStim: lastStim ? `f${lastStim.f} ${lastStim.s}`.slice(0, 200) : '', excRust: excR, excTs: excT, panic, surface, said, acted, onlyRust, soak: { ts: TL.find(l => l.startsWith('=== soak:'))?.slice(0, 160) ?? '', rust: RL.find(l => l.startsWith('=== soak:'))?.slice(0, 160) ?? '' } };
 if (asJson) { console.log(JSON.stringify(out)); process.exit(first ? 1 : 0); }
