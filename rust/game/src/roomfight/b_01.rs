@@ -8,21 +8,11 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-// THE THREE INVENTED HELPERS OF A DEFENDER'S WATCHED POINT (sig.rs's doc lines are their rule). No job listed them; roomfight's own parts keep private
-// twins (p_02 / p_03 fix_is_pt, move_pt, cover_pt), and enemysquads p_04, buddy and powerout call these public ones, which were stubs.
-/// `gd.lastKnown === D.pt` (roomfight.ts:303)
-pub fn def_fix_is_pt(g: &mut crate::game::Game, d: RoomfightDefId) -> bool {
-    let def = &g.tab.roomfight_def[d];
-    def.pt_stamp == Some(g.gd[def.gd].fix_stamp) && g.gd[def.gd].last_known == Some(def.pt)
-}
-/// D.pt moved in place: whatever of his IS that object moves with it, with no new fix. His fix, when it is the point (the stamp); and `covers`, which
-/// belief.ts:21 makes that very object on the page's path (`gd.covers = pt`, with D.pt handed in): here a copy, so equal bits stand for the same
-/// object, as roomfight's own twin of this has it. Every in-place write of a Def's point comes through here or through that twin.
-/// STAND-IN by value (`covers`): it belongs to the identity device.
+/// A DEFENDER'S WATCHED POINT MOVES (the one place it is written in place: roomfight's parts, the enemy squads and the lights-out rule all come
+/// here). What his duty has his gun on (`covers`) is that point, so it moves with it; kept as a copy, equal numbers stand for "the same point".
+/// His fix is not touched: where he thinks his man is, is his own, and no rule makes the watched point his fix any more.
 pub fn def_move_pt(g: &mut crate::game::Game, d: RoomfightDefId, to: V3) {
-    let same = def_fix_is_pt(g, d);
     let (gd, old) = (g.tab.roomfight_def[d].gd, g.tab.roomfight_def[d].pt);
     g.tab.roomfight_def[d].pt = to;
-    if same { g.gd[gd].last_known = Some(to); }
     if g.gd[gd].covers == Some(old) { g.gd[gd].covers = Some(to); }
 }
