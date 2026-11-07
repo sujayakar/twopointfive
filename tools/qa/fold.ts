@@ -122,7 +122,7 @@ let active = foldStartsOn();
 function lay(L: Laid, host: Record<string, unknown>): void {
   const d = Object.getOwnPropertyDescriptor(host, L.key)!; markHeld(host, L.key);   // (src/host/held.ts: what a panel's row builders ask before they build a box over it; said of a laid row even while the fold is off)
   Object.defineProperty(host, L.key, { enumerable: d.enumerable, configurable: true, get: () => !active || through ? L.now : L.held,
-    set: (v: unknown) => { if (!active) { L.now = v; return; } if (!sameValue(v, L.held)) { count(L.row, v); OFF.set(L.row, v); SINCE.add(L.row); } else OFF.delete(L.row); if (through) L.now = v; } });
+    set: (v: unknown) => { if (!active) { L.now = v; return; } if (!sameValue(v, L.held)) { count(L.row, v); OFF.set(L.row, v); SINCE.set(L.row, v); } else OFF.delete(L.row); if (through) L.now = v; } });
 }
 /** WHICH SIDE A CHECK MEANT. A refused write leaves the row at its page value, so what a check does next runs on the page's side whatever it asked for.
  *  `OFF` = what would stand with no fold: the rows written away from their page value and not written back since (a write of the page value, a check's own
@@ -132,8 +132,9 @@ function lay(L: Laid, host: Record<string, unknown>): void {
  *  (a pin written before the rule): the line's PASS or FAIL is of a run the check did not mean (the runner counts such lines a probe and tags a red made
  *  of nothing else, tools/qa/probes.ts). ONLY THIS PROCESS'S WRITES: what a child of the check wrote is in the probe's fold line and
  *  not here. And a check that works both sides out first and prints its lines afterwards has only its first line marked. */
-const OFF = new Map<string, unknown>(), SINCE = new Set<string>();
-export function foldOtherSide(): string[] { const rows = [...new Set([...OFF.keys(), ...SINCE])].sort(); SINCE.clear(); return rows; }
+const OFF = new Map<string, unknown>(), SINCE = new Map<string, unknown>();
+/** each row with the value that was wanted of it (the last one refused) */
+export function foldOtherSide(): { row: string; value: unknown }[] { const rows = [...new Map([...SINCE, ...OFF])].sort((a, b) => a[0] < b[0] ? -1 : 1).map(([row, value]) => ({ row, value: kept(value) })); SINCE.clear(); return rows; }
 /** forget both (the runner, as a probe begins: nothing a probe before it wanted is this one's) */
 export function foldOtherSideClear(): void { OFF.clear(); SINCE.clear(); }
 /** the laid fold on or off from here on. Nothing where no fold is laid, and nothing for `null` (the mode of a process with none laid). */
