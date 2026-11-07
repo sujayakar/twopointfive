@@ -540,8 +540,7 @@ fn main() {
     dead::rs_files(&src_dir, &mut all);
     let mut bodies: Vec<Body> = Vec::new();
     for p in &all {
-        let n = p.file_name().and_then(|n| n.to_str()).unwrap_or("");
-        if !((n.starts_with("p_") || n.starts_with("b_")) && n.ends_with(".rs")) {
+        if !dead::is_body(p) {
             continue;
         }
         let module = p.parent().and_then(|d| d.file_name()).and_then(|n| n.to_str()).unwrap_or("").to_string();

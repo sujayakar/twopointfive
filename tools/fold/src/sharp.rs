@@ -36,10 +36,7 @@ fn is_test_mod(m: &syn::ItemMod) -> bool {
     m.attrs.iter().any(|a| a.path().is_ident("cfg") && a.meta.require_list().map(|l| l.tokens.to_string().contains("test")).unwrap_or(false))
 }
 
-fn is_body(p: &Path) -> bool {
-    let n = p.file_name().and_then(|n| n.to_str()).unwrap_or("");
-    (n.starts_with("p_") || n.starts_with("b_")) && n.ends_with(".rs")
-}
+use crate::dead::is_body;
 
 /// `pub` -> `pub(crate)` on every item of a body file whose name is not in `keep`, and on its own `pub use`s.
 /// An item whose name IS in `keep` stays as it is and is told to the compiler as used (`#[allow(dead_code)]`, which
@@ -157,7 +154,12 @@ pub fn prep(root: &Path, scratch: &Path) -> Result<String, String> {
             out = privatise(&out, &keep);
         } else if name == "mod.rs" {
             // a module hands its parts on to the crate, not to the world
-            out = out.lines().map(|l| if l.starts_with("pub use p_") || l.starts_with("pub use b_") { l.replacen("pub use", "pub(crate) use", 1) } else { l.to_string() }).collect::<Vec<_>>().join("\n") + "\n";
+            // (`pub use p_01::*;`, `pub use base::*;`: a part whose file is a body file)
+            let dir = p.parent().map(|d| d.to_path_buf()).unwrap_or_default();
+            out = out.lines().map(|l| {
+                let part = l.strip_prefix("pub use ").and_then(|r| r.split("::").next()).unwrap_or("");
+                if !part.is_empty() && is_body(&dir.join(format!("{part}.rs"))) && dir.join(format!("{part}.rs")).exists() { l.replacen("pub use", "pub(crate) use", 1) } else { l.to_string() }
+            }).collect::<Vec<_>>().join("\n") + "\n";
         }
         if out.contains("dead_code") {
             out = out.replace("#![allow(dead_code)]", "").replace("#[allow(dead_code)]", "").replace("dead_code, ", "").replace(", dead_code", "");

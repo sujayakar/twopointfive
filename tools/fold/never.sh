@@ -18,7 +18,7 @@ cargo build --release --manifest-path tools/fold/Cargo.toml > /dev/null 2>&1 || 
 mkdir -p "$S" || exit 3
 
 # lines of the body files, by module
-count() { for d in rust/game/src/*/; do n=$(cat "$d"p_[0-9]*.rs "$d"b_[0-9]*.rs 2>/dev/null | wc -l); [ "$n" -gt 0 ] && echo "$(basename "$d") $n"; done; }
+count() { for d in rust/game/src/*/; do n=$(ls "$d"*.rs 2>/dev/null | grep -v '/mod\.rs$\|/types\.rs$\|/missing\.rs$' | xargs -r cat | wc -l); [ "$n" -gt 0 ] && echo "$(basename "$d") $n"; done; }
 sum() { awk '{ s += $2 } END { print s + 0 }' "$1"; }
 section() { awk -v h="$2" 'index($0, h) == 1 { on = 1; next } /^##/ { on = 0 } on && NF' "$1"; }
 step() { "$@" > "$S/step.out" 2>&1 || { tail -8 "$S/step.out" | cut -c1-300; echo "never.sh: failed: $*"; exit 3; }; }

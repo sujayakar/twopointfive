@@ -20,10 +20,7 @@ use syn::{Expr, FnArg, Pat, Type};
 /// Words in a function's body that mean it can write without `&mut Game`.
 const TAINT: &[&str] = &["sim::state::state", "UnsafeCell", "unsafe ", "static mut", "AtomicU32", "AtomicUsize", "AtomicBool", "RefCell", "Cell<"];
 
-fn is_body(p: &Path) -> bool {
-    let n = p.file_name().and_then(|n| n.to_str()).unwrap_or("");
-    (n.starts_with("p_") || n.starts_with("b_")) && n.ends_with(".rs")
-}
+use crate::dead::is_body;
 
 fn is_test_mod(m: &syn::ItemMod) -> bool {
     m.attrs.iter().any(|a| a.path().is_ident("cfg") && a.meta.require_list().map(|l| l.tokens.to_string().contains("test")).unwrap_or(false))
