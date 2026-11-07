@@ -5419,4 +5419,4 @@ impl Io for crate::view::MissionView { fn w(&self, o: &mut W) { self.of.w(o); se
 impl Poke for crate::view::MissionView { fn poke(&mut self, i: &mut R) { match u16::r(i) { 0xffff => self.ri(i), 0 => self.of.poke(i), 1 => self.text.poke(i), 2 => self.pos.poke(i), k => panic!("bridge: no field {} of MissionView", k) } } }
 impl Io for crate::view::TickView { fn w(&self, o: &mut W) { self.mission.w(o); } fn r(i: &mut R) -> Self { let mut s = Self::default(); s.mission = Io::r(i); s } fn ri(&mut self, i: &mut R) { self.mission.ri(i); } }
 impl Poke for crate::view::TickView { fn poke(&mut self, i: &mut R) { match u16::r(i) { 0xffff => self.ri(i), 0 => self.mission.poke(i), k => panic!("bridge: no field {} of TickView", k) } } }
-pub const LAYOUT: u32 = 3325614067;
+pub const LAYOUT: u32 = 1859946583;
