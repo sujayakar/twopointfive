@@ -5,7 +5,7 @@ use game_start::stand::{self, StartOpts, Stood};
 use game_start::{block, files, json};
 
 const LINK: &str = "?levelFile=kit-yard.json&roomclear&squad4";
-fn opts(seed: u32, slot: usize) -> StartOpts { StartOpts { seed, slot, link: Some(LINK.into()), cpu_senses: true, ..Default::default() } }
+fn opts(seed: u32, slot: usize) -> StartOpts { StartOpts { seed, slot, link: Some(LINK.into()), ..Default::default() } }
 fn step(s: &mut Stood, frames: usize) { for _ in 0..frames { stand::frame(&mut s.game, &s.host, 1.0 / 60.0); } }
 /// the game as the bridge writes it, and a hash of each part of its block. The box mirror is left out of the game's bytes: it holds where its
 /// tables stand in memory, which is the slot's own (its tables themselves are in the block, and the block is compared whole)

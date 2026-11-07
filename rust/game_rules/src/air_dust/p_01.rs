@@ -20,7 +20,7 @@ fn air_read(g: &Game) -> &'static ::sim::air::Air {
 
 /// The slot's tables, made if they are owed. (rust/sim/src/lib.rs air_of)
 fn plan(g: &mut Game) -> &'static mut ::sim::air::Plan {
-    let stamp = g.sim_stamp;
+    let stamp = ::sim::state::stamp(g.sim);
     let wx = ::sim::weather::of_read(g.sim);
     ::sim::air::plan(g.sim, stamp, &wx.air, &wx.roofs, wx.roofs_n as usize)
 }
@@ -127,7 +127,7 @@ pub fn air_dust_build(g: &mut crate::game::Game) {
     let fog = crate::weather::weather_fog(g);
     let has = crate::weather::weather_kind(g).is_some() && fog.is_some();
     let on = has; // (AIRDUST.on is settled true on the page)
-    let stamp = g.sim_stamp;
+    let stamp = ::sim::state::stamp(g.sim);
     ::sim::air_begin(g.sim, stamp, if on { 1 } else { 0 });
     g.air_dust.drift = 0.0;
     let leak = match (has, fog) {
@@ -135,7 +135,7 @@ pub fn air_dust_build(g: &mut crate::game::Game) {
         _ => {
             if g.air_dust.seeded {
                 g.air_dust.seeded = false;
-                let stamp = g.sim_stamp;
+                let stamp = ::sim::state::stamp(g.sim);
                 ::sim::air_clear(g.sim, stamp);
             }
             return;
@@ -143,7 +143,7 @@ pub fn air_dust_build(g: &mut crate::game::Game) {
     };
     g.air_dust.seeded = true;
     crate::weather::weather_roofs_now(g);
-    let stamp = g.sim_stamp;
+    let stamp = ::sim::state::stamp(g.sim);
     ::sim::air_seed(g.sim, stamp, leak);
     g.air_dust.stats.roofed = air_read(g).n_cells;
     g.air_dust.stats.edges = air_read(g).n_edges;
@@ -152,7 +152,7 @@ pub fn air_dust_build(g: &mut crate::game::Game) {
         crate::scene_collision::rule(g, &mut |g: &mut Game| {
             crate::scene_collision::rule_open(g);
             let (w, set, ask) = rule_args(g);
-            let stamp = g.sim_stamp;
+            let stamp = ::sim::state::stamp(g.sim);
             ::sim::air_settle(g.sim, stamp, w, set, ask);
             let t = said();
             air_dust_tally(g, &t);
@@ -176,7 +176,7 @@ pub fn air_dust_update(g: &mut crate::game::Game, dt: f64) {
     crate::scene_collision::rule(g, &mut |g: &mut Game| {
         crate::scene_collision::rule_open(g);
         let (w, set, ask) = rule_args(g);
-        let stamp = g.sim_stamp;
+        let stamp = ::sim::state::stamp(g.sim);
         ::sim::air_update(g.sim, stamp, w, set, ask, dt);
         let t = said();
         g.air_dust.drift += t[0];

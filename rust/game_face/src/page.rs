@@ -9,16 +9,6 @@
 //!   face_puppet(h, start)              the filtered export at face_out. `start` = 1: the long list and every row (after face_new_at, and it fills the
 //!                                      memo of what was last sent); 0: what changed since the last call. The out events ride on its tail, and the
 //!                                      game's list of them is emptied here: they are a step's output, read once.
-//!   face_probe_asks(h)                 THE LIGHT PROBE IS THE HOST'S (render/probe.ts: the GPU answers a frame or more later). What the tick asked of it
-//!                                      and the host has not yet taken, at face_out: u32 count, then for each its key (u32 length, utf-8), the point
-//!                                      (3 f64), whose own proxies are skipped (f64), a byte and the far end of a line (3 f64) where the byte is 1,
-//!                                      and its rank (f64). Nothing is taken: the host calls this after each step and holds its own table to it.
-//!                                      Then u32 count and the keys the tick still holds an ANSWER for: a key it forgot inside the tick (a sight
-//!                                      line picked up again starts from no answer: `sensors_forget`) is gone from the list, and the host lets its
-//!                                      own answer for it go, or it would hand the stale one straight back before the next step.
-//!   face_probe_took(h)                 the host's frame has sent the table to the GPU: it is empty again here, and whose turn it is on a full frame is
-//!                                      kept (`probe_like_take_asks`)
-//!   face_probe_results(h, p, n)        the answers the host holds now, before a step: u32 count, each a key and its three numbers
 //!   face_hand(h, seat, p, pn, keys, n) WHAT A PLAYER DID, for the next step: `HAND` numbers (`pn` bytes; src/draw/hand.ts says them in the same order) and his keys' codes as
 //!                                      text, those held and, after a line feed, those that went down. A seat nobody hands is as it last was, with
 //!                                      nothing pressed.
@@ -39,7 +29,7 @@
 //! A GAME KEPT (a checkpoint, the start a restart goes back to). The host's save controller (src/game/savestate.ts) decides when and under which label; what
 //! it keeps is the Rust game's own, held here and named by a number the controller's slot holds:
 //!   face_keep(h, how) -> k             how 0: THE GAME'S OWN VALUE (a clone of the whole `Game`, every field the bridge does not carry with it: a closure
-//!                                      in flight, the probe's table, the counters) and its block of rust/sim's. Nothing is lost by it, and it lives only
+//!                                      in flight, the counters) and its block of rust/sim's. Nothing is lost by it, and it lives only
 //!                                      as long as this module. how 1: THE BRIDGE'S BYTES (`io::export`) and the block: what a file holds.
 //!   face_keep_given(s, n, b, bn) -> k  a kept game from a file's two parts
 //!   face_kept_state(k) · face_kept_block(k)   at face_out: the bridge's bytes of kept `k` (a clone is exported now) · its block
@@ -87,7 +77,7 @@ fn keep(k: Kept) -> u32 {
 /// file's text, the address's words, the character's files). No state crosses: the level is read, the men are made and the mission is staged on
 /// this side, as the TypeScript start does them (rust/game_start/LEVELS.md holds the two to each other, mission by mission).
 /// `slot`: the slot of rust/sim to stand in, whose block is made anew; below 0 = a free one. `flags`: 1 = the rows that dress the picture are
-/// up (a page), 2 = the senses worked out by the game itself (a host with no GPU). Answers the game, or 0 where no slot is free.
+/// up (a page). Answers the game, or 0 where no slot is free.
 /// # Safety
 /// `p`, `n` name bytes the host wrote into memory from face_alloc.
 #[no_mangle]
@@ -95,7 +85,7 @@ pub unsafe extern "C" fn face_start(p: *const u8, n: usize, slot: i32, seed: u32
     super::hook();
     let slot = if slot < 0 { match super::free_slot() { Some(s) => s, None => return 0 } } else { slot as usize };
     if slot >= sim::state::GAMES { return 0; }
-    let o = game_start::stand::StartOpts { seed, seats, slot, dress: flags & 1 != 0, cpu_senses: flags & 2 != 0, ..Default::default() };
+    let o = game_start::stand::StartOpts { seed, seats, slot, dress: flags & 1 != 0, ..Default::default() };
     let mut stood = game_start::handed::stand_handed(super::bytes(p, n), &o);
     // (a host that draws has a particle pool, and keeps the lights' reach: the tick asks only whether they are there)
     if o.dress {
@@ -128,49 +118,6 @@ pub extern "C" fn face_mem() -> usize {
     core::arch::wasm32::memory_size(0) * 65536
 }
 
-#[no_mangle]
-pub extern "C" fn face_probe_asks(h: u32) {
-    let b = super::with(h, |x| {
-        let mut o: Vec<u8> = Vec::new();
-        o.extend_from_slice(&(x.g.probe.pending.len() as u32).to_le_bytes());
-        for a in x.g.probe.pending.iter() {
-            o.extend_from_slice(&(a.key.len() as u32).to_le_bytes());
-            o.extend_from_slice(a.key.as_bytes());
-            for v in a.pos.iter() { o.extend_from_slice(&v.to_le_bytes()); }
-            o.extend_from_slice(&a.skip_owner.to_le_bytes());
-            match a.b.as_ref() { None => o.push(0), Some(b) => { o.push(1); for v in b.iter() { o.extend_from_slice(&v.to_le_bytes()); } } }
-            o.extend_from_slice(&a.rank.to_le_bytes());
-        }
-        // (…and the keys the tick still holds an answer for: one it forgot inside the tick, `sensors_forget`, is not among them)
-        let keys = x.g.probe.results.keys();
-        o.extend_from_slice(&(keys.len() as u32).to_le_bytes());
-        for k in keys.iter() { o.extend_from_slice(&(k.len() as u32).to_le_bytes()); o.extend_from_slice(k.as_bytes()); }
-        o
-    });
-    super::out(b);
-}
-
-#[no_mangle]
-pub extern "C" fn face_probe_took(h: u32) {
-    super::with(h, |x| { let _ = game::sensors::probe_like_take_asks(&mut x.g); });
-}
-
-/// # Safety
-/// `p`, `n` name bytes the host wrote into memory from face_alloc.
-#[no_mangle]
-pub unsafe extern "C" fn face_probe_results(h: u32, p: *const u8, n: usize) {
-    let b = super::bytes(p, n);
-    let u32_at = |at: usize| u32::from_le_bytes([b[at], b[at + 1], b[at + 2], b[at + 3]]) as usize;
-    let f64_at = |at: usize| f64::from_le_bytes([b[at], b[at + 1], b[at + 2], b[at + 3], b[at + 4], b[at + 5], b[at + 6], b[at + 7]]);
-    super::with(h, |x| {
-        let mut at = 4;
-        for _ in 0..u32_at(0) {
-            let len = u32_at(at); at += 4;
-            let key = String::from_utf8_lossy(&b[at..at + len]).into_owned(); at += len;
-            x.g.probe.results.set(key, [f64_at(at), f64_at(at + 8), f64_at(at + 16)]); at += 24;
-        }
-    });
-}
 /// the numbers of a hand: buttons clicked wheel, cursor x y, the view's size in CSS pixels and in its own, the view-projection and its inverse, the eye, where it
 /// looks, the look-at, yaw pitch distance, field of view, aspect, how far it leads the aim
 const HAND: usize = 56;
@@ -280,7 +227,7 @@ pub extern "C" fn face_kept_n() -> usize {
 fn again(k: u32, slot: usize) -> Option<Box<game::game::Game>> {
     KEPT.with(|v| match v.borrow().get((k as usize).wrapping_sub(1)).and_then(|x| x.as_ref()) {
         Some(Kept::Own(g, block)) => {
-            unsafe { core::ptr::copy_nonoverlapping(block.as_ptr(), sim::state::addr(slot) as *mut u8, block.len().min(block_len())); }
+            sim::state::put(slot, block);
             let mut g = g.clone();
             game::io::set_slot(&mut g, slot);
             // (the box world's copy in rust/sim stands outside the block and is the abandoned moment's: written whole again, below)
@@ -445,6 +392,7 @@ pub unsafe extern "C" fn face_loaded(h: u32, p: *const u8, n: usize, loads: f64,
         }
         g.pl[pl].setup = None;   // (slotsetup.ts: a gun's setup that was up at the save is not up after the load)
         game::orders::squad_orders_loaded(g);
+        game::sense::smoke_clear(g);   // (a save keeps no smoke in the air: the picture's own is cleared with it, and nobody is to be hidden by smoke that is not drawn)
         g.chronicle.counts.loads = loads;
         g.chronicle.counts.saves = saves;
         let _ = game::chronicle::chron_checkpoint(g, game::chronicle::ChronCheckpointWhat::Load, Some(&label));

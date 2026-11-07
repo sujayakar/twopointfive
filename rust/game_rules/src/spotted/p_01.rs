@@ -65,7 +65,7 @@ pub fn in_line(g: &mut crate::game::Game, h: GuardId, q: &[f64], low: bool) -> b
 
 /// the meter's reading for a man knelt at `q` (spotted.ts litAt)
 pub fn lit_at(g: &mut crate::game::Game, q: &[f64]) -> f64 {
-    let e = crate::guards::light_estimate_at(g, [q[0], 0.9, q[2]], None, None, None, None, None);
+    let e = crate::guards::light_estimate_at(g, [q[0], 0.9, q[2]], None, None, None);
     crate::game::game_visibility_of(g, e)
 }
 

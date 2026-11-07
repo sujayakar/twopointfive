@@ -581,7 +581,6 @@ mod tests {
             assert_eq!(lights(g).cam_target[0], 1);
             let c = camera_machine_new(g, s, crate::Opaque);
             assert_eq!((camera_machine_yaw(g, c), camera_machine_reported_at(g, c), camera_machine_state(g, c)), (0.75, -100.0, CameraState::Idle));
-            assert_eq!(g.tab.devices_camera_rt[c].smoke_trans, 1.0);
             camera_machine_put(g, c, 1.0, 0.5, 2.0, CameraState::Alarm, 9.0, Some([4.0, 5.0, 6.0]), true);
             assert_eq!(lights(g).cam_state[0], S_ALARM);
             assert_eq!(camera_machine_state(g, c), CameraState::Alarm);

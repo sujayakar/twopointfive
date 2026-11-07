@@ -213,6 +213,7 @@ fn static_same(g: &mut Game, w: usize, i: usize, b: BoxId, kind: f64) -> bool {
 }
 fn static_put(g: &mut Game, w: usize, i: usize, b: BoxId, kind: f64, cut_row: f64) {
     let (o, x) = (world(w), seam_box(g, b));
+    o.wrote = o.wrote.wrapping_add(1);
     row_put(&mut o.rec, i * REC_, &mut o.flags[i], x, kind, cut_row);
     if (kind as u32) & K_CUT_ != 0 {
         planes_put(&mut o.cut, (cut_row * CUT_ROW) as usize, x);
@@ -456,6 +457,7 @@ pub fn box_mirror_statics(g: &mut crate::game::Game, boxes: &[BoxId], all: bool)
     let grid = !all && g.col.mirror.grid_over;
     let was = g.col.mirror.boxes as usize;
     for i in n..was {
+        world(s).wrote = world(s).wrote.wrapping_add(1);
         let r = g.col.mirror.cut_of[i];
         if r >= 0 {
             g.col.mirror.cut_free.push(r as f64);

@@ -81,9 +81,6 @@ pub struct FogOfWar {
     pub span_z: f64,
     pub cell_seen: JsMap<crate::Num, bool>,
     pub frame_no: f64,
-    pub asked: JsMap<String, f64>,
-    pub pending: Vec<crate::fogofwar::FogOfWarPendingItem>,
-    pub turn: f64,
     pub door_from: f64,
     pub door_n: f64,
     pub call_log: Vec<crate::fogofwar::FogOfWarCallLogItem>,
@@ -128,9 +125,6 @@ impl FogOfWar {
             span_z: 0.0,
             cell_seen: JsMap::new(),
             frame_no: 0.0,
-            asked: JsMap::new(),
-            pending: Vec::new(),
-            turn: 0.0,
             door_from: 0.0,
             door_n: 0.0,
             call_log: Vec::new(),
@@ -210,8 +204,6 @@ pub struct Rec {
     pub at: Option<V3>,
     pub wand_t: Option<f64>,
     pub body: bool,
-    pub smoked: bool,
-    pub smoke_f: f64,
 }
 impl Rec {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -223,8 +215,6 @@ impl Rec {
             at: None,
             wand_t: None,
             body: false,
-            smoked: false,
-            smoke_f: 0.0,
         }
     }
 }

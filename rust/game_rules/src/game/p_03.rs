@@ -80,19 +80,3 @@ pub fn game_rehand(g: &mut crate::game::Game) {
     crate::air_dust::air_dust_resend(g);
 }
 
-/// Asks the renderer's irradiance at a point under `key`. (game.ts Game.lightQuery; the tools' swap of this field is not carried)
-pub fn game_light_query(g: &mut crate::game::Game, key: &str, pos: V3, skip_owner: Option<f64>) {
-    let skip_owner = skip_owner.unwrap_or(0.0);
-    crate::sensors::sensors_ask(g, key, pos, Some(skip_owner));
-}
-
-/// The latest answer for `key`, or None while there is none. (game.ts Game.lightAt)
-pub fn game_light_at(g: &mut crate::game::Game, key: &str) -> Option<f64> {
-    crate::sensors::sensors_read(g, key)
-}
-
-/// Drops a stale answer for `key`. (game.ts Game.lightForget)
-pub fn game_light_forget(g: &mut crate::game::Game, key: &str) {
-    crate::sensors::sensors_forget(g, key);
-}
-

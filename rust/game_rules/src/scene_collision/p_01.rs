@@ -953,23 +953,12 @@ pub fn eye_contact_ask(g: &mut crate::game::Game, e: crate::scene_collision::Eye
     EyeContactAsk { visible: r & sim::sight::A_VISIBLE != 0, dist, in_cone: r & sim::sight::A_IN_CONE != 0 }
 }
 
-/// a question about the light begins; `shade` = the smoke's shadow, `rows` = what it says of the level's own lamps, which the module reads where they stand. (collision.ts StaticCollision.lampsBegin)
-pub fn lamps_begin(g: &mut crate::game::Game, p: V3, shade: Option<&crate::scene_collision::LampsBeginShade>, k: Option<crate::scene_collision::SmokeNumbers>, rows: Option<crate::scene_collision::LampRows>) {
+/// a question about the light begins; `shade` = the smoke dims each lamp on its way, `rows` = what it says of the level's own lamps, which the module reads where they stand. (collision.ts StaticCollision.lampsBegin)
+pub fn lamps_begin(g: &mut crate::game::Game, p: V3, shade: bool, rows: Option<crate::scene_collision::LampRows>) {
     lamps_over(g);
     g.col.mirror.lamp_set = sense(g, "light");
     g.col.mirror.lamp_n = 0.0;
-    if let (Some(shade), Some(k)) = (shade, k) {
-        blobs_fit(g, shade.blobs.len() as f64);
-        g.col.mirror.blob_n = 0.0;
-        for b in shade.blobs.iter() {
-            blob(g, b.x, b.y0, b.z, b.r2, b.age, b.mass);
-        }
-        let q = &mut g.col.lamp_q;
-        q.sim = Some(shade.grid.sim);
-        q.stands = if shade.grid.stands { 1.0 } else { 0.0 };
-        q.k = Some(k);
-        q.nb = g.col.mirror.blob_n;
-    }
+    g.col.lamp_q.stands = if shade { 1.0 } else { 0.0 };
     g.col.lamp_q.p = Some(p);
     g.col.lamp_q.rows = rows;
     g.col.lamp_q.on = true;
@@ -980,10 +969,7 @@ pub fn lamps_over(g: &mut crate::game::Game) {
     let q = &mut g.col.lamp_q;
     q.on = false;
     q.p = None;
-    q.sim = None;
-    q.k = None;
     q.stands = 0.0;
-    q.nb = 0.0;
     q.parts = 0.0;
     q.rows = None;
 }
@@ -996,13 +982,11 @@ fn lamps_part_into(g: &mut Game, last: bool, out: &mut [f64; 6]) {
     let more = q.parts > 0.0;
     let (set, n) = (g.col.mirror.lamp_set as i32, g.col.mirror.lamp_n as usize);
     let rows = rows_for(g, q.rows);
-    let r = match (q.sim, q.k) {
-        (Some(_), Some(k)) => {
-            let stamp = g.sim_stamp;
-            let shade = sim::light::Shade { sigma: k.sigma, g: g.sim, stamp, stands: q.stands != 0.0, nb: q.nb as usize, k: [k.spread, k.widest, k.rise, k.rise_rate] };
-            sim::light::asked(w, set, n, p, &shade, more, rows, last, out)
-        }
-        _ => sim::light::asked(w, set, n, p, &sim::light::NO_SHADE, more, rows, last, out),
+    let r = if q.stands != 0.0 {
+        let shade = sim::light::Shade { sigma: g.k.sense.smoke.sigma, g: g.sim, stamp: sim::state::stamp(g.sim), stands: true, nb: 0, k: [0.0; 4] };
+        sim::light::asked(w, set, n, p, &shade, more, rows, last, out)
+    } else {
+        sim::light::asked(w, set, n, p, &sim::light::NO_SHADE, more, rows, last, out)
     };
     g.col.lamp_q.parts += 1.0;
     g.col.mirror.lamp_n = 0.0;
@@ -1048,42 +1032,6 @@ pub fn lamps_on(g: &mut crate::game::Game, acc: &mut Vec<f64>) {
     g.m.scene_collision.sensed.light += 1.0;
 }
 
-/// a question of the smoke's blobs begins. (collision.ts StaticCollision.blobsBegin)
-pub fn blobs_begin(g: &mut crate::game::Game, n: f64) {
-    g.col.mirror.blob_set = sense(g, "smoke");
-    g.col.mirror.blob_n = 0.0;
-    blobs_fit(g, n);
-}
-
-/// a game keeps no more blobs than the module's table: more is a mistake, by name. (collision.ts StaticCollision.blobsFit)
-pub fn blobs_fit(g: &crate::game::Game, n: f64) {
-    if n > sim::smoke::MAX_BLOBS as f64 {
-        panic!("{} blobs of smoke and the Rust module's table holds {}: a game keeps no more than that (sense.ts CpuSmoke.emit), so somebody else filled the list", js::num_str(n), sim::smoke::MAX_BLOBS);
-    }
-}
-
-/// one blob of the question. (collision.ts StaticCollision.blob)
-pub fn blob(g: &mut crate::game::Game, x: f64, y0: f64, z: f64, r2: f64, age: f64, mass: f64) {
-    let at = sim::smoke::blobs_addr();
-    let o = g.col.mirror.blob_n as usize * sim::smoke::BLOB;
-    g.col.mirror.blob_n += 1.0;
-    let row = [x, y0, z, r2, age, mass];
-    for (i, v) in row.iter().enumerate() {
-        put_f64(at, o + i, *v);
-    }
-}
-
-/// the transmittance along a→b. (collision.ts StaticCollision.blobsAlong)
-pub fn blobs_along(g: &mut crate::game::Game, a: V3, b: V3, sigma: f64, spread: f64, widest: f64, rise: f64, rise_rate: f64) -> f64 {
-    let mut out = 0.0;
-    let (set, n) = (g.col.mirror.blob_set as i32, g.col.mirror.blob_n as usize);
-    if sim::smoke::trans(slot(g), set, n, a, b, sigma, spread, widest, rise, rise_rate, &mut out) == ASK_HOST {
-        panic!("{}", handed_back_words("smoke", "a line too long to be one, or of no number", &a, &b));
-    }
-    g.m.scene_collision.sensed.smoke += 1.0;
-    out
-}
-
 /// a sound's or a search's question: the leaves' list and the pane rule to ask with. (collision.ts StaticCollision.senseFor)
 pub fn sense_for(g: &mut crate::game::Game, row: crate::scene_collision::SenseForRow) -> crate::scene_collision::SenseFor {
     let set = sense(g, row.as_str());
@@ -1091,7 +1039,7 @@ pub fn sense_for(g: &mut crate::game::Game, row: crate::scene_collision::SenseFo
 }
 
 /// `n` steps of the coarse grid's smoke over the boxes and leaves as they stand. False = nothing was done. (collision.ts StaticCollision.gridStep)
-pub fn grid_step(g: &mut crate::game::Game, st: &mut crate::Opaque, pending: &[f64], n: f64, k: crate::scene_collision::GridStepK, glow: Option<crate::scene_collision::GridStepGlow>, wind: Option<&crate::scene_collision::GridWind>) -> bool {
+pub fn grid_step(g: &mut crate::game::Game, n: f64, k: crate::scene_collision::GridStepK, glow: Option<crate::scene_collision::GridStepGlow>, wind: Option<&crate::scene_collision::GridWind>) -> bool {
     ready(g);
     let mine = !standing(g);
     if mine {
@@ -1117,10 +1065,6 @@ pub fn grid_step(g: &mut crate::game::Game, st: &mut crate::Opaque, pending: &[f
             crate::guards::SteadyLamps::LampRows(r) => { lamps = g.col.mirror.lamp_n as i32; said_rows = Some(r); }
         }
     }
-    let all = pending.len() - pending.len() % 6;
-    let cap = sim::SCRATCH_LEN - sim::SCRATCH_LEN % 6;
-    let e = if all < cap { all } else { cap };
-    let emits = &pending[all - e..all];
     let (mut wx, mut wz, mut low, mut gain, mut full_at) = (0.0, 0.0, 1.0, 0.0, 1.0);
     if let Some(wd) = wind {
         if wd.x != 0.0 || wd.z != 0.0 {
@@ -1154,16 +1098,16 @@ pub fn grid_step(g: &mut crate::game::Game, st: &mut crate::Opaque, pending: &[f
     let windy = real(wx) && real(wz) && real(low) && real(gain) && real(full_at) && real(k.in_wind) && low >= 0.0 && gain >= 0.0 && full_at > 0.0;
     let (wx, wz) = if windy { (wx, wz) } else { (0.0, 0.0) };
     let bk = sim::bricks::K { decay: k.decay, spread: k.spread, rise: k.rise, rise_rate: k.rise_rate, gone: k.gone, wind_x: wx, wind_z: wz, wind_low: low, wind_gain: gain, wind_full_at: full_at, wind_keep: k.in_wind };
-    let stamp = g.sim_stamp;
+    let stamp = sim::state::stamp(g.sim);
     let copy = crate::scene_box_mirror::box_mirror_grid_copy(g);
     let (w, block) = (slot(g), g.sim);
     let rows = rows_for(g, said_rows);
     let r = match (&glow, lamps >= 0) {
         (Some(gl), true) => {
             let gk = sim::glow::K { albedo: gl.k.albedo, share: gl.k.share, passes: js::to_u32(gl.k.passes), sweep: gl.k.sweep, lamps: lamps as usize, rows };
-            sim::bricks::step(block, stamp, w, copy, set, js::to_u32(n), emits, &bk, Some(&gk))
+            sim::bricks::step(block, stamp, w, copy, set, js::to_u32(n), &bk, Some(&gk))
         }
-        _ => sim::bricks::step(block, stamp, w, copy, set, js::to_u32(n), emits, &bk, None),
+        _ => sim::bricks::step(block, stamp, w, copy, set, js::to_u32(n), &bk, None),
     };
     if mine { crate::scene_box_mirror::box_mirror_shut(g); }
     r != ASK_HOST

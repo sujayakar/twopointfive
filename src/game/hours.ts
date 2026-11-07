@@ -37,7 +37,6 @@ import { rayBox, BoxFlag, type Box } from '../scene/boxes';
 import type { WeatherSnap } from './weather';
 import { isDaylight } from './lighting';
 import { ENV } from './env';
-import { SENSE } from './sense';
 import { LIGHT_IN } from '../sim/lightshome';
 import { RUST_PASS, RUST_SURFACE } from './crossing';
 
@@ -159,7 +158,7 @@ export function isHourSun(g: Game, l: RtLight): boolean { return states.get(g)?.
 /** IS THIS DIRECTIONAL LIGHT ALREADY IN THE ESTIMATE (guards.ts lightEstimateAt): an hour's sun always, and under sense.ts SENSE.moon the night's own light
  *  from the sky (`skyLampOf`). Whoever adds a directional light on top of the estimate — the goggles' place light, a tool's moon — asks this first, so that
  *  no light is counted twice whichever way the switch stands */
-export function inEstimate(g: Game, l: RtLight): boolean { return isHourSun(g, l) || (SENSE.moon && !states.get(g) && skyLampOf(g) === l); }
+export function inEstimate(g: Game, l: RtLight): boolean { return isHourSun(g, l) || (!states.get(g) && skyLampOf(g) === l); }
 /** THE LEVEL'S OWN LIGHT FROM THE SKY when no hour is laid over it: its brightest steady directional light that is up — the moon of every level as authored,
  *  or the sun a show has put in its place (lighting.ts setDaylight). null: none (the moon turned out; an hour, whose sun `hourLight` has) */
 export function skyLampOf(g: Game): RtLight | null {

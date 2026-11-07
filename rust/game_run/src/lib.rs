@@ -43,12 +43,7 @@ pub fn part_hashes(slot: usize) -> [u32; 13] {
 pub fn start(state: &[u8], block: &[u8], slot: usize) -> (Box<game::game::Game>, Vec<String>) {
     let mut g = Box::new(game::io::import(state));
     let mut said: Vec<String> = Vec::new();
-    let len = core::mem::size_of::<sim::state::State>();
-    unsafe {
-        let at = sim::state::addr(slot) as *mut u8;
-        core::ptr::write_bytes(at, 0, len);
-        core::ptr::copy_nonoverlapping(block.as_ptr(), at, block.len().min(len));
-    }
+    sim::state::put(slot, block);
     // (the one way to say which of rust/sim's slots a game stands in: the game's own word and the box mirror's)
     game::io::set_slot(&mut g, slot);
     // (the level's script and its define pass are the import's own now: io::deal_scripts)

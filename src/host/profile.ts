@@ -36,7 +36,6 @@ import { moraleFromQuery } from '../game/morale';
 import { FIRE, FIRE_SIZE, FIRE_SHIMMER, FIRE_PLUME, FIRE_EMBERS, FIRE_BRIGHT, FIRE_REACH, FIRE_LIFT, FIRE_LIFT_WAS, FIRE_WARM, FIRE_WANDER, FIRE_WANDER_UP, FIRE_WANDER_WAS, FIRE_WANDER_UP_WAS, FIRE_REACT, FIRE_LEAN, FIRE_LEAN_WAS, FIRE_STEPS } from '../game/fire';
 import { POSEMATH } from '../anim/skeleton';
 import { rowsUp, mathsUp, retiredAddressWord, fellWord } from '../sim/sim';
-import { SENSE } from '../game/sense';
 import { netQuietFromQuery } from '../game/netquiet';
 import { PICTURE } from '../game/picture';
 import { TEAMPACE } from '../game/teampace';
@@ -116,11 +115,6 @@ export function pageSwitches(q: URLSearchParams): void {
   FIRE.gas.on = q.get('firegas') === '1';   // … its flame as gas in the smoke solver's fine cells (the picture, and the page's smoke): OFF in the page until it has been seen; ?firegas=1 = on (and a row in the fire lab)
   POSEMATH.singles = q.get('posesingles') !== '0';   // a pose's bulk arithmetic in singles (anim/skeleton.ts): blendPose and sampleClip's step worked in singles, a rotation's length a plain root, in both languages — what lets the module work four nodes a step. ON in the page; ?posesingles=0 = in doubles, as it was
   pageRows(q);   // which systems run in the Rust module (src/sim/sim.ts RUST): the rows of RUST_ON are ON in the page — pageRows below has the words
-  SENSE.cpu = q.has('cpusense');   // the senses on the CPU (game/sense.ts): OFF unless the URL says ?cpusense — the men see by the renderer's own light and smoke, as ever; on, by the game's own stand-ins, and a fight is then its seed and its inputs and nothing else (the same on a machine with no GPU). Whether the page plays on them is the maintainer's call.
-  SENSE.grid = q.has('smokegrid');   // …and their smoke on the coarse grid (sense.ts SmokeGrid): OFF unless the URL says ?smokegrid (read only with ?cpusense)
-  SENSE.bounce = q.has('cpulight');   // …and the light model on that grid (the smoke's shadow, the light that comes round): OFF unless the URL says ?cpulight (read only where a grid stands)
-  SENSE.moon = q.has('moonlight');   // …and the night's light from the sky in the estimate of the light on a man (game/hours.ts moonLight: the moon shadowed, the level's sky, one bounce, as an hour is read by day): OFF unless the URL says ?moonlight (read wherever the estimate is, on every host: the senses on the CPU, the first frames, every rule that asks what a place lights)
-  SENSE.drift = q.has('smokedrift');   // …and the coarse grid's smoke drifting with the weather's wind under the open sky (rust/sim/src/bricks.rs 3b; game/wind.ts stormDrift): OFF unless the URL says ?smokedrift (it is the grid's, so it acts only with ?cpusense&smokegrid)
   netQuietFromQuery(q);   // the net goes quiet (game/netquiet.ts): a radio check nobody answers and a body found shake the men, the asker's calls get worse, a jumpy man's beam whips to a noise, and the last man backs to the spot his doors sit in one arc from and goes low: ON in the page; ?nonetquiet = the men as they were
   if (q.has('picture')) PICTURE.show = q.get('picture') === 'all' ? 'all' : 'cursor';   // (?picture = the floor shows the picture of the man under the cursor; ?picture=all = every teammate's ideas)
   STALK.drag = q.get('stalkdrag') === '1' || (q.has('sneaklab') && q.get('stalkdrag') !== '0');   // …and the mouse as a stick from where the press on him was made (a prototype: up in the sneak lab and with ?stalkdrag=1, down in the plain page and on the frozen stand, so no FROZEN_HOLDS row)

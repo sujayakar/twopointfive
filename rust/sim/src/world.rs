@@ -146,6 +146,8 @@ pub struct World {
     /// WHOSE THE ROWS ARE AND OF WHAT MOMENT: one more each time anything of them is written. Who wrote them keeps the number, and a question is refused to
     /// anybody who holds another (another game of the process, a kept game put back). 0 = nobody's: no rows were written
     pub stood: u32,
+    /// how many times a static's row was written: whose a table made from the statics is
+    pub wrote: u32,
 }
 
 const BLANK: World = World {
@@ -180,6 +182,7 @@ const BLANK: World = World {
     n_tilted: 0,
     leaves: [0; LEAF_SETS],
     stood: 0,
+    wrote: 0,
 };
 static mut ALL: [World; WORLDS] = [BLANK; WORLDS];
 

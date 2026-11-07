@@ -340,7 +340,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   NOT DONE / NOT SEEN: node's V8 is not Chrome's build of it, and nobody has run this in Chrome, in Safari or on a Mac — the two-engine line is bun
   against node on one Linux machine; everything on the page (sound synthesis, the renderer's CPU side, the UI) also computes on these functions while
   the switch is on.
-- **The senses on the CPU** (`src/game/sense.ts`, switch `SENSE.cpu`; DEFAULT OFF on the page and on both stands — `?cpusense`, `TPS_CPUSENSE=1`; whether the
+- (HISTORY from here to the end of the bullet, and of the `Sensors` seam above: rust.md, ONE WAY OF SENSING, 2026-11-07.) **The senses on the CPU** (`src/game/sense.ts`, switch `SENSE.cpu`; DEFAULT OFF on the page and on both stands — `?cpusense`, `TPS_CPUSENSE=1`; whether the
   page plays on it is the maintainer's call; engine groundwork, nothing networked): off, the men see by the renderer's values through `Game.sensors` — a fight
   on the page is then its seed, its inputs AND a stream of GPU readbacks that land a drawn frame or two late (the run tape keeps them, so a tape re-runs; a
   machine with no GPU cannot play the fight afresh). On, nothing is asked of the probe: every LIGHT meter falls to the estimate it already had for 'no answer
