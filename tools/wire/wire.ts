@@ -152,6 +152,8 @@ function dropType(Q: string[]): void { const S = readJ(SCHEMA), ioP = rustFile('
   for (const q of Q) { const path = q.startsWith('crate::') ? q : `crate::${q}`, T = S.types[path]; if (!T) die(`${path} is no type of the table`); const named = new RegExp(`\\b${path.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`);
     const users = Object.entries(S.types).filter(([k, x]: [string, any]) => k !== path && JSON.stringify([x.fields, x.vars]).match(named)).map(([k]) => k); if (users.length) die(`${path} is still named by ${users.slice(0, 5).join(', ')}`);
     delete S.types[path]; const before = io.length; io = io.filter(l => !l.startsWith(`impl Io for ${path} {`) && !l.startsWith(`impl Poke for ${path} {`)); console.log(`wire: ${path} off the table, ${before - io.length} lines on the wire`); }
+  // (its fields' rows on the lists go with it)
+  const L = readJ(FIELDS), gone = Q.map(q => `${q.replace(/^crate::/, '')}.`); for (const k of ['everyTick', 'pageTick', 'atStartOnly']) L[k] = L[k].filter((x: string) => !gone.some(g => x.startsWith(g))); writeFields(L);
   writeFileSync(ioP, io.join('\n')); writeFileSync(SCHEMA, JSON.stringify(S)); gen(false); }
 const A = process.argv.slice(2), opt = (n: string) => { const i = A.indexOf(n); return i < 0 ? undefined : A[i + 1]; };
 switch (A[0]) { case 'gen': gen(A.includes('--check')); break;
