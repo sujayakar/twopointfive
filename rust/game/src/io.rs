@@ -5564,9 +5564,13 @@ pub fn stats_as_counted(g: &crate::game::Game) -> crate::game::Stats { let mut s
 
 impl Io for crate::Opaque { fn w(&self, _: &mut W) {} fn r(_: &mut R) -> Self { crate::Opaque } }
 // AN ADDRESS'S WORDS ARE NOT ON THE WIRE: the table declares the `URLSearchParams` arm of a `string | URLSearchParams` argument as holding nothing
-// (tools/blitz/schema.json, where it was `crate::Opaque`), and the TypeScript writes nothing for it. So this side writes nothing and reads no words:
-// a host that has an address hands its TEXT across (the `Text` arm), and the game reads the words itself (query.rs).
-impl Io for crate::query::Query { fn w(&self, _: &mut W) {} fn r(_: &mut R) -> Self { crate::query::Query::default() } }
+// (tools/blitz/schema.json), and the TypeScript writes nothing for it. A host that has an address hands its TEXT across (the `Text` arm) and the
+// game reads the words itself (query.rs). Words that came or went this way would be an address with no words in it, read without a sign: the
+// mission not started, the fog off, and nothing said. So both ends stop, by name.
+impl Io for crate::query::Query {
+    fn w(&self, _: &mut W) { panic!("an address's words are not on the wire: hand the address's text across (the Text arm)") }
+    fn r(_: &mut R) -> Self { panic!("an address's words are not on the wire: hand the address's text across (the Text arm)") }
+}
 impl Poke for crate::Opaque {}
 impl Poke for crate::director::CondTest {}
 impl Poke for crate::director::BeatFrame {}
