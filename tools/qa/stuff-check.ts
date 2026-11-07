@@ -21,7 +21,6 @@ const { lookPageWord } = await import(`${ROOT}/src/scene/look.ts`);
 const { makeBox, wordOf } = await import(`${ROOT}/src/scene/boxes.ts`);
 const { PropSystem } = await import(`${ROOT}/src/game/props.ts`), { StaticCollision } = await import(`${ROOT}/src/scene/collision.ts`);
 const KD = await import(`${ROOT}/src/scene/levelKit.ts`), { newKit, KIT_PALETTE, KIT_FINISH } = KD;
-const { Editor } = await import(`${ROOT}/src/editor/editor.ts`), { boxPaint } = await import(`${ROOT}/src/editor/paint.ts`);
 
 const BRK = process.env.STUFF_BREAK === '1';
 let red = false;
@@ -120,8 +119,6 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
   KD.rug(k, 4, 4, 2, 1, [0.3, 0.1, 0.09]); const rug = k.boxes.slice(n4);
   const says = (l: any[], w?: string) => l.length > 0 && l.every((b: any) => b.stuff === w);
   // the editor: painting a box with another paint drops the box's own word (the new paint's row speaks), in one command that undoes
-  const ED = dataOf('library-hall.json') as any, eb = ED.boxes.find((b: any) => b.material === 'wood'); eb.stuff = 'veneer'; const ed = new Editor(ED, {}); boxPaint(ed, [eb.id], 'concrete');
-  const painted = ed.data.boxes.find((b: any) => b.id === eb.id), dropped = painted.material === 'concrete' && painted.stuff === undefined;
   // a repaint: the one helper gives the new paint's word, and a named coat stays under a plain one, a paint or an enamel alike; the skin repaints boxes and props' parts through it and nowhere else
   const coatWas = { ...NAMED_COATS }; if (process.env.COAT_BREAK === '1') for (const k of Object.keys(NAMED_COATS)) delete (NAMED_COATS as any)[k];   // (COAT_BREAK=1: the table of named coats is emptied, so a repaint keeps no coat — this line must FAIL)
   const rp = (was: string | undefined, paint: readonly number[]) => repainted({ albedo: [0.5, 0.5, 0.5] as readonly number[], ...(was ? { stuff: was } : {}) } as any, paint).stuff as string | undefined;
@@ -130,9 +127,9 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
   Object.assign(NAMED_COATS, coatWas);
   // a piece broken off a thing is made of what the thing is
   const from = makeBox({ c: [0, 0, 0], h: [1, 1, 1], albedo: [0.2, 0.2, 0.2], stuff: 'veneer' }), copy = makeBox({ c: [0, 0, 0], h: [0.1, 0.1, 0.1], albedo: [0.2, 0.2, 0.2], ...wordOf(from) }), bare = makeBox({ c: [0, 0, 0], h: [0.1, 0.1, 0.1], albedo: [0.2, 0.2, 0.2], ...wordOf(makeBox({ c: [0, 0, 0], h: [1, 1, 1] })) });
-  check(says(own, 'veneer') && says(dark, 'veneer') && says(steel, 'steel') && says(white) && says(rug, 'cloth') && JSON.stringify(saidFor('veneer', [0.3, 0.31, 0.33], KIT_PALETTE.wood, KIT_PALETTE.woodDark)) === '{}' && JSON.stringify(saidFor('veneer', [...KIT_PALETTE.wood], KIT_PALETTE.wood, KIT_PALETTE.woodDark)) === '{}' && saidFor('veneer', KIT_PALETTE.wood, KIT_PALETTE.wood).stuff === 'veneer' && dropped && skin && copy.stuff === 'veneer' && bare.stuff === undefined,
-    '8 a word belongs to the paint it was said with: the kit\'s desk says veneer in its own wood paints; handed the kit\'s steel it is a steel bench (the paint handed over speaks), handed white laminate it says nothing, and handed a COPY of the wood\'s numbers it says nothing either (the row, not its numbers); a rug is cloth in any colour; the skin repaints through the one helper, which drops a repainted thing\'s old word and gives it its new paint\'s — but a named coat stays under a plain one (a car in another enamel is still car paint; in sheet metal it is sheet, in a plain orange nothing); the editor\'s paint drops a box\'s own word; a piece broken off a thing copies the thing\'s word',
-    `desk ${own[0]?.stuff}, dark ${dark[0]?.stuff}, as a steel bench ${steel[0]?.stuff ?? 'no word'}, white ${white[0]?.stuff ?? 'no word'} · rug ${rug[0]?.stuff} · the skin says the new word: ${skin} (veneer → sheet, steel → paint, car paint → paint, → sheet, → plain orange, nothing → paint, car paint → an enamel, steel → an enamel: ${coats}) · the editor drops it: ${dropped} · a broken piece: ${copy.stuff}`); }
+  check(says(own, 'veneer') && says(dark, 'veneer') && says(steel, 'steel') && says(white) && says(rug, 'cloth') && JSON.stringify(saidFor('veneer', [0.3, 0.31, 0.33], KIT_PALETTE.wood, KIT_PALETTE.woodDark)) === '{}' && JSON.stringify(saidFor('veneer', [...KIT_PALETTE.wood], KIT_PALETTE.wood, KIT_PALETTE.woodDark)) === '{}' && saidFor('veneer', KIT_PALETTE.wood, KIT_PALETTE.wood).stuff === 'veneer' && skin && copy.stuff === 'veneer' && bare.stuff === undefined,
+    '8 a word belongs to the paint it was said with: the kit\'s desk says veneer in its own wood paints; handed the kit\'s steel it is a steel bench (the paint handed over speaks), handed white laminate it says nothing, and handed a COPY of the wood\'s numbers it says nothing either (the row, not its numbers); a rug is cloth in any colour; the skin repaints through the one helper, which drops a repainted thing\'s old word and gives it its new paint\'s — but a named coat stays under a plain one (a car in another enamel is still car paint; in sheet metal it is sheet, in a plain orange nothing); a piece broken off a thing copies the thing\'s word',
+    `desk ${own[0]?.stuff}, dark ${dark[0]?.stuff}, as a steel bench ${steel[0]?.stuff ?? 'no word'}, white ${white[0]?.stuff ?? 'no word'} · rug ${rug[0]?.stuff} · the skin says the new word: ${skin} (veneer → sheet, steel → paint, car paint → paint, → sheet, → plain orange, nothing → paint, car paint → an enamel, steel → an enamel: ${coats}) · a broken piece: ${copy.stuff}`); }
 
 // 9. A PAINT IS KNOWN BY THE ROW HANDED OVER, never by its numbers: a kit's finish and word come with the palette's own array; a copy of its numbers is nobody's
 { const k = newKit(), C = KIT_PALETTE, i0 = KD.add(k, { c: [1, 1, 1], h: [0.2, 0.2, 0.2], albedo: C.metal }), i1 = KD.add(k, { c: [2, 1, 1], h: [0.2, 0.2, 0.2], albedo: [...C.metal] as any }), i2 = KD.add(k, { c: [3, 1, 1], h: [0.2, 0.2, 0.2], albedo: C.metal, rough: 0.9 }), i3 = KD.add(k, { c: [4, 1, 1], h: [0.2, 0.2, 0.2], albedo: C.metal, stuff: 'plain' });
@@ -189,18 +186,7 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
     '12 a house front\'s and a yard\'s pieces say their words: on the pass every box the kit\'s wall-face and yard pieces make in a named paint says what that paint is made of (wood, paint, mud wall, cloth and metal among them), and every piece of trim in a named paint of its own says that paint\'s (a log\'s end wood, a rolled blanket\'s ties cloth), and so does the showroom\'s trim (a pipe\'s bore metal: the pipes stand there); the lorry\'s trial stands down, the level\'s lorry saying its own shapes',
     `the pass's front and yard: ${mine.length} boxes, ${said} say a word (${[...words].sort().join(', ')}), ${silent.length} in a named paint and silent · their trim in a paint of its own: ${trim.length} pieces (${[...trimWords].sort().join(', ')}), ${trimSilent.length} silent · the showroom's trim: ${hall.length} pieces (${[...hallWords].sort().join(', ')}), ${hallSilent.length} silent · the lorry's trial made ${lorry}`); }
 
-// 13. THE EDITOR KEEPS A PAINT'S WORD (src/editor/paint.ts): editing a paint's colour or finish leaves what it is made of, a copy of a paint is made of the same,
-//     the word can be set and cleared and a word that is no stuff is refused; a blank document's own paints say theirs
-{ const P = await import(`${ROOT}/src/editor/paint.ts`), ed = new Editor(dataOf('office.json') as any, {}), M = () => ed.data.materials as Record<string, { stuff?: string; rough?: number }>;
-  const was = M().wood.stuff; P.materialSet(ed, 'wood', { rough: 0.5 }); const kept = M().wood.stuff; P.materialPreset(ed, 'wood', P.FINISH_PRESETS[0].key); const preset = M().wood.stuff;
-  const copy = P.materialDuplicate(ed, 'carpet'), copied = M()[copy].stuff; P.materialSet(ed, copy, { stuff: 'carpet' }); const set = M()[copy].stuff; P.materialSet(ed, copy, { stuff: null }); const cleared = M()[copy].stuff;
-  let refused = false; try { P.materialSet(ed, copy, { stuff: 'banana' }); } catch { refused = true; }
-  const plainWas = M().black.stuff; P.materialSet(ed, 'black', { rough: 0.3 }); const plainKept = M().black.stuff;
-  const fresh = P.materialCreate(ed, 'newpaint'), blank = Editor.blank('t').materials as Record<string, { stuff?: string }>;
-  check(was === 'wood' && kept === 'wood' && preset === 'wood' && copied === M().carpet.stuff && copied !== undefined && set === 'carpet' && cleared === undefined && refused && plainWas === 'plain' && plainKept === 'plain' && M()[fresh].stuff === undefined
-    && blank.wood.stuff === 'wood' && blank.wall.stuff === 'plaster' && blank.metal.stuff === 'steel' && validateLevelData(ed.data as never).length === 0,
-    '13 the editor keeps a paint\'s word: a change of roughness and a finish preset leave the wood paint wood, a copy of the carpet paint is made of what the carpet is, the word is set and cleared by name and a word that is no stuff is refused; a paint that says plain still says it after an edit (as the exporters write it); a new paint says nothing until told; a blank document\'s own paints say what their names are made of',
-    `wood: ${was} → after a roughness edit ${kept}, after a preset ${preset} · the carpet's copy: ${copied}, set ${set}, cleared ${cleared ?? 'nothing'} · banana refused ${refused} · blank: wood ${blank.wood.stuff}, wall ${blank.wall.stuff}, metal ${blank.metal.stuff}, asphalt ${blank.asphalt.stuff ?? 'nothing'}`); }
+// (13, 'the editor keeps a paint's word', went with the level editor.)
 
 // 14. A SHAPE'S PIECE SAYS ITS WORD AS A BOX DOES (scene/shapes.ts, a box's `shape.with`): its own, else its paint's row's, else nothing; the box stood up for
 //     it carries the word; the file keeps only a word that is another thing than the row's, and a word that is no stuff is refused
