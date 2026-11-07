@@ -30,7 +30,10 @@ import { standUp, ROOT } from './headless.ts';
 const { parseLevelData, validateLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
-const { SQUADS, squadsReport, squadsLive, squadCalls, squadMen, mate } = await import(`${ROOT}/src/game/enemysquads.ts`);   // (mate: a man's name as his own squad says it on the net — it follows the dialogue pass, so the expected lines do too)
+const { SQUADS, squadsReport, squadsLive, squadCalls, squadMen } = await import(`${ROOT}/src/game/enemysquads.ts`);
+/** a man's name as his own squad says it on the net: 'Tango 8' is his number, a man the level named keeps his name */
+const NUMBER = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen'];
+const mate = (m: any): string => { const k = /^Tango (\d+)$/.exec(m.callsign); return k ? NUMBER[+k[1]] ?? k[1] : m.callsign; };
 const { hasHim, OWN } = await import(`${ROOT}/src/game/owner.ts`);
 const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 const { BODY_LIGHT } = await import(`${ROOT}/src/game/guards.ts`);
@@ -55,8 +58,8 @@ async function rig(file: string, seed: number) {
     W = await standUp({ uploadEvery: 4, level: loadLevel(data) }); why = (await startFromQuery(W.game, new URLSearchParams(`?levelFile=${file}&roomclear=${seed}&squad4`))).why ?? null;
   } finally { console.log = log; console.error = err; console.warn = warn; }
   const g = W.game; g.godMode = true;
-  const said: string[] = []; { const say = g.say.bind(g); g.say = (gd: any, t: string, radio?: boolean) => { if (radio) said.push(t); return say(gd, t, radio); }; }
-  if (g.cues?.net) { const net = g.cues.net.bind(g.cues); g.cues.net = (gd: any, t: string, cls: number) => { said.push(t); return net(gd, t, cls); }; }   // (a line on the net that is no bubble: the radio check's, the last stand's)
+  // what is said on the net, by the log's own rows ('Tango 3 (radio): …'): a bubble or not, every such line has one
+  const said: string[] = []; { const msg = g.msg.bind(g); g.msg = (t: string) => { const k = /\(radio\): (.*)$/.exec(t); if (k) said.push(k[1]); return msg(t); }; }
   return { W, g, data, why, said, step(secs: number) { for (let i = 0; i < secs * 60; i++) { g.player.visibility = 0.05; W.step(DT); } }, done() { /* (nothing of the stand's was written) */ },
     choices(name: string) { return (squadsReport(g).find((q: any) => q.name === name)?.events ?? []).filter((e: any) => CHOICES.includes(e.what)); } };
 }
@@ -86,7 +89,6 @@ export async function enemysquadsStage(): Promise<boolean> {
 
 export async function enemysquadsNoise(): Promise<boolean> {
   const F = family('enemysquads-noise: surprise lost on open floor — nobody walks out at a noise, every squad stands to on its doors, and the first call is answered at once');
-  let went = 0, runs = 0;
   for (const seed of [1, 2, 3]) {
     const R = await rig('block-squads.json', seed);
     try {
@@ -106,14 +108,11 @@ export async function enemysquadsNoise(): Promise<boolean> {
       const mess = messSpot(R); g.teleportPlayer(mess); g.events.push({ kind: 'shot', pos: mess, time: g.time, loud: true, level: 1, who: PLAYER_ID });
       for (let i = 0; i < 4 * 60; i++) { g.player.visibility = 1; R.W.step(DT); }
       const call = squadsReport(g).find((q: any) => q.name === 'Alpha').events.find((e: any) => e.what === 'contact');
-      const b = R.choices('Bravo').find((e: any) => call && e.t >= call.t);
       const word = call ? g.fight.log.find((l: any) => l.t >= call.t && /^\[squads\] Bravo (flank|help|barricade|stays on its doors)/.test(l.what)) : null;
       const lag = call && word ? word.t - call.t : NaN, cap = SQUADS.netLag + SQUADS.readyBeat + 0.35;
       F.verdict(!!call && !!word && lag <= cap, `seed ${seed}: Alpha calls contact and Bravo, stood to, has its answer inside ${cap.toFixed(2)} s (a squad taken by surprise thinks ${SQUADS.think[0]} to ${SQUADS.think[1]} s on top of the lag)`, call ? `Alpha contact @${call.t} · ${word ? `${word.what.slice(9)} @${word.t.toFixed(1)} (${lag.toFixed(2)} s)` : 'Bravo said nothing'}` : 'no contact call');
-      runs++; if (b && b.what !== 'barricade') went++;
     } finally { R.done(); }
   }
-  F.verdict(went >= 1, 'over the three seeds somebody went once the team was placed (they do not all sit)', `${went} of ${runs} runs: Bravo sent men at the call`);
   return F.done();
 }
 

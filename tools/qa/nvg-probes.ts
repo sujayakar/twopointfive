@@ -1,7 +1,7 @@
 // The 'nvg' family: THE TEAM'S NIGHT VISION (the maintainer, 10-06: "the squad members should have night vision and use it accordingly. this could either be
 // following your lead or knowing when they haven't been compromised and flashlight would ruin that" · "but the lights make sense too, especially when things
 // are loud" · "ready or not is a good base case here"). The rule is game/nvg.ts; this family is its check. Run through probes.ts:
-//   bun run tools/qa/probes.ts nvg | nvg-quiet | nvg-lead | nvg-loud | nvg-sight | nvg-fight
+//   bun run tools/qa/probes.ts nvg | nvg-quiet | nvg-lead | nvg-loud | nvg-sight | nvg-fight       (the scenarios are a sample; QA_SWEEP=all asks every one)
 // PASS / FAIL each, all headless (the Game of headless.ts stood up on each row's own level; nothing is drawn). THE SCENARIOS are scene/scenarioList.ts
 // SCENARIOS, row by row, each started as a click on its row starts it (bang-tally.ts stage()).
 //   nvg-quiet   NOT COMPROMISED, IN THE DARK: every scenario with the floor emptied of hostiles (nothing but the rule decides), the team told to fall in and then
@@ -29,6 +29,7 @@
 import { readFileSync } from 'node:fs';
 import { ROOT } from './headless.ts';
 import { stage, setKnobs } from './bang-tally.ts';
+import { sample, swept } from './sweep.ts';
 const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const GDM: any = await import(`${ROOT}/src/game/guards.ts`);
 const CBM: any = await import(`${ROOT}/src/game/combat.ts`);
@@ -124,7 +125,7 @@ export const nvgQuiet = guarded(async () => {
   const F = family('nvg-quiet: not compromised and in the dark, the team walks on its goggles — no light but where the tube has nothing');
   if (process.env.NVG_BREAK) console.log("  (NVG_BREAK: Sam's weapon light is burning under this probe — it must FAIL)");
   let cleanDark = 0;
-  for (const id of IDS) {
+  for (const id of sample(IDS, 2)) {
     const on = await walk(await emptied(id), process.env.NVG_BREAK ? { light: true } : {});
     if (!on) { F.verdict(false, `${id}: a door to walk to`, 'no held room\'s door took the stack order'); continue; }
     const tubeless = on.log.filter(l => l.includes('too dark for the tube')).length;
@@ -133,8 +134,8 @@ export const nvgQuiet = guarded(async () => {
       `${id}: dark to the door (${on.door})`,
       `${on.team} men · ${modes(on)} · walking man-frames ${on.walk}: lit ${pct(on.lit, on.walk)}, goggles down ${pct(on.gog, on.walk)} · lit where the tube had something: ${on.litNotBlack} · unlit in a dim place: goggles down ${pct(on.dimUnlitGog, on.dimUnlit)} of ${on.dimUnlit}${tubeless ? ` · ${tubeless}× 'too dark for the tube' (no light of the place there at all)` : ''}`);
   }
-  F.verdict(cleanDark >= 4, 'not vacuous: most floors are walked with no light at all and the goggles down',
-    `${cleanDark} of ${IDS.length} scenarios with not one lit man-frame on the walk and goggled man-frames in the dim`);
+  F.verdict(cleanDark >= swept(1, 4), 'not vacuous: most floors are walked with no light at all and the goggles down',
+    `${cleanDark} of the scenarios asked with not one lit man-frame on the walk and goggled man-frames in the dim`);
   return F.done();
 });
 
@@ -142,7 +143,7 @@ export const nvgQuiet = guarded(async () => {
 export const nvgLead = guarded(async () => {
   const F = family('nvg-lead: Sam\'s goggles keep the team dark through anything; Sam\'s light frees theirs');
   let litFree = 0;
-  for (const id of IDS) {
+  for (const id of sample(IDS, 1)) {
     const dark = await walk(await emptied(id), { loud: true, nv: true });
     const X = await emptied(id); const free = await walk(X, { light: true }); const samLit = !!X.g.player.light.enabled;
     if (!dark || !free) { F.verdict(false, `${id}: a door to walk to`, 'no held room\'s door took the stack order'); continue; }
@@ -158,7 +159,7 @@ export const nvgLead = guarded(async () => {
     const after = modeOf(X.g), lit = X.team.filter((x: any) => x.flashlight?.enabled && !NVM.nvgState(X.g).men.find((q: any) => q.gd === x)?.black).length;
     F.verdict(after === 'dark/not compromised' && lit === 0, `${id}: his light out — dark again`, `${f2(NVG.leadTail + 1.5)} s after: ${after} · lights burning where the tube has something: ${lit}`);
   }
-  F.verdict(litFree >= 4, 'not vacuous: with his light on the walks are lit', `${litFree} of ${IDS.length} scenarios with lit man-frames on the walk`);
+  F.verdict(litFree >= swept(1, 4), 'not vacuous: with his light on the walks are lit', `${litFree} of the scenarios asked with lit man-frames on the walk`);
   return F.done();
 });
 
@@ -166,7 +167,7 @@ export const nvgLead = guarded(async () => {
 export const nvgLoud = guarded(async () => {
   const F = family('nvg-loud: once the floor is loud the lights are the light rule\'s again; quiet long enough, the team goes dark and says so');
   let lit = 0;
-  for (const id of IDS) {
+  for (const id of sample(IDS, 1)) {
     const X = await emptied(id); const r = await walk(X, { loud: true });
     if (!r) { F.verdict(false, `${id}: a door to walk to`, 'no held room\'s door took the stack order'); continue; }
     if (r.lit > 0) lit++;
@@ -180,7 +181,7 @@ export const nvgLoud = guarded(async () => {
     F.verdict(!isNaN(darkAt) && calls.size === 1 && burning === 0 && modeOf(g) === 'dark/not compromised', `${id}: ${NVG.quietSecs} s of quiet — dark again, and called once`,
       `dark ${isNaN(darkAt) ? 'never' : `${f2(darkAt - t0)} s after the walk`} · 'going dark.' from ${said || 'nobody'}${calls.size > 1 ? ` (${calls.size} CALLS)` : ''} · lights burning where the tube has something: ${burning}`);
   }
-  F.verdict(lit >= 4, 'not vacuous: loud, the walks are lit', `${lit} of ${IDS.length} scenarios with lit man-frames on the walk`);
+  F.verdict(lit >= swept(1, 4), 'not vacuous: loud, the walks are lit', `${lit} of the scenarios asked with lit man-frames on the walk`);
   { const r = await walk(await emptied(IDS[0]), { alarm: true });
     F.verdict(!!r && only(r, 'free/compromised'), 'an alarm on the floor compromises like a charge', r ? modes(r) : 'no walk'); }
   return F.done();
@@ -210,7 +211,7 @@ export const nvgSight = guarded(async () => {
 export const nvgFight = guarded(async () => {
   const F = family('nvg-fight: Sam\'s goggles down, a held room taken with not one light on');
   let takenTotal = 0, downTotal = 0;
-  for (const id of IDS) {
+  for (const id of sample(IDS, 2)) {
     const S: any = await quiet(() => stage(id, 1)); const { g, step } = S; const O = g.orders, D = g.doorTools;
     g.player.nv = true; const team: any[] = O.squad().filter((x: any) => x.state !== 'dead'); const sam = g.player.char.pos;
     const cands: { ent: any; dist: number }[] = []; for (const d of S.defs) for (const e of d.room.entries) if (!cands.some(c => c.ent === e)) cands.push({ ent: e, dist: flat(sam, e.at) });
@@ -235,7 +236,7 @@ export const nvgFight = guarded(async () => {
     F.verdict(lit === 0 && notDark <= 3, `${id}: dark from the first step to the last`,
       `${frames} frames · lit man-frames ${lit} · frames not 'dark/your goggles' ${notDark}${sent ? ` · the entry was refused (${sent}): the walk and the wait only` : ''} · targets taken ${taken} · hostiles down ${down} of ${before} · team standing ${alive} of ${team.length}`);
   }
-  F.verdict(takenTotal >= 3 && downTotal >= 3, 'not vacuous: men are found and dropped with no light burning',
-    `${takenTotal} targets taken over ${IDS.length} scenarios · ${downTotal} hostiles down`);
+  F.verdict(takenTotal >= swept(1, 3) && downTotal >= swept(1, 3), 'not vacuous: men are found and dropped with no light burning',
+    `${takenTotal} targets taken over the scenarios asked · ${downTotal} hostiles down`);
   return F.done();
 });

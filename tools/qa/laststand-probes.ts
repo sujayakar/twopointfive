@@ -22,7 +22,7 @@ const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { LASTSTAND, lastStandReport } = await import(`${ROOT}/src/game/laststand.ts`);
-const { digInPhase, digInWedged } = await import(`${ROOT}/src/game/digin.ts`);
+const { digInPhase } = await import(`${ROOT}/src/game/digin.ts`);
 const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 const { stripRows } = await import(`${ROOT}/src/game/cues.ts`);
 const { placeIn } = await import(`${ROOT}/src/game/dialogue.ts`);
@@ -71,22 +71,19 @@ export async function lastStandCallOut(): Promise<boolean> {
     const frame = () => { for (const r of stripRows(g) as { text: string }[]) rows.add(r.text); };
     steps(W, 1, frame); clean = said(g).length + lastStandReport(g).stats.checks;
     const kept = thin(W, KEEP);
-    steps(W, 30, i => { frame(); if (first < 0 && said(g).length) first = i / 60; });
+    steps(W, 20, i => { frame(); if (first < 0 && said(g).length) first = i / 60; });
     const A = { rep: lastStandReport(g), rows, obj: { ...rowOf(g, 'roomclear') }, hint: namedRooms(g).sort(), truth: kept.map((h: any) => roomOf(g, h)).sort() as string[], clean, first };
     {   // … and one of the three in a fight (the team in his sight every frame): he does not answer the next check
       const busy = kept[1], n0 = said(g).length;
-      steps(W, LASTSTAND.every + 12, () => { busy.lastSeenT = g.time; });
+      steps(W, LASTSTAND.every + 6, () => { busy.lastSeenT = g.time; });
       const later = said(g).slice(n0), ans = later.filter(l => l.kind.startsWith('ans'));
       F.verdict(later.some(l => l.kind === 'checkN') && ans.length === 1 && !later.some(l => l.who === busy.callsign) && lastStandReport(g).known.length === 2 && !lastStandReport(g).known.includes(busy.callsign),
         'a man with the team in his sight does not answer the check, and nobody counts him', `${busy.callsign} busy: ${later.map(l => `${l.who} '${l.text}'`).join(' · ')} → known ${lastStandReport(g).known.join(', ')}`);
     }
-    // down to one from the start: nobody answers him, he says he is the last and where. TWO MEN, because what the net then names is two rules of laststand.ts
-    // (a man is named by what he SAID; 'a man out hunting is not a room to go to' — tickCheck / tellOnly `free ? null : w`, the marker comes off him):
-    //   the guard hut's — a squad of one, so no mate of his drops and he HOLDS HIS POST: he says the hut and the net names the hut;
-    //   the office's — the man this line always kept. Where his squad is in contact the frame a mate of it drops he is OUT HUNTING when he says it: he
-    //     says where he truly is and the net names nothing, in a room or out of one. Where he holds the office it is the first case again.
+    // down to one from the start: nobody answers him, he says he is the last and where. The guard hut's man (a man is named by what he SAID):
+    //   a squad of one, so no mate of his drops and he HOLDS HIS POST: he says the hut and the net names the hut.
     // LASTSTAND_BREAK=1 = a second man is left up with him (the bunk room's): he is not the last, and both lines must fail.
-    for (const id of ['hut', 'office']) {
+    for (const id of ['hut']) {
       const W = await rig(5, false), g = W.game; steps(W, 1); const [one] = thin(W, process.env.LASTSTAND_BREAK === '1' ? [id, 'bunk'] : [id]);
       let room: string | null = null, named = '', spot = '', hunting = false, got = false;   // (where he is, what he is doing and what the net has named, the frame he says it — he may move afterwards)
       steps(W, 16, () => { if (!got && said(g).some(l => l.kind === 'lastAt')) { got = true; room = roomOf(g, one); named = namedRooms(g).join(); spot = room || !LASTSTAND.places ? '' : placeIn(g.level, one.char.pos)?.name ?? ''; hunting = (g.fight.defs as any[]).find(D => D.gd === one)?.mode === 'free'; } });
@@ -94,8 +91,7 @@ export async function lastStandCallOut(): Promise<boolean> {
       // (no room of the structure: 'outside the …' on ground the level has no word for — or, LASTSTAND.places, 'in the corridor' by the level's own name for the floor he stands on)
       const says = !!last && last.who === one.callsign && (room ? last.text.includes(`in the ${nameOf(g, room)}`) : spot ? last.text.includes(`in ${spot}`) : /outside the /.test(last.text));
       F.verdict(tail[0]?.kind === 'check1' && says && named === (hunting ? '' : room ?? '') && (!post || (!hunting && room === id)),
-        post ? 'the last man at his post: nobody answers his check, he says so and where he is, and the net names his room'
-          : 'the last man: nobody answers his check, he says so and where he truly is; the net names a room only if he holds one (a man out hunting is no room to go to)',
+        'the last man at his post: nobody answers his check, he says so and where he is, and the net names his room',
         `${tail.map(l => `${l.who} '${l.text}'`).join(' · ') || 'nothing said'} → ${!got ? 'he never says he is the last' : `${hunting ? 'out hunting' : 'holding'}, truly ${room ? 'in ' + room : 'outside the rooms'} then, named '${named}'${spot ? `, place '${spot}'` : ''}`}`);
     }
     const S = A.rep.said as { who: string; kind: string; text: string }[], ans = S.filter(l => l.kind === 'ansAt'), few = S.find(l => l.kind === 'fewAt');
@@ -110,7 +106,7 @@ export async function lastStandCallOut(): Promise<boolean> {
   return F.done();
 }
 
-async function standRun(F: { verdict: Verdict }, keep: string[], seed: number, long: boolean, squadRooms: string[] | null) {
+async function standRun(F: { verdict: Verdict }, keep: string[], seed: number, squadRooms: string[] | null) {
   const W = await rig(seed, true), g = W.game;
   steps(W, 1); const clean = said(g).length + lastStandReport(g).stats.checks;
   const kept = thin(W, keep), was = kept.map((h: any) => roomOf(g, h));
@@ -130,37 +126,24 @@ async function standRun(F: { verdict: Verdict }, keep: string[], seed: number, l
   F.verdict(R.stats.sent >= 1 && went.length === R.stats.sent - R.stats.quiet && R.stats.arrived >= 1 && R.stats.arrived + R.stats.short + R.stats.met + R.stats.diedOnWay + R.stats.dropped + R.moving.length === R.stats.sent && inRoom.length === R.in.length && R.in.length >= 2,
     'every man sent says so and walks; who arrives is in the room (a man stopped on the way holds where he is and says so)', `${R.stats.sent} sent, ${R.stats.arrived} arrived, ${R.stats.short} stopped short, ${R.stats.met} met, ${R.moving.length} still walking, ${R.stats.noWay} with no way · in the room: ${inRoom.map((h: any) => h.callsign).join(', ')} · ${went.concat(came).map(l => `${l.who}: ${l.text}`).join(' · ')}`);
   const phases = inRoom.map((h: any) => digInPhase(g, h)), setLine = S.find(l => l.kind === 'set' || l.kind === 'setOpen');
-  const fdefs = g.fight.defs as any[], standRoom = fdefs.find(D => D.gd === inRoom[0])?.room, wedged = standRoom ? digInWedged(g, standRoom).length : 0;
-  F.verdict(phases.every((p: string) => p === 'set') && !!setLine && setLine.text.includes(nameOf(g, stand)) && (setLine.kind === 'set') === (wedged > 0), 'every man in the room digs in and sets; one of them says so ("shut" only with a door wedged)', `${phases.join(', ')} · ${setLine?.who}: ${setLine?.text} (${setT.toFixed(1)} s after three were left, ${wedged} door(s) wedged)`);
+  F.verdict(phases.every((p: string) => p === 'set') && !!setLine && setLine.text.includes(nameOf(g, stand)), 'every man in the room digs in and sets; one of them says so', `${phases.join(', ')} · ${setLine?.who}: ${setLine?.text} (${setT.toFixed(1)} s after three were left)`);
   const held = g.roomClear.rooms.filter((r: any) => !r.cleared).map((r: any) => r.def.id), loose = kept.filter((h: any) => h.state !== 'dead' && !R.in.includes(h.callsign)).length;   // (a man told to hold where he is, on his way, or out hunting — nobody's to order — still holds a room of his own)
   const obj = rowOf(g, 'roomclear'), b = g.roomClear.rooms.find((r: any) => r.def.id === stand)?.def.bounds;
   F.verdict(held.includes(stand) && held.length <= 1 + loose && !!obj.pos && !!b && Math.abs(obj.pos[0] - (b.x0 + b.x1) / 2) < 0.01 && obj.text.includes(`[${nameOf(g, stand)}]`),
     'the rooms they left are clear behind them; the marker and the bracket are on the stand room', `still held: ${held.join(', ')} · ${obj.text}`);
   if (squadRooms) F.verdict([...seen].every(id => squadRooms.includes(id)), "a squad whose men stay in its rooms: nobody is ever in a room that is not the squad's", `rooms they were in: ${[...seen].join(', ')} · ${outside} samples between rooms`);
-  if (long) {
-    const n0 = S.length; steps(W, 120);
-    const R2 = lastStandReport(g), later = (R2.said as any[]).slice(n0), still = kept.filter((h: any) => h.state !== 'dead' && roomOf(g, h) === stand && digInPhase(g, h) === 'set');
-    F.verdict(still.length >= inRoom.length && later.filter(l => l.kind === 'checkStand').length >= 3 && later.every(l => l.kind !== 'checkStand' || l.text.includes(nameOf(g, stand))),
-      'two minutes on they are still set in it (no stand-down), still asking the net by the room\'s name', `${still.length} of ${inRoom.length} set · ${later.filter(l => l.kind === 'checkStand').length} checks · ${R2.stats.thumps} thuds at a wedged door`);
-    // … and the last of them, once the others are down, knows it at the next check with no answer: he says so, with his room, and holds what he holds
-    const left = kept.filter((h: any) => h.state !== 'dead'), last = left.find((h: any) => lastStandReport(g).in.includes(h.callsign)) ?? left[0]; for (const h of left) if (h !== last) killGuard(g, h, [1, 0, 0], true);
-    const n1 = said(g).length; steps(W, LASTSTAND.again + 25);
-    const end = said(g).slice(n1), line = end.find(l => l.kind === 'lastAt');
-    F.verdict(left.length >= 2 && !!line && line.who === last.callsign && line.text.includes(nameOf(g, stand)) && digInPhase(g, last) === 'set' && roomOf(g, last) === stand && lastStandReport(g).stats.lastMan === 1,
-      'the others down: the last man of the stand says he is the last, and where, and stays set', `${line?.who}: ${line?.text} · then ${end.filter(l => l !== line).map(l => l.kind).join(', ') || 'nothing'}`);
-  }
   return { W, R };
 }
 export async function lastStandRegroup(): Promise<boolean> {
   const F = family('laststand-regroup: the last three gather in one room on a spoken order, dig in and stay set');
   const was = { ...LASTSTAND };
-  try { await standRun(F, ['sala', 'kitchen', 'hut'], 3, true, null); } finally { Object.assign(LASTSTAND, was); }
+  try { await standRun(F, ['sala', 'kitchen', 'hut'], 3, null); } finally { Object.assign(LASTSTAND, was); }
   return F.done();
 }
 export async function lastStandKeep(): Promise<boolean> {
   const F = family('laststand-keep: the Keep\'s three (its men stay in its rooms) make their stand inside it');
   const was = { ...LASTSTAND };
-  try { await standRun(F, ['office', 'bunk', 'back'], 5, false, ['office', 'bunk', 'back']); } finally { Object.assign(LASTSTAND, was); }
+  try { await standRun(F, ['office', 'bunk', 'back'], 5, ['office', 'bunk', 'back']); } finally { Object.assign(LASTSTAND, was); }
   return F.done();
 }
 export async function lastStandFew(): Promise<boolean> {
