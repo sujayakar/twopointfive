@@ -3,7 +3,7 @@
 // scenes (the same panes, shooter, aims and cadences), so a number here can be read against that instrument's rows.
 //
 //   bun run tools/qa/probes.ts glasstune            the seven
-//   bun run tools/qa/probes.ts glasstune-<x>        blast | rake | spall | sound | budget | stack | off
+//   bun run tools/qa/probes.ts glasstune-<x>        blast | rake | spall | sound | budget | stack
 //
 // Every probe switches on what it needs itself (the harness stands the glass parts OFF and at chaos 0: src/host/standup.ts) and puts every table it touched back,
 // on a throw too. No Math.random of its own: the stand-up's dice are seeded as the other glass probes seed them, and put back.
@@ -45,7 +45,7 @@ async function probe(title: string, body: (verdict: Verdict) => Promise<void>): 
 const resetStats = () => { for (const k of Object.keys(GB_STATS)) (GB_STATS as any)[k] = 0; for (const k of Object.keys(SHARD_STATS)) (SHARD_STATS as any)[k] = 0; };
 
 // ---------------------------------------------------------------- the staging (glass-tune.ts runScene, in pieces)
-interface Parts { fx?: boolean; brk?: boolean; shards?: boolean; pen?: boolean }
+interface Parts { brk?: boolean; shards?: boolean }
 interface Pane { bi: number; b: any; kind: PaneKind; out: Vec3; tan: Vec3; hu: number; hv: number; sam: Vec3; yaw: number }
 /** the pane glass-tune.ts shoots for a type — the conference partition's second sheet (annealed), the first full-height facade sheet (tempered), the manager's
  *  sidelight (laminated) — and the side its shooter stands on, 1.7 m out with floor under him */
@@ -77,8 +77,8 @@ async function stage(parts: Parts = {}) {
   Math.random = seeded(4242);
   const W = await standUp(); const { game, engine } = W as any; floatPartition(game);
   engine.particles = new PM.Particles(fake('device'), fake('sceneLayout')); engine.settings.gpuParticles = true;
-  // (the stand-up has just put the three parts off and chaos at 0: what this probe needs goes on here, by name)
-  GLASSFX.on = parts.fx ?? true; GLASSPEN.on = parts.pen ?? true; game.tune.glassBreak = parts.brk ?? true; game.tune.glassShards = parts.shards ?? true; game.tune.chaos = 0.5;
+  // (the fracture and the shards are a run's own to set; the family's switch and rounds through glass are settled rules and are not written)
+  game.tune.glassBreak = parts.brk ?? true; game.tune.glassShards = parts.shards ?? true; game.tune.chaos = 0.5;
   game.godMode = true; game.player.visibility = 0.02; resetStats();
   for (let i = 0; i < 5; i++) W.step(DT);
   game.guards.forEach((gd: any, i: number) => { gd.hold = true; gd.pinned = true; gd.char.pos = [37.5, 0, 6 + i * 1.5]; gd.char.vel = [0, 0, 0]; gd.char.bodyYaw = gd.char.aimYaw = Math.PI / 2; gd.path = []; gd.pathGoal = null; gd.heardUpTo = 1e12; gd.dazzledUntil = 1e9; gd.flashlight.enabled = false; gd.char.update(0); });
@@ -263,7 +263,7 @@ export async function glasstuneBudget(): Promise<boolean> {
  *  line through a pane from the floor beyond the door are FOUND by asking — not named here. Then the public stackPosts is asked on those faces. */
 export async function glasstuneStack(): Promise<boolean> {
   return probe('glasstune-stack: on a door whose jamb a rifle reaches through a pane the stack is dealt off it; with stackEyes 0 (or rounds stopping in glass) the deal is the base one', async verdict => {
-    const S = await stage({ brk: false, shards: false, pen: true }), g = S.game, O = g.orders as any, men = g.guards.slice(0, 2);
+    const S = await stage({ brk: false, shards: false }), g = S.game, O = g.orders as any, men = g.guards.slice(0, 2);
     const same = (a: any[] | null, b: any[] | null) => JSON.stringify((a ?? []).map(p => p.pos.map((x: number) => +x.toFixed(3)))) === JSON.stringify((b ?? []).map(p => p.pos.map((x: number) => +x.toFixed(3))));
     const ps = (posts: any[] | null) => posts ? posts.map(p => `(${f2(p.pos[0])}, ${f2(p.pos[2])})`).join(' ') : 'null';
     /** the lattice behindGlass asks from (orders.ts): the floor beyond the door, chest height */
@@ -307,31 +307,7 @@ export async function glasstuneStack(): Promise<boolean> {
     const offEyes = faces.filter(f => same(g.orders.stackPosts(f.d, f.side, men), f.base)).length, flagEyes = hot.filter(f => f.flagged.some(p => O.behindGlass(f.d, f.side, p.pos))).length;
     GLASSPEN.stackEyes = eyes0;
     verdict(offEyes === faces.length && flagEyes === 0, 'stackEyes 0: every face is dealt its base posts and nothing is flagged', `${offEyes} of ${faces.length} faces identical · faces still flagged ${flagEyes}`);
-    GLASSPEN.on = false;
-    const offPen = faces.filter(f => same(g.orders.stackPosts(f.d, f.side, men), f.base)).length, flagPen = hot.filter(f => f.flagged.some(p => O.behindGlass(f.d, f.side, p.pos))).length;
-    GLASSPEN.on = true;
-    verdict(offPen === faces.length && flagPen === 0, 'rounds stopping in glass (GLASSPEN.on false): the same — the stack it always was', `${offPen} of ${faces.length} faces identical · faces still flagged ${flagPen}`);
   });
 }
 
-// ================================================================ glasstune-off
-/** GLASSFX.on, the one switch over the three parts: off = each part's own switch off, digest for digest */
-export async function glasstuneOff(): Promise<boolean> {
-  return probe('glasstune-off: GLASSFX.on false digests as the three parts switched off one by one; on, the digest differs', async verdict => {
-    const script = async (parts: Parts) => {
-      const S = await stage(parts); let frames = 0; const step = (n: number) => { S.step(n); frames += n; };
-      for (const kind of ['annealed', 'tempered', 'laminated'] as PaneKind[]) { const X = S.pane(kind); S.stand(X); frames += 2; for (let k = 0; k < 3; k++) { S.fire(aimAt(X, 'hand', k, 3)); step(6); } step(40); }
-      const A = S.pane('annealed'); S.stand(A); frames += 2; S.stun(stunSpot(A));
-      step(360 - frames);
-      const gl = S.events.filter((e: any) => e.kind === 'glass').length;
-      return { digest: JSON.stringify(digestGame(S.game, true)), note: `${frames} frames · 9 rounds (3 a pane type) + a stun · 'glass' events ${gl} · GB impacts ${GB_STATS.impacts} diced ${GB_STATS.diced} runs ${GB_STATS.runs} · shards born ${SHARD_STATS.born} · pen crossed ${GPM.GLASSPEN_STATS.crossed}` };
-    };
-    const c0 = GPM.GLASSPEN_STATS.crossed; void c0;
-    const fxOff = await script({ fx: false, brk: true, shards: true, pen: true });
-    const partsOff = await script({ fx: true, brk: false, shards: false, pen: false });
-    const allOn = await script({ fx: true, brk: true, shards: true, pen: true });
-    const firstDiff = (a: string, b: string) => { let i = 0; while (i < a.length && i < b.length && a[i] === b[i]) i++; return i >= a.length && i >= b.length ? 'identical' : `first difference at char ${i}: …${a.slice(Math.max(0, i - 40), i + 40)}… ≠ …${b.slice(Math.max(0, i - 40), i + 40)}…`; };
-    verdict(fxOff.digest === partsOff.digest, 'GLASSFX.on false (every part\'s own switch ON) ≡ GLASSFX.on true with glassBreak, glassShards and GLASSPEN.on off', `digest ${fxOff.digest.length} chars vs ${partsOff.digest.length} · ${firstDiff(fxOff.digest, partsOff.digest)}\n    fx off: ${fxOff.note}\n    parts off: ${partsOff.note}`);
-    verdict(allOn.digest !== fxOff.digest, 'with it on (and the parts on) the same script digests differently', `${firstDiff(allOn.digest, fxOff.digest).slice(0, 220)}\n    all on: ${allOn.note}`);
-  });
-}
+// (the family's one switch is a settled rule: until 2026-11-07 a probe `glasstune-off` held that off digests as the three parts switched off)

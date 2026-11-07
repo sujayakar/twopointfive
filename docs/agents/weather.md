@@ -96,7 +96,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   transmittance wherever an eye is tested — guards, pairs, bodies, civilians, cameras — NOT into fogofwar.ts); rain is NOISE at the listener (`hearPath(g, src, ear)` =
   propagate with pathLen × `Weather.hearMask(ear)` = 1 + `WX_SIM.rainK` × the mixer's own rain bed there, + `thunderK` for `thunderSecs` after a near clap — every
   hearing consumer calls hearPath); `Weather.cloud` is READ-ONLY for whoever owns sun / moon (test `kind` first: null = leave the lights alone); a kind is not suspended
-  by daylight and cannot be switched off. The renderer's half sits behind the scene prelude's `const WX_KINDS` (`frame.ts weatherKindConfig`, raised at boot by
+  by daylight and cannot be switched off. (SINCE 11-07 the prelude's `const WX_KINDS`, `const WX_SNOW` and the seven `const SNOW_*` named anywhere in this
+  file are BITS OF THE FRAME BLOCK'S LEVEL WORD, asked as `lv(WX_KINDS)`: `frame.ts LevelSw`, `docs/agents/render.md` "What a level raises is data". The
+  tables main.ts raises are the same; "dead code" below now reads "a branch not taken".) The renderer's half sits behind the scene prelude's `const WX_KINDS` (`frame.ts weatherKindConfig`, raised at boot by
   `?weather=`: off = dead code), so in the PAGE the weather is the URL's for its whole life (`WEATHER_BOOT.locked`: setKind refuses another, canLoad refuses a
   checkpoint made in another with the reason); headless a checkpoint / a journal's frame 0 carries its kind in (`WeatherSnap.kind`). Limits: wind.ts's storm record holds
   two rectangles (3–4 roofs = their bounding box: no storm wind in a yard — until `WX_OWN.wind`, the 'One wind field outdoors' bullet below), the native engine is not ported, audio.ts's reverb / destruction.ts / glassbreak.ts still test

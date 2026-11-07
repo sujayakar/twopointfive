@@ -718,8 +718,8 @@ row on his machine is the answer, and the word puts the count back on any machin
   (`navigator.webdriver`, or `?paused` on the address: EVERY PAGE TOOL, and the verify recipe's page, loads the page as it always was and reads the page's
   own window), and in a browser that is not of the Chromium family (no `Chrome/` in its name: a frame drawing with its parent's device has been seen
   nowhere else, and a browser that took the device and drew nothing would be a black page with no error to catch). ALWAYS OFF: under `?bench` and on the
-  benchmark's scene pages (their loads are what it times: a frame sent to one sends the tab there, `leave`), in the kit picture's window (a frame of the
-  game's page, with a device of its own as before) and on the one-file page. A frame under a shell of another build (a deploy mid-visit: the module
+  benchmark's scene pages (their loads are what it times: a frame sent to one sends the tab there, `leave`) and on the one-file page (until 11-07 the
+  kit picture's window too, with a device of its own: it now takes the shell's, on a seat beside its page's — the next bullet). A frame under a shell of another build (a deploy mid-visit: the module
   scripts the two pages name differ) sends the tab to its address, once a minute at most (a tab whose two pages can never agree plays on a device of its
   own). ANOTHER PAGE of the site asked for in the frame (the replay viewer, the workbench, the listening pages) is loaded by the TAB (the frame stops the
   load with the Navigation API and the tab makes it; without that API the shell sees the frame land there and follows): such a page has the address bar
@@ -745,7 +745,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   the tab's document the same one throughout (one top-level load, one device opened). The second mission's game after 120 frames is the game a whole load
   of that address plays, by digest, and the first mission's `Game` is collected once the collector runs. **Costs and seams:** the first load parses the
   bundle twice (the shell's page runs the same script and stops at the top of `main()`; `shell` in the record is what that costs on a real machine); the
-  kit picture still compiles its own copy of the shaders in its own window (it could take a lease too: two pages on one device at once, not built); an
+  kit picture compiled its own copy of the shaders in its own window (until 11-07: it takes a lease too now, two pages on one device, the next bullet); an
   uncaught GPU error raised by the last load's work after its lease ended would be reported by the next; in a browser that does not make equal pipelines
   one (Chromium does) the keeper's second making of a pipeline asked for AT ONCE is a second compile (the game asks for nearly all of them the waiting
   way, which is never made twice). **First read on a GPU (2026-10-28, the hosted build's records: an Apple M4 Max, Chrome, three starts in one tab):**
@@ -758,6 +758,139 @@ row on his machine is the answer, and the word puts the count back on any machin
   how Chromium behaves, proven here on the software adapter; Safari and Firefox keep a whole page per load until somebody has seen `?keeppage=1` draw
   there (the refusal path is for a browser that throws; one that draws nothing has no path), and the seconds saved on a real machine are the Windows
   records' to show.
+- **The Team & kit picture draws with the tab's device, and a lease has its own view of it (2026-11-07; `src/gpu/keep.ts` `viewOf`, `Keeper.take(seat)`;
+  `src/host/keeppage.ts` role `beside`; the maintainer: "ideally not needing to recompile for the gear selection screen and levels").** The picture is a
+  second game in a window inside the start page (`ui/kitView.ts`), and it opened a device of its own: all 142 of its programs compiled when the step
+  opened, and went with its window, so the mission it showed compiled its own again at Deploy. Under a shell it now takes a lease on the shell's device
+  BESIDE its page's. **A seat holds one lease:** `take(seat)` ends the lease on that seat and on every seat under it (`a/b` is under `a`); leases of
+  different seats are held at once. The game's page takes `KEEP_PAGE.seat` (`page`), the picture `KEEP_PAGE.pictureSeat` (`page/picture`): the next
+  picture ends the one before it and nothing of the page's, the page's next load (Deploy) ends the picture with its page, and `ui/kitView.ts drop`
+  gives the picture's seat up by name when it drops the frame (`Keeper.release(seat)`: the lease ends, and a take still on its way from a window
+  dropped mid-boot is refused, so no lease is left that nobody can end). A take waits for the GPU's queue only when NOBODY holds the device (what a
+  page that is gone left there): a picture beside its live page does not wait on that page's own frames. `keeperAbove` walks up to the nearest shell (`depth`: 1 = the window above, which is all
+  a page takes; a picture takes any). **A page is never handed the device.** Two holders cannot both write on it, and a page writes on it (the compile
+  queue's makers, the load's clock, the play total on the queue). So `Lease.device` is a VIEW (`viewOf`): a read finds what the page put there, else
+  what the keeper answers for that lease (the makers that keep, the lease's `lost`, its own view of the queue), else the device's own method, bound; a
+  write stays in the view and the end of the lease empties it (`onuncapturederror` is answered by the keeper as a listener of the lease's own: the
+  device has one such property and two holders). The device itself is never written on, so `dress` (which took every own property off the device
+  between leases) is gone. The one call that must be handed the device, a canvas's `configure`, takes `Lease.real`. This is
+  every kept load's path, not the picture's alone. **Where the picture keeps its own device:** no shell above (a driven page, `?paused`, `?keeppage=0`,
+  a browser that is not Chromium's), or a shell of another build; it never sends the tab anywhere and is never a shell. A picture whose `configure` is
+  refused opens its own and does not mark the keeper refused for its page's loads. `KEEP_PAGE.v` is 2 (a frame of this build under a shell of the
+  build before leaves it once, as for any deploy mid-visit). **No switch of its own:** `?keeppage=0` is the page as it was, picture and all.
+  **Checks:** `bun run tools/qa/keeppage-check.ts` (the two seats over a stand-in device: one device, a view each, one compile for a program both ask
+  for, what one puts over a method the other does not call, the picture's end, the next picture, Deploy, a loss told to both; the clock checks now hold
+  that nothing is written on the device or its queue; `KEEPPAGE_BREAK=1` fails 31) and `PORT=… JOBS=picture node tools/qa/keeppage-page.cjs` (the real
+  page: the start page's own clicks to a mission's Team & kit, a second mission's, Deploy; under `KEEPPAGE_BREAK=1` it must fail).
+  **Measured, software adapter, headless Chromium, verylow, `?paused` (2026-11-07):** the start page compiled 148 of 148; the picture of the office's
+  room clear 0 of 151, ready 5 s after the click; the picture of the records office 0 of 151, 3 s; the mission after Deploy 0 of 152, 2 s; one device
+  opened, the tab's document the one that was opened. Before, same tool's count on the tree before (`shader-count-page.cjs`): the title 144, the
+  compound's picture 142 on its own device (135 s here), the mission after it 147 of which 38 to 43 were new to the tab's device. **Never seen on a
+  GPU**, and what two games drawing on one device cost a frame against two devices is not known: the queue is one where it was two. **Seams:** an
+  uncaptured GPU error is the device's, so it is heard by both holders (the game's page files one the picture's work raised as its own, and the other
+  way about); on a device where a fog of war cut twin fails to compile the cut set is pinned off at every boot, where it took a fog frame before.
+- **The look's maps are worked out once a visit (2026-11-07; `gpu/keep.ts Lease.bytes` / `keepBytes`, `render/gbuffer.ts makeLayers`).** With the
+  look on, a load works out the material maps its level names: a third of a second of arithmetic a layer, some twenty a level, which the start card
+  waits for beside the shaders (the boot's span `pipelines_materials`). In the hosted records of 11-05 from the maintainer's M4 Max that was the WHOLE
+  wait of a repeat look-on load, 2.1 to 3.6 s, with every other pipeline span under 0.7 s; the workers of 11-05 (`lookWorkers.ts`) spread it over the
+  cores and every load still paid it, the Team & kit picture too. A map is the same bytes on every level: it depends on its layer, its size, the
+  evening and whose sin and cos made it. So the keeper keeps BYTES by a name that says those four (`look map <layer> <N> <even> <exact>`): a layer
+  this page works out is kept, every size of it (`keepBytes` copies into arrays of the shell's own: an array a page made would hold that page's whole
+  world after it is gone; the first said under a name stands; `KEEP_PAGE.bytesCap` 192 MB in all, the thirty maps being 84), and a later load, or the
+  picture beside it, is handed what the visit has and works out only the rest. The upload, the slots, the order of `lookMade` and the moment a stuff
+  is pointed at its slot are as they were. Not of a device: a device lost keeps them. A page with no lease makes every layer as it did.
+  `__engine.gbuffer.lookBy` gains `kept`, and `lookFresh` names the layers THIS page worked out. No switch: `?keeppage=0` is the page as it was.
+  **Checks:** `keeppage-check` (copies, the first said stands, the next lease and a picture get the same arrays, the cap; under `KEEPPAGE_BREAK=1`
+  nothing is kept) and `PORT=… JOBS=maps node tools/qa/keeppage-page.cjs` (the look's page: the title, two missions, the second again: no map worked
+  out by two loads, the load again works out none). **Measured, software adapter, headless Chromium, four cores under other load (2026-11-07):** the look's title worked out its 20 maps in 9.5 s (all on workers); the compound picked after it worked out 7 of its 17 (the ones the title has none of) in 1.9 s and was handed 10; the records office after that 0 of 16, 95 ms; loaded again 0 of 16, 82 ms. **Never seen on a GPU; no load of the maintainer's
+  from a build with the workers has been read, so what a load pays for its maps there today is not known.**
+- **What a level raises is data: every level is one shader text (2026-11-07; `render/frame.ts LevelSw`, `levelSwitches`, the frame block's `levelCfg`;
+  `shaders/common.wgsl lv`; `render/meshShadows.ts LEVEL_SIZES`).** The kept page compiles only what the visit has not built, and a text that differs
+  by one constant is a text the visit has not built. Nine constants of the scene prelude were a LEVEL's: `WX_KINDS` (any level but the office's
+  family, with the level's own roofs on), `WX_SNOW` and the seven `SNOW_*` rows (the pass and four training levels). So the title (the office) to any
+  mission compiled every program that read one of them a second time: 17 of 47 module texts and about a third of the pipelines between the title and a
+  snow level (`shaderinline-check --json` of the two settings, before). And the mesh shadows' module carried the cast's own nodes, triangles, levels and
+  corner base as constants: two programs more wherever the men were the other cast. NOW the nine are bits of `frame.levelCfg.x` (a new member, the
+  last of the head: FRAME_HEAD_BYTES 976, FRAME_BYTES 31216, the two tables four words on), written by `writeFrame` from the same three tables main.ts
+  always wrote (`weatherKindConfig`, `snowConfig`, `snowLookConfig`: no caller can leave the word out), and a shader asks `lv(WX_KINDS)`: the prelude
+  names each bit by the old name, so every use reads as it did with `lv( )` round it (128 uses in 22 files; comments untouched). The same answer at every
+  use on every pixel, so the picture is the one it was by construction: a branch a level does not raise is not taken, where it was not in the program.
+  Read as pixels too (`tools/qa/draw-equal.cjs`, the tree before against this one, software adapter, 640 by 360, high): the office at night, the rain,
+  the firefight and the squad view EQUAL at both checkpoints, the squad view once the fog's compile is out of the comparison (the next bullet's trap).
+  The cast's four numbers are the last four words of the mesh shadows' level list (read-only there: the refit's barrier needs a uniform loop bound, and
+  the mesh buffer is written by the same kernel). The snow's hills pipeline (`gbufSnow`) is made on every level and drawn where a level has drifts.
+  Nothing in the update reads any of it; `game/snowFx.ts` still asks the three tables what the page's level raised. No switch: one path.
+  **What it costs:** the title's first compile reads the weather's and the snow's code it used to leave out: 6.8 MB pasted for the boot's set where the
+  title had 6.2 and a snow level 6.8 (`shaderinline-check`, the page's rows on), about a tenth more text for the office and nothing more for a snow
+  level (with the fog of war's three: 6.9 MB). A visit that goes on to any mission compiles less in all.
+  **On a cloud NVIDIA card (A10G, Chrome 157 on Vulkan, the benchmark at high with `adapt=0`, the tree before against this change alone, two pairs on four
+  boxes of one kind, 2026-11-07):** the first load's shaders 25.4 and 28.5 s before, 26.1 and 25.5 s after: no change outside what two runs of one build
+  differ by. The second and third scene of the benchmark, each a fresh page with the browser's and the driver's caches on: 8.5 / 9.2 s and 8.7 / 8.4 s
+  before, 7.3 / 7.4 s and 3.0 / 2.8 s after (one text for every level is one cache entry for every level). **What the untaken branches cost a frame:**
+  nothing the compute passes' GPU ms shows (every row inside the spread of two runs: 7.6 | 7.6 as it opened, 10.4 | 10.5 the dark block, 15.7 | 15.9 the
+  storm, 18.6 and 17.8 | 18.1 and 18.9 held still), and about 0.1 ms in the g-buffer pass off snow (0.21 to 0.26 before, 0.32 to 0.35 after, both pairs).
+  One trap in that text: its night snow row follows the FIGHT, not the build (17.3 where the floors line says "0 of 4 up", 19.1 to 19.3 where it says
+  "1 of 4 up", once on each build). With the driver's cache OFF and medium (`shader-count-page.cjs`, 8 cores, two boxes that may not be one kind): the
+  boot's pipelines 41.8 s before, 49.8 s after, and `particlesUpdate` is the last of the boot's programs in where it was the sixth (31.6 to 42.9 s): the particle
+  kernel is the next text to cut. The kept page on that card: the title 152 pipelines, 30 missions none.
+  **ONE OF THE NINE IS NOT A BRANCH: the snow's surface in the boxes' shading is a second text of the g-buffer's module (`render/gbuffer.ts`, `const
+  GBUF_SNOW`; the same day).** As a branch it put `snowBox` and, on the look's page, `lookSnow` into every level's box program: 181 to 294 KB of pasted
+  text on the plain page, 269 to 469 on the look's (its cut twin 539), for two levels' sake, and about 0.1 ms of every frame's g-buffer pass on the cloud
+  card. On another machine the look's page then lost its device at its first drawn frame on the software adapter (`?paused&quality=high&mute&look&
+  firstframe=1`; here the same page drew two frames equal to the tree before, pixel for pixel, at twice the seconds a frame: read it as a routine near
+  what that adapter can build, not as a rule). So `gbuffer` and `gbufferCut` are each made twice, with the snow's surface and without (`gbufferSnow`,
+  `gbufferCutSnow`: word for word what a snow level and any other level compiled before), and `gbuffer.wgsl`, `gbuffer_cut.wgsl`, `look.wgsl
+  lookSurface` and `snow.wgsl` ask the module's own `GBUF_SNOW`. A page draws with its level's own (`GBuffer.init`: `snowLookConfig.surface` picks) and
+  asks for the other through the later lane without keeping it: a page is one level for its whole life, and the ask is for the visit's next one. So the
+  kept page still compiles nothing at any level, the program a level draws with is the size it was, and a visit's first page compiles three programs
+  more (`gbufBoxesSnow`, `gbufBoxesCutSnow`, and `gbufSnow`, the hills, which is of the snow's module). The men's `cold` (look.wgsl lookMan) stays a
+  read of the level word. THE RULE IT LEAVES: a level's switch is a branch where the code is small, and a second program asked for on every page where
+  it is heavy; never a constant of a text a level's start would compile again. The card's numbers above are the branch form's: the second and third
+  level's load stands (the texts a level asks for are still the visit's), the 0.1 ms is gone with the branch.
+  **Checks:** `bun run tools/qa/levelset-check.ts` (the page's boot recorded under the title's switches and a snow level's, rows as written and as the
+  page opens: the same module texts and pipelines; the level word 0 and 511; the mesh shadows' one text for both casts with each cast's numbers in
+  its list; `LEVELSET_BREAK=1` fails three) and `PORT=… JOBS=levels node tools/qa/keeppage-page.cjs` (EVERY mission of the list picked in turn on the
+  kept page from the title: each compiles no pipeline and no module). `shadertrim-check` holds that the weather switch changes no text, the snow
+  checks read the level word's bit where they read the prelude's constant, `frame-layout` has the member's row, `shaderrows-check` was stamped.
+  **Measured, software adapter, headless Chromium, verylow, `?paused` (2026-11-07):** the title compiled 148 pipelines and 68 modules (its boot's own, then the fog of war's and the later twins behind the start); each of the 30 missions of the list picked in turn on that one device then asked for 152 and compiled NONE, nor a module, 2 to 5 s a load (137 and none once the three old denoise chains were out and the Rust game was the page's). Before, by the same pages' text (`shader-count-page.cjs` on the tree before): the compound's mission after the title had 104 of its 142 pipelines' texts made already and compiled the rest. **On a GPU: the counts and the times above on the cloud card, by tools. Nobody has looked at its picture there, and nothing of it was run on an Apple GPU.**
+- **Nothing is compiled at its first use: the fog of war's programs are asked for at every boot (2026-11-07; `engine.ts warmFirstUse`, called by
+  main.ts after the boot's freeze; `render/fogofwar.ts FogPass.warm`, `FogSight.warm`).** The fog's sight table and its pass made their programs the
+  first frame a mission drew the fog. The title draws none, so on the kept page the first squad mission of a visit compiled `fogSight`, `fogofwar` and
+  `fogofwarPre` under play, and their cut twins after them (the maintainer, 10-27: "i think we shouldn't do truly lazy compilation where then have
+  stutters during gameplay"). They are asked for once the boot's own are in, behind the start: not on the start card's count, and the load's record (`made`, frozen at the
+  boot's end) does not count them. While one compiles it is one of the LATER set's (`gpu/device.ts laterHold`, taken in `FogPass.program` and
+  `FogSight.program`): a brief's Start, `__ready` and auto quality's measure wait for it, where a program made at first use was counted by nobody. 104 KB pasted for the three, 143 for the cut
+  twins. `tools/qa/pageboot.ts` asks for them as the page does, so the size and compile tools read them. A pass that gains a program of its own asks
+  for it in `warmFirstUse`. Still made at first use: whatever a `?word` trial builds, the save picture's, the debug views'.
+  **A trap for `draw-equal.cjs`:** against a tree from before this, the squad view DIFFERS at both checkpoints (a quarter of the pixels, at the men's
+  and the shadows' edges), because the older tree's fog programs are still compiling at drawn frames 3 and 7 and this one's are in. It is the compile
+  and nothing else: equal with `&nofow` on both sides, and equal with the fog on once both pages are given the time (`DRAW_EQUAL_AFTER_READY` = a module
+  that draws one frame and waits 150 s). The tree with the picture's lease alone is equal to the one before with no help. Never seen on a GPU.
+- **The composite is one program a form, the glass's bend its own statements (2026-11-07; `render/passes.ts compText(sharp, pre)`, `shaders/composite.wgsl`).**
+  The composite was compiled twice for each of its two forms (the fragment one and the sharp path's compute one), behind `const GLASS_REFRACT: bool`: a
+  refracting twin with the glass test ahead of the reads, and one with it after them. A frame drew one of the four, the encode picking by
+  `passes.glassRefract`. The refracting text already kept the older tint rule in an `else` for a frame with the setting off (`frame.glassCfg.w` = 0), and
+  with no pane crossed the two computed the same picture (the page had drawn `compositeSR` on every visit's first frames until `compositeS` was in). So
+  that text is the one kept and the second glass block is deleted: `compositeR`, `compositeSR`, `pCompR`, `pCompSR`, `passes.glassRefract` and the LATER
+  twin of the compute composite are gone, `compositeS` is the boot's own, and the fragment `composite` stays a LATER program under the first-frame row.
+  `settings.glassRefract`, `?norefract` and the panel's row are as they were. Two programs fewer at the boot and two fewer of the cut set: about 0.8 MB
+  of pasted text in each (`shaderinline-check`). **Picture** (`tools/qa/draw-equal.cjs`, the tree before against this one, software adapter, 640 by
+  360, high): the glass view, the squad view and the office at night EQUAL at both checkpoints, and the glass view under `&norefract` EQUAL at both (its
+  frames are not the default's, so the setting still does something). What those frames did not hold: a broken or cracked pane (the rig's staging broke
+  none on this build: its `unmet` says so), so the cracks' statements were moved by reading, not by a picture. Never seen on a GPU.
+- **What each program costs to compile, ALONE (2026-11-07; `tools/qa/shader-serial-page.cjs`).** The boot asks for its hundred programs side by side, so
+  `window.__boot.slowest` and the count tool's times "since asked" say which came in last, not which is dear. The tool boots the real page with every
+  `create…PipelineAsync` held in one line: a program goes to the browser when the one before it is back, and its time is its own. **On a cloud NVIDIA
+  card (A10G, Chrome on Vulkan, the driver's cache off, high, `?firstframe=1`, this tree with the cleanup's deletes to the one direct-light program):**
+  128 programs, 140.9 s of one compiler thread: the first-frame set 97 programs and 41.7 s, the later set 8 and 27.3 s, THE CUT-BOX SET 23 and 72.0 s
+  (the split is mine, by label, off `shaderrows-check`'s LATER list and a label's second program as its cut twin: the tool itself cannot name a
+  program's set, every one of them is asked before the page calls itself ready). The same page booted the usual way on that box: 93 pipelines in 15.5 s (25 to
+  28 s for 119 on the benchmark's first load that morning, before the deletes). So the browser draws under three threads' worth from the box, and a load's wait is the SUM of its
+  programs, not their number: 82 of the first-frame programs are under half a second each and 5.5 s together. Dearest, seconds alone (boot form | cut
+  twin): volDust 10.0 | 10.9 · volFroxel 8.3 | 9.8 · vol 5.9 | 6.9 · particlesUpdate 5.9 | 8.1 · restir 4.8 | 4.9 · compositeS 3.9 | 4.4 · composite
+  3.7 | 4.3 · gatherTrace 3.7 | 4.1 · froxelInjectJ 3.6 | 4.0 · reflect 2.9 | 3.4. A brief's Start waits for every program (`docs/agents/menus.md`),
+  so for a player the whole sum is the wait. What follows from the table: one set of ray programs is half of it; then the march, three writings of one
+  kernel (vol, volFroxel, volDust) and over a third of what is left. On the software adapter the tool's milliseconds are that adapter's and say nothing.
 - **Windows: why the shader wait came back on every load, and the compile queue (2026-10-26, measured on a Windows machine: RTX 3080, a 16-thread desktop CPU,
   Chrome 155, a 4K 240 Hz display at 150 %).** Chrome on Windows runs WebGPU on D3D12 and compiles with DXC (`use_dxc` is on; FXC, `--disable-dawn-features=use_dxc`,
   had not finished the boot after 16 minutes). DXC inlines every call, so the big kernels are 5–25 s each (fgather's `main` grows from 95 KB of WGSL to ~680 KB inlined:

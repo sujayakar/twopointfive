@@ -2,7 +2,8 @@
 // every tool that reads the page's shader texts (shaderinline-check sizes them, shaderfold-check reads the fold off them, wgsl-dump writes them out for a
 // browser's compiler), so the three cannot come to boot different pages.
 // The boot is main.ts's own order: the Engine's pipelines, the smoke solver's, the Game stood on that Engine, the Game's own GPU modules (mesh shadows,
-// particles, the light probe, the skinned raster), then the cut-box second set (render/cutSwap.ts build). In front of it, what main.ts writes before it builds
+// particles, the light probe, the skinned raster), the programs asked for ahead of their first use (engine.ts warmFirstUse: the fog of war's), then the
+// cut-box second set (render/cutSwap.ts build). In front of it, what main.ts writes before it builds
 // the Engine on a plain address: cut boxes on, round things on the GPU with them, the glass fracture, and the dust's own look (the march's dust twin).
 // THE SETTINGS are the switches a page is opened under, each a different set of texts since the fold of constant switches (gpu/wgslTrim.ts SHADER_FOLD):
 //   title   the page as it opens
@@ -67,6 +68,7 @@ export async function pageBoot(setting: string): Promise<Booted> {
       const smokeInit = smoke.init();
       const { game } = await standGame(engine, { ch: await loadCharacter(), smoke, seed: 1 });
       await Promise.all([engineInit, smokeInit, game.meshShadows.init(), engine.particles?.init(), game.probe.init?.(), engine.gbuffer.prepareSkin(game.chars.jointsFormat)]);
+      engine.warmFirstUse(); await new Promise(r => setTimeout(r, 0));   // (main.ts, after the boot's freeze: the programs a pass used to make at its first use — the fog of war's — are asked for behind the start)
       return true;
     })());
     set = 'cut';

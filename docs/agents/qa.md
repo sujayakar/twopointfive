@@ -114,8 +114,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   red path: `1` a tool on 7 (the family's older word; red on both stands), `four` the door tools' fourth row on 6 (`orderkeys-high`; red on both), `free`
   every free row's deed refuses (`orderkeys-give`: 23 FAIL on the page's stand; green on the old one, where no free row is on a digit this walk presses, so
   the judgement it breaks is never asked there). `picker-start` boots three pages at a time, not its 42 at once (`PICKER_JOBS=n`):
-  `tools/qa/pool.ts` is the pool that `picker`, `coop-check`, `dress-check`, `loadout-stage` and `weather-ident` share in place of a copy each (results in order;
-  after a case throws no further case is started; `jobsOf` reads a word or a flag the same way for all five: a number under one is one, no number is the
+  `tools/qa/pool.ts` is the pool that `picker`, `dress-check`, `loadout-stage` and `weather-ident` share in place of a copy each (results in order;
+  after a case throws no further case is started; `jobsOf` reads a word or a flag the same way for all four: a number under one is one, no number is the
   tool's default). Other tools still keep a loop of their own.
   THE SOAK'S FOUR OLD KINDS on the page's stand were its own readings: the arm hold's knife is wanted only where the close-in rule has one (`closeBare`), a ring
   that stays stands by itself with the key up and no press in hand (`ring.free`), and the cancel row is the list's, never a ring's (`listOpen`). A ring is held
@@ -360,6 +360,16 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   page's side, a stored card from before the tree, moved into `kittree-rows`, which is green; `mate40` lost its "no order, or not a tree" line;
   `KITTREE_BREAK=1` is kittree.ts's own hook and still fails `rows`, 9 lines). THE DOOR-TOOLS RIG'S PIN IS OUT (`doortools-probes.ts rig` wrote
   `OWNBLOW.on` off for 25 probes; refused, so nothing moved but the tags): a line of those probes that fails now reads as the page's side.
+  ROWS OF THE RUST GAME ARE PRINTED FROM A RUN, AND THE LIST IS FIVE TABLES (2026-11-07; `tools/qa/red-rows.ts`, `expected-red.ts RED_TABLES`).
+  `bun run tools/qa/probes.ts <family> > run.txt 2>&1; bun run tools/qa/red-rows.ts run.txt` prints a row for every red probe whose failing lines
+  are all the page's own side (nothing refused by the fold, no line under the "other side" note): 'real' with the place where the Rust game
+  panicked, 'open' where the check threw on a function that went with the tick, 'maybe' with the count and the first failing line otherwise. It
+  writes NO row for a probe that still writes a settled row (a comment line names the rows instead: clear the check first), because a row over
+  a check's own stale red would hide a real one behind it. It cannot tell a line that asks a build from before a settled rule (those are deleted,
+  not listed): read each row before keeping it. A row made so carries `rust: true`, reads "ON THE RUST GAME" in the runner's table, and the
+  `LIST_READ_ON` line is printed only where an older row is in the table. The tables: `older` (the 41 rows in `expected-red.ts`, read on the
+  TypeScript game) and one file a group of check families, `expected-red-world.ts`, `-kit.ts`, `-doors.ts`, `-stealth.ts`, so that four hands-over
+  do not meet in one file; `holds-check` (8) is red on a name in two tables. A row changes no verdict, as ever.
   EVERY RUN OF A STAND AS IT OPENS IS READ AGAINST THE LIST OF EXPECTED REDS, FOLDED OR NOT (2026-11-07; `probes.ts`). The runner had read a folded
   probe's red against no row; since the deletion that was every probe of every run with no word, so nothing read the list on the named build:
   no EXPECTED RED / NEW RED / GREEN AGAIN, and a break word's closing line could not say whether it bit (`holds-check` (9), red by it). The
