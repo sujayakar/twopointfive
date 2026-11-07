@@ -72,7 +72,7 @@ impl RoomFight {
 impl Default for RoomFight { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum RoomFightSkillKey {
     Operative,
     Hostile,
