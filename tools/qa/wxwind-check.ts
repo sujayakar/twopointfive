@@ -62,7 +62,7 @@ export async function wxWindCheck(o: { verbose?: boolean } = {}): Promise<boolea
     const sw = on && !BREAK;
     process.env.TPS_SNOW = '1'; process.env.TPS_OWNROOFS = '1'; process.env.TPS_SNOWWISPS = '1'; process.env.TPS_WXWIND = sw ? '1' : '0'; WX_OWN.wind = !sw;
     const lvl = loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')));
-    const W: any = await quiet(() => standUp({ level: lvl, seed: 7 }));
+    const W: any = await quiet(() => standUp({ level: lvl, seed: 7, dress: true }));
     const g = W.game; const stood = WX_OWN.wind; const set = () => { WX_OWN.wind = sw; WX_OWN.roofs = true; SNOW_LOOK.wisps = true; };   // (one table for the process: every step of a rig is made under that rig's own setting)
     const step = (n = 1) => { for (let i = 0; i < n; i++) { set(); W.step(DT); } };
     const at = (p: number[]) => { set(); return g.wind.at(p) as number[]; };
