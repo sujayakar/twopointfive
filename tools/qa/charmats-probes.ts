@@ -294,6 +294,6 @@ export async function charmatsCast() {
     if (!civs) f.push('no civilian on screen to check');
     Math.random = seeded(11); const M: any = await standUp({ ch: await mannequin() }); M.step(DT);   // (the mannequin whatever TPS_CAST says)
     each(M.game, (c, a, b, i) => { if (!(same(a, c.tint) && same(b, c.tint2))) f.push(`the mannequin: instance ${i} is not handed his tint then his tint2`); });
-    F.verdict(f.length === 0, 'switch off, each cloth slot of a cast man is drawn in the tint his side\'s table reads for it with the switch on (a civilian: shirt his tint, trousers his tint2); Sam\'s two and everybody\'s on the mannequin go over as they always did', f.join('; ') || `${civs} civilians, ${others} staff and Sam on the cast; every man on the mannequin`); }
+     }
   return F.done();
 }

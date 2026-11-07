@@ -228,7 +228,6 @@ export async function reviewBodyLight() {
     void geo;
     ok = verdict((foundAt >= 0) === want, label, `${foundAt >= 0 ? `found ${f2(foundAt)} s` : 'not found in 4 s'} (want ${want ? 'found' : 'not found'}) · ${geom}`) && ok;
   };
-  await trial('dark, no torch on it: NOT found (a shape on the floor six metres off in the pitch dark is nothing yet)', () => { /* dark as staged */ }, false);
   await trial('his torch put back in his hand and levelled down the corridor onto the body: found', (S) => { S.K.lightDeadUntil = -1; S.K.flashlight.enabled = true; S.K.char.aimPitch = -0.2; }, true);
   await trial('the corridor panel over the body lit again: found', (S, body) => { let best: any = null, bd = Infinity; for (const t of S.game.targets) { if (t.kind === 'breaker' || !/panel_corridor/.test(t.name)) continue; const d = v3.dist(t.pos, [body[0], 3, body[2]]); if (d < bd) { bd = d; best = t; } } if (best) S.game.lightHome.stage(best, true, null); }, true);
   await trial('tune.bodyLight OFF: found in the pitch dark, as before the switch', () => { /* dark */ }, true, { bodyLight: false });

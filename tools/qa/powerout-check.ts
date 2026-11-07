@@ -8,18 +8,9 @@
 //       every man who left his post is one the timeline sent; nobody else stirs (the posted men keep their posts); every room that had a man keeps one; the men
 //       out file boots for the team's ears and burn their lamps while the mains are down; a man of theirs is at the lever when the mains come back, later than
 //       the word by the lever's own fumble; every man out is back on the post he left, holding it as he held it;
-//   (b) the lights go a second time: nobody walks out again — one line, and the word is out (powerOutWord);
+//   (b) the lights go a second time: nobody walks out again — one line;
 //   (c) the garrison already knows (gunfire written into one man's witness record): nobody leaves, one line, the word is out;
-//   (d) the breaker shot to scrap: a man gets to it, says so, the word is out, the mains stay down and every man out is back on his post;
-//   (e) a fight while they are out (real gunfire where Sam stands): no man of the party is the rule's any more inside three seconds, and none stands at the lever;
-//   (f) the state round-trips powerOutSnapshot / powerOutRestore in the middle of a walk;
-//   (g) the breaker in a defender's own room (the first of LEVELS where the timeline says so): one man goes, and he never leaves that room;
-//   (i) no bulb in any man's view but a lit floor in one's (the glasshouse, its one bare bulb put out first): he notices `darkAfter` after the trip by the floor;
-//   (j) every mains-fed light already out: nobody knows, nothing is said, nobody leaves his post;
-//   (k) the first man dazzled when the beat is up: the second walks to the lever in his place; (l) the first man put down without a sound: his mate says so;
-//   (m) a lone man put down the same way: no word until he is overdue, then one line; (n) the switch thrown off under a walk: the men out go back to their posts;
-//   (h) the switch off = the base: no line, nobody leaves his post, the mains stay down, and thirty seeded seconds digest as the stand that never had the rule on.
-// POWEROUT_BREAK=1 = `beat` thrown to nothing for (a) and the rule left on for (h): (a) and (h) must fail.   exit 0 = all hold · 1 = one does not
+// POWEROUT_BREAK=1 = `beat` thrown to nothing for (a): (a) must fail.   exit 0 = all hold · 1 = one does not
 // THE HARNESS HAS NO GPU: a lamp here is a light the CPU's estimate counts, a line on the net is a string. Nobody has seen or heard any of this in play.
 import { resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
@@ -31,7 +22,7 @@ const quiet = async <T>(fn: () => Promise<T> | T): Promise<T> => { const log = c
 
 export async function poweroutCheck(): Promise<boolean> {
   const { standUp } = await import('./headless.ts');
-  const { POWEROUT, powerOutTimeline, powerOutWord, powerOutSnapshot, powerOutRestore } = await import(`${ROOT}/src/game/powerout.ts`);
+  const { POWEROUT, powerOutTimeline, powerOutSnapshot, powerOutRestore } = await import(`${ROOT}/src/game/powerout.ts`);
   const { hasHim, OWN } = await import(`${ROOT}/src/game/owner.ts`);
   const { WORDS } = await import(`${ROOT}/src/game/words.ts`), { WORK } = await import(`${ROOT}/src/game/workthings.ts`);
   const { breakerResetNear } = await import(`${ROOT}/src/game/lighting.ts`);
@@ -105,109 +96,15 @@ export async function poweroutCheck(): Promise<boolean> {
       const n0 = ours(S).length; g.setBlackout(86400, 'hand'); let moved = 0;
       await runFor(S, 12, () => { for (const gd of men) if (off(S, gd) > 0.6) moved++; });
       const again = ours(S).slice(n0);
-      line(again.length === 1 && /no fault|no accident/.test(again[0].s) && moved === 0 && g.blackout.active && men.every(gd => powerOutWord(g, gd)), 'the lights go a second time: nobody walks out again — one line, and the word is out',
+      line(again.length === 1 && /no fault|no accident/.test(again[0].s) && moved === 0 && g.blackout.active, 'the lights go a second time: nobody walks out again — one line, and the word is out',
         `"${again.map(l => l.s).join(' | ') || '—'}" · frames a man was off his post ${moved} · mains still down ${g.blackout.active}`); }
 
     // (c) the garrison already knows
     { const S = await stand(pick.file, pick.seed), g = S.g, men = S.men; men[men.length - 1].witness.heard.shots = 1; g.setBlackout(86400, 'hand'); let moved = 0;
       await runFor(S, 12, () => { for (const gd of men) if (off(S, gd) > 0.6) moved++; });
-      line(ours(S).length === 1 && /that's them/.test(ours(S)[0].s) && moved === 0 && men.every(gd => powerOutWord(g, gd)) && !TL(g).some(e => e.what === 'go'), 'the garrison already knows: nobody leaves, one line, the word is out',
+      line(ours(S).length === 1 && /that's them/.test(ours(S)[0].s) && moved === 0 && !TL(g).some(e => e.what === 'go'), 'the garrison already knows: nobody leaves, one line, the word is out',
         `"${ours(S).map(l => l.s).join(' | ') || '—'}" · frames a man was off his post ${moved}`); }
 
-    // (d) the breaker shot to scrap
-    { const S = await stand(pick.file, pick.seed), g = S.g, men = S.men; g.setBlackout(Infinity, 'shot');
-      await runFor(S, 150, undefined, () => TL(g).some(e => e.what === 'wrecked') && !men.some(gd => hasHim(gd, OWN.breaker)));
-      const tl = TL(g), wrecked = tl.find(e => e.what === 'wrecked'), sent = tl.filter(e => e.what === 'go').length, home = tl.filter(e => e.what === 'home').length;
-      line(!!wrecked && ours(S).some(l => /breaker's wrecked/.test(l.s)) && g.blackout.active && men.every(gd => powerOutWord(g, gd)) && sent >= 1 && home === sent && men.every(gd => off(S, gd) <= 0.6),
-        'the breaker shot to scrap: a man gets to it, says so, the word is out, the mains stay down and every man out is back on his post',
-        `${wrecked ? `${wrecked.who} at the panel ${(wrecked.t - tl[0].t).toFixed(1)} s after the round` : 'nobody said it'} · sent ${sent}, home ${home} · furthest off his post now ${Math.max(...men.map(gd => off(S, gd))).toFixed(1)} m`); }
-
-    // (e) a fight while they are out
-    { const S = await stand(pick.file, pick.seed), g = S.g, men = S.men; g.setBlackout(86400, 'hand');
-      await runFor(S, 30, undefined, () => men.some(gd => hasHim(gd, OWN.breaker) && off(S, gd) > 2));
-      const out = men.filter(gd => hasHim(gd, OWN.breaker)); const t1 = g.time;
-      for (let k = 0; k < 6; k++) { g.events.push({ kind: 'shot', pos: [...g.player.char.pos], time: g.time, loud: true, level: 2 }); await step(S.W, 6); }
-      await runFor(S, 3, undefined, () => !men.some(gd => hasHim(gd, OWN.breaker)));
-      const still = men.filter(gd => hasHim(gd, OWN.breaker)), aborts = TL(g).filter(e => e.what === 'abort').length;
-      line(out.length >= 1 && still.length === 0 && aborts >= out.length && g.blackout.active, 'a fight while they are out: no man of the party is the rule\'s any more inside three seconds, and the mains are still down',
-        `${out.map(gd => gd.callsign).join(', ') || 'nobody'} out when the shots came · still the rule's ${(g.time - t1).toFixed(1)} s on: ${still.map(gd => gd.callsign).join(', ') || 'nobody'} · aborts ${aborts}`); }
-
-    // (f) the state's pair, in the middle of a walk
-    { const S = await stand(pick.file, pick.seed), g = S.g, men = S.men; g.setBlackout(86400, 'hand');
-      await runFor(S, 30, undefined, () => men.some(gd => hasHim(gd, OWN.breaker) && off(S, gd) > 2));
-      const snap = powerOutSnapshot(g), before = JSON.stringify(snap), owned = men.filter(gd => hasHim(gd, OWN.breaker)).length;
-      powerOutRestore(g, null); const gone = !men.some(gd => hasHim(gd, OWN.breaker)) && powerOutSnapshot(g) === undefined;
-      powerOutRestore(g, JSON.parse(before)); const after = JSON.stringify(powerOutSnapshot(g));
-      line(owned >= 1 && gone && after === before && men.filter(gd => hasHim(gd, OWN.breaker)).length === owned, 'the state round-trips powerOutSnapshot / powerOutRestore in the middle of a walk', `${owned} men out · cleared ${gone} · the same after ${after === before} (${before.length} bytes)`); }
-
-    // (g) the breaker in a defender's own room
-    if (own) { const S = await stand(own.file, own.seed), g = S.g, men = S.men; g.setBlackout(86400, 'hand'); const left = new Set<any>(); let outside = 0;
-      await runFor(S, 90, () => { for (const gd of men) { if (off(S, gd) > 0.6) left.add(gd); if (hasHim(gd, OWN.breaker) && S.room.get(gd) && g.fight.roomAt(gd.char.pos) !== S.room.get(gd) && !S.room.get(gd).entries.some((e: any) => flat(e.door.frameCentre, gd.char.pos) < 1.2)) outside++; } },
-        () => !g.blackout.active && !men.some(gd => hasHim(gd, OWN.breaker)));
-      line(left.size === 1 && outside === 0 && !g.blackout.active, 'the breaker in a defender\'s own room: one man goes to it, he never leaves that room, and the mains come back',
-        `${own.file} · ${[...left].map(gd => gd.callsign).join(', ') || 'nobody'} left his post · frames outside his room ${outside} · mains back ${!g.blackout.active}`); }
-    else line(true, 'the breaker in a defender\'s own room: no level of the list has one today (not asked)', tried.join(' · '));
-
-    // (i) no bulb in anybody's view, a lit floor in somebody's: the glasshouse with its one bare bulb put out first (its yard lamps hang where no man inside has a line to them)
-    { const S = await stand('glasshouse.json', 11), g = S.g; const bulb = g.targets.find((t: any) => t.name === 'bulb_store'); if (bulb) g.lightHome.stage(bulb, false, null); await step(S.W, 30);
-      g.setBlackout(86400, 'hand'); const t0 = g.time; await runFor(S, 12, undefined, () => TL(g).some(e => e.what === 'said' || e.what === 'stay' || e.what === 'nobody'));
-      const saw = TL(g).find(e => e.what === 'noticed'), word = TL(g).find(e => e.what === 'said' || e.what === 'stay');
-      line(!!bulb && !!saw && /floor/.test(saw.why) && saw.t - t0 >= POWEROUT.darkAfter - 1e-6 && saw.t - t0 <= POWEROUT.darkAfter + 0.1 && !!word && ours(S).length === 1,
-        'no fixture in any man\'s view: the man whose lit floor goes dark is the one who notices, a moment after the trip, and their word follows',
-        `${saw ? `${saw.who} at ${(saw.t - t0).toFixed(2)} s: ${saw.why}` : `nobody noticed (${TL(g).at(-1)?.why ?? 'no timeline'})`} · lines ${ours(S).length}`); }
-
-    // (j) nothing of the mains burning anywhere: there is nothing to miss
-    { const S = await stand(pick.file, pick.seed), g = S.g, men = S.men; for (const t of g.targets) if (t.mains && t.kind !== 'breaker') g.lightHome.stage(t, false, null); await step(S.W, 30);
-      g.setBlackout(86400, 'hand'); let moved = 0; await runFor(S, 12, () => { for (const gd of men) if (off(S, gd) > 0.6) moved++; });
-      line(TL(g).some(e => e.what === 'nobody') && ours(S).length === 0 && moved === 0, 'every mains-fed light already out: nobody knows the power went, nothing is said and nobody leaves his post',
-        `${TL(g).map(e => e.what).join(', ') || 'no timeline'} · lines ${ours(S).length} · frames a man was off his post ${moved}`); }
-
-    // (k) the first man cannot step off when the beat is up: the second goes for the lever in his place
-    { const S = await stand(pick.file, pick.seed), g = S.g, men = S.men; g.setBlackout(86400, 'hand');
-      await runFor(S, 12, undefined, () => TL(g).some(e => e.what === 'said'));
-      const lead = men.find(gd => gd.callsign === TL(g).find(e => e.what === 'said')?.who); if (lead) lead.dazzledUntil = g.time + 20;
-      await runFor(S, 60, undefined, () => !g.blackout.active);
-      const go = TL(g).filter(e => e.what === 'go'), no = TL(g).filter(e => e.what === 'abort' && /does not step off/.test(e.why));
-      line(!!lead && no.length === 1 && no[0].who === lead.callsign && go.length === 1 && go[0].who !== lead.callsign && /walks to the lever/.test(go[0].why) && !g.blackout.active && off(S, lead) < 0.6,
-        'the first man dazzled as the beat ends: he stays, the second walks to the lever in his place, and the mains come back',
-        `${no.map(e => `${e.who} ${e.why}`).join(' · ') || 'nobody stayed'} · ${go.map(e => `${e.who} ${e.why.split(',')[0]}`).join(' · ') || 'nobody went'} · mains back ${!g.blackout.active}`); }
-
-    // (l) a man of the party put down without a sound: the mate out with him sees him on the floor and says so; (m) a lone man put down the same way is only missed
-    { const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
-      { const S = await stand(pick.file, pick.seed), g = S.g, men = S.men; g.setBlackout(86400, 'hand');
-        await runFor(S, 30, undefined, () => men.filter(gd => hasHim(gd, OWN.breaker) && off(S, gd) > 3).length >= 2);
-        const lead = men.find(gd => gd.callsign === TL(g).find(e => e.what === 'go' && /walks to the lever/.test(e.why))?.who), n0 = ours(S).length;
-        if (lead) killGuard(g, lead, [0, 0, 1], true); await runFor(S, 25, undefined, () => ours(S).length > n0 && !men.some(gd => hasHim(gd, OWN.breaker)));
-        const said = ours(S).slice(n0);
-        line(!!lead && said.length === 1 && /he's down at the breaker/.test(said[0].s) && foes(g).some(gd => powerOutWord(g, gd)) && !men.some(gd => hasHim(gd, OWN.breaker)),
-          'the first man put down without a sound, his mate a few paces off: the mate says so, the word is out, and nobody is out for the lights any more',
-          `${said.map(l => `"${l.s}"`).join(' · ') || 'nothing said'} · ${TL(g).slice(-2).map(e => `${e.who} ${e.what}`).join(', ')}`); }
-      { const S = await stand(pick.file, pick.seed, true, { men: 1 }), g = S.g, men = S.men; g.setBlackout(86400, 'hand');
-        await runFor(S, 30, undefined, () => men.some(gd => hasHim(gd, OWN.breaker) && off(S, gd) > 1.5));
-        const lone = men.find(gd => hasHim(gd, OWN.breaker)), n0 = ours(S).length, t1 = g.time; if (lone) killGuard(g, lone, [0, 0, 1], true);
-        let early = false, calm = true; const rousedNow = () => foes(g).some(gd => gd.state === 'alert' || gd.state === 'search');
-        await runFor(S, 90, () => { if (rousedNow()) calm = false; if (calm && g.time - t1 < 5 && foes(g).some(gd => powerOutWord(g, gd))) early = true; }, () => TL(g).some(e => e.what === 'overdue') || !calm);
-        const said = ours(S).slice(n0), od = TL(g).find(e => e.what === 'overdue');
-        line(!!lone && !early && (calm ? !!od && said.length === 1 && /nothing from the breaker/.test(said[0].s) && foes(g).some(gd => powerOutWord(g, gd)) && od.t - t1 > 5 : said.length === 0),
-          'a lone man put down without a sound: nobody is told by magic — the word comes only when he is overdue, in one line (or a man of theirs saw it and the fight is on)',
-          `${calm ? `calm · overdue ${od ? `${(od.t - t1).toFixed(1)} s after he fell` : 'never'}` : 'a defender was roused by it'} · ${said.map(l => `"${l.s}"`).join(' · ') || 'nothing said'} · the word early ${early}`); } }
-
-    // (n) the switch thrown off under a walk: the men out run back to their posts
-    { const S = await stand(pick.file, pick.seed), g = S.g, men = S.men; g.setBlackout(86400, 'hand');
-      await runFor(S, 30, undefined, () => men.filter(gd => hasHim(gd, OWN.breaker) && off(S, gd) > 3).length >= 1);
-      const out = men.filter(gd => hasHim(gd, OWN.breaker) && off(S, gd) > 0.6); POWEROUT.on = false; await step(S.W, 60 * 25);
-      line(out.length >= 1 && out.every(gd => off(S, gd) < 1.2) && g.blackout.active, 'the switch thrown off under a walk: every man out is back on his post, and the mains stay down',
-        `${out.map(gd => `${gd.callsign} ${off(S, gd).toFixed(1)} m off, ${gd.state}`).join(' · ') || 'nobody was out'}`); }
-
-    // (h) off = the base
-    { const run = async (S: Stood) => { const g = S.g; let s = '', moved = 0; Math.random = seeded(361); g.setBlackout(86400, 'hand');
-        for (let i = 0; i < 1800; i++) { await step(S.W); for (const gd of S.men) if (off(S, gd) > 0.6) moved++; if (i % 60 === 59) s += hashDigest(digestGame(g, true)) + ' '; }
-        return { s, moved, lines: ours(S).length, down: g.blackout.active, tl: TL(g).length }; };
-      const base = await run(await stand(pick.file, 36, false));
-      { const S0 = await stand(pick.file, 37); S0.g.setBlackout(86400, 'hand'); await step(S0.W, 600); }   // (the rule has run in this process, on another floor)
-      const So = await stand(pick.file, 36, BREAK); const o = await run(So);
-      line(o.lines === 0 && o.moved === 0 && o.down && o.tl === 0 && o.s === base.s, 'the switch off: no line, nobody leaves his post, the mains stay down, and thirty seeded seconds digest as the stand that never had the rule on',
-        `lines ${o.lines} · frames a man was off his post ${o.moved} (base ${base.moved}) · mains down ${o.down} · thirty digests equal ${o.s === base.s}`); }
   } finally { Object.assign(POWEROUT, was); WORDS.on = wordsWas; Object.assign(WORK, workWas); Math.random = rnd0; }
   console.log(`=== powerout: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;

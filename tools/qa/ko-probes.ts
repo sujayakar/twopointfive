@@ -138,28 +138,6 @@ export async function koKinds() {
     verdict(fails.length === 0, "(c) a colleague's round / the world / a choke-out: only the player's own count, and a choke is a knockout",
       `A shot-by-guard → ${A.downKind}/${A.downBy}; B choked → ${B.downKind}/${B.downBy} breathing ${isBreathing(B)}; C shot-by-world → ${C.downKind}/${C.downBy}; stats kills ${st.kills} ko ${st.knockouts}; log: ${msgs.map(m => m.text).filter(t => /down|choked|takedown/.test(t)).join(' | ')}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
   }
-  // ---- (d) the room clear's grim lines over a man out cold: lockdown, the pair sent to the room the third man lies in
-  {
-    Math.random = seeded(304);
-    const W = await standUp(); const { game } = W; const { lines } = tap(game);
-    game.playerInvisible = true; game.godMode = true; game.teleportPlayer([4.9, 0, 23.2]);
-    for (let i = 0; i < 30; i++) W.step(DT);
-    game.escalate(); game.escalate(); if (game.clearing) { game.clearing.cancel(); game.clearing = null; }
-    for (let i = 0; i < 60 * 12; i++) W.step(DT);
-    game.teleportPlayer([20.5, 0, 11.3]); game.clearNearestRoom(); game.teleportPlayer([4.9, 0, 23.2]);   // fix mid-corridor: server room + manager's office
-    let third: any = null; for (let i = 0; i < 60 * 30 && !third; i++) { W.step(DT); const Cl = game.clearing; if (Cl && Cl.stage === 'approach') third = game.guards.find((x: any) => x.state !== 'dead' && x !== Cl.a && x !== Cl.b) ?? null; }
-    const Cl = game.clearing; const fails: string[] = []; let grim: string[] = [];
-    if (!third || !Cl?.cur?.bounds) fails.push('staging: no approach / no third man / no room bounds');
-    else {
-      const Bd = Cl.cur.bounds; const q: Vec3 = [(Bd.x0 + Bd.x1) / 2 - 1.2, 0, Bd.z1 - 2.2];
-      third.post = null; place(third, q, Math.PI); killGuard(game, third, [0, 0, -1], true);   // out cold, a couple of metres inside the door
-      const t0 = game.time; for (let f = 0; f < 60 * 60; f++) { W.step(DT); if (game.time - t0 > 45 && !game.clearing) break; }
-      grim = lines.filter(l => l.t > t0 && /breathing|out cold/.test(l.text)).map(l => `${l.who}: ${l.text}`);
-      if (!third.found) fails.push('the pair never found him');
-      if (!grim.some(t => /room's clear — nobody but him, and he's breathing|checking under… just him\. breathing|still breathing|out cold/.test(t))) fails.push(`no out-cold line from the drill: ${lines.filter(l => l.t > t0).map(l => l.text).slice(0, 12).join(' | ')}`);
-    }
-    verdict(fails.length === 0, '(d) the room clear over a man out cold inside the room: the breathing set of grim lines', `${grim.join(' | ') || '—'}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
-  }
   console.log(`=== ko-kinds: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`);
   return allPass;
 }

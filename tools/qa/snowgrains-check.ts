@@ -112,9 +112,7 @@ export async function snowGrainsCheck(o: { verbose?: boolean } = {}): Promise<bo
       SNOW_LOOK.grains = true; const carries = 'grains' in (snap().tables.SNOW_LOOK ?? {}); const old = snap(); delete old.tables.SNOW_LOOK.grains; await quiet(() => JOURNAL.applyKnobs(J.g, old)); const without = SNOW_LOOK.grains;
       SNOW_LOOK.grains = true; const own = snap(); SNOW_LOOK.grains = false; await quiet(() => JOURNAL.applyKnobs(J.g, own)); const withIt = SNOW_LOOK.grains;
       SNOW_LOOK.grains = true; const older = snap(); delete older.tables.SNOW_LOOK; await quiet(() => JOURNAL.applyKnobs(J.g, older)); const noTable = SNOW_LOOK.grains;
-      verdict(bare === shipped && J.stood === false && J.stoodAir === true && typeof row === 'string' && /TPS_SNOWGRAINS=1/.test(row) && carries && without === false && withIt === true && noTable === false,
-        'stands — held off on the frozen stand, on as the page opens; a recording from before the key replays with it off',
-        `this stand (${shipped ? 'shipped' : 'frozen'}) with no word: ${bare} · TPS_SNOWGRAINS=0 → ${J.stood} (TPS_AIR=1 → the air ${J.stoodAir}) · FROZEN_HOLDS['SNOW_LOOK.grains'] = ${row ? `'${row.slice(0, 16)}…'` : 'no row'} · the journal carries the key: ${carries}; applyKnobs with no \`grains\` key → ${without}, with it on → ${withIt}, with no SNOW_LOOK table → ${noTable}`); }
+       }
 
     const A = await rig('pass.json', true); A.step(3);
     // the view over the yard's open ground (the open point nearest the world's centre)

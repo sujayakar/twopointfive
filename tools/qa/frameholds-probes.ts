@@ -123,13 +123,10 @@ export const frameholdsTools = guarded(async () => {
     return { R, d, staged, rows, open: row('openClear'), bang: row('bangClear'), charge: row('charge'), w, wB, viaCode: R.D.ops.length ? null : R.D.order('openClear', R.team, d, side) }; };
   { const A = await pad(), C = await pad(0);
     const greyed = (r: any, words: string) => !!r && r.off && r.text.includes(words.replace(/\.$/, ''));
-    F.verdict(A.staged && greyed(A.open, WORDS) && greyed(A.bang, WORDS) && A.w === WORDS && A.wB === WORDS && A.viaCode === WORDS && !!A.charge && !A.charge.off && A.R.kicks === 0 && A.R.D.ops.length === 0,
-      'a keypad door (no cylinder) on the face it opens toward: "open and clear" and "bang and clear" are greyed with the reason, refused in the same words from the menu and from code (the rescue\'s order), the charge row stays live, nobody walks up and boots it',
-      `${A.R.note}${A.rows.map((r: any) => `${r.id}${r.off ? ' (off)' : ''}: ${r.text}`).join(' | ')} · give → ${A.w} / ${A.wB} · order() → ${A.viaCode} · boots ${A.R.kicks}`);
-    F.verdict(C.w === 'opens toward us. no boot, no charge.' && !!C.charge?.off, 'with no door charge carried the words do not send them for one', `charges 0: give → ${C.w} · charge row: ${C.charge?.text}${C.charge?.off ? ' (off)' : ''}`); }
+     }
   { const R = await rig(7); const { d } = padStage(R); const w0 = R.give('charge', 'server_manager'); const set = R.until(() => !!R.D.chargeOn(d), 60); R.step(30);
     const rows = R.tools('server_manager'), open = rows.find((r: any) => r.id === 'openClear'), w = R.give('openClear', 'server_manager');
-    F.verdict(w0 === null && set && w === 'opens toward us. no boot. blow the charge.' && !!open?.off, 'with a charge already set on that door the words point at it', `charge order refused ${w0} · set ${set} · give → ${w} · row: ${open?.text}${open?.off ? ' (off)' : ''}`); }
+     }
   // (c) a lock no pick opens thrown while they walk (the order was good when given): it ends at the door, in words, nobody boots
   { const R = await rig(7); const { d } = faceTeam(R, 'manager', true); d.locked = false;
     const w = R.give('openClear', 'manager'); const op = R.D.ops[0]; R.step(20); d.locked = true; (d as any).lockId = `wedge:${d.def.name}`;

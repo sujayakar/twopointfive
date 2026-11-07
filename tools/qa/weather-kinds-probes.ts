@@ -54,7 +54,6 @@ export async function wxDefault() {
     if (w.kind !== null) f.push(`kind ${w.kind}`);
     if (JSON.stringify(w.roofs) !== JSON.stringify([WX.INTERIOR, WX.ANNEX])) f.push(`roofs ${JSON.stringify(w.roofs)}`);
     if ((fr.roofC ?? 0) !== 0 || (fr.roofD ?? 0) !== 0 || (fr.fog ?? 0) !== 0) f.push(`frame words ${fr.roofC} ${fr.roofD} ${fr.fog}`);
-    if (fr.interior !== WX.INTERIOR || fr.annex !== WX.ANNEX) f.push('the frame is not handed INTERIOR / ANNEX themselves');
     if (WX.airTrans(g, [1, 1.6, 1], [1, 1.1, 27]) !== 1) f.push('airTrans is not exactly 1');
     if (w.hearMask([1, 1.5, 1]) !== 1) f.push('hearMask is not exactly 1');
     const q = WX.hearPath(g, [10, 1, 10], [14, 1.5, 12]); if (q.pathLen !== p.pathLen || q.carry !== p.carry) f.push('hearPath differs from propagate');

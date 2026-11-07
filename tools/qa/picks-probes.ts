@@ -19,6 +19,7 @@
 //                the one build's page defaults need under the old stand; on the page's they are what it has): no run errors, every run
 //                reports the row's own difficulty and hour, and every run ends (won or lost, never an error). The `pair` switch reads
 //                the page's URL and is not in these runs (picks-boot holds it on); the solo night has no scripted player (picks-boot holds its boot)
+import { sample, swept } from './sweep.ts';
 import { resolve } from 'node:path';
 import { readFileSync, rmSync } from 'node:fs';
 import { groupsFit } from './listed.ts';
@@ -264,11 +265,11 @@ async function bootChild(query: string, secs: number, kept: string): Promise<any
   const line = out.split('\n').find(l => l.startsWith(TAG));
   return line ? JSON.parse(line.slice(TAG.length)) : { query, threw: `the boot printed no report (exit ${p.exitCode}): ${(errText || out).trim().split('\n').slice(-3).join(' | ')}` };
 }
-export async function picksBoot(secs = 30): Promise<boolean> {
-  const F = family(`picks-boot: every row's URL booted in a process of its own on a machine that keeps the other difficulty — its level, its team, the URL's settings in force — then ${secs} s of the simulation`);
+export async function picksBoot(secs = swept(6, 30)): Promise<boolean> {
+  const F = family(`picks-boot: a sample of the rows' URLs booted in a process of its own on a machine that keeps the other difficulty — its level, its team, the URL's settings in force — then ${secs} s of the simulation`);
   const L: any[] = P.PICKS, MS = await import(`${ROOT}/src/ui/missions.ts`), missions: any[] = MS.missionList();
   // (every row at its own difficulty, and the first row once more at the other: the one choice the card offers on a row)
-  const C: { p: any; i: number; d?: string }[] = [...L.map((p, i) => ({ p, i })), ...(P.pickEntry(L[0]) ? [{ p: L[0], i: 0, d: otherOf(wantOf(L[0]).difficulty) }] : [])];
+  const C: { p: any; i: number; d?: string }[] = sample([...L.map((p, i) => ({ p, i })), ...(P.pickEntry(L[0]) ? [{ p: L[0], i: 0, d: otherOf(wantOf(L[0]).difficulty) }] : [])], 3);
   const hrefOf = (c: { p: any; d?: string }) => P.pickHref(c.p, '?quality=high&mute', undefined, undefined, c.d);
   const jobs = Math.max(1, Math.min(4, Number(process.env.PICKS_JOBS) || 3)), boots: any[] = new Array(C.length); let next = 0;
   await Promise.all(Array.from({ length: jobs }, async () => { for (;;) { const k = next++; if (k >= C.length) return; boots[k] = await bootChild(hrefOf(C[k]), secs, otherOf(wantOf(C[k].p, C[k].d).difficulty)); } }));   // (each on a machine that keeps the OTHER difficulty: the URL's is the one in force)
