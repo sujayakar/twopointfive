@@ -66,6 +66,7 @@ pub mod combat;
 pub mod condition;
 pub mod consts;
 pub mod control;
+pub mod mind;
 pub mod cover;
 pub mod coverfire;
 pub mod cues;
