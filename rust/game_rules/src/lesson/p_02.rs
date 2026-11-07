@@ -228,7 +228,7 @@ pub fn lesson_count(g: &mut crate::game::Game, s: &mut crate::lesson::StepSeen) 
 
 
 /// The run is over, whichever scenario it was.   (lesson.ts Lesson.over)
-pub fn lesson_over(g: &mut crate::game::Game) -> bool {
+pub fn lesson_over(g: &crate::game::Game) -> bool {
     let stage = g.mission.stage;
     stage == crate::game::MissionStage::Failed
         || stage == crate::game::MissionStage::Done
@@ -236,8 +236,8 @@ pub fn lesson_over(g: &mut crate::game::Game) -> bool {
         || (crate::roomclear::room_clear_scenario_active(g) && g.room_clear.end.is_some())
 }
 
-/// The objective while a step is up (None: the scenario's own).   (lesson.ts Lesson.objective)
-pub fn lesson_objective(g: &mut crate::game::Game) -> Option<crate::lesson::LessonObjective> {
+/// The objective while a step is up (None: the scenario's own).
+pub fn lesson_objective(g: &crate::game::Game) -> Option<crate::lesson::LessonObjective> {
     let l = lesson_data(g)?;
     let i = lesson_at(g);
     if i >= l.steps.len() as f64 {
@@ -292,7 +292,7 @@ pub fn line_of(g: &crate::game::Game, t: &crate::scene_scenarios::LessonStep) ->
 
 
 /// The taught player is down (`who(g).down`).
-fn who_down(g: &mut Game) -> bool {
+fn who_down(g: &Game) -> bool {
     let p = who(g);
     g.pl[p].down
 }
@@ -308,7 +308,7 @@ fn filled(o: &Option<String>) -> Option<&str> {
     o.as_deref().filter(|s| !s.is_empty())
 }
 
-/// `line.replace(/\[([^\]]+)\]/g, (_m, k) => say(k))`.   (lesson.ts Lesson.objective)
+/// `line.replace(/\[([^\]]+)\]/g, (_m, k) => say(k))`.
 fn keys_plain(line: &str, say: &mut dyn FnMut(&str) -> String) -> String {
     let mut out = String::new();
     let mut rest = line;

@@ -11,7 +11,7 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 pub fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 
 /// The player a row is built for and a press is read from. (snatchout.ts who)
-pub fn who(g: &mut crate::game::Game) -> PlayerId { g.player }
+pub fn who(g: &crate::game::Game) -> PlayerId { g.player }
 
 /// Nothing led, nobody planted: the field initialisers; the constructor only keeps `g` and `S`. (snatchout.ts SnatchOut.constructor)
 pub fn snatch_out_new(g: &crate::game::Game) -> crate::snatchout::SnatchOut { SnatchOut::blank() }
@@ -426,8 +426,8 @@ pub fn snatch_out_bound(g: &mut crate::game::Game, dt: f64) {
     }
 }
 
-/// The objective's row once he is in hand: where to take him (None: not this rule's to say). (snatchout.ts SnatchOut.objective)
-pub fn snatch_out_objective(g: &mut crate::game::Game) -> Option<crate::snatchout::SnatchOutObjective> {
+/// The objective's row once he is in hand: where to take him (None: not this rule's to say).
+pub fn snatch_out_objective(g: &crate::game::Game) -> Option<crate::snatchout::SnatchOutObjective> {
     let ruled = snatch_out_ruled(g);
     let man = g.snatch.man;
     if !ruled || man.is_none() || g.snatch.end.is_some() || !crate::snatch::snatch_in_hand(g) { return None; }

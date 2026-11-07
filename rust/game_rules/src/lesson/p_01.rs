@@ -133,7 +133,7 @@ pub fn after(log: &[u32], last: Option<u32>) -> usize {
 pub fn inside(r: crate::scene_scenarios::Rect, p: V3) -> bool { p[0] > r.x0 && p[0] < r.x1 && p[2] > r.z0 && p[2] < r.z1 }
 
 /// the player a lesson is taught to, one seat today (lesson.ts who)
-pub fn who(g: &mut crate::game::Game) -> PlayerId { g.player }
+pub fn who(g: &crate::game::Game) -> PlayerId { g.player }
 
 /// the door a teammate is on a plain 'stack up' on, by name; None: none (lesson.ts onStack)
 pub fn on_stack(g: &crate::game::Game, m: GuardId) -> Option<String> {

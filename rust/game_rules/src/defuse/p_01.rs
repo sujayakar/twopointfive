@@ -11,7 +11,7 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 pub fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 
 /// The player the row is for (one seat today).   (defuse.ts who)
-pub fn who(g: &mut crate::game::Game) -> PlayerId { g.player }
+pub fn who(g: &crate::game::Game) -> PlayerId { g.player }
 
 /// Seconds as m:ss, rounded up, never below zero.   (defuse.ts mmss)
 pub fn mmss(s: f64) -> String {
@@ -402,8 +402,8 @@ pub fn defuse_running_row(g: &mut crate::game::Game, running: &mut dyn FnMut(&mu
     running(g, it, crate::game::Verb::Defuse, text, k)
 }
 
-/// The objective while a charge is live or one has gone off (None: the room clear's own).   (defuse.ts Defuse.objective)
-pub fn defuse_objective(g: &mut crate::game::Game) -> Option<crate::defuse::DefuseObjective> {
+/// The objective while a charge is live or one has gone off (None: the room clear's own).
+pub fn defuse_objective(g: &crate::game::Game) -> Option<crate::defuse::DefuseObjective> {
     let d = defuse_data(g)?;
     if !defuse_mine(g) { return None; }
     if g.defuse.end == Some(DefuseEnd::Safe) || g.defuse.end == Some(DefuseEnd::Over) { return None; }

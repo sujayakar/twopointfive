@@ -247,7 +247,9 @@ impl Play {
     /// … and the finished run (None: not taken yet, or wiped).
     pub fn par_result(&self) -> Option<game::par::ParResult> { game::par::par_result_now(&self.g).cloned() }
     /// the objective row, as a HUD is given it
-    pub fn objective(&mut self) -> String { game::mission::objective_text(&mut self.g) }
+    pub fn objective(&self) -> String { self.view().mission.map_or(String::new(), |m| m.text) }
+    /// WHAT A HUD IS TOLD of the game as it stands (`view::tick_view`: the record the page draws, asked of the game and never kept by it)
+    pub fn view(&self) -> game::view::TickView { game::view::tick_view(&self.g) }
     /// the lines on the game's log now, oldest first (it keeps the last five)
     pub fn log(&self) -> Vec<&str> { self.g.messages.iter().map(|m| m.text.as_str()).collect() }
     /// how the room clear ended and when, on the game's clock (None: it is on)

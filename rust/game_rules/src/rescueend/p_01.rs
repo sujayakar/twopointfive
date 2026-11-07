@@ -11,7 +11,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 pub fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 
 /// The player a row is built for and a press is read from.   (rescueend.ts who)
-pub fn who(g: &mut crate::game::Game) -> PlayerId { g.player }
+pub fn who(g: &crate::game::Game) -> PlayerId { g.player }
 
 /// Nobody led, nobody counted.   (rescueend.ts RescueEnd.constructor)
 pub fn rescue_end_new(g: &crate::game::Game) -> crate::rescueend::RescueEnd { crate::rescueend::RescueEnd::blank() }
@@ -157,8 +157,8 @@ pub fn rescue_end_won(g: &mut crate::game::Game) -> Option<crate::rescueend::Res
     None
 }
 
-/// The objective row once the room is the team's or the hostages are on their feet.   (rescueend.ts RescueEnd.objective)
-pub fn rescue_end_objective(g: &mut crate::game::Game) -> crate::rescueend::RescueEndObjective {
+/// The objective row once the room is the team's or the hostages are on their feet.
+pub fn rescue_end_objective(g: &crate::game::Game) -> crate::rescueend::RescueEndObjective {
     if g.rescue.ending.lead.is_some() {
         return crate::rescueend::RescueEndObjective { text: String::from("objective ▸ bring them out the way you came in"), pos: rescue_end_out(g) };
     }

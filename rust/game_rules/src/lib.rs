@@ -329,6 +329,7 @@ pub mod ui_missions;
 pub mod ui_shaderrows;
 pub mod unseen;
 pub mod verdict;
+pub mod view;
 pub mod walkahead;
 pub mod wallbreak;
 pub mod wallcharge;

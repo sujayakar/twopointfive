@@ -584,7 +584,6 @@ pub fn room_clear_scenario_clear(g: &mut crate::game::Game) {
     s.pair_said = false;
     s.entry_said = false;
     s.team_said = false;
-    s.obj = None;
     s.clear_due = Vec::new();
     s.clear_at = f64::NAN;
 }
@@ -686,7 +685,6 @@ pub fn room_clear_scenario_tick(g: &mut crate::game::Game, _dt: f64) {
         let now = g.time;
         g.room_clear.rooms[i].cleared = c;
         g.room_clear.rooms[i].cleared_at = if c { now } else { f64::NAN };
-        g.room_clear.obj = None;
         let id = g.room_clear.rooms[i].def.id.clone();
         room_clear_scenario_note(g, &format!("{}:{}", if c { "cleared" } else { "lost" }, id));
         let left = rooms_left(g);
@@ -752,7 +750,6 @@ pub fn room_clear_scenario_tick(g: &mut crate::game::Game, _dt: f64) {
         room_clear_scenario_finish(g, crate::roomclear::RoomClearEnd::Taken, &why);
     } else if live.is_empty() && !g.room_clear.team_said {
         g.room_clear.team_said = true;
-        g.room_clear.obj = None;
         room_clear_scenario_note(g, "team-up");
         let team = crate::qrf::response_team(g);
         crate::game::game_msg(g, &format!("the rooms are clear, but {} is still on the ground", team));
@@ -795,7 +792,6 @@ pub fn room_clear_scenario_rehome(g: &mut crate::game::Game, gd: GuardId, room: 
         }
     }
     g.room_clear.rooms[to].defenders.push(gd);
-    g.room_clear.obj = None;
     let line = format!("rehomed:{}>{}", g.gd[gd].callsign, room);
     room_clear_scenario_note(g, &line);
 }
@@ -806,7 +802,6 @@ pub fn room_clear_scenario_finish(g: &mut crate::game::Game, end: crate::roomcle
     g.room_clear.end = Some(end);
     g.room_clear.end_at = g.time;
     g.room_clear.end_why = String::from(why);
-    g.room_clear.obj = None;
     room_clear_scenario_note(g, &format!("end:{}", end.as_str()));
     let down = end == Wiped && crate::seats::all_down(g) && ops_up(g) > 0;
     g.room_clear.end_say = String::from(if down { "player down" } else { "team wiped" });
@@ -843,20 +838,14 @@ pub fn room_clear_scenario_room_at(g: &crate::game::Game, p: V3) -> Option<Strin
     room_clear_scenario_structure(g)?.rooms.into_iter().find(|r| in_rect(p, r.bounds)).map(|r| r.id)
 }
 
-/// The HUD's objective while it is up: worded when something changes, not every frame   (roomclear.ts RoomClearScenario.objective)
-pub fn room_clear_scenario_objective(g: &mut crate::game::Game) -> Option<crate::roomclear::RoomClearScenarioObjective> {
+/// The mission's line while it is up (None: not its to say): the rooms, ticked off as they clear, and a marker on the first still held. A read, worded as
+/// things stand each time it is asked.
+pub fn room_clear_scenario_objective(g: &crate::game::Game) -> Option<crate::roomclear::RoomClearScenarioObjective> {
     if !room_clear_scenario_active(g) || g.room_clear.rooms.is_empty() {
         return None;
     }
-    let ticks = true;
     let hint = if g.room_clear.end.is_some() { None } else { crate::laststand::last_stand_hint(g) };
-    let hk = hint.as_ref().map_or(String::new(), |h| h.key.clone());
-    if let Some(o) = &g.room_clear.obj {
-        if o.ticks == ticks && o.hint == hk {
-            return Some(crate::roomclear::RoomClearScenarioObjective { text: o.text.clone(), pos: o.pos });
-        }
-    }
-    let rooms = g.room_clear.rooms.clone();
+    let rooms = &g.room_clear.rooms;
     let said = |r: &crate::roomclear::RoomState| hint.as_ref().map_or(false, |h| !r.cleared && h.rooms.has(r.def.id.clone()));
     let spots: &[crate::laststand::Spot] = hint.as_ref().map_or(&[], |h| &h.spots[..]);
     let next = match rooms.iter().find(|r| said(r)) {
@@ -876,7 +865,7 @@ pub fn room_clear_scenario_objective(g: &mut crate::game::Game) -> Option<crate:
             let names: Vec<String> = rooms
                 .iter()
                 .map(|r| {
-                    let tick = if ticks && r.cleared { "✓ " } else { "" };
+                    let tick = if r.cleared { "✓ " } else { "" };
                     if said(r) { format!("{}[{}]", tick, r.def.name) } else { format!("{}{}", tick, r.def.name) }
                 })
                 .collect();
@@ -898,7 +887,6 @@ pub fn room_clear_scenario_objective(g: &mut crate::game::Game) -> Option<crate:
     } else {
         spot.map(|s| [s.pos[0], 0.0, s.pos[2]])
     };
-    g.room_clear.obj = Some(crate::roomclear::RoomClearScenarioObj { text: text.clone(), pos, ticks, hint: hk });
     Some(crate::roomclear::RoomClearScenarioObjective { text, pos })
 }
 

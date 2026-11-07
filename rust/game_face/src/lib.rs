@@ -48,6 +48,7 @@
 //! reading back
 //!   face_export(h)                            the whole state (`io::export`) at face_out
 //!   face_verdict(h) -> 0 | 1 | 2              how the mission ended: 0 not yet, 1 lost, 2 won (then `word\nwhy` at face_out); a read, nothing kept
+//!   face_tick_view(h)                         what a HUD is told of the game as its last tick left it (a TickView at face_out); a read, nothing kept
 //!   face_die_n(h) -> f64 · face_time(h) -> f64 · face_rows(h) -> usize
 //!                                             the die's count of draws (in the game's block), the game's clock, the rows of the box table
 //!   face_parts() -> 13 · face_part_name(i)    the parts of rust/sim's block in their order; a part's name at face_out
@@ -101,6 +102,8 @@ fn with<R>(h: u32, f: impl FnOnce(&mut Held) -> R) -> R {
     GAMES.with(|v| v.borrow_mut()[h as usize - 1] = Some(g));
     r
 }
+/// a call that only reads the game: what it is handed is shared, so the compiler holds it to that
+fn with_ref<R>(h: u32, f: impl FnOnce(&Held) -> R) -> R { with(h, |x| f(x)) }
 fn out(b: Vec<u8>) { OUT.with(|o| *o.borrow_mut() = b); }
 /// # Safety
 /// `p`, `n` name bytes the host wrote into memory from face_alloc.
@@ -134,6 +137,14 @@ pub extern "C" fn face_verdict(h: u32) -> i32 {
         None => 0,
         Some((won, word, why)) => { let mut b = Vec::with_capacity(word.len() + 1 + why.len()); b.extend_from_slice(word.as_bytes()); b.push(b'\n'); b.extend_from_slice(why.as_bytes()); out(b); if won { 2 } else { 1 } }
     }
+}
+/// WHAT A HUD IS TOLD of the game as its last tick left it (`view::tick_view`), for the seat that stands in it, which must be the seat this machine
+/// shows: a `TickView`'s bytes at face_out, read by the host with the table's own reader. A read: nothing of the game is written.
+#[no_mangle]
+pub extern "C" fn face_tick_view(h: u32) {
+    use game::io::Io;
+    let b = with_ref(h, |x| { assert!(x.g.local_seat.map_or(true, |s| s == x.g.seat), "face_tick_view: the seat that stands in the game is not the one this machine shows"); let mut o = game::io::W::new(); game::view::tick_view(&x.g).w(&mut o); o.b });
+    out(b);
 }
 /// THE GENERATION OF THE BRIDGE this module was built with (io::LAYOUT, and `layout` in schema.json): a host refuses a module of another generation.
 #[no_mangle]

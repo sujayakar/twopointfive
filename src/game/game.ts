@@ -77,7 +77,7 @@ import { PLAYER_ID } from './consts';
 import { seatsStand, seatManId, standMen, spotBeside, manById, isManId, eachSeat } from './seats';
 import { doorMan } from './doorthrow';
 import './mission';
-import { objectivePos, objectiveText } from './mission';
+import { NO_VIEW, type TickView } from '../view/seatview';
 import { Chronicle, chronInterrogated } from './chronicle';
 import { hiddenProps, irBeams } from './combat';
 import { irViewer, irMade } from './irlaser';
@@ -1654,8 +1654,12 @@ export class Game {
 
 
 
-  objectivePos() : Vec3 | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Game.objectivePos', this, []); if (__r !== RUST_PASS) return __r as any; } } return objectivePos(this); }
-  objectiveText() : string { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Game.objectiveText', this, []); if (__r !== RUST_PASS) return __r as any; } } return objectiveText(this); }
+  /** WHAT THE HUD IS TOLD (src/view/seatview.ts): the Rust game's own answer, handed over by the host that steps this game. A read */
+  get view(): TickView { return this.viewAsk?.() ?? NO_VIEW; }
+  /** the host's: asks the Rust game for its view (src/host/rustgame.ts in a page, tools/blitz/rust-host.ts in bun) */
+  viewAsk: (() => TickView) | null = null;
+  objectivePos(): Vec3 | null { return this.view.mission?.pos ?? null; }
+  objectiveText(): string { return this.view.mission?.text ?? ''; }
 
 }
 

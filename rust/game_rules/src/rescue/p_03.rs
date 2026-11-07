@@ -359,8 +359,8 @@ pub fn rescue_state(g: &crate::game::Game) -> crate::rescue::RescueState {
     if g.rescue.t0.is_nan() { RescueState::Staged } else { RescueState::Running }
 }
 
-/// the HUD's objective line and marker while it is up: the room, and how far the captor's clock has got, never in seconds   (rescue.ts Rescue.objective)
-pub fn rescue_objective(g: &mut crate::game::Game) -> Option<crate::rescue::RescueObjective> {
+/// the HUD's objective line and marker while it is up: the room, and how far the captor's clock has got, never in seconds
+pub fn rescue_objective(g: &crate::game::Game) -> Option<crate::rescue::RescueObjective> {
     if !g.rescue.active { return None; }
     let pos: Option<V3> = rescue_bounds(g).map(|r| [(r.x0 + r.x1) / 2.0, 0.0, (r.z0 + r.z1) / 2.0]);
     if let Some(r) = g.rescue.result.clone() {
