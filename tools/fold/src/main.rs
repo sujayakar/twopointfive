@@ -230,7 +230,7 @@ fn lines_of(t: &str) -> usize {
 
 /// What each TypeScript file of the page (src/) spells and reads: (every word of it, every name it reads as a field: `.name` not
 /// then assigned, `['name']`, or `name` before a comma or a closing brace, which a destructuring or a shorthand writes).
-fn page_reads(root: &std::path::Path) -> Vec<(HashSet<String>, HashSet<String>)> {
+fn page_reads(root: &std::path::Path) -> Vec<(String, HashSet<String>, HashSet<String>)> {
     fn walk(d: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {
         let Ok(rd) = std::fs::read_dir(d) else { return };
         for e in rd.flatten() {
@@ -244,6 +244,7 @@ fn page_reads(root: &std::path::Path) -> Vec<(HashSet<String>, HashSet<String>)>
     }
     let mut files = Vec::new();
     walk(&root.join("src"), &mut files);
+    files.sort();
     let mut out = Vec::new();
     for p in files {
         let Ok(t) = std::fs::read_to_string(&p) else { continue };
@@ -279,7 +280,7 @@ fn page_reads(root: &std::path::Path) -> Vec<(HashSet<String>, HashSet<String>)>
                 i += 1;
             }
         }
-        out.push((words, reads));
+        out.push((p.strip_prefix(root).unwrap_or(&p).to_string_lossy().to_string(), words, reads));
     }
     out
 }
@@ -544,6 +545,7 @@ fn main() {
     let mut table_to: Option<String> = None;
     let mut knobs_to: Option<String> = None;
     let mut drop_to: Option<String> = None;
+    let mut page_rows_to: Option<String> = None;
     let mut unnamed = false;
     let mut root = PathBuf::from(".");
     let mut it = args.iter();
@@ -557,6 +559,7 @@ fn main() {
             "--table" => table_to = Some(val()),
             "--knobs" => knobs_to = Some(val()),
             "--drop" => drop_to = Some(val()),
+            "--page-rows" => page_rows_to = Some(val()),
             "--root" => root = PathBuf::from(val()),
             x => {
                 eprintln!("fold: no option {x}");
@@ -996,11 +999,19 @@ fn main() {
         // the row when it spells the table (`AIM`) and reads the field's name (`.level`, `['level']`, `{ level }`); by name, so it
         // errs toward staying
         let page = page_reads(&root);
-        let (drop, s_page): (Vec<String>, Vec<String>) = drop.into_iter().partition(|name| {
-            let mut parts = name.split('.');
-            let (table, leaf) = (parts.next().unwrap_or(""), name.rsplit('.').next().unwrap_or(""));
-            !page.iter().any(|(words, reads)| words.contains(table) && reads.contains(leaf))
-        });
+        let files_of = |name: &str| -> Vec<&str> {
+            let (table, leaf) = (name.split('.').next().unwrap_or(""), name.rsplit('.').next().unwrap_or(""));
+            page.iter().filter(|(_, words, reads)| words.contains(table) && reads.contains(leaf)).map(|(f, _, _)| f.as_str()).collect()
+        };
+        let (drop, s_page): (Vec<String>, Vec<String>) = drop.into_iter().partition(|name| files_of(name).is_empty());
+        if let Some(f) = &page_rows_to {
+            // a row a line: the row, then the files of the page that still name it
+            let mut t = String::from("row\tfiles of the page that spell its table and read a field of its name\n");
+            for name in &s_page {
+                let _ = writeln!(t, "{name}\t{}", files_of(name).join(" "));
+            }
+            let _ = std::fs::write(f, t);
+        }
         let _ = writeln!(o, "# The knob tables' dead weight, as the bodies stand\n");
         if !write && !out.texts.is_empty() {
             let _ = writeln!(o, "NOT OF THE TREE AS IT IS: the fold has edits it did not write (no --write), and this counts the bodies as the fold would leave them. Fold first.\n");
