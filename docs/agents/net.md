@@ -5,17 +5,15 @@ back, WebSockets, CPU senses on the server. What is built so far is the server, 
 and a page is opened with `?net=`: a page without that word is the build as it was (the loop's `tick` seam is absent, `netFromUrl` returns on its first
 line).
 
-- **CO-OP ON THE RUST GAME: WHERE IT STANDS** (2026-11-07). The TypeScript tick is deleted; the game server, the scripted clients and the page in a game
-  step the Rust game. A page opened with `?net=` is the Rust game's page and plays as its server's client, with one seat and with two (`src/main.ts`
-  holds only a tape's address back now); the server (`tools/mp/server.ts`) and a scripted client (`tools/mp/bot.ts`) stand through the tools' host.
-  THE CO-OP SCREEN IS STILL DOWN: `src/net/lobby.ts COOP.down` holds one line ("Co-op can’t be played on this build yet. You can still play every
-  mission on your own.") and `src/ui/coop.ts lobby`, the one door of Host game, Join by a code, the invite and a `?join=` link, answers with it; '' =
-  co-op is up. It waits on two faults a game of two has at its start in Rust (a wall charge's roster, a pair's mission refusing the second seat's
-  men), which are being mended there. WHICH SEAT A MACHINE SHOWS reaches the Rust game at its start only (`Game.local_seat`: between ticks the Rust
-  game carries that seat's own set on its own fields): a host sets `g.localSeat` BEFORE its first step and never after, or every apply writes one
-  seat's order book over another's object (`src/host/rustgame.ts startSeated` is the marked stand-in round the start's apply). NEVER RUN ON THE RUST
-  GAME: Host game and Join through the control plane (`tools/qa/lobby-page.cjs` needs the backend's packages, which the cloud machines lack), two real
-  windows, a GPU, the hosted service.
+- **CO-OP IS ON THE RUST GAME** (2026-11-07). The TypeScript tick is deleted; the game server, the scripted clients and the page in a game step the Rust
+  game, and the Co-op screen is up again (for some hours of 2026-11-07 it answered "Co-op can’t be played on this build yet": `COOP.down`, gone once
+  the two faults a game of two had at its start in Rust were mended there: a wall charge's roster by seat, and the budget of men counting the seats). A
+  page opened with `?net=` is the Rust game's page and plays as its server's client, with one seat and with two (`src/main.ts` holds only a tape's
+  address back now); the server (`tools/mp/server.ts`) and a scripted client (`tools/mp/bot.ts`) stand through the tools' host. WHICH SEAT A MACHINE
+  SHOWS reaches the Rust game at its start only (`Game.local_seat`: between ticks the Rust game carries that seat's own set on its own fields): a host
+  sets `g.localSeat` BEFORE its first step and never after, or every apply writes one seat's order book over another's object
+  (`src/host/rustgame.ts startSeated` is the marked stand-in round the start's apply). NEVER RUN ON THE RUST GAME: Host game and Join through the
+  control plane (`tools/qa/lobby-page.cjs` needs the backend's packages, which the cloud machines lack), two real windows, a GPU, the hosted service.
   - **The state word is the game's own** (`src/net/step.ts netWord`): the die's count of draws and the hash of each part of the game's block (head, dice,
     doors, falls, props, slabs, items, men, lights, weather, smoke, poses, panes: where every body, door and thing is), folded tick after tick. The host
     of the game that steps hangs `stateWords()` on the game object beside its `stepSeats` (`src/host/rustgame.ts` in the page, `tools/blitz/rust-host.ts`
@@ -32,7 +30,16 @@ line).
     shows the SECOND seat differs from the rest in 24 parts (the seat's set and every module table that follows the seat standing on the Game);
     a client that looks ahead through the tools' surface differs in four (`col`, `alone_own`, `m.scene_box_mirror`, `m.scene_collision`: what the
     crossed walk leaves behind). Asked of the wire's owner: the words computed with the first seat standing, `m.owner` out. Fold them into `netWord`
-    the day words-diff says every part agrees.
+    the day words-diff says every part agrees. SECOND RUNS (same day, the module of the Rust goal's third batch: 310 parts, `m.owner` out, the walk
+    made with the first seat standing): ONE SEAT, every part agrees on server, client and watcher over 60 word ticks but the four the look ahead
+    leaves. TWO SEATS, the machine that shows the second seat still differs in 36 parts, and the whole exports say why: IT NUMBERS ITS ROWS
+    DIFFERENTLY. The start's export walked the puppet with the shown seat standing, so that seat's man, guns, lamp and order rows got the low
+    numbers (`g.pl[0]`, `g.ch[12]`, `cmd_seat[0]`, `FirearmId(0)` are the second player's there and the first player's on the server; the lists
+    `g.seats` and `g.men_all` are in true seat order on both). Server against the first seat's client: 0 paths of the whole export differ at ticks
+    30 and 570; against the second seat's: 76,705, one relabelling. The block words agreed throughout, so nothing has parted by it, but a rule that
+    goes by row index could. RULED by the Rust goal: a game's rows are numbered the same on every machine (the start exported with the first seat
+    standing) and which seat a machine shows becomes the host's own fact, told after the start and changeable; it comes in the Rust goal's next
+    batch with the four scratch parts taken off the words. The whole words stay out of the alarm until a two-seat run is clean.
   - **Networked machines step in QUIET RUNS** (`step.ts netQuiet`, the hosts' `quietRun(on)`): between two ticks of a run nothing is brought across to
     the host's copy of the game (no export, no apply, no out event, no dress step); as the run ends the copy takes what changed in one apply, the out
     events of every tick in their order, and the dress step over the run's whole time. The server's run is from one state word to the next (so the
@@ -51,6 +58,16 @@ line).
     walk was mended: it turned back with the key down until the page was level with its server, which on a slow page walks the man back to the wall
     he started from, and asleep there he walks nowhere whatever the server holds (a probe: the server ran his key the whole sleep, 5.68 m with floor
     ahead of him, 0.07 m at the wall). It turns back for two bursts and sleeps at once now.
+  - **Read again as the Co-op screen came back** (2026-11-07, the same box, the Rust goal's third batch with its checked-in module and `COOP.down`
+    off; nothing seen on a GPU or by a person): `mpserver-check` every line but `ahead`; `mpclient-page` one seat every line (551 state words by tick
+    16,558, his own man ahead in 24 of 35 looks, a tab that sleeps walked on 2.23 m, no page error); `--seats 2` every line (the page in the second
+    seat: its own man, 1,064 state words by tick 31,947, ahead in 31 of 31 looks, a tab that sleeps, no page error); `MPCLIENT_BREAK=1` fails the
+    same-fight line at the first word after the break. THE CO-OP DOORS with no backend on the box: Host game, Join by a code and a `?join=` link each
+    answer "You can’t play co-op here because this page isn’t connected to the game service." and the title stays usable, as before the card.
+    A HOSTED SERVER NEEDS NO COMPILER: from a fresh copy of the tree, with no cargo on the machine and an empty home, `tools/mp/server.ts` stood a
+    two-seat game on the checked-in module (taken by the hash of its sources) and played two scripted clients; its memory peaked at 615 MB (the hosted
+    image is bun alone with 2 GB). `tools/blitz/coop-check.ts` on the kept two-seat games: ALL PASS (a seat's pair through a locked door in 3.5 s and
+    4.5 s where the TypeScript game took 9.3 s and 10 s; 16 men on the barracks).
 - **What travels is the input timeline, never the state** (`src/net/wire.ts`). The game plays one fight to the bit from its recipe and its seats' records
   (`docs/agents/replays.md`: the game's own maths, the senses on the CPU, the input record, a record from anyone), so the server decides which record each
   seat's tick ran on, tells every client, and sends a state word (`src/net/step.ts netWord`, chained: the game's own words) every `NET.wordEvery` ticks as the alarm. A NETWORKED

@@ -31,7 +31,6 @@ function tabId(): string {
 }
 /** the lobby of this visit's backend, or the words for why this page has none */
 async function lobby(q: URLSearchParams): Promise<Lobby | string> {
-  if (COOP.down) return COOP.down;
   await cloudFind();
   const url = cloudUrl(q); if (!url) return 'You can’t play co-op here because this page isn’t connected to the game service.';
   const build = await buildName(); if (!build) return 'You can’t play co-op on this copy of the game.';
