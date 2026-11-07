@@ -1,4 +1,4 @@
-//! THE CALL SURFACE: every function of the tick that something outside the tick calls, by its row. Written by surface.py. Never edited by hand.
+//! THE CALL SURFACE: every function of the tick that something outside the tick calls, by its row. An arm's number is its row's `id` in tools/blitz/calls.json; a row that leaves the table may take its arm with it, and no other number moves.
 #![allow(unused_mut, unused_variables, unused_imports, clippy::all)]
 use crate::io::*; use crate::ids::*; use crate::js::*; use crate::{Quat, V3}; use alloc::{string::String, vec::Vec};
 /// how the host asks a die a caller handed in (the face sets it; a native runner has none, and the game's own die answers)
@@ -155,7 +155,6 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let mut
 147 => { let a1: V3 = Io::r(&mut i); let a2: Option<crate::wallbreak::BlastOpts> = Io::r(&mut i); let r = crate::wallbreak::wall_break_would_open(g, a1, a2); r.w(&mut o);  }
 148 => { let a1: V3 = Io::r(&mut i); let a2: Option<crate::wallbreak::BlastOpts> = Io::r(&mut i); let r = crate::wallbreak::wall_break_blast(g, a1, a2); r.w(&mut o);  }
 149 => { let a1: Option<bool> = Io::r(&mut i); crate::wallbreak::wall_break_reset(g, a1);  }
-150 => { let a1: Option<crate::wallbreak::WallsSave> = Io::r(&mut i); crate::wallbreak::wall_break_restore(g, a1.as_ref());  }
 151 => {  crate::furnblast::furniture_warm(g);  }
 152 => {  let r = crate::furnblast::furniture_inventory(g); r.w(&mut o);  }
 153 => { let a1: V3 = Io::r(&mut i); let a2: crate::furnblast::BlastSource = Io::r(&mut i); let r = crate::furnblast::furniture_first_to_go(g, a1, a2); r.w(&mut o);  }
@@ -163,8 +162,6 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let mut
 155 => { let a1: V3 = Io::r(&mut i); let a2: crate::furnblast::BlastSource = Io::r(&mut i); let a3: f64 = Io::r(&mut i); let a4: f64 = Io::r(&mut i); crate::furnblast::furniture_blast(g, a1, a2, a3, a4);  }
 156 => { let a1: BoxId = Io::r(&mut i); let a2: V3 = Io::r(&mut i); let a3: V3 = Io::r(&mut i); let a4: f64 = Io::r(&mut i); crate::furnblast::furniture_hung_goes(g, a1, a2, a3, a4);  }
 157 => {  crate::furnblast::furniture_reset(g);  }
-158 => { let a1: Option<crate::furnblast::FurnSave> = Io::r(&mut i); let r = crate::furnblast::furniture_check(g, a1.as_ref()); r.w(&mut o);  }
-159 => { let a1: Option<crate::furnblast::FurnSave> = Io::r(&mut i); crate::furnblast::furniture_restore(g, a1.as_ref());  }
 160 => { let a1: V3 = Io::r(&mut i); let a2: f64 = Io::r(&mut i); let a3: f64 = Io::r(&mut i); let r = crate::doorblast::door_blast(g, a1, a2, a3); r.w(&mut o);  }
 161 => { let a1: DoorId = Io::r(&mut i); let a2: V3 = Io::r(&mut i); let a3: f64 = Io::r(&mut i); let a4: Option<f64> = Io::r(&mut i); let r = crate::doorblast::tear_off(g, a1, a2, a3, a4); r.w(&mut o);  }
 162 => { let a1: f64 = Io::r(&mut i); let a2: f64 = Io::r(&mut i); let a3: V3 = Io::r(&mut i); let a4: V3 = Io::r(&mut i); let a5: f64 = Io::r(&mut i); crate::doorblast::leaf_round(g, a1, a2, a3, a4, a5);  }
@@ -412,12 +409,10 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let mut
 404 => { let a1: Option<CharId> = Io::r(&mut i); let r = crate::rescueend::rescue_end_word(g, a1); r.w(&mut o);  }
 405 => {  crate::rescueend::rescue_end_tick(g);  }
 406 => {  let r = crate::rescueend::rescue_end_won(g); r.w(&mut o);  }
-407 => { let a1: crate::rescueend::RescueEndSnap = Io::r(&mut i); crate::rescueend::rescue_end_restore(g, a1);  }
 408 => {  crate::rescueflush::rescue_flush_reset(g);  }
 409 => { let a1: Option<GuardId> = Io::r(&mut i); let r = crate::rescueflush::rescue_flush_holder(g, a1); r.w(&mut o);  }
 410 => { let a1: GuardId = Io::r(&mut i); let a2: Vec<GuardId> = Io::r(&mut i); let r = crate::rescueflush::rescue_flush_victims(g, a1, &a2); r.w(&mut o);  }
 411 => {  crate::rescueflush::rescue_flush_tick(g);  }
-412 => { let a1: crate::rescueflush::RescueFlushSnap = Io::r(&mut i); crate::rescueflush::rescue_flush_restore(g, &a1);  }
 413 => { let a1: Option<crate::scene_scenarios::RescueData> = Io::r(&mut i); let r = crate::rescue::check_rescue(g, a1.as_ref()); r.w(&mut o);  }
 414 => {  let r = crate::rescue::rescue_start(g); r.w(&mut o);  }
 415 => {  crate::rescue::rescue_stop(g);  }
@@ -441,12 +436,9 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let mut
 433 => {  crate::air_dust::air_dust_reseed(g);  }
 434 => {  crate::air_dust::air_dust_reset(g);  }
 435 => { let a1: f64 = Io::r(&mut i); crate::air_dust::air_dust_update(g, a1);  }
-436 => {  let r = crate::air_dust::air_dust_snapshot(g); r.w(&mut o);  }
-437 => { let a1: Option<crate::air_dust::AirDustSnap> = Io::r(&mut i); crate::air_dust::air_dust_restore(g, a1.as_ref());  }
 438 => {  let r = crate::air_dust::air_dust_summary(g); r.w(&mut o);  }
 439 => { let a1: PlayerId = Io::r(&mut i); let a2: crate::doors::DoorContact = Io::r(&mut i); crate::sprintdoor::sprint_door_after(g, a1, &a2);  }
 440 => { let a1: V3 = Io::r(&mut i); let a2: Vec<V3> = Io::r(&mut i); let r = crate::seenwalk::seen_price(g, a1, &a2); r.w(&mut o);  }
-441 => { let a1: Option<crate::savestate::SaveState> = Io::r(&mut i); let r = crate::savestate::can_load(g, a1.as_ref()); r.w(&mut o);  }
 442 => { let a1: V3 = Io::r(&mut i); let r = crate::wet::under_roof_rect(g, a1); r.w(&mut o);  }
 443 => { let a1: CharId = Io::r(&mut i); let r = crate::wet::open_sky(g, a1); r.w(&mut o);  }
 444 => { let a1: f64 = Io::r(&mut i); crate::wet::update_wetness(g, a1);  }
@@ -677,7 +669,6 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let mut
 669 => { let a1: GuardId = Io::r(&mut i); let a2: GuardId = Io::r(&mut i); let a3: CharId = Io::r(&mut i); let a4: V3 = Io::r(&mut i); let r = crate::silent::silent_holds_glass(g, a1, a2, a3, a4); r.w(&mut o);  }
 670 => {  crate::silent::silent_tick(g);  }
 671 => { let a1: f64 = Io::r(&mut i); crate::lesson::lesson_tick(g, a1);  }
-672 => { let a1: Option<crate::lesson::LessonSnap> = Io::r(&mut i); crate::lesson::lesson_restore(g, a1.as_ref());  }
 673 => { let a1: crate::scene_scenarios::LessonData = Io::r(&mut i); let a2: f64 = Io::r(&mut i); let a3: f64 = Io::r(&mut i); let r = crate::rails::rails_settles(g, &a1, a2, a3); r.w(&mut o);  }
 674 => { let a1: InputId = Io::r(&mut i); let a2: CameraId = Io::r(&mut i); let a3: f64 = Io::r(&mut i); crate::rails::rails_gate(g, a1, a2, a3);  }
 675 => {  let r = crate::rails::rails_eye(g); r.w(&mut o);  }
@@ -867,8 +858,6 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let mut
 859 => {  crate::fogofwar::fog_of_war_reset(g);  }
 860 => { let mut a1: Vec<BoxId> = Io::r(&mut i); crate::fogofwar::fog_of_war_door_boxes(g, &mut a1); a1.w(&mut o); }
 861 => { let a1: FixtureId = Io::r(&mut i); let r = crate::fogofwar::fog_of_war_lamp_seen(g, a1); r.w(&mut o);  }
-862 => {  let r = crate::fogofwar::fog_of_war_snapshot(g); r.w(&mut o);  }
-863 => { let a1: Option<crate::fogofwar::FogSnap> = Io::r(&mut i); crate::fogofwar::fog_of_war_restore(g, a1.as_ref());  }
 864 => { let a1: f64 = Io::r(&mut i); let a2: f64 = Io::r(&mut i); let r = crate::fogofwar::fog_of_war_spot_seen(g, a1, a2); r.w(&mut o);  }
 865 => { let a1: f64 = Io::r(&mut i); let a2: f64 = Io::r(&mut i); let r = crate::fogofwar::fog_of_war_ground_look(g, a1, a2); r.w(&mut o);  }
 866 => { let a1: f64 = Io::r(&mut i); let a2: f64 = Io::r(&mut i); let a3: f64 = Io::r(&mut i); let a4: f64 = Io::r(&mut i); let r = crate::fogofwar::fog_of_war_thing_seen(g, a1, a2, a3, a4); r.w(&mut o);  }
