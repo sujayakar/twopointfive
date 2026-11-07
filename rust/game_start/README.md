@@ -107,7 +107,7 @@ and `cargo test`'s threads take turns. A test that stands a second game drops th
 | the block of `rust/sim` the game stands in, zeroed under the layout's word | `stand.rs` |
 | the character: skeleton, skin, clips, the cast's meshes and variants | `gltf.rs`: `src/anim/gltf.ts` in Rust, from the `.gltf` files' bytes |
 | the host: an empty box world and light set, the picture's settings | the game's `box_world_new`; `settings.rs` (a copy of `defaultSettings()`) |
-| the level file read into the `Level`, its boxes and routes as rows | `level.rs`: `src/scene/levelLoad.ts loadLevel` in Rust; the records the game keeps as its own types (a mission's `scenarios`, the footsteps' map, devices, civilians, vents, the drill plans) through `read.rs` and `records.rs`, a line a type |
+| the level file read into the `Level`, its boxes and routes as rows | `level.rs`: `src/scene/levelLoad.ts loadLevel` in Rust; the records the game keeps as its own types (a mission's `scenarios`, the footsteps' map, devices, civilians, vents, the drill plans) and the file's own records the game crate has a type for (a box with its shape and markings, a light, a door) through `read.rs` and `records.rs`, a line a type |
 | the kit's octagons made one round box each; thin things and window bars marked; each box that says a shape given its record and its trim; statics into the world, lights into the set | `passes.rs` (`scene/round.ts`, `thin.ts`, `bars.ts`, `shapes.ts`); the game's `cut_record`, `box_world_add_static`, `light_from_def` |
 | the die, seeded before the men are made | the game's `sim_dice_new` |
 | collision, the walk grid, sound paths, fixtures, doors, guards, civilians, orders, the fog, the room fight, every module | **the game's own constructor, `game_new`** (`rust/game/src/game/p_04.rs`), which had never run before this crate |
@@ -130,7 +130,9 @@ it, and today it names nothing. `stand` REFUSES a file with anything on that lis
   since. There is no second list of a record's members to keep beside its reader. What the loader leaves behind by rule, as the TypeScript
   loader does (a floor, an author's notes, the editor's block), it passes by in so many words (`skip`).
 - **A record the game keeps as its own type is read by that type** (`records.rs`): one line says which member of the file each field is, so a type
-  that gains a field does not compile until its line names the member.
+  that gains a field does not compile until its line names the member. A box, a light and a door are read as the file's own record types
+  (`BoxData`, `LightData`, `DoorData`) and then laid as the loader lays them. Props, switchables, routes, volumes and the mission's objectives have
+  no record type in the game crate and are still read member by member.
 - NOT READ: `connectors` (a stair or a ladder between floors: the TypeScript loader passes them by too, and no file has one).
 - NOT CHECKED: the file's own rules (`validateLevelData`). A file is taken as one the TypeScript validator has passed; a wrong value stops the
   reader with its place in the file, a wrong level does not.
