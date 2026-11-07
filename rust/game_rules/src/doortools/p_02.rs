@@ -82,7 +82,7 @@ fn strs(xs: &[&str]) -> Vec<String> {
 }
 /// S.register(def, before): a row is a thing of the orders' table
 fn register(g: &mut Game, def: crate::orders::OrderDef, before: Option<&str>) {
-    let id = g.tab.orders_order_def.push(def);
+    let id = crate::orders::squad_orders_row(g, def);
     crate::orders::squad_orders_register(g, id, before);
 }
 

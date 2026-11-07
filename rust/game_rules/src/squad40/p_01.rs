@@ -401,7 +401,7 @@ pub fn row(g: &mut crate::game::Game) -> OrdersOrderDefId {
         free: Some(true),
         ..Default::default()
     });
-    g.tab.orders_order_def.push(def)
+    crate::orders::squad_orders_row(g, def)
 }
 
 /// the squad's HUD block: what is left while this staging brought any, and the shot just made. (squad40.ts notes)
