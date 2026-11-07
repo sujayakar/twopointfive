@@ -18,57 +18,12 @@ const ALL_KINDS: [WeatherKind; 7] = [
     WeatherKind::Snow,
 ];
 
-/// `URLSearchParams.get(key)` of a query the host holds. (weatherKinds.ts:112, :174, :179)
-fn seam_query_get(q: crate::Opaque, key: &str) -> Option<String> {
-    todo!("needs: URLSearchParams as a type that can answer get(key)")
-}
-
 /// The kind a text names, of the kinds a level can be started in.
 fn startable_kind(s: &str) -> Option<WeatherKind> {
     if !is_weather_kind(Some(s)) {
         return None;
     }
     ALL_KINDS.iter().copied().find(|k| k.as_str() == s)
-}
-
-/// One side of a `key=value` pair of a query, as URLSearchParams decodes it: + is a space, %XX a byte, the bytes UTF-8 with bad runs replaced.
-fn form_decode(s: &str) -> String {
-    let b = s.as_bytes();
-    let hex = |c: u8| (c as char).to_digit(16).map(|d| d as u8);
-    let mut out: Vec<u8> = Vec::with_capacity(b.len());
-    let mut i = 0;
-    while i < b.len() {
-        if b[i] == b'+' {
-            out.push(b' ');
-            i += 1;
-            continue;
-        }
-        if b[i] == b'%' && i + 2 < b.len() {
-            if let (Some(hi), Some(lo)) = (hex(b[i + 1]), hex(b[i + 2])) {
-                out.push(hi * 16 + lo);
-                i += 3;
-                continue;
-            }
-        }
-        out.push(b[i]);
-        i += 1;
-    }
-    String::from_utf8_lossy(&out).into_owned()
-}
-
-/// `new URLSearchParams(search).get(key)`: the first pair of that key, decoded.
-fn text_query_get(search: &str, key: &str) -> Option<String> {
-    let body = search.strip_prefix('?').unwrap_or(search);
-    for pair in body.split('&') {
-        if pair.is_empty() {
-            continue;
-        }
-        let (name, value) = pair.split_once('=').unwrap_or((pair, ""));
-        if form_decode(name) == key {
-            return Some(form_decode(value));
-        }
-    }
-    None
 }
 
 /// `/^[\w.-]+\.json$/`: a plain file name of a level. (weatherKinds.ts:112)
@@ -101,8 +56,8 @@ pub fn snow_level(g: &mut crate::game::Game, name: Option<&str>) -> bool {
 }
 
 /// snowLevel asked of a page's query: its `levelFile`. (weatherKinds.ts snowLevelOfQuery)
-pub fn snow_level_of_query(g: &mut crate::game::Game, q: crate::Opaque) -> bool {
-    let lf = match seam_query_get(q, "levelFile") {
+pub fn snow_level_of_query(g: &mut crate::game::Game, q: &crate::query::Query) -> bool {
+    let lf = match q.get("levelFile").map(String::from) {
         Some(lf) => lf,
         None => return false,
     };
@@ -217,15 +172,15 @@ pub fn in_rect(r: &[f64], x: f64, z: f64) -> bool {
 /// The kind a query string or the host's query names, if any. (weatherKinds.ts weatherOfSearch)
 pub fn weather_of_search(search: &crate::weather_kinds::WeatherOfSearchSearch) -> Option<crate::weather_kinds::WeatherKind> {
     let v = match search {
-        WeatherOfSearchSearch::Text(s) => text_query_get(s, WEATHER_KEY),
-        WeatherOfSearchSearch::URLSearchParams(q) => seam_query_get(*q, WEATHER_KEY),
+        WeatherOfSearchSearch::Text(s) => crate::query::Query::parse(s).get(WEATHER_KEY).map(String::from),
+        WeatherOfSearchSearch::URLSearchParams(q) => q.get(WEATHER_KEY).map(String::from),
     };
     startable_kind(&v?)
 }
 
 /// Reads ?weather= at boot and locks the page to it; an unknown name boots the level as it is. (weatherKinds.ts initWeather)
-pub fn init_weather(g: &mut crate::game::Game, qs: crate::Opaque) -> Option<crate::weather_kinds::WeatherKind> {
-    let v = seam_query_get(qs, WEATHER_KEY);
+pub fn init_weather(g: &mut crate::game::Game, qs: &crate::query::Query) -> Option<crate::weather_kinds::WeatherKind> {
+    let v = qs.get(WEATHER_KEY).map(String::from);
     g.m.weather_kinds.weather_boot.locked = true;
     let kind = v.and_then(|v| startable_kind(&v));
     g.m.weather_kinds.weather_boot.kind = kind;

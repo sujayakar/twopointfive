@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 /// The page's rule for the switch; all four rows are settled true on the page, so the address is not read.   (words.ts wordsFromQuery)
-pub fn words_from_query(g: &mut crate::game::Game, q: crate::Opaque) {
+pub fn words_from_query(g: &mut crate::game::Game, q: &crate::query::Query) {
     g.k.words.on = true;
     g.k.words.doors = true;
     g.k.words.radio_home = true;

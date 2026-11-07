@@ -103,7 +103,7 @@ impl Default for WeatherKindsModWEATHERBOOT { fn default() -> Self { Self::zeroe
 #[derive(Clone, Debug)]
 pub enum WeatherOfSearchSearch {
     Text(String),
-    URLSearchParams(crate::Opaque),
+    URLSearchParams(crate::query::Query),
 }
 
 /// the state this module keeps at its top level

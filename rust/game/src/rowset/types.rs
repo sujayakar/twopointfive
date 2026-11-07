@@ -7,7 +7,7 @@ use alloc::{string::String, vec::Vec};
 #[derive(Clone, Debug)]
 pub enum RowOfQuerySearch {
     Text(String),
-    URLSearchParams(crate::Opaque),
+    URLSearchParams(crate::query::Query),
 }
 
 /// (TypeScript: inline at src/game/rowset.ts:43 rowSettings ->, src/game/rowset.ts:43)
