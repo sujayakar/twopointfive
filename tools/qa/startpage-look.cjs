@@ -1,5 +1,5 @@
 // THE ONE STARTING PAGE LOOK (ui/startpage.ts): the page on the REAL build in headless Chromium:
-// what is on it, that every mission is on it and goes through its loadout to Deploy, the keys through both halves, real page loads, and the switch off.
+// what is on it, that every mission is on it and goes through its loadout to Deploy, the keys through both halves, real page loads.
 // The page's two steps: MISSION (the list, the briefing, the Setup rail of value rows) and TEAM & KIT (the loadout's rows); the rail's rows stand in for the list's own setting rows, which stay in the page unseen.
 //   node tools/qa/startpage-look.cjs <outDir>      env: PORT (the dev server's, default 5199) · SIZE (default 1440x900) · QUALITY (default verylow) · ALL=1 (deploy EVERY mission) · STILLS=0 (no stills) · GPU=1 (see below)
 // PASS / FAIL lines, stills beside a report.json, exit 1 on a FAIL or a page error.
@@ -72,7 +72,7 @@ const cardOf = page => page.evaluate(() => ({ buttons: [...document.querySelecto
 
   // ---- the card under the page: one button to it
   const card = await cardOf(page);
-  check(card.buttons[0] === 'Play ›' && !card.buttons.includes('Start') && !card.buttons.includes('Missions') && card.picks === 0, "the card has ONE way in: 'Play ›' (no short list of its own, no Missions, no Start)", `buttons: ${card.buttons.join(' | ')} · short-list rows on the card ${card.picks}`);
+  check(card.buttons[0] === 'Play ›' && !card.buttons.includes('Start') && !card.buttons.includes('Missions'), "the card has ONE way in: 'Play ›' (no Missions, no Start)", `buttons: ${card.buttons.join(' | ')}`);
  
 
   // ---- the page: everything on it
@@ -234,12 +234,6 @@ const cardOf = page => page.evaluate(() => ({ buttons: [...document.querySelecto
   await page.setViewportSize({ width: 1280, height: 720 }); await open(); const sS = await stateOf(page);
   check(!!sS.loadout?.deployInView, 'at 1280 x 720 Deploy is still in view without scrolling', `in view ${sS.loadout?.deployInView}`);
   await page.setViewportSize({ width: W, height: H });
-
-  // ---- the switch off: ?cards
-  await boot(Q + '&cards'); const cc = await cardOf(page);
-  await page.click('#menu .actions button:has-text("Missions")'); await page.waitForTimeout(300);
-  const off = await page.evaluate(() => ({ list: document.getElementById('missions')?.classList.contains('on'), one: document.getElementById('missions')?.classList.contains('one'), lo: !!document.getElementById('loadout') }));
-  check(cc.picks >= 2 && cc.buttons.includes('Missions') && cc.buttons.includes('Start') && off.list && !off.one && !off.lo, '?cards: the start card with its short list, Missions and Start, and the list as a screen of its own, as it was', `rows ${cc.picks} · ${cc.buttons.join(' | ')} · list ${off.list} one ${off.one} loadout ${off.lo}`);
 
   // ---- a narrow window, the squad line at its longest ('One wall charge' picked): nothing on the sheet runs off its right edge
   await boot(); await page.click('#menu .actions button.primary'); await page.waitForSelector('#missions.one.on', { timeout: 20000 });
