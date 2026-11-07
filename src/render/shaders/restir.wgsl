@@ -52,7 +52,7 @@
 //     TRANSIENT  lights (the kind word's 256 bit: muzzle flashes, tracer heads, the lightning — one to thirty frames each) are a STRATUM OF THEIR OWN: never a
 //                candidate, never in a reservoir, one dedicated shadow ray per pixel per class each frame they reach it (one transient importance-picked ∝ its
 //                unshadowed weight if several do), their E × V added to S exactly and their hue with it — what the leader path gave a flash, and what the cascades /
-//                gather / froxels already do with transients (history-free). Through the reservoirs a stroke of lightning lost a tenth of its floor on the frame it
+//                gather already do with transients (history-free). Through the reservoirs a stroke of lightning lost a tenth of its floor on the frame it
 //                struck (the pixels whose one fresh draw fell on the moon or a lamp instead) and its second return stroke came through MIS at half height a frame
 //                late (a 13× jump against twenty frames of confidence in its own decayed record): docs/internal/tjank.md §B. U counts them (exact, as ever); the
 //                denoiser's jump yardstick (U.a) counts them too, so their arrival and departure are light-jumps there; the believed-visible hue Uv does not.

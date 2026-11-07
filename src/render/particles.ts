@@ -215,11 +215,11 @@ export class Particles {
   private pEmit!: GPUComputePipeline; private pUpdate!: GPUComputePipeline; private pDraw!: GPURenderPipeline;
   private simMod: GPUShaderModule; private drawMod: GPUShaderModule; private simLay: GPUPipelineLayout; private drawLay: GPUPipelineLayout;
   private bgSim: GPUBindGroup | null = null; private bgSimDice: GPUTextureView | null = null;
-  /** THE LOOK PROTOTYPE's place field (render/placeField.ts `buffer`; particles_draw.wgsl placeBuf @7, read only on the look page while the one exposure
+  /** THE LOOK PROTOTYPE's place field (render/placeField.ts `buffer`; particles_draw.wgsl placeBuf @6, read only on the look page while the one exposure
    *  model is on): null = the zeros that say "none". The engine hands it each frame, as it hands the composite and the smoke march theirs (passes.setPlace) */
   private placeBuf: GPUBuffer | null = null; private placeNone: GPUBuffer;
   setPlace(b: GPUBuffer | null) { if (b !== this.placeBuf) { this.placeBuf = b; this.bgDraw = null; } }
-  private bgDraw: GPUBindGroup | null = null; private bgDrawKey: [GPUTextureView | null, GPUTextureView | null, GPUTextureView | null, GPUTextureView | null] = [null, null, null, null];
+  private bgDraw: GPUBindGroup | null = null; private bgDrawKey: [GPUTextureView | null, GPUTextureView | null, GPUTextureView | null] = [null, null, null];
   private readbacks: GPUBuffer[] = []; private inflight: GPUBuffer[] = []; private frameNo = 0;
   private static readonly ZERO_HDR = new Uint32Array(HDR_BYTES / 4);   // (only its first two words are written per frame)
 
@@ -240,10 +240,9 @@ export class Particles {
       { binding: 1, visibility: VS | FS, buffer: { type: 'uniform' } },
       { binding: 2, visibility: FS, texture: { sampleType: 'depth', viewDimension: '2d' } },
       { binding: 3, visibility: FS, texture: { sampleType: 'unfilterable-float', viewDimension: '2d' } },
-      { binding: 4, visibility: FS, texture: { sampleType: 'float', viewDimension: '3d' } },   // the integrated froxel volume (render/froxels.ts; read under FrameFlags.FroxelVol, a dummy otherwise)
-      { binding: 5, visibility: FS, texture: { sampleType: 'float', viewDimension: '2d' } },   // PARTICLE RAIN v2: the composite's copy the rain streaks REFRACT (render/passes.ts hdrCopy; a 1×1 black stand-in when there is none — rainCfgC.x is 0 then)
-      { binding: 6, visibility: FS, sampler: { type: 'filtering' } },                          // … and its bilinear sampler
-      { binding: 7, visibility: VS, buffer: { type: 'uniform' } },                             // THE LOOK PROTOTYPE: the place field (setPlace; zeros with none): a particle's light is shown by its place's gain (particles_draw.wgsl partShow)
+      { binding: 4, visibility: FS, texture: { sampleType: 'float', viewDimension: '2d' } },   // PARTICLE RAIN v2: the composite's copy the rain streaks REFRACT (render/passes.ts hdrCopy; a 1×1 black stand-in when there is none — rainCfgC.x is 0 then)
+      { binding: 5, visibility: FS, sampler: { type: 'filtering' } },                          // … and its bilinear sampler
+      { binding: 6, visibility: VS, buffer: { type: 'uniform' } },                             // THE LOOK PROTOTYPE: the place field (setPlace; zeros with none): a particle's light is shown by its place's gain (particles_draw.wgsl partShow)
     ] });
     this.sceneDummy = device.createTexture({ label: 'particlesSceneDummy', size: [1, 1], format: 'rgba16float', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
     this.sceneDummyView = this.sceneDummy.createView();
@@ -596,10 +595,10 @@ export class Particles {
   }
   /** The splat into the HDR target (loadOp 'load': straight over what the composite wrote) + its reactive mask into `reactView` (cleared here: this pass is the mask's only writer, and the
    *  resolve reads it only on frames this ran — liveSlots > 0), 6 vertices per live-window slot. A no-op with nothing live. */
-  /** `scene` (PARTICLE RAIN v2): the composite-size copy of the HDR target the rain streaks refract — `view` is bound at 5; when `copy` is given (GBAA off: nobody else fills it) and the rain
+  /** `scene` (PARTICLE RAIN v2): the composite-size copy of the HDR target the rain streaks refract — `view` is bound at 4; when `copy` is given (GBAA off: nobody else fills it) and the rain
    *  ring is live, hdr is copied into it first (≈ 0.1 ms at 1777×1000); without `copy` the view is read as it stands (GBAA refreshed it at the end of last frame: a frame old, free).
    *  null / omitted = the 1×1 stand-in and refraction off for the frame. */
-  encodeDraw(enc: GPUCommandEncoder, sceneBG: GPUBindGroup, hdrView: GPUTextureView, reactView: GPUTextureView, depthView: GPUTextureView, volView: GPUTextureView, froxelView: GPUTextureView, ts?: GPURenderPassTimestampWrites, scene?: { view: GPUTextureView; copy?: { src: GPUTexture; dst: GPUTexture; w: number; h: number } } | null) {
+  encodeDraw(enc: GPUCommandEncoder, sceneBG: GPUBindGroup, hdrView: GPUTextureView, reactView: GPUTextureView, depthView: GPUTextureView, volView: GPUTextureView, ts?: GPURenderPassTimestampWrites, scene?: { view: GPUTextureView; copy?: { src: GPUTexture; dst: GPUTexture; w: number; h: number } } | null) {
     if (this.liveTotal === 0) return;
     const rainLive = this.rainWin[3] > 0;
     const wantScene = rainLive && !!scene && this.rainLook.refract > 0;
@@ -607,9 +606,9 @@ export class Particles {
     const nextCopy: 'gbaa' | 'copy' | 'none' = wantScene ? (scene!.copy ? 'copy' : 'gbaa') : 'none';
     if (nextCopy !== this.rainSceneCopy) { this.rainSceneCopy = nextCopy; }   // (read by prepare() next frame: rainCfgC.x is zeroed while nothing real is bound)
     if (wantScene && scene!.copy) enc.copyTextureToTexture({ texture: scene!.copy.src }, { texture: scene!.copy.dst }, [scene!.copy.w, scene!.copy.h]);
-    if (!this.bgDraw || this.bgDrawKey[0] !== depthView || this.bgDrawKey[1] !== volView || this.bgDrawKey[2] !== froxelView || this.bgDrawKey[3] !== sceneView) {
-      this.bgDraw = this.device.createBindGroup({ layout: this.lDraw, entries: [{ binding: 0, resource: { buffer: this.pool } }, { binding: 1, resource: { buffer: this.emitBuf } }, { binding: 2, resource: depthView }, { binding: 3, resource: volView }, { binding: 4, resource: froxelView }, { binding: 5, resource: sceneView }, { binding: 6, resource: this.sceneSamp }, { binding: 7, resource: { buffer: this.placeBuf ?? this.placeNone } }] });
-      this.bgDrawKey = [depthView, volView, froxelView, sceneView];
+    if (!this.bgDraw || this.bgDrawKey[0] !== depthView || this.bgDrawKey[1] !== volView || this.bgDrawKey[2] !== sceneView) {
+      this.bgDraw = this.device.createBindGroup({ layout: this.lDraw, entries: [{ binding: 0, resource: { buffer: this.pool } }, { binding: 1, resource: { buffer: this.emitBuf } }, { binding: 2, resource: depthView }, { binding: 3, resource: volView }, { binding: 4, resource: sceneView }, { binding: 5, resource: this.sceneSamp }, { binding: 6, resource: { buffer: this.placeBuf ?? this.placeNone } }] });
+      this.bgDrawKey = [depthView, volView, sceneView];
     }
     const p = enc.beginRenderPass({ label: 'particlesDraw', colorAttachments: [{ view: hdrView, loadOp: 'load', storeOp: 'store' }, { view: reactView, loadOp: 'clear', storeOp: 'store', clearValue: { r: 0, g: 0, b: 0, a: 0 } }], timestampWrites: ts });
     p.setPipeline(this.pDraw); p.setBindGroup(0, sceneBG); p.setBindGroup(1, this.bgDraw);

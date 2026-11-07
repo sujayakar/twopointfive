@@ -7,7 +7,7 @@
 //   (old files)  a file without the field loads as it always did.
 //   (full ring)  in a ring of 512 a mark laid only for the picture goes before any mark play laid and never pushes one out: the digest's count is
 //                min(512, the marks play laid) with the soot and without it;
-//   (dust look)  the volumetric pass's two lit marches draw dust through dust_look.wgsl, the plain read with the frame's dust bit down (tools/qa/dust-look-check.ts's check, here so the gate runs it).
+//   (dust look)  the volumetric pass's one smoke march draws dust through dust_look.wgsl, the plain read with the frame's dust bit down (tools/qa/dust-look-check.ts's check, here so the gate runs it).
 import { standUp, ROOT, fake } from './headless.ts';
 import { readFileSync } from 'node:fs';
 const { Particles } = await import(`${ROOT}/src/render/particles.ts`);
@@ -74,10 +74,10 @@ export async function wallbreakLooks(): Promise<boolean> {
     verdict(ok && cb.look > 0 && cf.look === 0, "a full ring: the soot never pushes out a mark play laid, and goes before one", steps.join(' · ')); }
   { const vol = readFileSync(`${ROOT}/src/render/shaders/volumetrics.wgsl`, 'utf8'), dust = readFileSync(`${ROOT}/src/render/shaders/dust_look.wgsl`, 'utf8');
     const count = (s: string, x: string): number => s.split(x).length - 1;
-    const ok = count(vol, 'let dl = dustDensity(X, onMask, true); let dens = fogSmoke(dl.d, X); let dTint = dustTintOf(dl);') === 2 && count(vol, 'inscatter += dTint * (') === 4 && count(vol, 'selfC[c] = smokeSelfShadowLook(X, ev.L, nearMask);') === 2
+    const ok = count(vol, 'let dl = dustDensity(X, onMask, true); let dens = fogSmoke(dl.d, X); let dTint = dustTintOf(dl);') === 1 && count(vol, 'inscatter += dTint * (') === 2 && count(vol, 'selfC[c] = smokeSelfShadowLook(X, ev.L, nearMask);') === 1
       && !vol.includes('let dens = fogSmoke(smokeDensityIn(X, onMask), X);')
       && dust.includes('fn dustAlive() -> bool { return (frame.sideCfg.z & 2u) != 0u; }') && dust.includes('if (!dustAlive()) { return DustDens(smokeDensityIn(p, mask), vec3f(0.0), 0.0); }');
-    verdict(ok, "the march's two lit marches draw dust through dust_look.wgsl, and with the frame's dust bit down it is the plain read", ok ? `${vol.length} chars of march, ${dust.length} of dust` : 'the march or the dust\'s text has moved (tools/qa/dust-look-check.ts says what is pinned)'); }
+    verdict(ok, "the one smoke march draws dust through dust_look.wgsl, and with the frame's dust bit down it is the plain read", ok ? `${vol.length} chars of march, ${dust.length} of dust` : 'the march or the dust\'s text has moved (tools/qa/dust-look-check.ts says what is pinned)'); }
   console.log(fails ? `=== wallbreak-looks: ${fails} FAILED ===` : '=== wallbreak-looks: ALL PASS ===');
   return fails === 0;
 }

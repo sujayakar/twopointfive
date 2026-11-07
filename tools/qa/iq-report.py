@@ -122,12 +122,12 @@ def table_cost(rows):
     rows = [r for r in rows if r['cost'].get('union') is not None]
     if not rows: return
     print('\n### Calm cost (cubicles still, serialized offscreen renders; union of compute passes med / p95, Σ, wall; per-pass medians)\n')
-    print('| tag | res | ∪ med | ∪ p95 | Σ | wall | direct | softblur | gather | temporal | reflect+rdenoise | volFroxel+vol | sharpU+compS | gbaa | taau |')
+    print('| tag | res | ∪ med | ∪ p95 | Σ | wall | direct | softblur | gather | temporal | reflect+rdenoise | vol | sharpU+compS | gbaa | taau |')
     print('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|')
     for r in rows:
         c = r['cost']; p = c.get('passes') or {}
         g = lambda k: p.get(k) or 0
-        print(f"| {r['tag']} | {c.get('res')} | {fmt(c['union'])} | {fmt(c['p95'])} | {fmt(c['sum'])} | {fmt(c['wall'])} | {fmt(g('direct'))} | {fmt(g('softblur'))} | {fmt(g('gather'))} | {fmt(g('temporal'))} | {fmt(g('reflect')+g('rdenoise'))} | {fmt(g('volFroxel')+g('volumetrics'))} | {fmt(g('sharpU')+g('compS'))} | {fmt(g('gbaa'))} | {fmt(g('taau'))} |")
+        print(f"| {r['tag']} | {c.get('res')} | {fmt(c['union'])} | {fmt(c['p95'])} | {fmt(c['sum'])} | {fmt(c['wall'])} | {fmt(g('direct'))} | {fmt(g('softblur'))} | {fmt(g('gather'))} | {fmt(g('temporal'))} | {fmt(g('reflect')+g('rdenoise'))} | {fmt(g('volumetrics'))} | {fmt(g('sharpU')+g('compS'))} | {fmt(g('gbaa'))} | {fmt(g('taau'))} |")
 
 def load_chaos():
     out = {}

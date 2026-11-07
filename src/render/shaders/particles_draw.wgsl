@@ -11,10 +11,9 @@ struct PoolR { hdr: array<vec4u, 4>, parts: array<Particle> };
 @group(1) @binding(1) var<uniform> em: EmitBlock;
 @group(1) @binding(2) var gDepth: texture_depth_2d;
 @group(1) @binding(3) var volTex: texture_2d<f32>;   // rgb in-scatter, a transmittance toward the surface (volumetrics.wgsl), 1/frame.lossyCfg.y res
-@group(1) @binding(4) var froxTex: texture_3d<f32>;  // the integrated froxel volume (froxel.wgsl; FLAG_FROXEL_VOL): the haze to the particle's OWN distance in one fetch — volTex then holds the smoke + rain
-@group(1) @binding(5) var sceneTex: texture_2d<f32>;  // PARTICLE RAIN v2: the composite's copy (render/passes.ts hdrCopy, this pass's own size) the rain streaks REFRACT — a 1×1 black stand-in when em.rainCfgC.x is 0
-@group(1) @binding(6) var sceneSamp: sampler;         // … read bilinear
-@group(1) @binding(7) var<uniform> placeBuf: PlaceBuf;   // THE LOOK PROTOTYPE: the place field (render/placeField.ts; place_common.wgsl is pasted in front of this text). Zeros = none, on every other page, and never read there
+@group(1) @binding(4) var sceneTex: texture_2d<f32>;  // PARTICLE RAIN v2: the composite's copy (render/passes.ts hdrCopy, this pass's own size) the rain streaks REFRACT — a 1×1 black stand-in when em.rainCfgC.x is 0
+@group(1) @binding(5) var sceneSamp: sampler;         // … read bilinear
+@group(1) @binding(6) var<uniform> placeBuf: PlaceBuf;   // THE LOOK PROTOTYPE: the place field (render/placeField.ts; place_common.wgsl is pasted in front of this text). Zeros = none, on every other page, and never read there
 /** A PARTICLE'S LIGHT IS SHOWN BY ITS PLACE, AS THE FLOOR IT LIES ON IS (the look page under the one exposure model; the maintainer on his GPU, 11-04:
  *  "GPU particles (like casings) look like they're not lit"). The composite shows each place's surfaces by the place's gain and the smoke march its air;
  *  the splat came after both with no gain at all, so brass on the floor of a room shown thirty times brighter was drawn at a thirtieth of the floor it
@@ -224,7 +223,6 @@ struct FOut { @location(0) color: vec4f, @location(1) react: vec4f };
     let vol = textureLoad(volTex, clamp(pv, vec2i(0), vd - 1), 0);
     let fr = clamp(zp / max(zs, 1e-3), 0.0, 1.0);
     tp = pow(max(vol.a, 1e-4), fr); insc = vol.rgb * fr;
-    if ((frame.flags & FLAG_FROXEL_VOL) != 0u) { let hz = froxelFetch(froxTex, v.pos.xy * frame.invScreen, zp); insc += hz.rgb * tp; tp *= hz.a; }   // + the haze in front of IT (exact at its own depth), behind the smoke's share like the surface's
   }
   let fade = v.prm2.x;
   if (mode < 0.5) {                                                                          // spark: pure add (dst × (1 − 0) + this) — brighter at the head than
@@ -495,7 +493,6 @@ fn rainFragment(v: VOut) -> FOut {
     let vol = textureLoad(volTex, clamp(pv, vec2i(0), vd - 1), 0);
     let frc = clamp(v.zlin / max(zs, 1e-3), 0.0, 1.0);
     tp = pow(max(vol.a, 1e-4), frc);
-    if ((frame.flags & FLAG_FROXEL_VOL) != 0u) { tp *= froxelFetch(froxTex, v.pos.xy * frame.invScreen, v.zlin).a; }
   }
   var w = 0.0; var cov = 0.0;
   if (mode < 4.5) {   // the streak: the capsule's 1-px antialiased profile, its coverage (thin → dim), a touch brighter toward the head (mean 0.95; v2: the head / tail LIGHT now does most of what v1's 0.45 → 1.15 ramp stood in for)
@@ -604,7 +601,6 @@ fn shardFragment(v: VOut, fw: vec2f) -> FOut {
     let vol = textureLoad(volTex, clamp(pv, vec2i(0), vd - 1), 0);
     let frc = clamp(zp / max(zs, 1e-3), 0.0, 1.0);
     tp = pow(max(vol.a, 1e-4), frc); insc = vol.rgb * frc;
-    if ((frame.flags & FLAG_FROXEL_VOL) != 0u) { let hz = froxelFetch(froxTex, v.pos.xy * frame.invScreen, zp); insc += hz.rgb * tp; tp *= hz.a; }
   }
   // (round five) a resting drift is a soft heap, not a cut shape: it thins toward its edge, brightest in the middle, darker where the cubes shade the floor between them
   let frost = floor(v.prm2.w) / 255.0; let heap = frost * fract(v.prm2.w) / 0.99;

@@ -1,5 +1,5 @@
 // ---- smoke density at a point (smoke/smoke.ts + smoke.wgsl make the field; the scene prelude puts this file behind common.wgsl): what every reader — the marches, the shadow rays, the
-// froxels, the guards' probe — asks. The field is one world-wide lattice per voxel size, cut into 8³-cell bricks that exist only where smoke is.
+// the guards' probe — asks. The field is one world-wide lattice per voxel size, cut into 8³-cell bricks that exist only where smoke is.
 //   smokePage  (binding 14, r32uint 3D): rows [SPG_TEXY0, …) = the COARSE lattice's bricks: low 31 bits = slot + 1 of a brick with something to fetch (0 = nothing), bit 31 = fine smoke
 //              somewhere inside this coarse brick; rows [0, SPG_N1.y) = the FINE lattice's bricks: slot + 1 or 0; rows [SPG_TEXYM, …) = one word per MACRO cell of 4 × 2 × 4 coarse bricks:
 //              bit x + 4 z + 16 y = that brick's entry is not 0 (smoke.wgsl compose), so one load clears 1.76 × 0.88 × 1.76 m of air.

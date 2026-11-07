@@ -746,7 +746,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   table rays beside the spot's bearing, and the exact ray walked only where they disagree (a sight edge, a wall seen along its length), cached per spot;
   `fogSeenBins` = the table alone, for the vertex stage (which does not see the grid). (2) LIGHT CLASSES in the light record's kind word (bits 25 / 26,
   `lights.ts LIGHT_FOG_SEEN / _UNSEEN`), asked by `evalLight` (→ `evalLightRaw` × `lightFogK`) and by the four places that work a light out themselves
-  (`reflect.wgsl` ≡ `reflect_p5.wgsl` glints, `cards.wgsl` — a torch's bounce card, where its footprint falls — `froxel.wgsl`, + the volumetric march's
+  (`reflect.wgsl` ≡ `reflect_p5.wgsl` glints, `cards.wgsl` — a torch's bounce card, where its footprint falls — + the volumetric march's
   K-beam pick): class 1 = lights only what the team sees — every carried light not the team's and every flash / timed light not a teammate's own, DECIDED AT
   THE UPLOAD (`LightSet.fogClass` from `fogTeam`, which `fullBlock` keeps: a tracer's ember or a blast's afterglow born after the fog's turn is classed on its
   first frame); class 2 = lights only what it does not — a lamp OUT that the team last saw lit (`RtLight.fogGhost`: uploaded at its base strength, glass mask

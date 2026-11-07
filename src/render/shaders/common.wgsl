@@ -26,11 +26,8 @@ struct Frame {
   weatherC: vec4f,                          // the interior footprint x0, z0, x1, z1: no rain on rays that end inside it, none drawn inside its column
   glassCfg: vec4f,                          // glass panes (FLAG_GLASS): x = reflection strength (× the physical Fresnel term; 1 = as computed), y = tint depth (exponent on the pane's albedo per crossing, ÷ cos of the crossing angle), z = dust glow gain (× GLASS_DUST), w = REFRACTION: the index of refraction (≥ 1) while settings.glassRefract, 0 = off — composite bends the view ray through every glass box it meets (composite.wgsl glassRefractPath)
   weatherD: vec4f,                          // a second, small no-rain footprint x0, z0, x1, z1 (the west stair tower's roofed landing): rays ending inside it draw no rain; all zero = none
-  volCfg: vec4u,                            // volumetric worst-case caps (volumetrics.wgsl VOL_KMAX): x = K, the most lights a smoke-march step / a haze ray traces shadow rays for (0 = off: the pass exactly as it was); y = the march's shadow-ray refresh period in steps; z = its step in tenths of a voxel; w = bits 0‥3 the SHADOW rays' smoke sample count (smokeShadowSteps(): 0 = 8) | bits 8‥11 the smoke march's per-step light count (vol_common.wgsl smokeMarchLights(); 0 = J-lit)
-  froxelA: vec4f,                           // froxel volumetrics (FLAG_FROXEL_VOL, render/froxels.ts): x = distance of slice boundary 0 along the pixel ray (m), y = of boundary D (m), z = slice curve a (thickness grows e^a from first to last slice; → 0 = uniform), w = history weight this frame (0 = none: first frame of a grid, or history off)
-  froxelB: vec4u,                           // x, y, z = the froxel grid W × H × D (0 = no grid: the flag is never up then), w = k, shadow-rayed lights per froxel (bits 0‥7) | the fetch's screen filter << 8 (0 = cubic B-spline, 1 = plain trilinear — settings.froxelSharp) | (depth strata for the strongest light − 1) << 9, 2 bits (settings.froxelTopRays)
-  froxelC: vec4f,                           // xyz = this frame's sample jitter inside every froxel (0‥1, a Halton triple), w = the lookup's depth bias in slices (toward the eye: what a surface reads never includes scatter from behind it)
-  prevCam: vec4f,                           // xyz = the camera position of the PREVIOUS frame (prevViewProj's eye; the froxel history reprojects distances from it), w = the previous frame's froxelA.x (the near boundary follows the camera's height, so the history's slices are laid out on last frame's near)
+  volCfg: vec4u,                            // volumetric worst-case caps (volumetrics.wgsl VOL_KMAX): x = K, the most lights a smoke-march step / a haze ray traces shadow rays for (1 or more); y = the march's shadow-ray refresh period in steps; z = its step in tenths of a voxel; w = bits 0‥3 the SHADOW rays' smoke sample count (smokeShadowSteps(): 0 = 8) | bits 8‥11 free (the froxel-lit march's own light count until 2026-11-07)
+  prevCam: vec4f,                           // xyz = the camera position of the PREVIOUS frame (prevViewProj's eye: the specular denoiser's mirror-image validation reads it), w free (the froxel history's near boundary until 2026-11-07)
   rtCfg: vec4f,                             // ray-traced reflections (renderer v3 phase 4, reflect.wgsl): x = max roughness that gets a ray (composite fades the term out toward it), y = rays per pixel (1|2), z = anisotropy 0..1 on aniso-finished (wet) ground + 2 × the wet ground's break-up in tenths (settings.wetBreakup; read an = z − 2·floor(z/2)), w = the reflection target's resolution divisor — 0 = the pass is OFF this frame (nothing dispatched, composite reads nothing: the frame as it was)
   matCfg: vec4f,                            // materials: x = analytic-highlight gain (the GGX image of point / spot / panel lights on a finish; 1 = physical), y = reflection strength × the whole traced term, z = luminance bound on one reflection ray's radiance (firefly guard), w = the g-buffer's detail-layer amount 0..1 (worn paths, dust on tall tops, scuffed skirting, edge wear on metal — 0 = fsBox exactly as it was)
   p5Cfg: vec4u,                             // renderer v3 phase 5 (ultra-only extras; every field 0 = the pass exactly as it was): x, y free (the resampling gather's mode and numbers until 2026-11-07), z = the reflection pass's bits: 1 = characters are their skinned MESH at reflection hits (closest-hit walk of the mesh-shadow trees, reflect.wgsl; needs FLAG_MESH_SHADOWS up), 2 = the second reflection ray decorrelated (antithetic azimuth) + the hit's lighting reused from last frame's record when the hit point matches (rtHitReuse); w = the lowest light slot holding a TRANSIENT light this frame (lights.ts firstTransientSlot: they are born at the tail) — gather_common's per-hit subtraction walk starts there instead of at 0, testing each slot it visits as before (0 when none is alive)
@@ -81,7 +78,6 @@ const FLAG_MESH_SHADOWS: u32 = 8388608u; // ultra: occluded() / occludedT() test
 const FLAG_PARTICLES: u32 = 16777216u;   // experiment: the GPU particle system is live this frame (render/particles.ts + shaders/particles*.wgsl: its own compute pass and a splat into the HDR target after the composite) — informational for the scene passes, none of which reads it
 const FLAG_BOUNCE_CARDS: u32 = 33554432u; // torch bounce cards (default off): the final gather samples each carried spot's footprint as an analytic one-bounce emitter (cards.wgsl builds them, fgather.wgsl samples them and excludes the light's direct term where its rays land inside a footprint); off = nothing built, sampled or excluded
 const FLAG_GLASS: u32 = 268435456u;    // glass panes (E3, SceneInfo.glass) — composite tints / reflects over what stands behind them and draws the crack decals on them, fgather traces their mirror ray, direct tints light through them; off = scene.glassInfo.x is 0 and nobody loops
-const FLAG_FROXEL_VOL: u32 = 536870912u;   // froxel volumetrics (renderer v3 Phase 2b, render/froxels.ts + shaders/froxel.wgsl): haze + smoke in-scatter injected into a camera-frustum voxel grid (frame.froxelA/B/C), accumulated over frames, integrated front to back — composite / the particles read ONE trilinear sample at the pixel's distance and volumetrics.wgsl only draws the rain; off = the per-pixel march exactly as it was
 
 struct BoxGeo { c: vec3f, rot: u32, h: vec3f, flags: u32 };
 const BOX_NOPRIMARY: u32 = 1u;
@@ -108,7 +104,7 @@ struct Light {
   cosInner: f32, volumetric: f32, owner: u32, radius: f32,
 };
 
-struct SmokeBound {                // a loose box round some of the smoke (smoke.wgsl `boxes`): what a reader clips a ray against before it marches (the marches' and the froxels' comments call one a 'domain', from when it was a solver box). Never storage, never a limit on the smoke
+struct SmokeBound {                // a loose box round some of the smoke (smoke.wgsl `boxes`): what a reader clips a ray against before it marches (the marches' comments call one a 'domain', from when it was a solver box). Never storage, never a limit on the smoke
   origin: vec3f, voxel: f32,       // world min corner, voxel size (m) of the lattice it bounds
   pad0: vec3u, live: u32,
   dims: vec3u, pad1: u32,          // its size in voxels
@@ -1676,44 +1672,6 @@ fn worldFromDepth(pix: vec2f, depth: f32) -> vec3f {
   return w.xyz / w.w;
 }
 
-// ---- froxel volumetrics (FLAG_FROXEL_VOL): the one mapping every producer / consumer of the volume shares (render/froxels.ts fills frame.froxelA/B/C) ----
-// The grid is W × H over the screen (froxel (ix, iy) covers uv [ix/W, (ix+1)/W) — the same uv the G-buffer's pixels have, jitter and all) × D slices in
-// DISTANCE ALONG THE PIXEL'S OWN RAY from the eye (radial, what `distance(P, camPos)` gives a consumer): slice boundary s (0‥D, continuous) sits at
-//   d(s) = near + (far − near) · (e^{a·s/D} − 1) / (e^a − 1)      — thickness grows by e^a from the first slice to the last (a → 0: uniform)
-// A texel of the INTEGRATED volume (slice k, centre w = (k + ½)/D) holds (rgb = in-scatter reaching the eye from everything nearer than boundary k+1,
-// a = transmittance of that stretch), so what lies in front of a surface at distance d is the trilinear sample at w = (s(d) − ½)/D — one fetch.
-fn froxelCurveA() -> f32 { return max(frame.froxelA.z, 1e-3); }
-fn froxelDist(s: f32) -> f32 { let a = froxelCurveA(); return frame.froxelA.x + (frame.froxelA.y - frame.froxelA.x) * (exp(a * s / f32(frame.froxelB.z)) - 1.0) / (exp(a) - 1.0); }
-fn froxelSliceN(d: f32, near: f32) -> f32 { let a = froxelCurveA(); let u = (d - near) / (frame.froxelA.y - near) * (exp(a) - 1.0); return f32(frame.froxelB.z) / a * log(max(1.0 + u, 1e-6)); }
-fn froxelSlice(d: f32) -> f32 { return froxelSliceN(d, frame.froxelA.x); }
-/** the slice coordinate distance d had in LAST frame's volume (its near boundary rode last frame's camera height: frame.prevCam.w) — the history's reprojection */
-fn froxelSlicePrev(d: f32) -> f32 { return froxelSliceN(d, frame.prevCam.w); }
-/** unit direction of the eye ray through screen uv (0‥1, y down — a G-buffer pixel's uv is (pix + ½) · invScreen) */
-fn froxelDir(uv: vec2f) -> vec3f { return normalize(worldFromDepth(uv * frame.screen, 1.0) - frame.camPos); }
-/** (in-scatter rgb, transmittance a) between the eye and distance `dist` along the ray through `uv`, from the integrated froxel volume `vt` — biased frame.froxelC.w
- *  slices toward the eye so a surface never collects scatter injected behind it (the froxel it sits in straddles it). ACROSS the screen the fetch is a cubic
- *  B-spline (four trilinear taps — Sigg & Hadwiger's offsets): a froxel is a dozen pixels wide, and the trilinear kernel alone shows every froxel boundary as
- *  a crease along a beam's edge; the B-spline is C² across them (softer by half a froxel, never creased). Along the ray it stays linear (that axis is the eye's own). */
-fn froxelW(vt: texture_3d<f32>, uv: vec2f, w: f32) -> vec4f {
-  let G = vec2f(frame.froxelB.xy);
-  let tc = uv * G - 0.5; let it = floor(tc); let f = tc - it;
-  let f2 = f * f; let f3 = f2 * f;
-  let w0 = (1.0 / 6.0) * (-f3 + 3.0 * f2 - 3.0 * f + 1.0); let w1 = (1.0 / 6.0) * (3.0 * f3 - 6.0 * f2 + 4.0);
-  let w2 = (1.0 / 6.0) * (-3.0 * f3 + 3.0 * f2 + 3.0 * f + 1.0); let w3 = (1.0 / 6.0) * f3;
-  let g0 = w0 + w1; let g1 = w2 + w3;
-  let h0 = (it - 0.5 + w1 / g0) / G; let h1 = (it + 1.5 + w3 / g1) / G;   // (texel centres sit at (i + ½) / G)
-  return g0.y * (g0.x * textureSampleLevel(vt, linSamp, vec3f(h0.x, h0.y, w), 0.0) + g1.x * textureSampleLevel(vt, linSamp, vec3f(h1.x, h0.y, w), 0.0))
-       + g1.y * (g0.x * textureSampleLevel(vt, linSamp, vec3f(h0.x, h1.y, w), 0.0) + g1.x * textureSampleLevel(vt, linSamp, vec3f(h1.x, h1.y, w), 0.0));
-}
-fn froxelFetch(vt: texture_3d<f32>, uv: vec2f, dist: f32) -> vec4f {
-  let D = f32(frame.froxelB.z);
-  let s = clamp(froxelSlice(dist) - frame.froxelC.w, 0.0, D);
-  let w = (max(s, 1.0) - 0.5) / D;
-  var v: vec4f;
-  if ((frame.froxelB.w & 256u) != 0u) { v = textureSampleLevel(vt, linSamp, vec3f(uv, w), 0.0); } else { v = froxelW(vt, uv, w); }
-  if (s < 1.0) { return mix(vec4f(0.0, 0.0, 0.0, 1.0), v, s); }   // inside the first slice: between nothing and its far boundary
-  return v;
-}
 
 // Octahedral mapping: unit dir <-> [0,1]^2
 fn octEncode(n: vec3f) -> vec2f {
