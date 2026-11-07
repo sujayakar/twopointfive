@@ -19,13 +19,13 @@ function guarded(rel: string, text: string): string { const F = CALLS.files[rel]
   for (const k of Co ?? []) E.push({ pos: k.pos, line: `(globalThis as any).__tpsCall?.passed?.(${JSON.stringify(k.key)});` });
   for (const h of H ?? []) E.push({ pos: h.pos, line: `{ const __c = (globalThis as any).__tpsCall; if (__c?.inHook?.()) return ${JSON.stringify(h.answer ?? null)} as any; }` }); E.sort((a, b) => b.pos - a.pos);
   let out = text; for (const e of E) out = out.slice(0, e.pos) + ' ' + e.line + ' ' + out.slice(e.pos); return out; }
-// WHAT THE TOOLS OF THIS PROCESS WRITE (scan.ts): the names written in each file of tools/qa as it loads: `x.name = `, `x.name[i] += `, `x.name.push(`, and a local that names a field, `const p = x.name; p[0] = `
+// WHAT THE TOOLS OF THIS PROCESS WRITE (scan.ts): the names written in each file of a tool as it loads (tools/, the bridge's own files apart): `x.name = `, `x.name[i] += `, `x.name.push(`, and a local that names a field, `const p = x.name; p[0] = `
 const TOOL_WRITES = { names: new Set<string>(), version: 0 }; (globalThis as any).__tpsToolWrites = TOOL_WRITES;
 function toolWrites(t: string): void { const N = TOOL_WRITES.names, was = N.size; for (const m of t.matchAll(/\.([A-Za-z_$][\w$]*)(?:\[[^\]\n]*\])*\s*(?:=|\+=|-=|\*=|\/=|\|\|=|&&=|\?\?=|\|=|&=|\+\+|--)(?![=>])/g)) N.add(m[1]); for (const m of t.matchAll(/\.([A-Za-z_$][\w$]*)\.(?:push|splice|pop|shift|unshift|set|add|delete|clear|fill|sort|length\s*=)/g)) N.add(m[1]);
   for (const m of t.matchAll(/(?:const|let)\s+([A-Za-z_$][\w$]*)\s*=\s*[^;\n]*?\.([A-Za-z_$][\w$]*)\s*(?:[;,\n])/g)) { const x = m[1].replace(/\$/g, '\\$'); if (new RegExp(`\\b${x}(?:\\[[^\\]\\n]*\\])+\\s*(?:=|\\+=|-=|\\*=)(?![=>])|\\b${x}\\.(?:push|splice|pop|shift|unshift|set|add|delete|clear|fill|sort)\\(`).test(t)) N.add(m[2]); }
   if (N.size !== was) TOOL_WRITES.version++; }
 plugin({ name: 'tps-expose', setup(build) {
-  build.onLoad({ filter: /\/tools\/qa\/.*\.ts$/ }, async ({ path }) => { const text = await Bun.file(path).text(); toolWrites(text); return { contents: text, loader: 'ts' }; });
+  build.onLoad({ filter: /\/tools\/(?!blitz\/(export|import|scan|surface|expose|puppet-apply|out-dispatch|classes|host|rust-host|poke|ask|track)\.ts).*\.ts$/ }, async ({ path }) => { const text = await Bun.file(path).text(); toolWrites(text); return { contents: text, loader: 'ts' }; });
   build.onLoad({ filter: /\/src\/(game|anim|scene|sim|math|smoke)\/.*\.ts$/ }, async ({ path }) => {
     const text0 = await Bun.file(path).text(); const rel = path.slice(path.indexOf('/src/') + 1); const text = process.env.TPS_GAME === 'rust' ? guarded(rel, text0) : text0; const names: string[] = SCHEMA.top[rel] ?? []; if (!names.length) return { contents: text, loader: 'ts' };
     const isLet = (n: string) => new RegExp(`^(?:export )?let [^\\n]*\\b${n}\\b\\s*(?:[:=,;])`, 'm').test(text); const body = names.map(n => `get ${n}() { return ${n}; }` + (isLet(n) ? `, set ${n}(v) { ${n} = v; }` : '')).join(', ');
