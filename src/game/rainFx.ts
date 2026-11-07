@@ -279,6 +279,8 @@ function setDripEdges(st: RainState, out: DripPoint[], boxes: number) {
 /** BLAST_PACE: the same lines, `BLAST_PACE.dripSamples` edge samples a frame (`now` = all of it this frame: rain is drawn and there are no lines to drip off yet),
  *  begun once the statics have stood still `dripHold` frames where there are lines to go on with. Statics changed again part way: the walk starts over. The lines
  *  in use are swapped whole when the walk ends. */
+/** BEFORE THE FIRST FRAME (host/rustgame.ts rustWarm): the drip lines whole, a few thousand rays, where a stall is no frame of play. Whether it rains yet is no question here: the first frame it does would pay them. */
+export function warmRainFx(g: Game): void { if (snowing(g) || (g.engine as unknown as { settings: Record<string, unknown> }).settings.particleRain !== true) return; const st = stateOf(g); if (st.job || !st.edges || st.edgeBoxes !== g.engine.world.statics.length) paceDripEdges(g, st, true); }
 function paceDripEdges(g: Game, st: RainState, now: boolean) {
   const n = g.engine.world.statics.length;
   const serial = g.engine.world.geomSerial;   // (a wall rebuilt in its own slots mid-walk: the count stands, the serial moves — the walk starts over)
