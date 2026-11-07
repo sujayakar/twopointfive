@@ -443,7 +443,7 @@ export function hitPlayer(g: Game, fromDir: Vec3) { { const __s = RUST_SURFACE; 
 }
 
 /** Held / worn props as small oriented boxes (traced; lit lenses raster-only): the Five-seveN (+ can + rail light) in the player's hand and the trifocal goggles on
- *  their head, pistol or torch with a glowing lens for guards. All placement numbers live in rigProps.RIG (tune them in viewer.html). */
+ *  their head, pistol or torch with a glowing lens for guards. All placement numbers live in rigProps.RIG. */
 export function handProps(g: Game, out: Box[]): void { return crossToRust('handProps', undefined, [g, out]) as any; }
 const handOrd = new Uint16Array(256);
 function rigKeys(out: Box[], n0: number) {

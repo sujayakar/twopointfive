@@ -1,6 +1,6 @@
 // HOW SMOKE IS DRAWN — one table, the maintainer's numbers from the smoke lab (11-03: "latest settings we should make these
 // default"). They are rows of the PICTURE only: the solver's own numbers in that paste were the build's already, so the smoke itself, and what anyone sees
-// through it, is the build's. Every host that makes an engine puts the table on (main.ts, workbench/main.ts).
+// through it, is the build's. main.ts puts the table on.
 //   creases · selfK · selfReach · ahead    engine.smokeDraw (0 there = the shader's own number)
 //   keep · blurBehind                      the post pass's smoke diffusion (render/passes.ts): 0 = smoke only dims what is behind it, and the blur is not run
 //   glowThrough · blurStart · leanOnNew    settings.smokeMultiScatter / smokeDiffuseStart / smokeTaaReact

@@ -36,7 +36,7 @@ export const LOADBRIEF = { on: false };
 export interface BriefWords { mission: Mission; group: string; team: string }
 /** the mission a query string boots, in the list's words — its own row (ui/missions.ts missionOfQuery: the list's own answer, the plain solo night for
  *  `?solo` alone); deployed at a size no row has, the row of that kind on that level. Null: the address names no mission of the list (a plain page, a
- *  hand-typed combination on a level no row is on), or it picks its level by `?level=` (the editor's own level, the office as it was): the list's rows are
+ *  hand-typed combination on a level no row is on), or it picks its level by `?level=` (the office as it was): the list's rows are
  *  written for the levels the list names, and a level being built is played the moment it loads. */
 export function briefOfQuery(search: string | URLSearchParams): BriefWords | null {
   const q = typeof search === 'string' ? new URLSearchParams(search) : search; if (q.has('level')) return null;

@@ -1744,11 +1744,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   different ground. THE RULE THIS TEACHES: before a switch is called the picture's, look for its readers under `src/scene`, `src/game` and
   `rust/`, and run `PORT=<dev server> node tools/qa/mpclient-page.cjs`: its `wider word` line is the check that a page's game is its server's.
   If rays should see the hills on every page, that is a rule of the game with its own registered switch, laid on every machine from the recipe.
-  THE OTHER HOST OF THE ENGINE is the workbench (`/workbench`; the replay viewer at `/replay` has no engine). It has its own boot and drew the old
-  picture until the constant went; on the deletion's tree it opens with no console error and keeps the device (software adapter). Its boot sets none of
-  what main.ts tells the look of the page: its maps are made on the main thread, no level is kept, and the plan is told of no door, so its light can
-  differ from the game's. No
-  `FROZEN_HOLDS` row, no knob table, no journal key. THE TOOLS' PAGE BOOT (`tools/qa/pageboot.ts`): its settings are `title` (the page as it opens), `snow` and `smokelab`.
+  No `FROZEN_HOLDS` row, no knob table, no journal key. THE TOOLS' PAGE BOOT (`tools/qa/pageboot.ts`): its settings are `title` (the page as it opens), `snow` and `smokelab`.
   CHECKS: `bench-check` (a run with no look word carries the
   picture's trial and nothing of the lab's; the kit, the panel and the notes are pinned in `main.ts`'s text), `pricerun-check`, `smokelook-check`,
   `stuff-check`, `kept-check`; both typechecks. No break word: there is no off side.
@@ -4247,7 +4243,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   paint's row's, and the box stood up for it carries it. A TONE OF A PALETTE ROW is made of what the row is: the kit's `toned` (`gwotKit.ts`)
   and the snow levels' rock (`tools/levels/snowRock.ts`) hand their numbers through `tonedAs`, which is how ground dressing, stains, worn
   paths and cut rock keep their earth, gravel and slab. The kit's wall-face and yard pieces (the look page's hand-built trials until 11-05) are made of
-  palette rows and say their words, their trim in a paint of its own included (`gwotKit.ts trimIn`; `stuff-check` line 12). The editor keeps, copies, sets and shows a paint's word (`editor/paint.ts`, the paint panel's 'made of' row), a
+  palette rows and say their words, their trim in a paint of its own included (`gwotKit.ts trimIn`; `stuff-check` line 12). The editor kept, copied, set and showed a paint's word (`editor/paint.ts`, the paint panel's 'made of' row: gone with the level editor, and `stuff-check`'s line 13 with it), a
   said plain included; a blank document's paints say theirs.
   LEVEL FILES: every level file of the build is its generator's output, so each was written again by its generator
   (`tools/levels/export.ts`, `tools/level-export.ts`). `tools/levels/stuff-bake.ts` brings forward a file laid WITHOUT its generator (the

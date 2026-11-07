@@ -274,7 +274,7 @@ export class PerfRecorder {
     this.lastSent = false; this.lastLocal = false; const no = ++this.takeNo;
     // (a full take is tens of MB of text: it is not put together where nobody listens at all. The shot server is a thing of a page served from this
     // machine: a page opened from anywhere else asks nothing of the visitor's own localhost)
-    if (wanted('perf') || onThisMachine()) {
+    if (wanted() || onThisMachine()) {
       const name = `perf-${this.startedAt.replace(/[:.]/g, '-')}`; const body = new Blob(serializeDump(dump), { type: 'application/json' });
       // (the one door, host/savefile.ts: whoever listens there is told of it, and the browser is handed no file. A benchmark's take says so beside it: `of`)
       try { const w = saveFile('perf', name + '.json', body, { meta: { commit: dump.commit, of: dump.events.some(e => e.kind === 'bench') ? 'bench' : undefined },
