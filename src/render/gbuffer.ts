@@ -237,7 +237,7 @@ export class GBuffer {
     const lease = KEPT.lease && KEPT.lease.alive ? KEPT.lease : null, nameOf = (l: number) => `look map ${l} ${LOOK_N} ${this.lookEven ? 1 : 0} ${EXACT.on ? 1 : 0}`;
     const had = make.map(l => { const k = lease?.bytes(nameOf(l)) ?? null; return k && k.bytes.length === this.lookMips * 2 && k.nums.length === 2 ? k : null; }), toMake = had.filter(k => !k).length;
     const pool = toMake ? await LookPool.open(toMake) : null, asked: (ReturnType<LookPool['make']> | null)[] | null = pool ? make.map((l, k) => had[k] ? null : pool.make(l, LOOK_N, this.lookEven)) : null;
-    asked?.forEach(p => p!.catch(() => { /* taken below, where the layer is then made here */ }));
+    asked?.forEach(p => p?.catch(() => { /* taken below, where the layer is then made here */ }));   // (null = a layer the visit had: nothing asked)
     try { for (let k = 0; k < make.length; k++) {
       const l = make[k];
       await nextTask();

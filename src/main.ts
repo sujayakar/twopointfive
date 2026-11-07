@@ -1486,8 +1486,8 @@ function rendererFlagsAndHotSwaps(engine: Engine) {
     set: (k: Partial<{ on: boolean; div: number; rays: number; maxRough: number; atrous: number; aniso: number; strength: number; glints: number; detail: number; history: number; specClampK: number; mesh: boolean; reuse: boolean }>) => { const S = engine.settings; if (k.on !== undefined) S.rtReflect = k.on; if (k.div !== undefined) S.rtReflectDiv = k.div; if (k.rays !== undefined) S.rtRays = k.rays; if (k.maxRough !== undefined) S.rtMaxRough = k.maxRough; if (k.atrous !== undefined) S.rtAtrous = k.atrous; if (k.aniso !== undefined) S.rtAniso = k.aniso; if (k.strength !== undefined) S.rtStrength = k.strength; if (k.glints !== undefined) S.rtGlints = k.glints; if (k.detail !== undefined) S.detail = k.detail; if (k.history !== undefined) S.rtHistory = k.history; if (k.specClampK !== undefined) S.dnSpecClampK = k.specClampK; if (k.mesh !== undefined) S.rtMeshHits = k.mesh; if (k.reuse !== undefined) S.rtHitReuse = k.reuse; return (window as any).__rt.knobs(); },
     summary: () => { const S = engine.settings, P = engine.passes; return `rt ${S.rtReflect ? `on ÷${P.rtDiv} ${P.rw}×${P.rh} · ${S.rtRays} ray/px · rough ≤ ${S.rtMaxRough} · ${S.rtAtrous} à-trous` : 'off'} · detail ${S.detail.toFixed(2)} · gloss row ${S.gloss ? (S.rtReflect ? 'set, superseded' : 'on') : 'off'} · mesh hits ${S.rtMeshHits ? (engine.meshShadowsOn ? 'on' : 'wanted (mesh shadows off)') : 'off'} · hit reuse ${S.rtHitReuse ? 'on' : 'off'}`; },
   };
-  // __hotGather(src?): recompile both gather pipeline pairs (fgather.wgsl main + mainGi, × GATHER_STRATA ← /qa/shader/fgather.wgsl) against the staged scene
-  (window as any).__hotGather = async (src?: string) => engine.passes.hotSwapGather(src ?? await (await fetch('/qa/shader/fgather.wgsl', { cache: 'no-store' })).text(), await (await fetch('/qa/shader/gather_common.wgsl', { cache: 'no-store' })).text());   // (gather_common.wgsl from disk too: the two move together)
+  // __hotGather(src?): recompile the gather's three pipelines (gather_split.wgsl's trace and light over the helpers ← /qa/shader/fgather.wgsl, × GATHER_STRATA) against the staged scene
+  (window as any).__hotGather = async (src?: string) => engine.passes.hotSwapGather(src ?? await (await fetch('/qa/shader/fgather.wgsl', { cache: 'no-store' })).text(), await (await fetch('/qa/shader/gather_split_common.wgsl', { cache: 'no-store' })).text());   // (the gather's own common text from disk too: the two move together)
   // ?gatherStrata / __gs: the gather's tile-coherent STRATIFIED directions (settings.gatherStrata, ported from exp/trace-perf E8 — unbiased, −13‥16 % gather, not hash-identical: default off; flips live)
   { const q = new URLSearchParams(location.search); if (q.has('gatherStrata')) engine.settings.gatherStrata = true; if (q.has('nogatherstrata')) engine.settings.gatherStrata = false; }   // (default ON since 08-12; ?nogatherstrata = the iid gather, hash-identical to the pre-port frame)
   (window as any).__gs = {
@@ -1517,7 +1517,7 @@ function traceLabHooks(engine: Engine, game: Game) {
     const jobs: [string, Promise<{ ok: boolean; messages: string[] }>][] = [
       ['direct', P.hotSwapDirect(await shader('direct'), 'direct', dc)],
       ['restir', P.hotSwapDirect(await shader('restir'), 'restir', dc)],
-      ['gather', P.hotSwapGather(await shader('fgather'), await shader('gather_common'))],
+      ['gather', P.hotSwapGather(await shader('fgather'), await shader('gather_split_common'))],
       ['reflect', P.hotSwapReflect(await shader(P.rtP5 ? 'reflect_p5' : 'reflect'))],
       ['vol', P.hotSwapVol(await shader('volumetrics'))],
       ['froxel', P.froxels.hotSwap(await shader('froxel'))],

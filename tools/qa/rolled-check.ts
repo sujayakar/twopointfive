@@ -76,7 +76,7 @@ export async function rolledCheck(): Promise<boolean> {
     const WANT_CUT = 'if (LOOK && !cap && own >= 0 && !side) { let upW = quatRotate(boxRot(bi), vec3f(0.0, 1.0, 0.0)); if (abs(dot(normalize(v.normal), upW)) < 0.1) { n = lookRollUp(boxStuff(bi), n, v.lc.y, v.hf.y, upW); } }';
     const WANT_COAT = 'var coat = LOOK_MIRROR_PLAIN; if (LOOK && bidx != 0xFFFFFu) { coat += (LOOK_MIRRORS[boxStuff(bidx)] - LOOK_MIRROR_PLAIN) * beams.k.z; } let F0 = mix(vec3f(coat), base, metalness);';
     const lf = flat(look), panel = text('src/ui/lookpanel.ts'), gb = text('src/render/gbuffer.ts'), fr = text('src/render/frame.ts'), ps = text('src/render/passes.ts'), en = text('src/engine.ts'), cut = flat(text('src/render/shaders/gbuffer_cut.wgsl')), box = flat(text('src/render/shaders/gbuffer.wgsl'));
-    const refl = ['reflect.wgsl', 'reflect_p5.wgsl', 'compact/reflect_p5.wgsl'].map(f => [f, flat(text(`src/render/shaders/${f}`))] as const);
+    const refl = ['reflect.wgsl', 'reflect_p5.wgsl'].map(f => [f, flat(text(`src/render/shaders/${f}`))] as const);
     const coats = refl.filter(([, t]) => t.includes(WANT_COAT) && t.includes('let F0h = mix(vec3f(coat), base, metalness *') && !t.includes('vec3f(0.04)')).map(([f]) => f);
     const pins: [string, boolean][] = [
       ['look.wgsl lookRoll', lf.includes(WANT_ROLL)], ['look.wgsl lookRollUp', lf.includes(WANT_UP)], ['lookSurface asks the stuff only where its caller says the face is the box\'s own', lf.includes(WANT_ASK)],
@@ -87,9 +87,9 @@ export async function rolledCheck(): Promise<boolean> {
       ['a page without the look has lookRollUp as nothing', gb.includes('fn lookRollUp(cls: u32, n: vec3f, y: f32, hy: f32, upW: vec3f) -> vec3f { return n; }')],
       ['the scene prelude carries the plain coat and LOOK_MIRRORS off the table', fr.includes('const LOOK_MIRROR_PLAIN: f32 = ${LOOK_MIRROR_PLAIN.toFixed(4)}; const LOOK_MIRRORS = array<f32, ${LOOK_WORDS}>(${LOOK_MIRRORS.map(v => v.toFixed(4)).join(\', \')});')],
       ['the rule has a row of its own, Pressed panels: it reaches the g-buffer and the reflection pass (the second only on the look\'s page), the plain-boxes hold lowers it with the layers, and it alone keeps the look\'s surface from standing down', gb.includes('lookConfig.kept, k.pressed, ') && gb.includes('lookConfig.pressed = lookAmounts.pressed;') && panel.includes("['pressed', 'Pressed panels',") && !/const LIVE: ReadonlySet<string> = new Set\(\[[^\]]*'pressed'/.test(panel) && lf.includes('&& all(lookCfg.b.xyz == vec3f(0.0)) && lookCfg.c.y <= 0.0)) { return o; }') && en.includes('coats: lookConfig.on ? Math.max(0, Math.min(1, lookConfig.pressed)) : 0 });') && ps.includes('F[6] = opts.coats;') && ps.includes('F[6] === Math.fround(opts.coats)')],
-      ['all three reflection texts read the stuff\'s coat for the rays and the highlights', coats.length === 3] ];
+      ['both reflection texts read the stuff\'s coat for the rays and the highlights', coats.length === 2] ];
     const bad = pins.filter(p => !p[1]).map(p => p[0]);
-    verdict(bad.length === 0, 'the shaders\' rule is the one asked here: the look, the cut pass, both preludes, the row\'s way to the g-buffer and the reflection pass, and that pass\'s three texts', bad.length ? `NOT AS HELD: ${bad.join(' · ')}` : `${pins.length} texts as held (the reflection texts: ${coats.join(', ')})`); }
+    verdict(bad.length === 0, 'the shaders\' rule is the one asked here: the look, the cut pass, both preludes, the row\'s way to the g-buffer and the reflection pass, and that pass\'s two texts', bad.length ? `NOT AS HELD: ${bad.join(' · ')}` : `${pins.length} texts as held (the reflection texts: ${coats.join(', ')})`); }
   console.log(`=== rolled: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;
 }

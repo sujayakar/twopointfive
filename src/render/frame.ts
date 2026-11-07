@@ -1,8 +1,7 @@
 // Per-frame uniform block (must match `struct Frame` in common.wgsl) + shared scene bind group.
 import { Mat4, Vec3 } from '../math/vec';
 import commonSrc from './shaders/common.wgsl' with { type: 'text' };
-import { KERNELS } from './kernels';
-const sdfRigSrc = KERNELS.sdfRig;   // (shaders/sdfrig.wgsl, or its compact writing with that row on: render/kernels.ts)
+import sdfRigSrc from './shaders/sdfrig.wgsl' with { type: 'text' };
 import { sdfRigWgslConsts } from './sdfrig';
 import { wgslWorldConsts } from '../scene/world';
 import { AIR_CELL, AIR_W, AIR_H, AIR_ROWS } from '../scene/airGrid';
@@ -391,7 +390,7 @@ export const sharpCapConfig = { on: true };
  *  follows the shading normal, so a material's relief catches it. Only where the reflection pass makes highlights at all: a finish up to the highlights' own fade
  *  (shaders/common.wgsl RT_HI_FADE, the same on ultra, high and medium; none on low). ON THE LOOK'S PAGE ONLY, on by default there; main.ts lowers it at BOOT for ?nosunglint = every
  *  picture as it was. Without the word the shader's flag is a constant false and its lines are the lines they were, with one empty turn of the shadow
- *  loop; no kernel gains a call site (render/kernels.ts: a call is pasted whole). No game table: nothing in the update reads a reflection and the light
+ *  loop; no kernel gains a call site (a call is pasted whole where Windows compiles). No game table: nothing in the update reads a reflection and the light
  *  meter (shaders/probe.wgsl) does not either. COST on the look's page: one shadow ray to the world's top (and a smoke march, in smoke) on the pixels
  *  inside the sun's highlight. On a flat smooth floor that is all of it or none of it, by where the camera looks; a metal's highlight is wide (a steel
  *  floor passes from most bearings). Never timed, never seen on a GPU. */

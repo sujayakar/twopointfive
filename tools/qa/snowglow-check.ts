@@ -163,13 +163,13 @@ export async function snowGlowCheck(o: { verbose?: boolean } = {}): Promise<bool
       const reach = /if \(!lightReaches\(i, P\)\) \{ continue; \}\s*\n\s*let li = lights\[i\];\s*\n\s*let ev = evalLight\(li, P, vec3f\(0\.0\)\);/.test(fn);
       // THE LAMP'S OWN RANGE BEFORE THE TABLE (11-05; GLOWRANGE_BREAK=1 reads the term without the line and must fail): the walk's first statement is evalLight's first exit, written
       // as evalLightRaw writes it (the same subtraction, dot and square root, the same `>`; lightKind's own mask; a directional lamp has no range), so the lamps that pass are
-      // the lamps that passed. And the composite's other writing (shaders/compact) holds the term word for word
+      // the lamps that passed.
       const walk = process.env.GLOWRANGE_BREAK === '1' ? fn.replace(/\n[^\n]*if \(sqrt\(dot\(dq, dq\)\) > lights\[i\]\.range\)[^\n]*/, '') : fn;
       const first = /for \(var i = 0u; i < min\(frame\.numLights, 64u\); i\+\+\) \{\s*\n(?:\s*\/\/[^\n]*\n)*\s*if \(\(lights\[i\]\.kind & 255u\) != 2u\) \{ let dq = lights\[i\]\.pos - P; if \(sqrt\(dot\(dq, dq\)\) > lights\[i\]\.range\) \{ continue; \} \}[^\n]*\n\s*if \(!lightReaches\(i, P\)\)/.test(walk)
         && /fn lightKind\(li: Light\) -> u32 \{ return li\.kind & 255u; \}/.test(text['common.wgsl'])
         && /\n  let d = li\.pos - P; let dist2 = dot\(d, d\); let dist = sqrt\(dist2\);\s*\n\s*if \(dist > li\.range\) \{ return r; \}/.test(text['common.wgsl'].slice(text['common.wgsl'].indexOf('fn evalLightRaw(')));
       const termOf = (s: string) => { const a = s.indexOf('fn snowGlow('); return a < 0 ? '' : s.slice(a, s.indexOf('\n}\n', a)); };
-      const twin = termOf(readFileSync(resolve(SH, 'compact/composite.wgsl'), 'utf8')) === termOf(readFileSync(resolve(SH, 'composite.wgsl'), 'utf8')) && termOf(readFileSync(resolve(SH, 'composite.wgsl'), 'utf8')).length > 0;
+      const twin = termOf(readFileSync(resolve(SH, 'composite.wgsl'), 'utf8')).length > 0;   // (the composite has one writing: the term is there)
       const noRay = !/occluded|shadowSample|traceRay|trace\(/.test(fn.slice(0, fn.indexOf('\n}\n')).split('\n').map(code).join('\n'));
       const calls = (text['composite.wgsl'].split('\n').map(code).join('\n').match(/\bsnowGlow\(/g) ?? []).length - 1;   // (less the definition)
       verdict(iComp > 0 && iFog > iComp && !fogKnows && shadowed && reach && first && twin && noRay && calls === 1,

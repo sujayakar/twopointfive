@@ -1,6 +1,5 @@
 // Renderer orchestration: owns GPU resources and encodes the frame.
 import { Gpu, makeBuffer, PIPE_QUEUE, laterProgress } from './gpu/device';
-import { COMPACT } from './render/kernels';
 import { GpuTimer } from './gpu/timer';
 import { BoxWorld, BoxFlag, planBoxes, type Box, type DrawWait } from './scene/boxes';
 import { thinIs, thinAirOf } from './game/thinline';   // (a leaf: types only — which dynamic boxes are a laser's beam / a tracer's streak, for the reflections)
@@ -930,7 +929,7 @@ export class Engine {
       canvasView = this.offscreenTarget.createView();
     }
     this.passes.directPasses = s.directPasses; this.passes.directHistory = s.directHistory; this.passes.debugView = s.debugView;
-    this.passes.volK0 = COMPACT.on && Math.round(s.volLightCap || 0) <= 0;   // (COMPACT SHADERS, render/kernels.ts: the compact volumetrics.wgsl keeps the K = 0 smoke march in its own twin, passes.ts volK0Pipe; today's kernel carries it itself)
+    this.passes.volK0 = Math.round(s.volLightCap || 0) <= 0;   // (volumetrics.wgsl keeps the K = 0 smoke march, which no preset runs, in a twin of its own: passes.ts volK0Pipe)
     this.passes.gatherStrata = !!s.gatherStrata;   // (stratified gather directions: which gather pipeline pair the encode takes this frame)
     this.passes.glassRefract = !!(s.glassRefract && s.glass && this.world.glassList.length > 0);   // (glass refraction: composite's GLASS_REFRACT twin — only while there is a pane list to bend through; glass off / no panes = the module as it was)
     { const P = this.passes; P.restirOn = restir; P.restirRays = s.restirRays; P.restirSpatial = s.restirSpatial; P.restirHistory = s.restirHistory; P.restirRadius = s.restirRadius; P.restirGradient = s.restirGradient; P.restirGradK = s.restirGradK; P.restirYoung = s.restirYoung; P.restirSpatialAll = s.restirSpatialAll; P.restirCoherent = s.restirCoherent; P.restirSampleHue = s.restirSampleHue; P.restirRatioRaw = s.restirRatioRaw; P.restirPermute = s.restirPermute; P.restirPenCap = s.restirPenCap; P.restirPenRays = s.restirPenRays; P.restirAudit = s.restirAudit; P.heldRays = s.heldRays; P.heldAdaptive = !!s.heldAdaptive; P.restirStableRetrace = !!s.restirStableRetrace; P.restirDimClass = s.restirDimClass || 0; P.restirHueSplit = s.restirHueSplit; P.restirKnownDark = s.restirKnownDark; P.restirJitter = this.jitter;

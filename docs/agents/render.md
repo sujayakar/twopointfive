@@ -775,6 +775,30 @@ row on his machine is the answer, and the word puts the count back on any machin
   fallback frames themselves (a `?nogatherstrata` / `?norestir` / `?norefract` visit, ultra's phase-5 pair, a froxel tier, scale 1 — for the seconds before their twin is in).
   Left: vol's two smoke marches (the classic and the froxel-lit one are one march apart from their light — ~1.2 s of each program), the rain splash's second `rainLight`,
   restir's two `traceSample`s across its barriers, and the page script's own ~0.7 s.
+- **THE TEN BIG KERNELS HAVE ONE WRITING AND THE GATHER IS ITS TWO PROGRAMS (2026-11-07; the maintainer on the shaders: "let's do it", of cleaning up what the
+  survey found; his rule: "single path when possible").** Compact shaders and Separate shadow rays were Shaders rows from 2026-10-26, on in every browser since
+  2026-10-27 ("Everywhere"), and `render/kernels.ts` said the second copy "goes (one set or the other) when the default is decided". It went: `shaders/compact/` is
+  moved up over the ten files it copied (fgather, gather_common, reflect_p5, volumetrics, composite, particles, direct, sharp_direct, restir, sdfrig),
+  `render/kernels.ts` is gone, and `ui/shaderrows.ts` has ONE row left, Start on first frame shaders. **No switch and no word:** `?compactshaders`, `?splitrays`,
+  `TPS_COMPACTSHADERS`, `TPS_SPLITRAYS` and a choice kept under either key do nothing (a kept line loses the two entries the next time a row is moved; a report
+  made before today still names the rows: `shaderRowLabel`). **The harness now compiles what the page compiles**: it had every row off and so sized, trimmed and
+  folded the writing no player ran. **The gather**: `shaders/fgather.wgsl` is the gather's helpers, constants and bindings and has no entry point (843 lines to
+  190: `main`, `mainGi`, the resampling gather's helpers, the young-history rays, and glossReflection / glassShade, which `gather_split.wgsl` writes as
+  glossReflectionX / glassShadeX); `render/gatherSplit.ts` builds `trace` and `light` from it. Ultra's resampling gather was never built beside the two programs
+  (the maintainer, 10-27: "we pretty much have no one using ultra, so i think it's fine?"); its plumbing in passes.ts / engine.ts / settings.ts is inert and goes
+  next. **ONE KERNEL IS STILL IN TWO WRITINGS**: `shaders/gather_split_common.wgsl` (the gather's: directAtPoint as `light` calls it) beside
+  `shaders/gather_common.wgsl` (the reflection passes': one call site a heavy function). Making them one changes the gather's text, so it waits for a same-frame
+  comparison. **What was measured**: `tools/qa/shaderinline-check.ts --json` before the change with the two rows' words in front and after it with none, on the
+  title, a snow level and the look's page: all 66, 66 and 67 module texts the boot hands the browser are the same by their hashes, in both sets, and the same
+  127, 129 and 130 kernels are asked for at the same sizes. So the page as it opens compiles character for character what it did. **What changed for a
+  tool**: `shaderinline-check` has one budget table; `shaderrows-check` has two arms (off, first) and its store cases are the one row's (its stand-in device
+  now has room for the gather's points buffer); `splitrays-check` holds who reaches the light loop, the buffer's layout, the refusal's report and what a load
+  compiles (`SPLITRAYS_BREAK=1` writes a second call site of the light loop into `light`); `wgsl-compile.cjs` dumps each setting once; `splitrays-twin.cjs` and `fixtures/compact-kernels.json` are gone; the checks that held a rule "in both writings" (highlights, huesplit, reflup,
+  rolled, sunglint, sharpcap, snowglow, wallsides, lookexpo, lookveil, plainair, portal, bouncewalls) read the one, and three of them count the gather's sites
+  in `trace` (bouncewalls: one walled read, its mirror rays keep the old one; portal: one `skyThrough`). Every one passes and its break word bites.
+  **Credit: Stephen Jayakar, from his pull request 1**, which wrote the ten kernels this way in place. **Never seen on a GPU.** Nobody has drawn a frame of
+  this tree on a card: that the picture is the one of the build before rests on the texts being equal, and on a software-adapter boot. A load with the old
+  words at 0 (the plain kernels, the one-kernel gather) no longer exists to compare against.
 - **START ON FIRST FRAME SHADERS STARTS ON IN EVERY BROWSER A PERSON SITS AT (2026-10-27, the third row that starts on, `on: 'person'`; the maintainer:
   "should we do background compiles on all platforms? i'd generally prefer to have a single path when possible", and "i think we shouldn't do truly lazy
   compilation where then have stutters during gameplay").** (10-28: a mission's brief no longer goes live on that card's terms. Its Start waits for the
@@ -804,7 +828,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   seconds draws whole for longer; (b) a debug view or TAAU off while no fragment composite is in draws black until one lands (no preset and no Options row
   does either); (c) what a page tool draws is no longer the first seconds a player sees: only `shaderrows-page.cjs` looks at those; (d) a later pipeline that
   fails is one error record (the console's line) and its pass keeps the stand-in for the visit, counted nowhere in `__boot.pipelines`.
-- **TWO SHADERS ROWS START ON IN EVERY BROWSER (2026-10-27; `src/ui/shaderrows.ts`, a row's `on: true`): Compact shaders and Separate shadow rays.** The
+- **(SINCE 2026-11-07 NEITHER IS A ROW: the bullet 'THE TEN BIG KERNELS HAVE ONE WRITING' above. What follows is the record of when they were.) TWO SHADERS ROWS START ON IN EVERY BROWSER (2026-10-27; `src/ui/shaderrows.ts`, a row's `on: true`): Compact shaders and Separate shadow rays.** The
   maintainer's pick, asked whether to turn them on in a Windows browser only, everywhere, or not yet ("we pretty much have no one using ultra, so i think it's
   fine?" of Ultra losing its resampling gather under the split, below). **Off:** `?compactshaders=0&splitrays=0` on the address = a load as it was (the address
   for a PLAIN load to set a wait against; with the bullet above, `&firstframe=0` too), or either row turned off in Options > Graphics > Shaders, which is KEPT off (the kept line holds a row only while it
@@ -827,7 +851,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   browser with no storage shows a row turned off as still on. **Checks:** `shaderrows-check.ts` (cases `starts`, `offkept`, `plain` beside the harness's; `SHADERROWS_BREAK=1` fails `starts` and `offkept`, and `plain`, a load with both words at 0, reads the same under it),
   `splitrays-check.ts` (the refusal's line, and the size tool with both rows on), on the page `shaderrows-page.cjs` (walk `starts`). The ten kernels still exist twice: taking today's writing out
   is the next step, not done here.
-- **Shader rows on trial: Compact shaders and Start on first frame shaders (2026-10-26; Options > Graphics > Shaders, `src/ui/shaderrows.ts`).** The two levers of the
+- **(SINCE 2026-11-07 Compact shaders is not a row and its writing is the only one: the bullet 'THE TEN BIG KERNELS HAVE ONE WRITING' above.) Shader rows on trial: Compact shaders and Start on first frame shaders (2026-10-26; Options > Graphics > Shaders, `src/ui/shaderrows.ts`).** The two levers of the
   bullet above, each a row that was OFF by default when this was written (Compact shaders has started on in a browser since 2026-10-27: the bullet above) and is the NEXT load's (read once, when its module is imported: the pipelines are made before a menu can open). Kept
   under `twopointsix.shaderrows`; a URL word wins for the visit and is never written; a row is listed only in a build whose code reads it (`useShaderRow`). Switches of
   the page, not rules of the game: no knob, no `FROZEN_HOLDS` row, off on BOTH stands; the harness's words are `TPS_COMPACTSHADERS=1` / `TPS_FIRSTFRAME=1` in front of
@@ -891,7 +915,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   is the one path: the later set compiled behind the start (the first-frame row above), the cut set built in the background after the boot (`cutSwap.start()`), and
   the ladder's hold while a later program compiles (`ui/quality.ts STANDS_IN`, at most 30 s in one wait; `quality-plan` case D1, `LADDERHOLD_BREAK=1`). **Checked:**
   `shaderrows-check.ts --dump` on the off, compact, first, both and all-three arms is line for line that of the tree before. Nothing of it was run on a page.
-- **Separate shadow rays (a Shaders row, 2026-10-26; OFF on both stands of the harness and, since 2026-10-27, ON in every browser, the bullet above; the next load's; `?splitrays=1`, `TPS_SPLITRAYS=1` in front of a headless
+- **(SINCE 2026-11-07 this is the only gather and no row: the bullet 'THE TEN BIG KERNELS HAVE ONE WRITING' above.) Separate shadow rays (a Shaders row, 2026-10-26; OFF on both stands of the harness and, since 2026-10-27, ON in every browser, the bullet above; the next load's; `?splitrays=1`, `TPS_SPLITRAYS=1` in front of a headless
   tool; `render/gatherSplit.ts`, `shaders/gather_split.wgsl`).** A trial for the Windows shader wait: the final gather stops being one megakernel. Today
   `fgather.wgsl`'s `main` lights every point its rays land on inside itself, so `directAtPoint` (the light loop and its three shadow rays, 123 KB a copy as DXC
   pastes it) is written at four places and `main` is 780 KB out of a 92 KB module. With the row on the same frame is two programs made from the same helpers:

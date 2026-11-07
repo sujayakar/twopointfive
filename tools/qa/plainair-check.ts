@@ -8,8 +8,7 @@
 //   · any load: the weight of a lamp's glow through smoke reaches the frame at 0, so the real march's cut is the plain one's (the look's row; only its two writers name it)
 // No browser and no compiler: that the plain text COMPILES and DRAWS is the page's to say (tools/qa/plainair-page.cjs).
 //   bun run tools/qa/plainair-check.ts             exit 0 = every check passed, 1 = one failed
-//   TPS_COMPACTSHADERS=1 bun run tools/qa/plainair-check.ts     the page's writing of the march (its froxel twin is then one of the twins not asked for)
-//   PLAINAIR_BREAK=1 bun run tools/qa/plainair-check.ts     the plain-air boot is made with the switch's word off: must FAIL (5 lines; 7 with the compact set)
+//   PLAINAIR_BREAK=1 bun run tools/qa/plainair-check.ts     the plain-air boot is made with the switch's word off: must FAIL (7 lines)
 export {};
 const { ROOT, fake } = await import('./headless.ts');
 const { readFileSync, readdirSync } = await import('node:fs');
@@ -58,7 +57,7 @@ check(pm.length === 1 && fns.includes('main') && walks.length === 0, `the plain 
 const kb = code.replace(/\/\/.*$/gm, '').length / 1024, realKb = (any.mods.find(m => m.label === 'volumetrics')?.code ?? '').replace(/\/\/.*$/gm, '').length / 1024;
 check(pm.length === 1 && kb < 40 && kb < realKb / 3, `and is a small text: ${kb.toFixed(0)} KB where the real march's module is ${realKb.toFixed(0)} KB (comments out, each function once)`);
 // the copies: the plain march's numbers are the real one's
-{ const src = (f: string) => readFileSync(`${ROOT}/src/render/shaders/${f}`, 'utf8'), P = src('vol_plain.wgsl'), R = [src('volumetrics.wgsl'), src('compact/volumetrics.wgsl')];
+{ const src = (f: string) => readFileSync(`${ROOT}/src/render/shaders/${f}`, 'utf8'), P = src('vol_plain.wgsl'), R = [src('volumetrics.wgsl')];
   const body = (t: string, fn: string) => new RegExp(`fn ${fn}\\(\\) -> u32 \\{([^}]*)\\}`).exec(t)?.[1]?.trim() ?? null;
   const num = (t: string, c: string) => new RegExp(`const ${c}: f32 = ([0-9.]+);`).exec(t)?.[1] ?? null;
   check(R.every(t => num(t, 'WX_STEP') !== null && num(t, 'WX_STEP') === num(P, 'PLAIN_WX_STEP')) && R.every(t => body(t, 'wxMaxSteps') !== null && body(t, 'wxMaxSteps') === body(P, 'plainWxSteps')), `the weather's air is stepped as the real march steps it (WX_STEP ${num(P, 'PLAIN_WX_STEP')}, the tier's step budget)`);

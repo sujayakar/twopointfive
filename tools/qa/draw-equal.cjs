@@ -7,7 +7,7 @@
 //       drawn frames (each waited for), read back at two checkpoints (`--frames a,b`: after drawn frame a and after drawn frame b). Writes, per checkpoint,
 //       <view>-a.png / .rgba (w·h·4 bytes, alpha 255) / .json { sha256 of the rgba, w, h, boot pipelines, errors, env, facts } and <outDir>/index.json.
 //       Exit 0 = every view captured with no console / page error and every view's subject proven on screen (json.unmet empty); 1 = not; 2 = the driver died.
-//       --with 'compactshaders=1' = those words on every view's address too: ONE build drawn with a switch of the page off and on (two captures, one server), where
+//       --with 'shaderfold=0' = those words on every view's address too: ONE build drawn with a switch of the page off and on (two captures, one server), where
 //       the switch is read from the address and not from the tree.
 //   node tools/qa/draw-equal.cjs compare <dirA> <dirB> [--diff <dir>]
 //       per capture: EQUAL, or the number of differing pixels + the largest channel delta + their bounding box (from the .rgba files; --diff writes an amplified
@@ -292,7 +292,7 @@ async function captureView(name, opt, outDir) {
     R.pipelines = ready.pipelines; R.seconds.boot = +((Date.now() - t0) / 1000).toFixed(0); if (ready.fatal) R.errors.push('fatal: ' + ready.fatal);
     R.prep = await page.evaluate(PREP, opt.seed);
     log(name, `ready in ${R.seconds.boot} s`, JSON.stringify(ready.pipelines));
-    if (process.env.DRAW_EQUAL_AFTER_READY) {   // a step of the caller's own on the booted page, before anything is staged: a module { fn, arg } run as page.evaluate(fn, arg); a result with ok === false is an error of the view (tools/qa/splitrays-twin.cjs)
+    if (process.env.DRAW_EQUAL_AFTER_READY) {   // a step of the caller's own on the booted page, before anything is staged: a module { fn, arg } run as page.evaluate(fn, arg); a result with ok === false is an error of the view (a twin text swapped in through a dev hook, say)
       const M = require(path.resolve(process.env.DRAW_EQUAL_AFTER_READY)); R.afterReady = await page.evaluate(M.fn, M.arg);
       if (R.afterReady && R.afterReady.ok === false) R.errors.push('after-ready: ' + JSON.stringify(R.afterReady).slice(0, 600));
       log(name, 'after-ready', String(JSON.stringify(R.afterReady)).slice(0, 200));
