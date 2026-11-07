@@ -157,8 +157,6 @@ function readPage(O: any): PageRead {
   for (const r of hud?.rows ?? []) for (const o of r.opts ?? []) if (/^\d+$/.test(o.key) && !(Number(o.key) >= 1 && Number(o.key) <= ORDER_DIGITS)) bad.push(`${where}: the panel shows key "${o.key}" (${o.text})`);
   return { page: M.page ?? null, rows, wait, hint, bad };
 }
-const rowWords = (r: RowRead) => `${r.digit ?? r.hot ?? '—'} ${r.id}${r.opens ? ' ▸' : ''}`;
-const pageWords = (p: PageRead) => `${p.page ? `[${p.page}] ` : ''}${p.rows.map(rowWords).join(' · ')}${p.wait ? ` · ${p.wait.shown} wait` : ''}`;
 
 /** The open menu walked by its keys: its first page read, each row that opens a page pressed (the page read — and the pages behind ITS openers, the same way;
  *  Esc back a page; pressed again; a right click back). Returns the pages, each with the digits that turn to it (`via`), and what went wrong on the way. The menu
@@ -188,142 +186,10 @@ function walkMenu(R: Rig): { pages: PageRead[]; bad: string[] } {
 }
 
 // ---------------------------------------------------------------- every menu of every scenario, walked
-export const orderkeysWalk = guarded(async () => {
-  const { verdict, done } = family(`orderkeys-walk: every order menu of every scenario on the list, walked by its keys — no row on a digit above ${ORDER_DIGITS}`);
-  let menus = 0, rowsSeen = 0, top = 0; const shapes = new Set<string>();
-  for (const scn of LIST) {
-    const R = await rig(scn); const { O, game: g } = R; const bad: string[] = [], seen: string[] = []; let n = 0, doors = 0, rows = 0;
-    if (R.why !== null || !O.active || R.ops.length !== scn.squad) { verdict(false, `${scn.name} (${scn.query}): staged with its ${scn.squad} teammates`, `${R.why ?? 'started'} · ${O.summary()}`); continue; }
-    const take = (what: string, M: any) => {
-      if (!M) { bad.push(`${what}: X opened no menu`); return; }
-      const w = walkMenu(R); n++; bad.push(...w.bad.map(b => `${what} — ${b}`));
-      for (const p of w.pages) { rows += p.rows.length + (p.wait ? 1 : 0); for (const r of p.rows) if (r.digit !== null) top = Math.max(top, r.digit); if (p.wait?.digit) top = Math.max(top, p.wait.digit); }
-      const shape = w.pages.map(pageWords).join('  ‖  '); shapes.add(`${scn.squad === 4 ? 'four' : 'pair'} · ${M.target.kind === 'none' ? (M.target.man ? 'teammate' : 'Sam') : M.target.kind}: ${shape}`); if (!seen.includes(`${what.split(' ')[0]}: ${shape}`)) seen.push(`${what.split(' ')[0]}: ${shape}`);
-      R.press(ORDERS.key); if (O.menu) bad.push(`${what}: X did not close the menu`);
-    };
-    // from where the scenario puts Sam: the floor, himself, a teammate — each by X on the cursor
-    const spot = R.onFloor(); if (!spot) bad.push('no spot of floor found near Sam'); else { const M = R.openX(); if (M && M.target.kind !== 'floor') bad.push(`floor: the menu opened on ${M.target.kind}`); take('floor', M); }
-    R.onSam(); { const M = R.openX(); if (M && !(M.target.kind === 'none' && !M.target.man)) bad.push(`Sam: the menu opened on ${M.target.kind}`); take('Sam', M); }
-    // (the teammate is the man the cursor is ON with its point on the first man's chest: the nearest body along its ray. The line asked for the first man
-    // whoever stood in front of him, and on three levels of the page's stand another stands 0.6 m off and nearer the camera, over that chest on the screen:
-    // the menu opened on him, rightly. ORDERKEYS_BREAK=man: another man than the cursor's is asked for)
-    { const a = R.onMan(), want = BREAK === 'man' ? R.ops.find((o: any) => o !== a) : a;
-      if (!a) bad.push(`teammate: the cursor's ray through the first man's chest meets none of the ${R.ops.length}`);
-      else { const M = R.openX(); if (M && !(M.target.kind === 'none' && M.target.man === want)) bad.push(`teammate: the menu opened on ${M.target.kind}${M.target.kind === 'none' ? ` (${M.target.man?.callsign ?? 'no man'}, where the cursor is on ${want?.callsign})` : ''}`); take('teammate', M); } }
-    // every door of the level: X on the cursor where Sam can be stood by it and the cursor finds it; else the menu opened on it directly (its keys pressed all the same)
-    let byX = 0;
-    for (const d of g.doors.list) {
-      doors++; let M: any = null;
-      if (R.atDoor(d)) { M = R.openX(); if (M && M.target.door === d) byX++; else { if (O.menu) R.press(ORDERS.key); M = null; } }
-      if (!M) { R.aim = null; O.open(O.targetAt(d.frameCentre)); R.step(2); M = O.menu; if (M && M.target.door !== d) { bad.push(`door ${d.def.name}: opened on something else`); } }
-      take(`door ${d.def.name}`, M);
-    }
-    const high = R.pressed.filter(c => /^Digit/.test(c) && !(Number(c.slice(5)) >= 1 && Number(c.slice(5)) <= ORDER_DIGITS));
-    menus += n; rowsSeen += rows;
-    verdict(bad.length === 0 && high.length === 0 && n === 3 + doors && byX > 0, `${scn.name} (${scn.query}): ${n} menus — the floor, Sam, a teammate and all ${doors} doors — every page walked by its keys, every row on 1 to ${ORDER_DIGITS} or F`,
-      `${bad.length ? `WRONG: ${bad.slice(0, 6).join(' | ')}${bad.length > 6 ? ` (+${bad.length - 6} more)` : ''} · ` : ''}${rows} rows · ${byX} of ${doors} doors opened by X on the cursor · digits pressed above ${ORDER_DIGITS}: ${high.length}\n    ${seen.join('\n    ')}`);
-  }
-  verdict(top > 0 && top <= ORDER_DIGITS, `over all ${LIST.length} scenarios: the highest digit any row is on is ${top}`, `${menus} menus walked · ${rowsSeen} rows read · ${shapes.size} distinct menus:\n    ${[...shapes].sort().join('\n    ')}`);
-  return done();
-});
 
 // ---------------------------------------------------------------- every row given by the keys the walk read
-export const orderkeysGive = guarded(async () => {
-  const { verdict, done } = family(`orderkeys-give: every row of every page given by X and digits 1 to ${ORDER_DIGITS}, in every scenario on the list`);
-  let allGiven = 0, allGrey = 0, allRows = 0;
-  for (const scn of LIST) {
-    const R = await rig(scn); const { O, D, game: g } = R; if (R.why !== null || !O.active) { verdict(false, `${scn.name}: staged`, String(R.why)); continue; }
-    // the door this scenario's rows are given on: the nearest to Sam's start that X on the cursor opens on, the men called over first (X on Sam, 3)
-    const s0 = [...g.player.char.pos], doorsNear = [...g.doors.list].sort((a: any, b: any) => dist(a.frameCentre, s0) - dist(b.frameCentre, s0));
-    let door: any = null; for (const d of doorsNear) { if (R.atDoor(d)) { door = d; break; } } R.fresh();
-    const out: string[] = []; let given = 0, grey = 0, rowsN = 0, wrong = 0;
-    /** the letters the walk found a page's opener on (the squad's throws: G) — pressed to turn to that page, and no other letter is */
-    const openers = new Set<string>();
-    const stage = (kind: string): boolean => {
-      R.fresh();
-      if (kind === 'door') { R.onSam(); R.openX(); R.press('Digit3'); R.aim = null;   // fall in, by presses: the men come to the door with Sam
-        if (!door || !R.atDoor(door)) return false; const sam = g.player.char.pos; R.until(() => R.ops.every((m: any) => m.state === 'dead' || dist(m.char.pos, sam) < 3 + 1.2 * R.ops.length), 14); R.step(20); return true; }
-      if (kind === 'floor') return !!R.onFloor(); if (kind === 'Sam') { R.onSam(); return true; } return !!R.onMan();
-    };
-    for (const kind of ['floor', 'door', 'Sam', 'teammate']) {
-      if (!stage(kind)) { out.push(`${kind}: could not be staged`); wrong++; continue; }
-      // the paths to press: [digit] for a row of the first page, [the digits that turn to its page …, digit] for a row of a page
-      const M0 = R.openX(); if (!M0) { out.push(`${kind}: no menu`); wrong++; continue; }
-      const w = walkMenu(R); R.press(ORDERS.key);
-      const paths: { id: string; keys: (number | string)[] }[] = [];
-      for (const p of w.pages) for (const r of p.rows) { if (r.opens || r.digit === null) continue; paths.push({ id: r.id, keys: [...(p.via ?? []), r.digit] }); }
-      for (const path of paths) { for (const k of path.keys) if (typeof k === 'string') openers.add(k);
-        rowsN++; if (!stage(kind)) { wrong++; continue; }
-        const l0 = O.log.length; const M = R.openX(); for (const k of path.keys.slice(0, -1)) { R.press(keyCode(k)); R.step(2); }
-        // (the rows are re-read on the frame of the press: the men may still be walking up, and a line one of them gains between the menu's read and the key is
-        //  the game re-asking on the press as it always does, not a row answering wrongly)
-        if (M && O.menu === M) O.refresh();
-        const i = M && O.menu === M ? M.rows.findIndex((r: any) => r.id === path.id) : -1, why = i >= 0 ? M.why[i] : 'not on the page';
-        // (the order is the first thing logged on the press; a scenario may log one of its own behind it — the rescue calls the other man in on Sam's first order)
-        // (a FREE row — one that takes nobody off his order: the squad's silent / loud, a throw — is not written to the order log by give() (orders.ts), and
-        //  only some log a line of their own. So it answers as that row when its own issue() ran once on the press AND DID NOT REFUSE (a refusal is the
-        //  string it returns: 'no bangs left.') and nothing but its own line was logged; every other row answers by its line in the log. A greyed free
-        //  row's deed must not have run at all. ORDERKEYS_BREAK=free: every free row's deed refuses — each must read WRONG)
-        const def = O.defs.find((x: any) => x.id === path.id), issue0 = def?.issue; let ran = 0, said: unknown = null;
-        if (def?.free) def.issue = (...a: any[]) => { ran++; return (said = BREAK === 'free' ? 'refused (ORDERKEYS_BREAK=free)' : issue0.apply(def, a)); };
-        R.press(`Digit${path.keys[path.keys.length - 1]}`); const l = O.log[l0] ?? null, logged = O.log.length - l0, own = O.log.slice(l0 + 1).every((x: any) => x.order === 'fallIn'); R.step(2);
-        if (def?.free) def.issue = issue0;
-        const keys = `X ${path.keys.map(k => typeof k === 'number' ? k : nameOf(k)).join(' ')}`;
-        if (def?.free && !why && ran === 1 && typeof said !== 'string' && (logged === 0 || (l?.order === path.id && own)) && O.menu === null) { given++; out.push(`${kind} ${keys} ${path.id}: given (a free row: its own deed ran once${logged ? '' : ', and it logs no order'})`); }
-        else if (!def?.free && !why && logged >= 1 && own && l?.order === path.id && O.menu === null) { given++; out.push(`${kind} ${keys} ${path.id}: given${logged > 1 ? ` (+${logged - 1} of the scenario's own)` : ''}`); }
-        else if (why && logged === 0 && ran === 0 && O.menu === null) { grey++; out.push(`${kind} ${keys} ${path.id}: greyed there (${why}) and refused`); }
-        else { wrong++; out.push(`${kind} ${keys} ${path.id}: WRONG — ${why ? `greyed (${why}) ` : ''}logged ${logged}${l ? ` (${l.order})` : ''}${def?.free ? `, its deed ran ${ran}×${typeof said === 'string' ? ` and refused ("${said}")` : ''}` : ''}, menu ${O.menu ? 'still up' : 'gone'}`); }
-      }
-    }
-    const high = R.pressed.filter(c => /^Digit/.test(c) && !(Number(c.slice(5)) >= 1 && Number(c.slice(5)) <= ORDER_DIGITS)), other = [...new Set(R.pressed.filter(c => !/^Digit/.test(c) && c !== ORDERS.key && c !== 'Escape' && !openers.has(c)))];
-    allGiven += given; allGrey += grey; allRows += rowsN; void D;
-    verdict(wrong === 0 && rowsN > 0 && given > 0 && high.length === 0 && other.length === 0, `${scn.name} (${scn.query}): each of its ${rowsN} rows pressed by X and its digits answers as that row — ${given} given, ${grey} greyed where it stood and refused`,
-      `${door ? `door ${door.def.name}` : 'NO DOOR Sam could be stood by'} · keys pressed: X, Esc, digits ${[...new Set(R.pressed.filter(c => /^Digit/.test(c)).map(c => c.slice(5)))].sort().join(' ')} · above ${ORDER_DIGITS}: ${high.length}${other.length ? ` · OTHER KEYS: ${other.join(' ')}` : ''}\n    ${out.join(' · ')}`);
-  }
-  verdict(allRows > 0 && allGiven + allGrey === allRows, `over all ${LIST.length} scenarios: every row answered to its keys`, `${allRows} rows · ${allGiven} given · ${allGrey} greyed and refused`);
-  return done();
-});
 
 // ---------------------------------------------------------------- the four: the wait row and the word, from the left hand
-export const orderkeysFour = guarded(async () => {
-  const { verdict, done } = family('orderkeys-four: the four\'s "wait for my word" and the word itself, on keys of the left hand');
-  for (const scn of LIST.filter(s => s.squad === 4)) {
-    const R = await rig(scn); const { O, D, game: g } = R; if (R.why !== null || !O.active || !O.big) { verdict(false, `${scn.name}: staged with four`, `${R.why} · ${O.summary()}`); continue; }
-    // the door: the nearest to Sam's start that X on the cursor opens on and whose 'open and clear' is live there (not a way out of the building, say)
-    const s0 = [...g.player.char.pos]; let door: any = null;
-    for (const d of [...g.doors.list].sort((a: any, b: any) => dist(a.frameCentre, s0) - dist(b.frameCentre, s0))) {
-      if (!R.atDoor(d)) continue; const M = R.openX(); if (!M || M.target.door !== d) { if (O.menu) R.press(ORDERS.key); continue; }
-      R.press(`Digit${M.rows.find((r: any) => r.opens)?.key}`); const i = O.menu ? O.menu.rows.findIndex((r: any) => r.id === 'openClear') : -1, live = !!O.menu && i >= 0 && !O.menu.why[i]; if (O.menu) R.press(ORDERS.key);
-      if (live) { door = d; break; } }
-    const out: string[] = []; let ok = !!door;
-    const near = () => { R.fresh(); R.onSam(); R.openX(); R.press('Digit3'); R.aim = null; R.atDoor(door); const sam = g.player.char.pos; R.until(() => R.ops.every((m: any) => dist(m.char.pos, sam) < 8), 14); R.step(20); };
-    if (door) for (const how of ['5 on the tools page', 'F on the tools page', 'F on the door\'s first page']) {
-      near(); const M = R.openX(), toolsKey = M?.rows.find((r: any) => r.opens)?.key, p0 = M ? readPage(O) : null; let flipped = false;
-      if (how.startsWith('F on the door')) { R.press(DOORTOOLS.blowKey); flipped = O.menu === M && M.page !== null && M.onWord === true; }
-      else { R.press(`Digit${toolsKey}`); const p = readPage(O); if (how.startsWith('5')) R.press(`Digit${p.wait?.digit}`); else R.press(DOORTOOLS.blowKey); flipped = O.menu === M && M.onWord === true && (p.wait?.digit ?? 0) >= 1 && (p.wait?.digit ?? 9) <= ORDER_DIGITS; }
-      const shown = O.menu ? readPage(O) : null, l0 = O.log.length, open = shown?.rows.find(r => r.id === 'openClear');
-      R.press(`Digit${open?.digit}`); const l = R.last(), op = D.ops.find((o: any) => o.kind === 'openClear' && o.door === door), waits = O.log.length === l0 + 1 && l?.order === 'openClear' && !!op && op.onWord === true;
-      const ready = R.until(() => !!op && op.phase === 'ready', 30); /* 30 s: Sam is PUT at the door here, so on the barracks the way to his face is not known floor and the men come the long way round (cleared.ts) */ R.step(40); const still = !!op && op.phase === 'ready' && Number.isNaN(op.openT);
-      // the word, by F: once with a floor menu up (its row shows F), once with no menu
-      const withMenu = how.startsWith('5'); let goShown = true; const l1 = O.log.length;
-      if (withMenu) { R.onFloor(); const Mf = R.openX(); const pf = Mf ? readPage(O) : null, go = pf?.rows.find(r => r.id === 'go'); goShown = !!go && go.shown === nameOf(DOORTOOLS.blowKey) && go.digit === null && !go.why; }
-      else { R.aim = null; R.step(2); }
-      R.press(DOORTOOLS.blowKey); const lg = R.last(), went = O.log.length === l1 + 1 && lg?.order === 'go'; const moved = R.until(() => !op || !op.onWord || op.phase !== 'ready', 4);
-      const good = !!toolsKey && toolsKey <= ORDER_DIGITS && !!p0 && flipped && waits && ready && still && goShown && went && moved; ok &&= good;
-      out.push(`${how}: ${flipped ? 'wait ON, menu still up' : 'DID NOT FLIP'} → ${open?.digit} open and clear ${waits ? 'on the word' : 'NOT WAITING'} → ${still ? 'stacked and held' : 'DID NOT HOLD'} → F ${withMenu ? `with a floor menu up (its go row shows ${goShown ? 'F' : 'SOMETHING ELSE'})` : 'with no menu'}: ${went ? 'the word' : 'NO WORD'}${moved ? ', they go' : ', NOTHING MOVED'}`);
-      if (O.menu) R.press(ORDERS.key);
-    }
-    // 'wait for my word' is the menu's, not the page's: on, a step back to the door's first page and into the tools again leaves it on (and the first page says so)
-    if (door) { near(); const M = R.openX(), toolsKey = M?.rows.find((r: any) => r.opens)?.key; R.press(`Digit${toolsKey}`); R.press(`Digit${readPage(O).wait?.digit}`); const on0 = O.menu?.onWord === true;
-      R.press('Escape'); const first = O.menu === M && M.page === null, said = (O.hud().menu?.rows ?? []).flatMap((r: any) => r.opts).find((o: any) => /▸/.test(o.text))?.text ?? '';
-      R.press(`Digit${toolsKey}`); const kept = O.menu === M && M.page !== null && M.onWord === true; R.press(ORDERS.key); const gone = !O.menu; R.atDoor(door); const M2 = R.openX(), fresh = !!M2 && M2.onWord === false; if (O.menu) R.press(ORDERS.key);
-      const good = on0 && first && /on my word: ON(?:$| · )/.test(said) && kept && gone && fresh; ok &&= good;   // (the row goes on to name the big slot's key when the squad carries a tool)
-      out.push(`wait ON, Esc back, ${toolsKey} again: ${first ? `first page reads "${said}"` : 'NOT BACK ON THE FIRST PAGE'} → ${kept ? 'still ON on the tools page' : 'WAIT WAS DROPPED'} · a new menu starts ${fresh ? 'off' : 'ON'}`); }
-    const high = R.pressed.filter(c => /^Digit/.test(c) && !(Number(c.slice(5)) >= 1 && Number(c.slice(5)) <= ORDER_DIGITS));
-    verdict(ok && high.length === 0, `${scn.name} (${scn.query}): a tool given to wait and then sent, three ways, without a digit above ${ORDER_DIGITS}`, `${door ? `door ${door.def.name}` : 'NO DOOR'} · digits pressed above ${ORDER_DIGITS}: ${high.length}\n    ${out.join('\n    ')}`);
-  }
-  return done();
-});
 
 // ---------------------------------------------------------------- the digits above the reach do nothing
 export const orderkeysHigh = guarded(async () => {

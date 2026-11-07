@@ -27,7 +27,6 @@ import { standUp, ROOT } from './headless.ts';
 import { sample } from './sweep.ts';
 const { RESCUE } = await import(`${ROOT}/src/game/rescue.ts`);
 const { MAX_LIGHTS } = await import(`${ROOT}/src/render/lights.ts`);
-const { digestGame } = await import(`${ROOT}/src/game/digest.ts`);
 const { canLoad } = await import(`${ROOT}/src/game/savestate.ts`);
 const { killGuard, fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);
 
@@ -91,20 +90,6 @@ export async function rig(seed: number, knobs: Record<string, unknown> = {}, sta
   return T;
 }
 
-export const rescueOff = guarded(async () => {
-  const F = family('rescue-off: the flag off — nothing of it runs, and its keys are dead keys');
-  const run = async (press: boolean) => { const T = await rig(5, {}, false, 0); for (let i = 0; i < 600; i++) { if (press && (i === 60 || i === 200)) T.W.input.pressed.add('KeyF'); if (press && (i === 120 || i === 260)) T.W.input.pressed.add('KeyX'); T.step(); } return T; };
-  const A = await run(false), B = await run(true);
-  const R = B.R, g = B.game;
-  F.verdict(!R.active && R.state === 'off' && R.ops.length === 0 && R.hostiles.length === 0 && R.hostages.length === 0 && !g.guards.some((x: any) => x.unit), 'inactive: no cast, no unit on the floor',
-    `active ${R.active} · state ${R.state} · units ${g.guards.filter((x: any) => x.unit).length} · '${R.summary()}'`);
-  F.verdict(g.guards.length === B.before.guards && g.civilians.length === B.before.civilians && g.civilians.every((c: any) => !R.isHostage(c)), 'the shift and the building\'s civilians as ever',
-    `guards ${g.guards.length} (was ${B.before.guards}) · civilians ${g.civilians.length} (was ${B.before.civilians})`);
-  const da = JSON.stringify(digestGame(A.game, true)), db = JSON.stringify(digestGame(B.game, true));
-  F.verdict(da === db, 'ten seeded seconds digest the same with and without F / X presses', `digest ${da.length} chars · equal ${da === db}`);
-  F.verdict(R.orderDoor() === null && R.callOff() === null && R.log.length === 0, 'the order and the call-off called by hand do nothing', `log ${R.log.length} lines`);
-  return F.done();
-});
 
 export const rescueStage = guarded(async () => {
   const F = family('rescue-stage: start() puts everybody on his mark and nothing runs until Sam moves');

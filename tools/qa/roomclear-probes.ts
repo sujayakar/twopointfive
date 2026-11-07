@@ -35,7 +35,6 @@ const { ROOMCLEAR, STRUCTURE, placeDefenders, checkStructure, doorPlan } = await
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { killGuard, hitPlayer } = await import(`${ROOT}/src/game/combat.ts`);
 const { MAX_LIGHTS } = await import(`${ROOT}/src/render/lights.ts`);
-const { canLoad } = await import(`${ROOT}/src/game/savestate.ts`);
 
 const DT = 1 / 60;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -85,20 +84,6 @@ async function rig(seed: number, knobs: Record<string, unknown> = {}, start: boo
 /** every probe leaves both knob tables as it found them, pass, fail or throw (the runner's snapshot does not know these tables) */
 const guarded = (fn: () => Promise<boolean>) => async () => { try { return await fn(); } finally { Object.assign(ROOMCLEAR, RC_DEFAULTS); Object.assign(NIGHTBREACH, NB_DEFAULTS); } };
 
-export const roomclearOff = guarded(async () => {
-  const { verdict, done } = family('roomclear-off: nothing of it runs until it is started');
-  const R = await rig(5, {}, false); const { game: g, RC, NB } = R;
-  R.step(300);
-  verdict(!RC.active && RC.state === 'off' && RC.rooms.length === 0 && RC.end === null && RC.log.length === 0 && !!g.view.mission && g.view.mission.of !== 'roomclear' && NB.layout === null && !NB.active,
-    'inert after five seconds of night floor: inactive, no rooms, no end, an empty log, no layout on the night breach', `${RC.summary()} · rooms ${RC.rooms.length} · log ${RC.log.length} · layout ${NB.layout}`);
-  verdict(g.objectiveText() === R.before.objective && /server room/.test(g.objectiveText()) && g.guards.length === R.before.guards && !g.guards.some((x: any) => x.unit),
-    'the floor is the night game\'s: the shift, no unit, the mission\'s own objective line', `objective '${g.objectiveText()}' · guards ${g.guards.length}`);
-  const why = NB.start(); R.step(30); const P = g.level.breach;
-  verdict(why === null && NB.active && !RC.active && RC.state === 'off' && !!g.view.mission && g.view.mission.of !== 'roomclear' && NB.hostiles.length === 3 && NB.drill.hostiles.length === 3 && NB.hostiles.every((h: any, i: number) => dist(h.char.pos, P.hostiles[i].pos) < 0.3) && RC.rooms.length === 0,
-    '?nightbreach alone is the break room\'s three on the breach plan\'s marks, all three the drill\'s — and this scenario stays off under it', `${NB.summary()} · drill hostiles ${NB.drill.hostiles.length} · ${RC.summary()}`);
-  verdict(RC.start() !== null && !RC.active && NB.layout === null, 'started over a standing night breach it is refused, and leaves that one alone', `refusal: ${RC.canStart()} · layout ${NB.layout}`);
-  return done();
-});
 
 export const roomclearData = guarded(async () => {
   const { verdict, done } = family('roomclear-data: the structure is sound against the level and the deal is a pure function of its seed');

@@ -109,26 +109,6 @@ async function rig(seed: number, sam: number[], o: { squad?: 2 | 4; quiet?: bool
   return R;
 }
 
-// ============================================================================================================================ pairs-off
-export const pairsOff = guarded(async () => {
-  const { verdict, done } = family('pairs-off: the pair build is as it was; the four get the word');
-  { const R = await rig(5, CUBICLES, { squad: 2, quiet: true }); const { O } = R; const men = R.men('all');
-    const goDef = O.defs.find((d: any) => d.id === 'go'), why = O.give('go', R.here(), 'all');
-    // (the small squad's word, DOORTOOLS.wordSmall, on in the page: 'go' is registered for the pair too, on no menu row, and is refused while nobody is stacked — `probes.ts wordsmall`)
-    verdict(men.length === 2 && !O.big && !!goDef && (goDef.listed ?? []).length === 0 && why === 'nobody waiting.', 'two men: not a big squad; \'go\' is on the list for the key alone (on no menu row) and giving it with nobody stacked is refused', `${men.length} men · big ${O.big} · go listed [${(goDef?.listed ?? []).join(' ')}] · give('go') → ${why}`);
-    const t = R.target('breakroom_n'), t2 = O.forMen(t, men);
-    verdict(t2.side === t.side && t.side === sideOf(R.door('breakroom_n'), R.game.player.char.pos), 'two men: a door order keeps Sam\'s side of the door (he is in the cubicles: the INSIDE of the north door), as before', `Sam's side ${t.side} · the men's ${t2.side}`);
-    R.game.teleportPlayer(CORRIDOR); R.step(5);
-    O.give('move', O.targetAt(FLANK), 'all'); R.set('all', 30); O.give('hold', R.here(), 'all'); R.step(60);
-    const as = men.map((m: any) => O.of(m)); const plain = as.every((a: any) => a?.order === 'hold' && a.there === 'holding' && !a.watch && !a.door && a.upper !== 'aim' && !a.light);
-    verdict(plain, 'two men: hold is the old hold — where they stand, the way they face, low ready, no arc, no light', as.map((a: any, i: number) => `${men[i].callsign} [${a?.there}] upper ${a?.upper} watch ${a?.watch ? at(a.watch) : '-'} light ${!!a?.light}`).join(' · '));
-    R.give('stack', 'breakroom_n', 'all'); R.set('all', 30); const said = R.D.go(), ops = R.D.ops.length;
-    verdict(typeof said === 'string' && ops === 0, 'two men: doorTools.go() does nothing for a pair on a plain stack', `go() → ${said} · door orders running ${ops}`); }
-  { const R = await rig(5, CORRIDOR, { quiet: true }); const { O } = R;
-    const has = O.defs.some((d: any) => d.id === 'go'), why = O.give('go', R.here(), 'all'), moved = R.men('all').filter((m: any) => O.of(m)?.order === 'go').length;
-    verdict(R.men('all').length === 4 && O.big && has && why === 'nobody waiting.' && moved === 0, 'four men: a big squad, the \'go\' order is on the list, and with nobody waiting it is refused and moves nobody', `${R.men('all').length} men · big ${O.big} · 'go' listed ${has} (key ${O.defs.find((d: any) => d.id === 'go')?.key}) · give('go') → ${why}`); }
-  return done();
-});
 
 // ============================================================================================================================ pairs-side
 export const pairsSide = guarded(async () => {

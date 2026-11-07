@@ -8,9 +8,7 @@
 //   clear-doctrine    the guards' own two-man RoomClear (squad.ts) keeps battle drill six: the kicker off the funnel, #2 a beat behind, centre then his corner,
 //                     #2 on the next door
 import { standUp, ROOT } from './headless.ts';
-import type { Vec3 } from './headless.ts';
 const { setDaylight, isDaylight } = await import(`${ROOT}/src/game/lighting.ts`);
-const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 
 const DT = 1 / 60;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
