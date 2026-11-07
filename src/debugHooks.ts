@@ -116,8 +116,6 @@ declare global {
     __save?: { save(label?: string, force?: boolean): unknown; load(key: string): string | null; slots(): unknown[]; summary(): string; [k: string]: unknown };
     /** destruction by hand (game/destruction.ts): chaos, stats, log, knobs, debris, inventory(), summary(), heat(p), escalation(p), bang(p), burst(p, n, every), reset(), defaults() */
     __destr?: KnobHook;
-    /** the SDF character rig's ray queries on the live scene group vs a disc integral (render/rigDebug.ts) */
-    __rigTrace?: (rays: number[][]) => Promise<unknown>;
     /** knob panels of the renderer's systems and the game's presentation modules — see KnobHook and each system's CLAUDE.md bullet */
     __wet?: KnobHook; __weather?: KnobHook; __glass?: KnobHook; __froxel?: KnobHook; __particles?: KnobHook; __taa?: KnobHook; __sharp?: KnobHook; __sdfrig?: KnobHook; __mark?: KnobHook; __dn?: KnobHook;
     /** the RT-reflection + material knobs (renderer v3 phase 4) on the GAME page — the workbench's viewer Runtime is __vrt, not this */
