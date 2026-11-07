@@ -122,7 +122,7 @@ pub fn cover_spare(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) -> bool {
 
 /// Is this man free to be dealt an opening: the order he is under if so. (cover.ts free)
 pub fn cover_free(g: &mut Game, gd: GuardId) -> Option<OrdersAssignmentId> {
-    if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].script.is_none() || g.time < g.gd[gd].dazzled_until || g.gd[gd].held.is_some() { return None; }
+    if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].script.is_none() || crate::control::man::blind(g, gd) || g.gd[gd].held.is_some() { return None; }
     let a = crate::seats::order_of(g, gd)?;
     let plain = g.tab.orders_assignment[a].order == "fallIn" || (g.tab.orders_assignment[a].order == "hold" && g.tab.orders_assignment[a].watch.is_none());
     if !(plain || cover_spare(g, gd, a)) { return None; }

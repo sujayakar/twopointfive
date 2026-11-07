@@ -1077,7 +1077,7 @@ pub fn wall_charge_blow_raw(g: &mut crate::game::Game, c_2: Option<WallChargeId>
         o!(g, op).t0 = g.time;
         for gd in o!(g, op).men.clone() {
             if g.gd[gd].state == GuardState::Dead || !still_mine(g, &crate::seats::here(g), op, gd) { continue; }
-            if g.time >= g.gd[gd].dazzled_until { let c = g.gd[gd].ch; crate::character::anim_flinch(g, c); }   // (the start at the blast; then round to the wall)
+            if !crate::control::man::blind(g, gd) { let c = g.gd[gd].ch; crate::character::anim_flinch(g, c); }   // (the start at the blast; then round to the wall)
             let spare = o!(g, op).mine.get(gd).copied().map_or(false, |a| asg!(g, a).spare.unwrap_or(false));
             if !spare { wall_charge_stand_off(g, op, gd); }
         }

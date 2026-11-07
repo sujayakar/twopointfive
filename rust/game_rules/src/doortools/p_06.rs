@@ -81,7 +81,7 @@ pub fn door_tools_waiting(g: &crate::game::Game, op: DoorOpId, el: f64) -> bool 
 pub fn door_tools_busy(g: &crate::game::Game, op: DoorOpId, el: f64) -> bool {
     if !(el < g.k.doortools.stack_cap) { return false; }
     let men = o!(g, op).men.clone();
-    men.iter().any(|&gd| { let a = o!(g, op).mine.get(gd).copied().unwrap(); !asg!(g, a).arrived && (asg!(g, a).yield_t >= 0.0 || g.time < g.gd[gd].dazzled_until) })
+    men.iter().any(|&gd| { let a = o!(g, op).mine.get(gd).copied().unwrap(); !asg!(g, a).arrived && (asg!(g, a).yield_t >= 0.0 || crate::control::man::blind(g, gd)) })
 }
 
 /// the order is over (doortools.ts DoorTools.end)

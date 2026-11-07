@@ -174,7 +174,7 @@ pub fn rescue_flow_eyes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> 
         out.push([p[0], EYE, p[2]]);
     }
     for &op in g.rescue.ops.iter() {
-        if g.gd[op].state != crate::game::GuardState::Dead && g.time >= g.gd[op].dazzled_until {
+        if g.gd[op].state != crate::game::GuardState::Dead && !crate::control::man::blind(g, op) {
             let p = g.ch[g.gd[op].ch].pos;
             out.push([p[0], EYE, p[2]]);
         }
@@ -746,7 +746,7 @@ pub fn rescue_flow_free(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> 
     while i < g.rescue.ops.len() {
         let gd = g.rescue.ops[i];
         i += 1;
-        if g.gd[gd].state == crate::game::GuardState::Dead || g.rescue.flow.jobs.has(gd) || crate::rescue::rescue_owns(g, gd) || g.time < g.gd[gd].dazzled_until {
+        if g.gd[gd].state == crate::game::GuardState::Dead || g.rescue.flow.jobs.has(gd) || crate::rescue::rescue_owns(g, gd) || crate::control::man::blind(g, gd) {
             continue;
         }
         let Some(a) = crate::orders::squad_orders_of(g, seat, gd) else { continue };

@@ -397,7 +397,7 @@ pub fn net_quiet_fall(g: &mut crate::game::Game, victim: GuardId) {
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if o == victim || !on_net(g, o) || g.gd[o].team != v_team || g.time < g.gd[o].dazzled_until {
+        if o == victim || !on_net(g, o) || g.gd[o].team != v_team || crate::control::man::blind(g, o) {
             continue;
         }
         if !crate::guards::can_see_char(g, o, v_ch, false).visible {
@@ -644,8 +644,8 @@ pub fn free(g: &mut crate::game::Game, gd: GuardId) -> bool {
         && !g.touring
         && !g.quiet_utility
         && g.gd[gd].held.is_none()
-        && g.time >= g.gd[gd].dazzled_until
-        && g.time >= g.gd[gd].stagger_until
+        && !crate::control::man::blind(g, gd)
+        && !crate::control::man::staggered(g, gd)
         && !crate::owner::has_him(g, gd, crate::owner::own().morale)
         && !crate::owner::has_him(g, gd, crate::owner::own().runner)
 }

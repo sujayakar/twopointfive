@@ -309,7 +309,7 @@ fn script_state(s: crate::game::GuardState) -> Option<crate::squad::EndGuardScri
 /// One defender's blind fire this frame; true when a round left the barrel. (nightbreach.ts blindTurn)
 pub fn blind_turn(g: &mut crate::game::Game, h: GuardId, k: f64, b: &mut crate::nightbreach::BlindBurst, door: V3) -> bool {
     let bl = crate::nightbreach::blind();
-    if g.gd[h].state == crate::game::GuardState::Dead || g.time >= g.gd[h].dazzled_until { return false; }
+    if g.gd[h].state == crate::game::GuardState::Dead || !crate::control::man::blind(g, h) { return false; }
     if g.gd[h].dazzled_until > b.until + 1e-6 {
         b.until = g.gd[h].dazzled_until;
         b.n = 0.0;
@@ -320,7 +320,7 @@ pub fn blind_turn(g: &mut crate::game::Game, h: GuardId, k: f64, b: &mut crate::
     b.n += 1.0;
     b.next = g.time + bl.every;
     let c = g.gd[h].ch;
-    if g.gd[h].held.is_some() || g.time < g.gd[h].stagger_until || g.ch[c].gun_dir[1] < -bl.low_gun { return false; }
+    if g.gd[h].held.is_some() || crate::control::man::staggered(g, h) || g.ch[c].gun_dir[1] < -bl.low_gun { return false; }
     if g.tune.suppression && (g.gd[h].sup.v >= g.k.suppression.pinned || g.gd[h].sup.latched || g.gd[h].sup.down_t > 0.0) { return false; }
     let weapon = g.gd[h].weapon;
     if !crate::weapons::firearm_fire(g, weapon) { return false; }
