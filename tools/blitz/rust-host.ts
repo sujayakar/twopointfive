@@ -114,9 +114,20 @@ function snaps(SS: any): void { const N = SS.SNAPS, take = N.take, put = N.put; 
 const toolLine = (): string => String(new Error().stack ?? '').split('\n').map(l => l.match(/tools\/[\w./-]+\.ts:\d+/)?.[0]).find(x => !!x && !/rust-host\.ts|headless\.ts|surface\.ts|scan\.ts/.test(x)) ?? 'a line outside tools/';
 /** a harness snapshot (tools/qa/headless.ts `W.snapshot`) and the Rust game kept with it; the kept game is let go when the tool lets the snapshot go */
 const TOOL_KEPT = new WeakMap<object, { k: number; sig: bigint | number; host: RustHost }>();
-const TOOL_GONE = new FinalizationRegistry<{ k: number; host: RustHost }>(e => { e.host.unkeep(e.k); });
+const TOOL_GONE = new FinalizationRegistry<{ k: number; cell: Cell }>(e => { const i = e.cell.tool.indexOf(e.k); if (i >= 0) { e.cell.tool.splice(i, 1); e.cell.X.face_kept_drop(e.k); } });
 /** THE GAMES THAT GAVE THEIR SLOT UP AND KEEP THEIR BYTES (a clone in the module, 10 to 30 MB each): the last few; an older one's are let go and its re-step is refused */
-const OFF_KEPT: RustHost[] = [], OFF_CAP = 6;
+const OFF_KEPT: Cell[] = [], OFF_CAP = 6;
+/** WHAT A HOST HOLDS IN THE MODULE: its game's handle, the clone kept as its slot went, the games kept for saves and for a tool's snapshots. It is kept
+ *  apart from the host, and every list of this file holds a host by its cell, so that NOTHING HERE KEEPS A GAME THE TOOL HAS LET GO: once the collector has
+ *  taken a host, `reap` (as the next game is attached, and before a slot is taken from a game still held) gives back what it held in the module. */
+type Cell = { h: number; keptOff: number; shelf: Set<number>; tool: number[]; who: WeakRef<RustHost>; X: any };
+const CELLS = new Set<Cell>();
+function letGo(c: Cell): void { const X = c.X; CELLS.delete(c); if (!X) return; for (const k of c.shelf) X.face_kept_drop(k); c.shelf.clear(); for (const k of c.tool) X.face_kept_drop(k); c.tool.length = 0;
+  if (c.keptOff > 0) { X.face_kept_drop(c.keptOff); const i = OFF_KEPT.indexOf(c); if (i >= 0) OFF_KEPT.splice(i, 1); } c.keptOff = 0; if (c.h) { X.face_puppet_drop?.(c.h); X.face_drop(c.h); c.h = 0; } }
+const REAPED = { n: 0 };
+function reap(): number { let n = 0; for (const c of [...CELLS]) if (!c.who.deref()) { letGo(c); n++; } REAPED.n += n; return n; }
+/** (for a check: how many hosts hold something in the module, and how many were given back because nothing held them) */
+export const moduleHolds = () => ({ held: CELLS.size, reaped: REAPED.n });
 /** the classes of a man: a row of one of these that the APPLY made (a man the Rust game spawned) has no store row and no pose store on the TypeScript side */
 const MEN = ['Character', 'Guard', 'Player'], MADE_MEN = new WeakSet<object>(), MADE = { n: 0 };
 
@@ -148,7 +159,9 @@ export class RustHost {
   /** ticks this host has stepped */
   k = 0;
   /** the Rust game's handle and rust/sim's slot it stands in */
-  h = 0; slot = 0;
+  readonly cell: Cell = { h: 0, keptOff: 0, shelf: new Set<number>(), tool: [], who: new WeakRef(this), X: null };
+  get h(): number { return this.cell.h; } set h(v: number) { this.cell.h = v; }
+  slot = 0;
   readonly audit: boolean;
   /** the ms spent, by what */
   T = { wbExport: 0, wbCompare: 0, wbImport: 0, hostHalf: 0, step: 0, after: 0, exportStep: 0, applyStep: 0, exportWhole: 0, applyWhole: 0,  block: 0, out: 0, dress: 0, check: 0, calls: 0, start: 0, scan: 0 };
@@ -234,7 +247,7 @@ export class RustHost {
   scanRebase(): void { if (!this.scan) return; const t = now(); this.scan.rebase(this.auditGap); const e = now() - t; this.T.scan += e; this.N.rebase++; this.N.rebaseMs += e; }
 
   private constructor(readonly g: any, readonly F: Face, readonly B: any, readonly o: HostOpts) {
-    this.audit = !!o.audit; this.say = o.say ?? ((s: string) => { process.stdout.write(s + '\n'); });
+    this.cell.X = F.X; this.audit = !!o.audit; this.say = o.say ?? ((s: string) => { process.stdout.write(s + '\n'); });
     const ctx: any = { p: 0 }; this.pup = { lists: B.lists, rows: B.puppetRows(ctx), ctx, slowTable: B.SLOW, vals: B.VALS };
   }
   /** the bridge and the module loaded: once, before the first `attach` */
@@ -244,7 +257,7 @@ export class RustHost {
     if (!BR) throw new Error('rust-host: `await RustHost.ready()` first');
     // (RH_FRESH_FACE=1: a module of its own for every game, to tell what a second game of a process owes to the module's own memory from what it owes
     // to the TypeScript modules' tables)
-    const B = BR, F = loadFace(o.wasm, process.env.RH_FRESH_FACE === '1'), H = new RustHost(g, F, B, o); if ((F.X.face_layout?.() >>> 0) !== B.SCHEMA.layout) throw new Error(`rust-host: this module is of another generation than this checkout's bridge (its layout ${F.X.face_layout?.() >>> 0}, the bridge's ${B.SCHEMA.layout}): bun run tools/blitz/face-build.ts builds this checkout's`);
+    reap(); const B = BR, F = loadFace(o.wasm, process.env.RH_FRESH_FACE === '1'), H = new RustHost(g, F, B, o); if ((F.X.face_layout?.() >>> 0) !== B.SCHEMA.layout) throw new Error(`rust-host: this module is of another generation than this checkout's bridge (its layout ${F.X.face_layout?.() >>> 0}, the bridge's ${B.SCHEMA.layout}): bun run tools/blitz/face-build.ts builds this checkout's`);
     if (o.reserveMb !== 0) { const n = (o.reserveMb ?? 48) * 1048576, p = F.X.face_alloc(n); F.X.face_free(p, n); }
     if (o.dressDown !== false && !OFF.has('dress')) dressDown(B);
     if (o.die !== null && !g.dice) g.dice = B.newDice(o.die ?? 20942);
@@ -256,21 +269,22 @@ export class RustHost {
     return H; }
   private startDue = false;
   /** the Rust game is let go (its slot is free for another) and the game steps in TypeScript again */
-  detach(): void { const X = this.F.X; this.unkeepAll(); if (this.keptOff > 0) { X.face_kept_drop(this.keptOff); const i = OFF_KEPT.indexOf(this); if (i >= 0) OFF_KEPT.splice(i, 1); } this.keptOff = 0; if (this.h) { X.face_puppet_drop?.(this.h); X.face_drop(this.h); this.h = 0; } RustHost.live.delete(this); delete this.g.stepSeats; delete this.g.rustHost; delete this.g.stateWords; delete this.g.wholeWords; delete this.g.wholeNames; delete this.g.quietRun; delete this.g.rustSurface; delete this.g.update; delete this.g.restartEncounter; this.B.surfaceHost(null, this); }
+  detach(): void { this.unkeepAll(); letGo(this.cell); if (RustHost.last === this) RustHost.last = null; delete this.g.stepSeats; delete this.g.rustHost; delete this.g.stateWords; delete this.g.wholeWords; delete this.g.wholeNames; delete this.g.verdictNow; delete this.g.quietRun; delete this.g.rustSurface; delete this.g.update; delete this.g.restartEncounter; this.B.surfaceHost(null, this); }
   /** the hosts whose Rust game stands in a slot, and when each last stepped */
-  private static live = new Set<RustHost>(); private static clock = 0; private static last: RustHost | null = null; private stamp = 0; evicted = 0;
+  private static clock = 0; private static last: RustHost | null = null; private stamp = 0; evicted = 0;
   /** this game's slot goes to another: the puppet takes the whole state, the Rust game is let go; a later step starts a new one from the puppet */
   private giveUp(): void { const X = this.F.X; if (!this.h) return;
     try { this.applyWhole('its slot went to another game'); } catch (e) { this.count(`THE WHOLE APPLY THREW as the slot was given up: ${String((e as any)?.message ?? e).slice(0, 100)}`); }
     // THE GAME'S BYTES ARE KEPT (a clone of the Rust `Game` and its block, in the module): if the tool steps this game again it stands again as it was
     // (`restep`), with no export of the puppet. Only the last few games that gave a slot up keep theirs; an older one's re-step is refused.
-    if (X.face_keep && !OFF.has('keep')) { this.keptOff = X.face_keep(this.h, 0) || -1; if (this.keptOff > 0) { OFF_KEPT.push(this); while (OFF_KEPT.length > OFF_CAP) { const o = OFF_KEPT.shift()!; X.face_kept_drop(o.keptOff); o.keptOff = -1; } } }
-    X.face_puppet_drop?.(this.h); X.face_drop(this.h); this.h = 0; if (!this.keptOff) this.scan = null; if (RustHost.last === this) RustHost.last = null; this.evicted++; if (this.rec) this.rec.evicted = this.evicted; RustHost.live.delete(this); }
+    if (X.face_keep && !OFF.has('keep')) { this.keptOff = X.face_keep(this.h, 0) || -1; if (this.keptOff > 0) { OFF_KEPT.push(this.cell); while (OFF_KEPT.length > OFF_CAP) { const o = OFF_KEPT.shift()!; X.face_kept_drop(o.keptOff); o.keptOff = -1; } } }
+    X.face_puppet_drop?.(this.h); X.face_drop(this.h); this.h = 0; if (!this.keptOff) this.scan = null; if (RustHost.last === this) RustHost.last = null; this.evicted++; if (this.rec) this.rec.evicted = this.evicted; }
   /** the number of this game's clone kept as its slot was given up (0 none, -1 let go since: a re-step is refused) */
-  keptOff = 0; resteps = 0;
+  get keptOff(): number { return this.cell.keptOff; } set keptOff(v: number) { this.cell.keptOff = v; }
+  resteps = 0;
   /** A GAME THAT GAVE ITS SLOT UP IS STEPPED AGAIN: a handle is made from the kept game's own bytes and the clone stands in it (`face_back`); the puppet,
    *  which took the whole state as the slot went, takes it again (the modules' own tables are a process's, and another game's applies have written them since). */
-  private restep(): void { const X = this.F.X, k = this.keptOff, t = now(); this.keptOff = 0; { const i = OFF_KEPT.indexOf(this); if (i >= 0) OFF_KEPT.splice(i, 1); }
+  private restep(): void { const X = this.F.X, k = this.keptOff, t = now(); this.keptOff = 0; { const i = OFF_KEPT.indexOf(this.cell); if (i >= 0) OFF_KEPT.splice(i, 1); }
     X.face_kept_state(k); const state = this.F.outView().slice(); X.face_kept_block(k); const block = this.F.outView().slice();
     this.make(state, block);
     if (!X.face_back(this.h, k)) throw new Error('rust-host: the game kept as its slot was given up is gone');
@@ -279,12 +293,12 @@ export class RustHost {
     this.count('a game that had given its slot up was stepped again: it stands again from its own kept bytes'); }
   /** a handle from a start's bytes; where every slot is taken, the game stepped longest ago gives its slot up */
   private make(state: Uint8Array, block: Uint8Array): void { const X = this.F.X, mk = () => this.F.hand(state, (p, n) => this.F.hand(block, (bp, bn) => X.face_new(p, n, bp, bn)));
-    this.h = mk();
-    while (!this.h && RustHost.live.size) { let old: RustHost | null = null; for (const o of RustHost.live) if (o !== this && (!old || o.stamp < old.stamp)) old = o; if (!old) break; old.giveUp(); this.h = mk(); }
+    this.h = mk(); if (!this.h && reap()) this.h = mk();   // (a game nothing holds gives its slot back before one still held is asked to)
+    while (!this.h) { let old: RustHost | null = null; for (const c of CELLS) { const o = c.h ? c.who.deref() : undefined; if (o && o !== this && (!old || o.stamp < old.stamp)) old = o; } if (!old) break; old.giveUp(); this.h = mk(); }
     if (!this.h) throw new Error('face_new: no free slot'); }
   /** a Rust game stands in a slot for this host: the list's word, the taps, the slot */
   private seated(): void { const X = this.F.X, g = this.g, B = this.B;
-    RustHost.live.add(this); this.stamp = ++RustHost.clock; this.giveList(); if (!this.audit) { this.tapsOn ??= B.makeTaps(g, B.hooks.classes, (id: number, on: boolean) => { X.face_tap(this.h, id, on ? 1 : 0); }); this.tapsOn.reset(); }
+    CELLS.add(this.cell); this.stamp = ++RustHost.clock; this.giveList(); if (!this.audit) { this.tapsOn ??= B.makeTaps(g, B.hooks.classes, (id: number, on: boolean) => { X.face_tap(this.h, id, on ? 1 : 0); }); this.tapsOn.reset(); }
     this.slot = X.face_slot(this.h); }
   /** what a later step holds the puppet to, to tell a game the TypeScript put in the puppet's place from the one the Rust game steps */
   private refs(): void { const g = this.g; this.missionRef = g.mission; this.t0Ref = g.mission?.t0; this.loadsRef = g.chronicle?.counts?.loads ?? 0; this.putRef = this.B.PUT_BACKS.n; this.clockRef = this.clock(); this.stageRef = this.endMark(); this.downRef = this.downCount(); this.savesRef = g.chronicle?.counts?.saves ?? 0; }
@@ -306,7 +320,7 @@ export class RustHost {
 
   // ---- A GAME KEPT (the page's path: `face_keep`, `face_back`, `face_loaded`)
   /** kept games of this host: the save controller's (swept against its shelf) and the tool's own snapshots */
-  private keptShelf = new Set<number>(); private keptTool: number[] = []; keepsN = 0; backs = 0;
+  private get keptShelf(): Set<number> { return this.cell.shelf; } private get keptTool(): number[] { return this.cell.tool; } keepsN = 0; backs = 0;
   private backDue: { label: string; loads: number; saves: number } | null = null; private tookRow = false; private ctl = 0;
   /** does this host keep its saves as Rust games */
   keeps(): boolean { return !this.audit && typeof this.F.X.face_keep === 'function' && !OFF.has('keep'); }
@@ -367,7 +381,7 @@ export class RustHost {
    *  kept beside it. `W.restore` of that same file, unchanged, is the kept game standing again; anything else is the TypeScript's `loadState` on the puppet. */
   keptFor(s: object): void { if (!this.keeps() || !this.live() || this.inStep) return; this.scanFlush(); if (!OFF.has('backcam')) this.handHalf();
     const k = this.keep(); this.keptTool.push(k); while (this.keptTool.length > 16) this.F.X.face_kept_drop(this.keptTool.shift()!);
-    TOOL_KEPT.set(s, { k, sig: Bun.hash(JSON.stringify(s)), host: this }); TOOL_GONE.register(s, { k, host: this }); this.count('a snapshot: the Rust game kept beside the file (face_keep)'); }
+    TOOL_KEPT.set(s, { k, sig: Bun.hash(JSON.stringify(s)), host: this }); TOOL_GONE.register(s, { k, cell: this.cell }); this.count('a snapshot: the Rust game kept beside the file (face_keep)'); }
   backFor(s: object): boolean { const e = TOOL_KEPT.get(s); if (!e || e.host !== this || !this.keeps() || !this.live() || this.inStep || this.startWhy() !== null) return false;
     if (!this.keptTool.includes(e.k)) { this.count('a snapshot whose kept game was let go (more than 16 held): loaded by the TypeScript on the puppet'); return false; }
     if (Bun.hash(JSON.stringify(s)) !== e.sig) { this.count('a snapshot the tool changed since it was taken: loaded by the TypeScript on the puppet'); return false; }
@@ -422,7 +436,7 @@ export class RustHost {
     if (this.starts > 0 && !OFF.has('made')) { const men: string[] = [], look = (o: any, who: string) => { if (o && (MADE_MEN.has(o) || (o.char && MADE_MEN.has(o.char)))) men.push(who); };
       for (const x of (g.guards ?? []) as any[]) look(x, x.callsign ?? x.name ?? 'a man'); for (const s of (g.seats ?? []) as any[]) look(s.player ?? s.own?.player, 'a seat\'s player'); look(g.player, 'the player');
       if (men.length) throw new Error(`rust-host: a new start is asked for (${why}) from a puppet that holds ${men.length} men the apply made (${[...new Set(men)].slice(0, 6).join(', ')}): a man the Rust game made has no store row or pose store on the TypeScript side, so this puppet cannot be the start of a game. Asked by ${toolLine()}`); }
-    this.startDue = false; this.dueWhy = ''; this.unkeepAll(); if (this.keptOff > 0) { X.face_kept_drop(this.keptOff); const i = OFF_KEPT.indexOf(this); if (i >= 0) OFF_KEPT.splice(i, 1); } this.keptOff = 0; this.made = {};
+    this.startDue = false; this.dueWhy = ''; this.unkeepAll(); if (this.keptOff > 0) { X.face_kept_drop(this.keptOff); const i = OFF_KEPT.indexOf(this.cell); if (i >= 0) OFF_KEPT.splice(i, 1); } this.keptOff = 0; this.made = {};
     this.taps(g);   // (the tool may have started another mission since the game was stood: its menu, its fight and its saves are new objects)
     // (ANOTHER GAME OF THIS PROCESS STEPPED LAST: the modules' own tables and variables, which every game of a process shares and a start reads, hold what
     // the filtered apply left of it. Its puppet takes the whole state first, so that this start reads what the TypeScript tick would have left there.)
