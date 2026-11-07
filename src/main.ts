@@ -25,7 +25,6 @@ import { initGpu, showFatal, showFatalError, pipelineProgress, gpuStory, pipeQue
 import { shaderRowsOn } from './ui/shaderrows';
 import * as boot from './ui/boot';
 import { rigTable } from './render/sdfrig';
-import { rigDebugTrace } from './render/rigDebug';
 import { Engine } from './engine';
 import type { HostApi } from './host/api';
 import { SAVED, SAVE_UP, saveFile, savedWords } from './host/savefile';
@@ -1556,10 +1555,7 @@ function giMotionHooks(engine: Engine) {
 
 /** the SDF rig's and the character materials' URL flags (written over the applied preset, as they were), __charmat, __sdfrig */
 function characterRigFlagsAndHooks(engine: Engine, game: Game) {
-  { // the SDF CHARACTER RIG's two extras from the URL (the fitted round cones themselves are every ray's character test, no switch): ?sdfsmooth = the smooth-union closest hit in reflections ·
-    // ?charsoft = the analytic soft-shadow character visibility in the direct estimators (?charsoftmarch = its sphere-marched form). No preset touches either, so they hold for the visit.
-    const q = new URLSearchParams(location.search); const S = engine.settings;
-    if (q.has('charsoft') || q.has('charsoftmarch')) { S.charSoftShadow = true; S.charSoftAnalytic = !q.has('charsoftmarch'); }
+  { const q = new URLSearchParams(location.search); const S = engine.settings;
     if (q.has('noselfshadow')) S.charSelfShadow = false;   // ?noselfshadow: a man's own body never shadows him (the owner skip whole) — the frame as it was before the self-shadow rule, for A/B
     // CHARACTER MATERIALS (render/charMaterials.ts): on by itself for a mesh that carries slot-named materials (the contract with the models), off for the shipped mannequin —
     // ?charmats dresses that one by joint as a stand-in, ?nocharmats holds the two tints whatever the mesh says
@@ -1574,17 +1570,15 @@ function characterRigFlagsAndHooks(engine: Engine, game: Game) {
     get: (i: number | 'sam' = 'sam') => { const c = i === 'sam' || i < 0 ? game.player.char : game.guards[i]?.char; if (!c) return null; const gd = game.guards.find(x => x.char === c); const side = gd ? charLookMod.sideOfTeam(gd.team, gd.trained) : 'operator', suit = charLookMod.sneakSuit(game, c) /* (the black sneaking suit: its rows are `tables.suit`) */; return { ...charMatsMod.describePalette(side, c.tint, c.tint2, c.id, !charMatsMod.meshAuthored(game.ch.mesh), suit), suit }; },
     bump: () => charMatsMod.bumpCharMats(), reset: () => charMatsMod.resetCharMats(), summary: () => charMatsMod.charMatsSummary(game.ch, engine.settings.charMats),
   };
-  // __sdfrig: the SDF character rig for the console / automation — the extras' switches, the knobs, the fit table
+  // __sdfrig: the SDF character rig for the console / automation — self-shadow, the fit table
   (window as any).__sdfrig = {
-    get soft() { return engine.settings.charSoftShadow; }, set soft(v: boolean) { engine.settings.charSoftShadow = !!v; },
-    get analytic() { return engine.settings.charSoftAnalytic; }, set analytic(v: boolean) { engine.settings.charSoftAnalytic = !!v; },
     get self() { return engine.settings.charSelfShadow; }, set self(v: boolean) { engine.settings.charSelfShadow = !!v; },   // character self-shadow (rigCfg bit 64; default on)
     /** are the proxies the FITTED cones? (a fit attached; false = the game's hand capsules traced as untapered cones) */
     get live() { return engine.sdfRigOn; },
     fit: () => engine.rigFit, table: () => engine.rigFit ? rigTable(engine.rigFit) : '(no fit attached)',
-    knobs: () => { const S = engine.settings; return { k: S.sdfRigK, soft: S.charSoftShadow, analytic: S.charSoftAnalytic, softSteps: S.charSoftSteps, softK: S.charSoftK, minDeg: S.charSoftMinDeg, softSmooth: S.charSoftSmooth, broad: S.charSoftBroad, self: S.charSelfShadow }; },
-    set: (k: Partial<{ k: number; soft: boolean; analytic: boolean; softSteps: number; softK: number; minDeg: number; softSmooth: boolean; broad: boolean; self: boolean }>) => { const S = engine.settings; if (k.self !== undefined) S.charSelfShadow = !!k.self; if (k.broad !== undefined) S.charSoftBroad = !!k.broad; if (k.k !== undefined) S.sdfRigK = k.k; if (k.soft !== undefined) S.charSoftShadow = !!k.soft; if (k.analytic !== undefined) S.charSoftAnalytic = !!k.analytic; if (k.softSteps !== undefined) S.charSoftSteps = k.softSteps; if (k.softK !== undefined) S.charSoftK = k.softK; if (k.minDeg !== undefined) S.charSoftMinDeg = k.minDeg; if (k.softSmooth !== undefined) S.charSoftSmooth = !!k.softSmooth; return (window as any).__sdfrig.knobs(); },
-    summary: () => { const S = engine.settings; return `sdf rig: round cones ${engine.sdfRigOn ? 'FITTED' : 'unfitted (no fit attached: hand radii, untapered)'} · direct-light character shadows ${S.charSoftShadow ? `SOFT QUERY (${S.charSoftAnalytic ? 'analytic' : `march ${S.charSoftSteps} steps${S.charSoftSmooth ? ', smooth union' : ''}`}, angular ×${S.charSoftK}, ≥ ${S.charSoftMinDeg}°)` : engine.meshShadowsOn ? 'ray-traced (mesh)' : 'ray-traced'}${S.charSelfShadow ? ' + self-shadow' : ''}`; },
+    knobs: () => ({ self: engine.settings.charSelfShadow }),
+    set: (k: Partial<{ self: boolean }>) => { if (k.self !== undefined) engine.settings.charSelfShadow = !!k.self; return (window as any).__sdfrig.knobs(); },
+    summary: () => `sdf rig: round cones ${engine.sdfRigOn ? 'FITTED' : 'unfitted (no fit attached: hand radii, untapered)'} · character shadows ${engine.meshShadowsOn ? 'ray-traced (mesh)' : 'ray-traced'}${engine.settings.charSelfShadow ? ' + self-shadow' : ''}`,
   };
 }
 
@@ -1722,7 +1716,7 @@ function destructionWeatherFlagsAndHooks(engine: Engine, game: Game) {
   Object.defineProperties((window as any).__snow, { breath: { get: () => breathMod.SNOWBREATH }, steam: { get: () => breathMod.BREATHSTEAM }, breathStats: { get: () => breathMod.breathStats(game) }, breathSummary: { value: () => breathMod.breathSummary(game) } });   // … and the men's breath in its cold (game/snowBreath.ts): the numbers live with the next breath; `steam` = that breath as gas in the smoke solver, BREATHSTEAM
 }
 
-/** __taa, __dn, ?noglass / ?norefract (after the preset, as they were), __rigTrace, __meshTrace */
+/** __taa, __dn, ?noglass / ?norefract (after the preset, as they were), __meshTrace */
 function resolveGlassFlagsAndHooks(engine: Engine, gpu: Gpu) {
   // __taa: the TAAU resolve for the console / automation — on/off, the knobs, this frame's jitter, the reset count and why, the sizes
   (window as any).__taa = {
@@ -1745,13 +1739,6 @@ function resolveGlassFlagsAndHooks(engine: Engine, gpu: Gpu) {
   if (new URLSearchParams(location.search).has('nowetmirror')) engine.settings.wetMirror = false;   // ?nowetmirror: the wet ground's traced reflections at the weight they had (settings.wetMirror)
   if (new URLSearchParams(location.search).has('nowetbreak')) engine.settings.wetBreakup = 0;   // ?nowetbreak: wet ground one even film of water, the frame as it was (rtCfg.z = the anisotropy alone)
   if (new URLSearchParams(location.search).has('norefract')) engine.settings.glassRefract = false;   // ?norefract: the glass boxes' refraction off from boot (the panes' old tint rule, the read under the pixel — the frame byte for byte as it was) for A/B
-  // __rigTrace(rays): the SDF character rig's production WGSL over the live scene for a list of rays (render/rigDebug.ts): rays = [[Po.xyz, tmax, L.xyz, tanHalf], …] →
-  // per ray { vis (charSoftVis), resA / resM (the analytic / marched raw ratios), occ (occludedCapsules), t / idx (traceCapsules), tRig / ch (rigClosest) } — the CPU twin's check
-  (window as any).__rigTrace = async (rays: number[][]) => {
-    const flat = new Float32Array(rays.length * 8); rays.forEach((r, i) => flat.set(r.slice(0, 8), i * 8));
-    const out = await rigDebugTrace(gpu.device, engine.sceneLayout, engine.sceneBindGroup(), flat);
-    return rays.map((_, i) => ({ vis: out[i * 8], resA: out[i * 8 + 1], resM: out[i * 8 + 2], occ: out[i * 8 + 3], t: out[i * 8 + 4], idx: out[i * 8 + 5], tRig: out[i * 8 + 6], ch: out[i * 8 + 7] }));
-  };
   // __meshTrace(fixture): replay tools/qa/mesh-shadow-fixture.json on the GPU — poses skin slot 0 with the fixture's joint matrices, refits, runs the PRODUCTION
   // WGSL walk (common.wgsl meshAnyHitChar via a tiny kernel on the scene bind group) over its 64 rays and compares with the CPU reference's answers ray for
   // ray. Use on a ?paused page (it borrows character slot 0's joints until the next stepped frame rewrites them). Resolves to a summary + the mismatching rays.

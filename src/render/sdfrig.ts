@@ -18,11 +18,9 @@ export const RIG_SLOT_NAMES = ['lowerTorso', 'chest', 'shoulders', 'pelvis', 'ne
 export type RigSlotName = typeof RIG_SLOT_NAMES[number];
 /** the radii Character.capsules() authors by hand for the same slots (the 'was' column of the table; what a slot keeps when there is nothing to fit it to, and what an Engine with no fit attached traces) */
 export const HAND_RADII: readonly number[] = [0.15, 0.16, 0.07, 0.11, 0.105, 0.052, 0.042, 0.052, 0.042, 0.075, 0.058, 0.033, 0.075, 0.058, 0.033];
-/** SMOOTH-UNION blend radius per slot (m): slot s is folded into the running union with smin(·, ·, K[s]) in FOLD_ORDER — a knee / elbow / neck fillet the
- *  size of the joint, the arms last against everything with 2 cm so an arm at the side does not web to the ribs, the thighs 4 cm (the crotch fills, as
- *  cloth does). shaders/sdfrig.wgsl RIG_K carries the same numbers in slot order (× frame.rigCfgB.x for A/B; 0 = the plain union). */
+/** the blend radius per slot (m) of the smooth union the rig's trials traced (gone 2026-11-07). Kept for RIG_KPAD alone: the cull spheres were padded by its
+ *  bulge and are the mesh shadows' broad phase too, so the number stays what it was. */
 export const RIG_K: readonly number[] = [0.0, 0.06, 0.05, 0.06, 0.03, 0.02, 0.03, 0.02, 0.03, 0.04, 0.04, 0.03, 0.04, 0.04, 0.03];
-export const FOLD_ORDER: readonly number[] = [0, 3, 1, 2, 4, 9, 10, 11, 12, 13, 14, 5, 6, 7, 8];
 /** the largest smin bulge (k/4) any joint adds outside its cones — cull spheres and the closest hit's entry test are padded by it */
 export const RIG_KPAD = [...RIG_K].sort((a, b) => b - a).slice(0, 3).reduce((n, k) => n + k, 0) / 4;   // each smin bulges ≤ k/4 outside the plain union, and the fold NESTS: where three blends meet (chest + shoulders + neck) the surface can sit up to the sum of the three largest k/4 outside — the entry cones and the cull sphere are padded by that
 /** r1 rides in the top byte of a capsule's misc word in these units (0 = 'same as r0': a plain capsule — what a record nobody fitted decodes to) */
@@ -240,11 +238,7 @@ export function rigTable(fit: RigFit): string {
 
 // (What BoxWorld.upload needs to turn the frame's proxy list into the rig — { r0, r1, kPad } — engine.render builds inline from the attached fit, kPad = RIG_KPAD × settings.sdfRigK.)
 
-/** WGSL the shader side needs from this table (prepended to shaders/sdfrig.wgsl by frame.ts scenePrelude): the sizes, and `charSdf(base, p, kS)` = the SMOOTH UNION of
- *  character `base ÷ capsPerChar`'s cones at p, unrolled in FOLD_ORDER with each slot's blend radius × kS (0 = the plain union) — generated here so the two sides
- *  cannot disagree about the order or the radii. */
+/** WGSL the shader side needs from this table (prepended to shaders/sdfrig.wgsl by frame.ts scenePrelude): the unit r1 is packed in */
 export function sdfRigWgslConsts(): string {
-  const fold = FOLD_ORDER.map((s, i) => i === 0 ? `  var d = coneSdfAt(base + ${s}u, p);` : `  d = sminP(d, coneSdfAt(base + ${s}u, p), ${RIG_K[s].toFixed(3)} * kS);`).join('\n');
-  return `const RIG_SLOTS: u32 = ${RIG_SLOTS}u;\nconst RIG_KPAD: f32 = ${RIG_KPAD.toFixed(4)};\nconst RB_QUANT: f32 = ${RB_QUANT};\n`
-    + `/** the smooth union of one character's ${RIG_SLOTS} round cones at p (render/sdfrig.ts FOLD_ORDER / RIG_K, × kS) */\nfn charSdf(base: u32, p: vec3f, kS: f32) -> f32 {\n${fold}\n  return d;\n}\n`;
+  return `const RB_QUANT: f32 = ${RB_QUANT};\n`;
 }

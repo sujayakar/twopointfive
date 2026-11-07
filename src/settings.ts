@@ -311,20 +311,8 @@ export interface RenderSettings {
   markingReflCone: number;     // × the lobe's α added to the ray-cone growth that band-limits a marking at a TRACED reflection hit (0 = the pixel's own cone only — the ray distribution + the specular denoiser realise the lobe; 2 = the whole lobe again = the double blur that erased the vending cans in the lino; default 0.25 trades a little bias for 1-ray noise)
   rtMeshHits: boolean;         // ALWAYS FALSE: ultra's mesh hits in reflections went 2026-11-07. The field stays because game/game.ts reads it; it goes with that read
   // ---- SDF CHARACTER RIG (render/sdfrig.ts fits it, shaders/sdfrig.wgsl traces it, docs/internal/sdf-characters.md): every mannequin's 15 shadow / reflection proxies ARE round cones with radii
-  // least-squares fitted to the mesh — unconditionally, at every tier, once a fit is attached (Engine.setRigFit; BoxWorld.upload packs it into the frame's proxy list). What stays switchable is the two
-  // extras below, both rows (no preset touches them; ?sdfsmooth / ?charsoft set them from boot): frame.rigCfg bits 2 and 4/8/16/32, all 0 = the plain round-cone loops everywhere. ----
+  // least-squares fitted to the mesh — unconditionally, at every tier, once a fit is attached (Engine.setRigFit; BoxWorld.upload packs it into the frame's proxy list). ----
   sdfRigSmooth: boolean;       // ALWAYS FALSE: the smooth-union closest hit in reflections went 2026-11-07 with the reflection twin that traced it. Kept for game/game.ts's read, like rtMeshHits
-  sdfRigK: number;             // × the per-joint blend radii (render/sdfrig.ts RIG_K; 1 = as authored, 0 = the plain union of the cones) — also pads the cull spheres by the blend's bulge
-  charSoftShadow: boolean;     // (iii) EXPERIMENT: in the direct estimators (restir.wgsl AND direct.wgsl, through direct_common shadowSample) a shadow ray's CHARACTER visibility is the SDF soft-shadow query toward the emitter's
-                               // centre with the emitter's angular radius as the cone — deterministic per pixel per light, so a walking man's penumbra needs no history to converge — multiplied with the
-                               // ray-traced BOX visibility (still stochastic); the mesh-shadow / round-cone any-hit is then not asked about characters in that pass
-  charSoftAnalytic: boolean;   // (iii)'s form: true = the per-cone closest-approach clearance (no march, exact for a capsule, ~15 closest-point solves per man crossed); false = the sphere-marched field (smooth union, charSoftSteps)
-  charSoftSteps: number;       // the march's step budget (20)
-  charSoftK: number;           // × every light's angular radius in the query (1 = physical; 2 = penumbrae twice as wide)
-  charSoftMinDeg: number;      // the smallest half-angle (degrees) a light is given — a bare 1.5 cm torch bezel a metre off would otherwise draw a razor edge the raster aliases (0.35°)
-  charSoftSmooth: boolean;     // the march folds the cones with the smooth union (else their plain min — cheaper, the blend only shows at joints)
-  charSoftBroad: boolean;      // the soft query for BROAD-class emitters too (ceiling panels, area lights); false = the SHARP class only (torches, lamps, the moon) — a panel's character shadow is all
-                               // penumbra already (nothing to trail) and its disc dwarfs a limb, where the one-strip-per-man model under-counts a whole body's cover
   charSelfShadow: boolean;     // CHARACTER SELF-SHADOW (frame.rigCfg bit 64, default ON at every tier; ?noselfshadow / Tab ▸ Renderer — SDF character rig): the direct estimators' shadow rays from a man's own pixels
                                // test HIS OWN body too (common.wgsl selfShadowT: his round cones, or his mesh under meshShadows, from an origin lifted off the surface — the plain owner skip made every
                                // up-facing sliver of him glow under a light his trunk stands in front of: docs/internal/render-defects-0812.md §1); false = the owner skip whole, the frame as it was
@@ -384,5 +372,5 @@ export const defaultSettings = (): RenderSettings => ({
   detail: 0.35,                // the detail layer: 'lived-in' (Tab ▸ Materials; ?detail=0 boots without it — with ?nortreflect the untouched frame)
   rtMeshHits: false,
   markings: true, markingTexel: 0.025, markingContrast: 1, markingEmissive: 1, markingReflect: true, markingReflPattern: true, markingReflCone: 0.25,   // markings ON (?nomarkings boots without them; Tab ▸ Renderer — markings)
-  sdfRigSmooth: false, sdfRigK: 1, charSoftShadow: false, charSoftAnalytic: true, charSoftSteps: 20, charSoftK: 1, charSoftMinDeg: 0.35, charSoftSmooth: false, charSoftBroad: false, charSelfShadow: true,   // the SDF character rig's two extras: OFF (self-shadow: ON, all tiers) (rows on Tab ▸ Renderer — SDF character rig; ?sdfsmooth / ?charsoft from boot; no preset touches them) — the round cones themselves have no switch
+  sdfRigSmooth: false, charSelfShadow: true,   // the SDF character rig's two extras: OFF (self-shadow: ON, all tiers) (rows on Tab ▸ Renderer — SDF character rig; ?sdfsmooth / ?charsoft from boot; no preset touches them) — the round cones themselves have no switch
 });

@@ -450,7 +450,6 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
   // lane of the SIMD group (a lane with nothing at q idles through it) rather than whatever each lane happened to queue next.
   var rqSlot = array<u32, 8>(255u, 255u, 255u, 255u, 255u, 255u, 255u, 255u); var rqUv = array<u32, 8>();   // + slots 6, 7 = the transient stratum's ray per class (kind 3)
   var validT = array<bool, 2>(false, false);
-  var softC = array<bool, 2>(false, false);   // SDF rig (iii): a ray of the class came back clear of boxes but darkened by the drawn character term (shadowSample .y = SOFT_CLEAR_Y)
   if (live) {
     // the audit ray (knownDark): a lane tests ONE tile-dark light — drawn ∝ unshadowed weight within a class drawn ∝ its dark weight — in the second-fresh queue slot
     // (kind 1; rays 6, which no preset runs, keeps that slot for its second candidate). Its outcome votes and nothing else: it never enters the estimate.
@@ -532,7 +531,6 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
       if (kind == 0u) { VF[c] = vs.x; share = pF[c]; } else if (kind == 1u) { if (fresh2Pix) { VG[c] = vs.x; share = pG[c]; } } else if (kind == 2u) { VT[c] = vs.x; } else if (kind == 3u) { VTr[c] = vs.x; share = Wt[c]; } else { hV[hh] += vs.x; share = hW[hh]; }   // (kind 1 without fresh2 = the audit ray: its vote above is all it is for; kind 3 = the transient stratum's / the held tail's; 4 = a held leader's stratum)
       if (heldAdapt && kind == 4u) { if (hk == 0u) { hFirst[hh] = vs.x; } else if (hk == 1u && abs(vs.x - hFirst[hh]) < 0.02) { hStop[hh] = 1u; hN[hh] = 2.0; } }   // TRADE (held adaptive): two strata, one answer — they stand for the K
       if (vs.y >= 0.0 && !tileDark(bel, slot)) { blurPx[c] = max(blurPx[c], hintPx(vs.y, pxPerMetre, share / W[c])); }   // a blocked ray is a penumbra measurement — unless the whole tile found that light dark last frame (a lamp behind the wall measures nothing here; the audit ray never hints)
-      if (vs.y == SOFT_CLEAR_Y && q < 6u && !tileDark(bel, slot)) { softC[c] = true; }   // (gated like the hint: never off an audit ray, and never off the transient stratum's ray (slots 6, 7) — a muzzle flash past a man must not drop the class's history in his flash-shadow)
     }
   }
   workgroupBarrier();   // (uniform control flow) the parked values come back; nothing else crosses here
@@ -716,7 +714,6 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
           let vs = traceSample(fSlot, Po, N, owner, fUv & 15u, fUv >> 4u); nRays++;
           visK = vs.x / max(fV, 1e-3);
           if (vs.y >= 0.0) { blurPx[c] = max(blurPx[c], hintPx(vs.y, pxPerMetre, yP / W[c])); }
-          if (vs.y == SOFT_CLEAR_Y) { softC[c] = true; }
         }
         if (visK > 0.0) { let gm = wgGlass[fSlot]; if (gm != 0u) { tint = glassVis(wgLights[fSlot], gm, P); } }
       }
@@ -732,7 +729,6 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
       var own = blurPx[c];
       if (own <= 0.0 && hasT) { own = rHint(twA); }
       aOut[c] = -clamp(min(own, frame.directCfg.z) / MAX_BLUR_PX, 0.0, 1.0);
-      if (own <= 0.0 && softC[c]) { aOut[c] = -SOFT_HINT_FLAG; }   // no box penumbra measured or remembered here, and a man's DRAWN shadow on the pixel: the denoiser takes this frame's ratio as it is (SDF rig iii)
     }
     // ---- the pixel's own dark memory, for the NEXT frame: a fresh ray blocked toward a light the tile believes lit (the inside of THIS light's shadow within a lit tile) names it;
     // seeing that light from here again (a lit fresh ray, or the reservoir holding it lit) clears it. One slot for both classes: the last such light wins.
