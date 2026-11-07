@@ -1,5 +1,6 @@
-// THE PAGE PLAYS THE RUST GAME (`?rust=1`). The simulation's tick is the Rust game's (rust/game, in the module rust/game_face builds: tools/blitz/FACE.md);
-// the TypeScript `Game` stays as a PUPPET that everything outside the tick goes on reading: the picture, the sound, the HUD, the menus. Without the word
+// THE PAGE PLAYS THE RUST GAME (the page's game with no word; `?rust=0` = the TypeScript game while that is still here; src/main.ts says which pages
+// stay with it). The simulation's tick is the Rust game's (rust/game, in the module rust/game_face builds: tools/blitz/FACE.md);
+// the TypeScript `Game` stays as a PUPPET that everything outside the tick goes on reading: the picture, the sound, the HUD, the menus. Under `?rust=0`
 // nothing here is loaded and the page is the page it was.
 //
 // A STEP (`Game.update` runs its own host lines as ever: the record sampled from the Input and the camera, hostBefore, hostAfter. The step between them,
@@ -57,8 +58,6 @@ import { crossing, surfaceHost } from 'tps-bridge/surface';
 import LISTS from 'tps-bridge/puppet-lists.json';
 import SWITCHES from 'tps-bridge/switches.json';
 
-/** the address word: `?rust=1` (any other value, or no word: the TypeScript game) */
-export const rustAsked = (q: URLSearchParams): boolean => q.get('rust') === '1';
 
 type Face = SimExports & Record<string, (...a: number[]) => number>;
 let X: Face | null = null, MEM: WebAssembly.Memory | null = null, BUF: ArrayBufferLike | null = null;

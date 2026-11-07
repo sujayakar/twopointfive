@@ -233,9 +233,11 @@ async function main() {
   if (keep.role === 'leave') return;
   // NO MODULE, NO GAME (sim/sim.ts): the simulation is the Rust module's and nothing else works it out, so a page that cannot run it stops here, before
   // anything is built. With no WebAssembly (a browser whose policy turns this site's JIT off) it is the card below; anything else is a fault of the build
-  // THE RUST GAME (`?rust=1`, host/rustgame.ts): its module is fetched and compiled here, before anything has asked for the simulation's, and handed to
-  // src/sim as the one instance, so `__ready` waits on it behind the boot card. Without the word nothing of it is loaded and the page is as it was
-  const rustGame = q.get('rust') === '1' ? await import('./host/rustgame') : null;
+  // THE RUST GAME IS THE PAGE'S GAME (host/rustgame.ts): its module is fetched and compiled here, before anything has asked for the simulation's, and handed to
+  // src/sim as the one instance, so `__ready` waits on it behind the boot card. `?rust=0` = the TypeScript game, for as long as that is still here (nothing of the
+  // module is loaded then). A page that is a game server's client or its door (`?net=`, `?join=`) or that plays a tape (`?playtape=`) is the TypeScript game's as
+  // well until those have been played on the Rust one: `?rust=1` asks it of them all the same
+  const rustWord = q.get('rust'), rustGame = rustWord === '1' || (rustWord !== '0' && ![NETPLAY, NET_JOIN, PLAYTAPE].some(k => q.has(k))) ? await import('./host/rustgame') : null;
   if (rustGame) await rustGame.rustBoot();
   { const no = simWhyNot(); if (no) { console.info(simSay()); throw noWasm() ? new NoWasmError(no) : new Error(`the Rust simulation did not start: ${no}`); } }
   if (!kitViewOn && await cloudAdopt(q)) return;   // a browser handed another's id (`?player=`) takes it and its settings before a single key is read, then loads once more without the word (cloud/cloud.ts; no request at all on a build with no backend)

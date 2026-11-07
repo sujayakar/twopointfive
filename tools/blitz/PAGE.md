@@ -1,13 +1,18 @@
-# The page plays the Rust game (`?rust=1`)
+# The page plays the Rust game
 
-With the word, the game's tick is the Rust game's (`rust/game`, in the module `rust/game_face` builds) and the TypeScript `Game` stays as a puppet that the
-picture, the sound, the HUD and the menus go on reading. Without the word nothing of this is loaded and the page is the page it was. The host is
+The Rust game is the page's game: no address word is needed. `?rust=0` opens the TypeScript game for as long as that is still in the tree, and a page that
+is a game server's client or its door (`?net=`, `?join=`) or that plays a tape (`?playtape=`) stays with the TypeScript game until those have been played on the
+Rust one (`?rust=1` asks it of them all the same; `src/main.ts` holds the rule). The words below that say "under the word" or `?rust=1` were written while the
+Rust game was behind that word, and read the same for the page with no word.
+
+On the Rust game, the game's tick is the Rust game's (`rust/game`, in the module `rust/game_face` builds) and the TypeScript `Game` stays as a puppet that the
+picture, the sound, the HUD and the menus go on reading. Under `?rust=0` nothing of this is loaded and the page is the page it was. The host is
 `src/host/rustgame.ts` (its head says what a step is); the lines of the TypeScript tick that are for the picture only are `src/host/rustdress.ts`; the face's
 exports for a host that shows the game are `rust/game_face/src/page.rs`.
 
 ## Building, and a first run
 
-`rust/game_face` is built by `tools/blitz/face-build.ts`. The file is 25 to 27 MB and is never checked in. Two profiles (`rust/game_face/Cargo.toml`):
+`rust/game_face` is built by `tools/blitz/face-build.ts`. The file is 25 to 27 MB; a built one is checked in beside its sources' hash (`rust/game_face/prebuilt/`, served where no build of the machine is fresh and the hash is the checkout's; a hosted build never takes it). Two profiles (`rust/game_face/Cargo.toml`):
 
 | profile | what it is | who builds it | measured here (3 jobs, from nothing) |
 |---|---|---|---|
