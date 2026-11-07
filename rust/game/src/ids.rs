@@ -6,6 +6,8 @@ use core::ops::{Index, IndexMut};
 
 /// what an ID type owes its table
 pub trait Id: Copy + Ord {
+    /// the type's name, for a refusal
+    const NAME: &'static str;
     fn from_ix(i: usize) -> Self;
     fn ix(self) -> usize;
 }
@@ -16,6 +18,7 @@ macro_rules! id {
         #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
         pub struct $name(pub u32);
         impl $crate::ids::Id for $name {
+            const NAME: &'static str = stringify!($name);
             #[inline] fn from_ix(i: usize) -> Self { $name(i as u32) }
             #[inline] fn ix(self) -> usize { self.0 as usize }
         }

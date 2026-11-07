@@ -163,7 +163,7 @@ function wr(n: Node, v: any, o: Out): void {
     case 'tup': { if (!Array.isArray(v)) { miss('not a tuple', v); zero(n, o); return; } n.of.forEach((x: Node, i: number) => wr(x, v[i], o)); return; }
     case 'map': { const E = keysOf(v); if (!E) { miss('not a map', v); o.u32(0); return; } const K = n.K.k === 'id' && n.K.id === 'PlayerId' && isWeak(v) ? E.keys.filter(seated) : E.keys; o.u32(K.length); for (const k of K) { wKey(n.K, k, o); wr(n.V, E.get(k), o); } return; }
     case 'set': { const E = keysOf(v); if (!E) { miss('not a set', v); o.u32(0); return; } o.u32(E.keys.length); for (const k of E.keys) wKey(n.K, k, o); return; }
-    case 'id': { if (v && typeof v === 'object') { const e = SCHEMA.idExpr[n.id]; if (e) { const r = compiled(e)(v, G, B); if (typeof r === 'number') { if (r >= (BK.known?.get(n.id) ?? Infinity) && r !== 0xffffffff) { PAST.n++; PAST.id = n.id; } o.u32(r); return; } } const i = BK.idOf(n.id, v); if (i >= (BK.known?.get(n.id) ?? Infinity)) { PAST.n++; PAST.id = n.id; } o.u32(i); return; } if (typeof v === 'number') { o.u32(v); return; } miss(`nothing for ${n.id}`, v); o.u32(0xffffffff); return; }
+    case 'id': { if (v && typeof v === 'object') { const e = SCHEMA.idExpr[n.id]; if (e) { const r = compiled(e)(v, G, B); if (typeof r === 'number') { if (r >= (BK.known?.get(n.id) ?? Infinity) && r !== 0xffffffff) { PAST.n++; PAST.id = n.id; } o.u32(r); return; } } const i = BK.idOf(n.id, v); if (i >= (BK.known?.get(n.id) ?? Infinity)) { PAST.n++; PAST.id = n.id; } o.u32(i); return; } if (typeof v === 'number') { o.u32(v); return; } throw new Error(`export: ${AT}: no object for ${n.id} (found ${String(v)})`); }
     case 'type': return wType(n, v, o);
   }
   throw new Error(`bridge: no writer for ${n.k}`);
