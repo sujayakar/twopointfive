@@ -12,7 +12,8 @@
 # The folder keeps `cmd.txt` (this command), each side's tick lines and log, `dumps.txt` (a line a half minute: paths not known) and `rust-hashes.txt`:
 # what tools/blitz/fuzz-replay.sh plays the Rust game again against.
 # EQUAL means all three: the die, the block, and 0 paths not known at every half minute.
-# Exit: 0 equal · 1 the die or the block part, or one side stopped · 2 equal every tick, a whole state has a path not known · 3 a side did not run.
+# Exit: 0 equal · 1 the die or the block part, or one side stopped · 2 equal every tick, a whole state has a path not known · 3 a side did not run ·
+# 4 equal by all three but for the panes after a load (the reference's own: PLAY.md).
 cd "$(dirname "$0")/../.." || exit 64
 ARGS="$*"
 M=$1; SEED=$2; shift 2 || { sed -n '2,16p' "$0"; exit 64; }
@@ -32,8 +33,14 @@ for W in $SIDES; do
 done
 if [ "$SIDES" != "ts rust" ]; then bun run tools/blitz/fuzz-dumps.ts "$OUT" > /dev/null; exit 0; fi
 bun run tools/blitz/fuzz-diff.ts "$OUT" | tee "$OUT/ticks.txt"; CODE=${PIPESTATUS[0]}
-# (the whole states are held to each other up to the tick the die or the block parted: past it they are two games)
-UPTO=$(bun run tools/blitz/fuzz-diff.ts "$OUT" --json | sed -n 's/.*"parted":\([0-9]*\).*/\1/p'); [ "${UPTO:-0}" -gt 0 ] || UPTO=99999999
+# THE PANES AFTER A LOAD ARE THE REFERENCE'S OWN: the TypeScript's put-back of a save leaves a pane a round broke in the abandoned future broken, the Rust
+# game's kept clone has the saved moment's. A run that parts in the block's `panes` alone, after a load, is held again with the panes left out.
+PANES=; if [ $CODE -eq 1 ]; then bun run tools/blitz/fuzz-diff.ts "$OUT" --but-panes > "$OUT/ticks-but-panes.txt"; [ $? -eq 0 ] && grep -qE 'STIM load: .*put back|the checkpoint loaded' "$OUT/ts.log" && { PANES=1; CODE=0; echo "… and EQUAL on every tick with the panes left out (a pane after a load: the reference's own)"; }; fi
+# THE WHOLE STATES EVERY HALF MINUTE, a path a line (tools/blitz/fuzz-dumps.ts): what the tick lines cannot see. The die and the block are the bodies and
+# the dice; what a man was told, a talk's record, a module's own books are not in them, and a call that ran in TypeScript on the puppet and never reached
+# the Rust game leaves both equal for minutes. Held up to the tick the die or the block parted (the panes apart): past it they are two games.
+UPTO=$(bun run tools/blitz/fuzz-diff.ts "$OUT" --json --but-panes | sed -n 's/.*"parted":\([0-9]*\).*/\1/p'); [ "${UPTO:-0}" -gt 0 ] || UPTO=99999999
 bun run tools/blitz/fuzz-dumps.ts "$OUT" --upto "$UPTO"; D=$?
 [ $CODE -eq 0 ] && [ $D -eq 1 ] && CODE=2
+[ $CODE -eq 0 ] && [ -n "$PANES" ] && CODE=4
 exit $CODE
