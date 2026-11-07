@@ -5,16 +5,38 @@ back, WebSockets, CPU senses on the server. What is built so far is the server, 
 and a page is opened with `?net=`: a page without that word is the build as it was (the loop's `tick` seam is absent, `netFromUrl` returns on its first
 line).
 
-- **CO-OP IS DOWN ON THIS BUILD** (2026-11-07; `src/net/lobby.ts COOP.down`, said by `src/ui/coop.ts lobby`). The TypeScript tick is deleted and the
-  page's game is the Rust game; the game server and the page in a game are not on it yet. So Host game, Join by a code and the invite answer with one
-  line ("Co-op can’t be played on this build yet. You can still play every mission on your own.") before a game is made or a seat taken, and an
-  address with `?net=` or `?join=` gets the page's own card (`src/main.ts`, 'NoGameHere'). No switch: the field is the switch, '' = co-op is up, and it
-  goes with the last step of the move. Seen: the three ways in, in headless Chromium on the software adapter. `tools/qa/lobby-page.cjs` is red while
-  this stands (its first line expects the older words, the rest a game). Everything below describes co-op as it was on the TypeScript game and as it
-  is to be again on the Rust one.
+- **CO-OP ON THE RUST GAME: WHERE IT STANDS** (2026-11-07). The TypeScript tick is deleted; the game server, the scripted clients and the page in a game
+  step the Rust game. WHAT IS UP: a page opened with `?net=` is the Rust game's page and plays as its server's client (`src/main.ts` holds only a tape's
+  address back now); the server (`tools/mp/server.ts`) and a scripted client (`tools/mp/bot.ts`) stand through the tools' host. WHAT IS STILL DOWN: the
+  Co-op screen. `src/net/lobby.ts COOP.down` holds one line ("Co-op can’t be played on this build yet. You can still play every mission on your own.")
+  and `src/ui/coop.ts lobby`, the one door of Host game, Join by a code, the invite and a `?join=` link, answers with it before a game is made or a seat
+  taken; '' = co-op is up. It stands because A PAGE IN A GAME OF TWO SEATS IS NOT WHOLE YET: after its first step the host seat's order book and wall
+  charge on the page's copy of the game are objects the apply made anew (the HUD's notes and the cursor's ray are gone from them and the HUD throws
+  every frame). One seat is whole. `tools/qa/lobby-page.cjs` is red while the line stands.
+  - **The state word is the game's own** (`src/net/step.ts netWord`): the die's count of draws and the hash of each part of the game's block (head, dice,
+    doors, falls, props, slabs, items, men, lights, weather, smoke, poses, panes: where every body, door and thing is), folded tick after tick. The host
+    of the game that steps hangs `stateWords()` on the game object beside its `stepSeats` (`src/host/rustgame.ts` in the page, `tools/blitz/rust-host.ts`
+    in bun). It is no longer `game/digest.ts rawBits` walked over the host's copy, which inside a quiet run is not the game. NARROWER THAN THE GAME: a
+    seat's aim, a man's mind and an order book are not in the block, so a difference there is said only once it moves something. Measured: one record
+    stepped with its cursor a pixel off the server's changed no word in the 1,110 ticks after it; one stepped with another walk key changed the very
+    next word. The old word had each man's aim and awareness in it. WANTED: the hash of the whole Rust game less the host's half (a face export), twice
+    a second.
+  - **Networked machines step in QUIET RUNS** (`step.ts netQuiet`, the hosts' `quietRun(on)`): between two ticks of a run nothing is brought across to
+    the host's copy of the game (no export, no apply, no out event, no dress step); as the run ends the copy takes what changed in one apply, the out
+    events of every tick in their order, and the dress step over the run's whole time. The server's run is from one state word to the next (so the
+    verdict it reads is at most `NET.wordEvery` ticks late); a client's is ONE WALK of confirmed ticks, so a walk of one tick is the step it always was
+    and a page that is behind or far behind pays for one bring-up, not one a tick. NOT THE SAME inside a walk of two or more: a restart's camera cut
+    and a wall hold's peek written by a tick inside it do not reach the page's lens (the next record hands the page's own lens back); nothing of the
+    game differs by it.
+  - **Measured** (2026-11-07, a 4 core cloud box, bun 1.4.4 and headless Chromium on the software adapter, nothing seen on a GPU or by a person): a
+    two-seat server tick 7 ms in a quiet run against 27.6 ms with an apply a tick; a scripted client's tick 15.8 ms; the page, one seat, 9.2 ms a
+    confirmed tick and about 180 ticks a second when far behind (a page 28,000 ticks behind matched 242 of 242 words on its way). `mpserver-check`:
+    every line but `ahead` (in bun the look ahead crosses to the Rust rule, which is right, 30 of 30 looks to a millimetre in a probe, but one crossed
+    call costs 11 to 13 ms and a client that looks every beat cannot keep time). `mpclient-page`, one seat: every line (80 of 80 state words, his own
+    man ahead in 83 of 83 looks, a tab that sleeps, the Network page). `mpclient-page --seats 2`: RED at its first frame, by the fault above.
 - **What travels is the input timeline, never the state** (`src/net/wire.ts`). The game plays one fight to the bit from its recipe and its seats' records
   (`docs/agents/replays.md`: the game's own maths, the senses on the CPU, the input record, a record from anyone), so the server decides which record each
-  seat's tick ran on, tells every client, and sends a state word (`game/digest.ts rawBits`, chained) every `NET.wordEvery` ticks as the alarm. A NETWORKED
+  seat's tick ran on, tells every client, and sends a state word (`src/net/step.ts netWord`, chained: the game's own words) every `NET.wordEvery` ticks as the alarm. A NETWORKED
   GAME IS A RUN TAPE WRITTEN LIVE: its setup is the tape's RECIPE (`game/runtape.ts recipeOf`: the die, the page's address, every knob table, the kit),
   made by the server of the game it stood, and every machine — the server too — stands its game FROM the recipe (headless: `tools/mp/stand.ts standRecipe`,
   which is `tools/qa/rerun.ts` on a tape of no steps), so all of them come to the game by one door. Four tables are forced on whatever a setup says
@@ -81,7 +103,7 @@ line).
   THE CHECK: `PORT=<dev server> node tools/qa/mpclient-page.cjs` (headless Chromium on the software adapter against a real server process, a bun watcher
   beside it; about seven minutes: the page's boot, and two frames the look ahead's line draws, a minute each on the software adapter): moved to the game's address with the key off it · the server waits while the page stands
   · SAME FIGHT (every state word of 600 ticks the server's: V8 with the page's engine against JavaScriptCore with none) · the server ran ticks on the
-  page's records and the man moved · no page error. `MPCLIENT_BREAK=1` (the page flips the last bit of its man's place after tick 90) must fail the
+  page's records and the man moved · no page error. `MPCLIENT_BREAK=1` (the page flips the last bit of its man's place after tick 90, in the game itself: `__rust.poke`) must fail the
   same-fight line. RUN
   2026-11-02 on the cloud box: every line PASS on the four-man room clear seed 7 (a confirmed tick 8 ms in Chromium there with a watcher sharing the
   cores), and A TAB THAT SLEEPS: asleep 3.5 s with a walk key down and nothing said the server walked the man on 2.4 to 5.2 m, with the hands taken off
@@ -131,7 +153,7 @@ line).
   'under 5 mm off on average', and one thing a look cannot know, wrong in the ten or twenty looks that cross it, put a run of exact looks over that
   one run in three: the reason is written at the bar, `AHEAD_EXACT`; `bot.ts --why` prints each clean look that missed); the others are corrections,
   counted and held to no bar; a look with his legs not his own walks nothing
-  and is counted apart); `MPSERVER_BREAK=1` fails both (the first client flips a bit, the second runs `--no-ahead`). `mpclient-page.cjs`'s `ahead` line (on the frame the first record with a walk key down goes
+  and is counted apart); `MPSERVER_BREAK=1` fails both (the first client steps one record with another walk key, the second runs `--no-ahead`). `mpclient-page.cjs`'s `ahead` line (on the frame the first record with a walk key down goes
   out the look has him moved and the game has not; the game moves him some frames later; walking, he is ahead in over half the looks; two frames are
   DRAWN and each moved one palette instance, one set of capsules and his boxes, and every state word after them still matches), `--seats 2` (the page
   in seat two, a bun client in seat one) and `MPCLIENT_BREAK=ahead` (`netpredict=0`: the `ahead` line must fail).
@@ -342,7 +364,7 @@ line).
   are not records, three seconds of sending nothing, a server stalled a second, a late watcher over a socket that drops messages, a watcher too many, a
   client of no named build, whose `lost` counts); stood; refused hellos; SAME FIGHT (a seated client and a watcher, 1200 ticks, every half second's state word the server's, the man
   moved and fired); a late joiner; LAG (a second server started with the record as a control plane hands it over, a seat 60 to 100 ms away each way; its bar is on the records that CAME — over half ran as the seat's own — never on the run's ticks: how many a starved box lets a bot send is the box's); GONE (its
-  heartbeat answered 410: it says `ended` and stops); the heartbeats at a stand-in control plane; the server ending itself when idle. `MPSERVER_BREAK=1` (the seated client flips the last bit of its own man's place after tick 90) FAILS the two state-word lines, as it must.
+  heartbeat answered 410: it says `ended` and stops); the heartbeats at a stand-in control plane; the server ending itself when idle. `MPSERVER_BREAK=1` (the seated client steps one record with another walk key than the server ran after tick 90) FAILS the two state-word lines, as it must.
   `--setup '{…}'` plays another mission. RUN 2026-11-02 on the cloud box (bun 1.4.4, Linux x64, four cores, nothing seen on a GPU or in a browser): the
   four-man room clear in the office seed 7 and the consulate rescue seed 3, every line PASS; the break word fails 2 lines. A tick is 9 to 15 ms there
   with the server and three clients sharing the four cores, so a scripted client's own beat is starved (it sent 500 to 850 records in 1200 ticks and the
