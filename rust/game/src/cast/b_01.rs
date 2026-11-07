@@ -65,7 +65,7 @@ pub fn cast_variant_of(g: &mut Game, c_2: CharId) -> Option<AnimGltfCastVariantI
 }
 /// Who is drawn in the sneaking suit this frame.   (cast.ts sneakSuit)
 pub fn sneak_suit(g: &mut Game, c_2: CharId) -> bool {
-    if !g.k.look.on || !g.k.look.suit { return false; }
+    if !g.k.look.on { return false; }
     // (k: None = no mission; Some(true) = quiet; Some(false) = any other kind)
     let k: Option<bool> = match crate::scene_look::suit_as(g) {
         Some(asked) => asked.map(|_| true),   // (cast.ts:74 `asked !== undefined ? asked : activeScenario(g)`: null = no mission)
@@ -82,10 +82,10 @@ pub fn cast_parts(g: &mut Game, c_2: CharId) -> f64 {
     let cast = g.tab.rig[rig].cast.unwrap();
     let vmask = g.tab.anim_gltf_cast_variant[v].mask;
     if sneak_suit(g, c_2) { return crate::anim_gltf::cast_suit(g, cast, vmask); }
-    let worn0 = if g.k.packside.on {
+    let worn0 = {
         let carries = crate::bigkit::big_carried(g, crate::bigkit::BigCarriedC { id: g.ch[c_2].id }).is_some();
         crate::packside::pack_mask(g, rig, vmask, carries)
-    } else { vmask };
+    };
     let has = match g.m.cast.has_nvg.get(v) { Some(h) => *h, None => { let h = crate::anim_gltf::cast_goggles(g, cast, vmask, true) != vmask; g.m.cast.has_nvg.set(v, h); h } };
     if !has { return worn0; }
     let mut boxes = crate::seats::man_of(g, Some(c_2)).is_some();

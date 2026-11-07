@@ -474,7 +474,7 @@ fn foot_knobs(g: &Game) -> crate::debris::FootKnobs {
 
 /// Per frame: rubble at men's feet, the pools, the heat's decay, the queued dust.   (destruction.ts Destruction.update)
 pub fn destruction_update(g: &mut crate::game::Game, dt: f64) {
-    if g.k.rubble.on && (!g.touring || g.destr.show_chaos.is_some()) {
+    if !g.touring || g.destr.show_chaos.is_some() {
         let men: Vec<crate::debris::FootMan> = destruction_on_foot(g).into_iter().map(|c| crate::debris::FootMan { pos: g.ch[c].pos, vel: g.ch[c].vel }).collect();
         let knobs = foot_knobs(g);
         if !g.destr.debris.list.is_empty() {
