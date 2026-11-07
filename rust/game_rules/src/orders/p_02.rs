@@ -670,6 +670,23 @@ pub fn squad_orders_new_group(g: &mut crate::game::Game) -> f64 {
     g.orders.group
 }
 
+/// A ROW OF THE MENU IS ONE ROW OF THE TABLE, HOWEVER OFTEN IT IS LISTED. The table's row of this id is written in place, on the menu or off it;
+/// only an id the table has never held is a new row. Every module that lists an order makes its row through here.
+///
+/// Before, each listing pushed a new row and the one before it was left in the table for good: a row re-listed when the squad's roster changed,
+/// when a held door's page was rebuilt or when the man with the hammer fell left an orphan each time, every later row stood one place further
+/// on, and two machines of one game that had seen a different number of re-listings numbered their rows differently.
+///
+/// THE FIRST row of an id is the one meant. The wall tools keep a digitless copy of a row whose digit their own row has taken
+/// (`wall_charge_undigit`): a later row of the same id, made once and written in place by them, never by this.
+pub fn squad_orders_row(g: &mut crate::game::Game, def: crate::orders::OrderDef) -> OrdersOrderDefId {
+    let had = g.tab.orders_order_def.iter().find(|(_, r)| r.id == def.id).map(|(d, _)| d);
+    match had {
+        Some(d) => { g.tab.orders_order_def[d] = def; d }
+        None => g.tab.orders_order_def.push(def),
+    }
+}
+
 /// (orders.ts SquadOrders.unregister)
 pub fn squad_orders_unregister(g: &mut crate::game::Game, id_2: &str) {
     if let Some(i) = g.orders.defs.iter().position(|&d| g.tab.orders_order_def[d].id == id_2) {
@@ -803,6 +820,28 @@ pub fn squad_orders_target_under(g: &mut crate::game::Game, input: InputId, cam:
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A row listed again is the same row of the table, with what it was last listed as; only a new id is a new row.
+    #[test]
+    fn a_row_listed_again_is_the_same_row() {
+        let mut g = alloc::boxed::Box::new(crate::game::Game::blank());
+        let was = g.tab.orders_order_def.len();
+        let row = |id: &str, key: f64| crate::orders::OrderDef { id: String::from(id), key: Some(key), ..Default::default() };
+        let a = squad_orders_row(&mut g, row("first", 1.0));
+        let b = squad_orders_row(&mut g, row("second", 2.0));
+        assert_ne!(a, b);
+        for k in 0..5 {
+            assert_eq!(squad_orders_row(&mut g, row("first", 3.0 + k as f64)), a, "listing {k}: the row moved");
+            assert_eq!(squad_orders_row(&mut g, row("second", 2.0)), b);
+        }
+        assert_eq!(g.tab.orders_order_def.len(), was + 2, "ten more listings made no row");
+        assert_eq!(g.tab.orders_order_def[a].key, Some(7.0), "the row holds what it was last listed as");
+        // (on the menu or off it: a row taken off the menu is still the table's row of its id)
+        squad_orders_register(&mut g, a, None);
+        squad_orders_unregister(&mut g, "first");
+        assert_eq!(squad_orders_row(&mut g, row("first", 1.0)), a);
+        assert_eq!(g.tab.orders_order_def.len(), was + 2);
+    }
     use crate::game::PairId;
 
     /// the TypeScript's own bits for doorOnRay's arithmetic (bun, EXACT.on): t of a ray crossing a doorway
