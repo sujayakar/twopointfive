@@ -9,9 +9,10 @@
 //   hand   SAM'S OWN CAN: the team stacked ('stack up'), the door pushed open, one of his canisters landing inside (combat.ts dropThrowable), and 'open and
 //          clear' given the moment it goes off — the player's two hands doing what the order does
 // THE SITUATION: the room is HOT — a loud noise at this door four seconds before the order, so its men are on it (the case a bang is for; behind a door nobody
-// is watching the plain door has surprise and needs nothing). The team starts a few steps outside the door. The rest of the floor stays in its rooms
-// (ROOMFIGHT.rally off for the run) and any other defender with a line to where the team gathers is taken off the floor first: this counts the ENTRY, not the
-// building. Sam commands unseen and unhurt (the 'hand' arm's can is his; he does not fight).
+// is watching the plain door has surprise and needs nothing). The team starts a few steps outside the door. Any other defender with a line to where the
+// team gathers is taken off the floor first: this counts the ENTRY, not the building. (Until 2026-11-07 the stage also wrote ROOMFIGHT.rally off, to keep the
+// rest of the floor in its rooms. The rally is settled on, the write was refused, and it is out: the floor rallies here as on the page.) Sam commands
+// unseen and unhurt (the 'hand' arm's can is his; he does not fight).
 // COUNTED per arm: teammates lost · the room's men down · room taken (all its men down, a teammate standing; 'emptied' = the rest fell back out of it) · hostile rounds in the three seconds after the
 // bang (what comes back through the doorway) · seconds from the order to the last of the room's men down.
 // --set '{"table":{"knob":value}}' writes the game's knob tables for the run (operative / hostile = FIGHT_SKILL rows, ROOMFIGHT, BLIND, DOORTOOLS, ORDERS,
@@ -81,7 +82,7 @@ function crateTheWay(level: any, door: string) {
 /** a scenario stood up as its row starts it, stepped until the room fight has its defenders in their rooms */
 export async function stage(scnId: string, seed: number, crated?: string) {
   const E = SCENARIOS.find((e: any) => e.id === scnId); if (!E) throw new Error(`no scenario '${scnId}' — ${SCENARIOS.map((e: any) => e.id).join(', ')}`);
-  resetKnobs(); RFM.ROOMFIGHT.rally = false;
+  resetKnobs();
   Math.random = seeded(0xba46 + seed * 7919);
   const level = E.level ? levelOfFile(E.level) : null;
   if (crated) { if (!level) throw new Error(`TALLYDIFF_BREAK=1: '${scnId}' has no level file of its own to lay a crate in (try a row that has one)`); crateTheWay(level, crated); }
