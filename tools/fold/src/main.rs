@@ -63,6 +63,8 @@ struct Engine<'a> {
     bodies: &'a [Body],
     modules: Vec<String>,
     mfns: HashMap<String, HashSet<String>>,
+    /// functions that are plain readings (fold::pure_fns_of), to a fixed point over the tree as it stood
+    pure: HashSet<(String, String)>,
     world: dead::World,
 }
 
@@ -96,7 +98,7 @@ impl<'a> Engine<'a> {
                     continue;
                 }
             };
-            let mut p = Pass::new(&texts[i], &b.rel, &b.module, self.rows, take, fns, &self.mfns, true);
+            let mut p = Pass::new(&texts[i], &b.rel, &b.module, self.rows, take, fns, &self.mfns, &self.pure, true);
             p.visit_file(&file);
             merge(&mut rep, p.report);
         }
@@ -121,7 +123,7 @@ impl<'a> Engine<'a> {
                             std::process::exit(2);
                         }
                     };
-                    let mut p = Pass::new(&texts[i], &b.rel, &b.module, self.rows, take, &out.fns, &self.mfns, false);
+                    let mut p = Pass::new(&texts[i], &b.rel, &b.module, self.rows, take, &out.fns, &self.mfns, &self.pure, false);
                     p.visit_file(&file);
                     let edits = fold::innermost(std::mem::take(&mut p.edits));
                     if edits.is_empty() {
@@ -407,7 +409,29 @@ fn main() {
         }
     }
     let body_paths: HashSet<PathBuf> = bodies.iter().map(|b| b.path.clone()).collect();
-    let eng = Engine { rows: &rows, bodies: &bodies, modules: bodies.iter().map(|b| b.module.clone()).collect(), mfns, world: dead::world(&root, &body_paths) };
+    // which functions are plain readings: found over and over until no more are (one that calls another waits for it)
+    let mut pure: HashSet<(String, String)> = HashSet::new();
+    {
+        let none_taken: HashSet<String> = HashSet::new();
+        let no_facts: FnTable = HashMap::new();
+        let parsed: Vec<Option<syn::File>> = bodies.iter().map(|b| syn::parse_file(&b.was).ok()).collect();
+        loop {
+            let mut grew = false;
+            for (b, f) in bodies.iter().zip(parsed.iter()) {
+                let Some(f) = f else { continue };
+                let p = Pass::new(&b.was, &b.rel, &b.module, &rows, &none_taken, &no_facts, &mfns, &pure, true);
+                let names = fold::pure_fns_of(f, &p);
+                drop(p);
+                for n in names {
+                    grew |= pure.insert((b.module.clone(), n));
+                }
+            }
+            if !grew {
+                break;
+            }
+        }
+    }
+    let eng = Engine { rows: &rows, bodies: &bodies, modules: bodies.iter().map(|b| b.module.clone()).collect(), mfns, pure, world: dead::world(&root, &body_paths) };
     let pristine: Vec<String> = bodies.iter().map(|b| b.was.clone()).collect();
     let no_fns: FnTable = HashMap::new();
 
@@ -475,6 +499,7 @@ fn main() {
     }
     let _ = writeln!(o, "body files: {} ({} changed); lines {lines_before} -> {lines_after} ({} fewer)", bodies.len(), out.texts.len(), lines_before as i64 - lines_after as i64);
     let _ = writeln!(o, "functions deleted: {}; mod.rs files changed: {}", out.deleted.len(), out.modrs.len());
+    let _ = writeln!(o, "functions found to be plain readings (a test may be dropped after a call of one): {}", eng.pure.len());
     let _ = writeln!(o, "\n## Lines by module, where they changed (before -> after)\n");
     {
         let mut by: BTreeMap<&str, (usize, usize)> = BTreeMap::new();
