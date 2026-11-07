@@ -146,6 +146,7 @@ export async function civiliansSight() {
 export async function civiliansPhone() {
   console.log("\n=== civilians-phone: 'send her to a phone' from a quiet floor — the run to the nearer set, six seconds on the line, control on the net, the nearest calm man sent, one call only ===");
   const S = await stage(31); const { game, M } = S;
+  const phoned0 = CIV_STATS.phoned;
   S.step(60 * 3);
   const note = civPanic(game, M, 'phone');
   const t0 = game.time; let phoneAt = -1, phonedAt = -1, target = M.civ.target?.name ?? '?', cowerAt = -1;
@@ -168,7 +169,7 @@ export async function civiliansPhone() {
   ok = verdict(phonedAt > 0 && Math.abs(phonedAt - phoneAt - CIV.phoneSecs) < 0.1, `the call takes ${CIV.phoneSecs} s on the line`, `${f2(phonedAt - phoneAt)} s`) && ok;
   ok = verdict(control.length === 1 && /rang in|rang it in|called in|called it in/.test(control[0]) && rows.length === 1, "control puts it out ONCE on the radio strip ('… rang in a prowler …') and the card gets one 'rang it in' row", `${control.length} control line(s), ${rows.length} row(s)`) && ok;
   ok = verdict(sent.length === 1 && S.tap.lines.some(l => l.radio && /copy, control — on my way/.test(l.text)), "exactly one calm man is sent to the spot and says so on the net ('copy, control — on my way')", sent.map((g: any) => g.callsign).join(', ') || 'nobody') && ok;
-  const phonedN = S.clog.filter(l => /rang it in/.test(l)).length;
+  const phonedN = CIV_STATS.phoned - phoned0;
   ok = verdict(phonedN === 1 && cowerAt > phonedAt, 'one call per fright however long she stands there, then she cowers', `${phonedN} call(s), cower ${f2(cowerAt)}`) && ok;
   console.log(`=== civilians-phone: ${ok ? 'ALL PASS' : 'FAILURES above'} ===`); if (!ok) failures++;
   return ok;
@@ -208,11 +209,11 @@ export async function civiliansComply() {
   // Novak stood beside her, calm, facing her
   N.hold = false; N.pinned = false; N.dazzledUntil = -1; N.heardUpTo = game.eventSeq;   // (back from the lot: free, seeing and hearing again from now)
   N.char.pos = [M.char.pos[0], 0, M.char.pos[2] + 1.5]; N.char.bodyYaw = Math.PI; N.char.aimYaw = N.char.bodyYaw; N.path = []; N.pathGoal = null; N.wait = 4; N.state = 'patrol'; N.awareness = 0; N.char.update(0);   // a stride and a half south of her in the east aisle, facing her (nothing between them: the cluster's end partition is west of both)
-  const t0 = game.time; let foundAt = -1, toldAt = -1, novakState = '', esc = 0; const clog0 = S.clog.length;
+  const t0 = game.time; let foundAt = -1, toldAt = -1, novakState = '', esc = 0;
   for (let f = 0; f < 60 * 20; f++) {
     S.step();
     const t = game.time - t0;
-    if (foundAt < 0 && S.clog.slice(clog0).some(l => /found her cowering/.test(l))) foundAt = t;
+    if (foundAt < 0 && M.civ.foundLineAt >= 0) foundAt = t;   // (he has asked her: his line, the moment foundSecs is up)
     if (toldAt < 0 && M.civ.reported) { toldAt = t; novakState = N.state; }
     esc = Math.max(esc, game.escalation);
     if (VERBOSE && f % 60 === 0) console.log(`    ${f1(t)}s ${civiliansSummary(game)} · Novak ${N.state} aw ${f2(N.awareness)} lk ${posS(N.lastKnown)} esc ${game.escalation}`);
