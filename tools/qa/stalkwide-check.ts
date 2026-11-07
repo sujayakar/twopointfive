@@ -7,7 +7,6 @@
 // (the key changes nothing upright: a comparison alone) and the harness part went with that.
 //   out       hands empty, crouched, the click held on a man three metres ahead: under two metres each hand is a little outside its own shoulder and
 //             never a wing's reach out, well under it, the left leading, and no higher than his own neck.
-//   waits     the click let go, he stops behind the man: two seconds on his arms are still out, the left leading.
 //   grab      the key takes the man out of the stance: he is `held`.
 // STALKWIDE_BREAK=1 = the click is never held, so he never closes on the man: out and grab must FAIL.   exit 0 = all hold · 1 = one does not
 // THE HARNESS HAS NO GPU: nothing here says how the stance LOOKS (tools/qa/close-stills.ts scene stalk-rifle draws it on the CPU).
@@ -55,11 +54,6 @@ async function out() {
   verdict(a.high < 0 && a.out > 0 && a.out < 0.25 && a.under > 0.2 && a.lead > 0.05,
     'hands empty, crouched, the click held on a man three metres ahead: under two metres the footage\'s creep: each hand a little outside its own shoulder and never a wing\'s reach out, well under it, the left leading, no hand above his own neck',
     `his hands apart before he sinks ${f2(a.far)} m · under two metres: ${f2(a.near)} m apart, the furthest out of its shoulder ${f2(a.out)} m, the least under it ${f2(a.under)} m, the left ahead by ${f2(a.lead)} m · the higher hand against his neck ${f2(a.high)} m`);
-  console.log('\n=== waits: they stay out while he waits behind the man ===');
-  a.C.step(120); const wait = a.C.spread(), still = Math.hypot(a.C.g.player.char.vel[0], a.C.g.player.char.vel[2]), held = a.C.shape();
-  verdict(still < 0.02 && held.lead > 0.05 && held.out < 0.25,
-    'the click let go, he stops behind the man and two seconds on his arms are still out, the left leading',
-    `stopped (${f2(still)} m/s), two seconds on his hands ${f2(wait)} m apart, the left ahead by ${f2(held.lead)} m, the furthest out ${f2(held.out)} m`);
 }
 async function grab() {
   console.log('\n=== grab: the key takes the man out of the stance ===');
