@@ -204,7 +204,6 @@ const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 export const entryOf = (id: string): any => SCENARIOS.find((e: any) => e.id === id) ?? (/^[\w-]+\.json$/.test(id) && existsSync(resolve(ROOT, 'levels', id)) ? { id, title: id, kind: 'roomclear', squad: 4, level: id, blurb: '' } : undefined);
 const NO_SCN = (id: string) => `no scenario '${id}' — ${SCENARIOS.map((e: any) => e.id).join(', ')} (or <name>.json = levels/<name>.json's room clear with the four)`;
 const { scenarioQuery } = await import(`${ROOT}/src/scene/scenarios.ts`);
-const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { lookLevelFile } = await import(`${ROOT}/src/scene/look.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
@@ -242,7 +241,7 @@ const { PRESSURE, pressureStats } = await import(`${ROOT}/src/game/pressure.ts`)
 const { DRILLED } = await import(`${ROOT}/src/game/roomfight.ts`);
 const { HARD, HARD_AT, LEVERS, setDifficulty, setLever, leversMixed, leversLine, difficultyNow } = await import(`${ROOT}/src/game/difficulty.ts`);
 const { WX_SIM } = await import(`${ROOT}/src/game/weather.ts`);   // --set '{"WX_SIM":{"loudDry":false}}' = rain blurs where gunfire is placed again (the weather build's first cut)
-const { WEATHER_BOOT, isWeatherKind } = await import(`${ROOT}/src/game/weatherKinds.ts`);   // --set '{"WEATHER":{"kind":"fog"}}' = the run started in that weather (the page's ?weather=)
+const { isWeatherKind } = await import(`${ROOT}/src/game/weatherKinds.ts`);   // --set '{"WEATHER":{"kind":"fog"}}' = the run started in that weather (the page's ?weather=)
 const { SQUADS, DRILL_AT = {}, squadsReport } = await import(`${ROOT}/src/game/enemysquads.ts`);   // (DRILL_AT: absent in an older checkout)
 const { CUES } = await import(`${ROOT}/src/game/cues.ts`);
 const { BUDDY, buddyStats } = await import(`${ROOT}/src/game/buddy.ts`);
@@ -1643,8 +1642,13 @@ async function playRun(scn: string, seed: number, cap: number, verbose: boolean,
     for (const [name, o] of Object.entries(rest)) put(name, o);
     dug = DIGIN.on; bud = BUDDY.on; clOn = !!CLM?.CLEARLINE?.on; out.difficulty = difficultyNow(); if (leversMixed()) (out as any).levers = leversLine(true); if (HOUR.id !== 'night') out.hour = HOUR.id;
     Math.random = seeded(0x9137 + seed * 7919);   // (this run's counts — the JSON's `frag`, `teampace`, `noshove`, `picture`, `doorforce`, `holdfire` — begin level because every stand-up puts a tally back: tools/qa/fresh.ts)
-    WEATHER_BOOT.kind = (wx?.kind as any) ?? null; if (wx?.kind) (out as any).weather = wx.kind;
-    let W: any; try { W = await quiet(!verbose, () => standUp({ uploadEvery: 4, ...(E.level ? { level: levelOfFile(E.level) } : {}) })); } finally { WEATHER_BOOT.kind = null; } const g = W.game;
+    // THE MISSION'S ADDRESS IS THE STAND'S, as a page's is from its first line (headless.ts `address`): the weather a run is played in goes on it, and the game is born in it
+    let q = scenarioQuery(E) as string; if (E.kind === 'roomclear' && process.env.PT_SAMEFLOOR !== '1') q = q.replace(/(^|[?&])roomclear(=\d+)?(?=&|$)/, `$1roomclear=${seed}`);   // (the flag itself, not a level file with the word in its name. PT_SAMEFLOOR=1 leaves the row's own flag: every seed then plays THE ONE FLOOR the row stands — with SAMESTART on, the level's first marks as written — and the seed is only the dice rolled in play; without it each seed pins a placement of its own, which no page deals any more)
+    if (process.env.PT_SQUAD !== undefined) { if (!/^[0-4]$/.test(process.env.PT_SQUAD)) throw new Error(`PT_SQUAD=${process.env.PT_SQUAD}: a squad size is 0 to 4`); q = q.replace(/&squad4\b/, '').replace(/&squad=\d\b/, '') + `&squad=${process.env.PT_SQUAD}`; }   // (the loadout's size — game/loadout.ts — over the scenario's own)
+    if (wx?.kind) { q += `&weather=${wx.kind}`; (out as any).weather = wx.kind; }
+    // (PT_HOUR / PT_SUN were written into HOUR as this file loaded, and a check may have written an hour there before it called play: the stand-up puts what it
+    //  finds there onto an address that names none, headless.ts)
+    const W: any = await quiet(!verbose, () => standUp({ uploadEvery: 4, address: q, ...(E.level ? { level: levelOfFile(E.level) } : {}) })); const g = W.game;
     ff0 = { ...FF }; fl0 = { ...FL };   // (this run's share is counted from AFTER its stand-up, which puts a game's tallies back: tools/qa/fresh.ts)
     DOORSTAY.on = (rest.DOORSTAY?.on as boolean | undefined) ?? true;   // (the page's default too: doors stay where they are left — the harness stood the game up with the closers of old; --set '{"DOORSTAY":{"on":false}}' keeps them)
     T.DOORMANNERS.on = (rest.DOORMANNERS?.on as boolean | undefined) ?? true;   // (and the doorway manners as shipped: headless.ts stands every other tool up without them; --set '{"DOORMANNERS":{"on":false}}' plays without)
@@ -1662,9 +1666,7 @@ async function playRun(scn: string, seed: number, cap: number, verbose: boolean,
     if (rest.STACKLINE) put('STACKLINE', rest.STACKLINE);
     if (rest.HAULHOME) put('HAULHOME', rest.HAULHOME);   // (and the hauled furniture's last hand to the door: standUp's frozen stand has just pinned it off — TPS_HAULHOME — over a --set row)   // (and the brisk walk onto a stack mark at an open door: standUp's frozen stand has just pinned it off — TPS_STACKLINE — over a --set row)
     resetWoundStats(); g.godMode = !MORTAL; g.tune.chaos = 0.5;   // (the page's default chaos; Sam cannot be hurt — the team is what is under test — but he is seen, heard and in the way)
-    let q = scenarioQuery(E) as string; if (E.kind === 'roomclear' && process.env.PT_SAMEFLOOR !== '1') q = q.replace(/(^|[?&])roomclear(=\d+)?(?=&|$)/, `$1roomclear=${seed}`);   // (the flag itself, not a level file with the word in its name. PT_SAMEFLOOR=1 leaves the row's own flag: every seed then plays THE ONE FLOOR the row stands — with SAMESTART on, the level's first marks as written — and the seed is only the dice rolled in play; without it each seed pins a placement of its own, which no page deals any more)
-    if (process.env.PT_SQUAD !== undefined) { if (!/^[0-4]$/.test(process.env.PT_SQUAD)) throw new Error(`PT_SQUAD=${process.env.PT_SQUAD}: a squad size is 0 to 4`); q = q.replace(/&squad4\b/, '').replace(/&squad=\d\b/, '') + `&squad=${process.env.PT_SQUAD}`; }   // (the loadout's size — game/loadout.ts — over the scenario's own)
-    const { why } = await quiet(!verbose, () => startFromQuery(g, new URLSearchParams(q))); if (why) throw new Error(`start refused — ${why}`);
+    const { why } = await quiet(!verbose, () => W.start()); if (why) throw new Error(`start refused — ${why}`);
     if (process.env.PT_METER === 'sky') { const { installSkyMeter } = await import('./hour-lib.ts'); installSkyMeter(g); } else if (process.env.PT_METER) throw new Error(`PT_METER=${process.env.PT_METER}: sky, or unset`);
     if (DOOR && !g.doors.byName(DOOR)) throw new Error(`PT_DOOR=${DOOR}: this level has no door of that name`);
     if (EXTRA > 0) { const { uncap, spawnPast } = await import('./uncapped.ts'); const { standExtra } = await import(`${ROOT}/src/game/stress.ts`); uncap(W); const r = await quiet(!verbose, () => standExtra(g, EXTRA, spawnPast)); out.note = `PT_EXTRA: ${r.stood} of ${EXTRA} extra enemies stood${r.why ? ` (${r.why})` : ''}`; }

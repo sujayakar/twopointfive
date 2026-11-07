@@ -18,7 +18,6 @@ const { digestGame, hashDigest, diffDigest } = await import(`${ROOT}/src/game/di
 // (the first game's digests whole, so that where a later game's first parts the fields are named)
 const FIRST: unknown[] = []; const told = new Set<number>();
 const dig = (n: number, g: any, k: number): string => { const d = digestGame(g); if (n === 1) FIRST[k] = d; const h = hashDigest(d); if (n > 1 && !told.has(n) && FIRST[k] !== undefined && h !== hashDigest(FIRST[k])) { told.add(n); console.log(`  game ${n} first parts from the first at second ${k}: ${diffDigest(FIRST[k], d, 8).join(' · ')}`); } return h; };
-const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { mulberry32 } = await import(`${ROOT}/src/math/dice.ts`);
 for (const d of [TICKS, DUMP]) if (d) mkdirSync(d, { recursive: true });
 
@@ -39,7 +38,7 @@ const said = (n: number, my: string[], g: any) => { const part = my.findIndex((w
 for (let n = 1; n <= (WEAVE ? 1 : GAMES); n++) {
   if (TICKS) writeFileSync(`${TICKS}/${WORD}-g${n}.txt`, '');
   const my: string[] = []; let g: any, tick: (i: number) => void;
-  if (ONE) { Math.random = mulberry32(0xc0de); const W: any = await standUp({ seed: SEED }); g = W.game; const r = startFromQuery(g, QUERY); if (r.why) throw new Error(`thrice: ${QUERY} refused: ${r.why}`); tick = () => W.step(DT); }
+  if (ONE) { Math.random = mulberry32(0xc0de); const W: any = await standUp({ seed: SEED, address: QUERY }); g = W.game; const r = W.start(); if (r.why) throw new Error(`thrice: ${QUERY} refused: ${r.why}`); tick = () => W.step(DT); }
   else { const P = await standTwo(QUERY, SEED, null); g = P.g; const mine: string[][] = [];
     tick = (i: number) => { const cmds = records ? records[i].map(cmdFromText) : P.sample(i); if (!records) mine.push(cmds.map(cmdText)); P.tick(cmds); if (!records && i === N - 1) records = mine; }; }
   my.push(dig(n, g, 0));
