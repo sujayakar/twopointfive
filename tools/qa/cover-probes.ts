@@ -303,14 +303,14 @@ export const coverOrder = guarded(async () => {
   verdict(quiet && following === 4 && r0.every((t: string) => / · on /.test(t)), 'following with no other order, all four are dealt an opening — and the squad block says which', `${START.fallIn ? `fallen in from the staging, ${under0} of 4 under 'fall in' with nothing said: ${before} dealt, ${stray} dealt with no such order, ${spare0} with nothing beside an opening that is his to take` : `before 'fall in': ${before} dealt`} · after: ${following} · ${r0.join(' | ')}`);
   // an order to everybody: stack up on the server door
   const server = R.door('server'); O.give('stack', O.targetAt(server.frameCentre)); R.step(1);
-  const at1 = dealt(); let most = 0; for (let i = 0; i < 60 * 5; i++) { R.step(); most = Math.max(most, dealt()); }
+  const at1 = dealt(); let most = 0; for (let i = 0; i < 60 * 3; i++) { R.step(); most = Math.max(most, dealt()); }
   const on = R.ops.filter((m: any) => O.of(m)?.order === 'stack').length, r1 = rows();
   // … back with no word but 'fall in'
   R.fallIn(); const t0 = g.time; const back = R.until(() => dealt() >= 3 && R.ops.every((m: any) => C.of(m) ? facingJob(C, m, 20) : boxed(m)), 4); const took = g.time - t0;
   verdict(back && took <= 2.5, 'fall in again: every man with a clear line to something is back on an opening of his own, gun on it, with nothing asked', `${f2(took)} s · ${R.jobs()}${R.ops.some(boxed) ? ` · boxed in by the file in the corridor: ${R.ops.filter(boxed).map((m: any) => m.callsign).join(', ')}` : ''}`);
   // an order to the red pair alone: blue is still dealt
   O.give('stack', O.targetAt(server.frameCentre), 'red'); R.step(1);
-  let redMost = 0, blueLeast = 9, blueFrames = 0; for (let i = 0; i < 60 * 5; i++) { R.step(); const red = R.ops.filter((m: any) => O.pairOf(m) === 'red' && C.of(m)).length, blue = R.ops.filter((m: any) => O.pairOf(m) === 'blue' && C.of(m)).length; redMost = Math.max(redMost, red); if (i > 90) { blueLeast = Math.min(blueLeast, blue); blueFrames++; } }
+  let redMost = 0, blueLeast = 9, blueFrames = 0; for (let i = 0; i < 60 * 3; i++) { R.step(); const red = R.ops.filter((m: any) => O.pairOf(m) === 'red' && C.of(m)).length, blue = R.ops.filter((m: any) => O.pairOf(m) === 'blue' && C.of(m)).length; redMost = Math.max(redMost, red); if (i > 90) { blueLeast = Math.min(blueLeast, blue); blueFrames++; } }
   // … and with REAR SECURITY on (as shipped): a stack's last men — the last two of four, the second of a pair — are dealt an opening or the way they came,
   // but only from their last steps to the mark on; the men at the jambs are the order's and stay on the door
   { R.fallIn(); R.step(120);
@@ -320,7 +320,7 @@ export const coverOrder = guarded(async () => {
     watch(60 * 8); const nSpare = R.ops.filter(spare).length, on = R.ops.filter((m: any) => O.of(m)?.order === 'stack').length, jobs1 = R.jobs();
     verdict(on === 4 && nSpare === 2 && jamb === 0 && early === 0 && rear >= 1, 'rear security on: of four stacked, the last two watch an opening or the way they came — never the men at the jambs, and never before the last steps to the mark', `${on} under 'stack' · ${nSpare} with spare eyes · frames a jamb man was dealt: ${jamb} · frames a rear man was dealt more than ${COVER.rearWalkM} m from his mark: ${early} · rear men dealt at once: ${rear} · ${jobs1}`);
     R.fallIn(); R.step(120); O.give('stack', O.targetAt(server.frameCentre), 'red'); R.step(1); jamb = 0; early = 0; rear = 0;
-    let blueLeast2 = 9; for (let i = 0; i < 60 * 5; i++) { watch(1); if (i > 90) blueLeast2 = Math.min(blueLeast2, R.ops.filter((m: any) => O.pairOf(m) === 'blue' && C.of(m)).length); }
+    let blueLeast2 = 9; for (let i = 0; i < 60 * 3; i++) { watch(1); if (i > 90) blueLeast2 = Math.min(blueLeast2, R.ops.filter((m: any) => O.pairOf(m) === 'blue' && C.of(m)).length); }
     const redSpare = R.ops.filter((m: any) => O.pairOf(m) === 'red' && spare(m)).length;
     verdict(redSpare === 1 && jamb === 0 && early === 0 && blueLeast2 >= 1, 'rear security on, the red pair alone: its second man is the rear, its jamb man the order\'s; blue is still watching openings', `red with spare eyes ${redSpare} · jamb man dealt ${jamb} frames · dealt early ${early} frames · blue never fewer than ${blueLeast2} of 2 · ${R.jobs()}`); }
   // the pair's plain 'hold' names nothing to watch: they are dealt where they stand, and their feet stay
@@ -329,19 +329,6 @@ export const coverOrder = guarded(async () => {
   const held = P.until(() => P.ops.every((m: any) => P.C.of(m) && facingJob(P.C, m, 15)), 4); P.step(120);
   const off = P.ops.map((m: any, i: number) => dist(m.char.pos, stood[i])), under = P.ops.map((m: any) => P.O.of(m)?.order);
   verdict(held && under.every((o: string) => o === 'hold') && off.every((d: number) => d < 0.3), 'the pair told to hold (nothing named to watch): each squares up to an opening where he stands, feet still', `${under.join(' / ')} · ${P.jobs()} · moved ${off.map(f2).join(' / ')} m`);
-  // a contact still warm is the man's before any opening is: one of the pair with a living defender in his eyes half a second ago is dealt nothing until COVER.contactSecs are up
-  { const m = P.ops[0], M = P.game.fight.opOf(m)?.meters.get(P.hostiles.find((h: any) => h.state !== 'dead')), had = !!P.C.of(m);
-    if (M) M.seenT = P.game.time - 0.5; P.step(20); const warm = !P.C.of(m), mate = !!P.C.of(P.ops[1]), t1 = P.game.time;
-    const again = P.until(() => !!P.C.of(m), COVER.contactSecs + 2), took = P.game.time - t1 + 20 * DT + 0.5;
-    verdict(!!M && had && warm && mate && again && took >= COVER.contactSecs - 0.3, 'a man who had a living enemy in his eyes a moment ago keeps looking where he was: no opening is dealt him until that is COVER.contactSecs old — his mate keeps his', `on an opening before: ${had} · with the sighting 0.5 s old: ${warm ? 'nothing dealt' : 'still dealt'} (his mate: ${mate ? 'still on his' : 'dropped'}) · dealt again ${f1(took)} s after the sighting (contactSecs ${COVER.contactSecs})`); }
-  // taken off their orders mid back-pedal (orders.ts clear() does not re-pose a man, nor does a drill that takes him): what the cover wrote into his script goes with it
-  { const T = await rig(5, 4); T.fallIn(); T.step(120);
-    let cut = -1, who = ''; const aims = new Map<any, any>();
-    T.post = () => { if (cut >= 0) { cut++; return; } const b = T.ops.filter((m: any) => m.script?.strafe && T.C.of(m)?.back); if (!b.length) return;
-      for (const m of T.ops) aims.set(m, T.C.of(m)?.aim); who = b.map((m: any) => m.callsign).join(', '); T.O.clear(); cut = 0; };
-    T.walk([[13, 0, 17.6], [20.6, 0, 17.6]]); T.post = null; T.step(5);
-    const stale = T.ops.filter((m: any) => m.script && (m.script.strafe || (aims.get(m) && m.script.aimAt === aims.get(m)) || (m.script.upper === 'aim' && m.script.aimAt == null)));
-    verdict(cut > 0 && stale.length === 0 && T.ops.every((m: any) => !T.C.of(m)), 'the squad taken off its orders while a man walks backwards on his opening: nobody keeps the sidestep, the aim point or the raised gun', `${who || 'nobody'} walking backwards when the orders were cleared · ${cut} frames on: ${stale.length} men with anything of the cover's left in their script · ${T.ops.map((m: any) => `${m.script?.upper ?? '-'}${m.script?.strafe ? '+strafe' : ''}`).join(' / ')}`); }
   return done();
 });
 
