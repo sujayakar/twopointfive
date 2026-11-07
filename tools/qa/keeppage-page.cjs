@@ -227,7 +227,7 @@ const SHELL = () => ({ keeper: !!window.__pageKeeper, seats: window.__pageKeeper
       const r = await ready(page, !BREAK, BREAK ? null : ++n); if (r !== 'ok') throw new Error(`'${id}': ${r}`); await read(id); }
     const [, a, b, again] = loads, seen = new Map(), twice = [];
     for (const L of loads) for (const m of L.fresh) { if (seen.has(m)) twice.push(`${m} (${seen.get(m)}, then ${L.what})`); else seen.set(m, L.what); }
-    if (!(a.made.length > t.made.length)) throw new Error(`the first mission names no map the title did not: the walk tests nothing (${a.made.length} maps)`);
+    if (!(a.fresh.length > 0 && a.by.kept > 0)) throw new Error(`the first mission must name a map the title did not and one it did, or the walk tests nothing: ${a.fresh.length} worked out, ${a.by.kept || 0} handed over`);
     if (twice.length) throw new Error(`a map was worked out twice in one visit — ${twice.join(' · ')}`);
     for (const L of loads) if (L.fresh.length + (L.by.kept || 0) !== L.made.length) throw new Error(`${L.what}: ${L.made.length} maps, ${L.fresh.length} worked out and ${L.by.kept || 0} handed over`);
     if (again.fresh.length !== 0 || again.by.kept !== again.made.length || again.made.join() !== b.made.join()) throw new Error(`the mission loaded again worked out maps: ${JSON.stringify(again)}`);
