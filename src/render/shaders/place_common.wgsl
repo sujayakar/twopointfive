@@ -190,7 +190,7 @@ fn placeSideCell(m: vec2f, c0: vec2i, o0: vec2i) -> vec2i {
  *  the cells that may answer (a wall's top asks two sides or four, everything else one cell): the kernel's size is counted by its call sites. */
 fn lookPlaceLevels(P: vec3f, N: vec3f, Eown: f32) -> vec2f {
   if (placeWord(1) < 0.5) { return vec2f(lookOpenAir().x); }
-  let X = P + N * 0.3; let m = X.xz - RC_MIN.xz;
+  let m = P.xz + standOff(N, 0.3) - RC_MIN.xz;   // (30 cm out from a face; a floor, the ground and lying snow where they lie, common.wgsl standOff)
   let q = m / RC_SIZE.xz * vec2f(f32(PLACE_W), f32(PLACE_H)); let c = vec2i(floor(q)); let own = placeCell(c);
   let d = sideLine(c, m); let o = vec2i(sign(d));
   for (var ask = select(1, 0, N.y > 0.7 && P.y > PLACE_TOP); ask < 2; ask++) {
