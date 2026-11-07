@@ -536,6 +536,14 @@ The gate's forms of the tour and the soak (`--runs 3`; three seeds, twelve minut
 - **Two seats**: the first apply throws (below).
 - **`tut-solo`'s last 510 ticks, `tut-kit` from 5302**: the cursor parts (below).
 
+- **A TypeScript body that MAKES THINGS on the puppet between two ticks.** A kept method with no row of the call surface (a check calling
+  `WallBreak.openCells` by hand) runs as TypeScript on the puppet, and what it makes there (a wall's rubble, each piece a box) are objects the Rust
+  game has no row for. The plain fields it writes go to the Rust game by the scan, as any tool's write does; a watched leaf that NAMES one of the new
+  objects does not: the scan refuses it (`the scan: a write on the puppet was NOT SENT…` on stderr, `WRITES NOT SENT` on the exit line), because the
+  bytes would hold a number past the end of the Rust game's table. That was a panic four ticks later (`edge_look` indexing the boxes with a rubble
+  record's number, `cutboxes-lines`), far from the write. The call surface refuses such a row as an argument the same way. A check that needs the walls
+  opened asks through a function that has a row (`Destruction.blast`, `WallBreak.round`, `WallBreak.blast`), so the Rust game makes the pieces.
+
 ## Numbers
 
 The fast way, release module, 4 cores. THE MACHINE WAS NEVER QUIET for the longer runs (a load of 8 to 12 from other work), so each column says its load.
