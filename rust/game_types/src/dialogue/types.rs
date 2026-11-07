@@ -825,7 +825,7 @@ impl SamStage {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum SamNeed {
     Knife,
     Blackout,
@@ -1063,7 +1063,7 @@ impl RoomLine {
 impl Default for RoomLine { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum HandlerBeat {
     Blackout,
     Drive,
