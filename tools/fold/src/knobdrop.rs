@@ -286,7 +286,8 @@ pub fn drop(root: &Path, names: &[String], write: bool) -> Result<(usize, usize,
     Ok((hit.len(), places, missing))
 }
 
-/// A type leaves the Rust source: its declaration and its `impl`s, in the game's crates and the crates that use them. `names`:
+/// A type leaves the Rust source: its declaration, its `impl`s and a free function that hands it back (`page_par`: the table's
+/// page values, which `fields-drop` has left with no caller; a caller still there is the compile error that says so), in the game's crates and the crates that use them. `names`:
 /// `mod::Type`, one each. It is for a type the last field of its kind has left (`fields-drop`), after `tools/wire/wire.ts
 /// drop-type` has taken its lines off the wire: if anything is left that names the type, nothing is written and the places are said.
 /// Returns (items cut, what still names a type).
@@ -313,6 +314,13 @@ pub fn drop_types(root: &Path, names: &[String], write: bool) -> Result<(usize, 
                 syn::Item::Type(x) => Some(x.ident.to_string()),
                 syn::Item::Impl(x) => match &*x.self_ty {
                     syn::Type::Path(tp) => Some(last(&tp.path)),
+                    _ => None,
+                },
+                syn::Item::Fn(x) => match &x.sig.output {
+                    syn::ReturnType::Type(_, t) => match &**t {
+                        syn::Type::Path(tp) => Some(last(&tp.path)),
+                        _ => None,
+                    },
                     _ => None,
                 },
                 _ => None,
