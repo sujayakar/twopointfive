@@ -302,8 +302,8 @@ pub fn room_fight_adopt(g: &mut crate::game::Game, gd: GuardId) -> RoomfightDefI
     room_fight_note(g, Some(gd), &what);
     let ev = match room { Some(r) => vec![0.0; g.tab.roomfight_room[r].entries.len()], None => Vec::new() };
     let front: V3 = [p[0] + f[0] * 6.0, 0.0, p[2] + f[2] * 6.0];
-    let glance_next = g.time + pick(g, s.hold);
-    let nerve = pick(g, s.nerve);
+    let glance_next = g.time + pick(g, crate::dice::Who::Man(gd), s.hold);
+    let nerve = pick(g, crate::dice::Who::Man(gd), s.nerve);
     let H = g.gd[gd].witness.heard;
     let row = Def {
         gd, pinned0: g.gd[gd].pinned, station: p, home: front, room, staged: None, ev, watch: -1.0, want: -1.0, want_at: 0.0,
@@ -375,7 +375,7 @@ pub fn room_fight_evidence(g: &mut crate::game::Game, d: RoomfightDefId, dt: f64
             if H.kick > cnt.kick && e >= 0.0 && flat(ent[e as usize].at, at) < 2.5 && g.time >= g.gd[gd].dazzled_until {
                 let door = ent[e as usize].door;
                 if skill.startle[1] > 0.0 && !(digs_in(g, gd) && crate::digin::dig_in_braced(g, gd, door)) {
-                    let p = pick(g, skill.startle);
+                    let p = pick(g, crate::dice::Who::Def(d), skill.startle);
                     let t = p * (if room_fight_drilled(g) { g.k.drilled.shaken } else { 1.0 });
                     g.gd[gd].react_t = m::max(g.gd[gd].react_t, t); g.fight.stats.startled += 1.0;
                     let what = alloc::format!("flinches: {} booted in", door_name(g, door)); room_fight_note(g, Some(gd), &what);
@@ -428,7 +428,7 @@ pub fn room_fight_choose_watch(g: &mut crate::game::Game, d: RoomfightDefId) {
         if sc > bs { bs = sc; best = n; }
     }
     if best != g.tab.roomfight_def[d].want {
-        let at = g.time + pick(g, s.shift); let D = &mut g.tab.roomfight_def[d];
+        let at = g.time + pick(g, crate::dice::Who::Def(d), s.shift); let D = &mut g.tab.roomfight_def[d];
         D.want = best; D.want_at = at;
     }
     if g.tab.roomfight_def[d].want != g.tab.roomfight_def[d].watch && g.time >= g.tab.roomfight_def[d].want_at {
@@ -442,8 +442,8 @@ pub fn room_fight_choose_watch(g: &mut crate::game::Game, d: RoomfightDefId) {
         if watch >= 0.0 { others.push(-1.0); }
         let r = crate::math_dice::sim_random(g);
         let to = others.get(m::floor(r * others.len() as f64) as usize).copied().unwrap_or(-1.0);
-        let until = g.time + pick(g, s.glance);
-        let next = until + pick(g, s.hold);
+        let until = g.time + pick(g, crate::dice::Who::Def(d), s.glance);
+        let next = until + pick(g, crate::dice::Who::Def(d), s.hold);
         let D = &mut g.tab.roomfight_def[d];
         D.glance_to = to; D.glance_until = until; D.glance_next = next;
     }
@@ -476,7 +476,7 @@ pub fn room_fight_apply_watch(g: &mut crate::game::Game, d: RoomfightDefId, dt: 
 /// the untrained man's beats.   (roomfight.ts reactions)
 pub fn room_fight_reactions(g: &mut crate::game::Game, d: RoomfightDefId) {
     let gd = g.tab.roomfight_def[d].gd; let c = g.gd[gd].ch; let s = crate::enemysquads::squad_skill(g, hostile_skill(g));
-    if g.gd[gd].state == crate::game::GuardState::Alert && g.tab.roomfight_def[d].last_state != "alert" { let p = pick(g, s.react); g.gd[gd].react_t = m::max(g.gd[gd].react_t, p); }
+    if g.gd[gd].state == crate::game::GuardState::Alert && g.tab.roomfight_def[d].last_state != "alert" { let p = pick(g, crate::dice::Who::Def(d), s.react); g.gd[gd].react_t = m::max(g.gd[gd].react_t, p); }
     let fc = crate::teams::foe_char(g, gd);
     if let Some(fc) = fc { if g.gd[gd].last_seen_t > g.tab.roomfight_def[d].last_seen + 1.5 && g.time - g.gd[gd].last_seen_t < 0.1 {
         let (cp, fp, pt) = (g.ch[c].pos, g.ch[fc].pos, g.tab.roomfight_def[d].pt);
@@ -484,8 +484,8 @@ pub fn room_fight_reactions(g: &mut crate::game::Game, d: RoomfightDefId) {
         let B = g.tab.roomfight_def[d].burst;
         let dazed = g.time < B.until + B.daze;
         let caught = dazed || off > s.sector_deg * v3::DEG; let lim = g.k.roomfight.preaim_deg * v3::DEG;
-        let a = pick(g, s.react) * (if caught { 1.0 } else { s.ready });
-        let b = if caught { pick(g, s.surprise) } else { 0.0 };
+        let a = pick(g, crate::dice::Who::Def(d), s.react) * (if caught { 1.0 } else { s.ready });
+        let b = if caught { pick(g, crate::dice::Who::Def(d), s.surprise) } else { 0.0 };
         g.gd[gd].react_t = m::max(g.gd[gd].react_t, a + b);
         g.tab.roomfight_def[d].pre = !dazed && g.gd[gd].state != crate::game::GuardState::Patrol && off < lim && m::abs(v3::wrap_angle(v3::yaw_to(cp, fp) - g.ch[c].aim_yaw)) < lim;
         if caught {
@@ -512,7 +512,7 @@ pub fn room_fight_blind(g: &mut crate::game::Game, d: RoomfightDefId, k: f64) {
     if g.gd[h].dazzled_until > g.tab.roomfight_def[d].burst.until + 1e-6 {
         let (until, next) = (g.gd[h].dazzled_until, g.time + bl.after + k * bl.stagger);
         let broke = crate::math_dice::sim_random(g) < s.bang_break;
-        let daze = if s.daze[1] > 0.0 { let p = pick(g, s.daze); p * (if room_fight_drilled(g) { g.k.drilled.shaken } else { 1.0 }) } else { 0.0 };
+        let daze = if s.daze[1] > 0.0 { let p = pick(g, crate::dice::Who::Def(d), s.daze); p * (if room_fight_drilled(g) { g.k.drilled.shaken } else { 1.0 }) } else { 0.0 };
         let B = &mut g.tab.roomfight_def[d].burst;
         B.until = until; B.n = 0.0; B.next = next; B.broke = broke; B.daze = daze;
         if broke { g.fight.stats.broke += 1.0; room_fight_note(g, Some(h), "breaks under the bang"); }
@@ -726,7 +726,7 @@ pub fn room_fight_tick_move(g: &mut crate::game::Game, d: RoomfightDefId, dt: f6
         crate::aim::aim_state_clear(&mut g.gd[gd].aim);
         room_fight_plant(g, d, "contact");
         crate::mind::set(g, gd, 1.0, "roomfight");
-        g.gd[gd].react_t = pick(g, s.react);
+        g.gd[gd].react_t = pick(g, crate::dice::Who::Def(d), s.react);
         let fp = g.ch[fc].pos;
         crate::guards::eyes_on(g, gd, fp);
         return;
