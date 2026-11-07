@@ -449,7 +449,7 @@ pub fn door_tools_step_in(g: &mut crate::game::Game, op: DoorOpId) {
     let (men, lead) = (o.men.clone(), o.lead);
     let thr = o.thr.as_ref().unwrap();
     let (jamb, t_pods) = (thr.jamb.clone(), thr.pods.clone());
-    let pods: Vec<crate::entrypoints::Pod> = if crate::orders::squad_orders_big(g) && men.len() <= 2 { door_tools_pods_apart(g, op, &t_pods, men.len() as f64) } else { t_pods };
+    let pods: Vec<crate::entrypoints::Pod> = if crate::orders::squad_orders_big(g, &crate::seats::here(g)) && men.len() <= 2 { door_tools_pods_apart(g, op, &t_pods, men.len() as f64) } else { t_pods };
     if pods.is_empty() {
         crate::game::game_say(g, lead, "no way in.", None, None, None);
         door_tools_end(g, op, "no floor inside");
@@ -508,14 +508,14 @@ pub fn door_tools_hud_notes(g: &mut crate::game::Game) -> Vec<String> {
     if g.k.frag.squad > 0.0 {
         out.push(format!("frags {}", g.door_tools.frags));
     }
-    let word = crate::orders::squad_orders_big(g) && {
+    let word = crate::orders::squad_orders_big(g, &crate::seats::here(g)) && {
         let men = door_tools_word_men(g);
         !door_tools_waiting_any(g, &men).is_empty()
     };
     for c in g.door_tools.set.clone() {
         let door = g.tab.doortools_set_charge[c].door;
         let name = crate::orders::door_words(g, door);
-        let tail = if door_tools_on_pending_word(g, c) {
+        let tail = if door_tools_on_pending_word(g, &crate::seats::here(g), c) {
             String::from(" — on the word")
         } else if word {
             String::new()
@@ -531,7 +531,7 @@ pub fn door_tools_hud_notes(g: &mut crate::game::Game) -> Vec<String> {
         let o = &g.tab.doortools_door_op[op];
         if o.on_word && o.phase == Phase::Ready {
             let (men, door) = (o.men.clone(), o.door);
-            let who = crate::orders::squad_orders_who_words(g, Some(&men));
+            let who = crate::orders::squad_orders_who_words(g, &crate::seats::here(g), Some(&men));
             let name = crate::orders::door_words(g, door);
             out.push(format!("{} ready on your word · {}", who, name));
         }
@@ -540,9 +540,9 @@ pub fn door_tools_hud_notes(g: &mut crate::game::Game) -> Vec<String> {
         let o = &g.tab.doortools_door_op[op];
         if o.thr.as_ref().is_some_and(|t| t.hold) && o.phase == Phase::Thr {
             let (men, door, told) = (o.men.clone(), o.door, o.thr.as_ref().unwrap().told);
-            let who = crate::orders::squad_orders_who_words(g, Some(&men));
+            let who = crate::orders::squad_orders_who_words(g, &crate::seats::here(g), Some(&men));
             let name = crate::orders::door_words(g, door);
-            let goes = if crate::orders::squad_orders_big(g) { String::new() } else { format!(" — {} goes", f) };
+            let goes = if crate::orders::squad_orders_big(g, &crate::seats::here(g)) { String::new() } else { format!(" — {} goes", f) };
             out.push(format!("{} {} · {}{}", who, if told { "holding on your word" } else { "working the threshold" }, name, goes));
         }
     }
@@ -553,7 +553,7 @@ pub fn door_tools_hud_notes(g: &mut crate::game::Game) -> Vec<String> {
                 let mut words = Vec::new();
                 for o in late {
                     let men = alive(g, &g.tab.doortools_door_op[o].men);
-                    words.push(crate::orders::squad_orders_who_words(g, Some(&men)));
+                    words.push(crate::orders::squad_orders_who_words(g, &crate::seats::here(g), Some(&men)));
                 }
                 out.push(format!("word given · waiting for {}", uniq_plus(words)));
             }
@@ -567,14 +567,14 @@ pub fn door_tools_hud_notes(g: &mut crate::game::Game) -> Vec<String> {
 pub fn door_tools_corner_notes(g: &mut crate::game::Game) -> Vec<crate::doortools::DoorToolsCornerNotesItem> {
     let mut out: Vec<DoorToolsCornerNotesItem> = Vec::new();
     let f = blow_letter(g);
-    let word = crate::orders::squad_orders_big(g) && {
+    let word = crate::orders::squad_orders_big(g, &crate::seats::here(g)) && {
         let men = door_tools_word_men(g);
         !door_tools_waiting_any(g, &men).is_empty()
     };
     for c in g.door_tools.set.clone() {
         let close = close_caps(g, c);
         let door = g.tab.doortools_set_charge[c].door;
-        if !word && !door_tools_on_pending_word(g, c) && door_tools_key_is(g, c) {
+        if !word && !door_tools_on_pending_word(g, &crate::seats::here(g), c) && door_tools_key_is(g, c) {
             let name = crate::orders::door_words(g, door);
             out.push(DoorToolsCornerNotesItem { key: f.clone(), text: format!("blow the charge · {}{}", name, close) });
         } else if !close.is_empty() {
@@ -582,12 +582,12 @@ pub fn door_tools_corner_notes(g: &mut crate::game::Game) -> Vec<crate::doortool
             out.push(DoorToolsCornerNotesItem { key: String::new(), text: format!("charge set · {}{}", name, close) });
         }
     }
-    if !crate::orders::squad_orders_big(g) {
+    if !crate::orders::squad_orders_big(g, &crate::seats::here(g)) {
         for op in g.door_tools.ops.clone() {
             let o = &g.tab.doortools_door_op[op];
             if o.thr.as_ref().is_some_and(|t| t.hold) && o.phase == Phase::Thr && o.thr.as_ref().unwrap().told {
                 let (men, door) = (o.men.clone(), o.door);
-                let who = crate::orders::squad_orders_who_words(g, Some(&men));
+                let who = crate::orders::squad_orders_who_words(g, &crate::seats::here(g), Some(&men));
                 let name = crate::orders::door_words(g, door);
                 out.push(DoorToolsCornerNotesItem { key: f.clone(), text: format!("go · {} waiting · {}", who, name) });
             }

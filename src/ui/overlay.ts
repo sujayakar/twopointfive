@@ -125,7 +125,7 @@ export class Overlay implements HudLike {
   /** the player's own man made easy to find (ui/findme.ts ← host/findme.ts): a ring at his feet — nothing unless his Options ask */
   readonly findme = new FindMeViz(this.traj);
   /** Tour timeline: one segment per stop (width ∝ duration) with its chapter title, the live one filled to its progress; segments are clickable. */
-  setTimeline(ch: { list: { title: string; dur: number }[]; i: number; frac: number } | null, _unused?: unknown) {
+  setTimeline(ch: { list: { title: string; dur: number }[]; i: number; frac: number } | null) {
     if (!ch) { if (this.tlKey) { this.tlKey = ''; this.tlEl.className = ''; this.tlEl.innerHTML = ''; this.tlFill = null; } return; }
     const key = ch.list.length + '|' + ch.i;
     if (key !== this.tlKey) {

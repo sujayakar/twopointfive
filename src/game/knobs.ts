@@ -552,7 +552,7 @@ export function knobRegistry(): Record<string, object> {
     RESCUE, DIGIN, HAULHOME, PRESSURE, LANES, GUNHOLD, HARD, HARD_AT, DRILLED, SQUADS, DRILL_AT, CUES, BUDDY, WX_SIM, WX_OWN, SNOW, SNOW_LOOK, AIR_SIM, LASTSTAND, CLEARLINE, STACKROOM, REARWATCH, STACKLINE,
     // the team's own rules that no other list named (found by tools/qa/knobs-check.ts), and the two scenarios' own tables
     SNEAK, PAIRUP, SPOTTED, NIGHTBREACH, ROOMCLEAR, LESSON, SNATCH, DEFUSE,
-    // a room clear against a clock (par.ts): reads only — off = the level's room clear alone
+    // a room clear against a clock (the Rust game keeps it, rust/game_rules/src/par). A SETTLED row, on: nothing reads it any more, on either side
     PAR, ISSUE,
     // how a run went, said at its end (verdict.ts): reads only — off = no verdict, the end card as it was
     VERDICT,

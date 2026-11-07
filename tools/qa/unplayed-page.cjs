@@ -39,7 +39,7 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
   const lay = rows => groupsOf(rows).map(g => { const of = rows.filter(r => r.group === g); return `${g || '(no group)'} ${of.length} (${of.filter(r => r.quiet).length} unplayed${of.some(r => r.first) ? ', break at ' + of.find(r => r.first).id : ''})`; }).join(' · ');
 
   // ---- the start page's cards, the switch on
-  const CUT = ['night-breach', 'room-clear-four', 'block-squads', 'quiet-yard-alone', 'quiet-yard-two', 'tut-squad', 'tut-solo', 'tut-sky'];   // (the rows cut from the list — scene/scenarios.ts offList; the page's entry puts OFFLIST_UI on)
+  const CUT = ['night-breach', 'room-clear-four', 'block-squads', 'quiet-yard-alone', 'quiet-yard-two', 'tut-squad', 'tut-solo', 'tut-sky', 'tut-quiet', 'tut-pair', 'records-pair', 'block-four', 'warehouse-four', 'barracks-four', 'rescue-registry', 'snatch-four', 'defuse-four', 'floodlit-four', 'killhouse-four', 'hall-four', 'glasshouse-four', 'police-post-quiet', 'quiet-crossing-two', 'quiet-relay-two'];   // (the rows cut from the list — scene/scenarios.ts offList; the page's entry puts OFFLIST_UI on)
   let wordsOn = '', boxesOn = [], gOn = ''; const sorted = t => t.split(/\n+/).map(x => x.trim()).filter(Boolean).sort().join('\n');   // (the page's words as a bag of lines: a row that moves adds no word)
   { const { page, errors, own } = await open(''), A = await read(page); wordsOn = A.words;
     line(/\bone\b/.test(A.root) && /\btiles\b/.test(A.root) && A.rows.length > 0 && errors.length === 0, `the title's Play opens the Mission step as cards with no page error (${A.rows.length} cards)${errors.length ? ' — ' + errors.join(' ; ').slice(0, 400) : ''}`);
@@ -81,7 +81,7 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
     const shot = (page, name) => page.screenshot({ path: `${OUT}/${name}`, timeout: 60000 }).then(() => console.log(`  still: ${OUT}/${name}`), e => console.log(`  no still ${name}: ${String(e).split('\n')[0].slice(0, 120)}`));
     const group = (page, id) => page.evaluate(id => { const h = document.querySelector(`#missions .mrow[data-mission="${id}"]`)?.getAttribute('data-group'); if (h) document.querySelector(`#missions .msec[data-head="${h}"]`).click(); }, id);
     for (const [q, name] of [['', 'unplayed-on.png'], ['unplayed=0', 'unplayed-off.png']]) {
-      try { const { page } = await open(q, ctx); await group(page, 'records-pair'); await page.mouse.move(2, 2); await page.waitForTimeout(1500); await shot(page, name); await page.close(); }
+      try { const { page } = await open(q, ctx); await group(page, 'compound-four'); await page.mouse.move(2, 2); await page.waitForTimeout(1500); await shot(page, name); await page.close(); }
       catch (e) { console.log(`  no still ${name}: ${String(e).split('\n')[0].slice(0, 120)}`); } }
     await shut(B); }
   console.log(failed ? '=== unplayed-page: FAILED ===' : '=== unplayed-page: ALL PASS ===');

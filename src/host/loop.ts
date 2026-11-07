@@ -7,7 +7,7 @@
 //   exposure, Tab, F9 / F10, P; on a frozen frame they are shown the keys pressed on it, and only they are) · [view has a size:] attract.update · game.update(dt, input, cam,
 //   view) · the director's frame + postUpdate (main: the show class, the debrief card) · nvAmount / hitFlash → settings · audio listener + update · smoke.update · spectate
 //   auto-yaw / ease-yaw + the pitch ease · cam.update(dt, look-at, aim lead) · caption + timeline · lights.update(dt, t) · render(cam, t, dt, present) · hud.update ·
-//   bubbles.update (+ hudExpireBubbles inside it) · input.endFrame()
+//   bubbles.update · input.endFrame()
 //
 // THE FIXED STEP (FIXEDSTEP below; engine groundwork for two-player co-op, nothing networked): with the switch on and the host saying this frame is a live one (LoopCtx.fixedStep —
 // main.ts: not a scripted __runFrames frame), the game is stepped in whole ticks of exactly 1 / hz whatever the display's rate: the frame's time goes into an accumulator
@@ -150,7 +150,10 @@ export function planTicks(acc: number, dt: number, K: { hz: number; snap: number
   return { ticks, acc, drift };
 }
 
-export function stepFrame(ctx: LoopCtx, dt: number): void {
+/** A FRAME IS ONE WINDOW ON THE BOX WORLD'S COPY (scene/collision.ts `window`): what the page asks of it — the marks and the dress step behind a tick, the camera, the
+ *  sound, the HUD — is asked of a copy proven once and not once a question, and a tick inside the frame has it proven again (`writes`). A frame that asks nothing proves nothing. */
+export function stepFrame(ctx: LoopCtx, dt: number): void { ctx.game.col.window(() => stepFrameIn(ctx, dt)); }
+function stepFrameIn(ctx: LoopCtx, dt: number): void {
   const { game, input, cam, view } = ctx;
   ctx.time += dt;
   const frozen = ctx.frozen();   // paused / start card: the world holds still, the picture stays live behind the card, hotkeys are off — unless attract mode has let the world go behind the start card
@@ -213,7 +216,7 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
     let attractPos: Vec3 | null;
     // the camera's own step: come round a spectated man, the pitch ease, the follow — once a frame on the frame's dt, or (the fixed step) once a TICK on the tick's:
     // the input record takes its view from this camera (cmd.ts sampleCmd), so a camera eased by the display's frame time would make two displays two games
-    const camStepIn = (cdt: number, ap: Vec3 | null, tick: boolean): Vec3 | null => {
+    const camStep = (cdt: number, ap: Vec3 | null, tick: boolean): Vec3 | null => {
       const ds: DirectorFrame | null = frozen ? null : D.showing ? D.frame : null;
       const shot: Vec3 | null = (ds ? ds.look : null) ?? ap, follow = game.followPos();   // a scripted look-at: the level script's pinned shot / attract mode's
       const spect = !shot && game.spectate >= 0; if (spect) cam.autoYaw(cdt, follow, (a, b) => game.col.segmentBlocked(a, b)); cam.easeYaw(cdt, spect);   // spectating a guard: come round to the side he can be seen from,
@@ -244,9 +247,6 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
       if (tick) cam.step(cdt, at, aim); else cam.update(cdt, at, aim);
       return shot;
     };
-    /** …inside one window on the box world's copy (scene/collision.ts): the camera's own lines of a frame (the spectator's side, the turn, the sway) are asked
-     *  between ticks, and one proof of the copy serves them all; a frame that asks none proves nothing */
-    const camStep = (cdt: number, ap: Vec3 | null, tick: boolean): Vec3 | null => game.col.window(() => camStepIn(cdt, ap, tick));
     if (!fixed) {
       if (ctx.fixed) { ctx.fixed.acc = 0; ctx.fixed.drift = 0; ctx.fixed.owed = null; if (!frozen && ctx.fixed.orbit) { cam.rotate(ctx.fixed.orbit); ctx.fixed.orbit = 0; } }   // (a hand's turn the fixed step still owed a tick)
       ctx.ticks = frozen ? 0 : 1;

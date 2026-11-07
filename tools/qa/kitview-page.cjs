@@ -1199,7 +1199,7 @@ async function outer(browser) {
     deploy = { url: q.url() };
     return r.fulfill({ contentType: 'text/html', body: '<title>deployed</title>' });
   });
-  const open = async extra => { stub = false; await page.goto(`${BASE}?paused&quality=${QUALITY}&mute${extra}`, { waitUntil: 'domcontentloaded', timeout: 180000 }); await page.waitForSelector('#menu .actions button', { timeout: 60000 }); await page.waitForTimeout(500);
+  const open = async extra => { stub = false; await page.goto(`${BASE}?paused&quality=${QUALITY}&mute&offlist=0${extra}`, { waitUntil: 'domcontentloaded', timeout: 180000 }); await page.waitForSelector('#menu .actions button', { timeout: 60000 }); await page.waitForTimeout(500);
     await page.click('#menu .actions button.primary'); await page.waitForSelector('#missions.one.on', { timeout: 20000 }); await page.waitForTimeout(500); };
   const goRow = async id => { const sel = `#missions .mrow[data-mission="${id}"]`;   // (tools/qa/startpage-look.cjs goRow: back to the Mission step, the group's heading opened, the row clicked)
     const away = await page.evaluate(() => { const l = document.querySelector('#missions .mgrid, #missions .mlist'); return !!l && l.getClientRects().length === 0; });

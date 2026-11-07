@@ -69,7 +69,7 @@ pub fn alive(g: &crate::game::Game, gd: GuardId) -> bool {
 
 /// alive, nobody's arm on him, his wits about him. (powerout.ts fit)
 pub fn fit(g: &crate::game::Game, gd: GuardId) -> bool {
-    alive(g, gd) && g.gd[gd].held.is_none() && g.time >= g.gd[gd].dazzled_until && g.time >= g.gd[gd].stagger_until
+    alive(g, gd) && !crate::control::man::held(g, gd) && !crate::control::man::blind(g, gd) && !crate::control::man::staggered(g, gd)
 }
 
 /// alert or searching. (powerout.ts roused)

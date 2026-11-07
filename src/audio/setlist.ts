@@ -7,7 +7,7 @@
 //   the key        a level's file name without `.json` ('office' = the bundled level), and before it `<level>:<kind>` for a mission kind that wants its own on that level
 //                  (the office holds four kinds of mission: the solo night's slow lean is not a rescue's clock).
 //   a new level    is a row here: tools/qa/music-check.ts ('every level') is red on a mission with no row, a row for no level, a row that is not two pieces, the theme on one.
-// A level typed by hand that has no row (a test yard; the editor's own document under `?level=local` is read as the office) plays SETLIST_ELSE. Names, not indices: PIECE_NAMES is read when a list is asked for, never at module load.
+// A level typed by hand that has no row (a test yard) plays SETLIST_ELSE. Names, not indices: PIECE_NAMES is read when a list is asked for, never at module load.
 import { PIECE_NAMES } from './pieces';
 import { specOfQuery } from '../scene/scenarioList';
 

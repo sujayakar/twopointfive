@@ -333,8 +333,8 @@ pub fn view_of(g: &crate::game::Game, r: DirectorRunId, e: crate::game::GameEven
     }
 }
 /// What a script sees of a signal: where the player stands. (director.ts signalView)
-pub fn signal_view(g: &crate::game::Game, r: DirectorRunId, s: &crate::director::SignalViewS) -> crate::director::EventView {
-    let c = g.pl[g.player].ch;
+pub fn signal_view(g: &crate::game::Game, seat: &crate::seats::SeatRef, r: DirectorRunId, s: &crate::director::SignalViewS) -> crate::director::EventView {
+    let c = g.pl[seat.player].ch;
     EventView {
         kind: EventViewKind::Signal,
         pos: v3::copy(g.ch[c].pos),

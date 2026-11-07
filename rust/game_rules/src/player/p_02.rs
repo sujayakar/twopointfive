@@ -60,18 +60,18 @@ pub fn legs_own(g: &mut crate::game::Game) -> bool {
     let busy = g.pl[pl].down || g.pl[pl].takedown.is_some() || g.pl[pl].holding.is_some() || g.pl[pl].kick.is_some() || g.pl[pl].picking.is_some()
         || g.pl[pl].wanding.is_some() || g.pl[pl].coding.is_some() || g.pl[pl].wall.is_some() || g.pl[pl].dragging.is_some() || g.pl[pl].haul.is_some()
         || g.pl[pl].door_move.is_some() || g.puppet.is_some() || g.touring;
-    !(busy || crate::handwork::sam_work(g).is_some() || crate::stalk::stalk_on(g).is_some() || (g.k.tapstep.on && g.pl[pl].crouch) || crate::rails::rails_allowed(g).is_some())
+    !(busy || crate::handwork::sam_work(g).is_some() || crate::stalk::stalk_on(g, &crate::seats::here(g)).is_some() || (g.k.tapstep.on && g.pl[pl].crouch) || crate::rails::rails_allowed(g).is_some())
 }
 
 /// The top pace of a walk of his own this tick, by what his legs are doing and what his card weighs.   (player.ts freePace)
-pub fn free_pace(g: &crate::game::Game, m: crate::player::Legs, ml: f64) -> f64 {
+pub fn free_pace(g: &crate::game::Game, seat: &crate::seats::SeatRef, m: crate::player::Legs, ml: f64) -> f64 {
     let mut max_speed = if ml == 0.0 { 0.0 }
         else if m.sprinting { g.tune.player_sprint }
-        else if m.dragging.is_some() { if m.haul.is_some() { crate::hands::haul_speed(g) } else { g.tune.player_crouch * 0.6 } }
+        else if m.dragging.is_some() { if m.haul.is_some() { crate::hands::haul_speed(g, seat) } else { g.tune.player_crouch * 0.6 } }
         else if m.dash { g.k.crouchrun.pace }
         else { (if m.crouch { crouch_pace(g) } else { g.tune.player_walk }) * m.pace };
     if let Some(walk) = g.puppet.as_ref().and_then(|p| p.walk) { if ml > 0.0 { max_speed *= walk; } }
-    crate::kitload::sam_load_pace(g, max_speed, Some(m.sprinting))
+    crate::kitload::sam_load_pace(g, seat, max_speed, Some(m.sprinting))
 }
 
 /// His move keys as a way across the floor, in the view's basis, not yet of unit length.   (player.ts keysWay)
@@ -105,7 +105,7 @@ pub fn sprint_stance(g: &mut crate::game::Game, m: &mut crate::player::Legs, wan
 /// One stride: his pace taken up or let go, his place moved by it, the walls and then the men given their say.   (player.ts strideStep)
 pub fn stride_step(g: &mut crate::game::Game, m: &mut crate::player::Legs, mx: f64, mz: f64, ml: f64, tap: Option<crate::player::StrideStepTap>, stalk: Option<crate::player::StrideStepStalk>, dt: f64, now: Option<f64>) {
     let now = now.unwrap_or(g.time);
-    let mut max_speed = free_pace(g, *m, ml);
+    let mut max_speed = free_pace(g, &crate::seats::here(g), *m, ml);
     if let Some(t) = tap { max_speed = t.speed; }
     if let Some(s) = stalk { max_speed = if ml == 0.0 { 0.0 } else { s.pace }; }
     if m.sprinting { max_speed *= crate::sprintdoor::sprint_door_pace(g, door_stamps(m), Some(now)); }
@@ -191,13 +191,13 @@ fn draw(g: &mut Game, pl: PlayerId, name: &str) {
 }
 
 /// updatePlayer's `cursorPitch`: gun pitch onto what the reticle has, else level along the cursor's heading.   (player.ts:620)
-fn cursor_pitch(g: &Game, pl: PlayerId, c: CharId, ap: V3, aim_dist: f64) -> f64 {
+fn cursor_pitch(g: &Game, seat: &crate::seats::SeatRef, pl: PlayerId, c: CharId, ap: V3, aim_dist: f64) -> f64 {
     let mut target_y = ap[1] + 0.03;
-    if let Some(t) = g.aim_target { target_y = v3::clamp(g.tab.sim_lightshome_fixture[t].pos[1], 0.3, 2.95); }
-    else if let Some(gd) = g.aim_guard {
-        target_y = match g.aim_snap {
+    if let Some(t) = seat.aim_target { target_y = v3::clamp(g.tab.sim_lightshome_fixture[t].pos[1], 0.3, 2.95); }
+    else if let Some(gd) = seat.aim_guard {
+        target_y = match seat.aim_snap {
             Some(snap) if g.gd[gd].wound.is_some() => snap[1],
-            _ => man_aim(g, gd, 1.2)[1],
+            _ => man_aim(g, seat, gd, 1.2)[1],
         };
     }
     else if level_on(g) { return 0.0; }
@@ -206,19 +206,19 @@ fn cursor_pitch(g: &Game, pl: PlayerId, c: CharId, ap: V3, aim_dist: f64) -> f64
 }
 
 /// What a round goes at: the puppet's man, a fixture under the reticle, a man under the cursor, else level along the heading.   (player.ts:717, 742)
-fn shot_target(g: &Game) -> V3 {
+fn shot_target(g: &Game, seat: &crate::seats::SeatRef) -> V3 {
     let pt = g.puppet.as_ref().and_then(|p| p.target);
     if let Some(t) = pt {
         if g.gd[t].state != crate::game::GuardState::Dead { return v3::add(g.ch[g.gd[t].ch].pos, [0.0, 1.25, 0.0]); }
     }
-    if let Some(t) = g.aim_target { return v3::copy(g.tab.sim_lightshome_fixture[t].pos); }
-    if let Some(gd) = g.aim_guard {
-        return match g.aim_snap {
+    if let Some(t) = seat.aim_target { return v3::copy(g.tab.sim_lightshome_fixture[t].pos); }
+    if let Some(gd) = seat.aim_guard {
+        return match seat.aim_snap {
             Some(snap) if g.gd[gd].wound.is_some() => v3::copy(snap),
-            _ => man_aim(g, gd, 1.25),
+            _ => man_aim(g, seat, gd, 1.25),
         };
     }
-    free_aim(g, None)
+    free_aim(g, seat, None)
 }
 
 /// updateWorkPlant moves `W.at`, in the TypeScript the job's own array (handwork.ts samWork hands it on): the spot goes back to the job it came from.
@@ -313,7 +313,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
         let on = match w { Some(w) => !(input_lmb_hit(g, input) && crate::handwork::sam_work_let_go(g, w)), None => false };
         if w.is_some() && !on && g.pl[pl].work_stow.is_some() { crate::workstow::sam_stow_tick(g, &mut stow_holster); }
         if on {
-            if crate::workstow::sam_stowing(g) { crate::kitanim::kit_tick(g, None); }
+            if crate::workstow::sam_stowing(g, &crate::seats::here(g)) { crate::kitanim::kit_tick(g, None); }
             let mut w = w.unwrap();
             update_work_plant(g, dt, &mut w);
             work_spot_back(g, pl, &w);
@@ -536,13 +536,13 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
                 crate::ragdoll::ragdoll_set_pin(g, rag, bones.ank_l, [hx + f[2] * 0.1, 0.42, hz - f[0] * 0.1]);
                 crate::ragdoll::ragdoll_set_pin(g, rag, bones.ank_r, [hx - f[2] * 0.1, 0.42, hz + f[0] * 0.1]);
             }
-            if crate::hands::haul_upright(g) {
+            if crate::hands::haul_upright(g, &crate::seats::here(g)) {
                 if speed > 0.2 { g.ch[c].body_yaw = v3::approach_angle(g.ch[c].body_yaw, v3::yaw_of(g.ch[c].vel), g.k.hands.carry_turn * dt); }
                 g.ch[c].aim_yaw = g.ch[c].body_yaw;
                 g.ch[c].aim_pitch = v3::damp(g.ch[c].aim_pitch, 0.0, 6.0, dt);
                 g.pl[pl].backpedal = false; g.ch[c].anim.reverse = false;
             } else {
-                let face_yaw = match crate::hands::haul_yaw(g) { Some(y) => y, None => g.pl[pl].drag_yaw };
+                let face_yaw = match crate::hands::haul_yaw(g, &crate::seats::here(g)) { Some(y) => y, None => g.pl[pl].drag_yaw };
                 let hauling = g.pl[pl].haul.is_some();
                 g.ch[c].aim_pitch = v3::damp(g.ch[c].aim_pitch, if hauling { -0.45 } else { -0.9 }, 6.0, dt);
                 if hauling {
@@ -588,7 +588,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
         let mut body_t = along;
         if aiming && aim_dist > 0.25 {
             g.ch[c].aim_yaw = aim_ease(g.ch[c].aim_yaw, to_aim, dt);
-            let pitch = cursor_pitch(g, pl, c, ap, aim_dist);
+            let pitch = cursor_pitch(g, &crate::seats::here(g), pl, c, ap, aim_dist);
             g.ch[c].aim_pitch = v3::damp(g.ch[c].aim_pitch, pitch, 12.0, dt);
             let off = v3::wrap_angle(v3::yaw_of(to_aim) - along);
             let mut flip_t = if m::abs(off) > 110.0 * v3::DEG && !moving && !w.lean.map_or(false, |l| l > 0.0) { w.flip_t.unwrap_or(0.0) + dt } else { 0.0 };
@@ -621,7 +621,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
     } else {
         if !(stalk.is_some()) && crate::aimweight::aim_weigh_turn(g, dt) { /* the gun's heading swings to the cursor's bearing at a limited rate */ }
         else if aim_dist > 0.25 { g.ch[c].aim_yaw = aim_ease(g.ch[c].aim_yaw, to_aim, dt); }
-        let pitch = cursor_pitch(g, pl, c, ap, aim_dist);
+        let pitch = cursor_pitch(g, &crate::seats::here(g), pl, c, ap, aim_dist);
         g.ch[c].aim_pitch = v3::damp(g.ch[c].aim_pitch, pitch, 12.0, dt);
         // a leaf he is walking open is taken square on unless the gun is actually up
         let dp = g.ch[c].anim.door_push.clone();
@@ -694,9 +694,9 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
                 g.pl[pl].fire_cd = if firearm_automatic(g, gun) { def_auto(g, gun_def).unwrap() } else { def_row(g, gun_def).cd };
                 g.pl[pl].last_fire_t = g.time;
                 if def_auto(g, gun_def).is_some() { crate::weapons::firearm_auto_fired(g, gun); }
-                let tgt = shot_target(g);
+                let tgt = shot_target(g, &crate::seats::here(g));
                 let at = crate::aimweight::aim_weigh_shot(g, tgt);
-                let spread = grow + crate::suppression::sam_spread(g) + crate::aim::sam_aim(g);
+                let spread = grow + crate::suppression::sam_spread(g, &crate::seats::here(g)) + crate::aim::sam_aim(g);
                 crate::combat::fire_weapon(g, c, at, true, Some(&crate::combat::FireOpts { spread: Some(spread), ..Default::default() }));
                 if firearm_rounds_ready(g, gun) == 0.0 && !crate::autoreload::auto_reloads(g, gun) { game_msg(g, "you're empty. press R to reload"); }
             } else if input_lmb_hit(g, input) {
@@ -709,7 +709,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
             }
         }
         // right click with the pistol out: the OCP zaps the light the reticle has snapped to
-        if input_rmb_hit(g, input) && !(g.pl[pl].equip_t > 0.0) && g.ch[c].anim.big_tool.is_none() && (crate::lighting::ocpable(g) || (g.aim_target.is_none() && g.aim_guard.is_none())) {
+        if input_rmb_hit(g, input) && !(g.pl[pl].equip_t > 0.0) && g.ch[c].anim.big_tool.is_none() && (crate::lighting::ocpable(g, &crate::seats::here(g)) || (g.aim_target.is_none() && g.aim_guard.is_none())) {
             let t = g.aim_target;
             crate::game::game_ocp(g, t);
         }
@@ -728,9 +728,9 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
                 g.pl[pl].fire_cd = if firearm_automatic(g, rifle) { def_auto(g, rifle_def).unwrap() } else { def_row(g, rifle_def).cd };
                 g.pl[pl].last_fire_t = g.time;
                 crate::weapons::firearm_auto_fired(g, rifle);
-                let tgt = shot_target(g);
+                let tgt = shot_target(g, &crate::seats::here(g));
                 let at = crate::aimweight::aim_weigh_shot(g, tgt);
-                let spread = rifle_spread(g, speed) + grow + crate::suppression::sam_spread(g) + crate::aim::sam_aim(g);
+                let spread = rifle_spread(g, &crate::seats::here(g), speed) + grow + crate::suppression::sam_spread(g, &crate::seats::here(g)) + crate::aim::sam_aim(g);
                 crate::combat::fire_weapon(g, c, at, true, Some(&crate::combat::FireOpts { weapon: Some(def_row(g, rifle_def).clone()), spread: Some(spread), ..Default::default() }));
                 if firearm_rounds_ready(g, rifle) == 0.0 && !crate::autoreload::auto_reloads(g, rifle) {
                     let text = format!("{} is empty. press R to reload", def_row(g, rifle_def).short);
@@ -775,9 +775,9 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
         if let (Some(h), false) = (held, owed) {
             let from = crate::rig_props::sc20k_launcher_muzzle(g, c, None);
             let point = match h {
-                RifleAttachment::Ring => crate::launcher::ring_aim_point(g, from),
-                RifleAttachment::Cam => crate::stickycam::cam_aim_point(g, from),
-                RifleAttachment::He40 => crate::he40::shell_aim_point(g, from),
+                RifleAttachment::Ring => crate::launcher::ring_aim_point(g, &crate::seats::here(g), from),
+                RifleAttachment::Cam => crate::stickycam::cam_aim_point(g, &crate::seats::here(g), from),
+                RifleAttachment::He40 => crate::he40::shell_aim_point(g, &crate::seats::here(g), from),
             };
             let at = crate::aimweight::aim_weigh_shot(g, point);
             ring_preview = Some(match h {
@@ -829,7 +829,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
     {
         let tk = g.pl[pl].throw_kind;
         let other = if tk == ThrowKind::Flash { ThrowKind::Smoke } else { ThrowKind::Flash };
-        if crate::game::game_throw_count(g, tk) <= 0.0 && crate::game::game_throw_count(g, other) > 0.0 { g.pl[pl].throw_kind = other; }
+        if crate::game::game_throw_count(g, &crate::seats::here(g), tk) <= 0.0 && crate::game::game_throw_count(g, &crate::seats::here(g), other) > 0.0 { g.pl[pl].throw_kind = other; }
     }
     let slot_kind: Option<ThrowKind> = if g.pl[pl].holstered { None } else { crate::game::player_canister_sel(g, pl) };
     let (throw_held, held_kind, throw_kind) = (g.pl[pl].throw_held, g.pl[pl].held_kind, g.pl[pl].throw_kind);
@@ -839,9 +839,9 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
         match slot_kind { Some(k) => k, None => if throw_held { held_kind } else { throw_kind } }
     };
     g.pl[pl].held_kind = kind;
-    if !g.pl[pl].sprinting && crate::game::game_throw_count(g, kind) > 0.0 && slot_kind.is_some() {
+    if !g.pl[pl].sprinting && crate::game::game_throw_count(g, &crate::seats::here(g), kind) > 0.0 && slot_kind.is_some() {
         let tp = g.puppet.as_ref().and_then(|p| p.throw_at).unwrap_or(ap);
-        let origin = throw_origin(g);
+        let origin = throw_origin(g, &crate::seats::here(g));
         let sol = crate::throwables::throwables_solve(g, origin, [tp[0], m::max(0.05, m::min(tp[1], 2.6)), tp[2]], None);
         g.pl[pl].throw_preview = Some(sol.clone());
         let hold_ok = match g.ch[c].anim.kit_hold {
@@ -860,7 +860,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
     if let Some(p) = g.pl[pl].pending_throw.as_mut() { p.t -= dt; }
     if g.pl[pl].pending_throw.as_ref().map_or(false, |p| p.t <= 0.0) {
         let (sol, k2) = { let p = g.pl[pl].pending_throw.as_ref().unwrap(); (p.sol.clone(), p.kind) };
-        let origin = throw_origin(g);
+        let origin = throw_origin(g, &crate::seats::here(g));
         let who = g.ch[c].id;
         let (item_kind, fuse) = match k2 {
             ThrowKind::Flash => (crate::throwables::ItemKind::Flash, Some(crate::combat::flash_fuse(g))),
@@ -887,12 +887,12 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
     pose_gun_light(g);
     // footsteps, for audio and the AI's hearing
     let phase = g.ch[c].anim.phase;
-    let tread_speed = if crate::tapstep::tap_held(g) { 0.0 } else { speed };
+    let tread_speed = if crate::tapstep::tap_held(g, &crate::seats::here(g)) { 0.0 } else { speed };
     let fall = footfall_due(g, dt, phase, tread_speed);
     if js::truthy(fall) {
         let base = if g.pl[pl].sprinting { 1.0 } else if g.pl[pl].dash { g.k.crouchrun.loud } else if g.pl[pl].crouch { 0.125 }
-            else if crate::kitload::load_gait(g, crate::kitload::LoadGaitWho::Player, speed) > 2.0 { 0.6 } else { 0.26 };
-        let level = if g.pl[pl].sprinting { base } else { base * crate::kitload::load_heard(g, crate::kitload::LoadHeardWho::Player) };
+            else if crate::kitload::load_gait(g, &crate::seats::here(g), crate::kitload::LoadGaitWho::Player, speed) > 2.0 { 0.6 } else { 0.26 };
+        let level = if g.pl[pl].sprinting { base } else { base * crate::kitload::load_heard(g, &crate::seats::here(g), crate::kitload::LoadHeardWho::Player) };
         let pos = g.ch[c].pos;
         let loud = crate::floor::tread(g, pos, level, true);
         let (time, serial) = (g.time, g.serial());

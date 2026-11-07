@@ -65,6 +65,8 @@ export function leafWrote(): void { { const __s = RUST_SURFACE; if (__s) { const
  *  the level or the level put back (the list the parts are copied in changed). The host's count, as LEAVES is. */
 export const THINGS = { n: 0 };
 export function thingWrote(): void { THINGS.n++; }
+/** EVERY DRAWN BOX WAS HUNG SOMEWHERE ELSE, or put back (host/tween.ts: the blend between two ticks, for the render alone): the leaves and the furniture's parts are among them */
+export function posedWrote(): void { LEAVES.n++; THINGS.n++; }
 /** the furniture as the copy reads it (game/props.ts PropSystem): every thing by its id, and the ones in the level now in the furniture's own order */
 export interface Furniture { readonly all: readonly FurnitureThing[]; readonly props: readonly FurnitureThing[] }
 export interface FurnitureThing { readonly id: number; readonly x: number; readonly z: number; readonly yaw: number; readonly radius: number; readonly boxes: readonly Box[] }

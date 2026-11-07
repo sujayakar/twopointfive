@@ -29,7 +29,7 @@ fn layout_team(g: &mut Game, layout: Option<&NightBreachLayout>) -> Option<crate
 fn in_his_book(g: &mut Game, gd: GuardId) -> bool {
     let man = crate::seats::orders_of(g, gd);
     let s = crate::seats::seat_of_man(g, man);
-    crate::seats::with_seat(g, s, &mut |v| crate::orders::squad_orders_has(v, gd))
+    crate::seats::with_seat(g, s, &mut |v| crate::orders::squad_orders_has(v, &crate::seats::here(v), gd))
 }
 
 /// Teammate i's mark; Err is the TypeScript's throw. (nightbreach.ts:248 mark)

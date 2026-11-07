@@ -295,10 +295,10 @@ export class TapePlay {
       if (p && (!this.worst || d > this.worst.metres)) this.worst = row; if (!this.drift && d > TOL) this.drift = row; });
   }
 
-  /** AFTER A STEP THAT IS NOT DRAWN: what the page does between an update and the next — the HUD's one write to the game, and THE WORLD LISTED. The cursor's ray
+  /** AFTER A STEP THAT IS NOT DRAWN: what the page does between an update and the next — THE WORLD LISTED. The cursor's ray
    *  (BoxWorld.raycast) walks the box list as last made, and a step played without it would aim through the boxes of an older tick and part from a recording made
-   *  on a page that listed after every one (the fixed step's betweenTicks, host/loop.ts, is the same two lines). The pack for the GPU is the next draw's. */
-  private between(): void { const h = this.host; if (!h) return; J.hudExpireBubbles(h.game); h.engine.world.relist(); }
+   *  on a page that listed after every one (the fixed step's betweenTicks, host/loop.ts, is the same line). The pack for the GPU is the next draw's. */
+  private between(): void { const h = this.host; if (!h) return; h.engine.world.relist(); }
 
   // ------------------------------------------------------------------------------------------------------------------------ the frame (main.ts step() hands it over)
   /** one frame of the page: as many tape steps as its time asks for, then the picture, the mixer and the HUD — host/loop.ts stepFrame's second half, on the tape's camera */
@@ -361,7 +361,7 @@ export class TapePlay {
     if (L.audio) { const p = g.player.char.pos; L.audio.setListener([p[0], p[1] + 1.6, p[2]], cam.forward); L.audio.update(dt, L.time); }
     L.smoke?.update(pdt);
     cam.update(dt, g.followPos(), null);
-    L.hud?.setCaption('', ''); L.hud?.setTimeline(null, () => { /* */ });
+    L.hud?.setCaption('', ''); L.hud?.setTimeline(null);
     cam.kickIn();
     try { g.fogLift(this.nofog, tube, g.viewPx(cam, h.canvas));   // (the fog taken off the picture and its HUD, the infrared lines the viewer's tube shows or does not, and laser lines / tracers re-fit to THIS picture's pixel — the step sized them for the recording's view — for this draw only; Game.fogBack puts the step's own lists back)
       if (blent) { try { tw!.pose(a); L.render(cam, tPic, pdt, L.present()); } finally { tw!.unpose(); } }   // (the blend hangs on the drawn things for the render alone: the HUD below, and the next step, read the game's own)

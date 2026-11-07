@@ -509,7 +509,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 ## Run · build · check
 
 ```bash
-bun run dev            # tools/serve.ts → http://localhost:5173  (loopback only, HOST=… overrides; game at /, the WORKBENCH at /workbench = level editor + character/prop viewer in one shell; /viewer /editor /gait /index.html forward; GET/POST /levels/ — POST wants X-Level-Editor: 1)
+bun run dev            # tools/serve.ts → http://localhost:5173  (loopback only, HOST=… overrides; game at /; /index.html forwards; GET /levels/ = the level files, read-only)
 bun run build          # tools/build.ts → dist/ (Bun HTML bundler; WGSL imported as text)
 bun run typecheck      # node vendor/typescript/bin/tsc --noEmit -p tsconfig.json   ← run before every commit (vendor/typescript is gitignored: in a cloud checkout run a system `tsc --noEmit -p tsconfig.json` — 6.0.2 passes on src/)
 bun run tools/shot-server.ts   # :5174 capture sink (loopback only; CORS granted to loopback pages on any port): __shot() → docs/shots/<name>.jpg, __png() → docs/shots/ab/<name>.png
@@ -582,23 +582,16 @@ plus a clean typecheck — the harness cannot see rendering, the light meter, sm
 `__runFrames(n, dt=1/60, keys=[], draw=true)` (fixed-step frames with synthetic keys held; `draw` false = only the burst's last step is drawn, the others pack the world as a draw would and go on — what a script on the software adapter wants, and NOT a check of the drawn-every-step path: the GPU's senses then answer once a burst), `__mouse(x, y, buttons?)`,
 `__click`, `__pauseLoop` (stop the rAF loop; step only via `__runFrames`), `__resetClock()`, `__shot(name, q, scale)`
 (JPEG to the shot server), `__panelShot(name, {frame?, quality?, scale?})` (the tweak PANEL (the debugger, on the backslash key: `player.md`, empty hands are a slot) is HTML, outside the frame `__shot` reads back: `#panel` rasterised through
-editor/domshot.ts and laid over the frame + the overlay's canvases; native sliders in the raster), `__png(name)` (lossless readback for pixel A/B), `__timeScale`, `__wgsl(src, {prelude:'scene'|'lighting'})`
+ui/domshot.ts and laid over the frame + the overlay's canvases; native sliders in the raster), `__png(name)` (lossless readback for pixel A/B), `__timeScale`, `__wgsl(src, {prelude:'scene'|'lighting'})`
 (compile-check WGSL against the live device with the same prelude the scene passes get — 'scene' for direct/softblur/
 temporal, 'lighting' adds lighting_common for gather/rc/probe/volumetrics — `naga` is not installed here, so Chrome/Tint through the page is the WGSL validator; a Linux sandbox could run naga if ever
 needed).
 URL flags: `?keeppage=0` (every load a whole page, as before the kept page — `docs/agents/render.md`, the kept page; a DRIVEN page and a `?paused` one are whole by themselves, so a tool reads `window.__game` as ever, and `?keeppage=1` asks such a page for the shell: the game's hooks are then on `document.getElementById('kept-page').contentWindow`), `?keepdrain=0` (on the tab's first address: a load on the kept page does not wait for the last mission's GPU queue before it takes the device), `?callclock=0` (a load's buffer, texture and submit calls are not timed, and its record has no `calls`), `?playclock=0` (after the load, a frame's time inside the GPU queue's calls is not totalled; `?callclock=0` puts both off), `?paused` (deterministic boot, nothing runs until stepped), `?quality=verylow|low|medium|high|ultra` (pins a preset,
 auto off), (`?demo` and `?breach` started the night and day showcases; both were removed with `__night` / `__breach` — docs/agents/showcases.md — and the flags now do nothing), `?mute` (or `localStorage twopointsix.testMute=1` once in the automation
-profile — **keep test pages silent**, the user listens to their own audio), `?nodecals` / `?noparticles` / `?noweather` / `?noglass` / `?nocivilians` (each merged experiment off from boot — its untouched path), `?nortreflect` (+ `?detail=0‥1`; `?nortreflect&detail=0` = renderer v3 phase 4 off: main's frame bit for bit), `?nomarkings` / `?level=relief` / `?levelFile=<name>.json` (the markings bullet), `?decalStress=N`, `?level=local` (boot on the level EDITOR's current document: the workbench's ▶ *play from here*
-stashes it under localStorage `twopointsix.editorLevel` and opens this — an unreadable stash falls back to the bundled office with a console error), `?nogatherstrata` / `?nomotioncalm` (the two 08-12 defaults off), `?hud` (the debug read-out under the HUD on
+profile — **keep test pages silent**, the user listens to their own audio), `?nodecals` / `?noparticles` / `?noweather` / `?noglass` / `?nocivilians` (each merged experiment off from boot — its untouched path), `?nortreflect` (+ `?detail=0‥1`; `?nortreflect&detail=0` = renderer v3 phase 4 off: main's frame bit for bit), `?nomarkings` / `?level=relief` / `?levelFile=<name>.json` (the markings bullet), `?decalStress=N`, `?nogatherstrata` / `?nomotioncalm` (the two 08-12 defaults off), `?hud` (the debug read-out under the HUD on
 from boot — otherwise opt-in per machine, Tab ▸ Frame ▸ debug read-out), `?nop5` (renderer v3 phase 5's ultra extras off from boot AND vetoed for the presets — ultra's frame as it was before the
-phase; the Tab rows still flip them), `?reachUniform` (A/B only: force the reach masks' uniform binding instead of the storage buffer). The viewer = the workbench's Characters / Effects modes (`src/viewer/` runtime + chrome housed by `src/workbench/main.ts`, VIEWER.md;
-`/workbench#mode=chars&scene=guard/carbine-shoulder`; `/viewer#guard/carbine-shoulder` and `/gait` forward with the hash translated) has
-`__viewer __char __step __gizmo __rig __rigSource __toss __cans __vtime __shot` (+ `__viewer.scene(name, variant)`, `__tac __hold __long __M`, `__vui` the chrome, `__vrt` the viewer Runtime — NOT `__rt`, which is the game page's RT-reflection knobs).
-The level editor = the workbench's Level / Materials modes (`src/editor/app.ts` housed by `src/workbench/main.ts`, docs/level-format.md 'Editor'; `/workbench#mode=level&file=<name>` (`&autosave` / `&blank`);
-`/editor#file=…` forwards; `__wb` {mode, setMode, scene(id|null, variant), staged} switches modes / stands a staging figure in the level) has `__ed` (every edit as a
-function over the same undo stack: `__ed.box.add/move/resize/…`, `light`, `door` (+ `makeFrame` / `cutOpening`), `route.draw`, `volume`, `mark`, `select`,
-`undo/redo`, `validate()`, `lint()`, `serialize()`, `load(text, {lenient?})`, `camera()/pin()`, `step(n)`, `shot(name)`; every multi-op verb inside `doc.transact` = all-or-nothing), `__edshot(name)` (view + overlay), `__tools __view __scene`;
-its rAF loop also stops on a hidden pane — dispatch mouse events then `__ed.step(n)`. QA: `probes.ts editor` + `probes.ts level-lint`; `bun run tools/qa/level-lint.ts levels/office.json`.
+phase; the Tab rows still flip them), `?reachUniform` (A/B only: force the reach masks' uniform binding instead of the storage buffer).
+The workbench (the level editor and the character / effects viewer, `/workbench`) was removed on 2026-11-04 with its hooks (`__ed`, `__wb`, `__vrt`, `__viewer`) and its checks; the level lint stayed: `probes.ts level-lint`; `bun run tools/qa/level-lint.ts levels/office.json`.
 `__stage(pin | null, { park, guards:[{i,pos,yaw,torch,aimPitch}], player:{pos,yaw,crouch,holstered,invisible} })` pins the camera VERBATIM
 (`FollowCamera.setPin` → `pin`: look-at, yaw, pitch, dist — no damping, no aim lead; the numbers must be finite, dist is clamped ≥ near + 0.05 and |pitch| ≤ 89°, the applied pin comes back
 in the result; null releases it AND puts the free camera's yaw / pitch / zoom back) and stages actors in one call — use it for every capture: the follow
@@ -1410,6 +1403,28 @@ but synthetic writes still work.
   without, `kittree-sponge` before it dies in the bridge at its second stand and leaves no game; with, it stands, runs on to a function whose
   TypeScript went with the tick, and leaves a game whose gear rows come back from Rust without what hangs under what. Both are older faults the
   crash hid. Nothing of this touches the page.
+- **The host's camera and keys are handed to the game ONCE, at the stand, by every host** (2026-11-07; `Game.hostHands(cam, input)`, called at the end of
+  `standGame`; the fields are `game.hostCam` / `game.hostInput`, `host_cam` / `host_input` in Rust, on the wire's hosts-own list). BEFORE: `Game.update`
+  handed the Director the camera and Input it was stepped with, every frame (`director.attach`, and the same line in Rust's tick), so a host that
+  steps by records alone (a watcher, a game server: `stepSeats`) had a Director with neither, a page had the page's, the harness had its stand-in,
+  and the native runner GUESSED which camera to draw from ("the first that is no seat's": it picked a check's lens when one was made). Now the page
+  makes its Input before the stand, with no listeners, and passes it (`StandOpts.input`; its listeners go on where the page's Input was always made,
+  `Input.listen`: a key tapped while the page boots is still nobody's), the harness passes its stand-in, a host that passes none gets a detached one,
+  and the native start hands the pair it makes (`rust/game_start stand.rs host_new`). The Director's beats and the show read the game's fields; the
+  native runner reads `host_cam` and refuses, by name, a game that was handed none. NOT DONE (the design is written down for the next step): the
+  camera and Input a frame is STEPPED with are still arguments of `update` (a replay's player steps with a camera of its own), so the tick is not
+  yet one that takes the host's rows as its only input from outside. WHAT IT COST KEPT RUNS: a run kept by a host of records alone is one camera row
+  and one Input row short in every host's half (`export.ts hostHalfParts`), and not at the end, so `hold.sh`'s rule (a half may only GROW AT ITS END)
+  refused all three kept two-seat games. `tools/blitz/half-grow.ts` gives each kept half those two rows as the fresh start's tick 1 has them, at
+  the places the fresh start says (`hostrows.txt`, written by `seats.ts` / `mission.ts --start-only`: `export.ts hostRowsText`), and refuses,
+  writing nothing, unless every kept half is short by exactly those two rows and the kept tick 1 so grown IS the fresh tick 1 byte for byte
+  (`HALFGROW_BREAK=1` in front of `hold.sh`: every such run must read NOT HELD). THE ROWS IT GIVES ARE A STAND-IN AT EVERY TICK AFTER THE FIRST: a
+  fresh run would move them (seats.ts drives its first seat through the host's own Input and camera) and the kept run never recorded them. A grown
+  run holds for as long as no rule of the tick reads the host's own rows on a host that steps by records; the day one does, it parts from a fresh
+  run and is kept anew. `hold.sh` calls the grower only when the end-grown rule fails, and says so on the run's line. The snapshot's list of
+  what is the host's (`src/game/rollback.ts HOST_FIELDS`) has the two fields too: it is a second list beside the wire's (`tools/wire/wire.ts
+  HOSTS_OWN`), in the TypeScript's names and with another rule (what a snapshot leaves alone, against what no state word reads), and the two are
+  not made one here.
 - **A game stood up has done with the last one: `standUp` asks for a full collection first** (2026-11-05; `tools/qa/headless.ts STANDUP_COLLECTS`; the
   harness only, nothing of the game). FOUND by the merge: the workers of `bang-tally.ts` (the `flashweight` family's tally, missions back to back in one
   process) grew about 1.6 GB a minute on the page's stand and two died at a 12 GB limit; old, on every build looked at. Reproduced here: one worker from

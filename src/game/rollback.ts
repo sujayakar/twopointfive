@@ -52,7 +52,7 @@ const isObj = (v: unknown): v is object => typeof v === 'object' && v !== null;
 /** the Game's fields that are the host's (left exactly as they are, in either game) and the ones that are never written (the character file). The host's own
  *  INSIDE a game object is a `HostOwned` (math/side.ts): the GPU light meter's buffers and what it last sent (render/probe.ts `Plumbing`) — walked and put back
  *  like the rest of the meter, a page's next frame copied into a buffer still being mapped and the browser refused the whole frame. */
-const HOST_FIELDS = ['engine', 'audio', 'smoke', 'journal'] as const;
+const HOST_FIELDS = ['engine', 'audio', 'smoke', 'journal', 'hostCam', 'hostInput'] as const;   // (hostCam / hostInput: the host's camera and keys, handed at the stand — game.ts. On the wire they are on the hosts-own list, tools/wire/wire.ts HOSTS_OWN: no state word reads them, and no snapshot copies, hashes or puts them back)
 const STATIC_FIELDS = ['ch'] as const;
 /** where a walk starts: the Game, and the two CPU pieces of the host the simulation reads and writes (the box world its rays are cast in, the light set) */
 function rootsOf(g: Game): object[] { const e = (g as unknown as { engine: { world: object; lights: object } }).engine; return [g, e.world, e.lights]; }

@@ -324,11 +324,16 @@ pub fn upload(g: &mut game::game::Game) { game::host_api::b_01::host_world_uploa
 pub fn lights(g: &mut game::game::Game, dt: f64) { let now = g.time; game::render_lights::light_set_update(g, dt, now); }
 
 /// HOST STEP AFTER THE TICK (game.ts hostAfter): a tutorial mission staged again opens on its first view, set with the host's camera; a return on its
-/// first line off a rails level. The host's camera is the row the director was handed, else the first that is no seat's.
+/// first line off a rails level. The host's camera is the row the game was handed at its stand (`host_cam`).
 pub fn view(g: &mut game::game::Game) {
-    let seat_cams: Vec<game::ids::CameraId> = g.seats.iter().map(|s| g.tab.cmd_seat[*s].cam).collect();
-    let cam = g.director.cam.or_else(|| g.tab.camera.ids().find(|c| !seat_cams.contains(c)));
-    if let Some(cam) = cam { game::rails::rails_host_view(g, cam); }
+    let cam = host_cam(g);
+    game::rails::rails_host_view(g, cam);
+}
+
+/// THE HOST'S CAMERA: the row every host hands the game once, at its stand (game.ts hostCam, standGame; game_start `host_new`). A game that was
+/// handed none is refused here by name: nothing is guessed (the first camera that is no seat's was the check's scratch lens wherever no host row stood).
+fn host_cam(g: &game::game::Game) -> game::ids::CameraId {
+    g.host_cam.expect("the game was handed no host camera at its stand (Game.host_cam is None): a start kept before the stand handed one, or a host that made a game without standGame")
 }
 
 /// HOST STEP BEFORE THE TICK (game.ts update, its first lines: `if (this.restartCut) { this.restartCut = false; … }`): the player's own restart
@@ -344,9 +349,8 @@ pub fn restart_cut(g: &mut game::game::Game) { if g.restart_cut { g.restart_cut 
 /// seat that goes through `Game.update`; a game of several seats stepped by `stepSeats` alone (seats-run.ts) never hands the host's matrix back.
 pub fn view_live(g: &mut game::game::Game) {
     if g.seats.len() != 1 { return; }
-    let seat_cams: Vec<game::ids::CameraId> = g.seats.iter().map(|s| g.tab.cmd_seat[*s].cam).collect();
-    let cam = g.director.cam.or_else(|| g.tab.camera.ids().find(|c| !seat_cams.contains(c)));
-    if let Some(cam) = cam {
+    {
+        let cam = host_cam(g);
         let vp = g.tab.camera[cam].view_proj;
         let me = g.seats[0];
         game::seats::with_seat(g, me, &mut |g| g.view_proj = Some(game::game::GameViewProj::Float32Array(vp.to_vec())));
