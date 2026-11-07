@@ -124,7 +124,7 @@ export const SERIALS = new Set<string>();
 let G: any; let BK: Book; let B: any;
 const isTyped = (v: any) => ArrayBuffer.isView(v) && !(v instanceof DataView);
 /** a weak table's row of a player who is no longer in the game (the man before a mission's fresh deal) is that man's, and is not this game's state */
-const isWeak = (v: any) => typeof v?.liveKeys === 'function', seated = (k: unknown): boolean => { const S = CUR?.seats; if (!S) return true; const r = rawKey(k as object); return rawKey(CUR.player) === r || S.some((s: any) => rawKey(s.view?.player) === r); };
+const isWeak = (v: any) => typeof v?.liveKeys === 'function', seated = (k: unknown): boolean => { const S = CUR?.seats; if (!S) return true; const r = rawKey(k as object); if (r === rawKey(CUR)) return true;   /* (a seat's table, keyed by the Game: in a game of one seat that is its view. wKey writes it as the first seat's man, the walk having the first seat standing) */ return rawKey(CUR.player) === r || S.some((s: any) => rawKey(s.view?.player) === r); };
 function keysOf(v: any): { keys: unknown[]; get: (k: any) => unknown } | null {
   if (v instanceof Map) return { keys: [...v.keys()], get: k => v.get(k) };
   if (v instanceof Set) return { keys: [...v], get: k => k };
