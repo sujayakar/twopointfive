@@ -247,6 +247,10 @@ impl Play {
     pub fn at(&self, gd: GuardId) -> [f64; 2] { let p = self.g.ch[self.g.gd[gd].ch].pos; [p[0], p[2]] }
     /// where Sam stands
     pub fn sam_at(&self) -> [f64; 2] { let p = self.g.ch[self.g.pl[self.g.player].ch].pos; [p[0], p[2]] }
+    /// Sam is PUT at `at` (the sandbox's own call, `Game.teleportPlayer`): for a test whose staging is a place and not the walk to it.
+    pub fn sam_put(&mut self, at: [f64; 2]) { game::game::game_teleport_player(&mut self.g, [at[0], 0.0, at[1]]); }
+    /// Can Sam not see: a flash or a blast has his eyes for now.
+    pub fn sam_blind(&self) -> bool { self.g.time < self.g.pl[self.g.player].dazzled_until }
     /// the way a man's body faces, radians: 0 looks along +z (south), a quarter turn (π/2) along +x (east), π north (his forward is (sin, cos))
     pub fn facing(&self, gd: GuardId) -> f64 { self.g.ch[self.g.gd[gd].ch].body_yaw }
     /// calm, suspicious, alert, searching or dead
