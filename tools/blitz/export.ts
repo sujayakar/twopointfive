@@ -224,7 +224,10 @@ export function fieldAt(g: any, knobs: Record<string, unknown>, path: string[]):
   for (const p of path) { const T = SCHEMA.types[ty.replace(/^alloc::boxed::Box<(.*)>$/, '$1')]; if (!T || T.k !== 'struct') throw new Error('fieldAt: ' + ty + ' is no struct'); const f = T.fields.find((x: any) => x.rust === p); if (!f) throw new Error('fieldAt: no ' + p + ' in ' + ty);
     v = f.expr !== undefined ? compiled(f.expr)(v, G, B) : (f.ts !== undefined ? v[f.ts] : undefined); ty = f.ty; }
   return { ty, v }; }
-export function exportGame(g: any, knobs: Record<string, unknown>): Uint8Array { return forGame(g, () => exportGameNow(g, knobs)); }
+/** the place in the list of seats of the seat this host shows (the Rust game is told it: `face_show_seat`) */
+export function shownSeat(g: any): number { const i = g.seats?.indexOf?.(g.localSeat) ?? 0; return i > 0 ? i : 0; }
+/** A GAME'S ROWS ARE NUMBERED THE SAME ON EVERY MACHINE. The walk meets the rows of the seat the accessors answer first, so it walks with the first seat standing, whichever seat this host shows */
+export function exportGame(g: any, knobs: Record<string, unknown>): Uint8Array { return forGame(g, () => { if (!(g.seats?.length > 1)) return exportGameNow(g, knobs); const shown = g.localSeat; g.localSeat = g.seats[0]; try { return exportGameNow(g, knobs); } finally { g.localSeat = shown; } }); }
 function exportGameNow(g: any, knobs: Record<string, unknown>): Uint8Array {
   G = g; let bk = BOOKS.get(g); if (!bk) { bk = new Book(); BOOKS.set(g, bk); } BK = bk; REP = new Map(); AT = ''; B = helpers(g, knobs);
   for (const [id, e] of Object.entries(SCHEMA.seeds as Record<string, string>)) { let L: any; try { L = compiled(e)(g, g, B); } catch { L = null; } if (L && Symbol.iterator in Object(L)) for (const x of L) if (x && typeof x === 'object') BK.idOf(id, x); else miss(`a seed of ${id} not a list`); }
