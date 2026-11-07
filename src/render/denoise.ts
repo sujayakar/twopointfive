@@ -3,7 +3,6 @@
 // irradiance and its specular field at gather res). The WGSL is shaders/denoise.wgsl (one module, five entry points); this file owns its pipelines,
 // layouts, the small parameter uniform and a bind-group cache, and encodes a client's chain into an open compute pass with the texture views
 // render/passes.ts hands it (passes.ts owns every texture: they go through its pool / resample-on-resize machinery like the legacy histories).
-// settings.denoiser = 'legacy' never constructs a dispatch from here: passes.ts runs dtemporal / softblur / temporal / giblur exactly as before.
 import { makeBuffer, makeShader, computePipelineAsync, writeWordsIfChanged } from '../gpu/device';
 import { scenePrelude } from './frame';
 import denoiseSrc from './shaders/denoise.wgsl' with { type: 'text' };

@@ -618,7 +618,7 @@ export class Quality {
     if (!this.shedOn()) this.shed = false;   // (SHARP SHED is auto's, under its switch: a preset pinned by hand has its own rows)
     const iq = iqForce.off ? IQ_OFF : p.iq; const sharpOn = sharpForce.v ?? (iq.sharp && !this.shed);   // the tier's resolve configuration (IqTier; ?noiq / ?sharp / ?nosharp force it; SHARP SHED keeps sharp direct off across auto's hops; the Tab ▸ Frame rows move each by hand until the next preset)
     this.putSharp(iq, sharpOn); S.taauHistSharp = iq.histSharp;
-    S.dnShadowIters = p.dn.shIters; S.dnShadowCap = p.dn.shCap; S.dnGiIters = p.dn.giIters; S.dnGiCap = p.dn.giCap; S.dnSpecIters = p.dn.spIters;   // the v3 denoiser's tiers (render/denoise.ts; Tab ▸ Denoiser rows likewise) — inert under settings.denoiser 'legacy'
+    S.dnShadowIters = p.dn.shIters; S.dnShadowCap = p.dn.shCap; S.dnGiIters = p.dn.giIters; S.dnGiCap = p.dn.giCap; S.dnSpecIters = p.dn.spIters;   // the v3 denoiser's tiers (render/denoise.ts; Tab ▸ Denoiser rows likewise)
     S.giFullRes = !!p.dn.giFull && !gimVeto.on; S.giFullIters = p.dn.giFullIters ?? 4;   // GI in motion per tier (Dn above; ?nogim vetoes it for the visit; Tab ▸ Indirect light rows move them by hand until the next preset)
     S.directSamplesTop = p.ds[0]; S.directSamplesOther = p.ds[1]; S.directAdaptiveMin = p.ds[2]; S.directHistory = p.hist;
     S.restirRays = p.restir.rays; S.restirSpatial = p.restir.spatial; S.restirHistory = p.restir.history; S.heldRays = p.restir.held; S.restirMotionMin = p.restir.motionMin; S.restirMotionTaps = p.restir.motionTaps;   // ReSTIR DI's tier (settings.restir itself is not a preset's business: ?norestir / the Tab row own it)
