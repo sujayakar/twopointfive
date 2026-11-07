@@ -57,6 +57,8 @@ type Inverse = (o: any, v: any, c: Ctx) => void;
 const skipField: Inverse = () => {};
 /** the fields whose expression is no assignment. Each says how the value gets back, or why it need not: read `skipField` as "the export works this out from what is carried, or it is set up once and never changes" */
 const INVERSE: Record<string, Inverse> = {
+  // (a yes or no on Rust's side, and the seat's camera on the puppet's, which the page sets and no read of the tick's finds. As a yes it would be a value that takes no field: `w.cam.peekOffset = null` throws)
+  'player::WallHold.cam': () => {},
   'game::Game.view_proj': (o, v) => { o.viewProj = v; }, 'seats::SeatSet.view_proj': (o, v) => { o.viewProj = v; },
   'character::Character.who': skipField,   // (whoever holds this man as his `char`: rows)
   'character::Character.man_row': (o, v, c) => { if (v !== 0xffffffff) { o.S = c.g.men; o.r = v; } },
@@ -105,7 +107,7 @@ function wayOf(q: string, f: any): Way { let w = wayCache.get(q); if (w) return 
   else if ((m = e.match(/^B\.top\("([^"]+)", "([^"]+)", "([^"]*)"\)\.([\w$]+)$/))) w = { kind: 'topField', file: m[1], name: m[2], side: m[3], path: [m[4]] };
   else if ((m = e.match(/^B\.keysOf\(B\.top\("([^"]+)", "([^"]+)", "([^"]*)"\)\.([\w$]+), (\[.*\])\)$/))) w = { kind: 'topField', file: m[1], name: m[2], side: m[3], path: [m[4]], words: JSON.parse(m[5]) };
   else if ((m = e.match(/^B\.nonZero\(B\.top\("([^"]+)", "([^"]+)", "([^"]*)"\)\.([\w$]+)\)$/))) w = { kind: 'topField', file: m[1], name: m[2], side: m[3], path: [m[4]], zeroed: true };
-  else if (/^B\.knob\(/.test(e)) w = { kind: 'knob' };
+  else if (/^B\.knob\(/.test(e)) w = { kind: 'knob', name: e.match(/^B\.knob\("(\w+)"\)/)?.[1] };
   else if (e === 'B.serialOf(o)') w = { kind: 'serial' };
   else w = { kind: 'none' };
   wayCache.set(q, w); return w; }
@@ -229,7 +231,7 @@ function applyGameNow(g: any, blob: Uint8Array, knobs: Record<string, unknown>, 
         case 'default': { const key = w.path![0]; const cur = o[key]; const v = read(N, cur === undefined ? w.dflt : cur); if (cur !== undefined || JSON.stringify(v) !== JSON.stringify(w.dflt)) o[key] = v; break; }
         case 'top': { const T0 = (globalThis as any).__tpsTop?.[w.file!]; const V = B.varOf(w.side!); const cur = T0 && w.name! in T0 ? T0[w.name!] : V ? V.get() : B.rootOf(w.side!); if (cur === undefined && !V && !(T0 && w.name! in T0)) { R.noWindow.add(w.side!); sk(N); break; } const v = read(N, cur); if (differs(v, cur)) { if (V) V.set(v as never); else if (T0 && Object.getOwnPropertyDescriptor(T0, w.name!)?.set) T0[w.name!] = v; else { const k = `module ${w.side}: no setter`; R.noWay.set(k, (R.noWay.get(k) ?? 0) + 1); } } break; }
         case 'topField': { const T = (globalThis as any).__tpsTop?.[w.file!]?.[w.name!]; if (!T || typeof T !== 'object') { R.noWindow.add(w.side!); sk(N); break; } const key = w.path![0]; if (w.zeroed) { const Q = T[key], v: Map<any, number> = read(N, new Map()); for (const k of Object.keys(Q)) Q[k] = 0; for (const [k, x] of v) Q[k] = x; break; } if (w.words) { const Q = T[key], v = read(N, w.words.map((k: string) => Q[k])); w.words.forEach((k: string, j: number) => { Q[k] = v[j]; }); break; } const cur = T[key]; const v = read(N, cur); if (differs(v, cur)) T[key] = v; break; }
-        case 'knob': sk(N); break;
+        case 'knob': { const K = knobs[w.name!]; if (!K || typeof K !== 'object' || N.k !== 'type' || (globalThis as any).__settingsBreak) sk(N); else readStruct(SCHEMA.types[N.path], K); break; }   // (a table stands where it stands, for the host and for the next read: its rows are written in place)
         case 'skip': sk(N); break;
         case 'serial': { const s = dv.getUint32(I.p, true); I.p += 4; serialIs(c, o, s); break; }
         case 'inverse': { const v = read(N, N.k === 'map' ? new Map() : NUMERIC.has(N.k) ? 0 : undefined); w.fn!(o, v, c); break; }   // (a number stands whatever it is: read over nothing a 0 reads as nothing, and the first man's row is 0)
