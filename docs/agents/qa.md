@@ -354,6 +354,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   recording from before the key, the old stand's word and the page's off flag); the switch is no longer written at all. THE BREAK WORD CANNOT BE THE
   RULE LEFT OFF ANY MORE, so it breaks the staging: `FARCALM_BREAK=1` stands Sam at 12 m, inside the old reach, where a faint glimpse is a fix (4
   lines red); `FARSIGHT_BREAK=1` feeds a dark meter wherever the check lights a man (4 lines red). Both families ALL PASS with nothing refused.
+  MORE BY THE SAME RULE (2026-11-07): `owncharge-kit` (the "only with the switch" halves and the two "visit with the switch off" lines cut; green;
+  `OWNCHARGE_BREAK=1` now gives up no pouch before the first door charge, one line red; the file's `door`, `squad` and `save` probes no longer write
+  the switch either and are red for other reasons); the kit tree (`kittree-off` DELETED whole: the card of the build before; its one line of the
+  page's side, a stored card from before the tree, moved into `kittree-rows`, which is green; `mate40` lost its "no order, or not a tree" line;
+  `KITTREE_BREAK=1` is kittree.ts's own hook and still fails `rows`, 9 lines). THE DOOR-TOOLS RIG'S PIN IS OUT (`doortools-probes.ts rig` wrote
+  `OWNBLOW.on` off for 25 probes; refused, so nothing moved but the tags): a line of those probes that fails now reads as the page's side.
   EVERY RUN OF A STAND AS IT OPENS IS READ AGAINST THE LIST OF EXPECTED REDS, FOLDED OR NOT (2026-11-07; `probes.ts`). The runner had read a folded
   probe's red against no row; since the deletion that was every probe of every run with no word, so nothing read the list on the named build:
   no EXPECTED RED / NEW RED / GREEN AGAIN, and a break word's closing line could not say whether it bit (`holds-check` (9), red by it). The
