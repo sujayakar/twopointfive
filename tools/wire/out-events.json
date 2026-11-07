@@ -976,13 +976,6 @@
 "body": "let t = g.time; if !is_shout(text) || g.gd[gd].state == crate::game::GuardState:"
 },
 {
-"call": "Debris.cap",
-"rust": "crate::debris::debris_cap",
-"sites": 1,
-"why": "answers a value (f64)",
-"body": "let c = g.engine.settings.debris_cap; m::max(4.0, m::floor(c))"
-},
-{
 "call": "Debris.feet",
 "rust": "crate::debris::debris_feet",
 "sites": 2,

@@ -19,7 +19,6 @@ fn lead_of_is(lead_of: Option<LeadsBy>, by: LeadsBy) -> bool {
         _ => false,
     }
 }
-/// His row of the rule's memory, made on first asking. (clearline.ts memOf)
 /// What a man is doing about it this moment: nothing, the row being cut. (clearline.ts clearLineOf: a row of the call surface until the page's side goes)
 pub fn clear_line_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::clearline::ClearLineOf> { None }
 

@@ -119,9 +119,7 @@ impl Default for RecordOpts { fn default() -> Self { Self::zeroed() } }
 /// (TypeScript: EnvSnap, src/game/journal.ts:217)
 #[derive(Clone, Debug)]
 pub struct EnvSnap {
-    pub debris_cap: f64,
     pub emissive_scale: f64,
-    pub flashlight_radius: f64,
     pub markings: bool,
     pub particles_on: bool,
     pub hud: bool,
@@ -136,9 +134,7 @@ impl EnvSnap {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         EnvSnap {
-            debris_cap: 0.0,
             emissive_scale: 0.0,
-            flashlight_radius: 0.0,
             markings: false,
             particles_on: false,
             hud: false,

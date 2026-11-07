@@ -548,7 +548,6 @@ export class SquadOrders {
   /** what was ordered when (the probes read it; capped) */
   log: { t: number; order: string; who: string[]; target: string; /** the quick key gave it with the autopilot on (autopilot.ts: its plan is drawn a little longer) */ auto?: boolean; /** the word's key sent it off a laid plan (planlay.ts) */ laid?: boolean }[] = [];
   /** the order being given is the SEAT's own, at once (the menu's pick, the quick key) — not a scenario's, a tool's or the plan's (planlay.ts strikes its men off a laid plan) */
-  private byHand = false;
   /** the squad's own changes of plan, newest last: who, when (autopilot.ts AUTOPILOT.replan — PICTURE ONLY: floorplan.ts draws these men for a moment as it
    *  does an order just given; nothing of the game reads it, it is no order and starts no clock) */
   shows: { t: number; who: string[] }[] = [];

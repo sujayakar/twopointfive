@@ -3,7 +3,7 @@
 // the TypeScript `Game` stays as a PUPPET that everything outside the tick goes on reading: the picture, the sound, the HUD, the menus. Under `?rust=0`
 // nothing here is loaded and the page is the page it was.
 //
-// A STEP (`Game.update` runs its own host lines as ever: the record sampled from the Input and the camera, hostBefore, hostAfter. The step between them,
+// A STEP (`Game.update` runs its own host lines as ever: the record sampled from the Input and the camera, hostAfter. The step between them,
 // `stepSeats`, is this file's `step`, hung on the game object):
 //   the host's half   the knobs the module reads · the light probe's answers (the GPU's, a frame or more old) · each seat's record with every camera and
 //                     Input row (the bridge's `hostHalf` → `face_host_half`)

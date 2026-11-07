@@ -32,10 +32,9 @@ export const SCENES: { name: string; sam: Vec3; yaw: number; seen: boolean; behi
 ];
 export const SNEAKLAB_SYSTEM = 'Sneak lab';
 type Table = Record<string, unknown>;
-type Grp = 'step' | 'start' | 'pace' | 'pose' | 'grab' | 'rmb' | 'pass' | 'run' | 'corner' | 'turn' | 'old';
+type Grp = 'start' | 'pace' | 'pose' | 'grab' | 'rmb' | 'pass' | 'run' | 'corner' | 'turn' | 'old';
 /** the lab's groups, in the order they are read: a short name, whether it is open on a first visit, and what the group is for (its header's hover) */
 const GROUPS: { id: Grp; name: string; open: boolean; title: string }[] = [
-  { id: 'step', name: 'Tap to step', open: true, title: 'crouched, a press lifts his foot, holding reaches further and letting go plants it. Tap in time with his weight settling and watch the sound bar' },
   { id: 'start', name: 'Start and stop', open: false, title: 'when a press on a man begins the creep and when the creep lets go. Watch the rings and the arc drawn on the floor round the nearest man' },
   { id: 'pace', name: 'Pace', open: true, title: 'how fast he closes on the man and how he starts and stops. Watch "you … m/s, he … m/s" in Right now' },
   { id: 'pose', name: 'Pose', open: true, title: 'what his body does on the way in: how low he gets and where his arms are. Stop a metre and a half behind the man and look at him' },

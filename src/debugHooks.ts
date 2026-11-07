@@ -96,7 +96,6 @@ declare global {
     /** the civilians by hand: list, panic(i, 'panic' | 'phone'), set(on), knobs, stats, log, spots, check, summary */
     __civ?: KnobHook & { panic(i?: number, what?: 'panic' | 'phone'): unknown; set(on: boolean): unknown };
     /** wounds (game/wounds.ts, ?wounds): on, knobs, stats, men() */
-    __wounds?: { on: boolean; [k: string]: unknown };
     __wallsnap?: { on: boolean; [k: string]: unknown };
     /** the 2010s issue kit (game/gear.ts, ?oldgear = off): the switch, live */
     __gear?: { on: boolean };

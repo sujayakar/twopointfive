@@ -23,7 +23,6 @@ fn place_dark(g: &mut Game, x: f64, z: f64) -> bool {
     crate::game::game_visibility_of(g, e) < g.k.lights.lit_at
 }
 
-/// is where he stands, what his gun is on, the man he has and the mark he is nearly at lit by the place itself (guards.ts litPlace)
 /// m: the emitter radius of a torch
 pub const FLASHLIGHT_RADIUS: f64 = 0.07;
 

@@ -506,21 +506,17 @@ pub fn squad_orders_all_in(g: &mut crate::game::Game) {
         if !fell_in { every = false; break; }
     }
     if every { return; }
-    g.orders.by_hand = true;
     squad_orders_give(g, "fallIn", Some(&t), None, Some(&opts_men(men, None)));
-    g.orders.by_hand = false;
 }
 
 /// The quick key's own order on `t`, given by hand: the entry the men pick, else the target's first row. (orders.ts quickGive)
 pub fn squad_orders_quick_give(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) {
-    g.orders.by_hand = true;
     if !crate::autopilot::auto_quick(g, t) {
         if let Some(d) = squad_orders_default_for(g, t) {
             let id = g.tab.orders_order_def[d].id.clone();
             squad_orders_give(g, &id, Some(t), None, None);
         }
     }
-    g.orders.by_hand = false;
 }
 
 /// The quick key's order on `t` for exactly these men. (orders.ts quickFor)
@@ -538,14 +534,12 @@ pub fn squad_orders_quick_for(g: &mut crate::game::Game, men: &[GuardId], t: &cr
         return None;
     }
     let here = at_sam(g, &crate::seats::here(g));
-    g.orders.by_hand = true;
     if a.word {
         squad_orders_give(g, "go", Some(&here), None, Some(&opts_men(to, None)));
     } else if text(&a.id) {
         let ack = crate::squadnet::why_words(g, &a).map(|w| w.ack);
         squad_orders_give(g, a.id.as_deref().unwrap(), Some(t), None, Some(&opts_men(to, ack)));
     }
-    g.orders.by_hand = false;
     if let Some(row) = g.orders.log.last_mut() {
         if Some(row.serial) != tail { row.auto = Some(true); }
     }
@@ -557,10 +551,8 @@ pub fn squad_orders_quick_for(g: &mut crate::game::Game, men: &[GuardId], t: &cr
 /// Those men cover toward `at` from where they stand (true: somebody took it). (orders.ts coverFor)
 pub fn squad_orders_cover_for(g: &mut crate::game::Game, men: &[GuardId], at: V3) -> bool {
     let n = g.orders.group;
-    g.orders.by_hand = true;
     let t = OrderTarget::Floor(OrderTargetFloor { at, wall: None, thing: None, serial: 0 });
     squad_orders_give(g, "cover", Some(&t), None, Some(&opts_men(men.to_vec(), None)));
-    g.orders.by_hand = false;
     g.orders.group != n
 }
 
