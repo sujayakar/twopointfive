@@ -1,11 +1,11 @@
-// THE TEAM AT THE DOOR, on the start page's Team & kit step (the maintainer's pick, 10-13): where the standing man was (ui/kitFigure.ts), the REAL renderer's
+// THE TEAM AT THE DOOR, on the start page's Team & kit step (the maintainer's pick, 10-13): the REAL renderer's
 // top-down picture of the team as picked, stood at the mission's own way-in door. The Game behind the start page is not the picked mission's level — that
 // exists only after Deploy's page load — so the picture is a SECOND instance of the page in an iframe: the same origin, the very query Deploy would load plus
 // `&kitview&mute&noreplay` (src/host/kitView.ts: staged, lit, and from then on LIVE — the game runs and the open card's man uses what he carries at the door,
 // a beat at a time; `&stillkit` on it = drawn for a warm window, then held; read-only on this origin's storage). It is thrown away when the page closes or
 // Deploy fires, so its GPU device goes with it.
 //
-// WHEN: the switch on (KIT_VIEW.on; `?oldfigure` = off: the standing man everywhere, the page as it was), the Team & kit step, a room clear whose level file
+// WHEN: the Team & kit step, a room clear whose level file
 // says where the team stands for the way in picked (`scenarios.kitView.ways` — ui/missions.ts kitViewWays, the plan's own fetch), and a window the figure's
 // column is drawn in (over 720 px wide). Anything else is an empty column: this module then makes no element and puts no class on the page.
 //
@@ -23,15 +23,13 @@
 // child is opened `&stillkit` — the still picture, a plain restage on every change, no `sel`).
 //
 // NOBODY STANDS IN FOR THE PICTURE (the maintainer, 10-20: "we show the original gear screen before the new one fades in. let's just remove the old one with
-// the figure?"): the standing man used to be drawn while the child booted past a short grace, and wherever there was no picture. With the switch on he is
-// not on the page at all (ui/startpage.ts mounts him only under `?oldfigure`): the column WAITS EMPTY until the child's first `ready` (`data-kv-wait` on
+// the figure?"): the standing man used to be drawn while the child booted past a short grace, and wherever there was no picture. He is gone: the column WAITS EMPTY until the child's first `ready` (`data-kv-wait` on
 // #missions), and is EMPTY for good (`data-kv-none`) — the element dropped, the query marked for this page's life — when the child says `none` (a refused
 // device, a failed fetch, a moment that threw: every fatal card in there says it, main.ts kitViewFatal) or its load errors. THE WAIT HAS NO CLOCK: a second
 // game that takes long to come up (a cold shader cache, a slow adapter) is waited for however long that is. It was given 10 s and then called none for the
 // page's life — the standing man's cue while he stood in; with nobody standing in it only left the column blank for good on a slow start. The second game lives
 // only while it can show: it is dropped too when the mission picked has no block, the way in is dealt (the child's die would deal another door than
-// Deploy's: the query carries no seed), or the window goes under 720 px; it is kept across the Mission step. show() answers false only with the switch off
-// or under 720 px (where the column is not laid out at all).
+// Deploy's: the query carries no seed), or the window goes under 720 px; it is kept across the Mission step. Under 720 px the column is not laid out at all.
 //
 // LAYOUT: every rule is in the one block below; ONE root class, `kv-on`, is on #missions only while the picture is shown (the iframe's own rules stand
 // without it: it must be laid out, though unseen, for its page to draw at all). The iframe is the LAST child of `.mbody`, absolutely placed behind the sheet
@@ -45,9 +43,9 @@ import { rectZoom, uiMatch } from './textsize';
 import { KEEP_PAGE, keeperAbove } from '../gpu/keep';   // (a leaf: the picture's seat on the kept page's device)
 import { kitViewQuietKind } from '../host/kitViewSet';   // (pure: the mission's kind, read off its link — the quiet picture's)
 
-/** the switch (UI only: nothing in the game reads it) · the picture is LIVE and the open card's man acts in it (`?stillkit` = off: the still picture, every change a plain restage) · ms after a kit message in which further changes are folded into ONE more */
-export const KIT_VIEW = { on: true, acts: true, kitMs: 150, quiet: true };
-try { const q = new URLSearchParams(location.search); if (q.has('oldfigure')) KIT_VIEW.on = false; if (q.has('stillkit')) KIT_VIEW.acts = false; if (q.has('kitloud')) KIT_VIEW.quiet = false; } catch { /* no page (the harness) */ }
+/** the picture is LIVE and the open card's man acts in it (`?stillkit` = off: the still picture, every change a plain restage) · ms after a kit message in which further changes are folded into ONE more */
+export const KIT_VIEW = { acts: true, kitMs: 150, quiet: true };
+try { const q = new URLSearchParams(location.search); if (q.has('stillkit')) KIT_VIEW.acts = false; if (q.has('kitloud')) KIT_VIEW.quiet = false; } catch { /* no page (the harness) */ }
 /** where things sit, in the figure column's own widths and heights (the page's 330 px column: the picture is hung on the DOOR — its line about six tenths
  *  of the way across, the first metre of the room behind it clear to the column's right edge, where a can thrown through the door comes to rest — and the
  *  five places left of it with 16 px of margin) */
@@ -81,7 +79,6 @@ const CSS = `
 #missions.kv-on .mbody > iframe.kv { opacity: 1; }
 #missions.kv-on .mbody > .onefig, #missions.kv-on .mbody > .msheet { position: relative; z-index: 1; }
 #missions.kv-on .mbody > .onefig, #missions[data-kv-wait] .mbody > .onefig { border-right-color: transparent; }   /* (waiting: the column's own hairline does not show and go as the picture comes) */
-#missions.kv-on .mbody > .onefig canvas { display: none; }
 `;
 function styles() { if (document.getElementById?.('kitview-css')) return; const s = document.createElement('style'); s.id = 'kitview-css'; s.textContent = CSS; (document.head ?? document.body)?.appendChild?.(s); }
 
@@ -91,8 +88,8 @@ export interface KitViewAsk { search: string; kind: string; level?: string; way:
   /** whose card is open (0 = you) and the row its highlight is on (ui/kitCard.ts MemberCard.at: past the last row = the sets) — absent: you, no tile */
   member?: number; row?: number }
 export interface KitViewFrame {
-  /** show the picture for `ask` (null: off the step — put away, the instance kept). True = the column is the picture's: shown, waited for (empty), or none to be had here (empty); false = the switch is off or the window too narrow — the standing man's turn where he is mounted (`?oldfigure`) */
-  show(ask: KitViewAsk | null): boolean;
+  /** show the picture for `ask` (null: off the step — put away, the instance kept). The column is the picture's: shown, waited for (empty), or none to be had here (empty) */
+  show(ask: KitViewAsk | null): void;
   /** the instance gone for good (the page closed, Deploy fired) */
   close(): void;
   readonly frame: HTMLIFrameElement | null;
@@ -162,21 +159,21 @@ export function mountKitView(root: HTMLElement, body: HTMLElement, column: HTMLE
     get frame() { return frame; },
     show(ask) {
       root.removeAttribute('data-kv-wait'); root.removeAttribute('data-kv-none');   // (set below while the column waits empty for a picture, and where it is empty for want of one: what a check — or a rule — can see of it)
-      if (!ask) { hide(); paused = true; says(); return false; }   // (off the step: the second game rests — it neither steps nor draws until the step shows again)
+      if (!ask) { hide(); paused = true; says(); return; }   // (off the step: the second game rests — it neither steps nor draws until the step shows again)
       was = narrow();
       // (ANY KIND of mission whose level file has a block: the child stages the kind's own team at the way — or, on a bespoke set, a room clear of the set — and says
       //  'none' where that kind has no team at a way in, which is no picture and not tried again)
-      if (!KIT_VIEW.on || was) { hide(); drop(); return false; }
+      if (was) { hide(); drop(); return; }
       styles();
       // (a mission with NO level file is on the bundled office: its block is its own file's, levels/office.json, through ui/missions.ts — and the
       //  child is asked with the mission's own query, no `levelFile` in it: main.ts builds the office and stages from that same block)
       const lv = ask.level ?? '', q = new URLSearchParams(ask.search.replace(/^[^?]*\?/, '')), k = keyOf(q), W = ways.get(lv);
       quietAsk = KIT_VIEW.quiet && !q.has('kitloud') && kitViewQuietKind(q) !== null;
       if (W === undefined) { ways.set(lv, null); void kitViewWays(ask.level).then(w => w, () => [] as boolean[]).then(w => { ways.set(lv, w); again(); }); }
-      if (W == null) { hide(); drop(); root.setAttribute('data-kv-wait', ''); return true; }   // (asked, not yet answered — the plan's own fetch, a moment: the column waits empty)
+      if (W == null) { hide(); drop(); root.setAttribute('data-kv-wait', ''); return; }   // (asked, not yet answered — the plan's own fetch, a moment: the column waits empty)
       // the way in as the page's own row has it; one past the level's ways is the game's to fold (any of them must then have a picture); a dealt one is no picture
       const way = ask.way < 0 ? -1 : ask.way ? ask.way - 1 : 0;
-      if (!W || failed.has(k) || way < 0 || !(way < W.length ? W[way] : W.length > 0 && W.every(Boolean))) { hide(); drop(); root.setAttribute('data-kv-none', ''); return true; }   // (no picture to be had here: the column is empty — nobody stands in)
+      if (!W || failed.has(k) || way < 0 || !(way < W.length ? W[way] : W.length > 0 && W.every(Boolean))) { hide(); drop(); root.setAttribute('data-kv-none', ''); return; }   // (no picture to be had here: the column is empty — nobody stands in)
       squadNow = ask.squad; paused = false;
       { const who = ask.member ?? 0; sel = JSON.stringify({ who, field: kitRows(who)[ask.row ?? -1]?.field ?? null }); }
       if (!frame || k !== key) {   // another mission, way in, hour …: a new element, on exactly what Deploy would load
@@ -191,9 +188,8 @@ export function mountKitView(root: HTMLElement, body: HTMLElement, column: HTMLE
       } else { const now = kitNow(ask.squad);   // (the LEADING edge: the first change goes now; what follows inside kitMs is one more message at its end)
         if (now !== sent && now !== want) { if (due) want = now; else { kit(); due = setTimeout(() => { due = 0; if (want) kit(); }, KIT_VIEW.kitMs); } } }
       says();
-      if (!live) { hide(); root.setAttribute('data-kv-wait', ''); return true; }   // (booting: the column stays empty until the picture says `ready` — nobody stands in, however long it takes)
+      if (!live) { hide(); root.setAttribute('data-kv-wait', ''); return; }   // (booting: the column stays empty until the picture says `ready` — nobody stands in, however long it takes)
       if (!shown) { shown = true; root.classList.add(ROOT_CLASS); place(); }
-      return true;
     },
     close() { hide(); drop(); ro?.disconnect(); window.removeEventListener('message', onMsg); },
   };

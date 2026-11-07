@@ -19,7 +19,7 @@
 //     divide by `rectZoom()` (the speech bubbles' blockers, the debugger's tooltip, the kit picture's width); a size read off the WINDOW or the picture's
 //     canvas divides by `textZoom()` (the overlay's marks, `uiSize()`). The two are the same number wherever an engine measures a zoomed element in window
 //     pixels, which the boot asks it once (`rectZoom` is 1 on one that answers in the element's own). A canvas drawn inside a layer multiplies its
-//     device pixels by `textZoom()` or it is stretched (the kit figure, the debrief's map, the wind graph).
+//     device pixels by `textZoom()` or it is stretched (the debrief's map, the wind graph).
 // THE SWITCH: `TEXTSIZE.on`, OFF in this module, raised by the page's boot (main.ts → bootTextSize; `?textsize=0` = off: no factor, no class, the browser's
 // own zoom keys, every rule as it was — `var(--tz, 1)` is 1). Never in the Team & kit picture's own window (an iframe is zoomed with the layer it sits in).
 // It is a look, not a rule of the game: the picture's canvas, the cursor and every number the game reads are untouched, nothing here is in a recording, and
@@ -42,7 +42,7 @@ const LS = 'twopointsix.textsize', ID = 'textsize-css';
 /** sent on the window when the step changes (a screen that draws the choice repaints) */
 export const TEXT_EVENT = 'tps-textsize';
 /** every layer of the page that carries words: the fight screen's, the cards', the screens laid over them */
-const LAYERS = ['#overlay', '#equip', '#lcol', '#meters', '#log', '#objective', '#tabcard', '#alarm', '#checkpoint', '#journal', '#caption', '#timeline', '#panel', '#ptip', '#loading', '#menu', '#missions', '#brief', '#options', '#replaytag', '#fatal', '#kit-preview', '#tapebar', '#tapenote', '#tapebig', '#taperefuse'];
+const LAYERS = ['#overlay', '#equip', '#lcol', '#meters', '#log', '#objective', '#tabcard', '#alarm', '#checkpoint', '#journal', '#caption', '#timeline', '#panel', '#ptip', '#loading', '#menu', '#missions', '#brief', '#options', '#replaytag', '#fatal', '#tapebar', '#tapenote', '#tapebig', '#taperefuse'];
 const CSS = `
 html.tsz :is(${LAYERS.join(', ')}) { zoom: var(--tz, 1); }
 html.tsz { touch-action: pan-x pan-y; }
