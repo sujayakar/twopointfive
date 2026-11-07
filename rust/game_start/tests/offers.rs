@@ -151,3 +151,30 @@ fn sam_is_offered_the_wall_row_where_a_charge_can_be_set() {
         assert!(o.index == index as f64 && (o.u - u).abs() < 0.02, "{level} static {index} u {u}: the row is for wall {} u {}", o.index, o.u);
     }
 }
+
+// ---------------------------------------------------------------- a can up behind a man
+
+/// THE RULE: with a can up, crouched behind a man whose back is turned, the row is the plain grab and the way to the knockout; a man who is only
+/// suspicious is no different.
+/// A FAILURE MEANS: the can has changed the close-in offer. (The old check read "the grab is from behind", because its man had turned on it.)
+#[test]
+fn a_can_up_behind_a_man_offers_the_grab() {
+    for state in [game::game::GuardState::Patrol, game::game::GuardState::Suspicious] {
+        let mut p = Play::mission("office.json", "?levelFile=office.json&roomclear&squad=1", &Opts { seed: 7, ..Default::default() });
+        p.g.god_mode = true;
+        p.run(0.2);
+        let a = p.hostiles()[0];
+        p.drop_all_but(&[a]);
+        let (at, east) = ([14.0, 11.2], std::f64::consts::FRAC_PI_2);
+        let aware = if state == game::game::GuardState::Patrol { 0.0 } else { 0.4 };
+        p.sam_put([at[0] - 0.8, at[1]]);
+        let me = p.g.player;
+        p.g.pl[me].crouch = true;
+        for _ in 0..10 { p.pin_man(a, at, east, state, aware); p.frame(); }
+        p.g.pl[me].slot = game::game::SlotKind::Smoke;
+        p.pin_man(a, at, east, state, aware);
+        p.frame();
+        let row = p.g.nearby.iter().find(|r| r.guard == Some(a)).map(|r| r.line2.clone()).unwrap_or_default();
+        assert!(row.contains("grab him") && row.contains("holster for the knockout") && !row.contains("from behind"), "{state:?}: the row is '{row}'");
+    }
+}
