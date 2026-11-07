@@ -73,11 +73,12 @@ the picture right. `draw.html` (`?draw=1`; `src/host/drawpage.ts`) starts the ga
 the game's TypeScript, and `tools/draw/ban.ts` (the first step of `bun run build`) is red on an import of it. The page he plays takes the fog of war alone from a section; the rest
 of it is as it was. What a player or a panel does that is not input is ONE TYPED LIST, declared once (`rust/game_run/src/command.rs` `commands!`; the page's writer is generated beside the sections:
 `src/draw/commands.ts`), handed over before a step (`face_commands`) as the bytes a replay or another machine would be handed. Games are kept by the save controller in Rust
-(`game_rules` `savestate/control.rs`: when, which ring, what goes back; the module keeps the clones; a step told `SAVES` gives it its turn). Sound asks the world (`src/draw/ask.ts`).
+(`game_rules` `savestate/control.rs`: when, which ring, what goes back; the module keeps the clones; a step told `SAVES` gives it its turn). What has been commanded by the time a game is started is done to it before it is made (the difficulty and its levers: `src/host/machine.ts`). Sound asks the world (`src/draw/ask.ts`).
 Not on the new page yet: marks, snow and rain, fires, the traffic map, a look's paint on door leaves (`lookDoors`), the particles' own look table, the
 HUD, the menus, kit, the panel's knobs, the level's own music. To add a section: a file, a line in `sections!`, the generator, a line in `hold draw`'s parts.
 Checks: `tools/draw/rows-check.ts` runs both packers on one tick of one game and compares every word (462 ticks of six levels, all equal; `ROWS_BREAK=1` fails; it goes when the
-TypeScript copy does); `rust/game_start/tests/draw.rs` and `fog.rs`; `hold draw` draws every frame of a set of plays, holds the game's words to what they were and prints what each
+TypeScript copy does); `tools/draw/play-check.ts` starts every row of the mission list on the new page's game with no page, walks, shoots, saves, loads, restarts and draws between ticks
+(38 missions in 36 s; `PLAY_BREAK=1` fails); `rust/game_start/tests/draw.rs`, `saves.rs` and `fog.rs`; `hold draw` draws every frame of a set of plays, holds the game's words to what they were and prints what each
 part cost. Seen only in software: stills of the office beside the old page's. Never seen on a GPU.
 
 **The rows and the maths are NOT SWITCHES any more** (the bullet "Not switches", near the end, 2026-11-05). Every `TPS_RUST`, `TPS_RUST<ROW>`, `TPS_EXACT`,
