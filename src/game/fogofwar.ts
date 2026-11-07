@@ -109,7 +109,7 @@
 //     laserBoxes), and Sam's creeping carriage near a man (game.ts, presentation) does not start for one he cannot see;
 //   · a hidden man's spoken line takes the log (above);
 //   · it asks the probe for smoke along the team's sight lines (≤ 6 segments a frame, queued LAST — flushAsks — so they are the ones dropped when the table is
-//     full; the switch and FOG ride in an F10 journal's knobs, so a recording made under it replays);
+//     full; the switch and FOG ride in a tape's knobs, so a run made under it replays);
 //   · in the page a hidden man's shadow / reflection proxies and rig boxes are out of the scene, so the light meter no longer has his shadow in it and a CPU
 //     ray (a tripwire beam's end, the cursor's aim point) no longer meets his gun. Small, real, and invisible to the headless probes.
 //
@@ -673,7 +673,7 @@ export class FogOfWar {
     const L = Math.hypot(e.look[0], e.look[2]) || 1;
     return (dx * e.look[0] + dz * e.look[2]) / (d * L) > Math.cos(fov * 0.5 * DEG);
   }
-  /** A fresh encounter (Game.restartEncounter — a restart, a checkpoint load, the start of an F10 recording and of its replay): nobody has been seen, no pair asked. */
+  /** A fresh encounter (Game.restartEncounter — a restart, a checkpoint load): nobody has been seen, no pair asked. */
   reset() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('FogOfWar.reset', this, []); if (__r !== RUST_PASS) return __r as any; } } this.rawAt = -1; this.bared = false; this.lampRecs.clear(); this.faceRecs.clear(); this.doorRecs.clear(); this.doorsHeld = 0; this.thingRecs.clear(); this.propsLoaded = false; this.loaded = false; this.ourLanded.clear(); this.thingSince = -1; this.recs = new SideMap(); this.asked.clear(); this.pending.length = 0; this.turn = 0; this.frameNo = 0; this.hiddenChars.clear(); this.firedN = new SideMap(); this.firedAt = new SideMap(); this.shown = new SideSet(); this.fireClock = 0;
     this.callClock = 0; this.lastCall = -1e9; this.calledT = new SideMap(); this.knownT = new SideMap(); this.toldStep = new SideMap(); this.callN = 0; this.callLog = []; this.callStats = { contact: 0, heard: 0 }; }
 

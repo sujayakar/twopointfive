@@ -7,7 +7,7 @@
 // host/sneaklab.ts, stands him there — and wherever he was moved between two steps, a debug teleport; 'posein': where a restart made INSIDE a step, Shift+Enter,
 // left him once the page's own wrap of Game.restart had staged its scene — the game's restart is wrapped on this Game's instance to see it, as the sensors' read is).
 // A control worked on the page between two steps (`touched()`: ui/replaykey.ts hears the document's input, change and click) has every table looked at before the
-// next step, so a number moved on a panel while playing is taped at the step it first acts on, not on the tables' slow round. A save of this run loaded from a card is taped by its slot: the walk has made the same save. What cannot be followed — a scenario started or quit from a menu, a file's checkpoint or another run's loaded, an F10 recording started — ends the tape with its reason (`dead`),
+// next step, so a number moved on a panel while playing is taped at the step it first acts on, not on the tables' slow round. A save of this run loaded from a card is taped by its slot: the walk has made the same save. What cannot be followed — a scenario started or quit from a menu, a file's checkpoint or another run's loaded — ends the tape with its reason (`dead`),
 // and the replay is then a trace only. It never touches the game: the sensors' read is WRAPPED on this Game's instance (the value passes through untouched).
 // A re-run is exact as far as the page's arithmetic and bun's agree; the tool measures that against the trace instead of promising it.
 import type { Game } from './game';
@@ -68,14 +68,12 @@ export function tapePoses(g: Game): { row(f: number, kind: string, data: unknown
     due.push([f, data]); return true; } };
 }
 /** What reached the game from OUTSIDE a step that no tape can follow, as the replay buffer saw it before the step ran (replaybuf.ts `look` — the one place it is
- *  asked, for the tape and the trace alike): a checkpoint loaded, an F10 recording started (it re-enters a checkpoint of the moment and puts its own die in). */
-export type Outside = 'load' | 'rec' | null;
+ *  asked, for the tape and the trace alike): a checkpoint loaded. */
+export type Outside = 'load' | null;
 /** checkpoints loaded into this game so far (savestate.ts Checkpoints.load — the one road a page's load takes), and times the host put it back to its start
  *  (Checkpoints.startedAgain). Both move the clock; only these counts say which it was */
 export const loadsOf = (g: Game): number => g.saves?.stats?.loads ?? 0;
 export const restartsOf = (g: Game): number => g.saves?.stats?.restarts ?? 0;
-/** the F10 recorder: running, and the last file it made (a new object each stop: a recording stopped and started again between two looks is seen by it) */
-export const recOf = (g: Game): { on: boolean; last: object | null } => { const J = g.journal as { recording?: boolean; last?: object | null } | undefined; return { on: !!J?.recording, last: J?.last ?? null }; };
 const kitNow = (): string => JSON.stringify({ on: KIT.on, members: KIT.members, ...(kitOwn() ? { own: true } : {}), ...(kitStealthCard() ? { stealth: kitStealthCard() } : {}) });   // (`own`: the cards are the player's own layout, worn as written — kit.ts KITDEAL; absent = a tape from before, or cards a team of three or four wears dealt)
 
 /** THE RECIPE OF A GAME AS IT STANDS (format.ts RunTape.recipe, but for the page's address, which its host knows): its die, the scenario that is up, the journal's
@@ -123,7 +121,6 @@ export class RunTapeRec {
     const f = this.ticks;
     // (a LOAD is not a restart, whatever its clock says — earlier, later (a checkpoint of an earlier visit) or the same to the bit; a load made INSIDE a step, the
     // bare Enter once down, is the step's own input and is walked again like any other)
-    if (outside === 'rec') { this.kill(f, 'an F10 recording was started'); return; }
     if (f === 0) { if (outside) { this.kill(f, 'a checkpoint was loaded'); return; } if (!this.begin(g)) return; } else if (!this.between(g, f)) return;
     if (f >= RUNTAPE.minutes * 3600) { this.kill(f, `the page's game had run more than ${RUNTAPE.minutes} min of steps`); return; }
     { const L = this.dt[this.dt.length - 1]; if (L && L[1] === dt) L[0]++; else this.dt.push([1, dt]); }

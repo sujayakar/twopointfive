@@ -100,5 +100,4 @@ export const RED_WORLD: Record<string, RedRow> = {
   'wetground': { is: 'maybe', rust: true, line: "read 2026-11-07 · 4 of 6 lines fail, nothing refused · first: 1 under a picked rain nothing flat lies dry in the open: every ground slab, every finish laid on one and every sheet on those is wet; the kit lays nothing that lies higher than the step calls the ground", whose: RUST },
   'winbars': { is: 'maybe', rust: true, line: "read 2026-11-07 · 2 of 24 lines fail, nothing refused · first: a blast on the floor 0.2 m out from the wall's foot under the window, one side: the bar goes (its own sill is no shield) and its 0 pieces fly away from the blast (0)", whose: RUST },
   'wxkinds-default': { is: 'maybe', rust: true, line: "read 2026-11-07 · 1 of 2 lines fail, nothing refused · first: the office's two footprints, the frame's weather words 0, airTrans and hearMask exactly 1, hearPath = propagate", whose: RUST },
-  'wxkinds-journal': { is: 'maybe', rust: true, line: "read 2026-11-07 · 1 of 1 lines fail, nothing refused · first: staging: the scripted session did its deeds in both recordings (a whistle, a canister thrown, a round fired)", whose: RUST },
 };
