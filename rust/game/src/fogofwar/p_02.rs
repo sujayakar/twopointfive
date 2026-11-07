@@ -362,10 +362,9 @@ pub fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
     }
     // ---- the renderer's block: what the fog's pass and the sight table draw from (render/fogofwar.ts FogFrame). The picture's alone, and filled here because
     //      it is computed from the game's state: the page hands it to the renderer as it comes
+    // (the look's four rows, desat, edge, air and kept, are settled at the page's values: there is no other look to put back, and the count only runs down)
     if g.fog_of_war.look_frames > 0.0 {
         g.fog_of_war.look_frames -= 1.0;
-        let page = g.m.fogofwar.fog_page;
-        g.k.fog.desat = page.desat; g.k.fog.edge = page.edge; g.k.fog.air = page.air; g.k.fog.kept = page.kept;
     }
     let k = g.k.fog;
     {
