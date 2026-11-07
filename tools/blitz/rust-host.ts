@@ -381,8 +381,12 @@ export class RustHost {
    *  kept beside it. `W.restore` of that same file, unchanged, is the kept game standing again; anything else is the TypeScript's `loadState` on the puppet. */
   keptFor(s: object): void { if (!this.keeps() || !this.live() || this.inStep) return; this.scanFlush(); if (!OFF.has('backcam')) this.handHalf();
     const k = this.keep(); this.keptTool.push(k); while (this.keptTool.length > 16) this.F.X.face_kept_drop(this.keptTool.shift()!);
-    TOOL_KEPT.set(s, { k, sig: Bun.hash(JSON.stringify(s)), host: this }); TOOL_GONE.register(s, { k, cell: this.cell }); this.count('a snapshot: the Rust game kept beside the file (face_keep)'); }
-  backFor(s: object): boolean { const e = TOOL_KEPT.get(s); if (!e || e.host !== this || !this.keeps() || !this.live() || this.inStep || this.startWhy() !== null) return false;
+    const sig = Bun.hash(JSON.stringify(s)); TOOL_KEPT.set(s, { k, sig, host: this }); this.keptSig.set(sig, k); TOOL_GONE.register(s, { k, cell: this.cell }); this.count('a snapshot: the Rust game kept beside the file (face_keep)'); }
+  /** A COPY OF THE FILE WITH THE SAME BYTES IS THE SAME FILE (a tool that writes a snapshot out and reads it back, as a checkpoint's load does: `W.restore(
+   *  JSON.parse(JSON.stringify(save)))`): the kept game is found by the file's content where the object is not the one that was kept, while the tool still
+   *  holds the snapshot it took (its kept game goes when the collector takes that) */
+  private keptSig = new Map<bigint | number, number>();
+  backFor(s: object): boolean { let e = TOOL_KEPT.get(s); if (!e) { const sig = Bun.hash(JSON.stringify(s)), k = this.keptSig.get(sig); if (k !== undefined && this.keptTool.includes(k)) e = { k, sig, host: this }; } if (!e || e.host !== this || !this.keeps() || !this.live() || this.inStep || this.startWhy() !== null) return false;
     if (!this.keptTool.includes(e.k)) { this.count('a snapshot whose kept game was let go (more than 16 held): loaded by the TypeScript on the puppet'); return false; }
     if (Bun.hash(JSON.stringify(s)) !== e.sig) { this.count('a snapshot the tool changed since it was taken: loaded by the TypeScript on the puppet'); return false; }
     this.backTo(e.k, 'a snapshot put back'); this.count('a snapshot put back: the kept game stands again (face_back), one whole apply'); return true; }

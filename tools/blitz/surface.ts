@@ -3,7 +3,7 @@
 //   surfaceHost(H);               a game's host stands: H.surfaceCall(row, bytes) => bytes, H.surfaceOpen() => is a call to cross now (no Rust game yet, or inside the host's own lines: no)
 // INSIDE THE HOST'S OWN LINES nothing crosses: a guard reached from `Game.update`'s lines, an apply or the dress step runs as the TypeScript it is.
 // A CALL THROUGH A TOOL'S HOOK: an out event's dispatch calls the method on the puppet as it stands, so a tool's replacement fires, and its call through to the original does nothing: the Rust game has already done it (`dispatching`).
-import { SCHEMA, parse, bookOf, exportPart } from './export';
+import { SCHEMA, parse, bookOf, exportPart, PAST } from './export';
 import CALLS from './calls.json';
 import TAPS from './taps.json';
 import { WEAPONS } from '../../src/game/weapons';
@@ -46,7 +46,11 @@ function call(row: number, self: any, args: any[]): any { const H = hostOf(self,
   for (const [ty, v] of parts) if ((v === null || v === undefined) && parse(ty).k === 'id') throw new TypeError(`${C.key}: an argument of type ${ty} is ${v}`);
   // A ROW THE RUST GAME HAS NOT GOT (a tour's own RoomClear, made in TypeScript since the last start): the TypeScript runs, on its own row
   { const bk0 = bookOf(g); for (const [ty, v] of parts) { const n = parse(ty); if (n.k === 'id' && bk0 && !((bk0.ids.get(n.id)?.get(v as object) ?? Infinity) < ((bk0 as any).known?.get(n.id) ?? Infinity))) { passed(C.key, 'noRow'); H.count?.(`passed, a row Rust has not got: ${C.key}`); return PASS; } } }
-  TALLY.crossed++; H.count?.(`crossed: ${C.key}`); const dieWas = DIE.f; DIE.f = die; let out: Uint8Array; try { out = H.surfaceCall(row, exportPart(g, H.knobs, parts)); } finally { DIE.f = dieWas; } const bk = bookOf(g), I = new In(out); let r: any;
+  // …AND ONE INSIDE AN ARGUMENT (an optional id, a list of them, a field of a struct handed in): the rule above sees only an argument that IS an id. The
+  // bytes are written first and the exporter counts every id it wrote for a row the Rust game has not got (export.ts PAST): a door gate made by hand
+  // on the puppet and handed to `DoorTools.order` went over as gate 0 of a table of none, and the Rust body indexed past it
+  const past0 = PAST.n, bytes = exportPart(g, H.knobs, parts); if (PAST.n !== past0) { passed(C.key, 'noRow'); H.count?.(`passed, an argument holds a row Rust has not got (${PAST.id}): ${C.key}`); return PASS; }
+  TALLY.crossed++; H.count?.(`crossed: ${C.key}`); const dieWas = DIE.f; DIE.f = die; let out: Uint8Array; try { out = H.surfaceCall(row, bytes); } finally { DIE.f = dieWas; } const bk = bookOf(g), I = new In(out); let r: any;
   if (C.result) { if (I.b[I.p++]) { throw new Error(val({ k: 'str' }, I, bk)); } } if (C.ret) r = val(parse(C.ret), I, bk);
   for (const a of C.args) if (a.mut) { const v = val(parse(a.ty), I, bk), t = a.from === 'this' ? self : args[a.from]; if (Array.isArray(t) && Array.isArray(v)) { t.length = v.length; for (let i = 0; i < v.length; i++) t[i] = v[i]; } else if (t && typeof t === 'object' && v && typeof v === 'object') Object.assign(t, v); }
   return r; }
@@ -67,6 +71,6 @@ let ROW_OF: Map<string, number> | null = null, TAP_OF: Map<string, number> | nul
 export function crossing(key: string, self: unknown, args: unknown[]): unknown {
   TAP_OF ??= new Map(TAP.map(T => [T.key, T.id])); const t = TAP_OF.get(key); if (t !== undefined && firing?.id === t) return firing.answer;
   ROW_OF ??= new Map((CALLS as any).rows.map((r: any) => [r.stub, r.id])); const row = ROW_OF.get(key); if (row === undefined) throw new Error(`the call surface: no row ${key}`);
-  const r = call(row, self, args as any[]); if (r === PASS) throw new Error(`the call surface: ${key} was called where it cannot cross (no game stands, the host's own lines are running, or an argument is a row Rust has not got)`); return r; }
+  const r = call(row, self, args as any[]); if (r === PASS) throw new Error(`the call surface: ${key} was called where it cannot cross (no game stands, the host's own lines are running, or an argument is or holds a row the Rust game has not got${PAST.id ? `: the last such row written was a ${PAST.id}` : ''}: a thing made by hand on the puppet is not in the game; make it through a function that crosses)`); return r; }
 /** a tapped function with no row: all it still does is answer a tool that replaced it and called through */
 export function tapAnswer(key: string): unknown { TAP_OF ??= new Map(TAP.map(T => [T.key, T.id])); return firing?.id === TAP_OF.get(key) ? firing!.answer : undefined; }
