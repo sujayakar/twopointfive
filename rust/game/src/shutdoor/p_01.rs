@@ -473,3 +473,20 @@ pub fn order_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders
     None
 }
 
+/// The row, on the door tools' page in the charge's place while the door stands open. (shutdoor.ts registerShutDoor)
+pub fn register_shut_door(g: &mut crate::game::Game) {
+    let def = crate::orders::OrderDef {
+        id: String::from(SHUT_ID),
+        label: crate::orders::OrderLabel::Text { text: String::from("shut that door") },
+        targets: vec![crate::orders::TargetKind::Door],
+        ack: Some(vec![String::from("shutting it."), String::from("got the door.")]),
+        stands_in: Some(crate::orders::OrderDefStandsIn { for_: String::from(STOOD), when: crate::orders::OrderWhen::ShutDoor }),
+        only: Some(crate::orders::OrderOnly::ShutDoor),
+        valid: Some(crate::orders::OrderValid::ShutDoor),
+        issue: crate::orders::OrderIssue::ShutDoor,
+        tick: Some(crate::orders::OrderTick::ShutDoor),
+        ..crate::orders::OrderDef::zeroed()
+    };
+    let id = g.tab.orders_order_def.push(def);
+    crate::orders::squad_orders_register(g, id, None);
+}

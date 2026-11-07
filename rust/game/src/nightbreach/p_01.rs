@@ -336,6 +336,11 @@ pub fn night_breach_drill_ops(g: &mut crate::game::Game) -> Vec<GuardId> {
     g.night_breach.ops.iter().take(2).copied().collect()
 }
 
+/// A new one: its initialisers. (nightbreach.ts NightBreach.constructor)
+pub fn night_breach_new(g: &mut crate::game::Game) -> crate::nightbreach::NightBreach {
+    NightBreach::blank()
+}
+
 /// The team start in force. (nightbreach.ts NightBreach.teamOf)
 pub fn night_breach_team_of(g: &mut crate::game::Game, layout: Option<&crate::nightbreach::NightBreachLayout>) -> Option<crate::scene_scenarios::TeamStart> {
     if let Some(t) = layout_team(g, layout) { return Some(t); }

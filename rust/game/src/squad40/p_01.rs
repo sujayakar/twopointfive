@@ -409,6 +409,18 @@ pub fn row(g: &mut crate::game::Game) -> OrdersOrderDefId {
     })
 }
 
+/// the squad's HUD block: what is left while this staging brought any, and the shot just made. (squad40.ts notes)
+pub fn notes(g: &mut crate::game::Game) -> Vec<crate::orders::OrderNote> {
+    let key = crate::seats::view_key(g);
+    let (brought, shown) = match g.m.squad40.states.get(key) { Some(s) => (s.brought, s.shown.clone()), None => return Vec::new() };
+    if !js::truthy(brought) || !def_listed(g, SHELL_THERE) { return Vec::new(); }
+    let left = crate::orders::OrderNote::Text(format!("40 mm {}", js::num_str(squad40_left(g))));
+    match shown {
+        Some(w) if g.time >= w.t && g.time - w.t < g.k.squad40.shown_secs => vec![crate::orders::OrderNote::Text(w.text), left],
+        _ => vec![left],
+    }
+}
+
 /// Once a frame straight after the menu's own input: the row kept in step with what this staging brought and with the throws' page, a turn whose man is down or under another order ended. (squad40.ts squad40Tick)
 pub fn squad40_tick(g: &mut crate::game::Game) {
     let key = crate::seats::view_key(g);

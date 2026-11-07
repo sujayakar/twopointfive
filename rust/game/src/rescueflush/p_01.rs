@@ -10,6 +10,9 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 /// Distance on the floor.   (rescueflush.ts flat)
 pub fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 
+/// A new one: the field initialisers; the constructor only keeps `g` and `R`.   (rescueflush.ts RescueFlush.constructor)
+pub fn rescue_flush_new(g: &mut crate::game::Game) -> crate::rescueflush::RescueFlush { RescueFlush::blank() }
+
 /// Back to nothing having happened.   (rescueflush.ts RescueFlush.reset)
 pub fn rescue_flush_reset(g: &mut crate::game::Game) {
     let f = &mut g.rescue.flush;

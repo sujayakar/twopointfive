@@ -7,6 +7,11 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
+/// A new tracker: nothing known. (entrypoints.ts EntryPoints.constructor)
+pub fn entry_points_new(g: &mut crate::game::Game) -> crate::entrypoints::EntryPoints {
+    EntryPoints::blank()
+}
+
 /// Nothing known: a restart. A point already marked moved stays so, as in the TypeScript. (entrypoints.ts EntryPoints.reset)
 pub fn entry_points_reset(g: &mut crate::game::Game) {
     g.entry.been.clear();

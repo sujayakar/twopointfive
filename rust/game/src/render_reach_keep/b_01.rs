@@ -9,6 +9,9 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 
+/// BOUNDARY: the host's reach keeper takes the level's doors and roofed cells and builds its masks; a run with no picture has no keeper (`engine.reach?.boot`), so nothing happens   (render/reachKeep.ts:64 ReachKeep.boot)
+pub fn reach_keep_boot(g: &mut crate::game::Game, doors: &[crate::render_reach::ReachDoor], interior: &[u8]) {}
+
 /// BOUNDARY: the host's reach keeper makes this directional light's mask; a run with no picture has no keeper (`engine.reach?.dir`), so nothing happens   (render/reachKeep.ts:160 ReachKeep.dir)
 pub fn reach_keep_dir(g: &mut crate::game::Game, l: LightId, only: Option<&crate::render_reach::ReachOnly>) {}
 

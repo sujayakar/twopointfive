@@ -33,6 +33,14 @@ fn rear_pin(g: &mut Game, gd: GuardId) -> Option<crate::rearwatch::RearPin> {
 /// An optional boolean as a condition.
 fn yes(o: Option<bool>) -> bool { o.unwrap_or(false) }
 
+/// (cover.ts Cover) The constructor: the field initialisers, the file's one rear opening, the page's knobs.
+pub fn cover_new(g: &mut Game) -> Cover {
+    let mut c = Cover::blank();
+    c.knobs = g.k.cover;
+    c.rear = Some(g.tab.cover_opening.push(Opening { id: String::from("rear"), kind: OpeningKind::Rear, at: [0.0, CHEST, 0.0], n: [0.0, 1.0], half: 1.0, door: None, pass: None, far: None }));
+    c
+}
+
 /// Nothing dealt, nothing known: a restart. (cover.ts reset)
 pub fn cover_reset(g: &mut Game) {
     let c = &mut g.cover;

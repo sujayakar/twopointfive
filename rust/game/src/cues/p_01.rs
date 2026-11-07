@@ -318,6 +318,11 @@ pub fn flat(a: V3, b: V3) -> f64 {
     m::hyp2(a[0] - b[0], a[2] - b[2])
 }
 
+/// A new Cues: the field initialisers, nothing more.   (cues.ts Cues.constructor)
+pub fn cues_new(g: &mut crate::game::Game) -> crate::cues::Cues {
+    Cues::blank()
+}
+
 /// The encounter is another one (a restart, a checkpoint loaded: the clock may have gone back).   (cues.ts Cues.reset)
 pub fn cues_reset(g: &mut crate::game::Game) {
     g.cues.heard_row = None;

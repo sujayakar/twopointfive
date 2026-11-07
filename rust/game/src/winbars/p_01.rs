@@ -54,6 +54,15 @@ pub fn bar_at(g: &mut crate::game::Game, index: f64) -> bool {
     stands(seam_box(g, b).flags)
 }
 
+/// The bars a round or a blast has taken, ascending.   (winbars.ts barsGone)
+pub fn bars_gone(g: &mut crate::game::Game) -> Vec<f64> {
+    let mut out = Vec::new();
+    if untouched(g) { return out; }
+    let s = g.sim;
+    for i in 0..::sim::panes::bars_gone(s) as usize { out.push(::sim::panes::bar_gone(s, i) as f64); }
+    out
+}
+
 /// The flags a bar this rule took was authored with, or None.   (winbars.ts barFlags0)
 pub fn bar_flags0(g: &mut crate::game::Game, index: f64) -> Option<f64> {
     if untouched(g) { return None; }
@@ -62,6 +71,12 @@ pub fn bar_flags0(g: &mut crate::game::Game, index: f64) -> Option<f64> {
         if ::sim::panes::bar_gone(s, i) as f64 == index { return Some(::sim::panes::bar_flags(s, i) as f64); }
     }
     None
+}
+
+/// Once, as the game is made: the line of fire's question and the blasts' list.   (winbars.ts bootBars)
+pub fn boot_bars(g: &mut crate::game::Game) {
+    g.col.fire_pass = Some(crate::scene_collision::FirePass::Bars);
+    crate::destruction::destruction_on_blast(g, crate::destruction::BlastListener::Bars);
 }
 
 /// A round would stop in bar `index`: hidden from the rest of its flight, nothing more until bars_settle.   (winbars.ts barMeet)

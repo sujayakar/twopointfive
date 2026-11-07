@@ -64,6 +64,22 @@ pub fn air_dust_cells(g: &mut crate::game::Game) -> Vec<u32> {
     plan(g).cells[..n].to_vec()
 }
 
+/// A new one, against the game as it stands; the caller stores it at `g.air_dust`. (airDust.ts AirDust.constructor)
+pub fn air_dust_new(g: &mut crate::game::Game) -> crate::air_dust::AirDust {
+    let (w, h) = (crate::scene_air_grid::air_w(), crate::scene_air_grid::air_h());
+    let (cap_w, cap_h) = (::sim::weather_cap(2) as f64, ::sim::weather_cap(3) as f64);
+    let min = crate::scene_world::world().min;
+    if cap_w != w || cap_h != h || AIR_CELL != 0.5 || min[0] != 0.0 || min[2] != 0.0 {
+        panic!("the dust's plan is {} × {}, and rust/sim/src/air.rs holds {} × {}", w, h, cap_w, cap_h);
+    }
+    air(g).s.fill(1.0); // (a block's zeros are no air at all)
+    let was = core::mem::replace(&mut g.air_dust, AirDust::blank());
+    if crate::weather::weather_kind(g).is_some() {
+        air_dust_ensure(g);
+    }
+    core::mem::replace(&mut g.air_dust, was)
+}
+
 /// The share at a spot of the plan; off the grid = the open air. (airDust.ts AirDust.shareAt)
 pub fn air_dust_share_at(g: &mut crate::game::Game, x: f64, z: f64) -> f64 {
     if g.air_dust.dirty {

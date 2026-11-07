@@ -585,6 +585,19 @@ pub fn set_lever(g: &mut crate::game::Game, key: crate::difficulty::LeverKey, ru
     write(g, Some(own(key)));
 }
 
+/// round the kept feel rows being read back: the fog lever's rung over them again. (difficulty.ts leversFog)
+pub fn levers_fog(g: &mut crate::game::Game, load: &mut dyn FnMut(&mut crate::game::Game)) {
+    if g.m.difficulty.own_for.is_some() {
+        if let Some(was) = g.m.difficulty.own_was { g.k.fog.own = was; }
+    }
+    load(g);
+    if let Some(f) = g.m.difficulty.set.fog {
+        g.m.difficulty.own_was = Some(g.k.fog.own);
+        g.k.fog.own = f == crate::quietfog::QuietRung::Own;
+        g.m.difficulty.own_for = Some(f);
+    }
+}
+
 /// the cone for this visit, whatever the level; None = the level decides. (difficulty.ts setConeVisit)
 pub fn set_cone_visit(g: &mut crate::game::Game, v: Option<bool>) {
     g.m.difficulty.cone_visit = v;
