@@ -104,7 +104,7 @@ pub fn update_guard(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     let granted = crate::control::grant(g, gd);
     if let crate::control::Grant::Lent { rule, script } = granted {
         let ran = run_lent_script(g, gd, script, dt);
-        (crate::control::BODY_RULES[rule].ran)(g, gd, ran);
+        (crate::control::BODY_RULES[rule].commit)(g, gd, ran);
         return;
     }
     if let crate::control::Grant::Script = granted {

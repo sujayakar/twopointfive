@@ -8,9 +8,12 @@
 //! blast, startled. Below them stands his own script (`gd.script`, which 71 files read and so stays where it is), and below that the man's own
 //! state (patrol, suspicious, search, alert). Dead and held are noted from `update_guard`'s first lines.
 //!
-//! TO ADD A RULE THAT TAKES A MAN'S BODY: write its two functions in its own module and add one row to `BODY_RULES` at its rank.
-//! `ask` says what his body should do this tick if the rule has him (`None`: it does not want him); `ran` hears what the body made of it
-//! (`arrived`, the walk's clocks), so the rule can keep it for next tick.
+//! A RULE IS THREE FUNCTIONS, each with one job. `transition` moves the rule's own state for this man (a clock runs out, he arrives, he is stuck).
+//! `propose` says what his body should do this tick if the rule has him (`None`: it does not want him); it takes `&Game`, so the compiler holds
+//! that asking a rule changes nothing. `commit` hears what the body made of it (`arrived`, the walk's clocks), so the rule can keep it for next
+//! tick. Today a rule's `transition` runs only when no rule above has him, as the one function it was cut from did.
+//!
+//! TO ADD A RULE THAT TAKES A MAN'S BODY: write those three in its own module and add one row to `BODY_RULES` at its rank.
 //!
 //! A body has three channels (`Channel`): legs, aim, hands. A rule of `BODY_RULES` takes all three. A rule of `LEGS_RULES` takes his legs
 //! while his own fight keeps his aim and his hands: he gets down, or goes to a spot crouched, with his gun on the danger. It is asked where
@@ -49,18 +52,23 @@ pub enum Holder {
 /// a rule that can take a man's whole body for a tick
 pub struct BodyRule {
     pub name: &'static str,
-    /// what his body should do this tick, if this rule has him. Asked only when no rule above answered.
-    pub ask: fn(&mut Game, GuardId) -> Option<GuardScript>,
+    /// the rule's own state for this man, moved a tick. Run only when no rule above answered, just before `propose`.
+    pub transition: fn(&mut Game, GuardId),
+    /// what his body should do this tick, if this rule has him. It only reads.
+    pub propose: fn(&Game, GuardId) -> Option<GuardScript>,
     /// the script as the body left it after the tick (`None`: the run ended it)
-    pub ran: fn(&mut Game, GuardId, Option<GuardScript>),
+    pub commit: fn(&mut Game, GuardId, Option<GuardScript>),
 }
+
+/// for a rule whose state is all moved in its own tick
+pub fn no_transition(_: &mut Game, _: GuardId) {}
 
 /// THE LIST. The order of the rows is the rank.
 pub const BODY_RULES: [BodyRule; 4] = [
-    BodyRule { name: "a live grenade", ask: crate::frag::frag_flee, ran: crate::frag::frag_script_ran },
-    BodyRule { name: "broke and ran", ask: crate::runner::runner_script, ran: crate::runner::runner_script_ran },
-    BodyRule { name: "shaken by a blast", ask: crate::morale::morale_script, ran: crate::morale::morale_script_ran },
-    BodyRule { name: "startled", ask: crate::startle::startle_script, ran: crate::startle::startle_script_ran },
+    BodyRule { name: "a live grenade", transition: crate::frag::p_03::frag_flee_transition, propose: crate::frag::p_03::frag_flee_propose, commit: crate::frag::frag_script_ran },
+    BodyRule { name: "broke and ran", transition: no_transition, propose: crate::runner::p_01::runner_propose, commit: crate::runner::runner_script_ran },
+    BodyRule { name: "shaken by a blast", transition: crate::morale::p_02::morale_transition, propose: crate::morale::p_02::morale_propose, commit: crate::morale::morale_script_ran },
+    BodyRule { name: "startled", transition: crate::startle::p_01::startle_transition, propose: crate::startle::p_01::startle_propose, commit: crate::startle::startle_script_ran },
 ];
 
 /// what a rule wants of a man's legs for a tick, while his own fight keeps his aim and his hands
@@ -154,7 +162,8 @@ pub fn note(g: &mut Game, gd: GuardId, to: Holder, declined: u32) {
 pub fn grant_from(g: &mut Game, gd: GuardId, rules: &[BodyRule]) -> Grant {
     let mut declined = 0u32;
     for (i, r) in rules.iter().enumerate() {
-        if let Some(script) = (r.ask)(g, gd) {
+        (r.transition)(g, gd);
+        if let Some(script) = (r.propose)(g, gd) {
             note(g, gd, Holder::Rule(i as u8), declined);
             return Grant::Lent { rule: i, script };
         }
@@ -235,16 +244,18 @@ mod tests {
         g.guards.push(gd);
         (g, gd)
     }
-    fn no(_: &mut Game, _: GuardId) -> Option<GuardScript> { None }
-    fn yes(_: &mut Game, _: GuardId) -> Option<GuardScript> { Some(GuardScript { speed: Some(7.0), ..Default::default() }) }
-    fn never(_: &mut Game, _: GuardId) -> Option<GuardScript> { panic!("a rule below the winner was asked") }
+    fn no(_: &Game, _: GuardId) -> Option<GuardScript> { None }
+    fn yes(_: &Game, _: GuardId) -> Option<GuardScript> { Some(GuardScript { speed: Some(7.0), ..Default::default() }) }
+    fn never(_: &Game, _: GuardId) -> Option<GuardScript> { panic!("a rule below the winner was asked") }
+    fn never_moved(_: &mut Game, _: GuardId) { panic!("the state of a rule below the winner was moved") }
     fn ran(_: &mut Game, _: GuardId, _: Option<GuardScript>) {}
+    fn rule(name: &'static str, propose: fn(&Game, GuardId) -> Option<GuardScript>) -> BodyRule { BodyRule { name, transition: if name == "c" { never_moved } else { no_transition }, propose, commit: ran } }
 
     #[test]
     fn the_first_rule_that_answers_has_him_and_those_below_are_not_asked() {
         let (mut g, gd) = stand();
         g.time = 3.0;
-        let rules = [BodyRule { name: "a", ask: no, ran }, BodyRule { name: "b", ask: yes, ran }, BodyRule { name: "c", ask: never, ran }];
+        let rules = [rule("a", no), rule("b", yes), rule("c", never)];
         match grant_from(&mut g, gd, &rules) {
             Grant::Lent { rule, script } => { assert_eq!(rule, 1); assert_eq!(script.speed, Some(7.0)); }
             _ => panic!("rule b should have him"),
@@ -258,7 +269,7 @@ mod tests {
     #[test]
     fn his_script_stands_below_the_rules_and_his_own_state_below_that() {
         let (mut g, gd) = stand();
-        let rules = [BodyRule { name: "a", ask: no, ran }];
+        let rules = [rule("a", no)];
         assert!(matches!(grant_from(&mut g, gd, &rules), Grant::Own));
         assert_eq!(g.ctl.of(gd).unwrap().holder, [Holder::Own; 3]);
         g.gd[gd].script = Some(GuardScript::default());
@@ -271,7 +282,7 @@ mod tests {
     #[test]
     fn since_moves_only_when_a_channel_changes_hands() {
         let (mut g, gd) = stand();
-        let rules = [BodyRule { name: "a", ask: yes, ran }];
+        let rules = [rule("a", yes)];
         g.time = 1.0; let _ = grant_from(&mut g, gd, &rules);
         g.time = 2.0; let _ = grant_from(&mut g, gd, &rules);
         assert_eq!(g.ctl.of(gd).unwrap().since, [1.0; 3]);
