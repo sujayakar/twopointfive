@@ -81,7 +81,7 @@ export type Opening = { a: number; b: number; y0?: number; y1?: number; mullions
  *  props, ceiling panels) over one fresh set of lists — what buildOfficeProcedural below lays the office out with, statement for statement as they were inside it,
  *  and what a generator for ANOTHER level builds with (tools/levels/: the scenario levels — same boxes, same palette, same finishes, same markings; no new art).
  *  Every call appends to the kit's own `boxes` / `props` / `lights` / `switchables`; `grp(name)` names the editor group of what follows (trace.groups). */
-/** THE TWO VENDING MACHINES' LIT BODIES, for whoever stands one up (the office's break room; the smoke lab's yard): the upper body's half size and paint, and its
+/** THE TWO VENDING MACHINES' LIT BODIES, for whoever stands one up (the office's break room): the upper body's half size and paint, and its
  *  markings with the emissive field's radiances scaled so the ONE light game.ts registers for it has the LUMINOUS intensity of the slab it replaced (luminance of
  *  its mean radiance × its area = luminance of the old slab's radiance × the old slab's area; luminance, not the peak channel the light's intensity keys on: the
  *  field's light is whiter than the pure red or blue slab, and matched on the peak channel the meter read a third more in front of the machines). `red` is the
@@ -785,7 +785,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
     // Each machine = an UPPER body (the marked front: field + control column) standing on a black PLINTH set 6 cm back over its left two-thirds — the dispenser
     // opening, a real recess with a real shadow, its back wall marked black with the flap bar — and a flush block under the control column. (+3 boxes a machine
     // over the single body; footprint and height unchanged, so the nav grid and the collision are what they were.) The body, its paint and its calibrated marks are
-    // vendingSpec's (below: the smoke lab's floor stands the same two machines in its yard).
+    // vendingSpec's (below).
     const A = vendingSpec('red', TX, VENDING_FLUX_K), B = vendingSpec('blue', TX, VENDING_FLUX_K), plinth = A.plinth;
     const vendA = add({ c: [28.62, 1.125, 12.9], h: A.h, albedo: A.body, ...mk(A.marks) });
     add({ c: [28.47, 0.175, 12.87], h: [0.35, 0.175, 0.42], albedo: plinth, ...mk(MD.dispenserMarks([0.35, 0.175, 0.42], TX)) });   // A's dispenser recess (x 28.12‥28.82, 6 cm back)
