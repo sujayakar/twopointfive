@@ -629,9 +629,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   33, the relay's quiet row as two 27 of 27 with the first form of this). MEASURED on the one-file build opened from disk, no WebGPU adapter, two
   runs each: before, the page heard nothing and took the frame down at 10.07 s; now it hears the picture's `none` at 0.75 s and the picture hears
   its two `frame` messages. NOT SEEN: the picture itself up on a page from disk (the software adapter had not booted it in 150 s; no GPU here),
-  any browser but Chromium (the first form tested only the word 'null', which Chromium never gives: it changed nothing there). THE CHECK:
-  `bun run build:one && node tools/qa/kitview-disk.cjs` (the built file opened from disk, no adapter, no server: 6 of 6, two runs; `KITDISK_BREAK=1`
-  = a target of '*' put back to `location.origin`, must exit 1: 4 FAIL, the frame down at 10.08 s).
+  any browser but Chromium (the first form tested only the word 'null', which Chromium never gives: it changed nothing there).
   THE QUIET PICTURE (10-17; `host/kitView.ts KIT_VIEW_QUIET`, ON in the page; `?kitloud` = off, forwarded to the picture by `ui/kitView.ts`,
   whose own `KIT_VIEW.quiet` the same word puts off: the picture and its fade exactly as they were, on every kind. A host table like its
   neighbours: nothing in the game reads it, so it has no row in the knob registry or the frozen holds). The maintainer: "quiet missions
