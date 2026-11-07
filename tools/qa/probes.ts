@@ -3402,10 +3402,10 @@ let glassBannerPending: { f0: number } | null = null;
   await shf('shards-determinism', 'shardsDeterminism'); await shf('shards-off', 'shardsOff');
   if (shRan && which === 'shards') familyBanner('shards', FAILED.length - f0); }
 // ---------------------------------------------------------------- fallen glass as CUT PLATES (shards.ts under the cut switch, scene/cut.ts; cutglass-probes.ts; rebuild/cut-pieces/glass/notes.md): 'cutglass' = the
-// family — a fallen piece is its cell, cut children, a plate the pool drops goes as grains, determinism, the switch off = the rectangles (CUTGLASS_BASE=<checkout> adds the cross-build identity)
+// family — a fallen piece is its cell, cut children, a plate the pool drops goes as grains, determinism
 { let cgRan = false; const f0 = FAILED.length;
   const cgf = async (name: string, fn: string) => { if (on(name, 'cutglass', 'all')) { cgRan = which === 'cutglass' || which === name; await run(name, async () => ((await import('./cutglass-probes.ts')) as any)[fn]()); } };
-  await cgf('cutglass-shape', 'cutglassShape'); await cgf('cutglass-break', 'cutglassBreak'); await cgf('cutglass-gone', 'cutglassGone'); await cgf('cutglass-look', 'cutglassLook'); await cgf('cutglass-determinism', 'cutglassDeterminism'); await cgf('cutglass-off', 'cutglassOff');
+  await cgf('cutglass-shape', 'cutglassShape'); await cgf('cutglass-break', 'cutglassBreak'); await cgf('cutglass-gone', 'cutglassGone'); await cgf('cutglass-look', 'cutglassLook'); await cgf('cutglass-determinism', 'cutglassDeterminism');
   if (cgRan && which === 'cutglass') familyBanner('cutglass', FAILED.length - f0); }
 // ---------------------------------------------------------------- the glass TUNING round's rules, each held both ways (glasstune-probes.ts, rebuild/glass/tuning.md): 'glasstune' = the family — a stun against
 // annealed / tempered glass, raking a shot-out pane by walking at it, spall off a pane that lets nothing go, the sound and hearing-event gaps, the shard budget's floor, the stack dealt off glass, the one switch off
