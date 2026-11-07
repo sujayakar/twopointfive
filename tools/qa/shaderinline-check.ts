@@ -42,7 +42,7 @@ const { wgslDecls } = await import(`${ROOT}/src/gpu/wgslTrim.ts`) as typeof impo
 const BUDGET: [RegExp, number][] = [
   [/^gatherSplit \/ trace$/, 252],   // (the gather is two programs, render/gatherSplit.ts: its rays, then the light at what they hit)
   [/^gatherSplit \/ light$/, 58],   // (113 before the gather took the reflections' one-loop writing of the light loop, 2026-11-07)
-  [/^composite(R|S|SR)? \/ (fs|cs)$/, 403],
+  [/^composite(R|S|SR)? \/ (fs|cs)$/, 442],   // (403 until 2026-11-07: the snow's glow and sparkle are in every level's text now, asked by the frame's level word, 421 on the look's page)
   [/^volumetricsDust \/ main$/, 433],
   [/^volumetricsF? \/ main$/, 382],
   [/^particles \/ update$/, 356],
@@ -50,6 +50,7 @@ const BUDGET: [RegExp, number][] = [
   [/^froxel \/ injectJ$/, 210],
   [/^reflect \/ main$/, 204],
   [/^gbuffer(Cut)? \/ fsBox(Cut)?$/, 302],   // (… and its twin with the cut rule, the same text and the cut's test: 268 where fsBox is 267. It had no row, so the look's page read red against 200)
+  [/^gbuffer(Cut)?Snow \/ fsBox(Cut)?$/, 566],   // (the boxes' second writing, with the snow's surface in it: render/gbuffer.ts. 294 on the plain page; 468 and, with the cut rule, 539 on the look's. What a snow level always compiled, and under the look no setting here read it. Every page asks for it now, behind its boot where the level has no snow, so each of this tool's settings holds it)
   [/./, 200],
 ];
 /** the cut test's own functions (common.wgsl: isectCut and the four planes it takes twice), and the KB one copy of the box test may carry of them */

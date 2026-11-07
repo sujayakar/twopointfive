@@ -166,7 +166,7 @@ fn hazeShadowed(li: Light, kind: u32, sd: vec3f, d0: f32, d1: f32, jz: f32, smok
   let Xs = frame.camPos + sd * ev.t;
   var vis: bool;
   if (kind == 2u) {
-    if (WX_VOL) { if (WX_KINDS) { if (frame.cardCfg.w != 0u) { return vec4f(0.0); } } }   // (a weather is in: the sun in the air — the building's haze with it — is the 2D pass's, volumetrics.wgsl wxAirMarch)
+    if (WX_VOL) { if (lv(WX_KINDS)) { if (frame.cardCfg.w != 0u) { return vec4f(0.0); } } }   // (a weather is in: the sun in the air — the building's haze with it — is the 2D pass's, volumetrics.wgsl wxAirMarch)
     vis = Xs.y < CEIL_Y && occluded(Xs, vec3f(0.0, 1.0, 0.0), CEIL_Y + 0.5 - Xs.y, 0u) && !occluded(Xs, ev.L, 80.0, 0u);
   }
   else { vis = !occluded(Xs, ev.L, ev.dist - li.radius - 0.02, (li.owner & 0xffu) << 8u); }
@@ -205,7 +205,7 @@ fn inject(@builtin(global_invocation_id) gid: vec3u) {
         if (i >= frame.numLights) { continue; }
         let li = lights[i];
         if (li.volumetric <= 0.0 || lightTransient(li) || !lightReaches(i, X)) { continue; }   // no beam from this one / a transient (injectJ draws those outside the history) / walled off from this cell (reach.ts)
-        if (WX_VOL) { if (WX_KINDS) { if (frame.cardCfg.w != 0u && lightKind(li) == 2u) { continue; } } }   // (… or the sun under a weather: the 2D pass's — it takes no slot of the K kept here)
+        if (WX_VOL) { if (lv(WX_KINDS)) { if (frame.cardCfg.w != 0u && lightKind(li) == 2u) { continue; } } }   // (… or the sun under a weather: the 2D pass's — it takes no slot of the K kept here)
         let fe = evalLightSub(li, dirs, d0, d1, j.z, pick);
         if (!fe.ok) { continue; }
         let mc = max3(fe.E);

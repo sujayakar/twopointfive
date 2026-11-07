@@ -8,7 +8,7 @@
 //   TPS_PROFILE=shipped …                               = the same on the stand the page opens on
 //
 //   stands    held off on the frozen stand, on as the page opens, off by the page's own word; a recording from before the key replays with it off
-//   prelude   the page hands the switch to the shaders as `const SNOW_UNDER` (main.ts → frame.ts snowLookConfig.under): true with it on, false with it off
+//   prelude   the page hands the switch to the shaders as the SNOW_UNDER bit of the frame's level word (main.ts → frame.ts snowLookConfig.under → levelSwitches): up with it on, down with it off
 //   seam      on the pass no floor with roof over the whole square about it shows snow (with it off: the strip where two slabs of one building meet does)
 //   same      away from that seam nothing moves at the floor, nothing is newly OPEN, and what stands above the ceiling's plane is in the open as it was
 //   tops      a partition's top deep inside a building is under the roof; the whole top of every wall with open sky beside it still takes the snow
@@ -28,7 +28,7 @@ export async function snowUnderCheck(o: { verbose?: boolean } = {}): Promise<boo
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
   const { flakeHidden, flakeHiddenUnder, FLAKE_WALL_IN, FLAKE_TOP_IN } = await import(`${ROOT}/src/game/snowFx.ts`);
-  const { scenePrelude, snowLookConfig } = await import(`${ROOT}/src/render/frame.ts`);
+  const { scenePrelude, snowLookConfig, levelSwitches, LevelSw } = await import(`${ROOT}/src/render/frame.ts`);
   const { FROZEN_HOLDS, harnessProfile, pageSwitches } = await import(`${ROOT}/src/host/profile.ts`);
   const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
   const JOURNAL = await import(`${ROOT}/src/game/journal.ts`);
@@ -49,7 +49,8 @@ export async function snowUnderCheck(o: { verbose?: boolean } = {}): Promise<boo
     return { W, g: W.game, stood: SNOW_LOOK.under as boolean };
   }
   /** what the page's shaders are compiled with, the switch standing as it does: main.ts copies it to the prelude's config at boot (under SNOWUNDER_BREAK it never does) */
-  const compiled = (): boolean => { snowLookConfig.under = BREAK ? false : SNOW_LOOK.under; return /const SNOW_UNDER: bool = true;/.test(scenePrelude()); };
+  // (the switch reaches the shaders as a bit of the frame block's level word, render/frame.ts LevelSw, under the name the prelude gives that bit)
+  const compiled = (): boolean => { snowLookConfig.under = BREAK ? false : SNOW_LOOK.under; return new RegExp(`const SNOW_UNDER: u32 = ${LevelSw.SNOW_UNDER}u;`).test(scenePrelude()) && (levelSwitches() & LevelSw.SNOW_UNDER) !== 0; };
 
   try {
     // ---- stands
@@ -66,8 +67,8 @@ export async function snowUnderCheck(o: { verbose?: boolean } = {}): Promise<boo
     const A = await rig(true); const on = compiled(); await rig(false); const off = compiled(); SNOW_LOOK.under = true;
     // ---- prelude
     { const main = readFileSync(resolve(ROOT, 'src/main.ts'), 'utf8'); const fed = /snowLookConfig\.under = SNOW_LOOK\.under;/.test(main);
-      verdict(on === true && off === false && fed, 'prelude — the page compiles its shaders with the switch: `const SNOW_UNDER` true with it on, false with it off',
-        `the prelude with the switch on: SNOW_UNDER ${on} · off: ${off} · main.ts hands it over at boot: ${fed}`); }
+      verdict(on === true && off === false && fed, 'prelude — the page hands the shaders the switch: the level word\'s SNOW_UNDER bit up with it on, down with it off',
+        `the frame's level word with the switch on: SNOW_UNDER ${on} · off: ${off} · main.ts hands it over at boot: ${fed}`); }
 
     const roofs: number[][] = (A.g.weather as any).roofs ?? []; const CY = WORLD.ceilingY as number; const boxes: { c: number[]; h: number[]; yaw?: number }[] = A.g.engine.world.statics;
     /** the rule the page's shaders were compiled with (`on`), asked of the CPU's copy */
@@ -113,9 +114,9 @@ export async function snowUnderCheck(o: { verbose?: boolean } = {}): Promise<boo
     { const com = readFileSync(resolve(ROOT, 'src/render/shaders/particles_common.wgsl'), 'utf8');
       const num = Number(/const FLAKE_TOP_IN: f32 = ([0-9.]+);/.exec(com)?.[1]) === FLAKE_TOP_IN && Number(/const FLAKE_WALL_IN: f32 = ([0-9.]+);/.exec(com)?.[1]) === FLAKE_WALL_IN;
       const under = /fn flakeUnder\(p: vec2f, d: f32\) -> bool \{ return wxRoofed\(p\) && wxRoofed\(p \+ vec2f\(d, d\)\) && wxRoofed\(p \+ vec2f\(-d, d\)\) && wxRoofed\(p \+ vec2f\(d, -d\)\) && wxRoofed\(p - vec2f\(d, d\)\); \}/.test(com);
-      const rule = /\n  if \(SNOW_UNDER\) \{ if \(P\.y > CEIL_Y \+ 0\.05 \|\| !flakeUnder\(q, FLAKE_WALL_IN\)\) \{ return false; \} return P\.y <= CEIL_Y - 0\.05 \|\| flakeUnder\(q, FLAKE_TOP_IN\); \}\n/.test(com);
+      const rule = /\n  if \(lv\(SNOW_UNDER\)\) \{ if \(P\.y > CEIL_Y \+ 0\.05 \|\| !flakeUnder\(q, FLAKE_WALL_IN\)\) \{ return false; \} return P\.y <= CEIL_Y - 0\.05 \|\| flakeUnder\(q, FLAKE_TOP_IN\); \}\n/.test(com);
       // the old path, whole, right after the new branch (git show of the build before this switch: these four lines, to the letter)
-      const old = com.includes(`); }\n  if (P.y > CEIL_Y - 0.05) { return false; }\n  var r = flakeRectIn(frame.weatherC, q) || flakeRectIn(frame.weatherD, q);\n  if (WX_KINDS) { if (frame.cardCfg.y != 0u) { r = r || flakeRectIn(wxRect(frame.cardCfg.y), q) || flakeRectIn(wxRect(frame.cardCfg.z), q); } }\n  return r;\n}\n`)
+      const old = com.includes(`); }\n  if (P.y > CEIL_Y - 0.05) { return false; }\n  var r = flakeRectIn(frame.weatherC, q) || flakeRectIn(frame.weatherD, q);\n  if (lv(WX_KINDS)) { if (frame.cardCfg.y != 0u) { r = r || flakeRectIn(wxRect(frame.cardCfg.y), q) || flakeRectIn(wxRect(frame.cardCfg.z), q); } }\n  return r;\n}\n`)
         && /fn flakeRectIn\(R: vec4f, p: vec2f\) -> bool \{ return p\.x >= R\.x \+ FLAKE_WALL_IN && p\.y >= R\.y \+ FLAKE_WALL_IN && p\.x <= R\.z - FLAKE_WALL_IN && p\.y <= R\.w - FLAKE_WALL_IN; \}/.test(com);
       verdict(num && under && rule && old, 'text — the shader carries the rule and the CPU\'s two numbers, ahead of the old lines, which stand whole for the switch off',
         `FLAKE_WALL_IN ${FLAKE_WALL_IN} and FLAKE_TOP_IN ${FLAKE_TOP_IN} in the shader: ${num} · flakeUnder asks the roofs as one, the point and four corners: ${under} · flakeHidden takes the SNOW_UNDER branch first, with the ceiling's plane as its upper bound: ${rule} · the old rule after it, every line: ${old}`); }
