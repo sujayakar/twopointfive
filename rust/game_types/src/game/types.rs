@@ -806,10 +806,6 @@ pub struct Game {
     pub ticking: bool,
     pub alone_own: crate::game::AsideOwn,
     pub cmd_buf: Option<crate::cmd::PlayerCmd>,
-    pub men_all: Vec<CharId>,
-    pub men_statured: bool,
-    pub men_bare: bool,
-    pub fog_held: Option<crate::game::GameFogHeld>,
     pub door_owns: Vec<Option<usize>>,
     pub door_was: Vec<f64>,
     pub door_hand_recs: JsMap<CharId, crate::game::GameDoorHandRecsValue>,
@@ -995,10 +991,6 @@ impl Game {
             ticking: false,
             alone_own: crate::game::AsideOwn::blank(),
             cmd_buf: None,
-            men_all: Vec::new(),
-            men_statured: false,
-            men_bare: false,
-            fog_held: None,
             door_owns: Vec::new(),
             door_was: Vec::new(),
             door_hand_recs: JsMap::new(),
@@ -1404,23 +1396,6 @@ impl AsideOwn {
     }
 }
 impl Default for AsideOwn { fn default() -> Self { Self::blank() } }
-
-/// (TypeScript: inline at src/game/game.ts:1865 Game.fogHeld, src/game/game.ts:1865)
-#[derive(Clone, Debug)]
-pub struct GameFogHeld {
-    pub dyn_: Vec<BoxId>,
-    pub on: bool,
-}
-impl GameFogHeld {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GameFogHeld {
-            dyn_: Vec::new(),
-            on: false,
-        }
-    }
-}
-impl Default for GameFogHeld { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/game.ts:2127 Game.doorHandRecs, src/game/game.ts:2127)
 #[derive(Clone, Copy, Debug)]

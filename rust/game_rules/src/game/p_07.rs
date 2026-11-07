@@ -13,60 +13,10 @@ fn bone_or(g: &Game, c: CharId, b: crate::character::Bone, up: f64) -> V3 {
     match g.ch[c].bones.get(b) { Some(p) => *p, None => v3::add(g.ch[c].pos, [0.0, up, 0.0]) }
 }
 
-/// a viewer's picture without the fog of war, right before a draw and between two steps; fogBack right after it. Never in play   (game.ts fogLift)
-pub fn game_fog_lift(g: &mut crate::game::Game, want: bool, tube: Option<bool>, px: Option<f64>) {
-    let px = px.unwrap_or(0.0);
-    if g.fog_held.is_some() { return; }
-    let viewer = g.fog_of_war.viewer;
-    let bare = want && viewer && crate::fogofwar::fog_of_war_active(g);
-    let ir = match tube { Some(t) => viewer && !(g.engine.settings.debug_view > 0.0) && t != crate::irlaser::ir_viewer(g), None => false };
-    if bare != g.men_bare && !g.men_all.is_empty() {
-        let (all, statured) = (g.men_all.clone(), g.men_statured);
-        game_draw_men(g, &all, statured, bare, Some(false));   // (DRESS.men down, as drawCharacters has it)
-        g.men_bare = bare;
-    }
-    let thin = viewer && px > 0.0;
-    if !bare && !ir {
-        let t = if thin { let list = g.engine.world.dynamics.clone(); crate::thinline::thin_fit(g, &list, px) } else { None };
-        let Some(t) = t else { return; };
-        let held = core::mem::replace(&mut g.engine.world.dynamics, t);
-        g.fog_held = Some(crate::game::GameFogHeld { dyn_: held, on: g.fog_of_war.frame.on });
-        return;
-    }
-    let raw = if bare { crate::fogofwar::fog_of_war_raw(g) } else { None };
-    let mut b = match raw { Some(l) => l, None => g.engine.world.dynamics.clone() };
-    let n0 = b.len();
-    g.fog_held = Some(crate::game::GameFogHeld { dyn_: g.engine.world.dynamics.clone(), on: g.fog_of_war.frame.on });
-    if bare {
-        crate::combat::hidden_props(g, &mut b);
-        if g.men_statured { let all = g.men_all.clone(); crate::stature::drawn_boxes(g, &all, &b, n0 as f64); }
-        g.fog_of_war.frame.on = false; g.fog_of_war.bared = true;
-        crate::fogofwar::fog_of_war_faces_lift(g);
-    }
-    if ir {
-        if tube == Some(true) { crate::combat::ir_beams(g, &mut b); }
-        else {
-            let mut kept = Vec::with_capacity(b.len());
-            for &x in b.iter() { if !crate::irlaser::ir_made(g, x) { kept.push(x); } }
-            b = kept;
-        }
-    }
-    if thin { if let Some(t) = crate::thinline::thin_fit(g, &b, px) { b = t; } }
-    g.engine.world.dynamics = b;
-}
-
-/// the step's own list and the fog's frame handed back after a lifted draw   (game.ts fogBack)
-pub fn game_fog_back(g: &mut crate::game::Game) {
-    let Some(h) = g.fog_held.take() else { return; };
-    if g.fog_of_war.bared { crate::fogofwar::fog_of_war_faces_back(g); }
-    g.fog_of_war.bared = false; g.fog_of_war.frame.on = h.on; g.engine.world.dynamics = h.dyn_;
-    crate::scene_boxes::box_world_relist(g);
-}
-
 /// the one thing here the simulation reads: what each man wears, dealt in the order he is drawn. The renderer's half (`draw`) is the picture's, not translated   (game.ts drawMen)
-pub fn game_draw_men(g: &mut crate::game::Game, all: &[CharId], statured: bool, bare: bool, draw: Option<bool>) {
+pub fn game_draw_men(g: &mut crate::game::Game, all: &[CharId], statured: bool, draw: Option<bool>) {
     crate::scene_boxes::box_world_reset_capsules(g);
-    let mut drawn = if bare { crate::fogofwar::fog_of_war_everybody(g, all) } else { crate::fogofwar::fog_of_war_filter(g, all) };
+    let mut drawn = crate::fogofwar::fog_of_war_filter(g, all);
     if crate::rails::rails_sky_on(g) { let me = g.pl[g.player].ch; drawn.retain(|c| *c != me); }
     if drawn.len() > 8 && (g.night_breach.active || g.rescue.active) {
         let mut down: Vec<CharId> = Vec::new();

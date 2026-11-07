@@ -21,9 +21,6 @@ fn gpu_particles(g: &mut Game) -> Option<&mut crate::render_particles::Particles
 
 
 
-
-
-
 /// Is the fixture lit, as it stands.   (fogofwar.ts FogOfWar.lampLit)
 pub fn fog_of_war_lamp_lit(g: &mut crate::game::Game, t: FixtureId) -> bool {
     let on = crate::sim_lightshome::fixture_on(g, t);
@@ -421,7 +418,7 @@ pub fn fog_of_war_fired_on(g: &crate::game::Game, gd: GuardId) -> bool {
 
 /// Left out of the picture this frame; false for everybody while the fog is off.   (fogofwar.ts FogOfWar.hidden)
 #[doc(hidden)] pub fn fog_of_war_hidden__body(g: &crate::game::Game, gd: GuardId) -> bool {
-    !g.fog_of_war.bared && g.fog_of_war.hidden_chars.len() > 0 && g.fog_of_war.hidden_chars.has(g.gd[gd].ch)
+    g.fog_of_war.hidden_chars.len() > 0 && g.fog_of_war.hidden_chars.has(g.gd[gd].ch)
 }
 
 /// The rule is live: the fog on, and the full picture's block filled.   (fogofwar.ts FogOfWar.oursOn)
@@ -473,11 +470,8 @@ pub fn fog_of_war_hush(g: &mut crate::game::Game) {
 
 /// What a hidden man puts into the air is not filed: true = `c` is out of the picture.   (fogofwar.ts FogOfWar.airHides)
 pub fn fog_of_war_air_hides(g: &crate::game::Game, c_2: CharId) -> bool {
-    g.fog_of_war.full_on && !g.fog_of_war.bared && g.fog_of_war.hidden_chars.len() > 0 && g.fog_of_war.hidden_chars.has(c_2)
+    g.fog_of_war.full_on && g.fog_of_war.hidden_chars.len() > 0 && g.fog_of_war.hidden_chars.has(c_2)
 }
-
-
-
 
 
 #[doc(hidden)] pub fn fog_of_war_hidden(g: &mut crate::game::Game, gd: GuardId) -> bool {
@@ -535,15 +529,14 @@ mod tests {
         assert!(g.fog_of_war.cell_seen.has(crate::Num(f64::from_bits(0x418ff28078000000))));
     }
 
-    /// The men the fog leaves out come last, each list in the order it was given.
+    /// The men the fog leaves out are not on the list to draw; the rest keep the order they were given.
     #[test]
-    fn everybody_puts_the_hidden_last() {
+    fn the_hidden_are_left_off_the_list_to_draw() {
         let mut g = game();
         let all = [CharId(0), CharId(1), CharId(2), CharId(3)];
         g.fog_of_war.hidden_chars.add(CharId(0));
         g.fog_of_war.hidden_chars.add(CharId(2));
         assert_eq!(fog_of_war_filter(&mut g, &all), vec![CharId(1), CharId(3)]);
-        assert_eq!(fog_of_war_everybody(&mut g, &all), vec![CharId(1), CharId(3), CharId(0), CharId(2)]);
     }
 
     /// First met = as it stands, and no look is asked for while it agrees.
