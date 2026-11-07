@@ -924,6 +924,25 @@ row on his machine is the answer, and the word puts the count back on any machin
   3.7 | 4.3 · gatherTrace 3.7 | 4.1 · froxelInjectJ 3.6 | 4.0 · reflect 2.9 | 3.4. A brief's Start waits for every program (`docs/agents/menus.md`),
   so for a player the whole sum is the wait. What follows from the table: one set of ray programs is half of it; then the march, three writings of one
   kernel (vol, volFroxel, volDust) and over a third of what is left. On the software adapter the tool's milliseconds are that adapter's and say nothing.
+- **The dust's look is part of the march's text, not a third march program (2026-11-07; `shaders/dust_look.wgsl`, `shaders/volumetrics.wgsl`, `engine.ts
+  smokeDrawWords`).** The march was three programs of one kernel: `vol` (the classic tiers'), `volFroxel` (with the froxel-lit smoke march) and `volDust`,
+  which was `volFroxel`'s text with five statements swapped at eleven sites by string (`render/dustLookVol.ts`, deleted), compiled on every page and
+  chosen by the frame while some brick of smoke held dust. It was the dearest program of the page to build (10.0 s alone on the cloud card, the table
+  above), a third of the march's sum, and until it was in dust was drawn as plain smoke. Now the two lit marches are WRITTEN with the dust's statements
+  (`let dl = dustDensity(X, onMask, true); let dens = fogSmoke(dl.d, X); let dTint = dustTintOf(dl);`, the tint on both in-scatter terms, the dust's
+  self-shadow where `dl.dust > 0`), and `dustDensity` opens on `if (!dustAlive())`: the march's own masked read, no tint, `dust` 0. `dustAlive` is bit 1 of
+  `frame.sideCfg.z`, beside the smoke lab's streak bit, raised by `SmokeBinding.dusty` (never with `?nodustlook`: `smoke.ts` asks `DUST_DRAW` there now).
+  So with no dust alive every sample's density is the read it was, the tint is exactly 1 (`1 + 0 / max(d, 1e-6)`, and a product by exactly 1 is exact
+  however a compiler orders it) and the self-shadow is the plain one: the picture of a frame without dust cannot move by arithmetic. With dust alive the
+  statements run are the twin's own. What changes for a player: dust is dust from its first frame (no wait for a later program), and on a classic tier a
+  dust frame runs `vol` where it ran the froxel text with the froxel march not taken (the same classic march, read off the same text). The K = 0 march
+  (its own program, no row ships it) still draws dust as plain smoke. PASTED SIZE (`shaderinline-check`, with the cut test's text): vol 337 to 364 KB,
+  volFroxel 421 to 474 (it is what volDust was, 470, and four more for the test), volDust's 470 gone; the three together 1,228 to 838 KB. The budget row
+  for the march is 400 (was 382; 395 on the look's page) and volDust's row is out. CHECKS: `tools/qa/dust-look-check.ts` pins the statements and the
+  plain read as text (the wallbreak family's looks probe runs the same pin), `shaderrows-check` reads that both programs carry the look and that no
+  `volDust` is asked for, `fog-air` that the dust's drawn density still goes through `fogSmoke`. NOT READ: the smoke solver does not run on the software
+  adapter (five storage textures in a stage), so no frame with smoke or dust in it was drawn here before or after; a frame without smoke was. What the
+  one program costs a frame on a GPU (a uniform branch a sample, and vol's text 8 % longer) is not timed here.
 - **Windows: why the shader wait came back on every load, and the compile queue (2026-10-26, measured on a Windows machine: RTX 3080, a 16-thread desktop CPU,
   Chrome 155, a 4K 240 Hz display at 150 %).** Chrome on Windows runs WebGPU on D3D12 and compiles with DXC (`use_dxc` is on; FXC, `--disable-dawn-features=use_dxc`,
   had not finished the boot after 16 minutes). DXC inlines every call, so the big kernels are 5–25 s each (fgather's `main` grows from 95 KB of WGSL to ~680 KB inlined:
