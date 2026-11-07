@@ -7,7 +7,7 @@
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 const [kept, fresh] = process.argv.slice(2), asJson = process.argv.includes('--json');
 if (!kept || !fresh) { console.error('fuzz-replay.ts <kept folder> <new folder> [--json]'); process.exit(64); }
-const file = (d: string) => { const L = existsSync(d) ? readdirSync(d).filter(f => /^rust-.*\.txt$/.test(f) && !/-(say|hashes)\.txt$/.test(f)) : []; return L[0] ? `${d}/${L[0]}` : ''; };
+const file = (d: string) => { const L = existsSync(d) ? readdirSync(d).filter(f => /^rust-.*\.txt$/.test(f) && !/-(say|half|hashes)\.txt$/.test(f)) : []; return L[0] ? `${d}/${L[0]}` : ''; };
 // (a tick written twice is a tick a kept game stood again in: its last line counts)
 const ticks = (f: string): string[] => { const out: string[] = []; if (!f) return out; for (const l of readFileSync(f, 'utf8').split('\n')) { if (!l) continue; const k = l.slice(0, l.indexOf(' ')); if (out.length && out[out.length - 1].startsWith(k + ' ')) out[out.length - 1] = l; else out.push(l); } return out; };
 const A = ticks(file(kept)), B = ticks(file(fresh));
