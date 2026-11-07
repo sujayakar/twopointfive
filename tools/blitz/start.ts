@@ -51,10 +51,9 @@ dressAll(false);
 /** ONE START: the level read from its file anew (a stand-up marks a level's boxes), stood, its mission started, its moving state at home */
 async function stood(at = path, link = LINK, orNone = false): Promise<any> {
   const level = loadLevel(parseLevelData(readFileSync(at, 'utf8')));
-  const W = await standUp({ level, seed: SEED, seats: SEATS }), g: any = W.game;
+  const W = await standUp({ level, seed: SEED, seats: SEATS, ...(link ? { address: link } : {}) }), g: any = W.game;   // (a mission's address is the stand's from its first line, as a page's is: headless.ts `address`)
   if (link) {
-    const { startFromQuery } = await import('../../src/game/scenarioRun.ts');
-    const r = startFromQuery(g, link);
+    const r = W.start();
     if (r.why && orNone) return null;
     if (r.why) { say(`start.ts: the game refused the ${r.spec?.kind ?? 'start'}: ${r.why}`); process.exit(3); }
   } else if (spec) {
