@@ -104,7 +104,6 @@ pub fn door_tools_end(g: &mut crate::game::Game, op: DoorOpId, why: &str) {
 
 /// a charge order over short of its charge: the men still on it hold on that door (doortools.ts DoorTools.short)
 pub fn door_tools_short(g: &mut crate::game::Game, op: DoorOpId, why: &str) {
-    if !g.k.doortools.charge_answer { door_tools_end(g, op, why); return; }
     let (d, side, men) = { let r = &o!(g, op); (r.door, r.side, r.men.clone()) };
     let c = g.dr[d].frame_centre;
     let open = is_open(g, d) || door_tools_known_open(g, d);
@@ -147,11 +146,6 @@ pub fn door_tools_short(g: &mut crate::game::Game, op: DoorOpId, why: &str) {
 /// the charge came off the door under the men stood off from it (doortools.ts DoorTools.chargeGone)
 pub fn door_tools_charge_gone(g: &mut crate::game::Game, op: DoorOpId, hands: bool) {
     let d = o!(g, op).door;
-    if !g.k.doortools.charge_answer {
-        if hands && is_open(g, d) { door_tools_stay_hands(g, op); }
-        door_tools_end(g, op, "the charge is gone");
-        return;
-    }
     let lead = o!(g, op).lead;
     let line = if crate::doors::door_off(g, d) { "door's gone. charge went with it." } else { "door's open. charge is off." };
     say(g, lead, line);
@@ -753,20 +747,9 @@ fn step_place(g: &mut Game, op: DoorOpId, cx: &Cx) {
     let a = o!(g, op).mine.get(lead).copied().unwrap();
     let lp = pos_of(g, lead);
     let at = asg!(g, a).arrived && v3::dist_xz(lp, fc) < 1.6;
-    if g.k.doortools.charge_answer {
-        if door_tools_known_open(g, d) || (is_open(g, d) && (at || !o!(g, op).set_t.is_nan())) {
-            say(g, lead, "door's open.");
-            door_tools_short(g, op, "the door opened");
-            return;
-        }
-    } else if is_open(g, d) {
+    if door_tools_known_open(g, d) || (is_open(g, d) && (at || !o!(g, op).set_t.is_nan())) {
         say(g, lead, "door's open.");
-        let p = o!(g, op).post.get(lead).cloned();
-        if let Some(p) = p {
-            if crate::orders::squad_orders_big(g) { let aa = standing_off(g, d, &p, &cx.name); door_tools_assign(g, op, lead, &aa); }
-        }
-        door_tools_stay_hands(g, op);
-        door_tools_end(g, op, "the door opened");
+        door_tools_short(g, op, "the door opened");
         return;
     }
     let sa = crate::workstow::StowFightA { yield_t: asg!(g, a).yield_t };

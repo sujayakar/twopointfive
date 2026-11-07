@@ -1,6 +1,7 @@
 // 'Fall in', Sam stopped: no two places of the file fall on one spot (game/orders.ts ORDERS.fileSpread, apartSlot).
 //   bun run tools/qa/filespread-check.ts [--verbose]      (probes.ts filespread, in family squadorders; FILESPREAD_BREAK=1 and FILEHOLD_BREAK=1 must FAIL)
-// (ORDERS.propRound is held off for this check on every stand, tools/qa/holds.ts WAYS_AS_THEY_WERE: its stagings are by the ways the men walked before it.
+// (ORDERS.propRound WAS held off for this check, tools/qa/holds.ts WAYS_AS_THEY_WERE, until 2026-11-07: the row is settled and the check has run with it ON on
+//  the page's stand since the fold; it is owed a restaging. As it was written: its stagings are by the ways the men walked before it.
 // Run alone it stands the same: its own main runs through the same call as the runner.)
 // Found by the wall charge's own check on block-squads: Sam put down at (13.6, 10.3) with no trail behind him and the four told to fall in, Blue One's and Blue
 // Two's places came out at (11.69, 7.37) and (11.55, 7.16) — the file's places run straight back from Sam past the end of his trail and both stop where the

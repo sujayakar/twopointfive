@@ -616,7 +616,7 @@ pub fn laser_boxes(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<BoxId>)
         if let Some(on) = r.on { if crate::irlaser::paints_own(g, gd, on) { return; } }
     }
     let b = crate::stature::drawn_beam(g, c, from, dir, l);
-    if crate::fogofwar::fog_of_war_active(g) && g.k.fog.lasers && !crate::fogofwar::fog_of_war_on_team(g, gd) {
+    if crate::fogofwar::fog_of_war_active(g) && !crate::fogofwar::fog_of_war_on_team(g, gd) {
         if !crate::fogofwar::fog_of_war_seen(g, gd) { return; }
         for run in crate::fogofwar::fog_of_war_beam_runs(g, from, dir, l) {
             let (t0, t1) = (run[0], run[1]);

@@ -325,15 +325,32 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   WHAT THE FOLD IS FOR NOW: it is the harness's hold of the settled rows (the page's is `src/host/rustgame.ts rustSettledHold`), and its line a
   probe names every check that still writes a settled row: the list to restage or delete from. `QA_FOLD_FOR=0` / `foldFor(false)` stays the one
   way a tool reads a settled row's own value.
-  STILL RED IN all-quick FROM THE SAME CAUSE, NOT MENDED HERE: `holds` (holds-check (2), (3), (9)). Its table holds rows OFF for probes written for
-  older builds; nearly all those rows are settled, so under the fold every such hold is refused (101 of them), and (9) is red because of the rule
-  below. The table has no job on the Rust game: to retire, with its 119 probe names as the restaging list.
+  THE HOLDS TABLE IS TWO ROWS (2026-11-07; `tools/qa/holds.ts`). It held rules OFF for probes written for an older model. Fourteen of its sixteen
+  rows held only settled rows: on the page's stand every such hold was refused under the fold (101 a run of `holds`, which was red in all-quick by
+  it) and the probe ran on the page's model whatever the table said; on the old stand those rows are off already and the hold did nothing. Those
+  fourteen are out, and no run changed by it. LEFT: `CARDS_AS_THEY_WERE` (`BIGSLOT.on`, a run-time row) and `PACE_AS_IT_WAS` (`TEAMPACE.pacing`, an
+  open decision: that hold is LIVE, `leafstall` and `noshove` run with the pacing off). THE RESTAGING LIST IS ALL 119 NAMES the table had, the 20 kit
+  probes still in it too (they were owed the deal and the gun rows as well, and now run with the big slot off and those on: a card neither stand
+  has): `git show cd215879:tools/qa/holds.ts` says who was owed what, and `tools/blitz/qa-census.py`, which read the table as data, wants that
+  version. Where an area note names a row that left (`GRAB_ROW_AS_IT_WAS`, `DEAL_AS_IT_WAS` and the rest; `holdOff(heldList(…))` in
+  `lesson-check.ts`, gone), the notes were not swept. `holds-check` (3) asks 'the name's other words held all the same' only where a probe is owed
+  two rows, and none is now; (5) reads the mains of the files that still hold a table probe, 2 of 5 where it read 24 of 41: a main of the other
+  files that stops running its parts through `asProbe` is red nowhere.
+  EVERY RUN OF A STAND AS IT OPENS IS READ AGAINST THE LIST OF EXPECTED REDS, FOLDED OR NOT (2026-11-07; `probes.ts`). The runner had read a folded
+  probe's red against no row; since the deletion that was every probe of every run with no word, so nothing read the list on the named build:
+  no EXPECTED RED / NEW RED / GREEN AGAIN, and a break word's closing line could not say whether it bit (`holds-check` (9), red by it). The
+  exception is gone: the fold is how the page's stand IS. Two runs are still read against no row, as before: one started with a word of the stand by
+  hand, and one of a single case of a probe. BUT THE LIST'S ROWS ARE OF THE OTHER GAME: they were read on the TypeScript game with nothing folded,
+  and the closing table says so in a line under itself while that is so (`expected-red.ts LIST_READ_ON`; `gate.sh` carries it). Until the list is
+  run again on the Rust game, read it so: an EXPECTED RED may fail by another line than its row says (`noshove` does: its row is of a room keeper's
+  3 cm, the run fails 8 lines of 10 on refused stagings); a GREEN AGAIN may be a staging that was refused; a NEW RED is likely a staging debt of the
+  fold, not a fault of today; and a break word run on a probe that is red without it, with no row, closes with 'red with no row: the word's to
+  explain' whether the word bit or not. RUNNING THE LIST AGAIN ON THE RUST GAME, row by row, is the next piece of this work; `LIST_READ_ON` is set
+  to '' when it is done.
   WHAT HAS NO JOB LEFT and is still in the tree: `QA_FOLD=1` itself on the page's stand; `QA_FOLD_ONLY` and the check-by-check start under
   `TPS_GAME=table` (fold-check (10)), there being no unfolded game to stand a check on; `QA_VERDICTS` and the `plain` line (they need a run with no
-  fold); THE RUNNER'S RULE THAT A FOLDED RUN'S REDS ARE READ AGAINST NO ROW: on a run with no word on the page's stand that is now every run, so the
-  list of expected reds is not read there (an old-stand run and a run with the laid fold off still read it), and a break word's closing line cannot
-  say whether it bit. KNOWN AND NOT MENDED: an old-stand runner says 'NOT FOLDED' and takes `QA_FOLD` out of what its children inherit, which no
-  longer unfolds them: a page-stand arm it starts is folded, with no notice.
+  fold); `heldList` (no caller). KNOWN AND NOT MENDED: an old-stand runner says 'NOT FOLDED' and takes `QA_FOLD` out of what its children inherit,
+  which no longer unfolds them: a page-stand arm it starts is folded, with no notice.
   THE SETTLED ROWS, FOLDED (11-06; `tools/qa/fold.ts`, the list `tools/qa/switches.json`, its maker `tools/qa/switch-list.ts`, the check
   `tools/qa/fold-check.ts` = `probes.ts fold`, in all-quick). WHY: the Rust game has every settled switch row as a constant (the page's branch
   translated, the other dropped), and of 255 probes that step a game in the gate's families 186 did so with a settled row pinned off its page
@@ -347,7 +364,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `{"fold":{"probe":…,"red":…,"refused":[{"row","value","writer","n"}],"lost":[…]}}`, from ONE speaker down a tree of processes (the runner's
   `run()`, or the fence `holds.ts asProbe` in a check file run alone); a child hands its count to that speaker, a process nobody reads for says
   its own on STDERR as it ends; what the harness refused as it loaded (a word given by hand) has a line of its own, `"outside"`. A folded
-  run's reds are NOT read against the list of expected reds (the runner says why: it is not the stand as it opens). `gate.sh` carries
+  run's reds WERE NOT read against the list of expected reds until 2026-11-07 (they are now: 'EVERY RUN OF A STAND', above). `gate.sh` carries
   the notice and how many lines had a refusal. `QA_VERDICTS=1` on a run without the fold prints `{"plain":{"probe":…,"red":…}}` a probe, to
   lay the two side by side. FOR ONE CHECK AT A TIME (asked by the Rust goal: its table stands some checks on the Rust game, which must be
   folded, and keeps the rest on the TypeScript tick exactly as with no word until they are restaged): `fold.ts foldFor(on)` puts the laid
@@ -359,11 +376,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the unfolded checks (a folded check does not have it, and that is not said); the notice on stderr says 'LAID AND OFF'. By hand, the
   runner's word `QA_FOLD_ONLY=<probe,probe…>` beside `QA_FOLD=1` folds the named probes alone (a probe's own name; one no probe of the
   run had is an error; a check file run alone does not read it). A run so mixed reads its unfolded reds against the list of expected
-  reds as ever and says 'the reds of folded probes … are read against no row' with their names (gate.sh carries that line). WHAT A REFUSED WRITE MEANS: the check's staging may not have formed. A check that pinned a neighbour off to get a
+  reds as ever and (until 2026-11-07) said 'the reds of folded probes … are read against no row' with their names; they are read against the list now. WHAT A REFUSED WRITE MEANS: the check's staging may not have formed. A check that pinned a neighbour off to get a
   fight, and counts what happened in that fight, can pass with nothing to count: green under the fold with a refused write is not a re-aimed
   check until its lines are read against the same run without the fold. WHAT IT CANNOT HOLD: a branch of a table replaced whole (the rows under
   it are plain until the next look, which lays them again and names them `lost`; the fence looks before and after it puts the tables back); a
-  row a module copied into a local before the fold was laid; a child killed before it ends hands over nothing. UNDER IT `holds` IS RED: every
+  row a module copied into a local before the fold was laid; a child killed before it ends hands over nothing. UNDER IT `holds` WAS RED (until the table lost its settled rows, 2026-11-07, above): every
   hold of `holds.ts` over a settled row is refused, which is the point; those holds go as their checks are re-aimed or deleted.
   THE LIST: 992 rows, each `row`, `page` (its value on the page) and `kind`: settled, open decision (stays a switch), player's or run-time
   (stays a variable). THE COUNTS ARE THE FILE'S OWN (`counts` at its head) and move as rows are ruled: 866 / 85 / 41 on the morning of 2026-11-07,

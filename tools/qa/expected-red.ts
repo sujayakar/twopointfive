@@ -9,6 +9,10 @@
 // A run started with a break word (stand.ts BREAK_WORDS) IS read against the rows, and probes.ts adds a line on whether the word bit: a row can hide it.
 // tools/qa/holds-check.ts (8) holds the rows: every name is a probe the runner runs, every word of a `bisect` is one the stand can raise, none is a word the
 // probe's own holds put off, and no row that is red on the old stand carries a bisect. What is prose in a row is as right as its writer.
+/** WHAT GAME THE ROWS WERE LAST READ ON, said under the closing table on the page's stand while it is not the game a tool stands today ('' once they are).
+ *  The rows below were read on the TypeScript game with nothing folded. Since 2026-11-07 a tool with no word stands the Rust game, where the settled switch
+ *  rows are constants: a probe that staged itself on one of those rows fails there for that, whatever its row says. */
+export const LIST_READ_ON: string = 'the rows were last read on the TypeScript game, before its tick was deleted (2026-11-07), and not yet again on the Rust game: an EXPECTED RED may fail here by another line than its row says, and a GREEN AGAIN may be a staging that was refused';
 export interface RedRow {
   /** WHAT IT IS. 'stale' = the check is wrong, or asks a path the page no longer has: the tools' to mend or delete, nothing of the game's · 'real' = a fault of
    *  the page, traced in the row · 'maybe' = could be real: not settled, and its owner's read is owed before anything copies the behaviour · 'open' = not sorted */

@@ -278,6 +278,7 @@ pub fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Option<crate::game::
     g.shards = crate::shards::glass_shards_new(g);
     g.wind = crate::wind::wind_new(g);            // after the doors exist
     g.air_dust = crate::air_dust::air_dust_new(g);   // after the weather, the doors and the collision exist
+    g.moths = crate::moths::moths_new(g);   // moths at the lamps: after the targets (the lamps are light targets)   (game.ts:1229)
     crate::game::game_stand_lights(g);   // the lamps the fixtures feed, as rows in the list's order (rust/sim/src/lights.rs); a fixture's authored bit is said by its `add` now
     crate::civilians::spawn_civilians(g);   // after the shift, whose construction and dice they must not disturb
     g.fog_of_war = crate::fogofwar::fog_of_war_new(g);

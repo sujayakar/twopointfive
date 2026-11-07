@@ -838,7 +838,10 @@ pub fn drive(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// the script his body follows this frame, None = he is not this file's   (runner.ts runnerScript)
-pub fn runner_script(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::game::GuardScript> {
+pub fn runner_script(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::game::GuardScript> { runner_propose(g, gd) }
+
+/// WHAT IT WANTS OF HIM (a rule's second part, control/; it only reads): the same answer. Its state is moved by `runner_tick`.
+pub fn runner_propose(g: &crate::game::Game, gd: GuardId) -> Option<crate::game::GuardScript> {
     let now = g.time;
     match g.m.runner.state_of.get(gd) {
         Some(r) if r.drive && r.drive_t == now => Some(r.script),

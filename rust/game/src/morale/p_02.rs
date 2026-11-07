@@ -227,12 +227,25 @@ pub fn drive(g: &mut crate::game::Game, gd: GuardId, dt: f64, rooted: bool) {
 
 /// THE BODY'S SEAM (guards.ts updateGuard): the script his body follows this frame, None = he is nobody's but his own (morale.ts moraleScript)
 pub fn morale_script(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::game::GuardScript> {
-    let s = g.m.morale.state_of.get(gd).copied()?;
-    if !s.drive || s.drive_t != g.time { return None; }
+    morale_transition(g, gd);
+    morale_propose(g, gd)
+}
+
+/// THE FIRST OF A RULE'S THREE PARTS (control/), for one man: a man the rule drives who is down and folds clutches himself. The rest of its state is
+/// moved by `morale_tick`.
+pub fn morale_transition(g: &mut crate::game::Game, gd: GuardId) {
+    let Some(s) = g.m.morale.state_of.get(gd).copied() else { return };
+    if !s.drive || s.drive_t != g.time { return; }
     if s.act == MoraleAct::Down && folds(g, gd) {
         let c = g.gd[gd].ch;
         g.ch[c].anim.clutch = 1.0;
     }
+}
+
+/// WHAT IT WANTS OF HIM (the second part; it only reads): the script his body follows this tick, None = he is nobody's but his own.
+pub fn morale_propose(g: &crate::game::Game, gd: GuardId) -> Option<crate::game::GuardScript> {
+    let s = g.m.morale.state_of.get(gd)?;
+    if !s.drive || s.drive_t != g.time { return None; }
     Some(s.script)
 }
 

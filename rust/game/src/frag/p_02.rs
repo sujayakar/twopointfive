@@ -221,7 +221,7 @@ pub fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::BlastSpe
     for d in list { if !crate::doors::door_off(g, d) { hung.push(d); } }
     // what the burst had a line to before it broke anything
     let mut before: Option<JsMap<crate::Num, f64>> = None;
-    if g.k.destruction.on && crate::destruction::chaos_of(g) > 0.0 {
+    if crate::destruction::chaos_of(g) > 0.0 {
         let mut map: JsMap<crate::Num, f64> = JsMap::new();
         let mut all = g.guards.clone();
         all.extend(crate::civilians::civilians_shown(g));

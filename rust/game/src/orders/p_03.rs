@@ -191,7 +191,7 @@ fn seam_arm_valid(g: &mut Game, arm: &OrderValid, t: &OrderTarget, men: &[GuardI
             if crate::doortools::door_tools_loose_on(g, t) { return fits(crate::doortools::door_tools_standoff_fits(g, men, t, Some(true))); }
             if crate::doortools::door_tools_charge_on(g, x.door).is_some() { return Ok(()); }
             if on(g.dr[x.door].def.steel) { return Err(Some(String::from("steel. a charge won't cut it."))); }
-            let open = if g.k.doortools.charge_answer { crate::doortools::door_tools_known_open(g, x.door) } else { crate::doortools::is_open(g, x.door) };
+            let open = crate::doortools::door_tools_known_open(g, x.door);
             if open { return Err(Some(String::from("it's open."))); }
             if g.door_tools.charges <= 0.0 { return Err(Some(String::from("no charges left."))); }
             let ops = g.door_tools.ops.clone();
