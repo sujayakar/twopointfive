@@ -18,9 +18,9 @@ pub fn friend_on_ray(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// Is anybody in a fight, as far as Sam's own gun is concerned.   (friends.ts friendsInFight)
-pub fn friends_in_fight(g: &crate::game::Game) -> bool {
+pub fn friends_in_fight(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     let quiet_s = g.k.friends.quiet_s;
-    if g.time - g.pl[g.player].last_fire_t < quiet_s { return true; }
+    if g.time - g.pl[seat.player].last_fire_t < quiet_s { return true; }
     let mut i = 0;
     while i < g.guards.len() {
         let gd = g.guards[i];
@@ -79,7 +79,7 @@ pub fn sam_off_friend(g: &mut crate::game::Game, c_2: CharId, up: bool, dt: f64)
         && !g.pl[pl].wall.is_some()
         && !g.pl[pl].holding.is_some()
         && !g.pl[pl].dragging.is_some()
-        && !friends_in_fight(g);
+        && !friends_in_fight(g, &crate::seats::here(g));
     let o = if live { friend_in_sams_line(g, c_2).or_else(|| friend_under_cursor(g, c_2)) } else { None };
     if o.is_some() {
         if !g.pl[pl].friend_low { g.stats.friends.lowered += 1; }
@@ -153,11 +153,11 @@ mod tests {
     #[test]
     fn his_own_round_is_a_fight_for_quiet_s() {
         let (mut g, _) = lone_player();
-        assert!(!friends_in_fight(&mut g));
+        assert!(!friends_in_fight(&g, &crate::seats::here(&g)));
         g.pl[g.player].last_fire_t = g.time - g.k.friends.quiet_s + 0.01;
-        assert!(friends_in_fight(&mut g));
+        assert!(friends_in_fight(&g, &crate::seats::here(&g)));
         g.pl[g.player].last_fire_t = g.time - g.k.friends.quiet_s;
-        assert!(!friends_in_fight(&mut g));
+        assert!(!friends_in_fight(&g, &crate::seats::here(&g)));
     }
 
     #[test]

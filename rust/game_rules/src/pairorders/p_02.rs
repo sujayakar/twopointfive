@@ -32,7 +32,7 @@ pub fn pair_gripped(g: &mut crate::game::Game, h: GuardId) -> bool {
 /// One told to WATCH a man fires no round while that man has not noticed.   (pairorders.ts pairHoldsRound)
 pub fn pair_holds_round(g: &mut crate::game::Game, gd: GuardId, h: GuardId) -> bool {
     if !g.k.pair.on { return false; }
-    let a = match crate::orders::squad_orders_of(g, gd) { Some(a) => a, None => return false };
+    let a = match crate::orders::squad_orders_of(g, &crate::seats::here(g), gd) { Some(a) => a, None => return false };
     if g.tab.orders_assignment[a].order != "pairWatch" || g.tab.orders_assignment[a].foe != Some(h) || pair_orders_noticed(g, h) || crate::silent::urgent(g) {
         return false;
     }

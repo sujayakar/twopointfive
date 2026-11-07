@@ -70,7 +70,7 @@ pub fn list(g: &mut Game, r: &'static Row, data: OrderDef) -> OrdersOrderDefId {
 pub fn unlist(g: &mut Game, r: &Row) { crate::orders::squad_orders_unregister(g, r.id) }
 
 /// is the order's row on the menu
-pub fn listed(g: &Game, r: &Row) -> bool { g.orders.defs.iter().any(|&d| g.tab.orders_order_def[d].id == r.id) }
+pub fn listed(g: &Game, seat: &crate::seats::SeatRef, r: &Row) -> bool { seat.orders.defs.iter().any(|&d| g.tab.orders_order_def[d].id == r.id) }
 
 /// Hand a man his task under this order: `a` with the order's own id (whatever `a.order` held).
 pub fn assign(g: &mut Game, r: &Row, gd: GuardId, a: crate::orders::SquadOrdersAssignA) {

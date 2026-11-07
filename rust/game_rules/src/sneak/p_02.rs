@@ -99,8 +99,8 @@ pub fn sneak_tick(g: &mut crate::game::Game) -> bool {
 fn low_pace(g: &Game, v: f64, is_low: bool) -> f64 {
     if is_low { m::min(v, g.k.sneak.low_pace) } else { v }
 }
-fn sam_pos(g: &Game) -> V3 {
-    g.ch[g.pl[g.player].ch].pos
+fn sam_pos(g: &Game, seat: &crate::seats::SeatRef) -> V3 {
+    g.ch[g.pl[seat.player].ch].pos
 }
 /// A crumb's index on the trail now, from its absolute number; below 0 when it has been cut.
 fn idx(k: f64, off: f64) -> i64 {
@@ -208,7 +208,7 @@ fn unseen_at(g: &mut Game, w: &Way, t: &[Crumb], q: V3, lo: bool) -> bool {
 fn side_ok(g: &mut Game, w: &Way, t: &[Crumb], q: V3, lo: bool, deep: f64) -> bool {
     let p = w.p;
     if crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) { return false; }
-    if flat(q, sam_pos(g)) < g.k.sneak.stand_near + 0.3 { return false; }
+    if flat(q, sam_pos(g, &crate::seats::here(g))) < g.k.sneak.stand_near + 0.3 { return false; }
     if near_other(g, w, q) { return false; }
     if g.doors.list.iter().any(|d| flat(q, g.dr[*d].frame_centre) < 1.0) { return false; }
     if flat(p, q) > 0.3 && (!straight(g, p, q) || !crate::scene_collision::nav_grid_walkable(g, p, q)) { return false; }
@@ -286,7 +286,7 @@ fn dark(g: &mut Game, w: &mut Way, t: &mut [Crumb], at: i64, own: bool, lo: bool
     let mut bwd = -1;
     let mut bd = 0.0;
     let mut k = at + 1;
-    while k < len && fd < stand_m && (k <= w.place || flat(t[k as usize].p, sam_pos(g)) >= stand_near) {
+    while k < len && fd < stand_m && (k <= w.place || flat(t[k as usize].p, sam_pos(g, &crate::seats::here(g))) >= stand_near) {
         fd += flat(t[k as usize].p, t[(k - 1) as usize].p);
         if dark_ok(g, w, t, k, own, lo, strict) {
             fwd = k;
@@ -314,7 +314,7 @@ fn plan(g: &mut Game, s: &mut State, man: &mut Man, gd: GuardId, p: V3, i: i64, 
     let eyes = if k_.skill > 0.0 { eyes_for(g, gd) } else { Vec::new() };
     let low_walk = crouch_out(man, low, Mode::Walk);
     let keen_f = if crate::guards::escalation_of(g) >= 1.0 { crate::guards::KEEN } else { 1.0 };
-    let card_f = crate::kitload::load_seen(g, crate::kitload::LoadSeenWho::Guard(gd));
+    let card_f = crate::kitload::load_seen(g, &crate::seats::here(g), crate::kitload::LoadSeenWho::Guard(gd));
     let here = if !eyes.is_empty() { exposure_of(g, &eyes, gd) } else { none() };
     let off = s.off;
     let t = &mut s.trail;
@@ -347,8 +347,8 @@ fn plan(g: &mut Game, s: &mut State, man: &mut Man, gd: GuardId, p: V3, i: i64, 
     let mut why = man.why;
     let mut from: i64 = -1;
     let mut to: i64 = -1;
-    let others: Vec<GuardId> = crate::orders::squad_orders_men(g, None, None).into_iter().filter(|o| *o != gd).collect();
-    let sam = sam_pos(g);
+    let others: Vec<GuardId> = crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None).into_iter().filter(|o| *o != gd).collect();
+    let sam = sam_pos(g, &crate::seats::here(g));
     let list = g.doors.list.clone();
     let mut sam_doors: Vec<DoorId> = Vec::new();
     if k_.door_m > 0.0 {
@@ -396,7 +396,7 @@ fn plan(g: &mut Game, s: &mut State, man: &mut Man, gd: GuardId, p: V3, i: i64, 
                 let mut last = first;
                 let mut k = first;
                 while k < len && k < first + 60 {
-                    if k > place && flat(t[k as usize].p, sam_pos(g)) < k_.stand_near { break; }
+                    if k > place && flat(t[k as usize].p, sam_pos(g, &crate::seats::here(g))) < k_.stand_near { break; }
                     if !ex(g, &mut w, t, k, low_walk).seen && !in_line(g, &w, t, k, low_walk) {
                         end = k;
                         break;
@@ -412,7 +412,7 @@ fn plan(g: &mut Game, s: &mut State, man: &mut Man, gd: GuardId, p: V3, i: i64, 
                 let too_long = stretch > k_.cross_m;
                 let waited = if man.mode == Mode::Wait && man.wait_t >= 0.0 { now - man.wait_t } else { 0.0 };
                 let cheap = end >= 0 && watched && !too_long && {
-                    let card = crate::kitload::load_cross(g, crate::kitload::LoadCrossWho::Guard(gd));
+                    let card = crate::kitload::load_cross(g, &crate::seats::here(g), crate::kitload::LoadCrossWho::Guard(gd));
                     cross_cost(g, &w.eyes, t, first as f64, end as f64, Some(card)) <= k_.budget
                 };
                 let walked = on_walk
@@ -671,7 +671,7 @@ fn follow(g: &mut Game, s: &mut State, man: &mut Man, gd: GuardId, back: f64, sa
     man.i = i as f64 + off;
     if man.hid_i >= 0.0 && m::abs(man.i - man.hid_i) >= 3.0 { man.hid_i = -1.0; }
     // the trail from him to Sam, and his place on it
-    let sam = sam_pos(g);
+    let sam = sam_pos(g, &crate::seats::here(g));
     let gap = back + k_.back;
     let mut rem = 0.0;
     let mut k = i;
@@ -812,7 +812,7 @@ pub fn cue(g: &mut crate::game::Game, gd: GuardId, m: &mut crate::sneak::Man, li
 pub fn sneak_summary(g: &mut crate::game::Game) -> String {
     if !g.k.sneak.on { return String::from("off"); }
     if !sneak_live(g) { return String::from("on · not live (the squad is loud, found out, or a defender is hunting)"); }
-    let men = crate::orders::squad_orders_men(g, None, None);
+    let men = crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None);
     let mut rows: Vec<String> = Vec::new();
     for gd in men {
         let mode = match g.m.sneak.states.as_ref().and_then(|s| s.men.get(gd)) {

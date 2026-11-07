@@ -18,7 +18,7 @@ pub const ORDER: Row = Row {
 
 fn at_of(t: &OrderTarget) -> V3 { crate::orders::rows::at(t) }
 
-fn label(g: &mut Game, _t: &OrderTarget) -> String { format!("40 mm there · {} left", squad40::squad40_left(g)) }
+fn label(g: &mut Game, _t: &OrderTarget) -> String { format!("40 mm there · {} left", squad40::squad40_left(g, &crate::seats::here(g))) }
 
 /// the one man who would fire, or nobody
 fn only(g: &mut Game, men: &[GuardId], t: &OrderTarget) -> Vec<GuardId> {

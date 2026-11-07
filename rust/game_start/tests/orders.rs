@@ -22,7 +22,7 @@ fn yard() -> Scene {
 }
 fn spot(seed: u32) -> [f64; 2] { [28.0 + nudge(seed, 0), 24.0 + nudge(seed, 1)] }
 
-fn left(p: &mut Play) -> f64 { game::squad40::squad40_left(&mut p.g) }
+fn left(p: &mut Play) -> f64 { game::squad40::squad40_left(&p.g, &game::seats::here(&p.g)) }
 fn on_the_menu(p: &Play) -> bool { p.on_menu("shellThere") }
 
 /// THE RULE: with one man of the squad carrying 40 mm shells, "put a shell there" is on the menu; given, that man turns to the spot and
