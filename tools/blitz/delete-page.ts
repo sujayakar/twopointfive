@@ -1,7 +1,7 @@
 // THE PAGE UNDER THE RUST GAME, DRIVEN (tools/blitz/DELETION.md): headless Chromium on the software adapter loads the dev server's pages and plays them by the
 // page's own hooks (`__ready`, `__runFrames`, `__menu`, `__scenarios`, `__orders`: src/main.ts). It is the deletion's check that the page still boots and
-// plays, and, on the census's tree, the census of what the page runs as TypeScript and how often a frame. NEVER SEEN ON A GPU: the software adapter draws,
-// and nobody looks at the picture here; what is held is that the page reaches play, the Rust game steps, and no error is said.
+// plays, and, on the census's tree, the census of what the page runs as TypeScript and how often a frame. NEVER SEEN ON A GPU, AND NOT DRAWN: the frames it steps are undrawn (the software adapter needs minutes for some drawn frames),
+// so nothing here says anything of the picture; what is held is that the page reaches play, the Rust game steps, and no error is said.
 //   PORT=5260 bun run tools/serve.ts &                                   the tree's dev server
 //   bun run tools/blitz/delete-page.ts --at http://localhost:5260 [--word rust=1] [--frames 3600] [--census ran.jsonl] [--only solo,squad,title,pages] [--squad room-clear-four]
 // Exit 0: every flow reached play and no page said an error · 1: one did not.
@@ -24,7 +24,7 @@ async function census(c: Cdp, what: string, frames: number): Promise<void> { if 
 const state = `(() => { const g = window.__game, r = window.__rust; return { time: g ? +g.time.toFixed(2) : null, rust: r ? { on: r.on, ticks: r.ticks, starts: r.starts } : null, player: g ? { down: !!g.player?.down, x: +g.player.char.pos[0].toFixed(2), z: +g.player.char.pos[2].toFixed(2) } : null, guards: g ? g.guards.length : null, fatal: document.querySelector('.fatal, #fatal')?.textContent?.slice(0, 300) ?? null }; })()`;
 /** frames in bursts, each with the keys its row holds; a row may also run a line of the page's own */
 async function play(c: Cdp, rows: { n: number; keys?: string[]; js?: string }[]): Promise<number> { let done = 0;
-  for (const r of rows) { if (r.js) await c.eval(`(async () => { ${r.js} })()`, { timeoutMs: 60000 }); for (let left = r.n; left > 0; left -= 30) { const k = Math.min(30, left); await c.eval(`window.__runFrames(${k}, 1 / 60, ${JSON.stringify(r.keys ?? [])}, false)`, { timeoutMs: 600000 }); done += k; } note(`${done} frames`); }
+  for (const r of rows) { if (r.js) await c.eval(`(async () => { ${r.js} })()`, { timeoutMs: 60000 }); for (let left = r.n; left > 0; left -= 30) { const k = Math.min(30, left); await c.eval(`window.__runFrames(${k}, 1 / 60, ${JSON.stringify(r.keys ?? [])}, 'none')`, { timeoutMs: 600000 });   // (UNDRAWN: one drawn frame of the solo night takes minutes on the software adapter, with or without the Rust game) done += k; } note(`${done} frames`); }
   return done; }
 function verdict(name: string, c: Cdp, before: any, after: any, frames: number): void { const errs = errorsOf(c), stepped = after.time !== null && before.time !== null && after.time > before.time, rustOk = !WORD || (after.rust?.on && after.rust.ticks > 0);
   const ok = stepped && rustOk && !errs.length && !after.fatal; if (!ok) bad++;

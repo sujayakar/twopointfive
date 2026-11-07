@@ -150,6 +150,24 @@ function anyChain(nameNode: any): string[] | null { const names: string[] = [nam
 function gamePathFrom(names: string[]): any { let t = GAME_TYPE, prop: any; for (const n of names) { if (!t) return undefined; prop = checker.getPropertyOfType(checker.getNonNullableType(t), n); if (!prop) return undefined; t = checker.getTypeOfSymbol(prop); } return prop; }
 /** the last two names or more of the chain, where they are a path from the game (`P.g.cues.stats`: `cues.stats`) */
 function gamePath(names: string[]): any { for (let i = 0; i + 2 <= names.length; i++) { const p = gamePathFrom(names.slice(i)); if (p) return p; } return undefined; }
+/** the simulation's classes, by the checker's symbol */
+const SIM_CLASS_SYMS = new Set<any>(), classOfSym = new Map<any, Unit>(); for (const u of UNITS) if (u.kind === 'class') { const sy = checker.getSymbolAtLocation(u.nodes[0].name); SIM_CLASS_SYMS.add(sy); classOfSym.set(sy, u); }
+/** AN OBJECT HANDED WHERE ANOTHER TYPE IS ASKED FOR. `loop({ demo })` hands a `Demo` where a `DemoLike` is asked for, and from then on whoever holds
+ *  the `DemoLike` calls `Demo`'s methods through names the checker resolves to the interface. So at every place a value whose type is one of the
+ *  simulation's classes is written where the type asked for is another one (an interface, a type written in place, a union of them), every member
+ *  that type names is a use of the class's member of that name. This is exact: the checker says both types at that place. */
+const memberOf = (C: Unit, name: string): Unit | undefined => { for (const K of [C, ...allSupersLazy(C)]) { const m = K.members!.find(x => x.name === name && x.kind !== 'ctor' && !x.isStatic); if (m) return m; } return undefined; };
+let allSupersLazy: (C: Unit) => Iterable<Unit> = () => [];
+const flowMemo = new Map<string, Unit[]>();
+function handed(n: any, out: Edge[], sf: any, file: string): void {
+  let t: any; try { t = checker.getTypeAtLocation(n); } catch { return; } const C = t?.symbol && classOfSym.get(t.symbol); if (!C || !(t.flags & ts.TypeFlags.Object)) return;
+  if (checker.getSignaturesOfType(t, ts.SignatureKind.Construct).length) return;   // (the class itself, not one of its objects)
+  let ct: any; const p = n.parent; try { if (p.kind === SK.ShorthandPropertyAssignment) { const o = checker.getContextualType(p.parent), pr = o && checker.getPropertyOfType(checker.getNonNullableType(o), n.text); ct = pr && checker.getTypeOfSymbol(pr); } else ct = (p.kind === SK.AsExpression || p.kind === SK.TypeAssertionExpression || p.kind === SK.SatisfiesExpression) && p.expression === n ? checker.getTypeFromTypeNode(p.type) : checker.getContextualType(n); } catch { return; }
+  if (!ct || ct === t || (ct.flags & (ts.TypeFlags.Any | ts.TypeFlags.Unknown))) return;
+  for (const T of ct.types ?? [ct]) { if (!T || T === t || !(T.flags & (ts.TypeFlags.Object | ts.TypeFlags.Intersection)) || (T.symbol && classOfSym.has(T.symbol))) continue;
+    const key = `${C.id}:${(T as any).id}`; let ms = flowMemo.get(key);
+    if (!ms) { ms = []; for (const pr of checker.getPropertiesOfType(T)) { const m = memberOf(C, pr.name); if (m) ms.push(m); } flowMemo.set(key, ms); }
+    for (const m of ms) out.push({ to: m, at: n.getStart(sf), file, how: 'has its object handed where a type that names it is asked for' }); } }
 /** `import(\`${ROOT}/src/game/x.ts\`)`: the module, where the path is one substitution and then a path under the repository written out */
 function dynModule(call: any): any { const a = call.arguments?.[0]; if (!a) return undefined; let lit: string | undefined;
   if (a.kind === SK.TemplateExpression && a.head.text === '' && a.templateSpans.length === 1) lit = a.templateSpans[0].literal.text;
@@ -180,11 +198,13 @@ function refs(node: any, out: Edge[], skip?: (n: any) => boolean): void {
   const visit = (n: any): void => {
     if (skip?.(n)) return;
     if (n.kind === SK.ImportDeclaration || n.kind === SK.ImportEqualsDeclaration) return;
+    if (n.kind === SK.PropertyAccessExpression || n.kind === SK.ThisKeyword || n.kind === SK.NewExpression || n.kind === SK.CallExpression || n.kind === SK.ElementAccessExpression) handed(n, out, sf, file);
     // a module loaded by a written path is typed `any`: what is read off it is read by name, and the name is that module's export
     if (n.kind === SK.PropertyAccessExpression) { const mod = modOf(n.expression); if (mod) { const x = exportOf(mod, n.name.text); if (x) add(x, n.name, LOADS); ts.forEachChild(n.expression, visit); return; } }
     if (n.kind === SK.VariableDeclaration && n.name.kind === SK.ObjectBindingPattern && n.initializer) { const mod = modOf(n.initializer); if (mod) { for (const el of n.name.elements) { const nm = el.propertyName ?? el.name; if (nm.kind === SK.Identifier && !el.dotDotDotToken) { const x = exportOf(mod, nm.text); if (x) add(x, nm, LOADS); } if (el.initializer) visit(el.initializer); } visit(n.initializer); return; } }
     if (n.kind === SK.Identifier || n.kind === SK.PrivateIdentifier) {
       const p = n.parent;
+      if (n.kind === SK.Identifier && ((p as any).name !== n || p.kind === SK.ShorthandPropertyAssignment) && p.kind !== SK.QualifiedName && p.kind !== SK.TypeReference && p.kind !== SK.ExpressionWithTypeArguments && p.kind !== SK.ImportSpecifier && p.kind !== SK.ExportSpecifier) handed(n, out, sf, file);
       // (a property of an object written where a type is asked for names that type's property: `{ typeOf: … }` handed as a part of a class is a use of the class's `typeOf`)
       if ((p.kind === SK.PropertyAssignment || p.kind === SK.ShorthandPropertyAssignment || p.kind === SK.MethodDeclaration) && p.name === n && p.parent.kind === SK.ObjectLiteralExpression) { const ct = checker.getContextualType(p.parent); const prop = ct && checker.getPropertyOfType(checker.getNonNullableType(ct), n.text); if (prop) add(prop, n, 'writes a property of that name where its type is asked for'); if (p.kind !== SK.ShorthandPropertyAssignment) return; }
       if (p.kind === SK.ShorthandPropertyAssignment && p.name === n) add(checker.getShorthandAssignmentValueSymbol(p), n);
@@ -199,6 +219,22 @@ function refs(node: any, out: Edge[], skip?: (n: any) => boolean): void {
     if (n.kind === SK.ElementAccessExpression && n.argumentExpression && n.argumentExpression.kind !== SK.StringLiteral && n.argumentExpression.kind !== SK.NumericLiteral) STATS.dyn++;
     ts.forEachChild(n, visit); };
   visit(node); }
+// ---- class hierarchy: a call of a base's method is a call of every override; a class that says `implements I` answers I's members
+const supers = new Map<Unit, Unit[]>(), subs = new Map<Unit, Unit[]>(), implementers = new Map<any, Unit[]>(), ifaceSubs = new Map<any, any[]>();
+const push = <K, V>(m: Map<K, V[]>, k: K, v: V) => { const a = m.get(k); if (a) a.push(v); else m.set(k, [v]); };
+for (const C of UNITS) if (C.kind === 'class') for (const h of C.nodes[0].heritageClauses ?? []) for (const t of h.types) { const s = targetOf(checker.getSymbolAtLocation(t.expression)); for (const d of s?.declarations ?? []) { const B = unitOfNode.get(d); if (B && B.kind === 'class') { push(supers, C, B); push(subs, B, C); } else if (d.kind === SK.InterfaceDeclaration) push(implementers, d, C); } }
+for (const sf of program.getSourceFiles()) { if (sf.isDeclarationFile) continue; const v = (n: any): void => { if (n.kind === SK.InterfaceDeclaration) for (const h of n.heritageClauses ?? []) for (const t of h.types) { const s = targetOf(checker.getSymbolAtLocation(t.expression)); for (const d of s?.declarations ?? []) if (d.kind === SK.InterfaceDeclaration) push(ifaceSubs, d, n); } ts.forEachChild(n, v); }; for (const st of sf.statements) v(st); }
+const allSubs = (C: Unit, out = new Set<Unit>()): Set<Unit> => { for (const s of subs.get(C) ?? []) if (!out.has(s)) { out.add(s); allSubs(s, out); } return out; };
+const allSupers = (C: Unit, out = new Set<Unit>()): Set<Unit> => { for (const s of supers.get(C) ?? []) if (!out.has(s)) { out.add(s); allSupers(s, out); } return out; };
+allSupersLazy = C => allSupers(C);
+/** the classes that SAY they implement an interface (or one that extends it), with their subclasses */
+const saidCache = new Map<any, Set<Unit>>();
+function saidImplementers(I: any): Set<Unit> { let s = saidCache.get(I); if (s) return s; s = new Set(); saidCache.set(I, s); const seen = new Set<any>(), go = (i: any) => { if (seen.has(i)) return; seen.add(i); for (const C of implementers.get(i) ?? []) { s!.add(C); for (const D of allSubs(C)) s!.add(D); } for (const j of ifaceSubs.get(i) ?? []) go(j); }; go(I); return s; }
+const assignable = new Map<string, boolean>();
+function answers(C: Unit, iface: any): boolean { const k = `${C.id}:${iface.pos}:${iface.getSourceFile().fileName}`; let v = assignable.get(k); if (v !== undefined) return v;
+  try { const ct = checker.getDeclaredTypeOfSymbol(checker.getSymbolAtLocation(C.nodes[0].name)); const it = iface.kind === SK.InterfaceDeclaration ? checker.getDeclaredTypeOfSymbol(checker.getSymbolAtLocation(iface.name)) : checker.getTypeFromTypeNode(iface); v = !!checker.isTypeAssignableTo(ct, it); } catch { v = true; }
+  assignable.set(k, v); return v; }
+
 for (const u of UNITS) for (const n of u.nodes) {
   if (u.kind === 'class') { refs(n, u.sig, x => x.parent === n && ts.isClassElement(x)); continue; }
   const b = u.fnLike ? bodyOf(n) : undefined;
@@ -226,21 +262,6 @@ function retText(f: any, file: string): string { const t = retTypeOf(f); if (!t)
   // (a type the file has no name for is written through its module: the checker gives the module's whole path)
   s = s.replace(/import\("([^"]+)"\)/g, (_m, p: string) => { if (!p.startsWith('/')) return `import('${p}')`; let to = relative(dirname(join(ROOT, file)), p).split('\\').join('/'); if (!to.startsWith('.')) to = './' + to; return `import('${to}')`; });
   return s; }
-
-// ---- class hierarchy: a call of a base's method is a call of every override; a class that says `implements I` answers I's members
-const supers = new Map<Unit, Unit[]>(), subs = new Map<Unit, Unit[]>(), implementers = new Map<any, Unit[]>(), ifaceSubs = new Map<any, any[]>();
-const push = <K, V>(m: Map<K, V[]>, k: K, v: V) => { const a = m.get(k); if (a) a.push(v); else m.set(k, [v]); };
-for (const C of UNITS) if (C.kind === 'class') for (const h of C.nodes[0].heritageClauses ?? []) for (const t of h.types) { const s = targetOf(checker.getSymbolAtLocation(t.expression)); for (const d of s?.declarations ?? []) { const B = unitOfNode.get(d); if (B && B.kind === 'class') { push(supers, C, B); push(subs, B, C); } else if (d.kind === SK.InterfaceDeclaration) push(implementers, d, C); } }
-for (const sf of program.getSourceFiles()) { if (sf.isDeclarationFile) continue; const v = (n: any): void => { if (n.kind === SK.InterfaceDeclaration) for (const h of n.heritageClauses ?? []) for (const t of h.types) { const s = targetOf(checker.getSymbolAtLocation(t.expression)); for (const d of s?.declarations ?? []) if (d.kind === SK.InterfaceDeclaration) push(ifaceSubs, d, n); } ts.forEachChild(n, v); }; for (const st of sf.statements) v(st); }
-const allSubs = (C: Unit, out = new Set<Unit>()): Set<Unit> => { for (const s of subs.get(C) ?? []) if (!out.has(s)) { out.add(s); allSubs(s, out); } return out; };
-const allSupers = (C: Unit, out = new Set<Unit>()): Set<Unit> => { for (const s of supers.get(C) ?? []) if (!out.has(s)) { out.add(s); allSupers(s, out); } return out; };
-/** the classes that SAY they implement an interface (or one that extends it), with their subclasses */
-const saidCache = new Map<any, Set<Unit>>();
-function saidImplementers(I: any): Set<Unit> { let s = saidCache.get(I); if (s) return s; s = new Set(); saidCache.set(I, s); const seen = new Set<any>(), go = (i: any) => { if (seen.has(i)) return; seen.add(i); for (const C of implementers.get(i) ?? []) { s!.add(C); for (const D of allSubs(C)) s!.add(D); } for (const j of ifaceSubs.get(i) ?? []) go(j); }; go(I); return s; }
-const assignable = new Map<string, boolean>();
-function answers(C: Unit, iface: any): boolean { const k = `${C.id}:${iface.pos}:${iface.getSourceFile().fileName}`; let v = assignable.get(k); if (v !== undefined) return v;
-  try { const ct = checker.getDeclaredTypeOfSymbol(checker.getSymbolAtLocation(C.nodes[0].name)); const it = iface.kind === SK.InterfaceDeclaration ? checker.getDeclaredTypeOfSymbol(checker.getSymbolAtLocation(iface.name)) : checker.getTypeFromTypeNode(iface); v = !!checker.isTypeAssignableTo(ct, it); } catch { v = true; }
-  assignable.set(k, v); return v; }
 
 // ---- who a file of the tree is: the page, a host, or a tool
 type Who = 'page' | 'host' | 'tool';
@@ -292,7 +313,6 @@ const KEEP: { u: Unit; why: string }[] = [];
  *  a start (the game stood in TypeScript before it crosses whole) runs one rightly, and the census plays the starts. A function on the surface that takes
  *  no game (the kit's tables, a lookup) can be called with no game stood, by a menu: it is followed like any other. */
 const BARRIER = !flag('--no-barrier');
-const SIM_CLASS_SYMS = new Set<any>(); for (const u of UNITS) if (u.kind === 'class') SIM_CLASS_SYMS.add(checker.getSymbolAtLocation(u.nodes[0].name));
 const ruleMemo = new Map<Unit, boolean>();
 function takesGame(u: Unit): boolean { if (u.cls && !u.isStatic) return true; const f = fnOf(implOf(u) ?? u.nodes[0]);
   const isSim = (t: any, d = 0): boolean => !!t && (SIM_CLASS_SYMS.has(t.symbol) || (d < 2 && (t.types ?? []).some((x: any) => isSim(x, d + 1))));
