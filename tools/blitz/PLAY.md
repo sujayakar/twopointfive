@@ -21,6 +21,8 @@ tools/blitz/rust.sh rust bun run tools/qa/playthrough.ts --scn depot-four --seed
 | `tally-diff.ts` | two `playthrough.ts --json` files side by side, a run a row |
 | `thrice.ts` | one fight stood N times in one process, every game held to the first (the digest a second; `--ticks`, `--dump` to find where two part) |
 | `fuzz.sh`, `fuzz-diff.ts` | THE FUZZ: one seed of tools/qa/soak.ts played on the folded TypeScript tick and on the Rust game, a line a tick each, and the first tick they part with what the schedule did before it |
+| `fuzz-dumps.ts`, `diff.ts --live`, `known-loaded.txt` | the whole states of a fuzz run every half minute, held to each other by path, canonically; `dumps.txt` and `rust-hashes.txt` |
+| `fuzz-replay.sh`, `fuzz-replay.ts` | a KEPT run played again on the Rust game alone, and the first tick that differs: the fuzz's reference once the TypeScript tick is gone |
 | `fuzz-squad.sh`, `perturb.ts` | THE FUZZ ON A SQUAD MISSION: a seeded stream of orders, throws, fire, kills, saves, loads and restarts laid between the ticks of the scripted player (`QA_PERTURB=<seed>` over any headless tool), the same two-sided compare |
 | `keep-check.ts` | a snapshot and a save put back, six games in four slots, a refused re-step: the same lines under `ts` and `rust` |
 | `qa-sweep.py` | every family of probes.ts three ways, a probe a row: the table's `sweep` rows and its Rust-only reds by kind |
@@ -74,13 +76,17 @@ bun run tools/blitz/fuzz-diff.ts DIR [--json] [--but-panes]
 - **`fuzz-diff.ts`** names the first tick the die or the block parts, the first tick the host's half differs, where the two timelines first say
   another thing and where the DRIVER'S OWN ACTS first differ (the schedule reads the game it is given: once the driver takes another road the two
   sides are no longer the same experiment), the soak's own invariants that are red on the Rust side only, and the call surface's exit line.
-- **The whole states as the last tick returns** are diffed by path (`end-diff.txt`). THE DIE AND THE BLOCK ARE THE BODIES AND THE DICE: a call that ran
-  in TypeScript on the puppet and never reached the Rust game (an interrogation: a talk's record, the chronicle, a door's code) leaves them equal for
-  minutes. After a restart that diff is noisy: the TypeScript's book still numbers the players and guns of before the restart, so rows keyed by a
-  player compare crosswise.
+- **A line a tick's third word** is the host's half WITHOUT the lens's serial (`FollowCamera.desired_serial`, the bridge's own count of the camera's
+  `desired` arrays: after a load it is the frame's count on the TypeScript side and the saved moment's plus one on a puppet; no rule reads it).
+- **The whole states every half minute** (1,800 ticks; `RH_DUMP`) are held to each other by path, every pair both sides kept, up to the tick the die or
+  the block parted (`fuzz-dumps.ts` → `dumps.txt`, a line a pair; `diff-<tick>.txt` where a path is not known). THE DIE AND THE BLOCK ARE THE BODIES AND
+  THE DICE: a call that ran in TypeScript on the puppet and never reached the Rust game (an interrogation: a talk's record, the chronicle, a door's
+  code) leaves them equal for minutes.
+- **EQUAL means all three**: the die, the block, and 0 paths not known at every half minute. The scripts exit 0 only then (2: equal every tick, a path
+  not known; 4: equal by all three but for the panes after a load, below).
 - **To look closer**: `RH_SAY='<an expression of g>'` writes what the tool would read, a line a tick on each side (`<word>-say.txt`; `RH_SAY=digest` the
-  game's digest); `RH_DUMP=<ticks>` keeps the whole state of each side at those ticks for `diff.ts`; `RH_HALF=<ticks>` prints the host's half a field a
-  line under either word.
+  game's digest); `RH_DUMP=<ticks>` keeps the whole state of each side at those ticks for `diff.ts`; `RH_HALF=<ticks>` writes the host's half a field a
+  line under either word (with `RH_TICKS`, to `<word>-half.txt`: a tally plays its games in children whose output goes nowhere).
 
 ### The fuzz on a squad mission
 
@@ -89,8 +95,8 @@ Hard). The squad missions are where the orders menu, the door tools, the room fi
 stream over the scripted player of `tools/qa/playthrough.ts`:
 
 ```sh
-tools/blitz/fuzz-squad.sh <mission> <seed> [--hard] [--rate K] [--skip a,b] [--only a,b] [--out DIR] [--side ts|rust]
-QA_PERTURB=<seed> [QA_PERTURB_RATE=K] [QA_PERTURB_ONLY=a,b] [QA_PERTURB_SKIP=a,b] [QA_PERTURB_FROM=<tick>] <any tool that stands its game through tools/qa/headless.ts>
+tools/blitz/fuzz-squad.sh <mission> <seed> [--hard] [--rate K] [--god player|squad|all] [--alarm TICK] [--skip a,b] [--only a,b] [--out DIR] [--side ts|rust]
+QA_PERTURB=<seed> [QA_PERTURB_RATE=K] [QA_PERTURB_GOD=player|squad|all] [QA_PERTURB_ONLY=a,b] [QA_PERTURB_SKIP=a,b] [QA_PERTURB_FROM=<tick>] <any tool that stands its game through tools/qa/headless.ts>
 ```
 
 - **`tools/blitz/perturb.ts`** is laid by `tools/qa/headless.ts` when `QA_PERTURB` is given: before every step a schedule of its own (one seeded
@@ -101,15 +107,49 @@ QA_PERTURB=<seed> [QA_PERTURB_RATE=K] [QA_PERTURB_ONLY=a,b] [QA_PERTURB_SKIP=a,b
   reads either fuzz.
 - **Determinism first**: the same mission and seed twice on one side must write the same tick file; a parting between the sides means nothing
   before that is shown.
-- **The whole states** are kept every 1,800 ticks and the latest pair both sides have is diffed by path. Two kinds of path are noise there and are
-  named in the results: rows the TypeScript's book keeps for the player of before the mission's own fresh deal (`kit.issued_player`, `kit.you_bare`:
-  they number two more guns, so every gun after them compares crosswise), and nothing else known.
+- **The whole states** are kept every 1,800 ticks and every pair is held, as the soak's are (above).
+- **`--god player|squad|all`** (`QA_PERTURB_GOD`): the sandbox row's god mode held on (`game.godMode`), the net a showcase cast wears put on every living
+  man of the team (`guard.god`: rounds and fragments pass through him), or both, again on whoever a restart or a load brings. A run that lasts: with
+  the team's deaths and not the player's, or with neither (two casts at doors for minutes).
 - **`--alarm TICK`** (`QA_PERTURB_ALARM`): the response team is called at that tick the way `tools/qa/qrf-squad-check.ts` calls it (`tune.qrfSquad` on,
   four men fourteen seconds out, the alarm's place on one of the team, `requestQrf(g, 'panel')`) and the alarm's place is put on one of the team again
   every twenty seconds. WHY: in TypeScript the response team's cast runs its door tools with a VIEW of the game (src/game/squadcast.ts), which is
   another key than the game for every table keyed by the game object, so it keeps rows of its own in some twenty of them; the Rust game holds one row
   on Game for each. Only a floor with both casts at doors can show whether a tick reads the difference.
 - **`FUZZ_CAP`** (900 s): a side cut short is reported as "one side stopped" and the ticks both played are still compared.
+
+### The whole states, canonically (`diff.ts --live`), and what each rule hides
+
+Two states the die and the block call equal are not the same bytes: the two sides number rows and deal identity serials apart, and the TypeScript keeps
+tables the Rust game keeps otherwise. `fuzz-dumps.ts` holds a pair with these rules, and a clean run reads 0 paths not known:
+
+| rule | why | what it hides |
+|---|---|---|
+| a canon table's rows are numbered by reach FROM THE LIVE GAME: a map or set keyed by a row is walked only once its key is reached some other way | the TypeScript keeps such tables weakly, by the object, and lists a row for a player, a gun or an order's assignment that is out of the game (a fresh deal, a restart, a load) until the collector takes it. Numbered through such a row, every gun after it compared crosswise (61 of 67 paths on one run) | nothing |
+| a row ONLY A KEY reaches is named by its content (`Id(~1x9k2)`); an entry keyed by one is compared where both sides hold a row of that content, and counted by side and table where one side does | no rule can ask a weak table for a row whose key nothing else holds: such rows are dead on both sides, and which of them still stand is the collector's doing on one side and the table's on the other (`orders.back_fix` 13 rows against 2 after a load: 11 under assignments of the abandoned future) | a STRONG map or set keyed by a row nothing else holds, where the two rows differ |
+| a table keyed by an identity serial (schema `serial`, `<field>{}`): a map by the multiset of its values, a set by its count; the Rust side's surplus is reported, the TypeScript's counted | by place it read crosswise once one side held a member the other had dropped (`chronicle.heard_of`, `fight.heard_ev`, `qrf.heard_events`: the events of an abandoned future) | which key holds which value; a member only the TypeScript holds |
+| `gunhold.knowns`, `guards.holds_called` are compared as serial-keyed (STAND-IN: the schema does not mark them) | their key is an object, written as the serial each side deals it | as the rule above |
+| `wallcharge.stand_ins` is not walked for reach and its rows are known | a declared memo; the fuzz's `orders.rowsFor` between two ticks fills it on the TypeScript's side | the memo |
+| AFTER A LOAD (`known-loaded.txt`): `g.stats.*`, a module's `*_log` and `*_why`, `scene_collision.sensed.*`, `scene_box_mirror.things.n`, `doorway.stack_own.*` | the TypeScript's put-back takes back what the game reaches; a module's own log or tally is a plain table of the process and keeps what the abandoned future wrote. The Rust game holds them inside the game and its kept clone takes them back | every such log and tally from a run's first load to its end. No rule reads one |
+| the response team's key ring, `stackroom.books`, `seenwalk.shared` … (known.txt) | the cast's ring is an object that stands in for a set; the cast keeps its own row of a table keyed by the game under its VIEW of the game, the Rust game one row | the cast's own row of those tables |
+
+**The panes after a load are the reference's own.** The TypeScript's put-back leaves a pane a round broke in the abandoned future broken; the Rust
+game's kept clone has the saved moment's. A run that parts in the block's `panes` alone after a load is held again with the panes left out
+(`fuzz-diff.ts --but-panes`; exit 4).
+
+### Kept runs: the fuzz with no TypeScript tick
+
+A run that is EQUAL by all three measures is worth keeping: its Rust side IS what the TypeScript tick did. Keep the folder's `cmd.txt` (the command),
+`rust-*.txt` (a line a tick), `rust-hashes.txt` (a hash of the Rust game's whole state every half minute), `dumps.txt` and `rust.log` (the acts).
+
+```sh
+tools/blitz/fuzz-replay.sh <kept folder> [<kept folder> …] [--work DIR]
+```
+
+plays each kept command again on the Rust game alone and says THE SAME PLAY, or the first tick whose line differs (the die, the host's half or the
+orders given, which parts of the block), the acts before it, and the first whole state whose hash differs. A kept run is of one tree: a change that
+moves the play on purpose (a rule changed, the scripted player changed, a perturbation added) makes every kept run differ at its first touched tick,
+and the run is kept again. The hashes are of the Rust game's own export (`face_export`): a change to the schema moves every one.
 
 ### What the two fuzzes have found (to cut 7.16)
 
@@ -119,8 +159,9 @@ QA_PERTURB=<seed> [QA_PERTURB_RATE=K] [QA_PERTURB_ONLY=a,b] [QA_PERTURB_SKIP=a,b
 | a QRF man's door tools took the boot at a locked door where the reference worked the handle | the soak, seed 9, tick 9264 | the bodies' mend; seed 9 equal on all 10,800 ticks on 7.16 |
 | the TypeScript's own put-back of a save leaves a pane not the saved moment's | the soak, seeds 7 and 8 | the reference's; equal with the panes left out |
 | a throw in the changed-only apply 617 ticks after a load (`orders::SquadOrdersLogItem.who`) | the squad fuzz, depot-four:2 Hard, frame 5671 | serials colliding after a load; gone on 7.16 |
-| the follow camera after a load is not the reference's (its target 2 mm off), so the cursor's point on the floor is not, and the player's first round after a load is another round | the same run on 7.16: the host's half from tick 5055, the block from tick 5841 | THE HOST'S, OPEN: what `backTo` leaves the puppet's camera at. The soak's aim does not come through the camera and never showed it |
+| the follow camera after a load is not the reference's (its target 2 mm off), so the cursor's point on the floor is not, and the player's first round after a load is another round | the same run on 7.16: the host's half from tick 5055, the block from tick 5841 | the host's; MENDED: a save between two ticks takes the host's rows first, a load does not lay the camera of now over the saved moment's. The same run: equal on all 8,006 ticks, 0 paths not known at four half minutes |
 | a save by hand stood twice in the Rust game's chronicle | every squad run with a save; no tick's line shows it | the host's own; mended (`snapTake` holds the row out of the walk) |
+| a field a tool wrote by name and a rule then put back stays the tool's on the puppet (the every-tick export's memo holds what was sent before the write) | the soak's `holding-while-busy` on four seeds: `player.crouch = true`, then `startGrab` stands him up | the bridge's; stood in for (`face_puppet_spoil` after a walk that poked) |
 | a tool outside tools/qa writes the game by name and the walk does not watch the name | perturb.ts's `tune.qrfEta = 14`: the Rust game dealt the response team at 75 s | the file says its names (`__tpsToolWrites`) |
 
 Numbers, seeds and what each green could be wrong about are kept outside the repository with the runs.
@@ -412,6 +453,12 @@ The gate's forms of the tour and the soak (`--runs 3`; three seeds, twelve minut
   (a made row is filled whole).
 - **`face_loaded`, `face_saves_in`, `face_saves_asked`** (the page's own stand-ins in rust/game_face/src/page.rs, now the harness's too): what the save
   controller does to the game round a load, its shelf as the tick reads it, what the tick asked of it. Belong in rust/game's savestate.
+- **The memo spoiled after a poke** (rust-host.ts `poked`; rust/game_face/src/memo.rs `face_puppet_spoil`): after a walk that wrote a field into the Rust
+  game by its path, the next every-tick export sends every row. Belongs in the generated poke: a write by path spoils the memo's row of that path.
+- **Tables keyed by an identity serial that the schema does not mark** (diff.ts `KEYED_BY_SERIAL`: `gunhold.knowns`, `guards.holds_called`). Belongs in
+  schema.json's `serial`.
+- **A refused ask answered as nothing** (rust-host.ts `askNone`, the page's own table copied): `face_ask` answers a number for a row, a seat or a
+  question the Rust game has not got. Belongs in ask.ts: one reader of the number for both hosts.
 - **The game's die seeded on the Rust side by a write into the block** (rust-host.ts `seedDie`: the `dice` part found by its name, the count and the word
   by their offsets). Belongs in the face: one call that seeds the die of the game in a slot.
 - **The list-alone call tapped by hand** (rust-host.ts: `world.relist` → `face_upload`, beside the tap on `upload`). Belongs with the generated taps.
