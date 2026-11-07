@@ -373,11 +373,6 @@ pub fn stagger_guard(g: &mut crate::game::Game, gd: GuardId, dir: V3, shooter: C
     if let Some(pl) = crate::seats::man_by_id(g, shooter_id) { g.pl[pl].noise = m::max(g.pl[pl].noise, hit_noise); }
 }
 
-/// The stagger lines. (launcher.ts staggerLines)
-pub fn stagger_lines() -> Vec<String> {
-    stagger_lines_table()
-}
-
 /// Rings in flight as boxes: under the issue kit (GEAR.on, settled) the sponge round nose first along its flight, rolling about it. The tick's gathering of dynamic boxes calls this. (launcher.ts ringBoxes)
 pub fn ring_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
     // (skeleton 5.2: sponge_boxes takes g, so the walk reads each ring's numbers out first; making a box cannot change the rings)
@@ -419,10 +414,4 @@ mod tests {
         same([0.5, 1.4, 0.25], [20.0, 3.0, -15.0], Ballistics { speed: 76.0, drag: 0.12, solve_iters: 3.0, ..R }, [0x404dd24d263a8c2f, 0x401a3fdaaad96f33, 0xc047526a48903faf]);
     }
 
-    #[test]
-    fn stagger_lines_are_the_five() {
-        let l = stagger_lines();
-        assert_eq!(l.len(), 5);
-        assert_eq!(l.iter().filter(|t| t.contains("who's there")).count(), 1);
-    }
 }

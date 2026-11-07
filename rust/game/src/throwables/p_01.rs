@@ -365,11 +365,6 @@ pub fn item_set_heading(g: &mut crate::game::Game, id: ItemId, v: f64) {
     item_pf(g, id, ic::HEADING, v);
 }
 
-/// (throwables.ts Item.onPose)
-pub fn item_on_pose(g: &mut crate::game::Game, id: ItemId) -> f64 {
-    item_f(g, id, ic::ON_POSE)
-}
-
 /// (throwables.ts Item.onPose, set)
 pub fn item_set_on_pose(g: &mut crate::game::Game, id: ItemId, v: f64) {
     item_pf(g, id, ic::ON_POSE, v);

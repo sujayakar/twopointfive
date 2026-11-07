@@ -7,9 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// the panel's rows kept in the browser's storage. Host only (conventions 6): where the TypeScript finds no store it does nothing, and the game has none. (buddy.ts saveBuddy)
-pub fn save_buddy(g: &mut crate::game::Game) {}
-
 /// the counts of one run, all nought. (buddy.ts newStats)
 pub fn new_stats() -> crate::buddy::StateStats {
     StateStats { calls: 0.0, answered: 0.0, arrived: 0.0, met_on_way: 0.0, turned_back: 0.0, died_on_way: 0.0, short: 0.0, no_one: 0.0, secs: 0.0, metres: 0.0 }
@@ -652,37 +649,3 @@ pub fn buddy_stop(g: &mut crate::game::Game) {
     }
 }
 
-/// the counts of this run, by the TypeScript's names and in its order. (buddy.ts buddyStats)
-pub fn buddy_stats(g: &mut crate::game::Game) -> JsMap<String, f64> {
-    let s = g.m.buddy.states.as_ref().map_or_else(new_stats, |st| st.stats);
-    let rows: [(&str, f64); 10] = [
-        ("calls", s.calls),
-        ("answered", s.answered),
-        ("arrived", s.arrived),
-        ("metOnWay", s.met_on_way),
-        ("turnedBack", s.turned_back),
-        ("diedOnWay", s.died_on_way),
-        ("short", s.short),
-        ("noOne", s.no_one),
-        ("secs", js::to_fixed(s.secs, 1).parse::<f64>().unwrap()),
-        ("metres", js::to_fixed(s.metres, 1).parse::<f64>().unwrap()),
-    ];
-    let mut out = JsMap::new();
-    for (k, v) in rows {
-        out.set(String::from(k), v);
-    }
-    out
-}
-
-/// the line of the debugger's panel. (buddy.ts buddySummary)
-pub fn buddy_summary(g: &mut crate::game::Game) -> String {
-    if !g.k.buddy.on {
-        return String::from("off");
-    }
-    let st = match &g.m.buddy.states {
-        Some(st) => st,
-        None => return String::from("on · nothing yet"),
-    };
-    let s = &st.stats;
-    format!("{} call{} · {} answered · {} arrived · {} on the way", s.calls, if s.calls == 1.0 { "" } else { "s" }, s.answered, s.arrived, st.errands.len())
-}

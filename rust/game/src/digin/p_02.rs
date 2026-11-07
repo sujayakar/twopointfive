@@ -131,49 +131,6 @@ pub fn start_brace(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::
     true
 }
 
-/// DOUBLE UP: alone in his room, the room of his side's with the most men still holding it, away from the noise   (digin.ts gatherTo)
-pub fn gather_to(g: &mut crate::game::Game, d: RoomfightDefId, m: crate::digin::Man) -> Option<crate::digin::GatherTo> {
-    let pos = pos_of(g, g.tab.roomfight_def[d].gd);
-    let my_room = g.tab.roomfight_def[d].room;
-    let defs = g.fight.defs.clone();
-    if defs.iter().any(|x| *x != d && g.tab.roomfight_def[*x].room == my_room && !dead(g, g.tab.roomfight_def[*x].gd)) { return None; }
-    let mut rooms: JsMap<RoomfightRoomId, Vec<RoomfightDefId>> = JsMap::new();
-    for x in defs.iter().copied() {
-        if x == d { continue; }
-        let (k, xg, xmode) = match g.tab.roomfight_def[x].room { Some(k) => (k, g.tab.roomfight_def[x].gd, g.tab.roomfight_def[x].mode), None => continue };
-        if Some(k) == my_room || g.tab.roomfight_room[k].entries.is_empty() { continue; }
-        if !(!dead(g, xg) && xmode == crate::roomfight::DefMode::Hold && g.time - g.gd[xg].last_seen_t > 3.0) { continue; }
-        if crate::roomfight::room_fight_in_room(g, Some(k), m.know) || entered(g, k) { continue; }
-        rooms.get_or_insert_with(k, Vec::new).push(x);
-    }
-    let mine = flat(pos, m.know);
-    let mut best: Option<(GatherTo, f64)> = None;
-    let cell = g.col.nav.cell;
-    let (know, shy_m) = (m.know, g.k.digin.gather_shy_m);
-    for k in rooms.keys() {
-        let men = rooms.get(k).unwrap();
-        let station = g.tab.roomfight_def[men[0]].station;
-        let far = flat(station, know);
-        if men.len() < 2 && far < mine + 3.0 { continue; }
-        let aside = [station[0] + (if pos[0] > station[0] { 1.2 } else { -1.2 }), 0.0, station[2]];
-        let spot = match crate::roomfight::room_fight_free_near(g, aside) {
-            Some(q) => Some(q),
-            None => crate::roomfight::room_fight_free_near(g, station),
-        };
-        let spot = match spot { Some(q) => q, None => continue };
-        if !crate::roomfight::room_fight_in_room(g, Some(k), spot) { continue; }
-        let mut shy = |_: &mut Game, ix: f64, iz: f64| -> f64 {
-            if m::hyp2((ix + 0.5) * cell - know[0], (iz + 0.5) * cell - know[2]) < shy_m + 2.0 { 20.0 } else { 1.0 }
-        };
-        let path = match crate::scene_collision::nav_grid_find_path(g, pos, spot, Some(6000.0), Some(&mut shy)) { Some(p) if !p.is_empty() => p, _ => continue };
-        let walk = path_len(pos, &path);
-        if walk > g.k.digin.gather_m || path.iter().any(|w| flat(*w, know) < shy_m) { continue; }
-        let s = men.len() as f64 * 10.0 + far - walk * 0.2;
-        if best.as_ref().map_or(true, |b| s > b.1) { best = Some((GatherTo { room: k, spot }, s)); }
-    }
-    best.map(|b| b.0)
-}
-
 /// how many other men of this room are at it on entry `i`   (digin.ts begin's `on`)
 fn on_entry(g: &mut Game, me: RoomfightDefId, room: RoomfightRoomId, i: f64) -> usize {
     let mut n = 0;
@@ -995,14 +952,6 @@ pub fn dig_in_reset(g: &mut crate::game::Game) {
     g.stats.digin = DiginStats::default();
     g.m.digin.digin_log.clear();
     g.m.digin.digin_shut = DiginModDIGINSHUT { home: 0.0, held: 0.0, again: 0.0, more: 0.0, left: 0.0 };
-}
-
-/// the one line the checks print   (digin.ts digInSummary)
-pub fn dig_in_summary(g: &mut crate::game::Game) -> String {
-    if !g.k.digin.on && !crate::enemysquads::squads_live(g) { return String::from("off"); }   // a squads level's men dig in on their squad's word whatever the switch says
-    let rooms = g.m.digin.states.as_ref().map_or(0, |s| s.rooms.len());
-    let s = &g.stats.digin;
-    format!("{} dug in ({} moved) · {} doors wedged ({} booted) · {} rooms · cue first {}/{}", s.dug, s.moved, s.braced, s.kicked, rooms, s.cue_first, s.entered)
 }
 
 #[cfg(test)]

@@ -7,12 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// The host's book of what was filed, for the panel and the tools; None before a man smokes.   (smokebreak.ts smokeShown)
-pub fn smoke_shown(g: &mut crate::game::Game) -> Option<crate::smokebreak::SmokeShown2> {
-    let s = g.engine.host_books.as_ref()?.smoke_break.as_ref()?;
-    Some(SmokeShown2 { men: s.men.clone(), frame: s.frame, threads: s.threads, records: s.records })
-}
-
 /// A blank row of counts.   (smokebreak.ts fresh)
 pub fn fresh() -> crate::smokebreak::SmokeBreakStats {
     SmokeBreakStats { men: 0.0, lit: 0.0, draws: 0.0, flames: 0.0, embers: 0.0, breaths: 0.0, frames: 0.0 }
@@ -29,14 +23,6 @@ fn ensure_state(g: &mut Game) {
 pub fn state_of(g: &mut crate::game::Game) -> crate::smokebreak::State {
     ensure_state(g);
     g.m.smokebreak.states.clone().unwrap()
-}
-
-/// The counts a probe or the panel reads; a game nobody has smoked in gets a blank row and none is made.   (smokebreak.ts smokeBreakStats)
-pub fn smoke_break_stats(g: &mut crate::game::Game) -> crate::smokebreak::SmokeBreakStats {
-    match g.m.smokebreak.states.as_ref() {
-        Some(s) => s.stats,
-        None => fresh(),
-    }
 }
 
 /// A word's bits, stirred. Everything is modulo 2^32 in the TypeScript too, so u32 arithmetic gives its bits.   (smokebreak.ts mix)
@@ -310,16 +296,6 @@ pub fn update_smoke_break(g: &mut crate::game::Game, dt: f64) {
     }
     t.men = men;
     g.m.smokebreak.states.as_mut().unwrap().stats = t;
-}
-
-/// One line for the panel and the probes.   (smokebreak.ts smokeBreakSummary)
-pub fn smoke_break_summary(g: &mut crate::game::Game) -> String {
-    let t = smoke_break_stats(g);
-    let (threads, records) = match smoke_shown(g) {
-        Some(p) => (p.threads, p.records),
-        None => (0.0, 0.0),
-    };
-    alloc::format!("smoke break ▸ {} smoking · {} lit, {} draws, {} breathed out ({} threads on the solver, {} puff records)", t.men, t.lit, t.draws, t.breaths, threads, records)
 }
 
 #[cfg(test)]

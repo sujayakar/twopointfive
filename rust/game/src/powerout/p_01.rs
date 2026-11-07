@@ -522,11 +522,6 @@ pub fn power_out_word(g: &mut crate::game::Game, gd: GuardId) -> bool {
     crate::teams::is_hostile(g, team, crate::teams::Team::Player)
 }
 
-/// what was said and done, oldest first. (powerout.ts powerOutTimeline)
-pub fn power_out_timeline(g: &mut crate::game::Game) -> Vec<crate::powerout::PowerOutEvent> {
-    g.m.powerout.states.as_ref().map_or_else(Vec::new, |s| s.events.clone())
-}
-
 /// a fresh start. (powerout.ts powerOutReset)
 pub fn power_out_reset(g: &mut crate::game::Game) {
     g.m.powerout.states = None;
