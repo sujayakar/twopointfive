@@ -209,7 +209,6 @@ export class NetPlay {
   tick(_dt: number, input: Input, cam: FollowCamera, view: View): void {
     const h = this.host; if (!h) { const a = this.alone; if (a) { a.game.update(_dt, input, cam, view); a.engine.lights.update(_dt, a.game.time); } return; }   // (refused once stood: the loop's own tick)
     const g = h.game, c = this.client, now = performance.now();
-    g.hostBefore(input);
     if (c.behind >= NETPAGE.far) this.catching(true);   // (BEFORE the record: a page that wakes far behind sends no key made at a picture seconds old)
     if (c.seat >= 0 && c.state !== 'waiting') { if (this.audioWas === null) c.beat(this.cmd = sampleCmd(g.hostSeat().view, input, cam, view, this.cmd), now); else c.rest(now); }
     this.walk(); this.foresee();
