@@ -28,19 +28,23 @@
 //           from the face it opens toward too. A TEAMMATE: the squad's own row on a door's tools — on H, shown on the door's first page, X then H —
 //           takes an unlocked door with the tool from either face and ends (no second trip to the lock), takes a locked one without the halt at a door
 //           found shut, is refused to a silent squad, and is not there when nobody carries one; a plain open and clear on an unlocked door still uses
-//           the handle. Both knobs off: the build of 10-14 (no row at an unlocked door, the leaf left home from the face it opens toward, in front)
+//           the handle
 //   moves   BIGSLOT.moves (the maintainer, 10-15 evening, with Door Kickers 2 footage: "using the hammer shouldn't require being directly in front of the
 //           door?" · "they put away their gun, equip the hammer, wind up, and then hit the door in one motion"). YOU, from where a stack's second man
 //           stands (outside the hand's reach): the row is there, he WALKS to a place beside the frame and is never in the opening; a man on the latch
 //           jamb leaves him the place off that man's shoulder, or the hinge jamb when he came from that side and the leaf opens away; the animator is
 //           told each blow a wind-up ahead and it lands when told; the shotgun's place is a hand from the lock. A TEAMMATE's hammer is off his back
-//           as he is sent and back on it after; both tools from hard by the frame. Off: the build of 10-15 morning. OVER THE RIFLE: with his rifle slung
+//           as he is sent and back on it after; both tools from hard by the frame. OVER THE RIFLE: with his rifle slung
 //           across his back neither tool's boxes lie inside the rifle's (box against box, on this stand's body and rifle, and in the game's own frame);
 //           with the rifle in his hands the tool lies on his back with no clearance. Looks at no picture
 //   wiring  the two stands' row and word, the knob registry, the journal's tables (a recording from before the table replays with the switch off), slots.json
-// Run it on both stands (plain, and TPS_PROFILE=shipped): it raises the switch itself, and says which stand it ran on. Where a verdict needs a state no
-// level of the repo has (a lock keyed to the face a leaf opens toward, a wedge under a leaf, the frame rule on the frozen stand) the check sets it by hand
-// and the verdict's line says so. Nothing here looks at a picture: neither tool has ever been seen on a GPU.
+// SINCE 2026-11-07 NOTHING HERE WRITES A SETTLED ROW. BIGSLOT.shut, beside, moves, snug and weight, the tool's place at a pack's side (PACKSIDE), the
+// kit's own hand (KITANIM) and the doors' frame rule are constants of the game: the rig no longer writes them, and every line that asked the build
+// before one of them is cut (both knobs off, the moves off, the weight off, the first-pass timing, a recording from before each key). BIGSLOT.on is
+// still a variable of a run, so `off` and the card's switch-off lines stand. Where a verdict needs a state no level of the repo has (a lock keyed to
+// the face a leaf opens toward, a wedge under a leaf) the check sets it by hand and the verdict's line says so. BIGSNUG_BREAK=1 hands the animator a
+// record with no `snug` (the two by-the-record lines of `moves` must fail); BIGKIT_BREAK and BIGWEIGHT_BREAK are bigkit.ts's own. Nothing here looks at
+// a picture: neither tool has ever been seen on a GPU.
 import { resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
 import { standUp, loadCharacter, ROOT } from './headless.ts';
@@ -51,7 +55,6 @@ const BK = await import(`${ROOT}/src/game/bigkit.ts`);
 const { BIG_STATS } = BK;
 const { doorPt, alongOf, offOf } = await import(`${ROOT}/src/game/doortools.ts`);
 const flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
-const { DOORWAY } = await import(`${ROOT}/src/game/doors.ts`);
 const { killGuard, handProps } = await import(`${ROOT}/src/game/combat.ts`);
 const { BIG_TAG, SC20K_TAG, RIG, rifleM4, sc20kBoxes, bigBoxes } = await import(`${ROOT}/src/game/rigProps.ts`);
 const { quat } = await import(`${ROOT}/src/math/vec.ts`);
@@ -79,7 +82,6 @@ const ptGap = (b: any, p: number[]): number => { const q = b.rot ?? [0, Math.sin
 /** the big slot's hammer as it is DRAWN on the man with this character id (rigProps.ts bigBoxes, by its tag): how many boxes, and the head's centre; `all` = every box the frame draws on anybody */
 const drawnTool = (g: any, id: number) => { const out: any[] = []; handProps(g, out); const mine = out.filter(b => b.name === BIG_TAG && b.owner === (id & 0xff)), head = mine.find(b => b.h[0] > 0.05); return { n: mine.length, head: head ? [...head.c] as number[] : null, all: out.length }; };
 const SIL = await import(`${ROOT}/src/game/silent.ts`);
-const { PACKSIDE } = await import(`${ROOT}/src/game/packside.ts`);   // (held off in this rig: these lines are about the tool across a BARE back — its place at a pack's side and the hand that goes there are packside-check.ts's, on both stands)
 const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
 const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const { harnessProfile, FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`);
@@ -93,9 +95,7 @@ const hushed = async <T>(fn: () => Promise<T> | T): Promise<T> => { const log = 
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const J = (o: unknown) => JSON.stringify(o), DT = 1 / 60, f2 = (x: number) => (Number.isFinite(x) ? x.toFixed(2) : String(x));
 const STAND = harnessProfile() as string, BROKEN = process.env.BIGKIT_BREAK === '1', SNUG_BROKEN = process.env.BIGSNUG_BREAK === '1', WEIGHT_BROKEN = process.env.BIGWEIGHT_BREAK === '1';
-/** the doors' frame rule as the stand has it (headless.ts pins it as it loads): every game here starts from it, whatever the one before raised */
-const WAY0 = { oneWay: DOORWAY.oneWay as boolean, frameHolds: DOORWAY.frameHolds as boolean };
-/** … and whether the plain night wears your card (kit.ts KIT_SOLO — a game stood up while it is up puts the table's card on its fresh Player) */
+/** whether the plain night wears your card (kit.ts KIT_SOLO — a game stood up while it is up puts the table's card on its fresh Player) */
 const SOLO0 = { ...K.KIT_SOLO };
 const memStore = (init: Record<string, string> = {}) => { const m = new Map(Object.entries(init)); return { m, getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => { m.set(k, String(v)); }, removeItem: (k: string) => { m.delete(k); } }; };
 const fields = (i: number): string[] => K.kitRows(i).map((r: any) => r.field as string);
@@ -104,22 +104,22 @@ const rowOf = (i: number, f: string) => K.kitRows(i).find((r: any) => r.field ==
 const bigThings = (m: any) => (m.walls | 0) + (m.big && m.big !== 'none' ? 1 : 0);
 const stats = () => ({ ...BIG_STATS }) as Record<string, number>;
 const since = (a: Record<string, number>) => Object.fromEntries(Object.entries(BIG_STATS as Record<string, number>).map(([k, v]) => [k, v - a[k]])) as Record<string, number>;
-/** the kit table, its rules, the switch, the doors' frame rule, the silent order's switch and the dice as they stood, put back after `fn` (the store the table writes to is left on nothing) */
+/** the kit table, its rules, the switch, the silent order's switch and the dice as they stood, put back after `fn` (the store the table writes to is left on nothing) */
 async function kept<T>(fn: () => Promise<T> | T): Promise<T> {
-  const cards = K.KIT.members.map((m: any) => ({ ...m })), on = K.KIT.on, slots = K.SLOTS.on, big = K.BIGSLOT.on, shut = K.BIGSLOT.shut, beside = K.BIGSLOT.beside, moves = K.BIGSLOT.moves, snug = K.BIGSLOT.snug, weight = K.BIGSLOT.weight, solo = { ...K.KIT_SOLO }, way = { oneWay: DOORWAY.oneWay, frameHolds: DOORWAY.frameHolds }, hush = SIL.SILENT.on, side = PACKSIDE.on, rnd = Math.random;
-  try { return await fn(); } finally { PACKSIDE.on = side; K.kitLoad(null, ''); K.BIGSLOT.on = big; K.BIGSLOT.shut = shut; K.BIGSLOT.beside = beside; K.BIGSLOT.moves = moves; K.BIGSLOT.snug = snug; K.BIGSLOT.weight = weight; K.SLOTS.on = slots; K.KIT.on = on; for (let i = 0; i < cards.length; i++) K.KIT.members[i] = cards[i]; Object.assign(K.KIT_SOLO, solo); Object.assign(DOORWAY, way); SIL.SILENT.on = hush; Math.random = rnd; }
+  const cards = K.KIT.members.map((m: any) => ({ ...m })), on = K.KIT.on, slots = K.SLOTS.on, big = K.BIGSLOT.on, solo = { ...K.KIT_SOLO }, hush = SIL.SILENT.on, rnd = Math.random;
+  try { return await fn(); } finally { K.kitLoad(null, ''); K.BIGSLOT.on = big; K.SLOTS.on = slots; K.KIT.on = on; for (let i = 0; i < cards.length; i++) K.KIT.members[i] = cards[i]; Object.assign(K.KIT_SOLO, solo); SIL.SILENT.on = hush; Math.random = rnd; }
 }
 
 // where Sam stands for the manager's door (his side of it is the side the squad works it from): the corridor, off the line of the opening
 const SAM_MANAGER = [24.0, 0, 11.2];
 type Ev = { t: number; kind: string; weapon?: string; who?: number; loud: boolean };
-/** One game under a seed, the switch as `on` says (the frozen stand pins it off as it stands a game up: written after), `cards` written on the loadout
+/** One game under a seed, the switch as `on` says, `cards` written on the loadout
  *  cards BEFORE the staging — so the staging is what hands a man his tool — and the room clear staged (`stage: false` = the plain night, Sam alone).
  *  Sam in god mode and dark; every game event but footfalls kept, with its time. */
-async function rig(seed: number, o: { cards?: Record<number, Record<string, unknown>>; stage?: boolean; on?: boolean; old?: boolean; nomoves?: boolean; nosnug?: boolean; noweight?: boolean } = {}) {
+async function rig(seed: number, o: { cards?: Record<number, Record<string, unknown>>; stage?: boolean; on?: boolean } = {}) {
   Math.random = seeded(0x51b6 + seed * 7919);
-  Object.assign(DOORWAY, WAY0); Object.assign(K.KIT_SOLO, SOLO0); for (let i = 0; i < K.KIT_MEMBERS; i++) K.KIT.members[i] = K.kitDefault(i);   // (nothing of the game before this one: its frame rule, its cards)
-  const W: any = await hushed(() => standUp()); const game = W.game; PACKSIDE.on = false; K.BIGSLOT.on = o.on ?? true; K.BIGSLOT.shut = K.BIGSLOT.beside = !o.old; K.BIGSLOT.moves = !o.old && !o.nomoves; K.BIGSLOT.snug = !o.old && !o.nosnug && !SNUG_BROKEN; K.BIGSLOT.weight = !o.old && !o.nosnug && !o.noweight;   // (`old`: the knobs of 10-15 off — the tools as the build of 10-14 had them; `nomoves`: the evening's alone — the row inside the hand's reach, the one place, the punch)
+  Object.assign(K.KIT_SOLO, SOLO0); for (let i = 0; i < K.KIT_MEMBERS; i++) K.KIT.members[i] = K.kitDefault(i);   // (nothing of the game before this one: its cards)
+  const W: any = await hushed(() => standUp()); const game = W.game; K.BIGSLOT.on = o.on ?? true;
   for (let i = 0; i < K.KIT_MEMBERS; i++) K.KIT.members[i] = { ...K.kitDefault(i), ...(o.cards?.[i] ?? {}) };
   game.godMode = true;
   const said: string[] = []; { const msg = game.msg.bind(game); game.msg = (t: string) => { said.push(String(t)); msg(t); }; }   // (every line the HUD is handed)
@@ -143,9 +143,6 @@ type Rig = Awaited<ReturnType<typeof rig>>;
 const rowsOf = (g: any): string[] => g.nearby.filter((x: any) => x.kind === 'door').map((x: any) => x.verb as string);
 /** the face of d the leaf opens AWAY from (a boot there drives it) and the one it opens toward (where it rests on the frame's stop) */
 const faceOf = (g: any, d: any, which: 'push' | 'pull'): 1 | -1 => { const pull = ([1, -1] as const).find(s => g.doors.pullFace(d, doorPt(d, d.def.width / 2, 0.75, s))) ?? 1; return (which === 'pull' ? pull : -pull) as 1 | -1; };
-/** THE FRAME HOLDS A BOOT (doors.ts DOORWAY.oneWay + frameHolds) is the page's rule and held off on the frozen stand: raised by hand for a verdict about
- *  the face a leaf opens toward — true = it had to be (kept() puts it back) */
-function frameUp(g: any): boolean { if (g.doors.frameRule) return false; DOORWAY.oneWay = true; DOORWAY.frameHolds = true; return true; }
 /** a leaf put home on its latch and locked against the man at `from`, by hand: `lockId` 'wedge:…' = a wedge under it (digin.ts), which no pick opens */
 function lockAgainst(g: any, d: any, from: number[], lockId?: string) { d.angle = 0; d.vel = 0; d.latched = true; d.locked = true; d.lockBroken = false; d.keySide = g.doors.side(d, from); if (lockId) d.lockId = lockId; }
 
@@ -288,9 +285,9 @@ export async function bigOff(): Promise<boolean> {
 // ───────────────────────────────────────────────────────────── you
 /** the plain night, the tool on your card and put on you by the card (kitSolo), you at arm's length off the middle of `door`'s leaf on `face`, the row
  *  performed and three seconds given it. `lock`: a wedge put under the leaf by hand. */
-async function you(seed: number, tool: 'shotgun' | 'hammer', face: 'push' | 'pull', o: { door?: string; lock?: string; open?: boolean; old?: boolean } = {}) {
-  const R = await rig(seed, { stage: false, cards: { 0: { big: tool } }, old: o.old }), g = R.game, pl = g.player, d = R.door(o.door ?? 'storage'); g.aiEnabled = false;
-  const raised = face === 'pull' && frameUp(g), verb = tool === 'shotgun' ? 'breach' : 'hammer';
+async function you(seed: number, tool: 'shotgun' | 'hammer', face: 'push' | 'pull', o: { door?: string; lock?: string; open?: boolean } = {}) {
+  const R = await rig(seed, { stage: false, cards: { 0: { big: tool } } }), g = R.game, pl = g.player, d = R.door(o.door ?? 'storage'); g.aiEnabled = false;
+  const verb = tool === 'shotgun' ? 'breach' : 'hammer';
   // (a steel door: the face its lock is against, as the level keys it — a boot rings off either)
   const steel = !!d.def.steel, side = steel ? ([1, -1] as const).find(s => g.doors.side(d, doorPt(d, d.def.width / 2, 0.75, s)) === d.keySide) ?? 1 : faceOf(g, d, face), spot = doorPt(d, d.def.width / 2, 0.75, side);
   const keyed = !o.open && (!g.doors.lockedOut(d, spot, pl.keys) || !!o.lock); if (keyed) lockAgainst(g, d, spot, o.lock);
@@ -307,7 +304,7 @@ async function you(seed: number, tool: 'shotgun' | 'hammer', face: 'push' | 'pul
   R.until(given, 3); const secs = given() ? g.time - t0 : NaN; R.until(() => !pl.kick, 2); R.step(6); R.post = null;
   const p0 = doorPt(d, 0, 0, side), p1 = doorPt(d, 1, 0, side), along = at ? (at[0] - p0[0]) * (p1[0] - p0[0]) + (at[2] - p0[2]) * (p1[2] - p0[2]) : NaN, beside = along < -0.05 || along > d.def.width + 0.05;
   const home0 = d.isClosed() as boolean, angle0 = d.angle as number; if (!home0) R.until(() => Math.abs(d.angle) > 0.5, 2); const endsOpen = Math.abs(d.angle) > 0.5;
-  const res = { R, g, d, raised, keyed, steel, carried, bare, rows, out, held, offered, inPlace, picked, began, need, gunLead, blows, secs, gone: !d.locked && !!d.lockBroken, st: since(st), t0,
+  const res = { R, g, d, keyed, steel, carried, bare, rows, out, held, offered, inPlace, picked, began, need, gunLead, blows, secs, gone: !d.locked && !!d.lockBroken, st: since(st), t0,
     shots: R.ev.filter(e => e.t >= t0 && (e.kind === 'shot' || e.kind === 'guardShot')), kicks: R.ev.filter(e => e.t >= t0 && e.kind === 'kick').length,
     thuds: R.ev.filter(e => e.t >= t0 && e.kind === 'door' && e.loud && e.t < t0 + (Number.isFinite(secs) ? secs : 3) - 1e-6).length, said: R.said.slice(said0),
     home: home0, angle: endsOpen ? d.angle as number : angle0, after: rowsOf(g), hand: '', opened: false, along, beside, endsOpen };
@@ -317,12 +314,12 @@ async function you(seed: number, tool: 'shotgun' | 'hammer', face: 'push' | 'pul
 /** the control for the hammer's HUD line: the same door, the same face, no tool on him and no beat running — a boot of his landed on the leaf (doors.ts
  *  kickIn called by hand: the kick row itself declines at that face, 'a boot will not shift it', and throws none), and what the HUD is told of its thud */
 async function bareBoot(seed: number) {
-  const R = await rig(seed, { stage: false }), g = R.game, d = R.door('storage'); g.aiEnabled = false; frameUp(g);
+  const R = await rig(seed, { stage: false }), g = R.game, d = R.door('storage'); g.aiEnabled = false;
   const spot = doorPt(d, d.def.width / 2, 0.75, faceOf(g, d, 'pull')); lockAgainst(g, d, spot); g.teleportPlayer(spot); R.step(12);
   const t0 = g.time, n0 = R.said.length, gave = g.doors.kickIn(d, g.player.char.pos, PLAYER_ID) as boolean; R.step(6);
   return { said: R.said.slice(n0), thud: !gave && R.ev.some(e => e.t >= t0 && e.kind === 'door' && e.loud), locked: d.locked as boolean };
 }
-const byHand = (r: { keyed: boolean; raised: boolean }) => [r.keyed ? 'the lock keyed to this face BY HAND (the office keys its doors to the other)' : '', r.raised ? 'the frame rule raised BY HAND (the frozen stand holds it off)' : ''].filter(Boolean).join(' · ') || 'the door as the level has it';
+const byHand = (r: { keyed: boolean }) => (r.keyed ? 'the lock keyed to this face BY HAND (the office keys its doors to the other)' : 'the door as the level has it');
 export async function bigYou(): Promise<boolean> {
   const F = family('bigslot-you: your big slot\'s tool at a door locked against you — the shotgun or the hammer in the boot\'s place, from either face');
   await kept(async () => {
@@ -341,7 +338,7 @@ export async function bigYou(): Promise<boolean> {
           F.verdict(r.carried === 'hammer' && r.out && r.held === (face === 'pull') && r.inPlace && r.offered === 'hammer' && r.picked && r.began,
             `YOU, THE HAMMER, ${where}: your card puts it on you, and the rows have 'hammer it open' in the boot's place — performed, a committed beat`, `${byHand(r)} · on you ${r.carried} · locked against you ${r.out} · a boot held by the frame ${r.held} · without it: ${r.bare.join(' ')} · with it: ${r.rows.join(' ')} · began ${r.began}`);
           F.verdict(r.gone && r.secs <= 3 && r.st.samHammered === 1, 'the lock is gone inside three seconds, hammered', `lock off ${!r.d.locked}, keep broken ${!!r.d.lockBroken} after ${f2(r.secs)} s · hammered ${r.st.samHammered}${BROKEN ? ' · BIGKIT_BREAK=1' : ''}`);
-          const want = face === 'pull' ? K.BIGSLOT.swings : 1, lead = K.BIGSLOT.moves ? BK.bigOutBy('hammer') + r.gunLead : 0, onTime = face === 'pull' ? r.secs >= lead + BK.bigWind() + BK.bigSwing() * (want - 1) - DT : r.secs <= lead + BK.bigWind() + 0.1;   // (BIGSLOT.moves: the hammer comes off his back first — bigkit.ts bigOutBy, after his own gun is away)
+          const want = face === 'pull' ? K.BIGSLOT.swings : 1, lead = BK.bigOutBy('hammer') + r.gunLead, onTime = face === 'pull' ? r.secs >= lead + BK.bigWind() + BK.bigSwing() * (want - 1) - DT : r.secs <= lead + BK.bigWind() + 0.1;   // (BIGSLOT.moves: the hammer comes off his back first — bigkit.ts bigOutBy, after his own gun is away)
           F.verdict(r.st.samBlows === want && r.need === want && r.blows === want && K.BIGSLOT.swings === 2 && r.thuds === want - 1 && onTime && r.kicks >= 1 && r.shots.length === 0 && r.st.samShells === 0,
             face === 'push' ? 'in ONE BLOW, where a boot would do — off his back and wound up (BIGSLOT.equip, then the wind-up of bigWind()), no thud before it — loud as the boot and never gunfire: a \'kick\' among the game\'s events and no shot' : 'in TWO BLOWS (BIGSLOT.swings), where the frame holds a boot — the first a thud in the frame — loud as the boot and never gunfire: a \'kick\' among the game\'s events and no shot',
             `blows ${r.st.samBlows} (the beat's need ${r.need}, hammerBlows ${r.blows}; BIGSLOT.swings ${K.BIGSLOT.swings}, windup ${K.BIGSLOT.windup}, swing ${K.BIGSLOT.swing}) · thuds before the lock went ${r.thuds} · events: ${r.R.evs(r.t0, ['shot', 'guardShot', 'kick', 'door'])}`);
@@ -409,15 +406,15 @@ export async function bigMate(): Promise<boolean> {
       // the face the leaf opens toward. The break room's north door from inside the room: shut and locked against the squad by hand — and the room's
       // defenders taken off the floor first (the stack would stand among them: the fight is the room fight's dice, not this check's)
       { const pull = async (tool: string, lockId?: string, silent = false) => {
-          const R = await rig(SEED, { cards: tool === 'none' ? {} : { 1: { big: tool } } }), g = R.game, d = R.door('breakroom_n'), gd = R.ops[0], raised = frameUp(g);
+          const R = await rig(SEED, { cards: tool === 'none' ? {} : { 1: { big: tool } } }), g = R.game, d = R.door('breakroom_n'), gd = R.ops[0];
           await hushed(() => { for (const h of R.NB.hostiles) if (h.state !== 'dead') killGuard(g, h, [1, 0, 0], true); R.step(60); });
           const sam = doorPt(d, d.def.width + 1.2, 1.4, faceOf(g, d, 'pull')); lockAgainst(g, d, sam, lockId); g.teleportPlayer(sam); R.step(5);
-          const switched = silent && !SIL.SILENT.on; if (silent) { SIL.SILENT.on = true; SIL.setSilent(g, true); R.step(2); }   // (the squad's silent order — its switch is held off on the frozen stand: raised by hand)
+          const switched = silent && !SIL.SILENT.on; if (silent) { SIL.SILENT.on = true; SIL.setSilent(g, true); R.step(2); }   // (the squad's silent order: its switch is a run's own, raised by hand where it is not up)
           const quiet = SIL.squadSilent(g) as boolean, held = g.doors.bootHolds(d, sam) as boolean, st = stats(), e = enter(R, d); R.until(() => Math.abs(d.angle) > 0.5, 4); R.step(15);
-          return { R, d, gd, raised, switched, quiet, held, e, refused: typeof e.w === 'string' ? e.w : e.ended, s: since(st), open: Math.abs(d.angle) > 0.5, gun: gd.weapon.def.id as string, out: !!gd.slung?.out, shove: /shove|pull/.test(R.beats(e.t0)), kicks: R.D.stats.kicks as number, picks: R.D.stats.picks as number };
+          return { R, d, gd, switched, quiet, held, e, refused: typeof e.w === 'string' ? e.w : e.ended, s: since(st), open: Math.abs(d.angle) > 0.5, gun: gd.weapon.def.id as string, out: !!gd.slung?.out, shove: /shove|pull/.test(R.beats(e.t0)), kicks: R.D.stats.kicks as number, picks: R.D.stats.picks as number };
         };
         const none = await pull('none', 'wedge:breakroom_n'), ham = await pull('hammer', 'wedge:breakroom_n'), gun = await pull('shotgun');
-        const hand = `set BY HAND: the leaf shut and locked against the squad from inside the room, the room's defenders taken off the floor${ham.raised ? ', the frame rule raised (the frozen stand holds it off)' : ''}`;
+        const hand = `set BY HAND: the leaf shut and locked against the squad from inside the room, the room's defenders taken off the floor`;
         F.verdict(none.held && none.d.locked && !none.open && (typeof none.e.w === 'string' ? /no boot/.test(none.e.w) : /no boot/.test(none.e.ended)) && Object.values(none.s).every(n => n === 0),
           'A DOOR LOCKED ON THE FACE IT OPENS TOWARD, wedged (no pick opens it), nobody carrying a tool: the entry is refused as it always was', `${hand} · the frame holds a boot ${none.held} · give: ${none.e.w ?? 'taken'} · ended: ${none.e.ended || '-'} · still locked ${none.d.locked}`);
         F.verdict(ham.held && ham.e.w === null && ham.e.gone && ham.s.mateBlows === K.BIGSLOT.swings && K.BIGSLOT.swings === 2 && /hammer: a blow/.test(ham.R.beats(ham.e.t0)) && ham.s.mateHammered === 1 && ham.kicks === 0,
@@ -428,7 +425,7 @@ export async function bigMate(): Promise<boolean> {
         // a SILENT squad's loud tools stay slung (silent.ts): the same wedged door, hammer in the stack or not, is refused in the same words
         const qNone = await pull('none', 'wedge:breakroom_n', true), qHam = await pull('hammer', 'wedge:breakroom_n', true);
         F.verdict(qNone.quiet && qHam.quiet && qHam.held && BK.carriesHammer(qHam.gd) && qHam.d.locked && !qHam.open && qNone.d.locked && /no boot|silent|quiet/i.test(qHam.refused) && qHam.refused === qNone.refused && Object.values(qHam.s).every(n => n === 0) && qHam.kicks === 0,
-          'the squad told SILENT, a hammer man in the stack, that wedged door: refused exactly as with no tool — the same words, no blow, the lock whole', `${qHam.switched ? 'the silent order\'s switch raised BY HAND (the frozen stand holds it off) · ' : ''}silent ${qNone.quiet}/${qHam.quiet} · no tool: "${qNone.refused}" · a hammer: "${qHam.refused}" · blows ${qHam.s.mateBlows} · still locked ${qHam.d.locked} · ${qHam.R.beats(qHam.e.t0) || 'no order ran'}`); }
+          'the squad told SILENT, a hammer man in the stack, that wedged door: refused exactly as with no tool — the same words, no blow, the lock whole', `${qHam.switched ? 'the silent order\'s switch raised BY HAND · ' : ''}silent ${qNone.quiet}/${qHam.quiet} · no tool: "${qNone.refused}" · a hammer: "${qHam.refused}" · blows ${qHam.s.mateBlows} · still locked ${qHam.d.locked} · ${qHam.R.beats(qHam.e.t0) || 'no order ran'}`); }
     } catch (e) { F.verdict(false, 'the check ran', String((e as Error)?.stack ?? e)); }
   });
   return F.done();
@@ -439,9 +436,8 @@ export async function bigMate(): Promise<boolean> {
  *  from) or the break room's north door from inside the room (the face it opens TOWARD — its defenders taken off the floor first, as bigMate does). The door
  *  NOT locked unless `lock` says so (by hand either way). `key`: the row given as the page gives it — the menu opened on the door, then H; else by its id
  *  (`order`: another row's). Stepped until the door stands open, the order is refused or over. */
-async function mateShut(tool: 'none' | 'hammer' | 'shotgun', o: { face?: 'push' | 'pull'; lock?: boolean | string; order?: string; key?: boolean; silent?: boolean; old?: boolean; nosnug?: boolean; noweight?: boolean; /** called after every frame from the order on (the moves' family) */ watch?: (R: Rig, gd: any, d: any) => void } = {}) {
-  const R = await rig(8, { cards: tool === 'none' ? {} : { 1: { big: tool } }, old: o.old, nosnug: o.nosnug, noweight: o.noweight }), g = R.game, pullFace = o.face === 'pull', d = R.door(pullFace ? 'breakroom_n' : 'manager'), gd = R.ops[0];
-  const raised = pullFace && frameUp(g);
+async function mateShut(tool: 'none' | 'hammer' | 'shotgun', o: { face?: 'push' | 'pull'; lock?: boolean | string; order?: string; key?: boolean; silent?: boolean; /** called after every frame from the order on (the moves' family) */ watch?: (R: Rig, gd: any, d: any) => void } = {}) {
+  const R = await rig(8, { cards: tool === 'none' ? {} : { 1: { big: tool } } }), g = R.game, pullFace = o.face === 'pull', d = R.door(pullFace ? 'breakroom_n' : 'manager'), gd = R.ops[0];
   if (pullFace) await hushed(() => { for (const h of R.NB.hostiles) if (h.state !== 'dead') killGuard(g, h, [1, 0, 0], true); R.step(60); });
   const sam = pullFace ? doorPt(d, d.def.width + 1.2, 1.4, faceOf(g, d, 'pull')) : SAM_MANAGER;
   if (o.lock) lockAgainst(g, d, sam, typeof o.lock === 'string' ? o.lock : undefined); else { d.angle = 0; d.vel = 0; d.latched = true; d.locked = false; d.lockBroken = false; }
@@ -456,7 +452,7 @@ async function mateShut(tool: 'none' | 'hammer' | 'shotgun', o: { face?: 'push' 
   if (o.watch) R.post = () => o.watch!(R, gd, d);
   R.until(() => typeof w === 'string' || Math.abs(d.angle) > 0.5 || (!R.D.ops.length && g.time - t0 > 0.5), 30); const secs = g.time - t0; R.step(o.watch ? 80 : 20); R.post = null;
   const beats = R.beats(t0), last = R.D.done[R.D.done.length - 1], trips = (beats.match(/(?:^|\| )[\d.]+ (?:hammer|gun):/g) ?? []).length;
-  return { R, g, d, gd, raised, switched, w, shown, menuDown, big, secs, beats, trips, s: since(st), open: Math.abs(d.angle) > 0.5, broken: !!d.lockBroken, locked: d.locked as boolean, ended: R.D.ops.length ? '' : String(last?.ended ?? ''),
+  return { R, g, d, gd, switched, w, shown, menuDown, big, secs, beats, trips, s: since(st), open: Math.abs(d.angle) > 0.5, broken: !!d.lockBroken, locked: d.locked as boolean, ended: R.D.ops.length ? '' : String(last?.ended ?? ''),
     kicks: R.D.stats.kicks as number, gun: gd.weapon.def.id as string, out: !!gd.slung?.out, shell: R.ev.filter(x => x.t >= t0 && x.kind === 'guardShot' && x.weapon === 'm870').length, mateKick: R.ev.filter(x => x.t >= t0 && x.kind === 'kick' && x.who === gd.char.id).length };
 }
 export async function bigShut(): Promise<boolean> {
@@ -469,7 +465,7 @@ export async function bigShut(): Promise<boolean> {
         const r = await you(tool === 'hammer' ? 41 : 42, tool, face, { open: true }), verb = tool === 'shotgun' ? 'breach' : 'hammer', n = r.bare.length;
         const where = face === 'push' ? 'the face the leaf opens AWAY from' : 'the face it opens TOWARD';
         F.verdict(!r.out && r.carried === tool && r.offered === tool && n > 0 && r.rows.slice(0, n).join() === r.bare.join() && r.rows.length === n + 1 && r.rows[n] === verb,
-          `YOU, THE ${tool.toUpperCase()}, a storage door that is NOT locked, ${where}: the door's own rows stand as they were and the tool's row is listed under them`, `${r.raised ? 'the frame rule raised BY HAND · ' : ''}the door unlocked BY HAND · locked against you ${r.out} · without it: ${r.bare.join(' ')} · with it: ${r.rows.join(' ')}`);
+          `YOU, THE ${tool.toUpperCase()}, a storage door that is NOT locked, ${where}: the door's own rows stand as they were and the tool's row is listed under them`, `the door unlocked BY HAND · locked against you ${r.out} · without it: ${r.bare.join(' ')} · with it: ${r.rows.join(' ')}`);
         F.verdict(r.picked && r.began && r.beside, 'performed, it is worked from BESIDE the latch jamb, out of the opening\'s line', `began ${r.began} · he stood ${f2(r.along)} m along a ${f2(r.d.def.width)} m leaf from its hinge when it went`);
         const loud = tool === 'hammer' ? r.kicks >= 1 && r.shots.length === 0 && r.st.samBlows === 1 && r.st.samHammered === 1 : r.shots.some(e => e.kind === 'shot' && e.weapon === 'm870' && e.loud) && r.st.samShells === 1 && r.st.samShot === 1;
         F.verdict(r.endsOpen && r.hand === '' && !!r.d.lockBroken && Number.isFinite(r.secs) && r.secs <= 3 && loud,
@@ -480,10 +476,6 @@ export async function bigShut(): Promise<boolean> {
       { const r = await you(43, 'hammer', 'pull', { lock: 'wedge:storage' });
         F.verdict(r.out && r.held && r.rows.includes('hammer') && r.began && r.gone && r.need === K.BIGSLOT.swings && r.st.samBlows === K.BIGSLOT.swings && r.endsOpen && r.shots.length === 0,
           'A BARRICADED DOOR (a wedge set by hand) from the face it opens TOWARD: the hammer has its row there too, takes it in BIGSLOT.swings blows, and the door ends open', `${byHand(r)} · rows: ${r.rows.join(' ')} · lock off ${!r.d.locked}, broken ${!!r.d.lockBroken} after ${f2(r.secs)} s · blows ${r.st.samBlows} of ${r.need} · open ${r.endsOpen}${B}`); }
-      // both knobs off: the build of 10-14
-      { const a = await you(44, 'hammer', 'push', { open: true, old: true }), b = await you(45, 'hammer', 'pull', { old: true });
-        F.verdict(a.offered === null && a.rows.join() === a.bare.join() && !a.began && a.st.samBlows === 0, 'BOTH KNOBS OFF (BIGSLOT.shut, BIGSLOT.beside): a door that is not locked offers the hammer nothing — his rows are the rows he had', `without it: ${a.bare.join(' ')} · with it: ${a.rows.join(' ')} · blows ${a.st.samBlows}`);
-        F.verdict(b.gone && b.home && b.hand !== '' && b.opened && !b.beside, '… and at a locked one, from the face it opens toward, the leaf stands home unlocked for a hand, worked from in front of it — as it was', `home ${b.home} · '${b.hand}' → open ${b.opened} · he stood ${f2(b.along)} m along a ${f2(b.d.def.width)} m leaf${B}`); }
       // A TEAMMATE: the squad's own row
       { const r = await mateShut('hammer', { key: true });
         F.verdict(/\[H\] hammer and clear|H: hammer and clear/.test(r.shown) && r.w === null && r.menuDown && r.big, 'A TEAMMATE, THE HAMMER: the menu opened on the (unlocked) manager\'s door shows the row\'s key on its first page — and H gives it from there: X, then H', `the menu's rows: ${r.shown} · after H: menu down ${r.menuDown}, a door order of the tool's ${r.big}`);
@@ -491,23 +483,22 @@ export async function bigShut(): Promise<boolean> {
       { const r = await mateShut('shotgun');
         F.verdict(r.w === null && r.open && r.broken && r.s.drawn === 1 && r.s.slung === 1 && r.shell >= 1 && r.kicks === 0 && r.trips === 1 && r.gun !== 'm870' && !r.out, 'A TEAMMATE, THE SHOTGUN, the same unlocked door (the row by its id): the M870 up, a shell into the latch, the leaf in, his own gun back', `give: ${r.w ?? 'taken'} · open ${r.open} · latch broken ${r.broken} · drawn ${r.s.drawn}, slung ${r.s.slung} · shells heard ${r.shell} · now ${r.gun}${B} · ${r.beats}`); }
       { const r = await mateShut('hammer', { face: 'pull' });
-        F.verdict(r.w === null && r.open && r.broken && r.s.mateBlows === 1 && r.s.mateHammered === 1 && r.trips === 1, 'THE FACE THE LEAF OPENS TOWARD, unlocked (the break room\'s north door from inside, set by hand): one blow, the leaf left home — and a hand pulls it; the tool is not sent to it a second time', `${r.raised ? 'the frame rule raised BY HAND · ' : ''}give: ${r.w ?? 'taken'} · open ${r.open} after ${f2(r.secs)} s · blows ${r.s.mateBlows} · trips to the door with the tool ${r.trips}${B} · ${r.beats}`); }
+        F.verdict(r.w === null && r.open && r.broken && r.s.mateBlows === 1 && r.s.mateHammered === 1 && r.trips === 1, 'THE FACE THE LEAF OPENS TOWARD, unlocked (the break room\'s north door from inside, set by hand): one blow, the leaf left home — and a hand pulls it; the tool is not sent to it a second time', `give: ${r.w ?? 'taken'} · open ${r.open} after ${f2(r.secs)} s · blows ${r.s.mateBlows} · trips to the door with the tool ${r.trips}${B} · ${r.beats}`); }
       { const r = await mateShut('hammer', { lock: true });
         F.verdict(r.w === null && !r.locked && r.broken && r.s.mateHammered === 1 && r.ended !== 'found shut' && !/found shut/.test(r.beats), 'a LOCKED door under that row: no halt at a door found shut — the row is the call — and the lock is hammered off in the one order', `give: ${r.w ?? 'taken'} · lock off ${!r.locked}, broken ${r.broken} · hammered ${r.s.mateHammered} · ended '${r.ended || 'running'}'${B} · ${r.beats}`); }
       { const r = await mateShut('hammer', { order: 'openClear' });
         F.verdict(r.w === null && r.open && r.s.mateBlows === 0 && r.kicks === 0 && !r.broken, 'a plain OPEN AND CLEAR on the unlocked door, a hammer in the stack: the handle, as ever — no blow, the latch whole', `open ${r.open} · blows ${r.s.mateBlows} · kicks ${r.kicks} · latch broken ${r.broken} · ${r.beats}`); }
-      { const none = await mateShut('none', { key: true }), quiet = await mateShut('hammer', { silent: true }), old = await mateShut('hammer', { old: true });
+      { const none = await mateShut('none', { key: true }), quiet = await mateShut('hammer', { silent: true });
         F.verdict(typeof none.w === 'string' && !/H: |\[H\]/.test(none.shown) && !none.big && none.s.mateBlows === 0, 'NOBODY CARRIES ONE: the door\'s menu shows no H and the key gives nothing', `the menu's rows: ${none.shown} · H: ${none.w}`);
-        // (silent.ts: with SILENT.toolsLoud the row is one of LOUD_ROWS, as bang and clear and the charge are — picking it IS the squad going loud; without, it is refused)
-        F.verdict(SIL.SILENT.toolsLoud ? quiet.w === null && !SIL.squadSilent(quiet.g) && quiet.s.mateHammered === 1 && quiet.open && (SIL.LOUD_ROWS as string[]).includes('bigClear') : typeof quiet.w === 'string' && /silent/.test(quiet.w) && quiet.s.mateBlows === 0 && !quiet.open,
-          SIL.SILENT.toolsLoud ? 'the squad told SILENT: the row is a LOUD tool (silent.ts LOUD_ROWS) — picking it is the squad going loud, and the hammer takes the door' : 'the squad told SILENT (SILENT.toolsLoud off): the row is refused in its own words, and no blow lands',
+        // (silent.ts: the row is one of LOUD_ROWS, as bang and clear and the charge are — picking it IS the squad going loud)
+        F.verdict(quiet.w === null && !SIL.squadSilent(quiet.g) && quiet.s.mateHammered === 1 && quiet.open && (SIL.LOUD_ROWS as string[]).includes('bigClear'),
+          'the squad told SILENT: the row is a LOUD tool (silent.ts LOUD_ROWS) — picking it is the squad going loud, and the hammer takes the door',
           `${quiet.switched ? 'the silent order\'s switch raised BY HAND · ' : ''}give: ${quiet.w ?? 'taken'} · silent after ${SIL.squadSilent(quiet.g)} · hammered ${quiet.s.mateHammered} · open ${quiet.open}${B}`);
         { const HF = await import(`${ROOT}/src/game/holdfire.ts`); F.verdict((HF.LIFT_ORDERS as string[]).includes('bigClear'), 'and it is an order that means fire (holdfire.ts LIFT_ORDERS), as open and clear is', `LIFT_ORDERS: ${(HF.LIFT_ORDERS as string[]).join(' ')}`); }
-        // a wedge nobody has tried, only the shotgun to hand: the menu does not read the wedge (the stand that halts at a door found shut) — or says so (the stand that does not)
-        { const DT2 = (await import(`${ROOT}/src/game/doortools.ts`)).DOORTOOLS, r = await mateShut('shotgun', { lock: 'wedge:manager' });
-          F.verdict(DT2.testDoor ? r.w === null && r.locked && r.s.drawn === 0 && /tried the door|found shut/.test(r.beats + r.ended) : typeof r.w === 'string' && /wedged/.test(r.w), DT2.testDoor ? 'a WEDGED door nobody has tried, only the shotgun in the stack: the row is taken — the menu reads no wedge — and the lead\'s hand finds it; no shell is spent' : 'a WEDGED door, only the shotgun in the stack (this stand\'s squad knows a door\'s lock): refused, a shell shifts no wedge',
-            `give: ${r.w ?? 'taken'} · still locked ${r.locked} · drawn ${r.s.drawn} · ended '${r.ended}' · ${r.beats}`); }
-        F.verdict(typeof old.w === 'string' && /no such order/.test(old.w) && old.s.mateBlows === 0, 'BIGSLOT.shut off: the squad has no such row (the build of 10-14)', `give: ${old.w}`); }
+        // a wedge nobody has tried, only the shotgun to hand: the menu does not read the wedge (an entry halts at a door found shut)
+        { const r = await mateShut('shotgun', { lock: 'wedge:manager' });
+          F.verdict(r.w === null && r.locked && r.s.drawn === 0 && /tried the door|found shut/.test(r.beats + r.ended), 'a WEDGED door nobody has tried, only the shotgun in the stack: the row is taken — the menu reads no wedge — and the lead\'s hand finds it; no shell is spent',
+            `give: ${r.w ?? 'taken'} · still locked ${r.locked} · drawn ${r.s.drawn} · ended '${r.ended}' · ${r.beats}`); } }
     } catch (e) { F.verdict(false, 'the check ran', String((e as Error)?.stack ?? e)); }
   });
   return F.done();
@@ -528,10 +519,6 @@ export async function bigWiring(): Promise<boolean> {
       await hushed(() => JR.applyKnobs(g, old)); const without = K.BIGSLOT.on as boolean;
       await hushed(() => JR.applyKnobs(g, own)); const withIt = K.BIGSLOT.on as boolean;
       F.verdict(carried === true && without === false && withIt === true, 'a recording made with the switch on carries it and replays with it on; one from before the table replays with it OFF', `the snapshot's table says ${carried} · applied with no BIGSLOT table: ${without} · applied with its own: ${withIt}`);
-      { K.BIGSLOT.on = true; K.BIGSLOT.shut = K.BIGSLOT.beside = true; const now = JR.knobsSnapshot(g), was = JR.knobsSnapshot(g), t = (was.tables as any).BIGSLOT; delete t.shut; delete t.beside;
-        await hushed(() => JR.applyKnobs(g, was)); const a = { on: K.BIGSLOT.on, shut: K.BIGSLOT.shut, beside: K.BIGSLOT.beside };
-        await hushed(() => JR.applyKnobs(g, now)); const b = { on: K.BIGSLOT.on, shut: K.BIGSLOT.shut, beside: K.BIGSLOT.beside };
-        F.verdict(a.on === true && a.shut === false && a.beside === false && b.shut === true && b.beside === true, 'a recording from the build of 10-14 (a BIGSLOT table with no `shut` and no `beside`) replays with the big slot ON and both of them OFF; one made now, with both on', `applied the older table: ${J(a)} · applied its own: ${J(b)}`); }
       const T = K.SLOTS.table, bigs = Object.entries(T.items as Record<string, { big?: boolean }>).filter(([, it]) => it.big).map(([k]) => k).sort();
       F.verdict(T.v === 10 && T.big.length === K.KIT_MEMBERS && T.big.every((n: number) => n === 1) && bigs.join() === ['hammer', 'shotgun', ...(T.items.walls ? ['walls'] : [])].join(), 'slots.json is v10: one big slot a man, and the shotgun and the hammer marked big (the wall charge with them where the build prices one) and nothing else', `v${T.v} · big slots ${J(T.big)} · big things: ${bigs.join(', ')}`);
     } catch (e) { F.verdict(false, 'the check ran', String((e as Error)?.stack ?? e)); }
@@ -543,9 +530,9 @@ export async function bigWiring(): Promise<boolean> {
 /** BIGSLOT.moves, YOU: the plain night's storage door, shut and NOT locked (by hand), the tool on your card; you stood `from` = [metres along the frame line
  *  from the hinge, metres off the wall] on `face`; `man`: a guard of the floor stood BY HAND on the latch jamb (where a stack's lead stands — the plain
  *  night has no teammate). The row taken if it is there, and every frame of the beat watched. */
-export async function walkTo(seed: number, tool: 'shotgun' | 'hammer', face: 'push' | 'pull', from: [number, number], o: { man?: boolean; /** a second man of the file, stood by hand at [along, off] */ second?: [number, number]; nomoves?: boolean; noweight?: boolean; front?: boolean; /** what is in his hands as the row is taken (a digit pressed and its swap let finish) */ hand?: 'pistol' | 'rifle'; /** called after every frame from the row taken until his gun is up again (tools/qa/bigmoves-strip.ts draws them) */ each?: (g: any, sinceRow: number) => void; /** the kit's own hand on whatever the stand says (the frozen stand holds it off) */ kit?: boolean } = {}) {
-  const R = await rig(seed, { stage: false, cards: { 0: { big: tool } }, nomoves: o.nomoves, noweight: o.noweight }), g = R.game, pl = g.player, d = R.door('storage'), W = d.def.width as number; g.aiEnabled = false;
-  const raised = face === 'pull' && frameUp(g), verb = tool === 'shotgun' ? 'breach' : 'hammer', side = faceOf(g, d, face);
+export async function walkTo(seed: number, tool: 'shotgun' | 'hammer', face: 'push' | 'pull', from: [number, number], o: { man?: boolean; /** a second man of the file, stood by hand at [along, off] */ second?: [number, number]; /** not read since 2026-11-07 (the weight is a settled rule): here until tools/qa/swap-times.ts and bigmoves-strip.ts stop passing it */ noweight?: boolean; front?: boolean; /** what is in his hands as the row is taken (a digit pressed and its swap let finish) */ hand?: 'pistol' | 'rifle'; /** called after every frame from the row taken until his gun is up again (tools/qa/bigmoves-strip.ts draws them) */ each?: (g: any, sinceRow: number) => void; /** two frames given the kit's own hand before the gun is brought up (once: that hand raised by name) */ kit?: boolean } = {}) {
+  const R = await rig(seed, { stage: false, cards: { 0: { big: tool } } }), g = R.game, pl = g.player, d = R.door('storage'), W = d.def.width as number; g.aiEnabled = false;
+  const verb = tool === 'shotgun' ? 'breach' : 'hammer', side = faceOf(g, d, face);
   d.angle = 0; d.vel = 0; d.latched = true; d.locked = false; d.lockBroken = false;
   const spot = doorPt(d, from[0], from[1], side), floor = !g.col.nav.isBlocked(spot[0], spot[2]);
   const fc = (p: number[]) => ({ along: alongOf(d, p), off: offOf(d, p, side) as number });
@@ -561,9 +548,9 @@ export async function walkTo(seed: number, tool: 'shotgun' | 'hammer', face: 'pu
   g.teleportPlayer(spot); R.step(12); const bare = g.nearby.filter(mine).map((x: any) => x.verb as string);
   K.kitSolo(g); R.step(3);
   // (`hand`: what he holds as the row is taken — the digit pressed, the kit's own swap let finish; `front`: his rifle on its sling in front, as a loud mission has it)
-  const sling0 = KITANIM.sling, kit0 = [KITANIM.on, KITANIM.equip]; if (o.front !== undefined) KITANIM.sling = o.front ? 1 : 2; if (o.kit) { KITANIM.on = true; KITANIM.equip = true; R.step(2); }
+  const sling0 = KITANIM.sling; if (o.front !== undefined) KITANIM.sling = o.front ? 1 : 2; if (o.kit) R.step(2);
   if (o.hand) { const up = o.hand === 'rifle'; R.input.pressed.add(up ? 'Digit2' : 'Digit1'); R.step(1); if (!(up ? pl.rifleUp : pl.pistolUp)) { R.input.pressed.add('KeyE'); R.step(1); } R.until(() => (up ? pl.rifleUp : pl.pistolUp) && !(pl.equipT > 0) && !pl.char.anim.kitBusy, 6); R.step(20); }
-  const held = (KITANIM.on ? kitInHand(g) : pl.rifleUp ? 'rifle' : pl.pistolUp ? 'pistol' : null) as string | null;
+  const held = kitInHand(g) as string | null;
   const rows = g.nearby.filter(mine).map((x: any) => x.verb as string), reach = Math.min(flat(d.pos, spot), flat(d.frameCentre, spot));
   // the row taken: Space on it where it is the list's (a nearer door may have the list's one such row — then the same call the row makes, BY HAND)
   const st = stats(), t0 = g.time, listed = rows.includes(verb), picked = listed && g.selectVerb('door', verb) && g.hover?.door === d; R.post = null;
@@ -611,45 +598,43 @@ export async function walkTo(seed: number, tool: 'shotgun' | 'hammer', face: 'pu
   R.until(() => Math.abs(d.angle) > 0.5, 2); const open = Math.abs(d.angle) > 0.5, manAt = man && at ? flat(man.char.pos, at) : NaN, secondAt = second && at ? flat(second.char.pos, at) : NaN;
   let gunAt = NaN; for (let i = 0; i < 200; i++) { R.step(1); if (Number.isNaN(gunAt) && !pl.char.anim.bigTool && pl.equipT <= 0 && !pl.char.anim.kitBusy && !pl.char.anim.hideHeldItem) { gunAt = g.time - t0 - lead - (landed[0] ?? NaN); if (i >= 40) break; } }   // (`landed` is on the beat's own clock, which starts `lead` below zero)
   tail.rowAfter = other ? BK.samBig(g, other, other.pos) : 'no other door';
-  R.post = null; KITANIM.sling = sling0; [KITANIM.on, KITANIM.equip] = kit0; const drawn1 = drawnTool(g, pl.char.id), back1 = drawn1.head ? dist3(drawn1.head, hand()) : NaN;
+  R.post = null; KITANIM.sling = sling0; const drawn1 = drawnTool(g, pl.char.id), back1 = drawn1.head ? dist3(drawn1.head, hand()) : NaN;
   const stood = at ? fc(at) : null;
-  return { R, g, d, W, raised, floor, reach, bare, rows, held, lead, carry, carryBusy, carryHid, handWent, toolIn, toolBack, hid0, stepOut, rec, bareTail, pops, stowOf: (freeAt.posed ? freeAt.lock : NaN) as number, picked, listed, began, corner: via0 ? fc(via0) : null, turned, secondAt, place, stood, drawn0, drawn1, back0, back1, headAt, inHand, freeAt, man, manAt, inOpening, walked, stride, posed, firstTold, told, landed, arrive, endTold, secs,
+  return { R, g, d, W, floor, reach, bare, rows, held, lead, carry, carryBusy, carryHid, handWent, toolIn, toolBack, hid0, stepOut, rec, bareTail, pops, stowOf: (freeAt.posed ? freeAt.lock : NaN) as number, picked, listed, began, corner: via0 ? fc(via0) : null, turned, secondAt, place, stood, drawn0, drawn1, back0, back1, headAt, inHand, freeAt, man, manAt, inOpening, walked, stride, posed, firstTold, told, landed, arrive, endTold, secs,
     open, broken: !!d.lockBroken, gave: !!d.lockBroken && since(st).samHammered + since(st).samShot === 1, st: since(st), poseAfter: pl.char.anim.bigTool, pullK, gunAt, tail, lockAt: at ? flat(at, BK.bigSpots(g, d, side, tool)[0]?.at ?? d.pos) : NaN,
     shots: R.ev.filter(e => e.t >= t0 && (e.kind === 'shot' || e.kind === 'guardShot')).length, kicks: R.ev.filter(e => e.t >= t0 && e.kind === 'kick').length };
 }
 /** the gun swap the tools are weighed against (character.ts KIT, kitanim.ts): seconds from the digit to the other gun up, the kit's hand done — `front`: the
- *  rifle on its sling in front, as a loud mission wears it. The kit's hand raised by hand where the stand holds it off. */
+ *  rifle on its sling in front, as a loud mission wears it. */
 export async function gunSwap(to: 'pistol' | 'rifle', front: boolean) {
-  const R = await rig(74, { stage: false }), g = R.game, pl = g.player, an: any = pl.char.anim, kit0 = [KITANIM.on, KITANIM.equip, KITANIM.sling] as const; g.aiEnabled = false;
-  KITANIM.on = true; KITANIM.equip = true; KITANIM.sling = front ? 1 : 2; R.step(3);
+  const R = await rig(74, { stage: false }), g = R.game, pl = g.player, an: any = pl.char.anim, sling0 = KITANIM.sling; g.aiEnabled = false;
+  KITANIM.sling = front ? 1 : 2; R.step(3);
   const up = (w: 'pistol' | 'rifle') => { const is = () => (w === 'rifle' ? pl.rifleUp : pl.pistolUp) as boolean, t0 = g.time; R.input.pressed.add(w === 'rifle' ? 'Digit2' : 'Digit1'); R.step(1); if (!is()) { R.input.pressed.add('KeyE'); R.step(1); }
     const ok = R.until(() => is() && !(pl.equipT > 0) && !an.kitBusy, 6); return ok ? g.time - t0 : NaN; };
   up(to === 'rifle' ? 'pistol' : 'rifle'); R.step(30); const secs = up(to);
-  [KITANIM.on, KITANIM.equip, KITANIM.sling] = kit0; return secs;
+  KITANIM.sling = sling0; return secs;
 }
 /** BIGSLOT.weight (the maintainer, 10-18: "the swaps when taking out the hammer and putting it back feel too fast -- swapping the guns feels good, can we make
  *  sure they all feel similarly physical?"): YOU, the plain night's storage door from a step past its latch edge, a gun up — your own gun is carried to its
  *  place by the kit's hand before the hand goes for the tool, the tool comes out and goes back in a long gun's time, the blow and the shell wait for it; a
- *  teammate's record carries the same times; with the switch off every one is the build before's; a recording from before the key replays with it off. */
+ *  teammate's record carries the same times. */
 export async function bigWeight(): Promise<boolean> {
   const F = family('bigslot-weight: the big slot\'s tool changes hands with the weight of a gun swap (BIGSLOT.weight)');
   await kept(async () => {
     try {
       const S = WEIGHT_BROKEN ? ' · BIGWEIGHT_BREAK=1' : '', WU = BK.bigWind() as number, B = K.BIGSLOT, near: [number, number] = [0.86 + 0.35, 0.6];
-      const raised = KITANIM.on && KITANIM.equip ? '' : 'the kit\'s own hand raised BY HAND (this stand holds it off) · ';
-      const r = await walkTo(61, 'hammer', 'push', near, { hand: 'pistol', kit: true }), c = await walkTo(61, 'hammer', 'push', near, { hand: 'pistol', kit: true, noweight: true });
+      const r = await walkTo(61, 'hammer', 'push', near, { hand: 'pistol', kit: true });
       const frames = Math.round(r.lead / DT);
       F.verdict(r.began && r.held === 'pistol' && Math.abs(r.lead - HANDKIT.stow.pistol) < 1e-9 && Math.abs(r.carry - frames) <= 1 && r.carryBusy === r.carry && r.carryHid === 0 && r.handWent > 0.3 && r.hid0 >= 0,
-        'YOUR OWN GUN GOES TO ITS PLACE BY HAND: the pistol up, the hammer\'s row taken — for the pistol\'s own stow time the beat waits, the kit\'s hand carrying it down (the gun drawn in it every frame, never popped away), and only then does the hand go for the hammer', `${raised}in his hand: ${r.held} · the beat's clock began ${f2(r.lead)} s below zero (the pistol's stow: ${HANDKIT.stow.pistol}) · ${r.carry} frames of it, the kit's hand at work in ${r.carryBusy}, the gun hidden in ${r.carryHid} · his right hand went ${f2(r.handWent)} m in them · let go of at ${f2(r.hid0)} s on the beat's clock${S}`);
-      F.verdict(c.began && c.held === 'pistol' && c.lead === 0 && c.carry === 0 && c.hid0 < 0.1 && c.rec.equip === B.equip && c.rec.stow === B.stow,
-        '… and with the switch OFF it is the build before: no wait, the gun let go as the hand leaves it, the record\'s times the first ones', `lead ${f2(c.lead)} · frames below zero ${c.carry} · the gun away at ${f2(c.hid0)} s · the record: out in ${c.rec.equip} s, back in ${c.rec.stow} s`);
-      F.verdict(r.rec.equip === B.equipW && r.rec.stow === B.stowW && r.toolIn - c.toolIn > 0.08 && r.toolBack - c.toolBack > 0.1 && r.stepOut < Math.max(0.14, c.stepOut),
-        'THE HAMMER OUT AND BACK IN A LONG GUN\'S TIME: the animator is told the weighed times, the hammer is all in his hand later than before and on his back again later than before — and on the way out his right hand takes no step in a frame longer than the kit\'s own draw does', `the record: out in ${r.rec.equip} s (before: ${c.rec.equip}), back in ${r.rec.stow} s (before: ${c.rec.stow}) · all in his hand ${f2(r.toolIn)} s after the hand went for it (before: ${f2(c.toolIn)}) · on his back ${f2(r.toolBack)} s after it started back (before: ${f2(c.toolBack)}) · longest step of his right hand in a frame, row to tool: ${(r.stepOut * 100).toFixed(1)} cm (before: ${(c.stepOut * 100).toFixed(1)})${S}`);
-      const due = Math.max(r.arrive, B.equipW - Math.min(B.flow, B.equipW * 0.5)) + WU /* (bigkit.ts bigOutBy, by hand: the switch is as the last run left it here) */, was = Math.max(c.arrive, B.equip as number) + WU, cost = r.landed[0] + r.lead - c.landed[0], after = r.gunAt - c.gunAt;
-      F.verdict(r.landed.length === 1 && c.landed.length === 1 && Math.abs(r.landed[0] - due) < 2 * DT && Math.abs(c.landed[0] - was) < 2 * DT && cost > 0.1 && cost < 0.6 && after > 0.15 && after < 0.45 && r.open && c.open,
-        'WHAT IT COSTS A DOOR: the one blow lands once the hammer is out and wound up, later than before by less than six tenths of a second, and his gun is up again later by the longer way back — the door ends open either way', `from the row: the blow at ${f2(r.landed[0] + r.lead)} s (before: ${f2(c.landed[0])}) = ${f2(cost)} s later · a round could leave his gun ${f2(r.gunAt)} s after the blow (before: ${f2(c.gunAt)}) · due on the beat's clock ${f2(due)} s (before: ${f2(was)}), landed ${r.landed.map(f2).join(', ')} (${c.landed.map(f2).join(', ')}) · open ${r.open} (${c.open})${S}`);
-      F.verdict(r.bareTail === 0 && c.bareTail === 0 && r.pops === 0,
-        'THE WAY BACK: no frame of it has his gun free to fire while the tool is still going onto his back, and his gun is never shown in his hands for a frame before the kit\'s hand draws it', `frames of the tail with the gun unlocked: ${r.bareTail} (before: ${c.bareTail}) · frames the gun stood in his hands with no errand before the draw: ${r.pops} (before: ${c.pops})${S}`);
+        'YOUR OWN GUN GOES TO ITS PLACE BY HAND: the pistol up, the hammer\'s row taken — for the pistol\'s own stow time the beat waits, the kit\'s hand carrying it down (the gun drawn in it every frame, never popped away), and only then does the hand go for the hammer', `in his hand: ${r.held} · the beat's clock began ${f2(r.lead)} s below zero (the pistol's stow: ${HANDKIT.stow.pistol}) · ${r.carry} frames of it, the kit's hand at work in ${r.carryBusy}, the gun hidden in ${r.carryHid} · his right hand went ${f2(r.handWent)} m in them · let go of at ${f2(r.hid0)} s on the beat's clock${S}`);
+      // (until 2026-11-07 each of the next three lines also held its number against the same run with the weight off: later than before, a longer way back)
+      F.verdict(r.rec.equip === B.equipW && r.rec.stow === B.stowW,
+        'THE HAMMER OUT AND BACK IN A LONG GUN\'S TIME: the animator is told the weighed times', `the record: out in ${r.rec.equip} s, back in ${r.rec.stow} s · all in his hand ${f2(r.toolIn)} s after the hand went for it · on his back ${f2(r.toolBack)} s after it started back · longest step of his right hand in a frame, row to tool: ${(r.stepOut * 100).toFixed(1)} cm${S}`);
+      const due = Math.max(r.arrive, B.equipW - Math.min(B.flow, B.equipW * 0.5)) + WU /* (bigkit.ts bigOutBy, by hand) */;
+      F.verdict(r.landed.length === 1 && Math.abs(r.landed[0] - due) < 2 * DT && r.open,
+        'THE BLOW WAITS FOR IT: the one blow lands once the hammer is out and wound up, and the door ends open', `from the row: the blow at ${f2(r.landed[0] + r.lead)} s · a round could leave his gun ${f2(r.gunAt)} s after the blow · due on the beat's clock ${f2(due)} s, landed ${r.landed.map(f2).join(', ')} · open ${r.open}${S}`);
+      F.verdict(r.bareTail === 0 && r.pops === 0,
+        'THE WAY BACK: no frame of it has his gun free to fire while the tool is still going onto his back, and his gun is never shown in his hands for a frame before the kit\'s hand draws it', `frames of the tail with the gun unlocked: ${r.bareTail} · frames the gun stood in his hands with no errand before the draw: ${r.pops}${S}`);
       // the door opened by another hand while his rifle is still on its way to his back: nothing of the tool has begun — the beat is over at once
       { let opened = NaN, ended = NaN, posedAfter = 0, upAt = NaN;
         const o = await walkTo(61, 'hammer', 'push', near, { hand: 'rifle', front: false, kit: true, each: (g: any, since: number) => { const pl = g.player, an = pl.char.anim, d = g.doors.byName('storage');
@@ -660,31 +645,24 @@ export async function bigWeight(): Promise<boolean> {
         F.verdict(o.began && o.lead > 0.5 && ended - opened <= 3 * DT && posedAfter === 0 && o.landed.length === 0 && upAt < 0.9,
           'CALLED OFF WHILE HIS GUN IS STILL ON ITS WAY (the door opened by another hand a tenth of a second after the row, his rifle going to his back): his legs are his own at once — not at the end of the wait — no pose of the tool is ever shown, and the kit\'s hand brings the rifle straight back up', `the wait he was given ${f2(o.lead)} s · opened at ${f2(opened)} s, his legs his own at ${f2(ended)} s · frames posed after: ${posedAfter} · blows ${o.landed.length} · his rifle up again ${f2(upAt)} s after the row${S}`); }
       // … and a gun the kit's hand does not hold is not waited for: the pistol on a wall hold is the wall's own arms' — taken off the wall for the row, it is let go as before
-      { const R = await rig(75, { stage: false, cards: { 0: { big: 'hammer' } } }), g = R.game, pl = g.player, d = R.door('storage'), kit0 = [KITANIM.on, KITANIM.equip]; g.aiEnabled = false;
+      { const R = await rig(75, { stage: false, cards: { 0: { big: 'hammer' } } }), g = R.game, pl = g.player, d = R.door('storage'); g.aiEnabled = false;
         d.angle = 0; d.vel = 0; d.latched = true; d.locked = false; d.lockBroken = false; for (const m of g.guards) m.char.pos = [m.char.pos[0] + 400, 0, m.char.pos[2] + 400];
-        g.teleportPlayer(doorPt(d, (d.def.width as number) + 0.9, 0.45, faceOf(g, d, 'push'))); R.step(12); K.kitSolo(g); R.step(3); KITANIM.on = true; KITANIM.equip = true; R.step(2);
+        g.teleportPlayer(doorPt(d, (d.def.width as number) + 0.9, 0.45, faceOf(g, d, 'push'))); R.step(12); K.kitSolo(g); R.step(3); R.step(2);
         R.input.pressed.add('Digit1'); R.step(1); if (!pl.pistolUp) { R.input.pressed.add('KeyE'); R.step(1); } R.until(() => pl.pistolUp && !(pl.equipT > 0) && !pl.char.anim.kitBusy, 6); R.step(20);
         let took = false; for (const yaw of [0, Math.PI / 2, Math.PI, -Math.PI / 2]) { pl.char.bodyYaw = pl.char.aimYaw = yaw; R.input.pressed.add('KeyQ'); R.step(1); if (pl.wall) { took = true; break; } }
         R.step(120); const held = pl.kitWas ?? null; BK.samBigStart(g, d); const T = pl.kick?.tool, lead = (T?.lead ?? 0) as number; let below = 0; for (let i = 0; i < 80 && pl.kick?.tool && pl.kick.tool.t < 0; i++) { R.step(1); below++; }
-        [KITANIM.on, KITANIM.equip] = kit0;
         F.verdict(took && !!T && held === null && lead === 0 && below === 0, 'OFF A WALL HOLD (the pistol up, his back to the wall beside the frame, the row taken from there): the gun in the wall\'s own arms was never the kit\'s hand\'s to carry — no wait is given for it, the beat begins at once', `the wall taken ${took} · the kit's hand held: ${held ?? 'nothing'} · the row began ${!!T} · the wait ${f2(lead)} s, ${below} frames below zero`); }
       // what is in his hands sets the wait: nothing, the rifle off his back, the rifle on its sling in front
       { const e = await walkTo(61, 'hammer', 'push', near, { kit: true }), rb = await walkTo(61, 'hammer', 'push', near, { hand: 'rifle', front: false, kit: true }), rf = await walkTo(61, 'hammer', 'push', near, { hand: 'rifle', front: true, kit: true });
         F.verdict(e.began && e.held === null && e.lead === 0 && rb.held === 'rifle' && Math.abs(rb.lead - HANDKIT.stow.rifle) < 1e-9 && rf.held === 'rifle' && Math.abs(rf.lead - HANDKIT.front.stow) < 1e-9 && rb.carryHid === 0 && rf.carryHid === 0 && e.open && rb.open && rf.open,
           '… AND WHAT IS IN HIS HANDS SETS THE WAIT: nothing in them, none; the rifle that lives across his back, its own stow; the rifle on its sling in front, the shorter let-down', `empty hands: ${f2(e.lead)} s · rifle, back: ${f2(rb.lead)} s (${HANDKIT.stow.rifle}) · rifle, in front: ${f2(rf.lead)} s (${HANDKIT.front.stow}) · blows from the row at ${f2(e.landed[0] + e.lead)}, ${f2(rb.landed[0] + rb.lead)}, ${f2(rf.landed[0] + rf.lead)} s${S}`); }
       // the shotgun: no shell before it has been at the shoulder its weighed time
-      { const sg = await walkTo(67, 'shotgun', 'push', near, { hand: 'pistol', kit: true }), s0 = await walkTo(67, 'shotgun', 'push', near, { hand: 'pistol', kit: true, noweight: true });
-        F.verdict(sg.began && sg.lead > 0 && sg.rec.equip === B.drawW && sg.landed[0] >= B.drawW - DT && s0.rec.equip === B.draw && s0.landed[0] >= B.draw - DT && s0.landed[0] < sg.landed[0] && sg.open && s0.open,
-          'THE SHOTGUN: his pistol away by hand, the gun off his back to the shoulder in the weighed time, and no shell before it — with the switch off, the first time', `the shell ${f2(sg.landed[0])} s after the hand went for it (the record's ${sg.rec.equip}), ${f2(sg.landed[0] + sg.lead)} s from the row · before: ${f2(s0.landed[0])} s (${s0.rec.equip})${S}`); }
+      { const sg = await walkTo(67, 'shotgun', 'push', near, { hand: 'pistol', kit: true });
+        F.verdict(sg.began && sg.lead > 0 && sg.rec.equip === B.drawW && sg.landed[0] >= B.drawW - DT && sg.open,
+          'THE SHOTGUN: his pistol away by hand, the gun off his back to the shoulder in the weighed time, and no shell before it', `the shell ${f2(sg.landed[0])} s after the hand went for it (the record's ${sg.rec.equip}), ${f2(sg.landed[0] + sg.lead)} s from the row${S}`); }
       // a teammate: the same record
-      { const told = async (noweight: boolean) => { let equip = NaN, stow = NaN; const m = await mateShut('hammer', { noweight, watch: (_R, gd) => { const P = gd.char.anim.bigTool; if (P) { equip = P.equip; stow = P.stow; } } }); return { equip, stow, open: m.open as boolean }; };
-        const on = await told(false), off = await told(true);
-        F.verdict(on.open && off.open && on.equip === B.equipW && on.stow === B.stowW && off.equip === B.equip && off.stow === B.stow, 'A TEAMMATE\'S HAMMER is told the same times (his own gun still falls to its sling as his hands leave it: it hangs on him) — and the first ones with the switch off; the door ends open either way', `on: out in ${on.equip} s, back in ${on.stow} s · off: ${off.equip}, ${off.stow}${S}`); }
-      // the journal
-      { const R = await rig(68, { stage: false }), g = R.game, JR = await import(`${ROOT}/src/game/journal.ts`);
-        K.BIGSLOT.weight = true; const now = JR.knobsSnapshot(g), old = JR.knobsSnapshot(g); delete (old.tables as any).BIGSLOT.weight;
-        await hushed(() => JR.applyKnobs(g, old)); const a = K.BIGSLOT.weight as boolean; await hushed(() => JR.applyKnobs(g, now)); const b = K.BIGSLOT.weight as boolean;
-        F.verdict(a === false && b === true, 'a recording from before the key (a BIGSLOT table with no `weight`) replays with the first times; one made now, with the weight', `applied the older table: ${a} · the newer: ${b}`); }
+      { let equip = NaN, stow = NaN; const m = await mateShut('hammer', { watch: (_R, gd) => { const P = gd.char.anim.bigTool; if (P) { equip = P.equip; stow = P.stow; } } });
+        F.verdict(m.open && equip === B.equipW && stow === B.stowW, 'A TEAMMATE\'S HAMMER is told the same times (his own gun still falls to its sling as his hands leave it: it hangs on him), and the door ends open', `out in ${equip} s, back in ${stow} s${S}`); }
     } catch (e) { F.verdict(false, 'the check ran', String((e as Error)?.stack ?? e)); }
   });
   return F.done();
@@ -698,17 +676,16 @@ export async function bigMoves(): Promise<boolean> {
       const B = BROKEN ? ' · BIGKIT_BREAK=1' : '', E = BK.bigOutBy('hammer') as number, WU = BK.bigWind() as number;   // (E: when a wind-up may begin — the hammer out, bigkit.ts bigOutBy)
       const frame = (r: Awaited<ReturnType<typeof walkTo>>) => `he stood ${r.stood ? `${f2(r.stood.along)} m along a ${f2(r.W)} m leaf, ${f2(r.stood.off)} m off the wall` : 'nowhere (no blow)'}`;
       // from the stack's file: 1.5 m past the latch edge along the wall — outside the hand's reach of the leaf
-      { const r = await walkTo(61, 'hammer', 'push', [0.86 + 1.5, 0.6]), c = await walkTo(61, 'hammer', 'push', [0.86 + 1.5, 0.6], { nomoves: true });
+      { const r = await walkTo(61, 'hammer', 'push', [0.86 + 1.5, 0.6]);
         F.verdict(r.floor && r.reach > 1.35 && !r.bare.length && r.rows.join() === 'hammer' && r.picked && r.began, 'YOU, THE HAMMER, stood where a stack\'s second man stands (1.5 m past the latch edge, by the wall — outside the hand\'s reach of the leaf): the door\'s one row there is \'hammer it open\', and Space begins it', `floor there ${r.floor} · ${f2(r.reach)} m from the doorway (the hand reaches 1.35) · rows without the hammer: ${r.bare.join(' ') || 'none'} · with it: ${r.rows.join(' ') || 'none'} · began ${r.began}`);
-        F.verdict(!c.rows.length && !c.began && c.st.samBlows === 0, '… and with the moves OFF the same place offers nothing (the build before: step to the leaf first)', `rows: ${c.rows.join(' ') || 'none'} · began ${c.began}`);
         F.verdict(r.walked >= 20 && r.stride <= 1.5 * DT * 1.6 && r.inOpening === 0 && !!r.stood && r.stood.along > r.W + 0.05 && r.stood.off < 0.8 && r.st.samWalks === 1, 'he WALKS to the latch jamb — legs moving, no frame\'s step longer than a walk\'s — never in the opening, and works it hard by the frame', `${frame(r)} · frames his legs walked ${r.walked} · longest step ${f2(r.stride / DT)} m/s · frames in the opening ${r.inOpening} · walks counted ${r.st.samWalks}`);
         const due = Math.max(r.arrive, E) + WU;
         F.verdict(r.posed > 0 && r.told.length === 1 && Math.abs(r.told[0] - due) < 2 * DT && r.firstTold >= WU - 2 * DT && r.landed.length === 1 && Math.abs(r.landed[0] - r.told[0]) < 2 * DT && r.endTold >= r.landed[0] + 0.2 && r.freeAt.posed && r.freeAt.lock > 0.3 && Math.abs(r.freeAt.lock - r.tail.left) < 1e-6 && r.poseAfter === null && r.tail.on && r.tail.row === null && r.tail.rowAfter === 'hammer' && r.gunAt < 1.6,
           'THE BEAT: the animator is told the blow a whole wind-up ahead — it lands once the hammer is out (bigkit.ts bigOutBy) or as he arrives, whichever is later, plus the wind-up (BIGSLOT.heft) — it lands when told, is followed through before the tool starts back, his legs are his own while it goes back (his gun locked until it has, no row of the tool his until it has), and his hands are his own after', `legs back at ${f2(r.freeAt.t)} s with the tool still out ${r.freeAt.posed}, gun locked ${f2(r.freeAt.lock)} s (what is left of the stow: ${f2(r.tail.left)}) · another shut door's row inside the tail: ${r.tail.row ?? 'none'}, after it: ${r.tail.rowAfter} · a round could leave his gun ${f2(r.gunAt)} s after the blow · arrived ${f2(r.arrive)} s · told ${r.told.map(f2).join(', ')} s (${f2(r.firstTold)} s ahead; due ${f2(due)}) · landed ${r.landed.map(f2).join(', ')} s · put back from ${f2(r.endTold)} s · pose after: ${r.poseAfter === null ? 'none' : 'still set'}`);
         F.verdict(r.open && r.broken && r.st.samBlows === 1 && r.st.samHammered === 1 && r.kicks >= 1 && r.shots === 0, 'ONE blow, loud as the boot and no shot, and the door ENDS OPEN', `open ${r.open} · latch broken ${r.broken} after ${f2(r.secs)} s · blows ${r.st.samBlows} · kicks heard ${r.kicks} · shots ${r.shots}${B}`);
-        // what is DRAWN (combat.ts handProps → rigProps.ts bigBoxes): on his back, in his hands with its head on the lock at the blow, on his back again — and nothing with the moves off
-        F.verdict(r.drawn0.n === 2 && r.back0 > 0.3 && r.headAt < 0.25 && r.inHand < 0.45 && r.drawn1.n === 2 && r.back1 > 0.3 && c.drawn0.n === 0 && r.drawn0.all === c.drawn0.all + 2,
-          'THE HAMMER IS DRAWN: two boxes on his back before (the head well clear of his hand), the head on the point he strikes as the blow lands, on his back again after — and with the moves off nothing is drawn (the frame\'s boxes are the build before\'s)', `before: ${r.drawn0.n} boxes, head ${f2(r.back0)} m from his right hand · at the blow: head ${f2(r.headAt)} m from the point, ${f2(r.inHand)} m from his hand · after: ${r.drawn1.n}, ${f2(r.back1)} m · moves off: ${c.drawn0.n} (${c.drawn0.all} boxes in the frame against ${r.drawn0.all})${B}`); }
+        // what is DRAWN (combat.ts handProps → rigProps.ts bigBoxes): on his back, in his hands with its head on the lock at the blow, on his back again
+        F.verdict(r.drawn0.n === 2 && r.back0 > 0.3 && r.headAt < 0.25 && r.inHand < 0.45 && r.drawn1.n === 2 && r.back1 > 0.3,
+          'THE HAMMER IS DRAWN: two boxes on his back before (the head well clear of his hand), the head on the point he strikes as the blow lands, on his back again after', `before: ${r.drawn0.n} boxes, head ${f2(r.back0)} m from his right hand · at the blow: head ${f2(r.headAt)} m from the point, ${f2(r.inHand)} m from his hand · after: ${r.drawn1.n}, ${f2(r.back1)} m · ${r.drawn0.all} boxes in the frame${B}`); }
       // across a back that carries a rifle too: neither tool lies inside it (rigProps.ts bigClearOf — a number a tool, and as far again as the rifle itself rides out on this body)
       { const h = await overRifle('hammer'), sg = await overRifle('shotgun'), cm = (x: number) => (x * 100).toFixed(1), ROOM = 0.003;
         F.verdict(h.rifle > 0 && h.clear.n === 2 && sg.clear.n > 2 && h.clear.gap >= ROOM && sg.clear.gap >= ROOM && h.flat.gap < -0.005 && sg.flat.gap < -0.005,
@@ -725,15 +702,15 @@ export async function bigMoves(): Promise<boolean> {
           const cl = as(true), fl = as(false), t = cl ?? fl ?? []; let gap = Infinity; for (const r of rf) for (const x of t) if (r !== x) gap = Math.min(gap, boxGap(r, x));
           return { n: t.length, rifle: rf.length, gap, cleared: !!cl, flat: !!fl, told: an.bigClear as number }; };
         const slot = (code: string, up: boolean) => { R.input.pressed.add(code); R.step(1); return R.until(() => pl.rifleUp === up && !(pl.equipT > 0) && an.bigK === 0, 6) && (R.step(30), true); };
-        const s1 = slot('Digit1', false), front = !!(KITANIM.on && kitSlingFront(g)), back = read(), s2 = slot('Digit2', true), hand = read(), cm = (x: number) => (x * 100).toFixed(1);
+        const s1 = slot('Digit1', false), front = !!kitSlingFront(g), back = read(), s2 = slot('Digit2', true), hand = read(), cm = (x: number) => (x * 100).toFixed(1);
         F.verdict(s1 && s2 && pl.hasRifle && back.n > 0 && back.rifle > 0 && !front && back.cleared && !back.flat && back.gap >= 0.003 && (tool === 'hammer' ? back.told > 0.05 : back.told === 0) && hand.n === back.n && hand.flat && !hand.cleared && hand.told === 0,
           `… IN THE GAME, ${tool === 'hammer' ? 'THE HAMMER' : 'THE SHOTGUN'}: the pistol drawn and his rifle across his back, the frame's tool is drawn clear of the frame's rifle; the rifle in his hands, it lies on his back with no clearance — and the hand going for the handle is told the drawer's distance`,
           `pistol drawn ${s1}${front ? ' (THE RIFLE HANGS IN FRONT: nothing across his back to clear)' : ''}: ${back.n} tool boxes, ${back.rifle} of the rifle, ${cm(back.gap)} cm apart, the cleared ones ${back.cleared}, the hand told ${cm(back.told)} cm · rifle up ${s2}: the uncleared ones ${hand.flat}, the hand told ${cm(hand.told)} cm`); }
       // the face the leaf opens TOWARD, nobody by it: nothing flings it — the same hands pull it, once the tool is back on him
       { const r = await walkTo(70, 'hammer', 'pull', [0.86 + 1.5, 0.6]);
-        F.verdict(r.began && r.gave && r.open && r.pullK < 0.2 && r.inOpening === 0, 'THE FACE IT OPENS TOWARD: the latch is broken from beside the frame, the hammer goes back onto him, and only then do the same hands pull the leaf open', `${r.raised ? 'the frame rule raised BY HAND · ' : ''}${frame(r)} · blows ${r.st.samBlows} · the hammer ${f2(r.pullK)} of the way into his hands as the leaf first moved · open ${r.open}${B}`); }
+        F.verdict(r.began && r.gave && r.open && r.pullK < 0.2 && r.inOpening === 0, 'THE FACE IT OPENS TOWARD: the latch is broken from beside the frame, the hammer goes back onto him, and only then do the same hands pull the leaf open', `${frame(r)} · blows ${r.st.samBlows} · the hammer ${f2(r.pullK)} of the way into his hands as the leaf first moved · open ${r.open}${B}`); }
       // a teleport inside the tail (cancelActions): nothing of the beat is left on him
-      { const R = await rig(71, { stage: false }), g = R.game, pl = g.player; K.BIGSLOT.moves = true; K.kitSolo(g);
+      { const R = await rig(71, { stage: false }), g = R.game, pl = g.player; K.kitSolo(g);
         pl.char.anim.bigTool = { kind: 'hammer', t: 1.0, equip: 0.6, windup: 0.45, stow: 0.45, blows: [0.7], end: 0.95, at: [pl.char.pos[0], 1, pl.char.pos[2] + 0.5] };
         R.step(2); const kept = BK.samBigTail(g) as boolean, k = pl.char.anim.bigK as number; g.teleportPlayer([...pl.char.pos]); R.step(1);
         F.verdict(kept && k > 0.5 && pl.char.anim.bigTool === null && !BK.samBigTail(g), 'A TELEPORT INSIDE THE TAIL (cancelActions): the pose is dropped — his hands are his own', `the tail ran ${kept}, the tool ${f2(k)} of the way in his hands · after the teleport: ${pl.char.anim.bigTool === null ? 'nothing' : 'STILL POSED'}`); }
@@ -741,7 +718,7 @@ export async function bigMoves(): Promise<boolean> {
       for (const face of ['push', 'pull'] as const) {
         const r = await walkTo(face === 'push' ? 62 : 63, 'hammer', face, [0.86 + 1.5, 0.6], { man: true });
         F.verdict(r.began && !!r.stood && r.stood.along > r.W + 0.05 && r.stood.off > 0.85 && r.manAt >= 0.4 && r.inOpening === 0 && r.open && r.gave,
-          `A MAN ON THE LATCH JAMB (stood there by hand), you behind him, the face the leaf opens ${face === 'push' ? 'AWAY from' : 'TOWARD'}: it is worked from off his shoulder — out of the opening, not on him — and the hammer takes it and the door ends open`, `${r.raised ? 'the frame rule raised BY HAND · ' : ''}${frame(r)} · ${f2(r.manAt)} m from the man · frames in the opening ${r.inOpening} · open ${r.open} · the hammer took it ${r.gave}${B}`); }
+          `A MAN ON THE LATCH JAMB (stood there by hand), you behind him, the face the leaf opens ${face === 'push' ? 'AWAY from' : 'TOWARD'}: it is worked from off his shoulder — out of the opening, not on him — and the hammer takes it and the door ends open`, `${frame(r)} · ${f2(r.manAt)} m from the man · frames in the opening ${r.inOpening} · open ${r.open} · the hammer took it ${r.gave}${B}`); }
       // third in the file: a second man between you and the door
       { const r = await walkTo(69, 'hammer', 'push', [0.86 + 1.74, 0.5], { man: true, second: [0.86 + 1.04, 0.5] });
         F.verdict(r.began && !!r.corner && r.turned && r.corner.off > 1.0 && !!r.stood && r.stood.along > r.W + 0.05 && r.manAt >= 0.4 && r.inOpening === 0 && r.open && r.gave,
@@ -749,11 +726,10 @@ export async function bigMoves(): Promise<boolean> {
       // the same man on the latch jamb, you on the hinge side
       { const r = await walkTo(64, 'hammer', 'push', [-1.2, 0.6], { man: true }), q = await walkTo(65, 'hammer', 'pull', [-1.2, 0.6], { man: true });
         F.verdict(r.began && !!r.stood && r.stood.along < -0.05 && r.stood.off < 0.8 && r.inOpening === 0 && r.open && r.gave, '… you on the HINGE side, the face it opens away from: the hinge jamb is his place — he does not cross the opening to stand on the lead', `${frame(r)} · frames in the opening ${r.inOpening} · open ${r.open}${B}`);
-        F.verdict(q.began && !!q.stood && q.stood.along > q.W && q.open && q.gave, '… and on the face it opens TOWARD the hinge jamb is nobody\'s place (the leaf is pulled round over it): he walks past the shut leaf to the lead\'s shoulder, works it from there, and the door ends open', `${q.raised ? 'the frame rule raised BY HAND · ' : ''}rows: ${q.rows.join(' ') || 'none'} · ${frame(q)} · open ${q.open}${B}`); }
-      // the control: the moves off, in the hand's reach, the man on the jamb — in front of the leaf, as it was
-      { const c = await walkTo(66, 'hammer', 'push', [0.43, 0.75], { man: true, nomoves: true }), r = await walkTo(66, 'hammer', 'push', [0.43, 0.75], { man: true });
-        F.verdict(c.began && !!c.stood && c.stood.along > 0 && c.stood.along < c.W && c.walked === 0, 'THE MOVES OFF, a man on the latch jamb, you in the hand\'s reach: slid to the boot\'s spot square in the opening — the build before', `${frame(c)} · frames his legs walked ${c.walked}`);
-        F.verdict(r.began && !!r.stood && (r.stood.along < -0.05 || r.stood.along > r.W + 0.05) && r.open && r.gave, '… and ON, from that same place: out of the opening', `${frame(r)} · open ${r.open}${B}`); }
+        F.verdict(q.began && !!q.stood && q.stood.along > q.W && q.open && q.gave, '… and on the face it opens TOWARD the hinge jamb is nobody\'s place (the leaf is pulled round over it): he walks past the shut leaf to the lead\'s shoulder, works it from there, and the door ends open', `rows: ${q.rows.join(' ') || 'none'} · ${frame(q)} · open ${q.open}${B}`); }
+      // in the hand's reach, the man on the jamb: out of the opening (until 2026-11-07 a control with the moves off stood him square in it, as the build before did)
+      { const r = await walkTo(66, 'hammer', 'push', [0.43, 0.75], { man: true });
+        F.verdict(r.began && !!r.stood && (r.stood.along < -0.05 || r.stood.along > r.W + 0.05) && r.open && r.gave, 'A MAN ON THE LATCH JAMB, you in the hand\'s reach of the leaf: worked from out of the opening', `${frame(r)} · open ${r.open}${B}`); }
       // the shotgun: a hand from the lock
       { const r = await walkTo(67, 'shotgun', 'push', [0.86 + 1.5, 0.6]), far = Math.hypot(0.45 + 0.2, 1.0);
         F.verdict(r.began && !!r.stood && r.stood.along > r.W + 0.05 && r.lockAt < far - 0.15 && r.inOpening === 0 && r.landed.length >= 1 && r.told.length >= 1 && Math.abs(r.landed[0] - r.told[0]) < 2 * DT && r.open && r.st.samShells >= 1 && r.shots >= 1,
@@ -776,19 +752,18 @@ export async function bigMoves(): Promise<boolean> {
       // BIGSLOT.snug — each thing stays IN A HAND while it is off him (character.ts BIGMOVE.snug). The same teammate, the same door, the hammer: every frame of
       // the beat, how far the hammer as DRAWN (rigProps bigBoxes at the animator's bigK) is from the hollow of his right fist while it is off his back, and how
       // far his right hand has gone from his own gun's grip with the gun still drawn in it (his body's frame: from where the hand was as the beat began, and —
-      // putting the tool back — from where it is the frame after the beat). With the switch off both are the build before's, and far out.
-      { const fly = async (nosnug: boolean) => { let outOf = 0, n = 0, between = 0, told: boolean | undefined, hid = -1, after: number[] | null = null, was = false; const gunAt: number[][] = [];
+      // putting the tool back — from where it is the frame after the beat).
+      { const fly = async () => { let outOf = 0, n = 0, between = 0, told: boolean | undefined, hid = -1, after: number[] | null = null, was = false; const gunAt: number[][] = [];
           const inBody = (c: any) => { const h = c.bones.handR ?? c.pos, y = c.bodyYaw, dx = h[0] - c.pos[0], dz = h[2] - c.pos[2]; return [dx * Math.cos(y) - dz * Math.sin(y), h[1] - c.pos[1], dx * Math.sin(y) + dz * Math.cos(y)]; };
-          const r = await mateShut('hammer', { nosnug, watch: (_R, gd) => { const c = gd.char, an = c.anim; if (!an.bigTool) { if (was && !after) after = inBody(c); return; } was = true; n++; told = an.bigTool.snug;
+          const r = await mateShut('hammer', { watch: (_R, gd) => { const c = gd.char, an = c.anim; if (!an.bigTool) { if (was && !after) after = inBody(c); return; } was = true; n++; told = an.bigTool.snug;
             if (an.bigK > 0.02) { const a: any[] = []; bigBoxes(c, 'hammer', an.bigK, a); const hol = hollowR(c); if (a.length) outOf = Math.max(outOf, Math.min(...a.map(x => ptGap(x, hol)))); if (an.bigK < 0.98) between++; }
             if (an.hideHeldItem) { if (hid < 0) hid = gunAt.length; } else gunAt.push(inBody(c)); } });
           const d3 = (p: number[], q: number[]) => Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]); let carried = 0;
           gunAt.forEach((p, i) => { const ref = hid < 0 || i < hid ? gunAt[0] : after; if (ref) carried = Math.max(carried, d3(p, ref)); });
           return { open: r.open, n, outOf, between, carried, gunFrames: gunAt.length, told }; };
-        const on = await fly(false), off = await fly(true) /* (nosnug: rig() holds the weight off with it — the first-pass timing is the build before both) */, cm = (x: number) => (x * 100).toFixed(1), S = SNUG_BROKEN ? ' · BIGSNUG_BREAK=1' : '';
+        const on = await fly(), cm = (x: number) => (x * 100).toFixed(1), S = SNUG_BROKEN ? ' · BIGSNUG_BREAK=1' : '';
         F.verdict(on.open && on.n > 0 && on.between > 0 && on.outOf < 0.03 && on.carried < 0.06,
           'IN A HAND ALL THE WAY (BIGSLOT.snug), a teammate on the manager\'s door: off his back, the hammer is never drawn more than 3 cm from the hollow of his fist, and his own gun is never carried more than 6 cm by a hand on its way to the tool', `the hammer ${cm(on.outOf)} cm out of his fist at the worst (${on.between} frames between his back and his hand, of ${on.n}) · his gun carried ${cm(on.carried)} cm off its place (${on.gunFrames} frames drawn in his hand inside the beat) · the animator told snug ${on.told} · door open ${on.open}${S}`);
-        F.verdict(off.open && off.outOf > 0.06 && off.carried > 0.12 && !off.told, '… and with the switch OFF the first-pass timing stands: the tool drawn part way between his back and a fist that has left, his gun carried toward his shoulder', `the hammer ${cm(off.outOf)} cm out of his fist (${off.between} frames between) · his gun carried ${cm(off.carried)} cm (${off.gunFrames} frames) · the animator told snug ${off.told} · door open ${off.open}`);
         // … and the WHOLE move by the record alone, the same on any stand (in the game the fight may take a teammate before he has put the tool back — bigkit.ts
         // hammerIn `hard`: on his back at once, as the sim has it — so the put-back's share and the turned back are asked here): a teammate stood still at the
         // aim, his chest turned `turn` rad off his feet, the hammer out, one blow, back.
@@ -799,14 +774,8 @@ export async function bigMoves(): Promise<boolean> {
             if (!(an.bigK > 0.02)) continue; const a: any[] = []; bigBoxes(c, 'hammer', an.bigK, a); if (!a.length) continue; const hol = hollowR(c), gap = Math.min(...a.map(x => ptGap(x, hol)));
             if (t >= T.end) { back = Math.max(back, gap); if (an.bigK < 0.98) n++; } else out = Math.max(out, gap); }
           an.bigTool = null; c.aimYaw = yaw; an.upper = up; c.update(DT); return { out, back, n }; };
-        const turns = [0, 1, -1], sn = turns.map(t => by(!SNUG_BROKEN, t)), was = turns.map(t => by(false, t)), list = (l: { out: number; back: number; n: number }[]) => l.map((x, i) => `turned ${turns[i]} rad: out ${cm(x.out)}, back ${cm(x.back)} cm (${x.n} frames)`).join(' · ');
-        F.verdict(sn.every(x => x.n > 0 && x.out < 0.01 && x.back < 0.01), 'BY THE RECORD, OUT AND BACK, his chest square and turned a radian either way at the aim: the hammer is never drawn more than 1 cm from the hollow of his fist, taken out or put back', `${list(sn)}${S}`);
-        F.verdict(was.every(x => x.out > 0.03 && x.back > 0.03) && was.slice(1).every(x => x.out > 0.05 && x.back > 0.05), '… and by a record with no `snug` (the build before, a stored pose): over 3 cm out of his fist both ways with his chest square, over 5 turned', list(was)); }
-      // the journal: a recording from before each key
-      { const R = await rig(68, { stage: false }), g = R.game, JR = await import(`${ROOT}/src/game/journal.ts`);
-        for (const key of ['moves', 'snug'] as const) { K.BIGSLOT[key] = true; const now = JR.knobsSnapshot(g), was = JR.knobsSnapshot(g); delete (was.tables as any).BIGSLOT[key];
-          await hushed(() => JR.applyKnobs(g, was)); const a = K.BIGSLOT[key] as boolean; await hushed(() => JR.applyKnobs(g, now)); const b = K.BIGSLOT[key] as boolean;
-          F.verdict(a === false && b === true, key === 'moves' ? 'a recording from before the key (a BIGSLOT table with no `moves`) replays with the moves OFF; one made now, with them on' : '… and one from before `snug` replays with the first-pass timing; one made now, in a hand all the way', `applied the older table: ${a} · the newer: ${b}`); } }
+        const turns = [0, 1, -1], sn = turns.map(t => by(!SNUG_BROKEN, t)), list = (l: { out: number; back: number; n: number }[]) => l.map((x, i) => `turned ${turns[i]} rad: out ${cm(x.out)}, back ${cm(x.back)} cm (${x.n} frames)`).join(' · ');
+        F.verdict(sn.every(x => x.n > 0 && x.out < 0.01 && x.back < 0.01), 'BY THE RECORD, OUT AND BACK, his chest square and turned a radian either way at the aim: the hammer is never drawn more than 1 cm from the hollow of his fist, taken out or put back', `${list(sn)}${S}`); }
     } catch (e) { F.verdict(false, 'the check ran', String((e as Error)?.stack ?? e)); }
   });
   return F.done();
@@ -815,7 +784,7 @@ export async function bigMoves(): Promise<boolean> {
 /** the file's probes, by the names the runner calls them (the holds each is owed — the card's one gun row, the table's layout — are tools/qa/holds.ts's) */
 const PROBES = { 'bigslot-card': bigCard, 'bigslot-off': bigOff, 'bigslot-you': bigYou, 'bigslot-mate': bigMate, 'bigslot-shut': bigShut, 'bigslot-moves': bigMoves, 'bigslot-weight': bigWeight, 'bigslot-wiring': bigWiring };
 async function bigslotCheck(want: readonly string[]): Promise<boolean | null> {
-  console.log(`bigslot-check on the ${STAND.toUpperCase()} stand${STAND === 'frozen' ? ' (the switch is held off there: the check raises it itself)' : ' (TPS_PROFILE=shipped: the page as it opens)'}${BROKEN ? ' — BIGKIT_BREAK=1: the tools do nothing to a lock, the lock lines below must FAIL' : ''}`);
+  console.log(`bigslot-check on the ${STAND.toUpperCase()} stand${BROKEN ? ' — BIGKIT_BREAK=1: the tools do nothing to a lock, the lock lines below must FAIL' : ''}`);
   const ok = await asProbes(PROBES, want);
   console.log(`\nbigslot-check (${STAND} stand): ${ok === null ? 'NOTHING RAN' : ok ? 'ALL PASS' : 'FAILED'}`);
   return ok;
