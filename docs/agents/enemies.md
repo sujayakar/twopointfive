@@ -1070,13 +1070,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   wall changes the way they come. No man is added and nobody's eyes, aim or health change. A pure function: no dice, no clock, no state (nothing for a
   checkpoint). WHAT IT COSTS, known: with squads staged the floor is a squads level to every rule that asks (`squadsLive`): the press stands down, men
   dig in on their squad's word, and HARD on these eight levels is the drilled garrison and no longer "the defenders come at you together" — the mission
-  sheet says so (`difficulty.ts squadsHeld`, read by ui/picks.ts and ui/missions.ts; `squadsOf` stays the row's fact about its level FILE). The
+  sheet says so (`difficulty.ts squadsHeld`, read by ui/missions.ts; `squadsOf` stays the row's fact about its level FILE). The
   maintainer's call is asked on that. With the enemy kit on stun charges at standard, the office room clear's defenders put 1 charge through a door in 8 scripted runs
   where one pool puts three or more (it is the press that carries them, and the press stands down): the kit lever does little on these levels while
   the rule is on (`levers-run` holds the rule off for its two tallies: it measures the kit lever on one pool). SWITCH: ON in the page (`?nosquaddeal`; the debugger
   row 'enemies are in squads on every level'), OFF in the module and on the frozen stand (`FROZEN_HOLDS` `'SQUADDEAL.on': 'TPS_SQUADDEAL=1'`), in the
   knob registry and `JOURNAL_KNOBS` (a recording from before the key replays with it off). SEAMS in others' files, one clause each: roomclear.ts
-  (`onStaged`), difficulty.ts (`squadsHeld`), ui/picks.ts and ui/missions.ts (the Hard sentence asks `squadsHeld`), enemysquads-probes.ts (its "no
+  (`onStaged`), difficulty.ts (`squadsHeld`), ui/missions.ts (the Hard sentence asks `squadsHeld`), enemysquads-probes.ts (its "no
   squads block = none staged" line holds the rule off), levers-probes.ts (as above). CHECK: `tools/qa/squaddeal-check.ts` (probe `squaddeal`), 7 lines:
   (a) the cut on the eight rows (every room in one squad, a man in each, the count the men call for, roomclear.ts `checkSquads` silent), (b) the file
   wins (the warehouse: the same object), (c) a loud way in draws men to the noise with their word 1.5 s or more before the first is there (the kill
