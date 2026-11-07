@@ -14,7 +14,7 @@
 // exit 0 = every line passes · 1 = a FAIL or a page error
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const fs = require('fs'), os = require('os'), path = require('path');
-const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow', ROOT = path.resolve(__dirname, '../..');
+const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow', SEED = process.env.SEED || 7, ROOT = path.resolve(__dirname, '../..');
 const OUT = process.env.OUT || fs.mkdtempSync(path.join(os.tmpdir(), 'tut-quiet-page-'));
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage textures \(5\) in the Compute stage/;
@@ -61,7 +61,7 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
   const keyFor = (codes, games) => page.evaluate(([codes, games]) => { const K = window.__keys; return K ? codes.find(c => games.includes(K.gameCode(c))) ?? null : null; }, [codes, games]);
   const s = r => `step '${r.id}' · "${r.line}" [${r.keys}] · ${r.slot}${r.away ? ' (away)' : ''} · launcher ${r.load}, ${r.shells} grenade(s), ${r.rings} sponge round(s) · setup '${r.setup}'`;
 
-  const url = `http://localhost:${PORT}/?levelFile=tut-quiet.json&quiet&paused&quality=${QUALITY}&mute&nocutboxes`;
+  const url = `http://localhost:${PORT}/?levelFile=tut-quiet.json&quiet&paused&quality=${QUALITY}&mute&nocutboxes&seed=${SEED}`;   // (a page with no seed deals a fresh one each visit: a check that is to read the same twice names its own)
   log(url);
   await page.goto(url, { timeout: 600000 });
   await page.evaluate(async () => { await window.__ready; window.__testVisible = true; window.__runFrames(3, 1 / 60, [], 'none'); });

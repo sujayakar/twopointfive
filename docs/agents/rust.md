@@ -2292,3 +2292,9 @@ one stops the tool by name, on an address one does nothing and says so in the co
   the next frame. A check that holds the frames after a restart against a boot's matches them BY THE GAME'S CLOCK, never by their count
   (`tools/qa/cleanrestart-page.cjs`: placed by hand on the seeded solo night, the block's `lights` part and the die read the boot's own values one
   frame later).
+- **What a page tool writes by hand, and what does not cross.** On a page stepped by a script (`paused`), what the script writes on
+  `window.__game` BETWEEN its calls to `__runFrames` is carried into the game as the next call begins (the scan's `every`, `tools/blitz/PAGE.md`).
+  Three things are NOT: (1) a field the bridge does not carry, or a leaf too big to walk, stays on the page's copy alone; (2) a METHOD called on
+  the page's Game runs as TypeScript there and reaches the game only as far as the fields it wrote are carried: use `window.__rust.call(key, self,
+  args)` for a row of the call table (`Game.teleportPlayer` crosses by itself); (3) a write made INSIDE a call to step (a hook that fires between
+  two ticks of one `__runFrames`) is not walked. And a page with no `&seed=` deals a fresh game each visit: name the seed.
