@@ -53,7 +53,7 @@ console.log(`Cost model (src/ui/quality.ts COST): modelled compute ms on the ref
 console.log(`  preset    direct softbl gather tempor volume bloom | cascad probe |  pixel (rel)   fixed (rel)   what it switches`);
 for (const n of QUALITY_NAMES) {
   const c = COST[n], P = c.passes, p = withSmoke(PRESETS[n], SMOKE_KEEP_DEFAULT), L = p.lossy;   // (the rows as the page runs them: SMOKE KEEP)
-  const sw = [`${p.restir.rays} rays`, `hist ${p.hist}`, `maxH ${p.maxH}`, `scale ${p.scale}`, ...(['gatherThird', 'rcHalfRate', 'volQuarter'] as const).filter(k => L[k])].join(', ');
+  const sw = [`${p.restir.rays} rays`, `maxH ${p.maxH}`, `scale ${p.scale}`, ...(['gatherThird', 'rcHalfRate', 'volQuarter'] as const).filter(k => L[k])].join(', ');
   console.log(`  ${n.padEnd(8)} ${f1(P.direct)}  ${f1(P.softblur)}  ${f1(P.gather)}  ${f1(P.temporal)}  ${f1(P.volumetrics)} ${f1(P.bloom)} | ${f1(P.rc)}  ${f1(P.probe)} | ${f1(c.pixel)} (${f2(c.pixel / COST.ultra.pixel)})  ${f1(c.fixed)} (${f2(c.fixed / COST.ultra.fixed)})   ${sw}`);
 }
 // what each preset renders on the two window classes, old vs new semantics (the visible consequence of 'scale is relative to the cap, presets all 1.0')

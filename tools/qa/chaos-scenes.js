@@ -28,6 +28,8 @@
   // THE REFERENCE: every v3 history off — the leader / tail direct estimator (no reservoirs) with the direct term's history at 0 (dtemporal skipped), softblur (spatial only), the gather's temporal
   // accumulation flag down, the per-pixel volumetric march (no froxel history), no reflection pass (its specular history), no TAA (FXAA at scale 1.0). Rendered on the same OUTPUT grid.
   const TEMPORAL = 2048;
+  // SINCE 2026-11-07 the old estimator and the old denoiser are gone: this reference still runs ReSTIR's reservoirs and the shared denoiser, so it is NOT history-free any
+  // more, and its numbers do not compare with takes from before that day.
   const REF = { taau: false, froxelVol: false, rtReflect: false, directHistory: 0, renderScale: 1.0 };
   function applyRef() { const r = window.__iq.apply(REF); S().flags = S().flags & ~TEMPORAL; return r; }
   function applyVar(v, extra) { const r = window.__iq.apply(v, extra); if (flags0 !== null) S().flags = flags0; return r; }

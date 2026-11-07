@@ -1173,7 +1173,6 @@ fn compositePixel(pix0: vec2f) -> vec3f {
     else if (dbg == 14u) { color = refl; }                          // the ray-traced reflections alone (black with the pass off)
     else if (dbg == 15u) { let mt = textureLoad(gMat, pix, 0); color = vec3f(mt.x, mt.y, 0.0); }   // the material the g-buffer wrote: r = roughness (bright = matte), g = metalness — the finish table + the detail layer's wear, as the reflections read them
     else if (dbg == 13u) { color = textureLoad(directTex, pix, 0).rgb; }   // the v3 denoiser's shadow-client state, written raw into the sharp class's texture by its last iteration (denoise.wgsl DN_DEBUG_VIEW): r/g = σ per class, b = history length
-    else if (dbg == 16u) { color = Ei; }                            // phase 5: the resampling gather's reservoir state (fgather.wgsl mainGi writes it into the indirect, through the diffuse denoiser): r = confidence M ÷ cap, g = temporal history taken, b = spatial taps accepted ÷ k — the plain indirect with resampling off
     else if (dbg == 17u) { color = select(vec3f(0.0), upsampleRefl(sPixf, z, Nl) + hi4.xyz, frame.rtCfg.w >= 1.0); }   // phase 5: the reflection pass's raw output as the composite fetches it (no cutoff fade / gloss-keep) — the mesh hits and the hit-lighting reuse are judged here
     rdT = normalize(worldFromDepth(pixf, 0.5) - frame.camPos); tT = zg; dirS = normalize(worldFromDepth(pixf, depth) - frame.camPos);
 

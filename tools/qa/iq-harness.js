@@ -36,6 +36,7 @@
   const KEEP = ['renderScale', 'maxInternalHeight'];   // (a variant may set the scale explicitly; otherwise the tier's own)
   const VARIANTS = {
     main: {},                                                     // this tree's defaults = main @ 6551c66 + the port with sharp direct off
+    // (SINCE 2026-11-07 `old` keeps ReSTIR and the shared denoiser: the old estimator and denoiser are gone, so it is no longer the pre-v3 chain)
     old: { taau: false, froxelVol: false, rtReflect: false, detail: 0, renderScale: 1.0 },   // THE OLD RENDERER (pre-v3 chain, native rows, FXAA)
     sharp: { sharpDirect: true },                                 // B: decoupled resolution
     s085: { renderScale: 0.85 }, s09: { renderScale: 0.9 }, s10: { renderScale: 1.0 }, s077: { renderScale: 0.77 }, s067: { renderScale: 0.67 }, s07: { renderScale: 0.7 }, s06: { renderScale: 0.6 },   // A: resolution policy

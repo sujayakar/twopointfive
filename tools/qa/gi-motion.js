@@ -58,6 +58,7 @@
 
   // ------------------------------------------------------------------ variants: settings bundles over the boot defaults
   let S0 = null;
+  // (SINCE 2026-11-07 OLD keeps ReSTIR and the shared denoiser: the old estimator and denoiser are gone, so it is no longer the pre-v3 chain)
   const OLD = { taau: false, froxelVol: false, rtReflect: false, detail: 0, renderScale: 1.0, sharpDirect: false, sharpDecouple: false, gbaa: false, taauHistSharp: 0 };   // THE OLD RENDERER (pre-v3 chain at native rows, FXAA, the resolve configuration off)
   const VARIANTS = {
     main: {}, old: OLD,
