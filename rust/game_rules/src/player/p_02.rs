@@ -54,10 +54,10 @@ fn collide_legs(g: &mut Game, m: &mut crate::player::Legs, y1: f64) {
 
 // ---- the part's functions ----
 
-/// Is what moves him this tick his walk keys and nothing else. Asked, nothing written.   (player.ts legsOwn)
 /// how a player steps to the launcher's next load (slotsetup.ts loadKeys)
 const LOAD_KEYS: &str = "press 2, then 2";
 
+/// Is what moves him this tick his walk keys and nothing else. Asked, nothing written.   (player.ts legsOwn)
 pub fn legs_own(g: &mut crate::game::Game) -> bool {
     let pl = g.player;
     let busy = g.pl[pl].down || g.pl[pl].takedown.is_some() || g.pl[pl].holding.is_some() || g.pl[pl].kick.is_some() || g.pl[pl].picking.is_some()

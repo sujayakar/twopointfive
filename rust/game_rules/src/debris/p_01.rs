@@ -63,7 +63,7 @@ pub fn hash01(x: f64) -> f64 {
 /// A new pool.   (debris.ts Debris.constructor)
 pub fn debris_new(g: &crate::game::Game) -> crate::debris::Debris { crate::debris::Debris::blank() }
 
-/// The pool's size on this tier; 64 without one.   (debris.ts Debris.cap)
+/// The pool's size.   (debris.ts Debris.cap)
 pub const DEBRIS_CAP: f64 = 64.0;
 
 /// Thrown and not yet down; a piece a boot slid is not counted.   (debris.ts Debris.moving)

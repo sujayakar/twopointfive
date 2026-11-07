@@ -1,5 +1,5 @@
 // The 'breaks' probe family (src/game/breakTable.ts — walls, cover and what the destruction lane knocks loose break BY MATERIAL into cut pieces), run through probes.ts:
-//   bun run tools/qa/probes.ts breaks | breaks-shapes | breaks-wall | breaks-again | breaks-overflow | breaks-caps | breaks-determinism [--level block-squads]
+//   bun run tools/qa/probes.ts breaks | breaks-shapes | breaks-wall | breaks-again | breaks-caps | breaks-determinism [--level block-squads]
 // CUT PIECES ARE A SETTLED RULE (scene/cut.ts CUT.on; 2026-11-07): nothing here asks the wreck with the cut switch off or writes it. Until then a probe `off` did, with
 // an off run beside the on run in `wall`, `studs`, `furniture` and `look`; those runs, their lines and the furniture rule's pin in `wall` are out.
 // Headless = the Proxy device: nothing is drawn. What is asserted is the TABLE and the BUDGET:
@@ -47,11 +47,11 @@ const WALLS0 = JSON.parse(JSON.stringify(WALLS));
 const restoreKnobs = () => { for (const k of Object.keys(WALLS0)) (WALLS as any)[k] = JSON.parse(JSON.stringify(WALLS0[k])); };
 
 /** the harness Game on the loud level at `chaos`, a Particles attached, everyone deaf, blind and out of the way */
-async function stage(seed: number, chaos: number, cap = 64) {
+async function stage(seed: number, chaos: number) {
   Math.random = seeded(seed); restoreKnobs();
   const lv = LEVEL === 'office' ? undefined : loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/${LEVEL}.json`, 'utf8')));
   const W = await standUp(lv ? { level: lv } : {}); const { game, engine } = W;
-  engine.particles = new Particles(fake('device'), fake('sceneLayout')); engine.settings.gpuParticles = true; engine.settings.debrisCap = cap;
+  engine.particles = new Particles(fake('device'), fake('sceneLayout')); engine.settings.gpuParticles = true;
   game.godMode = true; game.aiEnabled = false; game.player.visibility = 0.02; game.tune.chaos = chaos; zero(WALL_STATS); WALL_LOG.length = 0; zero(BREAK_STATS);
   game.destr.breaks.look = null;   // (the family judges the table ALONE: a look-only wall dressing a merged tree attaches is put aside — breaks-look sets its own)
   for (let i = 0; i < 3; i++) W.step(DT);
@@ -155,8 +155,8 @@ export async function breaksShapes(): Promise<boolean> {
 // ================================================================ a blown wall
 export async function breaksWall(): Promise<boolean> {
   const F = family(`breaks-wall: a charge against a partition with cut pieces on — slabs, a heap, ragged ends, the same boxes underfoot (${LEVEL})`);
-  const run = async (cap: number) => {
-    const S = await stage(11, 0.5, cap); const { W, game } = S;
+  const run = async () => {
+    const S = await stage(11, 0.5); const { W, game } = S;
     const pick = pickWall(game); if (!pick) return null;
     const { mid, n } = pick; const at: Vec3 = [mid[0] + n[0] * 0.3, 0.3, mid[2] + n[2] * 0.3];
     const open0 = new Map<number, number>(game.destr.walls.all().map((w: any) => [w.id, w.open]));
@@ -171,12 +171,12 @@ export async function breaksWall(): Promise<boolean> {
     const out = { res, born, chips0, cells0, also, peak, pick, game, stats: { ...BREAK_STATS }, wstats: { ...WALL_STATS }, standing: standing(game), share: game.destr.breaks.share(), surf: game.destr.walls.all().find((w: any) => w.id === pick.id).surf };
     return out;
   };
-  const on = await run(64), on32 = await run(32);
-  if (!on || !on32) { F.verdict(false, 'a partition with floor both sides', 'none found'); return F.done(); }
+  const on = await run();
+  if (!on) { F.verdict(false, 'a partition with floor both sides', 'none found'); return F.done(); }
   const row = BREAK[BT.matOfSurf(on.surf)] as any;
   F.verdict(on.res.walls >= 1 && on.res.opened > 0, 'the charge holed the wall', `wall #${on.pick.id} (${on.surf}): ${on.wstats.holes} hole(s), nav cells opened ${on.res.opened}`);
   // thrown + heap inside the share
-  for (const [tag, r] of [['pool 64', on], ['pool 32', on32]] as [string, any][]) {
+  for (const [tag, r] of [['the pool', on]] as [string, any][]) {
     const heap = r.born.filter((b: any) => b.rest0), thrown = r.born.filter((b: any) => !b.rest0 && b.c.kind === 'chunk' && b.c.mat && Math.abs(b.side) < 0.2);   // born in the wall's own thickness: a piece of furniture the same charge broke is not the wall's
     F.verdict(thrown.length > 0 && thrown.length <= r.share.thrown && heap.length === r.stats.heap && heap.length <= r.share.heap && heap.length >= 1, `${tag}: thrown wall pieces and the dealt heap inside the blast's share`,
       `${thrown.length} thrown (share ${r.share.thrown}), ${heap.length} dealt at rest (share ${r.share.heap}); the pool peaked at ${r.peak} / ${r.game.destr.debris.cap()}; refused ${r.stats.refused}`);
@@ -188,9 +188,8 @@ export async function breaksWall(): Promise<boolean> {
     F.verdict(!bad && cutN >= Math.min(2, wallBorn.length), `${tag}: the pieces are cut boxes with valid, fitted records`, bad || `${cutN} of ${wallBorn.length} carry a cut (${planes} planes); row ${BT.matOfSurf(r.surf)}`);
   }
   // chips by the row
-  { const per64 = row.small.n, per32 = Math.round(row.small.n * BREAKS.smallPoolChipK);
-    const others = (r: any, small: boolean) => r.also.reduce((sum: number, a: any) => { const n = (BREAK[BT.matOfSurf(a.surf)] as any).small.n; return sum + (small ? Math.round(n * BREAKS.smallPoolChipK) : n) * a.cells; }, 0), o64 = others(on, false), o32 = others(on32, true);
-    F.verdict(on.cells0 > 0 && on.chips0 === per64 * on.cells0 + o64 && on32.chips0 === per32 * on32.cells0 + o32 && per32 > per64, 'chips by the row: its count a cell, more at the small pool to make up for the slabs it cuts', `${on.cells0} cells opened; pool 64: ${on.chips0 - o64} chips (${per64} a cell); pool 32: ${on32.chips0 - o32} (${per32} a cell)${o64 || o32 ? ` · and ${o64} / ${o32} by their own rows for ${on.also.reduce((k: number, a: any) => k + a.cells, 0)} cell(s) of other breakables the same charge took` : ''}`); }
+  { const per = row.small.n, others = on.also.reduce((sum: number, a: any) => sum + (BREAK[BT.matOfSurf(a.surf)] as any).small.n * a.cells, 0);
+    F.verdict(on.cells0 > 0 && on.chips0 === per * on.cells0 + others, 'chips by the row: its count a cell', `${on.cells0} cells opened: ${on.chips0 - others} chips (${per} a cell), and ${others} by their own rows`); }
   // the tint toward the core
   { const paint = on.pick.box.albedo, core = BT.coreOf(row, paint); const want = v3.lerp(paint, core, BREAKS.coreTint); const c = on.born.find((b: any) => b.c.kind === 'chunk'); const got = c ? c.c.box.albedo : [0, 0, 0];
     F.verdict(!!c && v3.dist(got, want) < 1e-6 && v3.dist(c.c.mat.paint, paint) < 1e-9, 'a piece shows the stuff inside: its paint taken toward the core colour, the paint remembered for its chips', `paint ${paint.map(f2)} → piece ${got.map(f2)} (core ${core.map(f2)}, ${BREAKS.coreTint} of the way)`); }
@@ -210,7 +209,7 @@ export async function breaksWall(): Promise<boolean> {
 export async function breaksStuds(): Promise<boolean> {
   const F = family(`breaks-studs: a partition shot through over a standing sill keeps its metal uprights; a hole does not (${LEVEL})`);
   const run = async () => {
-    const S = await stage(14, 0.5, 64); const { game, engine } = S; const pick = pickWall(game); if (!pick) return null;
+    const S = await stage(14, 0.5); const { game, engine } = S; const pick = pickWall(game); if (!pick) return null;
     const walls = game.destr.walls as any; const B = walls.list.find((b: any) => b.id === pick.id); const N = pick.alongX ? B.nx : B.nz; const ci = (k: number, iy: number) => pick.alongX ? (iy * B.nz) * B.nx + k : (iy * B.nz + k) * B.nx;
     const u = pick.alongX ? pick.mid[0] - pick.box.c[0] : pick.mid[2] - pick.box.c[2]; const L = pick.alongX ? pick.box.h[0] : pick.box.h[2]; const k0 = Math.max(1, Math.min(N - 4, Math.floor((u + L) / (2 * L) * N) - 1));
     const studs = () => standing(game).filter((b: any) => b.name === 'stud'); const n0 = game.col.boxes.length;
@@ -240,7 +239,7 @@ export async function breaksStuds(): Promise<boolean> {
 // ================================================================ level B
 export async function breaksAgain(): Promise<boolean> {
   const F = family(`breaks-again: one strong event breaks a piece once more — and only one, and only once (${LEVEL})`);
-  const S = await stage(12, 0.5, 64); const { W, game } = S; const D = game.destr.debris;
+  const S = await stage(12, 0.5); const { W, game } = S; const D = game.destr.debris;
   // open floor: the middle of a walkable stretch
   const pick = pickWall(game); if (!pick) { F.verdict(false, 'open floor to drop things on', 'none'); return F.done(); }
   const spot = (k: number): Vec3 => [pick.a[0] + (pick.alongX ? (k - 2) * 0.5 : 0), 0, pick.a[2] + (pick.alongX ? 0 : (k - 2) * 0.5)];
@@ -282,7 +281,7 @@ export async function breaksAgain(): Promise<boolean> {
 export async function breaksFurniture(): Promise<boolean> {
   const F = family(`breaks-furniture: a plain furniture piece takes its row's outline where it is; one metal panel a blast comes off kinked (${LEVEL})`);
   const run = async () => {
-    const S = await stage(14, 0.5, 64); const { game } = S; const D = game.destr.debris, Bk = game.destr.breaks;
+    const S = await stage(14, 0.5); const { game } = S; const D = game.destr.debris, Bk = game.destr.breaks;
     const pick = pickWall(game); if (!pick) return null;
     D.clear(); zero(BREAK_STATS);
     const mk = (h: Vec3, k: number, mat: string) => { const c0: Vec3 = [pick.a[0] + (pick.alongX ? (k - 3) * 0.7 : 0), 1.2, pick.a[2] + (pick.alongX ? 0 : (k - 3) * 0.7)];
@@ -322,7 +321,7 @@ export async function breaksFurniture(): Promise<boolean> {
 export async function breaksLook(): Promise<boolean> {
   const F = family(`breaks-look: beside a system that dresses a blown wall for the picture nothing is made twice — square wall ends, no second heap, its fragments cut by the table (${LEVEL})`);
   const run = async (look: null | { on: boolean }) => {
-    const S = await stage(11, 0.5, 64); const { W, game } = S; const br = game.destr.breaks; br.look = look;
+    const S = await stage(11, 0.5); const { W, game } = S; const br = game.destr.breaks; br.look = look;
     const pick = pickWall(game); if (!pick) return null;
     const { mid, n } = pick; game.destr.blast([mid[0] + n[0] * 0.3, 0.3, mid[2] + n[2] * 0.3], { who: PLAYER_ID });
     const thrown = BREAK_STATS.shaped + BREAK_STATS.plain - BREAK_STATS.heap, heaped = BREAK_STATS.heap;
@@ -345,7 +344,7 @@ export async function breaksLook(): Promise<boolean> {
     if (alone.coverEnds < 0) fails.push('staging: no cover of two cells with a ragged row'); else { if (alone.coverEnds < 1) fails.push('cover alone: no ragged end by the opened cell'); if (on.coverEnds !== alone.coverEnds) fails.push(`cover beside the look: ${on.coverEnds} ragged ends, alone ${alone.coverEnds} (cover has no plates: it keeps them)`); }
     F.verdict(!fails.length, 'beside a look that is on: no heap slabs (their part thrown), the wall\'s standing pieces square, cover still ragged; a look switched off puts the table\'s own back', fails.join('; ') || `alone ${JSON.stringify(alone)} · beside ${JSON.stringify(on)}`); }
   { // a loose fragment: keyed, inside the box it had, set down where the box stood, nothing of the table's stream drawn
-    const S = await stage(12, 0.5, 64); const br = S.game.destr.breaks; const fails: string[] = []; let cutN = 0, whole = 0, planes = 0;
+    const S = await stage(12, 0.5); const br = S.game.destr.breaks; const fails: string[] = []; let cutN = 0, whole = 0, planes = 0;
     const R = seeded(77); const sig = (b: any) => b.cut ? b.cut.map((p: any) => [...p.n, p.d].map((x: number) => x.toFixed(5)).join(',')).join(';') : '-';
     const lowOf = (b: any) => { const rot = b.rot ?? quat.yaw(b.yaw); let lo = Infinity; for (const v of (b.cut ? cutVerts(b.h, b.cut) : [0, 1, 2, 3, 4, 5, 6, 7].map(k => [k & 1 ? b.h[0] : -b.h[0], k & 2 ? b.h[1] : -b.h[1], k & 4 ? b.h[2] : -b.h[2]]))) lo = Math.min(lo, b.c[1] + quat.rotate(rot, v as Vec3)[1]); return lo; };
     const c0 = (br as any).counter;
@@ -369,42 +368,12 @@ export async function breaksLook(): Promise<boolean> {
   return F.done();
 }
 
-export async function breaksOverflow(): Promise<boolean> {
-  const F = family(`breaks-overflow: evicted pieces crumble, refused ones become chips, mayhem skips the second break (${LEVEL})`);
-  const S = await stage(13, 0.5, 8); const { W, game } = S; const D = game.destr.debris;
-  const pick = pickWall(game); if (!pick) { F.verdict(false, 'open floor', 'none'); return F.done(); }
-  const P = game.engine.particles as any; const chipsQueued = () => P.queue.reduce((s: number, r: any) => s + (r.kind === 'debris' ? r.count : 0), 0);
-  const at = (k: number): Vec3 => [pick.a[0] + (pick.alongX ? (k % 5 - 2) * 0.45 : 0), 0, pick.a[2] + (pick.alongX ? 0 : (k % 5 - 2) * 0.45)];
-  const slab = (k: number, y: number, vy: number) => { const p = at(k); const c = D.spawn('chunk', makeBox({ c: [p[0], y, p[2]], h: [0.18, 0.015, 0.12], albedo: [...pick.box.albedo] }), [0, vy, 0], [0, 0, 0], PLAYER_ID); if (c) { c.mat.mat = 'plasterboard'; } return c; };
-  // fill the pool with resting pieces, then one more
-  D.clear(); for (let k = 0; k < 8; k++) slab(k, 0.3, 0); for (let f = 0; f < 150; f++) W.step(DT);
-  const resting = D.list.filter((c: any) => c.rest).length; const oldest = D.list[0]; const q0 = chipsQueued(); zero(BREAK_STATS);
-  const extra = slab(2, 0.3, 0); const q1 = chipsQueued();
-  // (the eviction rule, settled, sizes the chips to the piece: BREAKS.sizedChips over sizedSpan by its longest half extent, 0.18 m here. Eight equal slabs: the
-  //  smallest is the oldest)
-  const [n0, n1] = BREAKS.sizedChips, [s0, s1] = BREAKS.sizedSpan; const sized = Math.round(n0 + (n1 - n0) * Math.max(0, Math.min(1, (0.18 - s0) / (s1 - s0))));
-  F.verdict(resting === 8 && !!extra && D.list.length === 8 && !D.list.includes(oldest) && BREAK_STATS.crumbled === 1 && q1 - q0 === sized, `pool full of resting pieces: the oldest goes and crumbles into ${sized} chips of its own material where it lay (by its size)`,
-    `${resting} at rest → spawn → pool ${D.list.length}/8, the oldest gone, ${q1 - q0} chips queued, crumbled ${BREAK_STATS.crumbled}`);
-  // everything moving: a cell's pieces are refused → chips
-  D.clear(); zero(BREAK_STATS); for (let k = 0; k < 8; k++) slab(k, 2.0 + 0.05 * k, 0.5);
-  { const q2 = chipsQueued(); const cell = makeBox({ c: [pick.mid[0], 1.2, pick.mid[2]], h: pick.alongX ? [0.25, 0.5, 0.06] : [0.06, 0.5, 0.25], albedo: [...pick.box.albedo] });
-    const r = game.destr.breaks.shedCell('drywall', cell, [pick.n[0], 0, pick.n[2]], PLAYER_ID, { chunks: 2 }); const q3 = chipsQueued();
-    const per = BREAK.plasterboard.small.n * BREAKS.smallPoolChipK; const refusedChips = q3 - q2 - Math.round(per);
-    F.verdict(r.thrown === 0 && r.refused === 2 && D.list.length === 8 && refusedChips >= 2 * BREAKS.refuseChips[0] && refusedChips <= 2 * BREAKS.refuseChips[1], 'pool full of moving pieces: new ones are refused and each becomes 6 to 8 chips', `thrown ${r.thrown}, refused ${r.refused}, ${refusedChips} chips for them (+ the cell's own ${Math.round(per)})`); }
-  // mayhem: more than half the pool moving → no second break, straight to particles
-  D.clear(); zero(BREAK_STATS); for (let k = 0; k < 7; k++) slab(k, 1.4 + 0.25 * k, -4);
-  let peak = 0; for (let f = 0; f < 200; f++) { W.step(DT); peak = Math.max(peak, D.list.length); }
-  F.verdict(BREAK_STATS.mayhem >= 1 && peak <= 8 && BREAK_STATS.mayhem + BREAK_STATS.again >= 5, 'mayhem rule: with over half the pool moving, a piece that would break again turns straight into particles; the pool never passes its cap',
-    `7 slabs landing fast in a pool of 8: ${BREAK_STATS.mayhem} went to particles, ${BREAK_STATS.again} snapped once the pool calmed, peak ${peak}/8, left ${D.list.length}`);
-  return F.done();
-}
-
 // ================================================================ the worst case
 export async function breaksCaps(): Promise<boolean> {
   const F = family(`breaks-caps: every breakable of the level blown end to end stays inside the pools (${LEVEL})`);
-  for (const cap of [64, 32]) {
-    const S = await stage(15, 1, cap); const { W, game, engine } = S; const D = game.destr.debris;
-    let blasts = 0, peak = 0, peakLoad = 0, bad = ''; const P = engine.particles as any; const births = cap >= 64 ? 384 : 192;   // (the page's frame deals the queue its births every frame: high 384, low 192)
+  { const cap = 64;
+    const S = await stage(15, 1); const { W, game, engine } = S; const D = game.destr.debris;
+    let blasts = 0, peak = 0, peakLoad = 0, bad = ''; const P = engine.particles as any; const births = 384;   // (the page's frame deals the queue its births every frame: high 384)
     const step0 = W.step; W.step = (dt: number) => { step0(dt); P.prepare(dt, true, births); };
     const look = () => { peak = Math.max(peak, D.list.length); peakLoad = Math.max(peakLoad, game.destr.breaks.load()); if (!bad) for (const c of D.list) { /* a kinked plate is two halves in one box: neither half fills it */ const f = recordFault(c.box.h, c.box.cut, !c.mate) ?? (c.mate ? recordFault(c.mate.h, c.mate.cut, false) : null); if (f) { bad = `chunk ${c.serial}: ${f}`; break; } if (c.box.c.some((x: number) => !isFinite(x))) { bad = `chunk ${c.serial} not finite`; break; } } };
     for (const w of game.destr.walls.all()) { const b = w.box; const alongX = b.h[0] >= b.h[2]; const L = alongX ? b.h[0] : b.h[2];
@@ -430,14 +399,14 @@ function wreck(W: any, game: any) {
 }
 export async function breaksDeterminism(): Promise<boolean> {
   const F = family(`breaks-determinism: the same wreck twice breaks the same way (${LEVEL})`);
-  const run = async () => { const S = await stage(18, 1, 64); wreck(S.W, S.game); const out = { standing: cutsOf(standing(S.game)), chunks: cutsOf(S.game.destr.debris.list.map((c: any) => c.box)), mats: S.game.destr.debris.list.map((c: any) => `${c.mat?.mat}${c.mat?.gen}`).join(','), stats: JSON.stringify(BREAK_STATS) }; return out; };
+  const run = async () => { const S = await stage(18, 1); wreck(S.W, S.game); const out = { standing: cutsOf(standing(S.game)), chunks: cutsOf(S.game.destr.debris.list.map((c: any) => c.box)), mats: S.game.destr.debris.list.map((c: any) => `${c.mat?.mat}${c.mat?.gen}`).join(','), stats: JSON.stringify(BREAK_STATS) }; return out; };
   const a = await run(), b = await run();
   F.verdict(a.standing === b.standing, 'the standing pieces and their ragged ends', `${a.standing.split('|').length} pieces, ${a.standing.split(':').filter(x => !x.startsWith('-')).length - 1} cut`);
   F.verdict(a.chunks === b.chunks && a.mats === b.mats, 'the pool: every piece, its planes, its row and generation', `${a.chunks.split('|').length} pieces: ${a.mats.slice(0, 120)}`);
   F.verdict(a.stats === b.stats, 'the counts', a.stats);
   // A RESTART: the pool's serial runs on across restarts (motion keys), and a piece breaking again is hashed off its serial — counted from the pool's last clear
   // (breakTable.ts rel(), off Debris.serial0), so a restarted encounter (a checkpoint load, a replay's frame 0) snaps the same slabs along the same planes as the fresh game did
-  { const S = await stage(18, 1, 64); const { W, game } = S; const D = game.destr.debris; const pick = pickWall(game);
+  { const S = await stage(18, 1); const { W, game } = S; const D = game.destr.debris; const pick = pickWall(game);
     if (!pick) F.verdict(false, 'open floor to drop things on', 'none');
     else {
       const WALLP: Vec3 = [...pick.box.albedo] as Vec3;

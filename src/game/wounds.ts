@@ -16,7 +16,7 @@
 // What is NOT wounded by this rule: a civilian, the man in Sam's arm, anybody in a showcase (their rounds are choreography), Sam himself (his vest is hitPlayer's
 // own, older rule), and every way down that is not a round (the cross, the choke, a ring, an execution, a blast — a blast that should wound is the blast's owner's).
 //
-// THE SWITCH: WOUND.on — `?wounds` in the page, `--wounds` natively, TPS_WOUNDS=1 under the harness. OFF = fireWeapon asks one question that answers 'shot' and
+// THE SWITCH: WOUND.on, settled off. OFF = fireWeapon asks one question that answers 'shot' and
 // the game is what it was, digest for digest (roundDoes's first line).
 import type { Game, Guard } from './game';
 import { FOLD_WITH, type Character } from './character';
@@ -45,7 +45,6 @@ FOLD_WITH.on = () => WOUND.on;   // the stagger's FOLD (character.ts MOVES.fold:
 /** what the rule has answered since the last reset — the probes and the tallies read it: first rounds (dead / wounded, by zone), then second rounds into a wounded man.
  *  Beside the knob table, not in it: journal.ts files WOUND with a recording and a replay must not have its counters written back. */
 export const WOUND_STATS = { dead: 0, wounded: 0, byZone: { head: 0, centre: 0, side: 0, leg: 0 } as Record<WoundZone, number>, again: 0, finished: 0 };
-try { const q = new URLSearchParams(location.search); if (q.has('wounds')) WOUND.on = q.get('wounds') !== '0'; if (q.has('nowounds')) WOUND.on = false; } catch { /* no page (the harness, the native host: they set it themselves) */ }
 export function resetWoundStats() { const S = WOUND_STATS; S.dead = S.wounded = S.again = S.finished = 0; S.byZone.head = S.byZone.centre = S.byZone.side = S.byZone.leg = 0; }
 
 /** closest distance between segments p1→q1 and p2→q2 */
