@@ -8,6 +8,7 @@
 # 4. `fold tests-cut`: the tests that are there for what 3 named go (a test that also calls a live function stays);
 # 5. `sharp.sh` again: what those tests alone held up goes, by the compiler's reading; then 3 once more for what is still kept.
 # Last, `fold --write` once more: a settled row whose only writer was dead code is a constant now.
+# Then every crate under rust/ is checked with all its targets, and the run stops red if one does not.
 # The report: lines by module before and after, then the lists.
 # Exit: 0 done · 3 a step failed (the tree is left as that step left it). Each check of the game crate takes several GB and about
 # two minutes: nothing heavy beside it.
@@ -45,6 +46,15 @@ fi
 
 "$FOLD" --write --report "$S/fold-after.md" > "$S/fold-after.out" || { cat "$S/fold-after.out"; echo "never.sh: the fold after the passes failed"; exit 3; }
 count > "$S/after.txt"
+# THE CLOSING PROOF: every crate under rust/ still checks, with all its targets (its binaries and its tests; the face for wasm).
+# A function the game never runs but another crate calls is live: a root this missed shows here as an error, and the run stops red.
+for c in rust/*/; do
+  [ -f "$c/Cargo.toml" ] || continue
+  T=; [ "$(basename "$c")" = game_face ] && T="--target wasm32-unknown-unknown"
+  ( cd "$c" && cargo check --all-targets $T > "$S/close-$(basename "$c").log" 2>&1 ) || {
+    grep -n '^error' -A 6 "$S/close-$(basename "$c").log" | head -30 | cut -c1-240
+    echo "never.sh: $(basename "$c") does not check after the passes ($S/close-$(basename "$c").log): something it uses was deleted. THE TREE IS LEFT AS THE PASSES LEFT IT."; exit 3; }
+done
 B=$(sum "$S/before.txt"); M=$(sum "$S/mid.txt"); A=$(sum "$S/after.txt")
 N1=$(section "$S/unnamed.md" "### Nothing names it" | tr ',' '\n' | grep -c .)
 N2=$(section "$S/unnamed.md" "### Only a function deleted here named it" | tr ',' '\n' | grep -c .)
@@ -57,7 +67,7 @@ N4=0; [ -d "$S/sharp2" ] && N4=$(cat "$S"/sharp2/round-*.md | grep -c '^- .* lin
   echo
   echo "- deleted, nothing named it: $N1 functions"
   echo "- deleted, only a function deleted here named it: $N2 functions"
-  echo "- deleted, the compiler's reading (reached from nothing the game, its face, its runner or a unit test uses): $N3 items"
+  echo "- deleted, the compiler's reading (reached from nothing the game, another crate under rust/ or a unit test uses): $N3 items"
   [ -f "$S/tests.md" ] && echo "- deleted with the tests that were its only users: $N4 items, and $(head -1 "$S/tests.md")"
   echo "- settled rows whose only writer went with the dead code, now constants:$(sed -n 's/^  folded://p' "$S/fold-after.out")"
   echo "- KEPT although the game never runs it, because a unit test that stays uses it: $(head -1 "$KEPT" | sed 's/ (nothing written: --write)//')"
@@ -77,7 +87,7 @@ N4=0; [ -d "$S/sharp2" ] && N4=$(cat "$S"/sharp2/round-*.md | grep -c '^- .* lin
   echo "## Deleted: dead by the compiler's reading ($N3)"
   echo
   echo "Each has a name something still spells (another function of the same name, itself, a function that is dead in turn), so the"
-  echo "pass by name kept it; the compiler follows the calls and finds none from the game, its face, its runner or a unit test."
+  echo "pass by name kept it; the compiler follows the calls and finds none from the game, another crate under rust/ or a unit test."
   echo
   for f in "$S"/sharp/round-*.md; do section "$f" "## Deleted"; done
   if [ -f "$S/tests.md" ]; then
