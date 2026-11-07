@@ -46,7 +46,7 @@ const FLIP = (label) => { const r = [...document.querySelectorAll('#options .op-
 const RESET = () => { const b = document.querySelector('#options [data-act="reset"]'); if (!b) return 'no Reset'; b.click(); return ''; };
 // in the page: what is in, and n frames drawn one at a time (each waited for)
 const STATE = () => { const E = window.__engine, P = E.passes, Q = window.__pipeQueue, B = window.__boot;
-  return { frag: P.fragCompReady, frox: P.froxels.ready, volF: P.volFReady, sharp: !!P.sharpOn, queue: Q ? Q.waiting.length + Q.inflight : -1, pipes: B.pipelines, flags: new Uint32Array(E.frameData)[62] >>> 0, gpuInit: (B.gpuInitErrors || []).length, fatal: (document.querySelector('#fatal') || {}).textContent || '' }; };
+  return { frag: P.fragCompReady, frox: P.froxels.ready, sharp: !!P.sharpOn, queue: Q ? Q.waiting.length + Q.inflight : -1, pipes: B.pipelines, flags: new Uint32Array(E.frameData)[62] >>> 0, gpuInit: (B.gpuInitErrors || []).length, fatal: (document.querySelector('#fatal') || {}).textContent || '' }; };
 const DRAW = async (n) => { const dev = window.__engine.device; const yieldMacro = () => new Promise(res => { const ch = new MessageChannel(); ch.port1.onmessage = () => res(); ch.port2.postMessage(0); });
   for (let i = 0; i < n; i++) { window.__runFrames(1, 1 / 60); await dev.queue.onSubmittedWorkDone(); await yieldMacro(); } return true; };
 
@@ -62,17 +62,17 @@ const DRAW = async (n) => { const dev = window.__engine.device; const yieldMacro
   const laterWalk = async (page, errs, name, o) => {
     const at = await page.evaluate(STATE); log(`${name}: ready`, JSON.stringify(at));
     line(!at.fatal && at.pipes.failed === 0 && at.gpuInit === 0, `${name}: the page comes ready with no pipeline failed and no GPU error in its boot`, `${at.pipes.done} of ${at.pipes.total} pipelines, ${at.pipes.failed} failed, ${at.gpuInit} GPU errors${at.fatal ? ', fatal: ' + at.fatal : ''}`);
-    const outAtReady = at.frag === false && at.frox === false && at.volF === false;
+    const outAtReady = at.frag === false && at.frox === false;
     // (with the queue off nothing holds the later set back: this adapter compiles in the order it is asked and has had it in before the start resolved, every time so far —
     //  the start then shows only that it COUNTED and waited for fewer pipelines. With the queue on the set must still be out)
-    if (QUEUE_ON || outAtReady) line(outAtReady, `${name}: it is ready with the later set still out`, `fragment composite ${at.frag}, froxel kernels ${at.frox}, volumetric twin ${at.volF}, ${at.queue} in the queue`);
+    if (QUEUE_ON || outAtReady) line(outAtReady, `${name}: it is ready with the later set still out`, `fragment composite ${at.frag}, froxel kernels ${at.frox}, ${at.queue} in the queue`);
     else console.log(`  (${name}: the later set was already in when the start resolved — the queue is off, nothing held it back; the start card counted ${at.pipes.total} pipelines, the later set not among them)`);
     await page.evaluate(DRAW, 3); const mid = await page.evaluate(STATE);
     const stillOut = mid.frag === false || mid.frox === false;
     line(!stillOut || (mid.sharp === true && (mid.flags & FROXEL_VOL) === 0), `${name}: frames drawn meanwhile take the stand-ins (sharp direct for the fragment composite, the froxel flag down)`, stillOut ? `sharp ${mid.sharp}, flags 0x${mid.flags.toString(16)}` : 'the later set was in before a frame could be drawn: not shown by this run');
     const t0 = Date.now(); let st = mid;
-    while (Date.now() - t0 < 1500000 && !(st.frag && st.frox && st.volF && st.queue <= 0)) { await new Promise(r => setTimeout(r, 5000)); await page.evaluate(DRAW, 1); st = await page.evaluate(STATE); }
-    line(st.frag && st.frox && st.volF, `${name}: every later pipeline arrives`, `after ${((Date.now() - t0) / 1000).toFixed(0)} s on this adapter: fragment composite ${st.frag}, froxel kernels ${st.frox}, volumetric twin ${st.volF}, ${st.queue} left in the queue`);
+    while (Date.now() - t0 < 1500000 && !(st.frag && st.frox && st.queue <= 0)) { await new Promise(r => setTimeout(r, 5000)); await page.evaluate(DRAW, 1); st = await page.evaluate(STATE); }
+    line(st.frag && st.frox, `${name}: every later pipeline arrives`, `after ${((Date.now() - t0) / 1000).toFixed(0)} s on this adapter: fragment composite ${st.frag}, froxel kernels ${st.frox}, ${st.queue} left in the queue`);
     await page.evaluate(DRAW, 3); const end = await page.evaluate(STATE);
     line(o.froxel ? (end.flags & FROXEL_VOL) !== 0 : true, `${name}: frames drawn after it${o.froxel ? ' march the froxels (the flag is up)' : ''}`, `flags 0x${end.flags.toString(16)}, sharp ${end.sharp}`);
     line(end.pipes.failed === 0 && !end.fatal && errs.length === 0, `${name}: nothing failed and nothing is on the console`, errs.length ? errs.slice(0, 4).join(' | ') : `${end.pipes.done} boot pipelines`);
@@ -97,8 +97,8 @@ const DRAW = async (n) => { const dev = window.__engine.device; const yieldMacro
     await page.goto('about:blank'); errs.length = 0;
     await page.goto(url); await page.evaluate(async () => { await window.__ready; });
     await page.evaluate(DRAW, 2); const at = await page.evaluate(STATE), rows = await page.evaluate(() => window.__bench.deps.rows()); log('kept: ready', JSON.stringify(at), rows.join());
-    line(rows.join() === '' && !at.fatal && at.pipes.failed === 0 && at.gpuInit === 0 && at.frag && at.frox && at.volF && errs.length === 0,
-      'kept: the next load is built without the row (its start waited for every pipeline: the fragment composite, the froxel kernels and the volumetric twin are in), with nothing failed and nothing on the console',
+    line(rows.join() === '' && !at.fatal && at.pipes.failed === 0 && at.gpuInit === 0 && at.frag && at.frox && errs.length === 0,
+      'kept: the next load is built without the row (its start waited for every pipeline: the fragment composite and the froxel kernels are in), with nothing failed and nothing on the console',
       `rows ${rows.join() || 'none'} · ${at.pipes.done} of ${at.pipes.total} pipelines, ${at.pipes.failed} failed · ${errs.slice(0, 3).join(' | ')}`);
     await page.evaluate(() => { window.__menu.open('pause'); });
     const o2 = await page.evaluate(OPEN), shown = o2 ? null : await page.evaluate(ROWS, LS);
@@ -109,7 +109,7 @@ const DRAW = async (n) => { const dev = window.__engine.device; const yieldMacro
   }
   if (WALKS.includes('starts')) {   // where the row starts: on, in a person's browser with nothing kept and no word
     const BUILT = () => { const P = window.__engine.passes, B = window.__boot, labels = (window.__shaderCount?.pipes ?? []).map(p => p.label);
-      return { rows: window.__bench.deps.rows(), split: !!P.lFGX, splitPipes: !!P.pFGX, mega: !!(P.pFG || P.pFGs || P.pFGR || P.pFGRs), volF: P.volFReady, labels: labels.filter(l => /gather/i.test(l)), pipes: B.pipelines, kept: localStorage.getItem('twopointsix.shaderrows'), fatal: (document.querySelector('#fatal') || {}).textContent || '' }; };
+      return { rows: window.__bench.deps.rows(), split: !!P.lFGX, splitPipes: !!P.pFGX, mega: !!(P.pFG || P.pFGs || P.pFGR || P.pFGRs), labels: labels.filter(l => /gather/i.test(l)), pipes: B.pipelines, kept: localStorage.getItem('twopointsix.shaderrows'), fatal: (document.querySelector('#fatal') || {}).textContent || '' }; };
     for (const [name, words, want] of [['starts', '', true], ['plain', '&compactshaders=0&splitrays=0&firstframe=0', false]]) {
       const { ctx, page, errs } = await fresh(true);
       const url = `http://localhost:${PORT}/?paused&quality=medium&mute&gpuretry=0${words}${QUEUE}`; log(url);
@@ -134,9 +134,9 @@ const DRAW = async (n) => { const dev = window.__engine.device; const yieldMacro
       await page.goto(url); await started(page);
       const at = await page.evaluate(STATE), rows = await page.evaluate(() => window.__bench.deps.rows());
       await page.evaluate(async () => { await window.__ready; }); await page.evaluate(DRAW, 2); const later = await page.evaluate(() => window.__boot.marks.laterReady);   // (read once `__ready` has resolved: with the row on the mark is there by then)
-      line(rows.join() === '' && at.frag && at.frox && at.volF && later === undefined && !at.fatal && at.pipes.failed === 0 && errs.length === 0,
-        'driven: a browser a script drives is built without the first-frame row: when the start card is live every pipeline is in (the fragment composite, the froxel kernels, the volumetric twin), with nothing failed and nothing on the console',
-        `rows ${rows.join() || 'none'} · ${at.pipes.done} of ${at.pipes.total} pipelines · fragment composite ${at.frag}, froxel kernels ${at.frox}, volumetric twin ${at.volF} · ${errs.slice(0, 3).join(' | ')}`);
+      line(rows.join() === '' && at.frag && at.frox && later === undefined && !at.fatal && at.pipes.failed === 0 && errs.length === 0,
+        'driven: a browser a script drives is built without the first-frame row: when the start card is live every pipeline is in (the fragment composite, the froxel kernels), with nothing failed and nothing on the console',
+        `rows ${rows.join() || 'none'} · ${at.pipes.done} of ${at.pipes.total} pipelines · fragment composite ${at.frag}, froxel kernels ${at.frox} · ${errs.slice(0, 3).join(' | ')}`);
       await page.evaluate(() => { window.__menu.open('pause'); });
       const o = await page.evaluate(OPEN), shown = o ? null : await page.evaluate(ROWS, LS);
       line(!!shown && shown.rows['Start on first frame shaders'] === 'Disabled' && shown.kept === null, 'driven: Options > Graphics shows the row Disabled, nothing kept', shown ? JSON.stringify(shown) : o);
