@@ -298,7 +298,7 @@ says NOTHING COMPARED and exits 3. Exit: 0 equal to the end and ended the same w
 3. `hostHalf` → `face_host_half`. `face_step`. The check's hook (the die, the block's hashes). `face_lights`, `face_view`, `face_follow`.
 4. `face_puppet(0)` → the filtered apply; the block copied; `asks.after()` (a row or a posture the apply made gets the closures that ask the Rust game).
 5. A whole apply if one is owed. The out events dispatched (`out-dispatch.ts`) on the puppet's host objects, in the order the rules made them.
-6. The dress step: `Par.tick`, `Verdict.tick` (each in a `try`: they are the debrief's), the autosave (`saves.tick`), whose checkpoint is made on the
+6. The dress step: `Verdict.tick` (in a `try`: it is the debrief's; the par clock is the Rust tick's), the autosave (`saves.tick`), whose checkpoint is made on the
    Rust side.
 
 Before the first tick the start is exported whole once (the Rust game is made from it), the filtered export's memo is filled, and the every-tick path
@@ -489,7 +489,7 @@ The gate's forms of the tour and the soak (`--runs 3`; three seeds, twelve minut
   between them). The host hands its half over, steps the Rust game and asks it the camera's two inputs (`face_look`: where to follow, the aim point);
   nothing is exported or applied until the run ends, when the puppet takes what changed over the whole run in one filtered apply, the run's out events
   are dispatched in order and the dress step runs once. What differs from the same steps one by one: an autosave due inside the run is taken as it
-  ends, the par clock and the verdict tick once, an out event reaches the host's objects late. ASKED FOR BY NAME (`RH_QUIET=1`) AND NOT YET THE SAME
+  ends, the verdict ticks once, an out event reaches the host's objects late. ASKED FOR BY NAME (`RH_QUIET=1`) AND NOT YET THE SAME
   PLAY: the Rust tick writes the lens's own row at times (a start snaps it onto the man) and a quiet run does not bring it across, so the host hands
   its own lens back. `tools/blitz/quiet-check.ts` (the office walked by input in six runs, 2,340 ticks): the die and the block equal on every tick
   under `ts`, quiet and with an apply every step; the host's half of the quiet run differs from tick 2 (`FollowCamera.target`); 3.4 ms a tick quiet

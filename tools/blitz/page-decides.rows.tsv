@@ -6,7 +6,8 @@ src/game/verdict.ts:*	moving	the verdict	the verdict is being moved into the Rus
 src/main.ts:main › vBooks	moving	the verdict	the verdict's books kept on the page go with src/game/verdict.ts	1
 src/game/director.ts:*	moving	the Director	its host fields (the camera and Input rows) are being moved to the game's own; the show's pins and key locks wait for the host's half to be redrawn	4
 # ---- decides: the records the page keeps and the lines it says
-src/game/par.ts:*	decides	par clock	the dress step runs Par.tick on the copy: it keeps the run's time and result in a record only TypeScript has and says the par line into the log
+src/game/par.ts:Par.best*	picture	the picture's feel	this machine's words about its best time, handed in by the page for the result as it shows it (the browser's store is a machine's own)	1
+src/game/par.ts:*	decides	HUD mission lines	the room clear's row with the clock on it is still worded by TypeScript from the game's record (the Rust game words the same row in par_objective, and is what a check reads)
 src/main.ts:main › {postUpdate}	decides	end card	the page takes the game's word for the end card by clearing Mission.debrief on its copy: the game should send the card as an event
 src/game/seats.ts:allDown	decides	end card	the page works out "every seat is down" on the copy (the find-me outline, the down card) where the game already knows it
 src/game/deathrecap.ts:*	decides	debrief	the dress step runs recapTick on the copy: who fell, who saw it and when the recap is due are kept in a record only TypeScript has
