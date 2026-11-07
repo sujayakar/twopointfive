@@ -65,7 +65,7 @@ export async function holdDropCheck(): Promise<boolean> {
         'choked out, nothing more falls from him (the one gun lies where it fell, dark); torn loose on his feet — a cancel, or Sam shot down — he has it in his hands again and the floor is clear, a longer stagger paid; a torch lost at an earlier grab stays lost',
         `choke: ${A.callsign} ${A.state}, guns on the floor ${G.length}, new items ${more.join(', ') || 'none'} · loose: guns on the floor ${n1} → ${guns(F.g).length}, in his hand ${back}, stagger ${react.toFixed(2)} s (the hold's own 0.30 + ${HOLD.regrab}) · Sam shot down with a pistol man in the arm: in his hand ${backShot}, guns on the floor ${floorShot} · the dead man's light ${darkDead ? 'out' : 'ON'} · torch at one grab, pistol at the next (guns down after / in his calm hand / torches on the floor): ${twice}`); }
     // ---- a checkpoint in the middle of the hold (a forced save: the hold itself is not filed, so he loads on his own feet — with his gun, not empty-handed and firing)
-    { const { W, g, A } = await take('rifle'); let ok = false, detail = 'no hold to save';
+    { const { W, g } = await take('rifle'); let ok = false, detail = 'no hold to save';
       if (g.player.holding) quiet(() => {
         const file = JSON.parse(JSON.stringify(W.snapshot('hold', true))), lost = file.guards?.find?.((x: any) => x.gunLostAt >= 0) !== undefined;
         W.restore(file); for (let i = 0; i < 3; i++) W.step(DT);
