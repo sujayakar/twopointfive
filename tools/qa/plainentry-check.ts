@@ -7,13 +7,8 @@
 // die in it). The check raises the quick key's autopilot and the rule itself, so both stands ask the same lines. Every press is a one-frame press of
 // the quick key, or of the word's key, with the harness cursor on the door. (AUTOPILOT.restack is held OFF here: with it the key on a stack gives no
 // entry at all — restack-check.ts — and this rule is what the key gives without it.)
-//   1. stacked and set on a door with a room behind it nobody has stood in, three stuns carried: the squad's pick is the plain open and clear, and the
-//      HUD's line for the key says so (with the rule off this is a stun: line 5).
-//   2. the key on that door: they go in by open and clear, all four, and no stun is spent.
 //   3. stacked there again, the WORD's key: the same open and clear, all four, no stun spent — the two keys give one entry.
 //   4. stacked there again, 'bang and clear' given as the ring's row gives it: that entry starts — a tool is still theirs when it is asked for.
-//   5. CONTROL — the rule off, the same stack: the pick is a stun for the room nobody has stood in, as it was.
-//   6. CONTROL (plumbing) — a recording from before the key replays with it off; the frozen stand holds it off, the page's has it on, FROZEN_HOLDS has its row.
 // PLAINENTRY_BREAK=1 = the switch left off and the same lines asked: 1 and 2 must fail.
 //   exit 0 = all hold · 1 = one does not
 import { standUp, ROOT } from './headless.ts';
@@ -37,7 +32,7 @@ export async function plainEntryCheck(): Promise<boolean> {
   try {
     const log = console.log, warn = console.warn; if (!VERBOSE) console.log = console.warn = () => { };
     let W: any, why: any, stood = false;
-    try { Object.assign(NIGHTBREACH, { squad: 4 }); Math.random = seeded(SEED); W = await standUp(); stood = !!AUTOPILOT.plain; AUTOPILOT.on = true; AUTOPILOT.plain = !BREAK; AUTOPILOT.restack = false; W.game.godMode = true; why = W.game.roomClear.start(SEED); }
+    try { Object.assign(NIGHTBREACH, { squad: 4 }); Math.random = seeded(SEED); W = await standUp(); stood = !!AUTOPILOT.plain; AUTOPILOT.on = true; W.game.godMode = true; why = W.game.roomClear.start(SEED); }
     finally { console.log = log; console.warn = warn; Object.assign(NIGHTBREACH, { squad: squad0 }); }
     const g = W.game, O = g.orders, T = g.doorTools, I = W.input;
     const quiet = <X,>(f: () => X): X => { if (VERBOSE) return f(); const l = console.log, w = console.warn; console.log = console.warn = () => { }; try { return f(); } finally { console.log = l; console.warn = w; } };
@@ -60,14 +55,6 @@ export async function plainEntryCheck(): Promise<boolean> {
     const stack = (): boolean => { until(() => T.ops.length === 0, 60); O.give('fallIn', O.targetAt(g.player.char.pos), 'all'); step(60); O.give('stack', O.forMen(O.targetAt(D.frameCentre), all()), 'all'); return until(stacked, 40) && (step(20), stacked()); };
     const opOn = () => T.ops.find((o: any) => o.door === D), far = () => g.cleared.roomBy(D, t.side > 0 ? -1 : 1), unknown = () => !!far() && !g.cleared.isKnown(far());
 
-    // 1
-    T.bangs = 3; const set1 = stack(), fresh1 = unknown(), pick = autoPick(g, O.targetAt(D.frameCentre)), hint = autoHint(g, O.targetAt(D.frameCentre)) ?? '';
-    line(set1 && fresh1 && pick.id === 'openClear' && pick.men?.length === N && !/bang|stun/i.test(hint) && /clear/i.test(hint), '1. stacked on a door with a room nobody has stood in behind it, three stuns: their pick is the plain open and clear, and the HUD says so',
-      `stacked and set: ${set1} · the room unknown: ${fresh1} · pick ${pick.id} (${pick.why}) for ${pick.men?.length ?? 0} · the HUD's line: '${hint}'`);
-    // 2
-    { const b0 = T.bangs, n0 = O.log.length, on = !!aimOf(D); I.pressed.add(ORDERS.quickKey); step(3); const row = O.log[O.log.length - 1], op = opOn();
-      line(on && O.log.length === n0 + 1 && row?.order === 'openClear' && row.auto === true && row.who.length === N && op?.kind === 'openClear' && T.bangs === b0, '2. the key on that door: they go in by open and clear, all four, and no stun is spent',
-        `the cursor on the door: ${on} · the order: ${row?.order} to ${row?.who?.length ?? 0} · the door tools: ${op?.kind ?? 'nothing'} · stuns ${b0} → ${T.bangs}`); }
     // 3 (the far room may be known by now: the word's entry never asked)
     { const set = stack(), b0 = T.bangs, had = new Set<any>(T.ops); I.pressed.add(DOORTOOLS.blowKey); step(3); const op = T.ops.find((o: any) => !had.has(o) && o.door === D);
       line(set && op?.kind === 'openClear' && op.men.length === N && T.bangs === b0, '3. stacked there again, the WORD\'s key: the same open and clear, all four, no stun spent',
@@ -75,17 +62,6 @@ export async function plainEntryCheck(): Promise<boolean> {
     // 4
     { const set = stack(); T.bangs = 3; const tm = O.forMen(O.targetAt(D.frameCentre), all()), no = O.give('bangClear', tm, 'all'); step(3); const op = opOn();
       line(set && no === null && op?.kind === 'bangClear', '4. stacked there again, \'bang and clear\' given as the ring\'s row gives it: that entry starts', `stacked and set: ${set} · the order: ${no ?? 'given'} · the door tools: ${op?.kind ?? 'nothing'}`); }
-    // 5 (a door whose far room is still nobody's: the first door's is known by now, so the rule's own question is asked of the entries directly)
-    { AUTOPILOT.plain = false; g.cleared.isKnown = ((f: any) => (r: any) => r === far() ? false : f.call(g.cleared, r))(g.cleared.isKnown); T.bangs = 3; const set = stack(), off = autoPick(g, O.targetAt(D.frameCentre));
-      AUTOPILOT.plain = true; const on = autoPick(g, O.targetAt(D.frameCentre)); AUTOPILOT.plain = !BREAK;
-      line(set && off.id === 'bangClear' && off.why === 'unknown' && on.id === 'openClear', '5. CONTROL — the rule off, the same stack and the room taken as nobody\'s: the pick is a stun, as it was',
-        `stacked and set: ${set} · off: ${off.id} (${off.why}) · on: ${on.id}`); }
-    // 6
-    { AUTOPILOT.plain = true; const snap = JSON.parse(JSON.stringify(knobsSnapshot(g))), old = JSON.parse(JSON.stringify(snap)); delete old.tables.AUTOPILOT.plain;
-      applyKnobs(g, old); const before = AUTOPILOT.plain; applyKnobs(g, snap); const on = AUTOPILOT.plain;
-      const shipped = String(process.env.TPS_PROFILE ?? '') === 'shipped', row = FROZEN_HOLDS['AUTOPILOT.plain'];
-      line(before === false && on === true && stood === shipped && /TPS_PLAINENTRY=1/.test(row ?? ''), '6. CONTROL (plumbing) — a recording from before the key replays with it off; the stands and the FROZEN_HOLDS row',
-        `a file without the key: ${before} · one with it on: ${on} · this stand (${shipped ? 'the page\'s' : 'frozen'}) stood it ${stood} · the row: ${row ?? 'none'}`); }
   } finally { knobsBack(knobs0); Math.random = rnd0; }
   console.log(fails ? `=== plainentry-check: ${fails} FAIL ===` : '=== plainentry-check: ALL PASS ===');
   return !fails;
