@@ -23,6 +23,7 @@ edit('game/types.rs', 'pub struct Guard {\n', 'pub struct Guard {\n    pub grown
 edit('game/types.rs', '    pub fn blank() -> Self {\n        Guard {\n', '    pub fn blank() -> Self {\n        Guard {\n            grown: 0.0,\n')
 # an arm of a plain enum, in the middle, and of an enum with data
 edit('wallreact/types.rs', 'pub enum BreachCause {\n    Blast,\n', 'pub enum BreachCause {\n    Grown,\n    Blast,\n')
+edit('wallreact/types.rs', '            BreachCause::Blast =>', '            BreachCause::Grown => "grown",\n            BreachCause::Blast =>')
 edit('laststand/types.rs', 'pub enum LaterThen {\n', 'pub enum LaterThen {\n    Grown,\n')
 edit('laststand/p_01.rs', '        LaterThen::MovedFree { d } =>', '        LaterThen::Grown => {}\n        LaterThen::MovedFree { d } =>')
 # a module with state, and a function it runs every tick
