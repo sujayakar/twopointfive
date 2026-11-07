@@ -271,10 +271,8 @@ export interface RenderSettings {
   markingReflect: boolean;     // markings are evaluated at REFLECTION hits (reflect.wgsl shadeReflHit: the vending window in the lino) — off = the hit's plain secondary albedo / no emission
   markingReflPattern: boolean; // the analytic highlight of a marking's light is textured with the marking's pattern at the mirror point (reflect.wgsl rtGlints → markings.wgsl markPatternAtMirror); off = the uniform rectangle (A/B only: the sign of frame.markCfg.w)
   markingReflCone: number;     // × the lobe's α added to the ray-cone growth that band-limits a marking at a TRACED reflection hit (0 = the pixel's own cone only — the ray distribution + the specular denoiser realise the lobe; 2 = the whole lobe again = the double blur that erased the vending cans in the lino; default 0.25 trades a little bias for 1-ray noise)
-  rtMeshHits: boolean;         // ALWAYS FALSE: ultra's mesh hits in reflections went 2026-11-07. The field stays because game/game.ts reads it; it goes with that read
   // ---- SDF CHARACTER RIG (render/sdfrig.ts fits it, shaders/sdfrig.wgsl traces it, docs/internal/sdf-characters.md): every mannequin's 15 shadow / reflection proxies ARE round cones with radii
   // least-squares fitted to the mesh — unconditionally, at every tier, once a fit is attached (Engine.setRigFit; BoxWorld.upload packs it into the frame's proxy list). ----
-  sdfRigSmooth: boolean;       // ALWAYS FALSE: the smooth-union closest hit in reflections went 2026-11-07 with the reflection twin that traced it. Kept for game/game.ts's read, like rtMeshHits
   charSelfShadow: boolean;     // CHARACTER SELF-SHADOW (frame.rigCfg bit 64, default ON at every tier; ?noselfshadow / Tab ▸ Renderer — SDF character rig): the direct estimators' shadow rays from a man's own pixels
                                // test HIS OWN body too (common.wgsl selfShadowT: his round cones, or his mesh under meshShadows, from an origin lifted off the surface — the plain owner skip made every
                                // up-facing sliver of him glow under a light his trunk stands in front of: docs/internal/render-defects-0812.md §1); false = the owner skip whole, the frame as it was
@@ -330,7 +328,6 @@ export const defaultSettings = (): RenderSettings => ({
   glassRefract: true, glassIor: 1.5,   // refraction through the glass boxes: ON (?norefract boots without it; Tab ▸ Renderer — glass; __glass.refract / .ior)
   rtReflect: false, rtReflectDiv: 2, rtRays: 1, rtMaxRough: 0.45, rtAniso: 0.7, wetBreakup: 1, beamReflect: true, beamAir: true, wetMirror: true, beamAirK: 1, rtStrength: 1, rtGlints: 1, rtAtrous: 3, rtHistory: 32,   // RT reflections: OFF here — the presets switch it on with their own divisor / rays / cutoff (quality.ts); Tab ▸ Materials
   detail: 0.35,                // the detail layer: 'lived-in' (Tab ▸ Materials; ?detail=0 boots without it — with ?nortreflect the untouched frame)
-  rtMeshHits: false,
   markings: true, markingTexel: 0.025, markingContrast: 1, markingEmissive: 1, markingReflect: true, markingReflPattern: true, markingReflCone: 0.25,   // markings ON (?nomarkings boots without them; Tab ▸ Renderer — markings)
-  sdfRigSmooth: false, charSelfShadow: true,   // the SDF character rig's two extras: OFF (self-shadow: ON, all tiers) (a row on Tab ▸ Renderer — SDF character rig; no preset touches them) — the round cones themselves have no switch
+  charSelfShadow: true,   // the character self-shadow: ON, all tiers (a row on Tab ▸ Renderer — SDF character rig; no preset touches it) — the round cones themselves have no switch
 });

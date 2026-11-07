@@ -3,7 +3,7 @@
 
     python3 tools/blitz/sweeps/post-flags.py [--check]
 
-Rewrites every `g.gd[<man>].hold = <value>;` and `g.gd[<man>].pinned = <value>;` in the body files of rust/game/src
+Rewrites every `g.gd[<man>].hold = <value>;` and `g.gd[<man>].pinned = <value>;` in the body files of rust/game_rules/src
 (`p_NN.rs`, `b_NN.rs`; not a file's tests) into `crate::control::set_hold(g, <man>, <value>, "<module>");` (`set_pinned`), where
 <module> is the folder the file is in. The call writes the same flag at the same place and notes who wrote it
 (control::PostNote), so play is unchanged. A value or a man that reads `g` is taken into a local first, because
@@ -15,7 +15,7 @@ anything is still written the old way.
 """
 import glob, os, re, sys
 
-ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', 'rust', 'game', 'src')
+ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', 'rust', 'game_rules', 'src')
 MAN = r'((?:[^\[\]]|\[[^\[\]]*\])+)'
 DIRECT = re.compile(r'g\.gd\[' + MAN + r'\]\.(hold|pinned) = ([^;]+);')
 # a flag of a Guard written through another name: the names these files use for a `&mut Guard`

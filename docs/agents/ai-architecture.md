@@ -58,7 +58,7 @@ a task; a ranked list of taskers with incumbency decides who may take him from w
 every rule that wants his body this tick proposes, and one arbiter grants his legs, his aim and his hands, by
 one ordered list. The two lists together replace the six answers of section 1.3.
 
-**Adding a behaviour is one module and one line** (section 7).
+**Adding a reaction or an order is one file and one line** (section 7); a behaviour of a man's own is not yet.
 
 **Groups are the same thing on both sides** (section 6): a squad is members, a lead, a commander (a seat or an
 AI) and an order book.
@@ -259,9 +259,87 @@ they share with the player's team from the start is `Assignment`, the limits and
   (local prediction). The arbiter is not the only door to a body: ACT takes `&World` and one `&mut Body`.
 - A rule of the world that says "the player is close, seen, down" means any player's man or each, never the first.
 
-## 7. Adding a behaviour: one module, one line
+## 7. Add a reaction, an order, a behaviour
 
-This is built (`rust/game/src/control/`), for the two seams the code has today. A rule is one file and one line.
+**A reaction**: something happens to an enemy and it takes him for a while (a grenade lands by him, a blast shakes
+him, rounds pass close). One file and one line.
+
+1. `rust/game/src/control/<name>.rs`, five things and nothing else (`control/duck.rs`, 41 lines, is one to copy):
+   `pub struct Row` what it keeps of one man (`pub type Row = ();` if nothing) · `transition(g, man, dt)` move
+   its own state · `propose(&Game, man) -> Option<Intent>` what it asks of him this tick, reading only ·
+   `commit(g, man, Outcome)` what his body made of it · `lost(g, man)` a higher rule took him.
+2. One line in `rules!` of `control/mod.rs`: `<name>: "the words that name it", Body;` or `Cover;`. Its place
+   in the list is its rank. `Body` rules are asked before he senses and hand him a script. `Cover` rules are
+   asked of a man whose state is Alert and who has no script of his own, and hand him `TakeCover` (down where
+   he is, or off to a spot). ALERT IS NOT "HAS A MAN TO FIGHT": a bang alone makes a man Alert, so a rule
+   that means "in a fight" asks for itself (`g.time - g.gd[man].last_seen_t`). RANK IT AS LOW AS IT CAN BE AND
+   STILL BE RIGHT: the rule that has a man is the only one that thinks about him that tick, so every rule
+   below it finds its own row stale when it gets him back.
+3. A test that is a fight: a file in `rust/game_start/tests/` that stands a few rooms and men, makes the thing
+   happen, and asserts the rule had him (`game::control::control_line`). `cargo test --release` there; no page.
+   Write a control beside it (the same scene where the thing does not happen, or happens to a calm man), and
+   break the rule once (`propose` returns `None`) to see the test go red.
+
+Worked example, held back until the dice are keyed: `control/reload_in_cover.rs` (a defender who runs dry kneels or
+goes to cover to change magazine), the line `reload_in_cover: "changing magazine in cover", Cover;`, and the test
+`a_guard_who_runs_dry_in_the_open_kneels_to_change_magazine` in `tests/control.rs`.
+
+**An order**: a row of the squad's menu. One file and one line.
+
+1. `rust/game/src/orders/rows/<name>.rs` with `pub const ORDER: Row = Row { id, label, can, only, valid, issue,
+   tick, frame }`: its id on the menu and the functions the menu and the tick call (`orders/rows/mod.rs` says
+   what each is for). Two of them are the order. `issue` gives each man his task with
+   `squad_orders_assign(g, man, &SquadOrdersAssignA { order, post, face, stance, upper, crouch, going, there, .. })`:
+   where he stands, which way he faces, how he carries his gun, and the two lines he says. `frame` runs once a
+   frame and is where the order puts its row on the menu once (`g.tab.orders_order_def.push(rows::def(&ORDER,
+   data))` then `squad_orders_register`), or takes it off.
+2. One line in `rows!` of `orders/rows/mod.rs`: `<name>;`.
+3. A test that is a fight, the same way, giving the order by the menu's own call (`Play::order`). IT MUST
+   INCLUDE CONTACT: the men under the order meet an enemy and the test says who fell and when. A test of
+   posture alone was green on an order that got two of four men killed (the pose trap, below).
+
+Worked examples: a whole small order is printed below ("take a knee", 42 lines, in this page only). In the
+build: `orders/rows/shell40.rs` ("put a 40 mm shell there") with the two tests of `tests/orders.rs`; it shows
+the `Row` and the list but hands its three functions on to an older module, so it is not the one to copy.
+
+**Before either lands** (none of this is in the file or the line):
+- `bun run tools/sim/build.ts` after any change under `rust/`.
+- An order's id also goes into `dealtRows` of `tools/blitz/schema.json`, or the page's export of a game that
+  holds the row stops with "no closures by id for the row" (`tools/blitz/export.ts`). Reading a game back is
+  already by the list (`rows::by_id`).
+- A dozen modules know orders BY ID and a new order is in none of their lists: `silent` (loud rows),
+  `holdfire` (lift and blow orders), `sneak` and `unseen` (posted), `orders::lane_orders`, `squadthrow`
+  (resumed), `rails` (a lesson's list of rows hides a row it does not name), `cmdring` (the ring's seats),
+  `cover` and `roomfight` (`order == "hold"`, `"cover"`, `"fallIn"`). Read each name once and decide; say in
+  the commit which the order joined.
+- The menu's digit: `squad_orders_register` deals a row with no key the first free digit (from 5, or from 1
+  for a row on a page), and none when all five are taken: the wheel still reaches it.
+- A switch or not: section 14 lands changes of play with tallies and no switch, the repo's standing rule says
+  a new rule is a switch. Until that is ruled, say in the commit which was done.
+- The build: a change to a rule or an order is a build of the game crate, about ten minutes on a small
+  machine; a change to a test is fifteen seconds. Ask your questions of the game from the test first.
+- Searching for a field of a man: leave out `io.rs` and `puppet.rs`, whose lines are several thousand
+  characters each.
+
+**That nothing else moved**: before the change, `cd rust/game_start && cargo run --release --bin hold -- keep
+/tmp/held`; after it, `… -- check /tmp/held`. 72 native runs, every part of the game hashed every frame; it names
+the first frame and the parts that differ. A new reaction or order is meant to change play where it acts, so read
+it this way: every run in which it never acted must still be the same (each run's line says how long each rule
+had a man), and what it does where it acts is for the mission tallies to judge.
+
+**What is NOT one file and one line today**, plainly. *A behaviour of a man's own* (how he patrols, searches,
+fights when nothing has taken him) is still a function of the guard's update in `guards/p_07.rs`, and the room
+fight's defenders and operatives are still their own module: neither is in a list. A reaction can take a man
+whole, not his legs alone while he goes on shooting. A reaction's file is longer than its idea, because it must
+ask for itself whether a man is on a post, kept to his rooms or somebody's (a third of the worked example).
+A reaction that draws from the die re-deals the rest of the mission until the keyed draws land. An order that
+shows a line in the squad's HUD block still needs an arm of `OrderNoteFn`, which the page reads over the wire,
+and an order that keeps state of its own still needs a field on the game. About thirty older orders are still
+arms of six enums. The rest of this section is the detail of each of these.
+
+### The pieces in detail
+
+The list of reactions as it stands (`rust/game/src/control/`), with the held worked example's line last:
 
 ```rust
 // control/mod.rs: THE LIST. The order of the lines is the rank.
@@ -271,7 +349,7 @@ rules! {
     morale: "shaken by a blast", Body;
     startle: "startled", Body;
     duck: "head down under fire", Cover;
-    reload_in_cover: "changing magazine in cover", Cover;
+    reload_in_cover: "changing magazine in cover", Cover;   // held: lands after the keyed draws
 }
 
 // control/reload_in_cover.rs: the whole rule
@@ -283,11 +361,26 @@ pub fn lost(g: &mut Game, gd: GuardId) { ... }                        // somethi
 ```
 
 A line names the rule's file, the words that name it, and the stage of a man's frame at which it is asked.
-`Body`: before he senses, and its intent is a script his whole body follows. `Cover`: in the fight, and its
-intent is `TakeCover`: down where he is or off to a spot crouched, gun lowered toward the danger, no round
-fired, hands free to change magazine. The line makes the rule's module, its id, the table of its rows
-(`g.ctl.rows.reload_in_cover`) and its place in the list. Nothing else names the rule: the commit that added
-the pilot is its file and two lines.
+`Body`: before he senses, and its intent is a script his whole body follows. `Cover`: asked at the top of
+`alert` (`guards/p_07.rs`), that is of a man whose state is Alert and whom no script has, before his reaction
+time and before his fight; its intent is `TakeCover`: down where he is or off to a spot crouched, gun lowered
+toward the danger, no round fired, hands free to change magazine. The line makes the rule's module, its id,
+the table of its rows (`g.ctl.rows.reload_in_cover`) and its place in the list. Nothing else names the rule:
+the commit that added the pilot is its file and one line.
+
+Four things the list does not yet do for a rule, each found by a reader who added one from this page alone:
+- **An intent of the wrong kind is dropped without a word.** A `Cover` rule that returns `Intent::Script`
+  (or the other way) is ignored: no panic, no record, not even "said no".
+- **`TakeCover` cannot say "hands idle".** Any `Cover` rule lets the reload run on, so a blinded man held
+  down by a rule finishes changing magazine.
+- **One unit test pins the first `Cover` rule by name** (`control/mod.rs`,
+  `the_games_list_is_the_order_update_guard_asked_them_in`): a rule ranked above `duck` must change it.
+- **The list holds 32 rules** (the "said no" record is 32 bits).
+
+What a rule reads of a man today, with no door: `dazzled_until` (is he blind: written by a flash, and also
+by a wall charge, a thrown door and the door tools, so it does not say WHAT blinded him), `last_seen_t` (when
+he last had his man in his eyes), `team` and `civ` (is he an enemy), `standoff` (has he a hostage in his arms),
+`pinned` and `hold_room` (through `control::set_pinned` / `set_hold` only), `reload_t`, `sup.cover`.
 
 Each man's `Control` says who has him, since when, and which rules were asked and said no. `control_line`
 prints it (`Alvarez: changing magazine in cover for 1.2 s · said no: a live grenade, ...`), and the native
@@ -301,7 +394,9 @@ game cannot yet answer in one place: is he on a post, is he kept to his rooms, i
 what `Assignment` and its limits are for. A rule is one file today; it is a SHORT file once step E is in.
 
 **What a rule calls, today.** Four doors are built, each a hand-written file a
-person can read in a few minutes, and a rule uses them instead of writing a man's fields:
+person can read in a few minutes, and a rule uses them instead of writing a man's fields. (The fight's three
+parts, `fight_sight`, `fight_legs` and `fight_trigger` in `guards/p_07.rs`, are NOT a door: they are private
+to the guard's update and take `&mut Game`, so a rule cannot call them.)
 
 | to do this | call | file |
 |---|---|---|
@@ -309,7 +404,6 @@ person can read in a few minutes, and a rule uses them instead of writing a man'
 | tell him where his man is | `mind::fix(g, man, Some(at), "my_rule")` (a new fix), `fix_keep` (put back, not news) | `rust/game/src/mind.rs` |
 | hold him to his post or pin him | `control::set_hold(g, man, on, "my_rule")`, `set_pinned` | `control/mod.rs` |
 | draw from the die for him | `dice::draw_for(g, "my_rule::what", Who::Man(man))` | `rust/game/src/dice.rs` |
-| point his gun, walk him, fire, as the fight does | `fight_sight`, `fight_legs`, `fight_trigger` | `guards/p_07.rs` |
 
 Every old write of awareness and state (189), of his fix (54 calls now, and eight private one-line helpers
 gone) and of the two post flags (81) was moved to these by a program, so there is no second way in the body
@@ -329,6 +423,54 @@ rows! {
 pub const ORDER: Row = Row { id: "shellThere", label, can: None, only: Some(only), valid: Some(valid), issue,
                              tick: Some(squad40::turn_tick), frame: Some(squad40::squad40_tick) };
 ```
+
+A whole order, as a reader who had only this page wrote it (it is printed here and is not in the game):
+
+```rust
+// orders/rows/knee.rs  TAKE A KNEE: the men it is given to stop where they are and crouch, until their next order
+const ID: &str = "takeKnee";
+pub const ORDER: Row = Row { id: ID, label, can: None, only: None, valid: None, issue, tick: None, frame: Some(frame) };
+
+fn label(_: &mut Game, _: &OrderTarget) -> String { String::from("take a knee") }
+
+fn issue(g: &mut Game, men: &[GuardId], _: &OrderTarget, _: Option<&GiveOpts>) -> Option<String> {
+    for &gd in men {
+        let c = g.gd[gd].ch;
+        let (p, face) = (g.ch[c].pos, g.ch[c].body_yaw);
+        crate::orders::squad_orders_assign(g, gd, &SquadOrdersAssignA {
+            order: String::from(ID), post: Some([p[0], 0.0, p[2]]), face: Some(face),
+            stance: Some(Stance::None), upper: Some(UpperMode::Aim),   // gun up: see the pose trap
+            crouch: Some(true),
+            going: String::from("taking a knee"), there: String::from("on a knee"),
+            ..Default::default()
+        });
+    }
+    None                                                               // or Some(why it was refused)
+}
+
+/// its row goes on the menu once there is a squad to give it to
+fn frame(g: &mut Game) {
+    let listed = g.orders.defs.iter().any(|&d| g.tab.orders_order_def[d].id == ID);
+    if listed || !crate::orders::squad_orders_active(g) { return; }
+    let data = OrderDef { targets: vec![TargetKind::Floor, TargetKind::Door, TargetKind::None],
+                          ack: Some(Vec::from([String::from("taking a knee.")])), ..Default::default() };
+    let id = g.tab.orders_order_def.push(def(&ORDER, data));
+    crate::orders::squad_orders_register(g, id, None);
+}
+```
+
+Three things about an order that its file does not show:
+- **The pose trap.** An order that crouches its men with the gun carried low (`Stance::LowReady`,
+  `UpperMode::None`, the pattern the older orders show) gave men who knelt and did not fire for about three
+  seconds at a defender they could see: on three seeds two of four fell, where the same men with no order, on
+  `hold`, standing in the same pose, or crouched with `UpperMode::Aim` lost nobody. The order's id made no
+  difference; it is the crouch with the lowered gun. Found on a trial, cause not traced. Until it is, a crouched
+  order carries the gun up.
+- **`tick` does not run in a hot fight.** `squad_orders_tick` (`orders/p_05.rs`) skips a man who is Alert with
+  no script until his fight has gone cold, so "once a frame for each man under the order" is true only out of
+  contact; and the fight drops the order's crouch while it has him.
+- **The id is typed twice.** `Row.id` and the `order` of `SquadOrdersAssignA` are the same word written by
+  hand, and nothing ties them.
 
 `frame` runs once a frame after the menu's input and is where an order puts its row on the menu or takes it off
 (`rows::def(&ORDER, data)` makes the row from what only it knows: its page, its targets, its key). The older
@@ -362,12 +504,20 @@ TypeScript). The pilot's test: a guard who runs dry in the open kneels to change
   hands, every part of the game hashed every frame), but the hands reach three things: a pushed fight, cans
   among the enemy, a floor at rest. No hand gives a door order or walks Sam.
 
-An order, the same way: one module exposes `can`, `valid`, `issue`, `tick` and a data row, and one line
-registers it. The eight enums of `orders/types.rs` stay for the orders not yet moved; the pilot (the 40 mm
-shell, `squad40`, called from 3 modules) shows the other path. It waits for the types to be hand-owned.
-
 **The bar:** someone who did not do this work adds one enemy reaction and one order by touching one module and
 one line each, with a native test.
+
+**The bar, tried.** A reader with this page and no other help added a reaction (an enemy blinded in a fight
+gets down where he stands until he can see) and an order (take a knee). Both compiled the first time and both
+tests passed on three seeds, with a control each and a broken build that went red: 36 and 42 lines of game
+code, one line each in the two lists, 71 and 88 lines of test. The claim held for what compiles and runs
+natively and failed at its edges, and each edge is now said above: one pinned unit test, the wire's list of
+order ids, the pose trap, what Alert means, what a rank costs the rules below. The code was about a tenth of
+the work; learning those was the rest. What would make each a quarter of an hour is a list for the code, not
+for this page: `Intent` typed by stage, `TakeCover::down()` with a word for the hands, defaults for the empty
+functions, a small file of questions a rule may ask of a man (enemy, in contact, blind, stopped), a `Row` that
+lists itself on the menu, an assign that takes its id from the `Row`, and readers in the test's `Play`
+(`rule(man)`, `flash_lands`, `on_menu`, `red()`, `blue()`).
 
 ## 8. The tick as a schedule
 
@@ -539,3 +689,123 @@ tick. It is honest (he notices he has lost the man) but it must not become a bac
 - Changes of play land with tallies, not behind switches.
 - No planner, no behaviour tree, no archetype ECS.
 - The squad's code is one code for both sides, reached in steps; tonight only the shared records and arbiter.
+
+## 15. Plan: the fog of war keeps two records (not built)
+
+The fog's record (`fogofwar::FogOfWar`, one part of the game's state) holds two different things. WHAT THE
+TEAM KNOWS is the game's: who has been seen and where, which doors, lamps and loose things are remembered and
+how, who is left out. Rules read it, so every machine of one game must hold it the same. THE PICTURE'S BLOCK
+is one machine's: the renderer's rows, the lamps picked for the lit fog, the switches of a viewer's lifted
+draw. Two machines showing different seats need not agree on it, and a host that draws nothing need not fill it.
+
+Today they are one record and one word of the state, and two places cross the line:
+
+- `fog_of_war_lamp_take` measures each lamp from `seats::host_man`, the seat this machine shows; when a level
+  has more lamps than `FOG_LIGHTS` the list is sorted by that distance and cut, so `lamp_pick`, `frame.lights`,
+  `frame.lights_u`, `frame.light_count` and `lit_stats.lights` differ by machine, inside the state.
+- `fog_of_war_hidden` and `fog_of_war_air_hides` ask `!bared` first, the switch of a viewer's lifted draw:
+  a rule's answer goes through the picture. (`bared` is only ever true between two steps, so no tick has
+  read it true; the mend changes nothing played.)
+
+### Which field goes where
+
+`g.fog_of_war` keeps the name and becomes the team's record. The picture's block is a new part,
+`g.fog_pic: fogofwar::FogPicture`, named on the scratch list (`tools/blitz/schema.json`, `game::Game.fog_pic`)
+so it has no word of the state.
+
+| stays in `FogOfWar` (the team's; a word of the state) | why |
+|---|---|
+| `on`, `eyes`, `mates` | the switch a scenario sets; this tick's eyes, which `spot_seen`, the doors and the sticky camera read |
+| `recs`, `shown`, `hidden_chars` | who is seen, framed, scripted in; who is left out: read by some forty rules through `hidden`, `seen`, `sighting`, `drawn` |
+| `fired_n`, `fired_at`, `fire_clock` | the squad's fire shows the man it is at |
+| `door_recs` (`shown` and `ghost`), `doors_held`, `door_from`, `door_n` | a door as last seen, and its copies on the frame's list |
+| `lamp_recs` | a lamp as last seen |
+| `thing_recs`, `thing_out`, `thing_since`, `thing_stats`, `cell_seen`, `span_x`, `span_z`, `rig_from`, `rig_to`, `our_chunks`, `our_landed` | loose things as last seen, and the step's own working values |
+| `frame_no`, `turn`, `asked`, `pending` | the pass's count and its smoke asks |
+| `call_clock`, `last_call`, `called_t`, `known_t`, `told_step`, `call_n`, `call_log`, `call_stats` | the calls a teammate makes of what he sees |
+| `stats` | the pass's counts |
+| `full_on` | read by rules (`ours_on`, `ours_id`, `air_hides`); renamed `live`, see below |
+| `loaded`, `props_loaded` | nothing sets either true since saves went; left for whoever brings a saved fog back (`FogSnap`) |
+
+| moves to `FogPicture` (the host's; no word) | why |
+|---|---|
+| `frame` (all of `render_fogofwar::FogFrame`) | the renderer's block |
+| `lamp_pick`, `lamp_n`, `lit_stats` | the lit fog's list, cut by distance from the shown seat |
+| `face_recs`, `full_stats` | a lamp's glow as last seen, which only `lamp_face` reads to paint `fog_emit`; the count of lights by class |
+| `viewer`, `bared`, `raw_list`, `raw_at` | a viewer's lifted draw |
+| `look_frames` | counted down and read by nothing; goes with the picture until it is deleted |
+| from `Game`: `fog_held`, `men_bare`, `men_all`, `men_statured` | what `game_fog_lift` keeps to hand back; become `fog_pic.held`, `.men_bare`, `.men_all`, `.men_statured` |
+
+### Which function goes where
+
+`fogofwar/picture.rs` (new, the host's side; may read all of the game, writes only `g.fog_pic` and the
+renderer's own fields named below): `fog_of_war_lit_block`, `fog_of_war_lamp_take`, `fog_of_war_thin_block`,
+`fog_of_war_lamp_face`, `face_of`, `fog_of_war_face_seen`, `fog_of_war_faces_lift`, `fog_of_war_faces_back`,
+`fog_of_war_raw`, `fog_of_war_filter`, `fog_of_war_everybody`, `fog_of_war_page_look`, the tail of
+`fog_of_war_pass` from "the renderer's block" down (as `picture::fill`), and the half of `fog_of_war_full_block`
+that paints (`tab.light[..].fog`, `.fog_ghost`, a box's `fog_emit` and `fog_mark`: by their own notes the
+upload alone reads these). `game_fog_lift` and `game_fog_back` already are the host's (they are called between
+two steps, never in one) and move beside them.
+
+Everything else stays the team's. Four cuts make the line clean:
+
+1. **A lamp's knowledge is written by the pass, not by the picture.** `fog_of_war_lamp_known` is the only
+   writer of `lamp_recs`, and today it is called from inside `full_block` and again from `lit_block`. The pass
+   gets its own step before the block, one call a fixture that has a light, in the order of `g.targets`; the
+   picture then reads `lamp_recs` and asks nothing. (The second call a frame goes. It could only count a test
+   twice: `thing_stats.tests` is zeroed by `fog_of_war_things` later in the same frame, so no word kept at a
+   frame's end moves. By reading; `hold` says.)
+2. **Who the team is belongs to the team.** `full_block` fills `engine.lights.fog_team` (its `owners` are read
+   by `things_ours` and `ours_id`) and sets `full_on`. That loop moves into the pass with the lamp step.
+   `full_on` is true exactly while the fog is active and the pass has run, so it becomes the team's `live`,
+   and the pass's own test "was I on last frame" reads `live`, not `frame.on` as it does now.
+3. **`hidden` and `air_hides` drop `!bared`.** Every caller found is a rule or a step of the tick (the AI's
+   picture, aim, orders, markers, cues, props on the frame's list). A host reader that wants "as drawn now"
+   gets `picture::hidden_as_drawn` (`!fog_pic.bared && hidden`); none is known, so it is written only if the
+   grep at the time finds one.
+4. **The list before the fog cut it is kept by the picture.** The first lines of `fog_of_war_things`, under
+   `viewer`, copy the frame's list into `raw_list`. They become `picture::keep_raw(g, &list)`, called by
+   `game_draw_characters` just before `things`; `things` then never reads `viewer`.
+
+`picture::fill` stays where the tail of the pass is today, called once a tick on every machine. It is the
+picture's by what it may write, not by where it runs; a host that draws nothing may later leave it out, and
+the check below is what makes that safe.
+
+### The ghosts: does a machine with no viewer make the same rows?
+
+Yes for `viewer`, by reading. `viewer` gates only `raw_list` and `raw_at`. The copies the fog keeps of a door
+moved unseen (`fog_of_war_door_boxes`, `copy_box`) and of a thing moved unseen (`thing_take`, `ghost_box`,
+`box_let_go`) are made by every machine alike, in the order of the frame's list, whenever the fog is active and
+there is an eye. And they are the game's, not the picture's: they go on the frame's list, which becomes
+`world.all`, and `box_world_raycast` over `world.all` is what a seat's cursor, an order's click, a weapon
+laser's reach and a device's beam meet. Two seats aim at the same remembered chair. So the ghosts stay rows
+of the game's table, and `thing_recs` and `door_recs.ghost` stay the team's.
+
+Not the same for a host with dressing rows down, also by reading. The list handed to `things` is gathered by
+`game_step_fx_and_dyn_boxes`, where three dressing steps add boxes: moths (their key is one the rule passes
+over), one-frame effects (no key was found on them: they only move `cell_seen` and `thing_stats.out`), and a broken fixture's
+pieces (`fixture_break`, keyed in the fixture range, so each gets a `thing_recs` row and, out of sight, ghost
+rows). With `fixtures` down those rows are never made, the box table hands out other ids from there on, and
+the state parts from a host with the row up. The dressing check's five missions are the same with the rows
+down, so either none of them breaks a fixture out of the team's sight or this reading is wrong: the new test
+below plays it both ways and says which. If it parts, the fog's rule passes over the fixture range as it does
+the moths' (a broken lamp's pieces are then drawn live or not at all, never remembered).
+
+### Order of work, and what proves each
+
+1. **The cuts, with every field where it is.** The four cuts above and the move of functions into
+   `picture.rs`; the record and the wire are untouched. Proof: `hold check`, the same after every frame on all
+   72 runs, every word of the state compared.
+2. **The fields move**, by a program (`g.fog_of_war.X` to `g.fog_pic.X` for the second table, the four
+   fields of `Game`, the scratch row, the types made again). The fog's word and the part count change, so
+   `hold` cannot compare the trees whole: it gains `--but PART,…` (parts left out by name on both sides), and
+   the check is every other word the same on the 72 runs, plus the two-seat kept games.
+3. **`lamp_take` measures from the picture's own seat** (it already does; it is now out of state), and one
+   native test stands two games of one seed on a level with more lamps than `FOG_LIGHTS`, one with a viewer
+   set (and, where the start seats two, another seat shown), one without, and compares every state word
+   after every frame. The same test once more with the dressing rows down in one game, for the fixtures
+   question.
+
+Not part of this: what the smoke along a sight line reads. `fog_of_war_pass` asks the sensors (`sensors_read`),
+and a machine whose senses are the host's probe may answer differently from one whose senses are the game's
+own. That is a question about which senses a networked game stands on, not about this record.

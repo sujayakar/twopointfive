@@ -237,7 +237,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   `useCut` on the lighting passes, the probe, the cascades, the froxels, the particles and the fog of war; the engine's per-frame swap and the
   raster's "drawn whole until the second set is in" (`gbuffer.ts`: a cut box is drawn cut from the first frame); `__cut.programs`,
   `__cut.stats.drawnWhole`, `?cutprograms`; the visit's `cut` record; the start's wait on the second set; tools/qa/cut-march.js. `cutConfig.swap`
-  is UNREAD AND UNWRITTEN (the knob row `CUT.swap`, the settled-switch list and the Rust mirror still name it: theirs to drop); the look page's
+  is GONE from the table and from the settled-switch list (11-07; its field on the wire to the Rust game goes with the Rust goal's next batch); the look page's
   rule that a geometry trial drops the round's GPU half (`main.ts roundConfig.gpu`) asks for the trial itself now, and draws what it drew. THE COMPILE QUEUE's background
   lane (`gpu/device.ts`) was given by text, to any module holding the cut rule's line; it is now the LATER pipelines' alone, and a module's size is
   kept beside the module. WHAT MOVES: about twenty programs fewer compiled after each boot (21 s of background compile on the cloud's NVIDIA
