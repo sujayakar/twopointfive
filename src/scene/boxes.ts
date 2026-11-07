@@ -280,6 +280,8 @@ export class BoxWorld {
   mkeyStats = { matched: 0, fresh: 0, unkeyed: 0 };
   /** Combined list uploaded this frame (statics first, then dynamics). */
   all: Box[] = [];
+  /** how many boxes were uploaded this frame */
+  get count(): number { return this.all.length; }
   maxBoxes: number;
   geoData: ArrayBuffer; geoF32: Float32Array; geoU32: Uint32Array;
   matData: Float32Array;
@@ -479,7 +481,7 @@ export class BoxWorld {
     return { boxes, planes };
   }
 
-  constructor(private device: GPUDevice, maxBoxes = WORLD.maxBoxes) {
+  constructor(protected device: GPUDevice, maxBoxes = WORLD.maxBoxes) {
     this.maxBoxes = maxBoxes;
     if (maxBoxes !== WORLD.maxBoxes) throw new Error('BoxWorld: maxBoxes must be WORLD.maxBoxes (the shaders place the marking table after that many mat rows)');
     this.geoData = new ArrayBuffer(maxBoxes * GEO_STRIDE * 4); this.geoF32 = new Float32Array(this.geoData); this.geoU32 = new Uint32Array(this.geoData);
@@ -578,10 +580,21 @@ export class BoxWorld {
     const bo = BoxWorld.INFO_BOUNDS + this.charCount * 4; this.infoF32[bo] = bound[0]; this.infoF32[bo + 1] = bound[1]; this.infoF32[bo + 2] = bound[2]; this.infoF32[bo + 3] = bound[3];
     this.charCount++; this.capsuleCount = this.charCount * BoxWorld.CAPS_PER_CHAR;
   }
+  /** a character's records as rows of words (src/draw: an end and its radius, the other end, whose they are) from `at`, in one colour or one a record; his bound at `b` of `fb` */
+  addCapsuleRows(f: Float32Array, u: Uint32Array, at: number, owner: number, colours: readonly Vec3[], fb: Float32Array, b: number): void {
+    if (this.charCount >= BoxWorld.castCap) return;
+    const N = BoxWorld.CAPS_PER_CHAR, base = this.charCount * N, D = this.capsuleData;
+    for (let i = 0; i < N; i++) { const o = (base + i) * 8, s = at + i * 8, c = colours[i] ?? colours[0];
+      for (let k = 0; k < 7; k++) D[o + k] = f[s + k];
+      const r = Math.round(Math.min(1, Math.max(0, c[0])) * 31) & 31, g = Math.round(Math.min(1, Math.max(0, c[1])) * 63) & 63, l = Math.round(Math.min(1, Math.max(0, c[2])) * 31) & 31;
+      this.capsuleU32[o + 7] = ((owner & 255) | ((r << 11 | g << 5 | l) << 8)) >>> 0; }
+    const bo = BoxWorld.INFO_BOUNDS + this.charCount * 4; for (let k = 0; k < 4; k++) this.infoF32[bo + k] = fb[b + k];
+    this.charCount++; this.capsuleCount = this.charCount * N;
+  }
   /** Turn the frame's proxy list into the SDF rig (see `rig`): per real record (radius > 0) the fitted r0 as its radius and r1 packed above the albedo; per character the cull sphere
    *  fitted to the cones' ends + radii (+ the smooth union's pad + 1 cm) about the middle of their box. Idempotent — a render with no game step re-applies it to the same records and
    *  gets the same words (the ends are never touched, r0 / r1 come from the fit, the sphere is rebuilt from both). */
-  private applyRig(base: { r0: Float32Array; r1: Float32Array; kPad: number; byOwner?: Map<number, { r0: Float32Array; r1: Float32Array; pad?: number }> }) {
+  protected applyRig(base: { r0: Float32Array; r1: Float32Array; kPad: number; byOwner?: Map<number, { r0: Float32Array; r1: Float32Array; pad?: number }> }) {
     const D = this.capsuleData, U = this.capsuleU32, N = BoxWorld.CAPS_PER_CHAR;
     for (let c = 0; c < this.charCount; c++) {
       const rig = base.byOwner?.get(U[c * N * 8 + 7] & 0xff) ?? base;   // (the cast: a man's own fit by his id — the owner byte every one of his records carries — else the shared one)
