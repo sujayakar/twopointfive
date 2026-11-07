@@ -15,13 +15,6 @@ pub fn def_fix_is_pt(g: &mut crate::game::Game, d: RoomfightDefId) -> bool {
     let def = &g.tab.roomfight_def[d];
     def.pt_stamp == Some(g.gd[def.gd].fix_stamp) && g.gd[def.gd].last_known == Some(def.pt)
 }
-/// `gd.lastKnown = D.pt`: a new fix only if it was not that object already
-pub fn def_fix_to_pt(g: &mut crate::game::Game, d: RoomfightDefId) {
-    let own = def_fix_is_pt(g, d);
-    let (gd, pt) = (g.tab.roomfight_def[d].gd, g.tab.roomfight_def[d].pt);
-    g.gd[gd].last_known = Some(pt);
-    if !own { g.gd[gd].fix_stamp = g.gd[gd].fix_stamp.wrapping_add(1); g.tab.roomfight_def[d].pt_stamp = Some(g.gd[gd].fix_stamp); }
-}
 /// D.pt moved in place: whatever of his IS that object moves with it, with no new fix. His fix, when it is the point (the stamp); and `covers`, which
 /// belief.ts:21 makes that very object on the page's path (`gd.covers = pt`, with D.pt handed in): here a copy, so equal bits stand for the same
 /// object, as roomfight's own twin of this has it. Every in-place write of a Def's point comes through here or through that twin.

@@ -381,11 +381,7 @@ pub fn calm_back(g: &mut crate::game::Game, d: RoomfightDefId, c_2: &crate::powe
     // (D.pt moved in place: a fix that IS it moves with it. Then `cover(gd, D.pt)`, whose other branch is the fix made that object: the Def has the stamp, cover has no Def)
     let pt = c_2.pt;
     crate::roomfight::def_move_pt(g, d, pt);
-    if g.k.belief.on {
-        crate::belief::cover(g, gd, pt);
-    } else {
-        crate::roomfight::def_fix_to_pt(g, d);
-    }
+    crate::belief::cover(g, gd, pt);
 }
 
 // ---------------------------------------------------------------- the trip

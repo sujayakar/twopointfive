@@ -85,7 +85,6 @@ pub fn surf_at(g: &mut crate::game::Game, b: BoxId) -> crate::scene_materials::S
 
 /// What `b` says it is, for the picture of a hit; None = the rule is off, it says nothing, its word is not one thing to a round, or it is a pane. (particleFx.ts saidSurf)
 pub fn said_surf(g: &mut crate::game::Game, b: Option<BoxId>) -> Option<crate::scene_materials::Surf> {
-    if !g.k.hitstuff.on { return None; }
     let b = b?;
     let stuff = seam_box(g, b).stuff?;
     if is_pane(seam_box(g, b).flags) { return None; }
@@ -94,7 +93,6 @@ pub fn said_surf(g: &mut crate::game::Game, b: Option<BoxId>) -> Option<crate::s
 
 /// A solid thing of glass that is not a pane, by its own word: a round cracks it and it stays. (particleFx.ts solidGlass)
 pub fn solid_glass(g: &mut crate::game::Game, b: Option<BoxId>) -> bool {
-    if !g.k.hitstuff.on { return false; }
     let Some(b) = b else { return false; };
     let (stuff, flags) = (seam_box(g, b).stuff, seam_box(g, b).flags);
     crate::scene_boxes::solid_glass_box(crate::scene_boxes::SolidGlassBoxB { stuff, flags })
@@ -181,7 +179,7 @@ pub fn impact_fx(g: &mut crate::game::Game, hit_p: V3, dir: V3, hit: crate::part
     let (surf, albedo, solid) = (look.surf, look.albedo, look.solid);
     let r = impact_row(surf);
     let pfx = g.m.particle_fx.pfx;
-    let chips = if g.k.hitstuff.on && surf == crate::scene_materials::Surf::Metal { 0.0 } else if solid { SOLID_GLASS_CHIPS } else { r.chips };
+    let chips = if surf == crate::scene_materials::Surf::Metal { 0.0 } else if solid { SOLID_GLASS_CHIPS } else { r.chips };
     let k = if def.cls == crate::weapons::WeaponClass::Pistol { 1.0 } else { pfx.impact_scale_rifle };
     let n = v3::normalize(hit.n);
     let dn = v3::dot(dir, n);
@@ -613,7 +611,6 @@ mod tests {
     #[test]
     fn hit_look_paths() {
         let mut g = crate::game::Game::blank();
-        g.k.hitstuff.on = true;
         let at = |i: f64| crate::particle_fx::HitLookHit { index: Some(i), prop: None, box_: None };
         let l = hit_look(&mut g, at(1e6));
         assert!(l.surf == crate::scene_materials::Surf::Wood && !l.said && l.albedo == [0.42, 0.3, 0.19]);

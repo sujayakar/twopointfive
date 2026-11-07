@@ -49,7 +49,6 @@ pub fn ground(g: &mut crate::game::Game) -> crate::snow_bog::Ground {
 
 /// May the ground bog anything in this game now. (snowBog.ts snowBogMay)
 pub fn snow_bog_may(g: &mut crate::game::Game) -> bool {
-    if !g.k.snowbog.on { return false; }
     let name = crate::scene_level_load::level_name_of(g);
     crate::weather_kinds::snow_level(g, name.as_deref())
 }

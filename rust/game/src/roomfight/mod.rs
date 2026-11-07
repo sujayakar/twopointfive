@@ -4,7 +4,7 @@ pub mod sig;
 pub use sig::*;
 // the parts' bodies: a named re-export wins over the stubs of sig.rs
 pub mod b_01;
-pub use b_01::{def_fix_is_pt, def_fix_to_pt, def_move_pt};
+pub use b_01::{def_fix_is_pt, def_move_pt};
 pub mod p_01;
 pub use p_01::{drilled_on, drilled_k, flat, pick, eye_of, chest_of, pair_key, pair_smoke, lamp_glare, fight_live, close_lane, room_fight_sam_speed_of, room_fight_new, room_fight_on, room_fight_note, room_fight_engaged, room_fight_no_shot, room_fight_busy, room_fight_contact, room_fight_team_sees, room_fight_seen_by, room_fight_sight_on};
 pub mod p_02;

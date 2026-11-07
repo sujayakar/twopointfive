@@ -94,9 +94,6 @@ pub fn is_weather_kind(s: Option<&str>) -> bool {
 
 /// Is the level called `name` one built for snow, with the switch on? (weatherKinds.ts snowLevel)
 pub fn snow_level(g: &mut crate::game::Game, name: Option<&str>) -> bool {
-    if !g.k.snow.on {
-        return false;
-    }
     match name {
         Some(n) => !n.is_empty() && snow_levels().iter().any(|l| l == n),
         None => false,
@@ -377,13 +374,10 @@ mod tests {
         assert_eq!(weather_title(&mut g, None), "As it is");
         assert_eq!(weather_words(&mut g, Some(WeatherKind::Fog)), "ground fog, so nobody can see past about twenty meters outdoors");
         assert_eq!(weather_words(&mut g, None), "the level's own weather, as it has always played");
-        g.k.snow.on = true;
         assert!(snow_level(&mut g, Some("tut-road")));
         assert!(!snow_level(&mut g, Some("office")));
         assert!(!snow_level(&mut g, Some("")));
         assert!(!snow_level(&mut g, None));
-        g.k.snow.on = false;
-        assert!(!snow_level(&mut g, Some("pass")));
     }
 
     #[test]
