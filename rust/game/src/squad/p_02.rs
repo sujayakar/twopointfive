@@ -37,12 +37,6 @@ fn rank(r: Perceive) -> i32 {
     match r { Perceive::Alert => 3, Perceive::Body => 2, Perceive::Suspicious => 1 }
 }
 
-/// `gd.lastKnown = <a new object>`: a new fix, so the stamp moves (doze.ts:244 asks by fix_stamp)
-fn new_fix(g: &mut Game, gd: GuardId, at: V3) {
-    let man = &mut g.gd[gd];
-    man.last_known = Some(at);
-    man.fix_stamp = man.fix_stamp.wrapping_add(1);
-}
 
 /// The senses updateGuard would have run for a man the runner drives: what they came to this frame. (squad.ts perceive)
 pub fn perceive(g: &mut crate::game::Game, gd: GuardId, dt: f64, before: f64) -> Option<crate::squad::Perceive> {
@@ -55,7 +49,7 @@ pub fn perceive(g: &mut crate::game::Game, gd: GuardId, dt: f64, before: f64) ->
         if rate > 0.05 {
             { let to = v3::clamp(g.gd[gd].awareness + rate * dt, 0.0, 1.0); crate::mind::set(g, gd, to, "squad"); }
             let pp = v3::copy(g.ch[pc].pos);
-            new_fix(g, gd, pp);
+            crate::mind::fix(g, gd, Some(pp), "squad");
             seen = rate > 0.25;
             if seen { g.gd[gd].last_seen_t = g.time; }
         }
@@ -65,7 +59,7 @@ pub fn perceive(g: &mut crate::game::Game, gd: GuardId, dt: f64, before: f64) ->
     let gp = g.ch[g.gd[gd].ch].pos;
     if !g.pl[g.player].down && !g.player_invisible && m::hyp2(pp[0] - gp[0], pp[2] - gp[2]) < 0.62 {
         crate::mind::set(g, gd, 1.0, "squad");
-        new_fix(g, gd, v3::copy(pp));
+        crate::mind::fix(g, gd, Some(v3::copy(pp)), "squad");
         g.gd[gd].last_seen_t = g.time;
         seen = true;
     }
@@ -75,7 +69,7 @@ pub fn perceive(g: &mut crate::game::Game, gd: GuardId, dt: f64, before: f64) ->
             crate::mind::raise(g, gd, 0.5, "squad");
             let oc = g.gd[o].ch;
             let h = bone_or(g, oc, crate::character::Bone::Hips, g.ch[oc].pos);
-            new_fix(g, gd, [h[0], 0.0, h[2]]);
+            crate::mind::fix(g, gd, Some([h[0], 0.0, h[2]]), "squad");
             return Some(Perceive::Body);
         }
     }

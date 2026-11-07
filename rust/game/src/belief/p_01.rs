@@ -64,10 +64,8 @@ pub fn gun_point(g: &mut crate::game::Game, gd: GuardId) -> Option<V3> {
 /// A report that reaches him outside his ears and eyes places his belief. (belief.ts word)
 pub fn word(g: &mut crate::game::Game, gd: GuardId, at: V3) {
     let now = g.time;
-    let man = &mut g.gd[gd];
-    man.last_known = Some(at);
-    man.fix_stamp = man.fix_stamp.wrapping_add(1); // a fresh object in the TypeScript: always a new fix
-    man.word_t = now;
+    crate::mind::fix(g, gd, Some(at), "belief"); // a fresh object in the TypeScript: always a new fix
+    g.gd[gd].word_t = now;
 }
 
 /// What he hears of `at` or before does not write over a word. (belief.ts wordStands)
