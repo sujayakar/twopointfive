@@ -267,21 +267,6 @@ impl RenderCharMaterialsModOrderOfValue {
 }
 impl Default for RenderCharMaterialsModOrderOfValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/charMaterials.ts:466 charLookSides, src/render/charMaterials.ts:466)
-#[derive(Clone, Copy, Debug)]
-pub struct RenderCharMaterialsModCharLookSides {
-    pub on: bool,
-}
-impl RenderCharMaterialsModCharLookSides {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RenderCharMaterialsModCharLookSides {
-            on: false,
-        }
-    }
-}
-impl Default for RenderCharMaterialsModCharLookSides { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: inline at src/render/charMaterials.ts:411 resolveSlot ->, src/render/charMaterials.ts:411)
 #[derive(Clone, Debug)]
 pub struct ResolveSlot {
@@ -314,8 +299,6 @@ pub struct RenderCharMaterialsMod {
     pub order_of: JsMap<crate::anim_gltf::CastSide, crate::render_char_materials::RenderCharMaterialsModOrderOfValue>,
     /// (src/render/charMaterials.ts:438 matsVersion)
     pub mats_version: f64,
-    /// (src/render/charMaterials.ts:466 charLookSides)
-    pub char_look_sides: crate::render_char_materials::RenderCharMaterialsModCharLookSides,
 }
 impl RenderCharMaterialsMod {
     pub fn blank() -> Self {
@@ -326,7 +309,6 @@ impl RenderCharMaterialsMod {
             sneak_suit: crate::render_char_materials::SideTable::zeroed(),
             order_of: JsMap::new(),
             mats_version: 1.0,
-            char_look_sides: crate::render_char_materials::RenderCharMaterialsModCharLookSides { on: false },
         }
     }
 }
