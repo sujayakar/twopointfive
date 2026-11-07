@@ -41,7 +41,7 @@ Detail, exit codes, the page's `window` hooks and URL flags: `docs/agents/qa.md`
   gone, said on stderr by a run that uses it, and no new fixture is recorded on it. A header that says "both stands" is older.
 - **A new rule is a switch.** ON in the page (a URL flag puts it off), OFF in its module: so a switch's value is read off the page's
   stand (`bun run tools/qa/stand-dump.ts`), never off the module's own table. A `FROZEN_HOLDS` row while that list stands; its table
-  registered in `src/game/knobs.ts` (`knobs-check` is red otherwise) and carried by the session journal so that a recording from
+  registered in `src/game/knobs.ts` (`knobs-check` is red otherwise) and carried by a tape's recipe (`journal.ts`) so that a recording from
   before the key replays with it off (`journal.ts applyKnobs`). Off = the build as it was, by run digest. It ships with a check
   whose `<NAME>_BREAK=1` path must fail.
 - **No `Math.random` in `src/game`** — `simRandom()` (`src/math/dice.ts`); `bun run tools/qa/dice-check.ts` is red on one. No wall
@@ -129,7 +129,7 @@ happened when; the live queue is outside the repo.
 - `render.md` — judging renderer output, GPU timing traps, quality presets and the ladder, caps, froxels, ReSTIR, TAAU, sharp direct,
   the gather, the denoiser, the smoke solver, effects numbers, prototype branches (longer renderer bullets:
   `docs/internal/claude-md-renderer-systems.md`).
-- `replays.md` — the F10 session journal and the `Sensors` seam, the game's own die, the fixed step, the input record, F7 replays, the
+- `replays.md` — the `Sensors` seam, the game's own die, the fixed step, the input record, F7 replays, the
   engine replay player, kept runs and the dump.
 - `net.md` — networked play: the wire (inputs, never state), the server's input rule, the server and client cores, the game server
   process and its environment, the page as a client (`?net=`), the lobby (host or join a co-op game, `?join=`), their checks.

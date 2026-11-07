@@ -92,11 +92,6 @@
       "behind": "a hand"
     },
     {
-      "id": "src/game/journal.ts:SessionRecorder.begin",
-      "why": "F10: the developer's recorder is started by a key (the journal takes its checkpoint as the next frame opens)",
-      "behind": "a hand"
-    },
-    {
       "id": "src/ui/menu.ts:Menu.close",
       "why": "a menu closed: the start page's and the cards' own callbacks (a pick, Deploy, back)",
       "behind": "a hand"

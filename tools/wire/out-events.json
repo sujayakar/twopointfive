@@ -329,29 +329,6 @@
 "answer": null
 },
 {
-"call": "SessionRecorder.cut",
-"rust": "crate::journal::session_recorder_cut",
-"sites": 1,
-"ts": "cut",
-"of": "SessionRecorder",
-"file": "src/game/journal.ts",
-"why": "this",
-"params": [
-{
-"ts": "why",
-"rust": "why"
-},
-{
-"ts": "lost",
-"rust": "lost"
-}
-],
-"sig": "pub fn session_recorder_cut(g: &mut crate::game::Game, why: &str, lost: Option<bool>)",
-"bodyFile": "journal/b_01.rs",
-"mode": "body",
-"answer": null
-},
-{
 "call": "SmokeSystemLike.clearAll",
 "rust": "crate::smoke_types::smoke_system_like_clear_all",
 "sites": 5,
