@@ -83,7 +83,7 @@ fn jog_seam_close(d: &mut [f32], rows: usize, seam: &[crate::character::AnimJogS
 // ---- helpers
 
 /// `ch.nodeByName.get(name)`, loud when missing (the constructor's `node`)
-fn node(g: &mut crate::game::Game, ch: RigId, name: &str) -> usize {
+fn node(g: &crate::game::Game, ch: RigId, name: &str) -> usize {
     match g.tab.rig[ch].node_by_name.get(String::from(name)) {
         Some(i) => *i as usize,
         None => panic!("missing node {}", name),
@@ -535,7 +535,7 @@ pub fn anim_toss_item(g: &mut crate::game::Game, c: CharId, release: Option<f64>
 }
 
 /// a world direction, flattened, in the figure's un-twisted model frame   (character.ts flatModel)
-pub fn anim_flat_model(g: &mut crate::game::Game, c: CharId, w: V3, fb: V3) -> V3 {
+pub fn anim_flat_model(g: &crate::game::Game, c: CharId, w: V3, fb: V3) -> V3 {
     let d = anim_to_model_d(g, c, [w[0], 0.0, w[2]]);
     let l = m::hyp2(d[0], d[2]);
     if l > 1e-4 { [d[0] / l, 0.0, d[2] / l] } else { fb }
@@ -685,7 +685,7 @@ pub fn anim_kit_cancel(g: &mut crate::game::Game, c: CharId) {
 }
 
 /// a swap is under way   (character.ts kitBusy)
-pub fn anim_kit_busy(g: &mut crate::game::Game, c: CharId) -> bool {
+pub fn anim_kit_busy(g: &crate::game::Game, c: CharId) -> bool {
     g.ch[c].anim.kit.is_some()
 }
 
@@ -719,7 +719,7 @@ pub fn anim_nv_cancel(g: &mut crate::game::Game, c: CharId) {
 }
 
 /// the errand under way has the rifle in it   (character.ts kitRifle)
-pub fn anim_kit_rifle(g: &mut crate::game::Game, c: CharId) -> bool {
+pub fn anim_kit_rifle(g: &crate::game::Game, c: CharId) -> bool {
     use crate::character::KitItem as Kit;
     match &g.ch[c].anim.kit {
         Some(k) => k.from == Some(Kit::Rifle) || k.to == Some(Kit::Rifle),
@@ -728,12 +728,12 @@ pub fn anim_kit_rifle(g: &mut crate::game::Game, c: CharId) -> bool {
 }
 
 /// the support hand's magazine work can be shown at all   (character.ts kitHandsOn)
-pub fn anim_kit_hands_on(g: &mut crate::game::Game, c: CharId) -> bool {
+pub fn anim_kit_hands_on(g: &crate::game::Game, c: CharId) -> bool {
     g.k.moves.reload > 0.5
 }
 
 /// a magazine change as the drawer needs it; none when none is shown   (character.ts reloadShow)
-pub fn anim_reload_show(g: &mut crate::game::Game, c: CharId) -> Option<crate::character::AnimReloadShow> {
+pub fn anim_reload_show(g: &crate::game::Game, c: CharId) -> Option<crate::character::AnimReloadShow> {
     let a = &g.ch[c].anim;
     if !(a.mv2_shown.reload > 0.5) { return None; }
     let (b, t) = (&a.rl_b, a.mv2.rl_at);
@@ -744,7 +744,7 @@ pub fn anim_reload_show(g: &mut crate::game::Game, c: CharId) -> Option<crate::c
 }
 
 /// the change the support hand is showing, as its beat and where it is on it   (character.ts feedClock)
-pub fn anim_feed_clock(g: &mut crate::game::Game, c: CharId) -> Option<crate::character::AnimFeedClock> {
+pub fn anim_feed_clock(g: &crate::game::Game, c: CharId) -> Option<crate::character::AnimFeedClock> {
     let a = &g.ch[c].anim;
     if !(a.mv2_shown.reload > 0.5) { return None; }
     let b = &a.rl_b;
@@ -781,7 +781,7 @@ pub fn anim_throw_item(g: &mut crate::game::Game, c: CharId, dist: Option<f64>, 
 }
 
 /// the reload one-shot is playing   (character.ts reloading)
-pub fn anim_reloading(g: &mut crate::game::Game, c: CharId) -> bool {
+pub fn anim_reloading(g: &crate::game::Game, c: CharId) -> bool {
     g.ch[c].anim.reload_t >= 0.0
 }
 

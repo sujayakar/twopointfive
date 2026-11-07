@@ -264,7 +264,7 @@ pub fn kneel_toward(g: &mut crate::game::Game, gd: GuardId, dt: f64, at: V3, out
 }
 
 /// the flankers of a plan are all set (or there are none), or somebody has eyes on the man   (tactics.ts readyToGo)
-pub fn ready_to_go(g: &mut crate::game::Game, plan: TacticsPlanId) -> bool {
+pub fn ready_to_go(g: &crate::game::Game, plan: TacticsPlanId) -> bool {
     if g.tab.tactics_plan[plan].contact {
         return true;
     }
@@ -290,7 +290,7 @@ pub fn ready_to_go(g: &mut crate::game::Game, plan: TacticsPlanId) -> bool {
 }
 
 /// some flanker of the plan is not yet set but still covering ground toward his corner   (tactics.ts flankersRunning)
-pub fn flankers_running(g: &mut crate::game::Game, plan: TacticsPlanId) -> bool {
+pub fn flankers_running(g: &crate::game::Game, plan: TacticsPlanId) -> bool {
     let row = &g.tab.tactics_plan[plan];
     for (m, r) in row.roles.iter() {
         let r = &g.tab.tactics_role[*r];
@@ -460,7 +460,7 @@ pub fn move_role(g: &mut crate::game::Game, gd: GuardId, role: TacticsRoleId, dt
 }
 
 /// (tactics.ts presserOf)
-pub fn presser_of(g: &mut crate::game::Game, plan: TacticsPlanId) -> Option<GuardId> {
+pub fn presser_of(g: &crate::game::Game, plan: TacticsPlanId) -> Option<GuardId> {
     let row = &g.tab.tactics_plan[plan];
     for (m, r) in row.roles.iter() {
         if g.tab.tactics_role[*r].kind == RoleKind::Presser && row.members.contains(&m) {
@@ -476,7 +476,7 @@ pub fn role_of_man(g: &mut crate::game::Game, gd: GuardId) -> Option<TacticsRole
 }
 
 /// Is the man this guard is after ARMED, as far as he can know   (tactics.ts armedIntruder)
-pub fn armed_intruder(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn armed_intruder(g: &crate::game::Game, gd: GuardId) -> bool {
     match g.gd[gd].foe {
         Some(crate::game::Foe::Player) => {}
         foe => return foe.is_some(),
@@ -773,13 +773,13 @@ pub fn side_of(g: &mut crate::game::Game, d: DoorId, p: V3) -> f64 {
 }
 
 /// how far along hinge → latch   (tactics.ts alongOf)
-pub fn along_of(g: &mut crate::game::Game, d: DoorId, p: V3) -> f64 {
+pub fn along_of(g: &crate::game::Game, d: DoorId, p: V3) -> f64 {
     let f = crate::guards::frame_of(g, d);
     (p[0] - f.hx) * f.ux + (p[2] - f.hz) * f.uz
 }
 
 /// a point in the door's frame: `a` along hinge → latch, `b` out from the frame line on side sg   (tactics.ts doorPt)
-pub fn door_pt(g: &mut crate::game::Game, d: DoorId, a: f64, b: f64, sg: f64, y: Option<f64>) -> V3 {
+pub fn door_pt(g: &crate::game::Game, d: DoorId, a: f64, b: f64, sg: f64, y: Option<f64>) -> V3 {
     let y = y.unwrap_or(0.0);
     let f = crate::guards::frame_of(g, d);
     [f.hx + f.ux * a + f.nx * sg * b, y, f.hz + f.uz * a + f.nz * sg * b]
@@ -834,7 +834,7 @@ pub fn stack_spot(g: &mut crate::game::Game, d: DoorId, sg: f64, near_a: f64, k:
 }
 
 /// the slice: stations across the opening as far back as the floor allows, each with the point in the room his muzzle is on   (tactics.ts sliceStations)
-pub fn slice_stations(g: &mut crate::game::Game, d: DoorId, sg: f64, near_a: f64) -> Option<crate::tactics::SliceStations> {
+pub fn slice_stations(g: &crate::game::Game, d: DoorId, sg: f64, near_a: f64) -> Option<crate::tactics::SliceStations> {
     let w = g.dr[d].def.width;
     let dir = if near_a <= 0.0 { 1.0 } else { -1.0 };
     let a0 = near_a - dir * 0.2;

@@ -14,7 +14,7 @@ fn pos_of(g: &mut Game, gd: GuardId) -> V3 {
 }
 
 /// where a round at this man goes: his chest bone, else above his feet   (rescue.ts:907, 932)
-fn chest_of(g: &mut Game, gd: GuardId) -> V3 {
+fn chest_of(g: &Game, gd: GuardId) -> V3 {
     let c = g.gd[gd].ch;
     match g.ch[c].bones.get(crate::character::Bone::Chest).copied() {
         Some(b) => b,
@@ -23,7 +23,7 @@ fn chest_of(g: &mut Game, gd: GuardId) -> V3 {
 }
 
 /// the men of a list still on their feet, in the list's order
-fn standing(g: &mut Game, l: &[GuardId]) -> Vec<GuardId> {
+fn standing(g: &Game, l: &[GuardId]) -> Vec<GuardId> {
     l.iter().copied().filter(|&x| g.gd[x].state != crate::game::GuardState::Dead).collect()
 }
 
@@ -38,7 +38,7 @@ fn room(g: &mut Game) -> Option<crate::scene_level::BreachPlanBounds> {
 }
 
 /// `${h.civ?.name ?? 'a hostage'}`
-fn hostage_name(g: &mut Game, h: GuardId) -> String {
+fn hostage_name(g: &Game, h: GuardId) -> String {
     match g.gd[h].civ {
         Some(c) => g.cv[c].name.clone(),
         None => String::from("a hostage"),
@@ -347,7 +347,7 @@ pub fn rescue_end(g: &mut crate::game::Game, state: crate::rescue::RescueEndStat
 }
 
 /// where it stands, in one word   (rescue.ts Rescue.state)
-pub fn rescue_state(g: &mut crate::game::Game) -> crate::rescue::RescueState {
+pub fn rescue_state(g: &crate::game::Game) -> crate::rescue::RescueState {
     if !g.rescue.active { return RescueState::Off; }
     if let Some(r) = &g.rescue.result {
         return match r.state {

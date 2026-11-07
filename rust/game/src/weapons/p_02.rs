@@ -100,7 +100,7 @@ fn ev_rack(g: &mut Game, id: FirearmId) {
 // ---- Firearm ----
 
 /// a shell at a time is how the reload under way (or the beat planned) puts its rounds in (weapons.ts Firearm.shellFed)
-pub fn firearm_shell_fed(g: &mut crate::game::Game, id: FirearmId) -> bool {
+pub fn firearm_shell_fed(g: &crate::game::Game, id: FirearmId) -> bool {
     g.fa[id].shell_t.is_some()
 }
 
@@ -178,12 +178,12 @@ pub fn firearm_bottomless(g: &mut crate::game::Game, id: FirearmId) -> bool {
 }
 
 /// (weapons.ts Firearm.reloading)
-pub fn firearm_reloading(g: &mut crate::game::Game, id: FirearmId) -> bool {
+pub fn firearm_reloading(g: &crate::game::Game, id: FirearmId) -> bool {
     g.fa[id].reload_t >= 0.0
 }
 
 /// (weapons.ts Firearm.roundsReady)
-pub fn firearm_rounds_ready(g: &mut crate::game::Game, id: FirearmId) -> f64 {
+pub fn firearm_rounds_ready(g: &crate::game::Game, id: FirearmId) -> f64 {
     g.fa[id].chamber + g.fa[id].mag.unwrap_or(0.0)
 }
 
@@ -196,12 +196,12 @@ pub fn firearm_spent(g: &mut crate::game::Game, id: FirearmId) -> f64 {
 }
 
 /// (weapons.ts Firearm.canFire)
-pub fn firearm_can_fire(g: &mut crate::game::Game, id: FirearmId) -> bool {
+pub fn firearm_can_fire(g: &crate::game::Game, id: FirearmId) -> bool {
     (g.fa[id].chamber == 1.0 || (g.fa[id].infinite && g.fa[id].mag.is_some())) && !firearm_reloading(g, id)
 }
 
 /// fullest-first view of the spare mags (weapons.ts Firearm.spareSorted)
-pub fn firearm_spare_sorted(g: &mut crate::game::Game, id: FirearmId) -> Vec<f64> {
+pub fn firearm_spare_sorted(g: &crate::game::Game, id: FirearmId) -> Vec<f64> {
     let mut v = g.fa[id].spare.clone();
     js::sort_by(&mut v, |a, b| *b - *a);
     v
@@ -467,13 +467,13 @@ pub fn rifle_new(g: &mut crate::game::Game, def: Option<&crate::weapons::WeaponD
 }
 
 /// the attachment the right button fires now (weapons.ts Rifle.attachment)
-pub fn rifle_attachment(g: &mut crate::game::Game, id: FirearmId) -> Option<crate::weapons::RifleAttachment> {
+pub fn rifle_attachment(g: &crate::game::Game, id: FirearmId) -> Option<crate::weapons::RifleAttachment> {
     let fa = &g.fa[id];
     if fa.att_idx >= 0 { fa.attachments.get(fa.att_idx as usize).copied() } else { None }
 }
 
 /// rounds left of an attachment (weapons.ts Rifle.left)
-pub fn rifle_left(g: &mut crate::game::Game, id: FirearmId, a: crate::weapons::RifleAttachment) -> f64 {
+pub fn rifle_left(g: &crate::game::Game, id: FirearmId, a: crate::weapons::RifleAttachment) -> f64 {
     let fa = &g.fa[id];
     match a {
         RifleAttachment::Ring => fa.rings,
@@ -493,7 +493,7 @@ pub fn rifle_cycle_attachment(g: &mut crate::game::Game, id: FirearmId) -> Optio
 // ---- Ocp ----
 
 /// (weapons.ts Ocp.ready)
-pub fn ocp_ready(this: &mut crate::weapons::Ocp) -> bool {
+pub fn ocp_ready(this: &crate::weapons::Ocp) -> bool {
     this.charge >= this.cost - 1e-3
 }
 

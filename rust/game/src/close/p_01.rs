@@ -42,18 +42,18 @@ pub fn arc(id_2: crate::close::CloseId, kind: crate::close::CloseKind, mid: f64,
 }
 
 /// Has he a seat at all, down in it or on his way. (close.ts closeHasSeat)
-pub fn close_has_seat(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn close_has_seat(g: &crate::game::Game, gd: GuardId) -> bool {
     g.m.close.seated.as_ref().map_or(false, |m| m.has(gd))
 }
 
 /// Is this man sitting. (close.ts closeSeated)
-pub fn close_seated(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn close_seated(g: &crate::game::Game, gd: GuardId) -> bool {
     if g.gd[gd].civ.is_some() { return crate::civilians::civilian_seated(g, gd); }
     g.m.close.seated.as_ref().and_then(|s| s.get(gd)).map_or(false, |st| st.down)
 }
 
 /// The windows round one man as he is now. (close.ts closeWindows)
-pub fn close_windows(g: &mut crate::game::Game, gd: GuardId) -> Vec<crate::close::CloseWindow> {
+pub fn close_windows(g: &crate::game::Game, gd: GuardId) -> Vec<crate::close::CloseWindow> {
     use crate::close::{CloseId as I, CloseKind as K};
     let r = g.k.close.reach;
     let mut out = Vec::new();
@@ -157,7 +157,7 @@ pub fn close_at(g: &mut crate::game::Game, gd: GuardId, p: &[f64]) -> crate::clo
 }
 
 /// The two-button blow is live: no show running. (close.ts closeLethal)
-pub fn close_lethal(g: &mut crate::game::Game) -> bool { !g.touring }
+pub fn close_lethal(g: &crate::game::Game) -> bool { !g.touring }
 
 /// The right button, tapped or held, once a frame. (close.ts closeRmb)
 pub fn close_rmb(g: &mut crate::game::Game, on: bool, down: bool, hit: bool, dt: f64, near: bool, choke: bool, dropped: bool) -> Option<crate::close::CloseRmb> {
@@ -188,10 +188,10 @@ pub fn close_rmb(g: &mut crate::game::Game, on: bool, down: bool, hit: bool, dt:
 }
 
 /// There is no knife: no show running. (close.ts closeBare)
-pub fn close_bare(g: &mut crate::game::Game) -> bool { !g.touring }
+pub fn close_bare(g: &crate::game::Game) -> bool { !g.touring }
 
 /// The windows are live: no show running. (close.ts closeLive)
-pub fn close_live(g: &mut crate::game::Game) -> bool { !g.touring }
+pub fn close_live(g: &crate::game::Game) -> bool { !g.touring }
 
 /// A blow landed: the tally. (close.ts closeBlow)
 pub fn close_blow(g: &mut crate::game::Game, lethal: bool) { g.stats.close.blows[if lethal { 0 } else { 1 }] += 1; }
@@ -283,7 +283,7 @@ pub fn close_rows(g: &mut crate::game::Game, gd: GuardId, p: &[f64], busy: bool,
 }
 
 /// The line that says what the held click does. (close.ts sneakHint)
-pub fn sneak_hint(g: &mut crate::game::Game) -> String {
+pub fn sneak_hint(g: &crate::game::Game) -> String {
     String::from(if g.k.stalk.drag { "LMB  press and drag to sneak up on him" } else { "LMB  hold to sneak up on him" })
 }
 
@@ -296,7 +296,7 @@ pub fn note_best(g: &mut crate::game::Game, o: &crate::close::CloseOffer) {
 }
 
 /// A civilian's gate with the windows on: is Sam in her window, and near enough. (close.ts closeCivGate)
-pub fn close_civ_gate(g: &mut crate::game::Game, gd: GuardId, p: &[f64]) -> crate::close::CloseCivGate {
+pub fn close_civ_gate(g: &crate::game::Game, gd: GuardId, p: &[f64]) -> crate::close::CloseCivGate {
     let c = g.gd[gd].ch;
     let gp = g.ch[c].pos;
     let b = v3::wrap_angle(m::atan2(p[0] - gp[0], p[2] - gp[2]) - g.ch[c].body_yaw);
@@ -472,7 +472,7 @@ pub fn close_near_k(g: &mut crate::game::Game, gd: GuardId, dist: f64) -> f64 {
 }
 
 /// Where Sam stands to strike, on his own bearing off the man, and the way he faces. (close.ts closeStation)
-pub fn close_station(g: &mut crate::game::Game, gd: GuardId, kind: crate::close::CloseKind, bearing: f64) -> crate::close::CloseStation {
+pub fn close_station(g: &crate::game::Game, gd: GuardId, kind: crate::close::CloseKind, bearing: f64) -> crate::close::CloseStation {
     let c = g.gd[gd].ch;
     let gp = g.ch[c].pos;
     let a = g.ch[c].body_yaw + bearing;
@@ -482,7 +482,7 @@ pub fn close_station(g: &mut crate::game::Game, gd: GuardId, kind: crate::close:
 }
 
 /// The fall's hearing level for a way in, and his shout if he was onto Sam. (close.ts closeNoise)
-pub fn close_noise(g: &mut crate::game::Game, kind: crate::close::CloseKind, was_alert: bool) -> f64 {
+pub fn close_noise(g: &crate::game::Game, kind: crate::close::CloseKind, was_alert: bool) -> f64 {
     let n = g.k.close.noise;
     let base = match kind {
         crate::close::CloseKind::Behind => n.behind,
@@ -502,7 +502,7 @@ pub fn close_took(g: &mut crate::game::Game, gd: GuardId, what: crate::close::Cl
 }
 
 /// The windows to draw: none on the page, CLOSE.marks being off. (close.ts closeMarks)
-pub fn close_marks(g: &mut crate::game::Game) -> Vec<crate::close::CloseMark> { Vec::new() }
+pub fn close_marks(g: &crate::game::Game) -> Vec<crate::close::CloseMark> { Vec::new() }
 
 /// A man calm enough to sit. (close.ts calm)
 pub fn calm(g: &mut crate::game::Game, gd: GuardId) -> bool {

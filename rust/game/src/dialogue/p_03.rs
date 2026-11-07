@@ -39,7 +39,7 @@ pub fn sam_stage_of(s: crate::dialogue::StageKey, gives: bool) -> crate::dialogu
 }
 
 /// Sam's facts for SAM_NEEDS, off the man's context plus the hold's variant. CLOSE.noKnife is settled on: `knife` is never true.   (dialogue.ts samFacts)
-pub fn sam_facts(g: &mut crate::game::Game, ctx: &crate::dialogue::DialogueCtx, variant: crate::character::HoldVariant) -> JsMap<crate::dialogue::SamNeed, bool> {
+pub fn sam_facts(g: &crate::game::Game, ctx: &crate::dialogue::DialogueCtx, variant: crate::character::HoldVariant) -> JsMap<crate::dialogue::SamNeed, bool> {
     use crate::character::HoldVariant;
     use crate::dialogue::SamNeed;
     let f = &ctx.facts;
@@ -186,7 +186,7 @@ fn live_script(g: &mut Game, ctx: &mut crate::dialogue::DialogueCtx, talk: GameT
 }
 
 /// chooseSamLine's closure `eligible`: the lines of `lines` that fit, are fresh if asked, and resolve to words.
-fn sam_eligible(g: &mut Game, lines: &[crate::dialogue::SamLine], ctx: &crate::dialogue::DialogueCtx, facts: &JsMap<crate::dialogue::SamNeed, bool>, mem: Option<&crate::dialogue::SamMemory>, fresh_only: bool) -> Vec<Eligible> {
+fn sam_eligible(g: &Game, lines: &[crate::dialogue::SamLine], ctx: &crate::dialogue::DialogueCtx, facts: &JsMap<crate::dialogue::SamNeed, bool>, mem: Option<&crate::dialogue::SamMemory>, fresh_only: bool) -> Vec<Eligible> {
     let mut out: Vec<Eligible> = Vec::new();
     let tokens = tokens_map(&ctx.tokens);
     for l in lines {

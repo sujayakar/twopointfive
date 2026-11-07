@@ -58,38 +58,38 @@ pub fn frac(x: f64) -> f64 {
 }
 
 /// his id's share of 0‥1, no dice. (powerout.ts idShare)
-pub fn id_share(g: &mut crate::game::Game, gd: GuardId) -> f64 {
+pub fn id_share(g: &crate::game::Game, gd: GuardId) -> f64 {
     frac(g.ch[g.gd[gd].ch].id * 0.6180339887)
 }
 
 /// a living man who has not fled the level. (powerout.ts alive)
-pub fn alive(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn alive(g: &crate::game::Game, gd: GuardId) -> bool {
     g.gd[gd].state != crate::game::GuardState::Dead && g.ch[g.gd[gd].ch].alive && !g.gd[gd].fled
 }
 
 /// alive, nobody's arm on him, his wits about him. (powerout.ts fit)
-pub fn fit(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn fit(g: &crate::game::Game, gd: GuardId) -> bool {
     alive(g, gd) && g.gd[gd].held.is_none() && g.time >= g.gd[gd].dazzled_until && g.time >= g.gd[gd].stagger_until
 }
 
 /// alert or searching. (powerout.ts roused)
-pub fn roused(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn roused(g: &crate::game::Game, gd: GuardId) -> bool {
     g.gd[gd].state == crate::game::GuardState::Alert || g.gd[gd].state == crate::game::GuardState::Search
 }
 
 /// what his ears have counted of shots, kicks and bangs. (powerout.ts loudHeard)
-pub fn loud_heard(g: &mut crate::game::Game, gd: GuardId) -> f64 {
+pub fn loud_heard(g: &crate::game::Game, gd: GuardId) -> f64 {
     let h = &g.gd[gd].witness.heard;
     h.shots + h.kick + h.bang
 }
 
 /// his row in the room fight. (powerout.ts defOf)
-pub fn def_of(g: &mut crate::game::Game, gd: GuardId) -> Option<RoomfightDefId> {
+pub fn def_of(g: &crate::game::Game, gd: GuardId) -> Option<RoomfightDefId> {
     g.fight.defs.iter().copied().find(|&d| g.tab.roomfight_def[d].gd == gd)
 }
 
 /// the rule's men: the room fight's defenders on the other side from the player, in live play. (powerout.ts ruled)
-pub fn ruled(g: &mut crate::game::Game) -> Vec<RoomfightDefId> {
+pub fn ruled(g: &crate::game::Game) -> Vec<RoomfightDefId> {
     if g.touring || crate::director::director_showing(g) || g.quiet_utility {
         return Vec::new();
     }
@@ -322,7 +322,7 @@ pub fn cover_spot(g: &mut crate::game::Game, lever: V3, way: &[V3], from: V3) ->
 }
 
 /// how a man holds his post now. (powerout.ts calmOf)
-pub fn calm_of(g: &mut crate::game::Game, d: RoomfightDefId) -> crate::powerout::Calm {
+pub fn calm_of(g: &crate::game::Game, d: RoomfightDefId) -> crate::powerout::Calm {
     let row = &g.tab.roomfight_def[d];
     let gd = &g.gd[row.gd];
     Calm {
@@ -493,7 +493,7 @@ pub fn nobody(g: &mut crate::game::Game) {
 }
 
 /// lighting.ts setBlackout: is the walk to the breaker this rule's to hand out, so the stock errand passes this man over? (powerout.ts powerOutRules)
-pub fn power_out_rules(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn power_out_rules(g: &crate::game::Game, gd: GuardId) -> bool {
     if g.gd[gd].unit.is_none() {
         return false;
     }

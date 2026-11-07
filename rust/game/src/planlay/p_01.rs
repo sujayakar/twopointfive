@@ -13,12 +13,12 @@ pub fn copy(a: &[crate::planlay::LaidOrder]) -> Vec<crate::planlay::LaidOrder> {
 }
 
 /// The key that sends the plan: the word's own. (planlay.ts layKey)
-pub fn lay_key(g: &mut crate::game::Game) -> String {
+pub fn lay_key(g: &crate::game::Game) -> String {
     g.k.doortools.blow_key.clone()
 }
 
 /// Can that row be laid: an order, not a page, not a free row, not the word. (planlay.ts layable)
-pub fn layable(g: &mut crate::game::Game, d: OrdersOrderDefId) -> bool {
+pub fn layable(g: &crate::game::Game, d: OrdersOrderDefId) -> bool {
     let def = &g.tab.orders_order_def[d];
     let opens = def.opens.as_deref().map_or(false, |s| !s.is_empty());
     !opens && !def.free.unwrap_or(false) && !g.m.planlay.word_rows.has(def.id.clone())
@@ -49,7 +49,7 @@ pub fn lay_prune(g: &mut crate::game::Game) {
 }
 
 /// The start a plan is kept for: the scenario up, the cast, the mark Sam stands on. (planlay.ts startKey)
-pub fn start_key(g: &mut crate::game::Game) -> String {
+pub fn start_key(g: &crate::game::Game) -> String {
     let c = g.pl[g.player].ch;
     let p = g.ch[c].pos;
     let scenario = match crate::scenario_run::active_scenario(g) {
@@ -61,7 +61,7 @@ pub fn start_key(g: &mut crate::game::Game) -> String {
 }
 
 /// The living men of the squad a laid order names. (planlay.ts layMen)
-pub fn lay_men(g: &mut crate::game::Game, o: &crate::planlay::LaidOrder) -> Vec<GuardId> {
+pub fn lay_men(g: &crate::game::Game, o: &crate::planlay::LaidOrder) -> Vec<GuardId> {
     let s = crate::orders::squad_orders_squad(g);
     let mut men = Vec::new();
     for c in &o.who {
@@ -364,7 +364,7 @@ pub fn lay_clear(g: &mut crate::game::Game) {
 }
 
 /// `g.doors.list[o.door ?? -1]`: nothing where the place is off the list.
-fn door_at(g: &mut Game, door: Option<f64>) -> Option<DoorId> {
+fn door_at(g: &Game, door: Option<f64>) -> Option<DoorId> {
     let n = door.unwrap_or(-1.0);
     if n < 0.0 || n != m::floor(n) {
         return None;

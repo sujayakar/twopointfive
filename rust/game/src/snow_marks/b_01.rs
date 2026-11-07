@@ -10,8 +10,8 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/game/snowMarks.ts:76 updateSnowMarks)
-pub fn update_snow_marks(g: &mut crate::game::Game, t: &mut crate::snow_tracks::SnowTracks, field: &crate::render_snow_field::SnowField, dt: f64) {}
+pub fn update_snow_marks(g: &crate::game::Game, t: &crate::snow_tracks::SnowTracks, field: &crate::render_snow_field::SnowField, dt: f64) {}
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/game/snowMarks.ts:129 land)
-pub fn land(g: &mut crate::game::Game, t: &mut crate::snow_tracks::SnowTracks, k: crate::snow_marks::SNOWMARKS, s: &mut crate::snow_marks::Seen, x: f64, z: f64, r: f64, v: f64, mess: f64) {}
+pub fn land(g: &crate::game::Game, t: &crate::snow_tracks::SnowTracks, k: crate::snow_marks::SNOWMARKS, s: &crate::snow_marks::Seen, x: f64, z: f64, r: f64, v: f64, mess: f64) {}
 

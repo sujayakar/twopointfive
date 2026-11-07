@@ -50,7 +50,7 @@ fn post_of(g: &Game, m: GuardId) -> V3 {
 }
 
 /// His head, or where it would be.   (guards.ts headOf)
-pub fn head_of(g: &mut crate::game::Game, gd: GuardId) -> V3 {
+pub fn head_of(g: &crate::game::Game, gd: GuardId) -> V3 {
     let c = g.gd[gd].ch;
     match g.ch[c].bones.get(Bone::Head) { Some(h) => *h, None => v3::add(g.ch[c].pos, [0.0, 1.7, 0.0]) }
 }
@@ -140,11 +140,11 @@ pub fn reset_guards(g: &mut crate::game::Game) {
 // ---- alarm escalation
 
 /// The alarm level the guards act on: the game's, except under the showcase tour.   (guards.ts escalationOf)
-pub fn escalation_of(g: &mut crate::game::Game) -> f64 {
+pub fn escalation_of(g: &crate::game::Game) -> f64 {
     if g.quiet_utility { 0.0 } else { g.escalation }
 }
 /// The living man best placed to radio something about `pos`: the nearest not mid-fight, else the nearest at all, never `except`.   (guards.ts spokesman)
-pub fn spokesman(g: &mut crate::game::Game, pos: Option<V3>, except: Option<GuardId>) -> Option<GuardId> {
+pub fn spokesman(g: &crate::game::Game, pos: Option<V3>, except: Option<GuardId>) -> Option<GuardId> {
     let mut best: Option<GuardId> = None;
     let mut bd = f64::INFINITY;
     let guards = g.guards.clone();
@@ -244,7 +244,7 @@ pub fn stand_down_escalation(g: &mut crate::game::Game) {
 // ---- the net's radio check
 
 /// A man who cannot answer the net: down, or held with Sam's arm across his throat.   (guards.ts offNet)
-pub fn off_net(g: &mut crate::game::Game, x: GuardId) -> bool {
+pub fn off_net(g: &crate::game::Game, x: GuardId) -> bool {
     g.gd[x].state == GuardState::Dead || g.gd[x].held.is_some()
 }
 /// The net's radio-check state for this game, made on first touch; the row itself.   (guards.ts rollcallState)
@@ -257,7 +257,7 @@ pub fn rollcall_interval(g: &mut crate::game::Game) -> f64 {
     secs * (1.0 + (crate::math_dice::sim_random(g) * 2.0 - 1.0) * ROLLCALL_JITTER)
 }
 /// Who calls the check: a living man with his hands free for the radio, one on his route for choice.   (guards.ts radioCaller)
-pub fn radio_caller(g: &mut crate::game::Game) -> Option<GuardId> {
+pub fn radio_caller(g: &crate::game::Game) -> Option<GuardId> {
     let mut best: Option<GuardId> = None;
     let mut br = -1;
     let guards = g.guards.clone();
@@ -275,7 +275,7 @@ pub fn radio_caller(g: &mut crate::game::Game) -> Option<GuardId> {
     best
 }
 /// Somebody already out walking this man's route.   (guards.ts checkerFor)
-pub fn checker_for(g: &mut crate::game::Game, m: GuardId) -> Option<GuardId> {
+pub fn checker_for(g: &crate::game::Game, m: GuardId) -> Option<GuardId> {
     g.guards.iter().copied().find(|&x| g.gd[x].state != GuardState::Dead && matches!(&g.gd[x].task, Some(GuardTask::CheckOn(k)) if k.who == m))
 }
 /// A silent man is being looked for right now: the floor's alarm level holds meanwhile.   (guards.ts stillLooking)
@@ -289,7 +289,7 @@ fn checker_free(g: &Game, x: GuardId, m: GuardId) -> bool {
     x != m && d.state == GuardState::Patrol && !d.hold && d.script.is_none() && d.task.is_none() && d.body_duty.is_none() && d.held.is_none() && d.team == Team::Guard
 }
 /// The living man best placed to go round M's route, nearest any point of it; `prefer` first.   (guards.ts pickChecker)
-pub fn pick_checker(g: &mut crate::game::Game, m: GuardId, prefer: Option<GuardId>) -> Option<GuardId> {
+pub fn pick_checker(g: &crate::game::Game, m: GuardId, prefer: Option<GuardId>) -> Option<GuardId> {
     let pts = match route_points(g, m) { Some(p) => p, None => vec![g.ch[g.gd[m].ch].pos] };
     if let Some(p) = prefer { if checker_free(g, p, m) { return Some(p); } }
     let mut best: Option<GuardId> = None;
@@ -400,7 +400,7 @@ pub fn check_on_done(g: &mut crate::game::Game, gd: GuardId, m: GuardId, capped:
     }
 }
 /// (guards.ts updateRollcall's `callerOk`)
-fn caller_ok(g: &mut Game, x: Option<GuardId>) -> bool {
+fn caller_ok(g: &Game, x: Option<GuardId>) -> bool {
     match x {
         None => false,
         Some(x) => !off_net(g, x) && g.gd[x].state != GuardState::Alert && g.gd[x].script.is_none() && g.guards.contains(&x),

@@ -76,7 +76,7 @@ pub fn hold360(g: &mut crate::game::Game, el: &[GuardId]) {
 }
 
 /// Where n men stack on a plan's door: its two marks, then on down the line, on free floor. (qrf.ts stackMarksFor)
-pub fn stack_marks_for(g: &mut crate::game::Game, p: &crate::scene_level::RoomClearPlan, n: f64) -> Vec<V3> {
+pub fn stack_marks_for(g: &crate::game::Game, p: &crate::scene_level::RoomClearPlan, n: f64) -> Vec<V3> {
     let mut out: Vec<V3> = vec![v3::copy(p.stack[0]), v3::copy(p.stack[1])];
     let u = v3::normalize([p.stack[1][0] - p.stack[0][0], 0.0, p.stack[1][2] - p.stack[0][2]]);
     let mut k = 2.0;

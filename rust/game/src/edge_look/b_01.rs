@@ -27,7 +27,7 @@ pub fn break_like(g: &Game, b: WallbreakBreakableId) -> BreakLike {
 }
 
 /// What the frame's box list can still take of a picture-only lane's boxes. Never None here: a Rust game has its box world. (src/game/edgeLook.ts:82 frameRoom)
-pub fn frame_room(g: &mut crate::game::Game, mine: f64, slack: f64, now: Option<f64>) -> Option<f64> {
+pub fn frame_room(g: &crate::game::Game, mine: f64, slack: f64, now: Option<f64>) -> Option<f64> {
     let w = &g.engine.world;
     let used = match now { Some(n) => n, None => m::max(0.0, m::max(g.dyn_raw, g.dyn_boxes.len() as f64) - mine) };
     Some(w.max_boxes - w.statics.len() as f64 - used - slack)
@@ -61,7 +61,7 @@ pub fn edge_look_dress(g: &mut crate::game::Game, b: &crate::edge_look::BreakLik
 }
 
 /// The wall's own frame: u along it, y up, v across it. (src/game/edgeLook.ts:178 EdgeLook.frame)
-pub fn edge_look_frame(g: &mut crate::game::Game, b: &crate::edge_look::BreakLike) -> crate::edge_look::Frame {
+pub fn edge_look_frame(g: &crate::game::Game, b: &crate::edge_look::BreakLike) -> crate::edge_look::Frame {
     let (c, h, yaw) = { let r = &g.tab.boxes[b.box_]; (r.c, r.h, r.yaw) };
     let along_x = b.nx > 1.0 || h[0] >= h[2];
     let (cs, sn) = (m::cos(yaw), m::sin(yaw));
@@ -76,7 +76,7 @@ pub fn edge_look_frame(g: &mut crate::game::Game, b: &crate::edge_look::BreakLik
 }
 
 /// A place in the wall's frame. (src/game/edgeLook.ts:184 EdgeLook.at)
-pub fn edge_look_at(g: &mut crate::game::Game, f: crate::edge_look::Frame, u: f64, y: f64, v: f64) -> V3 {
+pub fn edge_look_at(g: &crate::game::Game, f: crate::edge_look::Frame, u: f64, y: f64, v: f64) -> V3 {
     let c = g.tab.boxes[f.b].c;
     at_c(c, &f, u, y, v)
 }
@@ -424,7 +424,7 @@ pub fn edge_look_rebuild(g: &mut crate::game::Game, b: &crate::edge_look::BreakL
 // ---------------------------------------------------------------- rubble
 
 /// Does a fragment at `p` (reach `r`) lie in a tripwire's beam? A look-only slab in a beam's line casts no shadow. (src/game/edgeLook.ts:327 EdgeLook.inBeam)
-pub fn edge_look_in_beam(g: &mut crate::game::Game, p: V3, r: f64) -> bool {
+pub fn edge_look_in_beam(g: &crate::game::Game, p: V3, r: f64) -> bool {
     for &l in g.devices.lasers.iter() {
         let lz = &g.tab.devices_laser_rt[l]; let (f, d) = (lz.def.from, lz.dir);
         let t = m::max(0.0, m::min(lz.len, (p[0] - f[0]) * d[0] + (p[1] - f[1]) * d[1] + (p[2] - f[2]) * d[2]));
@@ -606,4 +606,4 @@ pub fn edge_look_scorch(g: &mut crate::game::Game, b: &crate::edge_look::BreakLi
 }
 
 /// The look's books, all empty (the TypeScript's field initialisers; its constructor keeps only `g`, here reached by path). (src/game/edgeLook.ts:99 EdgeLook.constructor)
-pub fn edge_look_new(g: &mut crate::game::Game) -> crate::edge_look::EdgeLook { EdgeLook::blank() }
+pub fn edge_look_new(g: &crate::game::Game) -> crate::edge_look::EdgeLook { EdgeLook::blank() }

@@ -94,7 +94,7 @@ fn place(x: &crate::director::MarkRef) -> crate::director::Place {
 }
 
 /// `!!u && c.query.alive(u)` (tut-queue.script.ts alive)
-fn alive(g: &mut Game, r: DirectorRunId, u: &Option<crate::director::UnitRef>) -> bool {
+fn alive(g: &Game, r: DirectorRunId, u: &Option<crate::director::UnitRef>) -> bool {
     match u {
         Some(u) => crate::director::director_query_alive(g, r, u),
         None => false,

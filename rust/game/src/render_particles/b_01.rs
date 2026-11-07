@@ -10,10 +10,10 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/render/particles.ts:421 Particles.setWind)
-pub fn particles_set_wind(g: &mut crate::game::Game, srcs: &[crate::smoke_types::WindGpuSource], knobs: [f64; 3]) {}
+pub fn particles_set_wind(g: &crate::game::Game, srcs: &[crate::smoke_types::WindGpuSource], knobs: [f64; 3]) {}
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/render/particles.ts:423 Particles.clear)
-pub fn particles_clear(g: &mut crate::game::Game) {}
+pub fn particles_clear(g: &crate::game::Game) {}
 
 
 

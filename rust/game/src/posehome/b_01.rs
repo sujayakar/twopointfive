@@ -153,7 +153,7 @@ pub fn pose_home_tend(g: &mut crate::game::Game) {
 pub fn stage_open(g: &mut Game, c: CharId) -> Option<Stage> {
     let set = g.ch[c].anim.poses;
     if g.tab.pose_set[set].home.is_some() || g.tab.pose_set[set].list.is_empty() { return None; }
-    let live = ::sim::state::state(g.sim).poses.live;
+    let live = ::sim::state::state_read(g.sim).poses.live;
     let mut map: BTreeMap<u32, Pose> = BTreeMap::new();
     let mut back = Vec::new();
     for p in g.tab.pose_set[set].list.clone() {

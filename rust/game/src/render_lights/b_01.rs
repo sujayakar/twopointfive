@@ -11,7 +11,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 /// One light's GPU record (common.wgsl struct Light, 16 words) at word `o`. In the TypeScript `f` and `u` are two views of one buffer; here they are two
 /// lists, so every word is written to both, the same bits, and a host may hand either on. `inten` scales the colour; `kind_word` is the kind with whatever
 /// flag bits the caller sets above its low byte, `owner_word` the owner byte with the glass mask above it.   (src/render/lights.ts:113 packLight)
-pub fn pack_light(g: &mut crate::game::Game, f: &mut Vec<f32>, u: &mut Vec<u32>, o: f64, l: LightId, inten: f64, kind_word: f64, volumetric: f64, owner_word: f64) {
+pub fn pack_light(g: &crate::game::Game, f: &mut Vec<f32>, u: &mut Vec<u32>, o: f64, l: LightId, inten: f64, kind_word: f64, volumetric: f64, owner_word: f64) {
     const DEG: f64 = core::f64::consts::PI / 180.0;
     let o = o as usize;
     if f.len() < o + 16 { f.resize(o + 16, 0.0); }
@@ -51,7 +51,7 @@ pub fn light_set_flash(g: &mut crate::game::Game, pos: V3, color: V3, intensity:
     light_set_add(g, id)
 }
 /// The class a light is uploaded with: what was said for it, else 1 for every light of a man not on the team and every flash not a teammate's own; never the sky's.   (lights.ts LightSet.fogClass)
-pub fn light_set_fog_class(g: &mut crate::game::Game, l: LightId) -> f64 {
+pub fn light_set_fog_class(g: &crate::game::Game, l: LightId) -> f64 {
     let row = &g.tab.light[l];
     if let Some(f) = row.fog { if js::truthy(f) { return f; } }
     let t = &g.engine.lights.fog_team;

@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// Whoever emits cut pieces asks this. Settled: the page has the switch on.   (cut.ts cutBoxesOn)
-pub fn cut_boxes_on(g: &mut crate::game::Game) -> bool {
+pub fn cut_boxes_on(g: &crate::game::Game) -> bool {
     true
 }
 

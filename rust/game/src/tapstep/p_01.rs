@@ -28,7 +28,7 @@ pub fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::tapstep::St 
 }
 
 /// Is he stepping this frame: the footfalls are the plants', not the cycle's. (tapstep.ts tapHeld)
-pub fn tap_held(g: &mut crate::game::Game) -> bool {
+pub fn tap_held(g: &crate::game::Game) -> bool {
     let on = g.k.tapstep.on;
     match g.m.tapstep.state.get(g.player) {
         Some(s) => on && s.at >= 0.0 && g.time - s.at < 0.1,
@@ -69,7 +69,7 @@ pub fn back_of(g: &mut crate::game::Game, dx: f64, dz: f64, far: f64) -> Option<
 }
 
 /// The spot `keyM` behind a man. (tapstep.ts spotOf)
-pub fn spot_of(g: &mut crate::game::Game, gd: GuardId) -> crate::tapstep::SpotOf {
+pub fn spot_of(g: &crate::game::Game, gd: GuardId) -> crate::tapstep::SpotOf {
     let c = g.gd[gd].ch;
     let key_m = g.k.stalk.key_m;
     let (pos, yaw) = (g.ch[c].pos, g.ch[c].body_yaw);
@@ -77,7 +77,7 @@ pub fn spot_of(g: &mut crate::game::Game, gd: GuardId) -> crate::tapstep::SpotOf
 }
 
 /// How long a step of `len` m takes from rest to rest. (tapstep.ts stepSecs)
-pub fn step_secs(g: &mut crate::game::Game, len: f64) -> f64 {
+pub fn step_secs(g: &crate::game::Game, len: f64) -> f64 {
     secs_of(&g.k.tapstep, len)
 }
 fn secs_of(t: &crate::knobs::TapstepK, len: f64) -> f64 {

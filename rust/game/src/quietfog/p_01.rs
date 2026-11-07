@@ -13,17 +13,17 @@ fn rung_of(v: Option<&str>) -> Option<QuietRung> {
 }
 
 /// The solo night's row is one the lever is live on. (quietfog.ts soloFogRow)
-pub fn solo_fog_row(g: &mut crate::game::Game) -> bool {
+pub fn solo_fog_row(g: &crate::game::Game) -> bool {
     true
 }
 
 /// A link is the solo night's own, to be read as a quiet row's: `solo` on it, nothing else staged by it. (quietfog.ts soloFogLink)
-pub fn solo_fog_link(g: &mut crate::game::Game, q: &crate::query::Query) -> bool {
+pub fn solo_fog_link(g: &crate::game::Game, q: &crate::query::Query) -> bool {
     solo_fog_row(g) && q.has("solo") && !not_solo().iter().any(|k| q.has(k))
 }
 
 /// A quiet mission that hands out its cameras hands the player a wand as well. (quietfog.ts quietWand)
-pub fn quiet_wand(g: &mut crate::game::Game) -> bool {
+pub fn quiet_wand(g: &crate::game::Game) -> bool {
     crate::stickycam::sticky_visit(g) > 0.0
 }
 
@@ -41,7 +41,7 @@ pub fn quiet_fog_words(rung: Option<&str>) -> String {
 }
 
 /// Where a quiet mission starts with nothing kept and nothing on its link; the enum is always a rung. (quietfog.ts quietFogDefault)
-pub fn quiet_fog_default(g: &mut crate::game::Game) -> crate::quietfog::QuietRung {
+pub fn quiet_fog_default(g: &crate::game::Game) -> crate::quietfog::QuietRung {
     g.k.quietfog.def
 }
 
@@ -61,7 +61,7 @@ pub fn quiet_fog(g: &mut crate::game::Game) -> crate::quietfog::QuietRung {
 }
 
 /// The cameras come with the fog unasked where a quiet mission starts under the fog. (quietfog.ts quietCamsDefault)
-pub fn quiet_cams_default(g: &mut crate::game::Game) -> bool {
+pub fn quiet_cams_default(g: &crate::game::Game) -> bool {
     quiet_fog_default(g) != QuietRung::Off
 }
 
@@ -86,7 +86,7 @@ pub fn set_quiet_cams(g: &mut crate::game::Game, on: bool, keep: Option<bool>) {
 }
 
 /// The cameras a quiet mission's query asks to be handed: none named is the default's, `cams=N` is N within what can be carried. (quietfog.ts quietCamsOfQuery)
-pub fn quiet_cams_of_query(g: &mut crate::game::Game, q: &crate::query::Query, lesson: Option<bool>) -> f64 {
+pub fn quiet_cams_of_query(g: &crate::game::Game, q: &crate::query::Query, lesson: Option<bool>) -> f64 {
     if lesson.unwrap_or(false) || !(q.has("quiet") || solo_fog_link(g, q)) { return 0.0; }
     if quiet_fog_of_query(g, q, lesson) == QuietRung::Off { return 0.0; }
     if !q.has(PARAM_CAMS) {
@@ -144,7 +144,7 @@ pub fn quiet_fog_href(g: &mut crate::game::Game, href: &str, quiet: bool) -> Str
 }
 
 /// The rung a query asks its quiet mission to be played under: none named is the default's; 'off' for what is not a quiet mission, or a lesson. (quietfog.ts quietFogOfQuery)
-pub fn quiet_fog_of_query(g: &mut crate::game::Game, q: &crate::query::Query, lesson: Option<bool>) -> crate::quietfog::QuietRung {
+pub fn quiet_fog_of_query(g: &crate::game::Game, q: &crate::query::Query, lesson: Option<bool>) -> crate::quietfog::QuietRung {
     if lesson.unwrap_or(false) || !(q.has("quiet") || solo_fog_link(g, q)) { return QuietRung::Off; }
     match rung_of(q.get(PARAM)) {
         Some(rung) => rung,

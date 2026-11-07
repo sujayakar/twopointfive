@@ -10,7 +10,7 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 // ------------------------------------------------------------ seams: what skeleton 5 cannot say yet
 
 /// `box.c`, `box.h` (workthings.ts:117-119): skeleton 5 has `g.col.boxes` as a `Vec<BoxId>` and no table of Box rows.
-fn seam_box_c_h(g: &mut Game, b: BoxId) -> (V3, V3) { let x = &g.tab.boxes[b]; (x.c, x.h) }
+fn seam_box_c_h(g: &Game, b: BoxId) -> (V3, V3) { let x = &g.tab.boxes[b]; (x.c, x.h) }
 
 // ------------------------------------------------------------ small local helpers
 
@@ -73,7 +73,7 @@ pub fn stand_for(g: &mut crate::game::Game, face: V3, n: Option<V3>, area: Optio
 }
 
 /// The breaker panel: the point on its face and the normal out of it, out of the box's thin side. (workthings.ts panelFace)
-pub fn panel_face(g: &mut crate::game::Game) -> crate::workthings::PanelFace {
+pub fn panel_face(g: &crate::game::Game) -> crate::workthings::PanelFace {
     let bp = g.level.breaker.pos;
     // a missing index is `statics[undefined]`, a missing box `undefined`: no box
     let bx = g.level.breaker.boxes.first().and_then(|&i| g.engine.world.statics.get(i as usize).copied());
@@ -95,7 +95,7 @@ pub fn panel_face(g: &mut crate::game::Game) -> crate::workthings::PanelFace {
 }
 
 /// The point just off the panel's real face that Sam's eye needs a line to; None when he is not in front of it. (workthings.ts samPanelPoint)
-pub fn sam_panel_point(g: &mut crate::game::Game, from: V3) -> Option<V3> {
+pub fn sam_panel_point(g: &crate::game::Game, from: V3) -> Option<V3> {
     let PanelFace { face, n } = panel_face(g);
     if (from[0] - face[0]) * n[0] + (from[2] - face[2]) * n[2] <= 0.0 { return None; }
     Some([face[0] + n[0] * 0.05, face[1], face[2] + n[2] * 0.05])
@@ -293,7 +293,7 @@ pub fn work_things_on(g: &mut crate::game::Game, box_: Option<BoxId>) -> Option<
 }
 
 /// orders.ts rowsFor: a thing's menu is the floor's with its own order where 'move there' was. (workthings.ts WorkThings.rows)
-pub fn work_things_rows(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, page: Option<&str>, rows: &[OrdersOrderDefId]) -> Vec<OrdersOrderDefId> {
+pub fn work_things_rows(g: &crate::game::Game, t: &crate::orders::OrderTarget, page: Option<&str>, rows: &[OrdersOrderDefId]) -> Vec<OrdersOrderDefId> {
     let on_thing = matches!(t, crate::orders::OrderTarget::Floor(crate::orders::OrderTargetFloor { thing: Some(_), .. }));
     if page.is_some() || !on_thing { return rows.to_vec(); }
     let mut out = vec![g.work.row];
@@ -585,7 +585,7 @@ pub fn work_things_hand(g: &mut crate::game::Game, c_2: CharId) -> Option<crate:
 }
 
 /// How long the work on a thing takes from the hand going out, s. (workthings.ts WorkThings.needOf)
-pub fn work_things_need_of(g: &mut crate::game::Game, verb: crate::workthings::WorkVerb) -> f64 {
+pub fn work_things_need_of(g: &crate::game::Game, verb: crate::workthings::WorkVerb) -> f64 {
     let hand = g.k.work.hand_secs;
     hand + (match verb {
         WorkVerb::Drive => crate::consts::DRIVE_SECS,
@@ -595,27 +595,27 @@ pub fn work_things_need_of(g: &mut crate::game::Game, verb: crate::workthings::W
 }
 
 /// What the hand out is doing, for whoever poses it. (workthings.ts WorkThings.job)
-pub fn work_things_job(g: &mut crate::game::Game, c_2: CharId) -> Option<crate::workthings::WorkJob> {
+pub fn work_things_job(g: &crate::game::Game, c_2: CharId) -> Option<crate::workthings::WorkJob> {
     let now = g.time;
     let h = g.work.hands.get(c_2)?;
     Some(WorkJob { verb: h.verb, secs: m::max(0.0, now - h.t0), need: h.need })
 }
 
 /// He is at work and stood on the spot his thing is worked from. (workthings.ts WorkThings.atThing)
-pub fn work_things_at_thing(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn work_things_at_thing(g: &crate::game::Game, gd: GuardId) -> bool {
     let (a, stand) = match g.work.jobs.get(gd) { Some(j) => (j.a, j.thing.stand), None => return false };
     if !work_things_working(g, gd) || !g.tab.orders_assignment[a].arrived { return false; }
     match stand { Some(s) => flat(pos(g, gd), s) < 0.45, None => false }
 }
 
 /// Is this man working a thing. (workthings.ts WorkThings.working)
-pub fn work_things_working(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn work_things_working(g: &crate::game::Game, gd: GuardId) -> bool {
     let a = match g.work.jobs.get(gd) { Some(j) => j.a, None => return false };
     g.gd[gd].state != crate::game::GuardState::Dead && crate::orders::squad_orders_of(g, gd) == Some(a)
 }
 
 /// The man an order has on a defuse mission's charge i; a man with his hand on it is named before one still walking. (workthings.ts WorkThings.onDevice)
-pub fn work_things_on_device(g: &mut crate::game::Game, i: f64) -> Option<crate::workthings::WorkThingsOnDevice> {
+pub fn work_things_on_device(g: &crate::game::Game, i: f64) -> Option<crate::workthings::WorkThingsOnDevice> {
     let mut best: Option<WorkThingsOnDevice> = None;
     for gd in g.work.jobs.keys() {
         let (t0, last_t, here) = {
@@ -663,7 +663,7 @@ pub fn work_on(g: &mut crate::game::Game, box_: Option<BoxId>) -> Option<crate::
 }
 
 /// orders.ts rowsFor. (workthings.ts workRows)
-pub fn work_rows(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, page: Option<&str>, rows: &[OrdersOrderDefId]) -> Vec<OrdersOrderDefId> {
+pub fn work_rows(g: &crate::game::Game, t: &crate::orders::OrderTarget, page: Option<&str>, rows: &[OrdersOrderDefId]) -> Vec<OrdersOrderDefId> {
     work_things_rows(g, t, page, rows)
 }
 
@@ -712,11 +712,11 @@ pub fn work_job(g: &mut crate::game::Game, c_2: CharId) -> Option<crate::workthi
 }
 
 /// lighting.ts: is the breaker none of this man's business unless he is told. (workthings.ts workNotHis)
-pub fn work_not_his(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn work_not_his(g: &crate::game::Game, gd: GuardId) -> bool {
     g.gd[gd].team == crate::teams::Team::Operative && g.gd[gd].unit.is_some()
 }
 
 /// lighting.ts setBlackout: a man who cannot leave where he stands is not handed the errand. (workthings.ts workStaysPut)
-pub fn work_stays_put(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn work_stays_put(g: &crate::game::Game, gd: GuardId) -> bool {
     !g.touring && !g.quiet_utility && (g.gd[gd].hold || g.gd[gd].pinned || g.gd[gd].script.is_some())
 }

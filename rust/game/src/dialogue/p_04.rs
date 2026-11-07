@@ -17,12 +17,12 @@ pub fn force_script(g: &mut crate::game::Game, talk: GameTalkId, id_2: Option<&s
 }
 
 /// The deal forced on this man and not yet made: `None` = none pending, `Some(None)` = forced to the pools.   (dialogue.ts forcedScriptOf)
-pub fn forced_script_of(g: &mut crate::game::Game, talk: GameTalkId) -> Option<Option<String>> {
+pub fn forced_script_of(g: &crate::game::Game, talk: GameTalkId) -> Option<Option<String>> {
     g.m.dialogue.forced_by_talk.get(talk).cloned()
 }
 
 /// The script this man's hold plays, if one has been dealt; never deals.   (dialogue.ts peekScript)
-pub fn peek_script(g: &mut crate::game::Game, talk: GameTalkId) -> Option<crate::dialogue::Script> {
+pub fn peek_script(g: &crate::game::Game, talk: GameTalkId) -> Option<crate::dialogue::Script> {
     g.m.dialogue.script_by_talk.get(talk).cloned().flatten()
 }
 

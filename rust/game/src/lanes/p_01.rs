@@ -53,7 +53,7 @@ pub fn live(g: &mut crate::game::Game) -> bool {
 }
 
 /// WHO THE LANES HAVE: the lane a man held short of it or out for a look round its corner is on, while that lane stands.   (lanes.ts laneOf)
-pub fn lane_of(g: &mut crate::game::Game, gd: GuardId) -> Option<LanesLaneId> {
+pub fn lane_of(g: &crate::game::Game, gd: GuardId) -> Option<LanesLaneId> {
     let st = g.m.lanes.states.as_ref()?;
     let lane = match st.held.get(gd) {
         Some(h) => h.lane,
@@ -118,7 +118,7 @@ pub fn lanes_gone(g: &mut crate::game::Game) {
 }
 
 /// Where he looks from.   (lanes.ts eyeOf)
-pub fn eye_of(g: &mut crate::game::Game, gd: GuardId) -> V3 {
+pub fn eye_of(g: &crate::game::Game, gd: GuardId) -> V3 {
     let c = g.gd[gd].ch;
     match g.ch[c].bones.get(crate::character::Bone::Head) {
         Some(p) => *p,
@@ -127,7 +127,7 @@ pub fn eye_of(g: &mut crate::game::Game, gd: GuardId) -> V3 {
 }
 
 /// The nav cell a point lies in, −1 off the grid.   (lanes.ts cellAt)
-pub fn cell_at(g: &mut crate::game::Game, p: V3) -> f64 {
+pub fn cell_at(g: &crate::game::Game, p: V3) -> f64 {
     let n = &g.col.nav;
     let x = m::floor(p[0] / n.cell);
     let z = m::floor(p[2] / n.cell);
@@ -139,14 +139,14 @@ pub fn cell_at(g: &mut crate::game::Game, p: V3) -> f64 {
 }
 
 /// A point lies on a mask's floor.   (lanes.ts inMask)
-pub fn in_mask(g: &mut crate::game::Game, m: Option<&[u8]>, p: V3) -> bool {
+pub fn in_mask(g: &crate::game::Game, m: Option<&[u8]>, p: V3) -> bool {
     let Some(m) = m else { return false };
     let i = cell_at(g, p);
     i >= 0.0 && m.get(i as usize) == Some(&1)
 }
 
 /// The side has it on the net, or he has it himself.   (lanes.ts knows)
-pub fn knows(g: &mut crate::game::Game, l: LanesLaneId, gd: GuardId) -> bool {
+pub fn knows(g: &crate::game::Game, l: LanesLaneId, gd: GuardId) -> bool {
     knows_row(&g.tab.lanes_lane[l], gd)
 }
 
@@ -156,7 +156,7 @@ fn knows_row(l: &Lane, gd: GuardId) -> bool {
 }
 
 /// An enemy he saw this close inside the last second: a fight already.   (lanes.ts closeFight)
-pub fn close_fight(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn close_fight(g: &crate::game::Game, gd: GuardId) -> bool {
     if g.time - g.gd[gd].last_seen_t >= 1.0 {
         return false;
     }
@@ -179,7 +179,7 @@ pub fn pushing(g: &mut crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// The energy a lane's lines are asked at: its heaviest gun's, or nothing. (LANES.glass settled on.)   (lanes.ts laneE)
-pub fn lane_e(g: &mut crate::game::Game, l: LanesLaneId) -> Option<f64> {
+pub fn lane_e(g: &crate::game::Game, l: LanesLaneId) -> Option<f64> {
     e_of(&g.tab.lanes_lane[l])
 }
 
@@ -189,7 +189,7 @@ fn e_of(l: &Lane) -> Option<f64> {
 }
 
 /// His own senses have the fire since `t`.   (lanes.ts roused)
-pub fn roused(g: &mut crate::game::Game, gd: GuardId, t: f64) -> bool {
+pub fn roused(g: &crate::game::Game, gd: GuardId, t: f64) -> bool {
     let r = &g.gd[gd];
     r.state == crate::game::GuardState::Alert
         || r.state == crate::game::GuardState::Search
@@ -214,7 +214,7 @@ pub fn flanking(g: &mut crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// The body with this id is up.   (lanes.ts upId)
-pub fn up_id(g: &mut crate::game::Game, id_2: f64) -> bool {
+pub fn up_id(g: &crate::game::Game, id_2: f64) -> bool {
     if crate::seats::is_man_id(g, id_2) {
         return match crate::seats::man_by_id(g, id_2) {
             Some(p) => g.ch[g.pl[p].ch].alive,
@@ -225,7 +225,7 @@ pub fn up_id(g: &mut crate::game::Game, id_2: f64) -> bool {
 }
 
 /// His row in the room fight.   (lanes.ts defOf)
-pub fn def_of(g: &mut crate::game::Game, gd: GuardId) -> Option<RoomfightDefId> {
+pub fn def_of(g: &crate::game::Game, gd: GuardId) -> Option<RoomfightDefId> {
     g.fight.defs.iter().copied().find(|&d| g.tab.roomfight_def[d].gd == gd)
 }
 
@@ -606,7 +606,7 @@ pub fn cost(g: &mut crate::game::Game, from: V3, at: V3, man: GuardId, down: boo
 }
 
 /// where the fire landed is floor of the lane already   (lanes.ts cost, 329)
-fn landed_in_it(g: &mut Game, l: LanesLaneId, at: V3) -> bool {
+fn landed_in_it(g: &Game, l: LanesLaneId, at: V3) -> bool {
     let i = cell_at(g, at);
     g.tab.lanes_lane[l].cells.as_ref().unwrap().has(crate::Num(i))
 }
