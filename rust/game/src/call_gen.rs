@@ -8,8 +8,8 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 0 => { let a1: Vec<crate::scene_cut::CutPlane> = Io::r(&mut i); let a2: f64 = Io::r(&mut i); let a3: f64 = Io::r(&mut i); let a4: f64 = Io::r(&mut i); let a5: f64 = Io::r(&mut i); let a6: f64 = Io::r(&mut i); let a7: f64 = Io::r(&mut i); let a8: f64 = Io::r(&mut i); let a9: f64 = Io::r(&mut i); let r = crate::scene_cut::cut_clip(g, &a1, a2, a3, a4, a5, a6, a7, a8, a9); r.w(&mut o);  }
 1 => { let a1: Vec<f64> = Io::r(&mut i); let a2: String = Io::r(&mut i); let a3: crate::scene_stuff::SayPaintSaid = Io::r(&mut i); crate::scene_stuff::say_paint(g, &a1, &a2, a3);  }
 2 => { let a1: crate::scene_stuff::BoxStuff = Io::r(&mut i); let a2: [f64; 3] = Io::r(&mut i); let a3: Option<crate::scene_stuff::MadeOfFinish> = Io::r(&mut i); let r = crate::scene_stuff::made_of(g, a1, a2, a3); r.w(&mut o);  }
-3 => { let a1: V3 = Io::r(&mut i); let a2: V3 = Io::r(&mut i); let a3: BoxId = Io::r(&mut i); let a4: f64 = Io::r(&mut i); let r = crate::scene_boxes::ray_box(g, a1, a2, a3, a4); r.w(&mut o);  }
-4 => { let a1: Vec<BoxId> = Io::r(&mut i); let a2: f64 = Io::r(&mut i); let r = crate::thinline::thin_fit(g, &a1, a2); r.w(&mut o);  }
+3 => { let a1: V3 = Io::r(&mut i); let a2: V3 = Io::r(&mut i); let a3: AnyBoxId = Io::r(&mut i); let a4: f64 = Io::r(&mut i); let r = crate::scene_boxes::ray_box(g, a1, a2, a3, a4); r.w(&mut o);  }
+4 => { let a1: Vec<AnyBoxId> = Io::r(&mut i); let a2: f64 = Io::r(&mut i); let r = crate::thinline::thin_fit(g, &a1, a2); r.w(&mut o);  }
 5 => { let a1: AnimGltfCastInfoId = Io::r(&mut i); let a2: f64 = Io::r(&mut i); let a3: bool = Io::r(&mut i); let r = crate::anim_gltf::cast_goggles(g, a1, a2, a3); r.w(&mut o);  }
 6 => { let a1: AnimGltfCastInfoId = Io::r(&mut i); let a2: f64 = Io::r(&mut i); let r = crate::anim_gltf::cast_suit(g, a1, a2); r.w(&mut o);  }
 7 => {  crate::scene_box_mirror::leaf_wrote(g);  }
@@ -35,14 +35,14 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 27 => { let a1: Option<crate::gunlook::GunLook> = Io::r(&mut i); let a2: Option<crate::weapons::WeaponDef> = Io::r(&mut i); let a3: Option<crate::weapons::WeaponDef> = Io::r(&mut i); let a4: Option<crate::weapons::WeaponDef> = Io::r(&mut i); let r = crate::gunlook::gun_look_of(g, a1, a2.as_ref(), a3.as_ref(), a4.as_ref()); r.w(&mut o);  }
 28 => { let a1: FirearmId = Io::r(&mut i); let r = crate::gunreload::feed_begin(g, a1); r.w(&mut o);  }
 29 => { let a1: CharId = Io::r(&mut i); let a2: crate::weapons::WeaponDef = Io::r(&mut i); let a3: f64 = Io::r(&mut i); let a4: f64 = Io::r(&mut i); let a5: Option<f64> = Io::r(&mut i); let a6: Option<FirearmId> = Io::r(&mut i); crate::gunreload::feed_tick(g, a1, &a2, a3, a4, a5, a6);  }
-30 => { let a1: CharId = Io::r(&mut i); let a2: bool = Io::r(&mut i); let mut a3: Vec<BoxId> = Io::r(&mut i); let a4: crate::rig_props::RigGoggles = Io::r(&mut i); let mut a5: Option<Vec<crate::rig_props::RigNodeMeta>> = Io::r(&mut i); let a6: Option<f64> = Io::r(&mut i); crate::rig_props::goggles_boxes(g, a1, a2, &mut a3, a4, a5.as_mut(), a6); a3.w(&mut o); a5.w(&mut o); }
-31 => { let a1: CharId = Io::r(&mut i); let a2: crate::rig_props::RigOpts = Io::r(&mut i); let mut a3: Vec<BoxId> = Io::r(&mut i); let a4: Option<crate::rig_props::Rig> = Io::r(&mut i); let mut a5: Option<Vec<crate::rig_props::RigNodeMeta>> = Io::r(&mut i); crate::rig_props::rig_boxes(g, a1, a2, &mut a3, a4, a5.as_mut()); a3.w(&mut o); a5.w(&mut o); }
-32 => { let a1: CharId = Io::r(&mut i); let mut a2: Vec<BoxId> = Io::r(&mut i); let a3: crate::rig_props::HolsterBoxesParts = Io::r(&mut i); let mut a4: Option<Vec<crate::rig_props::RigNodeMeta>> = Io::r(&mut i); let a5: Option<crate::rig_props::RigHolster> = Io::r(&mut i); crate::rig_props::holster_boxes(g, a1, &mut a2, a3, a4.as_mut(), a5); a2.w(&mut o); a4.w(&mut o); }
-33 => { let a1: CharId = Io::r(&mut i); let mut a2: Vec<BoxId> = Io::r(&mut i); let a3: Option<crate::rig_props::RigKnife> = Io::r(&mut i); let mut a4: Option<Vec<crate::rig_props::RigNodeMeta>> = Io::r(&mut i); crate::rig_props::knife_boxes(g, a1, &mut a2, a3, a4.as_mut()); a2.w(&mut o); a4.w(&mut o); }
-34 => { let a1: CharId = Io::r(&mut i); let a2: crate::game::ThrowKind = Io::r(&mut i); let mut a3: Vec<BoxId> = Io::r(&mut i); let mut a4: Option<Vec<crate::rig_props::RigNodeMeta>> = Io::r(&mut i); crate::rig_props::free_can_boxes(g, a1, a2, &mut a3, a4.as_mut()); a3.w(&mut o); a4.w(&mut o); }
-35 => { let a1: CharId = Io::r(&mut i); let mut a2: Vec<BoxId> = Io::r(&mut i); let a3: Option<crate::rig_props::RigSc20k> = Io::r(&mut i); let a4: Option<crate::rig_props::Sc20kBoxesWhere> = Io::r(&mut i); let a5: Option<V3> = Io::r(&mut i); let mut a6: Option<Vec<crate::rig_props::RigNodeMeta>> = Io::r(&mut i); let a7: Option<crate::rig_props::RigM4> = Io::r(&mut i); let a8: Option<crate::rig_props::KitDraw> = Io::r(&mut i); let a9: Option<bool> = Io::r(&mut i); let a10: Option<bool> = Io::r(&mut i); let a11: Option<f64> = Io::r(&mut i); let a12: Option<bool> = Io::r(&mut i); crate::rig_props::sc20k_boxes(g, a1, &mut a2, a3, a4, a5, a6.as_mut(), a7, a8, a9, a10, a11, a12); a2.w(&mut o); a6.w(&mut o); }
-36 => { let a1: CharId = Io::r(&mut i); let a2: crate::rig_props::BigBoxesKind = Io::r(&mut i); let a3: f64 = Io::r(&mut i); let mut a4: Vec<BoxId> = Io::r(&mut i); let a5: Option<crate::rig_props::Rig> = Io::r(&mut i); let a6: Option<bool> = Io::r(&mut i); let mut a7: Option<Vec<crate::rig_props::RigNodeMeta>> = Io::r(&mut i); crate::rig_props::big_boxes(g, a1, a2, a3, &mut a4, a5, a6, a7.as_mut()); a4.w(&mut o); a7.w(&mut o); }
-37 => { let a1: CharId = Io::r(&mut i); let a2: crate::rig_props::HungBoxesWeapon = Io::r(&mut i); let mut a3: Vec<BoxId> = Io::r(&mut i); let a4: Option<crate::rig_props::Rig> = Io::r(&mut i); let a5: Option<bool> = Io::r(&mut i); let mut a6: Option<Vec<crate::rig_props::RigNodeMeta>> = Io::r(&mut i); crate::rig_props::hung_boxes(g, a1, a2, &mut a3, a4, a5, a6.as_mut()); a3.w(&mut o); a6.w(&mut o); }
+30 => { let a1: CharId = Io::r(&mut i); let a2: bool = Io::r(&mut i); let mut a3: Vec<AnyBoxId> = Io::r(&mut i); let a4: crate::rig_props::RigGoggles = Io::r(&mut i); let mut a5: Option<Vec<crate::rig_props::RigNodeMeta>> = Io::r(&mut i); let a6: Option<f64> = Io::r(&mut i); crate::rig_props::goggles_boxes(g, a1, a2, &mut a3, a4, a5.as_mut(), a6); a3.w(&mut o); a5.w(&mut o); }
+31 => { let a1: CharId = Io::r(&mut i); let a2: crate::rig_props::RigOpts = Io::r(&mut i); let mut a3: Vec<AnyBoxId> = Io::r(&mut i); let a4: Option<crate::rig_props::Rig> = Io::r(&mut i); let mut a5: Option<Vec<crate::rig_props::RigNodeMeta>> = Io::r(&mut i); crate::rig_props::rig_boxes(g, a1, a2, &mut a3, a4, a5.as_mut()); a3.w(&mut o); a5.w(&mut o); }
+32 => { let a1: CharId = Io::r(&mut i); let mut a2: Vec<AnyBoxId> = Io::r(&mut i); let a3: crate::rig_props::HolsterBoxesParts = Io::r(&mut i); let mut a4: Option<Vec<crate::rig_props::RigNodeMeta>> = Io::r(&mut i); let a5: Option<crate::rig_props::RigHolster> = Io::r(&mut i); crate::rig_props::holster_boxes(g, a1, &mut a2, a3, a4.as_mut(), a5); a2.w(&mut o); a4.w(&mut o); }
+33 => { let a1: CharId = Io::r(&mut i); let mut a2: Vec<AnyBoxId> = Io::r(&mut i); let a3: Option<crate::rig_props::RigKnife> = Io::r(&mut i); let mut a4: Option<Vec<crate::rig_props::RigNodeMeta>> = Io::r(&mut i); crate::rig_props::knife_boxes(g, a1, &mut a2, a3, a4.as_mut()); a2.w(&mut o); a4.w(&mut o); }
+34 => { let a1: CharId = Io::r(&mut i); let a2: crate::game::ThrowKind = Io::r(&mut i); let mut a3: Vec<AnyBoxId> = Io::r(&mut i); let mut a4: Option<Vec<crate::rig_props::RigNodeMeta>> = Io::r(&mut i); crate::rig_props::free_can_boxes(g, a1, a2, &mut a3, a4.as_mut()); a3.w(&mut o); a4.w(&mut o); }
+35 => { let a1: CharId = Io::r(&mut i); let mut a2: Vec<AnyBoxId> = Io::r(&mut i); let a3: Option<crate::rig_props::RigSc20k> = Io::r(&mut i); let a4: Option<crate::rig_props::Sc20kBoxesWhere> = Io::r(&mut i); let a5: Option<V3> = Io::r(&mut i); let mut a6: Option<Vec<crate::rig_props::RigNodeMeta>> = Io::r(&mut i); let a7: Option<crate::rig_props::RigM4> = Io::r(&mut i); let a8: Option<crate::rig_props::KitDraw> = Io::r(&mut i); let a9: Option<bool> = Io::r(&mut i); let a10: Option<bool> = Io::r(&mut i); let a11: Option<f64> = Io::r(&mut i); let a12: Option<bool> = Io::r(&mut i); crate::rig_props::sc20k_boxes(g, a1, &mut a2, a3, a4, a5, a6.as_mut(), a7, a8, a9, a10, a11, a12); a2.w(&mut o); a6.w(&mut o); }
+36 => { let a1: CharId = Io::r(&mut i); let a2: crate::rig_props::BigBoxesKind = Io::r(&mut i); let a3: f64 = Io::r(&mut i); let mut a4: Vec<AnyBoxId> = Io::r(&mut i); let a5: Option<crate::rig_props::Rig> = Io::r(&mut i); let a6: Option<bool> = Io::r(&mut i); let mut a7: Option<Vec<crate::rig_props::RigNodeMeta>> = Io::r(&mut i); crate::rig_props::big_boxes(g, a1, a2, a3, &mut a4, a5, a6, a7.as_mut()); a4.w(&mut o); a7.w(&mut o); }
+37 => { let a1: CharId = Io::r(&mut i); let a2: crate::rig_props::HungBoxesWeapon = Io::r(&mut i); let mut a3: Vec<AnyBoxId> = Io::r(&mut i); let a4: Option<crate::rig_props::Rig> = Io::r(&mut i); let a5: Option<bool> = Io::r(&mut i); let mut a6: Option<Vec<crate::rig_props::RigNodeMeta>> = Io::r(&mut i); crate::rig_props::hung_boxes(g, a1, a2, &mut a3, a4, a5, a6.as_mut()); a3.w(&mut o); a6.w(&mut o); }
 38 => { let a1: CharId = Io::r(&mut i); crate::character::anim_fire(g, a1);  }
 39 => { let a1: CharId = Io::r(&mut i); crate::character::anim_hit(g, a1);  }
 40 => { let a1: CharId = Io::r(&mut i); crate::character::anim_flinch(g, a1);  }
@@ -142,11 +142,11 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 134 => {  crate::edge_look::edge_look_clear(g);  }
 135 => { let a1: f64 = Io::r(&mut i); crate::edge_look::edge_look_update(g, a1);  }
 136 => { let a1: Vec<crate::debris::FootMan> = Io::r(&mut i); let a2: crate::debris::FootKnobs = Io::r(&mut i); let a3: f64 = Io::r(&mut i); crate::edge_look::edge_look_feet(g, &a1, a2, a3);  }
-137 => { let mut a1: Vec<BoxId> = Io::r(&mut i); crate::edge_look::edge_look_boxes(g, &mut a1); a1.w(&mut o); }
+137 => { let mut a1: Vec<AnyBoxId> = Io::r(&mut i); crate::edge_look::edge_look_boxes(g, &mut a1); a1.w(&mut o); }
 138 => { let a1: crate::edge_look::BreakLike = Io::r(&mut i); crate::wallskin::wall_skin_opened(g, &a1);  }
 139 => {  crate::wallskin::wall_skin_clear(g);  }
 140 => {  crate::wallskin::wall_skin_update(g);  }
-141 => { let mut a1: Vec<BoxId> = Io::r(&mut i); crate::wallskin::wall_skin_boxes(g, &mut a1); a1.w(&mut o); }
+141 => { let mut a1: Vec<AnyBoxId> = Io::r(&mut i); crate::wallskin::wall_skin_boxes(g, &mut a1); a1.w(&mut o); }
 142 => { let a1: f64 = Io::r(&mut i); let r = crate::wallbreak::wall_break_adopt(g, a1); r.w(&mut o);  }
 143 => { let a1: f64 = Io::r(&mut i); let a2: f64 = Io::r(&mut i); let a3: Option<V3> = Io::r(&mut i); let mut a4: Option<crate::break_table::ShedBudget> = Io::r(&mut i); let r = crate::wallbreak::wall_break_raze(g, a1, a2, a3, a4.as_mut()); r.w(&mut o); a4.w(&mut o); }
 144 => { let a1: crate::wallbreak::WallBreakNoteC = Io::r(&mut i); let r = crate::wallbreak::wall_break_note(g, &a1); r.w(&mut o);  }
@@ -174,7 +174,7 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 169 => { let a1: crate::wallbreak::BlastEvent = Io::r(&mut i); crate::winbars::bars_blast(g, a1);  }
 170 => {  crate::winbars::reset_bars(g);  }
 171 => { let a1: f64 = Io::r(&mut i); crate::destruction::destruction_update(g, a1);  }
-172 => { let mut a1: Vec<BoxId> = Io::r(&mut i); crate::destruction::destruction_boxes(g, &mut a1); a1.w(&mut o); }
+172 => { let mut a1: Vec<AnyBoxId> = Io::r(&mut i); crate::destruction::destruction_boxes(g, &mut a1); a1.w(&mut o); }
 173 => {  crate::destruction::destruction_reset(g);  }
 174 => {  crate::destruction::destruction_clear_moving(g);  }
 175 => { let a1: CharId = Io::r(&mut i); let a2: V3 = Io::r(&mut i); let a3: V3 = Io::r(&mut i); let a4: crate::destruction::DestructionRoundHit = Io::r(&mut i); let a5: crate::weapons::WeaponDef = Io::r(&mut i); crate::destruction::destruction_round(g, a1, a2, a3, &a4, &a5);  }
@@ -198,7 +198,7 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 193 => { let a1: DebrisChunkId = Io::r(&mut i); crate::break_table::breaks_evicted(g, a1);  }
 194 => {  crate::break_table::breaks_tick(g);  }
 195 => { let a1: DebrisChunkId = Io::r(&mut i); crate::break_table::breaks_dress(g, a1);  }
-196 => { let a1: BoxId = Io::r(&mut i); let a2: String = Io::r(&mut i); let a3: f64 = Io::r(&mut i); let r = crate::break_table::breaks_shape_loose(g, a1, &a2, a3); r.w(&mut o);  }
+196 => { let a1: AnyBoxId = Io::r(&mut i); let a2: String = Io::r(&mut i); let a3: f64 = Io::r(&mut i); let r = crate::break_table::breaks_shape_loose(g, a1, &a2, a3); r.w(&mut o);  }
 197 => { let a1: DebrisChunkId = Io::r(&mut i); crate::break_table::breaks_sheet(g, a1);  }
 198 => { let a1: DebrisChunkId = Io::r(&mut i); let a2: f64 = Io::r(&mut i); let a3: f64 = Io::r(&mut i); let a4: Option<f64> = Io::r(&mut i); crate::break_table::breaks_carcass(g, a1, a2, a3, a4);  }
 199 => { let a1: crate::scene_materials::Surf = Io::r(&mut i); let a2: BoxId = Io::r(&mut i); let a3: Option<V3> = Io::r(&mut i); let a4: f64 = Io::r(&mut i); let mut a5: crate::break_table::ShedBudget = Io::r(&mut i); let a6: Option<crate::break_table::Mat> = Io::r(&mut i); let r = crate::break_table::breaks_shed_cell(g, a1, a2, a3, a4, &mut a5, a6); r.w(&mut o); a5.w(&mut o); }
@@ -207,7 +207,7 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 202 => {  crate::debris::debris_landings(g);  }
 203 => { let a1: crate::debris::ChunkKind = Io::r(&mut i); let a2: BoxId = Io::r(&mut i); let a3: V3 = Io::r(&mut i); let a4: V3 = Io::r(&mut i); let a5: Option<f64> = Io::r(&mut i); let a6: Option<bool> = Io::r(&mut i); let r = crate::debris::debris_spawn_raw(g, a1, a2, a3, a4, a5, a6); r.w(&mut o);  }
 204 => {  crate::debris::debris_clear(g);  }
-205 => { let mut a1: Vec<BoxId> = Io::r(&mut i); crate::debris::debris_boxes(g, &mut a1); a1.w(&mut o); }
+205 => { let mut a1: Vec<AnyBoxId> = Io::r(&mut i); crate::debris::debris_boxes(g, &mut a1); a1.w(&mut o); }
 206 => { let a1: Vec<crate::debris::FootMan> = Io::r(&mut i); let a2: crate::debris::FootKnobs = Io::r(&mut i); let a3: Option<Vec<DebrisChunkId>> = Io::r(&mut i); let mut a4: Option<crate::debris::FootBook> = Io::r(&mut i); let r = crate::debris::debris_feet(g, &a1, a2, a3.as_deref(), a4.as_mut()); r.w(&mut o); a4.w(&mut o); }
 207 => { let a1: f64 = Io::r(&mut i); crate::debris::debris_update(g, a1);  }
 208 => { let a1: f64 = Io::r(&mut i); let a2: f64 = Io::r(&mut i); let r = crate::wind::wind_storm_share(g, a1, a2); r.w(&mut o);  }
@@ -675,7 +675,7 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 680 => { let a1: GuardId = Io::r(&mut i); let r = crate::rails::rails_spare(g, a1); r.w(&mut o);  }
 681 => {  let r = crate::rails::rails_look(g); r.w(&mut o);  }
 682 => { let a1: CharId = Io::r(&mut i); let r = crate::cast::cast_parts(g, a1); r.w(&mut o);  }
-683 => { let a1: Vec<CharId> = Io::r(&mut i); let mut a2: Vec<BoxId> = Io::r(&mut i); let a3: f64 = Io::r(&mut i); crate::stature::drawn_boxes(g, &a1, &mut a2, a3); a2.w(&mut o); }
+683 => { let a1: Vec<CharId> = Io::r(&mut i); let mut a2: Vec<AnyBoxId> = Io::r(&mut i); let a3: f64 = Io::r(&mut i); crate::stature::drawn_boxes(g, &a1, &mut a2, a3); a2.w(&mut o); }
 684 => { let a1: CharId = Io::r(&mut i); let a2: bool = Io::r(&mut i); let r = crate::combat::firearm_of(g, a1, a2); r.w(&mut o);  }
 685 => { let a1: CharId = Io::r(&mut i); let a2: V3 = Io::r(&mut i); let a3: bool = Io::r(&mut i); let a4: Option<crate::combat::FireOpts> = Io::r(&mut i); crate::combat::fire_weapon(g, a1, a2, a3, a4.as_ref());  }
 686 => { let a1: CharId = Io::r(&mut i); let r = crate::combat::arm_through(g, a1); r.w(&mut o);  }
@@ -683,9 +683,9 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 688 => { let a1: GuardId = Io::r(&mut i); let a2: V3 = Io::r(&mut i); let a3: Option<bool> = Io::r(&mut i); let a4: Option<crate::game::DownKind> = Io::r(&mut i); let a5: Option<crate::game::DownBy> = Io::r(&mut i); let a6: Option<String> = Io::r(&mut i); let a7: Option<crate::combat::KillGuardZone> = Io::r(&mut i); crate::combat::kill_guard(g, a1, a2, a3, a4, a5, a6.as_deref(), a7);  }
 689 => { let a1: CharId = Io::r(&mut i); let a2: crate::combat::DropFromHandKind = Io::r(&mut i); let a3: V3 = Io::r(&mut i); let a4: V3 = Io::r(&mut i); let a5: Option<bool> = Io::r(&mut i); let a6: Option<bool> = Io::r(&mut i); let a7: Option<V3> = Io::r(&mut i); let r = crate::combat::drop_from_hand(g, a1, a2, a3, a4, a5, a6, a7); r.w(&mut o);  }
 690 => { let a1: V3 = Io::r(&mut i); crate::combat::hit_player(g, a1);  }
-691 => { let mut a1: Vec<BoxId> = Io::r(&mut i); crate::combat::hand_props(g, &mut a1); a1.w(&mut o); }
-692 => { let mut a1: Vec<BoxId> = Io::r(&mut i); crate::combat::hidden_props(g, &mut a1); a1.w(&mut o); }
-693 => { let a1: GuardId = Io::r(&mut i); let mut a2: Vec<BoxId> = Io::r(&mut i); crate::combat::laser_boxes(g, a1, &mut a2); a2.w(&mut o); }
+691 => { let mut a1: Vec<AnyBoxId> = Io::r(&mut i); crate::combat::hand_props(g, &mut a1); a1.w(&mut o); }
+692 => { let mut a1: Vec<AnyBoxId> = Io::r(&mut i); crate::combat::hidden_props(g, &mut a1); a1.w(&mut o); }
+693 => { let a1: GuardId = Io::r(&mut i); let mut a2: Vec<AnyBoxId> = Io::r(&mut i); crate::combat::laser_boxes(g, a1, &mut a2); a2.w(&mut o); }
 694 => { let a1: CharId = Io::r(&mut i); let a2: Option<GuardId> = Io::r(&mut i); let a3: Option<bool> = Io::r(&mut i); let r = crate::combat::laser_reach(g, a1, a2, a3); r.w(&mut o);  }
 695 => { let a1: f64 = Io::r(&mut i); crate::combat::update_items(g, a1);  }
 696 => { let a1: ItemId = Io::r(&mut i); crate::combat::start_canister(g, a1);  }
@@ -706,7 +706,7 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 712 => { let a1: crate::throwables::ItemKind = Io::r(&mut i); let a2: V3 = Io::r(&mut i); let a3: V3 = Io::r(&mut i); let a4: Option<crate::throwables::ThrowablesSpawnOpts> = Io::r(&mut i); let r = crate::throwables::throwables_spawn(g, a1, a2, a3, a4); r.w(&mut o);  }
 713 => { let a1: V3 = Io::r(&mut i); let a2: V3 = Io::r(&mut i); let a3: Option<f64> = Io::r(&mut i); let r = crate::throwables::throwables_solve(g, a1, a2, a3); r.w(&mut o);  }
 714 => { let a1: f64 = Io::r(&mut i); crate::throwables::throwables_update(g, a1);  }
-715 => { let mut a1: Vec<BoxId> = Io::r(&mut i); crate::throwables::throwables_boxes(g, &mut a1); a1.w(&mut o); }
+715 => { let mut a1: Vec<AnyBoxId> = Io::r(&mut i); crate::throwables::throwables_boxes(g, &mut a1); a1.w(&mut o); }
 716 => { let a1: V3 = Io::r(&mut i); let a2: V3 = Io::r(&mut i); let a3: Option<crate::frag::GlassView> = Io::r(&mut i); let r = crate::frag::burst_line(g, a1, a2, a3); r.w(&mut o);  }
 717 => { let a1: V3 = Io::r(&mut i); let a2: V3 = Io::r(&mut i); let a3: V3 = Io::r(&mut i); let a4: Option<crate::frag::GlassView> = Io::r(&mut i); let r = crate::frag::exposure(g, a1, a2, a3, a4); r.w(&mut o);  }
 718 => { let a1: V3 = Io::r(&mut i); let a2: V3 = Io::r(&mut i); let a3: V3 = Io::r(&mut i); let a4: Option<crate::frag::GlassView> = Io::r(&mut i); let r = crate::frag::exposed_to(g, a1, a2, a3, a4); r.w(&mut o);  }
@@ -750,7 +750,7 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 756 => {  let r = crate::workthings::breaker_errand(g); r.w(&mut o);  }
 757 => {  let r = crate::workthings::work_things_things(g); r.w(&mut o);  }
 758 => { let a1: V3 = Io::r(&mut i); let r = crate::workthings::work_things_near(g, a1); r.w(&mut o);  }
-759 => { let a1: Option<BoxId> = Io::r(&mut i); let r = crate::workthings::work_things_on(g, a1); r.w(&mut o);  }
+759 => { let a1: Option<AnyBoxId> = Io::r(&mut i); let r = crate::workthings::work_things_on(g, a1); r.w(&mut o);  }
 760 => { let a1: CharId = Io::r(&mut i); let r = crate::workthings::work_things_hand(g, a1); r.w(&mut o);  }
 761 => {  let r = crate::workthings::work_things_summary(g); r.w(&mut o);  }
 762 => { let a1: CharId = Io::r(&mut i); let r = crate::workthings::work_hand(g, a1); r.w(&mut o);  }
@@ -849,13 +849,13 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 857 => { let a1: f64 = Io::r(&mut i); crate::fogofwar::fog_of_war_update(g, a1);  }
 858 => {  crate::fogofwar::fog_of_war_flush_asks(g);  }
 859 => {  crate::fogofwar::fog_of_war_reset(g);  }
-860 => { let mut a1: Vec<BoxId> = Io::r(&mut i); crate::fogofwar::fog_of_war_door_boxes(g, &mut a1); a1.w(&mut o); }
+860 => { let mut a1: Vec<AnyBoxId> = Io::r(&mut i); crate::fogofwar::fog_of_war_door_boxes(g, &mut a1); a1.w(&mut o); }
 861 => { let a1: FixtureId = Io::r(&mut i); let r = crate::fogofwar::fog_of_war_lamp_seen(g, a1); r.w(&mut o);  }
 864 => { let a1: f64 = Io::r(&mut i); let a2: f64 = Io::r(&mut i); let r = crate::fogofwar::fog_of_war_spot_seen(g, a1, a2); r.w(&mut o);  }
 865 => { let a1: f64 = Io::r(&mut i); let a2: f64 = Io::r(&mut i); let r = crate::fogofwar::fog_of_war_ground_look(g, a1, a2); r.w(&mut o);  }
 866 => { let a1: f64 = Io::r(&mut i); let a2: f64 = Io::r(&mut i); let a3: f64 = Io::r(&mut i); let a4: f64 = Io::r(&mut i); let r = crate::fogofwar::fog_of_war_thing_seen(g, a1, a2, a3, a4); r.w(&mut o);  }
-867 => { let a1: Vec<BoxId> = Io::r(&mut i); let r = crate::fogofwar::fog_of_war_sees_thing(g, &a1); r.w(&mut o);  }
-868 => { let mut a1: Vec<BoxId> = Io::r(&mut i); let r = crate::fogofwar::fog_of_war_things(g, &mut a1); r.w(&mut o); a1.w(&mut o); }
+867 => { let a1: Vec<AnyBoxId> = Io::r(&mut i); let r = crate::fogofwar::fog_of_war_sees_thing(g, &a1); r.w(&mut o);  }
+868 => { let mut a1: Vec<AnyBoxId> = Io::r(&mut i); let r = crate::fogofwar::fog_of_war_things(g, &mut a1); r.w(&mut o); a1.w(&mut o); }
 869 => { let a1: V3 = Io::r(&mut i); let a2: V3 = Io::r(&mut i); let a3: f64 = Io::r(&mut i); let r = crate::fogofwar::fog_of_war_beam_runs(g, a1, a2, a3); r.w(&mut o);  }
 870 => { let a1: crate::game::GameEvent = Io::r(&mut i); let a2: V3 = Io::r(&mut i); let r = crate::guards::glass_heard(g, a1, a2); r.w(&mut o);  }
 871 => { let a1: GuardId = Io::r(&mut i); let a2: V3 = Io::r(&mut i); crate::guards::eyes_on(g, a1, a2);  }
@@ -1019,7 +1019,7 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 1029 => { let a1: DoorId = Io::r(&mut i); let a2: f64 = Io::r(&mut i); let r = crate::doorswing::leaf_swings(g, a1, a2); r.w(&mut o);  }
 1030 => {  let r = crate::doorswing::deal_swings(g); r.w(&mut o);  }
 1031 => { let a1: Option<FirearmId> = Io::r(&mut i); let a2: crate::weapons::WeaponDef = Io::r(&mut i); let a3: V3 = Io::r(&mut i); let a4: V3 = Io::r(&mut i); let a5: f64 = Io::r(&mut i); let a6: crate::tracers::TracerImpact = Io::r(&mut i); let a7: f64 = Io::r(&mut i); let a8: Option<bool> = Io::r(&mut i); let r = crate::tracers::tracers_round(g, a1, &a2, a3, a4, a5, a6, a7, a8); r.w(&mut o);  }
-1032 => { let a1: f64 = Io::r(&mut i); let mut a2: Vec<BoxId> = Io::r(&mut i); let a3: Option<f64> = Io::r(&mut i); crate::tracers::tracers_update(g, a1, &mut a2, a3); a2.w(&mut o); }
+1032 => { let a1: f64 = Io::r(&mut i); let mut a2: Vec<AnyBoxId> = Io::r(&mut i); let a3: Option<f64> = Io::r(&mut i); crate::tracers::tracers_update(g, a1, &mut a2, a3); a2.w(&mut o); }
 1033 => {  crate::tracers::tracers_clear(g);  }
 1034 => { let a1: Vec<crate::doors::DoorContact> = Io::r(&mut i); crate::doorthrow::door_throw_after(g, &a1);  }
 1035 => {  crate::cleared::cleared_rooms_reset(g);  }
@@ -1031,7 +1031,7 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 1041 => {  crate::cleared::cleared_rooms_tick(g);  }
 1042 => {  let r = crate::cleared::cleared_rooms_summary(g); r.w(&mut o);  }
 1043 => { let a1: DoorId = Io::r(&mut i); let a2: f64 = Io::r(&mut i); let r = crate::shutdoor::shut_spot(g, a1, a2); r.w(&mut o);  }
-1044 => { let mut a1: Vec<BoxId> = Io::r(&mut i); let a2: f64 = Io::r(&mut i); crate::fixture_break::fixture_break_boxes(g, &mut a1, a2); a1.w(&mut o); }
+1044 => { let mut a1: Vec<AnyBoxId> = Io::r(&mut i); let a2: f64 = Io::r(&mut i); crate::fixture_break::fixture_break_boxes(g, &mut a1, a2); a1.w(&mut o); }
 1045 => { let a1: f64 = Io::r(&mut i); crate::moths::moths_update(g, a1);  }
 1046 => {  crate::wet_ground::wet_ground_follow(g);  }
 1047 => { let a1: GuardId = Io::r(&mut i); let a2: f64 = Io::r(&mut i); crate::game::guard_track_fix(g, a1, a2);  }

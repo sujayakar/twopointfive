@@ -509,7 +509,7 @@ pub fn destruction_on_foot(g: &mut crate::game::Game) -> Vec<CharId> {
 }
 
 /// The rigid debris' and the blown walls' shadow-casting boxes, for the picture.   (destruction.ts Destruction.boxes)
-pub fn destruction_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
+pub fn destruction_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     crate::debris::debris_boxes(g, out);
     crate::edge_look::edge_look_boxes(g, out);
     crate::wallskin::wall_skin_boxes(g, out);   // (…and what stands of a holed wall's paint: wallskin.ts)

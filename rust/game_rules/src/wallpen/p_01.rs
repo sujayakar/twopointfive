@@ -151,7 +151,7 @@ pub fn thin_toll(g: &mut crate::game::Game, index: f64, at: V3, d: V3, e: f64) -
     let h = seam_box(g, b).h;
     if m::min(h[0], h[2]) * 2.0 > thin_max(g, t.stuff) { return None; }
     let cut = seam_box(g, b).cut.as_ref().map_or(false, |c| c.len() > 0);
-    if cut && crate::scene_cut::cut_boxes_on(g) && !crate::scene_boxes::shape_cut(g, b) { return None; }
+    if cut && crate::scene_cut::cut_boxes_on(g) && !crate::scene_boxes::shape_cut(g, b.into()) { return None; }
     let s = crate::scene_collision::line_box(g, at, d, b)?;
     if s.t1 <= 0.0 { return None; }
     let thru = s.t1;

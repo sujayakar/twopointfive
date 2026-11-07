@@ -75,7 +75,7 @@ fn owner_of(g: &mut Game, c: CharId) -> f64 {
 }
 
 /// A bound hostage's wrist tie: one pale strap round both wrists while they are crossed. (rigProps.ts wristTieBoxes)
-pub fn wrist_tie_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<BoxId>) {
+pub fn wrist_tie_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<AnyBoxId>) {
     let (Some(a), Some(b)) = (g.ch[c_2].bones.get(crate::character::Bone::HandL).copied(), g.ch[c_2].bones.get(crate::character::Bone::HandR).copied()) else { return };
     let d = v3::sub(b, a);
     let l = v3::len(d);
@@ -97,18 +97,18 @@ pub fn wrist_tie_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<Box
         owner: Some(owner),
         ..Default::default()
     });
-    out.push(made);
+    out.push(made.into());
 }
 
 /// One stick part as a box laid along its frame's z, after the part's own adjustment in the group frame. (rigProps.ts seg)
-pub fn seg(g: &mut crate::game::Game, out: &mut Vec<BoxId>, g_2: crate::rig_props::Frame, s: crate::rig_props::Seg, albedo: V3, emissive: Option<V3>, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, path: Option<&str>, label: Option<&str>, depth: Option<f64>, name: Option<&str>) {
+pub fn seg(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>, g_2: crate::rig_props::Frame, s: crate::rig_props::Seg, albedo: V3, emissive: Option<V3>, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, path: Option<&str>, label: Option<&str>, depth: Option<f64>, name: Option<&str>) {
     let adj = s.adj;
     let emissive = emissive.unwrap_or([0.0, 0.0, 0.0]);
     seg_at(g, out, g_2, s, adj, albedo, emissive, meta, path, label, depth, name);
 }
 
 /// seg() with the part's adjustment handed in. (rigProps.ts segAt)
-pub fn seg_at(g: &mut crate::game::Game, out: &mut Vec<BoxId>, g_2: crate::rig_props::Frame, s: crate::rig_props::Seg, adj: Option<crate::rig_props::Adj>, albedo: V3, emissive: V3, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, path: Option<&str>, label: Option<&str>, depth: Option<f64>, name: Option<&str>) {
+pub fn seg_at(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>, g_2: crate::rig_props::Frame, s: crate::rig_props::Seg, adj: Option<crate::rig_props::Adj>, albedo: V3, emissive: V3, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, path: Option<&str>, label: Option<&str>, depth: Option<f64>, name: Option<&str>) {
     let f = if adj.is_some() { apply_adj(g_2, adj) } else { g_2 };
     let dir = f.z;
     let mid = v3::mad(f.o, dir, (s.l0 + s.l1) / 2.0);
@@ -134,7 +134,7 @@ pub fn seg_at(g: &mut crate::game::Game, out: &mut Vec<BoxId>, g_2: crate::rig_p
         stuff,
         ..Default::default()
     });
-    out.push(made);
+    out.push(made.into());
 }
 
 /// Flattened head 'forward'; the body's heading when the head looks nearly straight up or down. (rigProps.ts headFlatForward)
@@ -150,7 +150,7 @@ pub fn head_flat_forward(g: &crate::game::Game, c_2: CharId) -> V3 {
 }
 
 /// A part's box in a group's own axes, with nothing lit. (rigProps.ts gogglesBoxes `boxOf(at(…), …, [0, 0, 0], …)`)
-fn goggle_part(g: &mut Game, c: V3, h: V3, yaw: f64, albedo: V3, flags: f64, owner: f64, rot: Quat) -> BoxId {
+fn goggle_part(g: &mut Game, c: V3, h: V3, yaw: f64, albedo: V3, flags: f64, owner: f64, rot: Quat) -> FrameBoxId {
     crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP {
         c,
         h,
@@ -165,7 +165,7 @@ fn goggle_part(g: &mut Game, c: V3, h: V3, yaw: f64, albedo: V3, flags: f64, own
 }
 
 /// The goggles: two tubes on a bridge, down over the eyes or flipped up on the forehead, `k` part way between. (rigProps.ts gogglesBoxes)
-pub fn goggles_boxes(g: &mut crate::game::Game, c_2: CharId, nv: bool, out: &mut Vec<BoxId>, g_2: crate::rig_props::RigGoggles, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, k: Option<f64>) {
+pub fn goggles_boxes(g: &mut crate::game::Game, c_2: CharId, nv: bool, out: &mut Vec<AnyBoxId>, g_2: crate::rig_props::RigGoggles, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, k: Option<f64>) {
     let mut meta = meta;
     let Some(head) = g.ch[c_2].bones.get(crate::character::Bone::Head).copied() else { return };
     let f = head_flat_forward(g, c_2);
@@ -206,7 +206,7 @@ pub fn goggles_boxes(g: &mut crate::game::Game, c_2: CharId, nv: bool, out: &mut
     }
     for (part_at, part_half) in [(t.bridge.at, t.bridge.half), (t.arm.at, t.arm.half)] {
         let made = goggle_part(g, at(hs, part_at), v3::copy(part_half), yaw_h, col.goggles_housing, crate::rig_props::PROP_FLAGS, owner, rot_h);
-        out.push(made);
+        out.push(made.into());
     }
     let ln = apply_adj(cl, g_2.lens_adj);
     let rot_l = v3::quat::from_basis(ln.x, ln.y, ln.z);
@@ -216,9 +216,9 @@ pub fn goggles_boxes(g: &mut crate::game::Game, c_2: CharId, nv: bool, out: &mut
     }
     for sx in [-t.side, t.side] {
         let tube = goggle_part(g, at(ln, [sx, t.down, (t.front - t.back) / 2.0]), [t.half, t.half, (t.front + t.back) / 2.0], yaw_l, col.goggles_housing, crate::rig_props::PROP_FLAGS, owner, rot_l);
-        out.push(tube);
+        out.push(tube.into());
         let glass = goggle_part(g, at(ln, [sx, t.down, t.front + t.glass]), [t.half * 0.8, t.half * 0.8, t.glass], yaw_l, col.dark_glass, crate::rig_props::GLOW_FLAGS, owner, rot_l);
-        out.push(glass);
+        out.push(glass.into());
     }
 }
 

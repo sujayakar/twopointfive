@@ -13,6 +13,10 @@
 //   bun run tools/wire/wire.ts add-event <crate::mod::fn|Name> [field:type,...] (--ts <name> --file <src file> [--no-game] | --host <arm>)   a call the Rust game hands to the host after a step: the event's line on the wire and the host's end. The Rust arm, its struct and the function that pushes it are a person's to write
 //   bun run tools/wire/wire.ts drop-event <Arm>...                                 events off the table: their rows, their structs, their arms on the wire (the Rust arm and what pushed it are a person's)
 //   bun run tools/wire/wire.ts drop-type <mod::Type>...                             a type off the table once no field names it
+//   bun run tools/wire/wire.ts add-table <Id> <table> <mod::Type> <ts>              a table of the game, last, under an ID of its own (its lines in io.rs and io_rules.rs are written by hand)
+//   bun run tools/wire/wire.ts add-mix <Mix> <Id>,<Id>                              an ID of either of two tables: one number on the wire, the page's book answers it (io.rs writes the number by hand)
+//   bun run tools/wire/wire.ts retype <mod::Type.field>=<type>...                   fields that now hold another type: the bytes they write are their type's
+//   bun run tools/wire/wire.ts retype-call <row id>:<type>=<type>...                a row of the call surface whose argument or answer holds another type now
 //   tools/blitz/rust.sh rust bun run tools/wire/cost.ts [address]                   what a tick's export and apply cost now, on the page's list
 // An enum arm needs nothing: an arm the table does not know goes out as the tag 0xffff, and the page keeps what it had.
 import { execFileSync } from 'node:child_process';
@@ -155,6 +159,14 @@ function dropType(Q: string[]): void { const S = readJ(SCHEMA), ioP = rustFile('
   // (its fields' rows on the lists go with it)
   const L = readJ(FIELDS), gone = Q.map(q => `${q.replace(/^crate::/, '')}.`); for (const k of ['everyTick', 'pageTick', 'atStartOnly']) L[k] = L[k].filter((x: string) => !gone.some(g => x.startsWith(g))); writeFields(L);
   writeFileSync(ioP, io.join('\n')); writeFileSync(SCHEMA, JSON.stringify(S)); gen(false); }
+/** a table of the game, last: the table's own number and every row's place stay as they were */
+function addTable(id: string, table: string, ty0: string, ts: string): void { const S = readJ(SCHEMA), ty = `crate::${ty0}`, T = S.types[ty]; if (!T) die(`${ty} is no type of the table`); if (S.ids.includes(id)) die(`${id} is on the table already`); S.ids.push(id); S.tables.push({ id, table, ty, ts, mod: T.mod }); writeFileSync(SCHEMA, JSON.stringify(S)); gen(false); }
+/** an ID that names a row of either of two tables. On the wire it is one number, the first table's row twice over, the second's twice over and one more (io.rs writes it, tools/blitz/export.ts `Book` reads it) */
+function addMix(id: string, of: string): void { const S = readJ(SCHEMA), two = of.split(','); if (two.length !== 2 || two.some(x => !S.ids.includes(x))) die(`add-mix: ${of} is not two IDs of the table`); if (S.ids.includes(id)) die(`${id} is on the table already`); S.ids.push(id); (S.mixes ??= {})[id] = two; writeFileSync(SCHEMA, JSON.stringify(S)); gen(false); }
+/** fields that hold another type now (each is `mod::Type.field=the type`) */
+function retype(Q: string[]): void { const S = readJ(SCHEMA); for (const q of Q) { const k = q.indexOf('='); if (k < 0) die(`${q}: write it mod::Type.field=the type`); const { f, path } = parseQ(q.slice(0, k)), row = S.types[path]?.fields?.find((x: any) => x.rust === f); if (!row) die(`${q.slice(0, k)} is not on the wire`); row.ty = q.slice(k + 1); } writeFileSync(SCHEMA, JSON.stringify(S)); gen(false); }
+/** a row of the call surface whose argument or answer holds another type now: its row in calls.json and its arm in call_gen.rs (each is `row id:the type it held=the type it holds`) */
+function retypeCall(Q: string[]): void { const CP = join(BLITZ, 'calls.json'), C = readJ(CP), GP = join(ROOT, 'rust/game/src/call_gen.rs'), L = read(GP).split('\n'); for (const q of Q) { const m = q.match(/^(\d+):(.*)=(.*)$/); if (!m) die(`${q}: write it <row id>:<type>=<type>`); const [id, was, now] = [+m![1], m![2], m![3]], row = C.rows.find((r: any) => r.id === id); /* (an arm may outlive its row) */ if (row) { for (const a of row.args) if (a.ty === was) a.ty = now; if (row.ret === was) row.ret = now; } const k = L.findIndex(l => l.startsWith(`${id} => {`)); if (k < 0) die(`no arm ${id} in call_gen.rs`); if (!L[k].includes(`: ${was} = Io::r`)) die(`arm ${id} holds no ${was}`); L[k] = L[k].split(`: ${was} = Io::r`).join(`: ${now} = Io::r`); } writeFileSync(CP, JSON.stringify(C)); writeFileSync(GP, L.join('\n')); }
 const A = process.argv.slice(2), opt = (n: string) => { const i = A.indexOf(n); return i < 0 ? undefined : A[i + 1]; };
 switch (A[0]) { case 'gen': gen(A.includes('--check')); break;
   case 'add': { const serial: SerialWord = A.includes('--serial') ? 'own' : A.includes('--holds-serial') ? 'holds' : A.includes('--serial-keys') ? 'keys' : null; add(A[1], opt('--ty') ?? (serial === 'own' ? 'u32' : die('add: --ty') as never), opt('--ts'), opt('--expr'), A.includes('--start-only'), serial); break; }
@@ -167,5 +179,9 @@ switch (A[0]) { case 'gen': gen(A.includes('--check')); break;
   case 'add-hand-arm': addHandArm(A[1], A[2]); break;
   case 'add-word-arm': addWordArm(A[1], A[2], A[3], A[4]); break;
   case 'drop-type': dropType(A.slice(1)); break;
+  case 'add-table': addTable(A[1], A[2], A[3], A[4]); break;
+  case 'add-mix': addMix(A[1], A[2]); break;
+  case 'retype': retype(A.slice(1)); break;
+  case 'retype-call': retypeCall(A.slice(1)); break;
   case 'drop': { const f = opt('--file'); drop(f ? read(f).split('\n').map(x => x.trim()).filter(Boolean) : A.slice(1)); break; }
-  default: console.error(read(import.meta.path).split('\n').slice(0, 7).join('\n')); process.exit(64); }
+  default: console.error(read(import.meta.path).split('\n').slice(0, 11).join('\n')); process.exit(64); }

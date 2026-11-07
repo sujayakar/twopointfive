@@ -38,7 +38,7 @@ fn to_landing(f: GlassShardsFallOf) -> GlassShardsLandingFall { GlassShardsLandi
 
 // ---- what the skeleton still cannot do
 /// `b.x` of a Box: the row of a box. Skeleton 5 has `g.col.boxes` as a `Vec<BoxId>` and no table of rows.
-fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
+fn seam_box<'g>(g: &'g mut Game, b: impl Into<AnyBoxId>) -> &'g mut crate::scene_boxes::Box { &mut g.tab[b.into()] }
 
 /// The shards' books; the ghost is a chunk in no pool (the pool's glass hook is calls by name).   (shards.ts GlassShards.constructor)
 pub fn glass_shards_new(g: &mut crate::game::Game) -> crate::shards::GlassShards {
@@ -47,7 +47,7 @@ pub fn glass_shards_new(g: &mut crate::game::Game) -> crate::shards::GlassShards
         c: [0.0, -100.0, 0.0], h: [0.01, 0.01, 0.01], yaw: Some(0.0), albedo: Some([0.0, 0.0, 0.0]), flags: Some(flags_or(bf.no_primary, bf.no_shadow)),
         ..Default::default()
     });
-    let ghost = g.tab.debris_chunk.push(crate::debris::Chunk { box_: ghost_box, ..crate::debris::Chunk::zeroed() });
+    let ghost = g.tab.debris_chunk.push(crate::debris::Chunk { box_: ghost_box.into(), ..crate::debris::Chunk::zeroed() });
     let mut s = crate::shards::GlassShards::blank();
     s.ghost = ghost;
     s

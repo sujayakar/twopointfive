@@ -450,7 +450,7 @@ pub extern "C" fn face_time(h: u32) -> f64 {
 }
 #[no_mangle]
 pub extern "C" fn face_rows(h: u32) -> usize {
-    with(h, |x| x.g.tab.boxes.len())
+    with(h, |x| x.g.tab.boxes.len() + x.g.tab.frame_boxes.len())
 }
 #[no_mangle]
 pub extern "C" fn face_parts() -> usize {

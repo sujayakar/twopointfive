@@ -568,7 +568,7 @@ pub fn sky_light(g: &mut crate::game::Game, p: V3, acc: &mut Vec<f64>) {
         if let Some(leaves) = &leaves {
             let mut hit = false;
             for &db in leaves.iter() {
-                if let Some(h) = crate::scene_boxes::ray_box(g, from, r.d, db, o.len) {
+                if let Some(h) = crate::scene_boxes::ray_box(g, from, r.d, db.into(), o.len) {
                     if h.t >= 0.0 { hit = true; break; }
                 }
             }

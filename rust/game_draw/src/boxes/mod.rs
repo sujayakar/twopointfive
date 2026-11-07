@@ -173,7 +173,7 @@ impl Was {
 
 /// one of the frame's own boxes as a tick left it: what a frame between two ticks needs of it
 #[derive(Clone, Copy)]
-struct Own { id: BoxId, key: u32, c: [f64; 3], h: [f64; 3], yaw: f64, rot: Option<[f64; 4]>, owner: f64, flags: u32, round: bool, cut: bool }
+struct Own { id: AnyBoxId, key: u32, c: [f64; 3], h: [f64; 3], yaw: f64, rot: Option<[f64; 4]>, owner: f64, flags: u32, round: bool, cut: bool }
 
 #[derive(Default)]
 pub struct Boxes {
@@ -272,7 +272,7 @@ impl Boxes {
         let ir = &g.m.irlaser.ir_made;
         for &id in w.dynamics.iter().take(total - n) {
             if !night && ir.has(id) { continue; }
-            let b = &all[id];
+            let b = &g.tab[id];
             let (c, h) = match b.dc { Some(c) => (c, b.dh.unwrap_or(b.h)), None => (b.c, b.h) };
             let i = n + self.own.len();
             pack::pack(b, c, h, true, &self.look, &mut self.marks, &mut self.geo[i], &mut self.mat[i], &mut self.cut[i]);
@@ -334,7 +334,7 @@ impl Boxes {
         self.unboxed.clear();
         if !(self.look.mirrors || self.look.air) { return; }
         let t = &g.m.thinline;
-        let mut found: Vec<(bool, f64, usize, Option<Option<BoxId>>)> = Vec::new();
+        let mut found: Vec<(bool, f64, usize, Option<Option<AnyBoxId>>)> = Vec::new();
         for (k, o) in self.own.iter().enumerate() {
             if !t.thin.has(o.id) { continue; }
             let bead = if self.look.air { t.air.get(o.id).copied() } else { None };

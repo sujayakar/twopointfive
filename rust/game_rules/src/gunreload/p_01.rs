@@ -383,7 +383,7 @@ pub fn sstep(a: f64, b: f64, x: f64) -> f64 {
 }
 
 /// the thing in his support hand this frame, as one box in the fist, appended to `out` (gunreload.ts reloadHandBoxes)
-pub fn reload_hand_boxes(g: &mut crate::game::Game, c_2: CharId, id_2: crate::weapons::WeaponId, out: &mut Vec<BoxId>) {
+pub fn reload_hand_boxes(g: &mut crate::game::Game, c_2: CharId, id_2: crate::weapons::WeaponId, out: &mut Vec<AnyBoxId>) {
     let Some(f) = own_of(g, c_2, id_2) else { return };
     let Some(b) = crate::character::anim_feed_clock(g, c_2) else { return };
     let t = b.t;
