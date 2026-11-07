@@ -4,25 +4,30 @@
 //! from the top and the first rule that answers has him. What it decided is written to the man's `Control`, once a tick, so "why is he doing
 //! that" is read in one place (`control_line`, `control_summary`, and the runner's CONTROL line of `control_tally`).
 //!
-//! A RULE IS FOUR FUNCTIONS AND A ROW, each with one job:
-//!   `Row`         what the rule keeps of one man (`()` where its own module still keeps it), at `state_mut(g).rows.<rule>.at(gd)`. Made by
-//!                 `Default`, cloned with the game.
-//!   `transition`  moves the rule's own state for this man: a clock runs out, he arrives, a spot is found for him.
+//! A RULE IS `pub struct Rule; impl Reaction for Rule { … }` in its file. Two things must be written, the rest have defaults:
+//!   `Ask`         what it asks of a man, which is also WHERE in his frame it is asked (below).
 //!   `propose`     what his body should do this tick if the rule has him, or `None`. It takes `&Game`: the compiler holds that asking a rule
 //!                 changes nothing.
-//!   `commit`      hears what his body made of it (he arrived, he is going nowhere, the script as the walk left it).
-//!   `lost`        hears that it had him last tick and does not this tick, whatever took him.
+//!   `Row`         what the rule keeps of one man (`()` where it keeps nothing, or its own module still keeps it), at
+//!                 `state_mut(g).rows.<rule>.at(gd)`. Made by `Default`, cloned with the game.
+//!   `transition`  moves the rule's own state for this man: a clock runs out, he arrives, a spot is found for him. Default: nothing.
+//!   `commit`      hears what his body made of it (he arrived, he is going nowhere, the script as the walk left it). Default: nothing.
+//!   `lost`        hears that it had him last tick and does not this tick, whatever took him. Default: nothing.
 //! Today a rule's `transition` runs only when no rule above it has him, just before its `propose`, as the one function it was cut from did.
 //!
-//! WHAT A RULE MAY ASK FOR (`Intent`), and where in a man's frame it is asked (`Stage`):
-//!   `Stage::Body`  before he senses anything. `Intent::Script`: his whole body follows a script for the tick and nothing else of his frame
-//!                  runs (guards::update_guard's `lent`). Below these rules stands his own script (`gd.script`, which 71 files read and so
-//!                  stays where it is), and below that his own state.
-//!   `Stage::Cover` in the fight, after his senses and his state. `Intent::Cover`: he gets down where he is or goes crouched to a spot, his
-//!                  gun lowered toward the danger, no round fired, his hands free to change magazine (update_guard's `alert`, its first test).
-//! A rule asked at one stage answers with that stage's intent. Dead and held men are recorded from update_guard's `incapable`.
+//! WHAT A RULE MAY ASK FOR (`Ask`), and so where in a man's frame it is asked (`Stage`):
+//!   `GuardScript`  asked before he senses anything (`Stage::Body`): his whole body follows the script for the tick and nothing else of his
+//!                  frame runs (guards::update_guard's `lent`). Below these rules stands his own script (`gd.script`, which 71 files read
+//!                  and so stays where it is), and below that his own state.
+//!   `TakeCover`    asked in the fight, after his senses and his state (`Stage::Cover`): he gets down where he is or goes crouched to a
+//!                  spot, his gun lowered toward the danger, no round fired, his hands free to change magazine (update_guard's `alert`,
+//!                  its first test). `TakeCover::down()` and `TakeCover::to(spot, pace)` are the two ways to say it.
+//! The type of `propose` is the stage, so a rule cannot answer out of its stage. Dead and held men are recorded from update_guard's
+//! `incapable`.
 //!
-//! TO ADD A RULE: one file here (its `Row` and four functions) and one line in `rules!` at its rank. Nothing else in the game names it.
+//! WHAT A RULE MAY ASK OF A MAN: `man.rs` of this folder (is he an enemy, blind, staggered, in contact). Use those before his fields.
+//!
+//! TO ADD A RULE: one file here and one line in `rules!` at its rank. Nothing else in the game names it.
 //!
 //! A body has three channels (`Channel`): legs, aim, hands. Every intent here takes all three; the record is kept by channel so that a rule
 //! which wants only one (the fight wants aim while an order has his legs) can be granted it without a change of shape.
@@ -64,6 +69,41 @@ pub struct TakeCover {
     pub threat: Option<V3>,
 }
 
+impl TakeCover {
+    /// down where he stands
+    pub fn down() -> Self { TakeCover { to: None, pace: 0.0, crouch: 1.0, fire_wait: 0.0, threat: None } }
+    /// off to `spot` at `pace`, down as he goes
+    pub fn to(spot: V3, pace: f64) -> Self { TakeCover { to: Some(spot), pace, ..TakeCover::down() } }
+}
+
+/// What a rule asks of a man is the stage of his frame it is asked at: a script before he senses, cover in his fight.
+pub trait Ask: Copy {
+    const STAGE: Stage;
+    fn intent(self) -> Intent;
+}
+impl Ask for GuardScript {
+    const STAGE: Stage = Stage::Body;
+    fn intent(self) -> Intent { Intent::Script(self) }
+}
+impl Ask for TakeCover {
+    const STAGE: Stage = Stage::Cover;
+    fn intent(self) -> Intent { Intent::Cover(self) }
+}
+impl Intent {
+    /// the stage this intent is an answer at
+    pub fn stage(&self) -> Stage { match self { Intent::Script(_) => Stage::Body, Intent::Cover(_) => Stage::Cover } }
+}
+
+/// A RULE, as its file writes it (this file's head says what each part is for)
+pub trait Reaction {
+    type Row: Default + Clone + core::fmt::Debug;
+    type Ask: Ask;
+    fn transition(_g: &mut Game, _gd: GuardId, _dt: f64) {}
+    fn propose(g: &Game, gd: GuardId) -> Option<Self::Ask>;
+    fn commit(_g: &mut Game, _gd: GuardId, _o: Outcome) {}
+    fn lost(_g: &mut Game, _gd: GuardId) {}
+}
+
 /// what his body made of an intent
 #[derive(Clone, Copy, Debug)]
 pub enum Outcome {
@@ -76,8 +116,8 @@ pub enum Outcome {
     Moving,
 }
 
-/// a rule of the list
-pub struct Rule {
+/// a rule as the list holds it: its line of `rules!` and its `Reaction`, as plain functions
+pub struct Listed {
     pub id: RuleId,
     pub name: &'static str,
     pub stage: Stage,
@@ -101,9 +141,11 @@ impl<T: Default + Clone> PerMan<T> {
     pub fn iter(&self) -> impl Iterator<Item = (GuardId, &T)> { self.rows.iter().enumerate().map(|(i, r)| (GuardId::from_ix(i), r)) }
 }
 
+fn asked<R: Reaction>(g: &Game, gd: GuardId) -> Option<Intent> { R::propose(g, gd).map(Ask::intent) }
+
 /// The list's own code: for each line the rule's module, its id, the table of its rows (`state_mut(g).rows.<rule>`) and its row of `RULES`.
 macro_rules! rules {
-    ($($m:ident: $name:literal, $stage:ident;)*) => {
+    ($($m:ident: $name:literal;)*) => {
         $(pub mod $m;)*
         /// a rule, by its file's name
         #[allow(non_camel_case_types)]
@@ -111,19 +153,26 @@ macro_rules! rules {
         pub enum RuleId { $($m),* }
         /// every rule's rows
         #[derive(Clone, Debug, Default)]
-        pub struct Rows { $(pub $m: PerMan<$m::Row>,)* }
-        pub const RULES: &[Rule] = &[$(Rule { id: RuleId::$m, name: $name, stage: Stage::$stage, transition: $m::transition, propose: $m::propose, commit: $m::commit, lost: $m::lost }),*];
+        pub struct Rows { $(pub $m: PerMan<<$m::Rule as Reaction>::Row>,)* }
+        pub const RULES: &[Listed] = &[$(Listed {
+            id: RuleId::$m, name: $name, stage: <<$m::Rule as Reaction>::Ask as Ask>::STAGE,
+            transition: <$m::Rule as Reaction>::transition, propose: asked::<$m::Rule>, commit: <$m::Rule as Reaction>::commit, lost: <$m::Rule as Reaction>::lost,
+        }),*];
     };
 }
 
-// THE LIST. The order of the lines is the rank.
+// THE LIST. The order of the lines is the rank. (Which stage a rule is asked at is its `Ask`; the first four hand him a script, `duck` cover.)
 rules! {
-    frag: "a live grenade", Body;
-    runner: "broke and ran", Body;
-    morale: "shaken by a blast", Body;
-    startle: "startled", Body;
-    duck: "head down under fire", Cover;
+    frag: "a live grenade";
+    runner: "broke and ran";
+    morale: "shaken by a blast";
+    startle: "startled";
+    duck: "head down under fire";
 }
+// a man's record of who said no is a bit a rule
+const _: () = assert!(RULES.len() <= 32, "Control.declined is 32 bits: widen it before the list holds a 33rd rule");
+
+pub mod man;
 
 /// who can have a man, strongest first. The rules stand between `Held` and `Script` in the list's own order, but for the rules of
 /// `Stage::Cover`, which are asked of a man nobody above `Own` has.
@@ -218,18 +267,28 @@ pub fn state_mut(g: &mut Game) -> &mut ControlState { g.ctl.at() }
 
 /// THE ARBITER, over `rules` at one stage of a man's frame: ask from the top; the first that answers has him. The caller acts on the answer
 /// and writes the record (`record`).
-pub fn grant_from(g: &mut Game, gd: GuardId, dt: f64, stage: Stage, rules: &[Rule]) -> Option<(RuleId, Intent)> {
+pub fn grant_from(g: &mut Game, gd: GuardId, dt: f64, stage: Stage, rules: &[Listed]) -> Option<(RuleId, Intent)> {
     if stage == Stage::Body { state_mut(g).row(gd).declined = 0; }
     for r in rules.iter().filter(|r| r.stage == stage) {
         (r.transition)(g, gd, dt);
-        if let Some(intent) = (r.propose)(g, gd) { return Some((r.id, intent)); }
+        if let Some(intent) = (r.propose)(g, gd) {
+            assert!(intent.stage() == stage, "the rule \"{}\" is asked at {:?} and answered with an intent of {:?}", r.name, stage, intent.stage());
+            return Some((r.id, intent));
+        }
         state_mut(g).row(gd).declined |= 1 << r.id as u32;
     }
     None
 }
 
-/// the arbiter over the game's list
-pub fn grant(g: &mut Game, gd: GuardId, dt: f64, stage: Stage) -> Option<(RuleId, Intent)> { grant_from(g, gd, dt, stage, RULES) }
+/// the arbiter over the game's list, before he senses: the rule that has him and the script his body follows
+pub fn grant_body(g: &mut Game, gd: GuardId, dt: f64) -> Option<(RuleId, GuardScript)> {
+    match grant_from(g, gd, dt, Stage::Body, RULES)? { (r, Intent::Script(s)) => Some((r, s)), _ => None }
+}
+
+/// the arbiter over the game's list, in his fight: the rule that has him and the cover he takes
+pub fn grant_cover(g: &mut Game, gd: GuardId, dt: f64) -> Option<(RuleId, TakeCover)> {
+    match grant_from(g, gd, dt, Stage::Cover, RULES)? { (r, Intent::Cover(c)) => Some((r, c)), _ => None }
+}
 
 /// WRITE THE RECORD: `to` has every channel of him this tick. Once a tick a man. A rule that had him and no longer does is told (`lost`).
 pub fn record(g: &mut Game, gd: GuardId, to: Holder) {
@@ -318,12 +377,12 @@ mod tests {
     fn never_moved(_: &mut Game, _: GuardId, _: f64) { panic!("the state of a rule below the winner was moved") }
     fn no(_: &Game, _: GuardId) -> Option<Intent> { None }
     fn yes(_: &Game, _: GuardId) -> Option<Intent> { Some(Intent::Script(GuardScript { speed: Some(7.0), ..Default::default() })) }
-    fn down(_: &Game, _: GuardId) -> Option<Intent> { Some(Intent::Cover(TakeCover { to: None, pace: 0.0, crouch: 1.0, fire_wait: 0.0, threat: None })) }
+    fn down(_: &Game, _: GuardId) -> Option<Intent> { Some(Intent::Cover(TakeCover::down())) }
     fn never(_: &Game, _: GuardId) -> Option<Intent> { panic!("a rule below the winner was asked") }
     fn heard(_: &mut Game, _: GuardId, _: Outcome) {}
     fn let_go(_: &mut Game, _: GuardId) {}
-    fn rule(id: RuleId, stage: Stage, propose: fn(&Game, GuardId) -> Option<Intent>) -> Rule {
-        Rule { id, name: "a test's rule", stage, transition: if propose as usize == never as usize { never_moved } else { still }, propose, commit: heard, lost: let_go }
+    fn rule(id: RuleId, stage: Stage, propose: fn(&Game, GuardId) -> Option<Intent>) -> Listed {
+        Listed { id, name: "a test's rule", stage, transition: if propose as usize == never as usize { never_moved } else { still }, propose, commit: heard, lost: let_go }
     }
 
     #[test]
@@ -377,11 +436,29 @@ mod tests {
     }
 
     #[test]
-    fn the_games_list_is_the_order_update_guard_asked_them_in() {
-        let body: Vec<&str> = RULES.iter().filter(|r| r.stage == Stage::Body).map(|r| r.name).collect();
-        assert_eq!(body, ["a live grenade", "broke and ran", "shaken by a blast", "startled"]);
-        assert_eq!(RULES.iter().find(|r| r.stage == Stage::Cover).map(|r| r.name), Some("head down under fire"));
+    #[should_panic(expected = "answered with an intent of Body")]
+    fn a_rule_that_answers_out_of_its_stage_is_stopped() {
+        let (mut g, gd) = stand();
+        let rules = [rule(RuleId::duck, Stage::Cover, yes)];
+        let _ = grant_from(&mut g, gd, 0.016, Stage::Cover, &rules);
+    }
+
+    /// The ranks the game rests on, each a pair: a new rule goes in anywhere and this test is not its business.
+    #[test]
+    fn the_ranks_update_guard_asked_them_in() {
+        let above = |a: RuleId, b: RuleId| assert!((a as usize) < (b as usize), "{} must outrank {}", rule_name(a), rule_name(b));
+        above(RuleId::frag, RuleId::runner);       // a grenade moves even a man who has broken
+        above(RuleId::runner, RuleId::morale);     // a man who ran is not also shaken
+        above(RuleId::morale, RuleId::startle);
         for (i, r) in RULES.iter().enumerate() { assert_eq!(r.id as usize, i, "a rule's id is its place in the list"); }
+        for (i, r) in RULES.iter().enumerate() { assert!(RULES[..i].iter().all(|o| o.name != r.name), "two rules are named \"{}\"", r.name); }
+    }
+
+    #[test]
+    fn what_a_rule_asks_for_is_where_it_is_asked() {
+        let at = |r: RuleId| RULES[r as usize].stage;
+        assert_eq!((at(RuleId::frag), at(RuleId::startle), at(RuleId::duck)), (Stage::Body, Stage::Body, Stage::Cover));
+        assert_eq!(TakeCover::to([1.0, 0.0, 2.0], 3.0), TakeCover { to: Some([1.0, 0.0, 2.0]), pace: 3.0, ..TakeCover::down() });
     }
 
     #[test]
@@ -389,13 +466,13 @@ mod tests {
         let (mut g, gd) = stand();
         g.gd[gd].callsign = String::from("Alvarez");
         g.time = 5.0;
-        assert!(grant(&mut g, gd, 0.016, Stage::Body).is_none());
+        assert!(grant_body(&mut g, gd, 0.016).is_none());
         let mut row = crate::morale::Mind::zeroed();
         row.act = crate::morale::MoraleAct::Hold;
         row.drive = true; row.drive_t = 5.0; row.script.speed = Some(2.5);
         g.m.morale.state_of.set(gd, row);
-        match grant(&mut g, gd, 0.016, Stage::Body) {
-            Some((r, Intent::Script(s))) => { assert_eq!(r, RuleId::morale); assert_eq!(s.speed, Some(2.5)); record(&mut g, gd, Holder::Rule(r)); }
+        match grant_body(&mut g, gd, 0.016) {
+            Some((r, s)) => { assert_eq!(r, RuleId::morale); assert_eq!(s.speed, Some(2.5)); record(&mut g, gd, Holder::Rule(r)); }
             _ => panic!("the morale rule should have him"),
         }
         assert_eq!(control_line(&g, gd), "Alvarez: shaken by a blast for 0.0 s · said no: a live grenade, broke and ran");
