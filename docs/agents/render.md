@@ -941,8 +941,28 @@ row on his machine is the answer, and the word puts the count back on any machin
   for the march is 400 (was 382; 395 on the look's page) and volDust's row is out. CHECKS: `tools/qa/dust-look-check.ts` pins the statements and the
   plain read as text (the wallbreak family's looks probe runs the same pin), `shaderrows-check` reads that both programs carry the look and that no
   `volDust` is asked for, `fog-air` that the dust's drawn density still goes through `fogSmoke`. NOT READ: the smoke solver does not run on the software
-  adapter (five storage textures in a stage), so no frame with smoke or dust in it was drawn here before or after; a frame without smoke was. What the
-  one program costs a frame on a GPU (a uniform branch a sample, and vol's text 8 % longer) is not timed here.
+  adapter (five storage textures in a stage), so no frame with smoke or dust in it was drawn here before or after; frames without smoke were, and are
+  PIXEL-EQUAL to the tree before (`draw-equal`, office-night and firefight at high, both checkpoints). ON THE CLOUD NVIDIA CARD (A10G, Vulkan; the named
+  tree `5dbe0d75` against it with the fold, the benchmark on two boxes of one kind): first load's shaders 21.9 s to 20.9 s, 100 of 100 programs on both
+  (the fold is one fewer and the look page's mend one more), the last program ready on both the froxel march at 20.9 s; the volumetrics pass 3.2 ms on
+  both and every row's GPU ms inside the spread, so the bit costs a frame nothing that reads. A second is inside what two boxes differ by (1.5 s that
+  morning); what is not is the sum: every program alone, driver's cache off, 108 programs and 70.5 s of one compiler thread where the morning's tree was
+  128 and 140.9 s (the ray programs' one set, the composite and this). Dearest alone now: volFroxel 10.7 s, vol 7.0, particlesUpdate 6.9, restir 5.0,
+  composite 4.8, compositeS 4.6, gatherTrace 4.1, froxelInjectJ 3.9, reflect 3.4. The second and third loads of that pair read 10.3 and 7.3 s on the
+  named tree and 3.7 and 3.2 s with the fold; nothing in the fold touches the programs that were built again there (the particle update, the composite),
+  so that is the box's driver cache and no result of this.
+  WHY THE MARCH IS STILL TWO PROGRAMS, MEASURED (the same card, the hour after; the one-program form is a commit kept off the build, `Render: the
+  march is one program for every tier`). With `const VOL_FROXEL_MARCH` gone and the one text compiled once, a frame taking the froxel-lit march by
+  `FrameFlags.FroxelVol` alone: 107 programs and 61.4 s alone where the fold left 108 and 70.5 s (the one march 10.0 s alone). But the wait a person
+  sits through first is the boot's set, and on that card it ends when the march does: `?firstframe=1`, 92 programs in 17.6 s with the two programs (the
+  boot's march 7.0 s alone, last in at 17.6 s) and in 19.7 s with the one (10.0 s alone, last in at 19.6 s); every program waited for, 99 in 19.1 s
+  against 98 in 18.2 s. One run each, on boxes that differ by a second or two, so read the direction and not the tenths: the one program takes about
+  nine seconds off the sum and about a second off the whole set, and puts two or three on the first wait, because the boot then holds the dearer
+  text. (The benchmark of the one-program form landed on a box of the slower kind, 42.1 s to its first start, so it says nothing of the load; its
+  volumetrics pass read 3.1 ms against 3.2, so the one text costs a frame at high nothing that reads.) That is what the twin was made for (2026-10-26), and it still holds. So the twin stays until the march itself is cheaper to build, or the
+  froxel-lit smoke march is a program of its own beside the classic one (its result feeds the rain and the beams in `main`, so that is a pass with a
+  target between, not a move of text). What the table says to try first, unmeasured: the march is asked for 1.7 s into the boot and needs 7 s alone, yet
+  is the last program in at 17 to 19 s; where the compile queue is off (everywhere but Windows) nothing asks for the dearest program first.
 - **Windows: why the shader wait came back on every load, and the compile queue (2026-10-26, measured on a Windows machine: RTX 3080, a 16-thread desktop CPU,
   Chrome 155, a 4K 240 Hz display at 150 %).** Chrome on Windows runs WebGPU on D3D12 and compiles with DXC (`use_dxc` is on; FXC, `--disable-dawn-features=use_dxc`,
   had not finished the boot after 16 minutes). DXC inlines every call, so the big kernels are 5–25 s each (fgather's `main` grows from 95 KB of WGSL to ~680 KB inlined:
