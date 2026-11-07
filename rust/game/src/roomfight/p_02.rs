@@ -24,15 +24,9 @@ fn guard_by_char_id(g: &Game, who: Option<f64>) -> Option<GuardId> { let w = who
 fn ev_at(g: &Game, d: RoomfightDefId, i: usize) -> f64 { g.tab.roomfight_def[d].ev.get(i).copied().unwrap_or(f64::NAN) }
 /// `D.ev[i] = v`, past the end as JavaScript writes it: the holes read back as undefined
 fn ev_set(g: &mut Game, d: RoomfightDefId, i: usize, v: f64) { let ev = &mut g.tab.roomfight_def[d].ev; while ev.len() <= i { ev.push(f64::NAN); } ev[i] = v; }
-/// `gd.lastKnown === D.pt` (off the page's path: with BELIEF.on nothing writes pt as the fix, and pt_stamp stays None). The body of the skeleton's def_fix_is_pt, whose stub has no owner (notes.md Skeleton)
-fn fix_is_pt(g: &Game, d: RoomfightDefId) -> bool { let D = &g.tab.roomfight_def[d]; D.pt_stamp == Some(g.gd[D.gd].fix_stamp) && g.gd[D.gd].last_known == Some(D.pt) }
-/// D.pt moved in place: a fix or a cover that is that object moves with it, with no new fix (def_move_pt's body, and `covers`, which is the same object on the page's path)
-fn move_pt(g: &mut Game, d: RoomfightDefId, to: V3) {
-    let same = fix_is_pt(g, d); let D = &mut g.tab.roomfight_def[d]; let (gd, old) = (D.gd, D.pt); D.pt = to;
-    if same { g.gd[gd].last_known = Some(to); }
-    if g.gd[gd].covers == Some(old) { g.gd[gd].covers = Some(to); }
-}
-/// `cover(gd, D.pt)`. Rule off that is `gd.lastKnown = D.pt`, a whole write of the fix only if it was not that object already (def_fix_to_pt's body); belief's cover has no Def to keep pt_stamp on
+/// His watched point moves: what his duty has his gun on moves with it. His fix does not: where he thinks his man is, is his own.
+fn move_pt(g: &mut Game, d: RoomfightDefId, to: V3) { crate::roomfight::def_move_pt(g, d, to); }
+/// His duty has his gun on his watched point.
 fn cover_pt(g: &mut Game, d: RoomfightDefId) {
     let (gd, pt) = (g.tab.roomfight_def[d].gd, g.tab.roomfight_def[d].pt);
     crate::belief::cover(g, gd, pt);
@@ -747,15 +741,15 @@ pub fn room_fight_tick_move(g: &mut crate::game::Game, d: RoomfightDefId, dt: f6
 /// a free hunter with his eyes on a man is planted where he stands with that man still his.   (roomfight.ts standOn)
 pub fn room_fight_stand_on(g: &mut crate::game::Game, d: RoomfightDefId, set: bool) {
     let gd = g.tab.roomfight_def[d].gd;
-    let fix = g.gd[gd].last_known; let own = fix_is_pt(g, d);   // (asked before plant: in the TypeScript that object IS D.pt, whatever plant does to it)
+    let fix = g.gd[gd].last_known;   // (asked before plant)
     { let D = &mut g.tab.roomfight_def[d]; D.move_kind = DefMoveKind::Fallback; D.came_by = None; D.rally_at = f64::NAN; }
     room_fight_plant(g, d, "stands and fights");
-    if let Some(f) = fix { if !own {
-        // (`gd.lastKnown = fix`, the object he had: a new fix only for a reader of the stamp if plant's cover put pt there, rule off. Rule on plant left it alone)
+    if let Some(f) = fix {
+        // (the fix he had is his again if planting him moved it: a new fix only then)
         if g.gd[gd].last_known != Some(f) { g.gd[gd].last_known = Some(f); g.gd[gd].fix_stamp = g.gd[gd].fix_stamp.wrapping_add(1); }
         crate::belief::uncover(g, gd);
         if set { let D = &mut g.tab.roomfight_def[d]; D.pt[0] = f[0]; D.pt[2] = f[2]; }
-    } }
+    }
     let (st, seen) = (g.gd[gd].state, g.gd[gd].last_seen_t);
     let D = &mut g.tab.roomfight_def[d];
     D.last_state = String::from(st.as_str()); if !set { D.last_seen = seen; }
@@ -796,7 +790,6 @@ mod tests {
         let (pt, q, seen): (V3, V3, V3) = ([1.0, 0.0, 2.0], [3.0, 0.0, 4.0], [5.0, 0.0, 6.0]);
         let (gd, d) = post(&mut g, pt);
         g.gd[gd].last_known = Some(pt); g.gd[gd].covers = Some(pt);   // a noise filed at the door he covers is still a noise
-        assert!(!fix_is_pt(&g, d));
         move_pt(&mut g, d, q);
         assert_eq!((g.gd[gd].covers, g.gd[gd].last_known), (Some(q), Some(pt)));
         g.gd[gd].covers = Some(seen);                // a point given once is not his post

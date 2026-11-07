@@ -48,17 +48,9 @@ fn line_by(f: RoomFightFriendInLine) -> OpLineBy {
 fn clear_by(f: RoomFightFriendInLine) -> crate::clearline::LeadsBy {
     match f { RoomFightFriendInLine::Guard(x) => crate::clearline::LeadsBy::Guard(x), RoomFightFriendInLine::Player => crate::clearline::LeadsBy::Player }
 }
-/// `gd.lastKnown === D.pt` (off the page's path: with BELIEF.on nothing writes pt as the fix). The body of def_fix_is_pt, whose stub has no owner
-fn fix_is_pt(g: &Game, d: RoomfightDefId) -> bool { let def = &g.tab.roomfight_def[d]; def.pt_stamp == Some(g.gd[def.gd].fix_stamp) && g.gd[def.gd].last_known == Some(def.pt) }
-/// D.pt moved in place: a fix or a cover that is that object moves with it, with no new fix (def_move_pt's body, and `covers`)
-fn move_pt(g: &mut Game, d: RoomfightDefId, to: V3) {
-    let same = fix_is_pt(g, d);
-    let (gd, old) = (g.tab.roomfight_def[d].gd, g.tab.roomfight_def[d].pt);
-    g.tab.roomfight_def[d].pt = to;
-    if same { g.gd[gd].last_known = Some(to); }
-    if g.gd[gd].covers == Some(old) { g.gd[gd].covers = Some(to); }
-}
-/// `cover(gd, D.pt)` (belief.ts cover): rule off that is `gd.lastKnown = D.pt`, a new fix only if it was not that object already (def_fix_to_pt's body)
+/// His watched point moves: what his duty has his gun on moves with it. His fix does not.
+fn move_pt(g: &mut Game, d: RoomfightDefId, to: V3) { crate::roomfight::def_move_pt(g, d, to); }
+/// His duty has his gun on his watched point.
 fn cover_pt(g: &mut Game, d: RoomfightDefId) {
     let (gd, pt) = (g.tab.roomfight_def[d].gd, g.tab.roomfight_def[d].pt);
     crate::belief::cover(g, gd, pt);
