@@ -53,7 +53,7 @@ pub fn perceive(g: &mut crate::game::Game, gd: GuardId, dt: f64, before: f64) ->
     if vis.visible {
         let rate = crate::guards::sight_gain(g, gd, vis.dist);
         if rate > 0.05 {
-            g.gd[gd].awareness = v3::clamp(g.gd[gd].awareness + rate * dt, 0.0, 1.0);
+            { let to = v3::clamp(g.gd[gd].awareness + rate * dt, 0.0, 1.0); crate::mind::set(g, gd, to, "squad"); }
             let pp = v3::copy(g.ch[pc].pos);
             new_fix(g, gd, pp);
             seen = rate > 0.25;
@@ -64,7 +64,7 @@ pub fn perceive(g: &mut crate::game::Game, gd: GuardId, dt: f64, before: f64) ->
     let pp = g.ch[pc].pos;
     let gp = g.ch[g.gd[gd].ch].pos;
     if !g.pl[g.player].down && !g.player_invisible && m::hyp2(pp[0] - gp[0], pp[2] - gp[2]) < 0.62 {
-        g.gd[gd].awareness = 1.0;
+        crate::mind::set(g, gd, 1.0, "squad");
         new_fix(g, gd, v3::copy(pp));
         g.gd[gd].last_seen_t = g.time;
         seen = true;
@@ -72,14 +72,14 @@ pub fn perceive(g: &mut crate::game::Game, gd: GuardId, dt: f64, before: f64) ->
     if g.gd[gd].awareness > g.gd[gd].witness.peak_awareness { g.gd[gd].witness.peak_awareness = g.gd[gd].awareness; }
     if g.time - g.gd[gd].saw_body_t > 20.0 && g.gd[gd].awareness < 0.85 {
         if let Some(o) = crate::guards::body_in_view(g, gd) {
-            g.gd[gd].awareness = m::max(g.gd[gd].awareness, 0.5);
+            crate::mind::raise(g, gd, 0.5, "squad");
             let oc = g.gd[o].ch;
             let h = bone_or(g, oc, crate::character::Bone::Hips, g.ch[oc].pos);
             new_fix(g, gd, [h[0], 0.0, h[2]]);
             return Some(Perceive::Body);
         }
     }
-    if !seen { g.gd[gd].awareness = m::max(0.0, g.gd[gd].awareness - dt * 0.06); }
+    if !seen { let to = m::max(0.0, g.gd[gd].awareness - dt * 0.06); crate::mind::set(g, gd, to, "squad"); }
     let aw = g.gd[gd].awareness;
     if aw >= 0.85 { Some(Perceive::Alert) } else if aw >= SUSPECT && aw > before { Some(Perceive::Suspicious) } else { None }
 }
@@ -185,7 +185,7 @@ pub fn clearing_tick(g: &mut crate::game::Game, dt: f64) -> bool {
             if let Some(left) = left {
                 if g.gd[left].state != crate::game::GuardState::Dead {
                     end_guard_script(g, left, Some(EndGuardScriptState::Suspicious));
-                    g.gd[left].awareness = m::max(g.gd[left].awareness, 0.6);
+                    crate::mind::raise(g, left, 0.6, "squad");
                     let at = g.ch[g.gd[dead].ch].pos;
                     crate::belief::word(g, left, at);
                     g.gd[left].react_t = 0.7;
@@ -228,7 +228,7 @@ pub fn clearing_tick(g: &mut crate::game::Game, dt: f64) -> bool {
     if worst == Some(Perceive::Body) {
         for &gd in &men {
             end_guard_script(g, gd, Some(EndGuardScriptState::Suspicious));
-            g.gd[gd].awareness = m::max(g.gd[gd].awareness, 0.5);
+            crate::mind::raise(g, gd, 0.5, "squad");
             if let Some(f) = fix { crate::belief::word(g, gd, f); }
             g.gd[gd].react_t = 0.6;
             g.gd[gd].search_t = 0.0;
@@ -241,7 +241,7 @@ pub fn clearing_tick(g: &mut crate::game::Game, dt: f64) -> bool {
         break_off(g, a, SUSPECT + 0.05, to);
         if let Some(b) = b {
             end_guard_script(g, b, Some(EndGuardScriptState::Suspicious));
-            g.gd[b].awareness = m::max(g.gd[b].awareness, SUSPECT);
+            crate::mind::raise(g, b, SUSPECT, "squad");
             if let Some(f) = fix { crate::belief::word(g, b, f); }
             g.gd[b].react_t = 1.2;
             g.gd[b].search_t = 0.0;
@@ -475,12 +475,11 @@ pub fn clearing_approach(g: &mut crate::game::Game) {
     let men = clearing_men(g);
     for (i, &gd) in men.iter().enumerate() {
         {
-            let man = &mut g.gd[gd];
-            man.state = crate::game::GuardState::Search;
-            man.react_t = 0.0;
-            man.search_t = 0.0;
-            man.body_duty = None;
-            man.awareness = m::min(man.awareness, 0.25);
+            crate::mind::set_state(g, gd, crate::game::GuardState::Search, "squad");
+            g.gd[gd].react_t = 0.0;
+            g.gd[gd].search_t = 0.0;
+            g.gd[gd].body_duty = None;
+            crate::mind::cap(g, gd, 0.25, "squad");
         }
         crate::control::set_hold(g, gd, false, "squad"); crate::control::set_pinned(g, gd, false, "squad");
         cl!(g).aw[i] = g.gd[gd].awareness;

@@ -1064,20 +1064,20 @@ fn tick_man(g: &mut Game, gd: GuardId, dt: f64) {
 /// on his gun: roused, at the floor's own alert line (netquiet.ts rouse)
 pub fn rouse(g: &mut crate::game::Game, gd: GuardId) {
     if g.gd[gd].state != crate::game::GuardState::Alert {
-        g.gd[gd].state = crate::game::GuardState::Alert;
+        crate::mind::set_state(g, gd, crate::game::GuardState::Alert, "netquiet");
     }
-    g.gd[gd].awareness = m::max(g.gd[gd].awareness, 0.92);
+    crate::mind::raise(g, gd, 0.92, "netquiet");
 }
 
 /// …and off it again: wary, not alert (netquiet.ts ease)
 pub fn ease(g: &mut crate::game::Game, gd: GuardId) {
-    g.gd[gd].state = crate::game::GuardState::Suspicious;
+    crate::mind::set_state(g, gd, crate::game::GuardState::Suspicious, "netquiet");
     g.stats.netquiet.eased += 1;
 }
 
 /// the awareness he does not fall under, low on his spot (netquiet.ts wary)
 pub fn wary(g: &mut crate::game::Game, gd: GuardId) {
-    g.gd[gd].awareness = m::max(g.gd[gd].awareness, g.k.netquiet.wary);
+    { let to = g.k.netquiet.wary; crate::mind::raise(g, gd, to, "netquiet"); }
 }
 
 /// down where he stands, on his gun: the arc as it reads from here (netquiet.ts settle)

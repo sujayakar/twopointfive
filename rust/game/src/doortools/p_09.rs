@@ -159,11 +159,10 @@ fn blow_seat(g: &mut Game, d: DoorId, side: f64, fc: V3, inn: V3, out: V3) -> bo
 pub fn door_tools_dazzle(g: &mut crate::game::Game, gd: GuardId, secs: f64, at: V3) {
     let until = g.time + secs;
     let ai = g.ai_enabled;
-    let r = &mut g.gd[gd];
-    r.dazzled_until = m::max(r.dazzled_until, until);
-    r.react_t = m::max(r.react_t, secs);
-    r.awareness = m::max(r.awareness, 0.6);
-    if r.state != crate::game::GuardState::Alert { crate::belief::word(g, gd, at); }
+    g.gd[gd].dazzled_until = m::max(g.gd[gd].dazzled_until, until);
+    g.gd[gd].react_t = m::max(g.gd[gd].react_t, secs);
+    crate::mind::raise(g, gd, 0.6, "doortools");
+    if g.gd[gd].state != crate::game::GuardState::Alert { crate::belief::word(g, gd, at); }
     if ai { g.gd[gd].witness.dazzled += 1.0; }
     crate::game::guard_set_path(g, gd, Vec::new());
     let r = &mut g.gd[gd];

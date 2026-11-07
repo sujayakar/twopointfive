@@ -270,9 +270,9 @@ pub fn not_getting_anywhere(g: &mut crate::game::Game, gd: GuardId, dt: f64, sec
 
 /// The alert chase is over without him: down to 'search' from where he stands. (guards.ts dropToSearch)
 pub fn drop_to_search(g: &mut crate::game::Game, gd: GuardId, bark: Option<&str>) {
-    g.gd[gd].state = crate::game::GuardState::Search;
+    crate::mind::set_state(g, gd, crate::game::GuardState::Search, "guards");
     g.gd[gd].search_t = 0.0;
-    g.gd[gd].awareness = m::min(g.gd[gd].awareness, 0.8);
+    crate::mind::cap(g, gd, 0.8, "guards");
     g.gd[gd].search_plan = None;
     reset_chase(g, gd);
     clear_path(g, gd);
@@ -327,7 +327,7 @@ pub fn body_aftermath(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option
     let d_b = v3::dist_xz(g.ch[c].pos, bp);
     let see_body = d_b < 8.0 && !crate::scene_collision::segment_blocked(g, eye, [bp[0], 0.4, bp[2]], None, None, None);
     let on_body: V3 = [bp[0], 0.35, bp[2]];
-    g.gd[gd].awareness = m::max(g.gd[gd].awareness, if stage == Stage::Fan { 0.16 } else { 0.3 });
+    crate::mind::raise(g, gd, if stage == Stage::Fan { 0.16 } else { 0.3 }, "guards");
     let mut move_ = 0.0;
     let mut aim: Option<V3> = None;
     match stage {
@@ -405,7 +405,7 @@ pub fn body_aftermath(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option
         }
         Stage::Fan => {
             match spot {
-                None => { g.gd[gd].awareness = m::min(g.gd[gd].awareness, 0.1); }
+                None => { crate::mind::cap(g, gd, 0.1, "guards"); }
                 Some(sp) => {
                     let mut arrived = g.gd[gd].search_t > 0.0;
                     if !arrived {
@@ -424,7 +424,7 @@ pub fn body_aftermath(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option
                         g.gd[gd].sweep = m::sin(g.gd[gd].look_phase * 1.1) * 1.1;
                         g.ch[c].anim.look_yaw_extra = m::sin(g.gd[gd].look_phase * 1.9) * 0.4;
                         g.ch[c].aim_yaw = g.ch[c].body_yaw + g.gd[gd].sweep;
-                        if g.gd[gd].search_t > 4.0 { g.gd[gd].awareness = m::min(g.gd[gd].awareness, 0.1); }
+                        if g.gd[gd].search_t > 4.0 { crate::mind::cap(g, gd, 0.1, "guards"); }
                     }
                 }
             }

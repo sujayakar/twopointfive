@@ -420,8 +420,8 @@ fn stage_or_why(g: &mut crate::game::Game) -> Result<(), String> {
             pair: Some(crate::game::PairId::Blue),
             ..crate::guards::UnitOpts::zeroed()
         })?;
-        g.gd[man].state = crate::game::GuardState::Patrol;
-        g.gd[man].awareness = 0.0;
+        crate::mind::set_state(g, man, crate::game::GuardState::Patrol, "quiet");
+        crate::mind::set(g, man, 0.0, "quiet");
         crate::control::set_hold(g, man, false, "quiet");
         crate::control::set_pinned(g, man, false, "quiet");
         let face = g.ch[g.gd[man].ch].body_yaw;

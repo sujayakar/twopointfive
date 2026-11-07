@@ -340,7 +340,7 @@ pub fn wake(g: &mut crate::game::Game, gd: GuardId, why: crate::doze::WakeWhy, a
     g.stats.doze.woke[why as usize] += 1;
     if why == WakeWhy::Noise || why == WakeWhy::Light || why == WakeWhy::Bump {
         let raise = if why == WakeWhy::Bump { g.k.doze.bump_aw } else { g.k.doze.wake_aw };
-        g.gd[gd].awareness = m::max(g.gd[gd].awareness, raise);
+        crate::mind::raise(g, gd, raise, "doze");
         if let Some(at) = at {
             g.gd[gd].last_known = Some([at[0], 0.0, at[2]]);
             g.gd[gd].fix_stamp = g.gd[gd].fix_stamp.wrapping_add(1);

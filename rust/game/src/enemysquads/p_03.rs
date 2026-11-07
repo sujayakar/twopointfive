@@ -1349,13 +1349,13 @@ pub fn settle(g: &mut crate::game::Game, l: &crate::enemysquads::Looker, d: Room
         crate::squad::end_guard_script(g, gd, Some(to));
     }
     let aw = g.gd[gd].awareness;
-    g.gd[gd].awareness = if roused {
+    crate::mind::set(g, gd, if roused {
         m::max(aw, c.awareness)
     } else if heard {
         m::max_n(&[aw, c.awareness, 0.35])
     } else {
         m::min(0.45, m::max_n(&[aw, c.awareness, 0.35]))
-    };
+    }, "enemysquads");
     crate::control::set_hold(g, gd, c.hold, "enemysquads");
     crate::control::set_pinned(g, gd, c.pinned, "enemysquads");
     let (state_now, seen_t) = (String::from(g.gd[gd].state.as_str()), g.gd[gd].last_seen_t);
