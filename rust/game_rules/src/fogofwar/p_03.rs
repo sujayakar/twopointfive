@@ -423,7 +423,7 @@ pub fn fog_of_war_fired_on(g: &crate::game::Game, gd: GuardId) -> bool {
 
 /// The rule is live: the fog on, and the full picture's block filled.   (fogofwar.ts FogOfWar.oursOn)
 pub fn fog_of_war_ours_on(g: &crate::game::Game) -> bool {
-    fog_of_war_active(g) && g.fog_of_war.full_on
+    fog_of_war_active(g) && g.fog_of_war.live
 }
 
 /// Is what `who` does the team's own to see, off the list of the team `full_block` filled.   (fogofwar.ts FogOfWar.oursId)
@@ -470,7 +470,7 @@ pub fn fog_of_war_hush(g: &mut crate::game::Game) {
 
 /// What a hidden man puts into the air is not filed: true = `c` is out of the picture.   (fogofwar.ts FogOfWar.airHides)
 pub fn fog_of_war_air_hides(g: &crate::game::Game, c_2: CharId) -> bool {
-    g.fog_of_war.full_on && g.fog_of_war.hidden_chars.len() > 0 && g.fog_of_war.hidden_chars.has(c_2)
+    g.fog_of_war.live && g.fog_of_war.hidden_chars.len() > 0 && g.fog_of_war.hidden_chars.has(c_2)
 }
 
 
