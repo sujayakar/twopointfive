@@ -185,21 +185,20 @@ tick K was.
 
 | kind | what it looks like | what to do |
 |---|---|---|
-| **a stub nobody owned** | a panic on `todo!()` in a `sig.rs` function | Write the body from the TypeScript the stub's doc line names, in a `b_NN.rs` of that module, and name it in `mod.rs`. |
+| **a function nobody wrote** | a panic `no body: <module>::<name>` from a module's `missing.rs` | Write the body in a part of that module, and delete its line in `missing.rs` |
 | **a seam left in a part** | a panic on `todo!("needs: …")` inside a `p_NN.rs` | The translator could not say something with the types it had. Read what it needs; often the answer is a line (a constant for a native game, a call into `::sim`). If it truly needs a new type or field, that is an ask (below). |
 | **dropped as picture** | no panic; a path differs, or boxes are short, where the TypeScript has a branch the Rust has not | A branch was left out as "the picture's" but the tick reads what it wrote (a spark's box in the frame list, a light, the copy of the box world a rule stood). Translate the branch. |
 | **a wrong boundary no-op** | a `BOUNDARY NO-OP` body returns nothing where the game needed an answer | Read the TypeScript: if game state or a later decision depends on it, translate it; if it is truly the renderer's, leave it and say why in `known.txt` if a path shows. |
 | **translation** | values differ in a rule both sides run | Read both, line by line. Usual suspects: an early return, the order of two writes, a copy where the TypeScript shares one object, `Math.fround`, a default argument. |
 | **the host's half** | the TypeScript changes between two ticks with no tick run | The host's code is not translated. The runner stands in for it (list below). A new one is a stand-in in the runner, marked `HOST STEP`, and an ask. |
 | **bridge** | a path differs at tick 1, or a field is blank after the import | The export or import does not carry it. `not-carried.json` says what is left out and why. A stand-in in the runner, and an ask. |
-| **skeleton** | the Rust types cannot say what the TypeScript holds | Never edit `types.rs`, `sig.rs`, `io.rs`, `knobs.rs`, `ids.rs`: a program writes them. Work round it in your part if you can, and log the ask. |
+| **skeleton** | the Rust types cannot say what the TypeScript holds | Edit the Rust: `types.rs`, `knobs.rs` and `ids.rs` are plain source. What the page reads goes by `tools/wire/wire.ts`. |
 | **harness** | serials, memo tables, counters, row numbers | The two sides number things differently by design, or the test driver's own question wrote the game. A `known.txt` line with its reason. |
 
 ## Mending
 
 - The Rust bodies live in `rust/game/src/<module>/p_NN.rs` (a translated part) and `b_NN.rs` (bodies added during bring-up). Mend them in place.
 - **A new `pub fn` that fills a skeleton stub must be named in that module's `mod.rs`**: `pub use b_01::{…, your_fn};`. A named re-export wins over the glob of
-  `sig.rs`'s `todo!()` stubs; a body that is not named is never called and the stub still panics. `stubcalls.py` prints such bodies by name.
 - Read the TypeScript before every mend, and say in a comment why the Rust is as it is where it is not a plain copy.
 - `cargo build` warnings are many and not yours; errors are. One cargo build at a time on a shared machine.
 - A difference you leave standing goes in `known.txt`: a regex of the paths, a tab, the kind and the reason. Take a line out when its cause is mended. A line
