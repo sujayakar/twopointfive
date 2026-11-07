@@ -43,6 +43,7 @@ import { sampleHand } from '../draw/hand';
 import { HOURS_OF, skyFrom } from '../draw/sky';
 import { fogFrom } from '../draw/fog';
 import { makeFogFrame } from '../render/fogofwar';
+import { WeatherPicture } from '../picture/weather';
 import type { Vec3 } from '../math/vec';
 
 const bytesOf = async (url: string): Promise<Uint8Array> => { const r = await fetch(url, { cache: 'no-store' }); if (!r.ok) throw new Error(`${url}: HTTP ${r.status}`); return new Uint8Array(await r.arrayBuffer()); };
@@ -106,6 +107,7 @@ async function main(): Promise<void> {
   engine.fogFrame = fog; engine.beams = world.beams;
   const lights = new DrawLights(engine.lights, D); lights.from();   // (the lights stand too: their reach is worked out of the level as it opens)
   const reach = new DrawReach(engine, world, gaps);
+  const weather = new WeatherPicture(engine, D, world, engine.particles, smoke);
 
   // ---- the player
   const input = new Input(canvas); input.saveKey = () => true;   // (F5 is the game's: a save by hand)
@@ -123,7 +125,7 @@ async function main(): Promise<void> {
   /** the game is another than the one last drawn (a restart, a load): what the picture and the sound carry over from frame to frame starts over, before anything of the new one is played */
   const anew = (): void => {
     const o = view(), first = stood < 0; stood = D.u[o + View.stood]; if (first) return;
-    engine.restartPicture(); engine.particles?.clear(); smoke.clearAll(); events.cut(); audio.hush(); pair.cut(); lag.reset(); three(cam.target, o + View.follow);
+    engine.restartPicture(); engine.particles?.clear(); smoke.clearAll(); events.cut(); weather.cut(); audio.hush(); pair.cut(); lag.reset(); three(cam.target, o + View.follow);
   };
   anew(); lens(); cam.aspect = Math.max(1, canvas.clientWidth) / Math.max(1, canvas.clientHeight); cam.rebuild();
 
@@ -140,6 +142,7 @@ async function main(): Promise<void> {
     const o = view();
     cam.step(dt, three(follow, o + View.follow), D.u[o + View.spectating] ? null : three(aim, o + View.aim));
     pair.capture(cam);
+    weather.tick(dt, cam);
     told.tick = game.ms.step; told.draw = game.ms.draw;
   };
   /** one drawn frame: `dt` seconds of the display's, in whole ticks (`drawn` false: a script's, stepped and not drawn) */
@@ -151,7 +154,7 @@ async function main(): Promise<void> {
     cam.frame();
     for (let i = 0; i < plan.ticks; i++) { if (i) input.endTick(); tick(1 / FIXEDSTEP.hz); }
     D.fresh();
-    skyFrom(engine, D); fogFrom(fog, D);
+    skyFrom(engine, D); fogFrom(fog, D); weather.frame(cam);
     { const o = view(); engine.settings.nvAmount = D.f[o + View.night]; engine.settings.hitFlash = D.f[o + View.hit]; }
     game.look(lookNumbers(engine.settings, engine.world, !!ch.cast));
     const t1 = performance.now();
@@ -187,7 +190,7 @@ async function main(): Promise<void> {
   };
   loading.style.display = 'none';
   // (for a tool: the page's parts, and frames stepped by hand)
-  Object.assign(window, { __draw: { game, engine, world, audio, cam, input, quality, told, fog, get held() { return held; }, set held(v: boolean) { held = v; last = performance.now(); }, run: (n: number, keys: string[] = [], drawn: 'none' | 'last' | 'all' = 'last') => { for (const k of keys) input.keys.add(k); try { for (let i = 0; i < n; i++) frame(1 / 60, 1, drawn === 'all' || (drawn === 'last' && i === n - 1)); } finally { for (const k of keys) input.keys.delete(k); } } } });
+  Object.assign(window, { __draw: { game, engine, world, audio, cam, input, quality, told, fog, weather, smoke, get held() { return held; }, set held(v: boolean) { held = v; last = performance.now(); }, run: (n: number, keys: string[] = [], drawn: 'none' | 'last' | 'all' = 'last') => { for (const k of keys) input.keys.add(k); try { for (let i = 0; i < n; i++) frame(1 / 60, 1, drawn === 'all' || (drawn === 'last' && i === n - 1)); } finally { for (const k of keys) input.keys.delete(k); } } } });
   requestAnimationFrame(loop);
 }
 const ready = main(); (window as unknown as { __ready: Promise<void> }).__ready = ready;
