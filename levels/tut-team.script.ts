@@ -1,5 +1,5 @@
 // THE SQUAD'S TUTORIAL MISSION ON THE GROUND, ITS SCRIPT (levels/tut-team.json; game/director.ts): what the road does while the player, behind his own truck,
-// learns the squad's key. The road's beats are the tunnel station's own (levels/tut-sky.script.ts: the roadblock's rounds WALKED over everything around the
+// learns the squad's key. The road's beats are the tunnel station's own (the roadblock's rounds WALKED over everything around the
 // two files, the squad's called smoke, the blind fire into it, the roadblock coming on for the gate) with three differences, each because he is on the floor:
 //   · THE SQUAD IS HELD ON ITS KNEES BY THIS SCRIPT until his first order (the mission from above has the frame's seat hold it), and NOTHING IS AIMED WHERE A
 //     STANDING MAN'S HEAD IS behind the tails: a pickup hides a man to 1.6 m and one round puts the player down. So the two trucks' boxes stop at the bonnet
@@ -14,7 +14,7 @@
 import type { LevelScriptFn, BeatCtx, UnitRef, Query } from '../src/game/director';
 import type { Vec3 } from '../src/math/vec';
 
-/** the roadblock's three posts (behind the sandbags tools/levels/tut-sky.ts lays across the road at the tunnel's mouth) and the names its men answer to
+/** the roadblock's three posts (behind the sandbags tools/levels/tunnel-station.ts lays across the road at the tunnel's mouth) and the names its men answer to
  *  (the station's own five are Tango 1 to 5, down its rooms: game/roomclear.ts) */
 const POSTS: { name: string; at: Vec3 }[] = [{ name: 'Tango 6', at: [34.0, 0, 21.6] }, { name: 'Tango 7', at: [34.9, 0, 23.6] }, { name: 'Tango 8', at: [32.4, 0, 23.2] }];
 /** WHERE THE ROADBLOCK'S ROUNDS GO while the squad is behind its trucks: boxes to aim into (`by`: the posts with a clear line into it — the trucks, the
