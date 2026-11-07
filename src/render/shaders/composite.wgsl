@@ -11,9 +11,8 @@
 @group(1) @binding(8) var softTex: texture_2d<f32>;
 @group(1) @binding(9) var specTex: texture_2d<f32>;       // glossy-floor reflection radiance (fgather.wgsl glossReflection, filtered), on indirectTex's texel grid — only read for BOX_GLOSS pixels while FLAG_GLOSS is on; holds nothing meaningful otherwise
 @group(1) @binding(12) var reflTex: texture_2d<f32>;      // ray-traced reflections, THE MIRROR (reflect.wgsl outRefl → the shared denoiser's specular client), at 1/frame.rtCfg.w res: what the lobe's rays bring back per texel, filterable (sampled bilinearly) — only read while frame.rtCfg.w > 0
-@group(1) @binding(18) var hiTex: texture_storage_2d<rgba16float, read>;   // … and THE HIGHLIGHTS on the same grid (reflect.wgsl outHi, as the pass wrote it): rgb = the lamps', the panels' and the sun's highlights and a beam's image, a = 0 where the texel holds none, else 1 + the roughness the texel made them with. A storage texture: this stage has no sampled texture left, and a load is all it is asked
+@group(1) @binding(18) var hiTex: texture_storage_2d<rgba16float, read>;   // … and THE HIGHLIGHTS on the same grid (reflect.wgsl outHi, as the pass wrote it): rgb = the lamps', the panels' and the sun's highlights and a beam's image, a = 0 where the texel holds none, else 1 + the roughness the texel made them with. A storage texture: this stage had no sampled texture left when it was added (one is free since the froxel volume went), and a load is all it is asked
 @group(1) @binding(13) var gMat: texture_2d<f32>;         // the g-buffer's material target: (roughness, metalness) per pixel (the reflections' cutoff fade, the metal step-back, the upsample's tap test)
-@group(1) @binding(11) var froxTex: texture_3d<f32>;      // the INTEGRATED froxel volume (froxel.wgsl; FLAG_FROXEL_VOL): (in-scatter, transmittance) from the eye to each slice boundary — one trilinear fetch at the pixel's own distance (froxelFetch, common.wgsl); volTex then carries only the rain
 // ---- SHARP DIRECT (docs/internal/sharp-direct.md). passes.ts compiles this text TWICE behind a prepended `const SHARP: bool`: false = the fragment composite at the INTERNAL size
 // exactly as it always was (every `if (SHARP)` folds away); true = the same arithmetic per OUTPUT pixel as a compute kernel (`cs` below, writing hdrOut) with group 0 = the OUTPUT frame block, the
 // g-buffer bindings = the output-size raster, directTex / softTex = the output-size shadowed direct (sharp_direct.wgsl), and everything stochastic — the gather's irradiance + specular, the volumetric
@@ -240,16 +239,6 @@ fn upsampleVol(pix: vec2i, pin: vec2f, z: f32) -> vec4f {
   }
   if (wsum < 1e-5) { return textureLoad(volTex, clamp(base, vec2i(0), hdims - 1), 0); }
   return acc / wsum;
-}
-
-// FROXEL VOLUMETRICS (FLAG_FROXEL_VOL): what lies between the eye and this pixel's surface, `dist` along its ray — the haze beams in ONE fetch of the integrated
-// froxel volume (froxelFetch, common.wgsl: cubic across the screen, linear along the ray), plus what the 2D pass still marches per pixel (the smoke, lit from
-// the froxels' J volume, and the rain) through the same depth-aware upsample it always had. The haze is laid behind the smoke's transmittance, as the march
-// always composed the two. → (rgb to add, a = transmittance to multiply the surface by), what upsampleVol returns for the old path.
-fn froxelVol(pixf: vec2f, pix: vec2i, pin: vec2f, dist: f32) -> vec4f {
-  let hz = froxelFetch(froxTex, pixf * frame.invScreen, min(dist, frame.froxelA.y));
-  let sm = upsampleVol(pix, pin, dist);
-  return vec4f(sm.rgb + hz.rgb * sm.a, sm.a * hz.a);
 }
 
 // The light falling ON a pane at X (either face; n = the normal on the eye's side) — what a crack star or its milky collar has to scatter (decals.wgsl
@@ -1138,11 +1127,8 @@ fn compositePixel(pix0: vec2f) -> vec3f {
   if (dbg == 0u || dbg == 5u) {
     if (!sky) { if (WX_VOL) { if (lv(WX_KINDS)) { if (frame.cardCfg.w != 0u) { wxAirT = wxAirTEst(pixf, zg); } } } }
     // (on a surface the fog along the PIXEL's ray to its own surface — zg — whatever a bend read; view 5 keeps the sky under the volumetrics, as the old path always did)
-    if ((frame.flags & FLAG_FROXEL_VOL) != 0u) { let vol = froxelVol(pixf, pix, pin, tT); color = select(color * vol.a + vol.rgb, vol.rgb, dbg == 5u && !sky); }
-    else {
     let vol = upsampleVol(pix, pin, tT);
     color = select(color * vol.a + vol.rgb, vol.rgb, dbg == 5u && !sky);
-    }
   }
   if (lv(WX_KINDS) && !WX_VOL) { if (frame.cardCfg.w != 0u && dbg == 0u) {   // WEATHER FOG (a kind picked, game/weatherKinds.ts) along the pixel's ray to its surface: the field the men's eyes are cut by (weather.ts airTrans); over the void past the lot as over the ground beside it. (The flat veil — under WX_VOL the weather's air is a volume the volumetric pass marched: it is in `vol` above)
     if (WX_EDGE && !sky) {   // (the veil at the building's shell — common.wgsl wxFogApplySurf: an outside wall's face is asked where its normal points; a man's pixel and a box he carries — bit 28 / the owner byte of the PIXEL's own id — where he stands)

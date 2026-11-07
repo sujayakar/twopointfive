@@ -31,7 +31,7 @@
   function state() {
     const S = E().settings, sm = window.__smoke, P = E().passes;
     return { commit: window.__skCommit ?? null, internal: [E().width, E().height], output: [E().outWidth, E().outHeight], scale: S.renderScale, maxH: S.maxInternalHeight, preset: window.__quality?.current ?? null,
-      volQuarter: !!S.volQuarter, gatherThird: !!S.gatherThird, volDiv: P.volDiv ?? P.divVol ?? null, froxel: !!S.froxelVol, froxelTopRays: S.froxelTopRays, froxelGrid: window.__froxel?.grid ?? null,
+      volQuarter: !!S.volQuarter, gatherThird: !!S.gatherThird, volDiv: P.volDiv ?? P.divVol ?? null,
       taau: !!S.taau, sharp: !!S.sharpDirect, sharpOn: !!E().sharpOn, decouple: !!S.sharpDecouple, gbaa: !!S.gbaa, taauMotionAlpha: S.taauMotionAlpha, taauAlpha: S.taauAlpha, motionCalm: S.restirSpatialAll && S.restirPenRays,
       volLightCap: S.volLightCap, volEvery: S.volShadowEvery, volStep: S.volStepVoxels, volSteps: S.volSteps, smokeShadowSteps: S.smokeShadowSteps,
       calm: sm?.params?.calmCells, frozen: !!sm?.params?.frozen, bricks: sm?.stats?.pool ?? 0, stepped: sm?.stats?.stepped ?? 0,
@@ -190,20 +190,20 @@
     for (const nm of names) { const keys = Object.keys(res[nm][0] ?? {}); const o = {}; for (const k of keys) { const vals = res[nm].map(x => x[k]); o[k] = { min: Math.min(...vals), med: [...vals].sort((a, b) => a - b)[Math.floor(vals.length / 2)], all: vals }; } summary[nm] = o; }
     return { summary, rounds: res };
   }
-  /** GPU-error sweep: presets × froxel on/off × K 0/3/6 × smoke frozen/live × debug views 0/5/3, a few frames each, uncaptured errors collected (stage a plume first) */
+  /** GPU-error sweep: presets × lights a step 1/3/6 × smoke frozen/live × debug views 0/5/3, a few frames each, uncaptured errors collected (stage a plume first) */
   async function validate() {
     const errs = []; const h = e => errs.push(String(e.error && e.error.message).slice(0, 240)); E().device.addEventListener('uncapturederror', h);
-    const S = E().settings, Q = window.__quality, sm = window.__smoke; const was = { preset: Q?.current, froxel: S.froxelVol, K: S.smokeMarchLights, view: S.debugView, frozen: sm.params.frozen };
+    const S = E().settings, Q = window.__quality, sm = window.__smoke; const was = { preset: Q?.current, K: S.volLightCap, view: S.debugView, frozen: sm.params.frozen };
     let n = 0;
     for (const preset of ['high', 'medium', 'low', 'verylow']) {
       Q.apply(preset); window.__runFrames(2, 1 / 60, []); await settle();
-      for (const froxel of [true, false]) for (const K of [0, 3, 6]) for (const frozen of [true, false]) {
-        S.froxelVol = froxel; S.smokeMarchLights = K; sm.params.frozen = frozen;
+      for (const K of [1, 3, 6]) for (const frozen of [true, false]) {
+        S.volLightCap = K; sm.params.frozen = frozen;
         for (const view of [0, 5, 3]) { S.debugView = view; window.__runFrames(2, 1 / 60, []); n += 2; }
         await settle();
       }
     }
-    S.debugView = was.view; S.froxelVol = was.froxel; S.smokeMarchLights = was.K; sm.params.frozen = was.frozen; if (was.preset) Q.apply(was.preset);
+    S.debugView = was.view; S.volLightCap = was.K; sm.params.frozen = was.frozen; if (was.preset) Q.apply(was.preset);
     window.__runFrames(2, 1 / 60, []); await settle();
     E().device.removeEventListener('uncapturederror', h);
     return { frames: n, errors: errs.length, errs: errs.slice(0, 8) };

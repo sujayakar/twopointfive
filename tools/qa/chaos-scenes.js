@@ -5,7 +5,7 @@
 //   P1  KICKED DOOR — the storage door kicked in from the corridor with the storage bulb off: the corridor panels light a wedge on the storage floor through the
 //       opening as the leaf flings (Doors.kickIn: 9 rad/s ≈ 8 m/s at the tip); camera on the floor inside. 30 frames from impact.
 //   P2  CANISTER thrown across the desk-lamp pool (the sharp lane's V1): a stun can that never fires, 5 m/s across the manager's desk between lamp and desk top.
-//   P2b the same can through a torch beam in the corridor's haze (V2's fixed spot): the froxel case.
+//   P2b the same can through a torch beam in the corridor's haze (V2's fixed spot): the beam case.
 //   P3  RAGDOLL — a guard staged in the desk lamp's spill, dropped by one round: he folds through the pool.
 //   P4  CHAIR shoved through the panels' light in the cubicles (desk A's chair, 3 m/s along +x).
 //   P5  CHURN — P2's throw while 6 mags + 4 cans spawn and go within 20 frames: the dynamic list reorders under a flying object (index-matched motion vectors).
@@ -26,11 +26,11 @@
   const r3 = v => (v === null || v === undefined || Number.isNaN(v)) ? null : +v.toFixed(3);
   function mulberry32(a) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
   // THE REFERENCE: every v3 history off — the leader / tail direct estimator (no reservoirs) with the direct term's history at 0 (dtemporal skipped), softblur (spatial only), the gather's temporal
-  // accumulation flag down, the per-pixel volumetric march (no froxel history), no reflection pass (its specular history), no TAA (FXAA at scale 1.0). Rendered on the same OUTPUT grid.
+  // accumulation flag down, no reflection pass (its specular history), no TAA (FXAA at scale 1.0). Rendered on the same OUTPUT grid.
   const TEMPORAL = 2048;
   // SINCE 2026-11-07 the old estimator and the old denoiser are gone: this reference still runs ReSTIR's reservoirs and the shared denoiser, so it is NOT history-free any
   // more, and its numbers do not compare with takes from before that day.
-  const REF = { taau: false, froxelVol: false, rtReflect: false, directHistory: 0, renderScale: 1.0 };
+  const REF = { taau: false, rtReflect: false, directHistory: 0, renderScale: 1.0 };
   function applyRef() { const r = window.__iq.apply(REF); S().flags = S().flags & ~TEMPORAL; return r; }
   function applyVar(v, extra) { const r = window.__iq.apply(v, extra); if (flags0 !== null) S().flags = flags0; return r; }
   let flags0 = null;

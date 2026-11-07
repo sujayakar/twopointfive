@@ -116,7 +116,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `weather.ts airTrans` reads the same cells (`shareAt`) while it is live. THE PICTURE (`wxAirMarch`, the per-pixel volumetric pass at every tier, only while a kind's fog is
   in — clear air runs the pass as it was): ≤ `wxMaxSteps()` jittered steps a ray (half the tier's beam steps: ultra 12 … verylow 4; `settings.wxAirSteps` overrides — the F8
   sweep's row `wxAir` prices it), each = extinction + the dice's mean radiance as the ambient + every kind-2 light (sun, moon, a stroke) through a SHADOW ray and the smoke, so
-  walls and roofs cut shafts through the dust and a dark room's dust stays dark; the classic haze branch and the froxel kernel hand kind-2 lights to this march while a kind
+  walls and roofs cut shafts through the dust and a dark room's dust stays dark; the haze branch hands kind-2 lights to this march while a kind
   is in (one owner; the dusk wall fix's `?nowallfog` acts only together with `?flatfog` now), lamps keep their own beam march through `hazeAt → wxHazeK` (which now reads `wxAir`). Output: the volumetric target's rgb gains the in-scatter, its
   alpha is smoke × air transmittance (composite dims the surface by it — the flat `wxFogApply` veil and its glow are skipped under `WX_VOL`), `volReact.g` stays smoke-only.
   Two switches, one URL flag: the picture's `weatherVolConfig.on` (prelude const, boot) and the game's `AIRDUST.on` (module default OFF = the frozen stand, where airTrans is
