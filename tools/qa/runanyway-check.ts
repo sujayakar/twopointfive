@@ -60,11 +60,13 @@ export async function runanywayCheck(): Promise<boolean> {
 
   try {
     // ------------------------------------------------------------ the recorded case
-    { const s = await world(); guesses(s); const R = s.run();
+    { const s = await world(); guesses(s); const R = s.run(15);
       line(R.broke && R.bold && R.stats.bold >= 1 && !R.low && !!R.first && flat(R.first, [38.3, 0, 14.3]) < 2.5 && R.goneAt < 20 && !R.here,
-        `the recorded man's picture (an enemy believed in the doorway, one believed in the room): he runs for the outside at ${at(R.first)} — by the room's door and the fire exit — and is gone ${f1(R.goneAt)} s on (the second look ${R.stats.bold}, the corner ${R.stats.low})`); }
+        `the recorded man's picture (an enemy believed in the doorway, one believed in the room): he runs for the outside at ${at(R.first)} — by the room's door and the fire exit — and is gone ${f1(R.goneAt)} s on (the second look ${R.stats.bold}, the corner ${R.stats.low})`);
+      line(R.rifle && R.rifles === 1 && R.pistols === 1 && R.bare,
+        `a rifleman (${R.rifle}) who has given up: his rifle and his pistol are both on the floor (${R.rifles} and ${R.pistols}) and his thigh is drawn empty (${R.bare})`); }
     // ------------------------------------------------------------ a way the whole picture allows
-    { const s = await world(); pictureTell(s.g, s.A, s.op, INSIDE); const b = s.run();
+    { const s = await world(); pictureTell(s.g, s.A, s.op, INSIDE); const b = s.run(15);
       line(!b.bold && b.stats.bold === 0 && !!b.first && !b.here,
         `an idea that is not on his way out: out at ${at(b.first)} and gone ${f1(b.goneAt)} s on, never the second look (${b.stats.bold})`); }
     // ------------------------------------------------------------ he never settles
@@ -75,10 +77,6 @@ export async function runanywayCheck(): Promise<boolean> {
       const b = await spent();
       line(!b.here && b.goneAt < 20,
         `a man gone low with every try at the way out spent, and the way open: he never settles — up at the next look and gone ${f1(b.goneAt)} s on`); }
-    // ------------------------------------------------------------ both guns
-    { const b = await world(); guesses(b); const Rb = b.run(3);
-      line(Rb.rifle && Rb.rifles === 1 && Rb.pistols === 1 && Rb.bare,
-        `a rifleman (${Rb.rifle}) three seconds after he gives up: his rifle and his pistol are both on the floor (${Rb.rifles} and ${Rb.pistols}) and his thigh is drawn empty (${Rb.bare})`); }
     // ------------------------------------------------------------ the checkpoint
     { const s = await world(); guesses(s); runnerBreak(s.g, s.A); s.step(120); const R0: any = runnerOf(s.A), snap = JSON.parse(JSON.stringify(runnerSnapshot(s.g) ?? null));   // (the runner's own slice: the block's staged units keep a whole checkpoint off this floor)
       const s2 = await world(); runnerRestore(s2.g, snap); const R1: any = runnerOf(s2.g.guards[s.g.guards.indexOf(s.A)]);

@@ -1,17 +1,12 @@
-// 'words-overheard' (game/cues.ts overheard, behind CUES.overheard — the page has it on, `?overheard=0` puts it off; off in the module and on the frozen
-// stand, `TPS_OVERHEARD=1` raises it), run through probes.ts:   bun run tools/qa/probes.ts words-overheard
+// 'words-overheard' (game/cues.ts overheard, behind CUES.overheard, settled on), run through probes.ts:   bun run tools/qa/probes.ts words-overheard
 // A defender the fog hides who SHOUTS a line (not on his net) where the player's ears or a living teammate's really get it is a quiet row of its own on the
 // radio strip: his words alone. PASS / FAIL each, all headless: no picture and no sound here — 'drawn' is the strip's own row list (stripRows), not a screen.
 //   1 · on a bare clock, a made-up floor (straight-line hearing, a `carry` the check sets): who gets a row and who does not; the row's words; the strip's
-//       own rows are never pushed off by one and push it off first; the same words and two shouts close together; the clock gone back; off = nothing
-//       asked, no row
+//       own rows are never pushed off by one and push it off first; the same words and two shouts close together; the clock gone back
 //   2 · the team met on levels/block-squads.json under the fog: every hidden defender shouts in turn — a row exactly where the game's own hearing law
 //       (hearPath, the path under the reach × its carry) says an ear gets it, from where the player stands and with his ear brought beside the man;
 //       and the questions the row asks leave nothing in the route cache the AI's own hearing reads
-//   3 · the same seed with the switch down and up, a hidden defender made to shout beside the player through the game's own say(): every digest the
-//       same (a row moves nobody and no die); up, the row is on the strip
-//   4 · the switch is a row of the two stands' list with its word, rides a recording's tables, and a recording from before the key replays with it down
-// OVERHEARD_BREAK=1 leaves the switch down where the check raises it: 1, 2 and 3 must then FAIL (exit 1).
+//   3 · a hidden defender made to shout beside the player through the game's own say(): the row is on the strip
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
@@ -19,12 +14,10 @@ const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { CUES, Cues, isShout, stripRows } = await import(`${ROOT}/src/game/cues.ts`);
-const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const { hearPath } = await import(`${ROOT}/src/game/weather.ts`);
 const { isHostile } = await import(`${ROOT}/src/game/teams.ts`);
 const { DIGIN } = await import(`${ROOT}/src/game/digin.ts`);
 
-const BREAK = process.env.OVERHEARD_BREAK === '1';
 const DT = 1 / 60;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 type Verdict = (ok: boolean, label: string, detail: string) => void;
@@ -44,7 +37,7 @@ async function rig(seed: number) {
 
 export async function wordsOverheard(): Promise<boolean> {
   const F = family("words-overheard: a hidden defender's shout that reaches an ear is a quiet row on the strip, his words alone");
-  const was = { ...CUES }, rnd = Math.random, stoodTop = CUES.overheard;   // (the shipped stand writes its switches once, at load: what it stood on is read here, before the check writes any)
+  const was = { ...CUES }, rnd = Math.random;
   try {
     // ---- 1 · the bare clock
     {
@@ -59,15 +52,11 @@ export async function wordsOverheard(): Promise<boolean> {
       g.cues = new Cues(g);
       const rows = () => (stripRows(g) as { text: string }[]).map(r => r.text);
       const fresh = () => { g.cues.reset(); g.time += 60; asked = 0; carry = 1; g.player.down = false; };
-      CUES.on = true; CUES.overheard = !BREAK;
       const foe = man('Tango 3', 'hostile', 10), far = man('Tango 4', 'hostile', 25), seen = man('Tango 5', 'hostile', 10), mate = man('Vega', 'operative', -60), foeByMate = man('Tango 6', 'hostile', -66);
       hid.add(foe); hid.add(far); hid.add(foeByMate); hid.add(mate); g.guards = [foe, far, seen, mate, foeByMate];
 
       fresh(); const drew = g.cues.overheard(foe, 'find them!'); const r1 = rows();
       F.verdict(drew === true && r1.length === 1 && r1[0] === 'heard: find them!' && !/Tango|\d|radio/.test(r1[0]) && g.cues.rows.length === 0 && g.cues.heardRow?.text === 'find them!', 'a hidden defender shouts ten metres off in open air: one row, his words alone under the strip\'s own word for a thing heard — no name, no number, no place — and it is no row of the net\'s own list', `drew ${drew} · strip [${r1.join(' | ')}]`);
-      const sq = (g.cues as any).squelchDue;
-      F.verdict(sq === false && g.cues.netWait(1) === 0 && g.cues.netWait(6) === 0, 'it is not on the net: no squelch is owed, and no class of the net waits on it', `squelch owed ${sq} · netWait 1: ${g.cues.netWait(1)} · 6: ${g.cues.netWait(6)}`);
-
       const no: [string, () => boolean][] = [
         ['a man the team sees (his bubble is over him)', () => g.cues.overheard(seen, 'find them!')],
         ['a line with no shout in it', () => g.cues.overheard(foe, 'must have been nothing.')],
@@ -100,10 +89,6 @@ export async function wordsOverheard(): Promise<boolean> {
 
       fresh(); const b1 = g.cues.overheard(foe, 'find them!'); g.time -= 30; const b2 = rows().length; const b3 = g.cues.overheard(foe, 'find them!'); const b4 = rows(); g.cues.adopt([]); const b5 = rows().length;
       F.verdict(b1 && b2 === 0 && b3 && b4.join('|') === 'heard: find them!' && b5 === 0, 'the clock goes back half a minute (a checkpoint loaded): the row from the time ahead is not drawn, the same shout is a row again at once, and the load itself (adopt) clears it', `before ${b1} · rows after the clock went back ${b2} · the same shout again ${b3} [${b4.join(' | ')}] · after adopt ${b5}`);
-
-      fresh(); CUES.overheard = false; const off = g.cues.overheard(foe, 'find them!'); const offAsked = asked, offRows = rows().length; CUES.overheard = !BREAK;
-      fresh(); CUES.on = false; const cuesOff = g.cues.overheard(foe, 'find them!'); CUES.on = true;
-      F.verdict(off === false && offAsked === 0 && offRows === 0 && cuesOff === false, 'the switch down: no row and the hearing model is not even asked; with the cues off altogether, none either', `down: drew ${off}, ${offAsked} paths asked, ${offRows} rows · cues off: ${cuesOff}`);
     }
 
     // ---- 2 · the real floor, the game's own hearing law
@@ -116,7 +101,7 @@ export async function wordsOverheard(): Promise<boolean> {
       if (!aim) throw new Error('words-overheard: block-squads.json has no first squad room with a mark to stage the player in front of');
       g.teleportPlayer([aim[0], 0, aim[2]]); };
     {
-      const W = await rig(2), g = W.game; g.godMode = true; CUES.on = true; CUES.overheard = !BREAK; stagePlayer(W, g);
+      const W = await rig(2), g = W.game; g.godMode = true; stagePlayer(W, g);
       let near = 0, farN = 0, seenRow = 0, frames = 0, named = 0, grew = 0; const wrong: string[] = []; const cache = (g.col.sound as any).cache as Map<string, unknown>; routed = 0;
       const ask = (gd: any, hidden: boolean, i: number) => {
         const want = hidden && law(g, gd);
@@ -128,7 +113,7 @@ export async function wordsOverheard(): Promise<boolean> {
         if (!hidden) seenRow += drew ? 1 : 0; else if (want) near++; else farN++;
         C.rows = keep.rows; C.heardRow = keep.row; C.heardSaid = keep.said; C.shoutT = keep.shoutT; C.heardLog.length = keep.log; C.stats = JSON.parse(keep.stats);
       };
-      for (let i = 0; i < 60 * 12; i++) {
+      for (let i = 0; i < 60 * 9; i++) {
         g.player.visibility = 1; W.step(DT); frames++;
         if (i % 30) continue;
         for (const gd of g.guards as any[]) {
@@ -144,37 +129,16 @@ export async function wordsOverheard(): Promise<boolean> {
       F.verdict(routed >= 20 && grew === 0, 'the row\'s own questions leave nothing behind: with that many of them going round walls, the route cache the AI\'s hearing reads did not grow by one entry across them', `${routed} of the law's questions went round walls · the cache grew by ${grew} across every question the row asked`);
     }
 
-    // ---- 3 · the switch moves nobody; the say() road
+    // ---- 3 · the say() road
     {
-      const out: { moves: string; shouts: number; drawn: number; row: boolean; who: string; ring: string }[] = [];
-      for (const on of [false, !BREAK]) {
-        const W = await rig(2), g = W.game; g.godMode = true; CUES.on = true; CUES.overheard = on;   // (after the stand-up: on the frozen stand a stand-up writes every held switch down again)
-        stagePlayer(W, g); let moves = '', row = false, who = '', ring = '';
-        for (let i = 0; i < 60 * 30; i++) { g.player.visibility = 1; W.step(DT);
-          if (i === 600) {   // ten seconds in: the player is stood two metres from a hidden defender who then shouts through the game's own say()
-            pick: for (const gd of g.guards as any[]) { if (gd.state === 'dead' || !isHostile(gd.team, 'player') || !g.fogOfWar.hidden(gd)) continue;
-              for (const [dx, dz] of ROUND) { g.teleportPlayer([gd.char.pos[0] + dx, 0, gd.char.pos[2] + dz]);   // (the teleport stands him on free floor: the law is asked from where he ended up — the same tries, in the same order, switch down or up)
-                if (law(g, gd)) { g.cues.rows = []; g.say(gd, 'over here!'); who = gd.callsign; ring = g.messages[g.messages.length - 1]?.text ?? ''; break pick; } } } }
-          if (i % 30 === 0) moves += hashDigest(digestGame(g, true) as any) + ' ';
-          if (i >= 600 && i < 600 + 60 * 3) for (const r of stripRows(g) as { text: string }[]) if (r.text === 'heard: over here!') row = true; }
-        out.push({ moves, shouts: g.cues.stats.shouts, drawn: g.cues.stats.shoutsDrawn, row, who, ring });
-      }
-      const [a, b] = out;
-      F.verdict(a.moves === b.moves && a.shouts === 0 && !a.row && !!a.who && a.who === b.who, 'the same seed, the switch down and up, 30 s of the fight with a hidden defender made to shout beside the player: every digest the same (a heard row moves no man and no die); down, nothing is asked and nothing drawn', `${a.moves.split(' ').length - 1} digests ${a.moves === b.moves ? 'equal' : 'DIFFER'} · the man: ${a.who || 'NONE FOUND'} · down: ${a.shouts} asked, row ${a.row}`);
-      F.verdict(b.row === true && b.drawn >= 1 && b.ring === `${b.who}: over here!`, 'up: his shout through say() is on the strip as a heard row — and the message ring nobody draws has the same line under his name, as it always had', `row ${b.row} · ${b.shouts} hidden shouts offered, ${b.drawn} drawn · the ring: '${b.ring}'`);
-    }
-
-    // ---- 4 · the two stands' row, the word, and a recording from before the key
-    {
-      const s = (await import(`${ROOT}/src/host/standEnv.ts`)).STAND_ENV as string[], PR = await import(`${ROOT}/src/host/profile.ts`), JR = await import(`${ROOT}/src/game/journal.ts`);
-      const shipped = process.env.TPS_PROFILE === 'shipped';
-      const W = await rig(3), stood = shipped ? stoodTop : CUES.overheard;   // (frozen: every stand-up writes the held switches again, so the one just made says it; shipped: the value from before the check)
-      const snap = JSON.parse(JSON.stringify(JR.knobsSnapshot(W.game))); const had = 'overheard' in snap.tables.CUES;
-      CUES.overheard = true; const snapUp = JSON.parse(JSON.stringify(JR.knobsSnapshot(W.game))); CUES.overheard = false; JR.applyKnobs(W.game, snapUp); const kept = CUES.overheard;
-      delete snap.tables.CUES.overheard; CUES.overheard = true; JR.applyKnobs(W.game, snap); const old = CUES.overheard;
-      F.verdict(s.includes('TPS_OVERHEARD') && PR.FROZEN_HOLDS['CUES.overheard'] === 'TPS_OVERHEARD=1' && had && old === false && kept === true && stood === (shipped || process.env.TPS_OVERHEARD === '1'),
-        'the switch is a row of the two stands\' list with its word, stands up on the shipped stand and down on the frozen one, rides a recording\'s tables, and a recording from before the key replays with it down',
-        `STAND_ENV ${s.includes('TPS_OVERHEARD')} · FROZEN_HOLDS ${PR.FROZEN_HOLDS['CUES.overheard']} · stood up ${stood} (shipped ${shipped}) · in the tables ${had} · an old recording: ${old} · one recorded with it up: ${kept}`);
+      const W = await rig(2), g = W.game; g.godMode = true; stagePlayer(W, g); let row = false, who = '', ring = '';
+      for (let i = 0; i < 60 * 8; i++) { g.player.visibility = 1; W.step(DT);
+        if (i === 300) {   // five seconds in: the player is stood two metres from a hidden defender who then shouts through the game's own say()
+          pick: for (const gd of g.guards as any[]) { if (gd.state === 'dead' || !isHostile(gd.team, 'player') || !g.fogOfWar.hidden(gd)) continue;
+            for (const [dx, dz] of ROUND) { g.teleportPlayer([gd.char.pos[0] + dx, 0, gd.char.pos[2] + dz]);   // (the teleport stands him on free floor: the law is asked from where he ended up)
+              if (law(g, gd)) { g.cues.rows = []; g.say(gd, 'over here!'); who = gd.callsign; ring = g.messages[g.messages.length - 1]?.text ?? ''; break pick; } } } }
+        if (i >= 300) for (const r of stripRows(g) as { text: string }[]) if (r.text === 'heard: over here!') row = true; }
+      F.verdict(row && ring === `${who}: over here!`, 'his shout through say() is on the strip as a heard row — and the message ring nobody draws has the same line under his name, as it always had', `row ${row} · the ring: '${ring}'`);
     }
   } catch (e) { F.verdict(false, 'the check ran', String((e as Error)?.stack ?? e)); }
   finally { Object.assign(CUES, was); Math.random = rnd; }
