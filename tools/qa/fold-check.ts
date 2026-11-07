@@ -198,10 +198,10 @@ const L = switchRows(), settled = Object.keys(settledOf(L));
 //      ONLY: its lines are to delete, not to mend), and a throw by its first line. `selftest-side` writes a settled row off, prints one FAIL line and writes
 //      it back. SIDES_BREAK=1 in front: the probe prints a second FAIL line with the row back, the tag says one of two, and this line fails.
 { const run = resolve(import.meta.dir, 'probes.ts'), side = await child([run, 'selftest-side'], { QA_FOLD: '1', ...(process.env.SIDES_BREAK === '1' ? { SIDES_BREAK: '1' } : {}) }), thrown = await child([run, 'selftest-throw'], { QA_FOLD: '1' });
-  const S = jsons<{ probe: string; fail: number; failOtherSide: number; rows: string[] }>(side.out, 'sides').find(x => x.probe === 'selftest-side'), tag = /^    NEW RED +selftest-side( \[[^\]]*\])?/m.exec(side.out)?.[1] ?? ' (no tag)';
-  line(!!S && S.fail === 1 && S.failOtherSide === 1 && S.rows.length === 1 && /^ \[OTHER SIDE ONLY: its 1 failing line /.test(tag) && /^    NEW RED +selftest-throw \[THREW: deliberately thrown/m.test(thrown.out),
+  const S = jsons<{ probe: string; fail: number; failOtherSide: number; rows: Record<string, { fail: number; pass: number }> }>(side.out, 'sides').find(x => x.probe === 'selftest-side'), tag = /^    NEW RED +selftest-side( \[[^\]]*\])?/m.exec(side.out)?.[1] ?? ' (no tag)';
+  line(!!S && S.fail === 1 && S.failOtherSide === 1 && Object.keys(S.rows).length === 1 && /^    \(made with the other side of a settled switch wanted: \S+=(true|false|0|1)\)$/m.test(side.out) && /^ \[OTHER SIDE ONLY: its 1 failing line /.test(tag) && /^    NEW RED +selftest-throw \[THREW: deliberately thrown/m.test(thrown.out),
     `(11) the runner says which side a red probe's lines asked: one made of the other side of a settled switch alone is tagged so, and a throw by what was thrown`,
-    side.code > 1 ? said(side) : `selftest-side: ${S ? `${S.failOtherSide} of ${S.fail} failing line(s) on the other side (${S.rows.join(', ')})` : 'no sides line'}, tagged${tag.slice(0, 60)}… · selftest-throw: ${/\[THREW: /.test(thrown.out) ? 'tagged THREW' : 'NO TAG'}`); }
+    side.code > 1 ? said(side) : `selftest-side: ${S ? `${S.failOtherSide} of ${S.fail} failing line(s) on the other side (${Object.keys(S.rows).join(', ')})` : 'no sides line'}, tagged${tag.slice(0, 60)}… · selftest-throw: ${/\[THREW: /.test(thrown.out) ? 'tagged THREW' : 'NO TAG'}`); }
 
 console.log(fails ? `=== fold-check: ${fails} FAILED ===` : '=== fold-check: ALL PASS ===');
 process.exit(fails ? 1 : 0);
