@@ -96,7 +96,7 @@ export class Overlay implements HudLike {
   private peak = 0; private peakT = 0;
   private log = document.getElementById('log')!; private logKey = '';
   private captionEl = document.getElementById('caption')!; private captionKey = '';
-  private tlEl = document.getElementById('timeline')!; private tlKey = ''; private tlFill: HTMLElement | null = null; private tlOnPick: ((k: number) => void) | null = null;
+  private tlEl = document.getElementById('timeline')!; private tlKey = ''; private tlFill: HTMLElement | null = null;
   private equip = document.getElementById('equip')!;
   private traj = document.getElementById('traj') as unknown as SVGSVGElement;
   private trajPath: SVGPolylineElement; private trajLand: SVGCircleElement; private trajShort = false;
@@ -125,15 +125,13 @@ export class Overlay implements HudLike {
   /** the player's own man made easy to find (ui/findme.ts ← host/findme.ts): a ring at his feet — nothing unless his Options ask */
   readonly findme = new FindMeViz(this.traj);
   /** Tour timeline: one segment per stop (width ∝ duration) with its chapter title, the live one filled to its progress; segments are clickable. */
-  setTimeline(ch: { list: { title: string; dur: number }[]; i: number; frac: number } | null, onPick: (k: number) => void) {
-    this.tlOnPick = onPick;
+  setTimeline(ch: { list: { title: string; dur: number }[]; i: number; frac: number } | null, _unused?: unknown) {
     if (!ch) { if (this.tlKey) { this.tlKey = ''; this.tlEl.className = ''; this.tlEl.innerHTML = ''; this.tlFill = null; } return; }
     const key = ch.list.length + '|' + ch.i;
     if (key !== this.tlKey) {
       this.tlKey = key; const total = ch.list.reduce((s, c) => s + c.dur, 0) || 1;
-      this.tlEl.innerHTML = ch.list.map((c, k) => `<div class="seg${k < ch.i ? ' done' : k === ch.i ? ' cur' : ''}" data-k="${k}" title="${k + 1}. ${c.title} — click or ←/→" style="flex:${(c.dur / total * 100).toFixed(2)} 1 0"><b></b><span>${c.title}</span></div>`).join('');
+      this.tlEl.innerHTML = ch.list.map((c, k) => `<div class="seg${k < ch.i ? ' done' : k === ch.i ? ' cur' : ''}" title="${k + 1}. ${c.title}" style="flex:${(c.dur / total * 100).toFixed(2)} 1 0"><b></b><span>${c.title}</span></div>`).join('');
       this.tlEl.className = 'on'; this.tlFill = this.tlEl.querySelector('.seg.cur b');
-      if (!this.tlEl.dataset.wired) { this.tlEl.dataset.wired = '1'; this.tlEl.addEventListener('click', ev => { const seg = (ev.target as HTMLElement).closest('.seg') as HTMLElement | null; if (seg && this.tlOnPick) this.tlOnPick(Number(seg.dataset.k)); }); }
     }
     if (this.tlFill) this.tlFill.style.width = `${(ch.frac * 100).toFixed(1)}%`;
   }
