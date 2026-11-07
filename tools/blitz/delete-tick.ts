@@ -253,6 +253,11 @@ const HOSTS = new Set<string>();
   const todo = [...HOST_ENTRIES.filter(f => sfByRel.has(f)), ...[...sfByRel.keys()].filter(f => f.startsWith('src/'))], seen = new Set<string>(todo);
   while (todo.length) { const f = todo.pop()!; if (f.startsWith('tools/')) HOSTS.add(f); for (const i of importsOf(f)) if (!seen.has(i)) { seen.add(i); todo.push(i); } } }
 const whoOf = (file: string): Who => file.startsWith('src/') ? 'page' : HOSTS.has(file) ? 'host' : 'tool';
+/** THE HOST'S OWN LINES: the hosts of tools/, and the files of src/ that load the bridge (the page's host of the Rust game) with what they load beside
+ *  them outside the simulation (the dress step). What these name runs where nothing crosses. */
+const HOST_LINES = new Set<string>(HOSTS);
+{ const bridgeUsers = [...sfByRel.keys()].filter(f => f.startsWith('src/') && !SIM.test(f) && sfByRel.get(f).statements.some((st: any) => st.kind === SK.ImportDeclaration && BRIDGE_ALIAS.test(st.moduleSpecifier.text)));
+  for (const f of bridgeUsers) { HOST_LINES.add(f); for (const st of sfByRel.get(f).statements) if (st.kind === SK.ImportDeclaration && !st.importClause?.isTypeOnly && st.moduleSpecifier.text.startsWith('./')) { const r = rel(resolve(dirname(join(ROOT, f)), st.moduleSpecifier.text)) + '.ts'; if (sfByRel.has(r) && !SIM.test(r)) HOST_LINES.add(r); } } }
 interface RootEdge { file: string; who: Who; e: Edge }
 const ROOT_EDGES: RootEdge[] = [];
 for (const sf of program.getSourceFiles()) { const file = rel(sf.fileName); if (SIM.test(file) || sf.isDeclarationFile || file.startsWith('..')) continue;
@@ -295,17 +300,25 @@ function takesGame(u: Unit): boolean { if (u.cls && !u.isStatic) return true; co
 function isRule(u: Unit): boolean { let v = ruleMemo.get(u); if (v === undefined) { v = !!u.guard && (u.row.writes ?? 1) > 0 && takesGame(u); ruleMemo.set(u, v); } return v; }
 interface Why { from: Unit | string; at: string; how: string; /** made by the signature of `from`, which stands at any reach */ sig?: boolean }
 interface Plan { reach: Uint8Array; why: (Why | undefined)[]; why1: (Why | undefined)[]; /** the tools that name it exactly */ namedBy: Map<Unit, Set<string>>; /** where the page or a host reads its name loosely */ looseMiss: Map<Unit, Set<string>>; /** the tools that read its name off a value typed any */ looseTools: Map<Unit, Set<string>> }
+/** WHAT THE TICK REACHES: every declaration `Game.stepSeats` leads to by exact references, overrides and said interfaces. A function in here is the
+ *  tick's own; one outside it (a level's builder, the level format, a lookup the menus use) is not, and the deletion of the tick has no claim on it. */
+const OF_TICK = new Set<Unit>();
+{ const q: Unit[] = [TICK!]; OF_TICK.add(TICK!); const add = (u?: Unit) => { if (u && !OF_TICK.has(u)) { OF_TICK.add(u); q.push(u); } };
+  while (q.length) { const u = q.pop()!; for (const e of [...u.sig, ...u.body]) { if (e.to) add(e.to); else if (e.iface) { const said = saidImplementers(e.iface); for (const m of byName.get(e.name!) ?? []) if (m.cls && said.has(m.cls)) add(m); } }
+    if (u.cls && (u.kind === 'method' || u.kind === 'accessor' || u.kind === 'field')) for (const D of allSubs(u.cls)) for (const m of D.members!) if (m.name === u.name && m.kind !== 'ctor') add(m); } }
+/** REACH: 0 nothing · 1 its signature · 2 its body, with rules not followed into · 3 its body and every body under it (the host's own lines: an apply, the
+ *  out events' dispatch, the dress step run where nothing crosses, so a rule reached from them is run as TypeScript and no census is asked) */
 function plan(skipRoot?: (r: RootEdge) => boolean): Plan {
   const reach = new Uint8Array(UNITS.length), why: (Why | undefined)[] = new Array(UNITS.length), why1: (Why | undefined)[] = new Array(UNITS.length), queue: Unit[] = [], namedBy = new Map<Unit, Set<string>>(), looseMiss = new Map<Unit, Set<string>>(), looseTools = new Map<Unit, Set<string>>();
   const note = (m: Map<Unit, Set<string>>, u: Unit, v: string, cap = 1e9) => { let s = m.get(u); if (!s) m.set(u, s = new Set()); if (s.size < cap) s.add(v); };
   let SIG = false;
-  const hit = (u: Unit, k: 1 | 2, from: Unit | string, at: string, how: string) => { if (!u.fnLike) k = 2; if (reach[u.id] >= k) return; if (!reach[u.id]) why1[u.id] = { from, at, how, sig: SIG }; if (k === 2) why[u.id] = { from, at, how, sig: SIG }; reach[u.id] = k; queue.push(u); };
+  const hit = (u: Unit, k: 1 | 2 | 3, from: Unit | string, at: string, how: string) => { if (!u.fnLike && k < 2) k = 2; if (reach[u.id] >= k) return; if (!reach[u.id]) why1[u.id] = { from, at, how, sig: SIG }; if (k >= 2 && reach[u.id] < 2) why[u.id] = { from, at, how, sig: SIG }; reach[u.id] = k; queue.push(u); };
   /** a loose candidate: followed where there is no census, or the census saw it run. Else a name alone holds nothing: with a row on the surface it crosses,
    *  with none it goes if nothing else keeps it, and the place is kept for the note */
-  const maybe = (u: Unit, k: 1 | 2, from: Unit | string, at: string, how: string) => { if (u.fnLike && CENSUS && !SEEN.has(u)) { note(looseMiss, u, at, 6); if (u.guard) hit(u, 1, from, at, how + ' (loose: the census never saw it run; it is on the surface, and crosses)'); return; } hit(u, k, from, at, how); };
+  const maybe = (u: Unit, k: 1 | 2 | 3, from: Unit | string, at: string, how: string) => { if (u.fnLike && CENSUS && !SEEN.has(u)) { note(looseMiss, u, at, 6); if (u.guard) hit(u, 1, from, at, how + ' (loose: the census never saw it run; it is on the surface, and crosses)'); return; } hit(u, k, from, at, how); };
   /** a tool's loose read: a candidate with a row on the surface keeps its crossing; one with none is not held by a name alone, and the tool is listed */
   const toolLoose = (u: Unit, file: string, at: string, how: string) => { note(looseTools, u, file); if (u.guard || !u.fnLike) hit(u, 1, file, at, how); };
-  const follow = (e: Edge, k: 1 | 2, from: Unit | string, tool = false) => { const at = pos(e.file, e.at);
+  const follow = (e: Edge, k: 1 | 2 | 3, from: Unit | string, tool = false) => { const at = pos(e.file, e.at);
     if (e.to) { if (tool) note(namedBy, e.to, e.file);
       if (BARRIER && k === 2 && CENSUS && !SEEN.has(e.to) && isRule(e.to)) { hit(e.to, 1, from, at, (e.how ?? 'names it') + ' (a rule the Rust game has, never seen to run as TypeScript outside the tick: it crosses)'); return; }
       hit(e.to, k, from, at, e.how ?? 'names it'); return; }
@@ -313,31 +326,34 @@ function plan(skipRoot?: (r: RootEdge) => boolean): Plan {
         if (said.has(m.cls)) { if (tool) note(namedBy, m, e.file); hit(m, k, from, at, `calls ${e.name} on an interface its class implements`); }
         else if (answers(m.cls, e.iface)) { if (tool) toolLoose(m, e.file, at, `calls ${e.name} on a type its class answers by shape`); else maybe(m, k, from, at, `calls ${e.name} on a type its class answers by shape`); } } return; }
     for (const m of looseOf(e.name!)) { if (tool) toolLoose(m, e.file, at, `reads .${e.name} off a value typed any`); else maybe(m, k, from, at, `reads .${e.name} off a value typed any`); } };
-  // (a tool's exact reference: a function on the surface keeps its signature and crosses; one with no row has no Rust function to cross to, and stays as it is)
-  for (const r of ROOT_EDGES) { if (skipRoot?.(r)) continue; const tool = r.who === 'tool'; follow(r.e, tool && (!r.e.to || r.e.to.guard) ? 1 : 2, r.file, tool); }
+  // A TOOL'S EXACT REFERENCE. A function on the surface keeps its signature and crosses. One with no row has no Rust function to cross to: where it is
+  // not the tick's own it stays as it is; where it is the tick's own (a rule's inner step that a check calls by name) it goes with the tick, its
+  // signature left to throw by name, and the tools that named it are listed.
+  for (const r of ROOT_EDGES) { if (skipRoot?.(r)) continue; const tool = r.who === 'tool', t = r.e.to; follow(r.e, tool ? (!t || t.guard || (t.fnLike && OF_TICK.has(t)) ? 1 : 2) : HOST_LINES.has(r.file) ? 3 : 2, r.file, tool); }
   for (const u of UNITS) if (u.kind === 'stmt' && !u.cls) hit(u, 2, 'the module', u.file, 'a top-level statement');
   for (const [file, names] of Object.entries<string[]>(SCHEMA.top)) for (const n of new Set(names)) { const u = UNITS.find(x => x.file === file && x.name === n && !x.cls); if (u) hit(u, 2, 'the bridge', 'tools/blitz/schema.json', 'a top-level name the schema reads'); }
   for (const u of SEEN.keys()) if (u !== TICK) hit(u, 2, 'the census', rel(CENSUS_FILE), 'was seen to run as TypeScript while the Rust game stepped');
   for (const k of KEEP) hit(k.u, 2, 'kept by hand', 'tools/blitz/delete-keep.json', k.why);
-  while (queue.length) { const u = queue.pop()!, k = reach[u.id] as 1 | 2;
+  while (queue.length) { const u = queue.pop()!, k = reach[u.id] as 1 | 2 | 3;
     SIG = true;   // (what follows from a declaration standing at all, whatever its reach)
     if (u.cls) hit(u.cls, 2, u, u.file, 'its class');
     if (u.kind === 'class') for (const m of u.members!) if (m.kind === 'ctor' || m.kind === 'stmt' || (m.kind === 'field' && !m.fnLike)) hit(m, 2, u, u.file, 'the class as data');
+    const kk = (k === 1 ? 2 : k) as 2 | 3;   // (what a signature names is whole, at the reach of whoever stands)
     // (virtual dispatch: an override answers a call of what it overrides; an override that stays keeps the declaration it overrides)
     if (u.cls && (u.kind === 'method' || u.kind === 'accessor' || u.kind === 'field')) {
       for (const D of allSubs(u.cls)) for (const m of D.members!) if (m.name === u.name && m.kind !== 'ctor') hit(m, k, u, u.file, 'overrides it');
       for (const B of allSupers(u.cls)) for (const m of B.members!) if (m.name === u.name && m.kind !== 'ctor') hit(m, 1, u, u.file, 'is overridden by it'); }
-    for (const e of u.sig) if (e.to !== u) follow(e, 2, u);
+    for (const e of u.sig) if (e.to !== u) follow(e, kk, u);
     if (k === 1) for (const e of retEdges(u)) follow(e, 2, u);   // (its body goes: the type of its answer is written in its place)
     SIG = false;   // (a declaration's own name is in its signature: not a use of it)
-    if (k === 2 && u !== TICK) for (const e of u.body) follow(e, 2, u); }
+    if (k >= 2 && u !== TICK) for (const e of u.body) follow(e, k as 2 | 3, u); }
   if (reach[TICK!.id] < 1) reach[TICK!.id] = 1;
   return { reach, why, why1, namedBy, looseMiss, looseTools }; }
 const P = plan();
 
 // ---- the classes
 type Class = 'kept' | 'kept+guard' | 'crossing' | 'gone' | 'deleted';
-const classIn = (p: Plan, u: Unit): Class => u === TICK ? 'gone' : p.reach[u.id] === 0 ? 'deleted' : p.reach[u.id] === 2 ? (u.guard ? 'kept+guard' : 'kept') : u.guard ? 'crossing' : 'gone';
+const classIn = (p: Plan, u: Unit): Class => u === TICK ? 'gone' : p.reach[u.id] === 0 ? 'deleted' : p.reach[u.id] >= 2 ? (u.guard ? 'kept+guard' : 'kept') : u.guard ? 'crossing' : 'gone';
 const classOf = (u: Unit): Class => classIn(P, u);
 const fnUnits = UNITS.filter(u => u.fnLike);
 const count = (us: Unit[], p = P) => { const c: Record<string, [number, number]> = {}; for (const u of us) { const k = classIn(p, u); (c[k] ??= [0, 0])[0]++; c[k][1] += u.lines; } return c; };
@@ -353,7 +369,7 @@ function summary(): string[] { const L: string[] = [];
   L.push(`functions of the simulation's folders: ${fnUnits.length} (${fnUnits.reduce((a, u) => a + u.lines, 0)} lines)`);
   const c = count(fnUnits); for (const k of ['deleted', 'crossing', 'gone', 'kept+guard', 'kept']) L.push(`  ${k.padEnd(12)} ${String(c[k]?.[0] ?? 0).padStart(6)} functions ${String(c[k]?.[1] ?? 0).padStart(7)} lines`);
   const o = count(UNITS.filter(u => !u.fnLike)); L.push(`other declarations: ${UNITS.length - fnUnits.length}: kept ${o.kept?.[0] ?? 0} (${o.kept?.[1] ?? 0} lines), deleted ${o.deleted?.[0] ?? 0} (${o.deleted?.[1] ?? 0} lines)`);
-  const kept = fnUnits.filter(u => P.reach[u.id] === 2), byRoot = new Map<string, [number, number]>(); for (const u of kept) { const r = rootOf(u), w = r.startsWith('src/') ? 'the page' : r.startsWith('tools/') ? 'the hosts' : r; const a = byRoot.get(w) ?? [0, 0]; a[0]++; a[1] += u.lines; byRoot.set(w, a); }
+  const kept = fnUnits.filter(u => P.reach[u.id] >= 2), byRoot = new Map<string, [number, number]>(); for (const u of kept) { const r = rootOf(u), w = r.startsWith('src/') ? 'the page' : r.startsWith('tools/') ? 'the hosts' : r; const a = byRoot.get(w) ?? [0, 0]; a[0]++; a[1] += u.lines; byRoot.set(w, a); }
   L.push(`kept with a body, by the root of the first chain found: ${[...byRoot].sort((a, b) => b[1][0] - a[1][0]).map(([r, [n, l]]) => `${r} ${n} (${l} lines)`).join(' · ')}`);
   L.push(`loose candidates left as a signature: ${P.looseMiss.size} · names read off any and typed as a path from the game: ${STATS.pathTyped} · element reads by a computed key (not followed): ${STATS.dyn}`);
   return L; }
@@ -380,9 +396,9 @@ export let RUST_SURFACE: Surface | null = null;
 export function setSurface(s: Surface | null): void { RUST_SURFACE = s; }
 /** the body of a rule only the Rust game has */
 export function crossToRust(key: string, self: unknown, args: unknown[]): unknown {
-  if (!RUST_SURFACE) throw new Error(\`\${key}: only the Rust game has this rule, and no call surface is installed here to reach it\`);
+  if (!RUST_SURFACE) throw new Error(\`\${key}: a rule that has no TypeScript body was called where no call surface is installed (the page, or a tool run without the bridge's preload): only the Rust game has it. If a start or a menu needs it as TypeScript, the cure is a row in tools/blitz/delete-keep.json and the deletion run again (tools/blitz/DELETION.md)\`);
   const r = RUST_SURFACE.call(key, self, args);
-  if (r === RUST_PASS) throw new Error(\`\${key}: only the Rust game has this rule, and this call did not cross: no host of a Rust game stands for it, or it was made inside the host's own lines (a start, an apply, the dress step), or on a row the Rust game has not got\`);
+  if (r === RUST_PASS) throw new Error(\`\${key}: a start called a rule that has no TypeScript body. Only the Rust game has it, and this call did not cross: no host of a Rust game stands for it yet (a start), or it was made inside the host's own lines (an apply, the dress step), or on a row the Rust game has not got. The census of starts never saw this call (tools/blitz/starts.json); the cure is to add the start that makes it to that table, or a row in tools/blitz/delete-keep.json, and run the deletion again (tools/blitz/DELETION.md)\`);
   return r; }
 /** the body of a function that went with the tick and has no row on the call surface */
 export function goneWithTick(key: string): never { throw new Error(\`\${key}: this function's TypeScript went with the tick, and the call surface has no row for it (tools/blitz/DELETION.md lists who named it)\`); }
@@ -510,6 +526,11 @@ function writeOut(mode: Mode): void {
   { const c = JSON.parse(readFileSync(join(ROOT, 'tools/blitz/calls.json'), 'utf8')); c.files = {}; c.taps = {}; c.counted = {}; T.set('tools/blitz/calls.json', JSON.stringify(c)); }
   T.set('tools/blitz/crossing-keys.ts', KEYS_TS);
   patch('tools/blitz/preload.ts', "await import('./expose.ts');", "await import('./expose.ts'); await import('./crossing-keys.ts');", T);
+  // THE RUST GAME IS THE ONLY GAME (not in the census's tree, which plays under the word as the tree before it does): the page loads its host with no
+  // word, behind the card a browser with no WebAssembly already gets, and a headless tool's `standUp` stands the Rust game with no word
+  if (mode === 'delete' && !flag('--keep-word')) {
+    patch('src/main.ts', "  const rustGame = q.get('rust') === '1' ? await import('./host/rustgame') : null;\n  if (rustGame) await rustGame.rustBoot();", "  if (noWasm()) throw new NoWasmError('this browser runs no WebAssembly here, and the game is a WebAssembly module');\n  const rustGame = await import('./host/rustgame');\n  await rustGame.rustBoot();", T);
+    patch('tools/blitz/word.ts', "export const DEFAULT_WORD: string = 'none';", "export const DEFAULT_WORD: string = 'rust';", T); }
   if (mode === 'instrument') { T.set('tools/blitz/delete-census-preload.ts', CENSUS_PRELOAD_TS); T.set('tools/blitz/delete-census-ids.json', JSON.stringify(W.ids));
     patch('bunfig.toml', 'preload = ["./tools/blitz/preload.ts"]', 'preload = ["./tools/blitz/delete-census-preload.ts", "./tools/blitz/preload.ts"]', T); }
   for (const [file, text] of T) writeFileSync(join(ROOT, file), text);
@@ -518,7 +539,7 @@ function writeOut(mode: Mode): void {
 // ---- the note
 function noteText(): { md: string; tsv: string } { const L: string[] = [], c = count(fnUnits), o = count(UNITS.filter(u => !u.fnLike)), n = (k: string) => c[k]?.[0] ?? 0, l = (k: string) => c[k]?.[1] ?? 0;
   const simLines = simFiles.reduce((a: number, sf: any) => a + sf.getLineStarts().length, 0), W = write('delete'), after = [...W.text].filter(([f]) => SIM.test(f)).reduce((a, [, t]) => a + t.split('\n').length, 0) + simFiles.filter((sf: any) => !W.text.has(rel(sf.fileName))).reduce((a: number, sf: any) => a + sf.getLineStarts().length, 0);
-  const kept = fnUnits.filter(u => P.reach[u.id] === 2), group = (r: string) => r.startsWith('src/') ? 'the page' : HOSTS.has(r) ? 'the hosts' : r.startsWith('tools/') ? 'a tool, and no Rust function to cross to' : r;
+  const kept = fnUnits.filter(u => P.reach[u.id] >= 2), group = (r: string) => r.startsWith('src/') ? 'the page' : HOSTS.has(r) ? 'the hosts' : r.startsWith('tools/') ? 'a tool, and no Rust function to cross to' : r;
   const byRoot = new Map<string, [number, number]>(); for (const u of kept) { const w = group(rootOf(u)), a = byRoot.get(w) ?? [0, 0]; a[0]++; a[1] += u.lines; byRoot.set(w, a); }
   const byFile = new Map<string, [number, number]>(); for (const u of kept) { const r = rootOf(u), a = byFile.get(r) ?? [0, 0]; a[0]++; a[1] += u.lines; byFile.set(r, a); }
   L.push('## The plan on this tree', '', `Tree \`${FINGERPRINT}\` (a hash of the simulation's files). Census: ${CENSUS ? `${SEEN.size} functions seen to run as TypeScript in ${CENSUS.runs.length} plays of the Rust game` : 'NONE: every loose reference was followed'}.`, '',
@@ -556,9 +577,9 @@ if (flag('--note')) { const N = noteText(), f = join(ROOT, 'tools/blitz/DELETION
 if (opt('--why')) { const k = opt('--why')!; for (const u of UNITS.filter(u => u.key === k)) { console.log(`${u.key} (${u.file}): ${classOf(u)}${SEEN.has(u) ? ` · the census saw it run ${SEEN.get(u)!.n} times` : ''}`); for (const l of chain(u)) console.log('   ' + l); } process.exit(0); }
 if (flag('--bridges')) { const N = Number(opt('--bridges')) || 40;
   // (what each file outside the simulation ALONE keeps: the plan again without its references)
-  const base = fnUnits.filter(u => P.reach[u.id] === 2).length, byFile = new Map<string, number>(); for (const u of fnUnits) if (P.reach[u.id] === 2) { const r = rootOf(u); byFile.set(r, (byFile.get(r) ?? 0) + 1); }
+  const base = fnUnits.filter(u => P.reach[u.id] >= 2).length, byFile = new Map<string, number>(); for (const u of fnUnits) if (P.reach[u.id] >= 2) { const r = rootOf(u); byFile.set(r, (byFile.get(r) ?? 0) + 1); }
   const rows: string[] = [];
-  for (const [f] of [...byFile].sort((a, b) => b[1] - a[1]).slice(0, N)) { if (!sfByRel.has(f)) { rows.push(`${String(byFile.get(f)).padStart(6)} first-chain              ${f}`); continue; } const q = plan(r => r.file === f); const n = fnUnits.filter(u => q.reach[u.id] === 2).length; rows.push(`${String(byFile.get(f)).padStart(6)} first-chain ${String(base - n).padStart(6)} alone  ${f}`); }
+  for (const [f] of [...byFile].sort((a, b) => b[1] - a[1]).slice(0, N)) { if (!sfByRel.has(f)) { rows.push(`${String(byFile.get(f)).padStart(6)} first-chain              ${f}`); continue; } const q = plan(r => r.file === f); const n = fnUnits.filter(u => q.reach[u.id] >= 2).length; rows.push(`${String(byFile.get(f)).padStart(6)} first-chain ${String(base - n).padStart(6)} alone  ${f}`); }
   console.log(rows.join('\n')); process.exit(0); }
 for (const l of summary()) console.log(l);
 if (flag('--instrument')) writeOut('instrument'); else if (flag('--write')) writeOut('delete');

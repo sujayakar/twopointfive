@@ -22,6 +22,8 @@ echo "the census's tree: $T · its lines: $OUT"
 # the missions, seed by seed, with the whole-run digest (the same plays the deletion is held to afterwards)
 TPS_GAME=rust PT_DIGEST=1 TPS_RAN_OUT=$RAN bun run tools/qa/playthrough.ts --seeds "$SEEDS" --jobs "$JOBS" --json "$OUT/missions.json" > "$OUT/missions.log" 2>&1 || true
 grep -cE '^\s+[a-z0-9-]+:[0-9]+ ' "$OUT/missions.log" | sed 's/^/missions played: /'
+# THE TABLE OF STARTS (tools/blitz/starts.json): every row stood and stepped a second, a process a row; its outcomes are kept for the gate
+STARTS_ROOT=$T TPS_GAME=rust TPS_RAN_OUT=$RAN bun run "$ROOT/tools/blitz/starts.ts" --jobs "$JOBS" --json "$ROOT/tools/blitz/starts-before.json" > "$OUT/starts.log" 2>&1 || true; tail -2 "$OUT/starts.log"
 # the same missions' starts on Hard (a start is TypeScript: what Hard alone stands must be seen), played 45 s each
 TPS_GAME=rust TPS_RAN_OUT=$RAN bun run tools/qa/playthrough.ts --seeds 1 --jobs "$JOBS" --cap 45 --set '{"DIFFICULTY":{"level":"hard"}}' --json "$OUT/hard.json" > "$OUT/hard.log" 2>&1 || true
 # the tutorials, the quiet missions' lone player, and a family of checks that call rules
