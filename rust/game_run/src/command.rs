@@ -71,4 +71,6 @@ commands! {
     15 DigIn { on: u32 } = |g, on| g.k.digin.on = on != 0;
     /// the fog of war's cone, whatever the level says, for a visit
     16 FogCone { on: u32 } = |g, on| game::difficulty::set_cone_visit(g, Some(on != 0));
+    /// one knob, by its name (knobs.rs); a name no knob has is nothing
+    17 Knob { name: &str, value: f64 } = |g, name, value| { let _ = crate::knobs::set(g, name, value); };
 }
