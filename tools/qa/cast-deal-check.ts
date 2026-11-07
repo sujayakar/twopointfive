@@ -28,7 +28,7 @@ const RUNS: [string, string | null, string, number][] = [
   ['hostage rescue (office), four', null, 'rescue&squad=4', 4],
   ['the registry (rescue), four', 'registry.json', 'rescue&squad=4', 4],
   ['the consulate (rescue), four', 'consulate.json', 'rescue&squad=4', 4],
-  ['quiet, as two', 'quiet-yard.json', 'quiet&squad=1', 1],
+  ['quiet, as two', 'lights-out.json', 'quiet&squad=1', 1],
 ];
 const knobs0 = knobsCopy();
 for (const [what, file, query, n] of RUNS) {

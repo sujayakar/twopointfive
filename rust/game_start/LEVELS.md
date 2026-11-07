@@ -32,16 +32,13 @@ What a row does NOT hold:
 - Nothing here has been seen on a GPU: both games stand on a host that draws nothing, with the rows that only dress the picture down.
 
 <!-- table -->
-38 of 38 missions start in Rust equal to the TypeScript start (die seed 20942, 300 frames).
+33 of 33 missions start in Rust equal to the TypeScript start (die seed 20942, 300 frames).
 
 | mission | the file the page loads | starts in Rust | paths not known at the start | 300 frames beside the TypeScript start | paths not known as they end | what the start lacks |
 |---|---|---|---|---|---|---|
 | `tut-road` | `tut-road.json` | yes | 0 | 300 in step | 0 |  |
 | `tut-team` | `tut-team.json` | yes | 0 | 300 in step | 0 |  |
-| `tut-sky` (off the list) | `tut-sky.json` | yes | 0 | 300 in step | 0 |  |
 | `tut-kit` | `tut-kit.json` | yes | 0 | 300 in step | 0 |  |
-| `tut-solo` (off the list) | `tut-solo.json` | yes | 0 | 300 in step | 0 |  |
-| `tut-squad` (off the list) | `tut-squad.json` | yes | 0 | 300 in step | 0 |  |
 | `tut-queue` | `tut-queue.json` | yes | 0 | 300 in step | 0 |  |
 | `tut-quiet` | `tut-quiet.json` | yes | 0 | 300 in step | 0 |  |
 | `tut-pair` | `tut-pair.json` | yes | 0 | 300 in step | 0 |  |
@@ -72,8 +69,6 @@ What a row does NOT hold:
 | `quiet-crossing-two` | `crossing.json` | yes | 0 | 300 in step | 0 |  |
 | `quiet-relay-two` | `quiet-relay.json` | yes | 0 | 300 in step | 0 |  |
 | `lights-out-two` | `lights-out.json` | yes | 0 | 300 in step | 0 |  |
-| `quiet-yard-alone` (off the list) | `quiet-yard.json` | yes | 0 | 300 in step | 0 |  |
-| `quiet-yard-two` (off the list) | `quiet-yard.json` | yes | 0 | 300 in step | 0 |  |
 <!-- /table -->
 
 ## As games of two players
@@ -83,16 +78,13 @@ one a host hands a seat it has none for. What two players DO is not held here, o
 TypeScript start makes for two, and that the two stay in step while nobody moves.
 
 <!-- table seats=2 -->
-23 of 23 missions the game stages for 2 players start in Rust equal to the TypeScript start (die seed 20942, 300 frames, 2 seats); 15 the game refuses for 2 players.
+21 of 21 missions the game stages for 2 players start in Rust equal to the TypeScript start (die seed 20942, 300 frames, 2 seats); 12 the game refuses for 2 players.
 
 | mission | the file the page loads | starts in Rust | paths not known at the start | 300 frames beside the TypeScript start | paths not known as they end | what the start lacks |
 |---|---|---|---|---|---|---|
 | `tut-road` | `tut-road.json` | not for this many players |  |  |  | the game refuses it for 2 players (it takes one player today) |
 | `tut-team` | `tut-team.json` | yes | 0 | 300 in step | 0 |  |
-| `tut-sky` (off the list) | `tut-sky.json` | yes | 0 | 300 in step | 0 |  |
 | `tut-kit` | `tut-kit.json` | yes | 0 | 300 in step | 0 |  |
-| `tut-solo` (off the list) | `tut-solo.json` | not for this many players |  |  |  | the game refuses it for 2 players (it takes one player today) |
-| `tut-squad` (off the list) | `tut-squad.json` | yes | 0 | 300 in step | 0 |  |
 | `tut-queue` | `tut-queue.json` | yes | 0 | 300 in step | 0 |  |
 | `tut-quiet` | `tut-quiet.json` | not for this many players |  |  |  | the game refuses it for 2 players (it takes one player today) |
 | `tut-pair` | `tut-pair.json` | not for this many players |  |  |  | the game refuses it for 2 players (it takes one player today) |
@@ -123,6 +115,4 @@ TypeScript start makes for two, and that the two stay in step while nobody moves
 | `quiet-crossing-two` | `crossing.json` | not for this many players |  |  |  | the game refuses it for 2 players (it takes one player today) |
 | `quiet-relay-two` | `quiet-relay.json` | not for this many players |  |  |  | the game refuses it for 2 players (it takes one player today) |
 | `lights-out-two` | `lights-out.json` | not for this many players |  |  |  | the game refuses it for 2 players (it takes one player today) |
-| `quiet-yard-alone` (off the list) | `quiet-yard.json` | not for this many players |  |  |  | the game refuses it for 2 players (it takes one player today) |
-| `quiet-yard-two` (off the list) | `quiet-yard.json` | not for this many players |  |  |  | the game refuses it for 2 players (it takes one player today) |
 <!-- /table seats=2 -->

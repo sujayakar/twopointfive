@@ -339,8 +339,7 @@ function file(rs: CoverOut[]) { mkdirSync(dirname(OUT), { recursive: true }); le
 /** the quiet missions' levels (src/scene/scenarioList.ts QUIET_MISSIONS, one row a level) and how each is listed. The ghost walks every one ALONE. */
 const QUIET: { level: string; as: string }[] = [
   { level: 'bazaar.json', as: 'solo' }, { level: 'police-post.json', as: 'solo' }, { level: 'vault.json', as: 'solo' },
-  { level: 'crossing.json', as: 'built for two, walked alone: its worst case' }, { level: 'quiet-relay.json', as: 'built for two, walked alone: its worst case' }, { level: 'lights-out.json', as: 'built for two, walked alone: its worst case' },
-  { level: 'quiet-yard.json', as: 'off the list' }];
+  { level: 'crossing.json', as: 'built for two, walked alone: its worst case' }, { level: 'quiet-relay.json', as: 'built for two, walked alone: its worst case' }, { level: 'lights-out.json', as: 'built for two, walked alone: its worst case' }];
 interface ArmSum { arm: string; pick: ArmOut['pick']; runs: number; shown: number; nearHidSecs: number; meetings: number; surprises: number; episodes: number; epSurprises: number; sends: number; roused: number; loud: Counts; calm: Counts; }
 /** an arm over runs: shown is sample-weighted · near-hidden s and cameras sent are a run's mean · meetings, surprises and episodes are totals */
 function armSums(rs: CoverOut[]): ArmSum[] {
