@@ -102,7 +102,7 @@ function toHalf(v: number): number {
 }
 
 /** `breakIt`: the check's break word — the hills are left a finger UNDER their boxes (the boxes then stand out of the surface, as rectangles) */
-/** `roll` (m; GROUND THAT RAYS CAN SEE, A TRIAL — scene/groundField.ts, the look's page only): the open ground's lying snow is not flat — a slow swell this
+/** `roll` (m; GROUND THAT RAYS CAN SEE, A TRIAL — scene/groundField.ts, the look lab only): the open ground's lying snow is not flat — a slow swell this
  *  deep at most stands under the open sky, thinner where the snow is trodden or old and none on cleared ground, under a roof or in a wall. Picture and rays
  *  only: nothing in the update reads the field. */
 export function buildSnowField(level: Level, opts: { wind?: readonly [number, number]; breakIt?: boolean; roll?: number } = {}): SnowField | null {

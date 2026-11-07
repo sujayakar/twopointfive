@@ -7,7 +7,7 @@ import { simTenant, simPart, simLayout, P_DICE, type SimState } from './state';
 import type { SimDice, DiceHome } from '../math/dice';
 
 /** the die's part of one game's block (rust/sim/src/dice.rs Dice: the count as a double, then the word). Holds the game's SimState, never a view of it. */
-class DiceInBlock implements DiceHome {
+export class DiceInBlock implements DiceHome {
   constructor(readonly st: SimState) { }
   get s(): number { return this.st.w[(simPart(P_DICE) + 8) >>> 2] | 0; }
   set s(v: number) { this.st.w[(simPart(P_DICE) + 8) >>> 2] = v; }

@@ -131,7 +131,6 @@
     ms15:      { note: 'multiple scattering 1.5', apply: s => { const v = s.smokeMultiScatter; s.smokeMultiScatter = 1.5; return () => { s.smokeMultiScatter = v; }; } },
     nodiff:    { note: 'diffusion off (attenuation only)', apply: (s, g, e) => { const v = e.passes.smokeDiffuse; e.passes.smokeDiffuse = 0; return () => { e.passes.smokeDiffuse = v; }; } },
     diff05:    { note: 'diffusion 0.5', apply: (s, g, e) => { const v = e.passes.smokeDiffuse; e.passes.smokeDiffuse = 0.5; return () => { e.passes.smokeDiffuse = v; }; } },
-    froxel:    { note: 'the froxel path at high (K-lit march + froxel haze)', apply: s => { const v = s.froxelVol; s.froxelVol = true; return () => { s.froxelVol = v; }; } },
     every1:    { note: 'shadow refresh every step, K 6', apply: s => { const a = s.volShadowEvery, b = s.volLightCap; s.volShadowEvery = 1; s.volLightCap = 6; return () => { s.volShadowEvery = a; s.volLightCap = b; }; } },
     wmax:      { note: 'diffusion weight = the MOST transparent of the four half-res texels (no rim on nearer things; piecewise-constant) instead of the default bilinear', apply: s => { const v = s.smokeDiffuseWeight; s.smokeDiffuseWeight = 'max'; return () => { s.smokeDiffuseWeight = v; }; } },
     relax:     { note: "composite's vol upsample drops its depth guide where the texel is mostly smoke", apply: s => { const v = s.smokeUpsampleRelax; s.smokeUpsampleRelax = true; return () => { s.smokeUpsampleRelax = v; }; } },

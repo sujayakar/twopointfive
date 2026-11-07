@@ -83,11 +83,15 @@ side by side with a door between them and a door each to the yard, a defender in
   `p.roll()` (every man in a line, for a failure's message).
 - **Ask:** `p.at(man)`, `p.state(man)`, `p.awareness(man)`, `p.fix(man)`, `p.facing(man)`, `p.speed(man)`, `p.low(man)`, `p.stacked(man)`,
   `p.up(man)`, `p.sam_at()`, `p.sam_light()`, `p.frag_fuse()`, `p.floor()` (what stands on the level: round things, shaped boxes, trim, civilians, devices); `p.lines(man)` and `p.said` are every line a man spoke (read off the speech
-  bubbles after each frame), `p.sounds` every sound the game asked its host to play.
+  bubbles after each frame), `p.sounds` every sound the game asked its host to play, `p.end_cards` when it told its host to open the end card.
+  The mission: `p.view()` and `p.view_of(seat)` (all a HUD is told), `p.objective()` (its row), `p.charges()`, `p.log()` (the lines on the game's log), `p.room_clear_end()`, `p.hostiles()`; the par
+  clock: `p.par_live()`, `p.par_bars()`, `p.par_started()`, `p.par_result()`, `p.par_counts()`.
 - **Do:** `p.order("stack", place, Who::Red)` is the order menu's own call; `p.frag_lands(place)` the sandbox's; `p.sam_fires_at(place, settle)`,
   `p.point_at`, `p.press`, `p.key_down` move Sam as a player's hand does, through the host's Input. An order pointed at Sam's own spot has a
   target of no kind, and `move` is refused there: point it somewhere else. A flash has no call of its own yet: the sandbox's is
   `game::game::game_drop_throwable(&mut p.g, game::game::ThrowKind::Flash, [x, 0.0, z])`.
+  `p.falls(man, by)` puts a man down by combat's own call, for a test of what follows a death. With `Opts { seats: 2, .. }` a second player sits in: `p.seat_orders(1, …)`, `p.seat_steps(1, metres)`, `p.seat_stands(1, place)`, `p.seat_at(1)`.
+  `p.man_fires_at(man, place)` is a round from a man by combat's own call, `p.falls_as(man, how, quiet, by)` a man put down any way combat has, `p.seat_goes_down(seat)` a player out of hits with no round fired. The recap: `p.recap_card()`, `p.recap_deaths()`, `p.recap_lost()`, `p.cue_over(man)`.
 
 Three rules keep the tests honest and alive:
 
@@ -119,7 +123,8 @@ and `cargo test`'s threads take turns. A test that stands a second game drops th
 | collision, the walk grid, sound paths, fixtures, doors, guards, civilians, orders, the fog, the room fight, every module | **the game's own constructor, `game_new`** (`rust/game/src/game/p_04.rs`), which had never run before this crate |
 | the moving state at home in the block | `settle` (the die, the pose pool, the smoke grid) |
 | the host's Input and camera | the game's `input_detached`, `FollowCamera`, `follow_camera_rebuild` |
-| a mission, where asked | the game's `start_scenario`, or `start_from_query` on an address's words (`StartOpts.link`), as a click on a row of the mission list starts it |
+| the address's words, where one is handed (`StartOpts.link`), BEFORE the game is made | the game's `address_before_game`: the row's own hour and weather onto the words, the weather the game is born in, the visit's hour (`src/host/standup.ts addressBeforeGame`) |
+| a mission, where asked | the game's `start_scenario`; or, from an address, `start_at_address`: `start_from_query` on its words, then the solo card's question, as a click on a row of the mission list starts it on a page |
 
 `frame(g, host, dt)` is one frame of that host: the game's `game_update` on the host's Input and camera, the camera after the man, the lights'
 envelopes, the box world listed again. It answers what the step told its host (sounds, marks, lines said).
@@ -160,10 +165,12 @@ that the picture, the sound, the HUD and the menus read (`src/host/rustgame.ts`,
    its row's link on both sides (`LEVELS.md`).
    What is left: the page hands `location.search` across once and the Rust game starts from it. Two things to know when that is written.
    An address's words are NOT on the wire (the table declares that arm of a `string | URLSearchParams` argument as holding nothing, and a
-   `Query` writes nothing and reads back empty): a host hands the TEXT. And the page reads three more things off the address before the
-   stand-up, which this start does not: the weather and the hour as it boots, the kit and the words. The game crate's readers of those
-   (`init_weather`, the kit's, the words') were called by nothing and went with the dead code; they come back, taking a `&Query`, with the
-   page's start.
+   `Query` writes nothing and reads back empty): a host hands the TEXT. And the page reads more off the address before the stand-up. THE
+   WEATHER AND THE HOUR ARE DONE (2026-11-07): `address_before_game` reads them onto the blank game before `game_new`, as the page's
+   `addressBeforeGame` does, and the TypeScript start this one is held to (`start.ts`) takes the address at its stand the same way; a game
+   stood from an address no longer has the harness's solo card put on at the stand (`stood.solo_stand` stays down, as on a page), and the
+   address's own question is asked once the mission is staged. STILL THE PAGE'S ALONE: the kit this machine keeps and the words. The game
+   crate's readers of those were called by nothing and went with the dead code; they come back, taking a `&Query`, with the page's start.
 2. **The puppet's objects.** The picture reads TypeScript objects that only the TypeScript start builds, and the apply writes onto objects it
    finds: of a man, his rig, his row of the men's columns, his capsules and his entry in the light probe's table; of the level, the box world
    the GPU is packed from (`BoxWorld`: the pack, the cut and round tables, the glass listed to the GPU), the light set, the marks' texture, the
@@ -311,6 +318,7 @@ game, whose start is the TypeScript's. This one's start is this crate's.)
 cd rust/game_start
 cargo run --release --bin hold -- keep /tmp/held        # on the tree BEFORE the change: play, and keep what the game was after every frame
 cargo run --release --bin hold -- check /tmp/held       # on the tree AFTER it: play the same again, and compare
+cargo run --release --bin hold -- check /tmp/held --but PART,PART   # … with the parts the change is meant to move left out
 ```
 
 `keep` stands each level by this crate's start, plays it for 90 s under each hand of `hands/`, and writes, for every frame, the
@@ -339,8 +347,17 @@ no squad the three hands that give orders do nothing but what Sam does himself.
 
 What a green check proves: on these floors, under these hands, the two builds played the same game part for part. What it does
 not: anything no hand reaches (charges, a pair's orders, the 40 mm, a startled man, a player walking, a second seat), and anything that is not in the
-state's words (what a host hands in: the cameras, the input). One part is left out for now: the box mirror's own record, which keeps
-addresses of rust/sim's tables (another in every native process); what it mirrors is compared as rust/sim's block, and the
-carve-out goes when the mirror keeps offsets. A change that is MEANT to change play is not judged here: that is the
-mission tallies' job. If a part of the game was added or taken away between the two trees, `check` says so and compares nothing:
-keep again on the last tree before that change.
+state's words (what a host hands in: the cameras, the input).
+
+A change that is MEANT to change play is not judged here: that is the mission tallies' job.
+
+**Parts are compared by name, and one can be left out on purpose.** A kept folder carries the names of the parts it was kept
+with, so a build that has gained a part, lost one or re-ordered them is still compared on the parts both have, and each run's
+line says which left the state and which are new. For a change that is MEANT to move one part and nothing else (a record that
+changes shape, a table numbered anew), `check DIR --but tab.orders_order_def,seats.orders` leaves the named parts out: every
+other part must still be the same after every frame, and the last line says what was not compared. A name that is a part of
+neither build is refused. Its first use: the orders' table no longer growing with each listing was shown to be the same game on
+120 runs but for those two parts, where the whole comparison parted at frame 1 on all 70 runs that have a squad.
+
+A build is the same as itself with every part in: the box mirror's record, once left out because it kept addresses, is hashed
+with the rest.

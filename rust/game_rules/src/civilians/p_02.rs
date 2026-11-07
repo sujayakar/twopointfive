@@ -500,8 +500,7 @@ pub fn see(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     let pl = g.player;
     let pc = g.pl[pl].ch;
     let eye = bone_or(g, c, Bone::Head, [0.0, 1.6, 0.0]);
-    let head_dir = crate::character::character_head_dir(g, c);
-    let look = v3::normalize(v3::lerp3(g.ch[c].chest_dir, head_dir, 0.5));
+    let look = crate::guards::look_of(g, c);
     let chest = bone_or(g, pc, Bone::Chest, [0.0, 1.1, 0.0]);
     let key = format!("civS{}", g.ch[c].id);
     let probe = crate::sensors::sensors_segment(g, &key, eye, chest, None).unwrap_or(1.0);
@@ -618,7 +617,7 @@ pub fn bodies(g: &mut crate::game::Game, gd: GuardId) {
     if matches!(g.cv[cv].state, CivState::Flee | CivState::Evacuate | CivState::Alarmed | CivState::Report | CivState::Phone) { return; }
     if js::rem(m::floor(g.time * 60.0) + g.ch[c].id, 12.0) != 0.0 { return; }
     let eye = bone_or(g, c, crate::character::Bone::Head, [0.0, 1.6, 0.0]);
-    let look = g.ch[c].chest_dir;
+    let look = crate::guards::look_of(g, c);
     let e = eye_of(g, gd);
     let mut i = 0;
     while i < g.guards.len() { let o = g.guards[i]; i += 1; if body_test(g, gd, o, eye, look, e) { return; } }

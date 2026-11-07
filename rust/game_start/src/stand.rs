@@ -119,6 +119,14 @@ pub fn host_of(g: &Game) -> Option<Host> {
     Some(Host { input, cam, canvas: canvas() })
 }
 
+/// is the level an address boots one of the look's places? The office and what is made of it are not, nor is an address that names no file   (scene/look.ts placeOfQuery)
+fn place_of(link: &str) -> bool {
+    let q = game::query::Query::parse(link);
+    let Some(f) = q.get("levelFile") else { return false };
+    let Some(name) = f.strip_suffix(".json") else { return false };
+    !(name == "office" || name.starts_with("office-"))
+}
+
 /// STAND A GAME on the level file `data` (the file's text, parsed).
 pub fn stand(data: &Json, assets: Assets, o: &StartOpts) -> Stood { stand_with(data, assets, o, &mut |_| {}) }
 
@@ -128,8 +136,14 @@ pub fn stand(data: &Json, assets: Assets, o: &StartOpts) -> Stood { stand_with(d
 pub fn stand_with(data: &Json, assets: Assets, o: &StartOpts, before: &mut dyn FnMut(&mut Game)) -> Stood {
     let mut g = Box::new(Game::blank());
     before(&mut g);
+    // THE ADDRESS, BEFORE THE GAME IS MADE, as every host that starts a game from one reads it (src/host/standup.ts addressBeforeGame): the row's
+    // own hour and weather onto its words, the weather the game is born in
+    let mut address = o.link.as_deref().map(game::query::Query::parse);
+    if let Some(q) = address.as_mut() { game::scenario_run::address_before_game(&mut g, q); }
     born(o.slot);
     g.sim = o.slot;
+    // (a host that draws dresses the men for the place its address names: the page's own cast is picked by the same rule)
+    if o.dress { if let Some(l) = o.link.as_ref() { g.m.scene_look.look_place = place_of(l); } }
     let cast = if game::scene_look::look_dress(&mut g) { assets.cast_look.or(assets.cast) } else { assets.cast };
     let rig = gltf::character(&mut g, assets.mannequin, cast);
     // the rows that only dress the picture, as this host has them (game/dress.ts DRESS: up on a page, down on a host that draws nothing)
@@ -150,14 +164,19 @@ pub fn stand_with(data: &Json, assets: Assets, o: &StartOpts, before: &mut dyn F
     g.col.boxes = loaded.boxes.clone();   // (`level.boxes`, which the constructor reads as the collision's list)
     game::game::game_new(&mut g, rig, Some(game::game::GameNewOpts { seats: Some(o.seats as f64) }));
     settle(&mut g);
-    // the harness's stand (standGame with `harness`): the solo night's card on a game stood plain
-    // (the flag is the page's boot: host/profile.ts shippedBoot raises it, and the page's own plain night asks `kitSoloIf` by its address)
-    g.m.kit.kit_solo.stand = true;
-    game::kit::kit_solo_stand(&mut g, None);
+    // A GAME STOOD WITH NO ADDRESS is the harness's plain stand (standGame with `harness`): the solo night's card goes on at the stand, by the
+    // harness's own flag (host/profile.ts shippedBoot raises it). A game stood FROM AN ADDRESS has no such flag, as a page has none: nothing is
+    // put on at the stand, and the address's own question is asked once its mission is staged (`start_at_address`)
+    if address.is_none() {
+        g.stood.solo_stand = true;
+        game::kit::kit_solo_stand(&mut g, None);
+    }
+    // the visit's hour laid over the level's own night (standGame's line: the hour is the address's, read before the game was made)
+    { let hour = g.stood.hour; if hour != game::hours::HourId::Night { game::hours::apply_hour(&mut g, hour); } }
     let host = host_new(&mut g);
-    if let Some(link) = o.link.as_ref() {
-        let r = game::scenario_run::start_from_query(&mut g, &game::scenario_run::StartFromQuerySearch::Text(link.clone()));
-        if let Some(why) = r.why { panic!("the game refused the start from '{}': {}", link, why); }
+    if let Some(q) = address.as_ref() {
+        let r = game::scenario_run::start_at_address(&mut g, q);
+        if let Some(why) = r.why { panic!("the game refused the start from '{}': {}", o.link.as_deref().unwrap_or(""), why); }
         settle(&mut g);
     } else if let Some(spec) = o.scenario.as_ref() {
         if let Some(why) = game::scenario_run::start_scenario(&mut g, spec) { panic!("the game refused the {}: {}", spec.kind.as_str(), why); }

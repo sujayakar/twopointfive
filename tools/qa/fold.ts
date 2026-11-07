@@ -12,10 +12,8 @@
 //             What was refused outside any probe (a word given by hand that the harness reads as it loads) has a line of its own, `"outside"` in place
 //             of `"probe"`. A child process hands its count to the speaker it is a child of; with none it says its own on STDERR as it ends (a parent
 //             that reads the last line of a child's stdout must not find this one).
-//             A row that stood OFF its page value as the fold was laid reads its page value from then on: a word given by hand that a module read as
-//             it loaded (GLASSFX=off), or a row the page raises only as a game is stood (the cut-pieces switch). The first process of a tree names them
-//             in its notice on stderr; a child that has one its parent had not (a word an arm gave it) has it counted, writer `(a word read before the
-//             fold)`, and says so on stderr.
+//             A word that a game module reads as it loads (GLASSFX=off) moves nothing: the page's rules raise every settled row first
+//             (src/host/settled.ts).
 //   A WORD GIVEN BY HAND over a settled row (TPS_GEAR=0 in front of a folded run) is refused wherever it is read: as the harness loads (the `outside`
 //             line), as each game is stood and in each child (the PROBE's line, writer `src/host/standup.ts:… (from <the check>)`).
 //   FOR ONE CHECK AT A TIME: the laid fold can be OFF for a check and ON for the next (`foldFor`). Off, every held row is plain in effect: a read answers
@@ -79,7 +77,7 @@ export function foldWanted(env: Record<string, string | undefined> = process.env
   return env.QA_FOLD === '1' || ['rust', 'audit', 'table'].includes(env.TPS_GAME ?? DEFAULT_WORD);
 }
 
-export const FOLD = { on: false, rows: 0, skipped: [] as string[], missing: [] as string[], offAtLay: [] as { row: string; value: unknown }[] };
+export const FOLD = { on: false, rows: 0, skipped: [] as string[], missing: [] as string[] };
 interface Laid { row: string; root: Record<string, unknown>; path: string[]; key: string; held: unknown; now: unknown; gone?: boolean }   // (`now`: what the row answers while the fold is off)
 const REFUSED = new Map<string, Refused>(), TAKEN = new Map<string, number>(), LAID: Laid[] = [], LOST: string[] = [];
 /** a yes/no row is 0 / 1 in some tables and false / true in others: the same answer either way */
@@ -154,7 +152,6 @@ export function foldSettled(reg: Record<string, object>, settled: Record<string,
     if (!d || d.get || d.set || !d.configurable) { FOLD.skipped.push(row); continue; }
     // (the table's own type is kept: a list that says true of a row the table keeps as 1 holds 1)
     const held = typeof d.value === typeof page ? page : typeof d.value === 'number' && typeof page === 'boolean' ? +page : typeof d.value === 'boolean' && typeof page === 'number' ? !!page : page;
-    if (!sameValue(d.value, held)) FOLD.offAtLay.push({ row, value: d.value });   // (it stood off its page value already: a word given by hand that its module read as it loaded, or a row the page raises only as a game is stood. Said once, by headless.ts)
     const L: Laid = { row, root, path, key, held, now: d.value }; lay(L, host); LAID.push(L); FOLD.rows++;
   }
   if (FOLD.on) return; FOLD.on = true;
@@ -167,15 +164,6 @@ export function foldSettled(reg: Record<string, object>, settled: Record<string,
       if (dir && !mine) { try { const f = `${dir}/${process.pid}`; writeFileSync(`${f}.tmp`, [...refused.map(r => JSON.stringify(r)), ...lost.map(l => JSON.stringify({ lost: l }))].join('\n') + '\n'); renameSync(`${f}.tmp`, `${f}.jsonl`); handed = true; } catch { /* said below */ } }
       if (!handed) console.error(`  ${JSON.stringify({ fold: { process: (process.argv[1] ?? '').replace(`${ROOT}/`, ''), refused, ...(lost.length ? { lost } : {}) } })}`); }
     if (dir && mine) { try { rmSync(dir, { recursive: true, force: true }); } catch { /* gone already */ } } });
-}
-/** the rows of `FOLD.offAtLay` as one text, and (a child of a folded process) the ones its parent did not have counted as refused: a word given to THIS
- *  process that a module read as it loaded. The first process of a tree has nothing to compare with: its notice names them all (headless.ts). */
-export const offAtLayText = (): string => FOLD.offAtLay.map(o => `${o.row}=${text(o.value)}`).join(', ');
-export function foldBefore(parents: string): string[] {
-  if (!active) return [];   // (the fold is off for this child: the row is plain there, and the word took)
-  const had = new Set(parents.split(', ')), more = FOLD.offAtLay.filter(o => !had.has(`${o.row}=${text(o.value)}`));
-  for (const o of more) count(o.row, o.value, '(a word read before the fold)');
-  return more.map(o => `${o.row}=${text(o.value)}`);
 }
 /** the rows whose hold is gone (their table, or a branch of it, was replaced whole since): laid again on what stands there now, named here and in the next
  *  line. A row whose branch is not there at all is named once, `(gone)`, and looked for again each time. */

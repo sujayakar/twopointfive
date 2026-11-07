@@ -1,5 +1,6 @@
 //! src/game/enemysquads.ts lines 310 to 738
 use super::*;                      // your own module: its types, its other parts' functions
+use crate::ask::Over;
 use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
@@ -227,7 +228,7 @@ pub fn squad_rally(g: &mut crate::game::Game, gd: GuardId, threat: V3) -> Option
 pub fn def_of(g: &crate::game::Game, gd: GuardId) -> Option<RoomfightDefId> { g.fight.defs.iter().copied().find(|d| g.tab.roomfight_def[*d].gd == gd) }
 /// his own wits about him: alive, not in Sam's arm, not blinded or reeling (enemysquads.ts fit)
 pub fn fit(g: &mut crate::game::Game, m: GuardId) -> bool {
-    alive(g, m) && g.gd[m].held.is_none() && g.time >= g.gd[m].dazzled_until && g.time >= g.gd[m].stagger_until && !crate::owner::has_him(g, m, crate::owner::own().runner)
+    alive(g, m) && g.gd[m].held.is_none() && !crate::control::man::blind(g, m) && !crate::control::man::staggered(g, m) && !crate::owner::has_him(g, m, crate::owner::own().runner)
 }
 /// when this man was sent to look where the team was last put, or None. Words only (enemysquads.ts squadLookSince)
 pub fn squad_look_since(g: &crate::game::Game, gd: GuardId) -> Option<f64> {
@@ -391,15 +392,13 @@ pub fn team_known_how(g: &mut crate::game::Game) -> Vec<crate::enemysquads::Know
 }
 
 // RoundCtx's closures (`fire`, `hot`, `hotCell`, `lane`): private fns over what they captured
-fn ctx_line(g: &mut Game, a: V3, b: V3, y: f64) -> bool { !crate::scene_collision::shot_blocked(g, [a[0], y, a[2]], [b[0], y, b[2]], None, None) }
+fn ctx_line(g: &mut Game, a: V3, b: V3, y: f64) -> bool { ctx_line_over(g, &Over::OWN, a, b, y) }
+fn ctx_line_over(g: &mut Game, over: &Over, a: V3, b: V3, y: f64) -> bool { !crate::scene_collision::shot_blocked_over(g, over, [a[0], y, a[2]], [b[0], y, b[2]], None, None) }
 /// a head or a chest in the line
 fn ctx_fire(g: &mut Game, a: V3, b: V3) -> bool { ctx_line(g, a, b, 1.5) || ctx_line(g, a, b, 1.0) }
 /// the line with every leaf out of it
 fn ctx_open(g: &mut Game, a: V3, b: V3) -> bool {
-    let dyn_boxes = core::mem::take(&mut g.col.dynamic_boxes);
-    let r = ctx_line(g, a, b, 1.5);
-    g.col.dynamic_boxes = dyn_boxes;
-    r
+    ctx_line_over(g, &Over::statics(), a, b, 1.5)
 }
 /// a man standing there is in front of one of the guns the side knows of
 fn ctx_hot(g: &mut Game, known: &[Known], rear: &[V3], ajar: &[V3], p: V3) -> bool {

@@ -27,6 +27,7 @@
 // Headless: positions, clocks and the animator's stance are read; how the take LOOKS has never been seen.
 import { ROOT } from './headless.ts';
 import { world } from './wallsnap-probes.ts';
+import { everyNth, swept } from './sweep.ts';
 type V = [number, number, number];
 const DT = 1 / 60, DEG = Math.PI / 180, WZ = 10.06, R = 0.42;
 export async function wallPressCheck(): Promise<boolean> {
@@ -66,15 +67,16 @@ export async function wallPressCheck(): Promise<boolean> {
         `diagonal for 3 s ${diag.took < 0 ? 'no hold' : 'HELD'} · key up ${f2(WALLSNAP.pressFlow + 0.05)} m out ${bump.took < 0 ? 'no hold' : 'HELD'} · into the server door's leaf ${d ? (leaf ? 'HELD' : 'no hold') : '(no door found)'}`); }
     // ---- any camera
     { const combos: string[][] = [['KeyW'], ['KeyW', 'KeyD'], ['KeyD'], ['KeyD', 'KeyS'], ['KeyS'], ['KeyS', 'KeyA'], ['KeyA'], ['KeyA', 'KeyW']]; let asked = 0, held = 0; const wrong: string[] = [];
+      const turn = everyNth(5);
       for (let k = 0; k < 24; k++) { const camYaw = k * 15 * DEG;
-        for (const ks of combos) { W.cam.yaw = camYaw; W.cam.rebuild(); const B = W.cam.planarBasis(); let mx = 0, mz = 0;
+        for (const ks of combos) { if (!turn()) continue; W.cam.yaw = camYaw; W.cam.rebuild(); const B = W.cam.planarBasis(); let mx = 0, mz = 0;
           for (const key of ks) { const s = key === 'KeyW' || key === 'KeyD' ? 1 : -1, v = key === 'KeyW' || key === 'KeyS' ? B.fwd : B.right; mx += s * v[0]; mz += s * v[2]; }
           const l = Math.hypot(mx, mz), ang = Math.acos(Math.max(-1, Math.min(1, -mz / l))) / DEG;   // from square INTO the north wall (its normal is +z)
           if (Math.abs(ang - WALLSNAP.pressDeg) < 2) continue;
           S.place(21, WZ + R + 0.03, 90); W.cam.yaw = camYaw; W.cam.rebuild(); S.keys(...ks); let took = false; for (let f = 0; f < 30; f++) { S.step(1); took ||= !!pl.wall && Math.abs(pl.wall.n[2] - 1) < 0.01; } S.keys(); S.step(12);
           asked++; if (took) held++; if (took !== (ang < WALLSNAP.pressDeg)) wrong.push(`camera ${k * 15}° ${ks.map(x => x.slice(3)).join('+')} (${ang.toFixed(0)}° off square) ${took ? 'held' : 'no hold'}`); } }
       W.cam.yaw = 0; W.cam.rebuild();
-      verdict(!wrong.length && held >= 24 && asked - held >= 96, 'whichever way the camera is turned: a hold if and only if the stick is within pressDeg of square into the wall', `${asked} asked, ${held} held · wrong: ${wrong.slice(0, 4).join(' · ') || 'none'}${wrong.length > 4 ? ` (+${wrong.length - 4})` : ''}`); }
+      verdict(!wrong.length && held >= swept(4, 24) && asked - held >= swept(16, 96), 'whichever way the camera is turned: a hold if and only if the stick is within pressDeg of square into the wall', `${asked} asked, ${held} held · wrong: ${wrong.slice(0, 4).join(' · ') || 'none'}${wrong.length > 4 ? ` (+${wrong.length - 4})` : ''}`); }
     // ---- the hands
     { const rifle = run(11.5, 180, ['KeyW'], 'rifle'); const stack = pl.wall?.kind === 'stack' && pl.rifleUp; rest();
       const pistol = run(11.5, 180, ['KeyW'], 'pistol'); const away = !!pl.wall && pl.holstered; S.keys('KeyS'); S.step(40); const back = !pl.wall && !pl.holstered && pl.slot === 'pistol'; rest();

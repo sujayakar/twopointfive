@@ -14,6 +14,8 @@
 // Usage:  const W = await standUp();  W.step(1/60);  // = game.update + camera + lights + box upload + input.endFrame, as main.ts's step() does
 import { resolve } from 'node:path';
 import './stand.ts';   // (the stand's word, written before anything below reads it)
+import { clockDice, harnessDie } from './die.ts';
+import { listen } from './heard.ts';
 
 export const ROOT = resolve(import.meta.dir, '../..');
 // ONE-WAY DOORS (src/game/doors.ts DOORWAY — the shipped default is ON): ON THE OLD FROZEN STAND (TPS_PROFILE=frozen; a run with no word is the page's, below) the
@@ -31,15 +33,13 @@ if (harnessProfile() === 'shipped') shippedBoot();
 // from here on, in this process and (the words are inherited) its children. Said on stderr by the first process of a tree. On the OLD stand nothing is
 // folded: a tool started there says so and takes QA_FOLD out of what its children inherit (the whole run is unfolded, its page-stand arms too); an arm on the
 // old stand under a folded runner is not folded and says nothing (the runner's notice says it once).
-{ const { foldWanted, foldSettled, foldBefore, foldActive, offAtLayText, settledOf, switchRows, FOLD } = await import('./fold.ts');
+{ const { foldWanted, foldSettled, foldActive, settledOf, switchRows, FOLD } = await import('./fold.ts');
   if (foldWanted()) {
     if (harnessProfile() !== 'shipped') { if (!process.env.QA_FOLD_SAID) console.error('THE SETTLED ROWS ARE NOT FOLDED: this is the old stand, which is the other side of those rows (QA_FOLD and TPS_GAME ask for the fold on the page\'s stand only)'); process.env.QA_FOLD_SAID ??= 'not folded'; if (process.env.QA_FOLD_SAID === 'not folded') delete process.env.QA_FOLD; }
     else { const { knobRegistry } = await import(`${ROOT}/src/game/knobs.ts`), say = !process.env.QA_FOLD_SAID; process.env.QA_FOLD_SAID = 'folded'; foldSettled(knobRegistry(), settledOf(switchRows()), process.env.FOLD_BREAK === '1');
-      const parents = process.env.QA_FOLD_OFF, off = offAtLayText(), more = parents === undefined ? [] : foldBefore(parents); process.env.QA_FOLD_OFF = off;
       if (say) console.error((foldActive() ? `THE SETTLED ROWS ARE FOLDED: ${FOLD.rows} switch rows are held at their value on the page; a write of any other is refused and counted`
         : `THE SETTLED ROWS' FOLD IS LAID AND OFF, to be put on check by check (fold.ts foldFor; QA_FOLD_ONLY in the runner): for a check it is on for, ${FOLD.rows} switch rows answer their value on the page and a write of any other is refused and counted; for every other check nothing is held`)
-        + ` (tools/qa/fold.ts; an arm on the old stand is not folded)${FOLD.skipped.length ? ` · ${FOLD.skipped.length} with a setter of their own left alone` : ''}${FOLD.missing.length ? ` · ${FOLD.missing.length} of the list are not in the tables: ${FOLD.missing.slice(0, 6).join(', ')}` : ''}${off ? ` · stood off its page value as the fold was laid${foldActive() ? ', and reads it from now on' : ' (folded, it reads its page value)'}: ${off}` : ''}`);
-      else if (more.length) console.error(`THE SETTLED ROWS ARE FOLDED, and this child was given a word its parent was not: ${more.join(', ')} stood off its page value as the fold was laid, and reads it from now on (counted as refused)`); } } }
+        + ` (tools/qa/fold.ts; an arm on the old stand is not folded)${FOLD.skipped.length ? ` · ${FOLD.skipped.length} with a setter of their own left alone` : ''}${FOLD.missing.length ? ` · ${FOLD.missing.length} of the list are not in the tables: ${FOLD.missing.slice(0, 6).join(', ')}` : ''}`); } } }
 /** the stand this file was loaded on. A tool that names its stand (`process.env.TPS_PROFILE ??= 'shipped'`) above a STATIC import of this file names it too late: imports load first, so the pins
  *  were lifted at stand-up and shippedBoot never ran, a stand that is neither of the two. standUp refuses that out loud. */
 const STAND_AT_LOAD: string = harnessProfile();
@@ -114,6 +114,7 @@ export const fake: (name?: string) => any = stubMod.fake;
 const { loadGltfCharacter, loadGltfCast, castFile } = await import(`${ROOT}/src/anim/gltf.ts`);
 const { saveState, loadState } = await import(`${ROOT}/src/game/savestate.ts`);
 const { Input } = await import(`${ROOT}/src/game/input.ts`);
+const { WEATHER_BOOT, snowLevel, snowLevelOfQuery } = await import(`${ROOT}/src/game/weatherKinds.ts`), { HOUR } = await import(`${ROOT}/src/game/hours.ts`), { levelNameOf } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 // the movement pass (character.ts MOVES) is ON in the page and OFF under the harness — pinned here too, so tools that build a bare Character (gait.ts) and never
 // stand a game up measure the animator as it was; `TPS_MOVES=1` runs any of them with it on
@@ -175,13 +176,18 @@ export interface Headless {
   /** A FAILED BEAT OF THE LEVEL'S SCRIPT FAILS ITS TOOL (default true). The director fails the beat, files an `error` row in its log and lets the frame go on,
    *  on every host alike; what to do then is the host's. This host throws after the step that filed one. false: a tool that means to watch a beat fail */
   beatsThrow: boolean;
+  /** THE MISSION OF THE ADDRESS THE GAME WAS STOOD FROM, started as a page starts it: the mission staged (scenarioRun.ts startFromQuery), then the solo
+   *  card's question (src/host/standup.ts startAtAddress). `between`: a host's own work between the two, as the page has (a recipe's tables laid again after
+   *  the staging). Answers the start's own answer (`why`: its refusal). Throws on a game stood with no address. */
+  start(between?: () => void): { spec: any; why: string | null };
   /** n steps with none of the tool's code between them (the same as `step` n times) */
   steps(n: number, dt: number, follow?: Vec3 | null): void;
   /** put the cursor on a world point (what the automation hooks' __mouse does after projecting) */
   cursorAt(p: [number, number, number]): boolean;
 }
 
-/** A fresh level + engine stand-in + Game. Math.random should already be seeded by the caller if determinism matters (Guard / Character constructors draw from it).
+/** A fresh level + engine stand-in + Game. A caller that wants a stream of its own seeds Math.random first (Guard / Character constructors draw from it); one that
+ *  seeds nothing and names no seed gets the harness's die put there (tools/qa/die.ts): no game stood here rolls the clock's dice.
  *  `env` (a session journal's EnvSnap — tools/qa/replay.ts): stand the engine up as the RECORDING's was where the simulation can tell — its settings (debris cap,
  *  emissive scale, torch radius, marking lights) before the Game is built, a fake GPU particle system attached if it had one (the effect sites then take the branch
  *  they took), the canister row on the null smoke. Absent = the harness exactly as it always stood.
@@ -203,7 +209,7 @@ function envSeed(v: string): number { if (!/^\d+$/.test(v.trim())) throw new Err
 function envCollects(v: string | undefined): boolean { if (v === undefined || v === '1') return true; if (v === '0') return false; throw new Error(`QA_STANDUP_GC=${v}: want 0 (the stand-up as it was) or 1`); }
 export const STANDUP_COLLECTS = envCollects(process.env.QA_STANDUP_GC);
 let stoodBefore = false;
-export async function standUp(opts: { /** the dressing rows up, as the page has them (src/game/dress.ts: the debris pool, the moths, the snow…). A headless game on the Rust game stands with them down; a check that is ABOUT a dressing row asks for them */ dress?: boolean; /** false: nothing writes this game between two ticks, so the Rust game's host need not walk it for a tool's writes (tools/blitz/rust-host.ts HostOpts.scan): a networked game's machine */ scan?: boolean; /** false: with `dress`, the rows are up for the game's sake and nothing is drawn: the page's dress step is not run on the copy (HostOpts.draws) */ draws?: boolean; uploadEvery?: number; env?: any; level?: any; cast?: boolean; ch?: any; seed?: number | null; seats?: number; /** the address the game is stood up from, for the words standGame reads off it (`seats=2`) */ search?: string; /** stand the picture's keeper of the lights' reach masks up too (render/reachKeep.ts), as a page's engine has one, and step it once a frame: for the tools that read masks. Absent = none, and no mask is ever made */ reach?: boolean } = {}): Promise<Headless> {
+export async function standUp(opts: { /** the dressing rows up, as the page has them (src/game/dress.ts: the debris pool, the moths, the snow…). A headless game on the Rust game stands with them down; a check that is ABOUT a dressing row asks for them */ dress?: boolean; /** false: nothing writes this game between two ticks, so the Rust game's host need not walk it for a tool's writes (tools/blitz/rust-host.ts HostOpts.scan): a networked game's machine */ scan?: boolean; /** false: with `dress`, the rows are up for the game's sake and nothing is drawn: the page's dress step is not run on the copy (HostOpts.draws) */ draws?: boolean; uploadEvery?: number; env?: any; level?: any; cast?: boolean; ch?: any; seed?: number | null; seats?: number; /** the address the game is stood up from, for the words standGame reads off it (`seats=2`) */ search?: string; /** THE MISSION'S ADDRESS, handed to the stand as a page has it from its first line (`levelFile=depot.json&roomclear&squad4&weather=downpour`): what a page reads of it BEFORE THE GAME IS MADE is read here before the game is made (src/host/standup.ts addressBeforeGame: the row's own hour and weather, the weather the game is born in, the visit's hour, into the record the game is made with), the floor is still `level` (or the bundled office: the address's `levelFile` is not loaded here), and `start()` on what comes back starts its mission and asks the solo card's question as the page does. Absent = a game stood plain, as the solo night: a tool that then starts a mission on it by `startFromQuery` is on the older road of two steps, where the weather is changed after the game is made and the solo card is put on and taken off again */ address?: string | URLSearchParams; /** A RECORD TO STAND THE GAME WITH (src/game/stood.ts): wins over the picks; not with `address`, which is read into one */ stood?: any; /** stand the picture's keeper of the lights' reach masks up too (render/reachKeep.ts), as a page's engine has one, and step it once a frame: for the tools that read masks. Absent = none, and no mask is ever made */ reach?: boolean } = {}): Promise<Headless> {
   if (STANDUP_COLLECTS && stoodBefore) Bun.gc(true); stoodBefore = true;
   if (harnessProfile() !== STAND_AT_LOAD) throw new Error(`the stand was '${STAND_AT_LOAD}' when tools/qa/headless.ts loaded and is '${harnessProfile()}' now: TPS_PROFILE was set after the harness was imported (a static import loads before the file's first line). Set it before the import: \`const { standUp } = await import('./headless.ts')\` below the line that sets it`);
   // (a game with no word stood after one under the word in the same process finds the process's dress rows as they were, BEFORE it is built: tools/blitz/rust-host.ts `dressDown`)
@@ -226,10 +232,29 @@ export async function standUp(opts: { /** the dressing rows up, as the page has 
   // the ONE stand-up (src/host/standup.ts): the level's boxes + lights into the stand-in, then `new Game`, then the harness trio — chaos 0 (the game byte for byte as it was before the
   // destruction lane, which is what every frozen digest and exact-count probe was written against), the autosave slots in a Map (no localStorage in bun), the level script strict
   const seed = opts.seed !== undefined ? opts.seed : process.env.TPS_SEED !== undefined && process.env.TPS_SEED !== '' ? envSeed(process.env.TPS_SEED) : null;
+  if (seed === null && clockDice()) Math.random = harnessDie() ?? Math.random;   // (no game rolls the clock's dice: tools/qa/die.ts)
   // (a start writes all of a game's state: what the TypeScript keeps at a module's top is put back before the game is made — tools/qa/fresh.ts)
   (await import('./fresh.ts')).freshStart();
+  // A MISSION'S ADDRESS HANDED TO THE STAND (`address`): its half that is read before a game is made is read here into the record the game is made with
+  // (src/game/stood.ts, Game.stood). Nothing of the process is written, so nothing has to be put back; a game stood with no address takes the picks as they stand.
+  const address = opts.address === undefined ? null : typeof opts.address === 'string' ? new URLSearchParams(opts.address) : opts.address;   // (a tool's own words are written on as a page's are: the row's hour and weather go onto them)
+  // (AN ADDRESS IS TAKEN AS WRITTEN, AND THE FLOOR IS STILL THE CALLER'S: `level`, or the bundled office. A level built for snow handed apart from an
+  //  address that does not name it would be born in the weather of any level: refused, with the word to add, before anything is written)
+  if (address && opts.level) { standMod.pinSnow(); const name = levelNameOf(opts.level); if (snowLevel(name) && !snowLevelOfQuery(address)) throw new Error(`standUp: the level handed (${name}) is built for snow and the address names no such file (${address}): put levelFile=${name}.json on the address, or the game is born in the weather of any level`); }
   const input: any = Input.detached(); input.mouseX = 800; input.mouseY = 500;   // (the real class minus its DOM listeners; the cursor where the harness always put it — the aim ray reads it. Made before the stand, which hands it to the game with the stand's camera: game.ts hostCam)
-  const { game, level, cam } = await standMod.standGame(engine, { ch, smoke, harness: true, seed, input, seats: opts.seats, ...(opts.search !== undefined ? { search: opts.search } : {}), ...(opts.level ? { level: opts.level } : {}) });
+  if (address && opts.stood) throw new Error('standUp: `address` and `stood` both given: an address is read into the record the game is made with');
+  let stood: any = opts.stood;
+  if (address) {
+    // (WHAT A TOOL SET BY HAND FOR ITS STAND GOES ONTO THE ADDRESS where the address names none: the hour of PT_HOUR or of a check that writes HOUR before
+    //  it plays a mission, a weather written into WEATHER_BOOT)
+    if (!address.has('hour') && HOUR.id !== 'night') address.set('hour', HOUR.id);
+    if (!address.has('sun') && HOUR.sunGiven) address.set('sun', String(HOUR.sun));
+    if (!address.has('weather') && WEATHER_BOOT.kind) address.set('weather', String(WEATHER_BOOT.kind));
+    standMod.pinSnow(); standMod.pinRowset();   // (the two switches the address's reader reads, pinned by this run's own words BEFORE it reads them: standGame pins them again, to the same)
+    stood = standMod.addressBeforeGame(address);
+  }
+  const stoodGame: any = await standMod.standGame(engine, { ch, smoke, harness: true, seed, input, seats: opts.seats, ...(stood ? { stood } : {}), ...(opts.search !== undefined ? { search: opts.search } : address ? { search: `?${address}` } : {}), ...(opts.level ? { level: opts.level } : {}) });
+  const { game, level, cam } = stoodGame;
   if (process.env.QA_DOORSTAY === '1') (await import(`${ROOT}/src/game/doors.ts`)).DOORSTAY.on = true;   // (the harness stands the game up with the door closers of old — standup.ts; this runs any probe, soak or tour with doors staying where they are left, as shipped)
   const audioCounts = new Map<string, number>();
   let audioLog: AudioCall[] | null = null;
@@ -237,6 +262,25 @@ export async function standUp(opts: { /** the dressing rows up, as the page has 
     play(n: string, pos: Vec3 | null, gain = 1, opts?: Record<string, unknown>) { audioCounts.set(n, (audioCounts.get(n) ?? 0) + 1); audioLog?.push({ name: n, pos: pos ? [pos[0], pos[1], pos[2]] : null, gain, opts, t: game.time }); },
     footstep(pos: Vec3, loudness: number, isPlayer: boolean, mat?: string) { audioCounts.set('footstep', (audioCounts.get('footstep') ?? 0) + 1); audioLog?.push({ name: 'footstep', pos: [pos[0], pos[1], pos[2]], gain: loudness, opts: { isPlayer, mat }, t: game.time }); },
   };
+  // WHAT IS SAID REACHES A TOOL THAT WRAPPED THE SAYING. A check learns what the player was told, or what a man said, by putting its own function in the place
+  // of `game.msg` / `game.say` and calling the one it found there. The Rust tick calls neither: a line is said inside the Rust game and arrives here as state
+  // (the log's rows, a man's bubble: tools/qa/heard.ts), so every such check read an empty list, whatever the game had said (seventy-three files). The
+  // stand-up therefore reads that state after every step and, where a tool has put a function of its own there, calls it with each new line, exactly once.
+  // What the tool's function then calls back (the one it found) does nothing for the length of that call: the line is already in the game. At any other
+  // time it is the game's own method, as ever. What this cannot give: more than five rows of the log in one tick, or two lines of one man in one tick.
+  const saying = { now: false }, G = Object.getPrototypeOf(game) as { msg: (t: string) => unknown; say: (...a: unknown[]) => unknown };
+  // (a line the tool itself says through the game's method went through its own function already: it is counted here and not told to it again)
+  const mine = new Map<string, number>(), owed = (k: string, d: number): number => { const n = (mine.get(k) ?? 0) + d; if (n > 0) mine.set(k, n); else mine.delete(k); return n; };
+  const msgOwn = function (this: unknown, t: string) { if (saying.now) return undefined; owed(`m|${t}`, 1); return G.msg.call(game, t); };
+  const sayOwn = function (this: unknown, ...a: unknown[]) { if (saying.now) return undefined; owed(`s|${String(a[1])}`, 1); return G.say.apply(game, a); };
+  game.msg = msgOwn; game.say = sayOwn;
+  const heard = listen(game); let nSaid = 0, nSpoke = 0;
+  const tell = (): void => { heard.poll();
+    if (game.msg === msgOwn && game.say === sayOwn) { nSaid = heard.said.length; nSpoke = heard.spoke.length; mine.clear(); return; }   // (nobody listens)
+    saying.now = true;
+    try { if (game.msg !== msgOwn) for (; nSaid < heard.said.length; nSaid++) { const t = heard.said[nSaid]; if (mine.has(`m|${t}`)) owed(`m|${t}`, -1); else game.msg(t); }
+      if (game.say !== sayOwn) for (; nSpoke < heard.spoke.length; nSpoke++) { const s = heard.spoke[nSpoke]; if (mine.has(`s|${s.text}`)) owed(`s|${s.text}`, -1); else game.say(s.man, s.text, s.radio); } }
+    finally { saying.now = false; nSaid = heard.said.length; nSpoke = heard.spoke.length; } };
   const canvas = { clientWidth: 1600, clientHeight: 1000, width: 1600, height: 1000 };
   cam.aspect = canvas.width / canvas.height; cam.rebuild();
   engine.world.upload();
@@ -245,8 +289,11 @@ export async function standUp(opts: { /** the dressing rows up, as the page has 
     game, engine, level, input, cam, canvas, audioCounts, smoke,
     get audioLog() { return audioLog; }, set audioLog(v: AudioCall[] | null) { audioLog = v; },
     beatsThrow: true,
+    start(between?: () => void) { if (!address) throw new Error('start(): this game was stood plain. Hand the mission\'s address to the stand, standUp({ address }), and it is read where a page reads it');
+      return standMod.startAtAddress(game, address, between); },
     step(dt: number, follow: Vec3 | null = null) {
       game.update(dt, input, cam, canvas);
+      tell();   // (what the step said, to a tool that listens: above)
       { const L: any[] | undefined = (game as any).director?.log, n = L?.length ?? 0, last = n ? L![n - 1] : null, key = last ? `${last.run}:${last.t}:${last.beat}:${last.kind}:${last.what}` : '';   // (the rows filed since the last step: from the log's end back to the row last seen)
         if (key !== beatSeen) { let bad: any = null; for (let i = n - 1; i >= 0; i--) { const r = L![i]; if (`${r.run}:${r.t}:${r.beat}:${r.kind}:${r.what}` === beatSeen) break; if (r.kind === 'error') bad = r; } beatSeen = key;
           if (bad && W.beatsThrow) throw new Error(`the level's script: beat '${bad.program}/${bad.beat}' ${bad.what}`); } }

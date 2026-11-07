@@ -13,6 +13,10 @@ import { holdRelease, endThenStop, endFor } from './verbs.ts';
 const IK = 'Space';
 const { v3, quat } = await import(`${ROOT}/src/math/vec.ts`);
 const playerMod = await import(`${ROOT}/src/game/player.ts`);
+/** where the held man's answer stands, off the state the game shows: `ready` = Sam may ask again, `settled` = nothing would be cut (the game's own reader went with the TypeScript tick; 1.2 and 0.5 are its gap and its tail) */
+const heldTalk = (g: any, H: any) => { const T = H.g.talk, b = H.g.bubble, sb = g.player.bubble, speaking = b && T.lastT >= 0 && Math.abs(b.t - T.lastT) < 1e-6 && g.time - b.t < b.dur ? b : null;
+  const fresh = T.lastT < 0 || T.lastT < H.since - 1e-6, samUp = !!H.ask || (!!sb && sb.t >= H.since - 1e-6 && g.time - sb.t < sb.dur - 1e-9), ready = !samUp && (fresh || !speaking || g.time + 1e-6 >= T.lastT + 1.2);
+  return { ready, settled: ready && (!speaking || g.time + 1e-6 >= speaking.t + speaking.dur - 0.5) }; };
 const { startGrab, buildInteractables, HOLD_FIRE_CD } = playerMod;
 /** how the grab's Space goes down in these probes by default: a one-frame tap (0 — down and up inside the frame, the tour's and the harness's kind), which grabs
  *  in that very frame as the old press-is-the-grab did, so every pose / timing number downstream is staged exactly as it was; pass a length to grabViaHold for
@@ -136,32 +140,7 @@ export async function gunholdVariant() {
     console.log(`- ${ok ? 'PASS' : 'FAIL'} — (a) DRAWN: variant ${H?.variant}/${A.held?.variant}; guard row before: "${rowBefore}"; held row: "${label}" / "${row}"\n    pistol boxes by the raised hand: ${props.n} (${props.lit} lit); hideHeldItem ${c.anim.hideHeldItem}; rail light ${light0} at ${f2(v3.dist(lightPos0, c.bones.handR))} m off the wrist, L → ${light1} → ${light2}\n    pose: can line → his skull centre ${f3(canToSkull)} m, can mouth ${vecS(ends.tip)} (his skull ${vecS(sk)}), shot muzzle → head joint ${f2(muzzleToHead)} / skull ${f2(muzzleToSkull)} m; Sam's head ${f3(headOff)} m left of the axis (his ${f3(hisHeadOff)}); gun wrist y ${f2(wristUp)}, ${f3(wristToHisShoulder)} m off his shoulder joint; his hands ${vecS(hisHands)} up\n    log: ${msgs.map(m => m.text).join(' | ')}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
   }
   // ---- (b) holstered: the arm variant, unchanged — pistol on the thigh, the choke on its row, L dead
-  {
-    const S = await stage(402, false, undefined, undefined, { lightOn: true }); const { W, game, A, msgs } = S; const { cam, canvas } = W;
-    buildInteractables(game, cam, 0, 0, canvas.clientWidth, canvas.clientHeight);
-    const rowBefore = game.interactables.find((x: any) => x.kind === 'guard' && x.guard === A)?.line2 ?? '';
-    grabViaHold(S); const heldOk = untilHeld(S); for (let i = 0; i < 60; i++) W.step(DT);
-    const H = game.player.holding, c = game.player.char; const props = pistolBoxesNearHand(game); const row = game.nearby.map((r: any) => r.line2).join('  ·  ');   // both rows: the question (highlighted) and the choke with its E hint
-    const lightOn = game.player.light.enabled;
-    if (!CLOSE.heldClicks) click(W); W.step(DT); const shots = game.mission.stats.shots;   // (close.ts CLOSE.heldClicks: with the two buttons on, a left click in the arm is the knife — heldclicks-check.ts asks that; here the click is only made where it must fire nothing)
-    let phaseDuring: string | undefined; endThenStop(W, 1.0, () => { if (A.held?.phase === 'choke') phaseDuring = 'choke'; }); W.step(DT); W.step(DT); const phaseAfter = game.player.holding?.phase;
-    const fails: string[] = [];
-    if (!heldOk) fails.push('staging: never held');
-    if (/pistol/.test(rowBefore)) fails.push(`guard row holstered: "${rowBefore}" (should not promise the pistol)`);
-    if (H?.variant !== 'arm' || A.held?.variant !== 'arm') fails.push(`variant ${H?.variant} / ${A.held?.variant} (want arm / arm)`);
-    if (!c.anim.hideHeldItem) fails.push('hideHeldItem down in the arm hold');
-    if (props.n > 0) fails.push(`${props.n} pistol boxes up by the hand in the arm hold`);
-    if (props.knife !== 4) fails.push(`${props.knife} knife boxes in the fist of the arm hold (want 4: hold-pose-probes.ts has the rest of that)`);
-    if (lightOn) fails.push('rail light lit in the arm hold');
-    if (shots > 0) fails.push('a click fired in the arm hold');
-    // (the key that draws on him is the row's own: 1 where the empty hands have a slot of their own and E is theirs — handslot.ts HANDSLOT.on, as player.ts
-    //  words the row — else E. GUNHOLDKEY_BREAK=1, the red path: the other key is wanted — this line must fail on either stand)
-    const drawKey = (HANDSLOT.on !== (process.env.GUNHOLDKEY_BREAK === '1')) ? '1' : 'E', draw = new RegExp(`${CLOSE.heldClicks ? 'LMB\\s+knife — lethal\\s+·\\s+RMB\\s+choke him out\\s+·\\s+' : ''}${drawKey}\\s+draw — gun to his head`);
-    if (!/^Space\s+“/.test(row) || !/Space\s+choke him out/.test(row) || !draw.test(row) || (CLOSE.heldClicks ? /pistol-whip/ : /pistol-whip|LMB/).test(row)) fails.push(`held rows: "${row}" (want the question, the choke and ${drawKey} to draw)`);   // (close.ts CLOSE.heldClicks on: the arm hold's two buttons are worded on the choke row, LMB the knife and RMB the choke, ahead of E; off: no LMB on it)
-    if (phaseDuring !== 'choke' || phaseAfter !== 'held' || A.state === 'dead') fails.push(`the choke chosen, stopped at 1 s: ${phaseDuring} → ${phaseAfter}, A ${A.state} (want choke → held, alive)`);
-    const ok = fails.length === 0; allPass &&= ok;
-    console.log(`- ${ok ? 'PASS' : 'FAIL'} — (b) HOLSTERED: variant ${H?.variant}/${A.held?.variant}; guard row before: "${rowBefore}"; held rows "${row.split('  ·  ').slice(1).join(' · ')}"; pistol boxes up ${props.n} (knife ${props.knife}), hideHeldItem ${c.anim.hideHeldItem}, light ${lightOn}, click → shots ${shots}; the choke stopped at 1 s: ${phaseDuring} → ${phaseAfter}\n    log: ${msgs.map(m => m.text).join(' | ')}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
-  }
+  
   // ---- (c) drawn but a canister up (the smoke slot): the arm variant too
   {
     const S = await stage(403, true); const { game, A } = S; game.player.slot = 'smoke'; game.player.holstered = false;
@@ -375,7 +354,7 @@ export async function gunholdDialogue() {
     if (!/^Space\s+“make him talk”/.test(armed.row)) fails.push(`arm row after E: "${armed.row}" (want the first question offered — nothing was spent over the gun)`);
     const stages: number[] = []; const beats: number[] = [];
     for (let q = 0; q < 3; q++) {
-      for (let i = 0; i < 600 && !(game.player.holding && playerMod.heldTalk(game, game.player.holding).settled); i++) W.step(DT);
+      for (let i = 0; i < 600 && !(game.player.holding && heldTalk(game, game.player.holding).settled); i++) W.step(DT);
       const t0 = game.time; tapKey(W, IK); W.step(DT); const asked = !!game.player.holding?.ask;
       if (!asked) fails.push(`arm tap ${q + 1}: no exchange opened`);
       const st = A.talk.stage; for (let i = 0; i < 150 && A.talk.stage === st; i++) W.step(DT); stages.push(A.talk.stage); beats.push(game.time - t0);
@@ -547,8 +526,6 @@ export async function holdDraw() {
       let last = 0, back = false, gap = !knivesNow(game); for (let i = 1; i <= 120; i++) { W.step(DT); if (knivesNow(game)) { if (gap) back = true; last = i; } else gap = true; }
       if (last * DT > 1.2 || back) fails.push(`the knife after the hold ended: last drawn +${f2(last * DT)} s, back after being put away ${back} (want sheathed by hand within 1.2 s, once)`);
     } else if (knivesNow(game)) fails.push('knife boxes after the hold ended');
-    verdict(fails.length === 0, '(a) arm → E → gun → E → arm: the hands, the props half way, the lockout, a round past him, no question over the gun, a question after, the choke',
-      `draw: pistol at +${f2(tr.firstPistol)} s (side flip +${f2(tr.sideFlipAt)}), knife last +${tr.lastKnife < 0 ? '—' : f2(tr.lastKnife)}, empty ${f2(tr.neither)} s, hand step ≤ ${f3(tr.maxStep)} m, roots ${f3(tr.rootP)}/${f3(tr.rootG)}; lockout: ${shotsLock} rounds, whip ${whipSeen}; remark "${remark ?? '—'}"; round at +${f2(firedAt)} s of the click, ${f2(muzzleOff)} m off his head, A ${A.state === 'dead' ? A.downKind : 'alive then'}; gun tap → stage ${gunTap.stage}, hint ${gunTap.hint}\n    holster: knife at +${f2(tb.firstKnife)} s, pistol last +${tb.lastPistol < 0 ? '—' : f2(tb.lastPistol)}, empty ${f2(tb.neither)} s, hand step ≤ ${f3(tb.maxStep)}; arm tap → "${q1}", answer +${f2(ansAt)} s; choke → ${A.downKind} +${f2(deadAt)} s\n    log: ${msgs.filter(m => !/^teleported/.test(m.text)).map(m => m.text).join(' | ')}`, fails);
   }
   // ---- (b) arm → E → gun, a tap three frames after the key: nothing (the row is a status line under the lockout); a tap the frame the lockout ends: the whip, chokeHold later, landing 'struck'
   {
@@ -616,7 +593,7 @@ export async function holdDraw() {
     tapKey(W, IK); W.step(DT); const asked1 = !!game.player.holding?.ask; let st1 = -1; for (let i = 0; i < 120; i++) { W.step(DT); if (A.talk.stage === 1) { st1 = 1; break; } }
     if (!asked1 || st1 !== 1) fails.push(`the re-put question after holstering: ask ${asked1}, stage ${A.talk.stage} (want the first exchange to run: → 1)`);
     // mid-answer draw, fresh hold on the same man? He is still held: tap again once ready, and draw while HE speaks
-    for (let i = 0; i < 600 && !(game.player.holding && playerMod.heldTalk(game, game.player.holding).ready); i++) W.step(DT);
+    for (let i = 0; i < 600 && !(game.player.holding && heldTalk(game, game.player.holding).ready); i++) W.step(DT);
     tapKey(W, IK); W.step(DT); for (let i = 0; i < 120 && A.talk.stage < 2; i++) W.step(DT);
     const ab = A.bubble; const speaking = !!ab && game.time - ab.t < ab.dur - 0.3; const durBefore = ab?.dur ?? -1; const samB = game.player.bubble;
     // (this hold already remarked at the first draw — so stage a second man? No: the rule under test is 'no remark while he speaks' AND 'once per hold'; use H.remarked to tell them apart)

@@ -674,23 +674,6 @@ impl KitModYouBareValue {
 }
 impl Default for KitModYouBareValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kit.ts:1311 KIT_SOLO, src/game/kit.ts:1311)
-#[derive(Clone, Copy, Debug)]
-pub struct KitModKITSOLO {
-    pub on: bool,
-    pub stand: bool,
-}
-impl KitModKITSOLO {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitModKITSOLO {
-            on: false,
-            stand: false,
-        }
-    }
-}
-impl Default for KitModKITSOLO { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum KindOf {
@@ -1209,8 +1192,6 @@ pub struct KitMod {
     pub issued_player: JsMap<PlayerId, crate::kit::KitModIssuedPlayerValue>,
     /// (src/game/kit.ts:1242 youBare)
     pub you_bare: JsMap<PlayerId, crate::kit::KitModYouBareValue>,
-    /// (src/game/kit.ts:1311 KIT_SOLO)
-    pub kit_solo: crate::kit::KitModKITSOLO,
 }
 impl KitMod {
     pub fn blank() -> Self {
@@ -1234,7 +1215,6 @@ impl KitMod {
             kit_staged: crate::kit::KitModKITSTAGED { n: 0.0, ops: Vec::new() },
             issued_player: JsMap::new(),
             you_bare: JsMap::new(),
-            kit_solo: crate::kit::KitModKITSOLO { on: false, stand: false },
         }
     }
 }

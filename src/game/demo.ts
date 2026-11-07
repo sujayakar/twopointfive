@@ -130,7 +130,7 @@ export class Demo {
         // from the tour's staged men (guards.ts standoffPerceive / raiseEscalation); the men who must not take part are held / pinned instead, and Sam is unseen
         // (playerInvisible) until beat C. So: the player's own mission is swapped for a scratch copy while it runs (the live seconds tick that, not his run — the
         // drive stop's trick), and the exit hands the flag, the alarm and the men back the way the firefight expects them (quiet, calm, fresh). (The objective
-        // diamond stays off through it: mission.ts objectivePos also reads Game.touring, which start() raises for the whole tour.)
+        // diamond stays off through it: the Rust game's `mission::objective` gives no line while Game.touring is up, which start() raises for the whole tour.)
         // The verbs are the player's rows, tapped as a player taps them (interact.ts: a one-frame Space does the highlighted row): 'grab him' on the man's row once it
         // is in reach, 'question him' — the top row while he is held — for each exchange, and for the end the choke's own row, chosen (Game.selectVerb: what holding
         // Space and scrolling to it does by hand) and tapped; it then runs on its own clock while the puppet keeps the shield square. Kowalski is simply un-held: he
@@ -310,7 +310,7 @@ export class Demo {
         sub: 'None of it is staged for the camera. Space on the rack\'s row starts the same timed pull a player makes; when it completes, the LEDs and the green wash they threw on the floor are just lights the renderer no longer has, the clunk goes into the hearing model, and the mission code radios the nearest calm man to check the rack — he shoulders a real door, so the corridor\'s light comes in with him and his torch does the rest. The player is already backing into the dark end of the room, behind its sweep.',
         enter: () => { tF = tOut = -1; sent = false; g.clearAftermath(); g.resetGuards(); this.rearm(); g.playerInvisible = true; g.godMode = true;
           g.setGroup('server', false);   // the room's own cold panel off: lit by the racks' green wash and whatever the door lets in — so one rack dying and one torch arriving both read
-          saved = g.mission; g.mission = { ...saved, stage: 'infiltrate', driveT: -1, pulled: false, sweepAt: -1, alarmOn: false, debrief: false, stats: { ...saved.stats } };   // a scratch copy for the beat: whatever it accrues (elapsed, the sandbox flag) is thrown away at exit with the player's own run put back; 'infiltrate' so the room announces its rack in the log the way it does for a player
+          saved = g.mission; g.mission = { ...saved, stage: 'infiltrate', driveT: -1, pulled: false, sweepAt: -1, alarmOn: false, stats: { ...saved.stats } };   // a scratch copy for the beat: whatever it accrues (elapsed, the sandbox flag) is thrown away at exit with the player's own run put back; 'infiltrate' so the room announces its rack in the log the way it does for a player
           for (const t of g.rackTargets) g.lightHome.in(LIGHT_IN.on, t, 1); g.missionInTour = true;   // (relit in case an earlier pull — the player's, or a previous lap of the tour — left it dark)
           const d = door('server'); if (d) { d.angle = 0; d.vel = 0; d.latched = true; d.closing = false; }   // shut, as authored: his push swings it and the corridor light sweeps in across the floor
           g.teleportPlayer(SPAWN); g.player.slot = 'pistol'; g.player.pistol.lightOn = false; g.player.crouch = true; g.player.char.bodyYaw = Math.PI / 2;

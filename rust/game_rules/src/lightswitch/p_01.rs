@@ -52,10 +52,7 @@ pub fn room_of_light(g: &mut crate::game::Game, t: FixtureId) -> f64 {
 
 /// A ray at the level's own boxes, the leaves aside. (lightswitch.ts wallRay)
 pub fn wall_ray(g: &mut crate::game::Game, ro: V3, rd: V3, tmax: f64) -> Option<crate::scene_collision::Raycast> {
-    let keep = core::mem::take(&mut g.col.dynamic_boxes);
-    let h = crate::scene_collision::raycast(g, ro, rd, tmax);
-    g.col.dynamic_boxes = keep;
-    h
+    crate::scene_collision::raycast_over(g, &crate::ask::Over::statics(), ro, rd, tmax)
 }
 
 /// A WALL under the ray: not glass, not a leaf, standing to above a door's head. (lightswitch.ts plateOn's `solid`)
@@ -281,8 +278,8 @@ pub fn switch_lit(g: &mut crate::game::Game, sw: &crate::lightswitch::WallSwitch
 }
 
 /// May Sam be planted at a plate for his hand's move: not from a wall hold. (lightswitch.ts plants)
-pub fn plants(g: &crate::game::Game, by: CharId) -> bool {
-    let pl = g.player;
+pub fn plants(g: &crate::game::Game, seat: &crate::seats::SeatRef, by: CharId) -> bool {
+    let pl = seat.player;
     by == g.pl[pl].ch && g.puppet.is_none() && g.pl[pl].wall.is_none()
 }
 
@@ -338,7 +335,7 @@ pub fn flip_switch(g: &mut crate::game::Game, sw: &crate::lightswitch::WallSwitc
     if !on { crate::audio_iface::game_audio_like_play(g, "lightOff", Some(sw.pos), Some(0.5), None); }
     if g.m.lightswitch.states.is_some() {
         g.m.lightswitch.states.as_mut().unwrap().hands.retain(|h| h.c != by);
-        let plant = plants(g, by);
+        let plant = plants(g, &crate::seats::here(g), by);
         let dur = g.k.lightswitch.hand_secs + (if plant { turn_secs(g, by, sw) } else { 0.0 });
         let hand = Hand { c: by, sw: sw.clone(), at: time, dir: if on { -1.0 } else { 1.0 }, dur, plant };
         g.m.lightswitch.states.as_mut().unwrap().hands.push(hand);
@@ -489,7 +486,7 @@ pub fn light_switch_tick(g: &mut crate::game::Game) {
             g.m.lightswitch.states.as_mut().unwrap().hands[i].plant = false;
             plant = false;
         }
-        let hand = if plant { crate::handwork::sam_hand(g) } else { None };
+        let hand = if plant { crate::handwork::sam_hand(g, &crate::seats::here(g)) } else { None };
         let more = crate::handwork::WorkAtMore { keys: None, hand, dir: Some(h.dir) };
         let t = g.time - h.at;
         crate::handwork::work_at(g, h.c, crate::character::WorkKind::Lever, h.sw.pos, h.sw.n, t, h.dur, Some(&more));

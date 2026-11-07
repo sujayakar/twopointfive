@@ -453,7 +453,7 @@ const STEALTH = {
   cable: { sink: 0.05, round: 15, gap: [-0.07, 0.11] as [number, number], short: 0.1, knee: [0.07, -0.05, 0.1] as Vec3, out: 0.45, headOut: 0.18, undo: 28, ahead: 0.3, nodMax: 82 },
 };
 /** Critically damped follower (value + velocity): unlike damp() it also eases IN, so a posture change starts as softly as it ends. w ≈ 6 / settle time. */
-class Spring {
+export class Spring {
   v = 0; constructor(public x = 0) {}
   step(target: number, w: number, dt: number) { const y = this.x - target, j = this.v + y * w, e = Math.exp(-w * dt); this.x = target + (y + j * dt) * e; this.v = (this.v - j * w * dt) * e; return this.x; }
 }
@@ -1113,7 +1113,7 @@ function blowsNear(B: { t: number; end: number; blows: readonly number[] }): num
   const near: number[] = []; if (prev > -Infinity) near.push(prev); if (next < Infinity) near.push(next); return near;
 }
 /** THE GAME'S OWN KEY TABLES AGAINST WHAT A LAYER OF THE MODULE IS HANDED: every knife blow's keys and every table of the two swings of a throw, read as an
- *  animator is made (the first character of a game, a menu's figure), so a table that grew past its layer is found as the game loads and not at the first
+ *  animator is made (the first character of a game, the viewer's), so a table that grew past its layer is found as the game loads and not at the first
  *  blow or throw of a mission. */
 export function layerTablesFit(): void {
   const blows: Record<StrikeKind | 'slash' | 'back', { keys: readonly unknown[] }> = { cross: KNIFE_BLOW.cross, jab: KNIFE_BLOW.jab, slash: KNIFE_SLASH, back: KNIFE_BACK };
@@ -1431,7 +1431,7 @@ export class CharacterAnimator {
   aimYawOffset = 0;          // chest yaw relative to body (rad)
   aimPitch = 0;              // rad, positive = up
   lookYawExtra = 0;          // additional head/neck yaw (looking around)
-  lookPitchExtra = 0;        // additional head/neck pitch, + = chin down (the kit figure's alone — ui/kitFigure.ts: nothing in the game sets it, and 0 adds no twist)
+  lookPitchExtra = 0;        // additional head/neck pitch, + = chin down (nothing sets it, and 0 adds no twist: the field goes when the wire drops it)
   /** TURN (Character.turnWeigh): how far his wish is ahead of where his gun has got to, eased — the neck carries it, so the head is on a new point before the muzzle (rad; 0 with the weight off) */
   turnLead = 0;
   /** Ready posture layered under the aim layer (aim / firing still win): 'highReady' pistol up under the eye line, elbows in, leaning into it — pieing a corner,

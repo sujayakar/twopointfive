@@ -92,13 +92,11 @@ export async function replaySession(F: any, name: string, opts: ReplayOpts = {})
     R.replayed = f + 1; R.seconds += dt;
     // digest on the recording's beat
     const want = P.digestAt(f);
-    if (want && f === F.frames - 1 && F.meta?.between && F.env.hud) J.hudExpireBubbles(game);   // (a recording finished between two frames — journal.ts finish: its closing digest was taken after the HUD's write of that frame, so the replay makes the write first)
     if (want) {
       R.digestsChecked++; const have = digestGame(game, true);
       if (JSON.stringify(have) !== JSON.stringify(want)) { if (!R.digestMismatch) { R.digestMismatch = { f, diffs: diffDigest(want, have, 14) }; if (!opts.quiet) log(`  ✗ digest mismatch after frame ${f} (t ${game.time.toFixed(2)} s) — recorded ≠ replayed:\n      ${R.digestMismatch.diffs.join('\n      ')}`); } if (opts.strict) { stoppedEarly = 'digest'; f++; break; } }
       else if (f === F.frames - 1) R.lastDigestOk = true;
     }
-    if (F.env.hud) J.hudExpireBubbles(game);   // a page recording: the HUD nulled expired bubbles here, after the update (and after the journal's digest of it) — so does the replay
     // sensors
     const S = game.sensors; if (S.firstDivergence && !R.sensor.first) { R.sensor.first = { ...S.firstDivergence }; if (!opts.quiet) log(`  ✗ sensor divergence on frame ${S.firstDivergence.f}: ${S.firstDivergence.detail}`); if (opts.strict) { stoppedEarly = 'sensor'; f++; break; } }
     // invariants (the soak's essential subset)

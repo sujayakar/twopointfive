@@ -32,13 +32,9 @@ pub fn loud_row(g: &crate::game::Game) -> bool {
     }
 }
 
-/// HOW THE MISSION ENDED, asked of the game as it stands: None while it is being played, else whether it was won, the end's word and why. A read: it
-/// writes nothing and keeps nothing, so the first tick it answers is the end and the asker keeps the answer (the TypeScript's verdict latches it on
-/// the puppet, with the men's tracks and the card, which stay the page's). While the answer is None it reads a few flags and allocates nothing.
-/// (verdict.ts Verdict.ended, under Verdict.live)
-pub fn verdict_ended(g: &crate::game::Game) -> Option<(bool, &'static str, String)> {
+/// This tick's end, by the mission kind's own rule (None: still running). The tick asks it and latches the first answer.   (verdict.ts Verdict.ended)
+pub(crate) fn ended(g: &crate::game::Game) -> Option<(bool, &'static str, String)> {
     use crate::scenario_run::ActiveScenario as K;
-    if g.touring || g.quiet_utility || g.puppet.is_some() || g.mission_in_tour { return None; }
     let kind = crate::scenario_run::active_scenario(g);
     let roomclear = kind == Some(K::Roomclear);
     // (defuse.ts Defuse.active, without its copy of the level's block: this pass is the running mission's, on a level with devices and rooms)

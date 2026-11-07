@@ -80,13 +80,12 @@ import type { Vec3 } from '../math/vec';
 import type { KitPlanLevel, KitViewPlanned } from './kitViewPlan';
 import { kitViewQuietKind } from './kitViewSet';   // (pure: the mission's kind, read off its link)
 import { kitViewPlanChild, kitPlanGeometry, kitPlanWayBuilt, kitPlanAct4, kitPlanPorchLit, kitPlanOwnLamps, kitPlanDayOut, KIT_PLAN } from './kitViewPlan';   // (pure: plain level data in, a plan out — no game module, no DOM)
-import { OWNCHARGE } from '../game/owncharge';   // (a leaf: read inside a row's start only)
 import { samBigSpot } from '../game/bigkit';   // (asked inside a row's start only: where the game stands Sam for the big slot's tool)
 import { BIG_ORDER } from '../game/doortools';   // (a name, read inside a row only)
 import { FIXLOOK } from '../game/fixtureBreak';   // (a leaf table: written inside the quiet gun's row only — the dead lamp's arcing lead is held off for that row)
 import { WAND_ORDER, WANDORDER_STATS } from '../game/wandorder';   // (a name and a tally, read inside a row only)
 import { kitOf, kitTreeOn } from '../game/kit';   // (asked inside a row's start only: the card a staged teammate carries · is the card laid out as a tree — your light a row of yours)
-import { SLOTSETUP } from '../game/slotsetup';   // (asked inside a row's start only: a gun's key again is its setup, not the launcher's step)
+import { END_CARD } from './endcard';
 import { exposedTo } from '../game/frag';   // (asked inside a row's tick only: has a burst THERE a line to Sam — the game's own reckoning, glass that it would break counted open)
 
 /** THE LIGHT, one table (a way's `light` in the level file lies over it, key by key). Every place is door-relative — [along the wall toward the stack, out
@@ -698,7 +697,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
   const threw = (err: unknown) => { console.error('kitview: a beat threw —', err); try { if (beat) finish(beat, 'threw'); game.puppet = null; if (!dz.work.length) dissolve(() => restage()); } catch (e2) { console.error('kitview: …and could not be taken down —', e2); dead?.(); } };
   loop.frozen = () => !kitViewLoop || state === 'none' || state === 'staging'; loop.afterFreeze = undefined; loop.hud = null; loop.bubbles = null; loop.audio = null; loop.demo = null; loop.attract = null;
   loop.hotkeys = () => { if (!kitViewLoop) return; try { before(); } catch (err) { threw(err); } };
-  loop.postUpdate = () => { if (!kitViewLoop) return; try { after(); } catch (err) { threw(err); } };
+  loop.postUpdate = () => { END_CARD.due = false; if (!kitViewLoop) return; try { after(); } catch (err) { threw(err); } };
   /** the copy of the frame just drawn, laid over the game's canvas (in the task that drew it) — false: none to be had */
   const copy = (): boolean => { try {
     const v = veil ??= (() => { const c = document.createElement('canvas'); c.id = 'kv-veil'; c.style.cssText = 'position:fixed;pointer-events:none;z-index:1'; (view.parentElement ?? document.body).appendChild(c); return c; })();
@@ -1363,7 +1362,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
    *  through the hold and is hung again under the dissolve; the stack closes up as the row ends */
   const ownCharge: Row = { door: 'none', damage: 'leaf', loud: true, leaf: true, rest: K.hold, cap: 12,
     start: (B, S) => { const G = S.at([K.ownPost[0] * S.latch, K.ownPost[1], 0]); if (game.col.nav.isBlocked(G[0], G[2])) return 'no room at the door';
-      if (S.door!.def.steel) return 'steel: a charge will not cut it'; if (!OWNCHARGE.on) return 'his own charges are switched off'; if (S.door!.off) return 'no leaf to set it on';   // (known before he walks: the gun's row instead — never a walk up to a door that offers nothing)
+      if (S.door!.def.steel) return 'steel: a charge will not cut it'; if (S.door!.off) return 'no leaf to set it on';   // (known before he walks: the gun's row instead — never a walk up to a door that offers nothing)
       B.base = tools().stats.blown; B.post = [G[0], G[2]]; to(B, 'go'); game.puppet = { goal: [G[0], 0, G[2]], aim: null, throwAt: null, walk: K.samWalk }; return null; },
     tick: (B, S) => { const pl = game.player, el = game.time - B.pt, T = tools(), c = T.set.find(x => x.door === S.door);
       if (isNaN(B.markT) && T.stats.blown > B.base) mark(B, 'blow');
@@ -1435,8 +1434,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
   const handWas = (): string => { const h = handDue || game.player.slot; if (handDue) { input.pressed.delete(handDue === 'rifle' ? 'Digit2' : 'Digit1'); handDue = ''; } return h; };
   const tube = (load: 'cam' | 'he40' | 'ring'): boolean => { const pl = game.player;
     if (!pl.rifleUp) { input.pressed.add('Digit2'); return false; } if (pl.equipT > 0) return false; if (pl.rifle.attachment === load) return true;
-    if (SLOTSETUP.on) { const i = pl.rifle.attachments.indexOf(load); if (i < 0) return false; pl.rifle.attIdx = i; return true; }   // (2 again is the setup now, and its row steps over a load he is out of: the picture's rifle is handed the load)
-    input.pressed.add('Digit2'); return false; };
+    const i = pl.rifle.attachments.indexOf(load); if (i < 0) return false; pl.rifle.attIdx = i; return true; };   // (2 again is the setup now, and its row steps over a load he is out of: the picture's rifle is handed the load)
   /** A STICKY CAMERA (calls 5; Sam's alone — stickycam.ts): the same half step and hand on the leaf as a throw, the rifle up with the camera on its tube (his
    *  own key), and ONE press of the right button: the game's own shot, flat over his aim point onto the first wall behind it — the line, of `camRays` across
    *  the opening, that meets a wall nearest the door. It is looked at for `camHold`, the leaf is pulled to, and the camera stays on its wall until the next

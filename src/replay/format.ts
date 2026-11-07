@@ -137,7 +137,7 @@ export interface RunTape {
    *  the VALUES is a 32-bit float written to nine significant digits (what the renderer hands back; read it with Math.fround: exact, and half the text), a
    *  value that is not one is [the double]. Absent (a tape from before it): every number is the double itself. Read both with `tapeNum` */
   sens: { keys: string[]; rows: [number, number[] | null, TapeVal[]][]; f32?: 1 };
-  /** from outside a step, before step f: 'restart' · 'flags' {…} · 'tune' {…} · 'table' [name, {…}] · 'kit' {…} · 'pose' [the player's place x y z, velocity x y z,
+  /** from outside a step, before step f: 'restart' ('start' = put back to the start the run was kept at, clock and die and all: the page's) · 'load' the slot of a save this run made in memory · 'flags' {…} · 'tune' {…} · 'table' [name, {…}] · 'kit' {…} · 'pose' [the player's place x y z, velocity x y z,
    *  body yaw, aim yaw, hands empty 0 | 1, low 0 | 1 — each a TapeVal: where he was put from outside a step] — and one row that is not from outside: 'posein', the
    *  same ten values, where a restart made INSIDE step f left him (a page's own staging behind it). Both are done by game/runtape.ts tapePoses */
   x: [number, string, unknown?][];
@@ -286,6 +286,9 @@ export function replayBlob(F: ReplayFile): { name: string; blob: Blob } {
  *  (ReplayKey's constructor, and its pageshow for a page handed back as it was left), so a replay reached later by another road finds none and goes to the
  *  game's own page. */
 export const CAME_FROM = 'twopointsix.replay.from';
+/** DOES THE GAME PAGE PLAY A RUN TAPE (engineplay.ts, `?playtape=`): asked by every road that would lead there — the end card's Replay (ui/replaykey.ts
+ *  engineUrl), the map viewer's 'Play in engine', the address itself (main.ts). While it does not, all of them are the map viewer's, which draws the file's trace. */
+export const GAME_PAGE = { playsTapes: false };
 type Slots = { currentEntry?: { key?: string } | null; entries?: () => { key: string }[]; traverseTo?: (key: string) => { committed?: Promise<unknown>; finished: Promise<unknown> } };
 const slots = (): Slots | null => { try { return (globalThis as { navigation?: Slots }).navigation ?? null; } catch { return null; } };
 /** this window goes to a replay page — never a new tab — leaving the mark its way back reads */

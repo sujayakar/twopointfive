@@ -131,7 +131,7 @@ pub fn run_guard_script(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     let (x0, z0) = (g.ch[c].pos[0], g.ch[c].pos[2]);
     let ordered = match s.speed { Some(x) => x, None => g.tune.guard_walk };
     let speed = crate::guards::team_pace(g, gd, ordered);
-    let legs = crate::guards::team_legs(g, gd, speed);
+    let legs = crate::guards::team_legs(g, &crate::seats::here(g), gd, speed);
     let mut fight_face = match s.over { Some(o) if o.walk.unwrap_or(false) => o.face, _ => None };
     if fight_face.is_some() {
         let (t, p) = (g.time, g.ch[c].pos);
@@ -211,7 +211,7 @@ pub fn run_guard_script(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     if let Some(at) = aim {
         let to = v3::sub(at, g.ch[c].pos);
         let yaw = m::atan2(to[0], to[2]);
-        let aim_yaw = if s.over.is_some() { yaw } else { crate::guards::team_turn(g, gd, yaw, dt) };
+        let aim_yaw = if s.over.is_some() { yaw } else { crate::guards::team_turn(g, &crate::seats::here(g), gd, yaw, dt) };
         live(g, gd, &mut s);
         let ch = &mut g.ch[c];
         ch.aim_yaw = aim_yaw;

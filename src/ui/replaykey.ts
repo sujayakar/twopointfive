@@ -13,7 +13,7 @@ import { ReplayBuffer, REPLAY } from '../game/replaybuf';
 import type { ReplayMeta } from '../game/replaybuf';
 import type { ReplayFile } from '../replay/format';
 import { shelfPut } from '../replay/shelf';
-import { CAME_FROM, clock, replayBlob, errorMarks, lastRun, leaveFor, replayName } from '../replay/format';
+import { CAME_FROM, GAME_PAGE, clock, replayBlob, errorMarks, lastRun, leaveFor, replayName } from '../replay/format';
 import { missionLive } from '../game/mission';
 export { CAME_FROM, leaveFor };
 import { ReplayKeeper } from '../replay/keeper';
@@ -254,7 +254,7 @@ export class ReplayKey {
   }
 }
 /** this page is all there is: the one-file build (tools/build-one.ts marks its page; ui/menu.ts lists no tool page there) ships no replay.html */
-const onePage = (): boolean => { try { return !!document.querySelector?.('meta[name="tps-one-page"]'); } catch { return false; } };
+export const onePage = (): boolean => { try { return !!document.querySelector?.('meta[name="tps-one-page"]'); } catch { return false; } };
 const LEAVE_MS = 8000, ARM_MS = 6000;
 /** the viewer page beside this one, on a shelf entry */
 export function viewerUrl(id: number): string { return new URL(`replay.html#id=${id}`, document.baseURI).href; }
@@ -263,11 +263,11 @@ export function viewerUrl(id: number): string { return new URL(`replay.html#id=$
  *  file: the trace's last restart mark (format.ts lastRun, the map viewer's own rule for a card's file — the step of the first sample from it on), which also has
  *  a restart made INSIDE a step (Shift+Enter, Enter once down: on no tape row), and the tape's last restart row (one older than the trace's window), the step
  *  after it so the still it opens on is the new try's. null: no tape to play (ended early: a checkpoint loaded, a scenario started from a menu, past the tape's
- *  length) — the map viewer plays that file */
+ *  length), or a game page that plays none (format.ts GAME_PAGE) — the map viewer plays that file */
 /** the address words a replay page keeps from the VISIT, not from the run it plays (replay/engineplay.ts tapeSearch): how the page is looked at and listened to is the
  *  viewer's — which sound table the mixer plays is the listener's, a replay holds no sound. The end card's Replay hands the game page's own on to its tab, bar the
  *  harness's `paused`: the replay of a run played at a chosen quality, or muted, opens the same way. */
-export const VISIT_FLAGS = ['paused', 'mute', 'quality', 'adapt', 'hud', 'oldsounds', 'newsounds', 'onetheme', 'shuffle', 'teamnerves', 'soundlanes', 'fogedge', 'fogdesat', 'fogair', 'fogkept', 'nobouncewalls', 'noreflwalls', 'sharpcap', 'allproxies', 'framecap', 'savepic', 'pace', 'giveway', 'flight', 'findtuned', 'look', 'nosunglint', 'glintpick', 'holedepth', 'portalworth', 'kept', 'hireach',
+export const VISIT_FLAGS = ['paused', 'mute', 'quality', 'adapt', 'hud', 'oldsounds', 'newsounds', 'soundlanes', 'fogedge', 'fogdesat', 'fogair', 'fogkept', 'nobouncewalls', 'noreflwalls', 'sharpcap', 'allproxies', 'framecap', 'pace', 'giveway', 'flight', 'look', 'nosunglint', 'glintpick', 'holedepth', 'portalworth', 'kept', 'hireach',
   ...SHADER_ROW_WORDS, 'pipequeue', 'shadertrim', 'shaderfold', 'fell', 'smokeindirect'];   // (the second line: how THIS machine builds its shaders — every row on trial in Options > Graphics, ui/shaderrows.ts, the compile queue and the trim, gpu/ — a word of the visit's address read once as the page loads; without them here a replay opened with one was sent on to an address without it and built the plain way. nobouncewalls: the picture's walled bounce read off — render/frame.ts bounceWallsConfig — so a page tool can play one replay both ways)
 // (…and `fell`: the count of questions the TypeScript answered while its row was up, sim.ts FELL — a page sent on to a recipe's address keeps the word. The Rust module's rows have no word: they are not switches)
 /** A WORD OF AN ADDRESS, WITH ITS VALUE, IS THE VISIT'S: one of VISIT_FLAGS, but `look` is two things under one word (scene/look.ts). The dress's
@@ -277,7 +277,7 @@ export const visitWord = (k: string, v: string): boolean => VISIT_FLAGS.includes
 /** the visit's words on an address, pair by pair in the list's order (a word can stand more than once: the look page's rows) */
 export const visitPairs = (q: URLSearchParams): [string, string][] => VISIT_FLAGS.flatMap(k => q.getAll(k).filter(v => visitWord(k, v)).map(v => [k, v] as [string, string]));
 export function engineUrl(id: number, file: ReplayFile): string | null {
-  const T = file.rerun; if (!T || 'dead' in T) return null;
+  const T = file.rerun; if (!GAME_PAGE.playsTapes || !T || 'dead' in T) return null;
   const r0 = lastRun(file), seen = r0 > 0 ? file.samples.find(s => s.r >= r0)?.n ?? 0 : 0;
   const taped = T.x.reduce((a, row) => row[1] === 'restart' && row[0] > 0 && row[0] + 1 > a ? row[0] + 1 : a, 0);
   const at = Math.min(T.ticks, Math.max(seen, taped));

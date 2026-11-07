@@ -59,10 +59,7 @@ pub fn in_shut_swing(g: &mut crate::game::Game, d: DoorId, x: f64, z: f64, pad: 
 
 /// A wall, a sill or a pane between two floor points at shin height, the level's statics only. (shutdoor.ts walled)
 pub fn walled(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
-    let keep = core::mem::take(&mut g.col.dynamic_boxes);
-    let blocked = crate::scene_collision::solid_blocked(g, [a[0], 0.45, a[2]], [b[0], 0.45, b[2]], None);
-    g.col.dynamic_boxes = keep;
-    blocked
+    crate::scene_collision::solid_blocked_over(g, &crate::ask::Over::statics(), [a[0], 0.45, a[2]], [b[0], 0.45, b[2]], None)
 }
 
 /// Can a man stand at p: a cell the walkers' grid calls free, nothing of the level inside his body. (shutdoor.ts stands)
@@ -151,8 +148,8 @@ pub fn walk(g: &mut crate::game::Game, gd: GuardId, p: V3) -> f64 {
 }
 
 /// Was he taken from Sam's file (or from another door of this order's, taken from the file for that one). (shutdoor.ts fromFile)
-pub fn from_file(g: &crate::game::Game, gd: GuardId) -> bool {
-    let a = match crate::orders::squad_orders_of(g, gd) { Some(a) => a, None => return false };
+pub fn from_file(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
+    let a = match crate::orders::squad_orders_of(g, seat, gd) { Some(a) => a, None => return false };
     let row = &g.tab.orders_assignment[a];
     row.post.is_none() || (row.order == SHUT_ID && g.m.shutdoor.jobs.get(gd).map_or(false, |j| j.back))
 }
@@ -167,7 +164,7 @@ pub fn plan(g: &mut crate::game::Game, d: DoorId, men: &[GuardId]) -> crate::shu
     let sam_at = g.ch[g.pl[g.player].ch].pos;
     let sam = crate::orders::side_of(g, d, sam_at);
     for &gd in men {
-        let want = if from_file(g, gd) {
+        let want = if from_file(g, &crate::seats::here(g), gd) {
             sam
         } else {
             let at = pos_of(g, gd);
@@ -457,7 +454,7 @@ pub fn order_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders
         Plan::Text(why) => return Some(why),
         Plan::Arm1(p) => (p.gd, p.spot),
     };
-    let back = from_file(g, gd);
+    let back = from_file(g, &crate::seats::here(g), gd);
     send(g, gd, d, spot);
     let now = g.time;
     g.m.shutdoor.jobs.set(gd, Job { door: d, spot, back, phase: JobPhase::Go, t0: now, t: now, pulls: 0.0, moved: 0.0, near: None });
@@ -487,6 +484,6 @@ pub fn register_shut_door(g: &mut crate::game::Game) {
         tick: Some(crate::orders::OrderTick::ShutDoor),
         ..crate::orders::OrderDef::zeroed()
     };
-    let id = g.tab.orders_order_def.push(def);
+    let id = crate::orders::squad_orders_row(g, def);
     crate::orders::squad_orders_register(g, id, None);
 }

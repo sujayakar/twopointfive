@@ -218,7 +218,7 @@ export class StaticCollision {
   /** THE WINDOW A RULE THAT TAKES `ruleOpen` STANDS IN: `window`, and on the path with no windows at all (ANYTIME off: a check's red path, fn just runs) the copy that ruleOpen stood is shut behind it */
   rule<T>(fn: () => T): T {
     const M = this.mirror, was = M.live;
-    try { return this.window(fn); } finally { if (!was && M.live && !this.windowed) M.shut(); }
+    try { return this.window(fn); } finally { if (!was && M.live && !this.hostWindow) M.shut(); }
   }
   /** …and THE PANE RULE AS A RULE'S STEP TAKES IT (a slab's and a thrown thing's rays ask it; `paneAsk` below): 0 or 1 to hand the module, or −1 — the step
    *  is the TypeScript's, and counted as its own here, once for every rule that asks */
@@ -230,25 +230,34 @@ export class StaticCollision {
   /** A WINDOW ON THE COPY, FOR QUESTIONS ASKED OUTSIDE A TICK. The module answers a row's questions only over a copy that has been PROVEN (every static
    *  compared with its row: tickOpen), and a proof holds only while nobody writes a box without saying so. A tick is one such stretch. `window(fn)` is
    *  another: the copy is proven once, `fn`'s questions go to the module, and it shuts when `fn` returns, however it returns. Inside it the tick's rule
-   *  holds: a rule that writes a static says `wrote()`. Already inside a tick or a window, `fn` just runs. A tick that opens and shuts inside `fn` shuts
-   *  the window with it (a tick's writers answer to the tick alone); what `fn` asks after that is asked alone, below.
+   *  holds: a rule that writes a static says `wrote()`. Already inside a tick or a window, `fn` just runs. A step
+   *  inside `fn` is `writes`, below: what `fn` asks after it is asked of the copy proven again.
    *  A QUESTION OUTSIDE EVERY WINDOW IS ITS OWN (`lone`): the copy is proven for it and shut behind it. That is always right and costs a proof a
    *  question (about 25 ns a static), so code that asks many in a row opens a window (a level's deal, the camera's step of a frame, the sound's
    *  probe, a tool's driver). A window is proven by the first question asked in it: one that asks nothing costs nothing. */
   window<T>(fn: () => T): T {
-    const M = this.mirror; if (M.live || this.windowed) return fn();   // (whatever ANYTIME says: a sense asked in a window has no other answer, and the window is what proves the copy for it)
-    this.windowed = true;
-    try { return fn(); } finally { this.windowed = false; if (M.live) M.shut(); }
+    const M = this.mirror; if (M.live || this.hostWindow) return fn();   // (whatever ANYTIME says: a sense asked in a window has no other answer, and the window is what proves the copy for it)
+    this.hostWindow = true;
+    try { return fn(); } finally { this.hostWindow = false; if (M.live) M.shut(); }
+  }
+  /** THE BOXES ARE WRITTEN BY `fn`, all of them it likes and none of them said (a step of the game put onto the page's objects: tools/blitz/import.ts applyGame): no
+   *  copy stands while it runs, and the window it ran in, if it ran in one, proves the copy again at its next question. So a frame is ONE window whatever it
+   *  steps (host/loop.ts): what is asked behind a step is asked of the boxes as that step left them. */
+  writes<T>(fn: () => T): T {
+    const M = this.mirror, was = this.hostWindow; if (M.live) M.shut(); this.hostWindow = false;
+    try { return fn(); } finally { this.hostWindow = was; }
   }
   /** inside `window(fn)`, outside a tick: the copy is proven by the first question `fn` asks and stands until `fn` returns (a window nobody asks in costs nothing) */
-  private windowed = false;
+  private hostWindow = false;
+  /** the GAME's own window flag, as its state has it (the Rust rules' `window`): the host's window is never written here, so a game exported inside a frame starts in no window */
+  windowed = false;
   /** THE COPY MADE READY FOR A QUESTION OF THE MODULE'S, where every asker passes: inside a window that no question has proven yet it is proven now, and
    *  a debt of the tick (a static written and said, the grid written) is paid */
-  private ready(): BoxMirror { const M = this.mirror; if (!M.live && this.windowed) this.lone(true); if (M.owes) M.again(this.boxes, this.glassWalkable); return M; }
+  private ready(): BoxMirror { const M = this.mirror; if (!M.live && this.hostWindow) this.lone(true); if (M.owes) M.again(this.boxes, this.glassWalkable); return M; }
   /** a question outside a tick: is the copy now standing for it ALONE (true: the caller shuts it behind the answer; false with the copy standing: a
    *  window's, which shuts it). `must`: it stands whatever ANYTIME says (a window's first question; a sense asked alone) */
   private lone(must = false): boolean { if (!ANYTIME.on && !must) return false; this.stand(); if (!this.mirror.live) return false;   // (the module does not run here; a level the copy cannot hold is no case — boxMirror.ts outgrown)
-    if (this.windowed) { ANYTIME.windows++; return false; }
+    if (this.hostWindow) { ANYTIME.windows++; return false; }
     ANYTIME.proofs++; if (ANYTIME.who || FELL.who) { const W = ANYTIME.who ?? (ANYTIME.who = {}), st = callers(4, 2, /scene\/(collision|boxMirror)\.ts/, 3); W[st] = (W[st] ?? 0) + 1; }   // (who asked alone, wherever the count asks who: TPS_FELL=who, ?fell=who)
     return true; }
   /** A STATIC WAS WRITTEN INSIDE A TICK — its place, its size, its flags, its cut — by a rule that may be asked about again before the tick ends (a wall holed,

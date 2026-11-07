@@ -62,6 +62,7 @@ import { Tracers } from './tracers';
 import { Particles } from '../render/particles';
 import { sparkSink, kickDustFx, lockSplinterFx, clearParticleFx, loadDust, applyDustLook } from './particleFx';
 import { Weather } from './weather';
+import { stoodOfPick, type StoodWith } from './stood';
 import { wetInstance, wetKnobs, wetLineRow, wetSummary, clearWetPrints } from './wet';
 import './takedown';   // takedowns as moves (takedown.ts): who breathes, once a frame
 import { hourAfterReset } from './hours';
@@ -77,7 +78,8 @@ import { PLAYER_ID } from './consts';
 import { seatsStand, seatManId, standMen, spotBeside, manById, isManId, eachSeat } from './seats';
 import { doorMan } from './doorthrow';
 import './mission';
-import { objectivePos, objectiveText } from './mission';
+import { NO_VIEW, type TickView } from '../view/seatview';
+import type { WorldAsk } from '../view/worldask';
 import { Chronicle, chronInterrogated } from './chronicle';
 import { hiddenProps, irBeams } from './combat';
 import { irViewer, irMade } from './irlaser';
@@ -140,6 +142,7 @@ import { QuietMission } from './quiet';
 import { Lesson } from './lesson';
 import { Rails } from './rails';
 import { Par } from './par';
+import type { LostMan } from './deathrecap';
 import { Verdict } from './verdict';
 import { Snatch } from './snatch';
 import { Defuse } from './defuse';
@@ -268,7 +271,6 @@ export interface Mission {
   alarmOn: boolean;                  // somebody is at 'alert' right now (edge → an alarm episode)
   sweepAt: number;                   // game time at which somebody gets sent to look at the dead rack (-1 = nobody pending)
   spottedT: number;                  // last time an alert guard had eyes on you (episode debounce for stats.spotted)
-  debrief: boolean;                  // one-shot for the page: open the end card (mission complete) — or, once `stage` is 'failed', the down card
   downCardAt: number;                // game time the down card comes up (mission.ts DOWN_CARD_SECS after he dropped; -1 = not pending)
   handsOn: boolean;                  // the drive has been touched at least once (the chronicle notes the first time only)
   stats: MissionStats;
@@ -277,14 +279,14 @@ export type MissionRating = 'ghost' | 'panther' | 'assault';
 /** Chaos Theory's own words: ghost = never spotted, no kills, no alarms; panther = lethal or loud but never actually seen; assault = they had eyes on you. */
 export function missionRating(s: MissionStats): MissionRating { return s.spotted > 0 ? 'assault' : s.kills === 0 && s.alerts === 0 && s.bodies === 0 ? 'ghost' : 'panther'; }   // ghost: never seen, no alarm, nobody shot, nothing found (a silent takedown nobody finds keeps it — a man out cold is not a kill); panther: they know someone was there but never saw who
 export function fmtClock(sec: number): string { const s = Math.max(0, Math.floor(sec)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; }
-const newMission = (t0: number): Mission => ({ stage: 'infiltrate', t0, driveT: -1, pulled: false, alarmOn: false, sweepAt: -1, spottedT: -100, debrief: false, downCardAt: -1, handsOn: false, stats: { elapsed: 0, alerts: 0, spotted: 0, bodies: 0, shots: 0, kills: 0, knockouts: 0, keys: 0, blackout: false, sandbox: false, qrf: 0, qrfAt: -1 } });
+const newMission = (t0: number): Mission => ({ stage: 'infiltrate', t0, driveT: -1, pulled: false, alarmOn: false, sweepAt: -1, spottedT: -100, downCardAt: -1, handsOn: false, stats: { elapsed: 0, alerts: 0, spotted: 0, bodies: 0, shots: 0, kills: 0, knockouts: 0, keys: 0, blackout: false, sandbox: false, qrf: 0, qrfAt: -1 } });
 
 /** the ragdoll particles a door leaf feels (Game.updateDoors): enough of the body that a leaf cannot close through it */
 export const BODY_DOOR_PARTICLES = [RAG.pelvis, RAG.spine, RAG.head, RAG.kneeL, RAG.kneeR, RAG.ankL, RAG.ankR];   // (how many of them there are is in the arithmetic of what a doors' step is handed: levelfit.ts handOverMost)
 
 // ---------------------------------------------------------------- player
 /** the query tables the world is asked aside with (Game.aside): scratch of the host's, in no snapshot */
-class AsideOwn extends HostOwned { s?: object; q?: object; w?: object; lens?: FollowCamera }
+export class AsideOwn extends HostOwned { s?: object; q?: object; w?: object; lens?: FollowCamera }
 export class Player extends PlayerCols {
   char: Character;
   crouch = false; aimHeld = false; lastFireT = -10; fireCd = 0; backpedal = false; sprinting = false; /** Shift held in a crouch this frame (player.ts CROUCHRUN): the fast crouch walk — set where `sprinting` is, false wherever that is not reached */ dash = false;
@@ -916,6 +918,10 @@ export class Game {
   /** the night storm (weather.ts, E10): rain outdoors, lightning through the windows, thunder, the wet lot — on by default (?noweather boots it off; Tab ▸ Weather;
    *  window.__weather) */
   weather: Weather;
+  /** what this game was stood with (stood.ts), set once at the stand: the rules read this, never the module tables it was picked from */
+  stood: StoodWith;
+  /** THE SOLO NIGHT'S CARD (kit.ts kitSolo): your own kit on the plain night's player and on every fresh one */
+  soloCard = false;
   fxSeed = 1;               // counting seed for the seeded effects: every shot / can differs, a replayed session repeats
   audio: GameAudioLike = nullAudio;
   ocpCooldown = 0; lastStingT = -100; eventSeq = 0;
@@ -975,8 +981,10 @@ export class Game {
   lesson!: Lesson;
   /** a tutorial mission's frame over the lesson (rails.ts): locked actions, cues to the level's script, authored checkpoints, the sky seat; inert on a level without a lesson.rails record */
   rails!: Rails;
-  /** a room clear against a clock (par.ts): reads the game, writes nothing of it; inert on a level without a scenarios.par block */
+  /** a room clear against a clock: the Rust game's record, written by the bridge (par.ts is how the page reads it); blank on a level without a scenarios.par block */
   par!: Par;
+  /** the squad's men lost, as the squad knows them: the game's record (rust/game_rules/src/deathrecap), read by the HUD */
+  recap: { lostLive: LostMan[]; allDown: boolean } = { lostLive: [], allDown: false };
   /** how the run went, said once it is over (verdict.ts): reads only — the end card's record */
   verdict!: Verdict;
   /** the man a snatch level's team must take alive (snatch.ts): inert without the level's scenarios.snatch block */
@@ -1059,7 +1067,8 @@ export class Game {
     // in view before the floor goes up a step; deviceCones = each live camera throws a faint red cone into the haze (a light slot apiece)
     ...DEVICE_TUNE_DEFAULTS };
 
-  constructor(public engine: HostApi, public level: Level, public ch: GltfCharacter, public smoke: SmokeSystemLike, opts: { seats?: number } = {}) { RUST_SURFACE?.newGame();
+  constructor(public engine: HostApi, public level: Level, public ch: GltfCharacter, public smoke: SmokeSystemLike, opts: { seats?: number; stood?: StoodWith } = {}) { RUST_SURFACE?.newGame();
+    this.stood = { ...(opts.stood ?? stoodOfPick()) };   // (its own copy. First: the Weather made below is born in it)
     { const over = levelOver(level); if (over) throw new Error(over); }   // (levelfit.ts: a level the pools cannot hold is not loaded, said before anything of it is built)
     this.seats = seatsStand(this, opts.seats ?? 1); this.localSeat = this.seats[0];   // (seats.ts: before anything is built over a seat's view; one seat = the Game is its own seat's view and nothing below differs)
     const first = this.seats[0].view;   // (the first seat's view: this Game, in a game of one)
@@ -1078,7 +1087,7 @@ export class Game {
     loadBodyLight(this.tune);   // …and the bodies-by-light switch with its bar (guards.ts)
     // (the FN2000 is always in the kit now — no per-machine loadout memory; Game.fn2000 / setLoadout stay for the harness)
     this.col = new StaticCollision(level.boxes, levelNameOf(level));
-    if (engine.gbuffer?.setWearMap) { const wm = buildWearMap(level, this.col.nav, lookConfig.on && lookConfig.longFoot > 0, lookConfig.on && lookConfig.walked > 0); engine.gbuffer.setWearMap(wm.data, wm.w, wm.h); }   // the detail layer's traffic map (render/wear.ts: the routes over the nav grid + the thresholds, the walls' feet) — the harness's engine stand-in has no g-buffer to hand it to
+    if (engine.gbuffer?.setWearMap) { const wm = buildWearMap(level, this.col.nav, lookConfig.longFoot > 0, lookConfig.walked > 0); engine.gbuffer.setWearMap(wm.data, wm.w, wm.h); }   // the detail layer's traffic map (render/wear.ts: the routes over the nav grid + the thresholds, the walls' feet) — the harness's engine stand-in has no g-buffer to hand it to
     this.syncSnowLook();   // a snow level's lying snow as one surface (render/snowField.ts; picture only — nothing below reads it)
     this.chars = new CharacterRenderer(engine.device, ch);
     engine.skin = this.chars;
@@ -1475,9 +1484,12 @@ export class Game {
     this.director?.injectInput(input);   // a showcase beat's synthetic key / click from LAST frame's tick (director.ts c.press / c.click) becomes this frame's input, ahead of everybody who reads it — a return on its first line otherwise
     this.hostBefore(input);
     this.cmdBuf = sampleCmd(me.view, input, cam, canvas, this.cmdBuf);
-    if (this.seats.length === 1) this.step(dt, this.cmdBuf); else this.stepSeats(dt, this.seats.map(s => s === this.localSeat ? this.cmdBuf! : s.handed(this.cmdBuf!)));
+    const cmds: readonly PlayerCmd[] = this.seats.length === 1 ? (this.stepBuf[0] = this.cmdBuf, this.stepBuf) : this.seats.map(s => s === this.localSeat ? this.cmdBuf! : s.handed(this.cmdBuf!));
+    this.replayTap?.(dt, cmds[0]);   // the replay buffer's run tape (runtape.ts): this step's dt and the first seat's record, before anything of it has run — reads only
+    this.stepSeats(dt, cmds);
     this.hostAfter(input, cam, canvas);
     this.journal.frameEnd();     // the session journal closes the frame (the sensors' reads folded in, a digest on the beat): after everything, so a digest is the whole settled frame
+    this.replayTap?.(dt);        // the replay buffer (replaybuf.ts): the settled frame read into its ring — reads only, after the journal has closed the frame
   }
   /** THE HOST'S HALF OF A TICK, round the step — `update`'s own lines, named for a host that steps the game by records it did not sample itself (a networked
    *  page: net/page.ts). Before: what the host's INPUT is told. After: what the tick hands back for the camera of the seat this host shows (`hostSeat`), and
@@ -1524,7 +1536,7 @@ export class Game {
   /** men moving through smoke push it */
   private smokeWake(all: Character[]) {
     // characters wading through smoke push it around
-    const stir = lookConfig.on ? Math.max(0, lookConfig.stir) : 0;   // (THE LOOK PROTOTYPE's Stirred smoke row; 0 = the two soft shoves below, as the build has them)
+    const stir = Math.max(0, lookConfig.stir);   // (THE LOOK PROTOTYPE's Stirred smoke row; 0 = the two soft shoves below, as the build has them)
     this.smoke.setStir?.(stir);
     for (const c of all) {
       const sp = Math.hypot(c.vel[0], c.vel[2]); if (sp < 0.25 || !c.bones.hips) continue;
@@ -1662,8 +1674,22 @@ export class Game {
 
 
 
-  objectivePos() : Vec3 | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Game.objectivePos', this, []); if (__r !== RUST_PASS) return __r as any; } } return objectivePos(this); }
-  objectiveText() : string { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Game.objectiveText', this, []); if (__r !== RUST_PASS) return __r as any; } } return objectiveText(this); }
+  /** WHAT THE HUD IS TOLD (src/view/seatview.ts): the Rust game's own answer, handed over by the host that steps this game. A read */
+  get view(): TickView { return this.viewAsk?.() ?? NO_VIEW; }
+  /** the host's: asks the Rust game for its view (src/host/rustgame.ts in a page, tools/blitz/rust-host.ts in bun) */
+  viewAsk: (() => TickView) | null = null;
+  /** THE BOX WORLD, ASKED (src/view/worldask.ts) by whoever draws, hears or points: the Rust game's answer where one steps this game (the host sets `askHost`), and
+   *  this page's own copy of the level where none does (a workbench's floor, the moment before the first start) */
+  readonly ask: WorldAsk = {
+    blocked: (a, b) => this.askHost ? this.askHost.blocked(a, b) : this.col.segmentBlocked(a, b),
+    solid: (a, b) => this.askHost ? this.askHost.solid(a, b) : this.col.solidBlocked(a, b),
+    ray: (o, d, max) => this.askHost ? this.askHost.ray(o, d, max) : this.col.raycast(o, d, max),
+    hear: (from, to) => this.askHost ? this.askHost.hear(from, to) : this.col.sound.propagate(from, to),
+    together: f => this.askHost ? f() : this.col.window(f),
+  };
+  askHost: WorldAsk | null = null;
+  objectivePos(): Vec3 | null { return this.view.mission?.pos ?? null; }
+  objectiveText(): string { return this.view.mission?.text ?? ''; }
 
 }
 

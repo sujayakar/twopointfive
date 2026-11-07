@@ -111,9 +111,9 @@ pub fn snatch_round_on(g: &mut crate::game::Game, gd: GuardId, shooter: Option<G
 }
 
 /// The team's living characters: Sam and every operative unit that is up. (snatch.ts Snatch.teamOf)
-pub fn snatch_team_of(g: &crate::game::Game) -> Vec<crate::snatch::SnatchTeamOfItem> {
+pub fn snatch_team_of(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<crate::snatch::SnatchTeamOfItem> {
     let mut out = Vec::new();
-    let p = g.player;
+    let p = seat.player;
     if !g.pl[p].down { out.push(SnatchTeamOfItem { c: g.pl[p].ch, gd: None }); }
     for &gd in &g.guards {
         let man = &g.gd[gd];
@@ -264,7 +264,7 @@ pub fn snatch_tick(g: &mut crate::game::Game, dt: f64) {
     let mut near: Option<CharId> = None;
     let mut near_d = f64::INFINITY;
     let mut in_sight: Vec<(CharId, f64)> = Vec::new();
-    for item in snatch_team_of(g) {
+    for item in snatch_team_of(g, &crate::seats::here(g)) {
         let (m, mate) = (item.c, item.gd);
         let d = v3::dist_xz(g.ch[m].pos, g.ch[c].pos);
         if d <= g.k.snatch.see_m && d < near_d {
@@ -420,8 +420,8 @@ pub fn snatch_lose(g: &mut crate::game::Game, how: crate::snatch::SnatchLoseHow,
     crate::game::game_msg(g, &format!("MISSION FAILED — {}. press Enter to restart", why));
 }
 
-/// His line and marker while he is loose or it is over; None = the room clear's own. (snatch.ts Snatch.objective)
-pub fn snatch_objective(g: &mut crate::game::Game) -> Option<crate::snatch::SnatchObjective> {
+/// His line and marker while he is loose or it is over; None = the room clear's own.
+pub fn snatch_objective(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<crate::snatch::SnatchObjective> {
     let man = g.snatch.man;
     if !snatch_active(g) { return None; }
     let gd = man?;
@@ -437,7 +437,7 @@ pub fn snatch_objective(g: &mut crate::game::Game) -> Option<crate::snatch::Snat
     }
     if g.room_clear.end == Some(crate::roomclear::RoomClearEnd::Wiped) { return None; }
     if snatch_in_hand(g) {
-        return crate::snatchout::snatch_out_objective(g).map(|o| SnatchObjective { text: o.text, pos: o.pos });
+        return crate::snatchout::snatch_out_objective(g, seat).map(|o| SnatchObjective { text: o.text, pos: o.pos });
     }
     if g.snatch.hands_up {
         return Some(SnatchObjective {

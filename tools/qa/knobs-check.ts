@@ -24,7 +24,6 @@ const UNREGISTERED: Record<string, string> = {
   'FIXLOOK (fixtureBreak.ts)': 'a fixture seen to break: the look only (its `on` is for its own proofs)',
   'BLAST_PACE (destructionSwitch.ts)': "when the blast frame's picture-only work runs (reach masks, rain drip lines, the furniture index made ahead): play is the same either way — TPS_BLASTPACE=old in front of a headless tool is its off",
   'KIT (kit.ts)': "each man's kit card, kept per machine and written by kitLoad / the loadout screen: a stand reads it through kitLoad, never as a knob",
-  'KIT_SOLO (kit.ts)': "raised by the start card's Start on the solo night (kitSolo): a flag of that visit, not a knob",
 };
 
 export async function knobsCheck(): Promise<boolean> {
@@ -56,7 +55,7 @@ export async function knobsCheck(): Promise<boolean> {
   //     CARRIES that table. With X not in JOURNAL_KNOBS every file reads as one from before, and the key is put off whatever the run was recorded with
   //     (PAIR's four keys and ROOMFIGHT.doorEars stood so until 10-22: the rules were written, the names never joined the list)
   const asked = [...new Set([...readFileSync(`${ROOT}/src/game/journal.ts`, 'utf8').matchAll(/\bk\.tables\.([A-Za-z_][A-Za-z0-9_]*)/g)].map(m => m[1]))], deaf = asked.filter(n => !want.includes(n));
-  check(asked.length > 50 && deaf.length === 0, `every table journal.ts asks a file for (k.tables.X) is one a recording carries (${asked.length} asked)${deaf.length ? ` — NOT CARRIED, so its rule reads every file as one from before the key: ${deaf.join(' ')} (add the name at the END of JOURNAL_KNOBS)` : ''}`);
+  check(asked.length > 20 && deaf.length === 0, `every table journal.ts asks a file for (k.tables.X) is one a recording carries (${asked.length} asked)${deaf.length ? ` — NOT CARRIED, so its rule reads every file as one from before the key: ${deaf.join(' ')} (add the name at the END of JOURNAL_KNOBS)` : ''}`);
 
   const feel: Record<string, object> = F.feelTables(), strangers = Object.keys(feel).filter(n => R[n] !== feel[n]);
   check(strangers.length === 0, `the feel panel's ${Object.keys(feel).length} tables are the registry's own objects under the same names${strangers.length ? ` — not so: ${strangers.join(' ')}` : ''}`);

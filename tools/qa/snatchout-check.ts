@@ -14,6 +14,8 @@ import { resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
 
 type Vec3 = [number, number, number];
+/** the man's own row on the Rust game's record of the mission's line (in hand or loose, the word is 'snatch') */
+const rowOf = (g: any, of: string) => g.view.mission?.of === of ? g.view.mission : null;
 export async function snatchoutCheck(): Promise<boolean> {
   const { standUp, ROOT } = await import('./headless.ts');
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`), { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
@@ -74,14 +76,14 @@ export async function snatchoutCheck(): Promise<boolean> {
       line(!!N.van && bad.length === 0 && flat(V, g.roomClear.startAt ?? g.level.playerSpawn) < 6, `the block names ${N.van?.name ?? '(no van)'} at ${at(V)}, ${flat(V, g.roomClear.startAt ?? g.level.playerSpawn).toFixed(1)} m from where the team starts, on floor with a walk from his room${bad.length ? ` — ${bad.join(' · ')}` : ''}`);
       const tied = await A.take(); await A.step(0.3);
       line(tied && !S.end && A.hostiles().length === 2 && !g.roomClear.end, `tied with ${A.hostiles().length} of theirs still up: not the end (end ${S.end}, the room clear ${g.roomClear.end ?? 'running'})`);
-      const o1 = S.objective();
+      const o1 = rowOf(g, 'snatch');
       line(!!o1 && /^objective ▸ get .* to the van$/.test(o1.text) && !!o1.pos && flat(o1.pos, S.man.char.pos) < 0.5, `the objective row: "${o1?.text ?? ''}", its marker on him`);
       const rows = () => (g.nearby ?? []).filter((r: any) => r.guard === S.man && r.verb).map((r: any) => r.verb);
       const p = S.man.char.pos; g.teleportPlayer([p[0] - 1.2, 0, p[2] + 0.2]); await A.step(0.3);
       const r1 = rows();
       line(r1.includes('lead') && !r1.includes('grab') && X.owns(S.man), `Sam beside him: the row is the word (${r1.join(', ') || 'no row'}), not the arm`);
       await A.tap(); const said = X.lead === g.player.char; await A.step(0.3);
-      const o2 = S.objective(), r2 = rows();
+      const o2 = rowOf(g, 'snatch'), r2 = rows();
       line(said && X.lead === g.player.char && !!o2?.pos && flat(o2.pos, V) < 0.1 && r2.includes('stay'), `Space on the row: he is led, the marker goes to the van ${at(o2?.pos ?? [0, 0, 0])}, the row now reads '${r2.join(', ')}'`);
       const p0 = [...S.man.char.pos]; await A.walk(p0[0] > 22 ? [20.4, 0, 10.6] : [24.6, 0, 10.9], () => false, 2.0, 4); await A.step(1.5);   // (across his own room's open floor: clear of every door's sweep)
       const followed = flat(S.man.char.pos, p0) > 1.5 && flat(S.man.char.pos, g.player.char.pos) < 3.2;
@@ -104,7 +106,7 @@ export async function snatchoutCheck(): Promise<boolean> {
     }
     // ---- 3 · the house taken with him tied is not the end; a round that kills him on the way loses it
     { const A = await stage(), { g, S, X, N } = A; await A.thin(1); await A.take(); await A.thin(0); await A.step(0.5);
-      line(g.roomClear.end === 'taken' && !S.end && S.owes && /van/.test(S.objective()?.text ?? ''), `the house taken (${g.roomClear.end}) with him tied: not the end (end ${S.end}); the row still reads "${S.objective()?.text ?? ''}"`);
+      line(g.roomClear.end === 'taken' && !S.end && S.owes && /van/.test(rowOf(g, 'snatch')?.text ?? ''), `the house taken (${g.roomClear.end}) with him tied: not the end (end ${S.end}); the row still reads "${rowOf(g, 'snatch')?.text ?? ''}"`);
       X.word(g.player.char); await A.step(0.5);
       const p = S.man.char.pos; g.teleportPlayer([p[0] - 2.4, 0, p[2]]); await A.step(0.2);
       await quiet(() => { for (let i = 0; i < 8 && S.man.state !== 'dead'; i++) { const ch = S.man.char.bones.chest ?? [p[0], 1.1, p[2]]; fireWeapon(g, g.player.char, ch, true); for (let k = 0; k < 14; k++) A.W.step(1 / 60); } });
@@ -199,7 +201,7 @@ export async function snatchoutCheck(): Promise<boolean> {
     { const A = await stage(), { g, S, X } = A; await A.thin(2); await A.take();
       const p = S.man.char.pos; g.teleportPlayer([p[0] - 1.2, 0, p[2] + 0.2]); await A.step(0.3);
       const rows = (g.nearby ?? []).filter((r: any) => r.guard === S.man && r.verb).map((r: any) => r.verb);
-      line(S.tied && !X.ruled && !X.word(g.player.char) && !rows.includes('lead') && S.objective() === null, `…no word to give (his rows: ${rows.join(', ') || 'none'}), no row of his once he is in hand`);
+      line(S.tied && !X.ruled && !X.word(g.player.char) && !rows.includes('lead') && !!g.view.mission && g.view.mission.of !== 'snatch', `…no word to give (his rows: ${rows.join(', ') || 'none'}), no row of his once he is in hand`);
       await A.thin(0); const won = await A.step(1, () => S.end === 'won');
       line(won && /taken alive/.test(S.why), `…and the house taken with him tied wins it, as it did: ${S.end} — ${S.why}`);
     }

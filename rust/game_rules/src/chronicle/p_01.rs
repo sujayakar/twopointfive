@@ -205,7 +205,7 @@ fn man_pos(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
 // ------------------------------------------------------------ rooms
 
 /// The room a floor point is in, by name; outside the building the side of it.   (chronicle.ts roomOf)
-pub fn room_of(g: &mut crate::game::Game, p: V3) -> String {
+pub fn room_of(g: &crate::game::Game, p: V3) -> String {
     if !crate::dialogue::is_office(g) {
         return match crate::dialogue::own_place(g, p) {
             Some(w) => without_the(&w.rect.name),
@@ -271,7 +271,7 @@ pub fn now_of(g: &crate::game::Game) -> f64 { g.mission.stats.elapsed }
 
 /// The first player's feet.   (chronicle.ts posOf)
 pub fn pos_of(g: &mut crate::game::Game) -> V3 {
-    let man = crate::seats::man_here(g);
+    let man = crate::seats::man_here(g, &crate::seats::here(g));
     g.ch[g.pl[man].ch].pos
 }
 
@@ -551,7 +551,7 @@ pub fn chron_down(g: &mut crate::game::Game, gd: GuardId, how: crate::game::Down
         } else if l.ends_with("at the charge when it went") {
             String::from("a wall charge")
         } else {
-            let man = crate::seats::man_here(g);
+            let man = crate::seats::man_here(g, &crate::seats::here(g));
             match crate::game::player_gun_in_hand(g, man) {
                 Some(gun) => {
                     crate::gear::plain_short(g.m.weapons.weapons.get(g.fa[gun].def).unwrap())
@@ -621,7 +621,7 @@ pub fn chron_checkpoint(g: &mut crate::game::Game, what: crate::chronicle::Chron
 // ------------------------------------------------------------ reading
 
 /// Everything the card and the score read, in one flat record.   (chronicle.ts runCounts)
-pub fn run_counts(g: &crate::game::Game) -> crate::chronicle::RunCounts {
+pub fn run_counts(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> crate::chronicle::RunCounts {
     use crate::game::MissionStage;
     let st = g.mission.stage;
     let s = &g.mission.stats;
@@ -636,7 +636,7 @@ pub fn run_counts(g: &crate::game::Game) -> crate::chronicle::RunCounts {
         seen: s.spotted, seen_up: n.seen_up, alarms: s.alerts, esc1: n.esc1, esc2: n.esc2, bodies: s.bodies,
         kills: s.kills, kos: s.knockouts, shots: s.shots, shots_near_men: n.shots_near_men, lights_shot: n.lights_shot, ocps: n.ocps,
         kicked: n.kicked, picked: n.picked, keys: s.keys, intel: n.intel, questioned: c.questioned.len() as f64, roster,
-        hits: n.hits, down: n.down || (g.pl[g.player].down && st != MissionStage::Done), loads: n.loads, thrown: n.thrown, grabs: n.grabs, dropped: c.dropped, devices: n.devices,
+        hits: n.hits, down: n.down || (g.pl[seat.player].down && st != MissionStage::Done), loads: n.loads, thrown: n.thrown, grabs: n.grabs, dropped: c.dropped, devices: n.devices,
         civ_seen: n.civ_seen, civ_reported: n.civ_reported, civ_complied: n.civ_complied, civ_ko: n.civ_ko, civ_killed: n.civ_killed,
     }
 }
@@ -729,8 +729,8 @@ pub fn fmt_mmss(sec: f64) -> String {
 }
 
 /// The whole debrief in one record. mission.ts reads its `grade` for the end line.   (chronicle.ts debriefOf)
-pub fn debrief_of(g: &crate::game::Game) -> crate::chronicle::Debrief {
-    let counts = run_counts(g);
+pub fn debrief_of(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> crate::chronicle::Debrief {
+    let counts = run_counts(g, seat);
     let StealthScore { score, lines } = stealth_score(g, &counts);
     let r = rating_of(score);
     let badges = badges_of(g, &counts);

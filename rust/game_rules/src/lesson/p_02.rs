@@ -60,13 +60,13 @@ pub fn lesson_tick(g: &mut crate::game::Game, dt: f64) {
         g.stats.lesson.started += 1;
         lesson_note(g, &format!("lesson '{}': {} steps", l.title, l.steps.len()));
     }
-    if g.lesson.i >= l.steps.len() as f64 || g.mission.stage == crate::game::MissionStage::Failed || who_down(g) {
+    if g.lesson.i >= l.steps.len() as f64 || g.mission.stage == crate::game::MissionStage::Failed || who_down(g, &crate::seats::here(g)) {
         return;
     }
     // The row is lent out of `g.lesson.seen` while `g` is passed along beside it; nothing it calls reads `seen` (private in the TypeScript, read by `settling` only).
     let mut s = match g.lesson.seen.take() {
         Some(s) => s,
-        None => lesson_fresh(g, Some(1e-6)),
+        None => lesson_fresh(g, &crate::seats::here(g), Some(1e-6)),
     };
     if s.done_t.is_some() && s.done_i != Some(g.lesson.i) {
         s.done_t = None;
@@ -111,7 +111,7 @@ pub fn lesson_advance(g: &mut crate::game::Game, l: &crate::scene_scenarios::Les
     let now = g.time;
     g.lesson.done_at.set(t.id.clone(), now);
     g.lesson.i += 1.0;
-    g.lesson.seen = Some(lesson_fresh(g, None));
+    g.lesson.seen = Some(lesson_fresh(g, &crate::seats::here(g), None));
     g.stats.lesson.steps += 1;
     let (i, len) = (g.lesson.i, l.steps.len() as f64);
     lesson_note(g, &format!("done {}/{} '{}'", i as usize, l.steps.len(), t.id));
@@ -127,12 +127,12 @@ pub fn lesson_advance(g: &mut crate::game::Game, l: &crate::scene_scenarios::Les
 }
 
 /// What a step that has just come up has seen: nothing, counted from now.   (lesson.ts Lesson.fresh)
-pub fn lesson_fresh(g: &crate::game::Game, back: Option<f64>) -> crate::lesson::StepSeen {
+pub fn lesson_fresh(g: &crate::game::Game, seat: &crate::seats::SeatRef, back: Option<f64>) -> crate::lesson::StepSeen {
     let back = back.unwrap_or(0.0);
     let ev = g.chronicle.events.len() as f64;
-    let last_order = g.orders.log.last().map(|r| r.serial);
+    let last_order = seat.orders.log.last().map(|r| r.serial);
     let last_pair = g.m.pairorders.pair_log.last().map(|r| r.serial);
-    let cam = g.tab.cmd_seat[g.seat].cam;
+    let cam = g.tab.cmd_seat[seat.id].cam;
     let (yaw, dist) = (g.tab.camera[cam].yaw, g.tab.camera[cam].distance);
     crate::lesson::StepSeen {
         t0: g.time - back,
@@ -173,7 +173,7 @@ pub fn lesson_count(g: &mut crate::game::Game, s: &mut crate::lesson::StepSeen) 
         s.yaw_last = y;
     }
     if let Some(verb) = g.act.as_ref().and_then(|a| a.verb) {
-        if !who_down(g) {
+        if !who_down(g, &crate::seats::here(g)) {
             add(s, format!("act:{}", verb.as_str()));
         }
     }
@@ -199,7 +199,7 @@ pub fn lesson_count(g: &mut crate::game::Game, s: &mut crate::lesson::StepSeen) 
             s.chron += 1.0;
         }
         if s.held_at < 0.0 {
-            let p = who(g);
+            let p = who(g, &crate::seats::here(g));
             if g.pl[p].throw_held {
                 s.held_at = len;
             }
@@ -228,22 +228,22 @@ pub fn lesson_count(g: &mut crate::game::Game, s: &mut crate::lesson::StepSeen) 
 
 
 /// The run is over, whichever scenario it was.   (lesson.ts Lesson.over)
-pub fn lesson_over(g: &mut crate::game::Game) -> bool {
+pub fn lesson_over(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     let stage = g.mission.stage;
     stage == crate::game::MissionStage::Failed
         || stage == crate::game::MissionStage::Done
-        || who_down(g)
+        || who_down(g, seat)
         || (crate::roomclear::room_clear_scenario_active(g) && g.room_clear.end.is_some())
 }
 
-/// The objective while a step is up (None: the scenario's own).   (lesson.ts Lesson.objective)
-pub fn lesson_objective(g: &mut crate::game::Game) -> Option<crate::lesson::LessonObjective> {
+/// The objective while a step is up (None: the scenario's own).
+pub fn lesson_objective(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<crate::lesson::LessonObjective> {
     let l = lesson_data(g)?;
     let i = lesson_at(g);
     if i >= l.steps.len() as f64 {
         return None;
     }
-    if lesson_over(g) {
+    if lesson_over(g, seat) {
         return None;
     }
     let t = &l.steps[i as usize];
@@ -292,8 +292,8 @@ pub fn line_of(g: &crate::game::Game, t: &crate::scene_scenarios::LessonStep) ->
 
 
 /// The taught player is down (`who(g).down`).
-fn who_down(g: &mut Game) -> bool {
-    let p = who(g);
+fn who_down(g: &Game, seat: &crate::seats::SeatRef) -> bool {
+    let p = who(g, seat);
     g.pl[p].down
 }
 
@@ -308,7 +308,7 @@ fn filled(o: &Option<String>) -> Option<&str> {
     o.as_deref().filter(|s| !s.is_empty())
 }
 
-/// `line.replace(/\[([^\]]+)\]/g, (_m, k) => say(k))`.   (lesson.ts Lesson.objective)
+/// `line.replace(/\[([^\]]+)\]/g, (_m, k) => say(k))`.
 fn keys_plain(line: &str, say: &mut dyn FnMut(&str) -> String) -> String {
     let mut out = String::new();
     let mut rest = line;

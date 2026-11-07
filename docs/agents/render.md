@@ -175,6 +175,60 @@ row on his machine is the answer, and the word puts the count back on any machin
   (a moved frame on the plain program until the twin landed) is gone with `restirMReady`. `shaderrows-check` holds that a moved frame runs the one program
   with its taps packed. Boot texts 115 to 113; both compile in Chromium's compiler with no warning. **NOT MEASURED: what the untaken branches cost a still
   frame on a real GPU** (the old twin run at rest measured +0.2 ms of direct at High on the M4 Max, most of it the flow this writing skips). **Never seen on a GPU.**
+- **ONE FOG MARCH ON EVERY TIER (2026-11-07; the maintainer's pick on a card, "Per-pixel, two lights a step", from stills of both ways and the cloud
+  card's numbers).** WHAT IT WAS: high marched haze and smoke per pixel (`volumetrics.wgsl`, its "classic" march). Medium, low and very low lit the
+  haze through a camera-frustum froxel grid (`render/froxels.ts`, `shaders/froxel.wgsl`: five kernels, three volumes and the smoke's own) and marched
+  the smoke with a second march lit from that grid (`smokeMarchJ`, in a twin program `volFroxel`); SMOKE KEEP (`settings.smokeKeep`, `withSmoke`)
+  chose how much of high's smoke a tier kept; a third march with no light cap (`VOL_K0`) had a twin of its own that no tier ran. A player on high and
+  one on medium saw fog made by different code, and the ladder hopped between the two in play. WHAT IT IS: ONE program, `vol`, on every tier, and a
+  tier differs by its rows alone (`ui/quality.ts` PRESETS): high as it was (half size, 20 beam steps, 4 lights a step, refresh 2, step 1.5); MEDIUM
+  AND LOW = HIGH'S MARCH WITH 2 LIGHTS A STEP; very low, the floor, its own small rows (quarter size, 8 steps, 2 lights, step 2.0).
+  GONE: `render/froxels.ts`, `shaders/froxel.wgsl`, `smokeMarchJ`, the K = 0 march and every `volK > 0` branch (the engine keeps the cap at 1 or
+  more; a settings table no preset has written, 0, is read as high's 4), `volFroxel` and `volK0`, `FrameFlags.FroxelVol` (bit 29 free), the Frame's
+  `froxelA/B/C` (THE FRAME BLOCK IS 48 BYTES SHORTER: every member after `volCfg` moved 12 words down, `FRAME_BYTES` 31168, `FRAME_HEAD_BYTES` 928;
+  `prevCam.w` and `volCfg.w` bits 8‥11 are free), the composite's binding 11 and the particles' binding 4 (the three after it renumbered), `Caps.vol`,
+  `Caps.marchLights`, `FroxelTier`, SMOKE KEEP with `?smokekeep`, `withSmoke`, `Quality.resmoke` and its Tab row, `?froxel`, `?nofroxel`, `__froxel`,
+  `__hotFroxel`, the debugger's Froxels section and 'plume: lights lit per step' row, the sweep's `froxel` and `marchLights` rows,
+  tools/qa/froxel-ab.js and froxel-scenes.js, the froxel ghost proof in rfix-proofs.ts, and the settings `smokeKeep`, `smokeMarchLights` and every
+  `froxel*`, on both sides of the wire. The smoke lab's 'lamps that light each
+  step' row moves `volLightCap` now (it moved `smokeMarchLights`, which high never read).
+  WHAT MOVES FOR A PLAYER. HIGH: nothing. Its smoke march is the same text line for line, and the haze's `volK > 0` wrappers are unwrapped with K
+  never under 1. MEDIUM AND LOW: beams and smoke are marched per pixel, as high's are, with two lights a step: a beam's edge is the pixel's own (no
+  froxel a dozen pixels wide, no fourteen frames of froxel history behind a camera cut), and a plume is lit by its two strongest lamps a step where
+  the froxel-lit march lit it by three (SMOKE KEEP's rows) over the grid's soft light. The smoke march starts at a dither fixed per texel, as high's
+  always has; the froxel-lit one started at one rotated each frame. VERY LOW: the same per-pixel march at its own rows where it had the froxel grid
+  at 64 × 24 and a plume lit by the grid alone.
+  THE COST, on the cloud's NVIDIA card (A10G, a rainy dusk with a smoke can thrown, time frozen, three seconds a row, 2026-11-07), read INSIDE ONE
+  PAGE each time, the tree before with a tier set by hand to the rows it has now. Before the pick: MEDIUM 13.22 ms a frame with the froxel grid,
+  13.70 with this (+3.6 %), 14.73 with four lights; LOW 8.86, 9.08 (+2.5 %), 10.45. After the change was written, another box and another plume,
+  two rounds: MEDIUM 13.14 and 13.23 to 13.48 and 13.52 (+2.4 %); LOW 8.73 to 8.83 (+1.2 %); VERY LOW 6.82 to 6.61 (−3 %: the per-pixel march at
+  its small rows is cheaper there than the grid was), and 6.38 with its march at half size. With no smoke in the frame medium read 12.20 to 12.62.
+  THE NEW COMMIT ON THE CARD (its own pages, six of them): no GPU error, no console line, 93 of 93 pipelines at every tier and 96 of 96 on the look
+  page, smoke in the frame at high, medium, low and very low; its boot came to its first frame in 16.8 and 16.9 s where the tree before took 22.4
+  and 24.1 (six programs fewer, the dearest among them). HIGH COSTS WHAT IT DID: with no smoke the march read 2.28 ms on the new commit against
+  2.25 on the tree before, and with a plume of the same size (the solver's own count of drawn bricks beside each read) 2.40 against 2.50, 3.07
+  against 3.03 and 4.79 against 4.52; a first pair of boxes had read 0.45 ms apart at every tier, and that was the plume, which grows differently
+  run to run (two boxes are never a read of the march's cost with smoke in it: count the bricks).
+  Lights a step is the lever: half the steps or a refresh every 4 moved a frame by under 0.2 ms, and A QUARTER-SIZE MARCH READ SLOWER than the half
+  (14.81 against 14.73 on medium, 11.18 against 10.45 on low, at four lights), which is why medium and low are not at quarter size; very low still
+  is, by its old row (half size read cheaper by 0.23 ms on one box and the same on another), and the ladder's model prices a quarter-size march
+  at × 0.375 (`FACTOR.quarter`), which that card does not bear out.
+  THE LADDER'S MODEL (`presetCost`): the march is priced per pixel on every tier (`REF.vol20` by the beam steps and the size; lights a step are not
+  priced), the froxels' fixed term is gone: medium's per-pixel part 13.5 to 14.0 model-ms and its fixed part 3.8 to 3.4, low 11.7 to 12.2 and 2.4
+  to 2.3. Where auto lands on a machine moves with that; no machine has run it.
+  THE COMPILE: six pipelines and two modules fewer (the title's boot is 35 modules and 100 pipelines), and the froxel-lit twin was the page's
+  dearest program alone (10.7 s on that card against 7.0 for the one left).
+  WHAT WENT WITH THE FROXEL-LIT MARCH AND WAS NOT CARRIED OVER (each would change which steps of HIGH's march trace a ray, so each is a picture call
+  nobody has made; the text is in git before this commit, `volumetrics.wgsl smokeMarchJ`): a start rotated each frame (`jitterS`: a still view
+  converges smooth under the resolve); `MARCH_DIR_TMAX` (a shadow ray toward the sun or the moon stops at 30 m: "the moon's whole price");
+  `MARCH_MINOR_K` (a light under 4 % of the stronger ones at a step spends no ray); `MARCH_REFRESH_W` (a shadow answer is refreshed only at steps
+  that weigh in the pixel). The first three are the likely next cut in what the march costs on every tier.
+  CHECKS: `bun run tools/qa/probes.ts ladder` (six lines of the rows in the ladder's self-test; `FOGROWS_BREAK=1` fails two);
+  `tools/qa/shaderrows-check.ts` (one program, no twin, no froxel kernel asked for; a frame with no cap said draws with the cap at 4);
+  `frame-layout.ts`; `dust-look-check.ts` and the looks probe (the one march's read of the dust); `shaderinline-check` (floors 35 and 100).
+  NOT SEEN: the software adapter draws no smoke, so the card's pages above are the only frames with smoke in them on the new path, and they were
+  read for errors and timed; the stills are in the project's files for the maintainer's eyes (fog5-night-medium-new, fog5-night-verylow-new against
+  fog5-night-verylow-base). No Mac has drawn it. Nobody has looked at medium, low or very low in motion.
 - **ONE SET OF RAY PROGRAMS (2026-11-07; the maintainer's yes on the shader survey's row for it).** The page compiled every program that traces
   boxes TWICE: the boot's without the cut rule, then a second set with it in the background after every boot, swapped in while a cut piece a ray
   could meet was alive (`render/cutSwap.ts`, "a calm room pays nothing"). There is ONE set now, with the rule in (`scenePrelude()` carries
@@ -428,7 +482,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   booted with 4 pairs at medium; low, verylow and medium applied in turn each left 4; with the setting put off and the same three applied, 3 each; back on, 4; a canister solved
   six frames at `stats.rbPairs` 4 with no GPU or page error. The `?onesolve=0` word itself was not opened on a page (one line beside `?onegrid=0`, read before the first
   preset). Never timed or seen on a GPU.
-- **The smoke keeps high's look down the ladder** (10-23; `settings.smokeKeep` 0 | 1 | 2, 1 in the page and the workbench, `?smokekeep=0|1|2`, Tab ▸ Frame 'smoke under
+- **The smoke keeps high's look down the ladder** (GONE SINCE 2026-11-07: the switch, its Tab row, `?smokekeep`, `withSmoke` and `Quality.resmoke` went with the froxel path, and medium and low carry high's march in their own rows: ONE FOG MARCH ON EVERY TIER above. `settings.smokeKeep` is unread and leaves with the Rust side's copy of the table. What follows is the rule as it was) (10-23; `settings.smokeKeep` 0 | 1 | 2, 1 in the page and the workbench, `?smokekeep=0|1|2`, Tab ▸ Frame 'smoke under
   high'). The maintainer, with auto on medium: "a ton of the smoke became very blocky … the smoke looks so sick in our game that i'd rather we keep it closer to high but
   then tradeoff other things in the frame budget". WHAT WAS BLOCKY: under high the march ran at quarter size (`lossy.volQuarter`: one march texel under 4 × 4 internal
   pixels; high's half-size march has 2 × 2), lit by fewer lights a step (medium 3 / 2, low and verylow 2 / 0 = `caps.volK` / `caps.marchLights`, high 4 / 3) and on low and
@@ -466,7 +520,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   `fullRateDomains` went with the boxes. Measure with `tools/qa/stress-scene.js` (`await import('/qa/stress-scene.js')`
   → `__stress.setup()` / `.record(n)` / `.ab(applyA, applyB)` / `.caps(on)` / `.table(r)`, serialized frames, orbiting camera) and `__hotVol(src?)` (recompile
   volumetrics.wgsl from disk — the dev server serves src/render/shaders under /qa/shader/ — and swap the pipeline in without rebooting a staged scene).
-- **Froxel volumetrics** (renderer v3 Phase 2b) — `settings.froxelVol` per tier (`quality.ts Caps.vol`: ultra / high 'classic', medium and below 'froxel'), `?nofroxel` / `?froxel` force either; `settings.smokeMarchLights`; `__froxel`, `__hotFroxel` — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
+- **Froxel volumetrics** (GONE SINCE 2026-11-07, deleted whole: ONE FOG MARCH ON EVERY TIER above, the settings too) (renderer v3 Phase 2b) — `settings.froxelVol` per tier (`quality.ts Caps.vol`: ultra / high 'classic', medium and below 'froxel'), `?nofroxel` / `?froxel` force either; `settings.smokeMarchLights`; `__froxel`, `__hotFroxel` — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
 - **Lossy options** (engine settings, default OFF in `defaultSettings`, switched ON by the presets as above; `LOSSY:` rows in the
   Tab panel for A/B; `checkerDirect` and `dimRays`, which only the old estimator read, went with it 2026-11-07): `gatherThird` / `volQuarter` (gather at 1/3, volumetrics at 1/4 res: `passes.setDivisors`, divisors
   in `frame.lossyCfg.xy`), `rcHalfRate` (`rc.halfRate`: uppers even frames, c0 + bake odd). `engine.render` mirrors the booleans every
@@ -568,7 +622,7 @@ row on his machine is the answer, and the word puts the count back on any machin
 - **The scene group's binding 11 is the fog of war's sight table, and `evalLight` asks it (10-14, `FOG.full` — `stealth.md`).** `common.wgsl`: `evalLight` =
   `evalLightRaw` (the old body) × `lightFogK` for a light whose kind word carries bit 25 / 26 (none while the rule or the fog is off: one `and` a light);
   `evalLightTrue` = the light as it is, for the game's readings (`probe.wgsl` alone). A NEW PLACE THAT WORKS A LIGHT OUT WITHOUT `evalLight` MUST MULTIPLY BY
-  `lightFogK` (today: the glints in `reflect.wgsl` ≡ `reflect_p5.wgsl`, `cards.wgsl`, `froxel.wgsl`, the march's K-beam pick) — `probes.ts fog-full` reads the
+  `lightFogK` (today: the glints in `reflect.wgsl` ≡ `reflect_p5.wgsl`, `cards.wgsl`, the march's K-beam pick) — `probes.ts fog-full` reads the
   text for these and fails on any other file calling `evalLightRaw`. `fogSeenAt` walks the grid, so the VERTEX stage uses `fogSeenBins`. The table is a 58 KB (41 KB until 10-24, when the fog took five eyes; `FOG.eyes`, `docs/agents/stealth.md`)
   uniform (the 5th of 12 a stage may bind with the composite group's) written as storage by `fogsight.wgsl` at the head of the frame, bound through a second
   scene group (`sceneBGPlain`, a zero stand-in at 11). Sampled textures: the composite stage is at 15 of 16 (13 + the smoke atlas + the smoke page — the note
@@ -951,7 +1005,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   composite 4.8, compositeS 4.6, gatherTrace 4.1, froxelInjectJ 3.9, reflect 3.4. The second and third loads of that pair read 10.3 and 7.3 s on the
   named tree and 3.7 and 3.2 s with the fold; nothing in the fold touches the programs that were built again there (the particle update, the composite),
   so that is the box's driver cache and no result of this.
-  WHY THE MARCH IS STILL TWO PROGRAMS, MEASURED (the same card, the hour after; the one-program form is a commit kept off the build, `Render: the
+  WHY THE MARCH IS STILL TWO PROGRAMS, MEASURED (OVERTAKEN THE SAME DAY: the froxel-lit march and its twin are deleted, ONE FOG MARCH ON EVERY TIER above, and the one program left is the cheaper of the two) (the same card, the hour after; the one-program form is a commit kept off the build, `Render: the
   march is one program for every tier`). With `const VOL_FROXEL_MARCH` gone and the one text compiled once, a frame taking the froxel-lit march by
   `FrameFlags.FroxelVol` alone: 107 programs and 61.4 s alone where the fold left 108 and 70.5 s (the one march 10.0 s alone). But the wait a person
   sits through first is the boot's set, and on that card it ends when the march does: `?firstframe=1`, 92 programs in 17.6 s with the two programs (the
@@ -1655,6 +1709,81 @@ row on his machine is the answer, and the word puts the count back on any machin
   pattern, its cut faces are bare. No check holds any of this. SEEN: on the software adapter only (the compound, squad of four, very low, 800×500, one seed,
   night and midday, 118 of 118 pipelines, no GPU or console error, the same two views with and without the word). Never seen on a GPU: the look at the play
   resolution, motion, shimmer under the temporal blend, the noise it adds to bounce light, and the cost (it is raster work, which no trusted timer covers).
+- **A FLOOR IS NOT STOOD OFF, AND THE BOUNCE KEEPS TO ITS ROOM (2026-11-07; the maintainer on his M4 Max, the pass at midday: "glowing near edges").** Two
+  faults of the picture, both of light taken from the room behind a wall. No switch: an estimator's own rule put right (`?look=walls:0` puts the second off).
+  (1) A WHITE LINE ALONG EVERY OUTER WALL'S FOOT. Three readers stand a point off its own face in plan before they ask where it is: the exposure by 30 cm
+  (`place_common.wgsl lookPlaceLevels`), the fog by 6 (`fogofwar.wgsl fowSeen`) and the fog's light classes by 6 (`common.wgsl fogSeenAt`). The normal is the SHADING
+  normal, and lying snow leans with its drift: at a wall's foot, at the wall, so the spot came out in the dark room and the snow took that room's gain (and,
+  with the fog drawn, an unseen hairline). All three now ask through one line, `common.wgsl standOff`: what looks up (N.y over 0.5) lies where it lies.
+  (2) LIGHT AT A ROOM'S UPPER CORNERS. The bounce's filter (`denoise.wgsl radAtrous`, the reflections' too: one text) tells surfaces apart by plane, normal and depth, and
+  an outer wall's one face runs through two rooms past the end of a partition: the brighter room's light came round the end. A texel whose place the floor plan knows
+  (`placeOf`, over `sideAt`) takes no tap of another place, nor of a texel that takes every tap (a doorway's, one the plan is silent on), which would hand
+  the far room on at the next pass. A wall's top is of neither room and is not asked.
+  NOT REACHED: a texel over 1.2 m from any other place takes every tap (a far camera or a low preset takes taps from past that); two places past a probe's reach may share a
+  number; a window's reveal and a wall's end are parted at their wall's line; the composite's 3 × 3 upsample of the bounce, the temporal clamp's 5 × 5 and the direct
+  light's filter do not ask. A FACE still steps its whole 30 cm, as before, so beside a doorway or a corner it can be answered by the far side.
+  CHECK: `wallsides-check` (11,616 points and leaning normals at three walls' feet, 913 of the far side stood off as it was, none now; 209 pairs across a
+  partition's ends, none blended, 418 of 418 within a room kept; the shaders' texts pinned); `fog-edge`'s text hash moved (its replica is handed the spot already stood off).
+  STILLS (software adapter, High, midday): 1,604 white pixels in the bounce's debug view at a wall's foot are none; the corner reads as the wall beside it (it was nearly
+  twice). Never seen on a GPU; not timed (up to nine plan reads a gather texel an iteration, only where a wall is near; the exposure reads no more than before).
+- **THE LOOK IS EVERY PAGE'S PICTURE (2026-11-07; the maintainer: "should we work on merging the new look too?", then "we can also get everything
+  merged and then try to fix forward, especially as we clean everything up and simplify the code").** Until this the look's layers drew only with a
+  `look` row on the address (the bullet below, which still says how they are made). Now there is no switch: the engine draws it on every page, with what stands on it (the walls' two sides, the men's side rows, the smoke's shorter step, the
+  stirred smoke and the fire's column, the maps made on workers). `?look=key:value` still
+  opens the page with a row's amount; `?look=plain|0|off` is still the GWOT dress's word, read from any `look` word of the address, and no longer
+  decides the picture's layers. THE OTHER WAY IS DELETED (the same day, the second commit): the prelude's `const LOOK`, its 35 branches in eleven
+  shaders, every reader of `lookConfig.on` in the page, the stub functions the g-buffer was given without it, `?look=old` (which drew the picture as it was
+  for a few hours of the build) and the pricing run's second page. The tools' page boot counts 47 distinct shader texts over its settings (one of them with the walls row
+  down) where it counted 53. `lookConfig.on` ITSELF IS GONE from both sides (the Rust
+  game had never heard it, so from the day it played the page a fire had no hot air and a bullet's wake through smoke was the soft dots).
+  The lines tagged `THE LOOK'S OWN LINE` are passed over by `snowglow-check` and `snowsparkle-check`; many comments
+  still say "on the look page" of what is on every page.
+  THE PICTURE ONLY. The look's own page did more than draw, and each of those things changes what the page's game PLAYS, which a co-op server, a
+  headless run and every check do not have. They stay with THE LOOK LAB (`scene/look.ts lookLabOn` → `LOOK_LAB.on`, read once at boot): a page
+  that asks for the look BY NAME, exactly the pages that were the look's before (`/look`, `/smokelab`, `?look`, `?look=key:value`, a one-file
+  build's tag). The lab's alone: the debugger opened on the look's rows (`buildLookPanel`'s `open`; on every other page the rows are a system of the
+  debugger, shut until asked for, and the Team & kit picture's window builds none), the kit and the fog put down (`?lookkit=0`), the two trials that
+  rewrite the level as it loads (`geo`: a bite out of a yard wall's top, the kit's octagons as prisms; `lorry`), the hills that rays see (`hills`,
+  below), the seated posts (`seatPosts`,
+  4 mm; `?seat=0`) and a snow level's broken cloud (`LOOK_SNOW_COVER`: the weather's own number, read by the light the men see by). So the lab is as
+  it was, to the word, and the game's own page plays the level as its file has it. With `geo` off a round thing is the build's own
+  (`scene/round.ts`, its GPU half compiled in: `roundConfig.gpu`): the look with that half in is a set of programs the look's page with `geo` on
+  never compiled. WHERE THE LAB'S THINGS BELONG, if they are wanted on every page: a bite, a lorry and a seated post in the level's file, the
+  snow's cloud in the weather's preset. NOT MENDED: without `seatPosts` a post built in a wall's end shares a plane with it and the two faces
+  flicker under the look (the maintainer saw it on a GPU on 10-25, on the look's page before the mend); `tools/qa/zfight-check.ts` lists the
+  pairs in a level file.
+  `hills` WAS ON EVERY PAGE FOR ONE STEP OF THE BUILD AND PARTED CO-OP (step 1906, the same day; mended the step after). The first cut kept it with
+  the picture as "the picture's alone". It is not: `groundRayConfig.on` is read by the game's own box world (`scene/boxes.ts groundOn`, in the Rust
+  game `scene_boxes ground_on`: the rays a sight line and the cursor's point use then meet the ground field) and `game/game.ts` builds the snow
+  field with its roll. A game server stands with no look, so a page had `on: true` beside its server's `false`: co-op's wider word (the parts of
+  the whole game's state a page and a server agree on, `src/net/agreed.ts`, part `m.scene_ground_field`) held on 0 of 282 word ticks with one seat
+  where the step before held 257 of 257. The alarm's narrow word did not part, the office being flat; on a snow level the two would have played
+  different ground. THE RULE THIS TEACHES: before a switch is called the picture's, look for its readers under `src/scene`, `src/game` and
+  `rust/`, and run `PORT=<dev server> node tools/qa/mpclient-page.cjs`: its `wider word` line is the check that a page's game is its server's.
+  If rays should see the hills on every page, that is a rule of the game with its own registered switch, laid on every machine from the recipe.
+  No `FROZEN_HOLDS` row, no knob table, no journal key. THE TOOLS' PAGE BOOT (`tools/qa/pageboot.ts`): its settings are `title` (the page as it opens), `snow` and `smokelab`.
+  CHECKS: `bench-check` (a run with no look word carries the
+  picture's trial and nothing of the lab's; the kit, the panel and the notes are pinned in `main.ts`'s text), `pricerun-check`, `smokelook-check`,
+  `stuff-check`, `kept-check`; both typechecks. No break word: there is no off side.
+  THE DELETION HELD TO THE COMMIT BEFORE IT: `tools/qa/draw-equal.cjs` (software adapter, High), the office at night and the squad's cast, drawn frames 2
+  and 4, 4 of 4 captures EQUAL, and again on the tree that was sent with the rain at dusk beside them, 6 of 6; `tools/qa/wgsl-compile.cjs`, every boot text compiles with no warning; `thrice` and night-breach seed 1 the same; co-op's wider word on
+  732 of 732 word ticks (one seat). Not drawn: a fire, smoke, a tape played back. Never seen on a GPU.
+  THE FIRST COMMIT, WHEN BOTH WAYS STOOD:
+  READ ON THE SOFTWARE ADAPTER (headless Chromium 153, 640 by 360, High, the office at night; the merge's `pagedraw.cjs`, two frames drawn and read
+  back): the page with no word draws and keeps its device (158,323 and 159,234 of 230,400 pixels lit), `?look=old` draws the old picture (146,060
+  and 149,491); these two on the tree before the lab was parted from the picture, the page's source otherwise this commit's. On this commit
+  as first cut (on 4b4400a2; it was cut again on 305baa5e, 49 commits on, with one neighbouring line of `main.ts` taken from that head, and
+  there the reads at ready, the typechecks, the checks above and the gate's two reads were run again and say the same; the pixels were not):
+  THE PAGE WITH NO WORD IS, PIXEL FOR PIXEL, the named head's look page with the lab's things put off by their words
+  (`?look&geo=0&lorry=0&lookkit=0&seat=0` on 34cdbcbd): `tools/qa/draw-equal.cjs`, the office at night and the depot's room clear with four at
+  midday, drawn frames 2 and 4, 4 of 4 captures EQUAL (both sides "not clean" alike on the office: two of three torches in frame). And read at
+  ready on the depot's room clear with four: no word = the look, `geo` and `lorry` off (and `hills` on, in that first cut), the debugger shut, the ammunition row down, the
+  fog up, 802 boxes; `&look` = the lab as it was (`geo` on, the debugger open on the look's rows, the ammunition row up, the fog down, 821 boxes,
+  one post seated); `&look=old` = no look, 802 boxes. No console error on any. The gate's own reads on this tree: `thrice` 93c2d1a7, and
+  night-breach seed 1 the named head's file byte for byte.
+  NEVER SEEN ON A GPU as this commit. The look itself was drawn on the cloud's NVIDIA card as the look's page many times and on the maintainer's
+  Mac on earlier builds; the look with the round things' GPU half compiled in was drawn there only as "the look, its trials off" on 11-04, on an
+  older tree. NOT MEASURED HERE: what the look costs a frame (the bar: `rebuild/look-join/bar.md` in the project's files) and a load.
 - **THE LOOK PROTOTYPE** (`?look` at boot, or the page `/look` = the game's page with `look` on the pass at night unless the link names its own `levelFile`; `?look=relief:1.4,air:2` opens it with those
   amounts, each held to 0‥4, and `?look=plain|0|off` stays the GWOT dress's word and does not raise it; `render/frame.ts lookConfig`,
   `shaders/look.wgsl`, `render/lookTex.ts`, the panel `ui/lookpanel.ts`; OFF on every other page). A place to find out how far materials carry a world of boxes,
@@ -2171,7 +2300,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   foot, a wall's top) had no place and took its level from the cache at the pixel: it now takes the place on its own side of the wall's line (`sideOut`, up to four
   cells out), under the row above.
 - **STONES GATHER ALONG A LONG FACE, NOT ROUND A THING PUT DOWN** (11-04, in place of 11-03's shelter rule; `render/wear.ts buildWearMap(level, nav, longFoot)`,
-  `faceRuns`, `bandByFaces`). THE SWITCH: on the look's page only (`game.ts` asks for it when `lookConfig.on`), and `?longfoot=0` there is the band as every
+  `faceRuns`, `bandByFaces`). THE SWITCH: on, and `?longfoot=0` is the band as every
   other page has it. Every other page has the traffic map's wall channel byte for byte as it always was (`bandByOccupancy`, the old code whole; checked
   against the old file on all 58 level files, and `probes.ts materials-wear` holds its sum on the office), so `detail.wgsl`'s grime band in the build does
   not move. The maintainer, 11-03 on the smoke lab's shed with the look on: "circles on ground near table legs are weird"; his 11-04 shots of a dressed yard
@@ -3493,7 +3622,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   already that fast is left alone, nothing is slowed or turned, and a second round down the same line adds nothing while the first's jet stands. `wake.push` 4
   = how flat the jet's top is (full speed out to 1.18 of `wake.radius` 0.12 m). A long thin jet is nearly free of divergence, so the pressure step leaves it
   standing: it drags smoke after the round out of the far side of a plume, pulls clear air in at the near side, and its edges roll up. LOOK PAGE ONLY
-  (`combat.ts` asks under `lookConfig.on` with the look panel's Stirred smoke row up; anywhere else, with that row at 0, and with the lab's row "how fast a
+  (`combat.ts` asks with the look panel's Stirred smoke row up; with that row at 0, and with the lab's row "how fast a
   round drags the air" at 0, the dots as they were), so the build's page is as it was. No frozen row: a headless run has no smoke system, and nothing here is
   the simulation's state. It does change what a guard sees through smoke on the look page (the same field is the sight line). Check:
   `bun run tools/qa/smokeline-check.ts` (the cut run as it stands over a system that is only its lists, the distance and the brick reach mirrored, the brick
@@ -3834,7 +3963,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   its red, the smoke crossing the blue front is lit by it (brighter and cooler there than the plume's far side). NOT SEEN: a GPU; the compound or
   the records office by day; midday or overcast anywhere.
 - **THE LOOK PAGE WITH A GEOMETRY TRIAL ON IS COMPILED WITHOUT THE ROUND TEST** (`main.ts urlFlagsBeforeEngine`: `roundConfig.gpu` is false when
-  `lookConfig.on` and a trial has put `cutConfig.swap` off; `?round=1` compiles it in; 10-25). After the build's round things came in by merge, the look
+  a trial has put `cutConfig.swap` off; `?round=1` compiles it in; 10-25). After the build's round things came in by merge, the look
   page lost its SOFTWARE device on its first drawn frame ("A valid external Instance reference no longer exists") where the plain page at the same
   quality drew. Runs that settled it: look with every trial off and `round=0` draws; look with every trial on and `round=0` draws; look with every
   trial on and rounds compiled in dies. The reading (the software adapter's room, above; not bisected further): a trial keeps the cut twin of every ray
@@ -4131,7 +4260,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   paint's row's, and the box stood up for it carries it. A TONE OF A PALETTE ROW is made of what the row is: the kit's `toned` (`gwotKit.ts`)
   and the snow levels' rock (`tools/levels/snowRock.ts`) hand their numbers through `tonedAs`, which is how ground dressing, stains, worn
   paths and cut rock keep their earth, gravel and slab. The kit's wall-face and yard pieces (the look page's hand-built trials until 11-05) are made of
-  palette rows and say their words, their trim in a paint of its own included (`gwotKit.ts trimIn`; `stuff-check` line 12). The editor keeps, copies, sets and shows a paint's word (`editor/paint.ts`, the paint panel's 'made of' row), a
+  palette rows and say their words, their trim in a paint of its own included (`gwotKit.ts trimIn`; `stuff-check` line 12). The editor kept, copied, set and showed a paint's word (`editor/paint.ts`, the paint panel's 'made of' row: gone with the level editor, and `stuff-check`'s line 13 with it), a
   said plain included; a blank document's paints say theirs.
   LEVEL FILES: every level file of the build is its generator's output, so each was written again by its generator
   (`tools/levels/export.ts`, `tools/level-export.ts`). `tools/levels/stuff-bake.ts` brings forward a file laid WITHOUT its generator (the

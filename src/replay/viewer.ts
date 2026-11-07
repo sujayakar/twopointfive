@@ -6,7 +6,7 @@
 // (`sendShown`). No game code runs here: the page reads the trace and nothing else.
 import type { ReplayFile, ReplayNote, Decoded, ManAt, ManDo, ReplayEvent } from './format';
 import { reportWarning } from '../cloud/report';
-import { checkReplay, decode, sampleAt, clock, doWords, isErrorMark, errorMarks, lastRun, backToGame, replayBlob } from './format';
+import { GAME_PAGE, checkReplay, decode, sampleAt, clock, doWords, isErrorMark, errorMarks, lastRun, backToGame, replayBlob } from './format';
 import { shelfList, shelfGet, shelfPut, shelfNotes, shelfDelete } from './shelf';
 import { assemble } from './kept';
 import { readVisit, beingWritten } from './keepstore';
@@ -68,9 +68,9 @@ async function openFromShelf(id: number) {
   try { const bad = open(f, id); if (bad) say(bad); else history.replaceState(null, '', `#id=${id}`); } catch (e) { say(`That replay could not be drawn (${(e as Error).message})`); void showShelf(); }
 }
 /** 'Play in engine': the game page playing this shelf entry's run tape (src/replay/engineplay.ts, `?playtape=<shelf id>`; its bar has a 'Map' link back here).
- *  Only where there is a tape to play and a shelf id to name it by (a kept visit has none) */
+ *  Only where the game page plays tapes (format.ts GAME_PAGE), there is a tape to play and a shelf id to name it by (a kept visit has none) */
 function engineLink() {
-  const a = $<HTMLAnchorElement>('engine'), T = F?.rerun, ok = shelfId !== null && !!T && !('dead' in T);
+  const a = $<HTMLAnchorElement>('engine'), T = F?.rerun, ok = GAME_PAGE.playsTapes && shelfId !== null && !!T && !('dead' in T);
   a.hidden = !ok; if (ok) a.href = new URL(`index.html?playtape=${shelfId}`, document.baseURI).href; else a.removeAttribute('href');
 }
 function say(text: string) { const h = $('hint'); h.textContent = text; h.style.color = '#ee7a68'; setTimeout(() => { h.style.color = ''; }, 4000); }

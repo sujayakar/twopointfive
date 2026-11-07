@@ -12,6 +12,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { ROOT, standUp } from './headless.ts';
+import { swept } from './sweep.ts';
 
 const K = await import(`${ROOT}/src/game/kit.ts`);
 const { kitAsIssued } = await import(`${ROOT}/src/game/loadout.ts`);
@@ -50,7 +51,6 @@ async function play(name: string) {
 export async function kitPack(): Promise<boolean> {
   console.log(`\n=== kitpack: a lesson the player packs for, and the plan its kit step teaches${BROKEN ? ' [KITPACK_BREAK=1]' : ''} ===`);
   let all = true; const verdict = (ok: boolean, label: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
-  const was = { solo: K.KIT_SOLO.on };
   try {
     // ── the row and its plan
     { const plans = Object.keys(KIT_PLANS), ids = packed.map(e => e.id);
@@ -97,14 +97,14 @@ export async function kitPack(): Promise<boolean> {
         verdict(put && named === 'stun' && you0 >= 1 && you1 === 0 && issued <= P.rooms && stun > P.rooms, 'WHAT ITS CARDS SAY OF THE KITS is true of them: as issued you carry a frag and the squad no more stun grenades than the street has rooms for them; Stun heavy takes your frag and gives the squad some to spare', `as issued: your frags ${you0}, the squad's stun grenades ${issued} · Stun heavy ('${named}'): your frags ${you1}, the squad's ${stun} · rooms ${P.rooms}`); } }
 
     // ── the mission played through under each kit
-    if (process.env.KITPACK_PLAY === '0') console.log('- (not played here: KITPACK_PLAY=0)');
+    if (process.env.KITPACK_PLAY === '0' || !swept(0, 1)) console.log('- (not played here: five whole missions, under QA_SWEEP=all only)');
     else { const names = Object.keys(KITS), t0 = Date.now();
       const outs = await Promise.all(names.map(async name => { const p = Bun.spawn(['bun', 'run', import.meta.path, '--play', name], { env: process.env, stdout: 'pipe', stderr: 'pipe' }); const text = await new Response(p.stdout).text(); await p.exited;
         const line = text.split('\n').find(l => l.startsWith('KITPACK_PLAY ')); try { return { name, ...(JSON.parse(line!.slice(13)) as { code: number; why: string; steps?: number; secs?: number; tail?: string[] }) }; } catch { return { name, code: 1, why: `no result (exit ${p.exitCode}): ${text.slice(-300)}` }; } }));
       for (const o of outs) verdict(o.code === 0, `PLAYED THROUGH under ${KITS[o.name].say}: every step of the mission done`, o.code === 0 ? `${o.steps} steps · ${o.secs} s of play` : `${o.why}${o.tail ? ` · ${o.tail.join(' | ')}` : ''}`);
       console.log(`    (${names.length} plays side by side, ${Math.round((Date.now() - t0) / 1000)} s)`); }
   } catch (x) { verdict(false, 'the check ran to its end', String((x as Error).stack ?? x)); }
-  finally { pageOff(); K.kitLoad(null, ''); K.KIT_SOLO.on = was.solo; }
+  finally { pageOff(); K.kitLoad(null, ''); }
   return all;
 }
 if (import.meta.main) { const k = process.argv.indexOf('--play'); if (k >= 0) { await play(process.argv[k + 1]); process.exit(0); } const ok = await kitPack(); console.log(ok ? '\n=== kitpack-check: ALL PASS ===' : '\n=== kitpack-check: FAILED ==='); process.exit(ok ? 0 : 1); }

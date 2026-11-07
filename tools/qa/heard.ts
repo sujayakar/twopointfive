@@ -8,11 +8,14 @@
 //   a man's bubble  ({ text, t, radio }: his last line, over his head or over the net)       → `spoke` ({ who, text, radio })
 // `listen(game)` keeps both as lists that only grow. Call `poll()` once after every step (a rig's own step is the place): the log keeps five rows and a bubble
 // one line, so a check that steps many frames between polls can miss what was said in between. Nothing here writes to the game.
+/** the radio strip as the HUD is told it (game.view.radio), each row under its word: 'radio: …', 'heard: …' */
+export const stripRows = (g: any): { text: string; t: number }[] => g.view.radio.map((r: any) => ({ text: `${r.kind === 'heard' ? 'heard' : 'radio'}: ${r.text}`, t: g.time - r.age }));
+
 export interface Heard {
   /** every row the log has shown since `listen`, in order */
   said: string[];
-  /** every line a man has said since `listen` (`who` = his callsign, or his name, or '?') */
-  spoke: { who: string; text: string; radio: boolean }[];
+  /** every line a man has said since `listen` (`who` = his callsign, or his name, or '?'; `man` = the man himself, as the game's copy has him) */
+  spoke: { who: string; text: string; radio: boolean; man: unknown }[];
   /** read the game's state now: call it after every step */
   poll(): void;
 }
@@ -31,7 +34,7 @@ export function listen(game: any): Heard {
       }
       (game.guards as any[]).forEach((gd, i) => {
         const b = gd.bubble, key = gd.id ?? gd.callsign ?? i, is = b ? `${b.t}|${b.text}` : ''; if (!b || bubbleAt.get(key) === is) return;
-        bubbleAt.set(key, is); spoke.push({ who: gd.callsign ?? gd.name ?? '?', text: b.text, radio: !!b.radio });
+        bubbleAt.set(key, is); spoke.push({ who: gd.callsign ?? gd.name ?? '?', text: b.text, radio: !!b.radio, man: gd });
       });
     } };
   H.poll();   // (what stood in the log before the listening began is not news: it is taken as seen, and dropped)

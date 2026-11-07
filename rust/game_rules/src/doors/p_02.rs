@@ -9,7 +9,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 // ---- the columns: value K of door i is `doors.c[K][i]` in the game's block (rust/sim doors.rs Doors); `i` is the door's own index, never moved
 #[inline]
-fn col(g: &mut Game, id: DoorId, k: usize) -> f64 {
+fn col(g: &Game, id: DoorId, k: usize) -> f64 {
     let i = g.dr[id].i as usize;
     ::sim::state::state_read(g.sim).doors.c[k][i]
 }
@@ -45,7 +45,7 @@ fn drive_kind_num(k: crate::doors::DoorDriveKind) -> f64 {
 fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 /// (doors.ts Door.angle)
-pub fn door_angle(g: &mut crate::game::Game, id: DoorId) -> f64 { col(g, id, ::sim::doors::ANGLE) }
+pub fn door_angle(g: &crate::game::Game, id: DoorId) -> f64 { col(g, id, ::sim::doors::ANGLE) }
 /// (doors.ts Door.angle)
 pub fn door_set_angle(g: &mut crate::game::Game, id: DoorId, v: f64) { set_col(g, id, ::sim::doors::ANGLE, v) }
 /// (doors.ts Door.vel)
