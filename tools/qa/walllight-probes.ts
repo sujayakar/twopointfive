@@ -14,6 +14,7 @@
 // The rule is settled (LIGHTS.wallOff), and so are the light discipline rule and the goggles: no line asks any of them off and nothing here writes them.
 // (Until 2026-11-07 every scenario was played four times: with the switch off and on, each with the discipline rule and the goggles written off and as the
 // stand had them. The off runs and their three lines are out, with the stand's word and the recording's key; the two on runs were one run, so one is left.)
+// An ordinary run plays the night breach alone, reads the beams every sixth frame and lays every 37th beam by hand; QA_SWEEP=all plays three scenarios, every frame, every beam.
 // What it cannot say: what any of it looks like (never seen on a GPU), or whether it helps a fight — that is playthrough.ts's tally.
 // The probe's own red path: WALLLIGHT_BREAK=1 bun run tools/qa/probes.ts light-wall must FAIL. The word is the PROBE'S now (the rule that plays is the Rust
 // game's, which reads no word; guards.ts's copy still reads it and nothing plays that copy): with it set the probe asks for dark out to five metres past
@@ -23,6 +24,7 @@
 import { ROOT } from './headless.ts';
 import { stage } from './bang-tally.ts';
 import { BEAM_MARGIN as MARGIN, plainWall, plainOpen, plainFoot, type Beam } from './beam-reading.ts';
+import { everyNth, swept } from './sweep.ts';
 const GDM: any = await import(`${ROOT}/src/game/guards.ts`);
 const LTM: any = await import(`${ROOT}/src/game/lighting.ts`);
 const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
@@ -51,10 +53,10 @@ const openBeam = (g: any, x: any): boolean => { const o = GDM.beamLens(g, x); re
  *  `ground` = the open ones whose every ray, flown straight, ends inside m with the ground counted as something solid: the beams the rule called walls
  *  before the floor stopped being one */
 function laid(g: any, m: number): { n: number; wall: number; wallOpen: number; open: number; openWall: number; foot: number; footOdd: number; ground: number } {
-  const T = { n: 0, wall: 0, wallOpen: 0, open: 0, openWall: 0, foot: 0, footOdd: 0, ground: 0 }, seen = new Set<string>(), B = beamOf(g);
+  const T = { n: 0, wall: 0, wallOpen: 0, open: 0, openWall: 0, foot: 0, footOdd: 0, ground: 0 }, seen = new Set<string>(), B = beamOf(g), turn = everyNth(37);
   for (const x of g.guards) { if (x.team !== 'operative' || !x.unit) continue; const p = x.char.pos;
     for (let i = -3; i <= 3; i++) for (let j = -3; j <= 3; j++) { const sx = Math.round(p[0]) + i, sz = Math.round(p[2]) + j, key = `${sx},${sz}`; if (seen.has(key) || g.col.nav.isBlocked(sx, sz)) continue; seen.add(key);
-      for (const y of [0.9, 1.3]) for (const dy of [0, -0.65, -0.87]) for (let a = 0; a < 8; a++) {
+      for (const y of [0.9, 1.3]) for (const dy of [0, -0.65, -0.87]) for (let a = 0; a < 8; a++) { if (!turn()) continue;
         const hl = Math.sqrt(1 - dy * dy), o = [sx, y, sz], d = [Math.sin(a * Math.PI / 4) * hl, dy, Math.cos(a * Math.PI / 4) * hl], starts = !!GDM.beamWalledAt(g, o, d, m, false), holds = !!GDM.beamWalledAt(g, o, d, m, true); T.n++;
         if (plainWall(B, o, d, m)) { T.wall++; if (!starts || !holds) T.wallOpen++; }
         else if (plainFoot(B, o, d, m)) { T.foot++; if (starts || !holds) T.footOdd++; }
@@ -69,15 +71,18 @@ const manIn = (g: any, x: any, m: number, cos: number): boolean => { const o = x
   return g.guards.some((y: any) => { if (y === x || y.state === 'dead' || y.team === 'operative') return false; const vx = y.char.pos[0] - o[0], vz = y.char.pos[2] - o[2], l = Math.hypot(vx, vz); return l < m && (l < 0.3 || (vx * d[0] + vz * d[2]) / (l * hl) > cos); }); };
 
 interface Tally { darkOnMan: number; manNear: number; litNear: number; lit: number; dark: number; darkClear: number; foeDark: number; foeNear: number; frames: number }
+/** every how many frames the beams are read (each read asks the game a dozen rays a man): every one under QA_SWEEP=all */
+const READ = swept(6, 1);
 /** one scripted stretch: fall in, stack on the nearest door, open and clear (a dark light in a dim place takes his goggles down, nvg.ts) */
 async function play(id: string): Promise<Tally> {
   const S: any = await quiet(() => stage(id, 1)); const { g, step } = S, O = g.orders;
   const T: Tally = { darkOnMan: 0, manNear: 0, litNear: 0, lit: 0, dark: 0, darkClear: 0, foeDark: 0, foeNear: 0, frames: 0 }, near = new Map<any, number>();
-  const frame = () => { step(); T.frames++;
+  let k = 0;
+  const frame = () => { step(); if (k++ % READ) return; T.frames++;
     for (const x of g.guards) { if (x.state === 'dead' || !x.flashlight) continue; const mate = x.team === 'operative' && !!x.unit;
       if (!mate) { if (GDM.wallDarkSeen(g, x)) T.foeDark++; if (x.flashlight.enabled && intoWall(g, x)) T.foeNear++; continue; }
       const walled = intoWall(g, x);   // (read once a man a frame)
-      const n = walled && !manIn(g, x, LIGHTS.wallM + 1, 0.8) ? (near.get(x) ?? 0) + 1 : 0; near.set(x, n);   // (nobody anywhere near his beam: the frames the rule owes dark)
+      const n = walled && !manIn(g, x, LIGHTS.wallM + 1, 0.8) ? (near.get(x) ?? 0) + READ : 0; near.set(x, n);   // (nobody anywhere near his beam: the frames the rule owes dark)
       if (walled && manIn(g, x, LIGHTS.wallM - MARGIN, 0.95)) { T.manNear++; if (GDM.wallDarkSeen(g, x)) T.darkOnMan++; }   // (a man plainly in a beam that ends at arm's length: the frames it must burn)
       if (x.flashlight.enabled) { T.lit++; if (n > (LIGHTS.wallSecs + 0.2) * 60) T.litNear++; }
       if (GDM.wallDarkSeen(g, x)) { T.dark++; if (openBeam(g, x)) T.darkClear++; } } };
@@ -90,7 +95,7 @@ async function play(id: string): Promise<Tally> {
 export async function lightWall(): Promise<boolean> {
   const F = family('light-wall: a teammate\'s weapon light is dark while its whole beam ends on something solid at arm\'s length, and burns again the frame it does not');
   try {
-    const ids = IDS.filter(id => ['night-breach', 'rescue-registry', IDS[0]].includes(id)).slice(0, 3);
+    const ids = swept(0, 1) ? IDS.filter(id => ['night-breach', 'rescue-registry', IDS[0]].includes(id)).slice(0, 3) : ['night-breach'];
     const on: Tally[] = [];
     for (const id of ids) on.push(await play(id));
     const sum = (A: Tally[], k: keyof Tally) => A.reduce((n, t) => n + (t[k] as number), 0), per = (k: keyof Tally) => ids.map((id, i) => `${id} ${on[i][k]}`).join(' · ');

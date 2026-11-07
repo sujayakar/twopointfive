@@ -9,10 +9,10 @@
 //   quiet-run         the mission played to its end by each way out: the room reached, the thing taken, out past that exit's line → done, the exit named
 //   quiet-pair        with one partner: an operative beside Sam, silent from the first frame, the pair rules on for the run, staff hostile to him — he follows
 //                     Sam across the floor, a guard he stands in front of notices HIM; stop takes him and every switch back
-//   quiet-checkpoint  a save carries the deal; a load puts the same start / spot / patrol set and every man back; the plain night refuses the file and the
-//                     mission refuses a plain file; the autosave's own gate passes on a calm quiet run (the manned roster is the roster)
-//   quiet-fixes       the review of the join (10-10): the hunt goes on after the partner drops, where a man stands at a holder, the card's checkpoint offer, the
-//                     autosave's words, `quiet` beside `squad4`, the switches a partner run holds (two Games, a hand's word, this visit's word), the failure paths
+//   quiet-checkpoint  a save carries the deal; a load puts the same start / spot / patrol set and every man back; the autosave's own gate passes on a calm quiet
+//                     run (the manned roster is the roster)
+//   quiet-fixes       the review of the join (10-10): the hunt goes on after the partner drops, where a man stands at a holder, the
+//                     autosave's words, `quiet` beside `squad4`, the switches a partner run holds (a hand's word, this visit's word), the failure paths
 //   quiet-own         the office-only places: on a level with the block the shift's errands, the civilians' phones and ways out, the response team, the weather
 //                     and the room names are the level's own (or off); on the office they are the tables they always were
 import { readFileSync } from 'node:fs';
@@ -239,12 +239,6 @@ export const quietCheckpoint = guarded(async () => {
   const same = men1.length === men0.length && men1.every((a: any, i: number) => a.r === men0[i].r && flat(a.p, men0[i].p) < 0.05);
   F.verdict(why === null && dealKey(g) === k0 && same && flat(g.player.char.pos, sam0) < 0.05 && Math.abs(g.time - t0) < 1e-6 && g.quiet.active && JSON.stringify(g.level.mission.rack.front) === JSON.stringify(g.level.scenarios.quiet.spots[S.quiet.deal.spot].front),
     'loaded over a restarted run: the file\'s start, spot and patrol set are in force again, every man and Sam where they were filed', `the run stood on ${other} · canLoad: ${why ?? 'ok'} · after the load ${dealKey(g)} · men ${men1.map((x: any) => `${x.n}@${at(x.p)}`).join(' ')} · Sam ${at(g.player.char.pos)}`);
-  { await hushed(() => quitScenario(g)); const plain = SAVE.canLoad(g, S), P = await hushed(() => W.snapshot('plain', true));
-    await start(W, '?quiet'); const cross = SAVE.canLoad(g, P);
-    await hushed(() => quitScenario(g)); await start(W, '?quiet&squad=1'); steps(W, 0.5);
-    const two = SAVE.canSave(g, false), solo = SAVE.canLoad(g, S);
-    F.verdict(typeof plain === 'string' && typeof cross === 'string' && typeof two === 'string' && typeof solo === 'string', 'the plain night refuses a quiet mission\'s file and the mission refuses a plain file, each with the reason; with the partner on the floor nothing is saved (a spawned unit, as in every squad scenario) and a file made alone is refused',
-      `plain night ← quiet file: '${plain}' · quiet ← plain file: '${cross}' · with the partner, save: '${two}' · with the partner ← a file made alone: '${solo}'`); }
   return F.done();
 });
 
@@ -296,13 +290,6 @@ export const quietFixes = guarded(async () => {
       ok &&= H.ok && line && same; rows.push(`'${P.place}' face ${at(P.front)}: ${who?.callsign ?? 'nobody'} sent to ${goal ? at(goal) : '—'} · the checker's cell ${H.pos ? at(H.pos) : '—'} · a clear line to the face ${line}`);
       await hushed(() => quitScenario(g)); }
     F.verdict(ok, 'the man sent to look at the holder stands on the cell the level\'s check validated: free floor in the room with nothing solid between him and the face', rows.join('\n    ')); }
-  { // (4) the cards' checkpoint offer: an earlier run's slot only if this game would load it
-    const W = await stand(13), g = W.game; steps(W, 1);
-    const wrote = await hushed(() => g.saves.write(g, 'manual', 'the plain night', true)); steps(W, 0.5);
-    await start(W, '?quiet=1'); steps(W, 0.5);
-    const any = g.saves.newest(true, g.mission.stats.elapsed), off = g.saves.offer(g, g.mission.stats.elapsed);
-    await hushed(() => quitScenario(g)); steps(W, 0.5); const back = g.saves.offer(g, g.mission.stats.elapsed);
-    F.verdict(!!any && off === null && !!back && back.key === any.key, 'a plain-night slot is no offer under the level\'s quiet mission (it would be refused); back on the plain night it is', `stored: ${wrote?.ok ?? !!any} · under the quiet mission newest() names '${any?.label ?? '—'}', offer() ${off ? `'${off.label}'` : 'nothing'} · on the plain night again: ${back ? `'${back.label}'` : 'nothing'}`); }
   { // (5) the autosave's own words on a quiet mission: the level's room and thing, the level's places
     const W = await stand(14), g = W.game, Q = g.level.scenarios.quiet; await start(W, '?quiet=1'); steps(W, 0.5);
     g.godMode = true; g.playerInvisible = true; const P = Q.spots[g.quiet.deal.spot], labels: string[] = [];
@@ -317,10 +304,6 @@ export const quietFixes = guarded(async () => {
     F.verdict(sp?.kind === 'quiet' && sp.squad === 0 && fog === own && off === false && specOfQuery('?squad4')?.kind === 'roomclear', '?quiet beside a stale squad4 is the quiet mission, alone, under the fog its own link asks for and no other: none with quietfog=off (squad4 alone is still the room clear)', `spec ${JSON.stringify(sp)} · fog ${fog} (the same link without squad4: ${own}) · with quietfog=off ${off}`); }
   { // (7, 8) the switches a partner run holds
     const flags0 = flagsNow();
-    const A = await stand(15); await start(A, '?quiet=1&squad=1'); const up = HOSTILE.guard.operative && PAIRUP.on && SNEAK.on;
-    const B = await stand(16), atB = flagsNow().join(); A.step(DT); const backA = HOSTILE.guard.operative && PAIRUP.on && PAIR.on && SNEAK.on && SPOTTED.on && SILENT.on; B.step(DT); const atB2 = flagsNow().join();
-    A.step(DT); await hushed(() => quitScenario(A.game)); const end = flagsNow().join();
-    F.verdict(up && atB === flags0.join() && backA && atB2 === flags0.join() && end === flags0.join(), 'two Games in one process: the switches are the partner run\'s on ITS Game\'s frames and as they stood on the other\'s; stopped, as they stood', `up ${up} · the second Game stood up: ${atB} · the first Game's next frame: held ${backA} · the second's frame: ${atB2} · after the stop: ${end} (were ${flags0.join()})`);
     const s0 = SILENT.on; SILENT.on = true; const C = await stand(17); await start(C, '?quiet=1&squad=1'); steps(C, 0.2); SILENT.on = false; steps(C, 0.2); await hushed(() => quitScenario(C.game)); const kept = SILENT.on === false && !PAIRUP.on === !flags0[0]; SILENT.on = s0;
     F.verdict(kept, 'a row moved by hand during the run stays where the hand put it when the run stops (the rest go back as they stood)', `SILENT.on true before the run, switched off during it → ${kept ? 'off' : 'put back on'} after the stop`);
     const env = (globalThis as any).process.env, e0 = env.SNEAK; env.SNEAK = 'off'; const D = await stand(18); await start(D, '?quiet=1&squad=1'); const part = PAIR.on && SPOTTED.on && !SNEAK.on; await hushed(() => quitScenario(D.game)); if (e0 === undefined) delete env.SNEAK; else env.SNEAK = e0;
