@@ -1,11 +1,11 @@
-//! THE PICTURE'S SIDE OF THE FOG OF WAR: the renderer's block, the lit fog's list of lamps, a lamp's face as the team remembers it, and the list a
-//! viewer's draw with the fog off is made from (that draw itself is the page's: it lifts the fog on its own copy of the game, between two steps).
-//! Everything here is computed FROM the game's state and read by nothing in it: no rule calls into this file, and what it writes is the block
-//! (`fog_picture.frame`), the lit fog's list and counts, the kept faces, the viewer's list, and the renderer's own fields of a light and a box
-//! (`fog`, `fog_ghost`, `fog_emit`, `fog_mark`: the upload alone reads these).
+//! THE PICTURE'S SIDE OF THE FOG OF WAR: a lamp's class and its face as the team remembers it, and the list a viewer's draw with the fog off is made from
+//! (that draw itself is the page's: it lifts the fog on its own copy of the game, between two steps). What the fog's pass draws from (the eyes, the lit
+//! fog's lamps, the look's numbers) is no state at all: rust/game_draw `fog` makes it of a game that stands.
+//! Everything here is computed FROM the game's state and read by nothing in it: no rule calls into this file, and what it writes is the counts, the kept
+//! faces, the viewer's list, and the renderer's own fields of a light and a box (`fog`, `fog_ghost`, `fog_emit`, `fog_mark`: the upload alone reads these).
 //!
 //! What the team knows (who is seen, which doors, lamps and loose things are remembered and how, who the team is) is the rest of fogofwar/ and is the
-//! game's: every machine of one game holds it the same. This file reads it: `lamp_recs` for a lamp, `hidden_chars` for a man, `eyes` for the block.
+//! game's: every machine of one game holds it the same. This file reads it: `lamp_recs` for a lamp, `hidden_chars` for a man.
 use super::*;
 use crate::game::Game;
 use crate::ids::*;
@@ -17,66 +17,14 @@ use alloc::{vec, vec::Vec};
 /// a box's row
 fn bx<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
-/// THE RENDERER'S BLOCK for this frame: what the fog's pass and the sight table draw from (render/fogofwar.ts FogFrame). Called at the end of the game's
-/// pass, once a tick, on every machine: it is computed from the game's state and the page hands it to the renderer as it comes.
-pub fn fill(g: &mut crate::game::Game) {
-    // (the look's four rows, desat, edge, air and kept, are settled at the page's values: there is no other look to put back, and the count only runs down)
-    if g.fog_picture.look_frames > 0.0 {
-        g.fog_picture.look_frames -= 1.0;
-    }
-    let k = g.k.fog;
-    {
-        let n = g.fog_of_war.eyes.len() as f64;
-        let f = &mut g.fog_picture.frame;
-        f.on = true; f.count = n; f.dim = k.dim; f.desat = k.desat; f.top_pad = k.top_pad; f.edge = m::max(0.0, k.edge);
-    }
-    let fov = crate::fogofwar::field_deg(g);
-    let near = crate::fogofwar::field_near(g);
-    let all_round = fov >= 360.0;
-    let cos_half = if all_round { -2.0 } else { m::cos(m::max(1.0, fov) * 0.5 * DEG) };
-    // (the picture's soft edges are the cone's alone: a plain wedge keeps its hard line)
-    let soft = if k.cone && !all_round { m::max(0.0, m::min(m::min(k.cone_soft_deg, fov), 360.0 - fov)) } else { 0.0 };
-    full_block(g);
-    g.fog_picture.frame.full = true;
-    g.fog_picture.frame.flat = m::max(0.0, k.flat);
-    lit_block(g);
-    g.fog_picture.frame.air = true;
-    g.fog_picture.frame.kept = true;
-    thin_block(g);
-    let n_eyes = crate::render_fogofwar::FOG_EYES as usize;
-    let pic = core::mem::take(&mut g.fog_of_war.eyes);
-    {
-        let f = &mut g.fog_picture.frame;
-        f.soft_in = if soft > 0.0 { m::cos(m::max(0.0, fov * 0.5 - soft * 0.5) * DEG) } else { 0.0 };
-        f.soft_out = if soft > 0.0 { m::cos(m::min(180.0, fov * 0.5 + soft * 0.5) * DEG) } else { 0.0 };
-        f.near_soft = if k.cone && !all_round { m::max(0.0, k.cone_near_soft_m) } else { 0.0 };
-        if f.eyes.len() < n_eyes * 4 { f.eyes.resize(n_eyes * 4, 0.0); }
-        if f.looks.len() < n_eyes * 4 { f.looks.resize(n_eyes * 4, 0.0); }
-        for i in 0..n_eyes {
-            let o = i * 4;
-            let Some(e) = pic.get(i) else {
-                for w in 0..4 { f.eyes[o + w] = 0.0; f.looks[o + w] = 0.0; }
-                continue;
-            };
-            f.eyes[o] = e.at[0] as f32; f.eyes[o + 1] = e.at[1] as f32; f.eyes[o + 2] = e.at[2] as f32; f.eyes[o + 3] = e.id as f32;
-            let l = js::or(m::hyp2(e.look[0], e.look[2]), 1.0);
-            f.looks[o] = (e.look[0] / l) as f32; f.looks[o + 1] = (e.look[2] / l) as f32;
-            // (an eye with its own field: the wand's lens)
-            f.looks[o + 2] = (match e.fov { None => cos_half, Some(v) if v >= 360.0 => -2.0, Some(v) => m::cos(m::max(1.0, v) * 0.5 * DEG) }) as f32;
-            f.looks[o + 3] = e.near.unwrap_or(near) as f32;
-        }
-    }
-    g.fog_of_war.eyes = pic;
-}
-
+/// Called at the end of the game's pass, once a tick, on every machine.
 /// The lights' classes for this frame, painted: the level's lamps the team has in another state than they are in. Out but remembered lit = lit where nobody
 /// sees; lit but remembered out = lit only where the team sees. (What a man carries who is not on the team, and every flash not a teammate's own, take
 /// their class from the team's list, which the pass filled: render_lights::light_set_fog_class.)   (fogofwar.ts FogOfWar.fullBlock, its second half)
-fn full_block(g: &mut crate::game::Game) {
+pub fn fill(g: &mut crate::game::Game) {
     g.fog_picture.full_stats.hidden = 0.0;
     g.fog_picture.full_stats.ghosts = 0.0;
     g.fog_picture.full_stats.held = 0.0;
-    g.fog_picture.frame.full_flat = m::max(0.0, g.k.fog.flat * g.k.fog.full_fill);
     let down = crate::sim_lightshome::mains_active(g);
     let es = g.engine.settings.emissive_scale;
     let mut i = 0;
@@ -117,114 +65,8 @@ fn full_block(g: &mut crate::game::Game) {
     }
 }
 
-/// A lamp for the lit fog's list: nothing with no strength; `far` = the sun or moon, which stays when the list is cut.   (fogofwar.ts FogOfWar.lampTake)
-fn lamp_take(g: &mut crate::game::Game, l: LightId, i: f64, far: bool) {
-    if !(i > 0.0) { return; }
-    let host = crate::seats::host_man(g);
-    let pp = g.ch[g.pl[host].ch].pos;
-    let d = if far {
-        -1.0
-    } else {
-        let row = &g.tab.light[l];
-        m::max(0.0, m::hyp2(row.pos[0] - pp[0], row.pos[2] - pp[2]) - row.range)
-    };
-    let n = g.fog_picture.lamp_n as usize;
-    let take = crate::fogofwar::FogOfWarLampPickItem { l, i, d };
-    if n < g.fog_picture.lamp_pick.len() { g.fog_picture.lamp_pick[n] = take; } else { g.fog_picture.lamp_pick.push(take); }
-    g.fog_picture.lamp_n += 1.0;
-}
-
-/// The lit fog's rows of the renderer's block: the levels, and every lamp the team has as lit at its own full strength, then the sun or moon. More than the block holds: the ones whose reach is nearest the player.   (fogofwar.ts FogOfWar.litBlock)
-fn lit_block(g: &mut crate::game::Game) {
-    g.fog_picture.lit_stats.lamps = 0.0;
-    g.fog_picture.lit_stats.lights = 0.0;
-    g.fog_picture.lit_stats.held = 0.0;
-    let fog = (g.k.fog.lit, g.k.fog.flat, g.k.fog.lit_fill, g.k.fog.lit_cut, g.k.fog.lit_ao, g.k.fog.lit_ao_m);
-    if !(fog.0 > 0.0) || !(fog.1 > 0.0) {
-        g.fog_picture.frame.lit = 0.0;
-        g.fog_picture.frame.light_count = 0.0;
-        return;
-    }
-    g.fog_picture.frame.lit = fog.0;
-    g.fog_picture.frame.lit_fill = m::max(0.0, fog.1 * fog.2);
-    g.fog_picture.frame.lit_cut = m::max(0.0, fog.3);
-    g.fog_picture.frame.lit_ao = m::min(1.0, m::max(0.0, fog.4));
-    g.fog_picture.frame.lit_ao_m = m::max(0.0, fog.5);
-    g.fog_picture.lamp_n = 0.0;
-    let mut i = 0;
-    while i < g.engine.lights.lights.len() {
-        let l = g.engine.lights.lights[i];
-        i += 1;
-        let row = &g.tab.light[l];
-        if row.kind == 2.0 && row.ttl < 0.0 && row.transient != Some(true) && row.enabled {
-            let strength = row.intensity;
-            lamp_take(g, l, strength, true);
-        }
-    }
-    let down = crate::sim_lightshome::mains_active(g);
-    let es = g.engine.settings.emissive_scale;
-    let mut i = 0;
-    while i < g.targets.len() {
-        let t = g.targets[i];
-        i += 1;
-        let (light, areas, mains) = { let row = &g.tab.sim_lightshome_fixture[t]; (row.light, row.area_lights.clone(), row.mains) };
-        if light.is_none() && areas.is_none() { continue; }
-        g.fog_picture.lit_stats.lamps += 1.0;
-        let lit = fog_of_war_lamp_lit(g, t);
-        let rec = g.fog_of_war.lamp_recs.get(t).copied().unwrap_or(lit);
-        if rec != lit { g.fog_picture.lit_stats.held += 1.0; }
-        if !rec || (mains && down) { continue; }
-        if let Some(l) = light {
-            let strength = match g.tab.light[l].steady { Some(ref s) => s.intensity, None => crate::sim_lightshome::fixture_base_intensity(g, t) };
-            lamp_take(g, l, strength, false);
-        }
-        for al in areas.unwrap_or_default() { lamp_take(g, al.light, al.base * es, false); }
-    }
-    let mut n = g.fog_picture.lamp_n;
-    if n > crate::render_fogofwar::FOG_LIGHTS {
-        g.fog_picture.lamp_pick.truncate(n as usize);
-        js::sort_by(&mut g.fog_picture.lamp_pick, |a, b| a.d - b.d);
-        n = crate::render_fogofwar::FOG_LIGHTS;
-    }
-    let mut lights = core::mem::take(&mut g.fog_picture.frame.lights);
-    let mut lights_u = core::mem::take(&mut g.fog_picture.frame.lights_u);
-    let mut k = 0;
-    while (k as f64) < n {
-        let (l, strength) = { let p = g.fog_picture.lamp_pick[k]; (p.l, p.i) };
-        // a fire's lamp wanders with its flames and is as big as they are: the fog has it where the level hung it, the size the level gave it
-        let (live, size, steady, kind) = { let row = &g.tab.light[l]; (row.pos, row.radius, row.steady.as_ref().map(|s| (s.pos, s.radius)), row.kind) };
-        if let Some((pos, radius)) = steady { g.tab.light[l].pos = pos; g.tab.light[l].radius = radius; }
-        crate::render_lights::pack_light(g, &mut lights, &mut lights_u, k as f64 * 16.0, l, strength, kind, 0.0, 0.0);
-        g.tab.light[l].pos = live;
-        g.tab.light[l].radius = size;
-        k += 1;
-    }
-    g.fog_picture.frame.lights = lights;
-    g.fog_picture.frame.lights_u = lights_u;
-    g.fog_picture.frame.light_count = n;
-    g.fog_picture.lit_stats.lights = n;
-    g.fog_picture.lamp_pick.clear();   // (made again every frame, by the distance from the man this machine shows: nothing of it is the game's)
-}
-
-/// The picture's half of FOG.thin: the row, and which statics are marked, as bits by box index. Filled every frame: a breached wall's studs come and go. (FogOfWar.thinBlock)
-fn thin_block(g: &mut crate::game::Game) {
-    g.fog_picture.frame.thin = true;
-    if !g.fog_picture.frame.thin { return; }
-    for w in g.fog_picture.frame.thin_bits.iter_mut() { *w = 0; }
-    g.fog_picture.frame.thin_serial = g.engine.world.geom_serial;
-    let st = g.engine.world.statics.clone();
-    g.fog_picture.frame.thin_count = st.len() as f64;
-    let thin = js::to_i32(crate::scene_boxes::box_flag().thin);
-    let n = core::cmp::min(st.len(), g.fog_picture.frame.thin_bits.len() * 32);
-    for i in 0..n {
-        if js::to_i32(bx(g, st[i]).flags) & thin != 0 { g.fog_picture.frame.thin_bits[i >> 5] |= 1u32 << (i & 31); }
-    }
-}
-
-/// The fog has gone off: the block says so, and every class and kept face is taken back off the lights and the lamps.   (fogofwar.ts FogOfWar.fullClear, and the pass's own head)
+/// The fog has gone off: every class and kept face is taken back off the lights and the lamps.   (fogofwar.ts FogOfWar.fullClear, and the pass's own head)
 pub fn off(g: &mut crate::game::Game) {
-    let f = &mut g.fog_picture.frame;
-    f.on = false; f.count = 0.0; f.lit = 0.0; f.light_count = 0.0; f.full = false;
     g.fog_picture.face_recs.clear();
     if !g.fog_of_war.live { return; }
     let mut i = 0;
@@ -333,10 +175,8 @@ pub fn fog_of_war_filter(g: &crate::game::Game, all: &[CharId]) -> Vec<CharId> {
     all.iter().copied().filter(|&c| !g.fog_of_war.hidden_chars.has(c)).collect()
 }
 
-/// The engine replay's word: a few frames under the page's fog look. (FogOfWar.pageLook)
-pub fn fog_of_war_page_look(g: &mut crate::game::Game) {
-    g.fog_picture.look_frames = 3.0;
-}
+/// The engine replay's word for a few frames under the page's fog look: the look's rows are settled at the page's values, and there is no other to put back.   (FogOfWar.pageLook)
+pub fn fog_of_war_page_look(g: &mut crate::game::Game) {}
 
 #[cfg(test)]
 mod tests {
