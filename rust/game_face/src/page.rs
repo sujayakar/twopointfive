@@ -96,7 +96,7 @@ pub unsafe extern "C" fn face_start(p: *const u8, n: usize, slot: i32, seed: u32
     let slot = if slot < 0 { match super::free_slot() { Some(s) => s, None => return 0 } } else { slot as usize };
     if slot >= sim::state::GAMES { return 0; }
     let o = game_start::stand::StartOpts { seed, seats, slot, dress: flags & 1 != 0, cpu_senses: flags & 2 != 0, ..Default::default() };
-    let mut stood = game_start::handed::stand_handed(super::bytes(p, n), &o);
+    let mut stood = game_start::handed::stand_handed(super::bytes(p, n), &o, &mut |g, b| if let Err(why) = game_run::command::apply(g, b) { panic!("face_start: {why}") });
     // (a host that draws has a particle pool, and keeps the lights' reach: the tick asks only whether they are there)
     if o.dress {
         stood.game.engine.particles = Some(game::render_particles::Particles { collide: true, spark_bounce: true, ..game::render_particles::Particles::blank() });
@@ -172,8 +172,8 @@ pub unsafe extern "C" fn face_probe_results(h: u32, p: *const u8, n: usize) {
     });
 }
 /// the numbers of a hand: buttons clicked wheel, cursor x y, the view's size in CSS pixels and in its own, the view-projection and its inverse, the eye, where it
-/// looks, the look-at, yaw pitch distance, field of view, aspect, how far it leads the aim
-const HAND: usize = 56;
+/// looks, the look-at, yaw pitch distance, field of view, aspect, how far it leads the aim, and the distance it is on its way to
+const HAND: usize = 57;
 /// # Safety
 /// `p`, `pn` and `keys`, `n` name bytes the host wrote into memory from face_alloc.
 #[no_mangle]
@@ -190,6 +190,13 @@ pub unsafe extern "C" fn face_hand(h: u32, seat: usize, p: *const f64, pn: usize
         view: PlayerCmdView { vp: v[9..25].to_vec(), ivp: v[25..41].to_vec(), pos: three(41), forward: three(44), target: three(47), yaw: v[50], pitch: v[51], distance: v[52], fov: v[53], aspect: v[54], aim_lead: v[55] },
     };
     super::with(h, |x| {
+        // (the host's own camera, as the hand has it: what a rule asks of the host's view, and where one writes to it)
+        if let (true, Some(c)) = (x.g.seats[seat] == game::game::game_host_seat(&x.g), x.g.host_cam) {
+            x.drawn.desired = v[56];
+            let (c, v) = (&mut x.g.tab.camera[c], &cmd.view);
+            (c.target, c.pos, c.forward) = (v.target, v.pos, v.forward);
+            (c.yaw, c.pitch, c.distance, c.desired_distance, c.fov, c.aspect) = (v.yaw, v.pitch, v.distance, x.drawn.desired, v.fov, v.aspect);
+        }
         let still = |s: game::ids::SeatId| { let c = x.g.tab.cmd_seat[s].cmd.as_ref().unwrap_or(&cmd); PlayerCmd { keys: Vec::new(), pressed: Vec::new(), buttons: 0.0, clicked: 0.0, wheel: 0.0, ..c.clone() } };
         let mut cmds = x.cmds.take().unwrap_or_else(|| x.g.seats.iter().map(|&s| still(s)).collect());
         cmds[seat] = cmd;
