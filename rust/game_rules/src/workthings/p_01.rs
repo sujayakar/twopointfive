@@ -155,7 +155,7 @@ pub fn work_things_new(g: &mut crate::game::Game) -> crate::workthings::WorkThin
         tick: Some(crate::orders::OrderTick::Work),
         ..crate::orders::OrderDef::zeroed()
     };
-    let row = g.tab.orders_order_def.push(def);
+    let row = crate::orders::squad_orders_row(g, def);
     crate::orders::squad_orders_register(g, row, None);
     WorkThings { row, ..WorkThings::blank() }
 }

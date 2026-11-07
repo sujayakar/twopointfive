@@ -487,6 +487,6 @@ pub fn register_shut_door(g: &mut crate::game::Game) {
         tick: Some(crate::orders::OrderTick::ShutDoor),
         ..crate::orders::OrderDef::zeroed()
     };
-    let id = g.tab.orders_order_def.push(def);
+    let id = crate::orders::squad_orders_row(g, def);
     crate::orders::squad_orders_register(g, id, None);
 }

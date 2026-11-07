@@ -159,7 +159,7 @@ pub fn row(g: &mut crate::game::Game) -> OrdersOrderDefId {
         issue: crate::orders::OrderIssue::Smoke,
         ..crate::orders::OrderDef::zeroed()
     };
-    g.tab.orders_order_def.push(def)
+    crate::orders::squad_orders_row(g, def)
 }
 
 /// The throw: one can off the count, on its arc from the nearest man's hand, and a row in the squad's log. None: given. The arm `OrderIssue::Smoke`. (squadsmoke.ts:135 issue)

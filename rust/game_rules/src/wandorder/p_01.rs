@@ -320,7 +320,7 @@ pub fn row(g: &mut crate::game::Game) -> OrdersOrderDefId {
         tick: Some(crate::orders::OrderTick::Wand),
         ..Default::default()
     };
-    g.tab.orders_order_def.push(def)
+    crate::orders::squad_orders_row(g, def)
 }
 
 /// Once a frame per seat: keeps the row on the menus only while a living squad man carries a wand and there is a fog; takes the lens out of a man the
