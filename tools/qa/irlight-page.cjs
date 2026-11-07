@@ -21,7 +21,7 @@
 // open door.
 // Asked of them: the tube's picture of the room is brighter with the light than without (the mean of the frame's middle); the light meter in the room — the
 // renderer's own probe pass, asked at the room's middle and on Sam — reads the same with the light and without; the frame after the goggles come up is the
-// bare-eyed frame it was; the Tab panel has its rows; no console error.
+// bare-eyed frame it was; no console error.
 //   node tools/qa/irlight-page.cjs <outDir>      env: PORT (the dev server's, default 5199) · SIZE (960x540) · QUALITY (verylow) · FRAMES (drawn per still, 4)
 //   · ROOM='x,z' DOOR='x,z' (the room's middle and where Sam stands; default the depot's dark room of roomclear=1) · QUERY (the page's, default the depot's room clear with four)
 // exit 0 = every line passed · 1 = one failed. Slow by nature: ~2 min to boot, 5–15 s a drawn frame.
@@ -129,9 +129,6 @@ const PLAY = (secs) => { const e = window.__engine, real = e.render; let threw =
     // (last, so the two bare-eyed stills stay as far apart as they were: the room is live between stills, and a defender walks on)
     await set({ nv: true, ...WAS }); await play(1); await save('was', await page.evaluate(DRAW, { n: FRAMES, room: ROOM })); await set({ ...NOW, nv: false });
     }
-    notes.push('panel: ' + JSON.stringify(await page.evaluate(() => { window.__panel.toggle(); const s = document.querySelector('#panel input[type=search], #panel input'); if (s) { s.value = 'IR light'; s.dispatchEvent(new Event('input', { bubbles: true })); }
-      return { text: (document.querySelector('#panel')?.innerText ?? '').split('\n').filter(l => /IR light/.test(l)).slice(0, 8) }; })));
-    await page.screenshot({ path: path.join(outDir, 'panel-page.png') }).catch(() => {});
   } catch (e) { errors.push('threw: ' + String(e && e.stack || e).slice(0, 800)); }
   await browser.close();
   // ---- the lines
@@ -167,7 +164,6 @@ const PLAY = (secs) => { const e = window.__engine, real = e.render; let threw =
     const lift = I.mid - T.mid;
     all = ok(B2.mid <= B.mid + Math.max(0.1 * Math.max(lift, 0), 3) && Math.abs(B2.mean - B.mean) <= 6 && /infrared/.test(B2.restarted), 'goggles up again: the bare-eyed frame it was, nothing of the flood left in it', `the middle ${B.mid} → ${B2.mid} (the flood lifted the tube's by ${lift.toFixed(1)}), the whole frame ${B.mean} → ${B2.mean} · screen histories: ${B2.restarted || 'not restarted'}`) && all;
   }
-  const panel = notes.find(n => n.startsWith('panel: ')) || ''; all = ok(/IR light ▸ on the goggles/.test(panel) && /IR light ▸ the team carries one too/.test(panel), 'the Tab panel has its rows', panel.slice(0, 600)) && all;
   all = ok(errors.length === 0, 'no console error', errors.slice(0, 6).join(' | ') || 'none') && all;
   console.log('\n=== irlight-page: the infrared light on the real page (software adapter) ===\n' + notes.join('\n') + '\n' + lines.join('\n') + `\n=== irlight-page: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   fs.writeFileSync(path.join(outDir, 'report.json'), JSON.stringify({ stills: R, notes, errors, pass: all }, null, 1));

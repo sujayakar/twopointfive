@@ -2322,7 +2322,7 @@
   "path": "Renderer fx ▸ Glass (the picture)",
   "kind": "toggle",
   "label": "glass panes",
-  "title": "the level's glazing (in the office: conference partition, manager sidelight, every exterior window) as glass: what stands behind a pane is drawn as always (the pane is in no raster and no traced ray meets it) and composite lays over it the pane's tint (albedo^depth ÷ cos), a traced mirror image × Schlick Fresnel (n 1.5: 4 % square-on, most of it edge-on) through the gloss floors' specular texture + history + blur pass, the analytic glint of small emitters, and a dust glow where light lands ON the glass; the direct pass tints light that crossed a pane. Men see through it and do not hear through it. What a round or a blast does to a pane is not this switch: Destruction ▸ Glass breaking (the cracks, the pieces, rounds passing through). OFF = no pane list at all: every glass box is an empty opening (the level as it was) — the CPU side (feet, sound, the crack stars) stays. Costs a slab test per listed pane per pixel in composite, ~3 rays per glass texel at gather res. (frame flag 268435456; ?noglass boots it off)",
+  "title": "the level's glazing (in the office: conference partition, manager sidelight, every exterior window) as glass: what stands behind a pane is drawn as always (the pane is in no raster and no traced ray meets it) and composite lays over it the pane's tint (albedo^depth ÷ cos), a traced mirror image × Schlick Fresnel (n 1.5: 4 % square-on, most of it edge-on) through the gloss floors' specular texture + history + blur pass, the analytic glint of small emitters, and a dust glow where light lands ON the glass; the direct pass tints light that crossed a pane. Men see through it and do not hear through it. What a round or a blast does to a pane is not this switch: that is glass breaking (the cracks, the pieces, rounds passing through). OFF = no pane list at all: every glass box is an empty opening (the level as it was) — the CPU side (feet, sound, the crack stars) stays. Costs a slab test per listed pane per pixel in composite, ~3 rays per glass texel at gather res. (frame flag 268435456; ?noglass boots it off)",
   "def": false,
   "extra": ""
  },
@@ -2692,7 +2692,7 @@
   "min": 0,
   "max": 6,
   "step": 0.1,
-  "title": "radius grows by this factor over its life (the same value as Effects ▸ Dust puffs ▸ dust: growth ×, which also keeps it: an edit here is not saved)",
+  "title": "radius grows by this factor over its life (an edit here is not saved)",
   "def": true,
   "extra": ""
  },
@@ -2703,7 +2703,7 @@
   "min": 0,
   "max": 1,
   "step": 0.02,
-  "title": "peak opacity of a puff at its centre (the same value as Effects ▸ Dust puffs ▸ dust: opacity, which also keeps it: an edit here is not saved)",
+  "title": "peak opacity of a puff at its centre (an edit here is not saved)",
   "def": true,
   "extra": ""
  },
@@ -3935,6 +3935,14 @@
  },
  {
   "path": "Sandbox ▸ Sandbox",
+  "kind": "buttons",
+  "label": "old tuning",
+  "title": "",
+  "def": false,
+  "extra": "[forget it — numbers once moved on the pages that have gone (squad, enemy, stealth, player, destruction, effects) are still read from this browser, and no row shows them. This drops them, hard defenders with them, and loads the page again]"
+ },
+ {
+  "path": "Sandbox ▸ Sandbox",
   "kind": "toggle",
   "label": "show AI debug labels",
   "title": "state / awareness tags over the guards",
@@ -3953,7 +3961,7 @@
   "path": "Missions ▸ Difficulty (loud scenarios)",
   "kind": "toggle",
   "label": "hard defenders",
-  "title": "THE difficulty switch for the loud squad missions (also on the mission sheet). Off = STANDARD: the defenders exactly as they were. On = HARD: Enemy AI ▸ Harder defenders and Enemy AI ▸ Defenders dig in both on at hard's rows (their shipped rows plus stand to, stand and fight and far rooms by one door, but the room's keeper does not dig in) — defenders near a room you have hit come at it together and round by a second door, the men of a room farther off as one by one door, call it on their radio first, stand and fight where they meet you out of it, and fall back to fight again; heard before your first entry they report it, wait, and all come when a room is hit; the man left to keep a room slips out by another door when you reach his. Few barricade: a defender shuts, wedges and covers his door only when he hears a fight he has no way into. No hit points, aim or dice change. Hard also narrows your own team's fog of war to cones (Missions ▸ Fog of war ▸ 'fog of war ▸ HARD: eyes are cones'). Restart the scenario after flipping it. Levels: standard · hard.",
+  "title": "THE difficulty switch for the loud squad missions (also on the mission sheet). Off = STANDARD: the defenders exactly as they were. On = HARD: the harder defenders' and the dig-in rows both on at hard's numbers (their shipped rows plus stand to, stand and fight and far rooms by one door, but the room's keeper does not dig in) — defenders near a room you have hit come at it together and round by a second door, the men of a room farther off as one by one door, call it on their radio first, stand and fight where they meet you out of it, and fall back to fight again; heard before your first entry they report it, wait, and all come when a room is hit; the man left to keep a room slips out by another door when you reach his. Few barricade: a defender shuts, wedges and covers his door only when he hears a fight he has no way into. No hit points, aim or dice change. Hard also narrows your own team's fog of war to cones (Missions ▸ Fog of war ▸ 'fog of war ▸ HARD: eyes are cones'). Restart the scenario after flipping it. Levels: standard · hard.",
   "def": true,
   "extra": ""
  },

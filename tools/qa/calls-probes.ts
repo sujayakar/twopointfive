@@ -8,7 +8,6 @@
 //   calls-shipped   every call of the list ships at its pick, and is a key the Team feel panel keeps
 //   calls-lastseen  FOG.lastSeen turned up to 4: an enemy seen and then lost keeps a mark where he was last seen, ageing, gone after 4 s, never while he
 //                   is in sight. What decides the mark while the row is 0 is the 'you're told' lever: tools/qa/told-check.ts
-import { readFileSync } from 'node:fs';
 import { ROOT } from './headless.ts';
 import { stage, quiet, guarded, family } from './thresholdmenu-probes.ts';
 const { FOG } = await import(`${ROOT}/src/game/fogofwar.ts`);
@@ -28,7 +27,7 @@ const SHIPPED: [string, string, unknown, string][] = [
   ['COVER', 'on', true, 'false: nobody watches openings unasked'], ['ORDERS', 'doorRay', true, 'false: the old pick'], ['LASER', 'enemy', false, 'true: enemies show lasers'],
 ];
 
-// ---------------------------------------------------------------- every call ships at its pick, and has a row
+// ---------------------------------------------------------------- every call ships at its pick
 export const callsShipped = guarded(async () => {
   const { verdict, done } = family('calls-shipped: every call taken ships at its pick and is kept per machine');
   const D = feelDefaults() as Record<string, Record<string, unknown>>;
