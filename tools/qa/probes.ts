@@ -3329,9 +3329,7 @@ if (on('checkpoint-autosave', 'checkpoints', 'all')) await run('checkpoint-autos
 { let civFail = 0;   // checkpoint-civilians lives in review-b-probes.ts (also 'rb-checkpoint-civilians' there): its verdict joins this family's banner, printed after the LAST member
   if (on('checkpoint-civilians', 'checkpoints')) { if (!await run('checkpoint-civilians', async () => (await import('./review-b-probes.ts')).checkpointCivilians())) civFail = 1; }
   if (KNOWN.has(which) && which.startsWith('checkpoint')) here() && familyBanner('checkpoints', (await import('./checkpoint-probes.ts')).checkpointFailures() + civFail); }
-// ---------------------------------------------------------------- the session journal (journal-probes.ts; src/game/journal.ts + sensors.ts + digest.ts): 'journal' = the family — a 90 s scripted session
-// recorded headless replays identically in a fresh game; a forged sensor value / a gameplay knob nudged is caught as a divergence at the right frame with the field named; every fixture
-// under tools/qa/sessions/ replays identically on this build (`probes.ts journal --write` re-files the scripted fixture; tools/qa/replay.ts <file> replays one by hand)
+// ---------------------------------------------------------------- what a tape's recipe carries (src/game/journal.ts): 'journal' = the family
 let journalKnobsRed = 0;
 if (on('journal-knobs', 'journal', 'all')) journalKnobsRed = (await run('journal-knobs', async () => (await import('./knobs-check.ts')).knobsCheck())) ? 0 : 1;   // THE list of knob tables (src/game/knobs.ts): the recording's set, the feel panel's tables, the copy / put-back round trip
 if (on('settings-reads', 'journal', 'all')) await run('settings-reads', async () => (await import('./settings-check.ts')).settingsReads());   // THE PICTURE'S SETTINGS ARE NOT THE GAME'S (src/game/env.ts): no file under src/game reads a setting of the engine's outside the named rows — the static lines of tools/qa/settings-check.ts
@@ -3367,7 +3365,6 @@ if (on('wxkinds-roofs', 'wxkinds', 'all')) await run('wxkinds-roofs', async () =
 if (on('wxkinds-sight', 'wxkinds', 'all')) await run('wxkinds-sight', async () => (await import('./weather-kinds-probes.ts')).wxSight());
 if (on('wxkinds-hearing', 'wxkinds', 'all')) await run('wxkinds-hearing', async () => (await import('./weather-kinds-probes.ts')).wxHearing());
 if (on('wxkinds-save', 'wxkinds', 'all')) await run('wxkinds-save', async () => (await import('./weather-kinds-probes.ts')).wxSave());
-if (on('wxkinds-journal', 'wxkinds', 'all')) await run('wxkinds-journal', async () => (await import('./weather-kinds-probes.ts')).wxJournal());
 if (on('wxkinds-url', 'wxkinds', 'all')) await run('wxkinds-url', async () => (await import('./weather-kinds-probes.ts')).wxUrl());
 // ---------------------------------------------------------------- the weather's dust in the rooms (airdust-probes.ts — game/airDust.ts): 'airdust' = the family
 if (on('airdust-shut', 'airdust', 'all')) await run('airdust-shut', async () => (await import('./airdust-probes.ts')).airShut());

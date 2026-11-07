@@ -451,7 +451,7 @@ if (typeof window !== 'undefined' && typeof window.addEventListener === 'functio
       case 'Enter': case 'NumpadEnter': case 'Space': if (onBtn) { e.stopImmediatePropagation(); return; } if (!e.repeat) S.rows[S.sel]?.press(); eat(); return;   // (on Back / Reset / a tab the key is that button's)
       case 'Tab': if (S.onTab) { const back = S.onTab; if (!e.repeat) { closeOptions(); back(); } eat(); return; }   // (the screen Tab itself opened — ui/tabkey.ts 'keys' — goes away on Tab)
         e.stopImmediatePropagation(); return;   // (the browser's own walk over Back and Reset; never the game's key)
-      default: if (/^F\d{1,2}$/.test(e.code)) return;   // (the recorders' keys — F7 replay, F8 sweep, F9, F10 — work with the screen up, as they do over a pause card)
+      default: if (/^F\d{1,2}$/.test(e.code)) return;   // (the recorders' keys — F7 replay, F8 sweep, F9 — work with the screen up, as they do over a pause card)
         e.stopImmediatePropagation();   // (nothing else under the screen hears a key while it is up; the rest keep their browser defaults)
     }
   }, { capture: true });
