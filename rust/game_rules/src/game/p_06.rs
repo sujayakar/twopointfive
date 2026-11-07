@@ -441,8 +441,7 @@ pub fn game_step_fx_and_dyn_boxes(g: &mut crate::game::Game, all: &[CharId], dt:
 
 /// characters → what each man wears (the renderer's own half is the picture's), and the frame's dynamic boxes handed to the world   (game.ts drawCharacters)
 pub fn game_draw_characters(g: &mut crate::game::Game, all: &[CharId], statured: bool) {
-    g.men_all = all.to_vec(); g.men_statured = statured; g.men_bare = false;
-    game_draw_men(g, all, statured, false, Some(false));   // (DRESS.men down: dress.ts, "what each WEARS is still dealt")
+    game_draw_men(g, all, statured, Some(false));   // (DRESS.men down: dress.ts, "what each WEARS is still dealt")
     g.dyn_raw = g.dyn_boxes.len() as f64;
     let mut list = core::mem::take(&mut g.dyn_boxes);
     crate::fogofwar::picture::keep_raw(g, &list);
