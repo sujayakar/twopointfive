@@ -31,7 +31,7 @@ const WORK = join(ROOT, 'rust'), CRATE = join(WORK, 'sim'), TARGET = join(WORK, 
  *  only makes the picture, and may round as the machine likes. 'both': exact by the standard and stateless, so either side may link it. A crate with no row
  *  here is red (`sides`): nothing joins the workspace without saying which it is. */
 type Side = 'gameplay' | 'dressing' | 'both';
-export const SIDES: Record<string, Side> = { prim: 'both', sim: 'gameplay', dress: 'dressing', game: 'gameplay', game_run: 'gameplay', game_start: 'gameplay', game_face: 'gameplay' };   // (game: the simulation's tick as Rust · game_run: what a host does round a step · game_start: the game's own start, a level file's text in and a Game out · game_face: the module the page loads under ?rust=1 — tools/blitz/FACE.md)
+export const SIDES: Record<string, Side> = { prim: 'both', sim: 'gameplay', dress: 'dressing', game: 'gameplay', game_run: 'gameplay', game_face: 'gameplay' };   // (game: the simulation's tick as Rust · game_run: what a host does round a step · game_face: the module the page loads under ?rust=1 — tools/blitz/FACE.md)
 /** the modules the build makes: the crate each is the build of, every crate it is made from, the file its bytes go to, and the name its constants carry there */
 interface Mod { name: string; side: 'gameplay' | 'dressing'; crates: string[]; out: string; tag: string }
 export const MODULES: readonly Mod[] = [
@@ -42,7 +42,7 @@ export const MODULES: readonly Mod[] = [
  *  compiles it off its own thread (src/host/rustgame.ts) and the 6 MB rule below is not its; it is never checked in (tools/blitz/face-build.ts builds it for
  *  the dev server and the static build). Its row is here so that `sides` reads its crates like any other's. */
 export const FILE_MODULES: readonly Mod[] = [
-  { name: 'game_face', side: 'gameplay', crates: ['prim', 'sim', 'game', 'game_run', 'game_start', 'game_face'], out: 'rust/game_face/target/wasm32-unknown-unknown/release/game_face.wasm', tag: 'FACE' },
+  { name: 'game_face', side: 'gameplay', crates: ['prim', 'sim', 'game', 'game_run', 'game_face'], out: 'rust/game_face/target/wasm32-unknown-unknown/release/game_face.wasm', tag: 'FACE' },
 ];
 /** the simulation's module (the one the crate rules and the powers' table are about) */
 const SIM = MODULES[0];

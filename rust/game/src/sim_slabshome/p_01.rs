@@ -11,6 +11,10 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 fn cols(g: &Game) -> &'static mut ::sim::slabs::Slabs {
     &mut ::sim::state::state(g.sim).slabs
 }
+/// The same columns, to read.
+fn cols_read(g: &Game) -> &'static ::sim::slabs::Slabs {
+    &::sim::state::state_read(g.sim).slabs
+}
 
 /// The column starts in SLAB_F64 then SLAB_U32 order, as `names` in slab_io walks them.
 fn in_order(o: &SlabStoreO) -> [f64; 21] {
@@ -180,29 +184,6 @@ pub fn slab_store_save(g: &mut crate::game::Game, r: f64, s: crate::sim_slabshom
         | (if s.side < 0.0 { ::sim::slabs::F_BACK } else { 0 })
         | (if s.bits.is_some() { ::sim::slabs::F_BITS } else { 0 });
     c.who[r] = js::to_i32(s.who);
-}
-
-/// Where the hand-over is, asked once, after checking this file's layout is the module's own. (slabshome.ts slabIo)
-pub fn slab_io(g: &mut crate::game::Game) -> crate::sim_slabshome::SlabIo {
-    if let Some(io) = g.m.sim_slabshome.io { return io; }
-    let x = crate::sim_sim::sim();
-    let o = slab_cols(SLAB_CAP);
-    let at = in_order(&store_o(&o));
-    let doubles = slab_f64().len();
-    let names: Vec<String> = slab_f64().into_iter().chain(slab_u32()).collect();
-    let mut off: Vec<String> = Vec::new();
-    for (i, k) in names.iter().enumerate() {
-        let want = if i < doubles { at[i] * 8.0 } else { at[i] * 4.0 };
-        if ::sim::slabs::cap(100 + i as u32) as f64 != want { off.push(k.clone()); }
-    }
-    let cap = |t: u32| ::sim::slabs::cap(t) as f64;
-    if cap(0) != SLAB_CAP || cap(13) != o.bytes || !off.is_empty() || cap(100 + names.len() as u32) != 0.0 || cap(1) != SLAB_PARS {
-        let where_ = if off.is_empty() { String::new() } else { format!(" (columns not where the module has them: {})", off.join(", ")) };
-        panic!("the Rust module lays the slabs out as {} rows in {} bytes and src/sim/slabshome.ts as {} in {}{}, or the hand-over is not the same length: bun run tools/sim/build.ts", cap(0), cap(13), SLAB_CAP, o.bytes, where_);
-    }
-    let io = SlabIo { x, par: (::sim::slabs::addr(0) / 8) as f64 };
-    g.m.sim_slabshome.io = Some(io);
-    io
 }
 
 /// Word `i` of a store's bytes. (the Uint32Array views of slabDiff)

@@ -184,17 +184,6 @@ pub fn warm_of(g: &mut crate::game::Game, c_2: V3) -> V3 {
     if lum(r, gr, b) == l0 { [r, gr, b] } else { c_2 }
 }
 
-/// The afterglow's light (BLAST.glow, a constant false: never queued, so never reached). Translated all the same: a light is the game's.
-/// (blastLook.ts:239 afterglow)
-pub fn afterglow(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) {
-    let a = afterglow_table();
-    let at = if holed(g, w) { let t = thick(g, w); crate::wallcharge::wall_pt(g, w, 0.0, -t / 2.0, Some(a.y)) } else { crate::wallcharge::wall_pt(g, w, 0.0, 0.15, Some(a.y)) };
-    let l = crate::render_lights::light_set_flash(g, at, a.color, a.intensity, a.range, a.ttl, 0.0);
-    let who = g.ch[g.pl[g.player].ch].id;
-    crate::fogofwar::fog_of_war_light_by(g, l, Some(who));   // (a wall charge is the team's: FOG.ours)
-    g.tab.light[l].radius = a.radius;
-}
-
 // ---------------------------------------------------------------- THE FRAGMENTS OF A BURST (blastLook.ts:246 to :333)
 // Particle records, computed from the game's state (which charge blew, how a can lies, where a door's leaf went) and handed to the host's pool as out
 // events (`render_particles::particles_emit`). Reached only where the host has a pool (particleFx `gpu_fx`): `bang_fx` asks `blast_sparks` first.

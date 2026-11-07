@@ -58,18 +58,6 @@ pub fn squad40_left(g: &mut crate::game::Game) -> f64 {
     match g.m.squad40.states.get(key) { Some(s) => left_in(g, s), None => 0.0 }
 }
 
-/// what this staging brought. (squad40.ts squad40Brought)
-pub fn squad40_brought(g: &mut crate::game::Game) -> f64 {
-    let key = crate::seats::view_key(g);
-    g.m.squad40.states.get(key).map_or(0.0, |s| s.brought)
-}
-
-/// one man's rounds left. (squad40.ts squad40Of)
-pub fn squad40_of(g: &mut crate::game::Game, gd: GuardId) -> f64 {
-    let key = crate::seats::view_key(g);
-    g.m.squad40.states.get(key).and_then(|s| s.rounds.get(gd).copied()).unwrap_or(0.0)
-}
-
 /// the words the throws' row adds while the order is on the page. (squad40.ts squad40Word)
 pub fn squad40_word(g: &mut crate::game::Game) -> String {
     let key = crate::seats::view_key(g);
@@ -493,16 +481,6 @@ pub fn squad40_plans(g: &mut crate::game::Game) -> Vec<crate::squad40::Squad40Pl
         }
     }
     out
-}
-
-/// the line for the tools. (squad40.ts squad40Summary)
-pub fn squad40_summary(g: &mut crate::game::Game) -> String {
-    let key = crate::seats::view_key(g);
-    let brought = g.m.squad40.states.get(key).map(|s| s.brought);
-    match brought {
-        Some(b) if js::truthy(b) => format!("{} of {} left · X on a spot of floor, G, then 3 · fired {}", js::num_str(squad40_left(g)), js::num_str(b), g.stats.squad40.fired),
-        _ => String::from("none brought (no teammate's card carries a 40 mm grenade)"),
-    }
 }
 
 #[cfg(test)]

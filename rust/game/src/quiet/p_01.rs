@@ -42,11 +42,6 @@ pub fn quiet_mission_new(g: &mut crate::game::Game) -> crate::quiet::QuietMissio
     crate::quiet::QuietMission::blank()
 }
 
-/// the block in force   (quiet.ts QuietMission.block)
-pub fn quiet_mission_block(g: &mut crate::game::Game) -> Option<crate::scene_scenarios::QuietData> {
-    if g.quiet.active { g.quiet.data.clone() } else { None }
-}
-
 /// the start dealt   (quiet.ts QuietMission.start_)
 pub fn quiet_mission_start_(g: &mut crate::game::Game) -> Option<crate::scene_scenarios::QuietStart> {
     if !g.quiet.active { return None; }
@@ -281,38 +276,6 @@ fn cut_lens(lens: &mut crate::camera::FollowCamera, p: V3) {
     lens.desired_serial = lens.desired_serial.wrapping_add(1);
 }
 
-/// the deal as a checkpoint files it   (quiet.ts QuietMission.snapshot)
-pub fn quiet_mission_snapshot(g: &mut crate::game::Game) -> Option<crate::quiet::QuietSnap> {
-    if g.quiet.active { Some(crate::quiet::QuietSnap { deal: g.quiet.deal, pin: g.quiet.pin, squad: g.quiet.squad }) } else { None }
-}
-
-/// a checkpoint's deal, for the restart its load is about to make; ignored out of range   (quiet.ts QuietMission.restoreDeal)
-pub fn quiet_mission_restore_deal(g: &mut crate::game::Game, s: Option<crate::quiet::QuietSnap>) {
-    if !g.quiet.active { return; }
-    let (q, s) = match (g.quiet.data.as_ref(), s) { (Some(q), Some(s)) => (q, s), _ => return };
-    let d = s.deal;
-    let sets = q.patrols.as_ref().map_or(0, |p| p.len());
-    let ok = is_integer(d.start) && d.start >= 0.0 && d.start < q.starts.len() as f64
-        && is_integer(d.spot) && d.spot >= 0.0 && d.spot < q.spots.len() as f64
-        && is_integer(d.patrol) && d.patrol >= -1.0 && d.patrol < sets as f64;
-    if ok { g.quiet.pending = Some(crate::quiet::QuietDeal { start: d.start, spot: d.spot, patrol: if sets > 0 { m::max(0.0, d.patrol) } else { -1.0 } }); }
-}
-
-/// how many men a deal's patrol set mans on this level (−1: not a deal its block deals)   (quiet.ts QuietMission.rosterOf)
-pub fn quiet_mission_roster_of(g: &mut crate::game::Game, d: Option<crate::quiet::QuietDeal>) -> f64 {
-    let q = match g.quiet.data.as_ref().or(g.level.scenarios.as_ref().and_then(|s| s.quiet.as_ref())) { Some(q) => q, None => return -1.0 };
-    let d = match d { Some(d) => d, None => return -1.0 };
-    if !(is_integer(d.start) && d.start >= 0.0 && d.start < q.starts.len() as f64 && is_integer(d.spot) && d.spot >= 0.0 && d.spot < q.spots.len() as f64) { return -1.0; }
-    let sets = match q.patrols.as_ref() { Some(p) if !p.is_empty() => p, _ => return g.level.routes.len() as f64 };
-    if !is_integer(d.patrol) || d.patrol < 0.0 { return -1.0; }
-    match sets.get(d.patrol as usize) { Some(s) => s.len() as f64, None => -1.0 }
-}
-
-/// Number.isInteger
-fn is_integer(x: f64) -> bool {
-    x.is_finite() && m::floor(x) == x
-}
-
 /// the run in a line   (quiet.ts QuietMission.summary)
 pub fn quiet_mission_summary(g: &mut crate::game::Game) -> String {
     if !g.quiet.active || g.quiet.data.is_none() {
@@ -452,11 +415,6 @@ fn stage_or_why(g: &mut crate::game::Game) -> Result<(), String> {
     Ok(())
 }
 
-/// Sam faced as the start has him, the partner staged. A failure here is the TypeScript's throw: only `onEncounterRestart` takes it   (quiet.ts QuietMission.stage)
-pub fn quiet_mission_stage(g: &mut crate::game::Game) {
-    if let Err(why) = stage_or_why(g) { panic!("{}", why); }
-}
-
 /// the free floor nearest a stride behind Sam, walkable from him; else the fault an author is told   (quiet.ts QuietMission.behind)
 fn behind_or_why(g: &mut crate::game::Game, s: &crate::scene_scenarios::QuietStart) -> Result<V3, String> {
     let back: V3 = [s.sam[0] - m::sin(s.sam_yaw) * 1.1, 0.0, s.sam[2] - m::cos(s.sam_yaw) * 1.1];
@@ -480,11 +438,6 @@ fn behind_or_why(g: &mut crate::game::Game, s: &crate::scene_scenarios::QuietSta
         Some(p) => Ok(p),
         None => Err(format!("no free floor beside the start at ({}, {}) for the partner — give the start a 'mate' mark", js::num_str(s.sam[0]), js::num_str(s.sam[2]))),
     }
-}
-
-/// the free floor nearest a stride behind Sam, walkable from him   (quiet.ts QuietMission.behind)
-pub fn quiet_mission_behind(g: &mut crate::game::Game, s: &crate::scene_scenarios::QuietStart) -> V3 {
-    match behind_or_why(g, s) { Ok(p) => p, Err(why) => panic!("{}", why) }
 }
 
 /// THE FLOOR A MAN STANDS ON AT A HOLDER'S FACE: the nearest free cell with a clear line to the face and, given the room, inside it   (quiet.ts holderStand)

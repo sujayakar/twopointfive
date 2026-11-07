@@ -32,11 +32,6 @@ fn get_f64(addr: usize, i: usize) -> f64 {
 fn get_u32(addr: usize, i: usize) -> u32 {
     unsafe { *(addr as *const u32).add(i) }
 }
-/// `Object.is`: a −0 is not a 0, and a NaN is any NaN
-#[inline]
-fn is(x: f64, y: f64) -> bool {
-    x.to_bits() == y.to_bits() || (x.is_nan() && y.is_nan())
-}
 /// a point as `a.join(', ')` writes it, in the language's own printing of a number
 fn joined(a: &[f64]) -> String {
     let mut s = String::new();
@@ -166,11 +161,6 @@ fn rows_for(g: &Game, r: Option<LampRows>) -> Option<sim::light::Rows> {
 fn handed_back_words(row: &str, why: &str, a: &[f64], b: &[f64]) -> String {
     alloc::format!("{}: the Rust module handed the question back ({}): [{}] → [{}]", row, why, joined(&a[..3]), joined(&b[..3]))
 }
-/// a sense's question the module handed back, as a value. The skeleton's Opaque holds no words: every asker here panics with `handed_back_words`. (collision.ts handedBack)
-pub fn handed_back(row: &str, why: &str, a: &[f64], b: &[f64]) -> crate::Opaque {
-    crate::Opaque
-}
-
 // ---- StaticCollision: the grid, as the boxes are filed in it
 
 /// the box world stood up: the cells from `boxes`, the walk grid baked. `g.col = new(g, …)`: everything of g.col is new, and is built where the bake can ask it. (collision.ts StaticCollision.constructor)
@@ -559,14 +549,6 @@ pub fn pane_ask(g: &mut crate::game::Game) -> f64 {
     }
 }
 
-/// a question the TypeScript took for it, counted where the module should have had it. (collision.ts StaticCollision.paneFell)
-pub fn pane_fell(g: &mut crate::game::Game, row: &str, ask: f64) {
-    if g.m.sim_sim.fell.on && ask == -1.0 {
-        let why = if g.col.pane_rows.is_none() { "no glass stands behind glassOpen" } else { "more broken panes, or a view of more panes, than the copy holds" };
-        crate::sim_sim::fell(row, &alloc::format!("a pane's rule the module cannot judge by: {}", why));
-    }
-}
-
 // ---- lines
 
 /// which of the world's lists holds the leaves to ask with (−1 none). No answer but the module's, so more leaves than a list is a mistake by name.
@@ -649,44 +631,6 @@ pub fn things_ask(g: &mut crate::game::Game, ro: V3, rd: V3, tmax: f64) -> Optio
         None => panic!("the Rust module's ray into the furniture met part {} of its list, which is no part of the furniture as it stands ({} things)", js::num_str(at), p.props.len()),
     };
     Some(Some(ThingsAsk { row: k as f64, t: out[0], n: [out[1], out[2], out[3]], box_ }))
-}
-
-/// the furniture's ray answered both ways: the module's against what the caller's own walk answered, and the copy against the furniture. A check's. (collision.ts StaticCollision.thingsBoth)
-pub fn things_both(g: &mut crate::game::Game, p: &crate::scene_box_mirror::Furniture, ro: V3, rd: V3, tmax: f64, t: Option<crate::scene_collision::ThingsBothT>) {
-    if !g.col.mirror.live || crate::scene_box_mirror::box_mirror_owes_boxes(g) || !crate::scene_box_mirror::box_mirror_things(g, p) { return; }
-    let mut out = [0.0; 5];
-    let k = sim::lines::ray_things(slot(g), ro[0], ro[1], ro[2], rd[0], rd[1], rd[2], tmax, &mut out);
-    let ok = if k < 0 {
-        t.is_none()
-    } else {
-        // (`P.props[k] === t.prop`: `prop` holds nothing here, and a box is one thing's part, so the box's compare answers that too)
-        match &t {
-            None => false,
-            Some(h) => is(out[0], h.t) && is(out[1], h.n[0]) && is(out[2], h.n[1]) && is(out[3], h.n[2]) && crate::scene_box_mirror::box_mirror_thing_box(g, p, out[sim::lines::RAY_PART]) == Some(h.box_),
-        }
-    };
-    let st = crate::scene_box_mirror::box_mirror_stale_things(g, p);
-    let both = &mut g.m.scene_collision.both;
-    both.asked += 1.0;
-    both.things += 1.0;
-    both.stale += st;
-    if !ok { both.differ += 1.0; }
-    if (js::truthy(st) || !ok) && both.first.is_empty() {
-        both.first = alloc::format!("the furniture's ray [{}] → [{}] ({}, {}): {}{} row(s) of the copy not the furniture", joined(&ro), joined(&rd), tmax, k, if ok { "" } else { "the two answers differ; " }, st);
-    }
-}
-
-/// the check's count of one question answered both ways, and of the copy against its boxes and panes. (collision.ts StaticCollision.compared)
-pub fn compared(g: &mut crate::game::Game, set: f64, ok: bool, what: &str, a: V3, b: V3, p: f64, q: f64) {
-    let (ids, leaves) = (g.col.boxes.clone(), g.col.dynamic_boxes.clone());
-    let st = crate::scene_box_mirror::box_mirror_stale(g, &ids, &leaves, set) + crate::scene_box_mirror::box_mirror_stale_panes(g);
-    let both = &mut g.m.scene_collision.both;
-    both.asked += 1.0;
-    both.stale += st;
-    if !ok { both.differ += 1.0; }
-    if (js::truthy(st) || !ok) && both.first.is_empty() {
-        both.first = alloc::format!("{} [{}] → [{}] ({}, {}): {}{} row(s) of the copy not their box or their pane", what, joined(&a), joined(&b), p, q, if ok { "" } else { "the two answers differ; " }, st);
-    }
 }
 
 /// can the segment from a along unit r for `len` be said, without the slab test, to come nowhere near box b (grown by `pad`). (collision.ts segClear)
@@ -804,16 +748,6 @@ fn line(g: &mut Game, a: V3, b: V3, shrink: f64, through: f64, panes: Option<&mu
 pub fn segment_blocked_ask(g: &mut crate::game::Game, a: V3, b: V3, shrink: Option<f64>, through: Option<f64>, panes: Option<&mut Vec<crate::scene_collision::SegmentBlockedPanesItem>>) -> bool {
     let (shrink, through) = (shrink.unwrap_or(0.02), through.unwrap_or(crate::scene_boxes::box_flag().glass));
     ready(g);
-    line(g, a, b, shrink, through, panes)
-}
-
-/// is the line test this class's own: a check's override has no Rust. (collision.ts StaticCollision.ownLines)
-pub fn own_lines(g: &mut crate::game::Game) -> bool {
-    true
-}
-
-/// TWIN: the module's line. (collision.ts StaticCollision.segmentBlockedHere)
-pub fn segment_blocked_here(g: &mut crate::game::Game, a: V3, b: V3, shrink: f64, through: f64, panes: Option<&mut Vec<crate::scene_collision::SegmentBlockedPanesItem>>) -> bool {
     line(g, a, b, shrink, through, panes)
 }
 

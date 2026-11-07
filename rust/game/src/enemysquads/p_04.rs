@@ -252,20 +252,6 @@ pub fn calls_tick(g: &mut crate::game::Game, q: EnemysquadsSquadId, busy: bool) 
     Some(done)
 }
 
-/// tools and the panel: the calls on the air in this game right now   (enemysquads.ts squadCalls)
-pub fn squad_calls(g: &mut crate::game::Game) -> Vec<crate::enemysquads::SquadCallsItem> {
-    let mut out = Vec::new();
-    if let Some(st) = g.m.enemysquads.states.as_ref() {
-        for &q in st.squads.iter() {
-            let s = &g.tab.enemysquads_squad[q];
-            if let Some(l) = &s.calls {
-                for c in l.iter() { out.push(SquadCallsItem { squad: s.name.clone(), by: c.by, t0: c.t0, end: c.end, body: c.body }); }
-            }
-        }
-    }
-    out
-}
-
 /// every squad has heard that one of them is not answering: stood to, counting its own men oftener   (enemysquads.ts netWary)
 pub fn net_wary(g: &mut crate::game::Game, about: &str) {
     let squads = the_state(g).squads.clone();
@@ -652,36 +638,6 @@ fn nc_stage_asked(g: &mut Game) {
     event(g, sent.q, SquadEventWhat::NetLooks, &why, Some(first));
     net_wary(g, &xn);
     let b = nc_beat(g); nc_idle(g, b);
-}
-
-/// what a tally and the panel read   (enemysquads.ts squadsReport)
-pub fn squads_report(g: &mut crate::game::Game) -> Vec<crate::enemysquads::SquadReport> {
-    let squads = match g.m.enemysquads.states.as_ref() { Some(st) => st.squads.clone(), None => return Vec::new() };
-    let mut out = Vec::new();
-    for q in squads {
-        let (men, sent) = { let s = &g.tab.enemysquads_squad[q]; (s.men.clone(), s.sent.iter().map(|x| x.gd).collect::<Vec<GuardId>>()) };
-        let up = men.iter().filter(|&&m| alive(g, m)).count();
-        let n_out = sent.iter().filter(|&&m| alive(g, m)).count();
-        let s = &g.tab.enemysquads_squad[q];
-        let events = s.events.iter().map(|e| { let mut c = e.clone(); c.t = m::round(e.t * 10.0) / 10.0; c }).collect();
-        out.push(SquadReport { id: s.def.id.clone(), name: s.name.clone(), men: men.len() as f64, up: up as f64, state: String::from(s.state.as_str()), out: n_out as f64, events });
-    }
-    out
-}
-
-/// the panel's line   (enemysquads.ts squadsSummary)
-pub fn squads_summary(g: &mut crate::game::Game) -> String {
-    let squads = match g.m.enemysquads.states.as_ref() { Some(st) => st.squads.clone(), None => return String::from("no squads on this floor") };
-    let mut rows: Vec<String> = Vec::new();
-    for q in squads {
-        let (men, sent) = { let s = &g.tab.enemysquads_squad[q]; (s.men.clone(), s.sent.iter().map(|x| x.gd).collect::<Vec<GuardId>>()) };
-        let up = men.iter().filter(|&&m| alive(g, m)).count();
-        let n_out = sent.iter().filter(|&&m| alive(g, m)).count();
-        let s = &g.tab.enemysquads_squad[q];
-        let tail = if n_out > 0 { format!(" ({} out)", n_out) } else { String::new() };
-        rows.push(format!("{} {}/{} {}{}", s.name, up, men.len(), s.state.as_str(), tail));
-    }
-    rows.join(" · ")
 }
 
 /// a squad's men by its name, the fallen among them   (enemysquads.ts squadMen)

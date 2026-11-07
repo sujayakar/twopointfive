@@ -43,7 +43,11 @@ const fieldFn = new Map<string, (o: any, g: any, B: any) => any>();
 const compiled = (expr: string) => { let f = fieldFn.get(expr); if (!f) { f = new Function('o', 'g', 'B', `return ${expr}`) as any; fieldFn.set(expr, f!); } return f!; };
 
 // ---- what a game's walk keeps between exports
-class Book { ids = new Map<string, Map<object, number>>(); lists = new Map<string, object[]>(); serial = new WeakMap<object, number>(); nextSerial = 1; serials = new Map<object, number>(); /** once the Rust game deals the serials (import.ts takes its counter with every apply), what this side deals comes from a range of its own: two things must never share a number */ rustDeals = false; ownSerial = 0x40000000;
+// AN ID WRITTEN FOR A ROW THE RUST GAME HAS NOT GOT. `known` (import.ts, after every apply) is how many rows of each table the Rust game has; an object the
+// TypeScript made since has a number past that, and bytes that hold it name a row that is not there: a list of the Rust game's would index past its
+// table's end on the next tick. Every such id written is counted here; the scan reads the count round a leaf's bytes and does not send them (scan.ts).
+export const PAST = { n: 0, id: '' };
+class Book { /** rows of each table the Rust game has, once an apply has said (import.ts) */ known?: Map<string, number>; ids = new Map<string, Map<object, number>>(); lists = new Map<string, object[]>(); serial = new WeakMap<object, number>(); nextSerial = 1; serials = new Map<object, number>(); /** once the Rust game deals the serials (import.ts takes its counter with every apply), what this side deals comes from a range of its own: two things must never share a number */ rustDeals = false; ownSerial = 0x40000000;
   /** (for the importer: every object that has a serial) */ serialOfObjects() { return this.serials; }
   first = new Map<object, string>();
   /** poses that have no place in the pool, in the order first met: their floats go at the end of the bytes */
@@ -159,7 +163,7 @@ function wr(n: Node, v: any, o: Out): void {
     case 'tup': { if (!Array.isArray(v)) { miss('not a tuple', v); zero(n, o); return; } n.of.forEach((x: Node, i: number) => wr(x, v[i], o)); return; }
     case 'map': { const E = keysOf(v); if (!E) { miss('not a map', v); o.u32(0); return; } const K = n.K.k === 'id' && n.K.id === 'PlayerId' && isWeak(v) ? E.keys.filter(seated) : E.keys; o.u32(K.length); for (const k of K) { wKey(n.K, k, o); wr(n.V, E.get(k), o); } return; }
     case 'set': { const E = keysOf(v); if (!E) { miss('not a set', v); o.u32(0); return; } o.u32(E.keys.length); for (const k of E.keys) wKey(n.K, k, o); return; }
-    case 'id': { if (v && typeof v === 'object') { const e = SCHEMA.idExpr[n.id]; if (e) { const r = compiled(e)(v, G, B); if (typeof r === 'number') { o.u32(r); return; } } o.u32(BK.idOf(n.id, v)); return; } if (typeof v === 'number') { o.u32(v); return; } miss(`nothing for ${n.id}`, v); o.u32(0xffffffff); return; }
+    case 'id': { if (v && typeof v === 'object') { const e = SCHEMA.idExpr[n.id]; if (e) { const r = compiled(e)(v, G, B); if (typeof r === 'number') { if (r >= (BK.known?.get(n.id) ?? Infinity) && r !== 0xffffffff) { PAST.n++; PAST.id = n.id; } o.u32(r); return; } } const i = BK.idOf(n.id, v); if (i >= (BK.known?.get(n.id) ?? Infinity)) { PAST.n++; PAST.id = n.id; } o.u32(i); return; } if (typeof v === 'number') { o.u32(v); return; } miss(`nothing for ${n.id}`, v); o.u32(0xffffffff); return; }
     case 'type': return wType(n, v, o);
   }
   throw new Error(`bridge: no writer for ${n.k}`);

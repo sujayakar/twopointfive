@@ -605,14 +605,6 @@ pub fn destruction_hide(g: &mut crate::game::Game, d: &crate::destruction::Destr
     crate::smoke_types::smoke_system_like_obstacles_changed(g, c, m::hyp3(h[0], h[1], h[2]) + 0.6);
 }
 
-/// The escalated burst by hand at a point on an up-facing surface: effects only.   (destruction.ts testBurst)
-pub fn destruction_test_burst(g: &mut crate::game::Game, at: V3, surf: Option<crate::scene_materials::Surf>, albedo: Option<V3>) {
-    let surf = surf.unwrap_or(crate::scene_materials::Surf::Drywall);
-    let albedo = albedo.unwrap_or([0.82, 0.8, 0.76]);
-    let e = g.k.chaos.t_burst + 1.5;
-    destruction_burst(g, at, [0.0, -1.0, 0.0], [0.0, 1.0, 0.0], surf, albedo, e, 1.0, 0.0, None);
-}
-
 /// The escalated material burst on top of impactFx's, scaled by E and the rifle factor: what flies is the picture's, by what the box says it is made of.   (destruction.ts burst)
 pub fn destruction_burst(g: &mut crate::game::Game, hit_p: V3, dir: V3, n: V3, surf: crate::scene_materials::Surf, albedo: V3, e: f64, k: f64, owner: f64, hit: Option<crate::destruction::DestructionBurstHit>) {
     let on_gpu = crate::particle_fx::gpu_fx(g);

@@ -107,14 +107,8 @@ pub fn host_new(g: &mut Game) -> Host {
 }
 
 /// STAND A GAME on the level file `data` (the file's text, parsed).
-pub fn stand(data: &Json, assets: Assets, o: &StartOpts) -> Stood { stand_with(data, assets, o, &mut |_| {}) }
-
-/// … with WHAT THE HOST HAS SET BEFORE A GAME IS MADE laid on the blank game first (`before`): its knob tables as a visitor, a panel or an address
-/// left them. The start reads knobs from its first line (which cast, which furniture, how a thing is rounded), so they are the host's before
-/// anything is read, as they are when the TypeScript stands a game.
-pub fn stand_with(data: &Json, assets: Assets, o: &StartOpts, before: &mut dyn FnMut(&mut Game)) -> Stood {
+pub fn stand(data: &Json, assets: Assets, o: &StartOpts) -> Stood {
     let mut g = Box::new(Game::blank());
-    before(&mut g);
     born(o.slot);
     g.sim = o.slot;
     let cast = if game::scene_look::look_dress(&mut g) { assets.cast_look.or(assets.cast) } else { assets.cast };
@@ -123,7 +117,6 @@ pub fn stand_with(data: &Json, assets: Assets, o: &StartOpts, before: &mut dyn F
     if !o.dress { g.m.dress.dress = game::dress::DressModDRESS::zeroed(); }
     // the host with no picture: an empty world and light set, the picture's settings, effectiveScale 1, no skin (stub.ts stubHost)
     g.engine.world = game::scene_boxes::box_world_new(&mut g, game::Opaque, None);
-    game::io::set_slot(&mut g, o.slot);   // (the slot is held twice: the game's own word and the box mirror's, which the world's lookups read)
     g.engine.lights = game::render_lights::LightSet::blank();
     g.engine.settings = settings::default_settings();
     g.engine.effective_scale = 1.0;

@@ -118,35 +118,6 @@ pub fn clearing_cap(g: &mut crate::game::Game) -> f64 {
     42.0 * m::max(1.0, cl!(g).rooms.len() as f64) + 15.0
 }
 
-/// A plan's name for the lines. (squad.ts Clearing.name)
-pub fn clearing_name(g: &mut crate::game::Game, p: Option<&crate::scene_level::RoomClearPlan>) -> String {
-    plan_name(p)
-}
-
-/// the summary's `who`
-fn summary_who(g: &Game, gd: GuardId) -> String {
-    match usize::try_from(g.gd[gd].route_i).ok().and_then(|i| g.level.routes.get(i)) {
-        Some(r) => g.tab.route[*r].name.clone(),
-        None => format!("guard {}", g.ch[g.gd[gd].ch].id - 10.0),
-    }
-}
-
-/// One line for the panel: which room, what stage, who, what is next. (squad.ts Clearing.summary)
-pub fn clearing_summary(g: &mut crate::game::Game) -> String {
-    let c = cl!(g).clone();
-    let r = match &c.cur { Some(r) if c.stage != ClearStage::Done => r, _ => return String::new() };
-    let next: Vec<String> = c.rooms.iter().skip(c.room_i + 1).map(|v| plan_name(v.first())).collect();
-    let next = next.join(", ");
-    let by = if c.stage != ClearStage::Muster { format!(" (by the {} door)", r.door) } else { String::new() };
-    let what = match (c.stage, c.drill) {
-        (ClearStage::Drill, Some(d)) => g.tab.squad_room_clear[d].phase.as_str(),
-        _ => c.stage.as_str(),
-    };
-    let pair = match c.b { Some(b) => format!(" + {}", summary_who(g, b)), None => String::from(" (alone)") };
-    let then = if next.is_empty() { String::new() } else { format!(" · then {}", next) };
-    format!("clearing: {}{} · {} · {}{}{} · {} s", plan_name(Some(r)), by, what, summary_who(g, c.a), pair, then, m::round(c.total))
-}
-
 /// Hand whoever of ours is still scripted back to the AI calm. (squad.ts Clearing.cancel)
 pub fn clearing_cancel(g: &mut crate::game::Game) {
     for gd in clearing_men(g) {

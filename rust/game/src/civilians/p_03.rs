@@ -873,42 +873,6 @@ pub fn set_civilians(g: &mut crate::game::Game, on: bool) {
     reset_civilians(g);
 }
 
-/// the panel's line: 'civilians ▸ Marta WORK wipe @wp3 (14 s) aw 0.00 | Owen FLEE → Novak [gun, armed] aw 1.00' (civilians.ts civiliansSummary)
-pub fn civilians_summary(g: &mut crate::game::Game) -> String {
-    if !g.tune.civilians { return String::from("civilians ▸ off"); }
-    if g.civilians.is_empty() { return String::from("civilians ▸ none authored on this level"); }
-    if !civilians_on_floor(g) { return String::from("civilians ▸ off the floor (the tour / daylight)"); }
-    let mut rows: Vec<String> = Vec::new();
-    for i in 0..g.civilians.len() {
-        let cv = g.civilians[i];
-        let cid = g.gd[cv].civ.unwrap();
-        let name = g.cv[cid].name.clone();
-        if g.gd[cv].state == GuardState::Dead {
-            let kind = g.gd[cv].down_kind.map_or("null", |k| k.as_str());
-            rows.push(format!("{} DOWN ({}{})", name, kind, if g.gd[cv].found { ", found" } else { "" }));
-            continue;
-        }
-        let st = g.cv[cid].state;
-        let mut bits = vec![format!("{} {}", name, st.as_str().to_ascii_uppercase())];
-        if st == CivState::Work {
-            let (wait, wp) = (g.gd[cv].wait, g.gd[cv].wp);
-            bits.push(if wait > 0.0 { format!("{} @wp{} ({} s)", task_at(g, cv).as_str(), wp, js::num_str(m::ceil(wait))) } else { format!("→ wp{}", wp) });
-        }
-        if let Some(t) = &g.cv[cid].target { bits.push(format!("→ {}", t.name)); }
-        if let Some(o) = g.cv[cid].report_to {
-            if st == CivState::Report || g.cv[cid].reported { bits.push(format!("told {}", g.gd[o].callsign)); }
-        }
-        if let Some(cause) = g.cv[cid].cause {
-            let cv_row = &g.cv[cid];
-            bits.push(format!("[{}{}{}{}]", cause.as_str(), if cv_row.armed { ", armed" } else { "" }, if cv_row.reported { ", reported" } else { "" }, if cv_row.phoned { ", phoned" } else { "" }));
-        }
-        if st == CivState::Cower && g.cv[cid].complied { bits.push(format!("complied {} min", js::num_str(m::max(0.0, m::ceil((g.cv[cid].comply_until - g.time) / 60.0))))); }
-        bits.push(format!("aw {}", js::to_fixed(g.gd[cv].awareness, 2)));
-        rows.push(bits.join(" "));
-    }
-    format!("civilians ▸ {}", rows.join(" | "))
-}
-
 /// the panel's and the probes' buttons: frighten one now, or send her to a phone (civilians.ts civPanic)
 pub fn civ_panic(g: &mut crate::game::Game, gd: Option<GuardId>, what: Option<crate::civilians::CivPanicWhat>) -> String {
     let what = what.unwrap_or(CivPanicWhat::Panic);

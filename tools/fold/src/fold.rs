@@ -127,6 +127,17 @@ fn diverges(s: &Stmt) -> bool {
 }
 
 /// A number written with no type of its own (`0.1`, `-2`, `3 * 0.5`): what it is depends on where it stands.
+/// a bare number written with a point (`1.0`), as against a whole one (`1`)
+fn has_float(e: &Expr) -> bool {
+    match e {
+        Expr::Lit(l) => matches!(&l.lit, syn::Lit::Float(_)),
+        Expr::Paren(p) => has_float(&p.expr),
+        Expr::Unary(u) => has_float(&u.expr),
+        Expr::Binary(b) => has_float(&b.left) || has_float(&b.right),
+        _ => false,
+    }
+}
+
 fn bare_number(e: &Expr) -> bool {
     match e {
         Expr::Lit(l) => match &l.lit {
@@ -1683,7 +1694,14 @@ impl<'ast, 'a> Visit<'ast> for Pass<'a> {
                         let whole = self.r(e);
                         let kept_block: Option<&Block> = if on { Some(&ifx.then_branch) } else { match ifx.else_branch.as_ref().map(|(_, x)| &**x) { Some(Expr::Block(b)) => Some(&b.block), _ => None } };
                         let kept_tail: Option<&Expr> = kept_block.and_then(|b| b.stmts.last()).and_then(|s| match s { Stmt::Expr(x, None) => Some(x), _ => None });
-                        if ifx.else_branch.is_some() && kept_tail.map(bare_number).unwrap_or(false) {
+                        // (where the side that goes ends in a bare number of the same kind, neither side gave the type: nothing is lost)
+                        let gone_block: Option<&Block> = if on { match ifx.else_branch.as_ref().map(|(_, x)| &**x) { Some(Expr::Block(b)) => Some(&b.block), _ => None } } else { Some(&ifx.then_branch) };
+                        let gone_tail: Option<&Expr> = gone_block.and_then(|b| b.stmts.last()).and_then(|s| match s { Stmt::Expr(x, None) => Some(x), _ => None });
+                        let same_kind = match (kept_tail, gone_tail) {
+                            (Some(a), Some(b)) => bare_number(a) && bare_number(b) && has_float(a) == has_float(b),
+                            _ => false,
+                        };
+                        if ifx.else_branch.is_some() && kept_tail.map(bare_number).unwrap_or(false) && !same_kind {
                             self.left(whole.start, "the side kept is a bare number, whose type the other side may have given: it stays");
                             visit::visit_expr(self, e);
                             return;
@@ -1712,7 +1730,12 @@ impl<'ast, 'a> Visit<'ast> for Pass<'a> {
                             (None, Some(x)) => self.text(self.full(self.r(x))).to_string(),
                             (None, None) => "()".to_string(),
                         };
-                        self.edit(whole, text, "if as a value: the side kept");
+                        // (`(if K { 1.0 } else { 0.0 })` kept as `1.0`: the parentheses were the if's)
+                        let atom = matches!(block.map(|b| (b.stmts.len(), b.stmts.last())), Some((1, Some(Stmt::Expr(x, None)))) if is_atomic(x) && !is_block_like(x));
+                        match self.paren_inner.get(&(whole.start, whole.end)).cloned() {
+                            Some(pr) if atom => self.edit(pr, text, "if as a value: the side kept"),
+                            _ => self.edit(whole, text, "if as a value: the side kept"),
+                        }
                     }
                 }
             }

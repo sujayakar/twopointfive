@@ -63,9 +63,6 @@ pub fn cover_reset(g: &mut Game) {
 /// What he was dealt. (cover.ts of)
 pub fn cover_of(g: &mut Game, gd: GuardId) -> Option<CoverJob> { g.cover.jobs.get(gd).copied() }
 
-/// The opening his gun has been left on. (cover.ts keptJob)
-pub fn cover_kept_job(g: &mut Game, gd: GuardId) -> Option<CoverJob> { g.cover.kept.get(gd).map(|k| k.j) }
-
 /// The level's openings, built if they are not yet. (cover.ts ready)
 pub fn cover_ready(g: &mut Game) -> Vec<CoverOpeningId> {
     if !g.cover.nav { cover_build(g); }
@@ -1152,15 +1149,6 @@ pub fn cover_words(g: &mut Game, gd: GuardId) -> String {
 pub fn cover_tail(g: &mut Game, gd: GuardId) -> String {
     let w = cover_words(g, gd);
     if w.is_empty() { w } else { alloc::format!(" · {}", w) }
-}
-
-/// Is he facing what he was dealt: his gun within `deg` of it. (cover.ts facing)
-pub fn cover_facing(g: &mut Game, gd: GuardId, deg: Option<f64>) -> bool {
-    let deg = deg.unwrap_or(15.0);
-    match cover_on_of(g, gd) {
-        Some(j) if !j.off => m::abs(v3::wrap_angle(v3::yaw_to(pos_of(g, gd), j.to) - g.ch[g.gd[gd].ch].aim_yaw)) < deg * m::PI / 180.0,
-        _ => false,
-    }
 }
 
 /// One line for the console. (cover.ts summary)

@@ -173,11 +173,5 @@ pub fn report(g: &mut crate::game::Game, pl: PlayerId, at: V3) {
 /// BOUNDARY NO-OP (the picture's: a particle record; a Rust game has no particles): (src/game/blastFeel.ts:175 emit)
 pub fn emit(g: &mut crate::game::Game, pl: PlayerId, kind: crate::render_particles::PKind, pos: V3, dir: V3, count: f64, o: crate::render_particles::EmitOpts) {}
 
-/// BOUNDARY NO-OP (the picture's: particles): (src/game/blastFeel.ts:181 fireball)
-pub fn fireball(g: &mut crate::game::Game, pl: PlayerId, w: &crate::wallcharge::WallSpot, open: bool, n: V3) {}
-
-/// BOUNDARY NO-OP (the picture's: particles): (src/game/blastFeel.ts:196 ringStage)
-pub fn ring_stage(g: &mut crate::game::Game, pl: PlayerId, k: f64, faces: &[crate::blast_feel::Face]) {}
-
 /// BOUNDARY NO-OP (the picture's: particles): (src/game/blastFeel.ts:213 ceiling)
 pub fn ceiling(g: &mut crate::game::Game, pl: PlayerId, faces: &[crate::blast_feel::Face]) {}

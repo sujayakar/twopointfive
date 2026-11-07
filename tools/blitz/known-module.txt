@@ -1,2 +1,0 @@
-# WHAT THE MODULE'S START MAY DIFFER IN FROM THE NATIVE START (tools/blitz/start-module.ts): a pattern, a tab, the reason. One thing.
-^g\.col\.mirror\.[a-z_0-9]+$	memory: where the box mirror's tables stand in each process's memory (addresses into rust/sim's block; the tables themselves are in the block, which is compared byte for byte)

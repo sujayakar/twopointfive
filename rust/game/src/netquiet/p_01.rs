@@ -39,22 +39,6 @@ fn id_of(g: &mut Game, gd: GuardId) -> f64 {
 
 // ---------------------------------------------------------------- the small questions
 
-/// this file's lines, every kind's or one kind's, with a line's wording of now beside it (netquiet.ts netQuietLines)
-pub fn net_quiet_lines(g: &mut crate::game::Game, kind: Option<crate::netquiet::LineKind>) -> Vec<String> {
-    let mut l: Vec<String> = Vec::new();
-    match kind {
-        Some(k) => l.extend(lines_of(k)),
-        None => {
-            for k in KINDS.iter() {
-                l.extend(lines_of(*k));
-            }
-        }
-    }
-    let now: Vec<String> = l.iter().filter_map(|t| line_now(t)).collect();
-    l.extend(now);
-    l
-}
-
 /// distance in plan (netquiet.ts flat)
 pub fn flat(a: V3, b: V3) -> f64 {
     m::hyp2(a[0] - b[0], a[2] - b[2])

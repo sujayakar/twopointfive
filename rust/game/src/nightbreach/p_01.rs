@@ -10,7 +10,7 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 // ---- private helpers
 
 /// The four-man squad's budget of characters: the seats' men, the four and the layout's five defenders (nightbreach.ts SQUAD4_BUDGET: ten in a game of one).
-pub(crate) fn squad4_budget(g: &crate::game::Game) -> f64 { SQUAD4_BUDGET - 1.0 + crate::seats::seat_count(g) }
+pub(crate) fn squad4_budget(g: &crate::game::Game) -> f64 { crate::seats::budget_with_seats(g, SQUAD4_BUDGET) }
 
 /// `T !== applied`, an identity of the level's own rows (a structure's team start, one of its other ways in, the night breach's own): here the row
 /// whole, by value. Another start with the same place for Sam is ANOTHER start in the TypeScript and writes the knobs again (a knob moved by hand
@@ -293,11 +293,6 @@ fn all_taken(g: &mut Game) -> bool {
     true
 }
 
-/// How many of the list are up. (nightbreach.ts:402 up)
-fn up(g: &Game, l: &[GuardId]) -> usize {
-    l.iter().filter(|x| g.gd[**x].state != crate::game::GuardState::Dead).count()
-}
-
 /// endGuardScript's word for a man's own state. (nightbreach.ts:346)
 fn script_state(s: crate::game::GuardState) -> Option<crate::squad::EndGuardScriptState> {
     match s {
@@ -464,11 +459,6 @@ pub fn night_breach_bench(g: &mut crate::game::Game) {
     benched.extend_from_slice(&staff);
     g.night_breach.benched = Some(benched);
     g.guards = g.guards.iter().filter(|x| g.gd[**x].unit.is_some()).copied().collect();
-}
-
-/// Everybody on his mark; a throw has only onEncounterRestart to go to, which uses stage_checked. (nightbreach.ts NightBreach.stage)
-pub fn night_breach_stage(g: &mut crate::game::Game) {
-    if let Err(e) = stage_checked(g) { panic!("{}", e); }
 }
 
 /// A place for a man of the second pair. (nightbreach.ts NightBreach.standBy)
@@ -751,25 +741,6 @@ pub fn night_breach_state(g: &mut crate::game::Game) -> crate::nightbreach::Nigh
         crate::breach::Phase::Enter | crate::breach::Phase::Clear => NightBreachState::Inside,
         _ => NightBreachState::Going,
     }
-}
-
-/// One line for the panel. (nightbreach.ts NightBreach.summary)
-pub fn night_breach_summary(g: &mut crate::game::Game) -> String {
-    if !g.night_breach.active { return String::from("night breach off"); }
-    let state = night_breach_state(g);
-    let (ops, hostiles) = (g.night_breach.ops.clone(), g.night_breach.hostiles.clone());
-    let blind = if js::truthy(g.night_breach.blind_rounds) { format!(" · {} blind rounds", g.night_breach.blind_rounds) } else { String::new() };
-    format!(
-        "night breach {} · orders {}/2 · team {}/{} up · defenders {}/{} up{} · staged ×{}",
-        state.as_str(),
-        live_of(g).orders,
-        up(g, &ops),
-        ops.len(),
-        up(g, &hostiles),
-        hostiles.len(),
-        blind,
-        g.night_breach.staged,
-    )
 }
 
 #[cfg(test)]

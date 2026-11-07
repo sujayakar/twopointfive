@@ -119,27 +119,6 @@ pub fn aim_weigh_turn(g: &mut Game, dt: f64) -> bool {
     true
 }
 
-/// Where the gun points: the circle's world point; None when nothing weighs his aim.   (aimweight.ts aimGunPoint)
-pub fn aim_gun_point(g: &mut Game) -> Option<V3> {
-    let pl = g.player;
-    let w = g.pl[pl].aimw;
-    if !w.live {
-        return None;
-    }
-    if w.landed {
-        return Some([g.aim_point[0], g.aim_point[1], g.aim_point[2]]);
-    }
-    let c = g.pl[pl].ch;
-    let (pos, yaw) = (g.ch[c].pos, g.ch[c].aim_yaw);
-    Some([pos[0] + m::sin(yaw) * w.r, w.y, pos[2] + m::cos(yaw) * w.r])
-}
-
-/// Is the circle on the cursor (true when nothing weighs his aim).   (aimweight.ts aimGunOn)
-pub fn aim_gun_on(g: &mut Game) -> bool {
-    let w = g.pl[g.player].aimw;
-    !w.live || w.on
-}
-
 /// What leaves the gun goes where the gun points: `tgt` as it is while on the cursor, else turned about him by what is left to swing.   (aimweight.ts aimWeighShot)
 pub fn aim_weigh_shot(g: &mut Game, tgt: V3) -> V3 {
     let pl = g.player;
@@ -191,18 +170,6 @@ pub fn aim_weigh_launch_keep(g: &mut Game, pl: PlayerId, dt: f64) -> bool {
         return false;
     }
     true
-}
-
-/// QA / the page's summary line. `AIMWEIGHT.on` is settled on.   (aimweight.ts aimWeightSummary)
-pub fn aim_weight_summary(g: &mut Game) -> String {
-    let w = g.pl[g.player].aimw;
-    if !w.live {
-        return String::from("on · not weighing");
-    }
-    if w.on {
-        return String::from("on the cursor");
-    }
-    alloc::format!("swinging {}°/s", js::to_fixed(w.vel * 180.0 / m::PI, 0))
 }
 
 #[cfg(test)]

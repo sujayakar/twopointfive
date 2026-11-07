@@ -7,32 +7,11 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// The one flag over the squads' senses: 'call' = what the page opens as.   (enemysquads.ts senses)
-pub fn senses(g: &mut crate::game::Game, v: Option<&str>) {
-    let k = &mut g.k.squads;
-    k.radio_check = v != Some("0") && v != Some("eyes");
-    k.noticed_eyes = v != Some("0") && v != Some("drop");
-    k.call_beat = v == Some("call") || v == Some("call-eyes") || v == Some("call-noask") || v == Some("net");
-    k.net_ask = v == Some("net");
-    if k.call_beat {
-        k.call_body = v != Some("call-eyes");
-        if v == Some("call-noask") { k.call_cut_ask = [0.0, 0.0]; }
-    }
-}
-
 /// The net's ask runs on this floor: a floor whose every squad stays in its rooms.   (enemysquads.ts netAsks)
 pub fn net_asks(g: &mut crate::game::Game) -> bool {
     match &g.m.enemysquads.states {
         Some(st) => st.stay_ask == Some(true),
         None => false,
-    }
-}
-
-/// Where the game stands: its room clear structure's name ('' = no squads staged).   (enemysquads.ts squadsWhere)
-pub fn squads_where(g: &mut crate::game::Game) -> String {
-    match &g.m.enemysquads.states {
-        Some(st) => st.s.name.clone(),
-        None => String::new(),
     }
 }
 

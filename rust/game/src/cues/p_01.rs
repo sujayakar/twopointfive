@@ -349,12 +349,6 @@ fn prune_rows(g: &mut Game) {
     g.cues.rows.retain(|r| r.t <= t && t - r.t < secs);
 }
 
-/// The rows still up, oldest first.   (cues.ts Cues.alive)
-pub fn cues_alive(g: &mut crate::game::Game) -> Vec<crate::cues::CueRow> {
-    prune_rows(g);
-    g.cues.rows.clone()
-}
-
 /// `done` of `file`: tally, log, answer.
 fn file_done(g: &mut Game, t: f64, text: &str, cls: f64, who: &str, kind: CuesFileKind, drawn: bool, why: &str) -> bool {
     if drawn { g.cues.stats.drawn[cls as usize] += 1.0; }
@@ -528,13 +522,6 @@ pub fn cues_overheard(g: &mut crate::game::Game, gd: GuardId, text: &str) -> boo
     g.cues.shout_t = Some(t);
     g.cues.stats.shouts_drawn += 1.0;
     heard_done(g, t, text, "")
-}
-
-/// A word over a man for the player's eyes alone: the bubble, no strip row, no class clock.   (cues.ts Cues.aside)
-pub fn cues_aside(g: &mut crate::game::Game, gd: GuardId, text: &str) -> bool {
-    let t = g.time;
-    g.cues.bubbles.set(gd, Bubble { text: String::from(text), t, dur: crate::guards::bubble_secs(text), radio: false });
-    true
 }
 
 /// Seconds until the strip would take a line of this class without dropping it for the class's gap (0 = now).   (cues.ts Cues.netWait)
@@ -846,9 +833,6 @@ pub fn strip_rows(g: &mut crate::game::Game) -> Vec<crate::cues::StripRowsItem> 
     }
     out
 }
-
-/// Host work: the debugger's panel keeps three rows in the browser's storage. No game state moves.   (cues.ts saveCues)
-pub fn save_cues(g: &mut crate::game::Game) {}   // (the panel's rows in the browser's storage: nothing of the game moves; it answers rather than panics, as sneak's and spotted's do)
 
 
 #[doc(hidden)] pub fn cues_net(g: &mut crate::game::Game, gd: GuardId, text: &str, cls: f64) {

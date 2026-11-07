@@ -496,15 +496,6 @@ pub fn anim_flinch_from(g: &mut crate::game::Game, c: CharId, toward: Option<V3>
     m_.fl_soft = soft;
 }
 
-/// how much of the whole untrained duck is showing   (character.ts flinchShown)
-pub fn anim_flinch_shown(g: &mut crate::game::Game, c: CharId) -> f64 {
-    let t = v3::clamp(g.ch[c].anim.trained, 0.0, 1.0);
-    let (fl_t, fl_k) = (g.ch[c].anim.mvs.fl_t, g.ch[c].anim.mvs.fl_k);
-    if fl_t < 0.0 { return 0.0; }
-    let (dur, amp) = (g.k.mv.flinch.dur, g.k.mv.flinch.amp);
-    v3::clamp(curve(fl_t / v3::lerp(dur[0], dur[1], t), &crate::character::mv_flinch_env()), 0.0, 1.0) * v3::lerp(amp[0], amp[1], t) * fl_k
-}
-
 /// the start of a man who has just seen what he did not expect   (character.ts startleFrom)
 pub fn anim_startle_from(g: &mut crate::game::Game, c: CharId, toward: Option<V3>) {
     if !mv_on(g, crate::character::MvOnK::Flinch) { g.ch[c].anim.hit_t = 0.0; return; }
@@ -512,14 +503,6 @@ pub fn anim_startle_from(g: &mut crate::game::Game, c: CharId, toward: Option<V3
     let st_d = match toward { Some(w) => anim_flat_model(g, c, w, [0.0, 0.0, 1.0]), None => [0.0, 0.0, 1.0] };
     g.ch[c].anim.mvs.st_d = st_d;
     g.ch[c].anim.mvs.st_t = 0.0;
-}
-
-/// how much of the start is showing   (character.ts startleShown)
-pub fn anim_startle_shown(g: &mut crate::game::Game, c: CharId) -> f64 {
-    let st_t = g.ch[c].anim.mvs.st_t;
-    if st_t < 0.0 { return 0.0; }
-    let s = crate::character::mv_startle();
-    v3::clamp(curve(st_t / v3::lerp(s.dur[0], s.dur[1], v3::clamp(g.ch[c].anim.trained, 0.0, 1.0)), &s.env), 0.0, 1.0)
 }
 
 /// a round that went home on a man who stays up   (character.ts hitFrom)
@@ -551,11 +534,6 @@ pub fn anim_toss_item(g: &mut crate::game::Game, c: CharId, release: Option<f64>
     m_.ts_rel = v3::clamp(release, 0.08, 0.6);
 }
 
-/// the toss is under way   (character.ts tossing)
-pub fn anim_tossing(g: &mut crate::game::Game, c: CharId) -> bool {
-    g.ch[c].anim.mvs.ts_t >= 0.0
-}
-
 /// a world direction, flattened, in the figure's un-twisted model frame   (character.ts flatModel)
 pub fn anim_flat_model(g: &mut crate::game::Game, c: CharId, w: V3, fb: V3) -> V3 {
     let d = anim_to_model_d(g, c, [w[0], 0.0, w[2]]);
@@ -579,16 +557,6 @@ pub fn anim_strike(g: &mut crate::game::Game, c: CharId, kind: Option<crate::cha
         a.kb_t = 0.0;
         a.knife_shown = false;
     }
-}
-
-/// the blow under way is the knife's   (character.ts strikeLethal)
-pub fn anim_strike_lethal(g: &mut crate::game::Game, c: CharId) -> bool {
-    g.ch[c].anim.strike_t >= 0.0 && g.ch[c].anim.strike_leth
-}
-
-/// the strike is under way   (character.ts striking)
-pub fn anim_striking(g: &mut crate::game::Game, c: CharId) -> bool {
-    g.ch[c].anim.strike_t >= 0.0
 }
 
 /// a takedown's own move, right after the strike it rides   (character.ts blow)
@@ -632,11 +600,6 @@ pub fn anim_taken_cancel(g: &mut crate::game::Game, c: CharId) {
 /// the man it is done to, while he is still on his feet   (character.ts taken)
 pub fn anim_taken(g: &mut crate::game::Game, c: CharId, style: crate::character::TakenStyle, delay: Option<f64>) {
     g.ch[c].anim.tk = Some(crate::character::AnimTk { style, t: 0.0, delay: delay.unwrap_or(0.0), off: -1.0 });
-}
-
-/// a takedown's move is under way   (character.ts blowing)
-pub fn anim_blowing(g: &mut crate::game::Game, c: CharId) -> bool {
-    g.ch[c].anim.bw.is_some()
 }
 
 /// the reload one-shot, retimed to `dur`, and the support hand's keys off the weapon's beat   (character.ts reload)
@@ -724,11 +687,6 @@ pub fn anim_kit_cancel(g: &mut crate::game::Game, c: CharId) {
 /// a swap is under way   (character.ts kitBusy)
 pub fn anim_kit_busy(g: &mut crate::game::Game, c: CharId) -> bool {
     g.ch[c].anim.kit.is_some()
-}
-
-/// a goggle flip is under way   (character.ts nvBusy)
-pub fn anim_nv_busy(g: &mut crate::game::Game, c: CharId) -> bool {
-    g.ch[c].anim.nv.is_some()
 }
 
 /// the goggles go down or up: by the left hand if `hand`, else a nod   (character.ts nvFlip)
@@ -825,15 +783,6 @@ pub fn anim_throw_item(g: &mut crate::game::Game, c: CharId, dist: Option<f64>, 
 /// the reload one-shot is playing   (character.ts reloading)
 pub fn anim_reloading(g: &mut crate::game::Game, c: CharId) -> bool {
     g.ch[c].anim.reload_t >= 0.0
-}
-
-/// which swing the throw under way is   (character.ts throwRead)
-pub fn anim_throw_read(g: &mut crate::game::Game, c: CharId) -> Option<crate::character::AnimThrowRead> {
-    let a = &g.ch[c].anim;
-    if a.throw_t < 0.0 { None }
-    else if a.thr_low >= 0.0 { Some(crate::character::AnimThrowRead::Toss) }
-    else if a.thr_far < 1.0 { Some(crate::character::AnimThrowRead::Short) }
-    else { Some(crate::character::AnimThrowRead::Full) }
 }
 
 #[cfg(test)]

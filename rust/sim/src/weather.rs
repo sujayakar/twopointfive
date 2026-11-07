@@ -410,6 +410,11 @@ pub fn wet_step(wx: &Weather, wo: usize, set: i32, ask: u32, time: f64, dt: f64,
 pub fn of(g: usize) -> &'static mut Weather {
     &mut state(g).weather
 }
+/// the weather's table of slot `g`, to read
+#[inline(always)]
+pub fn of_read(g: usize) -> &'static Weather {
+    &crate::state::state_read(g).weather
+}
 /// the columns the host reads and writes in place, by name (`weather_col`)
 pub fn col(i: u32) -> usize {
     use core::mem::offset_of;

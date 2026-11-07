@@ -37,11 +37,6 @@ pub fn fold_on(g: &mut Game, too: Option<bool>) -> bool {
     g.k.moves.clutch > 0.5 && (g.k.moves.fold > 0.5 || (g.k.moves.fold == 0.0 && (too || g.k.wound.on)))
 }
 
-/// The master switch of the motion pass, for the strips' tool. (character.ts setMoves)
-pub fn set_moves(g: &mut Game, on: bool) {
-    g.k.moves.on = if on { 1.0 } else { 0.0 };
-}
-
 /// One part of the motion pass: on? (character.ts mvOn)
 pub fn mv_on(g: &mut Game, k: crate::character::MvOnK) -> bool {
     use crate::character::MvOnK;
@@ -86,97 +81,6 @@ pub fn in_dip_lane(dx: f64, dz: f64, gun_yaw: f64) -> bool {
     let fz = m::cos(gun_yaw);
     let along = dx * fx + dz * fz;
     along > l[0] && along < l[1] && m::abs(dx * fz - dz * fx) < l[2]
-}
-
-/// MOVES.reload's marks on a long gun, off the trigger hand's wrist in the gun's frame. (character.ts reloadMarks)
-pub fn reload_marks(back: bool) -> crate::character::MV2ReloadBox {
-    let r = mv2().reload;
-    if back { r.back } else { r.box_ }
-}
-
-/// A row of TURN by its TypeScript key (`Object.hasOwn(TURN, k)`, `TURN[k]`); None = no such key.
-fn turn_row<'a>(t: &'a mut crate::knobs::TurnK, k: &str) -> Option<&'a mut f64> {
-    match k {
-        "on" => Some(&mut t.on),
-        "aim" => Some(&mut t.aim),
-        "aimAcc" => Some(&mut t.aim_acc),
-        "body" => Some(&mut t.body),
-        "bodyAcc" => Some(&mut t.body_acc),
-        "bodyShare" => Some(&mut t.body_share),
-        "green" => Some(&mut t.green),
-        "lead" => Some(&mut t.lead),
-        "leadRate" => Some(&mut t.lead_rate),
-        "jump" => Some(&mut t.jump),
-        _ => None,
-    }
-}
-
-/// setTurn on the table itself.
-fn set_turn_on(t: &mut crate::knobs::TurnK, spec: &str, dflt: f64) -> bool {
-    let mut parts = spec.split(',');
-    let head = parts.next().unwrap_or("");
-    let mut ok = true;
-    let feel = turn_feel_table();
-    let rates = match head {
-        "light" => Some((feel.light.aim, feel.light.aim_acc, feel.light.body, feel.light.body_acc)),
-        "medium" => Some((feel.medium.aim, feel.medium.aim_acc, feel.medium.body, feel.medium.body_acc)),
-        "heavy" => Some((feel.heavy.aim, feel.heavy.aim_acc, feel.heavy.body, feel.heavy.body_acc)),
-        _ => None,
-    };
-    if let Some((aim, aim_acc, body, body_acc)) = rates {
-        t.aim = aim;
-        t.aim_acc = aim_acc;
-        t.body = body;
-        t.body_acc = body_acc;
-        t.on = 1.0;
-    } else if head == "0" {
-        t.on = 0.0;
-    } else if head == "1" {
-        t.on = 1.0;
-    } else {
-        t.on = dflt;
-        ok = head.is_empty();
-    }
-    for kv in parts {
-        let mut pair = kv.split('=');
-        let k = pair.next().unwrap_or("");
-        let n = match pair.next() {
-            Some(v) if !v.is_empty() => js::number_of(v),
-            _ => m::NAN,
-        };
-        match turn_row(t, k) {
-            Some(row) if n.is_finite() => *row = n,
-            _ => ok = false,
-        }
-    }
-    ok
-}
-
-/// THE one reading of the turn switch: `0` | `1` | a TURN_FEEL name, then any `,key=number` pairs over TURN's own keys; an empty head = `dflt`. False when
-/// it was not understood. (character.ts setTurn)
-pub fn set_turn(g: &mut Game, spec: &str, dflt: Option<f64>) -> bool {
-    let dflt = dflt.unwrap_or(1.0);
-    set_turn_on(&mut g.k.turn, spec, dflt)
-}
-
-/// turnFeel on the table itself.
-fn feel_name(t: &crate::knobs::TurnK) -> &'static str {
-    let feel = turn_feel_table();
-    if feel.light.aim == t.aim && feel.light.aim_acc == t.aim_acc && feel.light.body == t.body && feel.light.body_acc == t.body_acc {
-        return "light";
-    }
-    if feel.medium.aim == t.aim && feel.medium.aim_acc == t.aim_acc && feel.medium.body == t.body && feel.medium.body_acc == t.body_acc {
-        return "medium";
-    }
-    if feel.heavy.aim == t.aim && feel.heavy.aim_acc == t.aim_acc && feel.heavy.body == t.body && feel.heavy.body_acc == t.body_acc {
-        return "heavy";
-    }
-    "own numbers"
-}
-
-/// Which setting is live, in words: a TURN_FEEL name, or 'own numbers'. (character.ts turnFeel)
-pub fn turn_feel(g: &mut Game) -> String {
-    String::from(feel_name(&g.k.turn))
 }
 
 #[cfg(test)]
@@ -230,62 +134,4 @@ mod tests {
         }
     }
 
-    #[test]
-    fn number_reads_as_the_language_does() {
-        for (s, want) in [("7", 7.0), (" 7 ", 7.0), ("0x10", 16.0), ("1e3", 1000.0), (".5", 0.5), ("5.", 5.0), ("+2", 2.0), ("-0.25", -0.25), (" ", 0.0), ("0b11", 3.0), ("0o7", 7.0)] {
-            assert_eq!(js::number_of(s), want);
-        }
-        for s in ["abc", "1_0", "-0x10", "0x"] {
-            assert!(js::number_of(s).is_nan());
-        }
-        assert!(!js::number_of("Infinity").is_finite());
-    }
-
-    fn turn_light() -> crate::knobs::TurnK {
-        let mut t = crate::knobs::page_turn();
-        assert!(set_turn_on(&mut t, "light", 1.0));
-        t
-    }
-
-    #[test]
-    fn set_turn_takes_a_name_a_switch_and_pairs() {
-        let mut t = turn_light();
-        assert_eq!(feel_name(&t), "light");
-        assert!(set_turn_on(&mut t, "heavy", 1.0));
-        assert_eq!((t.aim, t.body_acc, t.on), (7.0, 30.0, 1.0));
-        assert_eq!(feel_name(&t), "heavy");
-        assert!(set_turn_on(&mut t, "0", 1.0));
-        assert_eq!((t.on, t.aim), (0.0, 7.0));
-        assert!(set_turn_on(&mut t, "1,aim=9", 1.0));
-        assert_eq!((t.on, t.aim), (1.0, 9.0));
-        assert_eq!(feel_name(&t), "own numbers");
-        assert!(set_turn_on(&mut t, ",leadRate=3", 0.0));
-        assert_eq!((t.on, t.lead_rate), (0.0, 3.0));
-    }
-
-    #[test]
-    fn set_turn_says_false_and_takes_the_default_on_a_bad_head() {
-        let mut t = turn_light();
-        assert!(!set_turn_on(&mut t, "hevy", 0.0));
-        assert_eq!(t.on, 0.0);
-        assert_eq!(feel_name(&t), "light");
-    }
-
-    #[test]
-    fn set_turn_refuses_a_bad_pair_and_keeps_going() {
-        for bad in ["1,aimm=7", "1,aim=", "1,aim", "1,aim=abc", "1,aim=Infinity"] {
-            let mut t = turn_light();
-            assert!(!set_turn_on(&mut t, bad, 1.0));
-            assert_eq!(t.aim, 11.0);
-        }
-        let mut t = turn_light();
-        assert!(!set_turn_on(&mut t, "1,nope=1,aim=9", 1.0));
-        assert_eq!(t.aim, 9.0);
-    }
-
-    #[test]
-    fn reload_marks_pick_the_gun() {
-        assert_eq!(reload_marks(false).mag, [0.085, -0.17, 0.125]);
-        assert_eq!(reload_marks(true).mag, [0.085, -0.15, -0.115]);
-    }
 }
