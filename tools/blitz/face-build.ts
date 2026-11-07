@@ -5,7 +5,7 @@
 // without the word the page never asks.
 // A CHECKED-IN MODULE FOR A MACHINE THAT CANNOT BUILD (rust/game_face/prebuilt/game_face.wasm, with SOURCES beside it: a hash of every source file the
 // module is made from). Where no build of this machine is up to date and the checked-in module's hash IS this checkout's sources' hash, it is served and
-// cargo is never started: a pull is enough to play. Where the hashes differ it is not served (the page's half of the bridge is generated with the Rust
+// cargo is never started: a pull is enough to play. Where the hashes differ it is not served (the page's half of the bridge is made by the same generator as the Rust
 // and a module of other sources would read garbage): the machine builds, or says why it cannot. `--prebuilt` makes it: the `play` profile built with the
 // checkout's and the home folder's paths mapped away (the file must not carry a machine's paths), copied there with its hash.
 // A HOSTED BUILD MAKES ITS OWN (tools/host/build.sh sets FACE_BUILD=1): with FACE_BUILD=1 the checked-in module is never taken, the module is built from

@@ -14,16 +14,10 @@ pub fn lesson_new(g: &mut crate::game::Game) -> crate::lesson::Lesson {
 
 /// The lesson in force (None: not live).   (lesson.ts Lesson.data)
 pub fn lesson_data(g: &mut crate::game::Game) -> Option<crate::scene_scenarios::LessonData> {
-    if !g.k.lesson.on {
-        return None;
-    }
     let on_rails = match g.level.scenarios.as_ref().and_then(|s| s.lesson.as_ref()) {
         Some(l) if !l.steps.is_empty() => l.rails.is_some(),
         _ => return None,
     };
-    if on_rails && !g.k.rails.on {
-        return None;
-    }
     if g.touring || g.quiet_utility || g.puppet.is_some() {
         return None;
     }

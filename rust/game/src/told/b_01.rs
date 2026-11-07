@@ -16,7 +16,7 @@ fn rung_ix(r: ToldRung) -> usize { match r { ToldRung::Guided => 0, ToldRung::St
 
 /// The rung in force: Bare while the lever is off.   (told.ts toldNow)
 pub fn told_now(g: &mut crate::game::Game) -> crate::told::ToldRung {
-    if g.k.told.on { g.k.told.rung } else { ToldRung::Bare }
+    g.k.told.rung
 }
 
 /// Is the game telling at least as much as `rung`?   (told.ts toldAtLeast)

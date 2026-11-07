@@ -18,6 +18,17 @@ fuzz of the solo night and of squad missions on Hard (`fuzz.sh`, `fuzz-squad.sh`
 maintainer played a tutorial and a few levels on his own machine. Not checked: co-op and tapes on the Rust game, a hosted build, most page checks of
 `tools/qa` on the new default, and nothing of it has been seen on a GPU by a tool.
 
+**A GAME CAN START IN RUST, AND A BEHAVIOUR HAS A TEST OF TEN LINES (2026-11-07).** `rust/game_start` is the start in Rust: a level file's text and the
+character's files in, a `Game` the tick runs out, through the game's own constructor (`game_new`, which had never run), with nothing made by
+TypeScript. Its scene builder WRITES A LEVEL FILE (rooms, doors, lamps, men, a room clear's block), so a test's scene goes in by the level format
+and there is one start. `cargo test` in `rust/game_start` stands scenes and holds five behaviours in about half a minute; `rust/game_start/README.md`
+is the how-to, with what the start does not carry yet (it refuses such a file by name: box shapes, civilians, devices, vents, daylight, the office's
+plans, most scenario kinds). `tools/blitz/start.sh <level file>` holds the Rust start to the TypeScript start of the same file, path by path
+(`known-start.txt` is what may differ, each line with its reason), and with `--frames N` steps both starts in Rust and compares every frame.
+Checked: `kit-yard.json` plain and with its room clear started, and the tests' four scenes: no path not known, the block equal to the byte, in
+step for 600 to 1,800 frames. Not checked: any other level; a page starting a level this way (the page still starts in TypeScript); nothing of it
+on a GPU.
+
 **The rows and the maths are NOT SWITCHES any more** (the bullet "Not switches", near the end, 2026-11-05). Every `TPS_RUST`, `TPS_RUST<ROW>`, `TPS_EXACT`,
 `?rust`, `?rust<row>` and `?noexact` in the bullets below is how that step was measured on its day. None of them is a word now: in a tool's environment
 one stops the tool by name, on an address one does nothing and says so in the console. What a check still needs of them is its own arm, `QA_HOLD`.
@@ -2257,3 +2268,15 @@ one stops the tool by name, on an address one does nothing and says so in the co
   has built the crate on a Mac or on Windows.
 
 - **The weather** (`rust/sim/src/wind.rs`, `weather.rs`, `air.rs`, `snow.rs`; a part `weather` of a block, an always-home tenant; asked through `src/sim/weatherhome.ts`, `collision.ts ruleOpen`): what it is, what is gameplay and dressing file by file, and what holds it: `docs/agents/weather.md`, the bullet "The weather that play reads". The hour is not in it yet. A man's place, head and coat are a call's numbers until the men's columns land.
+
+- **The TypeScript tick is deleted** (`tools/blitz/DELETION.md`, written by `tools/blitz/delete-tick.ts`). The Rust game (`rust/game`) is the only game that
+  steps; there is no word for another (`?rust`, `TPS_GAME=ts` name nothing now), and an address that hosts or joins a co-op game or plays a tape back
+  shows a plain card until its own path onto the Rust game is here. What is left under `src/game`, `src/anim`, `src/math`, `src/sim`, `src/scene` is
+  what stands a game before it crosses into Rust, the readers over the puppet, and the workbench's and the menus' own code. A function there is one of
+  five things, and `tools/blitz/delete-plan.tsv` says which: kept; kept behind the call surface's guard (a line of its own source: a tool's call between
+  ticks crosses to the Rust rule, a start's runs the TypeScript); a crossing (its body is the call of the Rust rule: `crossToRust`, `src/game/crossing.ts`);
+  gone with a signature that throws by name (the Rust game has no row for it); or removed. NEW TYPESCRIPT THAT STEPS THE GAME IS A MISTAKE: a rule is
+  written in Rust. A check that named a function which went is a row of `tools/blitz/delete-lost.tsv`: fix it forward from there. Measured before and
+  after on the same tree: both type checks; the missions' tallies under the Rust game by whole record and digest series; every way to start a game
+  (`tools/blitz/starts.ts`, 1,480 rows); the page's flows in a headless browser WITH DRAWN FRAMES on the software adapter (`tools/blitz/delete-page.ts
+  --draw N`: no other headless tool draws, and what only a draw runs is run nowhere else). Not seen: anything on a GPU.

@@ -78,17 +78,16 @@ let fails = 0; const verdict = (ok, label, detail) => { if (!ok) fails++; consol
     const st = window.__layer('Blown grains').querySelector('.ststat'); return { ok, swapped: P.pUpdate !== was, err: st.classList.contains('err') ? st.textContent : '', gpu: window.__gpuErrs.slice() }; });
   verdict(part.ok && part.swapped && !part.err && !part.gpu.length, 'particles — GRAIN_PICK_RATE moved: the kernels rebuilt and stepped', `settled ${part.ok} · pipeline replaced ${part.swapped} · ${part.err || 'no error on the layer'} · GPU errors ${part.gpu.length}${part.gpu.length ? ': ' + part.gpu[0] : ''}`);
 
-  // ---- 4b: one snow in one air is live (the grains stand down with it and their layer is dimmed; off, they are back), and the blast button marks the snow
+  // ---- 4b: one snow in one air (the grains stand down with it and their layer is dimmed), and the blast button marks the snow. Until 2026-11-07 the one-air,
+  //      marks and blast layers each had a switch and this step also put one air off and on again; those three rows are settled on and the layers have no box.
   const air = await page.evaluate(async () => { const T = window.__tweak, G = () => window.__layer('Blown grains').classList.contains('idle'); const dim = (l, r) => window.__row(l, r).classList.contains('idle');
-    const box = window.__layer('Snow in one air').querySelector('input[type=checkbox]');
+    const boxes = ['Snow in one air', 'Things mark the snow', 'Blast marks'].filter(n => !window.__layer(n) || window.__layer(n).querySelector('input[type=checkbox]'));
     await window.__frames(2); T.refresh(true); const on = { force: window.__snow.oneAir, grains: G(), speedK: dim('Blown wisps', 'speedK'), liftLo: dim('Blown wisps', 'liftLo'), airLow: dim('Falling flakes', 'airLow') };
-    box.click(); await window.__frames(3); T.refresh(true); const off = { force: window.__snow.oneAir, grains: G(), speedK: dim('Blown wisps', 'speedK'), liftLo: dim('Blown wisps', 'liftLo'), airLow: dim('Falling flakes', 'airLow'), text: T.text() };
-    box.click(); await window.__frames(3); T.refresh(true); const back = { force: window.__snow.oneAir, grains: G() };
     const b0 = window.__snow.blastStats.blasts; window.__layer('Blast marks').querySelector('button.stact').click(); await window.__frames(3); const B = window.__snow.blastStats;
-    return { on, off, back, b0, b1: B.blasts, why: B.why, count: document.querySelector('#stweak .stcount').textContent, gpu: window.__gpuErrs.slice() }; });
+    return { on, boxes, b0, b1: B.blasts, why: B.why, count: document.querySelector('#stweak .stcount').textContent, gpu: window.__gpuErrs.slice() }; });
   { const same = (o, v) => o.grains === v && o.speedK === v && o.liftLo === !v && o.airLow === !v;
-    verdict(air.on.force === true && same(air.on, true) && air.off.force === false && same(air.off, false) && /switched off: .*Snow in one air/.test(air.off.text) && air.back.force === air.on.force && air.back.grains === air.on.grains && air.b1 === air.b0 + 1 && !air.gpu.length,
-      'oneair — the switch is live: what nothing reads is dimmed, either way; the blast button tells the snow one blast', `opened in force ${air.on.force} (grains dimmed ${air.on.grains}, wisps speedK ${air.on.speedK}, liftLo ${air.on.liftLo}) · off: in force ${air.off.force}, grains dimmed ${air.off.grains}, liftLo ${air.off.liftLo} · on again: ${air.back.force} · blasts ${air.b0} → ${air.b1} (${air.why}) · GPU errors ${air.gpu.length}${air.gpu.length ? ': ' + air.gpu[0] : ''}`); }
+    verdict(air.on.force === true && same(air.on, true) && !air.boxes.length && air.b1 === air.b0 + 1 && !air.gpu.length,
+      'oneair — in force, what nothing reads is dimmed; one air, the marks and the blast marks have no switch; the blast button tells the snow one blast', `opened in force ${air.on.force} (grains dimmed ${air.on.grains}, wisps speedK ${air.on.speedK}, liftLo ${air.on.liftLo}) · a box or no layer: ${air.boxes.join(', ') || 'none'} · blasts ${air.b0} → ${air.b1} (${air.why}) · GPU errors ${air.gpu.length}${air.gpu.length ? ': ' + air.gpu[0] : ''}`); }
 
   // ---- 4c: a blown man's breath (the hard breath rule, on as the page opens): the rule's `blown` rows are lit and the breath's own four dimmed; the rule put
   //      off in the page's own table (window.__knobs), the other way round; put back, as it opened
@@ -105,10 +104,10 @@ let fails = 0; const verdict = (ok, label, detail) => { if (!ok) fails++; consol
   // ---- 5: a switch mutes live; `none` and `all`
   const sw = await page.evaluate(async () => { const box = window.__layer('Blown wisps').querySelector('input[type=checkbox]'); const was = window.__snow.wisps.opacity; box.click(); const off = window.__snow.wisps.opacity; await window.__frames(1); box.click();
     const btn = t => [...document.querySelectorAll('#stweak .sthead button')].find(b => b.textContent === t);
-    btn('none').click(); const offN = [...document.querySelectorAll('#stweak .stlayer.off')].length, fl = window.__snow.fx.gain, air = !window.__layer('Snow in one air').classList.contains('off'); await window.__settled(); await window.__frames(1);
+    btn('none').click(); const offN = [...document.querySelectorAll('#stweak .stlayer.off')].length, fl = window.__snow.fx.gain, air = !window.__layer('Wind sim').classList.contains('off'); await window.__settled(); await window.__frames(1);
     btn('all').click(); await window.__settled(); await window.__frames(1);
     return { was, off, back: window.__snow.wisps.opacity, offN, torch: !window.__layer('Torches').classList.contains('off'), air, flGain: fl, flBack: window.__snow.fx.gain, gpu: window.__gpuErrs.slice() }; });
-  verdict(sw.off === 0 && sw.back === sw.was && sw.offN >= 10 && sw.torch && sw.air && sw.flGain === 0 && sw.flBack === 9 && !sw.gpu.length, 'switch — off is live and comes back; none / all', `wisps ${sw.was} → ${sw.off} → ${sw.back} · 'none' put ${sw.offN} layers off (flake gain ${sw.flGain}; the torches, which guards see by, left on: ${sw.torch}; one air, a way the scene runs, left on: ${sw.air}) · 'all': gain ${sw.flBack} · GPU errors ${sw.gpu.length}`);
+  verdict(sw.off === 0 && sw.back === sw.was && sw.offN >= 10 && sw.torch && sw.air && sw.flGain === 0 && sw.flBack === 9 && !sw.gpu.length, 'switch — off is live and comes back; none / all', `wisps ${sw.was} → ${sw.off} → ${sw.back} · 'none' put ${sw.offN} layers off (flake gain ${sw.flGain}; the torches, which guards see by, left on: ${sw.torch}; the wind sim, a way the scene runs, left on: ${sw.air}) · 'all': gain ${sw.flBack} · GPU errors ${sw.gpu.length}`);
   await page.screenshot({ path: path.join(OUT, 'scenetweak-moved.png') });
 
   // ---- 6: copy

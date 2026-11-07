@@ -83,7 +83,6 @@ pub fn rails_new(g: &mut crate::game::Game) -> crate::rails::Rails { crate::rail
 
 /// the rails record in force (rails.ts Rails.data)
 pub fn rails_data(g: &mut crate::game::Game) -> Option<crate::scene_scenarios::RailsData> {
-    if !g.k.rails.on { return None; }
     crate::lesson::lesson_data(g).and_then(|l| l.rails)
 }
 /// (rails.ts Rails.live)
@@ -92,12 +91,12 @@ pub fn rails_live(g: &mut crate::game::Game) -> bool { rails_data(g).is_some() }
 pub fn rails_sky_on(g: &mut crate::game::Game) -> bool { rails_data(g).map_or(false, |d| d.sky.is_some()) }
 /// this mission's ring is the flat tree's (rails.ts Rails.flatRing)
 pub fn rails_flat_ring(g: &mut crate::game::Game) -> bool {
-    g.k.rails.flat_ring && rails_data(g).map_or(false, |d| d.flat_ring.unwrap_or(false))
+    rails_data(g).map_or(false, |d| d.flat_ring.unwrap_or(false))
 }
 /// the lesson under the frame and the step that is up (rails.ts Rails.lesson)
 pub fn rails_lesson(g: &mut crate::game::Game) -> Option<crate::rails::RailsLesson> {
     let l = crate::lesson::lesson_data(g)?;
-    if l.rails.is_none() || !g.k.rails.on { return None; }
+    if l.rails.is_none() { return None; }
     let i = m::min(crate::lesson::lesson_index(g), l.steps.len() as f64);
     Some(crate::rails::RailsLesson { l, i })
 }
@@ -154,7 +153,7 @@ pub fn rails_card(g: &mut crate::game::Game) -> Option<crate::rails::RailsCard> 
 /// does the step whose deed is done stay up a little longer (rails.ts Rails.settles)
 pub fn rails_settles(g: &mut crate::game::Game, l: &crate::scene_scenarios::LessonData, i: f64, done_t: f64) -> bool {
     let e = match step_at(l, i + 1.0).and_then(|t| t.explain.as_ref()) { Some(e) => e, None => return false };
-    if !g.k.rails.card_beat || !rails_live(g) || e.now.unwrap_or(false) { return false; }
+    if !rails_live(g) || e.now.unwrap_or(false) { return false; }
     let t = g.time - done_t;
     t >= 0.0 && (t < g.k.rails.card_beat_secs || (e.quiet.unwrap_or(false) && t < g.k.rails.card_max && g.time - rails_fight(g) < g.k.rails.card_quiet))
 }
@@ -272,7 +271,6 @@ pub fn rails_gate(g: &mut crate::game::Game, input: InputId, cam: CameraId, dt: 
     } && crate::interact::running_verb(g).is_empty() && (!rails_locks(g, "whistle") || crate::interact::choosable(&g.nearby));
     let mut c = GateOk { a: &a, keys, rows, menu_up, hand_up, hand_key, enter };
     let mut dropped = 0;
-    let shift_tap = g.k.rails.shift_tap;
     // the sky seat's walk keys are the view's, never his feet's: read here, then gone from the tick
     if rails_sky_on(g) {
         if has(&a, "pan") { rails_pan(g, input, cam, dt); }
@@ -289,11 +287,8 @@ pub fn rails_gate(g: &mut crate::game::Game, input: InputId, cam: CameraId, dt: 
         let kb = || String::from("KeyB");
         if shift && !has(&a, "goal") {
             let running = has(&a, "sprint") && walk.iter().any(|k| i.keys.has(k.clone()));
-            if shift_tap && !running {
+            if !running {
                 if i.pressed.has(kb()) || i.keys.has(kb()) { i.keys.delete(String::from("ShiftLeft")); i.keys.delete(String::from("ShiftRight")); }
-            } else if !shift_tap {
-                if i.pressed.delete(kb()) { dropped += 1; }
-                i.keys.delete(kb());
             }
         }
         if !has(&a, "ring") && !i.pressed.has(kb()) { i.keys.delete(kb()); }
@@ -337,10 +332,6 @@ pub fn rails_eye(g: &mut crate::game::Game) -> Option<crate::fogofwar::FogEye> {
     }
     g.rails.lookout
 }
-/// (rails.ts Rails.eyeFirst)
-pub fn rails_eye_first(g: &mut crate::game::Game) -> bool { g.k.rails.eye_first }
-/// (rails.ts Rails.eyeView)
-pub fn rails_eye_view(g: &mut crate::game::Game) -> bool { g.k.rails.eye_view }
 /// the step's own lookout, for as long as the step is up (rails.ts Rails.stepEye)
 pub fn rails_step_eye(g: &mut crate::game::Game) -> Option<crate::fogofwar::FogEye> {
     let s = rails_lesson(g)?;
@@ -366,8 +357,7 @@ pub fn rails_host_view(g: &mut crate::game::Game, cam: CameraId) {
 /// once a tick: the run's start, the step that came up answered, the spared men stood up (rails.ts Rails.tick)
 pub fn rails_tick(g: &mut crate::game::Game, dt: f64) {
     let s = rails_lesson(g);
-    g.rails.running = g.k.rails.way_run
-        && s.as_ref().map_or(false, |s| step_at(&s.l, s.i).and_then(|t| t.on_way.as_ref()).map_or(false, |w| w.run.unwrap_or(false)))
+    g.rails.running = s.as_ref().map_or(false, |s| step_at(&s.l, s.i).and_then(|t| t.on_way.as_ref()).map_or(false, |w| w.run.unwrap_or(false)))
         && rails_on_way(g, s.as_ref());
     let s = match s {
         Some(s) => s,
@@ -398,7 +388,7 @@ pub fn rails_tick(g: &mut crate::game::Game, dt: f64) {
     if rails_sky_on(g) && !g.rails.sky.parked { rails_park(g, rd); }
     if g.rails.answered != s.i { rails_answer(g, &s, false); }
     // (RAILS.cardBeat: the last moment of HIS fight is kept up to date wherever a card ahead waits for one to go quiet)
-    if g.k.rails.card_beat && s.l.steps.iter().enumerate().any(|(k, t)| (k as f64) > s.i && t.explain.as_ref().map_or(false, |e| e.quiet.unwrap_or(false))) { rails_fight(g); }
+    if s.l.steps.iter().enumerate().any(|(k, t)| (k as f64) > s.i && t.explain.as_ref().map_or(false, |e| e.quiet.unwrap_or(false))) { rails_fight(g); }
     // every order the player gives is told to the level's program
     if (g.orders.log.len() as f64) < g.rails.orders_seen { g.rails.orders_seen = g.orders.log.len() as f64; }
     while g.rails.orders_seen < g.orders.log.len() as f64 {
@@ -529,7 +519,7 @@ pub fn rails_prompt(g: &mut crate::game::Game) -> Option<crate::rails::RailsProm
     } else { None };
     let gave_here = g.rails.gave_step == s.i && js::truthy(g.rails.gave);
     // (RAILS.cardBeat: the step's deed is done and it settles before the next step's card: what its men are doing, or nothing)
-    if up && g.k.rails.card_beat && step_at(&s.l, s.i + 1.0).map_or(false, |n| n.explain.is_some()) && crate::lesson::lesson_settling(g) {
+    if up && step_at(&s.l, s.i + 1.0).map_or(false, |n| n.explain.is_some()) && crate::lesson::lesson_settling(g) {
         let w = if done_is_cue(t) { crate::lesson::step_line(g, t) }
             else if let (Some(a), true) = (&t.after, gave_here) { let l = said(a, g.rails.gave).unwrap_or_default(); crate::lesson::lesson_line(g, &l) }
             else { String::new() };
@@ -583,7 +573,7 @@ pub fn rails_is_spared(g: &mut crate::game::Game, gd: GuardId) -> bool {
 /// where your own men stand, for the big line to keep clear of (rails.ts Rails.lineMen)
 pub fn rails_line_men(g: &mut crate::game::Game) -> Vec<crate::rails::RailsLineMenItem> {
     let mut out = Vec::new();
-    if !g.k.rails.line_clear || !rails_live(g) { return out; }
+    if !rails_live(g) { return out; }
     let item = |g: &Game, c: CharId| crate::rails::RailsLineMenItem { pos: g.ch[c].pos, bones: crate::rails::RailsLineMenItemBones { head: g.ch[c].bones.get(crate::character::Bone::Head).copied() } };
     for gd in rails_squad(g) { let c = g.gd[gd].ch; out.push(item(g, c)); }
     if !rails_sky_on(g) { let c = g.pl[g.player].ch; out.push(item(g, c)); }
@@ -743,7 +733,7 @@ pub fn rails_summary(g: &mut crate::game::Game) -> String {
         Some(s) => s,
         None => {
             let carries = g.level.scenarios.as_ref().and_then(|x| x.lesson.as_ref()).map_or(false, |l| l.rails.is_some());
-            return String::from(if carries { if g.k.rails.on { "off · this level carries the record (start its mission)" } else { "off · switched off" } } else { "off · this level carries none" });
+            return String::from(if carries { "off · this level carries the record (start its mission)" } else { "off · this level carries none" });
         }
     };
     let a = rails_allowed(g).unwrap();
@@ -764,7 +754,7 @@ pub fn rails_note(g: &mut crate::game::Game, s: &str) {
 /// combat.ts killGuard's question (rails.ts railsSpare)
 pub fn rails_spare_2(g: &mut crate::game::Game, gd: GuardId) -> bool { rails_spare(g, gd) }
 /// is this man down as far as an enemy's eye goes (rails.ts railsDown)
-pub fn rails_down(g: &mut crate::game::Game, gd: GuardId) -> bool { g.k.rails.spare_down && rails_live(g) && rails_is_spared(g, gd) }
+pub fn rails_down(g: &mut crate::game::Game, gd: GuardId) -> bool { rails_live(g) && rails_is_spared(g, gd) }
 
 #[cfg(test)]
 mod tests {

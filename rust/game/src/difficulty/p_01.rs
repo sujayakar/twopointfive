@@ -329,17 +329,17 @@ pub fn tables_of(g: &mut crate::game::Game, level: crate::difficulty::Difficulty
     if set.ai.unwrap_or(level) == Difficulty::Hard {
         let h = g.k.hard;
         p.on = true;
-        p.warned = h.warned;
-        p.second = h.second;
-        p.picket = h.picket;
-        p.by_way = h.by_way;
-        p.rescue_crew = h.rescue_crew;
-        p.way_out = h.way_out;
-        p.drilled = h.drilled;
-        p.sweep = h.sweep;
+        p.warned = true;
+        p.second = true;
+        p.picket = false;
+        p.by_way = true;
+        p.rescue_crew = true;
+        p.way_out = true;
+        p.drilled = true;
+        p.sweep = true;
         d.on = true;
         d.reach_m = h.reach_m;
-        d.keeper = h.keeper_digs;
+        d.keeper = false;
     }
     if level == Difficulty::Hard {
         p.stuns = g.k.hard.stuns;

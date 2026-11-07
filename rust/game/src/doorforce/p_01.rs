@@ -531,7 +531,7 @@ pub fn kick_step(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<crat
     let lock: V3 = [hinge[0] + m::cos(closed) * (width - 0.2), 0.9, hinge[1] + m::sin(closed) * (width - 0.2)];
     if kk.phase != KickPhase::Kick && !shut(g, d) { return kick_end(g, gd, d, b, Some("it stands open"), false); }
     if kk.phase == KickPhase::Walk {
-        if g.k.doorforce.post_ends && (g.gd[gd].pinned || g.gd[gd].hold) { return kick_end(g, gd, d, b, Some("he has been put on a post"), true); }   // (the boot was a free man's; what he believes of the door stands, for the rounds)
+        if g.gd[gd].pinned || g.gd[gd].hold { return kick_end(g, gd, d, b, Some("he has been put on a post"), true); }   // (the boot was a free man's; what he believes of the door stands, for the rounds)
         if g.time - kk.t0 > g.k.doorforce.walk_secs { return kick_end(g, gd, d, b, Some("the walk took too long"), false); }
         crate::guards::go_to(g, gd, kk.spot, None);
         let speed = g.tune.guard_investigate;

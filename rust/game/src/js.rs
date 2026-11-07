@@ -6,12 +6,23 @@ use alloc::vec::Vec;
 
 /// A `Map`: `get` / `set` / `delete` by key, walked in the order keys were FIRST set (setting a key again keeps its place; a deleted key set
 /// again goes to the end), as JavaScript's.
+///
+/// A deleted key's row stays as a hole only until the holes outnumber the live rows by `PACK_OVER`; then the map closes them up, in `delete`
+/// itself. That is safe under an open walk because A WALK'S CURSOR IS NOT A PLACE IN THE ROWS: it is a row's NUMBER, the count of keys first set
+/// before it since the map was made, which no packing changes (`next_key`). So a table set and deleted every tick stays as small as what it holds.
 #[derive(Clone, Debug)]
 pub struct JsMap<K: Ord + Clone, V> {
+    /// a key's place in `rows` (written again for every row when the map packs)
     at: BTreeMap<K, usize>,
-    rows: Vec<Option<(K, V)>>,
+    /// (the row's number, the row or the hole a delete left), in the order first set: the numbers rise along it
+    rows: Vec<(usize, Option<(K, V)>)>,
     live: usize,
+    /// the number the next key first set takes. Never taken back, not by `clear` either: a walk open over a clear then meets the keys set after
+    /// it, as the language's iterator does
+    next: usize,
 }
+/// how many more holes than live rows a map holds before a delete closes them up: the packing is paid for by at least that many deletes
+const PACK_OVER: usize = 16;
 impl<K: Ord + Clone, V> Default for JsMap<K, V> {
     fn default() -> Self {
         Self::new()
@@ -19,7 +30,7 @@ impl<K: Ord + Clone, V> Default for JsMap<K, V> {
 }
 impl<K: Ord + Clone, V> JsMap<K, V> {
     pub const fn new() -> Self {
-        JsMap { at: BTreeMap::new(), rows: Vec::new(), live: 0 }
+        JsMap { at: BTreeMap::new(), rows: Vec::new(), live: 0, next: 0 }
     }
     pub fn len(&self) -> usize {
         self.live
@@ -31,21 +42,22 @@ impl<K: Ord + Clone, V> JsMap<K, V> {
         self.at.contains_key(&k)
     }
     pub fn get(&self, k: K) -> Option<&V> {
-        self.at.get(&k).and_then(|&i| self.rows[i].as_ref()).map(|r| &r.1)
+        self.at.get(&k).and_then(|&i| self.rows[i].1.as_ref()).map(|r| &r.1)
     }
     pub fn get_mut(&mut self, k: K) -> Option<&mut V> {
         match self.at.get(&k) {
-            Some(&i) => self.rows[i].as_mut().map(|r| &mut r.1),
+            Some(&i) => self.rows[i].1.as_mut().map(|r| &mut r.1),
             None => None,
         }
     }
     /// `map.set(k, v)`; what was there before, if anything
     pub fn set(&mut self, k: K, v: V) -> Option<V> {
         if let Some(&i) = self.at.get(&k) {
-            return self.rows[i].replace((k, v)).map(|r| r.1);
+            return self.rows[i].1.replace((k, v)).map(|r| r.1);
         }
         self.at.insert(k.clone(), self.rows.len());
-        self.rows.push(Some((k, v)));
+        self.rows.push((self.next, Some((k, v))));
+        self.next += 1;
         self.live += 1;
         None
     }
@@ -60,48 +72,61 @@ impl<K: Ord + Clone, V> JsMap<K, V> {
     pub fn delete(&mut self, k: K) -> Option<V> {
         let i = self.at.remove(&k)?;
         self.live -= 1;
-        // (the row's place is left empty and NEVER reused or closed up while anything is in the map: a walk in progress keeps its place, as a
-        //  JavaScript iterator does. `pack` is for whoever knows no walk is open)
-        self.rows[i].take().map(|r| r.1)
+        let was = self.rows[i].1.take().map(|r| r.1);
+        // (the hole is closed up once there are more of them than the map is worth: a walk in progress keeps its place by the row's number)
+        if self.rows.len() - self.live > self.live + PACK_OVER {
+            self.pack();
+        }
+        was
     }
     pub fn clear(&mut self) {
         self.at.clear();
         self.rows.clear();
         self.live = 0;
     }
-    /// close up the places of deleted keys (the order stays). Only where no walk of this map is open: a cursor's place would move.
+    /// close up the places of deleted keys (the order and every row's number stay). Safe at any time, under an open walk too.
     pub fn pack(&mut self) {
-        self.rows.retain(|r| r.is_some());
+        self.rows.retain(|r| r.1.is_some());
         for (i, r) in self.rows.iter().enumerate() {
-            if let Some((k, _)) = r {
-                self.at.insert(k.clone(), i);
+            if let Some((k, _)) = &r.1 {
+                if let Some(p) = self.at.get_mut(k) {
+                    *p = i;
+                }
             }
         }
     }
+    /// how many holes the rows hold now (for a count of them at a run's end: never more than the live rows and `PACK_OVER`)
+    pub fn holes(&self) -> usize {
+        self.rows.len() - self.live
+    }
     /// A WALK THAT SEES THE MAP AS IT CHANGES, as `for (const [k, v] of map)` does: a key deleted before the walk reaches it is skipped, a key
     /// set during the walk is visited. `let mut at = 0; while let Some(k) = m.next_key(&mut at) { … m may be written here … }`
+    /// The cursor is the NUMBER of the next row to look at, not its place: the map may pack between two calls.
     pub fn next_key(&self, at: &mut usize) -> Option<K> {
-        while *at < self.rows.len() {
-            let i = *at;
-            *at += 1;
-            if let Some((k, _)) = &self.rows[i] {
+        let mut i = self.rows.partition_point(|r| r.0 < *at);
+        while i < self.rows.len() {
+            let (n, r) = &self.rows[i];
+            i += 1;
+            if let Some((k, _)) = r {
+                *at = n + 1;
                 return Some(k.clone());
             }
         }
+        *at = self.next;
         None
     }
     /// the keys, in the order first set (a copy: the map may be written while the list is walked, as a loop over `[...map.keys()]`)
     pub fn keys(&self) -> Vec<K> {
-        self.rows.iter().flatten().map(|r| r.0.clone()).collect()
+        self.rows.iter().filter_map(|r| r.1.as_ref()).map(|r| r.0.clone()).collect()
     }
     pub fn iter(&self) -> impl Iterator<Item = (K, &V)> {
-        self.rows.iter().flatten().map(|r| (r.0.clone(), &r.1))
+        self.rows.iter().filter_map(|r| r.1.as_ref()).map(|r| (r.0.clone(), &r.1))
     }
     pub fn iter_mut(&mut self) -> impl Iterator<Item = (K, &mut V)> {
-        self.rows.iter_mut().flatten().map(|r| (r.0.clone(), &mut r.1))
+        self.rows.iter_mut().filter_map(|r| r.1.as_mut()).map(|r| (r.0.clone(), &mut r.1))
     }
     pub fn values(&self) -> impl Iterator<Item = &V> {
-        self.rows.iter().flatten().map(|r| &r.1)
+        self.rows.iter().filter_map(|r| r.1.as_ref()).map(|r| &r.1)
     }
 }
 
@@ -351,6 +376,72 @@ mod tests {
         m.delete(7);
         *m.get_or_insert_with(9, || "n") = "N";
         assert_eq!(m.get(9), Some(&"N"));
+    }
+    #[test]
+    fn a_map_set_and_deleted_every_tick_stays_small_and_a_walk_keeps_its_place() {
+        let mut m: JsMap<u32, u32> = JsMap::new();
+        m.set(1, 1);
+        m.set(2, 2);
+        for i in 10..100_010 {
+            m.set(i, i);
+            m.set(i + 1_000_000, i);
+            m.delete(i);
+            m.delete(i + 1_000_000);
+            assert!(m.holes() <= m.len() + PACK_OVER + 1);
+        }
+        assert_eq!(m.keys(), [1, 2]);
+        // a walk open while the map packs under it: every key set before or during it is met once, in the order first set, a deleted one never
+        for i in 0..40 {
+            m.set(100 + i, i);
+        }
+        let (mut at, mut seen) = (0, Vec::new());
+        while let Some(k) = m.next_key(&mut at) {
+            seen.push(k);
+            if k == 2 {
+                for i in 0..38 {
+                    m.delete(100 + i);   // (enough holes to pack, twice over)
+                }
+                m.set(7, 7);
+            }
+            if k == 138 {
+                m.delete(139);
+                m.set(8, 8);
+            }
+        }
+        assert_eq!(seen, [1, 2, 138, 7, 8]);
+        // …and over a clear: the keys set after it are met
+        let (mut at, mut seen) = (0, Vec::new());
+        while let Some(k) = m.next_key(&mut at) {
+            seen.push(k);
+            if k == 2 {
+                m.clear();
+                m.set(5, 5);
+                m.set(6, 6);
+            }
+        }
+        assert_eq!(seen, [1, 2, 5, 6]);
+    }
+    #[test]
+    fn a_walk_that_deletes_the_key_it_stands_on_meets_every_key_once_across_packs() {
+        // (the shape of lanes' walks over `held` and `who` and pressure's over `marks`: the key just handed out is deleted before the next is asked)
+        let mut m: JsMap<u32, u32> = JsMap::new();
+        for i in 0..200 {
+            m.set(i, i);
+        }
+        let (mut at, mut seen, mut most_holes) = (0, Vec::new(), 0);
+        while let Some(k) = m.next_key(&mut at) {
+            seen.push(k);
+            m.delete(k);
+            most_holes = most_holes.max(m.holes());
+            if k % 50 == 0 && k < 200 {
+                m.set(1000 + k, k);
+            }
+        }
+        let mut want: Vec<u32> = (0..200).collect();
+        want.extend([1000, 1050, 1100, 1150]);
+        assert_eq!(seen, want);
+        assert!(m.is_empty());
+        assert!(most_holes < 150, "the map packed under the walk ({most_holes} holes at most, of 204 deletes)");
     }
     #[test]
     fn a_set_too() {

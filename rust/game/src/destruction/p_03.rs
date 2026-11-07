@@ -189,10 +189,6 @@ pub fn destruction_tile_drop(g: &mut crate::game::Game, p: V3, chaos: f64, force
     let v: V3 = [(destruction_hash(g) - 0.5) * 0.4, -0.2, (destruction_hash(g) - 0.5) * 0.4];
     let w: V3 = [(destruction_hash(g) - 0.5) * 3.0, (destruction_hash(g) - 0.5) * 1.0, (destruction_hash(g) - 0.5) * 3.0];
     let c = crate::debris::debris_spawn(g, crate::debris::ChunkKind::Tile, box_, v, w, Some(who), None);
-    if c.is_none() && !g.k.debris.dress {   // (dress: the tile is down whether or not the pool had room to show it)
-        g.stats.destruction.destr_tiles_refused += 1;
-        return false;
-    }
     g.destr.tiles_down.add(key.clone());
     g.destr.last_tile_t = g.time;
     g.destr.tile_count += 1.0;

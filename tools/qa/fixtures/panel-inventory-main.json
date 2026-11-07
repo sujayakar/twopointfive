@@ -734,7 +734,7 @@
   "path": "Direct light ▸ Estimator — ReSTIR DI",
   "kind": "toggle",
   "label": "restir: motion — run under a still camera too",
-  "title": "the motion levers live in a twin of the estimator's program that only frames on which the CAMERA moved dispatch (its levers are inert at rest, but the bigger kernel measured +0.2 ms direct at high doing nothing); on = dispatch it always, so a walking man's own pixels get the levers under a still camera as well",
+  "title": "the motion levers are switched on only on frames the CAMERA moved (their work measured +0.2 ms direct at high doing nothing at rest); on = always, so a walking man's own pixels get the levers under a still camera as well",
   "def": false,
   "extra": ""
  },
@@ -5067,14 +5067,6 @@
   "kind": "toggle",
   "label": "civilians ▸ a dead civilian fails the mission",
   "title": "Chaos Theory fails some missions for a civilian killed by your hand; here by default it PRICES it instead (−40, 'civilian casualty' on the card, control's fury on the net once they find her, the floor locked down). On: the run ends where you stand — mission failed, Enter restarts. A knockout (−10) never fails it. Kept per machine.",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Civilians",
-  "kind": "toggle",
-  "label": "civilians ▸ passing pleasantries",
-  "title": "'Evening.' — 'Evening, Marta.': a calm patrolling man passing within three metres of a working civilian gets a word and gives one back (at most one exchange a minute on the floor, four minutes per pair). Off = they never speak to each other (the identity probe's setting: the men's own chatter clocks are then untouched by her).",
   "def": false,
   "extra": ""
  },

@@ -276,7 +276,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   off main), the soak's device invariants; editor tools C / K / J + `__ed.device`.
 - **The wall hold's feel pass + the rifle stack** (`src/game/wallsnap.ts` = the table `WALLSNAP` and its arithmetic, nothing of the game imported; the hold itself is player.ts
   `findWall / wallSnap / moveOnWall / releaseWall`, the pose character.ts `wallBody / stanceBody`; `WALLSNAP.on` ON in the page — `?nowallsnap`, Tab ▸ Sandbox 'wall snap: feel
-  pass + rifle stack' and 'wall snap: the rifle stacks', `__wallsnap` = the live table — OFF in the frozen harness, `TPS_WALLSNAP=1`; off = the hold as it was: no feel-pass field
+  pass + rifle stack' and 'wall snap: the rifle stacks' (ROW TAKEN OFF THE PANEL 2026-11-07, its switch ruled settled: menus.md), `__wallsnap` = the live table — OFF in the frozen harness, `TPS_WALLSNAP=1`; off = the hold as it was: no feel-pass field
   on `Player.wall`, the animator's channels at rest). QUIET (hands empty / the pistol): the take runs one clock sized to the job (`wsTakeSecs`: 0.12‥0.30 s by glide and turn),
   eased OUT, the turn ahead of the glide, the soles anchored in the world and stepped one after the other (`anim.wallTake / wallTakeFeet`), a settle as the back lands
   (`anim.wallHit`: pelvis dip + head back) with one soft scuff for the player's ears only (no event filed); a wall he WALKS AT is in reach from `reachMoving` and outranks a nearer
@@ -335,7 +335,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   that was not wanted in real play is unmeasured, since no recorded human session is in the repo and the tour's man is a puppet the rule leaves alone.
 - **A sprint straight into a wall takes it** (`WALLSNAP.pressRun`, wallsnap.ts `wsPressNear`, player.ts `wallPress / pressFace / wallRanOn`; the maintainer,
   11-04, from the pass road's cover lesson: "sprinting straight into a wall should snap to cover"). ON in the page (`?wallrun=0` = never at a run, as it
-  was; debugger row 'wall snap: sprint into a wall to take it'; no Options row of its own — it acts only with the walk-in take, so Options ▸ Game ▸ 'Walk
+  was; debugger row 'wall snap: sprint into a wall to take it' (ROW TAKEN OFF THE PANEL 2026-11-07, its switch ruled settled: menus.md); no Options row of its own — it acts only with the walk-in take, so Options ▸ Game ▸ 'Walk
   into a wall to take it' off puts both off), OFF in the module and on the frozen stand (`TPS_WALLRUN=1`; a `FROZEN_HOLDS` row; the journal carries it and
   a recording from before the key replays with it off). ONE RULE, NOT A SECOND ONE: with the switch on the walk-in take no longer turns a run away, and
   that is all of it — the same stick (`pressDeg` 35° of square), the same clock (`pressSecs`), the same faces, refusals and latch, the same hold (the rifle

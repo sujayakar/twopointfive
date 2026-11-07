@@ -288,20 +288,37 @@ fn tick_man(g: &mut Game, i: usize, it: ItemId, at: V3, eye_at: V3, wise: &crate
     if !live!(g, i).counted.has(gd) { live!(g, i).counted.add(gd); g.stats.frag.fled += 1; }
 }
 
-/// The script his legs follow while a live grenade he knows of has a line to him (None = none). Once there he gets down.   (frag.ts fragFlee)
-pub fn frag_flee(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::game::GuardScript> {
+/// THE RULE'S OWN STATE, moved a tick for one man (the first of a rule's three parts, control/; the dealing is `frag_tick`'s): once he is at his
+/// spot he gets down.   (frag.ts fragFlee, the part that writes)
+pub fn frag_flee_transition(g: &mut crate::game::Game, gd: GuardId) {
+    let n = match g.m.frag.books.as_ref() { Some(b) if !b.is_empty() => b.len(), _ => return };
+    for i in 0..n {
+        if let Some(s) = flee_of(g, i, gd) {
+            if g.time < g.gd[gd].stagger_until { return; }
+            if s.goal.is_some() && arrived(&s) {
+                if let Some(Some(row)) = live!(g, i).flee.get_mut(gd) { row.crouch = Some(true); }
+            }
+            return;
+        }
+    }
+}
+
+/// WHAT IT WANTS OF HIM (the second part; it only reads): the script his legs follow while a live grenade he knows of has a line to him (None = none).
+pub fn frag_flee_propose(g: &crate::game::Game, gd: GuardId) -> Option<crate::game::GuardScript> {
     let n = match g.m.frag.books.as_ref() { Some(b) if !b.is_empty() => b.len(), _ => return None };
     for i in 0..n {
         if let Some(s) = flee_of(g, i, gd) {
             if g.time < g.gd[gd].stagger_until { return None; }
-            if s.goal.is_some() && arrived(&s) {
-                if let Some(Some(row)) = live!(g, i).flee.get_mut(gd) { row.crouch = Some(true); }
-                return flee_of(g, i, gd);
-            }
             return Some(s);
         }
     }
     None
+}
+
+/// The two as one call.   (frag.ts fragFlee)
+pub fn frag_flee(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::game::GuardScript> {
+    frag_flee_transition(g, gd);
+    frag_flee_propose(g, gd)
 }
 
 /// Is he on his legs off a live grenade this frame.   (frag.ts fragRunning)

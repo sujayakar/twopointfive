@@ -268,7 +268,7 @@ pub fn update_fire(g: &mut Game, dt: f64) {
         }
         // the smoke: a short source on the solver, filed afresh every `every` s while the fire is near the view
         let b = g.k.fire.smoke;
-        if moved && drawing && b.on && d < b.view_r {
+        if moved && drawing && d < b.view_r {
             let slot = m::floor(time / b.every);
             let p = book(g);
             let n = p.n;
@@ -388,12 +388,11 @@ pub fn update_fire(g: &mut Game, dt: f64) {
 /// the asks are made, for the same fires in the same order, and nothing else. Called by the update (fire.ts:406) and under the DRESS row `fires`
 /// straight behind the fog's turn (game.ts:1709). (fire.ts fireDraws)
 pub fn fire_draws(g: &mut crate::game::Game) {
-    if !g.k.fire.on { return; }
     let focus = match g.engine.view_focus {
         Some(f) => f,
         None => { let h = crate::seats::host_man(g); let c = g.pl[h].ch; g.ch[c].pos }
     };
-    let (fog, draw_r) = (g.k.fire.fog, g.k.fire.draw_r);
+    let (fog, draw_r) = (true, g.k.fire.draw_r);
     let mut i = 0;
     while i < g.targets.len() {
         let t = g.targets[i];
