@@ -230,16 +230,16 @@ fn hold_row(g: &mut Game, gd: GuardId, s: St) -> Option<FireLineFeet> {
 }
 
 /// Is he on a door order past the stack. (fireline.ts:185)
-fn past_the_stack(g: &Game, gd: GuardId) -> bool {
-    g.door_tools.ops.iter().any(|&o| {
+fn past_the_stack(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
+    seat.door_tools.ops.iter().any(|&o| {
         let op = &g.tab.doortools_door_op[o];
         op.phase != crate::doortools::Phase::Stack && op.men.contains(&gd)
     })
 }
 
 /// Is he on a wall charge. (fireline.ts:186)
-fn on_wall_charge(g: &Game, gd: GuardId) -> bool {
-    g.wall_charge.ops.iter().any(|&o| g.tab.wallcharge_wall_op[o].men.contains(&gd))
+fn on_wall_charge(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
+    seat.wall_charge.ops.iter().any(|&o| g.tab.wallcharge_wall_op[o].men.contains(&gd))
 }
 
 /// His feet while the player fires down a lane his walk would cross: speed 0 = wait where he stands, `goal` = the next corner of a way round, None = the order's own legs. (fireline.ts fireLineFeet)
@@ -280,7 +280,7 @@ pub fn fire_line_feet(g: &mut crate::game::Game, gd: GuardId, goal: Option<V3>, 
         end(g, gd, st.as_ref());
         return None;
     }
-    if past_the_stack(g, gd) || on_wall_charge(g, gd) || in_doorway(g, p[0], p[2]) {
+    if past_the_stack(g, &crate::seats::here(g), gd) || on_wall_charge(g, &crate::seats::here(g), gd) || in_doorway(g, p[0], p[2]) {
         end(g, gd, st.as_ref());
         return None;
     }

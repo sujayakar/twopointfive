@@ -699,8 +699,8 @@ pub fn update_takedown(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// Which hold a grab made now would be to begin with.   (player.ts grabVariant)
-pub fn grab_variant(g: &crate::game::Game) -> crate::character::HoldVariant {
-    let p = g.player;
+pub fn grab_variant(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> crate::character::HoldVariant {
+    let p = seat.player;
     if crate::game::player_pistol_up(g, p) { crate::character::HoldVariant::Gun } else { crate::character::HoldVariant::Arm }
 }
 
@@ -735,7 +735,7 @@ pub fn start_grab(g: &mut crate::game::Game, gd: GuardId, way: Option<crate::clo
         return;
     }
     if crate::game::player_rifle_up(g, p) { set_holstered(g, true, Some(true)); }
-    let variant = grab_variant(g);
+    let variant = grab_variant(g, &crate::seats::here(g));
     if let Some(w) = g.pl[p].wall.as_mut() { w.drawn = false; }
     release_wall(g);
     if g.pl[p].dragging.is_some() { crate::game::game_toggle_drag(g, None); }

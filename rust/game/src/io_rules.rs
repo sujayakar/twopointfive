@@ -14,7 +14,7 @@ pub fn ask(g: &mut crate::game::Game, kind: u32, row: u32, seat: u32, args: &[u8
         4 => { let t: T = Io::r(&mut i); let men: Vec<GuardId> = Io::r(&mut i); crate::orders::order_when(g, d, &t, &men).w(&mut o); }
         5 => { let t: T = Io::r(&mut i); let men: Vec<GuardId> = Io::r(&mut i); crate::orders::order_gone(g, d, &t, &men).w(&mut o); }
         6 => { crate::silent::posture_word(g).w(&mut o); }
-        7 => { String::from(crate::silent::posture_mark(g, d)).w(&mut o); }
+        7 => { String::from(crate::silent::posture_mark(g, &crate::seats::here(g), d)).w(&mut o); }
         8 => { crate::silent::posture_given(g, d); }
         9 => { let men: Vec<GuardId> = Io::r(&mut i); let t: T = Io::r(&mut i); let opts: Option<crate::orders::GiveOpts> = Io::r(&mut i); crate::orders::order_issue(g, d, &men, &t, opts.as_ref()).w(&mut o); }
         10 => { let id: String = Io::r(&mut i); let t: Option<T> = Io::r(&mut i); let who: Option<crate::orders::Who> = Io::r(&mut i); let opts: Option<crate::orders::GiveOpts> = Io::r(&mut i); crate::orders::squad_orders_give(g, &id, t.as_ref(), who, opts.as_ref()).w(&mut o); }

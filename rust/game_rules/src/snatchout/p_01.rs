@@ -194,7 +194,7 @@ pub fn snatch_out_mover(g: &mut crate::game::Game) -> Option<CharId> {
 /// An order of this module's, and the row it is from then on (what `last` and `jobs` know him by). (snatchout.ts SnatchOut.mine)
 pub fn snatch_out_mine(g: &mut crate::game::Game, gd: GuardId, spec: &crate::orders::SquadOrdersAssignA) -> OrdersAssignmentId {
     crate::orders::squad_orders_assign(g, gd, spec);
-    let a = crate::orders::squad_orders_of(g, gd).unwrap();
+    let a = crate::orders::squad_orders_of(g, &crate::seats::here(g), gd).unwrap();
     g.snatch.out.last.set(gd, Some(a));
     a
 }
@@ -216,7 +216,7 @@ pub fn snatch_out_rejoin(g: &mut crate::game::Game, gd: GuardId) {
     let a = g.snatch.out.jobs.get(gd).copied();
     snatch_out_drop(g, gd);
     let Some(a) = a else { return; };
-    if crate::orders::squad_orders_of(g, gd) == Some(a) && g.gd[gd].state != crate::game::GuardState::Dead {
+    if crate::orders::squad_orders_of(g, &crate::seats::here(g), gd) == Some(a) && g.gd[gd].state != crate::game::GuardState::Dead {
         snatch_out_mine(g, gd, &crate::orders::SquadOrdersAssignA {
             order: String::from("fallIn"),
             post: None,
@@ -360,8 +360,8 @@ pub fn snatch_out_bound(g: &mut crate::game::Game, dt: f64) {
         g.snatch.out.last.clear();
     }
     // an order that is not this module's since it last looked: the man is theirs, and is not asked again until he is next moved off
-    for gd in crate::orders::squad_orders_men(g, Some(crate::orders::SquadOrdersMenSel::All), None) {
-        let a = crate::orders::squad_orders_of(g, gd);
+    for gd in crate::orders::squad_orders_men(g, &crate::seats::here(g), Some(crate::orders::SquadOrdersMenSel::All), None) {
+        let a = crate::orders::squad_orders_of(g, &crate::seats::here(g), gd);
         if let Some(seen) = g.snatch.out.last.get(gd).copied() {
             if seen != a {
                 g.snatch.out.told.add(gd);
@@ -376,10 +376,10 @@ pub fn snatch_out_bound(g: &mut crate::game::Game, dt: f64) {
     snatch_out_turn(g);
     // the groups this can move: each pair's men who are in the file (fall in) or planted by this
     let mut groups: JsMap<String, Vec<GuardId>> = JsMap::new();
-    for gd in crate::orders::squad_orders_men(g, Some(crate::orders::SquadOrdersMenSel::All), None) {
+    for gd in crate::orders::squad_orders_men(g, &crate::seats::here(g), Some(crate::orders::SquadOrdersMenSel::All), None) {
         if g.snatch.out.told.has(gd) { continue; }
         if !g.snatch.out.jobs.has(gd) {
-            let fall_in = match crate::orders::squad_orders_of(g, gd) {
+            let fall_in = match crate::orders::squad_orders_of(g, &crate::seats::here(g), gd) {
                 Some(a) => g.tab.orders_assignment[a].order == "fallIn",
                 None => false,
             };

@@ -408,7 +408,7 @@ pub fn director_tick(g: &mut crate::game::Game, dt: f64, _input: Option<InputId>
         let rr = &g.tab.director_run[r];
         let s = &rr.signals[rr.sig_seen as usize];
         let s = SignalViewS { name: s.name.clone(), t: s.t, data: s.data.clone() };
-        fresh.push(signal_view(g, r, &s));
+        fresh.push(signal_view(g, &crate::seats::here(g), r, &s));
         g.tab.director_run[r].sig_seen += 1.0;
     }
     director_fire_triggers(g, r, &fresh);
