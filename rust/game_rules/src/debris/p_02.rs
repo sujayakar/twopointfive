@@ -23,6 +23,28 @@ fn lay_flat_row(row: &mut crate::scene_boxes::Box, n: V3, k: f64) {
         let d = m::abs(v3::dot(axes[i], n)) / m::max(0.01, h[i]);
         if d > bd { bd = d; bi = i; }
     }
+    lay_axis_row(row, bi, n, k);
+}
+
+/// A SHEET DOES NOT STAND ON ITS EDGE: one that came to rest up on end goes down on its face (a thing that is many times its thickness tall has nothing to stand on).
+pub fn lay_sheet(g: &mut crate::game::Game, b: BoxId, n: V3) {
+    const SHEET: f64 = 3.0;
+    let row = seam_box(g, b);
+    let r: Quat = match row.rot { Some(q) => q, None => v3::quat::yaw(row.yaw) };
+    let h = row.h;
+    let (mut up, mut most) = (0usize, -1.0);
+    for i in 0..3 {
+        let d = m::abs(v3::dot(v3::quat::rotate(r, if i == 0 { [1.0, 0.0, 0.0] } else if i == 1 { [0.0, 1.0, 0.0] } else { [0.0, 0.0, 1.0] }), n));
+        if d > most { most = d; up = i; }
+    }
+    let thin = if h[0] <= h[1] && h[0] <= h[2] { 0 } else if h[1] <= h[2] { 1 } else { 2 };
+    if h[up] > SHEET * h[thin] { lay_axis_row(row, thin, n, 1.0); }
+}
+
+/// The turn that brings axis `bi` of the box onto n, a share k of the way.
+fn lay_axis_row(row: &mut crate::scene_boxes::Box, bi: usize, n: V3, k: f64) {
+    let r: Quat = match row.rot { Some(q) => q, None => v3::quat::yaw(row.yaw) };
+    let axes: [V3; 3] = [v3::quat::rotate(r, [1.0, 0.0, 0.0]), v3::quat::rotate(r, [0.0, 1.0, 0.0]), v3::quat::rotate(r, [0.0, 0.0, 1.0])];
     let mut a = axes[bi];
     if v3::dot(a, n) < 0.0 { a = v3::scale(a, -1.0); }
     // shortest arc a -> n, scaled by k
