@@ -67,7 +67,7 @@ export const LOOK_SYSTEM = 'Materials prototype';
 // The page still OPENS with them up (panel.show), as the box did.
 export function buildLookPanel(panel: Panel, engine: Engine, fps: () => number, open: boolean, shapes?: { on: boolean; flip: () => void }, hills?: { on: boolean; flip: () => void }, lorry?: { on: boolean; flip: () => void }): void {
   const w = window as any;
-  const here = () => panel.system(LOOK_SYSTEM, { icon: '◍', short: 'Look', title: 'a slider a layer of the look · plain boxes to compare · the hour, sun and moon · the trials · performance takes · the character lab' });
+  const here = () => panel.system(LOOK_SYSTEM, { icon: '◍', short: 'Look', title: 'a slider a layer of the look · plain boxes to compare · the hour, sun and moon · the trials · performance takes' });
   here();
   const send = () => { engine.gbuffer.setLook(); lookSync(); };
   let kept: typeof lookAmounts | null = null;   // the amounts as the sliders have them, while the boxes are shown plain
@@ -213,28 +213,6 @@ export function buildLookPanel(panel: Panel, engine: Engine, fps: () => number, 
     }
     return true;
   };
-  // THE CHARACTER LAB (host/charlab.ts): the camera down on you at a man's height, and you in any outfit of the cast. The maintainer, 10-25: "we should just
-  // iterate on the characters in a character lab". Its rows show while it is open.
-  const labRows = (): boolean => {   // (made after this panel, like the recorder)
-    const lab = w.__charlab as { state: { on: boolean; yaw: number; pitch: number; dist: number; height: number; turn: boolean }; open(): void; leave(): void; wear(pick: string | number): string; worn(): string; outfits(): string[] } | undefined;
-    if (!lab) return false;
-    here(); const cl = panel.section('Character lab', { open: true });
-    const open = btn(row(cl, 'the lab'), 'Open', 'the camera comes down to you and stays on you; nobody notices or hurts you. Walk into the light you want to judge a man in');
-    const rows = document.createElement('div'); rows.hidden = true; cl.append(rows);   // (in the page before its rows are made: the panel files a row's refresh by the page it stands on)
-    const wear = row(rows, 'outfit'), prev = btn(wear, '◀', 'the outfit before'), next = btn(wear, '▶', 'the next outfit'), worn = document.createElement('span'); worn.style.cssText = 'color:#e8efe9;margin-left:6px'; wear.append(worn);
-    const S = lab.state;
-    slide(rows, 'Angle', 'where the camera stands round you, in degrees', 0, 359, 1, () => S.yaw, v => { S.yaw = v; });
-    slide(rows, 'Height', 'how steeply it looks down, in degrees', 2, 80, 1, () => S.pitch, v => { S.pitch = v; });
-    slide(rows, 'Distance', 'metres from you', 1.2, 9, 0.1, () => S.dist, v => { S.dist = v; });
-    slide(rows, 'Looks at', 'the height on you it looks at, in metres: 1.6 is the face, 0.2 the boots', 0.1, 1.8, 0.05, () => S.height, v => { S.height = v; });
-    panel.toggleBox(rows, 'turn slowly round him', () => S.turn, v => { S.turn = v; });
-    words(rows, 'You are the mannequin. Walk him into the sun, the shade or by a lamp.');
-    const show = () => { rows.hidden = !S.on; open.textContent = S.on ? 'Leave' : 'Open'; worn.textContent = S.on ? lab.worn() : ''; };
-    open.addEventListener('click', () => { if (S.on) lab.leave(); else lab.open(); show(); });
-    prev.addEventListener('click', () => { lab.wear(-1); show(); }); next.addEventListener('click', () => { lab.wear(1); show(); });
-    show();
-    return true;
-  };
-  for (const made of [labRows, perfRows]) if (!made()) { const h = setInterval(() => { if (made()) clearInterval(h); }, 300); }
+  if (!perfRows()) { const h = setInterval(() => { if (perfRows()) clearInterval(h); }, 300); }
   if (open) panel.show(LOOK_SYSTEM);   // (the look lab's page opens on its rows, as the box did; on every other page they are a system of the debugger like any other, shut until asked for)
 }

@@ -6,7 +6,7 @@
 //   glowThrough · blurStart · leanOnNew    settings.smokeMultiScatter / smokeDiffuseStart / smokeTaaReact
 //   stepCells                              the march's step in cells of the solver AS TUNED ON HIGH (whose own step is TUNED_STEP): a preset's step is taken
 //                                          in that proportion (smokeLookStep), so the ladder's cheaper presets keep their longer step
-// The lab's rows (host/smokelab.ts) move the same numbers live and its button puts these back. `?smokelook=0` = the engine's and the presets' own numbers
+// `?smokelook=0` = the engine's and the presets' own numbers
 // instead (a benchmark asked for there carries the word, scene/look.ts). Tuned on a GPU by eye at dusk in the lab; the cost of the shorter step is not measured.
 import type { Engine } from '../engine';
 
