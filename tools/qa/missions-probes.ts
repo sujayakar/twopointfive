@@ -98,11 +98,11 @@ export async function missionsScreen(): Promise<boolean> {
       const menu = new Menu({ engine: W.engine, game: g, quality: { auto: false, current: 'high', adaptive: true, lastChange: '' }, audio: { volume: { master: 1, sfx: 1, ambience: 1, music: 1 }, setVolumes() {} }, overlay: { showLightDots: true }, onStart() { starts++; } } as any);
       const L: any[] = M.missionList();
       setDifficulty('standard', false); M.MISSIONS.onPick = null;
-      // ---- the start card
+      // ---- the title
       menu.open('start');
-      F.verdict(!!buttonOf(root, 'Missions') && !!buttonOf(root, 'Start') && root.all(e => e.cls.has('scn') || e.cls.has('mrow')).length === 0 && M.currentMissions() === null,
-        'the start card carries a Missions button beside Start and no scenario rows of its own; the list is not up until asked for', buttons(root).map(b => b.textContent).join(' · '));
-      buttonOf(root, 'Missions')!.onclick!();
+      F.verdict(!!buttonOf(root, 'Play ›') && root.all(e => e.cls.has('scn') || e.cls.has('mrow')).length === 0 && M.currentMissions() === null,
+        'the title carries Play and no scenario rows of its own; the list is not up until asked for', buttons(root).map(b => b.textContent).join(' · '));
+      M.openMissions();
       let S = M.currentMissions()!, mroot: El = S?.root as any;
       const rows = missionRowsOf(mroot);
       F.verdict(!!S && mroot.cls.has('on') && rows.length === L.length && rows.every((r, i) => r.id === L[i].id && r.title === L[i].title && r.n === String(i + 1).padStart(2, '0')), 'Missions pressed: the list is up with one numbered row per mission, in order', rows.map(r => `${r.n} ${r.title}`).join(' · '));
@@ -176,7 +176,7 @@ export async function missionsScreen(): Promise<boolean> {
         P.close(); menu.close(); }
       // ---- the seam: onPick instead of the load
       { menu.open('start'); const got: string[] = []; M.MISSIONS.onPick = (m: any, href: string) => { got.push(`${m.id} ${href}`); };
-        buttonOf(root, 'Missions')!.onclick!(); const S2 = M.currentMissions()!; loads.length = 0; const before = starts;
+        M.openMissions(); const S2 = M.currentMissions()!; loads.length = 0; const before = starts;
         S2.select(L.indexOf(M.SOLO_NIGHT)); S2.pick(); M.MISSIONS.onPick = null;
         F.verdict(got.length === 1 && got[0] === `${M.SOLO_NIGHT.id} ?solo&quality=high&mute` && loads.length === 0 && starts === before && M.currentMissions() === null && menu.mode === 'start',
           'with MISSIONS.onPick set (the loadout screen\'s way in) a pick hands over the mission and its URL instead: nothing loads, nothing starts, and the list is closed first (the next screen\'s keys are its own)', got.join(' · '));

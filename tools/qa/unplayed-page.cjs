@@ -2,7 +2,7 @@
 // software WebGPU adapter (tools/qa/page-look.cjs's recipe — no GPU here, so this reads the DOM and the computed style; it judges no rendering of the game).
 // The title's Play opens the start page's Mission step; what is read: every group's cards in order with their classes, that a group's unplayed cards stand last
 // and the first of them (where a played one stands before it) wears the break and starts a line of its own, the opacity a quiet card's picture and title are
-// drawn at against a played one's and against the highlighted one's; the older list (?cards, then Missions) and the flat one (?nogroups); and under ?unplayed=0
+// drawn at against a played one's and against the highlighted one's; and the flat one (?nogroups); and under ?unplayed=0
 // that no card wears either class.
 //   PORT=5233 node tools/qa/unplayed-page.cjs        (a dev server on that port: PORT=5233 bun run tools/serve.ts)   OUT=<dir> also saves stills (no GPU at all): unplayed-on.png / -off.png / -list.png
 // exit 0 = all of it holds and no page printed an error · 1 = otherwise
@@ -23,14 +23,13 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
       rule: a.classList.contains('first') ? getComputedStyle(a, '::before').borderTopWidth + ' ' + Math.round(parseFloat(getComputedStyle(a, '::before').width)) + ' ' + getComputedStyle(a).borderTopWidth + ' ' + getComputedStyle(a).marginTop : '' })),
       grid: (g => g ? Math.round(g.clientWidth - parseFloat(getComputedStyle(g).paddingLeft) - parseFloat(getComputedStyle(g).paddingRight)) : 0)(root.querySelector('.mgrid')), words: root.innerText };
   });
-  const open = async (q, viaCards, ctx) => {
+  const open = async (q, ctx) => {
     const own = ctx ? null : await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS }); if (own) live.add(own);
     const page = await (ctx ? ctx.newPage() : own.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 })); const errors = [];
     page.on('console', m => { if (m.type() === 'error' && !NOISE.test(m.text()) && !/Failed to load resource/.test(m.text())) errors.push(m.text().slice(0, 300)); });
     page.on('pageerror', x => errors.push('pageerror: ' + String(x && x.stack || x).slice(0, 400)));
     await page.goto(`http://localhost:${PORT}/?mute&quality=${QUALITY}${q ? '&' + q : ''}`, { waitUntil: 'domcontentloaded', timeout: 180000 }); await page.waitForSelector('#menu .actions button', { timeout: 60000 }); await page.waitForTimeout(500);
-    if (viaCards) await page.evaluate(() => { [...document.querySelectorAll('#menu button')].find(b => b.textContent.trim() === 'Missions').click(); });
-    else await page.evaluate(() => { document.querySelector('#menu .actions button.primary').click(); });   // (the title's Play; a click from inside the page: the software adapter's frames keep a pointer click waiting on a 'stable' button)
+    await page.evaluate(() => { document.querySelector('#menu .actions button.primary').click(); });   // (the title's Play; a click from inside the page: the software adapter's frames keep a pointer click waiting on a 'stable' button)
     await page.waitForSelector('#missions .mrow', { state: 'attached', timeout: 20000 }); await page.waitForTimeout(500); await page.mouse.move(2, 2);
     return { page, errors, own };
   };
@@ -42,7 +41,7 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
   // ---- the start page's cards, the switch on
   const CUT = ['night-breach', 'room-clear-four', 'block-squads', 'quiet-yard-alone', 'quiet-yard-two', 'tut-squad', 'tut-solo', 'tut-sky'];   // (the rows cut from the list — scene/scenarios.ts offList; the page's entry puts OFFLIST_UI on)
   let wordsOn = '', boxesOn = [], gOn = ''; const sorted = t => t.split(/\n+/).map(x => x.trim()).filter(Boolean).sort().join('\n');   // (the page's words as a bag of lines: a row that moves adds no word)
-  { const { page, errors, own } = await open('', false), A = await read(page); wordsOn = A.words;
+  { const { page, errors, own } = await open(''), A = await read(page); wordsOn = A.words;
     line(/\bone\b/.test(A.root) && /\btiles\b/.test(A.root) && A.rows.length > 0 && errors.length === 0, `the title's Play opens the Mission step as cards with no page error (${A.rows.length} cards)${errors.length ? ' — ' + errors.join(' ; ').slice(0, 400) : ''}`);
     line(A.rows.some(r => r.quiet) && lastOk(A.rows) && firstOk(A.rows), `cards: in every group the unplayed stand last, and the break is on the first of them where a played card stands before it — ${lay(A.rows)}`);
     // (open a group that holds both kinds: its heading is the tile over the first break's group; the cursor lands on its first card, a played one)
@@ -59,22 +58,18 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
     line(errors.length === 0, `no page error through all of that${errors.length ? ' — ' + errors.join(' ; ').slice(0, 400) : ''}`);
     await shut(own); }
   // ---- the same page under ?unplayed=0
-  { const { page, errors, own } = await open('unplayed=0', false), A = await read(page);
+  { const { page, errors, own } = await open('unplayed=0'), A = await read(page);
     const g = gOn; if (g) { await page.evaluate(h => { document.querySelector(`#missions .msec[data-head="${h}"]`).click(); }, g); await page.mouse.move(2, 2); await page.waitForTimeout(600); }
     const B = await read(page), of = B.rows.filter(r => r.group === g && !r.sel);
     line(A.rows.length > 0 && A.rows.every(r => !r.quiet && !r.first) && of.every(r => r.thumb >= 0.9 && r.title === 1) && sorted(A.words) === sorted(wordsOn) && B.rows.filter(r => r.group === g).map(r => [r.x, r.y, r.h].join()).join(' ') === boxesOn.join(' ') && errors.length === 0,
       `?unplayed=0: no card wears either class, every card of '${g}' is drawn at ${of[0]?.thumb} / ${of[0]?.title}, the page's words are the same with the switch on or off (it adds none), and the group's ${boxesOn.length} cards stand in the same boxes either way (no line broken, no card squeezed)${errors.length ? ' — ' + errors.join(' ; ').slice(0, 400) : ''}`);
     await shut(own); }
   // ---- ?offlist=0: the cut rows are drawn again
-  { const { page, errors, own } = await open('offlist=0', false), A = await read(page);
+  { const { page, errors, own } = await open('offlist=0'), A = await read(page);
     line(CUT.every(id => A.rows.some(r => r.id === id)) && errors.length === 0, `?offlist=0: the cut rows are cards again (${A.rows.length} cards)${errors.length ? ' — ' + errors.join(' ; ').slice(0, 400) : ''}`);
     await shut(own); }
-  // ---- the older list (?cards, then Missions), and the flat one (?nogroups)
-  { const { page, errors, own } = await open('cards', true), A = await read(page), q = A.rows.filter(r => r.quiet && !r.sel), f = A.rows.filter(r => r.first);
-    line(q.length > 0 && q.every(r => r.title < 0.6) && A.rows.filter(r => !r.quiet).every(r => r.title === 1) && f.length > 0 && f.every(r => r.rule.split(' ')[0] === '1px' && r.rule.split(' ')[2] === '0px') && errors.length === 0,
-      `the older list: ${A.rows.length} rows, ${A.rows.filter(r => r.quiet).length} quiet at ${q[0]?.title}, a ${f[0]?.rule.split(' ')[0]} rule in ${f[0]?.rule.split(' ')[3]} of room over (the row's own box untouched) ${f.map(r => r.id).join(', ')}${errors.length ? ' — ' + errors.join(' ; ').slice(0, 400) : ''}`);
-    await shut(own); }
-  { const { page, errors, own } = await open('nogroups', false), A = await read(page); await shut(own); const off = await open('nogroups&unplayed=0', false), B = await read(off.page); await shut(off.own);
+  // ---- the flat one (?nogroups)
+  { const { page, errors, own } = await open('nogroups'), A = await read(page); await shut(own); const off = await open('nogroups&unplayed=0'), B = await read(off.page); await shut(off.own);
     line(A.rows.some(r => r.quiet) && A.rows.every(r => !r.first) && A.rows.map(r => r.id).join() === B.rows.map(r => r.id).join() && B.rows.every(r => !r.quiet) && errors.length + off.errors.length === 0,
       `?nogroups: ${A.rows.length} rows in the same order with the switch on or off, ${A.rows.filter(r => r.quiet).length} quiet, no break`);
     void page; }
