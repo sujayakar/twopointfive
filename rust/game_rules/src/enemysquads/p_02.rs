@@ -85,24 +85,22 @@ pub fn squad_word_of(g: &crate::game::Game, q: EnemysquadsSquadId, gd: GuardId) 
 /// what the squads have, as this frame's tick leaves it (enemysquads.ts squadSay)
 pub fn squad_say(g: &mut crate::game::Game) {
     let Some(squads) = g.m.enemysquads.states.as_ref().map(|st| st.squads.clone()) else { return };
-    let own = crate::owner::own();
     for q in squads {
         for m0 in g.tab.enemysquads_squad[q].men.clone() {
             let t = g.time;
-            if squad_leg_of(g, q, m0) { crate::owner::claim_man(g, m0, own.squad_leg, t, None); } else { crate::owner::release_man(g, m0, own.squad_leg, t); }
-            if squad_word_of(g, q, m0) { crate::owner::claim_man(g, m0, own.squad_word, t, None); } else { crate::owner::release_man(g, m0, own.squad_word, t); }
+            if squad_leg_of(g, q, m0) { crate::owner::claim(g, m0, crate::owner::by::SQUAD_LEG, t, None); } else { crate::owner::release(g, m0, crate::owner::by::SQUAD_LEG, t); }
+            if squad_word_of(g, q, m0) { crate::owner::claim(g, m0, crate::owner::by::SQUAD_WORD, t, None); } else { crate::owner::release(g, m0, crate::owner::by::SQUAD_WORD, t); }
         }
     }
 }
 /// the staging is over: nobody is its man (enemysquads.ts squadsLetGo)
 pub fn squads_let_go(g: &mut crate::game::Game, st: Option<&crate::enemysquads::State>) {
     let Some(st) = st else { return };
-    let own = crate::owner::own();
-    let all = (js::to_i32(own.squad) | js::to_i32(own.squad_leg) | js::to_i32(own.squad_word)) as f64;
+    let all = crate::owner::by::SQUAD | crate::owner::by::SQUAD_LEG | crate::owner::by::SQUAD_WORD;
     for &q in &st.squads {
         for m0 in g.tab.enemysquads_squad[q].men.clone() {
             let t = g.time;
-            crate::owner::release_man(g, m0, all, t);
+            crate::owner::release(g, m0, all, t);
             g.gd[m0].stays_in_rooms = false;
         }
     }
@@ -137,7 +135,7 @@ pub fn squads_stage(g: &mut crate::game::Game, s: Option<&crate::scene_scenarios
         for m0 in men {
             of.set(m0, q);
             let t = g.time;
-            crate::owner::claim_man(g, m0, crate::owner::own().squad, t, None);
+            crate::owner::claim(g, m0, crate::owner::by::SQUAD, t, None);
             g.gd[m0].stays_in_rooms = stays;
         }
     }
@@ -227,7 +225,7 @@ pub fn squad_rally(g: &mut crate::game::Game, gd: GuardId, threat: V3) -> Option
 pub fn def_of(g: &crate::game::Game, gd: GuardId) -> Option<RoomfightDefId> { g.fight.defs.iter().copied().find(|d| g.tab.roomfight_def[*d].gd == gd) }
 /// his own wits about him: alive, not in Sam's arm, not blinded or reeling (enemysquads.ts fit)
 pub fn fit(g: &mut crate::game::Game, m: GuardId) -> bool {
-    alive(g, m) && g.gd[m].held.is_none() && !crate::control::man::blind(g, m) && !crate::control::man::staggered(g, m) && !crate::owner::has_him(g, m, crate::owner::own().runner)
+    alive(g, m) && g.gd[m].held.is_none() && !crate::control::man::blind(g, m) && !crate::control::man::staggered(g, m) && !crate::owner::has(g, m, crate::owner::by::RUNNER)
 }
 /// when this man was sent to look where the team was last put, or None. Words only (enemysquads.ts squadLookSince)
 pub fn squad_look_since(g: &crate::game::Game, gd: GuardId) -> Option<f64> {
@@ -244,12 +242,11 @@ pub fn in_squad_rooms(g: &crate::game::Game, gd: GuardId, p: V3) -> bool {
 /// a squad's men at home and free to be told something (enemysquads.ts home)
 pub fn home(g: &mut crate::game::Game, q: EnemysquadsSquadId) -> Vec<RoomfightDefId> {
     let mut out = Vec::new();
-    let own = crate::owner::own();
     let men = g.tab.enemysquads_squad[q].men.clone();
     for m in men {
-        if !fit(g, m) || g.time - g.gd[m].last_seen_t < 2.0 || g.tab.enemysquads_squad[q].sent.iter().any(|s| s.gd == m) || crate::owner::has_him(g, m, own.stand)
+        if !fit(g, m) || g.time - g.gd[m].last_seen_t < 2.0 || g.tab.enemysquads_squad[q].sent.iter().any(|s| s.gd == m) || crate::owner::has(g, m, crate::owner::by::STAND)
             || g.tab.enemysquads_squad[q].rc.as_ref().map_or(false, |c| c.look.iter().any(|l| l.gd == m)) { continue; }
-        if crate::owner::has_him(g, m, own.last_man) { continue; }
+        if crate::owner::has(g, m, crate::owner::by::LAST_MAN) { continue; }
         if g.gd[m].script.is_some() && crate::director::director_lesson_runs(g) { continue; }
         if let Some(d) = def_of(g, m) {
             let row = &g.tab.roomfight_def[d];
@@ -888,7 +885,7 @@ pub fn contact(g: &mut crate::game::Game, q: EnemysquadsSquadId, at: V3, room: O
     if net_asks(g) { if let Some(o) = g.tab.enemysquads_squad[q].rc.as_mut().and_then(|c| c.net_out.as_mut()) { o.clear(); } }
     // (`by`, callBeat: the man whose call it is ends it himself)
     let mut caller = None;
-    if let Some(b) = by { if !crate::owner::has_him(g, b, crate::owner::own().runner) { caller = Some(b); } }
+    if let Some(b) = by { if !crate::owner::has(g, b, crate::owner::by::RUNNER) { caller = Some(b); } }
     if caller.is_none() {
         for m0 in g.tab.enemysquads_squad[q].men.clone() { if fit(g, m0) && !g.tab.enemysquads_squad[q].sent.iter().any(|s| s.gd == m0) { caller = Some(m0); break; } }
     }

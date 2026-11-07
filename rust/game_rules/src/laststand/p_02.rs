@@ -517,12 +517,12 @@ pub fn of_stand(g: &crate::game::Game, s: &crate::laststand::Stand, gd: GuardId)
 /// The owner's bit: the stand claims its men and lets go of every other.   (laststand.ts standSay)
 pub fn stand_say(g: &mut crate::game::Game) {
     let s = g.m.laststand.states.as_ref().and_then(|st| st.stand.clone());
-    let rule = crate::owner::own().stand;
+    let rule = crate::owner::by::STAND;
     let t = g.time;
     let guards = g.guards.clone();   // (neither call touches the list)
     for gd in guards {
         let has = match &s { Some(s) => of_stand(g, s, gd), None => false };
-        if has { crate::owner::claim_man(g, gd, rule, t, None); } else { crate::owner::release_man(g, gd, rule, t); }
+        if has { crate::owner::claim(g, gd, rule, t, None); } else { crate::owner::release(g, gd, rule, t); }
     }
 }
 

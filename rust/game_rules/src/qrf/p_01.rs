@@ -73,7 +73,7 @@ pub fn callers(g: &mut crate::game::Game) -> Vec<GuardId> {
     };
     let mut out = Vec::new();
     for x in of {
-        if g.gd[x].state != crate::game::GuardState::Dead && g.gd[x].held.is_none() && !crate::owner::has_him(g, x, crate::owner::own().runner) && g.guards.contains(&x) {
+        if g.gd[x].state != crate::game::GuardState::Dead && g.gd[x].held.is_none() && !crate::owner::has(g, x, crate::owner::by::RUNNER) && g.guards.contains(&x) {
             out.push(x);
         }
     }
@@ -473,7 +473,7 @@ pub fn best_fix(g: &crate::game::Game) -> Option<crate::qrf::BestFix> {
 /// Is this man on the defenders' net?   (qrf.ts onTheirNet)
 pub fn on_their_net(g: &mut crate::game::Game, x: GuardId) -> bool {
     let side = team_of(side_of_team(g));
-    if g.gd[x].team != side || g.gd[x].civ.is_some() || g.gd[x].state == crate::game::GuardState::Dead || g.gd[x].held.is_some() || crate::owner::has_him(g, x, crate::owner::own().runner) { return false; }
+    if g.gd[x].team != side || g.gd[x].civ.is_some() || g.gd[x].state == crate::game::GuardState::Dead || g.gd[x].held.is_some() || crate::owner::has(g, x, crate::owner::by::RUNNER) { return false; }
     !raid(g) || g.qrf.men.contains(&x) || callers(g).contains(&x)
 }
 

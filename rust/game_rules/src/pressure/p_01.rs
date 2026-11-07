@@ -139,7 +139,7 @@ pub fn target(g: &mut crate::game::Game, d: RoomfightDefId) -> Option<crate::pre
 
 /// Who the press has, for the one record: in a press, or on his beat toward one. Said as its tick ends. (pressure.ts pressSay)
 pub fn press_say(g: &mut crate::game::Game) {
-    let press = crate::owner::own().press;
+    let press = crate::owner::by::PRESS;
     let on = g.k.pressure.on && g.m.pressure.states.is_some();
     let mut i = 0;
     while i < g.guards.len() {
@@ -151,9 +151,9 @@ pub fn press_say(g: &mut crate::game::Game) {
             None => false,
         };
         if has {
-            crate::owner::claim_man(g, gd, press, t, None);
+            crate::owner::claim(g, gd, press, t, None);
         } else {
-            crate::owner::release_man(g, gd, press, t);
+            crate::owner::release(g, gd, press, t);
         }
     }
 }
