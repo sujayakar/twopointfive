@@ -94,7 +94,7 @@ export function lookPageRows(q: URLSearchParams): string[] { return q.getAll('lo
 // THE PICTURE IS THE LOOK'S ON EVERY PAGE, and on every other host of the engine: there is no switch (2026-11-07; the maintainer: "should we work on merging
 // the new look too?", and of the way to do it "single path when possible"). Until then it drew only with a row on the address, and for one step of the build
 // `?look=old` drew the picture as it was. THE PICTURE ONLY: nothing a step of the game reads follows it (what the look's own page added to PLAY is the lab's, below).
-/** THE LOOK LAB: the page that asks for the look BY NAME (a row on the address: `/look`, `/smokelab`, `?look`, `?look=key:value`; or the tag a one-file build
+/** THE LOOK LAB: the page that asks for the look BY NAME (a row on the address: `/look`, `?look`, `?look=key:value`; or the tag a one-file build
  *  carries, where the address takes no flags), which is what the look's own page was before the picture became every page's. What that page did beyond the
  *  picture stays the lab's and is on no other page: its panel opened over the game, its kit and the fog put down (`?lookkit=0`), the trials that rewrite the
  *  level as it loads (`geo`, `lorry`), the hills that rays see (`hills`: the game's own rays meet them too), the seated posts (`?seat=0`) and a snow level's
