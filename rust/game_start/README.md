@@ -282,19 +282,26 @@ byte of each part. `check` reads the folder's own list of runs and its copies of
 of each run `the same after every frame`, or the first frame that differs and the names of the parts that differ in it
 (`FIRST DIFFERS AT FRAME 2181 (36.35 s) in guards, chars, dice`). It exits 0 only if every run is the same. Levels, hands, seeds and
 the length are arguments (`keep DIR --hand push --seed 1 --seed 2 --secs 60 depot:clear office`); with none it is 24 levels (14 as
-room clears) by every hand by seed 1, about 1.7 MB a run.
+room clears) by every hand by seed 1: 120 runs, about ten minutes on four cores and 1.7 MB a run (`--hand push --hand bangs
+--hand rest` is the 72 of the first proofs, six minutes).
 
 A hand is a few lines of what is done to the game from outside (`hands/*.hand`; the file's head in `src/bin/hold.rs` is its
-grammar). Three stand here, and each file says what it reaches and what it does not:
+grammar). Five stand here, and each file says what it reaches and what it does not:
 
 | hand | what it does | reaches |
 |---|---|---|
 | `push` | Sam unhurtable; every 6 s the squad is ordered to move to the nearest man who is not theirs; every 10 s Sam fires a round at him | the move order, doors, contact, the room fight on both sides, hunting, reloads, deaths |
 | `bangs` | Sam unhurtable; a frag and a flash land by the nearest such man, again every 9 s; the squad falls in | the body rules (running from a grenade, shaken by a blast), flashed men, blasts on doors and glass |
+| `doors` | Sam unhurtable; the squad stacks on the door nearest that man and is told to go, falls in, then a pair bangs its way in while the other holds the threshold | the stack order, the word to go, the door tools, entries and the room fight behind them |
+| `kit` | Sam unhurtable; the squad goes silent, closes, throws a flash and a frag on order, covers, goes loud, holds, falls in | silent and loud, the throws' page, cover, hold; smoke and the wand where a floor brings them |
 | `rest` | nothing | a floor at rest: patrols, sentries, lights, the level's own script |
 
+A run's line says how many of the hand's lines the game took, and names each line it NEVER took on that floor with the game's own
+reason (`NEVER DONE HERE: order shutDoor door all (it's shut)`), so a hand is not trusted for what it only names. On a floor with
+no squad the three hands that give orders do nothing but what Sam does himself.
+
 What a green check proves: on these floors, under these hands, the two builds played the same game part for part. What it does
-not: anything no hand reaches (the other orders, the door tools, a startled man, a player walking, a second seat), and anything that is not in the
+not: anything no hand reaches (charges, a pair's orders, the 40 mm, a startled man, a player walking, a second seat), and anything that is not in the
 state's words (what a host hands in: the cameras, the input). One part is left out for now: the box mirror's own record, which keeps
 addresses of rust/sim's tables (another in every native process); what it mirrors is compared as rust/sim's block, and the
 carve-out goes when the mirror keeps offsets. A change that is MEANT to change play is not judged here: that is the
