@@ -94,87 +94,9 @@
 "civilians-identity": [
 "CIV.greet=false"
 ],
-"close-dark": [
-"STALK.on=false",
-"CLOSE.noKnife=false",
-"CLOSE.rmbHold=false",
-"CLOSE.dark=false"
-],
-"close-duo": [
-"STALK.on=false",
-"CLOSE.noKnife=false",
-"CLOSE.rmbHold=false",
-"NETQUIET.on=false",
-"CLOSE.dark=false",
-"CLOSE.on=false"
-],
-"close-grab": [
-"STALK.on=false",
-"CLOSE.noKnife=false",
-"CLOSE.rmbHold=false",
-"CLOSE.on=false"
-],
-"close-held": [
-"STALK.on=false",
-"CLOSE.noKnife=false",
-"CLOSE.rmbHold=false",
-"CLOSE.mode=false"
-],
-"close-marks": [
-"STALK.on=false",
-"CLOSE.noKnife=false",
-"CLOSE.rmbHold=false",
-"CLOSE.marks=true"
-],
-"close-melee": [
-"STALK.on=false",
-"CLOSE.noKnife=false",
-"CLOSE.rmbHold=false",
-"CLOSE.alertStrike=false",
-"CLOSE.lethal=false"
-],
-"close-mode": [
-"STALK.on=false",
-"CLOSE.noKnife=false",
-"CLOSE.rmbHold=false"
-],
-"close-offer": [
-"STALK.on=false",
-"CLOSE.noKnife=false",
-"CLOSE.rmbHold=false"
-],
-"close-rows": [
-"STALK.on=false",
-"CLOSE.noKnife=false",
-"CLOSE.rmbHold=false",
-"CLOSE.lethal=false",
-"CLOSE.on=false"
-],
-"close-seat": [
-"STALK.on=false",
-"CLOSE.noKnife=false",
-"CLOSE.rmbHold=false"
-],
-"close-tell": [
-"STALK.on=false",
-"CLOSE.noKnife=false",
-"CLOSE.rmbHold=false",
-"CLOSE.ready=false"
-],
-"close-windows": [
-"STALK.on=false",
-"CLOSE.noKnife=false",
-"CLOSE.rmbHold=false"
-],
 "deathrecap": [
 "RECAP.on=false",
 "RECAP.live=false"
-],
-"disarm": [
-"HOLD.stripFirst=false",
-"STALK.on=false",
-"CLOSE.noKnife=false",
-"HOLD.disarm=false"
 ],
 "farcalm": [
 "GUARD_EYE.farCalm=false",
@@ -261,12 +183,6 @@
 "OWNBLOW.on=false",
 "HANDS.team=false"
 ],
-"handslow": [
-"STALK.on=false",
-"CLOSE.noKnife=false",
-"CLOSE.rmbHold=false",
-"CLOSE.handsLow=false"
-],
 "handwork-swap": [
 "HANDWORK.on=false",
 "HANDWORK.radio=false"
@@ -275,19 +191,8 @@
 "OWNBLOW.on=false",
 "HANDWORK.on=false"
 ],
-"haul": [
-"CLOSE.noKnife=false",
-"CLOSE.rmbHold=false",
-"TAKEDOWN.haul=false"
-],
 "headmark": [
 "OWNBLOW.on=false"
-],
-"heldclicks": [
-"STALK.on=false",
-"CLOSE.noKnife=false",
-"CLOSE.rmbHold=false",
-"CLOSE.heldClicks=false"
 ],
 "inhand": [
 "FOG.cone=true",
@@ -370,10 +275,6 @@
 "OWNBLOW.on=false",
 "KITDEAL.stealth=false"
 ],
-"noknife": [
-"STALK.on=false",
-"CLOSE.noKnife=false"
-],
 "owncharge-door": [
 "OWNBLOW.on=false",
 "OWNCHARGE.on=false"
@@ -421,20 +322,6 @@
 "STALK.key=false",
 "FOG.eyes=5"
 ],
-"reachup": [
-"STALK.on=false",
-"CLOSE.handsLow=false",
-"CLOSE.noKnife=false",
-"CLOSE.rmbHold=false",
-"CLOSE.reachUp=false"
-],
-"rmbhold": [
-"STALK.key=false",
-"STALK.on=false",
-"STALK.low=false",
-"CLOSE.noKnife=false",
-"CLOSE.rmbHold=false"
-],
 "savetimeline": [
 "MOVES.on=0",
 "SAVETIMELINE.since=false",
@@ -451,19 +338,6 @@
 "SNATCHOUT.hold=false",
 "RESPONSE.on=false",
 "SNATCHOUT.on=false"
-],
-"stealthpose-cable": [
-"STEALTHPOSE.nod=false",
-"STEALTHPOSE.on=false"
-],
-"stealthpose-creep": [
-"STALK.on=false",
-"CLOSE.noKnife=false",
-"CLOSE.rmbHold=false",
-"STEALTHPOSE.on=false"
-],
-"stealthpose-standdown": [
-"STEALTHPOSE.on=false"
 ],
 "sticky-default": [
 "SLOTSETUP.on=false",
@@ -518,27 +392,6 @@
 "TOLD.on=false",
 "TOLD.fogOff=false",
 "GUNSLOTS.on=false"
-],
-"takedown-beats": [
-"HOLD.disarm=false",
-"CLOSE.noKnife=false",
-"CLOSE.rmbHold=false",
-"TAKEDOWN.haul=false",
-"TAKEDOWN.chokeBeats=false"
-],
-"takedown-kill": [
-"CLOSE.noKnife=false",
-"CLOSE.rmbHold=false",
-"TAKEDOWN.kill=false"
-],
-"takedown-lower": [
-"TAKEDOWN.haul=false",
-"TAKEDOWN.lower=false",
-"TAKEDOWN.on=false",
-"TAKEDOWN.chokeBeats=false"
-],
-"takedown-rules": [
-"TAKEDOWN.on=false"
 ],
 "wand-kit": [
 "WAND.mate=false",
@@ -1018,7 +871,6 @@
 "close-dark": "iii",
 "close-duo": "iv-b",
 "close-grab": "iii",
-"close-harness": "iii",
 "close-held": "iii",
 "close-marks": "iii",
 "close-melee": "iii",
@@ -1527,9 +1379,7 @@
 "nvg-fight": "iii",
 "nvg-lead": "iii",
 "nvg-loud": "iii",
-"nvg-off": "iii",
 "nvg-quiet": "iii",
-"nvg-rig": "iii",
 "nvg-sight": "iii",
 "off-hinges-after": "iii",
 "off-hinges-blast": "iii",
@@ -1909,7 +1759,6 @@
 "stayask": "iii",
 "stealthpose-cable": "ii",
 "stealthpose-creep": "ii",
-"stealthpose-harness": "ii",
 "stealthpose-idle": "ii",
 "stealthpose-rise": "ii",
 "stealthpose-standdown": "ii",
@@ -1943,13 +1792,9 @@
 "takecheck": "iii",
 "takedown-beats": "iii",
 "takedown-breathe": "iii",
-"takedown-harness": "ii",
-"takedown-kill": "iii",
 "takedown-lower": "iii",
 "takedown-moves": "iii",
-"takedown-off": "iii",
 "takedown-partner": "iii",
-"takedown-rules": "iii",
 "takedown-wall": "iii",
 "tapstep": "iii",
 "teampace": "iii",
@@ -2131,8 +1976,6 @@
 "owncharge-kit": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
 "rowset": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
 "solo-fog": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
-"stealthpose-harness": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
-"takedown-harness": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
 "words-doornames": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
 "work-harness": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process"
 }
