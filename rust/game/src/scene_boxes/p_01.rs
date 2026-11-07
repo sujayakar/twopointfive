@@ -10,6 +10,12 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 /// the game's Box (the header's `Box` is alloc's)
 type Bx = crate::scene_boxes::Box;
 
+// the browser's GPUBufferUsage words: SKELETON-GAP, no entry in the index
+const USAGE_COPY_SRC: f64 = 4.0;
+const USAGE_COPY_DST: f64 = 8.0;
+const USAGE_UNIFORM: f64 = 64.0;
+const USAGE_STORAGE: f64 = 128.0;
+
 /// `BoxWorld.RS` as an index
 const RS: usize = BOX_WORLD_RS as usize;
 
@@ -130,6 +136,40 @@ pub fn box_world_ray_aside<T: Clone + core::fmt::Debug>(g: &mut crate::game::Gam
     w.rc_bi = bi;
     w.rc_bn = bn;
     out
+}
+
+/// The world's buffers and tables. (boxes.ts BoxWorld.constructor)
+pub fn box_world_new(g: &mut crate::game::Game, device: crate::Opaque, max_boxes: Option<f64>) -> crate::scene_boxes::BoxWorld {
+    let wd = crate::scene_world::world();
+    let max_boxes = max_boxes.unwrap_or(wd.max_boxes);
+    let mut w = crate::scene_boxes::BoxWorld::blank();
+    w.device = device;
+    w.max_boxes = max_boxes;
+    if max_boxes != wd.max_boxes { panic!("BoxWorld: maxBoxes must be WORLD.maxBoxes (the shaders place the marking table after that many mat rows)"); }
+    let n = max_boxes as usize;
+    w.geo_f32 = vec![0.0; n * GEO_STRIDE as usize];
+    w.geo_u32 = vec![0; n * GEO_STRIDE as usize];
+    w.mat_data = vec![0.0; n * MAT_STRIDE as usize];
+    let s = USAGE_STORAGE + USAGE_COPY_DST;
+    w.geo_buf = crate::gpu_device::make_buffer(device, max_boxes * GEO_STRIDE * 4.0, s + USAGE_COPY_SRC, Some("boxGeo"));
+    w.cut_on = true;
+    w.round_on = g.m.scene_round.round_config.gpu;
+    w.ground_on = g.m.scene_ground_field.ground_ray_config.on;
+    w.cut_data = vec![0.0; n * crate::scene_cut::CUT_STRIDE as usize * 4];
+    let mat_bytes = max_boxes * MAT_STRIDE * 4.0 + crate::scene_markings::MARK_TABLE_ROWS * 16.0 + GB_ROWS * 16.0 + crate::scene_air_grid::air_rows() * 16.0 + max_boxes * crate::scene_cut::CUT_STRIDE * 16.0 + (if w.ground_on { crate::scene_ground_field::gh_rows() * 16.0 } else { 0.0 });
+    w.mat_buf = crate::gpu_device::make_buffer(device, mat_bytes, s + USAGE_COPY_SRC, Some("boxMat"));
+    if wd.grid_w + wd.grid_h > 96.0 { panic!("trace grid: the DDA in common.wgsl caps a ray at 96 cell visits; W + H must stay <= 96 for that cap to be unreachable"); }
+    if max_boxes > 65536.0 || max_boxes * wd.grid_w * wd.grid_h >= 16777216.0 { panic!("trace grid: packed items keep the box index in 16 bits and cell starts in 24"); }
+    w.cell_start = vec![0; (wd.grid_w * wd.grid_h + 1.0 + 2.0 * wd.grid_w * wd.grid_h) as usize];
+    w.items = vec![0; 65536];
+    w.cell_buf = crate::gpu_device::make_buffer(device, (w.cell_start.len() * 4) as f64, s, Some("gridCells"));
+    w.item_buf = crate::gpu_device::make_buffer(device, (w.items.len() * 4) as f64, s, Some("gridItems"));
+    w.info_buf = crate::gpu_device::make_buffer(device, (w.info_data.len() * 4) as f64, USAGE_UNIFORM + USAGE_COPY_DST, Some("sceneInfo"));
+    w.capsule_buf = crate::gpu_device::make_buffer(device, (w.capsule_data.len() * 4) as f64, s, Some("capsules"));
+    w.visible = vec![0; n];
+    w.visible_sent = vec![0; n];
+    w.visible_buf = crate::gpu_device::make_buffer(device, (w.visible.len() * 4) as f64, s, Some("visibleBoxes"));
+    w
 }
 
 /// (boxes.ts BoxWorld.addStatic)

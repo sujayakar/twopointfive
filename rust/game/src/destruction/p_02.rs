@@ -280,6 +280,11 @@ pub fn destruction_flags0(g: &mut crate::game::Game, i: f64) -> Option<f64> {
     crate::winbars::bar_flags0(g, i)
 }
 
+/// Be told of every blast. (The TypeScript's unsubscribe has no caller and no skeleton.)   (destruction.ts onBlast)
+pub fn destruction_on_blast(g: &mut crate::game::Game, fn_: crate::destruction::BlastListener) {
+    g.destr.blast_listeners.push(fn_);
+}
+
 /// Static `i` has lost what it stood on / hung from: a stack scatters, a screen dies, clutter drops. False = not one of ours.   (destruction.ts dropItem)
 pub fn destruction_drop_item(g: &mut crate::game::Game, i: f64, dirn: V3, who: Option<f64>, quiet: Option<bool>) -> bool {
     let who = who.unwrap_or(crate::consts::NOBODY_ID);

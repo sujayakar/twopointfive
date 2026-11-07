@@ -231,6 +231,19 @@ fn leaf_put(g: &mut Game, w: usize, at: usize, b: BoxId, kind: f64, cut_row: f64
     }
 }
 
+/// How much each table of the copy holds, by name.   (boxMirror.ts BoxMirror.tables)
+pub fn box_mirror_tables(g: &mut crate::game::Game) -> JsMap<String, f64> {
+    if g.col.mirror.caps.boxes == 0.0 {
+        box_mirror_boot(g); // (`!this.x && !simWhyNot()`: the module is linked here, and no table of it holds nothing)
+    }
+    let c = g.col.mirror.caps;
+    let mut t = JsMap::new();
+    for (k, v) in [("boxes", c.boxes), ("leaves", c.leaves), ("cuts", c.cuts), ("panes", c.panes), ("cells", c.cells), ("items", c.items), ("tilted", c.tilted), ("things", c.things), ("glass", c.glass), ("view", c.view)] {
+        t.set(String::from(k), v);
+    }
+    t
+}
+
 /// Reads what each table holds, and where the scratch and the senses' tables are.   (boxMirror.ts BoxMirror.boot)
 pub fn box_mirror_boot(g: &mut crate::game::Game) {
     let cap = |t: f64| sim::world_cap(t as u32) as f64;
@@ -535,6 +548,15 @@ pub fn box_mirror_glass_wrote(g: &mut crate::game::Game) {
     if g.col.mirror.live {
         box_mirror_debt(g, OWE_GLASS);
     }
+}
+
+/// The glass itself was hung, or taken down, under a standing copy.   (boxMirror.ts BoxMirror.glassIs)
+pub fn box_mirror_glass_is(g: &mut crate::game::Game, g_2: Option<&crate::scene_box_mirror::PaneSource>) {
+    if !g.col.mirror.live {
+        return;
+    }
+    g.col.mirror.glass = g_2.cloned();
+    box_mirror_debt(g, OWE_GLASS);
 }
 
 /// A static's write is still owed.   (boxMirror.ts BoxMirror.owesBoxes)
@@ -1025,6 +1047,14 @@ mod tests {
         assert!(g.col.mirror.block.is_none());
         assert_eq!(world(0).panes_g, 0);
         assert_eq!(box_mirror_stale_panes(&mut g), 0.0);
+    }
+
+    #[test]
+    fn a_table_holds_what_the_module_says() {
+        let mut g = game(0);
+        let t = box_mirror_tables(&mut g);
+        assert_eq!(t.get(String::from("glass")), Some(&PANE_CAP));
+        assert_eq!(t.keys().first().map(|k| k.as_str()), Some("boxes"));
     }
 
     #[test]

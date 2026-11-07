@@ -21,6 +21,71 @@ fn capitalised(w: &str) -> String {
     s
 }
 
+/// The query's level is a Training lesson's.   (scenarioRun.ts lessonLevel)
+pub fn lesson_level(q: &crate::query::Query) -> bool {
+    let level_file = q.get("levelFile").map(String::from);
+    // A row with no level is `undefined`, which is never `===` the `null` of a query with no levelFile.
+    crate::scene_scenario_list::lesson_missions().iter().any(|e| match (&e.level, &level_file) {
+        (Some(a), Some(b)) => a == b,
+        _ => false,
+    })
+}
+
+/// Fog of war on a page with no scenario up: only if the URL asks.   (scenarioRun.ts plainFog)
+pub fn plain_fog(q: &crate::query::Query) -> bool {
+    !(q.has("nofow") || q.has("nofogofwar")) && (q.has("fow") || q.has("fogofwar"))
+}
+
+/// The link is one the quiet fog reads: a quiet mission's, or the solo night's own.   (scenarioRun.ts quietLike)
+pub fn quiet_like(g: &mut crate::game::Game, q: &crate::query::Query) -> bool {
+    match crate::scene_scenario_list::spec_of_query(&crate::scene_scenario_list::SpecOfQuerySearch::URLSearchParams(q.clone())) {
+        Some(s) => s.kind == crate::scene_scenario_list::ScenarioSpecKind::Quiet,
+        None => crate::quietfog::solo_fog_link(g, q),
+    }
+}
+
+/// The sticky cameras a link hands the player for the visit where its fog runs.   (scenarioRun.ts quietCamsOfLink)
+pub fn quiet_cams_of_link(g: &mut crate::game::Game, q: &crate::query::Query) -> f64 {
+    if quiet_like(g, q) {
+        let lesson = lesson_level(q);
+        crate::quietfog::quiet_cams_of_query(g, q, Some(lesson))
+    } else {
+        0.0
+    }
+}
+
+/// The rung of the fog lever a quiet mission's query asks to be played under.   (scenarioRun.ts quietRungOfQuery)
+pub fn quiet_rung_of_query(g: &mut crate::game::Game, q: &crate::query::Query) -> crate::quietfog::QuietRung {
+    if quiet_like(g, q) {
+        let lesson = lesson_level(q);
+        crate::quietfog::quiet_fog_of_query(g, q, Some(lesson))
+    } else {
+        crate::quietfog::QuietRung::Off
+    }
+}
+
+/// Fog of war as a query string asks for it, the squad's fog lever heard.   (scenarioRun.ts fogOfQuery)
+pub fn fog_of_query(g: &mut crate::game::Game, q: &crate::query::Query) -> bool {
+    if crate::difficulty::fog_off_now(g) && !quiet_like(g, q) && !lesson_level(q) && !plain_fog(q) {
+        return false;
+    }
+    fog_of_link(g, q)
+}
+
+/// Fog of war as the link alone asks, whatever the squad's fog lever says.   (scenarioRun.ts fogOfLink)
+pub fn fog_of_link(g: &mut crate::game::Game, q: &crate::query::Query) -> bool {
+    if q.has("nofow") || q.has("nofogofwar") {
+        return false;
+    }
+    let four = q.has("squad4") && !q.has("nightbreach") && !q.has("rescue") && !q.has("quiet");
+    q.has("fow")
+        || q.has("fogofwar")
+        || q.has("roomclear")
+        || q.has("rescue")
+        || four
+        || quiet_rung_of_query(g, q) != crate::quietfog::QuietRung::Off
+}
+
 /// Stage `spec` on this game: the squad's size on the knob the staging reads, then the scenario's own start. Its refusal, or None.   (scenarioRun.ts startScenario)
 pub fn start_scenario(g: &mut crate::game::Game, spec: &crate::scene_scenario_list::ScenarioSpec) -> Option<String> {
     if spec.kind != crate::scene_scenario_list::ScenarioSpecKind::Roomclear {
@@ -48,6 +113,44 @@ pub fn start_scenario(g: &mut crate::game::Game, spec: &crate::scene_scenario_li
         crate::game::game_msg(g, &text);
     }
     why
+}
+
+/// The page's boot: fog of war as the query asks, then the scenario it names, staged and waiting. A refused start leaves the plain floor.   (scenarioRun.ts startFromQuery)
+pub fn start_from_query(g: &mut crate::game::Game, search: &crate::scenario_run::StartFromQuerySearch) -> crate::scenario_run::StartFromQuery {
+    // (the game's own copy of the words: the row's hour and weather are written onto it, never onto the caller's)
+    let mut q = match search {
+        StartFromQuerySearch::Text(s) => crate::query::Query::parse(s),
+        StartFromQuerySearch::URLSearchParams(q) => q.clone(),
+    };
+    crate::rowset::row_settings(g, &mut q);
+    let q = &q;
+    crate::hours::hour_from_query(g, q);
+    let fog = fog_of_query(g, q);
+    g.fog_of_war.on = fog;
+    let rung = if g.fog_of_war.on { quiet_rung_of_query(g, q) } else { crate::quietfog::QuietRung::Off };
+    crate::quietfog::quiet_fog_start(g, q, rung);
+    if let Some(wx) = crate::weather_kinds::weather_of_search(&crate::weather_kinds::WeatherOfSearchSearch::URLSearchParams(q.clone())) {
+        if crate::weather::weather_kind(g) != Some(wx) {
+            crate::weather::weather_set_kind_2(g, Some(wx));
+        }
+    }
+    let spec = crate::scene_scenario_list::spec_of_query(&crate::scene_scenario_list::SpecOfQuerySearch::URLSearchParams(q.clone()));
+    let cams = if g.fog_of_war.on { quiet_cams_of_link(g, q) } else { 0.0 };
+    crate::stickycam::sticky_visit_set(g, cams);
+    let why = match &spec {
+        Some(s) => start_scenario(g, s),
+        None => None,
+    };
+    if why.is_some() {
+        let plain = plain_fog(q);
+        g.fog_of_war.on = plain;
+        crate::quietfog::quiet_fog_end(g);
+        crate::stickycam::sticky_visit_set(g, 0.0);
+        g.k.nightbreach.squad = 2.0;
+        g.k.rescue.squad = 2.0;
+    }
+    crate::kit::kit_solo_stand(g, Some(spec.is_none()));
+    StartFromQuery { spec, why }
 }
 
 /// Which scenario is up on this game right now; the room clear is asked first, being the night breach on its own layout.   (scenarioRun.ts activeScenario)

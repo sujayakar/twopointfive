@@ -223,6 +223,62 @@ pub fn prop_set_push_t(g: &mut crate::game::Game, id: PropId, v: f64) {
     s.push_t[r] = v;
 }
 
+/// a thing of furniture made: its row written, its facts, its part boxes, placed   (props.ts Prop.constructor)
+pub fn prop_new(g: &mut crate::game::Game, def: &crate::scene_level::PropDef, id_2: f64) -> PropId {
+    let id = PropId(id_2 as u32);
+    prop_set_x(g, id, def.x);
+    prop_set_z(g, id, def.z);
+    prop_set_yaw(g, id, def.yaw);
+    let home = [def.x, def.z, def.yaw];
+    {
+        // (of the yaw it is made at, whatever that is: a yaw of −0 equals 0 and would keep the cos and sin of +0)
+        let c = cols(g);
+        let r = row(c, id);
+        c.cs[r] = m::cos(def.yaw);
+        c.sn[r] = m::sin(def.yaw);
+    }
+    let (hx, hz) = (def.half[0], def.half[1]);
+    let radius = m::hyp2(hx, hz);
+    let inv_i = 1.0 / (def.mass * (hx * hx + hz * hz) / 3.0 * 1.5);
+    let mut boxes: Vec<BoxId> = Vec::with_capacity(def.parts.len());
+    for (j, p) in def.parts.iter().enumerate() {
+        let marks = match &p.marks {
+            Some(k) if !k.is_empty() => Some(k.clone()),
+            _ => None,
+        };
+        boxes.push(crate::scene_boxes::make_box(g, &crate::scene_boxes::MakeBoxP {
+            c: [0.0, 0.0, 0.0],
+            h: [p.h[0], p.h[1], p.h[2]],
+            yaw: Some(0.0),
+            albedo: Some(p.albedo),
+            flags: Some(crate::scene_boxes::box_flag().dynamic),
+            name: Some(def.name.clone()),
+            mkey: Some(crate::scene_boxes::mkey().prop + id_2 * 16.0 + j as f64),
+            marks,
+            stuff: p.stuff.clone(),
+            does: p.does.clone(),
+            ..Default::default()
+        }));
+    }
+    let got = g.tab.props_prop.push(Prop {
+        hx,
+        hz,
+        radius,
+        height: def.height,
+        mass: def.mass,
+        inv_mass: 1.0 / def.mass,
+        inv_i,
+        tune: *kind().get(String::from(def.kind.as_str())).expect("a kind of furniture KIND has no row for"),
+        home,
+        boxes,
+        def: def.clone(),
+        id: id_2,
+    });
+    debug_assert!(got == id, "a thing's id is its row of the table: one PropSystem a game");
+    prop_place(g, id);
+    id
+}
+
 /// (props.ts Prop.cs)
 pub fn prop_cs(g: &mut crate::game::Game, id: PropId) -> f64 {
     let s = cols(g);
@@ -275,6 +331,26 @@ pub fn prop_system_say(g: &mut crate::game::Game, e: crate::props::PropEvent) {
     } else {
         emit(g, e);
     }
+}
+
+/// the furniture of a level made and settled. RETURNS the system; for the settle, which reaches it by `g.props` as every method does, it stands in
+/// `g.props` and the old value is put back, so the caller's `g.props = …` is what keeps it   (props.ts PropSystem.constructor)
+pub fn prop_system_new(g: &mut crate::game::Game, defs: &[crate::scene_level::PropDef], st: Option<crate::Opaque>) -> crate::props::PropSystem {
+    let mut sys = PropSystem::blank();
+    sys.store = crate::sim_propshome::prop_store_new(g, st.unwrap_or(crate::Opaque), defs.len() as f64);
+    for (i, d) in defs.iter().enumerate() {
+        let id = prop_new(g, d, i as f64);
+        sys.all.push(id);
+    }
+    sys.props = sys.all.clone();
+    for &p in &sys.props {
+        for &b in &g.tab.props_prop[p].boxes {
+            sys.by_box.set(b, p);
+        }
+    }
+    let old = core::mem::replace(&mut g.props, sys);
+    prop_system_settle(g);
+    core::mem::replace(&mut g.props, old)
 }
 
 /// every part box of what is in the level, in its order   (props.ts PropSystem.boxes)
@@ -336,6 +412,49 @@ pub fn prop_system_scatter(g: &mut crate::game::Game, strength: Option<f64>) {
         prop_set_w(g, p, w);
         prop_wake(g, p);
     }
+}
+
+/// authoring overlaps resolved once, silently; the settled pose becomes home   (props.ts PropSystem.settle)
+pub fn prop_system_settle(g: &mut crate::game::Game) {
+    g.props.muted = true;
+    for i in 0..g.props.props.len() {
+        let p = g.props.props[i];
+        prop_set_dirty(g, p, true);
+    }
+    if !g.props.props.is_empty() {
+        crate::scene_collision::window(g, &mut |g: &mut Game| {
+            prop_system_settle_world(g);
+            prop_system_settle_there(g);
+        });
+    }
+    for i in 0..g.props.props.len() {
+        let p = g.props.props[i];
+        prop_set_w(g, p, 0.0);
+        prop_set_vz(g, p, 0.0);
+        prop_set_vx(g, p, 0.0);
+        prop_set_asleep(g, p, true);
+        let home = [prop_x(g, p), prop_z(g, p), prop_yaw(g, p)];
+        g.tab.props_prop[p].home = home;
+        prop_place(g, p);
+    }
+    g.props.muted = false;
+}
+
+/// the box world's copy standing for the passes; in Rust the module always takes them   (props.ts PropSystem.settleWorld)
+pub fn prop_system_settle_world(g: &mut crate::game::Game) {
+    crate::scene_collision::rules_statics(g);
+    debug_assert!(g.col.mirror.live, "the furniture settled as a level stood up, with no copy of the box world standing");
+}
+
+/// the passes taken in the module: the level's facts by row, the call, and how often a thing was pushed out of a static   (props.ts PropSystem.settleThere)
+pub fn prop_system_settle_there(g: &mut crate::game::Game) {
+    prop_system_facts(g);
+    io().par[sim::props::P_PROPS] = g.props.props.len() as f64;
+    let walls = sim::props::settle(g.sim, g.col.mirror.slot as usize);
+    assert!(!js::truthy(io().par[sim::props::P_WRONG]), "the furniture's settle in the Rust module could not be what it was handed (another count of things than its rows)");
+    let c = &mut g.m.sim_propshome.props_stepped;
+    c.settled += 1.0;
+    c.settle_walls += walls as f64;
 }
 
 /// closest part of any thing along the ray (t < tmax): the module's ray, over the copy of the furniture   (props.ts PropSystem.raycast)

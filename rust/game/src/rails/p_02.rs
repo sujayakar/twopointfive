@@ -59,6 +59,9 @@ pub fn rails_fight(g: &mut crate::game::Game) -> f64 {
     g.rails.act_t
 }
 
+/// (rails.ts Rails.constructor)
+pub fn rails_new(g: &mut crate::game::Game) -> crate::rails::Rails { crate::rails::Rails::blank() }
+
 /// the rails record in force (rails.ts Rails.data)
 pub fn rails_data(g: &mut crate::game::Game) -> Option<crate::scene_scenarios::RailsData> {
     crate::lesson::lesson_data(g).and_then(|l| l.rails)

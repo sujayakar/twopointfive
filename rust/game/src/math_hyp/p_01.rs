@@ -199,6 +199,15 @@ mod tests {
         h
     }
 
+    // Hashes from src/math/hyp.ts itself under bun, on its own sample(40003), 39990 calls an arity.
+    #[test]
+    fn the_stream_is_the_typescripts() {
+        let v = sample(40003.0);
+        let mut h = H0;
+        for x in &v { h = fold(h, *x); }
+        assert_eq!(h, 0x855c75d12f41270b);
+    }
+
     #[test]
     fn the_sums_are_the_typescripts() {
         let v = sample(40003.0);

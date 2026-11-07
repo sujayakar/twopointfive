@@ -8,3 +8,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
+/// BOUNDARY NO-OP (the picture's / the host's): (src/cloud/report.ts:70 hand)
+pub fn hand(g: &mut crate::game::Game, r: &crate::cloud_report::Report) {}
+

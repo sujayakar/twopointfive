@@ -101,6 +101,38 @@ pub fn director_inject_input(g: &mut crate::game::Game, input: InputId) {
     g.director.due_clicks = 0.0;
 }
 
+/// A level's director: its script defined and linted, armed if the lint found no error. (director.ts Director.constructor)
+pub fn director_new(g: &mut crate::game::Game, script: Option<crate::scene_level::LevelScriptFn>) -> crate::director::Director {
+    let mut d = Director::blank();
+    let Some(script) = script else {
+        d.manifest = None;
+        return d;
+    };
+    let manifest = match manifest_of(script) {
+        Ok(m) => m,
+        Err(e) => {
+            d.manifest = None;
+            d.problems.push(LintProblem { level: LintProblemLevel::Error, what: format!("the script's define pass threw — {}", e) });
+            return d;
+        }
+    };
+    let level = LintManifestLevel {
+        lights: g.level.lights.clone(),
+        routes: g.level.routes.clone(),
+        breach: g.level.breach.clone(),
+        devices: g.level.devices.clone(),
+        doors: g.level.doors.clone(),
+        switchables: g.level.switchables.clone(),
+        clear_plans: g.level.clear_plans.clone(),
+        daylight: g.level.daylight.clone(),
+        volumes: g.level.volumes.clone(),
+    };
+    d.problems.extend(lint_manifest(g, &manifest, &level));
+    d.armed = !d.problems.iter().any(|p| p.level == LintProblemLevel::Error);
+    d.manifest = Some(manifest);
+    d
+}
+
 /// Hand the director the camera and the input. (director.ts Director.attach)
 pub fn director_attach(g: &mut crate::game::Game, o: crate::director::DirectorAttachO) {
     if o.cam.is_some() {

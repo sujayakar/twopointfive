@@ -13,6 +13,9 @@ pub fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 /// The player a row is built for and a press is read from. (snatchout.ts who)
 pub fn who(g: &mut crate::game::Game) -> PlayerId { g.player }
 
+/// Nothing led, nobody planted: the field initialisers; the constructor only keeps `g` and `S`. (snatchout.ts SnatchOut.constructor)
+pub fn snatch_out_new(g: &mut crate::game::Game) -> crate::snatchout::SnatchOut { SnatchOut::blank() }
+
 /// A fresh staging: nobody led, nobody planted. (snatchout.ts SnatchOut.reset)
 pub fn snatch_out_reset(g: &mut crate::game::Game) {
     let o = &mut g.snatch.out;

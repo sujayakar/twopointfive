@@ -310,3 +310,7 @@ pub fn morale_release(g: &mut crate::game::Game, gd: GuardId) {
     crate::owner::release_man(g, gd, crate::owner::own().morale, t);
 }
 
+/// A position as three numbers, NaN for none. (morale.ts n3)
+pub fn n3(p: Option<V3>) -> Vec<f64> {
+    match p { Some(p) => vec![p[0], p[1], p[2]], None => vec![f64::NAN, f64::NAN, f64::NAN] }
+}

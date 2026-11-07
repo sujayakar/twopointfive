@@ -9,6 +9,9 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 
+/// BOUNDARY NO-OP (the picture's / the host's): (src/game/deathrecap.ts:169 sample)
+pub fn sample(g: &mut crate::game::Game) {}
+
 /// BOUNDARY NO-OP (the picture's / the host's): (src/game/deathrecap.ts:185 take)
 pub fn take(g: &mut crate::game::Game, death: &crate::deathrecap::RecapDeath) {}
 

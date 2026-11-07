@@ -60,6 +60,9 @@ pub fn hash01(x: f64) -> f64 {
     ((x >> 8) as f64) / 16777216.0
 }
 
+/// A new pool.   (debris.ts Debris.constructor)
+pub fn debris_new(g: &mut crate::game::Game) -> crate::debris::Debris { crate::debris::Debris::blank() }
+
 /// The pool's size on this tier; 64 without one.   (debris.ts Debris.cap)
 pub fn debris_cap(g: &mut crate::game::Game) -> f64 {
     let c = g.engine.settings.debris_cap;

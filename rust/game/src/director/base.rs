@@ -248,8 +248,17 @@ pub mod util {
     use crate::{ids::*, js::*, Quat, V3};
     #[allow(unused_imports)]
     use alloc::{string::String, vec::Vec};
+    /// (src/game/director.ts:331 UTIL.distXZ)
+    pub fn dist_xz(a: V3, b: V3) -> f64 { todo!() }
+
+    /// (src/game/director.ts:332 UTIL.lerp)
+    pub fn lerp(a: V3, b: V3, t: f64) -> [f64; 3] { todo!() }
+
     /// (src/game/director.ts:332 UTIL.add)
     pub fn add(a: V3, b: V3) -> [f64; 3] { todo!() }
+
+    /// (src/game/director.ts:333 UTIL.ahead)
+    pub fn ahead(p: V3, yaw: f64, d: f64, y: Option<f64>) -> [f64; 3] { todo!() }
 
 }
 

@@ -37,6 +37,11 @@ pub fn exit_point(x: &crate::scene_scenarios::QuietExit, past: Option<f64>) -> V
     [x.x + x.out[0] * past, 0.0, x.z + x.out[1] * past]
 }
 
+/// a new mission, inert. The constructor's `current()` only ever handed back another Game's switches: the switches are this Game's here   (quiet.ts QuietMission)
+pub fn quiet_mission_new(g: &mut crate::game::Game) -> crate::quiet::QuietMission {
+    crate::quiet::QuietMission::blank()
+}
+
 /// the start dealt   (quiet.ts QuietMission.start_)
 pub fn quiet_mission_start_(g: &mut crate::game::Game) -> Option<crate::scene_scenarios::QuietStart> {
     if !g.quiet.active { return None; }
