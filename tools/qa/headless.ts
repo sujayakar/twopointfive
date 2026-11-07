@@ -14,6 +14,7 @@
 // Usage:  const W = await standUp();  W.step(1/60);  // = game.update + camera + lights + box upload + input.endFrame, as main.ts's step() does
 import { resolve } from 'node:path';
 import './stand.ts';   // (the stand's word, written before anything below reads it)
+import { clockDice, harnessDie } from './die.ts';
 
 export const ROOT = resolve(import.meta.dir, '../..');
 // ONE-WAY DOORS (src/game/doors.ts DOORWAY — the shipped default is ON): ON THE OLD FROZEN STAND (TPS_PROFILE=frozen; a run with no word is the page's, below) the
@@ -181,7 +182,8 @@ export interface Headless {
   cursorAt(p: [number, number, number]): boolean;
 }
 
-/** A fresh level + engine stand-in + Game. Math.random should already be seeded by the caller if determinism matters (Guard / Character constructors draw from it).
+/** A fresh level + engine stand-in + Game. A caller that wants a stream of its own seeds Math.random first (Guard / Character constructors draw from it); one that
+ *  seeds nothing and names no seed gets the harness's die put there (tools/qa/die.ts): no game stood here rolls the clock's dice.
  *  `env` (a session journal's EnvSnap — tools/qa/replay.ts): stand the engine up as the RECORDING's was where the simulation can tell — its settings (debris cap,
  *  emissive scale, torch radius, marking lights) before the Game is built, a fake GPU particle system attached if it had one (the effect sites then take the branch
  *  they took), the canister row on the null smoke. Absent = the harness exactly as it always stood.
@@ -200,15 +202,6 @@ function envSeed(v: string): number { if (!/^\d+$/.test(v.trim())) throw new Err
  *  stand-ups is 6 to 10 % slower; missions of a second or more are not slower for it (32 tally missions: 91 s with it, 93 without).
  *  `QA_STANDUP_GC=0` = the stand-up as it was, for measuring; any other value but 1 stops the tool (a typo must not quietly measure the wrong arm).
  *  tools/qa/standupgc-check.ts holds it, both ways. It does nothing for garbage that is not a dropped game (a single long game's own). */
-/** THE HARNESS'S DIE: mulberry32, the die every tool's own `seeded` is. */
-export function seeded(a: number): () => number { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
-/** NO GAME THE HARNESS STANDS ROLLS THE CLOCK'S DICE. A game stood with no seed takes its die off the tool's `Math.random` (the Rust game's seed is one draw of
- *  it as the game is stood, tools/blitz/rust-host.ts), so a tool that had put no die there stood ANOTHER GAME EVERY RUN: a check read green on one run and red
- *  on the next, and nothing said which game it had asked. So where a game is stood with no seed and `Math.random` is still the engine's own, the harness puts
- *  die 1 there first, for the rest of the process. A tool that names a stream (`Math.random = seeded(7)`, `standUp({ seed })`, TPS_SEED) is as it was.
- *  `ENTROPY` is the engine's own, for the tool that wants it by name (none does today). */
-export const ENTROPY: () => number = Math.random;
-export const HARNESS_SEED = 1;
 function envCollects(v: string | undefined): boolean { if (v === undefined || v === '1') return true; if (v === '0') return false; throw new Error(`QA_STANDUP_GC=${v}: want 0 (the stand-up as it was) or 1`); }
 export const STANDUP_COLLECTS = envCollects(process.env.QA_STANDUP_GC);
 let stoodBefore = false;
@@ -235,7 +228,7 @@ export async function standUp(opts: { /** the dressing rows up, as the page has 
   // the ONE stand-up (src/host/standup.ts): the level's boxes + lights into the stand-in, then `new Game`, then the harness trio — chaos 0 (the game byte for byte as it was before the
   // destruction lane, which is what every frozen digest and exact-count probe was written against), the autosave slots in a Map (no localStorage in bun), the level script strict
   const seed = opts.seed !== undefined ? opts.seed : process.env.TPS_SEED !== undefined && process.env.TPS_SEED !== '' ? envSeed(process.env.TPS_SEED) : null;
-  if (seed === null && Math.random === ENTROPY) Math.random = seeded(HARNESS_SEED);   // (no game rolls the clock's dice: ENTROPY, above)
+  if (seed === null && clockDice()) Math.random = harnessDie() ?? Math.random;   // (no game rolls the clock's dice: tools/qa/die.ts)
   // (a start writes all of a game's state: what the TypeScript keeps at a module's top is put back before the game is made — tools/qa/fresh.ts)
   (await import('./fresh.ts')).freshStart();
   const input: any = Input.detached(); input.mouseX = 800; input.mouseY = 500;   // (the real class minus its DOM listeners; the cursor where the harness always put it — the aim ray reads it. Made before the stand, which hands it to the game with the stand's camera: game.ts hostCam)
