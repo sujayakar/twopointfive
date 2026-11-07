@@ -26,7 +26,7 @@ bun run tools/qa/knobs-check.ts                           # after adding a knob 
 bun run tools/qa/rollback-check.ts --static               # after adding module state (a side table, a module `let`, a written container)
 bun run tools/sim/build.ts                                # after any change under rust/ → src/sim/built.ts, src/dress/built.ts; tools/qa/rust-check.ts is red on a stale one
 bun run tools/qa/dress-check.ts                           # after touching a picture-only step of the tick (src/game/dress.ts; docs/agents/rust.md)
-bun run tools/qa/tour.ts --runs 3 --quiet                 # + soak.ts --seeds 1,2,3 --minutes 12 --quiet after gameplay changes
+bun run tools/qa/soak.ts --seeds 1,2,3 --minutes 12 --quiet   # after gameplay changes
 ```
 Detail, exit codes, the page's `window` hooks and URL flags: `docs/agents/qa.md`.
 
@@ -123,7 +123,7 @@ happened when; the live queue is outside the repo.
   decals, GPU particles, destruction under fire, the paced blast frame, cut boxes.
 - `weather.md` — the hour, weather kinds, cloud over the hour, the level's own roofs, the dust volume, wet characters, wind.
 - `levels.md` — the level is data, scenario data in the level file, the GWOT look and its look files, lived-in rooms, the roof rule.
-- `showcases.md` — the old tour, the breach drill and the daylight variant, the Director (level scripting, no program today), the removed
+- `showcases.md` — the breach drill and the daylight variant, the Director (level scripting, no program today), the removed
   night and day showcases.
 - `anim.md` — MOVES and TURN, the second MOVES pass, wounds, character materials.
 - `render.md` — judging renderer output, GPU timing traps, quality presets and the ladder, caps, froxels, ReSTIR, TAAU, sharp direct,
