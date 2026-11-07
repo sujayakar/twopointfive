@@ -445,6 +445,7 @@ pub fn game_draw_characters(g: &mut crate::game::Game, all: &[CharId], statured:
     game_draw_men(g, all, statured, false, Some(false));   // (DRESS.men down: dress.ts, "what each WEARS is still dealt")
     g.dyn_raw = g.dyn_boxes.len() as f64;
     let mut list = core::mem::take(&mut g.dyn_boxes);
+    crate::fogofwar::picture::keep_raw(g, &list);
     let dynamics = crate::fogofwar::fog_of_war_things(g, &mut list);
     g.dyn_boxes = list;
     g.engine.world.dynamics = dynamics;
