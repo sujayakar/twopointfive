@@ -343,18 +343,16 @@ export class LightingPasses implements CutSwappable {
   /** the smallest gather grid (texels) whose points' buffer this device would not bind or could not make: that size and larger are not tried again */
   private gxRefusedAt = Infinity;
   private lDirect: GPUBindGroupLayout; private lRestir: GPUBindGroupLayout; private pRestir!: GPUComputePipeline; private lVol: GPUBindGroupLayout; private lComp: GPUBindGroupLayout; private lFxaa: GPUBindGroupLayout; private lTileDist: GPUBindGroupLayout; private lBloom: GPUBindGroupLayout; private lPost: GPUBindGroupLayout; private lCards: GPUBindGroupLayout; private lTaau: GPUBindGroupLayout;
-  private pVol!: GPUComputePipeline; private pComp: GPURenderPipeline | null = null; private pCompR: GPURenderPipeline | null = null; private pFxaa!: GPURenderPipeline; private pTileDist = new Map<number, GPUComputePipeline>(); private skipTs: number[] = [];   /* (the thresholds pTileDist is keyed by, smallest first: the last is the widest mask, safe for any chain) */ private pBloomDown0!: GPUComputePipeline; private pDiffBlurH!: GPUComputePipeline; private pDiffBlurV!: GPUComputePipeline; private pBloomDown!: GPUComputePipeline; private pBloomUp!: GPUComputePipeline; private pPost!: GPURenderPipeline; private postParams: GPUBuffer; private pCards!: GPUComputePipeline; private pTaau!: GPUComputePipeline; private taauParams: GPUBuffer; private taauData = new ArrayBuffer(TAAU_PARAM_BYTES); private taauF32 = new Float32Array(this.taauData); private taauU32 = new Uint32Array(this.taauData);
+  private pVol!: GPUComputePipeline; private pComp: GPURenderPipeline | null = null; private pFxaa!: GPURenderPipeline; private pTileDist = new Map<number, GPUComputePipeline>(); private skipTs: number[] = [];   /* (the thresholds pTileDist is keyed by, smallest first: the last is the widest mask, safe for any chain) */ private pBloomDown0!: GPUComputePipeline; private pDiffBlurH!: GPUComputePipeline; private pDiffBlurV!: GPUComputePipeline; private pBloomDown!: GPUComputePipeline; private pBloomUp!: GPUComputePipeline; private pPost!: GPURenderPipeline; private postParams: GPUBuffer; private pCards!: GPUComputePipeline; private pTaau!: GPUComputePipeline; private taauParams: GPUBuffer; private taauData = new ArrayBuffer(TAAU_PARAM_BYTES); private taauF32 = new Float32Array(this.taauData); private taauU32 = new Uint32Array(this.taauData);
   private bgDirect: GPUBindGroup | null = null; private bgVol: GPUBindGroup | null = null; private bgFxaa: GPUBindGroup | null = null; private bgTileDist: GPUBindGroup | null = null;
   private bgCompFG: GPUBindGroup | null = null; private bgCards: GPUBindGroup;
   /** bloom's first downsample and the post pass read the RESOLVED picture under TAAU — one bind group per history parity — or `hdr` (index 0 only) without it; the resolve's own group per parity */
   private bgBloomDown0: GPUBindGroup[] = []; private bgBloomDown: GPUBindGroup[] = []; private bgBloomUp: GPUBindGroup[] = []; private bgPost: GPUBindGroup[] = []; private bgDiffDown0: GPUBindGroup[] = []; private bgDiffDown: GPUBindGroup[] = []; private bgTaau: (GPUBindGroup | null)[] = [null, null];
   // SHARP DIRECT: the output-size kernels — sharpU (sharp_direct.wgsl), the composite's compute twin (composite.wgsl cs, SHARP = true), the 1 : 1 resolve (taau.wgsl, SHARP = true) — and their groups
   private lSharpU: GPUBindGroupLayout; private pSharpU: GPUComputePipeline | null = null; private pSharpUE: GPUComputePipeline | null = null; private bgSharpU: GPUBindGroup | null = null;
-  private lCompS: GPUBindGroupLayout; private pCompS: GPUComputePipeline | null = null; private pCompSR: GPUComputePipeline | null = null; private bgCompS: GPUBindGroup | null = null;
-  /** GLASS REFRACTION (settings.glassRefract; engine.render mirrors it here while the pane list is live): composite.wgsl compiled a second time behind `const GLASS_REFRACT: bool = true` —
-   *  the view ray bent through every glass box, the surface behind read where it comes out (composite.wgsl glassRefractPath / refractedRead over refract_common.wgsl) — as pCompR and,
-   *  for the sharp path, pCompSR; false = the module exactly as it was (hash-identical). The encode picks the pair by this each frame, so it flips live; both pairs are boot pipelines. */
-  glassRefract = false;
+  private lCompS: GPUBindGroupLayout; private pCompS: GPUComputePipeline | null = null; private bgCompS: GPUBindGroup | null = null;
+  // (GLASS REFRACTION is the one composite's own: composite.wgsl bends the view while the frame holds an index of refraction and keeps the older rule at 0.
+  // Until 2026-11-07 it was a twin of each composite behind a constant, four programs where a frame drew one.)
   private pTaauS: GPUComputePipeline | null = null; private bgTaauS: (GPUBindGroup | null)[] = [null, null];
   /** the sharp-direct pipelines are compiled on FIRST use (a tier that never turns the feature on never pays for the composite's compute twin, sharp_direct ×2 and the 1 : 1 resolve): built by
    *  the constructor's closure, `traced` = the sliver rays' traced kernel too */
@@ -509,13 +507,13 @@ export class LightingPasses implements CutSwappable {
       { binding: 2, visibility: CS, buffer: { type: 'uniform' } },
     ] });
     this.restirU = makeBuffer(device, this.restirUData.byteLength, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, 'restirU');
-    this.compText = (sharp: boolean, refr = false, p: string = pre) => p + lightingCommon + decalWgslConsts(10) + decalsSrc + markingsSrc + `const SHARP: bool = ${sharp};\nconst GLASS_REFRACT: bool = ${refr};\n` + refractCommonSrc + fireSrc + placeCommonSrc + tuned(compositeSrc);   // + decals.wgsl for the glass cracks (its DK_GLASS path; the g-buffer kinds are dead code here) + markings.wgsl (markEmissiveAt); SHARP = the sharp-direct twin (composite.wgsl header)
+    this.compText = (sharp: boolean, p: string = pre) => p + lightingCommon + decalWgslConsts(10) + decalsSrc + markingsSrc + `const SHARP: bool = ${sharp};\n` + refractCommonSrc + fireSrc + placeCommonSrc + tuned(compositeSrc);   // + decals.wgsl for the glass cracks (its DK_GLASS path; the g-buffer kinds are dead code here) + markings.wgsl (markEmissiveAt); SHARP = the sharp-direct twin (composite.wgsl header)
     this.buildGbaa = () => { this.pGbaa = device.createComputePipeline(this.gbaaDesc()); };   // (on first use, unless init({ gbaa }) prepared it)
     this.buildSharp = (traced: boolean) => {   // SHARP DIRECT's pipelines, on first use (ensureSharp) unless init({ sharp }) prepared the first three: the composite's compute twin, sharpU (SLIVER_RAYS false — no tracer compiled in — and, only once the sliver rule asks for it, true), the 1 : 1 resolve
       const hadS = !!this.pSharpU, hadUE = !!this.pSharpUE;
       if (!this.pSharpU) {
         const D = this.sharpDescs();
-        this.pCompS = device.createComputePipeline(D.compS); this.pCompSR = device.createComputePipeline(D.compSR); this.pSharpU = device.createComputePipeline(D.sharpU); this.pTaauS = device.createComputePipeline(D.taauS);
+        this.pCompS = device.createComputePipeline(D.compS); this.pSharpU = device.createComputePipeline(D.sharpU); this.pTaauS = device.createComputePipeline(D.taauS);
       }
       if (traced && !this.pSharpUE) this.pSharpUE = device.createComputePipeline(this.sharpTracedDesc());
       if (cutSwap.enabled && cutSwap.ready && (hadS !== !!this.pSharpU || hadUE !== !!this.pSharpUE)) void cutSwap.ready.then(ok => ok ? this.buildCut() : undefined).catch(e => reportErrorLine('render.cut.twins', '[cut programs] the sharp path\'s cut twins did not compile', e));   // (CUT BOXES: a TRACING kernel just made is the boot's — the second set gets its twin, once the set itself is in: a build still under way may have looked before this one existed)
@@ -526,17 +524,16 @@ export class LightingPasses implements CutSwappable {
     this.den = new Denoiser(device, sceneLayout);
     cutSwap.add(this);
   }
-  private compText: (sharp: boolean, refr?: boolean, pre?: string) => string;
+  private compText: (sharp: boolean, pre?: string) => string;
   /** the GBAA kernel's descriptor (init({ gbaa }) ahead of time, or buildGbaa on first use — the same object either way) */
   private gbaaDesc(): GPUComputePipelineDescriptor { const d = this.device; return { label: 'gbaa', layout: d.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.lGbaa] }), compute: { module: makeShader(d, scenePrelude() + gbaaSrc, 'gbaa'), entryPoint: 'main' } }; }
   /** the sharp kernel WITH the tracer compiled in (SLIVER_RAYS true — init({ sharp }) prepares it with the trio since the sliver rule defaults on) */
   private sharpTracedDesc(pre: string = scenePrelude()): GPUComputePipelineDescriptor { const d = this.device; return { label: 'sharpUE', layout: d.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.lSharpU] }), compute: { module: makeShader(d, pre + directCommonSrc + 'const SLIVER_RAYS: bool = true;\n' + sharpSrc, 'sharpUE'), entryPoint: 'main' } }; }
   /** SHARP DIRECT's three first-use descriptors: the composite's compute twin, sharpU without the tracer, the 1 : 1 resolve */
-  private sharpDescs(pre: string = scenePrelude()): { compS: GPUComputePipelineDescriptor; compSR: GPUComputePipelineDescriptor; sharpU: GPUComputePipelineDescriptor; taauS: GPUComputePipelineDescriptor } {
+  private sharpDescs(pre: string = scenePrelude()): { compS: GPUComputePipelineDescriptor; sharpU: GPUComputePipelineDescriptor; taauS: GPUComputePipelineDescriptor } {
     const d = this.device, sceneLayout = this.sceneLayout;
     return {
-      compS: { label: 'compositeS', layout: d.createPipelineLayout({ bindGroupLayouts: [sceneLayout, this.lCompS] }), compute: { module: makeShader(d, this.compText(true, false, pre), 'compositeS'), entryPoint: 'cs' } },
-      compSR: { label: 'compositeSR', layout: d.createPipelineLayout({ bindGroupLayouts: [sceneLayout, this.lCompS] }), compute: { module: makeShader(d, this.compText(true, true, pre), 'compositeSR'), entryPoint: 'cs' } },   // (its glass-refraction twin: GLASS_REFRACT true)
+      compS: { label: 'compositeS', layout: d.createPipelineLayout({ bindGroupLayouts: [sceneLayout, this.lCompS] }), compute: { module: makeShader(d, this.compText(true, pre), 'compositeS'), entryPoint: 'cs' } },
       sharpU: { label: 'sharpU', layout: d.createPipelineLayout({ bindGroupLayouts: [sceneLayout, this.lSharpU] }), compute: { module: makeShader(d, pre + directCommonSrc + 'const SLIVER_RAYS: bool = false;\n' + sharpSrc, 'sharpU'), entryPoint: 'main' } },
       taauS: { label: 'taauS', layout: d.createPipelineLayout({ bindGroupLayouts: [sceneLayout, this.lTaau] }), compute: { module: makeShader(d, pre + 'const SHARP: bool = true;\n' + taauSrc, 'taauS'), entryPoint: 'main' } },
     };
@@ -564,11 +561,9 @@ export class LightingPasses implements CutSwappable {
       const mods = Ts.map(T => makeShader(device, `const SKIP_T: i32 = ${T};\nconst SCAN_R: i32 = ${T - 1};\n` + softtileSrc, `softtile${T}`));
       Ts.forEach((T, i) => set(cp({ label: `softtileDist${T}`, layout: layD, compute: { module: mods[i], entryPoint: 'tileDistances' } }), p => { this.pTileDist.set(T, p); })); }
     if (opts.gbaa) set(cp(this.gbaaDesc()), p => { this.pGbaa ??= p; });
-    // (the sharp path is BUILT once pSharpU is set — its compute composite without refraction, compS, is a LATER twin while PIPE_QUEUE.later (the row 'Start on first frame shaders'): the frame takes compSR until it is in,
-    // which with no pane on the level, or none crossed, computes the same picture — the bend and the pane's terms need a glass hit; `?norefract` on a glass level draws the bend until then)
-    if (opts.sharp) { const D = this.sharpDescs(); const laterS = PIPE_QUEUE.later;
-      if (laterS) void laterPipelineAsync(device, D.compS).then(c => { if (c && !this.cutSet.baseOf(this, 'pCompS')) this.cutSet.patch(this, { pCompS: c }, null); });
-      set(Promise.all([laterS ? Promise.resolve(null) : cp(D.compS), cp(D.sharpU), cp(D.taauS), cp(this.sharpTracedDesc()), cp(D.compSR)]), ([c, u, t, ue, cr]) => { if (!this.pSharpU) { if (c) this.pCompS = c; this.pSharpU = u; this.pTaauS = t; } this.pSharpUE ??= ue; this.pCompSR ??= cr; }); }   // (+ the traced variant: the sliver rule defaults on, so it is a boot pipeline, not a first-use one)
+    // (the sharp path is BUILT once pSharpU is set. Its compute composite is ONE program and the boot's own: the refraction it had a twin for is a branch of it)
+    if (opts.sharp) { const D = this.sharpDescs();
+      set(Promise.all([cp(D.compS), cp(D.sharpU), cp(D.taauS), cp(this.sharpTracedDesc())]), ([c, u, t, ue]) => { if (!this.pSharpU) { this.pCompS = c; this.pSharpU = u; this.pTaauS = t; } this.pSharpUE ??= ue; }); }   // (+ the traced variant: the sliver rule defaults on, so it is a boot pipeline, not a first-use one)
     { const mod = makeShader(device, pre + bloomSrc, 'bloom'); const l = lay(sceneLayout, this.lBloom);
       set(cp({ label: 'bloomDown0', layout: l, compute: { module: mod, entryPoint: 'down', constants: { FIRST: 1 } } }), p => { this.pBloomDown0 = p; });
       set(cp({ label: 'bloomDown', layout: l, compute: { module: mod, entryPoint: 'down', constants: { FIRST: 0 } } }), p => { this.pBloomDown = p; });
@@ -616,16 +611,14 @@ export class LightingPasses implements CutSwappable {
     set(cp({ label: 'vol', layout: lay(sceneLayout, this.lVol), compute: { module: mk(volCommon + placeCommonSrc + volSrc.replace('const VOL_FROXEL_MARCH: bool = true;', 'const VOL_FROXEL_MARCH: bool = false;'), 'volumetrics'), entryPoint: 'main' } }), p => { T.pVol = p; });   // (the classic tiers' program: the froxel-lit smoke march is its twin's — volumetrics.wgsl VOL_FROXEL_MARCH)
     setL(() => cpL({ label: 'volFroxel', layout: lay(sceneLayout, this.lVol), compute: { module: mk(volCommon + placeCommonSrc + volSrc, 'volumetricsF'), entryPoint: 'main' } }), 'pVolF');   // (the froxel tiers' twin: LATER — engine.render keeps FrameFlags.FroxelVol down until it is in)   // (+ vol_common: the haze / masked-smoke helpers it shares with the froxel kernels)
     setL(() => this.dustTwin(volSrc, pre, late), 'pVolDust');   // (look only: the march's twin for frames with destruction dust alive — render/dustLookVol.ts)
-    // the fragment composite as it was, and its glass-refraction twin (GLASS_REFRACT — the encode takes pCompR while glassRefract). LATER too when the boot has the sharp path's
-    // compute twins (init({ sharp }), the default): the frame composites through those while sharp direct is live, and engine.render keeps it live until one of these is in.
+    // the fragment composite as it was. LATER when the boot has the sharp path's compute composite (init({ sharp }), the default): the frame composites
+    // through that while sharp direct is live, and engine.render keeps it live until this one is in.
     const lateC = late && this.sharpAtBoot;
-    for (const refr of [false, true]) {
-      const key = refr ? 'pCompR' : 'pComp';
-      const desc = (): GPURenderPipelineDescriptor => { const compMod = makeShader(device, this.compText(false, refr, pre), refr ? 'compositeR' : 'composite');
-        return { label: refr ? 'compositeR' : 'composite', layout: lay(sceneLayout, this.lComp),
+    { const desc = (): GPURenderPipelineDescriptor => { const compMod = makeShader(device, this.compText(false, pre), 'composite');
+        return { label: 'composite', layout: lay(sceneLayout, this.lComp),
           vertex: { module: compMod, entryPoint: 'vs' }, fragment: { module: compMod, entryPoint: 'fs', targets: [{ format: 'rgba16float' }] }, primitive: { topology: 'triangle-list' } }; };
-      if (lateC) setL(() => laterRenderPipelineAsync(device, desc()), key);
-      else set(renderPipelineAsync(device, desc()), p => { T[key] = p; }); }
+      if (lateC) setL(() => laterRenderPipelineAsync(device, desc()), 'pComp');
+      else set(renderPipelineAsync(device, desc()), p => { T.pComp = p; }); }
   }
   // ---- CUT BOXES — a calm room pays nothing (render/cutSwap.ts): the second set of the tracing pipelines, behind the cut prelude
   private cutSet = new ProgramSet();
@@ -639,8 +632,7 @@ export class LightingPasses implements CutSwappable {
     this.traceJobs(pre, T, jobs);
     const cp = (desc: GPUComputePipelineDescriptor) => computePipelineAsync(this.device, desc);
     const wantS = !!this.pSharpU || (this.cutSet.live && !!this.cutSet.cut?.pCompS), wantUE = !!this.pSharpUE || (this.cutSet.live && !!this.cutSet.cut?.pSharpUE);   // (the sharp path's tracing members, where this page has built them: the composite's compute twins and the traced sharp kernel)
-    if (wantS) { const D = this.sharpDescs(pre); jobs.push(cp(D.compS).then(p => { T.pCompS = p; }));
-      jobs.push(cp(D.compSR).then(p => { T.pCompSR = p; })); }
+    if (wantS) { const D = this.sharpDescs(pre); jobs.push(cp(D.compS).then(p => { T.pCompS = p; })); }
     if (wantUE) jobs.push(cp(this.sharpTracedDesc(pre)).then(p => { T.pSharpUE = p; }));
     await Promise.all(jobs);
     this.cutSet.set(this, T);
@@ -660,9 +652,9 @@ export class LightingPasses implements CutSwappable {
     if (body === this.compTunedAs) return { ok: true, messages: [] };
     const wantS = !!this.pSharpU || (this.cutSet.live && !!this.cutSet.cut?.pCompS);   // (as buildCutNow: the compute twins only where this page has them)
     const mods: { key: string; label: string; cut: boolean; sharp: boolean; mod: GPUShaderModule; off: number }[] = [];
-    for (const cut of hasCut ? [false, true] : [false]) for (const sharp of wantS ? [false, true] : [false]) for (const refr of [false, true]) {
-      const code = this.compText(sharp, refr, cut ? scenePrelude(true) : scenePrelude()), label = `composite${sharp ? 'S' : ''}${refr ? 'R' : ''}`;
-      mods.push({ key: `pComp${sharp ? 'S' : ''}${refr ? 'R' : ''}`, label, cut, sharp, mod: d.createShaderModule({ code, label }), off: code.split('\n').length - bodyLines });
+    for (const cut of hasCut ? [false, true] : [false]) for (const sharp of wantS ? [false, true] : [false]) {
+      const code = this.compText(sharp, cut ? scenePrelude(true) : scenePrelude()), label = `composite${sharp ? 'S' : ''}`;
+      mods.push({ key: `pComp${sharp ? 'S' : ''}`, label, cut, sharp, mod: d.createShaderModule({ code, label }), off: code.split('\n').length - bodyLines });
     }
     const infos = await Promise.all(mods.map(m => m.mod.getCompilationInfo()));
     const messages = infos.flatMap((info, i) => info.messages.map(m => `${mods[i].label}${mods[i].cut ? ' (cut)' : ''} ${m.type} ${m.lineNum - mods[i].off}:${m.linePos} ${m.message}`));   // (line numbers are composite.wgsl's own)
@@ -792,7 +784,7 @@ export class LightingPasses implements CutSwappable {
       ps.push(await this.device.createComputePipelineAsync({ label: traced ? 'sharpUE-hot' : 'sharpU-hot', layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.lSharpU] }), compute: { module: mod, entryPoint: 'main' } }));
     }
     this.pSharpU = ps[0]; this.pSharpUE = ps[1];
-    if (!this.pCompS) { const D = this.sharpDescs(); this.pCompS = this.device.createComputePipeline(D.compS); this.pCompSR = this.device.createComputePipeline(D.compSR); this.pTaauS = this.device.createComputePipeline(D.taauS); }
+    if (!this.pCompS) { const D = this.sharpDescs(); this.pCompS = this.device.createComputePipeline(D.compS); this.pTaauS = this.device.createComputePipeline(D.taauS); }
     return { ok: true, messages: out };
   }
   /** … and a gbaa.wgsl variant (main.ts __hotGbaa) */
@@ -866,7 +858,7 @@ export class LightingPasses implements CutSwappable {
   /** the boot built the sharp path's compute twins (init({ sharp })), so the fragment pair may be LATER twins (traceJobs) */
   private sharpAtBoot = false;
   /** a fragment composite is in (one of the LATER pair, or the boot's when sharp direct was not built at boot) */
-  get fragCompReady(): boolean { return !!(this.pComp || this.pCompR); }
+  get fragCompReady(): boolean { return !!this.pComp; }
   setSharp(on: boolean) { if (on !== this.sharpOn) { this.sharpOn = on; this.compStale = true; } }
   setGbaa(on: boolean) { if (on !== this.gbaaOn) { this.gbaaOn = on; this.compStale = true; } }
   /** PARTICLE RAIN v2's scene copy on / off (engine.render mirrors settings.particleRain before resize): a switch re-makes the composite-size set so hdrCopy exists (or goes) and hdr may be copied from */
@@ -1335,12 +1327,12 @@ export class LightingPasses implements CutSwappable {
       this.ensureSharp(traced);   // (the pipelines are compiled the first frame the path is live — the traced kernel the first frame the sliver rule is on, unless init prepared them)
       const wx = Math.ceil(this.cw / 8), wy = Math.ceil(this.ch / 8);
       { const p = enc.beginComputePass({ label: 'sharpU', timestampWrites: ts('sharpU') }); p.setPipeline(traced ? this.pSharpUE! : this.pSharpU!); p.setBindGroup(0, this.sceneBGOut); p.setBindGroup(1, this.bgSharpU); p.dispatchWorkgroups(wx, wy); p.end(); }
-      { const p = enc.beginComputePass({ label: 'compS', timestampWrites: ts('compS') }); p.setPipeline((this.glassRefract && this.pCompSR ? this.pCompSR : this.pCompS ?? this.pCompSR)!); p.setBindGroup(0, this.sceneBGOut); p.setBindGroup(1, this.bgCompS); p.dispatchWorkgroups(wx, wy); p.end(); }   // (glassRefract: the refraction twin of the same kernel — the same layout and groups)
+      { const p = enc.beginComputePass({ label: 'compS', timestampWrites: ts('compS') }); p.setPipeline(this.pCompS!); p.setBindGroup(0, this.sceneBGOut); p.setBindGroup(1, this.bgCompS); p.dispatchWorkgroups(wx, wy); p.end(); }
     } else {
       const p = enc.beginRenderPass({ label: 'composite', colorAttachments: [{ view: this.hdrView, loadOp: 'clear', storeOp: 'store', clearValue: { r: 0, g: 0, b: 0, a: 1 } }], timestampWrites: ts('composite') as GPURenderPassTimestampWrites | undefined });
-      const pc = this.glassRefract && this.pCompR ? this.pCompR : this.pComp ?? this.pCompR;   // (both LATER twins: until one is in, engine.render holds sharp direct live; a frame it cannot — a debug view, TAAU off — clears the target)
+      const pc = this.pComp;   // (a LATER program: until it is in, engine.render holds sharp direct live; a frame it cannot — a debug view, TAAU off — clears the target)
       if (pc) { p.setPipeline(pc); p.setBindGroup(0, sceneBG); p.setBindGroup(1, this.bgCompFG!); p.draw(3); }
-      p.end();   // (glassRefract: the refraction twin)
+      p.end();
     }
     if (overlayHdr) overlayHdr(enc);   // (the particles' splat into hdr: after the composite wrote it, before the resolve / the bloom reads it)
     if (this.gbaaOn && this.hdrCopy) {   // GBAA: hdr → hdrCopy, then every pixel a box edge crosses blended in place with its neighbour across the edge (gbaa.wgsl; the OUTPUT-size raster's edges under sharp direct)
