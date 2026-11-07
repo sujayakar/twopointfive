@@ -160,11 +160,6 @@ export class SmokeSystem implements SmokeSystemLike {
     return { fields, tables, atlas, page, total: fields + tables + atlas + page, perBrick: fields / cap + 8000 };
   }
 
-  /** Tools: recompile the solver from an edited smoke.wgsl text and swap every kernel in (the pool keeps its contents) */
-  async hotSwap(src: string): Promise<void> {
-    this.mod = makeShader(this.engine.device, wgslWorldConsts() + smokeSolverConsts(this.grid) + windFieldSrc + '\n' + windForceSrc + '\n' + src, 'smokeHot');
-    await this.init();
-  }
   async init(): Promise<void> {
     const device = this.engine.device, mod = this.mod;
     const pl = (extra?: GPUBindGroupLayout) => device.createPipelineLayout({ bindGroupLayouts: extra ? [this.g0L, this.g1L, extra] : [this.g0L, this.g1L] });
