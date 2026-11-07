@@ -1,7 +1,7 @@
 // The 'oneway' family: EVERY DOOR OPENS ONE WAY (src/game/doors.ts DOORWAY, src/game/doorswing.ts; the maintainer, 10-08: "doors could use some work too. only open one
 // direction"). Every door of every level a mission is played on (the office and each scenario's own level file), from BOTH faces, by every kind of opener — and
 // after every step of every case the one invariant: the leaf's angle never leaves the side it opens into.
-//   bun run tools/qa/probes.ts oneway | oneway-deal | oneway-read | oneway-leaf | oneway-player | oneway-men | oneway-save | oneway-off
+//   bun run tools/qa/probes.ts oneway | oneway-deal | oneway-read | oneway-leaf | oneway-player | oneway-men | oneway-save
 // All headless; nothing here looks at a picture.
 //   oneway-deal     the side every door was dealt and why (doorswing.ts): a door of a held room off a hall opens into the room, a drill plan's door the way its
 //                   plan throws it, a keyed door away from its cylinder; the same deal on a second boot; the table printed
@@ -11,13 +11,15 @@
 //                   run into (the player's sprint, an alert man's shoulder), used (Space: push / pull), eased, booted (kickIn), shoved by a drill's own write of
 //                   Door.vel either way, slammed and pulled to, an angle written on the wrong side, a lock held against a keyless man. Each must OPEN (the man
 //                   gets through / the leaf stands open) and never cross its frame
-//                   (QA_FRAMEHOLDS=1 — doors.ts DOORWAY.frameHolds: the booted openers are split by face in the open; from the face it opens toward the
+//                   (doors.ts DOORWAY.frameHolds: the booted openers are split by face in the open; from the face it opens toward the
 //                   leaf must stay home, its keep whole, a thud heard. The rule's own lines are the 'frameholds' family, frameholds-probes.ts)
 //   oneway-player   the real player on his own feet (Game.update, the puppet's strings) through every door from both faces, and Space on its row from both
 //   oneway-men      real men under the AI's own walk (a scripted goal: nav path, threadPath, their contacts): a teammate (operative) and a defender (hostile)
 //                   through every door from both faces
-//   oneway-save     a checkpoint made on double-acting leaves loaded on one-way doors: each leaf as wide on the side it opens into; a pull in hand survives a save
-//   oneway-off      DOORWAY.oneWay off: the leaves double-acting as they were (pushed from either face they open away), the read still dealt
+//   oneway-save     a pull in hand survives a save
+// THE SWITCHES ARE SETTLED AND NOT WRITTEN HERE (2026-11-07: DOORWAY.oneWay on, DOORWAY.exitsOut off, DOORWAY.frameHolds on). Out with their other sides:
+// oneway-off (the double-acting leaves), oneway-deal's outside doors opening outward (its roof rays, the turned count and the live flip of the switch: what is
+// kept is that no door is dealt 'outside'), oneway-save's checkpoint made on double-acting leaves and 'with the switch off a save carries nothing new'.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
@@ -37,13 +39,13 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
   return { verdict: (ok, label, detail) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); }, done: () => { console.log(`=== ${title.split(':')[0]}: ${all ? 'ALL PASS' : 'FAILURES above'} ===`); return all; } };
 }
 const quiet = async <T>(fn: () => Promise<T> | T): Promise<T> => { const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => {}; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } };
-const guarded = (fn: () => Promise<boolean>) => async () => { const was = DOORWAY.oneWay, out = DOORWAY.exitsOut; try { return await fn(); } finally { DOORWAY.oneWay = was; DOORWAY.exitsOut = out; } };
+const guarded = (fn: () => Promise<boolean>) => fn;
 
 /** every level a mission is played on: the office (the bundled level) and each scenario's own file */
 const LEVELS: (string | undefined)[] = [undefined, ...new Set<string>(SCENARIOS.map((e: any) => e.level).filter(Boolean))];
 const nameOf = (f?: string) => f ? f.replace(/\.json$/, '') : 'office';
 function levelOfFile(file: string): any { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return loadLevel(data); }
-async function boot(file?: string, on = true, out = on && process.env.QA_EXITSOUT === '1'): Promise<any> { DOORWAY.oneWay = on; DOORWAY.exitsOut = out; Math.random = seeded(7);   // (outside doors opening outward ship OFF: the family runs as shipped, on them under QA_EXITSOUT=1; oneway-deal and oneway-night turn the switch themselves)   // (headless.ts stands the harness up on the old double-acting leaves: the family turns the shipped doors on, `guarded` puts back what it found)
+async function boot(file?: string): Promise<any> { Math.random = seeded(7);
   return quiet(() => standUp({ uploadEvery: 4, ...(file ? { level: levelOfFile(file) } : {}) })); }
 
 /** a point off a door's face: `along` m from the hinge along the closed leaf, `off` m out of face `f` (Doors.side's sign) */
@@ -58,9 +60,9 @@ const fresh = (d: any, lock = false) => { d.reset(); d.angle = 0; d.vel = 0; d.l
 // ---------------------------------------------------------------- oneway-deal
 export const onewayDeal = guarded(async () => {
   const F = family('oneway-deal: the side every door opens into, and why');
-  let doors = 0; const whys: Record<string, number> = {}; const ext: any[] = [], planned: string[] = [], offBad: string[] = [], unmarked: string[] = []; let flipped = 0;
+  let doors = 0; const whys: Record<string, number> = {};
   for (const file of LEVELS) {
-    const W = await boot(file, true, true), g = W.game, L = W.level, deals: any[] = g.doorSwings;   // (the switch ON: this probe is the outward rule's own)
+    const W = await boot(file), g = W.game, L = W.level, deals: any[] = g.doorSwings;
     const rooms = L.scenarios?.roomClear?.rooms ?? [], plans = [...(L.breach ? [L.breach] : []), ...(L.clearPlans ?? [])];
     const bad: string[] = [];
     for (const d of g.doors.list) {
@@ -72,51 +74,18 @@ export const onewayDeal = guarded(async () => {
       if (deal.why === 'room' && mine.length === 1) { const B = mine[0].bounds, p = [c[0] + into[0] * 0.8, c[2] + into[1] * 0.8]; if (!(p[0] > B.x0 - 0.3 && p[0] < B.x1 + 0.3 && p[1] > B.z0 - 0.3 && p[1] < B.z1 + 0.3)) bad.push(`${d.def.name}: opens away from ${mine[0].id}`); }
       const P = plans.find((p: any) => p.door === d.def.name && p.fling); if (P && deal.why === 'plan' && Math.sign(P.fling) !== d.swing) bad.push(`${d.def.name}: against its plan's fling`);
       if (d.def.locked && deal.why === 'lock' && d.swing === d.keySide) bad.push(`${d.def.name}: opens onto its own cylinder's face`);
-      // OUTSIDE DOORS OPEN OUTWARD (DOORWAY.exitsOut; doorswing.ts 'outside'). Asked of the level's SOLIDS by rays, not of the deal's own box test: straight up
-      // from head height at nine points off each face — a face is under a roof when most are stopped, under the sky when at most two are. An `exterior` door with a
-      // roof over one face only must open toward the sky (by this rule, or by an authored side / a folding stop that says the same); one roofed on both faces
-      // or on neither is nobody's to turn, and no other door is ever dealt 'outside'.
+      // (no door is dealt 'outside': every one is on the side the room rules deal it)
       const base = g.doorDeals.find((x: any) => x.door === d.def.name);
-      const sky = (f: number) => { let n = 0; for (const o of [0.8, 1.5, 2.2]) for (const al of [-0.4, 0, 0.4]) { const q = off(d, f, o, d.def.width / 2 + al); if (g.col.solidBlocked([q[0], 1.9, q[2]], [q[0], 12, q[2]], 0.02)) n++; } return n; };
-      const rp = sky(1), rm = sky(-1), outSide = rp >= 6 && rm <= 2 ? -1 : rm >= 6 && rp <= 2 ? 1 : 0;   // (≤ 2: the lamp head on the wall over a fire exit stops one ray, and is no roof)
-      if (d.def.exterior) {
-        ext.push({ level: nameOf(file), door: d.def.name, before: base.swing, why0: base.why, into0: base.into, after: d.swing, why: deal.why, roof: [rp, rm], out: outSide });
-        if (outSide && d.swing !== outSide) bad.push(`${d.def.name}: an outside door (roof ${rp}/9 on +, ${rm}/9 on −) opening INWARD by '${deal.why}'`);
-        if (outSide && !['outside', 'authored', 'folds'].includes(deal.why)) bad.push(`${d.def.name}: outward by '${deal.why}', not by the rule`);
-        if (!outSide && deal.why === 'outside') bad.push(`${d.def.name}: dealt 'outside' with roof ${rp}/9 on + and ${rm}/9 on −`);
-        if (deal.why === 'outside') {   // …and the leaf has the room to swing out there: nothing solid of the level in the floor it sweeps (past its own frame)
-          const hit: string[] = [], W = d.def.width, open = Math.abs(d.swing > 0 ? d.maxA : d.minA);
-          for (let a = 0.3; a <= open + 1e-9; a += 0.1) for (const t of [0.35, 0.7, 1.0]) { const th = d.def.closedDir + d.swing * a, x = d.def.hinge[0] + Math.cos(th) * W * t, z = d.def.hinge[1] + Math.sin(th) * W * t;
-            const bi = L.boxes.findIndex((b: any) => !(b.flags & 2) && b.c[1] - b.h[1] < 2.0 && b.c[1] + b.h[1] > 0.12 && Math.abs((x - b.c[0]) * Math.cos(b.yaw) - (z - b.c[2]) * Math.sin(b.yaw)) <= b.h[0] && Math.abs((x - b.c[0]) * Math.sin(b.yaw) + (z - b.c[2]) * Math.cos(b.yaw)) <= b.h[2]);
-            if (bi >= 0 && !hit.includes(`box ${bi}`)) hit.push(`box ${bi}`); }
-          if (hit.length) bad.push(`${d.def.name}: its leaf swings out through ${hit.join(', ')}`);
-          const P2 = plans.find((p: any) => p.door === d.def.name && p.fling); if (P2 && Math.sign(P2.fling) !== d.swing) planned.push(`${nameOf(file)} ${d.def.name}`);
-        }
-      } else { if (deal.why === 'outside' || base.out) bad.push(`${d.def.name}: not an exterior door, dealt 'outside'`); if (outSide) unmarked.push(`${nameOf(file)} ${d.def.name} (${d.swing === outSide ? 'opens out already' : 'opens in'}, ${deal.why})`); }
+      if (deal.why === 'outside') bad.push(`${d.def.name}: dealt 'outside'`);
       const room = base.clear && DOORWAY.leafWay ? base.clear : base;   // (a door the 'leaf room' rule hangs the other way reads as that row while DOORWAY.leafWay is on: leafway-check's)
-      if (base.out ? base.out !== deal || base.why === 'outside' : room !== deal && JSON.stringify(room) !== JSON.stringify(deal)) bad.push(`${d.def.name}: the deal's two rows`);
+      if (room !== deal && JSON.stringify(room) !== JSON.stringify(deal)) bad.push(`${d.def.name}: the deal's two rows`);
       const stood = d.angle; d.reset(); if (Math.abs(d.angle - stood) > 1e-9 || Math.abs(Math.abs(d.angle) - Math.min(Math.abs(d.def.angle ?? 0), Math.abs(d.swing > 0 ? d.maxA : d.minA))) > 1e-9) bad.push(`${d.def.name}: authored standing at ${d.def.angle ?? 0}, dealt ${stood.toFixed(2)}, reset to ${d.angle.toFixed(2)}`);
       if (d.angle * d.swing < 0 || d.minA > 0 || d.maxA < 0 || (d.swing > 0 ? d.minA !== 0 : d.maxA !== 0)) bad.push(`${d.def.name}: stops [${d.minA}, ${d.maxA}] at ${d.angle} for swing ${d.swing}`);
     }
-    const again = (await boot(file, true, true)).game.doorSwings; const same = JSON.stringify(again) === JSON.stringify(deals);
-    // the switch off, live on the same game: every door back on the side the room rules deal it, not one 'outside' — and on again, as it was
-    DOORWAY.exitsOut = false; for (const d of g.doors.list) { const b = g.doorDeals.find((x: any) => x.door === d.def.name), b0 = b.clear && DOORWAY.leafWay ? b.clear : b, now = g.doorSwings.find((x: any) => x.door === d.def.name); if (d.swing !== b0.swing || now !== b0 || now.why === 'outside') offBad.push(`${nameOf(file)} ${d.def.name}`); }
-    DOORWAY.exitsOut = true; for (const d of g.doors.list) if (d.swing !== deals.find(x => x.door === d.def.name).swing) offBad.push(`${nameOf(file)} ${d.def.name} (back on)`);
-    // …and a leaf standing OPEN when the switch is flipped stands as wide on its other side at its next placing (Door.keep), never past the stop there — and back again
-    for (const d of g.doors.list) { const b0 = g.doorDeals.find((x: any) => x.door === d.def.name); if (!b0.out || b0.out.swing === b0.swing) continue;
-      const lim = () => Math.abs(d.swing > 0 ? d.maxA : d.minA), w = lim(), s1 = d.swing; d.angle = s1 * w; d.vel = 0; d.latched = false; d.place();   // (from its full stop: the other side's stop may be nearer, and is the clamp)
-      DOORWAY.exitsOut = false; d.place(); const wOff = Math.min(w, lim()); if (d.swing === s1 || d.angle * d.swing <= 0 || Math.abs(Math.abs(d.angle) - wOff) > 1e-9) offBad.push(`${nameOf(file)} ${d.def.name} (stood open ${(s1 * w).toFixed(2)}, off: ${d.angle.toFixed(2)})`);
-      DOORWAY.exitsOut = true; d.place(); if (d.swing !== s1 || d.angle * d.swing <= 0 || Math.abs(Math.abs(d.angle) - wOff) > 1e-9) offBad.push(`${nameOf(file)} ${d.def.name} (stood open, back on: ${d.angle.toFixed(2)})`);
-      flipped++; d.reset(); }
+    const again = (await boot(file)).game.doorSwings; const same = JSON.stringify(again) === JSON.stringify(deals);
     F.verdict(bad.length === 0 && same && deals.length === g.doors.list.length, `${nameOf(file)}: ${deals.length} doors, each dealt one side`, `${deals.map((x: any) => `${x.door} ${x.swing > 0 ? '+' : '−'} ${x.why}${x.into ? ` (${x.into})` : ''}`).join(' · ')}${bad.length ? `\n    WRONG: ${bad.join('; ')}` : ''}${same ? '' : '\n    a second boot dealt differently'}`);
   }
   F.verdict(doors > 0, `${doors} doors on ${LEVELS.length} levels`, Object.entries(whys).map(([k, n]) => `${k} ${n}`).join(' · '));
-  // the outside doors, level by level: the side each opened into before the rule (the room rules' deal — what DOORWAY.exitsOut off still deals) and now
-  const word = (e: any, s: number) => e.out ? (s === e.out ? 'OUT' : 'in') : (s > 0 ? '+' : '−');
-  const turned = ext.filter(e => e.before !== e.after), left = ext.filter(e => e.why !== 'outside');
-  // (the counts are a FLOOR, as of 10-08: a level that loses its `exterior` marks must fail here, not pass with nothing to check)
-  F.verdict(ext.length >= 29 && turned.length >= 22 && turned.every(e => e.why === 'outside' && e.out === e.after) && flipped === turned.length && offBad.length === 0, `${ext.length} exterior doors: ${turned.length} turned to open outward, ${left.length} left as dealt; the switch off = the room rules' deal, door for door, and a leaf stood open follows a live flip (${flipped})`,
-    `${ext.map(e => `${e.level} ${e.door}: ${word(e, e.before)} ${e.why0}${e.into0 ? ` (${e.into0})` : ''} → ${word(e, e.after)} ${e.why}  [roof ${e.roof[0]}/9 on +, ${e.roof[1]}/9 on −]`).join('\n    ')}\n    left as dealt: ${left.map(e => `${e.level} ${e.door} (${e.roof[0] >= 6 && e.roof[1] >= 6 ? 'a roof over both faces' : e.roof[0] <= 2 && e.roof[1] <= 2 ? 'open sky over both faces' : e.why})`).join(' · ') || 'none'}${planned.length ? `\n    a drill plan throws these the other way (its shove is turned round): ${planned.join(', ')}` : ''}${unmarked.length ? `\n    NOT marked exterior in their level, a roof over one face only (left to the room rules — a level's one-word call): ${unmarked.join(' · ')}` : ''}${offBad.length ? `\n    WRONG with the switch off: ${offBad.join('; ')}` : ''}`);
   return F.done();
 });
 
@@ -167,12 +136,12 @@ const body = (d: any) => [0.35, 0.6, 0.85].map(k => { const th = d.def.closedDir
 const clearOf = (d: any, b: { pos: number[]; radius: number }[]): string | null => { const u = d.dir(), [hx, hz] = d.def.hinge;
   for (const p of b) { const px = p.pos[0] - hx, pz = p.pos[2] - hz, t = Math.max(0, Math.min(d.def.width, px * u[0] + pz * u[1])), dist = Math.hypot(px - u[0] * t, pz - u[1] * t); if (dist < p.radius + d.thick / 2 - 0.03) return `the leaf stands ${(p.radius + d.thick / 2 - dist).toFixed(2)} m inside the body`; }
   return null; };
-/** THE FRAME HOLDS (doors.ts DOORWAY.frameHolds — the harness stands with it off; QA_FRAMEHOLDS=1 runs this family on it): a boot at the face the shut leaf opens
+/** THE FRAME HOLDS (doors.ts DOORWAY.frameHolds): a boot at the face the shut leaf opens
  *  toward lands on a door backed by its frame. The booted cases then want, from that face, the leaf still home, its keep whole and the thud heard — and from the
  *  push face exactly what they always wanted. Asked BEFORE the boot (bootHolds reads the leaf as it stands). */
 /** the frame holds a boot at face `f` of this (shut) door — read off how it is hung (Doors.side === Door.swing is its pull face), not off the function under test */
 let heldCases = 0;
-const holds = (d: any, f: number): boolean => { const h = DOORWAY.oneWay && DOORWAY.frameHolds && !d.def.steel && f === d.swing; if (h) heldCases++; return h; };
+const holds = (d: any, f: number): boolean => { const h = !d.def.steel && f === d.swing; if (h) heldCases++; return h; };
 function heldBoot(g: any, d: any, w: Watch, men: any[], secs: number): string | null {
   stand(g, d, w, men, secs, 0);
   return w.widest > 0.01 ? `its frame should have held that boot: it stood open ${w.widest.toFixed(2)}` : d.lockBroken ? 'the frame held the boot and the keep broke all the same' : heard.includes('thud') ? null : 'the frame held the boot without a sound (no thud)';
@@ -231,7 +200,7 @@ export const onewayLeaf = guarded(async () => {
     F.verdict(fails.length === 0, `${nameOf(file)}: ${g.doors.list.length} doors × 2 faces × ${CASES.length} openers = ${n} cases`, fails.length ? `${fails.length} wrong — ${fails.slice(0, 8).join('\n    ')}${fails.length > 8 ? `\n    … and ${fails.length - 8} more` : ''}` : 'every case opened (or held, where it should) and the leaf never left the side it opens into');
   }
   F.verdict(crossedAll === 0, `${total} cases on ${LEVELS.length} levels: the leaf crossed its frame in ${crossedAll}`, 'checked after every step of every case: angle × swing ≥ 0');
-  if (DOORWAY.frameHolds) F.verdict(heldCases > 0, 'QA_FRAMEHOLDS=1: the booted openers at the face a door opens toward were held to the frame (leaf home, keep whole, a thud), by how the door is hung', `${heldCases} booted cases expected held`);
+  F.verdict(heldCases > 0, 'the booted openers at the face a door opens toward were held to the frame (leaf home, keep whole, a thud), by how the door is hung', `${heldCases} booted cases expected held`);
   return F.done();
 });
 
@@ -291,37 +260,11 @@ export const onewayMen = guarded(async () => {
 
 // ---------------------------------------------------------------- oneway-save
 export const onewaySave = guarded(async () => {
-  const F = family('oneway-save: a checkpoint from before the doors had one side; a pull in hand across a save');
-  const W0 = await boot(undefined, false); const old = JSON.parse(JSON.stringify(W0.snapshot('two-way', true)));   // the office on double-acting leaves: the manager's door ajar at +0.7, the break room's at +1.35
-  const W = await boot(), g = W.game; W.restore(old); const bad: string[] = []; let turned = 0;
-  for (const D of old.doors) { const d = g.doors.byName(D.name), open = Math.abs(d.swing > 0 ? d.maxA : d.minA), want = Math.min(Math.abs(D.angle), open);
-    if (D.angle * d.swing < 0) turned++;
-    if (Math.abs(d.angle * d.swing - want) > 1e-9 || d.latched !== !!D.latched) bad.push(`${D.name}: saved ${D.angle}${D.latched ? ' latched' : ''}, loaded ${d.angle.toFixed(2)}${d.latched ? ' latched' : ''} (opens ${d.swing > 0 ? '+' : '−'})`); }
-  const at = g.doors.list.map((d: any) => d.angle); for (let i = 0; i < 120; i++) W.step(DT);
-  g.doors.list.forEach((d: any, i: number) => { if (d.def.closer === false && Math.abs(d.angle - at[i]) > 1e-6) bad.push(`${d.def.name}: moved to ${d.angle.toFixed(2)} in the two seconds after the load`); });
-  F.verdict(bad.length === 0 && turned > 0, `a two-way save loaded on one-way doors: ${old.doors.length} doors, ${turned} of them saved open on the far side`, bad.length ? bad.join('; ') : 'each stands as wide on the side it opens into, latched only if it was, and stays there');
+  const F = family('oneway-save: a pull in hand across a save');
+  const W = await boot(), g = W.game;
   const d = g.doors.byName('storage'); fresh(d); d.latched = false; d.angle = d.swing * 0.3; d.vel = d.swing * 2; d.pullT = 0.4; d.place();
   const mid = JSON.parse(JSON.stringify(W.snapshot('mid-pull', true))), row = mid.doors.find((x: any) => x.name === 'storage'); W.restore(mid); const d2 = g.doors.byName('storage');
   F.verdict(row.pullT === 0.4 && d2.pullT === 0.4 && Math.abs(d2.angle - d.swing * 0.3) < 1e-9, 'a leaf being pulled open when the game is saved is still being pulled when it loads', `saved pullT ${row.pullT}, loaded ${d2.pullT} at ${d2.angle.toFixed(2)}`);
   F.verdict(row.pressT !== undefined && row.openT !== undefined, 'the press and driven clocks ride the row too', `pressT ${row.pressT}, openT ${row.openT}`);
-  d2.pullT = 0.3; DOORWAY.oneWay = false; const plain = JSON.parse(JSON.stringify(W.snapshot('two-way again', true)));   // the same game — a pull in hand and all — saved with the switch off
-  F.verdict(!plain.doors.some((x: any) => 'pullT' in x || 'pressT' in x || 'openT' in x) && Object.keys(plain.doors[0]).join() === Object.keys(old.doors[0]).join(), 'with the switch off a save carries nothing new', `${plain.doors.length} door rows with the base's keys: ${Object.keys(plain.doors[0]).length} of them`);
-  return F.done();
-});
-
-// ---------------------------------------------------------------- oneway-off
-export const onewayOff = guarded(async () => {
-  const F = family('oneway-off: DOORWAY.oneWay off — the double-acting leaves as they were');
-  for (const file of [undefined, 'warehouse.json']) {
-    const g = (await boot(file, false)).game; const bad: string[] = []; let n = 0;
-    for (const d of g.doors.list) {
-      if (d.minA !== d.minAuth || d.maxA !== d.maxAuth) bad.push(`${d.def.name}: stops`);
-      if (g.doors.swingOf(d).oneWay) bad.push(`${d.def.name}: the read says one-way`);
-      for (const f of [1, -1]) { fresh(d); const w = new Watch(d); const c = man(d, f, 1.0, { key: true }); const r = walk(g, d, f, w, c, 1.6); n++;
-        let far = 0; fresh(d); const c2 = man(d, f, 1.0, { key: true }), to = off(d, -f, 1.4); for (let t = 0; t < 2; t += DT) { const dx = to[0] - c2.pos[0], dz = to[2] - c2.pos[2], L = Math.hypot(dx, dz); if (L > 0.15) { c2.pos[0] += dx / L * 1.6 * DT; c2.pos[2] += dz / L * 1.6 * DT; } g.doors.update(DT, [c2]); if (Math.abs(d.angle) > Math.abs(far)) far = d.angle; }
-        if (r || Math.sign(far) !== -f) bad.push(`${d.def.name} face ${f}: ${r ?? `opened to ${far.toFixed(2)}, not away from him`}`); fresh(d, !!d.def.locked); }
-    }
-    F.verdict(bad.length === 0, `${nameOf(file)}: ${n} pushes, each leaf away from the man whichever face he is on`, bad.length ? bad.slice(0, 6).join('; ') : 'authored stops both ways; pushed from + it opens −, from − it opens +');
-  }
   return F.done();
 });
