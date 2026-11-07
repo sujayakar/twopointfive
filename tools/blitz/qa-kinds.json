@@ -438,88 +438,10 @@
 "CLOSE.noKnife=false",
 "CLOSE.rmbHold=false"
 ],
-"roomclear-ends": [
-"ROOMCLEAR.pairOnly=true",
-"WORDS.on=false"
-],
-"roomclear-restart": [
-"SAMESTART.on=false",
-"ROOMCLEAR.reroll=false"
-],
-"roomclear-rooms": [
-"NIGHTBREACH.blindFire=false"
-],
-"roomfit-walk": [
-"NIGHTBREACH.blindFire=false"
-],
 "savetimeline": [
 "MOVES.on=0",
 "SAVETIMELINE.since=false",
 "SAVETIMELINE.on=false"
-],
-"silent-boot": [
-"DOORTOOLS.testDoor=false",
-"DOORTOOLS.outsidePlain=false",
-"KITDEAL.more=false",
-"SILENT.bootWedged=false"
-],
-"silent-cans": [
-"DOORTOOLS.testDoor=false",
-"DOORTOOLS.outsidePlain=false"
-],
-"silent-doors": [
-"DOORTOOLS.testDoor=false",
-"DOORTOOLS.outsidePlain=false",
-"SILENT.picks=false"
-],
-"silent-fire": [
-"DOORTOOLS.testDoor=false",
-"DOORTOOLS.outsidePlain=false",
-"SILENT.holdFire=false"
-],
-"silent-hud": [
-"DOORTOOLS.testDoor=false",
-"DOORTOOLS.outsidePlain=false"
-],
-"silent-hush": [
-"DOORTOOLS.testDoor=false",
-"DOORTOOLS.outsidePlain=false"
-],
-"silent-off": [
-"DOORTOOLS.testDoor=false",
-"DOORTOOLS.outsidePlain=false",
-"SILENT.kicks=false"
-],
-"silent-order": [
-"DOORTOOLS.testDoor=false",
-"DOORTOOLS.outsidePlain=false",
-"DOORTOOLS.wordOnKey=false"
-],
-"silent-pick": [
-"KITDEAL.more=false",
-"DOORTOOLS.testDoor=false",
-"DOORTOOLS.outsidePlain=false"
-],
-"silent-set": [
-"DOORTOOLS.testDoor=false",
-"DOORTOOLS.outsidePlain=false",
-"SILENT.stackSet=false"
-],
-"silent-start": [
-"NVG.on=false",
-"DOORTOOLS.testDoor=false",
-"DOORTOOLS.outsidePlain=false"
-],
-"silent-tools": [
-"KITDEAL.more=false",
-"DOORTOOLS.testDoor=false",
-"DOORTOOLS.outsidePlain=false",
-"SILENT.toolsLoud=false"
-],
-"silent-walk": [
-"DOORTOOLS.testDoor=false",
-"DOORTOOLS.outsidePlain=false",
-"NVG.on=false"
 ],
 "smokebreak": [
 "SMOKEBREAK.on=false"
@@ -532,39 +454,6 @@
 "SNATCHOUT.hold=false",
 "RESPONSE.on=false",
 "SNATCHOUT.on=false"
-],
-"squadnet-clear": [
-"AUTOPILOT.plain=false",
-"AUTOPILOT.restack=false"
-],
-"squadnet-end": [
-"AUTOPILOT.plain=false",
-"AUTOPILOT.restack=false",
-"SQUADNET.endCall=false"
-],
-"squadnet-net": [
-"AUTOPILOT.plain=false",
-"AUTOPILOT.restack=false",
-"SQUADNET.why=false",
-"SQUADNET.clear=false",
-"SQUADNET.on=false"
-],
-"squadnet-why": [
-"AUTOPILOT.plain=false",
-"AUTOPILOT.restack=false",
-"SQUADNET.endCall=false"
-],
-"stay-open-after": [
-"DOORSTAY.on=false"
-],
-"stay-open-floor": [
-"DOORSTAY.on=false"
-],
-"stay-open-off": [
-"DOORSTAY.on=false"
-],
-"stay-open-pass": [
-"DOORSTAY.on=false"
 ],
 "stealthpose-cable": [
 "STEALTHPOSE.nod=false",
@@ -653,48 +542,6 @@
 ],
 "takedown-rules": [
 "TAKEDOWN.on=false"
-],
-"threshold-doors": [
-"DOORTOOLS.wordNoCan=false"
-],
-"threshold-first": [
-"DOORTOOLS.wordNoCan=false",
-"DOORTOOLS.outsidePlain=false",
-"DOORTOOLS.thrFirstOnly=false"
-],
-"threshold-four": [
-"DOORTOOLS.wordNoCan=false"
-],
-"threshold-grenade": [
-"DOORTOOLS.wordNoCan=false",
-"DOORTOOLS.thrHand=false",
-"DOORTOOLS.thrFragHold=false"
-],
-"threshold-hand": [
-"DOORTOOLS.wordNoCan=false",
-"DOORTOOLS.thrNoCan=false",
-"DOORTOOLS.thrFragHold=false",
-"DOORTOOLS.thrHand=false"
-],
-"threshold-hold": [
-"SQUADDEAL.on=false",
-"DOORTOOLS.wordNoCan=false",
-"DOORTOOLS.thrPie=false",
-"DOORTOOLS.behindSam=false"
-],
-"threshold-last": [
-"DOORTOOLS.thrLast=false",
-"DOORTOOLS.wordNoCan=false"
-],
-"threshold-leaf": [
-"DOORTOOLS.wordNoCan=false",
-"DOORTOOLS.thrDoorsLeaf=false"
-],
-"threshold-pair": [
-"DOORTOOLS.wordNoCan=false"
-],
-"trail-doors": [
-"ORDERS.trailDoors=false"
 ],
 "wand-kit": [
 "WAND.mate=false",
@@ -1722,7 +1569,9 @@
 "orders-one": "iii",
 "orders-seams": "iii",
 "orders-stack": "iii",
+"orderui-block": "iii",
 "orderui-four": "iii",
+"orderui-half": "iii",
 "orderui-keys": "iii",
 "ownblow": "iii",
 "owncharge-door": "iii",
@@ -1761,8 +1610,8 @@
 "pairup-voice": "iii",
 "pairup-word": "iii",
 "pall": "iv-a",
-"panel-inventory": "iv-a",
 "panel-dead": "0",
+"panel-inventory": "iv-a",
 "par": "iii",
 "particles-determinism": "iii",
 "particles-off": "iii",

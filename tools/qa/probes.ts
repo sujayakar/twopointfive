@@ -2680,6 +2680,8 @@ if (on('rearread', 'cover', 'wallcharge', 'all')) await run('rearread', async ()
 if (on('backturn', 'cover', 'all')) await run('backturn', async () => (await import('./backturn-check.ts')).backturnCheck());
 // ---------------------------------------------------------------- the command menu as a press menu + who an order goes to, with four in two pairs (orderui-probes.ts; game/orders.ts under NIGHTBREACH.squad = 4): 'orderui' = the family
 if (on('orderui-four', 'orderui', 'all')) await run('orderui-four', async () => (await import('./orderui-probes.ts')).orderuiFour());
+if (on('orderui-block', 'orderui', 'all')) await run('orderui-block', async () => (await import('./orderui-probes.ts')).orderuiBlock());   // the squad block with everyone addressed (ORDERBLOCK_BREAK=1 fails it)
+if (on('orderui-half', 'orderui', 'all')) await run('orderui-half', async () => (await import('./orderui-probes.ts')).orderuiHalf());   // a door tool to one half of the squad, by Shift and the ring (ORDERHALF_BREAK=1 fails it)
 if (on('orderui-keys', 'orderui', 'all')) await run('orderui-keys', async () => (await import('./orderui-probes.ts')).orderuiKeys());
 // ---------------------------------------------------------------- the four PLAYED FROM THE KEYS (squadplay-probes.ts; the press menu + the pairs on one tree: the word on F, a tool 'on the word' from the tools page's wait row (5, or F), the men's face of a door, F one thing at a time): 'squadplay' = the family
 if (on('squadplay-go', 'squadplay', 'all')) await run('squadplay-go', async () => (await import('./squadplay-probes.ts')).squadplayGo());
