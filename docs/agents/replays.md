@@ -331,7 +331,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `Math.pow(x, y)`; `x ** 2` alone is `x·x` on every engine and stays. (4) `Math.cbrt / expm1 / log1p / sinh / cosh / asinh / acosh / atanh` have no
   own version: none is used under `src/`, and the check is red on one. CHECKS, each on both stands: `bun run tools/qa/exact-check.ts` (engines: one
   stream of 2.3 million inputs folded under bun and under node, the same word; close: within 2 to 4 ulp of each engine's own, pow within 8; corners;
-  switch; load; uncovered; stand — `EXACT_BREAK=1` must fail) and `bun run tools/qa/coop-check.ts` (four scripted fights on the shipped stand, each
+  switch; load; uncovered; stand — `EXACT_BREAK=1` must fail) and `tools/qa/coop-check.ts` (DELETED 2026-11-07 with the TypeScript tick: it stood that tick under two engines, and on the Rust game all four
+  of its runs differed with no frame compared. Two engines on one fight are now `tools/qa/mpclient-page.cjs`: a Chromium page on V8 against a bun
+  server on JavaScriptCore, state word by state word. What it was: four scripted fights on the shipped stand, each
   under bun AND node at this commit: raw float64 bits of the game — `game/digest.ts rawBits` — equal every half second, 1,356 to 3,840 frames;
   `COOP_BREAK=1` = both on their own functions, must differ; `--ref` / `--write` = the older cross-machine reference file, which is from before this
   and stale). OFF = THE BUILD AS IT WAS: 42 of 42 play-through digests (21 missions, seeds 1 and 2, `PT_DIGEST=1 tools/qa/playthrough.ts`) equal the build before on the frozen stand, and 42 of 42 on the shipped stand with the own maths held off (`TPS_EXACT=0`) and the record check on. COST (a room clear with the four, 1,500 harness steps on the shipped stand, off and on in turn, on a machine busy with other runs — read the ratio, not the milliseconds): under bun the median step 8.2 → 8.3 ms and the mean +8%; under node the median 12.7 → 13.4 ms (+6%) and the mean +10%. The sounds' synthesis at boot also runs on these functions and was not timed on a quiet machine.
@@ -352,8 +354,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   that no checkpoint carries yet. CHECK, both stands: `bun run tools/qa/sense-check.ts` (off = the probe asked as ever and the solver as built; on = sixty steps ask the probe
   nothing, an emitter handed straight to the solver reaches the game's smoke; Sam's meter bright under a lamp and dark in the dark; a canister on a 9 m line shuts it, 0.00 at 12 s, leaves another line at 0.98, is not seen
   through a wall and has cleared 75 s on, and keeps its place among 68 puffs; a taped room clear with the four and a smoke canister thrown, at mixed step times, re-run from its
-  seed and inputs with the game answering its own senses — about 50,000 reads, none different — the same to the bit; `SENSE_BREAK=1` must fail). `TPS_CPUSENSE=1 bun run tools/qa/coop-check.ts` is its
-  two-engine line. NOT SEEN: nobody has played with it on; how the blobs sit against the picture's smoke has never been looked at on a GPU.
+  seed and inputs with the game answering its own senses — about 50,000 reads, none different — the same to the bit; `SENSE_BREAK=1` must fail). `TPS_CPUSENSE=1 bun run tools/qa/coop-check.ts` was its
+  two-engine line (that tool is deleted, see the own maths above). NOT SEEN: nobody has played with it on; how the blobs sit against the picture's smoke has never been looked at on a GPU.
 - **A record from anyone** (`src/game/cmd.ts checkCmd`, switch `CMDCHECK.on`; ON in the page, `?nocmdcheck` = believed as it comes; OFF on the frozen stand,
   `TPS_CMDCHECK=1`; engine groundwork, nothing networked): `Game.step` makes the tick's record one an honest seat could have sent before anything reads it (and
   before the tape keeps it) — an object of the right shape, finite numbers inside wide bounds, at most 24 key codes that look like key codes, five button bits,

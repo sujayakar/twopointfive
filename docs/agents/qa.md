@@ -114,8 +114,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   red path: `1` a tool on 7 (the family's older word; red on both stands), `four` the door tools' fourth row on 6 (`orderkeys-high`; red on both), `free`
   every free row's deed refuses (`orderkeys-give`: 23 FAIL on the page's stand; green on the old one, where no free row is on a digit this walk presses, so
   the judgement it breaks is never asked there). `picker-start` boots three pages at a time, not its 42 at once (`PICKER_JOBS=n`):
-  `tools/qa/pool.ts` is the pool that `picker`, `coop-check`, `dress-check`, `loadout-stage` and `weather-ident` share in place of a copy each (results in order;
-  after a case throws no further case is started; `jobsOf` reads a word or a flag the same way for all five: a number under one is one, no number is the
+  `tools/qa/pool.ts` is the pool that `picker`, `dress-check`, `loadout-stage` and `weather-ident` share in place of a copy each (results in order;
+  after a case throws no further case is started; `jobsOf` reads a word or a flag the same way for all four: a number under one is one, no number is the
   tool's default). Other tools still keep a loop of their own.
   THE SOAK'S FOUR OLD KINDS on the page's stand were its own readings: the arm hold's knife is wanted only where the close-in rule has one (`closeBare`), a ring
   that stays stands by itself with the key up and no press in hand (`ring.free`), and the cancel row is the list's, never a ring's (`listOpen`). A ring is held
