@@ -11,7 +11,6 @@ const RUST = "the Rust game's";
 /** the switch cleanup's: the check asks through something the Rust game does not have (a row made by hand on the tools' copy of the game, a hook wrapped on it), and is to be restated */
 const CHECK = "the switch cleanup's (tools)";
 export const RED_STEALTH: Record<string, RedRow> = {
-  'by-eye': { is: 'open', rust: true, line: "read 2026-11-07 · throws: sneakWalk: this function's TypeScript went with the tick, and the call surface has no row for it (tools/blitz/DELETION.md lists who named it)", whose: RUST },
   'civilians-comply': { is: 'maybe', rust: true, line: "read 2026-11-07 · 1 of 6 lines fail, nothing refused · first: a calm man stood beside her asks inside a couple of seconds, she tells him (the arm at her throat: 'grabbed, armed'), he searches it and the floor goes up; the card's row says he found her hiding: found -1.00, told 4.63, search, esc 1, rows 1", whose: RUST },
   'civilians-phone': { is: 'maybe', rust: true, line: "read 2026-11-07 · 1 of 5 lines fail, nothing refused · first: one call per fright however long she stands there, then she cowers: 0 call(s), cower 10.95", whose: RUST },
   'close-grab': { is: 'maybe', rust: true, line: "read 2026-11-07 · 2 of 4 lines fail, nothing refused · first: inside the rear arc (every 30° of it, and 106° each hand): the grab row, Space takes him — 'held' inside a second, grabs.behind +1", whose: RUST },
