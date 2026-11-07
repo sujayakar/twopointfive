@@ -15,6 +15,9 @@
 //            programs and the browser compiles none, nor a shader module: the snow levels, the levels with their own roofs, the office, the quiet ones.
 //            LEVELS=a,b = only those rows. (The pages are `?paused`: what a pass first asks for under play is not this job's — the fog of war's
 //            programs are asked for at every boot, engine.ts warmFirstUse, and a played visit's own count is its load record's `made`)
+//   maps     THE LOOK'S MAPS ARE WORKED OUT ONCE A VISIT (render/gbuffer.ts makeLayers, gpu/keep.ts Lease.bytes): the look's page (`&look`) opened on the
+//            title, then two missions picked in turn and the second loaded again. Every load has all the maps its level names (`lookMade`), no map is
+//            worked out by two loads (`lookFresh`), and the load again works out none: they are handed over (`lookBy.kept`)
 //   stay     the ways back in that were never a page load stay none (a restart, a checkpoint loaded: the same document, the same lease), and the ones that
 //            are a load are the frame's: Quit to the mission list, then the same mission picked again — the tab's document kept, nothing compiled
 //   record   the same visit pointed at a STAND-IN backend (cloud/test/standin.ts: `npm ci` in cloud/ first): the first load's record says `kept` 1 with what
@@ -211,6 +214,25 @@ const SHELL = () => ({ keeper: !!window.__pageKeeper, seats: window.__pageKeeper
     if (bad.length) throw new Error(`${bad.length} of ${ids.length} missions compiled something the title had not built — ${bad.join(' · ')}`);
     if (errs.length) throw new Error(`the page complained: ${errs.slice(0, 3).join(' | ')}`);
     pass(name, `the title compiled ${t1.stats.pipelines} pipelines and ${t1.stats.modules} modules; ${ids.length} missions after it on the one device compiled none (compiled/asked: ${rows.join(', ')})`);
+  } catch (e) { fail(name, String(e.message || e)); } await browser.close(); }
+
+  if (want('maps')) { const name = 'maps', { browser, page, errs, docs } = await open(); try {
+    const LOOKED = () => { const g = window.__engine && window.__engine.gbuffer; return g ? { made: [...g.lookMade], fresh: [...(g.lookFresh || [])], by: { ...g.lookBy }, ms: Math.round(g.lookFillMs) } : null; };
+    await page.goto(`${BASE}?${BREAK ? 'keeppage=0' : 'keeppage=1'}&look&${REST}`);
+    const r1 = await ready(page, !BREAK, BREAK ? null : 1); if (r1 !== 'ok') throw new Error(`the title: ${r1}`);
+    const G = () => BREAK ? page.mainFrame() : frameOf(page), loads = [];
+    const read = async (what) => { const L = await G().evaluate(LOOKED); if (!L) throw new Error(`${what}: no g-buffer`); loads.push({ what, ...L }); log(` ${name}: ${what} — ${L.made.length} maps, ${L.fresh.length} worked out here (${L.fresh.join(', ') || 'none'}), ${JSON.stringify(L.by)}, ${L.ms} ms`); return L; };
+    const t = await read('the title'); if (!(t.made.length >= 1) || t.fresh.length !== t.made.length) throw new Error(`the first load of a visit works out every map it has: ${JSON.stringify(t)}`);
+    let n = 1; for (const id of ['compound-four', 'records-pair', 'records-pair']) { await G().evaluate((id) => { if (!window.__scenarios.pick(id)) throw new Error('no such mission'); }, id);
+      const r = await ready(page, !BREAK, BREAK ? null : ++n); if (r !== 'ok') throw new Error(`'${id}': ${r}`); await read(id); }
+    const [, a, b, again] = loads, seen = new Map(), twice = [];
+    for (const L of loads) for (const m of L.fresh) { if (seen.has(m)) twice.push(`${m} (${seen.get(m)}, then ${L.what})`); else seen.set(m, L.what); }
+    if (!(a.made.length > t.made.length)) throw new Error(`the first mission names no map the title did not: the walk tests nothing (${a.made.length} maps)`);
+    if (twice.length) throw new Error(`a map was worked out twice in one visit — ${twice.join(' · ')}`);
+    for (const L of loads) if (L.fresh.length + (L.by.kept || 0) !== L.made.length) throw new Error(`${L.what}: ${L.made.length} maps, ${L.fresh.length} worked out and ${L.by.kept || 0} handed over`);
+    if (again.fresh.length !== 0 || again.by.kept !== again.made.length || again.made.join() !== b.made.join()) throw new Error(`the mission loaded again worked out maps: ${JSON.stringify(again)}`);
+    if (errs.length) throw new Error(`the page complained: ${errs.slice(0, 3).join(' | ')}`);
+    pass(name, `the title worked out ${t.fresh.length} maps in ${t.ms} ms; the first mission ${a.fresh.length} of its ${a.made.length} in ${a.ms} ms, the second ${b.fresh.length} of ${b.made.length} in ${b.ms} ms, and loaded again 0 of ${again.made.length} in ${again.ms} ms`);
   } catch (e) { fail(name, String(e.message || e)); } await browser.close(); }
 
   if (want('stay')) { const name = 'stay', { browser, page, errs, docs } = await open(); try {

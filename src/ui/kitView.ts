@@ -42,6 +42,7 @@
 import { KIT, kitRows, kitWorn } from '../game/kit';
 import { kitViewWays } from './missions';
 import { rectZoom, uiMatch } from './textsize';
+import { KEEP_PAGE, keeperAbove } from '../gpu/keep';   // (a leaf: the picture's seat on the kept page's device)
 import { kitViewQuietKind } from '../host/kitViewSet';   // (pure: the mission's kind, read off its link — the quiet picture's)
 
 /** the switch (UI only: nothing in the game reads it) · the picture is LIVE and the open card's man acts in it (`?stillkit` = off: the still picture, every change a plain restage) · ms after a kit message in which further changes are folded into ONE more */
@@ -141,7 +142,7 @@ export function mountKitView(root: HTMLElement, body: HTMLElement, column: HTMLE
   };
   const hide = () => { if (shown) { shown = false; root.classList.remove(ROOT_CLASS); } };
   // (the picture's hold on the kept page's device ends here, by name: its buffers and textures are freed now, not when the browser gets round to its window — gpu/keep.ts)
-  const drop = () => { if (due) clearTimeout(due); due = 0; want = ''; if (!frame) return; try { (frame.contentWindow as unknown as { __keptPage?: { lease?: { release(): void } | null } } | null)?.__keptPage?.lease?.release(); } catch { /* */ } frame.remove(); frame = null; key = ''; live = false; up = false; sent = born = ''; selSent = ''; pauseSent = false; };
+  const drop = () => { if (due) clearTimeout(due); due = 0; want = ''; if (!frame) return; try { keeperAbove(window)?.keeper.release(KEEP_PAGE.pictureSeat); } catch { /* */ } frame.remove(); frame = null; key = ''; live = false; up = false; sent = born = ''; selSent = ''; pauseSent = false; };
   /** this query's instance is no picture: gone, and not tried again on this page */
   const fail = (k: string) => { if (!k || k !== key) return; failed.add(k); hide(); drop(); again(); };
   const onMsg = (e: MessageEvent) => {

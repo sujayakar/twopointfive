@@ -1,7 +1,9 @@
 // G-buffer targets + raster pipelines (boxes, skinned characters).
 import { makeShader, makeBuffer, renderPipelineAsync, renderPipelineOrNull } from '../gpu/device';
+import { KEPT } from '../gpu/keep';   // (the kept page's lease: the look's maps are worked out once a visit — makeLayers)
+import { EXACT } from '../math/exact';
 import { cutSwap } from './cutSwap';
-import { scenePrelude, lookConfig } from './frame';
+import { scenePrelude, snowLookConfig, lookConfig } from './frame';
 import { decalWgslConsts } from './decals';
 import { TexturePool } from './texpool';
 import { capUsage } from './framecap';
@@ -229,19 +231,31 @@ export class GBuffer {
     const tex = this.lookTex;
     // ON WORKERS WHERE THERE ARE ANY (render/lookWorkers.ts): every layer of the batch is asked for at once and taken here in the batch's own order, so the
     // slots, the order of lookMade and the moment a stuff is pointed at its slot are what they were. A layer no worker made is made here, in slices, as before
-    const pool = await LookPool.open(make.length), asked: (ReturnType<LookPool['make']> | null)[] | null = pool ? make.map(l => pool.make(l, LOOK_N, this.lookEven)) : null;
+    // ONCE A VISIT (gpu/keep.ts Lease.bytes): a map is the same bytes on every level — it depends on its layer, its size, the evening and whose sin and cos
+    // made it, which is what its name says — so on the kept page a layer the visit has made is handed over, every size of it, and only the others are
+    // worked out; each of those is then kept. A page with no lease (a driven one, a whole one) makes every layer as it did.
+    const lease = KEPT.lease && KEPT.lease.alive ? KEPT.lease : null, nameOf = (l: number) => `look map ${l} ${LOOK_N} ${this.lookEven ? 1 : 0} ${EXACT.on ? 1 : 0}`;
+    const had = make.map(l => { const k = lease?.bytes(nameOf(l)) ?? null; return k && k.bytes.length === this.lookMips * 2 && k.nums.length === 2 ? k : null; }), toMake = had.filter(k => !k).length;
+    const pool = toMake ? await LookPool.open(toMake) : null, asked: (ReturnType<LookPool['make']> | null)[] | null = pool ? make.map((l, k) => had[k] ? null : pool.make(l, LOOK_N, this.lookEven)) : null;
     asked?.forEach(p => p!.catch(() => { /* taken below, where the layer is then made here */ }));
     try { for (let k = 0; k < make.length; k++) {
       const l = make[k];
       await nextTask();
       let got: Awaited<ReturnType<typeof lookLayerSliced>> | null = null, sizes: { a: Uint8Array[]; b: Uint8Array[] } | null = null;   // (`sizes`: a worker's layer comes with every smaller size made)
-      if (asked) { try { const w = await asked[k]!; got = w; sizes = w.sizes; this.lookBy.workers++; } catch { got = null; } asked[k] = null; }   // (… and let go of: a batch's maps are not all held to its end)
-      if (!got) { got = await lookLayerSliced(l, LOOK_N, this.lookEven, sliceMs, nextTask); this.lookBy.here++; }
-      const m = got, slot = this.lookSlots; let lv = [m.a, m.b];
-      for (let mip = 0, n = LOOK_N; n >= 1; mip++, n >>= 1) {
-        for (let i = 0; i < 2; i++) this.device.queue.writeTexture({ texture: tex[i], mipLevel: mip, origin: [0, 0, slot] }, lv[i], { bytesPerRow: n * 4 }, [n, n, 1]);
-        if (n > 1) lv = sizes ? [sizes.a[mip + 1], sizes.b[mip + 1]] : [lookMip(lv[0], n, false), lookMip(lv[1], n, true)];
+      const kept = had[k];
+      /** every size of the layer's two maps, largest first: [a, b] a size */
+      const all: Uint8Array[][] = [];
+      if (kept) { for (let mip = 0; mip < this.lookMips; mip++) all.push([kept.bytes[mip * 2], kept.bytes[mip * 2 + 1]]); this.lookBy.kept = (this.lookBy.kept ?? 0) + 1; }
+      else {
+        if (asked && asked[k]) { try { const w = await asked[k]!; got = w; sizes = w.sizes; this.lookBy.workers++; } catch { got = null; } asked[k] = null; }   // (… and let go of: a batch's maps are not all held to its end)
+        if (!got) { got = await lookLayerSliced(l, LOOK_N, this.lookEven, sliceMs, nextTask); this.lookBy.here++; }
+        let lv = [got.a, got.b];
+        for (let mip = 0, n = LOOK_N; n >= 1; mip++, n >>= 1) { all.push(lv); if (n > 1) lv = sizes ? [sizes.a[mip + 1], sizes.b[mip + 1]] : [lookMip(lv[0], n, false), lookMip(lv[1], n, true)]; }
+        (this.lookFresh ??= []).push(LOOK_NAMES[l]);
+        if (lease?.alive) lease.keepBytes(nameOf(l), all.flat(), [got.tone, got.hollow]);
       }
+      const m = kept ? { tone: kept.nums[0], hollow: kept.nums[1] } : got!, slot = this.lookSlots;
+      for (let mip = 0, n = LOOK_N; n >= 1; mip++, n >>= 1) for (let i = 0; i < 2; i++) this.device.queue.writeTexture({ texture: tex[i], mipLevel: mip, origin: [0, 0, slot] }, all[mip][i], { bytesPerRow: n * 4 }, [n, n, 1]);
       if (l === LOOK_NAMES.indexOf('cloth')) this.lookMen = [m.tone, m.hollow];   // (the men's cloth was tuned against this layer as it fell: look.wgsl lookMan takes the evening back out)
       this.lookSlots++; this.lookMade.push(LOOK_NAMES[l]);
       // a stuff is pointed at its slot only once every layer its drawing reads is in: until then it draws plain, never against an empty map
@@ -249,8 +263,10 @@ export class GBuffer {
     } } finally { pool?.close(); }
     this.lookFillMs += (typeof performance !== 'undefined' ? performance.now() : 0) - t0;
   }
-  /** how many layers were made on workers and how many on this thread (a check reads it; from the console: __engine.gbuffer.lookBy) */
-  lookBy = { workers: 0, here: 0 };
+  /** how many layers were made on workers and how many on this thread, and how many the visit had made already and handed over (a check reads it; from the console: __engine.gbuffer.lookBy) */
+  lookBy: { workers: number; here: number; kept?: number } = { workers: 0, here: 0 };
+  /** the layers THIS page worked out, by name (the others of lookMade were the visit's) */
+  lookFresh: string[] = [];
   /** the layers made so far, in the order of their slots (a check reads it; from the console: __engine.gbuffer.lookMade) */
   lookMade: string[] = [];
   /** how long the maps have taken to make, each batch start to end, the boot's other work between the layers included (ms; 0 = none made) */
@@ -485,7 +501,8 @@ export class GBuffer {
     });
     const obg = this.objectBindGroup(visibleBuf, skin, dummy, decalBuf);
     pass.setBindGroup(0, sceneBG); pass.setBindGroup(1, obg);
-    if (this.snowPipe && this.snowQuads && this.snowQuadCount > 0) { pass.setPipeline(this.snowPipe); pass.setVertexBuffer(0, this.snowQuads); pass.draw(6, this.snowQuadCount); }   // THE SNOW'S HILLS, first: the ground and the boxes under them then fail the depth test instead of being shaded twice
+    if (this.snowPipe && snowLookConfig.surface && this.snowQuads && this.snowQuadCount > 0) {   // (…on a page whose level raised the snow's surface, as when the pipeline was made only there: the fragment's own shading asks lv(SNOW_SURF))
+      pass.setPipeline(this.snowPipe); pass.setVertexBuffer(0, this.snowQuads); pass.draw(6, this.snowQuadCount); }   // THE SNOW'S HILLS, first: the ground and the boxes under them then fail the depth test instead of being shaded twice
     pass.setPipeline(this.boxPipe);
     if (!this.cutPipe) cutWhole = cutCount;   // (a build whose cut pipeline failed to compile draws the cut boxes WHOLE with this one — wrong at the cut, never missing)
     pass.draw(36, visibleCount + cutWhole);   // `cutWhole` = the first so-many of the cut list drawn as their whole boxes: the traceable ones, on a frame whose ray programs have no cut rule (render/cutSwap.ts — picture and rays agree)

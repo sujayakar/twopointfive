@@ -273,11 +273,34 @@ check(await p3 !== a && three.stats.pipelines === 1, '…on which nothing is kep
   const same = await got(dn.createComputePipelineAsync(pipeDesc(dn, 'mission')));
   check(!page.alive && !pic3.alive && buf3.destroyed && pageBuf.destroyed && next.alive && keeper.seats.join() === K.KEEP_PAGE.seat && same === vq && next.stats.pipelines === 0 && next.stats.asked === 1 && made.asyncAsk === asks + 1,
     'THE POINT: the page\'s next load ends the picture with its page, and what the picture compiled answers the mission\'s load, nothing compiled');
+  // a picture's window dropped while it was still on its way to the device: its seat is given up by its page, and the take is refused, so no lease is left that nobody can end
+  { const going = keeper.take(SEAT).then(() => 'handed', () => 'refused'); keeper.release(SEAT); const how = await going;
+    check(how === 'refused' && keeper.seats.join() === K.KEEP_PAGE.seat && next.alive, 'a seat released while a take of it is on its way: that take is refused and the seat is empty; the page\'s lease stands'); }
+  // a picture does not wait for the queue its own live page keeps feeding; a lease's `onuncapturederror` is its own listener, never the device's one property
+  { const asksBefore = made.queueAsk ?? 0; holdQueue = true; const quick = await Promise.race([keeper.take(SEAT), tick().then(tick).then(() => null)]); holdQueue = false;
+    check(quick !== null && quick.waited === null && (made.queueAsk ?? 0) === asksBefore, 'a picture taking its seat beside its live page does not wait for the queue (it is its own page\'s, and never runs dry)');
+    let a = 0, b = 0; const dev = devices[devices.length - 1];
+    (next.device as unknown as { onuncapturederror: unknown }).onuncapturederror = () => { a++; }; if (quick) (quick.device as unknown as { onuncapturederror: unknown }).onuncapturederror = () => { b++; };
+    dev.dispatchEvent(new Event('uncapturederror')); const both = a === 1 && b === 1 && dev.onuncapturederror === null;
+    quick?.release(); dev.dispatchEvent(new Event('uncapturederror'));
+    check(both && a === 2 && b === 1 && dev.onuncapturederror === null && Object.getOwnPropertyNames(dev).every(k => k === 'onuncapturederror' || k === 'lose'), 'each holder\'s `onuncapturederror` hears the device, the one that goes stops hearing, and the device\'s own property is never written'); }
   // a device lost under two holders is told to both
   const pic4 = await keeper.take(SEAT); let lostP: unknown = null, lostQ: unknown = null; void next.device.lost.then(i => { lostP = i; }); void pic4.device.lost.then(i => { lostQ = i; });
   devices[devices.length - 1].lose({ reason: 'unknown', message: 'gone' }); await tick(); await tick();
   check(lostP !== null && lostQ !== null, 'a lost device is told to the page and to the picture inside it');
   const after = await keeper.take(); check(after.fresh && keeper.opened === opened0 + 1 && !pic4.alive, '…and the page\'s next load opens another, the picture\'s lease over with its page'); after.release(); }
+
+// ---- what the visit worked out once is kept as bytes, for every later lease (the look's maps)
+{ const first = await keeper.take(), src = [new Uint8Array([1, 2, 3]), new Uint8Array([4])], kb0 = keeper.keptBytes;
+  first.keepBytes('map a', src, [0.5, 2]); src[0][0] = 9; first.keepBytes('map a', [new Uint8Array([7, 7, 7])], [1]);
+  const got = first.bytes('map a'), none = first.bytes('map b');
+  check(!!got && got.bytes.length === 2 && got.bytes[0] !== src[0] && got.bytes[0].join() === '1,2,3' && got.bytes[1].join() === '4' && got.nums.join() === '0.5,2' && none === null && keeper.keptBytes === kb0 + 4,
+    'bytes a page worked out are kept under their name as copies of the shell\'s own: the page\'s later writes do not reach them, and the first said under a name stands');
+  const second = await keeper.take(), pic = await keeper.take(K.KEEP_PAGE.pictureSeat);
+  check(!first.alive && second.bytes('map a') === got && pic.bytes('map a') === got, 'the next load, and a picture beside it, are handed the same bytes: nothing is worked out twice in a visit');
+  const cap = K.KEEP_PAGE.bytesCap; (K.KEEP_PAGE as { bytesCap: number }).bytesCap = keeper.keptBytes + 2; second.keepBytes('too big', [new Uint8Array(3)]); second.keepBytes('fits', [new Uint8Array(2)]); (K.KEEP_PAGE as { bytesCap: number }).bytesCap = cap;
+  check(second.bytes('too big') === null && !!second.bytes('fits'), 'past the visit\'s cap nothing more is kept (the page makes it again, as a page with no lease does)');
+  second.release(); }
 
 // ---- the frame's side
 { const up = { [K.KEEP_PAGE.hook]: keeper } as Record<string, unknown>, win = { parent: up };

@@ -32,6 +32,8 @@
 export const KEEP_PAGE = { /** the shell's and the frame's side must agree on this */ v: 2, hook: '__pageKeeper', word: 'keeppage', store: 'twopointsix.keeppage', frameId: 'kept-page',
   /** the seats a lease is taken on (`Keeper.take`): the game's page in the shell's frame, and a picture shown inside that page (under it: it goes with its page) */
   seat: 'page', pictureSeat: 'page/picture',
+  /** the most bytes a visit keeps of what its pages worked out (`Lease.keepBytes`): the look's thirty maps are 84 MB */
+  bytesCap: 192 * 1048576,
   /** `?keepdrain=0` on the tab's first address: a load does not wait for what the load before it left in the GPU's queue (`Keeper.drain`, as the kept page
    *  first was); `drainMs`: how long it waits at most, against a queue that never answers (a lost device ends the wait by itself, and a slow GPU's queue
    *  is waited out: past the cap the load would only freeze for the rest) */
@@ -60,6 +62,8 @@ export function keepRole(f: { word: string | null; tab: string | null; top: bool
 
 /** what one load asked of the device and what the browser really had to make for it */
 export interface KeepStats { /** pipelines asked for */ asked: number; /** …of which the browser compiled (the rest were this visit's already) */ pipelines: number; /** shader modules the browser made */ modules: number; /** the first few compiled pipelines' labels: on a start after the first, what this mission needed that the visit had not built */ labels: string[] }
+/** bytes a page worked out and the visit keeps (`Lease.bytes`, `Lease.keepBytes`): the arrays are the shell's own copies, to be read and never written */
+export interface KeptBytes { bytes: Uint8Array[]; nums: number[] }
 /** one page's hold on the kept device */
 export interface Lease {
   adapter: GPUAdapter; asks: unknown[];
@@ -80,6 +84,13 @@ export interface Lease {
   /** the counts as they stood when the boot's own pipelines were in (`freeze`): what the load's record says, whenever it is sent */
   frozen: KeepStats | null;
   freeze(): void;
+  /** WHAT THE VISIT HAS WORKED OUT ONCE, by a name: plain bytes a page made from nothing but its own code (the look's material maps: a third of a second
+   *  of arithmetic each, the same on every level), so that a later load, and a picture beside this one, is handed them where it would make them again.
+   *  `keepBytes` COPIES into arrays of the shell's own (an array a page made would hold that page's whole world after it is gone) and keeps the first
+   *  said under a name; `bytes` = what is kept, or null. The name must say everything the bytes depend on: a build is one keeper, so the code is the same.
+   *  Nothing of a device: a device lost keeps them. `KEEP_PAGE.bytesCap` in all; past it nothing more is kept */
+  bytes(key: string): KeptBytes | null;
+  keepBytes(key: string, bytes: ArrayLike<Uint8Array>, nums?: ArrayLike<number>): void;
   /** false once the lease is over (`release`, the next `take` of its seat, or the end of the lease of the seat it is under) */
   readonly alive: boolean;
   /** the load is over: what it made is destroyed, what it hung on the device is taken off (the next `take` of its seat does it for a load that never said) */
@@ -89,14 +100,17 @@ export interface Keeper {
   v: number; build: string;
   /** set by a frame whose browser would not draw with the shell's device: the loads after it open their own */
   refused: boolean;
-  /** leases handed out (every seat) · devices opened · the seats that hold a lease now */
-  leases: number; opened: number; readonly seats: string[];
+  /** leases handed out (every seat) · devices opened · the seats that hold a lease now · the bytes the visit keeps of what its pages worked out */
+  leases: number; opened: number; readonly seats: string[]; readonly keptBytes: number;
   /** a load waits for what was left in the GPU's queue before it takes the device, `drainMs` at most (the shell's page sets them once) */
   drain: boolean; drainMs: number;
   /** A SEAT holds one lease at a time: a take of a seat ends the lease that was on it, and the leases of every seat under it (`a/b` is under `a`).
    *  Leases of different seats are held at once, each with its own view of the one device, so what one page compiled the other finds made. The game's
    *  page takes `KEEP_PAGE.seat`; a picture shown inside it takes `KEEP_PAGE.pictureSeat`, which is under it and so goes with its page */
   take(seat?: string): Promise<Lease>;
+  /** the seat is given up by whoever owns its page (the start page dropping its picture's window): the lease on it ends, and a take of it still on
+   *  its way (a window dropped while it booted: nobody is left to release what that take would be handed) is refused */
+  release(seat: string): void;
 }
 interface Opened { adapter: GPUAdapter; device: GPUDevice; asks: unknown[] }
 interface Live { n: number; seat: string; H: Held; alive: boolean; things: WeakRef<{ destroy(): void }>[]; heard: [string, unknown, unknown][]; scopes: number; lost: Promise<GPUDeviceLostInfo>; tell: (i: GPUDeviceLostInfo) => void; stats: KeepStats;
@@ -136,9 +150,9 @@ function keyOf(desc: unknown, H: { ids: WeakMap<object, number>; next: number })
  *  inside it), and a page puts functions of its own over the device's (the compile queue, the load's clock): written on the device itself they would be
  *  every holder's and would outlive their page. So a page is never handed the device: it is handed a view. A read finds what the page put there (`own`),
  *  else what the keeper answers for this lease (`base`: the makers that keep, the lease's `lost`), else the thing's own, a method bound to the thing and
- *  the same function at every read. A write of a method stays in `own` (taking it off again uncovers the keeper's, never the raw device's); a write of
- *  anything else the thing has (a label) goes to the thing. The end of the lease empties `own`, so a view somebody still holds keeps nothing of a page
- *  that is gone. The browser does not take a view for the thing (a canvas is configured with `Lease.real`); to script it is one: `instanceof` holds. */
+ *  the same function at every read. A write stays in `own` (taking it off again uncovers the keeper's, never the raw device's), but for a property the
+ *  keeper answers with a setter of its own (`onuncapturederror`: a listener the lease owns). NOTHING a page writes reaches the thing: another lease
+ *  holds it too. The end of the lease empties `own`, so a view somebody still holds keeps nothing of a page that is gone. The browser does not take a view for the thing (a canvas is configured with `Lease.real`); to script it is one: `instanceof` holds. */
 function viewOf<T extends object>(real: T, base: object, own: Record<PropertyKey, unknown>): T {
   const R = real as Record<PropertyKey, unknown>, B = base as Record<PropertyKey, unknown>, bound = new Map<PropertyKey, unknown>();
   return new Proxy(own, {
@@ -149,7 +163,7 @@ function viewOf<T extends object>(real: T, base: object, own: Record<PropertyKey
       const v = R[k]; if (typeof v !== 'function') return v;
       bound.set(k, f = (v as (...a: unknown[]) => unknown).bind(real)); return f;
     },
-    set(t, k, v) { if (k in t || k in B || !(k in R) || typeof R[k] === 'function') t[k] = v; else R[k] = v; return true; },
+    set(t, k, v) { const d = Object.getOwnPropertyDescriptor(B, k); if (d?.set) d.set.call(B, v); else t[k] = v; return true; },
     has: (t, k) => k in t || k in B || k in R,
     getPrototypeOf: () => Object.getPrototypeOf(real),
   }) as unknown as T;
@@ -160,6 +174,19 @@ function viewOf<T extends object>(real: T, base: object, own: Record<PropertyKey
  *  device itself is never written to: each lease reads it through a view of its own (`viewOf`). */
 export function makeKeeper(open: () => Promise<Opened>, build: string, shellMs = 0, shellNav = ''): Keeper {
   let held: Held | null = null, opening: Promise<Held> | null = null;
+  /** what the visit's pages worked out once (`Lease.keepBytes`), and its size */
+  const stash = new Map<string, KeptBytes>(); let stashed = 0;
+  const bytesOf = (key: string): KeptBytes | null => BREAK ? null : stash.get(key) ?? null;
+  const keepBytes = (key: string, bytes: ArrayLike<Uint8Array>, nums?: ArrayLike<number>): void => {
+    if (BREAK || stash.has(key)) return;
+    let size = 0; for (let i = 0; i < bytes.length; i++) size += bytes[i].byteLength;
+    if (stashed + size > KEEP_PAGE.bytesCap) return;
+    // (copies made HERE, in the shell's window, element by element: nothing kept is of the page that asked)
+    const own: Uint8Array[] = [], n: number[] = [];
+    for (let i = 0; i < bytes.length; i++) { const c = new Uint8Array(bytes[i].byteLength); c.set(bytes[i]); own.push(c); }
+    for (let i = 0; nums && i < nums.length; i++) n.push(Number(nums[i]));
+    stash.set(String(key), { bytes: own, nums: n }); stashed += size;
+  };
   /** the lease in hand on each seat · how many times each seat was asked for · how many leases each was given */
   const live = new Map<string, Live>(), takes = new Map<string, number>(), given = new Map<string, number>();
   const end = (L: Live | null | undefined): void => {
@@ -172,7 +199,6 @@ export function makeKeeper(open: () => Promise<Opened>, build: string, shellMs =
     // (whatever the load put over the device's or the queue's own methods goes now: the view holds nothing of a page that is gone)
     for (const own of L.own) for (const k of Reflect.ownKeys(own)) { try { delete own[k]; } catch { /* */ } }
     if (live.get(L.seat) === L) live.delete(L.seat);
-    if (live.size === 0) { try { d.onuncapturederror = null; } catch { /* */ } }
   };
   /** the seat's lease and those of every seat under it: a picture inside a page goes with its page */
   const clear = (seat: string): void => { for (const L of [...live.values()]) if (L.seat === seat || L.seat.startsWith(seat + '/')) end(L); };
@@ -230,7 +256,7 @@ export function makeKeeper(open: () => Promise<Opened>, build: string, shellMs =
       if (L.alive) { if (L.things.length >= 512 && (L.things.length & 255) === 0) L.things = L.things.filter(w => w.deref() !== undefined); L.things.push(new WeakRef(v)); }
       return v;
     };
-    const queue = (d as unknown as { queue?: object }).queue;
+    const queue = (d as unknown as { queue?: object }).queue; let onerr: unknown = null;
     return {
       // (a module's own report says whether it compiled: nothing is made twice for it)
       createShaderModule: once('m', P.createShaderModule, (m, drop) => { L.stats.modules++; try { void m.getCompilationInfo().then(i => { if (i.messages.some(x => x.type === 'error')) drop(); }, drop); } catch { /* a stand-in with no report */ } }),
@@ -244,6 +270,13 @@ export function makeKeeper(open: () => Promise<Opened>, build: string, shellMs =
       popErrorScope: (): Promise<GPUError | null> => { if (L.scopes > 0) L.scopes--; return P.popErrorScope.call(d); },
       // each lease its own `lost`: a load's reactions hang on a promise that goes with it, not on the device's
       get lost(): Promise<GPUDeviceLostInfo> { return L.lost; },
+      // (…and its own `onuncapturederror`: the device has one such property and two holders, so a lease's is a listener of its own, gone with it)
+      get onuncapturederror(): unknown { return onerr; },
+      set onuncapturederror(fn: unknown) {
+        if (typeof onerr === 'function') { try { EventTarget.prototype.removeEventListener.call(d, 'uncapturederror', onerr as EventListener); } catch { /* */ } L.heard = L.heard.filter(h => h[1] !== onerr); }
+        onerr = typeof fn === 'function' ? fn : null;
+        if (onerr && L.alive) { L.heard.push(['uncapturederror', onerr, undefined]); EventTarget.prototype.addEventListener.call(d, 'uncapturederror', onerr as EventListener); }
+      },
       // (…and its own view of the queue: the load's clock on the queue's calls is the page's, `startCallClock`, and goes with it)
       ...(queue ? { queue: viewOf(queue, {}, queueOwn) } : {}),
     };
@@ -275,7 +308,8 @@ export function makeKeeper(open: () => Promise<Opened>, build: string, shellMs =
   };
   const K: Keeper = {
     v: KEEP_PAGE.v, build, refused: false, leases: 0, opened: 0, drain: true, drainMs: KEEP_PAGE.drainMs,
-    get seats(): string[] { return [...live.keys()]; },
+    get seats(): string[] { return [...live.keys()]; }, get keptBytes(): number { return stashed; },
+    release(seat: string): void { takes.set(seat, (takes.get(seat) ?? 0) + 1); clear(seat); },
     async take(seat: string = KEEP_PAGE.seat): Promise<Lease> {
       // (two takes of one seat at once: the LATER one holds it. The earlier is its page's last word, a page that is gone or going: it is refused at its
       // next step, so it can end no lease but the one it found and never becomes the holder behind the later one's back)
@@ -286,7 +320,9 @@ export function makeKeeper(open: () => Promise<Opened>, build: string, shellMs =
       for (;;) {
         ({ H, fresh } = await device()); late();
         if (fresh) break;
-        const ms = await drained(H); late();
+        // (the queue is waited for when nobody holds the device: what a page that is GONE left there. A picture taking a seat beside its live page has
+        // nothing to wait out: that page goes on feeding the queue, and on a slow adapter the picture would wait on its own page's frames)
+        const ms = live.size === 0 ? await drained(H) : null; late();
         if (ms !== null) waited = (waited ?? 0) + ms;
         if (held === H) break;   // (else the device was lost while this load waited for its queue: another is opened, as for a loss between two loads)
       }
@@ -296,7 +332,7 @@ export function makeKeeper(open: () => Promise<Opened>, build: string, shellMs =
       const own: Record<PropertyKey, unknown> = Object.create(null) as Record<PropertyKey, unknown>, queueOwn: Record<PropertyKey, unknown> = Object.create(null) as Record<PropertyKey, unknown>;
       const L: Live = { n, seat, H, alive: true, things: [], heard: [], scopes: 0, lost, tell, stats: { asked: 0, pipelines: 0, modules: 0, labels: [] }, waits: new Map(), nextWait: 1, own: [own, queueOwn] };
       live.set(seat, L);
-      const lease: Lease = { adapter: H.o.adapter, device: viewOf(H.o.device, makers(H, L, queueOwn), own), real: H.o.device, asks: H.o.asks, seat, n, fresh, waited, stats: L.stats, shellMs, shellNav, frozen: null, get alive() { return L.alive; }, freeze: () => { lease.frozen ??= { ...L.stats, labels: L.stats.labels.slice() }; }, release: () => end(L) };
+      const lease: Lease = { adapter: H.o.adapter, device: viewOf(H.o.device, makers(H, L, queueOwn), own), real: H.o.device, asks: H.o.asks, seat, n, fresh, waited, stats: L.stats, shellMs, shellNav, frozen: null, bytes: bytesOf, keepBytes, get alive() { return L.alive; }, freeze: () => { lease.frozen ??= { ...L.stats, labels: L.stats.labels.slice() }; }, release: () => end(L) };
       return lease;
     },
   };
