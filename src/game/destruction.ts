@@ -193,7 +193,7 @@ function dlog(g: Game, s: string) { DESTR_LOG.push(`${g.time.toFixed(2)} ${s}`);
 /** ≤ n() events in any one-second window, exactly: a ring of the last n stamps (a token bucket's burst would let ~2n through across a window's edge, and these caps
  *  are what the page promises) */
 const ROOF_RAYS: [number, number][] = [[0, 0], [0.29, 0], [-0.29, 0], [0, 0.29], [0, -0.29]];
-class RateCap {
+export class RateCap {
   private ts: number[] = []; private head = 0;
   constructor(private n: () => number) {}
   take(t: number): boolean {
