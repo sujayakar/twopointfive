@@ -61,9 +61,7 @@ export const CLEARLINE = {
   /** m: the spot must clear the friend's lane by this much to spare (the lane itself is the fire gate's, untouched) */
   spareM: 0.15,
   /** nowhere to step: go to where the man cannot see him, for this many seconds / kneel where he is when there is no such place either */
-  cover: true, coverSecs: 3, kneel: true,
-  /** he says what he is doing (a bubble over him: 'blocked — stepping left.') */
-  cue: true,
+  coverSecs: 3, 
   /** s between two looks for a spot while he is still masked; s without his man in his eyes before the order's own legs are his again */
   again: 0.5, lose: 1,
   /** s at most in cover or on a knee for one masked line — then his order's legs are his again whatever is in the line, and the rule leaves him be for `rest` s
@@ -75,11 +73,6 @@ export const CLEARLINE = {
    *  a player on the move is owed (0.45 m standing, up to 0.95 m walking — the fire gate's, untouched): stood still where he is, the round would pass him.
    *  That line mostly opens by itself inside a quarter second. Never shorter than `after`; 0 = no such case, the rule as it was run for run. */
   afterEdge: 0,
-  /** INSIDE AN ENTRY. true = the rule as it was run for run: a man is answered wherever his order has him. false = the rule STANDS DOWN for a man between
-   *  the shove and his point on a door tool's order (the can in the air, the wait behind it, sent in and not yet on his point of domination — `entering`
-   *  below): he holds his way through the door as the base does, and the rule has him again once he is on his point. The seconds a bang or a boot buys are
-   *  the entry's: a lead stepped 2.5 m off his door on 'go' crossed a second late (rebuild/line-of-fire/fix.md, records-pair seed 21). */
-  inEntry: true,
   /** BEHIND A FRIEND WHO IS CLOSING ON THE MAN, seconds (2 as shipped). 0 = the rule as first built, run for run. More = neither cover nor the knee while the friend in his line is
    *  ahead of him and walking AT that same man (0.5 m/s or more toward him, and more toward him than across the line — the number a mate 'on the move' is
    *  read by), nor for this many seconds after he was last seen doing so: the friend is in that fight and the line is his to open. He takes the step if there is one; with none he holds behind
@@ -114,7 +107,7 @@ export interface ClearNote { t: number; who: string; what: 'step' | 'cover' | 'k
 export const CLEARLINE_LOG: ClearNote[] = [];
 
 const LS = 'twopointsix.clearline';
-const KEPT = ['after', 'afterEdge', 'inEntry', 'holdBehind', 'holdStep', 'still', 'stillFar', 'reachM', 'pace', 'cover', 'kneel', 'cue', 'holdMax'] as const;   // (the panel's rows)
+const KEPT = ['after', 'afterEdge', 'holdBehind', 'holdStep', 'still', 'stillFar', 'reachM', 'pace', 'holdMax'] as const;   // (the panel's rows)
 export function saveClearLine() { try { const o: Record<string, boolean | number> = {}; for (const k of KEPT) if (CLEARLINE[k] !== CLEARLINE_DEFAULTS[k]) o[k] = CLEARLINE[k]; if (Object.keys(o).length) globalThis.localStorage?.setItem(LS, JSON.stringify(o)); else globalThis.localStorage?.removeItem(LS); } catch { /* no store */ } }
 try { const o = JSON.parse(globalThis.localStorage?.getItem(LS) ?? 'null'); if (o) for (const k of KEPT) if (typeof o[k] === typeof CLEARLINE[k]) (CLEARLINE as Record<string, unknown>)[k] = o[k]; } catch { /* no store, or not ours */ }
 

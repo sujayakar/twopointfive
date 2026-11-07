@@ -56,10 +56,6 @@ export const KITANIM = {
   /** the rifle hanging in front rests on a thigh that comes up under it (rigProps SLING_REST): how fast it is pushed up onto one / settles back down, 1/s (an
    *  ease toward what the pose wants — a stride moves that a quarter turn in a few frames, and a hung rifle has weight); 0 = no ease, the pose's own answer */
   slingUp: 18, slingDown: 4,
-  /** NIGHT VISION goes down and up by hand or by a nod (the maintainer, 10-10: "if hands are busy it's a nod of the head for flicking on and off. otherwise hand
-   *  does it"): N still switches the tube on the key's frame for everything the game reads; the goggles travel (character.ts KIT.nv) and the PICTURE changes as
-   *  they cross his eyes. Off = they jump on the key and the picture with them, as the build had it. */
-  nv: true,
   /** s before a draw's end at which the gun may already fire (it is up; the support hand is still settling) */
   early: 0.05,
   /** A CLICK MADE WHILE A GUN IS STILL COMING UP IS KEPT: the left button pressed inside the last `clickKeep` s of a kit change's lock-out fires the round on the

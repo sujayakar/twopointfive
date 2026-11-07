@@ -38,7 +38,7 @@ import { crossToRust, goneWithTick } from './crossing';
  *  after which draw-or-run is no longer asked (something else had him meanwhile: he is in the fight by now); `run`: a green man alone, caught inside `runM`
  *  m and not inside `nearM` (at arm's length nobody turns his back: he draws), runs for it instead of drawing; `clearSecs`: how long a man running off a post is let run before the man he ran from can stop him to fight; `runSecs`:
  *  the longest a run for cover lasts, and `stuckSecs` gaining under `stuckM` m ends it where he is */
-export const STARTLE = { on: false, beat: 0.5, draw: 0.3, fresh: 1.0, late: 0.25, run: true, runM: 8, nearM: 2.5, clearSecs: 1.5, runSecs: 4, stuckSecs: 0.75, stuckM: 0.3 };
+export const STARTLE = { on: false, beat: 0.5, draw: 0.3, fresh: 1.0, late: 0.25, runM: 8, nearM: 2.5, clearSecs: 1.5, runSecs: 4, stuckSecs: 0.75, stuckM: 0.3 };
 /** QA: men startled by what they saw · starts given by a caller (giveStartle, all of them) · of the first: drew after the beat · ran */
 export const STARTLE_STATS = { seen: 0, given: 0, drew: 0, ran: 0 };
 

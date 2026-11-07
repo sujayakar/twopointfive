@@ -107,8 +107,6 @@ export const CIV = {
   outsideCallSecs: 18,
   /** passing pleasantries with a calm man inside greetM (a clear line between them): at most one per pair per pairSecs and one on the floor per floorSecs — off = never */
   greet: true, greetM: 3.0, greetPairSecs: 240, greetFloorSecs: 70,
-  /** the response team on its way: control clears them off the floor (they run for the doors) */
-  evacuateOnQrf: true,
 };
 
 /** the price list's civilian terms live in chronicle.ts SCORE (civReported / civKO / civKilled) with the rest of the card's */

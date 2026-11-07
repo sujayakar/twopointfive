@@ -61,7 +61,7 @@ export const FIRELINE = {
   /** m: …and, however shallow his way comes at it, before his next step is this near the lane's side (`lookM`: as far up his way as the lane is looked for) */
   gapM: 1.0, lookM: 6,
   /** he says so once, `cueS` into the wait (a man who stops for no reason he gives reads as stuck; a stop that short is not worth a word) */
-  cue: true, cueS: 0.35,
+  cueS: 0.35,
   /** s: the longest he waits before he looks for a way round, and how often he looks again */
   maxS: 4, againS: 2,
   /** m: a way round may be this much longer than the way across; the floor this near the lane is dear to the search for one (over half a nav cell's diagonal: a corner cut between two cells clear of it stays out of the lane) */

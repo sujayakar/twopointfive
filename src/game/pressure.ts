@@ -64,7 +64,7 @@ export const PRESSURE = {
   /** the master switch: off = none of this file runs */
   on: false,
   /** the three behaviours, each measurable alone (all need `on`) */
-  press: true, flank: true, fallBack: true,
+  press: true, flank: true, 
   /** HARD ON A LEVEL THAT DECLARES SQUADS (enemysquads.ts): the press above stands down there — the squads own who moves — so harder defenders are the
    *  squads themselves as a DRILLED GARRISON: enemysquads.ts SQUADS.drill* (each rule its own switch there), read only while `on` and this row are both
    *  up and squads are staged. Off = hard on a squads level is standard run for run, as it was */
@@ -72,19 +72,8 @@ export const PRESSURE = {
   /** stand and fight: a hunter the press called who meets the team out of the room he was called to stops and fights from where he stands (needs press;
    *  nothing under `gather`, whose men are set outside the doors already) */
   second: false,
-  /** the stood man KEEPS THE MAN HE IS ON (needs second): planted where he stands with his fix and his aim as they are (roomfight.ts standOn). Off = as the
-   *  rule was first measured: stood by a scripted leg to his own feet — a frame without senses, his watch turned to a room door, and the beat of a man
-   *  surprised (0.9–2 s without a round) owed against the man he was already looking at. ON with `secondSet` since it measured no easier than that
-   *  (straight on, seeds 145-288: the office four −12 teammates of 576, −43 to +19; The block −21, −51 to +8) */
-  secondKeeps: true,
-  /** with secondKeeps: he is a SET GUN on that man (the short beat of a defender whose man shows where he is looking, the pre-aim if his gun was on him).
-   *  Off = no beat, no pre-aim: measured clearly EASIER than the rule as first measured (office straight on, seeds 145-288: +41 teammates of 576, +8 to +75) —
-   *  most of the first rule's bite was the set gun's pre-aim, which the stood man got by being re-planted */
-  secondSet: true,
   /** men to one press (a far room that goes together — `byWay` — is not cut in two by it: its men are over the count) */
   maxMen: 4,
-  /** of several men holding one room, the one farthest from the fight stays to keep it (false = every man who hears it goes) */
-  keepRoom: true,
   /** s a fight he heard stays worth going to */
   memorySecs: 15,
   /** × his beat between hearing the fight and calling it and going (1 = the stock rally's own beat, FIGHT_SKILL rally: 1.5–4 s). The dial for how long a team
@@ -105,10 +94,6 @@ export const PRESSURE = {
    *  (The block with surprise lost, seeds 145-288: +18 runs won of 144, +3 to +33; +17 teammates of 576, −17 to +51) — men who all arrive together
    *  at the bang meet the team at its strongest */
   standPress: false,
-  /** THE KEEPER IS A MAN SOMEBODY LEFT (digin.ts asks `pressKeeps` with DIGIN.keeper off): he counts as the press's keeper only once a mate of his room has
-   *  gone to a press. Off = as the rule was first measured: named keeper when the first man of his room finished his beat, he was kept off his furniture
-   *  even when that man never went. ON: measured no easier (The block, seeds 145-288: +6 teammates of 576, −16 to +30; runs won −5 of 144, −15 to +5) */
-  keeperLeft: true,
   /** s between the first man hearing it and his call */
   reportSecs: 1.4,
   /** s stood to with nobody coming and nothing more heard before they stand down */
@@ -133,7 +118,7 @@ export const PRESSURE = {
    *  with nothing newer (by more than `stunMovedSecs`) putting them somewhere else. A man let go without it walks on as the fight AI's man, as he did before
    *  anybody carried a charge, and takes the door as the drill the moment his side has it (`stunLate`); a door already marked and not yet banged is let be the
    *  moment the newest thing they know puts the team elsewhere (`stunOff`: tactics.ts's 'the doorway is plain again'). */
-  stunKnown: true, stunKnowSecs: 20, stunMovedSecs: 3,
+  stunKnowSecs: 20, stunMovedSecs: 3,
   /** A LAST MAN ALONE KEEPS HIS ROOM (on; off = the last of them alive pressed like anybody — 'they've hit the others — get in there!' on a net with
    *  nobody left on it, and off alone at four rifles; the 10-13 tapes have it five times, each stopped short by a covered lane a moment later). With it on
    *  he neither starts a press nor walks off on the stock rally: his room, his doors, and the rules for a room's last man (fall back, dig in) as they are. */
@@ -167,24 +152,14 @@ export const PRESSURE = {
   flankMaxM: 46, flankK: 3, flankSlackM: 14,
   /** the last man's beat before he gives a room up: s, with two of the enemy in view the whole of it */
   lastManSecs: [0.35, 0.9] as [number, number],
-  /** …and he does not wait to see them: alone in his room on a floor gone loud, the team's boots at one door of it send him out by another (false = only the
-   *  sight of two of them does) */
-  outEarly: true,
   /** s a fight heard elsewhere on the floor keeps a man that ready to give his room up · his beat between the boots at his door and his move */
   loudSecs: 90, outSecs: [0.8, 1.6] as [number, number],
-  /** false = every man goes at the fight the moment his own beat is up (a flanker: the moment he is round); true = they FORM UP outside the doors first and go
-   *  together on a word — the knobs under this one are that mode's */
-  gather: false,
   /** s from a press's first call until its men stop waiting for more of them (two alive: set; one: he holds the door from outside) */
   gatherSecs: 8,
   /** s more they wait for a man still on his way round */
   flankSecs: 6,
   /** s a press set on a quiet room's doors holds them from outside before it goes in (0 = in as soon as it is set) */
   siegeSecs: 25,
-  /** the men holding the doors listen for the team moving inside and go on that */
-  listen: false,
-  /** the men at a quiet door go through when they hear the trap sprung at another */
-  converge: true,
   /** s between the word and the move: the cue's own length */
   wordSecs: 0.9,
   /** THE WAY OUT (off: every level as it was; ON under hard — difficulty.ts HARD.wayOut; record rebuild/hard-everywhere/round2-records-pair.md).
@@ -424,7 +399,7 @@ export function pressureSummary(g: Game): string {
 }
 
 /** what a visit keeps of this (read once, at import, below; the headless harness has no store) */
-const KEPT = ['on', 'press', 'flank', 'fallBack', 'second', 'secondKeeps', 'secondSet', 'maxMen', 'keepRoom', 'keeperLeft', 'organiseK', 'gather', 'warned', 'standPress', 'picket', 'byWay', 'wayOut', 'rescueCrew', 'drilled', 'squadDrill', 'sweep'] as const;   // (not `stuns`: it is hard's on one level — difficulty.ts HARD_AT — and a stored copy would follow the machine to every other)
+const KEPT = ['on', 'press', 'flank', 'second', 'maxMen', 'organiseK', 'warned', 'standPress', 'picket', 'byWay', 'wayOut', 'rescueCrew', 'drilled', 'squadDrill', 'sweep'] as const;   // (not `stuns`: it is hard's on one level — difficulty.ts HARD_AT — and a stored copy would follow the machine to every other)
 const LS = 'twopointsix.pressure';
 export const PRESSURE_DEFAULTS: typeof PRESSURE = JSON.parse(JSON.stringify(PRESSURE));
 export function loadPressure() {

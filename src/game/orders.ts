@@ -290,7 +290,7 @@ export const ORDERS = {
   moveSpread: 0.9,
   /** a man the fight AI has (the seam in the head comment) is back on his order this long after he last saw anybody / heard a shot / was handed over — never
    *  mid-reload; `pinPosted`: he fights from his post (false: the fight layer moves him as it likes and he walks back after) */
-  coldSecs: 2.5, pinPosted: true,
+  coldSecs: 2.5, 
   /** Sam within this of the line a man's gun is on (`laneOut` to come back up): the muzzle goes down until he is clear */
   laneIn: 0.45, laneOut: 0.7,
   /** hold: a man on the move stops a stride on (this × his velocity), not on the spot */
