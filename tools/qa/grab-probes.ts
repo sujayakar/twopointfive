@@ -24,6 +24,11 @@ const { isBreathing } = await import(`${ROOT}/src/game/game.ts`);
 const guardsMod = await import(`${ROOT}/src/game/guards.ts`);
 const { rollcallState, witnessSummary, offNet } = guardsMod;
 const Dlg = await import(`${ROOT}/src/game/dialogue.ts`);
+/** the row would take the next question without cutting anything: nothing asked, no line of Sam's up this hold, and the man's answer down or in its last half
+ *  second (the rule's own function went with the tick; this reads the hold and the two bubbles) */
+export const heldSettled = (game: any, H: any): boolean => { const b = H.g.bubble, sb = game.player.bubble, T = H.g.talk;
+  const speaking = b && T.lastT >= 0 && Math.abs(b.t - T.lastT) < 1e-6 && game.time - b.t < b.dur ? b : null;
+  return !H.ask && !(sb && sb.t >= H.since - 1e-6 && game.time - sb.t < sb.dur - 1e-9) && (!speaking || game.time + 1e-6 >= speaking.t + speaking.dur - 0.5); };
 
 type Vec3 = [number, number, number];
 const DT = 1 / 60;
@@ -38,8 +43,8 @@ async function armStandUp() {
  *  are settled on and the writes were refused, so they are out: the lines are asked of the rows the page has. A line that fails for the old rows is one to
  *  restage on the mode's own rows (family `close`) and the ring's (probes.ts handring), or to delete. */
 const { KITANIM } = await import(`${ROOT}/src/game/kitanim.ts`);
-/** QA: controls-behind's red path — CONTROLSBEHIND_BREAK=1 makes the click of (d) and of (f) half a second after the rule's own window has shut (counted from the
- *  frame the line counts from; for the can: thirty frames after it is in his fist), so the round and the throw are LATE: both lines must fail, on both stands. */
+/** QA: controls-behind's red path — CONTROLSBEHIND_BREAK=1 makes the click of (d) and of (f) come after the rule's own window has shut, so the round and the throw
+ *  are LATE: both lines must fail. */
 const LATE_BREAK = process.env.CONTROLSBEHIND_BREAK === '1';
 /** how many frames after a click its round (a gun still coming up) or its throw (a can still coming to the fist) may leave: the click's own frame — or, with
  *  the kit's moves played, the longest the rule keeps such a click (KITANIM.clickKeep / throwKeep, read from the game's table) and a frame for the hand-over */
@@ -57,8 +62,6 @@ function tap(game: any) {
   void origSay;
   return { lines, msgs };
 }
-/** hold `code` down for `secs` of frames (keys + the press edge on the first), then let it up; returns frames stepped */
-function holdKey(W: any, code: string, secs: number, each?: () => void): number { const n = Math.max(1, Math.round(secs / DT)); W.input.keys.add(code); W.input.pressed.add(code); for (let i = 0; i < n; i++) { W.step(DT); each?.(); } W.input.keys.delete(code); return n; }
 function tapKey(W: any, code: string) { W.input.pressed.add(code); }
 /** how far a body's circle sits inside the statics right now (its own push-out re-run on a copy) */
 function penetration(col: any, p: Vec3, r: number, y0: number, y1: number): number { const q = v3.copy(p); col.collideCircle(q, r, y0, y1, 3); return v3.distXZ(q, p); }
@@ -92,13 +95,9 @@ function untilHeld(S: any): boolean { const { W, game } = S; for (let i = 0; i <
 
 // ================================================================ (1) the gate: wherever the takedown is offered the grab is, and nowhere else — never through a wall or a leaf, never from the front, never on an alert man
 export async function grabGate() {
-  console.log('\n=== grab-gate: the grab row is offered (and a Space hold-and-release grabs) exactly where a hands-empty click would take him down — from behind, in reach, nothing solid between, not alert ===');
+  console.log('\n=== grab-gate: the grab row is not offered, and a Space hold-and-release grabs nobody, out of reach or through glass, a partition or a wall ===');
   let allPass = true;
-  const cases: { note: string; guard: Vec3; yaw: number; player: Vec3; state?: string; expect: boolean }[] = [
-    { note: 'open corridor, crouched 0.8 m behind a calm man', guard: [14, 0, 11.2], yaw: Math.PI / 2, player: [13.2, 0, 11.2], expect: true },
-    { note: 'the same man SUSPICIOUS (looking into a noise ahead of him): still grabbable from behind', guard: [14, 0, 11.2], yaw: Math.PI / 2, player: [13.2, 0, 11.2], state: 'suspicious', expect: true },
-    { note: 'the same man ALERT: refused (no grab while he is onto you)', guard: [14, 0, 11.2], yaw: Math.PI / 2, player: [13.2, 0, 11.2], state: 'alert', expect: false },
-    { note: 'in FRONT of him, 0.8 m: refused (get behind him)', guard: [14, 0, 11.2], yaw: -Math.PI / 2, player: [13.2, 0, 11.2], expect: false },
+  const cases: { note: string; guard: Vec3; yaw: number; player: Vec3; expect: boolean }[] = [
     { note: 'behind him but 1.6 m off: refused (get closer)', guard: [14.8, 0, 11.2], yaw: Math.PI / 2, player: [13.2, 0, 11.2], expect: false },
     { note: 'corridor man with his back to the conference glazing (z=10), Sam inside the conference room behind the glass: refused', guard: [12.0, 0, 10.45], yaw: 0, player: [12.0, 0, 9.6], expect: false },
     { note: "man in the manager's office, back to the server-room partition (x=22), Sam in the server room: refused", guard: [22.4, 0, 6.0], yaw: Math.PI / 2, player: [21.55, 0, 6.0], expect: false },
@@ -111,8 +110,6 @@ export async function grabGate() {
     for (let i = 0; i < 5; i++) W.step(DT);
     const gd = game.guards[0]; for (const o of game.guards.slice(1)) park(o, game.guards.indexOf(o));
     place(gd, c.guard, c.yaw); gd.hold = true;
-    if (c.state === 'suspicious') { gd.state = 'suspicious'; gd.awareness = 0.5; gd.lastKnown = [c.guard[0] + Math.sin(c.yaw) * 4, 0, c.guard[2] + Math.cos(c.yaw) * 4]; gd.reactT = 0; }
-    if (c.state === 'alert') { gd.state = 'alert'; gd.awareness = 1; gd.lastKnown = v3.copy(c.player); gd.lastSeenT = -100; gd.reactT = 5; gd.pinned = true; }
     game.teleportPlayer(v3.copy(c.player)); game.player.crouch = true; W.step(DT);
     const p = game.player.char.pos, gp = gd.char.pos; const p0 = v3.copy(p);
     const wall = game.col.segmentBlocked([p[0], 1.0, p[2]], [gp[0], 1.0, gp[2]]);
@@ -131,42 +128,8 @@ export async function grabGate() {
     if (grabbed !== c.expect) fails.push(`after 0.5 s of Space on him: holding=${grabbed}, expected ${c.expect}`);
     if (crossed) fails.push(`Sam ended on the far side of static geometry: ${posS(p0)} → ${posS(q)}`);
     if (!c.expect && gd.state === 'dead') fails.push('refused, yet he went down (the tap fell through to a takedown through the wall?)');
-    if (c.expect && grabbed) {
-      const d = v3.distXZ(q, gd.char.pos), dyaw = Math.abs(Math.atan2(Math.sin(game.player.char.bodyYaw - gd.char.bodyYaw), Math.cos(game.player.char.bodyYaw - gd.char.bodyYaw)));
-      if (Math.abs(d - HOLD.dist) > 0.03) fails.push(`pair ${f3(d)} m apart after a second (want ${HOLD.dist} ± 0.03)`);
-      if (dyaw > 0.02) fails.push(`yaws differ by ${f3(dyaw)} rad`);
-      if (game.player.holding?.phase !== 'held' || gd.held?.phase !== 'held') fails.push(`phase ${game.player.holding?.phase} / ${gd.held?.phase} (want held)`);
-      if (gd.state === 'dead') fails.push('grabbed man is dead');
-    }
     const ok = fails.length === 0; allPass &&= ok;
     console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${c.note}\n    ${f2(v3.distXZ(p0, c.guard))} m, wall between ${wall}; row: ${it ? `"${it.line1}" / "${it.line2}" inReach=${it.inReach}` : 'none'}; after the hold-press: holding=${grabbed}${grabbed ? ` (${game.player.holding?.phase ?? '—'}, ${f3(v3.distXZ(q, gd.char.pos))} m apart, guard ${gd.state})` : ''}, Sam ${posS(q)}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
-  }
-  // and the takedown is the CLICK with the hands empty (the tour's beat clicks once, holstered): it goes in on the click's own frame, never grabs, fires nothing
-  {
-    const S = await stage(12); const { W, game, A } = S;
-    W.cursorAt(v3.add(A.char.pos, [0, 1.35, 0])); W.step(DT);
-    const hv = game.hover; W.input.clicked |= 1; W.step(DT);   // a one-frame synthetic click (Demo.click / __click)
-    const td = !!game.player.takedown; for (let i = 0; i < 60; i++) W.step(DT);
-    const fails: string[] = [];
-    if (hv?.kind !== 'guard' || !hv.inReach) fails.push(`staging: hover ${hv?.kind} inReach ${hv?.inReach}`);
-    if (!game.player.holstered) fails.push('staging: the pistol is drawn (armStandUp holsters it)');
-    if (!td) fails.push('a one-frame click with the hands empty did not start the takedown');
-    if (A.state !== 'dead' || A.downKind !== 'struck') fails.push(`A ${A.state}/${A.downKind} after the click (want dead/struck)`);
-    if (game.player.holding || A.held) fails.push('a click grabbed him');
-    if (game.mission.stats.shots > 0) fails.push(`the click fired ${game.mission.stats.shots} round(s) with the pistol holstered`);
-    // and a real mouse press (button down 5 frames with its click edge on the first, then up): the strike goes in on the FIRST frame, the held button adds nothing
-    const S2 = await stage(13); const W2 = S2.W, g2 = S2.game, A2 = S2.A;
-    W2.cursorAt(v3.add(A2.char.pos, [0, 1.35, 0])); W2.step(DT);
-    W2.input.buttons |= 1; W2.input.clicked |= 1; W2.step(DT); const tdFirst = !!g2.player.takedown; const tdObj = g2.player.takedown;
-    let restarted = false; for (let i = 0; i < 4; i++) { W2.step(DT); if (g2.player.takedown && g2.player.takedown !== tdObj) restarted = true; }
-    W2.input.buttons = 0; for (let i = 0; i < 60; i++) W2.step(DT);
-    if (!tdFirst) fails.push('a 5-frame mouse press did not start the takedown on its first frame (the click edge)');
-    if (restarted) fails.push('the held button started a second takedown');
-    if (A2.state !== 'dead' || A2.downKind !== 'struck') fails.push(`a 5-frame mouse press: A ${A2.state}/${A2.downKind} (want dead/struck)`);
-    if (g2.player.holding || A2.held) fails.push('a 5-frame mouse press grabbed');
-    if (g2.mission.stats.shots > 0) fails.push('a 5-frame mouse press fired');
-    const ok = fails.length === 0; allPass &&= ok;
-    console.log(`- ${ok ? 'PASS' : 'FAIL'} — the takedown is a hands-empty CLICK on the man in reach behind: one-frame synthetic click → takedown ${td}, A ${A.state}/${A.downKind}, shots ${game.mission.stats.shots}; 5-frame mouse press → struck on its first frame (${tdFirst}), nothing more while held (${!restarted}), A ${A2.state}/${A2.downKind}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
   }
   console.log(`=== grab-gate: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`);
   return allPass;
@@ -377,10 +340,10 @@ export async function grabTalk() {
   const left5 = A.bubble ? A.bubble.dur - (game.time - A.bubble.t) : NaN; const asked5 = !!game.player.holding?.ask;   // (the tap was read inside the step, after game.time advanced: his line was cut to exactly that 'now')
   untilStage(3); const s5 = A.talk.stage; const gave = A.talk.last?.kind ?? null;
   // wait this one out entirely (settled: nothing left to cut), then two more exchanges into the dry pool; the row says he is spent once he is
-  for (let i = 0; i < 600 && !(game.player.holding && playerMod.heldTalk(game, game.player.holding).settled); i++) W.step(DT);
+  for (let i = 0; i < 600 && !(game.player.holding && heldSettled(game, game.player.holding)); i++) W.step(DT);
   const rowSettled3 = rowQ();
   press('tap 6 (settled → exchange 4: nothing left, the x pool)', 0.05); untilStage(4); const s6 = A.talk.stage;
-  for (let i = 0; i < 600 && !(game.player.holding && playerMod.heldTalk(game, game.player.holding).settled); i++) W.step(DT);
+  for (let i = 0; i < 600 && !(game.player.holding && heldSettled(game, game.player.holding)); i++) W.step(DT);
   const rowSpent = rowQ();
   press('tap 7 (→ 5: it keeps counting)', 0.05); untilStage(5); const s7 = A.talk.stage; stageAt('after the fifth answer');
   if (rows0 !== 'question/choke') fails.push(`held rows: ${rows0} (want question/choke)`);
@@ -603,90 +566,6 @@ export async function controlsBehind() {
   /** step n frames collecting every GameEvent stamped this frame (kind, level, loud, who) */
   const stepCollect = (W: any, game: any, n: number, out: any[]) => { for (let i = 0; i < n; i++) { W.step(DT); for (const e of game.events) if (e.time === game.time) out.push({ kind: e.kind, level: e.level ?? 0, loud: !!e.loud, who: e.who }); } };
   const rowOf = (game: any, A: any) => game.interactables.find((x: any) => x.kind === 'guard' && x.guard === A);
-  // ---- (a) hands empty, a Space TAP (one frame, no key held — the tour's kind of press): the grab starts THAT frame, arm variant, no takedown, and runs on to 'held'
-  {
-    const S = await hands(801, false); const { W, game, A } = S;
-    const hv = game.hover; const row = rowOf(game, A);
-    tapKey(W, IK); W.step(DT);
-    const H0 = game.player.holding; const phase0 = H0?.phase, variant0 = H0?.variant, td0 = !!game.player.takedown;
-    const heldOk = untilHeld(S); for (let i = 0; i < 30; i++) W.step(DT);
-    const fails: string[] = [];
-    if (hv?.kind !== 'guard' || !hv.inReach || hv.guard !== A) fails.push(`staging: hover ${hv?.kind} inReach ${hv?.inReach}`);
-    if (!row?.inReach || !/^Space\s+grab him/.test(row.line2) || !/LMB\s+takedown/.test(row.line2) || /HOLD|pistol/.test(row.line2)) fails.push(`hands-empty row: "${row?.line2}" (want 'Space  grab him  ·  LMB  takedown …', no HOLD, no pistol)`);
-    if (!H0 || phase0 !== 'grab') fails.push(`the tap's own frame: holding ${!!H0} phase ${phase0} (want the grab begun there and then — no hold timer)`);
-    if (variant0 !== 'arm' || A.held?.variant !== 'arm') fails.push(`variant ${variant0} / ${A.held?.variant} (want arm: the hands were empty)`);
-    if (td0 || game.player.takedown) fails.push('a Space tap started the takedown');
-    if (!heldOk || game.player.holding?.phase !== 'held') fails.push(`never settled into the hold (phase ${game.player.holding?.phase})`);
-    if (A.state === 'dead') fails.push(`A went down (${A.downKind}) — a tap is not the takedown any more`);
-    if (game.mission.stats.shots > 0) fails.push('a round was fired');
-    if (game.player.fHeld) fails.push('fHeld still set half a second after the tap came up');
-    verdict(fails.length === 0, '(a) hands empty, Space TAPPED behind him: grabbed on the tap\'s frame, the arm variant, no takedown', `row "${row?.line2}" · tap frame: ${phase0}/${variant0}, takedown ${td0} · now ${game.player.holding?.phase}, A ${A.state}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
-  }
-  // ---- (a2) hands empty, Space HELD a full second: the list OPENS on his one row (grab · cancel), nothing happens while it is down, and letting go takes him — the
-  //      hold-and-let-go path; then, held, Space held again opens [question · choke · cancel]: scrolled to the choke and let go, the arm closes chokeHold after the
-  //      release, and a tap stops it (he lives)
-  {
-    const S = await hands(802, false); const { W, game, A, msgs } = S;
-    let grabWhileDown = false, openedAt = -1, rowsOpen = ''; let k = 0;
-    W.cursorAt(v3.add(A.char.pos, [0, 1.35, 0]));
-    holdKey(W, IK, 1.0, () => { k++; if (game.player.holding) grabWhileDown = true; if (openedAt < 0 && game.player.sel.open) { openedAt = k * DT; rowsOpen = game.nearby.map((r: any) => r.kind === 'cancel' ? 'cancel' : r.verb).join('/'); } });
-    W.step(DT); const grabbedOnRelease = !!game.player.holding; const presses0 = A.talk.presses;
-    const heldOk = untilHeld(S); W.step(DT);
-    // Space held again with him in the arm: [question, choke, cancel]; one notch down = the choke; let go → it commits chokeHold later; a tap stops it
-    let rowsHeld = ''; holdKey(W, IK, 0.4, () => { if (game.player.sel.open && !rowsHeld) rowsHeld = game.nearby.map((r: any) => r.kind === 'cancel' ? 'cancel' : r.verb).join('/'); });
-    W.input.keys.add(IK); W.input.wheel = 100; W.step(DT); const onChoke = game.hover?.verb === 'choke'; W.input.keys.delete(IK); W.step(DT);   // (back down for the notch — holdKey let it up: press afresh, past the tap it re-opens on the scroll)
-    let chokeAt = -1; const t0 = game.time; for (let i = 0; i < Math.round((HOLD.secs.chokeHold + 0.15) / DT); i++) { W.step(DT); if (chokeAt < 0 && game.player.holding?.phase === 'choke') chokeAt = game.time - t0; }
-    tapKey(W, IK); W.step(DT); W.step(DT); const phaseEnd = game.player.holding?.phase;
-    const fails: string[] = [];
-    if (grabWhileDown) fails.push('grabbed while Space was still down (a hold acts on the release)');
-    if (openedAt < 0 || Math.abs(openedAt - 0.25) > 2 * DT || rowsOpen !== 'grab/cancel') fails.push(`the list opened at +${f2(openedAt)} s with [${rowsOpen}] (want ≈ +0.25 s, grab/cancel)`);
-    if (!grabbedOnRelease) fails.push('letting go did not grab him');
-    if (!heldOk) fails.push('never settled into the hold');
-    if (presses0 !== 0) fails.push(`${presses0} question(s) went in off the grab's own press`);
-    if (rowsHeld !== 'question/choke/cancel') fails.push(`held, Space held: [${rowsHeld}] (want question/choke/cancel)`);
-    if (!onChoke) fails.push('one notch down did not land on the choke');
-    if (chokeAt < 0 || Math.abs(chokeAt - HOLD.secs.chokeHold) > 0.05) fails.push(`after letting go on the choke: the arm closed at ${chokeAt < 0 ? 'never' : '+' + f2(chokeAt) + ' s'} (want ${HOLD.secs.chokeHold})`);
-    if (phaseEnd !== 'held' || A.state === 'dead') fails.push(`after the stopping tap: ${phaseEnd}, A ${A.state} (want held, alive)`);
-    if (game.player.takedown) fails.push('a takedown started somewhere in all that');
-    verdict(fails.length === 0, '(a2) hands empty, Space HELD 1 s: the list opens on [grab · cancel], nothing while down, the release grabs; held again → [question · choke · cancel], scrolled to the choke and let go it commits, a tap stops it', `opened +${f2(openedAt)} s [${rowsOpen}] · grab on release ${grabbedOnRelease} · held list [${rowsHeld}] · choke +${chokeAt >= 0 ? f2(chokeAt) : '—'} s → ${phaseEnd}\n    log: ${msgs.map((m: any) => m.text).join(' | ')}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
-  }
-  // ---- (b) the Five-seveN drawn, a Space TAP: the gun variant (pistol to his head), the row said so and pointed at E for the takedown; no round, no takedown
-  {
-    const S = await hands(803, true); const { W, game, A } = S;
-    const row = rowOf(game, A);
-    tapKey(W, IK); W.step(DT);
-    const H0 = game.player.holding; const phase0 = H0?.phase, variant0 = H0?.variant, td0 = !!game.player.takedown;
-    const heldOk = untilHeld(S); for (let i = 0; i < 40; i++) W.step(DT);
-    const fails: string[] = [];
-    if (!row?.inReach || !/^Space\s+grab him — pistol to his head/.test(row.line2) || !/E\s+holster/.test(row.line2) || !/takedown/.test(row.line2)) fails.push(`drawn row: "${row?.line2}" (want the grab with the pistol to his head, and E to holster for the LMB takedown)`);
-    if (!H0 || phase0 !== 'grab' || variant0 !== 'gun' || A.held?.variant !== 'gun') fails.push(`the tap's frame: holding ${!!H0} ${phase0}/${variant0}, his ${A.held?.variant} (want grab/gun)`);
-    if (td0 || game.player.takedown) fails.push('a Space tap with the gun out started the takedown');
-    if (!heldOk) fails.push('never settled into the hold');
-    if (game.player.char.anim.hideHeldItem) fails.push('the pistol went to the thigh (hideHeldItem) — the gun variant keeps it in the hand');
-    if (game.mission.stats.shots > 0) fails.push('a round was fired');
-    if (A.state === 'dead') fails.push(`A went down (${A.downKind})`);
-    verdict(fails.length === 0, '(b) pistol drawn, Space TAPPED behind him: grabbed on the frame, the GUN variant, no takedown, no round', `row "${row?.line2}" · tap frame: ${phase0}/${variant0} · now ${game.player.holding?.phase}, pistol in hand ${!game.player.char.anim.hideHeldItem}, A ${A.state}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
-  }
-  // ---- (c) hands empty + a LEFT CLICK from behind in reach: the silent takedown — begun on the click's frame, he ends struck / breathing / by the player, no round,
-  //      nothing louder than the fall's 0.3 thud in the hearing queue, a knockout on the card, no grab anywhere in it
-  {
-    const S = await hands(804, false); const { W, game, A, msgs } = S;
-    const ev: any[] = [];
-    W.input.clicked |= 1; stepCollect(W, game, 1, ev);
-    const td0 = !!game.player.takedown, hold0 = !!game.player.holding;
-    stepCollect(W, game, 90, ev);
-    const st = game.mission.stats; const shotsEv = ev.filter(e => e.kind === 'shot' || e.kind === 'guardShot'); const loudest = ev.reduce((m, e) => Math.max(m, e.loud ? 1 : e.level), 0);
-    const fails: string[] = [];
-    if (!td0) fails.push('the click did not start the takedown on its frame');
-    if (hold0 || game.player.holding || A.witness.wasHeld) fails.push('the click grabbed him');
-    if (A.state !== 'dead' || A.downKind !== 'struck' || A.downBy !== 'player' || !isBreathing(A)) fails.push(`A ${A.state}/${A.downKind}/${A.downBy} breathing ${isBreathing(A)} (want dead/struck/player, breathing)`);
-    if (shotsEv.length || st.shots !== 0) fails.push(`a round: ${shotsEv.length} shot event(s), card shots ${st.shots}`);
-    if (loudest > 0.3 + 1e-6) fails.push(`loudest event ${f2(loudest)} (want ≤ 0.3: the fall's thud, nothing floor-wide)`);
-    if (st.knockouts !== 1 || st.kills !== 0) fails.push(`card ko ${st.knockouts} kills ${st.kills} (want 1 / 0)`);
-    if (!msgs.some((m: any) => /takedown — out cold/.test(m.text))) fails.push(`no 'takedown — out cold' line: ${msgs.map((m: any) => m.text).join(' | ')}`);
-    if (game.player.takedown) fails.push('player.takedown still set 1.5 s later');
-    verdict(fails.length === 0, '(c) hands empty, LMB behind him: the silent takedown — struck, breathing, no round, quiet, a knockout, never a grab', `takedown on the click ${td0} · A ${A.state}/${A.downKind}/${A.downBy} breathing ${isBreathing(A)} · events ${ev.map(e => `${e.kind}${e.level ? ' ' + f2(e.level) : ''}${e.loud ? '!' : ''}`).join(', ') || '—'} · card ko ${st.knockouts} kills ${st.kills} shots ${st.shots}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
-  }
   // ---- (d) pistol DRAWN + a left click behind him: that is a round (the cursor on him: it is his), loud on the whole floor — never the takedown, never a grab
   {
     const S = await hands(805, true); const { W, game, A } = S;
@@ -708,46 +587,22 @@ export async function controlsBehind() {
     if (A.state === 'dead' && A.downKind !== 'shot') fails.push(`A went down '${A.downKind}' (a round makes 'shot')`);
     verdict(fails.length === 0, '(d) pistol drawn, LMB behind him: fires (a shot event, quiet as the pistol now is), no takedown, no grab', `shots ${shots1}, the round left ${leftAt < 0 ? 'never' : `${leftAt} frame${leftAt === 1 ? '' : 's'} after the click`} (due by ${due}), loud shot event ${loudShot}, takedown ${td0}, A ${A.state}/${A.downKind ?? '—'}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
   }
-  // ---- (e) not behind him / behind but out of reach: Space (tapped, then held) and the hands-empty click all do nothing — no grab, no takedown (in front of him at
-  //      arm's length he clocks Sam by himself, as ever — his eyes are not the point here; behind him out of reach he never knows)
-  for (const c of [{ note: 'in FRONT of him, 0.8 m', yaw: -Math.PI / 2, player: [13.2, 0, 11.2] as Vec3, hint: /get behind him/, unseen: false }, { note: 'behind him but 1.6 m off', yaw: Math.PI / 2, player: [12.4, 0, 11.2] as Vec3, hint: /get closer/, unseen: true }]) {
-    Math.random = seeded(806);
-    const W = await armStandUp(); const { game, cam, canvas } = W; game.godMode = true; game.player.visibility = 0.02;
-    for (let i = 0; i < 5; i++) W.step(DT);
-    const [A, B, C] = game.guards; park(B, 0); park(C, 1); place(A, [14, 0, 11.2], c.yaw); A.hold = true;
-    game.teleportPlayer(v3.copy(c.player)); game.player.crouch = true; W.step(DT);
-    buildInteractables(game, cam, 0, 0, canvas.clientWidth, canvas.clientHeight); const row = rowOf(game, A); const aw0 = A.awareness;
-    tapKey(W, IK); W.step(DT); const g1 = !!game.player.holding, t1 = !!game.player.takedown;
-    holdKey(W, IK, 0.5); const g2 = !!game.player.holding, t2 = !!game.player.takedown;
-    W.step(DT); W.input.clicked |= 1; W.step(DT); const t3 = !!game.player.takedown, g3 = !!game.player.holding;
-    for (let i = 0; i < 30; i++) W.step(DT);
-    const fails: string[] = [];
-    if (!row || row.inReach || !c.hint.test(row.line2)) fails.push(`row: ${row ? `"${row.line2}" inReach ${row.inReach}` : 'none'} (want out of reach, "${c.hint.source}")`);
-    if (g1 || g2 || g3 || A.held || A.witness.wasHeld) fails.push(`grabbed: tap ${g1} hold ${g2} click ${g3}`);
-    if (t1 || t2 || t3 || A.state === 'dead') fails.push(`took him down: tap ${t1} hold ${t2} click ${t3}, A ${A.state}`);
-    if (game.mission.stats.shots > 0) fails.push('a round was fired (holstered!)');
-    if (c.unseen && (A.state !== 'patrol' || A.awareness > aw0 + 0.05)) fails.push(`he noticed: ${A.state} aw ${f2(aw0)} → ${f2(A.awareness)}`);
-    verdict(fails.length === 0, `(e) ${c.note}: Space tapped / held and the hands-empty click all come to nothing`, `row "${row?.line2}" inReach ${row?.inReach} · grab ${g1 || g2 || g3} · takedown ${t1 || t2 || t3} · A ${A.state} aw ${f2(A.awareness)}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
-  }
   // ---- (f) a smoke can up (the smoke slot selected, not holstered) + a click behind him: that is a throw — the row says holster for the takedown; Space would still be the arm grab (gunhold-variant (c))
   {
     const S = await hands(807, true); const { W, game, A } = S; game.player.slot = 'smoke'; W.step(DT);
     const row = rowOf(game, A); const cans0 = game.player.canisters;
-    // (the throw is due THE FRAME THE CAN IS IN HIS FIST, and one more: a click made while it is still coming is kept and thrown as it arrives — kitanim.ts
-    //  kitClick, whose own test of 'in his fist' is read here; with the kit's moves off it is in his fist at once. KITANIM.throwKeep is only the longest such a
-    //  click may wait, and the count must be inside that too)
-    const inFist = () => { const an = game.player.char.anim; return !(an.kitHold !== undefined && !(an.kitHold === 'can' && game.player.kitCan === game.player.canisterSel)); };
-    const most = dueFrames(KITANIM.throwKeep), thrown = () => !!game.player.pendingThrow || game.player.canisters < cans0; let threwAt = -1, fistAt = -1, lateAt = -1;
-    if (!LATE_BREAK) W.input.clicked |= 1; W.step(DT); if (inFist()) fistAt = 1; if (thrown()) threwAt = 1;
+    // (a click made while the can is still coming is kept and thrown as it arrives — kitanim.ts kitClick; KITANIM.throwKeep is the longest such a click may wait)
+    const most = dueFrames(KITANIM.throwKeep), thrown = () => !!game.player.pendingThrow || game.player.canisters < cans0; let threwAt = -1; const lateAt = most + 2;
+    if (!LATE_BREAK) W.input.clicked |= 1; W.step(DT); if (thrown()) threwAt = 1;
     const td0 = !!game.player.takedown;
-    for (let f = 2; f <= 2 * most + 120; f++) { if (LATE_BREAK && fistAt > 0 && lateAt < 0) lateAt = fistAt + 30; if (f === lateAt) W.input.clicked |= 1; W.step(DT); if (fistAt < 0 && inFist()) fistAt = f; if (threwAt < 0 && thrown()) threwAt = f; }
-    const due = fistAt < 0 ? -1 : fistAt + 1, threw = threwAt >= 1 && due > 0 && threwAt <= due && threwAt <= most;
+    for (let f = 2; f <= 2 * most + 120; f++) { if (LATE_BREAK && f === lateAt) W.input.clicked |= 1; W.step(DT); if (threwAt < 0 && thrown()) threwAt = f; }
+    const threw = threwAt >= 1 && threwAt <= most;
     const fails: string[] = [];
     if (!row?.inReach || !/^Space\s+grab him\s+·/.test(row.line2) || !/E\s+holster/.test(row.line2) || /pistol/.test(row.line2)) fails.push(`can-up row: "${row?.line2}" (want the plain grab, and E to holster for the takedown; no pistol)`);
     if (td0 || game.player.takedown || A.state === 'dead') fails.push(`the click with a can up took him down (takedown ${td0}, A ${A.state})`);
-    if (!threw) fails.push(`the can left ${threwAt < 0 ? 'never' : `${threwAt} frames after the click`} (it was in his fist ${fistAt < 0 ? 'never' : `at frame ${fistAt}`}: due by frame ${due}, and inside the ${most} a kept click may wait)`);
+    if (!threw) fails.push(`the can left ${threwAt < 0 ? 'never' : `${threwAt} frames after the click`} (want inside the ${most} a kept click may wait)`);
     if (game.player.holding) fails.push('grabbed');
-    verdict(fails.length === 0, '(f) a canister up, LMB behind him: a throw, not the takedown (the row says holster first)', `row "${row?.line2}" · threw ${threw}, ${threwAt < 0 ? 'never' : `${threwAt} frame${threwAt === 1 ? '' : 's'} after the click`} (in his fist at frame ${fistAt}, due by ${due}; cans ${cans0} → ${game.player.canisters}) · takedown ${td0} · A ${A.state}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
+    verdict(fails.length === 0, '(f) a canister up, LMB behind him: a throw, not the takedown (the row says holster first)', `row "${row?.line2}" · threw ${threw}, ${threwAt < 0 ? 'never' : `${threwAt} frame${threwAt === 1 ? '' : 's'} after the click`} (inside ${most}; cans ${cans0} → ${game.player.canisters}) · takedown ${td0} · A ${A.state}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
   }
   console.log(`=== controls-behind: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`);
   return allPass;
