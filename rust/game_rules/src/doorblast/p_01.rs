@@ -37,21 +37,6 @@ pub fn support(g: &crate::game::Game, d: DoorId, tip: f64) -> f64 {
     (g.dr[d].height / 2.0) * m::cos(tip) + (g.dr[d].thick / 2.0) * m::sin(tip) + LIFT
 }
 
-/// The nearest static (or other door's leaf) along a horizontal ray. (doorblast.ts hitAt)
-pub fn hit_at(g: &mut crate::game::Game, x: f64, y: f64, z: f64, ex: f64, ez: f64, tmax: f64) -> Option<crate::doorblast::HitAt> {
-    crate::scene_collision::raycast(g, [x, y, z], [ex, 0.0, ez], tmax).map(|h| crate::doorblast::HitAt { t: h.t, n: h.n })
-}
-
-/// Runs `fn_` with the door's own box out of the dynamic list. (doorblast.ts withoutLeaf)
-pub fn without_leaf<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, d: DoorId, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
-    let b = g.dr[d].box_;
-    let all = core::mem::take(&mut g.col.dynamic_boxes);
-    g.col.dynamic_boxes = all.iter().copied().filter(|x| *x != b).collect();
-    let r = fn_(g);
-    g.col.dynamic_boxes = all;
-    r
-}
-
 /// Does a floor rectangle cut into a static standing in the heights [y0, y1]? (doorblast.ts overlaps)
 pub fn overlaps(g: &mut crate::game::Game, x: f64, z: f64, a: f64, hu: f64, hn: f64, y0: f64, y1: f64) -> bool {
     let (ux, uz, su, sn) = (m::cos(a), m::sin(a), hu - 0.012, hn - 0.012);
@@ -158,18 +143,17 @@ pub fn reaches(g: &mut crate::game::Game, d: DoorId, at: V3) -> bool {
     let off = g.dr[d].thick / 2.0 + 0.08;
     let height = g.dr[d].height;
     let from: V3 = [at[0], m::max(at[1], 0.15), at[2]];
-    let all = core::mem::take(&mut g.col.dynamic_boxes);
+    let walls = crate::ask::Over::statics();
     let mut open = false;
     'lines: for f in [0.5, 0.85, 0.15] {
         for y in [1.0, 0.3, 1.8] {
             let p: V3 = [hx + u[0] * w * f - u[1] * off * s, m::min(y, height - 0.1), hz + u[1] * w * f + u[0] * off * s];
-            if v3::dist(from, p) < 0.12 || !crate::scene_collision::solid_blocked(g, from, p, None) {
+            if v3::dist(from, p) < 0.12 || !crate::scene_collision::solid_blocked_over(g, &walls, from, p, None) {
                 open = true;
                 break 'lines;
             }
         }
     }
-    g.col.dynamic_boxes = all;
     open
 }
 
@@ -241,13 +225,13 @@ pub fn tear_off(g: &mut crate::game::Game, d: DoorId, from: V3, who: f64, k: Opt
     let pos = crate::doors::door_pos(g, d);
     crate::doors::doors_sound(g, d, crate::doors::DoorSound::Kick, pos, who, 1.0);
     let mut ahead: f64 = 9.0;
-    without_leaf(g, d, &mut |g: &mut Game| {
-        for f in [0.0, -0.4, 0.4] {
-            if let Some(h) = hit_at(g, cx + ux * w * f + nx * 0.06, 0.2, cz + uz * w * f + nz * 0.06, nx, nz, 9.0) {
-                ahead = m::min(ahead, h.t + 0.06);
-            }
+    // (its own leaf, which is coming off, is no wall ahead of it)
+    let others = crate::ask::Over::but_door(g, d);
+    for f in [0.0, -0.4, 0.4] {
+        if let Some(h) = crate::scene_collision::raycast_over(g, &others, [cx + ux * w * f + nx * 0.06, 0.2, cz + uz * w * f + nz * 0.06], [nx, 0.0, nz], 9.0) {
+            ahead = m::min(ahead, h.t + 0.06);
         }
-    });
+    }
     let back = ahead < g.dr[d].height + g.k.doorblast.room;
     let (mut dx, mut dz) = (nx, nz);
     if !back {
@@ -675,7 +659,7 @@ pub fn fly_slab(g: &mut crate::game::Game, d: DoorId, dt: f64) {
         let at: V3 = [met.lx, 0.1, met.lz];
         let level = g.k.doorblast.land_level;
         let who = s.who;
-        without_leaf(g, d, &mut |g: &mut Game| crate::doors::doors_sound(g, d, crate::doors::DoorSound::Bang, at, who, level));
+        crate::doors::doors_sound(g, d, crate::doors::DoorSound::Bang, at, who, level);
     }
     if met.rested {
         let line = format!("{} slab at rest ({}, {}) after {} s", g.dr[d].def.name, js::to_fixed(s.p[0], 2), js::to_fixed(s.p[2], 2), js::to_fixed(s.t, 2));

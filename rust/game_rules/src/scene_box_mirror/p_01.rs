@@ -231,6 +231,19 @@ fn leaf_put(g: &mut Game, w: usize, at: usize, b: BoxId, kind: f64, cut_row: f64
     }
 }
 
+/// the rows of boxes a question adds, and their cut planes: as the copy's own rows are written
+pub fn rows_of(g: &mut Game, boxes: &[BoxId]) -> (Vec<f64>, Vec<f64>) {
+    let cut_on = crate::scene_cut::cut_boxes_on(g);
+    let (mut rows, mut cuts) = (vec![0.0; boxes.len() * REC_], vec![0.0; boxes.len() * CUT_ROW as usize]);
+    for (i, &b) in boxes.iter().enumerate() {
+        let kind = kind_of(g, b, cut_on);
+        let x = seam_box(g, b);
+        row_put(&mut rows, i * REC_, &mut 0, x, kind, i as f64);
+        if (kind as u32) & K_CUT_ != 0 { planes_put(&mut cuts, i * CUT_ROW as usize, x); }
+    }
+    (rows, cuts)
+}
+
 /// How much each table of the copy holds, by name.   (boxMirror.ts BoxMirror.tables)
 pub fn box_mirror_tables(g: &mut crate::game::Game) -> JsMap<String, f64> {
     if g.col.mirror.caps.boxes == 0.0 {

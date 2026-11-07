@@ -4,7 +4,7 @@
 /** the hash of the crates' sources this was built from */
 export const DRESS_SOURCE = '55e52078728cf5b1031078ed2e5834b4';
 /** the compiler and the kind of machine that built it (the same sources built by another may give other bytes) */
-export const DRESS_BUILDER = 'rustc 1.97.0 on x86_64-unknown-linux-gnu';
+export const DRESS_BUILDER = 'rustc 1.98.1 on x86_64-unknown-linux-gnu';
 /** the module's size in bytes */
 export const DRESS_BYTES = 117;
 export const DRESS_WASM: readonly string[] = [
