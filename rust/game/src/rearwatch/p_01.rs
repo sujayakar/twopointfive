@@ -1045,12 +1045,6 @@ pub fn rear_pin_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::rear
     }
 }
 
-/// The pin, for the debug read-out. (rearwatch.ts rearPin)
-pub fn rear_pin(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::rearwatch::RearPin> {
-    let key = crate::seats::view_key(g);
-    g.m.rearwatch.books.get(key)?.pins.get(gd).copied()
-}
-
 /// doortools.ts, the entry's queue: nobody is held back, REARWATCH.hold being off on the page. (rearwatch.ts rearWatcherWaits)
 pub fn rear_watcher_waits(g: &mut crate::game::Game, op: DoorOpId, gd: GuardId) -> bool {
     false
@@ -1087,41 +1081,6 @@ pub fn rear_watcher(g: &mut crate::game::Game, op: DoorOpId) -> Option<GuardId> 
     } else {
         None
     }
-}
-
-/// The log's newest rows. (rearwatch.ts rearWatchLog)
-pub fn rear_watch_log(g: &mut crate::game::Game) -> Vec<String> {
-    let key = crate::seats::view_key(g);
-    match g.m.rearwatch.books.get(key) {
-        Some(b) => b.log.clone(),
-        None => Vec::new(),
-    }
-}
-
-/// How many rows that log has ever been handed. (rearwatch.ts rearWatchRows)
-pub fn rear_watch_rows(g: &mut crate::game::Game) -> f64 {
-    let key = crate::seats::view_key(g);
-    g.m.rearwatch.books.get(key).map_or(0.0, |b| b.rows)
-}
-
-/// The rule's line for the checks and the debug read-out. (rearwatch.ts rearWatchSummary)
-pub fn rear_watch_summary(g: &mut crate::game::Game) -> String {
-    let mut now: Vec<String> = Vec::new();
-    let key = crate::seats::view_key(g);
-    if let Some(b) = g.m.rearwatch.books.get(key) {
-        for (m, p) in b.pins.iter() {
-            now.push(format!("{} on {}", g.gd[m].callsign, g.tab.cover_opening[p.o].id));
-        }
-        for (m, r) in b.keeps.iter() {
-            now.push(format!("{} keeps {}", g.gd[m].callsign, g.tab.cover_opening[r.pin.o].id));
-        }
-    }
-    let now = if now.is_empty() { String::from("nobody pinned") } else { now.join(", ") };
-    let t = &g.stats.rearwatch;
-    format!(
-        "rear watch on: {} · {} pins · held back in {} entries ({} let go on the clock) · put last in {} · frames with a way behind {}, pinned {}, no rear mark sees it {} · rooms' doors kept over fall in {} ({} let go on the clock)",
-        now, t.pins, t.held, t.late, t.last, t.ways, t.pinned, t.no_line, t.rooms, t.room_late
-    )
 }
 
 #[cfg(test)]

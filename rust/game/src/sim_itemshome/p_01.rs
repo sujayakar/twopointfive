@@ -64,58 +64,6 @@ fn set_word_at(c: &mut sim::items::Items, k: usize, r: usize, v: u32) {
     }
 }
 
-/// The store's `O` from the columns' starts (the same numbers, two generated types).
-fn o_of(c: ItemCols) -> ItemStoreO {
-    ItemStoreO {
-        kind: c.kind, fill: c.fill, radius: c.radius, yaw: c.yaw, flags: c.flags, bytes: c.bytes, who: c.who, vx: c.vx, vz: c.vz, serial: c.serial,
-        fuse: c.fuse, on: c.on, restitution: c.restitution, friction: c.friction, spin: c.spin, age: c.age, life: c.life, tumble: c.tumble,
-        tumble_rate: c.tumble_rate, emit_t: c.emit_t, bounces: c.bounces, heading: c.heading, on_pose: c.on_pose, px: c.px, py: c.py, pz: c.pz, vy: c.vy,
-    }
-}
-
-/// Where each column starts, by its place (the body of ItemStore.places, usable before the store stands at its path).
-fn places_of(o: &ItemStoreO) -> Vec<f64> {
-    vec![
-        o.px, o.py, o.pz, o.vx, o.vy, o.vz, o.yaw, o.spin, o.tumble, o.tumble_rate, o.age, o.life, o.radius, o.restitution, o.friction, o.heading,
-        o.on_pose, o.fuse, o.emit_t, o.fill, o.flags, o.kind, o.bounces, o.who, o.on, o.serial,
-    ]
-}
-
-/// Where each column starts and how long the part is. (itemshome.ts itemCols)
-pub fn item_cols() -> crate::sim_itemshome::ItemCols {
-    // colsOf(ITEM_HEAD, ITEM_F64, ITEM_U32, ITEM_ROWS), walked here: the skeleton's cols_of hands back only `bytes`.
-    let mut s = [0.0; COLS_ALL];
-    let mut at = ITEM_HEAD;
-    for c in 0..COLS_F { s[c] = at / 8.0; at += ITEM_ROWS * 8.0; }
-    for c in COLS_F..COLS_ALL { s[c] = at / 4.0; at += ITEM_ROWS * 4.0; }
-    ItemCols {
-        px: s[0], py: s[1], pz: s[2], vx: s[3], vy: s[4], vz: s[5], yaw: s[6], spin: s[7], tumble: s[8], tumble_rate: s[9], age: s[10], life: s[11],
-        radius: s[12], restitution: s[13], friction: s[14], heading: s[15], on_pose: s[16], fuse: s[17], emit_t: s[18], fill: s[19],
-        flags: s[20], kind: s[21], bounces: s[22], who: s[23], on: s[24], serial: s[25],
-        bytes: at,
-    }
-}
-
-/// The columns of one pool over its game's block; ColStore's constructor folded in. (itemshome.ts ItemStore.constructor)
-pub fn item_store_new(g: &mut crate::game::Game, st: crate::Opaque) -> crate::sim_itemshome::ItemStore {
-    // `st.keep(ITEM_BIT, 'thrown things')` is not in the game (notInTheGame.txt); rust/sim's State holds the part from the start.
-    let o = o_of(item_cols());
-    let part = crate::sim_state::sim_part(crate::sim_state::P_ITEMS);
-    ItemStore {
-        at: places_of(&o),
-        o,
-        home: st,
-        b8: (js::to_u32(part) >> 3) as f64,
-        b4: (js::to_u32(part) >> 2) as f64,
-        cap: ITEM_ROWS,
-    }
-}
-
-/// Where each column starts, by its place (IC). (itemshome.ts ItemStore.places)
-pub fn item_store_places(g: &mut crate::game::Game) -> Vec<f64> {
-    places_of(&g.items.store.o)
-}
-
 /// `n` rows fit, or it is a fault. (itemshome.ts ItemStore.room)
 pub fn item_store_room(g: &mut crate::game::Game, n: f64) {
     if n > g.items.store.cap {
@@ -190,87 +138,6 @@ pub fn item_store_lay(g: &mut crate::game::Game, rows: &[Vec<f64>]) {
     c.n = rows.len() as u32;
 }
 
-/// Where the hand-over's tables are in the module's memory, asked once; the layout here is held to rust/sim's. (itemshome.ts itemIo)
-pub fn item_io(g: &mut crate::game::Game) -> crate::sim_itemshome::ItemIo {
-    if let Some(io) = g.m.sim_itemshome.io { return io; }
-    let x = crate::sim_sim::sim();
-    let o = item_cols();
-    let at = places_of(&o_of(o));
-    let names: Vec<String> = item_f64().into_iter().chain(item_u32()).collect();
-    let mut off: Vec<&str> = Vec::new();
-    for (i, k) in names.iter().enumerate() {
-        let here = if i < COLS_F { at[i] * 8.0 } else { at[i] * 4.0 };
-        if sim::items::cap(100 + i as u32) as f64 != here { off.push(k.as_str()); }
-    }
-    if sim::items::cap(0) as f64 != ITEM_ROWS
-        || sim::items::cap(13) as f64 != o.bytes
-        || !off.is_empty()
-        || sim::items::cap(100 + names.len() as u32) != 0
-        || sim::items::cap(1) as f64 != ITEM_PARS
-        || sim::items::cap(4) as f64 != ITEM_ROOFS
-        || sim::items::cap(3) as f64 != ITEM_EV
-        || sim::items::cap(2) as f64 != ITEM_ROWS * ITEM_ROW_EVENTS
-    {
-        let columns = if off.is_empty() { String::new() } else { format!(" (columns not where the module has them: {})", off.join(", ")) };
-        panic!("the Rust module lays the thrown things out as {} rows in {} bytes and src/sim/itemshome.ts as {} in {}{}, or the hand-over is not the same shape: bun run tools/sim/build.ts", sim::items::cap(0), sim::items::cap(13), ITEM_ROWS, o.bytes, columns);
-    }
-    let io = ItemIo { x, par: (sim::items::addr(0) / 8) as f64, ev: (sim::items::addr(1) / 8) as f64, max_events: sim::items::cap(2) as f64 };
-    g.m.sim_itemshome.io = Some(io);
-    io
-}
-
-/// A double of a take of the store's bytes, by its index into the doubles.
-fn double_of(b: &[u8], i: usize) -> f64 {
-    f64::from_ne_bytes(b[i * 8..i * 8 + 8].try_into().unwrap())
-}
-
-/// A word of a take of the store's bytes, by its index into the words.
-fn word_of(b: &[u8], i: usize) -> u32 {
-    u32::from_ne_bytes(b[i * 4..i * 4 + 4].try_into().unwrap())
-}
-
-/// Object.is of two doubles: a NaN is a NaN whatever its bits, -0 is not 0.
-fn same_double(x: f64, y: f64) -> bool {
-    (x.is_nan() && y.is_nan()) || x.to_bits() == y.to_bits()
-}
-
-/// Where two takes of the store's bytes differ, in words: at most `most` lines, none if they are the same state. (itemshome.ts itemDiff)
-pub fn item_diff(g: &mut crate::game::Game, a: &[u8], b: &[u8], most: Option<f64>) -> Vec<String> {
-    let most = most.unwrap_or(4.0);
-    let o = g.items.store.o;
-    let (ua0, ub0) = (word_of(a, 0), word_of(b, 0));
-    let mut out: Vec<String> = Vec::new();
-    if ua0 != ub0 { out.push(format!("{} things in the pool | {}", ua0, ub0)); }
-    col_diff_items(&o, a, b, m::max(ua0 as f64, ub0 as f64) as usize, most, &mut out);
-    out
-}
-
-/// colDiff(O, ITEM_F64, ITEM_U32, a, b, rows, who, most, out) over this store's columns (itemshome.ts:143, colstore.ts:58), `who` being the row's serial:
-/// sim_colstore::col_diff cannot do it, its ColDiffO carrying only `bytes`.
-fn col_diff_items(o: &ItemStoreO, a: &[u8], b: &[u8], rows: usize, most: f64, out: &mut Vec<String>) {
-    let at = places_of(o);
-    for (c, k) in item_f64().iter().enumerate() {
-        let col = at[c] as usize;
-        let mut r = 0;
-        while r < rows && (out.len() as f64) < most {
-            let (x, y) = (double_of(a, col + r), double_of(b, col + r));
-            if !same_double(x, y) {
-                out.push(format!("row {} (serial {}).{} {} | {}", r, word_of(a, o.serial as usize + r), k, js::num_str(x), js::num_str(y)));
-            }
-            r += 1;
-        }
-    }
-    for (c, k) in item_u32().iter().enumerate() {
-        let col = at[COLS_F + c] as usize;
-        let mut r = 0;
-        while r < rows && (out.len() as f64) < most {
-            let (x, y) = (word_of(a, col + r), word_of(b, col + r));
-            if x != y { out.push(format!("row {}.{} {} | {}", r, k, x, y)); }
-            r += 1;
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     extern crate std;
@@ -283,19 +150,6 @@ mod tests {
         v[4] = tag + 0.25;
         v[23] = -1.0;
         v
-    }
-
-    #[test]
-    fn the_columns_stand_where_rust_sim_has_them() {
-        let o = item_cols();
-        let at = places_of(&o_of(o));
-        for k in 0..COLS_ALL {
-            let bytes = if k < COLS_F { at[k] * 8.0 } else { at[k] * 4.0 };
-            assert_eq!(bytes as usize, sim::items::COLS[k], "column {}", k);
-        }
-        assert_eq!(o.bytes as usize, core::mem::size_of::<sim::items::Items>());
-        assert_eq!(item_f64().len(), COLS_F);
-        assert_eq!(item_f64().len() + item_u32().len(), COLS_ALL);
     }
 
     // (one test: every step below works on the same slot of rust/sim's block, a process-wide static)
@@ -345,36 +199,4 @@ mod tests {
         assert_eq!(item_store_n(&mut g), 1.0, "nothing laid by a pool that does not fit");
     }
 
-    /// the words itemDiff gives, held to the TypeScript's own output for these same bytes (bun, src/sim/itemshome.ts itemDiff)
-    #[test]
-    fn two_takes_differ_in_the_typescripts_words() {
-        let mut g = Box::new(crate::game::Game::blank());
-        g.items.store.o = o_of(item_cols());
-        let o = g.items.store.o;
-        let size = o.bytes as usize;
-        let put_f = |t: &mut [u8], i: f64, r: usize, v: f64| { let at = (i as usize + r) * 8; t[at..at + 8].copy_from_slice(&v.to_ne_bytes()); };
-        let put_w = |t: &mut [u8], i: f64, r: usize, v: u32| { let at = (i as usize + r) * 4; t[at..at + 4].copy_from_slice(&v.to_ne_bytes()); };
-        let mut a = vec![0u8; size];
-        put_w(&mut a, 0.0, 0, 2);
-        put_w(&mut a, o.serial, 0, 7);
-        put_w(&mut a, o.serial, 1, 9);
-        put_f(&mut a, o.fuse, 1, f64::NAN);
-        assert!(item_diff(&mut g, &a, &a.clone(), None).is_empty(), "the same state");
-
-        let mut b = a.clone();
-        put_f(&mut b, o.fuse, 1, f64::from_bits(0x7ff8_0000_0000_0001));
-        assert!(item_diff(&mut g, &a, &b, None).is_empty(), "a NaN is a NaN");
-
-        put_f(&mut b, o.px, 0, -0.0);
-        put_f(&mut b, o.tumble_rate, 1, 0.1);
-        put_w(&mut b, o.who, 1, 4294967295);
-        put_w(&mut b, 0.0, 0, 3);
-        assert_eq!(item_diff(&mut g, &a, &b, None), vec![
-            String::from("2 things in the pool | 3"),
-            String::from("row 0 (serial 7).px 0 | 0"),
-            String::from("row 1 (serial 9).tumbleRate 0 | 0.1"),
-            String::from("row 1.who 0 | 4294967295"),
-        ]);
-        assert_eq!(item_diff(&mut g, &a, &b, Some(2.0)).len(), 2);
-    }
 }

@@ -604,48 +604,6 @@ pub fn spotted_tick(g: &mut crate::game::Game) {
     }
 }
 
-/// the squad line's word while a silent squad is not yet 'compromised'; None: silent.ts's own (spotted.ts spottedWord)
-pub fn spotted_word(g: &mut crate::game::Game) -> Option<String> {
-    if !g.k.spotted.on { return None; }
-    let mut wary = false;
-    for gd in crate::orders::squad_orders_squad(g) {
-        let mode = spotted_mode(g, gd);
-        if mode == crate::spotted::SpottedMode::Caught { return Some(String::from("SILENT · contact")); }
-        if mode == crate::spotted::SpottedMode::Wary { wary = true; }
-    }
-    if wary { Some(String::from("SILENT · low")) } else { None }
-}
-
-/// the panel's one line (spotted.ts spottedSummary)
-pub fn spotted_summary(g: &mut crate::game::Game) -> String {
-    if !g.k.spotted.on { return String::from("off"); }
-    let squad = crate::orders::squad_orders_squad(g);
-    let sq: Vec<GuardId> = squad.into_iter().filter(|&gd| g.gd[gd].state != crate::game::GuardState::Dead).collect();
-    if sq.is_empty() { return String::from("on · no squad"); }
-    if !crate::silent::squad_silent(g) { return String::from("on · the squad is loud (it only acts on a silent squad)"); }
-    let mut parts: Vec<String> = Vec::new();
-    for gd in sq {
-        let row = g.m.spotted.men.get(gd);
-        let mode = row.map_or("calm", |r| r.mode.as_str());
-        let what = match row.and_then(|r| r.what) { Some(w) => alloc::format!(" ({})", w.as_str()), None => String::new() };
-        parts.push(alloc::format!("{} {}{}", g.gd[gd].callsign, mode, what));
-    }
-    parts.join(" · ")
-}
-
-/// what a man is doing, for the probes and the tally (spotted.ts spottedOf)
-pub fn spotted_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::spotted::SpottedOf> {
-    let r = g.m.spotted.men.get(gd)?;
-    Some(SpottedOf {
-        mode: r.mode,
-        what: r.what.map(|w| String::from(w.as_str())),
-        exposed: r.exposed,
-        spot: r.spot,
-        by: r.by.map(|b| g.gd[b].callsign.clone()),
-        wary: r.wary.iter().map(|&h| g.gd[h].callsign.clone()).collect(),
-    })
-}
-
 /// The panel's rows kept in the browser's storage: host work, nothing of the game moves. pairup.ts:85 calls it, so it answers rather than panics. (spotted.ts saveSpotted)
 pub fn save_spotted(g: &mut crate::game::Game) {}
 

@@ -17,11 +17,6 @@ pub fn u32(x: f64) -> f64 {
     js::to_u32(x) as f64
 }
 
-/// A litter cell's name in `GlassShards.litter`: cell (ix, iz) of half a metre.   (shards.ts cellName)
-pub fn cell_name(ix: f64, iz: f64) -> f64 {
-    (ix + 512.0) * 4096.0 + (iz + 512.0)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -42,17 +37,4 @@ mod tests {
         }
     }
 
-    #[test]
-    fn cell_name_matches_the_typescript_bits() {
-        let cases: [(f64, f64, u64); 5] = [
-            (0.0, 0.0, 0x4140010000000000),
-            (-3.0, 7.0, 0x413fd20700000000),
-            (-512.0, -512.0, 0x0000000000000000),
-            (511.0, 511.0, 0x414ff9ff80000000),
-            (-3.5, 7.25, 0x413fca0740000000),
-        ];
-        for (ix, iz, bits) in cases {
-            assert_eq!(cell_name(ix, iz).to_bits(), bits, "cell_name({ix}, {iz})");
-        }
-    }
 }

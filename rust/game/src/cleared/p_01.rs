@@ -111,11 +111,6 @@ pub fn dear_price(g: &mut crate::game::Game, price: &crate::cleared::DearPrice, 
     }
 }
 
-/// A new one: the field initialisers, nothing more.   (cleared.ts ClearedRooms.constructor)
-pub fn cleared_rooms_new(g: &mut crate::game::Game) -> crate::cleared::ClearedRooms {
-    crate::cleared::ClearedRooms::blank()
-}
-
 /// Nothing known (a restart: Game.resetGuards).   (cleared.ts ClearedRooms.reset)
 pub fn cleared_rooms_reset(g: &mut crate::game::Game) {
     crate::seenwalk::seen_reset(g);

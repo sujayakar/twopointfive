@@ -51,23 +51,6 @@ fn blast_step(s: u32) -> u32 {
 
 // ---- the part ----
 
-/// what a URL or env word said for this run; the host sets the field as a game starts (glass.ts glassFxForced)
-pub fn glass_fx_forced(g: &mut crate::game::Game) -> Option<bool> {
-    g.m.glass.fx_forced
-}
-
-/// the choice kept on this machine: the browser's storage is the host's, which sets g.k.glassfx and g.k.glass.crack_gap; with no storage the TypeScript's own try does nothing (glass.ts loadGlassFx)
-pub fn load_glass_fx(g: &mut crate::game::Game) {}
-
-/// the choice kept on this machine: the browser's storage is the host's; with no storage the TypeScript's own try does nothing (glass.ts saveGlassFx)
-pub fn save_glass_fx(g: &mut crate::game::Game) {}
-
-/// before a Game or an Engine exists in the TypeScript: the switch as this boot will have it (glass.ts glassFxBoot)
-pub fn glass_fx_boot(g: &mut crate::game::Game) -> bool {
-    load_glass_fx(g);
-    true
-}
-
 /// per-Game glass bookkeeping, made at first asking: the row itself (glass.ts glassState)
 pub fn glass_state<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::glass::GlassState {
     if g.m.glass.states.is_none() {
@@ -142,12 +125,6 @@ pub fn nearest_on_box(g: &mut crate::game::Game, b: BoxId, p: V3) -> crate::glas
     let lz = v3::clamp(sn * dx + cs * dz, -h[2], h[2]);
     let q: V3 = [c[0] + cs * lx + sn * lz, c[1] + ly, c[2] - sn * lx + cs * lz];
     NearestOnBox { q, d: v3::dist(p, q) }
-}
-
-/// one number of a seed, to the millimetre, folded into the word so far (glass.ts seedMix)
-pub fn seed_mix(h: f64, x: f64) -> f64 {
-    let h = m::imul(js::to_i32(h) ^ js::to_i32(m::round(x * 1000.0)), 0x85EBCA77u32 as i32) as u32;
-    (h ^ (h >> 13)) as f64
 }
 
 /// what a box is, as one 32-bit word: its centre and half sizes to the millimetre (glass.ts boxSeed)
@@ -339,25 +316,6 @@ pub fn crack_test(g: &mut crate::game::Game) -> f64 {
         glass_hit(g, best, q, Some(v3::sub(q, from)), 0.0, Some(GlassHitCause::Hand), None);
     }
     best
-}
-
-/// how many crack decals are live (glass.ts crackCount)
-pub fn crack_count(g: &mut crate::game::Game) -> f64 {
-    let mut n = 0.0;
-    for d in g.decals.list.iter() {
-        if d.kind == crate::render_decals::DecalKind::GlassHit { n += 1.0; }
-    }
-    n
-}
-
-/// the panel's line (glass.ts glassSummary)
-pub fn glass_summary(g: &mut crate::game::Game) -> String {
-    let panes = glass_panes(g).len();
-    let cracks = crack_count(g);
-    let listed = g.engine.world.glass_list.len();
-    let s = glass_state(g);
-    let last = match s.log.last() { Some(l) => format!(" · last: {}", l), None => String::new() };
-    format!("{} panes (laminated: rounds stop, glass stays) · {} crack stars live, {} hits this encounter · listed to GPU {}{}", panes, js::num_str(cracks), js::num_str(s.hits), listed, last)
 }
 
 #[cfg(test)]

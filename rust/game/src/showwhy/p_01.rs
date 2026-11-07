@@ -60,24 +60,6 @@ pub fn flat(a: V3, b: V3) -> f64 {
     m::hyp2(a[0] - b[0], a[2] - b[2])
 }
 
-/// What the rule has shown this game; a read makes no state. (showwhy.ts showWhyStats)
-pub fn show_why_stats(g: &mut crate::game::Game) -> crate::showwhy::ShowWhyStats {
-    let key = crate::seats::view_key(g);
-    match g.m.showwhy.states.get(key) {
-        Some(s) => s.stats,
-        None => fresh(),
-    }
-}
-
-/// The notes of what was shown. (showwhy.ts showWhyLog)
-pub fn show_why_log(g: &mut crate::game::Game) -> Vec<crate::showwhy::WhyNote> {
-    let key = crate::seats::view_key(g);
-    match g.m.showwhy.states.get(key) {
-        Some(s) => s.log.clone(),
-        None => Vec::new(),
-    }
-}
-
 /// A fresh encounter: nothing shown, nothing owed. (showwhy.ts resetShowWhy)
 pub fn reset_show_why(g: &mut crate::game::Game) {
     let key = crate::seats::view_key(g);
@@ -613,60 +595,6 @@ pub fn owe(m: &mut crate::showwhy::Mem, text: &str, why: crate::showwhy::Why, by
     if m.owed.len() < 2 && !m.owed.iter().any(|o| o.text == text) {
         m.owed.push(Owed { text: String::from(text), why, by });
     }
-}
-
-/// What holds this man from the plain thing right now, or none: the standing read. (showwhy.ts showWhyOf)
-pub fn show_why_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::showwhy::Why> {
-    if g.gd[gd].state == crate::game::GuardState::Dead || !crate::orders::squad_orders_mine(g, gd) {
-        return None;
-    }
-    let t = g.time;
-    // a memory the tick has not touched lately says nothing
-    let (line_on, door_shown, door_seen_t) = match g.m.showwhy.mem.get(gd) {
-        Some(r) if t >= r.t && t - r.t <= 0.25 => (r.line_on, r.door_shown, r.door_seen_t),
-        _ => (false, false, 0.0),
-    };
-    if line_on {
-        return Some(Why::Line);
-    }
-    if door_shown && t - door_seen_t <= 0.3 && t >= door_seen_t {
-        return Some(Why::Door);
-    }
-    if crate::rearwatch::room_kept(g, gd) {
-        return Some(Why::Keep);
-    }
-    for &op in &g.door_tools.ops {
-        if g.tab.doortools_door_op[op].men.contains(&gd) {
-            if let Some(r) = g.m.showwhy.op_mem.get(op) {
-                if t >= r.t && t - r.t <= 0.25 {
-                    return Some(Why::Stack);
-                }
-            }
-        }
-    }
-    if crate::condition::is_hurt(g, crate::condition::Man::Guard(gd), None) {
-        return Some(Why::Hurt);
-    }
-    None
-}
-
-/// One line for a tool or the debugger. (showwhy.ts showWhySummary)
-pub fn show_why_summary(g: &mut crate::game::Game) -> String {
-    let s = show_why_stats(g);
-    let mut now: Vec<String> = Vec::new();
-    let mut i = 0;
-    while i < g.guards.len() {
-        let gd = g.guards[i];
-        i += 1;
-        if let Some(w) = show_why_of(g, gd) {
-            now.push(alloc::format!("{} {}", g.gd[gd].callsign, w.as_str()));
-        }
-    }
-    let who = if now.is_empty() { String::from("nobody held") } else { now.join(", ") };
-    alloc::format!(
-        "show why ▸ {} · {} waves, {} squeezes, {} fists, {} ways shown, {} lines · {} door orders seen waiting",
-        who, s.waves, s.squeezes, s.fists, s.ways, s.lines, s.holds
-    )
 }
 
 #[cfg(test)]

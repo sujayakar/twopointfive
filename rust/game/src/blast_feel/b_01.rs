@@ -55,10 +55,6 @@ pub fn holed(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> bool
     !crate::scene_collision::solid_blocked(g, a, b, None)
 }
 
-/// A stage let go now or queued. The queue's rows hold no data (the head of this file): a stage with nothing of the tick's in it is not kept at all.
-/// (src/game/blastFeel.ts:105 later)
-pub fn later(g: &mut crate::game::Game, pl: PlayerId, secs: f64, run: &mut dyn FnMut(&mut crate::game::Game)) { run(g); }
-
 /// Combat's stun burst, where it plays the can's report: true = this burst is a wall charge's and its own report is played (the can's is not); false =
 /// not this module's (the switch off, the DRESS row down, a thrown can, a door charge). (src/game/blastFeel.ts:109 wallReport)
 pub fn wall_report(g: &mut crate::game::Game, at: V3) -> bool {
@@ -170,14 +166,3 @@ pub fn report(g: &mut crate::game::Game, pl: PlayerId, at: V3) {
     if !g.pl[pl].down && d < k.ring_m { crate::audio_iface::game_audio_like_play(g, "earRing", None, Some(k.ring * (1.0 - d / k.ring_m)), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.9 })); }
 }
 
-/// BOUNDARY NO-OP (the picture's: a particle record; a Rust game has no particles): (src/game/blastFeel.ts:175 emit)
-pub fn emit(g: &mut crate::game::Game, pl: PlayerId, kind: crate::render_particles::PKind, pos: V3, dir: V3, count: f64, o: crate::render_particles::EmitOpts) {}
-
-/// BOUNDARY NO-OP (the picture's: particles): (src/game/blastFeel.ts:181 fireball)
-pub fn fireball(g: &mut crate::game::Game, pl: PlayerId, w: &crate::wallcharge::WallSpot, open: bool, n: V3) {}
-
-/// BOUNDARY NO-OP (the picture's: particles): (src/game/blastFeel.ts:196 ringStage)
-pub fn ring_stage(g: &mut crate::game::Game, pl: PlayerId, k: f64, faces: &[crate::blast_feel::Face]) {}
-
-/// BOUNDARY NO-OP (the picture's: particles): (src/game/blastFeel.ts:213 ceiling)
-pub fn ceiling(g: &mut crate::game::Game, pl: PlayerId, faces: &[crate::blast_feel::Face]) {}

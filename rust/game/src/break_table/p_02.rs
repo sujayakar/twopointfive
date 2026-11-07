@@ -59,10 +59,6 @@ fn emit_chips(g: &mut Game, at: V3, dir: V3, k: f64, speed: f64, size: f64, aspe
     });
 }
 
-// ---------------------------------------------------------------- the dice, the pool's plain questions
-/// (breakTable.ts Breaks.constructor)
-pub fn breaks_new(g: &mut crate::game::Game) -> crate::break_table::Breaks { Breaks::blank() }
-
 /// The die that lays out what a cell throws. (breakTable.ts Breaks.hash)
 pub fn breaks_hash(g: &mut crate::game::Game) -> f64 {
     let n = g.destr.breaks.counter;
@@ -101,12 +97,6 @@ pub fn breaks_share(g: &mut crate::game::Game) -> crate::break_table::BreaksShar
         BreaksShare { thrown: t.thrown, heap: t.heap, furniture: t.furniture }
     };
     if look_on(g) { BreaksShare { thrown: s.thrown + s.heap, heap: 0.0, furniture: s.furniture } } else { s }
-}
-
-/// Pieces moving + particle records waiting to be born. (breakTable.ts Breaks.load)
-pub fn breaks_load(g: &mut crate::game::Game) -> f64 {
-    let waiting = if crate::particle_fx::gpu_fx(g) { g.engine.particles.as_ref().map_or(0.0, |p| p.queue.len() as f64) } else { 0.0 };
-    crate::debris::debris_moving(g) + waiting
 }
 
 // ---------------------------------------------------------------- the pool's hooks
@@ -884,13 +874,6 @@ pub fn breaks_studs(g: &mut crate::game::Game, b: &crate::break_table::CellGrid)
         k += 1.0;
     }
     out
-}
-
-/// The pool's line for the panel. (breakTable.ts Breaks.summary)
-pub fn breaks_summary(g: &mut crate::game::Game) -> String {
-    let load = breaks_load(g);
-    let s = &g.stats.break_table;
-    alloc::format!("breaks: shaped {} ({} planes, {} dropped) \u{b7} plain {} \u{b7} heap {} \u{b7} again {} \u{b7} crumbled {} \u{b7} refused {} \u{b7} mayhem {} \u{b7} ragged ends {} \u{b7} load {}", s.shaped, s.planes, s.dropped, s.plain, s.heap, s.again, s.crumbled, s.refused, s.mayhem, s.ragged, load)
 }
 
 

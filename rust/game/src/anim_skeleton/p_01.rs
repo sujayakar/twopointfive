@@ -168,27 +168,6 @@ pub fn layer_ran(g: &mut crate::game::Game, code: f64, c: CharId) {
     }
 }
 
-/// skeleton.ts:108 `c.get.call(self, ...)`, that is cols_table_get(&c, &g.ch[self_], out, o): the skeleton gives cols_to_bench no g to find the man by.
-fn seam_cols_get(c: ColsTable, self_: CharId, out: &mut [f64], o: usize) {
-    todo!("needs: g in cols_to_bench's signature, to reach g.ch[self_] for cols_table_get")
-}
-/// skeleton.ts:109 `c.put.call(self, ...)`, that is cols_table_put(&c, &mut g.ch[self_], from, o): as seam_cols_get.
-fn seam_cols_put(c: ColsTable, self_: CharId, from: &[f64], o: usize) {
-    todo!("needs: g in cols_from_bench's signature, to reach g.ch[self_] for cols_table_put")
-}
-
-/// Hand a layer's kept columns over to the bench's args, before the ask.   (skeleton.ts colsToBench)
-pub fn cols_to_bench(c_2: crate::anim_skeleton::ColsTable, self_: CharId, at: Option<f64>) {
-    let at = at.unwrap_or(LAYER_COLS_AT);
-    seam_cols_get(c_2, self_, &mut ::sim::skeleton::bench().args, at as usize);
-}
-
-/// Take a layer's kept columns back off the bench's args, after the ask.   (skeleton.ts colsFromBench)
-pub fn cols_from_bench(c_2: crate::anim_skeleton::ColsTable, self_: CharId, at: Option<f64>) {
-    let at = at.unwrap_or(LAYER_COLS_AT);
-    seam_cols_put(c_2, self_, &::sim::skeleton::bench().args, at as usize);
-}
-
 /// The module with `ch`'s rig on the bench, written when another was there; None for a rig the bench cannot hold.   (skeleton.ts benchRig)
 pub fn bench_rig(g: &mut crate::game::Game, ch: RigId, owed: Option<bool>) -> Option<crate::sim_sim::SimExports> {
     let n = g.tab.rig[ch].nodes.len();
@@ -440,11 +419,6 @@ pub fn pose_set_make(g: &mut crate::game::Game, id: PoseSetId, n: f64) -> crate:
     p
 }
 
-/// Singles a game's pool holds.   (skeleton.ts posePoolRoom)
-pub fn pose_pool_room() -> f64 {
-    ::sim::poses::POOL as f64
-}
-
 /// Singles of the pool this set fills when it has made every pose it can (none made yet: none, it has no rig to count by).   (skeleton.ts poseSetMost)
 pub fn pose_set_most(g: &mut crate::game::Game, s: PoseSetId) -> f64 {
     let set = &g.tab.pose_set[s];
@@ -587,12 +561,6 @@ pub fn side_of<'g>(g: &'g mut crate::game::Game, clip: ClipId) -> &'g mut crate:
         g.m.anim_skeleton.clip_side.set(clip, ClipSide { lines: l, at: -2.0, need });
     }
     g.m.anim_skeleton.clip_side.get_mut(clip).unwrap()
-}
-
-/// The clip copied into the module the first time it is asked for, and its number there kept (−1: the module does not take it).   (skeleton.ts clipIn)
-pub fn clip_in(g: &mut crate::game::Game, x: crate::sim_sim::SimExports, clip: ClipId) -> crate::anim_skeleton::ClipSide {
-    clip_place(g, clip);
-    g.m.anim_skeleton.clip_side.get(clip).unwrap().clone()
 }
 
 /// clipIn's work, answering the two numbers its callers read and not a copy of the side's lines: (at, need).

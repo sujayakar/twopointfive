@@ -7,16 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// Empties the QA log and the counters. (he40.ts he40StatsReset)
-pub fn he40_stats_reset(g: &mut crate::game::Game) {
-    g.m.he40.he40_log.clear();
-    let s = &mut g.stats.he40;
-    s.fired = 0;
-    s.bursts = 0;
-    s.duds = 0;
-    s.gone = 0;
-}
-
 /// The length of a previewed arc in metres. (he40.ts arcLength)
 pub fn arc_length(sol: &crate::throwables::ThrowSolution) -> f64 {
     let mut l = 0.0;
@@ -123,20 +113,6 @@ pub fn shell_solve(g: &mut crate::game::Game, from: V3, target: V3, bodies: Opti
         }
     }
     sol
-}
-
-/// The 40 mm is up, its arc is drawn, and the arc is too short to arm. (he40.ts previewTooClose)
-pub fn preview_too_close(g: &mut crate::game::Game) -> bool {
-    let pl = g.player;
-    if g.pl[pl].throw_preview.is_none() || !crate::game::player_rifle_up(g, pl) {
-        return false;
-    }
-    let rifle = g.pl[pl].rifle;
-    if crate::weapons::rifle_attachment(g, rifle) != Some(crate::weapons::RifleAttachment::He40) {
-        return false;
-    }
-    let preview = g.pl[pl].throw_preview.clone().unwrap();
-    !arc_armed(g, &preview)
 }
 
 /// The point to send a round at: the chest of the man under the reticle, led; else the fixture; else the cursor's point. (he40.ts shellAimPoint)

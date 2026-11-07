@@ -20,8 +20,6 @@ fn noted_thin(g: &mut Game, b: BoxId, hw0: f64, k: f64, r: f64, g_2: f64, bl: f6
 #[cfg(test)]
 fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { tests::row(b) }
 #[cfg(test)]
-fn made_box(g: &mut Game, p: &crate::scene_boxes::MakeBoxP) -> BoxId { tests::made(p) }
-#[cfg(test)]
 fn noted_thin(g: &mut Game, b: BoxId, hw0: f64, k: f64, r: f64, g_2: f64, bl: f64) {}
 
 /// A slot's streak: one thin emissive box, dynamic and shadowless, parked under the floor. (tracers.ts:72)
@@ -43,59 +41,6 @@ pub fn is_tracer_round(g: &mut crate::game::Game, w: FirearmId) -> bool {
     let Some(t) = g.m.weapons.weapons.get(def).unwrap().tracer else { return false; };
     let k = if g.fa[w].infinite { g.fa[w].shots_fired } else { crate::weapons::firearm_spent(g, w) };
     (t.every > 0.0 && k > 0.0 && js::rem(k, t.every) == 0.0) || crate::weapons::firearm_rounds_ready(g, w) < t.last_n
-}
-
-/// The pool: every slot made once, with its lamp. The lights are `g.engine.lights`, reached by path. (tracers.ts Tracers.constructor)
-pub fn tracers_new(g: &mut crate::game::Game, params: Option<crate::tracers::TracersParams>) -> crate::tracers::Tracers {
-    let params = match params { Some(p) => p, None => crate::effects::tracer_fx() };
-    let mut this = Tracers::blank();
-    this.params = params;
-    let n = m::max(1.0, js::to_i32(params.max_live) as f64);
-    let mut i = 0.0;
-    while i < n {
-        let box_ = made_box(g, &streak_box_p());
-        let lamp = g.tab.light.push(crate::render_lights::RtLight {
-            name: String::from("tracer"),
-            group: String::from("tracer"),
-            kind: 0.0,
-            pos: [0.0, -10.0, 0.0],
-            dir: [0.0, -1.0, 0.0],
-            color: [1.0, 0.5, 0.2],
-            intensity: 0.0,
-            range: params.light_range,
-            inner_deg: 0.0,
-            outer_deg: 180.0,
-            radius: params.light_radius,
-            volumetric: 1.0,
-            owner: 0.0,
-            enabled: true,
-            fixture_box: -1.0,
-            flicker: 0.0,
-            ttl: LAMP_TTL,
-            age: 0.0,
-            peak_intensity: 0.0,
-            ..crate::render_lights::RtLight::zeroed() // every optional field of the literal is absent
-        });
-        this.pool.push(Tracer {
-            alive: false,
-            from: [0.0, 0.0, 0.0],
-            dir: [0.0, 0.0, 1.0],
-            l: 0.0,
-            s: 0.0,
-            v: 0.0,
-            age: 0.0,
-            frames: 0.0,
-            color: [1.0, 0.5, 0.2],
-            owner: 0.0,
-            impact: TracerImpact::None,
-            arrived: false,
-            light: None,
-            box_,
-            lamp,
-        });
-        i += 1.0;
-    }
-    this
 }
 
 /// Every live streak, copied. (tracers.ts Tracers.each)
@@ -185,12 +130,6 @@ fn release_at(g: &mut Game, i: usize) {
     crate::render_lights::light_set_remove(g, l);
     g.tracers.pool[i].light = None;
     g.tracers.lit = m::max(0.0, g.tracers.lit - 1.0);
-}
-
-/// Hands a streak's light back to the set (idempotent). `t` cannot be the pool's row while `g` is lent, so it is a copy: its slot is found by its lamp, which is the slot's for good, and both are written. (tracers.ts Tracers.release)
-pub fn tracers_release(g: &mut crate::game::Game, t: &mut crate::tracers::Tracer) {
-    if let Some(i) = g.tracers.pool.iter().position(|r| r.lamp == t.lamp) { release_at(g, i); }
-    t.light = None;
 }
 
 /// One frame: a head that reached the end last frame retires, the others advance, one arriving now makes its ember, the lights ride the heads, each streak's box is rewritten tail to head and goes out. (tracers.ts Tracers.update)
@@ -369,24 +308,6 @@ mod tests {
         assert!(is_tracer_round(&mut g, w)); // every third of the AKS-74U's
         g.fa[w].def = crate::weapons::WeaponId::Fiveseven;
         assert!(!is_tracer_round(&mut g, w)); // a pistol's row declares none
-    }) }
-
-    /// The constructor's slots, each with its own lamp in the table, as the literal has it, and not in the set.
-    #[test]
-    fn each_slot_is_made_with_its_own_lamp() { on_a_big_stack(|| {
-        let mut g = Box::new(Game::blank());
-        let (before, mut p) = (g.tab.light.len(), crate::effects::tracer_fx());
-        p.max_live = 2.9;
-        let t = tracers_new(&mut g, Some(p));
-        assert_eq!((t.pool.len(), g.tab.light.len() - before, t.pool[0].dir, t.pool[0].color), (2, 2, [0.0, 0.0, 1.0], [1.0, 0.5, 0.2]));
-        assert!(t.pool[0].lamp != t.pool[1].lamp && t.pool[0].light.is_none() && g.engine.lights.lights.is_empty());
-        assert!(t.pool[0].box_ != t.pool[1].box_);
-        let b = row(t.pool[1].box_);
-        assert_eq!((b.c, b.h, b.albedo, b.emissive, b.flags), ([0.0, -10.0, 0.0], [0.006, 0.006, 0.05], [0.04, 0.03, 0.02], [0.0; 3], 10.0));
-        let l = &g.tab.light[t.pool[1].lamp];
-        assert_eq!((l.pos, l.dir, l.range, l.radius, l.ttl, l.fixture_box, l.outer_deg, l.enabled), ([0.0, -10.0, 0.0], [0.0, -1.0, 0.0], 4.0, 0.06, 30.0, -1.0, 180.0, true));
-        p.max_live = 0.0; // never fewer than one
-        assert_eq!(tracers_new(&mut g, Some(p)).pool.len(), 1);
     }) }
 
     /// A lit streak's light rides 5 cm behind the head, its age held at 0, and the count of lit heads is the walk's.

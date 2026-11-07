@@ -7,13 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// QA: the burst log, the reasons and the counters back to nothing. (frag.ts fragStatsReset)
-pub fn frag_stats_reset(g: &mut crate::game::Game) {
-    g.m.frag.frag_log.clear();
-    g.m.frag.frag_why.clear();
-    g.stats.frag = crate::frag::FragStats::default();
-}
-
 /// The burst's one roll: a hash of its serial and the man's id, 0‥1. (frag.ts hash01)
 pub fn hash01(a: f64, b: f64) -> f64 {
     let mut x = (m::imul(js::to_i32(a), 0x9E3779B1u32 as i32) ^ m::imul(js::to_i32(b).wrapping_add(0x7F4A7C15), 0x85EBCA6Bu32 as i32)) as u32;

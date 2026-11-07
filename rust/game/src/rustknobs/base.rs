@@ -787,7 +787,7 @@ pub fn knobs_to_rust(g: &mut crate::game::Game) {
         g.k.hold.catch.seat[2],   // 730 HOLD.catch.seat.2
         g.k.hold.catch.seat_lean,   // 731 HOLD.catch.seatLean
         g.k.hold.catch.settle,   // 732 HOLD.catch.settle
-        (if g.k.hold.catch_shape { 1.0 } else { 0.0 }),   // 733 HOLD.catchShape
+        1.0,   // 733 HOLD.catchShape
         g.k.hold.catch.sink,   // 734 HOLD.catch.sink
         g.k.hold.catch.via[0],   // 735 HOLD.catch.via.0
         g.k.hold.catch.via[1],   // 736 HOLD.catch.via.1
@@ -893,7 +893,7 @@ pub fn knobs_to_rust(g: &mut crate::game::Game) {
         g.k.hold.hit.hips,   // 836 HOLD.hit.hips
         g.k.hold.hit.sam_dip,   // 837 HOLD.hit.samDip
         g.k.hold.hit.sam_in,   // 838 HOLD.hit.samIn
-        (if g.k.hold.hit_shape { 1.0 } else { 0.0 }),   // 839 HOLD.hitShape
+        1.0,   // 839 HOLD.hitShape
         g.k.hold.hit.t[0],   // 840 HOLD.hit.t.0
         g.k.hold.hit.t[1],   // 841 HOLD.hit.t.1
         g.k.hold.hit.t[2],   // 842 HOLD.hit.t.2

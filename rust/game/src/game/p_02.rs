@@ -7,11 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// The suppression scalar, 0..1. (game.ts Player.suppression)
-pub fn player_suppression(g: &mut crate::game::Game, id: PlayerId) -> f64 {
-    g.pl[id].sup.v
-}
-
 /// The selector open as a list, not up as a ring. (game.ts Player.listOpen)
 pub fn player_list_open(g: &mut crate::game::Game, id: PlayerId) -> bool {
     let sel = &g.pl[id].sel;
@@ -47,11 +42,6 @@ pub fn player_new(g: &mut crate::game::Game, men: crate::Opaque, ch: RigId, pos:
     let def = g.fa[pistol].def;
     g.ch[c].muzzle_ahead = g.m.weapons.weapons.get(def).unwrap().muzzle_ahead;
     id
-}
-
-/// The firearm the kit has selected. (game.ts Player.firearm)
-pub fn player_firearm(g: &mut crate::game::Game, id: PlayerId) -> FirearmId {
-    if player_rifle_sel(g, id) { g.pl[id].rifle } else { g.pl[id].pistol }
 }
 
 /// What is physically in the gun hand right now. (game.ts Player.gunInHand)
