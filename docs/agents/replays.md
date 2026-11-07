@@ -748,3 +748,17 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (the listening page's 'In play' links) and the one-file build, which has no viewer page, keep the card. Putting the word up gives every road back as it was. CHECK:
   `probes.ts cardreplay` (the card as built, then each old road with the word up, and that the link and the address ask it). A headless page on the software
   adapter walked it: play, F7, the card, the click, the viewer playing, '‹ Game', the address, and the card inside a kept page. Never seen on a GPU.
+- **A run's tape lives over a restart and a loaded checkpoint, and a page's run walks again headless** (2026-11-07). The card's Restart puts the game back to the
+  start it was kept at, clock and die and all, with the same player object (`host/rustgame.ts toStart`): the tape read that as 'the game clock was moved between
+  two steps' and ended, and the trace marked it a loaded checkpoint, so the map viewer opened a card's file at the wrong try. The host now counts it
+  (`savestate.ts startedAgain`, `stats.restarts`; a load counts itself in `stats.loads`), and tape and trace read the counts: a row `[f, 'restart', 'start']`,
+  and RESTART_MARK. A checkpoint loaded from a card is a row `[f, 'load', slot]` where it was ONE load of a save this run made in memory (the walk has made the
+  same save); a slot written or emptied from a panel between two steps, a file's load, two loads or a load beside a restart in one gap end the tape with their
+  words. Autosave on or off is one of the 'flags' rows (a save is a line of the game's own). The tools' host does what the page's does (`tools/blitz/rust-host.ts`):
+  F5 off the step's record, the sandbox flags kept over a load, and, where a walk asked for it before its first step (`keepStart`), the page's restart off a row or inside
+  a step. CHECK: `tools/qa/replaybuf-probes.ts`, the 'load:' lines (a restart of the page's kind and a load between two steps, each walked again to the digest;
+  `ANEW_BREAK=1`, `LOADROW_BREAK=1` red). MEASURED on live pages (headless Chromium, only the render stubbed, real DOM events, the senses on the CPU; about five and a
+  half minutes each with F5s, loads, a restart, deaths): night breach 19,015 steps, rescue 18,072, compound 14,832, quiet yard 19,700, replayed on a page with no man
+  over 0.007 m off the trace (the trace's own rounding), and the same four files walked by `tools/qa/rerun.ts` to 0.01 m. ON THE GPU'S SENSES a page's tape
+  parts (room clear: at step 1,174): the light probe's answers are on no tape, since the tick no longer reads them through `Sensors.read`. That is why the game page
+  plays no tapes yet. Nobody has watched one; never seen on a GPU.
