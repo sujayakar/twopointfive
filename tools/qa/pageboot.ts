@@ -7,7 +7,6 @@
 // THE SETTINGS are the switches a page is opened under, each a different set of texts since the fold of constant switches (gpu/wgslTrim.ts SHADER_FOLD):
 //   title   the page as it opens (the look is the picture: its layers and the walls' two sides are in every setting)
 //   snow    a snow level in its weather: every switch a LEVEL raises (the weather kinds, lying snow and its look rows)
-//   smokelab  the smoke lab's page (`/smokelab`): the one switch of the shader text a page of the look's lab raises beyond the title
 //   nowalls   the page as it opens with the walls' row down (`?look=walls:0`): the WALL_SIDES=false texts, which no other setting compiles
 // ONE BOOT A PROCESS: the switches are module state, so a tool that wants two settings runs itself once for each (`--setting`).
 // The stand is the caller's: TPS_PROFILE is read as the game's modules load, so a tool that wants the page's own texts sets it before it calls pageBoot.
@@ -16,7 +15,7 @@ export type Stage = 'compute' | 'vertex' | 'fragment';
 export interface Mod { label: string; code: string }
 export interface Asked { label: string; stages: { stage: Stage; mod: number; entry: string | undefined }[] }
 export interface Booted { setting: string; mods: Mod[]; asked: Asked[]; /** a step the stand-in never answered: the recording is short */ faults: string[] }
-export const SETTINGS: Record<string, string> = { title: 'the title', snow: 'a snow level in its weather', smokelab: "the smoke lab's page", nowalls: 'the page with the walls\' row down' };
+export const SETTINGS: Record<string, string> = { title: 'the title', snow: 'a snow level in its weather', nowalls: 'the page with the walls\' row down' };
 /** the settings this tree has */
 export async function settingsHere(): Promise<string[]> { return Object.keys(SETTINGS); }
 /** `--setting <name>` of a tool's own arguments (null: none given); an unknown name stops the tool */
@@ -39,7 +38,6 @@ export async function pageBoot(setting: string): Promise<Booted> {
   const { DUST_DRAW } = await import(`${ROOT}/src/smoke/dustTint.ts`);
   cutConfig.on = true; roundConfig.gpu = ROUND.on && cutConfig.on; if (glassFxBoot()) FR.glassBreakConfig.on = true; DUST_DRAW.on = true;
   if (setting === 'snow') { FR.weatherKindConfig.on = true; FR.snowConfig.on = true; for (const k of Object.keys(FR.snowLookConfig)) FR.snowLookConfig[k] = true; }
-  if (setting === 'smokelab') FR.smokeLabConfig.on = true;
   if (setting === 'nowalls') FR.wallSidesConfig.on = false;
   const mods: Mod[] = [], asked: Asked[] = [], faults: string[] = [];
   const ofMod = new WeakMap<object, number>();

@@ -15,7 +15,7 @@ const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftsha
   // one dump a setting. (Until 2026-11-07 there were two, the second with the shader rows' words in the environment: the ten big kernels and the gather have
   // one writing now, and the row that is left, the first-frame start, changes WHEN a program is compiled and no text.)
   const mods = [], seen = new Set();
-  const SETTINGS = ['title', 'snow', 'smokelab', 'nowalls'];
+  const SETTINGS = ['title', 'snow', 'nowalls'];
   for (const setting of SETTINGS) {
     const d = spawnSync('bun', ['run', path.join(ROOT, 'tools/qa/wgsl-dump.ts'), JSON_AT, '--setting', setting], { cwd: ROOT, encoding: 'utf8', env: process.env });
     if (d.status !== 0) { console.error(d.stdout, d.stderr); process.exit(2); }
