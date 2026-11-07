@@ -118,7 +118,7 @@ export interface FrameParams {
   capColor: [number, number, number, number];
   post: [number, number, number, number];
   rcJitter: [number, number];
-  directCfg: [number, number, number, number];   // free, free (the old estimator's ray budgets until 2026-11-07), blurCapPx, historyWeight
+  directCfg: [number, number, number, number];   // free, free, blurCapPx, free (the old estimator's ray budgets and history weight until 2026-11-07)
   numTransient: number;        // transient (ttl) lights alive this frame — lets the gather skip its subtraction loop
   secMinE: number;             // shadow-ray threshold for lights at cascade interval hits (W/m², unshadowed)
   glassCfg: [number, number, number, number];   // glass experiment: x = reflection strength (× the physical Fresnel term), y = tint depth (exponent on the pane's albedo per crossing), z = dust glow gain, w = refraction: the index of refraction while settings.glassRefract (≥ 1), 0 = off (composite.wgsl glassRefractPath)

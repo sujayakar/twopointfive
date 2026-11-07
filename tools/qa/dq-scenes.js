@@ -372,6 +372,7 @@
   /** after a preset hop: forget the captured base (its renderScale / K belong to the old tier) so the next apply() re-reads the tier's own */
   function rebase() { base = null; return apply('ship'); }
   /** the OLD renderer for the flash / strobe references: every v3 system off, scale 1.0 (tjank's allOff) */
+  // (SINCE 2026-11-07 this keeps ReSTIR and the shared denoiser: the old estimator and denoiser are gone, so 'old' is only froxels, TAAU and sharp direct off)
   function oldRenderer(on) { const s = S(); if (!base) apply('ship'); if (on) { s.froxelVol = false; s.taau = false; s.renderScale = 1.0; s.sharpDirect = false; } else { for (const k of BASE_KEYS) s[k] = base[k]; } return { froxelVol: s.froxelVol, taau: s.taau, scale: s.renderScale }; }
   const T = { SCENES, VARIANTS, res: {}, sweeps: {}, tiers: {}, boot, stage, cap, apply, oldRenderer, census, survey, flashLight, noise, flashFrames, sweep, sweepCompare, torchLight, torchPose, costHeld, tierRun, saveJson, rebase, s3Lights, readback, tileRect, postCrop, postFrame, postCanvas, dirTerm, dirTermInternal, tileStats, seed, pinViewport, get steadyLight() { return steadyLight; }, set steadyLight(v) { steadyLight = v; }, setFakeHidden(v) { fakeHidden = !!v; } };
   window.__dq = T;
