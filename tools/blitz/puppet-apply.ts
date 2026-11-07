@@ -1837,11 +1837,10 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = b[C.p++] !== 0; const c = o.alarmOn; if (typeof c === 'boolean') { if (c !== v) o.alarmOn = v; } else if (c === null) { if (v) o.alarmOn = v; } else if (typeof c === 'object') { if (!v) o.alarmOn = null; } else if (!(c === undefined && !v)) o.alarmOn = v; }   // alarm_on
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.sweepAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.sweepAt = v !== 0 as any; else o.sweepAt = v; } }   // sweep_at
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.spottedT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.spottedT = v !== 0 as any; else o.spottedT = v; } }   // spotted_t
-    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { const v = b[C.p++] !== 0; const c = o.debrief; if (typeof c === 'boolean') { if (c !== v) o.debrief = v; } else if (c === null) { if (v) o.debrief = v; } else if (typeof c === 'object') { if (!v) o.debrief = null; } else if (!(c === undefined && !v)) o.debrief = v; }   // debrief
-    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.downCardAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.downCardAt = v !== 0 as any; else o.downCardAt = v; } }   // down_card_at
-    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { const v = b[C.p++] !== 0; const c = o.handsOn; if (typeof c === 'boolean') { if (c !== v) o.handsOn = v; } else if (c === null) { if (v) o.handsOn = v; } else if (typeof c === 'object') { if (!v) o.handsOn = null; } else if (!(c === undefined && !v)) o.handsOn = v; }   // hands_on
-    { let c = o.stats; if (!c || typeof c !== 'object') c = o.stats = C.made("crate::game::MissionStats"); f_game_MissionStats(c, m + 10); }   // stats
-    if (b[MP + ((m + 23) >> 3)] & (1 << ((m + 23) & 7))) C.slow(254, o);   // serial
+    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.downCardAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.downCardAt = v !== 0 as any; else o.downCardAt = v; } }   // down_card_at
+    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { const v = b[C.p++] !== 0; const c = o.handsOn; if (typeof c === 'boolean') { if (c !== v) o.handsOn = v; } else if (c === null) { if (v) o.handsOn = v; } else if (typeof c === 'object') { if (!v) o.handsOn = null; } else if (!(c === undefined && !v)) o.handsOn = v; }   // hands_on
+    { let c = o.stats; if (!c || typeof c !== 'object') c = o.stats = C.made("crate::game::MissionStats"); f_game_MissionStats(c, m + 9); }   // stats
+    if (b[MP + ((m + 22) >> 3)] & (1 << ((m + 22) & 7))) C.slow(254, o);   // serial
   }
   function f_savestate_ChronSnap(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(255, o);   // events
@@ -9724,6 +9723,7 @@ export function puppetRows(C: Ctx) {
   }
   function f_deathrecap_Recap(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1489, o);   // lost_live
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = b[C.p++] !== 0; const c = o.allDown; if (typeof c === 'boolean') { if (c !== v) o.allDown = v; } else if (c === null) { if (v) o.allDown = v; } else if (typeof c === 'object') { if (!v) o.allDown = null; } else if (!(c === undefined && !v)) o.allDown = v; }   // all_down
   }
   return { __set(d: DataView, bb: Uint8Array) { dv = d; b = bb; },
     __top: {

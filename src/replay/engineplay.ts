@@ -273,7 +273,6 @@ export class TapePlay {
     W.layCamera(cam);   // (tapewalk.ts: the pose, and the matrices the page's step read, as tools/qa/rerun.ts lays them)
     try { g.update(dt, I, cam, cv as unknown as HTMLCanvasElement); } catch (e) { W.failed(); throw e; }
     W.done();
-    if (g.mission.debrief) g.mission.debrief = false;   // (the page's own line after a step: the end card's flag is taken — the card itself is not opened over a replay)
     this.simTime += dt; h.engine.lights.update(dt, this.simTime); this.f = f + 1; this.lastDt = dt;
     if (tw) this.blendEnd(tw); else { const lt = h.loop.tween; if (lt && !lt.stale) lt.rest(); }   // (a step no slow frame will draw between — a seek, a script's, a faster pace — ends the blend: nothing is ever drawn across it)
     this.hold(f + 1); return dt;

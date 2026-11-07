@@ -41,6 +41,7 @@ pub enum OutEvent {
     ClearSnowTracks,
     Tap(crate::out_events::OutTap),
     WallFeel(crate::out_events::OutWallFeel),
+    EndCard,
 }
 
 #[derive(Clone, Debug)]

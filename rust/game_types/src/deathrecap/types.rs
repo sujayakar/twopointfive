@@ -306,6 +306,8 @@ pub struct DeathRecap {
 pub struct Recap {
     /// the mission this record is of, by its serial
     pub run: Option<u32>,
+    /// every player is down (written every tick, for the HUD: the find-me outline)
+    pub all_down: bool,
     pub last_t: f64,
     /// when the next sample of the floor is due
     pub next: f64,
@@ -337,6 +339,7 @@ impl Recap {
     pub fn blank() -> Self {
         Recap {
             run: None,
+            all_down: false,
             last_t: 0.0,
             next: 0.0,
             primed: false,

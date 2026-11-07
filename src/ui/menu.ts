@@ -336,7 +336,7 @@ export class Menu {
   /** the URL named a scenario and its start() said no: the reason, where the player is looking */
   private refused(card: HTMLElement) { const why = this.d.scenario?.refused?.() ?? null; if (why) { const r = el('div', 'refused'); r.textContent = why; card.appendChild(r); } }
 
-  /** The debrief card (main.ts opens it whenever game.mission.debrief is raised): on MISSION COMPLETE — Again = a fresh encounter (and mission), Keep playing / Esc =
+  /** The debrief card (main.ts opens it when the game says the end card is due): on MISSION COMPLETE — Again = a fresh encounter (and mission), Keep playing / Esc =
    *  back to the sandbox with the mission left done — and, a beat after Sam goes DOWN, as the down card — Restart (or Esc back to the floor, where Enter restarts
    *  as it always has). The contents are ui/debrief.ts's: rating + score, the numbers, the badges, the map, the timeline. */
   private debrief(card: HTMLElement) {

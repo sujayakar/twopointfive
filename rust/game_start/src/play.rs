@@ -64,6 +64,8 @@ pub struct Play {
     /// every sound the game told its host to play (`audio.play`: its name, when, and where it was, None for a sound with no place). Footsteps
     /// are another call of the host's and are not kept.
     pub sounds: Vec<Sound>,
+    /// when the game told its host to open the end card, on the game's clock
+    pub end_cards: Vec<f64>,
     /// each man's last bubble heard: when it was said, and its words
     spoke: Vec<(GuardId, f64, String)>,
     /// where the hand's cursor points in the world, kept there as the camera moves (None: where the host left it)
@@ -82,7 +84,7 @@ fn start_by(data: &Json, room_clear: bool, link: Option<&str>, o: &Opts) -> Play
     let Stood { mut game, host, .. } = stand::stand(data, ch.assets(), &StartOpts { seed: o.seed, seats: o.seats, scenario, link: link.map(String::from), cpu_senses: o.cpu_senses, ..Default::default() });
     game.out.clear();
     HOLDS.with(|h| h.set(true));   // (only once a Play exists to put it down: a stand that panicked holds nothing)
-    let mut p = Play { g: game, host, frames: 0, said: Vec::new(), sounds: Vec::new(), cursor: None, spoke: Vec::new(), _one: one };
+    let mut p = Play { g: game, host, frames: 0, said: Vec::new(), sounds: Vec::new(), end_cards: Vec::new(), cursor: None, spoke: Vec::new(), _one: one };
     p.hear();
     p
 }
@@ -118,7 +120,13 @@ impl Play {
         let out = stand::frame(&mut self.g, &self.host, DT);
         self.frames += 1;
         let t = self.g.time;
-        for e in out { if let E::GameAudioLikePlay(p) = e { self.sounds.push(Sound { t, name: p.name.clone(), at: p.pos }); } }
+        for e in out {
+            match e {
+                E::GameAudioLikePlay(p) => self.sounds.push(Sound { t, name: p.name.clone(), at: p.pos }),
+                E::EndCard => self.end_cards.push(t),
+                _ => {}
+            }
+        }
         self.hear();
     }
     /// every man's bubble that is new since the last frame goes on `said`

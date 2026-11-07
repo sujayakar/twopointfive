@@ -180,7 +180,7 @@ export async function debriefRun() {
     if (!game.mission.pulled) fails.push(`the drive did not come out (pressed ${pressed}, driveT ${f1(game.mission.driveT)}, stage ${game.mission.stage}, Sam ${f1(Math.hypot(game.player.char.pos[0] - M.rack.front[0], game.player.char.pos[2] - M.rack.front[2]))} m off the rack)`);
     game.teleportPlayer([36.9, 0, 20.6]); steps(W, 0.3);
     if (game.mission.stage !== 'done') fails.push(`past the fire exit the stage is ${game.mission.stage} (want done)`);
-    if (!game.mission.debrief) fails.push('mission.debrief was not raised for the end card');
+    if (!game.endCards) fails.push('the game told the host of no end card');
     // ---- the timeline, the numbers, the badges
     const ev = game.chronicle.events as any[]; const kindsGot = kindsOf(game);
     const WANT = ['lockPicked', 'ocp', 'lightShot', 'shot', 'thrown', 'objective', 'objective', 'objective', 'objective'];

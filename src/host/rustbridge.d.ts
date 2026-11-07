@@ -22,7 +22,7 @@ declare module 'tps-bridge/puppet-apply' {
 }
 declare module 'tps-bridge/out-dispatch' {
   export const OUT: Record<string, (g: any, e: any) => void>;
-  export const OUT_HOST: { checkpoint?: (g: any, what: string, e: any) => void; wallFeel?: (g: any, at: [number, number, number]) => void };
+  export const OUT_HOST: { checkpoint?: (g: any, what: string, e: any) => void; wallFeel?: (g: any, at: [number, number, number]) => void; endCard?: (g: any) => void };
   export function dispatchOut(g: any, events: { arm: string; e: any }[]): void;
 }
 declare module 'tps-bridge/puppet-lists.json' {

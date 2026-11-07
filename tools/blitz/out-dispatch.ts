@@ -51,6 +51,7 @@ export const OUT: Record<string, (g: any, e: any) => void> = {
   ClearSnowTracks: (g, e) => { if (g.snowTracks) clearSnowTracks(g.snowTracks); },
   Tap: (g, e) => { OUT_HOST.tap?.(g, e.row, e.args, e.answer); },
   WallFeel: (g, e) => { OUT_HOST.wallFeel?.(g, e.at); },
+  EndCard: (g, e) => { OUT_HOST.endCard?.(g, ); },
 };
 /** after an apply: every event of the step, in the order the rules made them */
 export function dispatchOut(g: any, events: { arm: string; e: any }[]): void { for (const { arm, e } of events) OUT[arm](g, e); }

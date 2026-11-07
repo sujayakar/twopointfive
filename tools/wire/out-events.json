@@ -808,6 +808,17 @@
 "sig": "pub fn wall_feel(g: &mut crate::game::Game, at: V3)",
 "mode": "push",
 "hostArm": "wallFeel"
+},
+{
+"call": "EndCard",
+"rust": "crate::out_events::end_card",
+"ts": "endCard",
+"file": "tools/blitz/out-dispatch.ts",
+"why": "this",
+"params": [],
+"sig": "pub fn end_card(g: &mut crate::game::Game)",
+"mode": "push",
+"hostArm": "endCard"
 }
 ],
 "listed": [
