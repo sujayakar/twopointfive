@@ -741,3 +741,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   walked the first man while the second stood, and with `__game.localSeat = __game.seats[1]` the same keys walked the second and the camera's follow point
   went to him; no page error. NOBODY HAS PLAYED IT: there is no second set of keys and no second picture (a page shows and drives one seat, the first unless
   `localSeat` is set by hand), nothing here was seen on a GPU, and no two people have sat at it.
+- **While the game page plays no tapes, every road to one is the map viewer's** (2026-11-07; `replay/format.ts GAME_PAGE.playsTapes`, false). Since the tick is
+  Rust the page refuses a `?playtape=` address (a plain card), and the end card's Replay led there. One word is asked by each road: the card's press
+  (`ui/replaykey.ts engineUrl`) and Shift+F7 send the window to the map viewer on the file, the map viewer hides 'Play in engine', and the address itself
+  (`main.ts`, the first thing it does; `engineplay.ts tapeMapUrl`) goes to the viewer on its shelf entry, with the visit's own sending words. A served file's address
+  (the listening page's 'In play' links) and the one-file build, which has no viewer page, keep the card. Putting the word up gives every road back as it was. CHECK:
+  `probes.ts cardreplay` (the card as built, then each old road with the word up, and that the link and the address ask it). A headless page on the software
+  adapter walked it: play, F7, the card, the click, the viewer playing, '‹ Game', the address, and the card inside a kept page. Never seen on a GPU.

@@ -24,13 +24,8 @@ pub fn name_of(g: &Game, h: GuardId) -> String {
 
 /// where a man is LOOKING on the floor plane: his chest and his head, halved   (pairorders.ts lookOf)
 pub fn look_of(g: &Game, h: GuardId) -> [f64; 2] {
-    let c = g.gd[h].ch;
-    let a = g.ch[c].chest_dir;
-    let b = crate::character::character_head_dir(g, c);
-    let x = a[0] + b[0];
-    let z = a[2] + b[2];
-    let l = m::hyp2(x, z);
-    if l > 1e-4 { [x / l, z / l] } else { let y = g.ch[c].body_yaw; [m::sin(y), m::cos(y)] }
+    let l = crate::guards::look_of(g, g.gd[h].ch);
+    [l[0], l[2]]
 }
 
 /// The quiet orders for one partner; the squad orders' people and note are hung here   (PairOrders.constructor)

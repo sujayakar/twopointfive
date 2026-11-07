@@ -50,7 +50,7 @@ import { drawFloor, drawLine, drawScene, mapFit, mapSize, mapToWorld, MAP_RING }
 import { TapeWalk } from './tapewalk';
 import { RecipeStand, layFlags, put, plain, type Plain } from './recipestand';
 import { shelfGet, shelfList, shelfNotes, shelfPut } from './shelf';
-import { viewerUrl, visitWord, visitPairs } from '../ui/replaykey';
+import { onePage, viewerUrl, visitWord, visitPairs } from '../ui/replaykey';
 import { cloudCarries, cloudFile, cloudNotes, cloudSendsFiles } from '../cloud/cloud';
 import { keptStore } from './keptui';
 import { TEXT_EVENT, rectZoom, textZoom } from '../ui/textsize';
@@ -156,6 +156,13 @@ export async function tapeFromUrl(q: URLSearchParams): Promise<TapePlay | 'moved
   const tape = F.rerun as RunTape, want = tapeSearch(tape, q, v);
   if (new URLSearchParams(location.search).toString() !== new URLSearchParams(want).toString()) { location.replace(location.pathname + want + location.hash); return 'moved'; }
   const P = new TapePlay(F, id, v, ''); for (const n of seen) P.onShelf.add(n.id); return P;
+}
+/** where a `?playtape=` address goes on a game page that plays no tapes (format.ts GAME_PAGE): the map viewer on that shelf entry, with the visit's own sending
+ *  words (the viewer sends too, and a visit that said not to still does not). null: a served file, or a build with no viewer page */
+export function tapeMapUrl(q: URLSearchParams): string | null {
+  const v = q.get(PLAYTAPE) ?? ''; if (!/^\d+$/.test(v) || onePage()) return null;
+  const to = new URL(viewerUrl(Number(v))); for (const k of SENDING_WORDS) if (q.has(k)) to.searchParams.set(k, q.get(k) ?? '');
+  return to.href;
 }
 /** the tape's own query, with this visit's keys: what the page must be booted on to be the recording's page */
 export function tapeSearch(tape: RunTape, now: URLSearchParams, v: string): string { return recipeSearch(tape.recipe, now, { [PLAYTAPE]: v, ...(now.has('at') ? { at: now.get('at') ?? '' } : {}) }); }

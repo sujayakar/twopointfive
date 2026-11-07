@@ -37,10 +37,8 @@ pub fn floor_seen_tick(g: &mut crate::game::Game, men: &[GuardId], reach: f64) {
             Some(head) => *head,
             None => v3::add(g.ch[c].pos, [0.0, 1.65, 0.0]),
         };
-        let chest = g.ch[c].chest_dir;
-        let look = v3::lerp3(chest, crate::character::character_head_dir(g, c), 0.5);
-        let ll = js::or(m::hyp2(look[0], look[2]), 1.0);
-        let (lx, lz) = (look[0] / ll, look[2] / ll);
+        let look = crate::guards::look_of(g, c);
+        let (lx, lz) = (look[0], look[2]);
         let (half_deg, near_deg, near_m) = (g.k.guard_eye.half_deg, g.k.guard_eye.near_deg, g.k.guard_eye.near_m);
         let cos_far = m::cos(half_deg * v3::DEG);
         let cos_near = m::cos(near_deg * v3::DEG);

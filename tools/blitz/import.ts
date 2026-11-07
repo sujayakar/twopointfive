@@ -137,7 +137,7 @@ function keepOf(only: Set<string>): Keep { let K = keepMemo.get(only); if (K) re
   K = { field: (q, ty) => { let v = memoF.get(q); if (v === undefined) memoF.set(q, v = only.has(q) || deep(ty)); return v; }, desc }; keepMemo.set(only, K); return K; }
 
 // ---- the walk
-export function applyGame(g: any, blob: Uint8Array, knobs: Record<string, unknown>, opts: ApplyOpts = {}): Report { return forGame(g, () => applyGameNow(g, blob, knobs, opts)); }
+export function applyGame(g: any, blob: Uint8Array, knobs: Record<string, unknown>, opts: ApplyOpts = {}): Report { return forGame(g, () => g.col.writes(() => applyGameNow(g, blob, knobs, opts))); }
 function applyGameNow(g: any, blob: Uint8Array, knobs: Record<string, unknown>, opts: ApplyOpts = {}): Report {
   const t0 = performance.now(); const hooks = opts.hooks ?? {}; const BK = bookOf(g); if (!BK) throw new Error('import: this game has never been exported, so no row has an ID: export it once first');
   seedBook(g, knobs); for (const [k, v] of Object.entries(hooks.classes ?? {})) if (v?.prototype) CLASSES.set(k, v.prototype);

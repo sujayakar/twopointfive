@@ -26,7 +26,6 @@
 // switch off there is no interpolation: off 60 Hz the men and the camera move at 60 a second on a display that draws more, and on a frame of two ticks or more (a display
 // under the tick rate, a hitch) a flash that lives one tick and was made in the frame's first is aged out by its second and never drawn (with it on, tween.ts draws it once).
 // The module's default is off = every statement below as it was; THE PAGE turns both on (host/profile.ts pageSwitches: ?fixedstep=0, ?tween=0).
-import { BACKKEY } from '../game/backkey';
 import type { Game } from '../game/game';
 import type { Input } from '../game/input';
 import type { FollowCamera } from '../game/camera';
@@ -153,15 +152,18 @@ export function planTicks(acc: number, dt: number, K: { hz: number; snap: number
   return { ticks, acc, drift };
 }
 
-export function stepFrame(ctx: LoopCtx, dt: number): void {
+/** A FRAME IS ONE WINDOW ON THE BOX WORLD'S COPY (scene/collision.ts `window`): what the page asks of it — the marks and the dress step behind a tick, the camera, the
+ *  sound, the HUD — is asked of a copy proven once and not once a question, and a tick inside the frame has it proven again (`writes`). A frame that asks nothing proves nothing. */
+export function stepFrame(ctx: LoopCtx, dt: number): void { ctx.game.col.window(() => stepFrameIn(ctx, dt)); }
+function stepFrameIn(ctx: LoopCtx, dt: number): void {
   const { game, input, cam, view } = ctx;
   ctx.time += dt;
   const frozen = ctx.frozen();   // paused / start card: the world holds still, the picture stays live behind the card, hotkeys are off — unless attract mode has let the world go behind the start card
   const frozenKeys = frozen && input.pressed.size ? [...input.pressed] : null;   // (the hotkeys' look below: the recorder keys are read on a frozen frame too)
   if (frozen) { dt = 0; input.endFrame(); if (!ctx.tick) game.player.launchHeld = null; }   // (…and the launcher's button, if it was down as the card came up, is let go of unsent: the tick that follows the card would read 'the button came up' and send the round — player.ts)
-  if (frozen) ctx.thaw = true; else if (ctx.thaw) { ctx.thaw = false; if (BACKKEY.tab) input.pressed.add('Paused'); input.pressed.add('Thawed'); }   // (game/backkey.ts: the first tick after the card is told the card was up — a held list or arc is let go unsent IN the tick, where a recording has it)
+  if (frozen) ctx.thaw = true; else if (ctx.thaw) { ctx.thaw = false; input.pressed.add('Paused'); input.pressed.add('Thawed'); }   // (game/backkey.ts: the first tick after the card is told the card was up — a held list or arc is let go unsent IN the tick, where a recording has it)
   ctx.afterFreeze?.(frozen);
-  const auto = AUTOCAM.on ? (ctx.auto ??= autoCam()) : null;   // (the camera running itself, host/autocam.ts: nothing below asks it while the mode is off — host/findme.ts AUTOVIEW)
+  const auto = ctx.auto ??= autoCam();   // (the camera running itself: host/autocam.ts)
   if (!frozen && input.wheelCtrl && !game.rails.locks('zoom')) { cam.zoom(input.wheelCtrl); if (auto && AUTOVIEW.on) autoZoom(auto, cam, input.wheelCtrl); }                 // the camera's key + wheel (or a pinch) zooms; the plain wheel is Sam's walking pace (player.ts)
   const fixed = !frozen && FIXEDSTEP.on && !!ctx.fixedStep?.() && view.clientWidth > 0 && view.clientHeight > 0;
   const orbit = !frozen && input.orbitDX && !game.rails.locks('camera') ? ctrlTurn(input.orbitDX) : 0;       // hold the camera's key and move the mouse to orbit (Ctrl, or the Space bar while it is spare: host/keymap.ts camKey)
@@ -216,7 +218,7 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
     let demoPos: Vec3 | null, attractPos: Vec3 | null;
     // the camera's own step: come round a spectated man, the pitch ease, the follow — once a frame on the frame's dt, or (the fixed step) once a TICK on the tick's:
     // the input record takes its view from this camera (cmd.ts sampleCmd), so a camera eased by the display's frame time would make two displays two games
-    const camStepIn = (cdt: number, dp: Vec3 | null, ap: Vec3 | null, tick: boolean): Vec3 | null => {
+    const camStep = (cdt: number, dp: Vec3 | null, ap: Vec3 | null, tick: boolean): Vec3 | null => {
       const ds: DirectorFrame | null = frozen ? null : D.showing ? D.frame : null;
       const shot: Vec3 | null = dp ?? (ds ? ds.look : null) ?? ap, follow = game.followPos();   // a scripted look-at: the tour's / the level script's pinned shot / attract mode's
       const spect = !shot && game.spectate >= 0; if (spect) cam.autoYaw(cdt, follow, (a, b) => game.col.segmentBlocked(a, b)); cam.easeYaw(cdt, spect);   // spectating a guard: come round to the side he can be seen from,
@@ -247,9 +249,6 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
       if (tick) cam.step(cdt, at, aim); else cam.update(cdt, at, aim);
       return shot;
     };
-    /** …inside one window on the box world's copy (scene/collision.ts): the camera's own lines of a frame (the spectator's side, the turn, the sway) are asked
-     *  between ticks, and one proof of the copy serves them all; a frame that asks none proves nothing */
-    const camStep = (cdt: number, dp: Vec3 | null, ap: Vec3 | null, tick: boolean): Vec3 | null => game.col.window(() => camStepIn(cdt, dp, ap, tick));
     if (!fixed) {
       if (ctx.fixed) { ctx.fixed.acc = 0; ctx.fixed.drift = 0; ctx.fixed.owed = null; if (!frozen && ctx.fixed.orbit) { cam.rotate(ctx.fixed.orbit); ctx.fixed.orbit = 0; } }   // (a hand's turn the fixed step still owed a tick)
       ctx.ticks = frozen ? 0 : 1;

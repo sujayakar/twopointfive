@@ -325,6 +325,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   WHAT THE FOLD IS FOR NOW: it is the harness's hold of the settled rows (the page's is `src/host/rustgame.ts rustSettledHold`), and its line a
   probe names every check that still writes a settled row: the list to restage or delete from. `QA_FOLD_FOR=0` / `foldFor(false)` stays the one
   way a tool reads a settled row's own value.
+  THE SETTLED ROWS ARE RAISED IN ONE PLACE (2026-11-07; `src/host/settled.ts settledUp`, the first line of `pageSwitches`): each at its page value
+  off `tools/qa/switches.json`. WHAT WENT WITH IT: the page's 354 address words that moved settled rows and nothing else (the page held those rows
+  already, so a word said there did nothing), the journal's lines for a file from before such a row, and the reads of those rows in the files the
+  page keeps (`src/ui`, `src/host`, `src/render`, `src/audio`). An address word quoted in these notes for a settled row does nothing: ask
+  `switches.json` whether a row is settled. A word a game module reads as it loads over a settled row (`GLASSFX=off`) does nothing either, and is
+  not said any more. MEASURED: every table after `shippedBoot()` the same as before (one row, `CUT.on`, is raised there and no longer as a game is
+  stood), and each of 708 words of the source at seven values moves the same rows that are still switches, but for three: `?autotune=0`, `?goals=0`
+  and `?qring=0` moved such rows through a settled one. FROZEN_HOLDS, `standup.ts` and the reads in `src/game` are as they were.
   THE HOLDS TABLE IS TWO ROWS (2026-11-07; `tools/qa/holds.ts`). It held rules OFF for probes written for an older model. Fourteen of its sixteen
   rows held only settled rows: on the page's stand every such hold was refused under the fold (101 a run of `holds`, which was red in all-quick by
   it) and the probe ran on the page's model whatever the table said; on the old stand those rows are off already and the hold did nothing. Those
@@ -885,7 +893,7 @@ but synthetic writes still work.
   kind, and the rows of the Rust module's twins. AND A VALUE THAT IS NOT THE PAGE'S, where the page itself says what that is: `--page page.json` is every
   table as a stand-up of the page left it (`TPS_PROFILE=shipped bun run tools/qa/stand-dump.ts --out page.json`, on the tree about to be folded), and a row
   the dump gives another value, or does not hold, is refused; so is a row whose write in the page rides a row that stays (`A = B && !q.has('noa')`: with
-  B's word on the address A was off too). `--trust ROW,ROW` takes the caller's word for those. `--late ROW,ROW` takes it for a row the walk of load-time calls reached (the refusal names every such read and the chain of calls to each from the top-level statement: the walk follows every call a function could make, not the ones it does make), never for a read at a file's own top level; each read it was taken for is printed. THE JOURNAL'S LINE for a recording from before a row, `if (the recording has no word for ROW) ROW = off`, goes whole with the row (also where the question is of the whole table, `if (!k.tables.T)`, or of the row under a type written out: a question asked of nothing but the recording goes with the write under it, one asked of the game handed in beside it stays), and only where everything under that `if` is the write of a row retiring in the same run: once the row is gone no recording has its word, so anything else under it would run for every recording made from then on, and the row is refused (as it is where the word is read into a name first). A row read on an untyped thing under the table's name anywhere else in the game is refused too: that may be a recording's words or the table itself. (Reading the page's writes off the code was tried first and
+  B's word on the address A was off too). `--trust ROW,ROW` takes the caller's word for those. `--late ROW,ROW` takes it for a row the walk of load-time calls reached (the refusal names every such read and the chain of calls to each from the top-level statement: the walk follows every call a function could make, not the ones it does make), never for a read at a file's own top level; each read it was taken for is printed. THE JOURNAL'S LINE for a recording from before a row, `if (the recording has no word for ROW) ROW = off`, goes whole with the row, and only where everything under that `if` is the write of a row retiring in the same run: once the row is gone no recording has its word, so anything else under it would run for every recording made from then on, and the row is refused (as it is where the word is read into a name first). A row read on an untyped thing under the table's name anywhere else in the game is refused too: that may be a recording's words or the table itself. (Reading the page's writes off the code was tried first and
   dropped: their order, an early return and a helper are the code's to run.) Exit 3 = some rows were refused and the rest done. A CALL IS NEVER FOLDED AWAY FOR ITS NAME: `x.get(k) && ROW` loses the call only where `get` is the language's own
   (a Map's), the function's body only reads, or the caller vouches for it (`--pure name,name`; the command line is then the record of what was vouched for).
   A game object's `get`, a getter (also under a type that calls it plain data, or reached by a key), a method some other class overrides, a function a `let`
@@ -898,26 +906,10 @@ but synthetic writes still work.
   line whose place printed other lines of the run too). THE PROOF OF A RUN is not the tool's: both
   typechecks; the page's stand run for run the same before and after (`TPS_PROFILE=shipped PT_DIGEST=1 bun run tools/qa/playthrough.ts --seeds 1-2 --json f`:
   42 digests); the frozen stand after = the frozen stand before with the retired rows' words raised; and the family's checks run before and after on the
-  page's stand, line by line, where a line that went from PASS to FAIL needed the retired path and is sorted by kind (below):
+  page's stand, line by line, where a line that went from PASS to FAIL is an arm of the retired path and is taken out by the place it was printed from:
   `bun run tools/retire/lines.ts run <dir> [--tree <the tree before>] <the check files the fold's report names>` before and after, `lines.ts diff <before>
   <after> --drop places.json`, `retire.ts --drop-lines places.json --write`, and `run` once more. (`diff` also says a check that DIED after the fold, one
-  that throws exits 1 as a red check does, and does not count a line that was red before under other words.) THE SORTING (2026-11-05; measured on the
-  squad's family: 96 rows, the play digests equal, and 538 lines PASS to FAIL in 131 commands): a red line is not always an arm of the retired path. FIRST,
-  before the fold, `lines.ts run <dir> --pin rows.json --importers <files>` on the tree as it stands: `RETIRE_PIN=<rows.json>` (tools/qa/headless.ts) holds
-  the listed rows at the page's values whatever a check, the stand or a recording writes, so the pinned run's red lines are the ones that need a retired
-  path, by the check's own staging and nothing else. The fold's own run of the same checks must then say the same lines but for the stand's and the
-  recording's: a red after the fold that is green under the pins is the FOLD'S fault (two were found that way, both in tools and both now the tool's own
-  cases: an `Object.assign(TABLE, kept, { row })` that lost its kept source, and a set of rows handed to a child's `--set` that kept the retired key).
-  `--importers` adds every check that imports a file given: a changed rig reaches the checks that stand on it, and the fold's report names only the
-  files it wrote in. What the pin does NOT reach: a check that never loads the harness (it is said, `NOT PINNED`, and listed in `<dir>/not-pinned.txt`:
-  its lines say nothing of the pins; `PINNED IN PART` = some of the list's rows are in no table the harness knows); a row marked `hold` in the list (it loses only its frozen line and stays a knob a tool writes); a `--set` written
-  as a JSON string (the fold says where: a note, by hand). The pin's own check: `bun run tools/retire/pin-check.ts` (`PINCHECK_BREAK=1` must fail).
-  THEN, by kind: a line that held a retired row off only to STAGE a question that still stands on the page is restaged the game's own
-  way and must still be able to fail (helpers in headless.ts: `fightStarted(game)` where a check held the unfound squad's hold off, `doorTried(game, door,
-  step)` where one held the door test off); a stand's line, a recording's line, a line whose question was "off is the build as it was" and a `--set` arm
-  for a row that is gone are taken out (`--drop-lines`); a line that set a rule's on half against its off half keeps the on half as a line of its own; a
-  check goes whole only where its ROUTE is gone from the page, and is moved where its question survives. A red line NEVER SAID BEFORE (`diff`: NEW RED) is
-  a staging that failed ("a door to stage it on") and is never in the drop list: taken out, it leaves the check silent where it should be red. After a fold that took a row with a slider
+  that throws exits 1 as a red check does, and does not count a line that was red before under other words.) After a fold that took a row with a slider
   out: `bun run tools/gen-scene-notes.ts` (the scene panel's notes are keyed by row). WHAT GOES THAT WAY, by kind: the stand's and the journal's
   lines, the off arm, the on arm measured against the off arm ("a quarter of those metres"), and the lines of a check that held a newer rule off for its
   length; in the first fifteen checks of the squad's family that was 65 of 147 lines. A check left saying nothing goes whole (`--drop`). THE TOOL'S OWN CHECK:

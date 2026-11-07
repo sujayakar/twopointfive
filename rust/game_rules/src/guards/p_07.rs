@@ -361,7 +361,7 @@ fn perceive(g: &mut Game, gd: GuardId, dt: f64, f: &mut Frame) {
                 let (dx, dz) = (f[0] - pos[0], f[2] - pos[2]);
                 let dd = m::hyp2(dx, dz);
                 if dd > 2.2 || dd < 1e-3 { continue; }
-                let look = g.ch[c].chest_dir;
+                let look = crate::guards::look_of(g, c);
                 if (look[0] * dx + look[2] * dz) / dd < m::cos(75.0 * v3::DEG) { continue; }
                 let off = crate::doors::door_off(g, d);
                 let spot: V3 = if off {
@@ -692,7 +692,9 @@ fn alert(g: &mut Game, gd: GuardId, dt: f64, f: &mut Frame) {
             };
             aim_at = Some([threat[0], 1.1, threat[2]]);
             crouch = want.crouch;
-            let outcome = match want.to {
+            // (A MAN WHO CANNOT SEE GOES NOWHERE: whatever spot a rule names, a dazzled or staggered man gets down where he is. Said here once, for
+            //  every rule of the cover stage; the rule keeps its spot and he goes when he can see)
+            let outcome = match want.to.filter(|_| !dazzled && !staggered) {
                 None => {
                     brake(g, gd, 8.0, dt);
                     g.ch[c].vel = [0.0, 0.0, 0.0];
