@@ -58,18 +58,6 @@ pub fn squad40_left(g: &mut crate::game::Game) -> f64 {
     match g.m.squad40.states.get(key) { Some(s) => left_in(g, s), None => 0.0 }
 }
 
-/// what this staging brought. (squad40.ts squad40Brought)
-pub fn squad40_brought(g: &mut crate::game::Game) -> f64 {
-    let key = crate::seats::view_key(g);
-    g.m.squad40.states.get(key).map_or(0.0, |s| s.brought)
-}
-
-/// one man's rounds left. (squad40.ts squad40Of)
-pub fn squad40_of(g: &mut crate::game::Game, gd: GuardId) -> f64 {
-    let key = crate::seats::view_key(g);
-    g.m.squad40.states.get(key).and_then(|s| s.rounds.get(gd).copied()).unwrap_or(0.0)
-}
-
 /// the words the throws' row adds while the order is on the page. (squad40.ts squad40Word)
 pub fn squad40_word(g: &mut crate::game::Game) -> String {
     let key = crate::seats::view_key(g);
@@ -368,7 +356,7 @@ pub fn turn_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) 
     if let Some(w) = g.m.squad40.states.get_mut(key).and_then(|s| s.turns.get_mut(gd)) { w.fired_t = now; }
 }
 
-/// the arm `OrderIssue::Shell40`: a refusal's words, or None (the floor as it stands NOW: nothing is spent on a refusal)
+/// the order's `issue` (orders/rows/shell40.rs): a refusal's words, or None (the floor as it stands NOW: nothing is spent on a refusal)
 pub fn row_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> Option<String> {
     let at = at_of(t);
     let a = match plan(g, men, at, None) {
@@ -407,18 +395,13 @@ pub fn row_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget) 
 
 /// the order's row on the throws' page. (squad40.ts row)
 pub fn row(g: &mut crate::game::Game) -> OrdersOrderDefId {
-    g.tab.orders_order_def.push(crate::orders::OrderDef {
-        id: String::from(SHELL_THERE),
+    let def = crate::orders::rows::def(&crate::orders::rows::shell40::ORDER, crate::orders::OrderDef {
         page: Some(String::from(crate::squadthrow::THROW_PAGE)),
         targets: vec![crate::orders::TargetKind::Floor],
         free: Some(true),
-        label: crate::orders::OrderLabel::Shell40,
-        only: Some(crate::orders::OrderOnly::Shell40),
-        valid: Some(crate::orders::OrderValid::Shell40),
-        issue: crate::orders::OrderIssue::Shell40,
-        tick: Some(crate::orders::OrderTick::Shell40),
         ..Default::default()
-    })
+    });
+    g.tab.orders_order_def.push(def)
 }
 
 /// the squad's HUD block: what is left while this staging brought any, and the shot just made. (squad40.ts notes)
@@ -493,16 +476,6 @@ pub fn squad40_plans(g: &mut crate::game::Game) -> Vec<crate::squad40::Squad40Pl
         }
     }
     out
-}
-
-/// the line for the tools. (squad40.ts squad40Summary)
-pub fn squad40_summary(g: &mut crate::game::Game) -> String {
-    let key = crate::seats::view_key(g);
-    let brought = g.m.squad40.states.get(key).map(|s| s.brought);
-    match brought {
-        Some(b) if js::truthy(b) => format!("{} of {} left · X on a spot of floor, G, then 3 · fired {}", js::num_str(squad40_left(g)), js::num_str(b), g.stats.squad40.fired),
-        _ => String::from("none brought (no teammate's card carries a 40 mm grenade)"),
-    }
 }
 
 #[cfg(test)]

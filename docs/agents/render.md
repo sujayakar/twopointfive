@@ -175,6 +175,28 @@ row on his machine is the answer, and the word puts the count back on any machin
   (a moved frame on the plain program until the twin landed) is gone with `restirMReady`. `shaderrows-check` holds that a moved frame runs the one program
   with its taps packed. Boot texts 115 to 113; both compile in Chromium's compiler with no warning. **NOT MEASURED: what the untaken branches cost a still
   frame on a real GPU** (the old twin run at rest measured +0.2 ms of direct at High on the M4 Max, most of it the flow this writing skips). **Never seen on a GPU.**
+- **ONE SET OF RAY PROGRAMS (2026-11-07; the maintainer's yes on the shader survey's row for it).** The page compiled every program that traces
+  boxes TWICE: the boot's without the cut rule, then a second set with it in the background after every boot, swapped in while a cut piece a ray
+  could meet was alive (`render/cutSwap.ts`, "a calm room pays nothing"). There is ONE set now, with the rule in (`scenePrelude()` carries
+  `const CUT_BOXES: bool = true;` wherever cut boxes are on): what `?cutprograms=boot` compiled. GONE: `render/cutSwap.ts`; `cutSet` / `buildCut` /
+  `useCut` on the lighting passes, the probe, the cascades, the froxels, the particles and the fog of war; the engine's per-frame swap and the
+  raster's "drawn whole until the second set is in" (`gbuffer.ts`: a cut box is drawn cut from the first frame); `__cut.programs`,
+  `__cut.stats.drawnWhole`, `?cutprograms`; the visit's `cut` record; the start's wait on the second set; tools/qa/cut-march.js. `cutConfig.swap`
+  is UNREAD AND UNWRITTEN (the knob row `CUT.swap`, the settled-switch list and the Rust mirror still name it: theirs to drop); the look page's
+  rule that a geometry trial drops the round's GPU half (`main.ts roundConfig.gpu`) asks for the trial itself now, and draws what it drew. THE COMPILE QUEUE's background
+  lane (`gpu/device.ts`) was given by text, to any module holding the cut rule's line; it is now the LATER pipelines' alone, and a module's size is
+  kept beside the module. WHAT MOVES: about twenty programs fewer compiled after each boot (21 s of background compile on the cloud's NVIDIA
+  card; 72 of 141 s of ONE compiler thread by the compile-time work's serial table) and nothing swaps under play. THE BOOT'S OWN SET IS BIGGER
+  by the rule's text: 4,711 to 5,356 KB pasted on a snow page (+14 %; the visit's whole falls 9,065 to 5,356), and a cut twin compiled 5 to 15 %
+  dearer than its boot form on that card: the start card waits that much longer for its programs, a brief's Start (which waits for every
+  program) much less. Not timed on Windows. If the g-buffer's cut pipeline fails to compile, cut pieces are DRAWN whole while rays meet the cut
+  shape (the two-set build drew and traced them whole): said in the console line. A ROUND THING IS ITS PICTURE'S PRISM TO EVERY RAY AT ALL TIMES (`ROUND_AS_CUT`, `docs/agents/levels.md`),
+  where a calm room traced the cylinder; `?roundexact=1` still asks for the cylinder. THE COST, on that card (A10G, the tree before, the two
+  sets pinned in turn in one page, 2026-11-07): the office in rain +1.9 % of a frame on High and +1.7 % on Medium; the squad lesson on the look
+  page +0.5 % and 0 %. The 1.9 x fog pass once read there is not reproduced. HELD: the module list by label and text hash is IDENTICAL to the
+  tree before forced to one set (title 36, snow 36, the look page 37 modules; `shaderinline-check --json`); shaderinline, shaderfold, pipequeue
+  (its background tests ask by LATER now) and the cutboxes probe family re-aimed (the swap's two probes are out, the prelude's verdict stays).
+  NOT SEEN on a GPU as this tree; the card saw the same programs through `__cut.programs.force` on the tree before.
 - **Character proxies = the SDF character rig** — every mannequin's 15 shadow / reflection proxies are round cones fitted at load (`render/sdfrig.ts`, `shaders/sdfrig.wgsl`), no switch; extras in `frame.rigCfg` (`settings.charSelfShadow` default ON, `?noselfshadow`; the `?sdfsmooth` / `?charsoft` / `?charsoftmarch` experiments and `__rigTrace` went 2026-11-07); `__sdfrig` — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
 
 <!-- was CLAUDE.md lines 2658–2728 -->

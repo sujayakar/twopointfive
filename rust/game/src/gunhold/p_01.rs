@@ -671,7 +671,7 @@ fn drop_path(g: &mut Game, gd: GuardId) {
 }
 
 /// `now + GUNHOLD.peekEvery * (0.6 + 0.8 * simRandom())`
-fn next_peek(g: &mut Game, now: f64) -> f64 {
+fn next_peek(g: &mut Game, who: crate::dice::Who, now: f64) -> f64 {
     let every = g.k.gunhold.peek_every;
     now + every * (0.6 + 0.8 * crate::math_dice::sim_random(g))
 }
@@ -810,7 +810,7 @@ fn feet(g: &mut Game, gd: GuardId, dt: f64, p: &crate::guards::Pair, s: GuardsSt
         let open = shown(g, k, at, false);
         if open && here_e == 1.0 && !shown(g, k, at, true) {
             // something low between them already: down behind it, here
-            let peek_t = next_peek(g, now);
+            let peek_t = next_peek(g, crate::dice::Who::Man(gd), now);
             let row = st!();
             row.spot = Some(v3::copy(at));
             row.low = true;
@@ -841,7 +841,7 @@ fn feet(g: &mut Game, gd: GuardId, dt: f64, p: &crate::guards::Pair, s: GuardsSt
             row.run_t = now;
             gun_hold_stats(g).ran += 1.0;
         } else {
-            let peek_t = next_peek(g, now);
+            let peek_t = next_peek(g, crate::dice::Who::Man(gd), now);
             let row = st!();
             row.spot = Some(v3::copy(at));
             row.low = false;
@@ -873,7 +873,7 @@ fn feet(g: &mut Game, gd: GuardId, dt: f64, p: &crate::guards::Pair, s: GuardsSt
         let chase = g.tune.guard_chase;
         let arrived = if scramble { crate::guards::step_along_path(g, gd, dt, chase) } else { crate::guards::follow_path(g, gd, dt, chase) };
         if arrived {
-            let peek_t = next_peek(g, now);
+            let peek_t = next_peek(g, crate::dice::Who::Man(gd), now);
             let row = st!();
             row.phase = Phase::Cover;
             row.peek_t = peek_t;
@@ -1001,7 +1001,7 @@ fn feet(g: &mut Game, gd: GuardId, dt: f64, p: &crate::guards::Pair, s: GuardsSt
                     bark(g, gd, k, BarkKind::Gone, Some(true));
                 }
             }
-            let peek_t = next_peek(g, now);
+            let peek_t = next_peek(g, crate::dice::Who::Man(gd), now);
             st!().peek_t = peek_t;
             let spot = st!().spot;
             match spot {
@@ -1077,38 +1077,6 @@ fn feet(g: &mut Game, gd: GuardId, dt: f64, p: &crate::guards::Pair, s: GuardsSt
     let speed = g.gd[gd].speed;
     let look = along_path(g, f, k);
     out(g, f, speed, true, Some(look), if here_e == 1.0 { 1.0 } else { m::max(low, if here { 0.35 } else { 0.0 }) }, true)
-}
-
-/// Panel / QA: the rule's state in a line. (gunhold.ts gunHoldSummary)
-pub fn gun_hold_summary(g: &mut crate::game::Game) -> String {
-    let held = g.pl[g.player].holding.as_ref().map(|h| (h.g, h.serial));
-    let known = held.and_then(|(_, key)| g.m.gunhold.knowns.get(key).map(|k| (k.gun_t, k.shot_t)));
-    let s = *gun_hold_stats(g);
-    let tail = alloc::format!("{} ran for cover · {} went round · {} lines · {} looks", js::num_str(s.ran), js::num_str(s.rounds), js::num_str(s.lines), js::num_str(s.looks));
-    let (held, gun_t, shot_t) = match (held, known) {
-        (Some((h, _)), Some((gun_t, shot_t))) if !(gun_t < 0.0) => (h, gun_t, shot_t),
-        _ => return alloc::format!("gun in the hold ▸ — ({})", tail),
-    };
-    let mut parts: Vec<String> = vec![String::from(if shot_t >= 0.0 { "he has fired" } else { "pistol seen" })];
-    for gd in men_on(g, held) {
-        let st = match g.gd[gd].standoff.and_then(|os| g.m.gunhold.states.get(os)) {
-            Some(st) => *st,
-            None => continue,
-        };
-        let what = match st.phase {
-            Phase::Run => String::from("running for cover"),
-            Phase::Cover => alloc::format!("behind cover{}", if st.low { " (low)" } else { "" }),
-            Phase::Peek | Phase::Back => String::from("taking a look"),
-            Phase::Flank => match st.goal {
-                Some(goal) => alloc::format!("going round, {} m off his spot", js::to_fixed(flat(g.ch[g.gd[gd].ch].pos, goal), 1)),
-                None => String::from("going round"),
-            },
-            Phase::Line => String::from("on the line at his back"),
-            _ => String::from("reacting"),
-        };
-        parts.push(alloc::format!("{}: {}", g.gd[gd].callsign, what));
-    }
-    alloc::format!("gun in the hold ▸ {} ({})", parts.join(" · "), tail)
 }
 
 /// QA and the standoff's muzzle: this man's part, by name. (gunhold.ts gunHoldPhase)

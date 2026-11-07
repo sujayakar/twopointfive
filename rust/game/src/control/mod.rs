@@ -198,6 +198,8 @@ pub struct ControlState {
     pub had: Vec<u32>,
     /// who last changed each man's post flags
     pub post: PerMan<PostNote>,
+    /// who last moved each man's awareness and state (mind.rs)
+    pub mind: PerMan<crate::mind::Note>,
 }
 impl ControlState {
     pub fn blank() -> Self { ControlState::default() }

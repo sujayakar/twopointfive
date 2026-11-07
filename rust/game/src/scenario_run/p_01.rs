@@ -23,12 +23,9 @@ fn capitalised(w: &str) -> String {
 
 /// The query's level is a Training lesson's.   (scenarioRun.ts lessonLevel)
 pub fn lesson_level(q: &crate::query::Query) -> bool {
-    let level_file = q.get("levelFile").map(String::from);
     // A row with no level is `undefined`, which is never `===` the `null` of a query with no levelFile.
-    crate::scene_scenario_list::lesson_missions().iter().any(|e| match (&e.level, &level_file) {
-        (Some(a), Some(b)) => a == b,
-        _ => false,
-    })
+    let Some(level_file) = q.get("levelFile") else { return false };
+    crate::scene_scenario_list::lesson_missions().iter().any(|e| e.level.as_deref() == Some(level_file))
 }
 
 /// Fog of war on a page with no scenario up: only if the URL asks.   (scenarioRun.ts plainFog)
@@ -38,7 +35,7 @@ pub fn plain_fog(q: &crate::query::Query) -> bool {
 
 /// The link is one the quiet fog reads: a quiet mission's, or the solo night's own.   (scenarioRun.ts quietLike)
 pub fn quiet_like(g: &mut crate::game::Game, q: &crate::query::Query) -> bool {
-    match crate::scene_scenario_list::spec_of_query(&crate::scene_scenario_list::SpecOfQuerySearch::URLSearchParams(q.clone())) {
+    match crate::scene_scenario_list::spec_of(q) {
         Some(s) => s.kind == crate::scene_scenario_list::ScenarioSpecKind::Quiet,
         None => crate::quietfog::solo_fog_link(g, q),
     }
@@ -62,37 +59,6 @@ pub fn quiet_rung_of_query(g: &mut crate::game::Game, q: &crate::query::Query) -
     } else {
         crate::quietfog::QuietRung::Off
     }
-}
-
-/// `s.replace(/^[^?]*\?/, '')`: a link's text after its first `?`, or all of it with none.
-fn after_first_question_mark(s: &str) -> &str {
-    match s.find('?') {
-        Some(i) => &s[i + 1..],
-        None => s,
-    }
-}
-
-/// What makes a link's fog: on or off, the rung, the cameras.   (scenarioRun.ts sameFog's `sig`, compared as a value rather than as its text)
-fn fog_sig(g: &mut Game, q: &crate::query::Query) -> (bool, crate::quietfog::QuietRung, f64) {
-    let on = fog_of_query(g, q);
-    let rung = quiet_rung_of_query(g, q);
-    let cams = quiet_cams_of_link(g, q);
-    (on, rung, cams)
-}
-
-/// Two links stand in the same fog.   (scenarioRun.ts sameFog)
-pub fn same_fog(g: &mut crate::game::Game, a: &crate::scenario_run::SameFogA, b: &crate::scenario_run::SameFogB) -> bool {
-    let qa = match a {
-        SameFogA::Text(s) => crate::query::Query::parse(after_first_question_mark(s)),
-        SameFogA::URLSearchParams(q) => q.clone(),
-    };
-    let sig_a = fog_sig(g, &qa);
-    let qb = match b {
-        SameFogB::Text(s) => crate::query::Query::parse(after_first_question_mark(s)),
-        SameFogB::URLSearchParams(q) => q.clone(),
-    };
-    let sig_b = fog_sig(g, &qb);
-    sig_a == sig_b
 }
 
 /// Fog of war as a query string asks for it, the squad's fog lever heard.   (scenarioRun.ts fogOfQuery)
@@ -160,12 +126,12 @@ pub fn start_from_query(g: &mut crate::game::Game, search: &crate::scenario_run:
     g.fog_of_war.on = fog;
     let rung = if g.fog_of_war.on { quiet_rung_of_query(g, q) } else { crate::quietfog::QuietRung::Off };
     crate::quietfog::quiet_fog_start(g, q, rung);
-    if let Some(wx) = crate::weather_kinds::weather_of_search(&crate::weather_kinds::WeatherOfSearchSearch::URLSearchParams(q.clone())) {
+    if let Some(wx) = crate::weather_kinds::weather_of(q) {
         if crate::weather::weather_kind(g) != Some(wx) {
             crate::weather::weather_set_kind_2(g, Some(wx));
         }
     }
-    let spec = crate::scene_scenario_list::spec_of_query(&crate::scene_scenario_list::SpecOfQuerySearch::URLSearchParams(q.clone()));
+    let spec = crate::scene_scenario_list::spec_of(q);
     let cams = if g.fog_of_war.on { quiet_cams_of_link(g, q) } else { 0.0 };
     crate::stickycam::sticky_visit_set(g, cams);
     let why = match &spec {
@@ -182,11 +148,6 @@ pub fn start_from_query(g: &mut crate::game::Game, search: &crate::scenario_run:
     }
     crate::kit::kit_solo_stand(g, Some(spec.is_none()));
     StartFromQuery { spec, why }
-}
-
-/// A refusal in the card's words.   (scenarioRun.ts refusalWords)
-pub fn refusal_words(spec: &crate::scene_scenario_list::ScenarioSpec, why: &str) -> String {
-    alloc::format!("{} did not start: {}", capitalised(&word(spec.kind.as_str())), why)
 }
 
 /// Which scenario is up on this game right now; the room clear is asked first, being the night breach on its own layout.   (scenarioRun.ts activeScenario)
@@ -289,27 +250,3 @@ pub fn quit_scenario(g: &mut crate::game::Game, fog: Option<bool>) -> Option<cra
     was.map(quit_kind)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn spec(kind: crate::scene_scenario_list::ScenarioSpecKind) -> crate::scene_scenario_list::ScenarioSpec {
-        crate::scene_scenario_list::ScenarioSpec { kind, squad: 2.0, level: None, seed: None }
-    }
-
-    #[test]
-    fn refusal_words_capitalise_the_kinds_name() {
-        assert_eq!(refusal_words(&spec(crate::scene_scenario_list::ScenarioSpecKind::Roomclear), "the AI is switched off"), "Room clear did not start: the AI is switched off");
-        assert_eq!(refusal_words(&spec(crate::scene_scenario_list::ScenarioSpecKind::Rescue), "x"), "Hostage rescue did not start: x");
-        assert_eq!(refusal_words(&spec(crate::scene_scenario_list::ScenarioSpecKind::Nightbreach), "x"), "Night breach did not start: x");
-        assert_eq!(refusal_words(&spec(crate::scene_scenario_list::ScenarioSpecKind::Quiet), "x"), "Quiet mission did not start: x");
-    }
-
-    #[test]
-    fn a_links_query_starts_after_its_first_question_mark() {
-        assert_eq!(after_first_question_mark("/index.html?a=1?b"), "a=1?b");
-        assert_eq!(after_first_question_mark("?a=1"), "a=1");
-        assert_eq!(after_first_question_mark("a=1"), "a=1");
-        assert_eq!(after_first_question_mark(""), "");
-    }
-}

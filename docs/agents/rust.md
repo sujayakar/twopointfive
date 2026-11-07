@@ -32,9 +32,9 @@ holds all of `levels/` to it). The records the game keeps as its own types are r
 stands between this and the page starting a level in Rust" is the list of what a page start still needs: first the page handing its address across (an address's words are a type of the
 game crate, `rust/game/src/query.rs`, every reader takes it, and `StartOpts.link` starts a mission by `start_from_query` as a click on its row does), then the puppet's objects.
 Checked: every row of the mission list (`LEVELS.md`: no path not known at the start, 300 frames in step with an idle hand, no path not known as
-they end; the office's four on a copy of its file with its scenarios written in), and the tests' scenes for 900 frames. Not checked: a mission
-started as the page starts it (from its address); a hand on the controls in those frames; two seats; a page starting a level this way (the page
-still starts in TypeScript); nothing of it on a GPU.
+they end, each mission started from its row's link as the page starts it, with one seat and as a game of two), and the tests' scenes for 900
+frames. Not checked: what the page reads off its address before the stand-up (the weather and the hour at boot, the kit, the words); a hand on
+the controls in those frames; a page starting a level this way (the page still starts in TypeScript); nothing of it on a GPU.
 
 **The rows and the maths are NOT SWITCHES any more** (the bullet "Not switches", near the end, 2026-11-05). Every `TPS_RUST`, `TPS_RUST<ROW>`, `TPS_EXACT`,
 `?rust`, `?rust<row>` and `?noexact` in the bullets below is how that step was measured on its day. None of them is a word now: in a tool's environment
@@ -2287,3 +2287,14 @@ one stops the tool by name, on an address one does nothing and says so in the co
   after on the same tree: both type checks; the missions' tallies under the Rust game by whole record and digest series; every way to start a game
   (`tools/blitz/starts.ts`, 1,480 rows); the page's flows in a headless browser WITH DRAWN FRAMES on the software adapter (`tools/blitz/delete-page.ts
   --draw N`: no other headless tool draws, and what only a draw runs is run nowhere else). Not seen: anything on a GPU.
+- **The page's frame of a start or a restart draws time 0.** A restart is a start: on the frame Shift+Enter (or Enter once down) is read, the page's
+  host stands the kept start again and returns from that step without a tick, as a first boot shows the start as it stands; the first tick comes on
+  the next frame. A check that holds the frames after a restart against a boot's matches them BY THE GAME'S CLOCK, never by their count
+  (`tools/qa/cleanrestart-page.cjs`: placed by hand on the seeded solo night, the block's `lights` part and the die read the boot's own values one
+  frame later).
+- **What a page tool writes by hand, and what does not cross.** On a page stepped by a script (`paused`), what the script writes on
+  `window.__game` BETWEEN its calls to `__runFrames` is carried into the game as the next call begins (the scan's `every`, `tools/blitz/PAGE.md`).
+  Three things are NOT: (1) a field the bridge does not carry, or a leaf too big to walk, stays on the page's copy alone; (2) a METHOD called on
+  the page's Game runs as TypeScript there and reaches the game only as far as the fields it wrote are carried: use `window.__rust.call(key, self,
+  args)` for a row of the call table (`Game.teleportPlayer` crosses by itself); (3) a write made INSIDE a call to step (a hook that fires between
+  two ticks of one `__runFrames`) is not walked. And a page with no `&seed=` deals a fresh game each visit: name the seed.

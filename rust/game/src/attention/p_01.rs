@@ -89,12 +89,6 @@ pub fn outside(g: &mut crate::game::Game, gd: GuardId, h: crate::attention::Hold
     off_cos(g, gd, h, p) < m::cos(g.k.attention.focus_deg * m::PI / 180.0)
 }
 
-/// Degrees a man at `p` stands off the thing that holds this man. (attention.ts attentionOffDeg)
-pub fn attention_off_deg(g: &mut crate::game::Game, gd: GuardId, p: V3) -> Option<f64> {
-    let h = attention_of(g, gd)?;
-    Some(m::acos(v3::clamp(off_cos(g, gd, h, p), -1.0, 1.0)) * 180.0 / m::PI)
-}
-
 /// × the rate at which this man's eye takes in a man standing at `p`. (attention.ts attentionSideK)
 pub fn attention_side_k(g: &mut crate::game::Game, gd: GuardId, p: V3) -> f64 {
     match attention_of(g, gd) {
@@ -144,9 +138,7 @@ pub fn attention_step(g: &mut crate::game::Game, gd: GuardId, at: V3) {
     end(g, gd, "step");
     if g.gd[gd].state == crate::game::GuardState::Suspicious {
         if !crate::belief::word_now(g, gd) {
-            let man = &mut g.gd[gd];
-            man.last_known = Some(v3::copy(at));
-            man.fix_stamp = man.fix_stamp.wrapping_add(1);
+            crate::mind::fix(g, gd, Some(v3::copy(at)), "attention");
         }
         let man = &mut g.gd[gd];
         man.path = Vec::new();
@@ -181,7 +173,7 @@ pub fn attention_heard(g: &mut crate::game::Game, gd: GuardId, e: crate::game::G
         crate::director::EventKind::LightOut => DrawKind::Light,
         _ => DrawKind::Noise,
     };
-    if e.lure == Some(true) && g.gd[gd].awareness < g.k.attention.draw_aw && able(g, gd) { g.gd[gd].awareness = g.k.attention.draw_aw; }
+    if e.lure == Some(true) && g.gd[gd].awareness < g.k.attention.draw_aw && able(g, gd) { let to = g.k.attention.draw_aw; crate::mind::set(g, gd, to, "attention"); }
     let t = g.time;
     mem(g, gd).cand = Some(MemCand { at: [where_[0], 0.0, where_[2]], kind, t });
 }
@@ -282,14 +274,14 @@ pub fn attention_tick(g: &mut crate::game::Game, gd: GuardId) {
                     h = None;
                 } else if now >= hh.until {
                     if suspicious {
-                        g.gd[gd].awareness = m::min(g.gd[gd].awareness, 0.1 + hh.glimpse);
+                        crate::mind::cap(g, gd, 0.1 + hh.glimpse, "attention");
                         end(g, gd, "done");
                     } else {
                         end(g, gd, "over");
                     }
                     h = None;
                 } else if suspicious {
-                    g.gd[gd].awareness = m::max(g.gd[gd].awareness, g.k.attention.floor);
+                    { let to = g.k.attention.floor; crate::mind::raise(g, gd, to, "attention"); }
                     tell(g, gd, &mut hh);
                     h = Some(hh);
                 }
@@ -344,16 +336,15 @@ pub fn attention_tick(g: &mut crate::game::Game, gd: GuardId) {
             row.series = true;
             let foe_lines = g.gd[gd].team != crate::teams::Team::Guard;
             if nth as f64 >= g.k.attention.spent && cand.kind != DrawKind::Whistle {
-                let man = &mut g.gd[gd];
-                man.state = crate::game::GuardState::Search;
-                man.search_t = 0.0;
-                man.search_plan = None;
-                man.pieing = None;
-                man.react_t = 0.0;
-                man.path = Vec::new();
-                man.path_serial = man.path_serial.wrapping_add(1);
-                man.path_goal = None; man.path_goal_orbit = false;   // (guard_set_path_goal's rule, for the row in hand)
-                man.stall_ref = None;
+                crate::mind::set_state(g, gd, crate::game::GuardState::Search, "attention");
+                g.gd[gd].search_t = 0.0;
+                g.gd[gd].search_plan = None;
+                g.gd[gd].pieing = None;
+                g.gd[gd].react_t = 0.0;
+                g.gd[gd].path = Vec::new();
+                g.gd[gd].path_serial = g.gd[gd].path_serial.wrapping_add(1);
+                g.gd[gd].path_goal = None; g.gd[gd].path_goal_orbit = false;   // (guard_set_path_goal's rule, for the row in hand)
+                g.gd[gd].stall_ref = None;
                 g.stats.attention.spent += 1;
                 log(g, gd, "spent", LogH { kind: cand.kind, secs: 0.0, nth });
                 line(g, gd, &if foe_lines { spent_foe() } else { spent() });
@@ -429,7 +420,7 @@ pub fn attention_walk(g: &mut crate::game::Game, gd: GuardId) {
         end(g, gd, "far");
         return;
     }
-    g.gd[gd].awareness = m::max(g.gd[gd].awareness, g.k.attention.floor);
+    { let to = g.k.attention.floor; crate::mind::raise(g, gd, to, "attention"); }
 }
 
 /// Arrived at his fix: true = his attention is on the thing and his suspicion stands. (attention.ts attentionDwell)
@@ -442,41 +433,13 @@ pub fn attention_dwell(g: &mut crate::game::Game, gd: GuardId) -> bool {
         set_hold(g, gd, Some(h));
     }
     if g.time >= h.until {
-        g.gd[gd].awareness = m::min(g.gd[gd].awareness, 0.1 + h.glimpse);
+        crate::mind::cap(g, gd, 0.1 + h.glimpse, "attention");
         end(g, gd, "done");
         return false;
     }
-    g.gd[gd].awareness = m::max(g.gd[gd].awareness, g.k.attention.floor);
+    { let to = g.k.attention.floor; crate::mind::raise(g, gd, to, "attention"); }
     tell(g, gd, &mut h);
     true
-}
-
-/// One man's held attention as the floor shows it, for every man a hold is on. (attention.ts attentionMarks)
-pub fn attention_marks(g: &mut crate::game::Game) -> Vec<crate::attention::AttentionMark> {
-    if g.touring { return Vec::new(); }
-    let mut out = Vec::new();
-    let mut i = 0;
-    while i < g.guards.len() {
-        let gd = g.guards[i];
-        i += 1;
-        let Some(h) = attention_of(g, gd) else { continue };
-        if g.gd[gd].state == crate::game::GuardState::Dead || crate::fogofwar::fog_of_war_hidden(g, gd) { continue; }
-        let now = g.time;
-        let left = if h.mode == HoldMode::Lent { 1.0 } else { v3::clamp((if h.until < 0.0 { h.secs } else { h.until - now }) / m::max(1e-3, h.full), 0.0, 1.0) };
-        let pos = g.ch[g.gd[gd].ch].pos;
-        out.push(AttentionMark {
-            gd,
-            from: [pos[0], 0.05, pos[2]],
-            at: [h.at[0], 0.05, h.at[2]],
-            left,
-            mode: h.mode,
-            kind: h.kind,
-            ending: h.mode != HoldMode::Lent && h.until >= 0.0 && h.until - now <= g.k.attention.tell_secs,
-            worn: h.nth > 1,
-            walking: h.mode == HoldMode::Go && h.until < 0.0,
-        });
-    }
-    out
 }
 
 

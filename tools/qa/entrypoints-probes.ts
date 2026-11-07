@@ -4,34 +4,33 @@
 //                       through a wall or from too far; a restart forgets it.
 //   entrypoints-count   THE COUNT, across the seven start-card scenarios: every entry of every held room, taken from outside by that scenario's squad as if
 //                       it were the first door of the run (known ground = the stack's own marks and nothing else: the worst case), its points of domination
-//                       as they were against as they are now — how many stand within ENTRY.nearM and in the line of an opening nobody has been beyond.
+//                       as they were (the game's own doortools.ts podsAsWere: the points before the rule looks at them) against as they are now — how
+//                       many stand within ENTRY.nearM and in the line of an opening nobody has been beyond.
 //                       Holds: fewer after than before in total and never more on any door; every point left risky is one the room has no floor for (the
 //                       same search finds none); every moved point is on free floor, inside the room, clear of the other points, walkable from the door,
 //                       no further than ENTRY.moveM from where it was and not risky. Printed, not judged: the threshold stage's shallow step and the
 //                       stack's own marks, which this change leaves where they were.
-//   entrypoints-off     ENTRY.offOpenings off: pods() answers the old points, object for object, on every door of every scenario; and a seeded entry on
-//                       the manager's door plays the same game with the switch off as the tracker alone leaves it (digest for digest).
 //   bun run tools/qa/entrypoints-probes.ts table      the count's rows as markdown (the page's table)
 // The same-seed play-through numbers (points dealt in play, deaths at such points) are tools/qa/playthrough.ts's: RunOut.entry and Death.open.
-// ENTRYOFF_BREAK=1 = entrypoints-off's run without the tracker plays with the switch on: must fail on both stands.
-// entrypoints-count is RED ON BOTH STANDS by a row of tools/qa/expected-red.ts (11-06): one moved point of the killhouse's bunks, its watch point out of his line.
+// THE RULE IS SETTLED (ENTRY.offOpenings, move, watch; 2026-11-07): nothing here writes the table. Until then the count dealt its 'as they were' points with the
+// switch written off (now asked of podsAsWere, which is that answer by the game's own words), and a probe `off` flicked the three rows and played an entry with
+// the rule off; it went, and ENTRYOFF_BREAK with it.
+// entrypoints-count had a row of tools/qa/expected-red.ts (11-06, read on the TypeScript game): one moved point of the killhouse's bunks, its watch point out of his line.
 import { ROOT } from './headless.ts';
 import { stage } from './bang-tally.ts';
 const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const { ENTRY } = await import(`${ROOT}/src/game/entrypoints.ts`);
 const { sideOf } = await import(`${ROOT}/src/game/orders.ts`);
 const { wallBetween } = await import(`${ROOT}/src/game/roomclear.ts`);
-const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 
 type Vec3 = [number, number, number];
 const VERBOSE = process.argv.includes('--verbose');
-const keep = { ...ENTRY };
 const lineTo = (g: any, p: number[], w: number[]) => !wallBetween(g, [p[0], 1.55, p[2]], [w[0], 1.1, w[2]]);
 function family(title: string) {
   console.log(`\n=== ${title} ===`); let all = true;
   return { verdict: (ok: boolean, label: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); }, done: () => { console.log(`=== ${title.split(':')[0]}: ${all ? 'ALL PASS' : 'FAIL'} ===`); return all; } };
 }
-const guarded = (fn: () => Promise<boolean>) => async () => { try { return await fn(); } catch (e) { console.log(`- FAIL — the probe threw\n    ${e instanceof Error ? e.stack : String(e)}`); return false; } finally { Object.assign(ENTRY, keep); } };
+const guarded = (fn: () => Promise<boolean>) => async () => { try { return await fn(); } catch (e) { console.log(`- FAIL — the probe threw\n    ${e instanceof Error ? e.stack : String(e)}`); return false; } };
 const quiet = async <T>(fn: () => T | Promise<T>): Promise<T> => { if (VERBOSE) return await fn(); const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => {}; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } };
 const flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const at = (p: number[]) => `(${p[0].toFixed(1)}, ${p[2].toFixed(1)})`;
@@ -49,9 +48,9 @@ export async function countScenario(scnId: string): Promise<Row> {
     const d = ent.door, side = sideOf(d, [ent.at[0] + ent.out[0] * 1.2, 0, ent.at[2] + ent.out[1] * 1.2]) as 1 | -1, n = men.length > 2 || O.big ? 4 : men.length, W = d.def.width, name = d.def.name;
     const posts = O.stackPosts(d, side, men) as any[] | null; if (!posts) continue;   // (no floor at its jambs from outside: the squad takes the room's other door)
     const known = () => { EP.reset(); for (const p of posts) EP.mark(p.pos); };
-    known(); ENTRY.offOpenings = false; const was = D.pods(d, side, n) as any[];
+    known(); const was = D.podsAsWere(d, side, n) as any[];
     const rb = was.map((p: any) => EP.riskAt(p.pos, d));
-    ENTRY.offOpenings = true; const now = D.pods(d, side, n) as any[], ra = now.map((p: any) => EP.riskAt(p.pos, d));
+    const now = D.pods(d, side, n) as any[], ra = now.map((p: any) => EP.riskAt(p.pos, d));
     row.doors++; row.pts += was.length; row.before += rb.filter(Boolean).length; row.after += ra.filter(Boolean).length;
     if (now.length !== was.length) row.bad.push(`${name}: ${was.length} points became ${now.length}`);
     if (ra.filter(Boolean).length > rb.filter(Boolean).length) row.bad.push(`${name}: more risky points after than before`);
@@ -71,7 +70,7 @@ export async function countScenario(scnId: string): Promise<Row> {
     known(); for (const p of D.shallowPods(d, side, Math.max(2, men.length)) as any[]) { row.shallow++; if (EP.riskAt(p.pos, d)) row.shallowRisky++; }
     EP.reset(); for (const p of posts) { row.stack++; if (EP.riskAt(p.pos, d)) row.stackRisky++; }
   }
-  EP.reset(); Object.assign(ENTRY, keep);
+  EP.reset();
   return row;
 }
 
@@ -115,37 +114,6 @@ export const entrypointsKnown = guarded(async () => {
   return done();
 });
 
-export const entrypointsOff = guarded(async () => {
-  const { verdict, done } = family('entrypoints-off: the switch off is the points as they were');
-  let doors = 0, diff = 0, stayBad = 0, watched = 0, mvBad = 0, movedOnly = 0;
-  for (const E of SCENARIOS as any[]) { const S: any = await quiet(() => stage(E.id, 1)); const g = S.g, D = g.doorTools; ENTRY.offOpenings = false;
-    for (const d of g.doors.list) for (const side of [1, -1] as const) for (const n of [2, 4]) { doors++; const b = D.podsAsWere(d, side, n), same = (a: any[]) => a.length === b.length && a.every((p: any, i: number) => p.pos[0] === b[i].pos[0] && p.pos[2] === b[i].pos[2] && p.face === b[i].face);
-      Object.assign(ENTRY, keep, { offOpenings: false }); const off = D.pods(d, side, n); if (!same(off) || off.some((p: any) => p.watch)) diff++;
-      Object.assign(ENTRY, keep, { offOpenings: true, move: false, watch: true }); const stay = D.pods(d, side, n); if (!same(stay)) stayBad++; watched += stay.filter((p: any) => p.watch).length;
-      Object.assign(ENTRY, keep, { offOpenings: true, move: true, watch: false }); const mv = D.pods(d, side, n); if (mv.some((p: any) => p.watch) || mv.some((p: any, i: number) => p.face !== b[i].face)) mvBad++; movedOnly += same(mv) ? 0 : 1; }
-    Object.assign(ENTRY, keep); }
-  // (that the switch off PLAYS as the build before it is threshold-identity's business: fourteen runs against digests frozen at af55d89, pinned with ENTRY.offOpenings off)
-  verdict(doors > 0 && diff === 0, 'pods() with the switch off: the points the old function deals and none with an opening to hold, on every door of every scenario, either face, for two and for four', `${doors} askings, ${diff} differ`);
-  verdict(stayBad === 0 && watched > 0 && mvBad === 0 && movedOnly > 0, 'the two halves switch apart: with the move off every point stays and the risky ones are given their opening to hold; with the watch off points move and none is given one, each keeping the facing it was dealt', `move off: ${stayBad} askings moved a point, ${watched} points given an opening · watch off: ${mvBad} askings wrong, ${movedOnly} moved a point`);
-  // the tracker alone changes nothing: one seeded entry, the switch off, with the tracker ticking and with it stopped
-  // (THE ROW IS GIVEN AGAIN WHERE THE FIRST ENDED AT THE HANDLE. The manager's door is locked: where the men try a door before they work it
-  // (DOORTOOLS.testDoor, the page's stand) the order ends 'found shut', nobody goes in, no point is dealt, and the two digests were equal over a run
-  // with no entry in it. The same row given again is the page's own way through: the men kick it and go in. The old stand's run is as it was: its
-  // first order goes through the lock. The line asks that the entry went in. ENTRYOFF_BREAK=1 = the run without the tracker plays with the
-  // switch ON: another game, and the line must fail.)
-  const play = async (track: boolean) => { const S: any = await quiet(() => stage('room-clear-pair', 3)); const g = S.g, O = g.orders, D = g.doorTools; ENTRY.offOpenings = !track && process.env.ENTRYOFF_BREAK === '1'; if (!track) g.entry.tick = () => {};
-    const d = g.doors.list.find((x: any) => x.def.name === 'manager') ?? S.defs[0].room.entries[0].door; let h = '', again = false;
-    const ended = (how: string) => D.done.some((o: any) => o.door === d && o.ended === how), row = () => O.give(D.bangs > 0 ? 'bangClear' : 'openClear', O.targetAt(d.frameCentre));
-    await quiet(() => { O.give('stack', O.targetAt(d.frameCentre)); for (let i = 0; i < 60 * 8; i++) S.step(); row();
-      for (let i = 0, after = 0; i < 60 * 80 && (i < 60 * 20 || (again && after < 60 * 5)); i++) { S.step(); if (i % 30 === 0) h = String(hashDigest(h + JSON.stringify(digestGame(g, true))));
-        if (!again && ended('found shut') && !ended('in')) { row(); again = true; } if (again && ended('in')) after++; } });
-    const went = ended('in');
-    Object.assign(ENTRY, keep); return { h, dealt: g.entry.stats.pods, went, again }; };
-  const a = await play(true), b = await play(false);
-  verdict(a.h === b.h && a.dealt > 0 && a.went && b.went, 'a seeded entry with the switch off plays the same game whether the tracker runs or not', `digest ${a.h} against ${b.h} · ${a.dealt} points dealt · the entry went in: ${a.went} / ${b.went}${a.again || b.again ? ' (the row given again after \'found shut\')' : ''}`);
-  return done();
-});
-
 if (import.meta.main) {
   if (process.argv[2] === 'table') { const rows: Row[] = []; for (const E of SCENARIOS as any[]) rows.push(await countScenario(E.id));
     console.log('| scenario | entries | points | risky before | risky after | moved | kept, no floor | shallow step risky | stack marks risky |\n|---|---|---|---|---|---|---|---|---|');
@@ -153,5 +121,5 @@ if (import.meta.main) {
     const s = (k: keyof Row) => rows.reduce((n, r) => n + (r[k] as number), 0);
     console.log(`| **all seven** | ${s('doors')} | ${s('pts')} | ${s('before')} | ${s('after')} | ${s('moved')} | ${s('kept')} | ${s('shallowRisky')} of ${s('shallow')} | ${s('stackRisky')} of ${s('stack')} |\n`);
     for (const r of rows) for (const l of r.lines) console.log(`- ${r.scn} · ${l}`); for (const r of rows) for (const b of r.bad) console.log(`- BAD ${r.scn} · ${b}`); }
-  else { let ok = true; for (const f of [entrypointsKnown, entrypointsCount, entrypointsOff]) ok = (await f()) && ok; process.exit(ok ? 0 : 1); }
+  else { let ok = true; for (const f of [entrypointsKnown, entrypointsCount]) ok = (await f()) && ok; process.exit(ok ? 0 : 1); }
 }

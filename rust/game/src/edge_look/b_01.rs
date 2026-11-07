@@ -43,9 +43,6 @@ pub fn edge_look_opened(g: &mut crate::game::Game, b: &crate::edge_look::BreakLi
     edge_look_dress(g, b, fresh, cause, dir, quiet);
 }
 
-/// The look switched off and emptied. Nothing calls it here: the TypeScript's caller is a `catch`. (src/game/edgeLook.ts:108 EdgeLook.fail)
-pub fn edge_look_fail(g: &mut crate::game::Game, e: crate::Opaque) { g.m.edge_look.edge.on = false; edge_look_clear(g); }
-
 /// The frame a wall goes: only the soot's record and its marks land on it; the wall is dressed on the next frame and its rubble shed a few cells a frame
 /// after that. A checkpoint being applied does it all at once. (src/game/edgeLook.ts:111 EdgeLook.dress)
 pub fn edge_look_dress(g: &mut crate::game::Game, b: &crate::edge_look::BreakLike, fresh: &[f64], cause: &str, dir: Option<V3>, quiet: bool) {

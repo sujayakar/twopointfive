@@ -11,6 +11,9 @@
 // address (the row's own hour and weather, the fog of war, a quiet mission's rung and cameras, then the mission). `--mission <id>` is a row of the
 // mission list (scene/scenarioList.ts): the level file the page loads for it (the look's, scene/look.ts lookLevelFile) and the link a click on the
 // row loads (scenarios.ts scenarioQuery), both written to DIR/mission.txt for the Rust side. No tick is run.
+// (THIS IS THE TYPESCRIPT START: the harness's word, which by default makes a stood game a puppet of the Rust module (tools/blitz/word.ts), is put off
+// before the harness is first imported, on every path)
+process.env.TPS_GAME = 'none';
 import { STAND } from '../qa/stand.ts';
 import { writeFileSync, mkdirSync, readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -30,8 +33,6 @@ if (MISSION || argv.includes('--missions')) {
 }
 if (!file || (file.startsWith('--') && !MISSION) || !outDir) { say("start.ts <level file> --out DIR [--seed N] [--scenario <kind> [--squad N] [--deal N]] · start.ts --mission <id> --out DIR · start.ts --missions"); process.exit(64); }
 mkdirSync(outDir, { recursive: true });
-// (THIS IS THE TYPESCRIPT START: the harness's word, which by default makes a stood game a puppet of the Rust module (tools/blitz/word.ts), is put off)
-process.env.TPS_GAME = 'none';
 const { exportGame } = await import('./host.ts');
 const { knobRegistry } = await import('../../src/game/knobs.ts');
 const { dressAll } = await import('../../src/game/dress.ts');

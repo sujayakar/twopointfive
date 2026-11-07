@@ -3,7 +3,7 @@
 //
 // A mission's page went live the moment the level stood (main.ts `interactive`): the brief's START took a press before one frame of the level had been drawn,
 // and a press kept from the boot started the run at once. So the run's first seconds were the renderer's own first seconds: a pass still on its stand-in
-// while its program compiled (`gpu/device.ts` PIPE_QUEUE.later), the second set of the tracing programs compiling in the background (render/cutSwap.ts),
+// while its program compiled (`gpu/device.ts` PIPE_QUEUE.later),
 // every history empty (the cascades, the reservoirs, the denoiser, the upscale), and auto quality measuring the machine in view, then changing the preset
 // and the render scale in one step about a second in. Each of those is a picture that changes under the player, and a GPU that is busy with something
 // other than the frame.
@@ -26,7 +26,7 @@
 
 export const SETTLE = { on: false, /** frames drawn with every program in and the pick made before the start is live */ frames: 45, /** seconds the picture's turn may take */ maxSecs: 12, /** seconds the wait on programs may take */ programSecs: 120 };
 
-/** what the page says each step: `out` = programs still compiling (every pipeline asked for and not in, the later set's, the second set while it builds), `measuring` = auto quality has not made its pick */
+/** what the page says each step: `out` = programs still compiling (every pipeline asked for and not in, the later set's), `measuring` = auto quality has not made its pick */
 export interface SettleFacts { out: number; measuring: boolean }
 
 const BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.SETTLE_BREAK ?? '') === '1'; } catch { return false; } })();

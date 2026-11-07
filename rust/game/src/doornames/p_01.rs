@@ -41,11 +41,6 @@ fn has_bearing(s: &str) -> bool {
     s.split(|c: char| !(c.is_ascii_alphanumeric() || c == '_')).any(|w| BEARINGS.contains(&w))
 }
 
-/// A token of an id that is no word: compass, one or two letters, letters with a number, no vowel. (doornames.ts shorthand)
-pub fn shorthand(g: &mut crate::game::Game, t: &str) -> bool {
-    token_is_shorthand(t)
-}
-
 /// True = this door id is its author's shorthand, not words to say. (doornames.ts shorthandId)
 pub fn shorthand_id(g: &mut crate::game::Game, id_2: &str) -> bool {
     id_is_shorthand(id_2)

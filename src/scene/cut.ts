@@ -31,9 +31,9 @@ export const BOX_CUT_BIT = 1 << 16;
 /** the switch (see the head of this file). Mutate only at boot (main.ts initCutSwitch) or in a headless probe. */
 export const cutConfig = {
   on: false,
-  /** A CALM ROOM PAYS NOTHING (render/cutSwap.ts): true = every ray program boots as the build's WITHOUT the cut rule (the scene prelude's CUT_BOXES false: the text
-   *  `?nocutboxes` compiles), a second set with the rule is compiled in the background after boot, and the frame takes that set only while a cut box a ray can meet
-   *  is alive. false (`?cutprograms=boot`) = the one set, compiled with the rule from boot, as the switch first shipped. Read before the first pipeline is compiled. */
+  /** UNREAD AND UNWRITTEN since 2026-11-07. It chose between one set of ray programs with the cut rule and two (a second set compiled after the boot and swapped in while a cut
+   *  piece was alive): there is one set now, with the rule, and render/cutSwap.ts is gone. The row stays only because the knob registry, the settled-switch list
+   *  (tools/qa/switches.json) and the Rust game's mirror of the knobs still name it: theirs to drop. */
   swap: true,
 };
 export const cutBoxesOn = () => cutConfig.on;
@@ -45,7 +45,6 @@ export function initCutSwitch(): boolean {
   if (q.has('nocutboxes')) cutConfig.on = false;
   else if (q.has('cutboxes')) cutConfig.on = q.get('cutboxes') !== '0';
   else { let kept: string | null = null; try { kept = localStorage.getItem('twopointsix.cutboxes'); } catch { /* no storage: on */ } cutConfig.on = kept !== '0'; }
-  if (q.get('cutprograms') === 'boot') cutConfig.swap = false;   // (the cut rule compiled into every ray program from boot — the A/B against the swap)
   return cutConfig.on;
 }
 

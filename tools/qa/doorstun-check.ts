@@ -1,4 +1,4 @@
-// A BURST THAT TAKES A DOOR OFF STUNS THE MEN BEHIND IT (src/game/frag.ts FRAG.doorStun; the maintainer, 10-11, a 40 mm on the compound's guard hut door:
+// A BURST THAT TAKES A DOOR OFF STUNS THE MEN BEHIND IT (src/game/frag.ts; the maintainer, 10-11, a 40 mm on the compound's guard hut door:
 // "40mm on door should maybe stun around the blast?"). Standalone and through probes.ts:
 //   bun run tools/qa/doorstun-check.ts          bun run tools/qa/probes.ts doorstun
 // The blast judges everybody on the frame it goes off, and the leaf it has just torn off still stands in its frame on that frame: the man straight behind the
@@ -11,11 +11,7 @@
 //   (5) the player behind a door somebody else's burst takes off: stunned (his trigger dead for the seconds, a line saying why), never hurt
 //   (7) BEFORE the burst: a man reckoning his cover (frag.ts exposedTo — who runs from a grenade, a thrower's 'none of mine in it') counts a door the burst
 //       will take as no cover; a door out of its reach is cover as ever
-// THE RULE IS SETTLED (FRAG.doorStun, blasts taking doors off and the destruction switch are constants of the game), so since 2026-11-07 nothing here
-// writes them. Gone: (6), the same burst with the rule off, and the half of (7) that asked any door with the rule off. It still sets the destruction
-// dial (Game.tune.chaos), a game's own.
-// DOORSTUN_BREAK=1 was the rule left off. It now breaks the staging: every burst at the hut door is 4.5 m off, too far to take the leaf, so (1) and (2)
-// must fail.   exit 0 = all hold · 1 = one does not
+// DOORSTUN_BREAK=1 = every burst is put 4.5 m off its door, too far to take the leaf: the lines are asked all the same and must fail.   exit 0 = all hold · 1 = one does not
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 const ROOT = resolve(import.meta.dir, '../..');
@@ -33,9 +29,9 @@ export async function doorstunCheck(): Promise<boolean> {
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
   const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
   const BREAK = process.env.DOORSTUN_BREAK === '1'; let all = true;
-  const was = { rnd: Math.random };
+  const was = { frag: JSON.parse(JSON.stringify(FRAG)), rnd: Math.random };
   const line = (ok: boolean, label: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
-  console.log(`\n=== doorstun: a burst that takes a door off stuns the men behind it${BREAK ? ' (DOORSTUN_BREAK: every burst too far off to take the leaf)' : ''} ===`);
+  console.log(`\n=== doorstun: a burst that takes a door off stuns the men behind it${BREAK ? ' (DOORSTUN_BREAK: every burst too far off)' : ''} ===`);
   /** a fresh floor with blasts taking doors off: the compound's room clear (his mission) or the office's plain night */
   const rig = async (compound: boolean) => {
     Math.random = seeded(7);
@@ -49,7 +45,7 @@ export async function doorstunCheck(): Promise<boolean> {
     const door = (name: string) => { const d = g.doors.list.find((x: any) => x.def.name === name); d.reset(); d.angle = 0; d.vel = 0; d.latched = true; d.closing = false; d.place(); return d; };
     const put = (gd: any, p: number[]) => { gd.char.pos = [p[0], 0, p[2]]; gd.char.vel = [0, 0, 0]; gd.path = []; gd.pathGoal = null; gd.speed = 0; gd.lastPos = [p[0], 0, p[2]]; };
     /** the 40 mm's burst on the middle of the leaf's `side` face, `off` metres from it (he40.ts: its own standoff) */
-    const shell = (d: any, side: 1 | -1, who: number, off = HE40.standoff + 0.03) => { const pt = doorPt(d, d.def.width / 2, off, side, 1.0); return blast(g, [pt[0], pt[1] - FRAG.lift, pt[2]], { who, name: '40 mm grenade' }); };
+    const shell = (d: any, side: 1 | -1, who: number, off = BREAK ? 4.5 : HE40.standoff + 0.03) => { const pt = doorPt(d, d.def.width / 2, off, side, 1.0); return blast(g, [pt[0], pt[1] - FRAG.lift, pt[2]], { who, name: '40 mm grenade' }); };
     return { W, g, said, step, door, put, shell };
   };
   const words = (rep: any, gd: any, g: any) => `${rep.hits.filter((h: any) => h.id === gd.char.id).map((h: any) => `${h.name} ${h.result} at ${f2(h.d)} m, exposed ${h.exposed}`).join('') || 'not in the report'} · ${gd.state} · folded ${f2(Math.max(0, gd.staggerUntil - g.time))} s · report ${rep.killed} down ${rep.wounded} hit ${rep.stunned} stunned ${rep.shielded} behind cover`;
@@ -57,7 +53,6 @@ export async function doorstunCheck(): Promise<boolean> {
   /** his door: the compound's guard hut, the burst on its OUTSIDE face (the side the maintainer fired from), the hut's own man inside. Which face is which is
    *  read off the level: the hut's man is the defender staged nearest the door, and the burst goes on the face he is not on. */
   const hut = async (where: 'tape' | 'near' | 'wall', off?: number, fire = true) => {
-    if (BREAK && off === undefined) off = 4.5;
     const R = await rig(true), g = R.g, d = R.door('hut_w'), mid = doorPt(d, d.def.width / 2, 0, 1, 0);
     const T = g.guards.filter((x: any) => x.team === 'hostile' && x.state !== 'dead').sort((a: any, b: any) => Math.hypot(a.char.pos[0] - mid[0], a.char.pos[2] - mid[2]) - Math.hypot(b.char.pos[0] - mid[0], b.char.pos[2] - mid[2]))[0];
     const inside: 1 | -1 = g.doors.side(d, T.char.pos), side = -inside as 1 | -1;
@@ -104,7 +99,7 @@ export async function doorstunCheck(): Promise<boolean> {
         '(7) before the burst: a door it will take is no cover to a man reckoning his own; one out of its reach is',
         `behind the shut hut door, a stride in · plain cover test ${plain} · a grenade at the leaf ${wary} · one 4.5 m off ${out}`); }
   } catch (e) { all = false; console.log(`- FAIL — the check threw\n    ${e instanceof Error ? e.stack : String(e)}`); }
-  finally { Math.random = was.rnd; }
+  finally { Object.assign(FRAG, was.frag); Math.random = was.rnd; }
   console.log(`=== doorstun: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;
 }

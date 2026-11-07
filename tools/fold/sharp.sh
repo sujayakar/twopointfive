@@ -12,11 +12,16 @@ while [ $# -gt 0 ]; do case "$1" in --dry) DRY=1; shift;; --no-tests) CHK=; shif
 FOLD=tools/fold/target/release/fold
 [ -x "$FOLD" ] || cargo build --release --manifest-path tools/fold/Cargo.toml > /dev/null 2>&1 || { echo "sharp.sh: tools/fold does not build"; exit 3; }
 mkdir -p "$S" || exit 3
-n=0
+n=0; mended=0
 while :; do
   n=$((n + 1))
   "$FOLD" sharp-prep --scratch "$S" || exit 3
   ( cd "$S/rust/game" && CARGO_TARGET_DIR="$S/target" cargo check $CHK --message-format=json > "$S/diag-$n.json" 2> "$S/check-$n.log" ) || {
+    # a `use` (of a test module, mostly) that still names what the round before deleted: the name goes, and the round runs again
+    if [ -z "$DRY" ] && [ $mended -lt 8 ]; then
+      "$FOLD" sharp-mend --diag "$S/diag-$n.json" --write; r=$?
+      [ $r = 10 ] && { mended=$((mended + 1)); mv "$S/diag-$n.json" "$S/diag-$n-unmended-$mended.json"; n=$((n - 1)); continue; }
+    fi
     grep -h '"level":"error"' "$S/diag-$n.json" | head -5 | cut -c1-600; tail -5 "$S/check-$n.log" | cut -c1-300
     echo "sharp.sh: round $n: the private copy does not compile ($S/diag-$n.json)"; exit 3; }
   echo "round $n:"

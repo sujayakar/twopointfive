@@ -35,49 +35,11 @@ pub fn sim() -> crate::sim_sim::SimExports {
     SimExports { memory: crate::Opaque }
 }
 
-/// Is `b` the module's memory: never, since rust/game holds no view over it and an `ArrayBufferLike` holds nothing that could be one. (sim.ts simOwns)
-pub fn sim_owns(b: crate::sim_sim::ArrayBufferLike) -> bool {
-    false
-}
 
 
 
 
 
-
-
-/// The length of any number of terms as the module works it out: the closure `hypot` of mathsOfRust, through the plain function behind the
-/// exports (rust/sim's hypot_n goes to its own 2, 3 and 4 by arity, as the closure did). (sim.ts mathsOfRust hypot)
-fn hypot_of_rust(v: &[f64]) -> f64 {
-    if v.len() > ::sim::sim_scratch_len() { return crate::math_hyp::kahan_n(v); }
-    ::sim::maths::hypot_n(v)
-}
-
-/// The fourteen and the lengths as the module works them out: THE set RUST.maths puts in Math's place. (sim.ts mathsOfRust)
-pub fn maths_of_rust() -> crate::math_exact::Maths {
-    seam_maths_of_the_module()
-}
-
-/// Who asked. A runtime with no stack to read answers '', the TypeScript's own `new Error().stack ?? ''`; a native build has none. (sim.ts callers)
-pub fn callers(skip: f64, n: f64, not: crate::Opaque, span: Option<f64>) -> String {
-    String::new()
-}
-
-/// Nothing to do: the TypeScript's count of questions it answered itself, a tool's with no other side in Rust. (sim.ts fell)
-pub fn fell(row: &str, why: &str) {}
-
-/// Nothing to do, as `fell`: every TypeScript caller was a way back to a TypeScript step. (sim.ts ruleFell)
-pub fn rule_fell(row: &str, why: &str) {}
-
-/// Never: only a tool raises FELL.red, and it sends a step to a TypeScript that Rust does not have. (sim.ts ruleRed)
-pub fn rule_red(row: &str) -> bool {
-    false
-}
-
-/// sim.ts:251: Maths holds FnField, which can name no function.
-fn seam_maths_of_the_module() -> crate::math_exact::Maths {
-    todo!("needs: Maths' fields as something that can hold rust/sim's functions, and hypot_of_rust for its hypot (sim.ts:251)")
-}
 
 #[cfg(test)]
 mod tests {
@@ -91,18 +53,4 @@ mod tests {
         sim();
     }
 
-    #[test]
-    fn no_stack_is_the_answer_the_typescript_gives_for_none() {
-        assert_eq!(callers(3.0, 2.0, crate::Opaque, None), "");
-    }
-
-    /// the bits are the TypeScript's: mathsOfRust().hypot under bun with EXACT.on
-    #[test]
-    fn hypot_any_arity_to_the_bit() {
-        let terms = [1.5, -2.25, 0.1, 7.3, 1e-3];
-        let cases: [(usize, u64); 4] = [(2, 0x4005a22073490377), (3, 0x4005a5e9872a81f7), (4, 0x401f2440afa97f49), (5, 0x401f2440b3f8d5ee)];
-        for (n, bits) in cases { assert_eq!(hypot_of_rust(&terms[..n]).to_bits(), bits, "{} terms", n); }
-        assert_eq!(hypot_of_rust(&[0.7]).to_bits(), 0x3fe6666666666666);
-        assert_eq!(hypot_of_rust(&[]).to_bits(), 0);
-    }
 }

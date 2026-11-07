@@ -18,12 +18,13 @@
 //   pairs-tool    a door tool given to one pair on a door the other pair is stacked on, all four tools on two doors: the stacked pair steps back to rear
 //                 security (its order still 'stack' on that door), the tool's pair takes the jambs, a charge's backblast catches nobody, the tool runs to
 //                 its end; a charge on a door with a teammate behind it is refused
-//   pairs-haltback  a pair HALTED on a door the other pair is charging (DOORTOOLS.haltBack; the probe sets that key and DOORTOOLS.testDoor itself after the
-//                 stand-up, so it asks the same of both stands): blue is given the charge on the locked manager's door, red then 'open and clear' on it —
-//                 red's lead tries the handle, the order ends 'found shut'. Key on: red steps back to rear security, to the marks a pair stacked there
-//                 BEFORE the charge order is sent to, and the charge catches nobody; key off: red stays stacked inside the blast (the fault, asserted);
-//                 no charge on the door: the key moves nobody; Sam at the door (put off it, and as played); a charge left set with
-//                 its order gone; the journal. HALTBACK_BREAK=1 = the key left off in the key-on run: must fail
+//   pairs-haltback  a pair HALTED on a door the other pair is charging (DOORTOOLS.haltBack): blue is given the charge on the locked manager's door, red then 'open and clear' on it —
+//                 red's lead tries the handle, the order ends 'found shut'. Red steps back to rear security, to the marks a pair stacked there
+//                 BEFORE the charge order is sent to, and the charge catches nobody; no charge on the door: nobody steps back; Sam at the door (put
+//                 off it, and as played); a charge left set with its order gone. HALTBACK_BREAK=1 = blue's charge is never ordered: must fail
+//                 (2026-11-07: the key is settled on and not written. Out: the key-off runs — 'KEY ON against KEY OFF', the two 'KEY OFF, the fault'
+//                 CONTROLs, the key-off half of the no-charge CONTROL — and the journal. Out of the rest of the file with the same day: the
+//                 defenders' grenades held off in pairs-hold (a) and (b), and the plain-stack run of the tool under a charge, COVER.stacked off)
 //   pairs-lanes   lines of fire: a posted man lowers his muzzle while a man of the OTHER pair crosses his line; the two pairs working two rooms off one
 //                 corridor at once; and the tally over every run of this family in this process — rounds fired through a teammate, teammates down to a
 //                 teammate (the game's rule makes that impossible; the lanes are what is measured)
@@ -32,7 +33,6 @@ const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { ROOMCLEAR } = await import(`${ROOT}/src/game/roomclear.ts`);
 const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
 const { ORDERS, sideOf } = await import(`${ROOT}/src/game/orders.ts`);
-const { FRAG } = await import(`${ROOT}/src/game/frag.ts`);
 
 const DT = 1 / 60;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -113,10 +113,9 @@ async function rig(seed: number, sam: number[], o: { squad?: 2 | 4; quiet?: bool
 export const pairsOff = guarded(async () => {
   const { verdict, done } = family('pairs-off: the pair build is as it was; the four get the word');
   { const R = await rig(5, CUBICLES, { squad: 2, quiet: true }); const { O } = R; const men = R.men('all');
-    const goDef = O.defs.find((d: any) => d.id === 'go'), noGo = !goDef, why = O.give('go', R.here(), 'all');
+    const goDef = O.defs.find((d: any) => d.id === 'go'), why = O.give('go', R.here(), 'all');
     // (the small squad's word, DOORTOOLS.wordSmall, on in the page: 'go' is registered for the pair too, on no menu row, and is refused while nobody is stacked — `probes.ts wordsmall`)
-    if (DOORTOOLS.wordSmall) verdict(men.length === 2 && !O.big && !!goDef && (goDef.listed ?? []).length === 0 && why === 'nobody waiting.', 'two men, DOORTOOLS.wordSmall on: not a big squad; \'go\' is on the list for the key alone (on no menu row) and giving it with nobody stacked is refused', `${men.length} men · big ${O.big} · go listed [${(goDef?.listed ?? []).join(' ')}] · give('go') → ${why}`);
-    else verdict(men.length === 2 && !O.big && noGo && typeof why === 'string', 'two men: not a big squad, no \'go\' order on the list, giving it is refused', `${men.length} men · big ${O.big} · rows ${O.defs.map((d: any) => d.id).join(' ')} · give('go') → ${why}`);
+    verdict(men.length === 2 && !O.big && !!goDef && (goDef.listed ?? []).length === 0 && why === 'nobody waiting.', 'two men: not a big squad; \'go\' is on the list for the key alone (on no menu row) and giving it with nobody stacked is refused', `${men.length} men · big ${O.big} · go listed [${(goDef?.listed ?? []).join(' ')}] · give('go') → ${why}`);
     const t = R.target('breakroom_n'), t2 = O.forMen(t, men);
     verdict(t2.side === t.side && t.side === sideOf(R.door('breakroom_n'), R.game.player.char.pos), 'two men: a door order keeps Sam\'s side of the door (he is in the cubicles: the INSIDE of the north door), as before', `Sam's side ${t.side} · the men's ${t2.side}`);
     R.game.teleportPlayer(CORRIDOR); R.step(5);
@@ -154,11 +153,7 @@ export const pairsHold = guarded(async () => {
   const { verdict, done } = family('pairs-hold: one pair holds while the other clears');
   // ---- (a) red stacked on the north door, blue opens and clears through the west door
   { const rows: string[] = []; let kept = 0, ended = 0, n = 0, lost = 0, drift = 0; const ff: string[] = [], thr: string[] = [];
-    // (the defenders' own frag grenades are pinned off here as in (b) below, and for its reason: a stacked man runs from a grenade that lands by him, as he
-    //  should — 1.8 m off his mark on seed 5 the day a walk to the stack took half a second longer — and that run is frag.ts's and `probes.ts frag`'s to
-    //  judge. What is asked here is the stack kept and the marks held against the other pair's order)
-    const fragWasA = FRAG.defenders; try {
-    for (const seed of [2, 5, 9]) { n++; const R = await rig(seed, CORRIDOR, { tag: 'hold-a' }); const { O, D } = R; const dn = R.door('breakroom_n'), red = R.men('red'); FRAG.defenders = false;
+    for (const seed of [2, 5, 9]) { n++; const R = await rig(seed, CORRIDOR, { tag: 'hold-a' }); const { O, D } = R; const dn = R.door('breakroom_n'), red = R.men('red');
       R.give('stack', 'breakroom_n', 'red'); R.set('red', 30); const posts = new Map(red.map((m: any) => [m, [...O.of(m).post]] as const));
       const why = R.give('openClear', 'breakroom_w', 'blue'); const op = D.ops[0], sent = op ? [...op.men] : []; let stayed = true, far = 0;   // (who the order TOOK: a man lost in the room is off op.men by the end)
       R.post = () => { for (const m of R.men('red')) { const a = O.of(m); if (a?.order !== 'stack' || a.door !== dn) stayed = false; far = Math.max(far, dist(m.char.pos, posts.get(m)! as any)); } };
@@ -166,19 +161,14 @@ export const pairsHold = guarded(async () => {
       const good = why === null && !!op && sent.length === 2 && sent.every((m: any) => O.pairOf(m) === 'blue'); if (stayed && good) kept++; if (op?.ended === 'in') ended++;
       lost += R.lost().length; drift = Math.max(drift, far); ff.push(...R.fratricide); thr.push(...R.through);
       rows.push(`seed ${seed}: blue's order → ${why} (${sent.length} men), ended '${op?.ended}' · red kept its stack ${stayed}, most it moved off its marks ${f2(far)} m · lost ${names(R.lost()) || 'none'} · defenders down ${R.hostiles.filter((h: any) => h.state === 'dead').length}`); }
-    } finally { FRAG.defenders = fragWasA; }
     verdict(kept === n && ended === n, 'red keeps its stack on the north door from the order to the end while blue — two men, blue alone — opens and clears through the west door', rows.join('\n    '));
     verdict(drift < 0.8, 'red stays on its marks (within 0.8 m) the whole time', `most ${f2(drift)} m`);
     verdict(ff.length === 0 && thr.length === 0, 'no teammate down to a teammate, no round fired through one', `${ff.join(' · ') || 'none'} · through ${thr.length} · ${lost} lost to defenders in ${n} runs`); }
   // ---- (b) red HOLDS a flank in the corridor (arcs dealt) while blue bangs and clears; against the plain hold (each man told alone: no arcs)
   { const SEEDS = [2, 5, 9, 11, 14, 17]; const res: Record<string, { lost: number; kills: number; rows: string[]; ok: number; thr: number; ff: number }> = {};
     let arcsOk = 0, stayed = 0;
-    // (the defenders' own frag grenades — FRAG.defenders, on as shipped, held off on the frozen stand — are pinned off for these runs: a man holding an arc
-    //  runs from a grenade that lands in his line and walks back to his mark after it, as he should, and that is frag.ts's flee and `probes.ts frag`'s to
-    //  judge. What is asked here is the hold itself: the arcs dealt, the men on their marks, what comes down the arcs met)
-    const fragWas = FRAG.defenders; try {
     for (const mode of ['arcs', 'plain'] as const) { const r = res[mode] = { lost: 0, kills: 0, rows: [] as string[], ok: 0, thr: 0, ff: 0 };
-      for (const seed of SEEDS) { const R = await rig(seed, CORRIDOR, { tag: `hold-${mode}` }); const { O, D } = R; const red = R.men('red'); FRAG.defenders = false;
+      for (const seed of SEEDS) { const R = await rig(seed, CORRIDOR, { tag: `hold-${mode}` }); const { O, D } = R; const red = R.men('red');
         O.give('move', O.targetAt(FLANK), 'red'); R.set('red', 25);
         if (mode === 'arcs') O.give('hold', R.here(), 'red'); else for (const m of red) O.give('hold', R.here(), m);
         R.step(60); const as = red.map((m: any) => O.of(m)), spots = red.map((m: any) => [...m.char.pos]);
@@ -190,7 +180,6 @@ export const pairsHold = guarded(async () => {
         R.until(() => !D.ops.includes(op), 60); R.step(60 * 25); R.post = null; R.tally();
         const l = R.lost('red').length, k = R.killsBy(red).length; r.lost += l; r.kills += k; r.thr += R.through.length; r.ff += R.fratricide.length; if (mode === 'arcs' && held) stayed++;
         r.rows.push(`${mode} seed ${seed}: ${words} · red lost ${l}, red killed ${k} (${names(R.killsBy(red)) || '-'}) · blue's order ended '${op?.ended}'`); } }
-    } finally { FRAG.defenders = fragWas; }
     const A = res.arcs, P = res.plain;
     verdict(arcsOk === SEEDS.length, 'told to hold as a pair, red splits the ways out: each man a watch point, gun and light up, the two arcs more than 90° apart', A.rows.join('\n    '));
     verdict(stayed === SEEDS.length, 'the holding pair stays where it was told (order \'hold\', within 0.8 m) while it lives', `${stayed} of ${SEEDS.length} runs`);
@@ -275,9 +264,7 @@ export const pairsTool = guarded(async () => {
   for (const name of ['manager', 'breakroom_w']) for (const tool of ['openClear', 'bangClear', 'charge', 'outside']) { const seed = 5; n++;
     try { const R = await rig(seed, name === 'manager' ? MANAGER : CUBICLES, { tag: `tool-${tool}-${name}` }); const { O, D } = R; const d = R.door(name), red = R.men('red');
       R.give('stack', name, 'red'); R.set('red', 30); const before = red.map((m: any) => [...m.char.pos]), was = D.stats.steppedBack;
-      // (the SHIPPED stand has no 'outside' row: 'clear from outside' is there the one plain order that holds the door until told — DOORTOOLS.outsidePlain,
-      //  'thresholdHold'. Each stand is given its own order; everything asked of red and of the tool after it is the same)
-      const why = R.give(tool === 'outside' && DOORTOOLS.outsidePlain ? 'thresholdHold' : tool, name, 'blue'); const op = D.ops[0]; const good = why === null && !!op && op.men.length === 2 && op.men.every((m: any) => O.pairOf(m) === 'blue'); R.step(2);
+      const why = R.give(tool === 'outside' ? 'thresholdHold' : tool, name, 'blue') /* ('clear from outside' is the one plain order that holds the door until told) */; const op = D.ops[0]; const good = why === null && !!op && op.men.length === 2 && op.men.every((m: any) => O.pairOf(m) === 'blue'); R.step(2);
       const as = red.map((m: any) => O.of(m)), stepped = D.stats.steppedBack - was;
       const bluePosts = op ? [...op.post.values()].map((p: any) => p.pos) : [], redPosts = as.map((a: any) => a.post);
       let near = Infinity; for (const a of redPosts) for (const b of bluePosts) near = Math.min(near, dist(a, b));
@@ -304,22 +291,21 @@ export const pairsTool = guarded(async () => {
   //      security pinned off: red is on the door first, and it opens with the setter still on his way — 'the door opened'), and as shipped (red's rear man
   //      takes his rear on the way in, so the stack forms later and the charge may already be ON the door when it opens — then it comes off it, back in the
   //      bag: 'the charge is gone'). Either way nobody reads 'setting the charge', no charge is spent, and the setter stands off with his mate
-  { const { COVER } = await import(`${ROOT}/src/game/cover.ts`); const was = COVER.stacked;
-    for (const plain of [true, false]) { COVER.stacked = plain ? false : was; try {
+  { {
       const R = await rig(5, MANAGER, { tag: 'tool-under-charge' }); const { O, D } = R; const d = R.door('manager');
       const w1 = R.give('charge', 'manager', 'blue'); const op = D.ops[0], lead = op?.lead, P = lead ? [...op.post.get(lead).pos] : null; R.step(5);
       let w2 = R.give('openClear', 'manager', 'red'); const rop = D.ops.find((x: any) => x !== op);
       // (the manager's door is locked. As shipped an entry halts at a door its lead finds shut — DOORTOOLS.testDoor: "holding on it — your call" — and the same
       //  row again is the order that boots it; so red is told twice, as a player would, and the door opens under blue's charge the second time)
-      if (DOORTOOLS.testDoor && w2 === null && rop) { R.until(() => !D.ops.includes(rop), 30); if (rop.ended === 'found shut') w2 = R.give('openClear', 'manager', 'red'); }
+      if (w2 === null && rop) { R.until(() => !D.ops.includes(rop), 30); if (rop.ended === 'found shut') w2 = R.give('openClear', 'manager', 'red'); }
       R.until(() => !D.ops.length, 50); R.step(180); R.tally();
       const stale = R.men('all').filter((m: any) => O.statusOf(m) === 'setting the charge'), off = lead && P && lead.state !== 'dead' ? dist(lead.char.pos, P) : NaN;
       // (the door opened with the setter still on his way and his mark across the opening from him: DOORTOOLS.openHand stops him where he is, on a plain stack
       //  with his mate, and that is that rule's own end for him — which end a run gets is a matter of how long the walk in was: seenwalk.ts made it longer)
-      const kept = DOORTOOLS.openHand && op?.ended === 'the door opened' && !!lead && String(O.statusOf(lead)).startsWith('stacked');
+      const kept = op?.ended === 'the door opened' && !!lead && String(O.statusOf(lead)).startsWith('stacked');
       const ended = op?.ended === 'the door opened' || op?.ended === 'the charge is gone';   // (either ending in both runs: which comes first, red's hand on the door or blue's charge, is a matter of half a second of walking — doorway.ts moved it in the plain run)
-      verdict(w1 === null && w2 === null && ended && stale.length === 0 && (lead.state === 'dead' || off < 0.8 || kept) && D.charges === DOORTOOLS.charges, plain ? 'red opens and clears a door blue was still walking a charge to (the plain stack): blue\'s order ends, the charge stays in the bag, and its setter stands off with his mate — nobody is left reading \'setting the charge\'' : 'the same with rear security as shipped: the door opens under the setter or under his charge — the charge is back in the bag either way, the setter stood off, nobody reading \'setting the charge\'', `charge → ${w1}, open and clear → ${w2} · blue's order ended '${op?.ended}' · ${R.where('blue')} · the setter ${f2(off)} m from his stand-off mark${kept ? ' (stopped on his hand of the opening, on a plain stack: openHand)' : ''}, ${f2(lead ? dist(lead.char.pos, d.frameCentre) : NaN)} m from the frame · charges left ${D.charges}`);
-    } finally { COVER.stacked = was; } } }
+      verdict(w1 === null && w2 === null && ended && stale.length === 0 && (lead.state === 'dead' || off < 0.8 || kept) && D.charges === DOORTOOLS.charges, 'red opens and clears a door blue was still walking a charge to: the door opens under the setter or under his charge — the charge is back in the bag either way, the setter stood off, nobody reading \'setting the charge\'', `charge → ${w1}, open and clear → ${w2} · blue's order ended '${op?.ended}' · ${R.where('blue')} · the setter ${f2(off)} m from his stand-off mark${kept ? ' (stopped on his hand of the opening, on a plain stack: openHand)' : ''}, ${f2(lead ? dist(lead.char.pos, d.frameCentre) : NaN)} m from the frame · charges left ${D.charges}`);
+    } }
   // ---- a teammate BEHIND the door: the charge is refused
   { const R = await rig(5, CUBICLES, { quiet: true }); const { O, D } = R;
     O.give('move', O.targetAt([29.6, 0, 17.6]), 'red'); R.set('red', 30); R.step(30); { const d = R.door('breakroom_w'); d.angle = 0; d.vel = 0; d.latched = true; d.place(); } R.step(2);   // (red went in through it: the leaf shut behind them, as the staging had it)
@@ -331,7 +317,7 @@ export const pairsTool = guarded(async () => {
 // ============================================================================================================================ pairs-haltback
 export const pairsHaltback = guarded(async () => {
   const { verdict, done } = family('pairs-haltback: a pair halted \'found shut\' on a door the other pair is charging steps back out of the blast (DOORTOOLS.haltBack)');
-  const BREAK = process.env.HALTBACK_BREAK === '1'; if (BREAK) console.log('  (HALTBACK_BREAK: DOORTOOLS.haltBack is left off in this probe\'s key-on run — the rear security and backblast lines must fail)');
+  const BREAK = process.env.HALTBACK_BREAK === '1'; if (BREAK) console.log('  (HALTBACK_BREAK: blue\'s charge is never ordered — the rear security and backblast lines must fail)');
   type Man = { c: string; order: string; door: string; there: string; post: number[]; pos: number[] };
   type Run = { w1: string | null; w2: string | null; ended: string; said: string; halt: Man[]; atBlow: Man[]; blue: number[][]; frame: number[]; res: any; chEnded: string; stale: string[]; stepped: number; notes: string[]; end: Man[]; orphan: string };
   const AWAY: number[] = [19.5, 0, 11.2], EAST: number[] = [34.5, 0, 11.0];
@@ -339,12 +325,12 @@ export const pairsHaltback = guarded(async () => {
    *  always been asked) · 'bare' = red's entry halts on the door and nobody has a charge on it. Sam stands down the corridor, off the door: at its lock
    *  rows he would KNOW it locked (doortools.ts testStacks) and no order halts on a door the team knows. `near` = both orders given with Sam AT the door, as
    *  a player gives them — his body is then in the stack's way and the entry's last man is dealt a mark further down the wall. 'leave': he is then put
-   *  down the corridor and what he learnt at the lock is taken back, by hand, so that the order halts on either stand; 'stay': he stays, as played —
-   *  the order halts or not by the stand's own rules. 'set' = blue's charge set and armed, blue then sent off down the corridor (its charge order ends,
+   *  down the corridor and what he learnt at the lock is taken back, by hand, so that the order halts; 'stay': he stays, as played —
+   *  the order halts or not by the game's own rules. 'set' = blue's charge set and armed, blue then sent off down the corridor (its charge order ends,
    *  the charge stays on the door), and only then red's entry, which halts on a door with a teammate's charge and no order on it */
-  const play = async (mode: 'halt' | 'ref' | 'bare' | 'set', key: boolean, near: false | 'leave' | 'stay' = false): Promise<Run> => {
+  const play = async (asked: 'halt' | 'ref' | 'bare' | 'set', near: false | 'leave' | 'stay' = false): Promise<Run> => {
+    const mode = BREAK && asked !== 'ref' ? 'bare' : asked;   // (the red path: no charge is ordered on the door)
     const R = await rig(5, near ? MANAGER : AWAY, { quiet: true, tag: `haltback-${mode}` }); const { O, D } = R; const d = R.door('manager'), red = R.men('red');
-    DOORTOOLS.testDoor = true; DOORTOOLS.haltBack = key;   // (after the stand-up: the frozen stand pins both off, the page's has both on — here each run is told)
     const snap = (): Man[] => red.map((m: any) => { const a = O.of(m); return { c: m.callsign, order: String(a?.order), door: String(a?.door?.def.name), there: String(a?.there), post: a?.post ? [...a.post] : [NaN, 0, NaN], pos: [...m.char.pos] }; });
     const was = D.stats.steppedBack, log0 = D.log.length; let w1: string | null = null, w2: string | null = null, ended = '', cop: any = null, gone: any = null, orphan = '';
     if (mode === 'ref') { w2 = R.give('stack', 'manager', 'red'); R.set('red', 30); w1 = R.give('charge', 'manager', 'blue'); cop = D.ops[0]; ended = 'stacked beforehand'; R.step(2); }
@@ -367,59 +353,46 @@ export const pairsHaltback = guarded(async () => {
   const gap = (a: number[][], b: number[][]) => a.length === b.length && a.length > 0 ? Math.max(...a.map((p, i) => dist(p, b[i]))) : Infinity;
   const row = (r: Run, l: Man[] = r.halt) => l.map(m => `${m.c} ${at(m.post)} ${f2(dist(m.post, r.frame))} m off the frame [${m.there}]`).join(', ');
   const blast = (r: Run) => r.res ? `knocked ${r.res.knocked}, stunned ${r.res.stunned}, backblast ${r.res.backblast}` : 'NOT BLOWN';
-  const on = await play('halt', !BREAK), off = await play('halt', false), ref = await play('ref', false);
+  const on = await play('halt'), ref = await play('ref');
   const K = DOORTOOLS.backblastM, rear = (m: Man) => m.order === 'stack' && m.door === 'manager' && m.there.startsWith('rear security · ');
   const staged = (r: Run) => r.w1 === null && r.w2 === null && r.ended === 'found shut' && !!r.res;
-  verdict(staged(on) && staged(off) && ref.w1 === null && ref.w2 === null && !!ref.res && ref.halt.every(rear) && ref.stepped === 2, 'staged: blue takes the charge on the locked manager\'s door, red\'s \'open and clear\' on it ends \'found shut\' (key on and key off), and each charge is set, armed and blown; the reference — red stacked on it before the charge order — steps back to rear security as it always has',
-    `key on: charge → ${on.w1}, open and clear → ${on.w2}, ended '${on.ended}', said "${on.said}" · key off: ended '${off.ended}' · reference: ${row(ref)} · ${blast(ref)}`);
-  verdict(on.halt.length === 2 && on.halt.every(rear) && on.stepped === 2 && on.notes.length === 1 && on.end.every(rear), `KEY ON${BREAK ? ' (HALTBACK_BREAK: left off)' : ''} — both of red read 'rear security · <door>' as the order ends, their order still 'stack' on that door, and still do after the blast`,
+  verdict(staged(on) && ref.w1 === null && ref.w2 === null && !!ref.res && ref.halt.every(rear) && ref.stepped === 2, 'staged: blue takes the charge on the locked manager\'s door, red\'s \'open and clear\' on it ends \'found shut\', and the charge is set, armed and blown; the reference — red stacked on it before the charge order — steps back to rear security as it always has',
+    `charge → ${on.w1}, open and clear → ${on.w2}, ended '${on.ended}', said "${on.said}" · reference: ${row(ref)} · ${blast(ref)}`);
+  verdict(on.halt.length === 2 && on.halt.every(rear) && on.stepped === 2 && on.notes.length === 1 && on.end.every(rear), `${BREAK ? '(HALTBACK_BREAK: no charge ordered) ' : ''}both of red read 'rear security · <door>' as the order ends, their order still 'stack' on that door, and still do after the blast`,
     `${row(on)} · stepped back ${on.stepped} · log: ${on.notes.join(' | ') || 'nothing'}`);
-  verdict(on.halt.every(m => dist(m.post, on.frame) >= K) && on.atBlow.every(m => dist(m.pos, on.frame) >= K), `KEY ON — their marks, and where they stand as Sam blows it, are ${K} m (the backblast) or more from the frame`,
+  verdict(on.halt.every(m => dist(m.post, on.frame) >= K) && on.atBlow.every(m => dist(m.pos, on.frame) >= K), `their marks, and where they stand as Sam blows it, are ${K} m (the backblast) or more from the frame`,
     `marks ${on.halt.map(m => f2(dist(m.post, on.frame))).join(' / ')} m · standing ${on.atBlow.map(m => f2(dist(m.pos, on.frame))).join(' / ')} m`);
   { const g = gap(on.halt.map(m => m.post), ref.halt.map(m => m.post)), sameMen = on.halt.map(m => m.c).join() === ref.halt.map(m => m.c).join();
-    verdict(sameMen && g < 1e-6 && on.halt.every((m, i) => m.there === ref.halt[i].there), 'KEY ON — man for man the marks and the words are the reference run\'s: where a pair stacked on the door before the charge order is sent',
+    verdict(sameMen && g < 1e-6 && on.halt.every((m, i) => m.there === ref.halt[i].there), 'man for man the marks and the words are the reference run\'s: where a pair stacked on the door before the charge order is sent',
       `differ by ${Number.isFinite(g) ? g.toFixed(6) : g} m · halted: ${row(on)} · reference: ${row(ref)}`); }
-  verdict(!!on.res && on.res.backblast === 0 && on.stale.length === 0 && on.chEnded === 'in', 'KEY ON — blown: nobody of ours inside the backblast, the charge order runs to its end, nobody is left reading \'setting the charge\'',
+  verdict(!!on.res && on.res.backblast === 0 && on.stale.length === 0 && on.chEnded === 'in', 'blown: nobody of ours inside the backblast, the charge order runs to its end, nobody is left reading \'setting the charge\'',
     `${blast(on)} · charge order ended '${on.chEnded}' · reading 'setting the charge': ${on.stale.join(', ') || 'nobody'}`);
-  verdict(gap(on.blue, off.blue) < 1e-6 && !!on.res && !!off.res && on.res.knocked === off.res.knocked && on.res.stunned === off.res.stunned && on.chEnded === off.chEnded, 'KEY ON against KEY OFF — blue\'s stand-off marks, what the blast does beyond the door and how the charge order ends are the same',
-    `blue ${on.blue.map(at).join(' ')} / ${off.blue.map(at).join(' ')} (differ ${gap(on.blue, off.blue).toFixed(6)} m) · on: ${blast(on)}, ended '${on.chEnded}' · off: ${blast(off)}, ended '${off.chEnded}'`);
-  verdict(!!off.res && off.res.backblast >= 1 && off.stepped === 0 && off.halt.every(m => m.order === 'stack' && m.there.startsWith('stacked · ')) && off.halt.some(m => dist(m.post, off.frame) < K), 'CONTROL (HALTBACK_BREAK does not touch it) — KEY OFF, the fault as it was: red stays stacked where it halted, a mark inside the backblast, and Sam\'s charge dazzles his own',
-    `${row(off)} · ${blast(off)}`);
-  { const a = await play('bare', true), b = await play('bare', false), g = Math.max(gap(a.halt.map(m => m.post), b.halt.map(m => m.post)), gap(a.end.map(m => m.pos), b.end.map(m => m.pos)));
-    verdict(a.ended === 'found shut' && b.ended === 'found shut' && a.stepped === 0 && b.stepped === 0 && g < 1e-6 && a.halt.every((m, i) => m.there.startsWith('stacked · ') && m.there === b.halt[i].there) && a.end.every((m, i) => m.there === b.end[i].there),
-      'CONTROL (HALTBACK_BREAK does not touch it) — no charge on the door: red halts \'found shut\' and stays plain-stacked, marks, words and where it stands ten seconds on the same key on and key off',
-      `key on: ended '${a.ended}', ${row(a)} · key off: ended '${b.ended}', ${row(b)} · differ by ${Number.isFinite(g) ? g.toFixed(6) : g} m · stepped back ${a.stepped} / ${b.stepped}`); }
+  { const a = await play('bare');
+    verdict(a.ended === 'found shut' && a.stepped === 0 && a.halt.every(m => m.there.startsWith('stacked · ')) && a.end.every((m, i) => m.there === a.halt[i].there),
+      'CONTROL (HALTBACK_BREAK does not touch it) — no charge on the door: red halts \'found shut\' and stays plain-stacked, the same words ten seconds on',
+      `ended '${a.ended}', ${row(a)} · stepped back ${a.stepped}`); }
   // the orders given with Sam at the door: the entry's stack is dealt round his body, and its last man may stand further down the wall than the makers count
   // as 'on the door' (doortools.ts holders, 2.6 m) — he is out of the blast and is not asked to step back; his mate must not be sent to stand on him
-  { const a = await play('halt', !BREAK, 'leave'), b = await play('halt', false, 'leave'), marks = a.halt.map(m => m.post);
+  { const a = await play('halt', 'leave'), marks = a.halt.map(m => m.post);
     let apart = Infinity; for (let i = 0; i < marks.length; i++) { for (let j = i + 1; j < marks.length; j++) apart = Math.min(apart, dist(marks[i], marks[j])); for (const q of a.blue) apart = Math.min(apart, dist(marks[i], q)); }
     const each = a.halt.every(m => m.order === 'stack' && m.door === 'manager' && dist(m.post, a.frame) >= K && (rear(m) || (m.there.startsWith('stacked · ') && dist(m.post, a.frame) >= 2.6)));
     verdict(a.ended === 'found shut' && !!a.res && each && a.stepped >= 1 && apart >= 0.85 && a.res.backblast === 0 && a.atBlow.every(m => dist(m.pos, a.frame) >= K) && a.stale.length === 0,
-      `KEY ON${BREAK ? ' (HALTBACK_BREAK: left off)' : ''} — the orders given with Sam at the door, Sam then put down the corridor and the lock he read forgotten: every man of red is rear security, or was dealt a stack mark already further off than the makers count as on the door and keeps it; no two marks on one place (0.85 m or more apart, blue's among them); blown, nobody of ours in the backblast`,
-      `key on: ended '${a.ended}', ${row(a)} · stepped back ${a.stepped} · nearest two marks ${f2(apart)} m · standing ${a.atBlow.map(m => f2(dist(m.pos, a.frame))).join(' / ')} m off the frame as it blows · ${blast(a)} · key off (not asked, for the reading): ended '${b.ended}', ${row(b)} · ${blast(b)}`); }
-  // … and AS PLAYED: Sam stays at the door through the halt and the blow. Where the stand's rules have the order halt there, red steps back; where they do
+      `${BREAK ? '(HALTBACK_BREAK: no charge ordered) ' : ''}the orders given with Sam at the door, Sam then put down the corridor and the lock he read forgotten: every man of red is rear security, or was dealt a stack mark already further off than the makers count as on the door and keeps it; no two marks on one place (0.85 m or more apart, blue's among them); blown, nobody of ours in the backblast`,
+      `ended '${a.ended}', ${row(a)} · stepped back ${a.stepped} · nearest two marks ${f2(apart)} m · standing ${a.atBlow.map(m => f2(dist(m.pos, a.frame))).join(' / ')} m off the frame as it blows · ${blast(a)}`); }
+  // … and AS PLAYED: Sam stays at the door through the halt and the blow. Where the game's rules have the order halt there, red steps back; where they do
   // not (the team knows the door from Sam at its lock rows, and the entry goes in), there is no halted pair and the line says so
-  { const a = await play('halt', !BREAK, 'stay'), marks = a.halt.map(m => m.post), halted = a.ended === 'found shut';
+  { const a = await play('halt', 'stay'), marks = a.halt.map(m => m.post), halted = a.ended === 'found shut';
     let apart = Infinity; for (let i = 0; i < marks.length; i++) { for (let j = i + 1; j < marks.length; j++) apart = Math.min(apart, dist(marks[i], marks[j])); for (const q of a.blue) apart = Math.min(apart, dist(marks[i], q)); }
     const each = a.halt.every(m => m.order === 'stack' && m.door === 'manager' && dist(m.post, a.frame) >= K && (rear(m) || (m.there.startsWith('stacked · ') && dist(m.post, a.frame) >= 2.6)));
     verdict(a.w1 === null && a.w2 === null && (halted ? !!a.res && each && a.stepped >= 1 && apart >= 0.85 && a.res.backblast === 0 && a.stale.length === 0 : a.ended === 'in'),
-      `KEY ON${BREAK ? ' (HALTBACK_BREAK: left off)' : ''} — as played, Sam standing at the door throughout: where the order halts red steps back — marks ${K} m or more off the frame and 0.85 m or more apart, blown, nobody of ours in the backblast; where the stand has it go in instead, nobody halted and nothing is asked`,
-      halted ? `halted: ${row(a)} · stepped back ${a.stepped} · nearest two marks ${f2(apart)} m · ${blast(a)}` : `DID NOT HALT on this stand: red's order ended '${a.ended}' (Sam at its lock rows: the team knew the door), blue's charge order ended '${a.chEnded}' — no halted pair, the line passes on that`); }
+      `${BREAK ? '(HALTBACK_BREAK: no charge ordered) ' : ''}as played, Sam standing at the door throughout: where the order halts red steps back — marks ${K} m or more off the frame and 0.85 m or more apart, blown, nobody of ours in the backblast; where the entry goes in instead, nobody halted and nothing is asked`,
+      halted ? `halted: ${row(a)} · stepped back ${a.stepped} · nearest two marks ${f2(apart)} m · ${blast(a)}` : `DID NOT HALT: red's order ended '${a.ended}' (Sam at its lock rows: the team knew the door), blue's charge order ended '${a.chEnded}' — no halted pair, the line passes on that`); }
   // a teammate's charge LEFT SET on the door with its order gone: a pair stacked there before the charge order is still stood back from it; so is a halted one
-  { const a = await play('set', !BREAK), b = await play('set', false), staged = (r: Run) => r.w1 === null && r.w2 === null && r.ended === 'found shut' && !!r.res && / ended '/.test(r.orphan) && /a charge set by Blue/.test(r.orphan);
+  { const a = await play('set'), staged = (r: Run) => r.w1 === null && r.w2 === null && r.ended === 'found shut' && !!r.res && / ended '/.test(r.orphan) && /a charge set by Blue/.test(r.orphan);
     verdict(staged(a) && a.halt.every(rear) && a.stepped === 2 && a.halt.every(m => dist(m.post, a.frame) >= K) && a.atBlow.every(m => dist(m.pos, a.frame) >= K) && a.res.backblast === 0,
-      `KEY ON${BREAK ? ' (HALTBACK_BREAK: left off)' : ''} — a teammate's charge left set on the door, its order gone (blue armed it and was sent off): red halts on it and steps back to rear security; blown, nobody of ours in the backblast`,
+      `${BREAK ? '(HALTBACK_BREAK: no charge ordered) ' : ''}a teammate's charge left set on the door, its order gone (blue armed it and was sent off): red halts on it and steps back to rear security; blown, nobody of ours in the backblast`,
       `${a.orphan} · red ended '${a.ended}' · ${row(a)} · stepped back ${a.stepped} · ${blast(a)}`);
-    verdict(staged(b) && b.stepped === 0 && b.res.backblast >= 1 && b.halt.every(m => m.there.startsWith('stacked · ')), 'CONTROL (HALTBACK_BREAK does not touch it) — the same, KEY OFF: red stays stacked where it halted and the charge dazzles one of ours',
-      `${b.orphan} · red ended '${b.ended}' · ${row(b)} · ${blast(b)}`); }
-  // the journal: a recording from before the key replays with it off (journal.ts applyKnobs); one that carries it keeps its own word
-  { const R = await rig(5, MANAGER, { quiet: true }), g = R.game, J: any = await import(`${ROOT}/src/game/journal.ts`), KN: any = await import(`${ROOT}/src/game/knobs.ts`), snap = () => JSON.parse(JSON.stringify(J.knobsSnapshot(g))), kept = KN.knobsCopy();
-    try {
-      DOORTOOLS.haltBack = true; const old = snap(); if (old.tables.DOORTOOLS) delete old.tables.DOORTOOLS.haltBack; if (old.flags) delete old.flags.haltBack; J.applyKnobs(g, old); const x = DOORTOOLS.haltBack;
-      DOORTOOLS.haltBack = true; const yes = snap(); DOORTOOLS.haltBack = false; J.applyKnobs(g, yes); const y = DOORTOOLS.haltBack;
-      DOORTOOLS.haltBack = false; const no = snap(); DOORTOOLS.haltBack = true; J.applyKnobs(g, no); const z = DOORTOOLS.haltBack;
-      verdict(x === false && y === true && z === false, 'CONTROL (plumbing: HALTBACK_BREAK does not touch it) — the journal: a recording from before DOORTOOLS.haltBack replays with it off, one made with it on replays on, one made with it off replays off', `old → ${x} · recorded on → ${y} · recorded off → ${z}`);
-    } finally { KN.knobsBack(kept); } }
+  }
   return done();
 });
 
@@ -448,7 +421,7 @@ export const pairsLanes = guarded(async () => {
       let w1 = R.give('bangClear', 'manager', 'red'), w2 = R.give('bangClear', 'storage', 'blue'); let ops = [...D.ops];
       // (both doors are locked. As shipped an entry halts at a door its lead finds shut — DOORTOOLS.testDoor — and the same row again boots it: each pair has
       //  tried its door and said so, then both are told again at once, as a player would, and those two orders are the ones read side by side)
-      if (DOORTOOLS.testDoor && w1 === null && w2 === null && ops.length === 2) { R.until(() => !D.ops.length, 30);
+      if (w1 === null && w2 === null && ops.length === 2) { R.until(() => !D.ops.length, 30);
         if (ops.every((op: any) => op.ended === 'found shut')) { w1 = R.give('bangClear', 'manager', 'red'); w2 = R.give('bangClear', 'storage', 'blue'); ops = [...D.ops]; } }
       const own = ops.length === 2 && ops.every((op: any, i: number) => op.men.length === 2 && op.men.every((m: any) => O.pairOf(m) === (i ? 'blue' : 'red'))), who = ops.map((op: any) => names(op.men));
       R.until(() => !D.ops.length, 60); R.step(240); R.tally();

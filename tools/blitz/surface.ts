@@ -14,8 +14,9 @@ const DEC = new TextDecoder();
 export interface SurfaceHost { g: any; knobs: Record<string, unknown>; surfaceOpen(): boolean; surfaceDispatching(): boolean; surfaceCall(row: number, bytes: Uint8Array): Uint8Array; count?(s: string): void }
 const TALLY: any = (globalThis as any).__tpsTally ?? { crossed: 0, pass() {} };   // (expose.ts keeps it, from before any game is stood, and prints it)
 const passed = (key: string, how: 'noHost' | 'noRow' | 'unlisted' | 'closed') => TALLY.pass(key, how);
-const hosts = new Set<SurfaceHost>(); let current: SurfaceHost | null = null;
-export const surfaceHost = (H: SurfaceHost | null, gone?: SurfaceHost) => { if (H) TALLY.standing = false; if (gone) { hosts.delete(gone); if (current === gone) current = null; } if (H) { hosts.add(H); current = H; } };
+// (no list of every host that ever stood: it kept every game of a process alive, 11 MB a game; a call's game is its receiver's, else the game stood last)
+let current: SurfaceHost | null = null;
+export const surfaceHost = (H: SurfaceHost | null, gone?: SurfaceHost) => { if (H) TALLY.standing = false; if (gone && current === gone) current = null; if (H) current = H; };
 // A CALL'S OWN GAME: the receiver, or an argument, that is a game or holds one (`o.g`, game-ref.json). What holds none goes to the game stood last
 const gameOf = (o: any): SurfaceHost | null => !o || typeof o !== 'object' ? null : o.rustSurface ?? o.g?.rustSurface ?? null;
 const hostOf = (self: any, args: any[]): SurfaceHost | null => { const H = gameOf(self); if (H) return H; for (const a of args) { const A = gameOf(a); if (A) return A; } return current; };

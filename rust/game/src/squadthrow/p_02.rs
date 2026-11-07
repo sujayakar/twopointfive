@@ -803,15 +803,6 @@ pub fn squad_throw_key(g: &mut crate::game::Game, input: InputId) -> bool {
     true
 }
 
-/// (squadthrow.ts squadThrowSummary)
-pub fn squad_throw_summary(g: &mut crate::game::Game) -> String {
-    if !g.k.squadthrow.on {
-        return String::from("off");
-    }
-    let (f, s) = (left(g, SquadThrowKind::Frag), left(g, SquadThrowKind::Stun));
-    format!("frag {} · stun {} · X on a spot of floor, {}, then 1 or 2 · thrown {}", f, s, g.k.frag.order_key.replacen("Key", "", 1), g.stats.squadthrow.thrown)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

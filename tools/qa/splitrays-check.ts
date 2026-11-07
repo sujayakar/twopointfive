@@ -1,7 +1,7 @@
 // THE GATHER IS TWO PROGRAMS (src/render/gatherSplit.ts, shaders/gather_split.wgsl; until 2026-11-07 the Shaders row 'Separate shadow rays'). `trace` writes the points
 // it needs lit, `light` lights them round ONE directAtPoint — where the one-kernel gather that went was a program DXC pasted to 780 KB. What is checked here is what a
 // harness can see of that: the two programs' texts (who reaches the light loop, through how many call sites), that the buffer's layout is one number in the shader and in
-// the engine, that a refused buffer is heard outside the machine, and what a load compiles (the three gather pipelines in both sets, each with a budget row of its own,
+// the engine, that a refused buffer is heard outside the machine, and what a load compiles (the gather's two pipelines, once each, each with a budget row of its own,
 // the size tool green, and no one-kernel gather).
 // NOT here (no GPU, and a harness compiles nothing): that the WGSL compiles (tools/qa/wgsl-compile.cjs), and the picture.
 //   bun run tools/qa/splitrays-check.ts                        exit 0 = every line passed, 1 = one failed
@@ -65,9 +65,9 @@ export async function splitraysCheck(): Promise<boolean> {
     const f = join(tmp, 'page.json'), r = Bun.spawn(['bun', 'run', `${ROOT}/tools/qa/shaderinline-check.ts`, '--json', f], { env: { ...process.env, SHADERINLINE_BREAK: undefined }, stdout: 'pipe', stderr: 'ignore' }), text = await new Response(r.stdout).text(), green = await r.exited === 0;
     let j: Sizes | null = null; try { j = JSON.parse(readFileSync(f, 'utf8')) as Sizes; } catch { /* no file: the line says so */ }
     const KB = (n: number) => `${Math.round(n / 1024)} KB`, gathers = (re: RegExp) => (j?.kernels ?? []).filter(k => re.test(k.module) && k.setting !== 'title');   // (the size tool's file carries the title's kernels after the page's own: one page is counted here)
-    const old = gathers(/^fgatherS?$/), own = gathers(/^gatherSplit/), pipes = (set: string) => own.filter(k => k.set === set).flatMap(k => k.pipelines).sort().join(' ');
-    line(old.length === 0 && !(j?.modules ?? []).some(m => /^fgather/.test(m.label)) && pipes('boot') === 'gatherLight gatherTrace' && pipes('cut') === pipes('boot'),
-      'a load compiles the gather\'s two pipelines in both sets and no one-kernel gather', `one-kernel gathers ${old.length} · boot set: ${pipes('boot') || 'none'} · cut set: ${pipes('cut') || 'none'}`);
+    const old = gathers(/^fgatherS?$/), own = gathers(/^gatherSplit/), pipes = own.flatMap(k => k.pipelines).sort().join(' ');
+    line(old.length === 0 && !(j?.modules ?? []).some(m => /^fgather/.test(m.label)) && pipes === 'gatherLight gatherTrace',
+      'a load compiles the gather\'s two pipelines, once each, and no one-kernel gather', `one-kernel gathers ${old.length} · pipelines: ${pipes || 'none'}`);
     line(own.length > 0 && green && own.every(k => k.budgetKB !== null && k.budgetKB < 300),
       'each of the gather\'s kernels has a budget row of its own under 300 KB, and the size tool is green', `as their rows hold them, the cut test's text apart: ${[...new Set(own.map(k => `${k.entry} ${KB(k.pasted - (k.cut ?? 0))} of ${k.budgetKB}`))].join(' · ')} · size tool: ${text.trim().split('\n').slice(-1)[0] ?? ''}`);
   } finally { rmSync(tmp, { recursive: true, force: true }); }

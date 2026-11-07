@@ -18,6 +18,11 @@ const KEY: usize = crate::anim_skeleton::LAYER_KEY as usize;
 fn args() -> &'static mut [f64] {
     &mut ::sim::skeleton::bench().args
 }
+/// the same doubles, to read
+#[inline(always)]
+fn args_read() -> &'static [f64] {
+    &::sim::skeleton::bench_read().args
+}
 
 // ---- what stands between a body and the skeleton's calls
 
@@ -245,44 +250,7 @@ pub fn anim_wound_limbs_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, w: f
     anim_hands_ask(g, c, &mut |_g| ::sim::layers::wound_limbs(slot, at, at_b, at_rest) as f64);
 }
 
-/// Seconds into the action clip now playing (0 with none). (character.ts actTime)
-pub fn anim_act_time(g: &mut crate::game::Game, c: CharId) -> f64 {
-    let an = &g.ch[c].anim;
-    if an.act_clip.is_some() { an.act_t } else { 0.0 }
-}
-
 // ---- MOVES
-
-/// Anything of the moves' passes still standing. (character.ts mvLive)
-pub fn anim_mv_live(g: &mut crate::game::Game, c: CharId) -> bool {
-    let an = &g.ch[c].anim;
-    let m = &an.mvs;
-    m.fl_t >= 0.0 || m.st_t >= 0.0 || m.ht_t >= 0.0 || m.ts_t >= 0.0 || m.dz.x != 0.0 || m.dz.v != 0.0 || m.cf.x != 0.0 || m.hu.x != 0.0 || m.sk.x != 0.0
-        || m.back + m.climb + m::abs(m.yaw) + m.rock + m.sho + m.head > 0.0
-        || m.glide.x != 0.0 || an.rl_t >= 0.0 || an.mv2.rw.x != 0.0 || an.mv2.bd.x != 0.0 || an.mv2.cl.x != 0.0 || an.mv2.dip.x != 0.0
-}
-
-/// Every clock, sum and spring of the moves' passes back to nothing. (character.ts mvReset)
-pub fn anim_mv_reset(g: &mut crate::game::Game, c: CharId) {
-    let an = &mut g.ch[c].anim;
-    {
-        let m = &mut an.mvs;
-        m.back = 0.0; m.climb = 0.0; m.yaw = 0.0; m.rock = 0.0; m.sho = 0.0; m.head = 0.0;
-        m.fl_t = -1.0; m.st_t = -1.0; m.ht_t = -1.0; m.ts_t = -1.0;
-        m.dz.x = 0.0; m.dz.v = 0.0; m.dz_t = 0.0;
-        m.cf.x = 0.0; m.cf.v = 0.0; m.cf_t = 0.0;
-        m.hu.x = 0.0; m.hu.v = 0.0; m.hu_t = 0.0;
-        m.sk.x = 0.0; m.sk.v = 0.0;
-        m.glide.x = 0.0; m.glide.v = 0.0;
-        m.hip_y = f64::NAN;
-    }
-    an.rl_t = -1.0;
-    let n = &mut an.mv2;
-    n.rw.x = 0.0; n.rw.v = 0.0; n.bd.x = 0.0; n.bd.v = 0.0; n.cl.x = 0.0; n.cl.v = 0.0; n.dip.x = 0.0; n.dip.v = 0.0;
-    let o = &mut an.mv2_shown;
-    o.reload = 0.0; o.bound = 0.0; o.clutch = 0.0; o.dip = 0.0;
-    an.sights_lift = 0.0;
-}
 
 /// Before the stances and the arms: the recoil's sums bled off and the pelvis's share of how a side carries itself. What the trunk layer needs. (character.ts mvPre)
 pub fn anim_mv_pre(g: &mut crate::game::Game, c: CharId, dt: f64, move_w: f64, stand_w: f64) -> crate::character::MvGait {
@@ -337,9 +305,6 @@ pub fn anim_rule_slot(g: &mut crate::game::Game, c: CharId) -> f64 {
 pub fn anim_rule_ran(g: &mut crate::game::Game, c: CharId, code: f64) {
     crate::anim_skeleton::layer_ran(g, code, c);
 }
-
-/// A tool's look at such a rule: LAYERS.watch is null in play, so nothing. (character.ts ruleWatch)
-pub fn anim_rule_watch(g: &mut crate::game::Game, c: CharId, name: &str, cols: crate::anim_skeleton::ColsOf) {}
 
 /// rust/sim layers mv_pre, asked. (character.ts mvPreAsk)
 pub fn anim_mv_pre_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, dt: f64, move_w: f64, stand_w: f64) {
@@ -643,11 +608,6 @@ pub fn anim_mv_post_arms(g: &mut crate::game::Game, c: CharId, dt: f64, gate: f6
     anim_mv_post_arms_ask(g, c, slot, dt, gate);
 }
 
-/// A layer's own columns, then the hand pass's (handCols: n 130), with the man whose they are: a watcher's. (character.ts withHands)
-pub fn anim_with_hands(g: &mut crate::game::Game, c: CharId, c_2: crate::anim_skeleton::LayerCols) -> crate::anim_skeleton::ColsOf {
-    crate::anim_skeleton::ColsOf { n: c_2.n + 130.0 }   // (colsOf and colsJoin left the game; handCols' n, character.ts:3403)
-}
-
 /// rust/sim layers mv_post_arms, asked through its own columns and the hand pass's. (character.ts mvPostArmsAsk)
 pub fn anim_mv_post_arms_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, dt: f64, gate: f64) {
     let a = args();
@@ -705,21 +665,6 @@ pub fn anim_fk_part(g: &mut crate::game::Game, c: CharId, pose: crate::anim_skel
         fk.rot[i] = q;
         fk.pos[i] = p;
     }
-}
-
-/// The nodes fkPart must compute for `ends` to come out current: each and all its ancestors, parents first. (character.ts fkList)
-pub fn anim_fk_list(g: &mut crate::game::Game, c: CharId, ends: &[f64]) -> Vec<i32> {
-    let rig = g.ch[c].anim.rig;
-    let ch = &g.tab.rig[rig];
-    let mut want = vec![false; ch.nodes.len()];
-    for &e in ends {
-        let mut i = e;
-        while i >= 0.0 {
-            want[i as usize] = true;
-            i = ch.nodes[i as usize].parent;
-        }
-    }
-    ch.order.iter().filter(|&&i| want[i as usize]).map(|&i| i as i32).collect()
 }
 
 /// Curl the four fingers and set the thumb of one hand, from the rest hand; and the hand pass's note of how far this shape stands from the locomotion's. (character.ts hand)
@@ -874,13 +819,6 @@ fn hand_tables_now(an: &mut Anim) {
     }
     for (i, x) in h.trig.iter().enumerate() { t[274 + i] = *x as f64; }
     an.hn_flat_of = built;
-}
-
-/// A man's hand tables as one run of doubles, as the module reads them (layers.rs HT_FIST…). (character.ts handTables)
-pub fn anim_hand_tables(g: &mut crate::game::Game, c: CharId) -> Vec<f64> {
-    let an = &mut g.ch[c].anim;
-    hand_tables_now(an);
-    an.hn_flat.clone().unwrap()
 }
 
 /// rust/sim layers hands_pass, asked. (character.ts handsPassAsk)
