@@ -70,7 +70,7 @@ export async function snowGlowCheck(o: { verbose?: boolean } = {}): Promise<bool
   const text: Record<string, string> = {};
   for (const f of files) {
     let t = readFileSync(resolve(SH, f), 'utf8');
-    t = t.split('\n').map(l => /\/\/.*THE LOOK PROTOTYPE/.test(l) && /\bLOOK\b/.test(l.replace(/\/\/.*$/, '')) ? '' : l).join('\n');   // (the look prototype's own lines, each tagged in its comment and behind LOOK in its code: live only on its page — shaders/look.wgsl. It reads and writes the mark's fourth level, alpha 0, and is not this check's)
+    t = t.split('\n').map(l => /\/\/.*THE LOOK'S OWN LINE/.test(l) ? '' : l).join('\n');   // (the look's own lines, each tagged in its comment — shaders/look.wgsl. They read and write the mark's fourth level, alpha 0, and are not this check's. Until 2026-11-07 they also stood behind a constant, LOOK, and were told by both)
     if (BREAK) {
       t = t.replace(/if \(lv\(SNOW_GLOW\)(?: \|\| lv\(SNOW_SPARKLE\))?\) \{/g, '{').replace(/select\(1\.0, ([^,()]+(?:\([^()]*\))?[^,()]*), lv\(SNOW_GLOW\)(?: \|\| lv\(SNOW_SPARKLE\))?\)/g, '$1');
       if (f === 'common.wgsl') t = t.replace('  r.E = li.color * (att * c); r.ok = true;\n', '  r.E = li.color * (att * c) + snowGlow(vec2i(0), P, N, 1.0, vec3f(0.0), vec3f(0.0)); r.ok = true;\n');

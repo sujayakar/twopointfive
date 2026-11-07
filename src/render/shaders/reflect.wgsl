@@ -344,9 +344,9 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_ind
   let Ve = vec3f(dot(V, T), dot(V, B), dot(V, N));
   let base = textureLoad(gAlbedo, full, 0).xyz;                            // base colour (a metal's F0; brighter on a worn edge — the detail layer)
   // WHAT ITS COAT MIRRORS HEAD-ON IS THE STUFF'S WORD (lookTex.ts STUFFS' `mirrors` → the prelude's LOOK_MIRRORS, by the word the box says: common.wgsl
-  // boxStuff, which reads the word's five bits whether or not the box moves; beams.k.z = the look's Pressed panels row, 0 on any other page). Every coat was
+  // boxStuff, which reads the word's five bits whether or not the box moves; beams.k.z = the look's Pressed panels row). Every coat was
   // a plain one, four hundredths; a lacquer says more, and a box that says no word reads the plain coat's.
-  var coat = LOOK_MIRROR_PLAIN; if (LOOK && bidx != 0xFFFFFu) { coat += (LOOK_MIRRORS[boxStuff(bidx)] - LOOK_MIRROR_PLAIN) * beams.k.z; }
+  var coat = LOOK_MIRROR_PLAIN; if (bidx != 0xFFFFFu) { coat += (LOOK_MIRRORS[boxStuff(bidx)] - LOOK_MIRROR_PLAIN) * beams.k.z; }
   let F0 = mix(vec3f(coat), base, metalness);
   // … and the highlights': a metal's are a conductor's only as far as its paint is stepped back for its mirror (composite.wgsl metalK: by the mirror's fade
   // and its strength, and only while rays are traced). Where the paint stands in whole for the metal, a highlight on top of it is a coat's: at a conductor's
