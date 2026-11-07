@@ -868,7 +868,7 @@ export class Game {
    *  with no picture). The game tells it that the level stands (the constructor), where walls changed (wallbreak.ts) and that a sun wants a mask (hours.ts,
    *  lighting.ts), and reads nothing back. */
   reachInterior: Uint8Array | null = null;
-  touring = false;   // the showcase tour is running (demo.ts start/stop) — a plain signal for the HUD / mission getters; quietUtility is NOT it (a stop can run 'live' with the flag down)
+  touring = false;   // a show has the floor (written by the Director and Attract) — a plain signal for the HUD / mission getters; quietUtility is NOT it (a stop can run 'live' with the flag down)
   hover: Interactable | null = null; interactables: Interactable[] = []; nearby: Interactable[] = []; aimSnap: Vec3 | null = null;   // aimSnap: where the auto-aim put the reticle this frame (a light or a man's chest), null = raw cursor aim   // hover = the highlighted ROW (what a Space tap / release performs), nearby = the panel's rows (player.ts buildInteractables), interactables = the per-thing markers
   /** The row Space performed THIS frame (interact.ts updateInteract sets it right after the rows are built — a tap released, or Space let go with the selector open —
    *  and update() clears it at the end): each system reads it where it used to read the key itself, so the frame's order of business is what it always was

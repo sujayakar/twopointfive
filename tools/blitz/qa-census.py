@@ -189,7 +189,7 @@ def merge(rs):
     return out
 PROBE = {n: merge([read(p, f) for p, f in t]) for n, t in TARGET.items()}
 # ---- the stand-alone gate tools, each read whole
-TOOLS = ['playthrough.ts', 'tour.ts', 'soak.ts', 'seats-run.ts', 'seats-check.ts', 'coop-check.ts', 'mpserver-check.ts', 'mp-control-check.ts', 'samestart-check.ts', 'lesson-run.ts', 'mission-table.ts']
+TOOLS = ['playthrough.ts', 'soak.ts', 'seats-run.ts', 'seats-check.ts', 'coop-check.ts', 'mpserver-check.ts', 'mp-control-check.ts', 'samestart-check.ts', 'lesson-run.ts', 'mission-table.ts']
 TOOL = {t: read(QA + t, None) for t in TOOLS if os.path.exists(QA + t)}
 # ---- the settled switches a check puts on their other side (--folded): by a write of the row (read above), or by the table of holds (tools/qa/holds.ts:
 # a probe owed the build before a rule runs with that rule's row off on every stand)

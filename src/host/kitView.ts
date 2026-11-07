@@ -695,7 +695,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
   // is where its card opens). STILL: the world is frozen for good. THE LOOP: it runs, and the two seams left are the director's — before the step (a throw
   // there ends the beat in a restage under the dissolve) and after it
   const threw = (err: unknown) => { console.error('kitview: a beat threw —', err); try { if (beat) finish(beat, 'threw'); game.puppet = null; if (!dz.work.length) dissolve(() => restage()); } catch (e2) { console.error('kitview: …and could not be taken down —', e2); dead?.(); } };
-  loop.frozen = () => !kitViewLoop || state === 'none' || state === 'staging'; loop.afterFreeze = undefined; loop.hud = null; loop.bubbles = null; loop.audio = null; loop.demo = null; loop.attract = null;
+  loop.frozen = () => !kitViewLoop || state === 'none' || state === 'staging'; loop.afterFreeze = undefined; loop.hud = null; loop.bubbles = null; loop.audio = null; loop.attract = null;
   loop.hotkeys = () => { if (!kitViewLoop) return; try { before(); } catch (err) { threw(err); } };
   loop.postUpdate = () => { END_CARD.due = false; if (!kitViewLoop) return; try { after(); } catch (err) { threw(err); } };
   /** the copy of the frame just drawn, laid over the game's canvas (in the task that drew it) — false: none to be had */

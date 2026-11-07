@@ -7,7 +7,6 @@
 import type { Engine } from './engine';
 import type { Game } from './game/game';
 import type { FollowCamera } from './game/camera';
-import type { Demo } from './game/demo';
 import type { Input } from './game/input';
 import type { SmokeSystem } from './smoke/smoke';
 import type { Menu } from './ui/menu';
@@ -35,7 +34,7 @@ declare global {
     __shot?: (name: string, quality?: number, scale?: number) => Promise<string>;
 
     // ---- game page
-    __game?: Game; __demo?: Demo; __input?: Input; __smoke?: SmokeSystem; __menu?: Menu; __audio?: AudioEngine; __quality?: Quality;
+    __game?: Game; __input?: Input; __smoke?: SmokeSystem; __menu?: Menu; __audio?: AudioEngine; __quality?: Quality;
     /** n fixed steps of dt with the given key codes held (synthetic input; works with the rAF loop paused) */
     __runFrames?: (n: number, dt?: number, keys?: string[], draw?: boolean) => void;
     /** move the synthetic cursor (CSS px in the canvas); buttons: 1 LMB, 4 RMB held */

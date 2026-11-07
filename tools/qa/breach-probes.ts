@@ -74,11 +74,9 @@ export async function breachDaylight() {
 export async function clearDoctrine() {
   const F = family('clear-doctrine: the live RoomClear keeps battle drill six — kicker off the funnel, #2 a beat behind, centre then his corner, #2 on the next door (squad.ts)');
   const { RoomClear } = await import(`${ROOT}/src/game/squad.ts`);
-  const { CONFERENCE_CLEAR } = await import(`${ROOT}/src/game/demo.ts`);
   const bearing = (from: Vec3, to: Vec3) => Math.atan2(to[0] - from[0], to[2] - from[2]);
   const angOff = (a: number, b: number) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b))) * 180 / Math.PI;
   const cases: { name: string; plan: (level: any) => any; wantNext: string | null }[] = [
-    { name: "the tour's conference room (kicked)", plan: () => CONFERENCE_CLEAR, wantNext: null },
     { name: 'server room by its corridor door (keyed shove; side door to the office)', plan: (level: any) => level.clearPlans[1], wantNext: 'server_manager' },
     { name: 'break room by its corridor door (keyed shove; three other doors)', plan: (level: any) => level.clearPlans[4], wantNext: 'breakroom_w' },
   ];

@@ -66,7 +66,7 @@ export async function autocamCheck(): Promise<boolean> {
   const knobs0 = knobsCopy(), rnd0 = Math.random, fixedWas = FIXEDSTEP.on, viewWas = AUTOVIEW.on, behindWas = FINDME.behind;
   const DT = 1 / 60, f2 = (v: number) => v.toFixed(2), deg = (r: number) => (r * 180 / Math.PI).toFixed(1), wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
   const ctxOf = (W: any, extra: Record<string, unknown> = {}): any => ({ game: W.game, input: W.input, cam: W.cam, view: W.canvas, host: W.engine, render: () => { W.engine.world.upload(); }, betweenTicks: () => { W.engine.world.relist(); },
-    smoke: null, audio: null, demo: null, attract: null, hud: null, bubbles: null, time: 0, updateMs: 0, frozen: () => false, present: () => false, fixedStep: () => true, ...extra });
+    smoke: null, audio: null, attract: null, hud: null, bubbles: null, time: 0, updateMs: 0, frozen: () => false, present: () => false, fixedStep: () => true, ...extra });
   const stand = async (seed: number) => { Math.random = seeded(1); const W: any = await standUp({ seed }); W.game.godMode = true; W.game.aiEnabled = false; if (stoodSway === null) stoodSway = K.sway; K.sway = false; if (stoodTune === null) stoodTune = K.tune; K.tune = false; A.autoTuneApply(); if (stoodLock === null) stoodLock = K.lock; K.lock = false; return W; };   // (the sway is off for every line but its own: 1 to 13 are the turn rule as it was built)
   let stoodTune: boolean | null = null; const tune0 = JSON.parse(JSON.stringify(A.AUTOTUNE));   // (the tuning is off for every line but its own, 17 to 20; the mode and rows as found are put back at the end)
   let stoodLock: boolean | null = null;   // (the soft lock is off for every line but its own, 21 to 23)
