@@ -119,7 +119,7 @@ QA_PERTURB=<seed> [QA_PERTURB_RATE=K] [QA_PERTURB_ONLY=a,b] [QA_PERTURB_SKIP=a,b
 | a QRF man's door tools took the boot at a locked door where the reference worked the handle | the soak, seed 9, tick 9264 | the bodies' mend; seed 9 equal on all 10,800 ticks on 7.16 |
 | the TypeScript's own put-back of a save leaves a pane not the saved moment's | the soak, seeds 7 and 8 | the reference's; equal with the panes left out |
 | a throw in the changed-only apply 617 ticks after a load (`orders::SquadOrdersLogItem.who`) | the squad fuzz, depot-four:2 Hard, frame 5671 | serials colliding after a load; gone on 7.16 |
-| the block's seventh part alone, the tick after the player's round, 787 ticks after a load | the same run on 7.16, tick 5841 | open, not pinned to a field |
+| the follow camera after a load is not the reference's (its target 2 mm off), so the cursor's point on the floor is not, and the player's first round after a load is another round | the same run on 7.16: the host's half from tick 5055, the block from tick 5841 | THE HOST'S, OPEN: what `backTo` leaves the puppet's camera at. The soak's aim does not come through the camera and never showed it |
 | a save by hand stood twice in the Rust game's chronicle | every squad run with a save; no tick's line shows it | the host's own; mended (`snapTake` holds the row out of the walk) |
 | a tool outside tools/qa writes the game by name and the walk does not watch the name | perturb.ts's `tune.qrfEta = 14`: the Rust game dealt the response team at 75 s | the file says its names (`__tpsToolWrites`) |
 
