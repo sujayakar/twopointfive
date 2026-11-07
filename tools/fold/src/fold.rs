@@ -89,6 +89,8 @@ pub struct Pass<'a> {
     pub fns: &'a FnTable,
     /// functions each module defines, for a bare call's meaning
     pub module_fns: &'a HashMap<String, HashSet<String>>,
+    /// (module, function): its body is a plain reading, with no effects (`pure_fns`)
+    pub pure_fns: &'a HashSet<(String, String)>,
     /// true: only count and report, substitute nothing
     pub scan_only: bool,
     pub edits: Vec<Edit>,
@@ -99,6 +101,8 @@ pub struct Pass<'a> {
     delim: HashSet<(usize, usize)>,
     receiver: HashSet<(usize, usize)>,
     claimed: HashSet<(usize, usize)>,
+    fn_bodies: HashSet<(usize, usize)>,
+    logic_operand: HashSet<(usize, usize)>,
     line_starts: Vec<usize>,
 }
 
@@ -156,14 +160,14 @@ const PURE_METHODS: &[&str] = &[
 const PARSED_MACROS: &[&str] = &["vec", "format", "assert", "assert_eq", "assert_ne", "debug_assert", "debug_assert_eq", "debug_assert_ne", "println", "eprintln", "print", "eprint", "panic", "write", "writeln", "matches", "unreachable"];
 
 impl<'a> Pass<'a> {
-    pub fn new(src: &'a str, file: &'a str, module: &'a str, rows: &'a Rows, take: &'a HashSet<String>, fns: &'a FnTable, module_fns: &'a HashMap<String, HashSet<String>>, scan_only: bool) -> Self {
+    pub fn new(src: &'a str, file: &'a str, module: &'a str, rows: &'a Rows, take: &'a HashSet<String>, fns: &'a FnTable, module_fns: &'a HashMap<String, HashSet<String>>, pure_fns: &'a HashSet<(String, String)>, scan_only: bool) -> Self {
         let mut line_starts = vec![0];
         for (i, b) in src.bytes().enumerate() {
             if b == b'\n' {
                 line_starts.push(i + 1);
             }
         }
-        Pass { src, file, module, rows, take, fns, module_fns, scan_only, edits: Vec::new(), report: Report::default(), scopes: Vec::new(), impl_ty: None, paren_inner: HashMap::new(), delim: HashSet::new(), receiver: HashSet::new(), claimed: HashSet::new(), line_starts }
+        Pass { src, file, module, rows, take, fns, module_fns, pure_fns, scan_only, edits: Vec::new(), report: Report::default(), scopes: Vec::new(), impl_ty: None, paren_inner: HashMap::new(), delim: HashSet::new(), receiver: HashSet::new(), claimed: HashSet::new(), fn_bodies: HashSet::new(), logic_operand: HashSet::new(), line_starts }
     }
 
     fn line_of(&self, at: usize) -> usize {
@@ -420,7 +424,8 @@ impl<'a> Pass<'a> {
         format!("{b}{MARK}")
     }
 
-    fn call_fact(&self, c: &syn::ExprCall) -> Option<FnFact> {
+    /// The function of this crate a call names: (module, function).
+    fn call_target(&self, c: &syn::ExprCall) -> Option<(String, String)> {
         let Expr::Path(p) = &*c.func else { return None };
         if p.qself.is_some() {
             return None;
@@ -444,11 +449,14 @@ impl<'a> Pass<'a> {
                 m.clone()
             }
         };
-        self.fns.get(&(module, name)).copied()
+        Some((module, name))
+    }
+    fn call_fact(&self, c: &syn::ExprCall) -> Option<FnFact> {
+        self.fns.get(&self.call_target(c)?).copied()
     }
 
     /// No effect when evaluated, by its shape alone. (It may leave out a panic: an index out of range.)
-    fn pure(&self, e: &Expr) -> bool {
+    pub fn pure(&self, e: &Expr) -> bool {
         match e {
             Expr::Lit(_) | Expr::Path(_) => true,
             Expr::Field(f) => self.pure(&f.base),
@@ -469,7 +477,7 @@ impl<'a> Pass<'a> {
                 if !c.args.iter().all(|x| self.pure(x)) {
                     return false;
                 }
-                if self.call_fact(c).is_some() {
+                if self.call_fact(c).is_some() || self.call_target(c).map(|t| self.pure_fns.contains(&t)).unwrap_or(false) {
                     return true;
                 }
                 // the vector and number helpers hold no state
@@ -507,12 +515,17 @@ impl<'a> Pass<'a> {
         let le = self.line_end(r.end.max(1) - 1);
         let after = self.src[r.end..le].trim();
         if !before.trim().is_empty() || !(after.is_empty() || after.starts_with("//")) {
-            // it shares its line: take it, and one blank beside it
+            // it shares its line: take it, and the blanks beside it
             let mut end = r.end;
-            if self.src[end..].starts_with(' ') {
+            let mut start = r.start;
+            if after.is_empty() {
+                while start > ls && matches!(self.src.as_bytes()[start - 1], b' ' | b'\t') {
+                    start -= 1;
+                }
+            } else if self.src[end..].starts_with(' ') {
                 end += 1;
             }
-            return r.start..end;
+            return start..end;
         }
         let mut start = ls;
         if comments {
@@ -649,8 +662,18 @@ impl<'a> Pass<'a> {
                         text.push_str(MARK);
                     }
                     // what follows can never run: it goes, unless an item stands there
+                    let mut to_end = is_last;
                     if !is_last && !parent.stmts[i + 1..].iter().any(|s| matches!(s, Stmt::Item(_))) {
                         end = self.r(parent.stmts.last().unwrap()).end;
+                        to_end = true;
+                    }
+                    // a bare `return;` that is now the last word of a function's body says nothing
+                    if to_end && self.fn_bodies.contains(&self.key(parent)) && matches!(last, Stmt::Expr(Expr::Return(r), _) if r.expr.is_none()) {
+                        let t = text.trim_end().trim_end_matches(MARK).trim_end();
+                        if let Some(t) = t.strip_suffix("return;").or(t.strip_suffix("return")) {
+                            let t = t.trim_end();
+                            text = if t.is_empty() && i == 0 { MARK.to_string() } else { t.to_string() };
+                        }
                     }
                 }
                 self.edit(stmt_r.start..end, text, "if: the side kept");
@@ -845,6 +868,9 @@ impl<'ast, 'a> Visit<'ast> for Pass<'a> {
         let saved = std::mem::take(&mut self.scopes);
         self.push();
         self.bind_sig(&f.sig);
+        if matches!(f.sig.output, syn::ReturnType::Default) {
+            self.fn_bodies.insert(self.key(&*f.block));
+        }
         self.visit_block(&f.block);
         self.pop();
         self.scopes = saved;
@@ -1160,6 +1186,11 @@ impl<'ast, 'a> Visit<'ast> for Pass<'a> {
                 let and = matches!(b.op, BinOp::And(_));
                 let or = matches!(b.op, BinOp::Or(_));
                 if and || or {
+                    for x in [&*b.left, &*b.right] {
+                        if let Expr::Paren(_) = x {
+                            self.logic_operand.insert(self.key(x));
+                        }
+                    }
                     let l = self.marked_bool(&b.left);
                     let r = self.marked_bool(&b.right);
                     // the value that decides the whole: false for `&&`, true for `||`
@@ -1182,7 +1213,13 @@ impl<'ast, 'a> Visit<'ast> for Pass<'a> {
                         let mut range = whole.clone();
                         let mut range_key = self.key(e);
                         if let Some(pr) = self.paren_inner.get(&self.key(e)).cloned() {
-                            if !operand || (is_atomic(kept) && !is_block_like(kept)) || self.delim.contains(&(pr.start, pr.end)) {
+                            // (a comparison or a `!` binds tighter than the `&&` or `||` the brackets stand under)
+                            let tight = self.logic_operand.contains(&(pr.start, pr.end)) && match kept {
+                                Expr::Binary(k) => matches!(k.op, BinOp::Eq(_) | BinOp::Ne(_) | BinOp::Lt(_) | BinOp::Le(_) | BinOp::Gt(_) | BinOp::Ge(_)),
+                                Expr::Unary(_) => true,
+                                _ => false,
+                            };
+                            if !operand || tight || (is_atomic(kept) && !is_block_like(kept)) || self.delim.contains(&(pr.start, pr.end)) {
                                 range_key = (pr.start, pr.end);
                                 range = pr;
                             }
@@ -1330,6 +1367,28 @@ impl<'ast, 'a> Visit<'ast> for Pass<'a> {
         }
         visit::visit_expr(self, e);
     }
+}
+
+/// The free functions of a body file whose body is a plain reading: `let`s of expressions with no effects, then
+/// one such expression. `pass` is a scan pass over the same file (for what its calls name and what is known pure).
+pub fn pure_fns_of(file: &syn::File, pass: &Pass) -> Vec<String> {
+    let mut out = Vec::new();
+    for it in &file.items {
+        let syn::Item::Fn(f) = it else { continue };
+        let n = f.block.stmts.len();
+        if n == 0 {
+            continue;
+        }
+        let ok = f.block.stmts.iter().enumerate().all(|(i, s)| match s {
+            Stmt::Local(l) => i + 1 < n && matches!(&l.pat, Pat::Ident(p) if p.mutability.is_none() && p.by_ref.is_none()) && matches!(&l.init, Some(init) if init.diverge.is_none() && pass.pure(&init.expr)),
+            Stmt::Expr(e, None) => i + 1 == n && pass.pure(e),
+            _ => false,
+        });
+        if ok {
+            out.push(f.sig.ident.to_string());
+        }
+    }
+    out
 }
 
 /// What the functions of one body file have become: (name, fact) for each free function whose whole body the fold settled.
