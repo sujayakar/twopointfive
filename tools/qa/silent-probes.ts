@@ -245,7 +245,7 @@ export const silentPick = guarded(async () => {
   { const P = A;
     verdict(P.locked && P.w === null && P.R.D.stats.halted === 0 && P.R.kicks === 0 && P.picked === 1 && P.crossed > 0 && P.R.silent(),
       'with the door tried before entry (as the page ships): the silent lead finds it locked and picks it on the same order — no halt, no boot, and they go in silent', `halted ${P.R.D.stats.halted} · kicks ${P.R.kicks} · picked ${P.picked} · over the line ${P.crossed} · ${P.R.beats(P.op)}`);
-    const R = await rig(7, {}); const { D, game } = R; const St = R.door('stairwell'); R.give('silent', AISLE); const w = R.giveDoor('openClear', 'stairwell'); const op = D.ops[0]; R.until(() => D.ops.length === 0, 45);
+    const R = await rig(7, {}); const { D } = R; const St = R.door('stairwell'); R.give('silent', AISLE); const w = R.giveDoor('openClear', 'stairwell'); const op = D.ops[0]; R.until(() => D.ops.length === 0, 45);
     verdict(St.locked && w === null && /steel/.test(op?.ended ?? '') && R.said.some((t: string) => /it's steel\. no way through/.test(t)) && D.stats.picks === 0 && St.pick === 0 && R.kicks === 0 && R.silent(),
       'and steel nobody has tried: the order is taken, the lead says it is steel at the door and the order ends there — nobody kneels, no boot, still silent', `given: ${w ?? 'ok'} · ended: ${op?.ended ?? '—'} · picks ${D.stats.picks} · kicks ${R.kicks} · said: ${R.said.filter((t: string) => /steel/.test(t)).join(' / ')}`); }
   // the fight has him mid-pick (blinded): hands off, then back on, and it still gives
@@ -326,7 +326,7 @@ export const silentTools = guarded(async () => {
 export const silentFire = guarded(async () => {
   const { verdict, done } = family('silent-fire: fire held on a man who has not noticed — and what changes once the squad is compromised');
   // the break room's two, kept unaware (state and awareness written back every frame) while the four go in on them
-  const run = async (silent: boolean, o: RigOpts = {}) => { const R = await rig(7, o); const { game } = R; let frozen = true; const h0 = SLM.SILENT_STATS.held, c0 = SLM.SILENT_STATS.compromised;
+  const run = async (silent: boolean, o: RigOpts = {}) => { const R = await rig(7, o); let frozen = true; const h0 = SLM.SILENT_STATS.held, c0 = SLM.SILENT_STATS.compromised;
     R.post = () => { if (frozen) for (const h of R.hostiles) if (h.state !== 'dead') { h.state = 'patrol'; h.awareness = 0; } };
     if (silent) R.give('silent', AISLE); R.giveDoor('openClear', 'breakroom_w'); R.step(60 * 25);
     const a = { shots: R.opShots, held: SLM.SILENT_STATS.held - h0, label: R.label(), eyesOn: R.said.filter((t: string) => /eyes on\. holding/.test(t)).length, down: R.hostiles.filter((h: any) => h.state === 'dead').length };

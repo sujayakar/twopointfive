@@ -34,7 +34,6 @@ import { standUp, ROOT } from './headless.ts';
 import { exporterCheck } from './level-file.ts';
 import { Run, Done, BOT, type RunOut, type Grade } from './rescue-tally.ts';
 const { RESCUE, checkRescue } = await import(`${ROOT}/src/game/rescue.ts`);
-const { SAMESTART } = await import(`${ROOT}/src/game/samestart.ts`);   // (while every mission starts the same way the roamer's coin is not thrown: registry-stage reads the rule and asks for the stage it gives)
 const { sideOf } = await import(`${ROOT}/src/game/orders.ts`);
 const { INTERACT_KEY } = await import(`${ROOT}/src/game/consts.ts`);
 const { spawnUnit } = await import(`${ROOT}/src/game/guards.ts`);

@@ -29,7 +29,7 @@ const { ROOMFIGHT, FIGHT_SKILL } = await import(`${ROOT}/src/game/roomfight.ts`)
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { spawnUnit, engage, canSeeChar } = await import(`${ROOT}/src/game/guards.ts`);
 const { order } = await import(`${ROOT}/src/game/squad.ts`);
-const { fireWeapon, detonateStun, killGuard } = await import(`${ROOT}/src/game/combat.ts`);
+const { fireWeapon, detonateStun } = await import(`${ROOT}/src/game/combat.ts`);
 const { holdFireDrill } = await import(`${ROOT}/src/game/holdfire.ts`);
 
 const DT = 1 / 60;
@@ -114,7 +114,6 @@ async function breach(seed: number, knobs: Record<string, unknown> = {}, chaos =
 }
 const MARKS = (g: any) => g.level.breach.hostiles as { pos: number[]; aimAt: number[] }[];
 const aimOff = (gd: any, at: number[]) => Math.abs(wrap(v3.yawTo(gd.char.pos, [at[0], 0, at[2]]) - gd.char.aimYaw)) * 57.3;
-const inBreakRoom = (g: any, p: number[]) => { const B = g.level.breach.bounds; return p[0] > B.x0 && p[0] < B.x1 && p[2] > B.z0 && p[2] < B.z1; };
 
 // ================================================================ entry: the noise decides what they watch
 export const roomfightEntry = guarded(async () => {
@@ -254,7 +253,7 @@ export const roomfightEyes = guarded(async () => {
   R.plant = () => { h.dazzledUntil = g.time + 5; op.dazzledUntil = 0; };   // (the defender stands behind the teammate's shoulder with his eyes full: nobody fires in this probe)
   order(op, { goal: null, upper: 'aim', stance: 'none', aimAt: [B[0], 1.2, B[2]] });
   R.step(150);
-  const c = op.char, eye = c.bones.head ?? [c.pos[0], 1.65, c.pos[2]], aim = c.aimYaw, look = v3.normalize(v3.lerp(c.chestDir, c.headDir(), 0.5));
+  const c = op.char, aim = c.aimYaw, look = v3.normalize(v3.lerp(c.chestDir, c.headDir(), 0.5));
   const lookOff = Math.abs(wrap(Math.atan2(look[0], look[2]) - aim)) * 57.3, boreOff = Math.abs(wrap(Math.atan2(c.gunDir[0], c.gunDir[2]) - aim)) * 57.3;
   verdict(c.anim.longShown === 'shoulder' && boreOff < 30 && lookOff > 25, 'the staging: his rifle is in the shoulder, level along his aim, and the eye between chest and head points well off it', `carriage ${c.anim.longShown} · bore ${boreOff.toFixed(0)}° off the aim · chest-and-head look ${lookOff.toFixed(0)}° off the aim (the cone is 58° either side of THAT)`);
   /** which bearings off his aim (°, a man stood RING m out with a clear line) this eye sees */

@@ -43,11 +43,11 @@ export async function railsCheck(): Promise<boolean> {
   let all = true; const keep = { on: RAILS.on, rnd: Math.random };
   const verdict = (ok: boolean, label: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
   try {
-    // ---- 1, 2: the block; the switch off
+    // ---- 1: the block
     { const R = await rig(true), g = R.g, L = g.level.scenarios?.lesson, faults = checkLesson(g);
       verdict(!R.why && !!L?.rails && faults.length === 0, 'the level starts and its lesson block is whole', `${R.why ?? 'started'} · ${L?.steps.length ?? 0} steps · ${faults.length ? faults.join(' · ') : 'no faults'}`);
     }
-    // ---- 3, 4, 5
+    // ---- 2, 3
     { const R = await rig(true), g = R.g, d0 = RAILS_STATS.dropped; R.run(0.5);
       const park = g.level.scenarios.lesson.rails.sky.park, mid = R.squad().reduce((c: V, m: any) => [c[0] + m.char.pos[0] / 4, 0, c[2] + m.char.pos[2] / 4], [0, 0, 0]);
       const look = g.followPos(), n0 = g.orders.log.length, crew = g.guards.filter((x: any) => /^Tango (8|9|10)$/.test(x.callsign)).length;

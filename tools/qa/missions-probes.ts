@@ -222,7 +222,7 @@ async function bootChild(query: string): Promise<any> {
 export async function missionsStart(): Promise<boolean> {
   const F = family('missions-start: every mission\'s URL booted in a process of its own — it starts as that row, with the team and the defenders its sheet says');
   setDifficulty('standard', false);
-  const L: any[] = sample(M.missionList() as any[], 6), FLAGS = '?quality=high&mute';
+  const L: any[] = [M.SOLO_NIGHT, ...sample((M.missionList() as any[]).filter(m => m !== M.SOLO_NIGHT), 5)], FLAGS = '?quality=high&mute';
   const boots = await Promise.all(L.map(m => bootChild(M.missionHref(m, FLAGS))));
   const SOLO = L.indexOf(M.SOLO_NIGHT);
   for (let i = 0; i < L.length; i++) { if (i === SOLO) continue; const m = L[i], r = boots[i], s = r.start;

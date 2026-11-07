@@ -34,7 +34,6 @@
 import { sample, swept } from './sweep.ts';
 import { standUp, ROOT } from './headless.ts';
 const { NIGHTBREACH, BLIND } = await import(`${ROOT}/src/game/nightbreach.ts`);
-const { SUPPRESSION } = await import(`${ROOT}/src/game/suppression.ts`);
 const { FIGHT_SKILL } = await import(`${ROOT}/src/game/roomfight.ts`);
 const { fireWeapon, detonateStun } = await import(`${ROOT}/src/game/combat.ts`);
 const { MAX_LIGHTS } = await import(`${ROOT}/src/render/lights.ts`);

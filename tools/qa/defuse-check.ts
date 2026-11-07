@@ -25,7 +25,6 @@ const levelOf = (file: string, patch?: (l: any) => void) => { const l = loadLeve
 let fails = 0;
 export async function defuseCheck(): Promise<boolean> {
 fails = 0;
-try {
 const line = (ok: boolean, what: string) => { console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${what}`); if (!ok) fails++; };
 
 /** a room clear with the four staged on a level; Sam cannot be hurt or seen unless a line says otherwise */
@@ -97,7 +96,6 @@ console.log('defuse-team — a pair ordered to it');
 
 console.log('defuse-blast — the clock at zero');
 { const { g, DF, run } = await stage('defuse.json', l => { l.scenarios.defuse = { ...l.scenarios.defuse, secs: 4 }; });
-  const foe = g.guards.filter((x: any) => x.unit && x.team === 'hostile' && x.state !== 'dead').length;
   g.godMode = false; const p = stand(g, 0); g.teleportPlayer([p[0], 0, p[2] + 0.8]); run(0.2);
   const hp0 = g.player.down; run(6);
   const rows = DF.log.filter((r: any) => /^blown:/.test(r.what)).map((r: any) => r.what), hurt = rows.reduce((n: number, r: string) => n + Number(/(\d+) killed/.exec(r)?.[1] ?? 0) + Number(/(\d+) wounded/.exec(r)?.[1] ?? 0), 0);
@@ -124,7 +122,6 @@ console.log('defuse-blast — the clock at zero');
   g.godMode = true; g.restartEncounter(); run(0.5);
   line(DF.active && DF.end === null && !DF.started && DF.states.every((s: string) => s === 'armed'), `after a restart: live, both armed, the clock waiting — ${DF.states.join(', ')}`); }
 
-} finally { /* nothing held */ }
 return fails === 0;
 }
 if (import.meta.main) { const ok = await defuseCheck(); console.log(ok ? '=== defuse-check: ALL PASS ===' : `=== defuse-check: ${fails} FAILED ===`); process.exit(ok ? 0 : 1); }

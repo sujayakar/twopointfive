@@ -35,7 +35,6 @@ const { ROOMCLEAR, STRUCTURE, placeDefenders, checkStructure, doorPlan } = await
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { killGuard, hitPlayer } = await import(`${ROOT}/src/game/combat.ts`);
 const { MAX_LIGHTS } = await import(`${ROOT}/src/render/lights.ts`);
-const { canLoad } = await import(`${ROOT}/src/game/savestate.ts`);
 
 const DT = 1 / 60;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }

@@ -144,7 +144,7 @@ export const sidedoorFeet = guarded(async () => {
   verdict(!threw, 'nothing threw', threw || `${ran} runs of ${CASES.length} cases`);
   verdict(ok, 'from the server room every row is offered and taken; the entries end \'in\' with every man they sent across the frame line and nobody left in the opening; the charge is blown with nobody in its backblast; the threshold is held with nobody in until told; clear from outside stays outside', rows.join('\n    '));
   // from the manager's office: jamb floor on that face, and the keypad's lock is on it — the boot
-  { const R = await rig(3, { blind: ['server'] }); const { O, D } = R; const d = R.door(DOOR); R.empty('manager'); R.place(OFFICE);
+  { const R = await rig(3, { blind: ['server'] }); const { D } = R; const d = R.door(DOOR); R.empty('manager'); R.place(OFFICE);
     const lines: string[] = []; { const say = R.game.say.bind(R.game); R.game.say = (gd: any, text: string, ...r: any[]) => { lines.push(text); return say(gd, text, ...r); }; }
     const why = R.give('openClear', DOOR); R.step(2); const op = D.ops.find((o: any) => o.door === d); R.until(() => !D.ops.includes(op), 70); R.step(60);
     const sent = op ? [...op.pod.keys()] : [], kicked = !!op?.beats.some((b: any) => /kick/.test(b.what)) || d.lockBroken;
@@ -162,7 +162,7 @@ export const sidedoorFight = guarded(async () => {
   const T = { side: { runs: 0, taken: 0, in: 0, clear: 0, lost: 0 }, corridor: { runs: 0, taken: 0, in: 0, clear: 0, lost: 0 } };
   for (const way of ['side', 'corridor'] as const) for (const seed of SEEDS) {
     try {
-      const R = await rig(seed); const { O, D } = R; const room = R.room('manager'), door = way === 'side' ? DOOR : 'manager', d = R.door(door);
+      const R = await rig(seed); const { D } = R; const room = R.room('manager'), door = way === 'side' ? DOOR : 'manager', d = R.door(door);
       // the server room as it stands once taken (its garrison down, the four in its aisle) — or, for the corridor door, the four outside it in the corridor
       R.empty('server'); R.place(way === 'side' ? AISLE : [[24.0, 0, 11.2], [23.2, 0, 11.4], [22.4, 0, 11.4], [21.6, 0, 11.4], [20.8, 0, 11.4]]);
       const before = R.up.length; const why = R.give('bangClear', door); R.step(2); const op = D.ops.find((o: any) => o.door === d);

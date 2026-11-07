@@ -36,8 +36,6 @@ const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 const { spawnUnit } = await import(`${ROOT}/src/game/guards.ts`);
 const { MAX_LIGHTS } = await import(`${ROOT}/src/render/lights.ts`);
 const { MAX_QUERIES } = await import(`${ROOT}/src/render/probe.ts`);
-const { MAX_CHARS } = await import(`${ROOT}/src/anim/characters.ts`);
-const { BoxWorld } = await import(`${ROOT}/src/scene/boxes.ts`);
 
 const DT = 1 / 60;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -107,8 +105,6 @@ async function rig(seed: number, o: { squad?: 2 | 4; stage?: 'rc' | 'nb'; quiet?
     get op(): any { return D.ops[0] ?? D.done[D.done.length - 1] ?? null; },
     beats(op: any): string { return (op?.beats ?? []).map((b: any) => b.what).join(' | '); },
     room(id: string) { return RC.rooms.find((r: any) => r.def.id === id); },
-    /** press X on p (one frame, nothing held), then the digit a third of a second later: the row with that digit, as a player gives it */
-    pick(p: number[], n: number) { W.cursorAt([p[0], p[1], p[2]]); input.pressed.add(ORDERS.key); R.step(); R.step(20); input.pressed.add(`Digit${n}`); R.step(); },
     /** friendly fire: a teammate down by a teammate's (or Sam's) hand */
     get fratricide(): string[] { return R.downs.filter(x => x.who.team === 'operative' && (x.by?.team === 'operative' || x.who.killerId === game.player.char.id)).map(x => `${x.who.callsign} by ${x.by?.callsign ?? 'Sam'}`); },
   };
@@ -289,7 +285,7 @@ export const foursquadClear = guarded(async () => {
   const SEEDS = sample([2, 5, 9], 1);
   const rows: string[] = []; let runs = 0, ended = 0, allIn = 0, cleared = 0, lost = 0, rounds = 0, ff: string[] = [], through: string[] = [], stuck: string[] = [], threw = '';
   for (const C of CASES) for (const seed of SEEDS) {
-    const R = await rig(seed, { door: C.door }); const { game: g, O, D, NB, RC } = R; const men = NB.ops, d = R.door(C.door); runs++;
+    const R = await rig(seed, { door: C.door }); const { game: g, D, NB } = R; const men = NB.ops, d = R.door(C.door); runs++;
     // (three of these doors are locked, and the lead TRIES a door nobody knew was locked: the order ends there, 'found shut' — DOORTOOLS.testDoor, settled,
     // held by doortest-check.ts. Until 2026-11-07 this wrote the rule off so the entry booted the door and went on; that write was refused.)
     const room = R.room(C.room);
@@ -337,7 +333,7 @@ export const foursquadClear = guarded(async () => {
 // ---------------------------------------------------------------- the F drill
 export const foursquadDrill = guarded(async () => {
   const { verdict, done } = family('foursquad-drill: F\'s breach is the red pair\'s; blue is not owned by it');
-  const R = await rig(4, { stage: 'nb' }); const { game: g, O, NB } = R; const [r1, r2, b1, b2] = NB.ops;
+  const R = await rig(4, { stage: 'nb' }); const { game: g, O, NB } = R; const [r1, b1, b2] = NB.ops;
   verdict(R.why === null && NB.ops.length === 4 && NB.hostiles.length === 3 && 1 + g.guards.length === 8, 'the night breach alone with four: Sam, four teammates, three defenders', `start ${R.why} · ${names(NB.ops)} · ${1 + g.guards.length} characters`);
   R.input.pressed.add('KeyF'); R.step(); R.step(60);
   const own = NB.ops.map((x: any) => O.owners.some((o: any) => o.owns(x)));

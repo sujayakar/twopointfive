@@ -11,7 +11,7 @@ import { standUp, ROOT } from './headless.ts';
 const SN: any = await import(`${ROOT}/src/game/squadnet.ts`);
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { ORDERS, sideOf } = await import(`${ROOT}/src/game/orders.ts`);
-const { SQUADNET, roomCall, plainCall, netPlace } = SN;
+const { SQUADNET, roomCall, netPlace } = SN;
 
 type Verdict = (ok: boolean, label: string, detail: string) => void;
 function family(title: string): { verdict: Verdict; done: () => boolean } {
@@ -34,7 +34,7 @@ const isCall = (x: string) => (/ clear\.$/.test(x) && !/ and clear\.$/.test(x)) 
 async function rig(seed: number) {
   const squad0 = NIGHTBREACH.squad; let W: any, why: any;
   try { NIGHTBREACH.squad = 4; Math.random = seeded(seed); W = await standUp(); W.game.godMode = true; why = W.game.roomClear.start(seed); } finally { NIGHTBREACH.squad = squad0; }
-  const game = W.game, O = game.orders, input = W.input, play: { name: string; gain: number; rate: number | undefined }[] = [];
+  const game = W.game, O = game.orders, play: { name: string; gain: number; rate: number | undefined }[] = [];
   { const a = game.audio, p0 = a.play.bind(a); a.play = (name: string, pos: unknown, gain = 1, opts: any = {}) => { play.push({ name, gain, rate: opts?.rate }); return p0(name, pos, gain, opts); }; }
   const said: string[] = []; { const msg = game.msg.bind(game); game.msg = (t: string) => { said.push(t); msg(t); }; }
   // (`said` is the log, which keeps a line only where its man is off the screen or in the fog; `bub` is every line a teammate's bubble has held, read a frame)

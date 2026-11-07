@@ -289,7 +289,7 @@ function wallRun(g: any, d: any, side: number, dir: 1 | -1): number {
 export const depotDoors = guarded(async () => {
   const { verdict, done } = family('depot-doors: stack room for a pair, and for four, on every door');
   const measure = async (S: { rooms: any[] }) => {
-    const R = await rig(5, 'depot', { quiet: true, empty: true }); const { game: g, O, D, NB } = R; const men = NB.ops; const rows: string[] = []; let ok = true, sides = 0; const runs: number[] = [], depths: number[] = [];
+    const R = await rig(5, 'depot', { quiet: true, empty: true }); const { game: g, D, NB } = R; const men = NB.ops; const rows: string[] = []; let ok = true, sides = 0; const runs: number[] = [], depths: number[] = [];
     for (const room of S.rooms) for (const { id } of room.doors) { const d = R.door(id); if (!d) continue; const side = outsideOf(d, room.bounds);
       const four = D.stackPosts(d, side, men), pair = D.stackPosts(d, side, men.slice(0, 2)); sides++;
       const good = (posts: any[] | null, n: number) => !!posts && posts.length === n && minApart(posts.map((p: any) => p.pos)) > 0.7 && posts.every((p: any) => !g.col.nav.isBlocked(p.pos[0], p.pos[2]) && !inDoorway(d, p.pos) && !inBounds(room.bounds, p.pos)

@@ -88,7 +88,7 @@ export async function snatchoutCheck(): Promise<boolean> {
       line(!!snap?.out && back, `the slice a save would carry puts the word back (lead ${back ? 'Sam' : 'nobody'})`);
     }
     // ---- 3 · the house taken with him tied is not the end; a round that kills him on the way loses it
-    { const A = await stage(), { g, S, X, N } = A; await A.thin(1); await A.take(); await A.thin(0); await A.step(0.5);
+    { const A = await stage(), { g, S, X } = A; await A.thin(1); await A.take(); await A.thin(0); await A.step(0.5);
       line(g.roomClear.end === 'taken' && !S.end && S.owes && /van/.test(rowOf(g, 'snatch')?.text ?? ''), `the house taken (${g.roomClear.end}) with him tied: not the end (end ${S.end}); the row still reads "${rowOf(g, 'snatch')?.text ?? ''}"`);
       X.word(g.player.char); await A.step(0.5);
       const p = S.man.char.pos; g.teleportPlayer([p[0] - 2.4, 0, p[2]]); await A.step(0.2);
@@ -97,7 +97,7 @@ export async function snatchoutCheck(): Promise<boolean> {
       line(S.end === 'lost' && S.lost === 'dead', `a round kills him on the way out: ${S.why || `(no end; he is ${S.man?.state})`} → ${S.end}`);
     }
     // ---- 4 · the response: gunfire a man of the house lives to report brings the level's men; quiet brings nobody; the house taken does not call them off
-    { const A = await stage(3), { g, S } = A, Q = g.qrf, R = g.level.scenarios.response;
+    { const A = await stage(3), { g } = A, Q = g.qrf, R = g.level.scenarios.response;
       await A.step(8);
       line(Q.state === 'idle', `eight quiet seconds: nobody is called (${Q.state})`);
       await quiet(() => { for (const h of A.hostiles()) { h.hold = true; } });

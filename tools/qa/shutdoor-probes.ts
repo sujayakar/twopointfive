@@ -23,17 +23,15 @@
 //                    same five minutes with the order given once move all of those (so the lines can go red)
 import { standUp, ROOT } from './headless.ts';
 import { listen } from './heard.ts';
-import { leftKey, toolsRow4 } from './order-keys.ts';
+import { leftKey } from './order-keys.ts';
 const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
 const { ROOMCLEAR } = await import(`${ROOT}/src/game/roomclear.ts`);
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
 const { DOORWAY, DOORSTAY } = await import(`${ROOT}/src/game/doors.ts`);
 const { PACE } = await import(`${ROOT}/src/game/guards.ts`);
-const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 const { setSilent, squadSilent, SILENT } = await import(`${ROOT}/src/game/silent.ts`);
 const { SHUTDOOR_STATS, SHUTDOOR_LOG, SHUT_ID, shutSpot } = await import(`${ROOT}/src/game/shutdoor.ts`);
-const FOUR = (): string => toolsRow4(DOORTOOLS);   // (the door tools' fourth row, as the stand has it: order-keys.ts)
 const FRAG_KEY = 'G';   // (the shared build's frag row sits on the door tools' page on a key of its own, never a digit)
 
 const DT = 1 / 60;
@@ -267,7 +265,7 @@ export const shutdoorWho = guarded(async () => {
 // ---------------------------------------------------------------- back to the file
 export const shutdoorFile = guarded(async () => {
   const { verdict, done } = family(`shutdoor-file: a man taken from fall in goes back into the file, and shuts it from Sam's side`);
-  { const x = await oneShut(11, 'breakroom_w', WEST, SAM_W, { fallIn: true }); const { R, O, man } = x;
+  { const x = await oneShut(11, 'breakroom_w', WEST, SAM_W, { fallIn: true }); const { R, man } = x;
     const was = man ? x.before[R.ops.indexOf(man)] : null; R.step(60 * 2);
     verdict(x.why === null && !!man && was?.order === 'fallIn' && was.post === null && x.latched && x.after?.order === 'fallIn' && x.after.post === null && SHUTDOOR_STATS.toFile === 1 && SHUTDOOR_STATS.stayed === 0,
       'the four on fall in, the order given: the man who shut it is on fall in again', `${man?.callsign}: ${was?.order} → ${SHUT_ID} → ${x.after?.order} · latched ${x.latched} in ${f2(x.secs)} s · toFile ${SHUTDOOR_STATS.toFile} · stayed ${SHUTDOOR_STATS.stayed}`);

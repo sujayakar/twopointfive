@@ -33,7 +33,6 @@ import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
 const { DOORTOOLS, doorPt } = await import(`${ROOT}/src/game/doortools.ts`);
 const { GLASSPEN } = await import(`${ROOT}/src/game/glasspen.ts`);
-const { RESCUE } = await import(`${ROOT}/src/game/rescue.ts`);
 const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const { scenarioQuery } = await import(`${ROOT}/src/scene/scenarios.ts`);
@@ -42,7 +41,6 @@ const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { feelTables } = await import(`${ROOT}/src/game/teamfeel.ts`);
 
-type Vec3 = [number, number, number];
 const DT = 1 / 60;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const f1 = (x: number) => (Number.isFinite(x) ? x.toFixed(1) : String(x));

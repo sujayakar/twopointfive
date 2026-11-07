@@ -37,7 +37,7 @@ const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
 const { SQUADTHROW } = await import(`${ROOT}/src/game/squadthrow.ts`);
 const { SILENT } = await import(`${ROOT}/src/game/silent.ts`);
-const { killGuard, dropThrowable } = await import(`${ROOT}/src/game/combat.ts`);
+const { dropThrowable } = await import(`${ROOT}/src/game/combat.ts`);
 const { MAX_LIGHTS } = await import(`${ROOT}/src/render/lights.ts`);
 
 const DT = 1 / 60;
@@ -202,7 +202,7 @@ export const doortoolsCharge = guarded(async () => {
 // ---------------------------------------------------------------- the bang
 export const doortoolsBang = guarded(async () => {
   const { verdict, done } = family('doortools-bang: a stun in the room before the first man is over the threshold');
-  const K = DOORTOOLS; const R = await rig(7, { door: 'breakroom_w' }); const { O, D, game } = R; const Wd = R.door('breakroom_w'); const room = R.room('breakroom');
+  const K = DOORTOOLS; const R = await rig(7, { door: 'breakroom_w' }); const { O, D, game } = R; const room = R.room('breakroom');
   let blindAtBang = -1; R.post = () => { const op = D.ops[0]; if (blindAtBang < 0 && op && !isNaN(op.bangT)) blindAtBang = room.defenders.filter((h: any) => h.dazzledUntil > game.time).length; };
   const w = R.give('bangClear', 'breakroom_w'); const op = D.ops[0];
   R.until(() => D.ops.length === 0, 40);
