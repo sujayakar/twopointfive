@@ -1,5 +1,5 @@
 // Tiny capture sink for automated screenshots: POST /shot?name=foo (image body) → docs/shots/foo.jpg, or docs/shots/ab/foo.png when the body is a PNG
-// (__png's lossless readbacks for pixel A/B); POST /perf?name= (the F9 recorder's dump) → docs/perf/<name>.json; POST /session?name= (the F10 session journal) → tools/qa/sessions/<name>.json.gz. PORT=… runs a second sink for a lane's own worktree (the page posts to window.__shotPort, default 5174).
+// (__png's lossless readbacks for pixel A/B); POST /perf?name= (the F9 recorder's dump) → docs/perf/<name>.json. PORT=… runs a second sink for a lane's own worktree (the page posts to window.__shotPort, default 5174).
 // Listens on LOOPBACK only (HOST=… overrides that on purpose) and grants CORS only to loopback origins — a dev server on any port, lanes run their own —
 // so some other page open in the same browser gets a 403 and no grant: it cannot write files here.
 import { mkdirSync } from 'node:fs';
@@ -21,13 +21,6 @@ Bun.serve({
       const body = await req.text(); await Bun.write(perfDir + name + '.json', body);
       console.log(`perf dump → docs/perf/${name}.json (${(body.length / 1024).toFixed(0)} KB)`);
       return new Response(`docs/perf/${name}.json ${body.length}`, { headers: cors });
-    }
-    if (req.method === 'POST' && url.pathname === '/session') {   // the session journal's file (src/ui/sessionrec.ts, F10): tools/qa/sessions/<name>.json.gz — the replay fixtures' folder (tools/qa/replay.ts --all)
-      const name = (url.searchParams.get('name') ?? `session-${Date.now()}`).replace(/[^A-Za-z0-9_.-]/g, '_').slice(0, 96);
-      const sesDir = new URL('./qa/sessions/', import.meta.url).pathname; mkdirSync(sesDir, { recursive: true });
-      const body = await req.text(); const gz = Bun.gzipSync(new TextEncoder().encode(body)); await Bun.write(sesDir + name + '.json.gz', gz);   // (gzipped: a session is a lot of digits — ~5× smaller — and the replay tool reads .json.gz as it reads .json)
-      console.log(`session journal → tools/qa/sessions/${name}.json.gz (${(body.length / 1024).toFixed(0)} KB → ${(gz.length / 1024).toFixed(0)} KB gzipped)`);
-      return new Response(`tools/qa/sessions/${name}.json.gz ${gz.length}`, { headers: cors });
     }
     if (req.method === 'POST' && url.pathname === '/clip') {   // the smoke battery's clips (tools/qa/smoke-battery.js: MediaRecorder off the canvas): docs/shots/clips/<name>.webm
       const name = (url.searchParams.get('name') ?? `clip-${Date.now()}`).replace(/[^a-zA-Z0-9_.\/-]/g, '_').replace(/\.\.+/g, '_').replace(/^\/+/, '').slice(0, 160);   // (one level of sub-folder allowed: <clip>/meta.json)
