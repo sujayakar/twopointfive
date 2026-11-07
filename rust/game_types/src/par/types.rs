@@ -1,9 +1,9 @@
-//! The types of `par`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `par`: a room clear run against a clock (rust/game_rules/src/par).
 #![allow(unused_imports)]
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: words)
+/// (on the wire: its word in small letters)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum Medal {
     None,
@@ -22,7 +22,7 @@ impl Medal {
     }
 }
 
-/// (TypeScript: ParResult, src/game/par.ts:33)
+/// a finished run against its par
 #[derive(Clone, Debug)]
 pub struct ParResult {
     pub secs: f64,
@@ -53,7 +53,7 @@ impl ParResult {
 }
 impl Default for ParResult { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/par.ts:33 ParResult.next, src/game/par.ts:33)
+/// the medal above the one earned, its bar, and how many whole seconds faster it needed
 #[derive(Clone, Copy, Debug)]
 pub struct ParResultNext {
     pub medal: crate::par::Medal,
@@ -72,109 +72,53 @@ impl ParResultNext {
 }
 impl Default for ParResultNext { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: ParSnap, src/game/par.ts:35)
+/// A seat's mark as the clock was armed: where its man stood, and the last order on its log then (by the row's serial: the log is cut from the front).
 #[derive(Clone, Copy, Debug)]
-pub struct ParSnap {
-    pub t0: Option<f64>,
-    pub said: bool,
+pub struct ParMark {
+    pub origin: V3,
+    pub order0: Option<u32>,
 }
-impl ParSnap {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+impl ParMark {
     pub fn zeroed() -> Self {
-        ParSnap {
-            t0: None,
-            said: false,
+        ParMark {
+            origin: [0.0, 0.0, 0.0],
+            order0: None,
         }
     }
 }
-impl Default for ParSnap { fn default() -> Self { Self::zeroed() } }
+impl Default for ParMark { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Par, src/game/par.ts:51)
+/// THE PAR CLOCK'S RECORD: the game's own, written by the tick (`par::par_tick`), and all of it on the wire: the page draws `live`, `t0` and `res`,
+/// and a game stood again from a page's copy takes the clock up where it was.
 #[derive(Clone, Debug)]
 pub struct Par {
+    /// the mission this clock is for, by its serial (a restart makes a new mission: the clock starts over)
     pub run: Option<u32>,
-    pub origin: V3,
-    pub order0: Option<u32>,
+    /// every seat's mark, in seat order: the first thing ANY of them does starts the clock
+    pub marks: Vec<crate::par::ParMark>,
+    /// the rounds and throws so far as the clock was armed
     pub fired0: f64,
+    /// when the clock started on the game's clock (NaN: not yet)
     pub t0: f64,
+    /// the finished run (None: not taken yet, wiped, or another mission's)
     pub res: Option<crate::par::ParResult>,
-    pub said: bool,
-    pub said_row: Option<crate::par::ParSaidRow>,
-    pub best_words: String,
-    pub log: Vec<String>,
+    /// a par is live now: the level has the block, its room clear is up, no show runs (written every tick)
+    pub live: bool,
 }
 impl Par {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         Par {
             run: None,
-            origin: [0.0, 0.0, 0.0],
-            order0: None,
+            marks: Vec::new(),
             fired0: 0.0,
             t0: f64::NAN,
             res: None,
-            said: false,
-            said_row: None,
-            best_words: String::from(""),
-            log: Vec::new(),
+            live: false,
         }
     }
 }
 impl Default for Par { fn default() -> Self { Self::blank() } }
-
-/// (TypeScript: inline at quiet Par.run, quiet Par.run)
-#[derive(Clone, Copy, Debug)]
-pub struct ParRun {
-}
-impl ParRun {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ParRun {
-        }
-    }
-}
-impl Default for ParRun { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at quiet Par.order0, quiet Par.order0)
-#[derive(Clone, Copy, Debug)]
-pub struct ParOrder0 {
-}
-impl ParOrder0 {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ParOrder0 {
-        }
-    }
-}
-impl Default for ParOrder0 { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/par.ts:59 Par.saidRow, src/game/par.ts:59)
-#[derive(Clone, Debug)]
-pub struct ParSaidRow {
-    pub text: String,
-}
-impl ParSaidRow {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ParSaidRow {
-            text: String::new(),
-        }
-    }
-}
-impl Default for ParSaidRow { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/par.ts:103 fresh(tail), src/game/par.ts:103 fresh(tail))
-#[derive(Clone, Copy, Debug)]
-pub struct ParFreshTail {
-}
-impl ParFreshTail {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ParFreshTail {
-        }
-    }
-}
-impl Default for ParFreshTail { fn default() -> Self { Self::zeroed() } }
 
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]
@@ -183,8 +127,5 @@ pub struct ParStats {
     pub finished: i32,
 }
 
-/// (src/game/par.ts:27 PAR_START_M)
+/// how far a player walks from his mark before the clock is his (metres): more than a shuffle, less than the way to any door
 pub const PAR_START_M: f64 = 1.0;
-
-/// (src/game/par.ts:30 MEDALS: a table nothing writes)
-pub fn medals() -> Vec<String> { alloc::vec![String::from("gold"), String::from("silver"), String::from("bronze")] }
