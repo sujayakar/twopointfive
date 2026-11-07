@@ -265,7 +265,6 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 261 => { let a1: GuardId = Io::r(&mut i); let a2: String = Io::r(&mut i); let r = crate::cues::cues_call(g, a1, &a2); r.w(&mut o);  }
 262 => { let a1: GuardId = Io::r(&mut i); let a2: String = Io::r(&mut i); let r = crate::cues::cues_overheard(g, a1, &a2); r.w(&mut o);  }
 263 => { let a1: Vec<crate::cues::CuesAdoptMsgsItem> = Io::r(&mut i); crate::cues::cues_adopt(g, &a1);  }
-264 => { let a1: GuardId = Io::r(&mut i); let r = crate::cues::cues_bubble_of(g, a1); r.w(&mut o);  }
 265 => {  crate::cues::cues_tick(g);  }
 266 => { let a1: Option<GuardId> = Io::r(&mut i); let a2: GuardId = Io::r(&mut i); let a3: Vec<GuardId> = Io::r(&mut i); crate::netquiet::net_quiet_asked(g, a1, a2, &a3);  }
 267 => { let a1: GuardId = Io::r(&mut i); let a2: Vec<GuardId> = Io::r(&mut i); let a3: Vec<GuardId> = Io::r(&mut i); crate::netquiet::net_quiet_closed(g, a1, &a2, &a3);  }
