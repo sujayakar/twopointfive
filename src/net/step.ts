@@ -1,10 +1,9 @@
 // ONE TICK OF A NETWORKED GAME, the same on the server and on every client: the seats' records, then what a host does between two ticks that the next tick
-// reads — the lights aged (a flash lives by the tick), the world's boxes listed again (the cursor's ray walks the list; the pack for the picture waits for a draw) and an expired
-// speech bubble let go (the HUD's one write to the game: journal.ts hudExpireBubbles). The order is the page's own between two ticks of one frame
+// reads — the lights aged (a flash lives by the tick) and the world's boxes listed again (the cursor's ray walks the list; the pack for the picture waits
+// for a draw). The order is the page's own between two ticks of one frame
 // (host/loop.ts betweenTicks) and a re-run's (tools/qa/rerun.ts). dt is exactly 1 / NET.hz.
 import type { Game } from '../game/game';
 import type { PlayerCmd } from '../game/cmd';
-import { hudExpireBubbles } from '../game/journal';   // (called inside netStep only: src/game is one import cycle)
 import { dressAll } from '../game/dress';   // (called inside netStand only)
 import { NET } from './wire';
 import { NET_AGREED } from './agreed';
@@ -15,7 +14,7 @@ export interface StepHost { lights: { update(dt: number, t: number): void }; wor
 export function netStep(g: Game, host: StepHost, cmds: readonly PlayerCmd[]): void {
   const dt = 1 / NET.hz;
   g.stepSeats(dt, cmds);
-  host.lights.update(dt, g.time); host.world.relist(); hudExpireBubbles(g);   // (the list alone: a tick is not a draw, and a server never draws — scene/boxes.ts relist; a page's next draw packs what it is handed)
+  host.lights.update(dt, g.time); host.world.relist();   // (the list alone: a tick is not a draw, and a server never draws — scene/boxes.ts relist; a page's next draw packs what it is handed)
 }
 /** WHAT THE HOST OF THE GAME THAT STEPS HANGS ON THE GAME OBJECT beside its `stepSeats` (src/host/rustgame.ts in the page, tools/blitz/rust-host.ts in bun):
  *    stateWords()   the game's own words for where things are, cheap enough for every tick: its die's count of draws and the hash of every part of its
