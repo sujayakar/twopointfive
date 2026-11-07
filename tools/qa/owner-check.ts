@@ -74,7 +74,7 @@ async function arm(label: string, set: object): Promise<void> {
     const pr = Bun.spawn(['bun', '--preload', resolve(import.meta.dir, 'owner-audit.ts'), resolve(import.meta.dir, 'playthrough.ts'), '--one', `${j.scn}:${j.seed}`, '--out', `${file}.run`, '--set', JSON.stringify(set)],
       { cwd: ROOT, env: { ...process.env, OWNER_OUT: `${file}.json`, OWNER_DROP: BREAK ? String(~0 >>> 0) : '0' }, stdout: 'ignore', stderr: 'pipe' });
     const err = await new Response(pr.stderr).text(); await pr.exited;
-    try { const o = JSON.parse(readFileSync(`${file}.json`, 'utf8'));
+    try { const o = auditOf(`${file}.json`);
       ticks += o.ticks; bad += o.bad; for (const f of o.first) if (first.length < 12) first.push(`${j.scn}:${j.seed} ${f}`);
       for (const [k, v] of Object.entries(o.reads) as [string, [number, number]][]) { const R = reads[k] ??= [0, 0]; R[0] += v[0]; R[1] += v[1]; }
       for (const [k, v] of Object.entries(o.held) as [string, number][]) held[k] = (held[k] ?? 0) + v; }
@@ -89,6 +89,14 @@ async function arm(label: string, set: object): Promise<void> {
 await arm('as the stand has them', {});
 if (!process.env.OWNER_SCN || process.env.OWNER_ALLON) await arm('with last stand, buddy, pressure and dig-in up', ALL_ON);
 
+/** what the audit's preload wrote (tools/qa/owner-audit.ts): a line a process that ran under it, summed. Throws where no process wrote one. */
+function auditOf(file: string): { ticks: number; bad: number; first: string[]; reads: Record<string, [number, number]>; held: Record<string, number> } {
+  const sum = { ticks: 0, bad: 0, first: [] as string[], reads: {} as Record<string, [number, number]>, held: {} as Record<string, number> };
+  for (const l of readFileSync(file, 'utf8').split('\n')) { if (!l) continue; const o = JSON.parse(l);
+    sum.ticks += o.ticks; sum.bad += o.bad; sum.first.push(...o.first);
+    for (const [k, v] of Object.entries(o.reads) as [string, [number, number]][]) { const R = sum.reads[k] ??= [0, 0]; R[0] += v[0]; R[1] += v[1]; }
+    for (const [k, v] of Object.entries(o.held) as [string, number][]) sum.held[k] = (sum.held[k] ?? 0) + v; }
+  return sum; }
 /** the rules' own families, whose checks put a man where the missions never do: the breaker's party, the rescue's walker, a trip for a coffee, the silent and unseen squads, a standoff */
 const FAMILIES = (process.env.OWNER_FAMS ?? 'rescuecheck,powerout,needs,gunhold,silent,unseen,spotted,holdfire,laststand,enemysquads,runner,morale,netquiet,startle').split(',').filter(Boolean);
 { const dir = mkdtempSync(join(tmpdir(), 'owner-fam-')), reads: Record<string, [number, number]> = {}, held: Record<string, number> = {}, first: string[] = [], lost: string[] = [], reds: string[] = []; let next = 0, bad = 0, ticks = 0;
@@ -98,7 +106,7 @@ const FAMILIES = (process.env.OWNER_FAMS ?? 'rescuecheck,powerout,needs,gunhold,
     const file = join(dir, `${fam}.json`);
     const pr = Bun.spawn(['bun', '--preload', resolve(import.meta.dir, 'owner-audit.ts'), resolve(import.meta.dir, 'probes.ts'), fam], { cwd: ROOT, env: { ...process.env, OWNER_OUT: file, OWNER_DROP: BREAK ? String(~0 >>> 0) : '0' }, stdout: 'ignore', stderr: 'ignore' });
     const exit = await pr.exited; if (exit) reds.push(`${fam} (exit ${exit})`);
-    try { const o = JSON.parse(readFileSync(file, 'utf8'));
+    try { const o = auditOf(file);
       ticks += o.ticks; bad += o.bad; for (const f of o.first) if (first.length < 12) first.push(`${fam} ${f}`);
       for (const [k, v] of Object.entries(o.reads) as [string, [number, number]][]) { const R = reads[k] ??= [0, 0]; R[0] += v[0]; R[1] += v[1]; }
       for (const [k, v] of Object.entries(o.held) as [string, number][]) held[k] = (held[k] ?? 0) + v; }
