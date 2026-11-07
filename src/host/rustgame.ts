@@ -37,9 +37,9 @@ import { BoxMirror } from '../scene/boxMirror';
 import { PUT_BACKS } from '../math/side';
 import { knobRegistry } from '../game/knobs';
 import { knobsToRust } from '../game/rustknobs';
+import { SETTLED, settledAt } from './settled';
 import { DC } from '../sim/doorshome';
-import { SNAPS, SAVETIMELINE, levelFingerprint, type SlotInfo } from '../game/savestate';
-import { CLEANRESTART } from '../game/cleanrestart';
+import { SNAPS, levelFingerprint, type SlotInfo } from '../game/savestate';
 import type { Snapshot } from '../game/rollback';
 import type { Game } from '../game/game';
 import { NO_VIEW, type TickView } from '../view/seatview';
@@ -60,7 +60,6 @@ import { makeScan } from 'tps-bridge/scan';
 import { installAsks, askNothing } from 'tps-bridge/ask';
 import { crossing, readRecord, surfaceHost } from 'tps-bridge/surface';
 import LISTS from 'tps-bridge/puppet-lists.json';
-import SWITCHES from 'tps-bridge/switches.json';
 
 
 type Face = SimExports & Record<string, (...a: number[]) => number>;
@@ -253,18 +252,17 @@ export const RUST_GAME = {
  *  tools/qa/fold.ts holds it for a headless run: a read answers that value, a write of another is refused, and what was refused or stood off its value
  *  is named ONCE in the console and stays on the debugger panel's first line. Rows that are still switches (an open decision, a player's own, the
  *  difficulty's) are not touched: they cross to the Rust game with the knob tables as a game starts.
- *  Laid by main.ts after the address's own switches are written and before the game is stood (the kept rows are read as the Game is made).
+ *  Laid by main.ts after the page's switches are written (host/settled.ts raised these rows first) and before the game is stood (the kept rows are read as the Game is made).
  *  What it cannot hold (as the fold): a table replaced whole, a row that is already an accessor, a value a module copied before this ran. */
 export const RUST_SETTLED = { held: 0, absent: 0, skipped: 0, off: [] as string[], refused: new Map<string, { value: unknown; n: number }>(), said: 0 };
 const sameRow = (a: unknown, b: unknown): boolean => Object.is(a, b) || (typeof a === 'object' && typeof b === 'object' && JSON.stringify(a) === JSON.stringify(b));
 const rowWord = (v: unknown): string => typeof v === 'number' || typeof v === 'boolean' || typeof v === 'string' ? String(v) : JSON.stringify(v);
 export function rustSettledHold(): void {
   const R = RUST_SETTLED, tables = knobRegistry() as Record<string, any>;
-  for (const r of (SWITCHES as { rows: { row: string; page: unknown; kind: string }[] }).rows) { if (r.kind !== 'settled') continue;
-    const path = r.row.split('.'), key = path.pop()!; let o: any = tables[path[0]]; for (let i = 1; i < path.length && o; i++) o = o[path[i]];
-    if (!o || typeof o !== 'object' || !(key in o)) { R.absent++; continue; }
+  for (const r of SETTLED) { const at = settledAt(r.row, tables); if (!at) { R.absent++; continue; }
+    const o = at.table, key = at.key;
     const d = Object.getOwnPropertyDescriptor(o, key); if (!d || d.get || d.set || !d.configurable) { R.skipped++; continue; }
-    const page = r.page; if (!sameRow(d.value, page)) R.off.push(`${r.row} (${rowWord(d.value)}; held at ${rowWord(page)})`);
+    const page = r.page as unknown; if (!sameRow(d.value, page)) R.off.push(`${r.row} (${rowWord(d.value)}; held at ${rowWord(page)})`);
     Object.defineProperty(o, key, { enumerable: true, configurable: true, get: () => page, set: (v: unknown) => { if (sameRow(v, page)) return; const e = R.refused.get(r.row) ?? { value: v, n: 0 }; e.value = v; e.n++; R.refused.set(r.row, e); } });
     markHeld(o, key); R.held++; }
 }
@@ -662,7 +660,7 @@ function toStart(S: Held, said?: string): void {
   pokes(S);
   if (said) g.msg(said);
   try { G.saves?.onPutBack?.({ key: '', slot: 'auto', n: 0, label: 'the start', kind: 'auto', savedAt: 0, missionT: 0, stage: String(G.mission?.stage ?? ''), runId: '', bytes: 0, mem: true }); } catch (e) { RUST_GAME.outThrew['restart.host'] ??= String((e as Error)?.stack ?? e).slice(0, 600); }
-  if (CLEANRESTART.on && CLEANRESTART.picture) G.engine?.restartPicture?.('level restarted');
+  G.engine?.restartPicture?.('level restarted');
   RUST_GAME.restarts++;
 }
 /** THE CONTROLLER'S SHELF AS THE TICK READS IT (Enter once down asks for this run's newest save, player.ts:493; the Rust game's `g.saves` is no part of
@@ -708,6 +706,8 @@ function watched(g: Game): Watched[] {
   const T = G.tune as Record<string, unknown> | undefined; if (T) for (const k of Object.keys(T)) { const v = T[k]; if (v === null || typeof v !== 'object') L.push([g, ['tune', k], v]); }
   if (G.props) L.push([g, ['props', 'frictionScale'], G.props.frictionScale], [g, ['props', 'enabled'], G.props.enabled]);
   if (G.fogOfWar) L.push([g, ['fogOfWar', 'on'], G.fogOfWar.on]);
+  // (a replay's viewer, or the kit's picture, may draw with the fog off: the tick then keeps the frame's list as it stood before the fog cut it. The picture's record is the other half of the page's fog object, named as the table names it)
+  if (G.fogOfWar) L.push([g, ['fog_picture', 'viewer'], G.fogOfWar.viewer]);
   if (G.engine?.settings) L.push([g, ['engine', 'settings', 'gpuParticles'], G.engine.settings.gpuParticles]);
   // (where the picture looks, set by the engine once a render: host/loop.ts. The wind picks the jets for the particles round it, wind.ts `update`)
   { const vf = G.engine?.viewFocus; if (vf && vf.length === 3) L.push([g, ['engine', 'viewFocus'], [vf[0], vf[1], vf[2]]]); }   // (the options' particle row: particleFx.ts `gpuFx` reads it in the tick)
@@ -765,7 +765,7 @@ function tail(S: Held, dt: number, cmds: readonly PlayerCmd[], tHost: number, tS
   // puppet. A save it takes is the Rust game kept (`take`), a load the kept game stood again (`put`).
   // STAND-IN: F5, the save by hand (player.ts:498, a line of the TypeScript tick the Rust tick does not have): read off the tick's own record here.
   // Belongs in the Rust tick (the controller's `hand`, read back with `face_saves_asked`).
-  if (SAVETIMELINE.on && cmds[g.seats.indexOf(g.hostSeat())]?.pressed.includes('F5') && !g.player.down) G.saves?.askSave();
+  if (cmds[g.seats.indexOf(g.hostSeat())]?.pressed.includes('F5') && !g.player.down) G.saves?.askSave();
   { const sv = G.saves, D = G.director, R = G.rails, authored = !!sv?.authored && !!R?.live, stop = D?.stop, resume = R?.resume;
     // (an authored checkpoint of a tutorial mission: the controller stops the level's program for the take, savestate.ts:991. That is the Rust game's
     //  to do, and `take` does it there in the same order; the TypeScript's two calls would run on a puppet's program, which holds no beat)

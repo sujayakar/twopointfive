@@ -2,7 +2,7 @@
 //   bun run tools/qa/dice-check.ts            every check below; exit 0 = all pass, 1 = one failed (named)
 //   DICE_BREAK=1 bun run tools/qa/dice-check.ts   the red path: one stray Math.random() is drawn inside the update — 'same seed' must then FAIL
 // WHAT IS HELD:
-//   source     no Math.random call is left in src/game outside civilians.ts withDice (which swaps it for a
+//   source     no Math.random call is left in src/game outside journal.ts (which installs a recording's die) and civilians.ts withDice (which swaps it for a
 //              constructor's length) — a new one is named with its file and line
 //   same seed  two games stood up on one seed, each under a DIFFERENT Math.random, play the same half minute (a firefight in it) digest for digest: nothing of the
 //              simulation reaches Math.random, and the seed alone names the dice
@@ -51,13 +51,14 @@ const firstDiff = (a: unknown[], b: unknown[]): string => { for (let i = 0; i < 
 // ---- source
 { const dir = `${ROOT}/src/game`, hits: string[] = [];
   for (const f of readdirSync(dir).filter(x => x.endsWith('.ts'))) {
+    if (f === 'journal.ts') continue;
     readFileSync(`${dir}/${f}`, 'utf8').split('\n').forEach((line, i) => {
       const code = line.replace(/\/\/.*$/, '').replace(/\/\*.*?\*\//g, '');
       if (!/Math\.random/.test(code) || /^\s*(\/\*\*|\*)/.test(line)) return;
       if (f === 'civilians.ts' && /function withDice/.test(code)) return;
       hits.push(`${f}:${i + 1}`);
     }); }
-  verdict(!hits.length, 'source: no Math.random left in src/game outside civilians.ts withDice', hits.length ? `still drawn at ${hits.join(', ')}` : 'every draw of the simulation goes through simRandom()'); }
+  verdict(!hits.length, 'source: no Math.random left in src/game outside journal.ts and civilians.ts withDice', hits.length ? `still drawn at ${hits.join(', ')}` : 'every draw of the simulation goes through simRandom()'); }
 
 // ---- same seed, other seed
 { Math.random = seeded(11); const A = await standUp({ seed: 4242 }); const a = run(A, 30, 300); const na = A.game.dice.n;

@@ -82,7 +82,7 @@ if (ONLY.has('kit')) await withPage(9371, async c => { const url = `${AT}/?${wor
   const errs = errorsOf(c); if (errs.length || fatal) bad++; say(`${errs.length || fatal ? 'FAIL' : 'PASS'}  the Team & kit page's small game: loaded and ran 20 s, ${errs.length} errors${fatal ? `, the fatal card: ${fatal}` : ''}`); for (const e of errs.slice(0, 6)) say(`      ${e.slice(0, 400)}`); await census(c, `the kit view ${url}`, 0); });
 
 // ---- the other pages: each loads, and says no error in its first seconds
-if (ONLY.has('pages')) for (const [i, p] of ['workbench.html', 'viewer.html', 'editor.html', 'replay.html', 'sounds.html', 'music.html'].entries()) await withPage(9364 + i, async c => { const url = `${AT}/${p}`;
+if (ONLY.has('pages')) for (const [i, p] of ['replay.html', 'sounds.html', 'music.html'].entries()) await withPage(9364 + i, async c => { const url = `${AT}/${p}`;
   try { await c.open(url, 120000); await new Promise(r => setTimeout(r, 8000)); } catch (e) { c.errors.push(String(e)); }
   const errs = errorsOf(c); if (errs.length) bad++; say(`${errs.length ? 'FAIL' : 'PASS'}  /${p}: loaded, ${errs.length} errors in 8 s`); for (const e of errs.slice(0, 6)) say(`      ${e.slice(0, 400)}`); await census(c, `the page ${url}`, 0); });
 

@@ -205,7 +205,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the fist 1.0 cm from the handle on the draw (0.7 cm across a bare back), his wrist as the game reads it identical on and off. `bigslot-check` holds the rule off: its lines
   are about a bare back. NOT DONE / NOT SEEN: in a crouch the pack lies flat on a bent back and the tool lies along it — a long
   handle stands out behind him (the pictures say so); with kit handling on and the rifle kept on his back, Sam's rifle still crosses the radio for a few frames as it is slung or
-  unslung (the hand goes over the right shoulder, the rifle rests at the pack's left); the kit figure draws no big tool and does not apply `packMask` (it shows the breacher's ram);
+  unslung (the hand goes over the right shoulder, the rifle rests at the pack's left); 
   the swapped mask's fit is solved on first use, not with the cast's pre-solved set, and the worn mask is a frame behind a change of tool; `PACKSIDE`'s numbers are first-pass, placed against the mesh offline, judged on stills from the
   offline pose tool only — never seen in the renderer, on a GPU, or played.
 - **IN HAND = what a man holds is in the hand that holds it** (`src/game/inhand.ts INHAND`, the maintainer, 10-18, of a teammate crouched on the rear with his sidearm out: "gun not
@@ -243,8 +243,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   reload the TRIGGER hand and the body played the pistol's clip (MENDED since under `GUNHAND.longReload`: `docs/agents/anim.md`, *A long gun reloads with a move of its own* —
   with that switch off, the frozen stand, it is as it was); a defender threw overhand with the carbine in the throwing fist (MENDED since under its own switch: `GUNHAND.throwFree`,
   enemies.md 'A defender throws with his free hand' — IN HAND's long hold stays on the grip through that throw). THE VIEWER draws by the rule too (`src/viewer/runtime.ts` says the staged man's
-  word as combat.ts does; the workbench raises the switch as the page does, `?inhand=0` there too; page line: `HALF=bench … inhand-page.cjs`), so a rig number fitted there is judged on
-  the picture the game draws. The Team & kit figure (`src/ui/kitFigure.ts`) still draws without it. NEVER SEEN ON A GPU OR IN PLAY: judged on Blender
+  word as combat.ts does; the workbench raises the switch as the page does, `?inhand=0` there too; the viewer and its page line went with the workbench, 2026-11-04), so a rig number fitted there is judged on
+  the picture the game draws.  NEVER SEEN ON A GPU OR IN PLAY: judged on Blender
   Workbench sheets of the skinned cast and by the numbers above.
 - **The rifle family's probes read the page's rules where they are live** (`tools/qa/fn2000-probes.ts`, 10-16; tests only, no game code). `kit-slots`, `rifle-cadence`,
   `rifle-reload` and `rifle-slot` pinned the old kit's beats and were red on the SHIPPED stand. Now: a kit change carried by hand is waited out (`kitWait`: `stage()`, kit-slots'
@@ -545,7 +545,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   now CUT: no `src/game/shield.ts`, no `SHIELD` knob table, no `TPS_SHIELD` word or `FROZEN_HOLDS` row, no `?shield`, no Tab row; `MemberKit` has no `shield` field and the big slot
   offers empty · breaching shotgun · dynamic hammer · wall charge; slots.json v10 has no shield tool and no 'Shield and shotgun' squad kit; a round, a blast and a defender's aim
   no longer ask about a plate (combat.ts, frag.ts, guards.ts), a stack is dealt by the plain rule (doortools.ts, orders.ts: no shield man put first), the figure has no plate
-  layer (`character.ts`), the kit figure and the Team & kit door picture draw none (`ui/kitFigure.ts`, `host/kitView.ts`). NO SWITCH: every stand is the build as it was with the
+  layer (`character.ts`), the Team & kit door picture draws none (`host/kitView.ts`). NO SWITCH: every stand is the build as it was with the
   shield off, so the shipped stand's digests are unmoved and the frozen stand's move only where a shield was staged (the long hall; the kit probes that planted one). WHAT OLD
   DATA DOES: a stored or pasted card that says `shield` is a card without one — `kitSanitize` takes only what a row offers, and the next change of a row writes the store without
   the word; a save never named one; a level whose issue card says `shield` is REFUSED with the reason in words (`scene/levelData.ts`: 'the ballistic shield is out of the game:
@@ -707,7 +707,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   recording from before the table replays with it off (`journal.ts applyKnobs`). WHAT A ROW NAMES: `weapons.ts WeaponDef.own = { model, voice, flame }` beside its
   stand-in fields (`rig`, `report.voice`, `muzzleFx`), read only through `gunlook.ts gunOwn / voiceOf / flameOf`. NO PLAY NUMBER MOVED. MODELS: `LONG_MODELS` /
   `PISTOL_MODELS`, part tables in the group's own axes (the trigger hand, the sling and the holster stay where the group has them); `Character.gunLook
-  { hand, long, side, bareLong, bareSide }` is dealt each step (`game.ts` for a teammate, `player.ts armRifle` for you, `ui/kitFigure.ts` for its figure) and read by `rigProps.ts`
+  { hand, long, side, bareLong, bareSide }` is dealt each step (`game.ts` for a teammate, `player.ts armRifle` for you) and read by `rigProps.ts`
   (in the hands, slung, hung down the front, holstered; the roster chip and the card's icon are `ui/kitIcons.ts OWN_GUN`). The big slot's pump gun (`m870`) is a
   model too, with a 12 gauge's voice; its muzzle and hand are where the short rifle's were. THREE THINGS THE SIMULATION READS, only of a man who carries one of the
   rows: his MUZZLE is the model's far face (ahead of the wrist: Mk 12 0.70 m, Mk 46 0.62, M1014 0.56, MP7 0.40 — the stand-ins were 0.52, 0.52, 0.50 and, on you,
@@ -722,9 +722,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   `tools/qa/gunlook-check.ts` (`own`: every row a slot hands out names a model, a voice, a flame and a casing row, no two guns share one — by name and by what is
   in them — and what two guns may share is said in the file; `hands`: a teammate and you with every pick are told, drawn and heard as that gun, off = the
   stand-in; `off`: ten seconds of the staged room clear digest the same with the switch off and on, seed 17, cards as issued) and `tools/qa/gunreload-check.ts`;
-  `probes.ts gunlook` runs both; `GUNLOOK_BREAK=1` fails them. The kit figure's own check (`tools/qa/kit-figure-roster-check.ts`) has a pose per model: the fist on the
-  model's pistol grip (its `is: 'grip'` part) under that check's own rows, the hand on the fore-end by the model's hold, and the model the one drawn. PICTURES WITHOUT A GPU: `tools/qa/gunlook-plates.ts` (every model flat, side and top, one scale) and
-  `tools/qa/gunlook-sheet.ts` (the kit figure with each gun, software-drawn; `--off` the before); `tools/qa/gunlook-page.cjs` boots the real page with all six on
+  `probes.ts gunlook` runs both; `GUNLOOK_BREAK=1` fails them. PICTURES WITHOUT A GPU: `tools/qa/gunlook-plates.ts` (every model flat, side and top, one scale); `tools/qa/gunlook-page.cjs` boots the real page with all six on
   a team of four. NOT DONE / KNOWN: the HK45 is hard to tell from the issue pistol at the game's distance (a darker, fatter can and a tan grip are all it has);
   the Glock 18's long magazine is mostly hidden by the hands; a teammate's reload is always shown as a gun run dry, and when he takes his long gun up after his
   sidearm the whole feed is mimed with only its first sound; with the shells key OFF the books still take the whole tube out at the row's `out` and put it back at `in_`, so a
@@ -1051,7 +1049,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   "Space  open" reads "E  open", and "E puts it away" still reads as the slot's key. With `?handslot=0` the ring is on Space. THE ORDER MENU'S
   ROW ON V (the wand under a door) has no key on the page while the rule is on: it is the squad owner's to seat on a wedge.
   THE WORDS: Options, Controls and the start card reword the action key's row and the whistle's under the rule (ui/options.ts `RING_SMALL`,
-  ui/menu.ts `RING_ROW`). A lesson's line that says "V whistles" (Training 2 has two) is shown as "Space held, then 5, whistles" while the rule is
+  . A lesson's line that says "V whistles" (Training 2 has two) is shown as "Space held, then 5, whistles" while the rule is
   on, and "Hold Space, wheel to kick, let go" (the lights lesson's gate) as "Hold Space, then 2 kicks it" (`lesson.ts lessonLine`; the page's
   words put the key in): the level's own text is not edited. A lesson that gains a line naming V or the held list's wheel needs a row there.
   PAGE DRIVERS: `tools/qa/keybinds-page.cjs` holds the rule off on its older lines (`&handring=0`) and reads the page's own board in its last
@@ -1114,7 +1112,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   A tap of Space with Shift held counts (Shift is his sprint; with Ctrl it is a browser chord and still does not). With a text box focused (the
   debugger's search) Space types a space and turns nothing, where Ctrl still turned: left so.
   THE WORDS: Options, Controls draws the two camera rows' cap plain (`ui/options.ts camCapEl`: Ctrl or Space; never keyCapEl's 'Space', which is the
-  action's row and reads "E"); the start card's row is "Space + mouse / wheel" (`ui/menu.ts CAM_SPACE`, written as it is by `keyCol`); Options,
+  action's row and reads "E"); Options,
   Game says "Double tap Space" and "hold Space and move the mouse" (`ui/findme.ts`, `camCap()`).
   NOT A ROW (a reviewer's note, left as it is): the camera's key cannot be moved in Options, and a row put on Space takes Space from it with no
   swap shown. Making the camera hold a row of the board would give it caps, words and a swap by the board's own machinery. `tools/qa/findme-page.cjs`
@@ -1387,9 +1385,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   own stride would take 3.45), stand ([C] with Shift held stands him up into 4.70 m/s), off, harness. One seed: these are speeds on a flat floor. The
   debugger has the toggle and both numbers under Detection & movement; the sneak lab has them and the stride and lean. `close-stills.ts` has a scene
   `dash`. THE WORDS (the controls goal, same day): while the rule is on, Options ▸ Controls' Sprint row has the line "hold it while you're crouched
-  to stay low and move faster, but it's louder than walking" (`ui/options.ts sprintSmall`), and the controls list of the old start card (`?cards`,
-  the boot card of a URL that names a mission, the harness: `ui/menu.ts moveRowNow`) adds "and Shift while you're crouched to hurry (it's louder)";
-  the shipped start page and the load brief show no controls list. Off, both read as they did. `keybinds` has the line, both stands;
+  to stay low and move faster, but it's louder than walking" (`ui/options.ts sprintSmall`). Off, no line. `keybinds` has the line, both stands;
   `MOVEWORDS_BREAK=1` fails it. It asks the two functions, not the drawn rows. KNOWN: a screen already open keeps its words when the rule is
   flipped in the debugger or the sneak lab, until it is drawn again. Not seen on a page. NOT DONE: no sound of its own; teammates following a crouched Sam
   keep their sneak pace (they speed up only for a real sprint). Nobody has played it or seen it on a GPU.

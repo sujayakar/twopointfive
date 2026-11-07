@@ -8,7 +8,7 @@
 //   alone   ?levelFile=<level>&quiet=7 — up, alone, Sam on the dealt start, the dealt men on the floor, the objective in the level's words, the camera on him
 //   two     …&squad=1 — the same with ONE partner beside him
 // (the camera ON the dealt start from the first frame is quiet-probes' line: here it has had ninety frames, and the aim lead is in the number)
-// Exit 1 on a FAIL or a page error. The software adapter's smoke-pipeline console noise is passed over as tools/qa/missions-look.cjs does.
+// Exit 1 on a FAIL or a page error. The software adapter's smoke-pipeline console noise is passed over.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const fs = require('fs'), path = require('path');
 const outDir = process.argv[2] || 'quiet-look', LEVEL = process.argv[3] || 'quiet-yard.json';
@@ -32,15 +32,14 @@ const ready = page => page.evaluate(async () => { await window.__ready; window._
 (async () => {
   const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS });
   if (ONLY.includes('list')) { const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 }); watch(page, 'list');
-    await page.goto(BASE + '?' + Q + '&cards');
-    await page.locator('#menu button', { hasText: 'Missions' }).waitFor({ state: 'attached', timeout: 30000 });
-    await page.evaluate(() => [...document.querySelectorAll('#menu button')].find(x => x.textContent === 'Missions').click());
+    await page.goto(BASE + '?' + Q);
+    await page.locator('#menu .actions button.primary').waitFor({ state: 'attached', timeout: 30000 });
+    await page.evaluate(() => document.querySelector('#menu .actions button.primary').click());
     log('list: waiting for the page (about a minute and a half on the software adapter)');
     const fatal = await ready(page); if (fatal) report.errors.push('list fatal: ' + fatal);
     await page.waitForTimeout(400);
-    const s = await page.evaluate(() => { const r = document.getElementById('missions'), out = []; for (const el of r.querySelectorAll('.msec, .mrow')) out.push(el.classList.contains('msec') ? `# ${el.textContent}` : el.dataset.mission); return { on: r.classList.contains('on'), out }; });
-    const heads = s.out.filter(x => x.startsWith('# ')), under = h => { const i = s.out.indexOf(h), j = s.out.findIndex((x, k) => k > i && x.startsWith('# ')); return i < 0 ? [] : s.out.slice(i + 1, j < 0 ? undefined : j); };
-    check(s.on && heads.length >= 3 && under('# Quiet, alone').includes('solo-night') && under('# Quiet, as two').length >= 1 && under('# Raids').length >= 1, 'the missions list draws a heading per group with its rows under it', s.out.join(' · '));
+    const s = await page.evaluate(() => { const r = document.getElementById('missions'); return { on: r.classList.contains('on'), heads: [...r.querySelectorAll('.msec')].map(e => e.textContent), rows: [...r.querySelectorAll('.mrow')].map(e => ({ id: e.dataset.mission, group: e.dataset.group || e.getAttribute('data-group') })) }; });
+    check(s.on && s.heads.length >= 3 && s.rows.some(x => x.id === 'solo-night') && s.rows.length >= 3, 'the start page draws a heading per group, and the rows, the solo night among them', JSON.stringify(s.heads));
     await still(page, 'list'); await page.close(); }
   for (const [name, extra, mates] of [['alone', '', 0], ['two', '&squad=1', 1]]) { if (!ONLY.includes(name)) continue;
     const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 }); watch(page, name);

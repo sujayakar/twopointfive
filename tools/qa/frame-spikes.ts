@@ -107,7 +107,7 @@ function wrap(fn: Function, i: number, kind: 0 | 1 | 2): Function {   // kind 1:
 const UPDATE_PARTS = new Set(['threatTick', 'dealWeapons', 'stepFxAndDynBoxes', 'smokeWake', 'drawCharacters', 'lightMeter']);
 /** called tens of thousands of times a frame and a few nanoseconds each: a wrapper would be most of what it measured (their time is their callers' self time) */
 const TINY = new Set(['nav.idx', 'nav.isBlocked']);
-const done = new WeakSet<object>(), SKIP_KEY = new Set(['engine', 'level', 'ch', 'audio', 'smoke', 'probe', 'viewProj']);
+const done = new WeakSet<object>(), SKIP_KEY = new Set(['engine', 'level', 'ch', 'audio', 'smoke', 'probe', 'viewProj', 'journal']);
 const plain = (p: any) => p === null || p === Object.prototype || p === Array.prototype || p === Map.prototype || p === Set.prototype || p === WeakMap.prototype || p === WeakSet.prototype || p === Function.prototype || ArrayBuffer.isView({ __proto__: p }) || Object.getPrototypeOf(p) === Object.getPrototypeOf(Int8Array.prototype) || p === Object.getPrototypeOf(Int8Array.prototype);
 /** every method on obj's class (and its bases) gets a wrapper, once per prototype, named `<name>.<method>` */
 function scan(obj: any, name: string, deep: number) {

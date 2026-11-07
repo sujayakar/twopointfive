@@ -70,7 +70,7 @@ export async function snowGlowCheck(o: { verbose?: boolean } = {}): Promise<bool
   const text: Record<string, string> = {};
   for (const f of files) {
     let t = readFileSync(resolve(SH, f), 'utf8');
-    t = t.split('\n').map(l => /\/\/.*THE LOOK PROTOTYPE/.test(l) && /\bLOOK\b/.test(l.replace(/\/\/.*$/, '')) ? '' : l).join('\n');   // (the look prototype's own lines, each tagged in its comment and behind LOOK in its code: live only on its page — shaders/look.wgsl. It reads and writes the mark's fourth level, alpha 0, and is not this check's)
+    t = t.split('\n').map(l => /\/\/.*THE LOOK'S OWN LINE/.test(l) ? '' : l).join('\n');   // (the look's own lines, each tagged in its comment — shaders/look.wgsl. They read and write the mark's fourth level, alpha 0, and are not this check's. Until 2026-11-07 they also stood behind a constant, LOOK, and were told by both)
     if (BREAK) {
       t = t.replace(/if \(lv\(SNOW_GLOW\)(?: \|\| lv\(SNOW_SPARKLE\))?\) \{/g, '{').replace(/select\(1\.0, ([^,()]+(?:\([^()]*\))?[^,()]*), lv\(SNOW_GLOW\)(?: \|\| lv\(SNOW_SPARKLE\))?\)/g, '$1');
       if (f === 'common.wgsl') t = t.replace('  r.E = li.color * (att * c); r.ok = true;\n', '  r.E = li.color * (att * c) + snowGlow(vec2i(0), P, N, 1.0, vec3f(0.0), vec3f(0.0)); r.ok = true;\n');
@@ -85,15 +85,14 @@ export async function snowGlowCheck(o: { verbose?: boolean } = {}): Promise<bool
     // ---- stands
     { const up = await rig(true), down = await rig(false), unsaid = await rig(null);
       const prof = PR.harnessProfile(); const row = String(PR.FROZEN_HOLDS['SNOW_LOOK.glow'] ?? '');
-      const page = /SNOW_LOOK\.glow = q\.get\('snowglow'\) !== '0';/.test(readFileSync(resolve(ROOT, 'src/host/profile.ts'), 'utf8'));   // (read, not run: pageSwitches writes every switch the page has)
       const mod = /export const SNOW_LOOK = \{[^}]*\bglow: false\b[^}]*\}/.test(readFileSync(resolve(ROOT, 'src/game/weatherKinds.ts'), 'utf8'));
       const reg = !!KN.JOURNAL_KNOBS && (KN.JOURNAL_KNOBS as readonly string[]).includes('SNOW_LOOK');
       // (the switch reaches the shaders as a bit of the frame block's level word, render/frame.ts LevelSw: the shader TEXT is the same with it on or off)
       const cfgWas = FR.snowLookConfig.glow; FR.snowLookConfig.glow = false; const p0 = FR.scenePrelude(), w0 = FR.levelSwitches(); FR.snowLookConfig.glow = true; const p1 = FR.scenePrelude(), w1 = FR.levelSwitches(); FR.snowLookConfig.glow = cfgWas;
       const word = p0 === p1 && /const SNOW_GLOW: u32 = 32u;/.test(p1) && FR.LevelSw.SNOW_GLOW === 32 && (w0 & 32) === 0 && (w1 ^ w0) === 32;
-      const boot = /snowLookConfig\.glow = SNOW_LOOK\.on && SNOW_LOOK\.glow;/.test(readFileSync(resolve(ROOT, 'src/main.ts'), 'utf8'));
-      verdict(up.stood === true && down.stood === false && unsaid.stood === (prof === 'shipped') && /TPS_SNOWGLOW=1/.test(row) && page && mod && reg && word && boot,
-        'stands — the switch\'s words on this stand', `${prof} stand · TPS_SNOWGLOW=1 → ${up.stood}, =0 → ${down.stood}, not said → ${unsaid.stood} (${prof === 'shipped' ? 'the page: on' : 'frozen: off'}) · FROZEN_HOLDS row: ${row ? `'${row.slice(0, 40)}…'` : 'NONE'} · the page's boot reads ?snowglow=0 and is on without it: ${page} · off in the module: ${mod} · its table rides in the journal's registry: ${reg} · the frame's level word follows snowLookConfig.glow in its one bit, and no shader text differs: ${word} · main.ts raises it only with the surface: ${boot}`); }
+      const boot = /snowLookConfig\.glow = true;/.test(readFileSync(resolve(ROOT, 'src/main.ts'), 'utf8'));
+      verdict(up.stood === true && down.stood === false && unsaid.stood === (prof === 'shipped') && /TPS_SNOWGLOW=1/.test(row) && mod && reg && word && boot,
+        'stands — the switch\'s words on this stand', `${prof} stand · TPS_SNOWGLOW=1 → ${up.stood}, =0 → ${down.stood}, not said → ${unsaid.stood} (${prof === 'shipped' ? 'the page: on' : 'frozen: off'}) · FROZEN_HOLDS row: ${row ? `'${row.slice(0, 40)}…'` : 'NONE'} · off in the module: ${mod} · its table rides in the journal's registry: ${reg} · the frame's level word follows snowLookConfig.glow in its one bit, and no shader text differs: ${word} · main.ts raises it only with the surface: ${boot}`); }
 
     // ---- mark
     { const writers: string[] = [], badW: string[] = [], readers: string[] = [], badR: string[] = [];

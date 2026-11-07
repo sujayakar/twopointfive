@@ -1,6 +1,7 @@
 // THE REPLAY FILE (the maintainer, 10-11: "a replay system where we can always save a replay after the fact and then a viewer where i can annotate bugs").
 // A replay is a TRACE of what happened — who stood where, facing what, doing what, on which route; the rounds, the doors, the words — sampled off the running game
-// by game/replaybuf.ts and saved after the fact (F7 on the game page). Nothing here is re-simulated to be read, so a replay opens
+// by game/replaybuf.ts and saved after the fact (F7 on the game page). It is NOT a recording the simulation is run again from (that is the session journal, F10 —
+// game/journal.ts — which must be started before the thing happens and refuses a squad on the floor): nothing here is re-simulated to be read, so a replay opens
 // on ANY later build, whatever has happened to the level, the doors or the save format since. The viewer (replay.html → src/replay/viewer.ts) draws it as a map
 // with a scrubber and takes NOTES — a moment, a spot, words — which are kept IN the file; tools/qa/replay-at.ts reads file and notes in a thread.
 //
@@ -189,7 +190,7 @@ export const TAPE_SHIELD = 'This replay was recorded with a ballistic shield, wh
 /** a file's sanity, in words ('' = fine) */
 export function checkReplay(F: Partial<ReplayFile> | null | undefined): string {
   if (!F || typeof F !== 'object') return 'not an object';
-  if (F.game !== 'twopointsix' || F.kind !== 'replay') return 'not a twopointsix replay';
+  if (F.game !== 'twopointsix' || F.kind !== 'replay') return (F as { v?: unknown; save?: unknown }).save ? 'this is a session journal (F10), not a replay (F7): tools/qa/replay.ts reads it' : 'not a twopointsix replay';
   if (F.v !== REPLAY_VERSION) return `replay version ${F.v} (this reader knows ${REPLAY_VERSION})`;
   if (!Array.isArray(F.samples) || !Array.isArray(F.cast) || !Array.isArray(F.events) || !Array.isArray(F.lines)) return 'samples / cast / events / lines missing';
   if (!F.map || !Array.isArray(F.map.boxes) || !Array.isArray(F.map.doors) || !Array.isArray(F.map.bounds) || F.map.bounds.length !== 4) return 'the map is missing';

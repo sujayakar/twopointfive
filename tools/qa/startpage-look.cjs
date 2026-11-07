@@ -1,5 +1,5 @@
 // THE ONE STARTING PAGE LOOK (ui/startpage.ts): the page on the REAL build in headless Chromium:
-// what is on it, that every mission is on it and goes through its loadout to Deploy, the keys through both halves, real page loads, and the switch off.
+// what is on it, that every mission is on it and goes through its loadout to Deploy, the keys through both halves, real page loads.
 // The page's two steps: MISSION (the list, the briefing, the Setup rail of value rows) and TEAM & KIT (the loadout's rows); the rail's rows stand in for the list's own setting rows, which stay in the page unseen.
 //   node tools/qa/startpage-look.cjs <outDir>      env: PORT (the dev server's, default 5199) · SIZE (default 1440x900) · QUALITY (default verylow) · ALL=1 (deploy EVERY mission) · STILLS=0 (no stills) · GPU=1 (see below)
 // PASS / FAIL lines, stills beside a report.json, exit 1 on a FAIL or a page error.
@@ -72,13 +72,13 @@ const cardOf = page => page.evaluate(() => ({ buttons: [...document.querySelecto
 
   // ---- the card under the page: one button to it
   const card = await cardOf(page);
-  check(card.buttons[0] === 'Play ›' && !card.buttons.includes('Start') && !card.buttons.includes('Missions') && card.picks === 0, "the card has ONE way in: 'Play ›' (no short list of its own, no Missions, no Start)", `buttons: ${card.buttons.join(' | ')} · short-list rows on the card ${card.picks}`);
+  check(card.buttons[0] === 'Play ›' && !card.buttons.includes('Start') && !card.buttons.includes('Missions'), "the card has ONE way in: 'Play ›' (no Missions, no Start)", `buttons: ${card.buttons.join(' | ')}`);
  
 
   // ---- the page: everything on it
   await page.click('#menu .actions button.primary'); await page.waitForSelector('#missions.one.on', { timeout: 20000 }); await page.waitForTimeout(500);
   const s0 = await stateOf(page);
-  const first = ['compound-four', 'rescue-registry', 'warehouse-four', 'depot-four', 'barracks-four', 'solo-night'];
+  const first = ['compound-four', 'depot-four', 'solo-night'];
   const GROUPS = ['Tutorial', 'Raids', 'Strongholds', 'On the clock', 'Quiet, alone', 'Quiet, as two'], inGroup = (s, h) => s.rows.filter(id => s.under[id] === h);
   check(s0.up && s0.heads.join('|') === GROUPS.join('|') && s0.rows.length > first.length && new Set(s0.rows).size === s0.rows.length && s0.rows.every(id => GROUPS.includes(s0.under[id]))
     && GROUPS.every((h, k) => s0.counts[k] === inGroup(s0, h).length && s0.counts[k] >= 1 && s0.counts[k] <= 8) && GROUPS.every(h => { const g = inGroup(s0, h), p = first.filter(id => g.includes(id)); return p.every((id, i) => g[i] === id); }),
@@ -108,10 +108,10 @@ const cardOf = page => page.evaluate(() => ({ buttons: [...document.querySelecto
   check(s2.pane === 'loadout' && s2b.sel === s1.sel && page.url() === url0, 'Enter steps INTO the loadout (nothing loads); W S there move its rows, not the mission', `pane ${s2.pane} · mission after S ${s2b.sel}`);
   await page.keyboard.press('Escape'); await page.waitForTimeout(200); const s3 = await stateOf(page);
   check(s3.up && s3.pane === 'list' && s3.sel === s1.sel && !!s3.loadout, 'Esc steps back to the missions with the same one highlighted and its loadout still there', `pane ${s3.pane} · ${s3.sel}`);
-  await page.keyboard.press('Enter'); await page.waitForTimeout(500);
+  await goRow('depot-four'); await page.keyboard.press('Enter'); await page.waitForTimeout(500);
   await Promise.all([deployed(), page.keyboard.press('Enter')]);
   const u1 = query(page.url());
-  check(u1.includes('pick=warehouse') && u1.includes('difficulty=standard'), 'Enter, Enter from a short-list row is in the game: ONE page load of that row\'s own URL (so its \'next\' and \'played\' still work)', new URL(page.url()).search);
+  check(u1.includes('pick=depot') && u1.includes('difficulty=standard'), 'Enter, Enter from a short-list row is in the game: ONE page load of that row\'s own URL (so its \'next\' and \'played\' still work)', new URL(page.url()).search);
 
   // ---- the groups fold: the keys walk every row and cross into the next group, which opens; a click on a heading is its first row
   await open(); const g0 = await stateOf(page), gi = g0.rows.indexOf(g0.sel), gEnd = g0.rows.lastIndexOf(g0.shown[g0.shown.length - 1]);
@@ -163,20 +163,13 @@ const cardOf = page => page.evaluate(() => ({ buttons: [...document.querySelecto
   const shownT0 = await valOf(); await page.focus(diffRow); await page.keyboard.press('Enter'); await page.waitForTimeout(300); const sT = await stateOf(page);
   const shownT = await valOf();
   check(/^(standard|hard)$/.test(shown) && shown !== shown0 && sM.pane === 'loadout' && uM.includes('difficulty=' + shown) && sT.pane === 'list' && shownT !== shownT0, "a mouse click on the rail's Difficulty row steps it (standard, hard), and Enter Enter then deploys what it reads (the clicked row does not keep the Enter); focused with Tab, Enter is still that row's", `the click: '${shown0}' → '${shown}', pane ${sM.pane}, deploy ${uM.join('&') || 'no load'} · focused: pane ${sT.pane}, '${shownT0}' → '${shownT}'`);
+  // ---- a weather of the player's own on a short-list row: Deploy carries it — it is then the mission's own link, no longer the short list's row
   await open();
-  await goRow('barracks-four'); await page.waitForTimeout(300);
-  const s5 = await stateOf(page);
-  await page.keyboard.press('Enter'); await page.waitForTimeout(500); await Promise.all([deployed(), page.keyboard.press('Enter')]);
-  const u5 = query(page.url());
-  check(s5.sel === 'barracks-four' && u5.includes('hour=midday') && u5.includes('pick=barracks-day'), 'the barracks row shows at its own hour (midday) and deploys as the short list\'s row', `${new URL(page.url()).search}`);
-
-  // ---- a weather of the player's own on a short-list row: Deploy carries it (and the row's hour) — it is then the mission's own link, no longer the short list's row
-  await open();
-  await goRow('barracks-four'); await page.waitForTimeout(300);
+  await goRow('depot-four'); await page.waitForTimeout(300);
   await page.keyboard.press('j'); await page.waitForTimeout(300);
   await page.keyboard.press('Enter'); await page.waitForTimeout(500); await Promise.all([deployed(), page.keyboard.press('Enter')]);
   const u5w = query(page.url());
-  check(u5w.some(k => /^weather=/.test(k)) && u5w.includes('hour=midday') && u5w.some(k => /^levelFile=barracks/.test(k)) && !u5w.some(k => /^pick=/.test(k)), 'J on a short-list row: the deploy carries that weather and the row\'s hour, as the mission\'s own link (no pick=)', new URL(page.url()).search);
+  check(u5w.some(k => /^weather=/.test(k)) && u5w.some(k => /^levelFile=depot/.test(k)) && !u5w.some(k => /^pick=/.test(k)), 'J on a short-list row: the deploy carries that weather, as the mission\'s own link (no pick=)', new URL(page.url()).search);
 
   // ---- a mission with NO KIT STEP (played with the kit as issued: the first tutorial mission): nothing on the page leads to an empty TEAM & KIT — the
   //      head names one step, the rail has no team row, the key line says what Enter does, and Enter on its row is in the game
@@ -242,12 +235,6 @@ const cardOf = page => page.evaluate(() => ({ buttons: [...document.querySelecto
   check(!!sS.loadout?.deployInView, 'at 1280 x 720 Deploy is still in view without scrolling', `in view ${sS.loadout?.deployInView}`);
   await page.setViewportSize({ width: W, height: H });
 
-  // ---- the switch off: ?cards
-  await boot(Q + '&cards'); const cc = await cardOf(page);
-  await page.click('#menu .actions button:has-text("Missions")'); await page.waitForTimeout(300);
-  const off = await page.evaluate(() => ({ list: document.getElementById('missions')?.classList.contains('on'), one: document.getElementById('missions')?.classList.contains('one'), lo: !!document.getElementById('loadout') }));
-  check(cc.picks >= 5 && cc.buttons.includes('Missions') && cc.buttons.includes('Start') && off.list && !off.one && !off.lo, '?cards: the start card with its short list, Missions and Start, and the list as a screen of its own, as it was', `rows ${cc.picks} · ${cc.buttons.join(' | ')} · list ${off.list} one ${off.one} loadout ${off.lo}`);
-
   // ---- a narrow window, the squad line at its longest ('One wall charge' picked): nothing on the sheet runs off its right edge
   await boot(); await page.click('#menu .actions button.primary'); await page.waitForSelector('#missions.one.on', { timeout: 20000 });
   await goRow('compound-four'); await page.waitForTimeout(300);
@@ -276,7 +263,6 @@ const cardOf = page => page.evaluate(() => ({ buttons: [...document.querySelecto
       await page.click('#menu .actions button.primary'); await page.waitForSelector('#missions.one.on', { timeout: 20000 }); await goRow('compound-four'); await page.waitForTimeout(400); await shot(page, 'page.png');
       await page.keyboard.press('Enter'); await page.waitForTimeout(300); await shot(page, 'page-in-loadout.png');
       await page.click('#missions [data-row="squadkit"] [data-kit]:nth-of-type(2)', { timeout: 5000 }).catch(() => {}); await page.waitForTimeout(300); await shot(page, 'page-wall-charge.png');
-      await goRow('barracks-four'); await page.waitForTimeout(400); await shot(page, 'page-barracks.png');
       await goRow(other); await page.waitForTimeout(400); await shot(page, 'page-other-mission.png');
       await goRow('solo-night').catch(() => {}); await page.waitForTimeout(400); await shot(page, 'page-solo.png');
       await page.setViewportSize({ width: 1280, height: 720 }); await goRow('compound-four'); await page.waitForTimeout(500); await shot(page, 'page-1280x720.png');

@@ -18,7 +18,7 @@
 // stands, put into ANOTHER game's own block, folded into the word a part at a time. A typed array over the module's memory found anywhere else in the state is
 // named (`Snapshot.simViews`; the check is red): cloned into another game it would take the whole memory with it.
 // WHAT IS NOT IN IT (and must not be reached for on the way back): the host — `Game.engine` but for its CPU box world and light set, the mixer, the smoke solver
-// (its fields live on the GPU), and inside a game object whatever is a `HostOwned` (the GPU light meter's buffers; its last answers and this
+// (its fields live on the GPU), the session journal, and inside a game object whatever is a `HostOwned` (the GPU light meter's buffers; its last answers and this
 // frame's asks ARE in it) — and the character file every man's clips are read from (STATIC: never written; `stateHash(g, true)` walks it
 // too, so a check can hold that). A function is kept as it is: what a closure has captured cannot be seen from here, so state belongs on objects and in side
 // tables, never in a closure (the check's static pass names the module variables that are not registered).
@@ -52,7 +52,7 @@ const isObj = (v: unknown): v is object => typeof v === 'object' && v !== null;
 /** the Game's fields that are the host's (left exactly as they are, in either game) and the ones that are never written (the character file). The host's own
  *  INSIDE a game object is a `HostOwned` (math/side.ts): the GPU light meter's buffers and what it last sent (render/probe.ts `Plumbing`) — walked and put back
  *  like the rest of the meter, a page's next frame copied into a buffer still being mapped and the browser refused the whole frame. */
-const HOST_FIELDS = ['engine', 'audio', 'smoke', 'hostCam', 'hostInput'] as const;   // (hostCam / hostInput: the host's camera and keys, handed at the stand — game.ts. On the wire they are on the hosts-own list, tools/wire/wire.ts HOSTS_OWN: no state word reads them, and no snapshot copies, hashes or puts them back)
+const HOST_FIELDS = ['engine', 'audio', 'smoke', 'journal', 'hostCam', 'hostInput'] as const;   // (hostCam / hostInput: the host's camera and keys, handed at the stand — game.ts. On the wire they are on the hosts-own list, tools/wire/wire.ts HOSTS_OWN: no state word reads them, and no snapshot copies, hashes or puts them back)
 const STATIC_FIELDS = ['ch'] as const;
 /** where a walk starts: the Game, and the two CPU pieces of the host the simulation reads and writes (the box world its rays are cast in, the light set) */
 function rootsOf(g: Game): object[] { const e = (g as unknown as { engine: { world: object; lights: object } }).engine; return [g, e.world, e.lights]; }
@@ -182,7 +182,7 @@ export function takeSnapshot(g: Game, since?: Snapshot): Snapshot {
     put(i, c, shape, Math.min(15, met[i]) << 4 | (c !== was ? 0 : Math.min(15, fresh[i] + 1)));
   };
   const drain = (): void => { while (stack.length) hold(stack.pop()!, true); };
-  // the host's and the statics as they stand now: met, never walked into (a mixer put in since the chain began is not either)
+  // the host's and the statics as they stand now: met, never walked into (a mixer or a journal put in since the chain began is not either)
   for (const f of [HOST_FIELDS, STATIC_FIELDS]) for (const o of fieldsOf(g, f)) { let i = index.get(o); if (i === undefined) i = add(o); stamp[i] = epoch; }
   if (whole) {
     // everything the statics reach is met and never walked into again by this chain (the character file's clips hang off every man: a fifth of all the game reaches)
@@ -293,7 +293,7 @@ export function restoreSnapshot(s: Snapshot, into: Game = s.game): void {
 
 function restoreInPlace(s: Snapshot): void {
   const { at, data, shapes } = s, { nodes, kinds, views, index } = s.chain;
-  const G = s.game as unknown as Rec, host = HOST_FIELDS.map(f => G[f]);   // (the host's own — a mixer swapped — stay as they are NOW: not the simulation's to put back)
+  const G = s.game as unknown as Rec, host = HOST_FIELDS.map(f => G[f]);   // (the host's own — a journal begun since, a mixer swapped — stay as they are NOW: not the simulation's to put back)
   for (let q = 0; q < at.length; q++) {
     const i = at[q];
     switch (kinds[i]) {

@@ -27,7 +27,7 @@ import { SNOWBREATH, BREATHSTEAM, breathStats, steamOn } from '../game/snowBreat
 import { HARDBREATH } from '../game/character';   // (read inside a row's own closure only)
 import { rowHeld } from '../host/held';
 import { AIR_SIM, airSimStats } from '../game/airSim';
-import { SNOW_LOOK, snowLevel } from '../game/weatherKinds';
+import { snowLevel } from '../game/weatherKinds';
 import { levelNameOf } from '../scene/levelLoad';
 import { WIND } from '../game/wind';
 import { FOG } from '../game/fogofwar';
@@ -148,10 +148,6 @@ function consts(text: string, pick: RegExp, src: string, rows: Rows = {}): Tweak
 function readWhen(vars: TweakVar[], ids: readonly string[], live: () => boolean) {
   for (const id of ids) { const v = vars.find(x => x.id === id); if (!v) throw new Error(`scene layers: no row ${id} to dim (renamed in its table?)`); v.idle = () => !live(); }
 }
-/** a switch the page reads when it opens: flipping it reloads with (off) or without (on) its URL word */
-function urlSwitch(get: () => boolean, word: string): TweakSwitch {
-  return { reloads: true, get, set: on => { const q = new URLSearchParams(location.search); if (on) q.delete(word); else q.set(word, '0'); location.search = '?' + q.toString().replace(/=(?=&|$)/g, ''); } };
-}
 
 export function sceneLayers(engine: Engine, game: Game): TweakLayer[] {
   const S = engine.settings, P = engine.passes, tune = game.tune as unknown as Record<string, number>, W = game.weather;
@@ -193,28 +189,27 @@ export function sceneLayers(engine: Engine, game: Game): TweakLayer[] {
   //  with the surface off still has the row that brings it back)
   const snowy = snowLevel(levelNameOf(game.level)), lying = !!game.snowField;
   const oneAir = () => oneAirActive(game);   // (is the snow one snow in one air on the frame last stepped: the switch on AND a wind sim to ride)
-  const grainsRun = () => !SNOW_LOOK.oneAir;   // (the grains stand down on the SWITCH, in force or not: snowFx.ts grainsOn)
   const relook = () => { if (game.snowField) engine.gbuffer.setSnowCfg(snowCfgRows(game.snowField, game.snowTracks ? TRACK_RES : 0)); };
   const SURF = 'src/render/snowField.ts';
   const glints = ['sparkle', 'sparkleShare', 'sparkleRough', 'sparkleLean'], prints = ['trackDeep', 'trackRim'];
-  if (snowy) layers.push({ id: 'surface', name: 'Snow surface', group: 'Ground', on: urlSwitch(() => SNOW_LOOK.on, 'snowlook'), apply: relook,
+  if (snowy) layers.push({ id: 'surface', name: 'Snow surface', group: 'Ground', apply: relook,
       vars: !lying ? [] : table('SNOW_SURF', SNOW_SURF, SURF, { skip: [...glints, ...prints], rows: { fresh: { max: 1.5, step: 0.01 }, packed: { max: 1.5, step: 0.01 }, old: { max: 1.5, step: 0.01 }, rough: { max: 1, step: 0.01 }, hollowBlue: { max: 2, step: 0.02 } } }),
       stat: () => { const f = game.snowField; return f ? `${f.w} × ${f.h}` : ''; } });
   if (lying) {
     { const vars = [...table('SNOW_SURF', SNOW_SURF, SURF, { only: glints, rows: { sparkle: { max: 5, step: 0.05 }, sparkleShare: { max: 0.5, step: 0.005 }, sparkleRough: { max: 1, step: 0.01 } } }),
-        ...(SNOW_LOOK.sparkle ? comp(/^SNOW_SPARKLE_/, { SNOW_SPARKLE_COS0: { min: 0.98, max: 1, step: 0.00005 }, SNOW_SPARKLE_COS1: { min: 0.98, max: 1, step: 0.00005 }, SNOW_SPARKLE_GAIN: { max: 20, step: 0.1 }, SNOW_SPARKLE_SHARE: { max: 1, step: 0.01 }, SNOW_SPARKLE_FAR: { max: 80, step: 1 }, SNOW_SPARKLE_ROUGH: { max: 1, step: 0.01 } }) : [])];
-      layers.push({ id: 'sparkle', name: 'Sparkle', group: 'Ground', vars, on: muting(vars, SNOW_LOOK.sparkle ? ['SNOW_SURF.sparkle', 'SNOW_SPARKLE_GAIN'] : ['SNOW_SURF.sparkle']), apply: relook, build: SNOW_LOOK.sparkle ? rebuildComp : undefined }); }
-    if (SNOW_LOOK.glow) { const vars = comp(/^SNOW_GLOW_/, { SNOW_GLOW_GAIN: { max: 1, step: 0.01 }, SNOW_GLOW_WRAP: { max: 1, step: 0.01 }, SNOW_GLOW_TINT: { max: 1.5, step: 0.01 }, SNOW_GLOW_SHADE: { max: 1.5, step: 0.01 }, SNOW_GLOW_WHITEN: { max: 1, step: 0.01 } });
+        ...comp(/^SNOW_SPARKLE_/, { SNOW_SPARKLE_COS0: { min: 0.98, max: 1, step: 0.00005 }, SNOW_SPARKLE_COS1: { min: 0.98, max: 1, step: 0.00005 }, SNOW_SPARKLE_GAIN: { max: 20, step: 0.1 }, SNOW_SPARKLE_SHARE: { max: 1, step: 0.01 }, SNOW_SPARKLE_FAR: { max: 80, step: 1 }, SNOW_SPARKLE_ROUGH: { max: 1, step: 0.01 } })];
+      layers.push({ id: 'sparkle', name: 'Sparkle', group: 'Ground', vars, on: muting(vars, ['SNOW_SURF.sparkle', 'SNOW_SPARKLE_GAIN']), apply: relook, build: rebuildComp }); }
+    { const vars = comp(/^SNOW_GLOW_/, { SNOW_GLOW_GAIN: { max: 1, step: 0.01 }, SNOW_GLOW_WRAP: { max: 1, step: 0.01 }, SNOW_GLOW_TINT: { max: 1.5, step: 0.01 }, SNOW_GLOW_SHADE: { max: 1.5, step: 0.01 }, SNOW_GLOW_WHITEN: { max: 1, step: 0.01 } });
       layers.push({ id: 'glow', name: 'Glow through snow', group: 'Ground', vars, on: muting(vars, ['SNOW_GLOW_GAIN']), build: rebuildComp }); }
-    if (SNOW_LOOK.tracks) { const vars = [...table('SNOW_SURF', SNOW_SURF, SURF, { only: prints, rows: { trackDeep: { max: 0.3, step: 0.002 }, trackRim: { max: 0.1, step: 0.001 } } }),
+    { const vars = [...table('SNOW_SURF', SNOW_SURF, SURF, { only: prints, rows: { trackDeep: { max: 0.3, step: 0.002 }, trackRim: { max: 0.1, step: 0.001 } } }),
         ...table('SNOWTRACKS', SNOWTRACKS, 'src/game/snowTracks.ts', { when: 'next', rows: { mess: { max: 1, step: 0.01 }, puff: { step: 1 }, puffMost: { step: 1 }, puffRecs: { step: 1, max: 12 }, puffWait: { step: 1 } } })];
       layers.push({ id: 'prints', name: 'Boot prints', group: 'Ground', vars, on: muting(vars, ['SNOW_SURF.trackDeep', 'SNOW_SURF.trackRim']), apply: relook,
         stat: () => { const T = game.snowTracks; return T ? `${T.prints} prints` : ''; } }); }
-    if (SNOW_LOOK.tracks) { const vars = table('SNOWMARKS', SNOWMARKS, 'src/game/snowMarks.ts', { when: 'next', rows: { mess: { max: 1, step: 0.01 }, itemMess: { max: 1, step: 0.01 }, rollDeep: { max: 1, step: 0.01 } } });
+    { const vars = table('SNOWMARKS', SNOWMARKS, 'src/game/snowMarks.ts', { when: 'next', rows: { mess: { max: 1, step: 0.01 }, itemMess: { max: 1, step: 0.01 }, rollDeep: { max: 1, step: 0.01 } } });
       layers.push({ id: 'marks', name: 'Things mark the snow', group: 'Ground', vars,   // (no switch: SNOW_LOOK.marks is ruled settled on; `?snowmarks=0` is its only other side while that word lasts)
         stat: () => { const T = game.snowTracks; return T ? `${T.marks} marks${T.forming.length ? ` · ${T.forming.length} forming` : ''}` : ''; } }); }
     { const vars = table('SNOWBLAST', SNOWBLAST, 'src/game/snowBlast.ts', { when: 'next', rows: { floor: { min: 0.6, max: 1, step: 0.01 }, rim: { min: 0.25 }, lobe: { max: 1 }, rag: { max: 0.5, step: 0.005 }, rays: { step: 1, max: 40 }, clods: { step: 1, max: 200 }, puff: { step: 1, max: 100 }, flakes: { step: 1, max: 600 }, dig: { max: 3, step: 0.05 }, digS: { max: 5, step: 0.1 }, throwShare: { max: 0.98, step: 0.01 } } });
-      readWhen(vars, ['SNOWBLAST.throwS', 'SNOWBLAST.throwShare', 'SNOWBLAST.out', 'SNOWBLAST.up'], grainsRun);
+      readWhen(vars, ['SNOWBLAST.throwS', 'SNOWBLAST.throwShare', 'SNOWBLAST.out', 'SNOWBLAST.up'], () => false);   // (the grains stand down: snowFx.ts grainsOn)
       readWhen(vars, ['SNOWBLAST.flakes', 'SNOWBLAST.flakeUp', 'SNOWBLAST.flakeLife'], oneAir);
       // (the layer stands on a page opened with ?snowblast=0 too. The button marks the snow three metres ahead of you as a frag there would — no blast, no sound, nothing the game reads)
       layers.push({ id: 'blast', name: 'Blast marks', group: 'Ground', vars,   // (no switch: SNOW_LOOK.blast is ruled settled on)
@@ -232,32 +227,31 @@ export function sceneLayers(engine: Engine, game: Game): TweakLayer[] {
       ];
       readWhen(vars, ['SNOWFX.airLow', 'SNOWFX.airHigh', 'SNOWFX.airLift', 'SNOWFX.skid'], oneAir);
       readWhen(vars, ['FLAKE_TOP_IN'], () => snowLookConfig.under);   // (the shaders this page compiled: nothing reads the row with ?snowunder=0)
-      readWhen(vars, ['SNOWFX.past'], () => SNOW_LOOK.past);   // (the snow past the level's rim: nothing reads the metres with ?snowpast=0)
       layers.push({ id: 'flakes', name: 'Falling flakes', group: 'Air', vars, on: muting(vars, ['SNOWFX.gain', 'SNOWFX.skyK']), build: rebuildPart, stat: () => { const s = snowStats(game); return s.active ? `${Math.round(s.pop)} in the air` : s.why; } }); }
     // (ONE SNOW IN ONE AIR: in force only on a page whose particle shaders were built to read the wind sim; the row says which)
-    if (AIR_SIM.on && (SNOW_LOOK.oneAir || SNOW_LOOK.grains)) layers.push({ id: 'oneair', name: 'Snow in one air', group: 'Air', vars: [],   // (no switch: SNOW_LOOK.oneAir is ruled settled on; the row stays to say whether it is in force on this page)
-      stat: () => oneAir() ? 'flakes and wisps ride the wind sim' : SNOW_LOOK.oneAir ? 'not in force' : 'flakes on the open wind' });
-    if (SNOW_LOOK.wisps) { const live = { speedK: {}, opacity: { max: 1, step: 0.01 }, gain: {} } as Rows;
+    if (AIR_SIM.on) layers.push({ id: 'oneair', name: 'Snow in one air', group: 'Air', vars: [],   // (no switch: the row says whether it is in force on this page)
+      stat: () => oneAir() ? 'flakes and wisps ride the wind sim' : 'not in force' });
+    { const live = { speedK: {}, opacity: { max: 1, step: 0.01 }, gain: {} } as Rows;
       const vars = [...table('SNOWWISPS', SNOWWISPS, FX, { when: 'next', rows: { speedK: { when: undefined, ...live.speedK }, opacity: { when: undefined, ...live.opacity }, gain: { when: undefined, ...live.gain }, lifeJit: { max: 1 }, sizeJit: { max: 1 },
         motes: { max: 1, step: 0.01 }, sparkle: { max: 1, step: 0.01 },
         liftLo: { when: undefined, max: 2, step: 0.01 }, liftHi: { when: undefined, max: 2, step: 0.01 }, dropK: { when: undefined, max: 1, step: 0.01 } } }), ...part(/^WISP_/)];
       readWhen(vars, ['SNOWWISPS.speedK', 'SNOWWISPS.gustLen', 'SNOWWISPS.gustPow'], () => !oneAir());
       readWhen(vars, ['SNOWWISPS.liftLo', 'SNOWWISPS.liftHi', 'SNOWWISPS.dropK'], oneAir);
       layers.push({ id: 'wisps', name: 'Blown wisps', group: 'Air', vars, on: muting(vars, ['SNOWWISPS.opacity']), build: rebuildPart, stat: () => { const s = wispStats(game); return s.active ? `aim ${Math.round(s.target)}` : s.why; } }); }
-    if (SNOW_LOOK.grains) { const vars = [...table('SNOWGRAINS', SNOWGRAINS, FX, { rows: { max: { when: 'next', max: 6000, step: 50 }, size: { when: 'next' }, sizeJit: { when: 'next', max: 1 }, opacity: { max: 2, step: 0.01 }, wispsKeep: { max: 1 }, radius: { max: 30, step: 0.5 }, tail: { max: 1, step: 0.01 }, dash: { max: 15, step: 0.1 } } }), ...part(/^GRAIN_/)];
-      layers.push({ id: 'grains', name: 'Blown grains', group: 'Air', vars, on: muting(vars, ['SNOWGRAINS.opacity']), build: rebuildPart, idle: () => SNOW_LOOK.oneAir, stat: () => { const s = grainStats(game); return s.active ? `${Math.round(s.pop)} · air ${s.u0.toFixed(2)} m/s` : s.why; } }); }
-    if (SNOW_LOOK.breath) { const vars = table('SNOWBREATH', SNOWBREATH, 'src/game/snowBreath.ts', { when: 'next', rows: { opacity: { max: 2, step: 0.01 }, pitch: { min: -1, max: 1, step: 0.01 }, color: { max: 1.5, step: 0.01 }, puffs: { step: 1, max: 8 }, count: { step: 1, max: 20 } } });
+    { const vars = [...table('SNOWGRAINS', SNOWGRAINS, FX, { rows: { max: { when: 'next', max: 6000, step: 50 }, size: { when: 'next' }, sizeJit: { when: 'next', max: 1 }, opacity: { max: 2, step: 0.01 }, wispsKeep: { max: 1 }, radius: { max: 30, step: 0.5 }, tail: { max: 1, step: 0.01 }, dash: { max: 15, step: 0.1 } } }), ...part(/^GRAIN_/)];
+      layers.push({ id: 'grains', name: 'Blown grains', group: 'Air', vars, on: muting(vars, ['SNOWGRAINS.opacity']), build: rebuildPart, idle: () => true, stat: () => { const s = grainStats(game); return s.active ? `${Math.round(s.pop)} · air ${s.u0.toFixed(2)} m/s` : s.why; } }); }
+    { const vars = table('SNOWBREATH', SNOWBREATH, 'src/game/snowBreath.ts', { when: 'next', rows: { opacity: { max: 2, step: 0.01 }, pitch: { min: -1, max: 1, step: 0.01 }, color: { max: 1.5, step: 0.01 }, puffs: { step: 1, max: 8 }, count: { step: 1, max: 20 } } });
       // (a blown man: with the hard breath rule on the steam reads the rule's own numbers, off the breath table's four — both are rows, the unread ones dimmed)
       vars.push(...table('HARDBREATH', HARDBREATH, 'src/game/character.ts', { only: BREATH_HARD, when: 'next', rows: { every: { label: 'blown every', max: 3, step: 0.01 }, puffs: { label: 'blown puffs', step: 1, max: 8 }, count: { label: 'blown count', step: 1, max: 20 },
         jet: { label: 'blown jet', max: 10, step: 0.05 }, size: { label: 'blown size', max: 5, step: 0.05 }, carry: { label: 'blown carry', max: 1, step: 0.01 }, up: { label: 'blown in', max: 10, step: 0.1 }, down: { label: 'wind back in', max: 60, step: 0.5 } } }));
-      readWhen(vars, BREATH_SOFT.map(k => `SNOWBREATH.${k}`), () => !HARDBREATH.on); readWhen(vars, BREATH_HARD.map(k => `HARDBREATH.${k}`), () => HARDBREATH.on);
+      readWhen(vars, BREATH_SOFT.map(k => `SNOWBREATH.${k}`), () => false);
       // (the breath as gas in the smoke solver: its own rows, and the puffs' rows that nothing reads while a man steams are dimmed — past `reach` he still breathes puffs, so with a reach set they stay lit)
-      if (SNOW_LOOK.steam) { vars.push(...table('BREATHSTEAM', BREATHSTEAM, 'src/game/snowBreath.ts', { when: 'next', rows: { radius: { label: 'steam radius', max: 0.15, step: 0.001 }, cells: { label: 'steam cells', max: 4, step: 0.1 }, density: { label: 'steam density', max: 30, step: 0.5 }, temp: { label: 'steam heat', max: 40, step: 0.5 },
+      vars.push(...table('BREATHSTEAM', BREATHSTEAM, 'src/game/snowBreath.ts', { when: 'next', rows: { radius: { label: 'steam radius', max: 0.15, step: 0.001 }, cells: { label: 'steam cells', max: 4, step: 0.1 }, density: { label: 'steam density', max: 30, step: 0.5 }, temp: { label: 'steam heat', max: 40, step: 0.5 },
         speed: { label: 'steam speed', max: 4, step: 0.05 }, push: { label: 'steam push', max: 90, step: 1 }, expand: { label: 'steam opens', max: 24, step: 0.5 }, attack: { label: 'steam attack', max: 0.5, step: 0.01 }, jitter: { label: 'steam jitter', max: 1, step: 0.01 }, carryK: { label: 'steam carry', max: 2, step: 0.05 },
         wake: { label: 'head wake', max: 0.5, step: 0.01 }, reach: { label: 'steam reach', max: 60, step: 1 } } }));
-        readWhen(vars, BREATH_PUFF.map(k => `SNOWBREATH.${k}`), () => !(steamOn(game) && BREATHSTEAM.reach <= 0)); readWhen(vars, ['HARDBREATH.puffs', 'HARDBREATH.count'], () => HARDBREATH.on && !(steamOn(game) && BREATHSTEAM.reach <= 0));
-        readWhen(vars, Object.keys(BREATHSTEAM).map(k => `BREATHSTEAM.${k}`), () => steamOn(game)); }
-      layers.push({ id: 'breath', name: 'Breath', group: 'Air', vars, on: muting(vars, SNOW_LOOK.steam ? ['SNOWBREATH.opacity', 'BREATHSTEAM.density'] : ['SNOWBREATH.opacity']), stat: () => { const s = breathStats(game); return s.active ? `${s.shown} of ${s.men} men steaming` : s.why; } }); }
+      readWhen(vars, BREATH_PUFF.map(k => `SNOWBREATH.${k}`), () => !(steamOn(game) && BREATHSTEAM.reach <= 0)); readWhen(vars, ['HARDBREATH.puffs', 'HARDBREATH.count'], () => !(steamOn(game) && BREATHSTEAM.reach <= 0));
+      readWhen(vars, Object.keys(BREATHSTEAM).map(k => `BREATHSTEAM.${k}`), () => steamOn(game));
+      layers.push({ id: 'breath', name: 'Breath', group: 'Air', vars, on: muting(vars, ['SNOWBREATH.opacity', 'BREATHSTEAM.density']), stat: () => { const s = breathStats(game); return s.active ? `${s.shown} of ${s.men} men steaming` : s.why; } }); }
   }
   if (AIR_SIM.on) layers.push({ id: 'air', name: 'Wind sim', group: 'Air', on: { mode: true, get: () => S.airSim, set: on => { S.airSim = on; } },
     vars: [...table('AIR', AIR, 'src/render/airField.ts', { rows: { iterations: { min: 1, max: 40, step: 1 }, sor: { min: 1, max: 1.95, step: 0.01 }, follow: { max: 1, step: 0.01 }, seed: { min: 1, max: 20, step: 1 } } }),

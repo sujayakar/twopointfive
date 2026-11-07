@@ -19,7 +19,7 @@ const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { mulberry32 } = await import(`${ROOT}/src/math/dice.ts`);
 const { AIM } = await import(`${ROOT}/src/game/aim.ts`);
 const { GUNWALL, GUNWALL_STATS, gunWallModel } = await import(`${ROOT}/src/game/gunwall.ts`);
-const BOOTED = GUNWALL.on;   // (as this file found it: on the shipped stand that is what the stand's one boot wrote, before any card here touches it)
+   // (as this file found it: on the shipped stand that is what the stand's one boot wrote, before any card here touches it)
 const { spawnUnit, despawnUnit } = await import(`${ROOT}/src/game/guards.ts`);
 const { order } = await import(`${ROOT}/src/game/squad.ts`);
 type Vec3 = [number, number, number];
@@ -50,22 +50,19 @@ function manAt(W: any, team: 'operative' | 'guard', weapon: string, z: number, o
 const snap = (W: any, c: any) => ({ how: carriageOf(c), through: gunThrough(W.game.col, c), muzzle: v3.copy(c.muzzle) as Vec3, short: NEAR - c.muzzle[2] });
 
 async function gunMen() {
-  console.log('\n=== gun-men: pressed to the wall, facing it, gun up — off: the gun is in the wall; on: the low ready, pulled in, out of it; back from the wall: up, the same pose ===');
+  console.log('\n=== gun-men: pressed to the wall, facing it, gun up — the low ready, pulled in, out of it; back from the wall: up ===');
   for (const [team, weapon, what] of [['operative', 'fn2000', 'teammate, FN2000'], ['guard', 'aks74u', 'defender, carbine'], ['guard', 'guard9mm', 'defender, pistol']] as const) {
-    const Wo = await stage(31, false), a = manAt(Wo, team, weapon, PRESS), A = snap(Wo, a.char), Wn = await stage(31, true), b = manAt(Wn, team, weapon, PRESS), B = snap(Wn, b.char), fails: string[] = [];
-    if (!A.through) fails.push(`off: nothing of the gun is in the wall (muzzle ${f3(A.short)} m short of the face) — the staging no longer reaches it`);
-    if (a.muzzleDown) fails.push('off: his gun is down');
+    const Wn = await stage(31, true), b = manAt(Wn, team, weapon, PRESS), B = snap(Wn, b.char), fails: string[] = [];
     if (B.through) fails.push(`on: the ${B.through.seg} is still in the wall`);
     if (!(B.short > 0.01)) fails.push(`on: the muzzle is ${f3(B.short)} m short of the face`);
     if (!b.muzzleDown) fails.push('on: he does not count his gun as down (muzzleDown)');
     if (b.char.anim.upper === 'aim' || b.char.anim.stance !== 'lowReady') fails.push(`on: he is posed ${b.char.anim.upper} / ${b.char.anim.stance}, not the low ready`);
     if (!(b.char.anim.gunWall > 0.3)) fails.push(`on: the low ready is not pulled in (gunWall ${f2(b.char.anim.gunWall)})`);
-    despawnUnit(Wo.game, a); despawnUnit(Wn.game, b);
-    const a2 = manAt(Wo, team, weapon, 2.0), b2 = manAt(Wn, team, weapon, 2.0), far = v3.len(v3.sub(a2.char.muzzle, b2.char.muzzle));
+    despawnUnit(Wn.game, b);
+    const b2 = manAt(Wn, team, weapon, 2.0);
     if (b2.muzzleDown || b2.char.anim.upper !== 'aim' || b2.char.anim.gunWall !== 0) fails.push('on, back from the wall: the gun is not up');
-    if (far > 1e-9) fails.push(`back from the wall the muzzle differs by ${far} m between the two`);
-    verdict(!fails.length, `${what}: off the ${A.through?.seg ?? 'gun'} is in the wall (${A.how}); on it is at the low ready, the muzzle ${f2(B.short)} m short of the face; 1.9 m back it is up, to the bit`,
-      fails.join('; ') || `he stands at z ${f2(b.char.pos[2])} · wall face ${f2(NEAR)} · off: muzzle z ${f3(A.muzzle[2])} · on: muzzle z ${f3(B.muzzle[2])}, ${B.how}, gunWall ${f2(b.char.anim.gunWall)}`);
+    verdict(!fails.length, `${what}: pressed to the wall it is at the low ready, the muzzle ${f2(B.short)} m short of the face; 1.9 m back it is up`,
+      fails.join('; ') || `he stands at z ${f2(b.char.pos[2])} · wall face ${f2(NEAR)} · muzzle z ${f3(B.muzzle[2])}, ${B.how}, gunWall ${f2(b.char.anim.gunWall)}`);
   }
 }
 
@@ -81,18 +78,16 @@ function samAt(W: any, z: number, gun: 'rifle' | 'pistol') {
   return { ...snap(W, pl.char), fired: r0 - firearm.roundsReady, up: gun === 'rifle' ? pl.rifleUp : pl.pistolUp, upper: pl.char.anim.upper, z: pl.char.pos[2] as number };
 }
 async function gunSam() {
-  console.log('\n=== gun-sam: Sam pressed to the wall, pistol then FN2000 — off: in the wall and it fires; on: the low ready, out of it, and a click fires nothing; back: it fires ===');
+  console.log('\n=== gun-sam: Sam pressed to the wall, pistol then FN2000 — the low ready, out of it, and a click fires nothing; back: it fires ===');
   for (const gun of ['pistol', 'rifle'] as const) {
-    const off = samAt(await stage(32, false), 3.45, gun), W = await stage(32, true), on = samAt(W, 3.45, gun), back = samAt(W, 2.0, gun), fails: string[] = [];
-    if (!off.up || !on.up) fails.push('the gun is not in his hands');
-    if (!off.through) fails.push(`off: nothing of the gun is in the wall (muzzle ${f3(off.short)} m short) — the staging no longer reaches it`);
-    if (off.fired !== 1) fails.push(`off: the click fired ${off.fired} rounds`);
+    const W = await stage(32, true), on = samAt(W, 3.45, gun), back = samAt(W, 2.0, gun), fails: string[] = [];
+    if (!on.up) fails.push('the gun is not in his hands');
     if (on.through) fails.push(`on: the ${on.through.seg} is still in the wall`);
     if (on.upper === 'aim') fails.push('on: he is still posed aiming');
     if (on.fired !== 0) fails.push(`on: the click fired ${on.fired} rounds with the gun down`);
     if (back.through || back.fired !== 1 || back.upper !== 'aim') fails.push(`on, back from the wall: ${back.upper}, fired ${back.fired}`);
-    verdict(!fails.length, `${gun}: off it is in the wall and fires into it; on it is at the low ready ${f2(on.short)} m short of the face and stays silent; back from the wall it is up and fires`,
-      fails.join('; ') || `he stands at z ${f2(on.z)} · wall face ${f2(NEAR)} · off: muzzle z ${f3(off.muzzle[2])} (${off.how}) · on: muzzle z ${f3(on.muzzle[2])} (${on.how ?? on.upper})`);
+    verdict(!fails.length, `${gun}: pressed to the wall it is at the low ready ${f2(on.short)} m short of the face and stays silent; back from the wall it is up and fires`,
+      fails.join('; ') || `he stands at z ${f2(on.z)} · wall face ${f2(NEAR)} · muzzle z ${f3(on.muzzle[2])} (${on.how ?? on.upper})`);
   }
 }
 
@@ -104,9 +99,9 @@ async function gunWalk() {
     let through = 0, worst = 0, downAt = -1, frames = 0;
     for (let i = 0; i < 300; i++) { W.step(DT); frames++; const h = gunThrough(g.col, gd.char); if (h) { through++; worst = Math.max(worst, h.depth); } if (downAt < 0 && gd.muzzleDown) downAt = NEAR - gd.char.pos[2]; }
     return { through, worst, downAt, frames, z: gd.char.pos[2] as number, down: gd.muzzleDown as boolean }; };
-  const off = await run(false), on = await run(true);
-  verdict(off.through > 30 && on.through === 0 && on.down && NEAR - on.z < 0.45, 'walked into the wall: off the gun ends in it; on it came down before the wall and never touched it',
-    `off: ${off.through} of ${off.frames} frames in the wall, ${f2(off.worst)} m deep · on: ${on.through} frames, down from ${f2(on.downAt)} m off the face · he ends ${f2(NEAR - on.z)} m off it`);
+  const on = await run(true);
+  verdict(on.through === 0 && on.down && NEAR - on.z < 0.45, 'walked into the wall: it came down before the wall and never touched it',
+    `${on.through} frames in the wall, down from ${f2(on.downAt)} m off the face · he ends ${f2(NEAR - on.z)} m off it`);
 }
 
 async function gunBeside() {
@@ -122,7 +117,7 @@ async function gunBeside() {
 
 async function gunBand() {
   console.log('\n=== gun-band: carried to the wall and back two millimetres at a time — down once, up once, and up further out than down ===');
-  const W = await stage(35, true), g = W.game, gd = manAt(W, 'operative', 'fn2000', 2.6);
+  const W = await stage(35, true), gd = manAt(W, 'operative', 'fn2000', 2.6);
   let downs = 0, ups = 0, downAt = 0, upAt = 0, was = false;
   const go = (z: number) => { gd.char.pos[2] = z; gd.script.goal = [X, 0, z]; for (let i = 0; i < 6; i++) W.step(DT); const low = gd.muzzleDown; if (low && !was) { downs++; downAt = NEAR - z; } if (!low && was) { ups++; upAt = NEAR - z; } was = low; };
   for (let z = 2.6; z <= PRESS + 1e-9; z += 0.002) go(z);   // (2 mm a step, six frames a step: the rule leads by his feet's own speed, and this is a crawl)
@@ -163,21 +158,10 @@ async function gunModel() {
   }
 }
 
-async function gunOff() {
-  console.log('\n=== gun-off: the rule off asks nothing and touches nothing; the stands ===');
-  const W = await stage(37, false), s0 = { ...GUNWALL_STATS }, gd = manAt(W, 'operative', 'fn2000', PRESS); samAt(W, 3.45, 'rifle');
-  const asked = GUNWALL_STATS.asked - s0.asked, low = GUNWALL_STATS.lowered - s0.lowered;
-  verdict(asked === 0 && low === 0 && gd.char.anim.gunWall === 0 && W.game.player.char.anim.gunWall === 0 && !gd.muzzleDown, 'off: no line asked, no gun lowered, no carriage pulled in — with a man and Sam both pressed to the wall', `asked ${asked} · lowered ${low} · gunWall ${gd.char.anim.gunWall} / ${W.game.player.char.anim.gunWall}`);
-  const frozen = !process.env.TPS_PROFILE || process.env.TPS_PROFILE === 'frozen', word = process.env.TPS_GUNWALL;
-  GUNWALL.on = frozen; await standUp();   // (stood up from the opposite of what the frozen stand should leave. The shipped stand's rows are written once, when headless.ts loads, and standUp() leaves them be: there the line reads what this file found and that a stand-up does not move it)
-  const want = frozen || word !== undefined ? word === '1' : true;
-  verdict(frozen || word !== undefined ? GUNWALL.on === want : BOOTED === want && GUNWALL.on === false, frozen ? 'standUp() on the frozen stand puts GUNWALL.on to what TPS_GUNWALL says (unset: off — every stored digest had the guns up)' : 'the shipped stand turns it on, as the page does: its boot wrote it, and standUp() writes nothing over what a card has set', `as found: ${BOOTED} · after standUp: ${GUNWALL.on} · TPS_GUNWALL ${word ?? 'unset'} · TPS_PROFILE ${process.env.TPS_PROFILE ?? 'unset'}`);
-}
-
 /** the whole card (probes.ts 'gunwall'): true = every check passed. The switches are put back as found. */
 export async function gunWall(): Promise<boolean> {
   const was = GUNWALL.on, lvl = AIM.player.level; allPass = true;
-  try { await gunMen(); await gunSam(); await gunWalk(); await gunBeside(); await gunBand(); await gunLock(); await gunHot(); await gunModel(); await gunOff(); }
+  try { await gunMen(); await gunSam(); await gunWalk(); await gunBeside(); await gunBand(); await gunLock(); await gunHot(); await gunModel(); }
   finally { GUNWALL.on = was; AIM.player.level = lvl; }
   console.log(`\n=== gunwall: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`); return allPass;
 }

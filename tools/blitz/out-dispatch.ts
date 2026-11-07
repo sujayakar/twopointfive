@@ -30,6 +30,7 @@ export const OUT: Record<string, (g: any, e: any) => void> = {
   ParticlesImpulse: (g, e) => { g.engine.particles?.impulse?.(e.pos, e.radius, e.strength, e.o); },
   ParticlesSetHeat: (g, e) => { g.engine.particles?.setHeat?.(e.srcs); },
   ReachKeepChanged: (g, e) => { g.engine.reach?.changed?.(e.rect ?? null, e.hold); },
+  SessionRecorderCut: (g, e) => { g.journal?.cut?.(e.why, e.lost); },
   SmokeSystemLikeClearAll: (g, e) => { g.smoke?.clearAll?.(); },
   SmokeSystemLikeEmit: (g, e) => { if (e.e.track) e.e.track = trackOf(g, e.e.track); g.smoke?.emit?.(e.e); },
   SmokeSystemLikeKeepHot: (g, e) => { g.smoke?.keepHot?.(e.heat); },

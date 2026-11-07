@@ -16,19 +16,13 @@ import { saveSandbox } from '../game/sandbox';
 import { gearText } from '../game/gear';
 import { menuTheme } from './theme';
 import { TABKEY, tabChoices, tabNow, setTabKey, tabSettle, tabKept, tabLoad } from './tabkey';
-import { BACKKEY } from '../game/backkey';
-import { TWOGEARS, CROUCHRUN } from '../game/player';
 import { WALLSNAP } from '../game/wallsnap';
 import { CMDRING } from '../game/cmdring';
-import { HANDRING } from '../game/handring';
-import { SLOTSETUP } from '../game/slotsetup';   // (read when the Controls list is drawn: the gun's setup took the selector's key and the light's)
-import { SAVETIMELINE } from '../game/savestate';   // (read when the screen is drawn)
 import { findMeRows } from './findme';
 import { shaderRows } from './shaderrows';
 import { cloudRows } from './cloudrows';
 import { TEXTSIZE, TEXT_EVENT, textStep, setTextStep } from './textsize';
 import { KEYMAP, cmdOnQ, keyText, keysOf, resetKeys, slotNow, camCap, capNow } from '../host/keymap';   // (the player's own keys: the Controls tab rebinds them)
-import { AUTOCAM } from '../host/autocam';
 import { keyCapEl, keyCapture, keyStop, keyWaiting, type KeyHost } from './keybinds';
 import { VOLUME_DEFAULTS } from '../audio/audio';   // (the mixer's levels on a fresh page: what Reset puts back)
 import type { MenuDeps } from './menu';
@@ -47,8 +41,7 @@ const TIERS: { v: 'auto' | QualityName; label: string; line: string }[] = [
   { v: 'high',    label: 'High',     line: 'This is the intended look, with ray-traced light and shadow, traced bounce light, volumetric beams and smoke, and reflections in polished floors and glass. It\'s the tier the game is tuned on.' },
 ];
 
-/** THE KEYS, grouped by what the hand is doing: [key caps, what it does, the small print]. The flat list other readers take is ui/menu.ts CONTROLS: a key
- *  that changes is changed in both. */
+/** THE KEYS, grouped by what the hand is doing: [key caps, what it does, the small print] */
 const WALL_WHAT = 'Back to the wall beside you', WALL_SMALL = 'slide along it and look around its end, then press Q or step away to let go';
 const E_WHAT = 'Holster or draw';
 /** the empty hands' own slot (game/handslot.ts; '0' is its row's cap in the build, shown as the key it is on: backtick): it heads the kit's rows, and E's row is gone */
@@ -60,9 +53,9 @@ const RING_SMALL = 'hold it a moment for a ring of everything you can do here, t
 const AUTO_WHAT = 'Tap twice for the auto camera';
 /** THE WHO ROW (the orders' who key, code 'KeyT'). While quick orders are the whole squad's (game/cmdring.ts `wholeSquad`: the key steps
  *  nobody) a row with no key is not listed, so there is no dashed cap to put a dead key on; one the player gave a key earlier stays his to see and move,
- *  and says where it still works. `?wholesquad=0` = the row as it was */
-const WHO_WHAT = 'Who takes the next order', WHO_ALL = "this key doesn't do anything now. every order goes to the whole squad", WHO_DEAD = "this key doesn't do anything now. hold Shift and tap B to send part of the squad";
-const whoRowGone = () => CMDRING.wholeSquad && !keysOf('KeyT').length;
+ *  and says where it still works. */
+const WHO_WHAT = 'Who takes the next order', WHO_DEAD = "this key doesn't do anything now. hold Shift and tap B to send part of the squad";
+const whoRowGone = () => !keysOf('KeyT').length;
 /** THE SQUAD'S KEYS AS THE PAGE HAS THEM (game/cmdring.ts `only`: the command key and the word's are the squad's only keys, and the wheel carries every
  *  order). The command key's row says both of its presses and the word's row says what the word does. The orders menu's row (code 'KeyX') has no key
  *  and no middle button there, so with no key it is not listed, and neither are the two rows that are keys of that menu alone (H and G: with a wheel
@@ -86,11 +79,11 @@ export function squadRows(rows: KeyRow[], only: boolean, goals: boolean, menuKey
 /** what the Controls list is built from that can change under it (a key given or taken, a rule ticked in the debugger): the list is built once */
 /** is the key tapped twice 'fall in' in the game that is up (off on a tutorial mission until a step lists it: game/rails.ts `twice`) */
 const twiceNow = () => CMDRING.twice && !deps?.game.rails?.locks('twice');
-const listNow = () => `${whoRowGone()} ${CMDRING.only} ${CMDRING.goals} ${twiceNow()} ${keysOf('KeyX').length > 0}`;
+const listNow = () => `${whoRowGone()} ${twiceNow()} ${keysOf('KeyX').length > 0}`;
 const PACE_WHAT = 'Walking pace', SPRINT_WHAT = 'Sprint';
 /** the sprint's row while Shift in a crouch is a fast crouch walk (game/player.ts CROUCHRUN): what the same key does crouched, and that it is heard
  *  (each footfall louder than a walk's: it is no sneak) */
-export const sprintSmall = (): string | undefined => CROUCHRUN.on ? "hold it while you're crouched to stay low and move faster, but it's louder than walking" : undefined;
+export const sprintSmall = (): string | undefined => "hold it while you're crouched to stay low and move faster, but it's louder than walking";
 export const KEYS: { group: string; rows: [string[], string, string?][] }[] = [
   { group: 'Move', rows: [
     [['W', 'A', 'S', 'D'], 'Move'],
@@ -345,8 +338,7 @@ function render(S: Screen) {
       'The game saves a checkpoint by itself when the mission moves on, when you first enter a room, when you hide a body, and after every minute and a half of quiet play. It never saves while anyone is onto you. Press Enter when you\'re down to load the newest one.');
     flip(body, 'Interaction hints', () => overlay.showLightDots, v => { overlay.showLightDots = v; keep(); }, `Show faint dots on what ${capNow('Space')} and right-click can act on, like lights, doors and bodies.`);
     if (WALLSNAP.on) flip(body, 'Walk into a wall to take it', () => WALLSNAP.press, v => { WALLSNAP.press = v; pressKept = v; pressUrl = false; keep(); }, wallWay() === 'key' ? keyText('Keep holding a move key into a wall to put your back to it. Q does the same either way.') : cmdOnQ() ? 'Keep holding a move key into a wall to put your back to it. When this is off, the wall hold needs a key from Controls.' : 'Keep holding a move key into a wall to put your back to it. When this is off, press Q instead.');   // (Q the squad's command key — host/keymap.ts qCmd: the wall hold never falls back to it)
-    if (!CMDRING.bareHint) flip(body, 'Order mark at the cursor', () => CMDRING.hint, v => { CMDRING.hint = v; hintKept = v; hintUrl = false; keep(); }, keyText(CMDRING.plainHint ? 'Show an outline on the floor for what B would order there.' : 'Show a small mark beside the cursor and an outline on the floor for what B would order there.'));
-    const tabOpts = tabChoices(BACKKEY.tab);   // (while Tab is the back key the first choice reads 'Nothing more' and every line says so: ui/tabkey.ts)
+    const tabOpts = tabChoices(true);   // (the first choice reads 'Nothing more' and every line says so: ui/tabkey.ts)
     seg(body, 'Tab key', tabOpts, () => tabNow(), v => { setTabKey(v); TABKEY.kept = v; TABKEY.picked = true; TABKEY.url = false; keep(); }, () => tabOpts.find(c => c.v === tabNow())?.line ?? '');
     const findReset = findMeRows({ sec, flip, seg, range }, body);   // (ui/findme.ts: finding your own man on the screen and how the camera answers the hand — twelve rows on trial, kept by host/findme.ts)
     cloudRows({ sec, flip, seg }, body);   // (ui/cloudrows.ts: a hosted build's two rows — sharing, and the settings link; nothing on a build with no backend)
@@ -366,7 +358,7 @@ function render(S: Screen) {
     S.rows.forEach((R, i) => R.el.classList.toggle('sel', i === S.sel));
     const R = S.rows[S.sel]; desc.innerHTML = '';
     if (R) { desc.appendChild(el('b', '', R.label)); desc.appendChild(document.createTextNode(R.desc())); }
-    else desc.appendChild(document.createTextNode(S.tab === 'controls' ? gearText(HANDRING.on ? `You don't need to hold anything down for long. Hold ${capNow('Space')} a moment for the ring of your actions, ${camCap()} to turn the view, and the rifle's launcher to see its arc.` : `You only need to hold down ${capNow('Space')} to pick an action, and the rifle's launcher to see its arc.`) : ''));
+    else desc.appendChild(document.createTextNode(S.tab === 'controls' ? gearText(`You don't need to hold anything down for long. Hold ${capNow('Space')} a moment for the ring of your actions, ${camCap()} to turn the view, and the rifle's launcher to see its arc.`) : ''));
   };
   S.paint();
 }
@@ -390,14 +382,14 @@ export function walkInNow(): boolean {
 }
 /** HOW A WALL IS TAKEN ON THIS BOARD: 'key' = the hold's row has one · 'walk' = it has none and walking into a wall takes it (host/keymap.ts qFree: the
  *  build's own board) · 'none' = neither: he took its key off and switched the walk-in off. The Controls list keeps the row whichever it is, its cap the
- *  dashed — a click puts on a key, and writes the row's words to suit; the start card's list does the same (ui/menu.ts controlRows) */
-export function wallWay(): 'key' | 'walk' | 'none' { return keysOf('KeyQ').length ? 'key' : WALLSNAP.on && walkInNow() ? 'walk' : 'none'; }
+ *  dashed — a click puts on a key, and writes the row's words to suit */
+function wallWay(): 'key' | 'walk' | 'none' { return keysOf('KeyQ').length ? 'key' : WALLSNAP.on && walkInNow() ? 'walk' : 'none'; }
 const wallLine = (s: string) => { const w = wallWay(); return w === 'key' ? s : s === WALL_WHAT ? (w === 'walk' ? 'Walk into a wall to put your back to it' : s) : s === WALL_SMALL ? (w === 'walk' ? 'slide along it and look around its end, then step away to let go' : 'no key yet. click the cap to give it one') : s; };
 /** THE GUN'S SETUP (game/slotsetup.ts), with its switch on: the two rows it took the keys of say where the thing is set now (while they have no key),
  *  and a gun's own row says what its key does pressed again */
 const SETUP_SMALL: Record<string, string> = { Z: 'the gun\'s key again, then 1', L: 'the gun\'s key again, then 3', '1': 'again: its setup', '2': 'again: its setup' };
 const SETUP_ROW: Record<string, string> = { Z: 'KeyZ', L: 'KeyL' };
-const setupSmall = (cap: string, small?: string): string | undefined => !SLOTSETUP.on || !SETUP_SMALL[cap] || (SETUP_ROW[cap] && keysOf(SETUP_ROW[cap]).length) ? small : SETUP_SMALL[cap];
+const setupSmall = (cap: string, small?: string): string | undefined => !SETUP_SMALL[cap] || (SETUP_ROW[cap] && keysOf(SETUP_ROW[cap]).length) ? small : SETUP_SMALL[cap];
 /** the camera's cap (the two rows that say Ctrl): Ctrl, or Space while the board leaves the Space bar spare (host/keymap.ts camKey). A plain cap — the
  *  camera's key is no row and cannot be moved — and never keyCapEl's 'Space', which is the action's row wherever that is */
 function camCapEl(host: KeyHost): HTMLElement { const k = el('kbd', '', camCap()); host.paints.push(() => { const t = camCap(); if (k.textContent !== t) k.textContent = t; }); return k; }
@@ -409,19 +401,17 @@ function controls(body: HTMLElement, host: KeyHost) {
   const tab = tabRow();
   for (const g of KEYS) {
     const box = el('div', 'op-kgroup'); box.appendChild(el('div', 'op-sec', g.group));
-    const back: typeof g.rows = BACKKEY.tab && g.group === 'Game' ? g.rows.flatMap(r => r[0][0] === 'Esc' ? [r, [['Tab'], 'Back out of a list'] as typeof r] : [r]) : g.rows;   // (game/backkey.ts: the key Esc gave up)
+    const back: typeof g.rows = g.group === 'Game' ? g.rows.flatMap(r => r[0][0] === 'Esc' ? [r, [['Tab'], 'Back out of a list'] as typeof r] : [r]) : g.rows;   // (game/backkey.ts: the key Esc gave up)
     const tabbed = tab && tab.group === g.group ? back.flatMap(r => r[0][0] === tab.after && r[1] !== 'Back out of a list' ? [r, tab.row] : [r]) : back;
-    const geared = !TWOGEARS.on ? tabbed : tabbed.flatMap(r => r[1] === PACE_WHAT ? [] : r[1] === 'Crouch' ? [[r[0], r[1], 'slower and quiet'] as typeof r] : [r]);   // (game/player.ts TWOGEARS: the wheel is nobody's pace, the crouch is the sneak)
+    const geared = tabbed.flatMap(r => r[1] === PACE_WHAT ? [] : r[1] === 'Crouch' ? [[r[0], r[1], 'slower and quiet'] as typeof r] : [r]);   // (game/player.ts TWOGEARS: the wheel is nobody's pace, the crouch is the sneak)
     const low = sprintSmall(), paced = !low ? geared : geared.map(r => r[1] === SPRINT_WHAT ? [r[0], r[1], low] as typeof r : r);   // (CROUCHRUN: Shift is not only the sprint)
     const rows = !slotNow() ? paced : g.group === 'Kit' ? [SLOT_ROW, ...paced] : paced.filter(r => r[1] !== E_WHAT || keysOf('KeyE').length > 0);   // (E's row put on a key by hand is still his to see and move)
-    for (const [caps, what, small0] of g.group === 'Squad' ? squadRows(rows, CMDRING.only, CMDRING.goals, keysOf('KeyX').length > 0, twiceNow()) : rows) {
-      const small1 = what === WHO_WHAT && CMDRING.wholeSquad ? (CMDRING.goals ? WHO_DEAD : WHO_ALL) : !HANDRING.on ? small0 : what === ACT_WHAT ? RING_SMALL : what === WHISTLE_WHAT ? WHISTLE_SMALL : small0;
-      if (caps[0] === 'F5' && !SAVETIMELINE.on) continue;   // (the save by hand is the save timeline's key: game/savestate.ts)
-      if (what === AUTO_WHAT && !AUTOCAM.on) continue;   // (the camera that runs itself: host/autocam.ts)
+    for (const [caps, what, small0] of g.group === 'Squad' ? squadRows(rows, true, true, keysOf('KeyX').length > 0, twiceNow()) : rows) {
+      const small1 = what === WHO_WHAT ? WHO_DEAD : what === ACT_WHAT ? RING_SMALL : what === WHISTLE_WHAT ? WHISTLE_SMALL : small0;
       if (what === WHO_WHAT && whoRowGone()) continue;   // (quick orders are the whole squad's: game/cmdring.ts wholeSquad)
       const r = el('div', 'op-krow'), c = el('div', 'op-caps');
       caps.forEach((k, i) => { if (i > 0 && caps.length < 4) c.appendChild(el('u', '', '+')); c.appendChild(k === 'Ctrl' ? camCapEl(host) : keyCapEl(k, gearText(wallLine(what)), host, seen)); });
-      const w = el('div', 'op-what', gearText(wallLine(what))), wt = w.firstChild, small = () => setupSmall(caps[0], small1) ?? '', sm = small1 || (SLOTSETUP.on && SETUP_SMALL[caps[0]]) ? el('small', '', gearText(wallLine(small()))) : null; if (sm) w.appendChild(sm);   // (asked at every paint: a row that gets its key back has its own words again)
+      const w = el('div', 'op-what', gearText(wallLine(what))), wt = w.firstChild, small = () => setupSmall(caps[0], small1) ?? '', sm = small1 || SETUP_SMALL[caps[0]] ? el('small', '', gearText(wallLine(small()))) : null; if (sm) w.appendChild(sm);   // (asked at every paint: a row that gets its key back has its own words again)
       host.paints.push(() => { const t = keyText(gearText(wallLine(what))); if (wt && wt.textContent !== t) wt.textContent = t; if (sm) { const u = keyText(gearText(wallLine(small()))); if (sm.textContent !== u) sm.textContent = u; } });
       r.appendChild(c); r.appendChild(w); box.appendChild(r);
     }
@@ -461,7 +451,7 @@ if (typeof window !== 'undefined' && typeof window.addEventListener === 'functio
       case 'Enter': case 'NumpadEnter': case 'Space': if (onBtn) { e.stopImmediatePropagation(); return; } if (!e.repeat) S.rows[S.sel]?.press(); eat(); return;   // (on Back / Reset / a tab the key is that button's)
       case 'Tab': if (S.onTab) { const back = S.onTab; if (!e.repeat) { closeOptions(); back(); } eat(); return; }   // (the screen Tab itself opened — ui/tabkey.ts 'keys' — goes away on Tab)
         e.stopImmediatePropagation(); return;   // (the browser's own walk over Back and Reset; never the game's key)
-      default: if (/^F\d{1,2}$/.test(e.code)) return;   // (the recorders' keys — F7 replay, F8 sweep, F9 — work with the screen up, as they do over a pause card)
+      default: if (/^F\d{1,2}$/.test(e.code)) return;   // (the recorders' keys — F7 replay, F8 sweep, F9, F10 — work with the screen up, as they do over a pause card)
         e.stopImmediatePropagation();   // (nothing else under the screen hears a key while it is up; the rest keep their browser defaults)
     }
   }, { capture: true });

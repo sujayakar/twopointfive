@@ -6,7 +6,7 @@
 //   fight      a room fight's teammate's row names the man his gun is on (the room fight's own record of him, read only)
 //   tape       a run taped from its first step is walked again by a fresh game (tools/qa/rerun.ts) to the same places and the same digest; refusals are in words
 //   load       a checkpoint loaded between two steps ends the tape as a load and is marked one in the trace whatever its clock says; a restart is a restart; a load
-//              made inside a step leaves the tape alive
+//              made inside a step leaves the tape alive; an F10 recording starting is neither
 //   stand      a tape made on the page's rules is walked on them by a process that stands frozen (the tape names its stand and carries every knob table and the kit — the stealth card its run wore with it)
 //   crash      the page's own save on an error (ui/replaykey.ts) makes one file a minute and three a page load, in a browser that keeps no shelf (where the file is sent, never a download);
 //              the error itself is a line in the ring at its moment of PLAY, in every file made while the ring holds it
@@ -243,13 +243,13 @@ console.log('\n=== replay buffer ===');
 
 // ---- load: a checkpoint loaded BETWEEN two steps is never read as a restart, whatever its clock says — one of an earlier visit with a LATER clock, one loaded
 // with no step since it was saved, one loaded a few steps after; a restart is still a restart; a load made INSIDE a step (the bare Enter once down) is the step's
-// own input: the tape lives, the trace marks it once and loses nothing of the next step
+// own input: the tape lives, the trace marks it once and loses nothing of the next step; an F10 recording starting is neither a restart nor a load
 { const { saveState } = await import(`${ROOT}/src/game/savestate.ts`);
   const stand = async (seed: number, steps: number, god = true, still = false) => { Math.random = mulberry32(seed); const W: any = await standUp({ seed: 11 }); W.game.godMode = god; const buf = new ReplayBuffer(); buf.tape.born(W.game);   // (god mode: the scripted hands get Sam shot inside ten seconds, and a man who is down saves nothing)
     W.game.replayTap = (dt: number, cmd?: unknown) => { if (cmd) buf.top(W.game, dt, cmd); else buf.tick(W.game, dt, W.cam); };
     let f = 0; const go = (n: number, pre?: () => void) => { for (let i = 0; i < n; i++, f++) { if (still) { W.input.keys.clear(); } else hands(W, f); pre?.(); W.step(1 / 60); } }; go(steps); return { W, buf, go }; };
   const read = (W: any, buf: any) => { const file = JSON.parse(JSON.stringify(buf.file(W.game, 'probe', { url: '', fp: levelFingerprint(W.game) }))), text = JSON.stringify(file), n = (re: RegExp) => (text.match(re) ?? []).length;
-    return { file, dead: String(buf.tape.dead || ''), loads: n(/a checkpoint loaded/g), restarts: n(/restart \(a fresh run/g) }; };
+    return { file, dead: String(buf.tape.dead || ''), loads: n(/a checkpoint loaded/g), restarts: n(/restart \(a fresh run/g), recs: n(/an F10 recording started/g) }; };
   const earlier = await stand(0xa11, 600), old = saveState(earlier.W.game, { label: 'an earlier visit', kind: 'manual', force: true }); earlier.W.game.replayTap = null;
   { const { W, buf, go } = await stand(0xa12, 200), why = W.game.saves.load(W.game, JSON.parse(JSON.stringify(old))); go(120); const r = read(W, buf);
     check(why === null && W.game.time > 9 && /checkpoint/.test(r.dead) && r.loads === 1 && !r.restarts, `load: a checkpoint of an earlier visit, its clock LATER than this page's, ends the tape as a load and is marked one in the trace (tape: ${r.dead || 'alive'}${why ? `; load refused: ${why}` : ''})`);
@@ -295,7 +295,25 @@ console.log('\n=== replay buffer ===');
       check(!R.refuse && !!R.report && R.report.compared > 50 && !R.report.drift && same, `load: its re-run is the first run again, to the digest at step ${N}${R.refuse ? ` — REFUSED: ${R.refuse}` : ` (${R.report?.compared} trace samples, worst ${R.report?.worst?.metres?.toFixed(3)} m, drift ${R.report?.drift ? 'YES' : 'none'}, digest ${same ? 'equal' : 'DIFFERS'})`}`);
       g.replayTap = null;
     } finally { SS.SAVETIMELINE.on = was; } }
-}
+  { const { W, buf, go } = await stand(0xa17, 120, true, true), J = W.game.journal, random = Math.random, until = () => { let n = 0; while (!J.recording && n < 300) { go(1); n++; } return J.recording; };
+    try {
+      J.request({ seed: 5 }); const on = until(); go(30); const a = read(W, buf);
+      check(on && /F10/.test(a.dead) && a.recs === 1 && !a.restarts && !a.loads, `load: an F10 recording starting ends the tape in those words and is marked as that in the trace, not as a restart (tape: ${a.dead || 'alive'}${on ? '' : `; it never started: ${J.why}`})`);
+      J.stop('probe', true); J.request({ seed: 6 }); const again = until(); go(30); const b = read(W, buf);
+      check(again && b.recs === 2 && !b.restarts && !b.loads, `load: one stopped and started again with no step between is seen too (${b.recs} marks)`);
+      // a recorder that ends its file at a change made between two frames and asks for the next (journal.ts): the recording is running on both sides of the
+      // gap, and the restart / the load in it is marked too, ahead of the recording's own mark — the run the file ends in begins at that restart
+      { J.stop('probe', true); W.game.restartEncounter(); J.request({ seed: 7 }); const on2 = until(); go(30); const c = read(W, buf);
+        const marks = c.file.lines.filter((l: any) => l.k === 'mark').map((l: any) => String(l.text)), iR = marks.findIndex((t: string) => /^restart \(/.test(t)), at = F.lastRun(c.file);
+        check(on2 && c.recs === 3 && c.restarts === 1 && !c.loads && iR >= 0 && /F10/.test(marks[iR + 1] ?? '') && at > 1 && at < c.file.seconds,
+          `load: a restart between a recording's end and the next one's start is marked a restart, ahead of the recording's mark, and is where the file's last run begins (${c.restarts} restart, ${c.recs} recordings; last run from ${at.toFixed(2)} s of ${c.file.seconds.toFixed(2)})`);
+        const s = saveState(W.game, { label: 'under a recording', kind: 'manual', force: true }); go(10); J.stop('probe', true); const why = W.game.saves.load(W.game, s); J.request({ seed: 8 }); const on3 = until(); go(30); const d = read(W, buf);
+        const m2 = d.file.lines.filter((l: any) => l.k === 'mark').map((l: any) => String(l.text)), iL = m2.findIndex((t: string) => /a checkpoint loaded/.test(t));
+        check(why === null && on3 && d.recs === 4 && d.loads === 1 && d.restarts === 1 && iL >= 0 && /F10/.test(m2[iL + 1] ?? ''),
+          `load: a checkpoint loaded in such a gap is marked a load, ahead of the recording's mark (${d.loads} load, ${d.recs} recordings${why ? `; load refused: ${why}` : ''})`); }
+      const b2 = new ReplayBuffer(); b2.tape.born(W.game); W.game.replayTap = (dt: number, cmd?: unknown) => { if (cmd) b2.top(W.game, dt, cmd); else b2.tick(W.game, dt, W.cam); }; go(2);
+      check(/F10/.test(String(b2.tape.dead || '')), `load: a tape handed a game already being recorded ends at its first step (tape: ${b2.tape.dead || 'alive'})`);
+    } finally { try { J.stop('probe', true); } catch { /* */ } Math.random = random; W.game.replayTap = null; } } }
 
 // ---- stand: a tape made on the page's rules (the child below stands as the page does) is walked on the page's rules by this process, whatever it stands as itself —
 // a thread's `replay-at.ts --rerun` stands frozen; what a browser keeps per machine rides in the tape

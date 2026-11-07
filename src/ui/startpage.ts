@@ -16,15 +16,13 @@
 // LOADOUT (team size, squad kit, the members, the picked member's kit) is the page's second step, TEAM & KIT, on the same frame.
 // THE KEYS are the two screens' own, with the highlight in one of two places: ON THE ROWS (the page opens there) W S choose, A D / H / J / K set, Enter or Space
 // steps INTO THE LOADOUT, where W S A D are its rows, Enter deploys (on a row with a press of its own: that press) and Esc steps back to the rows. So from a
-// row, Enter Enter is in the game with what the page shows; Esc on the rows is the card behind (the controls and the sandbox row). A click anywhere moves the
+// row, Enter Enter is in the game with what the page shows; Esc on the rows is the title behind. A click anywhere moves the
 // keys to where it landed. No held keys, no digits.
-// A ROW OF THE SHORT LIST KEEPS ITS SETTINGS: highlighted, it puts its own hour on the Hour row (the barracks by day) until an hour is picked by hand, and
+// A ROW OF THE SHORT LIST KEEPS ITS SETTINGS: highlighted, it puts its own hour on the Hour row (where a row sets one: none does today) until an hour is picked by hand, and
 // deployed with the short list's settings still on it the page it loads is that pick's own URL (scene/picks.ts pickHref) — so the pause card's 'Next' and
 // the 'played' mark work as they did off the short list. Anything else is the mission list's own link for the row. Coming onto a short-list row puts ITS
 // hour on the Hour row; leaving it puts the player's own back (an hour picked by hand on a row is the player's from then on).
-// THE SWITCH: START_PAGE.on — on for a real page, `?cards` = off: the start card with its short list, the Missions button and the loadout as a screen of its
-// own, as the build was. Off wherever there is no window to listen on (the harness's fake DOM): every older probe measures the cards as they were, and
-// the page is looked at on the real build by tools/qa/startpage-look.cjs (its rows as data: picks-probes.ts picks-list). A page whose URL names a mission never opens it (that page is booting the mission).
+// The page is looked at on the real build by tools/qa/startpage-look.cjs (its rows as data: picks-probes.ts picks-list). A page whose URL names a mission never opens it (that page is booting the mission).
 // Plain DOM inside the mission list's own layer (#missions, which gets the class `one`), styles injected here once. Nothing at module level uses another
 // module's exports.
 import { PICKS, PICKS_UI, pickHref, pickEntry, pickSquad, pickOfQuery, namesMission, type Pick } from '../scene/picks';
@@ -35,20 +33,15 @@ import { difficultyNow, leversMixed, leversBase, leversHref } from '../game/diff
 import { quietFogAside } from '../game/quietfog';
 import { quietGear } from './kitNoise';
 import type { HourId } from '../game/hours';
-import { WEATHER_PRESETS, snowLevel } from '../game/weatherKinds';
 import { squadOfQuery, sizeWords, kitAsIssued, type SquadSize } from '../game/loadout';
 import { menuTheme } from './theme';
-import { mountKitFigure, type KitFigure } from './kitFigure';
-import { KIT_VIEW, mountKitView, type KitViewFrame } from './kitView';
+import { mountKitView, type KitViewFrame } from './kitView';
 import { KIT_CLIP } from './kitCard';
-import { LOOK, placeOfQuery } from '../scene/look';
 import { mountKitBrief, type KitBrief } from './kitBrief';
 import { mountKitGuide, type KitGuide } from './kitGuide';
 import { KIT_PLANS } from './kitPlan';
 import { kitPacks } from '../game/kit';
 
-export const START_PAGE = { on: typeof window !== 'undefined' && typeof window.addEventListener === 'function' };
-try { if (new URLSearchParams(location.search).has('cards')) START_PAGE.on = false; } catch { /* no page (the harness) */ }
 
 const CSS = `
 /* THE CALM PASS (the maintainer, 10-11: 'this is still really busy'). Two steps on one frame that each fit the window: MISSION (the rows · the plan · the
@@ -193,11 +186,10 @@ const CSS = `
 #missions.one #loadout .lo-ic.n svg { width: 1em; }
 #missions.one #loadout .lo-ic b { font: 600 0.706em/1 var(--m-mono); color: var(--m-text); }
 #missions.one #loadout .lo-slot.pick .lo-ics { color: var(--m-text); }   /* (a man's pouches are on his kit card, when he is the one picked) */
-/* in the kit (pane-loadout) the briefing folds to the mission's name and what is set, and the picked man stands where the list was */
+/* in the kit (pane-loadout) the briefing folds to the mission's name and what is set, and the team's picture stands where the list was */
 #missions.one .onefig { display: none; }
 #missions.one.pane-loadout .mlist { display: none; }
 #missions.one.pane-loadout .onefig { display: block; grid-column: 1; grid-row: 1; min-height: 0; overflow: hidden; border-right: 1px solid rgba(var(--m-edge),0.12); }
-#missions.one .onefig canvas { display: block; width: 100%; height: 100%; cursor: ew-resize; touch-action: none; }
 #missions.one.pane-loadout .msheet { grid-template-rows: auto 1fr; padding-top: 20px; }
 #missions.one.pane-loadout .mbrief { grid-column: 1 / -1; max-width: none; flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; margin-bottom: 16px; }
 #missions.one.pane-loadout .mfacts, #missions.one.pane-loadout .mmap, #missions.one.pane-loadout .mblurb, #missions.one.pane-loadout .mrail, #missions.one.pane-loadout .mtop .tag { display: none; }
@@ -381,8 +373,8 @@ export interface StartPage { readonly missions: MissionsScreen; readonly loadout
 let page: StartPage | null = null;
 /** the one page, while it is up */
 export function startPage(): StartPage | null { return page && currentMissions() === page.missions ? page : null; }
-/** the page is this build's way in on this URL: the switch is on and the URL names nothing to play */
-export function startPageWanted(search: string = typeof location !== 'undefined' ? location.search ?? '' : ''): boolean { return START_PAGE.on && !namesMission(search); }
+/** the page is this build's way in on this URL: the URL names nothing to play */
+export function startPageWanted(search: string = typeof location !== 'undefined' ? location.search ?? '' : ''): boolean { return !namesMission(search); }
 
 /** the rows in the page's order: the list's groups in their order, each mission once, and INSIDE a group the short list's missions first, in play order,
  *  then the rest in the list's own (`first` 0: no row stands outside a group). ?nogroups (GROUPS_UI.on false): the short list's missions on top, in play
@@ -398,7 +390,7 @@ export function startPageList(all: Mission[] = listedMissions(), picks: Pick[] =
 /** the short list's row for a mission (its first, where two rows start the same mission) */
 export function pickOfMission(id: string, picks: Pick[] = PICKS): Pick | null { return PICKS_UI.on ? picks.find(p => p.mission === id) ?? null : null; }
 
-export interface StartPageOpts { /** the row to open on */ select?: string; /** the words on the button back to the card behind (absent: the start card's — its controls and sandbox row) */ backLabel?: string; /** where the keys start */ pane?: Pane;
+export interface StartPageOpts { /** the row to open on */ select?: string; /** the words on the button back to the card behind (absent: the title's) */ backLabel?: string; /** where the keys start */ pane?: Pane;
   /** THE PAGE IN ITS CO-OP DRESS (ui/coop.ts): only the missions `can` passes, `title` on its head, no kit step (two players play the kit as issued), and the block — worded `words` — hands the mission's address to `deploy` instead of loading it */
   coop?: { title: string; words: string; can(m: Mission): boolean; deploy(search: string, m: Mission): void }; /** the team size the loadout opens on for that row */ squad?: SquadSize; root?: HTMLElement }
 /** THE PAGE, up (again: the one already up is closed first). Null where the layer is not on the page. */
@@ -415,17 +407,15 @@ export function openStartPage(opts: StartPageOpts = {}): StartPage | null {
   let playerHour: HourId | null = null;   // (the hour the page stood at before a short-list row put its own on — null: the hour on the row IS the player's)
   const host = el('div', 'onehost'), tip = el('div', 'mtip');
   // THE COLUMN WHERE THE MISSION LIST WAS, on the Team & kit step: the team at the mission's own door, the real renderer's picture (ui/kitView.ts) — and nothing
-  // else. The standing man (ui/kitFigure.ts) is not on the page any more (the maintainer, 10-20: "we show the original gear screen before the new one fades
-  // in. let's just remove the old one with the figure?" — he stood in while the picture booted, and wherever a level stages none): the column waits EMPTY
-  // for the picture and stays empty where there is none. He is mounted, and drawn, only under `?oldfigure` (KIT_VIEW.on off: no picture, the page as it was).
-  const figHost = el('div', 'onefig'); let fig: KitFigure | null = null, kview: KitViewFrame | null = null;
+  // else (the maintainer, 10-20: "we show the original gear screen before the new one fades in. let's just remove the old one with the figure?"): the column
+  // waits EMPTY for the picture and stays empty where there is none.
+  const figHost = el('div', 'onefig'); let kview: KitViewFrame | null = null;
   // THE KIT STEP'S BRIEF AND ITS WALKTHROUGH (ui/kitBrief.ts `?kitbrief=0`, ui/kitGuide.ts `?kitguide=0`): the job, the map and what the place asks stay in
   // sight over the kit, and a first visit is walked through the step row by row. Both are this page's alone; each is null with its switch off.
   let kbrief: KitBrief | null = null, kguide: KitGuide | null = null;
   const guideOn = () => (pane === 'loadout' && L?.open ? L : null);
-  const paintFigure = (s: LoadoutScreen) => { if (shut || !kview) return; if (pane !== 'loadout' || s !== L) { kview.show(null); fig?.show(null); return; }
-    if (kview.show({ search: s.search(), kind: s.entry.kind, level: s.entry.level, way: ready ? M.way : 0, squad: s.squad, member: s.member, row: s.card?.at() ?? -1 }) || !fig) { fig?.show(null); return; }   // (where the mission's level stages it: the team at its way-in door, the real renderer's picture — ui/kitView.ts; `?oldfigure` = the standing man everywhere)
-    const k = s.entry.kind; fig.show({ member: s.member, squad: s.squad, suit: LOOK.on && LOOK.suit && (k === 'quiet' || k === 'solo'), look: LOOK.on && placeOfQuery(new URLSearchParams(s.search().replace(/^[^?]*\?/, ''))), card: s.worn(), hour: ready ? M.startHour : undefined, cloud: !ready ? 0 : snowLevel(s.entry.level?.replace(/\.json$/, '')) ? WEATHER_PRESETS.snow.cloud : M.startWeather ? WEATHER_PRESETS[M.startWeather].cloud : 0 }); };   // (he stands in the light of the hour the mission is set for, under the cloud of its weather: a snow level's own, whatever the hidden pick remembers)
+  const paintFigure = (s: LoadoutScreen) => { if (shut || !kview) return; if (pane !== 'loadout' || s !== L) { kview.show(null); return; }
+    kview.show({ search: s.search(), kind: s.entry.kind, level: s.entry.level, way: ready ? M.way : 0, squad: s.squad, member: s.member, row: s.card?.at() ?? -1 }); };   // (where the mission's level stages it: the team at its way-in door, the real renderer's picture — ui/kitView.ts)
 
   /** the short list's settings are what the page shows for `m`: its pick, else null */
   const asPick = (m: Mission): Pick | null => { const p = pickOfMission(m.id); if (!p) return null; const d = quietFogAside(() => leversMixed() ? leversBase() : difficultyNow());   // (levers moved to a mix of their own: the level they stand over)
@@ -528,7 +518,7 @@ export function openStartPage(opts: StartPageOpts = {}): StartPage | null {
   M = openMissions({ root: opts.root, list, keep: true, planPx: GROUPS_UI.on ? 640 : 1320, select: opts.select, first: PICKS_UI.on ? PICKS[0]?.mission : undefined, fold: GROUPS_UI.on, tiles: GROUPS_UI.on, heads: GROUPS_UI.on ? undefined : first > 0 && first < list.length ? { [first]: 'Every other mission' } : {},   // (the groups, folded — ui/missions.ts groupHeads / `fold`; a visit that names no row opens on the short list's first, wherever its group stands; ?nogroups = the short list on top and the one heading it had)
     onPick: onward,
     onPaint: () => { if (ready) onPaint(); },
-    onClose: () => { shut = true; if (L?.open) L.close(); L = null; fig?.close(); fig = null; kview?.close(); kview = null; kguide?.close(); kguide = null; kbrief?.close(); kbrief = null; figHost.remove?.(); root.classList.remove('one', 'tiles', 'pane-list', 'pane-loadout', 'quiet'); MISSIONS.keysAway = null; if (page === P) page = null;
+    onClose: () => { shut = true; if (L?.open) L.close(); L = null; kview?.close(); kview = null; kguide?.close(); kguide = null; kbrief?.close(); kbrief = null; figHost.remove?.(); root.classList.remove('one', 'tiles', 'pane-list', 'pane-loadout', 'quiet'); MISSIONS.keysAway = null; if (page === P) page = null;
       root.removeEventListener?.('click', onClick, true); for (const v of vals) if (v.lit) clearTimeout(v.lit);
       if (playerHour !== null) try { M.hour(playerHour); } catch { /* the list is gone */ }   // (the list remembers the PLAYER's hour, not one a short-list row put on)
       setTimeout(() => { const m = document.getElementById?.('menu'), b = m?.classList.contains('on') && !m.hasAttribute('inert') ? m.querySelector?.('.actions button.primary') as HTMLElement | null : null; if (b && !currentMissions()) b.focus?.(); }, 0); } });   // (the card behind has the keys again: Enter is its 'Play ›')
@@ -542,7 +532,7 @@ export function openStartPage(opts: StartPageOpts = {}): StartPage | null {
   // the rail down the right (Setup, the team, the readout), the loadout across the foot. The list's setting rows are parked in a store nobody sees.
   if (sheet) {
     sheetEl = sheet;
-    if (sheet.parentElement) { sheet.parentElement.insertBefore(figHost, sheet); fig = KIT_VIEW.on ? null : mountKitFigure(figHost); kview = mountKitView(root, sheet.parentElement, figHost, () => { if (L) paintFigure(L); }); }
+    if (sheet.parentElement) { sheet.parentElement.insertBefore(figHost, sheet); kview = mountKitView(root, sheet.parentElement, figHost, () => { if (L) paintFigure(L); }); }
     const brief = el('div', 'mbrief'), map = el('div', 'mmap'), rail = el('div', 'mrail'), store = el('div', 'mstore');
     const top = q('.mtop'), facts = q('.mfacts'), place = q('.mplace');
     if (top) brief.append(top, csum); if (facts) brief.appendChild(facts);
@@ -602,5 +592,5 @@ export function startPageFromQuery(search: string | URLSearchParams): StartPage 
   const q = typeof search === 'string' ? new URLSearchParams(search) : search, id = q.get('loadout');
   return id && missionList().some(m => m.id === id) ? openStartPage({ select: id, pane: 'loadout', squad: squadOfQuery(q, false) ?? undefined }) : null;
 }
-/** THE LIST, whichever this build's is: the one page, else the mission list as a screen of its own (the pause card's Missions button, 'to scenarios') */
-export function openList(opts: StartPageOpts = {}) { if (START_PAGE.on) openStartPage(opts); else openMissions(); }
+/** THE LIST: the one page (the title's Play, the pause card's Missions button, 'to scenarios') */
+export function openList(opts: StartPageOpts = {}) { openStartPage(opts); }

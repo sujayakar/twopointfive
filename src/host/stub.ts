@@ -33,7 +33,7 @@ export function fake(name = 'gpu'): any {
 }
 
 /** the stand-in as headless.ts always built it, typed: a fresh device / layout fake, an empty world + light set on it, default settings, effectiveScale 1, skin null.
- *  `settings` may be handed in (a tape's env applied first — headless.ts standUp({env})) */
+ *  `settings` may be handed in (a replayed recording's env applied first — tools/qa/replay.ts / headless.ts standUp({env})) */
 export function stubHost(opts: { settings?: RenderSettings } = {}): HostApi & { device: GPUDevice; skin: HostApi['skin'] } {
   const device = fake('device') as GPUDevice;
   return { device, sceneLayout: fake('sceneLayout') as GPUBindGroupLayout, skin: null, lights: new LightSet(device), world: new BoxWorld(device), settings: opts.settings ?? defaultSettings(), effectiveScale: 1 };

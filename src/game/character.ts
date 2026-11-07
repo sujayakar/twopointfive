@@ -1113,7 +1113,7 @@ function blowsNear(B: { t: number; end: number; blows: readonly number[] }): num
   const near: number[] = []; if (prev > -Infinity) near.push(prev); if (next < Infinity) near.push(next); return near;
 }
 /** THE GAME'S OWN KEY TABLES AGAINST WHAT A LAYER OF THE MODULE IS HANDED: every knife blow's keys and every table of the two swings of a throw, read as an
- *  animator is made (the first character of a game, a menu's figure), so a table that grew past its layer is found as the game loads and not at the first
+ *  animator is made (the first character of a game, the viewer's), so a table that grew past its layer is found as the game loads and not at the first
  *  blow or throw of a mission. */
 export function layerTablesFit(): void {
   const blows: Record<StrikeKind | 'slash' | 'back', { keys: readonly unknown[] }> = { cross: KNIFE_BLOW.cross, jab: KNIFE_BLOW.jab, slash: KNIFE_SLASH, back: KNIFE_BACK };
@@ -1431,7 +1431,7 @@ export class CharacterAnimator {
   aimYawOffset = 0;          // chest yaw relative to body (rad)
   aimPitch = 0;              // rad, positive = up
   lookYawExtra = 0;          // additional head/neck yaw (looking around)
-  lookPitchExtra = 0;        // additional head/neck pitch, + = chin down (the kit figure's alone — ui/kitFigure.ts: nothing in the game sets it, and 0 adds no twist)
+  lookPitchExtra = 0;        // additional head/neck pitch, + = chin down (nothing sets it, and 0 adds no twist: the field goes when the wire drops it)
   /** TURN (Character.turnWeigh): how far his wish is ahead of where his gun has got to, eased — the neck carries it, so the head is on a new point before the muzzle (rad; 0 with the weight off) */
   turnLead = 0;
   /** Ready posture layered under the aim layer (aim / firing still win): 'highReady' pistol up under the eye line, elbows in, leaning into it — pieing a corner,

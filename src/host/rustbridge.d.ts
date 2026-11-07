@@ -39,10 +39,6 @@ declare module 'tps-bridge/ask' {
   export function askNothing(kind: number, name: string): Uint8Array;
   export function installAsks(g: any, knobs: Record<string, unknown>, ask: (kind: number, row: number, seat: number, bytes: Uint8Array) => Uint8Array | number, reapply: () => void): { after(): void; give(S: any, id: string, t?: any, who?: any, o?: any): string | null; refused: { n: number; rows: Record<string, string> } };
 }
-declare module 'tps-bridge/switches.json' {
-  const list: { rows: { row: string; page: unknown; kind: string }[] };
-  export default list;
-}
 declare module 'tps-bridge/surface' {
   export function surfaceHost(H: { g: any; knobs: Record<string, unknown>; surfaceOpen(): boolean; surfaceDispatching(): boolean; surfaceCall(row: number, bytes: Uint8Array, view?: number): Uint8Array } | null, gone?: unknown): void;
   export function readRecord(g: object, type: string, bytes: Uint8Array): any;

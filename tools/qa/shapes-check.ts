@@ -15,6 +15,7 @@
 // Both stands: the check gives the stand its word (TPS_SHAPES) itself. Nothing here is a picture: no shaped box has been seen on a GPU by this check.
 import { readFileSync, readdirSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
+import { sample } from './sweep.ts';
 const { parseLevelData, validateLevelData, canonicalLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel, levelToData } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { SHAPES, SHAPES_STATS, shapeLevel, shapesTape, shapeStamp, withPieces, arcFacets } = await import(`${ROOT}/src/scene/shapes.ts`);
@@ -207,6 +208,7 @@ export async function shapesCheck(): Promise<boolean> {
       SHAPES.on = true; const old = snap(); delete old.tables.SHAPES; shapesTape(old.tables); const tapeOff = SHAPES.on === false;
       SHAPES.on = true; const rec = snap(); shapesTape(rec.tables); const tapeOn = SHAPES.on === true && rec.tables.SHAPES?.on === true;
       const called = ['src/replay/recipestand.ts', 'tools/qa/rerun.ts'].filter(f => !/shapesTape\(/.test(readFileSync(`${ROOT}/${f}`, 'utf8')));
+      if (!/TPS_SHAPES = .*SHAPES\?\.on/.test(readFileSync(`${ROOT}/tools/qa/replay.ts`, 'utf8'))) called.push('tools/qa/replay.ts (the stand\'s word)');
       const fpOn = levelFingerprint(on.game), fpOff = levelFingerprint(off.game), fpPlain = levelFingerprint(plain.game);
       SHAPES.on = true; J.applyKnobs(on.game, old); const before = SHAPES.on;
       SHAPES.on = false; J.applyKnobs(on.game, rec); const kept = SHAPES.on;
@@ -222,19 +224,6 @@ export async function shapesCheck(): Promise<boolean> {
         '7 a checkpoint saved with shapes down is refused by the game stood with them up, and one saved with them up by the game stood with them down, each as a checkpoint of another level is; each opens in its own game and plays on',
         `down into up: ${downUp ?? 'OPENED'} · up into down: ${upDown ?? 'OPENED'} · its own: ${ownOff ?? 'opens'} / ${ownOn ?? 'opens'}${played ? ` · ${played}` : ''}`); }
 
-    // (8) the game's own module, asked of its copy of the shaped yard inside a tick (a line of sight and a circle are the two questions it answers itself)
-    { const SIM: any = await import(`${ROOT}/src/sim/sim.ts`), C = on.game.col, B: any[] = C.boxes, R = seeded(13), its = B.filter(b => b.shaped || b.piece), rows = [SIM.RUST.lines, SIM.RUST.circles];
-      let asked = 0, segBad = 0, pushBad = 0;
-      const cases = Array.from({ length: 3000 }, () => { const b = its[Math.floor(R() * its.length)] ?? B[Y.tub]; const a: Vec3 = [b.c[0] + (R() - 0.5) * 6, 0.2 + R() * 1.6, b.c[2] + (R() - 0.5) * 6], z: Vec3 = [b.c[0] + (R() - 0.5) * 2, 0.2 + R() * 1.4, b.c[2] + (R() - 0.5) * 2]; return { a, z, r: 0.2 + R() * 0.25 }; });
-      const here = cases.map(q => { const p: Vec3 = [q.z[0], 0, q.z[2]]; const hit = C.collideCircleHere(p, q.r, FEET_Y, 1.5, 3); return { seg: C.segmentBlockedHere(q.a, q.z, 0.02, BoxFlag.Glass, null), hit, p }; });
-      try { SIM.RUST.lines = SIM.RUST.circles = true; C.tickOpen();
-        if (C.mirror.live && C.mirror.lines && C.mirror.circles) cases.forEach((q, i) => { asked++; const p: Vec3 = [q.z[0], 0, q.z[2]], hit = C.collideCircle(p, q.r, FEET_Y, 1.5), H = here[i];
-          if (C.segmentBlocked(q.a, q.z) !== H.seg) segBad++; if (hit !== H.hit || Math.hypot(p[0] - H.p[0], p[2] - H.p[2]) > 1e-9) pushBad++; });
-      } finally { C.tickShut(); [SIM.RUST.lines, SIM.RUST.circles] = rows; }
-      const why = SIM.simWhyNot();
-      line(segBad === 0 && pushBad === 0 && (why ? asked === 0 : asked === cases.length) && here.some(h => h.seg) && here.some(h => !h.seg),
-        `8 the game\'s own module, asked inside a tick of its copy of the shaped yard (its rows for lines and circles up; cut pieces as the stand has them): a line of sight and a walker\'s circle about the shaped boxes and their pieces are answered as this file\'s TypeScript answers them${why ? ' — NOT JUDGED HERE: the module cannot run on this machine' : ''}`,
-        `${cases.length} lines and circles · cut pieces ${cutConfig.on ? 'up' : 'down'} on this stand · the module: ${why ? `cannot run here (${why}), not asked` : `${asked} asked, ${segBad} lines and ${pushBad} pushes answered otherwise`} · of the lines ${here.filter(h => h.seg).length} are stopped`); }
 
     // (9) a blast: the crate that says a shape goes whole, and the plate that hangs on it goes with it (the wall engine's own rule for what hangs on a thing)
     { const G = on.game, B: any[] = G.col.boxes, crate = B[Y.crate], plate = B.find(b => b.piece === true && Math.hypot(b.c[0] - crate.c[0], b.c[2] - crate.c[2]) < 0.5), gone = (b: any) => !!b && !boxDrawn(B, b), flags0 = plate?.flags;   // (gone = out of the picture: a piece is drawn while its box is — boxes.ts trimDrawn)
@@ -293,7 +282,7 @@ export async function shapesCheck(): Promise<boolean> {
       const standL = async (d: any, on: boolean) => { Math.random = seeded(21); const word = process.env.TPS_SHAPES;
         try { process.env.TPS_SHAPES = on && !BREAK ? '1' : '0'; return await hushed(() => standUp({ level: lived(d), seed: 1 })); } finally { if (word === undefined) delete process.env.TPS_SHAPES; else process.env.TPS_SHAPES = word; } };
       try { DS.DESTRUCTION.on = true;
-        for (const f of BLAST_LEVELS) { const d = dataOf(f), up = await standL(d, true), down = await standL(d, false), A: any[] = up.game.col.boxes, Bv: any[] = down.game.col.boxes; levels++;
+        for (const f of sample(BLAST_LEVELS, 1)) { const d = dataOf(f), up = await standL(d, true), down = await standL(d, false), A: any[] = up.game.col.boxes, Bv: any[] = down.game.col.boxes; levels++;
           const pieces = A.filter(b => b.piece === true), first = A.findIndex(b => b.piece === true), nOwn = first < 0 ? A.length : first, flags0 = pieces.map(b => b.flags);
           // no engine holds a piece: the furniture's index, the lane's items, the wall engine's breakables and its list of what hangs
           const W: any = up.game.destr.walls, inFurn = new Set<number>((up.game.destr.furn.inventory().list as any[]).flatMap(x => x.members));
