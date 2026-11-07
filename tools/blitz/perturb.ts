@@ -18,6 +18,9 @@
 // place put on one of the team again every twenty seconds while they are out: two casts of the door tools on one floor.
 // A level with no response team of its own refuses the call (the compound and the warehouse have none; the depot, the records office, the bazaar, the
 // crossing, the police post and the snatch have): the line then says `called (false)` and `no-team`.
+// QA_PERTURB_GOD=player|squad|all: the sandbox row's god mode held on (`game.godMode`: the player is not hit), and / or the net a showcase cast wears put on
+// every living man of the team (`guard.god`: rounds and fragments pass through him), from the first perturbed tick and again on whoever a restart or a
+// load brings: a run that lasts, with the team's deaths, the player's, or neither.
 // QA_PERTURB_RATE=<k> scales every rate (1); QA_PERTURB_ONLY / QA_PERTURB_SKIP=<kinds, comma>; QA_PERTURB_FROM=<tick> (120).
 // THE LOG: a line a perturbation in `<RH_TICKS>/<word>.log`, in the soak's own shape (`  [seed N] 12.34s f741 STIM order: …`), so tools/blitz/fuzz-diff.ts
 // reads a squad run as it reads a soak. A perturbation that throws is logged with what it threw (its stack in `<word>.throws.txt`) and the play goes on.
@@ -73,10 +76,15 @@ export async function lay(W: any): Promise<void> {
     g.alarm.placed = true; g.alarm.pos = [m[0], m[1], m[2]]; g.alarm.raisedAt = g.time;
     const asked = first ? requestQrf(g, 'panel') : null;
     return `${first ? `the response team called (${asked})` : 'the alarm\'s place moved'} to ${at(m)} · state ${Q.state}${Q.cast ? ' · the cast is built' : ''}${Q.op ? ' · on an entry' : ''} · its last note: ${Q.log?.[Q.log.length - 1]?.what ?? 'none'}`; };
+  const GOD = process.env.QA_PERTURB_GOD ?? '', godPl = GOD === 'player' || GOD === 'all', godSq = GOD === 'squad' || GOD === 'all';
+  if (GOD && !godPl && !godSq) throw new Error(`QA_PERTURB_GOD=${GOD}: player, squad or all`);
+  if (GOD) { const TW = (globalThis as any).__tpsToolWrites; if (TW?.names) { for (const k of ['godMode', 'god']) TW.names.add(k); TW.version++; } }
+  const god = (): void => { if (godPl && !g.godMode) { g.godMode = true; say('god mode put on (the player)'); } if (godSq) for (const m of team()) if (!m.god) { m.god = true; say(`the net put on ${name(m)}`); } };
   const step = W.step;
   W.step = function (this: any, ...a: any[]) {
     if (ALARM >= 0 && n >= ALARM && (n - ALARM) % 1200 === 0 && !g.ticking) { let d: string | null; try { d = alarm(n === ALARM); } catch (e) { d = `THREW ${String((e as Error)?.message ?? e).slice(0, 200)}`; if (file) appendFileSync(file.replace(/\.log$/, '.throws.txt'), `f${n} alarm: ${String((e as Error)?.stack ?? e)}\n`); } if (d !== null) say(`STIM alarm: ${d}`); }
+    if (GOD && n >= FROM && !g.ticking) god();
     if (n >= FROM && !g.ticking) for (const k of kinds) { if (rng() >= RATES[k] * K / 3600) continue; let d: string | null; try { d = DO[k](); } catch (e) { d = `THREW ${String((e as Error)?.message ?? e).slice(0, 200)}`; if (file) appendFileSync(file.replace(/\.log$/, '.throws.txt'), `f${n} ${k}: ${String((e as Error)?.stack ?? e)}\n`); } if (d !== null) say(`STIM ${k}: ${d}`); }
     n++; return step.apply(this, a); };
-  say(`--- perturbations laid, seed ${seed}: ${kinds.join(', ')}; rates a minute x${K}${ALARM >= 0 ? `; the response team called at tick ${ALARM}` : ''}`);
+  say(`--- perturbations laid, seed ${seed}: ${kinds.join(', ')}; rates a minute x${K}${GOD ? `; god: ${GOD}` : ''}${ALARM >= 0 ? `; the response team called at tick ${ALARM}` : ''}`);
 }
