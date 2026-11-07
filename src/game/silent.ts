@@ -70,7 +70,7 @@ export const SILENT = {
   /** the posture a freshly staged squad stands up in: true = silent (the loadout screen's row) · false = loud, as ever */
   start: false,
   /** his legs, silent (m/s; 0 = no cap) — and whether the cap lifts for a man loud has reached since the order */
-  pace: 1.6, hotPace: false,
+  pace: 1.6, 
   /** a walking footfall's hearing level, silent (the walk's is 0.33, a run's 0.8; Sam: walk 0.26, crouched 0.125; 0 = as loud) */
   step: 0.2,
   /** weapon lights and torches held off */

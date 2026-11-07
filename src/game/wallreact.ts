@@ -92,9 +92,6 @@ export const WALLREACT = {
   freshSecs: 3, fresh: 3,
   /** … inside this, with a line to it */
   watchM: 16,
-  // ---- the squad's book
-  /** a breach is an opening a round can come through for the entry points too (off: only the unasked cover watches it) */
-  entryRisk: true,
   /** barks */
   say: true,
 };

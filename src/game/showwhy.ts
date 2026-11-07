@@ -53,9 +53,7 @@ export const SHOWWHY = {
   /** the switch (false = the build as it was, run for run) */
   on: false,
   /** each case by itself, for an A/B (all true as shipped) */
-  line: true, stack: true, door: true, hurt: true, keep: true,
-  /** the lines (false = the hands alone) */
-  say: true,
+  stack: true, hurt: true, keep: true,
   /** LINE. s the player has masked his round without a break before he shows it · a break shorter than this is no break · s from his first wave to his
    *  second · s between waves after that · the line stands at least this long once said · s after one man's line before another man says it · m either
    *  side of his line a mate counts as standing in it */

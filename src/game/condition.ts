@@ -33,9 +33,6 @@ export const CONDITION = {
   hurtSecs: 0,
   /** the score does not read wariness off one of the player's own men at rest (guards.ts tension: under an order nothing drains that number) */
   ownCalm: true,
-  /** the figures are dealt each state's look (conditionPose). Off = the model and its costs with nobody showing any of it: QA's lever for telling what the
-   *  looks alone do to a run (a figure's head and muzzle are where the simulation reads them) */
-  looks: true,
 };
 export const CONDITION_STATS = { hurt: 0 };
 

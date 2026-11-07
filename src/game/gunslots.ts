@@ -15,8 +15,6 @@ import { crossToRust, goneWithTick } from './crossing';
 
 export const GUNSLOTS = {
   on: false,
-  /** a teammate whose primary runs dry on a man within `near` metres goes to his sidearm (off: he stands and reloads, as he always has) */
-  dry: true,
   near: 10,
   /** seconds from the dry click to the sidearm on his man: the long gun let go onto its sling, the pistol out of the holster and up */
   out: 0.7,

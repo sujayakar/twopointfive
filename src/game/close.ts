@@ -45,17 +45,13 @@ export const CLOSE = {
   on: false,
   /** the mode near a man: the changed carriage and the gait that holds its pose (character.ts `creep`) · the hand on the knife and the reaching arm in melee reach
    *  (`ready`) · the men's near-sight floor scaled by the light on Sam (`dark`) */
-  mode: true, ready: true, dark: true,
+  ready: true, dark: true,
   /** the windows drawn on the floor (ui/overlay.ts): OFF as shipped — the character is the tell */
   marks: false,
   /** the strikes besides the one from behind, each its own switch · a seated man's longer rear reach */
   side: true, front: true, seat: true,
   /** a strike (never a grab) still lands on a man who is ALERT */
   alertStrike: true,
-  /** THE BLOW IS THE PLAYER'S CHOICE (Chaos Theory's two buttons): hands empty in reach, the LEFT click is the knife — he is dead — and the RIGHT click the
-   *  knockout — he is out cold, breathing. Off = the left click is the knockout, as the build had it, and the right click nothing. Never under a show (the
-   *  tour's clicks are knockouts) and never on a civilian (either button puts her out). */
-  lethal: true,
   /** WITH A MAN IN HIS ARM THE SAME TWO BUTTONS (player.ts updateHold) — its own switch: it does not wait on `on`. The knife is at his throat: the LEFT click
    *  uses it — he is dead, and once begun it is not eased off (no tap, step or Esc stops a blade) — and the RIGHT click is the choke, begun exactly as his Space
    *  row begins it (he is out cold, breathing; a tap or a step still eases it off). The arm hold only: the pistol's hold keeps its own clicks (a round past
