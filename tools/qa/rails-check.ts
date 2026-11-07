@@ -26,7 +26,7 @@
 //      `after`, RAILS.afterSecs / afterMax); a line with no key in it is one to watch; the page's input lets go of a modifier the system says is up.
 //  THE GATE'S BEAT: the squad set in the yard, the roadblock comes down the road (the script's `direct` walk) and the line is gone within eight seconds;
 //      with that word taken off its men, and covered lanes on (the page's stand), it is long. No break of its own: the second run is its proof.
-//  THE BIG LINE AND YOUR OWN MEN (ui/railclear.ts, Rails.lineMen, RAILS.lineClear): the line has two places, where it lies and the bottom edge, and is at
+//  THE BIG LINE AND YOUR OWN MEN (ui/railclear.ts, the view's lesson.rails.lineMen, RAILS.lineClear): the line has two places, where it lies and the bottom edge, and is at
 //      the edge while a man of yours is under where it lies; the frame lists the squad, and the player when he is on the floor. And a deed can name the
 //      man an order was given on. RAILS_BREAK=1 reaches this line through the list alone (nobody on it); the rule on boxes and the deed have no break.
 //  THE FRAME'S EYES ARE THE PLAYER'S VIEW (fogofwar.ts update, RAILS.eyeFirst, RAILS.eyeView): a step's eye has a place among the fog's five, and a man
@@ -38,6 +38,7 @@
 // RAILS_BREAK=1 = the gate lets everything through, the ring is no place, nothing keeps it in the picture and the menu lists every order: lines 3, 4, 10, 11, 12, 13 and 14, the last line's, the wall's, the stalk's, the first play's notes', the second play's, the card's, the card's beat's, the spared man's (reached through guards.ts acquireFoe and roomfight.ts tickMove, both staged; qrf.ts, tactics.ts and frag.ts are held by a read of their source only), the big line's, the two of the step's eye and the plan on the move must fail (the opening card's line is data and a screen: no break of its own).   exit 0 = all hold · 1 = one does not
 import { readFileSync } from 'node:fs';
 import { ROOT, standUp } from './headless.ts';
+import { locked } from '../../src/view/seatview.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
@@ -49,6 +50,8 @@ const YARD = [11.4, 0.02, 16.4];
 type V = number[];
 const flat = (a: V, b: V) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 
+/** the frame's two eyes among the fog's, by id (rust: LOOKOUT_ID, STEP_EYE_ID) */
+const LOOK_EYE = 199, STEP_EYE = 198;
 async function rig(on: boolean, seed = 1) {
   const log = console.log, warn = console.warn, err = console.error; if (!VERBOSE) console.log = console.warn = console.error = () => { };
   let W: any, started: any;
@@ -60,8 +63,8 @@ async function rig(on: boolean, seed = 1) {
   const press = (k: string) => quiet(() => { I.pressed.add(k); I.keys.add(k); W.step(DT); I.keys.delete(k); W.step(DT); W.step(DT); });
   const command = (p: V) => { W.cursorAt(p); run(2 / 60); W.cursorAt(p); press('KeyB'); };
   /** the host's own turn and zoom of the view, as host/loop.ts does them: only when the frame has them open */
-  const turn = (rad: number) => { for (let i = 0; i < 40; i++) { if (!g.rails.locks('camera')) W.cam.rotate(rad / 40); run(1 / 60); } };
-  const zoom = () => { for (let i = 0; i < 20; i++) { if (!g.rails.locks('zoom')) W.cam.zoom(60); run(1 / 60); } };
+  const turn = (rad: number) => { for (let i = 0; i < 40; i++) { if (!locked(g.view, 'camera')) W.cam.rotate(rad / 40); run(1 / 60); } };
+  const zoom = () => { for (let i = 0; i < 20; i++) { if (!locked(g.view, 'zoom')) W.cam.zoom(60); run(1 / 60); } };
   const squad = () => g.guards.filter((x: any) => x.unit && x.team === 'operative' && x.state !== 'dead');
   return { W, g, I, run, press, command, turn, zoom, squad, why: started?.why as string | undefined };
 }
@@ -75,23 +78,23 @@ export async function railsCheck(): Promise<boolean> {
       verdict(!R.why && !!L?.rails && faults.length === 0, 'the level starts and its lesson block is whole', `${R.why ?? 'started'} · ${L?.steps.length ?? 0} steps · ${faults.length ? faults.join(' · ') : 'no faults'}`);
       R.run(0.5); const p0 = [...g.player.char.pos], n0 = g.orders.log.length; R.command(YARD); R.run(0.3);
       const start = g.level.scenarios.roomClear.team.sam;
-      verdict(!g.rails.live && !g.lesson.data && !!g.view.mission && g.view.mission.of !== 'lesson' && !g.playerInvisible && flat(p0, start) < 0.6 && g.orders.log.length === n0 + 1 && !(g.director.run && !g.director.run.ended),
+      verdict(!g.view.lesson?.rails && !g.view.lesson && !!g.view.mission && g.view.mission.of !== 'lesson' && !g.playerInvisible && flat(p0, start) < 0.6 && g.orders.log.length === n0 + 1 && !(g.director.run && !g.director.run.ended),
         'switch off: the level is its mission alone — no lesson, the player on the floor at the file\'s start, the command key orders the squad at once, no program',
-        `live ${g.rails.live} · lesson ${g.lesson.data ? 'live' : 'none'} · the player ${flat(p0, start).toFixed(2)} m from the start · orders ${n0} → ${g.orders.log.length} · program ${g.director.run && !g.director.run.ended ? 'running' : 'none'}`); }
+        `live ${!!g.view.lesson?.rails} · lesson ${g.view.lesson ? 'live' : 'none'} · the player ${flat(p0, start).toFixed(2)} m from the start · orders ${n0} → ${g.orders.log.length} · program ${g.director.run && !g.director.run.ended ? 'running' : 'none'}`); }
     // ---- 3, 4, 5
     { const R = await rig(true), g = R.g, d0 = RAILS_STATS.dropped; R.run(0.5);
       const park = g.level.scenarios.lesson.rails.sky.park, mid = R.squad().reduce((c: V, m: any) => [c[0] + m.char.pos[0] / 4, 0, c[2] + m.char.pos[2] / 4], [0, 0, 0]);
       const look = g.followPos(), n0 = g.orders.log.length, crew = g.guards.filter((x: any) => /^Tango (8|9|10)$/.test(x.callsign)).length;
       const p0 = [...g.player.char.pos]; R.command(YARD); R.run(0.3, ['KeyW']);
-      const A = g.rails.allowed();
-      verdict(g.rails.live && g.rails.skyOn && g.playerInvisible && flat(p0, park) < 0.6 && flat(look, mid) < 1.5 && !!g.director.run && !g.director.run.ended && crew === 3
-        && g.orders.log.length === n0 && RAILS_STATS.dropped > d0 && g.rails.locks('zoom') && !g.rails.locks('camera') && g.rails.panned() === 0 && flat(g.player.char.pos, p0) < 0.05 && A.size === 1,
+      const A = new Set(g.view.lesson?.rails?.open);
+      verdict(!!g.view.lesson?.rails && !!g.view.lesson?.rails?.sky && g.playerInvisible && flat(p0, park) < 0.6 && flat(look, mid) < 1.5 && !!g.director.run && !g.director.run.ended && crew === 3
+        && g.orders.log.length === n0 && RAILS_STATS.dropped > d0 && locked(g.view, 'zoom') && !locked(g.view, 'camera') && Math.hypot(g.rails.sky.off[0], g.rails.sky.off[2]) === 0 && flat(g.player.char.pos, p0) < 0.05 && A.size === 1,
         'switch on, the first step: the player parked and unseen, the view on the squad, the program running with its men on the road; the command key, the zoom and the walk keys locked, the turn open',
-        `live ${g.rails.live} · parked ${flat(p0, park).toFixed(2)} m off its place, unseen ${g.playerInvisible} · the view ${flat(look, mid).toFixed(2)} m off the squad's middle · the road's men ${crew} · orders ${n0} → ${g.orders.log.length} · presses dropped ${RAILS_STATS.dropped - d0} · open: ${[...A].join(' ')} · the view shifted ${g.rails.panned().toFixed(2)} m`);
+        `live ${!!g.view.lesson?.rails} · parked ${flat(p0, park).toFixed(2)} m off its place, unseen ${g.playerInvisible} · the view ${flat(look, mid).toFixed(2)} m off the squad's middle · the road's men ${crew} · orders ${n0} → ${g.orders.log.length} · presses dropped ${RAILS_STATS.dropped - d0} · open: ${[...A].join(' ')} · the view shifted ${Math.hypot(g.rails.sky.off[0], g.rails.sky.off[2]).toFixed(2)} m`);
       const at0 = R.squad().map((m: any) => [...m.char.pos]); R.run(10); const still = g.lesson.i, drift = Math.max(...R.squad().map((m: any, i: number) => flat(m.char.pos, at0[i])));
       verdict(still === 0 && drift < 1.5 && R.squad().length === 4, 'a step is done by its deed: ten seconds of nothing and the first step is still up — and the squad is still behind its trucks (nobody falls in on the parked player)', `step ${still + 1} after ten seconds · the man who moved most: ${drift.toFixed(2)} m`);
-      R.turn(1.0); R.run(0.3); const s1 = g.lesson.i, z1 = !g.rails.locks('zoom'), pan1 = g.rails.locks('pan'); R.run(0.4, ['KeyD']); const shift0 = g.rails.panned();
-      R.zoom(); R.run(1.0); const s2 = g.lesson.i; const feet = [...g.player.char.pos]; R.run(2.5, ['KeyD']); const shift1 = g.rails.panned(), s3 = g.lesson.i, moved = flat(g.player.char.pos, feet);
+      R.turn(1.0); R.run(0.3); const s1 = g.lesson.i, z1 = !locked(g.view, 'zoom'), pan1 = locked(g.view, 'pan'); R.run(0.4, ['KeyD']); const shift0 = Math.hypot(g.rails.sky.off[0], g.rails.sky.off[2]);
+      R.zoom(); R.run(1.0); const s2 = g.lesson.i; const feet = [...g.player.char.pos]; R.run(2.5, ['KeyD']); const shift1 = Math.hypot(g.rails.sky.off[0], g.rails.sky.off[2]), s3 = g.lesson.i, moved = flat(g.player.char.pos, feet);
       const n1 = g.orders.log.length, sm0 = g.items?.list?.length ?? 0; R.command(YARD); R.run(1.5);
       const rows = g.director.rowsOf().map((r: any) => r.what).join('|'), smoke = /charge|Smoke out/.test(rows) || rows.includes('signal:order:move');
       verdict(s1 === 1 && z1 && pan1 && shift0 === 0 && s2 === 2 && shift1 > 5 && moved < 0.05 && s3 === 3 && g.orders.log.length === n1 + 1 && smoke,
@@ -114,8 +117,8 @@ export async function railsCheck(): Promise<boolean> {
       const kept = g.saves.stats.autosaves - s0.autosaves; R.turn(1.0); R.run(0.3); R.zoom(); R.run(1.0);
       const at = g.lesson.i, saves = g.saves.stats.autosaves - s0.autosaves, starts0 = RAILS_STATS.starts;
       const ck = g.saves.newest(true, g.mission.stats.elapsed), why = ck ? g.saves.loadInStep(g, ck.key) : 'no checkpoint on the shelf'; R.run(0.3);
-      const A = g.rails.allowed(), back = g.lesson.i, cued = g.director.rowsOf().some((r: any) => r.what === 'signal:lesson:ambush');
-      verdict(kept === 1 && saves === 1 && at === 2 && !why && back === 0 && RAILS_STATS.starts === starts0 + 1 && cued && A.size === 1 && A.has('camera') && g.rails.locks('zoom') && !!g.director.run && !g.director.run.ended,
+      const A = new Set(g.view.lesson?.rails?.open), back = g.lesson.i, cued = g.director.rowsOf().some((r: any) => r.what === 'signal:lesson:ambush');
+      verdict(kept === 1 && saves === 1 && at === 2 && !why && back === 0 && RAILS_STATS.starts === starts0 + 1 && cued && A.size === 1 && A.has('camera') && locked(g.view, 'zoom') && !!g.director.run && !g.director.run.ended,
         'an authored checkpoint: the first step\'s is kept and no other; put back from two steps on, the lesson is on that step, the program started again with its cue, and only that step\'s action is open',
         `saves at the first step ${kept}, by step ${at + 1}: ${saves} · put back: ${why ?? 'ok'} → step ${back + 1} · program starts ${st0} → ${starts0} → ${RAILS_STATS.starts}, cues ${c0} → ${RAILS_STATS.cues}, its cue again ${cued} · open: ${[...A].join(' ')}`); }
     // ---- 9
@@ -130,25 +133,25 @@ export async function railsCheck(): Promise<boolean> {
       I.keys.add('ShiftLeft'); I.keys.add('Enter'); I.pressed.add('Enter'); g.rails.gate(I, R.W.cam, DT); const shift = I.keys.has('ShiftLeft'), enter = I.pressed.has('Enter'); I.keys.delete('ShiftLeft'); I.keys.delete('Enter'); I.pressed.delete('Enter');
       I.keys.add('ShiftLeft'); g.rails.gate(I, R.W.cam, DT); const sprint = I.keys.has('ShiftLeft'); I.keys.delete('ShiftLeft');
       const cheat = g.verdict.cheat, started = g.verdict.started;
-      g.restartEncounter(); const A0 = g.rails.allowed(), sum0 = g.rails.summary(); R.run(3 / 60);
-      const end = g.roomClear.end, i1 = g.lesson.i, A1 = g.rails.allowed(), unseen = g.playerInvisible, d2 = g.seat.cam.distance;
+      g.restartEncounter(); const A0 = new Set(g.view.lesson?.rails?.open), sum0 = (g.view.lesson?.rails?.open ?? []).join(' '); R.run(3 / 60);
+      const end = g.roomClear.end, i1 = g.lesson.i, A1 = new Set(g.view.lesson?.rails?.open), unseen = g.playerInvisible, d2 = g.seat.cam.distance;
       R.W.game.rails.tick(DT); quitScenario(g); R.run(3 / 60); const after = g.playerInvisible;
       verdict(was === 2 && shift && enter && !sprint && started && !cheat && A0.size === 1 && A0.has('camera') && !end && i1 === 0 && A1.size === 1 && unseen && !after && Math.abs(d1 - d0) > 1 && Math.abs(d2 - d0) < 0.01,
         'the mission again: Shift rides with Enter through the gate (and alone does not), the run is no cheat\'s, a restart from the third step is on the first step with only its action open before a tick has passed, on the view the first run opened on, and does not end, and the mission left leaves the player seen again',
         `was on step ${was + 1} · Shift+Enter through ${shift && enter}, Shift alone ${sprint} · verdict started ${started}, cheat ${cheat} · before a tick: ${sum0} · after: step ${i1 + 1}, end ${end ?? 'none'}, open ${[...A1].join(' ')} · unseen in the seat ${unseen}, after quitting ${after} · view ${d0.toFixed(1)} → ${d1.toFixed(1)} → ${d2.toFixed(1)}`); }
     // ---- 11: the ring on the screen is the place it marks; the mission has no fog of war (the level's `rails.fog: false`): every man on the floor is in the picture
     { const R = await rig(true), g = R.g, I = R.I; R.run(0.5); R.turn(1.0); R.run(0.3); R.zoom(); R.run(1.0); R.run(2.6, ['KeyD']);   // (the fourth step: its mark is on the yard)
-      const at = g.lesson.step?.at as [number, number, number] | undefined, cv = R.W.canvas, cam = R.W.cam; const [sx, sy] = at ? cam.project(at, cv.clientWidth, cv.clientHeight) : [0, 0];
-      I.mouseX = sx + 12; I.mouseY = sy - 9; const on = g.rails.markUnder(I, cam, cv); I.mouseX = sx + 140; const off = g.rails.markUnder(I, cam, cv);
+      const at = g.level.scenarios.lesson?.steps[g.lesson.i]?.at as [number, number, number] | undefined, cv = R.W.canvas, cam = R.W.cam; const [sx, sy] = at ? cam.project(at, cv.clientWidth, cv.clientHeight) : [0, 0];
+      const under = () => { const t = g.orders.targetUnder(I, cam, cv); return !!at && Math.hypot(t.at[0] - at[0], t.at[2] - at[2]) < 1e-6; }; I.mouseX = sx + 12; I.mouseY = sy - 9; const on = under(); I.mouseX = sx + 140; const off = under();
       const foes = g.guards.filter((x: any) => x.team !== 'operative' && x.state !== 'dead'), road = foes.filter((x: any) => x.char.pos[2] > 22), house = foes.filter((x: any) => x.char.pos[2] < 18);
       const seenRoad = road.filter((x: any) => g.fogOfWar.drawn(x)).length, seenHouse = house.filter((x: any) => g.fogOfWar.drawn(x)).length;
-      verdict(!!at && on === at && off === null && !g.fogOfWar.active && road.length > 0 && seenRoad === road.length && house.length > 0 && seenHouse === house.length,
+      verdict(!!at && on && !off && !g.fogOfWar.active && road.length > 0 && seenRoad === road.length && house.length > 0 && seenHouse === house.length,
         'the ring on the screen is the place it marks (the cursor on it is on that place, off it is not), and the mission is played with no fog of war: the men on the road and the men in the rooms are all in the picture',
-        `step '${g.lesson.step?.id}' mark ${at ? at.join(',') : 'none'} · cursor on the ring → ${on ? 'the place' : 'nothing'}, 140 px off → ${off ? 'the place' : 'nothing'} · fog ${g.fogOfWar.active ? 'on' : 'off'} · on the road ${seenRoad}/${road.length} drawn · in the house ${seenHouse}/${house.length} drawn`); }
+        `step '${g.view.lesson?.id}' mark ${at ? at.join(',') : 'none'} · cursor on the ring → ${on ? 'the place' : 'nothing'}, 140 px off → ${off ? 'the place' : 'nothing'} · fog ${g.fogOfWar.active ? 'on' : 'off'} · on the road ${seenRoad}/${road.length} drawn · in the house ${seenHouse}/${house.length} drawn`); }
     // ---- the last line stays up until the mission's own end
-    { const R = await rig(true), g = R.g; R.run(0.5); const L = g.level.scenarios.lesson, n = L.steps.length, first = g.rails.prompt();
-      g.lesson.i = n; const fin = g.lesson.finished, over = g.lesson.over(), last = g.rails.prompt();   // (every step done, the room clear still running)
-      const was = g.roomClear.end; g.roomClear.end = 'taken'; const ended = g.rails.prompt(); g.roomClear.end = was;
+    { const R = await rig(true), g = R.g; R.run(0.5); const L = g.level.scenarios.lesson, n = L.steps.length, first = g.view.lesson?.rails?.prompt;
+      g.lesson.i = n; const fin = g.view.lesson?.finished, over = g.view.lesson?.over, last = g.view.lesson?.rails?.prompt;   // (every step done, the room clear still running)
+      const was = g.roomClear.end; g.roomClear.end = 'taken'; const ended = g.view.lesson?.rails?.prompt; g.roomClear.end = was;
       verdict(first?.n === 1 && fin && !over && last?.line === L.steps[n - 1].line && last?.n === n && last?.of === n && ended === null,
         'the last line stays up: with every step done and the mission still running the big line is the last step\'s, not the small row; once the mission is over there is none',
         `first up ${first?.n}/${first?.of} · every step done ${fin}, mission over ${over} → the line "${last?.line ?? 'none'}" (${last?.n ?? '-'}/${last?.of ?? '-'}) · mission over → ${ended ? `"${ended.line}"` : 'none'}`); }
@@ -184,10 +187,10 @@ export async function railsCheck(): Promise<boolean> {
       const near = { key: { said: '?', grab: false }, click: { said: '?', grab: false }, open: { said: '', grab: true }, armed: { said: '?', grab: false }, rifle: false, away: false, keyCan: false, onWall: true, held: false, from: false }, dead = /LMB|RMB|\bE {2}/, wall0 = g.player.wall;
       try {
         for (let i = 0; i < 30; i++) W.step(DT); g.lesson.i = at('corner'); if (H) { g.player.crouch = true; g.teleportPlayer([H.char.pos[0] - Math.sin(H.char.bodyYaw) * 1.6, 0, H.char.pos[2] - Math.cos(H.char.bodyYaw) * 1.6]); }
-        empty = !!g.player.holstered; noFire = g.rails.locks('fire'); named = !!deny0?.includes('stalk'); can.shut = could(); shut = ask(); said = g.rails.shuts('stalk'); sum = g.rails.summary();
-        if (C) C.allow = [...(allow0 ?? []), 'stalk']; can.again = could(); again = ask(); saidAgain = g.rails.shuts('stalk');
-        if (C) C.deny = [...(C.deny ?? []), 'stalk']; both = g.rails.shuts('stalk') && !g.rails.allowed().has('stalk'); if (C) { C.allow = allow0; delete C.deny; }   // (named both ways on one step: shut, as `allowed` folds the pair)
-        if (N) N.deny = (deny0 ?? []).filter(a => a !== 'stalk'); can.none = could(); none = ask(); saidNone = g.rails.shuts('stalk');
+        empty = !!g.player.holstered; noFire = locked(g.view, 'fire'); named = !!deny0?.includes('stalk'); can.shut = could(); shut = ask(); said = !!g.view.lesson?.rails?.stalkShut; sum = (g.view.lesson?.rails?.open ?? []).join(' ');
+        if (C) C.allow = [...(allow0 ?? []), 'stalk']; can.again = could(); again = ask(); saidAgain = !!g.view.lesson?.rails?.stalkShut;
+        if (C) C.deny = [...(C.deny ?? []), 'stalk']; both = !!g.view.lesson?.rails?.stalkShut && !g.view.lesson?.rails?.open.includes('stalk'); if (C) { C.allow = allow0; delete C.deny; }   // (named both ways on one step: shut, as `allowed` folds the pair)
+        if (N) N.deny = (deny0 ?? []).filter(a => a !== 'stalk'); can.none = could(); none = ask(); saidNone = !!g.view.lesson?.rails?.stalkShut;
         inFrame = railsFaults({ ...L, rails: { ...L.rails, allow: [...L.rails.allow, 'stalk'] } }).filter((f: string) => /stalk/.test(f)).length;
         // …AND IT IS THE CLICK THAT IS TAKEN, NOT THE GRAB. In reach behind him on the same line (0.6 m; the right button is locked there too): no line of
         // his names a button the gate holds, whichever way the grab is given (the row's key, or the held click alone: `?stalkkey=0`, and any wall hold);
@@ -218,12 +221,12 @@ export async function railsCheck(): Promise<boolean> {
       const m0 = men[0], st = m0.state, md = m0.muzzleDown, tOff = IR.teamOff; IR.teamOff = false; m0.state = 'alert'; m0.muzzleDown = false; const lasOff = laserOn(g, m0); delete L.rails.lasers; const lasOn = laserOn(g, m0); L.rails.lasers = false; m0.state = st; m0.muzzleDown = md; IR.teamOff = tOff;
       // the hold's step: a tap on the wall's ring gives no order and its words come up; held, the ring is up and the line is the ring's
       const k = L.steps.findIndex((T: any) => T.id === 'charge'), T = L.steps[k], WALL = T.at as number[]; g.lesson.i = k; R.run(0.2);
-      const line0 = g.rails.prompt(), n0 = g.orders.log.length, eye = g.rails.stepEye();
+      const line0 = g.view.lesson?.rails?.prompt, n0 = g.orders.log.length, eye = g.fogOfWar.eyes.find((e: any) => e.id === STEP_EYE) ?? null;
       R.W.cursorAt(WALL); R.run(2 / 60); R.W.cursorAt(WALL); R.press('KeyB'); R.run(0.1);
-      const tapGave = g.orders.log.length - n0, noted = g.rails.prompt()?.note ?? null;
-      R.run(3.0); const noteGone = !g.rails.prompt()?.note;
+      const tapGave = g.orders.log.length - n0, noted = g.view.lesson?.rails?.prompt?.note ?? null;
+      R.run(3.0); const noteGone = !g.view.lesson?.rails?.prompt?.note;
       const up = () => { R.W.cursorAt(WALL); I.pressed.add('KeyB'); R.run(0.5, ['KeyB']); }, down = () => { I.pressed.add('Tab'); R.run(0.1); if (g.orders.menu) { g.orders.menu = null; g.orders.cmdRing = null; } };
-      up(); const ring = !!g.orders.menu, isFlat = !!g.orders.menu?.flat, line1 = g.rails.prompt()?.line ?? null;
+      up(); const ring = !!g.orders.menu, isFlat = !!g.orders.menu?.flat, line1 = g.view.lesson?.rails?.prompt?.line ?? null;
       // (THE MISSION TAKES THE FLAT RING, RAILS.flatRing with the tree's own switches up: the ring on the wall is ONE ring, nothing behind a 'more', its
       //  line is the step's `flatLine`, and the digit that line names is the wedge the charge is on with this level's own list of orders)
       const wantFlat = !!CMDRING.flat && !!CMDRING.only && RAILS.flatRing && L.rails.flatRing === true, dig = Number(/\[(\d)\]/.exec(T.flatLine ?? '')?.[1] ?? 0);
@@ -232,26 +235,26 @@ export async function railsCheck(): Promise<boolean> {
       const SHIPPED = process.env.TPS_PROFILE === 'shipped', hasCharge = !!seat && g.orders.menu.rows.some((d: any) => d.id === 'wallCharge'), chargeAsked = hasCharge || SHIPPED; down();
       // (the menu's pages, with that switch off: a page under the ring's first has its own line, what is left to press · a tap just refused: its words are not up over a ring · the ring's FIRST wedge gives the tap's own order, and is no tap)
       const fr0 = RAILS.flatRing; RAILS.flatRing = false; let pagedRing = false, lineP: string | null = null, paged = false, line2: string | null = null, toolsAsked = SHIPPED;
-      try { up(); pagedRing = !!g.orders.menu && !g.orders.menu.flat; lineP = g.rails.prompt()?.line ?? null; toolsAsked ||= !!g.orders.menu?.rows.some((d: any) => d.id === 'walltools'); R.press('Digit5'); R.run(0.1); paged = !!g.orders.menu && g.orders.menu.page !== null; line2 = g.rails.prompt()?.line ?? null; down(); } finally { RAILS.flatRing = fr0; }
-      R.W.cursorAt(WALL); R.press('KeyB'); R.run(0.05); const n1 = g.orders.log.length; up(); const noteUp = !!g.rails.prompt()?.note; R.press('Digit1'); R.run(0.2); const wedgeGave = g.orders.log.length - n1; down();
+      try { up(); pagedRing = !!g.orders.menu && !g.orders.menu.flat; lineP = g.view.lesson?.rails?.prompt?.line ?? null; toolsAsked ||= !!g.orders.menu?.rows.some((d: any) => d.id === 'walltools'); R.press('Digit5'); R.run(0.1); paged = !!g.orders.menu && g.orders.menu.page !== null; line2 = g.view.lesson?.rails?.prompt?.line ?? null; down(); } finally { RAILS.flatRing = fr0; }
+      R.W.cursorAt(WALL); R.press('KeyB'); R.run(0.05); const n1 = g.orders.log.length; up(); const noteUp = !!g.view.lesson?.rails?.prompt?.note; R.press('Digit1'); R.run(0.2); const wedgeGave = g.orders.log.length - n1; down();
       // (…and that digit pressed on the flat ring gives the charge, with no second ring — and with the order out the ring's line is what the men are doing,
       //  never the digit again: the wedge that set the charge is the one that blows it)
-      let chargeGave = false, lineAft: string | null = null; if (isFlat && dig && hasCharge) { const n2 = g.orders.log.length; up(); R.press('Digit' + dig); R.run(0.2); chargeGave = g.orders.log.slice(n2).some((o: any) => o.order === 'wallCharge') && !g.orders.menu; up(); lineAft = g.rails.prompt()?.line ?? null; down(); }
+      let chargeGave = false, lineAft: string | null = null; if (isFlat && dig && hasCharge) { const n2 = g.orders.log.length; up(); R.press('Digit' + dig); R.run(0.2); chargeGave = g.orders.log.slice(n2).some((o: any) => o.order === 'wallCharge') && !g.orders.menu; up(); lineAft = g.view.lesson?.rails?.prompt?.line ?? null; down(); }
       // the last step: nothing ordered, the view is the hand's and the goggles stay; ordered on the trucks, the shift eases out and the goggles come up
       const z = L.steps.length - 1, TR = L.steps[z].at as number[], hold = L.steps[z].hold; L.steps[z].hold = 999; g.lesson.i = z;
       for (const m of men) g.orders.assign(m, { order: 'hold', post: [32, 0, 16.5], face: 0, stance: 'lowReady', upper: 'none', going: 'holding', there: 'holding' });   // (as if in the last room: this rig's squad never left the road)
       R.run(0.1); if (!g.player.nv) R.press('KeyN');   // (the squad of this rig never left the road: the step is kept from counting)
       R.run(2.0, ['KeyD']); R.run(0.3);
-      const off0 = g.rails.panned(), nv0 = g.player.nv;
+      const off0 = Math.hypot(g.rails.sky.off[0], g.rails.sky.off[2]), nv0 = g.player.nv;
       for (const m of men) g.orders.assign(m, { order: 'move', post: [TR[0], 0, TR[2]], face: 0, stance: 'lowReady', upper: 'none', going: 'moving', there: 'there' });
-      R.run(4.0); const off1 = g.rails.panned(), nv1 = g.player.nv; L.steps[z].hold = hold;
+      R.run(4.0); const off1 = Math.hypot(g.rails.sky.off[0], g.rails.sky.off[2]), nv1 = g.player.nv; L.steps[z].hold = hold;
       // (RAILS.flatRing as a switch: how this stand comes up and the frozen stand's word for it; a recording from before the key has the pages, one made
       //  with it keeps it; the page's word puts it off — and on a stand that has no flat ring up, the same ring with the tree's switches raised here)
       const J = await import(`${ROOT}/src/game/journal.ts`), PR = await import(`${ROOT}/src/host/profile.ts`), { knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`), kb = knobsCopy();
       const stoodFlat = RAILS.flatRing, holdsFlat = (PR.FROZEN_HOLDS as Record<string, string>)['RAILS.flatRing']; let oldFlat = true, keptFlat = false, wordFlat = '', raised = 'as it stands', raisedOk = wantFlat;
       try {
         if (!wantFlat) { CMDRING.on = true; CMDRING.only = true; CMDRING.flat = true; RAILS.flatRing = true; if (!(CMDRING.holdSecs > 0)) CMDRING.holdSecs = 0.3; g.lesson.i = k; R.run(0.2); up();
-          const M = g.orders.menu, s = M?.flat ? (g.orders as any).seats(M, g.orders.cmdRing) : null, id = s ? M.rows[s.row[dig]]?.id ?? null : null, l = g.rails.prompt()?.line ?? null;
+          const M = g.orders.menu, s = M?.flat ? (g.orders as any).seats(M, g.orders.cmdRing) : null, id = s ? M.rows[s.row[dig]]?.id ?? null : null, l = g.view.lesson?.rails?.prompt?.line ?? null;
           const has = !!M?.rows.some((d: any) => d.id === 'wallCharge');   // (a stand with no destruction has no wall charge to give: the ring and its line are what is asked there)
           raisedOk = !!s && l === T.flatLine && (has ? id === 'wallCharge' : true) && s.more + s.over.length === 0; raised = `${M?.flat ? 'flat' : M ? 'PAGES' : 'NO RING'}, line "${l}", ${has ? `[${dig}] is '${id}'` : 'no wall charge on this stand'}`; down(); knobsBack(kb); }
         const snap = () => JSON.parse(JSON.stringify(J.knobsSnapshot(g)));
@@ -267,21 +270,21 @@ export async function railsCheck(): Promise<boolean> {
     //      shown again on that page — and nothing of the run moves by it
     { const R = await rig(true), g = R.g, L = g.level.scenarios.lesson;
       const k = L.steps.findIndex((T: any) => !!T.explain), T = L.steps[k], other = L.steps.findIndex((T: any, i: number) => i > 0 && !T.explain);
-      R.run(0.5); const none0 = g.rails.card(); g.lesson.i = k; R.run(0.2); const owed = g.rails.card(), t0 = g.time; R.run(1.0); const still = g.rails.card(), ran = g.time - t0;   // (a headless run is never held: the clock goes on under a card nobody closed)
-      g.lesson.i = other; R.run(0.1); const noneThere = g.rails.card(); g.lesson.i = k; R.run(0.1);
+      R.run(0.5); const none0 = g.view.lesson?.rails?.card; g.lesson.i = k; R.run(0.2); const owed = g.view.lesson?.rails?.card, t0 = g.time; R.run(1.0); const still = g.view.lesson?.rails?.card, ran = g.time - t0;   // (a headless run is never held: the clock goes on under a card nobody closed)
+      g.lesson.i = other; R.run(0.1); const noneThere = g.view.lesson?.rails?.card; g.lesson.i = k; R.run(0.1);
       // the page's half, on a made-up element and a made-up clock
       const { railCard, CARD_ARM_MS } = await import(`${ROOT}/src/ui/railcard.ts`), G = globalThis as any, doc0 = G.document;
       const fake = () => ({ id: '', className: '', innerHTML: '', offsetWidth: 0, setAttribute() {}, addEventListener() {}, appendChild() {} }); let made: any = null, clock = 1000, closedN = 0;
       G.document = { createElement: () => (made = fake()) };
       let page: any; try { const C = railCard(fake(), () => clock), caps = (x: string) => x, ent = { code: 'Enter' }; C.onClose = () => { closedN++; };
-        C.update(g.rails.card(), caps); const up = C.up && made.className === 'on' && made.innerHTML.includes(T.explain.title);
+        C.update(g.view.lesson?.rails?.card, caps); const up = C.up && made.className === 'on' && made.innerHTML.includes(T.explain.title);
         const other1 = C.key({ code: 'KeyW' }), early = C.key(ent), upEarly = C.up; clock += CARD_ARM_MS + 1; const took = C.key(ent), gone = !C.up && made.className === '';
-        C.update(g.rails.card(), caps); const again = C.up; const after = C.key(ent);   // (the same card, owed again by the step: read on this page, so none — and Enter is the game's again)
+        C.update(g.view.lesson?.rails?.card, caps); const again = C.up; const after = C.key(ent);   // (the same card, owed again by the step: read on this page, so none — and Enter is the game's again)
         C.update({ text: 'another' }, caps); const next = C.up; C.update(null, caps); const down = !C.up;
         page = { up, other1, early, upEarly, took, gone, again, after, next, down }; } finally { G.document = doc0; }
       const pageOk = page.up && !page.other1 && page.early && page.upEarly && page.took && page.gone && closedN === 1 && !page.again && !page.after && page.next && page.down;
       // the arrow: a step with `toward` beside its `at` is drawn as one; a step without is the ring
-      const ring0 = g.rails.arrow(); T.toward = [T.at[0] + 2, 0, T.at[2]]; const arrow = g.rails.arrow(); delete T.toward;
+      const ring0 = g.view.lesson?.rails?.arrow; T.toward = [T.at[0] + 2, 0, T.at[2]]; const arrow = g.view.lesson?.rails?.arrow; delete T.toward;
       // …and a card nobody would read is a fault of the level
       const text0 = T.explain.text; T.explain.text = 'x'.repeat(400); const long = checkLesson(g).some((f: string) => /explain/.test(f)); T.explain.text = text0; const fine = !checkLesson(g).some((f: string) => /explain/.test(f));
       const main = readFileSync(`${ROOT}/src/main.ts`, 'utf8'), ov = readFileSync(`${ROOT}/src/ui/overlay.ts`, 'utf8');
@@ -370,7 +373,7 @@ export async function railsCheck(): Promise<boolean> {
           /** step `i` is up with its deed not done · its deed is done (the level's own test stood in for: this line is about what comes after it) */
           const put = (i: number) => { L.steps[i].done = { is: 'any', of: [] }; g.lesson.i = i; (g.lesson as any).seen = null; R.run(2 / 60); }, deed = (i: number) => { L.steps[i].done = { is: 'all', of: [] }; R.run(2 / 60); };
           type Look = { at: number; settling: boolean; card: boolean; line: string | null; watch: boolean };
-          const look = (): Look => { const p = g.rails.prompt(); return { at: g.lesson.i, settling: g.lesson.settling, card: !!g.rails.card(), line: p?.line ?? null, watch: !!p?.watch }; };
+          const look = (): Look => { const p = g.view.lesson?.rails?.prompt; return { at: g.lesson.i, settling: g.view.lesson?.settling, card: !!g.view.lesson?.rails?.card, line: p?.line ?? null, watch: !!p?.watch }; };
           const held = (x: Look) => x.at === k - 1 && x.settling && !x.card && x.watch && x.line === '', there = (x: Look) => x.at === k && !x.settling && x.card && !!x.line;
           const B = RAILS.cardBeatSecs, Q = RAILS.cardQuiet;
           // ---- a card with no word of its own: the beat, whatever is playing
@@ -378,10 +381,10 @@ export async function railsCheck(): Promise<boolean> {
           R.run(Q + 0.5); put(k - 1); const a0 = look(); deed(k - 1); const q0 = look(); R.run(B - 0.3); const q1 = look(); R.run(0.5); const q2 = look();   // a quiet floor
           put(k - 1); fight(0.5); deed(k - 1); const b0 = look(); fight(B + 0.25); const b1 = look();   // his squad firing all the while: the beat and no more
           // (a deed of his own while it settles — a whistle, filed as the game files one — is the next step's when it comes up)
-          R.run(Q + 0.5); put(k - 1); deed(k - 1); g.events.push({ kind: 'whistle', pos: [...g.player.char.pos], time: g.time, loud: false, level: 0.3, who: PLAYER_ID } as any); const own = L.steps[k - 1].done; L.steps[k - 1].done = { is: 'cue', name: 'none' }; const cue = g.rails.prompt(); L.steps[k - 1].done = own;   // (…and a step that only waited for the script keeps its own line while it settles)
+          R.run(Q + 0.5); put(k - 1); deed(k - 1); g.events.push({ kind: 'whistle', pos: [...g.player.char.pos], time: g.time, loud: false, level: 0.3, who: PLAYER_ID } as any); const own = L.steps[k - 1].done; L.steps[k - 1].done = { is: 'cue', name: 'none' }; const cue = g.view.lesson?.rails?.prompt; L.steps[k - 1].done = own;   // (…and a step that only waited for the script keeps its own line while it settles)
           R.run(B + 0.2); const carried = g.lesson.i === k ? (g.lesson as any).seen?.n.get('event:whistle') ?? 0 : -1;
           // (the step moved by hand while one settles: the step put up is not done by the other's deed)
-          put(k - 1); deed(k - 1); L.steps[plain].done = { is: 'any', of: [] }; g.lesson.i = plain; R.run(4 / 60); const moved = { at: g.lesson.i, settling: g.lesson.settling };
+          put(k - 1); deed(k - 1); L.steps[plain].done = { is: 'any', of: [] }; g.lesson.i = plain; R.run(4 / 60); const moved = { at: g.lesson.i, settling: g.view.lesson?.settling };
           // ---- a card marked quiet: the fight his deed set off is watched to its end
           E.quiet = true;
           R.run(Q + 0.5); put(k - 1); deed(k - 1); R.run(B - 0.3); const u1 = look(); R.run(0.5); const u2 = look();   // a quiet floor: still the beat alone
@@ -424,21 +427,21 @@ export async function railsCheck(): Promise<boolean> {
       const spread = marks.length >= 30 && top / marks.length <= 0.3 && bins.size >= 10 && near >= 1.5 && men.length === 4;   // (before: 12 metres marked in thirty seconds, 58% in one — ten in fourteen is far from that and a bin clear of this script's dice)
       // the stack's step: Shift down and the command key on the door — nothing with the rule off (the build as it was), the order with it
       const k = L.steps.findIndex((T: any) => T.id === 'stack'), T = L.steps[k], DOOR = T.at as number[]; g.lesson.i = k; R.run(0.3);
-      const ask = g.rails.prompt();
+      const ask = g.view.lesson?.rails?.prompt;
       // (an order pointed somewhere else is not the step being done: its line stays the ask. And a step's own line with no key in it is an ask, not a line to watch)
-      R.command([13.5, 0, 23.4]); R.run(0.3); const wrong = g.rails.prompt(), wrongGiven = g.orders.log.length > 0;
-      const was = T.line; T.line = 'Get up to the door'; const plain = g.rails.prompt(); T.line = was;
+      R.command([13.5, 0, 23.4]); R.run(0.3); const wrong = g.view.lesson?.rails?.prompt, wrongGiven = g.orders.log.length > 0;
+      const was = T.line; T.line = 'Get up to the door'; const plain = g.view.lesson?.rails?.prompt; T.line = was;
       const shifted = (on: boolean) => { RAILS.shiftTap = on; const n = g.orders.log.length; R.W.cursorAt(DOOR); R.run(3 / 60, ['ShiftLeft']); R.W.cursorAt(DOOR); I.pressed.add('KeyB'); R.run(3 / 60, ['ShiftLeft', 'KeyB']); R.run(0.2, ['ShiftLeft']); return g.orders.log.slice(n).map((o: any) => o.order); };
       const tap0 = RAILS.shiftTap; let off: string[] = [], on: string[] = []; try { off = shifted(false); on = shifted(true); } finally { RAILS.shiftTap = tap0; }
       // …and its line: the ask before, what the men are doing after — and the ask again once that has stood too long with the step not done
-      const aft = g.rails.prompt(), max = RAILS.afterMax; let again: ReturnType<typeof g.rails.prompt> = null; try { RAILS.afterMax = 1.5; R.run(2.0); again = g.rails.prompt(); } finally { RAILS.afterMax = max; }
+      const aft = g.view.lesson?.rails?.prompt, max = RAILS.afterMax; let again: any = null; try { RAILS.afterMax = 1.5; R.run(2.0); again = g.view.lesson?.rails?.prompt; } finally { RAILS.afterMax = max; }
       // the stack's door on the floor plan: its bar, and no key on it while the step holds the word shut; the key once a step opens the word
       const { floorPlan } = await import(`${ROOT}/src/game/floorplan.ts`), caps = () => floorPlan(g).doors.filter((d: any) => d.door).map((d: any) => `${d.why}:${d.key ?? '-'}`).join(' ');
-      const shut = g.rails.locks('word'), capShut = caps(), kw = L.steps.findIndex((_: any, j: number) => { g.lesson.i = j; return j > k && !g.rails.locks('word'); }), capOpen = kw >= 0 ? caps() : 'no step opens the word'; g.lesson.i = k;
+      const shut = locked(g.view, 'word'), capShut = caps(), kw = L.steps.findIndex((_: any, j: number) => { g.lesson.i = j; return j > k && !locked(g.view, 'word'); }), capOpen = kw >= 0 ? caps() : 'no step opens the word'; g.lesson.i = k;
       verdict(shut && /\bstack:-/.test(capShut) && !/:F/.test(capShut) && /\bstack:F/.test(capOpen),
         'a key is named on the floor only once its lesson has opened it: at the stack\'s step the word is shut, the stack\'s door has its bar and no key on it; at the first step that opens the word the same door carries the key',
         `the word shut ${shut} · the doors then: ${capShut || 'none'} · at step ${kw >= 0 ? L.steps[kw].id : '-'}: ${capOpen || 'none'}`);
-      const kg = L.steps.findIndex((T: any) => T.id === 'gate'); g.lesson.i = kg; const gate = g.rails.prompt();   // (read as it comes up: its cue is long past on this floor and the step is done on its first tick)
+      const kg = L.steps.findIndex((T: any) => T.id === 'gate'); g.lesson.i = kg; const gate = g.view.lesson?.rails?.prompt;   // (read as it comes up: its cue is long past on this floor and the step is done on its first tick)
       // the page's input (game/input.ts), on a made-up window: a Shift whose key-up never came goes with the next event that says it is up; a key that goes down again unrepeated is a fresh press
       const { Input } = await import(`${ROOT}/src/game/input.ts`); const G: any = globalThis, had: Record<string, unknown> = {}, names = ['window', 'HTMLElement', 'HTMLInputElement', 'HTMLSelectElement', 'HTMLTextAreaElement'];
       for (const n of names) had[n] = G[n];
@@ -526,30 +529,29 @@ export async function railsCheck(): Promise<boolean> {
       const both = railClear(rest, [man(700, 560), man(700, 700)], H, false), short = railClear(rest, [man(700, 560)], rest.b + RAILCLEAR.gap, false);   // (a second man at the bottom edge, and a layer with no room under it: it lies where it lies)
       const walk = (from: number, to: number) => { let at = 0, n = 0, top = 9e9; for (let y = from; from < to ? y <= to : y >= to; y += from < to ? 3 : -3) { const s = railClear(rest, [man(700, y)], H, at > 0); if (s !== at) n++; at = s; top = Math.min(top, rest.t + s); } return { n, top }; };
       const dn = walk(300, 800), up = walk(800, 300);   // (a man walks down the whole picture through both places, and back up: two moves each way, and never up into the picture)
-      const R = await rig(true), g = R.g; R.run(0.5); const squad = R.squad().length, men = g.rails.lineMen(), RD = g.lesson.data.rails, sky = RD.sky;
-      RD.sky = undefined; const floor = g.rails.lineMen(); RD.sky = sky; const lc = RAILS.lineClear; RAILS.lineClear = false; const off = g.rails.lineMen().length; RAILS.lineClear = lc;
+      const R = await rig(true), g = R.g; R.run(0.5); const squad = R.squad().length, men = g.view.lesson?.rails?.lineMen ?? [];
       const foes = g.guards.filter((x: any) => x.team !== 'operative' && x.state !== 'dead'), cs = foes[0]?.callsign as string, other = foes[1]?.callsign as string;
-      const T = g.lesson.step, done0 = T.done, what = (w: string) => { T.done = { is: 'did', what: w }; const f = checkLesson(g).filter((x: string) => /what:|on:/.test(x)); T.done = done0; return f.length; };
+      const T = g.level.scenarios.lesson?.steps[g.lesson.i], done0 = T.done, what = (w: string) => { T.done = { is: 'did', what: w }; const f = checkLesson(g).filter((x: string) => /what:|on:/.test(x)); T.done = done0; return f.length; };
       const named = what(`order:cover@foe:${cs}`), thing = what('order:work@thing:breaker'), plainDeed = what('order:stack'), noMan = what('order:cover@foe:Nobody 99'), door = what('order:stack@door:north door'), bad = what('order:stack@nowhere'), trail = what(`order:cover@foe:${cs} `);
       // (the step's own count: an order on ANOTHER man does not pass a deed that names one; the order on him does)
-      const i0 = g.lesson.index; T.done = { is: 'did', what: `order:cover@foe:${cs}` }; g.orders.log.push({ t: g.time, order: 'cover', who: [], target: `foe:${other}` }); R.run(0.2); const i1 = g.lesson.index;
-      g.orders.log.push({ t: g.time, order: 'cover', who: [], target: `foe:${cs}` }); R.run(0.2); const i2 = g.lesson.index; T.done = done0;
+      const i0 = g.view.lesson?.step; T.done = { is: 'did', what: `order:cover@foe:${cs}` }; g.orders.log.push({ t: g.time, order: 'cover', who: [], target: `foe:${other}` }); R.run(0.2); const i1 = g.view.lesson?.step;
+      g.orders.log.push({ t: g.time, order: 'cover', who: [], target: `foe:${cs}` }); R.run(0.2); const i2 = g.view.lesson?.step; T.done = done0;
       verdict(none === 0 && far === 0 && under === low && low > 0 && drift === 0 && near === low && gone === 0 && both === 0 && short === 0 && dn.n === 2 && up.n === 2 && dn.top === rest.t && up.top === rest.t
-        && squad > 0 && men.length === squad && floor.length === squad + 1 && floor[floor.length - 1] === g.player.char && off === 0
+        && squad > 0 && men.length === squad + (g.view.lesson?.rails?.sky ? 0 : 1) && (!!g.view.lesson?.rails?.sky || men[men.length - 1] === g.player.char.id)
         && !!cs && !!other && named === 0 && thing === 0 && plainDeed === 0 && noMan > 0 && door > 0 && bad > 0 && trail > 0 && i1 === i0 && i2 === i0 + 1,
-        'the big line stays clear of your own men: it lies where it lies with nobody under it, goes to the bottom edge from over a man, does not move again while he drifts, comes home only when he is well clear, lies where it lies with both places taken, and moves twice and never up while a man walks the whole picture; the frame lists the squad for it, and the player on the floor (nobody with the knob off); and a deed can name the man an order was given on, and only that order counts',
-        `nobody ${none} · men elsewhere ${far} · a man under it ${under} px (the edge is ${low}) · moves in 240 frames of drift ${drift} · just above it ${near}, well clear ${gone} · both places taken ${both} · no room under it ${short} · a walk down ${dn.n} moves, up ${up.n}, highest top ${Math.min(dn.top, up.top)} (it lies at ${rest.t}) · the frame's men ${men.length} of a squad of ${squad}, on the floor ${floor.length}, knob off ${off} · faults: named man ${named}, thing ${thing}, plain ${plainDeed}, no such man ${noMan}, a door after @ ${door}, no kind ${bad}, a space at the end ${trail} · the step: ${i0 + 1}, after an order on ${other} ${i1 + 1}, after the order on ${cs} ${i2 + 1}`); }
+        'the big line stays clear of your own men: it lies where it lies with nobody under it, goes to the bottom edge from over a man, does not move again while he drifts, comes home only when he is well clear, lies where it lies with both places taken, and moves twice and never up while a man walks the whole picture; the frame lists the squad for it, and the player when he is on the floor; and a deed can name the man an order was given on, and only that order counts',
+        `nobody ${none} · men elsewhere ${far} · a man under it ${under} px (the edge is ${low}) · moves in 240 frames of drift ${drift} · just above it ${near}, well clear ${gone} · both places taken ${both} · no room under it ${short} · a walk down ${dn.n} moves, up ${up.n}, highest top ${Math.min(dn.top, up.top)} (it lies at ${rest.t}) · the frame's men ${men.length} of a squad of ${squad} · faults: named man ${named}, thing ${thing}, plain ${plainDeed}, no such man ${noMan}, a door after @ ${door}, no kind ${bad}, a space at the end ${trail} · the step: ${i0 + 1}, after an order on ${other} ${i1 + 1}, after the order on ${cs} ${i2 + 1}`); }
     // ---- a step's own eye has a place among the fog's (fogofwar.ts update, RAILS.eyeFirst): the fog takes five, and with four men up and the seat's
     //      lookout in, the step's eye was the one dropped — the squad's own wall charge went off in the fog, twice, in the maintainer's play. The mission's
     //      own fog word is the level's to choose, so this rig puts the fog on itself
     { const { FOG } = await import(`${ROOT}/src/game/fogofwar.ts`), eyesWas = FOG.eyes; FOG.eyes = 5;   // (the rule is about FIVE places — the frozen stand's, and the page's until 10-24: with FOG.eyes at seven, the page's now, both eyes have a place, asked last)
       const R = await rig(true), g = R.g, L = g.level.scenarios.lesson; L.rails.fog = true; for (const T of L.steps) delete T.fog; R.run(0.5);
-      const lk = g.rails.eye(), lookIn = !!lk && !g.rails.stepEye() && g.fogOfWar.eyes.includes(lk), lookAt = L.rails.sky.eye.at as number[], lookSees = g.fogOfWar.spotSeen(lookAt[0], lookAt[2]);   // (a step with no eye of its own: the seat's lookout is one of the fog's)
+      const eyeIn = (id: number) => g.fogOfWar.eyes.find((e: any) => e.id === id) ?? null, lk = eyeIn(LOOK_EYE), lookIn = !!lk && !eyeIn(STEP_EYE), lookAt = L.rails.sky.eye.at as number[], lookSees = g.fogOfWar.spotSeen(lookAt[0], lookAt[2]);   // (a step with no eye of its own: the seat's lookout is one of the fog's)
       const k = L.steps.findIndex((T: any) => T.id === 'charge'), T = L.steps[k]; g.lesson.i = k; R.run(0.4);
-      const s = g.rails.stepEye(), at = (T.eye?.at ?? T.at) as number[], look = !!g.rails.eye(), men = R.squad().length, on = g.fogOfWar.on;
-      const eyes1 = g.fogOfWar.eyes.length, in1 = !!s && g.fogOfWar.eyes.includes(s), seen1 = g.fogOfWar.spotSeen(at[0], at[2]);
-      let in0 = false, seen0 = false; RAILS.eyeFirst = false; try { R.run(0.4); in0 = !!s && g.fogOfWar.eyes.includes(s); seen0 = g.fogOfWar.spotSeen(at[0], at[2]); } finally { RAILS.eyeFirst = true; }
-      FOG.eyes = 7; R.run(0.4); const lk7 = g.rails.eye(), eyes7 = g.fogOfWar.eyes.length, both7 = !!s && g.fogOfWar.eyes.includes(s) && !!lk7 && g.fogOfWar.eyes.includes(lk7); FOG.eyes = eyesWas;
+      const s = eyeIn(STEP_EYE), at = (T.eye?.at ?? T.at) as number[], look = !!eyeIn(LOOK_EYE), men = R.squad().length, on = g.fogOfWar.on;
+      const eyes1 = g.fogOfWar.eyes.length, in1 = !!s, seen1 = g.fogOfWar.spotSeen(at[0], at[2]);
+      let in0 = false, seen0 = false; RAILS.eyeFirst = false; try { R.run(0.4); in0 = !!eyeIn(STEP_EYE); seen0 = g.fogOfWar.spotSeen(at[0], at[2]); } finally { RAILS.eyeFirst = true; }
+      FOG.eyes = 7; R.run(0.4); const eyes7 = g.fogOfWar.eyes.length, both7 = !!eyeIn(STEP_EYE) && !!eyeIn(LOOK_EYE); FOG.eyes = eyesWas;
       verdict(on && men === 4 && look && lookIn && lookSees && !!s && eyes1 === 5 && in1 && !in0 && seen1 && !seen0 && eyes7 === 6 && both7,
         'a step\'s own eye has a place among the fog\'s five: on a step with none the seat\'s lookout is one of them and its own ground is seen; with four men up, on the wall\'s step, the step\'s eye is one of them and where it looks is seen (and it is the one dropped, and the place in the fog, with the rule off, as it was); with seven places (FOG.eyes, the page since 10-24) the lookout and the step\'s eye both have one',
         `fog ${on ? 'on' : 'OFF'} · ${men} men up, the lookout ${look ? 'named' : 'absent'}, on the first step among the fog's eyes ${lookIn}, its ground ${lookSees ? 'seen' : 'not seen'} · the step's eye ${s ? 'named' : 'none'} · the fog's eyes ${eyes1}, the step's among them ${in1} (rule off: ${in0}) · where it looks ${seen1 ? 'seen' : 'not seen'} (rule off: ${seen0 ? 'seen' : 'not seen'}) · with seven places: eyes ${eyes7}, the lookout and the step's eye both in ${both7}`); }
@@ -561,7 +563,7 @@ export async function railsCheck(): Promise<boolean> {
       const R = await rig(true), g = R.g, L = g.level.scenarios.lesson, F = g.fogOfWar; AUTOPILOT.plain = false; AUTOPILOT.restack = false;   // (`plain` held off for this line: the entry the squad would PICK is its window on what the squad knows — a later rig stands the page's switches up again)
       L.rails.fog = true; for (const T of L.steps) delete T.fog; R.run(0.5);
       g.lesson.i = L.steps.findIndex((T: any) => T.id === 'charge'); R.run(0.4);
-      const s = g.rails.stepEye(), foe = g.guards.find((h: any) => h.team !== 'operative' && h.state !== 'dead' && !h.script && !h.civ);
+      const s = g.fogOfWar.eyes.find((e: any) => e.id === STEP_EYE) ?? null, foe = g.guards.find((h: any) => h.team !== 'operative' && h.state !== 'dead' && !h.script && !h.civ);
       // (the first place down the eye's own line that is a room's floor with nothing between)
       const at = (m: number): [number, number, number] => [s.pos[0] + s.look[0] * m, 0, s.pos[2] + s.look[2] * m];
       const m = s ? [1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5].find(d => g.cleared.roomAt(at(d)) > 0 && !g.col.nav.isBlocked(at(d)[0], at(d)[2]) && !g.col.segmentBlocked(s.pos, [at(d)[0], 1.1, at(d)[2]])) : undefined;
@@ -578,7 +580,7 @@ export async function railsCheck(): Promise<boolean> {
         `the step's eye ${s ? 'named' : 'none'} · a man stood in it ${foe && m ? `${m} m down its line, in room ${room}` : 'none'} · a door into his room from a known one ${way ? 'found' : 'none'} · ${word(on)} · rule off: ${word(off)}`); }
     // ---- 12: the mark stays in the picture, and clear of the step's line
     { const R = await rig(true), g = R.g, cam = R.W.cam; R.run(0.5); R.turn(1.0); R.run(0.3); R.zoom(); R.run(1.0); R.run(2.6, ['KeyD']);   // (the fourth step again)
-      const at = g.lesson.step?.at as [number, number, number] | undefined, at_ = () => { const [x, y] = at ? cam.project(at, 1, 1) : [9, 9]; return [x, y] as [number, number]; };
+      const at = g.level.scenarios.lesson?.steps[g.lesson.i]?.at as [number, number, number] | undefined, at_ = () => { const [x, y] = at ? cam.project(at, 1, 1) : [9, 9]; return [x, y] as [number, number]; };
       // (the picture's kept part, as fractions of the view: off its edges, not under the squad's panel — the top left, to 0.24 across and 0.30 down at the smallest view — and above the line low in its middle — index.html #railprompt, whose top is at 0.77)
       const inPic = ([x, y]: [number, number]) => x >= 0.20 && x <= 0.90 && y >= 0.08 && y <= 0.70 && !(x < 0.25 && y < 0.31), word = ([x, y]: [number, number]) => `${x.toFixed(2)},${y.toFixed(2)}`;
       const rows: { k: string; near: boolean; held: [number, number]; let_: [number, number] }[] = [];
@@ -586,7 +588,7 @@ export async function railsCheck(): Promise<boolean> {
         if (near) for (let i = 0; i < 40; i++) { cam.zoom(-60); R.run(1 / 60); }   // (zoomed in: the kept ground is a few metres)
         for (const k of ['KeyW', 'KeyA', 'KeyS', 'KeyD']) { R.run(2.5, [k]); const held = at_(); R.run(4); rows.push({ k: k.slice(3), near, held, let_: at_() }); }
       }
-      const out = rows.filter(r => !inPic(r.held)).length, back = rows.filter(r => inPic(r.let_)).length, step = g.lesson.step?.id;
+      const out = rows.filter(r => !inPic(r.held)).length, back = rows.filter(r => inPic(r.let_)).length, step = g.view.lesson?.id;
       verdict(!!at && out >= 4 && back === rows.length && step === 'move',
         'the mark stays in the picture: a view shifted far off the step\'s mark stays there while the walk key is held, and once it is let go the mark comes back inside the picture\'s edges, clear of the squad\'s panel and above the step\'s line, each way the view can be shifted, zoomed out and in',
         `step '${step}' · the mark on the view (0,0 top left, 1,1 bottom right), key held → let go: ${rows.map(r => `${r.near ? 'near ' : ''}${r.k} ${word(r.held)} → ${word(r.let_)}`).join(' · ')} · out while held ${out}/${rows.length}, back in ${back}/${rows.length}`); }
@@ -600,7 +602,7 @@ export async function railsCheck(): Promise<boolean> {
     { const log = console.log, warn = console.warn, err = console.error; if (!VERBOSE) console.log = console.warn = console.error = () => { };
       let W: any; try { W = await standUp({ uploadEvery: 4, level: loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/tut-quiet.json`, 'utf8'))), seed: 1 }); RAILS.on = true; startFromQuery(W.game, '?levelFile=tut-quiet.json&quiet'); }
       finally { console.log = log; console.warn = warn; console.error = err; }
-      const g = W.game, R = g.lesson.data?.rails, named: string[] = R?.rows ?? [], DOOR = [27.9, 1.0, 16.5];
+      const g = W.game, R = g.level.scenarios.lesson?.rails, named: string[] = R?.rows ?? [], DOOR = [27.9, 1.0, 16.5];
       const verbs = (at: number[] | null, aim: number[]) => { if (at) g.teleportPlayer(at); for (let i = 0; i < 12; i++) { W.cursorAt(aim); W.step(DT); } return [...new Set<string>(g.nearby.filter((r: any) => r.verb).map((r: any) => r.verb as string))]; };
       // (the first step, at the start beside the yard's gate: Space is not open yet, so the gate has no row; without the list it has its own)
       const GATE = [8.0, 1.0, 14.0], shut = verbs(null, GATE); if (R) R.rows = undefined; const shut0 = verbs(null, GATE); if (R) R.rows = named;
@@ -614,7 +616,7 @@ export async function railsCheck(): Promise<boolean> {
       g.restartEncounter(); run(30); HANDRING.on = true; tap('KeyC'); run(20); for (const p of [DARK, WHISTLE]) { g.teleportPlayer(p); run(90); }
       const at = L.steps[g.lesson.i]?.id, digit = `Digit${CMDRING.wedges}`;
       const on = verbs([27.9, 0, 17.2], DOOR); if (R) R.rows = undefined; const all0 = verbs(null, DOOR); if (R) R.rows = named;   // (Space is open from the whistle's step on)
-      const extra = all0.filter(v => !named.includes(v)), pick = g.rails.offers('pick'), boot = g.rails.offers(extra[0] ?? 'pick'); g.teleportPlayer(WHISTLE); run(20);
+      const extra = all0.filter(v => !named.includes(v)), pick = (g.view.lesson?.rails?.rows ?? ['pick']).includes('pick'), boot = (g.view.lesson?.rails?.rows ?? [extra[0] ?? 'pick']).includes(extra[0] ?? 'pick'); g.teleportPlayer(WHISTLE); run(20);
       tap(digit); run(10); const early = L.steps[g.lesson.i]?.id;   // (no ring up: the digit is a slot's, and locked)
       I.pressed.add('Space'); I.keys.add('Space'); run(Math.ceil((HANDRING.holdSecs + 0.1) * 60)); I.keys.delete('Space'); const up = !!g.player.sel.ring; run(2); tap(digit); run(10 + BEAT);
       const after = L.steps[g.lesson.i]?.id;   // (the step after the whistle opens on a card: the whistle's settles for the card's beat first — RAILS.cardBeat)
@@ -652,10 +654,10 @@ export async function railsCheck(): Promise<boolean> {
         const pair = (at: V) => { W.cursorAt(at); step(2); W.cursorAt(at); I.keys.add('ShiftLeft'); step(2); I.keys.add(KEY); I.pressed.add(KEY); step(); I.keys.delete(KEY); step(3); I.keys.delete('ShiftLeft'); step(12); };
         const at = (id: string): V => L.steps.find((T: any) => T.id === id).at;
         g.godMode = true; step(30); for (const m of O.squad()) m.god = true;
-        const g0 = PM.PLAN_STATS.goals, e = { locked: g.rails.locks('goal') as boolean, his: PM.goalsOn(O) as boolean, n: 0, goals: 0, plan: false, first: (CMDRING.goalHalf ? 2 : 4) as number };   // (first: who a first goal is for as this game was stood — half the squad's since `CMDRING.goalHalf`)
+        const g0 = PM.PLAN_STATS.goals, e = { locked: locked(g.view, 'goal') as boolean, his: PM.goalsOn(O) as boolean, n: 0, goals: 0, plan: false, first: (CMDRING.goalHalf ? 2 : 4) as number };   // (first: who a first goal is for as this game was stood — half the squad's since `CMDRING.goalHalf`)
         pair(at('door1')); e.n = on('guard').length; e.goals = PM.PLAN_STATS.goals - g0; e.plan = !!O.plan?.up;
-        if (frame) for (let i = 0; i < 40 * 60 && g.lesson.step?.id !== 'door2'; i++) step(); else step(120);
-        const g1 = PM.PLAN_STATS.goals, l = { step: (g.lesson.step?.id ?? '(none)') as string, locked: g.rails.locks('goal') as boolean, his: PM.goalsOn(O) as boolean, a: 0, b: 0, whole: false, goals: 0, plan: false };
+        if (frame) for (let i = 0; i < 40 * 60 && g.view.lesson?.id !== 'door2'; i++) step(); else step(120);
+        const g1 = PM.PLAN_STATS.goals, l = { step: (g.view.lesson?.id ?? '(none)') as string, locked: locked(g.view, 'goal') as boolean, his: PM.goalsOn(O) as boolean, a: 0, b: 0, whole: false, goals: 0, plan: false };
         pair(at('door2')); const b = on('guard_side'); l.a = on('guard').length; l.b = b.length; l.whole = b.length === 2 && O.pairOf(b[0]) === O.pairOf(b[1]); l.goals = PM.PLAN_STATS.goals - g1; l.plan = !!O.plan?.up;
         return { e, l, said: `before: ${e.locked ? 'locked' : 'OPEN'}, ${e.his ? 'his' : 'not his'}, ${e.n} on the first door, ${e.goals} goal${e.plan ? ', PLAN MODE UP' : ''} · at '${l.step}': ${l.locked ? 'locked' : 'open'}, ${l.his ? 'his' : 'not his'}, ${l.a} + ${l.b} on the two doors${l.whole ? ' (a whole pair)' : ''}, ${l.goals} goal${l.plan ? ', PLAN MODE UP' : ''}` };
       };

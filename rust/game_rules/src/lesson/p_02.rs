@@ -236,6 +236,32 @@ pub fn lesson_over(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool 
         || (crate::roomclear::room_clear_scenario_active(g) && g.room_clear.end.is_some())
 }
 
+/// The step's deed is done and the moment is playing out: its own `settle`, or the beat before the next step's card.   (lesson.ts Lesson.settling)
+pub fn lesson_settling(g: &crate::game::Game) -> bool {
+    run_is_mission(g) && g.lesson.seen.as_ref().map_or(false, |s| s.done_t.is_some() && s.done_i == Some(g.lesson.i))
+}
+
+/// What a seat's HUD is told of the lesson that is live (None: none is).
+pub fn lesson_view(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<crate::view::LessonView> {
+    let l = lesson_data(g)?;
+    let i = lesson_at(g);
+    let (of, id, asks_view) = {
+        let t = l.steps.get(i as usize);
+        (l.steps.len(), t.map(|t| t.id.clone()), t.map_or(false, |t| matches!(t.done, crate::scene_scenarios::LessonTestKind::View { .. })))
+    };
+    let frame = crate::rails::RailsLesson { l, i: m::min(i, of as f64) };
+    Some(crate::view::LessonView {
+        step: i as u32,
+        of: of as u32,
+        finished: id.is_none(),
+        id,
+        over: lesson_over(g, seat),
+        settling: lesson_settling(g),
+        asks_view,
+        rails: crate::rails::rails_view(g, seat, &frame),
+    })
+}
+
 /// The objective while a step is up (None: the scenario's own).
 pub fn lesson_objective(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<crate::lesson::LessonObjective> {
     let l = lesson_data(g)?;

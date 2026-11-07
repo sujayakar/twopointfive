@@ -12,5 +12,5 @@ use crate::game::Game;
 
 /// the view about `seat`, as the last tick left the game
 pub fn tick_view(g: &Game, seat: &crate::seats::SeatRef) -> TickView {
-    TickView { mission: crate::mission::objective(g, seat) }
+    TickView { mission: crate::mission::objective(g, seat), lesson: crate::lesson::lesson_view(g, seat) }
 }

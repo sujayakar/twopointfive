@@ -490,19 +490,14 @@ export class FogOfWar {
     // ---- the eyes: Sam, then the living operatives in list order, as many as FOG.eyes (the renderer takes them all; the CPU answer uses the same ones — one model; a
     //      tutorial's frame adds eyes that are the picture's alone, below)
     const eyes: FogEye[] = []; const eyeOf = (c: Character): FogEye => this.eyeOf(c); const cap = Math.min(FOG_EYES, fogEyeCount(FOG.eyes) + g.seats.length - 1);   // (the count is one player's and his team's: a further player's man is one more — seats.ts)
-    if (!g.rails?.skyOn) eachSeat(g, v => { if (v !== g && eyes.length >= cap) return; const own = eyeOf(v.player.char); eyes.push(wandEye(v) ?? peekEye(v, own) ?? own); });   // (THE TEAM'S FOG: every player's man is an eye of it, as every teammate is — seats.ts)   // (rails.ts, the seat with nobody on the floor: the parked player is nobody's eye)   // (looking under a door his eyes are in the scope: the lens stands in his own eye's place — wand.ts; peeking round the end of a wall they are where a head leaned round it would be — peeksight.ts, null with its switch down)
-    if (!FOG.own || g.rails?.skyOn) for (const gd of g.guards) { if (eyes.length >= cap) break; if (!this.onTeam(gd) || gd.state === 'dead' || g.time < gd.dazzledUntil) continue; eyes.push(mateWandEye(g, gd) ?? eyeOf(gd.char)); }   // (a teammate ordered to look under a door: his lens in his own eye's place — wandorder.ts)
+    if (!g.view.lesson?.rails?.sky) eachSeat(g, v => { if (v !== g && eyes.length >= cap) return; const own = eyeOf(v.player.char); eyes.push(wandEye(v) ?? peekEye(v, own) ?? own); });   // (THE TEAM'S FOG: every player's man is an eye of it, as every teammate is — seats.ts)   // (rails.ts, the seat with nobody on the floor: the parked player is nobody's eye)   // (looking under a door his eyes are in the scope: the lens stands in his own eye's place — wand.ts; peeking round the end of a wall they are where a head leaned round it would be — peeksight.ts, null with its switch down)
+    if (!FOG.own || g.view.lesson?.rails?.sky) for (const gd of g.guards) { if (eyes.length >= cap) break; if (!this.onTeam(gd) || gd.state === 'dead' || g.time < gd.dazzledUntil) continue; eyes.push(mateWandEye(g, gd) ?? eyeOf(gd.char)); }   // (a teammate ordered to look under a door: his lens in his own eye's place — wandorder.ts)
     else eachSeat(g, v => { for (const e of mateWandEyes(v)) { if (eyes.length >= cap) break; eyes.push(e); } });   // (only my own eyes: an ordered lens is a device feed, as a sticky camera's is)
     eachSeat(g, v => { for (const e of stickyEyes(v)) { if (eyes.length >= cap) { STICKY_STATS.blind++; break; } eyes.push(e); } });   // (his sticky cameras, newest first, in the places the frame has left: stickycam.ts — nothing with none out)
     // (THE FRAME'S EYES — rails.ts: the seat's lookout, a step's eye. With RAILS.eyeView they are the PICTURE's alone: `pic` is the list the mask, the doors
     //  and the loose things read, and `eyes` stays the team's own — the list every man's seen() is answered from, the same as with no frame's eye at all, the
     //  man a step's eye takes the picture's last place from included. A man only a frame's eye has a line to is drawn, not seen: `framed`, in the verdicts)
-    let pic = eyes, view: FogEye[] | null = null;
-    { const e = g.rails?.eye(), s = g.rails?.stepEye(), first = !!s && !!g.rails?.eyeFirst, own = !!(e || s) && !!g.rails?.eyeView;
-      if (own) { pic = eyes.slice(); view = []; }
-      if (s && first) { if (pic.length >= cap) pic.length = cap - 1; pic.push(s); view?.push(s); }   // (the step's own eye is what the step is about: with the places full it takes the last one — with four men up and the lookout in, it was the one dropped)
-      if (e && pic.length < cap) { pic.push(e); view?.push(e); }   // (a tutorial mission's lookout in the seat with nobody on the floor: rails.ts — null off such a level)
-      if (s && !first && pic.length < cap) { pic.push(s); view?.push(s); } }
+    let pic = eyes, view = null as FogEye[] | null;
     this.eyes = pic; S.eyes = pic.length;
     // (the squad's own men for the doors' rule, FOG.squadDoors: every living teammate who is not blinded, whoever's eyes lift the fog)
     this.mates.length = 0; if (FOG.squadDoors && FOG.doors) for (const gd of g.guards) if (this.onTeam(gd) && gd.state !== 'dead' && g.time >= gd.dazzledUntil) this.mates.push(gd.char);

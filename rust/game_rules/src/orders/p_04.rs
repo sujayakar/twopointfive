@@ -57,7 +57,7 @@ fn target_kind(t: &OrderTarget) -> &'static str {
         OrderTarget::Foe(_) => "foe",
     }
 }
-fn target_at(t: &OrderTarget) -> V3 {
+pub fn order_target_at(t: &OrderTarget) -> V3 {
     match t {
         OrderTarget::Floor(x) => x.at,
         OrderTarget::Door(x) => x.at,
@@ -340,7 +340,7 @@ pub fn squad_orders_ring_up(g: &mut crate::game::Game, t: &crate::orders::OrderT
     g.stats.cmdring.opened += 1;
     // it stays on its point: the place, and where its middle stands from it (from the cursor, not from where the view's edge stood it)
     if let Some(cam) = cam {
-        let at = target_at(t);
+        let at = order_target_at(t);
         let (sx, sy, front) = crate::camera::follow_camera_project(g, cam, at, w, h, None, None);
         if front {
             let (mx, my) = mouse(g, input);

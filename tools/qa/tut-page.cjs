@@ -20,9 +20,9 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
 // ---- in the page
 const run = (page, n) => page.evaluate(n => window.__runFrames(n, 1 / 60, [], 'none'), n);   // (stepped, never drawn: a drawn frame is half a minute here — a picture draws its own)
 const read = page => page.evaluate(() => { const g = window.__game, L = window.__lesson, el = document.getElementById('railprompt'), vis = id => { const e = document.getElementById(id); return !!e && getComputedStyle(e).display !== 'none'; };
-  return { i: L.i, id: g.lesson.step?.id ?? null, done: g.lesson.finished, line: el?.querySelector('.line')?.textContent ?? '', keys: [...(el?.querySelectorAll('kbd') ?? [])].map(k => k.textContent), up: !!el && getComputedStyle(el).display !== 'none',
+  return { i: L.i, id: g.view.lesson?.id ?? null, done: g.view.lesson?.finished, line: el?.querySelector('.line')?.textContent ?? '', keys: [...(el?.querySelectorAll('kbd') ?? [])].map(k => k.textContent), up: !!el && getComputedStyle(el).display !== 'none',
     row: document.getElementById('objective')?.textContent ?? '', sky: document.body.classList.contains('skyseat'), equip: vis('equip'), meters: vis('meters'), fatal: document.getElementById('fatal')?.textContent || '',
-    rails: { live: g.rails.live, sum: g.rails.summary() }, t: +g.time.toFixed(1), team: g.guards.filter(x => x.team === 'operative').map(x => `${x.callsign}${x.state === 'dead' ? '†' : ''}@${x.char.pos[0].toFixed(0)},${x.char.pos[2].toFixed(0)}`).join(' '),
+    rails: { live: !!g.view.lesson?.rails, sum: (g.view.lesson?.rails?.open ?? []).join(' ') }, t: +g.time.toFixed(1), team: g.guards.filter(x => x.team === 'operative').map(x => `${x.callsign}${x.state === 'dead' ? '†' : ''}@${x.char.pos[0].toFixed(0)},${x.char.pos[2].toFixed(0)}`).join(' '),
     foes: g.guards.filter(x => x.team !== 'operative' && x.state !== 'dead').length, orders: g.orders.log.length, state: window.__roomclear?.state ?? null }; });
 const at = (page, p) => page.evaluate(p => { const c = document.getElementById('view'), r = c.getBoundingClientRect(), [x, y, vis] = window.__cam.project(p, r.width, r.height, 1); return { x: r.left + x, y: r.top + y, vis: !!vis && x > 8 && y > 8 && x < r.width - 8 && y < r.height - 8 }; }, p);
 
@@ -123,7 +123,7 @@ const at = (page, p) => page.evaluate(p => { const c = document.getElementById('
     torches: async () => { await until('torches', 25); },
     bunk: async s => { for (let n = 0; n < 2 && (await read(page)).id === 'bunk'; n++) { await point(s.at); await tap('KeyQ'); await run(page, 1200); await tap('KeyF'); await until('bunk', 20); } },
     out: async s => { const nv0 = await page.evaluate(() => window.__game.player.nv); await point(s.at); await tap('KeyQ'); await run(page, 240);
-      const V = await page.evaluate(() => ({ nv: window.__game.player.nv, off: window.__game.rails.panned() }));
+      const V = await page.evaluate(() => ({ nv: window.__game.player.nv, off: Math.hypot(window.__game.rails.sky.off[0], window.__game.rails.sky.off[2]) }));
       check(nv0 && !V.nv && V.off < 1, 'the last order given, the night vision comes up and the view is back on the squad', `night vision ${nv0} → ${V.nv} · the view's shift off the squad ${V.off.toFixed(1)} m`);
       log('picture', await shot('93-way')); await until('out', 40); },
   };
@@ -143,7 +143,7 @@ const at = (page, p) => page.evaluate(p => { const c = document.getElementById('
     // A CARD on the step (its `explain`, ui/railcard.ts): up and read; the page's OWN loop let run under it holds the world still (LIVE=0 skips that: a drawn
     // frame is slow here); Enter closes it, and the loop then runs the world again
     if (s.explain) {
-      const card = () => page.evaluate(() => { const e = document.getElementById('railcard'); return { on: !!e && e.classList.contains('on'), h: e?.querySelector('h2')?.textContent || '', p: [...(e?.querySelectorAll('p') ?? [])].map(x => x.textContent).join(' / '), owed: !!window.__game.rails.card(), t: window.__game.time }; });
+      const card = () => page.evaluate(() => { const e = document.getElementById('railcard'); return { on: !!e && e.classList.contains('on'), h: e?.querySelector('h2')?.textContent || '', p: [...(e?.querySelectorAll('p') ?? [])].map(x => x.textContent).join(' / '), owed: !!window.__game.view.lesson?.rails?.card, t: window.__game.time }; });
       const live = n => page.evaluate(async n => { const g = window.__game, t0 = g.time; window.__pauseLoop = false; await new Promise(res => { let k = 0; const f = () => { if (++k > n) res(); else requestAnimationFrame(f); }; requestAnimationFrame(f); }); window.__pauseLoop = true; return +(g.time - t0).toFixed(4); }, n);
       const C = await card(); log('picture', await shot(`60${n + 1}-card`));
       const LIVE = process.env.LIVE !== '0', under = LIVE ? await live(3) : null;

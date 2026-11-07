@@ -75,9 +75,9 @@ const stood = async (zoom: boolean, say: string) => { const rows: string[] = [];
     let hits = 0, down = false, posts = 0, off = 0, step = '', who = ''; const knees: string[] = [];
     const why = await live(seed, (W, g) => {
       const marks: number[][] = L.scenarios.roomClear.team.ops, full = g.player.hitsLeft;
-      if (zoom) for (let i = 0; i < 30 && g.lesson.step?.id === 'zoom'; i++) { W.cam.zoom(60); W.step(1 / 60); }   // (the host's own wheel on the view, as tools/qa/lesson-run.ts does it)
+      if (zoom) for (let i = 0; i < 30 && g.view.lesson?.id === 'zoom'; i++) { W.cam.zoom(60); W.step(1 / 60); }   // (the host's own wheel on the view, as tools/qa/lesson-run.ts does it)
       for (let i = 0; i < SECS * 60; i++) { W.step(1 / 60); for (const m of g.guards) if (m.unit && m.team === 'operative' && g.rails.isSpared(m) && !knees.some(k => k.startsWith(m.callsign))) knees.push(`${m.callsign} at ${g.time.toFixed(1)} s (${m.char.pos[0].toFixed(1)}, ${m.char.pos[2].toFixed(1)})`); }
-      hits = full - g.player.hitsLeft; down = !!g.player.down; step = g.lesson.step?.id ?? '';
+      hits = full - g.player.hitsLeft; down = !!g.player.down; step = g.view.lesson?.id ?? '';
       posts = g.guards.filter((x: any) => POSTS.some(([n]) => n === x.callsign) && x.state !== 'dead').length;
       const men = g.guards.filter((x: any) => x.unit && x.team === 'operative' && x.state !== 'dead');
       const away = men.filter((m: any) => !marks.some(k => Math.hypot(m.char.pos[0] - k[0], m.char.pos[2] - k[2]) < 1.0)); off = 4 - men.length + away.length;
@@ -94,11 +94,11 @@ await stood(true, `the zoom done and no order given, ${SECS} s of the roadblock'
 { const WAY: number[][] = [[6.25, 0, 21.25], [8.75, 0, 20.75], [11.25, 0, 20.75], [13.75, 0, 20.75], [14.5, 0, 19.9], [13.75, 0, 17.75]], EACH = 8; const rows: string[] = []; let bad = 0;
   for (const seed of SEEDS) { const hit: string[] = []; let step = '';
     const why = await live(seed, (W, g) => {
-      for (let i = 0; i < 30 && g.lesson.step?.id === 'zoom'; i++) { W.cam.zoom(60); W.step(1 / 60); }
+      for (let i = 0; i < 30 && g.view.lesson?.id === 'zoom'; i++) { W.cam.zoom(60); W.step(1 / 60); }
       for (let i = 0; i < 8 * 60; i++) W.step(1 / 60);   // (the two cans out and burning, the blind fire begun)
       if (!BROKEN) for (const p of WAY) { g.teleportPlayer(p); const full = g.player.hitsLeft; for (let i = 0; i < EACH * 60; i++) W.step(1 / 60); if (g.player.hitsLeft < full || g.player.down) { hit.push(`(${p[0]}, ${p[2]})`); break; } }
       else { for (let i = 0; i < EACH * WAY.length * 60; i++) W.step(1 / 60); if (g.player.down) hit.push(`(${BLIND[0]}, ${BLIND[2]})`); }
-      step = g.lesson.step?.id ?? ''; }, BLIND);
+      step = g.view.lesson?.id ?? ''; }, BLIND);
     const ok = !why && hit.length === 0; if (!ok) bad++;
     rows.push(`seed ${seed}: ${why || (hit.length ? `HIT at ${hit.join(', ')}` : BROKEN ? `not hit at (${BLIND[0]}, ${BLIND[2]})` : `not hit at ${WAY.length} places`)}${step === 'move' || step === 'with' ? '' : ` · step '${step}'`}`); }
   line(bad === 0, `under the blind fire he is stood ${EACH} s at each place his way to the gate goes by (the lane along the wall, the gateway, inside it), on ${SEEDS.length} seeds: not hit`, rows.join(' | ')); }

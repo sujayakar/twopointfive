@@ -316,8 +316,8 @@ async function planLines(): Promise<boolean> {
       const game = R.game, P = R.P, before = floorPlan(game).doors.length;
       R.O.give('pairMark', R.foe(foe)); R.step(1);
       // (the cap before he is set: dark, as a door's is while its men are on their way — and no mark at all while a lesson holds the word shut)
-      const early: any = (floorPlan(game).doors as any[]).find(x => x.why === 'pair'), earlyCap = early ? capOf(early) : 'no mark', locks0 = game.rails.locks;
-      let shut = -1; game.rails.locks = (a: string) => a === 'word'; try { shut = (floorPlan(game).doors as any[]).filter(x => x.why === 'pair').length; } finally { game.rails.locks = locks0; }
+      const early: any = (floorPlan(game).doors as any[]).find(x => x.why === 'pair'), earlyCap = early ? capOf(early) : 'no mark', ask0 = game.viewAsk;
+      let shut = -1; { const told = { ...game.view, lesson: { rails: { open: [] } } }; game.viewAsk = () => told; } try { shut = (floorPlan(game).doors as any[]).filter(x => x.why === 'pair').length; } finally { game.viewAsk = ask0; }
       const set = R.until(() => !!P.jobOf(mate)?.set, 30); R.step(2);
       const ds: any[] = floorPlan(game).doors, d = ds[0], off = d ? dist([(d.a[0] + d.b[0]) / 2, 0, (d.a[2] + d.b[2]) / 2], mate.char.pos) : NaN;
       const fx = Math.sin(mate.char.aimYaw), fz = Math.cos(mate.char.aimYaw), ahead = d ? ((d.a[0] + d.b[0]) / 2 - mate.char.pos[0]) * fx + ((d.a[2] + d.b[2]) / 2 - mate.char.pos[2]) * fz : NaN;

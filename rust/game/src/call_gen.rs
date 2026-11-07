@@ -668,13 +668,9 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 671 => { let a1: f64 = Io::r(&mut i); crate::lesson::lesson_tick(g, a1);  }
 673 => { let a1: crate::scene_scenarios::LessonData = Io::r(&mut i); let a2: f64 = Io::r(&mut i); let a3: f64 = Io::r(&mut i); let r = crate::rails::rails_settles(g, &a1, a2, a3); r.w(&mut o);  }
 674 => { let a1: InputId = Io::r(&mut i); let a2: CameraId = Io::r(&mut i); let a3: f64 = Io::r(&mut i); crate::rails::rails_gate(g, a1, a2, a3);  }
-675 => {  let r = crate::rails::rails_eye(g); r.w(&mut o);  }
-676 => {  let r = crate::rails::rails_step_eye(g); r.w(&mut o);  }
 677 => { let a1: f64 = Io::r(&mut i); crate::rails::rails_tick(g, a1);  }
 678 => {  crate::rails::rails_put_back(g);  }
 679 => {  crate::rails::rails_resume(g);  }
-680 => { let a1: GuardId = Io::r(&mut i); let r = crate::rails::rails_spare(g, a1); r.w(&mut o);  }
-681 => {  let r = crate::rails::rails_look(g); r.w(&mut o);  }
 682 => { let a1: CharId = Io::r(&mut i); let r = crate::cast::cast_parts(g, a1); r.w(&mut o);  }
 683 => { let a1: Vec<CharId> = Io::r(&mut i); let mut a2: Vec<BoxId> = Io::r(&mut i); let a3: f64 = Io::r(&mut i); crate::stature::drawn_boxes(g, &a1, &mut a2, a3); a2.w(&mut o); }
 684 => { let a1: CharId = Io::r(&mut i); let a2: bool = Io::r(&mut i); let r = crate::combat::firearm_of(g, a1, a2); r.w(&mut o);  }

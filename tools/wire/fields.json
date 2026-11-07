@@ -9358,7 +9358,8 @@
 "workthings::Job.last_t",
 "workthings::Job.t0",
 "workthings::Job.thing",
-"workthings::WorkThings.row"
+"workthings::WorkThings.row",
+"view::TickView.lesson"
 ],
 "pageTick": [
 "aim::AimState.bearing_rate",

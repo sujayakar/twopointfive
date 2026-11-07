@@ -291,7 +291,7 @@ pub fn game_clear_nearest_room(g: &mut crate::game::Game) { crate::guards::force
 pub fn game_follow_pos(g: &mut crate::game::Game, at: Option<V3>) -> V3 {
     let gd = if g.spectate >= 0.0 { g.guards.get(g.spectate as usize).copied() } else { None };
     if let Some(gd) = gd { let c = g.gd[gd].ch; return g.ch[c].pos; }
-    if let Some(p) = crate::rails::rails_look(g) { return p; }
+    if let Some(p) = crate::rails::rails_look(g, &crate::seats::here(g)) { return p; }
     if let Some(a) = at { return a; }
     let c = g.pl[g.player].ch;
     g.ch[c].pos

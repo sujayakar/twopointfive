@@ -18,7 +18,6 @@ import { standUp, ROOT } from './headless.ts';
 const { startGrab } = await import(`${ROOT}/src/game/player.ts`);
 const { handProps } = await import(`${ROOT}/src/game/combat.ts`);
 const { KNIFE_TAG, SHEATH_TAG } = await import(`${ROOT}/src/game/rigProps.ts`);
-const { lessonLine } = await import(`${ROOT}/src/game/lesson.ts`);
 
 const BREAK = process.env.NOKNIFE_BREAK === '1', DT = 1 / 60, EAST = Math.PI / 2, AT = [10.2, 0, 19.5];   // (the lobby's open floor)
 let allPass = true;
@@ -74,13 +73,10 @@ async function draw() {
 }
 async function words() {
   console.log('\n=== words: the lessons teach the knockout ===');
-  const LINES = ['Right click to knock him out, or left click to use the knife', 'Stay low so he doesn\'t hear you, then left click to knife him', 'When the guard comes through, step in and left-click to kill him with the knife'];
-  const now = LINES.map(l => lessonLine(l));
-  verdict(now.every((l: string) => !/knife/i.test(l) && /knock him out/.test(l)),
-    'each of the three lesson lines that teach the knife says the knockout and no knife', now.map((l: string) => `'${l}'`).join(' · '));
+  // (the three old sentences that taught the knife: rust/game_rules/src/lesson, bare_line and its tests)
   // …and a line that names the move by a token (lesson.ts TOKENS) says the page's key however the sentence around it is worded
-  const { LESSON_TOKENS, lessonToken, lessonTokenFaults } = await import(`${ROOT}/src/game/lesson.ts`);
-  const T = 'When he lights up, creep in and {grab him from behind}. {Take him out} if he turns, or {knock him out}. {Grab him} now. {open the door}', page = lessonLine(T) as string;
+  const { LESSON_TOKENS, lessonToken, lessonTokenFaults, tokenLine } = await import(`${ROOT}/src/game/lesson.ts`);
+  const T = 'When he lights up, creep in and {grab him from behind}. {Take him out} if he turns, or {knock him out}. {Grab him} now. {open the door}', page = tokenLine(T, false, true) as string;
   const known = LESSON_TOKENS.every((n: string) => lessonToken(n)) && lessonToken('Grab the near guard from behind') && !lessonToken('open the door') && !lessonToken('him');
   // …and the lesson's own check (checkLesson) refuses a name in braces that is no token, a brace left open, and a line that fits as written and not as read
   const pad = 'x'.repeat(70), faults = (l: string) => (lessonTokenFaults('t', l, 96) as string[]).length, refused = faults('{grab him from behnd}') + faults('{knock-him-out} now') + faults('grab him}') + faults(`${pad} {grab him from behind}`), clean = faults('{Grab yours}, then wait.') + faults('No braces here.') + faults('Creep in and {grab him}.'), far = faults('{grab guard 2}') + faults('{grab him }') + faults('{take the  man out}');

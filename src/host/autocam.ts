@@ -69,6 +69,7 @@ import { isHostile } from '../game/teams';
 import { closeMode, closeSubject } from '../game/close';
 import { stalkOn, stalkWait } from '../game/stalk';
 import { samWork } from '../game/handwork';
+import { locked } from '../view/seatview';
 
 export const AUTOCAM = {
   /** the switch: the camera's key tapped twice puts the auto camera on. Off = the double tap is the Options row's, as it was */
@@ -237,7 +238,7 @@ export function autoHand(A: AutoCam, input: Input, orbitPx: number, held: boolea
 }
 
 /** the view is Sam's own and the mode may frame it: no show's man in his place, nobody else's hands on him, and him on his feet */
-export function autoFree(g: Game): boolean { return !g.touring && !g.puppet && !g.player.down && !g.rails?.skyOn; }
+export function autoFree(g: Game): boolean { return !g.touring && !g.puppet && !g.player.down && !g.view.lesson?.rails?.sky; }
 
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 /** the floor a stride past a door's frame, on the face away from `from` */
@@ -326,8 +327,8 @@ export function autoRead(A: AutoCam, g: Game, input: Input, dt: number): AutoSce
   const room: AutoScene['room'] = A.mid ? { at: A.mid, w: 1 } : null, inRoom = !!A.mid;
   const sky = !g.weather?.underRoof(p[0], p[2]);
   const zoomK = (closeMode(g) || K.lock && K.lockIn > 0 && K.zoomAmt > 0 && !!pl.holding && !A.lockFight ? K.closeK : inRoom ? K.roomK : sky ? K.skyK : 1) * (pl.sup.v > K.fireAt ? K.fireK : 1);
-  const free = !pl.holding && !pl.dragging && !pl.throwPreview && !pl.launchHeld && !pl.wall && !g.rails?.locks('camera') && g.lesson?.step?.done?.is !== 'view';
-  return A.scene = { sam: [p[0], p[1], p[2]], threats: A.seen, beat, door, room, zoomK, hold: input.buttons !== 0, still, free, vel: [c.vel[0], c.vel[2]], fight: A.fight, shown: A.shown, zoomFree: !g.rails?.locks('zoom'), firedAgo: now - pl.lastFireT, lock, onto: A.lockFight };
+  const free = !pl.holding && !pl.dragging && !pl.throwPreview && !pl.launchHeld && !pl.wall && !locked(g.view, 'camera') && !g.view.lesson?.asksView;
+  return A.scene = { sam: [p[0], p[1], p[2]], threats: A.seen, beat, door, room, zoomK, hold: input.buttons !== 0, still, free, vel: [c.vel[0], c.vel[2]], fight: A.fight, shown: A.shown, zoomFree: !locked(g.view, 'zoom'), firedAgo: now - pl.lastFireT, lock, onto: A.lockFight };
 }
 
 /** how far the floor shows from the look-at at one metre of distance: to a side, up the screen and down it */

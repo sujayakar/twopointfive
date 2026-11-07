@@ -38,7 +38,7 @@ const run = (page, n) => page.evaluate(n => window.__runFrames(n, 1 / 60, [], 'n
     try { await page.screenshot({ path: f, timeout: 60000 }); } catch (e) { return `(no picture: ${String(e).slice(0, 60)})`; }
     finally { await page.evaluate(() => { document.getElementById('view').style.visibility = ''; document.getElementById('__still')?.remove(); }); }
     return f; };
-  const card = () => page.evaluate(() => { const e = document.getElementById('railcard'), g = window.__game; return { on: !!e && e.classList.contains('on'), h: e?.querySelector('h2')?.textContent || '', p: [...(e?.querySelectorAll('p') ?? [])].map(x => x.textContent).join(' / '), caps: e?.querySelectorAll('p kbd').length ?? 0, said: !!g.rails.card(), i: g.lesson.i, t: g.time, enter: window.__input.pressed.has('Enter') || window.__input.keys.has('Enter') }; });
+  const card = () => page.evaluate(() => { const e = document.getElementById('railcard'), g = window.__game; return { on: !!e && e.classList.contains('on'), h: e?.querySelector('h2')?.textContent || '', p: [...(e?.querySelectorAll('p') ?? [])].map(x => x.textContent).join(' / '), caps: e?.querySelectorAll('p kbd').length ?? 0, said: !!g.view.lesson?.rails?.card, i: g.lesson.i, t: g.time, enter: window.__input.pressed.has('Enter') || window.__input.keys.has('Enter') }; });
   const live = n => page.evaluate(async n => { const g = window.__game, t0 = g.time; window.__pauseLoop = false; await new Promise(res => { let c = 0; const f = () => { if (++c > n) res(); else requestAnimationFrame(f); }; requestAnimationFrame(f); }); window.__pauseLoop = true; return +(g.time - t0).toFixed(4); }, n);
   const bring = () => page.evaluate(k => { window.__game.lesson.i = k; window.__runFrames(6, 1 / 60, [], 'none'); }, k);
 

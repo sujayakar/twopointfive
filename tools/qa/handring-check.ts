@@ -138,11 +138,7 @@ export async function handRingCheck(): Promise<boolean> {
       slot = true; hand = false; const offCodes = codes(), off = !BRK && K.gameCode('KeyE') === '' && K.gameCode('Space') === 'Space' && K.gameCode('KeyV') === 'KeyV' && K.keyText('Space  pull it shut') === 'Space  pull it shut';
       verdict(on && words && bound && reset && plain && off, 'the page\'s board: his own actions on E, Space and V give nothing, the words follow; the whistle can be given a key; without the slot the ring is on Space; rule off, as it was',
         `on: ${seenOn}, the rest themselves ${on} · words ${words} ("${w1}", "${w3.slice(27)}") · the whistle put on G ${bound}, Reset ${reset} · no slot: ${noSlot} ${plain} · rule off: ${offCodes} ${off}`); }
-    // ---- the lesson's line
-    { const { lessonLine } = await import(`${ROOT}/src/game/lesson.ts`), LINE = 'V whistles the cook out. Then hide at once, at the mark';
-      rule(true); const on = `▸ ${lessonLine(LINE)}`; rule(false); const off = `▸ ${lessonLine(LINE)}`;
-      verdict(/▸ Space held, then 5, whistles the cook out\. Then hide/.test(on) && /▸ V whistles the cook out/.test(off) && !BRK, 'a lesson\'s line that names the whistle\'s old key says the ring\'s way while the rule is on (the page\'s words put the key in)',
-        `on: "${on}" · off: "${off}"`); }
+    // (the lesson's line that names the whistle's old key: rust/game_rules/src/lesson, line_on_page and its tests)
     // ---- recordings
     { HANDRING.on = true; const snap: any = JSON.parse(JSON.stringify(knobsSnapshot(g))), has = typeof snap.tables?.HANDRING?.on === 'boolean' && !BRK;
       const old = JSON.parse(JSON.stringify(snap)); delete old.tables.HANDRING;
@@ -383,7 +379,7 @@ export async function handRingCheck(): Promise<boolean> {
       const tables = JSON.parse(JSON.stringify(knobsSnapshot(g))), cmd1 = CMDRING.on; CMDRING.on = was.cmd;   // (the stand-up reads the squad ring's switch to set its dependents: the stand's own, not this check's)
       try { await quiet(async () => {
         const W: any = await standUp({ uploadEvery: 4, level: loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/tut-quiet.json`, 'utf8'))), seed: 1 }); RAILS.on = true; startFromQuery(W.game, '?levelFile=tut-quiet.json&quiet'); rule(true);
-        const q = W.game, I = W.input, DT = 1 / 60, L = q.level.scenarios.lesson, R = q.lesson.data?.rails, named: string[] | undefined = R?.rows, lean = named?.filter(v => v !== 'pull' && v !== 'ease'), back = q.doors.list.find((d: any) => d.def.name === 'back'), fb = back.frameCentre;
+        const q = W.game, I = W.input, DT = 1 / 60, L = q.level.scenarios.lesson, R = q.level.scenarios.lesson?.rails, named: string[] | undefined = R?.rows, lean = named?.filter(v => v !== 'pull' && v !== 'ease'), back = q.doors.list.find((d: any) => d.def.name === 'back'), fb = back.frameCentre;
         const run = (n: number) => { for (let i = 0; i < n; i++) { W.cursorAt([fb[0], 1.0, fb[2]]); W.step(DT); } }, hit = (k: string) => { I.pressed.add(k); I.keys.add(k); run(1); I.keys.delete(k); run(1); };
         const qrows = () => q.nearby.map((r: any) => `${r.kind}:${r.verb ?? '-'}`).join(' | ') || 'none';
         // (the mission is HELD at that step: stepping in through the door ends it, and the step after it takes the interaction key away, so every tap

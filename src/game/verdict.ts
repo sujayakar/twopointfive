@@ -145,7 +145,7 @@ export class Verdict {
       const moved = men(g).some((pl, i) => { const p = pl.char.pos, o = i ? this.origins[i] ?? p : this.origin; return Math.hypot(p[0] - o[0], p[2] - o[2]) > PAR_START_M; });   // (any player off his own start)
       if (moved || this.fired() !== this.fired0 || tail !== this.order0) this.t0 = g.time;
     }
-    if (this.started && (g.godMode || !g.aiEnabled || g.infiniteAmmo || (g.playerInvisible && !g.rails?.skyOn))) this.cheat = true;   // (rails.ts: the seat with nobody on the floor parks him unseen — the mission's own staging, not a sandbox tick)
+    if (this.started && (g.godMode || !g.aiEnabled || g.infiniteAmmo || (g.playerInvisible && !g.view.lesson?.rails?.sky))) this.cheat = true;   // (rails.ts: the seat with nobody on the floor parks him unseen — the mission's own staging, not a sandbox tick)
     this.watch();
     const end = this.ended();
     if (end) this.close(end);

@@ -12,8 +12,8 @@ src/main.ts:main › {postUpdate}	decides	end card	the page takes the game's wor
 src/game/seats.ts:allDown	decides	end card	the page works out "every seat is down" on the copy (the find-me outline, the down card) where the game already knows it
 src/game/deathrecap.ts:*	decides	debrief	the dress step runs recapTick on the copy: who fell, who saw it and when the recap is due are kept in a record only TypeScript has
 src/game/chronicle.ts:*	decides	debrief	the debrief reads the chronicle through TypeScript's own counts and words, and the save controller adds its checkpoint row on the copy
-src/game/lesson.ts:*	decides	lesson conditions	a lesson's step, its line and whether it is over are worked out again on the copy (the camera and the HUD ask Lesson.step each frame)
-src/game/rails.ts:*	decides	lesson conditions	what a tutorial's rails allow, offer and teach is worked out again on the copy each frame (its key locks wait for the host's half to be redrawn)
+src/game/rails.ts:Rails.hostView	decides	lesson conditions	left on the page: it sets the page's own camera as a tutorial opens (the view is the host's, and reaches the game in the next tick's record)
+src/game/rails.ts:Rails.resume	decides	lesson conditions	left on the page: the save controller's word that the level's program was stopped for an authored checkpoint; it goes with the controller
 src/game/cues.ts:*	decides	radio and spoken lines	the radio strip's rows and whose bubble shows are worked out on the copy, and a line the page says is filed on the copy only
 src/game/dialogue.ts:*	decides	radio and spoken lines	the room and place names the lines use are worked out again on the copy
 src/game/doornames.ts:*	decides	radio and spoken lines	a door's said and written name are worked out again on the copy

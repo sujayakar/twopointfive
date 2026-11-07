@@ -74,7 +74,7 @@ const landed = (B: Bot, kind: string, secs: number) => { let seen = false; for (
  *  hand a step after each was kept (nothing in this mission kills a man who does as he is told, so nothing else brings them back). After each he plays the
  *  beat again from its first line: every fight has to start clean from its cue. */
 const once = new Set<string>();
-const stepIs = (B: Bot, id: string) => B.g.lesson.step?.id === id;
+const stepIs = (B: Bot, id: string) => B.g.view.lesson?.id === id;
 /** the checkpoint 'the gate' is kept with the inner door already out and the rifle on full auto and full: put back, none of that is asked again */
 const againDoor = (B: Bot) => { const d = B.g.doors.byName('inner')!, w = B.g.player.rifle;
   if (d.isClosed()) B.fail('again: the checkpoint at the gate put the inner door back on its hinges'); if (w.roundsReady < w.def.magCapacity) B.fail(`again: the checkpoint at the gate left the rifle at ${w.roundsReady} rounds`); };
@@ -82,18 +82,18 @@ const againDoor = (B: Bot) => { const d = B.g.doors.byName('inner')!, w = B.g.pl
 const replay = (B: Bot, ids: string[]) => { for (const id of ids) {
   // (a line that may be true as it comes up — `idleOk` — has gone by when the lesson is already past it)
   const gone = () => idleOk.includes(id) && B.g.lesson.i > B.g.level.scenarios.lesson.steps.findIndex((T: { id: string }) => T.id === id);
-  if (!B.until(() => stepIs(B, id) || gone(), 4)) B.fail(`again: '${id}' did not come up after the checkpoint (the lesson is on '${B.g.lesson.step?.id}')`); if (gone()) continue; B.step(30); steps[id](B); B.step(30); } };
+  if (!B.until(() => stepIs(B, id) || gone(), 4)) B.fail(`again: '${id}' did not come up after the checkpoint (the lesson is on '${B.g.view.lesson?.id}')`); if (gone()) continue; B.step(30); steps[id](B); B.step(30); } };
 /** down as the line warns, then Enter */
 const downAndBack = (B: Bot, how: () => void, to: string) => {
   how(); if (!B.until(() => B.g.player.down, 4)) B.fail(`again: he was not hit (${to})`);
   B.step(20); B.press('Enter', 20);
-  if (B.g.player.down || !stepIs(B, to)) B.fail(`again: Enter did not put him back at '${to}' (down ${B.g.player.down}, the lesson is on '${B.g.lesson.step?.id}')`);
+  if (B.g.player.down || !stepIs(B, to)) B.fail(`again: Enter did not put him back at '${to}' (down ${B.g.player.down}, the lesson is on '${B.g.view.lesson?.id}')`);
   B.say(`  down, and back at '${to}' by Enter`);
 };
 /** the newest checkpoint of this run, put back by the harness */
 const handBack = (B: Bot, to: string) => {
   const g = B.g, ck = g.saves.newest(true, g.mission.stats.elapsed), why = ck ? g.saves.loadInStep(g, ck.key) : 'no checkpoint on the shelf'; B.step(20);
-  if (why || !stepIs(B, to)) B.fail(`again: the checkpoint was not put back at '${to}' (${why ?? `the lesson is on '${g.lesson.step?.id}'`})`);
+  if (why || !stepIs(B, to)) B.fail(`again: the checkpoint was not put back at '${to}' (${why ?? `the lesson is on '${g.view.lesson?.id}'`})`);
   B.say(`  the checkpoint put back: '${to}'`);
 };
 
@@ -170,15 +170,15 @@ export const steps: Record<string, (B: Bot) => void> = {
       if ((g.doors as unknown as { frameRule?: boolean }).frameRule) { B.go([INNER_X - 2.6, 0, INNER_Z], 6, { near: 0.3 }); B.go([INNER_X + 0.5, 0, INNER_Z], 2.5, { sprint: true, noDoors: true }); B.until(() => !g.player.kick, 3); B.step(30);
         if (!d.locked || !d.isClosed()) B.fail('jamb: a sprint into the inner door opened it (the lesson of the line is the trigger)'); B.say('  jamb: a sprint into the door did not open it'); }
       B.go(INNER_FROM, 6, { near: 0.3 });
-      trigger(B, () => [INNER_X, 1.1, INNER_Z - 1.6], 8, () => !stepIs(B, 'door') || !!g.lesson.settling);
-      if (stepIs(B, 'door') && !g.lesson.settling) B.fail(`jamb: ${r0 - gun(B).roundsReady} rounds into the wall beside the door and the line is still up`);
+      trigger(B, () => [INNER_X, 1.1, INNER_Z - 1.6], 8, () => !stepIs(B, 'door') || !!g.view.lesson?.settling);
+      if (stepIs(B, 'door') && !g.view.lesson?.settling) B.fail(`jamb: ${r0 - gun(B).roundsReady} rounds into the wall beside the door and the line is still up`);
       if ((d as unknown as { off?: boolean }).off) B.fail('jamb: the leaf is off its hinges with every round in the wall beside it');
       B.until(() => !d.isClosed(), 4); if (d.isClosed()) B.fail('jamb: the line went by on his rounds and the door was not opened for him');
       B.say(`  jamb: ${r0 - gun(B).roundsReady} rounds into the wall, the line went by and the door was opened for him`); return; }
     B.go(INNER_FROM, 6, { near: 0.3 });
     // (where gunfire does not splinter a door — the switch off, or walls that do not break — the twentieth round ends the line and the script opens it)
-    if (!splinters) { trigger(B, () => at, 10, () => !stepIs(B, 'door') || !!g.lesson.settling);
-      if (stepIs(B, 'door') && !g.lesson.settling) B.fail(`gunfire does not splinter a door on this stand, and ${r0 - gun(B).roundsReady} rounds did not end the line`);
+    if (!splinters) { trigger(B, () => at, 10, () => !stepIs(B, 'door') || !!g.view.lesson?.settling);
+      if (stepIs(B, 'door') && !g.view.lesson?.settling) B.fail(`gunfire does not splinter a door on this stand, and ${r0 - gun(B).roundsReady} rounds did not end the line`);
       B.say(`  the inner door: ${r0 - gun(B).roundsReady} round(s) and the line went by (gunfire does not splinter a door on this stand)`); return; }
     trigger(B, () => at, 6, () => !d.isClosed());
     const n = r0 - gun(B).roundsReady; B.say(`  the inner door: ${d.isClosed() ? 'still standing' : 'out'} after ${n} round(s)`);
@@ -320,4 +320,4 @@ export const steps: Record<string, (B: Bot) => void> = {
 };
 /** A line stays up a beat after it is done where the level says so (a step's `settle`: the man falls, the blast clears, the reload ends): each step waits
  *  that out, as a player does, before the runner asks whether the line has gone by */
-for (const id of Object.keys(steps)) { const f = steps[id]; steps[id] = B => { f(B); if (stepIs(B, id) && B.g.lesson.settling) B.until(() => !stepIs(B, id), 6); }; }
+for (const id of Object.keys(steps)) { const f = steps[id]; steps[id] = B => { f(B); if (stepIs(B, id) && B.g.view.lesson?.settling) B.until(() => !stepIs(B, id), 6); }; }

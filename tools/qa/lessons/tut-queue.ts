@@ -7,7 +7,7 @@ import type { Bot } from '../lesson-run';
 export const query = `?roomclear=1&squad4${process.env.TUTQUEUE_HOUR ? `&hour=${process.env.TUTQUEUE_HOUR}` : ''}`;   // (TUTQUEUE_HOUR=dusk: the level at another hour — the page's row gives the mission its own)
 /** the frozen stand's arm of the gate: the ring's key, the machinery the goal rule rides on, and the rule itself, which that stand holds off */
 export const raises = { TPS_QRING: '1', TPS_QPLAN: '1', TPS_GOALS: '1', TPS_GOALRING: '1', TPS_GOALHALF: '1', TPS_QONLY: '1', TPS_RINGFLAT: '1', TPS_RAILFLAT: '1' };
-export const ended = (g: any) => g.lesson.finished;
+export const ended = (g: any) => g.view.lesson?.finished;
 /** `TUTQUEUE_LOOSE=1`: two stacks more than a second apart, or a teammate dazzled by the team's own can, is only said (else it fails the run) */
 const LOOSE = process.env.TUTQUEUE_LOOSE === '1';
 /** `split` is the way back from the wrong wheel on `gateB`: with a pair on each gate as that step ends it is done as it comes up (`TUTQUEUE_PLAIN=1` plays it) */
@@ -60,7 +60,7 @@ function part(B: Bot, id: string, door: string, first: string) {
 function word(B: Bot, doors: string[], room: string) {
   if (!B.until(() => setOn(B, doors) || cleared(B, room), 70)) B.say('  the stacks never all stood on their doors: the word anyway');
   if (cleared(B, room)) B.fail(`${room} fell before the word: a stack went in without it, and nothing of the word could be measured`);
-  if (B.g.lesson.step?.id !== (room === 'hall' ? 'word2' : 'word')) B.until(() => B.g.lesson.step?.id === (room === 'hall' ? 'word2' : 'word'), 12);
+  if (B.g.view.lesson?.id !== (room === 'hall' ? 'word2' : 'word')) B.until(() => B.g.view.lesson?.id === (room === 'hall' ? 'word2' : 'word'), 12);
   B.wait(0.4);
   const stacks: Record<string, any[]> = {}; for (const d of doors) stacks[d] = on(B, d);
   B.press('KeyF', 3); B.step(6);
@@ -84,7 +84,7 @@ function told(B: Bot, n0: number) {
 
 /** he walks to a step's ring, and both things the next two lines name are on his picture from it with the view at rest (else the spot is the level's to move) */
 function spot(B: Bot, id: string, next: string[], via: number[][] = []) {
-  const at = stepOf(B, id).at as number[]; for (const v of via) B.go(v, 30, { noDoors: true, near: 0.6 }); B.go(at, 40, { noDoors: true }); B.until(() => B.g.lesson.step?.id !== id, 6);
+  const at = stepOf(B, id).at as number[]; for (const v of via) B.go(v, 30, { noDoors: true, near: 0.6 }); B.go(at, 40, { noDoors: true }); B.until(() => B.g.view.lesson?.id !== id, 6);
   B.aim(B.pos()); B.wait(0.5);
   const off = next.filter(n => !shown(B, stepOf(B, n).at)); if (off.length) B.fail(`from the ring of '${id}' the mark of ${off.map(n => `'${n}'`).join(' and ')} is off the picture: ${off.map(n => px(B, stepOf(B, n).at).map(v => v.toFixed(0)).join(',')).join(' · ')}`);
   B.say(`  at the ring of '${id}' (${B.pos()[0].toFixed(1)}, ${B.pos()[2].toFixed(1)}): ${next.map(n => `'${n}' at px ${px(B, stepOf(B, n).at).map(v => v.toFixed(0)).join(',')}`).join(' · ')}`);
@@ -92,11 +92,11 @@ function spot(B: Bot, id: string, next: string[], via: number[][] = []) {
 export const steps: Record<string, (B: Bot) => void> = {
   corner: B => { spot(B, 'corner', ['door1', 'door2']); },
   door1: B => { all(B, 'door1', 'guard'); if (process.env.TUTQUEUE_TWICE) { B.until(() => setOn(B, ['guard']), 40); B.wait(1); onMark(B, 'door1', 'guard'); key(B, false); B.wait(3); B.say(`  the key again on a stack that stands: ${cleared(B, 'guardroom') ? 'THEY WENT IN' : 'they wait'} (${squad(B).map(m => O(B).of(m)?.order).join(' ')})`); } },
-  door2: B => { part(B, 'door2', 'guard_side', 'guard'); B.until(() => B.g.lesson.step?.id !== 'door2', 60); },
+  door2: B => { part(B, 'door2', 'guard_side', 'guard'); B.until(() => B.g.view.lesson?.id !== 'door2', 60); },
   word: B => { word(B, ['guard', 'guard_side'], 'guardroom'); B.wait(1.5); },
   front: B => { all(B, 'front', 'hall'); },
   around: B => { spot(B, 'around', ['back', 'word2'], [[23.3, 0, 13.4], [23.3, 0, 20.4]]); },   // (round the hall's blind west wall: a body walked into the front door opens it, and the gun is on that doorway)
-  back: B => { part(B, 'back', 'hall_back', 'hall'); B.until(() => B.g.lesson.step?.id !== 'back', 70); },
+  back: B => { part(B, 'back', 'hall_back', 'hall'); B.until(() => B.g.view.lesson?.id !== 'back', 70); },
   word2: B => { const n0 = B.g.rails.log.length; word(B, ['hall', 'hall_back'], 'hall'); told(B, n0); B.wait(1.5); },
   call: B => { B.say(`  as the hall falls: ${watches(B)}`); B.aim(B.pos()); B.step(2); const t = under(B); key(B, false); B.step(6); B.say(`  the key on himself (${t.kind}${t.man ? ' a man' : ''}): ${watches(B)}`); },
   yard: B => { spot(B, 'yard', ['gateA', 'gateB'], process.env.TUTQUEUE_WEST ? [[23.3, 0, 20.4], [23.3, 0, 13.0]] : []); B.wait(Number(process.env.TUTQUEUE_WAIT ?? 2));
@@ -107,14 +107,14 @@ export const steps: Record<string, (B: Bot) => void> = {
     // (`TUTQUEUE_PLAIN=1`, the wrong wheel: the key kept down with NO Shift is everyone's, and its second wedge turns all four to this gate — the step goes by all the same and `split` puts it right)
     if (process.env.TUTQUEUE_PLAIN) { onMark(B, 'gateB', 'the back gate'); B.I.pressed.add('KeyB'); B.hold(['KeyB'], 0.7); const M = O(B).menu; if (!M || M.part) B.fail(`the key kept down with no Shift opened ${M ? 'the ring for a part' : 'no ring'}`);
       B.I.pressed.add('Digit2'); B.hold(['KeyB', 'Digit2'], 2 / 60); B.hold(['KeyB'], 3 / 60); B.step(10); B.say(`  the key kept down with NO Shift, its second wedge: ${watches(B)}`); return; }
-    onMark(B, 'gateB', 'the back gate'); const before = watches(B); key(B, true); B.step(10); const note = B.g.rails.prompt()?.note ?? '';
+    onMark(B, 'gateB', 'the back gate'); const before = watches(B); key(B, true); B.step(10); const note = B.g.view.lesson?.rails?.prompt?.note ?? '';
     if (watches(B) !== before || !/held down/.test(note)) B.fail(`a Shift tap on the step that teaches the key kept down: ${watches(B)} · the note "${note}"`);
     onMark(B, 'gateB', 'the back gate'); B.hold(['ShiftLeft'], 3 / 60); B.I.pressed.add('KeyB'); B.hold(['ShiftLeft', 'KeyB'], 0.7); const M = O(B).menu;
     if (!M?.part) B.fail(`Shift and the key kept down by the back gate opened ${M ? 'the ring for everyone' : 'no ring'}`);
-    const line = B.g.rails.prompt()?.line ?? ''; if (!/^Press/.test(line)) B.fail(`the ring is up on the step's spot and the line is still "${line}"`);
+    const line = B.g.view.lesson?.rails?.prompt?.line ?? ''; if (!/^Press/.test(line)) B.fail(`the ring is up on the step's spot and the line is still "${line}"`);
     B.say(`  a Shift tap there: nothing, and "${note}" · kept down, the ring by the back gate: for ${M.men.map((m: any) => m.callsign).join(', ')} · rows ${M.rows.map((r: any) => r.id).join(', ')} · the line "${line}"`);
     B.I.pressed.add('Digit2'); B.hold(['ShiftLeft', 'KeyB', 'Digit2'], 2 / 60); B.hold(['ShiftLeft', 'KeyB'], 3 / 60); B.step(10); B.say(`  its second wedge: ${watches(B)}`); },
-  split: B => { if (!process.env.TUTQUEUE_PLAIN) return; if (B.g.lesson.step?.id !== 'split') B.fail(`all four on the back gate and the step that is up is '${B.g.lesson.step?.id}'`);
+  split: B => { if (!process.env.TUTQUEUE_PLAIN) return; if (B.g.view.lesson?.id !== 'split') B.fail(`all four on the back gate and the step that is up is '${B.g.view.lesson?.id}'`);
     onMark(B, 'split', 'the road gate'); key(B, true); B.step(10); B.say(`  Shift with the key by the road gate again: ${watches(B)}`); },
-  hold: B => { B.until(() => (cleared(B, 'road') && cleared(B, 'lane')) || B.g.lesson.finished, 120); B.wait(1); },
+  hold: B => { B.until(() => (cleared(B, 'road') && cleared(B, 'lane')) || B.g.view.lesson?.finished, 120); B.wait(1); },
 };

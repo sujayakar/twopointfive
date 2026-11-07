@@ -227,7 +227,7 @@ export const QUIET_MAX_ROUTES = 6;
 /** A LESSON (game/lesson.ts — the Training group of the mission list): STEPS laid over whichever scenario the level's row starts (a quiet mission, a room clear).
  *  Each step is a LINE on the HUD's objective row naming the key, and a DONE-TEST the game reads off its own state: the line moves on when the player has done
  *  the thing, never on a clock. The lesson only READS the game (it moves nobody, ends nothing): past its last step the scenario's own objective stands and ends
- *  the run as it always does. Tests are plain records `{ is: '<kind>', … }` (the kinds and their fields: game/lesson.ts LESSON_TESTS, which also checks them
+ *  the run as it always does. Tests are plain records `{ is: '<kind>', … }` (the kinds and their fields: game/lesson.ts LESSON_CHECKS, which checks them
  *  against the built floor — tools/qa/lesson-check.ts). */
 export interface LessonTest { is: string; [k: string]: unknown }
 export interface LessonStep {
