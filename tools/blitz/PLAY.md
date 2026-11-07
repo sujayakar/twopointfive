@@ -681,6 +681,14 @@ compiler's proof; made by the program that demotes `&mut Game` wherever the crat
 and applies nothing and walks no second time (`RH_OFF=reads`: as any row). The list is EMPTY today: all three of the tally's rows take `&mut Game`.
 Never a guess from a row's history: a tool that reads the puppet after a call that did write must read what it wrote.
 
+**`tools/blitz/reads-contract.json`**: a second list, written by hand, that the host reads with the first. A row here takes `&mut Game` and still
+leaves the game as it found it, by its own contract: it puts back what it takes. Each row carries the sentence of that contract and the check that
+holds it, and the check has a red path. One row today, `walkAhead` (a co-op client's look ahead for its own man: his legs walked on a copy of him,
+`seats::with_seat` and `game::game_aside`): `tools/qa/seats-check.ts twin` reads the whole game's state words before and after the looks of every
+tenth tick of two firefights and lets no part differ but the scratch a look leaves (`SEATS_BREAK=look` must fail it). Measured on a 4 core cloud box,
+one look of five records in bun: 13.4 ms as any row, 5.1 ms as a row that reads, 1.6 ms in a stand that also walks no puppet for a tool's writes
+(`standUp({ scan: false })`, what `tools/mp/stand.ts` asks: nothing writes a networked game between two ticks but a seat's record).
+
 `RH_WHO=1`: the fiftieth crossing of each row is counted with the source lines that led to it.
 
 ## What has been played
