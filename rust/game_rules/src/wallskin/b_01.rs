@@ -295,9 +295,8 @@ pub fn wall_skin_recut(g: &mut crate::game::Game, j: f64) {
     let whole = |r: &[Rect]| r.len() == 1 && r[0][0] <= -hu + EPS && r[0][1] >= hu - EPS && r[0][2] <= -hv + EPS && r[0][3] >= hv - EPS;
     // what stands behind may END RAGGED (a breakable's standing piece under a cut record, with the cut switch up): the part of the sheet on such a piece
     // takes the outline of that piece's face
-    let cut_on = crate::scene_cut::cut_boxes_on(g);
     let mut parts: Vec<Rect> = Vec::new(); let mut rag: Vec<(Bx, Seat)> = Vec::new();
-    if cut_on { for q in seats.iter() {
+    for q in seats.iter() {
         let Some(b) = brk_id(g, q.k) else { continue; };
         let (live, slots) = { let w = &g.tab.wallbreak_breakable[b]; (w.live, w.slots.clone()) };
         let mut i = 0.0;
@@ -310,11 +309,11 @@ pub fn wall_skin_recut(g: &mut crate::game::Game, j: f64) {
             let r: Rect = [m::min(lo[ax(a)], hi[ax(a)]), m::max(lo[ax(a)], hi[ax(a)]), m::min(lo[1], hi[1]), m::max(lo[1], hi[1])];
             if m::min(r[1], hu) - m::max(r[0], -hu) > EPS && m::min(r[3], hv) - m::max(r[2], -hv) > EPS { parts.push(r); rag.push((p.clone(), *q)); }
         }
-    } }
+    } 
     let mut rects: Vec<Rect> = if open.iter().any(|l| !l.is_empty()) || !parts.is_empty() { standing(hu, hv, &on, &near, &open, Some(false), Some(&parts)) } else { vec![[-hu, hu, -hv, hv]] };
     if whole(&rects) && parts.is_empty() { uncut(g, j); return; }   // (something solid stands behind every part of it that lay on anything: the authored box, whole)
     let marked = s.marks.as_ref().map(|x| !x.is_empty()).unwrap_or(false); let base: Vec<CutPlane> = s.cut.clone().unwrap_or_default();
-    if marked && (!cut_on || base.len() as f64 + 4.0 > crate::scene_cut::MAX_CUT_PLANES) {   // (its marks are laid out on the whole box and no record can be drawn, or has room: left as it was)
+    if marked && base.len() as f64 + 4.0 > crate::scene_cut::MAX_CUT_PLANES {   // (its marks are laid out on the whole box and no record can be drawn, or has room: left as it was)
         if !g.destr.walls.skins.marked.has(crate::Num(j)) { g.destr.walls.skins.marked.add(crate::Num(j)); g.destr.walls.skins.stats.uncut += 1.0; }
         return;
     }

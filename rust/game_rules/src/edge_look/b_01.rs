@@ -278,7 +278,6 @@ pub fn edge_look_rebuild(g: &mut crate::game::Game, b: &crate::edge_look::BreakL
     let f = edge_look_frame(g, b);
     let (n, w, t) = (f.n, f.w, f.t);
     let e = g.m.edge_look.edge;
-    let real = crate::scene_cut::cut_boxes_on(g);   // the cut switch: the full-thickness coat and the lintel cast the shadow they draw
     let ni = n as i64;
     let open = |k: i64, iy: i64| -> bool { k >= 0 && k < ni && b.open.get(((iy as f64 * b.nz + (if f.along_x { 0.0 } else { k as f64 })) * b.nx + (if f.along_x { k as f64 } else { 0.0 })) as usize) == Some(&1) };
     let gone = |k: i64, iy: i64| -> bool { k < 0 || k >= ni || open(k, iy) };   // (nothing of THIS wall to bury a plate in: open, or past the wall's end)
@@ -287,7 +286,7 @@ pub fn edge_look_rebuild(g: &mut crate::game::Game, b: &crate::edge_look::BreakL
     let core_c = v3::lerp3(paint, core(), 0.82);
     let frame_c: V3 = if b.surf == "wood" { v3::scale(paint, 0.8) } else { steel() };   // what the wall is framed with
     let mut l = Lay { f, id: b.id, fc, f_yaw, f_rough, out: Vec::new(), cap: e.per_wall, capped: 0, key: (js::to_i32(b.id) & 0x3fff) << 9,
-        paint, core: core_c, bl: g.destr.edge_look.blasted.get(crate::Num(b.id)).cloned(), rim: e.scorch.rim, real };
+        paint, core: core_c, bl: g.destr.edge_look.blasted.get(crate::Num(b.id)).cloned(), rim: e.scorch.rim, real: true };
     // standing wall of this level past column j going `s` (m, a little short of it; 0 = open there, or the wall's end)
     let past = |mut j: i64, s: i64, iy: i64| -> f64 { let mut c = 0.0; while !gone(j, iy) && c < 2.0 { c += 1.0; j += s; } c * w * 0.88 };
     // standing wall behind an edge at level iy, from column ke away from the opening (m, a little short of it)
@@ -328,7 +327,7 @@ pub fn edge_look_rebuild(g: &mut crate::game::Game, b: &crate::edge_look::BreakL
             for j in k..=k1 {
                 let xa = if j == k && !gone(j - 1, 1) { 0.02 } else { 0.0 }; let xb = if j == k1 && !gone(j + 1, 1) { 0.02 } else { 0.0 }; let uc = edge_u(j) + w / 2.0;
                 let col = l.tone(paint, uc); let key = l.next_key();
-                let p = l.plate(uc + (xb - xa) / 2.0, (y_l + top) / 2.0, 0.0, (w + xa + xb) / 2.0, (top - y_l) / 2.0, t - 0.0035, 0.0, col, key, real);
+                let p = l.plate(uc + (xb - xa) / 2.0, (y_l + top) / 2.0, 0.0, (w + xa + xb) / 2.0, (top - y_l) / 2.0, t - 0.0035, 0.0, col, key, true);
                 l.push(p);
             }
             let r = m::min(if is_hole { e.sill_hole } else { e.sill_port }, lin * 0.7);
@@ -461,7 +460,6 @@ pub fn edge_look_shed(g: &mut crate::game::Game, b: &crate::edge_look::BreakLike
     let wood = b.surf == "wood"; let soft = b.surf == "cardboard" || b.surf == "fabric";
     let reach = if blast { e.throw_blast } else { e.throw_fire };
     let sill_up = f.is_some() && iy == 1.0 && b.open.get((c - b.nx * b.nz) as usize) == Some(&0);
-    let cut = crate::scene_cut::cut_boxes_on(g);
     let fl = crate::scene_boxes::box_flag();
     let no_shadow = js::to_i32(fl.no_shadow);
     let ch = e.cut_heap;
@@ -491,7 +489,7 @@ pub fn edge_look_shed(g: &mut crate::game::Game, b: &crate::edge_look::BreakLike
         else if blast { hy *= e.blast.flake_k; }
         // THE CUT SWITCH, a blast's heap off a wall: a few big SLABS of the wall's own sheet lying flat, and of the chunks a good share much smaller
         let mut slab = false;
-        if let (true, true, Some(f), false, false) = (cut, blast, f, wood, soft) {
+        if let (true, true, Some(f), false, false) = (true, blast, f, wood, soft) {
             let cls = hh(33.0, i);
             if cls < ch.slabs { slab = true; hx = ch.slab[0] + (ch.slab[1] - ch.slab[0]) * hh(15.0, i); hz = hx * (0.45 + 0.5 * hh(16.0, i)); hy = m::min(ch.slab_t, m::max(0.012, f.t * 0.45)); }
             else if lump && cls > 1.0 - ch.smalls { let k = ch.small[0] + (ch.small[1] - ch.small[0]) * hh(34.0, i); hx *= k; hz *= k; hy *= k; }
@@ -513,14 +511,14 @@ pub fn edge_look_shed(g: &mut crate::game::Game, b: &crate::edge_look::BreakLike
         };
         let soot = if blast { if d < 0.7 { 0.4 + 0.5 * hh(21.0, i) } else { 0.75 + 0.25 * hh(21.0, i) } } else { 1.0 };
         if blast { col = v3::scale(col, soot); }
-        if cut && blast && f.is_some() { col = v3::scale(col, 1.0 - ch.tone * hh(35.0, i)); }   // (each piece its own tone inside the material)
+        if blast && f.is_some() { col = v3::scale(col, 1.0 - ch.tone * hh(35.0, i)); }   // (each piece its own tone inside the material)
         g.destr.edge_look.serial = serial + 1.0;
         let bv = crate::scene_boxes::make_box_value(&crate::scene_boxes::MakeBoxP { c: p1, h: [hx, hy, hz], rot: Some(q1), albedo: Some(col),
             flags: Some((js::to_i32(fl.dynamic) | no_shadow) as f64), name: Some(String::from("rubble")),
             mkey: Some(MKEY_LOOK + 8388608.0 + (js::to_i32(serial) & 0x7fffff) as f64), ..Default::default() });
         let bx = crate::scene_boxes::box_kept(g, bv);
         // the cut switch: its outline by its material's row (breakTable.ts); a big piece casts its shadow
-        if cut && crate::break_table::breaks_shape_loose(g, bx, &b.surf, (id * 4096.0 + c) * 32.0 + i) {
+        if crate::break_table::breaks_shape_loose(g, bx, &b.surf, (id * 4096.0 + c) * 32.0 + i) {
             p1 = g.tab.boxes[bx].c;
             if m::max(hx, hz) >= 0.15 && !edge_look_in_beam(g, p1, m::max(hx, hz)) { let x = &mut g.tab.boxes[bx]; x.flags = (js::to_i32(x.flags) & !no_shadow) as f64; }
             // its broken faces: the material's core, sooted with the piece, a little of the paper's brown in some, no two the same white

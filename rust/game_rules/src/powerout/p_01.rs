@@ -156,7 +156,7 @@ pub fn saw_them_die(g: &mut crate::game::Game, gd: GuardId) -> bool {
 
 /// the meter's reading of a point of floor, by the place's own light. (powerout.ts floorWatched's `at`)
 fn floor_at(g: &mut Game, x: f64, z: f64) -> f64 {
-    let e = crate::guards::light_estimate_at(g, [x, 1.2, z], Some(&mut |_g: &mut Game, _owner: f64| carried()), Some(true), None, None, None);
+    let e = crate::guards::light_estimate_at(g, [x, 1.2, z], Some(&mut |_g: &mut Game, _owner: f64| true), Some(true), None, None, None);
     crate::game::game_visibility_of(g, e)
 }
 
