@@ -20,7 +20,6 @@ use syn::{Expr, FnArg, Pat, Type};
 /// Words in a function's body that mean it can write without `&mut Game`.
 const TAINT: &[&str] = &["UnsafeCell", "unsafe ", "unsafe{", "static mut", "AtomicU32", "AtomicUsize", "AtomicBool", "Ordering::", "RefCell", "Cell<"];
 
-use crate::dead::is_body;
 
 fn is_test_mod(m: &syn::ItemMod) -> bool {
     m.attrs.iter().any(|a| a.path().is_ident("cfg") && a.meta.require_list().map(|l| l.tokens.to_string().contains("test")).unwrap_or(false))
@@ -101,11 +100,10 @@ fn key(file: &str, name: &str, ord: usize, param: &str) -> String {
     format!("{file}|{name}|{ord}|{param}")
 }
 
-fn bodies(root: &Path) -> Vec<(PathBuf, String, String)> {
-    let game = root.join("rust/game");
-    let mut all = Vec::new();
-    rs_files(&game.join("src"), &mut all);
-    all.into_iter().filter(|p| is_body(p)).filter_map(|p| std::fs::read_to_string(&p).ok().map(|t| (p.clone(), p.strip_prefix(&game).unwrap_or(&p).to_string_lossy().to_string(), t))).collect()
+/// The body files of the game's crates (layout.rs): (where the file is, its path from the root, its text).
+fn bodies(root: &Path) -> Result<Vec<(PathBuf, String, String)>, String> {
+    let lay = crate::layout::find(root)?;
+    Ok(lay.body_files(root).into_iter().filter_map(|p| std::fs::read_to_string(&p).ok().map(|t| (p.clone(), p.strip_prefix(root).unwrap_or(&p).to_string_lossy().to_string(), t))).collect())
 }
 
 fn load_state(path: &Path) -> BTreeSet<String> {
@@ -123,15 +121,13 @@ fn soft_path(state: &Path) -> PathBuf {
     state.with_extension("soft")
 }
 
-/// The body files as they were before the pass: (where the file is, its path from rust/game, its text then).
+/// The body files as they were before the pass: (where the file is, its path from the root, its text then).
 fn pristine(root: &Path, state: &Path) -> Result<Vec<(PathBuf, String, String)>, String> {
-    let game = root.join("rust/game");
     let dir = orig_dir(state);
     let mut out = Vec::new();
-    for (path, rel, _) in bodies(root) {
+    for (path, rel, _) in bodies(root)? {
         let t = std::fs::read_to_string(dir.join(&rel)).map_err(|e| format!("no copy of {rel} from before the pass ({e}): run readers-demote first"))?;
-        out.push((game.join(&rel), rel, t));
-        let _ = path;
+        out.push((path, rel, t));
     }
     Ok(out)
 }
@@ -401,7 +397,7 @@ pub fn demote(root: &Path, state: &Path, soften: bool) -> Result<String, String>
     let dir = orig_dir(state);
     let _ = std::fs::remove_dir_all(&dir);
     let mut files = 0;
-    let before = bodies(root);
+    let before = bodies(root)?;
     let twins = if soften { twins_of(root, &before) } else { Twins::new() };
     for (path, rel, src) in before {
         let keep = dir.join(&rel);
@@ -501,7 +497,8 @@ fn is_read_twin(name: &str, ret: &str) -> bool {
     name.ends_with("_read") && ret.contains("&'static") && !ret.contains("mut")
 }
 
-/// The sim crate's files: (its module as the bodies write it, `sim::doors`; the text).
+/// The sim crate's files: (its module as the bodies write it, `sim::doors`; the text). The crate is found by the bodies' own
+/// word for it: `sim::` in a body is the crate in `rust/sim`.
 fn sim_files(root: &Path) -> Vec<(String, String)> {
     let mut all = Vec::new();
     rs_files(&root.join("rust/sim/src"), &mut all);
@@ -672,6 +669,8 @@ pub struct Restored {
 
 /// Put `mut` back where the compiler's errors (`diag`, cargo's JSON) and the calls say. With `taint`, also on
 /// every function that can write past the compiler's sight and on every function that calls one.
+/// The errors name each file from the root (`fold diag-from-root` rewrites a check's output so): whichever crate the check ran
+/// in, whichever crate the file is in.
 pub fn restore(root: &Path, state: &Path, diag: Option<&str>, taint: bool) -> Result<Restored, String> {
     let mut demoted = load_state(state);
     let mut soft = load_state(&soft_path(state));
@@ -736,9 +735,6 @@ pub fn restore(root: &Path, state: &Path, diag: Option<&str>, taint: bool) -> Re
         }
         s
     }
-    fn in_game(file: &str) -> &str {
-        file.rfind("rust/game/").map(|i| &file[i + "rust/game/".len()..]).unwrap_or(file)
-    }
     let demoted_params = |fi: usize, f: &FnAt, demoted: &BTreeSet<String>, back: &BTreeSet<String>| -> Vec<String> {
         ref_params(f.sig).into_iter().filter(|(_, p, _, _)| { let k = key(&files[fi].1, &f.name, f.ord, p); demoted.contains(&k) && !back.contains(&k) }).map(|(_, p, _, _)| p).collect()
     };
@@ -758,7 +754,7 @@ pub fn restore(root: &Path, state: &Path, diag: Option<&str>, taint: bool) -> Re
             let Some(s) = spans.iter().find(|s| s["is_primary"] == true) else { continue };
             let s = outer(s);
             // (a path into the game crate, however the check that met it was started)
-            let file = in_game(s["file_name"].as_str().unwrap_or(""));
+            let file = s["file_name"].as_str().unwrap_or("");
             let line = s["line_start"].as_u64().unwrap_or(0) as usize;
             let (hs, he) = (s["text"][0]["highlight_start"].as_u64().unwrap_or(1) as usize, s["text"][0]["highlight_end"].as_u64().unwrap_or(1) as usize);
             let shown: String = s["text"][0]["text"].as_str().unwrap_or("").chars().skip(hs.saturating_sub(1)).take(he.saturating_sub(hs)).collect();
@@ -772,7 +768,7 @@ pub fn restore(root: &Path, state: &Path, diag: Option<&str>, taint: bool) -> Re
                 let mut at: Vec<(usize, usize)> = Vec::new();
                 for sp in spans.iter().chain(notes.iter()) {
                     for one in [sp, outer(sp)] {
-                        if let Some(&fj) = rel_ix.get(in_game(one["file_name"].as_str().unwrap_or(""))) {
+                        if let Some(&fj) = rel_ix.get(one["file_name"].as_str().unwrap_or("")) {
                             let (a, b) = (one["line_start"].as_u64().unwrap_or(0) as usize, one["line_end"].as_u64().unwrap_or(0) as usize);
                             for l in a..=b.max(a) {
                                 at.push((fj, l));
@@ -874,7 +870,7 @@ pub fn restore(root: &Path, state: &Path, diag: Option<&str>, taint: bool) -> Re
                 if sp["is_primary"] == true && msg.contains("cannot") {
                     continue;
                 }
-                let sf = in_game(sp["file_name"].as_str().unwrap_or(""));
+                let sf = sp["file_name"].as_str().unwrap_or("");
                 let sl = sp["line_start"].as_u64().unwrap_or(0) as usize;
                 let label = sp["label"].as_str().unwrap_or("");
                 if !label.contains("signature") {
@@ -1053,7 +1049,7 @@ pub fn restore(root: &Path, state: &Path, diag: Option<&str>, taint: bool) -> Re
 /// The functions that take `&Game` as the files stand: `module::name`, one a line.
 pub fn readers_now(root: &Path) -> Result<Vec<String>, String> {
     let mut out = Vec::new();
-    for (_, rel, src) in bodies(root) {
+    for (_, rel, src) in bodies(root)? {
         let file = syn::parse_file(&src).map_err(|e| format!("{rel} does not parse: {e}"))?;
         let module = Path::new(&rel).parent().and_then(|d| d.file_name()).and_then(|n| n.to_str()).unwrap_or("").to_string();
         for f in fns_of(&src, &file) {
@@ -1084,7 +1080,7 @@ fn contract_keys(c: &serde_json::Value) -> Vec<String> {
 pub fn report(root: &Path, state: &Path, bare: Option<&str>, calls_json: Option<&str>) -> Result<(String, Option<String>), String> {
     use std::fmt::Write as _;
     let demoted = load_state(state);
-    let files = bodies(root);
+    let files = bodies(root)?;
     let parsed: Vec<syn::File> = files.iter().map(|(_, rel, src)| syn::parse_file(src).map_err(|e| format!("{rel} does not parse: {e}"))).collect::<Result<_, _>>()?;
     let all: Vec<Vec<FnAt>> = files.iter().zip(parsed.iter()).map(|((_, _, src), f)| fns_of(src, f)).collect();
     let tainted = tainted_fns(root, &files, &parsed, &all);
@@ -1214,7 +1210,8 @@ mod tests {
     fn tree(name: &str, files: &[(&str, &str)]) -> PathBuf {
         let root = std::env::temp_dir().join(format!("fold-readers-test-{name}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&root);
-        for (p, t) in files {
+        let stand = [("rust/game/Cargo.toml", "[dependencies]\nsim = { path = \"../sim\" }\n"), ("rust/game/src/knobs.rs", "pub struct Knobs {}"), ("rust/sim/Cargo.toml", "")];
+        for (p, t) in files.iter().chain(stand.iter()) {
             let f = root.join(p);
             std::fs::create_dir_all(f.parent().unwrap()).unwrap();
             std::fs::write(f, t).unwrap();
@@ -1223,7 +1220,7 @@ mod tests {
     }
 
     fn taint_of(root: &Path) -> HashSet<(String, String)> {
-        let files = bodies(root);
+        let files = bodies(root).unwrap();
         let parsed: Vec<syn::File> = files.iter().map(|(_, _, src)| syn::parse_file(src).unwrap()).collect();
         let all: Vec<Vec<FnAt>> = files.iter().zip(parsed.iter()).map(|((_, _, src), f)| fns_of(src, f)).collect();
         tainted_fns(root, &files, &parsed, &all)

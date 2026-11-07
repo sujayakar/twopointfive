@@ -120,14 +120,15 @@ pub fn world(root: &Path, body_paths: &HashSet<PathBuf>) -> World {
     let mut all = Vec::new();
     rs_files(&root.join("rust"), &mut all);
     let mut w = World { fixed: Counts::default(), call_surface: HashMap::new(), modrs: HashMap::new() };
-    let game_src = root.join("rust/game/src");
+    // (a module's own mod.rs: the one in a folder that holds body files, in whichever crate)
+    let body_dirs: HashSet<&Path> = body_paths.iter().filter_map(|p| p.parent()).collect();
     for p in all {
         if body_paths.contains(&p) {
             continue;
         }
         let Ok(text) = std::fs::read_to_string(&p) else { continue };
         let name = p.file_name().and_then(|n| n.to_str()).unwrap_or("");
-        if name == "mod.rs" && p.parent().and_then(|d| d.parent()) == Some(game_src.as_path()) {
+        if name == "mod.rs" && p.parent().map(|d| body_dirs.contains(d)).unwrap_or(false) {
             let module = p.parent().and_then(|d| d.file_name()).and_then(|n| n.to_str()).unwrap_or("").to_string();
             w.modrs.insert(module, (p.clone(), text));
             continue;
