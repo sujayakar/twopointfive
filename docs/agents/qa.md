@@ -1388,6 +1388,29 @@ but synthetic writes still work.
   the browser, short stays or full. Why those three, nobody knows; it is the driver's and nothing of the game's. So: A WARM BOOT TIMED ON A CLOUD BOX
   IS NOT TO BE TRUSTED BEFORE ITS FOURTH VISIT, and it says how the driver's cache behaves there, NOT whether a player's browser keeps its shaders. On
   Windows Chrome's own store is what has to hold them and is too small for this game (the shader rows above); on an Apple chip nobody has looked.
+- **A game stood up starts as the process's first did: `standUp` puts back what the last game left at a module's top** (`tools/qa/fresh.ts`
+  `freshStart`, called before `standGame`; the harness only). FOUND as: the same two-seat night breach stood twice in one process, the second's state
+  another from tick 1 (the men's unit numbers counted on, the first game's tallies and logs in the second's start; with the kit's staging record
+  left as the first game had it, a probe's second game threw in the bridge). THE RULE is in the file's header. Put back, to what the process's FIRST start
+  found, is only what is KNOWN to be a game's, each known by what says so: the registry's variables and roots (`src/math/side.ts`); a module-level
+  name the state bridge carries whose row of `rollback-exempt.ts` is a TALLY or a SCRATCH; a carried name with no row that the bridge's schema reads
+  into one of the Rust game's own `…Stats` structs (Rust says what its counts are: 102 names); and ten logs in `fresh.ts A_GAMES`. EVERYTHING ELSE IS
+  LEFT ALONE, a name nothing classes above all: it may be a setting a tool turns between two games (the kit's cards, a pace switch). A first cut put
+  such names back: a kit probe went red and `blast-pace-check` passed with both arms on one pace. SO, for whoever writes a tool:
+  **a tally (`X_STATS`, `X_LOG`) counts ONE game, not the process.** A count is read AFTER the game it counts is stood (read before, a stand-up has
+  since put it back: the difference comes out wrong or negative); a sum over several stand-ups is added up a game at a time. A tool's switch kept
+  inside a tally object has its row as CONFIG (`BOTH`, `ANYTIME`, `FELL`, `PRICED`, `SEAT_ASKS`). `STANDFRESH_SAY=1` in front of any tool names what
+  each stand-up put back; `start.ts --again` names any carried name that changed and that nothing classes, and the table is red on it. NOT put back
+  by a start: a knob table, and with it what a mission's start wrote there (its team's numbers). `knobsCopy` / `knobsBack` around a run does that,
+  and carries each table's NOTE of where its numbers came from (`side.ts tableNote`; `nightbreach.ts`, `rescue.ts` `applied`): before, the depot
+  played twice in one process gave two results, the second on the office's team marks. THE CHECK: `bun run tools/blitz/start-levels.ts --again`
+  (every mission stood, played, another mission stood and played in the same process, the mission stood again: 38 of 38, two seats 23 of 23;
+  `STANDFRESH_BREAK=1` = every row red). READ with it and without over every family of the quick list, a process each (1,712 verdict lines on
+  both sides, on the build before the one this landed on): three lines differed. One line of `takedown` failed without it and passed with it (on
+  the build it landed on the family reads alike both ways). Two lines of `kittree-mate40` pass without it and fail with it, on both builds:
+  without, `kittree-sponge` before it dies in the bridge at its second stand and leaves no game; with, it stands, runs on to a function whose
+  TypeScript went with the tick, and leaves a game whose gear rows come back from Rust without what hangs under what. Both are older faults the
+  crash hid. Nothing of this touches the page.
 - **A game stood up has done with the last one: `standUp` asks for a full collection first** (2026-11-05; `tools/qa/headless.ts STANDUP_COLLECTS`; the
   harness only, nothing of the game). FOUND by the merge: the workers of `bang-tally.ts` (the `flashweight` family's tally, missions back to back in one
   process) grew about 1.6 GB a minute on the page's stand and two died at a 12 GB limit; old, on every build looked at. Reproduced here: one worker from
