@@ -23,3 +23,4 @@ pub use p_10::*;
 pub mod behave;
 pub mod senses;
 pub mod looks;
+pub use senses::hearing::hearing_check;
