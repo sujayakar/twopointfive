@@ -7615,7 +7615,9 @@
 "game::Game.recap",
 "deathrecap::Recap.all_down",
 "game::Game.stood",
-"game::Game.solo_card"
+"game::Game.solo_card",
+"smoke_types::WindGpuSourceBound.c",
+"smoke_types::WindGpuSourceBound.r"
 ],
 "everyTickNotCarried": [
 {
@@ -12877,7 +12879,9 @@
 "game::Game.recap",
 "deathrecap::Recap.all_down",
 "game::Game.stood",
-"game::Game.solo_card"
+"game::Game.solo_card",
+"smoke_types::WindGpuSourceBound.c",
+"smoke_types::WindGpuSourceBound.r"
 ],
 "unsent": {
 "anim_characters::CharacterRenderer": "the page's renderer: the host fills its arrays and draws from them",
