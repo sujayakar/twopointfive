@@ -62,17 +62,6 @@ impl LookOfD {
 }
 impl Default for LookOfD { fn default() -> Self { Self::zeroed() } }
 
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct FloormessStats {
-    pub films: i32,
-    pub tops: i32,
-    pub rubble: i32,
-    pub crowded: i32,
-    pub shut: i32,
-    pub full: i32,
-}
-
 /// (src/game/floormess.ts:24 MESS_LOOK: a table nothing writes)
 pub fn mess_look() -> crate::floormess::MESSLOOK { crate::floormess::MESSLOOK { film: 6.0, grit: 7.0, splinter: 8.0 } }
 
