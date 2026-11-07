@@ -26,11 +26,13 @@ grep -cE '^\s+[a-z0-9-]+:[0-9]+ ' "$OUT/missions.log" | sed 's/^/missions played
 STARTS_ROOT=$T TPS_GAME=rust TPS_RAN_OUT=$RAN bun run "$ROOT/tools/blitz/starts.ts" --jobs "$JOBS" --json "$ROOT/tools/blitz/starts-before.json" > "$OUT/starts.log" 2>&1 || true; tail -2 "$OUT/starts.log"
 # the same missions' starts on Hard (a start is TypeScript: what Hard alone stands must be seen), played 45 s each
 TPS_GAME=rust TPS_RAN_OUT=$RAN bun run tools/qa/playthrough.ts --seeds 1 --jobs "$JOBS" --cap 45 --set '{"DIFFICULTY":{"level":"hard"}}' --json "$OUT/hard.json" > "$OUT/hard.log" 2>&1 || true
-# the tutorials, the quiet missions' lone player, and a family of checks that call rules
+# the tutorials and the quiet missions' lone player
 for f in tools/qa/lessons/tut-*.ts; do t=$(basename "$f" .ts); TPS_GAME=rust TPS_RAN_OUT=$RAN bun run tools/qa/lesson-run.ts "$t" > "$OUT/lesson-$t.log" 2>&1 || true; done
 TPS_GAME=rust TPS_RAN_OUT=$RAN bun run tools/qa/solo-night.ts --quiet --plan sneak --ghost --seeds 1 --jobs 1 > "$OUT/quiet.log" 2>&1 || true
 TPS_GAME=rust TPS_RAN_OUT=$RAN bun run tools/qa/solo-night.ts --plan walk --seeds 1 --jobs 1 > "$OUT/night.log" 2>&1 || true
-TPS_GAME=rust TPS_RAN_OUT=$RAN bun run tools/qa/probes.ts qrf > "$OUT/qrf.log" 2>&1 || true
+# A FAMILY OF CHECKS THAT CALL RULES, NOT COUNTED (no TPS_RAN_OUT): its lines here are the "before" that the deleted tree's are read against. Counted, the
+# family's own calls would keep the bodies it calls, and the comparison would hold nothing of a crossing.
+TPS_GAME=rust bun run tools/qa/probes.ts qrf > "$OUT/qrf-before.log" 2>&1 || true; echo "the qrf family before: $OUT/qrf-before.log"
 # the page: the solo night, a squad mission, the title to play, and the other pages
 if [ $PAGE = 1 ]; then touch "$WASM"; PORT=$PORT bun run tools/serve.ts > "$OUT/serve.log" 2>&1 & SERVE=$!; trap 'kill $SERVE 2>/dev/null || true' EXIT
   for i in $(seq 1 60); do curl -s -o /dev/null "http://localhost:$PORT/" && break; sleep 1; done
