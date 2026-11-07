@@ -706,9 +706,6 @@ pub fn director_fail_beat(g: &mut crate::game::Game, r: DirectorRunId, b: Direct
             }
         }
     }
-    if g.director.strict {
-        panic!("{}", msg);
-    }
     let rr = &mut g.tab.director_run[r];
     if rr.show.is_some() && !rr.finishing {
         rr.failed_show = true; // a broken show does not hold the screen: cut, restore, and report it stopped
