@@ -242,12 +242,17 @@ struct Site {
 type Twins = HashMap<String, Vec<String>>;
 
 fn twins_of(root: &Path, files: &[(PathBuf, String, String)]) -> Twins {
-    let mut names: HashMap<String, HashSet<String>> = HashMap::new();
+    // module -> name -> what it hands back, as written
+    let mut names: HashMap<String, HashMap<String, String>> = HashMap::new();
     let mut add = |module: String, src: &str| {
         if let Ok(f) = syn::parse_file(src) {
             for x in fns_of(src, &f) {
                 if !x.method {
-                    names.entry(module.clone()).or_default().insert(x.name.clone());
+                    let ret = match &x.sig.output {
+                        syn::ReturnType::Type(_, t) => src[t.span().byte_range()].to_string(),
+                        _ => String::new(),
+                    };
+                    names.entry(module.clone()).or_default().insert(x.name.clone(), ret);
                 }
             }
         }
@@ -260,7 +265,8 @@ fn twins_of(root: &Path, files: &[(PathBuf, String, String)]) -> Twins {
     }
     let mut out = Twins::new();
     for (m, set) in names {
-        let mut v: Vec<String> = set.iter().filter(|n| set.contains(&format!("{n}_read"))).cloned().collect();
+        // `f` hands back a `&'static mut`, `f_read` the same thing shared
+        let mut v: Vec<String> = set.iter().filter(|(n, ret)| ret.contains("&'static mut") && set.get(&format!("{n}_read")).map(|r| is_read_twin(&format!("{n}_read"), r)).unwrap_or(false)).map(|(n, _)| n.clone()).collect();
         v.sort();
         if !v.is_empty() {
             out.insert(m, v);
@@ -489,9 +495,10 @@ fn calls_of(all: &[Vec<FnAt>]) -> CallsOf {
 }
 
 /// A function of the sim crate or a helper of a body file that hands out a block to READ: named `…_read`, and what it hands
-/// back is no `mut`. It is clean by its name: the taint does not look inside it (its `unsafe` is the shared twin of the `mut` one's).
+/// back is `&'static` and no `mut` (a function that only has `read` in its name is not one). It is clean by its name: the taint does not look
+/// inside it (its `unsafe` is the shared twin of the `mut` one's). It is clean by its name: the taint does not look inside it (its `unsafe` is the shared twin of the `mut` one's).
 fn is_read_twin(name: &str, ret: &str) -> bool {
-    name.ends_with("_read") && !ret.contains("mut")
+    name.ends_with("_read") && ret.contains("&'static") && !ret.contains("mut")
 }
 
 /// The sim crate's files: (its module as the bodies write it, `sim::doors`; the text).
