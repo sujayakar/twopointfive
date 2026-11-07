@@ -60,8 +60,8 @@ fn item_lines(src: &str, r: Range<usize>) -> Range<usize> {
 pub enum Via {
     /// `f(…)`, `NAME`
     Bare,
-    /// `q::f(…)`: the word before the `::`
-    Path(String),
+    /// `a::q::f(…)`: the words before the name, in order (`[a, q]`)
+    Path(Vec<String>),
     /// `x.f(…)`
     Dot,
 }
@@ -77,11 +77,19 @@ pub fn uses(src: &str) -> HashSet<(Via, String, bool)> {
                     let called = matches!(v.get(i + 1), Some(TokenTree::Group(g)) if g.delimiter() == Delimiter::Parenthesis);
                     let via = if i >= 1 && punct(i - 1, '.') {
                         Via::Dot
-                    } else if i >= 3 && punct(i - 1, ':') && punct(i - 2, ':') {
-                        match &v[i - 3] {
-                            TokenTree::Ident(q) => Via::Path(q.to_string()),
-                            _ => Via::Path(String::new()),
+                    } else if i >= 2 && punct(i - 1, ':') && punct(i - 2, ':') {
+                        // back along `a :: q ::`
+                        let mut segs: Vec<String> = Vec::new();
+                        let mut k = i;
+                        while k >= 3 && punct(k - 1, ':') && punct(k - 2, ':') {
+                            match &v[k - 3] {
+                                TokenTree::Ident(q) => segs.push(q.to_string()),
+                                _ => break,
+                            }
+                            k -= 3;
                         }
+                        segs.reverse();
+                        Via::Path(segs)
                     } else {
                         Via::Bare
                     };
@@ -121,9 +129,16 @@ impl Items {
     fn resolve(&self, module: &str, via: &Via, name: &str, called: bool) -> Option<bool> {
         match via {
             Via::Dot => if called { self.method_names.get(name).copied() } else { None },
-            Via::Path(q) if q == "super" || q == "self" || q == module => self.free.get(&(module.to_string(), name.to_string())).copied(),
-            Via::Path(q) if self.modules.contains(q) => self.free.get(&(q.clone(), name.to_string())).copied(),
-            Via::Path(q) => self.methods.get(&(q.clone(), name.to_string())).copied(),
+            Via::Path(segs) => {
+                let q = segs.last().map(|s| s.as_str()).unwrap_or("");
+                if q == "super" || q == "self" || q == module {
+                    self.free.get(&(module.to_string(), name.to_string())).copied()
+                } else if self.modules.contains(q) && !segs.iter().any(|s| s == "sim") {
+                    self.free.get(&(q.to_string(), name.to_string())).copied()
+                } else {
+                    self.methods.get(&(q.to_string(), name.to_string())).copied()
+                }
+            }
             // (its own module's, else one brought in by a `use`: any module's of that name)
             Via::Bare => self.free.get(&(module.to_string(), name.to_string())).copied().or_else(|| self.free_names.get(name).copied()),
         }

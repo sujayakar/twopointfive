@@ -7,6 +7,7 @@
 # With --tests-too:
 # 4. `fold tests-cut`: the tests that are there for what 3 named go (a test that also calls a live function stays);
 # 5. `sharp.sh` again: what those tests alone held up goes, by the compiler's reading; then 3 once more for what is still kept.
+# Last, `fold --write` once more: a settled row whose only writer was dead code is a constant now.
 # The report: lines by module before and after, then the lists.
 # Exit: 0 done · 3 a step failed (the tree is left as that step left it). Each check of the game crate takes several GB and about
 # two minutes: nothing heavy beside it.
@@ -42,6 +43,8 @@ if [ -n "$TOO" ]; then
   count > "$S/after.txt"
 fi
 
+"$FOLD" --write --report "$S/fold-after.md" > "$S/fold-after.out" || { cat "$S/fold-after.out"; echo "never.sh: the fold after the passes failed"; exit 3; }
+count > "$S/after.txt"
 B=$(sum "$S/before.txt"); M=$(sum "$S/mid.txt"); A=$(sum "$S/after.txt")
 N1=$(section "$S/unnamed.md" "### Nothing names it" | tr ',' '\n' | grep -c .)
 N2=$(section "$S/unnamed.md" "### Only a function deleted here named it" | tr ',' '\n' | grep -c .)
@@ -56,6 +59,7 @@ N4=0; [ -d "$S/sharp2" ] && N4=$(cat "$S"/sharp2/round-*.md | grep -c '^- .* lin
   echo "- deleted, only a function deleted here named it: $N2 functions"
   echo "- deleted, the compiler's reading (reached from nothing the game, its face, its runner or a unit test uses): $N3 items"
   [ -f "$S/tests.md" ] && echo "- deleted with the tests that were its only users: $N4 items, and $(head -1 "$S/tests.md")"
+  echo "- settled rows whose only writer went with the dead code, now constants:$(sed -n 's/^  folded://p' "$S/fold-after.out")"
   echo "- KEPT although the game never runs it, because a unit test that stays uses it: $(head -1 "$KEPT" | sed 's/ (nothing written: --write)//')"
   echo
   echo "## Lines by module, where they changed (before -> after)"

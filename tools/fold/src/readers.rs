@@ -18,7 +18,7 @@ use syn::visit::{self, Visit};
 use syn::{Expr, FnArg, Pat, Type};
 
 /// Words in a function's body that mean it can write without `&mut Game`.
-const TAINT: &[&str] = &["sim::state::state", "UnsafeCell", "unsafe ", "static mut", "AtomicU32", "AtomicUsize", "AtomicBool", "RefCell", "Cell<"];
+const TAINT: &[&str] = &["UnsafeCell", "unsafe ", "unsafe{", "static mut", "AtomicU32", "AtomicUsize", "AtomicBool", "Ordering::", "RefCell", "Cell<"];
 
 use crate::dead::is_body;
 
@@ -233,12 +233,44 @@ fn code_only(src: &str) -> Vec<u8> {
 struct Site {
     off: usize,
     len: usize,
-    to: &'static str,
+    to: String,
     line: usize,
 }
 
+/// The functions that have a reading twin (`f` beside `f_read`), by where they are: a module of the game (called there by
+/// the bare name) or `sim::m` (called as `sim::m::f(…)`). A call of one is a site: it may become a call of its twin.
+type Twins = HashMap<String, Vec<String>>;
+
+fn twins_of(root: &Path, files: &[(PathBuf, String, String)]) -> Twins {
+    let mut names: HashMap<String, HashSet<String>> = HashMap::new();
+    let mut add = |module: String, src: &str| {
+        if let Ok(f) = syn::parse_file(src) {
+            for x in fns_of(src, &f) {
+                if !x.method {
+                    names.entry(module.clone()).or_default().insert(x.name.clone());
+                }
+            }
+        }
+    };
+    for (_, rel, src) in files {
+        add(module_of(rel), src);
+    }
+    for (m, src) in sim_files(root) {
+        add(m, &src);
+    }
+    let mut out = Twins::new();
+    for (m, set) in names {
+        let mut v: Vec<String> = set.iter().filter(|n| set.contains(&format!("{n}_read"))).cloned().collect();
+        v.sort();
+        if !v.is_empty() {
+            out.insert(m, v);
+        }
+    }
+    out
+}
+
 /// The sites of a body file: inside a function's body or one of the file's own `macro_rules!`, never in a test module.
-fn sites_of(src: &str, file: &syn::File) -> Vec<Site> {
+fn sites_of(src: &str, file: &syn::File, module: &str, twins: &Twins) -> Vec<Site> {
     let mut ranges: Vec<std::ops::Range<usize>> = Vec::new();
     fn walk(items: &[syn::Item], ranges: &mut Vec<std::ops::Range<usize>>) {
         for it in items {
@@ -275,11 +307,40 @@ fn sites_of(src: &str, file: &syn::File) -> Vec<Site> {
                     // (`ref mut` is a word of its own, not the end of one; `&'a mut` is not `&mut`)
                     let word_ok = !from.starts_with("ref") || at == 0 || !(code[at - 1].is_ascii_alphanumeric() || code[at - 1] == b'_');
                     if word_ok {
-                        out.push(Site { off: at, len: pat.len(), to, line: line_of(src, at) });
+                        out.push(Site { off: at, len: pat.len(), to: to.to_string(), line: line_of(src, at) });
                     }
                     i += pat.len();
                 } else {
                     i += 1;
+                }
+            }
+        }
+        // a call of a function that has a reading twin: `wx(` its own module's, `sim::weather::of(` the sim's
+        let word = |at: usize| at == 0 || !(code[at - 1].is_ascii_alphanumeric() || code[at - 1] == b'_');
+        let mut find = |pat: &str, name_at: usize, name: &str, bare: bool| {
+            let p = pat.as_bytes();
+            let mut i = 0;
+            while i + p.len() <= text.len() {
+                if &text[i..i + p.len()] == p {
+                    let at = r.start + i;
+                    // (a bare name: not a method, not another module's, not the tail of a longer word)
+                    let ok = word(at) && (!bare || at == 0 || !matches!(code[at - 1], b'.' | b':'));
+                    if ok {
+                        out.push(Site { off: at + name_at, len: name.len(), to: format!("{name}_read"), line: line_of(src, at) });
+                    }
+                    i += p.len();
+                } else {
+                    i += 1;
+                }
+            }
+        };
+        for (m, names) in twins {
+            for n in names {
+                if m == module {
+                    find(&format!("{n}("), 0, n, true);
+                } else if let Some(sm) = m.strip_prefix("sim::") {
+                    let pre = format!("sim::{sm}::");
+                    find(&format!("{pre}{n}("), pre.len(), n, false);
                 }
             }
         }
@@ -295,8 +356,8 @@ fn soft_key(rel: &str, off: usize) -> String {
 
 /// The file as the pass has it now: its text from before, with each parameter in `demoted` made `&` and each site in `soft`
 /// made its shared twin. Words change inside their lines; no line is added or lost.
-fn render(src: &str, file: &syn::File, rel: &str, demoted: &BTreeSet<String>, soft: &BTreeSet<String>) -> String {
-    let mut edits: Vec<(usize, usize, &str)> = Vec::new();
+fn render(src: &str, file: &syn::File, rel: &str, demoted: &BTreeSet<String>, soft: &BTreeSet<String>, twins: &Twins) -> String {
+    let mut edits: Vec<(usize, usize, String)> = Vec::new();
     for f in fns_of(src, file) {
         for (_, p, at, is_mut) in ref_params(f.sig) {
             if is_mut && demoted.contains(&key(rel, &f.name, f.ord, &p)) {
@@ -306,13 +367,13 @@ fn render(src: &str, file: &syn::File, rel: &str, demoted: &BTreeSet<String>, so
                 if rest[ws..].starts_with("mut") {
                     let after = &rest[ws + 3..];
                     let ws2 = after.len() - after.trim_start().len();
-                    edits.push((at + ws, 3 + ws2, ""));
+                    edits.push((at + ws, 3 + ws2, String::new()));
                 }
             }
         }
     }
     if !soft.is_empty() {
-        for s in sites_of(src, file) {
+        for s in sites_of(src, file, &module_of(rel), twins) {
             if soft.contains(&soft_key(rel, s.off)) {
                 edits.push((s.off, s.len, s.to));
             }
@@ -321,7 +382,7 @@ fn render(src: &str, file: &syn::File, rel: &str, demoted: &BTreeSet<String>, so
     edits.sort_by_key(|e| std::cmp::Reverse(e.0));
     let mut out = src.to_string();
     for (at, len, to) in edits {
-        out.replace_range(at..at + len, to);
+        out.replace_range(at..at + len, &to);
     }
     out
 }
@@ -334,7 +395,9 @@ pub fn demote(root: &Path, state: &Path, soften: bool) -> Result<String, String>
     let dir = orig_dir(state);
     let _ = std::fs::remove_dir_all(&dir);
     let mut files = 0;
-    for (path, rel, src) in bodies(root) {
+    let before = bodies(root);
+    let twins = if soften { twins_of(root, &before) } else { Twins::new() };
+    for (path, rel, src) in before {
         let keep = dir.join(&rel);
         if let Some(d) = keep.parent() {
             std::fs::create_dir_all(d).map_err(|e| format!("cannot make {}: {e}", d.display()))?;
@@ -349,11 +412,11 @@ pub fn demote(root: &Path, state: &Path, soften: bool) -> Result<String, String>
             }
         }
         if soften {
-            for s in sites_of(&src, &file) {
+            for s in sites_of(&src, &file, &module_of(&rel), &twins) {
                 soft.insert(soft_key(&rel, s.off));
             }
         }
-        let now = render(&src, &file, &rel, &demoted, &soft);
+        let now = render(&src, &file, &rel, &demoted, &soft, &twins);
         if now != src {
             if syn::parse_file(&now).is_err() {
                 return Err(format!("{rel} would not parse after the pass's edits"));
@@ -425,11 +488,29 @@ fn calls_of(all: &[Vec<FnAt>]) -> CallsOf {
     all.iter().map(|fns| fns.iter().map(|f| { let mut c = Calls { out: Vec::new() }; c.visit_block(f.block); c.out }).collect()).collect()
 }
 
-/// What can write without `&mut`: a function that names `sim::` (the block behind the slot), a static or a cell, or
-/// hands back a `&mut`; and, to a fixed point, everything that uses one. A use is read off the function's own words,
-/// inside a macro's too: `f` its own module's (else any module's of that name), `m::f` module m's, `T::f` and `x.f(…)`
-/// any method of that name. A `macro_rules!` of the file is followed like a function. It errs toward the taint.
-fn tainted_fns(files: &[(PathBuf, String, String)], parsed: &[syn::File], all: &[Vec<FnAt>]) -> HashSet<(String, String)> {
+/// A function of the sim crate or a helper of a body file that hands out a block to READ: named `…_read`, and what it hands
+/// back is no `mut`. It is clean by its name: the taint does not look inside it (its `unsafe` is the shared twin of the `mut` one's).
+fn is_read_twin(name: &str, ret: &str) -> bool {
+    name.ends_with("_read") && !ret.contains("mut")
+}
+
+/// The sim crate's files: (its module as the bodies write it, `sim::doors`; the text).
+fn sim_files(root: &Path) -> Vec<(String, String)> {
+    let mut all = Vec::new();
+    rs_files(&root.join("rust/sim/src"), &mut all);
+    all.into_iter().filter_map(|p| {
+        let stem = p.file_stem().and_then(|n| n.to_str()).unwrap_or("").to_string();
+        std::fs::read_to_string(&p).ok().map(|t| (if stem == "lib" { "sim".to_string() } else { format!("sim::{stem}") }, t))
+    }).collect()
+}
+
+/// What can write without `&mut`: a function that is `unsafe` or names a static or a cell, or hands back a `&mut` (so every
+/// function that hands out a block of the sim behind a slot number); and, to a fixed point, everything that uses one. The sim
+/// crate's own functions are followed like the bodies', so a call into the sim taints only when what it calls can write.
+/// A use is read off the function's own words, inside a macro's too: `f` its own module's (else any module's of that name),
+/// `m::f` module m's, `sim::m::f` the sim's, `T::f` and `x.f(…)` any method of that name. A `macro_rules!` of the file is
+/// followed like a function. A call into the sim that this cannot find is taken for a write. It errs toward the taint.
+fn tainted_fns(root: &Path, files: &[(PathBuf, String, String)], parsed: &[syn::File], all: &[Vec<FnAt>]) -> HashSet<(String, String)> {
     use crate::testcut::{uses, Via};
     struct Node {
         module: String,
@@ -439,25 +520,26 @@ fn tainted_fns(files: &[(PathBuf, String, String)], parsed: &[syn::File], all: &
         text: String,
         tainted: bool,
     }
-    let dirty = |text: &str| text.contains("sim::") || TAINT.iter().any(|t| text.contains(t));
+    let dirty = |text: &str| TAINT.iter().any(|t| text.contains(t));
     let mut nodes: Vec<Node> = Vec::new();
     let mut fn_keys: HashSet<(String, String)> = HashSet::new();
     let mut methods: HashSet<(String, String)> = HashSet::new();
-    let modules: HashSet<String> = files.iter().map(|f| module_of(&f.1)).collect();
+    let mut modules: HashSet<String> = files.iter().map(|f| module_of(&f.1)).collect();
     for (fi, fns) in all.iter().enumerate() {
         let src = &files[fi].2;
         let m = module_of(&files[fi].1);
         for f in fns {
             let body = &src[f.block.span().byte_range()];
             let ret = match &f.sig.output {
-                syn::ReturnType::Type(_, t) => src[t.span().byte_range()].contains("mut"),
-                _ => false,
+                syn::ReturnType::Type(_, t) => src[t.span().byte_range()].to_string(),
+                _ => String::new(),
             };
             fn_keys.insert((m.clone(), f.name.clone()));
             if f.method {
                 methods.insert((m.clone(), f.name.clone()));
             }
-            nodes.push(Node { module: m.clone(), name: f.name.clone(), file: fi, uses: uses(body), text: body.to_string(), tainted: ret || dirty(body) });
+            let clean = is_read_twin(&f.name, &ret);
+            nodes.push(Node { module: m.clone(), name: f.name.clone(), file: fi, uses: if clean { HashSet::new() } else { uses(body) }, text: if clean { String::new() } else { body.to_string() }, tainted: !clean && (ret.contains("mut") || dirty(body)) });
         }
         // the file's own macros: `macro_rules! name { … }`, as a function named `name!`
         fn macros(items: &[syn::Item], src: &str, out: &mut Vec<(String, String)>) {
@@ -483,6 +565,26 @@ fn tainted_fns(files: &[(PathBuf, String, String)], parsed: &[syn::File], all: &
             nodes.push(Node { module: m.clone(), name, file: fi, uses: uses(&text), tainted: dirty(&text), text });
         }
     }
+    // the sim crate: every function of its files (its tests left out), under `sim::file`
+    let sims = sim_files(root);
+    let sim_parsed: Vec<Option<syn::File>> = sims.iter().map(|(_, t)| syn::parse_file(t).ok()).collect();
+    for (si, (m, src)) in sims.iter().enumerate() {
+        modules.insert(m.clone());
+        let Some(file) = &sim_parsed[si] else { continue };
+        for f in fns_of(src, file) {
+            let body = &src[f.block.span().byte_range()];
+            let ret = match &f.sig.output {
+                syn::ReturnType::Type(_, t) => src[t.span().byte_range()].to_string(),
+                _ => String::new(),
+            };
+            fn_keys.insert((m.clone(), f.name.clone()));
+            if f.method {
+                methods.insert((m.clone(), f.name.clone()));
+            }
+            let clean = is_read_twin(&f.name, &ret);
+            nodes.push(Node { module: m.clone(), name: f.name.clone(), file: files.len() + si, uses: if clean { HashSet::new() } else { uses(body) }, text: if clean { String::new() } else { body.to_string() }, tainted: !clean && (ret.contains("mut") || dirty(body)) });
+        }
+    }
     // the macros of each file, to look for `name!` in a body
     let mut file_macros: HashMap<usize, Vec<usize>> = HashMap::new();
     for (i, n) in nodes.iter().enumerate() {
@@ -492,23 +594,44 @@ fn tainted_fns(files: &[(PathBuf, String, String)], parsed: &[syn::File], all: &
     }
     loop {
         let tainted: HashSet<(String, String)> = nodes.iter().filter(|n| n.tainted).map(|n| (n.module.clone(), n.name.clone())).collect();
-        let free_names: HashSet<&String> = tainted.iter().filter(|k| !methods.contains(*k)).map(|k| &k.1).collect();
+        let free_names: HashSet<&String> = tainted.iter().filter(|k| !methods.contains(*k) && !k.0.starts_with("sim")).map(|k| &k.1).collect();
         let method_names: HashSet<&String> = tainted.iter().filter(|k| methods.contains(*k)).map(|k| &k.1).collect();
         let mut grew: Vec<usize> = Vec::new();
         for (i, n) in nodes.iter().enumerate() {
             if n.tainted {
                 continue;
             }
+            let in_sim = n.module.starts_with("sim");
             let by_macro = file_macros.get(&n.file).map(|v| v.iter().any(|&j| nodes[j].tainted && j != i && n.text.contains(nodes[j].name.as_str()))).unwrap_or(false);
             // (a bare word that is not called is one of the module's own functions handed on as a value, or a local: only the first counts)
             let by_use = n.uses.iter().any(|(via, name, called)| match via {
                 Via::Dot => *called && method_names.contains(name),
-                Via::Path(q) if q == "super" || q == "self" || *q == n.module => tainted.contains(&(n.module.clone(), name.clone())),
-                Via::Path(q) if modules.contains(q) => tainted.contains(&(q.clone(), name.clone())),
-                Via::Path(_) => method_names.contains(name),
+                Via::Path(segs) => {
+                    let q = segs.last().map(|s| s.as_str()).unwrap_or("");
+                    // which module the path names: the function's own, one of the sim's, one of the game's
+                    let target: Option<String> = if q == "super" || q == "self" || q == n.module.rsplit("::").next().unwrap_or("") {
+                        Some(n.module.clone())
+                    } else if segs.iter().any(|s| s == "sim") || (in_sim && modules.contains(&format!("sim::{q}"))) {
+                        Some(if q == "sim" { "sim".to_string() } else { format!("sim::{q}") })
+                    } else if in_sim && q == "crate" {
+                        Some("sim".to_string())
+                    } else if modules.contains(q) {
+                        Some(q.to_string())
+                    } else {
+                        None
+                    };
+                    match target {
+                        Some(m) => {
+                            let k = (m, name.clone());
+                            // (a call into the sim that is no function this found there: taken for a write)
+                            if fn_keys.contains(&k) { tainted.contains(&k) } else { *called && k.0.starts_with("sim") && !in_sim }
+                        }
+                        None => method_names.contains(name),
+                    }
+                }
                 Via::Bare => {
                     let own = (n.module.clone(), name.clone());
-                    if fn_keys.contains(&own) { tainted.contains(&own) } else { *called && free_names.contains(name) }
+                    if fn_keys.contains(&own) { tainted.contains(&own) } else { *called && !in_sim && free_names.contains(name) }
                 }
             });
             if by_macro || by_use {
@@ -516,7 +639,7 @@ fn tainted_fns(files: &[(PathBuf, String, String)], parsed: &[syn::File], all: &
             }
         }
         if grew.is_empty() {
-            return tainted.into_iter().filter(|k| !k.1.ends_with('!')).collect();
+            return tainted.into_iter().filter(|k| !k.1.ends_with('!') && !k.0.starts_with("sim")).collect();
         }
         for i in grew {
             nodes[i].tainted = true;
@@ -548,9 +671,10 @@ pub fn restore(root: &Path, state: &Path, diag: Option<&str>, taint: bool) -> Re
     let mut out = Restored { by_error: 0, by_calls: 0, by_taint: 0, unplaced: Vec::new(), coarse: 0, left: 0, soft_back: 0, soft_left: 0 };
     // the softened sites that still stand, by file and line
     let mut soft_at: HashMap<(usize, usize), Vec<String>> = HashMap::new();
+    let twins = if soft.is_empty() { Twins::new() } else { twins_of(root, &files) };
     if !soft.is_empty() {
         for (fi, (_, rel, src)) in files.iter().enumerate() {
-            for st in sites_of(src, &parsed[fi]) {
+            for st in sites_of(src, &parsed[fi], &module_of(rel), &twins) {
                 let k = soft_key(rel, st.off);
                 if soft.contains(&k) {
                     soft_at.entry((fi, st.line)).or_default().push(k);
@@ -735,7 +859,7 @@ pub fn restore(root: &Path, state: &Path, diag: Option<&str>, taint: bool) -> Re
     //    cell, or hands back a `&mut`; and, to a fixed point, every function that calls one. By (module, name): two
     //    functions of a module that share a name taint each other.
     if taint {
-        let tainted = tainted_fns(&files, &parsed, &all);
+        let tainted = tainted_fns(root, &files, &parsed, &all);
         for (fi, fns) in all.iter().enumerate() {
             let m = module_of(&files[fi].1);
             for f in fns {
@@ -812,7 +936,7 @@ pub fn restore(root: &Path, state: &Path, diag: Option<&str>, taint: bool) -> Re
         soft.remove(k);
     }
     for (fi, (path, rel, src)) in files.iter().enumerate() {
-        let now = render(src, &parsed[fi], rel, &demoted, &soft);
+        let now = render(src, &parsed[fi], rel, &demoted, &soft, &twins);
         if std::fs::read_to_string(path).map(|t| t != now).unwrap_or(true) {
             std::fs::write(path, now).map_err(|e| format!("cannot write {rel}: {e}"))?;
         }
@@ -857,7 +981,7 @@ pub fn report(root: &Path, state: &Path, bare: Option<&str>, calls_json: Option<
     let files = bodies(root);
     let parsed: Vec<syn::File> = files.iter().map(|(_, rel, src)| syn::parse_file(src).map_err(|e| format!("{rel} does not parse: {e}"))).collect::<Result<_, _>>()?;
     let all: Vec<Vec<FnAt>> = files.iter().zip(parsed.iter()).map(|((_, _, src), f)| fns_of(src, f)).collect();
-    let tainted = tainted_fns(&files, &parsed, &all);
+    let tainted = tainted_fns(root, &files, &parsed, &all);
     // by module: functions, taking the game, of those `&Game`, of those sure readers
     let mut by_module: BTreeMap<String, (usize, usize, usize, usize)> = BTreeMap::new();
     // a name is a reader only if every function of that module and name is one
