@@ -356,7 +356,7 @@ pub fn can_see_char(g: &mut crate::game::Game, gd: GuardId, pc: CharId, is_playe
     let range = reach_for(g, &crate::seats::here(g), gd, pc, is_player, eye);
     let mut e = crate::guards::Eye { pos: eye, look, range, half_deg: g.k.guard_eye.half_deg, near_m: g.k.guard_eye.near_m, near_deg: g.k.guard_eye.near_deg, v_half_deg: None };
     let through = eye_through(g, gd);
-    let blind = g.time < g.gd[gd].dazzled_until || crate::pairorders::pair_gripped(g, gd) || crate::doze::doze_asleep(g, gd);
+    let blind = crate::control::man::blind(g, gd) || crate::pairorders::pair_gripped(g, gd) || crate::doze::doze_asleep(g, gd);
     let smoke_trans = g.gd[gd].smoke_trans;
     let mut r = eye_contact(g, e, pc, is_player, blind, smoke_trans, Some(through));
     // ROOMFIGHT.sights on, sightsFoe off: the eye along the sights is an operative's alone
@@ -373,7 +373,7 @@ pub fn can_see_char(g: &mut crate::game::Game, gd: GuardId, pc: CharId, is_playe
         if g.ch[c].anim.long_shown == Some(crate::character::LongStance::Shoulder) && !crate::character::anim_at_well(g, c) && lv > SIGHTS_COS {
             e.look = [ax, 0.0, az];
             e.half_deg = m::min(e.half_deg, g.k.roomfight.sights_deg);
-            let blind = g.time < g.gd[gd].dazzled_until || crate::pairorders::pair_gripped(g, gd) || crate::doze::doze_asleep(g, gd);
+            let blind = crate::control::man::blind(g, gd) || crate::pairorders::pair_gripped(g, gd) || crate::doze::doze_asleep(g, gd);
             let smoke_trans = g.gd[gd].smoke_trans;
             r = eye_contact(g, e, pc, false, blind, smoke_trans, Some(through));
         }

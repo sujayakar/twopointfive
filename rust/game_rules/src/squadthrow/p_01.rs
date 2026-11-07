@@ -390,7 +390,7 @@ pub fn stand_throw(g: &mut crate::game::Game, men: &[GuardId], at: V3, kind: cra
 pub fn frag_clears(g: &mut crate::game::Game, gd: GuardId, p: V3, pts: &[V3], late: Option<f64>, taken: Option<&mut Vec<V3>>) -> bool {
     let late = late.unwrap_or(0.0);
     let duck_min_m = g.k.squadthrow.duck_min_m;
-    if g.gd[gd].held.is_some() || g.time < g.gd[gd].stagger_until || g.time < g.gd[gd].dazzled_until { return false; }
+    if g.gd[gd].held.is_some() || crate::control::man::staggered(g, gd) || crate::control::man::blind(g, gd) { return false; }
     if pts.iter().any(|l| v3::dist_xz(p, *l) < duck_min_m) { return false; }   // (inside what it kills at nobody is asked to duck)
     let run = g.k.frag.run_speed;
     let blast = crate::teampace::team_blast_pace(g, gd, run);

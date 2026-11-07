@@ -63,7 +63,7 @@ pub fn door_tools_look(g: &mut crate::game::Game, op: DoorOpId, sr: DoortoolsRoo
     let men: Vec<GuardId> = match out { Some(l) => l.to_vec(), None => g.tab.doortools_door_op[op].men.clone() };
     let (look_m, look_rad) = (g.k.doortools.look_m, g.k.doortools.look_rad);
     for gd in men {
-        if (!outside && door_tools_in_at(g, op, gd).is_nan()) || g.time < g.gd[gd].dazzled_until { continue; }
+        if (!outside && door_tools_in_at(g, op, gd).is_nan()) || crate::control::man::blind(g, gd) { continue; }
         let c = g.gd[gd].ch;
         let p = g.ch[c].pos;
         let n = search(g, sr).pts.len();
@@ -590,7 +590,7 @@ fn flow_in_body(g: &mut Game, op: DoorOpId, sr: DoortoolsRoomSearchId, men: &[Gu
         while k < g.tab.doortools_door_op[op].men.len() {
             let mm = g.tab.doortools_door_op[op].men[k];
             k += 1;
-            if mm == lead || !alive(g, mm) || door_tools_in_at(g, op, mm).is_nan() || g.time < g.gd[mm].dazzled_until || has_over(g, mm) { continue; }
+            if mm == lead || !alive(g, mm) || door_tools_in_at(g, op, mm).is_nan() || crate::control::man::blind(g, mm) || has_over(g, mm) { continue; }
             let lead_now = pos_of(g, lead);
             if own.is_some() && crate::orders::squad_orders_pair_of(g, mm) == own {
                 let w = where_(g, mm);
@@ -647,7 +647,7 @@ pub fn door_tools_move_on(g: &mut crate::game::Game, op: DoorOpId, sr: Doortools
     for q in &dead { mid[0] += q[0] / of_dead; mid[2] += q[2] / of_dead; }
     let mut men: Vec<GuardId> = Vec::new();
     for mm in g.tab.doortools_door_op[op].men.clone() {
-        if !door_tools_in_at(g, op, mm).is_nan() && g.time >= g.gd[mm].dazzled_until && !has_over(g, mm) && !door_tools_on_other(g, op, mm) { men.push(mm); }
+        if !door_tools_in_at(g, op, mm).is_nan() && !crate::control::man::blind(g, mm) && !has_over(g, mm) && !door_tools_on_other(g, op, mm) { men.push(mm); }
     }
     if men.is_empty() { return false; }
     let mut by: Vec<(GuardId, f64)> = men.iter().map(|&x| (x, flat(pos_of(g, x), mid))).collect();

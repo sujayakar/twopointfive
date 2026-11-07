@@ -148,7 +148,7 @@ pub fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
             let gd = g.guards[i];
             i += 1;
             if eyes.len() as f64 >= cap { break; }
-            if !fog_of_war_on_team(g, gd) || is_dead(g, gd) || g.time < g.gd[gd].dazzled_until { continue; }
+            if !fog_of_war_on_team(g, gd) || is_dead(g, gd) || crate::control::man::blind(g, gd) { continue; }
             let e = match crate::wandorder::mate_wand_eye(g, gd) {
                 Some(e) => e,
                 None => { let c = g.gd[gd].ch; fog_of_war_eye_of(g, c) }
@@ -207,7 +207,7 @@ pub fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if fog_of_war_on_team(g, gd) && !is_dead(g, gd) && g.time >= g.gd[gd].dazzled_until {
+        if fog_of_war_on_team(g, gd) && !is_dead(g, gd) && !crate::control::man::blind(g, gd) {
             let c = g.gd[gd].ch;
             g.fog_of_war.mates.push(c);
         }
@@ -571,7 +571,7 @@ pub fn fog_of_war_tell_calls(g: &mut crate::game::Game, dt: f64) {
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if fog_of_war_on_team(g, gd) && !is_dead(g, gd) && g.time >= g.gd[gd].dazzled_until && g.gd[gd].held.is_none() { mates.push(gd); }
+        if fog_of_war_on_team(g, gd) && !is_dead(g, gd) && !crate::control::man::blind(g, gd) && g.gd[gd].held.is_none() { mates.push(gd); }
     }
     // contact: the first teammate, in list order, with one of them in his eyes
     for &gd in mates.iter() {

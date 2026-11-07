@@ -366,7 +366,7 @@ pub fn rescue_defenders(g: &mut crate::game::Game) {
             }
         }
         let d = def_of(g, h);
-        if !d.set && !d.learned.is_nan() && g.time >= d.learned + g.k.rescue.set_secs && g.time >= g.gd[h].dazzled_until && g.gd[h].held.is_none() {
+        if !d.set && !d.learned.is_nan() && g.time >= d.learned + g.k.rescue.set_secs && !crate::control::man::blind(g, h) && g.gd[h].held.is_none() {
             g.rescue.defs.get_mut(h).unwrap().set = true;
             let line = format!("set:{}", g.gd[h].callsign);
             rescue_note(g, &line);
@@ -415,7 +415,7 @@ pub fn rescue_defenders(g: &mut crate::game::Game) {
                     let fd = &mut g.tab.roomfight_def[f];
                     fd.rally_at = f64::INFINITY; fd.lost_at = now + 1.0;
                 }
-                if !d.set && g.time < g.gd[h].dazzled_until {
+                if !d.set && crate::control::man::blind(g, h) {
                     g.tab.roomfight_def[f].burst.n = crate::nightbreach::blind().rounds;
                 }
             }
@@ -458,7 +458,7 @@ pub fn rescue_crew_call(g: &mut crate::game::Game) {
     };
     let p = rescue_room_point(g, RescueRoomPointWhich::Outside);
     if rescue_crew_way(g, p).is_empty() { g.rescue.alarm_at = f64::INFINITY; return; }
-    if g.time < g.gd[cap].dazzled_until { return; }
+    if crate::control::man::blind(g, cap) { return; }
     g.rescue.alarm_at = g.time;
     rescue_note(g, "crew:call");
     let line = if crate::dialogue::is_office(g) { "they're here! get off the corridor — guns on my door!" } else { "they're here! get out of the open — guns on my door!" };
@@ -486,7 +486,7 @@ fn crew_on_row(g: &mut Game, h: GuardId, d: Def, f: Option<RoomfightDefId>) -> b
             return false;
         }
         if !(g.time >= g.rescue.alarm_at + (if d.role == Role::Roamer { 0.8 } else { 1.6 })) { return false; }
-        if g.tab.roomfight_def[f].mode != DefMode::Hold || g.gd[h].held.is_some() || g.time < g.gd[h].dazzled_until || g.time - g.gd[h].last_seen_t < 2.0 { return false; }
+        if g.tab.roomfight_def[f].mode != DefMode::Hold || g.gd[h].held.is_some() || crate::control::man::blind(g, h) || g.time - g.gd[h].last_seen_t < 2.0 { return false; }
         let one = g.rescue.hostiles.iter().any(|&o| o != h && alive(g, o) && def_of(g, o).crew == DefCrew::Cross);
         let x = if !(one && d.role == Role::Door) { rescue_crew_cross_spot(g, h, pt, if d.role == Role::Door { 14.0 } else { 9.0 }) } else { None };
         if let Some(x) = x {
@@ -585,7 +585,7 @@ fn crew_on_row(g: &mut Game, h: GuardId, d: Def, f: Option<RoomfightDefId>) -> b
         Some(n) => g.rescue.noise_serial != d.noise0 && (flat(n, pt) < 3.0 || in_rect(n, bounds)),
         None => false,
     };
-    if at_door && g.time - g.gd[h].last_seen_t > 2.5 && g.gd[h].held.is_none() && g.time >= g.gd[h].dazzled_until {
+    if at_door && g.time - g.gd[h].last_seen_t > 2.5 && g.gd[h].held.is_none() && !crate::control::man::blind(g, h) {
         let row = g.rescue.defs.get_mut(h).unwrap();
         row.released = true; row.crew = DefCrew::Out;
         crate::control::set_hold(g, h, false, "rescue");
