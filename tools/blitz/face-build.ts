@@ -8,6 +8,8 @@
 // cargo is never started: a pull is enough to play. Where the hashes differ it is not served (the page's half of the bridge is generated with the Rust
 // and a module of other sources would read garbage): the machine builds, or says why it cannot. `--prebuilt` makes it: the `play` profile built with the
 // checkout's and the home folder's paths mapped away (the file must not carry a machine's paths), copied there with its hash.
+// A HOSTED BUILD MAKES ITS OWN (tools/host/build.sh sets FACE_BUILD=1): with FACE_BUILD=1 the checked-in module is never taken, the module is built from
+// the sources on that machine (paths mapped away), and the static build (tools/build.ts) FAILS if it cannot be.
 // TWO PROFILES (rust/game_face/Cargo.toml). `play`: optimised, no link-time optimisation: what the DEV SERVER builds, because the release profile's fat
 // link needs over 10.5 GB of memory and many minutes, and a first `bun run dev` should not. `release`: the fat link, what `bun run build` ships
 // (FACE_PROFILE=play in front of it builds the other). A module of EITHER profile that is newer than the sources is served as it is: nobody is made to
@@ -87,7 +89,7 @@ export function faceWasm(say: (line: string) => void = () => {}, profile: FacePr
     if (!c) { const old = [file, faceFile(profile === 'play' ? 'release' : 'play')].find(f => existsSync(f)); if (old) { say(`game_face.wasm: ${stale}, and there is no cargo on this machine to build it: the file as it stands is served (${old.slice(ROOT.length + 1)})`); return { path: old }; } const why = NO_CARGO + otherSources(); if (!saidNoCargo) { saidNoCargo = true; say(`game_face.wasm: ${why}`); } return { why }; }
     say(`game_face.wasm: ${stale}; building it (cargo build --profile ${profile} in rust/game_face: ${profile === 'play' ? 'a few minutes the first time, and about 7 GB of memory' : 'the fat link: many minutes and over 10 GB of memory'}) …`);
     const t0 = performance.now(); NOW.building = true; NOW.since = t0; NOW.line = 'starting cargo'; NOW.profile = profile; NOW.failed = '';
-    const p = Bun.spawn([c, 'build', '--target', 'wasm32-unknown-unknown', '--profile', profile], { cwd: CRATE, stdout: 'ignore', stderr: 'pipe', env: { ...process.env, PATH: `${join(homedir(), '.cargo/bin')}:${process.env.PATH ?? ''}`, ...(MAPPED ? { RUSTFLAGS: `${process.env.RUSTFLAGS ?? ''} --remap-path-prefix=${ROOT}=. --remap-path-prefix=${homedir()}=~`.trim() } : {}) } });
+    const p = Bun.spawn([c, 'build', '--target', 'wasm32-unknown-unknown', '--profile', profile], { cwd: CRATE, stdout: 'ignore', stderr: 'pipe', env: { ...process.env, PATH: `${join(homedir(), '.cargo/bin')}:${process.env.PATH ?? ''}`, ...(MAPPED || process.env.FACE_BUILD === '1' ? { RUSTFLAGS: `${process.env.RUSTFLAGS ?? ''} --remap-path-prefix=${ROOT}=. --remap-path-prefix=${homedir()}=~`.trim() } : {}) } });
     // cargo's own words as they come: the crates it compiles and what rustup fetches are said, the compiler's warnings are not
     let err = '', part = '', lastSaid = 0;
     const dec = new TextDecoder();
