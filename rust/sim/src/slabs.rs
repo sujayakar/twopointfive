@@ -25,7 +25,7 @@ use crate::collide;
 use crate::lines::{ray_rule, RAY_HOST};
 use crate::maths::{cos, exp, hypot2, sin};
 use crate::state::state;
-use crate::world::{clamp, js_abs, js_ceil, js_max, js_min, or_one, world, REC, R_C, R_COS, R_H, R_SIN};
+use crate::world::{asking, clamp, js_abs, js_ceil, js_max, js_min, or_one, world, REC, R_C, R_COS, R_H, R_SIN};
 use core::mem::{offset_of, size_of};
 
 /// slabs a game can have: one a door (doors.rs CAP). A multiple of 4.
@@ -245,7 +245,7 @@ fn overlaps(d: &mut Leaf, x: f64, z: f64, a: f64, hu: f64, hn: f64, y0: f64, y1:
     let n = collide::gather(d.w, x - ex, z - ez, x + ex, z + ez, y0, y1, OV);
     let o = world(d.w);
     for i in 0..n {
-        let b = o.list[i] as usize * REC;
+        let b = asking(d.w).list[i] as usize * REC;
         let (bx, bz) = (o.rec[b + R_COS], -o.rec[b + R_SIN]);
         let (dx, dz) = (o.rec[b + R_C] - x, o.rec[b + R_C + 2] - z);
         let (h0, h2) = (o.rec[b + R_H], o.rec[b + R_H + 2]);

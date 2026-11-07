@@ -214,8 +214,8 @@ export const roomclearEnds = guarded(async () => {
     const M = g.level.mission, stage0 = g.mission.stage;
     g.teleportPlayer([(M.serverRoom.x0 + M.serverRoom.x1) / 2, 0, (M.serverRoom.z0 + M.serverRoom.z1) / 2]); R.step(30); const inServer = g.mission.stage;
     g.mission.stage = 'exfil'; g.teleportPlayer([M.exfilX + 0.6, 0, M.exfilZ]); R.step(30); const outside = g.mission.stage; g.mission.stage = stage0;
-    verdict(stage0 === 'infiltrate' && inServer === 'infiltrate' && outside === 'exfil' && !g.mission.debrief && R.heard(/reached the server room|exfiltrated/) === 0 && /structure taken/.test(g.objectiveText()),
-      'the stealth mission stands still under it: Sam in the server room starts no drive objective, and past the fire exit nothing is completed', `stage ${stage0} → in the server room ${inServer} · forced to exfil and stood outside: ${outside} · debrief ${g.mission.debrief}`);
+    verdict(stage0 === 'infiltrate' && inServer === 'infiltrate' && outside === 'exfil' && !g.endCards && R.heard(/reached the server room|exfiltrated/) === 0 && /structure taken/.test(g.objectiveText()),
+      'the stealth mission stands still under it: Sam in the server room starts no drive objective, and past the fire exit nothing is completed', `stage ${stage0} → in the server room ${inServer} · forced to exfil and stood outside: ${outside} · end cards ${g.endCards ?? 0}`);
   }
   { const R = await rig(11); const { game: g, RC, NB } = R; R.step(30);
     R.drop('storage');

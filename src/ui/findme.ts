@@ -10,7 +10,7 @@
 // proper silhouette". The outline is the renderer's now. His shape through a wall is SHELVED until that one has been seen on a GPU: it needs him drawn a
 // second time without the walls, which is a pass of its own.
 import type { Game } from '../game/game';
-import { men, teamMen, allDown, seatOfMan, seatTone } from '../game/seats';
+import { men, teamMen, seatOfMan, seatTone } from '../game/seats';
 import type { FollowCamera } from '../game/camera';
 import type { Vec3 } from '../math/vec';
 import { PLAN } from '../game/floorplan';
@@ -41,7 +41,7 @@ function outlineMan(M: OutlineMan, pos: Vec3, light: number, nv: number, dt: num
  *  so the same man is the same colour on both players' screens. A man who has left the list gives his place up. */
 export function findMeOutline(F: OutlineFrame, game: Game, dt: number, shown = true) {
   const pl = game.player, pool = F.mates;
-  if (!FINDME.outline || !(FINDME.width > 0) || !(FINDME.opacity > 0) || allDown(game) || !shown) { F.on = false; F.strength = 0; for (const m of pool) { m.on = false; m.strength = 0; m.owner = 0; } return; }
+  if (!FINDME.outline || !(FINDME.width > 0) || !(FINDME.opacity > 0) || game.recap.allDown || !shown) { F.on = false; F.strength = 0; for (const m of pool) { m.on = false; m.strength = 0; m.owner = 0; } return; }
   F.picture = FINDME.picture; F.lit = FINDME.picLit; F.dark = FINDME.picDark; F.whole = Math.max(0, Math.min(1, 1 - pl.nvAmount));   // (by the picture the meter is not asked: only the goggles take the rims out)
   F.owner = pl.char.id; outlineMan(F, pl.char.pos, pl.visibility, pl.nvAmount, dt, 1, seatTone(seatOfMan(game, pl).index));
   if (pl.down) F.strength = 0;   // (down in a game that goes on, another player still up: no rim of his own, and the team's as ever)

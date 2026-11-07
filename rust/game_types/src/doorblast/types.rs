@@ -55,23 +55,6 @@ impl SlabSnap {
 }
 impl Default for SlabSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doorblast.ts:123 hitAt ->, src/game/doorblast.ts:123)
-#[derive(Clone, Copy, Debug)]
-pub struct HitAt {
-    pub t: f64,
-    pub n: V3,
-}
-impl HitAt {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HitAt {
-            t: 0.0,
-            n: [0.0; 3],
-        }
-    }
-}
-impl Default for HitAt { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: inline at src/game/doorblast.ts:194 doorBlastReach ->, src/game/doorblast.ts:194)
 #[derive(Clone, Copy, Debug)]
 pub struct DoorBlastReachItem {

@@ -132,7 +132,7 @@ pub fn glass_break_asking<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game
 pub fn glass_break_ask<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, fn_: &mut dyn FnMut(&mut crate::game::Game, f64, f64) -> T) -> T {
     crate::scene_collision::window(g, &mut |g| {
         crate::scene_collision::rules_statics(g);
-        if !g.col.mirror.live { panic!("glass: the box world's copy will not stand for the rule: rust/sim/src/panes.rs has nothing to ask"); }
+        if !crate::scene_collision::standing(g) { panic!("glass: the box world's copy will not stand for the rule: rust/sim/src/panes.rs has nothing to ask"); }
         if !g.m.rustknobs.rust_knobs.tick { crate::rustknobs::knobs_to_rust(g); }
         let dynamic = g.col.dynamic_boxes.clone();
         let set = crate::scene_box_mirror::box_mirror_leaves(g, &dynamic);

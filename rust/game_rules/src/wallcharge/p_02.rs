@@ -1,5 +1,6 @@
 //! src/game/wallcharge.ts lines 421 to 786
 use super::*;                      // your own module: its types, its other parts' functions
+use crate::ask::Over;
 use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
@@ -541,11 +542,11 @@ fn reach_kept(g: &mut Game, gd: GuardId, to: V3, menu: bool) -> Option<String> {
     why
 }
 
-/// Something solid holds between the blast's reach and a chest at `p`, door leaves left to the caller (the closure `covered` of safePosts).
-fn covered(g: &mut Game, src: V3, open: f64, p: V3) -> bool {
+/// Something solid holds between the blast's reach and a chest at `p`, of the world the caller asks it of (the closure `covered` of safePosts).
+fn covered(g: &mut Game, over: &Over, src: V3, open: f64, p: V3) -> bool {
     let chest: V3 = [p[0], 1.1, p[2]];
     let from = v3::lerp3(src, chest, open / v3::dist(src, chest));
-    crate::scene_collision::solid_blocked(g, from, chest, None) && crate::scene_collision::segment_blocked(g, from, chest, None, None, None)
+    crate::scene_collision::solid_blocked_over(g, over, from, chest, None) && crate::scene_collision::segment_blocked_over(g, over, from, chest, None, None)
 }
 
 /// The safe stand-off: n marks out of the blast, the shortest walk back first; None: the floor has not n of them. (wallcharge.ts safePosts)
@@ -588,6 +589,7 @@ pub fn wall_charge_safe_posts(g: &mut crate::game::Game, w: &crate::wallcharge::
         let open = g.k.walls.blast.radius * g.k.walls.blast.port_k + 0.25;
         let lo = m::max(g.k.wallcharge.standoff[0], open + 0.6);
         let src = wall_pt(g, w, 0.0, 0.5, Some(1.1));
+        let statics = Over::statics();   // (before the blast a door leaf is no cover)
         let mut x = -hide;
         while x <= hide + 1e-6 {
             let mut z = -hide;
@@ -596,14 +598,13 @@ pub fn wall_charge_safe_posts(g: &mut crate::game::Game, w: &crate::wallcharge::
                 z += 0.9;
                 let d = flat(q, at);
                 if d < lo || d > hide || !free(g, q) || wall_off(g, w, q) <= 0.3 || wall_charge_in_frame(g, q, None) || !ours(g, q, room0) { continue; }
-                let good = wall_charge_no_leaves(g, &mut |g: &mut Game| {
-                    if !covered(g, src, open, q) { return false; }
-                    for (dx, dz) in [(0.4, 0.0), (-0.4, 0.0), (0.0, 0.4), (0.0, -0.4)] {
-                        let p: V3 = [q[0] + dx, 0.0, q[2] + dz];
-                        if !(!free(g, p) || covered(g, src, open, p)) { return false; }
-                    }
-                    true
-                });
+                // (a place is good if the charge's own line to it is cut, and to a step off it every way there is floor)
+                let mut good = covered(g, &statics, src, open, q);
+                for (dx, dz) in [(0.4, 0.0), (-0.4, 0.0), (0.0, 0.4), (0.0, -0.4)] {
+                    if !good { break; }
+                    let p: V3 = [q[0] + dx, 0.0, q[2] + dz];
+                    good = !free(g, p) || covered(g, &statics, src, open, p);
+                }
                 if good { hid.push(q); }
             }
             x += 0.9;
@@ -697,7 +698,7 @@ pub fn wall_charge_blast_share(g: &mut crate::game::Game, w: &crate::wallcharge:
     let t = thick(g, w);
     if d >= r.reach || wall_off(g, w, p) < -t / 2.0 { return 0.0; }
     let (a, b): (V3, V3) = (wall_pt(g, w, 0.0, 0.5, Some(1.1)), [p[0], 1.1, p[2]]);
-    let cut = if leaves { crate::scene_collision::solid_blocked(g, a, b, None) } else { wall_charge_no_leaves(g, &mut |g: &mut Game| crate::scene_collision::solid_blocked(g, a, b, None)) };
+    let cut = crate::scene_collision::solid_blocked_over(g, &if leaves { Over::OWN } else { Over::statics() }, a, b, None);
     if cut { 0.0 } else { 1.0 - d / r.reach }
 }
 
@@ -811,14 +812,6 @@ pub fn wall_charge_clear_of(g: &mut crate::game::Game, gd: GuardId, where_: &mut
     Some(mark)
 }
 
-/// A line asked with the door leaves out of the way: before the blast a leaf is no cover. (wallcharge.ts noLeaves)
-pub fn wall_charge_no_leaves<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, f: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
-    let dyn_ = core::mem::take(&mut g.col.dynamic_boxes);
-    let v = f(g);
-    g.col.dynamic_boxes = dyn_;
-    v
-}
-
 /// Who is inside the radius of a set charge right now: 'you' and the teammates by callsign. (wallcharge.ts tooClose)
 pub fn wall_charge_too_close(g: &mut crate::game::Game, c_2: Option<WallChargeId>) -> Vec<String> {
     let c = match c_2 { Some(c) => c, None => return Vec::new() };
@@ -838,13 +831,12 @@ pub fn wall_charge_too_close(g: &mut crate::game::Game, c_2: Option<WallChargeId
 
 /// A clear line to `p` from the far face at the charge or a step either side, door leaves out (the closure `lined` of behind).
 fn lined(g: &mut Game, w: &WallSpot, t: f64, p: V3) -> bool {
-    wall_charge_no_leaves(g, &mut |g: &mut Game| {
-        for du in [0.0, 0.4, -0.4] {
-            let a = wall_pt(g, w, du, -(t + 0.45), Some(1.1));
-            if !crate::scene_collision::solid_blocked(g, a, [p[0], 1.1, p[2]], None) { return true; }
-        }
-        false
-    })
+    let statics = Over::statics();
+    for du in [0.0, 0.4, -0.4] {
+        let a = wall_pt(g, w, du, -(t + 0.45), Some(1.1));
+        if !crate::scene_collision::solid_blocked_over(g, &statics, a, [p[0], 1.1, p[2]], None) { return true; }
+    }
+    false
 }
 
 /// Who the blast would catch beyond the wall right now. (wallcharge.ts behind)

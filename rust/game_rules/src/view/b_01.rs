@@ -12,5 +12,12 @@ use crate::game::Game;
 
 /// the view about `seat`, as the last tick left the game
 pub fn tick_view(g: &Game, seat: &crate::seats::SeatRef) -> TickView {
-    TickView { mission: crate::mission::objective(g, seat) }
+    let me = &g.ch[g.pl[seat.player].ch];
+    TickView {
+        mission: crate::mission::objective(g, seat),
+        radio: crate::cues::radio_rows(g),
+        bubbles: crate::cues::bubbles_view(g, seat),
+        me: me.id,
+        place: crate::chronicle::room_of(g, me.pos),
+    }
 }
