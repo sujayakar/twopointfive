@@ -37,7 +37,7 @@ impl Default for BreakLike { fn default() -> Self { Self::zeroed() } }
 /// (TypeScript: Rubble, src/game/edgeLook.ts:90)
 #[derive(Clone, Copy, Debug)]
 pub struct Rubble {
-    pub box_: BoxId,
+    pub box_: FrameBoxId,
     pub t: f64,
     pub t_2: f64,
     pub p0: V3,
@@ -51,7 +51,7 @@ impl Rubble {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         Rubble {
-            box_: BoxId(0),
+            box_: FrameBoxId(0),
             t: 0.0,
             t_2: 0.0,
             p0: [0.0; 3],
@@ -107,7 +107,7 @@ impl Default for Frame { fn default() -> Self { Self::zeroed() } }
 /// (TypeScript: EdgeLook, src/game/edgeLook.ts:94)
 #[derive(Clone, Debug)]
 pub struct EdgeLook {
-    pub decor: JsMap<crate::Num, Vec<BoxId>>,
+    pub decor: JsMap<crate::Num, Vec<FrameBoxId>>,
     pub dirty: JsMap<crate::Num, crate::edge_look::BreakLike>,
     pub rubble: Vec<crate::edge_look::Rubble>,
     pub flying: f64,
@@ -116,7 +116,6 @@ pub struct EdgeLook {
     pub blasted: JsMap<crate::Num, Vec<[f64; 2]>>,
     pub todo: Vec<crate::edge_look::EdgeLookTodoItem>,
     pub held: bool,
-    pub last: f64,
     pub foot_book: crate::debris::FootBook,
 }
 impl EdgeLook {
@@ -132,7 +131,6 @@ impl EdgeLook {
             blasted: JsMap::new(),
             todo: Vec::new(),
             held: false,
-            last: 0.0,
             foot_book: crate::debris::FootBook { shoves: 0.0, stats: crate::debris::FootBookStats { kicked: 0.0, off_man: 0.0, walled: 0.0, gave_up: 0.0 } },
         }
     }

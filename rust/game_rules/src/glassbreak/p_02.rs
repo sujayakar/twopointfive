@@ -14,7 +14,7 @@ use crate::Num;
 
 // ---------------------------------------------------------------- what the TypeScript reads off an array by a number
 /// a box's row. `g.col.boxes: Vec<BoxId>` names it, `g.tab.boxes` holds it
-fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
+fn seam_box<'g>(g: &'g mut Game, b: impl Into<AnyBoxId>) -> &'g mut crate::scene_boxes::Box { &mut g.tab[b.into()] }
 /// `g.level.boxes[bi]`: undefined off the list (a negative, fractional or NaN index included). That list and `g.col.boxes` are one array in the TypeScript (game.ts:1219): the box at place bi
 fn box_at(g: &Game, bi: f64) -> Option<BoxId> {
     let ix = bi as usize;

@@ -55,7 +55,7 @@ function call(row: number, self: any, args: any[]): any { const H = hostOf(self,
   // AN ID THE FUNCTION DOES NOT TAKE AS OPTIONAL, AND NOTHING THERE: the TypeScript would throw on it, so this throws; in Rust it would be a panic, and the game lost
   for (const [ty, v] of parts) if ((v === null || v === undefined) && parse(ty).k === 'id') throw new TypeError(`${C.key}: an argument of type ${ty} is ${v}`);
   // A ROW THE RUST GAME HAS NOT GOT (a tour's own RoomClear, made in TypeScript since the last start): the TypeScript runs, on its own row
-  { const bk0 = bookOf(g); for (const [ty, v] of parts) { const n = parse(ty); if (n.k === 'id' && bk0 && !((bk0.ids.get(n.id)?.get(v as object) ?? Infinity) < ((bk0 as any).known?.get(n.id) ?? Infinity))) { passed(C.key, 'noRow'); H.count?.(`passed, a row Rust has not got: ${C.key}`); return PASS; } } }
+  { const bk0 = bookOf(g); for (const [ty, v] of parts) { const n = parse(ty); if (n.k === 'id' && bk0 && !bk0.hasRow(n.id, v as object)) { passed(C.key, 'noRow'); H.count?.(`passed, a row Rust has not got: ${C.key}`); return PASS; } } }
   // …AND ONE INSIDE AN ARGUMENT (an optional id, a list of them, a field of a struct handed in): the rule above sees only an argument that IS an id. The
   // bytes are written first and the exporter counts every id it wrote for a row the Rust game has not got (export.ts PAST): a door gate made by hand
   // on the puppet and handed to `DoorTools.order` went over as gate 0 of a table of none, and the Rust body indexed past it
