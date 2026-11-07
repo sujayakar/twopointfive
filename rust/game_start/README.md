@@ -191,7 +191,10 @@ that the picture, the sound, the HUD and the menus read (`src/host/rustgame.ts`,
     feature), and `face_start` stands a game inside the module from one run of handed bytes (`src/handed.rs`: the level file's text, the
     address's words, the character's files, the host's knob tables). `tools/blitz/start-module.ts` holds the game the module starts to the
     game the native start makes, mission by mission ("The module's start", below). Nothing plays a game started that way yet: item 13.
-12. **The team's start is the office's until a start says otherwise.** The rescue's and the night breach's knob tables are made holding the
+12. **A MISSION'S TEAM NUMBERS BELONG ON THE GAME, AND THE RUST START IS WHERE THAT LANDS.** Today they are written into the process's knob
+    tables, so a game whose start does not write a table finds it as the last mission left it: the one thing a second start in one process
+    still differs in ("A second start in one process", below, where the table forgives it by name). **The team's start is the office's until a
+    start says otherwise.** The rescue's and the night breach's knob tables are made holding the
     office's team start (`samAt`, `samYaw`, `opsAt`): the TypeScript reads them off `levels/office.json` as the module loads, the Rust holds
     them as the table's values (`knobs.rs`), and each keeps `applied`, the start the knobs were last written from, so that a start on a level
     that names another writes its own over them and a knob moved by hand stays moved. A game made in Rust is made before any level, so it
@@ -222,6 +225,7 @@ tools/blitz/start.sh depot-gwot.json --link '?levelFile=depot.json&roomclear&squ
 tools/blitz/start.sh --mission depot-four --frames 300               # a row of the mission list: its file, started from its link
 tools/blitz/start.sh rust/game_start/target/scenes/two-rooms.json --scenario roomclear --cpu --frames 900
 bun run tools/blitz/start-levels.ts --write                          # every mission, and LEVELS.md written from the result (--seats 2: as games of two)
+bun run tools/blitz/start-levels.ts --again                          # every mission stood a SECOND time in one process, held to its first start (below)
 ```
 
 1. `tools/blitz/start.ts` stands the file with the TypeScript start on the page's stand and exports the state over the bridge.
@@ -242,6 +246,33 @@ bun run tools/blitz/start-levels.ts --write                          # every mis
 
 Where things stand is [`LEVELS.md`](LEVELS.md). The tests' scenes are held the same way: the three of `tests/behaviour.rs`, each 0 paths not known
 and the block equal to the byte, 900 frames in step.
+
+## A second start in one process (`tools/blitz/start-levels.ts --again`)
+
+A game's state lives on the Game, and a start writes all of it. The Rust start does by its make: every `stand` begins from `Game::blank()`, and
+nothing of a game is kept outside it (`tests/start.rs` stands seed 1, 2, 1 in one slot and holds the third to the first; `tests/slots.rs` stands a
+game again in a slot four other games have used; `start-module.ts` holds the module's second and third start of every mission to the native one).
+
+The TypeScript start did not: what a module of `src/` keeps at its own top (a counter of the men's unit numbers, the tallies and logs the Rust game
+is handed as state, what a mission of another kind had staged) was the process's, and a second game found it as the first left it. `tools/qa/fresh.ts`
+is the mend, run by the harness's stand-up before every game: it puts back only what is known to be a game's (its header says how each is known:
+for a count, that the bridge's schema reads it into one of this game's own `…Stats` structs) and leaves a setting alone. This table is what keeps it. Each mission is stood, stepped with an idle hand, then THE MISSION BEFORE IT ON THE LIST (the
+nearest the game stands for that many players) is stood and stepped in the same process, then the mission is stood again; the second start is held
+to the first, rust/sim's block byte for byte and the state path for path, but for what `tools/blitz/known-again.txt` names with its reason (the Rust
+module's own memory and memos; no game's state) and, in the block's poses, a row the first start had not made (a clip's first pose, a memo).
+
+```bash
+bun run tools/blitz/start-levels.ts --again                 # 38 of 38 (300 frames each; the module must be built)
+bun run tools/blitz/start-levels.ts --again --seats 2       # 23 of 23, 15 the game refuses for two
+bun run tools/blitz/start-levels.ts --again --frames 0      # no game stepped (needs no module): only what a START leaves behind
+STANDFRESH_BREAK=1 bun run tools/blitz/start-levels.ts --again   # nothing put back: every row red
+```
+
+ONE THING IS OPEN, and the table forgives it by name, row by row: a mission's start writes its team's numbers (where Sam and the men stand, how
+many come) into the process's knob tables, and a game whose start does not write a table finds it as the last mission left it. No start here can
+tell a game's write to a knob table from a tool's, so a tool that runs missions of several kinds puts the tables back itself (`knobsCopy` /
+`knobsBack`, which carry each table's note of where its numbers came from). It ends when a mission's numbers live on the Game: item 12 of the list
+above.
 
 ## The module's start (`tools/blitz/start-module.ts`)
 
