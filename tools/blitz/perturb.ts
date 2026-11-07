@@ -65,6 +65,9 @@ export async function lay(W: any): Promise<void> {
     restart() { g.restart('fuzz: the pause card\'s restart'); saved.length = 0; return 'the pause card'; },
   };
   const ALARM = process.env.QA_PERTURB_ALARM ? Number(process.env.QA_PERTURB_ALARM) : -1;
+  // (THE NAMES THIS FILE WRITES ON THE GAME. The walk for writes by name watches what the files of tools/qa write, read as each loads (tools/blitz/expose.ts);
+  // this file is not one of them, so it says its own: without this the Rust game dealt the team at the page's 75 s while the puppet read 14.)
+  if (ALARM >= 0) { const TW = (globalThis as any).__tpsToolWrites; if (TW?.names) { for (const k of ['qrf', 'qrfSquad', 'qrfEta', 'qrfSize', 'placed', 'pos', 'raisedAt']) TW.names.add(k); TW.version++; } }
   const alarm = (first: boolean): string | null => { const T = team(), m = T.length ? pick(T).char.pos : g.player.char.pos, Q = g.qrf; if (!Q) return null;
     if (first) { g.tune.qrf = true; g.tune.qrfSquad = true; g.tune.qrfEta = 14; g.tune.qrfSize = 4; }
     g.alarm.placed = true; g.alarm.pos = [m[0], m[1], m[2]]; g.alarm.raisedAt = g.time;
