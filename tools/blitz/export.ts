@@ -43,14 +43,14 @@ const fieldFn = new Map<string, (o: any, g: any, B: any) => any>();
 const compiled = (expr: string) => { let f = fieldFn.get(expr); if (!f) { f = new Function('o', 'g', 'B', `return ${expr}`) as any; fieldFn.set(expr, f!); } return f!; };
 
 // ---- what a game's walk keeps between exports
-class Book { ids = new Map<string, Map<object, number>>(); lists = new Map<string, object[]>(); serial = new WeakMap<object, number>(); nextSerial = 1; serials = new Map<object, number>();
+class Book { ids = new Map<string, Map<object, number>>(); lists = new Map<string, object[]>(); serial = new WeakMap<object, number>(); nextSerial = 1; serials = new Map<object, number>(); /** once the Rust game deals the serials (import.ts takes its counter with every apply), what this side deals comes from a range of its own: two things must never share a number */ rustDeals = false; ownSerial = 0x40000000;
   /** (for the importer: every object that has a serial) */ serialOfObjects() { return this.serials; }
   first = new Map<object, string>();
   /** poses that have no place in the pool, in the order first met: their floats go at the end of the bytes */
   loose = new Map<object, number>();
   idOf(id: string, o: object): number { let M = this.ids.get(id); if (!M) { M = new Map(); this.ids.set(id, M); this.lists.set(id, []); } let i = M.get(o); if (i === undefined) { i = M.size; M.set(o, i); this.lists.get(id)!.push(o); this.first.set(o, AT); } return i; }
   listOf(id: string): object[] { return this.lists.get(id) ?? []; }
-  serialOf(o: object): number { let s = this.serial.get(o); if (s === undefined) { s = this.nextSerial++; this.serial.set(o, s); this.serials.set(o, s); } return s; } }
+  serialOf(o: object): number { let s = this.serial.get(o); if (s === undefined) { s = this.rustDeals ? this.ownSerial++ : this.nextSerial++; this.serial.set(o, s); this.serials.set(o, s); } return s; } }
 const BOOKS = new WeakMap<object, Book>();
 // ---- A WEAK TABLE LISTS THE KEYS OF THE GAME BEING WALKED. `liveKeys()` is every key alive in the process, whichever game's, so a second game of a process would be walked with the first game's men, routes and players as rows of its own, a table of one thing's own row would give the first game's (`K[0]`), and an apply that puts a table's keys in the Rust game's order would strike every other game's off the list. Every walk of a game by the bridge goes through `forGame`: while it runs a table lists only that game's keys, the keys a walk from the game reaches. A start finds them (`startExport`): the game is exported with every table listing only the keys the walk has numbered so far (and the game and its views), again until an export numbers no key it had left out; what the book then holds is the game's, the book is put back as it was, and the start's own export lists exactly those. After a start: those keys, and a key first seen since (a thing made in play) unless a start left it out or it is in another game's book. Outside the walks `liveKeys()` is as it was
 type KeyMode = { kind: 'reach' } | { kind: 'exact' | 'own'; mine: WeakSet<object>; not?: WeakSet<object> };
@@ -68,7 +68,7 @@ export function forGame<T>(g: any, f: () => T): T { const c = CUR, m = MODE; CUR
 function owned(g: any, bk: any): void { const put = (k: object) => { if (!OWNER.has(k)) OWNER.set(k, g); }; put(g); if (!bk) return; for (const M of bk.ids.values() as Iterable<Map<object, number>>) for (const k of M.keys()) put(k); for (const k of (bk.serials as Map<object, number>).keys()) put(k); }
 /** A START'S EXPORT, with every weak table listing this game's keys and no other game's. `say` is told what was left out */
 export function startExport(g: any, knobs: Record<string, unknown>, say?: (s: string) => void): Uint8Array { holdKeys(); for (const o of WALKED) if (o !== g) owned(o, BOOKS.get(o)); WALKED.clear();
-  const FIELDS = ['ids', 'lists', 'first', 'loose', 'serials', 'serial', 'nextSerial'] as const; const fresh = (bk: any) => { bk.ids = new Map(); bk.lists = new Map(); bk.first = new Map(); bk.loose = new Map(); bk.serials = new Map(); bk.serial = new WeakMap(); bk.nextSerial = 1; };
+  const FIELDS = ['ids', 'lists', 'first', 'loose', 'serials', 'serial', 'nextSerial', 'rustDeals', 'ownSerial'] as const; const fresh = (bk: any) => { bk.ids = new Map(); bk.lists = new Map(); bk.first = new Map(); bk.loose = new Map(); bk.serials = new Map(); bk.serial = new WeakMap(); bk.nextSerial = 1; bk.rustDeals = false; bk.ownSerial = 0x40000000; };
   const bk0: any = BOOKS.get(g), saved: any = bk0 ? Object.fromEntries(FIELDS.map(f => [f, bk0[f]])) : null; if (bk0) fresh(bk0); MODE_OF.set(g, { kind: 'reach' });
   let out: Uint8Array, left = new Set<object>(), passes = 0, found = 0;
   for (;;) { DROPPED = new Set(); out = exportGame(g, knobs); left = DROPPED; DROPPED = null; passes++; const bk = BOOKS.get(g); let again = 0; for (const k of left) if (inBook(bk, k)) again++; found += again; if (!again) break; if (passes >= 8) { say?.(`A START'S REACH DID NOT SETTLE in 8 exports (${again} keys still found late)`); break; } }
