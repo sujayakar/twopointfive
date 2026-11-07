@@ -157,12 +157,12 @@ pub fn mouth_of(g: &mut crate::game::Game, t: FixtureId) -> crate::fire::MouthOf
 }
 
 /// How hot a fire burns, 0 to 1: its lamp's share of its authored strength.   (fire.ts heatOf)
-pub fn heat_of(g: &mut crate::game::Game, t: FixtureId) -> f64 {
+pub fn heat_of(g: &crate::game::Game, t: FixtureId) -> f64 {
     m::max(0.0, m::min(1.0, crate::sim_lightshome::fixture_factor(g, t)))
 }
 
 /// Whether it burns at all.   (fire.ts burns)
-pub fn burns(g: &mut crate::game::Game, t: FixtureId) -> bool {
+pub fn burns(g: &crate::game::Game, t: FixtureId) -> bool {
     if !(heat_of(g, t) > 0.001) {
         return false;
     }

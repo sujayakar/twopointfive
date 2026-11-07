@@ -256,7 +256,7 @@ pub fn tut_team_hold_step(g: &mut crate::game::Game, r: DirectorRunId, b: Direct
 }
 
 /// (P.beat 'hold') 1: met
-pub fn tut_team_hold_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_team::TutTeamHoldFrame, id: u32) -> Result<bool, String> {
+pub fn tut_team_hold_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_team::TutTeamHoldFrame, id: u32) -> Result<bool, String> {
     match id {
         1 => hold_met(g, r),
         _ => Err(String::from("tut-team hold: no such test")),
@@ -299,7 +299,7 @@ pub fn tut_team_cook_step(g: &mut crate::game::Game, r: DirectorRunId, b: Direct
 }
 
 /// (P.beat 'cook') 1: he is down, or met
-pub fn tut_team_cook_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_team::TutTeamCookFrame, id: u32) -> Result<bool, String> {
+pub fn tut_team_cook_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_team::TutTeamCookFrame, id: u32) -> Result<bool, String> {
     match id {
         1 => {
             let u = f.u.clone().unwrap();

@@ -630,7 +630,7 @@ pub fn hand_on(g: &mut Game, d: RoomfightDefId, m: &mut crate::digin::Man, d_2: 
 }
 
 /// …and stays on it: true = still waiting for the latch. (digin.ts handWaits)
-pub fn hand_waits(g: &mut Game, d: RoomfightDefId, m: &mut crate::digin::Man, d_2: DoorId) -> bool {
+pub fn hand_waits(g: &mut Game, d: RoomfightDefId, m: &crate::digin::Man, d_2: DoorId) -> bool {
     !(crate::doors::door_latched(g, d_2) || g.time > m.until)
 }
 

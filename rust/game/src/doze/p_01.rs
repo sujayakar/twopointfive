@@ -58,7 +58,7 @@ pub fn pulls(g: &mut crate::game::Game) -> Vec<[f64; 2]> {
 /// distance on the floor (doze.ts flat)
 pub fn flat(a: &[f64], x: f64, z: f64) -> f64 { m::hyp2(a[0] - x, a[2] - z) }
 /// which way a man in this chair faces (doze.ts chairFace)
-pub fn chair_face(g: &mut crate::game::Game, p: PropId) -> f64 {
+pub fn chair_face(g: &crate::game::Game, p: PropId) -> f64 {
     let y = crate::props::prop_yaw(g, p);
     m::atan2(-m::sin(y), -m::cos(y))
 }
@@ -530,7 +530,7 @@ pub fn doze_tick(g: &mut crate::game::Game, dt: f64) {
     }
 }
 /// where the man who shoved the chair stands: a player, else a guard, else the sleeper himself (doze.ts:265)
-fn shover_at(g: &mut Game, ch: PropId, c: CharId) -> V3 {
+fn shover_at(g: &Game, ch: PropId, c: CharId) -> V3 {
     let who = crate::props::prop_last_who(g, ch);
     if let Some(pl) = crate::seats::man_by_id(g, who) { return g.ch[g.pl[pl].ch].pos; }
     for &x in g.guards.iter() {
@@ -575,7 +575,7 @@ pub fn lamp_on(g: &mut crate::game::Game, gd: GuardId, head: V3) -> V3 {
 }
 
 /// a man on his way down into, in, or just up out of his chair is no contact for the furniture (doze.ts dozeInChair)
-pub fn doze_in_chair(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn doze_in_chair(g: &crate::game::Game, gd: GuardId) -> bool {
     let Some(d) = g.m.doze.rec.get(gd).copied() else { return false };
     let Some(ch) = d.chair else { return false };
     if seated(d) || d.phase == Phase::Up { return true; }

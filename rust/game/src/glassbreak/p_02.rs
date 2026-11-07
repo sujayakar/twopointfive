@@ -622,7 +622,7 @@ fn seed_mix_gust(key: f64) -> f64 { (js::to_i32(0x61A55 as f64) ^ m::imul(js::to
 
 // ---------------------------------------------------------------- queries
 /// nothing of a pane's is in the block: the panes part's first word, `used` (glassbreak.ts GlassBreak.untouched; `panes_untouched` takes no slot)
-pub fn glass_break_untouched(g: &mut crate::game::Game) -> bool {
+pub fn glass_break_untouched(g: &crate::game::Game) -> bool {
     ::sim::state::state_read(g.sim).panes.used == 0
 }
 

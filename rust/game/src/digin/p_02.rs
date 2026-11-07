@@ -29,7 +29,7 @@ fn entered(g: &mut Game, room: RoomfightRoomId) -> bool {
 fn phase_of(g: &mut Game, gd: GuardId) -> Phase {
     match state_of(g).men.get(gd) { Some(x) => x.phase, None => Phase::Idle }
 }
-fn prop_at(g: &mut Game, p: PropId) -> V3 { [crate::props::prop_x(g, p), 0.0, crate::props::prop_z(g, p)] }
+fn prop_at(g: &Game, p: PropId) -> V3 { [crate::props::prop_x(g, p), 0.0, crate::props::prop_z(g, p)] }
 
 /// braceInRoom: `to` is his room's floor and the way to it from `from` does not leave the room   (digin.ts wayInRoom)
 pub fn way_in_room(g: &mut crate::game::Game, room: RoomfightRoomId, from: V3, to: V3) -> bool {

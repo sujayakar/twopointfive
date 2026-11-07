@@ -1148,7 +1148,7 @@ fn in_volume(v: &crate::scene_level::VolumeDef, p: V3) -> bool {
     m::abs(lx) <= v.h[0] && m::abs(lz) <= v.h[2] && p[1] >= v.c[1] - v.h[1] - 0.1 && p[1] <= v.c[1] + v.h[1] + 2.0
 }
 /// (director.ts Director.insideVolume)
-pub fn director_inside_volume(g: &mut crate::game::Game, r: DirectorRunId, id_2: &str, who: &crate::director::DirectorInsideVolumeWho) -> bool {
+pub fn director_inside_volume(g: &crate::game::Game, r: DirectorRunId, id_2: &str, who: &crate::director::DirectorInsideVolumeWho) -> bool {
     let g = &*g;
     let Some(v) = g.level.volumes.as_ref().and_then(|l| l.iter().find(|x| x.name == id_2)) else { return false };
     let pl = &g.pl[g.player];
@@ -1204,7 +1204,7 @@ pub fn director_query_signalled(g: &crate::game::Game, r: DirectorRunId, n: &str
     g.tab.director_run[r].signals.iter().any(|s| s.name == n)
 }
 /// (director.ts Query.routed)
-pub fn director_query_routed(g: &mut crate::game::Game, r: DirectorRunId, u: &crate::director::UnitRef) -> bool {
+pub fn director_query_routed(g: &crate::game::Game, r: DirectorRunId, u: &crate::director::UnitRef) -> bool {
     match director_guard_of(g, r, u) {
         Ok(gd) => crate::owner::has_him(g, gd, crate::owner::own().runner),
         Err(_) => false,

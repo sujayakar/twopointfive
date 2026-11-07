@@ -32,7 +32,7 @@ fn cover_pt(g: &mut Game, d: RoomfightDefId) {
     crate::belief::cover(g, gd, pt);
 }
 /// `DIGIN.on || squadsLive(g) || hasHim(gd, OWN.stand)`
-fn digs_in(g: &mut Game, gd: GuardId) -> bool { g.k.digin.on || crate::enemysquads::squads_live(g) || crate::owner::has_him(g, gd, crate::owner::own().stand) }
+fn digs_in(g: &Game, gd: GuardId) -> bool { g.k.digin.on || crate::enemysquads::squads_live(g) || crate::owner::has_him(g, gd, crate::owner::own().stand) }
 
 // ---------------------------------------------------------------- what the other parts call
 /// the sight gain, with the hunting man's x2.2 for a scripted man.   (roomfight.ts rateOn)

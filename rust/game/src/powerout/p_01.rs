@@ -23,15 +23,15 @@ fn pos_of(g: &Game, gd: GuardId) -> V3 {
     g.ch[g.gd[gd].ch].pos
 }
 /// `bo.active`: a getter over the mains' columns, read live every time as the TypeScript's `bo` is
-fn bo_active(g: &mut Game) -> bool {
+fn bo_active(g: &Game) -> bool {
     crate::sim_lightshome::mains_active(g)
 }
 /// `bo.since`, read live
-fn bo_since(g: &mut Game) -> f64 {
+fn bo_since(g: &Game) -> f64 {
     crate::sim_lightshome::mains_since(g)
 }
 /// `bo.permanent`, read live
-fn bo_permanent(g: &mut Game) -> bool {
+fn bo_permanent(g: &Game) -> bool {
     crate::sim_lightshome::mains_permanent(g)
 }
 /// `g.guards[i]` for an index kept in `seen` (−1 or off the end of the list: nobody)
@@ -502,7 +502,7 @@ pub fn power_out_rules(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// guards.ts poseFlashlight: a man out for the lights burns his own while the mains are down. (powerout.ts powerOutLit)
-pub fn power_out_lit(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn power_out_lit(g: &crate::game::Game, gd: GuardId) -> bool {
     if !bo_active(g) {
         return false;
     }
@@ -514,7 +514,7 @@ pub fn power_out_lit(g: &mut crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// darkfoe.ts hasWord: their side holds this dark for the team's doing. (powerout.ts powerOutWord)
-pub fn power_out_word(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn power_out_word(g: &crate::game::Game, gd: GuardId) -> bool {
     if !bo_active(g) || !g.m.powerout.states.as_ref().map_or(false, |s| s.word) {
         return false;
     }

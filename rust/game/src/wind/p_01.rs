@@ -386,7 +386,7 @@ pub fn wind_storm_drift(g: &mut crate::game::Game) -> Option<crate::scene_collis
 }
 
 /// Does the weather blow at all; `session` adds the weather's own switch, which the game's drift does not ask. (wind.ts Wind.blows)
-pub fn wind_blows(g: &mut crate::game::Game, session: bool) -> bool {
+pub fn wind_blows(g: &crate::game::Game, session: bool) -> bool {
     if session && !crate::weather::weather_enabled(g) {
         return false;
     }
@@ -397,7 +397,7 @@ pub fn wind_blows(g: &mut crate::game::Game, session: bool) -> bool {
 }
 
 /// The storm's wind vector when it should be felt, none otherwise. (wind.ts Wind.stormWind)
-#[doc(hidden)] pub fn wind_storm_wind__body(g: &mut crate::game::Game) -> Option<V3> {
+#[doc(hidden)] pub fn wind_storm_wind__body(g: &crate::game::Game) -> Option<V3> {
     if !wind_blows(g, true) {
         return None;
     }

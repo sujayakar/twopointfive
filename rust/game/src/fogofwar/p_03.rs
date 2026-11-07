@@ -122,7 +122,7 @@ pub fn fog_of_war_faces_back(g: &mut crate::game::Game) {
 
 
 /// Is the fixture lit, as it stands.   (fogofwar.ts FogOfWar.lampLit)
-pub fn fog_of_war_lamp_lit(g: &mut crate::game::Game, t: FixtureId) -> bool {
+pub fn fog_of_war_lamp_lit(g: &crate::game::Game, t: FixtureId) -> bool {
     let on = crate::sim_lightshome::fixture_on(g, t);
     let broken = crate::sim_lightshome::fixture_broken(g, t);
     let until = crate::sim_lightshome::fixture_disabled_until(g, t);

@@ -226,7 +226,7 @@ pub fn destruction_tile_drop(g: &mut crate::game::Game, p: V3, chaos: f64, force
 }
 
 /// A fixture a stray round, a blast or a shaken ceiling can put out: a lit, interactive lamp or panel, not one already dead or one a fire holds.   (destruction.ts fixtureLive)
-pub fn destruction_fixture_live(g: &mut crate::game::Game, t: FixtureId) -> bool {
+pub fn destruction_fixture_live(g: &crate::game::Game, t: FixtureId) -> bool {
     use crate::sim_lightshome::{fixture_broken, fixture_factor, fixture_on, FixtureKind};
     !fixture_broken(g, t)
         && g.tab.sim_lightshome_fixture[t].interactive

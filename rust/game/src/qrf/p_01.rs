@@ -62,7 +62,7 @@ pub fn side_of_team(g: &crate::game::Game) -> crate::qrf::SideOfTeam {
 }
 
 /// A raid: the men who can call it in.   (qrf.ts callers)
-pub fn callers(g: &mut crate::game::Game) -> Vec<GuardId> {
+pub fn callers(g: &crate::game::Game) -> Vec<GuardId> {
     let id = response_of(g).and_then(|r| r.raid).and_then(|a| a.room).filter(|s| !s.is_empty());
     let of: Vec<GuardId> = match &id {
         Some(id) => match g.room_clear.rooms.iter().find(|r| r.def.id == *id) {
@@ -81,7 +81,7 @@ pub fn callers(g: &mut crate::game::Game) -> Vec<GuardId> {
 }
 
 /// A raid: the caller who heard gunfire and has lived `callSecs` since.   (qrf.ts raidVoice)
-pub fn raid_voice(g: &mut crate::game::Game) -> Option<GuardId> {
+pub fn raid_voice(g: &crate::game::Game) -> Option<GuardId> {
     for x in callers(g) {
         let heard = g.qrf.heard_at.get(x).copied().unwrap_or(f64::INFINITY);
         if g.time - heard >= g.k.response.call_secs { return Some(x); }
@@ -471,7 +471,7 @@ pub fn best_fix(g: &crate::game::Game) -> Option<crate::qrf::BestFix> {
 }
 
 /// Is this man on the defenders' net?   (qrf.ts onTheirNet)
-pub fn on_their_net(g: &mut crate::game::Game, x: GuardId) -> bool {
+pub fn on_their_net(g: &crate::game::Game, x: GuardId) -> bool {
     let side = team_of(side_of_team(g));
     if g.gd[x].team != side || g.gd[x].civ.is_some() || g.gd[x].state == crate::game::GuardState::Dead || g.gd[x].held.is_some() || crate::owner::has_him(g, x, crate::owner::own().runner) { return false; }
     !raid(g) || g.qrf.men.contains(&x) || callers(g).contains(&x)

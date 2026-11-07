@@ -591,7 +591,7 @@ pub fn segment_blocked_dynamic_ask(g: &mut crate::game::Game, a: V3, b: V3, need
 
 /// the furniture as the copy reads it: every thing by its id, and the ones in the level in the furniture's own order (the TypeScript hands PropSystem itself; here `P` is always g.props)
 fn furniture(g: &mut Game) -> crate::scene_box_mirror::Furniture {
-    fn things(g: &mut Game, ids: &[PropId]) -> Vec<crate::scene_box_mirror::FurnitureThing> {
+    fn things(g: &Game, ids: &[PropId]) -> Vec<crate::scene_box_mirror::FurnitureThing> {
         let mut out = Vec::with_capacity(ids.len());
         for &p in ids {
             let (id, radius, boxes) = { let r = &g.tab.props_prop[p]; (r.id, r.radius, r.boxes.clone()) };

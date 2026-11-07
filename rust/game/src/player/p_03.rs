@@ -195,7 +195,7 @@ pub fn end_open(g: &mut crate::game::Game, n: V3, d: f64, t: V3, u_end: f64, s: 
 }
 
 /// Push the circle (q, r) out of the loose furniture as it stands. True if anything moved it. (player.ts clearOfProps)
-pub fn clear_of_props(g: &mut crate::game::Game, q: &mut V3, r: f64) -> bool {
+pub fn clear_of_props(g: &crate::game::Game, q: &mut V3, r: f64) -> bool {
     let mut moved = false;
     for _it in 0..3 {
         let mut any = false;

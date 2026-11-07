@@ -234,7 +234,7 @@ fn ok_door(g: &mut Game, door: &str, state: &str) -> bool {
     }
 }
 
-fn ok_target(g: &mut Game, name: &str, on: bool) -> bool {
+fn ok_target(g: &Game, name: &str, on: bool) -> bool {
     use crate::sim_lightshome::{fixture_broken, fixture_factor, fixture_on};
     let Some(x) = g.targets.iter().copied().find(|&y| g.tab.sim_lightshome_fixture[y].name == name) else { return false };
     (fixture_on(g, x) && !fixture_broken(g, x) && fixture_factor(g, x) > 0.05) == on

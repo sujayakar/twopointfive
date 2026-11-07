@@ -619,13 +619,13 @@ pub fn cues_kind_busy(g: &mut crate::game::Game, kind: crate::cues::CueKind) -> 
 }
 
 /// Can he speak for his squad?   (cues.ts Cues.fit)
-pub fn cues_fit(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn cues_fit(g: &crate::game::Game, gd: GuardId) -> bool {
     let t = g.time;
     g.gd[gd].state != crate::game::GuardState::Dead && g.gd[gd].held.is_none() && t >= g.gd[gd].dazzled_until && t >= g.gd[gd].stagger_until && !crate::runner::runner_mute(g, gd)
 }
 
 /// Who says a squad's word: the man the note names, else one holding, else the first fit.   (cues.ts Cues.squadVoice)
-pub fn cues_squad_voice(g: &mut crate::game::Game, name: &str, by: &str) -> Option<GuardId> {
+pub fn cues_squad_voice(g: &crate::game::Game, name: &str, by: &str) -> Option<GuardId> {
     let mut men = Vec::new();
     for m in crate::enemysquads::squad_men(g, name) {
         if cues_fit(g, m) { men.push(m); }

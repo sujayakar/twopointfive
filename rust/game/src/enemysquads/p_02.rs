@@ -226,7 +226,7 @@ pub fn squad_rally(g: &mut crate::game::Game, gd: GuardId, threat: V3) -> Option
 /// (enemysquads.ts defOf)
 pub fn def_of(g: &crate::game::Game, gd: GuardId) -> Option<RoomfightDefId> { g.fight.defs.iter().copied().find(|d| g.tab.roomfight_def[*d].gd == gd) }
 /// his own wits about him: alive, not in Sam's arm, not blinded or reeling (enemysquads.ts fit)
-pub fn fit(g: &mut crate::game::Game, m: GuardId) -> bool {
+pub fn fit(g: &crate::game::Game, m: GuardId) -> bool {
     alive(g, m) && g.gd[m].held.is_none() && g.time >= g.gd[m].dazzled_until && g.time >= g.gd[m].stagger_until && !crate::owner::has_him(g, m, crate::owner::own().runner)
 }
 /// when this man was sent to look where the team was last put, or None. Words only (enemysquads.ts squadLookSince)

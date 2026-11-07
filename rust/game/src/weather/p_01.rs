@@ -110,7 +110,7 @@ pub fn weather_set_fog(g: &mut crate::game::Game, word: f64) {
 }
 
 /// Game time until which a thunderclap is drowning the floor's small noises. (weather.ts Weather.thunderUntil)
-pub fn weather_thunder_until(g: &mut crate::game::Game) -> f64 { wx_read(g).thunder_until }
+pub fn weather_thunder_until(g: &crate::game::Game) -> f64 { wx_read(g).thunder_until }
 
 /// (weather.ts Weather.thunderUntil)
 pub fn weather_set_thunder_until(g: &mut crate::game::Game, v: f64) { wx(g).thunder_until = v; }
@@ -122,25 +122,25 @@ pub fn weather_cloud(g: &crate::game::Game) -> f64 {
 }
 
 /// Storm intensity 0..1. (weather.ts Weather.storm)
-pub fn weather_storm(g: &mut crate::game::Game) -> f64 { wx_read(g).storm }
+pub fn weather_storm(g: &crate::game::Game) -> f64 { wx_read(g).storm }
 
 /// (weather.ts Weather.storm)
 pub fn weather_set_storm(g: &mut crate::game::Game, v: f64) { wx(g).storm = v; }
 
 /// Rain rate 0..1. (weather.ts Weather.rainRate)
-pub fn weather_rain_rate(g: &mut crate::game::Game) -> f64 { wx_read(g).rain_rate }
+pub fn weather_rain_rate(g: &crate::game::Game) -> f64 { wx_read(g).rain_rate }
 
 /// (weather.ts Weather.rainRate)
 pub fn weather_set_rain_rate(g: &mut crate::game::Game, v: f64) { wx(g).rain_rate = v; }
 
 /// Current wetness 0..1. (weather.ts Weather.wet)
-pub fn weather_wet(g: &mut crate::game::Game) -> f64 { wx_read(g).wet }
+pub fn weather_wet(g: &crate::game::Game) -> f64 { wx_read(g).wet }
 
 /// Sets the wetness. Not setWet, which is `weather_set_wet_2`. (weather.ts Weather.wet)
 pub fn weather_set_wet(g: &mut crate::game::Game, v: f64) { wx(g).wet = v; }
 
 /// The thunder on its way, the module's list as it stands. (weather.ts Weather.thunders)
-pub fn weather_thunders(g: &mut crate::game::Game) -> Vec<crate::weather::Thunder> {
+pub fn weather_thunders(g: &crate::game::Game) -> Vec<crate::weather::Thunder> {
     let w = wx_read(g);
     let mut out = Vec::new();
     let mut i = 0usize;
@@ -159,19 +159,19 @@ pub fn weather_set_thunders_are(g: &mut crate::game::Game, l: &[crate::weather::
 }
 
 /// When the next stroke is due (game time). (weather.ts Weather.nextFlashAt)
-pub fn weather_next_flash_at(g: &mut crate::game::Game) -> f64 { wx_read(g).next_flash_at }
+pub fn weather_next_flash_at(g: &crate::game::Game) -> f64 { wx_read(g).next_flash_at }
 
 /// (weather.ts Weather.nextFlashAt)
 pub fn weather_set_next_flash_at(g: &mut crate::game::Game, v: f64) { wx(g).next_flash_at = v; }
 
 /// The storm's own die: a word of the module's table. (weather.ts Weather.die)
-pub fn weather_die(g: &mut crate::game::Game) -> f64 { wx_read(g).dice as f64 }
+pub fn weather_die(g: &crate::game::Game) -> f64 { wx_read(g).dice as f64 }
 
 /// A store into the word: the Uint32Array's own conversion. (weather.ts Weather.die)
 pub fn weather_set_die(g: &mut crate::game::Game, v: f64) { wx(g).dice = js::to_u32(v); }
 
 /// When the last remark was made. (weather.ts Weather.lastBarkT)
-pub fn weather_last_bark_t(g: &mut crate::game::Game) -> f64 { wx_read(g).last_bark_t }
+pub fn weather_last_bark_t(g: &crate::game::Game) -> f64 { wx_read(g).last_bark_t }
 
 /// (weather.ts Weather.lastBarkT)
 pub fn weather_set_last_bark_t(g: &mut crate::game::Game, v: f64) { wx(g).last_bark_t = v; }
@@ -365,7 +365,7 @@ pub fn weather_seed(g: &mut crate::game::Game, n: f64) {
 }
 
 /// Everything the storm's next minutes hang on; a stroke in progress is not carried. hours.ts holds a level's own storm in one, so it is a rule's call and not only a checkpoint's. (weather.ts Weather.snapshot)
-pub fn weather_snapshot(g: &mut crate::game::Game) -> crate::weather::WeatherSnap {
+pub fn weather_snapshot(g: &crate::game::Game) -> crate::weather::WeatherSnap {
     let kind = g.weather.kind_now;
     WeatherSnap {
         kind,

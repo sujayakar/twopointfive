@@ -846,7 +846,7 @@ pub fn box_mirror_follow_row(g: &mut crate::game::Game, b: BoxId, r: &[f64]) -> 
 }
 
 /// Leaf i's row of list 0: its centre, its yaw, its flags.   (boxMirror.ts BoxMirror.leafRow)
-pub fn box_mirror_leaf_row(g: &mut crate::game::Game, i: f64) -> Vec<f64> {
+pub fn box_mirror_leaf_row(g: &crate::game::Game, i: f64) -> Vec<f64> {
     let (o, i) = (world_read(g.sim), i as usize);
     let q = i * REC_;
     vec![o.leaf[q], o.leaf[q + 1], o.leaf[q + 2], o.leaf[q + R_YAW_], o.leaf_flags[i] as f64]

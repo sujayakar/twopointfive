@@ -57,7 +57,7 @@ fn gun_mode(g: &Game, r: DirectorRunId) -> Option<String> {
 }
 
 /// `c.query.inside(v, 'sam')` (tut-solo.script.ts:64, :110, :121)
-fn sam_inside(g: &mut Game, r: DirectorRunId, which: fn(&TutSoloVars) -> &Option<VolumeRef>) -> bool {
+fn sam_inside(g: &Game, r: DirectorRunId, which: fn(&TutSoloVars) -> &Option<VolumeRef>) -> bool {
     let id = which(tut_solo_vars(g, r)).as_ref().unwrap().id.clone();
     director_inside_volume(g, r, &id, &DirectorInsideVolumeWho::Sam)
 }
@@ -160,7 +160,7 @@ pub fn tut_solo_cease_step(g: &mut crate::game::Game, r: DirectorRunId, b: Direc
 }
 
 /// the beat 'road' closure `lane`: the player is on the side the rounds cross (tut-solo.script.ts:64)
-fn road_lane(g: &mut Game, r: DirectorRunId) -> bool {
+fn road_lane(g: &Game, r: DirectorRunId) -> bool {
     sam_inside(g, r, |v| &v.road_east) || sam_inside(g, r, |v| &v.road_nose)
 }
 
@@ -333,7 +333,7 @@ pub fn tut_solo_shop_step(g: &mut crate::game::Game, r: DirectorRunId, b: Direct
 }
 
 /// the beat 'shop' c.untils: 0 = the player is in his line, 1 = he is down (tut-solo.script.ts:109-110)
-pub fn tut_solo_shop_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_solo::TutSoloShopFrame, id: u32) -> Result<bool, String> {
+pub fn tut_solo_shop_test(g: &crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_solo::TutSoloShopFrame, id: u32) -> Result<bool, String> {
     match id {
         SHOP_IN_LINE => Ok(sam_inside(g, r, |v| &v.shop_line) || sam_inside(g, r, |v| &v.shop_in)),
         SHOP_DOWN => Ok(!director_query_alive(g, r, f.u.as_ref().unwrap())),
@@ -397,7 +397,7 @@ pub fn tut_solo_room_step(g: &mut crate::game::Game, r: DirectorRunId, b: Direct
 }
 
 /// the beat 'room' c.untils: 0 = one of the pair is down, 1 = the player is in the store (tut-solo.script.ts:120-121)
-pub fn tut_solo_room_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_solo::TutSoloRoomFrame, id: u32) -> Result<bool, String> {
+pub fn tut_solo_room_test(g: &crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_solo::TutSoloRoomFrame, id: u32) -> Result<bool, String> {
     match id {
         ROOM_HIT => {
             for u in &f.men { if !director_query_alive(g, r, u) { return Ok(true); } }

@@ -77,7 +77,7 @@ fn up_of(g: &Game, r: DirectorRunId, men: &[crate::director::UnitRef]) -> Vec<cr
     out
 }
 /// the men of a list alive and not runner.ts's (lastMan's `left` :35, the gun's `left` :256, the hall's `mine` :207)
-fn left_of(g: &mut Game, r: DirectorRunId, men: &[crate::director::UnitRef]) -> Vec<crate::director::UnitRef> {
+fn left_of(g: &Game, r: DirectorRunId, men: &[crate::director::UnitRef]) -> Vec<crate::director::UnitRef> {
     let mut out = Vec::new();
     for u in men {
         if crate::director::director_query_alive(g, r, u) && !crate::director::director_query_routed(g, r, u) { out.push(u.clone()); }
@@ -198,7 +198,7 @@ fn picket_out(g: &mut Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::
     })
 }
 /// the test of the closure `there` (:85)
-fn picket_there(g: &mut Game, r: DirectorRunId, us: &[crate::director::UnitRef]) -> Result<bool, String> {
+fn picket_there(g: &Game, r: DirectorRunId, us: &[crate::director::UnitRef]) -> Result<bool, String> {
     for u in us {
         if crate::director::director_query_alive(g, r, u) && !crate::director::director_query_routed(g, r, u) && !crate::director::director_query_arrived(g, r, u)? { return Ok(false); }
     }
@@ -334,7 +334,7 @@ pub fn tut_squad_picket_step(g: &mut crate::game::Game, r: DirectorRunId, b: Dir
 }
 
 /// (levels/tut-squad.script.ts:75-134) the c.untils of 'picket'
-pub fn tut_squad_picket_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_squad::TutSquadPicketFrame, id: u32) -> Result<bool, String> {
+pub fn tut_squad_picket_test(g: &crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_squad::TutSquadPicketFrame, id: u32) -> Result<bool, String> {
     match id {
         PICKET_ONE => Ok(left_of(g, r, &picket_men(f)).len() <= if f.off { 0 } else { 1 }),
         PICKET_THERE_FRONT => { let us: Vec<crate::director::UnitRef> = f.front.iter().cloned().collect(); picket_there(g, r, &us) }
@@ -394,7 +394,7 @@ pub fn tut_squad_store_step(g: &mut crate::game::Game, r: DirectorRunId, b: Dire
 }
 
 /// (levels/tut-squad.script.ts:143-149) the c.untils of 'store'
-pub fn tut_squad_store_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_squad::TutSquadStoreFrame, id: u32) -> Result<bool, String> {
+pub fn tut_squad_store_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_squad::TutSquadStoreFrame, id: u32) -> Result<bool, String> {
     match id {
         STORE_OPEN => { let d = tut_squad_vars(g, r).store_door.clone(); door_opens(g, &d) }
         STORE_HURT => {
@@ -637,7 +637,7 @@ pub fn tut_squad_hall_step(g: &mut crate::game::Game, r: DirectorRunId, b: Direc
 }
 
 /// (levels/tut-squad.script.ts:205-235) the c.untils of 'hall'
-pub fn tut_squad_hall_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_squad::TutSquadHallFrame, id: u32) -> Result<bool, String> {
+pub fn tut_squad_hall_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_squad::TutSquadHallFrame, id: u32) -> Result<bool, String> {
     match id {
         HALL_CUED => Ok(crate::director::director_query_signalled(g, r, "lesson:window")),
         HALL_OPEN => { let d = tut_squad_vars(g, r).hall_door.clone(); door_opens(g, &d) }
@@ -672,12 +672,12 @@ fn gun_cue(g: &Game, r: DirectorRunId, k: &str) -> bool {
     crate::director::director_query_signalled(g, r, &format!("lesson:{}", k))
 }
 /// the closure `left` (:256)
-fn gun_left(g: &mut Game, r: DirectorRunId, f: &crate::script_tut_squad::TutSquadGunFrame) -> Vec<crate::director::UnitRef> {
+fn gun_left(g: &Game, r: DirectorRunId, f: &crate::script_tut_squad::TutSquadGunFrame) -> Vec<crate::director::UnitRef> {
     let men: Vec<crate::director::UnitRef> = f.m.iter().chain(f.n.iter()).cloned().collect();
     left_of(g, r, &men)
 }
 /// the closure `gun` (:257)
-fn gun_gun(g: &mut Game, r: DirectorRunId, f: &crate::script_tut_squad::TutSquadGunFrame) -> bool {
+fn gun_gun(g: &Game, r: DirectorRunId, f: &crate::script_tut_squad::TutSquadGunFrame) -> bool {
     alive(g, r, &f.m) && !crate::director::director_query_routed(g, r, f.m.as_ref().unwrap())
 }
 /// the closure `burst` (:258)
@@ -835,7 +835,7 @@ pub fn tut_squad_gun_step(g: &mut crate::game::Game, r: DirectorRunId, b: Direct
 }
 
 /// (levels/tut-squad.script.ts:253-300) the c.untils of 'gun'
-pub fn tut_squad_gun_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_squad::TutSquadGunFrame, id: u32) -> Result<bool, String> {
+pub fn tut_squad_gun_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_squad::TutSquadGunFrame, id: u32) -> Result<bool, String> {
     match id {
         GUN_CUE_GUN => Ok(gun_cue(g, r, "gun")),
         GUN_CUE_DUCKS => Ok(gun_cue(g, r, "ducks")),

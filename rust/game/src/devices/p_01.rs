@@ -159,7 +159,7 @@ pub fn devices_reset(g: &mut crate::game::Game) {
 }
 
 /// Powered, unbroken, not knocked out: the device works this frame.   (devices.ts alive)
-pub fn alive(g: &mut crate::game::Game, t: FixtureId) -> bool {
+pub fn alive(g: &crate::game::Game, t: FixtureId) -> bool {
     crate::sim_lightshome::fixture_factor(g, t) > 0.05 && !crate::sim_lightshome::fixture_broken(g, t)
 }
 /// Live play: devices sense.   (devices.ts sensing)
