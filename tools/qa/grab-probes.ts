@@ -30,15 +30,13 @@ const DT = 1 / 60;
 /** the game stood up with Sam's pistol holstered (E), so a grab is the ARM variant (player.ts grabVariant: drawn → 'gun', holstered / canister → 'arm') */
 async function armStandUp() {
   const W = await standUp(); W.game.player.holstered = true;
-  HANDRING.on = false;   // (handring.ts: these lines read the list on a held Space as it was built — the ring that stays has its own check, probes.ts handring)
-  if (oneButton && CLOSE.on) { CLOSE.on = false; if (!heldOff) console.log('  (the close-in mode is held OFF for this probe: it reads the one-button rows — the mode\'s own are family close)'); heldOff = true; }
   return W;
 }
-/** THE ONE-BUTTON ROWS. grab-gate, grab-release and controls-behind were written before the close-in mode (close.ts CLOSE.on: the knife / knockout pair of
- *  clicks, the take from in front, the alert man still in reach of a blow) and read the rows of the build without it. They hold it OFF, on either stand — on
- *  the shipped stand that is the `?noclose` page, which has to stay the build as it was. The mode's own rows and takes are family `close`. armStandUp lays
- *  the hold after the stand's own switches (every stand-up lays those afresh), says so once, and the mode is put back on when the probe is done. */
-const { CLOSE } = await import(`${ROOT}/src/game/close.ts`);
+/** WRITTEN BEFORE TWO SETTLED RULES. grab-gate, grab-release and controls-behind were written before the close-in mode (close.ts CLOSE.on: the knife /
+ *  knockout pair of clicks, the take from in front, the alert man still in reach of a blow) and read the one-button rows of the build without it; and every
+ *  probe here read the list on a held Space as it was built before the ring that stays (handring.ts). Until 2026-11-07 armStandUp wrote both rules off. Both
+ *  are settled on and the writes were refused, so they are out: the lines are asked of the rows the page has. A line that fails for the old rows is one to
+ *  restage on the mode's own rows (family `close`) and the ring's (probes.ts handring), or to delete. */
 const { KITANIM } = await import(`${ROOT}/src/game/kitanim.ts`);
 /** QA: controls-behind's red path — CONTROLSBEHIND_BREAK=1 makes the click of (d) and of (f) half a second after the rule's own window has shut (counted from the
  *  frame the line counts from; for the can: thirty frames after it is in his fist), so the round and the throw are LATE: both lines must fail, on both stands. */
@@ -46,13 +44,6 @@ const LATE_BREAK = process.env.CONTROLSBEHIND_BREAK === '1';
 /** how many frames after a click its round (a gun still coming up) or its throw (a can still coming to the fist) may leave: the click's own frame — or, with
  *  the kit's moves played, the longest the rule keeps such a click (KITANIM.clickKeep / throwKeep, read from the game's table) and a frame for the hand-over */
 const dueFrames = (keepSecs: number): number => 1 + (KITANIM.on ? Math.ceil(keepSecs / DT) + 1 : 0);
-const { HANDRING } = await import(`${ROOT}/src/game/handring.ts`);
-let oneButton = false, heldOff = false;
-async function oneButtonRows(probe: () => Promise<boolean>): Promise<boolean> {
-  oneButton = true; heldOff = false;
-  try { return await probe(); }
-  finally { oneButton = false; if (heldOff) CLOSE.on = true; }
-}
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 function place(gd: any, p: Vec3, yaw: number) { gd.char.pos = v3.copy(p); gd.char.vel = [0, 0, 0]; gd.speed = 0; gd.char.bodyYaw = gd.char.aimYaw = yaw; gd.char.aimPitch = 0; gd.path = []; gd.pathGoal = null; gd.char.update(0); gd.char.update(DT); }
 /** parked out on the lot east of the building, held (the scripted flag), facing east — deaf too unless said otherwise */
@@ -100,8 +91,7 @@ function grabViaHold(S: any, secs = PRESS_SECS): number {
 function untilHeld(S: any): boolean { const { W, game } = S; for (let i = 0; i < 120; i++) { if (game.player.holding?.phase === 'held') return true; W.step(DT); } return game.player.holding?.phase === 'held'; }
 
 // ================================================================ (1) the gate: wherever the takedown is offered the grab is, and nowhere else — never through a wall or a leaf, never from the front, never on an alert man
-export async function grabGate() { return oneButtonRows(grabGateRows); }
-async function grabGateRows() {
+export async function grabGate() {
   console.log('\n=== grab-gate: the grab row is offered (and a Space hold-and-release grabs) exactly where a hands-empty click would take him down — from behind, in reach, nothing solid between, not alert ===');
   let allPass = true;
   const cases: { note: string; guard: Vec3; yaw: number; player: Vec3; state?: string; expect: boolean }[] = [
@@ -487,8 +477,7 @@ export async function grabChoke() {
 }
 
 // ================================================================ (6) coming free: there is no release verb (E draws on him instead) — torn loose when Sam goes down (freeHeld 'shot') he is alert on Sam within a frame, wasHeld, nothing of the hold left anywhere; and no re-grab of an alert man
-export async function grabRelease() { return oneButtonRows(grabReleaseRows); }
-async function grabReleaseRows() {
+export async function grabRelease() {
   console.log('\n=== grab-release: E on his row draws (still held); freeHeld — instant witness (alert on Sam, wasHeld 1), no stumble, nothing residual; the alert man cannot be grabbed again ===');
   let allPass = true;
   const S = await stage(61); const { W, game, A, lines } = S; const { cam, canvas } = W;
@@ -606,8 +595,7 @@ export async function grabAuto() {
 //                                                                    you need to holster and primary click"): the one row is the grab — a Space TAP takes him on its frame, Space HELD opens the list on it and takes him on
 //                                                                    the release — in the variant the hand decides; the takedown's one input is a click with the hands empty; drawn, a click is a round; a canister up, a
 //                                                                    throw; and none of it from in front or out of reach
-export async function controlsBehind() { return oneButtonRows(controlsBehindRows); }
-async function controlsBehindRows() {
+export async function controlsBehind() {
   console.log('\n=== controls-behind: the grab row (tap: at once; hold: on letting go), arm / gun by the hand; holstered + LMB = the silent takedown; drawn + LMB = a round; nothing from in front / out of reach ===');
   let allPass = true; const verdict = (ok: boolean, label: string, detail: string) => { allPass &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
   /** the shared staging with the hand set: holstered (hands empty) or the Five-seveN drawn; A rooted on the scripted hold so nothing walks off mid-check; one settled frame (hover, rows) */

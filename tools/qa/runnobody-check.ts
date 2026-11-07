@@ -8,9 +8,10 @@
 // Headless, the block with its room clear staged, every other man parked blind and deaf out of the way; one rifleman is broken through the runner's own seam
 // and kept where he stands (his legs run on the spot: the lines are about what the others make of him). The key is settled (RUNNER.nobody), and so are the
 // rules round it: no line asks any of them off and nothing here writes them. (Until 2026-11-07 every line had a half with the key off, the staging held
-// 'runs no matter what' and a shot's word off, and two more lines asked a recording from before the key and the page's ?runnobody=0.)
+// 'runs no matter what' and a shot's word off, and two more lines asked a recording from before the key and the page's ?runnobody=0. And a line `room clear`
+// asked the lead to call a room clear with the broken man gone low in it: it was staged with 'runs no matter what' held off, and on the page such a man
+// runs out of the room, never low in its corner: a build from before that rule, out by ruling.)
 //   contact    a teammate with his eyes on him: no 'contact' called on him
-//   room clear the team sent through the door of the room he is low in: the lead calls it clear
 //   company    a mate three metres from him with a line is alone (morale.ts hasMate)
 //   bark       rounds past his head: he says nothing
 //   pinned     the same rounds past him and a mate beside him: the mate is pinned and does not shout 'got us pinned' (he would be the other of the 'us')
@@ -24,11 +25,11 @@ const BREAK = process.env.RUNNOBODY_BREAK === '1';
 
 export async function runnobodyCheck(): Promise<boolean> {
   const { standUp, ROOT } = await import('./headless.ts');
-  const { runnerBreak, runnerOf, runnerNobody, runnerMute } = await import(`${ROOT}/src/game/runner.ts`);
+  const { runnerBreak, runnerNobody, runnerMute } = await import(`${ROOT}/src/game/runner.ts`);
   const { hasMate } = await import(`${ROOT}/src/game/morale.ts`);
   const { noteRound } = await import(`${ROOT}/src/game/suppression.ts`);
   const { FOG } = await import(`${ROOT}/src/game/fogofwar.ts`);
-  const { PICTURE, pictureTell } = await import(`${ROOT}/src/game/picture.ts`);
+  const { PICTURE } = await import(`${ROOT}/src/game/picture.ts`);
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
   const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
@@ -36,11 +37,11 @@ export async function runnobodyCheck(): Promise<boolean> {
   let failed = false; const line = (ok: boolean, s: string) => { if (!ok) failed = true; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${s}`); };
   const quiet = async <R>(fn: () => Promise<R> | R): Promise<R> => { const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => {}; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } };
   const tell0 = PICTURE.tellSecs, cone0 = FOG.cone, own0 = FOG.own;
-  const HIS: Vec3 = [32.0, 0, 4.9], MATE: Vec3 = [29.6, 0, 6.2], DOOR: Vec3 = [33.3, 0, 12.0], INSIDE: Vec3 = [29.8, 0, 8.3], FAR: Vec3 = [8.6, 0, 13.9];
+  const HIS: Vec3 = [32.0, 0, 4.9], MATE: Vec3 = [29.6, 0, 6.2], FAR: Vec3 = [8.6, 0, 13.9];
   const level = () => loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', 'block.json'), 'utf8')));
   /** the block; one rifleman (`A`) at his place, a second defender (`B`) and a teammate (`op`) to stand by him, everybody else parked.
-   *  `broken`: A is broken now and a second run on (the gun is down, he is the runner's); `kept`: he is held on his spot from then on */
-  const world = async (broken = true, kept = true) => {
+   *  `broken`: A is broken now and a second run on (the gun is down, he is the runner's); he is held on his spot from then on */
+  const world = async (broken = true) => {
     const W: any = await quiet(async () => { const X: any = await standUp({ seed: 3, level: level() }); startFromQuery(X.game, 'levelFile=block.json&roomclear&squad=4'); return X; });
     const g = W.game; PICTURE.tellSecs = 1e9; FOG.cone = false; FOG.own = true;   // AFTER standUp: the stand-up line would otherwise write them back
     g.godMode = true;
@@ -50,7 +51,7 @@ export async function runnobodyCheck(): Promise<boolean> {
     const keeps: (() => void)[] = []; const stand = (o: any, p: Vec3, face?: Vec3) => keeps.push(() => { o.char.pos = [...p]; o.char.vel = [0, 0, 0]; o.path = []; o.pathGoal = null; if (face) o.char.bodyYaw = o.char.aimYaw = Math.atan2(face[0] - p[0], face[2] - p[2]); });
     const step = (n = 1, each?: () => void) => { for (let i = 0; i < n; i++) { g.player.visibility = 0.02; for (const k of keeps) k(); W.step(DT); each?.(); } };
     A.char.pos = [...HIS]; A.char.vel = [0, 0, 0]; A.path = []; A.pathGoal = null; A.script = null; A.dazzledUntil = 1e9; A.heardUpTo = 1e12; g.teleportPlayer(FAR); step(5);
-    let broke = true; if (broken && !BREAK) { broke = runnerBreak(g, A); step(60); } if (kept) stand(A, HIS);
+    let broke = true; if (broken && !BREAK) { broke = runnerBreak(g, A); step(60); } stand(A, HIS);
     return { W, g, A, B, op, hs, step, stand, park, broke, fled: A.fled as boolean };
   };
   try {
@@ -61,17 +62,6 @@ export async function runnobodyCheck(): Promise<boolean> {
       const b = await calls(), c = await calls(false);
       line(b.fled && b.n === 0 && c.n >= 1,
         `a teammate three metres off with a line to a man who has dropped his gun, three seconds: he says nothing (${b.n}) · on a man who has NOT broken he calls contact: ${c.n} (he lives through it: ${b.alive})`); }
-    // ------------------------------------------------------------ room clear
-    { const entry = async () => { const s = await world(false, false), { g, A } = s; const O: any = g.orders, RC: any = g.roomClear, d = g.doors.byName('b_s');
-        pictureTell(g, A, 'player', DOOR); pictureTell(g, A, s.op, INSIDE); if (!BREAK) runnerBreak(g, A); s.step(8 * 60);   // (the recorded man's picture)
-        const low = (runnerOf(A) as any)?.phase === 'low', room = RC.roomAt(A.char.pos), team = g.guards.filter((x: any) => x.team === 'operative');
-        team.forEach((o: any, k: number) => { o.hold = false; o.pinned = false; o.dazzledUntil = 0; o.heardUpTo = 0; o.char.pos = [31.5 + k * 0.9, 0, 13.9]; o.char.vel = [0, 0, 0]; o.path = []; o.pathGoal = null; }); g.teleportPlayer([30, 0, 13.9]); s.step(30);
-        const why = O.give('openClear', O.targetAt(d.frameCentre), 'all'); let text = ''; const heard = new Set<string>();
-        s.step(60 * 40, () => { for (const o of team) { const b = o.bubble; if (b) { heard.add(b.text); if (!text && / clear\.$/.test(b.text)) text = b.text; } } });
-        return { why: why as string | null, low, room: room as string | null, text, aLives: A.state !== 'dead', inRoom: RC.roomAt(A.char.pos) === room }; };
-      const b = await entry();
-      line(!b.why && b.low && b.aLives && b.inRoom && / clear\.$/.test(b.text),
-        `the team sent through the door of the room he is low in (${b.room}), forty seconds: the lead calls it clear ("${b.text}") — and he is alive in it (low there: ${b.low}, alive: ${b.aLives}, still in the room: ${b.inRoom})`); }
     // ------------------------------------------------------------ company
     { const company = async (broken = true) => { const s = await world(broken), { g, A, B } = s; s.stand(B, MATE, HIS); s.step(20);
         return { mate: hasMate(g, B) as boolean, nobody: runnerNobody(A) as boolean }; };
