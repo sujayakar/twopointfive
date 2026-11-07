@@ -3,38 +3,6 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: SmokeShown, src/game/smokebreak.ts:65)
-#[derive(Clone, Debug)]
-pub struct SmokeShown {
-    pub men: JsMap<crate::Num, crate::smokebreak::SmokeShownMenValue>,
-    pub threads: f64,
-}
-impl SmokeShown {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SmokeShown {
-            men: JsMap::new(),
-            threads: 0.0,
-        }
-    }
-}
-impl Default for SmokeShown { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/smokebreak.ts:65 SmokeShown.men, src/game/smokebreak.ts:65)
-#[derive(Clone, Copy, Debug)]
-pub struct SmokeShownMenValue {
-    pub thread: bool,
-}
-impl SmokeShownMenValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SmokeShownMenValue {
-            thread: false,
-        }
-    }
-}
-impl Default for SmokeShownMenValue { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: SmokeBreakStats, src/game/smokebreak.ts:52)
 #[derive(Clone, Copy, Debug)]
 pub struct SmokeBreakStats {
@@ -108,27 +76,6 @@ impl State {
     }
 }
 impl Default for State { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/smokebreak.ts:67 smokeShown ->, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1597)
-#[derive(Clone, Debug)]
-pub struct SmokeShown2 {
-    pub men: JsMap<crate::Num, crate::smokebreak::SmokeShownMenValue>,
-    pub frame: f64,
-    pub threads: f64,
-    pub records: f64,
-}
-impl SmokeShown2 {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SmokeShown2 {
-            men: JsMap::new(),
-            frame: 0.0,
-            threads: 0.0,
-            records: 0.0,
-        }
-    }
-}
-impl Default for SmokeShown2 { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/smokebreak.ts:82 handAt ->, src/game/smokebreak.ts:82)
 #[derive(Clone, Copy, Debug)]

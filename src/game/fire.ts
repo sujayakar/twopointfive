@@ -410,7 +410,9 @@ export function updateFire(g: Game, dt: number) { { const __s = RUST_SURFACE; if
  *  the fog of war each as the team last saw it (FIRE.fog, by the fog's memory of the fire's own lamp: RtLight.fog / fogGhost). Called by updateFire, and by the
  *  game again straight behind the fog's own turn (game.ts), which is what says this frame's classes: a fire put out where nobody sees keeps its flame in the
  *  fog from the very frame it goes out. Every number is a closed form of the clock, so the two calls of a frame agree but for the fog's word. */
-export function fireDraws(g: Game) {
+/** ONE COLUMN: how far each fire's painted soot has handed over to its gas, by fire: the picture's own, eased here */
+const SOOT = new WeakMap<object, number[]>();
+export function fireDraws(g: Game, dt = 0) {
   const E = g.engine, K = FIRE;
   if (!K.on) return;
   const time = g.time, focus = E.viewFocus ?? hostMan(g).char.pos, list: (FireDraw & { d: number })[] = [], P = E.hostBooks?.fire;
@@ -422,9 +424,12 @@ export function fireDraws(g: Game) {
     // out, and nobody on the team saw it go out: where the team does not see, the fog's picture has its lamp lit still (the lamp's own ghost) and its flame on it
     if (!lit && !(K.fog && (l.fogGhost ?? 0) > 0)) continue;
     const M = mouthOf(g, t), d = Math.hypot(M.pos[0] - focus[0], M.pos[2] - focus[2]);
+    let mixes = SOOT.get(E); if (!mixes) SOOT.set(E, mixes = []);
+    const up = lit && fits() && g.smoke?.drawing?.() === true && E.settings?.fireSmoke !== false && d < K.smoke.viewR;
+    const soot = mixes[ix] = Math.min(1, Math.max(0, (mixes[ix] ?? 0) + (up ? dt : -dt) * FIRE_LOOK_SMOKE.sootEase));
     if (!(d < K.drawR)) continue;
     const seed = fireSeed(t);
-    list.push({ pos: M.pos, r: M.r, h: K.height, heat: lit ? heatOf(t) : 1, seed, time: time % 4096, wind: windAt(g, M.pos).wind, flick: fireFlicker(seed, time), bed: M.lid * K.bedR, fog: !lit ? 2 : !K.fog || l.fog === 1 ? 1 : 0, gas: lit ? P?.gasMix[ix] ?? 0 : 0, soot: lit ? P?.sootMix?.[ix] ?? 0 : 0, d });
+    list.push({ pos: M.pos, r: M.r, h: K.height, heat: lit ? heatOf(t) : 1, seed, time: time % 4096, wind: windAt(g, M.pos).wind, flick: fireFlicker(seed, time), bed: M.lid * K.bedR, fog: !lit ? 2 : !K.fog || l.fog === 1 ? 1 : 0, gas: lit ? P?.gasMix[ix] ?? 0 : 0, soot: lit ? soot : 0, d });
   }
   const cap = Math.max(0, Math.min(4, Math.floor(K.max)));
   if (list.length > cap) { list.sort((a, b) => a.d - b.d); list.length = cap; }   // (which ones, not in what order: the composite orders them ray by ray)

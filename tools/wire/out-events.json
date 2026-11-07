@@ -1655,13 +1655,6 @@
 "why": "no Rust body"
 },
 {
-"call": "smokebreak#smokeShown",
-"rust": "crate::smokebreak::smoke_shown",
-"sites": 3,
-"why": "answers a value (Option<crate::smokebreak::SmokeShown2>)",
-"body": "let s = g.engine.host_books.as_ref()?.smoke_break.as_ref()?; Some(SmokeShown2 { "
-},
-{
 "call": "snowField#snowLayBare",
 "rust": "crate::render_snow_field::snow_lay_bare",
 "sites": 1,

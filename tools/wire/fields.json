@@ -7594,7 +7594,8 @@
 "thinline::Thin.e",
 "irlaser::IrlaserMod.ir_made",
 "game::Mods.thinline",
-"game::Mods.irlaser"
+"game::Mods.irlaser",
+"smoke_types::SmokeEmitter.fire"
 ],
 "everyTickNotCarried": [
 {
@@ -12845,6 +12846,7 @@
 "thinline::Thin.e",
 "irlaser::IrlaserMod.ir_made",
 "game::Mods.thinline",
-"game::Mods.irlaser"
+"game::Mods.irlaser",
+"smoke_types::SmokeEmitter.fire"
 ]
 }

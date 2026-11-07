@@ -120,7 +120,6 @@ pub fn update_fire(g: &mut Game, dt: f64) {
         Some(f) => f,
         None => { let h = crate::seats::host_man(g); let c = g.pl[h].ch; g.ch[c].pos }
     };
-    let filed = g.engine.settings.fire_smoke;   // (the graphics preset that sheds a fire's smoke; whether a solver draws it is the host's)
     let mut fires = 0.0;
     let mut lit = 0.0;
     let look = g.m.render_frame.look_config;
@@ -268,7 +267,7 @@ pub fn update_fire(g: &mut Game, dt: f64) {
         }
         // the smoke: a short source on the solver, filed afresh every `every` s while the fire is near the view
         let b = g.k.fire.smoke;
-        if moved && filed && d < b.view_r {
+        if moved && d < b.view_r {
             let slot = m::floor(time / b.every);
             let p = book(g);
             let n = p.n;
@@ -294,7 +293,7 @@ pub fn update_fire(g: &mut Game, dt: f64) {
                     push: Some(b.push),
                     jitter: Some(b.jitter),
                     lattice: Some(crate::smoke_types::SmokeEmitterLattice::Coarse),
-                    look: Some(true),
+                    look: Some(true), fire: Some(true),
                     tint: a.map(|_| fl_smoke.soot),
                     ..crate::smoke_types::SmokeEmitter::zeroed()
                 });
@@ -325,7 +324,7 @@ pub fn update_fire(g: &mut Game, dt: f64) {
                         attack: Some(0.06),
                         jitter: Some(0.9),
                         lattice: Some(crate::smoke_types::SmokeEmitterLattice::Coarse),
-                        look: Some(true),
+                        look: Some(true), fire: Some(true),
                         tint: a.map(|_| l.soot),
                         ..crate::smoke_types::SmokeEmitter::zeroed()
                     });
@@ -334,7 +333,7 @@ pub fn update_fire(g: &mut Game, dt: f64) {
         }
         // the flame as gas: a short source on the solver's fine lattice at the coals, filed afresh every `every` s while the fire is near the view
         let gs = g.k.fire.gas;
-        if moved && filed && gs.on && d < gs.view_r {
+        if moved && gs.on && d < gs.view_r {
             let slot = m::floor(time / gs.every);
             let p = book(g);
             let n = p.n;
@@ -356,7 +355,7 @@ pub fn update_fire(g: &mut Game, dt: f64) {
                     push: Some(gs.push),
                     jitter: Some(gs.jitter),
                     lattice: Some(crate::smoke_types::SmokeEmitterLattice::Fine),
-                    look: Some(true),
+                    look: Some(true), fire: Some(true),
                     ..crate::smoke_types::SmokeEmitter::zeroed()
                 });
             }
