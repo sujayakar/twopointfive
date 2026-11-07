@@ -100,7 +100,7 @@ pub fn squad_orders_tick(g: &mut crate::game::Game) {
             let hot = g.gd[gd].reload_t >= 0.0
                 || g.time - m::max(m::max(g.gd[gd].last_seen_t, g.gd[gd].witness.heard.last_shot_t), g.tab.orders_assignment[a].yield_t) < g.k.orders.cold_secs;
             if hot { continue; }
-            g.gd[gd].state = crate::game::GuardState::Search;
+            crate::mind::set_state(g, gd, crate::game::GuardState::Search, "orders");
         }
         if g.tab.orders_assignment[a].yield_t >= 0.0 {   // back on his order, by the way an order walks him, from wherever the fight left him
             let (now, here) = (g.time, g.ch[c].pos);

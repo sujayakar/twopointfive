@@ -133,8 +133,7 @@ pub fn kill_guard(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: Option
     }
     let now = g.time;
     {
-        let m = &mut g.gd[gd];
-        m.state = GuardState::Dead; m.speed = 0.0; m.died_at = now; m.down_kind = Some(how); m.down_by = Some(by);
+        crate::mind::set_state(g, gd, GuardState::Dead, "combat"); g.gd[gd].speed = 0.0; g.gd[gd].died_at = now; g.gd[gd].down_kind = Some(how); g.gd[gd].down_by = Some(by);
     }
     crate::tactics::tactics_man_down(g, gd);
     let c = g.gd[gd].ch;

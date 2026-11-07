@@ -370,20 +370,19 @@ pub fn call(g: &mut crate::game::Game, gd: GuardId, m: GuardId) {
     g.stats.darkdoor.calls += 1;
     let here = pos_of(g, gd);
     crate::belief::word(g, m, here);
-    let x = &mut g.gd[m];
-    x.awareness = crate::m::max(x.awareness, 0.42);
-    if x.state != crate::game::GuardState::Suspicious {
-        x.state = crate::game::GuardState::Suspicious;
-        x.react_t = 0.8;
-        x.search_plan = None;
-        x.pieing = None;
+    crate::mind::raise(g, m, 0.42, "darkdoor");
+    if g.gd[m].state != crate::game::GuardState::Suspicious {
+        crate::mind::set_state(g, m, crate::game::GuardState::Suspicious, "darkdoor");
+        g.gd[m].react_t = 0.8;
+        g.gd[m].search_plan = None;
+        g.gd[m].pieing = None;
     }
-    x.search_t = 0.0;
-    x.path = Vec::new();
-    x.path_serial = x.path_serial.wrapping_add(1);
-    x.path_goal = None;
-    x.path_goal_orbit = false;
-    x.stall_ref = None;
+    g.gd[m].search_t = 0.0;
+    g.gd[m].path = Vec::new();
+    g.gd[m].path_serial = g.gd[m].path_serial.wrapping_add(1);
+    g.gd[m].path_goal = None;
+    g.gd[m].path_goal_orbit = false;
+    g.gd[m].stall_ref = None;
     let s = fear(g, gd);
     if !s.called {
         s.called = true;
@@ -408,7 +407,7 @@ pub fn dark_door_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f6
             return Some(speed);
         }
         fear(g, gd).idle = 0.0;
-        if g.gd[gd].state == crate::game::GuardState::Suspicious { g.gd[gd].awareness = m::max(g.gd[gd].awareness, k.keep_aw); }
+        if g.gd[gd].state == crate::game::GuardState::Suspicious { crate::mind::raise(g, gd, k.keep_aw, "darkdoor"); }
         let s = fear(g, gd);
         s.t += dt;
         if s.t >= k.nerve_secs { return Some(speed * k.slow_k); }
@@ -574,7 +573,7 @@ pub fn hold(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, seen: b
     g.gd[gd].alert_stall_t = 0.0;
     g.gd[gd].chase_t = 0.0;
     if g.gd[gd].state == crate::game::GuardState::Suspicious {
-        g.gd[gd].awareness = m::max(g.gd[gd].awareness, k.keep_aw);
+        crate::mind::raise(g, gd, k.keep_aw, "darkdoor");
     } else if g.gd[gd].state == crate::game::GuardState::Search {
         g.gd[gd].search_t = m::max(0.0, g.gd[gd].search_t - dt);
     }
@@ -667,18 +666,17 @@ fn tick_man(g: &mut Game, gd: GuardId, dt: f64) {
         g.gd[gd].last_known = Some(v3::copy(goal));
         g.gd[gd].fix_stamp = g.gd[gd].fix_stamp.wrapping_add(1);
     }
-    let x = &mut g.gd[gd];
-    if x.state != crate::game::GuardState::Suspicious {
-        x.state = crate::game::GuardState::Suspicious;
-        x.search_plan = None;
-        x.pieing = None;
-        x.path = Vec::new();
-        x.path_serial = x.path_serial.wrapping_add(1);
-        x.path_goal = None;
-        x.path_goal_orbit = false;
+    if g.gd[gd].state != crate::game::GuardState::Suspicious {
+        crate::mind::set_state(g, gd, crate::game::GuardState::Suspicious, "darkdoor");
+        g.gd[gd].search_plan = None;
+        g.gd[gd].pieing = None;
+        g.gd[gd].path = Vec::new();
+        g.gd[gd].path_serial = g.gd[gd].path_serial.wrapping_add(1);
+        g.gd[gd].path_goal = None;
+        g.gd[gd].path_goal_orbit = false;
     }
-    x.awareness = m::max(x.awareness, 0.42);
-    x.search_t = 0.0;
+    crate::mind::raise(g, gd, 0.42, "darkdoor");
+    g.gd[gd].search_t = 0.0;
 }
 
 /// once a frame: the men called and the men going in with somebody kept on their man, or dropped; a stopped man nothing asks for is let go.   (darkdoor.ts darkDoorTick)

@@ -170,7 +170,7 @@ pub fn hear_whistle(g: &mut crate::game::Game, gd: GuardId, e: crate::game::Game
         if !crate::belief::word_now(g, gd) && (state != GuardState::Alert || g.gd[gd].last_known.is_none() || g.time - g.gd[gd].last_seen_t > 1.0) {
             write_fix(g, gd, h.at);
         }
-        g.gd[gd].awareness = m::max(g.gd[gd].awareness, knob_aw);
+        crate::mind::raise(g, gd, knob_aw, "whistle");
         let row = mem(g, gd);
         row.cues += 1.0;
         row.soft = false;
@@ -198,15 +198,14 @@ pub fn hear_whistle(g: &mut crate::game::Game, gd: GuardId, e: crate::game::Game
     g.stats.whistle.answered += 1;
     if !crate::belief::word_now(g, gd) { write_fix(g, gd, h.at); }
     {
-        let man = &mut g.gd[gd];
-        man.path = Vec::new();
-        man.path_serial = man.path_serial.wrapping_add(1);
-        man.path_goal = None;
-        man.path_goal_orbit = false;
-        man.stall_ref = None;
-        man.stall_t = 0.0;
-        man.search_t = 0.0;
-        man.awareness = m::max(man.awareness, knob_aw);
+        g.gd[gd].path = Vec::new();
+        g.gd[gd].path_serial = g.gd[gd].path_serial.wrapping_add(1);
+        g.gd[gd].path_goal = None;
+        g.gd[gd].path_goal_orbit = false;
+        g.gd[gd].stall_ref = None;
+        g.gd[gd].stall_t = 0.0;
+        g.gd[gd].search_t = 0.0;
+        crate::mind::raise(g, gd, knob_aw, "whistle");
     }
     let callsign = g.gd[gd].callsign.clone();
     if let Some(log) = g.m.whistle.whistle_log.last_mut() {
@@ -216,12 +215,11 @@ pub fn hear_whistle(g: &mut crate::game::Game, gd: GuardId, e: crate::game::Game
     if twice {
         // the second inside the window: a proper search of the place, gun out, no more 'hello?'
         {
-            let man = &mut g.gd[gd];
-            man.state = GuardState::Search;
-            man.search_plan = None;
-            man.pieing = None;
-            man.body_duty = None;
-            man.react_t = 0.0;
+            crate::mind::set_state(g, gd, GuardState::Search, "whistle");
+            g.gd[gd].search_plan = None;
+            g.gd[gd].pieing = None;
+            g.gd[gd].body_duty = None;
+            g.gd[gd].react_t = 0.0;
         }
         let row = mem(g, gd);
         row.searches += 1.0;
@@ -235,7 +233,7 @@ pub fn hear_whistle(g: &mut crate::game::Game, gd: GuardId, e: crate::game::Game
         crate::game::game_say(g, gd, &line, None, None, None);
     } else {
         // the first: over to it for a look, torch in hand
-        if g.gd[gd].state == GuardState::Patrol { g.gd[gd].state = GuardState::Suspicious; }
+        if g.gd[gd].state == GuardState::Patrol { crate::mind::set_state(g, gd, GuardState::Suspicious, "whistle"); }
         g.gd[gd].react_t = g.k.whistle.react_t;
         let row = mem(g, gd);
         row.soft = true;
