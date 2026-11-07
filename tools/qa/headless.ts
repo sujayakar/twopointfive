@@ -15,6 +15,7 @@
 import { resolve } from 'node:path';
 import './stand.ts';   // (the stand's word, written before anything below reads it)
 import { clockDice, harnessDie } from './die.ts';
+import { listen } from './heard.ts';
 
 export const ROOT = resolve(import.meta.dir, '../..');
 // ONE-WAY DOORS (src/game/doors.ts DOORWAY — the shipped default is ON): ON THE OLD FROZEN STAND (TPS_PROFILE=frozen; a run with no word is the page's, below) the
@@ -240,6 +241,25 @@ export async function standUp(opts: { /** the dressing rows up, as the page has 
     play(n: string, pos: Vec3 | null, gain = 1, opts?: Record<string, unknown>) { audioCounts.set(n, (audioCounts.get(n) ?? 0) + 1); audioLog?.push({ name: n, pos: pos ? [pos[0], pos[1], pos[2]] : null, gain, opts, t: game.time }); },
     footstep(pos: Vec3, loudness: number, isPlayer: boolean, mat?: string) { audioCounts.set('footstep', (audioCounts.get('footstep') ?? 0) + 1); audioLog?.push({ name: 'footstep', pos: [pos[0], pos[1], pos[2]], gain: loudness, opts: { isPlayer, mat }, t: game.time }); },
   };
+  // WHAT IS SAID REACHES A TOOL THAT WRAPPED THE SAYING. A check learns what the player was told, or what a man said, by putting its own function in the place
+  // of `game.msg` / `game.say` and calling the one it found there. The Rust tick calls neither: a line is said inside the Rust game and arrives here as state
+  // (the log's rows, a man's bubble: tools/qa/heard.ts), so every such check read an empty list, whatever the game had said (seventy-three files). The
+  // stand-up therefore reads that state after every step and, where a tool has put a function of its own there, calls it with each new line, exactly once.
+  // What the tool's function then calls back (the one it found) does nothing for the length of that call: the line is already in the game. At any other
+  // time it is the game's own method, as ever. What this cannot give: more than five rows of the log in one tick, or two lines of one man in one tick.
+  const saying = { now: false }, G = Object.getPrototypeOf(game) as { msg: (t: string) => unknown; say: (...a: unknown[]) => unknown };
+  // (a line the tool itself says through the game's method went through its own function already: it is counted here and not told to it again)
+  const mine = new Map<string, number>(), owed = (k: string, d: number): number => { const n = (mine.get(k) ?? 0) + d; if (n > 0) mine.set(k, n); else mine.delete(k); return n; };
+  const msgOwn = function (this: unknown, t: string) { if (saying.now) return undefined; owed(`m|${t}`, 1); return G.msg.call(game, t); };
+  const sayOwn = function (this: unknown, ...a: unknown[]) { if (saying.now) return undefined; owed(`s|${String(a[1])}`, 1); return G.say.apply(game, a); };
+  game.msg = msgOwn; game.say = sayOwn;
+  const heard = listen(game); let nSaid = 0, nSpoke = 0;
+  const tell = (): void => { heard.poll();
+    if (game.msg === msgOwn && game.say === sayOwn) { nSaid = heard.said.length; nSpoke = heard.spoke.length; mine.clear(); return; }   // (nobody listens)
+    saying.now = true;
+    try { if (game.msg !== msgOwn) for (; nSaid < heard.said.length; nSaid++) { const t = heard.said[nSaid]; if (mine.has(`m|${t}`)) owed(`m|${t}`, -1); else game.msg(t); }
+      if (game.say !== sayOwn) for (; nSpoke < heard.spoke.length; nSpoke++) { const s = heard.spoke[nSpoke]; if (mine.has(`s|${s.text}`)) owed(`s|${s.text}`, -1); else game.say(s.man, s.text, s.radio); } }
+    finally { saying.now = false; nSaid = heard.said.length; nSpoke = heard.spoke.length; } };
   const canvas = { clientWidth: 1600, clientHeight: 1000, width: 1600, height: 1000 };
   cam.aspect = canvas.width / canvas.height; cam.rebuild();
   engine.world.upload();
@@ -253,6 +273,7 @@ export async function standUp(opts: { /** the dressing rows up, as the page has 
       { const L: any[] | undefined = (game as any).director?.log, n = L?.length ?? 0, last = n ? L![n - 1] : null, key = last ? `${last.run}:${last.t}:${last.beat}:${last.kind}:${last.what}` : '';   // (the rows filed since the last step: from the log's end back to the row last seen)
         if (key !== beatSeen) { let bad: any = null; for (let i = n - 1; i >= 0; i--) { const r = L![i]; if (`${r.run}:${r.t}:${r.beat}:${r.kind}:${r.what}` === beatSeen) break; if (r.kind === 'error') bad = r; } beatSeen = key;
           if (bad && W.beatsThrow) throw new Error(`the level's script: beat '${bad.program}/${bad.beat}' ${bad.what}`); } }
+      tell();   // (what the step said, to a tool that listens: above)
       if (opts.reach) engine.reach.tick();   // (a page's engine steps its keeper of the reach masks once each render, on the clock where the frame has the planners' pace: here on the count, only where a tool asked for one, and never a real engine's, which steps its own)
       { const me = game.hostSeat().view, look = (game as any).rustHost?.look?.();   // (a game that steps somewhere else, in a quiet run of steps: the camera's two inputs asked of it, tools/blitz/PLAY.md)
         cam.update(dt, follow ?? look?.follow ?? me.followPos(), follow || game.spectate >= 0 ? null : look?.aim ?? me.aimPoint); }   // (main.ts: demoPos ?? followPos, and no aim lead while the tour frames the shot)
