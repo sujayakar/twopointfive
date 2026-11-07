@@ -47,7 +47,7 @@ const at = (page, p) => page.evaluate(p => { const c = document.getElementById('
     try { await page.screenshot({ path: f, timeout: 60000 }); } catch (e) { return `(no picture: ${String(e).slice(0, 60)})`; }
     finally { await page.evaluate(() => { document.getElementById('view').style.visibility = ''; document.getElementById('__still')?.remove(); }); }
     return f; };
-  const url = `http://localhost:${PORT}/?roomclear&squad4&levelFile=${name}.json&paused&quality=${QUALITY}&mute${process.env.MARKCLEAR_BREAK === '1' ? '&markclear=0' : ''}`;
+  const url = `http://localhost:${PORT}/?roomclear&squad4&levelFile=${name}.json&paused&quality=${QUALITY}&mute${process.env.MARKCLEAR_BREAK === '1' ? '&markclear=0' : ''}&seed=${process.env.SEED || 7}`;   // (a page with no seed deals a fresh one each visit)
   log(url);
   if (!held) await page.goto(url, { timeout: 600000 });
   await page.evaluate(async held => { await window.__ready; window.__testVisible = true; if (held && window.__game.lesson.i > 0) window.__game.restartEncounter();   // (a page played before: the mission again, as Shift+Enter gives it)

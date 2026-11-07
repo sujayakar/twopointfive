@@ -81,7 +81,7 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
 
   const steps = JSON.parse(fs.readFileSync(path.join(ROOT, 'levels/tut-team.json'), 'utf8')).scenarios.lesson.steps, step = id => steps.find(s => s.id === id);
   const along = async (way, secs) => { for (const p of way) if (!(await walk(p, secs))) return false; return true; };
-  const url = `http://localhost:${PORT}/?levelFile=tut-team.json&roomclear=1&squad4&paused&quality=${QUALITY}&mute&nocutboxes`;
+  const url = `http://localhost:${PORT}/?levelFile=tut-team.json&roomclear=1&squad4&paused&quality=${QUALITY}&mute&nocutboxes&seed=${process.env.SEED || 7}`;   // (a page with no seed deals a fresh one each visit: a check that is to read the same twice names its own)
   log(url);
   await page.goto(url, { waitUntil: 'commit' });
   await page.waitForFunction(() => window.__ready !== undefined, null, { timeout: 0 });   // (the bundle has run: the boot's own promise is there to wait on)
