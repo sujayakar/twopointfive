@@ -5,6 +5,8 @@
 // (the one-file build) or no buffer (?noreplay). Headless, with the page's globals stubbed round the key's own calls: no page, no shelf, nothing drawn.
 // the maintainer, 10-15: "clicking on replay after a mission should start in engine". The card's tab goes to the game page playing the file's run tape (?playtape=<shelf
 // id>, from the tape's last restart), and to the map viewer only where the file has no tape to play; the key's (Shift+F7) is the map viewer's as before.
+// While the game page plays no tapes (replay/format.ts GAME_PAGE) the card's, the map viewer's link and the address itself are all the map viewer's: held first, as the
+// build has it; the road to the game page is held with that word put up.
 import { standUp, ROOT } from './headless.ts';
 import { readFileSync } from 'node:fs';
 export async function cardReplayCheck(): Promise<boolean> {
@@ -20,10 +22,11 @@ export async function cardReplayCheck(): Promise<boolean> {
     document: { baseURI: 'http://localhost/', body: { appendChild() { /* */ } }, createElement: () => ({ style: {}, textContent: '', click() { /* */ }, remove() { /* */ } }), querySelector: (q: string) => one && /tps-one-page/.test(q) ? {} : null },
   };
   const opened: string[] = [];   // (a tab asked of the browser: there is to be none)
+  const { GAME_PAGE } = await import(`${ROOT}/src/replay/format.ts`), asBuilt = GAME_PAGE.playsTapes;
   const W: any = await standUp();
   try {
     for (const k of Object.keys(stub)) { kept[k] = Object.getOwnPropertyDescriptor(G, k); Object.defineProperty(G, k, { value: stub[k], configurable: true, writable: true }); }
-    const { ReplayKey, viewerUrl, engineUrl, VISIT_FLAGS, CAME_FROM } = await import(`${ROOT}/src/ui/replaykey.ts`); const { backToGame } = await import(`${ROOT}/src/replay/format.ts`); const { tapeSearch } = await import(`${ROOT}/src/replay/engineplay.ts`);
+    const { ReplayKey, viewerUrl, engineUrl, VISIT_FLAGS, CAME_FROM } = await import(`${ROOT}/src/ui/replaykey.ts`); const { backToGame } = await import(`${ROOT}/src/replay/format.ts`); const { tapeSearch, tapeMapUrl } = await import(`${ROOT}/src/replay/engineplay.ts`);
     store.set(CAME_FROM, '{"href":"an older trip"}');   // (a game page that boots drops the last trip's mark)
     const key = new ReplayKey(W.game, W.cam, () => { /* */ }), K = key as any, dropped = !store.has(CAME_FROM);
     const tick = () => new Promise(r => setTimeout(r, 5));
@@ -39,6 +42,13 @@ export async function cardReplayCheck(): Promise<boolean> {
     { const N1 = 40, N2 = 25; for (let f = 0; f < N1; f++) W.step(1 / 60); W.game.restartEncounter(); for (let f = 0; f < N2; f++) W.step(1 / 60);
       const file = JSON.parse(JSON.stringify(K.file('card'))), T = file?.rerun, live = !!T && !('dead' in T) && T.ticks === N1 + N2;
       const put = (f: unknown) => { K.save = async () => { await tick(); K.last = { id: 7, file: f }; return 7; }; };
+      // …and before that, the game page as built: while it plays no tapes the same press, on the same file with a live tape, goes to the map viewer
+      again(); put(file); key.openViewer('card'); await tick(); await tick(); const built = went[0], want0 = asBuilt ? engineUrl(7, file) : viewerUrl(7);
+      const map = (q: string): string | null => tapeMapUrl(new URLSearchParams(q)), at = { id: map('?playtape=7&at=40'), off: map('?playtape=7&cloud=0&mute'), file: map('?playtape=tapes/a.json.gz'), none: map('?playtape=') }; one = true; const oneFile = map('?playtape=7'); one = false;
+      verdict(live && built === want0 && at.id === viewerUrl(7) && at.off === 'http://localhost/replay.html?cloud=0#id=7' && at.file === null && at.none === null && oneFile === null,
+        `the game page as built ${asBuilt ? 'plays tapes: the card goes there' : 'plays no tapes: the card goes to the map viewer on the file, its tape live or not'}; a shelf entry's tape address is the map viewer's on that entry, the visit's sending words with it, and a served file's and the one-file build's are not`,
+        `the card: ${built ?? 'nowhere'} · the address's map: ${JSON.stringify(at)} · the one-file build's: ${oneFile}`);
+      GAME_PAGE.playsTapes = true;
       again(); put(file); key.openViewer('card'); await tick(); await tick(); const card = went[0];
       const noRow = { ...file, rerun: { ...T, x: (T?.x ?? []).filter((r: any) => r[1] !== 'restart') } };   // (a restart made INSIDE a step — Shift+Enter, Enter once down — is on no tape row: the trace's mark has it)
       const once = { ...noRow, lines: file.lines.filter((l: any) => l.k !== 'mark') };   // (one try: nothing to run through first)
@@ -120,6 +130,7 @@ export async function cardReplayCheck(): Promise<boolean> {
       verdict(page === true && onePage === false && went.length === 0 && saved === 1 && off.canView === false, 'the button is offered only where a replay can be viewed: not on the one-file build (a plain save there, the window stays), not under ?noreplay',
         `page ${page} · one-file build ${onePage}, moves ${went.length}, saves ${saved} · ?noreplay ${off.canView}`); }
   } finally {
+    GAME_PAGE.playsTapes = asBuilt;
     for (const k of Object.keys(stub)) { if (kept[k]) Object.defineProperty(G, k, kept[k]); else delete G[k]; }
     if (W.game.replayTap) W.game.replayTap = null;
   }
@@ -129,6 +140,8 @@ export async function cardReplayCheck(): Promise<boolean> {
     const wired = /replay: \(\) => viewReplay,/.test(main) && /viewReplay = replaykey\.canView \? \(\) => replaykey\.openViewer\('card'\) : null;/.test(main);
     const keyToo = /if \(e\.shiftKey\) this\.keyView\(\); else void this\.save\('key'\);/.test(rk);
     const viewer = readFileSync(`${ROOT}/src/replay/viewer.ts`, 'utf8');
+    // (…and no way onto the game page is left open while it plays no tapes: the viewer's link and the address itself ask the same word)
+    const asked = /ok = GAME_PAGE\.playsTapes && shelfId !== null/.test(viewer) && /async function main\(\) \{\n  const q = new URLSearchParams\(location\.search\);\n(?:  \/\/[^\n]*\n)*  if \(q\.has\(PLAYTAPE\) && !GAME_PAGE\.playsTapes\) \{ const to = tapeMapUrl\(q\); if \(to === null\) throw [^\n]*; location\.replace\(to\); return; \}\n/.test(main);   // (the first thing main does: before a key is read, a shell shown or a module fetched)
     const toEngine = /leaveFor\(\(why === 'card' && this\.last\?\.id === id \? engineUrl\(id, this\.last\.file\) : null\) \?\? viewerUrl\(id\), id\);/.test(rk) && /a\.href = new URL\(`index\.html\?playtape=\$\{shelfId\}`, document\.baseURI\)\.href;/.test(viewer);
     // (the maintainer, 10-15: "replays should just play in the current window, not open a new tab") — no road between the game, the replay and the map asks for a tab
     const roads: [string, string][] = [['ui/replaykey.ts', rk], ['replay/viewer.ts', viewer], ['replay/engineplay.ts', readFileSync(`${ROOT}/src/replay/engineplay.ts`, 'utf8')], ['replay.html', readFileSync(`${ROOT}/replay.html`, 'utf8')]];
@@ -155,8 +168,8 @@ export async function cardReplayCheck(): Promise<boolean> {
       verdict(S.map(speedName).join(' ') === '¼× ½× 1× 2× 4×' && down.join() === [S[0], ...S.slice(0, -1)].join() && up.join() === [...S.slice(1), S[S.length - 1]].join() && speedStep(3, -1) === 0.5 && speedStep(3, 1) === 2
         && opts.map(o => o.v).join() === S.join() && opts.map(o => o.name).join(' ') === S.map(speedName).join(' ') && opts.filter(o => o.first).map(o => o.v).join() === '1',
         'a replay plays at ¼× ½× 1× 2× 4× in the game and in the map viewer alike, one pace a step and the ends hold', `named ${S.map(speedName).join(' ')} · a step down ${down.join(' ')} · a step up ${up.join(' ')} · off the list (3): down ${speedStep(3, -1)} up ${speedStep(3, 1)} · the map viewer's list ${opts.map(o => o.name + (o.first ? ' (opens on)' : '')).join(' ')}`); }
-    verdict(card && wired && keyToo && toEngine, "the end card has a Replay button only when the page hands it a viewer, armed like the card's other buttons; Shift+F7 goes the same road, and the card's press goes where the viewer's 'Play in engine' goes",
-      `menu.ts debrief(): ${card} · main.ts wiring: ${wired} · the key: ${keyToo} · the engine page's address: ${toEngine}`); }
+    verdict(card && wired && keyToo && toEngine && asked, "the end card has a Replay button only when the page hands it a viewer, armed like the card's other buttons; Shift+F7 goes the same road, and the card's press goes where the viewer's 'Play in engine' goes",
+      `menu.ts debrief(): ${card} · main.ts wiring: ${wired} · the key: ${keyToo} · the engine page's address: ${toEngine} · the viewer's link and a tape's address ask whether the game page plays tapes: ${asked}`); }
   console.log(`=== cardreplay: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;
 }

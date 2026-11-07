@@ -26,7 +26,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   hole's far mouth (`floorAfter` → `NavGrid.cellBlockers` → `wouldTake(first, i, mouth)`: in the shatter band, a line from the mouth; of a long run — a LIVED-IN room's cot is one: the bedding and locker dealt onto and beside it are one piece with it — the floor-standing parts in the
   band and what those hold up, fixed()'s own rule with the shorter reach (`rowTake`); never a cover panel). Shared with the blast so they cannot drift: `chargeSource(radius)` (destruction.ts asks it too), `chargeAt(W)`; the hole's columns are NOT shared (the check
   is the link). The barracks' south wall between bunks 3 and 4 (static 52, a cot against it inside each room, a partition between them) was refused along its whole length; now a charge
-  asked at its middle settles half a metre along, over one cot. `bun run tools/qa/wallfurn-check.ts` (`probes.ts wallfurn`, also under `wallcharge`; every squad mission's and squad
+  asked at its middle settles half a metre along, over one cot. (THE CHECK SINCE 2026-11-07: the rule is settled and nothing is switched. A place the rule adds
+  is one the game takes where the nav grid as it stands has no floor behind the wall; on a sample of eight a level, `--cap 9999` for all, Sam really sets a
+  charge there and sets it off (`charge-rig.ts`), and it must open a way in. A place where Sam is offered no row with the cursor on the wall is counted and
+  not judged. Read on the Rust game: every charge set opened a way in, the barracks' 45 and Mousehole's 29 read whole; seven places on four levels gave
+  Sam no row. `WALLFURN_BREAK=1` sets the charges and never sets them off. What follows is the check as it was.)
+  `bun run tools/qa/wallfurn-check.ts` (`probes.ts wallfurn`, also under `wallcharge`; every squad mission's and squad
   lesson's level + the office, twelve, ~40 s: a place the plain rule accepts is the same place with the rule on — 0 moved; EVERY place the rule adds is really blown — 76 on the frozen stand, 85 under `TPS_PROFILE=shipped`: RUN IT ON BOTH, the lived-in furniture is only on the second, where the first cut took half the barracks wall and one place with sandbags across the near mouth — and must leave
   a man-sized hole, floor behind it and a short walk through; the barracks wall off / on, a second charge beside the first's hole, the four ordered through it; `WALLFURN_BREAK=1` must
   fail; `--baseline` = the same asked of the plain rule's own places). Cost: a refused place's `settle` ~40 µs a frame while the cursor is on it, and the furniture index is made on the
@@ -56,7 +61,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 
 - **A LEVEL'S PLACES FOR A WALL CHARGE ARE HELD** (2026-11-04; `tools/qa/wallfurn-check.ts`, the `held` line; `tools/qa/fixtures/wallcharge/<name>.txt` and
   its README; a check, no switch and no rule of play). Why: the compound's dressing stood wood piles at the outside foot of the wall the squad breaches and
-  took 23 of its 891 places, and nobody had counted them; the maintainer: a loss is fine "so long as it's deliberate". Each level's file holds two counts,
+  took 23 of its 891 places, and nobody had counted them; the maintainer: a loss is fine "so long as it's deliberate". (Since 2026-11-07 a file holds ONE
+  count, the level with its lived-in rooms in: the first number was the old test stand's.) Each level's file holds two counts,
   the places the plain rule accepts on the frozen stand and on the shipped one (its lived-in rooms in). The line is red when the level has another number
   on the stand of the run: fewer (something took a place), more (write it: slack would let a later loss pass), no file, a file that is not two counts, a
   file for no level. A run that names no level asks every level a mission on the list plays on, tutorials and quiet missions too (30 files with the
