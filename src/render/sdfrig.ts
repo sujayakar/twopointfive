@@ -18,11 +18,9 @@ export const RIG_SLOT_NAMES = ['lowerTorso', 'chest', 'shoulders', 'pelvis', 'ne
 export type RigSlotName = typeof RIG_SLOT_NAMES[number];
 /** the radii Character.capsules() authors by hand for the same slots (the 'was' column of the table; what a slot keeps when there is nothing to fit it to, and what an Engine with no fit attached traces) */
 export const HAND_RADII: readonly number[] = [0.15, 0.16, 0.07, 0.11, 0.105, 0.052, 0.042, 0.052, 0.042, 0.075, 0.058, 0.033, 0.075, 0.058, 0.033];
-/** the blend radius per slot (m) of the smooth union the rig's trials traced (gone 2026-11-07). Kept for RIG_KPAD alone: the cull spheres were padded by its
- *  bulge and are the mesh shadows' broad phase too, so the number stays what it was. */
-export const RIG_K: readonly number[] = [0.0, 0.06, 0.05, 0.06, 0.03, 0.02, 0.03, 0.02, 0.03, 0.04, 0.04, 0.03, 0.04, 0.04, 0.03];
-/** the largest smin bulge (k/4) any joint adds outside its cones — cull spheres and the closest hit's entry test are padded by it */
-export const RIG_KPAD = [...RIG_K].sort((a, b) => b - a).slice(0, 3).reduce((n, k) => n + k, 0) / 4;   // each smin bulges ≤ k/4 outside the plain union, and the fold NESTS: where three blends meet (chest + shoulders + neck) the surface can sit up to the sum of the three largest k/4 outside — the entry cones and the cull sphere are padded by that
+/** what every cull sphere of the rig is padded by (m). It was the largest bulge of the smooth union the rig's trials traced (gone 2026-11-07): the sum of the
+ *  three largest blend radii over four. The spheres are the mesh shadows' broad phase too, so the number stays what it was, to the bit. */
+export const RIG_KPAD = (0.06 + 0.06 + 0.05) / 4;
 /** r1 rides in the top byte of a capsule's misc word in these units (0 = 'same as r0': a plain capsule — what a record nobody fitted decodes to) */
 export const RB_QUANT = 0.001;
 /** Hand overrides, applied over the least-squares result (metres). Empty = the fit as solved. Example: { neckHead: { r1: 0.105 } } */
@@ -236,7 +234,7 @@ export function rigTable(fit: RigFit): string {
   return rows.join('\n') + `\n${fit.verts} vertices, ${all.n} used, overall rms ${(Math.sqrt(all.se / Math.max(1, all.n)) * 1000).toFixed(1)} mm, solved in ${fit.ms.toFixed(1)} ms`;
 }
 
-// (What BoxWorld.upload needs to turn the frame's proxy list into the rig — { r0, r1, kPad } — engine.render builds inline from the attached fit, kPad = RIG_KPAD × settings.sdfRigK.)
+// (What BoxWorld.upload needs to turn the frame's proxy list into the rig — { r0, r1, kPad } — engine.render builds inline from the attached fit, kPad = RIG_KPAD.)
 
 /** WGSL the shader side needs from this table (prepended to shaders/sdfrig.wgsl by frame.ts scenePrelude): the unit r1 is packed in */
 export function sdfRigWgslConsts(): string {

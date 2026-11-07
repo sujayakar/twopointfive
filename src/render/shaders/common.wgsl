@@ -37,10 +37,10 @@ struct Frame {
   jitter: vec4f,                            // xy = this frame's TAAU sub-pixel jitter in internal pixels (0 without TAAU / under a debug view), zw = the previous render's — a screen-space history keyed on the UNJITTERED pixel (the gather's reservoirs) takes both out of its reprojection
   markCfg: vec4f,                           // MARKINGS (scene/markings.ts, shaders/markings.wgsl): x = the base texel in metres (0 = markings OFF: nothing evaluated anywhere, the frame as it was), y = contrast 0‥1 (palette colours lerped from the box albedo), z = × the emission of emissive markings, w = 1 = evaluate markings at reflection hits too
   sharpCfg: vec4f,                          // SHARP DIRECT (docs/internal/sharp-direct.md): xy = the internal size, zw = the OUTPUT size the g-buffer / unshadowed direct / composite / TAA run at this frame — z = 0 = off: every pass as it was. (frame.screen is whichever of the two the pass binding this block runs at: the engine keeps an internal-screen and an output-screen copy of the block)
-  sharpCfgB: vec4f,                         // sharp direct's knobs: x = output-resolution EDGE RAYS on (1 — informational: the host dispatches the edge-ray pipeline; where the internal taps straddle a hard shadow edge, one deterministic ray from the output pixel to the class's strongest emitter decides that light) / off (0), y = the taps' visibility-ratio spread that flags such an edge, z = the blur-hint width (internal px) under which the edge counts as hard, w = the same-plane weight's k (plane distance ∕ (z·k))
+  sharpCfgB: vec4f,                         // sharp direct's knob: w = the same-plane weight's k (plane distance ∕ (z·k)); xyz free
   sharpCfgC: vec4f,                         // DECOUPLED JITTER under sharp direct: xy = the jitter the INTERNAL raster carries relative to the (unjittered) OUTPUT raster, internal px (gdown / sharp_direct / composite / taau / particles add it to every internal ↔ output texel map); 0 = one jitter for both rasters, the path as it was
-  rigCfg: vec4f,                            // SDF CHARACTER RIG (render/sdfrig.ts, shaders/sdfrig.wgsl): x = bits (2 = smooth-union closest hit in the reflection tracer, 4 = soft-shadow character visibility in the direct estimators, 8 = its analytic form, 16 = smooth union in the soft query, 32 = it for broad-class lights too, 64 = character self-shadow in the direct estimators' shadow rays (selfShadowT), 128 = mesh shadows for near receivers only (meshShadowT); bit 1 retired — the round-cone proxy test is unconditional) — 0 = the plain round-cone loops everywhere; y = soft march steps, z = × the lights' angular radius, w = the smallest tan(half-angle) a light is given
-  rigCfgB: vec4f,                           // x = × the per-joint smooth-union radii (0 = plain union), y = closest-hit sphere-trace steps, z = its surface epsilon (m), w = the soft query's smallest march step (m)
+  rigCfg: vec4f,                            // SDF CHARACTER RIG (render/sdfrig.ts, shaders/sdfrig.wgsl): x = bits (64 = character self-shadow in the direct estimators' shadow rays (selfShadowT), 128 = mesh shadows for near receivers only (meshShadowT); the bits under 64 are free — the round-cone proxy test is unconditional); yzw free
+  rigCfgB: vec4f,                           // free
   giCfg: vec4f,                             // four free words (the young-history gather rays read them until 2026-11-07)
   weatherE: vec4f,                          // PARTICLE RAIN (experiment, game/rainFx.ts + shaders/particles*.wgsl): xy = centre xz of the near-field particle layer's disc, z = its radius (m), w = the share 0‥1 of the LATTICE rain volumetrics.wgsl drops inside it (rainNearKeep) — 0 = no particle layer: the lattice exactly as it was (NEGATIVE on a snow level: the metres past the level's rim the snow goes on falling, particles_common.wgsl snowPast — every lattice reader asks `> 0.0`)
   weatherF: vec4f,                          // PARTICLE RAIN v2: the drop's PHASE the lattice's streaks share with the particles' (volumetrics.wgsl rainLight): x = isotropic floor, y = forward-lobe weight, z = its Henyey-Greenstein g, w = × gain — w 0 = the lattice's isotropic sum exactly as it was
@@ -681,7 +681,7 @@ fn selfShadowT(P: vec3f, N: vec3f, rd: vec3f, tmax: f32, owner: u32) -> f32 {
 // gridCells[GRID_CB + 2ci]     = heightMask (bit s ⇔ some box registered in ci covers quantised heights [10s, 10s+9]) | cheby << 24
 // gridCells[GRID_CB + 2ci + 1] = start (24 bits) | min(count, 255) << 24          cheby = Chebyshev distance (cells) to the nearest occupied cell, 0 = occupied
 // gridItems[itemsB + k]        = box index (16 bits) | qmin << 16 | qmax << 24     q = gridYq of the box's y extent widened by 4 cm each way
-// scene.globalsY               = the same padded extent per global, in metres (globalMissesY)
+// scene.globalsY               = the same padded extent per global, in metres (no shader reads it since the height cull became globalOutside's own test: tools/qa/grid-globals.ts does)
 //
 // Why both are exact (same hit.t / idx / code, same occlusion answers, flag on or off):
 //  * Empty runs. An empty cell has no items, so not loading its (equal) start/end pair changes nothing; a cell at Chebyshev distance d from
@@ -937,8 +937,8 @@ fn occludedT(ro: vec3f, rd: vec3f, tmaxIn: f32, skipOwner: u32) -> f32 {
   if (GROUND_RAYS) { let tg = ghHit(ro, rd, select(tmaxIn, tCap, tCap >= 0.0)); if (tg >= 0.0) { tCap = tg; } }   // (the trial: a snow hill nearer than the cap is the cap — a nearer box still wins in the walk)
   return occludedTBoxes(ro, rd, tmaxIn, skipOwner, tCap);
 }
-// occludedT's box walk on its own (its statements, unchanged): the nearest of a box blocker nearer than tCap and tCap itself (−1 = clear). The SDF rig's soft-shadow
-// query (direct_common.wgsl shadowSample under frame.rigCfg bit 4) asks this with tCap −1 and multiplies the characters' analytic visibility in itself.
+// occludedT's box walk on its own (its statements, unchanged): the nearest of a box blocker nearer than tCap and tCap itself (−1 = clear). The fog of war's
+// sight rays and the place field ask this with tCap −1.
 fn occludedTBoxes(ro: vec3f, rd: vec3f, tmaxIn: f32, skipOwner: u32, tCap: f32) -> f32 {
   let invRd = safeInv(rd);
   let tb = isectBounds(ro, invRd, WORLD_MIN, WORLD_MAX);

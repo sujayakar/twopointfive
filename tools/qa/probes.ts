@@ -61,7 +61,7 @@
 //     particles: particles-determinism particles-off particles-queue particles-sites
 //     perf: ladder perf-cards perf-flags perf-texpool
 //     qrf: qrf-element qrf-gating qrf-limits qrf-perimeter qrf-reset qrf-timeline qrf-trigger qrf-wave qrfsquad response
-//     sdfrig: sdfrig-fit sdfrig-pack sdfrig-presets
+//     sdfrig: sdfrig-fit sdfrig-pack
 //     cast: cast-loader cast-file cast-fit cast-game cast-look cast-beam   (the look switch: both files, OFF = today's masks, one digest under either look;  a statured man's laser leaves his drawn muzzle;  the operators' and defenders' meshes: the loader's contract, the shipped file, each variant's proxy fit, the game on it)
 //     selector: selector-input selector-noise selector-rows selector-sustained
 //     selftest: selftest-fail selftest-fold selftest-holds selftest-knobs selftest-pass selftest-quiet selftest-side selftest-throw   (selftest-fold and selftest-side by their own names only)
@@ -3443,7 +3443,7 @@ if (on('director-scheduler', 'director', 'all')) await run('director-scheduler',
 // ---------------------------------------------------------------- the SDF character rig (sdfrig-probes.ts): the fit off the mannequin, BoxWorld's packing of it, and that no preset switches it (no tier since the capsule cleanup)
 { let ran = false;
   const sf = async (name: string, fn: string) => { if (on(name, 'sdfrig', 'all')) { ran = true; await run(name, async () => ((await import('./sdfrig-probes.ts')) as any)[fn]()); } };
-  await sf('sdfrig-fit', 'sdfrigFit'); await sf('sdfrig-pack', 'sdfrigPack'); await sf('sdfrig-presets', 'sdfrigPresets');
+  await sf('sdfrig-fit', 'sdfrigFit'); await sf('sdfrig-pack', 'sdfrigPack');
   if (ran) familyBanner('sdfrig', (await import('./sdfrig-probes.ts')).sdfrigFailures()); }
 // ---------------------------------------------------------------- the cast (cast-probes.ts): the new character meshes — the loader against a synthetic file, the shipped cast.gltf, the per-variant fits, the game standing on it
 { let ran = false;

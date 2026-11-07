@@ -169,7 +169,7 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
   panel.system(SYS.wx, { icon: '☂', short: 'Weather', title: 'weather · particle rain · wind (+ its field view) · moths · wet characters' });
   panel.system(SYS.frame, { icon: '▣', title: 'quality · resolution · debug view · TAAU · sharp direct · hour · the look · camera' });
   panel.system(SYS.direct, { icon: '☼', short: 'Direct', title: 'the direct-light estimator, its shadow rays, its culls, the level\'s lights' });
-  panel.system(SYS.indirect, { icon: '◐', short: 'Indirect', title: 'the final gather, GI in motion, the probe cache' });
+  panel.system(SYS.indirect, { icon: '◐', short: 'Indirect', title: 'the final gather, the probe cache' });
   panel.system(SYS.vol, { icon: '≋', short: 'Volume', title: 'beams + haze · froxel volumetrics · the smoke solver' });
   panel.system(SYS.mat, { icon: '◈', short: 'Matls', title: 'RT reflections · the detail layer · character materials' });
   panel.system(SYS.dn, { icon: '▤', short: 'Denoise', title: 'the shared denoiser\'s three clients' });
@@ -343,7 +343,7 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
   let z0 = [...S.skyZenith], h0 = [...S.skyHorizon];
   panel.slider(l, 'sky brightness', 0, 5, 0.05, () => skyNow(), v => { if (S.skyZenith !== skyZ || S.skyHorizon !== skyH) { z0 = [...S.skyZenith]; h0 = [...S.skyHorizon]; } skyScale = v; S.skyZenith = [z0[0] * v, z0[1] * v, z0[2] * v]; S.skyHorizon = [h0[0] * v, h0[1] * v, h0[2] * v]; skyZ = S.skyZenith; skyH = S.skyHorizon; }, '× the sky as the hour and the weather last set it. When either changes the sky (Frame ▸ Hour, a weather\'s cloud) this reads 1 again and the next move scales the new sky');
 
-  // ================================================================ INDIRECT LIGHT: the final gather, GI in motion, the probe cache
+  // ================================================================ INDIRECT LIGHT: the final gather, the probe cache
   panel.system(SYS.indirect);
   const il = panel.section('Final gather', { open: true, summary: () => `gather ${engine.passes.gw}×${engine.passes.gh} (1/${engine.passes.gatherDiv}) · firefly ${S.giFireflyK}${S.torchBounceCards ? ` · ${engine.passes.numCards} cards` : ''}` });
   flag(il, 'enabled', FrameFlags.Indirect);
