@@ -815,20 +815,30 @@ row on his machine is the answer, and the word puts the count back on any machin
   always wrote (`weatherKindConfig`, `snowConfig`, `snowLookConfig`: no caller can leave the word out), and a shader asks `lv(WX_KINDS)`: the prelude
   names each bit by the old name, so every use reads as it did with `lv( )` round it (128 uses in 22 files; comments untouched). The same answer at every
   use on every pixel, so the picture is the one it was by construction: a branch a level does not raise is not taken, where it was not in the program.
+  Read as pixels too (`tools/qa/draw-equal.cjs`, the tree before against this one, software adapter, 640 by 360, high): the office at night, the rain,
+  the firefight and the squad view EQUAL at both checkpoints, the squad view once the fog's compile is out of the comparison (the next bullet's trap).
   The cast's four numbers are the last four words of the mesh shadows' level list (read-only there: the refit's barrier needs a uniform loop bound, and
   the mesh buffer is written by the same kernel). The snow's hills pipeline (`gbufSnow`) is made on every level and drawn where a level has drifts.
   Nothing in the update reads any of it; `game/snowFx.ts` still asks the three tables what the page's level raised. No switch: one path.
   **What it costs:** the title's first compile reads the weather's and the snow's code it used to leave out: 6.8 MB pasted for the boot's set where the
   title had 6.2 and a snow level 6.8 (`shaderinline-check`, the page's rows on), about a tenth more text for the office and nothing more for a snow
-  level (with the fog of war's three: 6.9 MB). A visit that goes on to any mission compiles less in all. **What it may cost a frame is not known:** untaken branches are in every program
-  now, and one earlier case of that kind (the cut test in the box walk, before the cut swap) cost the fog pass 1.9 x on an NVIDIA card.
+  level (with the fog of war's three: 6.9 MB). A visit that goes on to any mission compiles less in all.
+  **On a cloud NVIDIA card (A10G, Chrome 157 on Vulkan, the benchmark at high with `adapt=0`, the tree before against this change alone, two pairs on four
+  boxes of one kind, 2026-11-07):** the first load's shaders 25.4 and 28.5 s before, 26.1 and 25.5 s after: no change outside what two runs of one build
+  differ by. The second and third scene of the benchmark, each a fresh page with the browser's and the driver's caches on: 8.5 / 9.2 s and 8.7 / 8.4 s
+  before, 7.3 / 7.4 s and 3.0 / 2.8 s after (one text for every level is one cache entry for every level). **What the untaken branches cost a frame:**
+  nothing the compute passes' GPU ms shows (every row inside the spread of two runs: 7.6 | 7.6 as it opened, 10.4 | 10.5 the dark block, 15.7 | 15.9 the
+  storm, 18.6 and 17.8 | 18.1 and 18.9 held still), and about 0.1 ms in the g-buffer pass off snow (0.21 to 0.26 before, 0.32 to 0.35 after, both pairs).
+  One trap in that text: its night snow row follows the FIGHT, not the build (17.3 where the floors line says "0 of 4 up", 19.1 to 19.3 where it says
+  "1 of 4 up", once on each build). With the driver's cache OFF and medium (`shader-count-page.cjs`, 8 cores, two boxes that may not be one kind): the
+  boot's pipelines 41.8 s before, 49.8 s after, and `particlesUpdate` is the last of the boot's programs in where it was the sixth (31.6 to 42.9 s): the particle
+  kernel is the next text to cut. The kept page on that card: the title 152 pipelines, 30 missions none.
   **Checks:** `bun run tools/qa/levelset-check.ts` (the page's boot recorded under the title's switches and a snow level's, rows as written and as the
   page opens: the same module texts and pipelines; the level word 0 and 511; the mesh shadows' one text for both casts with each cast's numbers in
   its list; `LEVELSET_BREAK=1` fails three) and `PORT=… JOBS=levels node tools/qa/keeppage-page.cjs` (EVERY mission of the list picked in turn on the
   kept page from the title: each compiles no pipeline and no module). `shadertrim-check` holds that the weather switch changes no text, the snow
-  checks read the level word's bit where they read the prelude's constant, `frame-layout` has the member's row, `shaderrows-check` was stamped (both
-  writings of the five kernels changed alike) and `splitrays-check`'s pin of `glossReflection` moved with its one line.
-  **Measured, software adapter, headless Chromium, verylow, `?paused` (2026-11-07):** the title compiled 148 pipelines and 68 modules (its boot's own, then the fog of war's and the later twins behind the start); each of the 30 missions of the list picked in turn on that one device then asked for 152 and compiled NONE, nor a module, 2 to 5 s a load. Before, by the same pages' text (`shader-count-page.cjs` on the tree before): the compound's mission after the title had 104 of its 142 pipelines' texts made already and compiled the rest. **Never seen on a GPU.**
+  checks read the level word's bit where they read the prelude's constant, `frame-layout` has the member's row, `shaderrows-check` was stamped.
+  **Measured, software adapter, headless Chromium, verylow, `?paused` (2026-11-07):** the title compiled 148 pipelines and 68 modules (its boot's own, then the fog of war's and the later twins behind the start); each of the 30 missions of the list picked in turn on that one device then asked for 152 and compiled NONE, nor a module, 2 to 5 s a load (137 and none once the three old denoise chains were out and the Rust game was the page's). Before, by the same pages' text (`shader-count-page.cjs` on the tree before): the compound's mission after the title had 104 of its 142 pipelines' texts made already and compiled the rest. **On a GPU: the counts and the times above on the cloud card, by tools. Nobody has looked at its picture there, and nothing of it was run on an Apple GPU.**
 - **Nothing is compiled at its first use: the fog of war's programs are asked for at every boot (2026-11-07; `engine.ts warmFirstUse`, called by
   main.ts after the boot's freeze; `render/fogofwar.ts FogPass.warm`, `FogSight.warm`).** The fog's sight table and its pass made their programs the
   first frame a mission drew the fog. The title draws none, so on the kept page the first squad mission of a visit compiled `fogSight`, `fogofwar` and
@@ -836,7 +846,11 @@ row on his machine is the answer, and the word puts the count back on any machin
   stutters during gameplay"). They are asked for once the boot's own are in, behind the start like the background set: not on the start card's count,
   nothing waits for them, and the load's record (`made`, frozen at the boot's end) does not count them. 104 KB pasted for the three, 143 for the cut
   twins. `tools/qa/pageboot.ts` asks for them as the page does, so the size and compile tools read them. A pass that gains a program of its own asks
-  for it in `warmFirstUse`. Still made at first use: whatever a `?word` trial builds, the save picture's, the debug views'. Never seen on a GPU.
+  for it in `warmFirstUse`. Still made at first use: whatever a `?word` trial builds, the save picture's, the debug views'.
+  **A trap for `draw-equal.cjs`:** against a tree from before this, the squad view DIFFERS at both checkpoints (a quarter of the pixels, at the men's
+  and the shadows' edges), because the older tree's fog programs are still compiling at drawn frames 3 and 7 and this one's are in. It is the compile
+  and nothing else: equal with `&nofow` on both sides, and equal with the fog on once both pages are given the time (`DRAW_EQUAL_AFTER_READY` = a module
+  that draws one frame and waits 150 s). The tree with the picture's lease alone is equal to the one before with no help. Never seen on a GPU.
 - **Windows: why the shader wait came back on every load, and the compile queue (2026-10-26, measured on a Windows machine: RTX 3080, a 16-thread desktop CPU,
   Chrome 155, a 4K 240 Hz display at 150 %).** Chrome on Windows runs WebGPU on D3D12 and compiles with DXC (`use_dxc` is on; FXC, `--disable-dawn-features=use_dxc`,
   had not finished the boot after 16 minutes). DXC inlines every call, so the big kernels are 5–25 s each (fgather's `main` grows from 95 KB of WGSL to ~680 KB inlined:
