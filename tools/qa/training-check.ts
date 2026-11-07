@@ -26,8 +26,8 @@
 //   (R)  the debugger's roster row: one short line, 'men ▸ S g · S g g · S g g g g · S'
 //   (T9) the new lines fit a bubble, none on the blocklist, none twice
 // TRAINING_BREAK=1 = the rule's own tables spoiled — MORALE_AT's two rows swapped, a green man's line out of reach, the leader's death worth nothing, his order
-// reaching nobody: (T1), (T2), (T3) green, (T5), (F2) and (F3) must fail (how a steady man copes, the flinch and its line, the roster row and the nerve are not
-// spoiled by it and pass).   exit 0 / 1
+// reaching nobody: (T3) green, (T5), (F2) and (F3) must fail (how a steady man copes, the mix by difficulty, the flinch and its line, the roster row and the nerve
+// are not spoiled by it and pass).   exit 0 / 1
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 const ROOT = resolve(import.meta.dir, '../..');
