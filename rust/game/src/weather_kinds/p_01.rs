@@ -18,6 +18,14 @@ const ALL_KINDS: [WeatherKind; 7] = [
     WeatherKind::Snow,
 ];
 
+/// The kind a text names, of the kinds a level can be started in.
+fn startable_kind(s: &str) -> Option<WeatherKind> {
+    if !is_weather_kind(Some(s)) {
+        return None;
+    }
+    ALL_KINDS.iter().copied().find(|k| k.as_str() == s)
+}
+
 /// Is this one of the kinds a level can be started in? (weatherKinds.ts isWeatherKind)
 pub fn is_weather_kind(s: Option<&str>) -> bool {
     match s {
@@ -131,6 +139,20 @@ pub fn unpack_rect(w: f64) -> [f64; 4] {
     [(w & 255) as f64 * ROOF_Q, ((w >> 8) & 255) as f64 * ROOF_Q, ((w >> 16) & 255) as f64 * ROOF_Q, (w >> 24) as f64 * ROOF_Q]
 }
 
+/// Is (x, z) in the footprint, edges included? (weatherKinds.ts inRect)
+pub fn in_rect(r: &[f64], x: f64, z: f64) -> bool {
+    x >= r[0] && z >= r[1] && x <= r[2] && z <= r[3]
+}
+
+/// The kind a query string or the host's query names, if any. (weatherKinds.ts weatherOfSearch)
+pub fn weather_of_search(search: &crate::weather_kinds::WeatherOfSearchSearch) -> Option<crate::weather_kinds::WeatherKind> {
+    let v = match search {
+        WeatherOfSearchSearch::Text(s) => crate::query::Query::parse(s).get(WEATHER_KEY).map(String::from),
+        WeatherOfSearchSearch::URLSearchParams(q) => q.get(WEATHER_KEY).map(String::from),
+    };
+    startable_kind(&v?)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -206,6 +228,23 @@ mod tests {
         }
         assert_eq!(pack_rect(Some([2.0, 0.0, 1.0, 5.0])), 0.0);
         assert_eq!(pack_rect(None), 0.0);
+    }
+
+    #[test]
+    fn kinds_of_search() {
+        let rows: [(&str, Option<WeatherKind>); 8] = [
+            ("?weather=fog", Some(WeatherKind::Fog)),
+            ("weather=%66og&weather=rain", Some(WeatherKind::Fog)),
+            ("a=1&weather=snow", None),
+            ("wea%74her=rain", Some(WeatherKind::Rain)),
+            ("?weather=", None),
+            ("??weather=fog", None),
+            ("x=1&weather=dust#z", None),
+            ("weather=+fog", None),
+        ];
+        for (s, want) in rows {
+            assert_eq!(weather_of_search(&WeatherOfSearchSearch::Text(String::from(s))), want);
+        }
     }
 
     #[test]

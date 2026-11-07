@@ -49,6 +49,11 @@ pub fn live(g: &mut crate::game::Game) -> bool {
     true
 }
 
+/// live, and the check's breakage is never set by the game (netquiet.ts fed)
+pub fn fed(g: &mut crate::game::Game) -> bool {
+    true
+}
+
 /// the loud noises his ears have counted (netquiet.ts loudOf)
 pub fn loud_of(g: &mut crate::game::Game, gd: GuardId) -> f64 {
     let h = &g.gd[gd].witness.heard;

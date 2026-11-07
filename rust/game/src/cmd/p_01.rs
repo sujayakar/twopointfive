@@ -511,6 +511,15 @@ pub fn check_cmd_in(g: &mut crate::game::Game, raw: Option<&crate::cmd::PlayerCm
     CheckCmdIn { cmd, fixed }
 }
 
+/// `c` with nothing pressed: the same cursor and view, no key, no button, no wheel.   (cmd.ts stillCmd)
+pub fn still_cmd(c_2: &crate::cmd::PlayerCmd) -> crate::cmd::PlayerCmd {
+    let c = c_2;
+    PlayerCmd {
+        keys: Vec::new(), pressed: Vec::new(), buttons: 0.0, clicked: 0.0, wheel: 0.0,
+        mx: c.mx, my: c.my, w: c.w, h: c.h, pw: c.pw, ph: c.ph, view: c.view.clone(),
+    }
+}
+
 /// A record as a tick would take it, for code that must leave it as it came: the check on a copy.   (cmd.ts honestCopy)
 pub fn honest_copy(g: &mut crate::game::Game, c_2: &crate::cmd::PlayerCmd, near: Option<V3>) -> crate::cmd::PlayerCmd {
     check_cmd(g, Some(c_2), near).cmd
@@ -583,6 +592,15 @@ fn load_row(s: &mut Seat, i: &mut crate::input::Input, cam: &mut crate::camera::
 pub fn seat_load(g: &mut crate::game::Game, id: SeatId, c_2: &crate::cmd::PlayerCmd) {
     let (input, cam) = (g.tab.cmd_seat[id].input, g.tab.cmd_seat[id].cam);
     load_row(&mut g.tab.cmd_seat[id], &mut g.tab.input[input], &mut g.tab.camera[cam], c_2);
+}
+
+/// What was handed, once; else a still record of the view it last had (`like`'s before it has had one).   (cmd.ts Seat.handed)
+pub fn seat_handed(g: &mut crate::game::Game, id: SeatId, like: &crate::cmd::PlayerCmd) -> crate::cmd::PlayerCmd {
+    let s = &mut g.tab.cmd_seat[id];
+    match s.waiting.take() {
+        Some(c) => c,
+        None => still_cmd(s.cmd.as_ref().unwrap_or(like)),
+    }
 }
 
 /// The swallow on a seat's row.   (cmd.ts Seat.swallow)

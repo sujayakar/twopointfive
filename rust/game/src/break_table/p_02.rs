@@ -59,6 +59,10 @@ fn emit_chips(g: &mut Game, at: V3, dir: V3, k: f64, speed: f64, size: f64, aspe
     });
 }
 
+// ---------------------------------------------------------------- the dice, the pool's plain questions
+/// (breakTable.ts Breaks.constructor)
+pub fn breaks_new(g: &mut crate::game::Game) -> crate::break_table::Breaks { Breaks::blank() }
+
 /// The die that lays out what a cell throws. (breakTable.ts Breaks.hash)
 pub fn breaks_hash(g: &mut crate::game::Game) -> f64 {
     let n = g.destr.breaks.counter;

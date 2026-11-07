@@ -235,6 +235,64 @@ mod tests {
         l
     }
 
+    fn ids() -> Vec<String> {
+        ["w_n", "b_s", "x_1", "c_d", "m_c", "q7", "hd", "d1", "d2", "d3", "d4", "d5", "d6", "d7", "d8", "v1", "v2", "p1", "p2", "ward", "radio_room", "kitchen_to_hall", "back_1", "n9", "records_west"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect()
+    }
+
+    fn pairs(m: &JsMap<String, String>) -> Vec<(String, String)> {
+        m.iter().map(|(k, v)| (k, v.clone())).collect()
+    }
+
+    fn want(rows: &[(&str, &str)]) -> Vec<(String, String)> {
+        rows.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect()
+    }
+
+    // Every expected value below is what the TypeScript printed under bun for the same level.
+    const COMMON_HEAD: &[(&str, &str)] = &[
+        ("w_n", "hall-side mess door"),
+        ("b_s", "outer mess door"),
+        ("x_1", "first mess door"),
+        ("c_d", "mess door from bunks 1"),
+        ("m_c", "mess to comms room door"),
+        ("q7", "second mess door"),
+        ("hd", "second ward door"),
+        ("d1", "first dock door"),
+        ("d2", "second dock door"),
+        ("d3", "third dock door"),
+        ("d4", "fourth dock door"),
+        ("d5", "fifth dock door"),
+        ("d6", "fifth dock door"),
+        ("d7", "fifth dock door"),
+        ("d8", "fifth dock door"),
+    ];
+    const VAULT: &[(&str, &str)] = &[("v1", "hall-side vault door"), ("v2", "yard-side vault door")];
+    const PANTRY: &[(&str, &str)] = &[("p1", "northerner-side pantry door"), ("p2", "yard-side pantry door")];
+
+    #[test]
+    fn made_names_match_the_typescript() {
+        let expect: Vec<(String, String)> = [COMMON_HEAD, VAULT, PANTRY].iter().flat_map(|r| want(r)).collect();
+        assert_eq!(pairs(&names_of(&level(), &ids(), None)), expect);
+    }
+
+    #[test]
+    fn written_names_match_the_typescript() {
+        let written = authored_of(&level(), &ids());
+        assert_eq!(pairs(&written), want(&[("v1", "strong door"), ("v2", "the"), ("n9", "night door")]));
+        let expect: Vec<(String, String)> = [COMMON_HEAD, PANTRY].iter().flat_map(|r| want(r)).collect();
+        assert_eq!(pairs(&names_of(&level(), &ids(), Some(&written))), expect);
+    }
+
+    #[test]
+    fn no_names_for_a_lesson_or_a_level_without_structure() {
+        let mut lesson = level();
+        lesson.scenarios.as_mut().unwrap().lesson = Some(LessonData::zeroed());
+        assert!(names_of(&lesson, &ids(), None).is_empty());
+        assert!(names_of(&Level::zeroed(), &ids(), None).is_empty());
+    }
+
     #[test]
     fn shorthand_ids_match_the_typescript() {
         let rows = [
@@ -245,6 +303,22 @@ mod tests {
         for (id, want) in rows {
             assert_eq!(id_is_shorthand(id), want, "{id}");
         }
+    }
+
+    #[test]
+    fn bearing_is_a_whole_word() {
+        assert!(has_bearing("north corridor") && has_bearing("the western wing") && has_bearing("é east"));
+        assert!(!has_bearing("northerner") && !has_bearing("north_wing") && !has_bearing("North"));
+    }
+
+    #[test]
+    fn bare_drops_a_leading_article_only() {
+        assert_eq!(bare("The  mess"), "mess");
+        assert_eq!(bare("THE\u{a0}x"), "x");
+        assert_eq!(bare("theatre"), "theatre");
+        assert_eq!(bare("the"), "the");
+        assert_eq!(bare("the\u{85}x"), "the\u{85}x");
+        assert_eq!(bare("é the x"), "é the x");
     }
 
     /// A door by its ID: nameDoors over rows of `g.dr`; every expected value is what the TypeScript printed under bun for the same doors.

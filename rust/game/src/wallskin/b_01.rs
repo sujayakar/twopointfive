@@ -28,6 +28,10 @@ type Rect = [f64; 4];
 fn into_b(b: &Bx, p: V3) -> V3 { let (cs, sn) = (m::cos(b.yaw), m::sin(b.yaw)); let (x, z) = (p[0] - b.c[0], p[2] - b.c[2]); [cs * x - sn * z, p[1] - b.c[1], sn * x + cs * z] }
 fn out_of_b(b: &Bx, l: V3) -> V3 { let (cs, sn) = (m::cos(b.yaw), m::sin(b.yaw)); [b.c[0] + cs * l[0] + sn * l[2], b.c[1] + l[1], b.c[2] - sn * l[0] + cs * l[2]] }
 
+/// A point in a box's own frame (its centre the origin, its yaw undone). (src/game/wallskin.ts:82 into)
+pub fn into(g: &mut crate::game::Game, b: BoxId, p: [f64; 3]) -> [f64; 3] { into_b(&g.tab.boxes[b], p) }
+/// … and back. (src/game/wallskin.ts:83 outOf)
+pub fn out_of(g: &mut crate::game::Game, b: BoxId, l: [f64; 3]) -> [f64; 3] { out_of_b(&g.tab.boxes[b], l) }
 /// (src/game/wallskin.ts:84 inside)
 pub fn inside(r: [f64; 4], u: f64, v: f64) -> bool { u > r[0] && u < r[1] && v > r[2] && v < r[3] }
 

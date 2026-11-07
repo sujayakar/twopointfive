@@ -44,6 +44,11 @@ pub fn rescue_flow_f(g: &mut crate::game::Game) -> Option<crate::scene_scenarios
     crate::rescue::rescue_data(g).and_then(|d| d.flow)
 }
 
+/// (rescueflow.ts RescueFlow.constructor)
+pub fn rescue_flow_new(g: &mut crate::game::Game) -> crate::rescueflow::RescueFlow {
+    RescueFlow::blank()
+}
+
 /// A fresh staging: nothing known, nobody on a job. (rescueflow.ts RescueFlow.reset)
 pub fn rescue_flow_reset(g: &mut crate::game::Game) {
     let f = &mut g.rescue.flow;

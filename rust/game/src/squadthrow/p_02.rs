@@ -716,6 +716,17 @@ pub fn rows(g: &mut crate::game::Game) -> Vec<OrdersOrderDefId> {
     out
 }
 
+/// The squad's HUD block: the throw just made. (squadthrow.ts notes)
+pub fn notes(g: &mut crate::game::Game) -> Vec<crate::orders::OrderNote> {
+    let key = crate::seats::view_key(g);
+    if let Some(w) = g.m.squadthrow.states.get(key).and_then(|s| s.shown.as_ref()) {
+        if g.time >= w.t && g.time - w.t < g.k.squadthrow.shown_secs {
+            return vec![crate::orders::OrderNote::Text(w.text.clone())];
+        }
+    }
+    Vec::new()
+}
+
 /// The rows on the menu while the switch is on, off it otherwise. (squadthrow.ts sync)
 pub fn sync(g: &mut crate::game::Game) {
     let has = g.orders.defs.iter().any(|d| g.tab.orders_order_def[*d].id == THROW_OPEN);
