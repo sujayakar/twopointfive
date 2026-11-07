@@ -9,12 +9,14 @@
 //             have a place a squad can work from outside; nothing is the engine's until a charge goes (the engine's own list is the partitions', on or off);
 //   (squad)   the order from OUTSIDE by the partition's own presses (X, 5, 3): a man sets it, the rest stand off, nothing until Sam's F; then a hole a man walks
 //             through, the squad unhurt, every man in through it, the order ends 'in';
-//   (sam)     with no squad: the Space row at the foot of an outer wall reads 'wall · outer wall', setSecs on it, F, and he walks in through the hole;
+//   (sam)     with no squad: the Space row at the foot of an outer wall reads 'wall · outer wall', setSecs on it, set off by his own action from out of its
+//             blast, and he walks in through the hole;
 //   (hard)    an outer wall is opened by the charge set on it and by nothing else: rounds and a charge-sized blast with no charge on it leave it whole and
 //             un-adopted; after the breach, more of the same widen nothing;
 //   (live)    both sides awake through a breach: nothing throws, nobody ends in a wall, the change goes out on the engine's feed;
 //   (reset)   a restart after a breach: the wall is whole and structure again (the engine has let it go); a checkpoint taken after a breach, loaded: the hole is there.
 import { standUp, ROOT } from './headless.ts';
+import { samBlows, samBreach } from './charge-rig.ts';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 const WC = await import(`${ROOT}/src/game/wallcharge.ts`);
@@ -73,7 +75,9 @@ async function rig(scn: string, seed: number, o: { squad?: boolean; still?: bool
   const R = { W, game, input, O, D, C, said, spoke, scn,
     get team(): any[] { return O.squad(); }, get up(): any[] { return O.squad().filter((m: any) => m.state !== 'dead'); },
     get hostiles(): any[] { return game.guards.filter((x: any) => x.team !== 'operative' && x.team !== 'civilian'); },
-    step(n = 1) { for (let i = 0; i < n; i++) { game.player.visibility = 0.05; if (o.still ?? true) still(); W.step(DT); } },
+    /** what the rig does before every step (handed to charge-rig.ts, which steps the stand itself) */
+    each() { game.player.visibility = 0.05; if (o.still ?? true) still(); },
+    step(n = 1) { for (let i = 0; i < n; i++) { R.each(); W.step(DT); } },
     until(pred: () => boolean, secs: number) { for (let i = 0; i < secs * 60 && !pred(); i++) R.step(); return pred(); },
     press(code: string) { input.pressed.add(code); R.step(); },
     pick(p: number[], ...n: number[]) { W.cursorAt([p[0], p[1], p[2]]); input.pressed.add(ORDERS.key); R.step(); R.step(20); for (const k of n) { input.pressed.add(`Digit${k}`); R.step(); R.step(6); } },
@@ -190,7 +194,7 @@ async function probeSquad(scn: string): Promise<boolean> {
 
 // ================================================================ sam
 async function probeSam(scn: string): Promise<boolean> {
-  const F = family(`outerwall-sam: with no squad — the Space row at the foot of an outer wall, setSecs on it, F, and in (${scn})`);
+  const F = family(`outerwall-sam: with no squad — the Space row at the foot of an outer wall, setSecs on it, his own action, and in (${scn})`);
   const R = await rig(scn, 7, { squad: false }); const { D, C, game, input } = R;
   const P = outerSites(R, 'outside')[0] ?? outerSites(R, 'yard')[0]; if (!P) { F.verdict(false, 'an outer wall with floor both sides', 'none found'); return F.done(); }
   const W0 = P.W, T = thickOf(W0), foot = wallPt(W0, 0, 0.55), a: Vec3 = wallPt(W0, 0, 1.2), b: Vec3 = wallPt(W0, 0, -(T + 1.2)), before = R.pathLen(a, b);
@@ -203,9 +207,9 @@ async function probeSam(scn: string): Promise<boolean> {
   F.verdict(done && Math.abs(game.time - t0 - DOORTOOLS.setSecs) < 0.2 && R.spent(c0, k0) && input.keys.size === 0, 'stood on it for setSecs with no key held: the charge is on the wall, out of the bag', `set after ${f2(game.time - t0)} s (setSecs ${DOORTOOLS.setSecs}) · charges ${D.charges} · "${R.said.slice(-1)[0]}"`);
   if (!done) return F.done();
   R.step(60 * 3); F.verdict(C.set.length === 1 && !C.holeAt(C.set[0].wall) && R.pathLen(a, b) === before && !game.destr.walls.breakableAt(W0.index), 'three seconds on: nothing has happened, the wall is still structure', `set ${C.set.length} · route ${f2(R.pathLen(a, b))} m`);
-  const Wc = C.set[0].wall; game.teleportPlayer(wallPt(Wc, 3.0, 0.8)); R.step(3); R.press('KeyF');
+  const Wc = C.set[0].wall; samBlows(R.W, C.set[0], R.each);   // (his own charge goes off from his own action, out of its blast: the squad's key is not its key — ownblow.ts. Until 2026-11-07 this pressed F, with that rule written off)
   const hole = C.holeAt(Wc), after = R.pathLen(a, b);
-  F.verdict(!!hole && hole.half * 2 >= 1.2 && after < 4.5 && C.set.length === 0 && C.ops.length === 0 && !!game.destr.walls.breakableAt(W0.index)?.hard, 'F from three metres along the wall: a hole a man fits through', `hole ${hole ? f2(hole.half * 2) : '—'} m · route ${f2(before)} → ${f2(after)} m · "${R.said.filter(s => /^charge blown/.test(s)).slice(-1)[0]}"`);
+  F.verdict(!!hole && hole.half * 2 >= 1.2 && after < 4.5 && C.set.length === 0 && C.ops.length === 0 && !!game.destr.walls.breakableAt(W0.index)?.hard, 'set off by his own action from out of its blast: a hole a man fits through', `hole ${hole ? f2(hole.half * 2) : '—'} m · route ${f2(before)} → ${f2(after)} m · "${R.said.filter(s => /^charge blown/.test(s)).slice(-1)[0]}"`);
   if (hole) { const near = wallPt(Wc, hole.du, 0.9), far = wallPt(Wc, hole.du, -(T + 0.9)); game.teleportPlayer(near); R.step(3); const ok = R.walk(far, 8, () => wallOff(Wc, game.player.char.pos) < -(T + 0.4)), pos = game.player.char.pos;
     F.verdict(ok && wallOff(Wc, pos) < -T, 'Sam walks in through it on his own feet', `from ${at(near)} to ${at(pos)} (${f2(-wallOff(Wc, pos) - T)} m past the far face)`);
     // the breach is still that wall to the module: no second charge where it is open, a place beside it still takes one
@@ -214,8 +218,8 @@ async function probeSam(scn: string): Promise<boolean> {
   // from inside, outward (the module asks no more of a wall than which one it is): the same wall kind on another building's wall
   const Q = outerSites(R, 'inside').find(s => s.W.index !== W0.index);
   if (!Q) F.note('no place on another outer wall with room to work from inside on this level — the inside-out blast is not checked here');
-  else { D.charges = DOORTOOLS.charges; R.kit(); game.teleportPlayer(wallPt(Q.W, 0, 0.55)); R.aim(Q.top); const ok = game.selectVerb('wall', 'charge'); R.press('Space'); const set = R.until(() => C.set.length === 1, DOORTOOLS.setSecs + 1);
-    const Wq = C.set[0]?.wall ?? Q.W; game.teleportPlayer(wallPt(Wq, 3.0, 0.8)); R.step(3); R.press('KeyF'); const h2 = C.holeAt(Wq);
+  else { D.alone(DOORTOOLS.charges); C.setCarried(null); game.teleportPlayer(wallPt(Q.W, 0, 0.55)); R.aim(Q.top); const ok = game.selectVerb('wall', 'charge'); R.press('Space'); const set = R.until(() => C.set.length === 1, DOORTOOLS.setSecs + 1);
+    const Wq = C.set[0]?.wall ?? Q.W; if (C.set[0]) samBlows(R.W, C.set[0], R.each); const h2 = C.holeAt(Wq);
     F.verdict(ok && set && !!h2 && h2.half * 2 >= 1.0 /* (holeAt's width is twice the way through's distance to the gap's nearer end: lived-in furniture at a face — block-squads' wall 28 — moves the way through off the gap's middle, 1.13 m of the same 1.5 m hole) */, 'from INSIDE, outward: the same row, the same hole (the charge asks which wall, not which face)', `wall ${Q.W.index} at ${at(Q.p)} · row ${ok} · set ${set} · hole ${h2 ? f2(h2.half * 2) : '—'} m`); }
   return F.done();
 }
@@ -231,8 +235,8 @@ async function probeRooms(scn: string): Promise<boolean> {
     R.step(60); const far = wallPt(site.W, 0, -(thickOf(site.W) + 1.0)), near = wallPt(site.W, 0, 1.0);
     const of = (p: Vec3) => { const r = fight.roomAt(p); return r ? { id: r.id, cells: r.cells.size, doors: r.entries.length } : null; };
     const b = { far: of(far), near: of(near) };
-    R.C.set.push({ wall: site.W, t: g.time, by: 'probe', paid: 0 }); R.C.blow(R.C.set[0]); R.step(60);
-    return { W: site.W.index, hole: !!R.C.holeAt(site.W), before: b, after: { far: of(far), near: of(near) } };
+    const br = samBreach(R.W, site.W, R.each); R.step(60);   // (set by Sam's own hands and set off by his own action: a charge pushed onto the tools' copy by hand never reaches the game)
+    return { W: site.W.index, hole: !!br.hole && !!R.C.holeAt(br.wall), before: b, after: { far: of(far), near: of(near) } };
   };
   const say = (r: any) => (r ? `${r.cells} cells / ${r.doors} doors` : 'no room');
   const O = await shape('outer');
@@ -259,7 +263,7 @@ async function probeHard(scn: string): Promise<boolean> {
   F.verdict(walls.all().length === n0 && col.boxes.length === s0 && !walls.breakableAt(W.index) && !C.holeAt(W) && left === null, 'forty rounds into it and a charge-sized blast at its face with no charge set: whole, and still not the engine\'s', `breakables ${n0} → ${walls.all().length} · statics ${s0} → ${col.boxes.length} · hole ${C.holeAt(W) ? 'OPEN' : 'none'} · rounds' work left: ${left === null ? 'not a breakable' : left}`);
   // the breach, by Sam's own charge
   game.teleportPlayer(wallPt(W, 0, 0.55)); R.aim(P.top); game.selectVerb('wall', 'charge'); R.press('Space'); R.until(() => C.set.length === 1, DOORTOOLS.setSecs + 1);
-  const Wc = C.set[0]?.wall ?? W; game.teleportPlayer(wallPt(Wc, 3.0, 0.8)); R.step(3); R.press('KeyF'); R.step(5);
+  const Wc = C.set[0]?.wall ?? W; if (C.set[0]) samBlows(R.W, C.set[0], R.each); R.step(5);
   const B1 = walls.breakableAt(W.index), h1 = C.holeAt(Wc);
   F.verdict(!!B1?.hard && !!h1 && walls.all().length === n0 + 1, 'the charge set on it opens it: one more breakable in the engine\'s list, a hard one', `${B1 ? `${B1.open} of ${B1.cells} cells open` : 'not adopted'} · hole ${h1 ? f2(h1.half * 2) : '—'} m · breakables ${walls.all().length}`);
   if (!B1 || !h1) return F.done();
@@ -273,7 +277,7 @@ async function probeHard(scn: string): Promise<boolean> {
   // a second charge beside the first hole opens its own stretch (the wall is still chargeable)
   { const u2 = h1.du + (h1.du >= 0 ? -1 : 1) * (h1.half + 1.6), w2 = wallAt(game, wallPt(Wc, u2, 0, 1.05), wallPt(Wc, u2, 1.5));
     if (!w2 || w2.index !== W.index || !w2.ok) F.note('no room for a second charge further along this wall');
-    else { C.set.push({ wall: w2, t: game.time, by: 'probe', paid: 0 }); game.teleportPlayer(wallPt(w2, 0, 3.5)); R.step(2); R.press('KeyF'); R.step(5); const B3 = walls.breakableAt(W.index);
+    else { samBreach(R.W, w2, R.each); R.step(5); const B3 = walls.breakableAt(W.index);
       F.verdict(!!B3 && B3.open > B2!.open, 'a second charge set further along the same wall opens its own stretch', `cells open ${B2!.open} → ${B3?.open}`); } }
   return F.done();
 }
@@ -285,7 +289,7 @@ async function probeReset(scn: string): Promise<boolean> {
   const P = outerSites(R, 'outside')[0] ?? outerSites(R, 'yard')[0]; if (!P) { F.verdict(false, 'an outer wall', 'none found'); return F.done(); }
   const n0 = walls.all().length, s0 = col.boxes.length;
   const breach = () => { game.teleportPlayer(wallPt(P.W, 0, 0.55)); R.aim(P.top); game.selectVerb('wall', 'charge'); R.press('Space'); if (!R.until(() => C.set.length === 1, DOORTOOLS.setSecs + 1)) return null;
-    const Wc = C.set[0].wall; game.teleportPlayer(wallPt(Wc, 3.0, 0.8)); R.step(3); R.press('KeyF'); R.step(40); return Wc; };
+    const Wc = C.set[0].wall; samBlows(R.W, C.set[0], R.each); R.step(40); return Wc; };
   const W1 = breach(), open1 = !!W1 && !!C.holeAt(W1);
   game.restartEncounter(); R.step(5); const full = D.charges === DOORTOOLS.charges; R.kit();
   F.verdict(open1 && !C.holeAt(W1) && !walls.breakableAt(P.W.index) && walls.all().length === n0 && col.boxes.length === s0 && full && !!wallAt(game, P.p, P.near)?.outer,
