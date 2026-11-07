@@ -58,6 +58,7 @@ const st = (c: Character): St => { let s = ST.get(c); if (!s) ST.set(c, s = { lo
 const STAND_SH = 1.4, CROUCH_SH = 0.99;   // the gun shoulder's height standing / crouched (the mannequin's, measured): how far down he is, for the carriages' crouched numbers
 const TUCK_REACH = 0.235;                 // where WALL_TUCK leaves the muzzle ahead of his feet at gunWall 1 (measured: 0.21‥0.235 over the FN2000, the AKS-74U and the pistol)
 const FRESH_S = 0.05;                       // an answer older than this is nobody's (a man nobody asked about this frame or last: dead, held, pinned)
+const TELEPORT_M = 0.25;                    // further than this in a frame is not a step (teleportPlayer, a staged man): no speed read off it
 /** the floor's fight: when one was last seen, asked once a frame (GUNWALL.fightS) */
 const FIGHT = new GameSideMap<Game, { t: number; until: number }>('gunwall.FIGHT');
 
@@ -69,6 +70,16 @@ function frame(c: Character, yaw: number) {
 }
 const at = (o: Vec3, F: { f: Vec3; r: Vec3 }, fwd: number, right: number, y: number): Vec3 =>
   [o[0] + F.f[0] * fwd + F.r[0] * right, o[1] + y, o[2] + F.f[2] * fwd + F.r[2] * right];
+/** his feet's speed over the floor, sampled once a frame by whoever asks first */
+function track(g: Game, c: Character, S: St): void {
+  if (S.vt === g.time) return;
+  const h = g.time - S.vt;
+  const dx = c.pos[0] - S.px, dz = c.pos[2] - S.pz;
+  if (h > 1e-5 && h < 0.1 && Math.hypot(dx, dz) < TELEPORT_M) { S.vx = dx / h; S.vz = dz / h; } else S.vx = S.vz = 0;   // (a gap, the clock gone back — a load —, or put somewhere else: standing)
+  S.px = c.pos[0]; S.pz = c.pos[2]; S.vt = g.time;
+}
+/** how fast he closes along `f`, m/s (never negative: backing off buys nothing early) */
+const closing = (S: St, f: Vec3) => Math.max(0, S.vx * f[0] + S.vz * f[2]);
 
 /** The line a RAISED gun lies along on heading `yaw`, from his feet (metres off the measured carriages, standing → crouched): `a` at the hand end, `b` at the
  *  muzzle. The aim: level with his eye line, on his gun side, pitched as he aims. The port: the long gun slanting up across his chest, the pistol level at

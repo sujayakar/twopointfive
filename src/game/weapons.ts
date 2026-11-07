@@ -371,7 +371,7 @@ export class Firearm {
    *  shell is IN the gun, how many are, whether one begun with nothing in the gun goes straight into the chamber, and whether its end runs the bolt */
   private shellT: readonly number[] | null = null; private shellI = 0; private shellPort = false; feedPull = false;
   /** the beat the reload under way (or the next plain one) runs on */
-  get reloadRow(): WeaponDef['reload'] { return goneWithTick('Firearm.reloadRow') as any; }
+  get reloadRow(): WeaponDef['reload'] { return this.beat ?? this.def.reload; }
   shotsFired = 0;
   /** a guard's burst in progress (guards.ts burstTrigger; only ever non-null on a row with a BurstSpec) — see BurstState */
   burst: BurstState | null = null;

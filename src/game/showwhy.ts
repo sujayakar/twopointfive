@@ -120,6 +120,12 @@ export function showWhyLog(g: Game): WhyNote[] { return states.get(g)?.log ?? []
 export function resetShowWhy(g: Game): void { states.delete(g); }
 
 
+/** the side of his line to his man the player stands on: 1 his left, -1 his right (the way the wave sends him: the short way out) */
+function lineSide(g: Game, gd: Guard): 1 | -1 {
+  const h = g.fight.opOf(gd)?.tgt, c = gd.char.pos, pl = g.player.char.pos; if (!h) return 1;
+  const dx = h.char.pos[0] - c[0], dz = h.char.pos[2] - c[2];   // (his left of that line is (dz, -dx): the model's +x under a yaw of atan2(dx, dz))
+  return ((pl[0] - c[0]) * dz - (pl[2] - c[2]) * dx) / Math.max(1e-3, Math.hypot(dx, dz)) >= -0.15 ? 1 : -1;   // (on the line itself, or a hand off it: the wide push out to his left, the one that reads from overhead)
+}
 
 
 /** What holds this man from the plain thing right now, or null — the standing read (a menu row, a voice pass, a check). Null with the switch off. */

@@ -118,7 +118,7 @@ export function knowledgeOf(g: Game, gd: Guard): Knowledge {
  *   pressed         +0.03 per press past the third (cap +0.15): the exhausted pool gets rawer the longer you lean
  *   bias            nervy +0.15 · hard −0.10 · steady 0                                                          (TEMPERAMENT)
  */
-export function agitationOf(g: Game, gd: Guard): number { return goneWithTick('agitationOf') as any; }
+export function agitationOf(g: Game, gd: Guard): number { return agitationTerms(g, gd).a; }
 function agitationTerms(g: Game, gd: Guard): { a: number; why: string[] } {
   const W = gd.witness, H = W.heard, t = temperamentOf(gd), talk = gd.talk; const why: string[] = []; let a = 0;
   const add = (v: number, label: string) => { if (Math.abs(v) < 1e-6) return; a += v; if (Math.abs(v) >= 0.005) why.push(`${label} ${v > 0 ? '+' : ''}${v.toFixed(2)}`); };
@@ -429,7 +429,10 @@ function ownName(level: Level, p: Vec3): string | null { const w = ownPlace(leve
  *  the level's own (levelRects), on the office one of roomName's — or null (open ground the level has no word for: the caller says 'outside the …') */
 export function placeIn(level: Level, p: Vec3): PlaceRect | null { return crossToRust('placeIn', undefined, [level, p]) as any; }
 /** every rectangle placeIn answers by: the level's own (levelRects), on the office roomName's tables (no ids) — for a reader of the lines (the QA commander) */
-export function placeRects(level: Level): PlaceRect[] { return crossToRust('placeRects', undefined, [level]) as any; }
+export function placeRects(level: Level): PlaceRect[] { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('placeRects', undefined, [level]); if (__r !== RUST_PASS) return __r as any; } }
+  const R = levelRects(level); if (R) return R; if (!isOffice(level)) return [];
+  roomName(level, [0, 0, 0]); return roomRects.get(level)!.rooms.map(r => ({ ...r, id: null }));
+}
 const OFFICE_WALLS: Rect = { name: 'inside', x0: 4, x1: 36, z0: 4, z1: 24 };
 /** what a level that names none of its floor is called in a line ('in the building', 'by the building'): never a room of the office's */
 const NAMELESS = 'the building';
