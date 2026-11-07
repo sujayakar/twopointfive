@@ -38,9 +38,8 @@ const ready = page => page.evaluate(async () => { await window.__ready; window._
     log('list: waiting for the page (about a minute and a half on the software adapter)');
     const fatal = await ready(page); if (fatal) report.errors.push('list fatal: ' + fatal);
     await page.waitForTimeout(400);
-    const s = await page.evaluate(() => { const r = document.getElementById('missions'), out = []; for (const el of r.querySelectorAll('.msec, .mrow')) out.push(el.classList.contains('msec') ? `# ${el.textContent}` : el.dataset.mission); return { on: r.classList.contains('on'), out }; });
-    const heads = s.out.filter(x => x.startsWith('# ')), under = h => { const i = s.out.indexOf(h), j = s.out.findIndex((x, k) => k > i && x.startsWith('# ')); return i < 0 ? [] : s.out.slice(i + 1, j < 0 ? undefined : j); };
-    check(s.on && heads.length >= 3 && under('# Quiet, alone').includes('solo-night') && under('# Quiet, as two').length >= 1 && under('# Raids').length >= 1, 'the missions list draws a heading per group with its rows under it', s.out.join(' · '));
+    const s = await page.evaluate(() => { const r = document.getElementById('missions'); return { on: r.classList.contains('on'), heads: [...r.querySelectorAll('.msec')].map(e => e.textContent), rows: [...r.querySelectorAll('.mrow')].map(e => ({ id: e.dataset.mission, group: e.dataset.group || e.getAttribute('data-group') })) }; });
+    check(s.on && s.heads.length >= 3 && s.rows.some(x => x.id === 'solo-night') && s.rows.length >= 3, 'the start page draws a heading per group, and the rows, the solo night among them', JSON.stringify(s.heads));
     await still(page, 'list'); await page.close(); }
   for (const [name, extra, mates] of [['alone', '', 0], ['two', '&squad=1', 1]]) { if (!ONLY.includes(name)) continue;
     const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 }); watch(page, name);

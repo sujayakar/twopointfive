@@ -173,7 +173,7 @@ export async function picksList(): Promise<boolean> {
       `${h ?? 'no row has switches'} → '${left}' · others untouched ${same} · names a mission ${names}`); }
   // ---- what no row of today's list does, held on a list made up for it: a row with a team size and switches of its own (a quiet pair), and the walk
   //      through a row that opens on hard
-  { const Q: any = { id: 'quiet-two', mission: 'block-four', squad: 1, flags: ['pair', 'silentstart'], tags: ['quiet'], line: 'x' }, H: any = { id: 'on-hard', mission: 'depot-four', difficulty: 'hard', line: 'x' }, S: any = { id: 'plain', mission: 'compound-four', line: 'x' };
+  { const Q: any = { id: 'quiet-two', mission: 'block-four', squad: 1, flags: ['pair', 'silentstart'], line: 'x' }, H: any = { id: 'on-hard', mission: 'depot-four', difficulty: 'hard', line: 'x' }, S: any = { id: 'plain', mission: 'compound-four', line: 'x' };
     const LL = [S, H, Q], hq = P.pickHref(Q, '?mute&pair&squad=3', LL)!, q = paramsOf(hq);
     const made = q.get('squad') === '1' && q.has('pair') && q.has('silentstart') && q.get('pick') === 'quiet-two' && q.getAll('pair').length === 1 && q.getAll('squad').length === 1 && q.has('mute');
     const back = P.pickOfQuery(hq, LL) === Q && P.pickOfQuery(hq.replace('&silentstart', ''), LL) === null && P.pickHref(Q, hq, LL) === hq;

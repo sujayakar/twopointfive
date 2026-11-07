@@ -7,7 +7,7 @@
 // the down card (Restart): the rating word and score, the numbers, the badges, the floor map with his path and the pins, the timeline. While any of them is
 // open main.ts freezes the simulation and keeps rendering the frozen frame underneath. Plain DOM, styled in index.html (#menu…) with ui/theme.ts's tokens.
 import { SAVETIMELINE, type SlotInfo } from '../game/savestate';
-export { loadSandbox, saveSandbox, SANDBOX_LS } from '../game/sandbox';
+export { loadSandbox } from '../game/sandbox';
 import { Engine } from '../engine';
 import { Game } from '../game/game';
 import { renderDebrief } from './debrief';
@@ -182,7 +182,7 @@ export class Menu {
   /** THE TITLE SCREEN: the wordmark, PLAY · OPTIONS · CONTROLS, and — only when one is on — the cheats, named, a click from where they are switched */
   private title(card: HTMLElement) {
     const g = this.d.game, cheats = () => [g.godMode ? 'god mode' : '', !g.aiEnabled ? 'enemies don\'t think' : '', g.infiniteAmmo ? 'unlimited ammo' : ''].filter(Boolean).join(' · ');
-    // A MISSION REFUSED FOR 'NO AI' IS TRIED AGAIN the moment that cheat is off (off a tape of play, 10-13: the kept switch refused a rescue at boot, he
+    // A MISSION REFUSED FOR 'NO AI' IS TRIED AGAIN when Options closes with that cheat off (off a tape of play, 10-13: the kept switch refused a rescue at boot, he
     // switched it off and was on a floor with no mission while the card still said 'did not start'): its own link is loaded again, as Deploy would — a start is a
     // page load, and the switch has just been kept. Any other refusal stays said.
     const stuck = !g.aiEnabled && !!this.d.scenario?.refused?.();

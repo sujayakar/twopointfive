@@ -95,10 +95,7 @@ Surface: a WebGPU canvas app (GUI). Verification = load it in a WebGPU-capable b
   opens the one starting page (`src/ui/startpage.ts`, two steps that each fit the window: MISSION = the missions as a text list, the
   briefing with its plan, a Setup rail of one row a setting; Enter → TEAM & KIT = who comes and what each carries; Enter = Deploy, Esc back). Options is its own screen (`src/ui/options.ts`: Graphics · Audio · Game · Controls; keys 1–4, Esc back),
   also from the pause card. `?pick=<id>` redirects to that short-list row's own URL (`src/scene/picks.ts PICKS`).
-- **Missions list → Loadout → Deploy**: Missions (`src/ui/missions.ts`: the solo night + one row per `src/scene/scenarioList.ts
-  SCENARIOS` entry; `H` / `J` step the sheet's Hour / Weather rows) → a pick opens the Loadout screen (`src/ui/loadout.ts`: how
-  many teammates, none to four, each man's kit card, the Squad kit row) → Deploy is a PAGE LOAD of the mission's URL.
-  `?loadout=<mission id>` lands on that screen directly.
+- **Start page → Team & kit → Deploy**: the Mission step lists the solo night and one row per `src/scene/scenarioList.ts SCENARIOS` entry (`H` / `J` step the Hour / Weather rows); its Team & kit step (`src/ui/loadout.ts`: how many teammates, none to four, each man's kit card, the Squad kit row) deploys by a PAGE LOAD of the mission's URL. `?loadout=<mission id>` opens the start page on that step.
 - **Straight in by URL** (what a row loads; one config per fresh boot): `?roomclear` (the pair), `?roomclear&squad4` or
   `?squad=N` (0‥4 teammates), `?nightbreach`, `?rescue`, plus `&levelFile=<name>.json` for a level of its own (records, depot,
   block, block-squads, warehouse, compound, barracks, registry). After `await __ready` check `__scenarios.current()`,

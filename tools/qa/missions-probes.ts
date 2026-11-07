@@ -105,7 +105,7 @@ export async function missionsScreen(): Promise<boolean> {
       M.openMissions();
       let S = M.currentMissions()!, mroot: El = S?.root as any;
       const rows = missionRowsOf(mroot);
-      F.verdict(!!S && mroot.cls.has('on') && rows.length === L.length && rows.every((r, i) => r.id === L[i].id && r.title === L[i].title && r.n === String(i + 1).padStart(2, '0')), 'Missions pressed: the list is up with one numbered row per mission, in order', rows.map(r => `${r.n} ${r.title}`).join(' · '));
+      F.verdict(!!S && mroot.cls.has('on') && rows.length === L.length && rows.every((r, i) => r.id === L[i].id && r.title === L[i].title && r.n === String(i + 1).padStart(2, '0')), 'the list opened: it is up with one numbered row per mission, in order', rows.map(r => `${r.n} ${r.title}`).join(' · '));
       F.verdict(rows.every((r, i) => r.href === M.missionHref(L[i], SEARCH) && r.href.endsWith('quality=high&mute') && r.team === M.teamTagOf(L[i]) && r.lean === L[i].lean) && rows.filter(r => r.sel).length === 1 && rows[0].sel,
         "each row is a link to its own URL (the visitor's flags kept) tagged solo / pair / four with its lean; exactly one is highlighted — the first, with nothing remembered", rows.map(r => `${r.title} [${r.team} · ${r.lean}] ${r.href}`).join('\n    '));
       // ---- the sheet follows the highlight
@@ -172,7 +172,7 @@ export async function missionsScreen(): Promise<boolean> {
         loads.length = 0; S.select(L.indexOf(M.SOLO_NIGHT)); const before = starts; M.missionsKey({ code: 'Enter' }); QFS.solo = soloFogWas;
         F.verdict(loads.length === 0 && starts === before + 1 && menu.mode === 'closed' && M.currentMissions() === null && !mroot.cls.has('on'), 'the solo night picked off the start card over the plain night is Start: the card closes, the list goes, nothing loads', `loads ${loads.length} · onStart ${starts - before} · menu '${menu.mode}'`);
         menu.open('pause'); const pauseBtn = !!buttonOf(root, 'Missions'); M.openMissions(); const P = M.currentMissions()!; P.select(L.indexOf(M.SOLO_NIGHT)); loads.length = 0; P.pick();
-        F.verdict(pauseBtn && loads.length === 1 && loads[0] === '/?solo&quality=high&mute' && menu.mode === 'pause', 'the plain pause card offers Missions too; the solo night picked from there is a load of ?solo (a fresh night), not a resume', `${loads.join(',')} · menu '${menu.mode}'`);
+        F.verdict(pauseBtn && loads.length === 1 && loads[0] === '/?solo&quality=high&mute' && menu.mode === 'pause', 'the plain pause card offers Missions too; the solo night picked on the list is a load of ?solo (a fresh night), not a resume', `${loads.join(',')} · menu '${menu.mode}'`);
         P.close(); menu.close(); }
       // ---- the seam: onPick instead of the load
       { menu.open('start'); const got: string[] = []; M.MISSIONS.onPick = (m: any, href: string) => { got.push(`${m.id} ${href}`); };

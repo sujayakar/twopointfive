@@ -1049,7 +1049,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   "Space  open" reads "E  open", and "E puts it away" still reads as the slot's key. With `?handslot=0` the ring is on Space. THE ORDER MENU'S
   ROW ON V (the wand under a door) has no key on the page while the rule is on: it is the squad owner's to seat on a wedge.
   THE WORDS: Options, Controls and the start card reword the action key's row and the whistle's under the rule (ui/options.ts `RING_SMALL`,
-  ui/menu.ts `RING_ROW`). A lesson's line that says "V whistles" (Training 2 has two) is shown as "Space held, then 5, whistles" while the rule is
+  . A lesson's line that says "V whistles" (Training 2 has two) is shown as "Space held, then 5, whistles" while the rule is
   on, and "Hold Space, wheel to kick, let go" (the lights lesson's gate) as "Hold Space, then 2 kicks it" (`lesson.ts lessonLine`; the page's
   words put the key in): the level's own text is not edited. A lesson that gains a line naming V or the held list's wheel needs a row there.
   PAGE DRIVERS: `tools/qa/keybinds-page.cjs` holds the rule off on its older lines (`&handring=0`) and reads the page's own board in its last
@@ -1112,7 +1112,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   A tap of Space with Shift held counts (Shift is his sprint; with Ctrl it is a browser chord and still does not). With a text box focused (the
   debugger's search) Space types a space and turns nothing, where Ctrl still turned: left so.
   THE WORDS: Options, Controls draws the two camera rows' cap plain (`ui/options.ts camCapEl`: Ctrl or Space; never keyCapEl's 'Space', which is the
-  action's row and reads "E"); the start card's row is "Space + mouse / wheel" (`ui/menu.ts CAM_SPACE`, written as it is by `keyCol`); Options,
+  action's row and reads "E"); Options,
   Game says "Double tap Space" and "hold Space and move the mouse" (`ui/findme.ts`, `camCap()`).
   NOT A ROW (a reviewer's note, left as it is): the camera's key cannot be moved in Options, and a row put on Space takes Space from it with no
   swap shown. Making the camera hold a row of the board would give it caps, words and a swap by the board's own machinery. `tools/qa/findme-page.cjs`

@@ -23,7 +23,7 @@
 // module's exports. tools/qa/loadbrief-check.ts holds the words and the hand-over on a fake DOM; tools/qa/loadbrief-page.cjs looks at the real page.
 import { ALL_MISSIONS, specOfQuery, quitSearch } from '../scene/scenarioList';
 import { MISSION_GROUPS } from '../scene/scenarios';
-import { PICKS_UI, pickOfQuery, pickQuitSearch } from '../scene/picks';
+import { PICKS_UI, pickQuitSearch } from '../scene/picks';
 import { SOLO_NIGHT, missionOf, missionOfQuery, drawMissionMap, teamWordsOf, leanWords, defendersShown, reopenMissionsAfterLoad, type Mission } from './missions';
 import { openOptions, closeOptions, optionsOpen } from './options';
 import { menuTheme } from './theme';

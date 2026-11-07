@@ -72,7 +72,7 @@ const cardOf = page => page.evaluate(() => ({ buttons: [...document.querySelecto
 
   // ---- the card under the page: one button to it
   const card = await cardOf(page);
-  check(card.buttons[0] === 'Play ›' && card.picks === 0, "the card has ONE way in: 'Play ›' (no short list of its own, no Missions, no Start)", `buttons: ${card.buttons.join(' | ')} · short-list rows on the card ${card.picks}`);
+  check(card.buttons[0] === 'Play ›' && !card.buttons.includes('Start') && !card.buttons.includes('Missions'), "the card has ONE way in: 'Play ›' (no Missions, no Start)", `buttons: ${card.buttons.join(' | ')}`);
  
 
   // ---- the page: everything on it

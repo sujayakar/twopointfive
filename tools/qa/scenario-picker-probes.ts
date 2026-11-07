@@ -240,7 +240,10 @@ export async function pickerCard(): Promise<boolean> {
       MS.closeMissions();
       { bootCard(); const pb = buttonOf(root, 'Play ›');
         F.verdict(!!pb && !pb.disabled, 'the boot card (up while the shaders compile) has Play, already live', pb ? pb.textContent : 'no Play');
-        await new Promise(r => setTimeout(r, 0)); }   // (the boot card's focus timer runs while there is still a DOM)
+        await new Promise(r => setTimeout(r, 0));   // (the boot card's focus timer runs while there is still a DOM)
+        const loc = (globalThis as any).location, was = loc.search; loc.search = '?levelFile=depot.json&roomclear'; const c = bootCard();
+        const none = buttons(root).length === 0 && root.all(e => e.cls.has('bootstatus')).length === 1 && root.all(e => e.cls.has('head')).length === 1; loc.search = was; c.off();
+        F.verdict(none, "the boot card of an address that names a mission: the head and the status line, no buttons", `${buttons(root).length} buttons`); }
       // ---- a scenario up: the pause card
       const SQ: any[] = SCENARIOS, SCN = SQ.find(e => e.squad === 4) ?? SQ[0];   // (the squad's table: the office's own four-man room clear, as this probe always started)
       const { why } = await quiet(() => startFromQuery(g, pickSearch(SCN, SEARCH)));

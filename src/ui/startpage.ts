@@ -16,7 +16,7 @@
 // LOADOUT (team size, squad kit, the members, the picked member's kit) is the page's second step, TEAM & KIT, on the same frame.
 // THE KEYS are the two screens' own, with the highlight in one of two places: ON THE ROWS (the page opens there) W S choose, A D / H / J / K set, Enter or Space
 // steps INTO THE LOADOUT, where W S A D are its rows, Enter deploys (on a row with a press of its own: that press) and Esc steps back to the rows. So from a
-// row, Enter Enter is in the game with what the page shows; Esc on the rows is the card behind (the controls and the sandbox row). A click anywhere moves the
+// row, Enter Enter is in the game with what the page shows; Esc on the rows is the title behind. A click anywhere moves the
 // keys to where it landed. No held keys, no digits.
 // A ROW OF THE SHORT LIST KEEPS ITS SETTINGS: highlighted, it puts its own hour on the Hour row (the barracks by day) until an hour is picked by hand, and
 // deployed with the short list's settings still on it the page it loads is that pick's own URL (scene/picks.ts pickHref) — so the pause card's 'Next' and
@@ -390,7 +390,7 @@ export function startPageList(all: Mission[] = listedMissions(), picks: Pick[] =
 /** the short list's row for a mission (its first, where two rows start the same mission) */
 export function pickOfMission(id: string, picks: Pick[] = PICKS): Pick | null { return PICKS_UI.on ? picks.find(p => p.mission === id) ?? null : null; }
 
-export interface StartPageOpts { /** the row to open on */ select?: string; /** the words on the button back to the card behind (absent: the start card's — its controls and sandbox row) */ backLabel?: string; /** where the keys start */ pane?: Pane;
+export interface StartPageOpts { /** the row to open on */ select?: string; /** the words on the button back to the card behind (absent: the title's) */ backLabel?: string; /** where the keys start */ pane?: Pane;
   /** THE PAGE IN ITS CO-OP DRESS (ui/coop.ts): only the missions `can` passes, `title` on its head, no kit step (two players play the kit as issued), and the block — worded `words` — hands the mission's address to `deploy` instead of loading it */
   coop?: { title: string; words: string; can(m: Mission): boolean; deploy(search: string, m: Mission): void }; /** the team size the loadout opens on for that row */ squad?: SquadSize; root?: HTMLElement }
 /** THE PAGE, up (again: the one already up is closed first). Null where the layer is not on the page. */
@@ -593,4 +593,4 @@ export function startPageFromQuery(search: string | URLSearchParams): StartPage 
   return id && missionList().some(m => m.id === id) ? openStartPage({ select: id, pane: 'loadout', squad: squadOfQuery(q, false) ?? undefined }) : null;
 }
 /** THE LIST: the one page (the title's Play, the pause card's Missions button, 'to scenarios') */
-export const openList = (opts: StartPageOpts = {}) => { openStartPage(opts); };
+export function openList(opts: StartPageOpts = {}) { openStartPage(opts); }

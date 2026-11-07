@@ -389,8 +389,8 @@ export function walkInNow(): boolean {
 }
 /** HOW A WALL IS TAKEN ON THIS BOARD: 'key' = the hold's row has one · 'walk' = it has none and walking into a wall takes it (host/keymap.ts qFree: the
  *  build's own board) · 'none' = neither: he took its key off and switched the walk-in off. The Controls list keeps the row whichever it is, its cap the
- *  dashed — a click puts on a key, and writes the row's words to suit; the start card's list does the same (ui/menu.ts controlRows) */
-export function wallWay(): 'key' | 'walk' | 'none' { return keysOf('KeyQ').length ? 'key' : WALLSNAP.on && walkInNow() ? 'walk' : 'none'; }
+ *  dashed — a click puts on a key, and writes the row's words to suit */
+function wallWay(): 'key' | 'walk' | 'none' { return keysOf('KeyQ').length ? 'key' : WALLSNAP.on && walkInNow() ? 'walk' : 'none'; }
 const wallLine = (s: string) => { const w = wallWay(); return w === 'key' ? s : s === WALL_WHAT ? (w === 'walk' ? 'Walk into a wall to put your back to it' : s) : s === WALL_SMALL ? (w === 'walk' ? 'slide along it and look around its end, then step away to let go' : 'no key yet. click the cap to give it one') : s; };
 /** THE GUN'S SETUP (game/slotsetup.ts), with its switch on: the two rows it took the keys of say where the thing is set now (while they have no key),
  *  and a gun's own row says what its key does pressed again */

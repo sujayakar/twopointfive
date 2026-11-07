@@ -4,10 +4,9 @@
 // words and its store are game/loadout.ts's; this file is the DOM and the keys. Plain DOM in an overlay of its own (#loadout, over the start card's #menu), its
 // styles injected here, so nothing of the card is re-rendered under it and index.html is not touched.
 //
-// THE FLOW (wireMissions below, called once by main.ts): start card ▸ Missions (ui/missions.ts) ▸ a pick opens THIS screen for that mission (the list closes
+// THE FLOW (wireMissions below, called once by main.ts): the mission list (ui/missions.ts) ▸ a pick opens THIS screen for that mission (the list closes
 // first; MISSIONS.onPick) ▸ Deploy loads the mission's URL — the list's own href, so the sheet's Standard | Hard rides along — with the size on it. Back / Esc
-// reopens the list on the same row; Esc there is the start card. Also reached by URL: `?loadout=<mission id>` (main.ts, once the start card is up;
-// `&squad=N` beside it preselects). THE SOLO NIGHT comes through here too (kind 'solo': the team row is greyed at solo, your own card is the only one) and
+// reopens the list on the same row. THE SOLO NIGHT comes through here too (kind 'solo': the team row is greyed at solo, your own card is the only one) and
 // Deploy loads `?solo`, where main.ts puts your card on the plain night's player (game/kit.ts kitSolo).
 //
 // WHAT IS ON IT, top to bottom: the mission · TEAM (the size) · the five member slots, each with its man's kit in a line — one of those who come is PICKED ·
@@ -33,7 +32,7 @@
 import type { ScenarioEntry } from '../scene/scenarios';
 import { lessonGroup } from '../scene/scenarios';
 import { pickSearch, levelWords, SCENARIO_KEYS } from '../scene/scenarioList';
-import { MISSIONS, SOLO_NIGHT, SOLO_KEY, unplayed, missionList, missionHref, openMissions, closeMissions, issuedWalls, issuedKit, type IssuedKit, type Mission } from './missions';
+import { MISSIONS, SOLO_NIGHT, SOLO_KEY, unplayed, missionHref, openMissions, closeMissions, issuedWalls, issuedKit, type IssuedKit, type Mission } from './missions';
 import { difficultyHref, leversHref, leversMixed, leversLine, structureOfLevel, fogOffNow } from '../game/difficulty';
 import { leverRows, leversOpenOn, type LeverRowsUi } from './levers';
 import { fogOfQuery, fogOfLink, quietCamsOfLink, sameFog } from '../game/scenarioRun';
@@ -42,7 +41,7 @@ import { STICKY } from '../game/stickycam';   // (read inside the screen only: w
 import { WAND } from '../game/wand';         // (likewise)
 import { hourLive, hourIdOf } from '../game/hours';
 import { weatherOfSearch } from '../game/weatherKinds';
-import { squadChoices, squadSearch, squadOfQuery, startSize, storeSquad, rosterOf, sizeWords, kitAsIssued, lessonNote, issueNote, type SquadSize, type SquadChoice, type LoadoutKind } from '../game/loadout';
+import { squadChoices, squadSearch, startSize, storeSquad, rosterOf, sizeWords, kitAsIssued, lessonNote, issueNote, type SquadSize, type SquadChoice, type LoadoutKind } from '../game/loadout';
 import { KIT, KIT_SOLO, SLOTS, SUITS, bigOf, kitPacks, kitDefault, type MemberKit, kitGun, kitRowCan, kitChanged, kitCost, kitLoadout, kitLoadoutOf, kitLoadouts, kitMission, kitIssueWhole, kitPool, kitRingsLent, kitStealthHand, kitStealthOn, kitRows, kitShown, kitSmokes, kitTeam, kitTreeOn, kitWalls, kitWords, kitWorn, squadCost } from '../game/kit';
 import { memberCard, tintCss, clipWorn, clipKey, gunCanOf, KIT_CAN, KIT_CLIP, KIT_LENT, type MemberCard, type MemberCardOpts } from './kitCard';
 import { menuTheme } from './theme';
