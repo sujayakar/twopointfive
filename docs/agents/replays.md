@@ -566,7 +566,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   in ONE page of headless Chromium: 0 tabs, both first ways back land on the game's own entry (`back_forward`), the last — the mark's slot made one the
   window does not hold — loads the address left (`navigate`). NOT SEEN: any of it on a GPU or by a person; whether Chrome hands the live game page back.
   KNOWN, not mine: the kept list reads a visit just left as 'being played' until its lease runs out (keepstore.ts `beingWritten`; the ✕'s words no longer
-  say "another tab"). STILL OPENING A TAB, left on purpose and named to him: the level editor's Play (`src/editor/app.ts`).
+  say "another tab"). STILL OPENING A TAB, left on purpose and named to him: the level editor's Play (`src/editor/app.ts`; gone with the editor since).
 - **The page walk says where it is** (10-16, after the build's own run of `tools/qa/engine-replay-page.cjs` printed nothing for 83 minutes past the note's
   row and was stopped). It was NOT hung, and no replay page is at fault: on the software adapter a drawn frame of the replay page is about 40 s on a four-core
   box and a page takes some 210 s to stand; the page steps a seek for 14 ms a frame (`SEEK_MS`), which there is two or three steps (the map's scrub: 407 steps in 158
