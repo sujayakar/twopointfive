@@ -20,8 +20,6 @@ import type { Game } from './game';
 import type { ParData } from '../scene/scenarios';
 import type { Vec3 } from '../math/vec';
 
-/** the switch: off = a par level plays as its room clear alone, no clock (and nothing here runs) */
-export const PAR = { on: true };
 export const PAR_STATS = { started: 0, finished: 0 };
 /** how far Sam walks from where the staging stood him before the clock is his (metres): more than a shuffle, less than the way to any door */
 export const PAR_START_M = 1.0;

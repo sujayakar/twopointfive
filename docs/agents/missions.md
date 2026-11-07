@@ -1183,8 +1183,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   SECONDS AS SHOWN earns gold / silver / bronze / none (`medal_of`, `par_result`: pure). `par_tick` runs once a tick right after the mission's update, arms on a
   new mission, files the result and says the line once on the log; the wire carries `live`, `t0` and `res` every tick. `src/game/par.ts` is the page's READ of that
   record (no tick, no snapshot: a kept game carries the record with the rest), and the row with
-  the clock on it is the game's own (`par_objective`, in the mission's line of the view: `docs/agents/rust.md`, THE VIEW). `PAR.on` is a SETTLED row, on, and nothing reads
-  it any more: `?nopar` is gone, and a level without the block returns on the tick's first line. THE BEST TIME IS THE PAGE'S: main.ts files it the frame the result
+  the clock on it is the game's own (`par_objective`, in the mission's line of the view: `docs/agents/rust.md`, THE VIEW). There is no switch: a level without the block returns on the tick's first line. THE BEST TIME IS THE PAGE'S: main.ts files it the frame the result
   first appears (`ui/parBest.ts`, localStorage, key = level file + way in + squad size + difficulty; never under god mode / no AI / unlimited ammo) and hands
   its words to `par.best()`: they ride the card and the debrief's 'par' cell (`par.shown`), and no longer reword the log's line, which is the
   game's and the same on every machine. A CHANGE OF PLAY, small: in a two-seat game the clock starts on EITHER seat's first move (each page used to time its own
