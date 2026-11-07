@@ -233,7 +233,7 @@ fn leaf_put(g: &mut Game, w: usize, at: usize, b: BoxId, kind: f64, cut_row: f64
 
 /// the rows of boxes a question adds, and their cut planes: as the copy's own rows are written
 pub fn rows_of(g: &Game, boxes: &[BoxId]) -> (Vec<f64>, Vec<f64>) {
-    let cut_on = crate::scene_cut::cut_boxes_on(g);
+    let cut_on = true;
     let (mut rows, mut cuts) = (vec![0.0; boxes.len() * REC_], vec![0.0; boxes.len() * CUT_ROW as usize]);
     for (i, &b) in boxes.iter().enumerate() {
         let kind = kind_of(g, b, cut_on);
