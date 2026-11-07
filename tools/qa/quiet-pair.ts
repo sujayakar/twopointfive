@@ -6,7 +6,7 @@
 //   --level takes a file under levels/, or a path (a level exported to a scratch folder)
 //   --rig double | double-dark (with --trace / --seeds, arm orders): THE DOUBLE'S OWN CHECK, STAGED — see RIG below. Not a run of the mission.
 // THE STAND: the game as the PAGE stands it (solo-night.ts's own list: GLASSFX=on, TPS_MOVES=1, TPS_TURN=1, TPS_CAST=1, TPS_OPENING=1, TPS_QRFSILENT=1, TPS_QRFSQUAD=1, chaos 0.5,
-// destruction on unless SOLO_DESTR=0), the level loaded from its file, the mission started as the page starts it: startFromQuery(g, '?quiet[=N][&squad=1]').
+// destruction on, which is settled), the level loaded from its file, the mission started as the page starts it: startFromQuery(g, '?quiet[=N][&squad=1]').
 // THE PAIR SWITCHES ARE THE MISSION'S (quiet.ts holds PAIRUP / PAIR / SNEAK / SPOTTED and the silent posture on for a run with a partner): nothing here sets them;
 // every run carries `sw` = what they read when it ended.
 // THE SCRIPTED SAM (the same in all three arms; solo-night.ts's `careful` plan with `--out short`, copied): on his own feet and keys (WASD along the nav path, C,
@@ -108,7 +108,6 @@ export interface PairRun {
 
 async function one(seed: number, arm: Arm, cap: number, verbose: boolean, levelFile: string): Promise<PairRun> {
   const { standUp, ROOT } = await import('./headless.ts');
-  if (process.env.SOLO_DESTR !== '0') { try { (await import(`${ROOT}/src/game/destructionSwitch.ts`)).DESTRUCTION.on = true; } catch { /* a build from before the destruction goal */ } }
   if (process.env.SOLO_CLEAR_M) { try { (await import(`${ROOT}/src/game/opening.ts`)).OPENING.clearM = Number(process.env.SOLO_CLEAR_M); } catch { /* a build from before the opening rule */ } }
   const { lightEstimateAt, escalationOf, canSeeChar, sightGain, sightGainOn, pointInView } = await import(`${ROOT}/src/game/guards.ts`);
   const { debriefOf, fmtEvent } = await import(`${ROOT}/src/game/chronicle.ts`);
