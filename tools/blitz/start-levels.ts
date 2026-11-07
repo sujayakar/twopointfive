@@ -27,7 +27,8 @@ if (!missions.length) { say(listed.out.slice(-2000)); say('start-levels: start.t
 
 interface Row { id: string; file: string; link: string; listed: boolean; carried: boolean; ran: boolean; lacks: string; start: string; beside: string; end: string; green: boolean }
 const rows: Row[] = [];
-const unknownOf = (line: string | undefined) => { if (!line) return 'did not run'; const m = /(\d+) NOT KNOWN(?:: ([^;]*))?/.exec(line);   // (start.sh cuts a long line: the count is read with or without the end of its list) return !m ? 'did not run' : m[1] === '0' ? '0' : `${m[1]} (${(m[2] ?? '').trim()})`; };
+// (start.sh cuts a long line: the count is read with or without the end of its list)
+const unknownOf = (line: string | undefined) => { if (!line) return 'did not run'; const m = /(\d+) NOT KNOWN(?:: ([^;]*))?/.exec(line); return !m ? 'did not run' : m[1] === '0' ? '0' : `${m[1]} (${(m[2] ?? '').trim()})`; };
 for (const m of missions) {
   if (ONLY.length && !ONLY.includes(m.id)) continue;
   const row: Row = { ...m, carried: false, ran: false, lacks: '', start: '', beside: '', end: '', green: false };
