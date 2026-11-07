@@ -59,7 +59,7 @@ pub fn pick(g: &mut crate::game::Game) -> Option<GuardId> {
         state_of(g).on = None;
         return None;
     }
-    let st = crate::stalk::stalk_on(g);
+    let st = crate::stalk::stalk_on(g, &crate::seats::here(g));
     if let Some(st) = st {
         if crate::close::close_subject(g, st) {
             state_of(g).on = Some(st);
@@ -167,7 +167,7 @@ pub fn sam_look_step(g: &mut crate::game::Game) {
             None => head_of(g, gd, 1.6),
         };
         g.ch[c].anim.watch_at = Some(at);
-        let k = if crate::stalk::stalk_on(g) == Some(gd) {
+        let k = if crate::stalk::stalk_on(g, &crate::seats::here(g)) == Some(gd) {
             1.0
         } else {
             let (full_m, near_m) = (g.k.samlook.full_m, g.k.samlook.near_m);

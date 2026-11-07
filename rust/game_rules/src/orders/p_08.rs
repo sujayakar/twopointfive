@@ -228,7 +228,7 @@ pub fn squad_orders_pair(g: &mut crate::game::Game, men: &[GuardId], spots: &[V3
         let n = men.len();
         let gr = if front.is_some() { crate::gunroles::gun_file_ranks(g, men) } else { None };
         let mut ids: Vec<Vec<usize>> = Vec::new();
-        for id in squad_orders_pairs(g) {
+        for id in squad_orders_pairs(g, &crate::seats::here(g)) {
             let mut l = Vec::new();
             for (i, &gd) in men.iter().enumerate() {
                 if squad_orders_pair_of(g, gd) == Some(id) { l.push(i); }
@@ -284,14 +284,14 @@ pub fn squad_orders_pair(g: &mut crate::game::Game, men: &[GuardId], spots: &[V3
 /// The squad's orders in one line, for a panel or a log: who the next order goes to, what the menu is up on, each man with what he is doing.
 /// (src/game/orders.ts:2626 SquadOrders.summary)
 pub fn squad_orders_summary(g: &mut crate::game::Game) -> String {
-    if !squad_orders_active(g) { return String::from("no squad"); }
-    let who = squad_orders_who_words(g, None);
+    if !squad_orders_active(g, &crate::seats::here(g)) { return String::from("no squad"); }
+    let who = squad_orders_who_words(g, &crate::seats::here(g), None);
     let menu = match g.orders.menu.as_ref().map(|m| m.target.clone()) {
         Some(t) => format!("menu up on {} · ", squad_orders_hover_words(g, Some(&t))),
         None => String::new(),
     };
     let mut men: Vec<String> = Vec::new();
-    for gd in squad_orders_squad(g) { let s = squad_orders_status_of(g, gd); men.push(format!("{}: {}", g.gd[gd].callsign, s)); }
+    for gd in squad_orders_squad(g, &crate::seats::here(g)) { let s = squad_orders_status_of(g, gd); men.push(format!("{}: {}", g.gd[gd].callsign, s)); }
     format!("orders to {} · {}{}", who, menu, men.join(" · "))
 }
 
@@ -326,24 +326,24 @@ pub fn squad_orders_status_of(g: &mut crate::game::Game, gd: GuardId) -> String 
 }
 
 /// Who the next order goes to, as the panel names it.   (orders.ts SquadOrders.whoTag)
-pub fn squad_orders_who_tag(g: &crate::game::Game) -> crate::orders::SquadOrdersWhoTag {
-    if g.orders.menu.as_ref().map_or(false, |x| x.part.is_some()) {
-        let men = g.orders.menu.as_ref().unwrap().men.clone();
-        let tag = if !men.is_empty() { squad_orders_who_words(g, Some(&men)) } else { String::from("nobody") };
+pub fn squad_orders_who_tag(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> crate::orders::SquadOrdersWhoTag {
+    if seat.orders.menu.as_ref().map_or(false, |x| x.part.is_some()) {
+        let men = seat.orders.menu.as_ref().unwrap().men.clone();
+        let tag = if !men.is_empty() { squad_orders_who_words(g, seat, Some(&men)) } else { String::from("nobody") };
         return SquadOrdersWhoTag { tag, one: true };
     }
-    let menu_man = match g.orders.menu.as_ref().map(|x| &x.target) {
+    let menu_man = match seat.orders.menu.as_ref().map(|x| &x.target) {
         Some(OrderTarget::None(t)) => t.man,
         _ => None,
     };
-    let man = match (menu_man, g.orders.who) {
+    let man = match (menu_man, seat.orders.who) {
         (Some(x), _) => Some(x),
-        (None, Who::Num(n)) => squad_orders_squad(g).get(n as usize).copied(),
+        (None, Who::Num(n)) => squad_orders_squad(g, seat).get(n as usize).copied(),
         _ => None,
     };
     if let Some(man) = man { return SquadOrdersWhoTag { tag: g.gd[man].callsign.clone(), one: true }; }
-    let tag = match g.orders.who {
-        Who::All => String::from(if squad_orders_paired(g) { "GOLD" } else { "all" }),
+    let tag = match seat.orders.who {
+        Who::All => String::from(if squad_orders_paired(g, seat) { "GOLD" } else { "all" }),
         Who::Red => String::from("RED"),
         Who::Blue => String::from("BLUE"),
         Who::Num(n) => js::num_str(n),

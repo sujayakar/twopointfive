@@ -161,7 +161,7 @@ pub fn game_update_doors(g: &mut crate::game::Game, dt: f64) {
         if g.gd[gd].state == GuardState::Dead { continue; }
         let c = g.gd[gd].ch;
         let speed = g.gd[gd].speed;
-        let bash = g.gd[gd].state == GuardState::Alert && crate::kitload::load_gait(g, crate::kitload::LoadGaitWho::Guard(gd), speed) > 2.2;
+        let bash = g.gd[gd].state == GuardState::Alert && crate::kitload::load_gait(g, &crate::seats::here(g), crate::kitload::LoadGaitWho::Guard(gd), speed) > 2.2;
         let quiet = crate::silent::silent_ease(g, gd);
         let hand = crate::handleside::hand_press(g, gd);
         let round = speed > crate::doorway::ROUND_PACE && crate::doorway::rounds_leaves(g, gd) && !crate::doorway::leaf_stalled(g, gd);
@@ -291,15 +291,15 @@ pub fn game_door_contact(g: &mut crate::game::Game) -> Option<crate::doors::Door
 
 
 /// the row a click with empty hands is on: the first guard in reach who is no hostage and nobody the snatch has out (game.ts:2192)
-fn click_row(g: &Game) -> Option<Interactable> {
+fn click_row(g: &Game, seat: &crate::seats::SeatRef) -> Option<Interactable> {
     let mut i = 0;
-    while i < g.nearby.len() {
-        if g.nearby[i].kind == InteractableKind::Guard && g.nearby[i].in_reach {
-            let taken = match g.nearby[i].guard {
+    while i < seat.nearby.len() {
+        if seat.nearby[i].kind == InteractableKind::Guard && seat.nearby[i].in_reach {
+            let taken = match seat.nearby[i].guard {
                 Some(gd) => crate::rescue::rescue_is_hostage(g, gd) || crate::snatchout::snatch_out_owns(g, gd),
                 None => false,
             };
-            if !taken { return Some(g.nearby[i].clone()); }
+            if !taken { return Some(seat.nearby[i].clone()); }
         }
         i += 1;
     }
@@ -355,8 +355,8 @@ pub fn game_door_acts(g: &mut crate::game::Game, dt: f64, input: InputId) {
         let free = g.pl[pl].takedown.is_none() && !g.pl[pl].down && g.pl[pl].holding.is_none() && !crate::samstun::sam_staggered(g, None) && g.pl[pl].breaker_move.is_none();
         let bare = crate::close::close_bare(g);
         let two = crate::close::close_lethal(g) && !bare;
-        let knife = !bare && crate::input::input_lmb_hit(g, input) && !crate::stalk::stalk_has(g);
-        let in_reach: Option<Interactable> = if g.pl[pl].holstered { click_row(g) } else { None };
+        let knife = !bare && crate::input::input_lmb_hit(g, input) && !crate::stalk::stalk_has(g, &crate::seats::here(g));
+        let in_reach: Option<Interactable> = if g.pl[pl].holstered { click_row(g, &crate::seats::here(g)) } else { None };
         let reach_guard: Option<GuardId> = in_reach.as_ref().and_then(|r| r.guard);
         let choke_on = match reach_guard {
             Some(gd) if g.gd[gd].civ.is_none() && crate::rails::rails_offers(g, "grab") => {
@@ -374,7 +374,7 @@ pub fn game_door_acts(g: &mut crate::game::Game, dt: f64, input: InputId) {
         let clicked: Option<Interactable> = if blow { in_reach } else { None };
         let via_click: Option<GuardId> = clicked.as_ref().and_then(|c| c.guard);
         let clicked_close = clicked.as_ref().and_then(|c| c.close);
-        let stalked = crate::stalk::stalk_grab(g);
+        let stalked = crate::stalk::stalk_grab(g, &crate::seats::here(g));
         if let (Some(st), true) = (stalked, free) {
             crate::player::start_grab(g, st, None);
             if holds(g, pl, st) { hold_from_here(g, pl); }

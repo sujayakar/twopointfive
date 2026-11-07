@@ -21,7 +21,7 @@ fn flat(a: V3, b: V3) -> f64 {
 // ---- small reads
 
 fn of(g: &mut Game, m: GuardId) -> Option<OrdersAssignmentId> {
-    crate::orders::squad_orders_of(g, m)
+    crate::orders::squad_orders_of(g, &crate::seats::here(g), m)
 }
 fn post_of(g: &mut Game, m: GuardId) -> Option<V3> {
     let a = of(g, m)?;
@@ -64,8 +64,8 @@ fn carries(g: &Game, op: DoorOpId) -> bool {
     r.men.iter().filter(|&&m| !is_dead(g, m)).count() >= 3
 }
 /// does an order of the door tools work this door
-fn door_worked(g: &Game, door: DoorId) -> bool {
-    g.door_tools.ops.iter().any(|&x| g.tab.doortools_door_op[x].door == door)
+fn door_worked(g: &Game, seat: &crate::seats::SeatRef, door: DoorId) -> bool {
+    seat.door_tools.ops.iter().any(|&x| g.tab.doortools_door_op[x].door == door)
 }
 /// the room as fight sees it, or none
 fn room_of(g: &mut Game, p: V3) -> Option<RoomfightRoomId> {
@@ -74,7 +74,7 @@ fn room_of(g: &mut Game, p: V3) -> Option<RoomfightRoomId> {
 
 /// This view's book, made if it is not yet. (rearwatch.ts bookOf)
 pub fn book_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::rearwatch::Book {
-    let key = crate::seats::view_key(g);
+    let key = crate::seats::view_key(g, &crate::seats::here(g));
     // (the literal in the TypeScript is all empty: the same as zeroed)
     g.m.rearwatch.books.get_or_insert_with(key, Book::zeroed)
 }
@@ -103,7 +103,7 @@ pub fn rear_ways(g: &mut crate::game::Game, door: DoorId, side: f64, marks: &[V3
         c[0] += q[0] / n;
         c[2] += q[2] / n;
     }
-    let key = crate::seats::view_key(g);
+    let key = crate::seats::view_key(g, &crate::seats::here(g));
     let mut out: Vec<RearWaysItem> = Vec::new();
     for o in crate::cover::cover_ready(g) {
         let (od, at, on) = {
@@ -246,10 +246,10 @@ fn rank(g: &mut Game, key: PlayerId, op: Option<DoorOpId>, m: GuardId, o: CoverO
 
 /// Game.update, after the door tools' tick and before the cover's: who has the way behind each stack. (rearwatch.ts rearWatchTick)
 pub fn rear_watch_tick(g: &mut crate::game::Game) {
-    let key = crate::seats::view_key(g);
+    let key = crate::seats::view_key(g, &crate::seats::here(g));
     book_of(g);
     room_keep_tick(g, key);
-    if !crate::orders::squad_orders_active(g) {
+    if !crate::orders::squad_orders_active(g, &crate::seats::here(g)) {
         if !g.m.rearwatch.books.get(key).unwrap().pins.is_empty() {
             let pins: Vec<RearPin> = g.m.rearwatch.books.get(key).unwrap().pins.values().copied().collect();
             for p in pins {
@@ -262,7 +262,7 @@ pub fn rear_watch_tick(g: &mut crate::game::Game) {
         return;
     }
     let grace = g.k.rearwatch.grace;
-    let squad: Vec<GuardId> = crate::orders::squad_orders_men(g, None, None).into_iter().filter(|&m| !is_dead(g, m)).collect();
+    let squad: Vec<GuardId> = crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None).into_iter().filter(|&m| !is_dead(g, m)).collect();
     let mut groups: Vec<Group> = Vec::new();
     let mut taken: JsSet<GuardId> = JsSet::new();
     for op in g.door_tools.ops.clone() {
@@ -703,7 +703,7 @@ fn walk(g: &mut Game, far: &mut JsMap<GuardId, f64>, x: GuardId, sam_at: V3) -> 
 
 /// A TAKEN ROOM'S OTHER DOOR, KEPT WHILE THE SQUAD LEAVES. (rearwatch.ts roomKeepTick)
 pub fn room_keep_tick(g: &mut crate::game::Game, pl: PlayerId) {
-    if !crate::orders::squad_orders_active(g) {
+    if !crate::orders::squad_orders_active(g, &crate::seats::here(g)) {
         for m in book!(g, pl).keeps.keys() {
             let_go(g, pl, m, "switched off");
         }
@@ -712,11 +712,11 @@ pub fn room_keep_tick(g: &mut crate::game::Game, pl: PlayerId) {
         b.shut.clear();
         return;
     }
-    let now = crate::doortools::door_tools_door_keepers(g);
+    let now = crate::doortools::door_tools_door_keepers(g, &crate::seats::here(g));
     let sam = g.player;
     let sam_up = !g.pl[sam].down;
     let sam_ch = g.pl[sam].ch;
-    let squad: Vec<GuardId> = crate::orders::squad_orders_men(g, None, None).into_iter().filter(|&m| !is_dead(g, m)).collect();
+    let squad: Vec<GuardId> = crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None).into_iter().filter(|&m| !is_dead(g, m)).collect();
     // ---- the hand-over: he had a door last frame, the entry has let go of him since, and what he has now is 'fall in'
     for (m, door, a0) in book!(g, pl).was.clone() {
         if book!(g, pl).keeps.has(m) || is_dead(g, m) || now.iter().any(|x| x.0 == m) {
@@ -744,7 +744,7 @@ pub fn room_keep_tick(g: &mut crate::game::Game, pl: PlayerId) {
             Some(r) => r,
             None => continue,
         };
-        if crate::entrypoints::entry_points_far_known(g, o, inner(g, o, p, 0.4)) || door_worked(g, door) {
+        if crate::entrypoints::entry_points_far_known(g, o, inner(g, o, p, 0.4)) || door_worked(g, &crate::seats::here(g), door) {
             continue;
         }
         // (nobody left in it to keep it for)
@@ -790,7 +790,7 @@ pub fn room_keep_tick(g: &mut crate::game::Game, pl: PlayerId) {
     for door in book!(g, pl).shut.keys() {
         let w = *book!(g, pl).shut.get(door).unwrap();
         let w_room = w.room;
-        let mut gone = crate::entrypoints::entry_points_far_known(g, w.o, w.at) || door_worked(g, door);
+        let mut gone = crate::entrypoints::entry_points_far_known(g, w.o, w.at) || door_worked(g, &crate::seats::here(g), door);
         if !gone {
             let mut still = false;
             for &x in &squad {
@@ -824,7 +824,7 @@ pub fn room_keep_tick(g: &mut crate::game::Game, pl: PlayerId) {
                 let stays = a.is_some()
                     && !is_open_way(g, p.door)
                     && !crate::entrypoints::entry_points_far_known(g, o, at_him)
-                    && !door_worked(g, p.door)
+                    && !door_worked(g, &crate::seats::here(g), p.door)
                     && g.tab.orders_assignment[a.unwrap()].door != Some(p.door);
                 if stays {
                     book!(g, pl).shut.set(p.door, BookShutValue { o, room: r.room, at: at_him });
@@ -861,7 +861,7 @@ pub fn room_keep_tick(g: &mut crate::game::Game, pl: PlayerId) {
             continue;
         }
         let o_at = g.tab.cover_opening[o].at;
-        let mut other_has = door_worked(g, p.door);
+        let mut other_has = door_worked(g, &crate::seats::here(g), p.door);
         if !other_has {
             for &x in &squad {
                 if x == m {
@@ -978,10 +978,10 @@ pub fn walk_to(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
 }
 
 /// orders.ts, the fall-in leg: this man's feet stay where they are, in his seat's book. (rearwatch.ts roomKept)
-pub fn room_kept(g: &crate::game::Game, gd: GuardId) -> bool {
+pub fn room_kept(g: &crate::game::Game, seat_ref: &crate::seats::SeatRef, gd: GuardId) -> bool {
     // (viewOf: his seat's book; a cast is one book, its own)
     let key = if g.in_cast {
-        crate::seats::view_key(g)
+        crate::seats::view_key(g, seat_ref)
     } else {
         let seat = crate::seats::view_of(g, gd);
         crate::cmd::seat_man(g, seat)
@@ -1036,8 +1036,8 @@ pub fn rear_sees(g: &mut crate::game::Game, p: V3, o: CoverOpeningId, front: V3)
 }
 
 /// cover.ts deal(): the way this man is pinned to. (rearwatch.ts rearPinOf)
-pub fn rear_pin_of(g: &crate::game::Game, gd: GuardId) -> Option<crate::rearwatch::RearPin> {
-    let key = crate::seats::view_key(g);
+pub fn rear_pin_of(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> Option<crate::rearwatch::RearPin> {
+    let key = crate::seats::view_key(g, seat);
     let b = g.m.rearwatch.books.get(key)?;
     match b.pins.get(gd) {
         Some(p) => Some(*p),
@@ -1055,7 +1055,7 @@ pub fn rear_last(g: &mut crate::game::Game, op: DoorOpId, turn: &[GuardId], firs
     if turn.len() < 3 {
         return turn.to_vec();
     }
-    let w = match rear_watcher(g, op) {
+    let w = match rear_watcher(g, &crate::seats::here(g), op) {
         Some(w) => w,
         None => return turn.to_vec(),
     };
@@ -1069,11 +1069,11 @@ pub fn rear_last(g: &mut crate::game::Game, op: DoorOpId, turn: &[GuardId], firs
 }
 
 /// doortools.ts firstIn(): the man of this order pinned on a way behind and held on it through the entry. (rearwatch.ts rearWatcher)
-pub fn rear_watcher(g: &crate::game::Game, op: DoorOpId) -> Option<GuardId> {
+pub fn rear_watcher(g: &crate::game::Game, seat: &crate::seats::SeatRef, op: DoorOpId) -> Option<GuardId> {
     if !carries(g, op) {
         return None;
     }
-    let key = crate::seats::view_key(g);
+    let key = crate::seats::view_key(g, seat);
     let b = g.m.rearwatch.books.get(key)?;
     let w = *b.by_op.get(op)?;
     if b.pins.get(w)?.op == Some(op) {

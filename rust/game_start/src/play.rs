@@ -254,8 +254,8 @@ impl Play {
     /// is the order of that id on the squad's menu now
     pub fn on_menu(&self, id: &str) -> bool { self.menu().iter().any(|r| r == id) }
     /// the living men of the red pair, and of the blue (the menu's own call, `SquadOrders.men`)
-    pub fn red(&self) -> Vec<GuardId> { game::orders::squad_orders_men(&self.g, Some(game::orders::SquadOrdersMenSel::Red), None) }
-    pub fn blue(&self) -> Vec<GuardId> { game::orders::squad_orders_men(&self.g, Some(game::orders::SquadOrdersMenSel::Blue), None) }
+    pub fn red(&self) -> Vec<GuardId> { game::orders::squad_orders_men(&self.g, &game::seats::here(&self.g), Some(game::orders::SquadOrdersMenSel::Red), None) }
+    pub fn blue(&self) -> Vec<GuardId> { game::orders::squad_orders_men(&self.g, &game::seats::here(&self.g), Some(game::orders::SquadOrdersMenSel::Blue), None) }
     /// The rule of the list that has him this tick, by the words of its line ("head down under fire"); None when his script or his own
     /// state has him.
     pub fn rule(&self, gd: GuardId) -> Option<&'static str> {

@@ -893,7 +893,7 @@ fn fight_trigger(g: &mut Game, gd: GuardId, c: CharId, s: &Sight, move_speed: f6
     let Sight { aim, blocked, poked, facing_err, .. } = *s;
     g.gd[gd].fire_cd -= dt;
     let twisted = move_speed > 0.3 && m::abs(v3::wrap_angle(g.ch[c].body_yaw - g.ch[c].aim_yaw)) > 0.9;
-    let shield = g.tune.muzzle_discipline && shield_up(g);
+    let shield = g.tune.muzzle_discipline && shield_up(g, &crate::seats::here(g));
     if shield { g.gd[gd].fire_cd = m::max(g.gd[gd].fire_cd, SHIELD_RELEASE_BEAT_MIN + dt); }
     let weapon = g.gd[gd].weapon;
     if crate::gunslots::side_locked(g, gd) {

@@ -233,9 +233,9 @@ pub fn stack_room_keeps(g: &mut crate::game::Game, d: DoorId, side: f64, p: V3) 
 }
 
 /// is `q` the mark a man of the squad already stands on at this door   (stackroom.ts stoodAt)
-pub fn stood_at(g: &crate::game::Game, d: DoorId, q: V3) -> bool {
-    for man in crate::orders::squad_orders_squad(g) {
-        let a = crate::orders::squad_orders_of(g, man);
+pub fn stood_at(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: DoorId, q: V3) -> bool {
+    for man in crate::orders::squad_orders_squad(g, seat) {
+        let a = crate::orders::squad_orders_of(g, seat, man);
         let Some(a) = a else { continue };
         if g.gd[man].state == crate::game::GuardState::Dead { continue; }
         if g.tab.orders_assignment[a].door != Some(d) { continue; }
@@ -247,7 +247,7 @@ pub fn stood_at(g: &crate::game::Game, d: DoorId, q: V3) -> bool {
 
 /// a place a piece of furniture stands on, unless a man of the squad already stands on it at this door   (stackroom.ts furnished)
 pub fn furnished(g: &mut crate::game::Game, d: DoorId, q: V3) -> bool {
-    crate::orders::squad_orders_on_furniture(g, q) && !stood_at(g, d, q)
+    crate::orders::squad_orders_on_furniture(g, q) && !stood_at(g, &crate::seats::here(g), d, q)
 }
 
 // ---------------------------------------------------------------- THE RULE
@@ -559,7 +559,7 @@ pub fn stack_view_fix(g: &mut crate::game::Game, d: DoorId, side: f64, posts: Op
     {
         let mut stood: Vec<V3> = Vec::new();
         for &man in men {
-            let a = crate::orders::squad_orders_of(g, man);
+            let a = crate::orders::squad_orders_of(g, &crate::seats::here(g), man);
             let Some(a) = a else { continue };
             if g.tab.orders_assignment[a].order != "stack" || g.tab.orders_assignment[a].door != Some(d) { continue; }
             let Some(post) = g.tab.orders_assignment[a].post else { continue };
@@ -721,7 +721,7 @@ pub fn next_room(g: &mut crate::game::Game, d: DoorId, side: f64, f: &crate::sta
     };
     let mut ours: Vec<V3> = Vec::new();
     if !g.pl[pl].down { ours.push(g.ch[g.pl[pl].ch].pos); }
-    for man in crate::orders::squad_orders_squad(g) {
+    for man in crate::orders::squad_orders_squad(g, &crate::seats::here(g)) {
         if g.gd[man].state != crate::game::GuardState::Dead { ours.push(g.ch[g.gd[man].ch].pos); }
     }
     for n in 0..g.doors.list.len() {
