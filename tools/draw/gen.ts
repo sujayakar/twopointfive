@@ -52,7 +52,21 @@ const COMMANDS = join(ROOT, 'src/draw/commands.ts'), C: string[] = ['// Written 
     const F = m[3].split(',').map(x => x.trim()).filter(Boolean).map(x => { const [name, ty] = x.split(':').map(y => y.trim()); const k = ({ u32: 'u32', i32: 'i32', f64: 'f64', '&str': 'text' } as Record<string, string>)[ty] ?? die(`commands!: ${ty}`); return { name: camel(name), k }; });
     C.push(`  /** ${doc} */`, `  ${m[2][0].toLowerCase()}${m[2].slice(1)}(${F.map(f => `${f.name}: ${f.k === 'text' ? 'string' : 'number'}`).join(', ')}): void { this.u32(${m[1]});${F.map(f => ` this.${f.k}(${f.name});`).join('')} }`); doc = ''; }
   C.push('}', ''); }
-const files: [string, string][] = [[OUT, L.join('\n') + '\n'], [COMMANDS, C.join('\n')]];
+// ---- every number a person may turn while the game plays, by its name: where it lies in the knobs, from the wire's table (a settled row is the build's own)
+const KNOBS = join(ROOT, 'rust/game_run/src/knobs_list.rs'); let knobText = '';
+{ const S = JSON.parse(readFileSync(join(ROOT, 'tools/blitz/schema.json'), 'utf8')), T = S.types as Record<string, { k: string; fields: { rust: string; ty: string }[] }>, settled = new Set<string>(S.knobSettled), rows: string[] = [], typed: string[] = [];
+  const PARTS: Record<string, number> = { f64: 1, bool: 1, V3: 3, '[f64; 2]': 2, '[f64; 3]': 3, '[f64; 4]': 4 };
+  const walk = (path: string, ty: string): void => { const t = T[ty];
+    if (t?.k === 'struct') { for (const f of t.fields) if (!settled.has(`${ty.replace('crate::', '')}.${f.rust}`)) walk(path ? `${path}.${f.rust}` : f.rust, f.ty); return; }
+    const n = PARTS[ty]; if (n) typed.push(`    let _: &${ty === 'V3' ? '[f64; 3]' : ty} = &k.${path};`);
+    if (n) for (let i = 0; i < n; i++) rows.push(`    ("${path}${n > 1 ? `.${i}` : ''}", offset_of!(Knobs, ${path})${i ? ` + ${8 * i}` : ''}, ${ty === 'bool'}),`); };
+  walk('', 'crate::knobs::Knobs');
+  knobText = `//! Written by tools/draw/gen.ts from tools/blitz/schema.json: every number of the knob tables that is not settled, by its name, where it lies, and whether it is a yes or no.\nuse core::mem::offset_of;\nuse game::knobs::Knobs;\n\npub static KNOBS: &[(&str, usize, bool)] = &[\n${rows.join('\n')}\n];\n\n/// each is of the type the list's reader takes it for\nfn typed(k: &Knobs) {\n${typed.join('\n')}\n}\nconst _: fn(&Knobs) = typed;\n`; }
+// ---- the page: index.html's own markup and style, with the other script
+const PAGE = join(ROOT, 'draw.html'), index = readFileSync(join(ROOT, 'index.html'), 'utf8'), swapped = index.replace('src="./src/main.ts"', 'src="./src/host/drawpage.ts"').replace(/  <script>\/\* the page that draws a game it does not hold[^\n]*\n/, '').replace('<head>', '<head>\n  <!-- Written by tools/draw/gen.ts from index.html: the page that draws a game it does not hold (src/host/drawpage.ts). -->');
+if (/location\.replace\('draw/.test(swapped)) die('index.html\'s own way to draw.html is still in draw.html');
+if (swapped === index || swapped.includes('src/main.ts')) die('index.html has no main script to put the page that draws in the place of');
+const files: [string, string][] = [[PAGE, swapped], [KNOBS, knobText], [OUT, L.join('\n') + '\n'], [COMMANDS, C.join('\n')]];
 if (process.argv.includes('--check')) { const off = files.filter(([p, t]) => !existsSync(p) || readFileSync(p, 'utf8') !== t).map(([p]) => p.slice(ROOT.length + 1)); console.log(off.length ? `draw: ${off.join(', ')} would change` : `draw: the page's half is of these declarations (stamp ${stamp})`); process.exit(off.length ? 1 : 0); }
 for (const [p, t] of files) writeFileSync(p, t);
 console.log(`draw: ${list.length} sections, stamp ${stamp}; src/draw/sections.ts and commands.ts written`);

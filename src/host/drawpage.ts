@@ -29,11 +29,16 @@ import { EVENPACE, FLIGHT_PAGE, pacer, pageRoom, rateMeter } from './pace';
 import { PLAN_PACE } from '../render/planPace';
 import { RENDER_PASSES } from '../gpu/timer';
 import { DrawGame, GameLost } from './drawgame';
+import { knobPanel } from './knobpanel';
 import { lostCard } from './lostcard';
+import { PauseCard } from '../ui/pausecard';
+import { agoWords, type RunSaves } from '../ui/runcard';
 import { camKey, keysBoot } from './keymap';
 import { Section, Sky, View } from '../draw/sections';
 import { AudioEngine } from '../audio/audio';
 import { askOf } from '../draw/ask';
+import { rimsFrom } from '../draw/rims';
+import { makeOutlineFrame } from '../render/outline';
 import { DrawEvents } from '../draw/events';
 import { Particles } from '../render/particles';
 import { DrawReach, doorways } from '../draw/reach';
@@ -58,6 +63,8 @@ async function levelBytes(name: string): Promise<Uint8Array> {
 async function main(): Promise<void> {
   const q = new URLSearchParams(location.search), loading = document.getElementById('loading')!, say = (line: string) => { loading.textContent = line; };
   const canvas = document.getElementById('view') as HTMLCanvasElement;
+  // (of the page's markup, what this page drives: the rest of the HUD comes as it is told of the game)
+  for (const el of document.getElementById('app')!.children) if (!['view', 'loading', 'menu', 'fatal'].includes(el.id)) (el as HTMLElement).style.display = 'none';
   keysBoot(q);
   LOOK.on = lookOfQuery(q); setLookPlace(placeOfQuery(q));
   const name = /^[\w.-]+\.json$/.test(q.get('levelFile') ?? '') ? q.get('levelFile')! : 'office.json', at = (p: string) => new URL(p, document.baseURI).href;
@@ -108,7 +115,7 @@ async function main(): Promise<void> {
   const fog = makeFogFrame(), ask = askOf(game), audio = new AudioEngine(ask), events = new DrawEvents(D, engine.particles, smoke, audio, i => game.nameOf(i));
   if (q.has('mute')) { audio.volume.master = 0; audio.start = () => { /* silent */ }; }
   for (const ev of ['pointerdown', 'keydown'] as const) window.addEventListener(ev, () => audio.start(), { capture: true });   // (a browser's sound begins with a hand on the page)
-  engine.fogFrame = fog; engine.beams = world.beams;
+  engine.fogFrame = fog; const rims = engine.outline = makeOutlineFrame(); engine.beams = world.beams;
   const lights = new DrawLights(engine.lights, D); lights.from();   // (the lights stand too: their reach is worked out of the level as it opens)
   const reach = new DrawReach(engine, world, gaps);
 
@@ -131,15 +138,16 @@ async function main(): Promise<void> {
   /** the game is another than the one last drawn (a restart, a load): what the picture and the sound carry over from frame to frame starts over, before anything of the new one is played */
   const anew = (): void => {
     const o = view(), first = stood < 0; stood = D.u[o + View.stood]; if (first) return;
-    engine.restartPicture(); engine.particles?.clear(); smoke.clearAll(); events.cut(); audio.hush(); pair.cut(); lag.reset(); three(cam.target, o + View.follow);
+    engine.restartPicture(); engine.particles?.clear(); smoke.clearAll(); events.cut(); audio.hush(); game.turnAgain(); pair.cut(); lag.reset(); three(cam.target, o + View.follow);
   };
   anew(); lens(); cam.aspect = Math.max(1, canvas.clientWidth) / Math.max(1, canvas.clientHeight); cam.rebuild();
 
   const told = { update: 0, render: 0, tick: 0, draw: 0, frames: 0, fps: 0 };
   const ear: Vec3 = [0, 0, 0];
-  let time = 0, acc = 0, drift = 0, behind: number | null = null, tapped = false, carry: AimCarry | null = null; const feet: Vec3 = [0, 0, 0], twice = watchCtrlTaps(window, () => false, camKey);
+  let time = 0, acc = 0, drift = 0, paused = false, thaw = false, ended = 0, onEnded = (): void => { /* no card is made yet */ }, behind: number | null = null, tapped = false, carry: AimCarry | null = null; const feet: Vec3 = [0, 0, 0], twice = watchCtrlTaps(window, () => false, camKey);
   const tick = (dt: number): void => {
     if (carry) { let used = !!input.clicked || D.u[view() + View.spectating] !== 0 || !!cam.pin; for (const k of input.pressed) if (!CARRY_KEYS.has(k)) used = true; const s = carryStep(carry, input.mouseX, input.mouseY, used, three(feet, view() + View.at), (x, y, z) => cam.project([x, y, z], canvas.clientWidth, canvas.clientHeight, Infinity, 1e-3)); input.mouseX = s.x; input.mouseY = s.y; if (!s.held) carry = null; }
+    if (thaw) { thaw = false; input.pressed.add('Paused'); input.pressed.add('Thawed'); }   // (the first tick after a card is told: what was held when it came up is let go unsent, in the tick)
     const keys = sampleHand(game.numbersOf(), input, cam, canvas);
     game.step(dt, keys);
     if (D.u[view() + View.stood] !== stood) anew();
@@ -163,16 +171,19 @@ async function main(): Promise<void> {
   };
   /** one drawn frame: `dt` seconds of the display's, in whole ticks (`drawn` false: a script's, stepped and not drawn) */
   const frame = (dt: number, ticks?: number, drawn = true): void => {
+    if (paused) dt = 0;   // (the world holds still under a card: what only the picture moves with it)
     time += dt;
-    const t0 = performance.now(), plan = ticks === undefined ? planTicks(acc, dt, FIXEDSTEP, drift) : { ticks, acc, drift }; acc = plan.acc; drift = plan.drift;
+    const t0 = performance.now(), plan = ticks !== undefined ? { ticks, acc, drift } : paused ? { ticks: 0, acc, drift } : planTicks(acc, dt, FIXEDSTEP, drift); acc = plan.acc; drift = plan.drift;
     tapped = twice() && plan.ticks > 0;   // (asked every frame: a tap nobody took is not kept)
     const locks = D.u[view() + View.locks];
     if (input.wheelCtrl) { if (!(locks & 2)) cam.zoom(input.wheelCtrl); input.wheelCtrl = 0; }
     if (input.orbitDX && plan.ticks && !(locks & 1)) { cam.rotate(ctrlTurn(input.orbitDX)); behind = null; }   // (in a frame's first tick: the next tick's hand looks the way it left the view)
     cam.frame();
     for (let i = 0; i < plan.ticks; i++) { if (i) input.endTick(); tick(1 / FIXEDSTEP.hz); }
+    // (the run's end card, once each time one is due; a restart or a load is another end to come)
+    { const e = D.u[view() + View.ended]; if (e !== ended) { ended = e; if (e) onEnded(); } }
     D.fresh();
-    skyFrom(engine, D); fogFrom(fog, D);
+    skyFrom(engine, D); fogFrom(fog, D); rimsFrom(rims, D, dt);
     { const o = view(); engine.settings.nvAmount = D.f[o + View.night]; engine.settings.hitFlash = D.f[o + View.hit]; }
     game.look(lookNumbers(engine.settings, engine.world, !!ch.cast));
     const t1 = performance.now();
@@ -197,7 +208,7 @@ async function main(): Promise<void> {
   const standAgain = (newest: boolean): string | null => {
     const label = game.recover(newest); if (label === null) return null;
     input.keys.clear(); input.buttons = 0; input.endFrame(); acc = 0; drift = 0; behind = carry = null;
-    cam.kickOut(); cam.drawOut(); stood = 0; anew(); lens(); cam.rebuild();
+    cam.kickOut(); cam.drawOut(); if (pause.up) pause.close(); paused = false; thaw = false; input.lockExcept = null; stood = 0; anew(); lens(); cam.rebuild();
     backAt = newest ? game.ticks : -1e9; last = performance.now(); requestAnimationFrame(loop);
     return label;
   };
@@ -218,9 +229,13 @@ async function main(): Promise<void> {
       if (e instanceof GameLost) { lostCard(document.getElementById('app')!, e, { kept: () => game.kept(), back: standAgain }, e.tick - backAt < 120); return; }
       console.error(e); showFatal(`The frame loop threw and has been stopped:\n\n${(e as Error)?.stack ?? e}`); }
   };
-  loading.style.display = 'none';
+  // ---- the pause card: the world holds still under it
+  const runSaves: RunSaves = { elapsed: () => game.saves().elapsed, timeline: () => game.saves().rows, offer: () => { const s = game.saves(); return s.rows.find(r => r.key === s.offer) ?? null; }, age: row => agoWords(game.saves().elapsed - row.missionT), picture: () => null, load: key => { game.commands.load(key); return null; }, due: () => false };
+  const pause = new PauseCard({ title: name.replace(/\.json$/, ''), saves: runSaves, verdict: () => game.verdict(), may: () => !game.lost, restart: () => game.commands.restart('restarted'), quit: () => location.assign('./'), turned: up => { paused = up; if (up) game.commands.letGo(); else thaw = true; input.keys.clear(); input.buttons = 0; input.endFrame(); input.lockExcept = up ? new Set() : null; last = performance.now(); } });
+  onEnded = () => pause.end();
+  loading.style.display = 'none'; knobPanel(document.getElementById('app')!, game);
   // (for a tool: the page's parts, and frames stepped by hand)
-  Object.assign(window, { __draw: { game, engine, world, audio, cam, input, quality, told, fog, get held() { return held; }, set held(v: boolean) { held = v; last = performance.now(); }, run: (n: number, keys: string[] = [], drawn: 'none' | 'last' | 'all' = 'last') => { for (const k of keys) input.keys.add(k); try { for (let i = 0; i < n; i++) frame(1 / 60, 1, drawn === 'all' || (drawn === 'last' && i === n - 1)); } finally { for (const k of keys) input.keys.delete(k); } } } });
+  Object.assign(window, { __draw: { game, engine, world, audio, pause, cam, input, quality, told, fog, get held() { return held; }, set held(v: boolean) { held = v; last = performance.now(); }, run: (n: number, keys: string[] = [], drawn: 'none' | 'last' | 'all' = 'last') => { for (const k of keys) input.keys.add(k); try { for (let i = 0; i < n; i++) frame(1 / 60, 1, drawn === 'all' || (drawn === 'last' && i === n - 1)); } finally { for (const k of keys) input.keys.delete(k); } } } });
   requestAnimationFrame(loop);
 }
 const ready = main(); (window as unknown as { __ready: Promise<void> }).__ready = ready;

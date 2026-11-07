@@ -1,23 +1,724 @@
 <!doctype html>
 <html lang="en">
 <head>
+  <!-- Written by tools/draw/gen.ts from index.html: the page that draws a game it does not hold (src/host/drawpage.ts). -->
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>twopointsix</title>
+  <title>twopointsix — 2.5D RT stealth sandbox</title>
   <link rel="icon" href="data:," />
-  <!-- THE PAGE THAT DRAWS A GAME IT DOES NOT HOLD (src/host/drawpage.ts): the game is the Rust module's, and the bundle behind this page imports none of the game's TypeScript -->
   <style>
-    html, body { margin: 0; height: 100%; background: #000; overflow: hidden; font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; color: #d2c9b5; }
+    /* THE FIGHT SCREEN WEARS THE MENUS' LOOK (src/ui/theme.ts): sand ink on warm black and the ONE orange, which here marks what leads on: the row a tap of Space does,
+       the objective, a lost man's way. Every other hue still means something (gold / red / blue = who an order goes to; amber then red = alarm; blue = a door; red = a man).
+       Each token is the menus' own (`--m-…`, in the page from the first script on); the literal after it is that token's value for the moments before, and
+       `tools/qa/hud-look-check.ts` is red when one drifts from theme.ts, or when a green comes back into these rules. Labels are the menus' condensed caps, rows their
+       plain sans, digits and keys mono. A mark that sits on the picture keeps a dark halo (`--h-shadow`): sand has no hue to stand off a sunlit floor with. */
+    :root {
+      --h-ink: var(--m-text, #d2c9b5); --h-hi: var(--m-bright, #f0e9d9); --h-hi-rgb: var(--m-bright-rgb, 240,233,217); --h-soft: var(--m-soft, #a0977f); --h-dim: var(--m-dim, #938b76); --h-faint: var(--m-faint, #857d69);
+      --h-edge: var(--m-edge, 214,200,170); --h-acc: var(--m-accent, #f0912e); --h-acc-hi: var(--m-accent-hi, #ffb561); --h-acc-rgb: var(--m-accent-rgb, 240,145,46); --h-on: var(--m-on-accent, #140d05);
+      --h-base: var(--m-base, #0c0b09); --h-plate: var(--m-base-rgb, 12,11,9); --h-field: rgb(var(--m-panel-rgb, 21,19,16)); --h-btn: var(--m-btn-rgb, 44,40,33); --h-hover: var(--m-hover-rgb, 66,60,50);
+      --h-font: var(--m-font, Inter, ui-sans-serif, system-ui, -apple-system, 'Helvetica Neue', sans-serif);
+      --h-head: var(--m-head, 'Avenir Next Condensed', 'DIN Condensed', 'Roboto Condensed', 'Arial Narrow', Inter, ui-sans-serif, system-ui, sans-serif);
+      --h-mono: var(--m-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+      --h-shadow: 0 1px 2px #000, 0 0 5px rgba(0,0,0,0.7);
+    }
+    html, body { margin: 0; height: 100%; background: #000; overflow: hidden; font-family: var(--h-mono); color: var(--h-ink); }
     #app { position: fixed; inset: 0; }
-    canvas#view { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: crosshair; }
-    #loading { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); white-space: pre-wrap; text-align: center; }
+    canvas#view { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: crosshair; image-rendering: auto; }
+    /* left column, top: the debug read-out (#hud — main.ts fills it every 10 frames, empties it while the tour runs) and the interaction panel, which sits to the
+       right of that block while it has text and at the screen edge when it is empty (:empty drops it out of the row). The read-out is clipped short of the kit stack. */
+    #lcol { position: absolute; left: 10px; top: 8px; display: flex; align-items: flex-start; gap: 16px; pointer-events: none; }
+    #hud { font: 11px/1.35 var(--h-mono); white-space: pre; color: var(--h-ink); text-shadow: var(--h-shadow); max-height: calc(100vh / var(--tz, 1) - 240px); overflow: hidden; }   /* controls live in the pause / start card now */
+    #hud:empty { display: none; }
+    #hud:not(:empty) { min-width: 330px; }   /* a steady left edge for the panel beside it while the numbers change */
+    /* interaction panel (overlay.ts setInteractions): what Space can do round here — one block per VERB (a shut door is 'push it open' and 'ease it open';
+       the man in the arm 'question him' and 'choke him out'), a thin bar for a lock being picked / the drive coming out / a leaf easing round; the highlighted row
+       (a tap does it; Space held opens the list to choose another) is lit. The same sand caps and rows as the meters / objective line, the kit slots' translucent backing. */
+    #interact { display: none; width: 290px; margin: 46px 0 0 8px; font: 11px/1.3 var(--h-font); letter-spacing: 0.01em; color: var(--h-ink); text-shadow: var(--h-shadow); opacity: 0.95; }
+    #interact.on { display: block; }
+    #hud:not(:empty) + #interact { margin-left: 0; }
+    #interact .it { position: relative; margin-bottom: 4px; padding: 4px 8px 5px 10px; background: rgba(var(--h-plate),0.6); border: 1px solid rgba(var(--h-edge),0.22); border-radius: 3px; }
+    @media (max-height: 620px) { #interact { margin-top: 30px; } #interact .it { margin-bottom: 2px; padding: 2px 8px 3px 10px; } }   /* a short window: the open order menu clears the kit column under it */
+    #interact .it.primary { border-color: rgba(var(--h-edge),0.7); box-shadow: 0 0 8px rgba(0,0,0,0.4); background: rgba(var(--h-plate),0.72); }
+    #interact .it.primary::before { content: ''; position: absolute; left: -1px; top: -1px; bottom: -1px; width: 2px; background: var(--h-acc); border-radius: 2px 0 0 2px; }
+    #interact .what { display: flex; justify-content: space-between; gap: 8px; font: 700 11px/1 var(--h-head); letter-spacing: 0.14em; text-transform: uppercase; color: var(--h-hi); white-space: nowrap; }
+    #interact .what span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+    #interact .what em { flex: none; font: 400 10px/1.2 var(--h-font); letter-spacing: 0.02em; text-transform: none; color: var(--h-dim); }
+    #interact .it.k-door .what { color: #b4d8ff; } #interact .it.k-body .what { color: #f0b8a8; } #interact .it.k-guard .what { color: #ff9a8a; } #interact .it.k-objective .what { color: var(--h-hi); } #interact .it.k-breaker .what { color: #ffd08a; }
+    #interact .it.off .what { color: #f0b888; }
+    /* the squad's elements (orders.ts Tone): gold = the whole squad, red / blue = a pair or a man of it — the row's header, or one line of it */
+    #interact .it.t-gold .what, #interact .t-gold.opt, #interact .t-gold.hint { color: #f2cf6b; } #interact .it.t-red .what, #interact .t-red.opt, #interact .t-red.hint { color: #ff9a8a; } #interact .it.t-blue .what, #interact .t-blue.opt, #interact .t-blue.hint { color: #9cc8ff; }
+    #interact .opt, #interact .hint { margin-top: 3px; white-space: normal; overflow-wrap: anywhere; letter-spacing: 0.01em; }   /* a long row WRAPS (it was cut with an ellipsis: 'cover this door — no line fro…' lost the one thing a greyed order has to say) */
+    #interact .opt:has(kbd) { display: flex; align-items: baseline; } #interact .opt kbd { flex: none; }   /* … and hangs under its own words, not under its key (whatever the key cap's width: 1, SPACE, LMB) */
+    #interact .opt { font-size: 12px; line-height: 1.2; color: var(--h-hi); }
+    #interact .hint { color: var(--h-soft); }
+    #interact .hint.lost s { opacity: 0.6; } #interact .hint.lost b { display: inline-block; color: var(--h-acc); margin-left: 7px; font-weight: 700; } #interact .hint.lost b.n { animation: lostin 0.5s ease-out; } @keyframes lostin { from { scale: 2.2; opacity: 0; } }   /* a squad man lost: his line struck, the way it came from */
+    #interact kbd { display: inline-block; min-width: 9px; margin-right: 7px; padding: 1px 4px 0; border-radius: 2px; background: rgba(var(--h-edge),0.8); color: var(--h-on); font: 700 9px/1.25 var(--h-mono); letter-spacing: 0.06em; text-align: center; text-shadow: none; vertical-align: 1px; }
+    #interact .it.primary > .what + .opt kbd { background: var(--h-acc); } #interact .it.primary.far > .what + .opt kbd { background: var(--h-faint); }
+    #interact .it.far .opt { color: var(--h-dim); } #interact .it.far kbd { background: var(--h-faint); color: var(--h-on); }
+    /* the selector (interact.ts): every row is one verb — SPACE lit only on the highlighted one (a tap does it), the others' key dimmed until the highlight reaches
+       them (Space held opens the list: wheel / arrows choose, let go acts); rows of the same thing tuck under its header; open, the frame brightens, a line at the
+       top says how it works and the cancel row closes the list */
+    #interact .it:not(.primary) .opt.verb kbd { background: rgba(var(--h-edge),0.22); color: var(--h-soft); }
+    #interact .it.cont { margin-top: -3px; border-top-color: transparent; border-top-left-radius: 0; border-top-right-radius: 0; padding-top: 1px; }
+    #interact .it.cont .what { height: 0; }
+    #interact .it.cont .what em:empty { display: none; }
+    #interact.open .it { border-color: rgba(var(--h-edge),0.4); }
+    #interact.open .it.primary { border-color: var(--h-hi); box-shadow: 0 0 10px rgba(0,0,0,0.5); }
+    #interact.open .it.primary::before { width: 3px; background: var(--h-acc-hi); }
+    #interact .selhint { margin: 0 0 5px 2px; font: 600 10px/1.3 var(--h-head); letter-spacing: 0.14em; text-transform: uppercase; color: var(--h-soft); }
+    #interact .it.k-cancel { padding-top: 3px; padding-bottom: 4px; background: rgba(var(--h-plate),0.6); border-color: rgba(var(--h-edge),0.3); }
+    #interact .it.k-cancel .opt { margin-top: 0; color: var(--h-soft); } #interact .it.k-cancel kbd { background: rgba(var(--h-edge),0.3); color: var(--h-hi); }
+    #interact .it.k-cancel.primary { border-color: var(--h-hi); box-shadow: 0 0 10px rgba(0,0,0,0.4); } #interact .it.k-cancel.primary::before { background: var(--h-hi); box-shadow: 0 0 6px rgba(0,0,0,0.5); } #interact .it.k-cancel.primary kbd { background: var(--h-hi); color: var(--h-on); }
+    #interact.corner { width: 230px; } #interact .it.one { margin-bottom: 3px; padding: 3px 8px 4px 8px; } #interact .it.one .opt, #interact .it.one .hint { margin-top: 0; } #interact .it.one .hint + .hint, #interact .it.one .opt + .hint { margin-top: 3px; }   /* the corner as three things (ui/corner.ts, HANDRING.corner): a block under no heading … */
+    #interact .it.one.primary kbd { background: var(--h-acc); } #interact .it.one.primary.far kbd { background: var(--h-faint); } #interact .it.one.off .opt { color: var(--h-faint); } #interact .it.one.off kbd { background: var(--h-faint); }   /* … its lit line's key as a row's was, a line that cannot be given now faint */
+    #interact .it.sec { margin-bottom: 6px; border-color: rgba(var(--h-edge),0.55); } #interact .it.sec .what { color: var(--h-acc); } #interact .it.sec .opt { color: var(--h-ink); } #interact .it.sec .what + .opt { margin-top: 3px; } #interact .it.sec > .opt:first-child { margin-top: 0; } #interact .it.sec.done .opt { color: var(--h-hi); } #interact .it.sec.failed .opt { color: #f0a090; }   /* … under the objective's section (the stage's colours as the top line had them) */
+    #interact .prog { margin-top: 5px; height: 3px; border: 1px solid rgba(var(--h-edge),0.45); background: rgba(var(--h-plate),0.5); }
+    #interact .prog b { display: block; width: 0; height: 100%; background: var(--h-ink); }
+    #interact .it.k-door .prog b { background: #bfe6ff; }
+    #interact .more { padding: 0 10px; font-size: 9px; letter-spacing: 0.14em; color: var(--h-dim); }
+    /* the tour empties #hud, so the panel is at the edge: start it under the letterbox bar; on a window too narrow for it to sit beside the centred caption card, under that too */
+    body.touring #interact { margin-top: calc(7.5vh / var(--tz, 1) + 4px); }
+    @media (max-width: 1340px) { body.touring #interact { margin-top: calc(7.5vh / var(--tz, 1) + 190px); } }
+    /* THE TWEAK PANEL (Tab; ui/panel.ts + bindings.ts): a two-level tool — SYSTEMS down a left rail, collapsible SECTIONS on the selected system's page — in the HUD's own
+       thin sand mono. Header: a status strip (preset · resolution · fps · gpu ∪, so it is worth having up with the read-out off), the search box (every system at once;
+       click it to type; ← / → or [ / ] walk the rail) and the 'all knobs' switch that reveals the A/B rows (.row.adv) and the rarely-touched sections (.advsec). */
+    #panel { position: absolute; right: 8px; top: 8px; width: 372px; max-height: calc(100% - 16px); overflow: hidden; z-index: 12; display: flex; flex-direction: column; font: 11px/1.3 var(--h-mono); color: var(--h-ink); background: rgba(var(--h-plate),0.94); border: 1px solid rgba(var(--h-edge),0.22); border-radius: 4px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
+    #panel.hidden { display: none; }
+    #panel .phead { flex: none; padding: 6px 8px 5px; border-bottom: 1px solid rgba(var(--h-edge),0.16); background: rgba(var(--h-plate),0.6); }
+    #panel .pstat { font-size: 10px; letter-spacing: 0.06em; color: var(--h-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; margin-bottom: 5px; text-shadow: 0 1px 2px #000; }
+    #panel .pstat:empty { display: none; }
+    #panel .psearch { display: flex; align-items: center; gap: 8px; }
+    #panel .psearch input[type=search] { flex: 1; min-width: 0; font: inherit; background: var(--h-field); color: var(--h-hi); border: 1px solid rgba(var(--h-edge),0.2); border-radius: 3px; padding: 3px 7px; outline: none; }
+    #panel .psearch input[type=search]::placeholder { color: var(--h-faint); }
+    #panel .psearch input[type=search]:focus { border-color: var(--h-acc); box-shadow: 0 0 0 1px rgba(var(--h-acc-rgb),0.25); }
+    #panel .psearch .all { color: var(--h-dim); white-space: nowrap; display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 10px; letter-spacing: 0.06em; }
+    #panel .phits { font-size: 10px; color: #f3c86a; letter-spacing: 0.04em; margin-top: 4px; }
+    #panel .phits:empty { display: none; }
+    #panel .pmain { flex: 1 1 auto; min-height: 0; display: flex; }
+    /* the rail: one button per system — a glyph and a short label; the active one carries the orange bar; dimmed = nothing on that page until 'all knobs'; a search lights the systems it hit */
+    #panel .prail { flex: 0 0 48px; display: flex; flex-direction: column; gap: 1px; padding: 4px 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; border-right: 1px solid rgba(var(--h-edge),0.14); background: rgba(var(--h-plate),0.5); }
+    #panel .prail::-webkit-scrollbar { display: none; }
+    #panel .prail .sys { all: unset; box-sizing: border-box; width: 100%; padding: 5px 2px 4px; display: flex; flex-direction: column; align-items: center; gap: 1px; cursor: pointer; color: var(--h-faint); border-left: 2px solid transparent; }
+    #panel .prail .sys i { font: normal 13px/1 var(--h-mono); }
+    #panel .prail .sys span { font-size: 7.5px; letter-spacing: 0.08em; text-transform: uppercase; max-width: 44px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #panel .prail .sys:hover { color: var(--h-ink); background: rgba(var(--h-edge),0.08); }
+    #panel .prail .sys.on { color: var(--h-hi); border-left-color: var(--h-acc); background: rgba(var(--h-acc-rgb),0.1); text-shadow: none; }
+    #panel .prail .sys.dim:not(.on) { opacity: 0.45; }
+    #panel.searching .prail .sys { opacity: 0.35; } #panel.searching .prail .sys.hit { opacity: 1; color: #f3d78a; }
+    #panel .pbody { flex: 1 1 auto; min-width: 0; overflow-y: auto; overflow-x: hidden; padding: 2px 8px 10px; scrollbar-width: thin; scrollbar-color: rgba(var(--h-edge),0.2) transparent; }
+    #panel .ptitle { font-size: 10px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--h-ink); padding: 7px 2px 3px; text-shadow: none; }
+    #panel .ptitle span { display: block; margin-top: 2px; font-size: 9.5px; letter-spacing: 0.03em; text-transform: none; color: var(--h-faint); text-shadow: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #panel .pempty { margin: 10px 2px; font-size: 10px; color: var(--h-dim); font-style: italic; }
+    /* a section: header = caret · NAME · live one-line summary (shown while collapsed) · ↺ (where a shipped-defaults table exists) */
+    #panel .psec { border-top: 1px solid rgba(var(--h-edge),0.12); }
+    #panel .psec:first-of-type { border-top: none; }
+    #panel h3.pshead { display: flex; align-items: baseline; gap: 6px; margin: 0; padding: 6px 2px 5px; font: inherit; font-weight: 400; cursor: pointer; user-select: none; }
+    #panel h3.pshead:hover { background: rgba(var(--h-edge),0.06); }
+    #panel .pshead .caret { flex: 0 0 9px; color: rgba(var(--h-edge),0.4); font-weight: 400; font-size: 9px; }
+    #panel .pshead .nm { flex: 0 1 auto; min-width: 0; font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--h-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #panel .pshead.open .nm { color: var(--h-hi); }
+    #panel.searching .pshead .nm { color: #f3d78a; letter-spacing: 0.04em; }
+    #panel .pshead .sum { flex: 1 1 0; min-width: 0; text-align: right; font-size: 9.5px; color: var(--h-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #panel .psec.open > .pshead .sum { opacity: 0.55; }
+    #panel .pshead .rst { all: unset; flex: none; cursor: pointer; color: var(--h-faint); font-size: 11px; padding: 0 3px; border-radius: 2px; }
+    #panel .pshead .rst:hover { color: #f0d878; background: rgba(240,216,120,0.1); }
+    #panel .psec.advsec > .pshead .nm::after { content: ' · A/B'; color: var(--h-faint); font-weight: 400; letter-spacing: 0.04em; }
+    #panel .sbody { padding: 1px 0 6px 4px; }
+    /* rows: label left (ellipsis, full text in the tooltip), the control right; a thin track, a compact switch, tabular read-outs; A/B rows a shade dimmer with a dotted mark */
+    #panel .row { display: flex; align-items: center; gap: 6px; min-height: 18px; margin: 1px 0; padding: 1px 2px; border-radius: 2px; }
+    #panel .row:hover { background: rgba(var(--h-edge),0.05); }
+    #panel .row label { flex: 1 1 auto; min-width: 0; color: var(--h-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #panel .row.adv label { color: var(--h-soft); } #panel .row.adv label::before { content: '· '; color: rgba(var(--h-edge),0.4); }
+    #panel .row.changed label { color: #f0d878; }
+    #panel .row.flash { animation: pflash 1.4s ease-out; } @keyframes pflash { 0%, 30% { background: rgba(240,216,120,0.28); } 100% { background: transparent; } }
+    #panel .row .val { flex: 0 0 40px; text-align: right; color: var(--h-hi); font-variant-numeric: tabular-nums; font-size: 10.5px; }
+    #panel .row .rev { flex: 0 0 9px; color: #f0d878; cursor: pointer; font-size: 7px; text-align: center; visibility: hidden; }
+    #panel .row input[type=range] { flex: 0 0 96px; min-width: 0; height: 14px; margin: 0; background: transparent; -webkit-appearance: none; appearance: none; cursor: pointer; }
+    #panel .row input[type=range]::-webkit-slider-runnable-track { height: 2px; background: rgba(var(--h-edge),0.2); border-radius: 1px; }
+    #panel .row input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 9px; height: 9px; margin-top: -3.5px; border-radius: 50%; background: var(--h-hi); box-shadow: 0 0 5px rgba(0,0,0,0.5); border: none; }
+    #panel .row input[type=range]::-moz-range-track { height: 2px; background: rgba(var(--h-edge),0.2); } #panel .row input[type=range]::-moz-range-thumb { width: 9px; height: 9px; border-radius: 50%; background: var(--h-hi); border: none; }
+    #panel .row input[type=range]:focus { outline: none; } #panel .row input[type=range]:focus::-webkit-slider-thumb { box-shadow: 0 0 0 2px rgba(var(--h-acc-rgb),0.35); }
+    #panel .row.changed input[type=range]::-webkit-slider-thumb { background: #f0d878; box-shadow: 0 0 5px rgba(0,0,0,0.5); }
+    /* the switch: a pill with its knob drawn as a background gradient (no pseudo-element — __panelShot's DOM raster keeps backgrounds, loses ::before) */
+    #panel .row input[type=checkbox] { -webkit-appearance: none; appearance: none; flex: 0 0 24px; width: 24px; height: 13px; margin: 0 1px 0 0; border-radius: 7px; border: 1px solid rgba(var(--h-edge),0.26); cursor: pointer; background: var(--h-field) radial-gradient(circle at 5.5px 50%, var(--h-faint) 0 4px, transparent 4.6px) no-repeat; transition: border-color .12s; }
+    #panel .row input[type=checkbox]:checked { border-color: rgba(var(--h-acc-rgb),0.8); background: rgba(var(--h-acc-rgb),0.22) radial-gradient(circle at 16.5px 50%, var(--h-acc) 0 4px, rgba(var(--h-acc-rgb),0.35) 4.3px, transparent 6px) no-repeat; }
+    #panel .row input[type=checkbox]:hover { border-color: var(--h-faint); } #panel .row input[type=checkbox]:checked:hover { border-color: var(--h-acc-hi); }
+    #panel .row input[type=checkbox]:focus-visible { outline: 1px solid var(--h-acc); outline-offset: 1px; }
+    #panel.rastering .row input[type=range] { -webkit-appearance: auto; appearance: auto; accent-color: var(--h-acc); height: 12px; }   /* (__panelShot only: the custom track / thumb are pseudo-elements the DOM raster cannot carry — a capture shows the native slider in the panel's orange instead) */
+    #panel .psearch input[type=checkbox] { accent-color: var(--h-acc); margin: 0; }
+    #panel .row select { flex: 0 1 auto; min-width: 0; max-width: 62%; font: inherit; font-size: 10.5px; background: var(--h-field); color: var(--h-hi); border: 1px solid rgba(var(--h-edge),0.2); border-radius: 3px; padding: 1px 3px; outline: none; }
+    #panel .row select:focus { border-color: var(--h-acc); }
+    #panel .row.btnrow { align-items: baseline; flex-wrap: wrap; row-gap: 3px; }
+    #panel .row.btnrow label { flex: 0 0 auto; max-width: 40%; color: var(--h-dim); font-size: 10px; letter-spacing: 0.04em; }
+    #panel .row.btnrow label:empty { display: none; }
+    #panel .row .btns { flex: 1 1 auto; min-width: 0; display: flex; flex-wrap: wrap; gap: 3px; justify-content: flex-end; }
+    #panel .row button { font: inherit; font-size: 10px; letter-spacing: 0.03em; background: rgba(var(--h-btn),0.7); color: var(--h-ink); border: 1px solid rgba(var(--h-edge),0.32); border-radius: 3px; padding: 1px 6px 2px; cursor: pointer; white-space: nowrap; }
+    #panel .row button:hover { background: rgba(var(--h-hover),0.85); border-color: var(--h-ink); color: var(--h-hi); }
+    #panel .row button:active { background: var(--h-acc); color: var(--h-on); }
+    #panel .row.textrow { display: block; min-height: 0; margin: 3px 0 4px 1px; padding: 3px 6px 3px 7px; border-left: 2px solid rgba(var(--h-edge),0.22); background: rgba(var(--h-plate),0.3); font-size: 10px; line-height: 1.35; color: var(--h-soft) !important; white-space: pre-wrap; word-break: break-word; }
+    #panel .row.textrow.empty { display: none; }
+    /* the panel's own hover tip (ui/panel.ts installTips): descriptions and whatever an ellipsis above cut short, wrapped, at once */
+    #ptip { position: fixed; z-index: 40; max-width: 356px; padding: 5px 8px 6px; font: 10.5px/1.4 var(--h-mono); color: var(--h-ink); background: rgba(var(--h-plate),0.97); border: 1px solid rgba(var(--h-edge),0.38); border-radius: 3px; box-shadow: 0 6px 22px rgba(0,0,0,0.6); pointer-events: none; white-space: pre-wrap; word-break: break-word; letter-spacing: 0.02em; }
+    #panel .row input.num { width: 7ch; background: var(--h-field); color: var(--h-hi); border: 1px solid rgba(var(--h-edge),0.2); border-radius: 3px; padding: 1px 4px; text-align: right; cursor: ew-resize; outline: none; font: inherit; }
+    #panel .row input.num:focus { cursor: text; border-color: var(--h-acc); }
     #fatal { position: absolute; inset: 0; display: none; z-index: 40; align-items: center; justify-content: center; text-align: center; padding: 40px; font-size: 14px; color: #fcc; background: #100; white-space: pre-wrap; }
+    #overlay { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+    .marker { position: absolute; transform: translate(-50%, -100%); font-size: 13px; font-weight: 700; text-shadow: 0 1px 3px #000, 0 0 6px #000; white-space: nowrap; }
+    .marker.sus { color: #fd6; } .marker.alert { color: #f54; } .marker.dead { color: #777; font-weight: 400; font-size: 10px; } .marker.ko { color: var(--h-dim); font-weight: 400; font-size: 10px; letter-spacing: -0.05em; } .marker.calm { color: var(--h-soft); font-weight: 400; font-size: 10px; }
+    .marker.frag { color: #ff5a3c; font-weight: 700; font-size: 14px; letter-spacing: 0.04em; }   /* frag.ts fragMarks: a defender's live grenade Sam has been cued on, with the seconds left */
+    .lostfrom { position: absolute; height: 3px; transform-origin: 0 50%; pointer-events: none; background: linear-gradient(90deg, rgba(var(--h-acc-rgb),0.35), var(--h-acc)); }   /* deathrecap.ts lostLive: the way the round came in at a squad man lost, on the ground at him */
+    .lostfrom::after { content: ''; position: absolute; right: -2px; top: -3.5px; border-left: 9px solid var(--h-acc); border-top: 5px solid transparent; border-bottom: 5px solid transparent; }
+    .marker.lastseen { color: #cbb98a; font-weight: 400; font-size: 12px; letter-spacing: 0.08em; }   /* fogofwar.ts lastSeen: '(?)' where an enemy was last seen, fading — thin and bracketed, never a live man's bold '?' */
+    .marker.civ { font-style: italic; opacity: 0.9; } .marker.civ.alert { color: #f96; } .marker.civ.sus { color: #fe9; }   /* the civilians' (civilians.ts): the same glyphs, softer and slanted — a frightened cleaner is not a man onto you */
+    /* the ring on the marker F acts on (what it offers is spelled out in the interaction panel, #interact); dimmer while the thing is out of reach */
+    .reticle { position: absolute; width: 22px; height: 22px; border: 1.5px solid var(--h-hi); border-radius: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 6px rgba(0,0,0,0.8); }
+    .reticle.far { opacity: 0.55; }
+    .reticle.aim { width: 16px; height: 16px; border-width: 1px; opacity: 0.7; box-shadow: none; pointer-events: none; }   /* the auto-aim snap ring: smaller and quieter than the interaction ring; under the aim model overlay.ts sizes it to the cone and brightens it as the aim settles */
+    .reticle.aim.k-free { border-color: rgba(var(--h-hi-rgb),0.85); }   /* …round the bare cursor's point when nothing is near (aim model only) */
+    .reticle.aim.trail { opacity: 0.55; }   /* aimweight.ts: the circle is where the gun points — quieter while it is still swinging onto the cursor */
+    .reticle.aim.shut, .aimwish.gun.shut { border-style: dashed; opacity: 0.95 !important; }   /* player.ts gunShut: his gun cannot get a round out from here (a wall holds it down, or its muzzle is past a jamb) — the ring is broken and barred; while the ring is busy on a thing Space acts on, the gun's own small circle is */
+    .reticle.aim.shut::after, .aimwish.gun.shut::after { content: ''; position: absolute; left: 50%; top: 50%; width: 2px; height: 130%; min-height: 20px; background: rgba(var(--h-hi-rgb),0.95); border-radius: 1px; transform: translate(-50%, -50%) rotate(45deg); box-shadow: 0 0 3px rgba(0,0,0,0.9); }
+    .reticle.aim.k-guard.shut::after { background: #ff8070; }
+    .aimwish { position: absolute; width: 5px; height: 5px; border-radius: 50%; transform: translate(-50%, -50%); background: #ffe9a8; opacity: 0.85; pointer-events: none; }   /* …and a dot on what the reticle snapped to (a light, a man) until it gets there */
+    .aimwish.k-guard { background: #ff8070; }
+    .aimwish.gun { width: 12px; height: 12px; background: none; border: 1px solid rgba(var(--h-hi-rgb),0.85); opacity: 0.55; }   /* …or the circle itself, small, while the ring is busy on something Space acts on */
+    .reticle.off { border-color: #f96; box-shadow: 0 0 5px rgba(0,0,0,0.8); }
+    .reticle.k-door { border-color: #9cd0ff; box-shadow: 0 0 5px rgba(0,0,0,0.8); } .reticle.k-body { border-color: #f0a090; box-shadow: 0 0 5px rgba(0,0,0,0.8); } .reticle.k-guard { border-color: #ff8070; box-shadow: 0 0 5px rgba(0,0,0,0.8); } .reticle.k-objective { border-color: var(--h-acc); box-shadow: 0 0 5px rgba(0,0,0,0.8); } .reticle.k-breaker { border-color: #ffd08a; box-shadow: 0 0 5px rgba(0,0,0,0.8); }
+    /* progress ring round the reticle (a lock being picked, the drive coming out): a conic sweep masked to a 3 px annulus just outside the ring */
+    .reticle b { display: none; position: absolute; inset: -7px; border-radius: 50%; pointer-events: none; background: conic-gradient(#bfe6ff var(--p, 0%), rgba(160,210,255,0.14) 0); -webkit-mask: radial-gradient(circle closest-side, transparent calc(100% - 3.5px), #000 calc(100% - 3px)); mask: radial-gradient(circle closest-side, transparent calc(100% - 3.5px), #000 calc(100% - 3px)); filter: drop-shadow(0 0 3px rgba(0,0,0,0.7)); }
+    .reticle.k-objective b { background: conic-gradient(var(--h-acc-hi) var(--p, 0%), rgba(var(--h-acc-rgb),0.14) 0); }
+    /* the one word beside the ring: the 40 mm's '40 MM · TOO CLOSE TO ARM' (overlay.ts HE40_SHORT; the plain 'RMB  OCP' / 'RMB  RING' words are gone) */
+    .reticle i { display: none; position: absolute; left: 100%; top: 100%; margin: 1px 0 0 5px; font: 600 10px/1 var(--h-head); font-style: normal; letter-spacing: 0.12em; white-space: pre; color: var(--h-hi); text-shadow: 0 1px 2px #000, 0 0 5px rgba(0,0,0,0.5); pointer-events: none; }
+    .reticle.k-light i { color: #ffe9a8; text-shadow: var(--h-shadow); }
+    /* light / sound meters, bottom-left: two thin monochrome bars (Chaos-Theory-ish, minimal) */
+    #meters { position: absolute; left: 18px; bottom: 16px; width: 200px; font: 700 11px/1 var(--h-head); letter-spacing: 0.12em; color: var(--h-ink); text-shadow: var(--h-shadow); pointer-events: none; opacity: 0.92; }
+    #meters .m { position: relative; height: 20px; margin-top: 6px; }
+    #meters .m .lab { position: absolute; left: 0; top: 0; }
+    #meters .m .num { position: absolute; right: 0; top: 0; font: 9px/1 var(--h-mono); color: var(--h-hi); letter-spacing: 0.06em; }
+    #meters .m .bar { position: absolute; left: 0; right: 0; bottom: 0; height: 6px; border: 1px solid rgba(var(--h-edge),0.55); background: rgba(var(--h-plate),0.5); }
+    #meters .m .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: var(--h-ink); transition: width .08s linear; }
+    #meters .m .peak { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--h-hi); opacity: 0; }
+    #meters .m .ticks { position: absolute; left: 0; right: 0; bottom: 0; height: 6px; background: repeating-linear-gradient(90deg, transparent 0 19px, rgba(var(--h-edge),0.28) 19px 20px); }
+    #meters.hot .m.light .fill { background: var(--h-acc); }
+    /* radio traffic (overlay.ts): only what goes over a net — the guards' channel you are listening in on, and (later) your own side. Everything else the old
+       message log printed is carried by the interaction panel, the kit column and the world itself. */
+    #log { position: absolute; left: 50%; bottom: 44px; transform: translateX(-50%); max-width: min(620px, 70vw / var(--tz, 1)); font: italic 12px/1.45 var(--h-font); color: var(--h-ink); text-align: center; text-shadow: var(--h-shadow); white-space: pre-wrap; pointer-events: none; letter-spacing: 0.02em; }
+    #log .rx { display: block; opacity: 0.92; } #log .rx b { font: 700 11px/1 var(--h-head); color: var(--h-hi); letter-spacing: 0.12em; margin-right: 6px; } #log .rx.old { opacity: 0.5; } #log .rx.said { opacity: 0.8; font-style: normal; }
+    /* mission: one objective line top-centre and a small diamond on (or, clamped to the screen edge, toward) the current objective — the same caps as the meters; the objective is one of the things the orange is for (overlay.ts) */
+    #objective { position: absolute; left: 50%; top: 5px; padding: 5px 12px 4px; background: rgba(var(--h-plate),0.5); border-radius: 2px; transform: translateX(-50%); font: 12px/1 var(--h-font); letter-spacing: 0.02em; color: var(--h-ink); text-shadow: var(--h-shadow); white-space: pre; pointer-events: none; opacity: 0.95; }
+    #objective b { margin-right: 3px; font: 700 11px/1 var(--h-head); letter-spacing: 0.16em; text-transform: uppercase; color: var(--h-acc); } #objective.done b, #objective.failed b { color: inherit; }
+    /* A TUTORIAL MISSION'S ONE LINE (ui/overlay.ts, game/rails.ts): big, low in the middle, the keys it names drawn as keys, a pip a step */
+    #railprompt { position: absolute; left: 50%; bottom: max(13%, 112px); transform: translateX(-50%) translateY(calc(var(--railshift, 0px) + var(--railman, 0px))); transition: transform .18s ease-out; display: none; flex-direction: column; align-items: center; gap: 9px; pointer-events: none; z-index: 6; }
+    body.onrails #log { bottom: var(--raillog, 30px); transition: bottom .18s ease-out; } body.onrails #log .rx { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }   /* (the net's rows stay under a tutorial mission's line: three of them, one line each, never up over it — and when the line is at the bottom edge, clear of your men, they stand just above it: ui/railclear.ts) */
+    #railprompt.on { display: flex; animation: railin .45s cubic-bezier(.2,.9,.3,1.2); }
+    #railprompt .line { padding: 13px 26px 12px; background: rgba(var(--h-plate),0.78); border-radius: 4px; border-bottom: 2px solid var(--h-acc); font: 600 27px/1.25 var(--h-head); letter-spacing: 0.02em; color: var(--h-hi); text-shadow: var(--h-shadow); white-space: normal; text-align: center; text-wrap: balance; width: max-content; max-width: max(320px, calc(100vw / var(--tz, 1) - 860px)); }
+    body.skyseat #railprompt .line { max-width: calc(86vw / var(--tz, 1)); }   /* (the kit panel owns the lower left 400 px: a long line breaks in two beside it; in the sky seat there is no kit panel) */
+    #railprompt kbd { display: inline-block; min-width: 22px; margin: 0 3px; padding: 3px 9px 2px; border-radius: 5px; background: var(--h-acc); color: var(--h-on); box-shadow: 0 3px 0 rgba(0,0,0,0.45); font: 700 24px/1.2 var(--h-head); text-align: center; text-shadow: none; position: relative; top: -2px; }
+    #railprompt .note { padding: 5px 14px 4px; background: var(--h-acc); color: var(--h-on); border-radius: 4px; font: 700 17px/1.2 var(--h-head); letter-spacing: 0.03em; } #railprompt .note:empty { display: none; } #railprompt .line:empty { display: none; }   /* (a tap the step refused: what to do instead, under the line) */
+    #railprompt .note kbd { min-width: 16px; padding: 1px 6px 0; margin: 0 2px; background: var(--h-on); color: var(--h-acc); font-size: 15px; box-shadow: none; top: 0; }
+    #railprompt .nb, #railcard .nb { white-space: nowrap; }
+    /* (a line with no key in it — what the men are doing, a fight to watch: smaller, no rule of the accent's under it, a dot that beats beside it) */
+    #railprompt .line.watch { font-weight: 500; font-size: 21px; border-bottom-color: rgba(var(--h-edge),0.45); opacity: 0.92; }
+    #railprompt .line.watch::before { content: ''; display: inline-block; width: 8px; height: 8px; margin: 0 12px 2px 0; border-radius: 50%; background: var(--h-acc); animation: railwatch 1.1s ease-in-out infinite; }
+    @keyframes railwatch { 0%, 100% { opacity: 0.25; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.15); } }
+    #railprompt .line.nudge { animation: railnudge .32s ease-in-out; } @keyframes railnudge { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-7px); } 75% { transform: translateX(7px); } }
+    #railprompt .pips { display: flex; gap: 6px; } #railprompt .pips i { width: 9px; height: 4px; border-radius: 2px; background: rgba(var(--h-edge),0.35); }
+    #railprompt .pips i.done { background: var(--h-acc); opacity: 0.75; } #railprompt .pips i.now { background: var(--h-hi); width: 18px; }
+    /* A TUTORIAL STEP'S CARD (ui/railcard.ts): a heading and a few sentences in the middle, the world held still behind it (main.ts). In the HUD's layer, so by
+       ui/textsize.ts's rule its one viewport unit is divided by the factor */
+    #railcard { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; z-index: 12; pointer-events: auto; background: rgba(0,0,0,0.42); }
+    #railcard.on { display: flex; animation: railcardin .22s ease-out; }
+    #railcard .rc { box-sizing: border-box; width: min(540px, calc(100vw / var(--tz, 1) - 48px)); padding: 26px 30px 24px; background: rgba(var(--h-plate),0.95); border-top: 3px solid var(--h-acc); border-radius: 4px; box-shadow: 0 18px 60px rgba(0,0,0,0.6); }
+    #railcard h2 { margin: 0 0 14px; font: 700 27px/1.1 var(--h-head); letter-spacing: 0.04em; text-transform: uppercase; color: var(--h-hi); }
+    #railcard p { margin: 0 0 10px; font: 17px/1.5 var(--h-font); color: var(--h-ink); text-wrap: pretty; }
+    #railcard p kbd, #railcard h2 kbd { display: inline-block; min-width: 16px; margin: 0 2px; padding: 1px 7px 0; border-radius: 4px; background: var(--h-acc); color: var(--h-on); font: 700 15px/1.3 var(--h-head); text-align: center; }
+    #railcard button { margin-top: 12px; display: flex; align-items: center; gap: 14px; padding: 11px 18px 9px; background: var(--h-acc); color: var(--h-on); border: 0; border-radius: 4px; font: 700 19px/1 var(--h-head); letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; }
+    #railcard button:hover { filter: brightness(1.1); }
+    #railcard button kbd { padding: 3px 7px 2px; border-radius: 3px; background: var(--h-on); color: var(--h-acc); font: 700 11px/1 var(--h-head); letter-spacing: 0.14em; }
+    @keyframes railcardin { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes railin { from { opacity: 0; transform: translateX(-50%) translateY(calc(14px + var(--railshift, 0px) + var(--railman, 0px))) scale(0.96); } to { opacity: 1; transform: translateX(-50%) translateY(calc(var(--railshift, 0px) + var(--railman, 0px))); } }   /* (the line comes in where it stands: a ring's step and the step to the bottom edge clear of your men — ui/railclear.ts — are in both ends) */
+    @media (max-width: 900px) { #railprompt .line { font-size: 20px; white-space: normal; text-align: center; } #railprompt .line.watch { font-size: 17px; } #railprompt kbd { font-size: 18px; } }
+    body.skyseat #equip, body.skyseat #meters { display: none !important; }
+    /* a tutorial mission: the place its one line points at is a ring that beats, not a small diamond */
+    body.onrails .objmark { transform: translate(-50%, -50%); }
+    body.onrails .objmark i { width: 26px; height: 26px; border-width: 3px; border-radius: 50%; transform: none; box-shadow: 0 0 10px rgba(0,0,0,0.7), inset 0 0 6px rgba(0,0,0,0.5); animation: railbeat 1.05s ease-out infinite; }
+    body.onrails .objmark.edge i { width: 14px; height: 14px; }
+    /* (a step's `toward`: the mark is three chevrons lying from the place to where it points, lit one after another that way) */
+    .objmark u { display: none; }
+    body.onrails .objmark.arrow i { display: none; }
+    body.onrails .objmark.arrow u { display: flex; position: absolute; left: 50%; top: 50%; text-decoration: none; transform-origin: 0 50%; transform: translateY(-50%) rotate(var(--turn, 0deg)); }
+    body.onrails .objmark.arrow u b { display: block; width: 18px; height: 18px; margin-right: 2px; border-top: 6px solid var(--h-acc); border-right: 6px solid var(--h-acc); transform: rotate(45deg); filter: drop-shadow(0 0 4px rgba(0,0,0,0.85)); animation: railarrow 0.9s linear infinite; }
+    body.onrails .objmark.arrow u b:nth-child(2) { animation-delay: 0.15s; } body.onrails .objmark.arrow u b:nth-child(3) { animation-delay: 0.3s; }
+    body.onrails .objmark.arrow span { margin-top: 22px; }
+    @keyframes railarrow { 0%, 60%, 100% { opacity: 0.3; } 20% { opacity: 1; } }
+    @keyframes railbeat { 0% { outline: 3px solid var(--h-acc); outline-offset: 0; } 100% { outline: 3px solid transparent; outline-offset: 22px; } }
+    /* what Tab shows (ui/tabcard.ts, ui/tabkey.ts 'brief'): the objective in full and the squad, over a held game */
+    #tabcard { display: none; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-sizing: border-box; width: min(560px, 86vw / var(--tz, 1)); max-height: calc(82vh / var(--tz, 1)); overflow-y: auto; padding: 16px 20px 12px; background: rgba(var(--h-plate),0.94); border: 1px solid rgba(var(--h-edge),0.55); border-radius: 3px; box-shadow: 0 8px 40px rgba(0,0,0,0.6); font: 13px/1.4 var(--h-font); letter-spacing: 0.01em; color: var(--h-ink); z-index: 13; }   /* (over the HUD's own layers and a line being said; under the pause card and the lists) */
+    #tabcard.on { display: block; } #tabcard section + section { margin-top: 14px; }
+    #tabcard h4 { display: flex; justify-content: space-between; gap: 10px; margin: 0 0 6px; font: 700 11px/1 var(--h-head); letter-spacing: 0.16em; text-transform: uppercase; color: var(--h-acc); } #tabcard h4 em { font: 400 11px/1 var(--h-font); letter-spacing: 0.02em; text-transform: none; color: var(--h-dim); }
+    #tabcard p { margin: 0; color: var(--h-hi); } #tabcard ul { margin: 6px 0 0; padding: 0; list-style: none; columns: 2; column-gap: 18px; }
+    #tabcard li { position: relative; padding-left: 16px; break-inside: avoid; } #tabcard li::before { content: '○'; position: absolute; left: 0; color: var(--h-dim); } #tabcard li.done { color: var(--h-soft); } #tabcard li.done::before { content: '✓'; color: var(--h-acc); } #tabcard li.now { color: var(--h-hi); } #tabcard li.now::before { content: '▸'; color: var(--h-acc); }
+    #tabcard .man { display: grid; grid-template-columns: 96px minmax(0, 1fr); column-gap: 10px; padding: 4px 0; border-top: 1px solid rgba(var(--h-edge),0.14); } #tabcard .man b { color: var(--h-hi); } #tabcard .man i { grid-column: 2; font-style: normal; font-size: 11px; color: var(--h-soft); } #tabcard .man.down b, #tabcard .man.down span { text-decoration: line-through; opacity: 0.6; }
+    #tabcard .carry { margin-top: 5px; font-size: 12px; color: var(--h-soft); } #tabcard .carry:first-of-type { padding-top: 6px; border-top: 1px solid rgba(var(--h-edge),0.14); }
+    #tabcard footer { margin-top: 14px; font-size: 11px; color: var(--h-dim); } #tabcard kbd { display: inline-block; margin: 0 2px; padding: 1px 5px 0; border-radius: 2px; background: rgba(var(--h-edge),0.8); color: var(--h-on); font: 700 9px/1.25 var(--h-mono); letter-spacing: 0.06em; vertical-align: 1px; }
+    #objective:empty { display: none; } #objective.done { color: var(--h-hi); } #objective.failed { color: #f0a090; }
+    /* alarm stage (Chaos-Theory-style): hidden at calm; ALARM I amber while the floor is heightened, ALARM II red on lockdown, with the level's clock and
+       a pulsing pip while an alarm episode is actually running (someone is alert / searching) */
+    #alarm { position: absolute; left: 50%; top: 30px; transform: translateX(-50%); font: 700 11px/1 var(--h-head); letter-spacing: 0.22em; text-shadow: var(--h-shadow); white-space: pre; pointer-events: none; opacity: 0; transition: opacity .4s; }
+    #alarm.on { opacity: 0.95; } #alarm.l1 { color: #f3c86a; } #alarm.l2 { color: #ff7a5c; }
+    #alarm i { display: inline-block; width: 6px; height: 6px; margin-right: 8px; border-radius: 50%; background: currentColor; vertical-align: 1px; opacity: 0.35; }
+    #alarm.live i { animation: alarmPip 0.9s ease-in-out infinite; opacity: 1; }
+    @keyframes alarmPip { 50% { opacity: 0.25; } }
+    /* checkpoint tag (game/savestate.ts, overlay.ts): a discreet CHECKPOINT under the objective line for a couple of seconds when one is written / loaded */
+    #checkpoint { position: absolute; right: 14px; top: 10px; font: 700 11px/1 var(--h-head); letter-spacing: 0.26em; color: var(--h-ink); text-shadow: var(--h-shadow); white-space: pre; pointer-events: none; opacity: 0; transition: opacity .5s; }
+    #checkpoint.on { opacity: 0.8; transition: opacity .15s; }
+    #checkpoint b { display: inline-block; width: 5px; height: 5px; margin-right: 7px; transform: rotate(45deg); background: currentColor; vertical-align: 1px; }
+    body.touring #checkpoint { display: none; }
+    /* the session journal's REC tag (game/journal.ts, overlay.ts; F10): under the checkpoint tag, red while recording, amber while it waits for a moment it may start on */
+    #journal { position: absolute; right: 14px; top: 26px; font: 700 11px/1 var(--h-head); letter-spacing: 0.16em; color: #e8b04c; text-shadow: var(--h-shadow); white-space: pre; pointer-events: none; opacity: 0; transition: opacity .3s; }
+    #journal.on { opacity: 0.9; }
+    #journal.rec { color: #ff5a4e; }
+    .objmark { position: absolute; transform: translate(-50%, -5px); pointer-events: none; text-align: center; }
+    .objmark i { display: block; width: 7px; height: 7px; margin: 0 auto; border: 1.5px solid var(--h-acc); transform: rotate(45deg); box-shadow: 0 0 5px rgba(0,0,0,0.8); }
+    .objmark span { display: block; margin-top: 6px; font: 700 11px/1 var(--h-head); letter-spacing: 0.14em; color: var(--h-hi); text-shadow: var(--h-shadow); white-space: nowrap; }
+    .objmark.edge i { border-color: var(--h-acc); box-shadow: none; }
+    .cammark { position: absolute; width: 9px; height: 9px; margin: -6px 0 0 -6px; border: 1.5px solid rgba(var(--h-acc-rgb),0.6); border-radius: 50%; background: rgba(0,0,0,0.35); box-shadow: 0 0 4px rgba(0,0,0,0.9); pointer-events: none; }   /* his own stuck sticky camera under the fog of war (ui/overlay.ts): a small lens; the one that sends is brighter with a red pupil */
+    .cammark.live { border-color: var(--h-acc); }
+    .cammark.live::after { content: ''; position: absolute; left: 2px; top: 2px; width: 5px; height: 5px; border-radius: 50%; background: #ff5a4e; box-shadow: 0 0 5px rgba(255,90,78,0.8); }
+    /* the squad's order menu (orders.ts mark()): a dashed ring on what it is frozen on, a word under it, in the addressed element's colour */
+    .ordermark { position: absolute; transform: translate(-50%, -11px); pointer-events: none; text-align: center; color: var(--h-hi); }
+    .ordermark i { display: block; width: 20px; height: 20px; margin: 0 auto; border: 1.5px dashed currentColor; border-radius: 50%; box-shadow: 0 0 8px rgba(0,0,0,0.6); }
+    .ordermark span { display: block; margin-top: 5px; font: 700 11px/1 var(--h-head); letter-spacing: 0.14em; text-transform: uppercase; text-shadow: var(--h-shadow); white-space: nowrap; }
+    .ordermark.t-gold { color: #f2cf6b; } .ordermark.t-red { color: #ff9a8a; } .ordermark.t-blue { color: #9cc8ff; }
+    body.attract #equip, body.attract #meters, body.attract #interact, body.attract #objective, body.attract #hud, body.attract .marker, body.attract .reticle, body.attract .aimwish, body.attract .idot, body.attract .lostfrom { display: none !important; }   /* nobody is playing while the attract camera runs: no kit, meters, prompts, read-out, markers or interactable dots over the shots (nothing reads these elements' layout, so display:none is safe) */
+    /* THE MENUS (ui/menu.ts): the title screen, the pause card, the debrief. Colours and type are ui/theme.ts's tokens (--m-…), shared with the starting page, the loadout and the options screen */
+    #menu { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; background: radial-gradient(ellipse at 50% 55%, rgba(var(--m-base-rgb),0.4), rgba(var(--m-base-rgb),0.88) 70%); z-index: 20; color: var(--m-text); font: 13px/1.45 var(--m-font); }
+    #menu.on { display: flex; }
+    body.attract #menu { background: radial-gradient(ellipse at 50% 55%, rgba(var(--m-base-rgb),0.08), rgba(var(--m-base-rgb),0.45) 75%); }   /* attract mode is running behind the start card (main.ts): a lighter vignette so the rooms round the card can be seen */
+    #menu .card { box-sizing: border-box; width: min(560px, calc(100% - 40px)); max-height: calc(100% - 48px); overflow: auto; padding: 24px 28px 16px; background: rgba(var(--m-panel-rgb),0.95); border: 1px solid rgba(var(--m-edge),0.24); border-top: 3px solid var(--m-accent); box-shadow: 0 18px 60px rgba(0,0,0,0.6); border-radius: 2px; }
+    #menu .t1 { font: 700 44px/0.9 var(--m-head); letter-spacing: 0.02em; text-transform: uppercase; color: var(--m-bright); }
+    #menu .t1 b { font-weight: 700; color: var(--m-accent); }
+    #menu .t2 { margin-top: 8px; color: var(--m-soft); letter-spacing: 0.03em; }
+    #menu .actions { display: flex; gap: 8px; margin: 18px 0 6px; flex-wrap: wrap; }
+    #menu .btn { font: 600 13px/1 var(--m-head); letter-spacing: 0.14em; text-transform: uppercase; padding: 10px 16px 9px; background: rgba(var(--m-btn-rgb),0.8); color: var(--m-btn-text); border: 1px solid rgba(var(--m-edge),0.3); border-radius: 2px; cursor: pointer; }
+    #menu .btn:hover, #menu .btn:focus { background: rgba(var(--m-hover-rgb),0.9); outline: none; border-color: var(--m-accent); color: var(--m-bright); }
+    #menu .btn.primary { background: var(--m-accent); color: var(--m-on-accent); border-color: var(--m-accent); font-weight: 700; }
+    #menu .btn.primary:hover, #menu .btn.primary:focus { background: var(--m-accent-hi); border-color: var(--m-bright); color: var(--m-on-accent); }
+    #menu .btn.on { border-color: var(--m-accent); color: var(--m-accent-hi); }
+    #menu .btn:disabled, #menu .btn:disabled:hover { opacity: 0.4; cursor: progress; background: rgba(var(--m-btn-rgb),0.8); border-color: rgba(var(--m-edge),0.3); }   /* the boot card (menu.ts bootCard): buttons that wait for the renderer's kernels */
+    #menu .btn.primary:disabled, #menu .btn.primary:disabled:hover { background: var(--m-accent); border-color: var(--m-accent); }
+    #menu .note.bootstatus { color: var(--m-btn-text); letter-spacing: 0.04em; font-variant-numeric: tabular-nums; margin-bottom: 8px; }
+    #menu .bootstatus .bbar { display: block; height: 2px; margin-top: 6px; background: rgba(var(--m-edge),0.18); }
+    #menu .bootstatus .bbar i { display: block; height: 100%; width: 0; background: var(--m-accent); transition: width 0.2s; }
+    #menu .refused { margin: 0 0 6px; padding: 6px 10px; font-size: 12px; color: #f0c27a; border-left: 3px solid #e8b46a; background: rgba(232,180,106,0.08); }   /* the URL named a scenario and its start said no (ui/menu.ts) */
+    /* THE TITLE SCREEN (#menu.title: the start card while the one starting page is the way in): the wordmark and the main menu down the left, the floor — and the attract reel — showing through on the right */
+    #menu.title { align-items: stretch; justify-content: flex-start; background: linear-gradient(90deg, rgba(var(--m-base-rgb),0.97) 0, rgba(var(--m-base-rgb),0.9) 24%, rgba(var(--m-base-rgb),0.4) 56%, rgba(var(--m-base-rgb),0.06) 100%); }
+    body.attract #menu.title { background: linear-gradient(90deg, rgba(var(--m-base-rgb),0.95) 0, rgba(var(--m-base-rgb),0.84) 22%, rgba(var(--m-base-rgb),0.2) 52%, rgba(var(--m-base-rgb),0) 100%); }
+    #menu.title .card { width: min(920px, 100%); height: 100%; max-height: none; overflow: hidden auto; display: flex; flex-direction: column; padding: clamp(28px, 10vh / var(--tz, 1), 110px) 24px 22px clamp(24px, 6.5vw / var(--tz, 1), 110px); background: none; border: 0; box-shadow: none; border-radius: 0; }
+    #menu.title .t1 { font-size: clamp(40px, 6.6vw / var(--tz, 1), 100px); line-height: 0.9; letter-spacing: 0; white-space: nowrap; text-shadow: 0 2px 30px rgba(0,0,0,0.6); }
+    #menu.title .t2 { margin-top: 16px; max-width: 36ch; font-size: 14px; line-height: 1.4; letter-spacing: 0.04em; }
+    #menu.title .head::after { content: ''; display: block; width: 72px; height: 4px; margin-top: 22px; background: var(--m-accent); }
+    #menu.title .actions { flex-direction: column; flex-wrap: nowrap; align-items: flex-start; gap: 4px; margin: clamp(20px, 6vh / var(--tz, 1), 60px) 0 0; }
+    #menu.title .actions .btn { box-sizing: border-box; width: min(360px, 100%); text-align: left; font-size: 24px; letter-spacing: 0.12em; padding: 13px 18px 11px; background: rgba(var(--m-btn-rgb),0.4); border: 0; border-left: 4px solid rgba(var(--m-edge),0.3); border-radius: 0; transition: padding-left 0.12s, background 0.12s; }
+    #menu.title .actions .btn:hover, #menu.title .actions .btn:focus { padding-left: 28px; background: rgba(var(--m-hover-rgb),0.7); border-left-color: var(--m-accent); }
+    #menu.title .actions .btn.primary { font-size: 34px; padding: 14px 18px 11px; margin-bottom: 8px; background: var(--m-accent); border-left-color: var(--m-accent-hi); }
+    #menu.title .actions .btn.primary:hover, #menu.title .actions .btn.primary:focus { padding-left: 28px; background: var(--m-accent-hi); border-left-color: var(--m-bright); }
+    /* the title's EXTRAS page (ui/menu.ts EXTRAS): the tool pages, a link each, under a small head */
+    #menu.title .actions .xhead { margin: 14px 0 4px 4px; font: 600 11px/1.2 var(--m-head); letter-spacing: 0.22em; text-transform: uppercase; color: var(--m-dim); }
+    #menu.title .actions .xhead:first-child { margin-top: 0; }
+    #menu.title .actions .btn.xrow { display: block; width: min(520px, 100%); font-size: 20px; padding: 10px 18px 9px; text-decoration: none; color: var(--m-btn-text); }
+    #menu.title .actions .btn.xrow b { display: block; font-weight: inherit; }
+    #menu.title .actions .btn.xrow:hover, #menu.title .actions .btn.xrow:focus { padding-left: 28px; outline: none; }
+    #menu.title .actions .btn.xback { margin-top: 14px; font-size: 18px; color: var(--m-soft); }
+    /* a short window (960 x 540): the Extras list and its way back stay above the fold */
+    @media (max-height: 640px) { #menu.title .head::after { margin-top: 12px; } #menu.title .actions.extras { gap: 3px; margin-top: 12px; }
+      #menu.title .actions.extras .xhead { margin: 7px 0 2px 4px; } #menu.title .actions.extras .btn.xrow { font-size: 15px; padding: 5px 18px 4px; }
+      #menu.title .actions.extras .btn.xback { margin-top: 6px; font-size: 14px; padding: 5px 18px 4px; } }
+    #menu.title .tfill { flex: 1 1 auto; min-height: 16px; }
+    #menu.title .note.bootstatus { width: min(360px, 100%); margin: 0 0 10px; font: 11px var(--m-mono); color: var(--m-soft); }
+    #menu.title .cheats { align-self: flex-start; margin: 0 0 10px; padding: 4px 9px; font: 600 11px/1.2 var(--m-head); letter-spacing: 0.14em; text-transform: uppercase; color: #f0c27a; background: rgba(232,180,106,0.08); border: 1px dashed rgba(232,180,106,0.5); border-radius: 2px; cursor: pointer; }
+    #menu.title .cheats:hover, #menu.title .cheats:focus { border-style: solid; outline: none; }
+    #menu.title .foot { margin-top: 0; }
+    /* THE PAUSE CARD (#menu.paused): the run's name, the menu down the left; 'Run so far' opens the debrief beside it */
+    #menu.paused .card { width: min(380px, calc(100% - 40px)); }
+    #menu.paused .card.wide { width: min(1240px, calc(100% - 40px)); display: grid; grid-template-columns: 300px minmax(0, 1fr); column-gap: 28px; align-items: start; }
+    #menu.paused .t1 { font-size: 13px; line-height: 1; letter-spacing: 0.3em; color: var(--m-dim); } #menu.paused .t1 b { color: var(--m-dim); }
+    #menu.paused .t2 { margin-top: 12px; font: 700 26px/1.08 var(--m-head); letter-spacing: 0.05em; text-transform: uppercase; color: var(--m-bright); }
+    #menu.paused .side { min-width: 0; }
+    #menu.paused .actions { flex-direction: column; flex-wrap: nowrap; gap: 6px; }
+    #menu.paused .actions .btn { width: 100%; text-align: left; font-size: 15px; padding: 12px 14px 10px; }
+    #menu.paused .actions .btn.primary { font-size: 20px; padding: 13px 14px 11px; }
+    #menu.paused .actions .gap { height: 8px; }
+    #menu.paused .card.wide .body { margin-top: 0; min-width: 0; }
+    @media (max-width: 820px) { #menu.paused .card.wide { display: block; } }
+    /* THE MISSION LIST (ui/missions.ts): its own layer over #menu — the list down the left, the highlighted mission's sheet on the right */
+    #missions { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(var(--m-base-rgb),0.86); z-index: 21; outline: none; }
+    #missions.on { display: flex; }
+    #missions .mcard { width: min(980px, calc(100% - 40px)); height: min(780px, calc(100% - 40px)); display: flex; flex-direction: column; background: rgba(var(--m-panel-rgb),0.95); border: 1px solid rgba(var(--m-edge),0.35); box-shadow: 0 10px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,0,0,0.4); border-radius: 6px; color: var(--m-text); font: 13px/1.45 ui-sans-serif, system-ui, -apple-system, sans-serif; }
+    #missions .btn { font: inherit; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; padding: 8px 14px; background: rgba(var(--m-btn-rgb),0.7); color: var(--m-btn-text); border: 1px solid rgba(var(--m-edge),0.45); border-radius: 3px; cursor: pointer; }
+    #missions .btn:hover, #missions .btn:focus { background: rgba(var(--m-hover-rgb),0.8); outline: none; border-color: var(--m-accent-hi); }
+    #missions .btn.primary { background: var(--m-accent); color: var(--m-on-accent); border-color: var(--m-accent); font-weight: 600; }
+    #missions .btn.primary:hover, #missions .btn.primary:focus { background: var(--m-accent-hi); }
+    #missions .mhead { display: flex; align-items: center; gap: 18px; padding: 14px 22px 12px; border-bottom: 1px solid rgba(var(--m-edge),0.22); }
+    #missions .mback { padding: 5px 10px; font-size: 11px; }
+    #missions .mt { font: 300 24px/1 ui-sans-serif, system-ui, -apple-system, 'Helvetica Neue', sans-serif; letter-spacing: 0.26em; text-transform: uppercase; color: var(--m-bright); text-shadow: 0 0 24px rgba(var(--m-accent-rgb),0.25); }
+    #missions .mcount { margin-left: auto; font: 11px ui-monospace, Menlo, monospace; color: var(--m-faint); letter-spacing: 0.06em; }
+    #missions .mbody { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(230px, 310px) minmax(0, 1fr); }
+    #missions .mlist { overflow: auto; padding: 8px 0; border-right: 1px solid rgba(var(--m-edge),0.22); }
+    #missions .msec { padding: 12px 15px 4px; font-size: 10px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--m-accent); }
+    #missions .msec.rest { margin-top: 6px; border-top: 1px solid rgba(var(--m-edge),0.14); }
+    #missions .mrow { display: flex; align-items: baseline; gap: 10px; padding: 8px 14px 8px 15px; text-decoration: none; color: var(--m-soft); border-left: 3px solid transparent; cursor: pointer; }
+    #missions .mrow:focus { outline: none; }
+    #missions .mrow:hover { background: rgba(var(--m-hover-rgb),0.35); color: var(--m-bright); }
+    #missions .mrow.sel { background: rgba(var(--m-edge),0.16); border-left-color: var(--m-accent); color: var(--m-bright); }
+    #missions .mrow.unplayed:not(.sel):not(:hover) > * { opacity: 0.5; }   /* (THE UNPLAYED ROWS, ui/missions.ts unplayedClass: drawn quieter, back to full under the cursor; ?unplayed=0 = no row wears the class) */
+    #missions .mlist:not(.tiles) .mrow.unplayed.first { position: relative; margin-top: 15px; }   /* (and a rule over the first of a group's, in the room above it and outside the row's own box, so its highlight is the size of any row's: they stand apart, with no word for it) */
+    #missions .mlist:not(.tiles) .mrow.unplayed.first::before { content: ''; position: absolute; left: 0; right: 0; top: -8px; border-top: 1px solid rgba(var(--m-edge),0.14); opacity: 1; pointer-events: none; }
+    #missions .mn { font: 11px ui-monospace, Menlo, monospace; color: var(--m-faint); }
+    #missions .mrow.sel .mn { color: var(--m-accent-hi); }
+    #missions .mtitle { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; letter-spacing: 0.03em; }
+    #missions .tag { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; padding: 1px 6px; border-radius: 2px; border: 1px solid rgba(var(--m-edge),0.45); color: var(--m-btn-text); white-space: nowrap; }
+    #missions .tag.team.four { border-color: rgba(240,196,110,0.7); color: #f3d79a; }
+    #missions .tag.team.solo { border-color: rgba(150,190,240,0.55); color: #b9d2f3; }
+    #missions .tag.untuned { border-style: dashed; border-color: rgba(200,200,200,0.4); color: var(--m-soft); }
+    #missions .mlean { flex: 0 0 8px; width: 8px; height: 8px; border-radius: 50%; align-self: center; }   /* the row's lean: blue quiet, red loud, both = the player's choice */
+    #missions .mlean.quiet { background: #6fb7ff; } #missions .mlean.loud { background: #ff9c84; } #missions .mlean.either { background: linear-gradient(90deg, #6fb7ff 50%, #ff9c84 50%); }
+    #missions .msheet { overflow: auto; padding: 18px 24px 16px; display: flex; flex-direction: column; gap: 10px; }
+    #missions .mplan { display: block; flex: 0 0 auto; height: clamp(72px, calc(min(780px, 100vh / var(--tz, 1) - 40px) - 603px), 300px); max-width: 100%; aspect-ratio: 40 / 28; align-self: center; background: rgba(var(--m-base-rgb),0.5); border: 1px solid rgba(var(--m-edge),0.18); border-radius: 3px; }
+    #missions .msheet:has(.mway:not(.na)) .mplan { height: clamp(72px, calc(min(780px, 100vh / var(--tz, 1) - 40px) - 661px), 300px); }   /* a mission with a Way in row: the plan gives up that row's two lines + the gap (48 + 10 px) */
+    @media (max-height: 772px) { #missions .msheet:has(.mway:not(.na)) .mplan { display: none; } }   /* (…and where that would take it under its 72 px floor, the plan goes) */
+    #missions .mtop { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+    #missions .mst { font: 300 28px/1.1 ui-sans-serif, system-ui, -apple-system, 'Helvetica Neue', sans-serif; letter-spacing: 0.06em; color: var(--m-bright); }
+    #missions .mplace { font: 11px ui-monospace, Menlo, monospace; letter-spacing: 0.16em; text-transform: uppercase; color: var(--m-accent); }
+    #missions .mblurb { font-size: 14px; color: var(--m-text); max-width: 62ch; }
+    #missions .mfacts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; } #missions .mfacts.nodef { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    #missions .mfact { padding: 6px 9px 7px; background: rgba(var(--m-base-rgb),0.55); border: 1px solid rgba(var(--m-edge),0.22); border-radius: 3px; min-width: 0; }
+    #missions .mfact i { display: block; font-style: normal; font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--m-dim); }
+    #missions .mfact b { display: block; margin-top: 1px; font-size: 13px; font-weight: 600; color: var(--m-bright); }
+    #missions .mdiff { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 11px; letter-spacing: 0.06em; color: var(--m-dim); }   /* Standard | Hard (game/difficulty.ts) */
+    #missions .mdiff .dl { text-transform: uppercase; letter-spacing: 0.14em; }
+    #missions .mdiff .dbtn { font: inherit; text-transform: uppercase; letter-spacing: 0.14em; padding: 3px 10px; border-radius: 2px; cursor: pointer; color: var(--m-btn-text); background: rgba(var(--m-btn-rgb),0.55); border: 1px solid rgba(var(--m-edge),0.3); }
+    #missions .mdiff .dbtn.on { color: var(--m-on-accent); background: var(--m-accent-hi); border-color: var(--m-accent-hi); }
+    #missions .mdiff .dn { flex: 1 1 240px; color: var(--m-soft); letter-spacing: 0.02em; }
+    #missions .mdiff.na .dbtn, #missions .mdiff.na .dl { opacity: 0.45; }
+    #missions .mdiff.mwx .dbtn { padding: 3px 7px; letter-spacing: 0.08em; }   /* the Weather row (game/weatherKinds.ts): seven buttons on the difficulty row's look */
+    #missions .mhour .dbtn, #missions .mway .dbtn { padding: 3px 8px; }   /* the hour (game/hours.ts) and the way in: buttons on the difficulty row's style */
+    #missions .mlever { margin-top: -7px; }   /* the levers under Standard | Hard (ui/levers.ts): fog of war, enemy AI, enemy kit — one tight block with the switch */
+    #missions .mlever .dl { flex: 0 0 auto; min-width: 84px; white-space: nowrap; letter-spacing: 0.1em; color: var(--m-dim); }
+    #missions .mlever .dbtn { padding: 2px 8px; letter-spacing: 0.1em; }
+    #missions .mlever.moved .dl { color: #f3d79a; }   /* a lever moved off its level's rung by hand */
+    #missions .mlever.na .dn { display: none; }
+    #missions .mdiff > .dn { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }   /* two lines of a row's words on the sheet; all of them in its title (hover) */
+    #missions .mgo { align-self: flex-start; margin-top: 4px; padding: 10px 24px; font-size: 13px; text-decoration: none; position: sticky; bottom: 0; z-index: 1; box-shadow: 0 0 0 8px rgba(var(--m-panel-rgb),0.95); }   /* (stays in sight at the sheet's foot when the rows above run long: Hard's words, a lever moved, a short window) */
+    #missions .mfoot { padding: 9px 22px; border-top: 1px solid rgba(var(--m-edge),0.22); font: 11px ui-monospace, Menlo, monospace; color: var(--m-faint); letter-spacing: 0.06em; }
+    @media (max-width: 720px) { #missions .mbody { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(110px, 26%) minmax(0, 1fr); } #missions .mlist { border-right: none; border-bottom: 1px solid rgba(var(--m-edge),0.22); } #missions .mfacts { grid-template-columns: repeat(2, minmax(0, 1fr)); } #missions .mplan { display: none !important; } #missions .mhour .dn, #missions .mwx .dn, #missions .mway .dn, #missions .mlever .dn { display: none; } }   /* (a narrow window: the plan and the hour's and the weather's lines of words go, and the list gives up rows, so the start button stays on the sheet) */
+    /* THE STRIP OF SAVES (menu.ts saveStrip): this run's saves in time, a tile each — its picture, its age, a diamond on the ones made by hand */
+    #menu .saves { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; margin: 0 0 4px; }
+    #menu .db-actions .saves { flex: 0 0 100%; grid-template-columns: repeat(auto-fill, 96px); }
+    #menu .saves .tile { position: relative; aspect-ratio: 16 / 9; padding: 0; background: rgba(var(--m-btn-rgb),0.8) center / cover no-repeat; border: 1px solid rgba(var(--m-edge),0.3); border-radius: 2px; cursor: pointer; overflow: hidden; }
+    #menu .saves .tile:hover, #menu .saves .tile:focus { outline: none; border-color: var(--m-accent); }
+    #menu .saves .tile:focus { box-shadow: 0 0 0 1px var(--m-accent); }
+    #menu .saves .tile .age { position: absolute; left: 0; right: 0; bottom: 0; padding: 7px 4px 3px; font: 600 10px/1 var(--m-head); letter-spacing: 0.06em; text-align: right; color: var(--m-bright); background: linear-gradient(transparent, rgba(0,0,0,0.78)); white-space: nowrap; }
+    #menu .saves .tile i { position: absolute; left: 5px; top: 5px; width: 5px; height: 5px; transform: rotate(45deg); background: var(--m-accent); box-shadow: 0 0 0 1px rgba(0,0,0,0.6); }
+    #menu .saves .tile.regret { opacity: 0.45; }
+    #menu .saves .tile.due, #menu .saves .tile.due:hover { cursor: default; border-style: dashed; border-color: rgba(var(--m-edge),0.55); background-color: transparent; }
+    #menu .saves .tile.ahead .age { color: var(--m-dim); }
+    #menu .btn.quit { border-color: rgba(240,196,110,0.55); color: #f3d79a; }
+    #menu .body { margin-top: 10px; }
+    #menu .note { font-size: 11px; color: var(--m-dim); margin: -2px 0 6px 2px; }
+    #menu .foot { margin-top: 12px; font: 11px var(--m-mono); color: var(--m-faint); letter-spacing: 0.06em; }
+    #menu .t2 b { color: var(--m-accent-hi); font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; }   /* the debrief card's rating word */
+    /* the debrief (ui/debrief.ts): the end card, the down card, the pause card's 'Run so far' tab. A wider card in two columns — numbers / badges / timeline on the
+       left, the floor map and its legend on the right — in the HUD's thin green mono; one column when the window is narrow. */
+    #menu .card.wide { width: min(900px, calc(100% - 40px)); }
+    #menu .db { font: 11px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--m-text); }
+    #menu .db-head { display: flex; align-items: center; gap: 22px; }
+    #menu .db-rating { display: flex; align-items: baseline; gap: 12px; padding: 4px 14px 6px 0; border-right: 1px solid rgba(var(--m-edge),0.25); cursor: help; white-space: nowrap; }
+    #menu .db-rating b { font: 700 46px/1 var(--m-head); letter-spacing: 0.08em; color: var(--m-bright); text-shadow: 0 0 22px rgba(var(--m-accent-rgb),0.3); }
+    #menu .db-rating.r-ghost b { color: var(--m-accent-hi); } #menu .db-rating.r-shadow b { color: var(--m-accent-hi); } #menu .db-rating.r-operative b { color: #f3d78a; text-shadow: 0 0 22px rgba(240,200,110,0.25); } #menu .db-rating.r-assault b { color: #ff9c84; text-shadow: 0 0 22px rgba(255,120,90,0.25); }
+    #menu .db-score { font: 600 26px/1 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--m-accent); letter-spacing: 0.04em; }
+    #menu .db-score::after { content: '/100'; font-size: 11px; font-weight: 400; color: var(--m-faint); margin-left: 3px; letter-spacing: 0.08em; }
+    #menu .db-what { min-width: 0; }
+    #menu .db-t1 { font: 700 15px/1.2 var(--m-head); letter-spacing: 0.2em; text-transform: uppercase; color: var(--m-accent-hi); }
+    #menu .db-t2 { margin-top: 5px; color: var(--m-soft); letter-spacing: 0.03em; font: 12px/1.4 ui-sans-serif, system-ui, -apple-system, sans-serif; }
+    #menu .db-t3 { margin-top: 4px; color: var(--m-faint); font-size: 10px; letter-spacing: 0.04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #menu .db-actions { margin: 14px 0 4px; }
+    #menu .db-copytext { display: none; margin: 2px 0 6px; padding: 5px 8px; font-size: 10px; color: var(--m-bright); background: rgba(var(--m-base-rgb),0.5); border: 1px dashed rgba(var(--m-edge),0.4); user-select: all; word-break: break-word; }
+    #menu .db-copytext.show { display: block; }
+    /* (the tally beside its map while the card holds both, and the map under it, the row's whole width, when it does not: by the card's own width, whatever the window or the
+       text size. The tally's least width is 360 px, so a card of 800 px or more keeps the pair side by side with a scroll bar of any make taking its share) */
+    #menu .db-grid { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 10px; }
+    #menu .db-left { flex: 999 1 360px; min-width: 0; } #menu .db-right { flex: 1 1 420px; min-width: 0; }
+    #menu .db-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+    #menu .db-stats .st { display: flex; flex-direction: column; justify-content: space-between; padding: 5px 6px 6px; background: rgba(var(--m-panel2-rgb),0.85); border: 1px solid rgba(var(--m-edge),0.16); border-top: 2px solid rgba(var(--m-edge),0.35); min-width: 0; }
+    /* (a label is never cut: one too long for its tile takes a second line and the numbers of the row stay on one line) */
+    #menu .db-stats .st i { display: block; overflow-wrap: break-word; font: 600 10px/1.2 var(--m-head); letter-spacing: 0.08em; text-transform: uppercase; color: var(--m-dim); }
+    #menu .db-stats .st b { display: block; margin-top: 2px; font: 700 17px/1.1 var(--m-head); color: var(--m-bright); letter-spacing: 0.04em; }
+    #menu .db-stats .st.good b { color: var(--m-accent-hi); } #menu .db-stats .st.warn b { color: #f3d78a; } #menu .db-stats .st.bad b { color: #ff9c84; }
+    #menu .db-badges { display: flex; flex-wrap: wrap; gap: 5px; margin: 10px 0 2px; }
+    #menu .db-badges .chip { padding: 2px 7px 3px; font-size: 9.5px; letter-spacing: 0.16em; text-transform: uppercase; border: 1px solid rgba(var(--m-edge),0.28); border-radius: 10px; color: var(--m-faint); cursor: help; }
+    #menu .db-badges .chip.on { color: var(--m-bright); border-color: rgba(var(--m-accent-rgb),0.7); background: rgba(var(--m-sel-rgb),0.35); box-shadow: 0 0 8px rgba(var(--m-accent-rgb),0.25); text-shadow: 0 0 5px rgba(var(--m-accent-rgb),0.5); }
+    #menu .db-tlhead { margin: 14px 0 6px; padding-bottom: 5px; border-bottom: 1px solid rgba(var(--m-edge),0.2); font: 600 12px/1 var(--m-head); letter-spacing: 0.22em; text-transform: uppercase; color: var(--m-accent); }
+    #menu .db-timeline { max-height: min(30vh / var(--tz, 1), 260px); overflow: auto; padding: 2px 4px 2px 0; border-top: 1px solid rgba(var(--m-edge),0.18); border-bottom: 1px solid rgba(var(--m-edge),0.18); }
+    #menu .db-timeline .ev { display: flex; gap: 8px; padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.04); align-items: baseline; }
+    #menu .db-timeline .ev i { flex: 0 0 38px; font-style: normal; color: var(--m-accent); letter-spacing: 0.06em; }
+    #menu .db-timeline .ev u { flex: 0 0 104px; text-decoration: none; color: var(--m-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.04em; }
+    #menu .db-timeline .ev span { flex: 1; min-width: 0; color: var(--m-text); }
+    #menu .db-timeline .ev.k-spotted span, #menu .db-timeline .ev.k-down span, #menu .db-timeline .ev.k-kill span { color: #ffb0a0; }
+    #menu .db-timeline .ev.k-alarm span, #menu .db-timeline .ev.k-contact span, #menu .db-timeline .ev.k-bodyFound span { color: #f3d78a; }
+    #menu .db-timeline .ev.k-alarm.down span, #menu .db-timeline .ev.k-calm span, #menu .db-timeline .ev.k-lost span { color: var(--m-soft); }
+    #menu .db-timeline .ev.k-objective span { color: var(--m-accent-hi); letter-spacing: 0.06em; }
+    #menu .db-timeline .ev.k-radio span { color: var(--m-soft); font-style: italic; }
+    #menu .db-timeline .ev.k-heard span { color: var(--m-text); }
+    #menu .db-timeline .ev.empty { color: var(--m-faint); font-style: italic; border: none; }
+    #menu .db-recap { width: 100%; margin-bottom: 10px; border: 1px solid rgba(var(--m-edge),0.3); background: var(--m-base); }
+    #menu .db-recap-cv { display: block; width: 100%; height: auto; }
+    #menu .db-recap-cap { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; padding: 6px 9px 7px; border-top: 1px solid rgba(var(--m-edge),0.18); font: 11px/1.2 var(--m-mono); letter-spacing: 0.06em; color: var(--m-soft); }
+    #menu .db-recap-cap b { font: 700 13px/1 var(--m-head); letter-spacing: 0.12em; text-transform: uppercase; color: var(--m-accent); }
+    #menu .db-recap-who { display: flex; flex-wrap: wrap; gap: 5px; padding: 0 9px 8px; }
+    #menu .db-recap-chip { font: 10px/1 var(--m-mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--m-dim); background: none; border: 1px solid rgba(var(--m-edge),0.22); padding: 4px 7px; cursor: pointer; }
+    #menu .db-recap-chip:hover { color: var(--m-bright); }
+    #menu .db-recap-chip.on { color: var(--m-bright); border-color: rgba(var(--m-edge),0.6); }
+    #menu .db-map { position: relative; width: 100%; border: 1px solid rgba(var(--m-edge),0.3); background: var(--m-base); line-height: 0; }
+    #menu .db-canvas { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+    #menu .db-map .pin, #menu .db-map .mark { position: absolute; transform: translate(-50%, -50%); font: 700 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace; font-style: normal; text-shadow: 0 0 3px #000, 0 0 6px #000; cursor: help; pointer-events: auto; line-height: 1; }
+    #menu .db-map .mark { font-size: 12px; color: var(--m-bright); text-shadow: 0 0 4px #000, 0 0 8px rgba(var(--m-accent-rgb),0.6); }
+    #menu .db-map .mark.rack { color: var(--m-accent-hi); } #menu .db-map .mark.exit { color: #b4d8ff; font-size: 14px; }
+    #menu .db-map .pin.seen { color: #ff8070; font-size: 12px; } #menu .db-map .pin.alarm { color: #f3c86a; font-size: 13px; } #menu .db-map .pin.kill { color: #ff5040; } #menu .db-map .pin.ko { color: #9fd8c6; font-size: 12px; }
+    #menu .db-map .pin.light { color: #ffe9a0; } #menu .db-map .pin.body { color: #f0b8a8; } #menu .db-map .pin.down { color: #ff4030; font-size: 14px; } #menu .db-map .pin.door { color: #9cd0ff; font-size: 9px; }
+    #menu .db-legend { display: flex; flex-wrap: wrap; gap: 3px 12px; margin-top: 7px; font-size: 9.5px; letter-spacing: 0.08em; color: var(--m-dim); line-height: 1.5; }
+    #menu .db-legend .lg i { font-style: normal; font-weight: 700; margin-right: 2px; }
+    #menu .db-legend .lg.seen i { color: #ff8070; } #menu .db-legend .lg.alarm i { color: #f3c86a; } #menu .db-legend .lg.kill i { color: #ff5040; } #menu .db-legend .lg.ko i { color: #9fd8c6; } #menu .db-legend .lg.light i { color: #ffe9a0; } #menu .db-legend .lg.body i { color: #f0b8a8; } #menu .db-legend .lg.down i { color: #ff4030; } #menu .db-legend .lg.door i { color: #9cd0ff; } #menu .db-legend .lg.mark i { color: var(--m-bright); }
+    #menu .db-legend .lg.path i { background: linear-gradient(90deg, hsl(170,78%,52%), hsl(105,78%,57%), hsl(40,78%,62%)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    /* the run's verdict on the end card (ui/verdictCard.ts over game/verdict.ts): one word, the clock, the ways won, a tick per try; then a row per man. On a
+       squad's mission (.vd-squad) the stealth game's rating, numbers, badges, timeline and pins are not drawn: the men and their paths stand there. */
+    #menu .vd { margin: 0 0 12px; }
+    #menu .vd-top { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+    #menu .vd-word { font: 700 46px/1 var(--m-head); letter-spacing: 0.08em; text-transform: uppercase; color: var(--m-bright); white-space: nowrap; }
+    #menu .vd.lost .vd-word { color: #ff9c84; }
+    #menu .vd-time { font: 600 26px/1 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--m-text); letter-spacing: 0.04em; cursor: help; }
+    #menu .vd-medal, #menu .vd-void { padding: 3px 8px 4px; font: 700 12px/1 var(--m-head); letter-spacing: 0.18em; text-transform: uppercase; border: 1px solid currentColor; cursor: help; }
+    #menu .vd-medal.m-gold { color: #e8c15a; } #menu .vd-medal.m-silver { color: #c9ccd2; } #menu .vd-medal.m-bronze { color: #c98a5b; }
+    #menu .vd-void { color: #ff9c84; border-style: dashed; }
+    #menu .vd-gap { flex: 1; }
+    #menu .vd-tries { display: inline-flex; align-items: center; gap: 3px; cursor: help; }
+    #menu .vd-tries .try { display: block; width: 9px; height: 9px; border: 1px solid rgba(var(--m-edge),0.55); box-sizing: border-box; }
+    #menu .vd-tries .try.last { border-color: #ff9c84; }
+    #menu .vd-tries .try.win { border-color: var(--m-bright); background: var(--m-bright); }
+    #menu .vd-tries .more { font: 10px/1 var(--m-mono); font-style: normal; color: var(--m-dim); margin-right: 2px; }
+    #menu .vd-why { margin-top: 6px; font: 12px/1.4 ui-sans-serif, system-ui, -apple-system, sans-serif; color: var(--m-soft); letter-spacing: 0.03em; }
+    #menu .vd-men { display: grid; gap: 5px; margin: 0 0 12px; }
+    #menu .vd-man { display: grid; grid-template-columns: 92px minmax(0, 1fr) 40px; align-items: center; gap: 10px; --tone: #b7a98a; }
+    #menu .vd-man.t-you { --tone: var(--m-bright); } #menu .vd-man.t-purple { --tone: #a98be8; } #menu .vd-man.t-red { --tone: #c9655b; } #menu .vd-man.t-blue { --tone: #5b8fc9; }
+    #menu .vd-man .nm { font: 700 13px/1 var(--m-head); letter-spacing: 0.12em; text-transform: uppercase; color: var(--tone); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #menu .vd-man:not(.s-up):not(.vd-count) .nm { text-decoration: line-through; text-decoration-color: #ff9c84; }
+    #menu .vd-man .bar { position: relative; display: block; height: 12px; background: rgba(var(--m-edge),0.08); border-left: 1px solid rgba(var(--m-edge),0.4); }
+    #menu .vd-man .bar .fill { position: absolute; left: 0; top: 4px; height: 4px; background: var(--tone); opacity: 0.75; }
+    #menu .vd-man .bar .drop { position: absolute; top: 0; width: 2px; height: 12px; margin-left: -1px; background: var(--m-bright); cursor: help; }
+    #menu .vd-man .bar .fell { position: absolute; top: 50%; transform: translate(-50%, -50%); font: 700 13px/1 ui-monospace, SFMono-Regular, Menlo, monospace; font-style: normal; color: #ff9c84; text-shadow: 0 0 3px #000; cursor: help; }
+    #menu .vd-man .n { font: 700 15px/1 var(--m-head); color: var(--m-bright); text-align: right; letter-spacing: 0.04em; cursor: help; }
+    #menu .vd-man .n.none { color: var(--m-faint); }
+    #menu .vd-count { margin-top: 4px; cursor: help; } #menu .vd-count .nm { color: var(--m-dim); font-weight: 600; }
+    #menu .vd-count .sq { display: flex; gap: 3px; flex-wrap: wrap; }
+    #menu .vd-count .sq i { display: block; width: 9px; height: 9px; box-sizing: border-box; border: 1px solid rgba(255,156,132,0.6); }
+    #menu .vd-count .sq i.on { background: #ff9c84; }
+    #menu .vd-count.host .sq i { border-color: rgba(var(--m-edge),0.6); } #menu .vd-count.host .sq i.on { background: var(--m-bright); border-color: var(--m-bright); }
+    #menu .vd-count .n { font-size: 12px; color: var(--m-soft); }
+    #menu .db-map .vfell { position: absolute; transform: translate(-50%, -50%); font: 700 13px/1 ui-monospace, SFMono-Regular, Menlo, monospace; font-style: normal; color: #b7a98a; text-shadow: 0 0 3px #000, 0 0 6px #000; cursor: help; }
+    #menu .db-map .vfell.t-you { color: var(--m-bright); } #menu .db-map .vfell.t-purple { color: #a98be8; } #menu .db-map .vfell.t-red { color: #c9655b; } #menu .db-map .vfell.t-blue { color: #5b8fc9; }
+    #menu .db.vd-on .db-t1 { display: none; }
+    #menu .db.vd-solo .vd-time { display: none; }   /* (the stealth card has its own clock, the mission's: one clock a card) */
+    #menu .db.vd-squad .db-head, #menu .db.vd-squad .db-stats, #menu .db.vd-squad .db-badges, #menu .db.vd-squad .db-tlhead, #menu .db.vd-squad .db-timeline, #menu .db.vd-squad .db-legend,
+    #menu .db.vd-squad .db-map .pin, #menu .db.vd-squad .db-map .mark.rack, #menu .db.vd-squad .db-map .mark.exit { display: none; }
+    #menu .db.vd-squad .db-actions { margin-top: 4px; }
+    /* the four ways a mission can be won (ui/verdictPips.ts: the end card's head, a mission's card): won = lit, the rest dim, two won = the gold frame; under a
+       lit mark a '1' = at the first try, a bar = nobody lost */
+    .vpips { display: inline-flex; align-items: flex-start; gap: 6px; padding: 3px 5px; border: 1px solid transparent; vertical-align: middle; }
+    .vpips.gold { border-color: #e8c15a; }
+    .vpip { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; color: rgba(214,200,170,0.22); cursor: help; }
+    .vpip .vico { display: block; width: 20px; height: 20px; font-style: normal; } .vpip .vico svg { display: block; width: 100%; height: 100%; }
+    .vpip.won { color: #d2c9b5; } .vpip.now { color: #f0e9d9; } .vpip.now .vico { outline: 1px solid #f0e9d9; outline-offset: 2px; }
+    .vpip .vmarks { display: flex; align-items: center; gap: 2px; height: 7px; }
+    .vpip .v1 { font: 700 8px/7px ui-monospace, SFMono-Regular, Menlo, monospace; visibility: hidden; } .vpip .v1.on { visibility: visible; }
+    .vpip .vall { display: block; width: 9px; height: 2px; background: currentColor; text-decoration: none; visibility: hidden; } .vpip .vall.on { visibility: visible; }
+    /* the same pips on a mission's card on the start page (ui/verdictRows.ts): at the right of the card's last line, small; four dim marks until a way is won */
+    /* (on a mission's CARD: the foot line the menus keep empty for it — column 3 of row 3, 17 px tall. The strip is 17 px with its frame — an 11 px mark over 4 px
+       of ticks — so a card is the height it was; it is no link and takes no pointer, the card under it is; colours are the menu's own tokens, the gold
+       frame a pale sand that is not the selection's orange. Text rows — ?nogroups, the older card's list — show none.) */
+    #missions .mrow > .vpips { display: none; }
+    #missions.one .mgrid .mrow > .vpips { display: inline-flex; grid-column: 3; grid-row: 3; justify-self: end; align-self: center; margin: 0 5px 0 auto; padding: 0 3px; gap: 4px; pointer-events: none; }
+    #missions .mrow > .vpips .vpip { gap: 0; cursor: default; color: rgba(147,139,118,0.38); }
+    #missions .mrow > .vpips .vpip.won { color: var(--m-text, #d2c9b5); }
+    #missions .mrow > .vpips .vico { width: 11px; height: 11px; }
+    #missions .mrow > .vpips .vmarks { height: 4px; gap: 1px; } #missions .mrow > .vpips .v1 { font-size: 6px; line-height: 4px; } #missions .mrow > .vpips .vall { width: 6px; height: 1px; }
+    #missions .mrow > .vpips.none { opacity: 0.6; }
+    #caption { position: absolute; left: 50%; top: 11%; transform: translateX(-50%); width: min(760px, 88vw / var(--tz, 1)); text-align: center; pointer-events: none; opacity: 0; transition: opacity .5s; padding: 14px 22px 16px; border-radius: 3px; background: linear-gradient(180deg, rgba(var(--h-plate),0.62), rgba(var(--h-plate),0.44)); box-shadow: 0 10px 40px rgba(0,0,0,0.35); border-top: 1px solid rgba(var(--h-edge),0.2); }
+    #caption.on { opacity: 1; }
+    /* tour timeline: chapters along the bottom while the tour runs; segment width ∝ stop duration, the live one fills; clickable, ←/→ step too. 900 px centred when
+       there is room; on a narrower window it keeps its left end clear of the meters + kit column and runs on into the (now empty) right corner — short of the knob panel when that is open */
+    #timeline { position: absolute; left: max(310px, calc(50% - 450px)); right: max(40px, calc(50% - 450px)); bottom: 14px; height: 30px; display: none; gap: 3px; pointer-events: auto; font: 600 10px/1 var(--h-head); letter-spacing: 0.12em; text-transform: uppercase; user-select: none; z-index: 6; }
+    #timeline.on { display: flex; }
+    body.panel-open #timeline { right: max(398px, calc(50% - 450px)); }
+    #timeline .seg { position: relative; min-width: 0; cursor: pointer; border-top: 2px solid rgba(var(--h-edge),0.28); padding-top: 7px; color: rgba(var(--h-edge),0.5); transition: color .2s, border-color .2s; }
+    #timeline .seg span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: var(--h-shadow); }
+    #timeline .seg b { position: absolute; left: 0; top: -2px; height: 2px; width: 0; background: var(--h-acc); }
+    #timeline .seg.done { border-top-color: rgba(var(--h-edge),0.7); color: rgba(var(--h-edge),0.75); }
+    #timeline .seg.done b { width: 100% !important; opacity: 0; }
+    #timeline .seg.cur { color: var(--h-hi); }
+    #timeline .seg:hover { color: #fff; border-top-color: rgba(var(--h-edge),0.9); }
+    body.touring #log { bottom: 60px; }   /* keep the message lines clear of the timeline */
+    #veil { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; z-index: 6; }
+    body.blinded #bubbles, body.blinded .bubble, body.blinded .marker, body.blinded .lostfrom { visibility: hidden; }   /* blind: no word over a head and no mark gives a man's place away on the white */
+    #blind { position: absolute; inset: 0; background: #f4f6f2; opacity: 0; pointer-events: none; z-index: 4; }   /* a stun canister in the player's eyes (game/samstun.ts, overlay.ts): the picture whites out and clears */
+    .bar { position: absolute; left: 0; right: 0; height: 0; background: #000; z-index: 5; pointer-events: none; transition: height .6s ease; }
+    .bar.top { top: 0; } .bar.bot { bottom: 0; }
+    body.touring .bar { height: 7.5%; }
+    #meters, #equip, #log { z-index: 7; }   /* game HUD stays above the tour's letterbox / fades (a caption points at the light meter) */
+    body.touring #equip .cond.god { display: none; }   /* the tour runs in god mode; no need to say so on screen */
+    body.touring #caption { top: calc(7.5% + 22px); }
+    #caption .cap { font: 600 20px/1.25 var(--h-font); color: var(--h-hi); text-shadow: 0 2px 12px #000, 0 0 2px #000; letter-spacing: 0.01em; }
+    #caption .sub { margin-top: 8px; font: 13px/1.45 var(--h-font); color: var(--h-ink); text-shadow: 0 1px 6px #000, 0 0 2px #000; }
+    /* ?kitview (src/host/kitView.ts): the page as a picture in the start page's iframe — the canvas and nothing else */
+    body.kitview > :not(#app), body.kitview #app > :not(#view):not(#fatal) { display: none !important; }
+    /* the orders ring at the cursor (ui/cmdring.ts — a prototype, ?cmd): a wedge a digit, the lit one filled, a row that cannot be given greyed */
+    .cmdring { color: #f2cf6b; } .cmdring.t-red { color: #ff9a8a; } .cmdring.t-blue { color: #9cc8ff; } .cmdring.t-hands { color: var(--h-hi); }   /* (his own hands on Space: the HUD's own bright) */
+    .cmdring .cw { fill: rgba(var(--h-plate),0.82); stroke: currentColor; stroke-width: 1.4; stroke-linejoin: round; } .cmdring .lit .cw { fill: currentColor; }
+    .cmdring .cn { font: 700 12px/1 var(--h-mono); fill: currentColor; text-anchor: middle; } .cmdring .lit .cn { fill: var(--h-base); }
+    .cmdring .ct { font: 700 10px/1 var(--h-mono); letter-spacing: 0.06em; text-transform: uppercase; fill: currentColor; paint-order: stroke; stroke: rgba(var(--h-plate),0.8); stroke-width: 3px; stroke-linejoin: round; }
+    .cmdring .off { opacity: 0.38; } .cmdring .lit .ct { fill: #fff; }
+    .cmdring .ch { fill: none; stroke: currentColor; stroke-width: 1.2; opacity: 0.5; }   /* a ring with one row (game/ringlone.ts): the middle's own ring, and the row a pill beside it with its words inside */
+    .cmdring .lone .ct { stroke: none; } .cmdring .lone.lit .ct { fill: var(--h-base); }
+    .cmdring .cc { font: 600 9.5px/1 var(--h-mono); letter-spacing: 0.08em; text-transform: uppercase; text-anchor: middle; fill: currentColor; opacity: 0.8; paint-order: stroke; stroke: rgba(var(--h-plate),0.8); stroke-width: 3px; stroke-linejoin: round; }
+    /* … and the hint before the key (ui/cmdring.ts updateHint): the thing the ring would open on outlined on the floor, a glyph for its kind beside the cursor */
+    .cmdhint { color: #f2cf6b; } .cmdhint.t-red { color: #ff9a8a; } .cmdhint.t-blue { color: #9cc8ff; } .cmdhint.k-foe { color: #ff7a6a; }
+    .cmdhint .hw { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; opacity: 0.7; }
+    .cmdhint.k-door .hw, .cmdhint.k-wall .hw { stroke-width: 2.6; }
+    .cmdhint .hg { fill: none; stroke: currentColor; stroke-width: 1.3; stroke-linejoin: round; stroke-linecap: round; paint-order: stroke; filter: drop-shadow(0 0 2px rgba(0,0,0,0.9)); }
+    .cmdhint.held .hw { opacity: 0.9; }
+    body.ringover #interact { opacity: 0.28; }   /* the status column under the ring's words (ui/cmdring.ts clear) */
+    body.attract .cmdring, body.blinded .cmdring, body.attract .cmdhint, body.blinded .cmdhint { display: none; }
+    body.kitview { cursor: none; }
+    body.kitview::after { content: ''; position: fixed; left: 0; top: 0; right: 0; height: 15vh; z-index: 100000; pointer-events: none; background: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent); }   /* the top of the picture held down: a lit wall there is the brightest thing on the start page */
+    #traj { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+    /* the squad's plan on the floor (game/floorplan.ts → ui/planfloor.ts): a man's dotted way, the ring he will stand in, the fan he watches, a hair line to
+       the point he is on — in his pair's colour (bright sand for a squad with no pairs); rings at the feet of the men an open order menu goes to */
+    .plan { color: var(--h-hi); } .plan .t-gold { color: #f2cf6b; } .plan .t-red { color: #ff9a8a; } .plan .t-blue { color: #9cc8ff; }
+    .plan .pp { fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 0.1 8; }
+    .plan .pm { fill: none; stroke: currentColor; stroke-width: 1.4; stroke-dasharray: 3 3; } .plan .pm.there { fill: currentColor; fill-opacity: 0.08; stroke-dasharray: none; }
+    .plan .pf { fill: currentColor; fill-opacity: 0.05; stroke: currentColor; stroke-opacity: 0.45; stroke-width: 1; stroke-dasharray: 2 3; stroke-linejoin: round; } .plan .pf.there { fill-opacity: 0.13; stroke-dasharray: none; }
+    .plan .pl { stroke: currentColor; stroke-opacity: 0.4; stroke-width: 1; stroke-dasharray: 1 5; }
+    .plan polygon { stroke-linejoin: round; }
+    .plan .pw, .plan .py { fill: none; stroke: currentColor; stroke-width: 1.5; }   /* (the order mark's own weight: `.ordermark i`) */
+    .plan .pw.thr { fill: currentColor; fill-opacity: 0.14; stroke-width: 2; }
+    .plan .pa { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 5 6; }
+    .plan .pe { fill: currentColor; fill-opacity: 0.2; stroke: currentColor; stroke-width: 1.5; }
+    .plan .pr { fill: currentColor; fill-opacity: 0.04; stroke: currentColor; stroke-opacity: 0.55; stroke-width: 1; stroke-dasharray: 2 7; }
+    .plan .pt { font: 700 10px/1 var(--h-head); fill: currentColor; paint-order: stroke; stroke: rgba(var(--h-plate),0.72); stroke-width: 3px; stroke-linejoin: round; } .plan .pt.there { fill-opacity: 0.8; }
+    .plan > g { transition: opacity 0.25s linear; }
+    /* waiting on the key: a quiet dashed bar; the one the key would send now is solid with the key on it — a charge's key is filled (it is the loud one) */
+    .plan .pd { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-opacity: 0.6; stroke-dasharray: 2 5; } .plan .now .pd { stroke-width: 4; stroke-opacity: 1; stroke-dasharray: none; }
+    .plan .pk { fill: rgba(var(--h-plate),0.82); stroke: currentColor; stroke-width: 1.2; } .plan .pkt { font: 700 10px/1 var(--h-mono); fill: currentColor; }
+    .plan .w-charge .pk, .plan .w-wall .pk { fill: currentColor; } .plan .w-charge .pkt, .plan .w-wall .pkt { fill: var(--h-base); }
+    /* (PLAN.keyLit) the key's cap on every door that waits on it: dark while its men are on their way or the press would not send it, lit in their colour once they stand there and it would */
+    .plan .lit .pk { fill: rgba(6,6,6,0.92); stroke-opacity: 0.5; transition: fill 0.25s linear, stroke-opacity 0.25s linear; } .plan .lit .pkt { fill: currentColor; fill-opacity: 0.55; transition: fill 0.25s linear; }
+    .plan .lit.live .pk { fill: currentColor; stroke-opacity: 1; } .plan .lit.live .pkt { fill: var(--h-base); fill-opacity: 1; }
+    .plan .laid .pp { stroke-width: 2.5; stroke-dasharray: 0.1 13; } .plan .laid .pd { stroke-width: 3; stroke-opacity: 0.9; stroke-dasharray: 5 5; } .plan .laid .pw { stroke-dasharray: 2 3; }   /* (a plan laid for the word, game/planlay.ts: nobody moving yet — wider gaps than a way being walked) */
+    body.attract .plan, body.blinded .plan { display: none; }
+    /* closer than ever (game/close.ts → ui/overlay.ts drawClose): the windows round a man near Sam, on the floor — open = a thin outline, the one he stands in
+       filled and bright, a shut one amber and broken; each with what it gives in a few words just outside its arc */
+    /* game/throwreach.ts: what the thing he is aiming will reach, flat on the floor — a frag's kill ring (solid, alarm red-orange) and the ring it hurts to (dotted), a stun canister's ring (the HUD's own bright, dashed) */
+    .reach { fill: none; stroke-linejoin: round; stroke-linecap: round; } .reach.cut { fill: none !important; } .reach.kill { stroke: rgba(255,112,72,0.95); stroke-width: 2; fill: rgba(255,96,56,0.10); } .reach.hurt { stroke: rgba(255,112,72,0.6); stroke-width: 1.5; stroke-dasharray: 1 7; } .reach.stun { stroke: rgba(var(--h-hi-rgb),0.85); stroke-width: 1.5; stroke-dasharray: 8 6; fill: rgba(var(--h-hi-rgb),0.06); }
+    .trajpath { stroke: rgba(var(--h-hi-rgb),0.85); } .trajland { fill: rgba(var(--h-hi-rgb),0.12); stroke: rgba(var(--h-hi-rgb),0.9); } .trajroll { stroke: rgba(var(--h-hi-rgb),0.6); } .trajtick { fill: none; stroke: rgba(var(--h-hi-rgb),0.7); }   /* player.ts throwRest: the ring is where the can comes to rest; the tick is its first touch, the dots the floor it rolls over */
+    .closewin path { fill: rgba(var(--h-edge),0.06); stroke: rgba(var(--h-edge),0.55); stroke-width: 1.2; stroke-linejoin: round; }
+    .closewin path.cw-in { fill: rgba(var(--h-edge),0.2); stroke: rgba(var(--h-hi-rgb),0.98); stroke-width: 2; }
+    .closewin path.cw-shut { fill: none; stroke: rgba(255,190,120,0.5); stroke-dasharray: 3 4; }
+    .closewin text { font: 500 10px/1 var(--h-font); letter-spacing: 0.03em; fill: rgba(var(--h-edge),0.9); paint-order: stroke; stroke: rgba(var(--h-plate),0.72); stroke-width: 3px; stroke-linejoin: round; }
+    .closewin text.cw-in { font-weight: 700; font-size: 11px; fill: var(--h-hi); }
+    .closewin text.cw-shut { fill: rgba(255,200,140,0.85); }
+    /* kit, bottom-left, a column standing on the light / sound meters (Chaos-Theory-style): the key strip (the selected gun's light · night vision) and the condition
+       pips as two slim rows on top, then one slot per item in the digits' order — 1 the pistol (its OCP charge closing the row), 2 the FN2000 (SEMI/AUTO, RING ×n),
+       3 smoke, 4 stun: key, name, rounds / cans — the selected one lit. Left edges line up with the meters at 18 px. */
+    #equip { position: absolute; left: 18px; bottom: 86px; min-width: 200px; font: 11px/1.15 var(--h-font); color: var(--h-ink); text-shadow: var(--h-shadow); pointer-events: none; display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
+    #equip .slot { display: flex; align-items: center; gap: 8px; padding: 4px 7px; border: 1px solid rgba(var(--h-edge),0.25); background: rgba(var(--h-plate),0.6); border-radius: 3px; opacity: 0.7; white-space: nowrap; }
+    #equip .slot.sel { opacity: 1; border-color: rgba(var(--h-edge),0.7); box-shadow: 0 0 8px rgba(0,0,0,0.4); }
+    #equip .slot.holstered { opacity: 0.7; border-style: dashed; }   /* E: the selected item put away */
+    #equip .slot.holstered::after { content: 'holstered · E'; margin-left: 8px; color: var(--h-dim); font-size: 10px; letter-spacing: 0.1em; }
+    #equip .slot.slung.holstered::after { content: 'slung · E'; }
+    body.handslot #equip .slot.holstered::after { content: 'holstered'; } body.handslot #equip .slot.slung.holstered::after { content: 'slung'; }   /* empty hands are a slot (game/handslot.ts): E is not the way back, the row's own digit is */   /* the FN2000's row: put away is on his back */
+    #equip .slot.slung .rounds i { width: 2px; } #equip .slot.slung .rounds i.spent { width: 0; }   /* thirty of them: slimmer pips */
+    #equip .slot.absent { opacity: 0.3; border-style: dotted; }   /* the rifle's row in a kit without it: kept (greyed) so smoke and stun keep their numbers */
+    #equip .slot.absent .name { color: var(--h-dim); }
+    #equip .tag { font: 700 10px/1.2 var(--h-head); letter-spacing: 0.14em; padding: 0 4px; border: 1px solid rgba(var(--h-edge),0.35); border-radius: 2px; color: var(--h-faint); }   /* SEMI / AUTO (Z) and RING ×n (B): lit = what the trigger does now */
+    #equip .tag.on { color: var(--h-hi); border-color: rgba(var(--h-edge),0.6); text-shadow: 0 0 5px #000; }
+    #equip .tag.rings.on { color: #ffd27a; border-color: rgba(255,210,122,0.65); }
+    #equip .tag.ocp { margin-left: auto; display: inline-flex; align-items: center; }   /* the OCP's charge closes the pistol's row: the tag, then a slim meter of the charge inside it — lit (on) when a right click will fire it */
+    #equip .tag.ocp .ocpbar { width: 30px; height: 4px; margin-left: 5px; border-color: rgba(var(--h-edge),0.45); }
+    #equip .tag.ocp.on .ocpbar { border-color: rgba(var(--h-edge),0.6); }
+    #equip .tag.ocp:not(.on) .ocpbar b { background: var(--h-faint); }
+    #equip .pace { display: flex; align-items: center; gap: 8px; font: 600 10px/1.3 var(--h-head); letter-spacing: 0.14em; color: var(--h-soft); padding: 1px 7px; }
+    #equip .pace .ticks { display: inline-flex; gap: 3px; } #equip .pace .ticks i { width: 9px; height: 6px; border: 1px solid rgba(var(--h-edge),0.5); } #equip .pace .ticks i.on { background: var(--h-hi); box-shadow: 0 0 4px rgba(0,0,0,0.5); }
+    #equip .key { color: var(--h-dim); font: 700 11px/1 var(--h-mono); }
+    #equip .name { font: 700 12px/1 var(--h-head); letter-spacing: 0.08em; text-transform: uppercase; color: var(--h-hi); }
+    /* the magazine's pips: a line of their own UNDER each gun's row, selected or not (so the column keeps its height when the selection changes). Out of the
+       row's flow, so the row is as short as its name, count, spares and tags; `left` = the row's padding + the key digit + the gap: under the name */
+    #equip .rounds { display: flex; gap: 2px; align-items: flex-end; position: absolute; left: calc(15px + 1ch); bottom: 4px; }
+    #equip .slot:has(.rounds) { position: relative; padding-bottom: 19px; }
+    #equip .rounds i { display: block; width: 3px; height: 9px; background: var(--h-hi); opacity: 0.9; }
+    #equip .rounds i.spent { background: transparent; border: 1px solid rgba(var(--h-edge),0.3); width: 1px; height: 7px; }
+    #equip .rounds i.chamber { height: 11px; background: #ffd27a; }
+    #equip .mags { display: flex; gap: 3px; align-items: flex-end; margin-left: 4px; }
+    #equip .mag { width: 7px; height: 14px; border: 1px solid rgba(var(--h-edge),0.55); position: relative; }
+    #equip .mag b { position: absolute; left: 0; right: 0; bottom: 0; background: var(--h-ink); }
+    #equip .gadgets { display: flex; gap: 12px; padding: 1px 1px 2px; font-size: 10px; letter-spacing: 0.05em; white-space: nowrap; }
+    #equip .g { color: var(--h-soft); } #equip .g.on { color: var(--h-hi); text-shadow: 0 0 6px #000; }
+    #equip .ocpbar { width: 46px; height: 5px; border: 1px solid rgba(var(--h-edge),0.5); display: inline-block; vertical-align: middle; margin-left: 4px; position: relative; }
+    #equip .ocpbar b { position: absolute; left: 0; top: 0; bottom: 0; background: var(--h-hi); }
+    #equip .cans { display: flex; gap: 3px; } #equip .cans i { display: block; width: 6px; height: 11px; background: #7d8f74; border-top: 2px solid #b23; }
+    #equip .cans.bangs i { background: #3e4346; border-top: 2px solid #e8e6dc; }
+    #equip .cans.frags i { background: #4b5a2c; border-top: 2px solid #d9b21e; }
+    #equip .cond { display: flex; gap: 8px; align-items: center; padding: 1px 1px 4px; font-size: 10px; letter-spacing: 0.05em; white-space: nowrap; }
+    #equip .cond .pips { display: flex; gap: 3px; } #equip .cond .pips i { display: block; width: 14px; height: 6px; background: var(--h-ink); box-shadow: 0 0 5px rgba(0,0,0,0.5); }
+    #equip .cond .pips i.lost { background: transparent; border: 1px solid rgba(220,120,110,0.6); box-shadow: none; }
+    #equip .cond.down .g { color: #ff9c8c; }
+    #equip .cond .keytag { margin-left: auto; padding: 0 5px; border: 1px solid rgba(255,210,122,0.65); border-radius: 2px; color: #ffd27a; letter-spacing: 0.14em; }   /* a key taken off a questioned man (Player.keys): the chamber round's amber, pushed to the row's right edge */
+    #loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; color: var(--h-soft); background: #000; }
+    /* speech bubbles over guards' heads (Game.say): a caption, not a balloon — small, translucent, a hairline tail */
+    .bubble { position: absolute; transform: translate(-50%, -100%); max-width: 190px; padding: 3px 7px 4px; font: 11px/1.3 var(--h-font); color: var(--h-ink); background: rgba(var(--h-plate),0.78); border: 1px solid rgba(var(--h-edge),0.35); border-radius: 4px; white-space: normal; text-align: center; letter-spacing: 0.01em; text-shadow: var(--h-shadow); pointer-events: none; box-shadow: 0 2px 10px rgba(0,0,0,0.45); }
+    .bubble::after { content: ''; position: absolute; left: 50%; bottom: -5px; width: 7px; height: 7px; transform: translateX(-50%) rotate(45deg); background: rgba(var(--h-plate),0.78); border-right: 1px solid rgba(var(--h-edge),0.35); border-bottom: 1px solid rgba(var(--h-edge),0.35); }
+    .bubble.sus { border-color: rgba(255, 214, 102, 0.6); color: #fff0c8; } .bubble.sus::after { border-color: rgba(255, 214, 102, 0.6); }
+    .bubble.alert { border-color: rgba(255, 96, 72, 0.7); color: #ffd8d0; } .bubble.alert::after { border-color: rgba(255, 96, 72, 0.7); }
+    /* Sam's own line to the man in his arm (player.ts askHeld → Player.bubble): the same caption in the bright ink with a brighter frame, a shade darker behind it */
+    .bubble.sam { color: var(--h-hi); background: rgba(var(--h-plate),0.86); border-color: rgba(var(--h-edge),0.7); } .bubble.sam::after { background: rgba(var(--h-plate),0.86); border-color: rgba(var(--h-edge),0.7); }
+    .bubble.radio { font-style: italic; }
+    /* a teammate's line from off the screen, drawn near you on his side (game/squadnet.ts): one row with no tail, since the man is not under it; the calm tone
+       in the bright ink, the fight's red and the wary yellow as over a head */
+    .bubble.net { max-width: none; white-space: nowrap; background: rgba(var(--h-plate),0.86); } .bubble.net::after { display: none; }
+    .bubble.net.calm { color: var(--h-hi); border-color: rgba(var(--h-edge),0.7); }
+    .bubble.below { transform: translate(-50%, 0); }   /* hung under his head when the spot above it is under the caption card / the interaction panel */
+    .bubble.below::after { bottom: auto; top: -5px; transform: translateX(-50%) rotate(225deg); }
+    #bubbles, .bubble { z-index: 9; }   /* above the tour's caption card and letterbox (z 8-ish) — a line being said is the thing to read */
   </style>
 </head>
 <body>
   <div id="app">
     <canvas id="view"></canvas>
+    <div id="overlay"><svg id="traj"></svg></div>
+    <div id="equip"></div>
+    <div id="lcol"><div id="hud"></div><div id="interact"></div></div>
+    <div id="meters"><div class="m light"><span class="lab">LIGHT</span><span class="num"></span><div class="bar"><div class="fill"></div><div class="ticks"></div></div></div><div class="m sound"><span class="lab">SOUND</span><span class="num"></span><div class="bar"><div class="fill"></div><div class="peak"></div><div class="ticks"></div></div></div></div>
+    <div id="log"></div>
+    <div id="objective"></div>
+    <div id="tabcard"></div>
+    <div id="alarm"></div>
+    <div id="checkpoint"><b></b>CHECKPOINT</div>
+    <div id="journal"></div>
+    <div id="caption"></div>
+      <div id="timeline"></div>
+    <div class="bar top"></div><div class="bar bot"></div><div id="blind"></div><div id="veil"></div>
+    <div id="panel" class="hidden"></div>
     <div id="loading">loading…</div>
+    <div id="menu"></div>
+    <div id="missions"></div>
     <div id="fatal"></div>
   </div>
   <script type="module" src="./src/host/drawpage.ts"></script>
