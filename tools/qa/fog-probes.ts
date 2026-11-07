@@ -1053,7 +1053,7 @@ export async function fogEdge(): Promise<boolean> {
 
 // THE AIR IS THE PLACE (game/fogofwar.ts FOG.air — the maintainer, 10-23, on a fire with no flame in the fog: 'I think we should at least show everything in the
 // environment visible at the start of the level all the time?'): smoke and dust are drawn over floor the team does not see too. The march is shader text
-// (common.wgsl fogSmoke, read by volumetrics.wgsl and its dust twin), so headless this asks (1) what reaches the renderer — the block's row every frame, and the
+// (common.wgsl fogSmoke, read by volumetrics.wgsl, its dust look too), so headless this asks (1) what reaches the renderer — the block's row every frame, and the
 // sight table's head as render/fogofwar.ts writes it, (2) the wiring as written — fogSmoke leaves a density alone while the head says so and cuts it by
 // fogSeenAt otherwise, every march of the smoke takes its density through it, and nothing else in the shaders reads the row, (3) WHAT A HIDDEN MAN FIRES IS
 // NOT FILED: the fog's airHides says so of a man out of the picture and of nobody else, a shot told to leave its gas out files none and gives the same flash,
@@ -1083,10 +1083,10 @@ export async function fogAir(): Promise<boolean> {
     const rule = /fn fogSmoke\(dens: f32, X: vec3f\) -> f32 \{ if \(dens <= 0\.002 \|\| fogSmokeOn\(\)\) \{ return dens; \} return dens \* fogSeenAt\(X, vec3f\(0\.0\)\); \}/.test(body)
       && /fn fogSmokeOn\(\) -> bool \{ return \(u32\(fogSight\.soft\.w \+ 0\.5\) & 1u\) != 0u; \}/.test(common);   // (the head's last float is a whole number of two bits since FOG.thin rides it too: bit 0 is the air's)
     const vol = strip(rd('shaders/volumetrics.wgsl')), marches = (vol.match(/let dens = [^;]*;/g) ?? []), through = marches.filter(m => /fogSmoke\(/.test(m)).length;
-    const twin: string = rd('dustLookVol.ts'), twinThrough = (twin.match(/'let d[^']*let dens = fogSmoke\(|'let dens = fogSmoke\(smokeDensityAt\(X\), X\); let dTint/g) ?? []).length;
+    const twinThrough = vol.split('let dl = dustDensity(X, onMask, true); let dens = fogSmoke(dl.d, X);').length - 1;   // (the two lit marches read the dust's drawn density, and that goes through fogSmoke too)
     const dir = `${ROOT}/src/render/shaders`, others = (fsrc.readdirSync(dir) as string[]).filter(f => f.endsWith('.wgsl') && f !== 'common.wgsl' && /fogSight\.soft\.w/.test(strip(fsrc.readFileSync(`${dir}/${f}`, 'utf8'))));
-    verdict(rule && marches.length === 3 && through === 3 && twinThrough === 2 && others.length === 0, 'as written: fogSmoke hands a density back whole while the sight table\'s head says the air is drawn, and cut by what the team sees otherwise; each of the smoke\'s three marches takes its density through it, the dust look\'s twin lines too; no other shader reads the row',
-      `fogSmoke as expected: ${rule} · marches in volumetrics.wgsl: ${marches.length}, through fogSmoke: ${through} · the dust twin's lines through it: ${twinThrough} of 2 · other shaders reading the row: ${others.join(', ') || 'none'}`);
+    verdict(rule && marches.length === 3 && through === 3 && twinThrough === 2 && others.length === 0, 'as written: fogSmoke hands a density back whole while the sight table\'s head says the air is drawn, and cut by what the team sees otherwise; each of the smoke\'s three marches takes its density through it, the two lit ones the dust look\'s drawn density; no other shader reads the row',
+      `fogSmoke as expected: ${rule} · marches in volumetrics.wgsl: ${marches.length}, through fogSmoke: ${through} · the dust look's density through it: ${twinThrough} of 2 · other shaders reading the row: ${others.join(', ') || 'none'}`);
   }
   { // what a hidden man fires is not filed
     R.step(2);
