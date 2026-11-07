@@ -108,8 +108,8 @@ pub fn squad_orders_stack_posts_wait(g: &mut crate::game::Game, d: DoorId, side:
     squad_orders_own_mark_first(g, d, side, men, &mut |g: &mut Game| {
         squad_orders_stack_seen(g, d, side, men, &[], &mut |g: &mut Game| {
             let posts = squad_orders_stack_posts_room(g, d, side, men, Some(&[]));
-            let mut taken: Vec<V3> = vec![squad_orders_sam_place(g)];
-            taken.extend(squad_orders_held_on(g, d, men, Some(&[])));
+            let mut taken: Vec<V3> = vec![squad_orders_sam_place(g, &crate::seats::here(g))];
+            taken.extend(squad_orders_held_on(g, &crate::seats::here(g), d, men, Some(&[])));
             crate::stackroom::stack_view_fix(g, d, side, posts.as_deref(), &taken, men)
         })
     })
@@ -117,7 +117,7 @@ pub fn squad_orders_stack_posts_wait(g: &mut crate::game::Game, d: DoorId, side:
 
 /// stackSeen's `trial`: the chain asked with the whole order on hand `h`, nothing left behind but the glass rule's kept answers
 fn seen_trial(g: &mut Game, h: f64, ask: &mut dyn FnMut(&mut Game) -> Option<Vec<crate::orders::StackPost>>) -> Option<Vec<crate::orders::StackPost>> {
-    let keep = squad_orders_marks_keep(g);
+    let keep = squad_orders_marks_keep(g, &crate::seats::here(g));
     g.orders.file_hand = h;
     g.orders.file_gave = false;
     let p = ask(g);
@@ -149,7 +149,7 @@ pub fn squad_orders_stack_seen(g: &mut crate::game::Game, d: DoorId, side: f64, 
         let a = (p[0] - hg[0]) * u[0] + (p[2] - hg[1]) * u[1];
         if a >= width + out { 1.0 } else if a <= -out { -1.0 } else { 0.0 }
     };
-    let own = squad_orders_own_marks(g, d, side, men);
+    let own = squad_orders_own_marks(g, &crate::seats::here(g), d, side, men);
     if !own.is_empty() {
         if own.iter().all(|q| dealt.iter().any(|p| v3::dist_xz(p.pos, *q) < OWN_EPS)) { return Some(dealt); }
         let hs: Vec<f64> = own.iter().map(|q| hand_of(*q, 0.0)).collect();
@@ -192,8 +192,8 @@ pub fn squad_orders_stack_seen(g: &mut crate::game::Game, d: DoorId, side: f64, 
 }
 
 /// what the makers of marks tick, and the room rule's book, as they stand: the returned call puts them back (orders.ts marksKeep)
-pub fn squad_orders_marks_keep(g: &crate::game::Game) -> crate::orders::MarksKeep {
-    let leaf = g.orders.leaf_out_gave;
+pub fn squad_orders_marks_keep(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> crate::orders::MarksKeep {
+    let leaf = seat.orders.leaf_out_gave;
     let (stack_own, doorway, stackroom, glasspen) = (g.m.doorway.stack_own.clone(), g.stats.doorway.clone(), g.stats.stackroom.clone(), g.stats.glasspen.clone());
     let book = crate::stackroom::stack_room_book_keep(g);
     crate::orders::MarksKeep::Kept { leaf, stack_own, doorway, stackroom, glasspen, book }
@@ -214,8 +214,8 @@ pub fn squad_orders_stack_file_on(g: &mut crate::game::Game, d: DoorId, side: f6
     let stack_side = if (-n[0]) * (-f[1]) + (-n[1]) * f[0] >= 0.0 { 1.0 } else { -1.0 };
     let fc = g.dr[d].frame_centre;
     let front: V3 = [fc[0] + n[0] * jamb_out, 0.45, fc[2] + n[1] * jamb_out];
-    let sam = squad_orders_sam_place(g);
-    let held = squad_orders_held_on(g, d, men, Some(ignore));
+    let sam = squad_orders_sam_place(g, &crate::seats::here(g));
+    let held = squad_orders_held_on(g, &crate::seats::here(g), d, men, Some(ignore));
     if !latch && !crate::doors::door_off(g, d) {
         let arc = if side > 0.0 { crate::doors::door_max_a(g, d) > 0.05 } else { crate::doors::door_min_a(g, d) < -0.05 };
         if arc { return None; }
@@ -252,8 +252,8 @@ fn eyes_summed(g: &mut Game, d: DoorId, side: f64, posts: &[crate::orders::Stack
 pub fn squad_orders_stack_posts_room(g: &mut crate::game::Game, d: DoorId, side: f64, men: &[GuardId], ignore: Option<&[GuardId]>) -> Option<Vec<crate::orders::StackPost>> {
     let ignore: &[GuardId] = ignore.unwrap_or(&[]);
     let posts = squad_orders_stack_posts_marks(g, d, side, men, Some(ignore));
-    let mut taken: Vec<V3> = vec![squad_orders_sam_place(g)];
-    taken.extend(squad_orders_held_on(g, d, men, Some(ignore)));
+    let mut taken: Vec<V3> = vec![squad_orders_sam_place(g, &crate::seats::here(g))];
+    taken.extend(squad_orders_held_on(g, &crate::seats::here(g), d, men, Some(ignore)));
     crate::stackroom::stack_room_fix(g, d, side, posts.as_deref(), &taken, None)
 }
 
@@ -262,7 +262,7 @@ pub fn squad_orders_own_mark_first(g: &mut crate::game::Game, d: DoorId, side: f
     if g.orders.sam_out { return ask(g); }
     let c = g.pl[g.player].ch;
     let sam = g.ch[c].pos;
-    let own = squad_orders_own_marks(g, d, side, men);
+    let own = squad_orders_own_marks(g, &crate::seats::here(g), d, side, men);
     if !own.iter().any(|q| v3::dist_xz(sam, *q) < 1.3) { return ask(g); }
     fn stats(g: &Game) -> (f64, i32, f64) { (g.m.doorway.stack_own.leaf, g.stats.doorway.marks, g.m.doorway.stack_own.mark) }
     let c0 = stats(g);
@@ -297,14 +297,14 @@ pub fn squad_orders_own_mark_first(g: &mut crate::game::Game, d: DoorId, side: f
 }
 
 /// the marks men of an order STAND on, on this face of this door (orders.ts ownMarks)
-pub fn squad_orders_own_marks(g: &crate::game::Game, d: DoorId, side: f64, men: &[GuardId]) -> Vec<V3> {
+pub fn squad_orders_own_marks(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: DoorId, side: f64, men: &[GuardId]) -> Vec<V3> {
     let th = g.dr[d].def.closed_dir;
     let nx = -m::sin(th) * side;
     let nz = m::cos(th) * side;
     let c = g.dr[d].frame_centre;
     let mut out: Vec<V3> = Vec::new();
     for gd in men.iter().copied() {
-        let id = match g.orders.asg.get(gd) { Some(a) => *a, None => continue };
+        let id = match seat.orders.asg.get(gd) { Some(a) => *a, None => continue };
         if g.gd[gd].state == crate::game::GuardState::Dead { continue; }
         let a = &g.tab.orders_assignment[id];
         if a.door != Some(d) { continue; }
@@ -318,7 +318,7 @@ pub fn squad_orders_own_marks(g: &crate::game::Game, d: DoorId, side: f64, men: 
 /// ORDERS.inWay: the words of a 'no room' refusal on a door; `ask` is asked once more as if Sam were not there, and leaves nothing behind (orders.ts noRoomWords)
 pub fn squad_orders_no_room_words(g: &mut crate::game::Game, plain: &str, ask: &mut dyn FnMut(&mut crate::game::Game) -> bool) -> String {
     if g.orders.sam_out { return String::from(plain); }
-    let keep = squad_orders_marks_keep(g);
+    let keep = squad_orders_marks_keep(g, &crate::seats::here(g));
     let glass = g.orders.glass_at.clone();
     let glass_sig = g.orders.glass_sig;
     g.orders.sam_out = true;
@@ -331,14 +331,14 @@ pub fn squad_orders_no_room_words(g: &mut crate::game::Game, plain: &str, ask: &
 }
 
 /// where Sam stands, as the makers of marks ask it: nowhere during ownMarkFirst's second ask (orders.ts samPlace)
-pub fn squad_orders_sam_place(g: &crate::game::Game) -> V3 {
-    if g.orders.sam_out { nowhere() } else { squad_orders_sam_stood(g) }
+pub fn squad_orders_sam_place(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> V3 {
+    if seat.orders.sam_out { nowhere() } else { squad_orders_sam_stood(g, seat) }
 }
 
 /// where Sam stands, to the marks the door code makes; to another cast he is nowhere (orders.ts samStood)
-pub fn squad_orders_sam_stood(g: &crate::game::Game) -> V3 {
-    if g.orders.cast.is_some() { return nowhere(); }
-    let c = g.pl[g.player].ch;
+pub fn squad_orders_sam_stood(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> V3 {
+    if seat.orders.cast.is_some() { return nowhere(); }
+    let c = g.pl[seat.player].ch;
     g.ch[c].pos
 }
 
@@ -351,8 +351,8 @@ pub fn squad_orders_stack_posts_marks(g: &mut crate::game::Game, d: DoorId, side
     let n = [-m::sin(th) * side, m::cos(th) * side];
     let jamb_out = g.k.orders.jamb_out;
     let front: V3 = [c[0] + n[0] * jamb_out, 0.45, c[2] + n[1] * jamb_out];
-    let sam = squad_orders_sam_place(g);
-    let held = squad_orders_held_on(g, d, men, Some(ignore));
+    let sam = squad_orders_sam_place(g, &crate::seats::here(g));
+    let held = squad_orders_held_on(g, &crate::seats::here(g), d, men, Some(ignore));
     let all: Vec<BoxId> = g.col.dynamic_boxes.clone();
     let lines: Vec<BoxId> = if g.orders.leaf_out_gave {
         let leaf = g.dr[d].box_;
@@ -484,8 +484,8 @@ pub fn squad_orders_stack_least_glass(g: &mut crate::game::Game, d: DoorId, side
     let stack_side = if (-n[0]) * (-f[1]) + (-n[1]) * f[0] >= 0.0 { 1.0 } else { -1.0 };
     let fc = g.dr[d].frame_centre;
     let front: V3 = [fc[0] + n[0] * jamb_out, 0.45, fc[2] + n[1] * jamb_out];
-    let sam = squad_orders_sam_place(g);
-    let held = squad_orders_held_on(g, d, men, Some(ignore));
+    let sam = squad_orders_sam_place(g, &crate::seats::here(g));
+    let held = squad_orders_held_on(g, &crate::seats::here(g), d, men, Some(ignore));
     let mut out: Vec<crate::orders::StackPost> = Vec::new();
     let mut k: usize = 0;
     while k < men.len() + 3 && out.len() < men.len() {
@@ -614,8 +614,8 @@ pub fn squad_orders_stack_posts_on(g: &mut crate::game::Game, d: DoorId, side: f
 }
 
 /// stackPlaces' `heldBy`: a man outside the order on that jamb under an order on this door
-fn held_by(g: &Game, d: DoorId, men: &[GuardId], ignore: &[GuardId], p: V3) -> bool {
-    g.orders.asg.iter().any(|(gd, id)| {
+fn held_by(g: &Game, seat: &crate::seats::SeatRef, d: DoorId, men: &[GuardId], ignore: &[GuardId], p: V3) -> bool {
+    seat.orders.asg.iter().any(|(gd, id)| {
         if men.contains(&gd) || ignore.contains(&gd) { return false; }
         let a = &g.tab.orders_assignment[*id];
         if a.door != Some(d) { return false; }
@@ -624,8 +624,8 @@ fn held_by(g: &Game, d: DoorId, men: &[GuardId], ignore: &[GuardId], p: V3) -> b
 }
 
 /// stackPlaces' `taken`: the mark another of the squad stands on under an order on this door
-fn taken_at(g: &Game, d: DoorId, men: &[GuardId], ignore: &[GuardId], p: V3) -> bool {
-    g.orders.asg.iter().any(|(gd, id)| {
+fn taken_at(g: &Game, seat: &crate::seats::SeatRef, d: DoorId, men: &[GuardId], ignore: &[GuardId], p: V3) -> bool {
+    seat.orders.asg.iter().any(|(gd, id)| {
         if men.contains(&gd) || ignore.contains(&gd) { return false; }
         let a = &g.tab.orders_assignment[*id];
         if a.door != Some(d) { return false; }
@@ -656,24 +656,24 @@ pub fn squad_orders_stack_places(g: &mut crate::game::Game, d: DoorId, side: f64
         let f = [u[0] * toward, u[1] * toward];
         crate::orders::StackPost { pos, face: m::atan2(f[0], f[1]), stack_side: if (-n[0]) * (-f[1]) + (-n[1]) * f[0] >= 0.0 { 1.0 } else { -1.0 }, lead: true, group: None }
     };
-    let sam = squad_orders_sam_place(g);
+    let sam = squad_orders_sam_place(g, &crate::seats::here(g));
     let sam_on = |g: &mut Game, p: V3| -> bool {
         if v3::dist_xz(sam, p) >= 0.7 { return false; }
-        if !squad_orders_stood_on(g, d, men, p) { return true; }
+        if !squad_orders_stood_on(g, &crate::seats::here(g), d, men, p) { return true; }
         g.m.doorway.stack_own.mark += 1.0;
         false
     };
     let floor = |g: &mut Game, p: V3| -> bool {
         !crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) && clear_line(g, front, p, seam) && !(glass && squad_orders_behind_glass(g, d, side, p))
     };
-    let fur = |g: &mut Game, p: V3| -> bool { squad_orders_on_furniture(g, p) && !squad_orders_stood_on(g, d, men, p) };
+    let fur = |g: &mut Game, p: V3| -> bool { squad_orders_on_furniture(g, p) && !squad_orders_stood_on(g, &crate::seats::here(g), d, men, p) };
     let free = |g: &mut Game, p: V3| -> bool { floor(g, p) && !sam_on(g, p) && !fur(g, p) };
     let latch = mk(w + jamb_past, -1.0, jamb_out);
     let hinge = mk(-jamb_past, 1.0, jamb_out);
     let ok_l = free(g, latch.pos);
     let ok_h = free(g, hinge.pos);
     let mut held: Vec<V3> = Vec::new();
-    if squad_orders_big(g) {
+    if squad_orders_big(g, &crate::seats::here(g)) {
         for (gd, id) in g.orders.asg.iter() {
             if men.contains(&gd) || ignore.contains(&gd) || g.gd[gd].state == crate::game::GuardState::Dead { continue; }
             let a = &g.tab.orders_assignment[*id];
@@ -681,11 +681,11 @@ pub fn squad_orders_stack_places(g: &mut crate::game::Game, d: DoorId, side: f64
             if let Some(post) = a.post { held.push(post); }
         }
     }
-    let pick1 = if ok_l && !(held_by(g, d, men, ignore, latch.pos) && ok_h) { latch.clone() } else { hinge.clone() };
+    let pick1 = if ok_l && !(held_by(g, &crate::seats::here(g), d, men, ignore, latch.pos) && ok_h) { latch.clone() } else { hinge.clone() };
     let filed = if men.len() > 2 {
         floor(g, latch.pos) || floor(g, hinge.pos)
     } else {
-        !held.is_empty() && (ok_l || ok_h) && (men.len() == 2 || held_by(g, d, men, ignore, pick1.pos))
+        !held.is_empty() && (ok_l || ok_h) && (men.len() == 2 || held_by(g, &crate::seats::here(g), d, men, ignore, pick1.pos))
     };
     if filed {
         let nn = men.len();
@@ -778,12 +778,12 @@ pub fn squad_orders_stack_places(g: &mut crate::game::Game, d: DoorId, side: f64
             Some(s) if !s.is_empty() => s,
             _ => {
                 let mut taken: Vec<V3> = vec![sam];
-                taken.extend(squad_orders_held_on(g, d, men, Some(ignore)));
+                taken.extend(squad_orders_held_on(g, &crate::seats::here(g), d, men, Some(ignore)));
                 return squad_orders_worked_stack(g, d, side, men.len() as f64, &taken);
             }
         };
         let marks: Vec<V3> = if men.len() <= 1 {
-            vec![match stack.iter().find(|p| !taken_at(g, d, men, ignore, **p)) { Some(p) => *p, None => stack[0] }]
+            vec![match stack.iter().find(|p| !taken_at(g, &crate::seats::here(g), d, men, ignore, **p)) { Some(p) => *p, None => stack[0] }]
         } else {
             stack[..core::cmp::min(stack.len(), men.len())].to_vec()
         };

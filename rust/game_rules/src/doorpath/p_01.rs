@@ -95,7 +95,7 @@ pub fn door_path_guns(g: &mut crate::game::Game, dt: f64) {
             || g.gd[gd].state == crate::game::GuardState::Dead
             || !g.ch[c].anim.long_gun
             || s.hot.unwrap_or(false)
-            || crate::orders::squad_orders_of(g, gd).is_none()
+            || crate::orders::squad_orders_of(g, &crate::seats::here(g), gd).is_none()
             || s.over.is_some()
             || s.upper.unwrap_or(crate::character::UpperMode::Aim) != crate::character::UpperMode::Aim
         {
@@ -149,7 +149,7 @@ pub fn door_path_guns(g: &mut crate::game::Game, dt: f64) {
                     None => false,
                 };
                 let carry = match go {
-                    Some(go) if walking && !crosses(p, &l, k.gun_side, k.gun_m, lx, lz, go, true) && !door_path_friend_on(g, gd, go) => Some(go),
+                    Some(go) if walking && !crosses(p, &l, k.gun_side, k.gun_m, lx, lz, go, true) && !door_path_friend_on(g, &crate::seats::here(g), gd, go) => Some(go),
                     _ => None,
                 };
                 if let Some(go) = carry {
@@ -188,11 +188,11 @@ fn on_line(p: V3, sx: f64, cz: f64, q: V3) -> bool {
 }
 
 /// One of his own (a teammate up, or Sam) in the line of a gun carried on this heading. (doorpath.ts DoorPath.friendOn)
-pub fn door_path_friend_on(g: &crate::game::Game, gd: GuardId, yaw: f64) -> bool {
+pub fn door_path_friend_on(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, yaw: f64) -> bool {
     let p = g.ch[g.gd[gd].ch].pos;
     let sx = m::sin(yaw);
     let cz = m::cos(yaw);
-    if on_line(p, sx, cz, g.ch[g.pl[g.player].ch].pos) {
+    if on_line(p, sx, cz, g.ch[g.pl[seat.player].ch].pos) {
         return true;
     }
     for &o in g.guards.iter() {
@@ -599,7 +599,7 @@ pub fn door_path_fallen(g: &crate::game::Game, at: V3, r: f64) -> Vec<V3> {
 pub fn door_path_move(g: &mut crate::game::Game, w: &mut crate::doorpath::Walk, q: V3) {
     let gd = w.gd;
     let old = w.pod;
-    let a = crate::orders::squad_orders_of(g, gd);
+    let a = crate::orders::squad_orders_of(g, &crate::seats::here(g), gd);
     let pod = g.tab.doortools_door_op[w.op].pod.get(gd).copied();
     w.pod = q;
     g.door_path.stats.moved += 1.0;
@@ -785,7 +785,7 @@ pub fn door_path_sent(g: &mut crate::game::Game, op: DoorOpId, gd: GuardId, pod:
 
 /// The order's own way round is this walk's while it lasts: taken off the order and kept. (doorpath.ts DoorPath.own)
 pub fn door_path_own(g: &mut crate::game::Game, w: &mut crate::doorpath::Walk) -> bool {
-    let Some(a) = crate::orders::squad_orders_of(g, w.gd) else { return false };
+    let Some(a) = crate::orders::squad_orders_of(g, &crate::seats::here(g), w.gd) else { return false };
     let row = &mut g.tab.orders_assignment[a];
     let Some(post) = row.post else { return false };
     if flat(&post, &w.pod) > 0.1 || row.via.is_empty() {
@@ -811,7 +811,7 @@ pub fn door_path_drop(g: &mut crate::game::Game, w: &crate::doorpath::Walk, why:
         man.path_goal = None;
         man.path_goal_orbit = false;
     }
-    let Some(a) = crate::orders::squad_orders_of(g, w.gd) else { return };
+    let Some(a) = crate::orders::squad_orders_of(g, &crate::seats::here(g), w.gd) else { return };
     let Some(post) = g.tab.orders_assignment[a].post else { return };
     let p = g.ch[g.gd[w.gd].ch].pos;
     let side = g.tab.doortools_door_op[w.op].side;
@@ -829,7 +829,7 @@ pub fn door_path_drop(g: &mut crate::game::Game, w: &crate::doorpath::Walk, why:
 
 /// His order's stuck clocks wait with him: a man waiting his turn is not a man who cannot get there. (doorpath.ts tick, lines 358 and 366)
 fn hold_clocks(g: &mut Game, gd: GuardId, t: f64, p: V3) {
-    if let Some(a) = crate::orders::squad_orders_of(g, gd) {
+    if let Some(a) = crate::orders::squad_orders_of(g, &crate::seats::here(g), gd) {
         let row = &mut g.tab.orders_assignment[a];
         row.mark_t = t;
         row.moved_t = t;
@@ -866,7 +866,7 @@ fn tick_walk(g: &mut Game, gd: GuardId, w: &mut crate::doorpath::Walk, t: f64, d
     }
     if g.gd[gd].script.is_some() && door_path_own(g, w) {
         // (back from the fight, the order laid its own way round again)
-        let a = crate::orders::squad_orders_of(g, gd).unwrap();
+        let a = crate::orders::squad_orders_of(g, &crate::seats::here(g), gd).unwrap();
         let goal = g.tab.orders_assignment[a].goal;
         g.tab.orders_assignment[a].new_leg = false;   // (`s.goal = A.goal`: the same object, as in `move` above)
         let s = g.gd[gd].script.as_mut().unwrap();

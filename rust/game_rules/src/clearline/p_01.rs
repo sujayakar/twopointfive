@@ -400,7 +400,7 @@ pub fn doing<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> Option<&'g mut cr
         || !g.fight.live
         || g.gd[d.of].state == crate::game::GuardState::Dead
         || t < d.t0
-        || match crate::orders::squad_orders_of(g, gd) {
+        || match crate::orders::squad_orders_of(g, &crate::seats::here(g), gd) {
             Some(a) => g.tab.orders_assignment[a].t0 != d.order_t,
             None => true,
         }
@@ -518,7 +518,7 @@ pub fn clear_line_blocked(g: &mut crate::game::Game, gd: GuardId, tgt: GuardId, 
     if !k.on || g.gd[gd].script.is_none() {
         return false;
     }
-    let Some(a) = crate::orders::squad_orders_of(g, gd) else { return false };
+    let Some(a) = crate::orders::squad_orders_of(g, &crate::seats::here(g), gd) else { return false };
     let t = g.time;
     if t < mem_of(g, gd).rest_until {
         return false;

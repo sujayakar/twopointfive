@@ -347,7 +347,7 @@ pub fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
         crate::guards::guard_set_path_goal(g, gd, None);
         g.gd[gd].search_plan = None;
         g.gd[gd].pieing = None;
-        let left = enemy_up_on_floor(g, team);
+        let left = enemy_up_on_floor(g, &crate::seats::here(g), team);
         let said = left || floor_called_clear(g, gd, team);
         if mine {
             let text = if op { if said { "he's down." } else { "he's down — clear." } } else if said { "got him!" } else { "got him — that's all of them." };
@@ -361,7 +361,7 @@ pub fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// Nobody calls a floor clear with an enemy still up on it. (guards.ts:2729, WORDS.on settled on)
-fn enemy_up_on_floor(g: &Game, team: crate::teams::Team) -> bool {
+fn enemy_up_on_floor(g: &Game, seat: &crate::seats::SeatRef, team: crate::teams::Team) -> bool {
     let mut i = 0;
     while i < g.guards.len() {
         let o = g.guards[i];
@@ -370,7 +370,7 @@ fn enemy_up_on_floor(g: &Game, team: crate::teams::Team) -> bool {
         let oteam = g.gd[o].team;
         if crate::teams::is_hostile(g, team, oteam) { return true; }
     }
-    crate::teams::is_hostile(g, team, crate::teams::Team::Player) && !g.pl[g.player].down
+    crate::teams::is_hostile(g, team, crate::teams::Team::Player) && !g.pl[seat.player].down
 }
 
 /// One of his side said it in the last three seconds. (guards.ts:2730)
@@ -736,16 +736,16 @@ pub fn on_screen(g: &mut crate::game::Game, p: V3) -> bool {
     if g.seats.len() > 1 {
         let seats = g.seats.clone();
         for s in seats {
-            if crate::seats::with_seat(g, s, &mut |g: &mut Game| in_game_view(g, p)) { return true; }
+            if crate::seats::with_seat(g, s, &mut |g: &mut Game| in_game_view(g, &crate::seats::here(g), p)) { return true; }
         }
         return false;
     }
-    in_game_view(g, p)
+    in_game_view(g, &crate::seats::here(g), p)
 }
 
 /// inView of the view on Game: of the seat this pass is about.
-fn in_game_view(g: &Game, p: V3) -> bool {
-    match &g.view_proj {
+fn in_game_view(g: &Game, seat: &crate::seats::SeatRef, p: V3) -> bool {
+    match seat.view_proj {
         None => false,
         Some(crate::game::GameViewProj::Array(v)) => in_view_of(|i| v[i], p),
         Some(crate::game::GameViewProj::Float32Array(v)) => in_view_of(|i| v[i] as f64, p),

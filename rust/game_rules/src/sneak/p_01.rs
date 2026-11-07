@@ -54,12 +54,12 @@ pub fn sneak_live(g: &mut crate::game::Game) -> bool {
     v
 }
 fn sneak_live_now(g: &mut Game) -> bool {
-    if !crate::silent::squad_silent(g) { return false; }
-    if crate::silent::silent_compromised(g) { return false; }
+    if !crate::silent::squad_silent(g, &crate::seats::here(g)) { return false; }
+    if crate::silent::silent_compromised(g, &crate::seats::here(g)) { return false; }
     let pl = g.player;
     if g.pl[pl].down { return false; }
     if crate::pairup::pair_up(g, crate::pairup::PairUpRule::Hunted) && g.k.spotted.on {
-        let squad = crate::orders::squad_orders_squad(g);
+        let squad = crate::orders::squad_orders_squad(g, &crate::seats::here(g));
         for gd in squad {
             if g.gd[gd].state != crate::game::GuardState::Dead && crate::spotted::spotted_mode(g, gd) == crate::spotted::SpottedMode::Caught { return false; }
         }
@@ -267,7 +267,7 @@ pub fn exposure(g: &mut crate::game::Game, eyes: &[GuardId], c_2: &mut crate::sn
 pub fn exposure_of(g: &mut crate::game::Game, eyes: &[GuardId], gd: GuardId) -> crate::sneak::Exp {
     let c = g.gd[gd].ch;
     let low = g.ch[c].anim.crouch > 0.5;
-    let card = crate::kitload::load_seen(g, crate::kitload::LoadSeenWho::Guard(gd));
+    let card = crate::kitload::load_seen(g, &crate::seats::here(g), crate::kitload::LoadSeenWho::Guard(gd));
     read(g, eyes, &Target::Man { c }, &mut |g: &mut Game| g.gd[gd].visibility, Some(low), Some(card))
 }
 
@@ -369,7 +369,7 @@ pub fn sneak_walk(g: &mut crate::game::Game, gd: GuardId, low: bool, habit: Opti
     let irradiance = g.gd[gd].irradiance;
     let amb = m::max(0.0, m::min(visibility, crate::game::game_visibility_of(g, irradiance)) - cpu0 - 0.05);
     let open0 = amb > 0.0 && !crate::weather::weather_under_roof(g, p[0], p[2]);
-    let card = crate::kitload::load_seen(g, crate::kitload::LoadSeenWho::Guard(gd));
+    let card = crate::kitload::load_seen(g, &crate::seats::here(g), crate::kitload::LoadSeenWho::Guard(gd));
     SneakWalk { by: None, gd, low, keen, card, reach, amb, cpu0, open0, men, roofs: JsMap::new(), memo: JsMap::new() }
 }
 
@@ -490,7 +490,7 @@ pub fn sneak_walk_cost(g: &mut crate::game::Game, this: &mut crate::sneak::Sneak
                         if lit < 0.0 { lit = walk_lit_of(g, w, x, z, Some(0.4)); }
                         let h = w.men[q].h;
                         if d >= g.k.sneak.near_m && !lit_seen(g, h, lit, d, w.keen, w.low, Some(w.card), Some(MAP_SHORT)) { break; }
-                        rate = eye_rate(g, h, lit, d, w.keen, Some(w.low)) * crate::kitload::load_cross(g, crate::kitload::LoadCrossWho::Guard(w.gd));
+                        rate = eye_rate(g, h, lit, d, w.keen, Some(w.low)) * crate::kitload::load_cross(g, &crate::seats::here(g), crate::kitload::LoadCrossWho::Guard(w.gd));
                     }
                     add[q][k] += rate * dt;
                 }
