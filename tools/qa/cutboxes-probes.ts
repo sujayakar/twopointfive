@@ -226,43 +226,20 @@ export async function cutboxesPack(): Promise<boolean> {
         const ok = c ? cd[q] === Math.fround(c.n[0]) && cd[q + 1] === Math.fround(c.n[1]) && cd[q + 2] === Math.fround(c.n[2]) && cd[q + 3] === Math.fround(c.d) : cd[q] === 0 && cd[q + 1] === 0 && cd[q + 2] === 0 && cd[q + 3] === 1; if (!ok) rowBad++; }
         const q = (i * CUT_STRIDE + CUT_ROWS) * 4, k3 = b.cutCore; if (!(k3 ? cd[q] === Math.fround(k3[0]) && cd[q + 1] === Math.fround(k3[1]) && cd[q + 2] === Math.fround(k3[2]) && cd[q + 3] === 1 : cd[q] === 0 && cd[q + 1] === 0 && cd[q + 2] === 0 && cd[q + 3] === 0)) coreBad++; if (k3) nCore++; } }
     F.verdict(bitBad === 0 && rowBad === 0 && nCut === 16 && coreBad === 0 && nCore > 0 && nCore < nCut, 'bit 16 of the flags word on exactly the boxes with a record; their rows = the planes, then (0, 0, 0, 1); the core row = (colour, 1) or zeros', `${nCut} cut of ${all.length} · ${nCore} with a core colour · ${bitBad} bits wrong · ${rowBad} rows wrong · ${coreBad} core rows wrong`);
-    { // A CALM ROOM PAYS NOTHING (render/cutSwap.ts): what the boot compiles under the switch is the text of the build without it; the cut set asks for the rule by name
-      const boot = scenePrelude(), whole = scenePrelude(true);   // (the text with the switch off cannot be made any more: the boot text is asked by what it declares)
-      F.verdict(/const CUT_BOXES: bool = false;/.test(boot) && !/const CUT_BOXES: bool = true;/.test(boot) && whole !== boot && /const CUT_BOXES: bool = true;/.test(whole), 'under the swap the boot prelude declares CUT_BOXES false (the cut code is dead in every module of the boot set); scenePrelude(true) carries the rule', `${whole.length - boot.length} chars apart with the rule`);
+    { // ONE SET OF RAY PROGRAMS (2026-11-07): the prelude every tracing module is made from carries the rule whenever the switch is on, and is the old text with it off
+      const offText = scenePrelude(false), whole = scenePrelude(true), own = scenePrelude(), RULE = /const CUT_BOXES: bool = true;/;   // (asked by the argument: the switch's row is a settled one, a tool's write of it is refused — tools/qa/fold.ts)
+      F.verdict(own === (cutConfig.on ? whole : offText) && whole !== offText && RULE.test(whole) && !RULE.test(offText), 'the prelude carries the cut rule with the switch on and is the switch-off text without it: one text for every ray program', `switch ${cutConfig.on ? 'on' : 'off'} · the page's own text ${own === whole ? 'has the rule' : 'has none'} · ${whole.length - offText.length} chars apart with the rule`);
       const traced = all.filter(b => b.cut && b.cut.length > 0 && !(b.flags & BoxFlag.NoShadow)).length;
       const w2 = new BoxWorld(fake('device')); const R4 = seeded(78); let want2 = 0;
       for (let i = 0; i < 12; i++) { const b = randomCutBox(R4, i, [4 + R4() * 30, 1, 4 + R4() * 18]); b.flags |= BoxFlag.Dynamic; if (i % 2 === 0) b.flags |= BoxFlag.NoShadow; else if (b.cut && b.cut.length > 0) want2++; w2.dynamics.push(b); }
       w2.upload(); const mid = w2.cutTraced;
-      { // the cut list is the traceable boxes, THEN the picture-only ones: the g-buffer draws the first visibleCutTraced whole on a frame whose ray programs have no cut rule
+      { // the cut list is the traceable boxes, THEN the picture-only ones: an order the two-set build's raster leaned on, kept as the list's contract
         let lead = true, tail = true; const n0 = w2.visibleCount, nT = w2.visibleCutTraced, nC = w2.visibleCutCount;
         for (let k = 0; k < nC; k++) { const b = w2.all[w2.visible[n0 + k] & 0xFFFF]; const plate = !!(b.flags & BoxFlag.NoShadow); if (k < nT ? plate : !plate) { if (k < nT) lead = false; else tail = false; } }
         F.verdict(lead && tail && nT === want2 && nC > nT, 'the cut list leads with the boxes a ray can meet (visibleCutTraced of them) and ends with the picture-only plates', `${nT} traceable, then ${nC - nT} plates · order ${lead && tail}`);
       }
       w2.dynamics.length = 0; w2.upload();
       F.verdict(w.cutTraced === traced && traced > 0 && mid === want2 && want2 > 0 && w2.cutTraced === 0, 'cutTraced counts the cut boxes a ray can meet (a NoShadow plate is picture only) and is 0 again once they are gone', `${w.cutTraced} of ${nCut} · plates apart ${mid} = ${want2} · after they go ${w2.cutTraced}`);
-    }
-    { // THE SWAP'S RULE (render/cutSwap.ts frame / drawsCut / hot), driven with a stand-in owner: when the cut set is on the frame, and that the raster follows it
-      const { cutSwap } = await import(`${ROOT}/src/render/cutSwap.ts`);
-      const swapWas = cutConfig.swap, keep = { state: cutSwap.state, live: cutSwap.live, force: cutSwap.force, idle: cutSwap.idle, swaps: cutSwap.swaps, hot: cutSwap.hotPinned, members: new Set(cutSwap.members) };
-      const warn = console.warn; console.warn = () => { /* hot() says so once */ };
-      try {
-        cutConfig.swap = true; cutSwap.members.clear(); let used = false, calls = 0; const m = { buildCut: async () => { /* nothing to compile */ }, useCut: (on: boolean) => { used = on; calls++; } }; cutSwap.members.add(m);
-        cutSwap.live = false; cutSwap.force = null; cutSwap.idle = 0; cutSwap.swaps = 0; cutSwap.hotPinned = false;
-        cutSwap.state = 'building'; cutSwap.frame(5); const early = !cutSwap.live && !cutSwap.drawsCut && calls === 0;      // a piece born before the second set exists: boot programs, drawn whole
-        cutSwap.state = 'failed'; cutSwap.frame(5); const failed = !cutSwap.live && !cutSwap.drawsCut;
-        cutSwap.state = 'ready'; cutSwap.frame(0); const calm = !cutSwap.live && !used;
-        cutSwap.frame(5); const taken = cutSwap.live && used && cutSwap.drawsCut && cutSwap.swaps === 1;
-        let held = 0; while (cutSwap.live && held < 100000) { cutSwap.frame(0); held++; }                                       // …the last piece gone: held, then the boot's again
-        const back = !cutSwap.live && !used && cutSwap.swaps === 2 && held >= 120;
-        cutSwap.frame(1); let flap = true; for (let r = 0; r < 40; r++) { for (let k = 0; k < held - 1; k++) cutSwap.frame(0); flap &&= cutSwap.live; cutSwap.frame(1); }   // pieces coming and going inside the hold never swap
-        const steady = flap && cutSwap.swaps === 3;
-        while (cutSwap.live) cutSwap.frame(0);
-        cutSwap.force = 'cut'; cutSwap.frame(0); const pinned = cutSwap.live; cutSwap.force = null; cutSwap.frame(0); const released = pinned && !cutSwap.live;   // a pin let go leaves no hold behind (the cost lab's 'ship' row)
-        cutSwap.frame(5); cutSwap.hot(); const hot = !cutSwap.live && !used && !cutSwap.drawsCut && cutSwap.force === 'base'; cutSwap.frame(5); const hotStays = !cutSwap.live && !cutSwap.drawsCut;
-        F.verdict(early && failed, 'a cut piece alive before the second set is in (or with a set that failed) keeps the boot programs AND is drawn whole: picture and rays agree', `building ${early} · failed ${failed}`);
-        F.verdict(calm && taken && back && steady, 'the cut set is taken the frame a traceable piece exists, held after the last one goes, and pieces coming and going inside the hold never flap it', `calm ${calm} · taken ${taken} · back after ${held} frames ${back} · 40 comings and goings: swaps ${steady ? 'none' : 'SOME'}`);
-        F.verdict(released && hot && hotStays, 'a pin let go returns to the rule at once; a hot-swapped program pins the boot set (whole for both)', `release ${released} · hot ${hot} · stays ${hotStays}`);
-      } finally { console.warn = warn; cutConfig.swap = swapWas; cutSwap.members.clear(); for (const x of keep.members) cutSwap.members.add(x); cutSwap.state = keep.state; cutSwap.live = keep.live; cutSwap.force = keep.force; cutSwap.idle = keep.idle; cutSwap.swaps = keep.swaps; cutSwap.hotPinned = keep.hot; }
     }
     { // the rows land where the shaders read them: boxMat byte (CUT_BASE + bi × CUT_STRIDE) × 16, CUT_BASE as the prelude declares it
       const m = scenePrelude(true).match(/const CUT_BASE: u32 = MAX_BOXES \* 4u \+ (\d+)u;/); const baseRows = m ? w.maxBoxes * 4 + Number(m[1]) : -1;

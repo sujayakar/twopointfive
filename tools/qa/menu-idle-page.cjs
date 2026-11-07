@@ -29,11 +29,9 @@ const check = (ok, what, detail) => { console.log(`- ${ok ? 'PASS' : 'FAIL'} —
     }
     await page.waitForSelector('#menu .actions button', { timeout: 240000 });
     // the frame itself is not this tool's question, and on this adapter it can be a quarter of a minute: `__behind` counts the render CALLS main.ts lets through, so the
-    // engine's own render is stood in for by the world's pack (REAL=1 keeps it and wants minutes a line). No frame comes at all while the second set of programs compiles
-    // (cutSwap, a couple of minutes after boot here): the first frames after the loop is let go are waited for
+    // engine's own render is stood in for by the world's pack (REAL=1 keeps it and wants minutes a line). The first frames after the loop is let go are waited for
     const from = await page.evaluate(([w, real]) => { const e = window.__engine; if (!real) e.render = () => { e.world.upload(); };
       window.__smoke.params.enabled = false; window.__behind.warm = w; window.__pauseLoop = false; return window.__behind.drawn; }, [WARM, REAL]);
-    await page.evaluate(() => window.__cut && window.__cut.programs && Promise.race([window.__cut.programs.ready, new Promise(r => setTimeout(r, 400000))]).then(() => 0)).catch(() => {});
     await page.waitForFunction(n => window.__behind.drawn > n + 2, from, { timeout: 600000 });
     return { ctx, page };
   };

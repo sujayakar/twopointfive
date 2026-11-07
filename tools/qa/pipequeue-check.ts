@@ -35,9 +35,8 @@ check(pipeQueueFor(WIN, '0') === false, '?pipequeue=0 puts it off on Windows');
 check(pipeQueueFor(MAC, BREAK ? '0' : '1') === true && pipeQueueFor(LINUX, BREAK ? '0' : '6') === true, '?pipequeue=1 (or a number in flight) puts it on anywhere');
 if (!BREAK) installPipeQueue(dev);
 
-const CUT = 'const CUT_BOXES: bool = true;\n';
-const mod = (bytes: number, cut = false) => dev.createShaderModule({ code: (cut ? CUT : '') + 'x'.repeat(bytes) });
-const ask = (label: string, bytes: number, cut = false) => dev.createComputePipelineAsync({ label, compute: { module: mod(bytes, cut) } });
+const mod = (bytes: number) => dev.createShaderModule({ code: 'x'.repeat(bytes) });
+const ask = (label: string, bytes: number) => dev.createComputePipelineAsync({ label, compute: { module: mod(bytes) } });
 const labels = () => started.map(h => h.label).join(' ');
 const finish = async (label: string) => { const i = started.findIndex(h => h.label === label); if (i < 0) return false; started.splice(i, 1)[0].done(label); await tick(); return true; };
 const drain = async () => { for (let n = 0; n < 64 && (started.length || pipeQueue.waiting.length); n++) { for (const h of started.splice(0)) h.done(h.label); await tick(); } };
@@ -101,15 +100,15 @@ const later = (label: string, bytes: number, extra: object = {}) => laterPipelin
 { let v: unknown = 'never answered'; try { v = await later('laterFails', 10, { throws: true }); } catch { v = 'thrown'; /* (the device as the browser made it throws here: PIPEQUEUE_BREAK) */ }
   check(v === null && pipeQueue.inflight === 0 && laterProgress.pending === 0, `a LATER creation that fails hands back NOTHING (its caller keeps the fallback it draws with), frees its slot and is no longer counted as out (${JSON.stringify(v)}, ${laterProgress.pending} out)`); }
 
-// ---- after the boot: at most `after` in flight, at most `low` of them the background set's, the foreground first
+// ---- after the boot: at most `after` in flight, at most `low` of them the background's (the LATER pipelines), the foreground first
 pipeQueue.settle();
 { for (let i = 0; i < 7; i++) void ask(`f${i}`, 100 + i);
   await tick();
   check(labels() === 'f0 f1 f2 f3', `after the boot: seven asked, ${PIPE_QUEUE.after} in flight, in the order asked (${labels()})`);
   await drain(); }
-{ for (let i = 0; i < 5; i++) void ask(`cut${i}`, 500, true);
+{ for (let i = 0; i < 5; i++) void later(`cut${i}`, 500);
   await tick();
-  check(labels() === 'cut0 cut1', `the background set alone: ${PIPE_QUEUE.low} in flight, the other slots kept free (${labels()})`);
+  check(labels() === 'cut0 cut1', `the background alone: ${PIPE_QUEUE.low} in flight, the other slots kept free (${labels()})`);
   void ask('fg0', 10); void ask('fg1', 10); void ask('fg2', 10); await tick();
   check(labels() === 'cut0 cut1 fg0 fg1', `a pass's own pipelines start at once beside them (${labels()})`);
   await finish('cut0');
@@ -120,17 +119,13 @@ pipeQueue.settle();
   check(pipeQueue.inflight === 0 && pipeQueue.inflightLow === 0 && pipeQueue.waiting.length === 0, 'everything asked for was made: nothing in flight, nothing waiting'); }
 // ---- NOBODY SEES THE FRAMES (pipeQueue.rush: a mission's brief is up and its START not yet live, src/ui/settle.ts): the boot's number again, the background set's too
 { PIPE_QUEUE.boot = 6; pipeQueue.rush(true);
-  for (let i = 0; i < 8; i++) void ask(`r${i}`, 500, true);
+  for (let i = 0; i < 8; i++) void later(`r${i}`, 500);
   await tick();
-  check(labels() === 'r0 r1 r2 r3 r4 r5', `rushed: the background set compiles as many at a time as the boot did, in the order asked (${labels()})`);
+  check(labels() === 'r0 r1 r2 r3 r4 r5', `rushed: the background compiles as many at a time as the boot did, in the order asked (${labels()})`);
   pipeQueue.rush(false); await finish('r0');
   check(labels() === 'r1 r2 r3 r4 r5' && pipeQueue.waiting.length === 2, `the rush over: what is in flight finishes, and no other of the background starts until its ${PIPE_QUEUE.low} slots are free (${labels()}, ${pipeQueue.waiting.length} waiting)`);
   await drain(); PIPE_QUEUE.boot = 3;
   check(pipeQueue.inflight === 0 && pipeQueue.inflightLow === 0 && pipeQueue.waiting.length === 0, 'everything asked for under the rush was made'); }
-{ void dev.createRenderPipelineAsync({ label: 'render', vertex: { module: mod(10) }, fragment: { module: mod(10, true), targets: [] } } as unknown as GPURenderPipelineDescriptor);
-  void ask('cutA', 10, true); void ask('cutB', 10, true); await tick();
-  check(labels() === 'render cutA', `a render pipeline whose fragment is the background set's counts as background (${labels()})`);
-  await drain(); }
 
 { for (let i = 0; i < 4; i++) void later(`late${i}`, 10);
   await tick();
