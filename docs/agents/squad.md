@@ -1202,7 +1202,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   = asked every frame, the run's digest is the same; the pair's drill) and, on the real page (software adapter, starts its own dev server), `node tools/qa/plan-look.cjs [--q '<query>']
   [--name n]` = nine stills (given / walking / on marks / menu / stack given / stacked + the bar / a throw offered / the throw ordered / off)
   with the SVG's counts beside each. Never seen on a GPU.
-  **A MAN WITH NO THROW WALKS TO ONE** (`SQUADTHROW.walk`, on with the switch; Tab ▸ Squad ▸ 'throw order ▸ a man walks to a throw'; off = such a spot is 'no throw from here.' as above; a
+  **A MAN WITH NO THROW WALKS TO ONE** (`SQUADTHROW.walk`, on with the switch; Tab ▸ Squad ▸ 'throw order ▸ a man walks to a throw' (ROW TAKEN OFF THE PANEL 2026-11-07, its switch ruled settled: menus.md); off = such a spot is 'no throw from here.' as above; a
   recording whose SQUADTHROW table has no `walk` replays with it off; the maintainer, 10-13: "it would be good to have the squad move to do a throw (and maybe visualize who's doing it and the path
   on the ground?)"). Only where NOBODY addressed has a throw from where he stands: `walkSpot` floods the nav grid out from the men who may be walked (`mayWalk`: no drill owns him, not in a door
   tool's or a wall charge's op, not in a fight — 'alert', the fight AI's lease, or the room fight's gun on a man (`fight.opOf(gd).tgt`) —, not a stack's or stand-off's rear man (`Assignment.spare`), his order none / move / stack / cover / hold / fall in) — 4-neighbour, ≤ `walkM` 12 m COUNTED IN GRID STEPS, never through a door leaf where it stands nor a room the squad
@@ -1220,7 +1220,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **A man works his throw out; a frag is thrown where the men can duck; a frag near the player is his call** (`SQUADTHROW.lob` / `.duck` / `.samCall`,
   three keys under the throw order's switch, each ON in the module like `walk` and inert on the frozen stand, where `SQUADTHROW.on` is held off —
   `TPS_SQUADTHROW=1` raises all of it; `?throwlob=0` = the straight arc or nothing as it was, and the other two off with it; `?throwduck=0`; `?samcall=0`;
-  Tab ▸ Squad ▸ 'throw order ▸ a man works his throw out' / '▸ frag where men can duck' / '▸ a frag near you is your call'; a recording
+  Tab ▸ Squad ▸ 'throw order ▸ a man works his throw out' / '▸ frag where men can duck' / '▸ a frag near you is your call' (ROWS TAKEN OFF THE PANEL 2026-11-07, their switches ruled settled: menus.md); a recording
   whose SQUADTHROW table has no `lob` replays with the three off; squadthrow-check.ts's rig pins `lob` off, so the older throw / walk / plan checks ask
   what they asked). The maintainer, 10-15: "ordering your squad to throw a grenade is still pretty useless. they should figure out how to throw to a
   spot". WHAT IT WAS, measured headless on the shipped stand, the office with the four holding by Sam, 270 floor spots 2.5‥15 m from him: a frag at a

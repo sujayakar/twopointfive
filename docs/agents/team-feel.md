@@ -1040,7 +1040,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   cap, not walked; whether slowing to 0.8 of his pace is enough for him to catch up comfortably is his to say.
 - **On the walk to a mark a teammate looks where he walks until he can see what he was sent to watch** (`TEAMPACE.walkAim`, 11-04: ON in the page —
   `?walkaim=0` — OFF in the module and on the frozen stand, `TPS_WALKAIM=1`; a `FROZEN_HOLDS` row, `STAND_ENV`; journal: a recording whose TEAMPACE row
-  has no such key replays with it off; the debugger ▸ Team feel ▸ "teammates ▸ look where they walk"; knobs `walkAimOff 0.25, walkAimOn 0.5`). The other
+  has no such key replays with it off; the debugger ▸ Team feel ▸ "teammates ▸ look where they walk" (ROW TAKEN OFF THE PANEL 2026-11-07, its switch ruled settled: menus.md); knobs `walkAimOff 0.25, walkAimOn 0.5`). The other
   half of the weapon lights at a door (the wall rule's floor paragraph, above): with the floor no longer a wall, the compound's night stack still had 1.8
   of its 4 lights out for a REAL wall, because the men walked along the south wall with their guns on the door, through it. WHAT IT WAS: an order that
   sends a man to a mark hands him its watch point from his first step, and `orders.ts tick`'s walking carriage ("the gun up and leading",
