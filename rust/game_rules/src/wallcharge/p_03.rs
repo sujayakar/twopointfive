@@ -879,7 +879,8 @@ fn near_secs(g: &Game, d: f64, reach: f64) -> f64 {
 fn away_from(p: V3, xz: V3) -> V3 { v3::normalize([p[0] - xz[0], 0.15, p[2] - xz[2]]) }
 
 /// what the blast does to one seat's player   (blowRaw's eachSeat body)
-fn blow_seat(g: &mut Game, w: &WallSpot, hole: bool, r: crate::wallcharge::WallChargeAwayMarksValueR, wk: bool, xz: V3, out: V3, inn: V3, sam: &mut f64, sam_down: &mut bool) {
+/// `near` is his share of the blast on the charge's own side, taken before it went (0: not caught there)
+fn blow_seat(g: &mut Game, w: &WallSpot, hole: bool, r: crate::wallcharge::WallChargeAwayMarksValueR, wk: bool, xz: V3, near: f64, inn: V3, sam: &mut f64, sam_down: &mut bool) {
     let tk = thick(g, w);
     let (knock_m, stun_m, ours_secs, near_m) = (g.k.doortools.knock_m, g.k.doortools.stun_m, g.k.wallshot.ours_secs, g.k.wallkill.near_m);
     let pl = g.player;
@@ -887,14 +888,15 @@ fn blow_seat(g: &mut Game, w: &WallSpot, hole: bool, r: crate::wallcharge::WallC
         let p = g.ch[g.pl[pl].ch].pos;
         let far = wall_off(g, w, p) < -tk / 2.0;
         let dist = v3::dist_xz(p, xz);
-        if !(far && !hole) && dist < (if far { knock_m } else { near_m }) && !crate::scene_collision::solid_blocked(g, if far { inn } else { out }, [p[0], 1.1, p[2]], None) {
+        let struck = if far { hole && dist < knock_m && !crate::scene_collision::solid_blocked(g, inn, [p[0], 1.1, p[2]], None) } else { near > 0.0 && dist < near_m };
+        if struck {
             crate::combat::hit_player(g, away_from(p, xz));
             g.pl[pl].hit_flash = 1.0;
             crate::chronicle::chron_hit(g, Some("the wall charge"));
             *sam_down = *sam_down || g.pl[pl].down;
         }
     }
-    let k = if !g.pl[pl].down { let p = g.ch[g.pl[pl].ch].pos; wall_charge_blast_share(g, w, p, Some(r), None) } else { 0.0 };
+    let k = if !g.pl[pl].down { near } else { 0.0 };
     if k > 0.0 { wall_charge_sam_caught(g, pl, k, xz); }
     *sam = m::max(*sam, k);
     // (samstun.ts: the blast does to the player what it does to a teammate standing there)
@@ -902,7 +904,8 @@ fn blow_seat(g: &mut Game, w: &WallSpot, hole: bool, r: crate::wallcharge::WallC
         let p = g.ch[g.pl[pl].ch].pos;
         let far = wall_off(g, w, p) < -tk / 2.0;
         let dist = v3::dist_xz(p, xz);
-        if !(far && !hole) && dist < (if far { stun_m } else { r.reach }) && !crate::scene_collision::solid_blocked(g, if far { inn } else { out }, [p[0], 1.1, p[2]], None) {
+        let flashed = if far { hole && dist < stun_m && !crate::scene_collision::solid_blocked(g, inn, [p[0], 1.1, p[2]], None) } else { near > 0.0 };
+        if flashed {
             let secs = if far { ours_secs } else { near_secs(g, dist, r.reach) };
             crate::samstun::dazzle_player(g, secs, inn);
         }
@@ -924,6 +927,26 @@ pub fn wall_charge_blow_raw(g: &mut crate::game::Game, c_2: Option<WallChargeId>
     let hung = Some(crate::wallbreak::BlastOptsHung { wall: w.index, r: g.k.wallcharge.hung_m });
     crate::cleared::cleared_rooms_room_at(g, at);   // (the room beyond is named on the floor as it is BEFORE this hole joins two rooms)
     let who = g.ch[g.pl[g.player].ch].id;
+    // WHO THE BLAST CATCHES ON ITS OWN SIDE IS ASKED ONCE, NOW, BY THE WARNING'S OWN CALL (`wall_charge_too_close`): the world as it stood when the
+    // charge went. What stood between a man and the charge shielded him, and the note he was given was true. Asked after the blast instead (as every
+    // near-side test below once was, each with a line of its own), the furniture the blast had just smashed no longer stood, and a man the warning
+    // had not named was rocked. What the blast does BEYOND the wall is by nature after it: the hole, and the lines through it.
+    let r = safe_radius(g, &w);
+    let mut near: Vec<(GuardId, f64)> = Vec::new();
+    let mut men = g.guards.clone();
+    for cv in crate::civilians::civilians_shown(g) { if !men.contains(&cv) { men.push(cv); } }   // (a civilian in the building is a man on the floor too)
+    for gd in men {
+        if g.gd[gd].state == GuardState::Dead { continue; }
+        let p = pos_of(g, gd);
+        let share = wall_charge_blast_share(g, &w, p, Some(r), Some(false));
+        if share > 0.0 { near.push((gd, share)); }
+    }
+    let mut seat_near: Vec<f64> = Vec::new();
+    crate::seats::each_seat(g, &mut |g: &mut Game| {
+        let pl = g.player;
+        let share = if g.pl[pl].down { 0.0 } else { let p = g.ch[g.pl[pl].ch].pos; wall_charge_blast_share(g, &w, p, Some(r), Some(false)) };
+        seat_near.push(share);
+    });
     crate::destruction::destruction_blast(g, at, Some(crate::wallbreak::BlastOpts { who: Some(who), chaos: Some(false), breach, hung, ..Default::default() }));
     let hole = wall_charge_hole_at(g, &w);
     let du = hole.map_or(0.0, |h| h.du);
@@ -951,9 +974,7 @@ pub fn wall_charge_blow_raw(g: &mut crate::game::Game, c_2: Option<WallChargeId>
     if let Some(ii) = g.items.items.iter().position(|&x| x == it) { g.items.items.remove(ii); }
 
     let (mut knocked, mut stunned, mut backblast, mut lost) = (0.0, 0.0, 0.0, 0.0);
-    let r = safe_radius(g, &w);
     let xz = wall_pt(g, &w, 0.0, 0.0, None);
-    let out = wall_pt(g, &w, 0.0, 0.5, Some(1.1));
     let inn = wall_pt(g, &w, du, -(tk + 0.45), Some(1.1));
     let room = match hole { Some(h) => room_beyond(g, &w, h.du, tk), None => 0.0 };
     let wk = pressed;
@@ -967,21 +988,23 @@ pub fn wall_charge_blow_raw(g: &mut crate::game::Game, c_2: Option<WallChargeId>
         let dist = v3::dist_xz(p, xz);
         let chest = [p[0], 1.1, p[2]];
         let ours = g.gd[gd].team == crate::teams::Team::Operative;
-        let lined = dist <= stun_m && !crate::scene_collision::solid_blocked(g, if far { inn } else { out }, chest, None);
-        let in_room = js::truthy(room) && far && !ours && dist <= room_m && crate::cleared::cleared_rooms_room_at(g, p) == room;
-        if (far && !has_hole) || (!lined && !in_room) { continue; }   // (a wall that held is still a wall to the men behind it)
-        if !far {   // too near the charge on its own side (at it, he is killed)
+        if !far {   // on the charge's own side: caught or not as he stood when it went (at it, he is killed)
+            if !near.iter().any(|&(x, _)| x == gd) { continue; }
             if wk && dist < near_m {
                 let line = format!("{} down — at the charge when it went", callsign_or(g, gd, "a man"));
                 crate::combat::kill_guard(g, gd, away_from(p, xz), Some(false), Some(DownKind::Shot), Some(DownBy::Player), Some(&line), None);
                 if !ours { knocked += 1.0; } else if !crate::rails::rails_is_spared(g, gd) { lost += 1.0; }
-            } else if dist < r.reach {
+            } else {
                 let secs = near_secs(g, dist, r.reach);
                 wall_charge_dazzle(g, gd, secs, inn);
                 if ours { backblast += 1.0; } else { stunned += 1.0; }
             }
             continue;
         }
+        if !has_hole { continue; }   // (a wall that held is still a wall to the men behind it)
+        let lined = dist <= stun_m && !crate::scene_collision::solid_blocked(g, inn, chest, None);
+        let in_room = js::truthy(room) && !ours && dist <= room_m && crate::cleared::cleared_rooms_room_at(g, p) == room;
+        if !lined && !in_room { continue; }
         if !lined { wall_charge_shock(g, gd, shot_stagger, inn); stunned += 1.0; continue; }   // (in the room with no line to the hole: the shock, not the flash)
         if ours && (if wk { dist >= knock_m } else { crate::orders::squad_orders_big(g) }) {   // (one of ours past the wall: dazzled, not felled)
             wall_charge_dazzle(g, gd, ours_secs, inn);
@@ -1007,14 +1030,16 @@ pub fn wall_charge_blow_raw(g: &mut crate::game::Game, c_2: Option<WallChargeId>
             let p = pos_of(g, cv);
             let far = wall_off(g, &w, p) < -tk / 2.0;
             let dist = v3::dist_xz(p, xz);
-            if (far && !has_hole) || dist >= (if far { knock_m } else { near_m }) || crate::scene_collision::solid_blocked(g, if far { inn } else { out }, [p[0], 1.1, p[2]], None) { continue; }
+            let struck = if far { has_hole && dist < knock_m && !crate::scene_collision::solid_blocked(g, inn, [p[0], 1.1, p[2]], None) } else { dist < near_m && near.iter().any(|&(x, _)| x == cv) };
+            if !struck { continue; }
             let line = format!("{} down — {} when it went", callsign_or(g, cv, "a civilian"), if far { "behind the wall" } else { "at the charge" });
             crate::combat::kill_guard(g, cv, away_from(p, xz), Some(false), Some(if far { DownKind::Struck } else { DownKind::Shot }), Some(DownBy::Player), Some(&line), None);
             knocked += 1.0;
         }
     }
     let mut sam = 0.0;
-    crate::seats::each_seat(g, &mut |g: &mut Game| blow_seat(g, &w, has_hole, r, wk, xz, out, inn, &mut sam, &mut sam_down));   // (every player's man)
+    let mut seat = 0;
+    crate::seats::each_seat(g, &mut |g: &mut Game| { let share = seat_near[seat]; seat += 1; blow_seat(g, &w, has_hole, r, wk, xz, share, inn, &mut sam, &mut sam_down); });   // (every player's man)
     g.wall_charge.last_blow = Some(WallChargeLastBlow { reach: r.reach, indoors: r.indoors, sam, lost, sam_down });
     if has_hole { crate::morale::morale_blast(g, inn, Some(who)); }   // (the men past the wall it opened are shaken by it)
     let st = &mut g.wall_charge.stats;
