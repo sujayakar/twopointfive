@@ -446,7 +446,7 @@
 "wind",
 "words",
 "workstow",
-"wounds",
+
 "wxkinds"
 ],
 "unread": [
@@ -1629,11 +1629,6 @@
 "workstow-sam": "iii",
 "workstow-wall": "iv-b",
 "world-edge": "iii",
-"wounds-again": "iv-b",
-"wounds-both": "iv-b",
-"wounds-off": "iv-b",
-"wounds-play": "iii",
-"wounds-zone": "0",
 "writing": "0",
 "wxkinds-default": "iii",
 "wxkinds-hearing": "iii",
