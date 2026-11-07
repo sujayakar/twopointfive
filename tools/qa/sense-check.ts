@@ -9,7 +9,8 @@
 //              cross it alone, is not seen through a wall, and clears after it has burnt out
 //   same       on: a taped room clear with the four (the shipped rules) is re-run from its tape with the game answering its OWN senses — the tape's values only
 //              held against them — and is the same fight to the last bit (src/game/digest.ts rawBits), every read the page's game made answered the same
-// The two-engine line is tools/qa/coop-check.ts under TPS_CPUSENSE=1; the real page's is tools/qa/samefight-page.cjs with SAMEFIGHT_QUERY=cpusense.
+// The real page's line is tools/qa/samefight-page.cjs with SAMEFIGHT_QUERY=cpusense. (The two-engine line was tools/qa/coop-check.ts, a check of the
+// TypeScript tick under bun and node: gone with that tick. Two engines on one fight are now tools/qa/mpclient-page.cjs.)
 import { writeFileSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';

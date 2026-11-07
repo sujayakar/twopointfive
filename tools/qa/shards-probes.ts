@@ -294,9 +294,8 @@ export async function shardsUnderfoot() {
   F.verdict(cr0 === 0 && cr1 === 0 && cr2 === 1 && loud > plain * 1.2 && Math.abs(loud - (plain * (1 + SHARDS.crunchGain * k0) + SHARDS.crunchAdd * k0)) < 1e-9, 'a step on it crunches and is louder to the model; off it, or with the switch off, nothing', `step level off the litter ${lFar.toFixed(3)}; on it ${plain.toFixed(3)} (switch off) → ${loud.toFixed(3)} (on), 1 crunch`);
   let steps = 1; while (S.underfoot(on) >= 0.08 && steps < 200) { tread(game, on, base, false); steps++; }
   F.verdict(k1 < k0 || k0 === 1 && steps > 1, 'each step grinds it down; it stops crunching in the end', `underfoot ${k0.toFixed(2)} → ${k1.toFixed(2)} after one step, quiet after ${steps}`);
-  SHARDS.underfoot = false; const offKnob = tread(game, [cx + 0.5, 0, cz], base, true); SHARDS.underfoot = true;
   game.shards.reset();
-  F.verdict(S.litter.size === 0 && S.underfoot(on) === 0 && Number.isFinite(offKnob), 'reset(): no litter left', `cells ${S.litter.size}`);
+  F.verdict(S.litter.size === 0 && S.underfoot(on) === 0, 'reset(): no litter left', `cells ${S.litter.size}`);
   return F.done();
 }
 

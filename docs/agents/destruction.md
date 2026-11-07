@@ -494,9 +494,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the pixel already shows, ≤ `REFR_MAX_M` 1.5 m, projected with THIS raster's own matrices, offset ≤ `REFR_MAX_PX` 0.12 × height and shrunk continuously to stay on screen, refused
   — the pixel keeps its own read — where the sky shows there or the surface there is nearer than the exit point) → the paint / normal / id / direct / indirect / emissive / RT
   reflection are loaded at that pixel `sPix` (nearest texel; TAAU's jitter dithers it smooth) while the pane's own reflection field, the cracks and the fog stay keyed on the
-  pixel (`zg` / `Ng`). A 12 mm pane moves nothing but a pixel or two at a graze; the bottle bends the cabinet edge behind it by centimetres. `passes.ts` compiles composite (and
-  its sharp twin) a SECOND time behind `const GLASS_REFRACT: bool = true` (`pCompR` / `pCompSR`, boot pipelines) taken while `passes.glassRefract` (= setting ∧ glass ∧ a pane
-  listed); **false = the module exactly as it was — OFF is hash-identical to main**; `frame.glassCfg.w` = the index (0 = off). Cost: +0.07 ms compS at high with the conference
+  pixel (`zg` / `Ng`). A 12 mm pane moves nothing but a pixel or two at a graze; the bottle bends the cabinet edge behind it by centimetres. It is the ONE composite's own text (2026-11-07,
+  `docs/agents/render.md` "the composite is one program"): the glass test runs first, the ray bends while `frame.glassCfg.w` holds an index, and at 0 (the setting
+  off) the same statements keep the read under the pixel and the older tint rule. Until then `passes.ts` compiled composite and its sharp twin a second time behind
+  `const GLASS_REFRACT: bool` (`pCompR` / `pCompSR`) with the glass test after the reads in the false one; with no pane crossed the two computed the same picture. Cost: +0.07 ms compS at high with the conference
   glazing filling the view, 0.00 without glass on screen. The pure helpers live in `render/shaders/refract_common.wgsl` (no bindings: `fresnelSchlick / fresnelF0 / refractDir /
   slabExit / beerLambert / refractProbeDist / screenRefractPx / clampRefractOffset`) so the particle rain's water streaks (exp/prain) share the law. Screen space only: what a bent
   ray sees must already be on screen behind the glass; TAA reprojects the bottle's interior with the motion of the surface behind it (mild ghosting inside it under a fast

@@ -114,8 +114,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   red path: `1` a tool on 7 (the family's older word; red on both stands), `four` the door tools' fourth row on 6 (`orderkeys-high`; red on both), `free`
   every free row's deed refuses (`orderkeys-give`: 23 FAIL on the page's stand; green on the old one, where no free row is on a digit this walk presses, so
   the judgement it breaks is never asked there). `picker-start` boots three pages at a time, not its 42 at once (`PICKER_JOBS=n`):
-  `tools/qa/pool.ts` is the pool that `picker`, `coop-check`, `dress-check`, `loadout-stage` and `weather-ident` share in place of a copy each (results in order;
-  after a case throws no further case is started; `jobsOf` reads a word or a flag the same way for all five: a number under one is one, no number is the
+  `tools/qa/pool.ts` is the pool that `picker`, `dress-check`, `loadout-stage` and `weather-ident` share in place of a copy each (results in order;
+  after a case throws no further case is started; `jobsOf` reads a word or a flag the same way for all four: a number under one is one, no number is the
   tool's default). Other tools still keep a loop of their own.
   THE SOAK'S FOUR OLD KINDS on the page's stand were its own readings: the arm hold's knife is wanted only where the close-in rule has one (`closeBare`), a ring
   that stays stands by itself with the key up and no press in hand (`ring.free`), and the cancel row is the list's, never a ring's (`listOpen`). A ring is held
@@ -360,6 +360,19 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   page's side, a stored card from before the tree, moved into `kittree-rows`, which is green; `mate40` lost its "no order, or not a tree" line;
   `KITTREE_BREAK=1` is kittree.ts's own hook and still fails `rows`, 9 lines). THE DOOR-TOOLS RIG'S PIN IS OUT (`doortools-probes.ts rig` wrote
   `OWNBLOW.on` off for 25 probes; refused, so nothing moved but the tags): a line of those probes that fails now reads as the page's side.
+  A CHECK STAGES AS THE GAME IS PLAYED: A ROW MADE BY HAND NEVER REACHES THE RUST GAME (2026-11-07; `tools/qa/charge-rig.ts`). The game object a check
+  holds is the tools' COPY of the game. A row made on it by hand is a write that is never sent: `C.set.push({ wall, … })` then `C.blow`, `D.set.push`,
+  `walls.openCells`, a box's flags or `stuff` or the fog's records written after `standUp`, a `splice`. The Rust game then does nothing with it (a wall
+  charge opened no hole; before the Rust side counted such writes as "not sent" the next call trapped, `wallcharge/p_02.rs`). A HOOK wrapped on the copy
+  (`onRelease`, `onChange`, a `crossed` list) is never called by the Rust tick either: read state (`Debris.list`, the stats tables, `walls.changes`). What
+  crosses: keys and rows (`game.selectVerb` and the key in `W.input.pressed`), `SquadOrders.give`, `Destruction.blast`, `WallBreak.round`, and level data
+  changed BEFORE `standUp` (the hung charge's bare wall is a floor stood with the board taken off in the data). For a wall charge: `samSets` (Sam's row at
+  the wall's foot, the cursor on the wall's FACE a metre up — its top edge is no pick), `samBlows` (his own action on 'blow the charge' from out of its
+  blast: the squad's key is not his charge's, ownblow.ts), `samBreach` (both), `squadBreach` (the order to all, then the squad's key once armed). Each
+  says which step did not come about. Read on the Rust game: `holebase`, `underfoot` and `outerwall-sam` went from no hole to ALL PASS; `holesnow`,
+  `menclear` and `hungcharge` pass the lines that only wanted a hole. A red after a hand-made row or a wrapped hook is the CHECK's: its expected-red
+  row is `is: 'stale'`, never a fault listed for the game. STILL BY HAND (to move): wallsafe, wallkill, wallshot, wallkeep, pall, mess, wallfurn, the
+  wall charge probes' trigger / reset / hold / standoff, and standfire's sightings (`fog.recs.set`).
   ROWS OF THE RUST GAME ARE PRINTED FROM A RUN, AND THE LIST IS FIVE TABLES (2026-11-07; `tools/qa/red-rows.ts`, `expected-red.ts RED_TABLES`).
   `bun run tools/qa/probes.ts <family> > run.txt 2>&1; bun run tools/qa/red-rows.ts run.txt` prints a row for every red probe whose failing lines
   are all the page's own side (nothing refused by the fold, no line under the "other side" note): 'real' with the place where the Rust game

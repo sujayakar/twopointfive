@@ -296,8 +296,8 @@ line).
   title's row and the host's list, the block makes the game, the invite, the host's window sent to the LINK comes back through
   the door into its own seat, a second window TYPES the code, a third that opens the link is told the game is full, both windows match every state
   word for 300 ticks and each walks its own man; `LOBBY_BREAK=1`, the second window opened with `coop=0`, fails the join and same-fight lines). No
-  stand applies: the page is the shipped stand and the server stands the recipe's. (`tools/qa/coop-check.ts` is another thing: the two-engine
-  determinism check.) RUN 2026-11-02 on the cloud box (headless Chromium on the software adapter): `lobby-check` every line PASS and its break word fails three; `lobby-page` every line PASS in some twenty minutes (both windows walked 22730 ticks and matched 757 of 757 state words, each walked its own man) with no page error, and its break word fails the join and same-fight lines; `mpserver-check` on both stands and `mp-control-check` pass. NOBODY HAS SEEN OR PLAYED IT: never seen on a GPU (the windows were headless, on the software adapter, frames stepped by
+  stand applies: the page is the shipped stand and the server stands the recipe's. (The two-engine determinism check, `tools/qa/coop-check.ts`, is gone with the TypeScript tick it checked: `mpclient-page` is the two-engine line
+  now, a Chromium page against a bun server.) RUN 2026-11-02 on the cloud box (headless Chromium on the software adapter): `lobby-check` every line PASS and its break word fails three; `lobby-page` every line PASS in some twenty minutes (both windows walked 22730 ticks and matched 757 of 757 state words, each walked its own man) with no page error, and its break word fails the join and same-fight lines; `mpserver-check` on both stands and `mp-control-check` pass. NOBODY HAS SEEN OR PLAYED IT: never seen on a GPU (the windows were headless, on the software adapter, frames stepped by
   script and none looked at beyond two stills of the title and the host's list); no two people, no two machines, no real network; the hosted backend
   and a sandbox have never been reached from this screen (the control plane's own checks cover its functions); a deployed backend's redacted refusal
   is a made-up answer in the check, never a real one; the invite card, Copy link and the 'Your friend is joining' line were read from the DOM, not
@@ -425,6 +425,17 @@ line).
   mpserver-check: its scripted hands are timed by the wall clock, and only one run in several comes near a tube's threshold (a dimmed client parted 1
   run of 1 on step 1334 and 0 of 4 on 1515; with the game's own number turned on purpose, 1 of 8), so a red path there would not be red. Nobody has
   looked at a picture: no GPU, no page was opened for this.
+- **The two-seat checks on the Rust game** (2026-11-07). `bun run tools/qa/seats-check.ts` is restated: every tick is `stepSeats(dt, [record, record])`,
+  the word a line holds a game to is the game's own (the die and the block: `stateWords`), a moment is kept and put back through `savestate.ts SNAPS`
+  (the Rust game kept), and each fight runs in a process of its own (`--fight`: a game stood after another in one process does not start as the first
+  did; the modules holdfire, nvg, kit and guards carry something over, found with `tools/mp/words-diff.ts`). The count of asks of the Game for "the
+  player" went with the TypeScript tick. 18 lines pass; `down` is RED: a rule a tool calls with a seat's view crosses to the Rust game as the seat that
+  stands on the Game, so the hit meant for the second player's man lands on the first's (the call surface's to mend). `SEATS_BREAK=1` (the second seat
+  runs on the first seat's record) fails `walk`, `orders` and `ahead`. `ahead` holds BOTH looks, the Rust rule a tool's call crosses to and the
+  TypeScript body the page runs: each lands to the bit over 46 records (a walk, a sprint, a crouch walk, a coast) in a game with no teammates on the
+  floor; with the four there a teammate steps into his way and both looks are 7 cm out, which is the correction the look ahead allows. The three kinds
+  of fault below are mended in the Rust game (a seat's tools keep to its men; budgets count the seats); `tools/blitz/coop-check.ts`, restated on kept
+  two-seat runs, holds them from the commit that brings those runs.
 - **A game of two that is still read as a game of one: THE KNOWN SEAT FAULTS** (2026-11-05; found when `seats-check`'s `fight` threw on the page's
   stand at step 1557, the belief rule; NONE MENDED: `src/game` is frozen until the Rust swap, and each is a line of the port's notes,
   rebuild/rust-sim/port/blitz/after-swap.md). Three classes, all old (10-16 to 11-02).
