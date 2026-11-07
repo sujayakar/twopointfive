@@ -135,6 +135,15 @@ row on his machine is the answer, and the word puts the count back on any machin
   is no longer asked for (one pipeline less in each set). The options screen has four rows. NOT DONE HERE: mesh shadows on every ray (`meshShadows` without
   `meshShadowsNear`) was ultra's form and is still a debugger toggle; laminate and varnished wood (0.5, 0.55) now take a ray on no tier (high's cut is 0.45).
   `tools/qa/shaderdead.ts` (new) lists the declarations no program of the boot contains: it is how the leftovers above were found. **Never seen on a GPU.**
+- **THE GATHER'S LIGHT LOOP HAS ONE WRITING, AND SIX LOSSLESS SWITCHES ARE PLAIN CODE (2026-11-07).** `gather_split_common.wgsl` is deleted: the gather is made from
+  `gather_common.wgsl`, the reflection pass's file, and `directAtPoint` is its one body (the one-loop writing: one evalLight, one shadow ray). The gather's `light`
+  program is 46 KB of pasted text with it (113 before); the reflections' would be 262 KB on the plain writing, 196 on this. `splitrays-check` holds that no second
+  gather common file comes back. **The six**: grid skip, height cull, unrotated fast path, slab reject (every tracer: `gridCell`, `gridItem`, `isectBox`,
+  `globalOutside` take no flag now, in common.wgsl, fogofwar.wgsl and trace_lab.wgsl alike), the tile light list (restir, sharp direct) and the tile pass-through
+  (the shadow client). Each was proven exact when it went in and on in every preset since; their off sides, `globalSkipped`, `globalMissesY`, the six settings, frame
+  flags and debugger rows are gone. Free frame-flag bits: `bun run tools/qa/frame-layout.ts` prints them (eleven). **BOTH CHANGE SHADER TEXT** (the tracers are
+  in every ray program): all 121 boot texts and the four made on first use (fog of war's two, the sight table, the trace lab) compile in Chromium's compiler with no
+  warning. Whether the picture is the same to the pixel is draw-equal's to say: see the line under this one when it is written. **Never seen on a GPU.**
 - **Character proxies = the SDF character rig** — every mannequin's 15 shadow / reflection proxies are round cones fitted at load (`render/sdfrig.ts`, `shaders/sdfrig.wgsl`), no switch; extras in `frame.rigCfg` (`settings.charSelfShadow` default ON, `?noselfshadow`; `?sdfsmooth` / `?charsoft` / `?charsoftmarch` experiments); `__sdfrig`, `__rigTrace` — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
 
 <!-- was CLAUDE.md lines 2658–2728 -->

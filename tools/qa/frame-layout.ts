@@ -100,7 +100,7 @@ const lit = (t: string): number => { t = t.trim().replace(/u\b/g, ''); let m: Re
   const unread = wg.filter(([, v]) => !Number.isFinite(v));
   const dupW = wg.filter(([, v], i) => wg.findIndex(([, w]) => w === v) !== i);
   verdict(unread.length === 0 && wg.every(([, v]) => isPow2(v)) && dupW.length === 0, `common.wgsl: ${wg.length} FLAG_ consts, each a readable, distinct single bit`, [...unread.map(([n]) => `${n}: literal '${declared.find(m => m[1] === n)?.[2].trim()}' not understood (decimal / 0x… / 1u << n expected)`), ...dupW.map(([n, v]) => `${n} = ${v} shares its bit with ${wg.find(([m, w]) => w === v && m !== n)?.[0]}`)].join(' · '));
-  verdict(wg.length >= 24 && wg.length <= host.length, `the FLAG_ table was actually read: ${wg.length} consts found (≥ 24, ≤ FrameFlags' ${host.length})`, wg.length < 24 ? 'the regex matched too few lines — did the declaration style change?' : '');   // (the count guard: a regex that quietly matches nothing would make every check below vacuous)
+  verdict(wg.length >= 18 && wg.length <= host.length, `the FLAG_ table was actually read: ${wg.length} consts found (≥ 18, ≤ FrameFlags' ${host.length})`, wg.length < 18 ? 'the regex matched too few lines — did the declaration style change?' : '');   // (the count guard: a regex that quietly matches nothing would make every check below vacuous)
   const byName = new Map(host.map(([n, v]) => [norm(n), v]));
   const rows: string[] = [];
   for (const [n, v] of wg) { const key = norm(n.replace(/^FLAG_/, '')); const hv = byName.get(ALIAS[key] ?? key); if (hv === undefined) rows.push(`${n} (${v}) has no FrameFlags entry`); else if (hv !== v) rows.push(`${n} = ${v} but FrameFlags.${ALIAS[key] ?? key} = ${hv}`); }
