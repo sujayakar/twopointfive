@@ -492,7 +492,7 @@ pub fn fresh(g: &mut crate::game::Game) -> crate::laststand::State {
     rot.set(LineKind::MovedFree, 0.0);
     State {
         post, key, die, next_at: 0.0, check: None, known: JsSet::new(), named: JsMap::new(), spots: JsMap::new(), at: JsMap::new(), stand: None,
-        lone_said: false, few_n: 0.0, told: JsSet::new(), hint: None, said: Vec::new(), stats: new_stats(), stale: false, rot, cls_at: Vec::new(), later: Vec::new(),
+        lone_said: false, few_n: 0.0, told: JsSet::new(), said: Vec::new(), stats: new_stats(), stale: false, rot, cls_at: Vec::new(), later: Vec::new(),
     }
 }
 
@@ -585,38 +585,18 @@ pub fn last_stand_stop(g: &mut crate::game::Game) {
     st.spots.clear();
     st.at.clear();
     st.later.clear();
-    st.hint = None;
     st.stale = true;
 }
 
-/// roomclear.ts objective(): the rooms their net has named, the named places that are no room of it, and a key that changes when they do.   (laststand.ts lastStandHint)
-pub fn last_stand_hint(g: &mut crate::game::Game) -> Option<crate::laststand::Hint> {
-    let (named, spotted) = match g.m.laststand.states.as_ref() {
-        None => return None,
-        Some(st) if st.stale => return None,
-        Some(st) if st.hint.is_some() => (Vec::new(), Vec::new()),
-        Some(st) => (
-            st.named.iter().map(|(d, id)| (d, id.clone())).collect::<Vec<(RoomfightDefId, String)>>(),
-            st.spots.iter().map(|(d, x)| (d, x.clone())).collect::<Vec<(RoomfightDefId, Spot)>>(),
-        ),
-    };
-    if st(g).hint.is_none() {
-        let mut rooms: JsSet<String> = JsSet::new();
-        for (d, id) in named { if alive(g, d) { rooms.add(id); } }
-        let mut spots: Vec<Spot> = Vec::new();
-        for (d, x) in spotted { if alive(g, d) && !spots.iter().any(|y| y.name == x.name) { spots.push(x); } }
-        let mut ids = rooms.keys();
-        ids.sort();
-        let mut key = ids.join(",");
-        if !spots.is_empty() {
-            let names: Vec<String> = spots.iter().map(|x| x.name.clone()).collect();
-            key.push('|');
-            key.push_str(&names.join(","));
-        }
-        st(g).hint = Some(Hint { key, rooms, spots });
-    }
-    let h = st(g).hint.as_ref().unwrap();
-    if !h.rooms.is_empty() || !h.spots.is_empty() { Some(h.clone()) } else { None }
+/// roomclear.ts objective(): the rooms their net has named and the named places that are no room of it, by the men still up who said so
+pub fn last_stand_hint(g: &crate::game::Game) -> Option<crate::laststand::Hint> {
+    let st = g.m.laststand.states.as_ref()?;
+    if st.stale { return None; }
+    let mut rooms: JsSet<String> = JsSet::new();
+    for (d, id) in st.named.iter() { if alive(g, d) { rooms.add(id.clone()); } }
+    let mut spots: Vec<Spot> = Vec::new();
+    for (d, x) in st.spots.iter() { if alive(g, d) && !spots.iter().any(|y| y.name == x.name) { spots.push(x.clone()); } }
+    if rooms.is_empty() && spots.is_empty() { None } else { Some(Hint { rooms, spots }) }
 }
 
 #[cfg(test)]

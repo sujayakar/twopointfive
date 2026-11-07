@@ -1389,7 +1389,7 @@ class Searcher {
   private markT = new Map<any, number>();
   /** … and the bracketed names that are no room of the list (laststand.ts `places`: floor nobody holds — the marker sits on it), by `places` entry */
   private markA = new Map<any, number>();
-  private marks() { const t = this.P.g.time, text: string = this.P.g.roomClear.objective()?.text ?? ''; const on = new Set<string>(); for (const m of text.matchAll(/\[([^\]]+)\]/g)) on.add(m[1]);
+  private marks() { const t = this.P.g.time, M = this.P.g.view.mission, text: string = M?.of === 'roomclear' ? M.text : ''; const on = new Set<string>(); for (const m of text.matchAll(/\[([^\]]+)\]/g)) on.add(m[1]);
     for (const R of this.P.g.roomClear.rooms as any[]) { if (on.has(R.def.name)) { if (!this.markT.has(R)) this.markT.set(R, t); } else this.markT.delete(R); }
     for (const A of this.places) { if (A.R) continue; if ([...on].some(n => `the ${n}`.toLowerCase() === A.name || n.toLowerCase() === A.name)) { if (!this.markA.has(A)) this.markA.set(A, t); } else this.markA.delete(A); } }
   private inArea(A: { rects: { x0: number; x1: number; z0: number; z1: number }[] }, q: number[], pad = 0): boolean { return A.rects.some(b => Math.hypot(Math.max(b.x0 - q[0], 0, q[0] - b.x1), Math.max(b.z0 - q[2], 0, q[2] - b.z1)) <= pad); }

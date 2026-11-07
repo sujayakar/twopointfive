@@ -77,7 +77,6 @@ export function lessonTokenFaults(w: string, line: string, cap: number, row = 't
 /** a step's line as the HUD's row says it now */
 export const lessonLine = (written: string): string => { const line = tokenLine(written), s0 = stalkClickOnly() ? stalkLine(line) : line, s = CLOSE.on && CLOSE.noKnife ? bareLine(s0) : s0; return HANDRING.on ? s.replace(WHISTLE_LINE, `Space held, then ${CMDRING.wedges}, whistles`).replace(WHEEL_LINE, WHEEL_RING) : s; };
 import { railsFaults, RAILS } from './rails';   // (railsFaults is called inside checkLesson only, the switch read inside `data`)
-import { camCap } from '../host/keymap';
 import { wallPt } from './wallcharge';   // (called inside a flag only)
 import { OWNBLOW } from './ownblow';   // (read inside lineOf only)
 import { SLOTSETUP, slotSetupOpen } from './slotsetup';   // (slotSetupOpen is called inside a flag only)
@@ -340,13 +339,6 @@ export class Lesson {
 
   /** the run is over, whichever scenario it was: the quiet mission's stage, the player down, a room clear taken or the team wiped (roomclear.ts `end`) */
   over(): boolean { const g = this.g; return g.mission.stage === 'failed' || g.mission.stage === 'done' || who(g).down || (!!g.roomClear?.active && !!g.roomClear.end); }
-  /** The HUD's objective while a step is up (mission.ts objectiveText / objectivePos; null = the scenario's own: no lesson, or every step done) */
-  objective(): { text: string; pos: Vec3 | null } | null {
-    const L = this.data, i = this.at; if (!L || i >= L.steps.length) return null;
-    if (this.over()) return null;   // (the run is over: the row is the scenario's own word on it)
-    const T = L.steps[i], M = T.atMan ? this.g.guards.find(x => x.route?.name === T.atMan && !downed(x)) : undefined;   // (`atMan`: the marker rides on the man of that route)
-    return { text: `training ${i + 1}/${L.steps.length} ▸ ${lessonLine(lineOf(T)).replace(/\[([^\]]+)\]/g, (_m, k: string) => k === 'Ctrl' ? camCap() : k)}`, pos: M ? [M.char.pos[0], 1, M.char.pos[2]] : T.at ?? null };   // ('[B]': a key a tutorial mission's big line draws as a key — rails.ts; plain here. '[Ctrl]' is the camera's key, whichever it is: host/keymap.ts camCap)
-  }
   summary(): string {
     const L = this.data; if (!L) return this.g.level.scenarios?.lesson ? (LESSON.on ? 'off · this level carries one (start its mission)' : 'off · switched off') : 'off · this level carries none';
     const i = this.at;

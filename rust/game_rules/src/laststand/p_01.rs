@@ -138,7 +138,7 @@ pub fn new_stats() -> crate::laststand::StateStats {
 pub fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 
 /// up, and not broken and run: off the net from his shout on (laststand.ts alive)
-pub fn alive(g: &mut crate::game::Game, d: RoomfightDefId) -> bool {
+pub fn alive(g: &crate::game::Game, d: RoomfightDefId) -> bool {
     let gd = g.tab.roomfight_def[d].gd;
     g.gd[gd].state != crate::game::GuardState::Dead && !crate::owner::has_him(g, gd, crate::owner::own().runner)
 }
@@ -311,7 +311,6 @@ pub fn name(g: &mut crate::game::Game, d: RoomfightDefId, id_2: Option<&str>) {
     }
     st.spots.delete(d);
     st.at.delete(d);
-    st.hint = None;
 }
 
 /// named by what he said, the room or the place; kept, to be said again when it stops being true (laststand.ts nameAt)

@@ -2102,7 +2102,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the two carry notes, the clock stood still under it, Tab took it down and the clock ran, Tab put it up again, Esc took it down with no pause
   card; the same page without the word showed nothing on Tab; no console errors. MEASURED: nothing; it moves no tally. DECLINED, from review: the card as one of
   `overlay.card`'s (those are a lesson's, with its own key and locks) or a page of `#menu` (the menu is the pause, with its own Tab); the
-  objective handed over in parts by `mission.ts` (the line is the one source the top line, the corner and this card all read; the list is cut
+  objective handed over in parts by the Rust game's `mission::objective` (the line is the one source the top line, the corner and this card all read; the list is cut
   from it only under 'objective'); a place in `bubbles.ts BLOCKER_IDS` (the card is above the bubbles by z-index and holds the game); one page-level 'what holds the game' reader
   for the load brief, a lesson's card, the menu and this card (a change to `main.ts` wider than this card; the check pins each site it added);
   `picked` and `kept` as one field (the kept file's two keys are already on machines); the menu's HTML escaper shared (a private one-liner of a

@@ -10,6 +10,7 @@
 //   bun run tools/blitz/page-decides.ts --why <file>:<function>[,…]  how the frame and the page reach it, and each act with its line
 //   bun run tools/blitz/page-decides.ts --hubs [n]      the largest branches of the frame's reach (to find a stand or a menu that is not yet a stop)
 //   bun run tools/blitz/page-decides.ts --doors         the deciding rows the page's own code walks in through, each with how many stand behind it
+//   bun run tools/blitz/page-decides.ts --freed         the fields on the page's list by who reads them: what the page need not be sent
 //   bun run tools/blitz/page-decides.ts --unsent        the carried fields a function run every frame on the page reads and the page is not sent every tick
 //   bun run tools/blitz/page-decides.ts --check         exit 1 while a row is UNSORTED or sorted `decides` or `throws`, or a line of the sorts' file sorts
 //                                                       nothing, or sorts more rows than a person has read
@@ -114,14 +115,14 @@ const CENSUS = new Map<string, number>(); { const f = join(import.meta.dir, 'del
 
 // ---- units: a function with a body, named by its file and its own name
 type Act = { kind: 'keeps' | 'overwrites' | 'says' | 'stores' | 'crosses'; what: string; line: number; loose?: boolean };
-interface Unit { id: string; file: string; name: string; line: number; lines: number; acts: Act[]; refs: Set<string>; loose: Set<string>; reads: Set<string>; readsQ: Set<string>; answers: boolean; works: number; top: boolean; init: boolean; stub: string; timer: boolean; cls?: any; lit?: any; acc?: 'get' | 'set'; replaced?: boolean; callsOut: Map<string, number>; kept: Set<string> }
+interface Unit { id: string; file: string; name: string; line: number; lines: number; acts: Act[]; refs: Set<string>; loose: Set<string>; reads: Set<string>; readsQ: Set<string>; names: Set<string>; tops: Set<string>; answers: boolean; works: number; top: boolean; init: boolean; stub: string; timer: boolean; cls?: any; lit?: any; acc?: 'get' | 'set'; replaced?: boolean; callsOut: Map<string, number>; kept: Set<string> }
 const UNITS = new Map<string, Unit>(), unitOfNode = new Map<any, Unit>();
 /** every class's members by name (with the class, for the question "could this value be one of those"), and every function written as a member of an
  *  object in the page's own code: for a call the checker resolves only to a type's member */
 const BY_NAME = new Map<string, Unit[]>(), LIT_BY_NAME = new Map<string, Unit[]>();
 const push = (m: Map<string, Unit[]>, k: string, u: Unit) => { if (!m.has(k)) m.set(k, []); m.get(k)!.push(u); };
 const mk = (node: any, file: string, name: string, top = false): Unit => { let id = `${file}:${name}`, n = 1; while (UNITS.has(id) && !top) id = `${file}:${name}#${++n}`; let u = UNITS.get(id);
-  if (!u) { const sf = node.getSourceFile(), a = sf.getLineAndCharacterOfPosition(node.getStart()).line + 1, b = sf.getLineAndCharacterOfPosition(node.getEnd()).line + 1; u = { id, file, name, line: a, lines: b - a + 1, acts: [], refs: new Set(), loose: new Set(), reads: new Set(), readsQ: new Set(), answers: false, works: 0, top, init: /\.\(fields\)$/.test(name), stub: '', timer: false, callsOut: new Map(), kept: new Set() }; UNITS.set(id, u); }
+  if (!u) { const sf = node.getSourceFile(), a = sf.getLineAndCharacterOfPosition(node.getStart()).line + 1, b = sf.getLineAndCharacterOfPosition(node.getEnd()).line + 1; u = { id, file, name, line: a, lines: b - a + 1, acts: [], refs: new Set(), loose: new Set(), reads: new Set(), readsQ: new Set(), names: new Set(), tops: new Set(), answers: false, works: 0, top, init: /\.\(fields\)$/.test(name), stub: '', timer: false, callsOut: new Map(), kept: new Set() }; UNITS.set(id, u); }
   unitOfNode.set(node, u); return u; };
 const isFn = (n: any) => n.kind === SK.FunctionDeclaration || n.kind === SK.MethodDeclaration || n.kind === SK.Constructor || n.kind === SK.GetAccessor || n.kind === SK.SetAccessor || n.kind === SK.ArrowFunction || n.kind === SK.FunctionExpression;
 const nameOf = (n: any): string => n.name ? (n.name.text ?? n.name.getText()) : '';
@@ -259,7 +260,7 @@ for (const sf of files) {
       if (isCall && TIMERS.has(n.text)) { /* a function handed to a recurring timer by its name */ const a0 = n.parent.arguments[0]; if (a0?.kind === SK.Identifier) for (const d of symOf(a0)?.declarations ?? []) { const t = declUnit(d); if (t) t.timer = true; } }
       for (const d of s?.declarations ?? []) { const t = (d.kind === SK.ClassDeclaration || d.kind === SK.ClassExpression) && !(n.parent.kind === SK.ExpressionWithTypeArguments) ? null : declUnit(d);   // (a class named is not its constructor run: `new` is, below)
         if (t && t !== u) { u.refs.add(t.id); if (isCall) u.callsOut.set(t.id, lineOf(n)); }
-        const tv = topVarOf(d); if (tv) { const id = `${tv.file}:${tv.key}`, carried = TOP.has(id);
+        const tv = topVarOf(d); if (tv) { const id = `${tv.file}:${tv.key}`, carried = TOP.has(id); /* a tally counted up is no read of it */ { const w0 = n.parent?.kind === SK.PropertyAccessExpression && n.parent.expression === n ? writeKind(n.parent) : null; if (!w0) u.tops.add(id); }
           if ((writeKind(n) || mutated(n)) && !TALLY.test(tv.key)) u.acts.push({ kind: carried ? 'overwrites' : 'keeps', what: `${tv.key} of ${tv.file.replace(/^src\//, '')}${carried ? ' (a module\'s, carried)' : ' (a module\'s)'}`, line: lineOf(n) });
           else if (carried) u.reads.add(id); }
         if (d.kind === SK.ShorthandPropertyAssignment) { const f = fieldOf(d); if (f && (writeKind(n) || mutated(n))) noteWrite(u, f.key, n, false, f); } }
@@ -289,6 +290,15 @@ for (const sf of files) {
         const cands = FIELDS_BY_NAME.get(pname);
         if (cands && (writeKind(n) || mutated(n))) { const carried = [...cands].filter(k => CARRIED_NAMES.has(k)), pick = carried.length ? carried : [...cands], n0 = u.acts.length; noteWrite(u, pick.length === 1 ? pick[0] : `${pname} of ${pick.slice(0, 3).join(' | ')}${pick.length > 3 ? ` | +${pick.length - 3}` : ''}`, n, true); if (pick.length > 1 && carried.length && u.acts.length > n0 && u.acts[n0].kind === 'keeps') u.acts[n0].kind = 'overwrites'; }
         else if (cands) for (const k of cands) if (CARRIED_NAMES.has(k)) { u.reads.add(k); break; } } }
+    // (a name read that the checker does not place in the table: off a value nothing types, off a type the table has no struct for, taken apart by a pattern, or
+    //  written out as a word a key could be. `--freed`: such a name may be any carried field of the name)
+    { const placed = (nd: any): boolean => { const D = (symOf(nd)?.declarations ?? []); return D.length > 0 && D.every((d: any) => { const f = fieldOf(d); return !!f && WIRE_OF.has(`${rustModOf(f.file)}::${f.key}`); }); };
+      /** a property a class or an interface of a name of its own declares: that type's, and no struct of another name */
+      const named = (nd: any): boolean => { const D = (symOf(nd)?.declarations ?? []); return D.length > 0 && D.every((d: any) => { const c = d.parent; return (c?.kind === SK.ClassDeclaration || c?.kind === SK.ClassExpression || c?.kind === SK.InterfaceDeclaration || c?.kind === SK.ModuleBlock || c?.kind === SK.SourceFile || c?.kind === SK.EnumDeclaration || d.kind === SK.MethodDeclaration || d.kind === SK.MethodSignature || d.kind === SK.FunctionDeclaration || d.getSourceFile().isDeclarationFile); }); };
+      if (n.kind === SK.PropertyAccessExpression) { if (!placed(n.name)) { if (!named(n.name)) u.names.add(n.name.text); } else for (const d of symOf(n.name)!.declarations!) { const f = fieldOf(d)!; if (!writeKind(n)) u.readsQ.add(`${rustModOf(f.file)}::${f.key}`); } }
+      else if (n.kind === SK.BindingElement && n.parent.kind === SK.ObjectBindingPattern) { const nm = n.propertyName ?? n.name; if (ts.isIdentifier(nm) || ts.isStringLiteralLike(nm)) u.names.add(nm.text); if (n.dotDotDotToken) u.names.add('…'); }
+      else if (n.kind === SK.ShorthandPropertyAssignment || n.kind === SK.PropertyAssignment) { if (n.parent.parent?.kind === SK.BinaryExpression && n.parent.parent.left === n.parent && ts.isIdentifier(n.name)) u.names.add(n.name.text); }
+      else if (ts.isStringLiteralLike(n) && /^[A-Za-z_$][\w$]*$/.test(n.text)) u.names.add(n.text); }
     if (n.kind === SK.NewExpression) { const s = symOf(n.expression); for (const d of s?.declarations ?? []) { const t = declUnit(d); if (t && t !== u) u.refs.add(t.id); } }
     // (the hand-overs)
     if ((n.kind === SK.CallExpression || n.kind === SK.NewExpression) && n.arguments) for (const a of n.arguments) hand(a, ctxOf(a));
@@ -396,6 +406,35 @@ if (flag('--unsent')) { /* WHAT THE PAGE'S CODE READS THAT THE PAGE IS NOT SENT.
   console.log(`${rows.size} fields that a function run every frame on the page reads and the page is not sent every tick: ${[...by].map(([k, n]) => `${n} ${k}`).join(' · ')}`);
   for (const [q, r] of [...rows].sort((a, b) => a[1].how.localeCompare(b[1].how) || a[0].localeCompare(b[0]))) console.log(`${q}\t${r.how}\t${r.readers.length} readers\t${r.readers.slice(0, 4).join(', ')}${r.readers.length > 4 ? `, +${r.readers.length - 4}` : ''}`);
   process.exit(0); }
+if (flag('--freed')) { /* WHAT THE PAGE NEED NOT BE SENT: the fields on the page's list by who reads them, over every function a page runs (a frame, a start, a hand, a save).
+   A field read only by rows that decide goes with them. `nobody` is of two kinds: BY NO NAME (no function of src/, run or dead, reads a property of that name that the
+   checker does not place elsewhere in the table, nor writes the name out as a word): nothing written by hand can read it; and BY A COMMON NAME (its name is read somewhere the
+   checker cannot place, so a person has to look). Beside either: HOLDERS (a struct held plainly, or a list, an option or a map of one: the table walks through it) are
+   named apart, since what is under them may be read. What no static reading sees: a walk of every key of an object (`--freed` prints the functions that make one). */
+  const F = JSON.parse(readFileSync(join(ROOT, 'tools/wire/fields.json'), 'utf8')) as { pageTick: string[] }, sortOf = new Map(rows.map(r => [r.unit.id, r.sort])), by = new Map<string, Set<string>>(), loose = new Set<string>();
+  for (const u of UNITS.values()) { const w = when(u); for (const x of u.names) loose.add(x); const who = w === 'dead' || w === 'other page' ? 'dead' : sortOf.get(u.id) === 'decides' ? 'decides' : w.startsWith('every frame') ? 'frame' : 'else'; for (const k of u.readsQ) { const W = WIRE_OF.get(k); if (!W) continue; if (!by.has(W.q)) by.set(W.q, new Set()); by.get(W.q)!.add(who); } }
+  const fieldAt = new Map<string, any>(); for (const [q, T] of Object.entries(SCHEMA.types) as [string, any][]) for (const x of T.fields ?? []) fieldAt.set(`${q.replace(/^crate::/, '')}.${x.rust}`, x);
+  const holds = (ty: string): boolean => [...ty.matchAll(/crate::[A-Za-z_0-9:]+/g)].some(m => ['struct', 'data', 'handEnum'].includes(SCHEMA.types[m[0]]?.k));
+  const kind = (q: string): string => { const t = tableOf(q); if (t) { const S = topBy.get(t) ?? new Set<string>(); return `a module's table: ${S.has('frame') ? 'named by a frame function' : S.has('decides') || S.has('else') ? 'named only off the frame or by rows that decide' : S.has('dead') ? 'named only by code no page runs' : 'named by nobody'}`; } const S = by.get(q), x = fieldAt.get(q); if (S?.has('frame')) return 'read by a frame function that does not decide'; if (S?.has('decides') && !S.has('else')) return 'read only by rows that decide'; if (S?.has('decides')) return 'read by rows that decide and, off the frame, by a start, a hand or a save'; if (S?.has('else')) return 'read only off the frame';
+    const tag = S?.has('dead') ? 'read only by code no page runs' : x && !loose.has(x.ts ?? x.rust) && !/\bB\./.test(x.expr ?? '') ? 'nobody, by no name' : 'nobody placed, by a common name'; return x && holds(x.ty) ? `${tag} (a holder)` : tag; };
+  // (a module's own table, written by name (`B.top(file, name).field`): read by whoever names the table)
+  const topBy = new Map<string, Set<string>>(); for (const u of UNITS.values()) { const w = when(u), who = w === 'dead' || w === 'other page' ? 'dead' : sortOf.get(u.id) === 'decides' ? 'decides' : w.startsWith('every frame') ? 'frame' : 'else'; for (const id of u.tops) { if (!topBy.has(id)) topBy.set(id, new Set()); topBy.get(id)!.add(who); } }
+  const tableOf = (q: string): string | null => { const m = /^B\.top\(['"]([^'"]+)['"], ['"]([^'"]+)['"]/.exec(fieldAt.get(q)?.expr ?? ''); return m ? `${m[1]}:${m[2]}` : null; };
+  const of = new Map<string, string[]>(); for (const q of F.pageTick) { const k = kind(q); if (!of.has(k)) of.set(k, []); of.get(k)!.push(q); }
+  console.log(`${F.pageTick.length} fields on the page's list: ${[...of].sort((a, b) => b[1].length - a[1].length).map(([k, L]) => `${L.length} ${k}`).join(' · ')}`); for (const [k, L] of of) for (const q of L) console.log(`${k}\t${q}\t${fieldAt.get(q)?.ty ?? ''}`); process.exit(0); }
+if (flag('--fresh')) { /* WHERE THE PAGE READS, OFF THE FRAME, A FIELD NO FRAME FUNCTION READS: the doors such a reader is walked in through, each with how many readers and fields
+   stand behind it. A door is a stop of the frame's reach (a menu opening, a start, a save: page-decides.roots.json), or else the function nearest the page's
+   own root on the reader's road that is no file's top and no boot step: a key's handler, a panel's row, a console hook. What has to be brought up to date before it reads. */
+  const F = JSON.parse(readFileSync(join(ROOT, 'tools/wire/fields.json'), 'utf8')) as { pageTick: string[] }, PAGE = new Set(F.pageTick), frameRead = new Set<string>(), offBy = new Map<string, Set<string>>(), topFields = new Map<string, string[]>();
+  for (const [q, T] of Object.entries(SCHEMA.types) as [string, any][]) for (const x of T.fields ?? []) { const m = /^B\.top\(['"]([^'"]+)['"], ['"]([^'"]+)['"]/.exec(x.expr ?? ''), w = `${q.replace(/^crate::/, '')}.${x.rust}`; if (m && PAGE.has(w)) { const id = `${m[1]}:${m[2]}`; if (!topFields.has(id)) topFields.set(id, []); topFields.get(id)!.push(w); } }
+  const readsOf = (u: Unit): Set<string> => { const S = new Set<string>(); for (const k of u.readsQ) { const W = WIRE_OF.get(k); if (W && PAGE.has(W.q)) S.add(W.q); } for (const id of u.tops) for (const w of topFields.get(id) ?? []) S.add(w); return S; };
+  for (const u of UNITS.values()) if (when(u).startsWith('every frame')) for (const q of readsOf(u)) frameRead.add(q);
+  const doors = new Map<string, { how: string; readers: Set<string>; fields: Set<string> }>();
+  for (const u of UNITS.values()) { const w = when(u); if (w.startsWith('every frame') || w === 'dead' || w === 'other page') continue; const R = [...readsOf(u)].filter(q => !frameRead.has(q)); if (!R.length) continue;
+    let door = u.id, how = w; if (w.startsWith('behind')) { const b = BEHINDS.find(b => reachBehind.get(b)!.has(u.id))!, M = reachBehind.get(b)!; for (let x: string | null | undefined = u.id; x; x = M.get(x)) { door = x; if (stops.has(x)) break; } }
+    else { const road: string[] = []; for (let x: string | null | undefined = u.id; x; x = reachPage.get(x)) road.unshift(x); door = road.find(x => !/:\(the file\)$|:boot\b|:main$/.test(x) && !reachFrame.has(x)) ?? u.id; }
+    if (!doors.has(door)) doors.set(door, { how, readers: new Set(), fields: new Set() }); const D = doors.get(door)!; D.readers.add(u.id); for (const q of R) D.fields.add(q); for (const q of R) { if (!offBy.has(q)) offBy.set(q, new Set()); offBy.get(q)!.add(door); } }
+  console.log(`${offBy.size} fields of the page's list are read off the frame and by no frame function, through ${doors.size} doors`); for (const [d, D] of [...doors].sort((x, y) => y[1].fields.size - x[1].fields.size)) console.log(`${D.fields.size}\t${D.readers.size} readers\t${d.replace(/^src\//, '')}\t${D.how}\t${[...D.fields].slice(0, 4).join(', ')}`); process.exit(0); }
 if (flag('--doors')) { /* THE DOORS: of the rows that decide, the ones the page's own code walks in through (its caller on the frame's road is no deciding row),
    each with how many deciding rows stand behind it. A door is one question the page asks: what a view of the game has to answer in its place. */
   const dec = new Map(rows.filter(r => r.sort === 'decides').map(r => [r.unit.id, r])), behind = new Map<string, number>();
