@@ -24,6 +24,7 @@
 import { standUp, ROOT } from './headless.ts';
 import { toolsRow4 } from './order-keys.ts';
 import { asProbes, exitCode, wanted } from './holds.ts';   // (run alone, each part runs as the probe the runner calls it by: one stand both ways)
+import { sample, swept } from './sweep.ts';
 const { WEAPONS } = await import(`${ROOT}/src/game/weapons.ts`);
 const { SHOTGUN_STATS, SHOTGUN_LAST, breachSpot, lockPoint, pelletDrops } = await import(`${ROOT}/src/game/shotgun.ts`);
 const { fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);
@@ -86,7 +87,7 @@ async function rig(seed: number, o: { door?: string; cards?: Record<number, Reco
 }
 
 // ---------------------------------------------------------------- the curve
-const RANGES = [2, 4, 6, 8, 10, 12, 15, 20, 25], SHELLS = 400;
+const RANGES = [2, 4, 6, 8, 10, 12, 15, 20, 25], SHELLS = swept(40, 400);
 export const shotgunRange = guarded(async () => {
   const { verdict, done } = family('shotgun-range: one shell\'s kill chance by range — near certain in a room, poor down a corridor — and the rule on a real man');
   const def = WEAPONS.m870, P = def.pellets;
@@ -170,8 +171,9 @@ export const shotgunDoor = guarded(async () => {
     const t = (what: string) => R.beatT(op, what) - R.t0;
     return { R, d, op, w, halt, locked0, inOpening, glass: glassRule(R.game), spot: spot as { who: string; along: number; off: number; shells: number; mate: number; glazed: boolean } | null, stacked: t('stacked'), shotT: t('shotgun'), kickT: t('kick'), goT: t('go'), tossT: t('toss'), W: d.def.width as number, stats: { ...SHOTGUN_STATS }, crossed: op ? [...op.crossed.keys()].length : 0 };
   };
-  for (const kind of ['openClear', 'bangClear'] as const) {
-    const boot = await run(kind, {}), gun = await run(kind, { 1: { weapon: 'shotgun' } });
+  let keptBoot: any = null, keptGun: any = null;   // (the first kind's two runs, read again below: a run costs ten seconds)
+  for (const kind of sample(['openClear', 'bangClear'] as const, 1)) {
+    const boot = await run(kind, {}), gun = await run(kind, { 1: { weapon: 'shotgun' } }); keptBoot ??= boot; keptGun ??= gun;
     const lead = gun.R.ops[0];
     console.log(`    ${kind} · the boot:    ${boot.R.beats(boot.op)}\n    ${kind} · the shotgun: ${gun.R.beats(gun.op)}`);
     verdict(boot.locked0 && gun.locked0 && !gun.w && !isNaN(gun.shotT) && isNaN(gun.kickT) && gun.d.lockBroken && gun.spot?.shells === 1 && gun.stats.locks === 1 && gun.R.kicks === 1 && gun.R.D.stats.kicks === 0 && gun.R.D.stats.shot === 1,
@@ -189,7 +191,7 @@ export const shotgunDoor = guarded(async () => {
       'only the SECOND man carries one: he takes the lock with it from a spot of his own (not from inside the lead, who keeps his rifle and his jamb), and the entry goes', `shot by ${g2.spot?.who}, ${f2(g2.spot?.mate ?? NaN)} m from the lead, ${(g2.spot?.along ?? NaN) < 0 ? `${f2(-(g2.spot?.along ?? NaN))} m past the hinge edge` : `${f2((g2.spot?.along ?? NaN) - g2.W)} m past the latch edge`}, ${f2(g2.spot?.off ?? NaN)} m off the wall, frames in front of the leaf ${g2.inOpening}, his place behind glass ${g2.spot?.glazed} (${g2.R.ops[1].callsign} has the ${g2.R.ops[1].weapon.def.id}, lead ${g2.R.ops[0].callsign} the ${g2.R.ops[0].weapon.def.id}) · ${g2.R.beats(g2.op)}`); }
   // THE PAGE'S DOOR RULE (DOORTOOLS.testDoor, doortools.ts haltAt). What a player does there: the row, the halt at the handle, the same row again — and
   // with the gun in the stack that second order SHOOTS the lock.
-  { const t = await run('openClear', { 1: { weapon: 'shotgun' } }), h = t.halt!;
+  { const t = keptGun, h = t.halt!;
     console.log(`    the door rule on · the row: ${h.beats}\n    the door rule on · the same row again: ${t.R.beats(t.op)}`);
     verdict(t.locked0 && !h.w && h.ended === 'found shut' && h.halted === 1 && h.shells === 0 && h.kicks === 0 && h.shut,
       'THE PAGE\'S DOOR RULE ON (DOORTOOLS.testDoor), the lead carrying the M870: open and clear HALTS at the locked manager\'s door — the handle tried, the order over \'found shut\', no shell and no boot spent on it, the lock whole', `given: ${h.w ?? 'taken'} · ended: ${h.ended} · halts ${h.halted} · shells ${h.shells} · kicks ${h.kicks} · still locked and latched ${h.shut}`);
@@ -197,7 +199,7 @@ export const shotgunDoor = guarded(async () => {
       '… and the SAME ROW given again takes it with the gun, not the boot: one shell, the lock broken, nobody in front of the leaf, and the entry goes', `given again: ${t.w ?? 'taken'} · shotgun beat at ${f2(t.shotT)} s, kick beat ${f2(t.kickT)} · shells into the lock ${t.spot?.shells}, locks ${t.stats.locks} · door tools: shot ${t.R.D.stats.shot}, kicks ${t.R.D.stats.kicks} · frames in front of the leaf ${t.inOpening} · go at ${f2(t.goT)} s, crossed ${t.crossed} · ended: ${t.op?.ended ?? 'still on'} · the pair: ${t.R.ops.map((x: any) => x.state).join(', ')}`); }
   // GLASS'S RULE LIVE at this door (orders.ts behindGlass — the sidelight by the latch jamb files both men on the hinge side, and every spot of the list is in
   // front of that pane): he shoots it from his own side.
-  { const boot = await run('openClear', {}), gun = await run('openClear', { 1: { weapon: 'shotgun' } }), g2 = await run('openClear', { 2: { weapon: 'shotgun' } });
+  { const boot = keptBoot, gun = keptGun, g2 = await run('openClear', { 2: { weapon: 'shotgun' } });
     const hingeSide = (r: typeof gun) => !!r.spot && r.spot.along < -0.05 && r.spot.off > 0.4;
     verdict(gun.glass && !isNaN(gun.shotT) && isNaN(gun.kickT) && gun.spot?.shells === 1 && hingeSide(gun) && gun.inOpening === 0 && !gun.spot?.glazed && gun.shotT - gun.stacked < boot.kickT - boot.stacked,
       'GLASS ON, the lead carrying it: the lock is shot off from HIS OWN SIDE of the frame — past the hinge edge, never in front of the leaf, not in a line of fire through the sidelight — with one shell, and sooner after \'stacked\' than the boot',

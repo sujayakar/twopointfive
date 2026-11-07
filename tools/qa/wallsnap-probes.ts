@@ -19,6 +19,7 @@
 //                     load (through the gun's setup when that is on) and he stays stacked
 //   wallsnap-off-same with the switch OFF nothing of the hold carries a feel-pass field and the take is the old fixed 0.22 s glide
 import { standUp, ROOT } from './headless.ts';
+import { everyNth, sample, swept } from './sweep.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { mulberry32 } = await import(`${ROOT}/src/math/dice.ts`);
 const { WALLSNAP, wsTakeSecs } = await import(`${ROOT}/src/game/wallsnap.ts`);
@@ -477,7 +478,9 @@ async function camera() {
   const COMBOS = [['KeyW'], ['KeyA'], ['KeyS'], ['KeyD'], ['KeyW', 'KeyA'], ['KeyW', 'KeyD'], ['KeyS', 'KeyA'], ['KeyS', 'KeyD']];
   const cam = (yawDeg: number) => { W.cam.yaw = yawDeg * DEG; W.cam.rebuild(); };
   const gotOff = new Map<string, boolean>();   // per hold and camera yaw: did SOME key get him off the wall
+  const turn = everyNth(11);
   for (const kitIn of ['empty', 'rifle'] as const) for (let yaw = 0; yaw < 360; yaw += kitIn === 'rifle' ? 45 : 15) for (const ks of COMBOS) {
+    if (!turn()) continue;
     const hk = `${kitIn === 'rifle' ? 'stack' : 'back hold'}, camera ${yaw}°`; if (!gotOff.has(hk)) gotOff.set(hk, false);
     cam(yaw); S.place(21.5, 10.9, 180, kitIn); S.setCursor(null); S.tap('KeyQ'); S.step(40, () => cam(yaw)); if (!pl.wall) { fails.push(`(staging) ${hk}: no hold`); continue; }
     if ((pl.wall.kind === 'stack') !== (kitIn === 'rifle')) { fails.push(`(staging) ${hk}: the hold is '${pl.wall.kind ?? 'back'}'`); continue; }
@@ -493,10 +496,10 @@ async function camera() {
     else { stays++; if (offAt >= 0) fails.push(`${tag}: pushing into the wall let go`); else if (Math.abs(moved) > 0.05) fails.push(`${tag}: pushing into the wall moved him ${f2(moved)} m along`); }
     if (pl.wall) { S.tap('KeyQ'); S.step(12); }
   }
-  for (const [hk, off] of gotOff) if (!off) fails.push(`${hk}: no walk key or diagonal let go of the wall`);
+  if (swept(0, 1)) for (const [hk, off] of gotOff) if (!off) fails.push(`${hk}: no walk key or diagonal let go of the wall`);
   // AT THE END OF THE RUN the outward diagonal is the way off round the corner: held from mid-run it sidles him to the end and then lets go there (it must not park him)
   let ends = 0;
-  if (process.env.WALLSNAP_BREAK !== '1') for (const yaw of [0, 90, 180, 270]) for (const ks of COMBOS) {
+  if (process.env.WALLSNAP_BREAK !== '1') for (const yaw of sample([0, 90, 180, 270], 1)) for (const ks of COMBOS) {
     cam(yaw); const b = W.cam.planarBasis(); let mx = 0, mz = 0; for (const k of ks) { const s = k === 'KeyW' || k === 'KeyD' ? 1 : -1, v = k === 'KeyW' || k === 'KeyS' ? b.fwd : b.right; mx += s * v[0]; mz += s * v[2]; }
     const l = Math.hypot(mx, mz); mx /= l; mz /= l;
     S.place(21.5, 10.9, 180); S.tap('KeyQ'); S.step(40, () => cam(yaw)); const w = pl.wall; if (!w) continue;
@@ -509,7 +512,7 @@ async function camera() {
     if (pl.wall) { S.tap('KeyQ'); S.step(12); }
   }
   cam(0);
-  verdict(fails.length === 0 && sidles > 80 && offs > 28 && stays > 28 && (ends >= 4 || process.env.WALLSNAP_BREAK === '1'), 'the camera turned any way: a key that runs along the wall sidles him and never drops him; only square-out lets go',
+  verdict(fails.length === 0 && sidles > swept(5, 80) && offs > swept(2, 28) && stays > swept(2, 28) && (ends >= swept(0, 4) || process.env.WALLSNAP_BREAK === '1'), 'the camera turned any way: a key that runs along the wall sidles him and never drops him; only square-out lets go',
     fails.length ? `${fails.length} cases, the first: ${fails.slice(0, 6).join('\n    ')}` : `${sidles} sticks along the wall sidled and stayed, ${offs} square-out let go inside a tenth of a second, ${stays} into the wall did nothing (24 camera yaws × 8 key combinations on the back hold, 8 × 8 on the stack; at every yaw some key lets go); ${ends} outward diagonals held from mid-run sidled to the end and left there`);
 }
 

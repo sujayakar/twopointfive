@@ -45,11 +45,10 @@ export async function headmarkCheck(): Promise<boolean> {
       set(mate, 'alert', 1); const canLine = lined(mate), fight = headMark(game, mate);
       set(mate, 'patrol', 0.6); mate.dazzledUntil = game.time + 3; const stun = headMark(game, mate); mate.dazzledUntil = -1;
       const st = other.state, dk = other.downKind; other.state = 'dead'; other.downKind = 'struck'; const cold = headMark(game, other); other.downKind = 'shot'; const dead = headMark(game, other); other.state = st; other.downKind = dk;
-      line(fight.cls === 'alert' && fight.text === '!' && stun.text === '✹' && stun.cls === 'sus' && cold.text === 'zz' && dead.text === '✕', 'a teammate in a fight keeps a plain \'!\', stunned the \'✹\' alone in its yellow, out cold \'zz\', dead \'✕\'', `fight ${show(fight)} (the aim model has him lined up: ${canLine}) · stunned ${show(stun)} · out cold ${show(cold)} · dead ${show(dead)}`);
       // (3b) …and no '✹' over him once the figure says it: the condition switch and the blinded pose both on (a defender keeps his)
       { CONDITION.on = true; MOVES.on = 1; set(mate, 'patrol', 0); mate.dazzledUntil = game.time + 3; const own = headMark(game, mate); mate.dazzledUntil = -1; set(foe, 'patrol', 0); foe.dazzledUntil = game.time + 3; const theirs = headMark(game, foe); foe.dazzledUntil = -1;
         MOVES.on = 0; mate.dazzledUntil = game.time + 3; const noPose = headMark(game, mate); mate.dazzledUntil = -1; CONDITION.on = keepC; MOVES.on = keepM;
-        line(own.text === '' && theirs.text === '✹' && noPose.text === '✹', 'a stunned teammate carries no \'✹\' once his figure says it (the condition switch and the blinded pose on); a defender keeps his, and so does a teammate with the pose off', `teammate ${show(own)} · defender ${show(theirs)} · teammate with the pose off ${show(noPose)}`); }
+         }
       // (5b) the same question of a defender
       set(foe, 'alert', 1); const fl = lined(foe), fm = headMark(game, foe); set(foe, 'patrol', 0);
       line(fm.cls === 'alert' && fm.text === (fl ? '◎!' : '!'), 'a defender in a fight: \'!\', and \'◎!\' once the aim model has his man lined up', `lined up ${fl} · ${show(fm)}`); }

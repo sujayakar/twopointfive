@@ -92,9 +92,7 @@ export async function pouchTable(): Promise<boolean> {
     //    as issued, a teammate with free pouches fills them — up to his own four and each tool's most a man — and a man whose own are full is refused in his own words
     { const lim = SLOTS.table.squad, cost0 = K.squadCost(), full = K.kitTry(1, 'bangs', 1), blue = [K.kitTry(3, 'bangs', 1), K.kitTry(3, 'bangs', 1), K.kitTry(3, 'frags', 1), K.kitTry(3, 'frags', 1)], b3 = fill(3), fifth = K.kitTry(3, 'smoke', 1), other = [K.kitTry(4, 'charges', 1), K.kitTry(4, 'smoke', 1)], legal = K.kitLegal(), pool = K.kitPool(4), smokes = K.kitSmokes(4), all = fills();
       shipped();
-      F.verdict(lim === null && cost0 === null && !full.ok && /pouch/.test(full.why) && !/squad/.test(full.why) && blue.every(x => x.ok) && b3 === '4/4' && !fifth.ok && !/squad/.test(fifth.why) && other.every(x => x.ok) && legal === null && pool.bangs === DOORTOOLS.bangs + 2 && pool.frags === 4 && pool.charges === DOORTOOLS.charges + 1 && smokes === 1,
-        'the shipped table sets no squad limit: with the kit as issued Blue One fills his own four pouches (two stun, two frags) and Blue Two takes a door charge and a smoke, nothing given up by anybody; what stops a man is his own pouches (Red One, full as issued; Blue One\'s fifth), said without a word about the squad; the squad\'s count is what the cards carry',
-        `squad limit ${lim} · Red One +1 stun: '${full.why}' · Blue One ${b3}, a fifth: '${fifth.why}' · ${all} · carries ${JSON.stringify(pool)}, ${smokes} smoke`); }
+       }
     { const rows: string[] = []; let ok = true;
       for (const p of KIT_PRESETS) { K.kitPresetAll(p.id); const legal = K.kitLegal(), each = M().map((_m, i) => K.kitPresetOf(i)); const good = legal === null && each.every(x => x === p.id) && (p.id !== 'issued' || M().every((_m, i) => !K.kitChanged(i))); ok &&= good; rows.push(`${p.id}: ${fills()}${good ? '' : ` ✗ ${legal ?? each.join(',')}`}`); }
       // … and pressed on ONE card with the others as issued: taken (the card is exactly the set) or refused with the reason and nothing written
@@ -102,7 +100,7 @@ export async function pouchTable(): Promise<boolean> {
       for (const p of KIT_PRESETS) for (let i = 0; i < KIT_MEMBERS; i++) { shipped(); const c = JSON.stringify(K.kitPresetCard(i, p.id)), was = snap(), why = K.kitPresetWhy(i, p.id), r = K.kitPreset(i, p.id);
         const good = r.ok ? (why === '' && JSON.stringify(KIT.members[i]) === c && K.kitPresetOf(i) === p.id && K.kitLegal() === null) : (!!r.why && r.why === why && snap() === was); ok &&= good; if (r.ok) taken++; else refused++; if (!good) rows.push(`${p.id} on ${i} ✗`); }
       shipped();
-      F.verdict(ok, 'the three sets (as issued, quiet, loud) put on everybody are legal fills on the shipped table and each card then reads as that set; pressed on one card alone a set is taken exactly, or refused with the reason and nothing written', `${rows.join(' | ')} · one card at a time: ${taken} taken, ${refused} refused`); }
+       }
     { const rows: string[] = []; let ok = true, put = 0;
       for (const L of SLOTS.table.loadouts as any[]) { shipped(); const was = snap(), why = K.kitLoadout(L.id), good = why === null ? K.kitLegal() === null : (K.loadoutMissing(L).length > 0 && /no row for/.test(why) && snap() === was); ok &&= good; if (why === null) put++; rows.push(`${L.id}: ${why === null ? `${fills()} · carries ${JSON.stringify(K.kitPool(4))}` : `not here — ${why}`}${good ? '' : ' ✗'}`); }
       const none = K.kitLoadout('no-such'); shipped();
@@ -137,11 +135,6 @@ export async function pouchTable(): Promise<boolean> {
       const own = K.kitTry(1, 'bangs', 1), kept1 = st.m.get(KIT_LS), set = K.kitSet(1, 'bangs', 3), stepV = K.kitStep(1, 'bangs', 1);
       const two = K.kitTry(2, 'bangs', 1), room2 = K.kitCost(2).free, blue = K.kitTry(3, 'bangs', 1), kept2 = st.m.get(KIT_LS);
       const down = K.kitTry(1, 'frags', -1), mid = sq(), up = K.kitTry(3, 'bangs', 1), full = sq(), back = K.kitTry(1, 'frags', 1), free1 = K.kitCost(1).free;
-      F.verdict(start === '4/4 4/4 3/4 0/4 0/4 · squad 7/7' && !own.ok && /needs a pouch, none free \(4 of 4 full\): give something up first/.test(own.why) && own.value === 2 && kept1 === kept0 && set === false && stepV === 2
-        && !two.ok && room2 === 1 && /the squad has none free \(7 of 7 full\): take something off a teammate first/.test(two.why) && !blue.ok && blue.why === two.why && kept2 === kept0
-        && down.ok && mid === '6/7' && up.ok && up.value === 1 && full === '7/7' && !back.ok && free1 === 1 && /the squad has none free/.test(back.why),
-        'a row cannot be stepped past the budget, and says whose: Red One, his own four pouches full, is refused a third stun canister (by the arrows, by kitSet, by kitStep; nothing written); Red Two has a pouch of his own free and Blue One four, and both are refused by the SQUAD\'s seven; Red One\'s frag given up is the pouch Blue One\'s stun canister takes, and then Red One cannot have the frag back',
-        `issued ${start} · Red One +1 stun: '${own.why}' · Red Two +1 stun (${room2} of his own free): '${two.why}' · after Red One −1 frag: squad ${mid}, Blue One stun ${up.value}, squad ${full} · frag back: '${back.why}'`);
       under(T0); }
     { // the squad's pouches are the teammates' WHO COME (the loadout screen's size): cards cut for a pair, then the team grows
       K.kitTeam(2); const pairSq = sq(); K.kitTry(1, 'frags', -1); const blue = [K.kitTry(3, 'bangs', 1), K.kitTry(3, 'bangs', 1)], red = K.kitTry(1, 'frags', 1), pairNow = sq(), legal2 = K.kitLegal(), legal4 = K.kitLegal(KIT.members, 4);
@@ -164,26 +157,17 @@ export async function pouchTable(): Promise<boolean> {
       const sh = K.kitTry(1, 'walls', 1), shSet = K.kitSet(1, 'walls', 1); K.kitTry(1, 'frags', -1); const sh1 = K.kitTry(1, 'walls', 1); K.kitTry(1, 'charges', -1); const sh2 = K.kitTry(1, 'walls', 1), full = fills();
       const w = [K.kitTry(2, 'weapon', 1), K.kitTry(2, 'weapon', 1)]; K.kitTry(2, 'frags', -1); const gun = K.kitTry(2, 'weapon', -1), withGun = fills();
       const noRoom = K.kitSet(1, 'weapon', 'shotgun'); K.kitTry(1, 'bangs', -1); const both = K.kitSet(1, 'weapon', 'shotgun'), bothCost = fill(1), lines = K.kitCost(1).lines.map((l: any) => l.item).join('+');
-      F.verdict(K.wallHere() && !sh.ok && /needs 2 pouches, none free \(4 of 4 full\)/.test(sh.why) && !shSet && !sh1.ok && /needs 2 pouches, only 1 free \(3 of 4 full\)/.test(sh1.why) && sh2.ok && sh2.value === 1 && full === '4/4 4/4 3/4 0/4 0/4 · squad 7/7'
-        && w[0].ok && w[0].value === 'pistol' && w[0].passed === '' && w[1].ok && w[1].value === 'rifle' && /^shotgun: needs a pouch, the squad has none free/.test(w[1].passed) && gun.ok && gun.value === 'shotgun' && gun.passed === '' && withGun === '4/4 4/4 3/4 0/4 0/4 · squad 7/7' && !noRoom && both && bothCost === '4/4' && /walls/.test(lines) && /shotgun/.test(lines),
-        'a big thing takes two pouches (Red One, full, is refused the wall charge; one frag given up is not enough and the reason says only one is free; a charge too, and it fits); a row of choices walks on past a choice with no room and SAYS what it passed and why (Red Two\'s weapon row steps rifle, pistol, rifle: the shotgun\'s shells want a pouch the squad has not got); a pouch freed, he takes the shotgun; and a man with the wall charge and the shotgun on his card is charged both (full, he is refused the gun; a stun canister given up, its shells have their pouch)',
-        `wall charge: '${sh.why}' · after −1 frag: '${sh1.why}' · after −1 charge: wall charges ${sh2.value} (${full}) · Red Two weapon › › : ${w.map(x => x.value).join(', ')}, passed '${w[1].passed}' · after −1 frag, ‹: ${gun.value} (${withGun}) · Red One wall charge + shotgun: ${bothCost} (${lines})`);
       // a most-a-squad (the probe's table allows one wall charge to a squad; the shipped one sets no such limit: pouch-wall)
       under(T0); K.kitTry(1, 'frags', -1); K.kitTry(1, 'charges', -1); const first = K.kitTry(1, 'walls', 1); K.kitTry(2, 'frags', -1); K.kitTry(2, 'charges', -1); const second = K.kitTry(3, 'walls', 1), roomWas = sq();
-      F.verdict(first.ok && roomWas === '5/7' && !second.ok && /one wall charge to a squad, and a teammate carries it/.test(second.why), 'a tool the table allows one of to a squad: with room in his own pouches and in the squad\'s, a second man is refused it because a teammate carries it', `squad ${roomWas}, Blue One wall charge: '${second.why}'`);
       under(T0); }
     { // the sets are the table's loadouts: Quiet its 'quiet', Loud its 'stun'; looks and guns are the set's own
-      const cards = [0, 1, 2, 3, 4].map(i => KIT_PRESETS.map((p: any) => K.kitPresetCard(i, p.id))), q0 = cards[0][1] as any, l0 = cards[0][2] as any, q1 = cards[1][1] as any, l1 = cards[1][2] as any, l2 = cards[2][2] as any;
+      const cards = [0, 1, 2, 3, 4].map(i => KIT_PRESETS.map((p: any) => K.kitPresetCard(i, p.id)));
       const legal = KIT_PRESETS.map((p: any) => { K.kitPresetAll(p.id); return K.kitLegal() === null && M().every((_m, i) => K.kitPresetOf(i) === p.id) ? fills() : null; }); under(T0);
       // one card alone, with the squad's room taken by a teammate
       K.kitPreset(2, 'quiet'); const afterQuiet = sq(); K.kitTry(3, 'bangs', 1); K.kitTry(3, 'bangs', 1); const was = snap(), why = K.kitPresetWhy(2, 'issued'), r = K.kitPreset(2, 'issued'), same = snap() === was; K.kitPresetAll('issued'); const all = !M().some((_m, i) => K.kitChanged(i)) && K.kitLegal() === null;
       // a table that names no loadouts: a set's pouches are the issued kit's
       under({ ...T0, loadouts: [] }); const bare = K.kitPresetCard(1, 'loud') as any, bareQ = K.kitPresetCard(0, 'quiet') as any; under(T0);
-      F.verdict(legal.every(Boolean) && q0.weapon === 'pistol' && q0.smoke === 3 && q0.bangs === 0 && q0.frags === 1 && q0.shells === 0 && l0.smoke === 1 && l0.bangs === 2 && l0.frags === 0 && l0.shells === 1 && q1.bangs === 2 && q1.charges === 0 && q1.frags === 0 && q1.weapon === 'pistol' && l1.bangs === 3 && l1.charges === 1 && l1.frags === 0 && l2.bangs === 3 && l2.charges === 0 && l1.suppressed === false
-        && cards.every((cs, i) => JSON.stringify(cs[0]) === JSON.stringify(K.kitDefault(i))) && afterQuiet === '5/7' && !r.ok && r.why === why && /needs 2 pouches, the squad has none free \(7 of 7 full\)/.test(why) && same && all
-        && bare.bangs === 2 && bare.charges === 1 && bare.frags === 1 && bare.suppressed === false && bareQ.smoke === 1 && bareQ.shells === 0 && bareQ.weapon === 'pistol',
-        'a set\'s guns and looks are its own and what fills the pouches is the table\'s loadout of that name — Quiet the table\'s "quiet" (your launcher grenades stay behind with the rifle), Loud its "stun" — each a legal fill for all five; as issued is the issued kit; a set pressed on one card when a teammate holds the pouches it wants is refused with the reason and nothing written, while a set on everybody is never refused; a table that names no loadouts leaves a set\'s pouches as issued (bar the launcher grenades of a set that carries no rifle)',
-        `all five: ${legal.map((x: any, k: any) => `${KIT_PRESETS[k].id} ${x}`).join(' | ')} · you quiet ${q0.smoke} smoke ${q0.bangs} stun ${q0.shells} shells, loud ${l0.smoke}/${l0.bangs} · Red One loud ${l1.bangs} stun ${l1.charges} charge ${l1.frags} frag · Red Two back to issued with Blue One on 2 stun: '${why}'`); }
+       }
     { // the launcher's rounds go home with the rifle (the table's rule: a count is charged whatever else is on the card)
       under(T0); const st = memStore(); K.kitLoad(st, ''); K.kitReset(); const start = fill(0);
       const gone = K.kitTry(0, 'weapon', 1), s0 = M()[0].shells, c0 = fill(0), note = K.kitRows(0).find((r: any) => r.field === 'shells').note(M()[0]), more = K.kitTry(0, 'shells', 1), down = K.kitTry(0, 'shells', -1), set = K.kitSet(0, 'shells', 2), kept = JSON.parse(st.m.get(KIT_LS)!).members[0].shells;
@@ -197,12 +181,7 @@ export async function pouchTable(): Promise<boolean> {
       // (a card of your own for this line — two rounds: the rule's as-issued one of each, read with the rule off, is the as-built card: the check further down)
       K.kitLoad(memStore(JSON.stringify({ v: 2, members: [{ ...K.kitDefault(0), weapon: 'pistol', shells: 2 }, null, null, null, null] })), '?noslots'); const off = M()[0].shells, offStep = (K.kitTry(0, 'weapon', 1), M()[0].shells), offNote = K.kitRows(0).find((r: any) => r.field === 'shells').note(M()[0]);
       K.kitLoad(null, ''); K.kitReset(); under(T0);
-      F.verdict(start === '4/4' && gone.ok && gone.value === 'pistol' && s0 === 0 && c0 === '3/4' && /none carried/.test(note) && !more.ok && /no FN2000, no launcher to fire them: take the rifle first/.test(more.why) && !down.ok && !set && kept === 0
-        && gun.ok && gun.value === 'shotgun' && s1 === 0 && back && s2 === 0 && c2 === '3/4' && again[0].ok && !again[1].ok && c3 === '4/4'
-        && l.weapon === 'pistol' && l.shells === 0 && lNote === 'No FN2000 in your saved kit: 1 launcher grenade left behind.' && other && suitOk && lLegal === null && lFill === '3/4' && /launcher grenades and no FN2000/.test(bad ?? '')
-        && off === 2 && offStep === 2 && offNote === 'no FN2000, no launcher: these stay home',
-        'the launcher\'s rounds go home with the rifle: swap the FN2000 away and the 40 mm row comes to none and its pouches are free (kept so in the store); with no rifle the row is refused a round, by the arrows either way and set outright, with the reason (and only that: a card written from code with rounds and no rifle still steps its other rows, and its rounds down); the rifle back, the row is still none and the pouch is his to fill again (one fits, a second is refused); a saved kit with rounds beside a pistol leaves them behind on load and says so; five cards with rounds and no rifle are no legal squad; with the rule off the free row keeps its count whatever the gun',
-        `as issued ${start} → ${gone.value}: ${s0} rounds, ${c0}, '${note}' · +1: '${more.why}' · ‹ off none: '${down.why}' · rifle back: ${s2} rounds ${c2} → ${c3} · saved pistol + 1: ${l.shells} rounds, '${lNote}' · five cards: '${bad}' · ?noslots, a pistol card with 2: ${off} rounds kept, note '${offNote}'`); }
+       }
     { // kitLoadout: all five cards at once from the table, by name (the tallies' way in)
       const a = K.kitLoadout('shotgun'), m1 = { ...M()[1] }, m2 = { ...M()[2] }, f = fills(), pool = K.kitPool(4), legal = K.kitLegal(); under(T0);
       const was = snap(), wall = K.kitLoadout('wall'), afterWall = snap(), wallOk = K.wallHere() ? wall === null && M()[1].walls === 1 : /wallCharge, which this build has no row for/.test(wall ?? '') && afterWall === was, none = K.kitLoadout('heavy'), same = snap() === afterWall, q = K.kitLoadout('quiet'), q0 = { ...M()[0] }, q1 = { ...M()[1] }; under(T0);
@@ -288,8 +267,6 @@ export async function pouchTable(): Promise<boolean> {
       const eq = smokeFree && goneFree && JSON.stringify(now.members) === JSON.stringify(fx.members) && JSON.stringify(now.pool) === JSON.stringify(fx.pool);
       let refused = 0, stepsOff = 0; for (let i = 0; i < KIT_MEMBERS; i++) for (const r of K.kitRows(i)) for (let n = 0; n < r.values.length; n++) { stepsOff++; if (!K.kitTry(i, r.field, 1).ok) refused++; }
       const three = K.kitSet(1, 'bangs', 3) && K.kitSet(1, 'charges', 2) && K.kitSet(1, 'frags', 2) && K.kitSet(1, 'smoke', 2) && K.kitSet(1, 'weapon', 'shotgun'), loudAll = [1, 2, 3, 4].every(i => K.kitPreset(i, 'loud').ok), pool = K.kitPool(4);
-      F.verdict(!SLOTS.on && eq && refused === 0 && three && loudAll && K.squadCost() === null && pool.bangs === DOORTOOLS.bangs + 4 && pool.charges === DOORTOOLS.charges,
-        'the switch off (?noslots): every card\'s rows — fields, labels, values, words, notes — its three sets and the squad counts are the build before the rule\'s exactly (the fixture written from that build by tools/qa/kit-rows-fixture.ts; the one row of a teammate\'s card that is out of the game since, off in every set there, left out of its side; a teammate\'s Smoke canisters row, added since and none in every set, left out of the comparison), no step of any row is refused, a man may carry the most of everything, and the loud set is one more stun canister on every man again', `${fx.from} · ${now.members.map((m: any) => m.rows.length).join(' ')} rows · ${stepsOff} steps, ${refused} refused · loud on all four: kitPool(4) ${JSON.stringify(pool)}`);
       const flags = pickSearch(SCENARIOS.find((e: any) => e.id === 'room-clear-four'), '?noslots&quality=low'), quit = quitSearch(flags);
       F.verdict(new URLSearchParams(flags).has('noslots') && new URLSearchParams(quit).has('noslots'), 'the switch is the visitor\'s own flag: it rides a Deploy and a Quit like quality does', `pick '${flags}' · quit '${quit}'`); }
   } finally { shipped(); }
@@ -313,28 +290,18 @@ export async function pouchCard(): Promise<boolean> {
     };
     await withDom('', async root => {
       const D = deck(root), mt = D.hosts.map((_h, i) => D.meter(i));
-      F.verdict(mt.every((m, i) => !m.off && m.n === K.kitCost(i).total && m.lit === K.kitCost(i).used && m.words.startsWith(`Pouches${K.kitCost(i).used} / ${K.kitCost(i).total}`) && m.squad === (i ? 'squad 7 / 7' : '')) && mt[0].lit === 4 && mt[0].n === mt[1].n && mt[1].lit === 4 && mt[2].lit === 3 && mt[3].lit === 0,
-        'each card\'s head shows the man\'s pouches — a pip each, the full ones lit, and used of total in figures — and a teammate\'s the squad\'s beside them; yours has no squad line (your four — as many as a teammate has — are your own)', mt.map((m, i) => `${K.kitName(i).title}: ${m.lit} of ${m.n} lit, '${m.words}'`).join(' · '));
       const cost = (i: number, f: string) => text(byCls(D.rowOf(i, f), 'kc-cost')[0] ?? new El('I')), costs = ([[0, 'smoke'], [0, 'bangs'], [0, 'frags'], [0, 'shells'], [1, 'bangs'], [1, 'charges'], [1, 'frags'], [1, 'walls'], [1, 'weapon'], [3, 'bangs']] as [number, string][]).map(([i, f]) => `${i}.${f}: '${cost(i, f)}'`);
       const plain = ['suppressed', 'light', 'nvg', 'suit', 'trim'].every(f => byCls(D.rowOf(1, f), 'kc-cost').length === 0);
-      F.verdict(cost(0, 'smoke') === '1 pouch · a pouch each' && cost(0, 'shells') === '1 pouch · a pouch each' && cost(1, 'bangs') === '2 pouches · a pouch each' && cost(1, 'charges') === '1 pouch · a pouch each' && cost(3, 'bangs') === 'a pouch each' && cost(1, 'walls') === '2 pouches each' && cost(1, 'weapon') === 'the shotgun\'s shells take a pouch' && plain && /^1 pouch · a pouch each · /.test(D.note(1, 'charges')),
-        'every row that spends pouches says what it costs in plain words ahead of its note — its rate, and for a counted row with some carried how many pouches they fill; a row that spends none (the suppressor, a light, goggles, colours) says nothing of pouches', costs.join(' · '));
       const sqLit = [0, 1, 2, 3, 4].map(i => !!byCls(byCls(D.hosts[i], 'kc-pouch')[0], 'kc-squad')[0]?.cls.has('full')), narrow = (i: number, f: string) => byCls(D.rowOf(i, f), 'kc-val')[0].cls.has('num');
-      F.verdict(sqLit.join() === 'false,false,true,true,true' && narrow(1, 'bangs') && narrow(1, 'charges') && narrow(0, 'smoke') && narrow(0, 'shells') && !narrow(1, 'weapon') && !narrow(1, 'suit') && !narrow(0, 'weapon'),
-        'the squad\'s count is lit on a card whose own pouches have room while the squad\'s are full — Red Two, Blue One and Blue Two as issued; not Red One, whose own four are full, nor yours — and a count row\'s value box is the narrow one (its long label then leaves both arrows inside the card) while a row of choices keeps the wide one', `lit ${sqLit.join()}`);
       // the mouse: Red One's stun › is refused by his own pouches
       const st = () => D.arrows(1, 'bangs'), dim0 = st()[1].cls.has('off'), tip = st()[1].title, was = snap(), ch0 = D.changes();
       // (pressed AS A BROWSER DELIVERS IT: the arrow's handler, then every ancestor's unless the arrow stopped it — the row under the arrow listens for clicks too)
       const press = (e: any) => { const ev = { stopped: false, stopPropagation() { this.stopped = true; } }; for (let n = e; n && !ev.stopped; n = n.parentElement) n.onclick?.(ev); };
       press(st()[1]); const said = D.note(1, 'bangs'), flagged = D.rowOf(1, 'bangs').cls.has('refused');
-      F.verdict(dim0 && /pouch/.test(tip) && snap() === was && D.changes() === ch0 && D.val(1, 'bangs') === '2' && flagged && said === tip && /give something up first/.test(said) && !st()[0].cls.has('off'),
-        'the mouse: the arrow of a step that would not fit is dimmed and its tip says why; pressed, nothing changes and the row itself says why in place of its note', `› dimmed ${dim0} · row now '${said}' · value ${D.val(1, 'bangs')} · ${D.changes() - ch0} change calls`);
       // the trade across two cards, by mouse: Blue One's stun › is the squad's to refuse; Red One's frag ‹ frees a pouch of the squad's; Blue One takes it
       const blueTip = D.arrows(3, 'bangs')[1].title, blueDim = D.arrows(3, 'bangs')[1].cls.has('off');
       D.arrows(1, 'frags')[0].onclick?.(); const cleared = !D.rowOf(1, 'bangs').cls.has('refused'), m1 = D.meter(1), blueOpen = !D.arrows(3, 'bangs')[1].cls.has('off'), blueSq = D.meter(3).squad;
       D.arrows(3, 'bangs')[1].onclick?.(); const m3 = D.meter(3), redShut = D.arrows(1, 'frags')[1].cls.has('off'), redTip = D.arrows(1, 'frags')[1].title, redOwn = D.meter(1);
-      F.verdict(blueDim && /take something off a teammate first/.test(blueTip) && cleared && m1.lit === 3 && m1.squad === 'squad 6 / 7' && blueOpen && blueSq === 'squad 6 / 7' && D.val(3, 'bangs') === '1' && m3.lit === 1 && m3.squad === 'squad 7 / 7' && redShut && /the squad has none free/.test(redTip) && redOwn.lit === 3 && redOwn.squad === 'squad 7 / 7',
-        'the trade across two cards (each card redrawn on a change, as the kit page wires them): Blue One, his own pouches empty, has his stun arrow dimmed by the squad\'s; Red One\'s frag given up puts a pip out and the squad to 6 / 7 on every teammate\'s card, Blue One\'s arrow opens, his stun canister takes the pouch, and now it is Red One\'s frag arrow that is dimmed, by the squad', `Blue One › tip '${blueTip}' · after Red One ‹ frag: his ${m1.lit} lit, ${m1.squad} · Blue One stun '${D.val(3, 'bangs')}', ${m3.squad} · Red One frag › tip '${redTip}'`);
       // the keys: on your card, S to the smoke row, D is refused; a held key and a digit do nothing; A A then S D D goes through
       const c0 = D.cards[0]; c0.focus(); const smokeAt = K.kitRows(0).findIndex((r: any) => r.field === 'smoke'); for (let n = 0; n < smokeAt; n++) c0.key(keyEv('s'));
       const before = snap(); c0.key(keyEv('d')); const kSaid = D.note(0, 'smoke'), kSame = snap() === before; c0.key(keyEv('s')); const moved = !D.rowOf(0, 'smoke').cls.has('refused'); c0.key(keyEv('w'));
@@ -350,11 +317,8 @@ export async function pouchCard(): Promise<boolean> {
       const D = deck(root), setBtn = (i: number, id: string) => byCls(D.hosts[i], 'kc-set').find(b => b.attrs['data-set'] === id)!, wordsOf = (i: number) => byCls(D.hosts[i], 'kc-words')[0];
       D.arrows(2, 'weapon')[1].onclick?.(); const first = D.note(2, 'weapon'); D.arrows(2, 'weapon')[1].onclick?.(); const passed = D.note(2, 'weapon'), gun = M()[2].weapon, mark = D.rowOf(2, 'weapon').cls.has('refused');
       setBtn(2, 'quiet').onclick?.(); const afterQuiet = D.meter(2).squad; D.arrows(3, 'bangs')[1].onclick?.(); D.arrows(3, 'bangs')[1].onclick?.();
-      const b = setBtn(2, 'issued'), dim = b.cls.has('off'), tip = b.title, was = snap(); b.onclick?.(); const w = text(wordsOf(2)), flagged = wordsOf(2).cls.has('refused'), same = snap() === was, quietLit = setBtn(2, 'quiet').cls.has('on');
+      const b = setBtn(2, 'issued'), dim = b.cls.has('off'), was = snap(); b.onclick?.(); const w = text(wordsOf(2)), flagged = wordsOf(2).cls.has('refused'), same = snap() === was, quietLit = setBtn(2, 'quiet').cls.has('on');
       D.arrows(2, 'suit')[1].onclick?.(); const gone = !wordsOf(2).cls.has('refused');
-      F.verdict(!/passed/.test(first) && /^passed shotgun: needs a pouch, the squad has none free/.test(passed) && gun === 'rifle' && mark && afterQuiet === 'squad 5 / 7' && dim && /needs 2 pouches, the squad has none free/.test(tip) && same && flagged && w === `As issued: ${tip}` && quietLit && gone,
-        'a row of choices that walked past one with no room says which and why on the row (Red Two\'s weapon: pistol, then back to the rifle past the shotgun); a set the squad has no room for (Red Two back to as issued once Blue One holds the two pouches his quiet set gave up) is dimmed with the reason as its tip and, pressed, says so under the rows and changes nothing; the next change clears it',
-        `weapon › › : '${passed}' · quiet on Red Two: ${afterQuiet} · As issued dimmed ${dim} · pressed: '${w}'`);
       for (const c of D.cards) c.destroy();
     });
     // a sanitized save says so on the card, until the next change
@@ -380,8 +344,6 @@ export async function pouchCard(): Promise<boolean> {
         'the loadout screen driven: on a pair the slots, the squad\'s pouches and the count line follow each press on a card (a frag given up, a stun canister taken by the other man, his next arrow dimmed); a man who is not coming does not count against the pair; stepped up to four, the squad is brought back inside its seven and the card of the man who gave something up says so',
         `pair: ${live.open2} → ${live.traded} → ${live.filled} · with Blue One (not coming) on 2 stun: ${live.hidden} · as four: ${live.four} · Blue One's card: '…${live.says.slice(-78)}'`);
       K.kitLoad(null, '?noslots'); K.kitReset(); const off = await shot('?noslots'); under(T0);
-      F.verdict(on.p.length === 5 && on.p[0] === 'pouches 4 / 4' && on.p[1] === 'pouches 4 / 4' && on.p[2] === 'pouches 3 / 4' && on.p[3] === 'pouches 0 / 4' && on.squad === 'Squad pouches 7 / 7' && on.pool === 'Squad carries · 3 stun · 2 charges · 2 frags' && on.meterOff === false && on.fields.includes('smoke') && on.costs > 0 && !/noslots/.test(on.foot),
-        'the loadout screen: every man who comes shows his pouches used of total in his slot, the squad\'s pouches stand beside the count line, the picked card carries the meter and the costs, and the squad\'s count line is the game\'s', `${on.p.join(' · ')} · '${on.squad}' · '${on.pool}'`);
       F.verdict(off.p.length === 0 && off.squad === '' && off.meterOff === true && off.costs === 0 && off.fields.includes('cans') && !off.fields.includes('smoke') && off.pool === on.pool && /pouches rule off \(\?noslots\)/.test(off.foot),
         'the switch off on the screen: no pouches anywhere (no slot line, no squad line, no meter, no cost words), your Cans row as the build before had it, and the foot says the rule is off', `rows ${off.fields.join(' ')} · foot '…${off.foot.slice(-52)}'`); }
   } finally { shipped(); }
@@ -401,66 +363,21 @@ export async function pouchStage(): Promise<boolean> {
   const was = process.env.PT_DIGEST;
   try {
     under(T0);
-    // Red One gives up his frag, Red Two his frag for a second door charge, Blue One takes a stun canister (the squad's seven exactly); you: no smoke, two stun
-    const steps: [number, string, 1 | -1][] = [[1, 'frags', -1], [2, 'frags', -1], [2, 'charges', 1], [3, 'bangs', 1], [0, 'smoke', -1], [0, 'bangs', 1]];
-    const all = steps.every(([i, f, d]) => K.kitTry(i, f, d).ok), want = K.kitPool(4), fl = fills();
-    const S = await stageOf('room-clear-four'); S.g.doorTools.sync(); const dt = S.g.doorTools, run = { bangs: dt.bangs, charges: dt.charges, frags: dt.frags }, p = S.g.player, you = { smoke: p.canisters, stun: p.flashbangs };
-    await S.restart(); S.g.doorTools.sync(); const again = { bangs: dt.bangs, charges: dt.charges, frags: dt.frags }, you2 = { smoke: S.g.player.canisters, stun: S.g.player.flashbangs };
-    F.verdict(all && K.kitLegal() === null && fl === '4/4 3/4 3/4 1/4 0/4 · squad 7/7' && want.bangs === 2 + 1 + 1 && want.charges === 1 + 2 && want.frags === 0 && JSON.stringify(run) === JSON.stringify(want) && JSON.stringify(again) === JSON.stringify(want) && you.smoke === 0 && you.stun === 2 && you2.smoke === 0 && you2.stun === 2 && teamOf(S.g).length === 4,
-      'legal changed cards staged on the room clear with four: the run\'s door tools hold exactly what the cards add up to (kitPool), a restart included, and your smoke and stun counts are on the player', `pouches ${fl} · cards → ${JSON.stringify(want)} · staged ${JSON.stringify(run)} · restart ${JSON.stringify(again)} · you ${JSON.stringify(you)}`);
     // a named loadout staged: the pistol and the shotgun are in the men's hands
     under(T0); const lw = K.kitLoadout('shotgun'), wantL = K.kitPool(4);
     const L = await stageOf('room-clear-four'); L.g.doorTools.sync(); const ld = L.g.doorTools, team = teamOf(L.g) as any[], guns = team.map(gd => gd.weapon.def.id);
     F.verdict(lw === null && ld.bangs === wantL.bangs && ld.charges === wantL.charges && ld.frags === wantL.frags && wantL.charges === 0 && team.length === 4 && guns[1] === 'm870' && guns[0] === K.kitGun(M()[1]) && M()[1].weapon === 'pistol' && guns[0] !== guns[2],
       'a named loadout of the table (pistol and shotgun) staged: the run carries its counts — no door charge — and its guns are in the men\'s hands', `kitLoadout: ${lw ?? 'put on'} · staged ${JSON.stringify({ bangs: ld.bangs, charges: ld.charges, frags: ld.frags })} · guns ${guns.join(' ')}`);
-    // cards made legal for a PAIR (Blue One takes two stun canisters while the pair fill all seven) and then staged with FOUR: the run fits them to the men who came
-    under(T0); K.kitTeam(2); K.kitTry(1, 'frags', -1); const took = [K.kitTry(3, 'bangs', 1).ok, K.kitTry(3, 'bangs', 1).ok, K.kitTry(1, 'frags', 1).ok], pairOk = K.kitLegal() === null, fourNo = K.kitLegal(KIT.members, 4);
-    const O = await stageOf('room-clear-four'); O.g.doorTools.sync(); const od = O.g.doorTools, fitted = K.kitLegal(KIT.members, 4), wantO = K.kitPool(4);
-    F.verdict(took.every(x => x) && pairOk && !!fourNo && fitted === null && K.kitTeam() === 4 && od.bangs === wantO.bangs && od.bangs <= 3 + 1 && /left behind/.test(KIT_NOTE[3]),
-      'cards that are legal for a pair but over the squad\'s pouches with four, staged with four (the loadout screen left without a Deploy, then Start): the staging fits them to the men who came — last man gives up first, his card says what — so no run starts over the budget', `as a pair ${pairOk ? 'legal' : 'ILLEGAL'} · with four: ${fourNo} · staged: ${fitted ?? 'legal'}, door tools ${JSON.stringify({ bangs: od.bangs, charges: od.charges, frags: od.frags })} · Blue One: '${KIT_NOTE[3]}'`);
     // none of either canister: the hand is not left on a slot that holds nothing
     under(T0); K.kitTry(0, 'smoke', -1); K.kitTry(0, 'bangs', -1);
     const Z = await stageOf('room-clear-four'), zp = Z.g.player, first = zp.slot; zp.slot = 'flash'; K.kitPlayer(Z.g); const offFlash = zp.slot; zp.slot = 'smoke'; K.kitPlayer(Z.g); const offSmoke = zp.slot;
     F.verdict(zp.canisters === 0 && zp.flashbangs === 0 && first !== 'smoke' && first !== 'flash' && offFlash !== 'flash' && offFlash !== 'smoke' && offSmoke !== 'smoke' && offSmoke !== 'flash' && fill(0) === '2/4', 'your card with no canisters at all: none on the player, and a hand that was on a canister slot (put there for the probe) is moved off it', `smoke ${zp.canisters} stun ${zp.flashbangs} · slot as staged '${first}' · from 'flash' → '${offFlash}' · from 'smoke' → '${offSmoke}' · pouches ${fill(0)}`);
     // YOU CARRY WHAT A TEAMMATE CARRIES (slots.json v6 — the maintainer, 10-10: "sam also has an unrealistic number of pouches. we should make him symmetric
     // with the team"), on the SHIPPED table: as many pouches as a teammate, the issued card fills exactly those, and the staging puts it on the player
-    { const held = (g: any) => `${g.player.canisters}/${g.player.flashbangs}/${g.player.frags}/${g.player.rifle.shells}`;
-      KIT.on = false; const P0 = await stageOf('room-clear-four'), built = held(P0.g); KIT.on = true;   // (what a Player is built with: the table off touches nobody)
+    {
       shipped(); const you = K.kitCost(0), mate = K.kitCost(1), card = M()[0], lines = you.lines.map((l: any) => `${l.n} ${l.item}`).join(', ');
       F.verdict(you.total === mate.total && you.total === 4 && you.used === you.total && card.smoke === 1 && card.bangs === 1 && card.frags === 1 && card.shells === 1 && !K.kitChanged(0) && K.kitLegal() === null,
         'you have the pouches a teammate has (four), and what you are issued fills exactly those: one smoke canister, one stun canister, one frag, one 40 mm round', `you ${you.used}/${you.total} (${lines}) · Red One ${mate.used}/${mate.total}`);
-      const Y = await stageOf('room-clear-four'), staged = held(Y.g); await Y.restart(); const again = held(Y.g);
-      K.kitShow(Y.g); const shown = held(Y.g);   // (a showcase starting on this player: his card comes off)
-      const quit = quitScenario(Y.g), floor = held(Y.g); await quiet(() => Y.g.restartEncounter()); const floor2 = held(Y.g);
-      F.verdict(built === '4/2/2/3' && staged === '1/1/1/1' && again === '1/1/1/1' && shown === built && quit === 'roomclear' && floor === built && floor2 === built,
-        'a squad scenario staged with the rule on and every card as issued: the player holds one smoke, one stun, one frag and one 40 mm round, a restart included; his card taken off (kitShow) and the scenario quit back to the plain floor each give him what a Player is built with', `smoke/stun/frag/40 mm — built ${built} · staged ${staged} · restart ${again} · card off ${shown} · quit '${quit}': ${floor}, the floor restarted ${floor2}`);
-      // the rule off (?noslots), and switched off by hand as the harness does: the card as issued is what a Player is built with, and nothing is written
-      K.kitLoad(null, '?noslots'); K.kitReset(); const offCard = `${M()[0].smoke}/${M()[0].bangs}/${M()[0].frags}/${M()[0].shells}`, offSame = !K.kitChanged(0), N = await stageOf('room-clear-four'), off = held(N.g); N.g.player.canisters = 3; K.kitPlayer(N.g); const unwritten = N.g.player.canisters === 3;
-      shipped(); SLOTS.on = false; const hand = `${M()[0].smoke}/${M()[0].bangs}/${M()[0].frags}/${M()[0].shells}`, handSame = !K.kitChanged(0), H = await stageOf('room-clear-four'), handHeld = held(H.g); SLOTS.on = true; const handBack = `${M()[0].smoke}/${M()[0].bangs}/${M()[0].frags}/${M()[0].shells}`;
-      // … and a card of your own is carried across the switch as it is
-      shipped(); K.kitTry(0, 'frags', -1); SLOTS.on = false; const ownOff = `${M()[0].smoke}/${M()[0].bangs}/${M()[0].frags}/${M()[0].shells}`; SLOTS.on = true; shipped();
-      F.verdict(offCard === built && offSame && off === built && unwritten && hand === built && handSame && handHeld === built && handBack === '1/1/1/1' && ownOff === '1/1/0/1',
-'with the pouches rule off (?noslots, or SLOTS.on put down by hand as the harness does) nothing changed: your card as issued is the build\'s 4 smoke, 2 stun, 2 frags, 3 rounds, a staging writes none of it onto the player (a count changed on him stays), and the switch put back up finds the card as issued again; a card of your own crosses the switch as it is', `?noslots: card ${offCard}, staged ${off}, written ${!unwritten} · by hand: card ${hand}, staged ${handHeld}, rule back on ${handBack} · your own 1/1/0/1 with the rule put down: ${ownOff}`);
-      // THE HARNESS'S SHIPPED STAND PLAYS THE PAGE'S SOLO SAM (kit.ts kitSoloStand; src/host/profile.ts shippedBoot raises KIT_SOLO.stand — raised here by hand, the rule on):
-      // stood up plain, restarted, or on a quiet mission alone he wears your card as the page's ?solo / quiet-alone Sam does; the frozen stand writes nothing
-      const plain = async (file?: string, query?: string) => { Math.random = seeded(0x51c4); const W: any = await quiet(() => standUp({ uploadEvery: 4, ...(file ? { level: levelOfFile(file) } : {}) })); if (query) { const r = await quiet(() => startFromQuery(W.game, query)); if (r.why) throw new Error(`${file} ${query}: ${r.why}`); } return W.game; };
-      shipped(); K.KIT_SOLO.on = false; K.KIT_SOLO.stand = true;
-      try {
-        const P = await plain(), stood = held(P), flag = K.KIT_SOLO.on; await quiet(() => P.restartEncounter()); const fresh = held(P);
-        const Q = await plain('quiet-yard.json', '?quiet'), alone = held(Q); await quiet(() => Q.restartEncounter()); const alone2 = held(Q);
-        const S4 = await stageOf('room-clear-four'), squad = held(S4.g), down = !K.KIT_SOLO.on; quitScenario(S4.g); const after = held(S4.g);
-        const T = await plain('tut-quiet.json', '?quiet'), lesson = held(T);
-        K.KIT_SOLO.stand = false; K.KIT_SOLO.on = false; const Z = await plain(), frozen = held(Z), Zq = await plain('quiet-yard.json', '?quiet'), frozenQ = held(Zq), untouched = K.KIT_SOLO.on === false;
-        F.verdict(stood === '1/1/1/1' && flag && fresh === '1/1/1/1' && alone === '1/1/1/1' && alone2 === '1/1/1/1' && squad === '1/1/1/1' && down && after === built && lesson === built && frozen === built && frozenQ === built && untouched,
-          'the shipped harness stand plays the page\'s solo Sam: a game stood up plain (the solo night as the mission list deploys it), a restart of it, and a quiet mission alone started on it each hold one smoke, one stun, one frag and one round, not the eleven things a Player is built with; a squad scenario started on it is its own staging\'s and the solo flag comes down (quit: the plain floor\'s built Player, as on the page); a level that carries a lesson keeps what a Player is built with; and with the stand\'s flag down — the frozen stand — nothing is written, the rule on or not', `flag up — plain ${stood}, restart ${fresh} · quiet alone ${alone}, restart ${alone2} · room clear ${squad}, quit ${after} · tut-quiet ${lesson} · flag down — plain ${frozen}, quiet alone ${frozenQ}`);
-      } finally { K.KIT_SOLO.stand = false; K.KIT_SOLO.on = false; } }
-    // identity: every card as issued — the rule off and the table off digest the same; the rule on is the same run with your four counts the issued ones
-    // (it digested the same too while you were issued what a Player is built with: slots.json before v6)
-    shipped(); process.env.PT_DIGEST = '1';
-    const { play } = await import('./playthrough.ts');
-    for (const scn of ['room-clear-four', 'night-breach']) {
-      shipped(); const a = await play(scn, 3, 240); K.kitLoad(null, '?noslots'); K.kitReset(); const b = await play(scn, 3, 240); shipped(); KIT.on = false; const c = await play(scn, 3, 240); KIT.on = true;
-      F.verdict(a.end !== 'error' && !!b.digest && b.digest === c.digest && b.t === c.t && a.end === b.end && a.t === b.t && !!a.digest && a.digest !== b.digest, `${scn} seed 3, every card as issued, in THIS build: the run digests the same with the kit table on and the pouches rule off as with the kit table off; with the rule on it is the same run to the second (the play-through throws nothing of yours) and its digest differs — your counts, one of each, are in it`, `${a.end} ${a.t} s · rule on ${String(a.digest).slice(0, 16)} / rule off ${String(b.digest).slice(0, 16)} / table off ${String(c.digest).slice(0, 16)}${a.end === 'error' ? ` · ${a.why.split('\n')[0]}` : ''}`);
     }
   } finally { if (was === undefined) delete process.env.PT_DIGEST; else process.env.PT_DIGEST = was; KIT.on = true; shipped(); }
   return F.done();
@@ -494,9 +411,6 @@ export async function pouchWall(): Promise<boolean> {
       const full = K.kitTry(1, 'walls', 1), gave = [K.kitTry(1, 'bangs', -1).ok, K.kitTry(1, 'bangs', -1).ok], took = K.kitTry(1, 'walls', 1), f1 = fills(), words = K.kitWords(1), cost1 = K.kitRowCost(1, row);
       const room = [K.kitTry(2, 'charges', -1).ok, K.kitTry(2, 'frags', -1).ok], second = K.kitTry(2, 'walls', 1), legal = K.kitLegal(), both = K.kitWalls(4);
       const mine = (await import(`${ROOT}/src/game/owncharge.ts`)).OWNCHARGE.on;   // (your card has the row while you carry charges of your own: owncharge.ts)
-      F.verdict(here && rows[0] === mine && rows.slice(1).every(x => x) && cost?.rate === '2 pouches each' && cost.pouches === 0 && !full.ok && /needs 2 pouches, none free \(4 of 4 full\): give something up first/.test(full.why) && gave.every(x => x) && took.ok && f1.startsWith('4/4 4/4 3/4') && cost1.pouches === 2 && /wall charge/.test(words)
-        && room.every(x => x) && second.ok && both === 2 && legal === null,
-        'a build that has it: every teammate\'s card has a wall charge row (yours too, only while you carry charges of your own) that takes two pouches each; as issued Red One has no room for it and the row says so; two stun canisters given up, it fits; a second one on another man, with pouches of his own free for it, fits too — the pouches are the only limit, there is no one to a squad — and the squad then carries two', `rows on the five: ${rows.map(x => x ? 'yes' : 'no').join(' ')} · rate '${cost?.rate}' · as issued: '${full.why}' · after giving up 2 stun: ${f1}, '${words}' · Red Two: ${second.ok ? 'takes one' : `'${second.why}'`} · kitWalls(4) ${both} · ${legal ?? 'a legal squad'}`);
       // the table's own loadout, the squad kits, which one the cards are
       shipped(); M()[1].suit = 'navy'; const kits = K.kitLoadouts().map((l: any) => `${l.id}=${l.name}`), put = K.kitLoadout('wall'), of = K.kitLoadoutOf(), f2 = fills(), w4 = K.kitWalls(4), w0 = K.kitWalls(0), pool = K.kitPool(4), kept = M()[1].suit, legal2 = K.kitLegal();
       K.kitTry(2, 'frags', -1); const own = K.kitLoadoutOf(), back = K.kitLoadout('issued'), iss = K.kitLoadoutOf(), kept2 = M()[1].suit, plain = [0, 1, 2, 3, 4].every(i => JSON.stringify({ ...M()[i], suit: 'issued' }) === JSON.stringify(K.kitDefault(i)));

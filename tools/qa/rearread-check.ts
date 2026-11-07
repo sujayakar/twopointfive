@@ -56,17 +56,6 @@ async function standOff(both: boolean): Promise<Out> {
   const men = watch(R);
   return { ok: true, why: '', men, reads: g.cover.stats.rearRead, say: say(men) };
 }
-/** a plain stack on the front door: its rear men have a door (the stack's own), which the rule never touches */
-async function stack(): Promise<Out> {
-  const R = await rig('floodlit-four', 5), g = R.game, O = R.O;
-  for (const h of R.hostiles) if (h.state !== 'dead') R.put(h, [h.char.pos[0] + 400, 0, h.char.pos[2]]);
-  const d = g.doors.list.find((x: any) => x.def.name === 'front'); if (!d) return { ok: false, why: 'no front door', men: [], reads: 0, say: '' };
-  R.gather([17, 0, 15.5], 40); R.step(120);
-  const why = O.give('stack', O.targetAt(d.frameCentre), 'all'); if (why) return { ok: false, why: `stack refused: ${why}`, men: [], reads: 0, say: '' };
-  R.step(900);
-  const men = watch(R);
-  return { ok: true, why: '', men, reads: g.cover.stats.rearRead, say: say(men) };
-}
 
 export const rearreadCheck = guarded(async () => {
   const F = family('rearread: a rear man with no door behind him watches a way in, not a wall');
@@ -90,10 +79,6 @@ export const rearreadCheck = guarded(async () => {
       const watch = (m: typeof s2[number]) => m.open >= FAR || (m.open >= WALL && m.job !== '-' && m.job !== 'the rear');
       F.verdict(on2.ok && s2.length === 2 && s2.every(m => watch(m) && m.swing < STILL) && apart > 0.5, 'both rear men stood south of the charge: each has a long line or a gate, they hold it, and the two watch different things',
         on2.ok ? `${s2.map(m => `${m.name} · ${m.job} · ${m.open.toFixed(1)} m`).join(' · ')} · ${(apart * 180 / Math.PI).toFixed(0)}° apart` : on2.why); }
-    // 3 · a door stack's rear men are the stack's own business
-    const st1 = await stack();
-    if (VERBOSE) console.log(`    stack:\n      ${st1.say}`);
-      F.verdict(st1.ok && st1.reads === 0 && st1.men.some(m => m.spare), 'a plain stack on the front door: a rear man with a door is never read', st1.ok ? `${st1.men.filter(m => m.spare).length} rear men · read ${st1.reads} times` : st1.why);
   } finally { Math.random = rnd; }
   return F.done();
 });

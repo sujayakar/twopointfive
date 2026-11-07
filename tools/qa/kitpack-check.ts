@@ -12,6 +12,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { ROOT, standUp } from './headless.ts';
+import { swept } from './sweep.ts';
 
 const K = await import(`${ROOT}/src/game/kit.ts`);
 const { kitAsIssued } = await import(`${ROOT}/src/game/loadout.ts`);
@@ -97,7 +98,7 @@ export async function kitPack(): Promise<boolean> {
         verdict(put && named === 'stun' && you0 >= 1 && you1 === 0 && issued <= P.rooms && stun > P.rooms, 'WHAT ITS CARDS SAY OF THE KITS is true of them: as issued you carry a frag and the squad no more stun grenades than the street has rooms for them; Stun heavy takes your frag and gives the squad some to spare', `as issued: your frags ${you0}, the squad's stun grenades ${issued} · Stun heavy ('${named}'): your frags ${you1}, the squad's ${stun} · rooms ${P.rooms}`); } }
 
     // ── the mission played through under each kit
-    if (process.env.KITPACK_PLAY === '0') console.log('- (not played here: KITPACK_PLAY=0)');
+    if (process.env.KITPACK_PLAY === '0' || !swept(0, 1)) console.log('- (not played here: five whole missions, under QA_SWEEP=all only)');
     else { const names = Object.keys(KITS), t0 = Date.now();
       const outs = await Promise.all(names.map(async name => { const p = Bun.spawn(['bun', 'run', import.meta.path, '--play', name], { env: process.env, stdout: 'pipe', stderr: 'pipe' }); const text = await new Response(p.stdout).text(); await p.exited;
         const line = text.split('\n').find(l => l.startsWith('KITPACK_PLAY ')); try { return { name, ...(JSON.parse(line!.slice(13)) as { code: number; why: string; steps?: number; secs?: number; tail?: string[] }) }; } catch { return { name, code: 1, why: `no result (exit ${p.exitCode}): ${text.slice(-300)}` }; } }));

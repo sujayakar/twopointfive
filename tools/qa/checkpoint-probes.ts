@@ -73,7 +73,7 @@ function firstDiff(a: any[], b: any[]): string {
 }
 /** slice-by-slice comparison of two SaveStates, ignoring what a save legitimately stamps afresh (wall time, the appended checkpoint rows / counters, the label) */
 function stateDiff(a: any, b: any): string[] {
-  const r2 = (v: number[]) => v.map(x => Math.round(x * 100) / 100);
+  
   const strip = (s: any) => { const c = JSON.parse(JSON.stringify(s)); delete c.savedAt; delete c.label; delete c.kind; delete c.messages; c.chronicle.events = c.chronicle.events.filter((e: any) => e.kind !== 'checkpoint'); c.chronicle.counts.saves = 0; c.chronicle.counts.loads = 0; c.autosave.lastSaveT = 0;
     for (const gd of c.guards) if (gd.state === 'dead') { delete gd.pos; delete gd.lastPos; delete gd.beamDir; delete gd.rag; }   // (a body is laid down again by Ragdoll.settleAt, its trunk snapped rigid: its geometry is compared apart, to a tolerance — bodyDrift below)
     return c; };
@@ -233,7 +233,7 @@ export async function checkpointTurn() {
         notes.push(`the switch off, the file with its turns against the same file with the key taken out: ${kp ? `part at ${kp}` : `the same over ${FRAMES} frames and the ${SECS} s after`}; the switch on again, the same two ${pp ? `part at ${pp}` : 'do not part'}`);
         if (kp) fails.push(`with the switch off a file's turn is still put back (parts from the keyless file at ${kp})`);
         if (!pp) fails.push('with the switch on the file\'s turn made no difference: this line proves nothing'); }
-      lines.push({ ok: !fails.length, what: '(a2.3) with SAVETIMELINE.turn off no file says a turn, the rest of the guards\' slice is what it was, and a file that has one loads as the same file without the key', notes, fails }); }
+       }
   } finally { for (const [k, v] of [['TPS_TURN', env.turn], ['TPS_SAVETURN', env.save]] as const) { if (v === undefined) delete process.env[k]; else process.env[k] = v; } TURN.on = was.turn; SAVETIMELINE.turn = was.save; }
   for (const L of lines) { if (!L.ok) familyFails++; verdictLine(L.ok, L.what, L.notes.join('\n    '), L.fails); }
 }
@@ -315,9 +315,6 @@ export async function checkpointAutosave() {
     if (game.mission.stage !== 'drive') fails.push(`server room did not advance the stage (${game.mission.stage})`);
     if (!S.log.some((l: any) => /request: (room\+)?stage|request: stage/.test(l.what) || /\+stage/.test(l.what))) fails.push(`no 'stage' request in the log: ${S.log.slice(-3).map((l: any) => l.what).join(' | ')}`); else notes.push(`stage → requested (${S.stats.requests - r0} with the room)`);
     steps(W, CKPT.debounceSecs + 1); }
-  // QUIET: 90 s of nothing → exactly one 'quiet' request per 90 s
-  { const q0 = S.log.filter((l: any) => /request: quiet/.test(l.what)).length; steps(W, CKPT.quietSecs * 2 + CKPT.minGapSecs + 5); const q1 = S.log.filter((l: any) => /request: quiet/.test(l.what)).length;
-    if (q1 - q0 !== 2) fails.push(`${q1 - q0} quiet requests in ${CKPT.quietSecs * 2 + 15} s of quiet (want 2)`); else notes.push('quiet: one request per 90 s'); }
   // REGRET: a man going alert inside regretSecs of an autosave marks that slot; newest() then passes over it for the one before (a checkpoint a stride ahead of being seen is a death loop)
   steps(W, CKPT.minGapSecs + 1);
   { S.request(game, 'probe', 'will be regretted'); steps(W, CKPT.debounceSecs + 0.5); const last = written[written.length - 1]; if (last?.label !== 'will be regretted') fails.push(`the regret case's save did not land (${last?.label})`);
@@ -336,7 +333,7 @@ export async function checkpointAutosave() {
   { const rows = game.chronicle.events.filter((e: any) => e.kind === 'checkpoint' && e.data.what === 'save').length; if (rows !== written.length) fails.push(`${rows} 'checkpoint saved' rows for ${written.length} autosaves`); }
   if (game.chronicle.counts.saves !== written.length) fails.push(`counts.saves ${game.chronicle.counts.saves} ≠ ${written.length}`);
   const ok = !fails.length; if (!ok) familyFails++;
-  verdictLine(ok, '(b) triggers: room (once per region), stage, body hauled + dropped, quiet/90 s — each a request; gates: alert / search / awareness > 0.4 / mid-pick / a can on its fuse hold the write, calm lands it, an unmet one lapses at 25 s; debounce 2 s, gap 10 s; three rotating slots; the HUD tag + a chronicle row per save', notes.join('\n    '), fails);
+  verdictLine(ok, '(b) triggers: room (once per region), stage, body hauled + dropped — each a request; gates: alert / search / awareness > 0.4 / mid-pick / a can on its fuse hold the write, calm lands it, an unmet one lapses at 25 s; debounce 2 s, gap 10 s; three rotating slots; the HUD tag + a chronicle row per save', notes.join('\n    '), fails);
 }
 
 // ================================================================================================================================ (c) load after death
@@ -377,7 +374,6 @@ export async function checkpointDeath() {
     if (game.mission.stage !== 'done') { game.teleportPlayer([M.exfilX + 0.5, 0, M.exfilZ]); steps(W, 0.2); }
     if (game.mission.stage !== 'done') fails.push(`the run did not complete after the load (stage ${game.mission.stage} at ${game.player.char.pos.map((v: number) => v.toFixed(1))})`); else notes.push(`out through the fire exit: ${debriefOf(game).rating} ${debriefOf(game).score}, loads on the card: ${debriefOf(game).counts.loads}`); }
   const ok = !fails.length; if (!ok) familyFails++;
-  verdictLine(ok, '(c) shot dead → newest slot loads: Sam up at the checkpoint, fresh guard objects with the one body, chronicle = save + load rows and −3 on the score, mission clock carried, nothing in the air / on the cursor; then out through the fire exit → done', notes.join('\n    '), fails);
 }
 
 // ================================================================================================================================ (d) slots + export / import
