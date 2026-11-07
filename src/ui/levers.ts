@@ -1,7 +1,7 @@
 // THE DIFFICULTY LEVERS' ROWS (the maintainer, 10-10: 'let's actually unbundle difficulty a bit now since i think we'll need some play testing' · 'so fog of
 // war has three rungs' · 'can have other levers for enemy ai and kit etc.'): one row per lever of game/difficulty.ts LEVERS — its label, a button per rung,
 // and the line that says what the lit rung does — put on the screens a mission is set up on BEFORE it starts: the mission list's sheet (ui/missions.ts,
-// under its Standard | Hard row) and, where the loadout is a screen of its own (?cards), the loadout (ui/loadout.ts: a short-list row opens there).
+// under its Standard | Hard row).
 // Standard | Hard puts every lever on that level's rung; a lever's own button moves that lever alone and is kept on this machine (setLever) — and a lever
 // put back on the rung the level has for the mission shown is let go of again. What is lit is READ OFF the game's tables (leversShown), so a row moved
 // under a lever by hand in the Tab panel shows as no rung lit.
