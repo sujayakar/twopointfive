@@ -264,17 +264,10 @@ export class LightingPasses implements CutSwappable {
    *  1368×770), let go after GIF_IDLE_FRAMES off. While live the gather-grid diffuse chain does not run (its histories go stale: cleared on the way back). */
   giF: GPUTexture[] = []; giFView: GPUTextureView[] = []; giFHist: GPUTexture[] = []; giFHistView: GPUTextureView[] = []; giFMom: GPUTexture[] = []; giFMomView: GPUTextureView[] = []; giFFast: GPUTexture[] = []; giFFastView: GPUTextureView[] = [];
   giFullOn = false; giFullIters = 4; private giFullEverOn = false; private giFullRanLast = false; private giFullIdle = 0;
-  /** the young-history gather rays (frame.giCfg): the per-frame first-come counter the gather bumps (u32 count + 3 spare), zeroed by the encode each frame the multiplier is up; `youngOn` mirrored by the engine */
-  private youngBuf!: GPUBuffer; youngOn = false;
-  /** read the young-texel count of the last frame back (QA / the Tab panel: how much of the grid took the extra rays) */
-  async readYoungCount(): Promise<number> { const rb = this.device.createBuffer({ size: 16, usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ }); const enc = this.device.createCommandEncoder(); enc.copyBufferToBuffer(this.youngBuf, 0, rb, 0, 16); this.device.queue.submit([enc.finish()]); await rb.mapAsync(GPUMapMode.READ); const n = new Uint32Array(rb.getMappedRange().slice(0))[0]; rb.unmap(); rb.destroy(); return n; }
   private static readonly GIF_IDLE_FRAMES = 600;
   /** the internal-res diffuse chain runs THIS frame (wanted, the v3 core, allocated, its pipelines ready FOR THE CURRENT STRIDE SET — prepareFull is idempotent: true when they exist, else it starts
    *  the missing compiles and the gather-grid chain carries the frame): composite binds giF[0], the young-history test reads giFMom / giFHist */
   get giFullLive(): boolean { return this.giFullOn && this.dnMode === 'v3' && this.giF.length === 2 && this.den.prepareFull(this.fullStrides()); }
-  /** frames the young-history gather rays should stand down because the diffuse histories were just restarted wholesale (restartHistories, a keepHistories-off resize, the denoiser switch): every
-   *  texel would read young for giYoungLen frames — the engine folds it into frame.giCfg's cut hold and counts it down */
-  youngHold = 0;
   /** bytes the internal-res GI set holds (the Tab panel words it) */
   get giFullBytes(): number { let n = 0; for (const t of [...this.giF, ...this.giFHist, ...this.giFMom, ...this.giFFast]) n += t.width * t.height * 8; return n; }
   /** the à-trous strides at internal res: the raw gather's divisor × 1, 2, 4, 8 (the gather-grid chain's reach on the ground), as many as giFullIters */
@@ -303,13 +296,8 @@ export class LightingPasses implements CutSwappable {
    *  rgba32uint ping-pong on `hitParity` at the reflection grid; a 1×1 stand-in pair until first use (reflect.wgsl reads / writes them only while frame.p5Cfg.z bit 2 is up), re-made with the
    *  reflection set, never carried (a record names a point in the world, not a pixel: cleared instead) */
   reflHit: GPUTexture[] = []; reflHitView: GPUTextureView[] = []; rtHitReuse = false; private hitEverOn = false; private hitParity = 0; private hitRanLast = false;
-  /** PHASE 5 — the final gather's RESERVOIRS (settings.giResample, engine → setGi): per gather texel ONE secondary sample {hit point, normal, outgoing radiance, W, M, receiver signature} in two
-   *  rgba32uint textures (A, B), ping-pong sets on `giParity` at the gather grid. Made on first use (an off machine — every tier but ultra — pays nothing), re-made with the gather set on a
-   *  resize / divisor flip and CLEARED then (a resampled reservoir would name the wrong texel's sample), cleared on every off → on edge. The resampling gather is its own pipeline (fgather.wgsl
-   *  entry point mainGi, layout lFGR); `main` and its layout are untouched. */
-  giRes: GPUTexture[][] = [[], []]; giResView: GPUTextureView[][] = [[], []]; giOn = false; private giEverOn = false; private giParity = 0; private giRanLast = false;
   /** bytes of the phase-5 sets (the Tab panel words them) */
-  get p5Bytes(): number { let n = 0; for (const t of [...this.giRes.flat(), ...this.reflHit]) n += t.width * t.height * 16; return n; }
+  get p5Bytes(): number { let n = 0; for (const t of this.reflHit) n += t.width * t.height * 16; return n; }
   /** torch bounce cards (FrameFlags.BounceCards, default off): MAX_CARDS × 4 rgba32f rows written by cards.wgsl (one workgroup per nominated light) inside the 'gather'
    *  pass and read by fgather; `numCards` = how many the engine nominated this frame (0 = the builder is not dispatched and the gather touches nothing) */
   cards: GPUTexture; cardsView: GPUTextureView; numCards = 0;
@@ -411,26 +399,21 @@ export class LightingPasses implements CutSwappable {
   private lRefl: GPUBindGroupLayout; private pRefl!: GPUComputePipeline; private bgRefl: GPUBindGroup | null = null;   // main's reflection pass, untouched (every tier with the phase-5 bits down)
   private lReflP5: GPUBindGroupLayout; private pReflP5: GPUComputePipeline | null = null; private bgReflP5: (GPUBindGroup | null)[] = [null, null];   // phase 5's variant (reflect_p5.wgsl): + the hit records, per parity (reads reflHit[1−p], writes reflHit[p]); dispatched instead while frame.p5Cfg.z ≠ 0 (`rtP5`, engine.render mirrors it)
   rtP5 = false;
-  /** phase 5: the resampling gather (fgather.wgsl mainGi) — the plain gather's bindings + last frame's reservoir pair (read), this frame's (written), the g-buffer's motion vectors; per reservoir parity */
-  private lFGR: GPUBindGroupLayout; private pFGR: GPUComputePipeline | null = null; private bgFGR: (GPUBindGroup | null)[] = [null, null];
-  /** STRATIFIED GATHER DIRECTIONS (settings.gatherStrata, ported from exp/trace-perf E8 — docs/internal/trace-perf.md §2.10): the gather module compiled a second time behind
+  /** STRATIFIED GATHER DIRECTIONS (settings.gatherStrata, ported from exp/trace-perf E8 — docs/internal/trace-perf.md §2.10): the gather's module compiled a second time behind
    *  `const GATHER_STRATA: bool = true` (its k-th ray drawn from stratum (k + frame) mod 4 — a whole 8×8 tile shares the stratum, so its rays walk the grid coherently: −13‥16 % of the
-   *  gather pass at high, quality neutral or better). engine.render mirrors settings.gatherStrata into `gatherStrata`; the gather encode picks the pipeline pair by it, so it flips live
-   *  for A/B. Both pairs are boot pipelines (async); the false pair is the module exactly as it was. */
-  gatherStrata = false; private pFGs!: GPUComputePipeline; private pFGRs: GPUComputePipeline | null = null;
+   *  gather pass at high, quality neutral or better). engine.render mirrors settings.gatherStrata into `gatherStrata`; the gather encode picks `trace`'s pipeline by it, so it flips live
+   *  for A/B (pFGX / pFGXs below). */
+  gatherStrata = false;
   /** THE GATHER (render/gatherSplit.ts): two programs — `trace` (pFGX, its stratified twin pFGXs) writes every point it needs lit to
    *  gxBuf, `light` (pFGL) lights them and stores what the gather stores. One layout and one group serve both; the buffer grows with the gather grid and is let go for a smaller one only when the grid is under half of it (the ladder moves the
-   *  grid often). The one-kernel gathers are gone: no resampling gather is built (setGi keeps no reservoirs) and the young-history rays are not traced. */
+   *  grid often). The one-kernel gathers, the resampling gather and the young-history rays went 2026-11-07. */
   private lFGX: GPUBindGroupLayout | null = null; private pFGX: GPUComputePipeline | null = null; private pFGXs: GPUComputePipeline | null = null; private pFGL: GPUComputePipeline | null = null;
   private gxBuf: GPUBuffer | null = null; private gxTexels = 0; private bgFGX: GPUBindGroup | null = null;
   /** the smallest gather grid (texels) whose points' buffer this device would not bind or could not make: that size and larger are not tried again */
   private gxRefusedAt = Infinity;
-  private lDirect: GPUBindGroupLayout; private lRestir: GPUBindGroupLayout; private pRestir!: GPUComputePipeline; private lVol: GPUBindGroupLayout; private lComp: GPUBindGroupLayout; private lFxaa: GPUBindGroupLayout; private lSoft: GPUBindGroupLayout; private lTileFlags: GPUBindGroupLayout; private lTileDist: GPUBindGroupLayout; private lTemp: GPUBindGroupLayout; private lDTemp: GPUBindGroupLayout; private lFG: GPUBindGroupLayout; private lGiBlur: GPUBindGroupLayout; private lBloom: GPUBindGroupLayout; private lPost: GPUBindGroupLayout; private lCards: GPUBindGroupLayout; private lTaau: GPUBindGroupLayout;
-  private pDirect: GPUComputePipeline | null = null; private pVol!: GPUComputePipeline; private pComp: GPURenderPipeline | null = null; private pCompR: GPURenderPipeline | null = null; private pFxaa!: GPURenderPipeline; private pDen: GPUComputePipeline[] = []; private pTileFlags!: GPUComputePipeline; private pTileDist = new Map<number, GPUComputePipeline>(); private pTemp!: GPUComputePipeline; private pDTemp: GPUComputePipeline[] = []; private pFG: GPUComputePipeline | null = null; private pGiBlur: GPUComputePipeline[] = []; private pBloomDown0!: GPUComputePipeline; private pDiffBlurH!: GPUComputePipeline; private pDiffBlurV!: GPUComputePipeline; private pBloomDown!: GPUComputePipeline; private pBloomUp!: GPUComputePipeline; private pPost!: GPURenderPipeline; private postParams: GPUBuffer; private pCards!: GPUComputePipeline; private pTaau!: GPUComputePipeline; private taauParams: GPUBuffer; private taauData = new ArrayBuffer(TAAU_PARAM_BYTES); private taauF32 = new Float32Array(this.taauData); private taauU32 = new Uint32Array(this.taauData);
+  private lDirect: GPUBindGroupLayout; private lRestir: GPUBindGroupLayout; private pRestir!: GPUComputePipeline; private lVol: GPUBindGroupLayout; private lComp: GPUBindGroupLayout; private lFxaa: GPUBindGroupLayout; private lSoft: GPUBindGroupLayout; private lTileFlags: GPUBindGroupLayout; private lTileDist: GPUBindGroupLayout; private lTemp: GPUBindGroupLayout; private lDTemp: GPUBindGroupLayout; private lGiBlur: GPUBindGroupLayout; private lBloom: GPUBindGroupLayout; private lPost: GPUBindGroupLayout; private lCards: GPUBindGroupLayout; private lTaau: GPUBindGroupLayout;
+  private pDirect: GPUComputePipeline | null = null; private pVol!: GPUComputePipeline; private pComp: GPURenderPipeline | null = null; private pCompR: GPURenderPipeline | null = null; private pFxaa!: GPURenderPipeline; private pDen: GPUComputePipeline[] = []; private pTileFlags!: GPUComputePipeline; private pTileDist = new Map<number, GPUComputePipeline>(); private pTemp!: GPUComputePipeline; private pDTemp: GPUComputePipeline[] = []; private pGiBlur: GPUComputePipeline[] = []; private pBloomDown0!: GPUComputePipeline; private pDiffBlurH!: GPUComputePipeline; private pDiffBlurV!: GPUComputePipeline; private pBloomDown!: GPUComputePipeline; private pBloomUp!: GPUComputePipeline; private pPost!: GPURenderPipeline; private postParams: GPUBuffer; private pCards!: GPUComputePipeline; private pTaau!: GPUComputePipeline; private taauParams: GPUBuffer; private taauData = new ArrayBuffer(TAAU_PARAM_BYTES); private taauF32 = new Float32Array(this.taauData); private taauU32 = new Uint32Array(this.taauData);
   private bgDirect: GPUBindGroup | null = null; private bgVol: GPUBindGroup | null = null; private bgFxaa: GPUBindGroup | null = null; private bgDen: GPUBindGroup[] = []; private bgDenH: GPUBindGroup[] = []; private bgTileFlags: GPUBindGroup | null = null; private bgTileDist: GPUBindGroup | null = null; private bgDTemp: GPUBindGroup[] = []; private bgTemp: (GPUBindGroup | null)[] = [null, null];
-  /** the plain gather's group per history parity p: fgather's nine + last frame's diffuse moments / value history (bindings 14 / 15 — the young-history test reads the length and the depth key at
-   *  the reprojected texel; the gather-grid pair, or the internal-res pair while that path is live: `bgFGFull` says which the groups were built with) */
-  private bgFG: (GPUBindGroup | null)[] = [null, null]; private bgFGFull = false;
   private bgGiBlur: (GPUBindGroup | null)[][] = [[], []]; private bgCompFG: GPUBindGroup | null = null; private bgCards: GPUBindGroup;
   private bgTempSpec: (GPUBindGroup | null)[] = [null, null]; private bgGiBlurSpec: (GPUBindGroup | null)[] = [null, null];   // the gloss chain's per-parity groups (same layouts / pipelines as the indirect's temporal + giblur)
   /** bloom's first downsample and the post pass read the RESOLVED picture under TAAU — one bind group per history parity — or `hdr` (index 0 only) without it; the resolve's own group per parity */
@@ -515,22 +498,7 @@ export class LightingPasses implements CutSwappable {
       { binding: 2, visibility: CS, texture: tex2d('float') },
       { binding: 3, visibility: CS, storageTexture: { access: 'write-only', format: 'rgba16float', viewDimension: '2d' } },
     ] });
-    this.lFG = device.createBindGroupLayout({ label: 'fgather', entries: [
-      { binding: 0, visibility: CS, texture: tex2d('depth') },
-      { binding: 1, visibility: CS, texture: tex2d('float') },
-      { binding: 2, visibility: CS, texture: tex2d('uint') },
-      { binding: 3, visibility: CS, texture: tex2d('unfilterable-float') },
-      { binding: 4, visibility: CS, texture: tex2d('unfilterable-float') },
-      { binding: 5, visibility: CS, texture: { sampleType: 'float', viewDimension: '3d' } },
-      { binding: 6, visibility: CS, storageTexture: { access: 'write-only', format: 'rgba16float', viewDimension: '2d' } },
-      { binding: 7, visibility: CS, storageTexture: { access: 'write-only', format: 'rgba16float', viewDimension: '2d' } },   // glossy floors' specular (written only under FrameFlags.Gloss)
-      { binding: 8, visibility: CS, texture: tex2d('unfilterable-float') },   // torch bounce cards (rgba32f rows from cards.wgsl; read only under FrameFlags.BounceCards)
-      { binding: 14, visibility: CS, texture: tex2d('unfilterable-float') },  // GI in motion (the young-history test, frame.giCfg.x > 1): last frame's diffuse MOMENTS (history length in .z) …
-      { binding: 15, visibility: CS, texture: tex2d('unfilterable-float') },  // … and value history (view depth in .a — the disocclusion key), gather grid or internal res
-      { binding: 16, visibility: CS, buffer: { type: 'storage' } },            // … and the frame's young-texel counter (16 B: the cap's first-come; cleared each frame the path is on) — one storage buffer in the compute stage: scene 8 at ultra + 1 = 9 of 10
-    ] });
-    this.youngBuf = makeBuffer(device, 16, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC, 'giYoung');
-    this.lFGX = device.createBindGroupLayout({ label: 'gatherSplit', entries: [   // THE GATHER'S TWO PROGRAMS: the old gather's nine + the points' buffer (no young-history bindings: those rays are not traced) — `light` reads a subset of it. One storage buffer in the compute stage, as the young counter is in lFG
+    this.lFGX = device.createBindGroupLayout({ label: 'gatherSplit', entries: [   // THE GATHER'S TWO PROGRAMS: the old gather's nine + the points' buffer — `light` reads a subset of it. One storage buffer in the compute stage
       { binding: 0, visibility: CS, texture: tex2d('depth') }, { binding: 1, visibility: CS, texture: tex2d('float') }, { binding: 2, visibility: CS, texture: tex2d('uint') },
       { binding: 3, visibility: CS, texture: tex2d('unfilterable-float') }, { binding: 4, visibility: CS, texture: tex2d('unfilterable-float') },
       { binding: 5, visibility: CS, texture: { sampleType: 'float', viewDimension: '3d' } },
@@ -581,17 +549,6 @@ export class LightingPasses implements CutSwappable {
     this.lRefl = device.createBindGroupLayout({ label: 'reflect', entries: reflEntries });   // (main's layout, entry for entry)
     this.lReflP5 = device.createBindGroupLayout({ label: 'reflectP5', entries: [ ...reflEntries,   // + phase 5's hit records: last frame's read, this frame's written
       { binding: 9, visibility: CS, texture: tex2d('uint') }, { binding: 10, visibility: CS, storageTexture: { access: 'write-only', format: 'rgba32uint', viewDimension: '2d' } },
-    ] });
-    this.lFGR = device.createBindGroupLayout({ label: 'fgatherGi', entries: [   // the resampling gather (mainGi): fgather's nine + reservoirs in A/B (uint), out A/B (rgba32uint), gVel
-      { binding: 0, visibility: CS, texture: tex2d('depth') }, { binding: 1, visibility: CS, texture: tex2d('float') }, { binding: 2, visibility: CS, texture: tex2d('uint') },
-      { binding: 3, visibility: CS, texture: tex2d('unfilterable-float') }, { binding: 4, visibility: CS, texture: tex2d('unfilterable-float') },
-      { binding: 5, visibility: CS, texture: { sampleType: 'float', viewDimension: '3d' } },
-      { binding: 6, visibility: CS, storageTexture: { access: 'write-only', format: 'rgba16float', viewDimension: '2d' } },
-      { binding: 7, visibility: CS, storageTexture: { access: 'write-only', format: 'rgba16float', viewDimension: '2d' } },
-      { binding: 8, visibility: CS, texture: tex2d('unfilterable-float') },
-      { binding: 9, visibility: CS, texture: tex2d('uint') }, { binding: 10, visibility: CS, texture: tex2d('uint') },
-      { binding: 11, visibility: CS, storageTexture: { access: 'write-only', format: 'rgba32uint', viewDimension: '2d' } }, { binding: 12, visibility: CS, storageTexture: { access: 'write-only', format: 'rgba32uint', viewDimension: '2d' } },
-      { binding: 13, visibility: CS, texture: tex2d('float') },
     ] });
     this.lTaau = device.createBindGroupLayout({ label: 'taau', entries: [
       { binding: 0, visibility: CS, texture: tex2d('float') },                 // hdr (internal)
@@ -905,7 +862,7 @@ export class LightingPasses implements CutSwappable {
     div = div <= 1 ? 1 : div >= 3 ? 3 : 2;
     // Off for RT_IDLE_FRAMES: the real set (refl + scratch + three history pairs, ~15–28 MB at high's grid, + phase 5's hit records) goes back to the pool and the 1×1 stand-ins return —
     // else a machine auto-calibrated through high and settled on low kept them for the session AND resampled their histories on every resize (review R1.1). Re-made zeroed on the
-    // next `true`, like the gather's reservoirs (setGi) and the froxel volumes.
+    // next `true`, like the froxel volumes.
     if (!on) { if (this.rtEverOn && ++this.rtIdle > LightingPasses.RT_IDLE_FRAMES) { this.rtEverOn = false; this.hitEverOn = false; this.rtIdle = 0; this.hitIdle = 0; if (this.width) { const t0 = performance.now(); const R = this.beginRealloc(); this.reallocRefl(R, this.rw, this.rh, false); this.finishRealloc(R, 'reflection targets let go', t0); this.dropBindGroups(); } return; } }
     else this.rtIdle = 0;
     const firstOn = on && !this.rtEverOn;   // the first frame the pass is wanted on this machine: the real target set replaces the 1×1 stand-in (an off machine — low / verylow / ?nortreflect — never pays the ~28 MB at high)
@@ -944,26 +901,7 @@ export class LightingPasses implements CutSwappable {
   private static readonly P5_IDLE_FRAMES = 600;
   /** frames the RT-reflection set may stay allocated with the pass off before it goes back to the pool (setRt; review R1.1) */
   private static readonly RT_IDLE_FRAMES = 600;
-  private giIdle = 0; private hitIdle = 0; private rtIdle = 0;
-  /** PHASE 5 — the gather's reservoir resampling wanted this frame (engine.render mirrors settings.giResample ≠ 'off' before resize): the first `true` makes the reservoir sets at the gather grid
-   *  (pooled); afterwards they follow the gather set through resizes / divisor flips (reallocGather); P5_IDLE_FRAMES off lets them go again (re-made, zeroed, on the next `true`). The encode picks
-   *  the pipeline by it; the mode itself rides in frame.p5Cfg.x. */
-  setGi(on: boolean) {
-    on = false;   // (no resampling gather is built since the gather became two programs: its reservoirs are not kept either)
-    this.giOn = on;
-    if (!on) {
-      if (this.giEverOn && ++this.giIdle > LightingPasses.P5_IDLE_FRAMES) { this.giEverOn = false; this.giIdle = 0; const t0 = performance.now(); const R = this.beginRealloc(); this.reallocGi(R, this.gw, this.gh); this.finishRealloc(R, 'gather reservoirs let go', t0); this.bgFGR = [null, null]; }
-      return;
-    }
-    this.giIdle = 0;
-    if (this.giEverOn) return;
-    this.giEverOn = true;
-    if (!this.gw) return;   // (before the first resize: reallocGather makes them with everything else)
-    const t0 = performance.now(); const R = this.beginRealloc();
-    this.reallocGi(R, this.gw, this.gh);
-    this.finishRealloc(R, `gather reservoirs ${this.gw}×${this.gh}`, t0);
-    this.bgFGR = [null, null];
-  }
+  private hitIdle = 0; private rtIdle = 0;
   /** GI IN MOTION — the diffuse client at the internal resolution wanted this frame with `iters` à-trous iterations (engine.render mirrors settings.giFullRes / giFullIters before resize): the first
    *  `true` makes the internal-res set (pooled) and asks the denoiser for its pipelines (async: the gather-grid chain carries on for the frame or two until they exist); afterwards the set follows
    *  the internal size (reallocGiFull); GIF_IDLE_FRAMES off lets it go again. */
@@ -998,16 +936,7 @@ export class LightingPasses implements CutSwappable {
       if (carry && oldHist.length === 2 && oldMom.length === 2 && oldFast.length === 2) { for (let i = 0; i < 2; i++) { R.blits.push({ src: oldHist[i], dst: this.giFHist[i] }); R.blits.push({ src: oldMom[i], dst: this.giFMom[i] }); R.blits.push({ src: oldFast[i], dst: this.giFFast[i] }); } R.what.push('indirect (internal res)'); }
     }
     for (const t of [...oldHist, ...oldMom, ...oldFast]) this.drop(R, t);
-    this.bgCompFG = null; this.bgCompS = null; this.bgFG = [null, null];
-  }
-  /** the reservoir sets at (gw, gh): 2 parities × (A, B) rgba32uint — from the pool, zeroed (a zero record is 'no sample': M 0, invalid), never carried */
-  private reallocGi(R: Realloc, gw: number, gh: number) {
-    for (const t of this.giRes.flat()) this.drop(R, t);
-    this.giRes = [[], []]; this.giResView = [[], []];
-    if (!this.giEverOn) return;
-    const su = SU();
-    for (let p = 0; p < 2; p++) { this.giRes[p] = [0, 1].map(k => this.take(R, `giRes${p}${'AB'[k]}`, gw, gh, 'rgba32uint', su)); this.giResView[p] = this.giRes[p].map(t => t.createView()); }   // (a NEW texture is zero already; a pooled one is queued for zeroing by take() — nothing stale survives a size change)
-    this.bgFGR = [null, null];
+    this.bgCompFG = null; this.bgCompS = null;
   }
   /** PHASE 5 — the reflection pass's hit-lighting reuse wanted this frame (engine.render mirrors settings.rtHitReuse before resize): the first `true` with the reflections ever on makes the real
    *  hit-record pair at the reflection grid; afterwards it follows the reflection set (reallocRefl). The bit itself rides in frame.p5Cfg.z. */
@@ -1178,7 +1107,6 @@ export class LightingPasses implements CutSwappable {
     this.width = w; this.height = h; this.ow = ow; this.oh = oh; this.cw = cw; this.ch = ch;
     const gw = Math.ceil(w / this.gatherDiv), gh = Math.ceil(h / this.gatherDiv), vw = Math.ceil(w / this.volDiv), vh = Math.ceil(h / this.volDiv);
     const R = this.beginRealloc(); const carry = this.keepHistories && had;
-    if (!carry) this.youngHold = 6;   // (histories made fresh — every diffuse texel reads young for a few frames: the young-history rays stand down for them)
     if (inChanged || !this.keepHistories) this.reallocFull(R, w, h, carry);
     if (inChanged || !this.keepHistories || !had) this.reallocGiFull(R, w, h, carry);   // the internal-res GI set follows the internal size (nothing until first use)
     if (!this.keepHistories || !had || gw !== this.gw || gh !== this.gh) this.reallocGather(R, gw, gh, carry);   // (kept as they are, contents and all, in the rare case the gather grid did not move; off = re-created regardless, as before)
@@ -1298,7 +1226,6 @@ export class LightingPasses implements CutSwappable {
       R.what.push('indirect', 'specular');
     }
     for (const t of [...oldInd, ...oldSpec, ...oldGiMom, ...oldGiFast, ...oldSpecMom]) this.drop(R, t);
-    this.reallocGi(R, gw, gh);   // phase 5's reservoir sets ride with the gather grid (nothing until first use; zeroed, never carried)
   }
   private reallocVol(R: Realloc, vw: number, vh: number) {
     this.drop(R, this.vol); this.drop(R, this.volReact); this.vw = vw; this.vh = vh;
@@ -1353,7 +1280,7 @@ export class LightingPasses implements CutSwappable {
   /** bytes of the live target set (the pool's budget follows it) */
   targetBytes(): number {
     let n = 0;
-    for (const t of [...this.dS, ...this.dU, ...this.dP, this.tileFlag, this.tileDist, ...this.dH.flat(), ...this.dDepthHist, ...this.dnShared, ...this.dnHm, ...this.dnHg, ...this.indHist, this.indirect, ...this.gi, this.spec, ...this.specHist, ...this.giMom, ...this.giFast, ...this.specMom, ...this.specFast, ...this.giF, ...this.giFHist, ...this.giFMom, ...this.giFFast, this.refl, this.reflScratch, this.reflHi, ...this.reflHist, ...this.reflMom, ...this.reflFast, ...this.reflHit, ...this.giRes.flat(), this.vol, this.volReact, this.ldr, this.hdr, this.react, ...this.bloomDown, ...this.bloomUp, ...this.taaHist, ...this.sharpE, this.sharpMask, this.hdrCopy]) if (t) n += texBytes({ label: t.label, size: [t.width, t.height], format: t.format, usage: t.usage });
+    for (const t of [...this.dS, ...this.dU, ...this.dP, this.tileFlag, this.tileDist, ...this.dH.flat(), ...this.dDepthHist, ...this.dnShared, ...this.dnHm, ...this.dnHg, ...this.indHist, this.indirect, ...this.gi, this.spec, ...this.specHist, ...this.giMom, ...this.giFast, ...this.specMom, ...this.specFast, ...this.giF, ...this.giFHist, ...this.giFMom, ...this.giFFast, this.refl, this.reflScratch, this.reflHi, ...this.reflHist, ...this.reflMom, ...this.reflFast, ...this.reflHit, this.vol, this.volReact, this.ldr, this.hdr, this.react, ...this.bloomDown, ...this.bloomUp, ...this.taaHist, ...this.sharpE, this.sharpMask, this.hdrCopy]) if (t) n += texBytes({ label: t.label, size: [t.width, t.height], format: t.format, usage: t.usage });
     return n;
   }
   /** Explicit restart of the screen-space temporal histories (both parities of the direct pair + their depth, the indirect, the specular): the next frame accumulates from its own raw
@@ -1363,11 +1290,11 @@ export class LightingPasses implements CutSwappable {
   restartHistories(reason = ''): void {
     if (!this.width) return;
     const enc = this.device.createCommandEncoder({ label: 'restartHistories' }); const p = enc.beginComputePass({ label: 'restartHistories' });
-    for (const t of [...this.dH.flat(), ...this.dDepthHist, ...this.dnHm, ...this.dnHg, ...this.indHist, ...this.specHist, ...this.giMom, ...this.giFast, ...this.specMom, ...this.specFast, ...this.giFHist, ...this.giFMom, ...this.giFFast, ...this.reflHist, ...this.reflMom, ...this.reflFast, ...this.reflHit, ...this.giRes.flat(), ...this.taaHist]) this.ops.clear(p, t);   // (the v3 core's: a zeroed depth | length texel validates nothing = history length 0 everywhere — the internal-res GI set included; phase 5's reservoirs / hit records: a zero record is 'no sample')
+    for (const t of [...this.dH.flat(), ...this.dDepthHist, ...this.dnHm, ...this.dnHg, ...this.indHist, ...this.specHist, ...this.giMom, ...this.giFast, ...this.specMom, ...this.specFast, ...this.giFHist, ...this.giFMom, ...this.giFFast, ...this.reflHist, ...this.reflMom, ...this.reflFast, ...this.reflHit, ...this.taaHist]) this.ops.clear(p, t);   // (the v3 core's: a zeroed depth | length texel validates nothing = history length 0 everywhere — the internal-res GI set included; phase 5's reservoirs / hit records: a zero record is 'no sample')
     p.end();
     for (const b of this.resBuf) enc.clearBuffer(b);   // + the ReSTIR reservoirs and their tiles' light beliefs (zero = no sample, no history, nothing believed dark)
     this.device.queue.submit([enc.finish()]);
-    this.taaReset = true; this.youngHold = 6;   // (every diffuse history is young now: the young-history rays stand down while that is true of the whole grid)
+    this.taaReset = true;   // (every diffuse history is young now: the young-history rays stand down while that is true of the whole grid)
     this.reallocs++; this.lastRealloc = `histories restarted${reason ? ` (${reason})` : ''}`;
   }
 
@@ -1435,16 +1362,13 @@ export class LightingPasses implements CutSwappable {
         { binding: 5, resource: rc.diceView }, { binding: 6, resource: this.reflView }, { binding: 7, resource: g.albedoView }, { binding: 8, resource: g.matView }, { binding: 11, resource: { buffer: this.beamBuf } }, { binding: 12, resource: this.reflHiView } ];
       this.bgRefl = d.createBindGroup({ layout: this.lRefl, entries: reflRes });
       for (let pz = 0; pz < 2; pz++) this.bgReflP5[pz] = d.createBindGroup({ layout: this.lReflP5, entries: [ ...reflRes, { binding: 9, resource: this.reflHitView[1 - pz] }, { binding: 10, resource: this.reflHitView[pz] } ] }); }
-    this.bgFGR = [null, null];   // (the resampling gather's groups are built on demand — ensureGiBG — since its reservoirs exist only once it has been asked for)
     for (let pz = 0; pz < 2; pz++) {
       // parity pz: temporal writes indHist[pz] from (raw indirect, indHist[1-pz]); the à-trous chain then reads indHist[pz]
       this.bgTemp[pz] = d.createBindGroup({ layout: this.lTemp, entries: [
         { binding: 0, resource: g.depthView }, { binding: 1, resource: this.indirectView }, { binding: 2, resource: this.indHistView[1 - pz] }, { binding: 3, resource: this.indHistView[pz] },
       ] });
     }
-    // final gather: fgather → indirect (+ spec under FrameFlags.Gloss); temporal → indHist[pz]; à-trous indHist[pz] → gi0 → gi1 → gi0; composite reads gi0. Its groups are per history parity (the
-    // young-history test reads LAST frame's diffuse moments / history — index [parity] at gather time, before this frame's flip) and name the internal-res pair while that path is live: ensureFgBG
-    this.bgFG = [null, null];
+    // final gather: trace + light → indirect (+ spec under FrameFlags.Gloss / glass); temporal → indHist[pz]; à-trous indHist[pz] → gi0 → gi1 → gi0; composite reads gi0 (its group: ensureSplitBG)
     const gb = (src: GPUTextureView, dst: GPUTextureView) => d.createBindGroup({ layout: this.lGiBlur, entries: [ { binding: 0, resource: g.depthView }, { binding: 1, resource: g.normalView }, { binding: 2, resource: src }, { binding: 3, resource: dst } ] });
     for (let pz = 0; pz < 2; pz++) this.bgGiBlur[pz] = [gb(this.indHistView[pz], this.giView[0]), gb(this.giView[0], this.giView[1]), gb(this.giView[1], this.giView[0])];
     // gloss chain (dispatched only under FrameFlags.Gloss, same parity as the indirect): temporal (spec, specHist[1-pz]) → specHist[pz]; one stride-1 à-trous specHist[pz] → spec; composite reads spec
@@ -1496,23 +1420,12 @@ export class LightingPasses implements CutSwappable {
   }
 
   /** Forget every cached bind group (they name texture views): rebuilt lazily on the next encode. Costs microseconds and touches no texture — NOT a history restart. */
-  private dropBindGroups() { this.bgFGX = null; this.bgDirect = this.bgVol = this.bgFxaa = null; this.bgRefl = null; this.bgReflP5 = [null, null]; this.bgFGR = [null, null]; this.bgDen = []; this.bgDenH = []; this.bgTileFlags = this.bgTileDist = null; this.bgDTemp = []; this.bgTemp = [null, null]; this.bgFG = [null, null]; this.bgGiBlur = [[], []]; this.bgCompFG = null; this.bgBloomDown0 = []; this.bgBloomDown = []; this.bgBloomUp = []; this.bgPost = []; this.bgTaau = [null, null]; this.bgTempSpec = [null, null]; this.bgGiBlurSpec = [null, null]; this.bgSharpU = null; this.bgCompS = null; this.bgTaauS = [null, null]; this.bgEdge = null; this.bgGbaa = null; this.den.dropBindGroups(); }
+  private dropBindGroups() { this.bgFGX = null; this.bgDirect = this.bgVol = this.bgFxaa = null; this.bgRefl = null; this.bgReflP5 = [null, null]; this.bgDen = []; this.bgDenH = []; this.bgTileFlags = this.bgTileDist = null; this.bgDTemp = []; this.bgTemp = [null, null]; this.bgGiBlur = [[], []]; this.bgCompFG = null; this.bgBloomDown0 = []; this.bgBloomDown = []; this.bgBloomUp = []; this.bgPost = []; this.bgTaau = [null, null]; this.bgTempSpec = [null, null]; this.bgGiBlurSpec = [null, null]; this.bgSharpU = null; this.bgCompS = null; this.bgTaauS = [null, null]; this.bgEdge = null; this.bgGbaa = null; this.den.dropBindGroups(); }
   /** The g-buffer's targets or the radiance cache's dice volume were re-created (engine.resize / engine.rebuildRc): the bind groups naming their views must be rebuilt. The screen
    *  histories are untouched — after a cache rebuild the indirect's history simply converges on the refilled cache through its own clip + EMA (render/rc.ts owns what the cache
    *  itself does about a rebuild). This was `invalidate()`, which only ever did this much; the +6 ms 'invalidate' frames were the target re-creation in resize, now pooled. */
   externalViewsChanged() { this.dropBindGroups(); }
 
-  /** the plain gather's group for history parity p (= LAST frame's diffuse temporal outputs: this.parity before this frame's flip): fgather's nine + moments / history at 14 / 15 (the internal-res pair
-   *  while giFullLive, else the gather-grid pair — rebuilt when that flips) + the young counter at 16 */
-  private ensureFgBG(g: GBuffer, rc: RadianceCascades, p: number): GPUBindGroup {
-    const full = this.giFullLive;
-    if (full !== this.bgFGFull) { this.bgFG = [null, null]; this.bgFGFull = full; }
-    if (!this.bgFG[p]) this.bgFG[p] = this.device.createBindGroup({ layout: this.lFG, entries: [
-      { binding: 0, resource: g.depthView }, { binding: 1, resource: g.normalView }, { binding: 2, resource: g.idView }, { binding: 3, resource: this.directView }, { binding: 4, resource: this.softView },
-      { binding: 5, resource: rc.diceView }, { binding: 6, resource: this.indirectView }, { binding: 7, resource: this.specView }, { binding: 8, resource: this.cardsView },
-      { binding: 14, resource: full ? this.giFMomView[p] : this.giMomView[p] }, { binding: 15, resource: full ? this.giFHistView[p] : this.indHistView[p] }, { binding: 16, resource: { buffer: this.youngBuf } } ] });
-    return this.bgFG[p]!;
-  }
   /** THE GATHER: the one group `trace` and `light` share — the gather's nine + the points' buffer, grown here to the gather grid (never shrunk). null = the grid wants a buffer larger
    *  than this adapter binds: said once on the console and to the build's backend (gatherSplit.ts splitRefused, the reporter), and the bounce light is not drawn (the indirect texture keeps what it held) rather than a pipeline run on a short buffer. */
   private ensureSplitBG(g: GBuffer, rc: RadianceCascades): GPUBindGroup | null {
@@ -1533,15 +1446,6 @@ export class LightingPasses implements CutSwappable {
       { binding: 5, resource: rc.diceView }, { binding: 6, resource: this.indirectView }, { binding: 7, resource: this.specView }, { binding: 8, resource: this.cardsView },
       { binding: 17, resource: { buffer: this.gxBuf! } } ] });
     return this.bgFGX;
-  }
-  /** phase 5: the resampling gather's group for reservoir parity p — fgather's nine bindings + set [1−p] read, set [p] written, the g-buffer's motion vectors */
-  private ensureGiBG(g: GBuffer, rc: RadianceCascades, p: number): GPUBindGroup {
-    if (!this.bgFGR[p]) this.bgFGR[p] = this.device.createBindGroup({ layout: this.lFGR, entries: [
-      { binding: 0, resource: g.depthView }, { binding: 1, resource: g.normalView }, { binding: 2, resource: g.idView }, { binding: 3, resource: this.directView }, { binding: 4, resource: this.softView },
-      { binding: 5, resource: rc.diceView }, { binding: 6, resource: this.indirectView }, { binding: 7, resource: this.specView }, { binding: 8, resource: this.cardsView },
-      { binding: 9, resource: this.giResView[1 - p][0] }, { binding: 10, resource: this.giResView[1 - p][1] }, { binding: 11, resource: this.giResView[p][0] }, { binding: 12, resource: this.giResView[p][1] },
-      { binding: 13, resource: g.velView } ] });
-    return this.bgFGR[p]!;
   }
   /** SHARP DIRECT's groups (only while it is on and its textures exist): the U kernel's (output-size depth / normal, their internal view, the internal dS / dU pairs → sharpE) and the 1 : 1 resolve's
    *  per history parity (hdr + the OUTPUT-size depth / motion). The compute composite's is built in ensureCompBG beside the fragment one (both name the decal buffer and the froxel view). */
@@ -1605,7 +1509,7 @@ export class LightingPasses implements CutSwappable {
       this.dnModeLast = this.dnMode;         // depth / geometry keys) rather than let either read the other's numbers for a frame; the v3 core's gather-grid moments / lengths / fast history likewise (stale from its last
       const p = enc.beginComputePass({ label: 'dnSwitch' });   // run otherwise). The indirect / specular VALUE histories share one layout (rgb + view depth): legacy carries them across; v3 restarts at length 0 and re-converges.
       for (const t of [...this.dH.flat(), ...this.dDepthHist, ...this.dnHg, ...this.dnHm, ...this.giMom, ...this.giFast, ...this.specMom]) this.ops.clear(p, t);
-      p.end();   // (the young-history hold for this switch is raised on time by the engine's own denoiser check — engine.ts dnWas — before this frame's giCfg was written)
+      p.end();
     }
     if ((frameFlags & (FrameFlags.Direct | FrameFlags.SoftShadow)) === (FrameFlags.Direct | FrameFlags.SoftShadow) && this.debugView !== 11 && this.debugView !== 12) {
       const useHist = this.directHistory > 0;
@@ -1640,11 +1544,10 @@ export class LightingPasses implements CutSwappable {
     }
     const hx = Math.ceil(this.gw / 8), hy = Math.ceil(this.gh / 8);   // gather-resolution dispatch (1/2, or 1/3 with gatherThird)
     // GI IN MOTION — the internal-res diffuse chain this frame: on its off → on edge its histories start clean (whatever they hold is bounce of some other minute); on the way back the gather-grid
-    // diffuse histories do (they went stale while it ran). The young-texel counter is zeroed each frame the multiplier is up (the gather's first-come cap counts from 0).
+    // diffuse histories do (they went stale while it ran).
     const fullNow = this.giFullLive;
-    if (fullNow !== this.giFullRanLast) { const p = enc.beginComputePass({ label: 'giFullSwitch' }); for (const t of fullNow ? [...this.giFHist, ...this.giFMom, ...this.giFFast] : [...this.indHist, ...this.giMom, ...this.giFast]) this.ops.clear(p, t); p.end(); this.youngHold = 6; }   // (the composites' groups follow the switch by themselves: ensureCompBG keys on the indirect view it bound; the young-history rays stand down while the cleared side reads young everywhere — from the next frame: this one's giCfg is already written, its burst is cap-bounded)
+    if (fullNow !== this.giFullRanLast) { const p = enc.beginComputePass({ label: 'giFullSwitch' }); for (const t of fullNow ? [...this.giFHist, ...this.giFMom, ...this.giFFast] : [...this.indHist, ...this.giMom, ...this.giFast]) this.ops.clear(p, t); p.end(); }   // (the composites' groups follow the switch by themselves: ensureCompBG keys on the indirect view it bound; the young-history rays stand down while the cleared side reads young everywhere — from the next frame: this one's giCfg is already written, its burst is cap-bounded)
     this.giFullRanLast = fullNow;
-    if (this.youngOn) enc.clearBuffer(this.youngBuf);
     {
       const p = enc.beginComputePass({ label: 'gather', timestampWrites: ts('gather') });
       p.setBindGroup(0, sceneBG);
