@@ -601,7 +601,9 @@ fn tainted_fns(root: &Path, files: &[(PathBuf, String, String)], parsed: &[syn::
     }
     loop {
         let tainted: HashSet<(String, String)> = nodes.iter().filter(|n| n.tainted).map(|n| (n.module.clone(), n.name.clone())).collect();
-        let free_names: HashSet<&String> = tainted.iter().filter(|k| !methods.contains(*k) && !k.0.starts_with("sim")).map(|k| &k.1).collect();
+        // (a bare call of a function brought in by a `use`: any of that name. A body may bring in the sim's; the sim only its own)
+        let free_names: HashSet<&String> = tainted.iter().filter(|k| !methods.contains(*k)).map(|k| &k.1).collect();
+        let sim_names: HashSet<&String> = tainted.iter().filter(|k| !methods.contains(*k) && k.0.starts_with("sim")).map(|k| &k.1).collect();
         let method_names: HashSet<&String> = tainted.iter().filter(|k| methods.contains(*k)).map(|k| &k.1).collect();
         let mut grew: Vec<usize> = Vec::new();
         for (i, n) in nodes.iter().enumerate() {
@@ -616,10 +618,11 @@ fn tainted_fns(root: &Path, files: &[(PathBuf, String, String)], parsed: &[syn::
                 Via::Path(segs) => {
                     let q = segs.last().map(|s| s.as_str()).unwrap_or("");
                     // which module the path names: the function's own, one of the sim's, one of the game's
-                    let target: Option<String> = if q == "super" || q == "self" || q == n.module.rsplit("::").next().unwrap_or("") {
-                        Some(n.module.clone())
-                    } else if segs.iter().any(|s| s == "sim") || (in_sim && modules.contains(&format!("sim::{q}"))) {
+                    // (the sim's first: a body of `doors` that writes `sim::doors::update` means the sim's, not its own module's)
+                    let target: Option<String> = if segs.iter().any(|s| s == "sim") || (in_sim && modules.contains(&format!("sim::{q}"))) {
                         Some(if q == "sim" { "sim".to_string() } else { format!("sim::{q}") })
+                    } else if q == "super" || q == "self" || q == n.module.rsplit("::").next().unwrap_or("") {
+                        Some(n.module.clone())
                     } else if in_sim && q == "crate" {
                         Some("sim".to_string())
                     } else if modules.contains(q) {
@@ -638,7 +641,7 @@ fn tainted_fns(root: &Path, files: &[(PathBuf, String, String)], parsed: &[syn::
                 }
                 Via::Bare => {
                     let own = (n.module.clone(), name.clone());
-                    if fn_keys.contains(&own) { tainted.contains(&own) } else { *called && !in_sim && free_names.contains(name) }
+                    if fn_keys.contains(&own) { tainted.contains(&own) } else { *called && if in_sim { sim_names.contains(name) } else { free_names.contains(name) } }
                 }
             });
             if by_macro || by_use {

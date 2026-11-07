@@ -18,6 +18,7 @@
 mod dead;
 mod fields;
 mod fold;
+mod knobdrop;
 mod readers;
 mod rows;
 mod sharp;
@@ -225,6 +226,62 @@ fn strip_marks(s: &str) -> String {
 
 fn lines_of(t: &str) -> usize {
     t.lines().count()
+}
+
+/// What each TypeScript file of the page (src/) spells and reads: (every word of it, every name it reads as a field: `.name` not
+/// then assigned, `['name']`, or `name` before a comma or a closing brace, which a destructuring or a shorthand writes).
+fn page_reads(root: &std::path::Path) -> Vec<(HashSet<String>, HashSet<String>)> {
+    fn walk(d: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {
+        let Ok(rd) = std::fs::read_dir(d) else { return };
+        for e in rd.flatten() {
+            let p = e.path();
+            if p.is_dir() {
+                walk(&p, out);
+            } else if p.extension().map(|x| x == "ts" || x == "tsx").unwrap_or(false) {
+                out.push(p);
+            }
+        }
+    }
+    let mut files = Vec::new();
+    walk(&root.join("src"), &mut files);
+    let mut out = Vec::new();
+    for p in files {
+        let Ok(t) = std::fs::read_to_string(&p) else { continue };
+        let b = t.as_bytes();
+        let (mut words, mut reads) = (HashSet::new(), HashSet::new());
+        let is_w = |c: u8| c.is_ascii_alphanumeric() || c == b'_' || c == b'$';
+        let mut i = 0;
+        while i < b.len() {
+            if is_w(b[i]) && (i == 0 || !is_w(b[i - 1])) {
+                let mut j = i;
+                while j < b.len() && is_w(b[j]) {
+                    j += 1;
+                }
+                let w = &t[i..j];
+                words.insert(w.to_string());
+                // what stands before it, and after it past blanks
+                let before = t[..i].trim_end_matches(' ');
+                let mut k = j;
+                while k < b.len() && (b[k] == b' ' || b[k] == b'\n' || b[k] == b'\t') {
+                    k += 1;
+                }
+                let next = b.get(k).copied().unwrap_or(0);
+                let next2 = b.get(k + 1).copied().unwrap_or(0);
+                let assigned = next == b'=' && next2 != b'=' && next2 != b'>';
+                let dotted = before.ends_with('.');
+                let keyed = (before.ends_with("['") || before.ends_with("[\"")) && (next == b'\'' || next == b'"');
+                let listed = next == b',' || next == b'}';
+                if (dotted && !assigned) || keyed || listed {
+                    reads.insert(w.to_string());
+                }
+                i = j;
+            } else {
+                i += 1;
+            }
+        }
+        out.push((words, reads));
+    }
+    out
 }
 
 /// `fold sharp-prep --scratch DIR` and `fold sharp-apply --diag FILE [--write] [--report FILE]`:
@@ -438,6 +495,42 @@ fn readers_main(cmd: &str, args: &[String]) -> ! {
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if let Some(c) = args.first() {
+        if c == "knobs-drop" {
+            // `fold knobs-drop --file LIST [--write] [--root DIR]`: each `knobs::Type.field` of LIST out of the Rust source (knobdrop.rs),
+            // after `bun run tools/wire/wire.ts drop --file LIST` has taken it off the wire
+            let mut root = PathBuf::from(".");
+            let (mut file, mut write) = (None, false);
+            let mut it = args[1..].iter();
+            while let Some(a) = it.next() {
+                match a.as_str() {
+                    "--root" => root = PathBuf::from(it.next().cloned().unwrap_or_default()),
+                    "--file" => file = it.next().cloned(),
+                    "--write" => write = true,
+                    x => {
+                        eprintln!("fold knobs-drop: no option {x}");
+                        std::process::exit(64);
+                    }
+                }
+            }
+            let Some(f) = file else {
+                eprintln!("fold knobs-drop: --file LIST");
+                std::process::exit(64);
+            };
+            let names: Vec<String> = std::fs::read_to_string(&f).unwrap_or_else(|e| { eprintln!("fold: cannot read {f}: {e}"); std::process::exit(3) }).lines().map(|l| l.trim().to_string()).filter(|l| !l.is_empty()).collect();
+            match knobdrop::drop(&root, &names, write) {
+                Ok((n, places, missing)) => {
+                    println!("fold: {n} of {} fields out of their struct, {places} places cut{}", names.len(), if write { "" } else { " (nothing written: --write)" });
+                    for m in missing.iter().take(12) {
+                        println!("  no struct of the Rust source has {m}");
+                    }
+                    std::process::exit(if missing.is_empty() { 0 } else { 4 });
+                }
+                Err(e) => {
+                    eprintln!("fold: {e}");
+                    std::process::exit(3);
+                }
+            }
+        }
         if c == "sharp-prep" || c == "sharp-apply" || c == "tests-cut" || c == "sharp-mend" {
             sharp_main(c, &args[1..]);
         }
@@ -899,7 +992,20 @@ fn main() {
                 drop.push(name);
             }
         }
+        // a row a page file still names stays: the menus and the debugger read the TypeScript tables. A file under src/ names
+        // the row when it spells the table (`AIM`) and reads the field's name (`.level`, `['level']`, `{ level }`); by name, so it
+        // errs toward staying
+        let page = page_reads(&root);
+        let (drop, s_page): (Vec<String>, Vec<String>) = drop.into_iter().partition(|name| {
+            let mut parts = name.split('.');
+            let (table, leaf) = (parts.next().unwrap_or(""), name.rsplit('.').next().unwrap_or(""));
+            !page.iter().any(|(words, reads)| words.contains(table) && reads.contains(leaf))
+        });
         let _ = writeln!(o, "# The knob tables' dead weight, as the bodies stand\n");
+        if !write && !out.texts.is_empty() {
+            let _ = writeln!(o, "NOT OF THE TREE AS IT IS: the fold has edits it did not write (no --write), and this counts the bodies as the fold would leave them. Fold first.\n");
+            eprintln!("fold: --knobs and --drop count the bodies as the fold would leave them, and the fold was not written: run with --write first");
+        }
         let _ = writeln!(o, "leaves of the tables (a yes-or-no row, a number, a name, a list): {}", leaves.len());
         let _ = writeln!(o, "read by a body: {read}");
         let _ = writeln!(o, "read by no body, but named by a made file beside the bodies (the list of numbers the picture's poses get, a test): {handed}");
@@ -907,8 +1013,9 @@ fn main() {
         let _ = writeln!(o, "READ BY NO BODY: {} ({}%) · whole tables no body reads: {} of {}", dead.len(), dead.len() * 100 / leaves.len().max(1), whole.len(), by_table.len());
         let _ = writeln!(o, "\nThe generated wire reads and writes every leaf, and the page's own code may read a table the Rust game only carries: a leaf here is dead for the RUST game.\n");
         let _ = writeln!(o, "## Whole tables no body reads ({})\n\n{}\n", whole.len(), whole.iter().map(|s| s.as_str()).collect::<Vec<_>>().join(", "));
-        let _ = writeln!(o, "## Settled rows: the drop list ({} of {} in the Rust tables)\n", drop.len(), drop.len() + s_read.len() + s_handed.len() + s_maybe.len() + s_written.len());
+        let _ = writeln!(o, "## Settled rows: the drop list ({} of {} in the Rust tables)\n", drop.len(), drop.len() + s_page.len() + s_read.len() + s_handed.len() + s_maybe.len() + s_written.len());
         let _ = writeln!(o, "No Rust code but the wire reads or writes these: the row can leave the table and the wire.\n\n{}\n", drop.join(", "));
+        let _ = writeln!(o, "### Settled, read by no Rust code, and staying: a page file names it ({})\n\nA file under src/ spells the row's table and reads a field of the row's name.\n\n{}\n", s_page.len(), s_page.join(", "));
         let _ = writeln!(o, "### Settled and staying: a body reads it ({})\n\nA number or a name (it stays a number in its table), or a read left for a hand.\n\n{}\n", s_read.len(), s_read.join(", "));
         let _ = writeln!(o, "### Settled and staying: a body writes it ({})\n\n{}\n", s_written.len(), s_written.join(", "));
         let _ = writeln!(o, "### Settled and staying: a made file beside the bodies names it ({})\n\n{}\n", s_handed.len(), s_handed.join(", "));
@@ -919,7 +1026,26 @@ fn main() {
         }
         let _ = std::fs::write(f, &o);
         if let Some(d) = &drop_to {
-            let _ = std::fs::write(d, drop.join("\n") + "\n");
+            // as the wire's tool names a field: `knobs::Type.field`, the struct the row's field stands in
+            let mut by_name: HashMap<&str, &String> = HashMap::new();
+            for (path, row) in rows.by_path.iter() {
+                by_name.insert(row.name.as_str(), path);
+            }
+            let mut lines: Vec<String> = Vec::new();
+            for name in &drop {
+                let Some(path) = by_name.get(name.as_str()) else { continue };
+                let mut ty = "Knobs".to_string();
+                let mut at: Option<(String, String)> = None;
+                for seg in path.split('.') {
+                    let Some((f, t)) = rows.tree.get(&ty).and_then(|fs| fs.iter().find(|(f, _)| f == seg)) else { at = None; break };
+                    at = Some((ty.clone(), f.clone()));
+                    ty = t.clone();
+                }
+                if let Some((t, f)) = at {
+                    lines.push(format!("knobs::{t}.{f}"));
+                }
+            }
+            let _ = std::fs::write(d, lines.join("\n") + "\n");
         }
         println!("{}", o.lines().skip(2).take(5).collect::<Vec<_>>().join("\n"));
         println!("fold: the tables' dead weight is {f}");

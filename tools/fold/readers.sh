@@ -22,11 +22,12 @@ back() { git checkout -q -- rust/game/src; }
 n=0
 # check the game, then the crates that use it, until nothing is named; $1 = a word for the log
 settle() {
-  for crate in game game_run game_face; do
+  # (the game is checked twice: as the game, and with its unit tests, where a function under #[cfg(test)] or a test's own call shows)
+  for crate in game game+tests game_run game_face; do
     while :; do
       n=$((n + 1))
-      T=; [ $crate = game_face ] && T="--target wasm32-unknown-unknown"
-      ( cd rust/$crate && cargo check $T --message-format=json > "$S/diag-$n.json" 2> "$S/check-$n.log" ) && break
+      T=; [ $crate = game_face ] && T="--target wasm32-unknown-unknown"; [ $crate = game+tests ] && T="--tests"
+      ( cd rust/${crate%+tests} && cargo check $T --message-format=json > "$S/diag-$n.json" 2> "$S/check-$n.log" ) && break
       echo "check $n ($1, $crate): $(grep -c '"level":"error"' "$S/diag-$n.json") errors"
       "$FOLD" readers-restore --state "$S/state.txt" --diag "$S/diag-$n.json"; r=$?
       [ $r = 10 ] && continue
