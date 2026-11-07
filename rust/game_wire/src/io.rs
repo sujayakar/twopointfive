@@ -5415,4 +5415,4 @@ mod measure_test {
     #[test] #[should_panic(expected = "a BoxId from outside the game names row 5, and its table holds 5")]
     fn a_whole_game_is_measured_against_the_tables_it_brought() { let b = [5u32.to_le_bytes(), 1u32.to_le_bytes()].concat(); let mut i = R::tallied(&b); let _: BoxId = Io::r(&mut i); let _: BoxId = Io::r(&mut i); i.refuse_past(&[("BoxId", 5)]); }
 }
-pub const LAYOUT: u32 = 2223287641;
+pub const LAYOUT: u32 = 216067147;
