@@ -30,7 +30,8 @@ const check = (ok, what) => { console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${what}`);
     page.on('request', r => { if (r.url().includes('/assets/menu/')) asked.push(r.url().split('/').pop()); });
     await page.goto(`http://localhost:${PORT}/?paused&quality=${QUALITY}&mute`, { waitUntil: 'domcontentloaded' });
     await page.waitForSelector('#menu .actions button', { timeout: 240000 }); await page.waitForTimeout(700);
-    await page.click('#menu .actions button.primary'); await page.waitForSelector('#missions.one.on'); await page.waitForTimeout(3000);
+    await page.evaluate(() => document.querySelector('#menu .actions button.primary').click()); await page.waitForSelector('#missions.one.on');   // (from inside the page: a pointer click waits on frames this adapter does not give)
+    await page.waitForTimeout(3000);
     return { ctx, page, asked };
   };
   const shot = async (page, n) => { if (OUT) await page.screenshot({ path: path.join(OUT, `menu-art-${n}.png`), timeout: 240000 }); };
