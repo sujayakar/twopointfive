@@ -121,7 +121,7 @@ pub extern "C" fn face_state_name(i: usize) { out(game::state_words::STATE_NAMES
 thread_local! { static STATE_BUF: RefCell<(game::io::W, Vec<u32>)> = RefCell::new((game::io::W::new(), Vec::new())); }
 #[no_mangle]
 pub extern "C" fn face_state_words(h: u32) {
-    let b = STATE_BUF.with(|c| { let mut c = c.borrow_mut(); let (o, w) = &mut *c; with(h, |x| game::state_words::state_words(&x.g, o, w)); let mut b = Vec::with_capacity(w.len() * 4); for v in w.iter() { b.extend_from_slice(&v.to_le_bytes()); } b });
+    let b = STATE_BUF.with(|c| { let mut c = c.borrow_mut(); let (o, w) = &mut *c; with(h, |x| game::state_words::state_words(&mut x.g, o, w)); let mut b = Vec::with_capacity(w.len() * 4); for v in w.iter() { b.extend_from_slice(&v.to_le_bytes()); } b });
     out(b);
 }
 /// THE GENERATION OF THE BRIDGE this module was built with (io::LAYOUT, and `layout` in schema.json): a host refuses a module of another generation.
