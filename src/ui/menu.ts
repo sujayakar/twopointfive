@@ -1,18 +1,13 @@
 // The title screen, the pause card and the debrief: one panel (#menu) in three modes.
-// TITLE (mode 'start' while the one starting page is the way in — ui/startpage.ts): the wordmark and the main menu down the left of the screen — PLAY (the
+// TITLE (mode 'start'; the one starting page is the way in — ui/startpage.ts): the wordmark and the main menu down the left of the screen — PLAY (the
 // starting page: every mission, its team and kit, deploy), OPTIONS, CONTROLS (ui/options.ts) — with the floor, and the attract reel, showing through on the
-// right. Up from the first tick as the BOOT card (the same screen with a progress line while the shaders compile). Under ?cards / the headless harness the
-// start mode is the older card (Missions · Start, the short list, the notes, the controls list, the sandbox row), unchanged.
+// right. Up from the first tick as the BOOT card (the same screen with a progress line while the shaders compile).
 // PAUSE (Esc): the run's name and Resume / checkpoint / Restart / Options / Run so far / Quit down a narrow card; 'Run so far' opens the debrief of the run as
 // it stands beside the menu (ui/debrief.ts). DEBRIEF: the mission's card proper — up on mission complete (Again / Keep playing) and, a beat after Sam drops, as
 // the down card (Restart): the rating word and score, the numbers, the badges, the floor map with his path and the pins, the timeline. While any of them is
 // open main.ts freezes the simulation and keeps rendering the frozen frame underneath. Plain DOM, styled in index.html (#menu…) with ui/theme.ts's tokens.
-import { saveSandbox } from '../game/sandbox';
 import { SAVETIMELINE, type SlotInfo } from '../game/savestate';
-import { HANDRING } from '../game/handring';
-import { TWOGEARS, CROUCHRUN } from '../game/player';
-import { gearText } from '../game/gear';   // (the controls list names the kit: shown in the kit's words as issued)
-export { loadSandbox, saveSandbox, SANDBOX_LS } from '../game/sandbox';
+export { loadSandbox } from '../game/sandbox';
 import { Engine } from '../engine';
 import { Game } from '../game/game';
 import { renderDebrief } from './debrief';
@@ -20,131 +15,42 @@ import { Quality } from './quality';
 import { AudioEngine } from '../audio/audio';
 import { Overlay } from './overlay';
 import { MISSIONS, closeMissions, missionsBusy, missionsReopenAsked } from './missions';
-import { picksBlock, nextPickOf, picksNoteFocus } from './picks';
+import { nextPickOf } from './picks';
 import { nextLessonOf } from './verdictNext';
 import { pickEntry } from '../scene/picks';
 import { quitSearch } from '../scene/scenarioList';
 import { openList, openStartPage, startPageWanted, startPageFromQuery } from './startpage';
 import { menuTheme } from './theme';
 import { tabNow } from './tabkey';
-import { SLOTSETUP } from '../game/slotsetup';
-import { AUTOCAM } from '../host/autocam';
-import { CMDRING } from '../game/cmdring';
-import { keyText, keysOf, slotNow, camKey, typedInto } from '../host/keymap';   // (the player's own keys: the list names them as they are bound)
-import { openOptions, closeOptions, optionsOpen, setOptionsDeps, refreshOptions, wallWay } from './options';
+import { keyText, typedInto } from '../host/keymap';
+import { openOptions, closeOptions, optionsOpen, setOptionsDeps, refreshOptions } from './options';
 import { cloudNote } from './cloudnote';
 import { COOP } from '../net/lobby';
 import { coopRows } from './coop';
 
-const E_ROW: [string, string] = ['E', 'holster or draw the selected item (on a wall, pick what you\'ll draw next)'];
-/** …while empty hands are a slot (game/handslot.ts): '0' is its row's cap in the build, shown in the key column as the key it is on (backtick) */
-const SLOT_ROW: [string, string] = ['0', 'empty your hands · press a number to draw again'];
-/** the action key's row, and it and the whistle's while his own actions are a ring that stays (game/handring.ts) */
-const SPACE_ROW: [string, string] = ['Space', 'do the highlighted action (top-left) · hold it and use the wheel or ↑↓ to pick another, then let go · long actions keep going until you move or tap again'];
-const RING_ROW: [string, string] = ['Space', 'do the action shown top-left · hold it a moment for a ring of everything you can do here, including the whistle (pick with 1 to 5 or a click) · long actions keep going until you move or tap again'];
-const LN_ROW: [string, string] = ['L · N', 'weapon light · night vision'];
-const N_ROW: [string, string] = ['N', 'night vision'];
-/** the camera's row, and it while its key is the Space bar (host/keymap.ts camKey): that cap is written as it is — in a list of keys 'Space' is the action's
- *  row, wherever that is (`keyCol`) */
-const CAM_ROW: [string, string] = ['Ctrl + mouse / wheel', 'orbit the camera / zoom (or pinch)'];
-const CAM_SPACE: [string, string] = ['Space + mouse / wheel', CAM_ROW[1]];
-/** …and the auto camera's (host/autocam.ts, AUTOCAM.on): the camera's key tapped twice */
-const CAM_AUTO = (cap: string): [string, string] => [`${cap} twice`, 'the camera frames things for you · turn the view yourself to take it back'];
-const keyCol = (k: string) => k === CAM_SPACE[0] || k === CAM_AUTO('Space')[0] ? k : keyText(k, true);
-const Q_ROW: [string, string] = ['Q', 'put your back to the wall beside you, then slide and peek around its end · press Q or Shift, or step away, to let go'];
-const KIT_ROW: [string, string] = ['1 2 3 4 5', 'Five-seveN · FN2000 (press 2 again to switch its launcher, RING / 40 mm) · smoke · stun · frag'];
-const ZR_ROW: [string, string] = ['Z · R', 'FN2000 semi / auto · reload'];
-const LNV_ROW: [string, string] = ['L · N · V', 'weapon light · night vision · whistle (the nearest guard will come to look)'];
-/** the same three rows with the gun's setup on (game/slotsetup.ts): a gun's key again is its setup, and the selector and the light are rows of it (a key
- *  the player gave either one back keeps its old row) */
-const KIT_SET: [string, string] = ['1 2 3 4 5', 'Five-seveN · FN2000 · smoke · stun · frag · press a gun\'s key again for its setup (key 1 semi / auto · key 2 its launcher · key 3 its light)'];
-const R_ROW: [string, string] = ['R', 'reload'];
-const NV_ROW: [string, string] = ['N · V', 'night vision · whistle (the nearest guard will come to look)'];
-const MOVE_ROW: [string, string] = ['W A S D', 'move · Shift sprint · C crouch · wheel = walking pace (slower is quieter)'];
-/** …with two gears (game/player.ts TWOGEARS): the wheel is nobody's pace and the crouch is the sneak */
-const MOVE_GEARS: [string, string] = ['W A S D', 'move · Shift sprint · C crouch (slower and quiet)'];
-/** …and both while Shift in a crouch is a fast crouch walk (game/player.ts CROUCHRUN): what Shift does crouched, and that it's heard */
-const MOVE_ROW_RUN: [string, string] = ['W A S D', "move · Shift sprint · C crouch, and Shift while you're crouched to hurry (it's louder) · wheel = walking pace (slower is quieter)"];
-const MOVE_GEARS_RUN: [string, string] = ['W A S D', "move · Shift sprint · C crouch (slower and quiet), and Shift while you're crouched to hurry (it's louder)"];
-const TEAM_KEYS = 'X · B · T · F';
-export const CONTROLS: [string, string][] = [   // (the options screen draws its own grouped copy, ui/options.ts KEYS: a key that changes is changed in both) ONE short line per key (playtest 08-09: 'the start page is WAY too wordy')
-  MOVE_ROW,
-  ['Mouse', 'aim, and the ring snaps to an enemy near the cursor or a light under it'],
-  ['LMB', 'fire what\'s in your hand · throw a canister · take an enemy down silently from behind with empty hands'],
-  ['RMB', 'with the pistol, OCP the light under the ring · with the FN2000, fire its launcher (hold to see the arc first)'],
-  SPACE_ROW,
-  E_ROW,
-  Q_ROW,
-  KIT_ROW,
-  ZR_ROW,
-  LNV_ROW,
-  [TEAM_KEYS, 'with a team — X (or middle click) for orders · B for the usual order · T for who gets it · F to start the drill, say go or blow a charge'],
-  ['H · G', 'with the orders up — the big tool on a door, smoke on the floor · frag and clear'],
-  ['F5', 'save'],
-  ['Enter', 'go back to the last checkpoint when you\'re down · press Shift+Enter to restart any time'],
-  CAM_ROW,
-  ['Esc · `', 'pause & settings · the debugger (every knob)'],
-];
-/** the list as the board is (ui/options.ts wallWay): the wall hold's row with no key is the row of walking into one; with no key and no walk-in, no row */
-const WALL_ROW: [string, string] = ['Wall', 'walk into one to put your back to it, then slide and peek around its end · step away or press Shift to let go'];
-/** the move row as the game is: with two gears, and while Shift in a crouch is a fast crouch walk (game/player.ts CROUCHRUN) saying so */
-export function moveRowNow(): [string, string] { return TWOGEARS.on ? CROUCHRUN.on ? MOVE_GEARS_RUN : MOVE_GEARS : CROUCHRUN.on ? MOVE_ROW_RUN : MOVE_ROW; }
-/** the squad's keys on the older card while the command key and the word's are its only keys (game/cmdring.ts `only`; the codes are written, the list names the keys) */
-const TEAM_ONLY: [string, string] = ['B · F', "with a team, tap B for the usual order or hold it to open the wheel, and press F to send in everyone who's waiting"];
-const controlRows = (): [string, string][] => CONTROLS.flatMap(r => {
-  if (CMDRING.only && r[0] === TEAM_KEYS) return [TEAM_ONLY]; if (CMDRING.only && r[0] === 'H · G') return [];   // (game/cmdring.ts only: the squad's keys are the command key and the word's)
-  if (r === MOVE_ROW) return [moveRowNow()];
-  if (HANDRING.on && r === SPACE_ROW) return [RING_ROW]; if (r === CAM_ROW) return AUTOCAM.on ? [camKey() ? CAM_SPACE : r, CAM_AUTO(camKey() ? 'Space' : 'Ctrl')] : [camKey() ? CAM_SPACE : r];
-  if (SLOTSETUP.on && r === KIT_ROW) return [KIT_SET]; if (SLOTSETUP.on && r === ZR_ROW && !keysOf('KeyZ').length) return [R_ROW];
-  if (r === LNV_ROW) { const l = !(SLOTSETUP.on && !keysOf('KeyL').length), v = !(HANDRING.on && !keysOf('KeyV').length); return [l && v ? r : l ? LN_ROW : v ? NV_ROW : N_ROW]; }   // (the light is a row of the gun's setup, the whistle a wedge of his ring: a key given back to either keeps its place here)
-  if (r === E_ROW) return slotNow() ? (keysOf('KeyE').length ? [SLOT_ROW, r] : [SLOT_ROW]) : [r]; if (r !== Q_ROW) return [r]; const w = wallWay(); return w === 'key' ? [r] : w === 'walk' ? [WALL_ROW] : []; });
-
-const TAGLINE = 'a ray-traced stealth sandbox where every light, shadow and wisp of smoke is live';
 /** the title screen's line under the wordmark */
 const TITLE_LINE = 'Squad tactics and stealth. Every light, shadow and wisp of smoke is live.';
 const TITLE_FOOT = 'W S choose · Enter select · Esc back · ` the debugger';
-const START_NOTES = [
-  'MISSIONS lists every scenario and the solo night. START drops you straight into the solo night. Reach the server room, pull the drive from the marked rack and leave through the fire exit.'];
-/** the note under the buttons when the card opens on the short list (ui/picks.ts): the rows above are the way in, the two buttons are everything else */
 /** the card's one button to the one starting page (ui/startpage.ts) */
 const PLAY = 'Play ›';
-const PICKS_NOTES = ['MISSIONS has every mission, and you pick your own team, hour and weather. START puts you in the office at night, alone.'];
 
-/** THE BOOT CARD: the start card's own layout — title, the three buttons DISABLED, the notes and the controls — up from the first tick of main.ts while the GPU process compiles
- *  the renderer's kernels in the background (engine.ts init), with a one-line status ('compiling shaders 40 / 97 …') main.ts rewrites as they resolve. Menu.open('start')
- *  re-renders the real card over it the moment everything is ready (the buttons come alive in place); `off()` clears it for boots that open no card (?solo, a scenario).
- *  MISSIONS is live from the first tick: the list (ui/missions.ts) is its own layer and a pick is a page load, so it needs nothing of this page's renderer. */
+/** THE BOOT CARD: the title screen, up from the first tick of main.ts while the GPU process compiles the renderer's kernels in the background (engine.ts init), with a
+ *  one-line status ('compiling shaders 40 / 97 …') main.ts rewrites as they resolve. Menu.open('start') renders the live title over it the moment everything is ready; `off()`
+ *  clears it for boots that open no card (?solo, a scenario). An address that names a mission with no load brief has nothing to choose: the head and the status line, no buttons. */
 export function bootCard(): { status(text: string): void; off(): void } {
   menuTheme();
   const root = document.getElementById('menu')!;
   root.innerHTML = '';
   const card = el('div', 'card'); root.appendChild(card);
-  const one = startPageWanted();   // THE ONE STARTING PAGE (ui/startpage.ts) is this build's way in: this is the TITLE SCREEN, PLAY its one button to that page
+  const one = startPageWanted();   // (the address names nothing to play: PLAY, its one button to the starting page — ui/startpage.ts)
   const status = el('div', 'note bootstatus'), words = el('span'), fill = el('i'); words.textContent = 'starting the GPU…';
   { const bar = el('i', 'bbar'); bar.appendChild(fill); status.appendChild(words); status.appendChild(bar); }
-  if (one) {
-    root.classList.add('title'); root.classList.remove('paused');
-    card.appendChild(titleHead());
-    { const ta = titleActions(); card.appendChild(ta.actions); setTimeout(() => { if (!missionsBusy() && !optionsOpen() && (document.activeElement ?? document.body) === document.body) ta.play.focus(); }, 0); }   // (PLAY, OPTIONS and CONTROLS are live from the first tick: a deploy is a page load, and the controls need nothing of the renderer; Play has the focus from that tick too, as on the live title, so Enter is Play while the kernels still compile)
-    card.appendChild(el('div', 'tfill'));
-    card.appendChild(status);
-    const foot = el('div', 'foot'); foot.textContent = keyText(TITLE_FOOT); card.appendChild(foot);
-  } else {
-    root.classList.remove('title'); root.classList.remove('paused');
-    const head = el('div', 'head'); head.innerHTML = `<div class="t1">two<b>point</b>six</div><div class="t2">${TAGLINE}</div>`; card.appendChild(head);
-    const picks = picksBlock(); if (picks) { card.appendChild(status); card.appendChild(picks.root); }   // THE SHORT LIST (ui/picks.ts): live from the first tick like MISSIONS — a pick is a page load too (the status line over the rows: they fill the card, and the line that says why Start is still grey has to be on screen)
-    const actions = el('div', 'actions');
-    actions.appendChild(button('Missions', () => { openList(); }, picks ? '' : 'primary'));
-    { const b = button('Start', () => { /* not yet */ }) as HTMLButtonElement; b.disabled = true; actions.appendChild(b); }
-    card.appendChild(actions);
-    if (!picks) card.appendChild(status);
-    for (const t of picks ? PICKS_NOTES : START_NOTES) { const n = el('div', 'note'); n.textContent = t; card.appendChild(n); }
-    const body = el('div', 'body'); card.appendChild(body);
-    const list = el('div', 'controls');
-    for (const [k, v] of controlRows()) { if (k === 'F5' && !SAVETIMELINE.on) continue; const row = el('div', 'row'); const kk = el('div', 'k'); kk.textContent = keyCol(k); const vv = el('div', 'v'); vv.textContent = keyText(gearText(v)); row.append(kk, vv); list.appendChild(row); }
-    body.appendChild(list);
-    const foot = el('div', 'foot'); foot.textContent = keyText('Esc pauses · ` opens the debugger (every knob)'); card.appendChild(foot);
-  }
+  root.classList.add('title'); root.classList.remove('paused');
+  card.appendChild(titleHead());
+  if (one) { const ta = titleActions(); card.appendChild(ta.actions); setTimeout(() => { if (!missionsBusy() && !optionsOpen() && (document.activeElement ?? document.body) === document.body) ta.play.focus(); }, 0); }   // (PLAY, OPTIONS and CONTROLS are live from the first tick: a deploy is a page load, and the controls need nothing of the renderer; Play has the focus from that tick too, as on the live title, so Enter is Play)
+  card.appendChild(el('div', 'tfill'));
+  card.appendChild(status);
+  if (one) { const foot = el('div', 'foot'); foot.textContent = keyText(TITLE_FOOT); card.appendChild(foot); }
   root.classList.add('on');
   // A FRESH VISIT OPENS ON THE TITLE. The starting page is up by itself only where the address or the last page asked for it: `?loadout=<id>` names a mission,
   // or a mission was quit by a page load ('Quit to scenarios' lands on the missions, not the title). Never under ?paused (the automation boot: scripts drive
@@ -242,8 +148,8 @@ export class Menu {
   /** main.ts hands the scenario hooks over once the scenario is started (after this card is constructed) */
   setScenario(s: MenuDeps['scenario']) { this.d.scenario = s; }
   get isOpen() { return this.mode !== 'closed'; }
-  /** the start mode is the TITLE SCREEN (the one starting page is the way in), not the older card */
-  private get titled() { return this.mode === 'start' && startPageWanted(); }
+  /** the start mode is the TITLE SCREEN (the one starting page is the way in) */
+  private get titled() { return this.mode === 'start'; }
   /** Auto's calibration has just settled (main.ts wires Quality.onCalibrated): the options screen's live line follows, if it is the one up */
   refreshQualityNote() { refreshOptions(); }
 
@@ -263,39 +169,24 @@ export class Menu {
   toggle() { if (this.titled) return; if (this.isOpen) this.close(); else this.open('pause'); }   // (Esc: on the title screen there is nothing to back out of — the solo night is a row of the starting page)
 
   private render() {
-    picksNoteFocus();   // (ui/picks.ts: a short-list row the keys had walked to on the card this one replaces keeps the focus)
     const r = this.root; r.innerHTML = '';
     const titled = this.titled, pause = this.mode === 'pause';
     if (titled) r.classList.add('title'); else r.classList.remove('title');
     if (pause) r.classList.add('paused'); else r.classList.remove('paused');
     const card = el('div', 'card'); r.appendChild(card);
     if (this.mode === 'debrief') { card.classList.add('wide'); this.debrief(card); return; }
-    if (titled) { this.title(card); return; }
     if (pause) { this.pause(card); return; }
-    // ---- the older start card (?cards, the headless harness): Missions · Start, the short list, the notes, the sandbox row, the controls
-    const head = el('div', 'head');
-    head.innerHTML = `<div class="t1">two<b>point</b>six</div><div class="t2">${TAGLINE}</div>`;
-    card.appendChild(head);
-    const picks = picksBlock(); if (picks) card.appendChild(picks.root);   // THE SHORT LIST (ui/picks.ts): what the start card opens on — the missions worth playing first, in order, a click each; null under ?nopicks and on a page that is booting a mission
-    const actions = el('div', 'actions');
-    const missions = button('Missions', () => { openList(); }, picks ? '' : 'primary');   // the level select (ui/missions.ts): every scenario and the solo night; a pick is a page load
-    const primary = picks?.focus ?? missions;   // (the rows never take the focus by themselves: only the one the keys had already walked to)
-    actions.appendChild(missions);
-    actions.appendChild(button('Start', () => this.close()));
-    card.appendChild(actions);
-    this.refused(card);
-    for (const t of picks ? PICKS_NOTES : START_NOTES) { const n = el('div', 'note'); n.textContent = t; card.appendChild(n); }
-    this.sandboxRow(card);   // (no loadout choice: the FN2000 is always in the kit — playtest 08-09)
-    this.body = el('div', 'body'); card.appendChild(this.body);
-    this.controls();
-    const foot = el('div', 'foot'); foot.textContent = keyText('Esc pauses · ` opens the debugger (every knob)'); card.appendChild(foot);
-    setTimeout(() => { if (!missionsBusy() && !optionsOpen()) primary.focus(); }, 0);   // (the mission list opened off the boot card is still up over this card: the focus stays its own)
+    this.title(card);
   }
 
   /** THE TITLE SCREEN: the wordmark, PLAY · OPTIONS · CONTROLS, and — only when one is on — the cheats, named, a click from where they are switched */
   private title(card: HTMLElement) {
     const g = this.d.game, cheats = () => [g.godMode ? 'god mode' : '', !g.aiEnabled ? 'enemies don\'t think' : '', g.infiniteAmmo ? 'unlimited ammo' : ''].filter(Boolean).join(' · ');
-    const was = cheats(), again = () => { if (this.mode === 'start' && cheats() !== was) this.render(); };   // (the chip follows what Options ▸ Game did)
+    // A MISSION REFUSED FOR 'NO AI' IS TRIED AGAIN when Options closes with that cheat off (off a tape of play, 10-13: the kept switch refused a rescue at boot, he
+    // switched it off and was on a floor with no mission while the card still said 'did not start'): its own link is loaded again, as Deploy would — a start is a
+    // page load, and the switch has just been kept. Any other refusal stays said.
+    const stuck = !g.aiEnabled && !!this.d.scenario?.refused?.();
+    const was = cheats(), again = () => { if (stuck && g.aiEnabled && typeof location !== 'undefined') { location.reload(); return; } if (this.mode === 'start' && cheats() !== was) this.render(); };   // (the chip follows what Options ▸ Game did)
     card.appendChild(titleHead());
     this.refused(card);
     titleAgain = again; titleShownAt = typeof performance !== 'undefined' ? performance.now() : 0;
@@ -417,27 +308,6 @@ export class Menu {
   /** a save's picture came after its tile was laid (main.ts takes it a frame or a few after the save, host/savepic.ts): the tile on the card, if one is up, takes it — nothing is laid again */
   pictureCame(info: { key: string; savedAt: number }, url: string) {
     for (const t of this.root.querySelectorAll<HTMLElement>('.saves .tile')) if (t.dataset.save === `${info.key}@${info.savedAt}`) t.style.backgroundImage = `url("${url}")`;
-  }
-
-  private controls() {
-    const list = el('div', 'controls');
-    for (const [k, v] of controlRows()) { if (k === 'F5' && !SAVETIMELINE.on) continue; const row = el('div', 'row'); const kk = el('div', 'k'); kk.textContent = keyCol(k); const vv = el('div', 'v'); vv.textContent = keyText(gearText(v)); row.append(kk, vv); list.appendChild(row); }
-    this.body.appendChild(list);
-  }
-
-  /** the START card's sandbox row (the maintainer's ask, 08-12): god mode · guards don't think · unlimited ammo (magazines, canisters, rings) — set before the first frame,
-   *  kept per machine (`SANDBOX_LS`), the same three flags the pause card's Settings ▸ Game and the debugger's Sandbox page flip */
-  private sandboxRow(card: HTMLElement) {
-    const game = this.d.game; const row = el('div', 'sandbox');
-    // A MISSION REFUSED FOR 'NO AI' IS TRIED AGAIN the moment the box is unticked (off a tape of play, 10-13: the kept switch refused a rescue at boot, he
-    // unticked it here and pressed Start, and was on a floor with no mission while the card still said 'did not start'): its own link is loaded again, as
-    // Deploy would — a start is a page load, and the switch has just been kept. Any other refusal stays said.
-    const stuck = !game.aiEnabled && !!this.d.scenario?.refused?.();
-    const box = (label: string, key: 'god' | 'noAi' | 'ammo', get: () => boolean, set: (v: boolean) => void, title: string) => { const l = el('label') as HTMLLabelElement; l.title = title; const i = el('input') as HTMLInputElement; i.type = 'checkbox'; i.checked = get(); i.onchange = () => { set(i.checked); saveSandbox(game, key); if (key === 'noAi' && stuck && game.aiEnabled && typeof location !== 'undefined') location.reload(); }; l.appendChild(i); l.appendChild(document.createTextNode(' ' + label)); row.appendChild(l); };
-    box('god mode', 'god', () => game.godMode, v => { game.godMode = v; }, 'enemies still see you and shoot you, but hits don\'t hurt');
-    box('no AI', 'noAi', () => !game.aiEnabled, v => { game.aiEnabled = !v; }, 'the guards stay where they are, and nobody sees, hears or thinks');
-    box('unlimited ammo', 'ammo', () => game.infiniteAmmo, v => { game.infiniteAmmo = v; }, gearText('bottomless magazines (rounds still cycle and reload), smoke and stun canisters, ring airfoils, wall charges'));
-    card.appendChild(row);
   }
 }
 
