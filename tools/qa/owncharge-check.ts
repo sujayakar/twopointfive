@@ -1,6 +1,7 @@
 // THE PLAYER CARRIES AND SETS CHARGES LIKE THE SQUAD (src/game/owncharge.ts — the card's rows in kit.ts, a door charge by hand in doortools.ts), headless:
 //   bun run tools/qa/owncharge-check.ts [kit|door|squad|save]      (probes.ts owncharge; OWNCHARGE_BREAK=1 = no pouch is given up before the first door charge: `kit` must fail.
-//   The rule is settled, so no line asks the switch off and nothing here writes it; until 2026-11-07 the break word was the switch left off)
+//   The rule is settled, so no line asks the switch off and nothing here writes it; until 2026-11-07 the break word was the switch left off, `door`
+//   read a locked door's rows with the switch off beside them, and `save` closed on a file made with it off)
 // The maintainer, 10-12: "weird that i can't use wall charges or door charges myself, should be symmetric" · "we should just remove the max one wall charge
 // per squad limitation. maybe we can say that it takes up two slots".
 //   kit     your card has a 'Door charges' and a 'Wall charges' row, at the teammates' own pouch prices (one, two) and their own two a
@@ -21,7 +22,6 @@
 import { standUp, ROOT } from './headless.ts';
 import { rig } from './doortools-probes.ts';
 
-const { OWNCHARGE } = await import(`${ROOT}/src/game/owncharge.ts`);
 const K = await import(`${ROOT}/src/game/kit.ts`);
 /** the kit's one big slot, where the build has one (undefined before it: every card is a row a thing) */
 const BIG: { on: boolean } | undefined = (K as any).BIGSLOT;
@@ -42,8 +42,8 @@ const dist = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const isOpen = (d: any) => !d.latched && Math.abs(d.angle) >= 0.6;
 /** the kit table, its rules and the switch as they stood, put back after `fn` (the store the table writes to is left on nothing) */
 async function kept<T>(fn: () => Promise<T> | T): Promise<T> {
-  const cards = K.KIT.members.map((m: any) => ({ ...m })), on = K.KIT.on, slots = K.SLOTS.on, own = OWNCHARGE.on, big = BIG?.on, solo = { ...K.KIT_SOLO }, rnd = Math.random;
-  try { return await fn(); } finally { K.kitLoad(null, ''); if (BIG) BIG.on = !!big; for (let i = 0; i < cards.length; i++) K.KIT.members[i] = cards[i]; K.KIT.on = on; K.SLOTS.on = slots; OWNCHARGE.on = own; Object.assign(K.KIT_SOLO, solo); Math.random = rnd; }
+  const cards = K.KIT.members.map((m: any) => ({ ...m })), on = K.KIT.on, slots = K.SLOTS.on, big = BIG?.on, solo = { ...K.KIT_SOLO }, rnd = Math.random;
+  try { return await fn(); } finally { K.kitLoad(null, ''); if (BIG) BIG.on = !!big; for (let i = 0; i < cards.length; i++) K.KIT.members[i] = cards[i]; K.KIT.on = on; K.SLOTS.on = slots; Object.assign(K.KIT_SOLO, solo); Math.random = rnd; }
 }
 /** YOUR CARD FOR A NIGHT ALONE, AS THE BUILD STAGES IT. Where a stealth mission wears a card of its own (kit.ts KITDEAL.stealth, on in the page: the night
  *  alone is one) the charges go on THAT card, the way the loadout screen would have them there: as issued its pouches are full of the mission's kit, so what
@@ -145,9 +145,9 @@ export async function ownchargeDoor(): Promise<boolean> {
     d.latched = false; d.angle = (d.swing || 1) * 1.2; R.step(2);
     F.verdict(D.set.length === 0 && D.charges === 2 && R.said.some((t: string) => /came open, so the charge came off/.test(t)), 'the door comes open under it: the charge is off the door and back in the count', `set ${D.set.length} · count ${D.charges} · said: ${R.said.slice(-1)[0]}`);
     // F, on another door (a locked one: the row is one more row there)
-    const m = R.door('manager'); shut(m); g.player.crouch = true; OWNCHARGE.on = false; const ms: 1 | -1 = standAt(R, m, 1).some((r: any) => r.verb === 'pick') ? 1 : -1; const lockRows0 = standAt(R, m, ms).map((r: any) => r.verb); const lockRows = standAt(R, m, ms).map((r: any) => r.verb); g.player.crouch = false;
-    F.verdict(m.locked && lockRows0.includes('pick') && lockRows0.length === 3 && lockRows.includes('charge') && lockRows0.every((v: string) => lockRows.includes(v)) && lockRows.length === lockRows0.length + 1,
-      'on a locked door the charge is ONE MORE row: every row the lock had is still there', `switch off: ${lockRows0.join(' ')} · on: ${lockRows.join(' ')}`);
+    const m = R.door('manager'); shut(m); g.player.crouch = true; const ms: 1 | -1 = standAt(R, m, 1).some((r: any) => r.verb === 'pick') ? 1 : -1; const lockRows = standAt(R, m, ms).map((r: any) => r.verb); g.player.crouch = false;
+    F.verdict(m.locked && lockRows.includes('pick') && lockRows.includes('charge') && lockRows.length === 4,
+      'on a locked door the charge is ONE MORE row: the lock\'s three rows, the pick among them, and the charge', `rows: ${lockRows.join(' ')}`);
     const secs2 = setByHand(R, m, ms); g.teleportPlayer(doorPt(m, m.def.width / 2 + 2.6, 1.0, ms)); R.step(8); const blown0 = D.stats.blown, bangs0 = R.bangs.length;
     R.press('KeyF'); R.step(2);
     F.verdict(secs2 > 0 && D.stats.blown === blown0 + 1 && D.set.length === 0 && R.bangs.length === bangs0 + 1 && (m.off || (!m.latched && m.lockBroken)) && D.charges === 1,
@@ -243,8 +243,6 @@ export async function ownchargeSave(): Promise<boolean> {
       'a load puts the count back AND the charge on its door, where F blows it; a file from before the counts were saved gets the staging\'s (your card\'s)', `first file: ${J(l1)}, then F: ${J(l1b)} · second: ${J(l2)} · a file without the counts: ${l3}`);
     await hushed(() => SAVE.loadState(g, s1)); R.step(3); await hushed(() => g.restartEncounter()); R.step(5);
     F.verdict(D.charges === 2 && D.set.length === 0 && D.samSpent === 0, 'a restart after that load: your card\'s two, nothing set', `count ${D.charges} · set ${D.set.length} · spent ${D.samSpent}`);
-    OWNCHARGE.on = false; const s0 = SAVE.saveState(g, { kind: 'harness', force: true });
-    F.verdict(!('own' in s0.player), 'with the switch off the file has no such counts', `player slice keys: ${Object.keys(s0.player).filter(k => /own|wand/.test(k)).join(' ') || '(neither)'}`);
   });
   return F.done();
 }
