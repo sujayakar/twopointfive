@@ -48,15 +48,15 @@ export type KeepRole = 'shell' | 'kept' | 'beside' | 'leave' | 'plain';
  *  a shell of this build above (for a page: the window above; for a picture: any window above), `stale` = the window above is a shell of another build,
  *  `own` = a page that keeps its own page (the benchmark and its scenes), `picture` = a second game shown INSIDE a page of the game (the Team & kit
  *  picture), `driven` = a script drives or steps the page, `proven` = a browser where a frame is known to draw with its parent's device (false = not
- *  known), `onefile` = the one-file page.
+ *  known).
  *    shell = build the frame · kept = take the shell's device, on the page's seat · beside = take it on the picture's seat, beside the page that shows
  *    this window · leave = send the tab to this address, to load whole · plain = a page as it always was
  *  A picture never sends the tab anywhere and is never a shell: it draws with the shell's device where its page does, and with one of its own otherwise. */
-export function keepRole(f: { word: string | null; tab: string | null; top: boolean; keeper: boolean; stale?: boolean; own: boolean; picture?: boolean; driven: boolean; onefile: boolean; proven?: boolean }): KeepRole {
+export function keepRole(f: { word: string | null; tab: string | null; top: boolean; keeper: boolean; stale?: boolean; own: boolean; picture?: boolean; driven: boolean; proven?: boolean }): KeepRole {
   const off = f.word === '0' || (f.word === null && f.tab === '0');
   if (f.picture) return f.keeper && !off ? 'beside' : 'plain';
   if (f.keeper || f.stale) return off || f.own || f.stale ? 'leave' : 'kept';
-  if (!f.top || off || f.own || f.onefile) return 'plain';
+  if (!f.top || off || f.own) return 'plain';
   return (f.driven || f.proven === false) && f.word !== '1' ? 'plain' : 'shell';
 }
 
