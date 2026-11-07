@@ -296,6 +296,7 @@ pub fn fog_of_war_lit_block(g: &mut crate::game::Game) {
     g.fog_of_war.frame.lights_u = lights_u;
     g.fog_of_war.frame.light_count = n;
     g.fog_of_war.lit_stats.lights = n;
+    g.fog_of_war.lamp_pick.clear();   // (made again every frame, by the distance from the man this machine shows: nothing of it is the game's)
 }
 
 /// Is the floor at (x, z) in the lit part of the picture: some eye has it.   (fogofwar.ts FogOfWar.spotSeen)

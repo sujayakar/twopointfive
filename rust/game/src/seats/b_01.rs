@@ -65,6 +65,19 @@ pub fn with_seat<R>(g: &mut crate::game::Game, seat: SeatId, f: &mut dyn FnMut(&
     r
 }
 
+/// WHICH SEAT THIS MACHINE SHOWS, from now on: a host's own fact, told after a start and whenever it changes. The rows of a game are numbered the same on every
+/// machine (a start stands with the first seat), and this only says whose set stands on Game between ticks, for the page to read. It changes nothing of the play:
+/// a tick stands the first seat's set whichever seat is shown (`on_first_bare`).
+pub fn show_seat(g: &mut crate::game::Game, seat: SeatId) {
+    assert!(g.seats.contains(&seat), "a host asks to show a seat this game has not got: {:?}", seat);
+    g.local_seat = Some(seat);
+    if g.seat == seat { return; }
+    let from = g.seat;
+    let mut theirs = match g.tab.cmd_seat[seat].own.take() { Some(o) => o, None => panic!("show_seat: that seat keeps no set") };
+    swap_set(g, &mut theirs);
+    g.tab.cmd_seat[from].own = Some(theirs);
+}
+
 /// THE BARE GAME FOR THE LENGTH OF A TICK: the first seat's set on Game and no view open (seats.ts seatsStand: inside a tick the Game's own fields of a
 /// seat's name answer the FIRST seat's). Where another seat stood on Game (a host that shows the second player), the sets are changed over and back.
 pub fn on_first_bare<R>(g: &mut crate::game::Game, f: &mut dyn FnMut(&mut crate::game::Game) -> R) -> R {

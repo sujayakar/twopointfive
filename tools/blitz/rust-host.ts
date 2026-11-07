@@ -222,9 +222,13 @@ export class RustHost {
   private live(): boolean { return !!this.h && !this.startDue; }
   surfaceDispatching(): boolean { return false; }
   inHook(): boolean { return this.dispatching; }
-  surfaceCall(row: number, bytes: Uint8Array, view = -1): Uint8Array { const X = this.F.X; if (WHO) { const n = (this.whoN.get(row) ?? 0) + 1; this.whoN.set(row, n); if (n === 50) this.count(`who calls row ${row}: ${String(new Error().stack ?? '').split('\n').slice(2).map(l => l.match(/((?:src|tools)\/[\w./-]+\.ts:\d+)/)?.[1]).filter(x => !!x && !/rust-host|surface\.ts/.test(x!)).slice(0, 6).join(' < ')}`); } this.scanFlush(); this.busy++; this.N.cross++; let t0 = now(); try { if (this.lastCmds) { const hb: Uint8Array = this.B.hostHalf(this.g, this.B.reg, this.lastCmds); this.F.hand(hb, (p, n) => X.face_host_half(this.h, p, n)); this.viewLive(); this.N.crossHalfMs += now() - t0; t0 = now(); }   /* (NO TICK YET, a start made before play — `startNow`, a save: the half is a record a seat, and there is none; the start has just carried every camera and Input row) */   /* (a rule that crosses reads the cursor and the cameras: they come with the host's half, and the tool has moved them since the tick) */ this.F.hand(bytes, (p, n) => X.face_call(this.h, row, view, p, n)); const out = this.F.outView().slice(); this.N.crossCallMs += now() - t0; t0 = now(); if (reads().has(row) && !OFF.has('reads')) { this.N.crossReads++; this.lastChanged = false; return out; } this.applyStep(); this.dispatch(); this.N.crossApplyMs += now() - t0; if (this.lastChanged) this.N.crossChanged++; return out; } finally { this.busy--; if (this.lastChanged || OFF.has('skipwalk')) this.scanRebase(); } }   /* (a crossing whose apply changed nothing and sent no event left the puppet as the walk last saw it: no second walk. `RH_OFF=skipwalk` walks as before.) */
+  /** which seat this host shows is its own fact: the Rust game hears it before an apply and before the host's half of a tick */
+  private told = -1;
+  private tellShown(): void { const g = this.g; if (!this.h || !(g?.seats?.length > 1)) return; const k = this.B.shownSeat(g); if (k === this.told) return; const was = this.told; this.told = k; this.F.X.face_show_seat(this.h, k);
+    if (was >= 0 && !this.inApply) { this.applyStep(); this.scanRebase(); } }   // (the puppet's accessors answer another seat now: it takes that seat's values, and what it then holds is no tool's write)
+  surfaceCall(row: number, bytes: Uint8Array, view = -1): Uint8Array { const X = this.F.X; if (WHO) { const n = (this.whoN.get(row) ?? 0) + 1; this.whoN.set(row, n); if (n === 50) this.count(`who calls row ${row}: ${String(new Error().stack ?? '').split('\n').slice(2).map(l => l.match(/((?:src|tools)\/[\w./-]+\.ts:\d+)/)?.[1]).filter(x => !!x && !/rust-host|surface\.ts/.test(x!)).slice(0, 6).join(' < ')}`); } this.scanFlush(); this.busy++; this.N.cross++; let t0 = now(); try { if (this.lastCmds) { this.tellShown(); const hb: Uint8Array = this.B.hostHalf(this.g, this.B.reg, this.lastCmds); this.F.hand(hb, (p, n) => X.face_host_half(this.h, p, n)); this.viewLive(); this.N.crossHalfMs += now() - t0; t0 = now(); }   /* (NO TICK YET, a start made before play — `startNow`, a save: the half is a record a seat, and there is none; the start has just carried every camera and Input row) */   /* (a rule that crosses reads the cursor and the cameras: they come with the host's half, and the tool has moved them since the tick) */ this.F.hand(bytes, (p, n) => X.face_call(this.h, row, view, p, n)); const out = this.F.outView().slice(); this.N.crossCallMs += now() - t0; t0 = now(); if (reads().has(row) && !OFF.has('reads')) { this.N.crossReads++; this.lastChanged = false; return out; } this.applyStep(); this.dispatch(); this.N.crossApplyMs += now() - t0; if (this.lastChanged) this.N.crossChanged++; return out; } finally { this.busy--; if (this.lastChanged || OFF.has('skipwalk')) this.scanRebase(); } }   /* (a crossing whose apply changed nothing and sent no event left the puppet as the walk last saw it: no second walk. `RH_OFF=skipwalk` walks as before.) */
   /** what the tool wrote since the walk last looked goes to the Rust game */
-  private scanFlush(): void { if (this.audit || !this.h) return; { const t = now(); this.tapsOn?.sweep(); this.N.tapsMs += now() - t; const t1 = now(); this.blockBack(); this.N.blockBackMs += now() - t1; } if (this.o.scan === false || process.env.TPS_GAME_SCAN === '0') return; const t = now(); if (!this.scan) { this.scan = this.B.makeScan(this.g, this.B.reg, (b: Uint8Array) => { this.F.hand(b, (p, n) => this.F.X.face_write(this.h, p, n)); }, (q: string) => { if (q !== 'game::Game.cmd_buf') this.poked++; this.count(`scan: ${q}`); }, false, { traps: !OFF.has('traps'), audit: SCAN_AUDIT }); this.scan.rebase(this.auditGap); } else this.scan.flush(this.auditGap); { const e = now() - t; this.T.scan += e; this.N.flush++; this.N.flushMs += e; }
+  private scanFlush(): void { if (this.audit || !this.h) return; this.tellShown(); { const t = now(); this.tapsOn?.sweep(); this.N.tapsMs += now() - t; const t1 = now(); this.blockBack(); this.N.blockBackMs += now() - t1; } if (this.o.scan === false || process.env.TPS_GAME_SCAN === '0') return; const t = now(); if (!this.scan) { this.scan = this.B.makeScan(this.g, this.B.reg, (b: Uint8Array) => { this.F.hand(b, (p, n) => this.F.X.face_write(this.h, p, n)); }, (q: string) => { if (q !== 'game::Game.cmd_buf') this.poked++; this.count(`scan: ${q}`); }, false, { traps: !OFF.has('traps'), audit: SCAN_AUDIT }); this.scan.rebase(this.auditGap); } else this.scan.flush(this.auditGap); { const e = now() - t; this.T.scan += e; this.N.flush++; this.N.flushMs += e; }
     if (this.poked) { this.poked = 0; if (!OFF.has('pokesync') && !this.inApply) { this.pokeSyncs++; this.applyStep(); if (this.lastChanged) this.scanRebase(); } } }
   /** STAND-IN (belongs with the scan: a write by name of a field that lives in the block): WHAT THE TOOL WROTE INTO rust/sim's BLOCK. A door's swing and latch, a man's place and the die live in the block (the puppet's objects read and
    *  write its copy of it: `d.vel = 2`, `d.latched = false`), and no walk of the schema's fields meets them. After every apply the puppet's copy IS the
@@ -298,10 +302,10 @@ export class RustHost {
     this.make(state, block);
     if (!X.face_back(this.h, k)) throw new Error('rust-host: the game kept as its slot was given up is gone');
     X.face_kept_drop(k); this.seated(); this.resteps++; if (this.rec) this.rec.resteps = this.resteps;
-    this.applyWhole('its Rust game stands again in a slot'); X.face_puppet(this.h, 1); this.refs(); this.T.start += now() - t;
+    this.applyWhole('its Rust game stands again in a slot'); this.tellShown(); X.face_puppet(this.h, 1); this.refs(); this.T.start += now() - t;
     this.count('a game that had given its slot up was stepped again: it stands again from its own kept bytes'); }
   /** a handle from a start's bytes; where every slot is taken, the game stepped longest ago gives its slot up */
-  private make(state: Uint8Array, block: Uint8Array): void { const X = this.F.X, mk = () => this.F.hand(state, (p, n) => this.F.hand(block, (bp, bn) => X.face_new(p, n, bp, bn)));
+  private make(state: Uint8Array, block: Uint8Array): void { this.told = -1; const X = this.F.X, mk = () => this.F.hand(state, (p, n) => this.F.hand(block, (bp, bn) => X.face_new(p, n, bp, bn)));
     this.h = mk(); if (!this.h && reap()) this.h = mk();   // (a game nothing holds gives its slot back before one still held is asked to)
     while (!this.h) { let old: RustHost | null = null; for (const c of CELLS) { const o = c.h ? c.who.deref() : undefined; if (o && o !== this && (!old || o.stamp < old.stamp)) old = o; } if (!old) break; old.giveUp(); this.h = mk(); }
     if (!this.h) throw new Error('face_new: no free slot'); }
@@ -344,7 +348,7 @@ export class RustHost {
     // handed over first (a whole apply between two ticks does that, for a flooded room: here it would lay the abandoned future's camera over the saved
     // moment's, which is what parted the scripted player's first round after a load on a squad mission). `snapTake` hands them in before the keep.
     // (What may go on differing in the host's half afterwards is the lens's serial, the bridge's own count of the camera's `desired` arrays. No rule reads it.)
-    this.hostNow = OFF.has('backcam'); try { this.applyWhole(why); } finally { this.hostNow = true; } X.face_puppet(this.h, 1); this.refs(); this.scanRebase(); this.shelfSig = ''; this.backs++; if (this.rec) this.rec.backs = this.backs; }
+    this.told = -1; this.hostNow = OFF.has('backcam'); try { this.applyWhole(why); } finally { this.hostNow = true; } this.tellShown(); X.face_puppet(this.h, 1); this.refs(); this.scanRebase(); this.shelfSig = ''; this.backs++; if (this.rec) this.rec.backs = this.backs; }
   /** A SAVE (savestate.ts writeMem, through SNAPS.take). The controller has just written the chronicle's row on the puppet; the row is made on the Rust
    *  side first (`face_checkpoint`), so the kept game holds it. No state is walked in TypeScript and nothing is applied whole. */
   /** THE START MADE NOW, by whoever stood the game, where its first tick must cost a tick: a networked game's machine (tools/mp/stand.ts `begin`),
@@ -490,7 +494,7 @@ export class RustHost {
     // THE MEMO OF THE FILTERED EXPORT is filled by a start's export. Its bytes are not applied: the puppet IS that state (the Rust game was made from it).
     // The every-tick path is then run over every row a few times, so that the first ticks do not pay for its compiling: `face_puppet_warm` sends each
     // row as if it had changed, and applying a row that holds what the puppet holds changes nothing.
-    X.face_puppet(this.h, 1);
+    this.tellShown(); X.face_puppet(this.h, 1);
     const warm = this.o.warm ?? 4; if (X.face_puppet_warm) for (let i = 0; i < warm; i++) { X.face_puppet_warm(this.h); const R = B.applyGame(g, this.F.outView(), B.reg, { hooks: B.hooks, puppet: { ...this.pup, start: false } }); this.after(R); }
     this.visApplied = g.player?.visibility; this.hoverApplied = g.hover; this.refs();
     this.memPages = this.F.mem.buffer.byteLength; this.T.start += now() - t;
@@ -517,7 +521,7 @@ export class RustHost {
   /** THE FILTERED APPLY: the listed fields of what changed since the last one, and the step's out events */
   applyStep(): void {
     const g = this.g, X = this.F.X, B = this.B, t0 = now(), made0 = MADE.n; let t = t0; this.mBefore = g.mission;
-    X.face_puppet(this.h, 0); const blob = this.F.outView(); this.stepBytes += blob.length; this.T.exportStep += now() - t;
+    this.tellShown(); X.face_puppet(this.h, 0); const blob = this.F.outView(); this.stepBytes += blob.length; this.T.exportStep += now() - t;
     t = now(); const R = B.applyGame(g, blob, B.reg, { hooks: B.hooks, puppet: { ...this.pup, start: false } }); const el = now() - t; this.T.applyStep += el; if (el > this.worstApply) this.worstApply = el; this.missionRef = g.mission;   // (a mission the Rust game wrote is no start of a new game: only one a tool wrote behind it is)
     this.lastChanged = R.changed !== false || !!R.out?.length; if (R.out?.length) for (const e of R.out) this.outQ.push(e);
     this.after(R); this.copyBlock(); this.steps++; this.nest += now() - t0;
@@ -566,7 +570,7 @@ export class RustHost {
     return blob; }
   /** BETWEEN TWO TICKS: the host's rows (each seat's record, the cameras, the Input) as they stand on the puppet NOW go to the Rust game, as a tick's opening hands them */
   private hostNow = true;
-  private handHalf(): void { if (this.inStep || !this.lastCmds || !this.h) return; const hb: Uint8Array = this.B.hostHalf(this.g, this.B.reg, this.lastCmds); this.F.hand(hb, (p, n) => this.F.X.face_host_half(this.h, p, n)); this.viewLive(); }
+  private handHalf(): void { if (this.inStep || !this.lastCmds || !this.h) return; this.tellShown(); const hb: Uint8Array = this.B.hostHalf(this.g, this.B.reg, this.lastCmds); this.F.hand(hb, (p, n) => this.F.X.face_host_half(this.h, p, n)); this.viewLive(); }
   /** after a call that changed the Rust game between two ticks: the puppet takes the state again */
   private reapply(why: string): void { if (this.audit) { this.applyStep(); this.lastState = this.applyWhole(why); } else this.applyStep(); this.scanRebase(); }
 
@@ -736,7 +740,7 @@ export class RustHost {
     if (this.keeps()) this.shelfIn();
     this.o.beforeHost?.(this, cmds);
     // THE HOST'S HALF: each seat's record, every camera and Input row, in the bridge's own small buffer (export.ts hostHalf, io::take_host_half)
-    t = now(); const hb: Uint8Array = B.hostHalf(g, B.reg, cmds); this.hostBytes = hb.length; this.F.hand(hb, (p, n) => X.face_host_half(this.h, p, n)); this.viewLive();   /* (the view's matrix is the host camera's as the host left it: game_run::view_live) */ this.T.hostHalf += now() - t;
+    t = now(); this.tellShown(); const hb: Uint8Array = B.hostHalf(g, B.reg, cmds); this.hostBytes = hb.length; this.F.hand(hb, (p, n) => X.face_host_half(this.h, p, n)); this.viewLive();   /* (the view's matrix is the host camera's as the host left it: game_run::view_live) */ this.T.hostHalf += now() - t;
     const hw = TICKS_DIR ? halfWord(B, g, cmds) : null;
     // THE STEP'S OWN WARM-UP (`warmSteps`, off by default): a second game made from the same start, stepped with this tick's record and let go before
     // the game's own first step. MEASURED TO BUY NOTHING: the first tick is the worst of a play (about 20 ms on a quiet machine) with three such steps
