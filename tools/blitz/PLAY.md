@@ -104,6 +104,11 @@ QA_PERTURB=<seed> [QA_PERTURB_RATE=K] [QA_PERTURB_ONLY=a,b] [QA_PERTURB_SKIP=a,b
 - **The whole states** are kept every 1,800 ticks and the latest pair both sides have is diffed by path. Two kinds of path are noise there and are
   named in the results: rows the TypeScript's book keeps for the player of before the mission's own fresh deal (`kit.issued_player`, `kit.you_bare`:
   they number two more guns, so every gun after them compares crosswise), and nothing else known.
+- **`--alarm TICK`** (`QA_PERTURB_ALARM`): the response team is called at that tick the way `tools/qa/qrf-squad-check.ts` calls it (`tune.qrfSquad` on,
+  four men fourteen seconds out, the alarm's place on one of the team, `requestQrf(g, 'panel')`) and the alarm's place is put on one of the team again
+  every twenty seconds. WHY: in TypeScript the response team's cast runs its door tools with a VIEW of the game (src/game/squadcast.ts), which is
+  another key than the game for every table keyed by the game object, so it keeps rows of its own in some twenty of them; the Rust game holds one row
+  on Game for each. Only a floor with both casts at doors can show whether a tick reads the difference.
 - **`FUZZ_CAP`** (900 s): a side cut short is reported as "one side stopped" and the ticks both played are still compared.
 
 ## Two ways
