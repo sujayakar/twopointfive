@@ -13,7 +13,7 @@
 //      mode's mission and the tactics mission leave the list "for now"; their rows, levels and checks stay)
 //   6. off (?offlist=0): the lists are the whole table again
 //   7. no row of the short list (scene/picks.ts PICKS) starts a cut row: a card would offer what the list has dropped
-//   (2026-11-07, his "Keep my 13": sixteen more rows leave the list, so the list draws four tutorial missions, nine others and the solo night)
+//   (2026-11-07, his "Keep my 13": sixteen more rows leave the list, so the list draws four tutorial missions, nine others, the office as two rows, and the solo night: 15 rows)
 //   OFFLIST_BREAK=1  the switch is left off where the lines above want it on: the check must FAIL (exit 1) — the proof that it can
 // exit 0 = all hold · 1 = one does not
 import { ROOT } from './headless.ts';
