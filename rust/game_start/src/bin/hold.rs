@@ -18,8 +18,10 @@
 //!   order ID WHERE all|red|blue         the menu's own call: an order's id ("move", "stack", "fallIn") on what stands at WHERE
 //!   fire WHERE                          Sam's rifle comes up, the cursor goes to WHERE, one round
 //!   frag WHERE | flash WHERE            a live can lands at WHERE
-//! WHERE is `nearest` (the nearest man standing who is not of Sam's squad, as that frame finds him), `sam`, or `X,Z`.
-//! A line that cannot be done (nobody is left, the menu refuses the order) is counted and the run goes on.
+//! WHERE is `nearest` (the nearest man standing who is not of Sam's squad, as that frame finds him), `door` (the door nearest that
+//! man: the way to him), `sam`, or `X,Z`.
+//! A line that cannot be done (nobody is left, the menu refuses the order) is counted and the run goes on; a line that was NEVER done on
+//! a floor is named in that run's line with the game's own reason, so a hand is not trusted there for what it only names.
 //!
 //! ONE PART IS LEFT OUT FOR NOW: the box mirror's own record (`g.col.mirror`), because it keeps addresses of rust/sim's tables as numbers,
 //! which are another in every native process: with it in, a build is not the same as itself. What it mirrors is compared as rust/sim's
@@ -37,18 +39,19 @@ const DEFAULT_LEVELS: [&str; 24] = ["barracks:clear", "block:clear", "block-squa
 const MAGIC: &[u8; 8] = b"hold 1\n\0";
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-enum Place { Nearest, Sam, At(f64, f64) }
+enum Place { Nearest, Door, Sam, At(f64, f64) }
 #[derive(Clone, Debug)]
 enum What { Order(String, Place, game::orders::Who), Fire(Place), Can(game::game::ThrowKind, Place), KeyDown(&'static str), KeyUp(&'static str), Point(Place), Press, Release }
-struct Hand { unhurt: bool, at: Vec<(usize, What)> }
+/// `at`: (the frame, what is done, which line of the file it is of); `lines`: the file's lines that do something, as written
+struct Hand { unhurt: bool, at: Vec<(usize, What, usize)>, lines: Vec<String> }
 
 fn hands_dir() -> std::path::PathBuf { std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("hands") }
 
 /// a hand's file read for a run of `frames` frames: every line as the frames it happens on, in the file's order within a frame
 fn read_hand(text: &str, frames: usize) -> Hand {
-    let mut h = Hand { unhurt: false, at: Vec::new() };
+    let mut h = Hand { unhurt: false, at: Vec::new(), lines: Vec::new() };
     let place = |w: &str| -> Place {
-        match w { "nearest" => Place::Nearest, "sam" => Place::Sam, xz => { let mut p = xz.split(',').map(|v| v.parse::<f64>().unwrap_or_else(|_| panic!("a place is nearest, sam or X,Z: '{}'", xz))); Place::At(p.next().unwrap(), p.next().expect("X,Z")) } }
+        match w { "nearest" => Place::Nearest, "door" => Place::Door, "sam" => Place::Sam, xz => { let mut p = xz.split(',').map(|v| v.parse::<f64>().unwrap_or_else(|_| panic!("a place is nearest, door, sam or X,Z: '{}'", xz))); Place::At(p.next().unwrap(), p.next().expect("X,Z")) } }
     };
     for (n, line) in text.lines().enumerate() {
         let line = line.split('#').next().unwrap().trim();
@@ -69,12 +72,14 @@ fn read_hand(text: &str, frames: usize) -> Hand {
             ["flash", at] => What::Can(game::game::ThrowKind::Flash, place(at)),
             _ => bad(),
         };
+        h.lines.push(rest.join(" "));
+        let of = h.lines.len() - 1;
         let mut f = first;
         while f < frames {
             match &what {
                 // (the rifle comes up over 0.8 s, the cursor rests 0.3 s on the place, the trigger is down two frames)
-                What::Fire(p) => for (d, x) in [(0, What::KeyDown("Digit2")), (6, What::KeyUp("Digit2")), (48, What::Point(*p)), (66, What::Press), (68, What::Release)] { h.at.push((f + d, x)); },
-                x => h.at.push((f, x.clone())),
+                What::Fire(p) => for (d, x) in [(0, What::KeyDown("Digit2")), (6, What::KeyUp("Digit2")), (48, What::Point(*p)), (66, What::Press), (68, What::Release)] { h.at.push((f + d, x, of)); },
+                x => h.at.push((f, x.clone(), of)),
             }
             if step == 0 { break; }
             f += step;
@@ -92,23 +97,34 @@ fn others(p: &Play) -> Vec<game::ids::GuardId> {
     v
 }
 fn place_of(p: &Play, at: Place) -> Option<[f64; 2]> {
-    match at { Place::Sam => Some(p.sam_at()), Place::At(x, z) => Some([x, z]), Place::Nearest => others(p).first().map(|&m| p.at(m)) }
+    match at {
+        Place::Sam => Some(p.sam_at()),
+        Place::At(x, z) => Some([x, z]),
+        Place::Nearest => others(p).first().map(|&m| p.at(m)),
+        Place::Door => {
+            let him = others(p).first().map(|&m| p.at(m))?;
+            let mut doors: Vec<[f64; 2]> = p.g.doors.list.iter().map(|&d| { let c = p.g.dr[d].frame_centre; [c[0], c[2]] }).collect();
+            doors.sort_by(|a, b| dist(*a, him).partial_cmp(&dist(*b, him)).unwrap());
+            doors.first().copied()
+        }
+    }
 }
 
-/// one line of a hand done to the game; false if it could not be
-fn act(p: &mut Play, what: &What) -> bool {
+/// one line of a hand done to the game; Err says why it could not be (the game's own refusal of an order, or nobody to do it to)
+fn act(p: &mut Play, what: &What) -> Result<(), String> {
+    let nobody = || String::from("nobody is left");
     match what {
         What::Order(id, at, who) => {
-            let Some(at) = place_of(p, *at) else { return false };
+            let at = place_of(p, *at).ok_or_else(nobody)?;
             let t = game::orders::squad_orders_target_at(&mut p.g, [at[0], 0.0, at[1]]);
-            game::orders::squad_orders_give(&mut p.g, id, Some(&t), Some(who.clone()), None).is_none()
+            match game::orders::squad_orders_give(&mut p.g, id, Some(&t), Some(who.clone()), None) { Some(why) => Err(why), None => Ok(()) }
         }
-        What::Can(kind, at) => { let Some(at) = place_of(p, *at) else { return false }; game::game::game_drop_throwable(&mut p.g, *kind, [at[0], 0.0, at[1]]); true }
-        What::KeyDown(k) => { p.key_down(k); true }
-        What::KeyUp(k) => { p.key_up(k); true }
-        What::Point(at) => { let Some(at) = place_of(p, *at) else { return false }; p.point_at(at); true }
-        What::Press => { p.press(Button::Left); true }
-        What::Release => { p.release(Button::Left); true }
+        What::Can(kind, at) => { let at = place_of(p, *at).ok_or_else(nobody)?; game::game::game_drop_throwable(&mut p.g, *kind, [at[0], 0.0, at[1]]); Ok(()) }
+        What::KeyDown(k) => { p.key_down(k); Ok(()) }
+        What::KeyUp(k) => { p.key_up(k); Ok(()) }
+        What::Point(at) => { let at = place_of(p, *at).ok_or_else(nobody)?; p.point_at(at); Ok(()) }
+        What::Press => { p.press(Button::Left); Ok(()) }
+        What::Release => { p.release(Button::Left); Ok(()) }
         What::Fire(_) => unreachable!("read_hand writes a shot out as its keys"),
     }
 }
@@ -141,8 +157,10 @@ fn one(dir: &str, r: &Run, check: bool) -> Result<String, String> {
     p.g.god_mode = hand.unhurt;
     let (mut w, mut words, mut row) = (game::io::W::new(), Vec::new(), vec![0u8; 8 + n]);
     let (mut next, mut done, mut undone) = (0usize, 0usize, 0usize);
+    let mut did = vec![0usize; hand.lines.len()];
+    let mut why_not = vec![String::new(); hand.lines.len()];
     for k in 0..frames {
-        while next < hand.at.len() && hand.at[next].0 <= k { if act(&mut p, &hand.at[next].1) { done += 1; } else { undone += 1; } next += 1; }
+        while next < hand.at.len() && hand.at[next].0 <= k { match act(&mut p, &hand.at[next].1) { Ok(()) => { done += 1; did[hand.at[next].2] += 1; } Err(why) => { undone += 1; why_not[hand.at[next].2] = why; } } next += 1; }
         p.frame();
         w.b.clear();
         // (TEMPORARY, see the head: the box mirror's own record is taken out while the words are made, and rust/sim's block is hashed below)
@@ -168,7 +186,10 @@ fn one(dir: &str, r: &Run, check: bool) -> Result<String, String> {
     }
     if let Some(f) = &mut out { f.flush().unwrap(); }
     let up = others(&p).len();
-    Ok(format!("{} frames · {} of the hand's lines done, {} could not be · {} others standing of {} men · {} lines said · {}", frames, done, undone, up, p.g.guards.len(), p.said.len(), game::control::control_tally(&p.g)))
+    // (a line of the hand that was never once done on this floor reached nothing here: said, so that a hand is not trusted for what it only names)
+    let never: Vec<String> = hand.lines.iter().enumerate().filter(|(i, _)| did[*i] == 0).map(|(i, l)| format!("{} ({})", l, why_not[i].trim_end_matches('.'))).collect();
+    let never = if never.is_empty() { String::new() } else { format!(" · NEVER DONE HERE: {}", never.join("; ")) };
+    Ok(format!("{} frames · {} of the hand's lines done, {} could not be{never} · {} others standing of {} men · {} lines said · {}", frames, done, undone, up, p.g.guards.len(), p.said.len(), game::control::control_tally(&p.g)))
 }
 
 fn main() {
