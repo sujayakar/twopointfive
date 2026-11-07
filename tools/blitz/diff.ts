@@ -6,6 +6,11 @@
 // (the root, then every other table's rows in order, then the rows those reach), and a row nothing reaches is not compared. The TypeScript's walk numbers a made box
 // when an export first meets it and the Rust game when it is made; with an export only every so many ticks those numbers differ and mean nothing. A path of such a
 // row reads `g.tab.boxes[c12]`, and an ID's value `BoxId(c12)`.
+// --live: BY REACH FROM THE LIVE GAME. A map or set keyed by a row of a canon table is not walked for reach until its key is reached some other way: the
+// TypeScript keeps such tables weakly, by the object, and still lists a row for a player or a gun of before a restart or a mission's fresh deal for as long
+// as the collector leaves it; numbered through that row, every gun after it compared crosswise. The rows only such a key reaches are numbered LAST (they
+// read `Id(c7~)`), so they can no longer move a live row's number. An entry keyed by one that both sides hold is compared as ever; one that ONLY THE
+// TYPESCRIPT holds is counted by table and not reported (the weak table's row of a dead key); one only the Rust game holds is reported.
 // A Vec of two lengths: `.len` differs, the common rows are compared, the rest is counted as one path `[n..]`. A map / set is compared by key.
 import { readFileSync, writeFileSync } from 'node:fs';
 const { SCHEMA, parse } = await import('./export.ts');
@@ -21,14 +26,22 @@ const KNOWN = opt('--known', `${import.meta.dir}/known.txt`).split(',').flatMap(
   return { re: new RegExp(re), why, n: 0, ok: (a: string, b: string) => (bits < 0 || ((Number(a.split(' ')[0]) ^ Number(b.split(' ')[0])) & ~bits) === 0) && (!ts || ts.test(a)) && (!rs || rs.test(b)) }; });
 // (a field the two sides are KNOWN to hold differently is not walked for reach, or the two numberings would part there: BoxMirror.things_of, a reference the TypeScript's walk writes as a value)
 const NOREACH = new Set(opt('--noreach', 'things_of,lamp_pick,WorkThings.cache,DoortoolsMod.sky').split(','));   // (… the fog's lamps' list, picture-only and not filled by the Rust tick; the work things' memo the test driver's own asks fill)
+const LIVE = argv.includes('--live');
+// STAND-IN (belongs in schema.json's `serial`, as `<field>{}`): tables keyed by an object's identity serial that the schema does not mark so. A gun hold's
+// key is an object (gunhold.ts `P.key`), written as the serial each side deals it: under --live such a table is compared by place, as the marked ones are.
+const KEYED_BY_SERIAL = new Set(opt('--keyed-by-serial', 'gunhold::GunholdMod.knowns,guards::GuardsMod.holds_called').split(','));
+/** --live: the entries of maps and sets keyed by a canon row, met by the reach walk and held back until their key is live */
+type Held = { K: Node; V: Node | null; kp: number; vp: number; done: boolean };
+let HELD: Held[] | null = null;
+if (LIVE) NOREACH.add('WallchargeMod.stand_ins');   // (a declared memo, wallcharge.ts:303: the row a menu asks for in a digit's place, made when the row list is first asked; a tool that asks the menu between two ticks makes rows on the TypeScript's side that no tick made)
 const DEC = new TextDecoder();
 // --dump <regex>: every leaf whose path matches, both sides' values, the same or not (to read a piece of state)
 const DUMP = opt('--dump', '') ? new RegExp(opt('--dump', '')) : null; let dumped = 0; const DUMP_MAX = +opt('--dump-max', '400');
-class Side { dv: DataView; p = 0; serialAt = 0; left = new Map<number, boolean>(); leftN = 0; rows = new Map<string, number[]>(); canon = new Map<string, Map<number, number>>(); order = new Map<string, number[]>(); tableAt = new Map<string, number>(); tableLen = new Map<string, number>();
+class Side { liveN = new Map<string, number>(); dv: DataView; p = 0; serialAt = 0; left = new Map<number, boolean>(); leftN = 0; rows = new Map<string, number[]>(); canon = new Map<string, Map<number, number>>(); order = new Map<string, number[]>(); tableAt = new Map<string, number>(); tableLen = new Map<string, number>();
   constructor(public b: Uint8Array) { this.dv = new DataView(b.buffer, b.byteOffset, b.byteLength); }
   u8() { return this.b[this.p++]; } u16() { const x = this.dv.getUint16(this.p, true); this.p += 2; return x; } u32() { const x = this.dv.getUint32(this.p, true); this.p += 4; return x; }
   hex(n: number) { let s = ''; for (let i = 0; i < n; i++) s += this.b[this.p + i].toString(16).padStart(2, '0'); this.p += n; return s; }
-  cid(id: string, v: number): string { const M = this.canon.get(id); if (!M || v === 0xffffffff) return `${id}(${v})`; const c = M.get(v); return c === undefined ? `${id}(unreached)` : `${id}(c${c})`; } }
+  cid(id: string, v: number): string { const M = this.canon.get(id); if (!M || v === 0xffffffff) return `${id}(${v})`; const c = M.get(v); return c === undefined ? `${id}(unreached)` : `${id}(c${c}${c >= (this.liveN.get(id) ?? Infinity) ? '~' : ''})`; } }
 const T = (path: string) => SCHEMA.types[path];
 /** walk past a value; `onId` hears every ID of a canon table met */
 function skip(n: Node, s: Side, onId: ((id: string, v: number) => void) | null): void {
@@ -40,8 +53,8 @@ function skip(n: Node, s: Side, onId: ((id: string, v: number) => void) | null):
     case 'vec': { const L = s.u32(); const of = n.of; if (!onId || !hasId(of)) { const w = fixed(of); if (w >= 0) { s.p += w * L; return; } } for (let k = 0; k < L; k++) skip(of, s, onId); return; }
     case 'arr': { const w = (!onId || !hasId(n.of)) ? fixed(n.of) : -1; if (w >= 0) { s.p += w * n.n; return; } for (let k = 0; k < n.n; k++) skip(n.of, s, onId); return; }
     case 'tup': for (const x of n.of) skip(x, s, onId); return;
-    case 'map': { const L = s.u32(); for (let k = 0; k < L; k++) { skip(n.K, s, onId); skip(n.V, s, onId); } return; }
-    case 'set': { const L = s.u32(); for (let k = 0; k < L; k++) skip(n.K, s, onId); return; }
+    case 'map': { const L = s.u32(); if (onId && HELD && hasId(n.K)) { for (let k = 0; k < L; k++) { const kp = s.p; skip(n.K, s, null); const vp = s.p; skip(n.V, s, null); HELD.push({ K: n.K, V: n.V, kp, vp, done: false }); } return; } for (let k = 0; k < L; k++) { skip(n.K, s, onId); skip(n.V, s, onId); } return; }
+    case 'set': { const L = s.u32(); if (onId && HELD && hasId(n.K)) { for (let k = 0; k < L; k++) { const kp = s.p; skip(n.K, s, null); HELD.push({ K: n.K, V: null, kp, vp: 0, done: false }); } return; } for (let k = 0; k < L; k++) skip(n.K, s, onId); return; }
     case 'type': { const t = T(n.path);
       if (t.k === 'struct') { const F = fieldsOf(t); for (let i = 0; i < F.length; i++) skip(F[i], s, onId && (NOREACH.has(t.fields[i].rust) || NOREACH.has(`${t.name}.${t.fields[i].rust}`)) ? null : onId); return; }
       if (t.k === 'enum') { s.p += 2; return; }
@@ -76,10 +89,21 @@ function index(s: Side): void {
   for (let n = s.u32(); n > 0; n--) { s.p += 4; const L = s.u32(); s.p += L * 4; }
   if (s.p !== s.b.length) throw new Error(`diff: ${s.b.length - s.p} bytes left over`);
   const onId = (id: string, v: number) => { if (v === 0xffffffff) return; const M = s.canon.get(id)!; if (M.has(v) || leftOut(s, id, v)) return; M.set(v, M.size); s.order.get(id)!.push(v); queue.push([id, v]); };
+  HELD = LIVE ? [] : null;
   s.p = 0; skip(ROOT, s, onId);
   for (const t of SCHEMA.tables) { if (CANON.has(t.id)) continue; const N = parse(t.ty); for (const at of s.rows.get(t.id)!) { s.p = at; skip(N, s, onId); } }
   const ty = new Map<string, Node>(SCHEMA.tables.map((t: any) => [t.id, parse(t.ty)]));
-  for (let i = 0; i < queue.length; i++) { const [id, v] = queue[i]; const at = s.rows.get(id)!; if (v >= at.length) continue; s.p = at[v]; skip(ty.get(id)!, s, onId); }
+  let i = 0; const drain = () => { for (; i < queue.length; i++) { const [id, v] = queue[i]; const at = s.rows.get(id)!; if (v >= at.length) continue; s.p = at[v]; skip(ty.get(id)!, s, onId); } };
+  drain();
+  // (--live: an entry held back is walked once every canon row its key names is reached; the ready ones of a round in the order of their keys' canon
+  //  words, so that the two sides' maps, listed in two orders, number what they reach alike. Round after round until none is made ready.)
+  if (HELD) { const H = HELD; for (;;) { const ready: { e: Held; w: string }[] = [];
+      for (const e of H) { if (e.done) continue; let live = true; s.p = e.kp; skip(e.K, s, (id, v) => { if (v !== 0xffffffff && !s.canon.get(id)!.has(v)) live = false; }); if (!live) continue; s.p = e.kp; ready.push({ e, w: word(e.K, s) }); }
+      if (!ready.length) break; ready.sort((a, b) => a.w < b.w ? -1 : a.w > b.w ? 1 : 0);
+      for (const { e } of ready) { e.done = true; if (e.V) { s.p = e.vp; skip(e.V, s, onId); } } drain(); }
+    // (what is left is keyed by a row nothing but a key reaches: numbered now, after every live row, in the file's order)
+    HELD = null; for (const id of CANON) s.liveN.set(id, s.canon.get(id)!.size);
+    for (const e of H) { if (e.done) continue; s.p = e.kp; skip(e.K, s, onId); if (e.V) { s.p = e.vp; skip(e.V, s, onId); } } drain(); }
 }
 // LEFT OUT (--leave-out skin,look; nothing by default): boxes of a lane one side does not run, to see the rest. A box keyed MKEY.skin is what stands of a holed
 // wall's paint (src/game/wallskin.ts); one keyed MKEY.look is a LOOK piece, drawn and in no collision list (a broken edge's rubble and bars: src/game/edgeLook.ts).
@@ -99,7 +123,7 @@ function leftOut(s: Side, id: string, v: number): boolean {
 // BY RULE (schema.json, as paths.ts): a field in `schema.scratch` is a memo no rule reads back and is not compared; a field in `schema.serial` holds an object's
 // identity serial, which the two sides deal apart by design: its value is not compared (whether it is there still is), and a map or set marked `<field>{}`
 // is keyed by one and is compared by place. How many leaves each rule passed over is said at the end.
-let SER = false, KEYSER = false, serialN = 0, scratchN = 0, nullN = 0, rowN = 0;
+let SER = false, KEYSER = false, serialN = 0, scratchN = 0, nullN = 0, rowN = 0; const STALE = new Map<string, number>();
 let n = 0, unknown = 0; const by = new Map<string, number>(), shown: string[] = [], all: string[] = [];
 const P: string[] = [];
 function rep(mod: string, a: string, b: string, tail = '') { n++; const path = P.join('') + tail; const k = KNOWN.find(k => k.re.test(path) && k.ok(a, b)); if (k) { k.n++; return; } unknown++; by.set(mod, (by.get(mod) ?? 0) + 1); const l = `${mod}\t${path}\t${a}\t${b}`; if (shown.length < SHOW) shown.push(l); if (OUT && all.length < 200000) all.push(l); }
@@ -138,7 +162,11 @@ function cmp(n: Node, A: Side, B: Side, mod: string): void {
     case 'tup': n.of.forEach((x: Node, k: number) => { P.push(`.${k}`); cmp(x, A, B, mod); P.pop(); }); return;
     case 'map': case 'set': { const isMap = n.k === 'map', ks = KEYSER; KEYSER = false;
       const read = (s: Side) => { const L = s.u32(), M = new Map<string, number>(); for (let k = 0; k < L; k++) { let key = word(n.K, s); if (ks) key = `#${k}`; M.set(key, s.p); if (isMap) skip(n.V, s, null); } return { L, M, end: s.p }; };
-      const a = read(A), b = read(B); if (a.L !== b.L) rep(mod, String(a.L), String(b.L), '.len');
+      const a = read(A), b = read(B);
+      // (--live: an entry only the TypeScript holds, keyed by a row that only a key reaches, is the weak table's row of a dead key: counted by table)
+      let dead = 0; if (LIVE) for (const key of a.M.keys()) if (key.includes('~)') && !b.M.has(key)) { a.M.delete(key); dead++; }
+      if (dead) { const q = P.join('').replace(/\[c?\d+~?\]/g, '[]').replace(/\{[^}]*\}/g, '{}'); STALE.set(q, (STALE.get(q) ?? 0) + dead); }
+      if (a.L - dead !== b.L) rep(mod, String(a.L - dead), String(b.L), '.len');
       for (const [key, at] of a.M) { const bt = b.M.get(key); P.push(`{${key}}`); if (bt === undefined) rep(mod, isMap ? '(a row)' : 'in', '(absent)'); else if (isMap) { A.p = at; B.p = bt; cmp(n.V, A, B, mod); } P.pop(); }
       for (const key of b.M.keys()) if (!a.M.has(key)) { P.push(`{${key}}`); rep(mod, '(absent)', isMap ? '(a row)' : 'in'); P.pop(); }
       A.p = a.end; B.p = b.end; return; }
@@ -146,7 +174,7 @@ function cmp(n: Node, A: Side, B: Side, mod: string): void {
       if (t.k === 'struct') { const F = fieldsOf(t); for (let i = 0; i < F.length; i++) { const q = `${t.mod}::${t.name}.${t.fields[i].rust}`;
           if (t.fields[i].echo && t.fields[i].ty === 'Vec<u8>') { skip(F[i], A, null); skip(F[i], B, null); continue; }   // (a blank field: Rust's own bytes, which the TypeScript's walk has none of)
           if (SCHEMA.scratch?.[q]) { const a0 = A.p, b0 = B.p; skip(F[i], A, null); skip(F[i], B, null); if (A.p - a0 !== B.p - b0 || !same(A, a0, B, b0, A.p - a0)) scratchN++; continue; }
-          const s0 = SER, k0 = KEYSER; if (SCHEMA.serial?.[q]) SER = true; KEYSER = !!SCHEMA.serial?.[`${q}{}`];
+          const s0 = SER, k0 = KEYSER; if (SCHEMA.serial?.[q]) SER = true; KEYSER = !!SCHEMA.serial?.[`${q}{}`] || (LIVE && KEYED_BY_SERIAL.has(q));
           P.push(`.${t.fields[i].rust}`); cmp(F[i], A, B, t.mod); P.pop(); SER = s0; KEYSER = k0; } return; }
       if (t.k === 'enum') { const a = A.u16(), b = B.u16(); if (DUMP) { const path = P.join(''); if (DUMP.test(path) && dumped++ < DUMP_MAX) console.log(`  ${a === b ? ' ' : '≠'} ${path}\t${t.words[a]}\t${t.words[b]}`); } if (a !== b) rep(mod, `${t.name}::${t.words[a]}`, `${t.name}::${t.words[b]}`); return; }
       if (t.k === 'data') { const a = t.vars[A.u16()], b = t.vars[B.u16()]; if (a !== b) { rep(mod, a.tag, b.tag, '#'); if (a.ty) skip(parse(a.ty), A, null); if (b.ty) skip(parse(b.ty), B, null); return; } if (a.ty) { P.push(`.${a.tag}`); cmp(parse(a.ty), A, B, mod); P.pop(); } return; }
@@ -160,8 +188,11 @@ const A = new Side(new Uint8Array(readFileSync(argv[0]))), B = new Side(new Uint
 index(A); index(B);
 A.p = 0; B.p = 0; P.push('g'); cmp(ROOT, A, B, 'game'); P.pop();
 for (const t of SCHEMA.tables) { const N = parse(t.ty), mod = t.mod ?? 'game', ra = A.rows.get(t.id)!, rb = B.rows.get(t.id)!;
-  if (CANON.has(t.id)) { const oa = A.order.get(t.id)!, ob = B.order.get(t.id)!; P.push(`g.${t.table}`); if (oa.length !== ob.length) rep(mod, String(oa.length), String(ob.length), '.reached'); P.pop();
-    const c = Math.min(oa.length, ob.length); for (let j = 0; j < c; j++) { if (oa[j] >= ra.length || ob[j] >= rb.length) { P.push(`g.${t.table}[c${j}]`); rep(mod, oa[j] >= ra.length ? '(no row)' : 'a row', ob[j] >= rb.length ? '(no row)' : 'a row'); P.pop(); continue; } A.p = ra[oa[j]]; B.p = rb[ob[j]]; P.push(`g.${t.table}[c${j}]`); cmp(N, A, B, mod); P.pop(); }
+  if (CANON.has(t.id)) { const oa = A.order.get(t.id)!, ob = B.order.get(t.id)!; P.push(`g.${t.table}`);
+    // (--live: the live rows' count is held; of the rows only a key reaches, more on the TypeScript's side are the dead keys' and are counted)
+    if (LIVE) { const la = A.liveN.get(t.id)!, lb = B.liveN.get(t.id)!; if (la !== lb) rep(mod, String(la), String(lb), '.reached'); else if (oa.length > ob.length) STALE.set(`g.${t.table} (rows)`, oa.length - ob.length); else if (oa.length < ob.length) rep(mod, String(oa.length - la), String(ob.length - lb), '.reached_by_a_key_alone'); }
+    else if (oa.length !== ob.length) rep(mod, String(oa.length), String(ob.length), '.reached'); P.pop();
+    const c = Math.min(oa.length, ob.length); for (let j = 0; j < c; j++) { if (oa[j] >= ra.length || ob[j] >= rb.length) { P.push(`g.${t.table}[c${j}]`); rep(mod, oa[j] >= ra.length ? '(no row)' : 'a row', ob[j] >= rb.length ? '(no row)' : 'a row'); P.pop(); continue; } A.p = ra[oa[j]]; B.p = rb[ob[j]]; P.push(`g.${t.table}[c${j}${LIVE && j >= A.liveN.get(t.id)! ? '~' : ''}]`); cmp(N, A, B, mod); P.pop(); }
     continue; }
   P.push(`g.${t.table}`); if (ra.length !== rb.length) rep(mod, String(ra.length), String(rb.length), '.len'); P.pop();
   const c = Math.min(ra.length, rb.length); for (let k = 0; k < c; k++) { A.p = ra[k]; B.p = rb[k]; P.push(`g.${t.table}[${k}]`); cmp(N, A, B, mod); P.pop(); }
@@ -177,6 +208,7 @@ if (argv.includes('--dynboxes')) {
 }
 let bytes = -1; { const i = argv.indexOf('--blocks'); if (i >= 0) { const s = readFileSync(argv[i + 1]), t = readFileSync(argv[i + 2]); bytes = 0; for (let k = 0; k < Math.max(s.length, t.length); k++) if ((s[k] ?? 0) !== (t[k] ?? 0)) bytes++; } }
 console.log(`${n} paths differ, ${n - unknown} known, ${unknown} NOT KNOWN${unknown ? ': ' + [...by].sort((x, y) => y[1] - x[1]).map(([m, c]) => `${m} ${c}`).join(' · ') : ''}${bytes >= 0 ? `; block ${bytes} bytes` : ''}${A.leftN || B.leftN ? `; boxes left out as the picture's ${A.leftN} / ${B.leftN}` : ''}${serialN || scratchN || nullN || rowN ? `; by rule not compared: ${serialN} identity serials that differ, ${scratchN} scratch fields that differ${nullN ? `, ${nullN} null beside undefined` : ''}${rowN ? `, ${rowN} rows of poses of their own` : ''}` : ''}; boxes reached ${A.order.get('BoxId')?.length ?? '-'} / ${B.order.get('BoxId')?.length ?? '-'} of ${A.tableLen.get('BoxId')} / ${B.tableLen.get('BoxId')}; ${(process.memoryUsage().rss / 1e9).toFixed(2)} GB`);
+if (STALE.size) { let a = 0; for (const x of STALE.values()) a += x; console.log(`   by reach from the live game: ${a} entries only the TypeScript holds, keyed by a row that only a key reaches (a weak table's row of a dead key), not reported: ${[...STALE].sort((x, y) => y[1] - x[1]).slice(0, 40).map(([q, c]) => `${q} ${c}`).join(' · ')}`); }
 if (argv.includes('--why')) for (const k of KNOWN) if (k.n) console.log(`   known ${k.n}: ${k.why.slice(0, 150)}`);
 for (const x of shown) console.log('     ' + x.slice(0, 230));
 if (OUT) writeFileSync(OUT, all.join('\n') + '\n');
