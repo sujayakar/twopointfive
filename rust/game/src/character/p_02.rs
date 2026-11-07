@@ -7,16 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// Writes the stalk's polish in the hold's table: up = the page's numbers. Down (`up` false) is the off branch of settled rows: dropped. (character.ts holdPolish)
-pub fn hold_polish(g: &mut crate::game::Game, up: bool) {
-    if !up { return; }
-    let u = crate::knobs::page_hold();
-    let h = &mut g.k.hold;
-    h.way_shape = u.way_shape; h.catch_shape = u.catch_shape; h.hit_shape = u.hit_shape; h.lay_ahead = u.lay_ahead;
-    h.lunge.dip = u.lunge.dip; h.lunge.back = u.lunge.back; h.sway.m = u.sway.m; h.sway.twist = u.sway.twist;
-    h.apart.side = u.apart.side; h.apart.tip = u.apart.tip; h.yank.arch = u.yank.arch;
-}
-
 /// The rate (1/s) Sam's hold layer lets go at once the controller has: slow out of a kill or a choke run to its end while he stands idle. (character.ts holdOutRate)
 pub fn hold_out_rate(g: &mut crate::game::Game, last: crate::character::HoldPose, speed: f64, busy: bool) -> f64 {
     out_rate(last, speed, busy, g.m.character.hold_show, &g.k.hold)
@@ -169,11 +159,6 @@ fn delta_joint(p: [f64; 7], a: [f64; 7], b: [f64; 7], w: f64) -> [f32; 7] {
 /// Smooth 0 to 1 to 0 window: rises over [a,b], falls over [c,d]. (character.ts bump)
 pub fn bump(t: f64, a: f64, b: f64, c_2: f64, d: f64) -> f64 {
     v3::smoothstep(a, b, t) * (1.0 - v3::smoothstep(c_2, d, t))
-}
-
-/// A copy of a carriage. (character.ts cloneShape)
-pub fn clone_shape(s: crate::character::LongShape) -> crate::character::LongShape {
-    crate::character::LongShape { elbow_r: s.elbow_r, elbow_l: s.elbow_l, ..s }
 }
 
 /// A carriage flattened into spring channels (CharacterAnimator.lg.ch; indices: LC). (character.ts longFlat)

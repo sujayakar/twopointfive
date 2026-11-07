@@ -485,59 +485,6 @@ pub fn lanes_reset(g: &mut crate::game::Game) {
     g.m.lanes.states = Some(st);
 }
 
-/// The counters, and how many lanes the side knows. (lanes.ts lanesStats)
-pub fn lanes_stats(g: &mut crate::game::Game) -> JsMap<String, f64> {
-    let s = match g.m.lanes.states.as_ref() { Some(st) => st.stats, None => fresh(g).stats };
-    let known = lane_ids(g).iter().filter(|&&l| g.tab.lanes_lane[l].known).count();
-    let rows: [(&str, f64); 23] = [
-        ("lanes", s.lanes), ("known", s.known), ("unknown", s.unknown), ("held", s.held), ("rerouted", s.rerouted), ("backedOut", s.backed_out),
-        ("round", s.round), ("stuns", s.stuns), ("pushes", s.pushes), ("lapsed", s.lapsed), ("peeks", s.peeks), ("peekThere", s.peek_there),
-        ("peekClear", s.peek_clear), ("peekLost", s.peek_lost), ("pins", s.pins), ("pinRounds", s.pin_rounds), ("pinLost", s.pin_lost), ("sets", s.sets),
-        ("goes", s.goes), ("frags", s.frags), ("fragLost", s.frag_lost), ("fragKept", s.frag_kept), ("live", known as f64),
-    ];
-    let mut out = JsMap::new();
-    for (k, v) in rows { out.set(String::from(k), v); }
-    out
-}
-
-/// One line for the debugger. (lanes.ts lanesSummary)
-pub fn lanes_summary(g: &mut crate::game::Game) -> String {
-    let Some(st) = g.m.lanes.states.as_ref() else { return String::from("none yet") };
-    let k = st.lanes.iter().filter(|&&l| g.tab.lanes_lane[l].known).count();
-    let s = &st.stats;
-    let n = js::num_str;
-    let frags = if js::truthy(s.frags) { format!(" · grenades down it {}", n(s.frags)) } else { String::new() };
-    format!(
-        "{} known of {} · held short {} · round {} · backed out {} · charges {} · looks {} (still held {}, clear {}) · set on its other side {}, bursts from the corners {}{}",
-        k, st.lanes.len(), n(s.held), n(s.rerouted + s.round), n(s.backed_out), n(s.stuns), n(s.peeks), n(s.peek_there), n(s.peek_clear), n(s.sets), n(s.pins), frags
-    )
-}
-
-/// For a check or the debugger: every lane as plain data. (lanes.ts lanesList)
-pub fn lanes_list(g: &mut crate::game::Game) -> Vec<crate::lanes::LanesListItem> {
-    lane_ids(g).iter().map(|&id| {
-        let l = &g.tab.lanes_lane[id];
-        LanesListItem {
-            id: l.id,
-            from: l.from,
-            at: l.at,
-            known: l.known,
-            weight: l.weight,
-            downs: l.downs,
-            cells: l.cells.as_ref().map_or(0.0, |c| c.len() as f64),
-            until: l.until,
-            push_until: l.push_until,
-        }
-    }).collect()
-}
-
-/// This point is on the floor of a lane the whole side knows. (lanes.ts lanesKnows)
-pub fn lanes_knows(g: &mut crate::game::Game, p: V3) -> bool {
-    let i = cell_at(g, p);
-    if !(i >= 0.0) { return false; }   // (NaN too: `i >= 0` in inMask is false for it)
-    g.m.lanes.states.as_ref().and_then(|st| st.mask.as_ref()).map_or(false, |m| m[i as usize] == 1)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

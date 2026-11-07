@@ -33,14 +33,6 @@ fn rear_pin(g: &mut Game, gd: GuardId) -> Option<crate::rearwatch::RearPin> {
 /// An optional boolean as a condition.
 fn yes(o: Option<bool>) -> bool { o.unwrap_or(false) }
 
-/// (cover.ts Cover) The constructor: the field initialisers, the file's one rear opening, the page's knobs.
-pub fn cover_new(g: &mut Game) -> Cover {
-    let mut c = Cover::blank();
-    c.knobs = g.k.cover;
-    c.rear = Some(g.tab.cover_opening.push(Opening { id: String::from("rear"), kind: OpeningKind::Rear, at: [0.0, CHEST, 0.0], n: [0.0, 1.0], half: 1.0, door: None, pass: None, far: None }));
-    c
-}
-
 /// Nothing dealt, nothing known: a restart. (cover.ts reset)
 pub fn cover_reset(g: &mut Game) {
     let c = &mut g.cover;
@@ -62,9 +54,6 @@ pub fn cover_reset(g: &mut Game) {
 
 /// What he was dealt. (cover.ts of)
 pub fn cover_of(g: &mut Game, gd: GuardId) -> Option<CoverJob> { g.cover.jobs.get(gd).copied() }
-
-/// The opening his gun has been left on. (cover.ts keptJob)
-pub fn cover_kept_job(g: &mut Game, gd: GuardId) -> Option<CoverJob> { g.cover.kept.get(gd).map(|k| k.j) }
 
 /// The level's openings, built if they are not yet. (cover.ts ready)
 pub fn cover_ready(g: &mut Game) -> Vec<CoverOpeningId> {
@@ -1152,15 +1141,6 @@ pub fn cover_words(g: &mut Game, gd: GuardId) -> String {
 pub fn cover_tail(g: &mut Game, gd: GuardId) -> String {
     let w = cover_words(g, gd);
     if w.is_empty() { w } else { alloc::format!(" · {}", w) }
-}
-
-/// Is he facing what he was dealt: his gun within `deg` of it. (cover.ts facing)
-pub fn cover_facing(g: &mut Game, gd: GuardId, deg: Option<f64>) -> bool {
-    let deg = deg.unwrap_or(15.0);
-    match cover_on_of(g, gd) {
-        Some(j) if !j.off => m::abs(v3::wrap_angle(v3::yaw_to(pos_of(g, gd), j.to) - g.ch[g.gd[gd].ch].aim_yaw)) < deg * m::PI / 180.0,
-        _ => false,
-    }
 }
 
 /// One line for the console. (cover.ts summary)

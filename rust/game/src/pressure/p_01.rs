@@ -137,19 +137,6 @@ pub fn target(g: &mut crate::game::Game, d: RoomfightDefId) -> Option<crate::pre
     best
 }
 
-/// The room a picket hears fought over: PRESSURE.picket is off on the page and under hard, so no man is a picket. (pressure.ts picketHears)
-pub fn picket_hears(g: &mut crate::game::Game, d: RoomfightDefId) -> Option<RoomfightRoomId> {
-    None
-}
-
-/// The staging's marks as they are: PRESSURE.picket is off on the page and under hard. (pressure.ts picketMarks)
-pub fn picket_marks(g: &mut crate::game::Game, marks: &[crate::nightbreach::NightBreachMark], team_at: V3) -> Vec<crate::nightbreach::NightBreachMark> {
-    marks.to_vec()
-}
-
-/// Nothing to do: picket_marks never posts a man. (pressure.ts postPicket)
-pub fn post_picket(g: &mut crate::game::Game, gd: GuardId, room: RoomfightRoomId) {}
-
 /// Who the press has, for the one record: in a press, or on his beat toward one. Said as its tick ends. (pressure.ts pressSay)
 pub fn press_say(g: &mut crate::game::Game) {
     let press = crate::owner::own().press;

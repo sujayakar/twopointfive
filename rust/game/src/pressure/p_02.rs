@@ -398,8 +398,6 @@ pub fn team_boots(g: &mut crate::game::Game, gd: GuardId) -> Option<V3> {
     }
     best
 }
-/// (pressure.ts hearsTeam)
-pub fn hears_team(g: &mut crate::game::Game, gd: GuardId) -> bool { team_boots(g, gd).is_some() }
 /// planted outside a door: that door is what he watches. (pressure.ts watchDoor)
 pub fn watch_door(g: &mut crate::game::Game, d: RoomfightDefId, door: DoorId) {
     let room = match df(g, d).room { Some(r) => r, None => return };

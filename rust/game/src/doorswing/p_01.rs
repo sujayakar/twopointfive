@@ -20,17 +20,6 @@ struct Given {
     server_room: crate::doorswing::Rect,
 }
 
-/// The deal as the doors stand now.   (doorswing.ts swingsNow)
-pub fn swings_now(g: &mut crate::game::Game, deals: &[crate::doorswing::SwingDeal]) -> Vec<crate::doorswing::SwingDeal> {
-    deals
-        .iter()
-        .map(|s| match &s.clear {
-            Some(c) => (**c).clone(),
-            None => s.clone(),
-        })
-        .collect()
-}
-
 /// The side (Doors.side's sign) of the closed leaf a floor point is on, 0 on the leaf's own line.   (doorswing.ts sideOf)
 pub fn side_of(g: &mut crate::game::Game, d: DoorId, x: f64, z: f64) -> f64 {
     let c = g.dr[d].def.closed_dir;

@@ -11,7 +11,4 @@ pub mod wx_knobs {
     use crate::{ids::*, js::*, Quat, V3};
     #[allow(unused_imports)]
     use alloc::{string::String, vec::Vec};
-    /// (src/sim/weatherhome.ts:29 WX_KNOBS.here)
-    pub fn here() { todo!() }
-
 }

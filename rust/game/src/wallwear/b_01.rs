@@ -10,8 +10,3 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 
 
-/// BOUNDARY NO-OP (the picture's / the host's): (src/game/wallwear.ts:101 WallWear.shape)
-pub fn wall_wear_shape(g: &mut crate::game::Game, s: f64, serial: f64, half: f64, mat: f64) {}
-
-/// BOUNDARY NO-OP (the picture's / the host's): (src/game/wallwear.ts:107 WallWear.throwOut)
-pub fn wall_wear_throw_out(g: &mut crate::game::Game, box_: BoxId, surf: crate::scene_materials::Surf, hit_p: V3, dir: V3, n: V3, half: f64, through: bool, s: f64) {}

@@ -139,27 +139,6 @@ pub fn work_things_ask_aside<T: Clone + core::fmt::Debug>(g: &mut crate::game::G
     r
 }
 
-/// Makes the row and registers it on the orders' menu. (workthings.ts WorkThings.constructor)
-pub fn work_things_new(g: &mut crate::game::Game) -> crate::workthings::WorkThings {
-    let def = crate::orders::OrderDef {
-        id: String::from(WORK_ORDER),
-        key: Some(1.0),
-        label: crate::orders::OrderLabel::Work,
-        targets: vec![crate::orders::TargetKind::Floor],
-        listed: Some(Vec::new()),
-        ack: Some(vec![String::from("on it."), String::from("moving.")]),
-        can: Some(crate::orders::OrderCan::Work),
-        only: Some(crate::orders::OrderOnly::Work),
-        valid: Some(crate::orders::OrderValid::Work),
-        issue: crate::orders::OrderIssue::Work,
-        tick: Some(crate::orders::OrderTick::Work),
-        ..crate::orders::OrderDef::zeroed()
-    };
-    let row = g.tab.orders_order_def.push(def);
-    crate::orders::squad_orders_register(g, row, None);
-    WorkThings { row, ..WorkThings::blank() }
-}
-
 /// The things that can be worked now, read afresh when what places them changes and once a second besides. (workthings.ts WorkThings.things)
 pub fn work_things_things(g: &mut crate::game::Game) -> Vec<crate::workthings::WorkThing> {
     let (active, permanent) = mains(g);

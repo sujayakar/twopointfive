@@ -7,11 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// A new lesson: nothing done, no run yet.   (lesson.ts Lesson.constructor)
-pub fn lesson_new(g: &mut crate::game::Game) -> crate::lesson::Lesson {
-    crate::lesson::Lesson::blank()
-}
-
 /// The lesson in force (None: not live).   (lesson.ts Lesson.data)
 pub fn lesson_data(g: &mut crate::game::Game) -> Option<crate::scene_scenarios::LessonData> {
     let on_rails = match g.level.scenarios.as_ref().and_then(|s| s.lesson.as_ref()) {
@@ -43,14 +38,6 @@ pub fn lesson_step(g: &mut crate::game::Game) -> Option<crate::scene_scenarios::
     let l = lesson_data(g)?;
     let at = lesson_at(g);
     l.steps.into_iter().nth(at as usize)
-}
-
-/// Every step of the lesson in force is done.   (lesson.ts Lesson.finished)
-pub fn lesson_finished(g: &mut crate::game::Game) -> bool {
-    match lesson_data(g) {
-        Some(l) => lesson_at(g) >= l.steps.len() as f64,
-        None => false,
-    }
 }
 
 /// Once a frame, after updateMission: counts the frame's deeds, asks the step's test, moves on when it is done and settled.   (lesson.ts Lesson.tick)
@@ -111,17 +98,6 @@ pub fn lesson_tick(g: &mut crate::game::Game, dt: f64) {
             }
             lesson_advance(g, &l, t);
         }
-    }
-}
-
-/// The step that is up has done its deed and is waiting for the moment to play out.   (lesson.ts Lesson.settling)
-pub fn lesson_settling(g: &mut crate::game::Game) -> bool {
-    if !run_is_mission(g) {
-        return false;
-    }
-    match g.lesson.seen.as_ref() {
-        Some(s) => s.done_t.is_some() && s.done_i == Some(g.lesson.i),
-        None => false,
     }
 }
 
@@ -307,12 +283,6 @@ pub fn lesson_note(g: &mut crate::game::Game, s: &str) {
 pub fn line_of(g: &mut crate::game::Game, t: &crate::scene_scenarios::LessonStep) -> String {
     let line = filled(&t.blow_line).or(filled(&t.ring_line)).or(filled(&t.setup_line)).unwrap_or(t.line.as_str());
     String::from(line)
-}
-
-/// A step's line as the page says it.   (lesson.ts stepLine)
-pub fn step_line(g: &mut crate::game::Game, t: &crate::scene_scenarios::LessonStep) -> String {
-    let line = line_of(g, t);
-    lesson_line(g, &line)
 }
 
 
