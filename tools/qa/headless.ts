@@ -223,6 +223,8 @@ export async function standUp(opts: { /** the dressing rows up, as the page has 
   // the ONE stand-up (src/host/standup.ts): the level's boxes + lights into the stand-in, then `new Game`, then the harness trio — chaos 0 (the game byte for byte as it was before the
   // destruction lane, which is what every frozen digest and exact-count probe was written against), the autosave slots in a Map (no localStorage in bun), the level script strict
   const seed = opts.seed !== undefined ? opts.seed : process.env.TPS_SEED !== undefined && process.env.TPS_SEED !== '' ? envSeed(process.env.TPS_SEED) : null;
+  // (a start writes all of a game's state: what the TypeScript keeps at a module's top is put back before the game is made — tools/qa/fresh.ts)
+  (await import('./fresh.ts')).freshStart();
   const { game, level, cam } = await standMod.standGame(engine, { ch, smoke, harness: true, seed, seats: opts.seats, ...(opts.search !== undefined ? { search: opts.search } : {}), ...(opts.level ? { level: opts.level } : {}) });
   if (process.env.QA_DOORSTAY === '1') (await import(`${ROOT}/src/game/doors.ts`)).DOORSTAY.on = true;   // (the harness stands the game up with the door closers of old — standup.ts; this runs any probe, soak or tour with doors staying where they are left, as shipped)
   const audioCounts = new Map<string, number>();
