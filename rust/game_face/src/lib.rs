@@ -113,6 +113,17 @@ fn free_slot() -> Option<usize> {
 }
 
 // ---- memory
+/// THE STATE WORDS (game::state_words): a hash of the whole game a part, with what a host hands in left out, for two machines of one networked game to compare. `face_state_n` parts, `face_state_name(i)` at face_out; `face_state_words(h)` puts the words at face_out, u32 little-endian. Its buffers stay here, so a call grows nothing once they have their size.
+#[no_mangle]
+pub extern "C" fn face_state_n() -> usize { game::state_words::STATE_NAMES.len() }
+#[no_mangle]
+pub extern "C" fn face_state_name(i: usize) { out(game::state_words::STATE_NAMES[i].as_bytes().to_vec()); }
+thread_local! { static STATE_BUF: RefCell<(game::io::W, Vec<u32>)> = RefCell::new((game::io::W::new(), Vec::new())); }
+#[no_mangle]
+pub extern "C" fn face_state_words(h: u32) {
+    let b = STATE_BUF.with(|c| { let mut c = c.borrow_mut(); let (o, w) = &mut *c; with(h, |x| game::state_words::state_words(&x.g, o, w)); let mut b = Vec::with_capacity(w.len() * 4); for v in w.iter() { b.extend_from_slice(&v.to_le_bytes()); } b });
+    out(b);
+}
 /// THE GENERATION OF THE BRIDGE this module was built with (io::LAYOUT, and `layout` in schema.json): a host refuses a module of another generation.
 #[no_mangle]
 pub extern "C" fn face_layout() -> u32 { game::io::LAYOUT }

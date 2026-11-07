@@ -142,7 +142,7 @@ at the tick written in its `intended` list and nowhere before. One so far:
 ## Reading the stop
 
 **`PANIC in tick K`** with a `todo!()` or "not yet implemented": a function nobody wrote. The frames under it name it and who called it. Read the TypeScript it
-names and write its body (below). `python3 tools/blitz/stubcalls.py` lists every such call in the crate, so you can see the ones ahead of you.
+names and write its body (below).
 
 **`THE BLOCK FIRST PARTED AT TICK K`**, with the parts that differ by name. The Rust side has kept its state of that tick; the TypeScript side keeps only
 what it was asked, so run the whole command once more with `--keep "K" --blobs` added (not `--no-ts`). Then
@@ -274,7 +274,7 @@ Two more cases reach reads that were restored by reading (their counters are `di
 
 - `run.sh` the one command · `mission.ts` the TypeScript side (`seats.ts` for a game of two seats) · `host.ts` the bridge's writers for one part of a game (the host's half)
 - `diff.ts` two whole states by path, in the file's memory, tables numbered by reach (`canon.txt` names the tables) · `known.txt` the known differences (`known-dress.txt` with the dressing rows up)
-- `timeline.ts` a mission's events by tick · `stubcalls.py` calls that land on a stub
+- `timeline.ts` a mission's events by tick
 - the bridge, written by the skeleton's program (`BRIDGE.md`): `export.ts`, `expose.ts`, `paths.ts`, `schema.json`, `not-carried.json`, `bridge-check.ts`,
   `dump-tables.ts`
 - `rust/game_run/src/bin/mission.rs` the runner · `where_parts.rs` where two blocks differ

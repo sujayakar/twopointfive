@@ -2,7 +2,8 @@
 //   bun run tools/blitz/replay.ts <file> [--wasm FILE]
 import { existsSync, readFileSync } from 'node:fs';
 import { Reader, readRecord, ROLL, END, MEM, endOf } from './record';
-const argv = process.argv.slice(2), file = argv[0], at = argv.indexOf('--wasm'), wasm = at < 0 ? `${import.meta.dir}/../../rust/game_face/target/wasm32-unknown-unknown/release/game_face.wasm` : argv[at + 1];
+import { faceHere, FACE_WASM } from './face-build.ts';
+const argv = process.argv.slice(2), file = argv[0], at = argv.indexOf('--wasm'), wasm = at < 0 ? faceHere() ?? FACE_WASM : argv[at + 1];
 if (!file || !existsSync(file)) { console.error(`no record at ${file}`); process.exit(2); }
 const R: Reader = readRecord(file); const names: string[] = []; const rolls: number[] = [];
 const X: any = new WebAssembly.Instance(new WebAssembly.Module(new Uint8Array(readFileSync(wasm))), { env: { face_roll: () => { if (!rolls.length) throw new Error('the record has no die here'); return rolls.shift(); } } }).exports;

@@ -1,4 +1,4 @@
-// The host's end of the tick's out events: each makes today's call on today's objects. Written by puppetgen.cjs from out-events.json.
+// The host's end of the tick's out events: each makes today's call on today's objects. Written by tools/wire/puppetgen.cjs from out-events.json.
 import { trackOf } from './track';
 import '../../src/game/game';
 import { WEAPONS } from '../../src/game/weapons';
