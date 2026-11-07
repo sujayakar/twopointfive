@@ -115,7 +115,8 @@ async function againAndLate() {
 }
 async function page() {
   console.log('\n=== page: the held button\'s grab is the stalk\'s own ===');
-  const g0 = STALK_STATS.grabs, P = await world(), row = P.said(); P.press(); for (let i = 0; i < 300 && P.chokeAt < 0; i++) P.step(); const from = !!P.g.player.holding?.from, counted = STALK_STATS.grabs - g0;
+  const P = await world(), g0 = STALK_STATS.grabs, row = P.said();   // (a count is read AFTER the game it counts is stood: a stand-up puts a game's tallies back, tools/qa/fresh.ts)
+  P.press(); for (let i = 0; i < 300 && P.chokeAt < 0; i++) P.step(); const from = !!P.g.player.holding?.from, counted = STALK_STATS.grabs - g0;
   const RE = /RMB {2}knock him out {2}· {2}RMB {2}hold to choke him/;
   verdict(RE.test(row) && P.chokeAt > 0 && P.blowAt < 0 && from && counted === 1,
     'as the page opens: the row says the choke, and the held button\'s grab is the stalk\'s own (it steps in from where he stood, and is counted once) and closes into the choke',

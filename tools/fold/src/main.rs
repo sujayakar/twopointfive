@@ -2,8 +2,9 @@
 //!
 //!   cargo run --release --manifest-path tools/fold/Cargo.toml -- [--write] [--report FILE] [--settle FILE] [--table FILE]
 //!
-//! Reads tools/qa/switches.json (every switch row, its page value, its kind) and rust/game/src/knobs.rs (the
-//! tables, at page values), then every body file of rust/game/src (`<module>/p_NN.rs`, `<module>/b_NN.rs`).
+//! Reads tools/qa/switches.json (every switch row, its page value, its kind) and the game's knobs.rs (the tables, at page
+//! values), then every body file of the game's crates (`<module>/p_NN.rs`, `<module>/b_NN.rs`). Which crates under rust/ are
+//! the game's, and where the tables are, is found by listing rust/ (layout.rs): no pass names a crate.
 //! Where a body reads a SETTLED yes-or-no row, the read becomes the page value, and what that settles is
 //! folded: the `!`, the `&&` and `||`, the `if` (the side kept stands in its place, the other is deleted), a
 //! `let` that named the value, a function that is now one yes or no or does nothing (at its callers), and then
@@ -18,7 +19,9 @@
 mod dead;
 mod fields;
 mod fold;
+mod gone;
 mod knobdrop;
+mod layout;
 mod readers;
 mod rows;
 mod sharp;
@@ -285,6 +288,64 @@ fn page_reads(root: &std::path::Path) -> Vec<(String, HashSet<String>, HashSet<S
     out
 }
 
+/// `fold layout [game|bodies|users|src|body-src|knobs|page] [--root DIR]`: where the game is, found by listing rust/ (layout.rs). With a
+/// word, that list alone, a line each, for a script: the game's crates, the crates with body files (a crate after the ones it
+/// depends on), the crates that use a body crate, the `src` of the game's crates, the `src` of the body crates, the tables' file, the crates that build only a module for the page (checked for wasm).
+/// `fold diag-from-root --diag FILE --in FOLDER [--base DIR] [--root DIR]`: FILE (the output of `cargo check --message-format=json`
+/// run in FOLDER, the crate's folder from the root) rewritten in place with every file named from the root. --base: the folder the
+/// checked tree stands in, when it is a copy and not the root.
+fn layout_main(cmd: &str, args: &[String]) -> ! {
+    let mut root = PathBuf::from(".");
+    let (mut what, mut diag, mut at, mut base): (Option<String>, Option<String>, Option<String>, Option<String>) = (None, None, None, None);
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        let mut val = || it.next().cloned().unwrap_or_default();
+        match a.as_str() {
+            "--root" => root = PathBuf::from(val()),
+            "--diag" => diag = Some(val()),
+            "--in" => at = Some(val()),
+            "--base" => base = Some(val()),
+            x if !x.starts_with('-') && what.is_none() && cmd == "layout" => what = Some(x.to_string()),
+            x => {
+                eprintln!("fold {cmd}: no option {x}");
+                std::process::exit(64);
+            }
+        }
+    }
+    let fail = |e: String| -> ! {
+        eprintln!("fold: {e}");
+        std::process::exit(3)
+    };
+    if cmd == "diag-from-root" {
+        let (Some(d), Some(at)) = (diag, at) else {
+            eprintln!("fold diag-from-root: --diag FILE --in FOLDER (the folder of the crate the check ran in, from the root)");
+            std::process::exit(64);
+        };
+        let text = std::fs::read_to_string(&d).unwrap_or_else(|e| fail(format!("cannot read {d}: {e}")));
+        let base = base.map(PathBuf::from).unwrap_or_else(|| root.clone());
+        std::fs::write(&d, layout::diag_from_root(&text, &base, std::path::Path::new(&at))).unwrap_or_else(|e| fail(format!("cannot write {d}: {e}")));
+        std::process::exit(0);
+    }
+    let lay = layout::find(&root).unwrap_or_else(|e| fail(e));
+    let src = |names: Vec<String>| names.into_iter().map(|c| format!("rust/{c}/src")).collect::<Vec<_>>();
+    let lines: Vec<String> = match what.as_deref() {
+        None => vec![format!("fold: {}", lay.say())],
+        Some("game") => lay.game.iter().cloned().collect(),
+        Some("bodies") => lay.bodies.clone(),
+        Some("users") => lay.users(),
+        Some("src") => src(lay.game.iter().cloned().collect()),
+        Some("body-src") => src(lay.bodies.clone()),
+        Some("knobs") => vec![lay.knobs.to_string_lossy().to_string()],
+        Some("page") => lay.crates.iter().filter(|c| c.page).map(|c| c.name.clone()).collect(),
+        Some(x) => {
+            eprintln!("fold layout: no list {x} (game, bodies, users, src, body-src, knobs, page)");
+            std::process::exit(64);
+        }
+    };
+    println!("{}", lines.join("\n"));
+    std::process::exit(0);
+}
+
 /// `fold sharp-prep --scratch DIR` and `fold sharp-apply --diag FILE [--write] [--report FILE]`:
 /// the compiler's dead-code reading (sharp.rs; tools/fold/sharp.sh drives the two to a fixed point).
 fn sharp_main(cmd: &str, args: &[String]) -> ! {
@@ -496,9 +557,47 @@ fn readers_main(cmd: &str, args: &[String]) -> ! {
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if let Some(c) = args.first() {
-        if c == "knobs-drop" {
-            // `fold knobs-drop --file LIST [--write] [--root DIR]`: each `knobs::Type.field` of LIST out of the Rust source (knobdrop.rs),
-            // after `bun run tools/wire/wire.ts drop --file LIST` has taken it off the wire
+        if c == "fields-gone" {
+            // `fold fields-gone --type mod::Type --ts FILE [--interface NAME] [--root DIR]`: the fields of a struct of the wire's table
+            // that the TypeScript interface it mirrors no longer declares (gone.rs), a `mod::Type.field` a line: the list for
+            // `tools/wire/wire.ts drop --file` and `fold fields-drop --file`. What it counted goes to stderr.
+            let mut root = PathBuf::from(".");
+            let (mut ty, mut ts, mut interface) = (None, None, None);
+            let mut it = args[1..].iter();
+            while let Some(a) = it.next() {
+                match a.as_str() {
+                    "--root" => root = PathBuf::from(it.next().cloned().unwrap_or_default()),
+                    "--type" => ty = it.next().cloned(),
+                    "--ts" => ts = it.next().cloned(),
+                    "--interface" => interface = it.next().cloned(),
+                    x => {
+                        eprintln!("fold fields-gone: no option {x}");
+                        std::process::exit(64);
+                    }
+                }
+            }
+            let (Some(ty), Some(ts)) = (ty, ts) else {
+                eprintln!("fold fields-gone: --type mod::Type --ts FILE");
+                std::process::exit(64);
+            };
+            match gone::gone(&root, &ty, &ts, interface.as_deref()) {
+                Ok(g) => {
+                    eprintln!("fold: {ty} has {} fields on the wire; {ts} declares {} members; {} fields of the wire are declared no more{}", g.on_wire, g.declared, g.names.len(), if g.not_on_wire.is_empty() { String::new() } else { format!("; declared and not on the wire: {}", g.not_on_wire.join(", ")) });
+                    if !g.names.is_empty() {
+                        println!("{}", g.names.join("\n"));
+                    }
+                    std::process::exit(0);
+                }
+                Err(e) => {
+                    eprintln!("fold: {e}");
+                    std::process::exit(3);
+                }
+            }
+        }
+        if c == "types-drop" {
+            // `fold types-drop --file LIST [--write] [--root DIR]`: each `mod::Type` of LIST out of the Rust source, its declaration
+            // and its impls (knobdrop.rs), after `bun run tools/wire/wire.ts drop-type` has taken it off the wire. Exit 4, and nothing
+            // written, while anything still names one.
             let mut root = PathBuf::from(".");
             let (mut file, mut write) = (None, false);
             let mut it = args[1..].iter();
@@ -508,13 +607,49 @@ fn main() {
                     "--file" => file = it.next().cloned(),
                     "--write" => write = true,
                     x => {
-                        eprintln!("fold knobs-drop: no option {x}");
+                        eprintln!("fold {c}: no option {x}");
                         std::process::exit(64);
                     }
                 }
             }
             let Some(f) = file else {
-                eprintln!("fold knobs-drop: --file LIST");
+                eprintln!("fold {c}: --file LIST");
+                std::process::exit(64);
+            };
+            let names: Vec<String> = std::fs::read_to_string(&f).unwrap_or_else(|e| { eprintln!("fold: cannot read {f}: {e}"); std::process::exit(3) }).lines().map(|l| l.trim().to_string()).filter(|l| !l.is_empty()).collect();
+            match knobdrop::drop_types(&root, &names, write) {
+                Ok((n, still)) => {
+                    println!("fold: {n} items of {} types{}", names.len(), if !still.is_empty() { " (NOTHING WRITTEN: something still names one)" } else if write { "" } else { " (nothing written: --write)" });
+                    for s in still.iter().take(12) {
+                        println!("  {s}");
+                    }
+                    std::process::exit(if still.is_empty() { 0 } else { 4 });
+                }
+                Err(e) => {
+                    eprintln!("fold: {e}");
+                    std::process::exit(3);
+                }
+            }
+        }
+        if c == "fields-drop" || c == "knobs-drop" {
+            // `fold fields-drop --file LIST [--write] [--root DIR]`: each `mod::Type.field` of LIST out of the Rust source (knobdrop.rs),
+            // after `bun run tools/wire/wire.ts drop --file LIST` has taken it off the wire (`knobs-drop` is its first name, for a table's rows)
+            let mut root = PathBuf::from(".");
+            let (mut file, mut write) = (None, false);
+            let mut it = args[1..].iter();
+            while let Some(a) = it.next() {
+                match a.as_str() {
+                    "--root" => root = PathBuf::from(it.next().cloned().unwrap_or_default()),
+                    "--file" => file = it.next().cloned(),
+                    "--write" => write = true,
+                    x => {
+                        eprintln!("fold {c}: no option {x}");
+                        std::process::exit(64);
+                    }
+                }
+            }
+            let Some(f) = file else {
+                eprintln!("fold {c}: --file LIST");
                 std::process::exit(64);
             };
             let names: Vec<String> = std::fs::read_to_string(&f).unwrap_or_else(|e| { eprintln!("fold: cannot read {f}: {e}"); std::process::exit(3) }).lines().map(|l| l.trim().to_string()).filter(|l| !l.is_empty()).collect();
@@ -534,6 +669,9 @@ fn main() {
         }
         if c == "sharp-prep" || c == "sharp-apply" || c == "tests-cut" || c == "sharp-mend" {
             sharp_main(c, &args[1..]);
+        }
+        if c == "layout" || c == "diag-from-root" {
+            layout_main(c, &args[1..]);
         }
         if c.starts_with("readers-") {
             readers_main(c, &args[1..]);
@@ -567,14 +705,17 @@ fn main() {
             }
         }
     }
-    let src_dir = root.join("rust/game/src");
+    let lay = layout::find(&root).unwrap_or_else(|e| {
+        eprintln!("fold: {e}");
+        std::process::exit(3);
+    });
     let read = |p: PathBuf| {
         std::fs::read_to_string(&p).unwrap_or_else(|e| {
             eprintln!("fold: cannot read {}: {e}", p.display());
             std::process::exit(3);
         })
     };
-    let rows = match rows::load(&read(root.join("tools/qa/switches.json")), &read(src_dir.join("knobs.rs"))) {
+    let rows = match rows::load(&read(root.join("tools/qa/switches.json")), &read(root.join(&lay.knobs))) {
         Ok(r) => r,
         Err(e) => {
             eprintln!("fold: {e}");
@@ -632,13 +773,8 @@ fn main() {
         }
     }
 
-    let mut all = Vec::new();
-    dead::rs_files(&src_dir, &mut all);
     let mut bodies: Vec<Body> = Vec::new();
-    for p in &all {
-        if !dead::is_body(p) {
-            continue;
-        }
+    for p in &lay.body_files(&root) {
         let module = p.parent().and_then(|d| d.file_name()).and_then(|n| n.to_str()).unwrap_or("").to_string();
         let rel = p.strip_prefix(&root).unwrap_or(p).to_string_lossy().to_string();
         bodies.push(Body { path: p.clone(), rel, module, was: read(p.clone()) });
@@ -934,9 +1070,7 @@ fn main() {
         // a leaf one of them names after `.k.` is read there
         let mut elsewhere: HashSet<String> = HashSet::new();
         let leaf_set: HashSet<&str> = leaves.iter().map(|l| l.0.as_str()).collect();
-        let mut others = Vec::new();
-        dead::rs_files(&root.join("rust/game/src"), &mut others);
-        for p in others {
+        for p in lay.game_files(&root) {
             let name = p.file_name().and_then(|n| n.to_str()).unwrap_or("");
             if body_paths.contains(&p) || matches!(name, "knobs.rs" | "io.rs" | "puppet.rs" | "call_gen.rs") {
                 continue;
@@ -1119,7 +1253,7 @@ fn main() {
                 o1.values.len(),
                 o1.left.len(),
                 wa.len(),
-                read_in.iter().map(|(f, n)| format!("{}:{n}", f.trim_start_matches("rust/game/src/"))).collect::<Vec<_>>().join(" "),
+                read_in.iter().map(|(f, n)| format!("{}:{n}", f.trim_start_matches(lay.common().as_str()))).collect::<Vec<_>>().join(" "),
                 del.into_iter().collect::<Vec<_>>().join(" "),
                 set.into_iter().collect::<Vec<_>>().join(" "),
                 unread.join(" "),

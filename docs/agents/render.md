@@ -182,7 +182,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   `useCut` on the lighting passes, the probe, the cascades, the froxels, the particles and the fog of war; the engine's per-frame swap and the
   raster's "drawn whole until the second set is in" (`gbuffer.ts`: a cut box is drawn cut from the first frame); `__cut.programs`,
   `__cut.stats.drawnWhole`, `?cutprograms`; the visit's `cut` record; the start's wait on the second set; tools/qa/cut-march.js. `cutConfig.swap`
-  is UNREAD AND UNWRITTEN (the knob row `CUT.swap`, the settled-switch list and the Rust mirror still name it: theirs to drop); the look page's
+  is GONE from the table and from the settled-switch list (11-07; its field on the wire to the Rust game goes with the Rust goal's next batch); the look page's
   rule that a geometry trial drops the round's GPU half (`main.ts roundConfig.gpu`) asks for the trial itself now, and draws what it drew. THE COMPILE QUEUE's background
   lane (`gpu/device.ts`) was given by text, to any module holding the cut rule's line; it is now the LATER pipelines' alone, and a module's size is
   kept beside the module. WHAT MOVES: about twenty programs fewer compiled after each boot (21 s of background compile on the cloud's NVIDIA
@@ -1687,7 +1687,9 @@ row on his machine is the answer, and the word puts the count back on any machin
   `stuff-check`, `kept-check`; both typechecks. No break word of its own: `?look=old` is the off side and it is drawn below.
   READ ON THE SOFTWARE ADAPTER (headless Chromium 153, 640 by 360, High, the office at night; the merge's `pagedraw.cjs`, two frames drawn and read
   back): the page with no word draws and keeps its device (158,323 and 159,234 of 230,400 pixels lit), `?look=old` draws the old picture (146,060
-  and 149,491); these two on the tree before the lab was parted from the picture, the page's source otherwise this commit's. On this commit:
+  and 149,491); these two on the tree before the lab was parted from the picture, the page's source otherwise this commit's. On this commit
+  as first cut (on 4b4400a2; it was cut again on 305baa5e, 49 commits on, with one neighbouring line of `main.ts` taken from that head, and
+  there the reads at ready, the typechecks, the checks above and the gate's two reads were run again and say the same; the pixels were not):
   THE PAGE WITH NO WORD IS, PIXEL FOR PIXEL, the named head's look page with the lab's things put off by their words
   (`?look&geo=0&lorry=0&lookkit=0&seat=0` on 34cdbcbd): `tools/qa/draw-equal.cjs`, the office at night and the depot's room clear with four at
   midday, drawn frames 2 and 4, 4 of 4 captures EQUAL (both sides "not clean" alike on the office: two of three torches in frame). And read at

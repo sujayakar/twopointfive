@@ -145,11 +145,10 @@ impl Items {
     }
 }
 
-fn bodies(root: &Path) -> Vec<(PathBuf, String, String)> {
-    let game = root.join("rust/game");
-    let mut all = Vec::new();
-    crate::dead::rs_files(&game.join("src"), &mut all);
-    all.into_iter().filter(|p| is_body(p)).filter_map(|p| std::fs::read_to_string(&p).ok().map(|t| (p.clone(), p.strip_prefix(&game).unwrap_or(&p).to_string_lossy().to_string(), t))).collect()
+/// The body files of the game's crates (layout.rs): (where the file is, its path from the root, its text).
+fn bodies(root: &Path) -> Result<Vec<(PathBuf, String, String)>, String> {
+    let lay = crate::layout::find(root)?;
+    Ok(lay.body_files(root).into_iter().filter_map(|p| std::fs::read_to_string(&p).ok().map(|t| (p.clone(), p.strip_prefix(root).unwrap_or(&p).to_string_lossy().to_string(), t))).collect())
 }
 
 #[derive(Default)]
@@ -164,7 +163,7 @@ pub struct Cut {
 
 /// Delete the tests that are there for what `named` (the reading without the tests) calls dead.
 pub fn cut(root: &Path, named: &Named, write: bool) -> Result<Cut, String> {
-    let files = bodies(root);
+    let files = bodies(root)?;
     let parsed: Vec<syn::File> = files.iter().map(|(_, rel, src)| syn::parse_file(src).map_err(|e| format!("{rel} does not parse: {e}"))).collect::<Result<_, _>>()?;
     // what the body files hold outside their test modules: dead (only the tests use it) or live
     let mut items = Items::default();
@@ -322,8 +321,7 @@ pub fn cut(root: &Path, named: &Named, write: bool) -> Result<Cut, String> {
 /// Take out of its `use` each name the compiler could not resolve (`diag`: cargo's JSON of a check that failed).
 /// Returns (names taken out, errors that are not an unresolved import of a body file).
 pub fn mend(root: &Path, diag: &str, write: bool) -> Result<(usize, Vec<String>), String> {
-    let game = root.join("rust/game");
-    // file -> (line, name)
+    // file (from the root) -> (line, name)
     let mut want: BTreeMap<String, HashSet<(usize, String)>> = BTreeMap::new();
     let mut other: Vec<String> = Vec::new();
     for l in diag.lines() {
@@ -352,7 +350,7 @@ pub fn mend(root: &Path, diag: &str, write: bool) -> Result<(usize, Vec<String>)
     }
     let mut n = 0;
     for (file, list) in want {
-        let path = game.join(&file);
+        let path = root.join(&file);
         let src = std::fs::read_to_string(&path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
         let f = syn::parse_file(&src).map_err(|e| format!("{file} does not parse: {e}"))?;
         // every name a `use` of the file brings in: (name, the name's range, the whole item's range, is it the item's only name)

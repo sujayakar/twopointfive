@@ -4,7 +4,7 @@ use crate::io::*; use crate::ids::*; use crate::js::*; use crate::{Quat, V3}; us
 /// how the host asks a die a caller handed in (the face sets it; a native runner has none, and the game's own die answers)
 pub static mut HOST_ROLL: Option<fn() -> f64> = None;
 fn die_of(given: bool) -> impl FnMut(&mut crate::game::Game) -> f64 { move |g| { if given { if let Some(f) = unsafe { HOST_ROLL } { return f(); } } crate::math_dice::sim_random(g) } }
-pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let mut i = R::new(args); let mut o = W::new(); match f {
+pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let known = crate::id_tables::id_tables(g); let mut i = R::measured(args, &known); let mut o = W::new(); match f {
 0 => { let a1: Vec<crate::scene_cut::CutPlane> = Io::r(&mut i); let a2: f64 = Io::r(&mut i); let a3: f64 = Io::r(&mut i); let a4: f64 = Io::r(&mut i); let a5: f64 = Io::r(&mut i); let a6: f64 = Io::r(&mut i); let a7: f64 = Io::r(&mut i); let a8: f64 = Io::r(&mut i); let a9: f64 = Io::r(&mut i); let r = crate::scene_cut::cut_clip(g, &a1, a2, a3, a4, a5, a6, a7, a8, a9); r.w(&mut o);  }
 1 => { let a1: Vec<f64> = Io::r(&mut i); let a2: String = Io::r(&mut i); let a3: crate::scene_stuff::SayPaintSaid = Io::r(&mut i); crate::scene_stuff::say_paint(g, &a1, &a2, a3);  }
 2 => { let a1: crate::scene_stuff::BoxStuff = Io::r(&mut i); let a2: [f64; 3] = Io::r(&mut i); let a3: Option<crate::scene_stuff::MadeOfFinish> = Io::r(&mut i); let r = crate::scene_stuff::made_of(g, a1, a2, a3); r.w(&mut o);  }
@@ -1089,5 +1089,6 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let mut
 1092 => { let a1: FirearmId = Io::r(&mut i); let a2: f64 = Io::r(&mut i); crate::weapons::firearm_update(g, a1, a2);  }
 1093 => { let a1: FirearmId = Io::r(&mut i); let r = crate::weapons::rifle_cycle_attachment(g, a1); r.w(&mut o);  }
 1094 => { let a1: SeatId = Io::r(&mut i); let a2: Vec<crate::cmd::PlayerCmd> = Io::r(&mut i); let a3: f64 = Io::r(&mut i); let mut a4: Option<Vec<V3>> = Io::r(&mut i); let r = crate::walkahead::walk_ahead(g, a1, &a2, a3, a4.as_mut()); r.w(&mut o); a4.w(&mut o); }
+1095 => { let a1: Option<bool> = Io::r(&mut i); let r = crate::doortools::door_tools_together(g, a1); r.w(&mut o);  }
 _ => panic!("bridge: no call of row {}", f),
 } assert!(i.p == args.len(), "bridge: {} bytes left over in the call of row {}", args.len() - i.p, f); o.b }

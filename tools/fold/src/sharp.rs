@@ -133,13 +133,17 @@ pub fn prep(root: &Path, scratch: &Path) -> Result<String, String> {
     let to = scratch.join("rust");
     let _ = std::fs::remove_dir_all(&to);
     copy_tree(&root.join("rust"), &to).map_err(|e| format!("cannot copy rust/ to {}: {e}", to.display()))?;
+    let lay = crate::layout::find(root)?;
+    let mut said = Vec::new();
+    let mut n = 0;
+    // each crate that holds body files in its turn (layout.rs): one today
+    for body_crate in &lay.bodies {
     // names that make an item live from outside the crate's own non-test code
     let mut keep: HashSet<String> = HashSet::new();
     let mut users = Vec::new();
-    // EVERY crate under rust/ but the game itself is a root: the page's face, the runner, the crate that stands a level
-    // natively with its binaries and its tests, and whatever comes after them. A name one of them spells keeps the item.
-    let mut crates: Vec<PathBuf> = std::fs::read_dir(root.join("rust")).map(|rd| rd.flatten().map(|e| e.path()).filter(|p| p.is_dir() && p.join("Cargo.toml").exists() && p.file_name().map(|n| n != "game").unwrap_or(false)).collect()).unwrap_or_default();
-    crates.sort();
+    // EVERY other crate under rust/ is a root: the page's face, the runner, the crate that stands a level natively with its
+    // binaries and its tests, another of the game's crates, and whatever comes after them. A name one of them spells keeps the item.
+    let crates: Vec<PathBuf> = lay.crates.iter().filter(|c| &c.name != body_crate).map(|c| root.join("rust").join(&c.name)).collect();
     for c in &crates {
         crate::dead::rs_files(c, &mut users);
     }
@@ -150,8 +154,7 @@ pub fn prep(root: &Path, scratch: &Path) -> Result<String, String> {
     }
     let from_users = keep.len();
     let mut all = Vec::new();
-    crate::dead::rs_files(&to.join("game/src"), &mut all);
-    let mut n = 0;
+    crate::dead::rs_files(&to.join(body_crate).join("src"), &mut all);
     for p in &all {
         let Ok(t) = std::fs::read_to_string(p) else { continue };
         let name = p.file_name().and_then(|n| n.to_str()).unwrap_or("");
@@ -175,16 +178,18 @@ pub fn prep(root: &Path, scratch: &Path) -> Result<String, String> {
             std::fs::write(p, out).map_err(|e| format!("cannot write {}: {e}", p.display()))?;
         }
     }
-    Ok(format!("the private copy is {} ({n} files changed in it; {} names kept public for the {} other crates under rust/: {})", to.display(), from_users, crates.len(), crates.iter().filter_map(|c| c.file_name().and_then(|n| n.to_str())).collect::<Vec<_>>().join(", ")))
+    said.push(format!("{} names kept public for the {} other crates under rust/: {}", from_users, crates.len(), crates.iter().filter_map(|c| c.file_name().and_then(|n| n.to_str())).collect::<Vec<_>>().join(", ")));
+    }
+    Ok(format!("the private copy is {} ({n} files changed in it; {})", to.display(), said.join("; ")))
 }
 
 #[derive(Default)]
 pub struct Named {
-    /// file (from rust/game) -> (line, name, what the compiler said)
+    /// file (from the root) -> (line, name, what the compiler said)
     pub by_file: BTreeMap<String, Vec<(usize, String, String)>>,
 }
 
-/// What `cargo check --message-format=json` on the private copy named dead.
+/// What `cargo check --message-format=json` on the private copy named dead (its files named from the root: `fold diag-from-root`).
 pub fn read_diag(text: &str) -> Named {
     let mut out = Named::default();
     for l in text.lines() {
@@ -200,7 +205,11 @@ pub fn read_diag(text: &str) -> Named {
             let (hs, he) = (s["text"][0]["highlight_start"].as_u64().unwrap_or(1) as usize, s["text"][0]["highlight_end"].as_u64().unwrap_or(1) as usize);
             let text = s["text"][0]["text"].as_str().unwrap_or("");
             let name: String = text.chars().skip(hs.saturating_sub(1)).take(he.saturating_sub(hs)).collect();
-            out.by_file.entry(file).or_default().push((line, name, msg.clone()));
+            let list = out.by_file.entry(file).or_default();
+            // (a crate checked as itself and again under a crate that uses it says the same thing twice)
+            if !list.iter().any(|(l, n, _)| *l == line && *n == name) {
+                list.push((line, name, msg.clone()));
+            }
         }
     }
     out
@@ -241,11 +250,10 @@ fn item_lines(src: &str, r: std::ops::Range<usize>) -> std::ops::Range<usize> {
 /// Delete the named items from the real body files. Returns what went; writes only with `write`.
 pub fn apply(root: &Path, named: &Named, write: bool) -> Result<Applied, String> {
     let mut out = Applied { deleted: Vec::new(), listed: Vec::new(), lines: 0 };
-    let game = root.join("rust/game");
     // mod.rs -> (name, the part it was in)
     let mut modrs: BTreeMap<PathBuf, BTreeSet<(String, String)>> = BTreeMap::new();
     for (file, list) in &named.by_file {
-        let path = game.join(file);
+        let path = root.join(file);
         if !is_body(&path) {
             for (line, name, msg) in list {
                 out.listed.push(format!("{file}:{line} {name}: {msg}"));

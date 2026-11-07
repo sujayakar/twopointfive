@@ -1,0 +1,14 @@
+pub use ::game_types::kit::types;
+pub use types::*;
+pub mod base;
+pub use base::*;
+pub mod p_01;
+pub use p_01::*;
+pub mod p_02;
+pub use p_02::*;
+pub mod p_03;
+pub use p_03::*;
+pub mod p_04;
+pub use p_04::*;
+pub use p_01::slot_amount;
+pub use p_01::slot_put;

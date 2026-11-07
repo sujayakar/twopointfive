@@ -3,8 +3,8 @@
 
     python3 tools/blitz/sweeps/keyed-dice.py [--check]
 
-Rewrites each `crate::math_dice::sim_random(g)` in the body files of rust/game/src (`p_NN.rs`, `b_NN.rs`; not the die's own
-module, not a file's tests) into a keyed draw (rust/game/src/dice.rs `Keyed` and `draw`):
+Rewrites each `crate::math_dice::sim_random(g)` in the body files of rust/game_rules/src (`p_NN.rs`, `b_NN.rs`; not the die's own
+module, not a file's tests) into a keyed draw (rust/game_rules/src/dice.rs `Keyed` and `draw`):
 
     crate::dice::draw_of(g, "<module>::<function>#<n>", gd)      where the function is handed a man (a GuardId)
     crate::dice::draw_def / draw_op / draw_body(g, "…", x)       … a defender's or an operative's row, or a body (a CharId)
@@ -25,7 +25,7 @@ rewrites only what is still drawn the old way; a draw written by hand afterwards
 """
 import glob, os, re, sys
 
-ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', 'rust', 'game', 'src')
+ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', 'rust', 'game_rules', 'src')
 OLD = 'crate::math_dice::sim_random(g)'
 FN = re.compile(r'^\s*(?:pub(?:\([a-z]+\))? )?fn (\w+)(?:<[^>]*>)?\((.*)$')
 SKIP = {'math_dice'}

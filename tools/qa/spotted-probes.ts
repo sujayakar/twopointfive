@@ -208,24 +208,25 @@ export const spottedClose = guarded(async () => {
 // ---------------------------------------------------------------- caught: the cue, the gun, the step to a line
 export const spottedCaught = guarded(async () => {
   const { verdict, done } = family('spotted-caught: an alert man with his eyes on Sam — the partner says so, fights, and steps to a line');
-  const run = async (on: boolean, o: Stage, scn = SCN, prep?: (R: any, st: any) => void) => { const { R, st } = await staged(on, o, scn); prep?.(R, st); R.step(30); const t0 = R.game.time, p0 = [...R.mate.char.pos];
+  // (`steps`: the steps THIS game's partner took, counted from after it was stood: a stand-up puts a game's tallies back — tools/qa/fresh.ts)
+  const run = async (on: boolean, o: Stage, scn = SCN, prep?: (R: any, st: any) => void) => { const { R, st } = await staged(on, o, scn), steps0 = SPM.SPOTTED_STATS.steps; prep?.(R, st); R.step(30); const t0 = R.game.time, p0 = [...R.mate.char.pos];
     R.hold('alert', 1, { face: R.game.player.char.pos, eyesOn: 'sam' }); let downAt = -1, modeAt = -1;
     R.post = () => { if (downAt < 0 && R.foe.state === 'dead') downAt = R.game.time - t0; if (modeAt < 0 && R.mode() === 'caught') modeAt = R.game.time - t0; };
     R.step(60 * 10); R.post = null;
-    return { R, st, first: R.shots.length ? R.shots[0] - t0 : -1, shots: R.shots.length, downAt, modeAt, label: R.label(), cues: R.lines(/made you|made me|contact! covering/), walked: flat(p0, R.mate.char.pos), steps: SPM.SPOTTED_STATS.steps }; };
+    return { R, st, first: R.shots.length ? R.shots[0] - t0 : -1, shots: R.shots.length, downAt, modeAt, label: R.label(), cues: R.lines(/made you|made me|contact! covering/), walked: flat(p0, R.mate.char.pos), steps: SPM.SPOTTED_STATS.steps - steps0 }; };
   const A = await run(false, { shot: true }), B = await run(true, { shot: true });
   verdict(B.modeAt >= 0 && B.modeAt < 0.1 && B.cues.length === 1 && /radio/.test(B.cues[0]), 'caught is known the frame the man is alert with eyes on them, and said once', `caught after ${f2(B.modeAt)} s · ${B.cues.join(' / ') || '(nothing said)'}`);
   verdict(B.first >= 0 && B.downAt >= 0 && (A.first < 0 || B.first <= A.first + 1e-6), 'he fires and the man goes down — no later than with the switch off', `on: first round ${f2(B.first)} s, man down ${f2(B.downAt)} s, rounds ${B.shots} · off: first round ${f2(A.first)} s, man down ${f2(A.downAt)} s, rounds ${A.shots}`);
   { const { R, st } = await staged(true, { shot: true }); R.step(30); R.hold('alert', 1, { face: R.game.player.char.pos, eyesOn: 'sam' }); R.foe.god = true; R.step(45); const lab = R.label();
     verdict(/SILENT · (contact|compromised)/.test(lab), 'the squad line\'s word shows it while it lasts', `${lab} (${f2(st.d)} m)`); }
-  const s0 = SPM.SPOTTED_STATS.steps; const C = await run(false, { hidden: true }, 'warehouse-four'), D = await run(true, { hidden: true }, 'warehouse-four');   // (the warehouse: crates on an open floor — the records office's lines all run through doorways, where nobody is stood)
+  const C = await run(false, { hidden: true }, 'warehouse-four'), D = await run(true, { hidden: true }, 'warehouse-four');   // (the warehouse: crates on an open floor — the records office's lines all run through doorways, where nobody is stood)
   verdict(D.first >= 0 && D.downAt >= 0 && (C.first < 0 || D.first <= C.first + 1e-6), 'behind cover with his gun on the opening he was dealt: his gun comes round onto the man who has them (a step to a shot if he needs one) and he fires',
-    `on: first round ${f2(D.first)} s, man down ${f2(D.downAt)} s, walked ${f2(D.walked)} m, steps taken ${D.steps - s0} · off: first round ${f2(C.first)} s, man down ${f2(C.downAt)} s (−1 = never in 10 s), walked ${f2(C.walked)} m`);
+    `on: first round ${f2(D.first)} s, man down ${f2(D.downAt)} s, walked ${f2(D.walked)} m, steps taken ${D.steps} · off: first round ${f2(C.first)} s, man down ${f2(C.downAt)} s (−1 = never in 10 s), walked ${f2(C.walked)} m`);
   // Sam squarely between the partner and the man (the file as it walks: the partner a stride behind him) — the room fight keeps a gun down while Sam is in its lane
   const between = (R: any, st: any) => { const hp = R.foe.char.pos, p = st.at, L = flat(p, hp); R.game.teleportPlayer([p[0] + (hp[0] - p[0]) * 1.6 / L, 0, p[2] + (hp[2] - p[2]) * 1.6 / L]); };
-  const s1 = SPM.SPOTTED_STATS.steps; const E = await run(false, { shot: true }, SCN, between), F = await run(true, { shot: true }, SCN, between);
-  verdict(F.first >= 0 && F.downAt >= 0 && F.steps - s1 > 0 && (E.first < 0 || F.first <= E.first + 1e-6), 'Sam standing in his line to the man: he steps to a line that is not through Sam, and fires',
-    `on: first round ${f2(F.first)} s, man down ${f2(F.downAt)} s, walked ${f2(F.walked)} m, steps taken ${F.steps - s1} · off: first round ${f2(E.first)} s, man down ${f2(E.downAt)} s (−1 = never in 10 s)`);
+  const E = await run(false, { shot: true }, SCN, between), F = await run(true, { shot: true }, SCN, between);
+  verdict(F.first >= 0 && F.downAt >= 0 && F.steps > 0 && (E.first < 0 || F.first <= E.first + 1e-6), 'Sam standing in his line to the man: he steps to a line that is not through Sam, and fires',
+    `on: first round ${f2(F.first)} s, man down ${f2(F.downAt)} s, walked ${f2(F.walked)} m, steps taken ${F.steps} · off: first round ${f2(E.first)} s, man down ${f2(E.downAt)} s (−1 = never in 10 s)`);
   return done();
 });
 
@@ -261,14 +262,14 @@ export const spottedOff = guarded(async () => {
     const feet = SPM.spottedFeet(R.game, R.mate, true, false), keen = SPM.spottedKeen(R.game, R.mate);
     verdict(JSON.stringify(SPM.SPOTTED_STATS) === s0 && feet === null && !keen && R.mode() === 'calm' && !spottedHoldsRound(R.game, R.mate, R.foe) && SPM.spottedOf(R.mate) === null && /SILENT/.test(R.label()) && !/low|contact/.test(R.label()),
       'off, beside a suspicious man: no state kept, no feet, no word, nothing counted', `feet ${feet} · keen ${keen} · mode ${R.mode()} · ${R.label()} · ${SPM.spottedSummary(R.game)}`); }
-  const calm = async (on: boolean) => { const R = await rig(11, on); const hs: string[] = []; const g = R.game; const way = R.foe.char.pos;
+  const calm = async (on: boolean) => { const R = await rig(11, on), wary0 = SPM.SPOTTED_STATS.wary; const hs: string[] = []; const g = R.game; const way = R.foe.char.pos;
     R.post = () => { if (R.frames % 20 === 0) hs.push(hashDigest(digestGame(g, true))); };
     const path = g.col.nav.findPath(g.player.char.pos, way) ?? []; let i = 0;
     for (let f = 0; f < 60 * 20; f++) { const wp = path[Math.min(i, path.length - 1)]; if (wp && flat(wp, g.player.char.pos) < 0.5 && i < path.length - 4) i++;
       const p = g.player.char.pos; if (wp) { const d = flat(wp, p) || 1; g.teleportPlayer([p[0] + (wp[0] - p[0]) / d * 1.3 * DT, 0, p[2] + (wp[2] - p[2]) / d * 1.3 * DT]); } R.step(); }
-    return { hs, mode: R.mode(), wary: SPM.SPOTTED_STATS.wary }; };
-  const w0 = SPM.SPOTTED_STATS.wary; const A = await calm(false), B = await calm(true); const same = A.hs.length === B.hs.length && A.hs.every((h, i) => h === B.hs[i]);
-  verdict(same && B.wary === w0, 'on, the one defender calm for twenty seconds of following Sam: every digest the same as off', `${A.hs.length} digests · ${same ? 'identical' : `first difference at #${A.hs.findIndex((h, i) => h !== B.hs[i])}`} · last ${A.hs[A.hs.length - 1]} / ${B.hs[B.hs.length - 1]}`);
+    return { hs, mode: R.mode(), wary: SPM.SPOTTED_STATS.wary - wary0 }; };
+  const A = await calm(false), B = await calm(true); const same = A.hs.length === B.hs.length && A.hs.every((h, i) => h === B.hs[i]);
+  verdict(same && B.wary === 0, 'on, the one defender calm for twenty seconds of following Sam: every digest the same as off', `${A.hs.length} digests · ${same ? 'identical' : `first difference at #${A.hs.findIndex((h, i) => h !== B.hs[i])}`} · last ${A.hs[A.hs.length - 1]} / ${B.hs[B.hs.length - 1]}`);
   return done();
 });
 
