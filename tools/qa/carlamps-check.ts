@@ -140,7 +140,6 @@ export async function carlampsCheck(): Promise<boolean> {
       CARLAMPS.on = true; const old = snap(); delete old.tables.CARLAMPS; carLampsTape(old.tables); 
       CARLAMPS.on = true; carLampsTape(snap().tables); 
       const called = ['src/replay/recipestand.ts', 'tools/qa/rerun.ts'].filter(f => !/carLampsTape\(src\)/.test(readFileSync(`${ROOT}/${f}`, 'utf8')));
-      if (!/TPS_CARLAMPS = .*CARLAMPS\?\.on/.test(readFileSync(`${ROOT}/tools/qa/replay.ts`, 'utf8'))) called.push('tools/qa/replay.ts');   // (a session file's own replay stands its game up on the file's word)
       // … and the level is the same level to a checkpoint or a recording with the lamps for targets or without
       const fpOn = levelFingerprint(game).fp as string, fpOff = levelFingerprint(off.game).fp as string;
       CARLAMPS.on = true; J.applyKnobs(game, old); 

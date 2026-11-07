@@ -1001,11 +1001,11 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
   // the corridor's north wall hinges on its west jamb and swings north into its room, so the pair stack on the east (latch) jamb — #1 bladed to the wall half a
   // metre off it, #2 tucked in 0.85 m behind — #1 breaches by the lock and hooks east along the near wall, #2 takes the west, door side a beat later; the break
   // room is taken through its corridor door the same way mirrored (that wall is on their left). Staff carry keys, so every breach here is 'open': the leaf comes
-  // unlatched and gets shoved off its real hinge into the room (`fling` is that shove). Marks were checked
+  // unlatched and gets shoved off its real hinge into the room (`fling` is that shove; the tour's conference plan in demo.ts kicks instead). Marks were checked
   // headlessly against this file — free nav cells, ≥ 0.5 m off every settled prop footprint, straight walkable legs, the flung leaf's arc clear of the props —
   // and are listed per room below; y in the aim lists is where the muzzle (and its light) rests: ~1 m on walls and doors, ~0.3 m under furniture.
   const clearPlans: RoomClearPlan[] = [
-    { // conference room (x 4‥14, z 4‥10): the table-and-chairs block leaves clean lanes only along the south glass
+    { // conference room (x 4‥14, z 4‥10): the tour's own marks (demo.ts CONFERENCE_CLEAR) — the table-and-chairs block leaves clean lanes only along the south glass
       // and up the east side, so #1 dominates from the south-east corner and pushes up the TV wall while #2 holds the door side and clears the west half by light
       door: 'conference', room: 'conference room', breach: 'open', bounds: { x0: 4.12, x1: 13.94, z0: 4.12, z1: 9.94 },
       stack: [[10.55, 0, 10.5], [11.4, 0, 10.62]], stackFace: [-1.92, -1.9], stackSide: 1, stackAim: [[9.65, 1.05, 10.02], [9.7, 1.95, 10.0]],

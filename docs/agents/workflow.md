@@ -14,7 +14,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `.worktrees/` (gitignored) does a broader soak. Nothing minutes-long runs in the foreground while the user is
   around. Up to ~32 parallel agents is fine.
 - **Lanes = background agents in `.worktrees/<name>` on their own branch; the lead is the merge + verify gate** (unsigned `git merge --no-ff` in the main checkout, the changed
-  families through `gate.sh` (+ soak for gameplay) + `bun run build` on the MERGED tree in the background, a pane boot when shader text changed, commit, retire the worktree).
+  families through `gate.sh` + tour (+ soak for gameplay) + `bun run build` on the MERGED tree in the background, a pane boot when shader text changed, commit, retire the worktree).
   Each lane serves ITS checkout on ITS OWN port (`PORT=52xx nohup bun run tools/serve.ts` there; a shot sink beside it,
   `window.__shotPort` pointing the harnesses at it (main's default 5174); `vendor/typescript` symlinked from the main tree) and stops it BY PID / PORT (`lsof -ti :52xx`) — never
   `pkill -f tools/serve.ts`: that killed every lane's server and the maintainer's :5173 at once. **:5173 is the maintainer's own `bun run dev` tab and it bundles at start-up: after

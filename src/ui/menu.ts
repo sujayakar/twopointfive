@@ -26,6 +26,7 @@ import { openOptions, closeOptions, optionsOpen, setOptionsDeps, refreshOptions 
 import { cloudNote } from './cloudnote';
 import { COOP } from '../net/lobby';
 import { coopRows } from './coop';
+import { pageSay } from '../view/pagesaid';
 
 /** the title screen's line under the wordmark */
 const TITLE_LINE = 'Squad tactics and stealth. Every light, shadow and wisp of smoke is live.';
@@ -224,7 +225,7 @@ export class Menu {
   /** the URL named a scenario and its start() said no: the reason, where the player is looking */
   private refused(card: HTMLElement) { const why = this.d.scenario?.refused?.() ?? null; if (why) { const r = el('div', 'refused'); r.textContent = why; card.appendChild(r); } }
 
-  /** The debrief card (main.ts opens it whenever game.mission.debrief is raised): on MISSION COMPLETE — Again = a fresh encounter (and mission), Keep playing / Esc =
+  /** The debrief card (main.ts opens it when the game says the end card is due): on MISSION COMPLETE — Again = a fresh encounter (and mission), Keep playing / Esc =
    *  back to the sandbox with the mission left done — and, a beat after Sam goes DOWN, as the down card — Restart (or Esc back to the floor, where Enter restarts
    *  as it always has). The contents are ui/debrief.ts's: rating + score, the numbers, the badges, the map, the timeline. */
   private debrief(card: HTMLElement) {
@@ -255,7 +256,7 @@ export class Menu {
   private checkpointButton(cls = '', armed: () => boolean = () => true): HTMLElement | null {
     const g = this.d.game, load = this.d.loadCheckpoint; if (!load) return null;
     const info = this.checkpointInfo(); if (!info) return null;
-    return button(`Restart from checkpoint (${g.saves.ageWords(g, info)})`, () => { if (!armed()) return; const why = load(info.key); if (why) { g.msg(`checkpoint: ${why}`); this.render(); return; } this.close(); }, cls);
+    return button(`Restart from checkpoint (${g.saves.ageWords(g, info)})`, () => { if (!armed()) return; const why = load(info.key); if (why) { pageSay(`checkpoint: ${why}`); this.render(); return; } this.close(); }, cls);
   }
   /** 'Quit to scenarios' (the pause card and the down card while a scenario is up): the scenario stopped and the start card's picker back (main.ts) */
   private quitButton(armed: () => boolean = () => true): HTMLElement { return button('Quit to scenarios', () => { if (!armed()) return; this.d.stopTour?.(); this.d.scenario?.quit(); }, 'quit'); }
@@ -289,7 +290,7 @@ export class Menu {
       if (info.slot === 'manual') t.appendChild(el('i'));
       t.title = info.label || (info.slot === 'manual' ? 'by hand' : 'autosave'); t.setAttribute('aria-label', `${info.slot === 'manual' ? 'saved by hand' : 'autosave'}, ${g.saves.ageWords(g, info)}`);
       t.tabIndex = -1;
-      t.onclick = () => { if (!armed()) return; const why = load(info.key); if (why) { g.msg(`checkpoint: ${why}`); this.render(); return; } this.close(); };
+      t.onclick = () => { if (!armed()) return; const why = load(info.key); if (why) { pageSay(`checkpoint: ${why}`); this.render(); return; } this.close(); };
       strip.appendChild(t); return t;
     });
     if (due) { const t = el('div', 'tile hand due'); t.appendChild(el('i')); t.setAttribute('aria-label', 'a save by hand, written as play goes on'); strip.insertBefore(t, tiles[line.findIndex(x => x.missionT > now + 0.5)] ?? null); }   // (before the saves a load has left ahead of this moment)

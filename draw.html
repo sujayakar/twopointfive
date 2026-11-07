@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>twopointsix</title>
+  <link rel="icon" href="data:," />
+  <!-- THE PAGE THAT DRAWS A GAME IT DOES NOT HOLD (src/host/drawpage.ts): the game is the Rust module's, and the bundle behind this page imports none of the game's TypeScript -->
+  <style>
+    html, body { margin: 0; height: 100%; background: #000; overflow: hidden; font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; color: #d2c9b5; }
+    #app { position: fixed; inset: 0; }
+    canvas#view { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: crosshair; }
+    #loading { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); white-space: pre-wrap; text-align: center; }
+    #fatal { position: absolute; inset: 0; display: none; z-index: 40; align-items: center; justify-content: center; text-align: center; padding: 40px; font-size: 14px; color: #fcc; background: #100; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <canvas id="view"></canvas>
+    <div id="loading">loading…</div>
+    <div id="fatal"></div>
+  </div>
+  <script type="module" src="./src/host/drawpage.ts"></script>
+</body>
+</html>

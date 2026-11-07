@@ -412,12 +412,9 @@ pub fn reach_of(b: crate::hours::SkyStateBox, p: V3, d: V3) -> f64 {
     m::max(t, 0.0)
 }
 
-/// The statics alone between a and b: the door leaves are lent away for the question. (hours.ts staticBlocked)
+/// The statics alone between a and b: no door leaf is in the way. (hours.ts staticBlocked)
 pub fn static_blocked(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
-    let dynamic = core::mem::take(&mut g.col.dynamic_boxes);
-    let blocked = crate::scene_collision::segment_blocked(g, a, b, None, None, None);
-    g.col.dynamic_boxes = dynamic;
-    blocked
+    crate::scene_collision::segment_blocked_over(g, &crate::ask::Over::statics(), a, b, None, None)
 }
 
 /// What `skyLight` and `openRays` read of the row they are asked by. The TypeScript hands that row in; the signatures dropped it, and which it is follows from the game: hourLight runs only with an hour's row and moonLight only without one, so an hour's row if there is one, else the night's.

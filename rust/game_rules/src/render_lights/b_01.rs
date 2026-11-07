@@ -8,27 +8,18 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// One light's GPU record (common.wgsl struct Light, 16 words) at word `o`. In the TypeScript `f` and `u` are two views of one buffer; here they are two
-/// lists, so every word is written to both, the same bits, and a host may hand either on. `inten` scales the colour; `kind_word` is the kind with whatever
-/// flag bits the caller sets above its low byte, `owner_word` the owner byte with the glass mask above it.   (src/render/lights.ts:113 packLight)
-pub fn pack_light(g: &crate::game::Game, f: &mut Vec<f32>, u: &mut Vec<u32>, o: f64, l: LightId, inten: f64, kind_word: f64, volumetric: f64, owner_word: f64) {
+/// One light's GPU record (common.wgsl struct Light, 16 words), hung at `pos` with that radius. `inten` scales the colour; `kind_word` is the kind with
+/// whatever flag bits the caller sets above its low byte, `owner_word` the owner byte with the glass mask above it.   (src/render/lights.ts packLight)
+pub fn pack_light(row: &RtLight, pos: V3, radius: f64, inten: f64, kind_word: u32, volumetric: f64, owner_word: u32) -> [u32; 16] {
     const DEG: f64 = core::f64::consts::PI / 180.0;
-    let o = o as usize;
-    if f.len() < o + 16 { f.resize(o + 16, 0.0); }
-    if u.len() < o + 16 { u.resize(o + 16, 0); }
-    let row = &g.tab.light[l];
+    let w = |v: f64| (v as f32).to_bits();
     // (a portal has no cone: the two cone words are its own)
     let (w11, w12) = match row.portal.as_ref() {
         Some(p) => (p.half_wide, p.share),
         None => (m::cos(row.outer_deg * DEG), m::cos(m::min(row.inner_deg, row.outer_deg - 0.5) * DEG)),
     };
-    let mut fw = |k: usize, v: f64| { let x = v as f32; f[o + k] = x; u[o + k] = x.to_bits(); };
-    fw(0, row.pos[0]); fw(1, row.pos[1]); fw(2, row.pos[2]);
-    fw(4, row.dir[0]); fw(5, row.dir[1]); fw(6, row.dir[2]); fw(7, row.range);
-    fw(8, row.color[0] * inten); fw(9, row.color[1] * inten); fw(10, row.color[2] * inten); fw(11, w11);
-    fw(12, w12); fw(13, volumetric); fw(15, row.radius);
-    let mut uw = |k: usize, v: f64| { let x = js::to_u32(v); u[o + k] = x; f[o + k] = f32::from_bits(x); };
-    uw(3, kind_word); uw(14, owner_word);
+    [w(pos[0]), w(pos[1]), w(pos[2]), kind_word, w(row.dir[0]), w(row.dir[1]), w(row.dir[2]), w(row.range),
+        w(row.color[0] * inten), w(row.color[1] * inten), w(row.color[2] * inten), w(w11), w(w12), w(volumetric), owner_word, w(radius)]
 }
 
 

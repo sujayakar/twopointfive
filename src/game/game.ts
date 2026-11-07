@@ -78,6 +78,7 @@ import { seatsStand, seatManId, standMen, spotBeside, manById, isManId, eachSeat
 import { doorMan } from './doorthrow';
 import './mission';
 import { NO_VIEW, type TickView } from '../view/seatview';
+import type { WorldAsk } from '../view/worldask';
 import { Chronicle, chronInterrogated } from './chronicle';
 import { hiddenProps, irBeams } from './combat';
 import { irViewer, irMade } from './irlaser';
@@ -140,6 +141,7 @@ import { QuietMission } from './quiet';
 import { Lesson } from './lesson';
 import { Rails } from './rails';
 import { Par } from './par';
+import type { LostMan } from './deathrecap';
 import { Verdict } from './verdict';
 import { Snatch } from './snatch';
 import { Defuse } from './defuse';
@@ -186,7 +188,6 @@ import { openingStart } from './opening';
 import { Checkpoints } from './savestate';
 import { Sensors } from './sensors';
 import type { ProbeLike } from './sensors';
-import { SessionRecorder } from './journal';
 import { Devices, loadDeviceTune, learnCode, DEVICE_TUNE_DEFAULTS } from './devices';
 import { Destruction, loadChaos } from './destruction';
 import './fixtureBreak';   // the look of a fixture breaking and hanging broken (picture only)
@@ -268,7 +269,6 @@ export interface Mission {
   alarmOn: boolean;                  // somebody is at 'alert' right now (edge → an alarm episode)
   sweepAt: number;                   // game time at which somebody gets sent to look at the dead rack (-1 = nobody pending)
   spottedT: number;                  // last time an alert guard had eyes on you (episode debounce for stats.spotted)
-  debrief: boolean;                  // one-shot for the page: open the end card (mission complete) — or, once `stage` is 'failed', the down card
   downCardAt: number;                // game time the down card comes up (mission.ts DOWN_CARD_SECS after he dropped; -1 = not pending)
   handsOn: boolean;                  // the drive has been touched at least once (the chronicle notes the first time only)
   stats: MissionStats;
@@ -277,7 +277,7 @@ export type MissionRating = 'ghost' | 'panther' | 'assault';
 /** Chaos Theory's own words: ghost = never spotted, no kills, no alarms; panther = lethal or loud but never actually seen; assault = they had eyes on you. */
 export function missionRating(s: MissionStats): MissionRating { return s.spotted > 0 ? 'assault' : s.kills === 0 && s.alerts === 0 && s.bodies === 0 ? 'ghost' : 'panther'; }   // ghost: never seen, no alarm, nobody shot, nothing found (a silent takedown nobody finds keeps it — a man out cold is not a kill); panther: they know someone was there but never saw who
 export function fmtClock(sec: number): string { const s = Math.max(0, Math.floor(sec)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; }
-const newMission = (t0: number): Mission => ({ stage: 'infiltrate', t0, driveT: -1, pulled: false, alarmOn: false, sweepAt: -1, spottedT: -100, debrief: false, downCardAt: -1, handsOn: false, stats: { elapsed: 0, alerts: 0, spotted: 0, bodies: 0, shots: 0, kills: 0, knockouts: 0, keys: 0, blackout: false, sandbox: false, qrf: 0, qrfAt: -1 } });
+const newMission = (t0: number): Mission => ({ stage: 'infiltrate', t0, driveT: -1, pulled: false, alarmOn: false, sweepAt: -1, spottedT: -100, downCardAt: -1, handsOn: false, stats: { elapsed: 0, alerts: 0, spotted: 0, bodies: 0, shots: 0, kills: 0, knockouts: 0, keys: 0, blackout: false, sandbox: false, qrf: 0, qrfAt: -1 } });
 
 /** the ragdoll particles a door leaf feels (Game.updateDoors): enough of the body that a leaf cannot close through it */
 export const BODY_DOOR_PARTICLES = [RAG.pelvis, RAG.spine, RAG.head, RAG.kneeL, RAG.kneeR, RAG.ankL, RAG.ankR];   // (how many of them there are is in the arithmetic of what a doors' step is handed: levelfit.ts handOverMost)
@@ -808,8 +808,6 @@ export class Game {
   /** THE SENSES ON THE CPU (sense.ts SENSE.cpu; off = nothing below runs): the game's own smoke, fed by every emitter handed to the solver while the switch is on,
    *  and the solver as it was before the game's tee was put in front of it (null = no tee) */
   cpuSmoke = new CpuSmoke(); private smokeOwned: { solver: SmokeSystemLike; undo: () => void } | null = null;
-  /** the session journal's recorder (journal.ts): F10 / __journal on the game page, tools/qa/journal-probes.ts headless — idle unless somebody asked */
-  journal: SessionRecorder = new SessionRecorder(this);
   /** THE REPLAY BUFFER's tap (replaybuf.ts): called as a step's first statement with the record it is about to run on, and as its last with none — it only reads. null (a game nobody gave a buffer) = nothing */
   replayTap: ((dt: number, cmd?: PlayerCmd) => void) | null = null;
   /** The AI's window on the renderer's light, by key — the same GPU irradiance queries the light meter is made of (1–2 frames' latency, read back by key):
@@ -870,7 +868,7 @@ export class Game {
    *  with no picture). The game tells it that the level stands (the constructor), where walls changed (wallbreak.ts) and that a sun wants a mask (hours.ts,
    *  lighting.ts), and reads nothing back. */
   reachInterior: Uint8Array | null = null;
-  touring = false;   // a show has the floor (written by the Director and Attract) — a plain signal for the HUD / mission getters; quietUtility is NOT it (a stop can run 'live' with the flag down)
+  touring = false;   // the showcase tour is running (demo.ts start/stop) — a plain signal for the HUD / mission getters; quietUtility is NOT it (a stop can run 'live' with the flag down)
   hover: Interactable | null = null; interactables: Interactable[] = []; nearby: Interactable[] = []; aimSnap: Vec3 | null = null;   // aimSnap: where the auto-aim put the reticle this frame (a light or a man's chest), null = raw cursor aim   // hover = the highlighted ROW (what a Space tap / release performs), nearby = the panel's rows (player.ts buildInteractables), interactables = the per-thing markers
   /** The row Space performed THIS frame (interact.ts updateInteract sets it right after the rows are built — a tap released, or Space let go with the selector open —
    *  and update() clears it at the end): each system reads it where it used to read the key itself, so the frame's order of business is what it always was
@@ -977,6 +975,8 @@ export class Game {
   rails!: Rails;
   /** a room clear against a clock: the Rust game's record, written by the bridge (par.ts is how the page reads it); blank on a level without a scenarios.par block */
   par!: Par;
+  /** the squad's men lost, as the squad knows them: the game's record (rust/game_rules/src/deathrecap), read by the HUD */
+  recap: { lostLive: LostMan[]; allDown: boolean } = { lostLive: [], allDown: false };
   /** how the run went, said once it is over (verdict.ts): reads only — the end card's record */
   verdict!: Verdict;
   /** the man a snatch level's team must take alive (snatch.ts): inert without the level's scenarios.snatch block */
@@ -1424,7 +1424,7 @@ export class Game {
     if (CLEANRESTART.picture && this.engine.restartPicture) { this.engine.restartPicture('level restarted'); CLEANRESTART_STATS.pictures++; }
   }
   /** Restart the encounter: a fresh Player at the insertion point with full kit, fresh Guards on their routes, lights repaired, the level as authored. */
-  restartEncounter() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Game.restartEncounter', this, []); if (__r !== RUST_PASS) return __r as any; } } this.journal.cut('the encounter was staged again');   // (between frames — a card's restart, a show, a mission's quit — this is on no tape: an F10 recording ends whole before it and a new one is asked for; inside an update, or under a request still pending, it does nothing: journal.ts cut)
+  restartEncounter() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Game.restartEncounter', this, []); if (__r !== RUST_PASS) return __r as any; } }
     useDice(this.dice); this.sensors.ownReset(); this.quiet?.current();
     const clean = CLEANRESTART.on;   // (cleanrestart.ts: nothing of the try that ended stands, sounds or plays on in this one — off, every line below as it was)
     if (clean) { CLEANRESTART_STATS.restarts++; CLEANRESTART_STATS.lines += this.messages.length; this.messages.length = 0; }   // (the lines of the encounter that ended go before anything below speaks: a staging's own line is this one's)
@@ -1471,7 +1471,6 @@ export class Game {
     const me = this.hostSeat();   // (the seat this host plays: its record is sampled here; any other seat's is whatever was last handed to it — Seat.hand)
     if (this.restartCut) { this.restartCut = false; const cut = me.takeCut();   // a restart from outside a tick (a card's button) cut the seat's camera: taken HERE, before this tick's record reads the view, so the fresh man's first tick is aimed through the camera that is on him
       if (cut && !cam.pin) { cam.target = v3.copy(cut); cam.desired = v3.copy(cam.target); cam.rebuild(); } }
-    this.journal.frameStart(dt, input, cam, canvas);   // the session journal (journal.ts): idle, a return; asked for, it takes its checkpoint and re-enters it HERE, before anything of the frame has run; recording, it files this frame's dt / camera / input and opens the sensors' frame
     this.director?.injectInput(input);   // a showcase beat's synthetic key / click from LAST frame's tick (director.ts c.press / c.click) becomes this frame's input, ahead of everybody who reads it — a return on its first line otherwise
     this.hostBefore(input);
     this.cmdBuf = sampleCmd(me.view, input, cam, canvas, this.cmdBuf);
@@ -1479,8 +1478,7 @@ export class Game {
     this.replayTap?.(dt, cmds[0]);   // the replay buffer's run tape (runtape.ts): this step's dt and the first seat's record, before anything of it has run — reads only
     this.stepSeats(dt, cmds);
     this.hostAfter(input, cam, canvas);
-    this.journal.frameEnd();     // the session journal closes the frame (the sensors' reads folded in, a digest on the beat): after everything, so a digest is the whole settled frame
-    this.replayTap?.(dt);        // the replay buffer (replaybuf.ts): the settled frame read into its ring — reads only, after the journal has closed the frame
+    this.replayTap?.(dt);        // the replay buffer (replaybuf.ts): the settled frame read into its ring — reads only
   }
   /** THE HOST'S HALF OF A TICK, round the step — `update`'s own lines, named for a host that steps the game by records it did not sample itself (a networked
    *  page: net/page.ts). Before: what the host's INPUT is told. After: what the tick hands back for the camera of the seat this host shows (`hostSeat`), and
@@ -1669,6 +1667,16 @@ export class Game {
   get view(): TickView { return this.viewAsk?.() ?? NO_VIEW; }
   /** the host's: asks the Rust game for its view (src/host/rustgame.ts in a page, tools/blitz/rust-host.ts in bun) */
   viewAsk: (() => TickView) | null = null;
+  /** THE BOX WORLD, ASKED (src/view/worldask.ts) by whoever draws, hears or points: the Rust game's answer where one steps this game (the host sets `askHost`), and
+   *  this page's own copy of the level where none does (a workbench's floor, the moment before the first start) */
+  readonly ask: WorldAsk = {
+    blocked: (a, b) => this.askHost ? this.askHost.blocked(a, b) : this.col.segmentBlocked(a, b),
+    solid: (a, b) => this.askHost ? this.askHost.solid(a, b) : this.col.solidBlocked(a, b),
+    ray: (o, d, max) => this.askHost ? this.askHost.ray(o, d, max) : this.col.raycast(o, d, max),
+    hear: (from, to) => this.askHost ? this.askHost.hear(from, to) : this.col.sound.propagate(from, to),
+    together: f => this.askHost ? f() : this.col.window(f),
+  };
+  askHost: WorldAsk | null = null;
   objectivePos(): Vec3 | null { return this.view.mission?.pos ?? null; }
   objectiveText(): string { return this.view.mission?.text ?? ''; }
 

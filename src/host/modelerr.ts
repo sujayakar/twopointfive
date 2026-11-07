@@ -28,6 +28,7 @@ import { lightEstimateAt, steadyLamps, LIGHTS } from '../game/guards';
 import { moonForget } from '../game/hours';
 import { smokeParams } from '../game/combat';
 import { saveFile, type SavedKind } from './savefile';
+import { pageSay } from '../view/pagesaid';
 
 export const MODELERR = { on: false };
 export const modelErrAsked = (q: URLSearchParams): boolean => q.has('modelerr');
@@ -443,14 +444,14 @@ export function modelErrFrame(): void {
   if (!run) { if (boot.page.held() || !(g.time > 0)) return; hint?.remove(); hint = null; run = new ModelErr(g, PLANS[boot.plan], boot.plan, boot.scene, true); (window as unknown as { __modelerrRun?: ModelErr }).__modelerrRun = run; }
   if (run.done) { if (!card) finish(run.report); return; }
   run.frame();
-  if (run.station !== said && run.station < run.report.stations.length) { said = run.station; g.msg(`Measuring the senses against the picture: spot ${said + 1} of ${run.report.stations.length}. Hands off until it says it's done.`); }
+  if (run.station !== said && run.station < run.report.stations.length) { said = run.station; pageSay(`Measuring the senses against the picture: spot ${said + 1} of ${run.report.stations.length}. Hands off until it says it's done.`); }
 }
 function finish(R: Report): void {
   try { R.where = boot!.where(); } catch { /* said without it */ }
-  const text = reportText(R), g = boot!.game; (window as unknown as { __modelerr?: Report }).__modelerr = R;
+  const text = reportText(R); (window as unknown as { __modelerr?: Report }).__modelerr = R;
   let went = 'It was not sent anywhere: copy it from window.__modelerr.';
   try { const w = saveFile(KIND, `modelerr-${R.scene.replace(/[^a-z0-9]+/gi, '-')}-${R.plan}.json`, new Blob([JSON.stringify(R)], { type: 'application/json' }), { meta: { scene: R.scene, plan: R.plan, world: R.world } });
     if (w.local) went = 'The report was downloaded.'; else if (w.went) went = 'The report is being sent to the developer.'; } catch { /* the line above stands */ }
   card = say([...text, went]);
-  g.msg('The measurement is done.'); console.info(text.join('\n'));
+  pageSay('The measurement is done.'); console.info(text.join('\n'));
 }

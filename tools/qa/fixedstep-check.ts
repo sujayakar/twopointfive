@@ -9,7 +9,7 @@
 //   same game  one seed, one scripted input keyed by tick, the camera pinned: a 60, a 120, a 144 and a 50 Hz display and the harness's own W.step(1/60) play the same
 //              ten seconds digest for digest (a fight in it)
 //   off        with the switch off stepFrame runs one update a frame on the frame's own dt, as it always did
-//   frozen     a frame under the pause card: no update, the keys pressed on it reach the hotkeys once (F9 / F10 start a recording from the pause menu) and nothing after them
+//   frozen     a frame under the pause card: no update, the keys pressed on it reach the hotkeys once (F9 starts a recording from the pause menu) and nothing after them
 import { standUp, ROOT } from './headless.ts';
 const { stepFrame, planTicks, FIXEDSTEP } = await import(`${ROOT}/src/host/loop.ts`);
 const { digestGame, diffDigest } = await import(`${ROOT}/src/game/digest.ts`);
@@ -29,7 +29,7 @@ let onUpdate: ((g: any, dt: number, input: any) => void) | null = null;
 /** main.ts's LoopCtx with nothing drawn: the world packed where a draw would pack it */
 function ctxOf(W: any, extra: Record<string, unknown> = {}): any {
   return { game: W.game, input: W.input, cam: W.cam, view: W.canvas, host: W.engine, render: () => { W.engine.world.upload(); }, betweenTicks: () => { W.engine.world.relist(); },
-    smoke: null, audio: null, attract: null, hud: null, bubbles: null, time: 0, updateMs: 0, frozen: () => false, present: () => false, fixedStep: () => true, ...extra };
+    smoke: null, audio: null, demo: null, attract: null, hud: null, bubbles: null, time: 0, updateMs: 0, frozen: () => false, present: () => false, fixedStep: () => true, ...extra };
 }
 const frameOf = (ctx: any, dt: number) => { if (BREAK && FIXEDSTEP.on) { const hz = FIXEDSTEP.hz; FIXEDSTEP.hz = 1 / Math.max(dt, 1e-4); FIXEDSTEP.snap = 1; try { stepFrame(ctx, dt); } finally { FIXEDSTEP.hz = hz; FIXEDSTEP.snap = 0.0004; } } else stepFrame(ctx, dt); };
 

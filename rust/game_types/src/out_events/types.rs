@@ -20,7 +20,6 @@ pub enum OutEvent {
     ParticlesImpulse(crate::out_events::OutParticlesImpulse),
     ParticlesSetHeat(crate::out_events::OutParticlesSetHeat),
     ReachKeepChanged(crate::out_events::OutReachKeepChanged),
-    SessionRecorderCut(crate::out_events::OutSessionRecorderCut),
     SmokeSystemLikeClearAll,
     SmokeSystemLikeEmit(crate::out_events::OutSmokeSystemLikeEmit),
     SmokeSystemLikeKeepHot(crate::out_events::OutSmokeSystemLikeKeepHot),
@@ -42,6 +41,7 @@ pub enum OutEvent {
     ClearSnowTracks,
     Tap(crate::out_events::OutTap),
     WallFeel(crate::out_events::OutWallFeel),
+    EndCard,
 }
 
 #[derive(Clone, Debug)]
@@ -117,12 +117,6 @@ pub struct OutParticlesSetHeat {
 pub struct OutReachKeepChanged {
     pub rect: Option<[f64; 4]>,
     pub hold: Option<f64>,
-}
-
-#[derive(Clone, Debug)]
-pub struct OutSessionRecorderCut {
-    pub why: String,
-    pub lost: Option<bool>,
 }
 
 #[derive(Clone, Debug)]

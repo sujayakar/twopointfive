@@ -86,9 +86,9 @@ src/host/savefile.ts  THE ONE DOOR A FILE LEAVES THE PAGE BY (2026-10-27): `save
                      it was let go. NO DOWNLOAD (the maintainer, the same day: "we should get rid of local downloads entirely"; his pick for a file that
                      cannot go: no download, the page says it was not sent, the editor keeps saving its level files) for a kind that has given its
                      download up: a recorder's take ('perf'; `meta.of = 'bench'` on a benchmark's), a benchmark's RESULT ('bench', the BenchResult as
-                     JSON, `tellSaved`), the session journal and an exported checkpoint (the debug panel's 'export chosen', `ui/bindings.ts`; its
+                     JSON, `tellSaved`), and an exported checkpoint (the debug panel's 'export chosen', `ui/bindings.ts`; its
                      kind came off `SAVE_UP.local` the same day). Whoever saved it says where it went (`savedWords`: "is being sent to the developer" /
-                     "will be sent" / "wasn't sent" / "was sent"): the F9 and F8 notes, the F10 note and the checkpoint export's line (each followed by a second one when the file has arrived or
+                     "will be sent" / "wasn't sent" / "was sent"): the F9 and F8 notes and the checkpoint export's line (each followed by a second one when the file has arrived or
                      could not be sent), the benchmark card's line (qa.md). STILL DOWNLOADED (`SAVE_UP.local`, and told to the listener after the
                      click as before; THROWS where the download could not be asked for): the editor's level alone, which stays. A REPLAY IS NO KIND OF
                      THIS DOOR'S (since the replay pages gave their downloads up, the same day) and nothing downloads one: F7 and the engine
@@ -100,7 +100,7 @@ src/host/savefile.ts  THE ONE DOOR A FILE LEAVES THE PAGE BY (2026-10-27): `save
                      row on the frozen stand: a page-only table like `GPU_ASK`, no game state reads it. With no listener (the one-file build, the
                      harness, a dev page whose server runs no backend) a take or a journal goes nowhere but the shot server of a page on this machine
                      (`onThisMachine`), and the note then says where it landed (`REC → …`) or that it wasn't saved. WHAT NO DOWNLOAD COSTS, read in the code: with sharing off or no backend a take or a journal cannot be kept at
-                     all (a developer: `?downloads=1`, or after the fact `__saveUp.on = false` in the console and `__journal.save()` /
+                     all (a developer: `?downloads=1`, or after the fact `__saveUp.on = false` in the console and
                      `__perfrec.deliver(__lastPerfDump)`); a page left while a large file is going up loses it (the benchmark card's Close waits up
                      to `BENCH_SEND_MS` for `cloud.filesIdle`, and its line turns to "were sent"); a file HELD on a page that never shows the
                      notice (F9 on a mission opened by its link, first visit) is lost with the page. A long take fits: the backend packs text. A page is one bundle: the replay pages carry no door.
@@ -151,7 +151,7 @@ src/game/            game.ts (Game: state, constructor, event plumbing, doors/pr
                      drill, live Clearing dispatcher), qrf.ts (the response to going loud: trigger, radio telegraph, the four-man
                      element through the west stair door, the perimeter tier), consts.ts),
                      marks.ts (decal emit sites), particleFx.ts (GPU particle sites), glass.ts (rounds star panes), weather.ts (the storm), wet.ts (wet characters: the model + prints / drips),
-                     breach.ts (BreachDrill: the two-man
+                     demo.ts (the old showcase tour: Shot list + puppet choreography; console and tools/qa/tour.ts only), breach.ts (BreachDrill: the two-man
                      breach the night breach scenario runs live), character.ts (anim graph, aim, tactical stances /
                      kick / signals / lockpick layers), camera.ts (follow cam; spectate auto-yaw + low pitch up close),
                      ragdoll.ts, doors.ts, props.ts (pushable furniture), throwables.ts (canisters, dropped mags/
@@ -169,10 +169,10 @@ src/audio/ gpu/      audio.ts (mixer, propagation use, voice cap), music.ts (sco
 src/math/            vec.ts; src/debugHooks.ts (typed window hooks)
 tools/               serve.ts (+ levels-api.ts), build.ts, shot-server.ts, artifact-page.py, build-roadmap.ts (board generator), publish-public.sh,
                      level-export.ts (officeGen → levels/office.json; --check = stale test),
-                     qa/ (headless harness: headless.ts, soak.ts, probes.ts, gait.ts = the animation's numbers, audio-render.ts,
+                     qa/ (headless harness: headless.ts, soak.ts, probes.ts, tour.ts, gait.ts = the animation's numbers, audio-render.ts,
                      mesh-shadow-ref.ts = the mesh-shadow BVH / capsule-vs-mesh numbers + the GPU replay fixture, level-probes.ts = the
                      level-as-data identity / validate / round-trip family, fixtures/ (panel-inventory-main.json = the frozen Tab-row inventory),
-                     sessions/*.json.gz = the F10 journal fixtures the gate replays, gpu-quiet.sh,
+                     gpu-quiet.sh,
                      the in-page instruments *.js (served at /qa/<file>.js) and the review-page generators *-page.py — see 'A lane's deliverables' under Workflow)
 docs/                internal/<topic>.md = the notebooks (method, numbers, negatives) + review-ledger.md + architecture-review.md + morning-YYYY-MM-DD.html; review/<topic>.html = the self-contained
                      review pages published as Artifacts; perf/*.json = every measured take; shots/ = captures (shots/ab/ lossless, gitignored); design/ (level-scripting.md) + research/

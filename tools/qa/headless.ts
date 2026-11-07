@@ -147,7 +147,7 @@ const loadMannequin = (): Promise<any> => chPromise ??= loadGltfCharacter(`file:
 let castPromise: Promise<any> | null = null;
 /** THE CAST (public/assets/chars/cast.gltf — the operators' and defenders' meshes on the mannequin's skeleton, what the PAGE boots with): the harness stands on the mannequin as every
  *  frozen number was taken on it (the simulation reads no mesh, so nothing differs but what is drawn); `standUp({ cast: true })`, or TPS_CAST=1 in the environment for a whole tool
- *  (`TPS_CAST=1` in front of a tool), stands on the cast instead. Throws if the file is missing or off contract. */
+ *  (`TPS_CAST=1 bun run tools/qa/tour.ts`), stands on the cast instead. Throws if the file is missing or off contract. */
 export function loadCastCharacter(): Promise<any> { return castPromise ??= loadMannequin().then(base => loadGltfCast(`file://${ROOT}/public/assets/chars/${castFile()}`, base)); }
 /** the same for one named look, whatever the switch says (cast-probes.ts loads both files side by side): not cached */
 export function loadCastOf(look: boolean): Promise<any> { return loadMannequin().then(base => loadGltfCast(`file://${ROOT}/public/assets/chars/${castFile(look)}`, base)); }
@@ -167,9 +167,10 @@ export interface Headless {
   restore(s: any): void;
   /** null (the default): nothing recorded. Set it to an array and every audio call from then on is appended to THAT array, in order, stamped with game.time. */
   audioLog: AudioCall[] | null;
-  /** the null smoke object the Game was given (emit / push / clearAll dropped) */
+  /** the null smoke object the Game was given (emit / push / clearAll dropped) — hand the same one to anything else main.ts constructs with `smoke` (the Demo) */
   smoke: any;
-  /** one frame exactly as main.ts steps it (minus rendering): game.update → camera → lights → box upload → input.endFrame. `follow`: a camera look-at for this frame — the camera then follows it and drops the aim lead */
+  /** one frame exactly as main.ts steps it (minus rendering): game.update → camera → lights → box upload → input.endFrame. `follow` is what main.ts calls
+   *  demoPos: the showcase tour's camera look-at for this frame (Demo.update's return, called BEFORE this) — the camera then follows it and drops the aim lead */
   step(dt: number, follow?: Vec3 | null): void;
   /** A FAILED BEAT OF THE LEVEL'S SCRIPT FAILS ITS TOOL (default true). The director fails the beat, files an `error` row in its log and lets the frame go on,
    *  on every host alike; what to do then is the host's. This host throws after the step that filed one. false: a tool that means to watch a beat fail */
@@ -182,7 +183,7 @@ export interface Headless {
 
 /** A fresh level + engine stand-in + Game. A caller that wants a stream of its own seeds Math.random first (Guard / Character constructors draw from it); one that
  *  seeds nothing and names no seed gets the harness's die put there (tools/qa/die.ts): no game stood here rolls the clock's dice.
- *  `env` (a session journal's EnvSnap — tools/qa/replay.ts): stand the engine up as the RECORDING's was where the simulation can tell — its settings (debris cap,
+ *  `env` (a tape's EnvSnap — tools/qa/rerun.ts): stand the engine up as the RECORDING's was where the simulation can tell — its settings (debris cap,
  *  emissive scale, torch radius, marking lights) before the Game is built, a fake GPU particle system attached if it had one (the effect sites then take the branch
  *  they took), the canister row on the null smoke. Absent = the harness exactly as it always stood.
  *  `level` (a Level — loadLevel(parseLevelData(text)) of any file under levels/): stand the game up on THAT level instead of the bundled office.
@@ -273,7 +274,7 @@ export async function standUp(opts: { /** the dressing rows up, as the page has 
           if (bad && W.beatsThrow) throw new Error(`the level's script: beat '${bad.program}/${bad.beat}' ${bad.what}`); } }
       if (opts.reach) engine.reach.tick();   // (a page's engine steps its keeper of the reach masks once each render, on the clock where the frame has the planners' pace: here on the count, only where a tool asked for one, and never a real engine's, which steps its own)
       { const me = game.hostSeat().view, look = (game as any).rustHost?.look?.();   // (a game that steps somewhere else, in a quiet run of steps: the camera's two inputs asked of it, tools/blitz/PLAY.md)
-        cam.update(dt, follow ?? look?.follow ?? me.followPos(), follow || game.spectate >= 0 ? null : look?.aim ?? me.aimPoint); }   // (a look-at given: no aim lead)
+        cam.update(dt, follow ?? look?.follow ?? me.followPos(), follow || game.spectate >= 0 ? null : look?.aim ?? me.aimPoint); }   // (main.ts: demoPos ?? followPos, and no aim lead while the tour frames the shot)
       engine.lights.update(dt, game.time);
       engine.world.dynamics = game.dynBoxes;
       if (frame++ % uploadEvery === 0) engine.world.upload();   // CPU pack + grid (what the cursor's raycast and the lasers read); the GPU writes go nowhere

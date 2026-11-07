@@ -815,7 +815,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   'save'|'load', label)`. `roomOf(pos)` = the ROOMS table (nominal partition lines; replace with the level format's rooms block when G1 lands). Reading: `debriefOf(g)`
   → counts + `stealthScore` (100 minus SCORE's price list — every term only subtracts; probes hold monotonicity) + `ratingOf` (BANDS: GHOST ≥ 90 · SHADOW ≥ 70 ·
   OPERATIVE ≥ 40 · ASSAULT) + `badgesOf` (BADGE knobs) + the summary line; `fmtEvent` words a row. The card is `ui/debrief.ts renderDebrief(host, game, actions)`
-  (menu.ts: mode 'debrief' on `mission.debrief` — raised on exfil AND `DOWN_CARD_SECS` after Sam drops — plus the pause card's *Run so far* tab; CSS `#menu .db-*`);
+  (menu.ts: mode 'debrief' on the game's out event EndCard — sent on exfil AND `DOWN_CARD_SECS` after Sam drops, `END_CARD.due` for the page's frame — plus the pause card's *Run so far* tab; CSS `#menu .db-*`);
   the map is a canvas at nav-grid resolution + percent-placed DOM pins (PIN table). QA: `probes.ts debrief` (run / rooms / doorname / charge / loud / score / dom), soak's 'leak chronicle' invariant.
 
 <!-- was CLAUDE.md lines 1735–1757 -->
@@ -850,6 +850,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   records the particles get, a probe at the cursor; ~0.35 ms CPU at its 534-sample maximum, nothing when off, the frame untouched.
 
 <!-- added 2026-10-13, after the cut -->
+- **THE RECAP'S RECORD IS THE RUST TICK'S (2026-11-07).** `rust/game_rules/src/deathrecap` keeps who of ours fell, to whom, from where, with what, the floor's last seconds and what the squad knows of a man lost (`Game.recap`; only `lost_live` is on the wire), last in the tick, with `rust/game_start/tests/recap.rs` holding each rule. A kept game has none of it: a load starts it over. The bullet below is the rules as they were written and the page's side of them.
 - **The down card says who shot you, and from where** (the death recap goal, 'Every death explains itself'; `src/game/deathrecap.ts` `RECAP.on` + `src/ui/recap.ts`; step 1 = commit
   456c2e1b, in the build since 8d2c2785; its page is rebuild/death-recap/read-first.md): when Sam goes down the down
   card has a small plan above the route map — the man who shot him in the menu's orange with his name, the line of the round with an arrowhead, Sam as a white cross, a faint wedge for where

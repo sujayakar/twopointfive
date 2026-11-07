@@ -73,7 +73,7 @@ export async function findmeCheck(): Promise<boolean> {
   F.FINDTUNED.on = false; F.findMeStarts();   // (1) to (11) are the rows' own, on the starts as built
   const fixedWas = FIXEDSTEP.on, startWas = { ...FINDME }, autoWas = AUTOCAM.on;
   const ctxOf = (W: any, extra: Record<string, unknown> = {}): any => ({ game: W.game, input: W.input, cam: W.cam, view: W.canvas, host: W.engine, render: () => { W.engine.world.upload(); }, betweenTicks: () => { W.engine.world.relist(); },
-    smoke: null, audio: null, attract: null, hud: null, bubbles: null, time: 0, updateMs: 0, frozen: () => false, present: () => false, fixedStep: () => true, ...extra });
+    smoke: null, audio: null, demo: null, attract: null, hud: null, bubbles: null, time: 0, updateMs: 0, frozen: () => false, present: () => false, fixedStep: () => true, ...extra });
   const stand = async (seed: number) => { Math.random = seeded(1); const W = await standUp({ seed }) as any; AUTOCAM.on = false; F.setAutoView(false); F.FINDTUNED.on = false; F.findMeStarts(); return W; };   // (the camera that runs itself, host/autocam.ts, takes the double tap where it is on — the page's stand: these lines are the row's own, with it off; autocam-check.ts holds the tap with it on)
   // (…and the starts as built: a stand-up under TPS_FINDTUNED=1 raises the tuned ones each time — src/host/standup.ts — and these lines are the rows' own. Line (12) puts the switch where it wants it after its own stand-up)
   const DT = 1 / 60;
@@ -163,7 +163,7 @@ export async function findmeCheck(): Promise<boolean> {
       const inBox = hx > r[0] && hx < r[2] && hy > r[1] && hy < r[3], share = Math.max(0, Math.min(1, r[2]) - Math.max(0, r[0])) * Math.max(0, Math.min(1, r[3]) - Math.max(0, r[1]));
       
       pl.visibility = 0.9; const lit = fill(120); pl.visibility = 0.04; pl.nvAmount = 1; const nv = fill(120); pl.nvAmount = 0; fill(120);
-      pl.down = true; fill(1);  pl.down = was.down; fill(1, DT, false);  const held = fill(1, 0) === 1;   // (a frame with no time in it takes the meter's word whole)
+      g.recap.allDown = true; fill(1);  g.recap.allDown = false; fill(1, DT, false);  const held = fill(1, 0) === 1;   // (a frame with no time in it takes the meter's word whole)
       const back = { ...Fm, at: [...Fm.at] as [number, number, number], rect: [9, 9, 9, 9] as [number, number, number, number] }; { const f = cam.planarBasis().fwd; back.at[0] -= f[0] * 400; back.at[2] -= f[2] * 400; outlineBox(back, proj); }
       const behindLens = back.rect.every(v => v === 0);
       const edges = outlineWant(FINDME_START.dark) === 1 && outlineWant(FINDME_START.lit) === 0 && outlineWant(0) === 1 && outlineWant(1) === 0 && outlineWant(0, 1) === 0 && Math.abs(outlineWant(0.21) - 0.5) < 1e-9;

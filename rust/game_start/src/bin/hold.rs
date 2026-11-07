@@ -2,6 +2,7 @@
 //!
 //!   hold keep DIR [--hand NAME|FILE]… [--seed N]… [--secs N] [LEVEL[:clear]]…     play, and keep what the game was after every frame
 //!   hold check DIR [--but PART,…]                                                 play the same again on this build, and compare
+//!   hold draw DIR [as keep]                                                       play, DRAW every frame, and say what it cost and whether it changed anything
 //!
 //! `keep` stands each level by the Rust start (`:clear` starts a room clear on it), plays it for N seconds (90) under each HAND and each
 //! seed (1), and writes for every frame the state's words (game::state_words: every part of the game that a host does not hand in)
@@ -28,6 +29,10 @@
 //! `--but PART,…` leaves named parts out of the comparison on purpose, for a change that is MEANT to move one part and nothing else (a
 //! record that changes shape, a table that is numbered anew): every other part must still be the same after every frame, and the line says
 //! what was not compared. A part named that neither build has is an error, so a misspelt name does not pass for a comparison.
+//!
+//! `draw` keeps nothing in DIR but the hands it plays (a folder of its own): after every frame it makes every section of what the picture is told (rust/game_draw),
+//! as a host does that draws at twice the tick's rate, and once a second it holds the game's own words to what they were before. A section that panics, or that the game is another for, fails the run; the last line of a run is
+//! what each part cost, in microseconds a frame, its mean and its worst.
 //!
 //! WHAT IT PROVES: two builds that write the same bytes played the same game on these floors under these hands, part for part.
 //! WHAT IT DOES NOT: anything the hands do not reach. Each hand's file says what it reaches and what it does not.
@@ -150,6 +155,52 @@ fn kept_head(kept: &[u8], file: &str) -> Result<(Vec<String>, usize), String> {
     Ok((names, 16 + l))
 }
 
+/// the parts of a frame's drawing that are timed, by the sections they are asked with
+const DRAWN: [(&str, u32); 6] = [("fog", game_draw::want::fog), ("view", game_draw::want::view), ("sky", game_draw::want::sky), ("boxes", game_draw::want::geo), ("lights", game_draw::want::lights), ("men", game_draw::want::men)];
+
+/// ONE RUN DRAWN, in this process
+fn drawn(dir: &str, r: &Run) -> Result<String, String> {
+    let frames = (r.secs * 60.0).round() as usize;
+    let hand = read_hand(&std::fs::read_to_string(format!("{}/{}.hand", dir, r.hand)).map_err(|e| format!("{}/{}.hand: {}", dir, r.hand, e))?, frames);
+    let file_of = if r.level.ends_with(".json") || std::path::Path::new(&r.level).exists() { r.level.clone() } else { format!("{}.json", r.level) };
+    let mut p = Play::level(&file_of, r.clear, &Opts { seed: r.seed, ..Default::default() });
+    p.g.god_mode = hand.unhurt;
+    p.g.fog_of_war.on = r.clear;
+    let mut d: Vec<game_draw::Drawn> = DRAWN.iter().map(|_| Default::default()).collect();
+    let (mut cost, mut next) = (vec![(0.0f64, 0.0f64); DRAWN.len() + 1], 0usize);
+    let (mut boxes, mut men, mut lights) = (0, 0, 0);
+    for k in 0..frames {
+        while next < hand.at.len() && hand.at[next].0 <= k { let _ = act(&mut p, &hand.at[next].1); next += 1; }
+        p.frame();
+        let before = if k % 60 == 0 { Some(p.words()) } else { None };
+        let mut between = 0.0;
+        for (i, (_, want)) in DRAWN.iter().enumerate() {
+            let t = std::time::Instant::now();
+            d[i].take(&p.g, *want);
+            let us = t.elapsed().as_secs_f64() * 1e6;
+            cost[i].0 += us;
+            cost[i].1 = cost[i].1.max(us);
+            let focus = p.g.aim_point;
+            let t = std::time::Instant::now();
+            d[i].frame(&p.g, 0.5, focus);
+            d[i].frame(&p.g, 1.0, focus);
+            between += t.elapsed().as_secs_f64() * 1e6 / 2.0;
+            if d[i].table().is_empty() { return Err(String::from("no section lies anywhere")); }
+        }
+        let n = DRAWN.len();
+        cost[n].0 += between;
+        cost[n].1 = cost[n].1.max(between);
+        boxes = boxes.max(d[3].boxes.geo.len());
+        lights = lights.max(d[4].lights.rows.len());
+        men = men.max(d[5].men.men.len());
+        let h = d[3].boxes.head[0];
+        if h.count as usize != d[3].boxes.geo.len() || h.visible as usize + h.visible_cut as usize != d[3].boxes.visible.len() { return Err(format!("frame {}: the boxes' head does not say what their lists hold", k)); }
+        if let Some(b) = before { if b != p.words() { return Err(format!("frame {}: drawing the game changed it", k)); } }
+    }
+    let said: Vec<String> = DRAWN.iter().map(|x| x.0).chain(["between ticks"]).zip(&cost).map(|(n, c)| format!("{n} {:.0} ({:.0})", c.0 / frames as f64, c.1)).collect();
+    Ok(format!("{} frames · at most {} boxes, {} lights, {} men · microseconds a frame, mean (worst): {}", frames, boxes, lights, men, said.join(", ")))
+}
+
 /// ONE RUN, in this process. `check` false: write DIR's file. True: compare with it, frame by frame and part by part by name (the parts of
 /// `but` left out), and stop at the first frame that differs.
 fn one(dir: &str, r: &Run, check: bool, but: &[String]) -> Result<String, String> {
@@ -227,7 +278,7 @@ fn one(dir: &str, r: &Run, check: bool, but: &[String]) -> Result<String, String
 
 fn main() {
     let a: Vec<String> = std::env::args().collect();
-    let usage = || -> ! { eprintln!("hold keep DIR [--hand NAME|FILE]… [--seed N]… [--secs N] [LEVEL[:clear]]…\nhold check DIR [--but PART,…]"); std::process::exit(64) };
+    let usage = || -> ! { eprintln!("hold keep DIR [--hand NAME|FILE]… [--seed N]… [--secs N] [LEVEL[:clear]]…\nhold check DIR [--but PART,…]\nhold draw DIR [as keep]"); std::process::exit(64) };
     let (Some(verb), Some(dir)) = (a.get(1).map(|s| s.as_str()), a.get(2)) else { usage() };
     // (a child of this tool: one run, in a process of its own)
     if verb == "one" {
@@ -235,7 +286,8 @@ fn main() {
         let but: Vec<String> = a.get(5).map(|s| s.split(',').filter(|x| !x.is_empty()).map(String::from).collect()).unwrap_or_default();
         let dir = dir.clone();
         // (the start's frames are deep: a thread with room)
-        let h = std::thread::Builder::new().stack_size(1 << 30).spawn(move || one(&dir, &r, check, &but)).unwrap();
+        let draw = a[3] == "draw";
+        let h = std::thread::Builder::new().stack_size(1 << 30).spawn(move || if draw { drawn(&dir, &r) } else { one(&dir, &r, check, &but) }).unwrap();
         match h.join() { Ok(Ok(line)) => { println!("{}", line); return; } Ok(Err(why)) => { println!("{}", why); std::process::exit(1); } Err(_) => std::process::exit(2) }
     }
     // (`check`'s own words: the parts left out of the comparison on purpose)
@@ -249,7 +301,7 @@ fn main() {
         }
     }
     let runs: Vec<Run> = match verb {
-        "keep" => {
+        "keep" | "draw" => {
             let (mut hands, mut seeds, mut levels, mut secs) = (Vec::new(), Vec::new(), Vec::new(), 90.0);
             let mut i = 3;
             while i < a.len() {
@@ -270,6 +322,7 @@ fn main() {
             if seeds.is_empty() { seeds.push(1); }
             if levels.is_empty() { levels = DEFAULT_LEVELS.iter().map(|s| s.to_string()).collect(); }
             std::fs::create_dir_all(dir).unwrap();
+            if verb == "draw" && std::path::Path::new(&format!("{}/runs.txt", dir)).exists() { eprintln!("{} holds kept runs: draw into a folder of its own", dir); std::process::exit(64); }
             // a hand is copied into DIR under its name, so that `check` plays the hand that was kept whatever the file says by then
             let mut names = Vec::new();
             for h in &hands {
@@ -285,7 +338,7 @@ fn main() {
                 let (level, clear) = match l.strip_suffix(":clear") { Some(n) => (n.to_string(), true), None => (l.clone(), false) };
                 runs.push(Run { level, clear, hand: h.clone(), seed: s, secs });
             } } }
-            std::fs::write(format!("{}/runs.txt", dir), runs.iter().map(|r| r.line() + "\n").collect::<String>()).unwrap();
+            if verb == "keep" { std::fs::write(format!("{}/runs.txt", dir), runs.iter().map(|r| r.line() + "\n").collect::<String>()).unwrap(); }
             runs
         }
         "check" => std::fs::read_to_string(format!("{}/runs.txt", dir)).unwrap_or_else(|e| panic!("{}/runs.txt: {} (keep first)", dir, e)).lines().filter(|l| !l.trim().is_empty()).map(Run::of).collect(),
@@ -312,7 +365,7 @@ fn main() {
     }
     // (a run that could not be played is not in the list `check` plays: a level that does not stand as asked is said once, here)
     if verb == "keep" { std::fs::write(format!("{}/runs.txt", dir), good.iter().map(|&k| runs[k].line() + "\n").collect::<String>()).unwrap(); }
-    let what = if verb != "check" { String::from("kept") } else if but.is_empty() { String::from("the same after every frame") } else { format!("the same after every frame in every part but {}", but.join(", ")) };
+    let what = if verb == "draw" { String::from("drawn, and none of them another game for it") } else if verb != "check" { String::from("kept") } else if but.is_empty() { String::from("the same after every frame") } else { format!("the same after every frame in every part but {}", but.join(", ")) };
     println!("hold {}: {} of {} runs {}", verb, runs.len() - bad, runs.len(), what);
     std::process::exit(if bad > 0 { 1 } else { 0 });
 }

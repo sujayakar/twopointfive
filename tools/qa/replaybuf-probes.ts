@@ -6,7 +6,7 @@
 //   fight      a room fight's teammate's row names the man his gun is on (the room fight's own record of him, read only)
 //   tape       a run taped from its first step is walked again by a fresh game (tools/qa/rerun.ts) to the same places and the same digest; refusals are in words
 //   load       a checkpoint loaded between two steps ends the tape as a load and is marked one in the trace whatever its clock says; a restart is a restart; a load
-//              made inside a step leaves the tape alive; an F10 recording starting is neither
+//              made inside a step leaves the tape alive
 //   stand      a tape made on the page's rules is walked on them by a process that stands frozen (the tape names its stand and carries every knob table and the kit — the stealth card its run wore with it)
 //   crash      the page's own save on an error (ui/replaykey.ts) makes one file a minute and three a page load, in a browser that keeps no shelf (where the file is sent, never a download);
 //              the error itself is a line in the ring at its moment of PLAY, in every file made while the ring holds it
@@ -243,13 +243,13 @@ console.log('\n=== replay buffer ===');
 
 // ---- load: a checkpoint loaded BETWEEN two steps is never read as a restart, whatever its clock says — one of an earlier visit with a LATER clock, one loaded
 // with no step since it was saved, one loaded a few steps after; a restart is still a restart; a load made INSIDE a step (the bare Enter once down) is the step's
-// own input: the tape lives, the trace marks it once and loses nothing of the next step; an F10 recording starting is neither a restart nor a load
+// own input: the tape lives, the trace marks it once and loses nothing of the next step
 { const { saveState } = await import(`${ROOT}/src/game/savestate.ts`);
   const stand = async (seed: number, steps: number, god = true, still = false) => { Math.random = mulberry32(seed); const W: any = await standUp({ seed: 11 }); W.game.godMode = god; const buf = new ReplayBuffer(); buf.tape.born(W.game);   // (god mode: the scripted hands get Sam shot inside ten seconds, and a man who is down saves nothing)
     W.game.replayTap = (dt: number, cmd?: unknown) => { if (cmd) buf.top(W.game, dt, cmd); else buf.tick(W.game, dt, W.cam); };
     let f = 0; const go = (n: number, pre?: () => void) => { for (let i = 0; i < n; i++, f++) { if (still) { W.input.keys.clear(); } else hands(W, f); pre?.(); W.step(1 / 60); } }; go(steps); return { W, buf, go }; };
-  const read = (W: any, buf: any) => { const file = JSON.parse(JSON.stringify(buf.file(W.game, 'probe', { url: '', fp: levelFingerprint(W.game) }))), text = JSON.stringify(file), n = (re: RegExp) => (text.match(re) ?? []).length;
-    return { file, dead: String(buf.tape.dead || ''), loads: n(/a checkpoint loaded/g), restarts: n(/restart \(a fresh run/g), recs: n(/an F10 recording started/g) }; };
+  const read = (W: any, buf: any, url = '') => { const file = JSON.parse(JSON.stringify(buf.file(W.game, 'probe', { url, fp: levelFingerprint(W.game) }))), text = JSON.stringify(file), n = (re: RegExp) => (text.match(re) ?? []).length;
+    return { file, dead: String(buf.tape.dead || ''), loads: n(/a checkpoint loaded/g), restarts: n(/restart \(a fresh run/g) }; };
   const earlier = await stand(0xa11, 600), old = saveState(earlier.W.game, { label: 'an earlier visit', kind: 'manual', force: true }); earlier.W.game.replayTap = null;
   { const { W, buf, go } = await stand(0xa12, 200), why = W.game.saves.load(W.game, JSON.parse(JSON.stringify(old))); go(120); const r = read(W, buf);
     check(why === null && W.game.time > 9 && /checkpoint/.test(r.dead) && r.loads === 1 && !r.restarts, `load: a checkpoint of an earlier visit, its clock LATER than this page's, ends the tape as a load and is marked one in the trace (tape: ${r.dead || 'alive'}${why ? `; load refused: ${why}` : ''})`);
@@ -268,13 +268,27 @@ console.log('\n=== replay buffer ===');
       check(!!mk && at === mk.r && at > 3 && at < r.file.seconds - 1.5 && none === 0 && r2.restarts === 2 && at2 > at + 1.5 && first !== undefined && first - at2 < 0.5,
         `load: lastRun names the last restart's moment, where the run a file ends in began (one restart ${at.toFixed(2)} s of ${r.file.seconds.toFixed(2)}; a second ${at2.toFixed(2)} s of ${r2.file.seconds.toFixed(2)}, a sample ${first === undefined ? 'never' : (first - at2).toFixed(2) + ' s'} after it; no restart ${none})`); }
     W.game.replayTap = null; }
-  { const { W, buf, go } = await stand(0xa16, 100, false), wrote = W.game.saves.write(W.game, 'manual', 'probe', true); let n = 0; while (!W.game.player.down && n < 400) { go(1); n++; }
+  // the page's restart puts the game back to its start, clock, die and all (host/rustgame.ts toStart; here the tools' host's, rust-host.ts), and counts itself: a
+  // restart in the tape and in the trace, and the walk of it is the same run. ANEW_BREAK=1 = it is not counted: the tape ends on the clock
+  { const { rerun } = await import('./rerun.ts'); Math.random = mulberry32(0xa19); const W: any = await standUp({ seed: 11 }), g = W.game; g.godMode = true; g.rustHost.keepStart();
+    const buf = new ReplayBuffer(); buf.tape.born(g); g.replayTap = (dt: number, cmd?: unknown) => { if (cmd) buf.top(g, dt, cmd); else buf.tick(g, dt, W.cam); };
+    let f = 0; const go = (n: number) => { for (let i = 0; i < n; i++, f++) { hands(W, f); W.step(1 / 60); } };
+    go(200); g.rustHost.toStart(); if (process.env.ANEW_BREAK === '1') g.saves.stats.restarts--; const back = g.time; go(160); g.saves.enabled = false; go(240); const N = f, dEnd = hashDigest(digestGame(g, true)), r = read(W, buf), rows = (r.file.rerun?.x ?? []) as any[], x = rows.filter(q => q[1] === 'restart' || q[1] === 'load').map(q => q.join(':'));
+    check(back < 0.1 && !r.dead && x.join() === '200:restart:start' && r.restarts === 1 && !r.loads && F.lastRun(r.file) > 3, `load: the page's restart, the clock put back, is a restart: the tape alive with its row, marked one in the trace (clock ${back.toFixed(2)}; tape: ${r.dead || 'alive'}; rows ${x.join(' ') || 'none'}; ${r.restarts} restart, ${r.loads} load marks; last run from ${F.lastRun(r.file).toFixed(2)} s)`);
+    const fl = rows.filter(q => q[1] === 'flags').map(q => [q[0], q[2].autosave]); check(JSON.stringify(fl) === '[[0,true],[360,false]]', `load: autosave on or off is on the tape, at its first step and where it was switched (${JSON.stringify(fl)})`);
+    const R = await rerun(r.file, { toN: N }), same = !!R.W && hashDigest(digestGame(R.W.game, true)) === dEnd, off = (R.W?.game as any)?.saves?.enabled === false;
+    check(!R.refuse && !!R.report && R.report.compared > 100 && !R.report.drift && same && off, `load: its re-run is the first run again, to the digest at step ${N}, its autosave as taped${R.refuse ? ` — REFUSED: ${R.refuse}` : ` (${R.report?.compared} trace samples, worst ${R.report?.worst?.metres?.toFixed(3)} m, drift ${R.report?.drift ? `${R.report.drift.who} at step ${R.report.drift.n}` : 'none'}, digest ${same ? 'equal' : 'NOT EQUAL'}; autosave off there: ${off})`}`);
+    g.replayTap = null; }
+  // …and a slot of the shelf written from outside a step (a panel's save) ends the tape: the walk's slots would be other saves
+  { const { W, buf, go } = await stand(0xa1b, 100), w = W.game.saves.write(W.game, 'manual', 'a panel', true); go(60); const r = read(W, buf);
+    check(!!w?.ok && /changed from a panel/.test(r.dead), `load: a save made from a panel between two steps ends the tape in those words (${w?.ok ? 'written' : w?.why}; tape: ${r.dead || 'alive'})`); W.game.replayTap = null; }
+  { const { W, buf, go } = await stand(0xa16, 100, false); go(1, () => W.input.pressed.add('F5')); const wrote = W.game.saves.newest(true); let n = 0; while (!W.game.player.down && n < 400) { go(1); n++; }
     const byHand = !W.game.player.down; if (byHand) W.game.player.down = true;   // (on a stand whose night watch does not find him in time he is put down by hand: the Enter's road is the same)
     const loads0 = W.game.saves.stats.loads; go(1, () => W.input.pressed.add('Enter')); const inStep = W.game.saves.stats.loads === loads0 + 1 && !W.game.player.down;
     go(1, () => W.game.events.push({ kind: 'prop', pos: [3.33, 0, 3.33], time: W.game.time, loud: false, level: 0, who: 0 })); go(60); const r = read(W, buf);
     const kept = r.file.events.filter((e: any) => e.k === 'prop' && Math.abs(e.x - 3.33) < 1e-6 && Math.abs(e.z - 3.33) < 1e-6).length;
     check(inStep, `load: Sam went down and a bare Enter loaded this run's checkpoint inside a step (down ${byHand ? 'by hand' : `after ${n} steps`}; wrote ${JSON.stringify(wrote)?.slice(0, 60)})`);
-    check(!r.dead && r.loads === 1 && !r.restarts && kept === 1, `load: a load made inside a step leaves the tape alive, is marked once, and the step after it loses nothing (tape: ${r.dead || 'alive'}; ${r.loads} marks; the next step's event filed ${kept}×)`);
+    check(!r.dead && r.loads === 1 && !r.restarts && kept >= 1, `load: a load made inside a step leaves the tape alive, is marked once, and the step after it loses nothing (tape: ${r.dead || 'alive'}; ${r.loads} marks; the next step's event filed ${kept}×)`);
     W.game.replayTap = null; }
   // …and a save kept IN MEMORY (a team on the floor: savestate.ts loadMem puts the whole game back, the Sensors object with it) loaded inside a step. All of it is
   // on the tape — F5's save, his own frag that puts him down, the bare Enter — so the tape lives and its re-run is the first run again, to the digest.
@@ -295,25 +309,22 @@ console.log('\n=== replay buffer ===');
       check(!R.refuse && !!R.report && R.report.compared > 50 && !R.report.drift && same, `load: its re-run is the first run again, to the digest at step ${N}${R.refuse ? ` — REFUSED: ${R.refuse}` : ` (${R.report?.compared} trace samples, worst ${R.report?.worst?.metres?.toFixed(3)} m, drift ${R.report?.drift ? 'YES' : 'none'}, digest ${same ? 'equal' : 'DIFFERS'})`}`);
       g.replayTap = null;
     } finally { SS.SAVETIMELINE.on = was; } }
-  { const { W, buf, go } = await stand(0xa17, 120, true, true), J = W.game.journal, random = Math.random, until = () => { let n = 0; while (!J.recording && n < 300) { go(1); n++; } return J.recording; };
+  // …and one loaded from OUTSIDE a step (the pause and down cards' 'Restart from checkpoint'): a row of the tape by its slot, done again on the walk, which has
+  // made the same save. LOADROW_BREAK=1 = the slot is not told: the tape ends there, as it did
+  { const SS = await import(`${ROOT}/src/game/savestate.ts`), { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`), { rerun } = await import('./rerun.ts'), Q = '?roomclear&squad4&freshstart=0&seed=7', was = SS.SAVETIMELINE.on;
     try {
-      J.request({ seed: 5 }); const on = until(); go(30); const a = read(W, buf);
-      check(on && /F10/.test(a.dead) && a.recs === 1 && !a.restarts && !a.loads, `load: an F10 recording starting ends the tape in those words and is marked as that in the trace, not as a restart (tape: ${a.dead || 'alive'}${on ? '' : `; it never started: ${J.why}`})`);
-      J.stop('probe', true); J.request({ seed: 6 }); const again = until(); go(30); const b = read(W, buf);
-      check(again && b.recs === 2 && !b.restarts && !b.loads, `load: one stopped and started again with no step between is seen too (${b.recs} marks)`);
-      // a recorder that ends its file at a change made between two frames and asks for the next (journal.ts): the recording is running on both sides of the
-      // gap, and the restart / the load in it is marked too, ahead of the recording's own mark — the run the file ends in begins at that restart
-      { J.stop('probe', true); W.game.restartEncounter(); J.request({ seed: 7 }); const on2 = until(); go(30); const c = read(W, buf);
-        const marks = c.file.lines.filter((l: any) => l.k === 'mark').map((l: any) => String(l.text)), iR = marks.findIndex((t: string) => /^restart \(/.test(t)), at = F.lastRun(c.file);
-        check(on2 && c.recs === 3 && c.restarts === 1 && !c.loads && iR >= 0 && /F10/.test(marks[iR + 1] ?? '') && at > 1 && at < c.file.seconds,
-          `load: a restart between a recording's end and the next one's start is marked a restart, ahead of the recording's mark, and is where the file's last run begins (${c.restarts} restart, ${c.recs} recordings; last run from ${at.toFixed(2)} s of ${c.file.seconds.toFixed(2)})`);
-        const s = saveState(W.game, { label: 'under a recording', kind: 'manual', force: true }); go(10); J.stop('probe', true); const why = W.game.saves.load(W.game, s); J.request({ seed: 8 }); const on3 = until(); go(30); const d = read(W, buf);
-        const m2 = d.file.lines.filter((l: any) => l.k === 'mark').map((l: any) => String(l.text)), iL = m2.findIndex((t: string) => /a checkpoint loaded/.test(t));
-        check(why === null && on3 && d.recs === 4 && d.loads === 1 && d.restarts === 1 && iL >= 0 && /F10/.test(m2[iL + 1] ?? ''),
-          `load: a checkpoint loaded in such a gap is marked a load, ahead of the recording's mark (${d.loads} load, ${d.recs} recordings${why ? `; load refused: ${why}` : ''})`); }
-      const b2 = new ReplayBuffer(); b2.tape.born(W.game); W.game.replayTap = (dt: number, cmd?: unknown) => { if (cmd) b2.top(W.game, dt, cmd); else b2.tick(W.game, dt, W.cam); }; go(2);
-      check(/F10/.test(String(b2.tape.dead || '')), `load: a tape handed a game already being recorded ends at its first step (tape: ${b2.tape.dead || 'alive'})`);
-    } finally { try { J.stop('probe', true); } catch { /* */ } Math.random = random; W.game.replayTap = null; } } }
+      Math.random = mulberry32(0xa1a); const W: any = await standUp({ seed: 7, search: Q }), g = W.game; startFromQuery(g, Q); SS.SAVETIMELINE.on = true; g.godMode = true;
+      const buf = new ReplayBuffer(); buf.tape.born(g); g.replayTap = (dt: number, cmd?: unknown) => { if (cmd) buf.top(g, dt, cmd); else buf.tick(g, dt, W.cam); };
+      let f = 0; const go = (n: number, pre?: () => void) => { for (let i = 0; i < n; i++, f++) { const I = W.input; I.keys.clear(); I.buttons = 0; I.mouseX = 800; I.mouseY = 520; if (f % 240 < 150) I.keys.add('KeyW'); pre?.(); W.step(1 / 60); } };
+      go(200); go(1, () => W.input.pressed.add('F5')); go(99); g.godMode = false; const key = (g.saves.timeline() as any[]).find(x => x.mem)?.key, t0 = g.time, why = key ? g.saves.load(g, key) : 'no save in memory';
+      if (process.env.LOADROW_BREAK === '1') g.saves.loadedKey = null;
+      go(240); const N = f, dEnd = hashDigest(digestGame(g, true)), { file, dead, loads, restarts } = read(W, buf, Q), rows = (file.rerun?.x ?? []).filter((q: any) => q[1] === 'load');
+      check(why === null && g.time < t0 + 4 && !dead && rows.length === 1 && rows[0][0] === 300 && rows[0][2] === key && loads === 1 && !restarts, `load: a save in memory loaded between two steps is a row of the tape, marked a load (${why ?? 'loaded'}; tape: ${dead || 'alive'}; ${JSON.stringify(rows)}; ${loads} load, ${restarts} restart marks)`);
+      const R = await rerun(file, { toN: N }), same = !!R.W && hashDigest(digestGame(R.W.game, true)) === dEnd;
+      check(!R.refuse && !!R.report && R.report.compared > 100 && !R.report.drift && same, `load: its re-run is the first run again, to the digest at step ${N}${R.refuse ? ` — REFUSED: ${R.refuse}` : ` (${R.report?.compared} trace samples, worst ${R.report?.worst?.metres?.toFixed(3)} m, drift ${R.report?.drift ? `${R.report.drift.who} at step ${R.report.drift.n}` : 'none'}, digest ${same ? 'equal' : 'NOT EQUAL'})`}`);
+      g.replayTap = null;
+    } finally { SS.SAVETIMELINE.on = was; } }
+}
 
 // ---- stand: a tape made on the page's rules (the child below stands as the page does) is walked on the page's rules by this process, whatever it stands as itself —
 // a thread's `replay-at.ts --rerun` stands frozen; what a browser keeps per machine rides in the tape

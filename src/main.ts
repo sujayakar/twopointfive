@@ -1,4 +1,5 @@
 import { kitViewOn, kitViewStart, kitViewFatal, kitViewQuietOf, type KitView } from './host/kitView';   // (FIRST on purpose: under ?kitview its load makes this window's storage read-only before any module below reads or writes a store — it imports no module at run time, so nobody's load order changes)
+import { END_CARD } from './host/endcard';
 import { Menu, loadSandbox, bootCard } from './ui/menu';
 import { optionsOpen, openOptions, walkInNow } from './ui/options';
 import { LOADBRIEF, loadBrief } from './ui/loadbrief';
@@ -73,6 +74,8 @@ import { Game } from './game/game';
 import { SQUADTHROW, SQUADTHROW_STATS, squadThrowPlan, squadThrowPlans } from './game/squadthrow';
 import { AUTOPILOT, AUTOPILOT_STATS, autoPick } from './game/autopilot';
 import { PLANLAY, PLANLAY_STATS, laySummary, laySend, layClear } from './game/planlay';
+import { thinIs, thinAirOf } from './game/thinline';
+import { floorAt } from './game/floor';
 import { PAIRUP, PAIRUP_STATS, pairUpApply, pairUpSummary } from './game/pairup';
 import { SILENT, squadSilent } from './game/silent';
 import { DESTRUCTION, RUBBLE, BLAST_PACE } from './game/destructionSwitch';
@@ -86,6 +89,7 @@ import { pageIndirect } from './smoke/dispatch';
 import { Panel } from './ui/panel';
 import { AudioEngine, SFX_TABLE, SFX_WARM, warmSfx, warmState } from './audio/audio';
 import { setlistOfQuery, setlistOf, setlistLevel } from './audio/setlist';
+import { Demo } from './game/demo';
 import { REACH_OPTS } from './render/reach';
 import { PerfRecorder } from './ui/perfrec';
 import { PerfSweep } from './ui/perfsweep';
@@ -97,7 +101,6 @@ import { heldPage, ownPage, runPage } from './host/runpage';
 import { BENCH_SCENES } from './host/benchScenes';
 import { HandsOff } from './host/handsoff';
 import { oneAirFlip, wispMotesFlip } from './ui/sweepSnow';
-import { SessionRec } from './ui/sessionrec';
 import { ReplayKey } from './ui/replaykey';
 import { keptStore } from './replay/keptui';
 import { cloudAdopt, cloudBoot, cloudFatal, cloudReports, cloudUrl } from './cloud/cloud';   // (the hosted build's backend: nothing of it is made on a build that was given no address — src/cloud/cloud.ts)
@@ -107,7 +110,6 @@ import { keptRecord, keptFreeze, startCallClock, CALLS } from './gpu/keep';
 import { bootRecord, laterRecord } from './cloud/loadtime';   // (the load's record: the boot's own timeline and the browser's count of what came down)
 import { tapConsole, reportError, reportWarning } from './cloud/report';   // (the reporter's net: what the page prints as an error or a warning is one of the visit's records)
 import { cloudNote } from './ui/cloudnote';
-import { checkSessionFile } from './game/journal';
 import * as digestMod from './game/digest';
 import { requestQrf, callPerimeter, qrfStandDown } from './game/qrf';
 import { needsSend, needsTrip, NEEDS, NEEDS_STATS, NEEDS_LOG, type NeedKind } from './game/needs';
@@ -193,6 +195,7 @@ import { COOP } from './net/lobby';
 import { coopFromUrl, coopInvite } from './ui/coop';
 import { soundLanes } from './replay/soundlanes';
 import { smokeLook, putSmokeLook } from './render/smokeLook';
+import { pageSay } from './view/pagesaid';
 
 /** The top-left GPU / pass / guard read-out: opt-in in play (persisted), always off during the tour. */
 const readout = { on: localStorage.getItem('twopointsix.readout') === '1', set(v: boolean) { this.on = v; try { localStorage.setItem('twopointsix.readout', v ? '1' : '0'); } catch { /* */ } } };
@@ -396,16 +399,18 @@ async function main() {
   const overlay = new Overlay(); if (tape || q.get('cards') === '0') overlay.cards = false;   // (a replay's tape shows no tutorial card, nor does `?cards=0`: ui/railcard.ts)
   overlay.cardClosed = () => input.focusGame();
   const bubbles = new Bubbles(document.getElementById('overlay')!);
+  const demo = new Demo(game, cam, smoke, input); window.__demo = demo;
   // THE DIRECTOR (game/director.ts): level scripting. No shipped level has a script today — the office's two showcases, its only programs, were removed — so it idles, which
   // is the game exactly. The camera and the input a program would pin and lock are the game's hostCam / hostInput, handed at the stand; __director is the Director itself (log, run, manifest, problems, start(name), stop(), summary()).
   (window as any).__director = game.director;
   squadFlagsAndHooks(q, engine, game);
-  /** END a level-script program should a level ever carry one — back to the start card (Esc / P while it runs) */
-  const endShow = () => { if (game.director.showing || game.director.handedOver) game.director.stop(true); if (menu.mode !== 'start') menu.open('start'); };
+  // game/demo.ts (the old 13-stop tour) stays in the tree for tools/qa/tour.ts's regression lap: __demo.start() by console, reachable from no button.
+  /** END whatever hands-off programme has the floor — the old tour, or a level-script program should a level ever carry one — back to the start card (Esc / P while it runs) */
+  const endShow = () => { if (demo.active) demo.stop(); if (game.director.showing || game.director.handedOver) game.director.stop(true); if (menu.mode !== 'start') menu.open('start'); };
   soloNightHooks(game);
-  /** the hands-off programme running (a showcase program of a level script), for the veil / captions / timeline / hotkeys below:
+  /** whichever hands-off programme is running (the tour, or a showcase program of a level script), for the veil / captions / timeline / hotkeys below — never both:
    *  each refuses to start over the other */
-  const show = (): { caption: string; sub: string; fade: number } | null => game.director.showing ? (game.director.frame ?? { caption: '', sub: '', fade: 0 }) : null;
+  const show = (): { caption: string; sub: string; fade: number } | null => demo.active ? demo : game.director.showing ? (game.director.frame ?? { caption: '', sub: '', fade: 0 }) : null;
   // WGSL compile check against the live device (Chrome/Tint is the compiler we ship to; naga is not available on this machine):
   // __wgsl(source, { prelude: 'scene' | 'lighting' }) prepends what the scene passes get (world consts + common.wgsl [+ lighting_common.wgsl]),
   // so a worktree's edited pass shader can be checked in seconds without booting its build. Resolves to the compiler messages.
@@ -452,7 +457,7 @@ async function main() {
   traceLabHooks(engine, game);
   giMotionHooks(engine);
   let benchOn: () => boolean = () => false;   // (a benchmark is running: set where it is built, below — ui/bench.ts)
-  { let lastHint = -10; input.onLockedInput = () => { const now = performance.now() / 1000; if (show() && !benchOn() && now - lastHint > 3) { lastHint = now; game.msg('hands-off showcase — P to stop · Esc to pause'); } }; }
+  { let lastHint = -10; input.onLockedInput = () => { const now = performance.now() / 1000; if (show() && !benchOn() && now - lastHint > 3) { lastHint = now; pageSay(demo.active ? 'hands-off tour — P to stop · Esc to pause' : 'hands-off showcase — P to stop · Esc to pause'); } }; }
   { const og = new URLSearchParams(location.search).get('onegrid'); if (og !== null) engine.settings.oneCacheGrid = !(og === '0' || og === 'off' || og === 'false'); }   // ?onegrid=0: low and verylow back on their coarser light-cache grid (ui/quality.ts ONE CACHE GRID) — before the Quality below applies its first preset and parks the ladder's grids
   { const os = new URLSearchParams(location.search).get('onesolve'); if (os !== null) engine.settings.oneSmokeSolve = !(os === '0' || os === 'off' || os === 'false'); }   // ?onesolve=0: each preset back on its own smoke pressure pairs (ui/quality.ts ONE SMOKE SOLVE) — before the Quality below applies its first preset
   { const fs = new URLSearchParams(location.search).get('fireshed'); if (fs !== null) engine.settings.fireSmokeShed = !(fs === '0' || fs === 'off' || fs === 'false'); }   // ?fireshed=0: verylow keeps an open fire's smoke, as every other preset does (ui/quality.ts FIRE SMOKE SHED) — before the Quality below applies its first preset
@@ -473,7 +478,7 @@ async function main() {
   buildPanel(panel, engine, game, smoke, cam, overlay, audio, quality, () => ({ fps: fpsSm, union: unionSm }));   // (the status strip reads the frame loop's own smoothed numbers — only ever called from the panel's refresh, long after they exist)
   if (sneakLabAsked(new URLSearchParams(location.search))) sneakLabBoot(game, panel);   // ?sneaklab: the lab's own system in the panel, open (host/sneaklab.ts) — without the word nothing of it is made
   if (fireLabAsked(new URLSearchParams(location.search))) fireLabBoot(game, panel);   // ?firelab: the fire's numbers live in the panel (host/firelab.ts), nothing of it made without the word
-  if (modelErrAsked(q) && !tape && !net) modelErrBoot(game, q.get('modelerr'), sceneOf(q), () => ({ adapter: gpu.adapterInfo, ...(gpu.adapterFallback ? { fallback: 'yes' } : {}), ...(sessionrec.commit ? { commit: sessionrec.commit } : {}) }), { held: () => menu.isOpen, startPage: startPageWanted() });   // ?modelerr: the game's own senses measured against the picture (host/modelerr.ts), nothing of it made without the word
+  if (modelErrAsked(q) && !tape && !net) modelErrBoot(game, q.get('modelerr'), sceneOf(q), () => ({ adapter: gpu.adapterInfo, ...(gpu.adapterFallback ? { fallback: 'yes' } : {}), ...(replaykey.commit ? { commit: replaykey.commit } : {}) }), { held: () => menu.isOpen, startPage: startPageWanted() });   // ?modelerr: the game's own senses measured against the picture (host/modelerr.ts), nothing of it made without the word
   if (net) netRows(panel, net);   // (a networked game: the debugger's Network page — this page's connection made worse on purpose, live: ui/netrows.ts; nothing of it is made on any other page)
   if (smokeLabAsked(new URLSearchParams(location.search))) smokeLabBoot(game, panel, smoke, engine);   // ?smokelab: the solver's bricks and curls drawn, its numbers live in the panel (host/smokelab.ts), nothing of it made without the word
   // ?tweak: the one off scene tweak panel (ui/sceneTweak.ts) — the picture's layers with their switches and numbers, live; without the word nothing of it is made or read
@@ -496,7 +501,7 @@ async function main() {
   // checkpoints (game/savestate.ts): loading a stored slot from a card / the panel / the console — any show stopped first (its beat must not puppet the loaded
   // encounter), attract put back in its box, then the load, the camera cut onto Sam where the file has him (the follow cam's cut rule drops the TAA history)
   const cutToHim = () => { cam.target = v3.copy(game.followPos()); cam.pin = null; input.keys.clear(); input.buttons = 0; };
-  const loadCheckpoint = (key: string): string | null => { attract.poke(); if (game.director.showing) game.director.stop(); const why = game.saves.load(game, key); if (!why) cutToHim(); return why; };
+  const loadCheckpoint = (key: string): string | null => { attract.poke(); if (demo.active) demo.stop(); if (game.director.showing) game.director.stop(); const why = game.saves.load(game, key); if (!why) cutToHim(); return why; };
   // THE SAVE TIMELINE (game/savestate.ts SAVETIMELINE): F5 is the game's; every save written asks for a picture, taken off the canvas straight after the next
   // frame that is drawn (the frame of the save: the update that wrote it is the one that frame shows) and handed back small — the simulation never sees a canvas,
   // and a picture that cannot be taken or kept is simply not there; a save kept in memory put back cuts the camera onto the man, as a file's load does
@@ -555,7 +560,7 @@ async function main() {
   let viewReplay: (() => void) | null = null;   // (the end card's Replay button: set once the replay key is made, below)
   let startBench: () => void = () => {};   // (set where the benchmark is built, below: ui/bench.ts)
   TABKEY.whoGone = () => true; TABKEY.first = navigator.webdriver === true ? 'off' : 'brief'; tabFromQuery(q); tabSettle();   // (what Tab does where nobody has chosen: before the menu is made, whose Options read it — ui/tabkey.ts, and the card's own lines below)
-  const menu = new Menu({ engine, game, quality, audio, overlay, saveDue: () => savePending() && !game.saves.handNo(game), stopTour: () => { if (game.director.showing) game.director.stop(); }, focusGame: () => input.focusGame(), onStart: () => { attract.poke(); kitFresh(game); if (gestured) audio.start(); }, replay: () => viewReplay,
+  const menu = new Menu({ engine, game, quality, audio, overlay, saveDue: () => savePending() && !game.saves.handNo(game), stopTour: () => { if (demo.active) demo.stop(); if (game.director.showing) game.director.stop(); }, focusGame: () => input.focusGame(), onStart: () => { attract.poke(); kitFresh(game); if (gestured) audio.start(); }, replay: () => viewReplay,
     startBench: () => startBench(), loadCheckpoint });
   window.__menu = menu;
   // __save: the checkpoints for the console / automation — save now (manual slot; force lets go of Sam's hands in the file), load the newest / a slot key / a
@@ -575,7 +580,7 @@ async function main() {
     get state() { return game.saves; }, get log() { return game.saves.log; }, summary: () => game.saves.summary(game),
     canSave: (force = false) => saveMod.canSave(game, force), snapshot: (force = true) => saveMod.saveState(game, { label: 'console', kind: 'harness', force }),
   };
-  const loadCheckpoint2 = (state: object): string | null => { attract.poke(); if (game.director.showing) game.director.stop(); const why = game.saves.load(game, state as never); if (!why) { cam.target = v3.copy(game.followPos()); cam.pin = null; } return why; };
+  const loadCheckpoint2 = (state: object): string | null => { attract.poke(); if (demo.active) demo.stop(); if (game.director.showing) game.director.stop(); const why = game.saves.load(game, state as never); if (!why) { cam.target = v3.copy(game.followPos()); cam.pin = null; } return why; };
   quality.onCalibrated = () => menu.refreshQualityNote();   // 'auto' picked on the pause card calibrates behind it: the card's note follows when it settles
   // attract mode (game/attract.ts): the start card left alone for a few seconds shows the place off by itself — the camera cuts round a loop of the tour's framings
   // while the patrols walk through them — and the first key, click, wheel tick or real mouse movement puts the card's own still view straight back (a fresh
@@ -584,9 +589,12 @@ async function main() {
   let automated = testMute;   // any scripted hook used once (or the automation profile's mute flag): this page is a test rig, not a visitor
   // attract mode: with nobody touching anything on the start card it cuts round the level, pass after pass, until somebody does (it handed over to a showcase after its first pass
   // while there was one to hand over to)
-  const attract = new Attract(game, cam, () => menu.mode === 'start' && !missionsBusy() && !optionsOpen() && !game.director.showing && !game.nightBreach.active && !game.rescue.active && !game.quiet.active && !quality.calibrating && !automated && !benchOn() && !window.__pauseLoop && !window.__testVisible && !document.hidden,
+  const attract = new Attract(game, cam, () => menu.mode === 'start' && !missionsBusy() && !optionsOpen() && !demo.active && !game.director.showing && !game.nightBreach.active && !game.rescue.active && !game.quiet.active && !quality.calibrating && !automated && !benchOn() && !window.__pauseLoop && !window.__testVisible && !document.hidden,
     undefined,
     () => { refreshStill = true; });   // onStop: attract has just put the fresh encounter and the card's own camera back with no fade — the next frozen frame must show THAT, settled (step() below)
+  { // the console's entry point obeys the rule a button would: never over a running programme, and attract is put back in its box first
+    const rawD = demo.start.bind(demo) as (...x: unknown[]) => void; (demo as unknown as { start: (...x: unknown[]) => void }).start = (...a: unknown[]) => { if (demo.active || game.director.showing) return; attract.poke(); rawD(...a); };
+  }
   let refreshStill = false;
   (window as any).__attract = attract;
   for (const ev of ['keydown', 'mousedown', 'pointerdown', 'wheel', 'touchstart']) window.addEventListener(ev, () => { attract.poke(); }, { capture: true, passive: true });   // (someone is here)
@@ -596,7 +604,7 @@ async function main() {
   window.addEventListener('keydown', e => { if (e.code === 'Escape' && !e.repeat) { if (tabUp) { tabShow(false); input.pressed.delete('Escape'); e.preventDefault(); return; }   // (Tab's card, ui/tabcard.ts: Esc puts it away, and is that press's whole job)
     if (benchOn()) { input.pressed.delete('Escape'); return; }   // (Esc is the benchmark's while it runs: it stops itself, and puts the picture back BEFORE its scene is stopped — ui/bench.ts finish. Out of the frame's keys too: on a floor opened straight in, the world runs again the frame after, and its tick is not to read the key)
     if (!menu.isOpen && panelWantsEsc()) { const a = document.activeElement as HTMLElement; a.dataset.esc = '1'; a.blur(); delete a.dataset.esc; return; }   // (the mark: a field that takes Esc as 'never mind' reads it in the change its blur fires)
-    if (!menu.isOpen && (game.director.showing || game.director.handedOver)) { endShow(); e.preventDefault(); return; } input.pressed.delete('Escape'); menu.toggle(); e.preventDefault(); } }, { capture: true });   // (game/backkey.ts: Esc is only the pause — nothing backs out on it; Tab does that, in the tick)   // (Esc over a running tour ends it to the start card)
+    if (!menu.isOpen && (demo.active || game.director.showing || game.director.handedOver)) { endShow(); e.preventDefault(); return; } input.pressed.delete('Escape'); menu.toggle(); e.preventDefault(); } }, { capture: true });   // (game/backkey.ts: Esc is only the pause — nothing backs out on it; Tab does that, in the tick)   // (Esc over a running tour ends it to the start card)
   const panelWantsEsc = () => { const a = document.activeElement; return !!a && (a instanceof HTMLInputElement || a instanceof HTMLSelectElement) && !!a.closest('#panel, #sndcard'); };   // first Esc just releases a focused tweak-panel control; controls inside the menu never block it
   recipe?.stood(game);   // (a tape, or a networked game's recipe: the game's tune, flags and tables as the recording's stood, round the mission's staging — tools/qa/rerun.ts's order)
   { const dress = kitSetUp ? kitViewSetDress(q) : null; if (dress) { setSuitAs(dress.suit); KITANIM.sling = dress.sling; } else if (kitViewOn && kitViewQuietOf(q)) KITANIM.sling = 2; }   // (?kitview on a bespoke set of a QUIET mission or the solo night: the men dressed as that mission's are, the rifle across the back — this window's own modules, an iframe's; a loud mission's set and every other page: nothing said)
@@ -713,13 +721,13 @@ async function main() {
       const w = saveFile('capture', `${name}.tpscap.gz`, new Blob([gz as BlobPart]));   // (anywhere else it leaves by the page's one door, host/savefile.ts: to whoever keeps the page's files, and to the browser only with ?downloads=1)
       return w.local ? '→ your downloads' : savedWords('The capture', w.went);
     },
-    said: s => { try { game.msg(s); } catch { /* */ } },
+    said: pageSay,
   });
   (window as any).__framecap = framecap;
   const capAt = (): [number, number] => [input.mouseX / Math.max(1, canvas.clientWidth), input.mouseY / Math.max(1, canvas.clientHeight)];
   let capShift = false; window.addEventListener('keydown', e => { if (FRAMECAP.on && e.code === 'F6' && !e.metaKey && !e.ctrlKey && !e.altKey) { capShift = e.shiftKey; e.preventDefault(); } }, true);   // (the key itself is read with F9 and F10 below, so it works wherever they do; this only keeps the browser's own F6 off the page and notes Shift)
   // F9: the perf recorder (ui/perfrec.ts) — a stress-test dump the maintainer hands back: per-frame GPU passes + CPU sections + state + events → the one door (host/savefile.ts: a backend's intake, no download) + shot server
-  const perfrec = new PerfRecorder(engine, game, cam, quality, s => { perfNote = s; perfNoteT = 4; try { game.msg(s); } catch (e) { reportError('page.note', e); } });   // (also on the message line, so REC start / saved shows without the debug read-out)
+  const perfrec = new PerfRecorder(engine, game, cam, quality, s => { perfNote = s; perfNoteT = 4; pageSay(s); });   // (also on the message line, so REC start / saved shows without the debug read-out)
   let perfNote = '', perfNoteT = 0;
   const GPU_RENDER_PASSES = [...RENDER_PASSES];   // the passes the GPU union leaves out (gpu/timer.ts: the one list); the backend's records list them apart
   let cloudCallsAt = NaN;   // (the page's running ms inside its GPU calls when this frame's timer started — gpu/keep.ts CALLS.play; NaN = no clock then)
@@ -728,7 +736,7 @@ async function main() {
   (window as any).__perfrec = perfrec;
   // F8: the perf SWEEP (ui/perfsweep.ts) — a measurement take over the recorder: the world frozen where it stands (Shift+F8: left running), auto quality held, one heavy feature
   // flipped at a time and put back, each flip a recorder event; the take goes out as any F9 one does. Its own key listener, not one of the loop's hotkeys: F8 must stop a frozen sweep, and a frozen frame shows the hotkeys at most the recorder keys (F9 there stops the recorder and with it the sweep).
-  const perfsweep: PerfSweep = new PerfSweep(engine, game, quality, smoke, perfrec, s => { perfNote = s; perfNoteT = 6; try { game.msg(s); } catch (e) { reportError('page.note', e); } },
+  const perfsweep: PerfSweep = new PerfSweep(engine, game, quality, smoke, perfrec, s => { perfNote = s; perfNoteT = 6; pageSay(s); },
     () => bench.active && !bench.sweeping ? 'the benchmark is running' : quality.calibrating ? 'auto quality is still measuring this machine' : menu.isOpen && menu.mode === 'start' && !bench.sweeping ? 'start a run first' : null);
   perfsweep.oneAir = () => oneAirFlip(game); perfsweep.wispMotes = () => wispMotesFlip(game);
   (window as any).__perfsweep = perfsweep;
@@ -756,7 +764,7 @@ async function main() {
       return `${H.end === 'taken' ? 'taken in' : H.end === 'sam' ? 'Sam down at' : 'fighting at'} ${Math.round(H.t)} s, ${up} of ${sq.length} up`; },
   } : null;
   let benchAway = false; document.addEventListener('visibilitychange', () => { if (document.hidden) benchAway = true; });
-  const benchBlocked = () => perfsweep.active ? 'the sweep is running' : tape ? 'a replay is playing' : game.director.showing ? 'a show is running' : missionsBusy() || optionsOpen() ? 'a screen is open' : null;
+  const benchBlocked = () => perfsweep.active ? 'the sweep is running' : tape ? 'a replay is playing' : demo.active || game.director.showing ? 'the tour is running' : missionsBusy() || optionsOpen() ? 'a screen is open' : null;
   const bench: Bench = new Bench(engine, quality, perfrec, { idle: capMs => cloud ? cloud.filesIdle(capMs) : Promise.resolve(true), boot: () => boot.summary(), rows: shaderRowsOn, machine: () => machineFacts(gpu.adapterInfo, gpu.adapterFallback, quality.displayHzPin || quality.displayHz), hz: () => quality.displayHzPin || quality.displayHz, view: benchView(() => missionsBusy() || optionsOpen()), smoke,
     blocked: () => benchBlocked(),
     covered: () => missionsBusy() || optionsOpen() ? 'a screen came up over it' : null,
@@ -776,21 +784,9 @@ async function main() {
   else if (benchRefused) { perfNote = `benchmark not now: ${benchRefused}`; perfNoteT = 10; }
   (window as any).__sim = { sim, RUST, RUST_ON, say: simSay, whyNot: simWhyNot, maths: mathsOfRust, exact: () => EXACT.on, fell: fellLines, fellSealed, alone: () => [ANYTIME.proofs, ANYTIME.windows, ANYTIME.who] }; console.info(simSay());   // THE RUST SIMULATION (src/sim/sim.ts): the module, which systems run in it, and one line at boot saying it started (tools/qa/rust-page.cjs reads these)
   (window as any).__knobs = { registry: knobRegistry, copy: knobsCopy, back: knobsBack };   // THE list of knob tables (game/knobs.ts): every switch table by name, a copy, a copy put back
-  // F10: the SESSION JOURNAL (game/journal.ts + ui/sessionrec.ts) — a checkpoint of the moment, then every frame's dt / camera / input and every value the game took off the GPU
-  // (the sensors), so tools/qa/replay.ts can play the session again headless and hold the deterministic simulation to it; the file goes out by the one door, host/savefile.ts (+ the shot server's /session sink)
-  const sessionrec = new SessionRec(game, s => { perfNote = s; perfNoteT = 5; try { game.msg(s); } catch (e) { reportError('page.note', e); } });
-  (window as any).__journal = {
-    start: (opts: { seed?: number; note?: string } = {}) => { automated = true; if (game.journal.state !== 'idle') return game.journal.summary(); game.journal.request({ ...opts, commit: sessionrec.commit, userAgent: navigator.userAgent, hud: true }); return game.journal.why ? `pending — ${game.journal.why}` : 'starts on the next frame'; },
-    stop: (immediate = false) => game.journal.stop('stopped (console)', immediate) ?? (game.journal.stopping ? 'stops at the end of the next frame (step one, or F10 / stop(true) forces it now)' : null),   // (deferred by default: the closing digest is taken straight after an update, where a replay compares it)
-    toggle: () => sessionrec.toggle(),
-    save: () => { const f = game.journal.last; if (!f) return 'nothing recorded'; sessionrec.deliver(f, f.meta.stopped); return sessionrec.lastName; },
-    get state() { return game.journal.state; }, get file() { return game.journal.last; }, get stats() { return { ...game.sensors.stats, frame: game.journal.frame, bytes: game.journal.approxBytes(), lastName: sessionrec.lastName, lastBytes: sessionrec.lastBytes }; },
-    check: (f?: unknown) => checkSessionFile((f ?? game.journal.last) as never), get sensors() { return game.sensors; },
-    summary: () => game.journal.summary(),
-  };
   // F7: the REPLAY BUFFER (game/replaybuf.ts + ui/replaykey.ts) — the last minutes of play, always kept, nothing to start: F7 puts them on this browser's replay shelf after the fact,
   // Shift+F7 also opens the viewer (replay.html: a map with a scrubber, and notes that stay in the file); ?noreplay = no buffer, the build as it was
-  const replaykey = new ReplayKey(game, cam, s => { perfNote = s; perfNoteT = 6; try { game.msg(s); } catch (e) { reportError('page.note', e); } }, () => ({ levelFile: levelFileQ ?? undefined, scenario: runningScenario(game, levelFileQ)?.title, fp: saveMod.levelFingerprint(game) }));
+  const replaykey = new ReplayKey(game, cam, s => { perfNote = s; perfNoteT = 6; pageSay(s); }, () => ({ levelFile: levelFileQ ?? undefined, scenario: runningScenario(game, levelFileQ)?.title, fp: saveMod.levelFingerprint(game) }));
   (window as any).__replay = replaykey.hook();
   // THE BACKEND (cloud/cloud.ts): on a hosted build that was given one, and only where this browser sends, the kept tape, a few records of the visit and the
   // settings go up. null on every other build (the dev server, a checkout, the one-file page): no id, no timer, no request. Never on a page that
@@ -811,17 +807,17 @@ async function main() {
     // (…and what the load learnt after that: the later programs in, a mission's START live)
     later: have => laterRecord(boot.summary(), have) });
   // (…but what goes WRONG on a tape's page is still said: its reports go up under the records' own words, as a page's and not as a visit's — cloud.ts cloudReports)
-  if (tape) void cloudReports(q, { page: 'tape', build: () => replaykey.commit ?? sessionrec.commit, machine: () => machineFacts(gpu.adapterInfo, gpu.adapterFallback, quality.displayHzPin || quality.displayHz).now });
+  if (tape) void cloudReports(q, { page: 'tape', build: () => replaykey.commit, machine: () => machineFacts(gpu.adapterInfo, gpu.adapterFallback, quality.displayHzPin || quality.displayHz).now });
   if (cloud) {   // a lost device is one of the visit's error records (a device let go because the page is leaving is not a loss); a GPU error is printed by gpu/device.ts's own listener and reaches the records by the tapped console
     void gpu.device.lost.then(info => { if (info.reason !== 'destroyed') void cloud.telemetry.flush(true); });   // (gpu/device.ts prints the loss; the reporter's net makes that line the visit's record, and this sends it while the page still can)
   }
   // THE SAVE DOOR'S LISTENER (host/savefile.ts): a file the page saves goes to the backend's file intake (cloud/files.ts: it returns at once, never throws,
   // and sends only where this browser sends) and nowhere else, so its whole answer goes back to whoever saved the file: going up now, held until the notice
   // has been read, or not going (the switch off, too large), and later whether it arrived (`done`). The file's short facts go beside it. A benchmark's take
-  // goes up under a kind of its own, so it can be told from a plain recording; the journal under the backend's word for it. (`off` and `no` both read
+  // goes up under a kind of its own, so it can be told from a plain recording. (`off` and `no` both read
   // as not sent: the saver's words are the same.)
-  SAVED.sink = cloud ? (f, done) => { const took = cloud.save(f.name, f.blob, f.kind === 'session' ? 'journal' : f.kind === 'perf' && f.meta?.of === 'bench' ? 'benchperf' : f.kind, f.meta, done); return took === 'sent' || took === 'held' ? took : false; } : null;
-  (window as any).__saveUp = SAVE_UP;   // (a developer's way to a file after the fact: `__saveUp.on = false`, then `__journal.save()` or `__perfrec.deliver(__lastPerfDump)` downloads it — docs/agents/qa.md)
+  SAVED.sink = cloud ? (f, done) => { const took = cloud.save(f.name, f.blob, f.kind === 'perf' && f.meta?.of === 'bench' ? 'benchperf' : f.kind, f.meta, done); return took === 'sent' || took === 'held' ? took : false; } : null;
+  (window as any).__saveUp = SAVE_UP;   // (a developer's way to a file after the fact: `__saveUp.on = false`, then `__perfrec.deliver(__lastPerfDump)` downloads it — docs/agents/qa.md)
   (window as any).__cloud = cloud?.hook() ?? null;
   if (cloud?.tapes) { const tapes = cloud.tapes; replaykey.onEndKept = () => { void tapes.round(); }; }   // (a run's end is in the browser's store: the tape's last pieces go up now, not at the next beat 20 s on — cloud/tapes.ts round)
   (window as any).__digest = { game: () => digestMod.hashDigest(digestMod.digestGame(game)), bits: (from?: number) => digestMod.rawBits(game, from), chain: (every?: number, detail?: number) => digestMod.chainBits(game, every, detail) };   // the game's state as one word (game/digest.ts): rounded, raw, and raw chained over every step from now — what tools/qa/samefight-page.cjs holds against a headless re-run
@@ -908,7 +904,7 @@ async function main() {
   const tabEl = document.getElementById('tabcard'); let tabUp = false;
   const tabShow = (on: boolean) => { if (!tabEl) return; tabUp = on; tabEl.classList.toggle('on', on); if (on) tabEl.innerHTML = tabCardHtml(tabCardOf(game)); };   // (painted once: the game is held under it)
   const tabKey = (frozen: boolean) => {
-    if (game.director.showing || attract.live) return;
+    if (demo.active || game.director.showing || attract.live) return;
     const free = !frozen && !menu.isOpen;
     if (tabNow() === 'brief') { if (tabUp) tabShow(false); else if (free && !game.backable()) tabShow(true); return; }   // (never over a list, the order menu or a running verb, whatever backs out of those)
     if (tabNow() === 'run') { if (free) menu.openRun(); else if (menu.mode === 'pause' && !optionsOpen() && !missionsBusy()) { if (menu.runOpen) menu.close(); else menu.openRun(); } }   // (from a pause card Esc opened: the run first, then back to the game)
@@ -934,7 +930,7 @@ async function main() {
   let scoreMission: unknown = game.mission;   // (the Mission the score last saw: a new one = a mission began)
   const loop: LoopCtx = {
     game, input, cam, view: canvas,
-    host: engine, smoke, attract, hud: overlay, bubbles,
+    host: engine, smoke, demo, attract, hud: overlay, bubbles,
     audio: { setListener: (p, f) => audio.setListener(p, f), update: (dt, t) => { audio.update(dt, t); audio.scoreMenu = menu.mode === 'start'; if (audio.music && !window.__forcedTension) audio.music.intensity = game.tension(true); if (game.mission !== scoreMission) { scoreMission = game.mission; audio.scoreSet = setlistOf(setlistLevel(levelFileQ), runningScenario(game, levelFileQ)?.kind ?? null); if (game.mission.stats.elapsed < 0.5) audio.music?.mission(); } } },   // (a fresh encounter is a fresh Mission with nothing on its clock: the score's cue that a mission began — audio/music.ts mission() — and, a scenario quit or started in the page being another kind of mission on the same level, where the level's own music is said again: audio/setlist.ts. A load, a recording's start and a show's scratch copy are new objects too, with a clock already run: not a cue. And while the main menu is up the score is the theme alone: music.ts `menu`)
     get time() { return timeAcc; }, set time(v: number) { timeAcc = v; },
     updateMs: 0,
@@ -961,12 +957,12 @@ async function main() {
       else if (savePend) { if (savePending()) input.pressed.add('F5'); else savePend = null; }   // (…handed over on every live frame until a tick has moved the clock: a frame with no tick keeps the press for the next one — host/loop.ts — and a card that came up again before any tick still has it)
       if (FRAMECAP.on && input.hit('F6')) framecap.start({ whole: !capShift, at: capAt() });   // a frame capture (render/framecap.ts): frozen or not
       if (input.hit('F9')) perfrec.toggle();   // the perf recorder: works frozen or not (a pause-menu frame is data too)
-      if (input.hit('F10')) sessionrec.toggle();   // the session journal: asks now, starts at the top of the next live update it may (a paused card holds it pending), stops at the end of one
-      if (!frozen && input.hit('KeyP') && (game.director.showing || game.director.handedOver)) endShow();   // P: over a level-script program stops it to the start card — and starts nothing: the showcases it once started are gone
+      if (!frozen && input.hit('KeyP') && (demo.active || game.director.showing || game.director.handedOver)) endShow();   // P: over a running tour (by console; or a level-script program) stops it to the start card — and starts nothing: the showcases it once started are gone
+      if (!frozen && demo.active) { if (input.hit('ArrowRight')) demo.jump(+1); if (input.hit('ArrowLeft')) demo.jump(-1); }   // tour: arrows step between stops (the timeline at the bottom is clickable too)
     },
     postUpdate: () => {
       vBooks();   // (what this machine keeps of the run that just ended, before its card is drawn)
-      if (game.mission.debrief) { game.mission.debrief = false; menu.open('debrief'); }   // out with the drive: the end card (freezes the world like the pause menu; Esc / Keep playing resume, Again restarts)
+      if (END_CARD.due) { END_CARD.due = false; menu.open('debrief'); }   // the game's word for the end card, out with the drive or a beat after he is down (freezes the world like the pause menu; Esc / Keep playing resume, Again restarts)
       else if (game.verdict.takeDue()) menu.open('debrief');   // a squad's mission ended (taken, wiped, rescued, lost): the same card, a beat after — game/verdict.ts says when
     },
     render: (camR, t, dt, present) => {
@@ -1040,7 +1036,7 @@ async function main() {
     frameCount++;
     if (prewarmAt >= 0 && frameCount >= prewarmAt + 12) { smoke.clearAll(); engine.particles?.clear(); prewarmAt = -2; (window as any).__prewarmed = true; }   // the warm-up's throwaway can / spark (above; the can goes in the smoke lattice's own far corner — off the lattice nothing would be made and no reader would meet smoke): everything they touch has been touched
     hudReadout();
-    tourVeil.style.opacity = String(game.director.showing ? (game.director.frame?.fade ?? 0) : attract.fade); document.body.classList.toggle('touring', !!show()); document.body.classList.toggle('attract', attract.active);   // (attract mode cuts under the same veil — its fade is 0 whenever it is not running — and thins the card's vignette while it runs: index.html body.attract)
+    tourVeil.style.opacity = String(demo.active ? demo.fade : game.director.showing ? (game.director.frame?.fade ?? 0) : attract.fade); document.body.classList.toggle('touring', !!show()); document.body.classList.toggle('attract', attract.active);   // (attract mode cuts under the same veil — its fade is 0 whenever it is not running — and thins the card's vignette while it runs: index.html body.attract)
   }
   /** the debug read-out's lines, every tenth frame (step() above calls it). NOT only text: `unionSm`, which the Tab panel's status strip reads, is eased in here */
   function hudReadout() {
@@ -1085,7 +1081,7 @@ async function main() {
   boot.mark('hooks');
   // THE LOAD BRIEF stays up, the world held still behind it (`frozen` below), until the player starts the run — on a page a person sits at. A page a script
   // drives, a benchmark, a show, or a mission whose start was refused (the start card says why) drops it here and goes on as before.
-  const briefGo = !openStartCard && !automated && !benchOn() && !game.director.showing;
+  const briefGo = !openStartCard && !automated && !benchOn() && !demo.active && !game.director.showing;
   // THE START WAITS FOR THE PICTURE (ui/settle.ts): the brief holds the world, its block not yet live, until every program is in (the later set too:
   // nothing compiles once the run is live) and the frames behind it have been drawn with them and measured. A press kept from the boot
   // starts the run then. `__boot.marks.settled` is when; a script that takes the page meanwhile drops the brief (briefHolds) and the wait with it.
@@ -1109,7 +1105,7 @@ async function main() {
     requestAnimationFrame(settleStep);
   };
   // THE FIRST PLAYED FRAME IS AN ORDINARY ONE, ON EVERY ROAD STRAIGHT TO PLAY (a mission's card, a benchmark's address): the Rust game is started, its apply and its tick run once here, before the loop's first frame, and not where the first frame would pay for them (host/rustgame.ts rustWarm). Not behind the title (a pick is a page load, and an idle title's attract stages by name first), a show, a networked game's machine (it starts by its server's clock) or a replay (it stands from its tape). ?rustwarm=0: the first frame pays.
-  if (!openStartCard && !net && !tape && q.get('rustwarm') !== '0') rustGame?.rustWarm({ input, cam, canvas });
+  if (!openStartCard && !net && !tape && !demo.active && q.get('rustwarm') !== '0') rustGame?.rustWarm({ input, cam, canvas });
   if (openStartCard) { brief?.off(); menu.open('start');
     if (openMissionsIfAsked() && !startPage()) openStartPage();   // (ui/startpage.ts: the one page was put up by the boot card — `?loadout=` included; left on the list across a load: the page again)
   } else if (brief && briefGo) briefSettle(brief); else card.off();
@@ -1253,7 +1249,7 @@ function sfxSwitches() { const q = new URLSearchParams(location.search); SFX_TAB
 function pageMuted(): boolean { return new URLSearchParams(location.search).has('mute') || (() => { try { return localStorage.getItem('twopointsix.testMute') === '1'; } catch { return false; } })(); }
 /** the audio engine, the test-rig mute, and the gesture that starts it */
 function pageAudio(game: Game) {
-  const audio = new AudioEngine(game.col); game.audio = audio;   // col includes the door leaves as dynamic occluders
+  const audio = new AudioEngine(game.ask); audio.floorAt = floorAt; game.audio = audio;   // (the box world as it stands, its door leaves with it)
   audio.scoreSet = setlistOfQuery(location.search);   // the level's own music (audio/setlist.ts): which pieces of the score this page's level plays, in their order (as the URL names it; the frame loop says it again from the running game at every new mission)
   sfxSwitches();   // every sound as it was before they were redone · every redone one, the ones he picked the old of too (audio.ts SFX_TABLE; the mixer only: no rule reads it)
   // test-rig mute: '?mute' or localStorage twopointsix.testMute=1 (set once in the automation browser's profile) keeps this page silent —
@@ -1352,7 +1348,7 @@ function squadFlagsAndHooks(q: URLSearchParams, engine: Engine, game: Game) {
   (window as any).__orders = game.orders;   // squad orders (game/orders.ts): .give(id, target?, who?) / .targetAt(p) / .who / .cycleWho() / .address(gd) / .open(target?) / .pick(i?) / .turn(page) / .pageBack() / .close() / .menu (.page: null = the first page, 'tools' = a door's tools) / .log / .knobs
   // FOG OF WAR (game/fogofwar.ts — a try at the Door Kickers rule): on under the room-clear flag, ?fow (or ?fogofwar) forces it on and ?nofow (?nofogofwar) off; the renderer's pass
   // reads the game's FogFrame through engine.fogFrame. __fow = the object: .on, .knobs, .eyes, .seen(guard), .drawn(guard), .hiddenChars, .stats, .summary()
-  engine.fogFrame = game.fogOfWar.frame;
+  engine.fogFrame = game.fogOfWar.frame; engine.beams = { is: thinIs, airOf: thinAirOf };
   // ?squad4[=seed]: the FOUR-MAN SQUAD (nightbreach.ts NIGHTBREACH.squad — a red pair and a blue pair where the playtests stage the one pair) in the room clear;
   // beside ?nightbreach it is that playtest with four instead. Without it both stage the pair exactly as they always did. The hostage rescue stages its own pair
   // (rescue.ts), so beside ?rescue the flag changes nothing: the rescue wins and says so.
