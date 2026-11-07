@@ -56,7 +56,6 @@ export const WALLSNAP = {
   /** the pose's way out (1/s; the stance's own spring is 13) */
   outRate: 24,
   // ---- the stack (rifle in the hands)
-  stack: true,
   /** the rifle brought into his hands ON the back hold (2, or E with it selected) makes the hold the stack where he stands; false = it waits for the step off, as it did ('in hand once off the wall') */
   stackDraw: true,
   /** the rifle stays up this long after a click (s) and takes this long to come up before a round may leave (s); no round while this much of the bore's line is in a wall (m) */
@@ -68,7 +67,7 @@ export const WALLSNAP = {
   /** once out, the far limits give this much before he comes back (degrees further round, m nearer the corner): a point sitting on a limit does not flap him */
   leanKeepDeg: 15, leanKeepDist: 0.2,
   /** a cursor that lands above this height (m: a wall's top, a lintel) is read where its ray comes down to chest height behind it; off = the landing point as it is */
-  leanOver: true, leanOverY: 1.9,
+  leanOverY: 1.9,
   /** he steps out only if, from where he would then stand, this much of the way to the point is open (m; 0 = the angle alone — he would step out to face a shut door) */
   leanClearM: 1.4,
   /** THE GUN'S SHARE OF THE STEP: leanAlong is measured for his eyes, and the rifle rides a hand's width to his right — round an end on that side it is
@@ -89,8 +88,6 @@ export const WALLSNAP = {
   pressTurn: 50, pressAgain: 0.6,
   /** …and not with a mouse button held, nor within this (s) of a round of his own: a man shooting who backs into a wall keeps his gun up (the stack carries the rifle at the low ready) */
   pressAfterShot: 1.0,
-  /** with a sidearm or a can in the hand (the hold puts it away) the key-less take waits until nobody is alert; false = whenever. The rifle stacks either way. */
-  pressCalm: true,
   /** AT A RUN TOO (a switch of its own; acts only with `press`; false = never at a run, as it was): Shift held with the key straight into a wall takes it as a
    *  walk does — the same clock, the same faces, the same refusals — and the clock is counted from as far out as his pace needs (wsPressNear), so a sprint
    *  arrives with the wait done and has the wall from pressFlow short of it, as a walk has. The run that put him on a wall is not then the run that takes him

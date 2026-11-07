@@ -93,8 +93,6 @@ export const SQUADTHROW = {
   walkSecs: 16, turnSecs: 1.2, tossSecs: 0.5,
   /** thrown, he walks back to where he stood and to the order he had (off: he holds where he threw from) */
   back: true,
-  /** the picture on the overlay: who throws, his walk, the arc, where it rests (off: none — a module that draws the squad's plan may fold `squadThrowPlans` in and put this off) */
-  draw: true,
   /** A MAN WORKS HIS THROW OUT (throwplan.ts; on with the switch, off = the one straight arc that rests on the spot, as it was; `?throwlob=0`): where the
    *  straight arc has no answer he flies a few throws before he makes one — straight at the spot at `lobPaces` (m/s over the ground: the solver's, flat and
    *  hard, a slow lob) and at up to `lobWalls` walls that stand within `lobWallM` of it (met `lobWallH` up; `lobBankPaces`) — and takes the one that GOES OFF
