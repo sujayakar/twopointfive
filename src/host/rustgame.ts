@@ -42,6 +42,7 @@ import { DC } from '../sim/doorshome';
 import { SNAPS, levelFingerprint, type SlotInfo } from '../game/savestate';
 import type { Snapshot } from '../game/rollback';
 import type { Game } from '../game/game';
+import { NO_VIEW, type TickView } from '../view/seatview';
 import { CharacterAnimator } from '../game/character';
 import { SkeletonInstance } from '../anim/skeleton';
 import { sampleCmd, stillCmd, type PlayerCmd } from '../game/cmd';
@@ -56,7 +57,7 @@ import { OUT, OUT_HOST } from 'tps-bridge/out-dispatch';
 import { makePoke } from 'tps-bridge/poke';
 import { makeScan } from 'tps-bridge/scan';
 import { installAsks, askNothing } from 'tps-bridge/ask';
-import { crossing, surfaceHost } from 'tps-bridge/surface';
+import { crossing, readRecord, surfaceHost } from 'tps-bridge/surface';
 import LISTS from 'tps-bridge/puppet-lists.json';
 
 
@@ -300,7 +301,7 @@ export async function rustBoot(): Promise<void> {
   //  by the page's readers, are handed on as they are)
   { const raw = inst.exports as unknown as Record<string, unknown>, W: Record<string, unknown> = {}; for (const k of Object.keys(raw)) { const f = raw[k]; W[k] = typeof f === 'function' && k.startsWith('face_') ? guard(k, f as (...a: number[]) => number) : f; } X = W as unknown as Face; }
   MEM = X.memory; BUF = MEM.buffer;
-  for (const n of ['face_new_at', 'face_show_seat', 'face_puppet', 'face_host_half', 'face_step', 'face_ask', 'face_probe_asks', 'face_poke', 'face_write', 'face_keep', 'face_back', 'face_loaded', 'face_saves_in', 'face_saves_asked']) if (typeof X[n] !== 'function') throw new RustGameError(`?rust=1: game_face.wasm has no ${n}: it was built from another tree (tools/blitz/face-build.ts builds this one's)`);
+  for (const n of ['face_new_at', 'face_show_seat', 'face_puppet', 'face_host_half', 'face_step', 'face_ask', 'face_tick_view', 'face_probe_asks', 'face_poke', 'face_write', 'face_keep', 'face_back', 'face_loaded', 'face_saves_in', 'face_saves_asked']) if (typeof X[n] !== 'function') throw new RustGameError(`?rust=1: game_face.wasm has no ${n}: it was built from another tree (tools/blitz/face-build.ts builds this one's)`);
   // (the module and this page's half of the bridge must be of one generation: a module of another reads garbage)
   if ((X.face_layout?.() >>> 0) !== SCHEMA.layout) throw new RustGameError(`?rust=1: game_face.wasm is of another generation than this page's bridge (its layout ${(X.face_layout?.() ?? 0) >>> 0}, the page's ${SCHEMA.layout}): the checkout's module is stale, tools/blitz/face-build.ts builds this one's`);
   // STAND-IN: EVERY CLASS OF THE SIMULATION'S FOLDERS GETS ITS OWN NAME BACK (tools/blitz/page-plugin.ts keeps each beside its class). The bridge tells
@@ -335,7 +336,7 @@ function ownCopy(v: any, depth = 0): any {
 function ownKeep(g: Game): unknown[] { const G = g as unknown as Record<string, any>; return OWN.map(name => { const o = G[name]; if (!o) return null; const c: Record<string, unknown> = {}; for (const k of Object.keys(o)) if (k !== 'g') c[k] = ownCopy(o[k]); return c; }); }
 function ownPut(g: Game, K: unknown[] | undefined): void { const G = g as unknown as Record<string, any>; OWN.forEach((name, i) => { const o = G[name], c = K?.[i] as Record<string, unknown> | null | undefined; if (!o || !c) return; for (const k of Object.keys(c)) o[k] = ownCopy(c[k]); }); }
 let SETTLED_SAID = false;
-interface Held { told: number; toolScan: boolean; inRun: boolean; settings?: { flush(): void; rebase(): void; stats(): { settledLeft: number } & Record<string, unknown> } | null; g: Game; lastCmds: readonly PlayerCmd[] | null; kept: Set<number>; startKept: number; startOwn: unknown[]; back: { label: string; loads: number; saves: number } | null; took: boolean; saves: number; shelfSig: string; doorKept: number[]; poke: ((obj: unknown, path: string | (string | number)[], value: unknown) => void) | null; watch: Watched[]; launch: unknown; putBacks: number; loads: number; h: number; slot: number; stale: string; uploaded: boolean; ctx: { p: number }; rows: unknown; inStep: boolean; side: { list: unknown[]; of: unknown; base: number }; asks: { after(): void; give(S: any, id: string, t?: any, who?: any, o?: any): string | null; refused: { n: number; rows: Record<string, string> } } | null; quiet: boolean; owed: number; quietDt: number }
+interface Held { /** how many applies there have been, the count the view was asked at, and the view */ applies: number; viewAt: number; view: TickView; told: number; toolScan: boolean; inRun: boolean; settings?: { flush(): void; rebase(): void; stats(): { settledLeft: number } & Record<string, unknown> } | null; g: Game; lastCmds: readonly PlayerCmd[] | null; kept: Set<number>; startKept: number; startOwn: unknown[]; back: { label: string; loads: number; saves: number } | null; took: boolean; saves: number; shelfSig: string; doorKept: number[]; poke: ((obj: unknown, path: string | (string | number)[], value: unknown) => void) | null; watch: Watched[]; launch: unknown; putBacks: number; loads: number; h: number; slot: number; stale: string; uploaded: boolean; ctx: { p: number }; rows: unknown; inStep: boolean; side: { list: unknown[]; of: unknown; base: number }; asks: { after(): void; give(S: any, id: string, t?: any, who?: any, o?: any): string | null; refused: { n: number; rows: Record<string, string> } } | null; quiet: boolean; owed: number; quietDt: number }
 let H: Held | null = null;
 const REG = { v: null as Record<string, object> | null };
 const reg = (): Record<string, unknown> => (REG.v ??= knobRegistry()) as Record<string, unknown>;
@@ -383,7 +384,7 @@ function grown(g: Game): void {
 export function rustAttach(g: Game): void {
   if (!X) throw new Error('rustAttach before rustBoot');
   const G = g as unknown as Record<string, any>;
-  H = { told: -1, toolScan: false, inRun: false, g, lastCmds: null, kept: new Set(), startKept: 0, startOwn: [], back: null, took: false, saves: 0, shelfSig: '', doorKept: [], poke: null, watch: [], launch: null, putBacks: -1, loads: 0, h: 0, slot: -1, stale: 'the game was stood', uploaded: true, ctx: { p: 0 }, rows: null, inStep: false, side: { list: [], of: null, base: 0 }, asks: null, quiet: false, owed: 0, quietDt: 1 / 60 };
+  H = { applies: 0, viewAt: -1, view: NO_VIEW, told: -1, toolScan: false, inRun: false, g, lastCmds: null, kept: new Set(), startKept: 0, startOwn: [], back: null, took: false, saves: 0, shelfSig: '', doorKept: [], poke: null, watch: [], launch: null, putBacks: -1, loads: 0, h: 0, slot: -1, stale: 'the game was stood', uploaded: true, ctx: { p: 0 }, rows: null, inStep: false, side: { list: [], of: null, base: 0 }, asks: null, quiet: false, owed: 0, quietDt: 1 / 60 };
   const held = H;
   G.stepSeats = (dt: number, cmds: readonly PlayerCmd[]) => step(held, dt, cmds);
   // (for a networked game, src/net/step.ts: a quiet run of steps, and the game's own words for its state, as `rustHashes` reads them by name for a check)
@@ -445,6 +446,14 @@ export function rustAttach(g: Game): void {
       surfaceCall: (row: number, bytes: Uint8Array, view = -1) => { settle(held); pokes(held); if (held.toolScan) scanFlush(held); else held.settings?.flush(); handHost(held); call('face_call', () => hand(bytes, (p, n) => X!.face_call(held.h, row, view, p, n))); const out = outBytes().slice(); grown(g); apply(held, false); return out; } });
     for (const m of ['open', 'close', 'turn', 'pageBack', 'pick', 'cycleWho', 'address']) { const was = O[m]; if (typeof was !== 'function') continue;
       O[m] = function (this: any, ...a: unknown[]) { if (RUST_PANIC.dead) return undefined; if (held.inStep || held.stale || !held.h) return was.apply(this, a); RUST_GAME.crossed[m] = (RUST_GAME.crossed[m] ?? 0) + 1; try { return crossing(`SquadOrders.${m}`, this, a); } catch (e) { if (RUST_PANIC.dead) return undefined; throw e; } }; } }
+  // WHAT THE HUD IS TOLD (src/view/seatview.ts): asked of the Rust game once after whatever moved it, and kept till the next (`viewAt`: an apply, a whole apply
+  // and a write into the game each put it off). While no Rust game stands, or one is stopped, the last word stands. The HUD reads it every drawn frame: a
+  // trap inside the question stops the game, and is no throw of the frame's (the frame goes on, or the panic card's key would never be read)
+  g.viewAsk = () => { if (!held.h || held.stale || RUST_PANIC.dead) return held.view;
+    try { settle(held); if (held.toolScan && !held.inRun && !held.inStep) scanFlush(held); tellShown(held);
+      if (held.viewAt !== held.applies) { call('face_tick_view', () => X!.face_tick_view(held.h)); const r = readRecord(g, 'crate::view::TickView', outBytes()); grown(g); held.view = r; held.viewAt = held.applies; }
+    } catch (e) { if (!RUST_PANIC.dead) throw e; }
+    return held.view; };
   // THE GAME'S OWN METHODS A TOOL OR A PANEL CALLS BETWEEN TICKS (`GAME_CROSSES`): run as TypeScript they move the puppet only, and the Rust game keeps
   // the man where he was (seen: a check put the player inside a door by `teleportPlayer`, and the interaction key then worked nothing, the Rust game's
   // man still standing at his spawn). Each crosses by its row of the call table like the orders menu's calls above.
@@ -480,7 +489,7 @@ function start(S: Held): void {
     return no || outBytes().slice(); }, () => { if (RUST_PANIC.dead) return; try { grown(g); if (!S.inStep) apply(S, false); } catch (e) { if (!RUST_PANIC.dead) throw e; } });
   RUST_GAME.askRefused = S.asks.refused;
   // (the write by path: by the rows' IDs in this book too)
-  S.poke = makePoke(g, reg(), b => { call('face_write', () => hand(b, (p, n) => X!.face_write(S.h, p, n))); });
+  S.poke = makePoke(g, reg(), b => { S.viewAt = -1; call('face_write', () => hand(b, (p, n) => X!.face_write(S.h, p, n))); });
   // THE SETTINGS, written here by whatever writes them (a panel's row, a lever, a difficulty, an address word) and read by the Rust game: held to what the last walk saw, as a tick opens. A settled row is no setting and is not walked
   // A PAGE A TOOL DRIVES (`?paused`: its frames are stepped by a script, never by the clock) walks more than the settings: every carried field (the
   // scan's `every`: no reading of the tools' sources; about 32 ms a walk on the first tutorial, the software adapter's box, two a run of frames), so a
@@ -489,7 +498,7 @@ function start(S: Held): void {
   // rustToolsHold). THE RULE: what a script writes on the puppet BETWEEN its calls to step is carried into the game. A player's page pays none of
   // it: its walk is the settings', every sixteenth tick, as before.
   { const tools = TOOL_DRIVEN; 
-    const scan = makeScan(g, reg(), (b: Uint8Array) => { call('face_write', () => hand(b, (p, n) => X!.face_write(S.h, p, n))); }, tools ? (q: string) => { RUST_GAME.scan.wrote[q] = (RUST_GAME.scan.wrote[q] ?? 0) + 1; } : () => {}, !tools, tools ? { traps: true, every: true } : {}); scan.rebase(); S.settings = scan; S.toolScan = tools;
+    const scan = makeScan(g, reg(), (b: Uint8Array) => { S.viewAt = -1; call('face_write', () => hand(b, (p, n) => X!.face_write(S.h, p, n))); }, tools ? (q: string) => { RUST_GAME.scan.wrote[q] = (RUST_GAME.scan.wrote[q] ?? 0) + 1; } : () => {}, !tools, tools ? { traps: true, every: true } : {}); scan.rebase(); S.settings = scan; S.toolScan = tools;
   if (!SETTLED_SAID) { SETTLED_SAID = true; console.info(`rust=1: ${scan.stats().settledLeft} settled rows of the knob tables are the game's constants, and what a page writes to them does not reach it`); } }
   // (room asked for and given back once the game stands: the allocator keeps it, so a step seldom has to grow the memory, which detaches every view over it)
   X!.face_reserve(64 * 1048576); grown(g);
@@ -536,6 +545,7 @@ function handHost(S: Held): void { if (S.inStep || !S.lastCmds || !S.h) return; 
 /** THE FILTERED EXPORT ONTO THE PUPPET, its out events dispatched. Answers the ms of the export, the apply and the dispatch. */
 function apply(S: Held, first: boolean, then?: () => void): { ex: number; ap: number; out: number; bytes: number } {
   const g = S.g, G = g as unknown as Record<string, any>;
+  S.applies++;
   handHost(S);
   let t = performance.now();
   tellShown(S); call('face_puppet', () => X!.face_puppet(S.h, first ? 1 : 0)); grown(g);
@@ -686,6 +696,7 @@ function shelfIn(S: Held): void {
 function whole(S: Held): void {
   const g = S.g, G = g as unknown as Record<string, any>, t = performance.now();
   handHost(S);
+  S.viewAt = -1;
   call('face_export', () => X!.face_export(S.h)); grown(g);
   applyGame(g, outBytes(), reg(), { hooks: HOOKS });
   after(S);

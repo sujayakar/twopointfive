@@ -315,7 +315,7 @@ async function playLessonAs(name: string, o: LessonRunOpts = {}, loud = false): 
       if (lessonOn && (g.lesson.i !== i || g.lesson.settling) && fightOk.has(T.id)) { until(() => g.lesson.i > i, RAILS.cardMax + 3); byFight(); continue; }   // (…or is done by it and settles before a card: the same thing a beat later)
       if (lessonOn && (g.lesson.i !== i || g.lesson.settling) && !idleOk.has(T.id)) throw new Stop(`step ${i + 1} '${T.id}' went by with nothing done (its test was already true when it came up)`);
       if (PACE > 0) step(Math.round(PACE * 60));   // --pace: a reader's seconds on the line (a step that only WAITS for the floor may well go by while he reads: its script then finds its wait already over)
-      say(`step ${i + 1}/${L.steps.length} '${T.id}': ${g.lesson.objective()?.text.split(' ▸ ')[1] ?? T.line}${gone ? ' (it had already gone by: idleOk)' : ''}`);   // (the line as the row reads it: a step may carry another for the keys as they stand)
+      say(`step ${i + 1}/${L.steps.length} '${T.id}': ${(g.view.mission?.of === 'lesson' ? g.view.mission.text : '').split(' ▸ ')[1] ?? T.line}${gone ? ' (it had already gone by: idleOk)' : ''}`);   // (the line as the row reads it: a step may carry another for the keys as they stand)
       script.steps[T.id](B);
       step(30);   // (the same half second in both arms — a step with a `hold` longer than that waits in its own script)
       // (a step before a card SETTLES — rails.ts RAILS.cardBeat: its deed done, it stays up for the card's beat and, for a card marked quiet, while a fight of his is on, to the cap)
@@ -325,7 +325,7 @@ async function playLessonAs(name: string, o: LessonRunOpts = {}, loud = false): 
       if (g.player.down) throw new Stop(`the player went down in step '${T.id}'`);
     }
     if (lessonOn && !g.lesson.finished) throw new Stop('the lesson does not say it is finished after its last step');
-    if (lessonOn && g.lesson.objective()) throw new Stop('the lesson still holds the objective row after its last step');
+    if (lessonOn && g.view.mission?.of === 'lesson') throw new Stop('the lesson still holds the objective row after its last step');
     say('every step done; playing the mission out');
     const ended = script.ended ?? ((gg: any) => gg.mission.stage === 'done');
     if (!ended(g)) script.finish?.(B);

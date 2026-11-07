@@ -420,8 +420,8 @@ pub fn snatch_lose(g: &mut crate::game::Game, how: crate::snatch::SnatchLoseHow,
     crate::game::game_msg(g, &format!("MISSION FAILED — {}. press Enter to restart", why));
 }
 
-/// His line and marker while he is loose or it is over; None = the room clear's own. (snatch.ts Snatch.objective)
-pub fn snatch_objective(g: &mut crate::game::Game) -> Option<crate::snatch::SnatchObjective> {
+/// His line and marker while he is loose or it is over; None = the room clear's own.
+pub fn snatch_objective(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<crate::snatch::SnatchObjective> {
     let man = g.snatch.man;
     if !snatch_active(g) { return None; }
     let gd = man?;
@@ -437,7 +437,7 @@ pub fn snatch_objective(g: &mut crate::game::Game) -> Option<crate::snatch::Snat
     }
     if g.room_clear.end == Some(crate::roomclear::RoomClearEnd::Wiped) { return None; }
     if snatch_in_hand(g) {
-        return crate::snatchout::snatch_out_objective(g).map(|o| SnatchObjective { text: o.text, pos: o.pos });
+        return crate::snatchout::snatch_out_objective(g, seat).map(|o| SnatchObjective { text: o.text, pos: o.pos });
     }
     if g.snatch.hands_up {
         return Some(SnatchObjective {

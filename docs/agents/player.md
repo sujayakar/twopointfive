@@ -1503,7 +1503,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   digest is the same with it on or off by construction, never run to show it). RUN ON THE PAGE after the change: `deathrecap-page` ONLY=live (three cases pass). NOT RUN: `lesson-page`
   after its change, a set door charge or a threshold hold on the page or in a check with the squad of four armed on it, a running verb on the
   page. DECLINED from review, with why: `hudNotes` returning keyed notes under the rule (it would change what the block holds on the shipped
-  stand, which that stand's checks read as strings); `objectiveText` returning its parts (every mission module words that line). Never seen on a GPU. NOBODY HAS PLAYED IT.
+  stand, which that stand's checks read as strings); the objective record returning its parts (the Rust game's `mission::objective` words that line, in the view). Never seen on a GPU. NOBODY HAS PLAYED IT.
 
 - **The gun is put away for a charge, and brought back after** (`src/game/workstow.ts WORKSTOW.on`, 10-23; the maintainer: "characters should fully
   unequip their weapon when planting door charges, etc. -- they can reequip after they're done"). A charge went on with the gun still in the man's

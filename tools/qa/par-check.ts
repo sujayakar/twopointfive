@@ -1,8 +1,7 @@
 // A PAR ON A ROOM CLEAR — the check of the par clock as the page reads it (the level block `scenarios.par`; today levels/killhouse.json alone).
 // THE CLOCK IS THE RUST GAME'S (rust/game_rules/src/par: the tick keeps it; src/game/par.ts only reads its record). Its rules are held natively, over three
 // seeds each, in rust/game_start/tests/par.rs (the arithmetic, armed and waiting, an order, a stride, either player of two, the end said once, a man
-// lost); this check holds what a host sees of it through the bridge: the record on the page's copy, the row AS THE PAGE STILL WORDS IT against the row
-// the game words, the log, the file's rules, a game stood again from the copy, and that off moves nobody.
+// lost); this check holds what a host sees of it through the bridge: the record on the page's copy, the row (the Rust game words it; the page words nothing), the log, the file's rules, a game stood again from the copy, and that off moves nobody.
 //   bun run tools/qa/par-check.ts
 // What it holds (the game stood up by the harness, the kill house's room clear staged):
 //   1. the level carries a par (the arithmetic is the native test's: rust/game_start/tests/par.rs)
@@ -29,7 +28,6 @@ export async function parCheck(): Promise<boolean> {
   const { parseLevelData, validateLevelData } = await import(`${ROOT}/src/scene/levelData.ts`), { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
   const { killGuard, fireWeapon } = await import(`${ROOT}/src/game/combat.ts`), { WEAPONS } = await import(`${ROOT}/src/game/weapons.ts`);
   const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
-  const { objectiveText } = await import(`${ROOT}/src/game/mission.ts`);
   const { knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`);
   const brk = process.env.PAR_BREAK === '1', knobs0 = knobsCopy();
 
@@ -51,10 +49,7 @@ export async function parCheck(): Promise<boolean> {
     const drop = (list: any[], by: 'player' | 'guard' = 'player') => quiet(() => { for (const h of list) killGuard(g, h, [1, 0, 0], false, 'shot', by); });
     const order = () => quiet(() => g.orders.give('fallIn', g.orders.targetAt(g.player.char.pos), 'all'));
     const nudge = (m: number) => quiet(() => { const p = g.player.char.pos; g.teleportPlayer([p[0] + m, 0, p[2]]); });
-    // (`row` is the game's wording, asked of the Rust game by the crossing · `pageRow` is the page's own, src/game/par.ts on the copy: until the HUD
-    //  is given the game's row, the two are held to each other here)
-    const pageRow = () => g.par.result() ? g.par.objective('') as string : g.par.row() as string;
-    return { W, g, rc, par: g.par, step, foes, drop, order, nudge, row: () => objectiveText(g) as string, pageRow };
+    return { W, g, rc, par: g.par, step, foes, drop, order, nudge, row: () => g.objectiveText() as string };
   }
 
   try {
@@ -73,13 +68,11 @@ export async function parCheck(): Promise<boolean> {
     { const A = await stage(); await A.step(90);
       line(!!A.par.data && !A.par.started && A.par.secs === 0 && A.par.result() === null, 'staged: armed, and a second and a half on the mark with nothing ordered has not started the clock');
       line(/^par \d:\d\d \/ \d:\d\d \/ \d:\d\d · \S/.test(A.row()), `the objective row leads with the three bars before the start: '${A.row().slice(0, 44)}…'`);
-      line(A.pageRow() !== '' && A.row().startsWith(A.pageRow()), `the page words the bars as the game does: '${A.pageRow()}'`);
       await A.nudge(PAR_START_M * 0.6); await A.step(2);
       line(!A.par.started, `a shuffle of ${(PAR_START_M * 0.6).toFixed(1)} m is not a start`);
       await A.nudge(PAR_START_M * 0.8); await A.step(1); const t0 = A.g.time; await A.step(120);
       line(A.par.started && Math.abs(A.par.secs - (A.g.time - t0)) < 0.05, `past ${PAR_START_M} m from the mark the clock runs (${A.par.secs.toFixed(2)} s after two seconds)`);
       line(/^⏱ 0:0[12] → gold \d:\d\d · \S/.test(A.row()), `the clock leads the row, then the medal still on, then the room clear's words: '${A.row().slice(0, 40)}…'`);
-      line(A.pageRow() !== '' && A.row().startsWith(A.pageRow()), `the page words the running clock as the game does: '${A.pageRow()}'`);
       // a game stood again from the page's copy (a file loaded on it, a resync) takes the clock up where it was: the whole record is on the wire
       { const was = A.par.t0, H = A.g.rustHost; if (H?.puppetTakesOver) { await quiet(() => H.puppetTakesOver('par-check: the game is stood again from the copy')); await A.step(2);
           line(A.par.started && A.par.t0 === was, `stood again from the copy mid-run, the clock runs on from the same start (${A.par.t0.toFixed(2)})`); }
@@ -92,19 +85,18 @@ export async function parCheck(): Promise<boolean> {
       line(A.rc.end === 'taken' && !!R && R.lost === 0 && Math.abs(R.secs - (A.rc.endAt - t0)) < 0.05 && ['gold', 'silver', 'bronze', 'none'].includes(R.medal), `every defender down: taken, ${R?.secs.toFixed(1)} s, nobody lost, ${R?.medal}`);
       const secs = A.par.secs; await A.step(120);
       line(said() === 1 && A.par.secs === secs && A.par.result()?.secs === R?.secs, 'the result is said once on the HUD log and the clock holds at the end');
-      line(A.row() === A.pageRow(), `the page words the end row as the game does: '${A.pageRow().slice(0, 44)}…'`);
       { const H = A.g.rustHost; await quiet(() => H?.puppetTakesOver?.('par-check: the game is stood again from the copy, after the end')); await A.step(4);
         line(said() === 1 && A.par.result()?.secs === R?.secs, 'stood again from the copy after the end, the result stands and is not said a second time'); }
       line(/^structure taken · \d:\d\d · (GOLD|SILVER|BRONZE|no medal)/.test(A.row()), `the row at the end: '${A.row().slice(0, 44)}…'`);
       await quiet(() => A.g.restartEncounter()); await A.step(5);
       line(!!A.par.data && !A.par.started && A.par.result() === null && /^par /.test(A.row()), 'a restart: armed again, clock not started, no result');
-      // the page's words about the best time ride the result where THIS page shows it (par.shown: the card, the debrief), never the game's log or the row
-      // the game words, which every machine of one game reads the same
+      // the page's words about the best time ride the result where THIS page shows it (par.shown: the card, the debrief), never the row the game words,
+      // which every machine of one game reads the same
       await A.nudge(PAR_START_M + 0.5); await A.step(30); await A.drop(A.foes()); await A.step(4);
-      const R2 = A.par.result(), row0 = A.g.messages.filter((m: any) => /^par ▸/.test(m.text)).length;
+      const R2 = A.par.result();
       A.par.best('best 0:59');
-      line(!!R2 && A.par.shown === `${R2.line} · best 0:59` && A.g.messages.filter((m: any) => m.text === R2.line).length === 1 && row0 === 1 && !/best/.test(A.row()),
-        `the page's best-time words ride what this page shows ('${A.par.shown}'), and the log and the game's row stay the game's`); }
+      line(!!R2 && A.par.shown === `${R2.line} · best 0:59` && !/best/.test(A.row()),
+        `the page's best-time words ride what this page shows ('${A.par.shown}'), and the game's row carries none`); }
 
     // Sam's first round starts it, standing on his mark
     { const F = await stage(); await F.step(30); const before = F.par.started;

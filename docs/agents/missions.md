@@ -41,7 +41,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   kit `reload` `launcher` `burst` `threw`, squad `orderTo` `stackOn` `pairsOn` `word` `taken` `following`, the quiet partner `mate` `pair`) — run over a REAL mission of the level's kind (quiet alone, quiet as two, a
   room clear with the pair or the four). The lesson READS ONLY: it moves nobody and writes nothing the simulation reads, so the same keys play the same run with `LESSON.on` false (`?nolesson`); a level
   without the block returns on the first line of every entry point. Seams: `game.ts` (`lesson.tick(dt)` right after `updateMission`: this frame's `act`, events, chronicle rows and orders are in),
-  `mission.ts objectiveText / objectivePos` (the step's line and marker stand over the scenario's own until the last step is done), `savestate.ts` (the step that is up rides in a checkpoint), `knobs.ts`.
+  the mission's line, `rust/game_rules/src/mission objective` (the step's line and marker stand over the scenario's own until the last step is done), `savestate.ts` (the step that is up rides in a checkpoint), `knobs.ts`.
   A fresh `g.mission` (restartEncounter) starts the lesson over; once the run is over (failed, done, Sam down, a room clear ended) the row is the scenario's own again. THE SEVEN (`tools/levels/train-*.ts` on the
   shared compound `train-ground.ts` — GWOT kit; `hut`, `lamp`, `finish`; seven corners of ONE compound, each lesson's far gate the next one's near gate, the neighbours' landmarks standing outside the walls: motor pool · kitchen court · generator yard · range · quarters · white house · well court; each ends on a small set piece done with what it taught): 1 `train-move` moving unseen · 2 `train-hands` hands · 3 `train-lights` lights, locks and devices · 4 `train-kit` guns and the kit
   (quiet, alone) · 5 `train-orders` orders and door tools (room clear, the pair) · 6 `train-pairs` two pairs, two doors, one word (the four) · 7 `train-silent` quiet, as two. A Training row deploys at its own
@@ -1182,11 +1182,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   his start mark, `PAR_START_M` 1 m, or the first round or throw) to roomclear's 'taken'; every teammate down at the end adds `lossSecs`; the total in WHOLE
   SECONDS AS SHOWN earns gold / silver / bronze / none (`medal_of`, `par_result`: pure). `par_tick` runs once a tick right after the mission's update, arms on a
   new mission, files the result and says the line once on the log; the wire carries `live`, `t0` and `res` every tick. `src/game/par.ts` is the page's READ of that
-  record (no tick, no snapshot: a kept game carries the record with the rest), and still words the objective row from it (`mission.ts objectiveText` →
-  `par.objective`) until the HUD reads the game's own row (`par_objective`, which a check is answered by). `PAR.on` is a SETTLED row, on, and nothing reads
+  record (no tick, no snapshot: a kept game carries the record with the rest), and the row with
+  the clock on it is the game's own (`par_objective`, in the mission's line of the view: `docs/agents/rust.md`, THE VIEW). `PAR.on` is a SETTLED row, on, and nothing reads
   it any more: `?nopar` is gone, and a level without the block returns on the tick's first line. THE BEST TIME IS THE PAGE'S: main.ts files it the frame the result
   first appears (`ui/parBest.ts`, localStorage, key = level file + way in + squad size + difficulty; never under god mode / no AI / unlimited ammo) and hands
-  its words to `par.best()`: they ride the end row, the card and the debrief's 'par' cell (`par.shown`), and no longer reword the log's line, which is the
+  its words to `par.best()`: they ride the card and the debrief's 'par' cell (`par.shown`), and no longer reword the log's line, which is the
   game's and the same on every machine. A CHANGE OF PLAY, small: in a two-seat game the clock starts on EITHER seat's first move (each page used to time its own
   seat). Checks: `cargo test --test par` in `rust/game_start` (5 rules, 3 seeds each beside a control: armed and waiting, an order starts it, a stride does and
   a shuffle does not, the medal on whole seconds, the end files one result said once, with and without a man lost) and `bun run tools/qa/par-check.ts`
@@ -2003,7 +2003,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   own round, the player down). The room taken is still said and logged ('secured'); its line reads 'hostage room secured — bring them out, or clear the
   building', the objective row points at the nearest hostage and then, once they are on their feet, at the way out ('bring them out the way you came in'); the
   end's why is '2 of 2 hostages out' or '2 of 2 hostages alive · building cleared'. SEAMS: rescue.ts `outcome()` (asks `ending.won()`; the 15 s hold only
-  with the switch off), `objective()`, `tick()`, `end()`; rescue.ts `captor()` / `clock()` count only hostages still IN the room for the man standing in
+  with the switch off), `tick()`, `end()` (the objective row is the Rust game's, `mission::objective`, in the view); rescue.ts `captor()` / `clock()` count only hostages still IN the room for the man standing in
   it (a hostage walked out is had by line and reach alone: the flush's bullet in `enemies.md`); a hostage on her feet killed by a grenade of THEIRS is theirs
   ('killed', frag.ts's `killerId`), not the team's own fire; the objective keeps the clock's step while a man has one of them again; player.ts `buildInteractables` (`rescueEndRows`); game.ts
   `Verb` 'lead' | 'stay'; civilians.ts `Civ.lead / leadGap`. The scripted commander (`tools/qa/playthrough.ts playRescue`) waits for a clear and else leads
