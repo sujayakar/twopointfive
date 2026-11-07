@@ -13,6 +13,7 @@
 // must stay. The low bank at the wall's foot (top 0.17 m, nothing on it) must stay at every site.
 import { readFileSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
+import { samBreach } from './charge-rig.ts';
 type Vec3 = [number, number, number];
 export async function holeBaseCheck(): Promise<boolean> {
   const BRK = process.env.HOLEBASE_BREAK === '1'; let all = true;
@@ -34,9 +35,9 @@ export async function holeBaseCheck(): Promise<boolean> {
     try { const L: any = loadLevel(parseLevelData(data)); edit?.(L); const W: any = await standUp({ level: L, seed: 1 }); raise(); const g = W.game; g.godMode = true; g.aiEnabled = false; g.tune.chaos = BRK ? 0 : 0.5; for (let i = 0; i < 4; i++) W.step(1 / 60);
       const boxes: any[] = g.col.boxes, piles = boxes.filter(near), n0 = piles.length, b0 = piles.filter(base), bk = boxes.find(bank);
       const w = wallAt(g, at, from); if (!w || !w.ok) return null;
-      g.wallCharge.set.push({ wall: w, t: g.time, by: 'probe', paid: 0 }); const res: any = g.wallCharge.blow(g.wallCharge.set[g.wallCharge.set.length - 1]); for (let i = 0; i < 60; i++) W.step(1 / 60);
+      const res = samBreach(W, w); for (let i = 0; i < 60; i++) W.step(1 / 60);   // (set by Sam's own hands from the yard, set off by his own action: charge-rig.ts)
       const stays = (b: any) => !(b.flags & GONE);
-      return { g, hole: !!res?.hole, n0, bases: b0.length, left: piles.filter(stays).length, baseLeft: b0.filter(stays).length, baseLeftR: b0.filter(b => right(b) && stays(b)).length, baseLeftL: b0.filter(b => !right(b) && stays(b)).length,
+      return { g, hole: !!res.hole, breach: res.why, n0, bases: b0.length, left: piles.filter(stays).length, baseLeft: b0.filter(stays).length, baseLeftR: b0.filter(b => right(b) && stays(b)).length, baseLeftL: b0.filter(b => !right(b) && stays(b)).length,
         above: piles.filter(b => !base(b)).length, aboveLeft: piles.filter(b => !base(b) && stays(b)).length, aboveLeftR: piles.filter(b => !base(b) && right(b) && stays(b)).length, aboveGoneL: piles.filter(b => !base(b) && !right(b) && !stays(b)).length, bank: !!bk, bankStays: !!bk && stays(bk), tall: boxes.filter(b => near({ ...b, c: [b.c[0], 0.3, b.c[2]], h: [b.h[0], 0.1, b.h[2]] }) && b.c[1] + b.h[1] > 2.3 && stays(b)).length };
     } finally { console.log = log; } };
   try {

@@ -16,6 +16,7 @@
 // line, the recording from before the key and the page's flag. The plan 'asked plain' is still asked: that is an argument of the plan, not the switch.
 // Rigid pieces only: the splinters are GPU particles this harness has no eyes for, and nothing here looks at a picture.
 import { standUp, ROOT } from './headless.ts';
+import { samBreach } from './charge-rig.ts';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 const { WALLCHARGE, wallAt, wallPt } = await import(`${ROOT}/src/game/wallcharge.ts`);
@@ -33,7 +34,7 @@ async function floor(level: string, cut?: (boxes: any[]) => void) {
   const W: any = await standUp({ level: lvl }); const g = W.game; DESTRUCTION.on = true; WALLCHARGE.on = true; g.tune.chaos = CHAOS; g.godMode = true;
   if (lvl.scenarios?.roomClear) await startFromQuery(g, new URLSearchParams('roomclear&squad4'));
   const step = (n: number) => { for (let i = 0; i < n; i++) W.step(1 / 60); }; step(30);
-  return { g, step };
+  return { W, g, step };
 }
 interface Place { level: string; board: number; wall: number; p: Vec3; side: number; ax: boolean; what: string; offered: boolean }
 const fromOf = (P: { p: Vec3; side: number; ax: boolean }): Vec3 => P.ax ? [P.p[0], 0, P.p[2] + P.side] : [P.p[0] + P.side, 0, P.p[2]];
@@ -55,22 +56,26 @@ function boards(level: string, g: any): { places: Place[]; offered: number; fixe
         const o = found.get(j); if (!o || best.d < o.d) found.set(j, best); } } }
   return { places: [...found.values()].sort((a, b) => a.board - b.board), offered, fixed };
 }
+/** a level's boxes with board `i` taken off its wall before the floor stands (neither seen nor a shadow: what `bare` is measured on) */
+const bareOf = (i: number) => (boxes: any[]): void => { boxes[i].flags |= HIDE; };
 /** the same place `du` metres along the wall */
 const along = (P: Place, du: number): Place => ({ ...P, p: P.ax ? [P.p[0] + du, P.p[1], P.p[2]] : [P.p[0], P.p[1], P.p[2] + du] });
 const spotOf = (g: any, P: Place) => wallAt(g, [P.p[0], 0, P.p[2]], fromOf(P));
 const cellsOf = (g: any, wall: number): string => (g.destr.walls.snapshot()?.b ?? []).find((r: any) => r[0] === wall)?.[1] ?? '';
-/** a charge set at the place and blown: did the wall hole, is the board gone, where are the pieces of its colour a second and a half on */
-function blowAt(S: { g: any; step: (n: number) => void }, P: Place, bare = false) {
+/** a charge set at the place by Sam's own hands and set off by his own action (charge-rig.ts: a charge pushed onto the tools' copy of the game by hand is a
+ *  write the Rust game never gets): did the wall hole, is the board gone, where are the pieces of its colour a second and a half on. `bare` = the floor was
+ *  stood with this board taken off its wall in the level's data (`bareOf`): hiding it by hand afterwards is such a write too. */
+function blowAt(S: { W: any; g: any; step: (n: number) => void }, P: Place, bare = false) {
   const g = S.g, C = g.wallCharge, w = spotOf(g, P), b = g.col.boxes[P.board], col = [...b.albedo]; if (!w || !w.ok || w.index !== P.wall) return null;
-  if (bare) b.flags |= HIDE;   // (the same wall with nothing hung on it)
   const mine = (c: any) => c.box.albedo.every((v: number, k: number) => Math.abs(v - col[k]) < 0.004) && Math.min(c.box.h[0], c.box.h[2]) <= Math.min(b.h[0], b.h[2]) + 0.002;
-  const had = new Set(g.destr.debris.list), flags0 = b.flags; let walk = false; const un = g.destr.walls.onChange((c: any) => { if (c.kind === 'hole' && c.id === P.wall && c.walkable) walk = true; });
+  const had = new Set(g.destr.debris.list), flags0 = b.flags, rows0 = (g.destr.walls.changes ?? []).length;
   const forecast = plans(g, w, true), plain = plans(g, w, false), pure = b.flags === flags0;
-  C.set.push({ wall: w, t: g.time, by: 'probe', paid: 0 }); const r = C.blow(C.set[C.set.length - 1]); un(); S.step(2);
+  const r = samBreach(S.W, w); S.step(2);
+  const walk = ((g.destr.walls.changes ?? []) as any[]).slice(rows0).some(c => c.kind === 'hole' && c.id === P.wall && c.walkable);   // (the feed's own rows since the charge: a hook wrapped on the tools' copy is never called by the Rust tick)
   const fresh = g.destr.debris.list.filter((c: any) => !had.has(c) && mine(c)), born = fresh.length; S.step(88);
   const off = (c: any) => ((P.ax ? c.box.c[2] - w.box.c[2] : c.box.c[0] - w.box.c[0]) * P.side);
   const live = fresh.filter((c: any) => g.destr.debris.list.includes(c));
-  return { hole: !!r?.hole && !!C.holeAt(w), gone: !bare && (b.flags & 1) !== 0, cells: cellsOf(g, P.wall), born, back: live.filter((c: any) => off(c) > 0.2).length, through: live.filter((c: any) => off(c) < -0.2).length,
+  return { hole: !!r.hole && !!C.holeAt(r.wall), breach: r.why, gone: !bare && (b.flags & 1) !== 0, cells: cellsOf(g, P.wall), born, back: live.filter((c: any) => off(c) > 0.2).length, through: live.filter((c: any) => off(c) < -0.2).length,
     forecast, plain, pure, walk, kept: (g.destr.walls.snapshot()?.h ?? []) as [number, number][] };
 }
 
@@ -87,14 +92,14 @@ export async function hungchargeCheck(): Promise<boolean> {
       const ok = B.places.filter(P => { const w = spotOf(S.g, P); return !!w && w.ok && w.index === P.wall && !w.outer; });
       seen.push(`${level} ${ok.length} (${B.offered} offered places on them are duds by the plain plan)`);
       for (const P of ok) { places.push(P); if (level === 'block' && S.g.col.boxes[P.board].h[1] >= 0.39) places.push({ ...along(P, -0.25), what: `${P.what} 0.25 m along` }, { ...along(P, 0.25), what: `${P.what} 0.25 m back` }); } }
-    // two floors a place: the game as it stands, and the bare wall. A place the same board was already blown at on this floor needs a floor of its own.
+    // two floors a place: the game as it stands, and the bare wall (a floor of its own each time: the board comes off in the level's data). A place the same board was already blown at on this floor needs a floor of its own.
     const run = async (bare: boolean) => { const out: (ReturnType<typeof blowAt>)[] = []; let S: Awaited<ReturnType<typeof floor>> | null = null, lvl = '', used = new Set<number>();
-      for (const P of places) { if (!S || lvl !== P.level || used.has(P.board)) { S = await quiet(() => floor(P.level)); lvl = P.level; used = new Set(); } used.add(P.board); out.push(blowAt(S, P, bare)); }
+      for (const P of places) { if (bare || !S || lvl !== P.level || used.has(P.board)) { S = await quiet(() => floor(P.level, bare ? bareOf(P.board) : undefined)); lvl = P.level; used = new Set(); } used.add(P.board); out.push(blowAt(S, P, bare)); }
       return out; };
     const on = await run(false), bareW = await run(true);
     // (a place is FAIR where the same wall with the board taken off does hole: elsewhere the wall holds for a reason of its own, and no rule about boards is asked there)
     const fair = places.filter((_, k) => bareW[k]?.hole), opens = fair.filter(P => on[places.indexOf(P)]?.hole);
-    const tell = (P: Place) => { const k = places.indexOf(P); return `${P.what}: ${on[k]?.hole ? 'hole' : 'NONE'}${bareW[k]?.hole ? '' : ' (the bare wall holds too)'}`; };
+    const tell = (P: Place) => { const k = places.indexOf(P); return `${P.what}: ${on[k]?.hole ? 'hole' : `NONE${on[k]?.breach ? ` — ${on[k]!.breach}` : ''}`}${bareW[k]?.hole ? '' : ` (the bare wall holds too${bareW[k]?.breach ? `: ${bareW[k]!.breach}` : ''})`}`; };
     { const mine = fair.filter(P => P.offered), block = places.filter(P => P.level === 'block');
       verdict(mine.length >= 3 && block.length >= 3 && block.every(P => fair.includes(P)) && offered >= 10 && fixed === offered,
         'the staging: places the game itself offers on a board (a man\'s standing room, floor behind) on three boards or more, and the block\'s notice board at all three places; by the plan, every offered place that is a dud asked plain holes once the charge\'s wall is named',

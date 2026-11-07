@@ -8,10 +8,11 @@
 // THE SITES: his own (the wall by the floor point 11.4, 7.7, set from the side he stood on) and up to five more places on the level (the biggest banks first) where a snow bank that stops feet
 // lies at the foot of a wall the game offers a charge on, and the first of those once more with its bank DRAWN OUT TO 15 M by the check itself (the level's own
 // long banks left the walls' feet on 10-15: without this nothing here is over the furniture's size bar, and no feed row could be longer than its hole). At each, a fresh stand of the level with the page's destruction switches, a charge set as the order
-// sets it and blown as F blows it; then the charge's own verdict, a body as wide as the player pushed through the gap with the player's own collision call, and
+// sets it and blown as his own action blows it (charge-rig.ts samBreach: his row at its foot, then 'blow the charge' from out of its blast); then the charge's own verdict, a body as wide as the player pushed through the gap with the player's own collision call, and
 // the walk grid asked for the way from one side to the other.
 import { readFileSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
+import { samBreach, type Breach } from './charge-rig.ts';
 type Vec3 = [number, number, number];
 export async function holeSnowCheck(): Promise<boolean> {
   const BRK = process.env.HOLESNOW_BREAK === '1'; let all = true;
@@ -38,14 +39,14 @@ export async function holeSnowCheck(): Promise<boolean> {
     const W = await stand(S.edit), g = W.game, col = g.col, w = wallAt(g, S.at, S.from); if (!w || !w.ok) return null;
     const ax = w.alongX ? 2 : 0, lx = w.alongX ? 0 : 2, plane = w.box.c[ax], near = Math.sign(S.from[ax] - plane) || 1, banks = banksBy(g, S.at, 0.9), took0 = FURN_STATS.mouth;
     const bankLen = Math.max(0, ...banks.map(i => 2 * Math.max(col.boxes[i].h[0], col.boxes[i].h[2]))), bankVol = Math.max(0, ...banks.map(i => 8 * col.boxes[i].h[0] * col.boxes[i].h[1] * col.boxes[i].h[2]));
-    console.log = () => { }; let res: any; try { g.wallCharge.set.push({ wall: w, t: g.time, by: 'probe', paid: 0 }); res = g.wallCharge.blow(g.wallCharge.set[g.wallCharge.set.length - 1]); for (let i = 0; i < 60; i++) W.step(1 / 60); } finally { console.log = log; }
+    console.log = () => { }; let res: Breach; try { res = samBreach(W, w); for (let i = 0; i < 60; i++) W.step(1 / 60); } finally { console.log = log; }   // (set by Sam's own hands from the side asked, set off by his own action: charge-rig.ts)
     // a body pushed through, at every eighth of a metre along the wall round the charge
     let through = 0; for (let k = -8; k <= 8; k++) { const p: Vec3 = [0, 0, 0]; p[lx] = S.at[lx] + k * 0.125; p[ax] = plane + near * 1.1; const a0 = p[lx]; for (let s = 0; s < 150; s++) { p[ax] -= near * 0.02; col.collideCircle(p, R, Y0, Y1, 4); } if ((plane - p[ax]) * near > 0.6 && Math.abs(p[lx] - a0) < 0.6) through++; }
     const A: Vec3 = [0, 0, 0], B: Vec3 = [0, 0, 0]; A[lx] = B[lx] = S.at[lx]; A[ax] = plane + near * 1.6; B[ax] = plane - near * 1.6;
     const path: Vec3[] | null = col.nav.findPath(A, B); let len = -1; if (path) { len = Math.hypot(path[0][0] - A[0], path[0][2] - A[2]); for (let i = 1; i < path.length; i++) len += Math.hypot(path[i][0] - path[i - 1][0], path[i][2] - path[i - 1][2]); }
     const left = banks.filter(i => bank(col.boxes[i])).length, br = g.destr.walls.breakableAt(w.index), cut: number = typeof br?.open === 'number' ? br.open : 0;
     const slabs: number = g.destr.debris.list.filter((c: any) => snowPaintOf(c.box) !== null).length, rowLen = (() => { const rows = [...(g.destr.walls.changes ?? [])] as any[]; let m = 0; for (const r of rows) if (r?.kind === 'cover' && r.rect) m = Math.max(m, r.rect[2] - r.rect[0], r.rect[3] - r.rect[1]); return m; })();
-    return { W, w, slabs, rowLen, bankLen, bankVol, wall: w.index, outer: !!w.outer, cut, hole: !!res?.hole, through, len, banks: banks.length, left, took: FURN_STATS.mouth - took0, msg: String(g.messages[g.messages.length - 1]?.text ?? '') };
+    return { W, w, slabs, rowLen, bankLen, bankVol, wall: w.index, outer: !!w.outer, cut, hole: !!res.hole, breach: res.why, through, len, banks: banks.length, left, took: FURN_STATS.mouth - took0, msg: String(g.messages[g.messages.length - 1]?.text ?? '') };
   };
   try {
     const his: Site = { at: [12.0, 0, 7.45], from: [10.5, 0, 7.45], what: "his: the tea room's outer wall" };   // (his tape: the order at floor 11.4, 7.7, the bang at 11.73, 7.42 — the wall is at x 12)

@@ -13,6 +13,7 @@
 // high laid across open floor in the yard and the grid re-baked over it.
 import { readFileSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
+import { samBreach, type Breach } from './charge-rig.ts';
 type Vec3 = [number, number, number];
 export async function underfootCheck(): Promise<boolean> {
   const BRK = process.env.UNDERFOOT_BREAK === '1'; let all = true;
@@ -42,10 +43,10 @@ export async function underfootCheck(): Promise<boolean> {
     // (1) his breach: the store's outer wall, set from the yard
     const at: Vec3 = [31.3, 0, 5.0], from: Vec3 = [31.3, 0, 3.6], A: Vec3 = [31.25, 0, 3.75], B: Vec3 = [31.25, 0, 6.75];
     const blown = async () => { const W = await stand(), g = W.game, col = g.col, w = wallAt(g, at, from); if (!w || !w.ok) return null;
-      console.log = () => { }; let res: any; try { g.wallCharge.set.push({ wall: w, t: g.time, by: 'probe', paid: 0 }); res = g.wallCharge.blow(g.wallCharge.set[g.wallCharge.set.length - 1]); for (let i = 0; i < 60; i++) W.step(1 / 60); } finally { console.log = log; }
+      console.log = () => { }; let res: Breach; try { res = samBreach(W, w); for (let i = 0; i < 60; i++) W.step(1 / 60); } finally { console.log = log; }   // (set by Sam's own hands from the yard, set off by his own action: charge-rig.ts)
       const k = col.circleTouches(at[0], at[2] + 0.5, 0.6, Y0, Y1, out);
       const left = [...out.slice(0, Math.max(0, k))].filter(i => top(col.boxes[i]) < BAKE_Y).map(i => top(col.boxes[i]).toFixed(2));
-      return { W, g, hole: !!res?.hole, left, ...walk(g, A, B) }; };
+      return { W, g, hole: !!res.hole, breach: res.why, left, ...walk(g, A, B) }; };
     const on = await blown();
     if (!on) verdict(false, "the store's outer wall takes a charge where his was set", 'no wall place there: the level changed, and this check needs its site again');
     else {
