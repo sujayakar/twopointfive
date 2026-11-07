@@ -342,8 +342,7 @@ pub fn wake(g: &mut crate::game::Game, gd: GuardId, why: crate::doze::WakeWhy, a
         let raise = if why == WakeWhy::Bump { g.k.doze.bump_aw } else { g.k.doze.wake_aw };
         crate::mind::raise(g, gd, raise, "doze");
         if let Some(at) = at {
-            g.gd[gd].last_known = Some([at[0], 0.0, at[2]]);
-            g.gd[gd].fix_stamp = g.gd[gd].fix_stamp.wrapping_add(1);
+            crate::mind::fix(g, gd, Some([at[0], 0.0, at[2]]), "doze");
         }
         d.phase = Phase::Stir;
         d.until = g.time + g.k.doze.stir_secs;

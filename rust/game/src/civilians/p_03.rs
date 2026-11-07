@@ -743,7 +743,7 @@ pub fn found_down(g: &mut crate::game::Game, cv: GuardId, o: GuardId) {
         g.gd[other].witness.called_to_body = Some(WitnessCalledToBody { victim: name.clone(), t: now, breathing: !dead });
         if g.gd[other].script.is_some() { continue; }
         crate::mind::raise(g, other, 0.45, "civilians");
-        if g.gd[other].task.is_none() && g.gd[other].state != GuardState::Alert { g.gd[other].last_known = Some(body); g.gd[other].fix_stamp = g.gd[other].fix_stamp.wrapping_add(1); }
+        if g.gd[other].task.is_none() && g.gd[other].state != GuardState::Alert { crate::mind::fix(g, other, Some(body), "civilians"); }
     }
     if !g.quiet_utility {
         g.alarm.pos[0] = body[0]; g.alarm.pos[1] = 0.0; g.alarm.pos[2] = body[2]; g.alarm.placed = true;

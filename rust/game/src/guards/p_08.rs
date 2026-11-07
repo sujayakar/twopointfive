@@ -290,7 +290,7 @@ pub fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
         if g.gd[cur].state == GuardState::Dead || !g.guards.contains(&cur) || g.gd[cur].fled || knee {
             let cur_pos = g.ch[g.gd[cur].ch].pos;
             if let Some(lk) = g.gd[gd].last_known {
-                if v3::dist_xz(lk, cur_pos) < 1.5 { g.gd[gd].last_known = None; g.gd[gd].fix_stamp = g.gd[gd].fix_stamp.wrapping_add(1); }
+                if v3::dist_xz(lk, cur_pos) < 1.5 { crate::mind::fix(g, gd, None, "guards"); }
             }
             mine = g.gd[cur].state == GuardState::Dead && g.gd[cur].killer_id == g.ch[g.gd[gd].ch].id && g.gd[gd].state == GuardState::Alert;
             g.gd[gd].foe = None;

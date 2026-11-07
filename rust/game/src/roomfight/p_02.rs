@@ -771,7 +771,7 @@ pub fn room_fight_stand_on(g: &mut crate::game::Game, d: RoomfightDefId, set: bo
     room_fight_plant(g, d, "stands and fights");
     if let Some(f) = fix {
         // (the fix he had is his again if planting him moved it: a new fix only then)
-        if g.gd[gd].last_known != Some(f) { g.gd[gd].last_known = Some(f); g.gd[gd].fix_stamp = g.gd[gd].fix_stamp.wrapping_add(1); }
+        if g.gd[gd].last_known != Some(f) { crate::mind::fix(g, gd, Some(f), "roomfight"); }
         crate::belief::uncover(g, gd);
         if set { let D = &mut g.tab.roomfight_def[d]; D.pt[0] = f[0]; D.pt[2] = f[2]; }
     }

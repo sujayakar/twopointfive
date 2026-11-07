@@ -7,12 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// `gd.lastKnown = at`, a new object in the TypeScript: every whole write bumps `fix_stamp`, doze.ts:244's and roomfight's identity question.
-fn write_fix(g: &mut Game, gd: GuardId, at: V3) {
-    let man = &mut g.gd[gd];
-    man.last_known = Some(at);
-    man.fix_stamp = man.fix_stamp.wrapping_add(1);
-}
 
 /// A bone of a body, or a stand-in where it has none yet (`c.bones.head ?? …`).
 fn bone_or(g: &Game, c: CharId, bone: crate::character::Bone, or: V3) -> V3 {
@@ -76,7 +70,7 @@ pub fn glass_heard(g: &mut crate::game::Game, e: crate::game::GameEvent, ear: V3
 
 /// His eyes have a man at `at` this moment, by another rule's look than updateGuard's own: the record of a sighting, in one place. (guards.ts eyesOn)
 pub fn eyes_on(g: &mut crate::game::Game, gd: GuardId, at: V3) {
-    write_fix(g, gd, at);
+    crate::mind::fix(g, gd, Some(at), "guards");
     let now = g.time;
     let man = &mut g.gd[gd];
     man.sight_pos = at;
@@ -146,7 +140,7 @@ pub fn hearing_check(g: &mut crate::game::Game, gd: GuardId, ear: Option<f64>, e
                     };
                     crate::mind::set(g, gd, 0.4, "guards");
                     if !placed {
-                        write_fix(g, gd, at);
+                        crate::mind::fix(g, gd, Some(at), "guards");
                     }
                     g.gd[gd].react_t = 0.8;
                     small(g, gd, &e, at);
@@ -194,7 +188,7 @@ pub fn hearing_check(g: &mut crate::game::Game, gd: GuardId, ear: Option<f64>, e
             crate::mind::raise(g, gd, 0.5, "guards");
             let at = if prop.direct { e.pos } else { heard_at };
             if !placed && (g.gd[gd].state != S::Alert || g.gd[gd].last_known.is_none() || g.time - g.gd[gd].last_seen_t > 1.0) {
-                write_fix(g, gd, at);
+                crate::mind::fix(g, gd, Some(at), "guards");
             }
             if g.gd[gd].state == S::Patrol {
                 g.gd[gd].react_t = m::max(g.gd[gd].react_t, 0.6);
@@ -234,7 +228,7 @@ pub fn hearing_check(g: &mut crate::game::Game, gd: GuardId, ear: Option<f64>, e
             if rel == crate::guards::ShotRelation::Own {
                 let at = crate::guards::colleague_fire_pos(g, gd, crate::guards::ColleagueFirePosE { who: e.who, pos: e.pos, to: e.to, blind: e.blind });
                 if let (Some(at), false) = (at, placed) {
-                    write_fix(g, gd, at);
+                    crate::mind::fix(g, gd, Some(at), "guards");
                 }
             } else if g.gd[gd].state != S::Alert || g.gd[gd].last_known.is_none() || prop.direct || g.time - g.gd[gd].last_seen_t > 1.0 {
                 let err = if prop.direct { 0.0 } else { m::min(4.0, 0.6 + d_loud * 0.08) * (1.3 - 0.3 * carry) };
@@ -245,7 +239,7 @@ pub fn hearing_check(g: &mut crate::game::Game, gd: GuardId, ear: Option<f64>, e
                         let from = g.ch[c].pos;
                         crate::scene_collision::nav_grid_find_path(g, from, cand, None, None).is_some()
                     };
-                    write_fix(g, gd, if reachable { cand } else { e.pos });
+                    crate::mind::fix(g, gd, Some(if reachable { cand } else { e.pos }), "guards");
                 }
             }
             g.gd[gd].witness.heard.loud_at = g.gd[gd].last_known;   // what the report came to in his head, written or not: the room fight's evidence reads it
@@ -284,7 +278,7 @@ pub fn hearing_check(g: &mut crate::game::Game, gd: GuardId, ear: Option<f64>, e
                 let aw = g.gd[gd].awareness;
                 crate::mind::set(g, gd, m::min(1.0, m::max(aw, m::min(if e.loud { 0.75 } else { 0.45 }, aw + a))), "guards");
                 if !placed && (g.gd[gd].last_known.is_none() || g.gd[gd].state != S::Alert) {
-                    write_fix(g, gd, heard_at);
+                    crate::mind::fix(g, gd, Some(heard_at), "guards");
                 }
                 if g.gd[gd].state == S::Patrol {
                     g.gd[gd].react_t = 0.6;
@@ -300,7 +294,7 @@ pub fn hearing_check(g: &mut crate::game::Game, gd: GuardId, ear: Option<f64>, e
                 let aw = g.gd[gd].awareness;
                 crate::mind::set(g, gd, m::min(1.0, m::max(aw, m::min(0.85, 0.4 + a))), "guards");
                 if !placed && (g.gd[gd].last_known.is_none() || g.gd[gd].state != S::Alert) {
-                    write_fix(g, gd, heard_at);
+                    crate::mind::fix(g, gd, Some(heard_at), "guards");
                 }
                 if calm {
                     g.gd[gd].react_t = m::max(g.gd[gd].react_t, 0.5);
@@ -324,7 +318,7 @@ pub fn hearing_check(g: &mut crate::game::Game, gd: GuardId, ear: Option<f64>, e
                 let aw = g.gd[gd].awareness;
                 crate::mind::set(g, gd, m::min(1.0, m::max(aw, m::min(0.6, aw + a * 0.5))), "guards");
                 if !placed && (g.gd[gd].last_known.is_none() || g.gd[gd].state == S::Patrol) {
-                    write_fix(g, gd, heard_at);
+                    crate::mind::fix(g, gd, Some(heard_at), "guards");
                 }
                 small(g, gd, &e, heard_at);
                 crate::chronicle::chron_heard(g, gd, e, None);

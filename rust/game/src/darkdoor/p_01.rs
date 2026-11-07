@@ -569,8 +569,7 @@ pub fn hold(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, seen: b
         }
         if g.gd[gd].state == crate::game::GuardState::Alert {
             crate::guards::drop_to_search(g, gd, None);
-            g.gd[gd].last_known = Some(v3::copy(g.ch[c].pos));
-            g.gd[gd].fix_stamp = g.gd[gd].fix_stamp.wrapping_add(1);
+            { let at = Some(v3::copy(g.ch[c].pos)); crate::mind::fix(g, gd, at, "darkdoor"); }
         } else {
             g.gd[gd].stall_ref = Some(v3::copy(g.ch[c].pos));
             g.gd[gd].stall_t = 1e3;
@@ -673,8 +672,7 @@ fn tick_man(g: &mut Game, gd: GuardId, dt: f64) {
     }
     let far = match g.gd[gd].last_known { Some(l) => flat(l, goal) > 0.5, None => true };
     if far {
-        g.gd[gd].last_known = Some(v3::copy(goal));
-        g.gd[gd].fix_stamp = g.gd[gd].fix_stamp.wrapping_add(1);
+        crate::mind::fix(g, gd, Some(v3::copy(goal)), "darkdoor");
     }
     if g.gd[gd].state != crate::game::GuardState::Suspicious {
         crate::mind::set_state(g, gd, crate::game::GuardState::Suspicious, "darkdoor");

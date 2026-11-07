@@ -451,8 +451,7 @@ pub fn send_to_look(g: &mut crate::game::Game, pos: V3, what: &str) -> Option<Gu
     let id = best?;
     {
         g.gd[id].task = Some(crate::game::GuardTask::Arm0(crate::game::GuardTaskArm0 { kind: crate::game::GuardTaskArm0Kind::Device, pos: v3::copy(goal) }));
-        g.gd[id].last_known = Some(v3::copy(goal));
-        g.gd[id].fix_stamp = g.gd[id].fix_stamp.wrapping_add(1);
+        crate::mind::fix(g, id, Some(v3::copy(goal)), "devices");
         crate::mind::raise(g, id, errand().awareness, "devices");
         crate::mind::set_state(g, id, crate::game::GuardState::Suspicious, "devices");
         g.gd[id].react_t = errand().react_t;

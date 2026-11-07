@@ -301,8 +301,7 @@ pub fn send_rack_check(g: &mut crate::game::Game) {
     let Some(best) = best else { return };
     {
         g.gd[best].task = Some(GuardTask::Arm0(GuardTaskArm0 { kind: GuardTaskArm0Kind::Rack, pos: goal }));
-        g.gd[best].last_known = Some(v3::copy(goal));
-        g.gd[best].fix_stamp = g.gd[best].fix_stamp.wrapping_add(1);
+        crate::mind::fix(g, best, Some(v3::copy(goal)), "mission");
         crate::mind::raise(g, best, 0.42, "mission");
         crate::mind::set_state(g, best, GuardState::Suspicious, "mission");
         g.gd[best].react_t = 1.2;
