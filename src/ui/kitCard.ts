@@ -16,9 +16,9 @@
 //
 // THE MOUSE does everything: a click on an arrow steps the row, on a set presses it, anywhere on the card takes the keys to it.
 // THE KEYS (no key is held, no digit is read): W / S or up / down move the highlighted row (the last 'row' is the sets), A / D or left / right change its
-// value (on the sets: pick one), Enter or Space confirm (a row: its next value; the sets: press the picked one), Esc hands back to whoever mounted the card
-// (opts.onBack). A host that routes keys itself calls card.key(e) — true = the card took it; W on the top row and S on the sets come back false, so a screen
-// can walk on to whatever it has above or below (the loadout screen does: ui/loadout.ts, which also gives no onBack, so Esc is the screen's). A host that does not gets them anyway: the card's element takes focus and listens (inside #menu, where
+// value (on the sets: pick one), Enter or Space confirm (a row: its next value; the sets: press the picked one), Esc is the card's only while a pop-up is open.
+// A host that routes keys itself calls card.key(e) — true = the card took it; W on the top row and S on the sets come back false, so a screen
+// can walk on to whatever it has above or below (the loadout screen does: ui/loadout.ts, and Esc is the screen's). A host that does not gets them anyway: the card's element takes focus and listens (inside #menu, where
 // game/input.ts lets keys through).
 //
 // COPY AND PASTE (the maintainer, 10-15: "we should have copy and paste for loadouts"): two buttons at the end of the sets' line and two keys, C and V (the
@@ -43,8 +43,6 @@ import { denseStyle } from './kitDense';
 type KitValue = KitRow['values'][number];
 
 export interface MemberCardOpts {
-  /** Esc on the card */
-  onBack?: () => void;
   /** a row or a set changed member i's card (the table is already written and kept) */
   onChange?: (i: number) => void;
   /** the card took the keys (a click on it, focus()) */
@@ -103,7 +101,7 @@ const liveCards = new Set<{ root: HTMLElement; draw: () => void }>();
 /** the bits of a KeyboardEvent the card reads (a probe hands a plain object) */
 export interface KeyLike { key: string; code?: string; repeat?: boolean; ctrlKey?: boolean; metaKey?: boolean; altKey?: boolean }
 export interface MemberCard {
-  el: HTMLElement; member: number;
+  el: HTMLElement;
   /** take the keys (the highlight shows) / give them up */
   focus(): void; blur(): void;
   /** the highlighted row: 0 … rows − 1, or rows = the sets */
@@ -454,7 +452,7 @@ export function memberCard(host: HTMLElement, i: number, opts: MemberCardOpts = 
     // (the dense card: Enter on a gun's tile opens its pop-up; open, the keys are the pop-up's — W S walk the gun and its things and stop at the ends, A D change, Enter on the gun or Esc shuts it)
     if (dense && (popAt ? back || (ok && cur < rows.length && isGun(rows[cur])) || (up && at === 0) || (down && at === S.length - 1) : ok && cur < rows.length && isGun(rows[cur]))) {
       seen.add(e); if (!e.repeat && (back || ok)) setPop(popAt ? null : rows[cur].field as GunSlot); return true; }
-    if (back) { if (!opts.onBack) return false; seen.add(e); if (!e.repeat) opts.onBack(); return true; }
+    if (back) return false;
     if (up && at === 0 || down && at === S.length - 1) { if (said) { said = null; draw(); } return false; }   // (an edge: the host's to walk on from)
     seen.add(e);
     if (e.repeat) return true;   // (a key held down is one press: nothing here repeats)
@@ -473,7 +471,7 @@ export function memberCard(host: HTMLElement, i: number, opts: MemberCardOpts = 
   host.appendChild(root); draw();
   const me = { root, draw }; liveCards.add(me);
   const card: MemberCard = {
-    el: root, member: i,
+    el: root,
     focus() { setFocus(true, true); (root as { focus?: (o?: FocusOptions) => void }).focus?.({ preventScroll: true }); },
     blur() { said = null; setPop(null); setFocus(false, false); draw(); },
     at: () => cur, key,
