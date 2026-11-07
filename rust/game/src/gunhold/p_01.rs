@@ -671,7 +671,7 @@ fn drop_path(g: &mut Game, gd: GuardId) {
 }
 
 /// `now + GUNHOLD.peekEvery * (0.6 + 0.8 * simRandom())`
-fn next_peek(g: &mut Game, now: f64) -> f64 {
+fn next_peek(g: &mut Game, who: crate::dice::Who, now: f64) -> f64 {
     let every = g.k.gunhold.peek_every;
     now + every * (0.6 + 0.8 * crate::math_dice::sim_random(g))
 }
@@ -810,7 +810,7 @@ fn feet(g: &mut Game, gd: GuardId, dt: f64, p: &crate::guards::Pair, s: GuardsSt
         let open = shown(g, k, at, false);
         if open && here_e == 1.0 && !shown(g, k, at, true) {
             // something low between them already: down behind it, here
-            let peek_t = next_peek(g, now);
+            let peek_t = next_peek(g, crate::dice::Who::Man(gd), now);
             let row = st!();
             row.spot = Some(v3::copy(at));
             row.low = true;
@@ -841,7 +841,7 @@ fn feet(g: &mut Game, gd: GuardId, dt: f64, p: &crate::guards::Pair, s: GuardsSt
             row.run_t = now;
             gun_hold_stats(g).ran += 1.0;
         } else {
-            let peek_t = next_peek(g, now);
+            let peek_t = next_peek(g, crate::dice::Who::Man(gd), now);
             let row = st!();
             row.spot = Some(v3::copy(at));
             row.low = false;
@@ -873,7 +873,7 @@ fn feet(g: &mut Game, gd: GuardId, dt: f64, p: &crate::guards::Pair, s: GuardsSt
         let chase = g.tune.guard_chase;
         let arrived = if scramble { crate::guards::step_along_path(g, gd, dt, chase) } else { crate::guards::follow_path(g, gd, dt, chase) };
         if arrived {
-            let peek_t = next_peek(g, now);
+            let peek_t = next_peek(g, crate::dice::Who::Man(gd), now);
             let row = st!();
             row.phase = Phase::Cover;
             row.peek_t = peek_t;
@@ -1001,7 +1001,7 @@ fn feet(g: &mut Game, gd: GuardId, dt: f64, p: &crate::guards::Pair, s: GuardsSt
                     bark(g, gd, k, BarkKind::Gone, Some(true));
                 }
             }
-            let peek_t = next_peek(g, now);
+            let peek_t = next_peek(g, crate::dice::Who::Man(gd), now);
             st!().peek_t = peek_t;
             let spot = st!().spot;
             match spot {

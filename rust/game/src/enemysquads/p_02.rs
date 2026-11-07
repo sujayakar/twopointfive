@@ -42,7 +42,7 @@ pub fn squad_skill(g: &mut crate::game::Game, base: crate::roomfight::FightSkill
 /// (enemysquads.ts flat)
 pub fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 /// (enemysquads.ts pick)
-pub fn pick(g: &mut crate::game::Game, r: [f64; 2]) -> f64 { r[0] + crate::math_dice::sim_random(g) * (r[1] - r[0]) }
+pub fn pick(g: &mut crate::game::Game, who: crate::dice::Who, r: [f64; 2]) -> f64 { r[0] + crate::math_dice::sim_random(g) * (r[1] - r[0]) }
 /// a man who dropped it and ran is no man of his squad's any more (enemysquads.ts alive)
 pub fn alive(g: &mut crate::game::Game, gd: GuardId) -> bool { g.gd[gd].state != crate::game::GuardState::Dead && !g.gd[gd].fled }
 /// (enemysquads.ts grown)
@@ -944,7 +944,7 @@ pub fn contact(g: &mut crate::game::Game, q: EnemysquadsSquadId, at: V3, room: O
         if his.is_none() || same_room(&his, &Some(room.clone())) || g.tab.enemysquads_squad[q].due.iter().any(|x| x.gd == gd) { continue; }
         let key = stay_key(g, gd, &StayKeyRoom { name: room.name.clone() });
         if g.tab.enemysquads_squad[q].stayed.as_ref().map_or(false, |s| s.has(key.clone())) && squad_drill(g).map_or(false, |k| k.drill_own) { continue; }   // (drillOwn: he was told that room is gone)
-        let t = g.time + pick(g, reinforce) * own_k(g);
+        let t = g.time + pick(g, crate::dice::Who::Man(gd), reinforce) * own_k(g);
         g.tab.enemysquads_squad[q].due.push(SquadDueItem { gd, at: v3::copy(at), t, room: Some(room.clone()) });
     }
 }

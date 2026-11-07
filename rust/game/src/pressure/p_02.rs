@@ -479,7 +479,7 @@ pub fn consider(g: &mut crate::game::Game, d: RoomfightDefId) {
         Some(th) if th.room == tt => th,
         _ => {
             let beat = crate::roomfight::fight_skill().get(String::from("hostile")).unwrap().rally;
-            let at = g.time + pick(g, beat) * g.k.pressure.organise_k;
+            let at = g.time + pick(g, crate::dice::Who::Def(d), beat) * g.k.pressure.organise_k;
             state_of(g).think.set(d, crate::pressure::StateThinkValue { room: tt, at, held: None });
             // PRESSURE.byWay, a fight that is not next door: he says what he has placed, and the men of his room who heard it and could not place it know it from him
             if g.k.pressure.by_way && heard.is_some() && told.map(|t| t.room) != heard.map(|h| h.t) && my_room.is_some() && !next_door(g, my_room, tt) {
@@ -1041,7 +1041,7 @@ pub fn last_man(g: &mut crate::game::Game, d: RoomfightDefId) {
         Some(at) => at,
         None => {
             let range = if why == HookedWhy::Seen { g.k.pressure.last_man_secs } else { g.k.pressure.out_secs };
-            let at = g.time + pick(g, range);
+            let at = g.time + pick(g, crate::dice::Who::Def(d), range);
             state_of(g).last.set(d, at);
             return;
         }

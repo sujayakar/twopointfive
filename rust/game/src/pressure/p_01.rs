@@ -71,7 +71,7 @@ pub fn flat(a: V3, b: V3) -> f64 {
 }
 
 /// A number from a range, on the game's die. (pressure.ts pick)
-pub fn pick(g: &mut crate::game::Game, r: [f64; 2]) -> f64 {
+pub fn pick(g: &mut crate::game::Game, who: crate::dice::Who, r: [f64; 2]) -> f64 {
     let u = crate::math_dice::sim_random(g);
     r[0] + u * (r[1] - r[0])
 }

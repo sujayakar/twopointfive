@@ -33,16 +33,16 @@ pub fn state_of<'g>(g: &'g mut Game) -> &'g mut crate::digin::St {
 pub fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 
 /// A draw from [min, max]. (digin.ts pick)
-pub fn pick(g: &mut Game, r: [f64; 2]) -> f64 { r[0] + crate::math_dice::sim_random(g) * (r[1] - r[0]) }
+pub fn pick(g: &mut Game, who: crate::dice::Who, r: [f64; 2]) -> f64 { r[0] + crate::math_dice::sim_random(g) * (r[1] - r[0]) }
 
 /// A draw from [min, max] at the table's pace. (digin.ts paced)
-pub fn paced(g: &mut Game, r: [f64; 2]) -> f64 {
-    let p = pick(g, r);
+pub fn paced(g: &mut Game, who: crate::dice::Who, r: [f64; 2]) -> f64 {
+    let p = pick(g, who, r);
     p * m::max(0.1, g.k.digin.pace)
 }
 
 /// One of these, by the die. (digin.ts oneOf)
-pub fn one_of<T: Clone + core::fmt::Debug>(g: &mut Game, a: &[T]) -> T {
+pub fn one_of<T: Clone + core::fmt::Debug>(g: &mut Game, who: crate::dice::Who, a: &[T]) -> T {
     let i = m::floor(crate::math_dice::sim_random(g) * a.len() as f64);
     match a.get(i as usize) {
         Some(x) => x.clone(),
@@ -562,7 +562,7 @@ pub fn scrape(g: &mut Game, gd: GuardId, m: crate::digin::Man, r: Option<&mut cr
         if !rm.callout {
             rm.callout = true;
             g.stats.digin.callouts += 1;
-            let line = one_of(g, &["movement inside. they're blocking the door.", "furniture moving in there. they know we're coming."]);
+            let line = one_of(g, crate::dice::Who::Man(gd), &["movement inside. they're blocking the door.", "furniture moving in there. they know we're coming."]);
             crate::game::game_say(g, by, line, Some(true), None, None);
             log(g, Some(by), "calls the furniture he hears");
         }

@@ -219,11 +219,11 @@ pub fn begin(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digin:
     let text = format!("digs in: room {}, expects {}{}, takes {}", g.tab.roomfight_room[room].id, door_name(g, expected.door), or_second, door_name(g, e.door));
     log(g, Some(gd), &text);
     if first && !m.ordered {
-        let line = one_of(g, &["they're coming this way. get ready!", "they're working through the rooms. watch that door!", "that's next door. get set, get set!"]);
+        let line = one_of(g, crate::dice::Who::Def(d), &["they're coming this way. get ready!", "they're working through the rooms. watch that door!", "that's next door. get set, get set!"]);
         if !shout(g, gd, line, Some(&mut r)) {
             // out of the team's earshot: the room says it on its side's net instead
             let guide = crate::words::wg(g, &"copy. we'll be ready for them.", &"heard. they'll find this room ready.");
-            let line = one_of(g, &["we hear it. getting ready for them here.", "copy. we're digging in.", guide]);
+            let line = one_of(g, crate::dice::Who::Def(d), &["we hear it. getting ready for them here.", "copy. we're digging in.", guide]);
             crate::game::game_say(g, gd, line, Some(true), None, None);
             g.stats.digin.radio += 1;
             cue(g, Some(&mut r), Cue::Radio);
@@ -248,7 +248,7 @@ pub fn begin(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digin:
         }
         row_put(g, room, r.clone());
         if braced {
-            let line = one_of(g, &["block that door. get something against it!", "get that against the door!"]);
+            let line = one_of(g, crate::dice::Who::Def(d), &["block that door. get something against it!", "get that against the door!"]);
             shout(g, gd, line, Some(&mut r));
             row_put(g, room, r);
             return;
@@ -388,7 +388,7 @@ pub fn drop(g: &mut crate::game::Game, m: &mut crate::digin::Man, gd: Option<Gua
 /// the team in his eyes while his hands were on the furniture or the door: the gun has to come up first   (digin.ts caught)
 pub fn caught(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digin::Man, what: &str) {
     let range = g.k.digin.caught;
-    m.owe = pick(g, range);
+    m.owe = pick(g, crate::dice::Who::Def(d), range);
     g.stats.digin.caught += 1;
     g.stats.digin.aborted += 1;
     let text = format!("caught {}", what);
@@ -538,7 +538,7 @@ fn tick_man(g: &mut Game, d: RoomfightDefId, m: &mut Man) {
         state_of(g).fix = Some(StFix { at: pos, t: now, room: my_room, heard });
         g.stats.digin.radio += 1;
         let pool = crate::words::w(g, &["contact! they're here. hold your rooms!", "they're on us. watch your doors!"], &["contact! they're inside. hold your rooms!", "they're in here. watch your doors!"]);
-        let line = one_of(g, &pool);
+        let line = one_of(g, crate::dice::Who::Def(d), &pool);
         crate::game::game_say(g, gd, line, Some(true), None, None);
         let text = format!("calls contact on the net{}", if heard { "" } else { " (out of the team's earshot)" });
         log(g, Some(gd), &text);
@@ -568,7 +568,7 @@ fn tick_man(g: &mut Game, d: RoomfightDefId, m: &mut Man) {
                 if crate::pressure::press_keeps(g, d) { crate::game::b_tap::tap(crate::game::b_tap::DIGIN_KEEPER_LETS_LIE); m.know_t = t; return; }
             }
             let think = g.k.digin.think;
-            m.know = know; m.know_t = t; m.phase = Phase::Think; m.until = now + paced(g, think);
+            m.know = know; m.know_t = t; m.phase = Phase::Think; m.until = now + paced(g, crate::dice::Who::Def(d), think);
             g.stats.digin.heard += 1;
             m.far = if reach > 0.0 { let pos = pos_of(g, gd); way_to(g, pos, know) > reach } else { false };   // too far to join that fight in time: his room is his job
             if m.far { g.stats.digin.far += 1; }
@@ -624,7 +624,7 @@ fn tick_man(g: &mut Game, d: RoomfightDefId, m: &mut Man) {
                 if flat(prop_at(g, p), m.rest) < 1.3 && wedgeable(g, e.door) && holds(g, e) {
                     if !crate::doors::door_latched(g, e.door) { hand_on(g, d, m, e.door); return; }
                     let secs = g.k.digin.wedge_secs;
-                    m.phase = Phase::Wedge; m.until = now + paced(g, secs); m.scrape_t = now;
+                    m.phase = Phase::Wedge; m.until = now + paced(g, crate::dice::Who::Def(d), secs); m.scrape_t = now;
                     return;
                 }
             }
@@ -659,7 +659,7 @@ fn tick_man(g: &mut Game, d: RoomfightDefId, m: &mut Man) {
             if hand_waits(g, d, m, e.door) { return; }
             if m.brace >= 0.0 && m.prop.is_some() && crate::doors::door_latched(g, e.door) && wedgeable(g, e.door) && holds(g, e) {
                 let secs = g.k.digin.wedge_secs;
-                m.phase = Phase::Wedge; m.until = now + paced(g, secs); m.scrape_t = now;
+                m.phase = Phase::Wedge; m.until = now + paced(g, crate::dice::Who::Def(d), secs); m.scrape_t = now;
                 return;
             }
             to_cover(g, d, m, &r, None);
@@ -776,10 +776,10 @@ pub fn watch(g: &mut crate::game::Game) {
         g.stats.digin.tried += 1;
         let dn = crate::orders::door_words(g, d);                     // the line NAMES its door
         if m::abs(crate::doors::door_angle(g, d)) > 0.05 {            // a leaf standing open is no door to call wedged: the line is not said, his die is still drawn
-            if by.gd.is_some() { one_of(g, &["", ""]); }
+            if by.gd.is_some() { one_of(g, crate::dice::Who::Man(by.gd.unwrap()), &["", ""]); }
         } else if let Some(who) = by.gd {
             let lines = [format!("the {} is blocked. something heavy behind it.", dn), format!("the {} is wedged from inside. they know we're here.", dn)];
-            let line = one_of(g, &lines);
+            let line = one_of(g, crate::dice::Who::Man(who), &lines);
             crate::game::game_say(g, who, &line, Some(true), None, None);
         } else {
             let text = format!("the {} is wedged from inside", dn);
