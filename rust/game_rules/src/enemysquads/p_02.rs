@@ -24,9 +24,6 @@ fn cell_of(g: &Game, p: V3) -> f64 { let c = g.col.nav.cell; nav_idx(g, m::floor
 fn in_grid(g: &Game, ix: f64, iz: f64) -> bool { ix >= 0.0 && iz >= 0.0 && ix < g.col.nav.w && iz < g.col.nav.h }
 fn room_has(g: &Game, t: RoomfightRoomId, i: f64) -> bool { g.tab.roomfight_room[t].cells.has(crate::Num(i)) }
 
-/// roomfight.ts: the defenders' row of FIGHT_SKILL as a drilled garrison has it (squadSkill): drillReact and drillNerve are off on the page, on every map
-pub fn squad_skill(g: &crate::game::Game, base: crate::roomfight::FightSkill) -> crate::roomfight::FightSkill { base }
-
 /// (enemysquads.ts flat)
 pub fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 /// (enemysquads.ts pick)
