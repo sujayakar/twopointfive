@@ -140,6 +140,10 @@ ownerWitness<Game>('stand', (gd, g) => { if (!LASTSTAND.regroup) return false; c
 
 const alive = (D: Def) => D.gd.state !== 'dead' && !hasHim(D.gd, OWN.runner);   // (runner.ts: a man who has broken and run is off the net from his shout on — he leads no check, answers none and is not one of the few)
 
+/** the strip takes one line of a class every few seconds and DROPS the rest (cues.ts `gaps`, whoever spoke last — the squads' and the dig-in's lines too): a
+ *  line that would land inside that waits its turn here, and is said by the same man if he is still fit to say it. `then` = what the line makes true for the
+ *  HUD (the room it names): it happens when the line is said, never for a line that was not */
+const fill = (tpl: string, vars: Record<string, string>) => tpl.replace(/\{(\w+)\}/g, (_m, k: string) => vars[k] ?? '');
 const name = (st: State, D: Def, id: string | null) => { if (id) st.named.set(D, id); else st.named.delete(D); st.spots.delete(D); st.at.delete(D); st.hint = null; };
 
 

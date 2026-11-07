@@ -6,6 +6,7 @@
 // Nothing here is the game's: it writes the same table the game reads, and two of the sandbox's flags. Without the word none of it is made.
 import type { Game } from '../game/game';
 import type { Panel } from '../ui/panel';
+import { rowHeld } from './held';
 import type { Vec3 } from '../math/vec';
 import { FIRE, isFire, fireSummary } from '../game/fire';
 
@@ -115,7 +116,7 @@ export function fireLabBoot(game: Game, panel: Panel) {
   const so = panel.section('Its sound', { open: false, reset: back(SOUND), resetTitle: 'the sound\'s numbers back to the build\'s' });
   for (const n of SOUND) panel.slider(so, n.label, n.min, n.max, n.step, () => n.t()[n.key] as number, v => { n.t()[n.key] = v; }, n.tip);
   const sm = panel.section('The drifting smoke', { open: false, reset: () => { back(DRIFT)(); FIRE.smoke.on = wasSmoke; }, resetTitle: 'the smoke\'s numbers back to the build\'s' });
-  panel.toggleBox(sm, 'the fire lets smoke out', () => FIRE.smoke.on, v => { FIRE.smoke.on = v; }, 'the smoke the wind carries off, in the game\'s own smoke');
+  if (!rowHeld(FIRE.smoke, 'on')) panel.toggleBox(sm, 'the fire lets smoke out', () => FIRE.smoke.on, v => { FIRE.smoke.on = v; }, 'the smoke the wind carries off, in the game\'s own smoke');   // (held at one value on the page: no box)
   for (const n of DRIFT) panel.slider(sm, n.label, n.min, n.max, n.step, () => n.t()[n.key] as number, v => { n.t()[n.key] = v; }, n.tip);
   const out = panel.section('Hand the numbers back', { open: true });
   panel.buttons(out, 'numbers', [{ text: 'copy them', run: () => { copied = asText(); try { navigator.clipboard?.writeText(copied).catch(() => { /* refused: the line below shows them */ }); } catch { /* no clipboard here: the line below shows them */ } }, title: 'the numbers as they stand, as one line of text on the clipboard (and shown below)' }]);

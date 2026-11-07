@@ -49,10 +49,10 @@ pub fn hour_id_of(v: Option<&str>) -> crate::hours::HourId {
 }
 
 /// The hour off a query handed to a running game; no `hour` key = nothing touched. (hours.ts hourFromQuery)
-pub fn hour_from_query(g: &mut crate::game::Game, q: crate::Opaque) {
-    if !seam_query_has(&q, "hour") { return; }
-    apply_hour(g, hour_id_of(seam_query_get(&q, "hour").as_deref()));
-    if let Some(s) = seam_query_number(&q, "sun") { set_sun_strength(g, s, None); }
+pub fn hour_from_query(g: &mut crate::game::Game, q: &crate::query::Query) {
+    if !q.has("hour") { return; }
+    apply_hour(g, hour_id_of(q.get("hour")));
+    if let Some(s) = q.float("sun").filter(|s| s.is_finite()) { set_sun_strength(g, s, None); }
 }
 
 // ---------------------------------------------------------------- the hour on a Game
@@ -655,10 +655,6 @@ fn set_light_power(g: &mut Game, l: LightId, x: f64) {
 
 /// A box's row (Box.* in the TypeScript). On a skeleton with the table `g.tab.boxes` (5.1), the body is `&mut g.tab.boxes[b]`.
 fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
-fn seam_query_get(q: &crate::Opaque, key: &str) -> Option<String> { todo!("needs: URLSearchParams.get: q is Opaque (hours.ts:103, 104)") }
-fn seam_query_has(q: &crate::Opaque, key: &str) -> bool { todo!("needs: URLSearchParams.has: q is Opaque (hours.ts:102)") }
-/// `parseFloat(q.get(key))` where the key is there and the number finite (hours.ts:104).
-fn seam_query_number(q: &crate::Opaque, key: &str) -> Option<f64> { todo!("needs: URLSearchParams.get: q is Opaque (hours.ts:104)") }
 
 #[cfg(test)]
 mod tests {

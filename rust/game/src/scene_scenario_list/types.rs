@@ -62,7 +62,7 @@ impl Default for TeamWordsE { fn default() -> Self { Self::zeroed() } }
 #[derive(Clone, Debug)]
 pub enum SpecOfQuerySearch {
     Text(String),
-    URLSearchParams(crate::Opaque),
+    URLSearchParams(crate::query::Query),
 }
 
 /// (src/scene/scenarioList.ts:16 SCENARIOS: a table nothing writes)

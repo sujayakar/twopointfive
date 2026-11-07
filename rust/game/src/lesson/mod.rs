@@ -1,10 +1,11 @@
 pub mod types;
 pub use types::*;
-pub mod sig;
-pub use sig::*;
-// the parts' bodies: a named re-export wins over the stubs of sig.rs
+pub mod base;
+pub use base::*;
+pub mod missing;
+pub use missing::*;
 pub mod p_01;
-pub use p_01::{stalk_line, bare_line, lower, lesson_token, token_line, lesson_token_faults, lesson_line, passes, after, inside, who, on_stack, downed, partner_of, band, band_check, of_check, free_in, test_fault};
+pub use p_01::*;
 pub mod p_02;
-pub use p_02::{lesson_new, lesson_data, lesson_at, lesson_index, lesson_step, lesson_finished, lesson_tick, lesson_settling, lesson_advance, lesson_fresh, lesson_count, lesson_over, lesson_objective, lesson_note, line_of, step_line };
+pub use p_02::*;
 pub use p_01::flags;

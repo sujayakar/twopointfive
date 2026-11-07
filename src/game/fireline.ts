@@ -34,7 +34,7 @@
 // No dice, no clock but the game's. (src/game is one import cycle: nothing below is built from another game module's exports at module load.)
 import { SideMap } from '../math/side';
 import type { Vec3 } from '../math/vec';
-import type { Guard, Player } from './game';
+import type { Game, Guard, Player } from './game';
 import './friendlyfire';
 import './glasspen';
 import './wallpen';
@@ -84,4 +84,7 @@ const fired = new SideMap<Player, Fired>('fireline.fired');
 
 
 
+function end(gd: Guard, st: St | undefined): null { if (st) states.delete(gd); return null; }
+/** he stands: the wait's seconds counted as they pass */
+function hold(g: Game, st: St): { speed: number } { FIRELINE_STATS.heldS += Math.min(0.1, Math.max(0, g.time - st.t)); st.t = g.time; return { speed: 0 }; }
 

@@ -34,6 +34,11 @@ pub struct Opts {
 }
 impl Default for Opts { fn default() -> Self { Opts { seed: 1, squad: 4, cpu_senses: true } } }
 
+/// What stands on a level's floor: its boxes (the round things, the boxes that stand shaped and the pieces of trim among them), and who and what
+/// the game made of the file's civilians, devices and vents.
+#[derive(Debug, PartialEq)]
+pub struct Floor { pub boxes: usize, pub round: usize, pub shaped: usize, pub trim: usize, pub civilians: usize, pub cameras: usize, pub lasers: usize, pub keypads: usize, pub vents: usize, pub daylight: bool }
+
 /// a mouse button, by its bit in the Input
 #[derive(Clone, Copy, Debug)]
 pub enum Button { Left = 1, Middle = 2, Right = 4 }
@@ -64,14 +69,15 @@ pub struct Play {
     _one: MutexGuard<'static, ()>,
 }
 
-fn start(data: &Json, room_clear: bool, o: &Opts) -> Play {
+fn start(data: &Json, room_clear: bool, o: &Opts) -> Play { start_by(data, room_clear, None, o) }
+fn start_by(data: &Json, room_clear: bool, link: Option<&str>, o: &Opts) -> Play {
     // (a second game stood by the thread that holds the first would wait on itself for ever: said, not waited for)
     if HOLDS.with(|h| h.get()) { panic!("one game at a time: this test still holds a Play. Drop it (`drop(p)`, or end its block) before standing another"); }
     // (a test that failed while it held the lock left it poisoned and its game dead: the next one stands on a block zeroed anew)
     let one = ONE_GAME.lock().unwrap_or_else(|p| p.into_inner());
     let ch = CHARACTER.get_or_init(files::CharacterFiles::read);
     let scenario = if room_clear { Some(game::scene_scenario_list::ScenarioSpec { kind: game::scene_scenario_list::ScenarioSpecKind::Roomclear, squad: o.squad as f64, level: None, seed: None }) } else { None };
-    let Stood { mut game, host, .. } = stand::stand(data, ch.assets(), &StartOpts { seed: o.seed, scenario, cpu_senses: o.cpu_senses, ..Default::default() });
+    let Stood { mut game, host, .. } = stand::stand(data, ch.assets(), &StartOpts { seed: o.seed, scenario, link: link.map(String::from), cpu_senses: o.cpu_senses, ..Default::default() });
     game.out.clear();
     HOLDS.with(|h| h.set(true));   // (only once a Play exists to put it down: a stand that panicked holds nothing)
     let mut p = Play { g: game, host, frames: 0, said: Vec::new(), sounds: Vec::new(), cursor: None, spoke: Vec::new(), _one: one };
@@ -90,6 +96,13 @@ impl Play {
     pub fn level(name: &str, room_clear: bool, o: &Opts) -> Play {
         let data = json::parse(&files::level_text(name)).unwrap_or_else(|e| panic!("{}: {}", name, e));
         start(&data, room_clear, o)
+    }
+
+    /// Stand a level of `levels/` and start a mission on it FROM AN ADDRESS'S WORDS, as a click on a row of the mission list does
+    /// (`?levelFile=depot.json&roomclear&squad4`): the row's own hour and weather, the fog of war, a quiet mission's rung, then the mission.
+    pub fn mission(name: &str, link: &str, o: &Opts) -> Play {
+        let data = json::parse(&files::level_text(name)).unwrap_or_else(|e| panic!("{}: {}", name, e));
+        start_by(&data, false, Some(link), o)
     }
 
     /// one frame of the host; what the step told its host is kept (`said`, `sounds`)
@@ -209,6 +222,17 @@ impl Play {
     /// every man of the game's list in a line, for a failure's message
     pub fn roll(&self) -> String {
         self.g.guards.iter().map(|&gd| { let o = &self.g.gd[gd]; let p = self.at(gd); format!("{} {:?} {:?} at ({:.1}, {:.1})", o.callsign, o.team, o.state, p[0], p[1]) }).collect::<Vec<_>>().join("; ")
+    }
+
+    /// what stands on the level's floor, counted off the game (for a test of the start itself)
+    pub fn floor(&self) -> Floor {
+        let g = &self.g;
+        let count = |f: &dyn Fn(&game::scene_boxes::Box) -> bool| g.col.boxes.iter().filter(|&&b| f(&g.tab.boxes[b])).count();
+        Floor {
+            boxes: g.col.boxes.len(), round: count(&|b| b.round == Some(true)), shaped: count(&|b| b.shaped == Some(true)), trim: count(&|b| b.piece == Some(true)),
+            civilians: g.civilians.len(), cameras: g.devices.cameras.len(), lasers: g.devices.lasers.len(), keypads: g.devices.keypads.len(),
+            vents: g.level.vents.as_ref().map_or(0, |v| v.len()), daylight: g.level.daylight.is_some(),
+        }
     }
 
     // ---- what a man is doing, read off the game

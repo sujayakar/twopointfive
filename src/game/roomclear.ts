@@ -3,7 +3,7 @@
 // staged on the old office with what the demo already has.
 //
 // WHAT THIS FILE OWNS: the set-up and the score-keeping. The structure is LEVEL DATA (scene/scenarios.ts StructureData: Level.scenarios.roomClear — the office's is
-// levels/office.scenarios.ts, exported here as STRUCTURE for its probes; a level with no breach plan gives the team's start too and has no F drill) — the rooms, the doors into each and what lies on the other side
+// its level file's block, exported here as STRUCTURE for its probes; a level with no breach plan gives the team's start too and has no F drill) — the rooms, the doors into each and what lies on the other side
 // of them, how many men hold each room and the marks they may stand on (more marks than men: placeDefenders(seed, attempt) deals them, so a tally re-runs a
 // placement by its seed and a restart can deal another); the per-room CLEARED state (RoomClearScenario.rooms); and the two ENDS — 'taken' (every room clear) and
 // 'wiped' (Sam down). What it does NOT own: how either side fights and how the pair is ordered about. Both are the night breach's as it stands — the defenders are
@@ -28,7 +28,7 @@
 //
 // With the flag off none of this runs: tick() returns on its first line and the layout seam is null. (src/game is one import cycle: the tables below are plain
 // literals, nothing here is built from another game module's exports at module load.)
-import './seats';
+import { allDown } from './seats';
 import { Vec3, v3 } from '../math/vec';
 import { mulberry32 } from '../math/dice';
 import type { Game, Guard } from './game';
@@ -39,7 +39,7 @@ import { SQUAD_MAX_MEN } from '../scene/scenarios';
 import type { Door } from './doors';
 import { frameOf } from './guards';
 import { responseTeam } from './qrf';   // (asked inside tick only: a raid's team still up)
-import { OFFICE_SCENARIOS } from '../../levels/office.scenarios';   // (plain literals with type-only imports: safe at the top of the game's import cycle)
+import officeData from '../../levels/office.json' with { type: 'json' };   // (the bundled level's own file: its scenarios block is where these knobs start from. JSON, so safe at the top of the game's import cycle)
 import { inBounds } from './squad';
 import { squadsStage, squadsStop } from './enemysquads';
 import { squadDeal } from './squaddeal';
@@ -48,6 +48,7 @@ import { lastStandHint } from './laststand';
 import { w } from './words';   // (a leaf: the dialogue pass's one switch)
 import { SAMESTART } from './samestart';   // (a leaf: every mission starts the same way on every try)
 import { RUST_PASS, RUST_SURFACE } from './crossing';
+import { seatCount } from './seats';   // (how many players' men stand: every budget of characters counts it)
 
 /** The scenario's knobs (Tab ▸ Sandbox ▸ Room clear, __roomclear.knobs; read at the next staging). */
 export const ROOMCLEAR = {
@@ -82,9 +83,9 @@ export function freshWayOf(diceSeed: number, n: number): number { return n > 1 ?
 /** The structure's shapes are level data now (scene/scenarios.ts — a level's `scenarios.roomClear` block): the rooms, the doors into each and what lies on the
  *  other side of them, how many men hold each room and the marks they may stand on. */
 export type { StructureDoor, StructureMark, StructureRoom, StructureData } from '../scene/scenarios';
-/** THE OFFICE'S STRUCTURE (levels/office.scenarios.ts: the east wing's four rooms) under the name its probes and its tally import it by. The GAME never reads
- *  this: a staging takes the structure of the level it stands on (RoomClearScenario.structure = Level.scenarios.roomClear). */
-export const STRUCTURE: StructureData = OFFICE_SCENARIOS.roomClear;
+/** THE OFFICE'S STRUCTURE (the east wing's four rooms: the bundled level's own block, levels/office.json) under the name its probes and its tally import it
+ *  by. The GAME never reads this: a staging takes the structure of the level it stands on (RoomClearScenario.structure = Level.scenarios.roomClear). */
+export const STRUCTURE: StructureData = (officeData as unknown as { scenarios: { roomClear: StructureData } }).scenarios.roomClear;
 
 /** one dealt defender: his room (STRUCTURE id), which of its marks, and the mark itself */
 export interface Placement { room: string; mark: number; pos: Vec3; watch: string; aimAt: Vec3; name: string; }
@@ -153,7 +154,7 @@ export function checkStructure(g: Game, S: { rooms: StructureRoom[]; team?: Team
   return bad;
 }
 /** The squads block against the floor (scene/scenarios.ts SquadData; what the file alone can say — refs, one squad a room, headcounts — is levelData.ts's and is
- *  asked again here, since a structure may reach the game without passing the validator: office.scenarios.ts, a probe's own): rally points and spawn points on
+ *  asked again here, since a structure may reach the game without passing the validator: a probe's own): rally points and spawn points on
  *  floor a man can stand on, a rally inside one of its squad's rooms, spawns outside every room and joined on foot to the door they come by. Empty = sound; no
  *  squads block = nothing to say. */
 export function checkSquads(g: Game, S: { rooms: StructureRoom[]; maxMen?: number; squads?: SquadData[] }): string[] { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('checkSquads', undefined, [g, S]); if (__r !== RUST_PASS) return __r as any; } }
@@ -251,7 +252,7 @@ export class RoomClearScenario {
   constructor(private g: Game) {
     const self = this;
     this.layout = { name: 'room clear', defenders: () => this.deal(), staged: () => this.onStaged(),
-      get budget() { const n = self.structure?.maxMen ? self.structure.rooms.reduce((k, r) => k + r.garrison, 0) : 0; return n > 5 ? 5 + n : undefined; },   // (a structure with maxMen: Sam, the four and its men)
+      get budget() { const n = self.structure?.maxMen ? self.structure.rooms.reduce((k, r) => k + r.garrison, 0) : 0; return n > 5 ? seatCount(self.g) + 4 + n : undefined; },   // (a structure with maxMen: a man a seat, the four and its men)
       get team() { return self.startNow() ?? undefined; },   // (the structure's own start, where it gives one: a level with no breach plan has no approach marks to stand the team on — or the other way in this start took, ROOMCLEAR.way)
       stagedLine: () => `room clear. ${this.placement.length} armed enemies hold ${this.rooms.length} rooms: ${this.rooms.map(r => r.def.name).join(', ')}. ${!this.g.nightBreach.noDrill ? `Press F to stack up on the ${this.drillRoom()?.name ?? 'door'}, or X for orders (door tools on any door)` : this.g.nightBreach.ops.length ? 'X for your orders (door tools on any door)' : "You're alone"}` };   // (noDrill: a level with no breach plan, or a loadout of fewer than two — game/loadout.ts)
   }
@@ -315,6 +316,14 @@ export class RoomClearScenario {
   /** A man the night breach adopted after the staging (stress.ts — extra enemies) is this structure's too: a row of the placement and a man of his room, so the
    *  room is not clear and the structure not taken while he is up. After nightBreach.adopt, the same frame (tick holds while the two lists differ in length). */
   adopt(gd: Guard, p: Placement) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('RoomClearScenario.adopt', this, [gd, p]); if (__r !== RUST_PASS) return __r as any; } } const R = this.rooms.find(r => r.def.id === p.room); if (!this.active || !R || R.defenders.includes(gd)) return; this.placement.push(p); R.defenders.push(gd); }
+  private finish(end: RoomClearEnd, why: string) {
+    this.end = end; this.endAt = this.g.time; this.endWhy = why; this.obj = null; this.note(`end:${end}`);
+    this.endSay = w(end === 'wiped' && allDown(this.g) && this.g.nightBreach.ops.some(o => o.state !== 'dead') ? 'player down' : 'team wiped', 'team wiped');
+    const loose = end === 'taken' && this.g.snatch?.active && this.g.snatch.owes ? this.g.snatch.objective()?.text.replace(/^objective ▸ /, '') : null;   // (a snatch level, snatch.ts: the house is the team's and the man is not — it is not over)
+    // (a defuse mission whose charge has gone off stays FAILED — defuse.ts: the house taken after that is said as what it is, never as a win)
+    if (end === 'taken' && this.g.defuse?.active && this.g.defuse.end === 'failed') { this.g.msg(`you took the house too late. a charge went off, so you still failed the mission. press Shift+Enter to restart`); return; }
+    this.g.msg(loose ? `structure taken — ${why}. it's not over yet: ${loose}` : end === 'taken' ? `structure taken — ${why}. press Shift+Enter to restart` : this.endSay === 'player down' ? 'the mission is over. press Enter to restart' : `team wiped — ${why}. press ${allDown(this.g) ? 'Enter' : 'Shift+Enter'} to restart`);
+  }
 
   /** where it stands, in one word */
   get state(): RoomClearState { return !this.active ? 'off' : this.end ?? 'live'; }

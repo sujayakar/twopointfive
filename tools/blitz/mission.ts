@@ -24,6 +24,7 @@ const { exportGame, bookOf } = await import('./host.ts');
 const { hostHalf } = await import('./export.ts');
 const argv = process.argv.slice(2), arg = (n: string, d: string) => { const i = argv.indexOf(n); return i < 0 ? d : argv[i + 1]; };
 const say = (s = '') => process.stdout.write(s + '\n');
+const START_ONLY = argv.includes('--start-only'), EXIT = process.exit.bind(process);
 const outDir = arg('--out', ''), TICKS = +arg('--ticks', '1000000'), DIE = +arg('--die', '20942'), EVERY = +arg('--every', '0');
 if (!argv[0] || argv[0].startsWith('--') || !outDir) { say('mission.ts <mission>:<seed> --out DIR [--ticks N] [--keep "100,200-210"] [--every N] [--open "559"]'); process.exit(64); }
 const ranges = (s: string) => s.split(',').filter(Boolean).map(x => x.split('-').map(Number)).map(([a, b]) => [a, b ?? a]);
@@ -343,6 +344,9 @@ Game.prototype.update = function (this: any, ...a: any[]) {
     if (FRAG_ASK && fragSaid !== k) between(`${k} frag_step_off`, 'call');
     between(`${k} ${g.player.visibility}`, 'meter');
     writeFileSync(`${outDir}/h${k}.bin`, hostHalf(g, reg, cmds as any[]));
+    // (`--start-only`: the start alone, for a kept run whose start is of an older layout of the wire, tools/blitz/hold.sh: the state and the block as tick 1
+    //  opens, tick 1's host half, the knob table; no tick is run, so this needs no TypeScript tick and no Rust module. Stand it with TPS_GAME=none)
+    if (START_ONLY) { const x: any = sim(), at = x.knob_addr(0), len = x.knob_len(0) * 8; writeFileSync(`${outDir}/knobs.bin`, new Uint8Array(x.memory.buffer).slice(at, at + len)); EXIT(0); }
     row('meter.txt', meterL, `${g.player.visibility}`);   // (a mission's scripted player writes the meter before every tick too, playthrough.ts:779: the same number every tick, until a restart makes the player anew)
     row('host.txt', hostL, `${dt} ${g.probe?.pending?.length ?? 0} ${g.time} ${g.dice?.n ?? -1} ${k === 1 ? 0 : uploads}`); uploads = 0;
     const chron0 = g.chronicle, saves0 = chron0.counts.saves, loads0 = chron0.counts.loads;

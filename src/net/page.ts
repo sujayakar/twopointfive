@@ -29,7 +29,6 @@ import type { View } from '../host/hud';
 import type { PlayerCmd } from '../game/cmd';
 import { sampleCmd } from '../game/cmd';                    // (game exports are called inside functions only: src/game is one import cycle)
 import { activeScenario } from '../game/scenarioRun';
-import { rawBits, RAW_BITS_SEED } from '../game/digest';
 import type { Stand } from '../host/ahead';
 import { RecipeStand } from '../replay/recipestand';
 import { recipeSearch, unseenDone } from '../replay/engineplay';
@@ -38,7 +37,7 @@ import type { Recipe } from './wire';
 import { NET, recipeWhy } from './wire';
 import { FORESEE, Foresee } from './foresee';
 import { onWay, wayOff, type Way } from './delay';
-import { netStep, netSeats, type StepHost } from './step';
+import { netStep, netSeats, netWord, netQuiet, NET_WORD_SEED, type StepHost } from './step';
 import { myName, setSeatNames } from '../host/names';
 
 /** the address's words: the server's WebSocket address, the game's id, the seat's key (read once, then kept for the tab under KEEP) */
@@ -144,7 +143,7 @@ export class NetPlay {
   refuse = '';
   readonly client: NetClient;
   private ws: WebSocket | null = null; private rs: RecipeStand | null = null; private host: NetHost | null = null;
-  private word: number = RAW_BITS_SEED; private first = true; private walkMs = 0; private line: HTMLElement | null = null; private said = '';
+  private word: number = NET_WORD_SEED; private first = true; private walkMs = 0; private line: HTMLElement | null = null; private said = '';
   /** catching up (NETPAGE.far): the mixer's own switch as it was, null = not catching up */
   private audioWas: boolean | null = null;
   private note = ''; private noteUntil = 0;
@@ -234,10 +233,13 @@ export class NetPlay {
       this.rs?.env(h.engine.settings); this.rs?.flags(g);
       { const d = h.ahead?.draws ?? 0; if (d !== this.drawsAt) { this.drawsAt = d; h.engine.world.relist(); } }   // (THE LIST A TICK READS IS THE LAST TICK'S, as on the server: a draw since then listed the boxes as it DREW them — between two ticks, his own man ahead — and the world's ray reads that list. So the first tick after a draw lists them again as the game has them)
       this.stepping = true; try { netStep(g, h.engine, cmds); } finally { this.stepping = false; }
-      this.word = rawBits(g, this.word);
+      this.word = netWord(g, this.word);
       if (far) { h.smoke?.update(1 / NET.hz); const tw = h.loop.tween; if (tw && !tw.stale) tw.rest(); }   // (unseen ticks: the smoke keeps the game's time, and nothing is drawn between two of them — as under a replay's seek)
     };
-    while (c.behind && n < most && (n < 1 || performance.now() - t0 < ms)) n += c.walk({ step, word: () => this.word.toString(36) }, 1);
+    // (ONE QUIET RUN A WALK, step.ts netQuiet: nothing of this page reads the game between two ticks of a walk, so what the picture reads is brought up
+    //  once as the walk ends. A walk of one tick is the step it always was; a page that is behind, or far behind, pays for one bring-up and not for one a tick)
+    netQuiet(g, true);
+    try { while (c.behind && n < most && (n < 1 || performance.now() - t0 < ms)) n += c.walk({ step, word: () => this.word.toString(36) }, 1); } finally { netQuiet(g, false); }
     if (n) this.walkMs = (performance.now() - t0) / n;
     if (far && c.behind <= NET.lead) this.catching(false);
     if ((c.bad || c.broken) && this.ws) { if (far) this.catching(false); this.close(); }   // (parted from the server: the seat is let go — the server holds no key for a seat nobody sits in — and the page stands where it is)

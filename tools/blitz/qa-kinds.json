@@ -380,12 +380,6 @@
 "KITDEAL.on=false",
 "KITDEAL.stealth=false"
 ],
-"kittree-off": [
-"OWNBLOW.on=false",
-"KITDEAL.on=false",
-"KITDEAL.stealth=false",
-"KITTREE.on=false"
-],
 "kittree-sponge": [
 "OWNBLOW.on=false",
 "KITDEAL.stealth=false"
@@ -1077,6 +1071,7 @@
 "secondway",
 "selftest-fail",
 "selftest-fold",
+"selftest-side",
 "selftest-knobs",
 "selftest-pass",
 "selftest-quiet",
@@ -1655,7 +1650,6 @@
 "kitstealth": "iii",
 "kittree-guns": "iii",
 "kittree-mate40": "iii",
-"kittree-off": "iii",
 "kittree-rows": "iv-b",
 "kittree-sponge": "iii",
 "ko-kinds": "iii",
@@ -1853,6 +1847,7 @@
 "pairup-word": "iii",
 "pall": "iv-a",
 "panel-inventory": "iv-a",
+"panel-dead": "0",
 "par": "iii",
 "particles-determinism": "iii",
 "particles-off": "iii",

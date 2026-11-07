@@ -323,7 +323,7 @@ pub fn spawn_unit(g: &mut crate::game::Game, o: &crate::guards::UnitOpts) -> Res
     if !g.tune.teams { return Err(String::from("spawnUnit: sides are switched off (Game.tune.teams) — no unit may be spawned")); }
     if o.team == crate::teams::Team::Player { return Err(String::from("spawnUnit: the 'player' side is the player alone — spawn an 'operative' for a man on his side")); }
     if o.team == crate::teams::Team::Civilian { return Err(String::from("spawnUnit: civilians are not units — civilians.ts stands them up from the level's civilians block (Game.civilians)")); }
-    let chars = 1.0 + g.guards.len() as f64;
+    let chars = crate::seats::seat_count(g) + g.guards.len() as f64;   // (a man a seat, and everybody else who stands)
     let cap = m::max(MAX_CHARACTERS, m::min(o.budget.unwrap_or(0.0), crate::guards::MAX_SKINNED));
     if chars + 1.0 > cap {
         if cap > MAX_CHARACTERS {
@@ -377,7 +377,7 @@ pub fn spawn_unit(g: &mut crate::game::Game, o: &crate::guards::UnitOpts) -> Res
     let gd = crate::game::guard_new(g, men, rig, id, route, -1, fl, tint, Some(&look));
     let now = g.time;
     g.gd[gd].unit = Some(crate::game::UnitInfo { name, spawned_at: now, light: o.light != Some(false), pair: o.pair, seat: None });
-    g.gd[gd].hold = true;
+    crate::control::set_hold(g, gd, true, "guards");
     g.gd[gd].heard_up_to = g.event_seq;
     let c = g.gd[gd].ch;
     crate::character::character_update(g, c, 0.0);

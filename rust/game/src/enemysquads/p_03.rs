@@ -1356,8 +1356,8 @@ pub fn settle(g: &mut crate::game::Game, l: &crate::enemysquads::Looker, d: Room
     } else {
         m::min(0.45, m::max_n(&[aw, c.awareness, 0.35]))
     };
-    g.gd[gd].hold = c.hold;
-    g.gd[gd].pinned = c.pinned;
+    crate::control::set_hold(g, gd, c.hold, "enemysquads");
+    crate::control::set_pinned(g, gd, c.pinned, "enemysquads");
     let (state_now, seen_t) = (String::from(g.gd[gd].state.as_str()), g.gd[gd].last_seen_t);
     let row = &mut def!(g, d);
     row.mode = crate::roomfight::DefMode::Hold;

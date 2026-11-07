@@ -7,5 +7,5 @@ use alloc::{string::String, vec::Vec};
 #[derive(Clone, Debug)]
 pub enum SquadOfQuerySearch {
     Text(String),
-    URLSearchParams(crate::Opaque),
+    URLSearchParams(crate::query::Query),
 }

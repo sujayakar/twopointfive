@@ -85,6 +85,9 @@ struct Outcome {
     modrs: HashMap<String, String>,
     fns: FnTable,
     deleted: Vec<(String, String)>,
+    deleted_first: HashSet<(String, String)>,
+    /// reads of taken rows that still stand after the fold
+    reads_after: BTreeMap<String, usize>,
     surface_only: Vec<(String, String)>,
     rule_counts: BTreeMap<&'static str, usize>,
     passes: usize,
@@ -119,6 +122,7 @@ impl<'a> Engine<'a> {
     /// `start` = the bodies that read a taken row, where the caller knows them (else every body is walked).
     fn fold(&self, texts: &mut Vec<String>, take: &HashSet<String>, start: Option<Vec<usize>>, base: &dead::Cache, spare: &HashSet<(String, String)>) -> Outcome {
         let mut out = Outcome::default();
+        let whole = start.is_none();
         let mut changed: BTreeSet<usize> = BTreeSet::new();
         let mut work: Vec<usize> = start.unwrap_or_else(|| (0..texts.len()).collect());
         loop {
@@ -171,8 +175,10 @@ impl<'a> Engine<'a> {
             work = (0..texts.len()).filter(|&i| fresh.iter().any(|n| texts[i].contains(n.as_str()))).collect();
         }
         let ch: Vec<usize> = changed.iter().copied().collect();
-        let after = self.scan(texts, take, &out.fns, Some(&ch));
+        // (a whole run looks at every file for what is left: a read the fold does not take is in a file it never changed)
+        let after = self.scan(texts, take, &out.fns, if whole { None } else { Some(&ch) });
         out.left = after.left;
+        out.reads_after = after.reads;
         for &i in &ch {
             for (n, l) in texts[i].lines().enumerate() {
                 if l.contains(&format!("true{MARK}")) || l.contains(&format!("false{MARK}")) {
@@ -189,6 +195,7 @@ impl<'a> Engine<'a> {
             }
         }
         out.deleted = s.deleted;
+        out.deleted_first = s.first;
         out.surface_only = s.surface_only;
         out.modrs = s.modrs;
         out
@@ -219,7 +226,7 @@ fn lines_of(t: &str) -> usize {
     t.lines().count()
 }
 
-/// `fold sharp-prep --scratch DIR [--no-tests]` and `fold sharp-apply --diag FILE [--write] [--report FILE]`:
+/// `fold sharp-prep --scratch DIR` and `fold sharp-apply --diag FILE [--write] [--report FILE]`:
 /// the compiler's dead-code reading (sharp.rs; tools/fold/sharp.sh drives the two to a fixed point).
 fn sharp_main(cmd: &str, args: &[String]) -> ! {
     let mut root = PathBuf::from(".");
@@ -227,7 +234,6 @@ fn sharp_main(cmd: &str, args: &[String]) -> ! {
     let mut diag: Option<String> = None;
     let mut report: Option<String> = None;
     let mut write = false;
-    let mut tests = true;
     let mut it = args.iter();
     while let Some(a) = it.next() {
         let mut val = || it.next().cloned().unwrap_or_default();
@@ -237,7 +243,6 @@ fn sharp_main(cmd: &str, args: &[String]) -> ! {
             "--diag" => diag = Some(val()),
             "--report" => report = Some(val()),
             "--write" => write = true,
-            "--no-tests" => tests = false,
             x => {
                 eprintln!("fold {cmd}: no option {x}");
                 std::process::exit(64);
@@ -245,7 +250,7 @@ fn sharp_main(cmd: &str, args: &[String]) -> ! {
         }
     }
     if cmd == "sharp-prep" {
-        match sharp::prep(&root, &scratch, tests) {
+        match sharp::prep(&root, &scratch) {
             Ok(s) => {
                 println!("fold: {s}");
                 std::process::exit(0);
@@ -389,6 +394,7 @@ fn main() {
     let mut settle_file: Option<String> = None;
     let mut table_to: Option<String> = None;
     let mut knobs_to: Option<String> = None;
+    let mut drop_to: Option<String> = None;
     let mut unnamed = false;
     let mut root = PathBuf::from(".");
     let mut it = args.iter();
@@ -401,6 +407,7 @@ fn main() {
             "--settle" => settle_file = Some(val()),
             "--table" => table_to = Some(val()),
             "--knobs" => knobs_to = Some(val()),
+            "--drop" => drop_to = Some(val()),
             "--root" => root = PathBuf::from(val()),
             x => {
                 eprintln!("fold: no option {x}");
@@ -574,7 +581,9 @@ fn main() {
     let _ = writeln!(o, "# The settled rows, folded: the report\n");
     let _ = writeln!(o, "rows in the list: {} ({} of them settled and in the Rust tables{}; {} of any kind have no field there)", rows.by_path.len() + rows.not_in_rust.len(), settled_all.len(), if told.is_empty() { String::new() } else { format!(", {} of those told settled by --settle", told.len()) }, rows.not_in_rust.len());
     let _ = writeln!(o, "settled yes-or-no rows a body read before: {} rows, {reads_before} reads", before.reads.len());
-    let _ = writeln!(o, "  folded: {taken_rows} rows, {taken_reads} reads");
+    let stand_reads: usize = out.reads_after.iter().filter(|(p, _)| take.contains(*p)).map(|(_, n)| n).sum();
+    let stand_rows = out.reads_after.keys().filter(|p| take.contains(*p)).count();
+    let _ = writeln!(o, "  folded: {} rows, {} reads{}", taken_rows - stand_rows, taken_reads - stand_reads, if stand_reads > 0 { format!(" ({stand_reads} reads of {stand_rows} more rows stand: left for a hand, below)") } else { String::new() });
     let wr = findings.keys().filter(|p| before.reads.contains_key(*p)).count();
     let _ = writeln!(o, "  kept, because a body WRITES the row: {} rows ({wr} of them read too, {} reads; {} written and never read)", findings.len(), findings.keys().filter_map(|p| before.reads.get(p)).sum::<usize>(), findings.len() - wr);
     let _ = writeln!(o, "  kept by hand (keep.txt): {}", kept_by_hand.len());
@@ -618,8 +627,11 @@ fn main() {
         let _ = writeln!(o, "- {d}");
     }
     if unnamed {
-        let _ = writeln!(o, "\n## Functions nothing named before the fold, deleted (--unnamed) ({})\n", del.intersection(&was_dead).count());
-        let _ = writeln!(o, "{}", del.intersection(&was_dead).cloned().collect::<Vec<_>>().join(", "));
+        let first: BTreeSet<String> = out.deleted_first.iter().map(|(m, n)| format!("{m}::{n}")).collect();
+        let un: BTreeSet<String> = del.intersection(&was_dead).cloned().collect();
+        let _ = writeln!(o, "\n## Functions nothing named before the fold, deleted (--unnamed) ({})\n", un.len());
+        let _ = writeln!(o, "### Nothing names it ({})\n\n{}\n", un.intersection(&first).count(), un.intersection(&first).cloned().collect::<Vec<_>>().join(", "));
+        let _ = writeln!(o, "### Only a function deleted here named it ({})\n\n{}", un.difference(&first).count(), un.difference(&first).cloned().collect::<Vec<_>>().join(", "));
     }
     let only: BTreeSet<String> = out.surface_only.iter().filter(|k| !surface_before.contains(*k)).map(|(m, n)| format!("{m}::{n}")).collect();
     let _ = writeln!(o, "\n## Functions only the tools' call surface names since the fold, kept ({})\n", only.len());
@@ -816,6 +828,22 @@ fn main() {
             }
         }
         let whole: Vec<&String> = by_table.iter().filter(|(_, (n, d))| n == d).map(|(t, _)| t).collect();
+        // the settled rows, by what still holds each in the tables
+        let (mut drop, mut s_read, mut s_handed, mut s_maybe, mut s_written) = (Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new());
+        for (path, row) in rows.by_path.iter().filter(|(_, r)| r.kind == rows::Kind::Settled) {
+            let name = row.name.clone();
+            if sc.writes.contains_key(path) {
+                s_written.push(name);
+            } else if sc.leaf_reads.get(path).copied().unwrap_or(0) > 0 {
+                s_read.push(name);
+            } else if elsewhere.contains(path) {
+                s_handed.push(name);
+            } else if escapes(path) {
+                s_maybe.push(name);
+            } else {
+                drop.push(name);
+            }
+        }
         let _ = writeln!(o, "# The knob tables' dead weight, as the bodies stand\n");
         let _ = writeln!(o, "leaves of the tables (a yes-or-no row, a number, a name, a list): {}", leaves.len());
         let _ = writeln!(o, "read by a body: {read}");
@@ -824,12 +852,21 @@ fn main() {
         let _ = writeln!(o, "READ BY NO BODY: {} ({}%) · whole tables no body reads: {} of {}", dead.len(), dead.len() * 100 / leaves.len().max(1), whole.len(), by_table.len());
         let _ = writeln!(o, "\nThe generated wire reads and writes every leaf, and the page's own code may read a table the Rust game only carries: a leaf here is dead for the RUST game.\n");
         let _ = writeln!(o, "## Whole tables no body reads ({})\n\n{}\n", whole.len(), whole.iter().map(|s| s.as_str()).collect::<Vec<_>>().join(", "));
+        let _ = writeln!(o, "## Settled rows: the drop list ({} of {} in the Rust tables)\n", drop.len(), drop.len() + s_read.len() + s_handed.len() + s_maybe.len() + s_written.len());
+        let _ = writeln!(o, "No Rust code but the wire reads or writes these: the row can leave the table and the wire.\n\n{}\n", drop.join(", "));
+        let _ = writeln!(o, "### Settled and staying: a body reads it ({})\n\nA number or a name (it stays a number in its table), or a read left for a hand.\n\n{}\n", s_read.len(), s_read.join(", "));
+        let _ = writeln!(o, "### Settled and staying: a body writes it ({})\n\n{}\n", s_written.len(), s_written.join(", "));
+        let _ = writeln!(o, "### Settled and staying: a made file beside the bodies names it ({})\n\n{}\n", s_handed.len(), s_handed.join(", "));
+        let _ = writeln!(o, "### Settled and staying: its table is handed on whole by a body ({})\n\n{}\n", s_maybe.len(), s_maybe.join(", "));
         let _ = writeln!(o, "## Leaves no body reads ({})\n", dead.len());
         for d in &dead {
             let _ = writeln!(o, "- {d}");
         }
         let _ = std::fs::write(f, &o);
-        println!("{}", o.lines().skip(2).take(4).collect::<Vec<_>>().join("\n"));
+        if let Some(d) = &drop_to {
+            let _ = std::fs::write(d, drop.join("\n") + "\n");
+        }
+        println!("{}", o.lines().skip(2).take(5).collect::<Vec<_>>().join("\n"));
         println!("fold: the tables' dead weight is {f}");
     }
 

@@ -25,7 +25,6 @@ const { DOORWAY, Doors } = await import(`${ROOT}/src/game/doors.ts`);
 const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { isOfficeFamily, withOfficeScript } = await import(`${ROOT}/src/scene/level.ts`);
 const { order, endGuardScript } = await import(`${ROOT}/src/game/squad.ts`);
 const { spawnUnit, despawnUnit } = await import(`${ROOT}/src/game/guards.ts`);
 const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
@@ -43,7 +42,7 @@ const guarded = (fn: () => Promise<boolean>) => async () => { const was = DOORWA
 /** every level a mission is played on: the office (the bundled level) and each scenario's own file */
 const LEVELS: (string | undefined)[] = [undefined, ...new Set<string>(SCENARIOS.map((e: any) => e.level).filter(Boolean))];
 const nameOf = (f?: string) => f ? f.replace(/\.json$/, '') : 'office';
-function levelOfFile(file: string): any { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data); }
+function levelOfFile(file: string): any { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return loadLevel(data); }
 async function boot(file?: string, on = true, out = on && process.env.QA_EXITSOUT === '1'): Promise<any> { DOORWAY.oneWay = on; DOORWAY.exitsOut = out; Math.random = seeded(7);   // (outside doors opening outward ship OFF: the family runs as shipped, on them under QA_EXITSOUT=1; oneway-deal and oneway-night turn the switch themselves)   // (headless.ts stands the harness up on the old double-acting leaves: the family turns the shipped doors on, `guarded` puts back what it found)
   return quiet(() => standUp({ uploadEvery: 4, ...(file ? { level: levelOfFile(file) } : {}) })); }
 

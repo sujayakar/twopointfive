@@ -21,7 +21,6 @@ const { HANDLE, HANDLE_STATS, handleSpot } = await import(`${ROOT}/src/game/hand
 const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { isOfficeFamily, withOfficeScript } = await import(`${ROOT}/src/scene/level.ts`);
 const { order, endGuardScript } = await import(`${ROOT}/src/game/squad.ts`);
 const { spawnUnit, despawnUnit, frameOf } = await import(`${ROOT}/src/game/guards.ts`);
 
@@ -38,7 +37,7 @@ const guarded = (fn: () => Promise<boolean>) => async () => { const was = DOORWA
 
 const LEVELS: (string | undefined)[] = [undefined, ...new Set<string>(SCENARIOS.map((e: any) => e.level).filter(Boolean))];
 const nameOf = (f?: string) => f ? f.replace(/\.json$/, '') : 'office';
-function levelOfFile(file: string): any { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data); }
+function levelOfFile(file: string): any { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return loadLevel(data); }
 async function boot(file?: string, rule = true): Promise<any> { DOORWAY.oneWay = true; HANDLE.on = rule; Math.random = seeded(7);
   return quiet(() => standUp({ uploadEvery: 4, ...(file ? { level: levelOfFile(file) } : {}) })); }
 

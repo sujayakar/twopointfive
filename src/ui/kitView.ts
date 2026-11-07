@@ -166,7 +166,7 @@ export function mountKitView(root: HTMLElement, body: HTMLElement, column: HTMLE
       //  'none' where that kind has no team at a way in, which is no picture and not tried again)
       if (!KIT_VIEW.on || was) { hide(); drop(); return false; }
       styles();
-      // (a mission with NO level file is on the bundled office: its block is the office's own data — levels/office.scenarios.ts, through ui/missions.ts — and the
+      // (a mission with NO level file is on the bundled office: its block is its own file's, levels/office.json, through ui/missions.ts — and the
       //  child is asked with the mission's own query, no `levelFile` in it: main.ts builds the office and stages from that same block)
       const lv = ask.level ?? '', q = new URLSearchParams(ask.search.replace(/^[^?]*\?/, '')), k = keyOf(q), W = ways.get(lv);
       quietAsk = KIT_VIEW.quiet && !q.has('kitloud') && kitViewQuietKind(q) !== null;

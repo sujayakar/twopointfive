@@ -41,7 +41,7 @@ export interface SideList { list: unknown[]; of: unknown; base: number }
 
 /** THE WIND'S HAND-OVER (wind.ts `update`, its last lines): the sources that blow go to the smoke's solver, and the ones the tick picked for the
  *  particles (the jets near the view, then the storm) to the particle pool. Both lists are the Rust tick's, as the host put them on the puppet
- *  (rustgame.ts `windIn`); nothing is chosen here. */
+ *  (the filtered export); nothing is chosen here. */
 function windOut(g: Game): void {
   const W = g.wind as unknown as { active: unknown[]; forParticles: unknown[] }, P = gpuFx(g), Sm = g.smoke as unknown as { setWind?: (a: unknown[], relax: number) => void };
   P?.setWind(W.forParticles as never, [WIND.sheetWake, WIND.sheetKick, WIND.debrisK]);

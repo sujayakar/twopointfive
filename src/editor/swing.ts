@@ -6,7 +6,6 @@
 import type { LevelData } from '../scene/levelData';
 import { validateLevelData } from '../scene/levelData';
 import { loadLevel } from '../scene/levelLoad';
-import { isOfficeFamily, withOfficeScript } from '../scene/level';
 import { StaticCollision } from '../scene/collision';
 import { Doors } from '../game/doors';
 import { dealSwings, swingsNow, SwingDeal } from '../game/doorswing';
@@ -15,7 +14,7 @@ export function dealtSwings(data: LevelData): Map<string, SwingDeal> | null {
   if (!data.doors.length) return new Map();
   try {
     if (validateLevelData(data).length) return null;
-    const plain = loadLevel(data, { validate: false, lived: true }), level = isOfficeFamily(data) ? withOfficeScript(plain) : plain;
+    const level = loadLevel(data, { validate: false, lived: true });
     const col = new StaticCollision(level.boxes);
     const deal = swingsNow(dealSwings(level, new Doors(level.doors, () => {}), col.nav, col));   // (as the doors stand: an outside door outward while DOORWAY.exitsOut is on)
     return new Map(deal.map(d => [d.door, d]));

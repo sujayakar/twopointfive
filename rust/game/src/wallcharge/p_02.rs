@@ -22,12 +22,14 @@ fn box_of_wall(g: &Game, w: &WallSpot, wall: f64) -> BoxId { if wall >= 0.0 { g.
 fn wall_of(g: &Game, c: WallChargeId) -> WallSpot { g.tab.wallcharge_set_wall_charge[c].wall.clone() }
 
 // ---------------------------------------------------------------- the run, the switch, the rows
+/// (The roster is this book's own men, by the one roster test: an operative unit of this seat. Another seat's teammate coming or going is not this
+/// seat's run starting over, and a seat with no teammates of its own is a man alone whatever the other seat has.)
 /// A new Player or a new cast is a fresh run; the rows are on the menu only while the module is live. Returns live. (wallcharge.ts sync)
 pub fn wall_charge_sync(g: &mut crate::game::Game) -> bool {
     let (mut i, mut same) = (0usize, g.wall_charge.player == Some(g.player));
     for k in 0..g.guards.len() {
         let gd = g.guards[k];
-        if g.gd[gd].unit.is_some() && g.gd[gd].team == crate::teams::Team::Operative {
+        if crate::orders::squad_orders_mine(g, gd) {
             if g.wall_charge.roster.get(i) != Some(&gd) { same = false; }
             i += 1;
         }
@@ -37,7 +39,7 @@ pub fn wall_charge_sync(g: &mut crate::game::Game) -> bool {
         let mut roster = Vec::new();
         for k in 0..g.guards.len() {
             let gd = g.guards[k];
-            if g.gd[gd].unit.is_some() && g.gd[gd].team == crate::teams::Team::Operative { roster.push(gd); }
+            if crate::orders::squad_orders_mine(g, gd) { roster.push(gd); }
         }
         g.wall_charge.roster = roster;
         g.wall_charge.player = Some(g.player);

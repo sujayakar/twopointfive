@@ -718,7 +718,7 @@ fn other_theirs(g: &mut Game, op: DoorOpId, squad: &[GuardId], o: DoorId, by: Op
     if g.door_tools.held.iter().any(|(x, r)| r.door == Some(o) && Some(x) != by) { return true; }
     let fc = frame(g, o);
     for x in squad.iter().copied() {
-        if let Some(a) = crate::orders::squad_orders_of(g, x) {
+        if let Some(a) = crate::seats::order_of(g, x) {
             if asg!(g, a).door == Some(o) { return true; }
             if let Some(w) = asg!(g, a).watch { if v3::dist_xz(w, fc) < 1.5 { return true; } }
         }
@@ -730,7 +730,7 @@ fn other_beside(g: &mut Game, squad: &[GuardId], o: DoorId) -> bool {
     let fc = frame(g, o);
     for x in squad.iter().copied() {
         if v3::dist_xz(pos(g, x), fc) < 3.0 {
-            match crate::orders::squad_orders_of(g, x) {
+            match crate::seats::order_of(g, x) {
                 None => return true,
                 Some(a) => if asg!(g, a).post.is_some() { return true; },
             }

@@ -9,7 +9,27 @@ Written by surface.py. 1095 rows of `io::call`, 803 with a guard at load. What i
 - **takes no game: nothing to write** (7): `AimState.clear`, `Ocp.update`, `Ocp.use`, `RateCap.reset`, `RateCap.take`, `gpFragments`, `manifestOf`
 - **answers what its Rust function does not** (5): `Destruction.onBlast`, `Pose.copy`, `WallBreak.onChange`, `searchPlanFor`, `wallReactOf`
 - **a parameter only Rust has** (4): `blendPose`, `layerSlot`, `sampleClip`, `spawnShot`
-- **takes an opaque value** (2): `initWeather`, `quietFogStart`
+- **takes an address's words, which are not on the wire** (2): `initWeather`, `quietFogStart` (in Rust they take a `Query`, `rust/game/src/query.rs`; a host hands an address's TEXT across)
+
+## The picture's own functions have no row
+
+A function that is the picture's or the host's — its Rust body a marked boundary no-op, its whole work the TypeScript body the dress step runs inside a
+tick — is not a crossing. With a row and a guard, a call from OUTSIDE a tick (the scene panel's blast button, `__snow.blastAt`, `__wet.summary()`, a
+check that steps a man's breath by hand) crossed, the Rust game did nothing and answered `false` or an empty line, and the TypeScript body never ran:
+the button told the snow nothing, and ten seconds at a sprint filed no breath. Inside a tick nothing changed, since the host's own lines never cross.
+
+Taken off the table, and the guard out of the nine that had one on disk (the last two never had one): `thinFit`, `wetSummary`, `recapTick`,
+`updateSnowBreath`, `updateSnowTracks`, `snowBlastAt`, `updateSnowFx`, `updateRainFx`, `updateSnowMarks`, `Par.tick`, `WetGround.follow`. That is every
+row whose Rust body carries the boundary no-op mark, and `wetSummary`, whose body is marked a boundary and answers an empty line. 1084 rows are left.
+
+A row is named by its `id`, which is the dispatcher's arm in `rust/game/src/call_gen.rs`, not by its place in `calls.json`: the eleven left holes and
+no other row moved (`surface.ts` indexes by `id`). The eleven arms and their no-op bodies are still in the Rust crate, reached by nothing from the
+TypeScript; they can go with the next change there, and no number needs to move when they do.
+
+LEFT ON THE TABLE though their Rust body is empty, because the nothing is the game's own answer and not the picture's: `SnatchOut.switched` and
+`closeMarks` (a settled switch), `fogFlags` and `loadCivTune` (the address and the browser's storage are the host's; their TypeScript would read a page).
+
+How the class is found again: every `pub fn` under `rust/game/src` whose doc line says `BOUNDARY NO-OP`, joined to `calls.json` by its `rust` path.
 
 ## Called with no game stood (the census's kind iv-b)
 
@@ -19,8 +39,6 @@ Written by surface.py. 1095 rows of `io::call`, 803 with a guard at load. What i
 |---|---|---|
 | knobsBack | src/game/knobs.ts |  |
 | knobsCopy | src/game/knobs.ts |  |
-| isOfficeFamily | src/scene/level.ts | with tick code |
-| withOfficeScript | src/scene/level.ts | with tick code |
 | canonicalLevelData | src/scene/levelData.ts |  |
 | freshId | src/scene/levelData.ts |  |
 | indexLevelData | src/scene/levelData.ts |  |

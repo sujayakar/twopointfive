@@ -35,7 +35,9 @@ function val(n: any, I: In, bk: any): any { const dv = I.dv; switch (n.k) {
     if (T.k === 'struct') { const o: any = {}; for (const f of T.fields) { const v = val(parse(f.ty), I, bk); const key = f.ts ?? f.expr?.match(/^o\.([\w$]+)/)?.[1] ?? f.rust; o[key] = v; } return o; }
     if (T.k === 'data' || T.k === 'handEnum') { const a = dv.getUint16(I.p, true); I.p += 2; const V = T.vars?.[a]; const ty = V?.ty ?? (T.arms?.[a]?.match(/\((.*)\)/)?.[1]); if (!ty) return V?.str ?? (V?.kw !== undefined ? { kind: V.kw } : V?.tag ?? T.arms?.[a]); const x = val(parse(ty), I, bk); if (V?.kw !== undefined && x && typeof x === 'object') x.kind = V.kw; return x; } }
   } throw new Error(`surface: no way to read a ${n.k} ${n.path ?? ''}`); }
-const ROWS: any[] = (CALLS as any).rows;
+// A ROW IS NAMED BY ITS NUMBER (`id`), which is the Rust dispatcher's arm (rust/game/src/call_gen.rs), not by its place in the file: a row taken off the
+// table leaves a hole, and no other row moves. (Taken off so far: the picture's own functions, whose TypeScript body is the whole of them: SURFACE.md.)
+const ROWS: any[] = []; for (const r of (CALLS as any).rows) ROWS[r.id] = r;
 function call(row: number, self: any, args: any[]): any { const H = hostOf(self, args); if (!H) { passed(ROWS[row].key, 'noHost'); return PASS; } if (H.surfaceDispatching()) return undefined; if (!H.surfaceOpen()) { passed(ROWS[row].key, 'closed'); return PASS; }
   // A DIE THE CALLER HANDS IN (`rnd`): the game's own is no argument at all. A tool's own is asked as the Rust function asks it, by the face's import `face_roll`
   const C = ROWS[row], g = H.g, parts: [string, unknown][] = []; let die: (() => number) | null = null; for (const a of C.args) { if (a.ty === 'rnd') { const f = args[a.from]; die = typeof f === 'function' && f !== simRandom ? f : null; parts.push(['bool', die !== null]); continue; } parts.push([a.ty, a.from === 'this' ? self : args[a.from]]); }
@@ -63,7 +65,7 @@ export const surfaceRows = ROWS;
 let ROW_OF: Map<string, number> | null = null, TAP_OF: Map<string, number> | null = null;
 export function crossing(key: string, self: unknown, args: unknown[]): unknown {
   TAP_OF ??= new Map(TAP.map(T => [T.key, T.id])); const t = TAP_OF.get(key); if (t !== undefined && firing?.id === t) return firing.answer;
-  ROW_OF ??= new Map(ROWS.map((r, i) => [r.stub, i])); const row = ROW_OF.get(key); if (row === undefined) throw new Error(`the call surface: no row ${key}`);
+  ROW_OF ??= new Map((CALLS as any).rows.map((r: any) => [r.stub, r.id])); const row = ROW_OF.get(key); if (row === undefined) throw new Error(`the call surface: no row ${key}`);
   const r = call(row, self, args as any[]); if (r === PASS) throw new Error(`the call surface: ${key} was called where it cannot cross (no game stands, the host's own lines are running, or an argument is a row Rust has not got)`); return r; }
 /** a tapped function with no row: all it still does is answer a tool that replaced it and called through */
 export function tapAnswer(key: string): unknown { TAP_OF ??= new Map(TAP.map(T => [T.key, T.id])); return firing?.id === TAP_OF.get(key) ? firing!.answer : undefined; }
