@@ -40,10 +40,13 @@ pub struct StartOpts {
     pub seats: u32,
     /// which of rust/sim's blocks the game stands in (one game a block at a time)
     pub slot: usize,
-    /// the mission to start on the stood level by the game's own `startScenario`, none = the level as its file has it.
-    /// (NOT the page's whole start of a mission: `startFromQuery` first lays the row's hour and weather, the fog and a quiet mission's cameras
-    /// off the address, and the Rust game has no type for an address's words yet: README, "What stands between this and the page")
+    /// the mission to start on the stood level by the game's own `startScenario`, none = the level as its file has it
     pub scenario: Option<game::scene_scenario_list::ScenarioSpec>,
+    /// …or THE ADDRESS'S WORDS a click on a mission's row loads (`?levelFile=depot.json&roomclear&squad4`: scenarios.ts scenarioQuery), started by
+    /// the game's own `start_from_query` AS THE PAGE STARTS A MISSION: the row's own hour and weather, the fog of war, a quiet mission's rung and
+    /// cameras, then the mission. The level file is the caller's to read (the page reads the file the link names, in the look that is on).
+    /// Wins over `scenario`
+    pub link: Option<String>,
     /// the rows that only dress the picture up (a page) or down (a host that draws nothing: the moths do not fly, the fixtures do not swing)
     pub dress: bool,
     /// THE SENSES WORKED OUT BY THE GAME ITSELF (game/sense.ts SENSE.cpu, and the sky's light in its estimate, SENSE.moon): what a host with no
@@ -51,7 +54,7 @@ pub struct StartOpts {
     /// every man is in the dark for good (the harness's TPS_CPUSENSE=1 TPS_MOONLIGHT=1)
     pub cpu_senses: bool,
 }
-impl Default for StartOpts { fn default() -> Self { StartOpts { seed: 20942, seats: 1, slot: 0, scenario: None, dress: false, cpu_senses: false } } }
+impl Default for StartOpts { fn default() -> Self { StartOpts { seed: 20942, seats: 1, slot: 0, scenario: None, link: None, dress: false, cpu_senses: false } } }
 
 /// THE HOST'S OWN HALF of a stood game: the Input a hand writes, the camera that follows, the canvas's size (headless.ts standUp: `input`, `cam`, `canvas`).
 #[derive(Clone, Copy, Debug)]
@@ -133,7 +136,11 @@ pub fn stand(data: &Json, assets: Assets, o: &StartOpts) -> Stood {
     g.m.kit.kit_solo.stand = true;
     game::kit::kit_solo_stand(&mut g, None);
     let host = host_new(&mut g);
-    if let Some(spec) = o.scenario.as_ref() {
+    if let Some(link) = o.link.as_ref() {
+        let r = game::scenario_run::start_from_query(&mut g, &game::scenario_run::StartFromQuerySearch::Text(link.clone()));
+        if let Some(why) = r.why { panic!("the game refused the start from '{}': {}", link, why); }
+        settle(&mut g);
+    } else if let Some(spec) = o.scenario.as_ref() {
         if let Some(why) = game::scenario_run::start_scenario(&mut g, spec) { panic!("the game refused the {}: {}", spec.kind.as_str(), why); }
         settle(&mut g);   // (the men the mission made: their poses go home as a tick's opening would take them)
     }

@@ -5563,6 +5563,10 @@ pub fn stats_as_counted(g: &crate::game::Game) -> crate::game::Stats { let mut s
 
 
 impl Io for crate::Opaque { fn w(&self, _: &mut W) {} fn r(_: &mut R) -> Self { crate::Opaque } }
+// AN ADDRESS'S WORDS ARE NOT ON THE WIRE: the table declares the `URLSearchParams` arm of a `string | URLSearchParams` argument as holding nothing
+// (tools/blitz/schema.json, where it was `crate::Opaque`), and the TypeScript writes nothing for it. So this side writes nothing and reads no words:
+// a host that has an address hands its TEXT across (the `Text` arm), and the game reads the words itself (query.rs).
+impl Io for crate::query::Query { fn w(&self, _: &mut W) {} fn r(_: &mut R) -> Self { crate::query::Query::default() } }
 impl Poke for crate::Opaque {}
 impl Poke for crate::director::CondTest {}
 impl Poke for crate::director::BeatFrame {}

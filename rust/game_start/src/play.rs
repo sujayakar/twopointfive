@@ -69,14 +69,15 @@ pub struct Play {
     _one: MutexGuard<'static, ()>,
 }
 
-fn start(data: &Json, room_clear: bool, o: &Opts) -> Play {
+fn start(data: &Json, room_clear: bool, o: &Opts) -> Play { start_by(data, room_clear, None, o) }
+fn start_by(data: &Json, room_clear: bool, link: Option<&str>, o: &Opts) -> Play {
     // (a second game stood by the thread that holds the first would wait on itself for ever: said, not waited for)
     if HOLDS.with(|h| h.get()) { panic!("one game at a time: this test still holds a Play. Drop it (`drop(p)`, or end its block) before standing another"); }
     // (a test that failed while it held the lock left it poisoned and its game dead: the next one stands on a block zeroed anew)
     let one = ONE_GAME.lock().unwrap_or_else(|p| p.into_inner());
     let ch = CHARACTER.get_or_init(files::CharacterFiles::read);
     let scenario = if room_clear { Some(game::scene_scenario_list::ScenarioSpec { kind: game::scene_scenario_list::ScenarioSpecKind::Roomclear, squad: o.squad as f64, level: None, seed: None }) } else { None };
-    let Stood { mut game, host, .. } = stand::stand(data, ch.assets(), &StartOpts { seed: o.seed, scenario, cpu_senses: o.cpu_senses, ..Default::default() });
+    let Stood { mut game, host, .. } = stand::stand(data, ch.assets(), &StartOpts { seed: o.seed, scenario, link: link.map(String::from), cpu_senses: o.cpu_senses, ..Default::default() });
     game.out.clear();
     HOLDS.with(|h| h.set(true));   // (only once a Play exists to put it down: a stand that panicked holds nothing)
     let mut p = Play { g: game, host, frames: 0, said: Vec::new(), sounds: Vec::new(), cursor: None, spoke: Vec::new(), _one: one };
@@ -95,6 +96,13 @@ impl Play {
     pub fn level(name: &str, room_clear: bool, o: &Opts) -> Play {
         let data = json::parse(&files::level_text(name)).unwrap_or_else(|e| panic!("{}: {}", name, e));
         start(&data, room_clear, o)
+    }
+
+    /// Stand a level of `levels/` and start a mission on it FROM AN ADDRESS'S WORDS, as a click on a row of the mission list does
+    /// (`?levelFile=depot.json&roomclear&squad4`): the row's own hour and weather, the fog of war, a quiet mission's rung, then the mission.
+    pub fn mission(name: &str, link: &str, o: &Opts) -> Play {
+        let data = json::parse(&files::level_text(name)).unwrap_or_else(|e| panic!("{}: {}", name, e));
+        start_by(&data, false, Some(link), o)
     }
 
     /// one frame of the host; what the step told its host is kept (`said`, `sounds`)

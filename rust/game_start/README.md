@@ -74,7 +74,7 @@ refuses a scene that says both. A scene has at least one door (a level's mission
 
 ### The game in a test's hands (`src/play.rs`)
 
-- **Stand:** `Play::scene(&scene, &opts)`, or `Play::level("kit-yard.json", room_clear, &opts)` for a file of `levels/`.
+- **Stand:** `Play::scene(&scene, &opts)`, or `Play::level("kit-yard.json", room_clear, &opts)` for a file of `levels/`. `Play::mission("depot-gwot.json", "?levelFile=depot.json&roomclear&squad4", &opts)` starts a mission on a file from the words of its address, as a click on its row of the mission list does (the row's hour and weather, the fog of war, then the mission).
 - **Time:** `p.run(secs)`; `p.until(secs, |p| …)` answers how long it took, or `None`; `p.always(secs, |p| …)` answers `None`, or the second it
   first failed; `p.frame()` is one sixtieth.
 - **Who:** `p.guard("route name")`, `p.defender_at(mark)`, `p.mates()`, `p.roll()` (every man in a line, for a failure's message).
@@ -113,7 +113,7 @@ and `cargo test`'s threads take turns. A test that stands a second game drops th
 | collision, the walk grid, sound paths, fixtures, doors, guards, civilians, orders, the fog, the room fight, every module | **the game's own constructor, `game_new`** (`rust/game/src/game/p_04.rs`), which had never run before this crate |
 | the moving state at home in the block | `settle` (the die, the pose pool, the smoke grid) |
 | the host's Input and camera | the game's `input_detached`, `FollowCamera`, `follow_camera_rebuild` |
-| a mission, where asked | the game's `start_scenario` |
+| a mission, where asked | the game's `start_scenario`, or `start_from_query` on an address's words (`StartOpts.link`), as a click on a row of the mission list starts it |
 
 `frame(g, host, dt)` is one frame of that host: the game's `game_update` on the host's Input and camera, the camera after the man, the lights'
 envelopes, the box world listed again. It answers what the step told its host (sounds, marks, lines said).
@@ -142,17 +142,19 @@ Which missions start in Rust equal to the TypeScript start, row by row: [`LEVELS
 A list, not a plan. Today the page stands the game in TypeScript, sends the whole state across once, and keeps the TypeScript `Game` as a puppet
 that the picture, the sound, the HUD and the menus read (`src/host/rustgame.ts`, "A START").
 
-1. **The address.** The page starts a mission by `startFromQuery(g, search)`: the row's hour and weather, the fog of war, a quiet mission's fog
-   rung and cameras, the team's size, then the mission. In the Rust game an address's words are a type that holds nothing (`crate::Opaque`), so
-   every reader of them stops at its first line: `start_from_query`, `spec_of_query`, `hour_from_query`, `weather_of_search`,
-   `fog_of_query`, `quiet_rung_of_query`, `row_settings`, the loadout's, the gear's, the morale's and the words' (17 functions that take the
-   words, 7 types with an arm for them, a private stand-in for `has` and `get` in each module). This start takes a `ScenarioSpec` (kind, team
-   size, deal) and calls `start_scenario`: what a link adds to that is not started here.
-   THE TYPE THEY WAIT FOR IS WRITTEN: `src/query.rs`, `Query`, the browser's rules for reading the text and the four calls the game makes on
-   it (`has`, `get`, `set`, `delete`), held to the browser's own reader case by case. What is left is in the game crate, whose types are
-   written by a program today: `Query` in place of `crate::Opaque` in those signatures, and each module's stand-ins gone for `q.has` and
-   `q.get`. Then `StartOpts` takes the address's text, the page hands `location.search` across once, and the compare starts a mission from
-   its link on both sides.
+1. **The address.** DONE IN THE GAME, NOT YET ON THE PAGE. The page starts a mission by `startFromQuery(g, search)`: the row's hour and
+   weather, the fog of war, a quiet mission's fog rung and cameras, the team's size, then the mission. An address's words are a type of the
+   game crate now (`rust/game/src/query.rs`, `Query`: the browser's rules for reading the text and the calls the game makes on it, `has`,
+   `get`, `set`, `delete`, held to the browser's own reader case by case), every reader of them takes it (`start_from_query`,
+   `spec_of_query`, `hour_from_query`, `weather_of_search`, `fog_of_query`, `quiet_rung_of_query`, `row_settings`, the loadout's, the
+   gear's, the words'), and the one stand-in each module kept for `has` and `get` is gone, with three private copies of the text reader.
+   `StartOpts.link` is the address's text and `stand` starts the mission by `start_from_query` on it; the compare starts every mission from
+   its row's link on both sides (`LEVELS.md`).
+   What is left: the page hands `location.search` across once and the Rust game starts from it. Two things to know when that is written.
+   An address's words are NOT on the wire (the table declares that arm of a `string | URLSearchParams` argument as holding nothing, and a
+   `Query` writes nothing and reads back empty): a host hands the TEXT. And the page reads three more things off the address before the
+   stand-up, which this start does not (`init_weather`, `hour_from_query` at boot, the kit and the words): they take a `&Query` and are
+   ready to be called, and nothing here has called them on a real address.
 2. **The puppet's objects.** The picture reads TypeScript objects that only the TypeScript start builds, and the apply writes onto objects it
    finds: of a man, his rig, his row of the men's columns, his capsules and his entry in the light probe's table; of the level, the box world
    the GPU is packed from (`BoxWorld`: the pack, the cut and round tables, the glass listed to the GPU), the light set, the marks' texture, the
@@ -184,6 +186,7 @@ that the picture, the sound, the HUD and the menus read (`src/host/rustgame.ts`,
 ```sh
 tools/blitz/start.sh kit-yard.json                                   # a level of levels/, as its file has it
 tools/blitz/start.sh kit-yard.json --scenario roomclear --frames 1800
+tools/blitz/start.sh depot-gwot.json --link '?levelFile=depot.json&roomclear&squad4' --frames 300   # started as the page starts it
 tools/blitz/start.sh --mission depot-four --frames 300               # a row of the mission list: its file, kind, team size and deal
 tools/blitz/start.sh rust/game_start/target/scenes/two-rooms.json --scenario roomclear --cpu --frames 900
 bun run tools/blitz/start-levels.ts --write                          # every mission, and LEVELS.md written from the result (--seats 2: as games of two)

@@ -7,21 +7,21 @@ use alloc::{string::String, vec::Vec};
 #[derive(Clone, Debug)]
 pub enum SameFogA {
     Text(String),
-    URLSearchParams(crate::Opaque),
+    URLSearchParams(crate::query::Query),
 }
 
 /// (TypeScript: a union)
 #[derive(Clone, Debug)]
 pub enum SameFogB {
     Text(String),
-    URLSearchParams(crate::Opaque),
+    URLSearchParams(crate::query::Query),
 }
 
 /// (TypeScript: a union)
 #[derive(Clone, Debug)]
 pub enum StartFromQuerySearch {
     Text(String),
-    URLSearchParams(crate::Opaque),
+    URLSearchParams(crate::query::Query),
 }
 
 /// (TypeScript: inline at src/game/scenarioRun.ts:63 startFromQuery ->, src/game/scenarioRun.ts:63)
