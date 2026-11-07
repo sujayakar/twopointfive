@@ -19,7 +19,7 @@
 //       doors   anything else
 //     in that order, so two pips on a mission card are two different plans.
 //   CHEATS (god mode, no AI, unlimited ammo, invisible) on at any frame of the try: `void` — the card still shows, nothing is kept of it.
-//   THE CARD: the stealth mission raises its own (`mission.debrief`); for every other end this module says when (`takeDue()`, read by the page).
+//   THE CARD: the stealth mission sends its own (the game's out event EndCard); for every other end this module says when (`takeDue()`, read by the page).
 //
 // Per-player by construction: the men are `humans(g)` (today the one Player) then the AI teammates; nothing here asks for "the" player by name but that list.
 // Not in a checkpoint: a load is the SAME try (`resumed`), and for the kinds that can be loaded (the quiet game alone) the way won is read off the chronicle,

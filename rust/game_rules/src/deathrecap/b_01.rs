@@ -202,6 +202,7 @@ fn read_events(g: &mut Game) {
 /// LAST IN THE TICK: this tick's rounds, who went down in it, a sample of the floor when one is due.
 pub fn recap_tick(g: &mut Game) {
     this_run(g);
+    g.recap.all_down = crate::seats::all_down(g);
     // (not watching: whoever goes down meanwhile is not a death seen, and the next look starts from the floor as it is)
     if !live(g) { g.recap.primed = false; return; }
     let now = g.time;
