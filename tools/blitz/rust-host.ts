@@ -431,8 +431,9 @@ export class RustHost {
     // (STAND-IN, belongs in the importer (a made row is filled whole): A MAN THE APPLY MADE, the Rust game having restarted or spawned (inside its tick, or
     // by a call that crossed), holds only the fields of the every-tick list: his rifle's rows, his kit, read `undefined` to whatever reads the puppet
     // next. The puppet takes the whole state at once.)
+    this.newRun();   // (before the whole apply below, which takes the record as it finds it)
     if (MADE.n !== made0 && !this.audit) this.applyWhole('the apply made a man');
-    this.newRun(); this.newClear();
+    this.newClear();
   }
   // STAND-IN (belongs in the schema: `Game.clearing` a row with an ID, or a serial the importer reads): A ROOM CLEAR ENDED AND ANOTHER BEGAN INSIDE ONE
   // TICK. The TypeScript makes a new `Clearing` (squad.ts) and a reader knows a clear began by that identity (tools/qa/soak.ts:1760
