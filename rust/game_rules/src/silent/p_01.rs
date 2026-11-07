@@ -108,7 +108,7 @@ pub fn silent_step(g: &mut crate::game::Game, gd: GuardId) -> Option<f64> {
 }
 
 /// his weapon light or torch is held off   (silent.ts silentDark)
-pub fn silent_dark(g: &mut crate::game::Game, gd: GuardId) -> bool { if under_silence(g, gd) { true } else { crate::unseen::unseen_dark(g, gd) } }
+pub fn silent_dark(g: &mut crate::game::Game, gd: GuardId) -> bool { if under_silence(g, gd) { true } else { false } }
 
 /// his line goes over the net   (silent.ts silentHush)
 pub fn silent_hush(g: &mut crate::game::Game, gd: GuardId) -> bool { if under_silence(g, gd) { true } else { crate::unseen::unseen_hush(g, gd) } }

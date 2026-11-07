@@ -158,20 +158,19 @@ pub fn read_place(g: &mut crate::game::Game, gd: GuardId, m: &mut crate::nvg::Ma
     let eye: V3 = [pos[0], 1.5, pos[2]];
     let (fx, fz) = (m::sin(aim_yaw), m::cos(aim_yaw));
     let (mut dim, mut black) = (false, false);
-    let lamp = crate::irlight::ir_carried(g);   // (a man with an illuminator has no place too dark for his tube)
-    read_at(g, pos[0], pos[2], false, lamp, &mut dim, &mut black);
+    read_at(g, pos[0], pos[2], false, true, &mut dim, &mut black);
     for r in look_m() {
         let p: V3 = [eye[0] + fx * r, 1.2, eye[2] + fz * r];
         if crate::scene_collision::segment_blocked(g, eye, p, None, None, None) {
             break;
         }
-        read_at(g, p[0], p[2], r <= TUBE_M, lamp, &mut dim, &mut black);
+        read_at(g, p[0], p[2], r <= TUBE_M, true, &mut dim, &mut black);
     }
     if let Some(a) = crate::seats::order_of(g, gd) {
         let (post, arrived) = (g.tab.orders_assignment[a].post, g.tab.orders_assignment[a].arrived);
         if let Some(post) = post {
             if !arrived && v3::dist_xz(pos, post) < g.k.lights.lit_mark_m {
-                read_at(g, post[0], post[2], true, lamp, &mut dim, &mut black);
+                read_at(g, post[0], post[2], true, true, &mut dim, &mut black);
             }
         }
     }
@@ -179,16 +178,16 @@ pub fn read_place(g: &mut crate::game::Game, gd: GuardId, m: &mut crate::nvg::Ma
         if let Some(tgt) = g.tab.roomfight_op[o].tgt {
             if g.gd[tgt].state != crate::game::GuardState::Dead {
                 let at = g.ch[g.gd[tgt].ch].pos;
-                read_at(g, at[0], at[2], false, lamp, &mut dim, &mut black);
+                read_at(g, at[0], at[2], false, true, &mut dim, &mut black);
             }
         }
         if let Some((by_t, by_at)) = g.tab.roomfight_op[o].step_by.as_ref().map(|by| (by.t, by.at)) {
             if g.time - by_t < g.k.lights.step_secs {
-                read_at(g, by_at[0], by_at[2], true, lamp, &mut dim, &mut black);
+                read_at(g, by_at[0], by_at[2], true, true, &mut dim, &mut black);
             }
         }
         if let Some(pt) = g.tab.roomfight_op[o].turn.as_ref().and_then(|turn| turn.pt) {
-            read_at(g, pt[0], pt[2], true, lamp, &mut dim, &mut black);
+            read_at(g, pt[0], pt[2], true, true, &mut dim, &mut black);
         }
     }
     m.place_t = g.time;

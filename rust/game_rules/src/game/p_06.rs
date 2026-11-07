@@ -310,7 +310,7 @@ pub fn game_deal_weapons(g: &mut crate::game::Game, dt: Option<f64>) {
             let lg = *grip.get_or_insert_with(|| { let x = crate::rig_props::carbine_grip(None); AnimLongGrip { wrist: x.wrist, fingers: x.fingers, back: x.back } });
             g.ch[c].anim.long_grip = lg;
         }
-        if crate::gunlook::gun_look_on(g) || g.ch[c].gun_look.is_some() {
+        {
             let had = g.ch[c].gun_look.as_ref().and_then(|l| l.hand);
             let into = g.ch[c].gun_look.clone();
             let in_hands = weapon_row(g, def).clone();
