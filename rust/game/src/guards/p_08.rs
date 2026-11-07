@@ -290,7 +290,7 @@ pub fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
         if g.gd[cur].state == GuardState::Dead || !g.guards.contains(&cur) || g.gd[cur].fled || knee {
             let cur_pos = g.ch[g.gd[cur].ch].pos;
             if let Some(lk) = g.gd[gd].last_known {
-                if v3::dist_xz(lk, cur_pos) < 1.5 { g.gd[gd].last_known = None; g.gd[gd].fix_stamp = g.gd[gd].fix_stamp.wrapping_add(1); }
+                if v3::dist_xz(lk, cur_pos) < 1.5 { crate::mind::fix(g, gd, None, "guards"); }
             }
             mine = g.gd[cur].state == GuardState::Dead && g.gd[cur].killer_id == g.ch[g.gd[gd].ch].id && g.gd[gd].state == GuardState::Alert;
             g.gd[gd].foe = None;
@@ -339,8 +339,8 @@ pub fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
         if mine { crate::game::game_say(g, gd, "got him!", None, None, None); }
     } else if lost_man && best.is_none() && (g.gd[gd].state == GuardState::Alert || g.gd[gd].state == GuardState::Search) {
         // the man he was fighting is down and no other enemy is in his sight: he comes off the alert to a wary look round
-        g.gd[gd].state = GuardState::Suspicious;
-        g.gd[gd].awareness = 0.45;
+        crate::mind::set_state(g, gd, GuardState::Suspicious, "guards");
+        crate::mind::set(g, gd, 0.45, "guards");
         g.gd[gd].react_t = 1.2;
         g.gd[gd].search_t = 0.0;
         crate::game::guard_set_path(g, gd, Vec::new());
@@ -608,29 +608,6 @@ pub fn burst_trigger(g: &mut crate::game::Game, gd: GuardId, dt: f64, aim_at: V3
     }
 }
 
-/// Panel / QA: one line per living rifleman. (guards.ts burstSummary)
-pub fn burst_summary(g: &mut crate::game::Game) -> String {
-    let mut parts: Vec<String> = Vec::new();
-    let mut i = 0;
-    while i < g.guards.len() {
-        let gd = g.guards[i];
-        i += 1;
-        let w = g.gd[gd].weapon;
-        let def = g.fa[w].def;
-        let row = g.m.weapons.weapons.get(def).unwrap();
-        if g.gd[gd].state == crate::game::GuardState::Dead || row.burst.is_none() { continue; }
-        let cap = row.mag_capacity;
-        let ready = crate::weapons::firearm_rounds_ready(g, w);
-        let reloading = if g.gd[gd].reload_t >= 0.0 { format!(" reloading {} s", js::to_fixed(g.gd[gd].reload_t, 1)) } else { String::new() };
-        let beat = match g.fa[w].burst {
-            Some(b) => format!("burst {}/{}{}", b.idx, b.n, if b.off.is_some() { " (opening, wide)" } else { "" }),
-            None => format!("cd {}", js::to_fixed(m::max(0.0, g.gd[gd].fire_cd), 2)),
-        };
-        parts.push(format!("{}: {}/{}{} · {} · {} bursts", g.gd[gd].callsign, ready, cap, reloading, beat, g.fa[w].bursts));
-    }
-    if !parts.is_empty() { format!("rifles ▸ {}", parts.join(" | ")) } else { format!("rifles ▸ nobody carries one ({})", g.tune.carbine_guards.as_str()) }
-}
-
 /// His light posed for the frame; a burning lens carried through a wall lights from this side of it. (guards.ts attachFlashlight)
 pub fn attach_flashlight(g: &mut crate::game::Game, gd: GuardId, dt: Option<f64>) {
     let dt = dt.unwrap_or(1.0 / 60.0);
@@ -775,15 +752,6 @@ fn in_game_view(g: &Game, p: V3) -> bool {
     }
 }
 
-/// Is a point inside the frame of this view-projection? (guards.ts inView)
-pub fn in_view(vp: Option<&crate::guards::InViewVp>, p: V3) -> bool {
-    match vp {
-        None => false,
-        Some(InViewVp::Array(v)) => in_view_of(|i| v[i], p),
-        Some(InViewVp::Float32Array(v)) => in_view_of(|i| v[i] as f64, p),
-    }
-}
-
 fn in_view_of(vp: impl Fn(usize) -> f64, p: V3) -> bool {
     let w = vp(3) * p[0] + vp(7) * p[1] + vp(11) * p[2] + vp(15);
     if w <= 0.0 { return false; }
@@ -816,16 +784,4 @@ mod tests {
         }
     }
 
-    /// inView's frame, by a plain perspective-free matrix: w from row 3, x and y over it.
-    #[test]
-    fn in_view_frame() {
-        let mut vp = vec![0.0f64; 16];
-        vp[0] = 1.0; vp[5] = 1.0; vp[15] = 1.0;
-        let v = crate::guards::InViewVp::Array(vp);
-        assert!(!in_view(None, [0.0, 0.0, 0.0]));
-        assert!(in_view(Some(&v), [0.0, 0.0, 0.0]));
-        assert!(in_view(Some(&v), [0.91, 0.89, 0.0]));
-        assert!(!in_view(Some(&v), [0.92, 0.0, 0.0]));
-        assert!(!in_view(Some(&v), [0.0, 0.9, 0.0]));
-    }
 }

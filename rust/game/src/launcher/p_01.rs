@@ -359,7 +359,7 @@ pub fn stagger_guard(g: &mut crate::game::Game, gd: GuardId, dir: V3, shooter: C
         }
         crate::belief::word(g, gd, back);
     }
-    g.gd[gd].awareness = m::max(g.gd[gd].awareness, aware);
+    crate::mind::raise(g, gd, aware, "launcher");
     if g.ai_enabled { g.gd[gd].witness.heard.small += 1.0; }
     let all = stagger_lines_table();
     let now: Vec<String> = if g.gd[gd].state == GuardState::Alert { all.iter().filter(|t| !t.contains("who's there")).cloned().collect() } else { all.clone() };
@@ -371,11 +371,6 @@ pub fn stagger_guard(g: &mut crate::game::Game, gd: GuardId, dir: V3, shooter: C
     let pos = v3::copy(g.ch[c].pos);
     prop_event(g, pos, hit_noise, shooter_id, None);
     if let Some(pl) = crate::seats::man_by_id(g, shooter_id) { g.pl[pl].noise = m::max(g.pl[pl].noise, hit_noise); }
-}
-
-/// The stagger lines. (launcher.ts staggerLines)
-pub fn stagger_lines() -> Vec<String> {
-    stagger_lines_table()
 }
 
 /// Rings in flight as boxes: under the issue kit (GEAR.on, settled) the sponge round nose first along its flight, rolling about it. The tick's gathering of dynamic boxes calls this. (launcher.ts ringBoxes)
@@ -419,10 +414,4 @@ mod tests {
         same([0.5, 1.4, 0.25], [20.0, 3.0, -15.0], Ballistics { speed: 76.0, drag: 0.12, solve_iters: 3.0, ..R }, [0x404dd24d263a8c2f, 0x401a3fdaaad96f33, 0xc047526a48903faf]);
     }
 
-    #[test]
-    fn stagger_lines_are_the_five() {
-        let l = stagger_lines();
-        assert_eq!(l.len(), 5);
-        assert_eq!(l.iter().filter(|t| t.contains("who's there")).count(), 1);
-    }
 }

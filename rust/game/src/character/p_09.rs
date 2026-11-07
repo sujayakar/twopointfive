@@ -198,42 +198,6 @@ fn stance_of(ty: &[Vec<f64>], tz: &[Vec<f64>]) -> Option<AnimStanceOf> {
     let cc = js::rem(m::atan2(m::sin(4.0 * m::PI * cs[0]) + m::sin(4.0 * m::PI * cs[1]), m::cos(4.0 * m::PI * cs[0]) + m::cos(4.0 * m::PI * cs[1])) / (4.0 * m::PI) + 1.0, 0.5);
     Some(AnimStanceOf { c: cc, c_l: cs[0], c_r: cs[1] })
 }
-/// a run clip's stances from its toes; None if either foot never qualifies   (character.ts stanceOf)
-pub fn anim_stance_of(g: &mut crate::game::Game, c: CharId, ty: &[Vec<f64>], tz: &[Vec<f64>]) -> Option<crate::character::AnimStanceOf> {
-    stance_of(ty, tz)
-}
-
-/// Jog_Fwd_Loop at phase ph with its loop seam closed   (character.ts sampleJog)
-pub fn anim_sample_jog(g: &mut crate::game::Game, c: CharId, ph: f64, out: crate::anim_skeleton::Pose) {
-    let cj = clip_of(g, c, "Jog_Fwd_Loop");
-    let t = ph * g.tab.clip[cj].duration;
-    let singles = g.k.posemath.singles;
-    crate::anim_skeleton::sample_clip(g, cj, t, true, out, singles);
-    let k = ph - m::floor(ph) - 0.5;
-    let nn = crate::anim_skeleton::pose_rows(out.nodes as f64) as usize;
-    let seams = g.ch[c].anim.jog_seam.len();
-    for i in 0..seams {
-        let s = g.ch[c].anim.jog_seam[i];
-        let d = crate::anim_skeleton::pose_cols(g, out);
-        if let Some(sd) = s.d {
-            let o = s.node as usize;
-            d[o] = (d[o] as f64 + sd[0] * k) as f32;
-            d[o + nn] = (d[o + nn] as f64 + sd[1] * k) as f32;
-            d[o + 2 * nn] = (d[o + 2 * nn] as f64 + sd[2] * k) as f32;
-        } else {
-            let o = 3 * nn + s.node as usize;
-            let q = v3::quat::mul(
-                [d[o] as f64, d[o + nn] as f64, d[o + 2 * nn] as f64, d[o + 3 * nn] as f64],
-                v3::quat::axis_angle(s.axis.unwrap(), s.ang.unwrap() * k),
-            );
-            d[o] = q[0] as f32;
-            d[o + nn] = q[1] as f32;
-            d[o + 2 * nn] = q[2] as f32;
-            d[o + 3 * nn] = q[3] as f32;
-        }
-    }
-}
-
 /// SOFT_KNEE: each leg re-solved with its reach eased below full extension   (character.ts softKnees)
 pub fn anim_soft_knees(g: &mut crate::game::Game, c: CharId, pose: crate::anim_skeleton::Pose, w: f64) {
     let slot = crate::anim_skeleton::layer_slot(g, c);
@@ -700,22 +664,6 @@ pub fn anim_tell_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, t: f6
     let mut back = [0.0; 1];
     args_read(COLS, &mut back);
     g.ch[c].anim.tell_shown = back[0];
-}
-
-/// the held gait for a save file; nothing to say outside the mode   (character.ts heldGaitSnap)
-pub fn anim_held_gait_snap(g: &mut crate::game::Game, c: CharId) -> Option<Vec<f64>> {
-    let a = &g.ch[c].anim;
-    if a.cr_t > 0.0 || a.cr_w > 0.0 { Some(vec![a.cr_t, a.cr_w, a.cr_pace, if a.creep { 1.0 } else { 0.0 }]) } else { None }
-}
-/// the held gait back from a save file; anything else is ignored   (character.ts heldGaitBack)
-pub fn anim_held_gait_back(g: &mut crate::game::Game, c: CharId, a: Option<&[f64]>) {
-    let Some(a) = a else { return };
-    if a.len() != 4 || !a.iter().all(|x| x.is_finite()) { return; }
-    let an = &mut g.ch[c].anim;
-    an.cr_t = v3::clamp(a[0], 0.0, 1.0);
-    an.cr_w = v3::clamp(a[1], 0.0, 1.0);
-    an.cr_pace = m::max(0.0, a[2]);
-    an.creep = a[3] == 1.0;
 }
 
 #[cfg(test)]

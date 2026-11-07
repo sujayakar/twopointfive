@@ -3,7 +3,7 @@
 # side of a run that was equal to the TypeScript tick by every measure (the die, the block, 0 paths not known every half minute), with the command that
 # made it (`cmd.txt`). With the TypeScript tick gone this is what the fuzz is held to.
 #   tools/blitz/fuzz-replay.sh <kept folder | tools/blitz/kept/NAME.kept> […] [--work DIR]
-# Exit 0: every run named is the same play · 1: one differs · 3: one did not run.
+# Exit 0: every run named is the same play · 1: one differs · 3: one did not run · 4: a packed run is of another layout of the wire.
 cd "$(dirname "$0")/../.." || exit 64
 WORK=; L=()
 while [ $# -gt 0 ]; do case "$1" in --work) WORK=$2; shift 2;; *) L+=("$1"); shift;; esac; done
@@ -15,6 +15,8 @@ for K in "${L[@]}"; do
   if [ -f "$K" ]; then CMD=$(sed -n 's/^cmd //p' "$K"); else CMD=$(cat "$K/cmd.txt" 2>/dev/null); fi
   [ -n "$CMD" ] || { echo "fuzz-replay: $K names no command"; CODE=3; continue; }
   O="$WORK/$(basename "$K" .kept)"; rm -rf "$O"; mkdir -p "$O"
+  # (what `fuzz-replay.ts --pack "$O"` needs to pack THIS play: the command, the tree, the wire's layout)
+  echo "$CMD" > "$O/cmd.txt"; git rev-parse --short HEAD > "$O/tree.txt" 2>/dev/null; bun -e 'console.log(JSON.parse(require("fs").readFileSync("tools/blitz/schema.json","utf8")).layout)' > "$O/layout.txt"
   # (the kept command, the Rust side alone, into a folder of its own)
   eval "$CMD --side rust --out '$O'" > "$O/replay.out" 2>&1
   echo -n "$(basename "$K"): "; bun run tools/blitz/fuzz-replay.ts "$K" "$O"; C=$?

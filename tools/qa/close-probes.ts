@@ -5,42 +5,41 @@
 // in the current position, not reverting back to an idle state)" · "sam doesn't pull out his knife when he's within melee radius, just reaches for it" · "lethal vs. nonlethal
 // melee kills like splinter cell".
 // All headless, on the lobby's open floor (nothing within 2 m at shin, chest or head height — checked by ray at every staging), against the office's south outer wall from the
-// strip outside it, and in the break room with its lights off. The mode and its rows are settled: no line asks one off and nothing here writes one (until 2026-11-07 a line or a half
-// in most probes asked CLOSE.on, mode, ready, side, front, dark, lethal or alertStrike off, or the marks on; those are out, with the probe close-harness).
-// And no line asks THE KNIFE: no-knife is settled on (CLOSE.noKnife: the left click is no blow and no row names a blade), so until 2026-11-07's second cut the
-// lines that asked the left click's kill (close-melee's sweep, the knife drawn in the lethal blow, an alert man, under a show; close-seat; close-duo) and the rows
-// worded 'LMB  knife — lethal' (close-rows behind, a side, the front, the pistol drawn; close-melee's row words) asked a build from before that rule: out by ruling.
+// strip outside it, and in the break room with its lights off. Every probe raises CLOSE.on itself (the frozen stand holds it off) and puts the whole table back as it found it.
 //   close-mode        THE MODE: on by distance at 30° steps round a standing man (off at 3.1 m coming in, on at 2.9, still on at 3.5 going out, off at 3.7); off through a wall;
-//                     off for every suppressing state (a show, down, a man in the arm, a body in tow, the kick, the lock, the rifle up, sprinting, the wall);
-//                     anim.creep is the mode on the same tick, creepAt his chest; the nearer of two men
+//                     off for every suppressing state (a show, down, a man in the arm, a body in tow, the kick, the lock, the rifle up, sprinting, the wall) and with
+//                     CLOSE.mode off; anim.creep is the mode on the same tick, creepAt his chest; the nearer of two men
 //   close-tell        THE TELL: at 30° steps at 0.8 m, hands empty — anim.ready 'grab' in the rear arc, 'strike' everywhere else, never null; the hand on the hilt
 //                     (anim.reachShown ≥ 0.9 within 0.5 s, under 0.1 within 0.6 s of stepping out) and the knife NEVER out (anim.knifeShown false throughout); the pistol up:
-//                     'grabGun' behind, nothing elsewhere, no reach; behind a chair: 'seat'
-//   close-melee       MELEE FROM EVERY ANGLE: at 30° steps through the real click — RIGHT = the knockout ('struck', breathing, knockouts +1, a 'ko' row, blows.knockout +1); the
-//                     fall's hearing level by the way in, Sam never through him and no further than his station; the knife never shown; an ALERT man
-//                     facing Sam; a civilian (never a kill); the pistol up (no blow)
+//                     'grabGun' behind, nothing elsewhere, no reach; behind a chair: 'seat'; CLOSE.ready off: nothing
+//   close-melee       MELEE FROM EVERY ANGLE, THE PLAYER'S CHOICE: at 30° steps through the real click — LEFT = the knife (dead: 'shot', not breathing, kills +1, a 'kill' row
+//                     "killed — the knife", blows.knife +1, takedown.lethal) · RIGHT = the knockout ('struck', breathing, knockouts +1, a 'ko' row, blows.knockout +1); the
+//                     fall's hearing level by the way in, Sam never through him and no further than his station; the knife drawn only inside the lethal blow; an ALERT man
+//                     facing Sam (alertStrike on; refused with it off); CLOSE.lethal off; under a show; a civilian (never a kill); the pistol up (no blow)
 //   close-grab        GRABBING ONLY FROM BEHIND: at 30° steps (and each side of the arc's edge) the grab row and Space — a hold starts only in the rear arc, elsewhere no row and
-//                     nothing starts; from straight behind 'held' on HOLD.secs.grab; a seated man: hauled out from the rear arc at 1.15 m, never from his front
+//                     nothing starts; from straight behind 'held' on the same frame as with the switch off; a seated man: hauled out from the rear arc at 1.15 m, never from his front
 //   close-held        THE HELD SNEAK: Sam crouched on a puppet goal past a man, stopped four times in one walk — from the frame his root is at rest the phase does not move
-//                     (1e-6) and feet / toes / hands stay within 2 cm for 80 frames; each stop stands in the stride it stopped in (the four differ); on resuming
-//                     the phase goes on from the held value, no frame's step above the walk's own
-//   close-dark        THE DARK: closeNearK's table (the light on Sam × patrol / search / alert × 0.5 / 1.0 m) and guards.ts sightGain under it; played in the break
-//                     room, visibility fed from the CPU light estimate as the game's meter would — across a man's front at 1.2 m (his torch out): unnoticed in the
-//                     dark, noticed with the room lit; through his burning torch: noticed (the light term is the build's); past his side with the torch burning:
-//                     unnoticed; and the exhibit — three men, torches burning, Sam threading between them
+//                     (1e-6) and feet / toes / hands stay within 2 cm for 80 frames; each stop stands in the stride it stopped in (the four differ), where with CLOSE.mode
+//                     off the four stops all end in the idle's one stance; on resuming the phase goes on from the held value, no frame's step above the walk's own
+//   close-dark        THE DARK: closeNearK's table (the light on Sam × patrol / search / alert × 0.5 / 1.0 m; the switches) and guards.ts sightGain under it; played in the break
+//                     room, visibility fed from the CPU light estimate as the game's meter would — across a man's front at 1.2 m (his torch out): unnoticed in the dark with
+//                     the rule, noticed without it, noticed either way with the room lit; through his burning torch: noticed (the light term is the build's); past his side
+//                     with the torch burning; and the exhibit — three men, torches burning, Sam threading between them
 //   close-windows     the table: a standing staff man's 1440 bearings each in EXACTLY one window (by the interface's own cosine AND by closeAt), 'behind' = the set
-//                     cos(b) < −0.25 to the float and the only window that grabs, left / right mirror images; a seated man = the same rear arc with the seat's
-//                     reach + ONE front strike window; a civilian = one rear window; the table is a registered knob table a recording carries
+//                     cos(b) < −0.25 to the float and the only window that grabs, left / right mirror images; side off → the front takes their arc; front off → that arc
+//                     gives nothing; a seated man = the same rear arc with the seat's reach + ONE front strike window; a civilian = one rear window
 //   close-offer       closeAt from staged spots: 180° / 120° / ±77° / 30° / 0° at 0.7 m and 1.5 m — kind, inReach, grab, strike, can, why; sprinting; an alert man
-//                     (strike only); a wall between
-//   close-rows        the rows a real frame builds for an alert man in reach (the other rows' wording named the knife: out)
-//   close-marks       closeMarks is off on the page (CLOSE.marks, settled off): nothing is handed to the overlay. (Until 2026-11-07 the probe then turned the row on
-//                     and asked the picture: four windows, the precision claim on a 4 cm grid, a wall's cut. The page has no such picture: those lines are out.)
-//   close-seat        closeSeat: down inside a second and a half, the sitting clip, kept on his mark; up the frame he is anything but calm; refusals; the right button and
+//                     (strike only; nothing with alertStrike off); a wall between
+//   close-rows        the rows a real frame builds: behind / a side / the front / the pistol drawn / CLOSE.lethal off — wording, the marker's `close` — and the build's own
+//                     row with the switch off
+//   close-marks       closeMarks (ships OFF: the probe turns CLOSE.marks on and says so): four windows in the open, 'in' with its words in the one Sam stands in; THE
+//                     PRECISION CLAIM — a 4 cm grid round the man, 'drawn' against 'offered', in the open and against a wall; no vertex past the wall's face
+//   close-seat        closeSeat: down inside a second and a half, the sitting clip, kept on his mark; up the frame he is anything but calm; refusals; both buttons and
 //                     Space on a seated man from beyond the standing reach; a restart leaves nobody seated
-//   close-duo         the two-person game (pairup.ts PAIRUP.on, one partner, silent, 'fall in' — the pair family's own stand, pairup-probes.ts `rig`): the
-//                     partner is never a subject of any of it; on a defender the mode, the tell, the right button from behind / a side / the front, Space from behind
-//                     only and the held gait; the partner's 'take him · on your mark' afterwards; the order menu keeps the right button;
+//   close-harness     the frozen stand holds CLOSE.on off, the page's boot turns it on unless ?noclose, the table is a registered knob table a recording carries
+//   close-duo         the two-person game (pairup.ts PAIRUP.on, one partner, silent, 'fall in' — the pair family's own stand, pairup-probes.ts `rig`) with CLOSE.on: the
+//                     partner is never a subject of any of it; on a defender the mode, the tell, both buttons from behind / a side / the front, Space from behind
+//                     only and the held gait; the partner's 'take him · on your mark' afterwards against the switch off; the order menu keeps the right button;
 //                     the dark rule is Sam's alone (a partner in a defender's near field is seen as ever) + what the partner does when Sam crosses the dark, as observed
 // THE HARNESS HAS NO GPU AND NO DOM: the picture (the sheathed knife, the stance as drawn, the floor marks) is not measured here — what is measured is what close.ts tells the
 // animator, what the animator reports back (creepShown / reachShown / knifeShown, the bones), and the game's own books.
@@ -50,7 +49,7 @@ import { tapVerb } from './verbs.ts';
 const IK = 'Space';
 const { v3, wrapAngle } = await import(`${ROOT}/src/math/vec.ts`);
 const { mulberry32 } = await import(`${ROOT}/src/math/dice.ts`);
-const { CLOSE, CLOSE_STATS, closeWindows, closeAt, closeMarks, closeReady, closeSummary, closeSeat, closeSeated, closeNoise, CLOSE_DEFAULTS, closeMode, closeTick, closeNearK, closeSubject } = await import(`${ROOT}/src/game/close.ts`);
+const { CLOSE, CLOSE_STATS, closeWindows, closeAt, closeMarks, closeReady, closeSummary, closeSeat, closeSeated, closeNoise, CLOSE_DEFAULTS, closeMode, closeTick, closeNearK, closeLethal, closeSubject } = await import(`${ROOT}/src/game/close.ts`);
 const { HOLD } = await import(`${ROOT}/src/game/character.ts`);
 const { TWOGEARS } = await import(`${ROOT}/src/game/player.ts`);
 const { KITANIM } = await import(`${ROOT}/src/game/kitanim.ts`);
@@ -64,6 +63,9 @@ const verdict = (ok: boolean, label: string, detail: string) => { allPass &&= ok
 const bad = (fails: string[]) => fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : '';
 /** the lobby's open floor (the man stands here facing east); the strip south of the office by its outer wall (the wall's outside face found by ray in wallFace) */
 const LOBBY: Vec3 = [9.5, 0, 19.5], EAST = Math.PI / 2, STRIP_X = 12;
+/** the whole table put back as it was found, whatever the probe did to it (the runner also snapshots every registered table round each probe) */
+async function keepClose<T>(fn: () => Promise<T>): Promise<T> { const was = JSON.parse(JSON.stringify(CLOSE)); try { return await fn(); } finally { putBack(CLOSE, was); } }
+function putBack(T: any, was: any) { for (const k of Object.keys(was)) { if (was[k] && typeof was[k] === 'object') putBack(T[k], was[k]); else T[k] = was[k]; } }
 function place(gd: any, p: Vec3, yaw: number) { gd.char.pos = v3.copy(p); gd.char.vel = [0, 0, 0]; gd.speed = 0; gd.char.bodyYaw = gd.char.aimYaw = yaw; gd.char.aimPitch = 0; gd.path = []; gd.pathGoal = null; gd.char.update(0); gd.char.update(DT); }
 /** parked out on the lot east of the building, on the scripted hold, deaf */
 function park(gd: any, i: number) { gd.hold = true; place(gd, [37.5, 0, 6 + i * 1.5], EAST); gd.heardUpTo = 1e12; }
@@ -75,9 +77,9 @@ const bearingOf = (gp: ArrayLike<number>, yaw: number, p: ArrayLike<number>) => 
 const distXZ = (a: ArrayLike<number>, b: ArrayLike<number>) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 /** The one staging: A (Kowalski) planted at `at` facing `yaw` on the scripted hold (he walks nowhere), calm; B and C parked deaf on the lot; Sam's hands empty, dark,
  *  unhurtable. `ai` false = nobody perceives anything (the geometry / wording probes: Sam stands in front of the man for as long as the check takes). */
-async function stage(seed: number, o: { ai?: boolean; at?: Vec3; yaw?: number; holdA?: boolean; open?: boolean } = {}) {
+async function stage(seed: number, o: { on?: boolean; ai?: boolean; at?: Vec3; yaw?: number; holdA?: boolean; open?: boolean } = {}) {
   Math.random = mulberry32(seed);
-  const W: any = await standUp(); const g = W.game;
+  const W: any = await standUp(); const g = W.game; CLOSE.on = o.on ?? true;
   g.godMode = true; g.player.visibility = 0.02; g.player.slot = 'pistol'; g.player.holstered = true; if (o.ai === false) g.aiEnabled = false;
   for (let i = 0; i < 5; i++) W.step(DT);
   const [A, B, C] = g.guards; const at = o.at ?? LOBBY;
@@ -107,8 +109,8 @@ const far = (S: any, frames = 1) => { S.g.teleportPlayer([LOBBY[0], 0, LOBBY[2] 
 function feedMeter(g: any) { const pl = g.player, c = pl.char; const pc = c.bones.chest ?? [c.pos[0], 1.0, c.pos[2]], ph = c.bones.head ?? [c.pos[0], 1.4, c.pos[2]]; const E = Math.max(lightEstimateAt(g, pc), lightEstimateAt(g, ph)); pl.visibility += (g.visibilityOf(E) - pl.visibility) * Math.min(1, DT * 6); }
 
 // ================================================================ (1) the table
-export async function closeWindowsProbe(): Promise<boolean> {
-  console.log('\n=== close-windows: the windows round a man — every bearing in exactly one, behind = the build\'s own cosine, the sides mirrored, a seated man, a civilian, the knob table ===');
+export async function closeWindowsProbe(): Promise<boolean> { return keepClose(async () => {
+  console.log('\n=== close-windows: the windows round a man — every bearing in exactly one, behind = the build\'s own cosine, the sides mirrored, the switches, a seated man, a civilian ===');
   allPass = true; const S = await stage(1101, { ai: false }), { W, g, A } = S;
   g.teleportPlayer([LOBBY[0], 0, LOBBY[2] - 6]); W.step(DT);
   const N = 1440, bs: number[] = []; for (let i = 0; i < N; i++) bs.push((-180 + (i + 0.5) * 360 / N) * DEG);   // (a quarter of a degree apart, offset half a step: no sample ON an edge)
@@ -129,6 +131,13 @@ export async function closeWindowsProbe(): Promise<boolean> {
     const wantBehind = bs.filter(b => Math.cos(b) < -0.25).length;
     verdict(!fails.length, 'standing staff man: 1440 bearings, each in exactly one window; behind is exactly cos(b) < −0.25 and ALONE carries the grab; the sides and the front carry the strike; left and right mirror each other',
       `${w.map((x: any) => `${x.id}/${x.kind} mid ${dg(x.mid)} ±${dg(x.half)} reach ${x.reach} ${x.grab ? 'grab ' : ''}${x.strike ? 'strike' : ''}`).join(' · ')}\n    bearings: behind ${r.n.behind} (cos < −0.25: ${wantBehind}) · left ${r.n.left} · right ${r.n.right} · front ${r.n.front} · none ${r.n.none ?? 0} · gaps ${r.gap} · overlaps ${r.over}${bad(fails)}`); }
+  { CLOSE.side = false; const r = sweep(), fails: string[] = []; const wantFront = bs.filter(b => Math.cos(b) >= -0.25).length;
+    if (r.wins.length !== 2 || r.gap || r.over || r.behindWrong || (r.n.front ?? 0) !== wantFront || r.n.left || r.n.right) fails.push(`windows ${r.wins.map((x: any) => x.id).join(',')} · front ${r.n.front} of ${wantFront} · gaps ${r.gap} · overlaps ${r.over}`);
+    verdict(!fails.length, 'CLOSE.side off: the front takes the sides\' arc — behind and front, nothing between', `front ${r.n.front} bearings (everything with cos ≥ −0.25: ${wantFront}) · behind ${r.n.behind} · front ±${dg(r.wins.find((x: any) => x.id === 'front')?.half ?? 0)}${bad(fails)}`); CLOSE.side = true; }
+  { CLOSE.front = false; const r = sweep(), fails: string[] = []; const arcN = bs.filter(b => Math.abs(b) < CLOSE.sideFromDeg * DEG).length; let whyBad = 0;
+    for (const b of bs) if (Math.abs(b) < CLOSE.sideFromDeg * DEG) { const o = closeAt(g, A, off(A, b / DEG, 0.5)); if (o.win || o.can || o.why !== 'get behind him') whyBad++; }
+    if (r.wins.length !== 3 || (r.n.none ?? 0) !== arcN || r.n.front || whyBad || r.over) fails.push(`windows ${r.wins.map((x: any) => x.id).join(',')} · none ${r.n.none} of ${arcN} · ${whyBad} of them offering something or worded otherwise`);
+    verdict(!fails.length, 'CLOSE.front off: the front arc gives nothing (no window, \'get behind him\'); the rest as it was', `${arcN} bearings inside ±${CLOSE.sideFromDeg}°: none ${r.n.none ?? 0} · behind ${r.n.behind} · left ${r.n.left} · right ${r.n.right}${bad(fails)}`); CLOSE.front = true; }
   { g.aiEnabled = true; const n = seatDown(S); g.aiEnabled = false; const w = n < 0 ? [] : closeWindows(g, A), fails: string[] = []; const rearFrom = Math.acos(-0.25); let wrong = 0, none = 0;
     if (n < 0) fails.push('he never sat down'); else {
       if (w.length !== 2 || w[0].id !== 'behind' || w[0].kind !== 'seat' || w[1].id !== 'front' || w[1].kind !== 'front') fails.push(`windows ${w.map((x: any) => `${x.id}/${x.kind}`).join(', ')} (want behind/seat + front/front)`);
@@ -143,14 +152,11 @@ export async function closeWindowsProbe(): Promise<boolean> {
         if (w.length !== 1 || w[0].id !== 'behind' || Math.abs(w[0].mid - Math.PI) > 1e-12 || !w[0].grab) fails.push(`${cv.callsign}: ${w.length} windows`);
         else if (w[0].kind === 'behind' && cv.civ.state !== 'cower' && Math.abs(Math.cos(w[0].half) - 0.25) > 1e-12) fails.push(`${cv.callsign}: a standing civilian's rear is ±${dg(w[0].half)}, not the build's`); }
       verdict(!fails.length, 'a civilian: one rear window (the build\'s own arc standing, the wider one at a desk)', rows.join('\n    ') + bad(fails)); } }
-  { const K = await import(`${ROOT}/src/game/knobs.ts`), reg = K.knobRegistry(), inJ = K.JOURNAL_KNOBS.includes('CLOSE'), same = reg.CLOSE === CLOSE; let back = false;
-    { const c = K.knobsCopy(), was = CLOSE.strikeDist; CLOSE.strikeDist = was + 1; (CLOSE.reach as any).behind += 1; K.knobsBack(c); back = CLOSE.strikeDist === was && CLOSE.reach.behind === (JSON.parse(JSON.stringify(CLOSE)).reach.behind) && CLOSE.reach.behind < 1.5; }
-    verdict(same && inJ && back, 'knobRegistry().CLOSE is the table, JOURNAL_KNOBS carries it, and knobsCopy / knobsBack restore it (nested rows too)', `registry is the table: ${same} · in JOURNAL_KNOBS: ${inJ} · a changed strikeDist / reach.behind put back: ${back}`); }
   return allPass;
-}
+}); }
 
 // ================================================================ (2) the offer
-export async function closeOffer(): Promise<boolean> {
+export async function closeOffer(): Promise<boolean> { return keepClose(async () => {
   console.log('\n=== close-offer: closeAt from staged spots — the window, the reach, what is on offer and the row\'s word for why not ===');
   allPass = true; const S = await stage(1102, { ai: false }), { W, g, A, pl } = S;
   g.teleportPlayer([LOBBY[0], 0, LOBBY[2] - 6]); W.step(DT);
@@ -166,8 +172,10 @@ export async function closeOffer(): Promise<boolean> {
     verdict(!fails.length, 'sprinting: nothing from any window, \'stop sprinting\'', `why: ${[...new Set(seen)].join(' | ')}${bad(fails)}`); }
   { A.state = 'alert'; const fails: string[] = [], rows: string[] = [];
     for (const [b, id] of table) { const o = closeAt(g, A, off(A, b, 0.7)); rows.push(`${b}° grab ${o.grab} strike ${o.strike}`); if (o.win?.id !== id || o.grab || !o.strike || !o.can) fails.push(`${b}°: grab ${o.grab} strike ${o.strike} can ${o.can}`); }
-    A.state = 'patrol';
-    verdict(!fails.length, 'an ALERT man: no grab from anywhere, the strike from every window', `${rows.join(' · ')}${bad(fails)}`); }
+    CLOSE.alertStrike = false; const whys: string[] = [];
+    for (const [b] of table) { const o = closeAt(g, A, off(A, b, 0.7)); whys.push(o.why); if (o.grab || o.strike || o.can || o.inReach || o.why !== "not while he's onto you") fails.push(`alertStrike off, ${b}°: can ${o.can} why '${o.why}'`); }
+    CLOSE.alertStrike = true; A.state = 'patrol';
+    verdict(!fails.length, 'an ALERT man: no grab from anywhere, the strike from every window; with alertStrike off nothing, \'not while he is onto you\'', `${rows.join(' · ')}\n    alertStrike off: ${[...new Set(whys)].join(' | ')}${bad(fails)}`); }
   { // a wall between: the south outer wall, the man half a metre off its outside face with his back to it; the spot behind him inside his reach is beyond the wall
     const hit = g.col.raycast([STRIP_X, 1.0, 2], [0, 0, 1], 6), back = g.col.raycast([STRIP_X, 1.0, 8], [0, 0, -1], 6); if (!hit || !back) throw new Error('close-offer: the south wall is not where the probe expects it');
     const near = 2 + hit.t, far = 8 - back.t; place(A, [STRIP_X, 0, near - 0.5], Math.PI);   // (facing south: the wall is at his back)
@@ -178,19 +186,41 @@ export async function closeOffer(): Promise<boolean> {
     verdict(!fails.length, 'a wall between (he stands 0.5 m off the outer wall, Sam\'s spot inside his rear reach on its far side): in reach, NOT clear, nothing on offer; his own side is clear',
       `wall z ${f2(near)} … ${f2(far)} · the spot ${f2(d)} m dead astern of him: reach ${through.inReach} clear ${through.clear} can ${through.can} '${through.why}' · in front ${f2(control.dist)} m: clear ${control.clear} · beside 0.70 m: clear ${side.clear}${bad(fails)}`); }
   return allPass;
-}
+}); }
 
 // ================================================================ (3) the rows
-export async function closeRowsProbe(): Promise<boolean> {
-  console.log('\n=== close-rows: what a real frame puts on the panel for an alert man ===');
-  allPass = true; const S = await stage(1103, { ai: false }), { g, A } = S;
+export async function closeRowsProbe(): Promise<boolean> { return keepClose(async () => {
+  console.log('\n=== close-rows: what a real frame puts on the panel — behind, a side, the front; the two buttons\' words; the pistol drawn; CLOSE.lethal off; the build\'s own row with the switch off ===');
+  allPass = true; const S = await stage(1103, { ai: false }), { g, A, pl } = S; const TWO = 'LMB  knife — lethal  ·  RMB  knock him out';
   const show = (r: any) => r ? `[${r.verb ?? '—'}] "${r.line2}" reach ${r.inReach} close ${r.close}` : 'no row';
+  { const at = samAt(S, 180, 0.8), rows = rowsOf(g, A), r = rows.find((x: any) => x.verb === 'grab'), mk = markerOf(g, A), fails: string[] = [];
+    if (!r || r.line2 !== `Space  grab him  ·  ${TWO}`) fails.push(`row: ${show(r)}`);
+    if (mk?.close !== 'behind' || !mk?.inReach || r?.close !== 'behind') fails.push(`marker close ${mk?.close} inReach ${mk?.inReach}`); if (rows.length !== 1) fails.push(`${rows.length} rows for him`);
+    verdict(!fails.length, `behind (0.8 m): one row — 'Space  grab him  ·  ${TWO}', the marker says behind`, `${dg(at.b)} ${f2(at.d)} m · ${show(r)} · marker "${mk?.line1}"${bad(fails)}`); }
+  for (const [b, kind, word] of [[77, 'side', 'side on'], [-77, 'side', 'side on'], [0, 'front', 'facing you']] as const) { const at = samAt(S, b, 0.7), rows = rowsOf(g, A), withVerb = rows.filter((x: any) => x.verb), r = rows.find((x: any) => !x.verb && x.inReach), mk = markerOf(g, A), fails: string[] = [];
+    if (withVerb.length) fails.push(`a Space row: ${withVerb.map(show).join(' ; ')}`); if (rows.length !== 1 || !r || r.line2 !== `${TWO}  ·  the grab is from behind`) fails.push(`rows: ${rows.map(show).join(' ; ') || 'none'}`);
+    if (r?.close !== kind || mk?.close !== kind || !(mk?.line1 ?? '').includes(word)) fails.push(`close ${r?.close} / marker ${mk?.close} "${mk?.line1}"`); if (g.selectVerb('guard', 'grab')) fails.push('selectVerb(guard, grab) found a row');
+    verdict(!fails.length, `${b === 0 ? 'the front' : `his ${b > 0 ? 'left' : 'right'} side`} (0.7 m): NO Space row — one line in reach, '${TWO}  ·  the grab is from behind', the marker says '${word}'`, `${dg(at.b)} ${f2(at.d)} m · ${show(r)} · marker "${mk?.line1}"${bad(fails)}`); }
+  { pl.holstered = false; const at = samAt(S, 180, 0.8), r = rowsOf(g, A).find((x: any) => x.verb === 'grab'), fails: string[] = [];
+    if (!pl.pistolUp) fails.push('staging: the pistol is not up'); if (!r || r.line2 !== 'Space  grab him — pistol to his head  ·  E  holster for the knife / the knockout') fails.push(`row: ${show(r)}`);
+    samAt(S, 0, 0.7); const fr = rowsOf(g, A).find((x: any) => !x.verb && x.inReach); if (!fr || fr.line2 !== 'E  holster for the knife / the knockout  ·  the grab is from behind') fails.push(`front, pistol up: ${show(fr)}`);
+    pl.holstered = true;
+    verdict(!fails.length, 'the pistol drawn: behind → \'grab him — pistol to his head\' · \'E  holster for the knife / the knockout\'; in front → the holster line alone', `${dg(at.b)} · behind: ${show(r)}\n    front: ${show(fr)}${bad(fails)}`); }
+  { CLOSE.lethal = false; const fails: string[] = [], rows: string[] = [];
+    for (const [b, d, want] of [[180, 0.8, 'Space  grab him  ·  LMB  takedown — silent'], [77, 0.7, 'LMB  strike — quiet  ·  the grab is from behind'], [0, 0.7, 'LMB  strike — he gets a sound out  ·  the grab is from behind']] as const) { samAt(S, b, d); const r = rowsOf(g, A).find((x: any) => x.inReach); rows.push(`${b}°: "${r?.line2}"`); if (r?.line2 !== want) fails.push(`${b}°: "${r?.line2}" (want "${want}")`); }
+    CLOSE.lethal = true;
+    verdict(!fails.length, 'CLOSE.lethal off: the one-button words — takedown behind, strike — quiet at a side, strike — he gets a sound out in front', rows.join(' · ') + bad(fails)); }
   { A.state = 'alert'; samAt(S, 0, 0.7); const mk = markerOf(g, A), r = rowsOf(g, A).find((x: any) => x.inReach), fails: string[] = []; if (!/guard · alert/.test(mk?.line1 ?? '') || !r || r.verb) fails.push(`marker "${mk?.line1}" · ${show(r)}`); A.state = 'patrol';
     verdict(!fails.length, 'an alert man in reach: the marker says alert, the one line is the blow\'s (no Space row)', `marker "${mk?.line1}" · ${show(r)}${bad(fails)}`); }
+  { CLOSE.on = false; const at = samAt(S, 77, 0.7), rows = rowsOf(g, A), mk = markerOf(g, A), fails: string[] = [];
+    if (rows.length) fails.push(`rows with the switch off at his side: ${rows.map(show).join(' ; ')}`); if (!mk || mk.inReach || mk.line2 !== 'get behind him' || mk.close !== undefined) fails.push(`marker: "${mk?.line2}" inReach ${mk?.inReach} close ${mk?.close}`);
+    const b = samAt(S, 180, 0.8), rb = rowsOf(g, A).find((x: any) => x.verb === 'grab'); if (!rb || !/^Space\s+grab him\s+·\s+LMB\s+takedown — silent$/.test(rb.line2) || rb.close !== undefined) fails.push(`switch off, behind: ${show(rb)}`);
+    CLOSE.on = true;
+    verdict(!fails.length, 'CLOSE.on off: at his side nothing in reach, the marker reads \'get behind him\' and carries no way in; behind him the build\'s own row', `side ${dg(at.b)} ${f2(at.d)} m: marker "${mk?.line1}" / "${mk?.line2}" close ${mk?.close} · behind ${dg(b.b)}: ${show(rb)}${bad(fails)}`); }
   return allPass;
-}
+}); }
 // ================================================================ (4) the mode
-export async function closeModeProbe(): Promise<boolean> {
+export async function closeModeProbe(): Promise<boolean> { return keepClose(async () => {
   console.log('\n=== close-mode: "the animation changes when you enter the mode" — on by distance from every side, off through a wall and for every state that has his body, the nearer of two men ===');
   allPass = true; const S = await stage(1111, { ai: false }), { W, g, A, B, pl } = S, an = pl.char.anim;
   const lineP = (a: number, d: number): Vec3 => [LOBBY[0] + Math.sin(a) * d, 0, LOBBY[2] + Math.cos(a) * d];
@@ -239,11 +269,11 @@ export async function closeModeProbe(): Promise<boolean> {
     const fails: string[] = [], rows: string[] = []; far(S); samAt(S, 180, 2.0); if (!look().on) fails.push('staging: not in the mode 2 m behind him');
     const set = (o: any, k: string, v: any) => () => { const was = o[k]; o[k] = v; return () => { o[k] = was; }; };
     const sup: [string, () => () => void][] = [['a show (g.touring)', set(g, 'touring', true)], ['Sam down', set(pl, 'down', true)], ['a man in his arm (holding)', set(pl, 'holding', {})], ['a body in tow (dragging)', set(pl, 'dragging', {})],
-      ['the kick', set(pl, 'kick', {})], ['at a lock (picking)', set(pl, 'picking', {})], ['sprinting', set(pl, 'sprinting', true)], ['back to the wall', set(pl, 'wall', {})],
+      ['the kick', set(pl, 'kick', {})], ['at a lock (picking)', set(pl, 'picking', {})], ['sprinting', set(pl, 'sprinting', true)], ['back to the wall', set(pl, 'wall', {})], ['CLOSE.mode off', set(CLOSE, 'mode', false)],
       ['the rifle up', () => { const s = pl.slot, h = pl.holstered; pl.slot = 'rifle'; pl.holstered = false; if (!pl.rifleUp) fails.push('staging: the rifle is not up'); return () => { pl.slot = s; pl.holstered = h; }; }]];
     for (const [what, put] of sup) { const undo = put(); closeTick(g); const offNow = closeMode(g) === null && !an.creep && an.creepAt === null; undo(); closeTick(g); const back = look().on && an.creep;
       rows.push(`${what}: ${offNow ? 'off' : 'ON'}`); if (!offNow) fails.push(`${what}: still in the mode (creep ${an.creep})`); if (!back) fails.push(`${what}: not back in the mode once it is over`); }
-    verdict(!fails.length, 'not in the mode — and anim.creep down with it — under a show, down, with a man in the arm, a body in tow, in a kick, at a lock, sprinting, on the wall, with the rifle up; back the tick each ends', rows.join(' · ') + bad(fails)); }
+    verdict(!fails.length, 'not in the mode — and anim.creep down with it — under a show, down, with a man in the arm, a body in tow, in a kick, at a lock, sprinting, on the wall, with the rifle up, with CLOSE.mode off; back the tick each ends', rows.join(' · ') + bad(fails)); }
   { // the nearer of two men
     const fails: string[] = []; far(S); place(A, LOBBY, EAST); place(B, lineP(LINE, 3.4), EAST);
     g.teleportPlayer(lineP(LINE, 2.0)); W.step(DT); const m1 = closeMode(g), s1 = closeSummary(g); g.teleportPlayer(lineP(LINE, 1.2)); W.step(DT); const m2 = closeMode(g), s2 = closeSummary(g);
@@ -258,10 +288,10 @@ export async function closeModeProbe(): Promise<boolean> {
     if (!tapped || !held.holding) fails.push('staging: the grab took nobody'); else if (held.mode || held.creep || held.ready) fails.push(`with him in the arm: mode ${held.mode?.callsign ?? 'off'}, creep ${held.creep}, ready ${held.ready}`);
     verdict(!fails.length, 'through real frames: the rifle brought up → out of the mode, slung again → back in; a man taken in the arm → out of the mode, no tell', `rifle up: mode ${rifle.on ? 'on' : 'off'} · slung: ${on1 ? 'on' : 'off'} · holding: mode ${held.mode ? 'on' : 'off'} creep ${held.creep} ready ${held.ready}${bad(fails)}`); }
   return allPass;
-}
+}); }
 
 // ================================================================ (5) the tell
-export async function closeTell(): Promise<boolean> {
+export async function closeTell(): Promise<boolean> { return keepClose(async () => {
   console.log('\n=== close-tell: "the character changes when you\'re close enough to do a melee attack" — the hand goes to the knife at every bearing in reach; "sam doesn\'t pull out his knife … just reaches for it" ===');
   allPass = true; const S = await stage(1112, { ai: false }), { W, g, A, pl } = S, an = pl.char.anim; const hasReach = 'reachShown' in an;
   const IN = 30, OUT = 36;   // (0.5 s · 0.6 s)
@@ -287,13 +317,16 @@ export async function closeTell(): Promise<boolean> {
       rows.push(`${b}° ${an.ready ?? 'null'}`); if (!pl.pistolUp) fails.push('staging: the pistol is not up'); if (wrong) fails.push(`${b}°: ${wrong} frames not ${want}`); if (reach > 0.1) fails.push(`${b}°: reachShown ${f2(reach)} with the pistol up`); if (knife) fails.push(`${b}°: knifeShown on ${knife} frames`); }
     pl.holstered = true;
     verdict(!fails.length, 'the pistol up: \'grabGun\' behind him (the free hand only), nothing from a side or the front; no hand on the hilt, no knife', rows.join(' · ') + bad(fails)); }
+  { const fails: string[] = []; far(S, 50); CLOSE.ready = false; samAt(S, 180, 0.8, 3); const a = an.ready; samAt(S, 0, 0.8, 3); const b = an.ready; CLOSE.ready = true; samAt(S, 0, 0.8, 2); const c = an.ready;
+    if (a || b) fails.push(`CLOSE.ready off: ${a} behind, ${b} in front`); if (c !== 'strike') fails.push(`on again: ${c}`);
+    verdict(!fails.length, 'CLOSE.ready off: no tell behind him or in front; on again: back', `off: ${a ?? 'null'} / ${b ?? 'null'} · on: ${c}${bad(fails)}`); }
   { const S2 = await stage(1112, {}), g2 = S2.g, an2 = g2.player.char.anim, n = seatDown(S2); S2.pl.holstered = true; samAt(S2, 180, 1.0, 2); const k = an2.ready, fails: string[] = []; let up = -1, knife = 0;
     for (let f = 1; f <= IN; f++) { S2.W.step(DT); g2.player.visibility = 0.02; if (hasReach && up < 0 && an2.reachShown >= 0.9) up = f; if (an2.knifeShown) knife++; }
     if (n < 0) fails.push('he never sat down'); if (k !== 'seat') fails.push(`anim.ready ${k}`); if (hasReach && up < 0) fails.push('reachShown never ≥ 0.9'); if (knife) fails.push(`knifeShown on ${knife} frames (${WAIT})`);
     samAt(S2, 0, 0.8, 2); const front = an2.ready; if (closeSeated(g2, S2.A) && front !== 'strike') fails.push(`in front of the chair: ${front}`);
     verdict(!fails.length, 'a seated man: \'seat\' from behind the chair (1.0 m), \'strike\' from in front of it', `sat in ${n} frames · behind ${k} · hand on the hilt at frame ${hasReach ? up : `— (${WAIT})`} · in front ${front}${closeSeated(g2, S2.A) ? '' : ' (he had stood up by then: not judged)'}${bad(fails)}`); }
   return allPass;
-}
+}); }
 
 // ================================================================ (6) melee
 /** One blow through the real click (button 1 = the left, 4 = the right): Sam on his spot (one settled frame — the row), the click, 100 frames. `pre` runs between the two. */
@@ -335,32 +368,47 @@ function judgeBlow(r: any, lethal: boolean, kind: string, o: { books?: boolean, 
   return fails;
 }
 const blowLine = (r: any) => `${dg(r.at.b).padStart(7)} ${f2(r.at.d)} m ${(r.td0?.kind ?? 'no blow').padEnd(6)} → ${r.dead ? `${r.down}${r.breathing ? ', breathing' : ', dead'} at frame ${r.deadAt}` : 'not down'} · fall [${r.ev.map((e: any) => e.level).join(', ')}] · card k+${r.kills} ko+${r.kos} · ${r.rows.filter((e: any) => /kill|ko/i.test(e.kind)).map((e: any) => e.text.replace(/^.*· /, '')).join(' ; ') || 'no row'} · Sam ${f2(r.endD)} m off, moved ${f2(r.slid)} · knife out ${r.knife0 < 0 ? 'never' : `frames ${r.knife0}‥${r.knife1}`}`;
-export async function closeMelee(): Promise<boolean> {
-  console.log('\n=== close-melee: "melee attacks work from all angles" — the right click is the knockout, at every 30° ===');
-  allPass = true;
-  const sweep: any[] = [];
-  { const rows: string[] = [], fails: string[] = [];
-    for (const b of ROUND) { const S = await stage(1104, {}), r = blow(S, b, 0.75, 4), kind = kindAt(b); sweep.push(r); rows.push(blowLine(r));
-      for (const x of judgeBlow(r, false, kind)) fails.push(`${b}°: ${x}`); }
-    verdict(!fails.length, 'the RIGHT click, hands empty, from every 30° round him: the knockout — out cold (\'struck\', breathing), knockouts +1, a \'ko\' row, blows.knockout +1', rows.join('\n    ') + bad(fails)); }
-  { const fk: string[] = [];
-    for (const r of sweep) if (r.knife0 >= 0) fk.push(`${dg(r.at.b)}: out on frames ${r.knife0}‥${r.knife1} of a knockout`);
+export async function closeMelee(): Promise<boolean> { return keepClose(async () => {
+  console.log('\n=== close-melee: "melee attacks work from all angles" · "lethal vs. nonlethal … the player choice" — the left click is the knife, the right click the knockout, at every 30° ===');
+  allPass = true; const WORDS = 'LMB  knife — lethal  ·  RMB  knock him out';
+  const sweep: Record<number, any[]> = { 1: [], 4: [] };
+  for (const button of [1, 4] as const) { const lethal = button === 1, rows: string[] = [], fails: string[] = [];
+    for (const b of ROUND) { const S = await stage(1104, {}), r = blow(S, b, 0.75, button), kind = kindAt(b); sweep[button].push(r); rows.push(blowLine(r));
+      for (const x of judgeBlow(r, lethal, kind)) fails.push(`${b}°: ${x}`);
+      const line = r.row?.line2 ?? ''; if (kind === 'behind' ? !(r.row?.verb === 'grab' && line.endsWith(WORDS)) : line !== `${WORDS}  ·  the grab is from behind`) fails.push(`${b}°: the row reads "${line}"`); }
+    verdict(!fails.length, lethal ? 'the LEFT click, hands empty, from every 30° round him: the knife — dead (\'shot\', not breathing), kills +1, a \'kill\' row "killed — the knife", blows.knife +1; the fall heard by the way in; Sam never through him'
+      : 'the RIGHT click, hands empty, from every 30° round him: the knockout — out cold (\'struck\', breathing), knockouts +1, a \'ko\' row, blows.knockout +1', rows.join('\n    ') + bad(fails)); }
+  { const fl: string[] = [], fk: string[] = [];
+    for (const r of sweep[1]) { if (r.knife0 < 0) fl.push(`${dg(r.at.b)}: never out during the lethal blow`); else if (r.deadAt >= 0 && r.knife1 > r.deadAt + 60) fl.push(`${dg(r.at.b)}: still out ${r.knife1 - r.deadAt} frames after he is down`); }
+    for (const r of sweep[4]) if (r.knife0 >= 0) fk.push(`${dg(r.at.b)}: out on frames ${r.knife0}‥${r.knife1} of a knockout`);
+    verdict(!fl.length, `the knife is drawn IN the lethal blow: anim.knifeShown true at some frame of it, false again within a second of him going down${fl.length ? ` — ${WAIT}` : ''}`, fl.length ? `player.ts startTakedown asks anim.strike(kind, true); the animator's strike() does not take the second argument yet${bad(fl)}` : sweep[1].map((r: any) => `${dg(r.at.b)} ${r.knife0}‥${r.knife1}`).join(' · '));
     verdict(!fk.length, 'the knockout never shows the knife', fk.length ? bad(fk) : 'never out at any bearing'); }
-  { const S = await stage(1104, { ai: false }); S.A.state = 'alert'; S.A.awareness = 1; const r = blow(S, 0, 0.75, 4), fails = judgeBlow(r, false, 'front');
+  for (const button of [1, 4] as const) { const S = await stage(1104, { ai: false }); S.A.state = 'alert'; S.A.awareness = 1; const r = blow(S, 0, 0.75, button), fails = judgeBlow(r, button === 1, 'front');
     if (!r.td0?.alert) fails.push('staging: the blow\'s own note does not say he was alert'); if (Math.abs(closeNoise('front', true) - (CLOSE.noise.front + CLOSE.alertNoise)) > 1e-12) fails.push('closeNoise(front, alert) is not noise.front + alertNoise');
-    verdict(!fails.length, `an ALERT man facing Sam, the right click: struck all the same, and louder (${CLOSE.noise.front} + ${CLOSE.alertNoise})`, blowLine(r) + bad(fails)); }
+    verdict(!fails.length, `an ALERT man facing Sam, the ${button === 1 ? 'left' : 'right'} click (alertStrike on): struck all the same, and louder (${CLOSE.noise.front} + ${CLOSE.alertNoise})`, blowLine(r) + bad(fails)); }
+  { const S = await stage(1104, { ai: false }), { g, A } = S; A.state = 'alert'; A.awareness = 1; CLOSE.alertStrike = false; const fails: string[] = [], rows: string[] = [];
+    for (const [b, button] of [[0, 4], [0, 1], [180, 4], [180, 1]] as const) { const r = blow(S, b, 0.75, button); rows.push(`${b}° ${button === 1 ? 'left' : 'right'}: ${r.td0 ? 'a blow' : 'nothing'}`); if (r.td0 || r.dead || r.row || r.knifeBlows || r.koBlows) fails.push(`${b}° button ${button}: blow ${!!r.td0}, down ${r.dead}, a row in reach ${!!r.row}`); }
+    const why = markerOf(g, A)?.line2; if (why !== "not while he's onto you") fails.push(`his marker reads "${why}"`); CLOSE.alertStrike = true;
+    verdict(!fails.length, 'CLOSE.alertStrike off: an alert man is refused — no row in reach, neither button starts a blow, \'not while he is onto you\'', rows.join(' · ') + bad(fails)); }
+  { const S = await stage(1104, {}), { g } = S; CLOSE.lethal = false; const fails: string[] = []; const right = blow(S, 180, 0.8, 4); const line = right.row?.line2 ?? '';
+    if (right.td0 || right.dead || right.koBlows || right.knifeBlows) fails.push(`the right click: blow ${!!right.td0}, down ${right.dead}`); if (!/LMB  takedown — silent$/.test(line) || /RMB|knife/.test(line)) fails.push(`the row reads "${line}"`); if (closeLethal(g)) fails.push('closeLethal true');
+    const left = blow(S, 180, 0.8, 1); for (const x of judgeBlow(left, false, 'behind')) fails.push(`the left click: ${x}`); CLOSE.lethal = true;
+    verdict(!fails.length, 'CLOSE.lethal off: the right click does nothing, the left click is the knockout, the row is the one-button one', `row "${line}" · right: ${right.td0 ? 'a blow' : 'nothing'} · left: ${blowLine(left)}${bad(fails)}`); }
+  { const S = await stage(1104, { ai: false }), { g } = S; let said = true; const r = blow(S, 180, 0.8, 1, S.A, () => { g.touring = true; said = closeLethal(g); }); g.touring = false; const fails = judgeBlow(r, false, 'behind', { books: false, takes: false });   // under a show nothing of the mode runs: no tally either
+    if (said) fails.push('closeLethal true under g.touring');
+    verdict(!fails.length, 'under a show (g.touring): closeLethal is false and the left click is the knockout', blowLine(r) + bad(fails)); }
   { const fails: string[] = [], rows: string[] = []; let who = '';
-    for (const button of [4] as const) { const S = await stage(1104, {}), cv = (S.g.civilians ?? []).find((x: any) => x.civ && !closeSeated(S.g, x) && x.state !== 'dead'); if (!cv) { fails.push('staging: no standing civilian on this stand'); break; } who = cv.callsign;
-      const r = blow(S, 180, 0.8, button, cv); rows.push(`right: ${r.td0 ? `lethal ${r.td0.lethal}` : 'no blow'} → ${r.dead ? `${r.down}, breathing ${r.breathing}` : 'not down'} · kills +${r.kills} · blows knife +${r.knifeBlows} knockout +${r.koBlows} · rows ${r.rows.map((e: any) => e.kind).join(', ')}`);
+    for (const button of [1, 4] as const) { const S = await stage(1104, {}), cv = (S.g.civilians ?? []).find((x: any) => x.civ && !closeSeated(S.g, x) && x.state !== 'dead'); if (!cv) { fails.push('staging: no standing civilian on this stand'); break; } who = cv.callsign;
+      const r = blow(S, 180, 0.8, button, cv); rows.push(`${button === 1 ? 'left' : 'right'}: ${r.td0 ? `lethal ${r.td0.lethal}` : 'no blow'} → ${r.dead ? `${r.down}, breathing ${r.breathing}` : 'not down'} · kills +${r.kills} · blows knife +${r.knifeBlows} knockout +${r.koBlows} · rows ${r.rows.map((e: any) => e.kind).join(', ')}`);
       if (Math.abs(r.at.d - 0.8) > 0.05) fails.push(`staging: Sam ${f2(r.at.d)} m behind her`); if (!r.td0 || r.td0.lethal) fails.push(`button ${button}: ${r.td0 ? 'a LETHAL blow' : 'no blow'}`); if (!r.dead || r.down !== 'struck' || !r.breathing) fails.push(`button ${button}: she is ${r.dead ? `'${r.down}', breathing ${r.breathing}` : 'not down'}`);
       if (r.kills || r.knifeBlows || r.rows.some((e: any) => e.kind === 'kill')) fails.push(`button ${button}: a kill on the books`); if (r.koBlows !== 1) fails.push(`button ${button}: blows.knockout +${r.koBlows}`); }
-    verdict(!fails.length, 'a CIVILIAN from behind: the right click puts her out cold — never a kill', `${who}: ${rows.join('\n    ')}${bad(fails)}`); }
+    verdict(!fails.length, 'a CIVILIAN from behind: either button puts her out cold — never the knife, never a kill', `${who}: ${rows.join('\n    ')}${bad(fails)}`); }
   { const S = await stage(1104, { ai: false }), { pl, A } = S; pl.holstered = false; const fails: string[] = [], rows: string[] = [];
     for (const [b, button] of [[180, 4], [0, 4], [180, 1], [0, 1]] as const) { const r = blow(S, b, 0.75, button); rows.push(`${b}° ${button === 1 ? 'left' : 'right'}: ${r.td0 ? 'a blow' : 'no blow'}`);
       if (!pl.pistolUp) fails.push('staging: the pistol is not up'); if (r.td0 || r.knifeBlows || r.koBlows || Object.values(r.takes).some(n => n)) fails.push(`${b}° button ${button}: a blow with the pistol up`); if (A.downKind === 'struck') fails.push(`${b}° button ${button}: he was struck`); }
     verdict(!fails.length, 'the pistol up: neither button starts a blow (the left click is a round, as ever)', rows.join(' · ') + bad(fails)); }
   return allPass;
-}
+}); }
 
 // ================================================================ (7) the grab
 /** Space on his grab row; the frames until 'held' */
@@ -375,7 +423,7 @@ function grabRun(S: any, bDeg: number, d: number) {
 function spaceNothing(S: any) { const { W, g, A, pl } = S; const sel = g.selectVerb('guard', 'grab'); W.input.pressed.add(IK); W.step(DT); const tap = !!pl.holding || !!pl.takedown;
   W.input.keys.add(IK); W.input.pressed.add(IK); for (let i = 0; i < 30; i++) W.step(DT); W.input.keys.delete(IK); for (let i = 0; i < 5; i++) W.step(DT); if (pl.sel?.open) { W.input.pressed.add('Escape'); W.step(DT); }
   return { sel, started: tap || !!pl.holding || !!pl.takedown || !!A.held || A.state === 'dead' }; }
-export async function closeGrab(): Promise<boolean> {
+export async function closeGrab(): Promise<boolean> { return keepClose(async () => {
   console.log('\n=== close-grab: "grabbing only works from behind" — the grab row and Space at every 30° (and each side of the arc\'s edge); a seated man ===');
   allPass = true; const EDGE = Math.acos(-0.25) / DEG;   // 104.48°
   { const S = await stage(1105, { ai: false }), { g, A } = S, fails: string[] = [], rows: string[] = [];
@@ -389,9 +437,10 @@ export async function closeGrab(): Promise<boolean> {
       if (!r.row || !/^Space\s+grab him\s+·/.test(r.row.line2) || r.row.close !== 'behind') fails.push(`${b}°: row "${r.row?.line2}" close ${r.row?.close}`); if (!r.tapped || !r.H || !r.held) fails.push(`${b}°: Space took nobody`); else if (r.heldAt < 0 || r.heldAt > 60) fails.push(`${b}°: 'held' at frame ${r.heldAt}`);
       for (const k of Object.keys(r.grabs)) if (r.grabs[k] !== (k === 'behind' && r.H ? 1 : 0)) fails.push(`${b}°: CLOSE_STATS.grabs.${k} moved by ${r.grabs[k]}`); if (S.pl.takedown || S.A.state === 'dead') fails.push(`${b}°: Space struck him`); }
     verdict(!fails.length, 'inside the rear arc (every 30° of it, and 106° each hand): the grab row, Space takes him — \'held\' inside a second, grabs.behind +1', rows.join(' · ') + bad(fails)); }
-  { const on = grabRun(await stage(1105, {}), 180, 0.8), want = Math.round(HOLD.secs.grab / DT), fails: string[] = [];
-    if (!on.H) fails.push('the tap took nobody'); if (Math.abs(on.heldAt - want) > 1) fails.push(`'held' at frame ${on.heldAt} (HOLD.secs.grab ${HOLD.secs.grab} s = ${want})`);
-    verdict(!fails.length, 'from straight behind: \'held\' on HOLD.secs.grab', `held at frame ${on.heldAt} (${HOLD.secs.grab} s = ${want})${bad(fails)}`); }
+  { const on = grabRun(await stage(1105, {}), 180, 0.8), offR = grabRun(await stage(1105, { on: false }), 180, 0.8), want = Math.round(HOLD.secs.grab / DT), fails: string[] = [];
+    if (!on.H || !offR.H) fails.push(`the tap took nobody (on ${on.H}, off ${offR.H})`); if (on.heldAt !== offR.heldAt || Math.abs(on.heldAt - want) > 1) fails.push(`'held' at frame ${on.heldAt} with the switch on, ${offR.heldAt} off (HOLD.secs.grab ${HOLD.secs.grab} s = ${want})`);
+    const worst = Math.max(...on.tr.map((x, i) => offR.tr[i] !== undefined ? Math.abs(x - offR.tr[i]) : 1)); if (worst > 1e-9) fails.push(`Sam's distance off him on the way in differs from the switch-off grab by ${worst} m`);
+    verdict(!fails.length, 'from straight behind the grab is the build\'s own: \'held\' on HOLD.secs.grab, Sam\'s way in the switch-off grab\'s to the bit', `held at frame ${on.heldAt} (off: ${offR.heldAt}; ${HOLD.secs.grab} s = ${want}) · largest difference ${worst} m${bad(fails)}`); }
   { const fails: string[] = [], rows: string[] = [];
     for (const b of [180, 120, -120]) { const S = await stage(1105, {}), n = seatDown(S), r = grabRun(S, b, 1.15); rows.push(`${b}° ${f2(r.at.d)} m: ${r.H ? `held at frame ${r.heldAt}` : 'NOTHING'}`);
       if (n < 0) fails.push(`${b}°: he never sat down`); if (!(r.at.d > CLOSE.reach.behind && r.at.d < CLOSE.reach.seat)) fails.push(`staging ${b}°: ${f2(r.at.d)} m is not between the standing reach and the seat's`);
@@ -402,14 +451,14 @@ export async function closeGrab(): Promise<boolean> {
       if (gr || s.sel || s.started || o.grab) fails.push(`seated, ${b}°: grab row ${!!gr}, offer.grab ${o.grab}, Space started ${s.started}`); if (o.win?.kind !== 'front' || !o.strike) fails.push(`seated, ${b}° ${f2(at.d)} m: the window is ${o.win?.kind}, strike ${o.strike}`); if (!closeSeated(g, A)) fails.push(`seated, ${b}°: he is no longer sitting`); }
     verdict(!fails.length, 'a SEATED man: hauled out of the chair from the rear arc at 1.15 m (beyond the standing reach) at 180° and ±120°; from his front (0°, 60°, −90°, 100°) no grab row, Space starts nothing, the strike is on', rows.join('\n    ') + bad(fails)); }
   return allPass;
-}
+}); }
 
 // ================================================================ (8) the held sneak
 const HELD_KEYS = ['footL', 'footR', 'toeL', 'toeR', 'handL', 'handR'];
 /** Sam crouched on a puppet goal east past the man (1.2 m off his left side: outside every window's reach — no tell in the arms), the goal dropped at four
  *  places and put back. Each stop: the frame the ROOT comes to rest, then the phase and the bones (off the root) 0 / 10 / 30 / 90 frames on. */
-async function heldWalk() {
-  const S = await stage(1113, { ai: false }), { W, g, A, pl } = S, c = pl.char, an = c.anim;
+async function heldWalk(mode: boolean) {
+  const S = await stage(1113, { ai: false }), { W, g, A, pl } = S, c = pl.char, an = c.anim; CLOSE.mode = mode;
   const Z = LOBBY[2] + 1.2, from: Vec3 = [LOBBY[0] - 1.9, 0, Z], goal: Vec3 = [LOBBY[0] + 1.8, 0, Z], STOPS = [-1.2, -0.6, 0, 0.6].map(x => LOBBY[0] + x);
   g.teleportPlayer(from); const exact = distXZ(c.pos, from) < 1e-6; c.bodyYaw = c.aimYaw = EAST; pl.crouch = true; an.crouchTarget = 1;
   g.puppet = { goal: null, aim: [goal[0] + 2, 1, Z], crouch: true };
@@ -427,12 +476,12 @@ async function heldWalk() {
   return { stops, ref, frames, inMode, ready, exact, crouched: pl.crouch };
 }
 const boneGap = (a: number[][], b: number[][], n = a.length) => { let m = 0; for (let i = 0; i < n; i++) m = Math.max(m, Math.hypot(a[i][0] - b[i][0], a[i][1] - b[i][1], a[i][2] - b[i][2])); return m; };
-export async function closeHeld(): Promise<boolean> {
-  console.log('\n=== close-held: "pausing movement sticks in the current position, not reverting back to an idle state" — the sneak stopped four times in one walk past a man ===');
-  allPass = true; const on = await heldWalk();
+export async function closeHeld(): Promise<boolean> { return keepClose(async () => {
+  console.log('\n=== close-held: "pausing movement sticks in the current position, not reverting back to an idle state" — the sneak stopped four times in one walk past a man, the mode on and off ===');
+  allPass = true; const on = await heldWalk(true), offR = await heldWalk(false);
   const spread = (r: any) => { let m = 0; for (const a of r.stops) for (const b of r.stops) m = Math.max(m, boneGap(a.s90.rel, b.s90.rel, 4)); return m; };   // (feet and toes only)
   { const fails: string[] = []; if (!on.exact || !on.crouched) fails.push('staging: Sam is not on his start, crouched'); if (on.stops.length !== 4 || on.stops.some((s: any) => s.rest < 0)) fails.push(`staging: ${on.stops.filter((s: any) => s.rest >= 0).length} of 4 stops came to rest`);
-    if (on.inMode !== on.frames) fails.push(`in the mode (closeMode on the man, anim.creep) on ${on.inMode} of ${on.frames} frames`); if (on.ready) fails.push(`a tell pose on ${on.ready} frames (the walk passes outside every reach)`);
+    if (on.inMode !== on.frames) fails.push(`in the mode (closeMode on the man, anim.creep) on ${on.inMode} of ${on.frames} frames`); if (on.ready) fails.push(`a tell pose on ${on.ready} frames (the walk passes outside every reach)`); if (offR.inMode) fails.push('CLOSE.mode off: in the mode all the same');
     verdict(!fails.length, 'the walk: crouched on a puppet goal 1.2 m past his left side, in the mode on every frame, no tell in the arms; four stops, each coming to rest', `${on.frames} frames · stops at x ${on.stops.map((s: any) => f2(s.x)).join(', ')} (the man at ${LOBBY[0]}) · the root at rest ${on.stops.map((s: any) => s.rest).join(' / ')} frames after the goal is dropped, having coasted ${on.stops.map((s: any) => (s.coast * 100).toFixed(1)).join(' / ')} cm (the controller's own run-out: the stride moves on with that ground — phase +${on.stops.map((s: any) => f3(s.coastPh)).join(' / ')} — and stops with it)${bad(fails)}`); }
   { const fails: string[] = [], rows: string[] = [];
     for (const s of on.stops) { const d = Math.max(Math.abs(s.s10.ph - s.s0.ph), Math.abs(s.s30.ph - s.s0.ph), Math.abs(s.s90.ph - s.s0.ph)); rows.push(`x ${f2(s.x)}: phase ${s.s0.ph.toFixed(6)} → ${s.s30.ph.toFixed(6)} → ${s.s90.ph.toFixed(6)}`); if (!(d <= 1e-6)) fails.push(`x ${f2(s.x)}: the phase moved ${d.toExponential(2)} while he stood`); }
@@ -442,23 +491,26 @@ export async function closeHeld(): Promise<boolean> {
     for (const s of on.stops) { const a = boneGap(s.s30.rel, s.s10.rel), b = boneGap(s.s90.rel, s.s10.rel), fa = boneGap(s.s30.rel, s.s10.rel, 4), fb = boneGap(s.s90.rel, s.s10.rel, 4); rows.push(`x ${f2(s.x)}: ${(a * 100).toFixed(2)} / ${(b * 100).toFixed(2)} cm`);
       if (fa > 0.02 || fb > 0.02) fails.push(`x ${f2(s.x)}: a foot / toe ${(Math.max(fa, fb) * 100).toFixed(1)} cm from where it was 10 frames after the stop`); else if (a > handsM || b > handsM) fails.push(`x ${f2(s.x)}: a hand ${(Math.max(a, b) * 100).toFixed(1)} cm from where it was 10 frames after the stop`); }
     verdict(!fails.length, `stopped: both feet, both toes and both hands within 2 cm${KITANIM.on ? ' (the hands 5 cm: kit handling on)' : ''} (30 and 90 frames on) of where they were 10 frames after the stop — breathing apart, nothing eases anywhere`, rows.join(' · ') + bad(fails)); }
-  { const sOn = spread(on), fails: string[] = [];
-    if (!(sOn >= 0.25)) fails.push(`the four held stances differ by at most ${(sOn * 100).toFixed(1)} cm in the feet (want ≥ 25: each stop in the stride it stopped in)`);
-    verdict(!fails.length, 'NOT the idle: the four stops stand in four different strides (feet / toes ≥ 25 cm apart between stops)', `the stops' feet differ by up to ${(sOn * 100).toFixed(1)} cm${bad(fails)}`); }
+  { const sOn = spread(on), sOff = spread(offR), fails: string[] = [], idle = offR.stops[offR.stops.length - 1].s90.rel, vs = on.stops.map((s: any) => boneGap(s.s90.rel, idle, 4));
+    if (!(sOn >= 0.25)) fails.push(`the four held stances differ by at most ${(sOn * 100).toFixed(1)} cm in the feet (want ≥ 25: each stop in the stride it stopped in)`); if (!(sOff <= 0.10)) fails.push(`with CLOSE.mode off the four stops' stances differ by ${(sOff * 100).toFixed(1)} cm in the feet (want ≤ 10: the idle's one stance, give or take which foot the stop left forward)`);
+    if (!(Math.max(...vs) >= 0.08)) fails.push(`no held stance is further than ${(Math.max(...vs) * 100).toFixed(1)} cm from the idle's`);
+    const offPh = offR.stops.map((s: any) => Math.abs(s.s90.ph - s.s10.ph)).reduce((a: number, b: number) => Math.max(a, b), 0);
+    verdict(!fails.length, 'NOT the idle: the four stops stand in four different strides (feet / toes ≥ 25 cm apart between stops) — where with CLOSE.mode off the same four stops all end in the idle\'s one stance (≤ 10 cm)',
+      `mode on: the stops' feet differ by up to ${(sOn * 100).toFixed(1)} cm, and sit ${vs.map((v: number) => (v * 100).toFixed(1)).join(' / ')} cm from the idle crouch · mode off: up to ${(sOff * 100).toFixed(1)} cm between stops\n    (the phase is no witness here: the build's own cycle clock stops with the feet too — mode off it moved ${offPh.toExponential(1)} between 10 and 90 frames; it is the POSE that goes back to the idle there)${bad(fails)}`); }
   { const fails: string[] = [], rows: string[] = [];
     for (const s of on.stops) { const mx = Math.max(...s.resume), mn = Math.min(...s.resume), sum = s.resume.reduce((a: number, b: number) => a + b, 0); rows.push(`x ${f2(s.x)}: first step +${s.resume[0].toFixed(4)}, largest +${mx.toFixed(4)}, 30 frames +${f3(sum)}`);
       if (s.resume.length < 30) fails.push(`x ${f2(s.x)}: only ${s.resume.length} frames walked on`); if (mx > on.ref * 1.1 + 1e-6) fails.push(`x ${f2(s.x)}: a frame's phase step of ${mx.toFixed(4)} on resuming (the walk's own largest: ${on.ref.toFixed(4)})`); if (mn < -1e-9) fails.push(`x ${f2(s.x)}: the phase went back ${mn.toExponential(2)}`); if (!(sum > 0.02)) fails.push(`x ${f2(s.x)}: the stride did not move on (${f3(sum)} in 30 frames)`); }
     verdict(!fails.length, 'resumed: the phase goes on FROM the held value — no frame\'s step above the steady walk\'s own (× 1.1), never back, and the stride does move on', `the walk in: at most +${on.ref.toFixed(4)} a frame · ${rows.join(' · ')}${bad(fails)}`); }
   console.log(`  (the numbers used, off character.ts creepGait / CREEP: the held gait's share comes in over gaitIn 0.2 s and under it the phase is advanced by the ground the ROOT covered (crV) — so 'stopped' is taken from the first frame the root moves less than 1e-9 m, not from the frame the goal is dropped; bones are read off the root, in the world's axes)`);
   return allPass;
-}
+}); }
 
 // ================================================================ (9) the dark
 /** One man on a mark in the break room, Sam crouch-walking a 4 m line past him on a puppet goal with his meter fed from the CPU light estimate. `path` 'front' = across
  *  his front 1.2 m ahead of him, 'side' = down his right side 1.2 m off, front to back. `torch` false = his torch put out every frame (the room's own light alone). */
-async function darkCross(o: { lights: boolean; path: 'front' | 'side'; torch: boolean }) {
+async function darkCross(o: { dark: boolean; lights: boolean; path: 'front' | 'side'; torch: boolean }) {
   Math.random = mulberry32(11);
-  const W: any = await standUp(); const g = W.game;
+  const W: any = await standUp(); const g = W.game; CLOSE.on = true; CLOSE.dark = o.dark;
   g.restartEncounter(); g.playerInvisible = false; g.godMode = true; g.setGroup('breakroom', o.lights);
   const pl = g.player, c = pl.char; pl.slot = 'pistol'; pl.holstered = true; pl.pistol.lightOn = false; pl.nvOn = false;
   { const dw = g.doors.byName('breakroom_w'); if (dw) { dw.angle = 0; dw.vel = 0; dw.latched = true; dw.closing = false; } }   // the room's west door shut for the walk: the shipped stand's one-way leaves (doors.ts oneWay) open this one INTO the room, across Sam's start on the front path — teleported into its sweep he knocks it shut, and that slam (a 'door' event, 0.58, two metres off) is what the man then hears. Shut on both stands, so both walk the same room
@@ -480,9 +532,9 @@ async function darkCross(o: { lights: boolean; path: 'front' | 'side'; torch: bo
  *  puppet path, freezes mid-stride while one of them turns his way, goes on when he has turned back. Their senses are live. */
 const SLITHER = { men: [{ x: 30.5, z: 16.4, yaw: 0 }, { x: 31.9, z: 15.2, yaw: 180 }, { x: 33.3, z: 16.5, yaw: 90 }], from: [28.6, 13.0], yaw0: 60,
   path: [[30.3, 15.3], [31.2, 15.8], [32.05, 16.3], [32.75, 15.75], [33.6, 15.0], [34.4, 13.6]], pace: 0.7, pause: { leg: 2, k: 0.45, frames: 100, man: 1, turnDeg: -38, lead: 20, hold: 40 } };
-async function slither() {
+async function slither(dark: boolean) {
   Math.random = mulberry32(11);
-  const W: any = await standUp(); const g = W.game, K = SLITHER, P = K.pause;
+  const W: any = await standUp(); const g = W.game, K = SLITHER, P = K.pause; CLOSE.on = true; CLOSE.dark = dark;
   Math.random = mulberry32(11); g.restartEncounter(); g.playerInvisible = false; g.godMode = true; g.puppet = null; g.setGroup('breakroom', false);
   const men = g.guards.slice(0, K.men.length); men.forEach((gd: any, k: number) => { const m = K.men[k]; gd.char.pos = [m.x, 0, m.z]; gd.char.bodyYaw = gd.char.aimYaw = m.yaw * DEG; gd.hold = true; gd.pinned = true; gd.state = 'patrol'; gd.awareness = 0; gd.wait = 1e6; });
   const pl = g.player, c = pl.char; pl.slot = 'pistol'; pl.holstered = true; pl.pistol.lightOn = false; pl.nvOn = false;
@@ -503,49 +555,94 @@ async function slither() {
   g.puppet = null;
   return { done, f, seen, maxAw, minD, maxVis, modeF, heldF, phMoved, names: men.map((gd: any) => gd.callsign as string) };
 }
-export async function closeDark(): Promise<boolean> {
+export async function closeDark(): Promise<boolean> { return keepClose(async () => {
   console.log('\n=== close-dark: the one rule of the men\'s eyes — the near-sight floor goes by the light on Sam; the table, sightGain, and played in the break room with its lights off ===');
   allPass = true;
   { const S = await stage(1114, { ai: false }), { g, A, pl } = S, fails: string[] = [], rows: string[] = []; const ss = (v: number) => { const t = Math.max(0, Math.min(1, (v - CLOSE.darkAt) / (CLOSE.litAt - CLOSE.darkAt))); return t * t * (3 - 2 * t); };
     for (const state of ['patrol', 'suspicious', 'search', 'alert']) for (const dist of [0.5, 1.0]) { const got: string[] = [];
       for (const vis of [0, 0.1, 0.2, 0.3, 1]) { A.state = state; pl.visibility = vis; const k = closeNearK(g, A, dist), want = state === 'alert' || state === 'search' || dist < CLOSE.touchM ? 1 : ss(vis); got.push(String(+k.toFixed(3))); if (Math.abs(k - want) > 1e-12) fails.push(`${state} ${dist} m, light ${vis}: ${k} (want ${want})`); }
       rows.push(`${state.padEnd(10)} ${dist} m: ${got.join(' / ')}`); }
-    verdict(!fails.length, `closeNearK by the light on Sam (0 / 0.1 / 0.2 / 0.3 / 1): nothing under darkAt ${CLOSE.darkAt}, all of it from litAt ${CLOSE.litAt}; always 1 for a man searching or alert, inside touchM ${CLOSE.touchM}`, rows.join('\n    ') + bad(fails));
-    const f2s: string[] = []; pl.visibility = 0; A.state = 'patrol'; A.smokeTrans = 1; const g0 = sightGain(g, A, 1.0), gTouch = sightGain(g, A, 0.5), gFar = sightGain(g, A, 2.5); pl.visibility = 1; const gLit = sightGain(g, A, 1.0); pl.visibility = 0; A.state = 'search'; const gHunt = sightGain(g, A, 1.0); A.state = 'patrol'; pl.visibility = 0.02;
-    if (g0 !== 0) f2s.push(`pitch dark, 1 m: ${g0} a second (want 0)`); if (!(gTouch >= 3.5)) f2s.push(`0.5 m: ${gTouch}`); if (gFar !== 0) f2s.push(`2.5 m in the dark: ${gFar}`); if (!(gLit >= 3.5)) f2s.push(`lit: ${gLit}`); if (!(gHunt >= 3.5 * 2.2 - 1e-9)) f2s.push(`a searching man: ${gHunt}`);
-    verdict(!f2s.length, 'guards.ts sightGain under it, Sam in pitch dark: 0 a second at 1 m, the build\'s floor at 0.5 m, for a searching man, and for Sam lit', `dark 1 m: ${g0} · dark 0.5 m: ${gTouch} · dark 2.5 m: ${gFar} · lit 1 m: ${f2(gLit)} · searching, dark 1 m: ${f2(gHunt)}${bad(f2s)}`); }
+    A.state = 'patrol'; pl.visibility = 0; CLOSE.dark = false; const kd = closeNearK(g, A, 1.0); CLOSE.dark = true; CLOSE.on = false; const ko = closeNearK(g, A, 1.0); CLOSE.on = true;
+    if (kd !== 1 || ko !== 1) fails.push(`pitch dark at 1 m: ${kd} with CLOSE.dark off, ${ko} with CLOSE.on off (want exactly 1 both)`);
+    verdict(!fails.length, `closeNearK by the light on Sam (0 / 0.1 / 0.2 / 0.3 / 1): nothing under darkAt ${CLOSE.darkAt}, all of it from litAt ${CLOSE.litAt}; always 1 for a man searching or alert, inside touchM ${CLOSE.touchM}, with CLOSE.dark or CLOSE.on off`, rows.join('\n    ') + `\n    pitch dark, 1 m: CLOSE.dark off → ${kd} · CLOSE.on off → ${ko}` + bad(fails));
+    const f2s: string[] = []; pl.visibility = 0; A.state = 'patrol'; A.smokeTrans = 1; const g0 = sightGain(g, A, 1.0), gTouch = sightGain(g, A, 0.5), gFar = sightGain(g, A, 2.5); CLOSE.dark = false; const g1 = sightGain(g, A, 1.0); CLOSE.dark = true; pl.visibility = 1; const gLit = sightGain(g, A, 1.0); pl.visibility = 0; A.state = 'search'; const gHunt = sightGain(g, A, 1.0); A.state = 'patrol'; pl.visibility = 0.02;
+    if (g0 !== 0) f2s.push(`pitch dark, 1 m, the rule on: ${g0} a second (want 0)`); if (!(g1 >= 3.5)) f2s.push(`the rule off: ${g1} (want the build's 3.5)`); if (!(gTouch >= 3.5)) f2s.push(`0.5 m: ${gTouch}`); if (gFar !== 0) f2s.push(`2.5 m in the dark: ${gFar}`); if (!(gLit >= 3.5)) f2s.push(`lit: ${gLit}`); if (!(gHunt >= 3.5 * 2.2 - 1e-9)) f2s.push(`a searching man: ${gHunt}`);
+    verdict(!f2s.length, 'guards.ts sightGain under it, Sam in pitch dark: 0 a second at 1 m with the rule (the build\'s 3.5 without it), the build\'s floor at 0.5 m, for a searching man, and for Sam lit', `dark 1 m: ${g0} (rule off ${g1}) · dark 0.5 m: ${gTouch} · dark 2.5 m: ${gFar} · lit 1 m: ${f2(gLit)} · searching, dark 1 m: ${f2(gHunt)}${bad(f2s)}`); }
   const line = (r: any) => `${r.f} frames · nearest ${f2(r.minD)} m, ${r.near} frames inside 1.8 m · the light on Sam there at most ${f3(r.maxVis)} · his awareness at most ${f2(r.maxAw)} · ${r.seen || 'never anything but patrol'} · dark passes ${r.passes}`;
   const staged = (r: any, fails: string[]) => { if (!r.exact || !r.arrived) fails.push(`staging: Sam ${r.exact ? '' : 'not on his start'} ${r.arrived ? '' : 'never reached the far end'}`); if (Math.abs(r.minD - 1.2) > 0.08) fails.push(`staging: he passed ${f2(r.minD)} m off the man (want 1.2)`); return fails; };
-  { const a = await darkCross({ lights: false, path: 'front', torch: false }), fails = staged(a, []);
+  { const a = await darkCross({ dark: true, lights: false, path: 'front', torch: false }), fails = staged(a, []);
     if (!(a.maxAw < 0.3) || a.state !== 'patrol') fails.push(`he noticed: awareness ${f2(a.maxAw)}, ${a.seen}`); if (!(a.maxVis < CLOSE.darkAt)) fails.push(`staging: the light on Sam reached ${f3(a.maxVis)} (not dark)`); if (!a.passes) fails.push('closeNearK never passed anything (darkPasses 0)');
-    verdict(!fails.length, 'the room dark, his torch out: Sam crouch-walks across his front at 1.2 m — awareness stays under 0.3, he never leaves his patrol', line(a) + bad(fails)); }
-  { const a = await darkCross({ lights: true, path: 'front', torch: false }), fails = staged(a, []);
-    if (a.state === 'patrol') fails.push(`the room lit: he noticed nothing (awareness ${f2(a.maxAw)})`); if (!(a.maxVis >= CLOSE.litAt)) fails.push(`staging: the light on Sam only reached ${f3(a.maxVis)} with the room's lights on`);
-    verdict(!fails.length, 'the room LIT: he is onto Sam', line(a) + bad(fails)); }
-  { const a = await darkCross({ lights: false, path: 'front', torch: true }), fails = staged(a, []); if (a.state === 'patrol') fails.push(`he noticed nothing walking through his beam (awareness ${f2(a.maxAw)})`); if (!(a.maxVis >= CLOSE.litAt)) fails.push(`staging: his torch put only ${f3(a.maxVis)} on Sam`);
-    verdict(!fails.length, 'the room dark, but his torch BURNING and Sam walking through its beam: seen — the light term is the build\'s, the rule gives nothing to a lit man', line(a) + bad(fails)); }
-  { const a = await darkCross({ lights: false, path: 'side', torch: true }), fails = staged(a, []);
-    if (!(a.maxAw < 0.3) || a.state !== 'patrol') fails.push(`he noticed (awareness ${f2(a.maxAw)}, ${a.seen})`);
-    verdict(!fails.length, 'his torch burning, Sam down his side 1.2 m off, out of the beam: unnoticed', line(a) + bad(fails)); }
-  { const a = await slither(), fails: string[] = []; const say = (r: any) => `${r.done ? 'through' : 'TIMED OUT'} in ${r.f} frames · ${r.seen || 'nobody noticed'} · awareness at most ${r.maxAw.map(f2).join(' / ')} (${r.names.join(', ')}) · nearest ${r.minD.map(f2).join(' / ')} m · the light on Sam inside 3 m at most ${f3(r.maxVis)} · in the mode ${r.modeF} frames · stood frozen ${r.heldF} frames, the stride held to ${r.phMoved.toExponential(1)}`;
-    if (!a.done) fails.push('Sam never got through'); if (a.seen || a.maxAw.some((x: number) => x >= 0.3)) fails.push(`${a.seen || 'awareness past 0.3'}`); if (a.minD.filter((d: number) => d < 1.8).length < 2) fails.push(`staging: Sam passed inside 1.8 m of ${a.minD.filter((d: number) => d < 1.8).length} men`);
+    verdict(!fails.length, 'the room dark, his torch out, the rule ON: Sam crouch-walks across his front at 1.2 m — awareness stays under 0.3, he never leaves his patrol', line(a) + bad(fails));
+    const b = await darkCross({ dark: false, lights: false, path: 'front', torch: false }), fb = staged(b, []); if (b.state === 'patrol' || !(b.maxAw >= 0.3)) fb.push(`he noticed nothing: awareness ${f2(b.maxAw)}`);
+    verdict(!fb.length, 'the same walk with CLOSE.dark OFF: the build\'s floor — a shape inside 1.8 m is seen whatever the light — and he is onto it', line(b) + bad(fb)); }
+  { const a = await darkCross({ dark: true, lights: true, path: 'front', torch: false }), b = await darkCross({ dark: false, lights: true, path: 'front', torch: false }), fails = staged(b, staged(a, []));
+    if (a.state === 'patrol') fails.push(`rule on, the room lit: he noticed nothing (awareness ${f2(a.maxAw)})`); if (b.state === 'patrol') fails.push(`rule off, the room lit: he noticed nothing (awareness ${f2(b.maxAw)})`); if (!(a.maxVis >= CLOSE.litAt)) fails.push(`staging: the light on Sam only reached ${f3(a.maxVis)} with the room's lights on`);
+    verdict(!fails.length, 'the room LIT: he is onto Sam with the rule on and with it off alike', `rule on:  ${line(a)}\n    rule off: ${line(b)}${bad(fails)}`); }
+  { const a = await darkCross({ dark: true, lights: false, path: 'front', torch: true }), fails = staged(a, []); if (a.state === 'patrol') fails.push(`he noticed nothing walking through his beam (awareness ${f2(a.maxAw)})`); if (!(a.maxVis >= CLOSE.litAt)) fails.push(`staging: his torch put only ${f3(a.maxVis)} on Sam`);
+    verdict(!fails.length, 'the room dark, the rule on, but his torch BURNING and Sam walking through its beam: seen — the light term is the build\'s, the rule gives nothing to a lit man', line(a) + bad(fails)); }
+  { const a = await darkCross({ dark: true, lights: false, path: 'side', torch: true }), b = await darkCross({ dark: false, lights: false, path: 'side', torch: true }), fails = staged(b, staged(a, []));
+    if (!(a.maxAw < 0.3) || a.state !== 'patrol') fails.push(`rule on: he noticed (awareness ${f2(a.maxAw)}, ${a.seen})`); if (b.state === 'patrol') fails.push(`rule off: he noticed nothing (awareness ${f2(b.maxAw)})`);
+    verdict(!fails.length, 'his torch burning, Sam down his side 1.2 m off, out of the beam: unnoticed with the rule, noticed without it', `rule on:  ${line(a)}\n    rule off: ${line(b)}${bad(fails)}`); }
+  { const a = await slither(true), b = await slither(false), fails: string[] = []; const say = (r: any) => `${r.done ? 'through' : 'TIMED OUT'} in ${r.f} frames · ${r.seen || 'nobody noticed'} · awareness at most ${r.maxAw.map(f2).join(' / ')} (${r.names.join(', ')}) · nearest ${r.minD.map(f2).join(' / ')} m · the light on Sam inside 3 m at most ${f3(r.maxVis)} · in the mode ${r.modeF} frames · stood frozen ${r.heldF} frames, the stride held to ${r.phMoved.toExponential(1)}`;
+    if (!a.done) fails.push('rule on: Sam never got through'); if (a.seen || a.maxAw.some((x: number) => x >= 0.3)) fails.push(`rule on: ${a.seen || 'awareness past 0.3'}`); if (a.minD.filter((d: number) => d < 1.8).length < 2) fails.push(`staging: Sam passed inside 1.8 m of ${a.minD.filter((d: number) => d < 1.8).length} men`);
     // (the freeze is a hundred frames from the frame he is told to stop: his root coasts to rest for about seventy of them from the old crouch-walk and two more from
     //  the sneak's pace of two gears — player.ts TWOGEARS — so with that key up the bar on frames AT REST is 25; with it down it is the 30 it was. With the key up the staging's own slow pace is nobody's either: he threads them at the sneak's pace, which is what the page does)
-    if (a.heldF < (TWOGEARS.on ? 25 : 30) || a.phMoved > 1e-6) fails.push(`the freeze: ${a.heldF} frames at rest, the phase moved ${a.phMoved.toExponential(1)}`);
-    verdict(!fails.length, 'THE EXHIBIT — three men in the dark break room, torches burning, Sam threading between them inside arm\'s reach and freezing mid-stride while one turns: nobody notices', `${say(a)}${bad(fails)}`); }
+    if (!b.seen) fails.push('rule off: nobody noticed'); if (a.heldF < (TWOGEARS.on ? 25 : 30) || a.phMoved > 1e-6) fails.push(`the freeze: ${a.heldF} frames at rest, the phase moved ${a.phMoved.toExponential(1)}`);
+    verdict(!fails.length, 'THE EXHIBIT — three men in the dark break room, torches burning, Sam threading between them inside arm\'s reach and freezing mid-stride while one turns: nobody notices with the rule; without it somebody does', `rule on:  ${say(a)}\n    rule off: ${say(b)}${bad(fails)}`); }
   return allPass;
-}
+}); }
 
 // ================================================================ (6) the picture
-export async function closeMarksProbe(): Promise<boolean> {
-  console.log('\n=== close-marks: the windows as floor polygons are off on the page — nothing is handed to the overlay ===');
-  allPass = true; const S = await stage(1106, { ai: false }), { g } = S;
-  { samAt(S, 180, 1.5); const shipped = closeMarks(g).length; verdict(CLOSE_DEFAULTS.marks === false && CLOSE.marks === false && shipped === 0, 'the floor marks are OFF (CLOSE.marks false): nothing is handed to the overlay', `CLOSE_DEFAULTS.marks ${CLOSE_DEFAULTS.marks} · CLOSE.marks ${CLOSE.marks} · ${shipped} marks 1.5 m behind him`); }
-  return allPass;
+function inPoly(pts: Vec3[], x: number, z: number): boolean { let c = false; for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) { const a = pts[i], b = pts[j]; if ((a[2] > z) !== (b[2] > z) && x < (b[0] - a[0]) * (z - a[2]) / (b[2] - a[2]) + a[0]) c = !c; } return c; }
+function edgeDist(pts: Vec3[], x: number, z: number): number { let m = Infinity; for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) { const a = pts[j], b = pts[i], ex = b[0] - a[0], ez = b[2] - a[2], L = ex * ex + ez * ez, t = L > 0 ? Math.max(0, Math.min(1, ((x - a[0]) * ex + (z - a[2]) * ez) / L)) : 0; m = Math.min(m, Math.hypot(x - a[0] - ex * t, z - a[2] - ez * t)); } return m; }
+/** THE PRECISION CLAIM on one man: a 4 cm grid over ±1.4 m — is each point inside a drawn window exactly when closeAt offers something from it (in reach, clear)? */
+function gridAgree(g: any, A: any, inSolid?: (x: number, z: number) => boolean) {
+  const marks = closeMarks(g).filter((m: any) => m.guard === A && m.pts.length), gp = A.char.pos; let n = 0, agree = 0, worst = 0, drawnN = 0, offeredN = 0, solidOffered = 0; const far: string[] = [];
+  for (let ix = -35; ix <= 35; ix++) for (let iz = -35; iz <= 35; iz++) { const x = gp[0] + ix * 0.04, z = gp[2] + iz * 0.04; if (Math.hypot(x - gp[0], z - gp[2]) < CLOSE.inner) continue;
+    const o = closeAt(g, A, [x, 0, z]); if (inSolid?.(x, z)) { if (o.inReach && o.clear) solidOffered++; continue; } const offered = o.inReach && o.clear, drawn = marks.some((m: any) => inPoly(m.pts, x, z)); n++; if (drawn) drawnN++; if (offered) offeredN++;
+    if (drawn === offered) { agree++; continue; }
+    const e = Math.min(...marks.map((m: any) => edgeDist(m.pts, x, z))); worst = Math.max(worst, e); if (e > 0.06) far.push(`(${f2(x - gp[0])}, ${f2(z - gp[2])}) ${drawn ? 'drawn, not offered' : `offered (${o.win?.id}), not drawn`} ${f3(e)} m from an edge`); }
+  return { n, agree, pct: 100 * agree / n, worst, far, drawnN, offeredN, marks, solidOffered };
 }
+export async function closeMarksProbe(): Promise<boolean> { return keepClose(async () => {
+  console.log('\n=== close-marks: the windows as floor polygons — four in the open, the one Sam stands in, drawn = offered on a 4 cm grid, cut by a wall, off when off ===');
+  allPass = true; const S = await stage(1106, { ai: false }), { W, g, A, pl } = S;
+  { samAt(S, 180, 1.5); const shipped = closeMarks(g).length; verdict(CLOSE_DEFAULTS.marks === false && CLOSE.marks === false && shipped === 0, 'as shipped the floor marks are OFF (CLOSE.marks false): nothing is handed to the overlay', `CLOSE_DEFAULTS.marks ${CLOSE_DEFAULTS.marks} · CLOSE.marks ${CLOSE.marks} · ${shipped} marks 1.5 m behind him`); }
+  CLOSE.marks = true; console.log('  (everything below with CLOSE.marks = true: the picture as it is when the row is switched on)');
+  const mine = () => closeMarks(g).filter((m: any) => m.guard === A), line = (ms: any[]) => ms.map((m: any) => `${m.id} ${m.state} '${m.label}' ${m.pts.length} pts`).join(' · ');
+  { samAt(S, 180, 1.5); const ms = mine(), fails: string[] = [];
+    if (ms.map((m: any) => m.id).join(',') !== 'behind,left,right,front') fails.push(`marks: ${ms.map((m: any) => m.id).join(',')}`); if (ms.some((m: any) => !m.pts.length)) fails.push('an empty polygon in the open'); if (ms.some((m: any) => m.state !== 'open')) fails.push('a window not \'open\'');
+    if (ms.some((m: any) => !(m.alpha > 0.99))) fails.push(`alpha ${ms.map((m: any) => f2(m.alpha)).join(', ')} at 1.5 m`);
+    verdict(!fails.length, 'open floor, Sam 1.5 m behind him: four windows, every polygon drawn, all \'open\'', line(ms) + bad(fails)); }
+  { samAt(S, 180, 0.8); const ms = mine(), b = ms.find((m: any) => m.id === 'behind'), fails: string[] = [];
+    if (b?.state !== 'in' || b?.label !== 'GRAB · TAKEDOWN') fails.push(`behind: ${b?.state} '${b?.label}'`); if (ms.filter((m: any) => m.state === 'in').length !== 1) fails.push('more than one window \'in\'');
+    pl.holstered = false; W.step(DT); const b2 = mine().find((m: any) => m.id === 'behind'), f2m = mine().find((m: any) => m.id === 'front'); pl.holstered = true; W.step(DT);
+    if (b2?.state !== 'in' || b2?.label !== 'GRAB') fails.push(`pistol drawn: ${b2?.state} '${b2?.label}'`); if (f2m?.label !== 'STRIKE · HOLSTER FIRST') fails.push(`pistol drawn, the front's words: '${f2m?.label}'`);
+    verdict(!fails.length, 'Sam in the rear window: that one \'in\' — \'GRAB · TAKEDOWN\' with the hands empty, \'GRAB\' with the pistol drawn', `holstered: ${line(ms)}\n    pistol: behind ${b2?.state} '${b2?.label}' · front '${f2m?.label}'${bad(fails)}`); }
+  { samAt(S, 180, 1.5); const r = gridAgree(g, A), fails: string[] = []; if (r.far.length) fails.push(`${r.far.length} points disagree further than 6 cm from a drawn edge: ${r.far.slice(0, 4).join(' ; ')}`); if (r.drawnN < 800) fails.push(`only ${r.drawnN} grid points drawn — the staging drifted`);
+    verdict(!fails.length, 'THE PRECISION CLAIM, open floor: a point is inside a drawn window exactly when closeAt offers something from it — every disagreement inside 6 cm of an edge', `${r.n} points on a 4 cm grid (±1.4 m, outside ${CLOSE.inner} m): drawn ${r.drawnN} · offered ${r.offeredN} · agree ${r.pct.toFixed(2)} % · the furthest disagreeing point ${f3(r.worst)} m from an edge${bad(fails)}`); }
+  { A.state = 'alert'; const ms = mine(), fails: string[] = []; if (ms.length !== 4 || ms.some((m: any) => m.state !== 'open')) fails.push(`alert, alertStrike on: ${line(ms)}`);
+    CLOSE.alertStrike = false; const ms2 = mine(); if (ms2.length !== 4 || ms2.some((m: any) => m.state !== 'shut' || m.label !== 'HE IS ONTO YOU')) fails.push(`alertStrike off: ${line(ms2)}`); CLOSE.alertStrike = true; A.state = 'patrol';
+    verdict(!fails.length, 'an alert man: his windows still \'open\' (the strike); with alertStrike off all \'shut\', \'HE IS ONTO YOU\'', `on: ${line(ms)}\n    off: ${line(ms2)}${bad(fails)}`); }
+  { const fails: string[] = []; CLOSE.on = false; const a = closeMarks(g).length; CLOSE.on = true; CLOSE.marks = false; const b = closeMarks(g).length; CLOSE.marks = true;
+    samAt(S, 180, 0.8); const tapped = tapVerb(W, 'guard', 'grab'); const c = pl.holding ? closeMarks(g).length : -1; for (let i = 0; i < 40; i++) W.step(DT); const d = pl.holding ? closeMarks(g).length : -1;
+    if (a || b) fails.push(`${a} marks with the switch off, ${b} with the marks off`); if (!tapped || c !== 0 || d !== 0) fails.push(`with a man in the arm: ${c} marks on the grab's frame, ${d} once held (−1 = no hold)`);
+    verdict(!fails.length, 'nothing drawn with CLOSE.on off, with CLOSE.marks off, or while Sam has a man in his arm', `switch off ${a} · marks off ${b} · holding (${pl.holding?.phase}) ${c} then ${d}${bad(fails)}`); }
+  { // against a wall: the man 0.6 m off the outer wall's outside face, facing along it
+    const S2 = await stage(1107, { ai: false, at: [STRIP_X, 0, 2], open: false }), g2 = S2.g, A2 = S2.A; CLOSE.marks = true; const hit = g2.col.raycast([STRIP_X, 1.0, 2], [0, 0, 1], 6); if (!hit) throw new Error('close-marks: the south wall is not where the probe expects it');
+    const face = 2 + hit.t; place(A2, [STRIP_X, 0, face - 0.6], EAST); g2.teleportPlayer([STRIP_X - 1.6, 0, face - 0.9]); S2.W.step(DT);
+    const ms = closeMarks(g2).filter((m: any) => m.guard === A2), fails: string[] = []; let past = -Infinity, cut = 0, verts = 0;
+    for (const m of ms) for (const p of m.pts) { verts++; past = Math.max(past, p[2] - face); if (p[2] > face - 0.05) cut++; }
+    if (ms.length !== 4 || ms.some((m: any) => !m.pts.length)) fails.push(`marks: ${line(ms)}`); if (past > 0.025) fails.push(`a vertex ${f3(past)} m beyond the wall's near face (a segment ENDING on a face is clear to the collision's 0.02 m: that much is the test's own)`); if (!cut) fails.push('no vertex anywhere near the wall — the window was not cut by it (the staging drifted)');
+    const back = g2.col.raycast([STRIP_X, 1.0, 8], [0, 0, -1], 6), farFace = back ? 8 - back.t : face + 0.3; const r = gridAgree(g2, A2, (_x, z) => z > face + 0.02 && z < farFace - 0.02); if (r.far.length) fails.push(`${r.far.length} points disagree further than 6 cm from a drawn edge: ${r.far.slice(0, 4).join(' ; ')}`);
+    const beyond = closeAt(g2, A2, [STRIP_X, 0, face + 0.1]); if (beyond.clear || !beyond.inReach) fails.push(`a point in the wall 0.7 m beside him: reach ${beyond.inReach} clear ${beyond.clear}`);
+    verdict(!fails.length, 'against a wall (0.6 m off it, facing along it): no vertex beyond its near face, and drawn = offered still holds on the grid wherever a body can stand', `wall face z ${f2(face)} · ${verts} vertices, ${cut} on the wall, the furthest ${past > 0 ? f3(past) + ' m past' : f3(-past) + ' m short of'} the face · grid: ${r.n} points, drawn ${r.drawnN} · offered ${r.offeredN} · agree ${r.pct.toFixed(2)} % · furthest disagreement ${f3(r.worst)} m from an edge${bad(fails)}`);
+    console.log(`  (not judged — the grid's points INSIDE the wall's thickness, z ${f2(face)} … ${f2(farFace)}, where nobody can stand: closeAt calls ${r.solidOffered} of them clear and in reach. close.ts:166 asks clearBetween FROM the spot, and a segment that starts inside a wall does not see that wall; clipReach — the picture — asks from the man outward and is right)`); }
+  return allPass;
+}); }
 
 // ================================================================ (8) the seat
-export async function closeSeatProbe(): Promise<boolean> {
+export async function closeSeatProbe(): Promise<boolean> { return keepClose(async () => {
   console.log('\n=== close-seat: a calm staff man sat down on a mark — the clip, the hold flag, up the moment he is not calm; the click and Space over the chair; a restart ===');
   allPass = true;
   { const S = await stage(1109, { holdA: false }), { W, g, A, B, pl } = S; g.teleportPlayer([LOBBY[0], 0, LOBBY[2] - 7]); W.step(DT);
@@ -560,9 +657,9 @@ export async function closeSeatProbe(): Promise<boolean> {
     place(B, [LOBBY[0] + 1.5, 0, LOBBY[2] - 1.5], EAST); B.state = 'alert'; const rAlert = closeSeat(g, B), cv = (g.civilians ?? [])[0], rCiv = cv ? closeSeat(g, cv) : null, f3s: string[] = [];
     if (rAlert) f3s.push('an alert man was sat down'); if (rCiv) f3s.push('a civilian was sat down'); if (!/seated 0/.test(closeSummary(g))) f3s.push(closeSummary(g)); if (!cv) console.log('  (no civilian on this stand: that refusal not asked)');
     verdict(!f3s.length, 'closeSeat refuses an alert man and a civilian', `alert → ${rAlert} · civilian (${cv?.callsign ?? '—'}) → ${rCiv}${bad(f3s)}`); }
-  { const S = await stage(1109, {}), n = seatDown(S), r = blow(S, 180, 1.12, 4), fails = n < 0 ? ['he never sat down'] : judgeBlow(r, false, 'seat');
+  for (const button of [1, 4] as const) { const S = await stage(1109, {}), n = seatDown(S), r = blow(S, 180, 1.12, button), fails = n < 0 ? ['he never sat down'] : judgeBlow(r, button === 1, 'seat');
     if (!(r.at.d > CLOSE.reach.behind && r.at.d < CLOSE.reach.seat)) fails.push(`staging: ${f2(r.at.d)} m`);
-    verdict(!fails.length, 'the RIGHT click (the knockout) on a seated man from 1.12 m behind — inside the seat\'s reach, outside the standing one: out cold where he sits', `row "${r.row?.line2}" · ${blowLine(r)}${bad(fails)}`); }
+    verdict(!fails.length, `the ${button === 1 ? 'LEFT click (the knife)' : 'RIGHT click (the knockout)'} on a seated man from 1.12 m behind — inside the seat's reach, outside the standing one: ${button === 1 ? 'dead where he sits' : 'out cold where he sits'}`, `row "${r.row?.line2}" · ${blowLine(r)}${bad(fails)}`); }
   { const S = await stage(1109, {}), { g, A, pl } = S, n = seatDown(S), r = grabRun(S, 180, 1.12), fails: string[] = [];
     if (n < 0) fails.push('he never sat down'); if (!r.row || !/haul him out of the chair/.test(r.row.line2) || r.row.close !== 'seat') fails.push(`row: "${r.row?.line2}" close ${r.row?.close}`);
     if (!r.H || !pl.holding) fails.push('Space took nobody'); if (closeSeated(g, A) || !/seated 0/.test(closeSummary(g))) fails.push('he is still seated'); if (A.char.anim.act?.clip === 'Sitting_Idle_Loop') fails.push('the sitting clip is still on him');
@@ -572,17 +669,36 @@ export async function closeSeatProbe(): Promise<boolean> {
     if (n < 0 || !/seated 1/.test(before)) fails.push(`staging: ${before}`); if (!/seated 0/.test(after) || !/seated 0/.test(later)) fails.push(`after the restart: ${after} · 30 frames on: ${later}`); if (g.guards.some((x: any) => x.char.anim.act?.clip === 'Sitting_Idle_Loop' || closeSeated(g, x))) fails.push('a man of the new shift is sitting');
     verdict(!fails.length, 'restartEncounter leaves nobody seated', `before: ${before}\n    after:  ${after}${bad(fails)}`); }
   return allPass;
-}
+}); }
+
+// ================================================================ (9) the two stands, the page, the knob table
+export async function closeHarness(): Promise<boolean> { return keepClose(async () => {
+  console.log('\n=== close-harness: the frozen stand holds the switch off, the page turns it on unless ?noclose, the table is a registered knob table ===');
+  allPass = true; const P = await import(`${ROOT}/src/host/profile.ts`), K = await import(`${ROOT}/src/game/knobs.ts`);
+  { const frozen = !process.env.TPS_PROFILE || process.env.TPS_PROFILE === 'frozen', word = process.env.TPS_CLOSE;
+    if (frozen || word !== undefined) CLOSE.on = word !== '1';   // (stood up from the opposite of what the stand should leave — where the stand writes it at all)
+    const before = CLOSE.on; await standUp(); const want = frozen || word !== undefined ? word === '1' : before;
+    verdict(CLOSE.on === want, frozen ? 'standUp() on the frozen stand puts CLOSE.on to what TPS_CLOSE says (unset: off — every stored row and digest read the one way in)' : 'standUp() on the shipped stand leaves CLOSE.on to the page\'s boot (or to TPS_CLOSE where it is given)', `before ${before} · after standUp: ${CLOSE.on} · TPS_CLOSE ${word ?? 'unset'} · TPS_PROFILE ${process.env.TPS_PROFILE ?? 'unset'}`); }
+  { const row = P.FROZEN_HOLDS['CLOSE.on']; verdict(typeof row === 'string' && /TPS_CLOSE=1/.test(row), 'src/host/profile.ts FROZEN_HOLDS names CLOSE.on, with the word that turns it on', `FROZEN_HOLDS['CLOSE.on'] = ${JSON.stringify(row)}`); }
+  { const keep = K.knobsCopy(); let onEmpty: unknown, onNo: unknown, onOther: unknown;
+    try { CLOSE.on = false; P.pageSwitches(new URLSearchParams('')); onEmpty = CLOSE.on; P.pageSwitches(new URLSearchParams('noclose')); onNo = CLOSE.on; P.pageSwitches(new URLSearchParams('nolightwall&nodestruction')); onOther = CLOSE.on; }
+    finally { K.knobsBack(keep); }
+    verdict(onEmpty === true && onNo === false && onOther === true, 'the page\'s boot (pageSwitches): no flag → on · ?noclose → off · other flags leave it on', `'' → ${onEmpty} · 'noclose' → ${onNo} · 'nolightwall&nodestruction' → ${onOther} (every table put back after)`); }
+  { const reg = K.knobRegistry(), inJ = K.JOURNAL_KNOBS.includes('CLOSE'), same = reg.CLOSE === CLOSE; let back = false;
+    { const c = K.knobsCopy(), was = CLOSE.strikeDist; CLOSE.strikeDist = was + 1; (CLOSE.reach as any).behind += 1; K.knobsBack(c); back = CLOSE.strikeDist === was && CLOSE.reach.behind === (JSON.parse(JSON.stringify(CLOSE)).reach.behind) && CLOSE.reach.behind < 1.5; }
+    verdict(same && inJ && back, 'knobRegistry().CLOSE is the table, JOURNAL_KNOBS carries it, and knobsCopy / knobsBack restore it (nested rows too)', `registry is the table: ${same} · in JOURNAL_KNOBS: ${inJ} · a changed strikeDist / reach.behind put back: ${back}`); }
+  return allPass;
+}); }
 
 // ================================================================ (14) the two-person game
 /** THE DUO STAND (lifted from the pair's own family — pairup-probes.ts `rig`: the room clear on the office with ONE teammate, PAIRUP.on set before the Game is made,
- *  the squad told silent): Sam's hands empty, every defender but Tango 1 and 2 quietly off the floor. `room` = the break room with its
+ *  the squad told silent): CLOSE.on written after it, Sam's hands empty, every defender but Tango 1 and 2 quietly off the floor. `room` = the break room with its
  *  lights off and Tango 1 held on the dark-crossing's mark facing north-of-screen (+z), calm whatever he sees (`calm`), Sam 3.1 m behind him, the partner at Sam's
  *  shoulder on 'fall in'; else the pair family's own aisle marks. */
 const BR = { man: [31.2, 0, 16.0] as Vec3, yaw: 0, sam: [31.2, 0, 12.9] as Vec3, mate: [30.2, 0, 13.0] as Vec3 };
-async function duoStage(o: { calm?: boolean; room?: boolean } = {}) {
+async function duoStage(o: { close?: boolean; dark?: boolean; calm?: boolean; room?: boolean } = {}) {
   const { rig } = await import('./pairup-probes.ts');
-  const R: any = await rig({ up: true });
+  const R: any = await rig({ up: true }); CLOSE.on = o.close ?? true; if (o.dark !== undefined) CLOSE.dark = o.dark;
   const g = R.game, pl = g.player, m = R.mate; pl.slot = 'pistol'; pl.holstered = true;
   const T1 = R.tango(1), T2 = R.tango(2); R.only(T1, T2);
   let mateMode = 0, orders = new Set<string>(); R.post = () => { if (closeMode(g) === m) mateMode++; const A = R.O.of(m); orders.add(A ? `${A.order}${A.post === null ? '' : '@post'}` : 'none'); };
@@ -593,8 +709,8 @@ async function duoStage(o: { calm?: boolean; room?: boolean } = {}) {
   const order = () => { const A = R.O.of(m); return A ? `${A.order}${A.post === null ? '' : '@post'}` : 'none'; };
   return { R, g, pl, m, T1, T2, at, order, orders, mateMode: () => mateMode };
 }
-export async function closeDuo(): Promise<boolean> {
-  console.log('\n=== close-duo: "make sure all the sneaking stuff works in the duo mode" — the pair on (PAIRUP.on, one partner, silent, \'fall in\'): the partner is nobody\'s subject, Sam\'s set works on a defender, the partner\'s own orders still work ===');
+export async function closeDuo(): Promise<boolean> { return keepClose(async () => {
+  console.log('\n=== close-duo: "make sure all the sneaking stuff works in the duo mode" — the pair on (PAIRUP.on, one partner, silent, \'fall in\') with CLOSE.on: the partner is nobody\'s subject, Sam\'s set works on a defender, the partner\'s own orders still work ===');
   allPass = true; const K = await import(`${ROOT}/src/game/knobs.ts`), keep = K.knobsCopy(), rnd = Math.random;
   try {
   { // (1) the partner is never a subject
@@ -611,7 +727,7 @@ export async function closeDuo(): Promise<boolean> {
     verdict(!fails.length, 'the PARTNER, Sam at arm\'s length behind him, beside him and in front of him, each button clicked: never a subject — closeSubject false, no row, no tell, no mode, no blow', `${m.callsign}: ${rows.join('\n    ')}${bad(fails)}`); }
   { // (2) Sam's set on a defender, the partner at his shoulder
     const fails: string[] = [], rows: string[] = [];
-    for (const [b, button] of [[180, 4], [-90, 4], [0, 4]] as const) { const S = await duoStage(), { R, g, pl, m, T1 } = S, an = pl.char.anim, lethal: boolean = false, kind = kindAt(b), what = `${b}° right`;
+    for (const [b, button] of [[180, 1], [90, 1], [0, 1], [180, 4], [-90, 4], [0, 4]] as const) { const S = await duoStage(), { R, g, pl, m, T1 } = S, an = pl.char.anim, lethal = button === 1, kind = kindAt(b), what = `${b}° ${lethal ? 'left' : 'right'}`;
       const off0 = closeMode(g), d0 = distXZ(pl.char.pos, T1.char.pos); R.walk([BR.sam[0], 0, 13.6], 1.0, 10); const on1 = closeMode(g), d1 = distXZ(pl.char.pos, T1.char.pos), creep = an.creep, mateD = distXZ(m.char.pos, pl.char.pos);
       const w = S.at(b, 0.75), tell = an.ready, want = kind === 'behind' ? 'grab' : 'strike', row = g.nearby.find((x: any) => x.kind === 'guard' && x.inReach && x.guard === T1);
       const st0 = { ...g.mission.stats }, bl0 = { ...CLOSE_STATS.blows }; R.W.input.clicked |= button; R.step(); const td = pl.takedown ? { lethal: !!pl.takedown.lethal, kind: pl.takedown.kind ?? 'behind' } : null; let deadAt = -1; for (let f = 1; f <= 100; f++) { R.step(); if (deadAt < 0 && T1.state === 'dead') deadAt = f; }
@@ -623,7 +739,7 @@ export async function closeDuo(): Promise<boolean> {
       if (CLOSE_STATS.blows.knife - bl0.knife !== (lethal ? 1 : 0) || CLOSE_STATS.blows.knockout - bl0.knockout !== (lethal ? 0 : 1)) fails.push(`${what}: blows knife +${CLOSE_STATS.blows.knife - bl0.knife}, knockout +${CLOSE_STATS.blows.knockout - bl0.knockout}`);
       if (g.mission.stats.kills - st0.kills !== (lethal ? 1 : 0)) fails.push(`${what}: the card's kills +${g.mission.stats.kills - st0.kills}`);
       if ([...S.orders].some(x => x !== 'fallIn') || m.state === 'dead' || S.mateMode()) fails.push(`${what}: the partner — orders ${[...S.orders].join(', ')}, ${m.state}, in Sam's mode ${S.mateMode()} frames`); }
-    verdict(!fails.length, 'a DEFENDER in the dark break room, the partner following at Sam\'s shoulder: the mode on inside modeM; the tell \'grab\' behind / \'strike\' at a side and in front; the right click the knockout (breathing), from behind, a side and the front; the partner on \'fall in\' on every frame of it', rows.join('\n    ') + bad(fails)); }
+    verdict(!fails.length, 'a DEFENDER in the dark break room, the partner following at Sam\'s shoulder: the mode on inside modeM; the tell \'grab\' behind / \'strike\' at a side and in front; the left click the knife (dead), the right click the knockout (breathing), from behind, a side and the front; the partner on \'fall in\' on every frame of it', rows.join('\n    ') + bad(fails)); }
   { // (2, 4) the grab, the held gait, the menu's right button
     const S = await duoStage(), { R, g, pl, m, T1 } = S, an = pl.char.anim, fails: string[] = [];
     // the held gait: crouched, east along z 14.8 (1.2 m behind his back — past the rear reach: no tell in the arms), by the keys (a puppet would switch the squad's orders off)
@@ -644,16 +760,17 @@ export async function closeDuo(): Promise<boolean> {
     S.at(180, 0.8); const sel = g.selectVerb('guard', 'grab'); R.W.input.pressed.add(IK); R.step(); const H = !!pl.holding; const held = R.until(() => pl.holding?.phase === 'held', 1.5); R.step(60);
     if (sideSel || sideHeld || frontSel || frontHeld) f2s.push(`a side: row ${sideSel}, started ${sideHeld} · the front: row ${frontSel}, started ${frontHeld}`); if (!sel || !H || !held || !T1.held) f2s.push(`behind: row ${sel}, holding ${H}, 'held' ${held}`); if (m.state === 'dead' || S.order() !== 'fallIn') f2s.push(`the partner: ${m.state}, ${S.order()}`);
     verdict(!f2s.length, 'Space beside a partner: no grab row and nothing started at the defender\'s side or front; from behind he is taken into the hold — the partner still on \'fall in\'', `side: row ${sideSel} · front: row ${frontSel} · behind: ${H ? `held ${held}` : 'NOTHING'} · partner ${[...S.orders].join(', ')} (${R.status()})${bad(f2s)}`); }
-  { // (3) the partner's own quiet order afterwards
-    const run = async () => { const S = await duoStage({ room: false }), { R, g, pl, m, T1, T2 } = S;
+  { // (3) the partner's own quiet order afterwards, against the switch off
+    const run = async (close: boolean) => { const S = await duoStage({ close, room: false }), { R, g, pl, m, T1, T2 } = S;
       R.pin(T1, { at: [22, 0, 17.6], yaw: EAST }); R.pin(T2, { at: LOBBY, yaw: EAST, state: 'patrol', aw: 0, eyesOn: null }); R.put(m, [9.5, 0, 22.0], 0); R.step(5);
-      S.at(180, 0.8, 2, T2); R.W.input.clicked |= 4; R.step(); const td = !!pl.takedown; for (let i = 0; i < 90; i++) R.step(); const first = { td, state: T2.state as string, down: T2.downKind as string | null, breathing: isBreathing(T2) };
+      S.at(180, 0.8, 2, T2); R.W.input.clicked |= close ? 4 : 1; R.step(); const td = !!pl.takedown; for (let i = 0; i < 90; i++) R.step(); const first = { td, state: T2.state as string, down: T2.downKind as string | null, breathing: isBreathing(T2) };
       g.teleportPlayer([11, 0, 18.5]); R.put(m, [13, 0, 17.6], EAST); R.step(10); const fall = R.O.give('fallIn', R.O.targetAt(pl.char.pos), 'all'); R.step(30); const before = S.order();
       const f0 = R.frames, why = R.O.give('pairMark', R.foe(T1), 'all'), set = R.until(() => !!R.P.jobOf(m)?.set, 30), setAt = R.frames - f0, sent = set && R.P.mark('api'), down = R.until(() => T1.state === 'dead', 15), downAt = R.frames - f0; R.step(30);
       return { first, fall, before, why, set, setAt, sent, down, downAt, kind: T1.downKind as string | null, breathing: isBreathing(T1), after: S.order(), status: R.status() as string, mate: m.state as string, line: R.lines(/he's down/).slice(-1)[0] ?? '(nothing)' }; };
-    const on = await run(), fails: string[] = []; const say = (r: any) => `Sam's own first: ${r.first.down}${r.first.breathing ? ', breathing' : ''} · 'fall in' → ${r.before} · 'take him · on your mark' ${r.why ? `REFUSED: ${r.why}` : 'given'} · set after ${(r.setAt / 60).toFixed(1)} s · the mark ${r.sent} · down ${r.down ? `after ${(r.downAt / 60).toFixed(1)} s: ${r.kind}${r.breathing ? ', breathing' : ''}` : 'NEVER'} · then ${r.after} (${r.status}) · "${r.line}"`;
-    { const r = on; if (r.first.state !== 'dead' || r.first.down !== 'struck') fails.push(`staging — Sam's knockout of the first man left him ${r.first.state} / ${r.first.down}`); if (r.fall || r.before !== 'fallIn') fails.push(`'fall in' after it → ${r.fall ?? r.before}`); if (r.why || !r.set || !r.sent || !r.down) fails.push(`the order — refused ${r.why}, set ${r.set}, sent ${r.sent}, down ${r.down}`); if (r.mate === 'dead') fails.push('the partner is down'); }
-    verdict(!fails.length, 'after Sam\'s own knockout of one man: \'take him · on your mark\' on a second, then the mark — he goes down by the partner\'s hands', `${say(on)}${bad(fails)}`); }
+    const on = await run(true), offR = await run(false), fails: string[] = []; const say = (r: any) => `Sam's own first: ${r.first.down}${r.first.breathing ? ', breathing' : ''} · 'fall in' → ${r.before} · 'take him · on your mark' ${r.why ? `REFUSED: ${r.why}` : 'given'} · set after ${(r.setAt / 60).toFixed(1)} s · the mark ${r.sent} · down ${r.down ? `after ${(r.downAt / 60).toFixed(1)} s: ${r.kind}${r.breathing ? ', breathing' : ''}` : 'NEVER'} · then ${r.after} (${r.status}) · "${r.line}"`;
+    for (const [what, r] of [['CLOSE on', on], ['CLOSE off', offR]] as const) { if (r.first.state !== 'dead' || r.first.down !== 'struck') fails.push(`${what}: staging — Sam's knockout of the first man left him ${r.first.state} / ${r.first.down}`); if (r.fall || r.before !== 'fallIn') fails.push(`${what}: 'fall in' after it → ${r.fall ?? r.before}`); if (r.why || !r.set || !r.sent || !r.down) fails.push(`${what}: the order — refused ${r.why}, set ${r.set}, sent ${r.sent}, down ${r.down}`); if (r.mate === 'dead') fails.push(`${what}: the partner is down`); }
+    if (on.kind !== offR.kind || on.breathing !== offR.breathing) fails.push(`the man is '${on.kind}' with the switch on, '${offR.kind}' off`); if (Math.abs(on.downAt - offR.downAt) > 60) fails.push(`down ${(on.downAt / 60).toFixed(1)} s after the order with the switch on, ${(offR.downAt / 60).toFixed(1)} s off`); if (on.after !== offR.after) fails.push(`afterwards the partner is on '${on.after}' (off: '${offR.after}')`);
+    verdict(!fails.length, 'after Sam\'s own knockout of one man: \'take him · on your mark\' on a second, then the mark — he goes down by the partner\'s hands the same way, inside a second of when he does with CLOSE.on off, and the partner falls in again', `on:  ${say(on)}\n    off: ${say(offR)}${bad(fails)}`); }
   { // (5) the dark rule is Sam's alone
     const SPOT: Vec3 = [BR.man[0], 0, BR.man[2] + 1.2], fails: string[] = [];
     const alone = async (who: 'partner' | 'sam') => { const S = await duoStage({ calm: false, room: false }), { R, g, pl, m, T1, T2 } = S; g.setGroup('breakroom', false); R.pin(T1, { at: BR.man, yaw: BR.yaw }); T1.flashlight.enabled = false; R.pin(T2, { at: [20, 0, 11], yaw: EAST });
@@ -665,19 +782,19 @@ export async function closeDuo(): Promise<boolean> {
     if (!s.passes || s.first || s.maxAw >= 0.3) fails.push(`Sam on the same spot: dark passes ${s.passes}, ${s.first || 'calm'}, awareness ${f2(s.maxAw)}`);
     verdict(!fails.length, 'the dark rule is SAM\'s alone (by decision): the partner stood 1.2 m in front of a defender in the dark is seen by the build\'s near-sight floor and closeNearK is never asked (darkPasses +0); Sam on the same spot is passed', `the spot's meter ${f3(p.lit)} · the partner there, Sam ${f1(p.samD)} m away: ${p.first || 'calm'}, his eyes on ${p.foe}, dark passes +${p.passes} · Sam there, the partner away: ${s.first || 'calm'} (awareness ${f2(s.maxAw)}), dark passes +${s.passes}${bad(fails)}`);
     // OBSERVED, not judged: Sam walks through the dark 1.2 m across the man's front with the partner following
-    { const S = await duoStage({ calm: false, room: false }), { R, g, pl, m, T1, T2 } = S; g.setGroup('breakroom', false); R.pin(T1, { at: BR.man, yaw: BR.yaw }); T1.flashlight.enabled = false; R.pin(T2, { at: [20, 0, 11], yaw: EAST });
+    for (const dark of [true, false]) { const S = await duoStage({ calm: false, room: false, dark }), { R, g, pl, m, T1, T2 } = S; g.setGroup('breakroom', false); R.pin(T1, { at: BR.man, yaw: BR.yaw }); T1.flashlight.enabled = false; R.pin(T2, { at: [20, 0, 11], yaw: EAST });
       g.teleportPlayer([28.0, 0, 17.2]); R.put(m, [27.0, 0, 17.2], EAST); R.step(5); R.O.give('fallIn', R.O.targetAt(pl.char.pos), 'all'); R.step(60); pl.crouch = true;
       const n0 = R.said.length, words: string[] = []; let minMate = 9, minSam = 9, maxAw = 0, first = ''; const post = R.post;
       R.post = () => { post?.(); T1.flashlight.enabled = false; minMate = Math.min(minMate, distXZ(m.char.pos, T1.char.pos)); minSam = Math.min(minSam, distXZ(pl.char.pos, T1.char.pos)); maxAw = Math.max(maxAw, T1.awareness); if (!first && T1.state !== 'patrol') first = `${T1.state} at frame ${R.frames} (his eyes on ${T1.foe === m ? 'the partner' : T1.foe === 'player' ? 'Sam' : T1.foe})`; const w = R.status(); if (words[words.length - 1] !== w) words.push(w); };
       const got = R.walk([33.2, 0, 17.2], 0.7, 30); R.step(600); R.post = post;
-      console.log(`  (OBSERVED, not judged: Sam crouch-walks the dark break room across the man's front, nearest ${f2(minSam)} m, ${got ? 'and is through' : 'and does not get through'}; ${first ? `the man: ${first}` : `the man never leaves his patrol (awareness at most ${f2(maxAw)})`}.\n     ${m.callsign} following: nearest ${f2(minMate)} m to the man, ends ${f2(distXZ(m.char.pos, pl.char.pos))} m from Sam on '${S.order()}'; his status line went: ${words.join(' → ')}; said: ${R.said.slice(n0).filter((t: string) => t.startsWith(`[${m.callsign}]`)).join(' | ') || '(nothing)'})`); }
+      console.log(`  (OBSERVED, not judged — CLOSE.dark ${dark ? 'ON' : 'off'}: Sam crouch-walks the dark break room across the man's front, nearest ${f2(minSam)} m, ${got ? 'and is through' : 'and does not get through'}; ${first ? `the man: ${first}` : `the man never leaves his patrol (awareness at most ${f2(maxAw)})`}.\n     ${m.callsign} following: nearest ${f2(minMate)} m to the man, ends ${f2(distXZ(m.char.pos, pl.char.pos))} m from Sam on '${S.order()}'; his status line went: ${words.join(' → ')}; said: ${R.said.slice(n0).filter((t: string) => t.startsWith(`[${m.callsign}]`)).join(' | ') || '(nothing)'})`); }
   }
   } finally { K.knobsBack(keep); Math.random = rnd; }
   return allPass;
-}
+}); }
 
 /** the whole card (`bun run tools/qa/close-probes.ts`): true = every probe passed */
-export const CLOSE_PROBES = [['close-mode', closeModeProbe], ['close-tell', closeTell], ['close-melee', closeMelee], ['close-grab', closeGrab], ['close-held', closeHeld], ['close-dark', closeDark], ['close-windows', closeWindowsProbe], ['close-offer', closeOffer], ['close-rows', closeRowsProbe], ['close-marks', closeMarksProbe], ['close-seat', closeSeatProbe], ['close-duo', closeDuo]] as const;
+export const CLOSE_PROBES = [['close-mode', closeModeProbe], ['close-tell', closeTell], ['close-melee', closeMelee], ['close-grab', closeGrab], ['close-held', closeHeld], ['close-dark', closeDark], ['close-windows', closeWindowsProbe], ['close-offer', closeOffer], ['close-rows', closeRowsProbe], ['close-marks', closeMarksProbe], ['close-seat', closeSeatProbe], ['close-harness', closeHarness], ['close-duo', closeDuo]] as const;
 async function closeAll(want: readonly string[]): Promise<boolean | null> {
   const t0 = performance.now(), timed = Object.fromEntries(CLOSE_PROBES.map(([name, fn]) => [name, async (): Promise<boolean> => { const t = performance.now(); try { return await fn(); } finally { if (VERBOSE) console.log(`  (${name}: ${((performance.now() - t) / 1000).toFixed(1)} s)`); } }]));
   const ok = await asProbes(timed, want);

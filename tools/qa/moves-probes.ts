@@ -1,15 +1,15 @@
 // The 'moves' family: THE LOUD DEMO'S MOTION PASS (src/game/character.ts MOVES / MV) — a rifle that recoils, the bang tossed off the support hand, the stun
-// charge's hunch, the flinch and the hit as two different things, the two sides' gaits, the stack's squeeze. The pass is settled on (MOVES.on): nothing here writes it and no
-// line asks it off. Until 2026-11-07 the family also had `moves-off` (the pass off: the new calls are the old ones, to the bit) and `moves-gait` (the trained
-// walk lower, leaning in and with less bob, the feet where the cycle had them: every one of its five lines was measured against the pass off), and four lines
-// of other probes asked the pass off (moves-kept's ankles, moves-hands (8), moves-snap's master switch, moves-steady's sneak): all went with the switch.
+// charge's hunch, the flinch and the hit as two different things, the two sides' gaits, the stack's squeeze. The harness stands the game up with the pass OFF
+// (host/standup.ts) so every older probe and frozen digest measures the animator as it was; this family turns it on.
 //
-//   bun run tools/qa/probes.ts moves | moves-recoil | moves-react | moves-toss | moves-dazzle | moves-game | moves-reload | moves-kept | moves-entry | moves-second | moves-hands | moves-snap
+//   bun run tools/qa/probes.ts moves | moves-off | moves-recoil | moves-react | moves-toss | moves-dazzle | moves-gait | moves-game | moves-reload | moves-kept | moves-entry | moves-second | moves-hands | moves-snap
 //
+//   moves-off     · with the pass off the new calls ARE the old ones: flinchFrom / hitFrom = hit(), tossItem = signal('go'), signal('squeeze') = signal('hold') — the pose bit for bit
 //   moves-recoil  · four rounds: the gun comes back and climbs, more for an untrained man than a trained one, both hands stay on it, and it settles back
 //   moves-react   · the flinch and the hit: feet where they stood, hands on the gun, the head down in a flinch, the trunk knocked along the round in a hit, back at rest after
 //   moves-toss    · the support hand leaves the gun, swings through and is back on it; the trigger hand keeps the rifle; feet where they stood
 //   moves-dazzle  · blinded: head down and turned off the charge, the forearm up at the face, held as long as the game holds him; eased back out after
+//   moves-gait    · the trained walk sits lower and leans in with every FOOT where the cycle had it; the untrained walk moves no pelvis
 //   moves-game    · a staged fight with the pass on: each side is dealt its training, a blinded man is held bent, a minute runs with every bone finite
 //   moves-hands   · the hand pass: an empty hand is relaxed, a grip is kept, a layer's hand is the layer's — and nothing the game reads moves (its head comment below)
 //   moves-snap    · a pistol fired from the carry: the wrist eases up, the bare arm stays out from between carry and aim, a pitched shot keeps its pitch; the round's bore and frame unchanged
@@ -33,8 +33,11 @@ const DT = 1 / 60, cm = (m: number) => (m * 100).toFixed(1) + ' cm', deg = (r: n
 const dist = (a: V3, b: V3) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
 const keep = { ...CH.MOVES };
 const restore = () => Object.assign(CH.MOVES, keep);
-// (GUN HAND's long reload — gunhand.ts `longReload`, settled on — carries the gun and the trigger hand through a long gun's magazine change. Until 2026-11-07
-// moves-reload and moves-kept ran with GUN HAND written off, the pose their support-arm layer was recorded over: the write is out, they run on the page's pose.)
+// GUN HAND's long reload (gunhand.ts `longReload`, on on the shipped stand) carries the gun and the trigger hand through a long gun's magazine change: a man
+// changing one no longer reads the same as a man who is not, which is what moves-reload and moves-kept hold of the support arm's layer. Those two run with it
+// held off (the pose this layer was recorded over); the carry has its own check, with the hand at the well where the gun then is (gunhand-reload-check.ts).
+const { GUNHAND } = await import(`${ROOT}/src/game/gunhand.ts`);
+const gunhandOff = () => { const was = GUNHAND.on; GUNHAND.on = false; return () => { GUNHAND.on = was; }; };
 let gltf: any = null;
 async function man(trained: number, o: { aim?: boolean; speed?: number; steady?: number } = {}) {
   gltf ??= await loadCharacter();
@@ -47,10 +50,28 @@ async function man(trained: number, o: { aim?: boolean; speed?: number; steady?:
 const snap = (c: any) => ({ hR: [...c.bones.handR] as V3, hL: [...c.bones.handL] as V3, fL: [...c.bones.footL] as V3, fR: [...c.bones.footR] as V3, head: [...c.bones.head] as V3, hips: [...c.bones.hips] as V3, chest: [...c.bones.chest] as V3, pitch: Math.asin(c.gunDir[1]), grip: dist(c.bones.handL, c.bones.handR) });
 const poseBits = (c: any) => { const b = c.bones; let h = 2166136261; const f = new Float64Array(1), u = new Uint8Array(f.buffer); for (const k of Object.keys(b).sort()) for (const x of b[k]) { f[0] = x; for (const y of u) { h ^= y; h = Math.imul(h, 16777619); } } return (h >>> 0).toString(16); };
 
+export async function movesOff(): Promise<boolean> {
+  const F = family('moves-off: the pass off — the new calls are the old ones, to the bit');
+  try {
+    CH.MOVES.on = 0;
+    const run = async (neu: boolean) => {
+      const c = await man(0.12); let out = '';
+      const acts: [number, () => void][] = [[5, () => c.anim.fire()], [11, () => c.anim.fire()], [40, () => neu ? c.anim.flinchFrom([1, 0, 1]) : c.anim.hit()], [120, () => neu ? c.anim.hitFrom([0, 0, -1]) : c.anim.hit()],
+        [200, () => neu ? c.anim.tossItem() : c.anim.signal('go')], [300, () => c.anim.signal(neu ? 'squeeze' : 'hold')], [380, () => { if (neu) c.anim.dazzle = { from: [1, 0, 2], k: 1 }; }], [380, () => { c.anim.trained = neu ? 1 : 0.12; }],
+        [60, () => { if (neu) { c.anim.reloadBack = true; c.anim.clutch = 1; c.anim.dip = 1; c.anim.bound = 2; } }], [240, () => neu ? c.anim.reload(1.6, { dur: 2.6, out: 0.7, in_: 1.7, rack: 2.2 }) : c.anim.reload(1.6)]];   // (the second pass: its inputs and the reload's beat are nobody's with the pass off)
+      for (let f = 0; f < 460; f++) { for (const [at, fn] of acts) if (at === f) fn(); c.update(DT); if (f % 20 === 0) out += poseBits(c); }
+      return out;
+    };
+    const a = await run(true), b = await run(false);
+    F.verdict(a === b, 'off: fire, flinchFrom, hitFrom, tossItem, signal squeeze, a dazzle, a change of training, a reload with its beat and the second pass\'s inputs pose exactly as fire, hit, hit, signal go, signal hold, a plain reload and nothing did', `${a.length / 8 | 0} pose hashes over 460 frames · ${a === b ? 'identical' : 'DIFFER'}`);
+  } finally { restore(); }
+  return F.done();
+}
+
 export async function movesRecoil(): Promise<boolean> {
   const F = family('moves-recoil: four rounds — the gun comes back and climbs, less for a trained man, both hands on it, settled after');
   try {
-    if (BREAK) CH.MOVES.recoil = 0;
+    CH.MOVES.on = 1; if (BREAK) CH.MOVES.recoil = 0;
     const burst = async (tr: number) => {
       const c = await man(tr), k = await man(tr); const s0 = snap(c); let back = 0, climb = 0, part = 0;   // (k: the same man firing nothing — what "where it was" means a second later, the idle's own drift taken out)
       for (let f = 0; f < 100; f++) { if (f % 6 === 0 && f < 24) c.anim.fire(); c.update(DT); k.update(DT); const s = snap(c), z = snap(k); back = Math.max(back, z.hR[2] - s.hR[2]); climb = Math.max(climb, s.pitch - z.pitch); part = Math.max(part, Math.abs(s.grip - s0.grip)); }
@@ -68,6 +89,7 @@ export async function movesRecoil(): Promise<boolean> {
 export async function movesReact(): Promise<boolean> {
   const F = family('moves-react: the flinch is a duck, the hit a blow — feet planted, hands on the gun, back at rest after');
   try {
+    CH.MOVES.on = 1;
     const play = async (tr: number, what: 'flinch' | 'hit') => {
       const c = await man(tr), k = await man(tr); const s0 = snap(c); let foot = 0, part = 0, headDrop = 0, chestBack = 0, hipsDrop = 0;
       if (what === 'flinch') c.anim.flinchFrom([0.5, 0, 1]); else c.anim.hitFrom([0, 0, -1]);
@@ -95,6 +117,7 @@ export async function movesReact(): Promise<boolean> {
 export async function movesToss(): Promise<boolean> {
   const F = family('moves-toss: the support hand tosses and comes back; the rifle stays in the trigger hand');
   try {
+    CH.MOVES.on = 1;
     const c = await man(1, { aim: false }); c.anim.stance = 'highReady'; c.anim.upper = 'none'; for (let i = 0; i < 60; i++) c.update(DT);
     const s0 = snap(c); let off = 0, gun = 0, foot = 0, fwd = -9, low = 9; c.anim.tossItem();
     const busy0 = c.anim.tossing;
@@ -111,6 +134,7 @@ export async function movesToss(): Promise<boolean> {
 export async function movesDazzle(): Promise<boolean> {
   const F = family('moves-dazzle: blinded — bent away from the charge with the forearm up at the face, for as long as he is held');
   try {
+    CH.MOVES.on = 1;
     const c = await man(0.12), k = await man(0.12); const s0 = snap(c);
     c.anim.dazzle = { from: [1.5, 0, 2], k: 1 }; c.anim.upper = 'none'; c.anim.stance = 'lowReady';
     let foot = 0; for (let f = 0; f < 90; f++) { c.update(DT); const s = snap(c); foot = Math.max(foot, dist(s.fL, s0.fL), dist(s.fR, s0.fR)); }
@@ -141,11 +165,32 @@ export async function movesDazzle(): Promise<boolean> {
   return F.done();
 }
 
+export async function movesGait(): Promise<boolean> {
+  const F = family('moves-gait: the trained walk sits lower and leans in over the same feet; the untrained one keeps its pelvis');
+  try {
+    const walk = async (on: number, tr: number) => {
+      CH.MOVES.on = on; const c = await man(tr, { aim: false, speed: 1.3, steady: 1 }); c.anim.stance = 'lowReady'; c.anim.upper = 'none';
+      const out: any[] = []; for (let f = 0; f < 240; f++) { c.update(DT); if (f >= 120) out.push(snap(c)); } return out;
+    };
+    const off = await walk(0, 1), tr = await walk(1, 1), un = await walk(1, 0.12);
+    const mean = (a: any[], k: (s: any) => number) => a.reduce((x, s) => x + k(s), 0) / a.length;
+    const range = (a: any[], k: (s: any) => number) => Math.max(...a.map(k)) - Math.min(...a.map(k));
+    let foot = 0, footU = 0, hipU = 0; for (let i = 0; i < off.length; i++) { foot = Math.max(foot, dist(off[i].fL, tr[i].fL), dist(off[i].fR, tr[i].fR)); footU = Math.max(footU, dist(off[i].fL, un[i].fL), dist(off[i].fR, un[i].fR)); hipU = Math.max(hipU, dist(off[i].hips, un[i].hips)); }
+    const drop = mean(off, s => s.hips[1]) - mean(tr, s => s.hips[1]), lean = mean(tr, s => s.chest[2] - s.hips[2]) - mean(off, s => s.chest[2] - s.hips[2]);
+    F.verdict(drop > 0.02 && drop < 0.06, 'a trained man with a rifle walks sunk onto his knees', `pelvis ${cm(drop)} lower on average than with the pass off — want 2 to 6`);
+    F.verdict(lean > 0.012, 'leaning into the gun', `chest ${cm(lean)} further ahead of the hips`);
+    F.verdict(range(tr, s => s.hips[1]) < range(off, s => s.hips[1]) * 0.85, 'with less bob', `pelvis height varies ${cm(range(tr, s => s.hips[1]))} over the cycle against ${cm(range(off, s => s.hips[1]))}`);
+    F.verdict(foot < 0.004, 'and every foot exactly where the walk cycle had it', `worst foot difference from the pass off, frame for frame over two seconds: ${(foot * 1000).toFixed(1)} mm — want < 4`);
+    F.verdict(hipU < 0.002 && footU < 0.002, 'the untrained walk moves no pelvis and no foot (its difference is in the shoulders)', `pelvis ${(hipU * 1000).toFixed(1)} mm · feet ${(footU * 1000).toFixed(1)} mm off the pass-off walk`);
+  } finally { restore(); }
+  return F.done();
+}
+
 export async function movesGame(): Promise<boolean> {
   const F = family('moves-game: a staged fight with the pass on — training dealt by side, a blinded man held bent, every bone finite');
   try {
     const { stage } = await import('./bang-tally.ts');
-    const S: any = await quiet(() => stage('night-breach', 1)); const { g, step } = S; step(30);
+    const S: any = await quiet(() => stage('night-breach', 1)); const { g, step } = S; CH.MOVES.on = 1; step(30);
     const ops = g.guards.filter((x: any) => x.team === 'operative' && x.state !== 'dead'), foes = g.guards.filter((x: any) => x.team === 'hostile' && x.state !== 'dead');
     F.verdict(ops.length > 0 && foes.length > 0 && ops.every((x: any) => x.char.anim.trained === 1) && foes.every((x: any) => x.char.anim.trained < 0.3) && g.player.char.anim.trained === 1,
       'the team and the player are dealt trained, the defenders untrained', `${ops.length} operatives at ${ops[0]?.char.anim.trained} · ${foes.length} defenders at ${foes[0]?.char.anim.trained} · the player at ${g.player.char.anim.trained}`);
@@ -175,7 +220,9 @@ const gunFrame = (c: any) => { const d = c.gunDir as V3, g = c.gunUnder() as V3,
 const inGun = (c: any, p: V3): V3 => { const F = gunFrame(c), r: V3 = [p[0] - c.bones.handR[0], p[1] - c.bones.handR[1], p[2] - c.bones.handR[2]]; const dot = (a: V3) => a[0] * r[0] + a[1] * r[1] + a[2] * r[2]; return [dot(F.x), dot(F.u), dot(F.d)]; };
 export async function movesReload(): Promise<boolean> {
   const F = family('moves-reload: the long gun\'s magazine change on the support arm — and nothing the fight reads moved');
+  const gunhandBack = gunhandOff();
   try {
+    CH.MOVES.on = 1;
     const run = async (trained: number, back: boolean, beat: any, clip: number, on: number, long = true) => {
       CH.MOVES.reload = BREAK ? 0 : on; const c = await man(trained); if (!long) { c.anim.longGun = false; for (let i = 0; i < 60; i++) c.update(DT); }
       c.anim.reloadBack = back; c.anim.upper = 'none'; c.anim.stance = 'lowReady'; c.anim.reload(clip, beat);
@@ -221,13 +268,14 @@ export async function movesReload(): Promise<boolean> {
       F.verdict(atIn < 0.05 && back < 0.02 && fullBack > 0.05 && c.anim.mv2Shown.reload === 0, 'a top-up (a round still chambered): the fresh one seated and the hand straight back to the gun — the handle is not run', `at the well ${cm(atIn)} when it seats · at 2.0 s (where an empty gun racks) the hand is ${cm(back)} from the gun hold (want < 2; ${cm(fullBack)} on a full change, on the handle) · the layer out by the end`); }
     { const beat = { dur: 1.6, out: 0.38, in_: 1.02, rack: 1.38 }; const a = await run(0.12, false, beat, 1.6, 1, false), b = await run(0.12, false, beat, 1.6, 0, false); let same = 0; for (let i = 0; i < a.length; i++) if (a[i].all === b[i].all) same++;
       F.verdict(same === a.length, 'a sidearm\'s reload is the clip as it was (the layer is the long gun\'s)', `${same} of ${a.length} frames identical, whole pose`); }
-  } finally { restore(); }
+  } finally { gunhandBack(); restore(); }
   return F.done();
 }
 export async function movesKept(): Promise<boolean> {
   const F = family('moves-kept: wrists behind the back, hands on the head, a hand to the ribs — arms only');
+  const gunhandBack = gunhandOff();
   try {
-    gltf ??= await loadCharacter();
+    CH.MOVES.on = 1; gltf ??= await loadCharacter();
     const civ = async (bound: number) => { const c: any = new CH.Character(gltf, { id: 1, tint: [1, 1, 1], tint2: [1, 1, 1], pos: [0, 0, 0], yaw: 0 }); c.anim.phase = 0; c.anim.upper = 'none'; c.anim.stance = 'none'; c.anim.crouchTarget = 1; c.anim.trained = 0.5;
       for (let i = 0; i < 90; i++) c.update(DT); c.anim.bound = BREAK ? 0 : bound; const fr: string[] = []; for (let i = 0; i < 90; i++) { c.anim.lookYawExtra = 0.5 * Math.sin(i / 20); c.update(DT); fr.push(simBits(c)); } return { c, fr }; };
     for (const [kind, label] of [[1, 'a hostage: wrists together behind her back'], [2, 'told to stay down: both hands on the head']] as const) {
@@ -237,8 +285,8 @@ export async function movesKept(): Promise<boolean> {
       const ok = kind === 1 ? apart < 0.14 && behind > 0.06 : apart < 0.2 && toCrown < 0.17;
       F.verdict(ok && k.c.anim.mv2Shown.bound > 0.95, label, kind === 1 ? `wrists ${cm(apart)} apart (want < 14), ${cm(behind)} behind the pelvis (want > 6)` : `wrists ${cm(apart)} apart (want < 20), their middle ${cm(toCrown)} from the crown (want < 17)`);
       F.verdict(same === k.fr.length, '… and her head, where it looks, the trunk and the feet are the same numbers as with her arms free, every frame', `${same} of ${k.fr.length} frames identical`);
-      { const low = Math.min(b.toeL[1], b.toeR[1]);   // (toesUp: the kneeling foot's toe, which the crouch had 8 cm under the floor — by the foot joint alone; until 2026-11-07 the line also held both ankles to the pose with the pass off)
-        F.verdict(low > CH.TOE_FLOOR_Y - 0.002, '… kept down, neither toe is under the floor', `lowest toe ${cm(low)} off the floor`); }
+      { CH.MOVES.on = 0; const was = await civ(kind); CH.MOVES.on = 1; const low = Math.min(b.toeL[1], b.toeR[1]), lowWas = Math.min(was.c.bones.toeL[1], was.c.bones.toeR[1]);   // (toesUp: the kneeling foot's toe, which the crouch had 8 cm under the floor — by the foot joint alone)
+        F.verdict(low > CH.TOE_FLOOR_Y - 0.002 && dist(b.footL, was.c.bones.footL) < 1e-6 && dist(b.footR, was.c.bones.footR) < 1e-6, '… kept down, neither toe is under the floor, and both ankles are where the game as it was has them', `lowest toe ${cm(low)} off the floor (MOVES off: ${cm(lowWas)}) · ankles moved ${(dist(b.footL, was.c.bones.footL) * 1000).toFixed(3)} / ${(dist(b.footR, was.c.bones.footR) * 1000).toFixed(3)} mm`); }
       k.c.anim.bound = 0; for (let i = 0; i < 120; i++) { k.c.anim.lookYawExtra = free.c.anim.lookYawExtra = 0; k.c.update(DT); free.c.update(DT); }
       const offL = dist(k.c.bones.handL, free.c.bones.handL), offR = dist(k.c.bones.handR, free.c.bones.handR);
       F.verdict(offL < 0.003 && offR < 0.003 && k.c.anim.mv2Shown.bound === 0, '… and let go of, her arms are her own again', `hands ${cm(offL)} / ${cm(offR)} from where the free pose has them`);
@@ -251,10 +299,10 @@ export async function movesKept(): Promise<boolean> {
     { const fall = async (mk: () => Promise<{ c: any }>) => { const { c } = await mk(), r = Math.random; let s = 12345; Math.random = () => (s = (Math.imul(s, 1664525) + 1013904223) >>> 0) / 4294967296;
         const sh = c.anim.mv2Shown, w = Math.max(sh.reload, sh.bound, sh.clutch), hand = [...(c.jointUnder('handL') as V3)] as V3, drawn = [...c.bones.handL] as V3;
         try { c.ragdollize(null, [0.6, 0, 0.8], false); for (let k = 0; k < 90; k++) c.update(DT); } finally { Math.random = r; } return { x: Array.from(c.ragdoll.x as ArrayLike<number>).join(','), w, hand, drawn }; };
-      // (until 2026-11-07 two lines here shot a rifleman half way through a magazine change and asked that he falls, and a can leaves his hand, exactly as
-      //  with his hand on the gun. They were written over the pose with GUN HAND held off; its long reload, settled on, carries the gun and the trigger
-      //  hand through the change, so a man changing a magazine no longer reads the same as a man who is not: out by ruling)
-      const free = await fall(() => civ(0)), tied = await fall(() => civ(1)), head = await fall(() => civ(2)), plain = await fall(() => rif(0)), ribs = await fall(() => rif(1));
+      // (a magazine change on the game's clock, caught with the hand off the gun at the well; the same man with no reload beside him)
+      const rel = async (on: boolean) => { const c = await man(0.12); c.anim.upper = 'none'; c.anim.stance = 'lowReady'; c.anim.reloadBack = true; c.anim.reloadRow = { dur: 2.4, out: 0.5, in_: 1.5, rack: 2.0 };
+        for (let i = 0; i < 60; i++) { c.anim.reloadAt = on && !BREAK ? 0.3 + i * DT : -1; c.update(DT); } return { c }; };
+      const free = await fall(() => civ(0)), tied = await fall(() => civ(1)), head = await fall(() => civ(2)), plain = await fall(() => rif(0)), ribs = await fall(() => rif(1)), gun = await fall(() => rel(false)), mag = await fall(() => rel(true));
       const shown = (...a: { w: number }[]) => a.every(o => o.w > 0.9), say = (a: { x: string }, b: { x: string, w: number }) => `${a.x === b.x ? 'identical' : 'DIFFERS'} (layer shown ${b.w.toFixed(2)})`;
       F.verdict(free.x === tied.x && free.x === head.x && shown(tied, head), 'shot with her wrists tied or her hands on her head, she falls exactly as with her arms free', `tied ${say(free, tied)} · hands on the head ${say(free, head)} · every particle, 1.5 s on`);
       F.verdict(plain.x === ribs.x && shown(ribs), 'shot with his hand at his ribs, a rifleman falls exactly as without it', `${say(plain, ribs)} · every particle, 1.5 s on`);
@@ -262,7 +310,9 @@ export async function movesKept(): Promise<boolean> {
       { const low = async (cl: number) => { const o = await rif(cl); o.c.anim.crouchTarget = 1; for (let i = 0; i < 90; i++) o.c.update(DT); return o; };
         const kneel = await fall(() => low(0)), kneelRibs = await fall(() => low(1));
         F.verdict(kneel.x === kneelRibs.x && shown(kneelRibs) && kneel.x !== plain.x, 'shot crouched with his hand at his ribs, he falls exactly as crouched without it', `${say(kneel, kneelRibs)} · ${kneel.x !== plain.x ? 'not the standing fall' : 'THE STANDING FALL: he never crouched'} · every particle, 1.5 s on`); }
-    }
+      F.verdict(gun.x === mag.x && mag.w > 0.5, 'shot half way through a magazine change, a rifleman falls exactly as with his hand on the gun', `${say(gun, mag)} · every particle, 1.5 s on`);
+      const off = dist(mag.drawn, gun.drawn), under = dist(mag.hand, gun.hand);
+      F.verdict(off > 0.05 && under < 1e-9 && dist(gun.hand, gun.drawn) === 0, '… and a can thrown from that hand leaves where the hand is without the magazine change (jointUnder)', `drawn hand ${cm(off)} off the gun hold (want > 5) · the hand the game reads ${(under * 1000).toFixed(3)} mm from it (want 0)`); }
     const a = await rif(1), b = await rif(0); let same = 0; for (let i = 0; i < a.fr.length; i++) if (a.fr[i] === b.fr[i]) same++;
     const off = dist(a.c.bones.handL, b.c.bones.handL), toRibs = dist(a.c.bones.handL, a.c.bones.spine2);
     F.verdict(off > 0.12 && toRibs < 0.3 && same === a.fr.length, 'knocked about and still up: the support hand leaves the gun for his ribs, and nothing the fight reads moves', `the hand ${cm(off)} off the fore-end (want > 12), ${cm(toRibs)} from the chest joint (want < 30) · ${same} of ${a.fr.length} frames identical in what the fight reads`);
@@ -286,12 +336,13 @@ export async function movesKept(): Promise<boolean> {
         } finally { CH.FOLD_WITH.on = keepWith; }
       }
     }
-  } finally { restore(); }
+  } finally { gunhandBack(); restore(); }
   return F.done();
 }
 export async function movesEntry(): Promise<boolean> {
   const F = family('moves-entry: the muzzle down past a friend\'s back — off as shipped, its own switch');
   try {
+    CH.MOVES.on = 1;
     F.verdict(keep.entry === 0 && keep.entryEyes === 0 && keep.reload === 1 && keep.bound === 1 && keep.clutch === 1, 'as shipped the entry switch and its eyes-up part are off, the three arms-only layers are on', `MOVES: entry ${keep.entry} · entryEyes ${keep.entryEyes} · reload ${keep.reload} · bound ${keep.bound} · clutch ${keep.clutch}`);
     const run = async (entry: number, dip: number) => { CH.MOVES.entry = BREAK ? 0 : entry; const c = await man(1, { speed: 1.3 }); const fr: string[] = []; c.anim.dip = dip; for (let i = 0; i < 60; i++) { c.update(DT); fr.push(poseBits(c)); } return { c, fr }; };
     const offA = await run(0, 1), offB = await run(0, 0); let same = 0; for (let i = 0; i < offA.fr.length; i++) if (offA.fr[i] === offB.fr[i]) same++;
@@ -316,7 +367,7 @@ export async function movesSecond(): Promise<boolean> {
   const F = family('moves-second: the second pass in a staged game — hostages bound, a reloading man shows it, no dip dealt with the switch off');
   try {
     const { stage } = await import('./bang-tally.ts');
-    { const S: any = await quiet(() => stage('hostage-rescue', 1)); const { g, step } = S; step(90);
+    { const S: any = await quiet(() => stage('hostage-rescue', 1)); const { g, step } = S; CH.MOVES.on = 1; step(90);
       const hs = g.civilians.filter((x: any) => g.rescue?.isHostage(x) && x.state !== 'dead');
       F.verdict(hs.length > 0 && hs.every((x: any) => x.char.anim.bound === 1 && x.char.anim.mv2Shown.bound > 0.9), 'every living hostage is down with her wrists behind her', `${hs.length} hostages · bound ${hs.map((x: any) => `${x.char.anim.bound}/${x.char.anim.mv2Shown.bound.toFixed(2)}`).join(' ')}`);
       const ops = g.guards.filter((x: any) => x.team === 'operative' && x.state !== 'dead'); let dips = 0; for (let i = 0; i < 600; i++) { step(1); for (const x of ops) if (x.char.anim.dip > 0 || x.char.anim.mv2Shown.dip > 0) dips++; }
@@ -326,7 +377,7 @@ export async function movesSecond(): Promise<boolean> {
       if (!tm) F.verdict(BREAK, 'a teammate the room fight makes reload shows the change', 'no operative on the room fight\'s list in this stage');
       else { const R = tm.x.weapon.def.reload; tm.O.reloadUntil = g.time + R.dur; let shown = 0, n = 0; for (let i = 0; i < Math.round(R.dur * 60) - 6; i++) { if (tm.x.state === 'dead') break; if (tm.O.reloadUntil <= g.time) break; step(1); const t = R.dur - (tm.O.reloadUntil - g.time); if (t > 0.4 && t < R.dur - 0.4) { n++; if (tm.x.char.anim.mv2Shown.reload > 0.5) shown++; } }
         F.verdict(n > 30 && shown >= n * 0.9, 'a teammate the room fight makes reload shows the change through the middle of it', `${tm.x.callsign}: ${n} frames mid-reload · the layer in the pose on ${shown}`); } }
-    { const S: any = await quiet(() => stage('night-breach', 1)); const { g, W } = S; S.step(30);
+    { const S: any = await quiet(() => stage('night-breach', 1)); const { g, W } = S; CH.MOVES.on = 1; S.step(30);
       // the defenders down to their last round and Sam walked into their room in the light (god mode): the round that empties the box starts the game's own reload beat
       const foes = g.guards.filter((x: any) => x.team === 'hostile' && x.state !== 'dead' && x.char.anim.longGun); for (const x of foes) { x.weapon.mag = 0; x.weapon.chamber = 1; }
       const h = foes[0], hp = h.char.pos, y = h.char.bodyYaw; g.playerInvisible = false; g.teleportPlayer([hp[0] + Math.sin(y) * 2.2, 0, hp[2] + Math.cos(y) * 2.2]);
@@ -374,7 +425,7 @@ async function bare(id: number, trained: number, o: { rifle?: boolean; upper?: s
 export async function movesHands(): Promise<boolean> {
   const F = family('moves-hands: an empty hand is a relaxed hand, a hand on something keeps its grip, a layer\'s hand is the layer\'s — and nothing the game reads moves by a bit');
   try {
-    const RP: any = await import(`${ROOT}/src/game/rigProps.ts`); const run = (c: any, n: number) => { for (let i = 0; i < n; i++) c.update(DT); };
+    CH.MOVES.on = 1; const RP: any = await import(`${ROOT}/src/game/rigProps.ts`); const run = (c: any, n: number) => { for (let i = 0; i < n; i++) c.update(DT); };
     const d1 = (a: number[]) => a.map(x => x.toFixed(0)).join(' ');
     // (1) the relaxed hand, standing and walking
     { const a = await bare(11, 0.12), b = noHands(await bare(11, 0.12)); run(a, 90); run(b, 90);
@@ -450,6 +501,10 @@ export async function movesHands(): Promise<boolean> {
         for (let f = 0; f < 3400; f++) { script(a, f); script(b, f); a.update(DT); b.update(DT); if (bad < 0 && gameBits(a, RP) !== gameBits(b, RP)) bad = f; if (digitBits(a) !== digitBits(b)) dig++; }
         ok &&= bad < 0; moved += dig; rows.push(`${name}: ${bad < 0 ? 'identical' : `DIFFERS at frame ${bad}`} (digits differ on ${dig} of 3400 frames)`); }
       F.verdict(ok && moved > 3000, 'with the pass in and with it out, everything the game reads off a pose is bit for bit the same over 3400 scripted frames a man — only finger and thumb joints differ', rows.join(' · ')); }
+    // (8) with MOVES off nothing of it runs: the pose is the pose, whatever the grip input says
+    { CH.MOVES.on = 0; const a = await bare(11, 1), b = await bare(11, 1); a.anim.grip[0] = a.anim.grip[1] = true; let same = true;
+      for (let f = 0; f < 200; f++) { a.update(DT); b.update(DT); same &&= poseBits(a) === poseBits(b) && digitBits(a) === digitBits(b); }
+      F.verdict(same && flexOf(a, 'L').slice(1).every(x => x > 70), 'MOVES off: no pass — the clips\' fists, as the build was', `left ${d1(flexOf(a, 'L'))}° · 200 frames ${same ? 'identical' : 'DIFFER'} with the grip input set and not`); CH.MOVES.on = 1; }
   } finally { restore(); }
   return F.done();
 }
@@ -473,18 +528,21 @@ async function swing(h: number, k: number, aim: number, body: number, secs = 2.5
   return { t, tb, peak, peakB, jerk, past, rel: rel(), c };
 }
 export async function turnOff(): Promise<boolean> {
-  const F = family('turn-off: a man nobody weighs — his yaws are the ones written, to the bit');
+  const F = family('turn-off: with the weight off — or a man nobody weighs — his yaws are the ones written, to the bit');
   try {
-    const c = await man(1); c.turn.on = false; let worst = 0;
+    CH.TURN.on = 0; let c = await man(1); c.turn.on = true; let worst = 0;
     for (let i = 0; i < 120; i++) { const b = Math.sin(i * 0.37) * 2, a = b + Math.cos(i * 0.91); c.turnBegin(); c.bodyYaw = b; c.aimYaw = a; c.update(DT); worst = Math.max(worst, Math.abs(c.bodyYaw - b), Math.abs(c.aimYaw - a)); }
-    F.verdict(worst === 0, 'a man not weighed (Sam, a civilian, a showcase\'s cast): bodyYaw and aimYaw come out of update() as they went in', `worst difference over 120 frames of thrown yaws: ${worst}`);
+    F.verdict(worst === 0, 'TURN.on 0: bodyYaw and aimYaw come out of update() as they went in', `worst difference over 120 frames of thrown yaws: ${worst}`);
+    CH.TURN.on = 1; c = await man(1); c.turn.on = false; worst = 0;
+    for (let i = 0; i < 120; i++) { const b = Math.sin(i * 0.37) * 2, a = b + Math.cos(i * 0.91); c.turnBegin(); c.bodyYaw = b; c.aimYaw = a; c.update(DT); worst = Math.max(worst, Math.abs(c.bodyYaw - b), Math.abs(c.aimYaw - a)); }
+    F.verdict(worst === 0, 'a man not weighed (Sam, a civilian, a showcase\'s cast): the same, with TURN on', `worst difference ${worst}`);
   } finally { restoreTurn(); restore(); }
   return F.done();
 }
 export async function turnWeight(): Promise<boolean> {
   const F = family('turn-weight: a muzzle and a body come round as masses — up to speed, a top rate by the weapon, off speed onto the point and never past it');
   try {
-    const T = CH.TURN, Q = Math.PI / 2;
+    CH.TURN.on = 1; const T = CH.TURN, Q = Math.PI / 2;
     const car = await swing(0.82, 1, Q, 0), pis = await swing(1, 1, Q, 0), rif = await swing(0.7, 1, Q, 0), green = await swing(0.82, 0.12, Q, 0);
     F.verdict(car.t > 0.2 && car.t < 0.5 && (BREAK ? car.t < 0.1 : true), 'a trained man brings a carbine a quarter turn round in over a fifth and under half a second (it was 0.2 s flat out, no run-up)', `90° with handling 0.82: on the point (inside 3°) after ${car.t.toFixed(2)} s`);
     F.verdict(car.peak <= T.aim * 0.82 + 0.05 && car.peak > 4, 'its top rate is the weapon\'s', `peak ${deg(car.peak)}/s — the cap ${deg(T.aim * 0.82)}/s`);
@@ -496,18 +554,18 @@ export async function turnWeight(): Promise<boolean> {
     F.verdict(piv.tb > 0.5 && piv.tb < 1.0 && piv.peakB <= T.body * (1 - T.bodyShare * 0.18) + 0.05, 'an about-face takes over half a second, at the body\'s own top rate', `176°: body on it after ${piv.tb.toFixed(2)} s, peak ${deg(piv.peakB)}/s (unweighed, bodies in whole play-throughs turned at a flat 290‥340°/s)`);
     { const ts: number[] = [], was = { ...T };   // the three named settings (TURN_FEEL; `?turn=light|medium|heavy`, `TPS_TURN=<name>`): each heavier than the last, and setTurn is the one way in
       for (const k of ['light', 'medium', 'heavy'] as const) { CH.setTurn(k); ts.push((await swing(0.8, 1, Q, 0)).t); }
-      const named = CH.turnFeel(), own = (CH.setTurn('1,aim=9'), CH.turnFeel()); Object.assign(T, was);
-      F.verdict(ts[0] < ts[1] && ts[1] < ts[2] && named === 'heavy' && own === 'own numbers', 'light, medium, heavy: each named setting is slower than the last, and the game says which one is live', `the team's rifle a quarter turn: ${ts.map(t => t.toFixed(2) + ' s').join(' · ')} · after 'heavy': ${named} · after '1,aim=9': ${own}`);
-      const warn = console.warn; let said = 0; console.warn = () => { said++; }; let bad: boolean, typo: boolean, typoAim: number;
-      try { bad = CH.setTurn('hevy'); Object.assign(T, was); typo = CH.setTurn('1,aimm=7'); typoAim = T.aim; } finally { console.warn = warn; Object.assign(T, was); }
-      F.verdict(!bad && !typo && typoAim === was.aim && said === 2, 'a mistyped name or number is refused aloud, never quietly taken as another setting', `'hevy' → understood ${bad} · '1,aimm=7' → understood ${typo}, aim still ${typoAim} · warnings ${said}`); }
+      const named = CH.turnFeel(), own = (CH.setTurn('1,aim=9'), CH.turnFeel()), offW = (CH.setTurn('0'), CH.turnFeel()); Object.assign(T, was);
+      F.verdict(ts[0] < ts[1] && ts[1] < ts[2] && named === 'heavy' && own === 'own numbers' && offW === 'off', 'light, medium, heavy: each named setting is slower than the last, and the switch says which one is live', `the team's rifle a quarter turn: ${ts.map(t => t.toFixed(2) + ' s').join(' · ')} · after 'heavy': ${named} · after '1,aim=9': ${own} · after '0': ${offW}`);
+      const warn = console.warn; let said = 0; console.warn = () => { said++; }; let bad: boolean, badOn: number, typo: boolean, typoAim: number;
+      try { bad = CH.setTurn('hevy', 0); badOn = T.on; Object.assign(T, was); typo = CH.setTurn('1,aimm=7'); typoAim = T.aim; } finally { console.warn = warn; Object.assign(T, was); }
+      F.verdict(!bad && badOn === 0 && !typo && typoAim === was.aim && said === 2, 'a mistyped name or number is refused aloud, never quietly taken as another setting', `'hevy' → understood ${bad}, on ${badOn} · '1,aimm=7' → understood ${typo}, aim still ${typoAim} · warnings ${said}`); }
   } finally { restoreTurn(); restore(); }
   return F.done();
 }
 export async function turnEasing(): Promise<boolean> {
   const F = family('turn-easing: the AI\'s own easings still arrive (they run wish to wish), a point behind his back swings the gun across his front, a staging is taken as written');
   try {
-    const { approachAngle } = await import(`${ROOT}/src/math/vec.ts`); const Q = Math.PI / 2;
+    CH.TURN.on = 1; const { approachAngle } = await import(`${ROOT}/src/math/vec.ts`); const Q = Math.PI / 2;
     // (a) an easing at 8 rad/s (guards.ts PACE.turn) through turnBegin, as updateGuard runs it
     let c = await man(1); c.turn.on = true; c.turn.h = 0.82; c.turn.k = 1; c.bodyYaw = c.aimYaw = 0; c.update(DT); let t = NaN;
     for (let i = 0; i < 120; i++) { c.turnBegin(); c.aimYaw = approachAngle(c.aimYaw, Q, 8 * DT); c.update(DT); if (isNaN(t) && Math.abs(c.aimYaw - Q) < 3 / 57.2958) t = (i + 1) * DT; }
@@ -541,7 +599,8 @@ export async function turnEasing(): Promise<boolean> {
     c = await man(1); c.turn.on = true; c.turn.h = 0.82; c.turn.k = 1; c.bodyYaw = c.aimYaw = 0; c.update(DT);
     c.turnBegin(); c.aimYaw = Q; c.update(DT); c.turnBegin(); const g1 = c.gunYaw, w1 = c.aimYaw; c.update(DT);
     for (let i = 0; i < 60; i++) { c.turnBegin(); c.aimYaw = Q; c.update(DT); } c.turnBegin(); const g2 = c.gunYaw; c.update(DT);
-    F.verdict(w1 === Q && g1 < 0.1 && Math.abs(g2 - Q) < 1e-6, 'inside his own update the gates read the gun, not the wish: a frame into a quarter turn it is still near where it was, and it ends on the point', `wish ${deg(w1)}, gun ${deg(g1)} a frame in · gun ${deg(g2)} once round`);
+    CH.TURN.on = 0; const o = await man(1); o.turn.on = true; o.aimYaw = 1.23; o.update(DT); const g3 = o.gunYaw === 1.23; CH.TURN.on = 1;
+    F.verdict(w1 === Q && g1 < 0.1 && Math.abs(g2 - Q) < 1e-6 && g3, 'inside his own update the gates read the gun, not the wish: a frame into a quarter turn it is still near where it was, and it ends on the point', `wish ${deg(w1)}, gun ${deg(g1)} a frame in · gun ${deg(g2)} once round · weight off: gunYaw is aimYaw ${g3}`);
   } finally { restoreTurn(); restore(); }
   return F.done();
 }
@@ -549,7 +608,7 @@ export async function turnGame(): Promise<boolean> {
   const F = family('turn-game: a staged fight with the weight on — who is weighed and by what, nobody turns faster than his weapon lets him, every yaw finite');
   try {
     const { stage } = await import('./bang-tally.ts'); const { handlingOf } = await import(`${ROOT}/src/game/weapons.ts`);
-    const S: any = await quiet(() => stage('night-breach', 2)); const { g, step } = S; step(5);
+    const S: any = await quiet(() => stage('night-breach', 2)); const { g, step } = S; CH.TURN.on = 1; step(5);
     const men = g.guards.filter((x: any) => x.state !== 'dead');
     F.verdict(men.length > 3 && men.every((x: any) => x.char.turn.on && x.char.turn.h === handlingOf(x.weapon.def)) && !g.player.char.turn.on, 'every man on the floor is weighed by the handling of what he carries; Sam is not',
       men.slice(0, 4).map((x: any) => `${x.callsign} ${x.weapon.def.short} ${x.char.turn.h}`).join(' · ') + ` · the player ${g.player.char.turn.on}`);
@@ -574,6 +633,7 @@ export async function turnGame(): Promise<boolean> {
 export async function movesSnap(): Promise<boolean> {
   const F = family('moves-snap: a pistol fired from the carry — the hand eases up, the bare arm never shows between carry and aim, a pitched shot keeps its pitch');
   try {
+    CH.MOVES.on = 1;
     type Upper = 'relaxed' | 'aim' | 'torch';
     const pistol = async (pitch: number, upper: Upper) => {
       gltf ??= await loadCharacter(); const c: any = new CH.Character(gltf, { id: 1, tint: [1, 1, 1], tint2: [1, 1, 1], pos: [0, 0, 0], yaw: 0 });
@@ -614,11 +674,14 @@ export async function movesSnap(): Promise<boolean> {
     // pitched, from the carry
     { const was = await shot(0, -0.7, 'relaxed'), now = await shot(1, -0.7, 'relaxed');
       F.verdict(max(now.d) < max(was.d) * 0.65 && now.d[0] < was.d[0] * 0.5, 'a snap shot at his feet: a long way for the hand, taken over frames', `fire frame ${cm(now.d[0])} (off: ${cm(was.d[0])}) · worst frame ${cm(max(now.d))} (off: ${cm(max(was.d))})`); }
+    // the master switch: with the pass off the part does nothing
+    { CH.MOVES.on = 0; const a = await shot(0, -0.4, 'relaxed'), b = await shot(1, -0.4, 'relaxed'); CH.MOVES.on = 1;
+      F.verdict(BREAK || same(a, b), 'MOVES off: the animator as it was, whatever the part says', `every bone, the bore and the muzzle on each of 110 frames ${same(a, b) ? 'identical' : 'DIFFER'}`); }
     // in the game: the rounds themselves. One from the carry, one a second later with the aim up, at a far mark and at the floor by his feet — where each left
     // from and where it went, with the part off and on (a round leaves from the muzzle as it stood BEFORE that frame's pose: from rest, the same floats)
     { const { standUp } = await import('./headless.ts');
       const rounds = async (snapOn: number) => quiet(async () => {
-        const W: any = await standUp({ seed: 5 }); CH.MOVES.snap = snapOn; const g = W.game, c = g.player.char; g.infiniteAmmo = true;
+        const W: any = await standUp({ seed: 5 }); CH.MOVES.on = 1; CH.MOVES.snap = snapOn; const g = W.game, c = g.player.char; g.infiniteAmmo = true;
         for (const gd of g.guards) { gd.hold = true; gd.char.pos = [38.5, 0, 1.5 + gd.char.id * 1.2]; gd.char.update(0); }
         W.input.pressed.add('KeyE'); for (let i = 0; i < 90; i++) W.step(DT);
         const out: number[][] = []; let travel = 0;
@@ -628,16 +691,25 @@ export async function movesSnap(): Promise<boolean> {
             if (k === 0 && cursor[1] > 0) travel = dist(h0, c.bones.handR);
             if (k === 0 || k === 60) { const e = g.events.filter((x: any) => x.kind === 'shot').pop(); out.push(e?.from && e?.to ? [...e.from, ...e.to] : []); } }
         }
-        // (until 2026-11-07 the rifle was then put away for the pistol and a round fired the moment the pistol would fire, and a line asked that the gun hand
-        //  is posed one way through that shot. It was staged with the kit-handling part written off: with that part, settled on, the rifle is carried away by
-        //  hand for a second and the shot is the snap shot from the carry the lines above hold. Out by ruling)
-        return { out, travel };
+        // …and the rifle put away for the pistol with a round fired the moment the pistol will fire, at his feet: the long gun's share of the arms runs out
+        // DURING that shot — it is posed one way from its fire frame to its end
+        // (asked with the build's change of gun on the key's frame: a tree that has the kit-handling part carries the rifle away by hand for a second, the rifle's
+        // share is long gone when the round leaves and this is then the snap shot from the carry the lines above already hold — so that part is put off for it)
+        const KA = (await import(`${ROOT}/src/game/knobs.ts`)).knobRegistry().KITANIM as { on: boolean } | undefined, ka0 = KA?.on; if (KA) KA.on = false;
+        const at: V3 = [10, 0, 20.2]; g.teleportPlayer([10, 0, 19]); c.bodyYaw = c.aimYaw = 0; for (let i = 0; i < 300; i++) { W.cursorAt(at); W.step(DT); }
+        W.input.pressed.add('Digit2'); for (let i = 0; i < 150; i++) { W.cursorAt(at); W.step(DT); }
+        W.input.pressed.add('Digit1'); const n0 = g.events.filter((x: any) => x.kind === 'shot').length; let fired = -1, swap = 0, pitch = NaN, prev = [...c.bones.handR] as V3;
+        for (let k = 0; k < 140; k++) { W.cursorAt(at); if (fired < 0) W.input.clicked |= 1; W.step(DT); if (fired < 0 && g.events.filter((x: any) => x.kind === 'shot').length > n0) fired = k;
+          const h = [...c.bones.handR] as V3; if (fired >= 0 && k > fired && k < fired + 45) swap = Math.max(swap, dist(h, prev)); if (k === fired) pitch = c.aimPitch; prev = h; }
+        if (KA) KA.on = ka0!;
+        return { out, travel, swap: fired >= 0 ? swap : NaN, fired, pitch };
       });
       const was = await rounds(0), now = await rounds(BREAK ? 0 : 1); const got = was.out.length === 4 && was.out.every(r => r.length === 6) && now.out.every(r => r.length === 6);
       const gap = (i: number) => got ? Math.max(...was.out[i].map((v, k) => Math.abs(v - now.out[i][k]))) : NaN;
       const rest = got && [0, 2].every(i => was.out[i].every((v, k) => v === now.out[i][k])), up = Math.max(gap(1), gap(3));
       F.verdict(got && rest && up < 1e-5 && now.travel < 0.02 && was.travel > 0.06, 'in the game the rounds are the same rounds: from the carry to the bit, with the aim up to a hundredth of a millimetre — far and at his feet',
-        got ? `where each left from and where it went, the part off against on — from the carry: ${rest ? 'identical' : 'DIFFER'} · a second later with the aim up: within ${(up * 1e6).toFixed(2)} µm (the layers' weights end a hair apart; want < 10) · the wrist on the fire frame ${cm(now.travel)} (off: ${cm(was.travel)})` : 'a round was not fired'); }
+        got ? `where each left from and where it went, the part off against on — from the carry: ${rest ? 'identical' : 'DIFFER'} · a second later with the aim up: within ${(up * 1e6).toFixed(2)} µm (the layers' weights end a hair apart; want < 10) · the wrist on the fire frame ${cm(now.travel)} (off: ${cm(was.travel)})` : 'a round was not fired');
+      F.verdict(now.swap < was.swap + 0.02, 'a round fired as the rifle\'s share of the arms runs out is posed one way for its whole length', `rifle away, pistol up, fired at his feet at once (${now.fired} frames after the key, the aim pitched ${(now.pitch * 180 / Math.PI).toFixed(0)}° — 0° = this stand keeps a cursor on the floor's aim level, and the line is then about a level shot): the gun hand's worst frame through the shot ${cm(now.swap)} (off: ${cm(was.swap)}) — want no more than 2 over`); }
   } finally { restore(); }
   return F.done();
 }
@@ -650,7 +722,7 @@ export async function movesSnap(): Promise<boolean> {
 export async function movesSteady(): Promise<boolean> {
   const F = family('moves-steady: the crouch walk carried level — the side-to-side rock most of the way out, the stride, the height and the mean carriage where they were');
   try {
-    gltf ??= await loadCharacter();
+    CH.MOVES.on = 1; gltf ??= await loadCharacter();
     type Kit = 'none' | 'relaxed' | 'pistol' | 'rifle';
     interface Ask { speed: number; crouch: number; kit: Kit; delib?: number; trained?: number; creep?: boolean; stack?: boolean; low?: boolean; loose?: boolean }
     const stand = (on: number, a: Ask) => { CH.MOVES.steady = on; const c: any = new CH.Character(gltf, { id: 1, tint: [1, 1, 1], tint2: [1, 1, 1], pos: [0, 0, 0], yaw: 0 });
@@ -743,8 +815,9 @@ export async function movesSteady(): Promise<boolean> {
         `every bone on every frame — MOVES.steadyRun 0 against the part off, sprinting with the rifle: ${asWas ? 'identical' : 'DIFFERS'} · a man who steadies his rifle at a teammate's top pace (2.2 m/s) and at the jog's own (2.7), low carry and at the shoulder, the part off against on: ${mates ? 'identical' : 'DIFFERS'}`); }
     { const same = (a: Ask) => gait(0, a).bits === gait(1, a).bits; const hold = (on: number, kit: Kit) => { const c = stand(on, { speed: 0, crouch: 1, kit }); let b = ''; for (let i = 0; i < 300; i++) { c.anim.speed = 0; c.update(DT); b += JSON.stringify(c.bones) + ';'; } return b; };   // (gait() collects whole cycles: a man standing still turns none)
       const still = (['none', 'relaxed', 'rifle'] as Kit[]).every(k => hold(0, k) === hold(1, k) && hold(0, k) === hold(2, k)), walk = same({ speed: 1.55, crouch: 0, kit: 'rifle' }), run = same({ speed: 3.4, crouch: 0, kit: 'relaxed' }) && same({ speed: 4.7, crouch: 0, kit: 'none' }) && same({ speed: 2.2, crouch: 0, kit: 'rifle', low: true, loose: true });
-      F.verdict(still && walk && run, 'only the crouch walk and the steadied rifle\'s sprint: a crouched stand, the upright walk, the run and sprint with no long gun and an unsteadied rifle\'s jog are the same to the bit',
-        `every bone on every frame, the part off against on — crouched and still ${still ? 'identical' : 'DIFFERS'} · walking ${walk ? 'identical' : 'DIFFERS'} · running (pistol at 3.4, hands empty at 4.7, a man who does not steady his rifle at all, at 2.2) ${run ? 'identical' : 'DIFFERS'}`); }
+      CH.MOVES.on = 0; const off = same(SNEAK); CH.MOVES.on = 1;
+      F.verdict(still && walk && run && off, 'only the crouch walk and the steadied rifle\'s sprint: a crouched stand, the upright walk, the run and sprint with no long gun and an unsteadied rifle\'s jog are the same to the bit, and so is the crouch walk with MOVES off',
+        `every bone on every frame, the part off against on — crouched and still ${still ? 'identical' : 'DIFFERS'} · walking ${walk ? 'identical' : 'DIFFERS'} · running (pistol at 3.4, hands empty at 4.7, a man who does not steady his rifle at all, at 2.2) ${run ? 'identical' : 'DIFFERS'} · MOVES off, sneaking ${off ? 'identical' : 'DIFFERS'}`); }
     { // away at the sneak, a stop, a creep, a stop, away again and up out of the crouch mid-walk, a last stop: finite throughout, and at each stand his feet are where the
       // part-off run plants them (the rest of him the same but for the rifle hands' springs still settling from another road in — millimetres, gone by the last)
       const take = (on: number) => { const c = stand(on, SNEAK), an = c.anim; let sp = 0, fin = true, slide = 0; let pf: number[] | null = null; const rest: any[] = [];

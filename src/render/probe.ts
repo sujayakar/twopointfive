@@ -1,5 +1,4 @@
 // GPU irradiance queries with async readback (1–2 frames latency). Used for the stealth light meter.
-import { cutSwap, ProgramSet } from './cutSwap';
 import { makeBuffer, makeShader, computePipelineAsync, writeWordsIfChanged } from '../gpu/device';
 import { Vec3 } from '../math/vec';
 import { HostOwned } from '../math/side';
@@ -59,15 +58,7 @@ export class IrradianceProbe {
   }
 
   /** the kernel, compiled off the GPU process's main thread (gpu/device.ts computePipelineAsync) — main.ts awaits it with the rest of the game's GPU init; never called headless */
-  async init(): Promise<void> { this.pipe ??= await computePipelineAsync(this.device, { label: 'probe', layout: this.pipeLayout, compute: { module: this.mod, entryPoint: 'main' } }); cutSwap.add(this); }
-  // ---- CUT BOXES — a calm room pays nothing (render/cutSwap.ts): the meter's kernel a second time, behind the cut prelude (ONE MODEL: the meter and the sight lines
-  // meet a cut piece's cut shape while one is alive, as the picture's rays do)
-  private cutSet = new ProgramSet();
-  async buildCut(): Promise<void> {
-    const pipe = await computePipelineAsync(this.device, { label: 'probeCut', layout: this.pipeLayout, compute: { module: makeShader(this.device, scenePrelude(true) + lightingCommon + probeSrc, 'probeCut'), entryPoint: 'main' } });
-    this.cutSet.set(this, { pipe });
-  }
-  useCut(on: boolean) { this.cutSet.use(this, on); }
+  async init(): Promise<void> { this.pipe ??= await computePipelineAsync(this.device, { label: 'probe', layout: this.pipeLayout, compute: { module: this.mod, entryPoint: 'main' } }); }
 
   /** Queue a query for this frame. `rank` (0 first ‥ 3 last): who keeps a place on a frame that asks for more than the table holds — put(). */
   query(key: string, pos: Vec3, skipOwner = 0, rank = 2) { this.put({ key, pos, skipOwner, rank }); }

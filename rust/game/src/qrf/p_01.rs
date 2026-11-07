@@ -160,38 +160,10 @@ pub fn qrf_owns(g: &mut crate::game::Game, gd: GuardId) -> bool {
     g.qrf.men.contains(&gd) || g.qrf.perim.as_ref().map_or(false, |p| p.men.iter().any(|m| m.gd == gd))
 }
 
-/// One line for the panel and the probes.   (qrf.ts Qrf.summary)
-pub fn qrf_summary(g: &mut crate::game::Game) -> String {
-    if g.qrf.state == crate::qrf::QrfState::Idle {
-        let heard = if g.qrf.loud_t > -1e8 { alloc::format!(" · gunfire heard {} s ago", js::num_str(m::round(g.time - g.qrf.loud_t))) } else { String::new() };
-        let bodies = bodies_found(g);
-        let alarm = crate::guards::escalation_of(g);
-        return alloc::format!("QRF ▸ idle{} · bodies found {} · alarm {}", heard, js::num_str(bodies), js::num_str(alarm));
-    }
-    let left = if g.qrf.arrive_at > g.time { alloc::format!(" · door in {} s", js::num_str(m::ceil(g.qrf.arrive_at - g.time))) } else { String::new() };
-    let up = alive(g).len();
-    let q = &g.qrf;
-    let deployed = if q.state == crate::qrf::QrfState::Deployed {
-        let target = match &q.target { Some(t) => alloc::format!(" → {}", t.room), None => String::new() };
-        alloc::format!(" · {}/{} up · {}{} · bangs {} · lost {}", up, q.men.len(), q.phase.as_str(), target, js::num_str(q.bangs), js::num_str(q.lost))
-    } else {
-        String::new()
-    };
-    let perim = match &q.perim {
-        Some(p) => alloc::format!(" · PERIMETER {} ({} out: {} spawned, {} peeled)", p.state.as_str(), p.men.len(), js::num_str(p.spawned), js::num_str(p.peeled)),
-        None => String::new(),
-    };
-    let reason = q.reason.map_or("null", |r| r.as_str());
-    alloc::format!("QRF ▸ {} ({}){}{}{}", q.state.as_str(), reason, left, deployed, perim)
-}
-
 // ---------------------------------------------------------------- knobs kept per machine
 
 /// `?qrfsquad=0` on the page's address. The skeleton has no row for the address: the TypeScript's answer with no word.   (qrf.ts ownDrillAsked)
 pub fn own_drill_asked() -> bool { false }
-
-/// What this machine kept of the knobs. With no `g` the store cannot be reached, so this is the TypeScript's answer with no storage; this file's callers use `stored_tune_in`.   (qrf.ts storedTune)
-pub fn stored_tune() -> Option<JsMap<String, crate::qrf::StoredTuneRow>> { None }
 
 /// storeName's shape: `stored_tune` with what it needs, the store being reached through `g`. Nothing kept or junk in it: None.   (qrf.ts storedTune)
 fn stored_tune_in(g: &mut Game) -> Option<JsMap<String, crate::qrf::StoredTuneRow>> {
@@ -366,32 +338,6 @@ fn tune_json(t: &crate::game::GameTune, qrf_squad: bool) -> String {
         "{{\"qrf\":{},\"qrfEta\":{},\"qrfSize\":{},\"perimeter\":{},\"perimeterEta\":{},\"perimeterSize\":{},\"qrfSilent\":{},\"qrfSquad\":{}}}",
         t.qrf, json_num(t.qrf_eta), json_num(t.qrf_size), t.perimeter, json_num(t.perimeter_eta), json_num(t.perimeter_size), t.qrf_silent, qrf_squad
     )
-}
-
-/// The knobs into the machine's memory; under the address's word the squad row's memory stays as it was.   (qrf.ts saveQrfTune)
-pub fn save_qrf_tune(g: &mut crate::game::Game) {
-    let qrf_squad = if own_drill_asked() {
-        stored_tune_in(g).and_then(|o| row_bool(&o, "qrfSquad")).unwrap_or(qrf_tune_defaults().qrf_squad)
-    } else {
-        g.tune.qrf_squad
-    };
-    let line = tune_json(&g.tune, qrf_squad);
-    crate::savestate::save_store_set(g, TUNE_KEY, &line);
-}
-
-/// The knobs back to what the game ships, and the machine's memory of them dropped.   (qrf.ts resetQrfTune)
-pub fn reset_qrf_tune(g: &mut crate::game::Game) {
-    let d = qrf_tune_defaults();
-    g.tune.qrf = d.qrf;
-    g.tune.qrf_eta = d.qrf_eta;
-    g.tune.qrf_size = d.qrf_size;
-    g.tune.perimeter = d.perimeter;
-    g.tune.perimeter_eta = d.perimeter_eta;
-    g.tune.perimeter_size = d.perimeter_size;
-    g.tune.qrf_silent = d.qrf_silent;
-    g.tune.qrf_squad = d.qrf_squad;
-    if own_drill_asked() { g.tune.qrf_squad = false; }
-    crate::savestate::save_store_remove(g, TUNE_KEY);
 }
 
 // ---------------------------------------------------------------- small shared helpers
@@ -717,18 +663,6 @@ pub fn response_words(g: &mut crate::game::Game) -> Option<crate::qrf::ResponseW
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn the_kept_row_reads_as_json_stringify_writes_it() {
-        let d = qrf_tune_defaults();
-        let mut t = crate::game::GameTune::zeroed();
-        t.qrf = d.qrf; t.qrf_eta = d.qrf_eta; t.qrf_size = d.qrf_size; t.perimeter = d.perimeter;
-        t.perimeter_eta = d.perimeter_eta; t.perimeter_size = d.perimeter_size; t.qrf_silent = d.qrf_silent;
-        // JSON.stringify(QRF_TUNE_DEFAULTS), with the squad row as the caller says
-        assert_eq!(tune_json(&t, false), r#"{"qrf":true,"qrfEta":75,"qrfSize":4,"perimeter":true,"perimeterEta":45,"perimeterSize":2,"qrfSilent":true,"qrfSquad":false}"#);
-        t.qrf_eta = f64::NAN;
-        assert!(tune_json(&t, true).contains(r#""qrfEta":null"#));
-    }
 
     #[test]
     fn a_row_of_the_wrong_kind_is_not_read() {

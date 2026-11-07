@@ -11,6 +11,8 @@ import { resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 const { standUp, ROOT } = await import('./headless.ts');
 const { m4 } = await import(`${ROOT}/src/math/vec.ts`);
+const { CLOSE } = await import(`${ROOT}/src/game/close.ts`);
+const { WAND } = await import(`${ROOT}/src/game/wand.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 type P3 = number[];
 const DT = 1 / 60, EAST = Math.PI / 2;
@@ -76,7 +78,7 @@ async function rise() {
   return R.moments;
 }
 async function creep() {
-  const S = await lobby(7104, true, [5.6, 0, 19.5]), g = S.g;
+  const S = await lobby(7104, true, [5.6, 0, 19.5]), g = S.g; CLOSE.on = true;
   const A = g.guards[0]; place(A, [10.2, 0, 19.5], EAST); A.hold = true; A.pinned = true;
   const R = recorder(g, A); S.W.input.keys.add('KeyD');
   let n = 0; while (g.player.char.pos[0] < 10.2 - 2.7 && n++ < 400) S.step(1);
@@ -85,7 +87,7 @@ async function creep() {
 }
 /** the office's four-man room clear (fog of war, so the wand's row is offered), Sam at the server room's door */
 export async function atDoor(seed: number, first?: () => void) {
-  Math.random = seeded(seed); hush(); const W: any = await standUp({ uploadEvery: 4 }); const g = W.game; first?.();
+  Math.random = seeded(seed); hush(); const W: any = await standUp({ uploadEvery: 4 }); const g = W.game; WAND.on = true; first?.();
   await startFromQuery(g, 'roomclear&squad4'); for (let i = 0; i < 30; i++) W.step(DT);
   const d = g.doors.list.find((x: any) => x.def.name === 'server'), T = g.guards.find((x: any) => x.callsign === 'Tango 5');
   if (!d || !T) { loud(); throw new Error('no server door / Tango 5'); }

@@ -26,19 +26,6 @@ fn startable_kind(s: &str) -> Option<WeatherKind> {
     ALL_KINDS.iter().copied().find(|k| k.as_str() == s)
 }
 
-/// `/^[\w.-]+\.json$/`: a plain file name of a level. (weatherKinds.ts:112)
-fn is_level_file(lf: &str) -> bool {
-    match lf.strip_suffix(".json") {
-        Some(stem) => !stem.is_empty() && stem.bytes().all(|c| c.is_ascii_alphanumeric() || c == b'_' || c == b'.' || c == b'-'),
-        None => false,
-    }
-}
-
-/// The first `=`-side of a query's pair, as weatherSearch compares it.
-fn pair_key(p: &str) -> &str {
-    p.split('=').next().unwrap_or("")
-}
-
 /// Is this one of the kinds a level can be started in? (weatherKinds.ts isWeatherKind)
 pub fn is_weather_kind(s: Option<&str>) -> bool {
     match s {
@@ -53,18 +40,6 @@ pub fn snow_level(g: &mut crate::game::Game, name: Option<&str>) -> bool {
         Some(n) => !n.is_empty() && snow_levels().iter().any(|l| l == n),
         None => false,
     }
-}
-
-/// snowLevel asked of a page's query: its `levelFile`. (weatherKinds.ts snowLevelOfQuery)
-pub fn snow_level_of_query(g: &mut crate::game::Game, q: &crate::query::Query) -> bool {
-    let lf = match q.get("levelFile").map(String::from) {
-        Some(lf) => lf,
-        None => return false,
-    };
-    if !is_level_file(&lf) {
-        return false;
-    }
-    snow_level(g, lf.strip_suffix(".json"))
 }
 
 /// A kind a checkpoint may carry: one of the row's, or a level's own. (weatherKinds.ts isAnyKind)
@@ -171,35 +146,14 @@ pub fn in_rect(r: &[f64], x: f64, z: f64) -> bool {
 
 /// The kind a query string or the host's query names, if any. (weatherKinds.ts weatherOfSearch)
 pub fn weather_of_search(search: &crate::weather_kinds::WeatherOfSearchSearch) -> Option<crate::weather_kinds::WeatherKind> {
-    let v = match search {
-        WeatherOfSearchSearch::Text(s) => crate::query::Query::parse(s).get(WEATHER_KEY).map(String::from),
-        WeatherOfSearchSearch::URLSearchParams(q) => q.get(WEATHER_KEY).map(String::from),
-    };
-    startable_kind(&v?)
+    match search {
+        WeatherOfSearchSearch::Text(s) => weather_of(&crate::query::Query::parse(s)),
+        WeatherOfSearchSearch::URLSearchParams(q) => weather_of(q),
+    }
 }
 
-/// Reads ?weather= at boot and locks the page to it; an unknown name boots the level as it is. (weatherKinds.ts initWeather)
-pub fn init_weather(g: &mut crate::game::Game, qs: &crate::query::Query) -> Option<crate::weather_kinds::WeatherKind> {
-    let v = qs.get(WEATHER_KEY).map(String::from);
-    g.m.weather_kinds.weather_boot.locked = true;
-    let kind = v.and_then(|v| startable_kind(&v));
-    g.m.weather_kinds.weather_boot.kind = kind;
-    kind
-}
-
-/// The query string with the weather put on it (None = taken off), every other flag kept in order. (weatherKinds.ts weatherSearch)
-pub fn weather_search(search: &str, kind: Option<crate::weather_kinds::WeatherKind>) -> String {
-    let body = search.strip_prefix('?').unwrap_or(search);
-    let all: Vec<&str> = body.split('&').collect();
-    let mut parts: Vec<String> = all.iter().filter(|p| !p.is_empty() && pair_key(p) != WEATHER_KEY).map(|p| String::from(*p)).collect();
-    if kind.is_none() && !all.iter().any(|p| pair_key(p) == WEATHER_KEY) {
-        return String::from(search);
-    }
-    if let Some(k) = kind {
-        parts.push(format!("{}={}", WEATHER_KEY, k.as_str()));
-    }
-    format!("?{}", parts.join("&"))
-}
+/// `weather_of_search` of words already read.
+pub fn weather_of(q: &crate::query::Query) -> Option<crate::weather_kinds::WeatherKind> { startable_kind(q.get(WEATHER_KEY)?) }
 
 #[cfg(test)]
 mod tests {
@@ -279,23 +233,6 @@ mod tests {
     }
 
     #[test]
-    fn search_strings() {
-        let rows: [(&str, Option<WeatherKind>, &str); 8] = [
-            ("?a=1&weather=fog&b", Some(WeatherKind::Rain), "?a=1&b&weather=rain"),
-            ("?a=1&weather=fog&b", None, "?a=1&b"),
-            ("?a=1", None, "?a=1"),
-            ("", None, ""),
-            ("", Some(WeatherKind::Rain), "?weather=rain"),
-            ("a&&b=2&weatherx=1", Some(WeatherKind::Dust), "?a&b=2&weatherx=1&weather=dust"),
-            ("?", None, "?"),
-            ("?weather", None, "?"),
-        ];
-        for (s, k, want) in rows {
-            assert_eq!(weather_search(s, k), want);
-        }
-    }
-
-    #[test]
     fn kinds_of_search() {
         let rows: [(&str, Option<WeatherKind>); 8] = [
             ("?weather=fog", Some(WeatherKind::Fog)),
@@ -335,13 +272,4 @@ mod tests {
         assert!(!snow_level(&mut g, None));
     }
 
-    #[test]
-    fn level_files() {
-        assert!(is_level_file("pass.json"));
-        assert!(is_level_file("a.b-c_1.json"));
-        assert!(!is_level_file(".json"));
-        assert!(!is_level_file("pass.json\n"));
-        assert!(!is_level_file("a/b.json"));
-        assert!(!is_level_file("pass"));
-    }
 }

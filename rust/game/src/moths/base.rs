@@ -6,5 +6,3 @@ use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 
-/// (src/game/moths.ts:48 Moths.clear)
-pub fn moths_clear(g: &mut crate::game::Game) { g.out.push(crate::out_events::OutEvent::MothsClear); }

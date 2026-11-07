@@ -1,7 +1,7 @@
 // WHAT A TICK COSTS — the simulation's own CPU time, tick by tick, on the stand a game server plays: the shipped stand with the senses on the CPU
 // (TPS_CPUSENSE=1) and the game's own maths. A scripted play-through (tools/qa/playthrough.ts) is the load; the clock is read round Game.update alone and round
 // the box list's pack and trace grid (BoxWorld.upload's CPU half, which rounds and the cursor read; the play-through packs it every 4th tick, the page every frame). After every update the raw bits
-// of what moves are hashed and chained (game/digest.ts rawBits, as coop-check does), OUTSIDE the clock: two builds whose `bits` agree played the same run to
+// of what moves are hashed and chained (game/digest.ts rawBits), OUTSIDE the clock: two builds whose `bits` agree played the same run to
 // the last place, so their times are for the same work. Not game code: it reads.
 //   bun run tools/qa/tickcost.ts                              the runs below, one at a time, each in its own process → the table
 //   bun run tools/qa/tickcost.ts --runs compound-four:1       other runs (playthrough.ts's scenarios)

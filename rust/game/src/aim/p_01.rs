@@ -159,11 +159,6 @@ pub fn feet_settled(g: &mut crate::game::Game, gd: GuardId) -> bool {
     !move_cost(g) || g.gd[gd].aim.move_sm <= g.k.aimcost.flank_at
 }
 
-/// An alert man whose track has passed the gate. (aim.ts guardAcquired)
-pub fn guard_acquired(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    g.tune.aim_model && g.gd[gd].state == crate::game::GuardState::Alert && g.gd[gd].aim.track >= g.k.aim.guard.acquire_min - 1e-9
-}
-
 /// `gd.weapon.def.aiSpread`: the row of the gun in his hands.
 fn ai_spread_of(g: &crate::game::Game, gd: GuardId) -> crate::weapons::AiSpread {
     g.m.weapons.weapons.get(g.fa[g.gd[gd].weapon].def).unwrap().ai_spread
@@ -392,59 +387,6 @@ pub fn sam_aim(g: &mut crate::game::Game) -> f64 {
     let now = g.time;
     g.pl[pl].aim.last_shot = Some(crate::aim::AimStateLastShot { t: now, track: r.track, spread: r.spread, speed: m::hyp2(v[0], v[2]), gated: false, hands: r.base, settle: r.settle, tgt: r.tgt, own: r.own });
     r.spread
-}
-
-/// The panel's save of the kept knobs: localStorage is the host's, the game holds nothing to do here. (aim.ts saveAim)
-pub fn save_aim(g: &mut crate::game::Game) {}
-
-/// The load of the kept knobs: localStorage is the host's, which writes `g.k.aim` itself if it keeps any. (aim.ts loadAim)
-pub fn load_aim(g: &mut crate::game::Game) {}
-
-/// Every aim knob back to the shipped values; dropping the stored copy is the host's. (aim.ts resetAim)
-pub fn reset_aim(g: &mut crate::game::Game) {
-    g.k.aim = aim_defaults();
-}
-
-/// The panel's line: Sam, then every living alert man, or the nearest at rest. (aim.ts aimSummary)
-pub fn aim_summary(g: &mut crate::game::Game) -> String {
-    if !g.tune.aim_model {
-        return String::from("aim ▸ model OFF (every round as it was: guards' rows, the player dead-on)");
-    }
-    let r = player_aim(g);
-    let key = g.pl[g.player].aim.tgt_key.clone();
-    let on = if !key.is_empty() && key != "free" {
-        if key.starts_with('l') { alloc::format!(" on lamp {}", &key[1..]) } else { alloc::format!(" on #{}", &key[1..]) }
-    } else {
-        String::new()
-    };
-    let puppet = if g.puppet.is_some() { " [puppet: dead-on]" } else { "" };
-    let mut parts: Vec<String> = vec![alloc::format!(
-        "you: track {}{} · cone {} (hands {} ×{} + crossing {} + feet {}){}",
-        js::to_fixed(g.pl[g.player].aim.track, 2), on, js::to_fixed(r.spread, 3), js::to_fixed(r.base, 3), js::to_fixed(r.settle, 2), js::to_fixed(r.tgt, 3), js::to_fixed(r.own, 3), puppet
-    )];
-    let mut men: Vec<GuardId> = g.guards.iter().copied().filter(|x| g.gd[*x].state == crate::game::GuardState::Alert).collect();
-    if men.is_empty() {
-        if let Some(n) = crate::game::game_nearest_living_guard(g, None, None) {
-            men = vec![n];
-        }
-    }
-    for gd in men {
-        let t = guard_terms(g, gd, 0.0);
-        let acquired = if guard_acquired(g, gd) { " ◎" } else { "" };
-        let now = g.time;
-        let x = &g.gd[gd];
-        let pinned = if x.pinned { " (pinned)" } else { "" };
-        let braking = if x.aim.braking { " · BRAKING" } else { "" };
-        let last = match &x.aim.last_shot {
-            Some(ls) if now - ls.t < 3.0 => alloc::format!(" · last round {} s ago at track {}, {} rad, {} m/s", js::to_fixed(now - ls.t, 2), js::to_fixed(ls.track, 2), js::to_fixed(ls.spread, 3), js::to_fixed(ls.speed, 2)),
-            _ => String::new(),
-        };
-        parts.push(alloc::format!(
-            "{}{} {} track {}{} · brg {} rad/s · cone {} (hands {} ×{} + crossing {} + feet {}){}{}",
-            x.callsign, acquired, x.state.as_str(), js::to_fixed(x.aim.track, 2), pinned, js::to_fixed(x.aim.bearing_rate, 2), js::to_fixed(t.spread, 3), js::to_fixed(t.hands, 3), js::to_fixed(t.settle, 2), js::to_fixed(t.tgt, 3), js::to_fixed(t.own, 3), braking, last
-        ));
-    }
-    alloc::format!("aim ▸ {}", parts.join(" · "))
 }
 
 #[cfg(test)]

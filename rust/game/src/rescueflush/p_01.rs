@@ -241,8 +241,7 @@ pub fn rescue_flush_send(g: &mut crate::game::Game, h: GuardId, goal: crate::res
         r.mode = crate::roomfight::DefMode::Free; r.free_at = time; r.rally_at = m::NAN;
     }
     if g.gd[h].script.is_some() { crate::squad::end_guard_script(g, h, Some(crate::squad::EndGuardScriptState::Alert)); }
-    let gd = &mut g.gd[h];
-    gd.state = crate::game::GuardState::Alert; gd.awareness = 1.0; gd.react_t = 0.0;
+    crate::mind::set_state(g, h, crate::game::GuardState::Alert, "rescueflush"); crate::mind::set(g, h, 1.0, "rescueflush"); g.gd[h].react_t = 0.0;
     crate::belief::word(g, h, at); clear_path(g, h);
     crate::guards::reset_chase(g, h);
     let time = g.time;

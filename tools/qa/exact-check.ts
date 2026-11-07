@@ -1,7 +1,8 @@
 // THE GAME'S OWN MATHS (src/math/exact.ts): do sin, cos, atan2 and the rest come out the same to the bit on every JavaScript engine, and near enough to true?
 //   bun run tools/qa/exact-check.ts                 every check below; exit 0 = all pass, 1 = one failed (named)
 //   EXACT_BREAK=1 bun run tools/qa/exact-check.ts   the red path: the node child folds the ENGINE's sine where the game's own belongs — 'engines' must then FAIL
-// Whole fights across two engines are tools/qa/coop-check.ts (minutes); this is the functions themselves (seconds).
+// Whole fights across two engines are tools/qa/mpclient-page.cjs (a Chromium page on V8 against a bun server on JavaScriptCore, state word by state word;
+// minutes); this is the functions themselves (seconds).
 // WHAT IS HELD:
 //   engines    one fixed stream of inputs through all fourteen functions, every answer's raw bits folded into one word — under bun (JavaScriptCore) and under
 //              node (V8, the engine Chrome runs the page on) the word is the same. No node on the machine = that is said, and the line does not pass.

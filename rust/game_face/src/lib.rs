@@ -47,6 +47,7 @@
 //!
 //! reading back
 //!   face_export(h)                            the whole state (`io::export`) at face_out
+//!   face_verdict(h) -> 0 | 1 | 2              how the mission ended: 0 not yet, 1 lost, 2 won (then `word\nwhy` at face_out); a read, nothing kept
 //!   face_die_n(h) -> f64 · face_time(h) -> f64 · face_rows(h) -> usize
 //!                                             the die's count of draws (in the game's block), the game's clock, the rows of the box table
 //!   face_parts() -> 13 · face_part_name(i)    the parts of rust/sim's block in their order; a part's name at face_out
@@ -121,8 +122,18 @@ pub extern "C" fn face_state_name(i: usize) { out(game::state_words::STATE_NAMES
 thread_local! { static STATE_BUF: RefCell<(game::io::W, Vec<u32>)> = RefCell::new((game::io::W::new(), Vec::new())); }
 #[no_mangle]
 pub extern "C" fn face_state_words(h: u32) {
-    let b = STATE_BUF.with(|c| { let mut c = c.borrow_mut(); let (o, w) = &mut *c; with(h, |x| game::state_words::state_words(&x.g, o, w)); let mut b = Vec::with_capacity(w.len() * 4); for v in w.iter() { b.extend_from_slice(&v.to_le_bytes()); } b });
+    let b = STATE_BUF.with(|c| { let mut c = c.borrow_mut(); let (o, w) = &mut *c; with(h, |x| game::state_words::state_words(&mut x.g, o, w)); let mut b = Vec::with_capacity(w.len() * 4); for v in w.iter() { b.extend_from_slice(&v.to_le_bytes()); } b });
     out(b);
+}
+/// THE MISSION'S VERDICT, for a host with no puppet (a server): 0 while the mission is being played, 1 lost, 2 won; when not 0 the end's word, a line
+/// feed and the why are at face_out. Read-only (game::verdict::verdict_ended): nothing is written or kept, so the asker keeps the first answer. While
+/// it is 0 nothing is allocated and face_out is left as it was.
+#[no_mangle]
+pub extern "C" fn face_verdict(h: u32) -> i32 {
+    match with(h, |x| game::verdict::verdict_ended(&mut x.g)) {
+        None => 0,
+        Some((won, word, why)) => { let mut b = Vec::with_capacity(word.len() + 1 + why.len()); b.extend_from_slice(word.as_bytes()); b.push(b'\n'); b.extend_from_slice(why.as_bytes()); out(b); if won { 2 } else { 1 } }
+    }
 }
 /// THE GENERATION OF THE BRIDGE this module was built with (io::LAYOUT, and `layout` in schema.json): a host refuses a module of another generation.
 #[no_mangle]

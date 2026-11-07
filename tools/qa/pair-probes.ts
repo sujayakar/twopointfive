@@ -8,16 +8,18 @@
 //                  off; he comes), each cancels the other and both cancel a take job; with the partner down there is nobody to order (the cue)
 //   pair-dark      silent: 1 on lit floor with dark floor beside it → he ends on DARK floor near the point, on a knee, 'set.'; on dark floor → the point
 //                  itself; nothing dark in reach → greyed, and given by B refused in his own words, he does not move; behind a locked door → refused;
-//                  cancelled by fall in; `darkRefuse` off → he goes and says it is lit; the spot lit under him → 'lit up here.'
+//                  cancelled by fall in; the spot lit under him → 'lit up here.'
 //   pair-mark      take him on your mark: given (B on the man), obeyed (round to his back unseen, 'set.', WAITS — the man still unaware — then F: hands, the
 //                  man out cold with no round fired and nobody else roused, the partner holding), the mark by Sam's own takedown (two men down on one
 //                  beat), F before he is set, cancelled (hold: the job is gone and F is nobody's), refused with a cue (a locked door between; the man
 //                  already down; the man already roused) and called off under way with a cue (the man turned on him)
 //   pair-now       take him now: no mark — the same job done at once
-//   pair-watch     watch him: gun on the man, not one round while the man has not noticed (the silent order's own fire hold switched off for the probe:
-//                  this row's alone) — and rounds the moment he has; a plain hold beside it for the contrast
+//   pair-watch     watch him: gun on the man, not one round while the man has not noticed — and rounds the moment he has
 //   pair-identity  the switch on and never used digests the same scripted minute as the switch off, frame for frame (one partner; the squad of four, where
 //                  the rows are not offered at all); used, the minute differs (the probe can tell)
+// 2026-11-07, settled rows no longer written here (PAIR.on itself is a mission's own switch and is still thrown): out went '`darkRefuse` off: he goes to
+// the lit point anyway', 'the rule switched off (PAIR.watched)', 'the rule off, hands as the mark', 'the rule off (PAIR.lookBack)', and pair-watch's
+// contrast (a plain hold with the silent order's fire hold off: the probe no longer puts SILENT.holdFire off).
 // The cross-commit identity (switch off = the base build 25e5e7c) is the play-through digests, run in this checkout and in one of the base: the same lines.
 import { standUp, ROOT } from './headless.ts';
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
@@ -199,9 +201,6 @@ export const pairDark = guarded(async () => {
   // cancelled
   O.give('fallIn', O.targetAt(game.player.char.pos)); R.step(60 * 3);
   verdict(O.of(mate)?.order === 'fallIn' && mate.char.anim.crouch < 0.5, 'cancelled by fall in: he is up off his knee and on Sam again', `${R.status()} · crouch ${f1(mate.char.anim.crouch)}`);
-  // the knob: go anyway
-  PAIR.darkRefuse = false; R.step(65); const w6 = O.give('pairDark', O.targetAt(lit)); const there6 = R.until(() => !!O.of(mate)?.arrived, 25);
-  verdict(w6 === null && there6 && flat(mate.char.pos, lit) < 0.7 && R.said.includes(`[${mate.callsign}] it's lit there.`), "`darkRefuse` off: he goes to the lit point anyway and says it is lit", `give → ${w6} · at ${at(mate.char.pos)} lit ${f2(P.litAt(mate.char.pos))} · said: it's lit there. ${R.said.includes(`[${mate.callsign}] it's lit there.`)}`);
   verdict(R.held === 0 && R.opShots === 0, 'no key held, no round fired', `held ${R.held} · rounds ${R.opShots}`);
   return done();
 });
@@ -307,11 +306,6 @@ export const pairWatched = guarded(async () => {
     R.press('KeyF'); const down = R.until(() => foe.state === 'dead', 6);
     verdict(held && down && R.said.slice(n0).includes(`[${mate.callsign}] going anyway.`) && PM.PAIR_STATS.anyway === 1, 'a second mark while he is held up: "going anyway." and he takes the man whoever is looking', `held ${held} · down ${down} · said: ${R.said.slice(n0).join(' / ')} · anyway ${PM.PAIR_STATS.anyway}`);
   }
-  { const { R, foe, mate } = await staged({ pair: { watched: false } });
-    const w = witness(R, foe, -Math.PI / 2); calm(R, w); R.step(20); const n0 = R.said.length;
-    R.press('KeyF'); R.step(60 * 2); const said = R.said.slice(n0), J = R.P.jobOf(mate);
-    verdict(said.includes(`[${mate.callsign}] moving.`) && !said.some((x: string) => /has eyes on him/.test(x)) && !J?.watcher && PM.PAIR_STATS.watched === 0, 'the rule switched off (PAIR.watched): the mark is the mark, as it was — nobody is asked who is looking (the way to his back is still read for eyes, as it always was)', `said: ${said.join(' / ')} · ${R.O.statusOf?.(mate) ?? ''}`);
-  }
   // held up for longer than the whole job's own clock: the seconds he was held are not the job's — he still takes the man once it is clear
   { const { R, foe, mate } = await staged(); const { P } = R; const keep = PM.PAIR.takeSecs;
     const w = witness(R, foe, -Math.PI / 2); calm(R, w); R.step(20);
@@ -325,12 +319,6 @@ export const pairWatched = guarded(async () => {
     const w = witness(R, foe, -Math.PI / 2); calm(R, w); R.step(20); const n0 = R.said.length;
     P.mark('hands'); const down = R.until(() => foe.state === 'dead', 6), said = R.said.slice(n0);
     verdict(down && !said.some((x: string) => /has eyes on him/.test(x)) && PM.PAIR_STATS.watched === 0, "your own hands as the mark, the partner set at his man: he goes with you whoever is looking — no 'hold'", `down ${down} · said: ${said.join(' / ')}`);
-  }
-  // … but with the rule off, hands force nothing: the mark is the mark as it was
-  { const { R, foe, mate } = await staged({ pair: { watched: false } }); const { P } = R;
-    const w = witness(R, foe, -Math.PI / 2); calm(R, w); R.step(20);
-    P.mark('hands'); R.step(30); const J = P.jobOf(mate);
-    verdict(!!J && J.go && !J.force && !J.watcher && PM.PAIR_STATS.anyway === 0, 'the rule off, hands as the mark: nothing is forced — he is going, by the way to his back as it always was', `go ${J?.go} · force ${J?.force} · ${R.O.statusOf?.(mate) ?? ''}`);
   }
   // HE'LL LOOK BACK (PAIR.lookBack): the watcher has stood there a while, the partner is held on the mark, and the man only turns his head `turn` rad
   const back = async (o: any, turn: number) => { const { R, foe, mate } = await staged(o); const w = witness(R, foe, -Math.PI / 2); calm(R, w); R.step(60 * 20);   // (long enough for the way he mostly faces to BE this way: he came from facing his own door)
@@ -354,11 +342,6 @@ export const pairWatched = guarded(async () => {
     const down = R.until(() => foe.state === 'dead', 6);
     verdict(held && still && down && R.said.slice(n0).includes(`[${mate.callsign}] clear. moving.`), 'the light goes off the man and the partner while the watcher\'s head is turned: nothing is there for him to look back to — the hold lets go',
       `held ${held} · still at 2 s ${still} · down ${down} after ${f2(R.game.time - t0)} s · said: ${R.said.slice(n0).join(' / ')}`);
-  }
-  { const { R, foe, mate, held, n0, t0 } = await back({ pair: { lookBack: false } }, 1.3);
-    R.step(60 * 2); const J = R.P.jobOf(mate);
-    verdict(held && !J?.watcher && R.said.slice(n0).includes(`[${mate.callsign}] clear. moving.`) && !R.said.slice(n0).some((x: string) => /look back/.test(x)), 'the rule off (PAIR.lookBack): a turned head is a clear moment, as it was',
-      `held ${held} · watcher ${J?.watcher?.callsign ?? 'nobody'} ${f2(R.game.time - t0)} s on · ${R.O.statusOf?.(mate) ?? ''} · said: ${R.said.slice(n0).join(' / ')}`);
   }
   { const { R, foe, mate } = await scene({ pair: { heelWait: 3 } }); const { P } = R;
     const w = witness(R, foe, -Math.PI / 2); calm(R, w); R.step(5);
@@ -387,17 +370,16 @@ export const pairWatch = guarded(async () => {
   const run = async (order: 'pairWatch' | 'hold') => { const { R, foe, mate } = await scene(); const { O } = R;
     R.put(mate, [AISLE_MID[0] - 6, 0, AISLE_MID[2]], EAST); R.step(5);
     const w = order === 'pairWatch' ? (R.menu(R.chest(foe)), R.press('Digit2'), R.last()?.order === 'pairWatch' ? null : 'not given') : O.give('hold', O.targetAt(mate.char.pos));
-    R.step(3); SILENT.holdFire = false;   // (from here on only this row holds his fire)
+    R.step(3);
     R.step(60 * 6); const quiet = { shots: R.opShots, foe: foe.state, onHim: Math.abs(Math.atan2(Math.sin(mate.char.aimYaw - Math.atan2(foe.char.pos[0] - mate.char.pos[0], foe.char.pos[2] - mate.char.pos[2])), Math.cos(mate.char.aimYaw - Math.atan2(foe.char.pos[0] - mate.char.pos[0], foe.char.pos[2] - mate.char.pos[2])))), status: R.status(), held: PM.PAIR_STATS.held };
     if (foe.state !== 'dead') { foe.state = 'alert'; foe.awareness = 1; foe.foe = mate; } R.step(60 * 4);
     return { w, quiet, after: { shots: R.opShots, foe: foe.state }, name: foe.callsign, held: R.held }; };
-  const a = await run('pairWatch'), b = await run('hold');
+  const a = await run('pairWatch');
   verdict(a.w === null && a.quiet.shots === 0 && a.quiet.foe !== 'dead' && a.quiet.onHim < 0.2 && a.quiet.held > 0 && a.quiet.status === `watching ${a.name}` && a.held === 0,
-    'X, 2 on the man (the silent order\'s own fire hold switched off): six seconds with his gun on him and not one round', `rounds ${a.quiet.shots} · ${a.name} ${a.quiet.foe} · gun off him by ${f2(a.quiet.onHim)} rad · rounds held by this row ${a.quiet.held} · ${a.quiet.status}`);
+    'X, 2 on the man: six seconds with his gun on him and not one round', `rounds ${a.quiet.shots} · ${a.name} ${a.quiet.foe} · gun off him by ${f2(a.quiet.onHim)} rad · rounds held by this row ${a.quiet.held} · ${a.quiet.status}`);
   verdict(a.after.shots > 0, 'the moment the man has noticed, he shoots', `rounds after: ${a.after.shots} · ${a.name} ${a.after.foe}`);
   { const R = await rig(); const t5 = R.tango(5), w = R.O.give('pairWatch', R.foe(t5)); R.step(20);
     verdict(w === 'no line from here.' && R.said.includes(`[${R.mate.callsign}] no line from here.`) && R.O.of(R.mate)?.order !== 'pairWatch', 'a man he cannot see (a wall between): refused — no line from here', `give → ${w} · said: ${R.said.slice(-1).join('')}`); }
-  verdict(b.quiet.shots > 0 || b.quiet.foe === 'dead', 'the contrast — a plain hold in the same place, the same fire hold off: he shoots the man on sight (the probe can tell)', `rounds ${b.quiet.shots} · ${b.name} ${b.quiet.foe}`);
   return done();
 });
 
@@ -419,7 +401,7 @@ async function minute(o: RigOpts, use: false | 'move' | 'pairDark' = false): Pro
 }
 export const pairIdentity = guarded(async () => {
   const { verdict, done } = family('pair-identity: the switch on and never used is the game with it off');
-  const off = await minute({ pair: { on: false } }), on = await minute({}), knobs = await minute({ pair: { stageM: 3, pace: 0.7, darkVis: 0.6, markOnHands: false } });
+  const off = await minute({ pair: { on: false } }), on = await minute({}), knobs = await minute({ pair: { stageM: 3, pace: 0.7, darkVis: 0.6 } });
   verdict(off === on && on === knobs, 'one partner, a scripted minute (fall in, move, go silent, move, stack, cover, fall in, open and clear) with no row of these given (the moves given loud): the same hash every frame with the switch off, on, and on with its numbers moved', `off ${off} · on ${on} · numbers moved ${knobs}`);
   const used = await minute({}, 'pairDark'), plain = await minute({}, 'move');
   verdict(used !== plain, "the same minute with the second move given SILENT, once as the plain move and once as 'hold in the dark': the hashes differ (the probe can tell)", `hold in the dark ${used} · the plain move ${plain}`);

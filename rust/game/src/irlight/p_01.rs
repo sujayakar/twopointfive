@@ -578,37 +578,6 @@ pub fn ir_carried(g: &mut crate::game::Game) -> bool {
     true
 }
 
-/// QA / the panel: whose illuminator burns. (irlight.ts irLightState)
-pub fn ir_light_state(g: &mut crate::game::Game) -> crate::irlight::IrLightState {
-    let host = crate::seats::host_man(g);
-    let shown = g.pl[host].nv_amount > 0.5;
-    let list = &g.engine.lights.ir;
-    let (sam, men) = match &g.m.irlight.kits {
-        Some(kit) => (
-            kit.sam.map_or(false, |l| list.contains(&l)),
-            kit.men.iter().filter(|(_, l)| list.contains(*l)).map(|(gd, _)| gd).collect(),
-        ),
-        None => (false, Vec::new()),
-    };
-    crate::irlight::IrLightState { sam, men, shown }
-}
-
-/// 'IR light: yours on · Blue One · Blue Two — only goggles see it'. (irlight.ts irLightSummary)
-pub fn ir_light_summary(g: &mut crate::game::Game) -> String {
-    let st = ir_light_state(g);
-    let yours = if st.sam { "on" } else if st.shown { "off (light enough here)" } else { "off (goggles up)" };
-    let mut team = String::new();
-    if st.men.is_empty() {
-        team.push_str(" · no teammate in the dark");
-    } else {
-        for gd in st.men {
-            team.push_str(" · ");
-            team.push_str(&g.gd[gd].callsign);
-        }
-    }
-    alloc::format!("IR light: yours {}{} — only goggles see it", yours, team)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

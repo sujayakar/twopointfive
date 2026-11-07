@@ -148,11 +148,6 @@ pub fn breach_drill_say(g: &mut crate::game::Game, gd: GuardId, key: &str, text:
     }
 }
 
-/// New waypoints and the order onto the first.   (breach.ts BreachDrill.route)
-pub fn breach_drill_route(g: &mut crate::game::Game, gd: GuardId, wps: &mut Vec<V3>, pts: &[V3], patch: Option<crate::squad::OrderPatch>) {
-    route_on(g, gd, wps, pts, patch.unwrap_or_default());
-}
-
 /// Past a waypoint, on to the next; true when on the last and arrived.   (breach.ts BreachDrill.advance)
 pub fn breach_drill_advance(g: &mut crate::game::Game, gd: GuardId, wps: &mut Vec<V3>, pass: Option<f64>) -> bool {
     let pass = pass.unwrap_or(0.7);
@@ -163,15 +158,6 @@ pub fn breach_drill_advance(g: &mut crate::game::Game, gd: GuardId, wps: &mut Ve
         crate::squad::order(g, gd, OP { goal: Some(Some(wps[0])), ..Default::default() });
     }
     wps.len() <= 1 && g.gd[gd].script.as_ref().map_or(false, |s| s.arrived == Some(true))
-}
-
-/// Is a point inside the doorway's opening.   (breach.ts BreachDrill.inFunnel)
-pub fn breach_drill_in_funnel(g: &mut crate::game::Game, p: V3) -> bool {
-    let d = match breach_drill_door(g) { Some(d) => d, None => return false };
-    let [hx, hz] = g.dr[d].def.hinge;
-    let along_x = m::abs(m::sin(g.dr[d].def.closed_dir)) < 0.5;
-    let (u0, u, w) = if along_x { (hx, p[0], p[2] - hz) } else { (hz, p[2], p[0] - hx) };
-    u > u0 - 0.05 && u < u0 + g.dr[d].def.width + 0.05 && m::abs(w) < 0.9
 }
 
 /// A door pulled to and latched.
@@ -197,10 +183,9 @@ pub fn breach_drill_start(g: &mut crate::game::Game) {
         g.ch[c].body_yaw = yaw;
         g.ch[c].aim_pitch = 0.0;
         g.gd[gd].speed = 0.0;
-        g.gd[gd].state = crate::game::GuardState::Patrol;
-        g.gd[gd].awareness = 0.0;
-        if g.gd[gd].last_known.is_some() { g.gd[gd].fix_stamp = g.gd[gd].fix_stamp.wrapping_add(1); }
-        g.gd[gd].last_known = None;
+        crate::mind::set_state(g, gd, crate::game::GuardState::Patrol, "breach");
+        crate::mind::set(g, gd, 0.0, "breach");
+        if g.gd[gd].last_known.is_some() { crate::mind::fix(g, gd, None, "breach"); }
         crate::control::set_hold(g, gd, false, "breach");
         crate::control::set_pinned(g, gd, false, "breach");
         g.gd[gd].react_t = 0.0;
@@ -220,8 +205,8 @@ pub fn breach_drill_start(g: &mut crate::game::Game) {
             g.ch[c].vel = [0.0, 0.0, 0.0];
             g.ch[c].aim_yaw = h.yaw;
             g.ch[c].body_yaw = h.yaw;
-            g.gd[gd].state = crate::game::GuardState::Patrol;
-            g.gd[gd].awareness = 0.0;
+            crate::mind::set_state(g, gd, crate::game::GuardState::Patrol, "breach");
+            crate::mind::set(g, gd, 0.0, "breach");
             crate::character::character_update(g, c, 0.0);
             crate::squad::order(g, gd, OP { goal: Some(None), face: Some(Some(h.yaw)), aim_at: Some(Some(v3::copy(h.aim_at))), stance: Some(Some(St::None)), upper: Some(Some(Up::Aim)), crouch: Some(Some(h.crouch == Some(true))), light: Some(Some(false)), ..Default::default() });
         }
@@ -359,8 +344,8 @@ pub fn breach_drill_tick(g: &mut crate::game::Game, dt: f64) {
             if dr!(g).t_enter.is_nan() {
                 if t < dr!(g).t_bang + GO_AFTER_BANG { return; }
                 dr!(g).t_enter = t;
-                if !dead(g, a) { g.gd[a].state = crate::game::GuardState::Search; }
-                if !dead(g, b) { g.gd[b].state = crate::game::GuardState::Search; }
+                if !dead(g, a) { crate::mind::set_state(g, a, crate::game::GuardState::Search, "breach"); }
+                if !dead(g, b) { crate::mind::set_state(g, b, crate::game::GuardState::Search, "breach"); }
                 say!(g, a, "going1", breach_lines.going1);
                 breach_drill_beat(g, "enter1");
                 if !dead(g, a) { breach_drill_start_flow(g, 0); }

@@ -41,7 +41,7 @@ async function boot(tag, flag) {
     log(name, 'staged · A', JSON.stringify(cA)); log(name, 'staged · B', JSON.stringify(cB));
     const census = name === 'calm' ? null : await PA.page.evaluate(() => window.__cc.census({ step: 6 }));
     if (census) log(name, 'census', JSON.stringify(census));
-    const plan = name === 'calm' ? [[PA, PA.info && PA.info.programs && PA.info.programs.swap ? 'ship' : 'cut', 'on'], [PB, 'plain', 'off']] : [[PA, 'cut', 'on'], [PB, 'plain', 'off'], [PA, 'plain', 'onPlain']];
+    const plan = name === 'calm' ? [[PA, 'cut', 'on'], [PB, 'plain', 'off']] : [[PA, 'cut', 'on'], [PB, 'plain', 'off'], [PA, 'plain', 'onPlain']];
     const acc = {}; for (const p of plan) acc[p[2]] = [];
     for (let r = 0; r < ROUNDS; r++) for (const [P, cfg, key] of (r % 2 ? [...plan].reverse() : plan)) { const rows = await sample(P, cfg); acc[key].push(...rows); log(name, `round ${r} ${key}: wall ${rows.map(x => x.wall.toFixed(0)).join(' ')} · union ${rows.map(x => Number.isFinite(x.union) ? x.union.toFixed(0) : '-').join(' ')}`); }
     await PA.page.evaluate(() => window.__cc.CONFIG.cut());

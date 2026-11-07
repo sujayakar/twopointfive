@@ -37,16 +37,6 @@ fn lit_r(r: crate::darkdoor::DarkRoom) -> crate::darkdoor::StandsLitR {
     crate::darkdoor::StandsLitR { t: r.t, dark: r.dark, share: r.share, mean: r.mean }
 }
 
-/// this file's lines: every kind's, or one kind's.   (darkdoor.ts darkDoorLines)
-pub fn dark_door_lines(kind: Option<crate::darkdoor::LineKind>) -> Vec<String> {
-    let mut out = Vec::new();
-    for &(k, say, he, they) in LINES.iter() {
-        if let Some(only) = kind { if only != k { continue; } }
-        for l in say.iter().chain(he.iter()).chain(they.iter()) { out.push(String::from(*l)); }
-    }
-    out
-}
-
 /// one line of a kind from this man, the next of its pool by his own count: spoken, or on the net with the handset's chirp.   (darkdoor.ts bark)
 pub fn bark(g: &mut crate::game::Game, gd: GuardId, kind: crate::darkdoor::LineKind, radio: bool) {
     let (_, say, he, they) = *LINES.iter().find(|l| l.0 == kind).unwrap();
@@ -380,20 +370,19 @@ pub fn call(g: &mut crate::game::Game, gd: GuardId, m: GuardId) {
     g.stats.darkdoor.calls += 1;
     let here = pos_of(g, gd);
     crate::belief::word(g, m, here);
-    let x = &mut g.gd[m];
-    x.awareness = crate::m::max(x.awareness, 0.42);
-    if x.state != crate::game::GuardState::Suspicious {
-        x.state = crate::game::GuardState::Suspicious;
-        x.react_t = 0.8;
-        x.search_plan = None;
-        x.pieing = None;
+    crate::mind::raise(g, m, 0.42, "darkdoor");
+    if g.gd[m].state != crate::game::GuardState::Suspicious {
+        crate::mind::set_state(g, m, crate::game::GuardState::Suspicious, "darkdoor");
+        g.gd[m].react_t = 0.8;
+        g.gd[m].search_plan = None;
+        g.gd[m].pieing = None;
     }
-    x.search_t = 0.0;
-    x.path = Vec::new();
-    x.path_serial = x.path_serial.wrapping_add(1);
-    x.path_goal = None;
-    x.path_goal_orbit = false;
-    x.stall_ref = None;
+    g.gd[m].search_t = 0.0;
+    g.gd[m].path = Vec::new();
+    g.gd[m].path_serial = g.gd[m].path_serial.wrapping_add(1);
+    g.gd[m].path_goal = None;
+    g.gd[m].path_goal_orbit = false;
+    g.gd[m].stall_ref = None;
     let s = fear(g, gd);
     if !s.called {
         s.called = true;
@@ -418,7 +407,7 @@ pub fn dark_door_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f6
             return Some(speed);
         }
         fear(g, gd).idle = 0.0;
-        if g.gd[gd].state == crate::game::GuardState::Suspicious { g.gd[gd].awareness = m::max(g.gd[gd].awareness, k.keep_aw); }
+        if g.gd[gd].state == crate::game::GuardState::Suspicious { crate::mind::raise(g, gd, k.keep_aw, "darkdoor"); }
         let s = fear(g, gd);
         s.t += dt;
         if s.t >= k.nerve_secs { return Some(speed * k.slow_k); }
@@ -570,8 +559,7 @@ pub fn hold(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, seen: b
         }
         if g.gd[gd].state == crate::game::GuardState::Alert {
             crate::guards::drop_to_search(g, gd, None);
-            g.gd[gd].last_known = Some(v3::copy(g.ch[c].pos));
-            g.gd[gd].fix_stamp = g.gd[gd].fix_stamp.wrapping_add(1);
+            { let at = Some(v3::copy(g.ch[c].pos)); crate::mind::fix(g, gd, at, "darkdoor"); }
         } else {
             g.gd[gd].stall_ref = Some(v3::copy(g.ch[c].pos));
             g.gd[gd].stall_t = 1e3;
@@ -584,7 +572,7 @@ pub fn hold(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, seen: b
     g.gd[gd].alert_stall_t = 0.0;
     g.gd[gd].chase_t = 0.0;
     if g.gd[gd].state == crate::game::GuardState::Suspicious {
-        g.gd[gd].awareness = m::max(g.gd[gd].awareness, k.keep_aw);
+        crate::mind::raise(g, gd, k.keep_aw, "darkdoor");
     } else if g.gd[gd].state == crate::game::GuardState::Search {
         g.gd[gd].search_t = m::max(0.0, g.gd[gd].search_t - dt);
     }
@@ -674,21 +662,19 @@ fn tick_man(g: &mut Game, gd: GuardId, dt: f64) {
     }
     let far = match g.gd[gd].last_known { Some(l) => flat(l, goal) > 0.5, None => true };
     if far {
-        g.gd[gd].last_known = Some(v3::copy(goal));
-        g.gd[gd].fix_stamp = g.gd[gd].fix_stamp.wrapping_add(1);
+        crate::mind::fix(g, gd, Some(v3::copy(goal)), "darkdoor");
     }
-    let x = &mut g.gd[gd];
-    if x.state != crate::game::GuardState::Suspicious {
-        x.state = crate::game::GuardState::Suspicious;
-        x.search_plan = None;
-        x.pieing = None;
-        x.path = Vec::new();
-        x.path_serial = x.path_serial.wrapping_add(1);
-        x.path_goal = None;
-        x.path_goal_orbit = false;
+    if g.gd[gd].state != crate::game::GuardState::Suspicious {
+        crate::mind::set_state(g, gd, crate::game::GuardState::Suspicious, "darkdoor");
+        g.gd[gd].search_plan = None;
+        g.gd[gd].pieing = None;
+        g.gd[gd].path = Vec::new();
+        g.gd[gd].path_serial = g.gd[gd].path_serial.wrapping_add(1);
+        g.gd[gd].path_goal = None;
+        g.gd[gd].path_goal_orbit = false;
     }
-    x.awareness = m::max(x.awareness, 0.42);
-    x.search_t = 0.0;
+    crate::mind::raise(g, gd, 0.42, "darkdoor");
+    g.gd[gd].search_t = 0.0;
 }
 
 /// once a frame: the men called and the men going in with somebody kept on their man, or dropped; a stopped man nothing asks for is let go.   (darkdoor.ts darkDoorTick)
@@ -729,54 +715,12 @@ pub fn lose(g: &mut crate::game::Game, gd: GuardId) {
     g.stats.darkdoor.drops += 1;
 }
 
-/// QA: what the rule has of a man (None = never met).   (darkdoor.ts darkDoorOf)
-pub fn dark_door_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::darkdoor::DarkDoorOf> {
-    let s = g.m.darkdoor.state_of.get(gd)?.clone();
-    Some(crate::darkdoor::DarkDoorOf { act: s.act, t: s.t, door: s.door, side: s.side, spot: s.spot, at: s.at, other: s.other, called: s.called, call_t: s.call_t, tried: s.tried, left: s.left, told: s.told, lag: s.lag, armed: s.armed, arm_t: s.arm_t, quits: s.quits, pass: s.pass, said: s.said, idle: s.idle, ask: s.ask })
-}
-
 /// QA: is he green as the rule deals it.   (darkdoor.ts darkDoorGreen)
 pub fn dark_door_green(g: &mut crate::game::Game, gd: GuardId) -> bool { green_man(g, gd) }
-
-/// the debug panel's line: every man the rule has.   (darkdoor.ts darkDoorSummary)
-pub fn dark_door_summary(g: &mut crate::game::Game) -> String {
-    let mut men: Vec<String> = Vec::new();
-    let mut i = 0;
-    while i < g.guards.len() {
-        let gd = g.guards[i];
-        i += 1;
-        let Some((act, t, door, other)) = g.m.darkdoor.state_of.get(gd).map(|s| (s.act, s.t, s.door, s.other)) else { continue };
-        if act == DarkDoorAct::None { continue; }
-        let mut line = alloc::format!("{} {}", g.gd[gd].callsign, act.as_str());
-        if act == DarkDoorAct::Balk || act == DarkDoorAct::Solo {
-            let name = match door_at(g, door) { Some(d) => g.dr[d].def.name.clone(), None => String::from("?") };
-            line.push_str(&alloc::format!(" {} s at {}", js::to_fixed(t, 1), name));
-        }
-        if let Some(o) = other {
-            let who = &g.gd[o].callsign;
-            line.push_str(&if act == DarkDoorAct::Balk { alloc::format!(" ({} coming)", who) } else { alloc::format!(" (with {})", who) });
-        }
-        men.push(line);
-    }
-    let body = if men.is_empty() { String::from("nobody stopped") } else { men.join(" · ") };
-    alloc::format!("dark door ▸ {}", body)
-}
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn lines_come_in_the_order_written() {
-        let all = dark_door_lines(None);
-        assert_eq!(all.len(), 4 + 3 + 3 + 3 + 3 + 3);
-        assert_eq!(all[0], "I'm not going in there alone. get up here.");
-        assert_eq!(all[3], "they could be anywhere in that. somebody get up here.");
-        assert_eq!(all[all.len() - 1], "all right. slow. going in.");
-        let copy = dark_door_lines(Some(LineKind::Copy));
-        assert_eq!(copy.len(), 3);
-        assert_eq!(copy[2], "hold there — coming to you.");
-    }
 
     /// the static here and the skeleton's `lines()` are the same words in the same order
     #[test]

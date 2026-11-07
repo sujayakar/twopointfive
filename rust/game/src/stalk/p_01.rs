@@ -89,11 +89,6 @@ pub fn stalk_begin_m(g: &mut crate::game::Game) -> f64 {
     begin_m(g)
 }
 
-/// (stalk.ts stalkOutM)
-pub fn stalk_out_m(g: &mut crate::game::Game) -> f64 {
-    out_m(g)
-}
-
 /// Is the held click the ONE way to grab a man from behind: on the page, only on a wall. (stalk.ts stalkClickOnly)
 pub fn stalk_click_only(g: &mut crate::game::Game) -> bool {
     let me = g.player;
@@ -243,23 +238,6 @@ pub fn broke_duck(g: &mut crate::game::Game, pl: PlayerId) {
         duck(g, b.gd, jolt);
         g.m.stalk.state.get_mut(pl).unwrap().broke = None;
     }
-}
-
-/// The polish, up or down together, and the hold's share of it. (stalk.ts stalkPolish)
-pub fn stalk_polish(g: &mut crate::game::Game, up: bool) {
-    let (turn_in, corner_show, yank_with, catch_long, jolt) = if up {
-        let u = polish_up();
-        (u.turn_in, u.corner_show, u.yank_with, u.catch_long, u.jolt)
-    } else {
-        let u = polish_down();
-        (u.turn_in, u.corner_show, u.yank_with, u.catch_long, u.jolt)
-    };
-    g.k.stalk.turn_in = turn_in;
-    g.k.stalk.corner_show = corner_show;
-    g.k.stalk.yank_with = yank_with;
-    g.k.stalk.catch_long = catch_long;
-    g.k.stalk.jolt = jolt;
-    crate::character::hold_polish(g, up);
 }
 
 /// Once a frame from updatePlayer, before his keys become a step: what the stalk asks of his feet, or None = his own. (stalk.ts stalkStep)

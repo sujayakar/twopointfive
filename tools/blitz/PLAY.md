@@ -51,6 +51,11 @@ tools/blitz/rust.sh rust bun run tools/qa/playthrough.ts --scn depot-four --seed
 `start()` THROWS, naming the tool's line, for a new start from a puppet that holds a man the apply made (a man the Rust game made has no store row or
 pose store on the TypeScript side).
 
+**A game the tool has let go is freed.** Nothing in the host keeps a game alive: what a host holds in the module (its game's handle, the clone kept as
+its slot went, the games kept for saves and snapshots) is in a cell of its own, and the host's lists hold hosts weakly. As the next game is attached, and
+before a slot is taken from a game still held, every host the collector has taken gives back what it held (`reap`). A tool that wants a game kept holds
+the game. (Before this the call surface listed every host that ever stood: 25 games stood back to back grew the heap 276 MB.)
+
 **A slot given up** (rust/sim has four; a tool that stands a fifth game takes the slot of the game stepped longest ago) keeps a clone of its game in
 the module; stepped again, the game stands again from it (`restep`). Only the last six games that gave a slot up keep theirs: an older one's re-step
 THROWS and names the tool's line. `tools/blitz/keep-check.ts` holds all of this under either word.
@@ -137,6 +142,23 @@ tables the Rust game keeps otherwise. `fuzz-dumps.ts` holds a pair with these ru
 game's kept clone has the saved moment's. A run that parts in the block's `panes` alone after a load is held again with the panes left out
 (`fuzz-diff.ts --but-panes`; exit 4).
 
+### Kept runs: the three games of two seats
+
+`tools/blitz/kept/two-lock0-9.tar.zst`, `two-lock1-9.tar.zst` and `two-full-3.tar.zst` are the games of two players that the co-op check plays
+(`coop-check.ts`: each seat's pair sent through a locked door; the barracks with every seat counted). Their records (the host's half of every tick and
+the orders given) were written by the TypeScript tick while it stood, and nothing can write them again, so they are kept whole: the records, the
+Rust game's own series (the die's count and a hash of each part of the block after every tick) and the run's `coop.json`. No start is kept: the
+start's bytes are bound to the wire, and `hold.sh` stands it again from this tree (`seats.ts --start-only`).
+
+```sh
+tools/blitz/hold.sh tools/blitz/kept                              # each: "the same over N ticks", exit 0
+HOLD_DIRS=DIR tools/blitz/hold.sh tools/blitz/kept                # … and leaves each run's folder in DIR, start and all
+rust/game_run/target/debug/mission DIR/two-lock0-9 1800 --keep 960,990,1020   # the Rust game's whole states at those ticks: DIR/two-lock0-9/n<k>.bin
+```
+
+The lock games' series is the Rust game's alone: the TypeScript's was another from ticks 1082 and 1056 on purpose, where a seat's door tools first
+kept to their own men. The barracks' is both games', in step for 7200 ticks.
+
 ### Kept runs: the fuzz with no TypeScript tick
 
 A run that is EQUAL by all three measures is worth keeping: its Rust side IS what the TypeScript tick did. Keep the folder's `cmd.txt` (the command),
@@ -178,7 +200,24 @@ known in the whole states every half minute), both sides played from one tree, H
   record, an order's words, a gun's rows). A change to the schema or the export's order moves every hash and no line: pack again, having seen the
   lines equal.
 - SHOWN: the Rust game's four whole-state hashes of `depot-four-2-r2` were the same in three separate plays, and each packed file here is THE SAME
-  PLAY as its own folder. NOT YET SHOWN: a whole `fuzz-replay.sh` play of each packed run from a clean tree (the box was not free to run it).
+  PLAY as its own folder. A whole `fuzz-replay.sh` play of each packed run has been made since (the retake, below).
+- A PACKED RUN IS OF ONE LAYOUT OF THE WIRE, and says which (`layout`, the stamp `schema.layout` that the module is held to as it loads). The line's
+  host-half word is a hash of the host's parts and a whole state's hash is of its bytes, so a field added to either moves them with no play moved.
+  Held to a packed run of another layout, `fuzz-replay` says THE WIRE'S LAYOUT MOVED by name (exit 4 where the ticks played and the die's count are
+  still the packed run's), not "differs first in ticks 1 to 600".
+- THE PLAY'S OWN WORDS (`play`) are in a packed file beside the lines': the same ten-second windows over each line without the host-half word, so
+  the die's count and the block's parts alone, which no layout of the wire touches. After a change of the wire, ONE COMMAND takes every packed run
+  again: `tools/blitz/fuzz-retake.sh` plays each, holds the new play to the `play` words, and only where they are equal writes the file again from the
+  new play (its lines, its states, the tree, the layout). A run whose play differs is left alone and named, with the ten seconds. With the layout
+  unchanged it is `fuzz-replay.sh` over all of them and writes nothing.
+- THE SIX WERE TAKEN AGAIN after the TypeScript tick went, on the tree their `tree` line names, and each time this was seen first: every tick's line
+  of the new play IDENTICAL to the kept folder's own line (the one that was equal to the TypeScript tick) in the die's count and all twelve parts of
+  the block, on all 35,659 ticks; only the host-half word differed, by the capability part the host's half gained. The whole states had differed from
+  the kept ones in ONE list alone, by `diff.ts` on two runs at three ticks (20 paths, every one `g.m.owner.witnesses[k]`): the owner check's
+  witnesses, filled as each rule's file loaded and so in the bundle's order, which moved when the tick's files went. That list is kept in the rules'
+  order now (owner.ts `ownerWitness`). So the lines of the packed files are still the TypeScript tick's play; their half words and state hashes pin
+  the Rust game to itself. The three records runs were played twice on that tree: lines and state hashes the same both times. On the tree the files
+  name, `fuzz-retake.sh` over the six said "of this layout already, and the same play" of each: every line and all 17 whole states' hashes.
 - A run packed AFTER the TypeScript tick is gone was held to nothing: it pins the Rust game to itself, which is worth having and is another thing.
 - The scripts stand the Rust game by the harness's word (`TPS_GAME=rust`, `QA_FOLD=1` in fuzz.sh and fuzz-squad.sh). When the word goes with the
   TypeScript tick, `--side rust` is what stays and the two variables go.
@@ -323,7 +362,7 @@ As a game is stood, the probe running then (the runner names it) or the tool's o
    `RH_FOLDED`: 185 probes; the TypeScript tick;
 4. `waits`: a check SEEN RED ON THE RUST GAME and green on the TypeScript tick, by hand, with what it waits on; the TypeScript tick until its row is taken out;
 5. everything else (kinds i and ii that are in none of the lists): the Rust game;
-6. a stand-alone tool by its row: `ts`, or `none` (stood with no word at all: `tools/qa/coop-check.ts`, whose second engine is node), else the Rust game.
+6. a stand-alone tool by its row: `ts`, or `none` (stood with no word at all: `tools/qa/exact-check.ts`, whose second engine is node), else the Rust game.
 
 Each check kept off the Rust game says so as its first game is stood (`[the game: <name> is stood on the TYPESCRIPT TICK by the table (kind iii); its
 verdict is not the Rust game's]`) and the run ends on one line that counts both sides and names them (`=== the game, by the table: … ===`), so a green
@@ -333,7 +372,7 @@ word's own stand (the game owns its die, the dress rows down), under which every
 families tried: `weapons-identity` 2 of 2 red, `workstow` 2 of 5, green both with no word and under `'none'`). A FROZEN run is always stood as with no word.
 
 A stand-alone tool: by its row, `rust` (seen to play the same on the Rust game: `playthrough.ts`, `seats-run.ts`, `bench-seeds.ts`, `thrice.ts`,
-`die-check.ts`), `ts` (`tour.ts`, `soak.ts`, `seats-check.ts`, `lesson-run.ts`) or `none` (`coop-check.ts`, `exact-check.ts`, `dice-check.ts`). A TOOL
+`die-check.ts`), `ts` (`tour.ts`, `soak.ts`, `seats-check.ts`, `lesson-run.ts`) or `none` (`exact-check.ts`, `dice-check.ts`). A TOOL
 WITH NO ROW is kept on the TypeScript tick and counted like a probe with none (485 files of tools/qa stand a game; run as its own main a check file has
 no probe name). One of this folder's own tools with no row stands its games itself and gets no word. A process that is not bun (a child under node)
 has no bridge: its game is stood with no word, said and counted.
@@ -417,7 +456,7 @@ have a probe on the Rust game by the table. They are not converted: the census a
 | `seats-run.ts` | 87 s PASS | 170 s PASS | |
 | `seats-check.ts` | 319 s PASS | 477 s, 3 red | `rollback`, `twin`: a word made by walking the JavaScript objects (and `walkAhead` on the puppet); `down`: calls `hitPlayer` |
 | `mpserver-check.ts` | 226 s, 2 red (clocks) | 443 s, 4 red | `same fight`, `late joiner`: the check runs on the wall clock and the games stepped 650 to 917 of 1,200 ticks, at 120 to 175 ms a tick: THE RUST GAME NEVER LISTED ITS WORLD there (a networked tick calls `world.relist()`, which had no tap), so its state grew 35 KB a tick and the every-tick export slowed with it. Tapped since ("Numbers", below); `lag`, `ahead` red under `ts` too |
-| `tools/qa/coop-check.ts` | 209 s, 4 red | 520 s, 4 red | its second engine (node) has no preload under either word: by the table it is stood with no word (ALL PASS, 226 s). Its bun half alone (`--one hostage-rescue 1`) under each word: the same row, and the chained raw float bits equal on all 107 half seconds (it was 3,797 frames against 10,528: the tool's counter on `Math.random` made every die put back a new function, so the TypeScript tick left the game's die; under a word it now gives the same function back) |
+| `tools/qa/coop-check.ts` (DELETED 2026-11-07 with the TypeScript tick it checked; the row is the record) | 209 s, 4 red | 520 s, 4 red | its second engine (node) has no preload under either word: by the table it is stood with no word (ALL PASS, 226 s). Its bun half alone (`--one hostage-rescue 1`) under each word: the same row, and the chained raw float bits equal on all 107 half seconds (it was 3,797 frames against 10,528: the tool's counter on `Math.random` made every die put back a new function, so the TypeScript tick left the game's die; under a word it now gives the same function back) |
 | `dice-check.ts` | 24 s, 1 red | 51 s, 2 red | `default`: the word gives the game a die (both words); `same seed`: provokes its fight by a rule (`teleportPlayer`), not the die. The tool checks the TypeScript die's own rule: by the table it is stood with no word (6 of 6) |
 | `tour.ts --runs 1 --seed 1 --quiet` | 22 s PASS | 52 s, 9 FAIL | kind iii: the showcase's own Demo (src/game/demo.ts, host-side) calls rules and writes fields on the puppet between ticks; first: `stop2-hand` (Sam's hand never on the fire exit's leaf), then the takedown, the hold, the firefight, the room clear's drill. By the table (its row `ts`): PASS |
 | `soak.ts --seeds 1 --minutes 3 --quiet` | 34 s ALL PASS | 62 s, dies at 2.5 min | kind iii / iv-a: its stimuli call rules on the puppet: first `f2530 exception (stim:mission-step): Attempted to assign to readonly property` (player.ts:1107 `w.cam.peekOffset = null` under `teleportPlayer`: an object the apply left frozen), then `S.u` and `h.where` undefined (a `PoseSet.home` the apply left undefined, skeleton.ts:203), the last one uncaught. By the table (its row `ts`): ALL PASS |
@@ -518,6 +557,14 @@ The gate's forms of the tour and the soak (`--runs 3`; three seeds, twelve minut
   game's; its counts of rounds, bangs, papers are not: see the tallies.
 - **Two seats**: the first apply throws (below).
 - **`tut-solo`'s last 510 ticks, `tut-kit` from 5302**: the cursor parts (below).
+
+- **A TypeScript body that MAKES THINGS on the puppet between two ticks.** A kept method with no row of the call surface (a check calling
+  `WallBreak.openCells` by hand) runs as TypeScript on the puppet, and what it makes there (a wall's rubble, each piece a box) are objects the Rust
+  game has no row for. The plain fields it writes go to the Rust game by the scan, as any tool's write does; a watched leaf that NAMES one of the new
+  objects does not: the scan refuses it (`the scan: a write on the puppet was NOT SENT…` on stderr, `WRITES NOT SENT` on the exit line), because the
+  bytes would hold a number past the end of the Rust game's table. That was a panic four ticks later (`edge_look` indexing the boxes with a rubble
+  record's number, `cutboxes-lines`), far from the write. The call surface refuses such a row as an argument the same way. A check that needs the walls
+  opened asks through a function that has a row (`Destruction.blast`, `WallBreak.round`, `WallBreak.blast`), so the Rust game makes the pieces.
 
 ## Numbers
 
@@ -633,6 +680,14 @@ tick's line equal.
 compiler's proof; made by the program that demotes `&mut Game` wherever the crate still compiles). After a crossing of such a row the host exports
 and applies nothing and walks no second time (`RH_OFF=reads`: as any row). The list is EMPTY today: all three of the tally's rows take `&mut Game`.
 Never a guess from a row's history: a tool that reads the puppet after a call that did write must read what it wrote.
+
+**`tools/blitz/reads-contract.json`**: a second list, written by hand, that the host reads with the first. A row here takes `&mut Game` and still
+leaves the game as it found it, by its own contract: it puts back what it takes. Each row carries the sentence of that contract and the check that
+holds it, and the check has a red path. One row today, `walkAhead` (a co-op client's look ahead for its own man: his legs walked on a copy of him,
+`seats::with_seat` and `game::game_aside`): `tools/qa/seats-check.ts twin` reads the whole game's state words before and after the looks of every
+tenth tick of two firefights and lets no part differ but the scratch a look leaves (`SEATS_BREAK=look` must fail it). Measured on a 4 core cloud box,
+one look of five records in bun: 13.4 ms as any row, 5.1 ms as a row that reads, 1.6 ms in a stand that also walks no puppet for a tool's writes
+(`standUp({ scan: false })`, what `tools/mp/stand.ts` asks: nothing writes a networked game between two ticks but a seat's record).
 
 `RH_WHO=1`: the fiftieth crossing of each row is counted with the source lines that led to it.
 

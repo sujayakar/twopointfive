@@ -187,12 +187,6 @@ fn release_at(g: &mut Game, i: usize) {
     g.tracers.lit = m::max(0.0, g.tracers.lit - 1.0);
 }
 
-/// Hands a streak's light back to the set (idempotent). `t` cannot be the pool's row while `g` is lent, so it is a copy: its slot is found by its lamp, which is the slot's for good, and both are written. (tracers.ts Tracers.release)
-pub fn tracers_release(g: &mut crate::game::Game, t: &mut crate::tracers::Tracer) {
-    if let Some(i) = g.tracers.pool.iter().position(|r| r.lamp == t.lamp) { release_at(g, i); }
-    t.light = None;
-}
-
 /// One frame: a head that reached the end last frame retires, the others advance, one arriving now makes its ember, the lights ride the heads, each streak's box is rewritten tail to head and goes out. (tracers.ts Tracers.update)
 pub fn tracers_update(g: &mut crate::game::Game, dt: f64, out: &mut Vec<BoxId>, m_per_px: Option<f64>) {
     let m_per_px = m_per_px.unwrap_or(0.0);

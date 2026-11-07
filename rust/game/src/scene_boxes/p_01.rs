@@ -34,15 +34,6 @@ fn bx_mut(g: &mut Game, id: BoxId) -> &mut Bx { &mut g.tab.boxes[id] }
 #[cfg(not(test))]
 fn seam_box_push(g: &mut Game, b: Bx) -> BoxId { crate::scene_boxes::box_new(g, b) }
 
-/// `device.queue.writeBuffer(matBuf, offset, data, 0, bytes)` (boxes.ts:332, :337). No Rust part calls its two callers: the air grid and the hills go to the host.
-fn seam_write_mat_buf(g: &mut Game, offset: f64, data: &[f32], bytes: f64) {
-    todo!("needs: a boundary call for the GPU queue's writeBuffer on matBuf")
-}
-/// `AREA_LIT_MARKS.has(m)`, a set of MarkingDef objects by identity (boxes.ts:534). Reached only from repackMarkings, which no Rust part calls.
-fn seam_area_lit(g: &mut Game, m: &crate::scene_markings::MarkingDef) -> bool {
-    g.m.scene_markings.area_lit_marks.has(crate::scene_markings::mark_key(m))
-}
-
 /// A piece of the picture, which no game ray meets. (boxes.ts lookKeyed)
 pub fn look_keyed(g: &mut crate::game::Game, b: BoxId) -> bool {
     let (dress, mkey) = { let x = bx(g, b); (x.dress, x.mkey) };
@@ -52,11 +43,6 @@ pub fn look_keyed(g: &mut crate::game::Game, b: BoxId) -> bool {
 /// boxOf's value, before it has a place in the table
 fn box_value(c: V3, h: V3, yaw: f64, albedo: V3, emissive: V3, flags: f64, owner: f64, rot: Option<Quat>, name: Option<String>) -> Bx {
     Bx { c, h, yaw, albedo, emissive, flags, owner, cut_height: 1e6, rot, name, ..Bx::zeroed() }
-}
-
-/// A box with every field in place. (boxes.ts boxOf)
-pub fn box_of(g: &mut crate::game::Game, c_2: V3, h: V3, yaw: f64, albedo: V3, emissive: V3, flags: f64, owner: f64, rot: Option<Quat>, name: Option<&str>) -> BoxId {
-    seam_box_push(g, box_value(c_2, h, yaw, albedo, emissive, flags, owner, rot, name.map(String::from)))   // (skeleton 5.2: box_of takes g)
 }
 
 /// Is this piece of trim drawn: while the box that says it is. (boxes.ts trimDrawn)
@@ -132,28 +118,6 @@ pub fn word_of(b: crate::scene_boxes::WordOfB) -> crate::scene_boxes::WordOf {
     crate::scene_boxes::WordOf { stuff: b.stuff, does: b.does }
 }
 
-/// A thing of solid glass: says 'glass' and is no pane. (boxes.ts solidGlassBox)
-pub fn solid_glass_box(b: crate::scene_boxes::SolidGlassBoxB) -> bool {
-    b.stuff == Some(crate::scene_stuff::BoxStuff::Glass) && js::to_i32(b.flags) & js::to_i32(box_flag().glass) == 0
-}
-
-/// The air grid's rows, in matBuf's tail. (boxes.ts BoxWorld.setAirGrid)
-pub fn box_world_set_air_grid(g: &mut crate::game::Game, cells: &[f32]) {
-    let max_boxes = g.engine.world.max_boxes;
-    let offset = max_boxes * MAT_STRIDE * 4.0 + crate::scene_markings::MARK_TABLE_ROWS * 16.0 + GB_ROWS * 16.0;
-    let bytes = m::min((cells.len() * 4) as f64, crate::scene_air_grid::air_rows() * 16.0);
-    seam_write_mat_buf(g, offset, cells, bytes);
-}
-
-/// The hills' rows, in matBuf's last region; nothing without the switch. (boxes.ts BoxWorld.setGroundField)
-pub fn box_world_set_ground_field(g: &mut crate::game::Game, rows: &[f32]) {
-    if !g.engine.world.ground_on { return; }
-    let max_boxes = g.engine.world.max_boxes;
-    let offset = max_boxes * MAT_STRIDE * 4.0 + crate::scene_markings::MARK_TABLE_ROWS * 16.0 + GB_ROWS * 16.0 + crate::scene_air_grid::air_rows() * 16.0 + max_boxes * crate::scene_cut::CUT_STRIDE * 16.0;
-    let bytes = m::min((rows.len() * 4) as f64, crate::scene_ground_field::gh_rows() * 16.0);
-    seam_write_mat_buf(g, offset, rows, bytes);
-}
-
 /// A ray asked by the picture: the ray grid's stamps are the asker's, the last ray's scratch put back after. (boxes.ts BoxWorld.rayAside)
 pub fn box_world_ray_aside<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, own: &mut crate::scene_boxes::BoxWorldRayAsideOwn, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
     // own.w's table stays out of this: BoxWorldRayAsideOwnW is an empty struct (SKELETON-GAP). Every ask takes a clean table at ray 0, which the TypeScript does
@@ -216,100 +180,10 @@ pub fn box_world_add_static(g: &mut crate::game::Game, b: BoxId) -> f64 {
     (w.statics.len() - 1) as f64
 }
 
-/// A marking list into the table at its slot, and its secondary albedo. (boxes.ts BoxWorld.packList)
-pub fn box_world_pack_list(g: &mut crate::game::Game, ent: &mut crate::scene_boxes::BoxWorldPackListEnt) {
-    let mut row = ent.slot - 1.0;
-    let n = ent.n as usize;
-    let texel = g.engine.world.marking_texel;
-    let cap = core::cmp::min(n, ent.marks.len());
-    let mut stats: Vec<crate::scene_markings::MarkStats> = Vec::with_capacity(cap);
-    for m_ in &ent.marks[..cap] { stats.push(crate::scene_markings::mark_stats(m_, ent.base, Some(texel))); }
-    let any_emit = stats.iter().any(|st| st.emask != 0.0);
-    for k in 0..n {
-        let m_ = &ent.marks[k];
-        let lit = seam_area_lit(g, m_);
-        crate::scene_markings::pack_marking(&mut g.engine.world.mark_data, row, m_, stats[k], k == n - 1, any_emit, lit);
-        row += crate::scene_markings::mark_record_rows(m_);
-    }
-    let sec = crate::scene_markings::secondary_albedo(ent.base, ent.h, &ent.marks[..cap], Some(texel));
-    ent.sec[0] = sec[0];
-    ent.sec[1] = sec[1];
-    ent.sec[2] = sec[2];
-    ent.any_emit = any_emit;
-    g.engine.world.mark_dirty = true;
-}
-
-/// Every registered list again at a new base texel. (boxes.ts BoxWorld.repackMarkings)
-pub fn box_world_repack_markings(g: &mut crate::game::Game, texel: Option<f64>) {
-    let texel = texel.unwrap_or(g.engine.world.marking_texel);
-    g.engine.world.marking_texel = texel;
-    for key in g.engine.world.mark_by_key.keys() {
-        let Some(row) = g.engine.world.mark_by_key.get(key.clone()) else { continue };
-        if !js::truthy(row.slot) { continue; }
-        let mut ent = crate::scene_boxes::BoxWorldPackListEnt { slot: row.slot, n: row.n, sec: row.sec, any_emit: row.any_emit, marks: row.marks.clone(), base: row.base, h: row.h };
-        box_world_pack_list(g, &mut ent);
-        let w = &mut g.engine.world;
-        if let Some(row) = w.mark_by_key.get_mut(key.clone()) {
-            row.sec = ent.sec;
-            row.any_emit = ent.any_emit;
-        }
-        // (the TypeScript's markOfBox rows hold the same `sec` array)
-        for (_, kept) in w.mark_of_box.iter_mut() {
-            if kept.key == key { kept.sec = ent.sec; }
-        }
-    }
-    g.engine.world.pack_epoch += 1.0;
-}
-
 /// Begin a frame's proxy list. (boxes.ts BoxWorld.resetCapsules)
 pub fn box_world_reset_capsules(g: &mut crate::game::Game) {
     g.engine.world.capsule_count = 0.0;
     g.engine.world.char_count = 0.0;
-}
-
-/// rgb565 of a colour, clamped to 0..1
-fn pack_clamped(a: V3) -> i32 {
-    ((js::to_i32(m::round(m::min(1.0, m::max(0.0, a[0])) * 31.0)) & 31) << 11) | ((js::to_i32(m::round(m::min(1.0, m::max(0.0, a[1])) * 63.0)) & 63) << 5) | (js::to_i32(m::round(m::min(1.0, m::max(0.0, a[2])) * 31.0)) & 31)
-}
-
-/// One man's proxies, CAPS_PER_CHAR records. (boxes.ts BoxWorld.addCharacterCapsules)
-pub fn box_world_add_character_capsules(g: &mut crate::game::Game, owner: f64, albedo: &crate::scene_boxes::BoxWorldAddCharacterCapsulesAlbedo, caps: &[Vec<f64>], bound: [f64; 4]) {
-    use crate::scene_boxes::BoxWorldAddCharacterCapsulesAlbedo as Albedo;
-    let w = &mut g.engine.world;
-    if w.char_count >= BOX_WORLD_castCap { return; }
-    let own = js::to_i32(owner) & 0xff;
-    let misc = match albedo {
-        Albedo::Array(_) => 0u32,
-        Albedo::List(one) => {
-            let rgb565 = ((js::to_i32(m::round(one[0] * 31.0)) & 31) << 11) | ((js::to_i32(m::round(one[1] * 63.0)) & 63) << 5) | (js::to_i32(m::round(one[2] * 31.0)) & 31);
-            (own | (rgb565 << 8)) as u32
-        }
-    };
-    let base = w.char_count * BOX_WORLD_CAPS_PER_CHAR;
-    const NONE: [f64; 7] = [0.0, -100.0, 0.0, 0.0, 0.0, -100.0, 0.0];
-    for i in 0..BOX_WORLD_CAPS_PER_CHAR as usize {
-        let c: &[f64] = match caps.get(i) { Some(c) => c, None => &NONE };
-        let o = (base as usize + i) * 8;
-        w.capsule_data[o] = c[0] as f32;
-        w.capsule_data[o + 1] = c[1] as f32;
-        w.capsule_data[o + 2] = c[2] as f32;
-        w.capsule_data[o + 3] = c[3] as f32;
-        w.capsule_data[o + 4] = c[4] as f32;
-        w.capsule_data[o + 5] = c[5] as f32;
-        w.capsule_data[o + 6] = c[6] as f32;
-        let word = match albedo {
-            Albedo::Array(per) => (own | (pack_clamped(*per.get(i).unwrap_or(&per[0])) << 8)) as u32,
-            Albedo::List(_) => misc,
-        };
-        w.capsule_data[o + 7] = f32::from_bits(word);
-    }
-    let bo = (BOX_WORLD_INFO_BOUNDS + w.char_count * 4.0) as usize;
-    w.info_data[bo] = (bound[0] as f32).to_bits();
-    w.info_data[bo + 1] = (bound[1] as f32).to_bits();
-    w.info_data[bo + 2] = (bound[2] as f32).to_bits();
-    w.info_data[bo + 3] = (bound[3] as f32).to_bits();
-    w.char_count += 1.0;
-    w.capsule_count = w.char_count * BOX_WORLD_CAPS_PER_CHAR;
 }
 
 /// Half extents in world XZ of a yawed or rotated box. (boxes.ts BoxWorld.footprint)
@@ -708,12 +582,6 @@ pub fn ray_box(g: &mut crate::game::Game, ro: V3, rd: V3, b: BoxId, tmax: f64) -
     hit.map(|(t, n)| crate::scene_boxes::RayBox { t, n })
 }
 
-/// (boxes.ts rayBoxRot)
-pub fn ray_box_rot(g: &mut crate::game::Game, ro: V3, rd: V3, b: BoxId, tmax: f64) -> Option<crate::scene_boxes::RayBoxRot> {
-    let x = bx(g, b);
-    ray_rot(ro, rd, x, x.rot.unwrap(), tmax).map(|(t, n)| crate::scene_boxes::RayBoxRot { t, n })
-}
-
 /// The test against a box with a cut record: the slab interval, cut down by the record's planes. (boxes.ts rayBoxCut)
 pub fn ray_box_cut(g: &mut crate::game::Game, ro: V3, rd: V3, b: BoxId, tmax: f64) -> Option<crate::scene_boxes::RayBoxCut> {
     let (c, h, yaw, rot) = { let x = bx(g, b); (x.c, x.h, x.yaw, x.rot) };
@@ -867,22 +735,6 @@ mod tests {
         bx_mut(&mut g, id).c[0] += 1.0;
         box_world_list(&mut g);
         assert!(g.engine.world.ray_grid_stats.items > 0.0, "a move rebuilds it");
-    }
-
-    #[test]
-    fn capsules_pack_as_the_typescript_does() {
-        let mut g = Game::blank();
-        g.engine.world = crate::scene_boxes::BoxWorld::blank();
-        let caps = vec![vec![1.0, 2.0, 3.0, 0.5, 4.0, 5.0, 6.0]];
-        box_world_add_character_capsules(&mut g, 300.0, &crate::scene_boxes::BoxWorldAddCharacterCapsulesAlbedo::List([1.0, 0.5, 0.0]), &caps, [1.0, 2.0, 3.0, 1.5]);
-        let w = &g.engine.world;
-        assert_eq!(w.char_count, 1.0);
-        assert_eq!(w.capsule_count, 15.0);
-        assert_eq!(w.capsule_data[3], 0.5);
-        // owner 300 & 0xff = 44; rgb565 of (1, .5, 0): 31<<11 | 32<<5 | 0 = 0xFC00
-        assert_eq!(w.capsule_data[7].to_bits(), 44 | (0xFC00 << 8));
-        assert_eq!(w.capsule_data[8 + 1], -100.0);
-        assert_eq!(w.info_data[24 + 3], 1.5f32.to_bits());
     }
 
     #[test]

@@ -171,32 +171,6 @@ pub fn you_can_rows(g: &mut crate::game::Game) -> Vec<crate::kit::KitRow> {
     ]
 }
 
-/// The pistol carried alone, named for what it is, or null.   (kit.ts youGunsCan)
-pub fn you_guns_can(g: &mut crate::game::Game, v: &crate::kit::KitValue) -> Option<String> {
-    let table = you_guns_can_table();
-    let w = match v {
-        KitValue::Text(s) if s == "pistol" => table.pistol,
-        KitValue::Text(s) if s == "rifle" => table.rifle,
-        KitValue::Text(s) if s == "shotgun" => table.shotgun,
-        _ => None,
-    };
-    match w {
-        Some(w) if !w.is_empty() => Some(crate::gear::gear_text(g, &w)),
-        _ => None,
-    }
-}
-
-/// The gun in member i's hands wears a suppressor.   (kit.ts kitGunCan)
-pub fn kit_gun_can(g: &mut crate::game::Game, i: f64, m: &crate::kit::MemberKit) -> bool {
-    if tree_up(g) {
-        let slot = if m.weapon == KitWeapon::Pistol { crate::gunslots::GunSlot::Secondary } else { crate::gunslots::GunSlot::Primary };
-        return kit_slot_can(g, m, slot);
-    }
-    if i == 0.0 { return m.weapon != KitWeapon::Shotgun; }
-    let w = kit_gun(g, m);
-    g.m.weapons.weapons.get(w).expect("WEAPONS has every id").suppressed
-}
-
 /// The split of six a card's two canister counts are, if they are one.   (kit.ts mixOf)
 pub fn mix_of(m: &crate::kit::MemberKit) -> Option<crate::kit::CanMix> {
     let table = can_mixes();
@@ -404,19 +378,6 @@ pub fn kit_row_cost(g: &mut crate::game::Game, i: f64, r: &crate::kit::KitRow, m
     };
     let n = amount_of(g, item, &m);
     Some(KitRowCost { pouches: slot_cost(g, item, n, None), rate })
-}
-
-/// Who the card is for: 'You', or the callsigns the man in that place answers to.   (kit.ts kitName)
-pub fn kit_name(i: f64) -> crate::kit::KitName {
-    if i == 0.0 { return KitName { title: String::from("You"), sub: String::from("point man") }; }
-    let at = (i - 1.0) as usize;
-    let four = ["Red One", "Red Two", "Blue One", "Blue Two"].get(at).copied().unwrap_or("undefined");
-    let pair = ["Blue One", "Blue Two"].get(at).copied();
-    let sub = match pair {
-        Some(p) => alloc::format!("{} · {} in a pair", four, p),
-        None => String::from(four),
-    };
-    KitName { title: alloc::format!("Teammate {}", i), sub }
 }
 
 /// `[…].filter(Boolean).join(sep)`.
@@ -743,13 +704,6 @@ pub fn kit_paste_card(g: &mut crate::game::Game, i: f64, from: &crate::kit::Memb
     if g.k.slots.on { home_shells(g, &mut m) } else { m }
 }
 
-/// The rows of member i's card that read differently on two cards of his.   (kit.ts rowsMoved)
-pub fn rows_moved(g: &mut crate::game::Game, i: f64, a: &crate::kit::MemberKit, b: &crate::kit::MemberKit) -> Vec<crate::kit::KitField> {
-    let (mut a, mut b) = (a.clone(), b.clone());
-    let rows = kit_rows(g, i);
-    moved_rows(g, &rows, &mut a, &mut b)
-}
-
 /// rowsMoved's walk, over the cards themselves: a read may home a card's picks and that lands on them.
 fn moved_rows(g: &mut Game, rows: &[KitRow], a: &mut MemberKit, b: &mut MemberKit) -> Vec<KitField> {
     rows.iter()
@@ -930,11 +884,4 @@ mod tests {
         assert_eq!(mix_of(&card(1.0, 1.0)), None);
     }
 
-    #[test]
-    fn a_card_is_named_by_its_place() {
-        assert_eq!(kit_name(0.0).title, "You");
-        assert_eq!(kit_name(1.0).sub, "Red One · Blue One in a pair");
-        assert_eq!(kit_name(3.0).sub, "Blue One");
-        assert_eq!(kit_name(4.0).title, "Teammate 4");
-    }
 }

@@ -594,11 +594,6 @@ pub fn seat_load(g: &mut crate::game::Game, id: SeatId, c_2: &crate::cmd::Player
     load_row(&mut g.tab.cmd_seat[id], &mut g.tab.input[input], &mut g.tab.camera[cam], c_2);
 }
 
-/// A record waiting for this seat's next tick.   (cmd.ts Seat.hand)
-pub fn seat_hand(g: &mut crate::game::Game, id: SeatId, c_2: &crate::cmd::PlayerCmd) {
-    g.tab.cmd_seat[id].waiting = Some(c_2.clone());
-}
-
 /// What was handed, once; else a still record of the view it last had (`like`'s before it has had one).   (cmd.ts Seat.handed)
 pub fn seat_handed(g: &mut crate::game::Game, id: SeatId, like: &crate::cmd::PlayerCmd) -> crate::cmd::PlayerCmd {
     let s = &mut g.tab.cmd_seat[id];

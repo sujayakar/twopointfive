@@ -16,9 +16,7 @@ macro_rules! stand { ($g:expr, $gd:expr) => { $g.m.doorforce.states.as_mut().unw
 
 /// `gd.lastKnown = [x, 0, z]`: a whole write of his fix, which doze.ts:244 asks about by identity (Guard.fix_stamp).
 fn set_fix(g: &mut Game, gd: GuardId, at: V3) {
-    let o = &mut g.gd[gd];
-    o.last_known = Some([at[0], 0.0, at[2]]);
-    o.fix_stamp = o.fix_stamp.wrapping_add(1);
+    crate::mind::fix(g, gd, Some([at[0], 0.0, at[2]]), "doorforce");
 }
 
 /// `gd.path = []; gd.pathGoal = null`: a whole write of his path (Guard.path_serial) and no goal, so none the standoff laid.
@@ -587,23 +585,6 @@ pub fn kick_step(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<crat
     kick_end(g, gd, d, b, None, false)
 }
 
-/// QA: what `gd` believes of `d`. (doorforce.ts doorForceBelief)
-pub fn door_force_belief(g: &mut crate::game::Game, gd: GuardId, d: DoorId) -> Option<crate::doorforce::DoorForceBelief> {
-    let time = g.time;
-    let b = g.m.doorforce.states.as_ref()?.men.get(gd)?.beliefs.get(d)?;
-    Some(DoorForceBelief { sure: b.sure, at: b.at, seen: b.seen, age: time - b.t })
-}
-
-/// QA: what `gd` is doing about a door this frame. (doorforce.ts doorForceOn)
-pub fn door_force_on(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::doorforce::DoorForceOn> {
-    let row = g.m.doorforce.states.as_ref()?.men.get(gd)?;
-    if let Some(k) = row.kick {
-        let kick = match k.phase { KickPhase::Walk => DoorForceOnKick::Walk, KickPhase::Set => DoorForceOnKick::Set, KickPhase::Kick => DoorForceOnKick::Kick };
-        return Some(DoorForceOn { door: k.door, fired: row.on.map_or(0.0, |o| o.fired), kick: Some(kick) });
-    }
-    row.on.map(|o| DoorForceOn { door: o.door, fired: o.fired, kick: None })
-}
-
 /// QA: hand `gd` the record a real sighting of his foe at `at` leaves, `age` seconds old. (doorforce.ts doorForceSaw)
 pub fn door_force_saw(g: &mut crate::game::Game, gd: GuardId, at: V3, age: Option<f64>) {
     let age = age.unwrap_or(0.0);
@@ -613,13 +594,6 @@ pub fn door_force_saw(g: &mut crate::game::Game, gd: GuardId, at: V3, age: Optio
 
 /// A restart or a checkpoint load: forget everything about this game. (doorforce.ts doorForceReset)
 pub fn door_force_reset(g: &mut crate::game::Game) { g.m.doorforce.states = None; }
-
-/// Panel and console line. (doorforce.ts doorForceSummary)
-pub fn door_force_summary(g: &mut crate::game::Game) -> String {
-    let s = &g.stats.doorforce;
-    let last = match g.m.doorforce.doorforce_log.last() { Some(l) => alloc::format!(" · last: {}", l), None => String::new() };
-    alloc::format!("an alerted man at a shut door ON ▸ stands {} (heard {}, seen {}) · rounds through {} (held for a friend {}) · boots {} (gave {}; not thrown {}){}", s.stands, s.heard, s.seen, s.shots, s.held_friend, s.kicks, s.gave, s.no_kick, last)
-}
 
 #[cfg(test)]
 mod tests {

@@ -508,16 +508,6 @@ pub fn role_record(g: &mut crate::game::Game, gd: GuardId) -> Option<TacticsRole
     g.m.tactics.states.as_ref()?.roles.get(gd).copied()
 }
 
-/// His lone hold, a copy. (tactics.ts loneRecord)
-pub fn lone_record(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::tactics::Lone> {
-    g.m.tactics.states.as_ref()?.lone.get(gd).cloned()
-}
-
-/// His gate, a copy. (tactics.ts gateRecord)
-pub fn gate_record(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::tactics::Gate> {
-    g.m.tactics.states.as_ref()?.gates.get(gd).cloned()
-}
-
 /// The live plans. (tactics.ts plansOf)
 pub fn plans_of(g: &mut crate::game::Game) -> Vec<TacticsPlanId> {
     match g.m.tactics.states.as_ref() { Some(st) => st.plans.clone(), None => Vec::new() }
