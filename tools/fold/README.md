@@ -90,7 +90,9 @@ Three steps, each its own run, each rerunnable on a later tree:
    to the crate, lifts the crate's `allow(dead_code)`, runs `cargo check --tests` on the copy and deletes from the real body files
    what the check names (functions, methods, constants, statics; a whole `impl` when all of it went), then runs again until a round
    deletes nothing. What stays public in the copy is what makes a thing live: the generated call surface, the wire and the tables
-   (never touched), and any item whose name stands in `rust/game_face` or `rust/game_run`. The unit tests are live too, because the
+   (never touched), and any item whose name stands in ANOTHER CRATE under `rust/`: the page's face, the runner, the crate that stands a
+   level natively with its binaries and its tests. The crates are found by listing `rust/`, never from a list kept here: the pass once
+   held two of them by name, and deleted what only the third called. The unit tests are live too, because the
    check is made with them: what only a test uses stays, by the compiler's own reading and not by name. So a function reached only
    through a table of handlers is live for as long as the table is, and a function only a test calls is kept (`sharp.sh --dry
    --no-tests` checks without the tests and so names those as well). Nothing inside a test module is deleted. A deleted function's
@@ -110,8 +112,11 @@ a body file, itself or through its module's own helpers; a test that does both i
 use, and it stays with its helper. Which item a use means is read off how it is written (`f(…)` its own module's, `m::f(…)` module
 m's, `T::f(…)` a method of T; `x.f(…)` can keep a test and never dooms one), so the rule errs toward keeping. The program chooses only
 which TESTS go: what code goes after them is the compiler's reading again, so nothing a remaining test or the game reaches can go.
-The report gains a fourth list, DELETED WITH THE TESTS THAT WERE ITS ONLY USERS, with the tests. Run `cargo test --lib` in `rust/game`
-after it.
+The report gains a fourth list, DELETED WITH THE TESTS THAT WERE ITS ONLY USERS, with the tests.
+
+`never.sh` ends with ITS OWN PROOF: `cargo check --all-targets` in every crate under `rust/` (for wasm in `game_face`), and it stops
+red where one does not check. A kept run cannot stand in for this: it starts from exported bytes and never calls the functions that
+stand a level. Run `cargo test --lib` in `rust/game` after it.
 
 ## Readers
 

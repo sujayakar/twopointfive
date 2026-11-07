@@ -1,7 +1,8 @@
 //! The compiler's own reading of what the game never runs.
 //!
 //! `prep` writes a copy of rust/ in which every item of a body file is private to the crate, unless its name
-//! stands in the crates that use the game (rust/game_face, rust/game_run).
+//! stands in another crate under rust/ (the page's face, the runner, the crate that stands a level natively with
+//! its binaries and tests: every one of them is a root, found by listing rust/, never by a list kept here).
 //! With the crate's `allow(dead_code)` lifted, `cargo check` on that copy names every function, constant and
 //! static that nothing live reaches: the generated call surface, the wire and the tables stay public, so
 //! what they reach is live. Checked with `--tests`, the unit tests are live too, so what only a test uses
@@ -135,8 +136,13 @@ pub fn prep(root: &Path, scratch: &Path) -> Result<String, String> {
     // names that make an item live from outside the crate's own non-test code
     let mut keep: HashSet<String> = HashSet::new();
     let mut users = Vec::new();
-    crate::dead::rs_files(&root.join("rust/game_face"), &mut users);
-    crate::dead::rs_files(&root.join("rust/game_run"), &mut users);
+    // EVERY crate under rust/ but the game itself is a root: the page's face, the runner, the crate that stands a level
+    // natively with its binaries and its tests, and whatever comes after them. A name one of them spells keeps the item.
+    let mut crates: Vec<PathBuf> = std::fs::read_dir(root.join("rust")).map(|rd| rd.flatten().map(|e| e.path()).filter(|p| p.is_dir() && p.join("Cargo.toml").exists() && p.file_name().map(|n| n != "game").unwrap_or(false)).collect()).unwrap_or_default();
+    crates.sort();
+    for c in &crates {
+        crate::dead::rs_files(c, &mut users);
+    }
     for p in &users {
         if let Ok(t) = std::fs::read_to_string(p) {
             idents(&t, &mut keep);
@@ -169,7 +175,7 @@ pub fn prep(root: &Path, scratch: &Path) -> Result<String, String> {
             std::fs::write(p, out).map_err(|e| format!("cannot write {}: {e}", p.display()))?;
         }
     }
-    Ok(format!("the private copy is {} ({n} files changed in it; {} names kept public for rust/game_face and rust/game_run)", to.display(), from_users))
+    Ok(format!("the private copy is {} ({n} files changed in it; {} names kept public for the {} other crates under rust/: {})", to.display(), from_users, crates.len(), crates.iter().filter_map(|c| c.file_name().and_then(|n| n.to_str())).collect::<Vec<_>>().join(", ")))
 }
 
 #[derive(Default)]
