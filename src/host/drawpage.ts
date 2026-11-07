@@ -24,9 +24,14 @@ import { FIXEDSTEP, planTicks } from './fixedstep';
 import { CameraPair, Lag } from './between';
 import { FINDTUNED, bindFindMe, ctrlTurn, findMeStarts } from './findme';
 import { fetchFace } from './face';
+import { EVENPACE, FLIGHT_PAGE, pacer, pageRoom, rateMeter } from './pace';
+import { PLAN_PACE } from '../render/planPace';
+import { RENDER_PASSES } from '../gpu/timer';
 import { DrawGame } from './drawgame';
 import { keysBoot } from './keymap';
 import { Section, Sky, View } from '../draw/sections';
+import { AudioEngine } from '../audio/audio';
+import { askOf } from '../draw/ask';
 import { DrawEvents } from '../draw/events';
 import { Particles } from '../render/particles';
 import { DrawReach, doorways } from '../draw/reach';
@@ -95,14 +100,18 @@ async function main(): Promise<void> {
   lookConfig.snow = () => snowConfig.on;
   { const eye: [number, number] = [0, 0]; lookConfig.eyeAt = () => { const o = view() + View.at; eye[0] = D.f[o]; eye[1] = D.f[o + 2]; return eye; }; }
   const gaps = doorways(D); { const lines = gaps.map(d => [d.hinge[0], d.hinge[1], d.hinge[0] + Math.cos(d.closedDir) * d.width, d.hinge[1] + Math.sin(d.closedDir) * d.width] as [number, number, number, number]); lookConfig.doorGaps = () => lines; }
-  const fog = makeFogFrame(), events = new DrawEvents(D, engine.particles, smoke); engine.fogFrame = fog; engine.beams = world.beams;
+  const fog = makeFogFrame(), audio = new AudioEngine(askOf(game)), events = new DrawEvents(D, engine.particles, smoke, audio, i => game.nameOf(i));
+  if (q.has('mute')) { audio.volume.master = 0; audio.start = () => { /* silent */ }; }
+  for (const ev of ['pointerdown', 'keydown'] as const) window.addEventListener(ev, () => audio.start(), { capture: true });   // (a browser's sound begins with a hand on the page)
+  engine.fogFrame = fog; engine.beams = world.beams;
   const lights = new DrawLights(engine.lights, D); lights.from();   // (the lights stand too: their reach is worked out of the level as it opens)
   const reach = new DrawReach(engine, world, gaps);
 
   // ---- the player
-  const input = new Input(canvas), cam = new FollowCamera(), follow: Vec3 = [0, 0, 0], aim: Vec3 = [0, 0, 0];
+  const input = new Input(canvas); input.saveKey = () => true;   // (F5 is the game's: a save by hand)
+  const cam = new FollowCamera(), follow: Vec3 = [0, 0, 0], aim: Vec3 = [0, 0, 0];
   FINDTUNED.on = true; findMeStarts(); bindFindMe(cam);   // (how the view feels: the player's own rows, over the tuned starts)
-  let cuts = -1;
+  let cuts = -1, stood = -1; const lag = new Lag(), pair = new CameraPair();
   const three = (v: Vec3, o: number): Vec3 => { v[0] = D.f[o]; v[1] = D.f[o + 1]; v[2] = D.f[o + 2]; return v; };
   const peek: Vec3 = [0, 0, 0], kick: Vec3 = [0, 0, 0], any = (v: Vec3, o: number): Vec3 | null => D.f[o] || D.f[o + 1] || D.f[o + 2] ? three(v, o) : null;
   /** what the tick left for the camera that follows the shown man */
@@ -111,14 +120,22 @@ async function main(): Promise<void> {
     cam.peekOffset = any(peek, o + View.peek); cam.kick = any(kick, o + View.kick);
     if (cuts < 0) { three(cam.target, o + View.follow); cuts = n; } else if (n !== cuts) { cuts = n; three(cam.target, o + View.cut); }
   };
-  lens(); cam.aspect = Math.max(1, canvas.clientWidth) / Math.max(1, canvas.clientHeight); cam.rebuild();
+  /** the game is another than the one last drawn (a restart, a load): what the picture and the sound carry over from frame to frame starts over, before anything of the new one is played */
+  const anew = (): void => {
+    const o = view(), first = stood < 0; stood = D.u[o + View.stood]; if (first) return;
+    engine.restartPicture(); engine.particles?.clear(); smoke.clearAll(); events.cut(); audio.hush(); pair.cut(); lag.reset(); three(cam.target, o + View.follow);
+  };
+  anew(); lens(); cam.aspect = Math.max(1, canvas.clientWidth) / Math.max(1, canvas.clientHeight); cam.rebuild();
 
-  const told = { update: 0, render: 0, tick: 0, draw: 0, frames: 0 };
-  let time = 0, acc = 0, drift = 0; const lag = new Lag(), pair = new CameraPair();
+  const told = { update: 0, render: 0, tick: 0, draw: 0, frames: 0, fps: 0 };
+  const ear: Vec3 = [0, 0, 0];
+  let time = 0, acc = 0, drift = 0;
   const tick = (dt: number): void => {
     const keys = sampleHand(game.numbersOf(), input, cam, canvas);
     game.step(dt, keys);
+    if (D.u[view() + View.stood] !== stood) anew();
     events.from();
+    D.fresh();   // (a sound asks the module, whose memory may have grown)
     lens();
     const o = view();
     cam.step(dt, three(follow, o + View.follow), D.u[o + View.spectating] ? null : three(aim, o + View.aim));
@@ -139,6 +156,7 @@ async function main(): Promise<void> {
     game.look(lookNumbers(engine.settings, engine.world, !!ch.cast));
     const t1 = performance.now();
     if (!drawn) { input.endFrame(); return; }
+    { const o = view() + View.at; ear[0] = D.f[o]; ear[1] = D.f[o + 1] + 1.6; ear[2] = D.f[o + 2]; audio.setListener(ear, cam.forward); audio.update(dt, time); }
     smoke.update(dt);
     const a = ticks === undefined ? lag.at(acc * FIXEDSTEP.hz) : 1, pose = pair.at(a, cam);
     if (pose) cam.drawIn(pose);
@@ -148,13 +166,28 @@ async function main(): Promise<void> {
     told.update = t1 - t0; told.render = performance.now() - t1; told.frames++;
   };
   let last = performance.now(), held = q.has('paused');
-  const loop = (): void => {
-    try { const now = performance.now(), dt = Math.min(1 / 20, (now - last) / 1000); last = now; if (!held) { if (quality.calibrating) quality.calibrateTick(dt); frame(dt); } requestAnimationFrame(loop); }
-    catch (e) { console.error(e); showFatal(`The frame loop threw and has been stopped:\n\n${(e as Error)?.stack ?? e}`); }
+  // THE PAGE'S PACE (host/pace.ts): a frame is not begun while two are still with the GPU, and a fast display's frames between the ladder's are passed over. A tab
+  // nobody sees is not drawn; the time it was away is not the game's
+  const pace = pacer(), rate = rateMeter(), rendered = [...RENDER_PASSES]; let resolved = -1;
+  EVENPACE.on = true; EVENPACE.flight = FLIGHT_PAGE; PLAN_PACE.on = true;
+  document.addEventListener('visibilitychange', () => { last = performance.now(); pace.reset(); rate.reset(); });
+  const loop = (ts: number): void => {
+    try {
+      const room = pageRoom({ calibrating: quality.calibrating, measuring: false, kitView: false });
+      if (held || document.hidden) { last = performance.now(); pace.reset(); rate.reset(); requestAnimationFrame(loop); return; }
+      if (pace.skip(ts, !quality.calibrating && (quality.adaptive || quality.auto) ? quality.bands.target : 0, false, room)) { requestAnimationFrame(loop); return; }
+      const now = performance.now(), raw = (now - last) / 1000; last = now; told.fps = rate.push(now);
+      if (quality.early) quality.remeasure();
+      if (quality.calibrating) quality.calibrateTick(raw);
+      else if (raw < 0.5) { const fresh = engine.timer.resolved !== resolved; resolved = engine.timer.resolved; quality.sample(raw, !engine.timer.enabled ? 0 : fresh ? engine.timer.unionMs(rendered) : NaN); }
+      frame(Math.min(1 / 20, raw));
+      if (room > 0) { const w = pace.sent(performance.now()), end = (): void => pace.done(w, performance.now(), 0); gpu.device.queue.onSubmittedWorkDone().then(end, end); }
+      requestAnimationFrame(loop);
+    } catch (e) { console.error(e); showFatal(`The frame loop threw and has been stopped:\n\n${(e as Error)?.stack ?? e}`); }
   };
   loading.style.display = 'none';
   // (for a tool: the page's parts, and frames stepped by hand)
-  Object.assign(window, { __draw: { game, engine, world, cam, input, quality, told, fog, get held() { return held; }, set held(v: boolean) { held = v; last = performance.now(); }, run: (n: number, keys: string[] = [], drawn: 'none' | 'last' | 'all' = 'last') => { for (const k of keys) input.keys.add(k); try { for (let i = 0; i < n; i++) frame(1 / 60, 1, drawn === 'all' || (drawn === 'last' && i === n - 1)); } finally { for (const k of keys) input.keys.delete(k); } } } });
+  Object.assign(window, { __draw: { game, engine, world, audio, cam, input, quality, told, fog, get held() { return held; }, set held(v: boolean) { held = v; last = performance.now(); }, run: (n: number, keys: string[] = [], drawn: 'none' | 'last' | 'all' = 'last') => { for (const k of keys) input.keys.add(k); try { for (let i = 0; i < n; i++) frame(1 / 60, 1, drawn === 'all' || (drawn === 'last' && i === n - 1)); } finally { for (const k of keys) input.keys.delete(k); } } } });
   requestAnimationFrame(loop);
 }
 const ready = main(); (window as unknown as { __ready: Promise<void> }).__ready = ready;

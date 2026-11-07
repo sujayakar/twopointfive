@@ -38,7 +38,8 @@
 //!                                             listing is also what frees the rows of the frames gone by) ·
 //!                                             `game_step` with the record face_host took (or the game's own `cmd_buf` where none was taken) ·
 //!                                             the autosave's rows face_hostwrite kept · flag 2 `LIGHTS`: the lights' update (a flash's envelope and
-//!                                             its retirement, which the next tick reads) · flag 4 `VIEW`: the host's view of a level on rails.
+//!                                             its retirement, which the next tick reads) · flag 4 `VIEW`: the host's view of a level on rails · flag 8 `SAVES`: the
+//!                                             save controller's turn (page.rs `saves`).
 //!                                             A host that plays calls this one thing a tick with LIGHTS and VIEW up. A host that compares the block
 //!                                             with the TypeScript's leaves them down, compares, and calls face_lights and face_view: the
 //!                                             TypeScript's hashes are taken before its host's half.
@@ -247,6 +248,7 @@ pub extern "C" fn face_blank() -> u32 {
 }
 #[no_mangle]
 pub extern "C" fn face_drop(h: u32) {
+    page::shelf_off(h, |_| true);
     GAMES.with(|v| if let Some(x) = v.borrow_mut().get_mut((h as usize).wrapping_sub(1)) { *x = None; });
 }
 #[no_mangle]
@@ -384,6 +386,7 @@ pub extern "C" fn face_meter(h: u32, v: f64) {
 pub const UPLOAD: u32 = 1;
 pub const LIGHTS: u32 = 2;
 pub const VIEW: u32 = 4;
+pub const SAVES: u32 = 8;
 #[no_mangle]
 pub extern "C" fn face_step(h: u32, dt: f64, flags: u32) {
     let said = with(h, |x| {
@@ -396,6 +399,7 @@ pub extern "C" fn face_step(h: u32, dt: f64, flags: u32) {
         for (k, l) in core::mem::take(&mut x.after) { if let Some(t) = game_run::write_after(&mut x.g, k, &l) { said.push_str(&t); said.push('\n'); } }
         if flags & LIGHTS != 0 { game_run::lights(&mut x.g, dt); }
         if flags & VIEW != 0 { game_run::view(&mut x.g); }
+        if flags & SAVES != 0 { page::saves(h, x, dt); }
         said
     });
     out(said.into_bytes());

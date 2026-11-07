@@ -6,8 +6,8 @@
 // placement and levels, the reverb sized by the traced free path, the footstep material — exactly as it was.
 import type { WorldAsk } from '../view/worldask';
 import { Vec3, v3 } from '../math/vec';
-import { GameAudioLike } from '../game/audio_iface';
-import { FLOOR, FloorMat, floorAt } from '../game/floor';
+import type { GameAudioLike } from '../game/audio_iface';
+import { FLOOR, type FloorMat } from './floors';
 import { buildSfx, buildSfxLater, ROLL_LOOP, FIRE_LOOP, SfxName } from './sfx';
 import { buildSfxWas, wasInGame, wasOnly, WAS_IN_GAME } from './sfxWas';
 import { Music, WebAudioMusicBackend } from './music';
@@ -261,7 +261,9 @@ export class AudioEngine implements GameAudioLike {
   /** One footfall. The floor it lands on comes from the shared material map (game/floor.ts — the same map the guards' ears and the SOUND meter read; `mat` arrives
    *  resolved by the caller, floor.ts tread, so the mixer cannot disagree with them): hard finishes get the heel click, carpet and grass the soft scuff, and the
    *  sample runs a touch brighter on stone / duller on carpet. `loudness` already carries the material's share (carpet 0.6 ×, stone 1.1 × …), so it goes straight to the gain. */
-  footstep(pos: Vec3, loudness: number, isPlayer: boolean, mat: FloorMat = floorAt(pos)) {
+  /** what is underfoot, where a footfall does not say (the page's game; none = the reference floor) */
+  floorAt: (p: Vec3) => FloorMat = () => 'lino';
+  footstep(pos: Vec3, loudness: number, isPlayer: boolean, mat: FloorMat = this.floorAt(pos)) {
     const f = FLOOR[mat];
     this.play(f.hard ? 'footHard' : 'footSoft', pos, (isPlayer ? 0.55 : 0.7) * loudness, { rate: (0.9 + sysRandom() * 0.25) * f.rate });
   }
