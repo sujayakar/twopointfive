@@ -3,7 +3,7 @@
 
     python3 tools/blitz/sweeps/mind-door.py [--check]
 
-In the body files of rust/game/src (`p_NN.rs`, `b_NN.rs`; not a file's tests) it does four things, in this order.
+In the body files of rust/game_rules/src (`p_NN.rs`, `b_NN.rs`; not a file's tests) it does four things, in this order.
 
 1. A second name for a man is taken away where his mind is written through it:
 
@@ -14,7 +14,7 @@ In the body files of rust/game/src (`p_NN.rs`, `b_NN.rs`; not a file's tests) it
    block (or to where the same name is bound to a man again) is a field of it or hands it whole to a function
    (`no_path(d)` becomes `no_path(&mut g.gd[gd])`). Anything else is listed and left for a hand.
 
-2. Every `g.gd[<man>].awareness = <value>;` and `g.gd[<man>].state = <value>;` becomes a call of rust/game/src/mind.rs:
+2. Every `g.gd[<man>].awareness = <value>;` and `g.gd[<man>].state = <value>;` becomes a call of rust/game_rules/src/mind.rs:
 
        g.gd[x].awareness = m::max(g.gd[x].awareness, V);   crate::mind::raise(g, x, V, "<module>");
        g.gd[x].awareness = m::min(g.gd[x].awareness, V);   crate::mind::cap(g, x, V, "<module>");
@@ -38,7 +38,7 @@ has to look at, and exits 1 if anything is still written the old way.
 """
 import glob, os, re, sys
 
-ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', 'rust', 'game', 'src')
+ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', 'rust', 'game_rules', 'src')
 MAN = r'((?:[^\[\]]|\[[^\[\]]*\])+)'
 WRITE = re.compile(r'g\.gd\[' + MAN + r'\]\.(awareness|state) (\+|-)?= ([^;]+);')
 FIX_NEW = re.compile(r'g\.gd\[' + MAN + r'\]\.last_known = ([^;]+);\s*g\.gd\[\1\]\.fix_stamp (?:= g\.gd\[\1\]\.fix_stamp\.wrapping_add\(1\)|\+= 1);')
