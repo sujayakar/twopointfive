@@ -22,7 +22,7 @@ const IN_THE_OPEN: [f64; 2] = [12.7, 15.3];
 /// The office's room clear with a charge set on the partition from its east side, and Sam put at `sam`. The charge, and who the warning names.
 fn set_and_warned(seed: u32, sam: [f64; 2]) -> (Play, game::ids::WallChargeId, Vec<String>) {
     let mut p = Play::mission("office.json", "?levelFile=office.json&roomclear&squad4", &Opts { seed, ..Default::default() });
-    p.g.god_mode = true;   // (the sandbox's switch: nothing hurts Sam, who is put beside a charge here)
+    p.sam_unhurt();   // (he is put beside a charge here)
     p.run(0.1);
     game::wallcharge::wall_charge_raise_carried(&mut p.g, 2.0);   // (the mission's own issue: the squad brings charges)
     p.sam_put([14.6, 15.2]);   // (a wall is worked from Sam's side of it: east)
@@ -39,7 +39,7 @@ fn set_and_warned(seed: u32, sam: [f64; 2]) -> (Play, game::ids::WallChargeId, V
 
 /// Who of the squad the blast caught on its own side: blinded, or down.
 fn caught(p: &Play) -> Vec<String> {
-    p.mates().into_iter().filter(|&m| !p.up(m) || p.g.time < p.g.gd[m].dazzled_until).map(|m| p.g.gd[m].callsign.clone()).collect()
+    p.mates().into_iter().filter(|&m| !p.up(m) || p.blind(m)).map(|m| p.g.gd[m].callsign.clone()).collect()
 }
 
 /// THE RULE: a man the warning did not name is not caught. Sam stands round the corner of a wall the blast will open.
