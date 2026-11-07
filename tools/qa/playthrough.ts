@@ -184,7 +184,7 @@ import { HOUR, HOUR_IDS, hourIdOf } from '../../src/game/hours.ts';
 import { doorCells, frameOf, canSeeChar } from '../../src/game/guards.ts';
 import { pickHover } from '../../src/game/player.ts';
 import { HOLDFIRE_STATS } from '../../src/game/holdfire.ts';
-import { fragStepOff, FRAG_STATS, FRAG_WHY, FRAG_LOG, fragStatsReset } from '../../src/game/frag.ts';
+import { fragStepOff, FRAG_STATS, FRAG_WHY, FRAG_LOG } from '../../src/game/frag.ts';
 import { CONDITION_STATS } from '../../src/game/condition.ts';   // (the JSON's `condition`: how many men a blast left hurt this run)
 import { DESTRUCTION, FURNBLAST, RUBBLE, EVICT } from '../../src/game/destructionSwitch.ts';
 import { WALLREACT, WALLREACT_STATS, wallReactOf } from '../../src/game/wallreact.ts';
@@ -1642,10 +1642,7 @@ async function playRun(scn: string, seed: number, cap: number, verbose: boolean,
     if (rest.OPENING) throw new Error('--set: OPENING is read while the game is built, which is before --set lands: TPS_OPENING=1 turns it on for the frozen stand, TPS_OPENING=0 off under TPS_PROFILE=shipped');
     for (const [name, o] of Object.entries(rest)) put(name, o);
     dug = DIGIN.on; bud = BUDDY.on; clOn = !!CLM?.CLEARLINE?.on; out.difficulty = difficultyNow(); if (leversMixed()) (out as any).levers = leversLine(true); if (HOUR.id !== 'night') out.hour = HOUR.id;
-    Math.random = seeded(0x9137 + seed * 7919); fragStatsReset(); for (const k of Object.keys(TEAMPACE_STATS) as (keyof typeof TEAMPACE_STATS)[]) TEAMPACE_STATS[k] = 0; for (const k of Object.keys(NOSHOVE_STATS) as (keyof typeof NOSHOVE_STATS)[]) NOSHOVE_STATS[k] = 0;   // (teampace.ts: this run's runs by reason — the JSON's `teampace`)
-    for (const k of Object.keys(PICTURE_STATS) as (keyof typeof PICTURE_STATS)[]) PICTURE_STATS[k] = 0;   // (picture.ts: this run's counts — the JSON's `picture`)
-    for (const k of Object.keys(DOORFORCE_STATS) as (keyof typeof DOORFORCE_STATS)[]) DOORFORCE_STATS[k] = 0;   // (doorforce.ts: this run's counts — the JSON's `doorforce`)
-    HOLDFIRE_STATS.held = HOLDFIRE_STATS.heldGlass = 0; HOLDFIRE_STATS.lifts.shot = HOLDFIRE_STATS.lifts.order = HOLDFIRE_STATS.lifts.drill = 0;
+    Math.random = seeded(0x9137 + seed * 7919);   // (this run's counts — the JSON's `frag`, `teampace`, `noshove`, `picture`, `doorforce`, `holdfire` — begin level because every stand-up puts a tally back: tools/qa/fresh.ts)
     WEATHER_BOOT.kind = (wx?.kind as any) ?? null; if (wx?.kind) (out as any).weather = wx.kind;
     let W: any; try { W = await quiet(!verbose, () => standUp({ uploadEvery: 4, ...(E.level ? { level: levelOfFile(E.level) } : {}) })); } finally { WEATHER_BOOT.kind = null; } const g = W.game;
     DOORSTAY.on = (rest.DOORSTAY?.on as boolean | undefined) ?? true;   // (the page's default too: doors stay where they are left — the harness stood the game up with the closers of old; --set '{"DOORSTAY":{"on":false}}' keeps them)
