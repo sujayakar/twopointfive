@@ -1,1 +1,18 @@
-{"_": "The keys of calls.json's rows whose Rust function takes the game by a shared borrow and so cannot write it (the compiler's proof). After a crossing of one the host exports and applies nothing. Empty until the program that demotes `&mut Game` has run.", "rows": []}
+{"rows": [
+  "Game.wetSummary",
+  "SnatchOut.switched",
+  "autoEntries",
+  "closeMarks",
+  "difficultyHref",
+  "difficultyNow",
+  "difficultyWords",
+  "exposureAsker",
+  "fogFlags",
+  "gunLookOf",
+  "leversHref",
+  "leversLine",
+  "leversMixed",
+  "leversShown",
+  "loadCivTune",
+  "presetLevers"
+]}
