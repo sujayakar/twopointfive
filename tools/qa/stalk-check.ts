@@ -24,7 +24,7 @@
 //   harness   the key is a row of the two stands' list with its word, off on the frozen stand and on in the page (`?stalk=0` puts it off), rides a recording's
 //             tables, and a recording from before the table replays with it off.
 // STALK_BREAK=1 = the key left down where grab, still, steer and let ask for it up, the tell off where it is asked for, the step in at 0 s, the corner off, the duck at 0, the catch's two keys down, the old recording's keys left in: each must FAIL.   exit 0 = all hold · 1 = one does not
-// THE HARNESS HAS NO GPU: nothing here says how it looks or feels. tools/qa/stalk-page.cjs drives the real page on the software adapter.
+// THE HARNESS HAS NO GPU: nothing here says how it looks or feels.
 import { standUp, ROOT } from './headless.ts';
 import { standWall, wallBetween } from './standwall.ts';
 

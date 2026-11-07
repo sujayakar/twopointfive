@@ -38,7 +38,7 @@ export async function pageBoot(setting: string): Promise<Booted> {
   const { DUST_DRAW } = await import(`${ROOT}/src/smoke/dustTint.ts`);
   cutConfig.on = true; roundConfig.gpu = ROUND.on && cutConfig.on; if (glassFxBoot()) FR.glassBreakConfig.on = true; DUST_DRAW.on = true;
   if (setting === 'snow') { FR.weatherKindConfig.on = true; FR.snowConfig.on = true; for (const k of Object.keys(FR.snowLookConfig)) FR.snowLookConfig[k] = true; }
-  if (setting === 'look') { if (!FR.lookConfig) throw new Error('pageBoot: this tree has no look page'); for (const c of [FR.lookConfig, FR.wallSidesConfig, FR.smokeLabConfig]) if (c) c.on = true; }
+  if (setting === 'look') { if (!FR.lookConfig) throw new Error('pageBoot: this tree has no look page'); for (const c of [FR.lookConfig, FR.wallSidesConfig]) if (c) c.on = true; }
   const mods: Mod[] = [], asked: Asked[] = [], faults: string[] = [];
   const ofMod = new WeakMap<object, number>();
   const pipe = () => new Proxy({}, { get: (_t, k) => k === 'then' ? undefined : fake(String(k)) });

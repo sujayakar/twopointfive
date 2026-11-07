@@ -7,11 +7,6 @@
 //   cut      the case as the build stands it: pieces drawn cut and met cut by every ray
 //   plain    the SAME pieces with their cut record taken off (Box.cut = undefined: each is its whole fitted box) — same count, same places: the difference is the cut alone
 //   none     no test pieces at all (the synthetic pool only): what the pieces themselves cost, cut or not
-//   offText  the tracing pipelines with CUT_BOXES false (recompiled through __hotCommon; the calm case only) — the price of the branch in the ray test when no box is cut.
-//            (the g-buffer, the probe, composite's side ray keep the boot's text: a build booted with ?nocutboxes is the whole truth — run() there prints the same table
-//            with `plain` only, and tools/qa/cut-cost-run.cjs alternates two such pages frame by frame)
-//   gate     (opt-in: run({ gate: true }), the calm case) the tracing pipelines recompiled with the per-box bit test put BEHIND a frame-level word that is always 0
-//            (frame.flags bit 31): if the calm cost stays, a per-frame 'any cut box' gate is shown to buy nothing where this runs. A test text, never shipped.
 // Also here, hardware-independent: counts() (boxes, cut boxes, planes, vertices drawn, cut-table bytes uploaded a frame) and census() — a CPU walk of the frame's ray
 // classes (camera rays, shadow rays to every light in reach, cosine gather rays) counting how many reach a cut test and how many planes those tests read.
 // Cases: calm (nothing broken) · pool (64 __cut.test pieces, the debris cap at high) · worst (the pool + 260 small fragments + 40 edge plates, every one cut: 364 records) · blast / glass (the real emitters, when the build has them: game/breakTable.ts,
@@ -106,33 +101,10 @@
     if (on && !hidden) { hidden = []; for (let i = fx.length - 1; i >= 0; i--) if (fx[i].ttl > 1e11) hidden.push(fx.splice(i, 1)[0]); window.__runFrames(1, 1 / 60); await settle(); }
     else if (!on && hidden) { for (const m of hidden.reverse()) fx.push(m); hidden = null; window.__runFrames(1, 1 / 60); await settle(); }
   }
-  /** the tracing pipelines recompiled with CUT_BOXES true / false (needs the dev server: __hotCommon fetches the shader text) */
-  let textMode = null;   // 'on' | 'off' | 'gate'
-  /** common.wgsl with the cut hook behind a frame word that is never set (the 'gate' config) */
-  async function gatedCommon() {
-    const src = await (await fetch('/qa/shader/common.wgsl', { cache: 'no-store' })).text();
-    const a = 'if (CUT_BOXES) { if ((b.flags & CUT_BITS) != 0u) {', b = 'if (CUT_BOXES) { if ((frame.flags & 2147483648u) != 0u && (b.flags & CUT_BITS) != 0u) {';   // (CUT_BITS: the cut bit, and a round's in a program with the cut rule — common.wgsl ROUND_AS_CUT)
-    if (src.split(a).length !== 2) throw new Error('cut-cost: the cut hook in common.wgsl is not where the gate test expects it');
-    return src.replace(a, b);
-  }
-  async function text(mode) {
-    if (mode === true) mode = 'on'; else if (mode === false) mode = 'off';
-    if (!cutOn()) return 'this build was booted without the switch: its text is the off text';
-    if (textMode === null) textMode = 'on';
-    if (textMode === mode) return mode;
-    const cfg = C().mod.cutConfig; const t0 = performance.now(); 
-    cfg.on = mode !== 'off'; let r; try { r = await window.__hotCommon(mode === 'gate' ? await gatedCommon() : ''); } finally { cfg.on = true; }   // (the CPU keeps the boot's switch: only the prelude built inside the swap reads the other value)
-    textMode = mode; await settle();
-    if (r && !r.ok) console.error('cut-cost: the hot swap failed', JSON.stringify(r.failed));
-    const msg = `${mode} text in ${(performance.now() - t0).toFixed(0)} ms${r && !r.ok ? ' — FAILED' : ''}`; console.log('cut-cost   ' + msg);
-    return msg;
-  }
   const CONFIG = {
-    cut:     async () => { await hidePool(false); restore(); await text(true); },
-    plain:   async () => { await hidePool(false); strip(); await text(true); },
-    none:    async () => { restore(); await hidePool(true); await text(true); },
-    offText: async () => { await hidePool(false); restore(); await text(false); },
-    gate:    async () => { await hidePool(false); restore(); await text('gate'); },
+    cut:     async () => { await hidePool(false); restore(); },
+    plain:   async () => { await hidePool(false); strip(); },
+    none:    async () => { restore(); await hidePool(true); },
   };
 
   // ---- timing -------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -245,25 +217,25 @@
 
   // ---- the one-minute run ---------------------------------------------------------------------------------------------------------------------------------------------
   const fmt = (v, d = 2) => Number.isFinite(v) ? v.toFixed(d) : '—';
-  /** stage each case, time it, print one table. opts: { cases, rounds, n, warm, swap (the calm case's offText config: default on with the switch), smoke, census } */
+  /** stage each case, time it, print one table. opts: { cases, rounds, n, warm, smoke, census } */
   async function run(opts = {}) {
-    const { rounds = 4, n = 30, warm = 8, swap = cutOn(), doCensus = true } = opts; if (opts.smoke !== undefined) OPT.smoke = !!opts.smoke;
+    const { rounds = 4, n = 30, warm = 8, doCensus = true } = opts; if (opts.smoke !== undefined) OPT.smoke = !!opts.smoke;
     await emitters(); const avail = ['calm', 'pool', 'worst', ...Object.keys(EMIT)]; const cases = opts.cases ?? avail;
     const e = E(); const t0 = performance.now(); const out = { when: new Date().toISOString(), on: cutOn(), adapter: e.gpu?.adapterInfo ?? null, preset: window.__quality?.current ?? null, res: `${e.width}×${e.height} → ${e.outWidth ?? e.width}×${e.outHeight ?? e.height}`, timer: !!e.timer.enabled, rounds, n, warm, cases: {} };
     const rows = [];
     for (const name of cases) {
-      const c0 = await stage(name, opts[name] ?? {}); console.log(`cut-cost ${name}: staged, ${c0.cutStatics + c0.cutDynamics} cut boxes, ${c0.planes} planes, ${c0.dynamics} dynamic boxes`); const configs = !cutOn() ? ['plain'] : name === 'calm' ? (swap ? (opts.gate ? ['cut', 'offText', 'gate'] : ['cut', 'offText']) : ['cut']) : name === 'pool' || name === 'worst' ? ['cut', 'plain', 'none'] : ['cut', 'plain'];
+      const c0 = await stage(name, opts[name] ?? {}); console.log(`cut-cost ${name}: staged, ${c0.cutStatics + c0.cutDynamics} cut boxes, ${c0.planes} planes, ${c0.dynamics} dynamic boxes`); const configs = !cutOn() ? ['plain'] : name === 'calm' ? ['cut'] : name === 'pool' || name === 'worst' ? ['cut', 'plain', 'none'] : ['cut', 'plain'];
       const cen = doCensus && cutOn() && name !== 'calm' ? census(opts.census ?? {}) : null;
       const r = await ab(configs, { rounds, n, warm });
       out.cases[name] = { counts: c0, staged: STAGED[name] ?? null, census: cen, configs: r };
-      const base = r.plain ?? r.offText ?? null;
+      const base = r.plain ?? null;
       for (const cfg of configs) { const s = r[cfg];
         rows.push({ case: name, config: cfg, 'cut boxes': cfg === 'cut' ? c0.cutStatics + c0.cutDynamics : 0, planes: cfg === 'cut' ? c0.planes : 0, 'union ms': fmt(s.union), 'IQR': `${fmt(s.unionLo)}–${fmt(s.unionHi)}`, 'wall ms': fmt(s.wall),
           'Δ union vs plain/off': base && s !== base ? `${s.union - base.union >= 0 ? '+' : ''}${fmt(s.union - base.union)} (${fmt((s.union / base.union - 1) * 100, 1)} %)` : '', 'Δ wall': base && s !== base ? `${s.wall - base.wall >= 0 ? '+' : ''}${fmt(s.wall - base.wall)}` : '',
           direct: fmt(s.passes.direct), gather: fmt(s.passes.gather), reflect: fmt(s.passes.reflect), rc: fmt(Object.entries(s.passes).filter(([k]) => /^rc/.test(k)).reduce((a, [, v]) => a + v, 0)), gbuffer: fmt(s.passes.gbuffer) });
       }
     }
-    await text(true); restore(); await hidePool(false); C()?.clear();
+    restore(); await hidePool(false); C()?.clear();
     out.secs = +((performance.now() - t0) / 1000).toFixed(1); out.res = `${e.width}×${e.height} → ${e.outWidth ?? e.width}×${e.outHeight ?? e.height}`;
     out.table = rows; window.__ccLast = out;
     console.log(`cut-cost · switch ${out.on ? 'ON' : 'off'} · ${out.preset} ${out.res} · ${out.adapter ?? ''} · ${out.secs} s`);
