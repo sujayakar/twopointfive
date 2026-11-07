@@ -5,7 +5,7 @@
 //
 // A STEP (`Game.update` runs its own host lines as ever: the record sampled from the Input and the camera, hostBefore, hostAfter. The step between them,
 // `stepSeats`, is this file's `step`, hung on the game object):
-//   the host's half   the knobs the module reads · the light probe's answers (the GPU's, a frame or more old) · each seat's record with every camera and
+//   the host's half   the knobs the module reads · each seat's record with every camera and
 //                     Input row (the bridge's `hostHalf` → `face_host_half`)
 //   the tick          `face_step`: the box world listed again first where the picture has uploaded it since the last step, the tick, the lights' update,
 //                     a rails level's host view
@@ -13,7 +13,6 @@
 //   the out events    what the tick's rules told the host (a sound, particles, a decal, smoke): the generated dispatcher makes today's calls on the
 //                     page's real objects
 //   the dress step    src/host/rustdress.ts: what the TypeScript tick did for the picture only
-//   the probe         what the tick asked of the light probe is put in the probe's table for the frame's GPU pass
 //
 // ONE BLOCK. The module is rust/sim's too (the same C exports over the same memory), and src/sim binds to THIS instance (sim.ts `simAdopt`, before anything
 // has asked for the module). The puppet's `SimState` stands in a slot of the module's and the Rust game is made over the block in that slot
@@ -222,19 +221,19 @@ export const RUST_GAME = {
   madeLast: {} as Record<string, object>, madeAtRunTime: (row: object): boolean => MADE_ROWS.has(row),
   /** ms of the last step and summed over every step: the host's half, the tick, the filtered export, the apply, the out events, the dress step */
   last: { host: 0, step: 0, export: 0, apply: 0, out: 0, dress: 0, bytes: 0 }, sum: { host: 0, step: 0, export: 0, apply: 0, out: 0, dress: 0, bytes: 0 }, worst: { step: 0, apply: 0, at: 0 },
-  probeForgot: 0, wallFeels: 0, pokes: 0, poked: {} as Record<string, number>, pokeRefused: {} as Record<string, string>, askRefused: { n: 0, rows: {} } as { n: number; rows: Record<string, string> }, crossed: {} as Record<string, number>, named: 0, wholes: 0, wholeMs: 0, rowsKept: 0, nulls: 0,
+  wallFeels: 0, pokes: 0, poked: {} as Record<string, number>, pokeRefused: {} as Record<string, string>, askRefused: { n: 0, rows: {} } as { n: number; rows: Record<string, string> }, crossed: {} as Record<string, number>, named: 0, wholes: 0, wholeMs: 0, rowsKept: 0, nulls: 0,
   /** games kept (a save, the start) and their cost: how many were taken, ms of the last take and the worst, how many the module holds now; games put back,
    *  ms of the last (the kept game stood again, the whole apply, the hand-over of the controller's lines) */
   /** the warm-up behind a start card (`rustWarm`): ms of the Rust game's start, of the applies and of the ticks stepped and thrown away, and how many */
   warm: { n: 0, startMs: 0, applyMs: 0, tickMs: 0, ticks: 0, firstTickMs: 0, lastTickMs: 0 },
   keeps: 0, keepMs: 0, keepWorst: 0, kept: 0, backs: 0, backMs: { back: 0, whole: 0, hand: 0 }, restarts: 0, shelfSent: 0, keepAs: 0 as 0 | 1,
   /** WHERE A STEP'S TIME GOES, finer (`prof.on`, for a check: the tick is then four calls into the module where play makes one). Sums in ms over `n` steps:
-   *  the host's half (the knobs · the light probe's answers handed in · the bridge's hand-over built and taken), the listing, the tick, the lights'
-   *  update, the rails' view, the filtered export, the apply (the bridge's own walk, by its phases · the menu's questions · the doors' stand-in), the out events, the dress step, the probe's asks read back, the save controller */
-  prof: { on: false, n: 0, knobs: 0, probeIn: 0, hostHalf: 0, upload: 0, tick: 0, lights: 0, view: 0, asked: 0, export: 0, applyWalk: 0, applyRows: 0, applyMain: 0, applyTables: 0, asks: 0, doors: 0, out: 0, dress: 0, probeOut: 0, saves: 0, phases: {} as Record<string, number> },
+   *  the host's half (the knobs · the bridge's hand-over built and taken), the listing, the tick, the lights'
+   *  update, the rails' view, the filtered export, the apply (the bridge's own walk, by its phases · the menu's questions · the doors' stand-in), the out events, the dress step read back, the save controller */
+  prof: { on: false, n: 0, knobs: 0, hostHalf: 0, upload: 0, tick: 0, lights: 0, view: 0, asked: 0, export: 0, applyWalk: 0, applyRows: 0, applyMain: 0, applyTables: 0, asks: 0, doors: 0, out: 0, dress: 0, saves: 0, phases: {} as Record<string, number> },
   /** quiet runs of steps (`rustQuiet`): how many ended in an apply, and the steps taken inside them */
   quiet: { runs: 0, ticks: 0 },
-  outEvents: 0, outArms: {} as Record<string, number>, outThrew: {} as Record<string, string>, gives: [] as string[], probeAsks: 0,
+  outEvents: 0, outArms: {} as Record<string, number>, outThrew: {} as Record<string, string>, gives: [] as string[],
   dress: DRESS_MS,
   /** what the forward export could not carry at the last start (the bridge's own report) */
   notCarried: [] as string[],
@@ -303,7 +302,7 @@ export async function rustBoot(): Promise<void> {
   //  by the page's readers, are handed on as they are)
   { const raw = inst.exports as unknown as Record<string, unknown>, W: Record<string, unknown> = {}; for (const k of Object.keys(raw)) { const f = raw[k]; W[k] = typeof f === 'function' && k.startsWith('face_') ? guard(k, f as (...a: number[]) => number) : f; } X = W as unknown as Face; }
   MEM = X.memory; BUF = MEM.buffer;
-  for (const n of ['face_new_at', 'face_show_seat', 'face_puppet', 'face_host_half', 'face_step', 'face_ask', 'face_tick_view', 'face_probe_asks', 'face_poke', 'face_write', 'face_keep', 'face_back', 'face_loaded', 'face_saves_in', 'face_saves_asked']) if (typeof X[n] !== 'function') throw new RustGameError(`?rust=1: game_face.wasm has no ${n}: it was built from another tree (tools/blitz/face-build.ts builds this one's)`);
+  for (const n of ['face_new_at', 'face_show_seat', 'face_puppet', 'face_host_half', 'face_step', 'face_ask', 'face_tick_view', 'face_poke', 'face_write', 'face_keep', 'face_back', 'face_loaded', 'face_saves_in', 'face_saves_asked']) if (typeof X[n] !== 'function') throw new RustGameError(`?rust=1: game_face.wasm has no ${n}: it was built from another tree (tools/blitz/face-build.ts builds this one's)`);
   // (the module and this page's half of the bridge must be of one generation: a module of another reads garbage)
   if ((X.face_layout?.() >>> 0) !== SCHEMA.layout) throw new RustGameError(`?rust=1: game_face.wasm is of another generation than this page's bridge (its layout ${(X.face_layout?.() ?? 0) >>> 0}, the page's ${SCHEMA.layout}): the checkout's module is stale, tools/blitz/face-build.ts builds this one's`);
   // STAND-IN: EVERY CLASS OF THE SIMULATION'S FOLDERS GETS ITS OWN NAME BACK (tools/blitz/page-plugin.ts keeps each beside its class). The bridge tells
@@ -423,9 +422,6 @@ export function rustAttach(g: Game): void {
   // THE LIGHTS' UPDATE (a flash's envelope and its retirement) is made on the Rust side as its step ends (`face_step`'s LIGHTS flag); the lights are rows of
   // the one block, so made here too it would be made twice
   { const L = G.engine.lights; L.update = function () { /* the Rust side made it */ }; }
-  // THE LIGHT PROBE'S FRAME (render/probe.ts encode: the table sent to the GPU and emptied): the Rust game's table is emptied with it
-  { const P = G.sensors?.probeOf?.(); if (P && typeof P.encode === 'function') { const was = P.encode; P.encode = function (this: any, ...a: unknown[]) { const n = this.pending.length; const r = was.apply(this, a); if (n && held.h && !RUST_PANIC.dead) { try { call('face_probe_took', () => X!.face_probe_took(held.h)); } catch (e) { if (!RUST_PANIC.dead) throw e; } }   // (this is the frame's own GPU pass: a trap here stops the game, never the frame)
-      return r; }; } }
   // AN ORDER GIVEN FROM OUTSIDE A TICK (a tool's `__orders.give`, a panel's button) goes to the Rust game at once, in the words the headless host gives
   // it (rust/game_run `give`), and the puppet takes the state again. Inside a tick the menu's own keys are in the record and are the Rust game's.
   // A thing, options and one man by object have no words there: such an order runs through the menu's own `give` on the puppet, whose rows ask the
@@ -757,24 +753,12 @@ function step(S: Held, dt: number, cmds: readonly PlayerCmd[]): void {
     try { whole(S); RUST_GAME.ticks++; } catch (e2) { if (!RUST_PANIC.dead) died('the whole apply after a step threw', e2); }
   }
 }
-/** AFTER A STEP, or a quiet run of them: the apply onto the puppet, the out events (inside `apply`), the dress step, what the tick asked of the light probe,
+/** AFTER A STEP, or a quiet run of them: the apply onto the puppet, the out events (inside `apply`), the dress step,
  *  the save controller */
 function tail(S: Held, dt: number, cmds: readonly PlayerCmd[], tHost: number, tStep: number): void {
   const g = S.g, G = g as unknown as Record<string, any>, PF = RUST_GAME.prof; let t = performance.now(), tp = 0;
   const A = apply(S, false, () => { t = performance.now(); dressStep(g, dt, S.side); });
   if (PF.on) { tp = performance.now(); PF.dress += tp - t; PF.export += A.ex; PF.out += A.out; }
-  // what the tick asked of the light probe, for the frame's GPU pass (the table is the Rust game's until the pass takes it: `face_probe_took`)
-  { const P = G.sensors?.probeOf?.(); if (P && Array.isArray(P.pending)) { X!.face_probe_asks(S.h); const b = outBytes(), d = new DataView(b.buffer, b.byteOffset, b.byteLength); let at = 4; const n = d.getUint32(0, true); P.pending.length = 0;
-      for (let i = 0; i < n; i++) { const kl = d.getUint32(at, true); at += 4; const key = dec.decode(b.subarray(at, at + kl)); at += kl; const pos = [d.getFloat64(at, true), d.getFloat64(at + 8, true), d.getFloat64(at + 16, true)]; at += 24; const skipOwner = d.getFloat64(at, true); at += 8;
-        const hasB = b[at++]; let bb: number[] | undefined; if (hasB) { bb = [d.getFloat64(at, true), d.getFloat64(at + 8, true), d.getFloat64(at + 16, true)]; at += 24; } const rank = d.getFloat64(at, true); at += 8;
-        P.pending.push(bb ? { key, pos, skipOwner, b: bb, rank } : { key, pos, skipOwner, rank }); }
-      // (the answers the tick still holds: one it forgot inside the tick is let go here too, as `Sensors.forget` lets it go on the page that ticks,
-      //  or the next step's hand-over would give the stale answer straight back)
-      if (at + 4 <= b.length && P.results instanceof Map) { const kn = d.getUint32(at, true); at += 4; const held = new Set<string>();
-        for (let i = 0; i < kn; i++) { const kl = d.getUint32(at, true); at += 4; held.add(dec.decode(b.subarray(at, at + kl))); at += kl; }
-        for (const k of [...P.results.keys()]) if (!held.has(k)) { P.results.delete(k); RUST_GAME.probeForgot++; } }
-      RUST_GAME.probeAsks += n; } }
-  if (PF.on) { const n = performance.now(); PF.probeOut += n - tp; tp = n; }
   // THE SAVE CONTROLLER is the host's and decides off the frame as it now stands (savestate.ts Checkpoints.tick, the TypeScript tick's last line): on the
   // puppet. A save it takes is the Rust game kept (`take`), a load the kept game stood again (`put`).
   // STAND-IN: F5, the save by hand (player.ts:498, a line of the TypeScript tick the Rust tick does not have): read off the tick's own record here.
@@ -811,13 +795,6 @@ function stepOne(S: Held, dt: number, cmds: readonly PlayerCmd[]): void {
     if (PF.on) { const n = performance.now(); PF.knobs += n - tp; tp = n; }
     { const L = (G.doors?.list ?? []) as Record<string, any>[]; for (let i = 0; i < L.length && i < S.doorKept.length; i++) if (!Object.is(L[i].g(DC.posAngle), S.doorKept[i])) L[i].p(DC.posAngle, NaN); }
     pokes(S); if (!S.toolScan && (RUST_GAME.ticks & 15) === 0) S.settings?.flush();   // (a page a tool drives walks as the script's run of frames opens: rustToolsWrote)   // (a walk of the tables is about a millisecond, and a person's hand on a panel or a lever does not need it sooner than a quarter of a second)
-    // the light probe's answers, as the GPU has handed them back by now
-    { const P = G.sensors?.probeOf?.(), Rm: Map<string, number[]> | undefined = P?.results;
-      if (Rm && Rm.size) { let n = 4; const keys: Uint8Array[] = []; for (const k of Rm.keys()) { const b = enc.encode(k); keys.push(b); n += 4 + b.length + 24; }
-        const b = new Uint8Array(n), d = new DataView(b.buffer); d.setUint32(0, Rm.size, true); let at = 4, i = 0;
-        for (const v of Rm.values()) { const k = keys[i++]; d.setUint32(at, k.length, true); at += 4; b.set(k, at); at += k.length; d.setFloat64(at, v[0], true); d.setFloat64(at + 8, v[1], true); d.setFloat64(at + 16, v[2], true); at += 24; }
-        hand(b, (p, m) => X!.face_probe_results(S.h, p, m)); } }
-    if (PF.on) { const n = performance.now(); PF.probeIn += n - tp; tp = n; }
     tellShown(S); const hb = hostHalf(g, reg(), cmds); hand(hb, (p, n) => X!.face_host_half(S.h, p, n));
     if (PF.on) { PF.hostHalf += performance.now() - tp; PF.n++; }
     const tHost = performance.now() - t; t = performance.now();
@@ -882,7 +859,7 @@ function buildWord(): string { if (BUILD) return BUILD; const s = JSON.stringify
 /** A SAVE AS A FILE: the bridge's bytes of a kept game and its block, under a version word. `key`: a slot of the controller's (default: the game as it
  *  stands now). 'TPSR', version (u32), then three counted parts: a JSON head (the level's fingerprint, this build's word for the bytes, the label, the
  *  mission's clock and stage), the state, the block. WHAT A FILE DOES NOT HOLD (the bridge does not carry it, tools/blitz/BRIDGE.md): a thrown can's
- *  bounce, a blow, a fall or a beat of the level's script in mid-flight, the light probe's table, the counters. A save in memory holds all of it. */
+ *  bounce, a blow, a fall or a beat of the level's script in mid-flight, the counters. A save in memory holds all of it. */
 export function rustFile(key?: string): Uint8Array | null {
   const S = H; if (!X || !S || !S.h || S.stale) return null;
   settle(S);
@@ -933,7 +910,7 @@ export function rustWarm(host: { input: unknown; cam: unknown; canvas: unknown }
       const cmd = stillCmd(sampleCmd(g.hostSeat().view as never, host.input as never, host.cam as never, host.canvas as never, null)), cmds = g.seats.map(() => cmd);
       for (let i = 0; i < ticks; i++) { const a = performance.now();
         tellShown(S); const hb = hostHalf(g, reg(), cmds); hand(hb, (p, n) => X!.face_host_half(S.h, p, n));
-        call('face_step (warming)', () => X!.face_step(S.h, 1 / 60, LIGHTS | VIEW | UPLOAD)); X!.face_saves_asked(S.h); X!.face_puppet(S.h, 0); X!.face_probe_asks(S.h); grown(g);
+        call('face_step (warming)', () => X!.face_step(S.h, 1 / 60, LIGHTS | VIEW | UPLOAD)); X!.face_saves_asked(S.h); X!.face_puppet(S.h, 0); grown(g);
         const ms = performance.now() - a; if (i === 0) W.firstTickMs = ms; W.lastTickMs = ms; W.ticks++; }
     } finally {
       // THE GAME AS IT WAS STARTED stands again, and what the filtered export last sent is filled again from it (the puppet never took the ticks above)

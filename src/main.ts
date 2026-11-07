@@ -397,13 +397,13 @@ async function main() {
     lookMaps = timed('materials', engine.gbuffer.needLook()); lookMaps?.catch(() => { /* awaited below */ }); }
   if (q.has('noweather')) game.weather.setEnabled(false);   // ?noweather: the storm experiment off from boot (weather.ts) — the plain night, byte for byte
   const probe = game.probe as IrradianceProbe;   // (the game holds a ProbeLike — src/game/sensors.ts; on this host it is the WebGPU kernel the Game built, whose encode / readback the frame drives)
-  engine.extraPasses.push((enc, sceneBG, diceView, ts) => { if (probe.hasPending) probe.encode(enc, sceneBG, diceView, ts('probe')); });
-  engine.afterSubmit.push(() => probe.afterSubmit());
+  const probed = modelErrAsked(q);   // (the game asks the picture nothing: the probe is the error tool's, and is compiled and run under its word alone)
+  if (probed) { engine.extraPasses.push((enc, sceneBG, diceView, ts) => { if (probe.hasPending) probe.encode(enc, sceneBG, diceView, ts('probe')); }); engine.afterSubmit.push(() => probe.afterSubmit()); }
   engine.afterSubmit.push(() => smoke.afterSubmit());
   // ---- everything the first frame dispatches must exist: the engine's kernels, the smoke solver's, the Game's own three GPU modules (mesh-shadow skin / refit, the particles, the light
   // probe) and the skinned-mesh raster for this glTF's joint format — all compiled off the browser's compositing thread, counted in on the card meanwhile
   await tick(); status();
-  await Promise.all([engineInit, smokeInit, lookMaps, timed('meshShadows', game.meshShadows.init()), timed('particles', engine.particles?.init()), timed('probe', probe.init()), timed('skin', engine.gbuffer.prepareSkin(game.chars.jointsFormat))]);
+  await Promise.all([engineInit, smokeInit, lookMaps, timed('meshShadows', game.meshShadows.init()), timed('particles', engine.particles?.init()), ...(probed ? [timed('probe', probe.init())] : []), timed('skin', engine.gbuffer.prepareSkin(game.chars.jointsFormat))]);
   boot.span('pipelines', tPipe); boot.mark('pipelines');
   pipelineProgress.onChange = null; boot.freezePipelines(); keptFreeze(); gpuStory.stage = 'while setting up';
   pipeQueue.settle();   // THE COMPILE QUEUE (gpu/device.ts PIPE_QUEUE): from here the background set compiles two at a time, leaving the browser's GPU workers free to draw the page
