@@ -65,6 +65,9 @@ export interface HostOpts {
    *  two ticks: a networked game's machine, whose every write is a seat's record through `stepSeats` (tools/mp/stand.ts). A write made there all the
    *  same never reaches the Rust game */
   scan?: boolean;
+  /** false: the dressing rows are up FOR THE GAME'S SAKE and nothing is drawn here, so the page's own dress step is not run on the puppet (the men
+   *  handed to a renderer, the wind's hand-over, the air): a game server and a scripted client. The par clock and the verdict still tick */
+  draws?: boolean;
 }
 
 // ---- the module: one instance a process, as many games as rust/sim has slots
@@ -95,9 +98,9 @@ let BR: any = null;
 async function bridge(): Promise<any> {
   if (BR) return BR;
   const SU = await import('./surface.ts'), SC = await import('./scan.ts'); SU.installSurface(); const E = await import('./export.ts'), I = await import('./import.ts'), AK = await import('./ask.ts'), C = await import('./classes.ts'), P = await import('./puppet-apply.ts'), O = await import('./out-dispatch.ts'), A = await import('./audit.ts');
-  const K = await import('../../src/game/knobs.ts'), D = await import('../../src/math/dice.ts'), DR = await import('../../src/game/dress.ts');
+  const K = await import('../../src/game/knobs.ts'), D = await import('../../src/math/dice.ts'), DR = await import('../../src/game/dress.ts'); const PD = await import('../../src/host/rustdress.ts');
   const LJ = JSON.parse(readFileSync(new URL('./puppet-lists.json', import.meta.url).pathname, 'utf8'));
-  O.OUT_HOST.tap = SU.fireTap; BR = { ...E, surfaceHost: SU.surfaceHost, makeTaps: SU.makeTaps, makeScan: SC.makeScan, installAsks: AK.installAsks, applyGame: I.applyGame, hooks: { classes: C.classTable(), values: C.valueTable(), made: Object.fromEntries(MEN.map(c => [c, (o: object) => { MADE_MEN.add(o); MADE.n++; }])) }, puppetRows: P.puppetRows, SLOW: P.SLOW, VALS: P.VALS, OUT: O.OUT, A, reg: K.knobRegistry(), newDice: D.newDice, dressAll: DR.dressAll, DRESS: DR.DRESS,
+  O.OUT_HOST.tap = SU.fireTap; BR = { ...E, pageDress: PD.dressStep, surfaceHost: SU.surfaceHost, makeTaps: SU.makeTaps, makeScan: SC.makeScan, installAsks: AK.installAsks, applyGame: I.applyGame, hooks: { classes: C.classTable(), values: C.valueTable(), made: Object.fromEntries(MEN.map(c => [c, (o: object) => { MADE_MEN.add(o); MADE.n++; }])) }, puppetRows: P.puppetRows, SLOW: P.SLOW, VALS: P.VALS, OUT: O.OUT, A, reg: K.knobRegistry(), newDice: D.newDice, dressAll: DR.dressAll, DRESS: DR.DRESS,
     lists: { step: new Set<string>(LJ.step), start: new Set<string>(LJ.start) } };
   BR.PUT_BACKS = (await import('../../src/math/side.ts')).PUT_BACKS;
   { const SS = await import('../../src/game/savestate.ts'); snaps(SS); BR.SNAPS = SS.SNAPS; }
@@ -770,8 +773,10 @@ export class RustHost {
     if (SAY_FN) sayLine(this.audit ? 'audit' : 'rust', g, k);
   }
   /** after a step, or a quiet run of them: the apply, the out events, the dress step. Returns the whole Rust state where the audit took one */
+  /** the page's dress step's side list (boxes only the picture has) */
+  private side = { list: [] as unknown[], of: null as unknown, base: 0 };
   private tail(dt: number, k: number): Uint8Array | null {
-    const g = this.g, X = this.F.X; let t = now();
+    const g = this.g, X = this.F.X, B = this.B; let t = now();
     // ---- the apply
     this.applyStep();
     let rust: Uint8Array | null = null;
@@ -786,7 +791,11 @@ export class RustHost {
     t = now(); const nest0 = this.nest;
     if (this.o.dress !== false) {
       // (the par clock and the verdict are the debrief's: a throw of theirs on the puppet is counted and is not the play's end)
-      for (const n of ['par', 'verdict'] as const) try { g[n]?.tick(); } catch (e) { this.count(`${n}.tick THREW on the puppet (first at tick ${this.threw[n] ??= k}): ${String((e as any)?.message ?? e).slice(0, 100)}`); }
+      // THE PICTURE'S HALF, for a game stood with the dressing rows up (a check about what is drawn): the page's own dress step, one path with the
+      // page (src/host/rustdress.ts: the men handed to the renderer, the wind's hand-over, the air, the stature). It ticks the par clock and the
+      // verdict itself. With the rows down nothing reads the picture's lists and only those two are run.
+      if (this.o.dressDown === false && this.o.draws !== false && !OFF.has('pagedress')) { try { B.pageDress(g, dt, this.side); } catch (e) { this.count(`the page's dress step THREW on the puppet: ${String((e as any)?.message ?? e).slice(0, 100)}`); } }
+      else for (const n of ['par', 'verdict'] as const) try { g[n]?.tick(); } catch (e) { this.count(`${n}.tick THREW on the puppet (first at tick ${this.threw[n] ??= k}): ${String((e as any)?.message ?? e).slice(0, 100)}`); }
       const S = g.saves;
       // (a take is due this tick: an authored checkpoint a rule asked for, a save by hand, a load. The puppet takes the whole state first. An autosave
       // the controller decides on inside its tick takes the whole state as the take starts: `taps`. Its gate and its triggers read the puppet as the
@@ -860,7 +869,7 @@ function dressDown(B: any): void { DRESS_WAS ??= { ...B.DRESS }; B.dressAll(fals
 // ---- THE HARNESS'S WORD (tools/qa/headless.ts `standUp`): TPS_GAME=rust the game the harness stands is a puppet of the Rust game; TPS_GAME=audit the
 // same with the audit; TPS_GAME=ts the SAME STAND (the game's own die, the dress rows down) stepped by the TypeScript tick, for a tally to hold the Rust
 // game's beside. Unset: nothing here is loaded. (Not TPS_RUST: src/sim/sim.ts refuses that word as a retired one.)
-export async function standRust(g: any, word: string, o: { /** the dressing rows up for this game (a check about one of them) */ dress?: boolean; /** false: no walk of the puppet for a tool's writes (HostOpts.scan) */ scan?: boolean } = {}): Promise<RustHost | null> {
+export async function standRust(g: any, word: string, o: { /** the dressing rows up for this game (a check about one of them) */ dress?: boolean; /** false: no walk of the puppet for a tool's writes (HostOpts.scan) */ scan?: boolean; /** false: nothing is drawn (HostOpts.draws) */ draws?: boolean } = {}): Promise<RustHost | null> {
   if (!(globalThis as any).__tpsTop) throw new Error(`TPS_GAME=${word} needs the bridge's preload in this process and its children: BUN_OPTIONS=--preload=./tools/blitz/expose.ts (tools/blitz/rust.sh sets both)`);
   // (THE DIE: the game's own, seeded off the tool's `Math.random` as it stands when the game is stood, so a tool that seeds a run by its seed number
   // (playthrough.ts:1646) rolls another die a seed, and the same die under `ts` and `rust`)
@@ -878,7 +887,7 @@ export async function standRust(g: any, word: string, o: { /** the dressing rows
     if (process.env.RH_TRACE) { const rec = traceRec(word), was = g.stepSeats; g.stepSeats = function (this: any, ...a: any[]) { rec.k++; if (SITES) site(rec); if (CAP_AT && (rec.k & 31) === 0 && Date.now() > CAP_AT) process.exit(143); return was.apply(this, a); }; }
     return null; }
   if (word !== 'rust' && word !== 'audit') throw new Error(`TPS_GAME=${word}: rust (the Rust game steps), audit, or ts (the same stand, the TypeScript tick)`);
-  await RustHost.ready(); const H = RustHost.attach(g, { audit: word === 'audit', quiet: true, die, dressDown: !o.dress, wholeEvery: +(process.env.TPS_GAME_WHOLE ?? 0), ...(o.scan === false ? { scan: false } : {}) });
+  await RustHost.ready(); const H = RustHost.attach(g, { audit: word === 'audit', quiet: true, die, dressDown: !o.dress, wholeEvery: +(process.env.TPS_GAME_WHOLE ?? 0), ...(o.scan === false ? { scan: false } : {}), ...(o.draws === false ? { draws: false } : {}) });
   if (process.env.RH_TRACE) trace(H, word);
   if (process.env.RH_TIMES) timed(H);
   if (process.env.RH_STALE) staleAtEnd(H);

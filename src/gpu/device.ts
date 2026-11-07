@@ -357,8 +357,8 @@ function laterDone<T>(label: string | undefined, p: Promise<T>): Promise<T | nul
   return p.catch((e): null => { reportError('gpu.pipeline', `[pipeline] ${label ?? '?'}: ${e?.message ?? e}`, { label: label ?? '?', later: true }); return null; }).finally(laterLet);
 }
 function laterLet() { if (--laterProgress.pending === 0 && laterWaits.length) setTimeout(() => { if (laterProgress.pending === 0) for (const w of laterWaits.splice(0)) w(); }, 0); }
-/** counted as out from NOW, for work that will ask for a LATER pipeline but has something to wait for first (the dust twin's module is checked before its
- *  pipeline is asked for): without it the count could read 0 in between and `laterIdle` let its waiters go a program early. The call handed back lets it go, once. */
+/** counted as out from NOW, for work that will ask for a LATER pipeline but has something to wait for first (the fog of war's programs are asked for inside
+ *  a chain of their own): without it the count could read 0 in between and `laterIdle` let its waiters go a program early. The call handed back lets it go, once. */
 export function laterHold(): () => void { laterProgress.pending++; let held = true; return () => { if (held) { held = false; laterLet(); } }; }
 /** createRenderPipelineAsync, likewise */
 export function renderPipelineAsync(device: GPUDevice, desc: GPURenderPipelineDescriptor): Promise<GPURenderPipeline> {

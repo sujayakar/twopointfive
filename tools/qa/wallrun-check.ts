@@ -1,7 +1,9 @@
-// A WALL TAKEN AT A RUN — the check behind WALLSNAP.pressRun (src/game/wallsnap.ts `pressRun` / wsPressNear, player.ts wallPress / pressFace / wallRanOn; on in the
-// page, ?wallrun=0; off in the module and on the frozen stand, TPS_WALLRUN=1; it acts only with the wall taken without the key, WALLSNAP.press, and the hold's
-// feel pass, WALLSNAP.on, which these lines turn on).
-//   bun run tools/qa/probes.ts wallrun          (families `wallsnap`, `wall-snap`)        WALLRUN_BREAK=1 = the rule off and the same lines asked: must FAIL
+// A WALL TAKEN AT A RUN — the check behind WALLSNAP.pressRun (src/game/wallsnap.ts `pressRun` / wsPressNear, player.ts wallPress / pressFace / wallRanOn; settled
+// on: the check asks the page's side alone and no longer writes it; it acts only with the wall taken without the key, WALLSNAP.press, and the hold's feel
+// pass, WALLSNAP.on, which these lines turn on).
+//   bun run tools/qa/probes.ts wallrun          (families `wallsnap`, `wall-snap`)        WALLRUN_BREAK=1 = Shift is never held (a walk into the wall): must FAIL
+// Until 2026-11-07 it also asked the switch off (a sprint into the wall is a man run into a wall), a recording from before the key and the frozen stand's
+// word, and held the camera's line against a sprint the wall stops (the rule off) as well as a walk's take; and it raised SAVETIMELINE.holds (settled on).
 // the maintainer, 11-04, from the cover lesson on the pass road: "sprinting straight into a wall should snap to cover".
 // WHAT IS ASKED, at the east end of the office corridor (seven metres of run-up along it; the feel pass's own rig, wallsnap-probes.ts world) unless said:
 //   run up      a sprint straight at the wall has it BEFORE he touches it (inside pressFlow), still at his sprint the frame before, no frame of the take
@@ -19,10 +21,8 @@
 //   a thing     the long wait is read off the rows in reach, as at a walk: the mains breaker's row is out of a sprinting man's reach, so the wall is his as
 //               he arrives, there as further along it, and the row is in reach from the hold; in the crouched dash (where Shift in a crouch stays down)
 //               the row is in reach and the wait is the long one, against the wall
-//   the camera  its look-at changes speed in no frame of a sprint's take by more than it does in a walk's take or in a sprint the wall stops
-//   off         the switch off: a sprint into the wall is a man run into a wall, a walk still takes it, and Shift takes him off a wall he walked onto
-//   recordings  a recording carries the key; one from before it replays with it off; the frozen stand holds it off by name, and this stand has it as said
-//   checkpoint  under SAVETIMELINE.holds a save made on a wall with the run still held loads on the wall and stays on it with the keys as they were; the same
+//   the camera  its look-at changes speed in no frame of a sprint's take by more than it does in a walk's take
+//   checkpoint  a save made on a wall with the run still held loads on the wall and stays on it with the keys as they were; the same
 //               file with the run cut out of the hold is a hold Shift takes him off; a hold walked onto carries no such key
 //   the lesson  the pass road's cover lesson (levels/tut-road.json) played as he played it — Shift never let go from the truck straight into the post's wall:
 //               not on the wall while the sprint's line is still up (a mission that teaches the wall keeps it shut until its line: rails.ts locksWall), on it
@@ -49,16 +49,15 @@ async function lessonArm(): Promise<void> {
 export async function wallRunCheck(): Promise<boolean> {
   const BRK = process.env.WALLRUN_BREAK === '1'; let all = true;
   const verdict = (ok: boolean, what: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}\n    ${detail}`); };
-  console.log(`\n=== wallrun: a sprint held straight into a wall takes it${BRK ? ' (the rule off: must fail)' : ''} ===`);
+  console.log(`\n=== wallrun: a sprint held straight into a wall takes it${BRK ? ' (Shift never held: must fail)' : ''} ===`);
   const { WALLSNAP } = await import(`${ROOT}/src/game/wallsnap.ts`); const { CROUCHRUN } = await import(`${ROOT}/src/game/player.ts`);
-  const { knobsSnapshot, applyKnobs } = await import(`${ROOT}/src/game/journal.ts`); const PR: any = await import(`${ROOT}/src/host/profile.ts`);
-  const was = { on: WALLSNAP.on, press: WALLSNAP.press, run: WALLSNAP.pressRun }, log = console.log, err = console.error, warn = console.warn;
-  const undo: (() => void)[] = [];   // (what a line raises besides the three switches: put back at the end whether or not the line got there)
+  const was = { on: WALLSNAP.on, press: WALLSNAP.press }, log = console.log, err = console.error, warn = console.warn;
+  const undo: (() => void)[] = [];   // (what a line raises besides the two switches: put back at the end whether or not the line got there)
   const quiet = async <T>(f: () => T | Promise<T>): Promise<T> => { console.log = console.error = console.warn = () => { }; try { return await f(); } finally { console.log = log; console.error = err; console.warn = warn; } };
   const f2 = (x: number) => x.toFixed(2), f3 = (x: number) => x.toFixed(3);
   try {
-    const S = await quiet(() => world(true)); const { pl, c, g, W } = S as any; const stood: boolean = WALLSNAP.pressRun;   // (as the stand left it: read once a game has been stood, before these lines set it)
-    const set = (rule: boolean) => { WALLSNAP.on = true; WALLSNAP.press = true; WALLSNAP.pressRun = rule && !BRK; }; set(true);
+    const S = await quiet(() => world(true)); const { pl, c, g, W } = S as any;
+    WALLSNAP.on = true; WALLSNAP.press = true;
     const end = g.col.raycast([29, 0.5, CZ], [1, 0, 0], 20), EX: number = 29 + (end?.t ?? NaN), sprint: number = g.tune.playerSprint;   // the corridor's east wall: its face, looking west
     const gap = () => EX - R - c.pos[0];   // what is left between his body and that wall
     const onEast = () => !!pl.wall && pl.wall.n[0] < -0.99;
@@ -70,7 +69,7 @@ export async function wallRunCheck(): Promise<boolean> {
       const said = g.messages.map((m: any) => m.text).filter((t: string) => /wall/.test(t)); return { took, seated, gapAt, into, stride, said };
     };
     const rest = () => { S.keys(); S.step(20); if (pl.wall) { S.tap('KeyQ'); S.step(20); } };
-    const RUN = ['KeyD', 'ShiftLeft'], FROM = 29;
+    const RUN = BRK ? ['KeyD'] : ['KeyD', 'ShiftLeft'], FROM = 29;
 
     // ---- run up
     { const r = run(FROM, RUN); const w = pl.wall, off = gap() + R, yaw = w ? Math.abs(Math.atan2(Math.sin(c.bodyYaw - Math.atan2(w.n[0], w.n[2])), Math.cos(c.bodyYaw - Math.atan2(w.n[0], w.n[2])))) / DEG : NaN;
@@ -133,42 +132,31 @@ export async function wallRunCheck(): Promise<boolean> {
         `at the breaker, a sprint: hold at frame ${thing}${touchT >= 0 ? `, his feet still from ${touchT}` : ''}, its row in reach on the hold ${row} · 2.6 m along: hold at frame ${plain}${touchP >= 0 ? `, his feet still from ${touchP}` : ''} · at the breaker, crouched with Shift (${CROUCHRUN.on ? `stays down ${low}` : `Shift stands him up: a sprint, as above`}): hold at frame ${dash}${touchD >= 0 ? `, ${Number.isFinite(waited) ? f2(waited) : '—'} s after his feet stopped (pressThing ${WALLSNAP.pressThing})` : ''}`); }
     // ---- the camera
     { /** the worst change of the look-at's speed in one frame (m), from ten frames before `mark()` first says so to two seconds after */
-      const cam = (x: number, ks: string[], rule: boolean, mark: () => boolean) => { set(rule); S.place(x, CZ, 90); S.setCursor(null); S.keys(...ks); let p = [...W.cam.target], v = [0, 0, 0], at = -1; const acc: number[] = [];
+      const cam = (x: number, ks: string[], mark: () => boolean) => { S.place(x, CZ, 90); S.setCursor(null); S.keys(...ks); let p = [...W.cam.target], v = [0, 0, 0], at = -1; const acc: number[] = [];
         for (let f = 0; f < 330 && (at < 0 || f < at + 120); f++) { S.step(1); const t = W.cam.target, nv = [t[0] - p[0], t[1] - p[1], t[2] - p[2]]; acc.push(Math.hypot(nv[0] - v[0], nv[1] - v[1], nv[2] - v[2])); p = [...t]; v = nv; if (at < 0 && mark()) at = f; }
-        rest(); set(true); return at < 0 ? { at, worst: NaN } : { at, worst: Math.max(...acc.slice(Math.max(0, at - 10))) }; };
-      const taken = cam(FROM, RUN, true, onEast), walked = cam(EX - R - 2.2, ['KeyD'], true, onEast), stopped = cam(FROM, RUN, false, () => gap() < 0.005), most = Math.max(walked.worst, stopped.worst);
-      verdict(taken.at >= 0 && walked.at >= 0 && stopped.at >= 0 && taken.worst <= most * 1.1 + 0.001, 'the camera: its look-at changes speed in no frame of a sprint\'s take by more than it does in a walk\'s take or in a sprint the wall stops',
-        `the worst change of the look-at's speed in a frame, from ten frames before to two seconds after: a sprint's take ${taken.at < 0 ? 'NO HOLD' : (taken.worst * 1000).toFixed(1) + ' mm'} · a walk's take ${walked.at < 0 ? 'NO HOLD' : (walked.worst * 1000).toFixed(1) + ' mm'} · a sprint stopped by the wall (the rule off) ${stopped.at < 0 ? 'NEVER STOPPED' : (stopped.worst * 1000).toFixed(1) + ' mm'}`); }
-    // ---- the switch off
-    { WALLSNAP.on = true; WALLSNAP.press = true; WALLSNAP.pressRun = false; const a = run(FROM, RUN, 'empty', 200); rest(); const b = run(EX - R - 1.4, ['KeyD']); const walked = onEast();
-      S.keys(...RUN); S.step(3); const off = !pl.wall; let back = false; for (let f = 0; f < 60; f++) { S.step(1); back ||= !!pl.wall; } rest(); set(true);
-      verdict(a.took < 0 && b.took >= 0 && walked && off && !back, 'the switch off: a sprint into the wall is a man run into a wall, a walk still takes it, and Shift takes him off a wall he walked onto', `sprint ${a.took < 0 ? 'no hold' : 'HELD'} · walk ${b.took >= 0 ? 'holds' : 'NO HOLD'} · Shift on it: off ${off}, back on with the key still held ${back}`); }
-    // ---- recordings and the stands
-    { const before = WALLSNAP.pressRun; WALLSNAP.pressRun = true; const snap: any = JSON.parse(JSON.stringify(knobsSnapshot(g))), has = typeof snap.tables?.WALLSNAP?.pressRun === 'boolean'; const old = JSON.parse(JSON.stringify(snap)); delete old.tables.WALLSNAP.pressRun;
-      const offOld = await quiet(() => { applyKnobs(g, old); const off = WALLSNAP.pressRun === false; applyKnobs(g, snap); return off && WALLSNAP.pressRun === true; }); WALLSNAP.pressRun = before;
-      const word = process.env.TPS_WALLRUN, shipped = PR.harnessProfile() === 'shipped', want = word !== undefined ? word === '1' : shipped;
-      verdict(has && offOld && PR.FROZEN_HOLDS['WALLSNAP.pressRun'] === 'TPS_WALLRUN=1' && (PR.STAND_ENV as string[]).includes('TPS_WALLRUN') && stood === want, `a recording carries the switch, one from before the key replays with it off, the frozen stand holds it off by name, and this stand has it ${want ? 'on, as the page opens' : 'off, as every frozen digest was recorded'}`,
-        `in the file ${has} · off for an old file ${offOld} · FROZEN_HOLDS ${PR.FROZEN_HOLDS['WALLSNAP.pressRun']} · in the stands' list ${(PR.STAND_ENV as string[]).includes('TPS_WALLRUN')} · as the stand left it ${stood} (word ${word ?? 'none'}, ${shipped ? 'shipped' : 'frozen'})`); }
+        rest(); return at < 0 ? { at, worst: NaN } : { at, worst: Math.max(...acc.slice(Math.max(0, at - 10))) }; };
+      const taken = cam(FROM, RUN, onEast), walked = cam(EX - R - 2.2, ['KeyD'], onEast), most = walked.worst;
+      verdict(taken.at >= 0 && walked.at >= 0 && taken.worst <= most * 1.1 + 0.001, 'the camera: its look-at changes speed in no frame of a sprint\'s take by more than it does in a walk\'s take',
+        `the worst change of the look-at's speed in a frame, from ten frames before to two seconds after: a sprint's take ${taken.at < 0 ? 'NO HOLD' : (taken.worst * 1000).toFixed(1) + ' mm'} · a walk's take ${walked.at < 0 ? 'NO HOLD' : (walked.worst * 1000).toFixed(1) + ' mm'}`); }
     // ---- the cover lesson, Shift never let go (its own process, the page's stand)
-    { const env: Record<string, string | undefined> = { ...process.env, TPS_PROFILE: 'shipped' }; delete env.WALLRUN_BREAK; if (BRK) env.TPS_WALLRUN = '0'; else delete env.TPS_WALLRUN;
+    { const env: Record<string, string | undefined> = { ...process.env }; delete env.WALLRUN_BREAK;
       const r = Bun.spawnSync(['bun', 'run', import.meta.path, '--lesson'], { env: env as Record<string, string>, stdout: 'pipe', stderr: 'pipe' }), line = r.stdout.toString().split('\n').find(l => l.startsWith('WALLRUN-LESSON '));
       const o: any = line ? JSON.parse(line.slice(15)) : null, after = o && o.onAt >= 0 && o.openAt >= 0 ? (o.onAt - o.openAt) * DT : NaN;
       verdict(!!o && !o.early && o.onAt >= 0 && after >= 0 && after <= 0.5 && o.stayed >= 90 && o.code === 0, 'the cover lesson with Shift never let go: not on the wall before the line that teaches it, on it as that line comes up, still on it with the keys held, and the mission plays to its end',
         o ? `on the wall while its line was still shut ${o.early} · the wall's line up at frame ${o.openAt} of the run-in, on the wall (${o.kind || '—'}) ${o.onAt < 0 ? 'NEVER' : f2(after) + ' s after'} · on it ${o.stayed} of the next 90 frames · the mission: ${o.code === 0 ? `ended, ${o.steps} steps` : `exit ${o.code}: ${o.why}`}` : `no line from the lesson's run (exit ${r.exitCode}): ${r.stderr.toString().trim().split('\n').slice(-2).join(' | ').slice(0, 300)}`); }
     // ---- a checkpoint (THE LAST LINE THAT USES THE RIG'S MAN: a load makes a new Player, and world()'s place / run / gap keep the old one)
-    { const SS = await import(`${ROOT}/src/game/savestate.ts`); const holds0 = SS.SAVETIMELINE.holds; undo.push(() => { SS.SAVETIMELINE.holds = holds0; }); SS.SAVETIMELINE.holds = true; const P = () => g.player;
+    { const SS = await import(`${ROOT}/src/game/savestate.ts`); const P = () => g.player;
       const save = (label: string) => quiet(() => SS.saveState(g, { label, kind: 'harness' })), load = async (file: any) => { const yaw = W.cam.yaw; await quiet(() => SS.loadState(g, JSON.parse(JSON.stringify(file)))); W.cam.yaw = yaw; W.cam.rebuild(); };
       const held = () => { let on = true; for (let f = 0; f < 60; f++) { S.step(1); on &&= !!P().wall && P().wall.n[0] < -0.99; } return on; };
       // (both saves first, the loads after: once a load has made a new Player the rig's place() is no use)
-      set(true); const w = run(EX - R - 1.4, ['KeyD']); S.step(60); const walkFile: any = await save('walked onto the wall'); rest();
+      const w = run(EX - R - 1.4, ['KeyD']); S.step(60); const walkFile: any = await save('walked onto the wall'); rest();
       const r = run(FROM, RUN, 'empty', 200); const file: any = await save('ran onto the wall'), inFile = file?.wallHold?.hold?.ran === 8, plainFile = walkFile?.wallHold?.hold !== undefined && !('ran' in walkFile.wallHold.hold);
       const carried = held();
       await load(file); S.keys(...RUN); const loaded = held();
       const cut = JSON.parse(JSON.stringify(file)); if (cut.wallHold?.hold) delete cut.wallHold.hold.ran; await load(cut); S.keys(...RUN); S.step(3); const cutOff = !P().wall; S.keys(); S.step(20);
-      SS.SAVETIMELINE.holds = holds0; set(true);
       verdict(w.took >= 0 && r.took >= 0 && inFile && plainFile && carried && loaded && cutOff, 'a checkpoint made on a wall with the run still held loads on the wall and stays on it with the keys as they were; the file with the run cut out of it is a hold Shift takes him off',
         `ran on ${r.took >= 0}, the run's keys in the file's hold ${inFile}; a wall walked onto has no such key ${plainFile} · a second on with the keys held: carried on ${carried}, loaded ${loaded} · the run cut out of the file: off at once ${cutOff}`); }
-  } finally { for (const u of undo.reverse()) try { u(); } catch { /* the rig is gone */ } WALLSNAP.on = was.on; WALLSNAP.press = was.press; WALLSNAP.pressRun = was.run; console.log = log; console.error = err; console.warn = warn; }
+  } finally { for (const u of undo.reverse()) try { u(); } catch { /* the rig is gone */ } WALLSNAP.on = was.on; WALLSNAP.press = was.press; console.log = log; console.error = err; console.warn = warn; }
   console.log(`=== wallrun: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;
 }

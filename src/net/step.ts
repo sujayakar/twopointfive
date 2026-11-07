@@ -7,6 +7,7 @@ import type { PlayerCmd } from '../game/cmd';
 import { hudExpireBubbles } from '../game/journal';   // (called inside netStep only: src/game is one import cycle)
 import { dressAll } from '../game/dress';   // (called inside netStand only)
 import { NET } from './wire';
+import { NET_AGREED } from './agreed';
 
 /** the two things of a host's engine a tick's end touches (the page's engine, the headless stand-in) */
 export interface StepHost { lights: { update(dt: number, t: number): void }; world: { relist(): void }; }
@@ -38,10 +39,20 @@ export function netWord(g: Game, from: number): number {
   return h;
 }
 /** THE WHOLE GAME'S WORDS as they stand, with the parts' names: for whoever asks WHICH part two machines disagree on (tools/mp/words-diff.ts, a check).
- *  They are the alarm netWord should fold on a word tick and does not yet: two machines of one game that agree on every tick still differ in some parts
- *  (docs/agents/net.md lists them: a table in its process's import order, the modules' tables that follow whichever seat a machine shows, what a look
- *  ahead in the tools leaves behind). Fold them the day words-diff says every part agrees. */
+ *  They are NOT the alarm: a page and a game server do not agree on every part yet (docs/agents/net.md: the picture's own carried in the game's
+ *  record, rows numbered differently). The parts every kind of host does agree on are folded into the wider word, watched: netWatch below. */
 export function netWhole(g: Game): { names: string[]; words: number[] } | null { const S = g as unknown as Stepper, A = S.wholeWords?.(); return A ? { names: S.wholeNames?.() ?? [], words: Array.from(A) } : null; }
+/** THE WIDER WORD, WATCHED: the whole game's words of the parts on the one list of parts every kind of host has agreed on (net/agreed.ts), folded into
+ *  one word, by NAME (a part the module has not got is passed over; two machines of one build pass over the same). Not chained: each word tick's stands
+ *  alone, so a tick that differs is one tick counted. The server sends it beside the state word; a client holds its own against it and COUNTS
+ *  (client.ts watchOk / watchOff): it is no alarm until real pages on real GPUs have shown the list holds. null where the host has no whole words */
+let WATCH: { names: readonly string[]; ix: number[] } | null = null;
+export function netWatch(g: Game): string | null {
+  const S = g as unknown as Stepper, A = S.wholeWords?.(); if (!A) return null;
+  const N = S.wholeNames?.() ?? []; if (!WATCH || WATCH.names !== N) { const on = new Set(NET_AGREED); WATCH = { names: N, ix: N.map((n, i) => on.has(n) ? i : -1).filter(i => i >= 0) }; }
+  let h = NET_WORD_SEED; for (const i of WATCH.ix) h = Math.imul(h ^ A[i], 0x01000193) >>> 0;
+  return h.toString(36);
+}
 /** a quiet run of networked ticks begins / ends (a server between two state words, a client's walk of the ticks its server has confirmed) */
 export function netQuiet(g: Game, on: boolean): void { (g as unknown as Stepper).quietRun?.(on); }
 /** A NETWORKED GAME IS STOOD THE SAME WAY ON EVERY MACHINE: once, when the game is stood, by the server, a scripted client and a page alike.

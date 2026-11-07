@@ -79,11 +79,11 @@ export async function menclearCheck(): Promise<boolean> {
         `in the blast before: ${in0} of ${S.men.length} · too close: ${close.join(', ') || 'nobody'} · ${S.where()} · at the stand-off: ${off} · marks ${marks0} · clear after ${took.toFixed(1)} s · stepped back ${S.C.stats.cleared} · fastest ${top.toFixed(2)} m/s (brisk ${brisk}) · reach ${R.reach} m, stand-off ${R.standoff} m`);
       // (3s) the squad silent, as his was
       { const Q = await stage(true); if (!Q) { line(false, 'the silent squad\'s stage'); return false; }
-        const was = squadSilent(Q.g) && Q.men.every(m => sneaking(Q.g, m)), in1 = Q.men.filter(m => Q.hit(m.char.pos)).length, c1 = Q.set(); let secs = 0; while (secs < 12 && Q.C.tooClose(c1).join() !== 'you') { Q.step(0.5); secs += 0.5; }
+        const wasWhy = `the squad silent ${squadSilent(Q.g)}, ${Q.men.filter(m => sneaking(Q.g, m)).length} of ${Q.men.length} sneaking, SILENT.on ${SILENT.on}, SNEAK.on ${SNEAK.on}`, was = squadSilent(Q.g) && Q.men.every(m => sneaking(Q.g, m)), in1 = Q.men.filter(m => Q.hit(m.char.pos)).length, c1 = Q.set(); let secs = 0; while (secs < 12 && Q.C.tooClose(c1).join() !== 'you') { Q.step(0.5); secs += 0.5; }
         Q.step(4); const R1 = safeRadius(Q.g, Q.Wl), off1 = Q.men.every(m => Q.C.blastShare(Q.Wl, m.char.pos, { ...R1, reach: R1.standoff - 0.3 }, false) === 0);
         const walk: number = Q.O.knobs.walk, top1 = Math.max(...Q.men.map(m => Q.peak.get(m) ?? 0)), close1: string[] = Q.C.tooClose(c1);
         line(was && in1 >= 2 && close1.join() === 'you' && off1 && top1 <= walk * 1.1, 'the squad silent and nobody on to it: they step back all the same, at a walk',
-          `silent and sneaking: ${was} · in the blast before: ${in1} · clear after ${secs.toFixed(1)} s · at the stand-off four seconds on: ${off1} · too close: ${close1.join(', ') || 'nobody'} · ${Q.where()} · fastest ${top1.toFixed(2)} m/s (walk ${walk})`); }
+          `silent and sneaking: ${was} (${wasWhy}) · in the blast before: ${in1} · clear after ${secs.toFixed(1)} s · at the stand-off four seconds on: ${off1} · too close: ${close1.join(', ') || 'nobody'} · ${Q.where()} · fastest ${top1.toFixed(2)} m/s (walk ${walk})`); }
       // (4) Sam walks clear: they leave their marks and fall in on him
       const stood = S.C.stats.cleared; S.sam(AWAY); S.step(9); const held = (S.C as any).away.size, far = S.men.map(m => flat(m.char.pos, S.g.player.char.pos));
       line(stood >= 2 && held === 0 && far.every(d => d < 6), 'Sam well clear of it: nine seconds later nobody is kept on a mark and the four are with him', `stood off before: ${stood} · kept on marks: ${held} · from Sam: ${far.map(d => d.toFixed(1)).join(', ')} m`);

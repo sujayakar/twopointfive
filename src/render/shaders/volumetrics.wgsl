@@ -282,7 +282,7 @@ fn smokeMarchJ(ro: vec3f, rd: vec3f, tSurf: f32, jitter: f32, uv: vec2f) -> vec4
       let t = ta + len * jitter;                                   // the sample, stratified inside the (partial) step
       if ((s % every) == 0u) { validBits = 0u; }                   // (per-step lights: every shadow answer is at most `every` steps old, lit steps or not)
       let X = ro + rd * t;
-      let dens = fogSmoke(smokeDensityIn(X, onMask), X);
+      let dl = dustDensity(X, onMask, true); let dens = fogSmoke(dl.d, X); let dTint = dustTintOf(dl);
       if (dens == 0.0 && spgHole) { let hop = u32(clamp((smokeClearRun(X, rd) - 1e-3) / dt, 0.0, 4096.0)); if (hop > 0u) { if ((s % every) + hop >= every) { validBits = 0u; } rayBudget += min(hop, steps - 1u - s); s += hop; continue; } }
       if (dens > 0.002) {
         let sigT = dens * 6.0;
@@ -308,7 +308,7 @@ fn smokeMarchJ(ro: vec3f, rd: vec3f, tSurf: f32, jitter: f32, uv: vec2f) -> vec4
           if ((validBits & bit) == 0u && (wStep > MARCH_REFRESH_W || (knownBits & bit) == 0u)) {   // due AND worth it: a step that can move the pixel by less than MARCH_REFRESH_W (thin haze at the skin, the
             let vis = !occluded(X, ev.L, min(ev.dist.x - li.radius - 0.02, MARCH_DIR_TMAX), (li.owner & 0xffu) << 8u);   // core behind opaque smoke) keeps the last answers; each slot is traced at least once a stretch —
             visBits = select(visBits & ~bit, visBits | bit, vis); validBits |= bit; knownBits |= bit;                   // the light's own carrier never shadows its beam; the moon / sun ray ends past the roofs
-            if (vis) { selfC[c] = smokeSelfShadowIn(X, ev.L, nearMask); }
+            if (vis) { if (dl.dust > 0.0) { selfC[c] = smokeSelfShadowLook(X, ev.L, nearMask); } else { selfC[c] = smokeSelfShadowIn(X, ev.L, nearMask); } }
           }
           if ((visBits & bit) == 0u) { continue; }
           Lin += ev.E * phaseHG(dot(rd, ev.L), 0.35) * selfC[c];
@@ -316,8 +316,8 @@ fn smokeMarchJ(ro: vec3f, rd: vec3f, tSurf: f32, jitter: f32, uv: vec2f) -> vec4
           LinA += smokeAheadE(ev.E, dot(rd, ev.L), li.radius, ev.dist.x) * smokeAheadT(selfC[c]);   // (the light a lamp BEHIND the sample sends nearly straight on, vol_common.wgsl smokeAheadT: the smoke is a fifth as thick to it; nothing with the row at 0)
         }
         if (LOOK) { let pk = airShow(X, luminance(Lin)); Lin *= pk; Lin2 *= pk; LinA *= pk; }   // (THE LOOK PROTOTYPE: the step's light as its place shows it, airShow above; never compiled in off the look page)
-        inscatter += T * Lin * sigS * (1.0 - stepT) / max(sigT, 1e-4);
-        inscatter += msGain * sqrt(T) * Lin2 * (sigS / max(sigT, 1e-4)) * (1.0 - sqrt(stepT));   // the octave to the eye through half the extinction: √T of the way in, (1 − √stepT) of this step (σs/2 ÷ σt/2 = the same albedo)
+        inscatter += dTint * (T * Lin * sigS * (1.0 - stepT) / max(sigT, 1e-4));
+        inscatter += dTint * (msGain * sqrt(T) * Lin2 * (sigS / max(sigT, 1e-4)) * (1.0 - sqrt(stepT)));   // the octave to the eye through half the extinction: √T of the way in, (1 − √stepT) of this step (σs/2 ÷ σt/2 = the same albedo)
         inscatter += smokeAheadW() * smokeAheadT(T) * LinA * (sigS / max(sigT, 1e-4)) * (1.0 - smokeAheadT(stepT));   // + a lamp behind the smoke, glowing through it (0 with the row at 0)
         T *= stepT;
         if (smokeMarchDone(T, tCut)) { break; }
@@ -476,7 +476,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
         for (var s = 0u; s < steps; s++) {
           let X = ro + rd * t;
           if ((s % every) == 0u) { validBits = 0u; }                                             // every light's shadow answer is at most `every` steps old, lit steps or not
-          let dens = fogSmoke(smokeDensityIn(X, onMask), X);
+          let dl = dustDensity(X, onMask, true); let dens = fogSmoke(dl.d, X); let dTint = dustTintOf(dl);
           if (dens == 0.0 && spgHole) { let hop = u32(clamp((smokeClearRun(X, rd) - 1e-3) / dt, 0.0, 4096.0)); if (hop > 0u) { if ((s % every) + hop >= every) { validBits = 0u; } rayBudget += min(hop, steps - 1u - s); s += hop; t += f32(hop + 1u) * dt; continue; } }
           if (dens > 0.002) {
             let sigT = dens * 6.0;
@@ -506,7 +506,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
               if ((validBits & bit) == 0u) {
                 let vis = !occluded(X, ev.L, ev.dist.x - li.radius - 0.02, (li.owner & 0xffu) << 8u);   // the light's own carrier never shadows its beam
                 visBits = select(visBits & ~bit, visBits | bit, vis); validBits |= bit;
-                if (vis) { selfC[c] = smokeSelfShadowIn(X, ev.L, nearMask); }
+                if (vis) { if (dl.dust > 0.0) { selfC[c] = smokeSelfShadowLook(X, ev.L, nearMask); } else { selfC[c] = smokeSelfShadowIn(X, ev.L, nearMask); } }
               }
               if ((visBits & bit) == 0u) { continue; }
               Lin += ev.E * phaseHG(dot(rd, ev.L), 0.35) * selfC[c];
@@ -515,8 +515,8 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
             }
             let stepT = exp(-sigT * dt);
             if (LOOK) { let pk = airShow(X, luminance(Lin)); Lin *= pk; Lin2 *= pk; LinA *= pk; }   // (THE LOOK PROTOTYPE: the step's light as its place shows it, airShow above; never compiled in off the look page)
-            inscatter += T * Lin * sigS * (1.0 - stepT) / max(sigT, 1e-4);   // energy-conserving integration over the step
-            inscatter += msGain * sqrt(T) * Lin2 * (sigS / max(sigT, 1e-4)) * (1.0 - sqrt(stepT));   // + the octave through half the extinction (vol_common.wgsl smokeMsGain)
+            inscatter += dTint * (T * Lin * sigS * (1.0 - stepT) / max(sigT, 1e-4));   // energy-conserving integration over the step
+            inscatter += dTint * (msGain * sqrt(T) * Lin2 * (sigS / max(sigT, 1e-4)) * (1.0 - sqrt(stepT)));   // + the octave through half the extinction (vol_common.wgsl smokeMsGain)
             inscatter += smokeAheadW() * smokeAheadT(T) * LinA * (sigS / max(sigT, 1e-4)) * (1.0 - smokeAheadT(stepT));   // + a lamp behind the smoke, glowing through it (0 with the row at 0)
             T *= stepT;
             if (smokeMarchDone(T, 0.03)) { break; }                                       // (0.01 as ever elsewhere; whatever lies behind 3 % transmittance is under an 8-bit step of black smoke)
