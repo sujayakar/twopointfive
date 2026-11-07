@@ -17,7 +17,6 @@
 // by ONE capture listener registered when this module loads, i.e. before main.ts's own Esc handler, so Esc here goes back instead of closing the card.
 // Plain DOM, styled in index.html (#missions …). Nothing at module level uses another module's exports (ui/menu.ts imports this beside the game).
 import { PICKS_UI, pickLeaveSearch, onShortList } from '../scene/picks';
-import { SAMESTART } from '../game/samestart';   // (a leaf: every mission starts the same way on every try)
 import { MISSION_GROUPS, lessonGroup, type MissionGroup, type ScenarioEntry } from '../scene/scenarios';
 import { ALL_MISSIONS, SCENARIO_KEYS, pickSearch, quitSearch, entryOfQuery, levelWords, teamWords, teamTag } from '../scene/scenarioList';
 import { lookLevelFile } from '../scene/look';   // (a leaf: which file of a level the page loads)
@@ -308,7 +307,7 @@ export function openMissions(opts: MissionsOpts = {}): MissionsScreen {
   let wx: WeatherKind | null = wxPick && wxPick.search === search ? wxPick.kind : weatherOfSearch(search), wxShown: WeatherKind | null | undefined;   // (the pick made on this page's list earlier — Back from the loadout reopens the list — else the URL's)
   { const m0 = missionOfQuery(search, list), w = new URLSearchParams(search).get('way');   // (the page's own way in is its mission's pick until another is made)
     if (m0?.scenario?.ways && !(m0.id in wayPick) && w) wayPick[m0.id] = wayOfLink(m0, search); }
-  const wayOf = (m: Mission) => { const w = m.scenario?.ways ? wayPick[m.id] ?? 0 : 0; return w < 0 && SAMESTART.on ? 0 : w; }; let wayVer = 0, wayShown = -1;   // (wayOf: a link that came in with way=any while every mission starts the same way = the level's own)
+  const wayOf = (m: Mission) => { const w = m.scenario?.ways ? wayPick[m.id] ?? 0 : 0; return w < 0 ? 0 : w; }; let wayVer = 0, wayShown = -1;   // (wayOf: a link that came in with way=any = the level's own)
   /** a level BUILT FOR SNOW (game/weatherKinds.ts SNOW_LEVELS) has its own weather: no Weather row is drawn for it, and its link carries none */
   const ownWx = (m: Mission) => snowLevel(m.scenario?.level?.replace(/\.json$/, ''));
   // A ROW WITH ITS OWN HOUR OR WEATHER (game/rowset.ts — a tutorial mission) is always started in them: that row is not drawn for it (what does not apply is
@@ -326,7 +325,7 @@ export function openMissions(opts: MissionsOpts = {}): MissionsScreen {
     (wrow as HTMLElement & { style: { display: string } }).style.display = ownWx(m) || rowWeather(m.scenario) ? 'none' : '';
     (hrow as HTMLElement & { style: { display: string } }).style.display = rowHour(m.scenario) ? 'none' : '';   // (what does not apply is not drawn)
     { const W = m.scenario?.ways, y = wayOf(m);
-      for (const [v, b] of ybtns) { const k = v < 0 ? -1 : v ? v - 1 : 0, shown = !!W && (v < 0 ? !SAMESTART.on : k < W.length); (b as HTMLElement & { style: { display: string } }).style.display = shown ? '' : 'none'; if (W && v >= 0 && k < W.length) b.textContent = W[k]; b.className = shown && y === v ? 'dbtn on' : 'dbtn'; b.setAttribute('aria-pressed', shown && y === v ? 'true' : 'false'); }
+      for (const [v, b] of ybtns) { const k = v < 0 ? -1 : v ? v - 1 : 0, shown = !!W && v >= 0 && k < W.length; (b as HTMLElement & { style: { display: string } }).style.display = shown ? '' : 'none'; if (W && v >= 0 && k < W.length) b.textContent = W[k]; b.className = shown && y === v ? 'dbtn on' : 'dbtn'; b.setAttribute('aria-pressed', shown && y === v ? 'true' : 'false'); }
       yrow.className = W ? 'mdiff mway' : 'mdiff mway na'; (yrow as HTMLElement & { style: { display: string } }).style.display = W ? '' : 'none'; ynote.textContent = wayNote(m, y); }   // (a mission with one way in shows no row: the one-page start has no line to spare)
     rows.forEach((r, i) => { r.className = (i === sel ? 'mrow sel' : fold && secOf[i] >= 0 && secOf[i] !== secOf[sel] ? 'mrow shut' : 'mrow') + apart[i]; r.setAttribute('aria-current', i === sel ? 'true' : 'false'); });
     secs.forEach((x, k) => { const on = k === secOf[sel]; x.h.className = `msec${x.at ? ' rest' : ''}${on ? ' open' : ''}`; x.h.setAttribute('aria-expanded', on ? 'true' : 'false'); x.h.setAttribute('data-count', String((secs[k + 1]?.at ?? list.length) - x.at)); });
@@ -361,7 +360,7 @@ export function openMissions(opts: MissionsOpts = {}): MissionsScreen {
     get weather() { return wx; },
     setWeather(k) { wx = k; wxPick = { search, kind: k }; paint(); },
     get way() { return wayOf(list[sel]); },
-    setWay(v) { const m = list[sel], W = m.scenario?.ways; if (!W) return; const all = [0, ...W.slice(1).map((_, k) => k + 2), ...(SAMESTART.on ? [] : [-1])]; wayPick[m.id] = v === 'next' || v === 'prev' ? all[(all.indexOf(wayOf(m)) + (v === 'next' ? 1 : all.length - 1)) % all.length] : all.includes(v) ? v : 0; wayVer++; paint(); },
+    setWay(v) { const m = list[sel], W = m.scenario?.ways; if (!W) return; const all = [0, ...W.slice(1).map((_, k) => k + 2)]; wayPick[m.id] = v === 'next' || v === 'prev' ? all[(all.indexOf(wayOf(m)) + (v === 'next' ? 1 : all.length - 1)) % all.length] : all.includes(v) ? v : 0; wayVer++; paint(); },
     pick() {
       const m = list[sel], href = hrefs[sel], fn = opts.onPick ?? MISSIONS.onPick;
       try { globalThis.localStorage?.setItem(LS, m.id); } catch { /* no store */ }
@@ -544,7 +543,7 @@ function wayOfLink(m: Mission, search: string): number {
 export function drawMissionMap(cv: HTMLCanvasElement, m: Mission, search: string, width: number): Promise<boolean> {
   const w = wayOfLink(m, search), file = lookLevelFile(m.scenario?.level ?? OFFICE);
   cv.width = width; cv.height = Math.round(width * PLAN_D / PLAN_W);
-  return drawPlan(cv, file, false, true, { kind: m.scenario ? m.scenario.kind : 'solo', way: w < 0 && SAMESTART.on ? 0 : w }).then(() => cv.style?.display !== 'none' && !!cv.getContext?.('2d'));
+  return drawPlan(cv, file, false, true, { kind: m.scenario ? m.scenario.kind : 'solo', way: w < 0 ? 0 : w }).then(() => cv.style?.display !== 'none' && !!cv.getContext?.('2d'));
 }
 /** WHERE SPOTS OF THE PLACE FALL ON A DRAWN SHEET: `spots` (x, z on the floor) as fractions of the canvas `cv`, which this list drew a small sheet on
  *  (its `data-level` names the file, `data-sheet` the size it was drawn at). Null: no sheet is drawn there (no file, a plain plan, a still picture). For a caller that pins words on

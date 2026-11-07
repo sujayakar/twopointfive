@@ -38,7 +38,7 @@ import { GUN_STATS, gunStats } from './gunStats';
 import { menuTheme } from './theme';
 import { kitIcon } from './kitIcons';
 import { kitNoise } from './kitNoise';
-import { KITLOAD, loadOf, loadRef, loadShare, type KitLoad } from '../game/kitload';
+import { loadOf, loadRef, loadShare, type KitLoad } from '../game/kitload';
 import { denseStyle } from './kitDense';
 type KitValue = KitRow['values'][number];
 
@@ -366,14 +366,13 @@ export function memberCard(host: HTMLElement, i: number, opts: MemberCardOpts = 
       pouch.title = c.big ? POUCH_TIP_BIG : POUCH_TIP;
       pouchN.textContent = `${c.used} / ${c.total}`;
       const sq = i > 0 && i <= kitTeam() ? squadCost() : null; squadN.textContent = sq ? `squad ${sq.used} / ${sq.total}` : '';
-      load.classList.toggle('off', !KITLOAD.on);
-      if (KITLOAD.on) { const L = loadOf(i, m), R = loadRef(i), row = cur < rows.length ? rows[cur] : null, S: KitLoad | null = row ? loadShare(i, m, row.field) : null, pct = (x: number) => `${Math.round(Math.min(1, Math.max(0, x)) * 1000) / 10}%`;
-        // (a row that carries none: what ONE MORE would take — the step the right arrow would make, weighed on a copy of the card; nothing where that step has no room)
-        let M: KitLoad | null = null; if (row && !S) { const p = kitPeek(i, row.field, 1); if (!p.why) { const c = { ...m } as MemberKit; if (row.set) row.set(c, p.value); else (c as unknown as Record<string, unknown>)[row.field] = p.value; const up = loadOf(i, c);   /* (a row with a setter of its own writes other fields: the Primary row's long gun is `weapon`) */ if (up.mob < L.mob || up.con < L.con) M = { mob: L.mob - up.mob, con: L.con - up.con }; } }
-        for (const b of bars) { const v = L[b.k], r = R[b.k], lo = Math.min(v, r), s = S?.[b.k] ?? 0, more = M?.[b.k] ?? 0;
-          b.fill.style.width = pct(lo); b.gain.style.left = pct(lo); b.gain.style.width = pct(Math.abs(v - r)); b.gain.classList.toggle('loss', v < r);
-          b.part.classList.toggle('more', !s && more > 0); b.part.style.left = pct(s ? v : v - more); b.part.style.width = pct(s ? Math.min(s, 1 - v) : more); b.part.style.display = s || more ? '' : 'none';
-          b.ref.style.left = pct(r); b.bar.setAttribute('data-score', v.toFixed(3)); b.bar.setAttribute('data-share', s.toFixed(3)); b.bar.setAttribute('data-more', more.toFixed(3)); } }
+      const L = loadOf(i, m), R = loadRef(i), row = cur < rows.length ? rows[cur] : null, S: KitLoad | null = row ? loadShare(i, m, row.field) : null, pct = (x: number) => `${Math.round(Math.min(1, Math.max(0, x)) * 1000) / 10}%`;
+      // (a row that carries none: what ONE MORE would take — the step the right arrow would make, weighed on a copy of the card; nothing where that step has no room)
+      let M: KitLoad | null = null; if (row && !S) { const p = kitPeek(i, row.field, 1); if (!p.why) { const c = { ...m } as MemberKit; if (row.set) row.set(c, p.value); else (c as unknown as Record<string, unknown>)[row.field] = p.value; const up = loadOf(i, c);   /* (a row with a setter of its own writes other fields: the Primary row's long gun is `weapon`) */ if (up.mob < L.mob || up.con < L.con) M = { mob: L.mob - up.mob, con: L.con - up.con }; } }
+      for (const b of bars) { const v = L[b.k], r = R[b.k], lo = Math.min(v, r), s = S?.[b.k] ?? 0, more = M?.[b.k] ?? 0;
+        b.fill.style.width = pct(lo); b.gain.style.left = pct(lo); b.gain.style.width = pct(Math.abs(v - r)); b.gain.classList.toggle('loss', v < r);
+        b.part.classList.toggle('more', !s && more > 0); b.part.style.left = pct(s ? v : v - more); b.part.style.width = pct(s ? Math.min(s, 1 - v) : more); b.part.style.display = s || more ? '' : 'none';
+        b.ref.style.left = pct(r); b.bar.setAttribute('data-score', v.toFixed(3)); b.bar.setAttribute('data-share', s.toFixed(3)); b.bar.setAttribute('data-more', more.toFixed(3)); }
       squadN.classList.toggle('full', !!sq && sq.used >= sq.total && c.used < c.total);   // (room in his own pouches and none in the squad's: the squad's count is why his arrows are dimmed, so it is the one lit)
     }
     const issuedShown = kitIssuedShown(i);   // (one deal a refresh, not one a row)
