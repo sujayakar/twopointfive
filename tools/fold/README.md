@@ -100,10 +100,18 @@ Three steps, each its own run, each rerunnable on a later tree:
    panics when called. Run steps 2 and 3 for good on a tree without those stubs, where a missing function is a compile error. Fields, variants and items
    of generated files the check names are listed, not deleted.
 
-`tools/fold/never.sh` runs steps 2 and 3 and one more reading with no test holding anything, and writes one report: lines by module
-before and after, and three lists. DELETED, NOTHING NAMED IT (the first look of step 2); DELETED, ONLY DEAD CODE NAMED IT (the later
-looks of step 2 and all of step 3); KEPT ALTHOUGH THE GAME NEVER RUNS IT (what the last reading names: only a unit test uses it, and
-deleting it is deleting that test, a hand's call).
+`tools/fold/never.sh` runs steps 2 and 3 and one more reading without the tests, and writes one report: lines by module before and
+after, and the lists. DELETED, NOTHING NAMED IT (the first look of step 2); DELETED, ONLY DEAD CODE NAMED IT (the later looks of step 2
+and all of step 3); KEPT ALTHOUGH THE GAME NEVER RUNS IT (what the last reading names: only a unit test uses it).
+
+`never.sh --tests-too` goes on: a unit test that is there for code the game never runs goes, and then what it alone held up
+(`fold tests-cut`, then the compiler's pass again). A test goes when it uses something only the tests use and calls no live function of
+a body file, itself or through its module's own helpers; a test that does both is a test of live code leaning on a helper only tests
+use, and it stays with its helper. Which item a use means is read off how it is written (`f(…)` its own module's, `m::f(…)` module
+m's, `T::f(…)` a method of T; `x.f(…)` can keep a test and never dooms one), so the rule errs toward keeping. The program chooses only
+which TESTS go: what code goes after them is the compiler's reading again, so nothing a remaining test or the game reaches can go.
+The report gains a fourth list, DELETED WITH THE TESTS THAT WERE ITS ONLY USERS, with the tests. Run `cargo test --lib` in `rust/game`
+after it.
 
 ## Readers
 
@@ -116,8 +124,15 @@ The compiler cannot see one kind of write: `sim::state::state(slot)` hands out t
 a cell can be written through `&`. So after the compiler's rounds the program taints by function: one that names `sim::`, a
 static or a cell, or hands back a `&mut`, and every function that calls one (by module and name, to a fixed point), keeps `&mut`.
 Then `&Game` means "moves nothing" and not only "moves nothing of the Game struct". It is a conservative reading: a pure query of
-`sim::` taints too. The report counts readers by module, lists the rows of the call surface whose function takes `&Game`, and
-gives the compiler's bare answer before the taint as a second list (a map of who touches the struct, not a proof).
+`sim::` taints too. A function that was written `&Game` and is tainted is not changed (making it `&mut` would break its callers'
+borrows): it is listed, and it is no reader for this program. The report counts by module the SURE READERS (`&Game`, no `&mut`
+parameter of any type, not tainted), lists those the taint contradicts, and gives the compiler's bare answer before the taint as a
+second list (a map of who touches the struct, not a proof). `--reads FILE` writes the rows of the call surface
+(`tools/blitz/calls.json`, by key) whose function cannot write the game: a sure reader, or one that takes no game, no `&mut` and is
+not tainted.
+
+An error inside a macro is placed where the macro was called; a function handed on as a value where a `&mut` one is wanted is found
+by the compiler's note on its signature; an error that fits neither puts `mut` back on every parameter of its file (counted).
 
 ## The report
 

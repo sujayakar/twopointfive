@@ -37,6 +37,8 @@ struct FnAt<'a> {
     sig: &'a syn::Signature,
     block: &'a syn::Block,
     lines: (usize, usize),
+    /// the lines of its signature, up to where its body opens
+    sig_lines: (usize, usize),
 }
 
 fn line_of(src: &str, at: usize) -> usize {
@@ -53,7 +55,7 @@ fn fns_of<'a>(src: &str, file: &'a syn::File) -> Vec<FnAt<'a>> {
                     let name = f.sig.ident.to_string();
                     let ord = *seen.entry(name.clone()).and_modify(|n| *n += 1).or_insert(0);
                     let r = it.span().byte_range();
-                    out.push(FnAt { name, ord, sig: &f.sig, block: &f.block, lines: (line_of(src, r.start), line_of(src, r.end)) });
+                    out.push(FnAt { name, ord, sig: &f.sig, block: &f.block, lines: (line_of(src, r.start), line_of(src, r.end)), sig_lines: (line_of(src, r.start), line_of(src, f.block.span().byte_range().start)) });
                 }
                 syn::Item::Impl(x) if x.trait_.is_none() => {
                     for ii in &x.items {
@@ -61,7 +63,7 @@ fn fns_of<'a>(src: &str, file: &'a syn::File) -> Vec<FnAt<'a>> {
                             let name = f.sig.ident.to_string();
                             let ord = *seen.entry(name.clone()).and_modify(|n| *n += 1).or_insert(0);
                             let r = ii.span().byte_range();
-                            out.push(FnAt { name, ord, sig: &f.sig, block: &f.block, lines: (line_of(src, r.start), line_of(src, r.end)) });
+                            out.push(FnAt { name, ord, sig: &f.sig, block: &f.block, lines: (line_of(src, r.start), line_of(src, r.end)), sig_lines: (line_of(src, r.start), line_of(src, f.block.span().byte_range().start)) });
                         }
                     }
                 }
@@ -200,11 +202,70 @@ fn idents_in(text: &str) -> Vec<String> {
     out
 }
 
+type CallsOf = Vec<Vec<Vec<(Option<String>, String, Vec<Option<String>>)>>>;
+
+fn module_of(rel: &str) -> String {
+    Path::new(rel).parent().and_then(|d| d.file_name()).and_then(|n| n.to_str()).unwrap_or("").to_string()
+}
+
+fn calls_of(all: &[Vec<FnAt>]) -> CallsOf {
+    all.iter().map(|fns| fns.iter().map(|f| { let mut c = Calls { out: Vec::new() }; c.visit_block(f.block); c.out }).collect()).collect()
+}
+
+/// What can write without `&mut`: a function that names `sim::` (the block behind the slot), a static or a cell, or
+/// hands back a `&mut`; and, to a fixed point, every function that calls one. By (module, name): two functions of
+/// a module that share a name taint each other.
+fn tainted_fns(files: &[(PathBuf, String, String)], all: &[Vec<FnAt>], calls: &CallsOf) -> HashSet<(String, String)> {
+    let mut tainted: HashSet<(String, String)> = HashSet::new();
+    for (fi, fns) in all.iter().enumerate() {
+        let src = &files[fi].2;
+        let m = module_of(&files[fi].1);
+        for f in fns {
+            let body = &src[f.block.span().byte_range()];
+            let ret = match &f.sig.output {
+                syn::ReturnType::Type(_, t) => src[t.span().byte_range()].contains("mut"),
+                _ => false,
+            };
+            if ret || body.contains("sim::") || TAINT.iter().any(|t| body.contains(t)) {
+                tainted.insert((m.clone(), f.name.clone()));
+            }
+        }
+    }
+    loop {
+        let mut grew = false;
+        for (fi, fns) in all.iter().enumerate() {
+            let m = module_of(&files[fi].1);
+            for (k, f) in fns.iter().enumerate() {
+                if tainted.contains(&(m.clone(), f.name.clone())) {
+                    continue;
+                }
+                let hit = calls[fi][k].iter().any(|(cm, cn, _)| {
+                    let target = match cm.as_deref() {
+                        None | Some("super") | Some("self") => (m.clone(), cn.clone()),
+                        Some(x) => (x.to_string(), cn.clone()),
+                    };
+                    tainted.contains(&target)
+                });
+                if hit {
+                    tainted.insert((m.clone(), f.name.clone()));
+                    grew = true;
+                }
+            }
+        }
+        if !grew {
+            break;
+        }
+    }
+    tainted
+}
+
 pub struct Restored {
     pub by_error: usize,
     pub by_calls: usize,
     pub by_taint: usize,
     pub unplaced: Vec<String>,
+    /// parameters put back a whole file at a time, where an error could not be placed on a function
+    pub coarse: usize,
     pub left: usize,
 }
 
@@ -215,9 +276,7 @@ pub fn restore(root: &Path, state: &Path, diag: Option<&str>, taint: bool) -> Re
     let files = bodies(root);
     let parsed: Vec<syn::File> = files.iter().map(|(_, rel, src)| syn::parse_file(src).map_err(|e| format!("{rel} does not parse: {e}"))).collect::<Result<_, _>>()?;
     let mut back: BTreeSet<String> = BTreeSet::new();
-    let mut out = Restored { by_error: 0, by_calls: 0, by_taint: 0, unplaced: Vec::new(), left: 0 };
-    let module_of = |rel: &str| -> String { Path::new(rel).parent().and_then(|d| d.file_name()).and_then(|n| n.to_str()).unwrap_or("").to_string() };
-
+    let mut out = Restored { by_error: 0, by_calls: 0, by_taint: 0, unplaced: Vec::new(), coarse: 0, left: 0 };
     // every function, by file
     let all: Vec<Vec<FnAt>> = files.iter().zip(parsed.iter()).map(|((_, _, src), f)| fns_of(src, f)).collect();
     let rel_ix: HashMap<&str, usize> = files.iter().enumerate().map(|(i, (_, rel, _))| (rel.as_str(), i)).collect();
@@ -226,6 +285,17 @@ pub fn restore(root: &Path, state: &Path, diag: Option<&str>, taint: bool) -> Re
         for (k, f) in fns.iter().enumerate() {
             by_name.entry(f.name.as_str()).or_default().push((fi, k));
         }
+    }
+    // (a span of an error inside a macro is the macro's own text: the place it was called from is what the error is about)
+    fn outer(s: &serde_json::Value) -> &serde_json::Value {
+        let mut s = s;
+        while !s["expansion"].is_null() && !s["expansion"]["span"].is_null() {
+            s = &s["expansion"]["span"];
+        }
+        s
+    }
+    fn in_game(file: &str) -> &str {
+        file.rfind("rust/game/").map(|i| &file[i + "rust/game/".len()..]).unwrap_or(file)
     }
     let demoted_params = |fi: usize, f: &FnAt, demoted: &BTreeSet<String>, back: &BTreeSet<String>| -> Vec<String> {
         ref_params(f.sig).into_iter().filter(|(_, p, _, _)| { let k = key(&files[fi].1, &f.name, f.ord, p); demoted.contains(&k) && !back.contains(&k) }).map(|(_, p, _, _)| p).collect()
@@ -244,9 +314,9 @@ pub fn restore(root: &Path, state: &Path, diag: Option<&str>, taint: bool) -> Re
             }
             let Some(spans) = v["message"]["spans"].as_array() else { continue };
             let Some(s) = spans.iter().find(|s| s["is_primary"] == true) else { continue };
+            let s = outer(s);
             // (a path into the game crate, however the check that met it was started)
-            let file = s["file_name"].as_str().unwrap_or("");
-            let file = file.rfind("rust/game/").map(|i| &file[i + "rust/game/".len()..]).unwrap_or(file);
+            let file = in_game(s["file_name"].as_str().unwrap_or(""));
             let line = s["line_start"].as_u64().unwrap_or(0) as usize;
             let (hs, he) = (s["text"][0]["highlight_start"].as_u64().unwrap_or(1) as usize, s["text"][0]["highlight_end"].as_u64().unwrap_or(1) as usize);
             let shown: String = s["text"][0]["text"].as_str().unwrap_or("").chars().skip(hs.saturating_sub(1)).take(he.saturating_sub(hs)).collect();
@@ -255,7 +325,8 @@ pub fn restore(root: &Path, state: &Path, diag: Option<&str>, taint: bool) -> Re
             let mut placed = false;
             if let Some(&fi) = rel_ix.get(file) {
                 if let Some(f) = all[fi].iter().find(|f| f.lines.0 <= line && line <= f.lines.1) {
-                    let ps = demoted_params(fi, f, &demoted, &back);
+                    // (a parameter an earlier error of this round already put back is placed too)
+                    let ps = demoted_params(fi, f, &demoted, &BTreeSet::new());
                     let mut hit: Vec<&String> = ps.iter().filter(|p| named.contains(p)).collect();
                     if hit.is_empty() {
                         let in_span = idents_in(&shown);
@@ -281,6 +352,28 @@ pub fn restore(root: &Path, state: &Path, diag: Option<&str>, taint: bool) -> Re
                     }
                 }
             }
+            // a span of the error (its own, a note's, a help's) that lies on a function's signature: that function is
+            // what was handed on as a value where a `&mut` one is wanted ("found signature defined here")
+            let notes = v["message"]["children"].as_array().map(|c| c.iter().flat_map(|c| c["spans"].as_array().cloned().unwrap_or_default()).collect::<Vec<_>>()).unwrap_or_default();
+            for sp in spans.iter().chain(notes.iter()) {
+                if sp["is_primary"] == true && msg.contains("cannot") {
+                    continue;
+                }
+                let sf = in_game(sp["file_name"].as_str().unwrap_or(""));
+                let sl = sp["line_start"].as_u64().unwrap_or(0) as usize;
+                let label = sp["label"].as_str().unwrap_or("");
+                if !label.contains("signature") {
+                    continue;
+                }
+                if let Some(&fj) = rel_ix.get(sf) {
+                    if let Some(f) = all[fj].iter().find(|f| f.sig_lines.0 <= sl && sl <= f.sig_lines.1) {
+                        for p in demoted_params(fj, f, &demoted, &BTreeSet::new()) {
+                            back.insert(key(sf, &f.name, f.ord, &p));
+                            placed = true;
+                        }
+                    }
+                }
+            }
             if !placed {
                 // outside a body function (a table in a generated file, another crate): every function it names
                 for n in idents_in(&shown).into_iter().chain(msg.split('`').skip(1).step_by(2).flat_map(idents_in)) {
@@ -295,6 +388,18 @@ pub fn restore(root: &Path, state: &Path, diag: Option<&str>, taint: bool) -> Re
                 }
             }
             if !placed {
+                // the last resort, so that a run always ends: every parameter of the file the error stands in
+                if let Some(&fi) = rel_ix.get(file) {
+                    for f in &all[fi] {
+                        for p in demoted_params(fi, f, &demoted, &back) {
+                            back.insert(key(file, &f.name, f.ord, &p));
+                            out.coarse += 1;
+                            placed = true;
+                        }
+                    }
+                }
+            }
+            if !placed {
                 out.unplaced.push(format!("{file}:{line} {}", msg.chars().take(160).collect::<String>()));
             }
         }
@@ -302,52 +407,13 @@ pub fn restore(root: &Path, state: &Path, diag: Option<&str>, taint: bool) -> Re
     }
 
     // the calls of every function, for 2 and 3
-    let calls: Vec<Vec<Vec<(Option<String>, String, Vec<Option<String>>)>>> = all.iter().map(|fns| fns.iter().map(|f| { let mut c = Calls { out: Vec::new() }; c.visit_block(f.block); c.out }).collect()).collect();
+    let calls = calls_of(&all);
 
     // 2. what can write without `&mut`: a function that names `sim::` (the block behind the slot), a static or a
     //    cell, or hands back a `&mut`; and, to a fixed point, every function that calls one. By (module, name): two
     //    functions of a module that share a name taint each other.
     if taint {
-        let mut tainted: HashSet<(String, String)> = HashSet::new();
-        for (fi, fns) in all.iter().enumerate() {
-            let src = &files[fi].2;
-            let m = module_of(&files[fi].1);
-            for f in fns {
-                let body = &src[f.block.span().byte_range()];
-                let ret = match &f.sig.output {
-                    syn::ReturnType::Type(_, t) => src[t.span().byte_range()].contains("mut"),
-                    _ => false,
-                };
-                if ret || body.contains("sim::") || TAINT.iter().any(|t| body.contains(t)) {
-                    tainted.insert((m.clone(), f.name.clone()));
-                }
-            }
-        }
-        loop {
-            let mut grew = false;
-            for (fi, fns) in all.iter().enumerate() {
-                let m = module_of(&files[fi].1);
-                for (k, f) in fns.iter().enumerate() {
-                    if tainted.contains(&(m.clone(), f.name.clone())) {
-                        continue;
-                    }
-                    let hit = calls[fi][k].iter().any(|(cm, cn, _)| {
-                        let target = match cm.as_deref() {
-                            None | Some("super") | Some("self") => (m.clone(), cn.clone()),
-                            Some(x) => (x.to_string(), cn.clone()),
-                        };
-                        tainted.contains(&target)
-                    });
-                    if hit {
-                        tainted.insert((m.clone(), f.name.clone()));
-                        grew = true;
-                    }
-                }
-            }
-            if !grew {
-                break;
-            }
-        }
+        let tainted = tainted_fns(&files, &all, &calls);
         for (fi, fns) in all.iter().enumerate() {
             let m = module_of(&files[fi].1);
             for f in fns {
@@ -471,79 +537,117 @@ pub fn readers_now(root: &Path) -> Result<Vec<String>, String> {
     Ok(out)
 }
 
-pub fn report(root: &Path, state: &Path, bare: Option<&str>) -> Result<String, String> {
+/// The report, and (with `calls`, the text of tools/blitz/calls.json) the rows of the call surface whose function
+/// cannot write the game, as JSON: `{"rows": [key, …]}`.
+pub fn report(root: &Path, state: &Path, bare: Option<&str>, calls_json: Option<&str>) -> Result<(String, Option<String>), String> {
     use std::fmt::Write as _;
     let demoted = load_state(state);
-    let mut by_module: BTreeMap<String, (usize, usize, usize)> = BTreeMap::new(); // functions, with a Game parameter, of those `&Game`
-    let mut reader_names: HashSet<(String, String)> = HashSet::new();
-    let mut writer_names: HashSet<(String, String)> = HashSet::new();
-    for (_, rel, src) in bodies(root) {
-        let file = syn::parse_file(&src).map_err(|e| format!("{rel} does not parse: {e}"))?;
-        let module = Path::new(&rel).parent().and_then(|d| d.file_name()).and_then(|n| n.to_str()).unwrap_or("").to_string();
-        for f in fns_of(&src, &file) {
+    let files = bodies(root);
+    let parsed: Vec<syn::File> = files.iter().map(|(_, rel, src)| syn::parse_file(src).map_err(|e| format!("{rel} does not parse: {e}"))).collect::<Result<_, _>>()?;
+    let all: Vec<Vec<FnAt>> = files.iter().zip(parsed.iter()).map(|((_, _, src), f)| fns_of(src, f)).collect();
+    let tainted = tainted_fns(&files, &all, &calls_of(&all));
+    // by module: functions, taking the game, of those `&Game`, of those sure readers
+    let mut by_module: BTreeMap<String, (usize, usize, usize, usize)> = BTreeMap::new();
+    // a name is a reader only if every function of that module and name is one
+    let mut readers: HashSet<(String, String)> = HashSet::new();
+    let mut not_readers: HashSet<(String, String)> = HashSet::new();
+    let mut lying: Vec<String> = Vec::new();
+    let mut no_game: HashSet<(String, String)> = HashSet::new();
+    for (fi, fns) in all.iter().enumerate() {
+        let module = module_of(&files[fi].1);
+        for f in fns {
             let e = by_module.entry(module.clone()).or_default();
             e.0 += 1;
             let mut game: Option<bool> = None;
+            let mut any_mut = false;
             for a in &f.sig.inputs {
-                let FnArg::Typed(t) = a else { continue };
+                let FnArg::Typed(t) = a else { any_mut |= matches!(a, FnArg::Receiver(r) if r.mutability.is_some()); continue };
                 let Type::Reference(r) = &*t.ty else { continue };
+                any_mut |= r.mutability.is_some();
                 if let Type::Path(p) = &*r.elem {
                     if p.path.segments.last().map(|s| s.ident == "Game").unwrap_or(false) {
                         game = Some(r.mutability.is_some());
                     }
                 }
             }
-            if let Some(is_mut) = game {
-                e.1 += 1;
-                if !is_mut {
-                    e.2 += 1;
-                    reader_names.insert((module.clone(), f.name.clone()));
-                } else {
-                    writer_names.insert((module.clone(), f.name.clone()));
+            let k = (module.clone(), f.name.clone());
+            let taint = tainted.contains(&k);
+            match game {
+                Some(is_mut) => {
+                    e.1 += 1;
+                    if !is_mut {
+                        e.2 += 1;
+                        if taint {
+                            lying.push(format!("{module}::{}", f.name));
+                        }
+                    }
+                    if !is_mut && !any_mut && !taint {
+                        e.3 += 1;
+                        readers.insert(k);
+                    } else {
+                        not_readers.insert(k);
+                    }
+                }
+                None => {
+                    if any_mut || taint {
+                        not_readers.insert(k);
+                    } else {
+                        no_game.insert(k);
+                    }
                 }
             }
         }
     }
+    lying.sort();
+    lying.dedup();
     let mut o = String::new();
-    let (t0, t1, t2) = by_module.values().fold((0, 0, 0), |a, b| (a.0 + b.0, a.1 + b.1, a.2 + b.2));
+    let t = by_module.values().fold((0, 0, 0, 0), |a, b| (a.0 + b.0, a.1 + b.1, a.2 + b.2, a.3 + b.3));
     let _ = writeln!(o, "# Who writes the game, by signature\n");
-    let _ = writeln!(o, "functions in body files: {t0}; taking the game: {t1}; of those `&Game` (readers by the compiler's word): {t2} ({}%)", t2 * 100 / t1.max(1));
+    let _ = writeln!(o, "functions in body files: {}; taking the game: {}; of those `&Game`: {} ({}%)", t.0, t.1, t.2, t.2 * 100 / t.1.max(1));
+    let _ = writeln!(o, "SURE READERS (take `&Game`, no `&mut` parameter of any type, and neither name `sim::`, a static or a cell nor call a function that does): {} ({}%)", t.3, t.3 * 100 / t.1.max(1));
     let _ = writeln!(o, "`&mut` parameters of any type made `&` and held: {}", demoted.len());
-    let _ = writeln!(o, "\n## By module: functions taking the game, readers among them\n");
+    let _ = writeln!(o, "\n## By module: functions taking the game, `&Game` among them, sure readers among those\n");
     let mut v: Vec<_> = by_module.iter().filter(|(_, e)| e.1 > 0).collect();
     v.sort_by_key(|(_, e)| std::cmp::Reverse(e.1));
     for (m, e) in v {
-        let _ = writeln!(o, "- {m}: {} take the game, {} read only ({}%)", e.1, e.2, e.2 * 100 / e.1.max(1));
+        let _ = writeln!(o, "- {m}: {} take the game, {} `&Game`, {} sure readers ({}%)", e.1, e.2, e.3, e.3 * 100 / e.1.max(1));
     }
-    // the call surface: `crate::module::name(g, …)` in call_gen.rs
-    if let Ok(cg) = std::fs::read_to_string(root.join("rust/game/src/call_gen.rs")) {
-        let mut rows: BTreeSet<String> = BTreeSet::new();
-        let mut total: BTreeSet<String> = BTreeSet::new();
-        for part in cg.split("crate::").skip(1) {
-            let mut it = part.split("::");
-            let (Some(m), Some(rest)) = (it.next(), it.next()) else { continue };
-            let n: String = rest.chars().take_while(|c| c.is_alphanumeric() || *c == '_').collect();
-            if !rest[n.len()..].starts_with('(') {
-                continue;
+    let _ = writeln!(o, "\n## Take `&Game` and can write past it ({})\n", lying.len());
+    let _ = writeln!(o, "Each names `sim::` (the block behind the game's slot), a static or a cell, or calls a function that does. The taint is by the word,\nso a pure query of `sim::` is here too: the signature says reader, this program cannot.\n");
+    let _ = writeln!(o, "{}", lying.join(", "));
+    // the call surface: a row of calls.json is `"rust": "crate::module::name"` under its key
+    let mut reads_json = None;
+    if let Some(text) = calls_json {
+        let v: serde_json::Value = serde_json::from_str(text).map_err(|e| format!("calls.json: {e}"))?;
+        let rows = v["rows"].as_array().ok_or("calls.json has no rows")?;
+        let (mut keys, mut pure_keys, mut with_game) = (Vec::new(), Vec::new(), 0);
+        for r in rows {
+            let (Some(key), Some(rust)) = (r["key"].as_str(), r["rust"].as_str()) else { continue };
+            let mut it = rust.trim_start_matches("crate::").split("::");
+            let k = (it.next().unwrap_or("").to_string(), it.next().unwrap_or("").to_string());
+            if readers.contains(&k) || not_readers.contains(&k) {
+                with_game += 1;
             }
-            let k = (m.to_string(), n.clone());
-            if reader_names.contains(&k) || writer_names.contains(&k) {
-                total.insert(format!("{m}::{n}"));
-            }
-            if reader_names.contains(&k) && !writer_names.contains(&k) {
-                rows.insert(format!("{m}::{n}"));
+            if readers.contains(&k) && !not_readers.contains(&k) {
+                keys.push(key.to_string());
+            } else if no_game.contains(&k) && !not_readers.contains(&k) && !readers.contains(&k) {
+                pure_keys.push(key.to_string());
             }
         }
-        let _ = writeln!(o, "\n## Rows of the call surface whose function takes `&Game` ({} of {} that take the game)\n", rows.len(), total.len());
-        let _ = writeln!(o, "{}", rows.into_iter().collect::<Vec<_>>().join(", "));
+        let _ = writeln!(o, "\n## Rows of the call surface whose function is a sure reader ({} of {} rows; {} more take no game and write nothing)\n", keys.len(), rows.len(), pure_keys.len());
+        let _ = writeln!(o, "{}\n\n### Take no game, no `&mut`, and name no `sim::`, static or cell ({})\n\n{}", keys.join(", "), pure_keys.len(), pure_keys.join(", "));
+        let _ = with_game;
+        let mut all_keys: Vec<&String> = keys.iter().chain(pure_keys.iter()).collect();
+        all_keys.sort();
+        reads_json = Some(format!("{{\"rows\": [\n{}\n]}}\n", all_keys.iter().map(|k| format!("  {}", serde_json::to_string(k).unwrap())).collect::<Vec<_>>().join(",\n")));
     }
     // the compiler's bare answer, taken before the taint: a map of who touches the Game struct, not a proof of who moves nothing
     if let Some(b) = bare {
         let names: Vec<&str> = b.lines().filter(|l| !l.is_empty()).collect();
-        let only: Vec<&str> = names.iter().copied().filter(|n| { let mut it = n.split("::"); let k = (it.next().unwrap_or("").to_string(), it.next().unwrap_or("").to_string()); !reader_names.contains(&k) }).collect();
-        let _ = writeln!(o, "\n## The compiler's bare answer: `&Game` before the taint ({}), of which {} write past the compiler's sight and are `&mut` again\n", names.len(), only.len());
-        let _ = writeln!(o, "The second number is the functions that touch no field of the Game struct for writing, yet name `sim::`, a static or a cell, or call one that does.\n");
+        let only: Vec<&str> = names.iter().copied().filter(|n| { let mut it = n.split("::"); let k = (it.next().unwrap_or("").to_string(), it.next().unwrap_or("").to_string()); !readers.contains(&k) }).collect();
+        let _ = writeln!(o, "\n## The compiler's bare answer: `&Game` before the taint ({}), of which {} are not sure readers\n", names.len(), only.len());
+        let _ = writeln!(o, "The second number is the functions that touch no field of the Game struct for writing, yet take another `&mut`, name `sim::`, a static\nor a cell, or call one that does.\n");
         let _ = writeln!(o, "{}", only.join(", "));
     }
-    Ok(o)
+    Ok((o, reads_json))
 }

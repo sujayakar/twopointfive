@@ -21,6 +21,7 @@ mod fold;
 mod readers;
 mod rows;
 mod sharp;
+mod testcut;
 
 use fold::{FnFact, FnTable, Pass, Report, MARK};
 use rows::{Kind, Rows};
@@ -269,7 +270,46 @@ fn sharp_main(cmd: &str, args: &[String]) -> ! {
         eprintln!("fold: cannot read {d}: {e}");
         std::process::exit(3);
     });
+    if cmd == "sharp-mend" {
+        // `fold sharp-mend --diag FILE [--write]`: a `use` of a name the pass deleted loses the name. Exit 10 mended, 4 an error it cannot mend.
+        match testcut::mend(&root, &text, write) {
+            Ok((n, other)) => {
+                println!("fold: {n} names taken out of a `use` that no longer resolved");
+                for o in other.iter().take(8) {
+                    println!("  an error this is no mend for: {}", o.chars().take(200).collect::<String>());
+                }
+                std::process::exit(if !other.is_empty() { 4 } else if n > 0 { 10 } else { 0 });
+            }
+            Err(e) => {
+                eprintln!("fold: {e}");
+                std::process::exit(3);
+            }
+        }
+    }
     let named = sharp::read_diag(&text);
+    if cmd == "tests-cut" {
+        // `fold tests-cut --diag FILE [--write] [--report FILE]`: FILE is the reading WITHOUT the tests; the tests that are
+        // there for what it names go (testcut.rs). Exit 10 when a test went.
+        match testcut::cut(&root, &named, write) {
+            Ok(c) => {
+                let mut o = String::new();
+                let _ = writeln!(o, "{} tests, {} lines ({} test modules whole){}", c.tests.len(), c.lines, c.mods, if write { "" } else { " (nothing written: --write)" });
+                let _ = writeln!(o, "\n## Tests deleted: each calls something only tests use, and no live function of a body file\n");
+                let _ = writeln!(o, "{}", c.tests.iter().map(|l| format!("- {l}")).collect::<Vec<_>>().join("\n"));
+                let _ = writeln!(o, "\n## Tests that call something only tests use and stay ({})\n", c.stay.len());
+                let _ = writeln!(o, "{}", c.stay.iter().map(|l| format!("- {l}")).collect::<Vec<_>>().join("\n"));
+                if let Some(f) = &report {
+                    let _ = std::fs::write(f, &o);
+                }
+                println!("{}", o.lines().next().unwrap_or(""));
+                std::process::exit(if c.tests.is_empty() { 0 } else { 10 });
+            }
+            Err(e) => {
+                eprintln!("fold: {e}");
+                std::process::exit(3);
+            }
+        }
+    }
     match sharp::apply(&root, &named, write) {
         Ok(a) => {
             let mut o = String::new();
@@ -315,7 +355,7 @@ fn sharp_main(cmd: &str, args: &[String]) -> ! {
     }
 }
 
-/// `fold readers-demote | readers-restore [--diag FILE] | readers-report`, each with `--state FILE`:
+/// `fold readers-demote | readers-restore [--diag FILE] [--taint] | readers-now | readers-report [--bare FILE] [--reads FILE]`, each with `--state FILE`:
 /// whether a function writes, said by its signature (readers.rs; tools/fold/readers.sh drives them).
 fn readers_main(cmd: &str, args: &[String]) -> ! {
     let mut root = PathBuf::from(".");
@@ -323,11 +363,13 @@ fn readers_main(cmd: &str, args: &[String]) -> ! {
     let mut diag: Option<String> = None;
     let mut taint = false;
     let mut bare: Option<String> = None;
+    let mut reads: Option<String> = None;
     let mut it = args.iter();
     while let Some(a) = it.next() {
         let mut val = || it.next().cloned().unwrap_or_default();
         match a.as_str() {
             "--root" => root = PathBuf::from(val()),
+            "--reads" => reads = Some(val()),
             "--state" => state = PathBuf::from(val()),
             "--diag" => diag = Some(val()),
             "--taint" => taint = true,
@@ -351,7 +393,7 @@ fn readers_main(cmd: &str, args: &[String]) -> ! {
             let text = diag.map(|d| std::fs::read_to_string(&d).unwrap_or_else(|e| fail(format!("cannot read {d}: {e}"))));
             match readers::restore(&root, &state, text.as_deref(), taint) {
                 Ok(r) => {
-                    println!("fold: `mut` put back on {} parameters the compiler named, {} that write past the compiler's sight, {} more by the calls; {} stay `&`", r.by_error, r.by_taint, r.by_calls, r.left);
+                    println!("fold: `mut` put back on {} parameters the compiler named{}, {} that write past the compiler's sight, {} more by the calls; {} stay `&`", r.by_error, if r.coarse > 0 { format!(" ({} of them a whole file at a time: an error with no function to place it on)", r.coarse) } else { String::new() }, r.by_taint, r.by_calls, r.left);
                     for u in r.unplaced.iter().take(12) {
                         println!("  an error this program could not place: {u}");
                     }
@@ -362,8 +404,17 @@ fn readers_main(cmd: &str, args: &[String]) -> ! {
         }
         "readers-report" => {
             let b = bare.map(|f| std::fs::read_to_string(&f).unwrap_or_else(|e| fail(format!("cannot read {f}: {e}"))));
-            match readers::report(&root, &state, b.as_deref()) {
-                Ok(s) => print!("{s}"),
+            // (--reads FILE: the rows of tools/blitz/calls.json whose function cannot write the game, by key)
+            let calls = reads.as_ref().and_then(|_| std::fs::read_to_string(root.join("tools/blitz/calls.json")).ok());
+            match readers::report(&root, &state, b.as_deref(), calls.as_deref()) {
+                Ok((s, json)) => {
+                    print!("{s}");
+                    if let (Some(f), Some(j)) = (&reads, json) {
+                        if let Err(e) = std::fs::write(f, j) {
+                            fail(format!("cannot write {f}: {e}"));
+                        }
+                    }
+                }
                 Err(e) => fail(e),
             }
         }
@@ -382,7 +433,7 @@ fn readers_main(cmd: &str, args: &[String]) -> ! {
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if let Some(c) = args.first() {
-        if c == "sharp-prep" || c == "sharp-apply" {
+        if c == "sharp-prep" || c == "sharp-apply" || c == "tests-cut" || c == "sharp-mend" {
             sharp_main(c, &args[1..]);
         }
         if c.starts_with("readers-") {
