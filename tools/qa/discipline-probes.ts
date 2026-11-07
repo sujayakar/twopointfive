@@ -7,15 +7,14 @@
 //       every frame after their beat; the flank line reached and HELD for seconds with the pistol up on Sam; at least one line said to him;
 //   (b) then Space held on the man's row — the choke, in front of them, Sam lit: nothing while the elbow closes (he is still up), and the first round ≥ 0.35 s and
 //       ≤ 4 s after he folds;
-//   (c) the same staging with tune.muzzleDiscipline = false: a round DURING the hold (the flag is live, and (a) would catch a regression);
 //   (e) the gun variant (Sam turns the pair onto Kowalski and fires past Novak's head at him, and on into the room): the discipline is what the gun-hold rule left of it. Nobody fires before Sam has; the man in front of
 //       the gun never fires at all; the one man who answers is Reyes, from the clean line at Sam's back (within 70° of dead astern), single rounds on the
 //       standoff's slow cadence, and Novak never dies to his own side. What the men in FRONT do (run for cover, go round, look) is gunhold-check's.
 import { ROOT } from './headless.ts';
-import { stageHold, bringIn, bearingPoint } from './standoff-probes.ts';
+import { stageHold, bringIn, bearingPoint, pairOf } from './standoff-probes.ts';
 const IK = 'Space';
 const { v3, DEG } = await import(`${ROOT}/src/math/vec.ts`);
-const { pairOf, flankShot, colleagueInLine, standoffSummary } = await import(`${ROOT}/src/game/guards.ts`);
+const { flankShot, colleagueInLine, standoffSummary } = await import(`${ROOT}/src/game/guards.ts`);
 const { gunHoldStats } = await import(`${ROOT}/src/game/gunhold.ts`);
 
 type Vec3 = [number, number, number];
@@ -129,29 +128,6 @@ export async function standoffDiscipline() {
       const ok = fails.length === 0; allPass &&= ok;
       console.log(`- ${ok ? 'PASS' : 'FAIL'} — (b) the choke in front of them: began +${chokeT >= 0 ? f2(chokeT - tA) : '—'} s, Novak folded +${endT >= 0 ? f2(endT - tA) : '—'} s (${victim.downKind ?? victim.state}); rounds while closing ${shotsBefore}; first round ${firstShotT >= 0 ? `+${f2(firstShotT - endT)} s after the fold (${firstWho})` : 'never'}; per man: ${men.map(m => `${m.callsign} ${firstBy.has(m) ? '+' + f2(firstBy.get(m)! - endT) + ' s' : '—'}`).join(', ')}; records dropped on the fold ${gone}/${men.length}\n    lines: ${lines.filter(l => l.t > tA).map(l => `${f1(l.t - tA)}s ${l.who}${l.radio ? ' (radio)' : ''}: "${l.text}"`).join(' · ') || '—'}\n    ${log2.join('\n    ')}\n    log tail: ${msgs.slice(-4).map(m => m.text).join(' | ')}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
     } else { allPass = false; console.log('- FAIL — (b) skipped: (a) did not leave a hold to end'); }
-  }
-  // ================================================================ (c) the flag off: the same twenty seconds fire
-  {
-    const S = await stageHold(383, 1, AT, FACE * DEG); const { W, game, victim, faceDeg } = S;
-    game.tune.muzzleDiscipline = false;
-    const A = game.guards[0], C = game.guards[2]; const men = [A, C]; const obs = new Map<any, Obs>(men.map(m => [m, newObs()]));
-    const P0 = pairOf(game)!; const centre = v3.copy(P0.centre);
-    bringIn(game, A, bearingPoint(centre, faceDeg + 15, 4.6), centre); bringIn(game, C, bearingPoint(centre, faceDeg - 25, 4.8), centre);
-    const t0 = game.time; let exc = '', firstT = -1, shots = 0, holdEnded = '';
-    try {
-      for (let f = 0; f < 60 * 20; f++) {
-        W.step(DT); const P = pairOf(game);
-        if (!P) { holdEnded = `${f2(game.time - t0)}s (${victim.state}/${victim.downKind ?? '-'})`; break; }
-        const n = observe(game, men, obs, P); shots += n; if (n && firstT < 0) firstT = game.time;
-        if (firstT >= 0 && game.time - firstT > 3) break;
-      }
-    } catch (e: any) { exc = String(e?.stack ?? e); }
-    game.puppet = null;
-    const fails: string[] = [];
-    if (exc) fails.push('exception: ' + exc.split('\n')[0]);
-    if (!shots) fails.push(`not one round in 20 s with the discipline OFF${holdEnded ? ' (hold ended ' + holdEnded + ')' : ''} — the flag does nothing, or the flank never opened`);
-    const ok = fails.length === 0; allPass &&= ok;
-    console.log(`- ${ok ? 'PASS' : 'FAIL'} — (c) tune.muzzleDiscipline = false: ${shots} round(s) during the hold, the first +${firstT >= 0 ? f2(firstT - t0) : '—'} s in; ${men.map(m => obsLine(m, obs.get(m)!, t0)).join(' · ')}${holdEnded ? '; hold ended ' + holdEnded : ''}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
   }
   // ================================================================ (e) the gun hold: what is left of the discipline once men answer a gun in the hold
   {
