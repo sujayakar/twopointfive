@@ -38,7 +38,7 @@ import smokeReadSrc from './shaders/smoke_read.wgsl' with { type: 'text' };
  *    720  sharpCfgB  vec4f              (f[180‥183])  sharp direct's knob: w = the same-plane weight's k (xyz free)
  *    736  sharpCfgC  vec4f              (f[184‥187])  DECOUPLED JITTER under sharp direct (settings.sharpDecouple): xy = the jitter the INTERNAL raster carries relative to the (unjittered) OUTPUT raster, internal px — every internal ↔ output texel map adds it; 0 = the two rasters share one jitter (the sharp path as it was); zw spare
  *    752  rigCfg     vec4f              (f[188‥191])  SDF CHARACTER RIG (render/sdfrig.ts, shaders/sdfrig.wgsl): x = bits (64 character SELF-shadow in the direct estimators' shadow rays (common.wgsl selfShadowT) · 128 mesh shadows for NEAR receivers only (common.wgsl meshShadowT, MESH_NEAR_M); the bits under 64 are free — the round-cone proxy test is unconditional), yzw free
- *    768  rigCfgB    vec4f              (f[192‥195])  x = × the per-joint smooth-union radii (0 = plain union), y = closest-hit sphere-trace steps, z = its surface epsilon (m), w = the soft query's smallest march step (m)
+ *    768  rigCfgB    vec4f              (f[192‥195])  free (the smooth-union and soft-query knobs went 2026-11-07)
  *    784  giCfg      vec4f              (f[196‥199])  four FREE words (the young-history gather rays read them until 2026-11-07; no shader reads them now, the writer below still copies what it is given)
  *    800  weatherE   vec4f              (f[200‥203])  PARTICLE RAIN (game/rainFx.ts, EXPERIMENT): the near-field particle layer's disc — centre x, z, radius (m), and the share 0‥1 of the lattice rain it replaces inside it (on a snow level, where there is no lattice rain: 0, or NEGATIVE the metres past the level's rim the snow goes on falling — particles_common.wgsl snowPast) (volumetrics.wgsl rainNearKeep); w 0 = no particle layer: the lattice exactly as it was
  *    816  weatherF   vec4f              (f[204‥207])  PARTICLE RAIN v2: the drop's PHASE the lattice rain shares with the particles (volumetrics.wgsl rainLight) — x = isotropic floor, y = forward-lobe weight, z = its Henyey-Greenstein g, w = × gain; w 0 = the lattice's isotropic sum exactly as it was
@@ -154,10 +154,9 @@ export interface FrameParams {
   sharpCfgB: [number, number, number, number];
   /** DECOUPLED JITTER (settings.sharpDecouple, sharp direct only): [the internal raster's jitter relative to the output raster in internal px x, y, 0, 0] — 0 = one jitter for both (as it was) */
   sharpCfgC: [number, number, number, number];
-  /** SDF CHARACTER RIG (render/sdfrig.ts + shaders/sdfrig.wgsl; engine.ts settings sdfRigSmooth / charSoftShadow …): [bits (2 smooth closest hit in reflections · 4 soft character shadows in the direct
-   *  estimators · 8 analytic soft form · 16 smooth union in the soft query · 32 broad lights too; bit 1 retired; 0 = the plain round-cone loops), soft march steps, × light angular radius, min tan(half-angle)] */
+  /** SDF CHARACTER RIG (render/sdfrig.ts + shaders/sdfrig.wgsl): [bits (64 character self-shadow · 128 mesh shadows near only; the bits under 64 free), free, free, free] */
   rigCfg: [number, number, number, number];
-  /** [× the per-joint smooth-union radii (0 = plain union), closest-hit sphere-trace steps, its epsilon (m), the soft query's min march step (m)] */
+  /** free (the smooth-union and soft-query knobs went 2026-11-07) */
   rigCfgB: [number, number, number, number];
   /** GI-IN-MOTION (fgather.wgsl `main`): [young-history ray multiplier k (≤ 1 = off — the gather byte for byte as it was), the per-frame cap on texels that may take it (count), the history length (frames)
    *  under which a texel is 'young', 0] */
@@ -414,7 +413,7 @@ export function scenePrelude(cut: boolean = cutConfig.on && !cutConfig.swap): st
     ? '@group(0) @binding(13) var<storage, read> meshData: array<vec4u>;   // mesh-shadow trees + skinned corners (render/meshShadows.ts layout; walked by meshShadowT under FLAG_MESH_SHADOWS)\nfn meshLoad(i: u32) -> vec4u { return meshData[i]; }\n'
     : 'fn meshLoad(i: u32) -> vec4u { return vec4u(0u); }   // no mesh-shadow binding on this adapter (frame.ts meshBinding): a zero header = an empty tree, and the engine never raises the flag\n';
   return wgslWorldConsts() + weatherVolWgsl() + groundRayWgsl() + roundRayWgsl(cut) + `const REACH_VEC4S: u32 = ${REACH_VEC4S}u;   // lightReach uniform: MAX_LIGHTS × REACH_ROW_WORDS u32 as vec4u (render/lights.ts)\nconst MESH_MAX_CHARS: u32 = ${MESH_MAX_CHARS}u;   // characters with a mesh-shadow tree (render/meshbvh.ts)\n` + commonText + '\n' + decl + mesh
-    + sdfRigWgslConsts() + sdfRigSrc + '\n';   // the SDF character rig (render/sdfrig.ts's per-slot table as consts + the generated charSdf fold, then shaders/sdfrig.wgsl): the round-cone primitive common.wgsl's proxy loops call, plus the smooth-union / soft-query extras — compiled only into the modules that name them, and not taken while frame.rigCfg.x is 0
+    + sdfRigWgslConsts() + sdfRigSrc + '\n';   // the SDF character rig (render/sdfrig.ts's quantum as a const, then shaders/sdfrig.wgsl): the round-cone primitive common.wgsl's proxy loops call
 }
 
 export function createSceneLayout(device: GPUDevice): GPUBindGroupLayout {

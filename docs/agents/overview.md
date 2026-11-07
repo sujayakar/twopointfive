@@ -118,7 +118,7 @@ src/host/savefile.ts  THE ONE DOOR A FILE LEAVES THE PAGE BY (2026-10-27): `save
 src/render/          passes.ts (pass graph + target lifecycles), frame.ts (uniforms/flags — THE flag table + Frame byte table + the scene prelude incl. TRACE_VARIANT), lights.ts (+ identity
                      maps for the reservoirs), rc.ts (cascades), probe.ts (the light meter / smoke probe queries), gbuffer.ts, texpool.ts (pooled targets + history resampling),
                      denoise.ts (the shared denoiser's pipelines), froxels.ts, particles.ts (GPU pool + impulses + wind records), decals.ts, reach.ts (per-light reach masks), wear.ts (traffic
-                     map), meshbvh.ts + meshShadows.ts (mesh-traced character shadows at ultra), sdfrig.ts (round-cone proxy fit) + rigDebug.ts
+                     map), meshbvh.ts + meshShadows.ts (mesh-traced character shadows at ultra), sdfrig.ts (round-cone proxy fit)
 src/render/shaders/  common.wgsl (structs, flags, box/grid traversal, glassTrace, round-cone character terms) + sdfrig.wgsl; direct: restir.wgsl (THE estimator + the hybrid held-light path)
                      over direct_common.wgsl (direct.wgsl, the leader/tail estimator, went 2026-11-07); sharp_direct / sharp_edge / gdown / gbaa (output-res direct + edge AA); refract_common.wgsl (pure refraction helpers: glass + rain); denoise.wgsl (one core, three
                      clients) + softtile (the old chains dtemporal / softblur / temporal / giblur went 2026-11-07); fgather.wgsl + gather_split.wgsl (the final gather's helpers and its two programs; gatherStrata variant) over gather_split_common

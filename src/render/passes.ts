@@ -882,7 +882,7 @@ export class LightingPasses implements CutSwappable {
   setGbaa(on: boolean) { if (on !== this.gbaaOn) { this.gbaaOn = on; this.compStale = true; } }
   /** PARTICLE RAIN v2's scene copy on / off (engine.render mirrors settings.particleRain before resize): a switch re-makes the composite-size set so hdrCopy exists (or goes) and hdr may be copied from */
   setSceneCopy(on: boolean) { if (on !== this.sceneCopyOn) { this.sceneCopyOn = on; this.compStale = true; } }
-  /** bytes the sharp path holds in the passes: the output-size direct pair + the edge mask + what hdr / react grew by (the output-size g-buffer set is render/gbuffer.ts sharpBytes) */
+  /** bytes the sharp path holds in the passes: the output-size direct pair + what hdr / react grew by (the output-size g-buffer set is render/gbuffer.ts sharpBytes) */
   get sharpBytes(): number { if (!this.sharpOn) return 0; let n = 0; for (const t of this.sharpE) n += t.width * t.height * 8; n += (this.cw * this.ch - this.width * this.height) * (8 + 1); return n; }
   /** the next resolve takes this frame's picture outright, no history (engine.resetTaa words why) */
   resetTaa() { this.taaReset = true; this.taaStats.resets++; this.restirBeliefsStale = true; }   // (a cut: the ReSTIR tiles' light beliefs describe some other piece of the world — dropped at the next dispatch; the reservoirs validate themselves per pixel)
@@ -911,7 +911,6 @@ export class LightingPasses implements CutSwappable {
     { const rw = Math.ceil(w / this.rtDiv), rh = Math.ceil(h / this.rtDiv); if (!this.keepHistories || !had || rw !== this.rw || rh !== this.rh) this.reallocRefl(R, rw, rh, carry); }   // the reflection targets, on their own grid
     if (outChanged || !this.keepHistories || !had) this.reallocOut(R, ow, oh, carry);
     if (compChanged || !this.keepHistories || !had) this.reallocComp(R, cw, ch);   // (with sharp off the composite size IS the internal size, so an internal resize re-makes hdr / react exactly as before; with it on a render-scale step leaves the output-size set alone)
-    if (compChanged || inChanged || !this.keepHistories || !had) this.reallocMask(R);   // the edge mask is INTERNAL-size: it follows both
     this.finishRealloc(R, `${sizeChanged ? 'resize' : compChanged && !outChanged ? `comp set (sharp ${this.sharpOn ? 'on' : 'off'}, gbaa ${this.gbaaOn ? 'on' : 'off'})` : 'taau ' + (this.taauOn ? 'on' : 'off')} ${from}→${w}×${h}${ow !== w || oh !== h ? `→${ow}×${oh}` : ''}${this.sharpOn ? ' sharp' : ''}`, t0);
     this.dropBindGroups();
     this.writeFxaaParams();
@@ -969,10 +968,6 @@ export class LightingPasses implements CutSwappable {
     this.sharpE = []; this.sharpEView = [];
     if (this.sharpOn) { this.sharpE = [0, 1].map(c => this.take(R, `sharpE${c}`, cw, ch, 'rgba16float', SU())); this.sharpEView = this.sharpE.map(t => t.createView()); }
     this.bgSharpU = null; this.bgCompS = null; this.bgTaauS = [null, null];
-  }
-  /** the hard-edge mask at the INTERNAL size (sharp only) */
-  private reallocMask(R: Realloc) {
-    this.bgSharpU = null;
   }
   /** the OUTPUT-size set: the tonemapped frame (ldr), the bloom pyramid (fractions of the output), and — TAAU on — the resolve's history pair, carried across a change of output size like the
    *  other histories (a preset's cap, the window) so a hop between presets does not flash; a pair made fresh (TAAU just switched on, keepHistories off) starts reset instead */
@@ -1277,7 +1272,7 @@ export class LightingPasses implements CutSwappable {
       const p = enc.beginComputePass({ label: 'gather', timestampWrites: ts('gather') });
       p.setBindGroup(0, sceneBG);
       if ((frameFlags & FrameFlags.BounceCards) && this.numCards > 0) { p.setPipeline(this.pCards); p.setBindGroup(1, this.bgCards); p.dispatchWorkgroups(this.numCards); }   // torch bounce cards: one workgroup per nominated light rebuilds its footprint card (cards.wgsl) — inside this pass, so its cost is timed with the gather it serves
-      { const bg = this.ensureSplitBG(g, rc); if (bg) { p.setPipeline(this.pFGX!); p.setBindGroup(1, bg); p.dispatchWorkgroups(hx, hy); } }   // the rays, the points they want lit into gxBuf — the light is the next pass's · (the plain pattern's `trace` is a LATER twin: the stratified one meanwhile)
+      { const bg = this.ensureSplitBG(g, rc); if (bg) { p.setPipeline(this.pFGX!); p.setBindGroup(1, bg); p.dispatchWorkgroups(hx, hy); } }   // the rays, the points they want lit into gxBuf — the light is the next pass's
       p.end();
     }
     if (this.bgFGX) {   // the light at every point `trace` wrote, and the gather's two stores — a pass of its own, so the timer prices the two halves apart

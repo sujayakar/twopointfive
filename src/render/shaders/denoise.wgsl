@@ -585,7 +585,7 @@ var<workgroup> wgFill: vec4f;   // per-pixel specular: a texel of this tile that
  *  `sc` = the apron cell its 5×5 statistics are centred on (its own slot); `hf` = the reprojected fast history is fetched here only when haveFastTex (every entry point but the stand-in specular binds it) */
 fn radTemporalCore(gid: vec3u, haveFastTex: bool, cur4: vec4f, sc: vec2i) -> RadOut {
   var o: RadOut;
-  let od = vec2i(textureDimensions(rtHist));   // (the HISTORY's grid: = rtCur's for the gather-grid clients; the internal size for the internal-res diffuse client, whose rtCur is the raw gather it takes its statistics from)
+  let od = vec2i(textureDimensions(rtHist));   // (the HISTORY's grid: = rtCur's)
   let g = vec2i(gid.xy);
   var cur = cur4.xyz;
   let full = fullPx(g);
