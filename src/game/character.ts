@@ -1833,8 +1833,7 @@ export class CharacterAnimator {
     this.clips = {};
     for (const k of need) { const c = ch.clips.get(k); if (!c) throw new Error('missing clip ' + k); this.clips[k] = c; }
     { const j = ch.clips.get('Punch_Jab'); if (j) this.clips.Punch_Jab = j; }   // (optional: strike('jab') plays the cross on a library without it)
-    this.nodes = {} as Record<keyof typeof N, number>;
-    for (const [k, name] of Object.entries(N)) { const i = ch.nodeByName.get(name); if (i === undefined) throw new Error('missing node ' + name); (this.nodes as Record<string, number>)[k] = i; }
+    this.nodes = {} as Record<keyof typeof N, number>; this.nodeTable();
     const node = (name: string) => { const i = ch.nodeByName.get(name); if (i === undefined) throw new Error('missing node ' + name); return i; };
     this.fingers = ['L', 'R'].map(s => ['f_index', 'f_middle', 'f_ring', 'f_pinky'].map(f => [1, 2, 3].map(j => node(`DEF-${f}.0${j}.${s}`))));
     this.thumbs = ['L', 'R'].map(s => [1, 2, 3].map(j => node(`DEF-thumb.0${j}.${s}`)));
@@ -1884,9 +1883,7 @@ export class CharacterAnimator {
         }
       } }
     layerTablesFit(); layerClipsFit(ch.clips.values(), this.pA.numNodes);
-    // (what a layer of the Rust module is handed with the rig — skeleton.ts layerSlot: the named nodes, the lists of nodes, and the tables of numbers worked out above)
-    this.cast = { nodes: this.nodes, lists: { fkLegs: this.fkLegs, fkArms: this.fkArms, fkHead: this.fkHead, digitsL: this.hn.nodes[0], digitsR: this.hn.nodes[1] }, poses: this.poses,
-      nums: { jogSeam: this.jogSeam.flatMap(e => e.d ? [e.node, 0, e.d[0], e.d[1], e.d[2], 0] : [e.node, 1, e.axis![0], e.axis![1], e.axis![2], e.ang!]) } };
+    this.picture();
     { // the run clip's pelvis height round its cycle (64 samples, model up) and its mean: the clip bounds 23 cm crest to trough — twice a jog's — so the
       // locomotion blend flattens the run's share of the bob toward its mean (BOB_KEEP of it kept), read off this table by phase. The same pass finds where its
       // ankles' fore-aft travel is centred (the stride warp scales about it) and each foot's stance — the toe within 2 cm of its lowest and sweeping back —
@@ -1914,6 +1911,21 @@ export class CharacterAnimator {
       this.runGait.sprint = this.stanceOf(ty, tz) ?? this.runGait.sprint; }
     } finally { POSEMATH.singles = poseRule; }
     this.phase = simRandom();
+  }
+  /** every named node of the rig this animator has no number for yet (the rig says each; a table that came over the bridge with one missing is made whole) */
+  private nodeTable(): void { const ch = this.ch, T = this.nodes as Record<string, number>;
+    for (const [k, name] of Object.entries(N)) { if (T[k] !== undefined) continue; const i = ch.nodeByName.get(name); if (i === undefined) throw new Error('missing node ' + name); T[k] = i; } }
+  /** THE PICTURE'S HALF of an animator: what it holds that is no part of the game's state and follows from the rig and from its own carried tables. The
+   *  node table made whole; the memo of the reload's beat; the placement the host hands in each frame; and what a layer of the Rust module is handed
+   *  with the rig (skeleton.ts layerSlot: the named nodes, the lists of nodes, the tables of numbers the constructor worked out), a record over THIS
+   *  animator's own node table, lists and poses. It draws no die and writes no state field: the phase's draw and `desync` are the game's half and stay
+   *  the constructor's. The constructor calls it where it used to lay the cast (the tables after it are sampled through a layer); so does the page for an animator the game made at run time (src/host/rustgame.ts). */
+  picture(): this {
+    this.nodeTable(); this.fk.picture();
+    if (this.rlSrc === undefined) this.rlSrc = null; this.posIn ??= [0, 0, 0];   // (two fields a constructed animator has from its own initial values: the reload beat's memo, the placement the host hands in each frame)
+    this.cast = { nodes: this.nodes, lists: { fkLegs: this.fkLegs, fkArms: this.fkArms, fkHead: this.fkHead, digitsL: this.hn.nodes[0], digitsR: this.hn.nodes[1] }, poses: this.poses,
+      nums: { jogSeam: this.jogSeam.flatMap(e => e.d ? [e.node, 0, e.d[0], e.d[1], e.d[2], 0] : [e.node, 1, e.axis![0], e.axis![1], e.axis![2], e.ang!]) } };
+    return this;
   }
   /** desynchronise the idle / life clocks per figure, deterministically (Character passes its id): a room of guards must not breathe and fidget in step,
    *  and two boots with the same ids must pose identically (the pixel-A/B capture recipe) */
