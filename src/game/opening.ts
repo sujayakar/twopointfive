@@ -12,7 +12,7 @@
 // attract.ts stop: so the card's still view already has him there). Game.update also calls it once a frame, the net under those: a man is FRESH for
 // FRESH_SECS after this module first met his Guard object, show or no show, so an encounter handed over live a frame later (director.ts c.handover — touring
 // stays up, `handedOver` says it is the player's) is still placed, and a man met long ago is never moved however he happens to stand.
-// NOT covered: the old tour's own hand-over (demo.ts — unreachable from the page), and a spot inside a prop or a shut leaf (the nav grid is the statics').
+// NOT covered: a spot inside a prop or a shut leaf (the nav grid is the statics').
 // QA: tools/qa/opening-check.ts.
 import { SideMap, SideSet } from '../math/side';
 import type { Game, Guard } from './game';
