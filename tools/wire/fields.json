@@ -1899,12 +1899,10 @@
 "director::CondResult.event",
 "director::CondResult.index",
 "director::Director.armed",
-"director::Director.cam",
 "director::Director.due_clicks",
 "director::Director.due_keys",
 "director::Director.exiting",
 "director::Director.frame",
-"director::Director.input",
 "director::Director.last_run",
 "director::Director.log",
 "director::Director.manifest",
@@ -7593,7 +7591,9 @@
 "thinline::Thin.e",
 "irlaser::IrlaserMod.ir_made",
 "game::Mods.thinline",
-"game::Mods.irlaser"
+"game::Mods.irlaser",
+"game::Game.host_cam",
+"game::Game.host_input"
 ],
 "everyTickNotCarried": [
 {
@@ -10150,12 +10150,10 @@
 "director::CondResult.event",
 "director::CondResult.index",
 "director::Director.armed",
-"director::Director.cam",
 "director::Director.due_clicks",
 "director::Director.due_keys",
 "director::Director.exiting",
 "director::Director.frame",
-"director::Director.input",
 "director::Director.last_run",
 "director::Director.log",
 "director::Director.manifest",
@@ -12843,6 +12841,8 @@
 "thinline::Thin.e",
 "irlaser::IrlaserMod.ir_made",
 "game::Mods.thinline",
-"game::Mods.irlaser"
+"game::Mods.irlaser",
+"game::Game.host_cam",
+"game::Game.host_input"
 ]
 }
