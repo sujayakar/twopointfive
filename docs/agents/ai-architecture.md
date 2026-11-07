@@ -58,7 +58,7 @@ a task; a ranked list of taskers with incumbency decides who may take him from w
 every rule that wants his body this tick proposes, and one arbiter grants his legs, his aim and his hands, by
 one ordered list. The two lists together replace the six answers of section 1.3.
 
-**Adding a behaviour is one module and one line** (section 7).
+**Adding a reaction or an order is one file and one line** (section 7); a behaviour of a man's own is not yet.
 
 **Groups are the same thing on both sides** (section 6): a squad is members, a lead, a commander (a seat or an
 AI) and an order book.
@@ -259,9 +259,56 @@ they share with the player's team from the start is `Assignment`, the limits and
   (local prediction). The arbiter is not the only door to a body: ACT takes `&World` and one `&mut Body`.
 - A rule of the world that says "the player is close, seen, down" means any player's man or each, never the first.
 
-## 7. Adding a behaviour: one module, one line
+## 7. Add a reaction, an order, a behaviour
 
-This is built (`rust/game/src/control/`), for the two seams the code has today. A rule is one file and one line.
+**A reaction**: something happens to an enemy and it takes him for a while (a grenade lands by him, a blast shakes
+him, rounds pass close). One file and one line.
+
+1. `rust/game/src/control/<name>.rs`, five things and nothing else (`control/duck.rs`, 41 lines, is one to copy):
+   `pub struct Row` what it keeps of one man (`pub type Row = ();` if nothing) · `transition(g, man, dt)` move
+   its own state · `propose(&Game, man) -> Option<Intent>` what it asks of him this tick, reading only ·
+   `commit(g, man, Outcome)` what his body made of it · `lost(g, man)` a higher rule took him.
+2. One line in `rules!` of `control/mod.rs`: `<name>: "the words that name it", Body;` or `Cover;`. Its place
+   in the list is its rank. `Body` rules are asked before he senses and hand him a script; `Cover` rules are
+   asked in his fight and hand him `TakeCover` (down where he is, or off to a spot).
+3. A test that is a fight: a file in `rust/game_start/tests/` that stands a few rooms and men, makes the thing
+   happen, and asserts the rule had him (`game::control::control_line`). `cargo test --release` there; no page.
+
+Worked example, held back until the dice are keyed: `control/reload_in_cover.rs` (a defender who runs dry kneels or
+goes to cover to change magazine), the line `reload_in_cover: "changing magazine in cover", Cover;`, and the test
+`a_guard_who_runs_dry_in_the_open_kneels_to_change_magazine` in `tests/control.rs`.
+
+**An order**: a row of the squad's menu. One file and one line.
+
+1. `rust/game/src/orders/rows/<name>.rs` with `pub const ORDER: Row = Row { id, label, can, only, valid, issue,
+   tick, frame }`: its id on the menu and the functions the menu and the tick call (`orders/rows/mod.rs` says
+   what each is for). `frame` runs once a frame and is where the order puts its row on the menu
+   (`rows::def(&ORDER, …)` then `squad_orders_register`) or takes it off.
+2. One line in `rows!` of `orders/rows/mod.rs`: `<name>;`.
+3. A test that is a fight, the same way, giving the order by the menu's own call (`Play::order`).
+
+Worked example, in the build: `orders/rows/shell40.rs` (41 lines: "put a 40 mm shell there"), the line
+`shell40;`, and the two tests of `tests/orders.rs`.
+
+**That nothing else moved**: before the change, `cd rust/game_start && cargo run --release --bin hold -- keep
+/tmp/held`; after it, `… -- check /tmp/held`. 72 native runs, every part of the game hashed every frame; it names
+the first frame and the parts that differ. A new reaction or order is meant to change play where it acts, so read
+it this way: every run in which it never acted must still be the same (each run's line says how long each rule
+had a man), and what it does where it acts is for the mission tallies to judge.
+
+**What is NOT one file and one line today**, plainly. *A behaviour of a man's own* (how he patrols, searches,
+fights when nothing has taken him) is still a function of the guard's update in `guards/p_07.rs`, and the room
+fight's defenders and operatives are still their own module: neither is in a list. A reaction can take a man
+whole, not his legs alone while he goes on shooting. A reaction's file is longer than its idea, because it must
+ask for itself whether a man is on a post, kept to his rooms or somebody's (a third of the worked example).
+A reaction that draws from the die re-deals the rest of the mission until the keyed draws land. An order that
+shows a line in the squad's HUD block still needs an arm of `OrderNoteFn`, which the page reads over the wire,
+and an order that keeps state of its own still needs a field on the game. About thirty older orders are still
+arms of six enums. The rest of this section is the detail of each of these.
+
+### The pieces in detail
+
+The list of reactions as it stands (`rust/game/src/control/`), with the held worked example's line last:
 
 ```rust
 // control/mod.rs: THE LIST. The order of the lines is the rank.
@@ -271,7 +318,7 @@ rules! {
     morale: "shaken by a blast", Body;
     startle: "startled", Body;
     duck: "head down under fire", Cover;
-    reload_in_cover: "changing magazine in cover", Cover;
+    reload_in_cover: "changing magazine in cover", Cover;   // held: lands after the keyed draws
 }
 
 // control/reload_in_cover.rs: the whole rule
@@ -361,10 +408,6 @@ TypeScript). The pilot's test: a guard who runs dry in the open kneels to change
 - No-change proofs are native now (`rust/game_start`, `hold keep` / `hold check`: 24 levels by three scripted
   hands, every part of the game hashed every frame), but the hands reach three things: a pushed fight, cans
   among the enemy, a floor at rest. No hand gives a door order or walks Sam.
-
-An order, the same way: one module exposes `can`, `valid`, `issue`, `tick` and a data row, and one line
-registers it. The eight enums of `orders/types.rs` stay for the orders not yet moved; the pilot (the 40 mm
-shell, `squad40`, called from 3 modules) shows the other path. It waits for the types to be hand-owned.
 
 **The bar:** someone who did not do this work adds one enemy reaction and one order by touching one module and
 one line each, with a native test.
