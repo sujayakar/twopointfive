@@ -114,11 +114,6 @@ pub fn slot_setup_shut(g: &mut crate::game::Game) -> bool {
     true
 }
 
-/// the presses that put the next load on the launcher, in words (slotsetup.ts loadKeys)
-pub fn load_keys(g: &crate::game::Game) -> String {
-    String::from("press 2, then 2")
-}
-
 /// presses of the launcher's own step from the load that is up to the next one he has any of; 0: none but the one up (slotsetup.ts loadSteps)
 pub fn load_steps(g: &crate::game::Game, pl: PlayerId) -> f64 {
     let rf = g.pl[pl].rifle;
