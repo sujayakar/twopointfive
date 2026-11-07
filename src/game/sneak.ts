@@ -52,7 +52,7 @@ import type { Game, Guard } from './game';
 import { squadSilent, silentCompromised } from './silent';
 import { pairUp, keptOn, PAIRUP } from './pairup';
 import { SPOTTED, spottedMode } from './spotted';
-import './guards';
+import { lightEstimateAt } from './guards';
 import './teams';
 import './doze';
 import './workthings';
@@ -181,6 +181,7 @@ interface Man {
 const leafT = new SideMap<object, { a: number; t: number }>('sneak.leafT');
 interface State { trail: Crumb[]; off: number; t: number; men: WeakMap<Guard, Man>; list: Man[]; live: boolean; /** Sam's meter over the estimate, eased up slowly (a flash is not the light of a place) */ amb: number }
 const states = new SideMap<Game, State>('sneak.states');
+const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 
 /** the sneak is live for the squad this frame: the switch, the silent order standing and unbroken, Sam on his feet, and no defender hunting (one read a frame) */
 const liveAt = new SideMap<Game, { t: number; v: boolean }>('sneak.liveAt');
@@ -209,6 +210,7 @@ export function sneakWord(g: Game, gd: Guard): string | null { { const __s = RUS
   return M.mode === 'wait' ? (M.why === 'door' ? 'clear of the door' : M.why === 'lit' || M.why === 'near' ? 'waiting on eyes' : 'waiting on the light') : M.mode === 'cross' ? 'crossing' : M.mode === 'back' ? 'backing off' : null;
 }
 
+const cpuLit = (g: Game, a: Vec3, b: Vec3, own?: (o: number) => boolean, steady = true) => g.visibilityOf(Math.max(lightEstimateAt(g, a, own, steady), lightEstimateAt(g, b, own, steady)));
 
 
 // ------------------------------------------------------------ the same eye, for a man who is NOT following (pairup.ts 'oneEye': pairorders.ts's stalk)
@@ -228,6 +230,22 @@ export interface SneakWalk {
  *  the way he MOSTLY looks, a second time looking that way — the worse of the two counts, never both). */
 export function sneakWalk(g: Game, gd: Guard, low: boolean, habit?: (h: Guard) => [number, number] | null): SneakWalk { return goneWithTick('sneakWalk') as any; }
 
+// ------------------------------------------------------------ the follower's seam (orders.ts tick)
+/** Sam's trail, a crumb every 0.4 m (once a frame, whoever asks first) */
+function track(g: Game, S: State) {
+  if (S.t === g.time) return; const dt = g.time - S.t; S.t = g.time;
+  const c = g.player.char, p = c.pos, T = S.trail, last = T[T.length - 1];
+  if (dt < 0 || dt > 1 || (last && flat(last.p, p) > 3)) { S.off += T.length; T.length = 0; S.amb = 0; }   // (a load, a gap in the asking — nobody was sneaking —, a teleport: the old trail leads nowhere he walked)
+  let cpu = 0;
+  if (SNEAK.ambient) { cpu = cpuLit(g, c.bones.chest ?? [p[0], 1.2, p[2]], c.bones.head ?? [p[0], 1.6, p[2]], o => o === c.id, false);
+    S.amb = Math.min(Math.max(0, g.player.visibility - cpu - 0.05), S.amb + 0.5 * Math.max(0, Math.min(dt, 0.1))); }   // (down at once, up at half a meter a second: a lightning stroke, a flicker, the meter's own lag are not the light of a place)
+  else S.amb = 0;
+  if (!T.length || flat(T[T.length - 1].p, p) >= 0.4) T.push({ p: [p[0], 0, p[2]], t: -1e9, lit: 0, low: true, amb: S.amb, cpu0: cpu });
+  // kept `trailM` long — but never cut from under a man who is on it (a waiting man's crumb is his place: he waits as long as it takes), short of four times that
+  const max = Math.ceil(SNEAK.trailM / 0.4);
+  if (T.length > max) { let keep = T.length; S.list = S.list.filter(M => g.time - M.t < 5 && g.time >= M.t); for (const M of S.list) keep = Math.min(keep, M.i - S.off - 2);
+    const cut = Math.max(T.length - 4 * max, Math.min(T.length - max, keep)); if (cut > 0) { T.splice(0, cut); S.off += cut; } }
+}
 
 export function sneakSummary(g: Game): string { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('sneakSummary', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } }
   if (!SNEAK.on) return 'off';

@@ -9,6 +9,9 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 // ---- private helpers
 
+/// The four-man squad's budget of characters: the seats' men, the four and the layout's five defenders (nightbreach.ts SQUAD4_BUDGET: ten in a game of one).
+pub(crate) fn squad4_budget(g: &crate::game::Game) -> f64 { SQUAD4_BUDGET - 1.0 + crate::seats::seat_count(g) }
+
 /// `T !== applied`, an identity of the level's own rows (a structure's team start, one of its other ways in, the night breach's own): here the row
 /// whole, by value. Another start with the same place for Sam is ANOTHER start in the TypeScript and writes the knobs again (a knob moved by hand
 /// since is put back), so every field is asked, not only the two the write copies. Two rows of one level alike in every field would still read as
@@ -88,7 +91,7 @@ fn stage_checked(g: &mut Game) -> Result<(), String> {
     let n = g.k.nightbreach.squad;
     let four = n > 2.0;
     let layout_budget = if layout.is_some() { crate::roomclear::room_clear_scenario_budget(g) } else { None };
-    let budget = if four { Some(m::max(SQUAD4_BUDGET, layout_budget.unwrap_or(0.0))) } else { layout_budget };
+    let budget = if four { Some(m::max(squad4_budget(g), layout_budget.unwrap_or(0.0))) } else { layout_budget };
     let yaw = team.as_ref().and_then(|s| s.ops_yaw).unwrap_or(m::PI / 2.0);
     if !four {
         for i in 0..core::cmp::min(2, n as usize) {
@@ -147,6 +150,10 @@ fn stage_checked(g: &mut Game) -> Result<(), String> {
             .map(|h| NightBreachMark { pos: h.pos, aim_at: h.aim_at, name: None, drill: None })
             .collect()
     };
+    // (THE FLOOR HOLDS SIXTEEN WITH EVERY SEAT COUNTED: the team stands first, then as many defenders, in the order of their marks, as that
+    //  leaves room for. A game of one has room for every garrison a level may hold, so it stands as ever; a game of two on a full floor
+    //  stands one defender fewer, where it stood seventeen and the picture held sixteen.)
+    let marks: Vec<NightBreachMark> = { let room = crate::seats::floor_room(g); marks.into_iter().take(m::max(0.0, room) as usize).collect() };
     g.night_breach.marks = marks.clone();
     for (i, h) in marks.iter().enumerate() {
         let name = match &h.name { Some(s) => s.clone(), None => format!("Tango {}", i + 1) };
@@ -161,8 +168,8 @@ fn stage_checked(g: &mut Game) -> Result<(), String> {
         };
         let man = crate::guards::spawn_unit(g, &opts)?;
         g.night_breach.hostiles.push(man);
-        g.gd[man].hold = true;
-        g.gd[man].pinned = true;
+        crate::control::set_hold(g, man, true, "nightbreach");
+        crate::control::set_pinned(g, man, true, "nightbreach");
     }
     let live = staged_live();
     g.night_breach.bang_taken = false;
@@ -202,8 +209,8 @@ fn stage_checked(g: &mut Game) -> Result<(), String> {
     for gd in standing {
         g.gd[gd].state = crate::game::GuardState::Patrol;
         g.gd[gd].awareness = 0.0;
-        g.gd[gd].hold = false;
-        g.gd[gd].pinned = false;
+        crate::control::set_hold(g, gd, false, "nightbreach");
+        crate::control::set_pinned(g, gd, false, "nightbreach");
         let c = g.gd[gd].ch;
         let patch = crate::squad::OrderPatch {
             goal: Some(None),
@@ -613,8 +620,8 @@ pub fn night_breach_tick(g: &mut crate::game::Game, dt: f64, input: InputId, cam
                 let was = script_state(g.gd[h].state);
                 crate::squad::end_guard_script(g, h, was);
             }
-            g.gd[h].hold = true;
-            g.gd[h].pinned = true;
+            crate::control::set_hold(g, h, true, "nightbreach");
+            crate::control::set_pinned(g, h, true, "nightbreach");
             let Some(aim) = g.night_breach.marks.get(i).map(|m| m.aim_at) else { continue };
             if g.gd[h].state == crate::game::GuardState::Patrol && g.gd[h].awareness < 0.3 && g.gd[h].held.is_none() {
                 let c = g.gd[h].ch;
@@ -652,8 +659,8 @@ pub fn night_breach_tick(g: &mut crate::game::Game, dt: f64, input: InputId, cam
             for o in night_breach_drill_ops(g) {
                 if g.gd[o].state != crate::game::GuardState::Dead && g.gd[o].script.is_some() && !in_his_book(g, o) {
                     crate::squad::end_guard_script(g, o, Some(crate::squad::EndGuardScriptState::Search));
-                    g.gd[o].hold = true;
-                    g.gd[o].pinned = true;
+                    crate::control::set_hold(g, o, true, "nightbreach");
+                    crate::control::set_pinned(g, o, true, "nightbreach");
                 }
             }
             let many = g.night_breach.ops.len() > 2;

@@ -87,7 +87,6 @@ pub fn debris_spawn(g: &mut crate::game::Game, kind: crate::debris::ChunkKind, b
     if kind == ChunkKind::Shard {
         if let Some(r) = crate::shards::glass_shards_take(g, box_, v, w, who) { return Some(r); }
     }
-    if !g.k.debris.dress { return debris_spawn_raw(g, kind, box_, v, w, Some(who), None); }
     if let Some(f) = g.destr.debris.fling { v = v3::add(v, f); }
     debris_thrown(g, kind, box_, v, level, who);
     debris_spawn_raw(g, kind, box_, v, w, Some(who), Some(true))
@@ -128,8 +127,7 @@ pub fn debris_landings(g: &mut crate::game::Game) {
 pub fn debris_spawn_raw(g: &mut crate::game::Game, kind: crate::debris::ChunkKind, box_: BoxId, v: V3, w: V3, who: Option<f64>, told: Option<bool>) -> Option<DebrisChunkId> {
     let who = who.unwrap_or(crate::consts::NOBODY_ID);
     let told = told.unwrap_or(false);
-    let dress = g.k.debris.dress && (told || kind != ChunkKind::Shard || g.k.shards.by_fall);
-    if dress && !g.m.dress.dress.debris { g.destr.debris.stats.refused += 1.0; return None; }
+    if !g.m.dress.dress.debris { g.destr.debris.stats.refused += 1.0; return None; }
     while (g.destr.debris.list.len() as f64) >= debris_cap(g) {
         let list = g.destr.debris.list.clone();
         let mut ok = |g: &mut Game, c: DebrisChunkId| evictable(g, c);
@@ -165,7 +163,7 @@ pub fn debris_spawn_raw(g: &mut crate::game::Game, kind: crate::debris::ChunkKin
     let id = g.tab.debris_chunk.push(Chunk {
         kind, box_: b, v: v3::copy(v), w: v3::copy(w), rest: false, still_t: 0.0, age: 0.0, sounded: false,
         level: l.level, sfx: sfx_of(&l), serial, who, on: None, on_pose: 0.0,
-        dress: if dress { Some(true) } else { None },
+        dress: Some(true),
         ..Chunk::zeroed()
     });
     g.destr.debris.list.push(id);
@@ -176,9 +174,7 @@ pub fn debris_spawn_raw(g: &mut crate::game::Game, kind: crate::debris::ChunkKin
 
 /// Back to an empty pool; `serial` runs on.   (debris.ts Debris.clear)
 pub fn debris_clear(g: &mut crate::game::Game) {
-    if g.k.debris.dress || js::truthy(crate::sim_fallshome::fall_store_waiting_in(g, crate::sim_fallshome::FALL_PIECES)) {
-        crate::sim_fallshome::fall_store_clear(g, Some(false), Some(crate::sim_fallshome::FALL_PIECES));
-    }
+    crate::sim_fallshome::fall_store_clear(g, Some(false), Some(crate::sim_fallshome::FALL_PIECES));
     let d = &mut g.destr.debris;
     d.fling = None;
     d.list.clear();

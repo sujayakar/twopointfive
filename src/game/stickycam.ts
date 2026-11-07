@@ -23,7 +23,7 @@ import { Vec3, v3 } from '../math/vec';
 import { Box } from '../scene/boxes';
 import type { Game, Interactable, Player, Verb } from './game';
 import type { FogEye } from './fogofwar';
-import './fogofwar';   // (read inside functions only)
+import { FOG, fieldDeg } from './fogofwar';   // (read inside functions only)
 import './combat';
 import './civilians';
 import './player';   // (read inside functions only)
@@ -91,6 +91,7 @@ export function fireCam(g: Game, pl: Player, from: Vec3, target: Vec3): StickyCa
 
 
 
+const flat = (c: StickyCam) => Math.abs(c.n[1]) > STICKY.flatY;
 /** where a stuck camera's lens stands */
 export function camLens(c: StickyCam): Vec3 { return v3.mad(c.pos, c.n, STICKY.off); }
 
@@ -104,7 +105,16 @@ export function stickyLive(pl: { cams: StickyCam[] }): StickyCam[] {
 /** The fog's eyes a player's LIVE stuck cameras are, newest first (fogofwar.ts update appends as many as its frame still has room for): on a wall a wedge of
  *  STICKY.fovDeg about the wall's normal (under the fog's cone the cone's own width, as the optical wand's lens is: the picture has one soft edge for every
  *  wedge), lying flat all round; no near field. Empty with the switch off or nothing out. */
-export function stickyEyes(g: Game): FogEye[] { return goneWithTick('stickyEyes') as any; }
+export function stickyEyes(g: Game): FogEye[] {
+  if (!STICKY.on) return NONE;
+  const cams = g.player.cams; if (!cams.length) return NONE;
+  const out: FogEye[] = [], wide = FOG.cone ? Math.min(STICKY.fovDeg, fieldDeg()) : STICKY.fovDeg;
+  for (const c of stickyLive(g.player)) {
+    const p = camLens(c), all = flat(c);
+    out.push({ id: EYE_ID + (c.id % 50), pos: p, look: all ? [1, 0, 0] : v3.normalize([c.n[0], 0, c.n[2]]), at: p, fov: all ? 360 : wide, near: 0 });
+  }
+  return out;
+}
 const NONE: FogEye[] = [], NONE_CAMS: StickyCam[] = [];
 
 // ---------------------------------------------------------------- taking one back (STICKY.take)

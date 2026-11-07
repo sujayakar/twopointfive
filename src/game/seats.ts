@@ -109,6 +109,12 @@ export const seatManId = (i: number): number => i === 0 ? PLAYER_ID : NOBODY_ID 
 /** is `id` a player's man's (whoever's, whether or not that seat is in this game) */
 export const isManId = (id: number): boolean => id === PLAYER_ID || (id > NOBODY_ID && id < NOBODY_ID + SEATS.max);
 /** every seat's man, in seat order */
+/** HOW MANY PLAYERS' MEN STAND ON THE FLOOR: one a seat. Every budget of characters counts this, never "1": a floor holds at most MAX_SKINNED
+ *  (16, guards.ts) characters with every seat counted — the seats' men, every teammate, every other man stood (rust/game/src/seats/b_01.rs seat_count) */
+export const seatCount = (g: Pick<Game, 'seats'>): number => g.seats.length;
+/** how many more men the floor can be given as it stands (`most` = guards.ts MAX_SKINNED): a staging stands its team first and then as many of its
+ *  defenders, in the order of their marks, as this leaves — a game of one: all of them (rust/game/src/seats/b_01.rs floor_room) */
+export const floorRoom = (g: Pick<Game, 'seats' | 'guards'>, most: number): number => most - g.seats.length - g.guards.length;
 export function men(g: Pick<Game, 'seats' | 'player'>): Player[] { const S = g.seats; if (S.length === 1) return [g.player]; const out: Player[] = []; for (const s of S) out.push(s.view.player); return out; }
 /** the men still up */
 export function menUp(g: Game): Player[] { return men(g).filter(p => !p.down); }

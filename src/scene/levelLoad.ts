@@ -310,7 +310,7 @@ export function levelToData(level: Level, opts: LevelToDataOpts): LevelData {
     sky: { zenith: V(level.sky.zenith), horizon: V(level.sky.horizon) },
     ...(level.daylight ? { daylight: { sun: lightData(level.daylight.sun), sky: { zenith: V(level.daylight.sky.zenith), horizon: V(level.daylight.sky.horizon) }, groupsOn: [...level.daylight.groupsOn], groupsOff: [...level.daylight.groupsOff], lightsOff: [...level.daylight.lightsOff], haze: level.daylight.haze, exposure: level.daylight.exposure } } : {}),
     plans: { roomClear: (level.clearPlans ?? []).map((p, i) => planData(p, planIds[i]) as RoomClearPlanData), ...(level.breach ? { breach: planData(level.breach, `breach_${slug(level.breach.door)}`) as BreachPlanData } : {}) },
-    ...(level.scenarios && Object.prototype.propertyIsEnumerable.call(level, 'scenarios') ? { scenarios: clone(level.scenarios) } : {}),   // (the level's OWN block only: the office's is attached beside its file, non-enumerable — scene/level.ts withScenarios)
+    ...(level.scenarios ? { scenarios: clone(level.scenarios) } : {}),   // (the level's own block: scene/scenarios.ts)
   };
   return data;
 }

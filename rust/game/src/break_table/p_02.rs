@@ -72,13 +72,9 @@ pub fn breaks_hash(g: &mut crate::game::Game) -> f64 {
 
 /// The pool's own die; with DEBRIS.dress off there is one die. (breakTable.ts Breaks.phash)
 pub fn breaks_phash(g: &mut crate::game::Game) -> f64 {
-    if g.k.debris.dress {
-        let n = g.destr.breaks.pcounter;
-        g.destr.breaks.pcounter = n + 1.0;
-        crate::debris::hash01(n * 2246822519.0 + 5369127.0)
-    } else {
-        breaks_hash(g)
-    }
+    let n = g.destr.breaks.pcounter;
+    g.destr.breaks.pcounter = n + 1.0;
+    crate::debris::hash01(n * 2246822519.0 + 5369127.0)
 }
 
 /// (breakTable.ts Breaks.reset)
@@ -100,10 +96,7 @@ pub fn breaks_rel(g: &mut crate::game::Game, c_2: DebrisChunkId) -> f64 {
 
 /// The rigid pool's share of one blast. (breakTable.ts Breaks.share)
 pub fn breaks_share(g: &mut crate::game::Game) -> crate::break_table::BreaksShare {
-    let s = if breaks_small(g) && !g.k.debris.dress {
-        let t = g.k.breaks.share.small;
-        BreaksShare { thrown: t.thrown, heap: t.heap, furniture: t.furniture }
-    } else {
+    let s = {
         let t = g.k.breaks.share.big;
         BreaksShare { thrown: t.thrown, heap: t.heap, furniture: t.furniture }
     };
@@ -886,7 +879,7 @@ pub fn breaks_studs(g: &mut crate::game::Game, b: &crate::break_table::CellGrid)
             let yl = y0 - k_.foot;
             let c: V3 = if along_x { [u, (yl + y1) / 2.0, 0.0] } else { [0.0, (yl + y1) / 2.0, u] };
             let h: V3 = if along_x { [k_.half, (y1 - yl) / 2.0, t * k_.depth_k] } else { [t * k_.depth_k, (y1 - yl) / 2.0, k_.half] };
-            out.push(BreaksStudsItem { c, h, albedo: k_.albedo, rough: k_.rough, metal: k_.metal, does: k_.does });
+            out.push(BreaksStudsItem { c, h, albedo: k_.albedo, rough: k_.rough, metal: true, does: k_.does });
         }
         k += 1.0;
     }

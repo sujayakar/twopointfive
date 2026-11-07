@@ -32,7 +32,7 @@ import type { BlowStyle, Character, FallStyle } from './character';
 import { HOLD } from './character';   // (HOLD_SHOW written inside takedownTick only, HOLD read inside takeFall only: the game's one import cycle)
 import type { CloseKind } from './close';
 import { Vec3, v3 } from '../math/vec';
-import './player';   // (is there headroom over a crouched Sam: the rise out of the crouch is not taken under a duct)
+import { canStand } from './player';   // (is there headroom over a crouched Sam: the rise out of the crouch is not taken under a duct)
 import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 export const TAKEDOWN = {
@@ -50,6 +50,8 @@ export const TAKEDOWN = {
   /** breathing, out cold: breaths a second · m the chest rises · s it takes to come in once the body has settled */
   breathHz: 0.24, breathRise: 0.02, breathIn: 1.2,
 };
+/** Sam's own blow lands this long after it starts (player.ts updateTakedown's clock: read here, never written) */
+const SAM_HIT = 0.28;
 /** QA: how often each was asked for (probes read them; nothing else does) */
 export const TAKEDOWN_STATS = { blows: 0, falls: 0, partner: 0, breathing: 0 };
 
@@ -67,7 +69,30 @@ export function fallStyle(style: BlowStyle): FallStyle {
 }
 
 const fwd = (c: Character): Vec3 => [Math.sin(c.bodyYaw), 0, Math.cos(c.bodyYaw)];
+/** where on the man each move's hands go: [the blow's own point, the free hand's] — off his bones AS THEY STAND, in the world (asked again every frame until
+ *  the blow lands: a man who turns his head or takes a step in the quarter second of the wind-up is hit where he is) */
+function marks(by: Character, vic: Character, style: BlowStyle): [Vec3, Vec3 | null] {
+  const b = vic.bones, f = fwd(vic), neck = b.neck ?? v3.add(vic.pos, [0, 1.5, 0]), head = b.head ?? v3.add(neck, [0, 0.12, 0]);
+  const to = v3.normalize([by.pos[0] - vic.pos[0], 0, by.pos[2] - vic.pos[2] + 1e-6]);   // from him toward the attacker
+  const left: Vec3 = [Math.cos(by.bodyYaw), 0, -Math.sin(by.bodyYaw)];                   // the attacker's own left
+  if (style === 'chop') return [v3.add(v3.mad(neck, to, 0.07), [0, 0.05, 0]), v3.add(v3.mad(v3.mad(neck, to, 0.11), left, 0.13), [0, -0.2, 0])];   // the base of the skull · his left shoulder blade
+  if (style === 'palm') return [v3.add(v3.mad(v3.mad(head, f, 0.07), to, 0.05), [0, -0.06, 0]), null];                                            // under the point of the chin (his own front), from the attacker's side
+  if (style === 'mouth') return [v3.copy(neck), v3.add(v3.mad(v3.mad(head, f, 0.11), left, 0.02), [0, 0.0, 0])];                                  // (the knife's own keys) · over his mouth
+  return [v3.add(neck, [0, 0.04, 0]), null];                                                                                                      // the throat
+}
+/** no headroom over him: a crouched Sam does not rise into the blow (everybody else stands) */
+const mayRise = (g: Game, by: Character) => !(by === g.player.char && g.player.crouch && !canStand(g));
 
+/** SAM'S BLOW BEGINS (player.ts startTakedown, right after the strike it asked for): his move by the side and the hand, and what the man does before it lands */
+export function takeBegin(g: Game, by: Character, gd: Guard, kind: CloseKind | undefined, lethal: boolean) {
+  if (!live(g, 'blow')) return;
+  const style = blowStyle(kind, lethal), vic = gd.char, [at, at2] = marks(by, vic, style);
+  by.anim.blow(style, at, at2, { live: () => marks(by, vic, style), rise: mayRise(g, by), tail: true }); TAKEDOWN_STATS.blows++;
+  if (!live(g, 'victim')) return;
+  if (style === 'mouth') vic.anim.taken('arch', 0.12);
+  else if (style === 'chop') vic.anim.taken('hunch', SAM_HIT - 0.045);   // (the blow's last frames: the chin is on its way to his chest as he is put out — the body that falls starts from it)
+  else if (style === 'palm') vic.anim.taken('snap', SAM_HIT - 0.04);
+}
 /** how far a fall wants clear floor, by its style and which way: [direction, m] */
 function fallWay(vic: Character, from: Vec3 | null, style: FallStyle): [Vec3, number] {
   const f = fwd(vic), p = vic.pos;

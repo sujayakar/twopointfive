@@ -247,7 +247,7 @@ export interface LevelData {
   daylight?: DaylightData;
   plans: { roomClear: RoomClearPlanData[]; breach?: BreachPlanData };
   /** what the playtest scenarios take from this level (scene/scenarios.ts — the RUNTIME structs verbatim, like the plans: door names are door ids). Optional:
-   *  a level without the block stages none of them (the office's lives beside its file, levels/office.scenarios.ts) */
+   *  a level without the block stages none of them */
   scenarios?: LevelScenarios;
 }
 

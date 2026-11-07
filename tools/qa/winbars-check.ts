@@ -32,7 +32,6 @@ export async function winbarsCheck(): Promise<boolean> {
   const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-  const { withOfficeScript, isOfficeFamily } = await import(`${ROOT}/src/scene/level.ts`);
   const { DESTRUCTION } = await import(`${ROOT}/src/game/destructionSwitch.ts`);
   const { fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);
   const { spawnUnit } = await import(`${ROOT}/src/game/guards.ts`);
@@ -46,7 +45,7 @@ export async function winbarsCheck(): Promise<boolean> {
   const was = WINBARS.on, destr0 = DESTRUCTION.on; let stood: boolean | null = null;
   const HIDE = BoxFlag.NoPrimary | BoxFlag.NoShadow;
   const dataOf = (file: string): any => parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8'));
-  const levelOf = (file: string): any => { const data = dataOf(file); return isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data); };
+  const levelOf = (file: string): any => { const data = dataOf(file); return loadLevel(data); };
   /** the bar's own axis through its wall (unit, plan): its deep side */
   const deepN = (b: any): Vec3 => { const cs = Math.cos(b.yaw), sn = Math.sin(b.yaw); return b.h[0] > b.h[2] ? [cs, 0, -sn] : [sn, 0, cs]; };
   const park = (g: any, keep: number) => g.guards.slice(keep).forEach((o: any, i: number) => { o.hold = true; o.pinned = true; o.dazzledUntil = 1e9; o.heardUpTo = 1e12; o.char.pos = [1.5 + i * 0.9, 0, 1.5]; o.char.vel = [0, 0, 0]; o.path = []; o.pathGoal = null; o.flashlight.enabled = false; o.char.update(0); });

@@ -51,6 +51,22 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   not (five today: DESTRUCTION and LIVED by a recording's env, LOOK and PLAN picture only, RECAP reads only); knobs-check is red on a written table that is neither — and on a table `journal.ts` asks a FILE for (`k.tables.X`, the rules that put a key off for a recording from before it) that no recording carries: such a rule reads every file as one from before the key (PAIR's four keys and ROOMFIGHT.doorEars stood so until 10-22).
 
 <!-- was CLAUDE.md lines 319–323 -->
+- **THE GATE BEFORE A BUILD IS NAMED IS UNDER FIVE MINUTES (2026-11-07; the maintainer: "can we slim down the gate? should be no more than 15m", "in
+  general we should try to move fast at this point (maybe <5m for gate checks) and then have async checks that we fix forward").** A change is sent as
+  single-parent commit(s) cut on the named head, and its sender runs the same reads first, from the repository's root: (1) THE SCAN: the diff against
+  the named head read for anything that must not be public, every binary in the diff read with `strings` for machine paths, ids, names and hosts, no registry address in a lock file; (2) THE BAR:
+  `tsc --noEmit -p tsconfig.json`, `tsc --noEmit -p tools/qa/tsconfig.json`, `bun run tools/qa/claude-md-check.ts`, `bun run tools/qa/knobs-check.ts`,
+  `bun run build`, all exit 0; (3) DETERMINISM, SHORT: `bun run tools/blitz/thrice.ts` (three games of one process, one digest at the start and at each of
+  40 seconds); (4) ONE QUICK MISSION: `PT_DIGEST=1 bun run tools/qa/playthrough.ts --scn night-breach --seeds 1 --json out.json` ends with no error or
+  panic and its end, second and men up are the named head's, or the sender names the move. ONLY a change to what the page does at boot (the host, the
+  loader, `src/main.ts`) adds, up to a ceiling of fifteen minutes, one mission stood and played 45 s under real keys in headless Chromium
+  (`PORT=<port> node tools/blitz/page-walk.cjs`). A red is placed by one run on the named head: the same red there is old, a new one goes back to its
+  sender. A read with a memory kill beside it, a time cap or a lost browser is spoiled and is read again, not called. EVERYTHING ELSE IS ASYNC, after the
+  name, and its reds are fixed forward by their owners and told, never hidden: the page as it opens and the other page checks, the 84 mission tallies
+  (seeds 1 to 4) against the named head, the check families read as a list of reds by kind (not a bar), tour, soak, the two-seat run and the co-op
+  checks, rollback, a build of the Rust module compared with the checked-in one. What the short gate does not see: a page that does not boot (unless the
+  change is of the kind above), a rule that breaks on one die in ten, any mission but one, co-op, a family's red, timing, and a real GPU (no tool has
+  one: "never seen on a GPU" stays in every note).
 - **The gates.** `bun run tools/qa/missions-gate.ts` (`probes.ts missions-shipped`) plays every squad mission of the Missions list × 2 seeds to its end AS SHIPPED and is red on a run
   that throws or stalls (≈ 4 min at four jobs; not judged: who won); the QUIET rows (`QUIET_MISSIONS`) are played by `solo-night.ts`'s ghost on that tool's own stand, × 2 seeds — for
   them the gate holds 'starts and runs to the debrief', not 'as shipped'. `tools/qa/expected-red.ts` = the reds somebody has explained, by probe name; probes.ts prints its reds against it
@@ -299,6 +315,42 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the door tools' owner's to say which line is promised).
   `orderui-door` (11-06): read, NOT mended, its row put right. One blue man's fall-in mark is dealt 0.31 m from Sam on the page's stand; he stands
   0.68 m short of it, called arrived, for as long as he is watched (not a settle). Could be real: the squad's owner's.
+  SINCE THE TYPESCRIPT TICK WAS DELETED (2026-11-07) A TOOL WITH NO WORD IS FOLDED: it stands the Rust game (tools/blitz/word.ts, the default word),
+  which has the settled rows as constants, so `foldWanted()` is true with nothing in front and the fold is laid as the harness loads on the page's
+  stand. WHERE THE PARAGRAPH BELOW SAYS OTHERWISE IT IS OF BEFORE THE DELETION ('NOT THE DEFAULT YET', 'a run without the fold', (1)'s 'plain'):
+  not rewritten here. `fold-check` lines (1), (7) and (8) had asked that no word means no fold and were red on every tree since the deletion. They
+  pin the new state now: (1) reads each settled row's OWN value with the laid fold put off (`QA_FOLD_FOR=0`) and asks that the fold laid every one
+  and each still answers through it after the stand; (7) that a run with no word says the same notice and the same probe's line as one under
+  `QA_FOLD=1`; (8) that `foldWanted` is true for nothing and for `QA_FOLD=0`. A default word that stops folding turns them red.
+  WHAT THE FOLD IS FOR NOW: it is the harness's hold of the settled rows (the page's is `src/host/rustgame.ts rustSettledHold`), and its line a
+  probe names every check that still writes a settled row: the list to restage or delete from. `QA_FOLD_FOR=0` / `foldFor(false)` stays the one
+  way a tool reads a settled row's own value.
+  THE HOLDS TABLE IS TWO ROWS (2026-11-07; `tools/qa/holds.ts`). It held rules OFF for probes written for an older model. Fourteen of its sixteen
+  rows held only settled rows: on the page's stand every such hold was refused under the fold (101 a run of `holds`, which was red in all-quick by
+  it) and the probe ran on the page's model whatever the table said; on the old stand those rows are off already and the hold did nothing. Those
+  fourteen are out, and no run changed by it. LEFT: `CARDS_AS_THEY_WERE` (`BIGSLOT.on`, a run-time row) and `PACE_AS_IT_WAS` (`TEAMPACE.pacing`, an
+  open decision: that hold is LIVE, `leafstall` and `noshove` run with the pacing off). THE RESTAGING LIST IS ALL 119 NAMES the table had, the 20 kit
+  probes still in it too (they were owed the deal and the gun rows as well, and now run with the big slot off and those on: a card neither stand
+  has): `git show cd215879:tools/qa/holds.ts` says who was owed what, and `tools/blitz/qa-census.py`, which read the table as data, wants that
+  version. Where an area note names a row that left (`GRAB_ROW_AS_IT_WAS`, `DEAL_AS_IT_WAS` and the rest; `holdOff(heldList(…))` in
+  `lesson-check.ts`, gone), the notes were not swept. `holds-check` (3) asks 'the name's other words held all the same' only where a probe is owed
+  two rows, and none is now; (5) reads the mains of the files that still hold a table probe, 2 of 5 where it read 24 of 41: a main of the other
+  files that stops running its parts through `asProbe` is red nowhere.
+  EVERY RUN OF A STAND AS IT OPENS IS READ AGAINST THE LIST OF EXPECTED REDS, FOLDED OR NOT (2026-11-07; `probes.ts`). The runner had read a folded
+  probe's red against no row; since the deletion that was every probe of every run with no word, so nothing read the list on the named build:
+  no EXPECTED RED / NEW RED / GREEN AGAIN, and a break word's closing line could not say whether it bit (`holds-check` (9), red by it). The
+  exception is gone: the fold is how the page's stand IS. Two runs are still read against no row, as before: one started with a word of the stand by
+  hand, and one of a single case of a probe. BUT THE LIST'S ROWS ARE OF THE OTHER GAME: they were read on the TypeScript game with nothing folded,
+  and the closing table says so in a line under itself while that is so (`expected-red.ts LIST_READ_ON`; `gate.sh` carries it). Until the list is
+  run again on the Rust game, read it so: an EXPECTED RED may fail by another line than its row says (`noshove` does: its row is of a room keeper's
+  3 cm, the run fails 8 lines of 10 on refused stagings); a GREEN AGAIN may be a staging that was refused; a NEW RED is likely a staging debt of the
+  fold, not a fault of today; and a break word run on a probe that is red without it, with no row, closes with 'red with no row: the word's to
+  explain' whether the word bit or not. RUNNING THE LIST AGAIN ON THE RUST GAME, row by row, is the next piece of this work; `LIST_READ_ON` is set
+  to '' when it is done.
+  WHAT HAS NO JOB LEFT and is still in the tree: `QA_FOLD=1` itself on the page's stand; `QA_FOLD_ONLY` and the check-by-check start under
+  `TPS_GAME=table` (fold-check (10)), there being no unfolded game to stand a check on; `QA_VERDICTS` and the `plain` line (they need a run with no
+  fold); `heldList` (no caller). KNOWN AND NOT MENDED: an old-stand runner says 'NOT FOLDED' and takes `QA_FOLD` out of what its children inherit,
+  which no longer unfolds them: a page-stand arm it starts is folded, with no notice.
   THE SETTLED ROWS, FOLDED (11-06; `tools/qa/fold.ts`, the list `tools/qa/switches.json`, its maker `tools/qa/switch-list.ts`, the check
   `tools/qa/fold-check.ts` = `probes.ts fold`, in all-quick). WHY: the Rust game has every settled switch row as a constant (the page's branch
   translated, the other dropped), and of 255 probes that step a game in the gate's families 186 did so with a settled row pinned off its page
@@ -312,7 +364,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `{"fold":{"probe":…,"red":…,"refused":[{"row","value","writer","n"}],"lost":[…]}}`, from ONE speaker down a tree of processes (the runner's
   `run()`, or the fence `holds.ts asProbe` in a check file run alone); a child hands its count to that speaker, a process nobody reads for says
   its own on STDERR as it ends; what the harness refused as it loaded (a word given by hand) has a line of its own, `"outside"`. A folded
-  run's reds are NOT read against the list of expected reds (the runner says why: it is not the stand as it opens). `gate.sh` carries
+  run's reds WERE NOT read against the list of expected reds until 2026-11-07 (they are now: 'EVERY RUN OF A STAND', above). `gate.sh` carries
   the notice and how many lines had a refusal. `QA_VERDICTS=1` on a run without the fold prints `{"plain":{"probe":…,"red":…}}` a probe, to
   lay the two side by side. FOR ONE CHECK AT A TIME (asked by the Rust goal: its table stands some checks on the Rust game, which must be
   folded, and keeps the rest on the TypeScript tick exactly as with no word until they are restaged): `fold.ts foldFor(on)` puts the laid
@@ -324,14 +376,17 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the unfolded checks (a folded check does not have it, and that is not said); the notice on stderr says 'LAID AND OFF'. By hand, the
   runner's word `QA_FOLD_ONLY=<probe,probe…>` beside `QA_FOLD=1` folds the named probes alone (a probe's own name; one no probe of the
   run had is an error; a check file run alone does not read it). A run so mixed reads its unfolded reds against the list of expected
-  reds as ever and says 'the reds of folded probes … are read against no row' with their names (gate.sh carries that line). WHAT A REFUSED WRITE MEANS: the check's staging may not have formed. A check that pinned a neighbour off to get a
+  reds as ever and (until 2026-11-07) said 'the reds of folded probes … are read against no row' with their names; they are read against the list now. WHAT A REFUSED WRITE MEANS: the check's staging may not have formed. A check that pinned a neighbour off to get a
   fight, and counts what happened in that fight, can pass with nothing to count: green under the fold with a refused write is not a re-aimed
   check until its lines are read against the same run without the fold. WHAT IT CANNOT HOLD: a branch of a table replaced whole (the rows under
   it are plain until the next look, which lays them again and names them `lost`; the fence looks before and after it puts the tables back); a
-  row a module copied into a local before the fold was laid; a child killed before it ends hands over nothing. UNDER IT `holds` IS RED: every
+  row a module copied into a local before the fold was laid; a child killed before it ends hands over nothing. UNDER IT `holds` WAS RED (until the table lost its settled rows, 2026-11-07, above): every
   hold of `holds.ts` over a settled row is refused, which is the point; those holds go as their checks are re-aimed or deleted.
-  THE LIST: 992 rows, each `row`, `page` (its value on the page) and `kind`: 866 settled, 93 open decision (stays a switch), 33 player's or
-  run-time (stays a variable). It is WRITTEN from the port's switch list (project files, `rebuild/rust-sim/port/blitz/port-list.json`: the
+  THE LIST: 992 rows, each `row`, `page` (its value on the page) and `kind`: settled, open decision (stays a switch), player's or run-time
+  (stays a variable). THE COUNTS ARE THE FILE'S OWN (`counts` at its head) and move as rows are ruled: 866 / 85 / 41 on the morning of 2026-11-07,
+  with the port's ruling of the open rows about to settle more (project files `rebuild/rust-sim/port/cleanup/OPEN-ROWS-RULING.md`). Of the run-time
+  rows, eight were called open until 2026-11-07: Hard turns PRESSURE.on and DIGIN.on on, a quiet mission with a squad
+  turns on PAIRUP.on, PAIR.on, SNEAK.on and SPOTTED.on, WALLSNAP.press is an Options row, POSEMATH.singles is written inside the tick. It is WRITTEN from the port's switch list (project files, `rebuild/rust-sim/port/blitz/port-list.json`: the
   source; a row changes kind there): `bun run tools/qa/switch-list.ts make <that list>`, and `… same <that list>` says whether the two agree.
   A NEW RULE'S SWITCH joins by `bun run tools/qa/switch-list.ts new` (an open decision at its page value; needs no list from outside; `make`
   keeps such a row until the port's list has it): without it `fold` line (2) is red, since every true/false row of the tables must be on the

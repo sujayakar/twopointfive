@@ -10,6 +10,7 @@
 //   bun run tools/blitz/delete-tick.ts --bridges [n]       the references out of the page and the hosts that keep the most, by what each alone keeps
 //   bun run tools/blitz/delete-tick.ts --instrument        THE CENSUS'S TREE: nothing deleted, the surface's lines written into the source, and a counter
 //                                                          at the top of every function (tools/blitz/delete-census.sh runs the plays on it)
+//   bun run tools/blitz/delete-tick.ts --readers out.tsv   who still reads each field of the simulation's classes and tables, after the deletion's plan
 //   --census file.json   what the census saw run (default tools/blitz/delete-census.json; `--no-census`: a host's loose references are followed too)
 //   --census-settles-all the census settles the page's loose references as it does a host's (deletes more; rests on the census having played every path)
 //
@@ -63,7 +64,11 @@ if (flag('--census-merge')) { const i = ARGV.indexOf('--census-merge'), rest = A
 /** the simulation's folders: where this program may delete */
 const SIM = /^src\/(game|anim|math|sim|scene)\//;
 /** THE ENTRY POINTS OF THE HOSTS in tools/: a file of tools/ is a host's when one of these, or a file of src/, loads it */
-const HOST_ENTRIES = ['tools/blitz/rust-host.ts', 'tools/blitz/page-plugin.ts', 'tools/serve.ts', 'tools/build.ts', 'tools/build-one.ts', 'tools/mp/server.ts', 'tools/mp/runner.ts'];
+// (… and THE TOOLS THAT PLAY WHOLE GAMES: the tallies' scripted player, the plain night's, the tour's, the soak's, the lessons' runner. Each stands a game,
+// steps it under the Rust host and READS THE PUPPET between ticks to decide its next key, as the page's HUD reads it: what such a tool names keeps its
+// body like a host's, where a check that calls one rule and looks at the answer keeps a signature. Entry points, not a list of functions.)
+const HOST_ENTRIES = ['tools/blitz/rust-host.ts', 'tools/blitz/page-plugin.ts', 'tools/serve.ts', 'tools/build.ts', 'tools/build-one.ts', 'tools/mp/server.ts', 'tools/mp/runner.ts',
+  'tools/qa/playthrough.ts', 'tools/qa/solo-night.ts', 'tools/qa/tour.ts', 'tools/qa/soak.ts', 'tools/qa/lesson-run.ts'];
 /** the bridge's files as the page names them (page-plugin.ts FILES): `tps-bridge/<name>` */
 const BRIDGE_ALIAS = /^tps-bridge\/(.*)$/;
 /** the module the stubs call (written by this program on `--write`) */
@@ -141,7 +146,7 @@ const implOf = (u: Unit): any => u.nodes.filter(n => bodyOf(n)).pop();
   const taps = new Map<string, any>(); for (const t of TAPS) taps.set(`${t.file}\n${t.key}`, t);
   let ng = 0, nt = 0;
   for (const u of UNITS) { const r = rows.get(`${u.file}\n${u.key}`); if (r && guards.has(r.id) && u.fnLike) { u.row = r; u.guard = guards.get(r.id); ng++; } const t = taps.get(`${u.file}\n${u.key}`); if (t && u.fnLike) { u.tap = t; nt++; } }
-  if (ng !== guards.size) { const got = new Set(UNITS.filter(u => u.guard).map(u => u.row.id)); console.error(`calls.json guards ${guards.size} functions and ${ng} were found by key: ${[...guards.keys()].filter(i => !got.has(i)).slice(0, 12).map(i => `${CALLS.rows[i].key} (${CALLS.rows[i].file})`).join(', ')}`); process.exit(2); }
+  if (ng !== guards.size) { const got = new Set(UNITS.filter(u => u.guard).map(u => u.row.id)); console.error(`calls.json guards ${guards.size} functions and ${ng} were found by key: ${[...guards.keys()].filter(i => !got.has(i)).slice(0, 12).map(i => { const r = CALLS.rows.find((x: any) => x.id === i); return `${r?.key} (${r?.file})`; }).join(', ')}`); process.exit(2); }
   const tapsHere = Object.values<any>(CALLS.taps ?? {}).reduce((a, l) => a + l.length, 0); if (nt < tapsHere) { const got = new Set(UNITS.filter(u => u.tap).map(u => u.tap.id)); console.error(`calls.json places ${tapsHere} taps and ${nt} were found by key: ${TAPS.filter(t => !got.has(t.id)).map(t => `${t.key} (${t.file})`).join(', ')}`); process.exit(2); } }
 
 // ---- references
@@ -457,6 +462,52 @@ type Class = 'kept' | 'kept+guard' | 'crossing' | 'gone' | 'deleted';
 const classIn = (p: Plan, u: Unit): Class => u === TICK ? 'gone' : p.reach[u.id] === 0 ? 'deleted' : p.reach[u.id] >= 2 ? (u.guard ? 'kept+guard' : 'kept') : u.guard ? 'crossing' : 'gone';
 const classOf = (u: Unit): Class => classIn(P, u);
 const fnUnits = UNITS.filter(u => u.fnLike);
+
+// ---- WHO STILL READS A FIELD (--readers out.tsv): for the cleanup of what the bridge carries onto the puppet every tick. A row a field, by the
+// TypeScript's own name (`Class.field`, `Interface.field`, `TABLE.key`): where the code that is left after the deletion reads it, by the kind of reader,
+// and where it is written. A reader in the simulation's folders counts where its function keeps a body in the plan; "seen on the page" says the census
+// saw that function run in a page play. Read from the tree BEFORE the deletion (this program does not run on a tree it has been through).
+if (opt('--readers')) {
+  const kindOf = (file: string): string => SIM.test(file) ? 'sim' : /^src\/(render|gpu|smoke|dress)\/|^src\/engine\.ts$|^src\/host\/(rustdress|tween|ahead|loop|autocam)\.ts$/.test(file) ? 'picture' : /^src\/(audio|sounds|music)\//.test(file) ? 'sound' : /^src\/ui\/|^src\/host\/hud\.ts$/.test(file) ? 'hud' : /^src\/(editor|viewer|workbench|replay)\/|^src\/(workbench|viewerGizmo)\.ts$/.test(file) ? 'otherPages' : /^src\/(net|cloud)\//.test(file) ? 'net' : file.startsWith('src/') ? 'host' : HOSTS.has(file) ? 'bridge' : 'tool';
+  const KINDS = ['picture', 'sound', 'hud', 'host', 'simKept', 'otherPages', 'net', 'bridge', 'tool', 'gone'] as const;
+  interface Row { decl: string; n: Record<string, number>; files: Map<string, number>; seenOnPage: number; writesKept: number; writesGone: number; writeFiles: Set<string> }
+  const rows = new Map<string, Row>();
+  /** the name a field is declared under: its class, interface or type's name, or the table's, and the path of keys down to it */
+  const ownerPath = (d: any): string | undefined => { const parts: string[] = []; let n = d;
+    for (let hop = 0; n && hop < 12; hop++) { const nm = n.name && (n.name.kind === SK.Identifier || n.name.kind === SK.StringLiteral || n.name.kind === SK.PrivateIdentifier) ? n.name.text ?? String(n.name.escapedText) : undefined;
+      if (n.kind === SK.PropertyDeclaration || n.kind === SK.PropertySignature || n.kind === SK.PropertyAssignment || n.kind === SK.ShorthandPropertyAssignment || n.kind === SK.GetAccessor || n.kind === SK.SetAccessor || n.kind === SK.Parameter || n.kind === SK.MethodSignature) { if (nm === undefined) return undefined; parts.unshift(nm); n = n.parent; if (n.kind === SK.Constructor) n = n.parent; continue; }
+      if (n.kind === SK.ClassDeclaration || n.kind === SK.InterfaceDeclaration || n.kind === SK.TypeAliasDeclaration || n.kind === SK.VariableDeclaration || n.kind === SK.EnumDeclaration) { if (nm === undefined) return undefined; parts.unshift(nm); return parts.join('.'); }
+      if (n.kind === SK.TypeLiteral || n.kind === SK.ObjectLiteralExpression || n.kind === SK.AsExpression || n.kind === SK.SatisfiesExpression || n.kind === SK.ParenthesizedExpression || n.kind === SK.ArrayType || n.kind === SK.UnionType || n.kind === SK.IntersectionType || n.kind === SK.ParenthesizedType || n.kind === SK.TypeReference || n.kind === SK.TypeOperator || n.kind === SK.ArrayLiteralExpression) { n = n.parent; continue; }
+      return undefined; } return undefined; };
+  const isField = (d: any) => d.kind === SK.PropertyDeclaration || d.kind === SK.PropertySignature || d.kind === SK.PropertyAssignment || d.kind === SK.ShorthandPropertyAssignment || d.kind === SK.GetAccessor || (d.kind === SK.Parameter && d.parent.kind === SK.Constructor && (d.modifiers?.length ?? 0) > 0);
+  const note = (sym: any, at: any, sf: any, file: string, where: string, unit: Unit | undefined) => { sym = targetOf(sym); if (!sym) return;
+    // (read, written, or both)
+    let x = at.parent; if (x.kind !== SK.PropertyAccessExpression && x.kind !== SK.ElementAccessExpression) x = at; let par = x.parent; while (par && (par.kind === SK.ParenthesizedExpression || par.kind === SK.NonNullExpression)) { x = par; par = par.parent; }
+    const asg = par?.kind === SK.BinaryExpression && par.left === x && par.operatorToken.kind >= SK.FirstAssignment && par.operatorToken.kind <= SK.LastAssignment, plain = asg && par.operatorToken.kind === SK.EqualsToken;
+    const inc = (par?.kind === SK.PrefixUnaryExpression || par?.kind === SK.PostfixUnaryExpression) && (par.operator === SK.PlusPlusToken || par.operator === SK.MinusMinusToken);
+    const reads = !plain, writes = asg || inc;
+    for (const d of sym.declarations ?? []) { if (!isField(d)) continue; const dsf = d.getSourceFile(); if (dsf.isDeclarationFile) continue; const df = rel(dsf.fileName); if (!SIM.test(df)) continue; const key = ownerPath(d); if (!key) continue;
+      let r = rows.get(key); if (!r) rows.set(key, r = { decl: df, n: Object.fromEntries(KINDS.map(k => [k, 0])), files: new Map(), seenOnPage: 0, writesKept: 0, writesGone: 0, writeFiles: new Set() });
+      if (reads) { r.n[where]++; if (where !== 'gone' && where !== 'tool' && where !== 'bridge') r.files.set(file, (r.files.get(file) ?? 0) + 1); if (where === 'simKept' && unit && SEEN.get(unit)?.page) r.seenOnPage++; }
+      if (writes) { if (where === 'gone') r.writesGone++; else if (where !== 'tool') { r.writesKept++; r.writeFiles.add(file); } } } };
+  const walk = (node: any, sf: any, file: string, where: string, unit: Unit | undefined, skip?: (n: any) => boolean) => { const v = (n: any): void => { if (skip?.(n)) return;
+      if (n.kind === SK.Identifier || n.kind === SK.PrivateIdentifier || n.kind === SK.StringLiteral) { const p = n.parent;
+        const isName = (p.kind === SK.PropertyAccessExpression && p.name === n) || (p.kind === SK.ElementAccessExpression && p.argumentExpression === n) || (p.kind === SK.BindingElement && (p.propertyName === n || (p.name === n && !p.propertyName && p.parent.kind === SK.ObjectBindingPattern)));
+        if (isName) { let sym: any; try { sym = p.kind === SK.BindingElement && p.name === n ? checker.getTypeAtLocation(p.parent)?.getProperty?.(n.text) : checker.getSymbolAtLocation(n); } catch { sym = undefined; }
+          if (!sym && p.kind === SK.PropertyAccessExpression) { const r = castRooted(n); if (r && r !== 'none') sym = r; else { const ch = anyChain(n); if (ch && ch.length >= 2) sym = gamePath(ch); } }
+          if (sym) note(sym, n, sf, file, where, unit); } return; }
+      ts.forEachChild(n, v); }; v(node); };
+  // the simulation's own code, a declaration at a time: a reader there survives where its declaration keeps a body
+  for (const u of UNITS) for (const n of u.nodes) { const sf = n.getSourceFile(), file = rel(sf.fileName), kept = P.reach[u.id] >= 2;
+    if (u.kind === 'class') { walk(n, sf, file, 'simKept', u, x => x.parent === n && ts.isClassElement(x)); continue; }
+    const b = u.fnLike ? bodyOf(n) : undefined; if (!b) { walk(n, sf, file, kept || !u.fnLike ? 'simKept' : 'gone', u); continue; }
+    walk(n, sf, file, 'simKept', u, x => x === b); walk(b, sf, file, kept && u !== TICK ? 'simKept' : 'gone', u); }
+  for (const sf of program.getSourceFiles()) { const file = rel(sf.fileName); if (SIM.test(file) || sf.isDeclarationFile || file.startsWith('..')) continue; walk(sf, sf, file, kindOf(file), undefined); }
+  const cols = ['field', 'declared in', 'read by surviving code', 'picture', 'sound', 'hud or menu', 'page host', 'simulation code that stays', 'of those, seen running in a page play', 'other pages', 'net', 'the bridge', 'tools', 'code that went', 'written by code that stays', 'first files that read it', 'files that write it'];
+  const out = [cols.join('\t')]; let yes = 0;
+  for (const [key, r] of [...rows].sort((a, b) => a[0] < b[0] ? -1 : 1)) { const live = r.n.picture + r.n.sound + r.n.hud + r.n.host + r.n.simKept + r.n.otherPages + r.n.net; if (live) yes++;
+    out.push([key, r.decl, live ? 'yes' : 'no', r.n.picture, r.n.sound, r.n.hud, r.n.host, r.n.simKept, r.seenOnPage, r.n.otherPages, r.n.net, r.n.bridge, r.n.tool, r.n.gone, r.writesKept, [...r.files].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([f, c]) => `${f} (${c})`).join(', '), [...r.writeFiles].slice(0, 3).join(', ')].join('\t')); }
+  writeFileSync(opt('--readers')!, out.join('\n') + '\n'); say(`the readers: ${rows.size} fields declared in the simulation's folders, ${yes} read by code that stays, ${rows.size - yes} read by none → ${opt('--readers')}`); process.exit(0); }
 const count = (us: Unit[], p = P) => { const c: Record<string, [number, number]> = {}; for (const u of us) { const k = classIn(p, u); (c[k] ??= [0, 0])[0]++; c[k][1] += u.lines; } return c; };
 /** the references that hold a declaration, one after another back to a root. A step made by a signature goes on from why that signature stands at all. */
 function steps(u: Unit): { u: Unit; w?: Why }[] { const out: { u: Unit; w?: Why }[] = []; let x: Unit = u, top = true; const seen = new Set<string>();

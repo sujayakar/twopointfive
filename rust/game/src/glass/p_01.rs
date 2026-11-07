@@ -65,7 +65,7 @@ pub fn save_glass_fx(g: &mut crate::game::Game) {}
 /// before a Game or an Engine exists in the TypeScript: the switch as this boot will have it (glass.ts glassFxBoot)
 pub fn glass_fx_boot(g: &mut crate::game::Game) -> bool {
     load_glass_fx(g);
-    g.k.glassfx.on
+    true
 }
 
 /// per-Game glass bookkeeping, made at first asking: the row itself (glass.ts glassState)

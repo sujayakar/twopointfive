@@ -169,6 +169,8 @@ export function chronObjective(g: Game, text: string, pos?: Vec3) { return chron
 
 
 
+/** guards.ts dropToSearch: the alert chase is over without him. */
+export function chronLost(g: Game, gd: Guard) { return chronicle(g, 'lost', { who: gd.callsign }, gd.char.pos); }
 
 /** guards.ts raiseEscalation (an actual rise) / stepDownEscalation: the floor's alarm level moved to `stage` (0 calm · 1 heightened · 2 lockdown), `up` or down,
  *  and for a rise what caused it (a search that found nobody, a body, a man missing, a hostage). Pinned at the alarm's fix when there is one. */

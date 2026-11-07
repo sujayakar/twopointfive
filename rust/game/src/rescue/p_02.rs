@@ -386,15 +386,15 @@ pub fn rescue_defenders(g: &mut crate::game::Game) {
             }
             if d.set {
                 g.rescue.defs.get_mut(h).unwrap().released = true;
-                g.gd[h].hold = false;
-                g.gd[h].pinned = false;
+                crate::control::set_hold(g, h, false, "rescue");
+                crate::control::set_pinned(g, h, false, "rescue");
                 if let Some(f) = f {
                     let now = g.time;
                     let fd = &mut g.tab.roomfight_def[f];
                     fd.mode = DefMode::Free; fd.free_at = now; fd.rally_at = f64::NAN;
                 }
                 if g.gd[h].script.is_some() { crate::squad::end_guard_script(g, h, Some(crate::squad::EndGuardScriptState::Alert)); }
-                if g.gd[h].state != GuardState::Alert || g.gd[h].foe.is_none() || (g.k.belief.on && g.time - g.gd[h].last_seen_t > 1.0) {
+                if g.gd[h].state != GuardState::Alert || g.gd[h].foe.is_none() || g.time - g.gd[h].last_seen_t > 1.0 {
                     let to = match g.rescue.noise { Some(n) => n, None => rescue_room_point(g, RescueRoomPointWhich::Outside) };
                     g.gd[h].state = GuardState::Alert;
                     g.gd[h].awareness = 1.0;
@@ -431,8 +431,8 @@ pub fn rescue_defenders(g: &mut crate::game::Game) {
             };
             crate::squad::end_guard_script(g, h, Some(state));
         }
-        g.gd[h].hold = true;
-        g.gd[h].pinned = true;
+        crate::control::set_hold(g, h, true, "rescue");
+        crate::control::set_pinned(g, h, true, "rescue");
         if g.gd[h].state == GuardState::Patrol && g.gd[h].awareness < 0.3 {
             let c = g.gd[h].ch;
             g.ch[c].body_yaw = v3::yaw_to(g.ch[c].pos, d.mark.aim_at);
@@ -588,13 +588,13 @@ fn crew_on_row(g: &mut Game, h: GuardId, d: Def, f: Option<RoomfightDefId>) -> b
     if at_door && g.time - g.gd[h].last_seen_t > 2.5 && g.gd[h].held.is_none() && g.time >= g.gd[h].dazzled_until {
         let row = g.rescue.defs.get_mut(h).unwrap();
         row.released = true; row.crew = DefCrew::Out;
-        g.gd[h].hold = false;
-        g.gd[h].pinned = false;
+        crate::control::set_hold(g, h, false, "rescue");
+        crate::control::set_pinned(g, h, false, "rescue");
         let now = g.time;
         let fd = &mut g.tab.roomfight_def[f];
         fd.mode = DefMode::Free; fd.free_at = now; fd.rally_at = f64::NAN;
         if g.gd[h].script.is_some() { crate::squad::end_guard_script(g, h, Some(crate::squad::EndGuardScriptState::Alert)); }
-        if g.gd[h].state != GuardState::Alert || g.gd[h].foe.is_none() || (g.k.belief.on && g.time - g.gd[h].last_seen_t > 1.0) {
+        if g.gd[h].state != GuardState::Alert || g.gd[h].foe.is_none() || g.time - g.gd[h].last_seen_t > 1.0 {
             g.gd[h].state = GuardState::Alert;
             g.gd[h].awareness = 1.0;
             g.gd[h].react_t = 0.0;
@@ -618,7 +618,7 @@ pub fn rescue_crew_move(g: &mut crate::game::Game, h: GuardId, f: RoomfightDefId
     fd.move_t = 0.0;
     fd.stall_at = v3::copy(at);
     fd.stall_t = 0.0;
-    g.gd[h].pinned = false;
+    crate::control::set_pinned(g, h, false, "rescue");
     let speed = g.tune.guard_chase + 0.3;
     crate::squad::order(g, h, crate::squad::OrderPatch {
         goal: Some(Some(v3::copy(goal))), speed: Some(Some(speed)), face: Some(None), strafe: Some(Some(false)), aim_at: Some(None),

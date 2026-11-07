@@ -52,14 +52,16 @@ import { lockPoint, breachSpot } from './shotgun';
 import { offOf, doorPt, alongOf } from './doortools';
 import './chronicle';
 import './player';
-import { bigRebound, type Character } from './character';
-import './kitanim';
+import { bigRebound, KIT, type Character } from './character';
+import { KITANIM, kitInHand, kitSlingFront } from './kitanim';
 import './handwork';
 import { RUST_PASS, RUST_SURFACE, crossToRust, goneWithTick } from './crossing';
 
 /** counted since the page (or the harness) stood up — the check's and the panel's */
 export const BIG_STATS = { samShells: 0, samShot: 0, samBlows: 0, samHammered: 0, drawn: 0, slung: 0, mateBlows: 0, mateHammered: 0, /** BIGSLOT.moves: a teammate's hammer off his back · put back · you walked onto a place beside a frame · of those, by the hinge jamb or off a man's shoulder */ hammersOut: 0, hammersIn: 0, samWalks: 0, samOther: 0 };
 const BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.BIGKIT_BREAK ?? '') === '1'; } catch { return false; } })();
+/** `BIGWEIGHT_BREAK=1` (the check's): the weight is never on — the tool's times and the gun's let-go are the build before's whatever the switch says */
+const WEIGHT_BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.BIGWEIGHT_BREAK ?? '') === '1'; } catch { return false; } })();
 
 // ------------------------------------------------------------ you
 /** the big slot's tool that OPENS this door from where you stand (null: none carried, the switch off, a show, the door open, off its hinges or steel, a
@@ -125,10 +127,38 @@ export function bigSpots(g: Game, d: Door, side: 1 | -1, tool: 'shotgun' | 'hamm
 /** BIGSLOT.moves — THE ROW FROM WHERE A STACK STANDS (player.ts buildInteractables, for a door outside the hand's reach): within BIGSLOT.reach of the
  *  doorway, a tool that opens it, and a place beside the frame he can walk to. */
 export function samBigFar(g: Game, d: Door, p: Vec3): 'shotgun' | 'hammer' | null { return crossToRust('samBigFar', undefined, [g, d, p]) as any; }
+/** BIGSLOT.weight — THE TOOL CHANGES HANDS WITH THE WEIGHT OF A GUN SWAP (the maintainer, 10-18: "the swaps when taking out the hammer and putting it back
+ *  feel too fast -- swapping the guns feels good, can we make sure they all feel similarly physical?"). A rifle off his back takes the kit's hand 0.71 s
+ *  (character.ts KIT: reach + draw) and 0.76 s to put back (stow + the hand away); the hammer was in both hands 0.6 s after his own gun VANISHED from them
+ *  and back on him in 0.45 s. With the weight on: the tool's own times are `equipW` / `drawW` / `stowW`; YOUR gun is first carried to its holster or sling
+ *  by the kit's own hand (samBigLeadOf: the beat's clock starts that far below zero, kitanim.ts runs the errand — samBigCarry); and the hammer's first
+ *  wind-up may begin `flow` s before the hammer is fully out (bigOutBy), so out, up and down read as one move — `flow` is the whole of what was added to
+ *  the hammer's way out, so a blow from empty hands lands when it did and a blow with a gun up is later by that gun's own stow, no more. A teammate's
+ *  record carries the same times (his own gun hangs on him: it still falls to its sling as his hands leave it); his hammer's blow waits what it did, his
+ *  shotgun's shell `drawW`. Off (`?nobigweight`, a recording from before the key) = the times and the let-go of the build before. */
+const weighed = (): boolean => BIGSLOT.moves && BIGSLOT.weight && !WEIGHT_BREAK;
+/** … is on (kitanim.ts asks) */
+export const bigWeighed = (): boolean => weighed();
 /** … seconds from the hand leaving for the tool to the tool in his hands · to put it back · after which a hammer's wind-up may begin (a shell: the same as bigEquip) */
 export const bigEquip = (kind: 'hammer' | 'shotgun'): number => goneWithTick('bigEquip') as any;
 export const bigStow = (): number => goneWithTick('bigStow') as any;
 export const bigOutBy = (kind: 'hammer' | 'shotgun'): number => goneWithTick('bigOutBy') as any;
+/** … how long YOUR own gun (or the can in your fist) takes to be put away by hand before the hand goes for the tool: the kit's own stow for what its hand
+ *  HOLDS (`kitWas` — what the last errand brought there, not what the game says is up: a pistol the wall's own arms have just handed back was never the kit's
+ *  to carry, and is let go as before; a rifle on a sling in front is let down, not taken over the shoulder) — 0 with nothing in that hand, with the kit's hand
+ *  off, or the weight off. An upper bound: an errand that is over sooner (a gun asked back half way out) ends the wait with it — samBigTick. */
+export function samBigLeadOf(g: Game): number {
+  if (!weighed() || !KITANIM.on || !KITANIM.equip || g.touring) return 0;
+  const it = g.player.kitWas; if (!it || !kitInHand(g)) return 0;
+  return it === 'rifle' && kitSlingFront(g) ? KIT.front.stow : KIT.stow[it];
+}
+/** … and that errand is the kit's to run this frame (kitanim.ts kitTick / kitInHand): while the beat's clock is below zero, and after it until the empty
+ *  hand has come away from the holster (the tool's own pose starts on the hand the pose under it shows: an errand dropped there would jump it) */
+export function samBigCarry(g: Game): boolean {
+  const T = g.player.kick?.tool; if (!T?.moves || !(T.lead! > 0)) return false;
+  return T.t < 0 || (g.player.char.anim.kitBusy && T.t < CARRY_TAIL);
+}
+const CARRY_TAIL = 0.6;
 /** the hammer's wind-up (s): `BIGSLOT.heft` with the moves on — the swing is drawn — and `BIGSLOT.windup`, as it was, with them off */
 export const bigWind = (): number => goneWithTick('bigWind') as any;
 /** … and from one blow to the next: with the moves on never less than a follow-through and a wind-up */
@@ -149,7 +179,7 @@ const BESIDE_CLEAR = 0.6;
 export function samBigStart(g: Game, d: Door): void { return crossToRust('samBigStart', undefined, [g, d]) as any; }
 /** the blows the hammer needs on d from p: ONE where a boot would do (the leaf opens away: it is flung in, in the boot's own time) — `BIGSLOT.swings` where
  *  the frame holds a boot (doors.ts bootHolds: the face it opens toward), the first a thud in the frame */
-export const hammerBlows = (g: Game, d: Door, p: readonly number[]): number => goneWithTick('hammerBlows') as any;   // (a latch that is not locked gives at one blow from either face)
+export const hammerBlows = (g: Game, d: Door, p: readonly number[]): number => (d.locked && g.doors.bootHolds(d, p as [number, number, number]) ? Math.max(1, BIGSLOT.swings) : 1);   // (a latch that is not locked gives at one blow from either face)
 /** which face of d he is on (the lock point's side) */
 export const bigSide = (d: Door, p: readonly number[]): 1 | -1 => (offOf(d, p as [number, number, number], 1) >= 0 ? 1 : -1);
 

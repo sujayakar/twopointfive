@@ -479,11 +479,10 @@ pub fn clearing_approach(g: &mut crate::game::Game) {
             man.state = crate::game::GuardState::Search;
             man.react_t = 0.0;
             man.search_t = 0.0;
-            man.hold = false;
-            man.pinned = false;
             man.body_duty = None;
             man.awareness = m::min(man.awareness, 0.25);
         }
+        crate::control::set_hold(g, gd, false, "squad"); crate::control::set_pinned(g, gd, false, "squad");
         cl!(g).aw[i] = g.gd[gd].awareness;
         let mark = p.stack[i];
         let mut end: V3 = v3::copy(mark);

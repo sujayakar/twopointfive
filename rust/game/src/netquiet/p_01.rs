@@ -993,7 +993,7 @@ fn tick_man(g: &mut Game, gd: GuardId, dt: f64) {
             def.stall_at = v3::copy(here);
             def.stall_t = 0.0;
             def.rally_at = f64::NAN;
-            g.gd[gd].pinned = false;
+            crate::control::set_pinned(g, gd, false, "netquiet");
             crate::squad::order(
                 g,
                 gd,
@@ -1054,7 +1054,7 @@ fn tick_man(g: &mut Game, gd: GuardId, dt: f64) {
     // nothing seen, nothing heard for `alertSecs`: he is no longer 'alert'; the spot, the crouch and the arc stay
     let alert = g.gd[gd].state == crate::game::GuardState::Alert;
     let long_enough = mind(g, gd).t > k.alert_secs;
-    if alert && ok && long_enough && g.time - m::max(g.gd[gd].last_seen_t, g.gd[gd].witness.heard.last_t) > k.alert_secs && (!g.k.belief.on || g.gd[gd].awareness < 0.85) {
+    if alert && ok && long_enough && g.time - m::max(g.gd[gd].last_seen_t, g.gd[gd].witness.heard.last_t) > k.alert_secs && g.gd[gd].awareness < 0.85 {
         ease(g, gd);
     } else if !alert && ok {
         wary(g, gd);

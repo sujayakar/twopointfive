@@ -41,7 +41,7 @@ pub fn hash_u(n: f64) -> f64 {
 pub fn dice(s: &mut crate::blast_feel::State) -> f64 { let n = s.serial; s.serial += 1.0; hash_u(n) / 4294967296.0 }
 
 /// DESTRUCTION.on && FEEL.on && chaosOf(g) > 0 (src/game/blastFeel.ts:98 live)
-pub fn live(g: &mut crate::game::Game) -> bool { g.k.destruction.on && g.m.blast_feel.feel.on && crate::destruction::chaos_of(g) > 0.0 }
+pub fn live(g: &mut crate::game::Game) -> bool { g.m.blast_feel.feel.on && crate::destruction::chaos_of(g) > 0.0 }
 /// (src/game/blastFeel.ts:99 thick)
 pub fn thick(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> f64 { let h = g.tab.boxes[w.box_].h; 2.0 * (if w.along_x { h[2] } else { h[0] }) }
 /// (src/game/blastFeel.ts:100 near)
@@ -163,6 +163,7 @@ pub fn report(g: &mut crate::game::Game, pl: PlayerId, at: V3) {
     let carry = 1.0 + k.carry * m::min(1.0, m::max(0.0, (d - k.carry_from) / k.carry_over));
     let (r2, r3) = { let s = state_mut(g); let r2 = 0.96 + 0.06 * dice(s); let r3 = 0.94 + 0.12 * dice(s); (r2, r3) };
     // (the crack passes NO rate: the mixer draws its own)
+    crate::out_events::push_wall_feel(g, at);   // (the picture's half of the feel: the fireball, the dust ring, the pushes, the ceiling's dust)
     crate::audio_iface::game_audio_like_play(g, "wallCrack", Some(at), Some(k.crack * (0.25 + 0.75 * dull) * carry), None);
     crate::audio_iface::game_audio_like_play(g, "wallThump", Some(at), Some(k.thump * carry), Some(&crate::audio_iface::PlayOpts::Rate { rate: r2 }));
     crate::audio_iface::game_audio_like_play(g, "wallDebris", Some(at), Some(k.debris * (0.4 + 0.6 * dull) * carry), Some(&crate::audio_iface::PlayOpts::Rate { rate: r3 }));

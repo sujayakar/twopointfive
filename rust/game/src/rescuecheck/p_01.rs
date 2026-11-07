@@ -377,9 +377,8 @@ pub fn tick_out(g: &mut Game, cast: &[CastItem], fight: bool) {
             man.state = crate::game::GuardState::Alert;
             man.awareness = 1.0;
             man.react_t = 0.0;
-            man.hold = false;
-            man.pinned = false;
         }
+        crate::control::set_hold(g, gd, false, "rescuecheck"); crate::control::set_pinned(g, gd, false, "rescuecheck");
         crate::belief::word(g, gd, [body[0], 0.0, body[2]]);
         crate::guards::reset_chase(g, gd);
         // (the way the rescue lets a roamer go: he stays on the room fight's roster and holds again where he ends up)

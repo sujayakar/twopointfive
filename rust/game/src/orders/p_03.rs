@@ -191,7 +191,7 @@ fn seam_arm_valid(g: &mut Game, arm: &OrderValid, t: &OrderTarget, men: &[GuardI
             if crate::doortools::door_tools_loose_on(g, t) { return fits(crate::doortools::door_tools_standoff_fits(g, men, t, Some(true))); }
             if crate::doortools::door_tools_charge_on(g, x.door).is_some() { return Ok(()); }
             if on(g.dr[x.door].def.steel) { return Err(Some(String::from("steel. a charge won't cut it."))); }
-            let open = if g.k.doortools.charge_answer { crate::doortools::door_tools_known_open(g, x.door) } else { crate::doortools::is_open(g, x.door) };
+            let open = crate::doortools::door_tools_known_open(g, x.door);
             if open { return Err(Some(String::from("it's open."))); }
             if g.door_tools.charges <= 0.0 { return Err(Some(String::from("no charges left."))); }
             let ops = g.door_tools.ops.clone();
@@ -940,8 +940,8 @@ pub fn squad_orders_assign(g: &mut crate::game::Game, gd: GuardId, a: &crate::or
     let t = g.time;
     let was = g.orders.asg.get(gd).copied();
     let fighting = g.gd[gd].script.is_none() && g.gd[gd].state == crate::game::GuardState::Alert;
-    g.gd[gd].pinned = false;
-    g.gd[gd].hold = false;
+    crate::control::set_pinned(g, gd, false, "orders");
+    crate::control::set_hold(g, gd, false, "orders");
     g.orders.ours.delete(gd);
     let r = a.post.map(|post| squad_orders_route(g, gd, post, a.shy, a.thru, None));
     let via: Vec<V3> = r.as_ref().map_or(Vec::new(), |x| x.via.clone());

@@ -21,7 +21,7 @@ import type { Game, Guard, GameEvent } from './game';
 import type { UpperMode } from './character';
 import './teams';
 import { wg } from './words';   // (a leaf: the dialogue pass's one switch)
-import { crossToRust, goneWithTick } from './crossing';
+import { crossToRust } from './crossing';
 
 /** Every number of it (panel-tunable; the QA probes read them rather than copy them). */
 export const WHISTLE = {
@@ -88,7 +88,7 @@ function mem(gd: Guard): WhistleMem {
   return M;
 }
 /** read-only peek for the panel / the QA harness (null: no whistle has ever concerned this man) */
-export function whistleMem(gd: Guard): Readonly<WhistleMem> | null { return goneWithTick('whistleMem') as any; }
+export function whistleMem(gd: Guard): Readonly<WhistleMem> | null { return memOf.get(gd) ?? null; }
 
 // ---------------------------------------------------------------- the player's side
 export interface Blower { readyAt: number; blown: number; lastAt: number; }

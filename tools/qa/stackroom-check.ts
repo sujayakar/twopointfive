@@ -29,7 +29,6 @@ const { scenarioQuery } = await import(`${ROOT}/src/scene/scenarios.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { withOfficeScript, isOfficeFamily } = await import(`${ROOT}/src/scene/level.ts`);
 const { LOOK_LEVELS } = await import(`${ROOT}/src/scene/look.ts`);
 const SRM: any = await import(`${ROOT}/src/game/stackroom.ts`).catch(() => null);   // (null in a checkout from before the rule: --dump runs there too)
 const { STACKROOM, stackRoomProbe, stackRoomSummary } = SRM ?? { STACKROOM: { on: false, nextM: 0 }, stackRoomProbe: null, stackRoomSummary: () => '' };
@@ -41,7 +40,7 @@ type V = [number, number, number];
 const DT = 1 / 60, args = process.argv.slice(2), WALK_OFF = args.includes('--walk-off'), WALK = WALK_OFF || args.includes('--walk'), VERBOSE = args.includes('--verbose'), DUMP = args.includes('--dump') ? args[args.indexOf('--dump') + 1] : null, ids = args.filter((a, i) => !a.startsWith('--') && args[i - 1] !== '--dump');
 const flat = (a: V, b: V) => Math.hypot(a[0] - b[0], a[2] - b[2]), f2 = (p: V) => `(${p[0].toFixed(2)}, ${p[2].toFixed(2)})`;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
-const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data); };
+const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return loadLevel(data); };
 const hush = async <T>(fn: () => T | Promise<T>): Promise<T> => { if (VERBOSE) return await fn(); const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } };
 
 async function stage(E: any, seed = 1) {

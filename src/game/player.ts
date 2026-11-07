@@ -6,7 +6,7 @@ import type { View } from '../host/hud';
 import { Vec3, v3, clamp, wrapAngle, approachAngle, damp } from '../math/vec';
 import { Input } from './input';
 import { FollowCamera } from './camera';
-import { Door } from './doors';
+import { Doors, Door, DOORWAY } from './doors';
 import './ragdoll';
 import { ThrowSolution } from './throwables';
 import './rigProps';
@@ -21,10 +21,10 @@ import './workthings';   // (called inside buildInteractables only)
 import { chronKey, chronGrab } from './chronicle';
 import { killGuard, dropFromHand } from './combat';
 import { restOfThrow } from './frag';
-import './bigkit';
-import './kit';   // (the two asked at the two keys and each frame beside them: a card that left your light or your goggles at home — kittree.ts)
-import './shotgun';
-import { samBigDrop } from './bigkit';
+import { hammerBlows } from './bigkit';
+import { BIGSLOT } from './kit';   // (the two asked at the two keys and each frame beside them: a card that left your light or your goggles at home — kittree.ts)
+import { lockPoint } from './shotgun';
+import { bigSide, samBigSpot, samBigDrop, samBigLeadOf } from './bigkit';
 import './suppression';
 import './condition';   // (a hurt man does not sprint: Shift is not a run for him, so it lets go of nothing either)
 import './he40';
@@ -57,7 +57,7 @@ import './wallcharge';
 import './defuse';
 import { STALK, stalkOn } from './stalk';
 import { TAPSTEP } from './tapstep';
-import { closeLive, closeAt, closeKindOf, closeTook, closeSeated, closeUnseat } from './close';
+import { closeLive, closeAt, closeKindOf, closeStation, closeTook, closeSeated, closeUnseat } from './close';
 import './kitanim';
 import type { CloseKind } from './close';
 import './wet';
@@ -67,7 +67,7 @@ import { civilianGrabbed, civiliansShown } from './civilians';
 import { samKeyLineFor } from './dialogue';
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import { WORDS } from './words';   // (a leaf: the dialogue pass's one switch)
-import { takeFall } from './takedown';   // a takedown's own move and the fall it leaves (takedown.ts): poses only
+import { takeBegin, takeFall } from './takedown';   // a takedown's own move and the fall it leaves (takedown.ts): poses only
 import { word } from './belief';
 import { RUST_PASS, RUST_SURFACE, crossToRust, goneWithTick } from './crossing';
 
@@ -539,7 +539,23 @@ export function gunShut(g: Game): boolean { { const __s = RUST_SURFACE; if (__s)
 
 /** Silent takedown (a left click with the hands empty on the man in reach behind — game.ts updateDoors; the tour and the harness call it too): lock in behind the
  *  guard, throw the cross, he drops with a soft thud only the room hears. */
-export function startTakedown(g: Game, gd: Guard, way?: CloseKind, lethal = false, loud = false): void { return crossToRust('startTakedown', undefined, [g, gd, way, lethal, loud]) as any; }
+export function startTakedown(g: Game, gd: Guard, way?: CloseKind, lethal = false, loud = false) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('startTakedown', undefined, [g, gd, way, lethal, loud]); if (__r !== RUST_PASS) return __r as any; } }
+  const pl = g.player; if (gd.state === 'dead' || pl.down) return;   // (F + fire in the same frame: the round got there first)
+  // closer than ever (close.ts): the way in the row offered — from a side or the front he strikes from where he stands, a seated man is put out in his chair
+  const kind: CloseKind | undefined = closeLive(g) ? way ?? closeKindOf(closeAt(g, gd, pl.char.pos)) : undefined;
+  const from = kind && kind !== 'behind' ? wrapAngle(Math.atan2(pl.char.pos[0] - gd.char.pos[0], pl.char.pos[2] - gd.char.pos[2]) - gd.char.bodyYaw) : 0;
+  if (pl.wall) pl.wall.drawn = false;   // offered from the wall: he steps off it into the lunge with the empty hands he had on it — and keeps them empty after, as every takedown leaves him
+  releaseWall(g);
+  if (pl.dragging) g.toggleDrag();
+  pl.takedown = kind && kind !== 'behind' ? { g: gd, t: 0, kind, from, alert: gd.state === 'alert', at: closeStation(gd, kind, from).pos } : { g: gd, t: 0 }; pl.sprinting = false;
+  if (loud) pl.takedown.loud = true;   // (close.ts CLOSE.rmbHold: the quick knockout is heard further)
+  if (lethal) { pl.takedown.lethal = true; pl.char.anim.strike(kind === 'front' ? 'jab' : 'cross', true); } else pl.char.anim.strike(kind === 'front' ? 'jab' : 'cross'); takeBegin(g, pl.char, gd, kind, lethal); cancelReloads(pl);   // (lethal: the knife comes out of its sheath in the blow — close.ts CLOSE.lethal, the left click)
+  if (kind) closeTook(g, gd, 'take', kind, from, Math.hypot(pl.char.pos[0] - gd.char.pos[0], pl.char.pos[2] - gd.char.pos[2]));
+  if (THROWBACK.on) throwOff(pl);   // (throwback.ts: the can it counted off the belt at the click is not lost with the wind-up)
+  pl.throwHeld = false; pl.throwPreview = null; pl.pendingThrow = null;   // a wind-up does not survive the lunge
+  gd.speed = 0; gd.char.vel = [0, 0, 0]; gd.path = []; gd.pathGoal = null; gd.reactT = Math.max(gd.reactT, 1.0);   // he freezes for the beat it takes
+  g.audio.play('bodyHit', v3.add(gd.char.pos, [0, 1.3, 0]), loud ? 0.8 : 0.55, { rate: 0.8 });
+}
 
 
 // ------------------------------------------------------------ grab → hold → interrogate → choke out / pistol-whip
@@ -694,7 +710,14 @@ export function freeHeld(g: Game, why: 'shot' | 'cancel') { { const __s = RUST_S
 // ------------------------------------------------------------ locked doors: pick it (quiet, slow) or kick it in (instant, floor-wide loud)
 /** The 'pick the lock' row on a door locked against you (Game.updateDoors): drop whatever the hands were doing and start working the lock — updatePicking runs
  *  the beat on its own from here; a step, a Space tap or Esc breaks off (interact.ts cancelSustained → stopPicking). */
-export function startPicking(g: Game, d: Door): void { return crossToRust('startPicking', undefined, [g, d]) as any; }
+export function startPicking(g: Game, d: Door) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('startPicking', undefined, [g, d]); if (__r !== RUST_PASS) return __r as any; } }
+  const pl = g.player, c = pl.char; if (pl.down || pl.takedown || pl.kick) return;
+  if (d.def.steel) { g.msg("the stair door has no keyhole on this side, so you can't pick it"); return; }   // (the row is never offered for it; a script asking anyway gets the reason)
+  releaseWall(g); if (pl.dragging) g.toggleDrag();
+  cancelReloads(pl); pl.throwHeld = false; pl.throwPreview = null; pl.sprinting = false; pl.easing = null; wandDrop(pl);
+  pl.picking = d; pl.crouch = true;   // you work a lock on your knee — and stay down there afterwards
+  if (d.pick <= 0) g.msg('picking the lock. take a step or press Space to stop');
+}
 /** Hands off the tools (the pick broken off — a step, Space, Esc, the tour, a man coming through with his key — or done): the progress stays on the door a couple
  *  of seconds (doors.ts), he stays on his knee. */
 export function stopPicking(g: Game, text?: string) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('stopPicking', undefined, [g, text]); if (__r !== RUST_PASS) return __r as any; } }
@@ -717,8 +740,31 @@ export function stopWand(g: Game, text?: string) {
 
 /** Kick a door in: the 'kick it in' row on a door locked against you, or a sprint straight into one (Game.updateDoors). One committed second: updateKick.
  *  Offered crouched too — it stands him up into it — so not where he cannot stand (canStand: the row is withheld there, and this refuses). */
-export function startKick(g: Game, d: Door, run = false, tool?: 'shotgun' | 'hammer'): void { return crossToRust('startKick', undefined, [g, d, run, tool]) as any; }
+export function startKick(g: Game, d: Door, run = false, tool?: 'shotgun' | 'hammer') { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('startKick', undefined, [g, d, run, tool]); if (__r !== RUST_PASS) return __r as any; } }
+  const pl = g.player, c = pl.char; if (pl.kick || pl.down || pl.takedown || c.anim.kicking) return;   // (anim.kicking without pl.kick: the leg is still coming down from a kick a teleport broke off — its clock would time this one's impact wrong)
+  if (pl.crouch && !canStand(g)) { g.msg('no room to stand for a kick here'); return; }
+  if (tool && BIGSLOT.moves && Math.min(v3.distXZ(d.pos, c.pos), v3.distXZ(d.frameCentre, c.pos)) >= Doors.USE_REACH && !samBigSpot(g, d, c.pos, tool)) return;   // (the row taken from a stack's distance and the place beside the frame gone under it this frame: nothing begins — the opening is not walked into from there)
+  releaseWall(g); if (pl.dragging) g.toggleDrag();
+  pl.picking = null; wandDrop(pl); c.anim.lockpick = false; pl.easing = null; pl.sprinting = false; pl.crouch = false; pl.throwHeld = false; pl.throwPreview = null; pl.fHeld = true; pl.speedSm = 0;
+  cancelReloads(pl);
+  pl.doorKickTail = false;
+  const beside = tool ? samBigSpot(g, d, c.pos, tool) : null;
+  const spot = beside ?? (run ? null : sideKickSpot(g, d, c.pos)) ?? g.doors.kickSpot(d, c.pos);   // taken ONCE, off the leaf as it stands now: a man coming through with his key mid-kick swings the leaf, and a spot re-read off the swinging leaf orbited the hinge with it — reeling the planted kicker through the doorway (or at 20 fps through the wall beside it)
+  if (tool) { const lead = BIGSLOT.moves ? samBigLeadOf(g) : 0;
+    pl.kick = { door: d, spot: spot.pos, yaw: spot.yaw, tool: { kind: tool, side: bigSide(d, c.pos), t: -lead, ...(lead > 0 ? { lead } : {}), n: 0, need: hammerBlows(g, d, c.pos), next: BIGSLOT.moves ? Infinity : tool === 'hammer' ? BIGSLOT.windup : BIGSLOT.draw, done: -1,
+    ...(BIGSLOT.moves ? { moves: { arrived: false, at: beside?.at ?? lockPoint(d, bigSide(d, c.pos)), blows: [], end: -1, ...(beside?.via ? { via: beside.via } : {}) } } : {}) } }; return; }   // (bigkit.ts: the big slot's tool on the lock in the boot's place — the same planted beat, no leg thrown)
+  pl.kick = run ? { door: d, spot: spot.pos, yaw: spot.yaw, run: true } : { door: d, spot: spot.pos, yaw: spot.yaw }; c.anim.kickDoor();   // (run — sprintdoor.ts: the boot at a sprint, at the face the leaf opens toward)
+}
 
+/** DOORWAY.sideKick: the spot a kick is thrown from BESIDE the door, for a kicker who already stands beside its latch jamb on that face with floor to stand on
+ *  there and nothing solid between him and it; null = the square kick (in front of the leaf, on the hinge side, no floor, the switch off). */
+export function sideKickSpot(g: Game, d: Door, from: Vec3): { pos: Vec3; yaw: number } | null {
+  if (!DOORWAY.sideKick || d.off) return null;
+  const f = g.doors.frameCoords(d, from); if (f.along < d.def.width - 0.05 || f.along > d.def.width + 1.2 || f.off > 1.3) return null;
+  const s = g.doors.kickSpotSide(d, from);
+  if (g.col.nav.isBlocked(s.pos[0], s.pos[2]) || g.col.solidBlocked([from[0], 0.5, from[2]], [s.pos[0], 0.5, s.pos[2]])) return null;
+  return s;
+}
 
 
 /** Planar distance from the player to a corpse, wherever the ragdoll left it: the nearer of its ankles (what you take hold of) and its hips.
@@ -776,6 +822,7 @@ export const MAX_NEAR = 3;
  *  leaf may already stand and still offer the row (shut, or a hand ajar). */
 export const EASE_RATE = 0.55, EASE_MAX = 1.45;
 
+export function throwCount(g: Game, kind: ThrowKind) { return kind === 'frag' ? g.player.frags : kind === 'flash' ? g.player.flashbangs : g.player.canisters; }
 /** a thrown thing not yet out of the hand (or, under unlimited ammo, just out of it) goes back on the belt */
 function canBack(pl: Player, kind: ThrowKind) { if (kind === 'frag') pl.frags++; else if (kind === 'flash') pl.flashbangs++; else pl.canisters++; }
 /** a wind-up called off with the can still in his fist: the can is back on the belt and nothing leaves his hand (a grab, cancelActions; under throwback.ts

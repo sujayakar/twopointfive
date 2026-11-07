@@ -40,6 +40,7 @@ pub enum OutEvent {
     ClearSnowMarks,
     ClearSnowTracks,
     Tap(crate::out_events::OutTap),
+    WallFeel(crate::out_events::OutWallFeel),
 }
 
 #[derive(Clone, Debug)]
@@ -95,6 +96,7 @@ pub struct OutParticlesEmit {
     pub dir: V3,
     pub count: f64,
     pub o: crate::render_particles::EmitOpts,
+    pub ours: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -216,6 +218,11 @@ pub struct OutTap {
     pub row: u32,
     pub args: Vec<u8>,
     pub answer: Vec<u8>,
+}
+
+#[derive(Clone, Debug)]
+pub struct OutWallFeel {
+    pub at: V3,
 }
 
 /// (audio_iface.ts PlayOpts: an object with some of these)

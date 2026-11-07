@@ -33,6 +33,8 @@ export const PROP_U32 = ['flags', 'who', 'id', 'row'] as const;
 export const PROP_HEAD = 16;
 /** a thing's truths (the bits of `flags`: props.rs F_ASLEEP, F_DIRTY, F_ROLLING) */
 export const PT = { asleep: 1, dirty: 2, rolling: 4 } as const;
+/** PropEvent.sound as an event of the module's names it (its place here) */
+export const PROP_SOUNDS = ['scrape', 'thud', 'roll'] as const;
 
 /** where each column starts for columns `cap` rows long (sim/colstore.ts colsOf) */
 export type PropCols = ColsOf<(typeof PROP_F64)[number], (typeof PROP_U32)[number]>;

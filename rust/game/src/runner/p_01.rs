@@ -481,9 +481,8 @@ pub fn drop(g: &mut crate::game::Game, gd: GuardId) {
         o.search_plan = None;
         o.standoff = None;
         o.muzzle_down = false;
-        o.hold = true;
-        o.pinned = true;
     }
+    crate::control::set_hold(g, gd, true, "runner"); crate::control::set_pinned(g, gd, true, "runner");
     let e = known(g, gd);
     let mate = pick_mate(g, gd);
     if let Some(ma) = mate {
@@ -661,8 +660,8 @@ pub fn step(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     g.fa[w].chamber = 0.0;
     g.fa[w].mag = Some(0.0);
     g.fa[w].burst = None;
-    g.gd[gd].hold = true;
-    g.gd[gd].pinned = true;
+    crate::control::set_hold(g, gd, true, "runner");
+    crate::control::set_pinned(g, gd, true, "runner");
     if g.gd[gd].state != crate::game::GuardState::Patrol { g.gd[gd].state = crate::game::GuardState::Patrol; }
     g.gd[gd].awareness = 0.0;
     g.gd[gd].foe = None;
@@ -838,7 +837,10 @@ pub fn drive(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// the script his body follows this frame, None = he is not this file's   (runner.ts runnerScript)
-pub fn runner_script(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::game::GuardScript> {
+pub fn runner_script(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::game::GuardScript> { runner_propose(g, gd) }
+
+/// WHAT IT WANTS OF HIM (a rule's second part, control/; it only reads): the same answer. Its state is moved by `runner_tick`.
+pub fn runner_propose(g: &crate::game::Game, gd: GuardId) -> Option<crate::game::GuardScript> {
     let now = g.time;
     match g.m.runner.state_of.get(gd) {
         Some(r) if r.drive && r.drive_t == now => Some(r.script),

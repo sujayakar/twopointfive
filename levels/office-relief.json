@@ -1221,5 +1221,142 @@
       { "id": "clear_breakroom_w", "door": "breakroom_w", "room": "break room", "breach": "open", "bounds": { "x0": 28.12, "x1": 35.88, "z0": 12.26, "z1": 23.88 }, "stack": [[27.4, 0, 18.7], [27.35, 0, 19.55]], "stackFace": [2.43, 2.5], "stackSide": 1, "stackAim": [[27.98, 1.05, 17.9], [28, 1.95, 17.6]], "kickFrom": [27.24, 0, 18.04], "kickFace": 1.5707963267948966, "fling": -6.5, "entry": [[[28.5, 0, 17.75], [28.9, 0, 21.5]], [[27.3, 0, 17.75], [28.6, 0, 17.7], [29.7, 0, 17.35], [29.6, 0, 15.6], [29.3, 0, 14.6]]], "podFace": [2.3, 1.75], "entryAim": [[[28.4, 0.8, 23.4], [31.6, 1, 23.7], [31.5, 0.9, 19.5]], [[28.3, 1.1, 17.5], [28.6, 0.9, 13.8], [30.6, 1, 12.5], [35.2, 1, 13.4]]], "searchPath": [[31.25, 0, 22.25], [33.75, 0, 21.25]], "searchFace": -2.23, "searchAimWalk": [[35.3, 0.5, 22.8], [35.3, 0.5, 22.8], [34.9, 0.5, 18.4]], "searchAimThere": [[30.5, 0.8, 19.4], [35.3, 1, 15], [35.2, 0.9, 12.9], [30.6, 1.1, 12.5]], "underAim": [[31.5, 0.32, 19.4], [32.6, 0.32, 18.6], [30.4, 0.32, 20.4]], "upAim": [30.6, 1.1, 12.5], "formUp": [[[30, 0, 21.6], [28.9, 0, 18.9]], [[29.7, 0, 16.2], [29.4, 0, 17.45], [28.6, 0, 17.75]]], "formFace": [-2.68, -1.5707963267948966], "lines": { "stack1": "stack up — break room, side door.", "stack2": "on you.", "go2": "set… go!", "in1": "going in!", "side2": "door side clear — machines, north door.", "side1": "right side clear.", "push1": "taking the back wall — get your light under the table.", "under2": "checking under the table…", "nothing2": "nothing under it.", "corner1": "far end clear — outside door's shut.", "empty2": "break room's clear.", "radio1": "negative contact, break room." } }
     ],
     "breach": { "id": "breach_breakroom_w", "door": "breakroom_w", "room": "break room", "breach": "kick", "bounds": { "x0": 28.12, "x1": 35.88, "z0": 12.26, "z1": 23.88 }, "from": [[9.4, 0, 18.75], [8.3, 0, 19.05]], "stack": [[27.42, 0, 18.68], [27.42, 0, 19.55]], "stackFace": [3.141592653589793, 3.141592653589793], "stackSide": 1, "stackAim": [[27.9, 1.05, 18], [27.85, 1.9, 17.7]], "kickFrom": [27.24, 0, 18.04], "kickFace": 1.5707963267948966, "fling": -6.5, "retreat": { "mark": [26.55, 0, 18.9], "face": 1.5707963267948966 }, "toss": { "mark": [27.5, 0, 18.62], "face": 3.141592653589793, "land": [30.7, 0.05, 16.6] }, "hostiles": [{ "pos": [32.3, 0, 17.95], "yaw": -1.5707963267948966, "aimAt": [28.1, 1.1, 17.6] }, { "pos": [31.9, 0, 14.9], "yaw": -0.97, "aimAt": [28.1, 1.1, 17.6] }, { "pos": [33.4, 0, 21.7], "yaw": -2.22, "aimAt": [28.1, 1.1, 17.6] }], "entry": [[[27.45, 0, 17.72], [28.55, 0, 17.8], [29.6, 0, 17.92], [29.25, 0, 19.3], [28.95, 0, 20.45]], [[27.55, 0, 17.5], [28.55, 0, 17.42], [29.4, 0, 17.2], [29.95, 0, 16.2], [29.8, 0, 14.75], [29.45, 0, 14.05]]], "podFace": [0.75, 2.55], "entryAim": [[[33.4, 1.1, 16.1], [33.2, 1.05, 19.4], [33.4, 1.15, 21.7], [28.7, 0.9, 23.3]], [[33, 1.05, 19], [32.4, 1.1, 15], [31.5, 1, 12.5], [28.45, 0.9, 14.3]]], "flow": [{ "podFace": 2.94, "into": [[27.45, 0, 17.72], [28.55, 0, 17.8], [29.6, 0, 17.92]], "centre": [[33.4, 1.1, 16.1], [33.2, 1.05, 19.4]], "corner": [[29.25, 0, 19.3], [28.95, 0, 20.45]], "cornerAim": [[35, 1.1, 19.6], [33.4, 1.15, 21.7], [31.6, 1, 23.6], [28.7, 0.9, 23.3]], "hold": [30.6, 1.05, 12.5] }, { "podFace": 1.58, "into": [[27.55, 0, 17.5], [28.55, 0, 17.42], [29.4, 0, 17.2]], "centre": [[33, 1.05, 19], [32.4, 1.1, 15]], "corner": [[29.95, 0, 16.2], [29.8, 0, 14.75], [29.45, 0, 14.05]], "cornerAim": [[34.6, 1.1, 13.2], [31.5, 1, 12.5], [29.2, 1, 13.5], [28.45, 0.9, 14.3]], "hold": [34.6, 1.1, 15.2] }], "targets": [{ "centre": [0], "corner": [2] }, { "centre": [1, 0], "corner": [1] }], "next": { "door": "breakroom_n", "stack": [[31.62, 0, 12.78], [32.5, 0, 12.8]], "stackFace": [-1.5707963267948966, -1.5707963267948966], "stackSide": 1, "stackAim": [[30.9, 1.05, 12.3], [30.5, 1.85, 12.3]], "via": [[29.75, 0, 18.7], [30.3, 0, 16.2], [30.9, 0, 14.3]] }, "searchPath": [[31.25, 0, 22.25], [33.75, 0, 21.25]], "searchFace": -2.23, "searchAimWalk": [[35.3, 0.5, 22.8], [35.3, 0.5, 22.8], [34.9, 0.5, 18.4]], "searchAimThere": [[30.5, 0.8, 19.4], [35.3, 1, 15], [35.2, 0.9, 12.9], [30.6, 1.1, 12.5]], "underAim": [[31.5, 0.32, 19.4], [32.6, 0.32, 18.6], [30.4, 0.32, 20.4]], "upAim": [30.6, 1.1, 12.5], "formUp": [[[29.55, 0, 15.7]], [[29.5, 0, 19.6], [29, 0, 18.6]]], "formFace": [1.25, 1.5707963267948966], "lines": { "stack1": "stack on me — side door. bang on my boot.", "stack2": "set — bang's up.", "go2": "", "in1": "door!", "side2": "left clear.", "side1": "right side — clear.", "push1": "", "under2": "", "nothing2": "", "corner1": "", "empty2": "", "radio1": "" }, "breachLines": { "breach1": "breaching.", "bang2": "bang out!", "going1": "go! go! go!", "clear1": "right side — clear. two down.", "clear2": "left clear — one down. i have the door.", "roomClear1": "room clear — three down.", "next1": "north door — stack on it. you're point.", "radio1": "entry team: break room secure, moving to the corridor door." } }
+  },
+  "scenarios": {
+    "nightBreach": {
+      "team": { "sam": [9.6, 0, 20.3], "samYaw": 1.5707963267948966 },
+      "room": "break room",
+      "lights": "breakroom"
+    },
+    "roomClear": {
+      "name": "east wing",
+      "rooms": [
+        { "id": "breakroom", "name": "break room", "bounds": { "x0": 28.12, "x1": 35.88, "z0": 12.26, "z1": 23.88 }, "garrison": 2, "doors": [{ "id": "breakroom_w", "from": "cubicles" }, { "id": "breakroom_n", "from": "corridor" }, { "id": "breakroom_ext", "from": "south lot" }, { "id": "fire_exit", "from": "east side" }], "marks": [{ "pos": [32.3, 0, 17.95], "watch": "breakroom_w", "aimAt": [28.1, 1.1, 17.6] }, { "pos": [33.6, 0, 15.4], "watch": "breakroom_n", "aimAt": [30.6, 1.1, 12.36] }, { "pos": [31.9, 0, 14.9], "watch": "breakroom_w", "aimAt": [28.1, 1.1, 17.6] }, { "pos": [33.4, 0, 21.7], "watch": "breakroom_w", "aimAt": [28.1, 1.1, 17.6] }, { "pos": [29.4, 0, 21.9], "watch": "breakroom_n", "aimAt": [30.6, 1.1, 12.36] }, { "pos": [33.9, 0, 19.2], "watch": "breakroom_ext", "aimAt": [31.6, 1.1, 23.84] }] },
+        { "id": "storage", "name": "storage", "bounds": { "x0": 30.12, "x1": 35.88, "z0": 4.12, "z1": 9.94 }, "garrison": 1, "doors": [{ "id": "storage", "from": "corridor" }], "marks": [{ "pos": [31.8, 0, 5.3], "watch": "storage", "aimAt": [32.6, 1.1, 9.84] }, { "pos": [35.1, 0, 8.8], "watch": "storage", "aimAt": [32.6, 1.1, 9.5] }, { "pos": [31, 0, 8.8], "watch": "storage", "aimAt": [32.6, 1.1, 9.5] }] },
+        { "id": "manager", "name": "manager's office", "bounds": { "x0": 22.12, "x1": 29.94, "z0": 4.12, "z1": 9.94 }, "garrison": 1, "doors": [{ "id": "manager", "from": "corridor" }, { "id": "server_manager", "from": "server room" }], "marks": [{ "pos": [28.2, 0, 8.1], "watch": "manager", "aimAt": [25.6, 1.1, 9.84] }, { "pos": [23.4, 0, 6.3], "watch": "manager", "aimAt": [25.6, 1.1, 9.84] }, { "pos": [28.6, 0, 6.5], "watch": "server_manager", "aimAt": [22.16, 1.1, 8.55] }] },
+        { "id": "server", "name": "server room", "bounds": { "x0": 14.12, "x1": 21.88, "z0": 4.12, "z1": 9.94 }, "garrison": 1, "doors": [{ "id": "server", "from": "corridor" }, { "id": "server_manager", "from": "manager's office" }], "marks": [{ "pos": [15.2, 0, 8.4], "watch": "server", "aimAt": [17.6, 1.1, 9.84] }, { "pos": [20.6, 0, 7.9], "watch": "server", "aimAt": [17.6, 1.1, 9.84] }, { "pos": [16, 0, 7.8], "watch": "server_manager", "aimAt": [21.84, 1.1, 8.55] }] }
+      ]
+    },
+    "rescue": {
+      "team": { "sam": [7.6, 0, 13.4], "samYaw": 0.9, "ops": [[6.6, 0, 14.25], [8.5, 0, 14.3]] },
+      "room": { "name": "manager's office", "where": "far end of the corridor", "door": "manager", "lights": "manager", "doorAim": [25.6, 1.1, 9.9], "outside": [25.6, 0, 10.9], "hold": [25.6, 0, 10.3] },
+      "side": { "door": "server_manager", "hold": [22, 0, 8.55], "from": { "door": "server" }, "stack": [[20.85, 0, 7.55], [20.15, 0, 7.55]], "standoff": [[20.5, 0, 7.55], [19.8, 0, 7.55]] },
+      "hostages": [
+        { "pos": [26.4, 0, 4.9], "face": 0 },
+        { "pos": [28.4, 0, 5.45], "face": -0.5 }
+      ],
+      "captor": { "pos": [27.8, 0, 7.3], "aimAt": [25.6, 1.1, 9.9] },
+      "doorMan": { "inside": { "pos": [23.4, 0, 6.6], "aimAt": [25.6, 1.1, 9.9] }, "outside": { "pos": [29.4, 0, 11.1], "aimAt": [21, 1.1, 11.1] } },
+      "roamers": [
+        { "pos": [31.4, 0, 15.2], "aimAt": [30.6, 1.1, 12.4] },
+        { "pos": [7.2, 0, 6.4], "aimAt": [9.6, 1.1, 9.8] }
+      ],
+      "flow": { "corridor": { "x0": 4, "x1": 36, "z0": 10, "z1": 12.25 }, "regions": [{ "id": "conference", "door": "conference", "rect": { "x0": 4.12, "x1": 13.94, "z0": 4.12, "z1": 9.94 } }, { "id": "server", "door": "server", "rect": { "x0": 14.12, "x1": 21.88, "z0": 4.12, "z1": 9.94 } }, { "id": "cubicles", "door": null, "rect": { "x0": 12.2, "x1": 27.8, "z0": 12.3, "z1": 23.9 } }], "route": [{ "id": "conference", "name": "conference room", "short": "conf", "region": "conference", "kind": "glass", "door": "conference", "at": [9.6, 0, 10], "mark": [9, 0, 11.55], "watch": [10.2, 1.1, 7.4], "half": 0.55, "north": true, "call": "glass left.", "side": "left", "look": 0.9 }, { "id": "cubicles-w", "name": "cubicles west", "short": "cub W", "region": "cubicles", "kind": "doorway", "door": null, "at": [15.75, 0, 12.2], "mark": [14.9, 0, 10.6], "watch": [16, 1.1, 13.6], "half": 0.7, "north": false, "call": "opening right.", "side": "right", "look": 0.9 }, { "id": "server", "name": "server room", "short": "server", "region": "server", "kind": "door", "door": "server", "at": [17.6, 0, 10], "mark": [16.7, 0, 11.55], "watch": [17.6, 1.05, 10], "half": 0.55, "north": true, "call": "door left.", "side": "left", "look": 0.4 }, { "id": "cubicles-e", "name": "cubicles east", "short": "cub E", "region": "cubicles", "kind": "doorway", "door": null, "at": [22.75, 0, 12.2], "mark": [21.9, 0, 10.6], "watch": [23, 1.1, 13.6], "half": 0.7, "north": false, "call": "opening right.", "side": "right", "look": 0.9 }], "hold": { "ahead": 9, "xMax": 31, "z": 11.1 } }
+    },
+    "kitView": {
+      "ways": [
+        { "door": "server", "ref": [17.6, 11.1], "hide": ["box_0120", "box_0121", "box_0380", "box_0390"], "slots": [null, null, null, [15, 11.56, 90]], "roomLights": 1, "pane": false }
+      ]
+    },
+    "response": {
+      "why": "One floor of a guarded building at night: the night shift is three men, and the building's own response team waits floors below, a stair away.",
+      "site": "two-six",
+      "at": "on two-six",
+      "team": "the response team",
+      "tag": "QRF",
+      "ways": [
+        { "name": "the west stairwell", "door": "stairwell", "stairs": true, "coming": "coming up the west stairs", "clear": "nobody west of the lobby arch", "muster": [[3.1, 0, 11.25], [2.25, 0, 11.25], [3.1, 0, 10.3], [2.25, 0, 10.3]], "entry": [[6.7, 0, 11.2], [5.9, 0, 10.55], [5.9, 0, 11.8], [5.4, 0, 11.25]], "entryFace": [1.5707963267948966, 2.4, 0.75, 1.5707963267948966] }
+      ],
+      "men": [3, 4],
+      "eta": [60, 90],
+      "posts": [
+        { "name": "fire exit", "pos": [38.9, 0, 24.2], "yaw": -2.48, "sweep": [[36.15, 1, 19.9], [36.15, 1, 21.5]] },
+        { "name": "break-room door", "pos": [27.4, 0, 25.7], "yaw": 1.95, "sweep": [[30.9, 1, 24.15], [32.4, 1, 24.15]] },
+        { "name": "lobby front", "pos": [2.3, 0, 20.6], "yaw": 1.5707963267948966, "sweep": [[3.9, 1, 17.6], [3.9, 1, 22.4]] },
+        { "name": "south lot", "pos": [17.4, 0, 26.4], "yaw": 3.141592653589793, "sweep": [[14.5, 1.2, 24.15], [23.5, 1.2, 24.15]] }
+      ],
+      "outside": [[38.6, 0, 26.6], [37.4, 0, 26.9], [38.8, 0, 25.4], [37.2, 0, 25.6]]
+    },
+    "doorNames": [
+      { "door": "breakroom_n", "name": "corridor-side break room door" },
+      { "door": "breakroom_w", "name": "cubicles-side break room door" }
+    ],
+    "walked": [
+      { "from": "stairwell", "to": "reception", "weight": 2 },
+      { "from": "reception", "to": "couch", "weight": 0.5 },
+      { "from": "reception", "to": "coffee", "weight": 0.5 },
+      { "from": "reception", "to": "printer", "weight": 0.3 },
+      { "from": "stairwell", "to": "desk 1", "weight": 0.25 },
+      { "from": "desk 1", "to": "coffee", "weight": 0.25 },
+      { "from": "desk 1", "to": "printer", "weight": 0.15 },
+      { "from": "stairwell", "to": "desk 2", "weight": 0.25 },
+      { "from": "desk 2", "to": "coffee", "weight": 0.25 },
+      { "from": "desk 2", "to": "printer", "weight": 0.15 },
+      { "from": "stairwell", "to": "desk 3", "weight": 0.25 },
+      { "from": "desk 3", "to": "coffee", "weight": 0.25 },
+      { "from": "desk 3", "to": "printer", "weight": 0.15 },
+      { "from": "stairwell", "to": "desk 4", "weight": 0.25 },
+      { "from": "desk 4", "to": "coffee", "weight": 0.25 },
+      { "from": "desk 4", "to": "printer", "weight": 0.15 },
+      { "from": "stairwell", "to": "desk 5", "weight": 0.25 },
+      { "from": "desk 5", "to": "coffee", "weight": 0.25 },
+      { "from": "desk 5", "to": "printer", "weight": 0.15 },
+      { "from": "stairwell", "to": "desk 6", "weight": 0.25 },
+      { "from": "desk 6", "to": "coffee", "weight": 0.25 },
+      { "from": "desk 6", "to": "printer", "weight": 0.15 },
+      { "from": "stairwell", "to": "desk 7", "weight": 0.25 },
+      { "from": "desk 7", "to": "coffee", "weight": 0.25 },
+      { "from": "desk 7", "to": "printer", "weight": 0.15 },
+      { "from": "stairwell", "to": "desk 8", "weight": 0.25 },
+      { "from": "desk 8", "to": "coffee", "weight": 0.25 },
+      { "from": "desk 8", "to": "printer", "weight": 0.15 },
+      { "from": "stairwell", "to": "desk 9", "weight": 0.25 },
+      { "from": "desk 9", "to": "coffee", "weight": 0.25 },
+      { "from": "desk 9", "to": "printer", "weight": 0.15 },
+      { "from": "stairwell", "to": "desk 10", "weight": 0.25 },
+      { "from": "desk 10", "to": "coffee", "weight": 0.25 },
+      { "from": "desk 10", "to": "printer", "weight": 0.15 },
+      { "from": "stairwell", "to": "desk 11", "weight": 0.25 },
+      { "from": "desk 11", "to": "coffee", "weight": 0.25 },
+      { "from": "desk 11", "to": "printer", "weight": 0.15 },
+      { "from": "stairwell", "to": "desk 12", "weight": 0.25 },
+      { "from": "desk 12", "to": "coffee", "weight": 0.25 },
+      { "from": "desk 12", "to": "printer", "weight": 0.15 },
+      { "from": "stairwell", "to": "desk 13", "weight": 0.25 },
+      { "from": "desk 13", "to": "coffee", "weight": 0.25 },
+      { "from": "desk 13", "to": "printer", "weight": 0.15 },
+      { "from": "stairwell", "to": "desk 14", "weight": 0.25 },
+      { "from": "desk 14", "to": "coffee", "weight": 0.25 },
+      { "from": "desk 14", "to": "printer", "weight": 0.15 },
+      { "from": "stairwell", "to": "desk 15", "weight": 0.25 },
+      { "from": "desk 15", "to": "coffee", "weight": 0.25 },
+      { "from": "desk 15", "to": "printer", "weight": 0.15 },
+      { "from": "stairwell", "to": "desk 16", "weight": 0.25 },
+      { "from": "desk 16", "to": "coffee", "weight": 0.25 },
+      { "from": "desk 16", "to": "printer", "weight": 0.15 },
+      { "from": "stairwell", "to": "conference table", "weight": 0.5 },
+      { "from": "conference table", "to": "coffee", "weight": 0.5 },
+      { "from": "stairwell", "to": "manager's office", "weight": 0.5 },
+      { "from": "manager's office", "to": "coffee", "weight": 0.5 },
+      { "from": "manager's office", "to": "conference table", "weight": 0.5 },
+      { "from": "manager's office", "to": "printer", "weight": 0.3 },
+      { "from": "racks", "to": "desk 6", "weight": 0.3 },
+      { "from": "storage shelves", "to": "printer", "weight": 0.3 },
+      { "from": "storage shelves", "to": "coffee", "weight": 0.3 },
+      { "from": "storage shelves", "to": "bins", "weight": 0.5 },
+      { "from": "coffee", "to": "bins", "weight": 0.5 },
+      { "from": "coffee", "to": "break table", "weight": 2 },
+      { "from": "vending", "to": "break table", "weight": 1 },
+      { "from": "cooler", "to": "desk 12", "weight": 0.5 },
+      { "from": "cooler", "to": "desk 15", "weight": 0.5 },
+      { "from": "breakroom_ext", "to": "coffee", "weight": 1 },
+      { "from": "breakroom_ext", "to": "breakroom_n", "weight": 2 },
+      { "from": "breakroom_ext", "to": "red car", "weight": 0.5 },
+      { "from": "breakroom_ext", "to": "grey car", "weight": 0.5 },
+      { "from": "breakroom_ext", "to": "van", "weight": 0.5 },
+      { "from": "breakroom_ext", "to": "bikes", "weight": 0.5 },
+      { "from": "spawn", "to": "racks", "weight": 0.45 },
+      { "from": "racks", "to": "fire_exit", "weight": 0.45 }
+    ]
   }
 }

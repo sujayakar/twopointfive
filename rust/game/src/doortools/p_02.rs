@@ -259,7 +259,7 @@ pub(crate) fn row_charge_valid(g: &mut Game, t: &crate::orders::OrderTarget, men
     if door_tools_loose_on(g, t) { return standoff_fits(g, men, t, Some(true)); }
     if door_tools_charge_on(g, d).is_some() { return V::Bool(true); }
     if g.dr[d].def.steel.unwrap_or(false) { return V::Text(String::from("steel. a charge won't cut it.")); }
-    let open = if g.k.doortools.charge_answer { door_tools_known_open(g, d) } else { is_open(g, d) };
+    let open = door_tools_known_open(g, d);
     if open { return V::Text(String::from("it's open.")); }
     if g.door_tools.charges <= 0.0 { return V::Text(String::from("no charges left.")); }
     let on_it = g.door_tools.ops.iter().any(|&o| {

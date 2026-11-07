@@ -61,10 +61,7 @@ fn move_pt(g: &mut Game, d: RoomfightDefId, to: V3) {
 /// `cover(gd, D.pt)` (belief.ts cover): rule off that is `gd.lastKnown = D.pt`, a new fix only if it was not that object already (def_fix_to_pt's body)
 fn cover_pt(g: &mut Game, d: RoomfightDefId) {
     let (gd, pt) = (g.tab.roomfight_def[d].gd, g.tab.roomfight_def[d].pt);
-    if g.k.belief.on { crate::belief::cover(g, gd, pt); return; }
-    let own = fix_is_pt(g, d);
-    g.gd[gd].last_known = Some(pt);
-    if !own { g.gd[gd].fix_stamp = g.gd[gd].fix_stamp.wrapping_add(1); g.tab.roomfight_def[d].pt_stamp = Some(g.gd[gd].fix_stamp); }
+    crate::belief::cover(g, gd, pt);
 }
 
 // ---------------------------------------------------------------- the men in the rooms
@@ -76,8 +73,8 @@ pub fn room_fight_plant(g: &mut crate::game::Game, d: RoomfightDefId, why: &str)
     if g.gd[gd].script.is_some() { crate::squad::end_guard_script(g, gd, Some(crate::squad::EndGuardScriptState::Alert)); }
     g.gd[gd].state = crate::game::GuardState::Alert;
     g.gd[gd].awareness = m::max(g.gd[gd].awareness, 0.92);
-    g.gd[gd].hold = true;
-    g.gd[gd].pinned = true;
+    crate::control::set_hold(g, gd, true, "roomfight");
+    crate::control::set_pinned(g, gd, true, "roomfight");
     let was = g.tab.roomfight_def[d].room;
     let pos = g.ch[c].pos;
     let room = room_fight_room_at(g, pos);
@@ -175,8 +172,8 @@ pub fn room_fight_rally(g: &mut crate::game::Game, d: RoomfightDefId) {
         def.free_at = time;
         def.rally_at = f64::NAN;
     }
-    g.gd[gd].hold = false;
-    g.gd[gd].pinned = false;
+    crate::control::set_hold(g, gd, false, "roomfight");
+    crate::control::set_pinned(g, gd, false, "roomfight");
     g.gd[gd].state = crate::game::GuardState::Alert;
     g.gd[gd].awareness = m::max(g.gd[gd].awareness, 0.92);
     g.gd[gd].last_known = Some(v3::copy(at));
@@ -225,8 +222,8 @@ pub fn room_fight_tick_free(g: &mut crate::game::Game, d: RoomfightDefId) {
         def.home = [pos[0] + f[0] * 6.0, 0.0, pos[2] + f[2] * 6.0];
         def.moved_at = time;
     }
-    g.gd[gd].hold = true;
-    g.gd[gd].pinned = true;
+    crate::control::set_hold(g, gd, true, "roomfight");
+    crate::control::set_pinned(g, gd, true, "roomfight");
     let room_id = match room { Some(r) => alloc::format!("{}", g.tab.roomfight_room[r].id), None => String::from("-") };
     room_fight_note(g, Some(gd), &alloc::format!("holds where he ended up (room {})", room_id));
 }
@@ -1126,7 +1123,7 @@ mod tests {
         assert!(g.gd[gd].script.as_ref().unwrap().over.is_none());
     }
 
-    /// D.pt moved in place carries a cover or a fix that IS it, with no new fix; a point given once and a noise stay. Rule off, `cover` is a new fix once, not twice.
+    /// D.pt moved in place carries a cover or a fix that IS it, with no new fix; a point given once and a noise stay.
     #[test]
     fn the_post_moved_takes_what_is_on_it() {
         let (mut g, gd, _) = man_with_overlay();
@@ -1138,16 +1135,6 @@ mod tests {
         move_pt(&mut g, d, [2.0, 0.0, 2.0]);
         assert_eq!(g.gd[gd].covers, Some([2.0, 0.0, 2.0]));
         assert_eq!(g.gd[gd].last_known, Some([1.0, 0.0, 1.0]));
-        g.k.belief.on = false;
-        let was = g.gd[gd].fix_stamp;
-        cover_pt(&mut g, d);
-        assert_eq!(g.gd[gd].last_known, Some([2.0, 0.0, 2.0]));
-        assert_eq!(g.gd[gd].fix_stamp, was.wrapping_add(1));
-        cover_pt(&mut g, d);
-        assert_eq!(g.gd[gd].fix_stamp, was.wrapping_add(1));
-        move_pt(&mut g, d, [3.0, 0.0, 3.0]);
-        assert_eq!(g.gd[gd].last_known, Some([3.0, 0.0, 3.0]));
-        assert_eq!(g.gd[gd].fix_stamp, was.wrapping_add(1));
     }
 
     /// Stood still: he turns once a point is past 1.2 rad off his chest, and finishes the turn down to 0.3 rad.

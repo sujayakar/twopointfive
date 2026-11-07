@@ -36,15 +36,19 @@
 // Type-only game imports but for the functions below, used inside calls only (src/game is one import cycle).
 import { SideMap, GameSideMap } from '../math/side';
 import type { Game, Guard } from './game';
-import { Vec3 } from '../math/vec';
-import './guards';
-import './calmtorch';
-import './hours';
+import type { Door } from './doors';
+import type { Character } from './character';
+import { Vec3, v3, clamp, damp, approachAngle } from '../math/vec';
+import { crossesDoor, dropToSearch } from './guards';
+import { placeLight, workLit } from './calmtorch';
+import { hourOf } from './hours';
 import { MORALE } from './morale';
 import './teams';
-import './runner';   // (asked inside a tick only: false with its switch off)
+import { w } from './words';
+import { runnerNobody } from './runner';   // (asked inside a tick only: false with its switch off)
 import { hasHim, OWN } from './owner';
-import { crossToRust } from './crossing';
+import { word } from './belief';
+import { RUST_PASS, RUST_SURFACE, crossToRust } from './crossing';
 
 /** the switch and its numbers: off in the module, raised by the page (host/profile.ts pageSwitches; ?nodarkdoor = every man walks into the dark as he did) and by
  *  the shipped stand; the harness's frozen stand leaves it off (TPS_DARKDOOR=1 turns it on — with TPS_MORALE=1: it acts only under MORALE.on). `who` = who is
@@ -92,17 +96,143 @@ const LINES: Record<LineKind, { say: string[]; he?: string[]; they?: string[] }>
 };
 /** this file's lines — every kind's, or one kind's (the check: a line said came from the right pool; the words lint's bubble length and blocklist) */
 export function darkDoorLines(kind?: LineKind): string[] { return (kind ? [LINES[kind]] : Object.values(LINES)).flatMap(l => [...l.say, ...(l.he ?? []), ...(l.they ?? [])]); }
+/** one line of a kind from this man, the next of its pool by his own count (no die) — spoken, or on the net with the handset's chirp */
+function bark(g: Game, gd: Guard, S: Fear, kind: LineKind, radio: boolean) {
+  const L = LINES[kind], pool = [...L.say, ...((gd.team !== 'guard' ? w(L.they, L.he) : L.he) ?? [])];   // (words.ts: 'they' is a scenario's defender under the pass — off, every man's intruder is 'he')
+  g.say(gd, pool[(gd.char.id + S.said++) % pool.length], radio);
+  if (radio) g.audio.play('radio', headOf(gd.char), 0.5, { rate: 1.05 });
+}
 
+const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
+const chestOf = (c: Character): Vec3 => c.bones.chest ?? [c.pos[0], c.pos[1] + 1.2, c.pos[2]];
+const headOf = (c: Character): Vec3 => c.bones.head ?? [c.pos[0], c.pos[1] + 1.6, c.pos[2]];
+/** a man this file is about at all: a living defender or a man of the night staff — never a civilian, an operative, a body, a man in Sam's arm */
+const ours = (gd: Guard) => gd.state !== 'dead' && !gd.civ && !gd.held && (gd.team === 'hostile' || gd.team === 'guard');
 const rescued = (g: Game, gd: Guard) => !!g.rescue?.active && g.rescue.hostiles.includes(gd);
 /** nobody's but his own: no choreography, no order to stand, no standoff, no errand, no body, not morale.ts's, not the rescue's */
 const own = (g: Game, gd: Guard) => !gd.script && !gd.hold && !gd.pinned && !gd.standoff && !gd.task && !gd.bodyDuty && !rescued(g, gd) && !hasHim(gd, OWN.morale) && !hasHim(gd, OWN.lastMan);   // (…nor the last man at his act, netquiet.ts: his hold wins — never stopped at a doorway, never called to one)
+/** free to come to a mate, or to go in with one: his own man, calm or merely suspicious, not following a leader, holding a post or off on a need of his own,
+ *  in no act of this file's */
+function canCome(g: Game, o: Guard): boolean {
+  if (!ours(o) || (o.state !== 'patrol' && o.state !== 'suspicious') || !own(g, o) || o.leader || o.post || hasHim(o, OWN.needs)) return false;
+  const So = stateOf.get(o); return !So || So.act === 'none';
+}
+function mind(gd: Guard): Fear {
+  let S = stateOf.get(gd);
+  if (!S) stateOf.set(gd, S = { act: 'none', t: 0, door: -1, side: 1, spot: null, at: false, other: null, called: false, callT: 0, tried: [], left: -1e9, told: false, lag: 0, armed: -1, armT: -1e9, quits: [], pass: [], said: 0, idle: 0, ask: 0 });
+  return S;
+}
+/** the nearest living man of his side inside `pairM` with nothing solid between his eyes and that man's chest (`fit`: of those the test passes) */
+function mateBy(g: Game, gd: Guard, fit?: (o: Guard) => boolean): Guard | null {
+  const c = gd.char, eye = headOf(c); let best: Guard | null = null, bd = DARKDOOR.pairM;
+  for (const o of g.guards) { if (o === gd || !ours(o) || o.team !== gd.team || (fit && !fit(o)) || runnerNobody(o)) continue;   // (runner.ts nobody: a mate who has dropped his gun is no company)
+    const d = flat(o.char.pos, c.pos); if (d <= bd && !g.col.segmentBlocked(eye, chestOf(o.char))) { bd = d; best = o; } }
+  return best;
+}
+/** the man to call: of the `mateTry` nearest men of his side free to come and not yet dropped, the one with the shortest WALK to him inside `mateM` */
+function freeMate(g: Game, gd: Guard, S: Fear): Guard | null {
+  const K = DARKDOOR, p = gd.char.pos;
+  const near = g.guards.filter(o => o !== gd && o.team === gd.team && canCome(g, o) && !S.tried.includes(o) && flat(o.char.pos, p) <= K.mateM).sort((a, b) => flat(a.char.pos, p) - flat(b.char.pos, p)).slice(0, Math.max(1, Math.round(K.mateTry)));
+  let best: Guard | null = null, bl = K.mateM;
+  for (const o of near) { const path = g.col.nav.findPath(o.char.pos, p); if (!path) continue;
+    let l = 0, a = o.char.pos; for (const b of path) { l += flat(a, b); a = b; }
+    if (l <= bl) { bl = l; best = o; } }
+  return best;
+}
 
+/** the level's rooms as lists of floor cells (cleared.ts's flood, asked cell by cell once a nav grid) */
+function roomCells(g: Game, room: number): number[] {
+  const nav = g.col.nav; let M = cellsOf.get(nav);
+  if (!M) { cellsOf.set(nav, M = new Map());
+    for (let z = 0; z < nav.H; z++) for (let x = 0; x < nav.W; x++) { const px = (x + 0.5) * nav.cell, pz = (z + 0.5) * nav.cell, r = g.cleared.roomAt([px, 0, pz]); if (!r) continue;
+      let L = M.get(r); if (!L) M.set(r, L = []); L.push(px, pz); } }
+  return M.get(room) ?? [];
+}
 /** IS THE ROOM DARK — the one place this file reads a room's light: `samples` of its floor cells, evenly through its list, each the place's own steady light
  *  on the meter's scale (calmtorch.ts placeLight: lightEstimateAt with every carried lamp and every transient light left out); dark = `darkShare` of them
  *  under `darkAt`; `mean` = their mean. By day a cell under the bar that the hour's daylight reaches (calmtorch.ts workLit: the estimate has no sun in it) is
  *  not dark: it counts at the bar. Kept `askSecs`. Open floor (room 0) is never dark. */
-export function darkRoom(g: Game, room: number): Readonly<Read> { return crossToRust('darkRoom', undefined, [g, room]) as any; }
+export function darkRoom(g: Game, room: number): Readonly<Read> { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('darkRoom', undefined, [g, room]); if (__r !== RUST_PASS) return __r as any; } }
+  const K = DARKDOOR; if (!room) return { t: g.time, dark: false, share: 0, mean: 1 };
+  let R = readsOf.get(g); if (!R) readsOf.set(g, R = new Map());
+  const was = R.get(room); if (was && g.time >= was.t && g.time - was.t < K.askSecs) return was;
+  const L = roomCells(g, room), n = L.length / 2, take = Math.max(1, Math.min(n, Math.round(K.samples))), day = hourOf(g) !== 'night'; let under = 0, sum = 0;
+  for (let i = 0; i < take && n > 0; i++) { const j = Math.min(n - 1, Math.floor((i + 0.5) * n / take)), x = L[j * 2], z = L[j * 2 + 1]; let v = placeLight(g, x, z);
+    if (v < K.darkAt && day && workLit(g, x, z, K.darkAt)) v = K.darkAt; sum += v; if (v < K.darkAt) under++; }
+  const share = n > 0 ? under / take : 0, now = { t: g.time, dark: n > 0 && share >= K.darkShare, share, mean: n > 0 ? sum / take : 1 };
+  R.set(room, now); DARKDOOR_STATS.asks++;
+  return now;
+}
+/** an open doorway: the leaf off its hinges, or standing `openRad` off its frame */
+const open = (d: Door) => d.off || (!d.latched && Math.abs(d.angle) >= DARKDOOR.openRad);
+/** the next doorway on his walk inside `reach` metres of path: the door, the face he is on, where his path cuts the frame, how far along the path that is */
+function doorAhead(g: Game, gd: Guard, reach: number): { d: Door; side: 1 | -1; at: Vec3; dist: number } | null {
+  let run = 0, a = gd.char.pos;
+  for (let i = gd.pathI; i < gd.path.length && run < reach; i++) { const b = gd.path[i];
+    let hit: { d: Door; t: number; side: 1 | -1; at: Vec3 } | null = null;
+    for (const d of g.doors.list) { const x = crossesDoor(a, b, d); if (x && (!hit || x.t < hit.t)) hit = { d, ...x }; }
+    if (hit) { const dist = run + flat(a, hit.at); return dist <= reach ? { d: hit.d, side: hit.side, at: hit.at, dist } : null; }
+    run += flat(a, b); a = b; }
+  return null;
+}
+function pass(g: Game, S: Fear, door: number) { S.pass = S.pass.filter(p => p.door !== door && g.time < p.until); S.pass.push({ door, until: g.time + DARKDOOR.againSecs }); }
+/** a mate is let go where he is (his suspicion wears off on its own) */
+function drop(M: Fear) { M.act = 'none'; M.t = 0; M.other = null; M.told = false; M.spot = null; M.lag = 0; }
+/** the act is over: he is his own man again, and a mate still on his way to him with him. `unresolved`: nothing came of it — the same door inside
+ *  `resumeSecs` takes the same wait up again */
+function end(g: Game, S: Fear, unresolved = false) {
+  const o = S.other, So = o ? stateOf.get(o) : null;
+  if (o && So && So.other && stateOf.get(So.other) === S && So.act === 'come') drop(So);
+  S.left = unresolved && S.act === 'balk' ? g.time : -1e9;
+  S.act = 'none'; S.spot = null; S.at = false; S.other = null; if (!unresolved) { S.t = 0; S.called = false; S.tried = []; }
+}
+/** a mate is told to come: the floor's own walk to a fix, the fix on the man who called (what guards.ts sendCheckOn does to a man, less the errand). The line
+ *  is the call — spoken if he is in earshot, on the net otherwise */
+function call(g: Game, gd: Guard, S: Fear, m: Guard) {
+  const M = mind(m); M.act = 'come'; M.t = 0; M.other = gd; M.told = false; M.spot = v3.copy(m.char.pos); M.lag = 0; S.other = m; DARKDOOR_STATS.calls++;
+  word(g, m, gd.char.pos); m.awareness = Math.max(m.awareness, 0.42);
+  if (m.state !== 'suspicious') { m.state = 'suspicious'; m.reactT = 0.8; m.searchPlan = null; m.pieing = null; }
+  m.searchT = 0; m.path = []; m.pathGoal = null; m.stallRef = null;
+  if (!S.called) { S.called = true; bark(g, gd, S, 'call', flat(m.char.pos, gd.char.pos) > DARKDOOR.earM); }
+}
 
+/** one frame at the frame: is the wait over (his walk no longer wants this door, the room is lit, a mate is here, nobody came), else his feet. `seen` = he has
+ *  a foe in his eyes: the wait's clock stands, and nothing here ends his fight */
+function hold(g: Game, gd: Guard, S: Fear, dt: number, speed: number, seen: boolean): number | null {
+  const K = DARKDOOR, c = gd.char, d = g.doors.list[S.door];
+  const X = d ? doorAhead(g, gd, K.stopM + 4) : null;
+  if (!d || !X || X.d !== d || X.side !== S.side) return speed;   // (re-planned some other way: no longer this door's — the tick lets the balk go once nothing asks)
+  const room = g.cleared.roomBy(d, -S.side as 1 | -1);
+  S.idle = 0; if (!seen) S.t += dt; S.ask += dt; S.callT += dt;
+  if (S.ask >= K.askSecs) { S.ask = 0;
+    if (g.blackout.active || !darkRoom(g, room).dark) { end(g, S); return speed; }   // somebody found the switch — or the mains went, and every room is the same dark
+    const m = mateBy(g, gd, o => o === S.other || canCome(g, o));
+    if (m) {   // a man at his shoulder who can come: he says so, and they go in together — the mate's fix is this man's goal from here
+      const M = mind(m); if (S.other && S.other !== m) { const So = stateOf.get(S.other); if (So && So.other === gd) drop(So); }
+      M.act = 'with'; M.t = 0; M.other = gd; M.spot = v3.copy(m.char.pos); M.lag = 0; bark(g, m, M, 'with', false);
+      pass(g, S, S.door); S.act = 'none'; S.t = 0; S.spot = null; S.at = false; S.other = m; S.called = false; S.tried = []; DARKDOOR_STATS.pairs++;
+      return speed;
+    }
+  }
+  if (!S.other && S.callT >= K.callSecs && S.t < K.waitSecs) { S.callT = 0; const f = freeMate(g, gd, S); if (f) call(g, gd, S, f); }   // (nobody was free when he stopped, or his man was dropped: the next who is, comes)
+  if (S.t >= K.waitSecs) {   // nobody came: said, the room given up — its spots struck off his search, the leg dropped by its own walk's rule for a leg that goes nowhere
+    bark(g, gd, S, 'nobody', false); S.quits.push({ room, t: g.time }); end(g, S); DARKDOOR_STATS.quits++;
+    if (gd.searchPlan) for (const s of gd.searchPlan.spots) if (g.cleared.roomAt(s.pos) === room) { s.unreachable = true; s.by = c.id; }
+    if (gd.state === 'alert') { dropToSearch(g, gd, null); gd.lastKnown = v3.copy(c.pos); }
+    else { gd.stallRef = v3.copy(c.pos); gd.stallT = 1e3; }   // (guards.ts notGettingAnywhere, asked by his walk's owner this very frame: the spot is as looked-at as it will get / his fix is where he stands)
+    gd.speed = damp(gd.speed, 0, 8, dt); c.vel = [0, 0, 0]; return null;
+  }
+  // his feet: to his place a stride short of the frame, then still — squared to the opening. His clocks for a leg going nowhere stand (he is standing on purpose).
+  gd.stallRef = null; gd.alertStallT = 0; gd.chaseT = 0;
+  if (gd.state === 'suspicious') gd.awareness = Math.max(gd.awareness, K.keepAw); else if (gd.state === 'search') gd.searchT = Math.max(0, gd.searchT - dt);
+  const to = S.spot, dS = to ? flat(c.pos, to) : 0, face = v3.yawTo(c.pos, d.frameCentre);
+  if (to && !S.at && dS > 0.15 && S.t < 4) {   // (stepping back from a leaf he has just opened he keeps his chest on it: he walks to the place only from further off)
+    const yaw = v3.yawTo(c.pos, to), back = dS < 1.6 && Math.cos(yaw - face) < 0.3; c.bodyYaw = approachAngle(c.bodyYaw, back ? face : yaw, 5.5 * dt);
+    gd.speed = damp(gd.speed, Math.min(speed, g.tune.guardInvestigate) * clamp(dS / 0.8, 0.35, 1) * (back ? 0.6 : clamp(Math.cos(yaw - c.bodyYaw) * 1.5, 0.15, 1)), 4, dt);
+    c.vel = [Math.sin(yaw) * gd.speed, 0, Math.cos(yaw) * gd.speed]; c.pos = v3.mad(c.pos, c.vel, dt);
+  } else { S.at = true; gd.speed = damp(gd.speed, 0, 8, dt); c.vel = [0, 0, 0]; c.bodyYaw = approachAngle(c.bodyYaw, face, 3 * dt); }
+  return null;
+}
 
 
 /** QA: what the rule has of a man (null = never met) */

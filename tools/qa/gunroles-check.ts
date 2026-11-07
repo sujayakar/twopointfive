@@ -19,7 +19,6 @@ const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { lookLevelFile } = await import(`${ROOT}/src/scene/look.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { withOfficeScript, isOfficeFamily } = await import(`${ROOT}/src/scene/level.ts`);
 const { GUNROLES, GUNROLES_STATS, gunRole, gunString, gunStringGap, gunLane, gunKeepsPost, gunFileCost, gunFileRanks, gunLast, gunBlindGap, gunHand } = await import(`${ROOT}/src/game/gunroles.ts`);
 const { SAMESTART } = await import(`${ROOT}/src/game/samestart.ts`);
 const { sideOut } = await import(`${ROOT}/src/game/gunslots.ts`);
@@ -42,7 +41,7 @@ async function withSwitch<T>(on: boolean, fn: () => Promise<T>, keys: Partial<ty
   try { return await fn(); } finally { if (was === undefined) delete process.env.TPS_GUNROLES; else process.env.TPS_GUNROLES = was; Object.assign(GUNROLES, DEFAULTS); }
 }
 const seeded = (s: number) => () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
-const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync((f => existsSync(f) ? f : resolve(ROOT, 'levels', file))(resolve(ROOT, 'levels', lookLevelFile(file))), 'utf8')); return isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data); };
+const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync((f => existsSync(f) ? f : resolve(ROOT, 'levels', file))(resolve(ROOT, 'levels', lookLevelFile(file))), 'utf8')); return loadLevel(data); };
 /** a mission of the start card staged as the page stages it; the note the deal leaves is read back: who was given what, on how long a line */
 async function stage(id: string, seed: number) {
   const E = SCENARIOS.find((e: any) => e.id === id); if (!E) throw new Error(`no mission '${id}'`);

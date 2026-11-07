@@ -44,8 +44,12 @@ each is held at its page value from before the level is built (`rustSettledHold`
 that value, a write of another is refused, and what was refused is named once in the console and stays on the debugger panel's first line ("N kept
 rows or address words are settled in this build and are not applied: …"; `window.__rust.settled`). So the half of the game the page still runs (the
 HUD, the menus, the picture's dressing) and the tick agree. Rows that are still switches (open decisions, the player's own, the difficulty's) cross
-to the Rust game with the knob tables AS A GAME STARTS; one changed in the middle of a mission (the debugger's Difficulty row) does not reach the
-Rust game until the next start.
+to the Rust game with the knob tables as a game starts, and one changed in the middle of a mission reaches it by the settings' walk, which is made
+every sixteenth tick: a quarter of a second at most. Measured on the compound (a row written, n frames stepped, the Rust game's whole state put back on
+the puppet, the row read): the squad ring's two rows, the team pace's two, `PRESSURE.on`, `DIGIN.on` and the fog's cone are there after 16 and after 17
+frames every time, and the debugger's 'hard defenders' box turns all three of the difficulty's rows 17 frames on. A settled row written on the page
+still reads its page value and is named in `window.__rust.settled.refused`. One gap: a row written and then, inside those sixteen ticks, a whole
+apply (a load, a restart) is put back to the Rust game's value, and the write is lost.
 
 ## A game kept: saves, loads, the restart
 
@@ -103,14 +107,22 @@ has not got.
 - **The orders menu's own calls** (`open`, `close`, `turn`, `pageBack`, `pick`, `cycleWho`, `address`) cross to the Rust functions the tick itself runs,
   by the call table (`tools/blitz/surface.ts` `crossing`; the page stands as a surface host): the writes made between ticks go first, then the host's half
   (the cursor, the cameras), `face_call`, and the puppet takes the state again. Inside a tick, and while the puppet is the game (before a start, while
-  one is due), the method runs as it was. `__rust.crossed` counts them. `give` goes by its own line (above).
+  one is due), the method runs as it was. `__rust.crossed` counts them. `give` goes with the target as bytes by the schema (`asks.give`), whatever the target is.
 - **A question about a row or a seat the Rust game has not got is refused, not indexed.** `face_ask` measures the row against the order table and the
   seat against the seats before it asks, and answers 1 (no such row), 2 (no such seat) or 3 (no such question) with no bytes; an index past a table is a
-  panic, and a panic is the game lost. The host then asks by the Rust game's own row of the same id where there is one (a copy of a row), and otherwise
-  hands the row's closure "nothing": its label is its name, no man can, it is not offered, an order through it is refused. One console line a row;
-  `__rust.asksRefused`, `__rust.askRefused`.
+  panic, and a panic is the game lost. The asks (`tools/blitz/ask.ts`) then answer the row's closure
+  "nothing": its label is its name, no man can, it is not offered, an order through it is refused. One console line a row; `__rust.askRefused`.
 - The page's bundle carries the call table for this (about half a megabyte). `tools/blitz/page-plugin.ts` names the bridge's files: after a pull that
   adds one, a running dev server must be started again.
+
+## A tool that writes the game by name
+
+A check that sets a field of `window.__game` between two frames (a lesson's step set back, a man moved) writes the PUPPET. Where the field is one the
+page's own switches (`watched` in `src/host/rustgame.ts`) or the settings' walk carry, it reaches the Rust game; any other field does not, and the puppet
+then shows what the game does not hold until an apply writes the game's value back over it. Seen: `tools/qa/tut-squad-page.cjs` set
+`game.lesson.i = 0` by hand, the line on the screen went back to step 1, and the Rust game stayed on the later step (its ring unlocked). Such a write
+goes through `window.__rust.poke(game, ['lesson', 'i'], 0)`: the puppet and the Rust game at once, or the reason it cannot. (The headless harness walks
+every field its tools write; the page walks the settings only: a walk of them all would cost every frame.)
 
 ## A panic does not end the session
 
@@ -137,6 +149,22 @@ stopped frame loop. Now (`src/host/rustgame.ts`, "a panic"; `rust/game_face/src/
 
 What it does not cover: a panic while a game is being kept or put back (the kept games' own table would be left borrowed: the card then offers the page
 again); a save asked from a panel while the card is up (it throws to the page's red card); a fault that leaves the Rust game wrong without a panic.
+
+## A row the game makes at run time
+
+The start builds the page's game with the classes' own constructors, so every row has its picture half: a man's skeleton and its buffers, his
+animator's springs and node table, a gun's event list. None of that is the game's state and the bridge carries none of it. A row the tick makes later
+(a level's program stands three men at a roadblock, an alarm calls a team) reaches the page as its class's prototype and its carried fields, and
+nothing else. Such a man could not be posed: `headRot` and `capsules` threw, the dress step's `men` and `snowBreath` lines threw every tick, he was
+not drawn, and the poses the host owes the game for him were never worked out, so rounds fired at him did not land.
+
+`src/host/rustgame.ts` `madeHooks` is told of every made row by the apply (`hooks.made`). For a `Character` and a `Firearm` it builds a TWIN with
+the same constructor the start calls and the made row takes from it every field it lacks and the class of every part the apply made plain; nothing
+the apply wrote is overwritten and a man's columns row stays the game's. `window.__rust.made` counts made rows by class, `madeTook` what the twins
+gave, `madeThrew` a class whose twin could not be built, `madeLast[class]` the last made row and `madeAtRunTime(row)` answers for any row.
+
+`Game.drawMen` hands the men over one at a time: a man who throws there is left out of that frame, said once by name in the console and kept on
+`game.menNotDrawn`; the men after him are drawn.
 
 ## What a step costs, and what stands in the way
 
@@ -194,21 +222,20 @@ The rule: what the simulation's own code computes from the game's state for the 
 | the fog of war's block (`fogOfWar.frame`: the team's eyes and their fields, the fog's levels, the lit fog's lamps, the thin walls' bits) | `fogofwar/p_02.rs fog_of_war_pass`, `p_03.rs` (`full_block`, `lit_block`), `render_lights pack_light` | the filtered export (the block is on both lists) |
 | the lights' fog classes (the team's ids and lights) | `fogofwar/p_03.rs fog_of_war_full_block` | the filtered export (`LightSet.fog_team`) |
 | particle records, impulses, the fires' heat | every site of `particle_fx`, `blast_look`, `destruction`, `break_table`, … through `render_particles::particles_emit` | out events (`ParticlesEmit`, `ParticlesImpulse`, `ParticlesSetHeat`) |
-| a particle record's shape (cone, burst, ring, puff) and whether it is the team's own doing (the fog's mark) | `render_particles::particles_emit` | STAND-IN `face_emits_ours` → `OUT_OWN.ParticlesEmit`: the event's schema has neither |
-| smoke sources (a shot's gas, a stun's jets and trails, the can, a holed wall's puff) | `effects`, `combat`, `destruction`, `fire`, `smokebreak` | out event `SmokeSystemLikeEmit`; its kind, its grid and what it rides by STAND-IN `face_smoke_out` → `OUT_OWN.SmokeSystemLikeEmit`: the event's schema has none of the three |
+| a particle record's shape (cone, burst, ring, puff) and whether it is the team's own doing (the fog's mark) | `render_particles::particles_emit` | fields of the out event `ParticlesEmit` (`o.shape`, `ours`) |
+| smoke sources (a shot's gas, a stun's jets and trails, the can, a holed wall's puff) | `effects`, `combat`, `destruction`, `fire`, `smokebreak` | out event `SmokeSystemLikeEmit`, with its kind, grid and what it rides (`tools/blitz/track.ts`) |
 | a burst's fragments: a wall charge's, a door charge's, a thrown can's | `blast_look/b_01.rs blast_sparks` | out events |
-| which boxes are a laser's beam, a tracer's streak, an infrared line | `thinline thin_note / thin_air`, `irlaser ir_note` | STAND-IN `face_notes_out` → `notesIn` (the page's own side tables) |
-| the wind's two lists (the sources that blow; the ones for the particles) and each source's record (speed, direction, place, reach) | `wind/p_01.rs wind_update` | STAND-IN `face_wind_out` → `windIn`; `windOut` hands them to the solver and the pool, and the rain's lean reads the storm's off the same record |
-| the weather frame, the sky's two colours, the haze, the exposure, the gloss, the box world's geometry serial | `weather`, `lighting`, `hours`, `wallbreak` | STAND-IN `face_picture_out` → `pictureIn` |
+| which boxes are a laser's beam, a tracer's streak, an infrared line | `thinline thin_note / thin_air`, `irlaser ir_note` | the filtered export, into the page's own side tables (`thinline.ts` THIN and AIR, `irlaser.ts` IR_MADE) |
+| the wind's two lists (the sources that blow; the ones for the particles) and each source's record (speed, direction, place, reach) | `wind/p_01.rs wind_update` | the filtered export (`Wind.active`, `to_pool`, the source's rows); `windOut` hands them to the |
+| the weather frame, the sky's two colours, the haze, the exposure, the gloss, the box world's geometry serial | `weather`, `lighting`, `hours`, `wallbreak` | the filtered export (`HostApi.weather`, `RenderSettings`, `BoxWorld.geom_serial`). A row moves on the page only when the Rust game's moved, so what a panel set stays until the tick changes it |
 
 What the tick has to be TOLD of the host, because a rule asks it: whether there is a particle pool (`particleFx.ts gpuFx`: with one, embers and
 fragments go to it and the sparks' own pool of streak boxes stays empty), the pool's two switches a door charge's fragments go by, and whether there is
-a reach keeper (a breached wall tells it). The bridge's engine list carries none of these: STAND-IN `face_host_has`, called beside the host's half
-before every step.
+a reach keeper (a breached wall tells it). They ride in the host's half.
 
 A wall charge's feel is in two halves. The report and the camera's kick are the Rust tick's (`blast_feel`). Its particles (the fireball, the dust
 ring, the three pushes, the ceiling's dust) are queued closures in the TypeScript and stay the page's: the host starts them on the report's own out
-event (the crack, which nothing else plays: STAND-IN, `OUT_OWN.GameAudioLikePlay`) through `blastFeel.ts wallFeelPicture`, and the dress step lets
+event (`WallFeel`, `OUT_HOST.wallFeel`) through `blastFeel.ts wallFeelPicture`, and the dress step lets
 their later stages go (`blastFeelStages`).
 
 MEASURED (software adapter; nothing here has been seen on a GPU). Four tapes, each played by the page without the word and played back on both pages
@@ -244,6 +271,12 @@ WHAT STILL DIFFERS, each with its cause:
 - a smoke can's and its vent's source does not ride the can while it rolls (no arm for an item in the Rust `Track`).
 
 ## Checking it
+
+`tools/blitz/page-walk.cjs` walks the page in headless Chromium the way a player goes: the title, Play, a squad mission's row, Deploy, an order by the
+command key, the ring held up on a door (its caption must name the door, its first wedge must be the door's own order, a wedge's digit must give that
+wedge's order, on its second page too), a floor spot, a frag; then the solo night to its first checkpoint, a save by hand and its load. `PORT=5173 node
+tools/blitz/page-walk.cjs` with a dev server up; every line is PASS or FAIL and the exit code says which. The tutorial missions by a hand's own keys
+are `tools/qa/tut-*-page.cjs` (and `tut-page.cjs tut-sky`).
 
 A scripted player in the page (the same hands as `tools/qa/lesson-run.ts`, over the page's own Input) plays the address without the word and keeps every
 frame's input; the address with the word plays that input back; the die's count and the hash of each part of the game's block are held together every 60
