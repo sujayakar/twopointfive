@@ -37,7 +37,7 @@ import { MISSIONS, SOLO_NIGHT, SOLO_KEY, unplayed, missionList, missionHref, ope
 import { difficultyHref, leversHref, leversMixed, leversLine, structureOfLevel, fogOffNow } from '../game/difficulty';
 import { leverRows, leversOpenOn, type LeverRowsUi } from './levers';
 import { fogOfQuery, fogOfLink, quietCamsOfLink, sameFog } from '../game/scenarioRun';
-import { QUIETFOG, quietFogHref, quietFogRow, quietFogAside, soloFogRow } from '../game/quietfog';
+import { quietFogHref, quietFogRow, quietFogAside, soloFogRow } from '../game/quietfog';
 import { STICKY } from '../game/stickycam';   // (read inside the screen only: what a quiet mission hands you — lentNow)
 import { WAND } from '../game/wand';         // (likewise)
 import { hourLive, hourIdOf } from '../game/hours';
@@ -170,9 +170,9 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): Loadou
   // (ui/kitCard.ts `lent`), where it read 'none' beside a thing you were about to be handed, and so does the kit you are drawn in (worn()). Asked live: the
   // fog lever and the Cameras row are on this screen — read once for a link and a gun, not once a tile.
   let lentKey = '', lentIs = { fog: false, n: 0, cams: 0, wand: 0 };
-  const lentOf = () => { const href = quietFogHref(base, quietRow), gun = KIT.members[0]?.weapon, key = `${href}|${gun}|${STICKY.on}|${WAND.on}|${QUIETFOG.wand}|${fogOffNow()}`;
+  const lentOf = () => { const href = quietFogHref(base, quietRow), gun = KIT.members[0]?.weapon, key = `${href}|${gun}|${STICKY.on}|${WAND.on}|${fogOffNow()}`;
     if (key !== lentKey) { lentKey = key; const q = new URLSearchParams(href.replace(/^[^?]*\?/, '')), fog = fogOfQuery(q), n = fog && STICKY.on ? quietCamsOfLink(q) : 0;
-      lentIs = { fog, n, cams: gun === 'rifle' ? n : 0, wand: n > 0 && WAND.on && QUIETFOG.wand ? 1 : 0 }; }
+      lentIs = { fog, n, cams: gun === 'rifle' ? n : 0, wand: n > 0 && WAND.on ? 1 : 0 }; }
     return lentIs; };
   // (… and under the card as a tree — game/kittree.ts — its sponge rounds: a quiet mission and the solo night hand you the launcher's five over a card that carries none)
   const stealthKind = entry.kind === 'quiet' || entry.kind === 'solo';
