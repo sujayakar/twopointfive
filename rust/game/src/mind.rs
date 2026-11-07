@@ -1,9 +1,10 @@
 //! A man's mind is written through one door.
 //!
-//! How aware a man is (`Guard.awareness`) and what he is doing about it (`Guard.state`) were assigned in place by
-//! every module that had a reason to: about 126 writes of the one and 80 of the other. Each is now one of the calls
-//! below, which writes the same value at the same place and keeps WHO moved him and WHEN, so that "why is he alert"
-//! has an answer (`why`, on the debugger's line for a man beside `control::control_line`).
+//! How aware a man is (`Guard.awareness`), what he is doing about it (`Guard.state`) and where he thinks his man is
+//! (`Guard.last_known`, his fix) were assigned in place by every module that had a reason to: about 126 writes of the
+//! first, 80 of the second, 40 of the third. Each is now one of the calls below, which writes the same value at the
+//! same place and keeps WHO moved him and WHEN, so that "why is he alert" and "who told him that" have an answer
+//! (`why`, for the debugger's line for a man beside `control::control_line`).
 //!
 //! The calls say what the writer means:
 //!
@@ -11,6 +12,8 @@
 //!   cap(g, man, ceiling, by)   he is at most this aware (stood down, lost his man): never raises him
 //!   set(g, man, to, by)        exactly this (his own senses' sum for the tick, a reset)
 //!   set_state(g, man, to, by)  patrol, suspicious, alert, search, dead
+//!   fix(g, man, at, by)        he has a NEW FIX: where he now thinks his man is (None: nowhere)
+//!   fix_keep(g, man, at, by)   his fix put back or cleared without being news to him (a man handed back what he had)
 //!
 //! `by` is the writer's module. The body files are moved to these calls by a program
 //! (tools/blitz/sweeps/mind-door.py), which can be run again on a later tree. A new rule calls them itself.
@@ -21,6 +24,7 @@
 use crate::game::{Game, GuardState};
 use crate::ids::GuardId;
 use crate::m;
+use crate::v3::V3;
 use alloc::format;
 use alloc::string::String;
 
@@ -42,6 +46,8 @@ pub struct Note {
     /// the last write that changed his state, and the state it took him out of
     pub state: Mark,
     pub state_from: Option<GuardState>,
+    /// the last write of his fix (`to` is 1 for a new fix, 0 for one kept)
+    pub fix: Mark,
 }
 
 fn write(g: &mut Game, gd: GuardId, was: f64, now: f64, by: &'static str) {
@@ -81,6 +87,25 @@ pub fn set_state(g: &mut Game, gd: GuardId, to: GuardState, by: &'static str) {
     n.state_from = Some(was);
 }
 
+/// HE HAS A NEW FIX: where he now thinks his man is, or `None` for nowhere. Every such write counts
+/// (`Guard.fix_stamp`): a rule that asks "did anything give him a fix just now" compares the count before and after
+/// (a man dozing at a desk wakes on it).
+pub fn fix(g: &mut Game, gd: GuardId, at: Option<V3>, by: &'static str) {
+    let now = g.time;
+    let man = &mut g.gd[gd];
+    man.last_known = at;
+    man.fix_stamp = man.fix_stamp.wrapping_add(1);
+    g.ctl.mind.at(gd).fix = Mark { by, t: now, to: 1.0 };
+}
+
+/// His fix written without being news to him: put back as it was, carried over, or cleared with the rest of him.
+/// The count of new fixes does not move.
+pub fn fix_keep(g: &mut Game, gd: GuardId, at: Option<V3>, by: &'static str) {
+    let now = g.time;
+    g.gd[gd].last_known = at;
+    g.ctl.mind.at(gd).fix = Mark { by, t: now, to: 0.0 };
+}
+
 /// Why he is as aware as he is, in one line: his awareness and state, and who last raised him, lowered him and
 /// changed his state, with how long ago.
 pub fn why(g: &Game, gd: GuardId) -> String {
@@ -91,6 +116,7 @@ pub fn why(g: &Game, gd: GuardId) -> String {
     if let Some(from) = n.state_from { s.push_str(&format!(" · {} since {:.1} s ago by {} (was {})", man.state.as_str(), ago(n.state.t), n.state.by, from.as_str())); }
     if !n.up.by.is_empty() { s.push_str(&format!(" · raised to {:.2} by {} {:.1} s ago", n.up.to, n.up.by, ago(n.up.t))); }
     if !n.down.by.is_empty() { s.push_str(&format!(" · lowered to {:.2} by {} {:.1} s ago", n.down.to, n.down.by, ago(n.down.t))); }
+    if !n.fix.by.is_empty() { s.push_str(&format!(" · {} by {} {:.1} s ago", if man.last_known.is_some() { "his fix" } else { "no fix" }, n.fix.by, ago(n.fix.t))); }
     s
 }
 
@@ -132,6 +158,20 @@ mod tests {
         cap(&mut g, gd, 0.2, "lost him");
         let n = *g.ctl.mind.get(gd).expect("he has a note");
         assert_eq!((n.down.by, n.down.t, n.down.to), ("lost him", 9.0, 0.2));
+    }
+
+    #[test]
+    fn a_new_fix_counts_and_a_kept_one_does_not() {
+        let (mut g, gd) = one_man();
+        g.time = 7.0;
+        fix(&mut g, gd, Some([1.0, 0.0, 2.0]), "a sound");
+        assert_eq!((g.gd[gd].last_known, g.gd[gd].fix_stamp), (Some([1.0, 0.0, 2.0]), 1));
+        fix_keep(&mut g, gd, Some([3.0, 0.0, 4.0]), "handed back");
+        assert_eq!((g.gd[gd].last_known, g.gd[gd].fix_stamp), (Some([3.0, 0.0, 4.0]), 1));
+        fix(&mut g, gd, None, "stood down");
+        assert_eq!((g.gd[gd].last_known, g.gd[gd].fix_stamp), (None, 2));
+        g.time = 8.0;
+        assert!(why(&g, gd).contains("no fix by stood down 1.0 s ago"), "{}", why(&g, gd));
     }
 
     #[test]
