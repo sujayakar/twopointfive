@@ -1352,6 +1352,16 @@ but synthetic writes still work.
   the browser, short stays or full. Why those three, nobody knows; it is the driver's and nothing of the game's. So: A WARM BOOT TIMED ON A CLOUD BOX
   IS NOT TO BE TRUSTED BEFORE ITS FOURTH VISIT, and it says how the driver's cache behaves there, NOT whether a player's browser keeps its shaders. On
   Windows Chrome's own store is what has to hold them and is too small for this game (the shader rows above); on an Apple chip nobody has looked.
+- **A game stood up starts as the process's first did: `standUp` puts back what the last game left at a module's top** (`tools/qa/fresh.ts`
+  `freshStart`, called before `standGame`; the harness only). FOUND as: the same two-seat night breach stood twice in one process, the second's state
+  another from tick 1 (the men's unit numbers counted on, the first game's tallies and logs in the second's start). THE RULE is in the file's header:
+  the registry's variables and roots (`src/math/side.ts`) and every module-level name the state bridge carries go back to what the process's FIRST
+  start found, but for a knob table, a row of `rollback-exempt.ts` that is a CONFIG, a CACHE, a CONST or a HOST's, and a table keyed weakly by a
+  game's objects. SO: a tally (`X_STATS`, `X_LOG`) now counts ONE game, not the process: a tool that sums one over several stand-ups adds them up
+  itself, and a tool's switch kept inside a tally object has its row as CONFIG (four did: `BOTH`, `ANYTIME`, `FELL`, `SEAT_ASKS`). NOT put back: what
+  a mission's start wrote into a KNOB TABLE (its team's numbers): `knobsCopy` / `knobsBack` around a run, as before. THE CHECK:
+  `bun run tools/blitz/start-levels.ts --again` (every mission stood again after another was played in the same process: 38 of 38, two seats 23 of
+  23; `FRESH_BREAK=1` = every row red). Read on this machine with a module built here; nothing of it touches the page.
 - **A game stood up has done with the last one: `standUp` asks for a full collection first** (2026-11-05; `tools/qa/headless.ts STANDUP_COLLECTS`; the
   harness only, nothing of the game). FOUND by the merge: the workers of `bang-tally.ts` (the `flashweight` family's tally, missions back to back in one
   process) grew about 1.6 GB a minute on the page's stand and two died at a 12 GB limit; old, on every build looked at. Reproduced here: one worker from
