@@ -25,7 +25,7 @@ fn charge_look() -> CHARGELOOK {
 const WALL_FLASH_COLOR: V3 = [1.0, 0.62, 0.25];
 
 /// DESTRUCTION.on && BLAST.on && chaosOf(g) > 0   (blastLook.ts:155 live)
-pub fn live(g: &mut crate::game::Game) -> bool { g.k.destruction.on && blast().on && crate::destruction::chaos_of(g) > 0.0 }
+pub fn live(g: &mut crate::game::Game) -> bool { blast().on && crate::destruction::chaos_of(g) > 0.0 }
 
 /// (blastLook.ts:157 near)
 pub fn near(a: V3, b: V3, m: f64) -> bool { m::abs(a[0] - b[0]) + m::abs(a[1] - b[1]) + m::abs(a[2] - b[2]) < m }

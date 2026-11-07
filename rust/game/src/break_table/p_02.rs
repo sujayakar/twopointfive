@@ -886,7 +886,7 @@ pub fn breaks_studs(g: &mut crate::game::Game, b: &crate::break_table::CellGrid)
             let yl = y0 - k_.foot;
             let c: V3 = if along_x { [u, (yl + y1) / 2.0, 0.0] } else { [0.0, (yl + y1) / 2.0, u] };
             let h: V3 = if along_x { [k_.half, (y1 - yl) / 2.0, t * k_.depth_k] } else { [t * k_.depth_k, (y1 - yl) / 2.0, k_.half] };
-            out.push(BreaksStudsItem { c, h, albedo: k_.albedo, rough: k_.rough, metal: k_.metal, does: k_.does });
+            out.push(BreaksStudsItem { c, h, albedo: k_.albedo, rough: k_.rough, metal: true, does: k_.does });
         }
         k += 1.0;
     }
