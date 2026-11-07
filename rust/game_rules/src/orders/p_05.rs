@@ -312,7 +312,7 @@ pub fn squad_orders_tick(g: &mut crate::game::Game) {
             let short = crate::roomfight::room_fight_short(g, gd);
             if short { speed = 0.0; mark_clocks(g, a, p); }
             else if (crate::doorway::door_gate_stopped(g, gd) || crate::handleside::handle_gate_stopped(g, gd)) && squad_orders_held_wait(g, a) { mark_clocks(g, a, p); }   // (doorway.ts SHORT: a wait, not a shut way)
-            if crate::clearline::clear_line_live(g, gd) || crate::fireline::fire_line_live(g, gd) { mark_clocks(g, a, p); }   // (off his mark on purpose)
+            if crate::fireline::fire_line_live(g, gd) { mark_clocks(g, a, p); }   // (off his mark on purpose)
             // has he MOVED (his commanded speed says nothing)
             let now = g.time;
             if flat(p, g.tab.orders_assignment[a].anchor) > 0.05 {

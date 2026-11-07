@@ -284,7 +284,7 @@ pub fn close_rows(g: &mut crate::game::Game, gd: GuardId, p: &[f64], busy: bool,
 
 /// The line that says what the held click does. (close.ts sneakHint)
 pub fn sneak_hint(g: &crate::game::Game) -> String {
-    String::from(if g.k.stalk.drag { "LMB  press and drag to sneak up on him" } else { "LMB  hold to sneak up on him" })
+    String::from("LMB  hold to sneak up on him")
 }
 
 /// This frame's best offer: the nearest man Sam could do something to. (close.ts noteBest)
@@ -424,7 +424,7 @@ pub fn close_tick(g: &mut crate::game::Game) {
         g.ch[c].anim.hands_down = if bare { g.k.stalk.low_hands } else { 0.0 };
         let bare = close_bare(g);
         let wide = if bare && !has_h {
-            if g.k.tapstep.on && g.pl[pl].crouch { 1.0 } else { m::min(1.0, g.ch[c].anim.low / m::max(0.05, g.k.stalk.wide_by)) }
+            m::min(1.0, g.ch[c].anim.low / m::max(0.05, g.k.stalk.wide_by))
         } else { 0.0 };
         g.ch[c].anim.wide = wide;
         if js::truthy(wide) {
