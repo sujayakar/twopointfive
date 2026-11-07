@@ -380,12 +380,6 @@
 "KITDEAL.on=false",
 "KITDEAL.stealth=false"
 ],
-"kittree-off": [
-"OWNBLOW.on=false",
-"KITDEAL.on=false",
-"KITDEAL.stealth=false",
-"KITTREE.on=false"
-],
 "kittree-sponge": [
 "OWNBLOW.on=false",
 "KITDEAL.stealth=false"
@@ -1656,7 +1650,6 @@
 "kitstealth": "iii",
 "kittree-guns": "iii",
 "kittree-mate40": "iii",
-"kittree-off": "iii",
 "kittree-rows": "iv-b",
 "kittree-sponge": "iii",
 "ko-kinds": "iii",
