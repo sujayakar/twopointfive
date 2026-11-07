@@ -61,6 +61,7 @@ pub fn update_guard(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     crate::character::character_turn_begin(g, c);
     player_ground_vel(g);
     if g.gd[gd].state == St::Dead {
+        crate::control::note(g, gd, crate::control::Holder::Dead, 0);
         let m = &mut g.gd[gd];
         m.muzzle_down = false; m.pieing = None; m.search_plan = None; m.held = None; m.standoff = None; m.speed = 0.0;
         g.ch[c].vel = [0.0, 0.0, 0.0];
@@ -72,6 +73,7 @@ pub fn update_guard(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
         return;
     }
     if g.gd[gd].held.is_some() {
+        crate::control::note(g, gd, crate::control::Holder::Held, 0);
         {
             let m = &mut g.gd[gd];
             m.pieing = None; m.search_plan = None; m.body_duty = None; m.standoff = None; m.muzzle_down = false; m.saw_player_this_frame = false;
@@ -98,11 +100,14 @@ pub fn update_guard(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     }
     let staff = g.gd[gd].team == crate::teams::Team::Guard;
     if !staff { unit_light_meter(g, gd, dt); }
-    if let Some(fs) = crate::frag::frag_flee(g, gd) { let ran = run_lent_script(g, gd, fs, dt); crate::frag::frag_script_ran(g, gd, ran); return; }
-    if let Some(rs) = crate::runner::runner_script(g, gd) { let ran = run_lent_script(g, gd, rs, dt); crate::runner::runner_script_ran(g, gd, ran); return; }
-    if let Some(ms) = crate::morale::morale_script(g, gd) { let ran = run_lent_script(g, gd, ms, dt); crate::morale::morale_script_ran(g, gd, ran); return; }
-    if let Some(ss) = crate::startle::startle_script(g, gd) { let ran = run_lent_script(g, gd, ss, dt); crate::startle::startle_script_ran(g, gd, ran); return; }
-    if g.gd[gd].script.is_some() {
+    // WHO HAS HIS BODY (control/): the rules of the list are asked from the top; below them his own script, below that his own state
+    let granted = crate::control::grant(g, gd);
+    if let crate::control::Grant::Lent { rule, script } = granted {
+        let ran = run_lent_script(g, gd, script, dt);
+        (crate::control::BODY_RULES[rule].ran)(g, gd, ran);
+        return;
+    }
+    if let crate::control::Grant::Script = granted {
         {
             let m = &mut g.gd[gd];
             m.pieing = None; m.search_plan = None; m.standoff = None;
