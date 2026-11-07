@@ -1210,7 +1210,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   untouched. With this up `reachUp` has nothing to raise, and its check stages with this key down. Switch: ON in the page (`?handslow=0` off; Tab ▸ Closer
   than ever ▸ 'crouched ▸ hands stay low until the move'), OFF in the module and on the frozen stand (`FROZEN_HOLDS` 'CLOSE.handsLow': `TPS_HANDSLOW=1`;
   `TPS_HANDSLOW=0` holds it off on the shipped stand), in the journal's `CLOSE` table, and a recording from before the key replays with it off. CHECK:
-  `bun run tools/qa/handslow-check.ts` (probe `handslow`, families handslow / close / player), both stands; `HANDSLOW_BREAK=1` must fail `low`. Lines: low
+  `bun run tools/qa/handslow-check.ts` (probe `handslow`, families handslow / close / player), both stands; `HANDSLOW_BREAK=1` must fail `low` (the line `low` went 11-07 with the knife it asked of: the word has nothing to fail there now). Lines: low
   (the three gaps above), offer (the grab is still offered and its row is there), stand (standing, and with the pistol up, the pose is the same to the bit),
   harness. One staging, no seeds, and no line stages a low man (the neck bar is read from the code alone). Pictures: `close-stills.ts --scene stops-crouch` with and without `--set '{"CLOSE":{"handsLow":false}}'`. WHAT IT COSTS:
   crouched, nothing on Sam's body now says "the grab is on" before he presses; the row says it. NOT MENDED: the grab still takes him from the crouch to

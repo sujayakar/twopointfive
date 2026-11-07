@@ -199,11 +199,21 @@ row on his machine is the answer, and the word puts the count back on any machin
   the froxel-lit march lit it by three (SMOKE KEEP's rows) over the grid's soft light. The smoke march starts at a dither fixed per texel, as high's
   always has; the froxel-lit one started at one rotated each frame. VERY LOW: the same per-pixel march at its own rows where it had the froxel grid
   at 64 × 24 and a plume lit by the grid alone.
-  THE COST, on the cloud's NVIDIA card (A10G, the tree before, one page, a rainy dusk with a smoke can thrown, time frozen, three seconds a row,
-  2026-11-07): MEDIUM 13.22 ms a frame with the froxel grid, 13.70 with this (+3.6 %), 14.73 with four lights; LOW 8.86, 9.08 (+2.5 %), 10.45.
+  THE COST, on the cloud's NVIDIA card (A10G, a rainy dusk with a smoke can thrown, time frozen, three seconds a row, 2026-11-07), read INSIDE ONE
+  PAGE each time, the tree before with a tier set by hand to the rows it has now. Before the pick: MEDIUM 13.22 ms a frame with the froxel grid,
+  13.70 with this (+3.6 %), 14.73 with four lights; LOW 8.86, 9.08 (+2.5 %), 10.45. After the change was written, another box and another plume,
+  two rounds: MEDIUM 13.14 and 13.23 to 13.48 and 13.52 (+2.4 %); LOW 8.73 to 8.83 (+1.2 %); VERY LOW 6.82 to 6.61 (−3 %: the per-pixel march at
+  its small rows is cheaper there than the grid was), and 6.38 with its march at half size. With no smoke in the frame medium read 12.20 to 12.62.
+  THE NEW COMMIT ON THE CARD (its own pages, six of them): no GPU error, no console line, 93 of 93 pipelines at every tier and 96 of 96 on the look
+  page, smoke in the frame at high, medium, low and very low; its boot came to its first frame in 16.8 and 16.9 s where the tree before took 22.4
+  and 24.1 (six programs fewer, the dearest among them). HIGH COSTS WHAT IT DID: with no smoke the march read 2.28 ms on the new commit against
+  2.25 on the tree before, and with a plume of the same size (the solver's own count of drawn bricks beside each read) 2.40 against 2.50, 3.07
+  against 3.03 and 4.79 against 4.52; a first pair of boxes had read 0.45 ms apart at every tier, and that was the plume, which grows differently
+  run to run (two boxes are never a read of the march's cost with smoke in it: count the bricks).
   Lights a step is the lever: half the steps or a refresh every 4 moved a frame by under 0.2 ms, and A QUARTER-SIZE MARCH READ SLOWER than the half
   (14.81 against 14.73 on medium, 11.18 against 10.45 on low, at four lights), which is why medium and low are not at quarter size; very low still
-  is, by its old row, and the ladder's model prices a quarter-size march at × 0.375 (`FACTOR.quarter`), which that card does not bear out.
+  is, by its old row (half size read cheaper by 0.23 ms on one box and the same on another), and the ladder's model prices a quarter-size march
+  at × 0.375 (`FACTOR.quarter`), which that card does not bear out.
   THE LADDER'S MODEL (`presetCost`): the march is priced per pixel on every tier (`REF.vol20` by the beam steps and the size; lights a step are not
   priced), the froxels' fixed term is gone: medium's per-pixel part 13.5 to 14.0 model-ms and its fixed part 3.8 to 3.4, low 11.7 to 12.2 and 2.4
   to 2.3. Where auto lands on a machine moves with that; no machine has run it.
@@ -217,8 +227,9 @@ row on his machine is the answer, and the word puts the count back on any machin
   CHECKS: `bun run tools/qa/probes.ts ladder` (six lines of the rows in the ladder's self-test; `FOGROWS_BREAK=1` fails two);
   `tools/qa/shaderrows-check.ts` (one program, no twin, no froxel kernel asked for; a frame with no cap said draws with the cap at 4);
   `frame-layout.ts`; `dust-look-check.ts` and the looks probe (the one march's read of the dust); `shaderinline-check` (floors 35 and 100).
-  NOT SEEN: THE SOFTWARE ADAPTER DRAWS NO SMOKE, so no frame with smoke in it was drawn here on the new path; frames without smoke were (the plain
-  page at medium, staged: 93 of 93 pipelines, no GPU error). No Mac has drawn it. Nobody has looked at medium, low or very low in motion.
+  NOT SEEN: the software adapter draws no smoke, so the card's pages above are the only frames with smoke in them on the new path, and they were
+  read for errors and timed; the stills are in the project's files for the maintainer's eyes (fog5-night-medium-new, fog5-night-verylow-new against
+  fog5-night-verylow-base). No Mac has drawn it. Nobody has looked at medium, low or very low in motion.
 - **ONE SET OF RAY PROGRAMS (2026-11-07; the maintainer's yes on the shader survey's row for it).** The page compiled every program that traces
   boxes TWICE: the boot's without the cut rule, then a second set with it in the background after every boot, swapped in while a cut piece a ray
   could meet was alive (`render/cutSwap.ts`, "a calm room pays nothing"). There is ONE set now, with the rule in (`scenePrelude()` carries

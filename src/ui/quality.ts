@@ -180,8 +180,9 @@ type Lossy = { gatherThird: boolean; rcHalfRate: boolean; volQuarter: boolean; f
  *  ONE MARCH ON EVERY TIER (2026-11-07; the maintainer's pick from stills of both): haze and smoke are marched per pixel on every preset, by one program, and a tier
  *  differs by numbers alone. Medium and low run high's march (the pass at half size, its 20 beam steps, its shadow refresh and step length) with TWO lights a step
  *  where high has four: on the cloud's NVIDIA card that read 13.70 ms a frame on medium against 13.22 with the froxel grid it replaces and 14.73 at four lights,
- *  9.08 against 8.86 and 10.45 on low. Lights a step is the lever: half the steps or a slower shadow refresh moved a frame by under 0.2 ms, and a quarter-size
- *  march was SLOWER. Very low, the floor, keeps its own small rows (quarter size, 8 steps, a longer step). The froxel grid that lit the haze and the smoke under high,
+ *  9.08 against 8.86 and 10.45 on low (a second pair of reads: +2.4 % and +1.2 %). Lights a step is the lever: half the steps or a slower shadow refresh moved a
+ *  frame by under 0.2 ms, and a quarter-size march was SLOWER. Very low, the floor, keeps its own small rows (quarter size, 8 steps, a longer step): 3 % cheaper
+ *  there than the grid was. The froxel grid that lit the haze and the smoke under high,
  *  the SMOKE KEEP switch that chose between the two and their Tab rows went with it. */
 export interface Caps { volK: number; volEvery: number; volStep: number; births: number; debris: number; rain: number }   // debris = settings.debrisCap: the destruction lane's rigid-debris pool (game/debris.ts) — 64 ultra / high, 32 below: the stage-2 chaos budget (64 tumbling casters +2 ms at high, no boil)   // rain = settings.particleRainCount (the particle rain's cap on drops alive at once, game/rainFx.ts — inert while settings.particleRain is off): 6000 / 4000 / 2500 / 1500 / 800
 /** ReSTIR DI per tier (renderer v3 Phase 2a; settings.restirRays / restirSpatial / restirHistory — engine.ts words them): the SAME estimator scaled by shadow rays per pixel,

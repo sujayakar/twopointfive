@@ -11,7 +11,9 @@
 //   RESTART_BREAK=1 bun run tools/qa/restart-probes.ts --missions solo      THE RED PATH: a chair left off its mark after the restart — must FAIL naming `props`
 // THE STAND: each mission runs in a child bun under TPS_PROFILE=shipped (src/host/profile.ts: the game as the page ships it; RESTART_PROFILE=frozen = the
 // harness's frozen stand instead), one child at a time. Missions are rows of src/scene/scenarioList.ts SCENARIOS by id, plus 'solo' = the plain night with no
-// scenario up; the default set is the solo night and the three office missions (night-breach, room-clear-pair, hostage-rescue).
+// scenario up; the default set is the solo night and two office missions (night-breach, hostage-rescue). A ROOM CLEAR IS NOT ASKED since 2026-11-07: a restart
+// under one deals the NEXT placement of the seed on purpose (ROOMCLEAR.reroll, a settled rule), so the restarted floor is not the freshly staged one by design;
+// this file used to write that rule off for both arms, and the write is refused.
 // WHAT 'THE WAY THE PAGE DOES' IS: Game.restartEncounter() — the pause card's 'Restart scenario / encounter' (ui/menu.ts), the down card's, Shift+Enter
 // (game/player.ts). Under a scenario the restart re-stages it by itself: restartEncounter's tail calls nightBreach.onEncounterRestart / rescue.onEncounterRestart.
 // WHAT 'A FRESH STAGING' IS: for a scenario, the page's own start (game/scenarioRun.ts startFromQuery on the row's query) on a game just stood up; its start()
@@ -26,8 +28,6 @@
 //   - THE CLOCK: Game.time runs on through a restart by design, and some of the level is a function of the absolute clock (a flickering fixture's `factor`:
 //     rust/sim/src/lights.rs supply()). So arm B runs first and arm A's fresh game has its Game.time SET to arm B's restart time before its staging — the one write this file
 //     makes into the game. `--own-clock` leaves arm A at the stand-up's 0 instead: red on `targets` for the flicker alone, which is what that mode is for
-//   - the room clear's `ROOMCLEAR.reroll` is OFF in both arms: with it on (the shipped default) a restart under a room clear deals the NEXT placement of the
-//     seed on purpose, which is not what this checks
 //   - the event serial (and, under --own-clock, the clock's origin): Game.eventSeq runs on through a restart by design, so `seq` / a civilian's `heard` are
 //     re-based to the staging's serial, and the digest's absolute stamps (t, escT, mission.sweepAt, the radio check's nextAt, a tripwire's lastTripAt, a bubble's
 //     @t) to the staging's time (a no-op when the clocks are the same). `--raw` compares the digests as they come (red on `seq` alone: for reading what that covers).
@@ -39,7 +39,7 @@ import { resolve } from 'node:path';
 const ROOT = resolve(import.meta.dir, '../..');
 type Vec3 = [number, number, number];
 const DT = 1 / 60, BEAT = 60;
-export const RESTART_MISSIONS = ['solo', 'night-breach', 'room-clear-pair', 'hostage-rescue'];
+export const RESTART_MISSIONS = ['solo', 'night-breach', 'hostage-rescue'];
 const seeded = (a: number) => () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
 const STAGE_SEED = 0x51a9e;   // the one word both arms seed Math.random with right before the staging under test
 
@@ -53,7 +53,6 @@ async function arm(id: string, seed: number, play: number, quietFrames: number, 
   const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
   const { digestGame } = await import(`${ROOT}/src/game/digest.ts`);
   const { rollcallState } = await import(`${ROOT}/src/game/guards.ts`);
-  const { ROOMCLEAR } = await import(`${ROOT}/src/game/roomclear.ts`);
   const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
   const E = id === 'solo' ? null : SCENARIOS.find((e: any) => e.id === id);
   if (E === undefined) throw new Error(`no mission '${id}' in scenarioList.ts SCENARIOS (or 'solo')`);
@@ -62,7 +61,6 @@ async function arm(id: string, seed: number, play: number, quietFrames: number, 
     const { readFileSync } = await import('node:fs'); const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`); const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
     level = loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', E.level), 'utf8')));
   }
-  ROOMCLEAR.reroll = false;
   const log = console.log, err = console.error, warn = console.warn; const hush = <T>(fn: () => T): T => { console.log = console.error = console.warn = () => {}; try { return fn(); } finally { console.log = log; console.error = err; console.warn = warn; } };
   Math.random = seeded(0x9137 + seed * 7919);
   console.log = console.error = console.warn = () => {}; let W: any; try { W = await standUp({ uploadEvery: 4, ...(level ? { level } : {}) }); } finally { console.log = log; console.error = err; console.warn = warn; }
