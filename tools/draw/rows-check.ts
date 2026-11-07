@@ -7,8 +7,8 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from '../qa/headless.ts';
 import { RustHost } from '../blitz/rust-host.ts';
-import { Section, Head, Geo, Mat, Cut, Word, Row4, Light, Man, Inst, Bones, Cap, STUFFS } from '../../src/draw/sections';
-import { ALL, Drawn } from '../../src/draw/drawn';
+import { Section, Want, Head, Geo, Mat, Cut, Word, Row4, Light, Man, Inst, Bones, Cap, STUFFS } from '../../src/draw/sections';
+import { Drawn } from '../../src/draw/drawn';
 import { lookNumbers } from '../../src/draw/look';
 
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
@@ -47,7 +47,7 @@ for (const L of LEVELS) { const [name, query] = L.split(':');
     g.godMode = true;
     await quiet(() => W.step(DT));
     const H: any = RustHost.last; if (!H) { line(false, `${name}: no Rust game stands`); break; }
-    if (t === 0) { const X = H.F.X; D = new Drawn(X, H.F.mem, ALL); const v = lookNumbers(E.settings, world, !!g.ch.cast); v[6] = v[7] = 0;   // (no line of light is taken out of the boxes)
+    if (t === 0) { const X = H.F.X; D = new Drawn(X, H.F.mem, Want.all); const v = lookNumbers(E.settings, world, !!g.ch.cast); v[6] = v[7] = 0;   // (no line of light is taken out of the boxes)
       const at = X.face_alloc(v.length * 8) >>> 0; new Float64Array(H.F.mem.buffer, at, v.length).set(v); X.face_draw_look(H.h, at, v.length); X.face_free(at, v.length * 8); continue; }
     D.take(H.h); D.frame(H.h, 1, [20, 0, 14]);   // (a frame each tick, as a page draws: the motion words are of the last)
     if (t % 7 && t > 20) continue;
