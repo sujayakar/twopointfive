@@ -3,18 +3,18 @@
 // PASS / FAIL each, all headless. No picture and no sound here: 'drawn' is the strip's own row list (stripRows — what both HUDs draw), not a screen.
 //   cues-lines   every new line of the table falls in the class it was written for, and the defenders' existing calls fall where the ranking puts them
 //   cues-strip   the strip's rules on a bare clock: a unit's radio line gets a row; the same words twice, a class inside its gap, a full strip of better
-//                rows and a class with its two rows are held back; a better class takes the worst row; a 'radio: ' row is always drawn
-//   cues-run     the team met in the mess on levels/block-squads.json: no cue is ever written on a Guard, the net reaches the strip, silent decisions get
-//                a line, Sam down is told to the floor, a place on the net is the level's own. CUESRUN_BREAK=1 = Sam's god mode is left on: must fail
-// The rule is settled (CUES.on): no line asks the switch off and nothing here writes it (until 2026-11-07 cues-strip's last line and half of every line of
-// cues-run asked the message ring as it was before the rule, and cues-run's first line held the run with the switch on to the run with it off).
+//                rows and a class with its two rows are held back; a better class takes the worst row; a 'radio: ' row is always drawn; switch off = the
+//                message ring's rows exactly
+//   cues-run     the team met in the mess on levels/block-squads.json, the same seed with the switch on and off: every man's state and place frame for
+//                frame the same (a cue never moves a man, nor a die), no cue is ever written on a Guard, the net reaches the strip with it on and not off
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
-const { Cues, cueClass, cueLines, stripRows } = await import(`${ROOT}/src/game/cues.ts`);
+const { CUES, Cues, cueClass, cueLines, stripRows } = await import(`${ROOT}/src/game/cues.ts`);
+const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const { roomName, placeName } = await import(`${ROOT}/src/game/dialogue.ts`);
 
 const DT = 1 / 60;
@@ -48,43 +48,50 @@ export async function cuesLines(): Promise<boolean> {
 }
 
 export async function cuesStrip(): Promise<boolean> {
-  const F = family('cues-strip: one row a line, ranked, rate-limited');
-  const played: number[] = [];
-  const g: any = { time: 10, messages: [] as { text: string; t: number }[], audio: { play: (_n: string, _p: unknown, gain: number) => played.push(gain) }, fight: { log: [], defs: [], live: true }, level: {} };
-  g.msg = (text: string) => { g.messages.push({ text, t: g.time }); if (g.messages.length > 5) g.messages.shift(); g.cues.raw(text); };
-  g.cues = new Cues(g);
-  const man = (callsign: string, team = 'hostile') => ({ callsign, team, unit: true });
-  const rows = () => (stripRows(g) as { text: string }[]).map(r => r.text.slice(7));
-  g.cues.heard(man('Blue 2', 'operative'), 'room clear'); g.cues.heard(man('Q1', 'guard'), 'stairs clear');
-  F.verdict(rows().length === 0, "only the defenders' net is put on the strip: not the team's own, not the night game's response", `${rows().length} rows`);
-  g.cues.heard(man('Tango 1'), 'contact — the mess!'); g.cues.tick();
-  F.verdict(rows().join('|') === 'Tango 1: contact — the mess!' && played.length === 1, "a defender's radio line gets a row under his callsign, and one squelch", `${rows().join(' | ')} · ${played.length} squelch`);
-  g.time += 0.5; g.cues.heard(man('Tango 2'), 'contact — the mess!');
-  F.verdict(rows().length === 1 && g.cues.stats.dup === 1, 'the same words from another man inside ten seconds: not drawn twice', `${rows().length} row · dup ${g.cues.stats.dup}`);
-  g.cues.heard(man('Tango 2'), 'shots fired! on me!'); g.cues.heard(man('Tango 3'), 'that was a shot — find him!');
-  F.verdict(rows().length === 2 && g.cues.stats.gap === 1, 'with two rows up, a class that has just spoken waits', `${rows().join(' | ')} · gap ${g.cues.stats.gap}`);
-  g.cues.heard(man('Tango 4'), 'Bravo: two going round — keep them there!');
-  g.cues.heard(man('Tango 5'), "heard. they'll find this room ready.");
-  F.verdict(rows().length === 3 && rows().includes("Tango 5: heard. they'll find this room ready.") && !rows().includes('Tango 1: contact — the mess!'), 'a full strip: a better class takes the place of the worst row, the oldest of them', rows().join(' | '));
-  g.cues.heard(man('Tango 6'), "they're still out there — holding the mess");
-  F.verdict(rows().length === 3 && !rows().some(r => /still out there/.test(r)) && g.cues.stats.full === 1, 'a worse class than every row up is held back', `${rows().join(' | ')} · full ${g.cues.stats.full}`);
-  g.time += 3; g.cues.heard(man('Tango 7'), 'moving round — coming at him from the store'); g.time += 3; g.cues.heard(man('Tango 8'), 'go go go');
-  const ones = rows().filter(r => cueClass(r.replace(/^Tango \d: /, '')) === 1).length;
-  F.verdict(ones === 2 && rows().length === 3, 'no class holds more than two of the three rows', rows().join(' | '));
-  g.msg('radio: CONTROL — all units, lock it down'); const n0 = played.length; g.cues.tick();
-  F.verdict(rows().includes('CONTROL — all units, lock it down') && played.length - n0 <= 1, "a 'radio: ' row (control, the staff's net) is always drawn; rows of one frame squelch once", `${rows().join(' | ')} · ${played.length - n0} squelch for the frame`);
-  g.time += 2; g.cues.reset(); g.messages = [{ text: 'radio: kept one', t: g.time - 1 }, { text: 'Tango 1 (radio): not a row', t: g.time - 1 }]; g.cues.adopt(g.messages);
-  F.verdict(rows().join('|') === 'kept one', "a checkpoint loaded: the saved ring's 'radio: ' rows are the strip's again", rows().join(' | '));
-  g.time += 9;
-  F.verdict(rows().length === 0, 'a row is gone after eight seconds', `${rows().length} rows`);
-  for (let i = 0; i < 7; i++) g.msg(`Tango ${i} (radio): row ${i}`);
-  g.cues.heard(man('Tango 1'), 'falling back!'); g.msg('Tango 1 (radio): falling back!'); for (let i = 0; i < 6; i++) g.msg(`Tango ${i}: not drawn ${i}`);
-  F.verdict(rows().join('|') === 'Tango 1: falling back!', 'rows nothing draws do not push a drawn one out (the strip is its own list, not the five-row ring)', `${rows().join(' | ')} · ring: ${g.messages.length} rows, none of them his`);
+  const F = family('cues-strip: one row a line, ranked, rate-limited; off = the message ring as ever');
+  const was = { ...CUES };
+  try {
+    const played: number[] = [];
+    const g: any = { time: 10, messages: [] as { text: string; t: number }[], audio: { play: (_n: string, _p: unknown, gain: number) => played.push(gain) }, fight: { log: [], defs: [], live: true }, level: {} };
+    g.msg = (text: string) => { g.messages.push({ text, t: g.time }); if (g.messages.length > 5) g.messages.shift(); g.cues.raw(text); };
+    g.cues = new Cues(g);
+    const man = (callsign: string, team = 'hostile') => ({ callsign, team, unit: true });
+    const rows = () => (stripRows(g) as { text: string }[]).map(r => r.text.slice(7));
+    CUES.on = true;
+    g.cues.heard(man('Blue 2', 'operative'), 'room clear'); g.cues.heard(man('Q1', 'guard'), 'stairs clear');
+    F.verdict(rows().length === 0, "only the defenders' net is put on the strip: not the team's own, not the night game's response", `${rows().length} rows`);
+    g.cues.heard(man('Tango 1'), 'contact — the mess!'); g.cues.tick();
+    F.verdict(rows().join('|') === 'Tango 1: contact — the mess!' && played.length === 1, "a defender's radio line gets a row under his callsign, and one squelch", `${rows().join(' | ')} · ${played.length} squelch`);
+    g.time += 0.5; g.cues.heard(man('Tango 2'), 'contact — the mess!');
+    F.verdict(rows().length === 1 && g.cues.stats.dup === 1, 'the same words from another man inside ten seconds: not drawn twice', `${rows().length} row · dup ${g.cues.stats.dup}`);
+    g.cues.heard(man('Tango 2'), 'shots fired! on me!'); g.cues.heard(man('Tango 3'), 'that was a shot — find him!');
+    F.verdict(rows().length === 2 && g.cues.stats.gap === 1, 'with two rows up, a class that has just spoken waits', `${rows().join(' | ')} · gap ${g.cues.stats.gap}`);
+    g.cues.heard(man('Tango 4'), 'Bravo: two going round — keep them there!');
+    g.cues.heard(man('Tango 5'), "heard. they'll find this room ready.");
+    F.verdict(rows().length === 3 && rows().includes("Tango 5: heard. they'll find this room ready.") && !rows().includes('Tango 1: contact — the mess!'), 'a full strip: a better class takes the place of the worst row, the oldest of them', rows().join(' | '));
+    g.cues.heard(man('Tango 6'), "they're still out there — holding the mess");
+    F.verdict(rows().length === 3 && !rows().some(r => /still out there/.test(r)) && g.cues.stats.full === 1, 'a worse class than every row up is held back', `${rows().join(' | ')} · full ${g.cues.stats.full}`);
+    g.time += 3; g.cues.heard(man('Tango 7'), 'moving round — coming at him from the store'); g.time += 3; g.cues.heard(man('Tango 8'), 'go go go');
+    const ones = rows().filter(r => cueClass(r.replace(/^Tango \d: /, '')) === 1).length;
+    F.verdict(ones === 2 && rows().length === 3, 'no class holds more than two of the three rows', rows().join(' | '));
+    g.msg('radio: CONTROL — all units, lock it down'); const n0 = played.length; g.cues.tick();
+    F.verdict(rows().includes('CONTROL — all units, lock it down') && played.length - n0 <= 1, "a 'radio: ' row (control, the staff's net) is always drawn; rows of one frame squelch once", `${rows().join(' | ')} · ${played.length - n0} squelch for the frame`);
+    g.time += 2; g.cues.reset(); g.messages = [{ text: 'radio: kept one', t: g.time - 1 }, { text: 'Tango 1 (radio): not a row', t: g.time - 1 }]; g.cues.adopt(g.messages);
+    F.verdict(rows().join('|') === 'kept one', "a checkpoint loaded: the saved ring's 'radio: ' rows are the strip's again", rows().join(' | '));
+    g.time += 9;
+    F.verdict(rows().length === 0, 'a row is gone after eight seconds', `${rows().length} rows`);
+    for (let i = 0; i < 7; i++) g.msg(`Tango ${i} (radio): row ${i}`);
+    g.cues.heard(man('Tango 1'), 'falling back!'); g.msg('Tango 1 (radio): falling back!'); for (let i = 0; i < 6; i++) g.msg(`Tango ${i}: not drawn ${i}`);
+    F.verdict(rows().join('|') === 'Tango 1: falling back!', 'rows nothing draws do not push a drawn one out (the strip is its own list, not the five-row ring)', `${rows().join(' | ')} · ring: ${g.messages.length} rows, none of them his`);
+    CUES.on = false; g.msg('radio: one'); g.msg('Tango 1 (radio): two'); g.cues.heard(man('Tango 1'), 'two');
+    const old = g.messages.filter((m: any) => g.time - m.t < 8 && m.text.startsWith('radio: ')).slice(-3).map((m: any) => m.text).join('|');
+    F.verdict((stripRows(g) as { text: string }[]).map(r => r.text).join('|') === old && old === 'radio: one', "switch off: the strip is the message ring's 'radio: ' rows, as it was", old);
+  } finally { Object.assign(CUES, was); }
   return F.done();
 }
 
-async function rig(seed: number) {
-  Math.random = seeded(seed);
+async function rig(seed: number, on: boolean) {
+  CUES.on = on; Math.random = seeded(seed);
   const log = console.log, err = console.error, warn = console.warn; let W: any;
   try { console.log = console.error = console.warn = () => { };
     W = await standUp({ uploadEvery: 4, level: loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', 'block-squads.json'), 'utf8'))) });
@@ -93,35 +100,44 @@ async function rig(seed: number) {
   return W;
 }
 export async function cuesRun(): Promise<boolean> {
-  const F = family('cues-run: a played floor — no cue is written on a man, the net and the silent decisions reach the strip, Sam down is told to the floor');
-  const W = await rig(2), g = W.game; g.godMode = true;
-  const cueTexts = new Set<string>(); let cueOnMan = 0; const strip = new Set<string>(); let hold = '';
-  const frame = (_i: number) => {
-    for (const r of stripRows(g) as { text: string }[]) strip.add(r.text);
-    for (const l of g.cues.log) if (l.kind !== 'heard' && l.kind !== 'raw') cueTexts.add(l.text.replace(/^Tango \d+: /, ''));
-    for (const gd of g.guards) { if (gd.bubble && cueTexts.has(gd.bubble.text)) cueOnMan++; if (gd.bubble && /hold where you are|back to your posts/.test(gd.bubble.text)) hold = gd.bubble.text; }
-  };
-  for (let i = 0; i < 60; i++) { g.player.visibility = 0.05; W.step(DT); frame(i); }
-  // Sam is stood where the first squad's first posted man is aiming — read off the level's own marks, so a rebuilt floor moves the staging with it
-  // (a fixed point in the old mess was out of every eye on the rebuilt block: nobody called anything and three lines went red)
-  const rc = g.level.scenarios?.roomClear, aim = rc?.rooms?.find((r: any) => r.id === rc.squads?.[0]?.rooms?.[0])?.marks?.[0]?.aimAt;
-  if (!aim) throw new Error('cues-run: block-squads.json has no first squad room with a mark to stage Sam in front of');
-  // (THE TEAM IS TOLD TO HOLD WHERE IT STANDS before Sam goes. The page's squad opens following Sam: it walked after him
-  // onto the squad's room, dropped the three men who had a line to that spot and lost two of its own, and with god mode off nobody was left to see
-  // Sam: 38 s lit on the mark, not a round at him, never down, so the line his fall is owed was never said. The held team still fights from where it
-  // stands; the case rests on the men with a line to Sam being left to it, and says the order's answer when he never falls.
-  // CUESRUN_BREAK=1 = Sam's god mode is left on: he never falls. =follow = no hold: the team follows as the stand has it.)
-  const heldWhy = g.orders?.active && process.env.CUESRUN_BREAK !== 'follow' ? g.orders.give('hold', g.orders.targetAt(g.player.char.pos), 'all') : 'not given';
-  g.teleportPlayer([aim[0], 0, aim[2]]);
-  for (let i = 60; i < 12 * 60; i++) { g.player.visibility = 1; W.step(DT); frame(i); }
-  g.godMode = process.env.CUESRUN_BREAK === '1';   // …and now their rounds count: Sam drops where he stands, and the floor's fight is over
-  for (let i = 12 * 60; i < 50 * 60; i++) { if (!g.player.down) g.player.visibility = 1; W.step(DT); frame(i); }
-  const A = { strip, cueOnMan, stats: { ...g.cues.stats }, kinds: { ...g.cues.kinds }, hold, down: !!g.player.down, heldWhy: String(heldWhy ?? 'taken'), place: placeName(g.level, [2, 0, 2]) + ' / ' + roomName(g.level, [2, 0, 2]) };
-  F.verdict(A.cueOnMan === 0, "no cue is ever written on a man (Guard.bubble is the bark clocks' to read)", `${A.cueOnMan} frames`);
-  F.verdict([...A.strip].some(t => /^radio: Alpha: contact/.test(t)) && A.stats.heardDrawn >= 3, "the defenders' net reaches the strip", `${A.stats.heardDrawn} of ${A.stats.heard} lines drawn (${[...A.strip].slice(0, 3).join(' · ')}…)`);
-  F.verdict(A.stats.cues >= 2 && A.stats.cueDrawn >= 1, 'silent decisions get a line', `${JSON.stringify(A.kinds)}, ${A.stats.cueDrawn} on the strip`);
-  // (with Sam known down the floor's own words are owed: an empty string passed while his fall was not read)
-  F.verdict(A.down && /hold where you are/.test(A.hold), 'Sam down: the floor is told to hold where it is', `${A.down ? '' : `STAGING: Sam never went down (the team's 'hold' was ${A.heldWhy}) · `}'${A.hold}'`);
-  F.verdict(/^outside the [\w ]+ \/ the [\w ]+$/.test(A.place) && !/car park|back offices/.test(A.place), "a place on the net, and the dialogue's room noun, are the level's own", `'${A.place}'`);
+  const F = family('cues-run: the same seed with the switch on and off — every man the same, frame for frame; the net on the strip only with it on');
+  const was = { ...CUES };
+  try {
+    const out: { moves: string; strip: Set<string>; cueOnMan: number; stats: any; kinds: any; hold: string; down: boolean; heldWhy: string; place: string }[] = [];
+    for (const on of [true, false]) {
+      const W = await rig(2, on), g = W.game; g.godMode = true;
+      const cueTexts = new Set<string>(); let moves = '', cueOnMan = 0; const strip = new Set<string>(); let hold = '';
+      const frame = (i: number) => {
+        if (i % 30 === 0) { const d = digestGame(g, true) as any; for (const x of d.guards) delete x.bubble; for (const x of d.civilians) delete x.bubble; if (d.player) delete d.player.bubble; moves += hashDigest(d) + ' '; }
+        for (const r of stripRows(g) as { text: string }[]) strip.add(r.text);
+        for (const l of g.cues.log) if (l.kind !== 'heard' && l.kind !== 'raw') cueTexts.add(l.text.replace(/^Tango \d+: /, ''));
+        for (const gd of g.guards) { if (gd.bubble && cueTexts.has(gd.bubble.text)) cueOnMan++; if (gd.bubble && /hold where you are|back to your posts/.test(gd.bubble.text)) hold = gd.bubble.text; }
+      };
+      for (let i = 0; i < 60; i++) { g.player.visibility = 0.05; W.step(DT); frame(i); }
+      // Sam is stood where the first squad's first posted man is aiming — read off the level's own marks, so a rebuilt floor moves the staging with it
+      // (a fixed point in the old mess was out of every eye on the rebuilt block: nobody called anything and three lines went red)
+      const rc = g.level.scenarios?.roomClear, aim = rc?.rooms?.find((r: any) => r.id === rc.squads?.[0]?.rooms?.[0])?.marks?.[0]?.aimAt;
+      if (!aim) throw new Error('cues-run: block-squads.json has no first squad room with a mark to stage Sam in front of');
+      // (THE TEAM IS TOLD TO HOLD WHERE IT STANDS before Sam goes, the same on both stands. The page's squad opens following Sam: it walked after him
+      // onto the squad's room, dropped the three men who had a line to that spot and lost two of its own, and with god mode off nobody was left to see
+      // Sam: 38 s lit on the mark, not a round at him, never down, so the line his fall is owed was never said. The held team still fights from where it
+      // stands; the case rests on the men with a line to Sam being left to it, and says the order's answer when he never falls.
+      // CUESRUN_BREAK=1 = Sam's god mode is left on: he never falls, on either stand. =follow = no hold: the team follows as the stand has it.)
+      const heldWhy = g.orders?.active && process.env.CUESRUN_BREAK !== 'follow' ? g.orders.give('hold', g.orders.targetAt(g.player.char.pos), 'all') : 'not given';
+      g.teleportPlayer([aim[0], 0, aim[2]]);
+      for (let i = 60; i < 12 * 60; i++) { g.player.visibility = 1; W.step(DT); frame(i); }
+      g.godMode = process.env.CUESRUN_BREAK === '1';   // …and now their rounds count: Sam drops where he stands, and the floor's fight is over
+      for (let i = 12 * 60; i < 50 * 60; i++) { if (!g.player.down) g.player.visibility = 1; W.step(DT); frame(i); }
+      out.push({ moves, strip, cueOnMan, stats: { ...g.cues.stats }, kinds: { ...g.cues.kinds }, hold, down: !!g.player.down, heldWhy: String(heldWhy ?? 'taken'), place: placeName(g.level, [2, 0, 2]) + ' / ' + roomName(g.level, [2, 0, 2]) });
+    }
+    const [A, B] = out;
+    F.verdict(A.moves === B.moves && A.moves.split(' ').length > 90, 'every man, door and item digests the same with the cues on and off, every half second for 50 s', `${A.moves.split(' ').length - 1} digests · ${A.moves === B.moves ? 'identical' : 'first difference at ' + (A.moves.split(' ').findIndex((h, i) => h !== B.moves.split(' ')[i]) * 0.5).toFixed(1) + ' s'}`);
+    F.verdict(A.cueOnMan === 0, "no cue is ever written on a man (Guard.bubble is the bark clocks' to read)", `${A.cueOnMan} frames`);
+    F.verdict([...A.strip].some(t => /^radio: Alpha: contact/.test(t)) && A.stats.heardDrawn >= 3 && B.strip.size === 0, "the defenders' net reaches the strip with the switch on, and none of it with it off", `on: ${A.stats.heardDrawn} of ${A.stats.heard} lines drawn (${[...A.strip].slice(0, 3).join(' · ')}…) · off: ${B.strip.size} rows`);
+    F.verdict(A.stats.cues >= 2 && A.stats.cueDrawn >= 1 && B.stats.cues === 0, 'silent decisions get a line with it on (and none is made with it off)', `on: ${JSON.stringify(A.kinds)}, ${A.stats.cueDrawn} on the strip · off: ${B.stats.cues}`);
+    // (with Sam known down on both runs each floor's own words are owed: an empty string on either side passed while his fall was not read)
+    F.verdict(A.down && B.down && /hold where you are/.test(A.hold) && /back to your posts/.test(B.hold), "Sam down: the floor is told to hold where it is — 'back to your posts' only with the switch off", `${A.down && B.down ? '' : `STAGING: Sam never went down (on: ${A.down}, off: ${B.down}; the team's 'hold' was ${A.heldWhy} / ${B.heldWhy}) · `}on: '${A.hold}' · off: '${B.hold}'`);
+    F.verdict(/^outside the [\w ]+ \/ the [\w ]+$/.test(A.place) && !/car park|back offices/.test(A.place) && B.place === 'the car park / the car park', "a place on the net, and the dialogue's room noun, are the level's own (off: 'the car park' for both, on a floor with none — the words as they were)", `on: '${A.place}' · off: '${B.place}'`);
+  } finally { Object.assign(CUES, was); }
   return F.done();
 }

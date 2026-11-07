@@ -4,15 +4,14 @@
 // PASS / FAIL each, headless (bang-tally.ts stage(): the Game of headless.ts started as a click on the scenario's row starts it). A teammate and a hostile are
 // PUT where the place's own light is read as lit or dark (the floor is scanned for the brightest and the darkest standing room: no coordinate is written
 // here), the teammate's eyes are handed the man (Op.tgt), and the rule is asked — no frame is stepped in between, so the fight never takes the staging back.
-//   litman-rule  · from the dark on a lit man: the rule holds and his weapon light is off
+//   litman-rule  · from the dark on a lit man: the rule holds and his weapon light is off; switch off: it does not hold and his light burns (as it was)
 //                · the man in the dark too, or he himself in the light: it does not hold
 //                · a round's flash by a man in the dark (nobody's light, on a fuse) lights him by the plain estimate and NOT by the rule's: it does not hold
 //                · the man out of his eyes a moment ago (Op.kept): it holds; with a cue turning him to somebody else, or the blink grown old: it does not
-//                · FEET: a walk that closes on the man is held (fight.short); one that leads away is not; holdShortSecs 0: never; past the cap: let go
+//                · FEET: a walk that closes on the man is held (fight.short); one that leads away is not; holdShortSecs 0: never; past the cap: let go;
+//                  switch off: never
 // What it cannot say: whether any of it is right to look at, or helps — that is playthrough.ts's tally (rebuild/away-build/night-breach-hunt.md).
-// The family's own red path: LITMAN_BREAK=1 bun run tools/qa/probes.ts litman-rule must FAIL (the teammate is stood in the light himself for the first
-// question; a run that throws before that question never reaches it). The rule is settled (LIGHTS.litMan): no line asks the switch off and nothing here writes it; until 2026-11-07 a line and a half did, and the
-// break word was the switch taken off.
+// The family's own red path: LITMAN_BREAK=1 bun run tools/qa/probes.ts litman-rule must FAIL (the switch taken off under the first check).
 import { ROOT } from './headless.ts';
 import { stage } from './bang-tally.ts';
 const GDM: any = await import(`${ROOT}/src/game/guards.ts`);
@@ -30,7 +29,7 @@ const f2 = (n: number) => n.toFixed(2), at = (p: number[]) => `(${p[0].toFixed(1
 
 export async function litmanRule(): Promise<boolean> {
   const F = family('litman-rule: in the dark on a man the place lights — light off, feet held on a closing walk; anything else, as it was');
-  const keepR = { holdShortSecs: ROOMFIGHT.holdShortSecs };
+  const keepL = { ...LIGHTS }, keepR = { holdShortSecs: ROOMFIGHT.holdShortSecs };
   try {
     const S: any = await quiet(() => stage('night-breach', 1)); const { g, step } = S; const O = g.orders, nav = g.col.nav, fight: any = g.fight;
     const sam = g.player.char.pos; await quiet(() => O.give('fallIn', O.targetAt([sam[0], 0, sam[2]]), 'all')); step(30);
@@ -53,9 +52,11 @@ export async function litmanRule(): Promise<boolean> {
     const ask = () => ({ rule: !!GDM.gunOnLitMan(g, gd), light: !!GDM.teamLit(g, gd) });
 
     // ---- the light
-    put(gd, BREAK ? lit2.p : dark.p); put(h, lit.p); eyes(h);
+    put(gd, dark.p); put(h, lit.p); eyes(h); if (BREAK) LIGHTS.litMan = false;
     const a = ask();
     F.verdict(a.rule && !a.light, 'from the dark on a lit man: the rule holds and his weapon light is off', `${gd.callsign} at ${at(dark.p)} (${f2(dark.e)}) on ${h.callsign} at ${at(lit.p)} (${f2(lit.e)}) · rule ${a.rule} · light ${a.light ? 'ON' : 'off'}`);
+    LIGHTS.litMan = false; eyes(h); const b = ask(); LIGHTS.litMan = true;
+    F.verdict(!b.rule && b.light, 'switch off: the rule does not hold and his light burns on the man, as it was', `rule ${b.rule} · light ${b.light ? 'ON' : 'off'}`);
     put(h, dark2.p); eyes(h); const c = ask();
     put(h, lit.p); put(gd, lit2.p); eyes(h); const d = ask();
     F.verdict(!c.rule && !d.rule, 'the man in the dark too, or he himself in the light: it does not hold', `man at ${at(dark2.p)} (${f2(dark2.e)}): rule ${c.rule} · himself at ${at(lit2.p)} (${f2(lit2.e)}): rule ${d.rule}`);
@@ -81,9 +82,10 @@ export async function litmanRule(): Promise<boolean> {
     walk(-1.5); const f2_ = held();
     walk(1.5); ROOMFIGHT.holdShortSecs = 0; const f3 = held(); ROOMFIGHT.holdShortSecs = keepR.holdShortSecs;
     walk(1.5); op.shortSeen = g.time - 0.1; op.shortSince = g.time - ROOMFIGHT.holdShortSecs - 1; const f4 = held();
-    F.verdict(f1 && !f2_ && !f3 && !f4, 'feet: a walk that closes on the man is held; one that leads away, holdShortSecs 0, a hold past its cap: not',
-      `closing 1.5 m: ${f1 ? 'held' : 'walks'} · away 1.5 m: ${f2_ ? 'held' : 'walks'} · holdShortSecs 0: ${f3 ? 'held' : 'walks'} · ${ROOMFIGHT.holdShortSecs + 1} s into a hold: ${f4 ? 'held' : 'walks'}`);
+    walk(1.5); LIGHTS.litMan = false; const f5 = held(); LIGHTS.litMan = true;
+    F.verdict(f1 && !f2_ && !f3 && !f4 && !f5, 'feet: a walk that closes on the man is held; one that leads away, holdShortSecs 0, a hold past its cap, the switch off: not',
+      `closing 1.5 m: ${f1 ? 'held' : 'walks'} · away 1.5 m: ${f2_ ? 'held' : 'walks'} · holdShortSecs 0: ${f3 ? 'held' : 'walks'} · ${ROOMFIGHT.holdShortSecs + 1} s into a hold: ${f4 ? 'held' : 'walks'} · switch off: ${f5 ? 'held' : 'walks'}`);
   } catch (err) { F.verdict(false, 'the probe ran', err instanceof Error ? (err.stack ?? err.message) : String(err)); }
-  finally { Object.assign(ROOMFIGHT, keepR); }
+  finally { Object.assign(LIGHTS, keepL); Object.assign(ROOMFIGHT, keepR); }
   return F.done();
 }

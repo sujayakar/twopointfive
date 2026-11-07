@@ -28,9 +28,11 @@ function verdict(ok: boolean, label: string, detail: string) { console.log(`- ${
 
 // ================================================================ shared staging for the behaviour probes
 const teamsMod = await import(`${ROOT}/src/game/teams.ts`);
-/** QA: teams-dark's red path — TEAMSDARK_BREAK=1 stands the hostile in the corridor with the operative, no wall between them: the wall's line must fail. */
+const { NVG } = await import(`${ROOT}/src/game/nvg.ts`);
+/** QA: teams-dark's red path — TEAMSDARK_BREAK=1 leaves the floor's lights ON for the 'lights out' line and OUT for the 'lights on' line: he is acquired in
+ *  the first and not in the second, and both lines must fail, on both stands. */
 const DARK_BREAK = process.env.TEAMSDARK_BREAK === '1';
-const { spawnUnit, despawnUnit, despawnUnits, units, engage, canSeeChar } = guardsMod;
+const { spawnUnit, despawnUnit, despawnUnits, units, engage, lightEstimateAt, canSeeChar } = guardsMod;
 const chestOf = (c: any): Vec3 => c.bones.chest ?? v3.add(c.pos, [0, 1.1, 0]);
 const eyeOf = (c: any): Vec3 => c.bones.head ?? v3.add(c.pos, [0, 1.65, 0]);
 /** the three staff parked on the lot east of the building — held, pinned, blind and deaf (standoff-probes' parking): out of every unit's sight and hearing */
@@ -185,7 +187,7 @@ export async function teamsPlayer() {
 
 // ================================================================ (d) line of sight and light gate acquisition exactly as they gate a guard's sight of Sam
 export async function teamsDark() {
-  console.log('\n=== teams-dark: an alert operative and a hostile behind a wall: never acquired, until the hostile fires and is placed by ear ===');
+  console.log('\n=== teams-dark: an alert operative and a hostile 8 m off in his cone — (1) a wall between: never acquired, until the hostile fires and is placed by ear; (2) in the open with the room\'s lights out: not acquired in 5 s; lights on: acquired by sight inside 2 s ===');
   Math.random = seeded(613);
   const W = await standUp(); const { game } = W;
   game.aiEnabled = true; game.godMode = true;
@@ -195,7 +197,7 @@ export async function teamsDark() {
   // ---- (1) the wall: operative in the corridor facing west, hostile in the server room beyond the corridor's north wall
   {
     const op = spawnUnit(game, { team: 'operative', pos: [22.0, 0, 11.3], yaw: -Math.PI / 2, name: 'Archer', light: false });
-    const ho = spawnUnit(game, { team: 'hostile', pos: DARK_BREAK ? [16.5, 0, 11.3] : [16.5, 0, 7.5], yaw: Math.PI / 2, name: 'Vasquez', light: false });
+    const ho = spawnUnit(game, { team: 'hostile', pos: [16.5, 0, 7.5], yaw: Math.PI / 2, name: 'Vasquez', light: false });
     op.hold = false; op.pinned = true; op.state = 'alert'; op.awareness = 1; op.reactT = 0; op.lastKnown = null;   // alert with nothing, planted (pinned: he covers, he does not wander off to search)
     ho.heardUpTo = 1e12; ho.dazzledUntil = 1e9;   // the hostile is a prop here: deaf and blind, he stands
     W.step(DT); W.step(DT);
@@ -210,9 +212,30 @@ export async function teamsDark() {
     allPass = verdict(!!fix && dFix < 4.5 && op.witness.heard.shots >= 1 && !op.foe, '(1) he fires: heard as a threat — a fix within a few metres of him (placed by ear through the doorway), still no foe (nothing seen)', `fix ${fix ? `(${f1(fix[0])}, ${f1(fix[2])})` : 'none'} ${f1(dFix)} m off him · shots heard ${op.witness.heard.shots} · foe ${op.foe ? 'set' : 'none'}`) && allPass;
     despawnUnits(game); W.step(DT);
   }
-  // (Until 2026-11-07 a part (2) asked SIGHT BY THE LIGHT METER ALONE: the two in the open with the floor's lights out, "five seconds and never acquired", then
-  //  lights on. It was asked "with nobody's goggles on" (NVG.on written off): the goggles are settled on, the team sees a dark man through the tube, and the
-  //  question was a build from before them. Out by ruling; probes.ts nvg has what the goggles add.)
+  // ---- (2) the light: both in the cubicles' north aisle, 8 m apart, in the open; the floor's lights out, then on
+  // (SIGHT BY THE LIGHT METER ALONE: with goggles the team sees a dark man through the tube and by the infrared light on it — nvg.ts, irlight.ts, and
+  //  probes.ts nvg has what they add. What bare eyes make of the meter is asked here with nobody's goggles on, as flashweight-lights asks the light rule)
+  { const nvgWas = NVG.on; NVG.on = false;
+    for (const grp of ['cubicles', 'monitors', 'lobby', 'corridor', 'breakroom']) game.setGroup(grp, DARK_BREAK);
+    W.step(DT);
+    const op = spawnUnit(game, { team: 'operative', pos: [14.2, 0, 13.35], yaw: Math.PI / 2, name: 'Bishop', light: false });   // (his own weapon light off: it would light the man he is looking at — true, and the point of a torch, but not this probe's question)
+    const ho = spawnUnit(game, { team: 'hostile', pos: [22.2, 0, 13.35], yaw: -Math.PI / 2, name: 'Drake', light: false });
+    op.hold = false; op.pinned = true; op.state = 'alert'; op.awareness = 1; op.reactT = 0; op.lastKnown = null;
+    ho.heardUpTo = 1e12;   // (deaf, and NOT blinded: a blinded man fires blind down his last line — he shot the operative dead seventeen frames in, and
+    //  both lines were then asked of a dead man. In the dark he sees the operative no better than he is seen)
+    W.step(DT); W.step(DT);
+    const los = !game.col.segmentBlocked(eyeOf(op.char), chestOf(ho.char)) || !game.col.segmentBlocked(eyeOf(op.char), eyeOf(ho.char));
+    const inCone = canSeeChar(game, op, ho.char, false);
+    const Edark = lightEstimateAt(game, chestOf(ho.char));
+    let everFoe = false; let visMax = 0;
+    for (let f = 0; f < 60 * 5; f++) { W.step(DT); if (op.foe) everFoe = true; visMax = Math.max(visMax, ho.visibility); }
+    allPass = verdict(los && inCone.visible && !everFoe && op.state !== 'dead' && ho.state !== 'dead', '(2) lights out: in the open, in his cone, line of sight clear — five seconds and never acquired (the meter reads him dark)', `LOS ${los} · canSee ${inCone.visible} at ${f1(inCone.dist)} m · E at his chest ${Edark.toFixed(3)} W/m² → vis peak ${f2(visMax)} (floor ${game.tune.visFloor}) · foe ever ${everFoe} · both alive ${op.state !== 'dead' && ho.state !== 'dead'}`) && allPass;
+    for (const grp of ['cubicles', 'monitors', 'lobby', 'corridor', 'breakroom']) game.setGroup(grp, !DARK_BREAK);
+    let acquiredAt = -1; const t0 = game.time; let Elit = 0;
+    for (let f = 0; f < 60 * 3; f++) { W.step(DT); if (f === 30) Elit = ho.irradiance; if (acquiredAt < 0 && op.foe === ho && op.sawFoeThisFrame) acquiredAt = game.time - t0; }
+    allPass = verdict(acquiredAt >= 0 && acquiredAt <= 2.0, '(2) lights on: acquired by sight inside two seconds', `+${f2(acquiredAt)} s · E at his chest lit ${Elit.toFixed(2)} W/m² → vis ${f2(ho.visibility)}`) && allPass;
+    despawnUnits(game); NVG.on = nvgWas;
+  }
   console.log(`=== teams-dark: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`);
   return allPass;
 }

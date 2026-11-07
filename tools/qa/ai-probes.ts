@@ -42,6 +42,7 @@ export async function muzzle() {
   console.log('\n=== muzzle: low ready rather than a pistol pointed at a colleague — the stack, a pair in file, a man crossing the line in a fight ===');
   const { RoomClear } = await import(`${ROOT}/src/game/squad.ts`);
   const { CONFERENCE_CLEAR } = await import(`${ROOT}/src/game/demo.ts`);
+  const { laserBoxes, LASER } = await import(`${ROOT}/src/game/combat.ts`);
   const { colleagueInLine, aimAhead } = guardsMod;
   let allPass = true; const verdict = (ok: boolean, label: string, detail: string) => { allPass &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
   // ---- (1) the stack
@@ -53,18 +54,22 @@ export async function muzzle() {
     const [a, b] = game.guards; for (const o of game.guards.slice(2)) o.hold = true;
     const d = game.doors.byName('conference'); d.reset(); d.angle = 0; d.vel = 0; d.latched = true; d.closing = false;
     const clear = new RoomClear(game, CONFERENCE_CLEAR, a, b); clear.start();
-    let t = 0, planted = 0, bDown = 0, aDown = 0, pitchSum = 0; const rows: string[] = [];
+    let t = 0, planted = 0, bDown = 0, aDown = 0, pitchSum = 0; let laserEndY = NaN, laserLen = NaN, laserToA = NaN; const rows: string[] = [];
     for (let f = 0; f < 60 * 6 && clear.phase === 'stack'; f++) {
       clear.tick(t, DT); W.step(DT); t += DT;
       const both = !!a.script?.arrived && !!b.script?.arrived;
       if (both) {
         planted++; if (b.muzzleDown) { bDown++; pitchSum += b.char.gunDir[1]; } if (a.muzzleDown) aDown++;
+        if (planted === 30) {   // half a second into the formed stack: where no. 2's beam actually lands
+          const out: any[] = []; LASER.enemy = true; try { laserBoxes(game, b, out); } finally { LASER.enemy = false; }   // (the guards' lasers on, as before combat.ts LASER: out[0] is read as his beam)
+          if (out.length) { const beam = out[0]; laserLen = beam.h[2] * 2; const from = v3.mad(b.char.muzzle, b.char.gunDir, 0.02); const end = v3.mad(from, b.char.gunDir, laserLen); laserEndY = end[1]; const A = axisOf(a); laserToA = segToAxis(from, end, A.x, A.z, A.y0, A.y1); }
+        }
       }
       if (f % 30 === 29) rows.push(`    ${t.toFixed(1)}s phase ${clear.phase} · #1 arrived ${!!a.script?.arrived} down ${a.muzzleDown} · #2 arrived ${!!b.script?.arrived} down ${b.muzzleDown} gunDir.y ${b.char.gunDir[1].toFixed(2)} stance ${b.char.anim.stance}/${b.char.anim.upper} · gap ${v3.distXZ(a.char.pos, b.char.pos).toFixed(2)} m`);
     }
     const fracB = planted ? bDown / planted : 0, meanPitch = bDown ? pitchSum / bDown : 0;
     verdict(planted > 30 && fracB > 0.9 && aDown === 0 && meanPitch < -0.4, '(1) the stack on the conference door: no. 2 behind no. 1',
-      `stack formed for ${(planted * DT).toFixed(1)} s of the phase; no. 2 muzzleDown ${(100 * fracB).toFixed(0)} % of it (want > 90), gun axis y ${meanPitch.toFixed(2)} while down (want < −0.4: on the floor), no. 1 lowered ${aDown} frames (want 0)`);
+      `stack formed for ${(planted * DT).toFixed(1)} s of the phase; no. 2 muzzleDown ${(100 * fracB).toFixed(0)} % of it (want > 90), gun axis y ${meanPitch.toFixed(2)} while down (want < −0.4: on the floor), no. 1 lowered ${aDown} frames (want 0); no. 2's laser is OFF while lowered (combat.ts handProps) — had it been on at +0.5 s: ${isNaN(laserLen) ? '—' : `${laserLen.toFixed(2)} m long, landing at y ${laserEndY.toFixed(2)}, ${laserToA.toFixed(2)} m off no. 1's axis`}`);
     console.log(rows.join('\n'));
     clear.end('patrol');
   }

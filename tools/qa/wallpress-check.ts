@@ -6,7 +6,7 @@
 //   walk up     a walk straight at the wall has it BEFORE he touches it (inside pressFlow), at the pace he was walking (no frame of the take outruns his walk by
 //               half), and it ends as Q's hold ends: 0.45 m off the face, back to it, stance 'wall', nothing said
 //   turn in     stood against the wall, the key turned into it takes it after pressSecs (the frame's grain either way)
-//   not asked   a diagonal along the wall, the key let go before pressFlow, a shut door's leaf: never a hold
+//   not asked   a diagonal along the wall, a run at it, the key let go before pressFlow, a shut door's leaf: never a hold
 //   any camera  24 yaws × 8 key combinations, stood against the wall: a hold if and only if the stick is within pressDeg of square into it
 //   the hands   the rifle stacks in his hands; the pistol goes away and comes back on the step off; with an ENEMY alert the pistol does NOT go away (no hold),
 //               the rifle and empty hands still take it, and a man of his own side alert changes nothing; inside pressAfterShot of a round of his own, with
@@ -19,11 +19,9 @@
 //               the same wall further along is taken on the walk up
 //   off         the switch off: none of the above ever holds, and Q still does
 //   recordings  a recording carries the key; one from before it replays with it off; the frozen stand holds it off by name
-//   checkpoint  a save made on a wall loads ON the wall and what he does next is what he did, the pistol the hold put away back in his hand off it; the
-//               take's latch rides the file too; a slice he could not be in is no hold
-// Two later rules are settled on and no longer written here. Until 2026-11-07 the check held the wall taken at a run off (WALLSNAP.pressRun) and its `not
-// asked` line also said 'a run at it: never a hold', the build before a sprint could take a wall (out by ruling: wallrun-check.ts asks the page's); and
-// the checkpoint line also saved and loaded with SAVETIMELINE.holds off (a file that says nothing, a load that stands him free).
+//   checkpoint  under SAVETIMELINE.holds (savestate.ts; ?saveholds=0, TPS_SAVEHOLDS=1) a save made on a wall loads ON the wall and what he does next is what he
+//               did, the pistol the hold put away back in his hand off it; the take's latch rides the file too; a slice he could not be in is no hold; with
+//               the saves' switch off a file says nothing of it and a load stands him free, as it was
 // Headless: positions, clocks and the animator's stance are read; how the take LOOKS has never been seen.
 import { ROOT } from './headless.ts';
 import { world } from './wallsnap-probes.ts';
@@ -35,11 +33,11 @@ export async function wallPressCheck(): Promise<boolean> {
   console.log(`\n=== wallpress: a move key held into a wall takes it, no Q${BRK ? ' (the rule off: must fail)' : ''} ===`);
   const { WALLSNAP } = await import(`${ROOT}/src/game/wallsnap.ts`);
   const { knobsSnapshot, applyKnobs } = await import(`${ROOT}/src/game/journal.ts`); const { FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`);
-  const was = { on: WALLSNAP.on, press: WALLSNAP.press }, log = console.log, err = console.error, warn = console.warn;
+  const was = { on: WALLSNAP.on, press: WALLSNAP.press, run: WALLSNAP.pressRun }, log = console.log, err = console.error, warn = console.warn;
   const quiet = async <T>(f: () => T | Promise<T>): Promise<T> => { console.log = console.error = console.warn = () => { }; try { return await f(); } finally { console.log = log; console.error = err; console.warn = warn; } };
   const f2 = (x: number) => x.toFixed(2), f3 = (x: number) => x.toFixed(3);
   try {
-    const S = await quiet(() => world(true)); const { pl, c, g, W } = S as any; const set = (rule: boolean) => { WALLSNAP.on = true; WALLSNAP.press = rule && !BRK; }; set(true);
+    const S = await quiet(() => world(true)); const { pl, c, g, W } = S as any; const set = (rule: boolean) => { WALLSNAP.on = true; WALLSNAP.press = rule && !BRK; WALLSNAP.pressRun = false; /* (these lines are the walk's: 'a run at it is never a hold' is asked as it was before a sprint could take a wall — that rule's own lines are wallrun-check.ts. Here, after the stand has had its say) */ }; set(true);
     const gap = () => c.pos[2] - WZ - R;   // what is left between his body and the north wall
     /** hold `ks` from (x 21, z, yaw) for `frames`: the frame a hold began, the gap then, the frame his back was on it, the longest stride of the take, what was said */
     const run = (z: number, yaw: number, ks: string[], kit: 'empty' | 'pistol' | 'rifle' = 'empty', frames = 120, each?: (f: number) => void) => {
@@ -58,12 +56,12 @@ export async function wallPressCheck(): Promise<boolean> {
     { const r = run(WZ + R + 0.03, 90, ['KeyW']); const t = r.took * DT;
       verdict(r.took >= 0 && t >= WALLSNAP.pressSecs - 2 * DT && t <= WALLSNAP.pressSecs + 2 * DT, 'stood against the wall, the key turned into it takes it after the wait', `hold after ${r.took < 0 ? 'never' : f3(t) + ' s'} (pressSecs ${WALLSNAP.pressSecs})`); rest(); }
     // ---- not asked for
-    { const diag = run(WZ + R + 0.1, 90, ['KeyW', 'KeyD'], 'empty', 180); rest();
+    { const diag = run(WZ + R + 0.1, 90, ['KeyW', 'KeyD'], 'empty', 180); rest(); const sprint = run(11.5, 180, ['KeyW', 'ShiftLeft'], 'empty', 150); rest();
       let upAt = -1; const bump = run(11.5, 180, ['KeyW'], 'empty', 120, () => { if (upAt < 0 && gap() <= WALLSNAP.pressFlow + 0.05) { upAt = 1; S.keys(); } }); rest();
       const d = g.doors.byName('server'); if (d) { d.angle = 0; d.vel = 0; }
       S.place(17.6, 10.75, 180); S.keys('KeyW'); let leaf = false; for (let f = 0; f < 120; f++) { S.step(1); leaf ||= !!pl.wall; } rest();
-      verdict(diag.took < 0 && bump.took < 0 && !leaf && !!d, 'not asked for, never a hold: a diagonal along the wall, the key let go before the take, a shut door\'s leaf',
-        `diagonal for 3 s ${diag.took < 0 ? 'no hold' : 'HELD'} · key up ${f2(WALLSNAP.pressFlow + 0.05)} m out ${bump.took < 0 ? 'no hold' : 'HELD'} · into the server door's leaf ${d ? (leaf ? 'HELD' : 'no hold') : '(no door found)'}`); }
+      verdict(diag.took < 0 && sprint.took < 0 && bump.took < 0 && !leaf && !!d, 'not asked for, never a hold: a diagonal along the wall, a run at it, the key let go before the take, a shut door\'s leaf',
+        `diagonal for 3 s ${diag.took < 0 ? 'no hold' : 'HELD'} · sprint into it ${sprint.took < 0 ? 'no hold' : 'HELD'} · key up ${f2(WALLSNAP.pressFlow + 0.05)} m out ${bump.took < 0 ? 'no hold' : 'HELD'} · into the server door's leaf ${d ? (leaf ? 'HELD' : 'no hold') : '(no door found)'}`); }
     // ---- any camera
     { const combos: string[][] = [['KeyW'], ['KeyW', 'KeyD'], ['KeyD'], ['KeyD', 'KeyS'], ['KeyS'], ['KeyS', 'KeyA'], ['KeyA'], ['KeyA', 'KeyW']]; let asked = 0, held = 0; const wrong: string[] = [];
       for (let k = 0; k < 24; k++) { const camYaw = k * 15 * DEG;
@@ -118,7 +116,7 @@ export async function wallPressCheck(): Promise<boolean> {
       const offOld = await quiet(() => { applyKnobs(g, old); const off = WALLSNAP.press === false; applyKnobs(g, snap); return off && WALLSNAP.press === true; });
       verdict(has && offOld && FROZEN_HOLDS['WALLSNAP.press'] === 'TPS_WALLPRESS=1', 'a recording carries the switch, one from before the key replays with it off, and the frozen stand holds it off by name', `in the file ${has} · off for an old file ${offOld} · FROZEN_HOLDS ${FROZEN_HOLDS['WALLSNAP.press']}`); }
     // ---- a checkpoint (THE LAST LINE THAT USES THE RIG'S MAN: a load makes a new Player, and world()'s place / run / gap keep the old one)
-    { const SS = await import(`${ROOT}/src/game/savestate.ts`); const P = () => g.player;
+    { const SS = await import(`${ROOT}/src/game/savestate.ts`); const holds0 = SS.SAVETIMELINE.holds; SS.SAVETIMELINE.holds = true; const P = () => g.player;
       const save = (label: string) => quiet(() => SS.saveState(g, { label, kind: 'harness' })), load = async (file: any) => { const yaw = W.cam.yaw; await quiet(() => SS.loadState(g, JSON.parse(JSON.stringify(file)))); W.cam.yaw = yaw; W.cam.rebuild(); };
       const worstOf = (a: number[], b: number[]) => { let w = 0; for (let i = 0; i < Math.max(a.length, b.length); i++) w = Math.max(w, Math.abs((a[i] ?? 1e9) - (b[i] ?? -1e9))); return w; };
       const hold = () => { const out: number[] = []; for (let f = 0; f < 60; f++) { S.step(1); out.push(P().wall ? 1 : 0); } return out; };
@@ -127,18 +125,18 @@ export async function wallPressCheck(): Promise<boolean> {
       set(true); S.place(21, 11.5, 180); S.keys('KeyW'); S.step(70); S.tap('KeyQ'); S.step(2); const offQ = !pl.wall; const latched = await save('just off the wall'); const la = hold(); S.keys(); S.step(20);
       // the hold itself, taken with Q, the pistol in hand (the walk-in take off: the file is the saves' business, not the take's)
       WALLSNAP.press = false; S.place(21, 10.6, 0, 'pistol'); S.tap('KeyQ'); S.step(90); const on = !!pl.wall && pl.wall.settle >= 1 && pl.holstered && pl.wall.drawn;
-      const file = await save('on the wall'), inFile = !!file.wallHold?.hold;
+      const file = await save('on the wall'), inFile = !!file.wallHold?.hold; SS.SAVETIMELINE.holds = false; const plain = await save('the switch off'); SS.SAVETIMELINE.holds = true;
       const walk = () => { const out: number[] = []; S.keys('KeyD'); for (let f = 0; f < 90; f++) { S.step(1); out.push(P().char.pos[0], P().char.pos[2], P().wall ? P().wall.u : -1); } S.keys('KeyS'); for (let f = 0; f < 60; f++) { S.step(1); out.push(P().char.pos[0], P().char.pos[2], P().wall ? 1 : 0); } S.keys(); S.step(40); return out; };
       const a = walk(), gunA = !P().holstered; await load(file); const back = !!P().wall && Math.abs(P().wall.n[2] - 1) < 0.01 && P().wall.settle >= 1; const b = walk(), gunB = !P().holstered, worst = worstOf(a, b);
       set(true); await load(latched); S.keys('KeyW'); const lb = hold(), retaken = la.includes(1) || lb.includes(1);
       const cut = JSON.parse(JSON.stringify(latched)); delete cut.wallHold; await load(cut); S.keys('KeyW'); const lc = hold(), cutRetaken = lc.includes(1); S.keys(); S.step(20);
       // a slice that is not a hold he could be in where he stands is no hold
       const bad = JSON.parse(JSON.stringify(file)); bad.wallHold.hold.d += 3; await load(bad); const refused = !P().wall;
-      set(true);
-      verdict(on && inFile && back && worst < 1e-9 && gunA && gunB && offQ && !retaken && (BRK || cutRetaken) && refused,
-        'a checkpoint made on a wall loads on the wall and plays on as the save did, the pistol back in his hand off it; the take\'s latch rides the file; a hold he could not be in is none',
-        `Q, pistol out: on the wall at the save ${on} · the hold in the file ${inFile} · on it after the load ${back} · 2.5 s of sliding and stepping off: the worst difference ${worst < 1e-9 ? 'none' : worst.toExponential(1)} · the pistol in hand after, carried on ${gunA}, loaded ${gunB} · Q off with the key held, saved: off ${offQ}, pulled back on in the next second, carried on or loaded ${retaken}; the file with the slice cut out pulls him back ${cutRetaken} · the plane moved 3 m in the file: no hold ${refused}`); }
-  } finally { WALLSNAP.on = was.on; WALLSNAP.press = was.press; console.log = log; console.error = err; console.warn = warn; }
+      SS.SAVETIMELINE.holds = false; await load(file); const offLoad = !P().wall; SS.SAVETIMELINE.holds = holds0; set(true);
+      verdict(on && inFile && back && worst < 1e-9 && gunA && gunB && offQ && !retaken && (BRK || cutRetaken) && refused && offLoad && plain.wallHold === undefined,
+        'a checkpoint made on a wall loads on the wall and plays on as the save did, the pistol back in his hand off it; the take\'s latch rides the file; a hold he could not be in is none; with the saves\' switch off a file says nothing',
+        `Q, pistol out: on the wall at the save ${on} · the hold in the file ${inFile} · on it after the load ${back} · 2.5 s of sliding and stepping off: the worst difference ${worst < 1e-9 ? 'none' : worst.toExponential(1)} · the pistol in hand after, carried on ${gunA}, loaded ${gunB} · Q off with the key held, saved: off ${offQ}, pulled back on in the next second, carried on or loaded ${retaken}; the file with the slice cut out pulls him back ${cutRetaken} · the plane moved 3 m in the file: no hold ${refused} · SAVETIMELINE.holds off: the load leaves him free ${offLoad}, the file's key ${plain.wallHold === undefined ? 'absent' : 'THERE'}`); }
+  } finally { WALLSNAP.on = was.on; WALLSNAP.press = was.press; WALLSNAP.pressRun = was.run; console.log = log; console.error = err; console.warn = warn; }
   console.log(`=== wallpress: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;
 }
