@@ -21,14 +21,14 @@
 // room fight's reloadUntil, gunslots.ts taking his long gun up again), the hand's stations where the movement pass shows his change (game.ts deals his clock),
 // always as a gun run dry — a full belt, a full tube, the first shell in the port; and his empty falls only where one fell before (tickReloadBeat).
 import type { Game } from './game';
-import type { Character, CharacterAnimator } from './character';
+import type { Character } from './character';
 import type { Box } from '../scene/boxes';
 import type { Vec3 } from '../math/vec';
 import type { Firearm, GunModelId, WeaponDef, WeaponId } from './weapons';
 import { WEAPONS } from './weapons';   // (read inside functions only: the game's one import cycle)
-import { gunOwn, gunLookOn, gunShellsOn } from './gunlook';   // (the same)
+import { gunOwn, gunLookOn } from './gunlook';   // (the same)
 import { magBoxL } from './rigProps';   // (the same)
-import { RELOAD } from './autoreload';   // (the same: the last-magazine rule's count)
+import { crossToRust, goneWithTick } from './crossing';
 
 export type FeedKind = 'mag' | 'belt' | 'shells';
 /** a beat as the support hand has it (character.ts rlB): seconds on the weapon's clock; `pull` = nothing was chambered, the handle is run at `rack` */
@@ -81,29 +81,10 @@ export function beltTimes(B: FeedBeat): { up: number; off: number; pouch: number
 }
 /** THE SHELLS' moments: `n` of them, the last home at the beat's `in_` (where the weapon books them), spread evenly from its `out` */
 export function shellTimes(B: FeedBeat, n: number): number[] { const out: number[] = []; for (let k = 0; k < n; k++) out.push(B.out + (k + 1) * (B.in_ - B.out) / n); return out; }
-/** (a shell's own pitch: dealt off its place in the tube, never drawn) */
-const shellRate = (k: number): number => 0.94 + ((k * 5) % 7) * 0.02;
 
 /** WHAT IS HEARD, in order, of a reload of this row on this beat that puts `n` rounds in (`port`: begun with nothing in the gun) — null: a magazine gun, heard
  *  as it always was (the weapon's own magOut / magIn / rack) */
-export function feedCues(def: WeaponDef, B: FeedBeat, n: number, port: boolean): FeedCue[] | null {
-  const F = feedOf(def); if (!F || F.kind === 'mag') return null;
-  const out: FeedCue[] = [];
-  if (F.kind === 'belt') {
-    const T = beltTimes(B);
-    out.push({ t: T.up, sfx: 'beltCoverUp', gain: 0.8, rate: 1 }, { t: T.off, sfx: 'beltBoxOff', gain: 0.8, rate: 1 }, { t: T.on, sfx: 'beltBoxOn', gain: 0.85, rate: 1 },   // (sounds: beltCoverUp) (sounds: beltBoxOff) (sounds: beltBoxOn)
-      { t: T.lay, sfx: 'beltLay', gain: 0.8, rate: 1 }, { t: T.down, sfx: 'beltCoverDown', gain: 0.9, rate: 1 });   // (sounds: beltLay) (sounds: beltCoverDown)
-    if (B.pull) out.push({ t: T.charge, sfx: 'chargeLmg', gain: 0.9, rate: 1 });   // (sounds: chargeLmg)
-  } else {
-    const T = shellTimes(B, n), first = port && !!F.portFirst;
-    for (let k = 0; k < n; k++) {
-      out.push({ t: T[k], sfx: 'shellIn', gain: first && k === 0 ? 0.6 : 0.8, rate: shellRate(k) });   // (sounds: shellIn)
-      if (first && k === 0) out.push({ t: Math.min(T[0] + 0.12, n > 1 ? T[1] - 0.02 : B.in_ + 0.12), sfx: 'boltDrop', gain: 0.9, rate: 1 });   // (sounds: boltDrop) — the first one dropped in the port and the bolt let go on it
-    }
-    if (B.pull && !first) out.push(F.pump ? { t: B.rack, sfx: 'rack', gain: 0.85, rate: 0.7 } : { t: B.rack, sfx: 'boltDrop', gain: 0.9, rate: 1 });   // (the pump gun's rack is the pump: the old 'rack', slowed; the gas gun's is its bolt run and let go)
-  }
-  return out.sort((a, b) => a.t - b.t);
-}
+export function feedCues(def: WeaponDef, B: FeedBeat, n: number, port: boolean): FeedCue[] | null { return goneWithTick('feedCues') as any; }
 /** WHERE THE SUPPORT HAND IS over a reload of this model (character.ts reloadArm): its stations in order — or a magazine gun's own marks (`marks` null: the
  *  carbine's, its well ahead of the grip) — or null: the switch is off, the magazine change as ever. Times are kept in order and clear of each other whatever beat it is handed. */
 export function feedPath(model: GunModelId, B: FeedBeat, n: number, port: boolean): { keys: FeedKey[] } | { marks: FeedMarks | null } | null {
@@ -133,74 +114,20 @@ export function feedPath(model: GunModelId, B: FeedBeat, n: number, port: boolea
   return { keys: K.filter((k, i) => i === 0 || k.t > K[i - 1].t + 1e-6) };
 }
 
-/** DEALT to a man's animator — you: every frame, beside `reloadMag` (player.ts armRifle); a teammate, a defender: as his reload begins and on every tick of its
- *  clock (guards.ts, roomfight.ts, gunslots.ts) — the long gun in his hands, or null (a pistol, nothing): how the support hand is to feed it. `dry`: a man whose reload is a beat and not a Firearm's books (a teammate, a defender): the gun ran dry, so all of it goes in. */
-export function feedDeal(an: CharacterAnimator, gun: Firearm | null, dry = false) {
-  const o = gun ? gunOwn(gun.def) : null, F = o ? FEED[o.model] : null;
-  if (!gun || !o || !F) { an.feed = null; return; }
-  const plain = dry && !gun.shellFed;   // (dry, but the shells key has planned his beat on the gun: what it puts in is the plan's)
-  an.feed = o.model; an.feedN = plain ? gun.def.magCapacity : gun.feedN; an.feedPort = plain ? true : gun.feedPort;
-}
 /** the switch is up (character.ts mvArms: a tube gun had no hands in its reload — `reloadMag` false — and with a model dealt it has a trip a shell) */
 export const feedLive = (): boolean => gunLookOn();
 
-// ------------------------------------------------------------------ the player: reloadInHand's plan
-/** What your reload of `gun` on `row` (the beat it is about to begin on) is to sound like and to drop — asked BEFORE Firearm.startReload, off the gun as it
- *  stands. null: the switch off or a row with nothing of its own. `cues` null: a magazine gun (its three sounds are the weapon's own, as ever). */
-export function feedPlan(gun: Firearm, row: WeaponDef['reload'], shells?: { n: number; pull: boolean }): { cues: FeedCue[] | null; times: number[]; drop: number | null } | null {
-  const F = feedOf(gun.def); if (!F) return null;
-  // (what startReload is about to book — the same sums: the fullest spare, as much of it as the gun may hold, less what is in it; `shells`: shellPlan's own count)
-  const best = () => Math.min(gun.spare.length ? Math.max(...gun.spare) : gun.bottomless || !RELOAD.lastMag ? gun.def.magCapacity : gun.mag ?? 0, gun.magRoom), n = shells ? shells.n : Math.max(0, best() - (gun.mag ?? 0)), port = gun.chamber === 0 && !gun.mag;
-  const cues = feedCues(gun.def, beatOf(row, shells ? shells.pull : gun.chamber === 0), n, port);
-  return { cues, times: cues ? cues.map(c => c.t) : [], drop: F.drop };
-}
 /** a weapon's reload row as a beat (a row that gives only its length does everything at the end: the weapon's own rule) */
-export const beatOf = (R: WeaponDef['reload'], pull: boolean): FeedBeat => ({ dur: R.dur, out: R.out ?? R.dur, in_: R.in_ ?? R.dur, rack: R.rack ?? R.dur, pull });
+export const beatOf = (R: WeaponDef['reload'], pull: boolean): FeedBeat => goneWithTick('beatOf') as any;
 
-// ------------------------------------------------------------------ the shells key: a tube gun's reload by the shell
-/** a beat made for one reload: a weapon row the animator takes as it stands (character.ts ReloadBeat.exact — its floors are a magazine change's) */
-export type ShellRow = WeaponDef['reload'] & { exact: true };
-/** A TUBE GUN'S RELOAD AS IT STANDS NOW, by the shell (GUNLOOK.shells; null: the key off, or not a tube gun with `reload.shell` — the row's own reload, as
- *  ever). `n` shells go in: the room in the tube, no more than he carries (`free`: a man whose reload is a beat — his spares are not counted); one begun with
- *  nothing in the gun at all goes straight into the chamber where the model is fed that way (`port`: the M1014). `pull`: nothing is chambered and nothing will
- *  be by the port, so the bolt or the pump is run inside the tail. The row: `out` the lead, shell k home at lead + (k+1) × each (`times`, where the weapon
- *  books it), `in_` the last of them, `rack` the tail less the bolt's time after it, `dur` the tail after it. n = 0 with `pull`: a round in the tube and none
- *  chambered — the bolt run alone (`max` 0 asks for it whatever room there is). n = 0 without: nothing to do (`idle`). */
-export function shellPlan(gun: Firearm, free = false, max = Infinity): { row: ShellRow; times: number[]; n: number; port: boolean; pull: boolean; idle: boolean } | null {
-  const S = gun.def.reload.shell; if (!S || !gunShellsOn()) return null;
-  const F = feedOf(gun.def); if (!F || F.kind !== 'shells') return null;
-  const tube = gun.mag ?? 0, port = !!F.portFirst, have = free || gun.bottomless ? Infinity : gun.spare.reduce((a, b) => a + b, 0);
-  const n = Math.max(0, Math.min(gun.def.magCapacity - tube, have, max)), first = port && gun.chamber === 0 && tube === 0 && n > 0;
-  const pull = gun.chamber === 0 && !first && tube + n > 0;
-  const last = S.lead + n * S.each;
-  const row: ShellRow = n > 0 ? { dur: last + S.tail, out: S.lead, in_: last, ...(pull ? { rack: last + S.tail - S.bolt } : null), exact: true }
-    : { dur: S.bolt, out: S.bolt * 0.05, in_: S.bolt * 0.1, rack: S.bolt * 0.5, exact: true };
-  return { row, times: shellTimes(beatOf(row, pull), n), n, port, pull, idle: n === 0 && !pull };   // (the hand's and the sounds' own sum, to the bit: a shell is booked on the frame it is heard)
-}
 /** A MAN WHOSE RELOAD IS A BEAT BEGINS ONE (guards.ts startReloadBeat, the room fight's and the covering fire's reloadUntil): the row his beat runs on — the
  *  gun's own, as ever, or under the shells key a tube gun's row for the shells that go in, planned on the gun for his ticks (feedTick books them) */
-export function feedBegin(gun: Firearm): WeaponDef['reload'] {
-  gun.cancelReload();   // (a beat that was dropped part way — his gun put away, his fight reset — left its plan on the gun: this one starts clean)
-  const P = shellPlan(gun, true); if (!P || P.idle) return gun.def.reload;
-  gun.planFeed(P.row, P.times, P.port); return P.row;
-}
-/** one of them, played at him */
-export function feedPlay(g: Game, at: Vec3, c: FeedCue, vol = 1) { g.audio.play(c.sfx, at, c.gain * vol, { rate: c.rate }); }
+export function feedBegin(gun: Firearm): WeaponDef['reload'] { return crossToRust('feedBegin', undefined, [gun]) as any; }
 
 // ------------------------------------------------------------------ a teammate, a defender: the sounds on his beat
 /** His reload's clock went from `before` to `now` seconds into his row's beat (guards.ts tickReloadBeat, the room fight's reloadUntil, gunslots.ts taking the
  *  long gun up again): the sounds of his gun's own feeding that fall between are played at him. Nothing for a magazine gun or with the switch off. */
-export function feedTick(g: Game, c: Character, def: WeaponDef, before: number, now: number, vol = 0.7, gun?: Firearm) {
-  const F = feedOf(def); if (!F || F.kind === 'mag' || !(now > before)) return;
-  const by = gun && gun.shellFed ? gun : null; if (by) by.feedTo(now);   // (the shells key, feedBegin's plan on his gun: each shell is in it as his beat passes it, and the sounds are that beat's)
-  const cues = by ? feedCues(def, beatOf(by.reloadRow, by.feedPull), by.feedN, by.feedPort) : feedCues(def, beatOf(def.reload, true), def.magCapacity, true); if (!cues) return;
-  for (const q of cues) if (q.t > before && q.t <= now) feedPlay(g, c.pos, q, vol);
-}
-/** …and what falls out of it when his beat crosses `out` (guards.ts tickReloadBeat's 'mag' item): the fill it is drawn by — null: nothing falls (a tube gun);
- *  undefined: the row has nothing of its own, the box that always fell */
-export function feedDrop(def: WeaponDef): number | null | undefined { const F = feedOf(def); return F ? F.drop : undefined; }
-/** his reload begins (guards.ts startReloadBeat's clack): true — this gun's first sound is its own, on its beat, and nothing is played here */
-export function feedStarts(def: WeaponDef): boolean { const F = feedOf(def); return !!F && F.kind !== 'mag'; }
+export function feedTick(g: Game, c: Character, def: WeaponDef, before: number, now: number, vol = 0.7, gun?: Firearm): void { return crossToRust('feedTick', undefined, [g, c, def, before, now, vol, gun]) as any; }
 
 // ------------------------------------------------------------------ the drawer's half (rigProps.ts asks both of a man with a model in his hands)
 /** (the row's feeding, for the gun that is IN HIS HANDS: a long gun's row asked of a man with his pistol up — the one on his back — shows nothing) */

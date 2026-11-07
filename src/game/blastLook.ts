@@ -42,10 +42,7 @@
 import { SideMap } from '../math/side';
 import type { Game } from './game';
 import type { Particles, EmitOpts, PKind } from '../render/particles';
-import type { RtLight } from '../render/lights';
 import type { SetWallCharge, WallSpot } from './wallcharge';
-import type { Box } from '../scene/boxes';
-import { BoxFlag, makeBox } from '../scene/boxes';
 import { Vec3, v3 } from '../math/vec';
 import { DESTRUCTION } from './destructionSwitch';
 import { chaosOf } from './destruction';
@@ -65,27 +62,6 @@ export const BLAST = {
   glow: false,
 };
 
-/** THE SET CHARGE (metres; the slab itself is wallcharge.ts's: 14 × 22 × 4 cm at WALLCHARGE.height) */
-export const CHARGE_LOOK = {
-  /** the frame of explosive strip: half width along the wall · its foot and head above the floor · strip width · how proud of the face */
-  frameHalf: 0.3, frameLo: 0.5, frameHi: 1.6, strip: 0.045, proud: 0.012,
-  stripAlbedo: [0.62, 0.46, 0.1] as Vec3,
-  /** the lamp: half size · seconds between blinks · seconds lit · radiance lit / dark (dark has to be DARK: at a night level's exposure the tonemap shows a red of 1 and a red
-   *  of 70 as the same pixel — the blink is between seen and not seen) */
-  lamp: 0.04, blinkEvery: 1.1, blinkOn: 0.35, lampOn: [70, 5, 2.5] as Vec3, lampOff: [0.008, 0.0008, 0.0005] as Vec3,
-  /** what the two lamps throw on the things beside them, PAINTED on (a share of the lamp's radiance × the thing's own paint, as its emission): the strip and the
-   *  drop of the line redden with each blink, the reel's end of the line sits in the reel lamp's amber — a real light would be read by the light meter, which is play */
-  lampSpill: 0.0025, ledSpill: 0.02,
-  /** marker tape along the strip and the firing line: a steady faint glow of their own paint (× the paint, as emission), so the outline of the cut and the run of the
-   *  line can be found in a dark room without a torch on them */
-  tape: 0.07, wireTape: 0.04,
-  /** the firing line: width (never under wirePx pixels of the frame) · out from the face, a jog along the wall, out again · the whole run × `short` where
-   *  something stands in its way (wallcharge.ts keeps floor for the setter 0.5 m off the face: the short run ends inside that) */
-  wire: 0.018, wirePx: 1.4, wireMax: 0.05, run: [0.4, 0.2, 0.6] as [number, number, number], short: 0.36, wireAlbedo: [0.85, 0.36, 0.05] as Vec3,
-  reel: [0.05, 0.035, 0.08] as Vec3, reelAlbedo: [0.1, 0.11, 0.08] as Vec3,
-  /** the firing device's own lamp on the reel, steady: in a dark room the blinking lamp on the wall and this one on the floor are the two ends of the line */
-  led: 0.013, ledOn: [7, 3.6, 0.4] as Vec3,
-};
 
 /** what the shares and ratios below are OF, as authored when they were set (effects.ts sparks · particleFx.ts PFX): at these values the tables read in sparks,
  *  m/s, seconds and metres as written */
@@ -107,13 +83,6 @@ export const WALL_BLAST = {
   /** a tongue of the wall's own dust out of each face (particle dust — none of the solver's, nothing a sight line reads) */
   dust:   { count: [44, 24], speed: [5.5, 3.6], jit: 0.6, cone: [0.55, 0.7], tilt: 0.05, life: 1.7, lifeJit: 0.3, size: 0.3, sizeJit: 0.35 },
 };
-/** THE WALL CHARGE'S FLASH: the stun charge's light as detonateStun made it (power, reach, length untouched), its colour turned from magnesium white to an
- *  explosive's orange-white AT THE SAME LUMINANCE — effects.ts on the stun's white: 'warm would read as an explosion'; a frag's flash is [1, 0.74, 0.42]. */
-export const WALL_FLASH = { color: [1.0, 0.62, 0.25] as Vec3 };
-/** THE AFTERGLOW (BLAST.glow — off): one transient light where the wall gave (on the charge's side of a wall that held), born `after` frames into the blast — as
- *  the flash (1600 over 0.14 s, untouched) falls under ~15 % — and fading on the light set's own envelope. For scale: the flash is 1600 × 0.14 ÷ 3.2 = 70
- *  intensity·seconds, a rifle's muzzle flash 90 × 0.09 ÷ 3.2 = 2.5, this 50 × 0.55 ÷ 3.2 = 8.6. */
-export const AFTERGLOW = { after: 4, intensity: 50, ttl: 0.55, range: 9, radius: 0.3, y: 1.0, color: [1.0, 0.5, 0.18] as Vec3 };
 
 /** A STUN CAN'S FRAGMENTS (149 where there were 160): two unequal lobes along the can's axis, a low fan all round, a small fountain, embers. */
 export const STUN_SPARKS = {
@@ -158,88 +127,13 @@ const near = (a: Vec3, b: Vec3, m: number) => Math.abs(a[0] - b[0]) + Math.abs(a
 /** where a wall charge's borrowed stun burst stands (wallcharge.ts blow() + combat.ts detonateStun) */
 const burstAt = (W: WallSpot): Vec3 => wallPt(W, 0, 0.15, 0.5 + fx.bang.height);
 
-/** game.ts update, once a frame after the frame's other boxes: the set charges drawn, a blown one's flash warmed, the queued stages of a blast let go */
-export function blastLookTick(g: Game, out: Box[]) { const was = g.fogOfWar.begin(g.player.char.id); try { blastLookTickRaw(g, out); } finally { g.fogOfWar.done(was); } }   // (a wall charge and every stage of its blast are the team's doing: fogofwar.ts FOG.ours)
-function blastLookTickRaw(g: Game, out: Box[]) {
-  const S = STATE.get(g); const WC = g.wallCharge;
-  if (!WC || !live(g)) { if (S) { S.seen.length = 0; S.queue.length = 0; } return; }
-  const set = WC.set;
-  if (!S && !set.length) return;
-  const st = S ?? stateOf(g);
-  if (g.time < st.last) st.queue.length = 0;   // (the clock went back: a load / a restart)
-  st.last = g.time;
-  // charges gone from the list since last frame — BLOWN (the flash detonateStun lit for it is burning at its stun point) or given back (no flash: nothing to do)
-  for (let i = st.seen.length - 1; i >= 0; i--) {
-    const s = st.seen[i]; if (set.includes(s.c)) continue;
-    st.seen.splice(i, 1);
-    const l = flashOf(g, s.c.wall); if (!l) continue;
-    l.color = warmOf(l.color);
-    if (BLAST.glow) st.queue.push({ at: g.time + (AFTERGLOW.after - 0.5) * FRAME, run: () => afterglow(g, s.c.wall) });
-  }
-  for (const c of set) { let s = st.seen.find(x => x.c === c); if (!s) { s = { c, t0: c.t ?? g.time, run: runOf(g, c.wall) }; st.seen.push(s); } chargeBoxes(g, s, out); }
-  for (let i = 0; i < st.queue.length;) { const q = st.queue[i]; if (q.at <= g.time) { st.queue.splice(i, 1); q.run(); } else i++; }
-}
 
-/** how much of the firing line's run fits: the whole of it over clear floor, the short one where furniture, a wall or a pane stands in the way */
-function runOf(g: Game, W: WallSpot): number {
-  const K = CHARGE_LOOK, [r0, jog, r1] = K.run;
-  return g.col.solidBlocked(wallPt(W, 0.035, 0.05, 0.12), wallPt(W, 0.035 + jog, r0 + r1 + 2 * K.reel[2] + 0.05, 0.12)) ? K.short : 1;
-}
 
-/** the frame of strip, the blinking lamp, the firing line and its reel */
-function chargeBoxes(g: Game, s: Seen, out: Box[]) {
-  const K = CHARGE_LOOK, W = s.c.wall, H = WALLCHARGE.height, flags = BoxFlag.Dynamic | BoxFlag.NoShadow, yaw = W.alongX ? 0 : Math.PI / 2;
-  const box = (c: Vec3, h: Vec3, albedo: Vec3, emissive?: Vec3) => out.push(makeBox({ c, h, yaw, albedo, emissive: emissive ?? [0, 0, 0], flags }));
-  const spill = (albedo: Vec3, lamp: Vec3, k: number): Vec3 => [albedo[0] * lamp[0] * k, albedo[1] * lamp[1] * k, albedo[2] * lamp[2] * k];
-  // the lamp on the slab's head: dark, and lit for blinkOn of every blinkEvery since it was set
-  const lit = ((g.time - s.t0) % K.blinkEvery + K.blinkEvery) % K.blinkEvery < K.blinkOn;
-  const glow = (albedo: Vec3, tape: number, lamp: number): Vec3 => { const e = v3.scale(albedo, tape); return lit ? v3.add(e, spill(albedo, K.lampOn, lamp)) : e; };
-  const red = glow(K.stripAlbedo, K.tape, K.lampSpill), line = v3.scale(K.wireAlbedo, K.wireTape);
-  // the frame (half extents: along the wall · up · off the face — the slab's own convention)
-  const w = K.strip / 2, mid = (K.frameLo + K.frameHi) / 2, tall = (K.frameHi - K.frameLo) / 2;
-  for (const side of [-1, 1]) box(wallPt(W, side * K.frameHalf, K.proud, mid), [w, tall + w, K.proud], K.stripAlbedo, red);
-  for (const y of [K.frameLo, K.frameHi]) box(wallPt(W, 0, K.proud, y), [K.frameHalf - w, w, K.proud], K.stripAlbedo, red);
-  box(wallPt(W, 0, 0.05, H + 0.075), [K.lamp, K.lamp, 0.012], [0.5, 0.06, 0.04], lit ? K.lampOn : K.lampOff);
-  // the firing line: down the wall from the slab, out across the floor with one jog, to the reel and its lamp
-  const ww = Math.min(K.wireMax, Math.max(K.wire, K.wirePx * g.mPerPx)) / 2;
-  const drop = H - 0.11, r0 = K.run[0] * s.run, jog = K.run[1] * s.run, r1 = K.run[2] * s.run, a0 = 0.035;
-  const amber = spill(K.wireAlbedo, K.ledOn, K.ledSpill);
-  box(wallPt(W, a0, 0.008, drop / 2), [ww, drop / 2, 0.008], K.wireAlbedo, glow(K.wireAlbedo, K.wireTape, K.lampSpill / 2));
-  box(wallPt(W, a0, r0 / 2, 0.008), [ww, 0.008, r0 / 2], K.wireAlbedo, line);
-  box(wallPt(W, a0 + jog / 2, r0, 0.008), [jog / 2 + ww, 0.008, ww], K.wireAlbedo, line);
-  box(wallPt(W, a0 + jog, r0 + r1 / 2, 0.008), [ww, 0.008, r1 / 2], K.wireAlbedo, v3.add(line, amber));
-  box(wallPt(W, a0 + jog, r0 + r1 + K.reel[2], K.reel[1]), K.reel, K.reelAlbedo, spill(K.reelAlbedo, K.ledOn, K.ledSpill));
-  box(wallPt(W, a0 + jog, r0 + r1 + K.reel[2], 2 * K.reel[1] + K.led), [K.led, K.led, K.led], [0.4, 0.3, 0.1], K.ledOn);
-}
 
 /** is the wall open at the charge (the blast made its hole)? one segment through it at the slab's height */
 const holed = (g: Game, W: WallSpot) => !g.col.solidBlocked(wallPt(W, 0, 0.12, WALLCHARGE.height), wallPt(W, 0, -(thick(W) + 0.12), WALLCHARGE.height));
 
-/** the stun charge's flash a wall charge borrowed (combat.ts detonateStun lit it this frame where effects.ts spawnBurst put it) — null: none burning there */
-function flashOf(g: Game, W: WallSpot): RtLight | null {
-  const B = fx.bang, at = burstAt(W); at[1] += B.lightLift;
-  const L = g.engine.lights.lights;
-  for (let i = L.length - 1; i >= 0; i--) { const l = L[i]; if (l.name === 'flash' && l.ttl === B.lightDuration && near(l.pos, at, 0.06)) return l; }
-  return null;
-}
-const LUM = (r: number, g: number, b: number) => 0.2126 * r + 0.7152 * g + 0.0722 * b;   // (the light meter's own sum, in its own order: guards.ts lightEstimateAt, common.wgsl luminance)
-/** WALL_FLASH's hue at `c`'s luminance — the same number the meter's sum gives for `c`, TO THE BIT: red and blue are scaled, green is solved for, and then green
- *  (failing that, blue) is walked one representable number at a time until the sum lands on it; a colour it cannot land (none found in testing) stays as it was */
-const STEP = new Float64Array(1), BITS = new BigUint64Array(STEP.buffer);
-const nudge = (x: number, up: boolean) => { STEP[0] = x; BITS[0] += up ? 1n : -1n; return STEP[0]; };   // (x > 0)
-function warmOf(c: Vec3): Vec3 {
-  const T = WALL_FLASH.color, L0 = LUM(c[0], c[1], c[2]), k = L0 / LUM(T[0], T[1], T[2]);
-  const r = T[0] * k; let b = T[2] * k, gr = (L0 - 0.2126 * r - 0.0722 * b) / 0.7152;
-  if (!(L0 > 0 && gr > 0 && b > 0)) return c;
-  for (let i = 0; i < 48 && LUM(r, gr, b) !== L0; i++) gr = nudge(gr, LUM(r, gr, b) < L0);
-  for (let i = 0; i < 48 && LUM(r, gr, b) !== L0; i++) b = nudge(b, LUM(r, gr, b) < L0);
-  return LUM(r, gr, b) === L0 ? [r, gr, b] : c;
-}
 
-function afterglow(g: Game, W: WallSpot) {
-  const A = AFTERGLOW, at = holed(g, W) ? wallPt(W, 0, -thick(W) / 2, A.y) : wallPt(W, 0, 0.15, A.y);
-  const l = g.fogOfWar.lightBy(g.engine.lights.flash(at, A.color, A.intensity, A.range, A.ttl, 0), g.player.char.id); l.radius = A.radius;   // (a wall charge is the team's: FOG.ours)
-}
 
 /** particleFx.ts bangFx, in place of its one spark record: true = the fragments were thrown here (a wall charge's two ways out of the wall, or a thrown can's
  *  along its axis) — false = not this module's (the switch off, or a burst that is neither): the caller throws its own as it always did */

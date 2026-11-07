@@ -7,10 +7,10 @@
 // Read by the debrief card (ui/debrief.ts: the score, the rating word, the badges, the stats grid, the scrollable timeline, the floor map with the path and the
 // pins) and by the QA probes (tools/qa/debrief-probes.ts). Lives on Game.chronicle; restartEncounter() replaces it; the end card and the down card read it as it
 // stood when the run ended, and it survives 'Keep playing' (nothing more is written: the mission is done).
-import { isManId, manHere } from './seats';
+import { manHere } from './seats';
 import { SideMap, SideSet } from '../math/side';
 import { Vec3, v3, clamp } from '../math/vec';
-import type { Game, Guard, GameEvent, LightTarget, MissionStats, DownKind } from './game';
+import type { Game, Guard, LightTarget, MissionStats, DownKind } from './game';
 import type { Door } from './doors';
 import { BUILDING } from './floor';   // (a leaf: the office building's footprint — everything outside it is the grounds: the car park south and east, the verge north and west)
 import { gearText, plainShort } from './gear';   // (a leaf: the kit's names as issued, where a row is worded)
@@ -19,6 +19,7 @@ import { loudRow } from './verdict';   // (asked inside debriefOf only: is this 
 import { doorWrittenName } from './doornames';   // (a leaf: the name a level wrote for a door — one name on one card)
 import type { Level } from '../scene/level';
 import { isOffice, levelRects, ownPlace } from './dialogue';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 // ------------------------------------------------------------ rooms
 /** The floor's rooms as the debrief names them: nominal partition lines of the one office level (scene/level.ts — the corridor z 10‥12.2 across the building,
@@ -97,7 +98,7 @@ export type ChronCountKey = { [K in keyof ChronCounts]: ChronCounts[K] extends n
 export const PATH_CAP = 4000, PATH_SECS = 0.5;
 /** a noise of the same kind within this many seconds of the last one heard is the same timeline row (footsteps are a row, not forty); a round within SHOT_MERGE
  *  of the last into the same sort of thing is the same row (a magazine emptied into a wall is one line ×30) */
-const HEARD_MERGE_SECS = 8, SHOT_MERGE_SECS = 2.5;
+const SHOT_MERGE_SECS = 2.5;
 /** a round that stops within this of a living man was fired 'near men' (the score's shots term; a hit is nearer still) */
 export const SHOT_NEAR_M = 3;
 
@@ -143,26 +144,13 @@ export class Chronicle {
     for (let i = ev.length - 1, k = 0; i >= 0 && k < 8; i--, k++) { const e = ev[i]; if (t - e.t > win) return null; if (e.kind === kind && e.data[keyName] === key) return e; }
     return null;
   }
-  heardRow(e: object): ChronEvent | undefined { return this.heardOf.get(e); }
-  bindHeard(e: object, row: ChronEvent) { this.heardOf.set(e, row); }
-  heardCounted(e: object): boolean { return this.heardNoRow.has(e); }
-  markHeardCounted(e: object) { this.heardNoRow.add(e); }
-  /** one path sample at mission time t (thins itself when full) */
-  sample(x: number, z: number, t: number) {
-    if (this.pathN >= PATH_CAP) {   // keep every other point, twice the interval from here: the whole run stays on the map at half the resolution
-      const P = this.path; let w = 0; for (let r = 0; r < this.pathN; r += 2, w++) { P[w * 3] = P[r * 3]; P[w * 3 + 1] = P[r * 3 + 1]; P[w * 3 + 2] = P[r * 3 + 2]; }
-      this.pathN = w; this.pathEvery *= 2;
-    }
-    const i = this.pathN * 3; this.path[i] = x; this.path[i + 1] = z; this.path[i + 2] = t; this.pathN++;
-    this.pathNext = t + this.pathEvery;
-  }
 }
 
 // ------------------------------------------------------------ writing (the hooks call these; every one is a no-op outside a live run)
 const nowOf = (g: Game) => g.mission.stats.elapsed;
 const posOf = (g: Game): Vec3 => manHere(g).char.pos;   // (a writer with no place of its own, asked of the Game: the first player's feet — one handed a seat's view passes that player's)
 /** the generic entry: `kind` at `pos` (Sam's feet by default) with `data` — what a lane with a new verb calls (and what the named helpers below come down to) */
-export function chronicle(g: Game, kind: ChronKind, data: ChronData = {}, pos?: Vec3): ChronEvent | null {
+export function chronicle(g: Game, kind: ChronKind, data: ChronData = {}, pos?: Vec3): ChronEvent | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('chronicle', undefined, [g, kind, data, pos]); if (__r !== RUST_PASS) return __r as any; } }
   if (!missionLive(g)) return null;
   return g.chronicle.add(nowOf(g), kind, pos ?? posOf(g), data, g.level);
 }
@@ -174,70 +162,13 @@ export function chronicleN(g: Game, kind: ChronKind, count: ChronCountKey, data:
   return g.chronicle.add(nowOf(g), kind, pos ?? posOf(g), data, g.level);
 }
 
-/** Once a frame from mission.ts updateMission (inside its live gate, after the clock moved): the path sample when it is due. */
-export function tickChronicle(g: Game) {
-  const C = g.chronicle, t = nowOf(g);
-  if (t >= C.pathNext) { const p = posOf(g); C.sample(p[0], p[2], t); }
-}
 
 /** mission.ts: the stage machine moved — `text` is the row ('reached the server room', 'the drive is out', …) */
 export function chronObjective(g: Game, text: string, pos?: Vec3) { return chronicle(g, 'objective', { text }, pos); }
 
-/** mission.ts, the sighting-episode edge (the one that counts stats.spotted): an alert man has eyes on him afresh. Weighted for the score by the floor's alarm level
- *  at that moment — seen again once they already know is worse (counts.seenUp). */
-export function chronSpotted(g: Game, by: Guard | undefined) {
-  const lvl = g.escalation;
-  return lvl >= 1 ? chronicleN(g, 'spotted', 'seenUp', { by: by?.callsign ?? 'a guard', lvl }) : chronicle(g, 'spotted', { by: by?.callsign ?? 'a guard', lvl });   // (every counter below moves with the run LIVE, row kept or not — review U9.2; chronShot always had it so)
-}
 
-/** guards.ts updateGuard, the transition into 'alert' (right where witness.alertedBy is booked): who, and what did it. */
-export function chronContact(g: Game, gd: Guard) { return chronicleN(g, 'contact', 'contacts', { who: gd.callsign, cause: gd.witness.alertedBy ?? 'radio' }, gd.char.pos); }
 
-/** guards.ts hearingCheck, at each place a noise actually raised a man (the light dying near him, the odd quiet report, gunfire / a stun charge / a door going in,
- *  a door or furniture noise, a footfall): only noises of SAM's making count (his events carry no `who`, or his id, or 0 — a clatter nobody living made, which on
- *  this floor is a gun leaving a hand he emptied); one row per noise however many hear it (their names join the row), and a run of the same kind of noise inside
- *  HEARD_MERGE_SECS is one row with a count. `where` = where the man places it (the doorway it came through), else the source. */
-export function chronHeard(g: Game, gd: Guard, ev: GameEvent, where?: Vec3) {
-  if (!missionLive(g)) return null;
-  const who = ev.who; if (who !== undefined && !isManId(who) && who !== 0) return null;   // a colleague's round, a guard's own door: not Sam's doing
-  const C = g.chronicle, t = nowOf(g);
-  const react = gd.awareness >= 0.85 ? 'alerted' : gd.awareness >= 0.3 ? 'investigates' : 'pricks up';
-  let row = C.heardRow(ev);
-  if (!row) {
-    if (C.heardCounted(ev)) return null;   // (counted for the first man who heard it, no row to be had: the second is not another noise)
-    const what = heardWhat(ev);
-    row = C.recent('heard', 'what', what, t, HEARD_MERGE_SECS) ?? undefined;
-    if (row) row.data.n = (Number(row.data.n) || 1) + 1;
-    else { C.counts.heard++; row = C.add(t, 'heard', where ?? ev.pos, { what, by: gd.callsign, k: 1, n: 1, react }, g.level) ?? undefined; if (!row) C.markHeardCounted(ev); }
-    if (!row) return null;
-    C.bindHeard(ev, row);
-  }
-  const names = String(row.data.by);
-  if (!names.split(', ').includes(gd.callsign)) { const k = Number(row.data.k) || 1; row.data.by = k < 3 ? `${names}, ${gd.callsign}` : names; row.data.k = k + 1; }
-  if (RANK[react] > RANK[String(row.data.react)]) row.data.react = react;   // the row says the most it did to anybody
-  return row;
-}
-const RANK: Record<string, number> = { 'pricks up': 0, investigates: 1, alerted: 2 };
-/** what a hearing-model event of Sam's IS, in the timeline's words */
-export function heardWhat(e: GameEvent): string {
-  switch (e.kind) {
-    case 'shot': return (e.level ?? 0) >= 1 ? 'gunfire' : e.weapon ? 'a muffled shot' : 'a canister';   // (a canister's pop / skitter goes in as a quiet 'shot' with no weapon row)
-    case 'guardShot': return 'gunfire';
-    case 'kick': return 'a door kicked in';
-    case 'bang': return e.frag ? 'a grenade' : 'a stun charge';
-    case 'door': return (e.level ?? 0) >= 0.6 ? 'a door slammed' : 'a door';
-    case 'prop': return e.who === 0 ? 'a clatter' : (e.level ?? 0) >= 0.5 ? 'a crash of furniture' : 'a scrape';
-    case 'step': return 'footsteps';
-    case 'lightOut': return 'a light going out';
-    case 'glass': return 'a round into the glass';
-  }
-  return 'a noise';
-}
 
-/** guards.ts dropToSearch: the alert chase is over without him. */
-export function chronLost(g: Game, gd: Guard) { return chronicle(g, 'lost', { who: gd.callsign }, gd.char.pos); }
-/** guards.ts, the search branch letting go: he gives it up ('returning to patrol'). */
-export function chronCalm(g: Game, gd: Guard) { return chronicle(g, 'calm', { who: gd.callsign }, gd.char.pos); }
 
 /** guards.ts raiseEscalation (an actual rise) / stepDownEscalation: the floor's alarm level moved to `stage` (0 calm · 1 heightened · 2 lockdown), `up` or down,
  *  and for a rise what caused it (a search that found nobody, a body, a man missing, a hostage). Pinned at the alarm's fix when there is one. */
@@ -268,8 +199,6 @@ export function chronShot(g: Game, weapon: string, hitGuard: Guard | null, hitP:
 }
 /** combat.ts fireWeapon's light pass: a fixture shot out. */
 export function chronLightShot(g: Game, tg: LightTarget) { return chronicleN(g, 'lightShot', 'lightsShot', { name: fixtureName(tg) }, tg.pos); }
-/** lighting.ts ocp: the OCP put something out — a fixture, or the torch in a man's hand. */
-export function chronOcp(g: Game, what: string, pos: Vec3) { return chronicleN(g, 'ocp', 'ocps', { what }, pos); }
 /** lighting.ts setBlackout (not the panel's button): the mains went — tripped by the OCP, destroyed by a round, thrown by hand. */
 export function chronBlackout(g: Game, cause: string) { if (missionLive(g) && cause === 'ocp') g.chronicle.counts.ocps++; return chronicleN(g, 'blackout', 'blackouts', { cause }, g.level.breaker.pos); }
 /** a fixture's name in words: 'panel_corridor_12' → 'a corridor ceiling panel', 'desk_lamp' → 'the desk lamp' */
@@ -282,8 +211,6 @@ export function fixtureName(tg: { name: string; group: string }): string {
   return 'the ' + tg.name.replace(/_?\d+$/, '').replace(/_/g, ' ');
 }
 
-/** player.ts, the pending throw's release: a canister is away. */
-export function chronThrown(g: Game, kind: string) { return chronicleN(g, 'thrown', 'thrown', { kind }); }
 /** player.ts startGrab: a man taken into the arm. */
 export function chronGrab(g: Game, gd: Guard) { return chronicleN(g, 'grab', 'grabs', { who: gd.callsign }, gd.char.pos); }
 /** game.ts interrogate: one exchange — who, the stage it was, and the useful thing's kind if he gave one (counts.intel; `questioned` keeps who has been leaned on) */
@@ -297,27 +224,22 @@ export function chronKey(g: Game, gd: Guard) { return chronicle(g, 'keyTaken', {
 
 /** combat.ts killGuard, by the player's hand: shot dead ('kill', with what) or out cold ('ko': the takedown's cross, the choke, the pistol-whip, a ring to the head —
  *  told apart the way killGuard's own log line is: `how` + the caller's line). */
-export function chronDown(g: Game, gd: Guard, how: DownKind, line?: string) {
+export function chronDown(g: Game, gd: Guard, how: DownKind, line?: string) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('chronDown', undefined, [g, gd, how, line]); if (__r !== RUST_PASS) return __r as any; } }
   if (how === 'shot') return chronicle(g, 'kill', { who: gd.callsign, weapon: /^knife/.test(line ?? '') ? 'knife' : /at the charge when it went$/.test(line ?? '') ? 'a wall charge' : (manHere(g).gunInHand() ? plainShort(manHere(g).gunInHand()!.def) : 'a round') }, gd.char.pos);   // (the knife: close.ts's lethal blow, told by its line as the ring and the whip are)
   const method = how === 'wounded' ? 'wounded' : how === 'choked' ? 'choke' : /^ring/.test(line ?? '') ? 'ring' : /whip/.test(line ?? '') ? 'whip' : /behind the wall when it went$/.test(line ?? '') ? 'charge' : 'takedown';   // ('charge': wallcharge.ts's knock through the wall it opened — nobody's hands were on him)
   return chronicle(g, 'ko', { who: gd.callsign, method }, gd.char.pos);
 }
-/** guards.ts: a body discovered — walked onto (bodyInView) or watched going down (the standoff's end): whose, by whom, and found breathing or not. */
-export function chronBodyFound(g: Game, body: Guard, by: Guard) {
-  const h = body.char.bones.hips ?? body.char.pos;
-  return chronicle(g, 'bodyFound', { who: body.callsign, by: by.callsign, breathing: body.downKind !== null && body.downKind !== 'shot', ...(body.wound ? { wounded: true } : null) }, [h[0], 0, h[2]]);
-}
 /** combat.ts fireWeapon → hitPlayer (god mode off): a round found Sam — 'down' the once, 'hit' while the vest still has something left. `by`: whose round. */
-export function chronHit(g: Game, by?: string) {
+export function chronHit(g: Game, by?: string) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('chronHit', undefined, [g, by]); if (__r !== RUST_PASS) return __r as any; } }
   const C = g.chronicle; if (C.counts.down || !missionLive(g)) return null;
   if (g.player.down) { C.counts.down = true; C.counts.downBy = by ?? ''; return chronicle(g, 'down', { by: by ?? '' }); }
   return chronicleN(g, 'hit', 'hits', { by: by ?? '', left: g.player.hitsLeft });
 }
 /** player.ts updateKick's impact frame / updatePicking's opening click */
-export function chronDoor(g: Game, kind: 'doorKicked' | 'lockPicked', d: Door) { return chronicleN(g, kind, kind === 'doorKicked' ? 'kicked' : 'picked', { door: d.def.name.replace(/_/g, ' ') }, d.frameCentre); }
+export function chronDoor(g: Game, kind: 'doorKicked' | 'lockPicked', d: Door) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('chronDoor', undefined, [g, kind, d]); if (__r !== RUST_PASS) return __r as any; } } return chronicleN(g, kind, kind === 'doorKicked' ? 'kicked' : 'picked', { door: d.def.name.replace(/_/g, ' ') }, d.frameCentre); }
 /** G5's seam: a checkpoint written ('save') or restored ('load', counted for the card and the score) — `label` names it ('server room', 'autosave 3'). A SAVE row is
  *  chatter to the caps (a long run's ninety autosaves must not crowd its alarms out); a load stays. */
-export function chronCheckpoint(g: Game, what: 'save' | 'load', label = '') { return chronicleN(g, 'checkpoint', what === 'load' ? 'loads' : 'saves', { what, label }); }
+export function chronCheckpoint(g: Game, what: 'save' | 'load', label = '') { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('chronCheckpoint', undefined, [g, what, label]); if (__r !== RUST_PASS) return __r as any; } } return chronicleN(g, 'checkpoint', what === 'load' ? 'loads' : 'saves', { what, label }); }
 
 // ------------------------------------------------------------ reading: the run in numbers, the score, the rating, the badges, the words
 /** Everything the card and the score read, in one flat record: the mission's own tallies (MissionStats) + the chronicle's counters + the roster size. Pure data, so

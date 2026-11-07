@@ -7,6 +7,7 @@
 // PICTURE ONLY: the note is a WeakMap beside the box, `thinFit` never writes a noted box nor the list it is handed, and nothing in a step reads either. A leaf: types, and the box world's copy.
 import { SideMap } from '../math/side';
 import { type Box, copyBox } from '../scene/boxes';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 interface Thin { hw0: number; k: number; e: [number, number, number] }
 const THIN = new SideMap<Box, Thin>('thinline.THIN');
@@ -23,7 +24,7 @@ export function thinNote(b: Box, hw0: number, k: number, r: number, g: number, b
 export const thinHalf = (hw0: number, k: number, px: number) => Math.max(hw0, k * px);
 /** `list` as a picture whose pixel is `px` metres should draw it: a NEW array with a copy of every noted line whose width is not that view's (over 2 % out), widened or
  *  thinned to it and its light scaled the other way — or null when every line already fits (the view is the step's own). */
-export function thinFit(list: Box[], px: number): Box[] | null {
+export function thinFit(list: Box[], px: number): Box[] | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('thinFit', undefined, [list, px]); if (__r !== RUST_PASS) return __r as any; } }
   if (!(px > 0) || !Number.isFinite(px)) return null;
   let out: Box[] | null = null;
   for (let i = 0; i < list.length; i++) {

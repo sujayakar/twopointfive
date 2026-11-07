@@ -21,7 +21,8 @@
 // do the work off (HANDWORK) — nothing here is called and every plant is what it was. State: Player.workStow, Guard.workStow (on the men: a rollback snapshot holds them; a checkpoint does not — no save is written while a
 // charge goes on, his gun is away for one or a kit errand runs (savestate.ts playerBusy), and a teammate loaded mid-job has his gun in his hands). No dice, no clock of its own.
 import type { Game, Guard } from './game';
-import { HANDWORK } from './handwork';   // (asked inside the functions below only)
+import './handwork';   // (asked inside the functions below only)
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 export const WORKSTOW = {
   /** THE switch (see the head) */
@@ -35,61 +36,11 @@ export const WORKSTOW = {
   /** a teammate the fight has: s at most, at a stretch, his charge waits on it — then he sets it anyway (door tools' own cap for a lock under fire: kickCap + 3) */
   fightCap: 8,
 };
-/** the rule is live: its own switch, and the hands that do the work (handwork.ts — with those off there is no two-handed job to put a gun away for) */
-const live = (): boolean => WORKSTOW.on && HANDWORK.on;
 /** QA: how often each happened (the check reads them; nothing else does) */
 export const WORKSTOW_STATS = { samDown: 0, samUp: 0, samKept: 0, mateDown: 0, mateUp: 0, mateFired: 0 };
 
-// ---------------------------------------------------------------- you
-/** is a charge going on by your own hands (the two jobs this module covers) */
-const samJob = (g: Game): boolean => !!g.doorTools?.samJob || !!g.wallCharge?.samJob;
-/** player.ts, at the head of his every frame (and again on the frame the trigger lets go of the job): a job begun puts away what is in his hand, a job over
- *  brings it back (`holster`: player.ts setHolstered, quiet) */
-export function samStowTick(g: Game, holster: (g: Game, on: boolean) => void) {
-  const pl = g.player, job = live() && !g.puppet && samJob(g), s = pl.workStow;
-  if (!s) { if (!job) return;
-    const w = pl.wall, owed = !!w?.drawn; if (w) w.drawn = false;   // (pressed to a wall: what the hold owed back to his hand is this job's to bring back — player.ts releaseWall hands nothing over as he comes off the wall onto it)
-    const drew = !pl.holstered; pl.workStow = { drew: drew || owed, t: g.time, down: !drew };
-    if (drew) { holster(g, true); g.audio.play('equip', null, 0.35); WORKSTOW_STATS.samDown++; }
-    return; }
-  if (job) { if (!s.down && g.time > s.t && (!pl.char.anim.kitBusy || g.time - s.t > WORKSTOW.downMax)) s.down = true; return; }
-  pl.workStow = null;
-  if (!s.drew || !pl.holstered) return;   // (nothing was put away — or he has drawn it himself since)
-  if (pl.down || pl.holding || pl.takedown || pl.dragging || pl.picking || pl.wanding) { WORKSTOW_STATS.samKept++; return; }   // (his hands went to something that wants them empty: it stays where it is)
-  if (pl.wall && pl.wall.kind !== 'stack') { pl.wall.drawn = true; WORKSTOW_STATS.samKept++; return; }   // (pressed to a wall: it comes back into his hand as he steps off — player.ts releaseWall)
-  holster(g, false); pl.equipT = Math.max(pl.equipT, WORKSTOW.samUp); g.audio.play('equip', null, 0.35); WORKSTOW_STATS.samUp++;
-}
-/** the thing is still on its way out of his hand: the job's clock has not started (doortools.ts / wallcharge.ts samTick), and kit handling still has the arm (kitanim.ts) */
-export const samStowing = (g: Game): boolean => { const s = g.player.workStow; return !!s && !s.down; };
 
-// ---------------------------------------------------------------- the team
-/** s a teammate's job waits, from the frame he is on it, for his hands to be free of his gun (0 with the switch off: its clock is what it was) */
-export const mateStowLead = (): number => live() ? WORKSTOW.mateDown : 0;
-/** once a frame of a teammate's two-handed job, by its owner: his gun is out of his hands (nothing with the switch off) */
-export function mateStow(g: Game, gd: Guard) {
-  if (!live() || gd.state === 'dead') return;
-  const s = gd.workStow;
-  if (!s || s.upT >= 0) { gd.workStow = { upT: -1, fed: true }; WORKSTOW_STATS.mateDown++; } else s.fed = true;
-}
-/** game.ts, once a frame for a man with one: a job that stopped being fed starts the gun back up, and it is his again `mateUp` later; his fire clock is held meanwhile */
-export function mateStowTick(g: Game, gd: Guard) {
-  const s = gd.workStow; if (!s) return;
-  const an = gd.char.anim, K = WORKSTOW;
-  if (gd.state === 'dead' || !live()) { gd.workStow = null; an.stowed = false; return; }
-  if (s.upT < 0 && !s.fed) { s.upT = g.time + K.mateUp; WORKSTOW_STATS.mateUp++; }
-  s.fed = false;
-  if (s.upT >= 0 && g.time >= s.upT) { gd.workStow = null; an.stowed = false; return; }
-  an.stowed = stowHang(g, gd);
-  gd.fireCd = Math.max(gd.fireCd, s.upT < 0 ? K.mateUp : s.upT - g.time);
-}
 /** combat.ts guardProps: his gun is drawn out of his hands this frame (hung on its sling, or on his thigh) */
 export const stowHang = (g: Game, gd: Guard): boolean => { const s = gd.workStow; return !!s && gd.state !== 'dead' && (s.upT < 0 || s.upT - g.time > WORKSTOW.mateUp * (1 - WORKSTOW.show)); };
 /** combat.ts fireWeapon, the net under every other fire site: a round that leaves a gun this module has out of his hands puts it in them at once */
-export function stowFired(gd: Guard) { gd.workStow = null; gd.char.anim.stowed = false; WORKSTOW_STATS.mateFired++; }
-/** doortools.ts / wallcharge.ts 'place': THE FIGHT HAS HIM — his order yielded to it, he is blind or doubled over, or the room fight has brought his gun onto a
- *  man — so the job is dropped and waits (`op.stowOffT`: since when, this stretch: no such wait outlasts `fightCap`, and then he sets it with the fight on him) */
-export function stowFight(g: Game, gd: Guard, A: { yieldT: number } | undefined, op: { stowOffT?: number }): boolean {
-  const has = live() && ((!!A && A.yieldT >= 0) || g.time < gd.dazzledUntil || g.time < gd.staggerUntil || !!gd.script?.over);
-  if (!has) { if (op.stowOffT !== undefined) op.stowOffT = undefined; return false; }
-  return g.time - (op.stowOffT ??= g.time) < WORKSTOW.fightCap;
-}
+export function stowFired(gd: Guard) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('stowFired', undefined, [gd]); if (__r !== RUST_PASS) return __r as any; } } gd.workStow = null; gd.char.anim.stowed = false; WORKSTOW_STATS.mateFired++; }

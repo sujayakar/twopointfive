@@ -114,7 +114,7 @@ export const IEK = { bounce: 0, impulse: 1, gone: 2 } as const;
 /** the most one row lists (its time up; or, a substep, an impulse, a bounce and the floor's bounce — twice) */
 export const ITEM_ROW_EVENTS = 6;
 /** the walk's answers (items.rs DONE, HOST, WRONG) */
-export const ITEMS_DONE = 0, ITEMS_HOST = 1;
+export const ITEMS_HOST = 1;
 
 /** where the hand-over's tables are in the module's memory (indices into its doubles), and how many events the list holds: asked once */
 export interface ItemIo { x: SimExports; par: number; ev: number; maxEvents: number }

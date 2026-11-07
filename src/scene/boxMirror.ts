@@ -33,6 +33,7 @@ import { PROP_CAP, PROP_PARTS } from '../sim/propshome';
 import { cutConfig, MAX_CUT_PLANES } from './cut';
 import { shapeCut, type Box } from './boxes';
 import type { SimState } from '../sim/state';
+import { RUST_PASS, RUST_SURFACE } from '../game/crossing';
 
 // rust/sim/src/world.rs: a row's doubles, the kinds, the tables by number
 const REC = 16, R_COS = 6, R_SIN = 7, R_YAW = 8, R_ROT = 9, R_CUT = 13, R_CUTN = 14, R_KIND = 15, K_ROT = 1, K_ROUND = 2, K_CUT = 4, K_WALK = 8, F_GLASS = 1 << 17;
@@ -59,7 +60,7 @@ const COPIES = { n: 0 };
 export const LEAVES = { n: 0 };
 /** A LEAF WAS WRITTEN — said by the three places that write one: a door placing its leaf (game/doors.ts Door.place), a door putting its leaf back whole
  *  (Door.reset), a slab posed off its hinges (game/doorblast.ts poseSlab). Whoever calls those, and when, is no part of the rule. */
-export function leafWrote(): void { LEAVES.n++; }
+export function leafWrote(): void { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('leafWrote', undefined, []); if (__r !== RUST_PASS) return __r as any; } } LEAVES.n++; }
 /** how many times the furniture has been written: a thing placed (game/props.ts Prop.place — the one place a part's box is written), a thing taken out of
  *  the level or the level put back (the list the parts are copied in changed). The host's count, as LEAVES is. */
 export const THINGS = { n: 0 };
@@ -307,11 +308,6 @@ export class BoxMirror extends HostOwned {
    *  pays for none. The grid is not compared: only addStatic and truncateStatics change it, and they say so themselves. */
   wrote(): void { if (this.live) this.debt(OWE_BOXES); }
   private debt(what: number): void { this.owed |= what; if (!this.owes) { this.owes = true; this.lines = this.rays = this.circles = false; } }
-  /** …or THE GLASS IS BEING WORKED ON (game/glassbreak.ts: a blow, a blast, a step of what is coming down — a piece out, a piece queued to leave). The
-   *  rule asks lines and rays of its own between its writes, so from `glassBegin` to `glassEnd` EVERY question owes the panes' rows written again, and
-   *  so does the first one after; no static is compared for it. Nobody has to say which write changed what. */
-  glassBegin(): void { this.glassBusy++; if (this.live) this.debt(OWE_GLASS); }
-  glassEnd(): void { this.glassBusy--; if (this.live) this.debt(OWE_GLASS); }
   /** …the glass was written with no question of its own between (a pane made another glass, every pane made whole): its rows are owed */
   glassWrote(): void { if (this.live) this.debt(OWE_GLASS); }
   /** …and the glass itself was hung, or taken down, under a standing copy (collision.ts glassRule): its rows are owed like any other write of it */
@@ -494,14 +490,6 @@ export class BoxMirror extends HostOwned {
     b.c = [m[o], m[o + 1], m[o + 2]]; b.yaw = yaw; b.flags ^= (b.flags & MIRRORED) ^ u32()[this.leafFlags + i];
     return yaw;
   }
-  /** a leaf's row as leafRow read it → its box, the same writes as followLeaf (for a caller that had to read the rows BEFORE something else could ask the
-   *  module and have them copied from the boxes again). → the yaw */
-  followRow(b: Box, r: readonly number[]): number { b.c = [r[0], r[1], r[2]]; b.yaw = r[3]; b.flags ^= (b.flags & MIRRORED) ^ r[4]; return r[3]; }
-  /** leaf i's row of list 0: its centre, its yaw, its flags */
-  leafRow(i: number): number[] { const m = f64(), o = this.leaf + i * REC; return [m[o], m[o + 1], m[o + 2], m[o + R_YAW], u32()[this.leafFlags + i]]; }
-  /** the game's own leaves are being placed box by box while what the rule answered is heard (game/doors.ts takeBack): a question asked meanwhile, and the
-   *  first one after, copies list 0 from the boxes as they stand */
-  leavesTurned(): void { this.ownAt = -1; }
 
   /** THE CHECK'S QUESTION (tools/qa/rust-check.ts, through collision.ts BOTH): how many rows of the copy are not their box now — the statics, and list `set`
    *  of the leaves. 0 inside a tick, or a write went unsaid. */
