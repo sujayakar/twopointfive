@@ -312,7 +312,7 @@ pub fn hostage_call(g: &mut crate::game::Game, gd: GuardId, p: crate::guards::Pa
         crate::belief::word(g, o, p.sam);
         if was_calm {
             let d = v3::dist(g.ch[g.gd[o].ch].pos, p.sam);
-            let roll = crate::math_dice::sim_random(g);
+            let roll = crate::dice::draw_of(g, "guards::hostage_call#1", gd);
             g.gd[o].react_t = m::max(g.gd[o].react_t, 0.25 + m::min(1.2, d / 25.0) + roll * 0.4);
         }
     }
@@ -523,7 +523,7 @@ pub fn standoff_bark(g: &mut crate::game::Game, gd: GuardId, moment: crate::guar
         return;
     }
     let n = pool.len() as f64;
-    let mut i = js::rem(m::floor(crate::math_dice::sim_random(g) * n), n) as usize;
+    let mut i = js::rem(m::floor(crate::dice::draw_of(g, "guards::standoff_bark#1", gd) * n), n) as usize;
     if pool.len() > 1 && g.m.guards.last_bark.get(gd).map_or(false, |l| l.as_str() == pool[i]) {
         i = (i + 1) % pool.len();
     }

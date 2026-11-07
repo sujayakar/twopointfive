@@ -139,7 +139,7 @@ pub fn pick_sam_line(g: &mut crate::game::Game, ctx: &mut crate::dialogue::Dialo
 
 /// Sam's line for the next exchange with a real man in his arm, remembered on the Game.   (dialogue.ts samLineFor)
 pub fn sam_line_for(g: &mut crate::game::Game, gd: GuardId, variant: crate::character::HoldVariant, rnd: Option<&mut dyn FnMut(&mut crate::game::Game) -> f64>) -> crate::dialogue::SamPick {
-    let mut die = |g: &mut Game| crate::math_dice::sim_random(g);
+    let mut die = |g: &mut Game| crate::dice::draw_of(g, "dialogue::sam_line_for#1", gd);
     let rnd: &mut dyn FnMut(&mut Game) -> f64 = match rnd { Some(r) => r, None => &mut die };
     let mut ctx = gather(g, gd);
     let talk = g.gd[gd].talk;
@@ -152,7 +152,7 @@ pub fn sam_line_for(g: &mut crate::game::Game, gd: GuardId, variant: crate::char
 /// Sam's word as he pockets the key a man has just given up: a remark, no exchange.   (dialogue.ts samKeyLineFor)
 pub fn sam_key_line_for(g: &mut crate::game::Game, gd: GuardId, variant: crate::character::HoldVariant, rnd: Option<&mut dyn FnMut(&mut crate::game::Game) -> f64>) -> Option<crate::dialogue::SamKeyLineFor> {
     use crate::dialogue::SamLineS;
-    let mut die = |g: &mut Game| crate::math_dice::sim_random(g);
+    let mut die = |g: &mut Game| crate::dice::draw_of(g, "dialogue::sam_key_line_for#1", gd);
     let rnd: &mut dyn FnMut(&mut Game) -> f64 = match rnd { Some(r) => r, None => &mut die };
     let ctx = gather(g, gd);
     let tiers = [sam_lines_where(g, |l| l.s == SamLineS::Key)];
@@ -166,7 +166,7 @@ pub fn sam_key_line_for(g: &mut crate::game::Game, gd: GuardId, variant: crate::
 /// One of Sam's pistol openers as a remark, for the moment he draws on a man already in his arm. Nobody answers it.   (dialogue.ts samRemarkFor)
 pub fn sam_remark_for(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut dyn FnMut(&mut crate::game::Game) -> f64>) -> Option<crate::dialogue::SamRemarkFor> {
     use crate::dialogue::{SamLineS, SamNeed};
-    let mut die = |g: &mut Game| crate::math_dice::sim_random(g);
+    let mut die = |g: &mut Game| crate::dice::draw_of(g, "dialogue::sam_remark_for#1", gd);
     let rnd: &mut dyn FnMut(&mut Game) -> f64 = match rnd { Some(r) => r, None => &mut die };
     let ctx = gather(g, gd);
     let tiers = [sam_lines_where(g, |l| l.s == SamLineS::Open && l.needs.as_ref().is_some_and(|n| n.contains(&SamNeed::Gun)))];

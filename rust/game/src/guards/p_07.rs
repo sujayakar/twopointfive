@@ -412,7 +412,7 @@ fn alertness(g: &mut Game, gd: GuardId, dt: f64, f: &mut Frame) {
         reset_chase(g, gd);
         g.gd[gd].state = St::Alert;
         g.gd[gd].react_t = m::max(g.gd[gd].react_t, 0.35);
-        g.gd[gd].fire_cd = 0.6 + crate::math_dice::sim_random(g) * 0.4;
+        g.gd[gd].fire_cd = 0.6 + crate::dice::draw_of(g, "guards::alertness#1", gd) * 0.4;
         let now = g.time;
         let radio_recent = match &g.gd[gd].bubble { Some(b) => b.radio && now - b.t < 1.0, None => false };
         if g.gd[gd].standoff.is_none() && !radio_recent {
@@ -442,7 +442,7 @@ fn alertness(g: &mut Game, gd: GuardId, dt: f64, f: &mut Frame) {
         g.gd[gd].state = St::Suspicious;
         g.gd[gd].search_t = 0.0;
         if g.gd[gd].body_duty.is_some() {
-            g.gd[gd].react_t = 0.5 + crate::math_dice::sim_random(g) * 0.5;
+            g.gd[gd].react_t = 0.5 + crate::dice::draw_of(g, "guards::alertness#2", gd) * 0.5;
         } else {
             g.gd[gd].react_t = 0.9;
             if g.gd[gd].team != crate::teams::Team::Operative && !crate::attention::attention_again(g, gd) {
@@ -818,7 +818,7 @@ fn alert(g: &mut Game, gd: GuardId, dt: f64, f: &mut Frame) {
                 && !round_past_colleague(g, gd, aim, None, None) && crate::aim::aim_ready(g, gd) && crate::weapons::firearm_fire(g, weapon) {
                 let (cd, jitter) = { let w = g.m.weapons.weapons.get(g.fa[weapon].def).expect("a gun's def is a row"); (w.cd, w.cd_jitter) };
                 let mods = crate::suppression::guard_fire_mods(g, gd);
-                g.gd[gd].fire_cd = (cd + crate::math_dice::sim_random(g) * jitter) * mods.gap;
+                g.gd[gd].fire_cd = (cd + crate::dice::draw_of(g, "guards::alert#1", gd) * jitter) * mods.gap;
                 let round = crate::aim::guard_round(g, gd, mods.spread, None);
                 crate::combat::fire_weapon(g, c, aim, false, Some(&round));
                 crate::aim::note_bore(g, gd, aim);

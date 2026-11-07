@@ -143,7 +143,7 @@ pub fn walk_len(g: &mut crate::game::Game, from: &[f64], to: V3) -> f64 {
 pub fn seated(d: crate::doze::Doze) -> bool { d.phase == Phase::Down || d.phase == Phase::Asleep || d.phase == Phase::Work }
 /// a number drawn from [from, to] (doze.ts span)
 pub fn span(g: &mut crate::game::Game, r: &[f64]) -> f64 {
-    r[0] + crate::math_dice::sim_random(g) * (r[1] - r[0])
+    r[0] + crate::dice::draw_world(g, "doze::span#1") * (r[1] - r[0])
 }
 /// the lines, for the words lint (doze.ts dozeLines)
 pub fn doze_lines() -> Vec<String> { screen_lines() }
@@ -508,7 +508,7 @@ pub fn doze_tick(g: &mut crate::game::Game, dt: f64) {
                 { let said = g.m.doze.said.as_ref().unwrap();
                   for i in 0..n { if !said.contains(&(i as f64)) { left.push(i); } } }
                 let len = left.len() as f64;
-                let k = left[js::rem(m::floor(crate::math_dice::sim_random(g) * len), len) as usize];
+                let k = left[js::rem(m::floor(crate::dice::draw_world(g, "doze::doze_tick#1") * len), len) as usize];
                 g.m.doze.said.as_mut().unwrap().push(k as f64);
                 let every = g.k.doze.say_every.clone();
                 let t = g.time;

@@ -42,7 +42,7 @@ pub fn squad_skill(g: &mut crate::game::Game, base: crate::roomfight::FightSkill
 /// (enemysquads.ts flat)
 pub fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 /// (enemysquads.ts pick)
-pub fn pick(g: &mut crate::game::Game, r: [f64; 2]) -> f64 { r[0] + crate::math_dice::sim_random(g) * (r[1] - r[0]) }
+pub fn pick(g: &mut crate::game::Game, r: [f64; 2]) -> f64 { r[0] + crate::dice::draw_world(g, "enemysquads::pick#1") * (r[1] - r[0]) }
 /// a man who dropped it and ran is no man of his squad's any more (enemysquads.ts alive)
 pub fn alive(g: &mut crate::game::Game, gd: GuardId) -> bool { g.gd[gd].state != crate::game::GuardState::Dead && !g.gd[gd].fled }
 /// (enemysquads.ts grown)

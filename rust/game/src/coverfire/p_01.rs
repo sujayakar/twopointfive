@@ -667,7 +667,7 @@ pub fn cover_blind(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3
         let mods = crate::suppression::guard_fire_mods(g, gd);
         let w = g.m.weapons.weapons.get(def).unwrap();
         let (r, cd, cd_jitter) = (w.ai_spread, w.cd, w.cd_jitter);
-        g.gd[gd].fire_cd = (cd + crate::math_dice::sim_random(g) * cd_jitter) * mods.gap;
+        g.gd[gd].fire_cd = (cd + crate::dice::draw_of(g, "coverfire::cover_blind#1", gd) * cd_jitter) * mods.gap;
         let spread_k = g.gd[gd].skill.as_ref().map_or(1.0, |sk| sk.spread_k);
         let hands = (r.base + m::max(0.0, dist - r.range_from) * r.range_k) * spread_k;
         let opts = if g.tune.aim_model {
@@ -771,7 +771,7 @@ pub fn cover_op(g: &mut crate::game::Game, o: RoomfightOpId, dt: f64, speed: f64
     g.fight.stats.op_rounds += 1.0;
     let str_ = crate::gunroles::gun_string(g, gd);
     let gap = if js::rem(k_now, js::or(str_, 2.0)) == 0.0 {
-        sk.shift[0] + crate::math_dice::sim_random(g) * (sk.shift[1] - sk.shift[0])
+        sk.shift[0] + crate::dice::draw_op(g, "coverfire::cover_op#1", o) * (sk.shift[1] - sk.shift[0])
     } else if js::truthy(str_) {
         crate::gunroles::gun_string_gap(g, gd)
     } else {

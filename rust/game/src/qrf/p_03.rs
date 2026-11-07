@@ -478,7 +478,7 @@ pub fn to_fight(g: &mut crate::game::Game, el: &[GuardId], seer: GuardId) {
         g.gd[man].awareness = m::max(g.gd[man].awareness, if is_seer { 1.0 } else { 0.95 });
         let known = match g.gd[man].last_known { Some(k) if is_seer => k, _ => fix };
         crate::belief::word(g, man, known);
-        let react = if is_seer { 0.12 } else { 0.2 + crate::math_dice::sim_random(g) * 0.25 };
+        let react = if is_seer { 0.12 } else { 0.2 + crate::dice::draw_of(g, "qrf::to_fight#1", seer) * 0.25 };
         g.gd[man].react_t = react;
         g.gd[man].fire_cd = m::max(g.gd[man].fire_cd, 0.35);
         g.gd[man].search_t = 0.0;

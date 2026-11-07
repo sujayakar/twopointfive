@@ -329,9 +329,9 @@ pub fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, i
     let mut dir = v3::normalize(v3::sub(target, muzzle));
     if !is_player && !steady { spread += ai_wide(g, sg, shooter, &def); }
     if spread > 0.0 {
-        let rx = crate::math_dice::sim_random(g);
-        let ry = crate::math_dice::sim_random(g);
-        let rz = crate::math_dice::sim_random(g);
+        let rx = crate::dice::draw_body(g, "combat::fire_weapon_raw#1", shooter);
+        let ry = crate::dice::draw_body(g, "combat::fire_weapon_raw#2", shooter);
+        let rz = crate::dice::draw_body(g, "combat::fire_weapon_raw#3", shooter);
         dir = v3::normalize([dir[0] + (rx - 0.5) * spread, dir[1] + (ry - 0.5) * spread, dir[2] + (rz - 0.5) * spread]);
     }
     if lead { if let Some(p) = &mut pel { p.dir = Some(dir); } }

@@ -56,7 +56,7 @@ pub fn bark(g: &mut crate::game::Game, gd: GuardId, kind: crate::morale::LineKin
     pool.extend_from_slice((if st.dark { l.dark } else { l.lit }).unwrap_or(&[]));
     pool.extend_from_slice((if g.gd[gd].team != crate::teams::Team::Guard { l.they } else { l.he }).unwrap_or(&[]));
     let n = pool.len() as f64;
-    let i = js::rem(m::floor(crate::math_dice::sim_random(g) * n), n);
+    let i = js::rem(m::floor(crate::dice::draw_of(g, "morale::bark#1", gd) * n), n);
     crate::game::game_say(g, gd, pool[i as usize], Some(radio), None, None);
     g.m.morale.state_of.get_mut(gd).unwrap().bark = 0.0;
     if radio { g.stats.morale.calls += 1; } else { g.stats.morale.shouts += 1; }

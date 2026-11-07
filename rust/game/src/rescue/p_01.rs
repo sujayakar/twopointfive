@@ -434,10 +434,10 @@ fn stage_tried(g: &mut Game) -> Result<(), String> {
     if let Some(c) = &s.cast {
         // samestart.ts on the page: the first n marks as written, the die drawn all the same
         let n = m::max(0.0, m::min(len, m::round(c.roamers))) as usize;
-        for _ in 0..n { crate::math_dice::sim_random(g); }
+        for _ in 0..n { crate::dice::draw_world(g, "rescue::stage_tried#1"); }
         for i in 0..n { cast.push(CastRow { role: Role::Roamer, in_room: false, mark: s.roamers[i], name: format!("Roamer {}", i + 1) }); }
     } else {
-        crate::math_dice::sim_random(g);   // (seedRoamers's draw: samestart.ts keeps the swap off and the stream the same)
+        crate::dice::draw_world(g, "rescue::stage_tried#2");   // (seedRoamers's draw: samestart.ts keeps the swap off and the stream the same)
         let n = m::max(0.0, m::min(len, m::round(g.k.rescue.roamers))) as usize;
         for i in 0..n { cast.push(CastRow { role: Role::Roamer, in_room: false, mark: s.roamers[i % s.roamers.len()], name: format!("Roamer {}", i + 1) }); }
     }
@@ -534,7 +534,7 @@ fn stage_tried(g: &mut Game) -> Result<(), String> {
         g.rescue.hostages.push(hostage);
     }
     g.rescue.resolve = 0.0;
-    crate::math_dice::sim_random(g);   // (samestart.ts on: the clock is the knob's to the second, the die drawn all the same)
+    crate::dice::draw_world(g, "rescue::stage_tried#3");   // (samestart.ts on: the clock is the knob's to the second, the die drawn all the same)
     g.rescue.resolve_secs = m::max(5.0, g.k.rescue.resolve_secs);
     g.rescue.t0 = f64::NAN;
     g.rescue.door_orders = 0.0;

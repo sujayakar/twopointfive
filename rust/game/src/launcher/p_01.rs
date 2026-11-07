@@ -131,7 +131,7 @@ pub fn ring_aim_point(g: &mut crate::game::Game, from: V3) -> V3 {
 /// Let one ring go: in the air from this frame, the launcher's sound at the tube, a 'prop' noise at the shooter. (launcher.ts fireRing)
 pub fn fire_ring(g: &mut crate::game::Game, shooter: CharId, from: V3, target: V3) -> crate::launcher::Ring {
     let vel = launch_vel(from, target, ballistics_of(&g.k.ring));
-    let spin = crate::math_dice::sim_random(g) * m::PI;
+    let spin = crate::dice::draw_body(g, "launcher::fire_ring#1", shooter) * m::PI;
     let ring = Ring { pos: v3::copy(from), vel, age: 0.0, shooter, spin };
     g.rings.push(ring);
     crate::audio_iface::game_audio_like_play(g, "launcher", Some(from), Some(0.8), None);
@@ -318,9 +318,9 @@ pub fn ring_hits_character(g: &mut crate::game::Game, r: crate::launcher::Ring, 
         Some(gd) => stagger_guard(g, gd, dir, r.shooter),
     }
     let drop_at = v3::mad(at, dir, -0.05);
-    let vx = -dir[0] * 1.5 + (crate::math_dice::sim_random(g) - 0.5);
-    let vy = 1.0 + crate::math_dice::sim_random(g);
-    let vz = -dir[2] * 1.5 + (crate::math_dice::sim_random(g) - 0.5);
+    let vx = -dir[0] * 1.5 + (crate::dice::draw_body(g, "launcher::ring_hits_character#1", c_2) - 0.5);
+    let vy = 1.0 + crate::dice::draw_body(g, "launcher::ring_hits_character#2", c_2);
+    let vz = -dir[2] * 1.5 + (crate::dice::draw_body(g, "launcher::ring_hits_character#3", c_2) - 0.5);
     spend(g, r, drop_at, [vx, vy, vz]);
 }
 
@@ -364,7 +364,7 @@ pub fn stagger_guard(g: &mut crate::game::Game, gd: GuardId, dir: V3, shooter: C
     let all = stagger_lines_table();
     let now: Vec<String> = if g.gd[gd].state == GuardState::Alert { all.iter().filter(|t| !t.contains("who's there")).cloned().collect() } else { all.clone() };
     let pool = crate::words::w(g, &now, &all);
-    let roll = m::floor(crate::math_dice::sim_random(g) * pool.len() as f64);
+    let roll = m::floor(crate::dice::draw_of(g, "launcher::stagger_guard#1", gd) * pool.len() as f64);
     let line = &pool[js::rem(roll, pool.len() as f64) as usize];
     crate::game::game_say(g, gd, line, None, None, None);
     let shooter_id = g.ch[shooter].id;

@@ -696,7 +696,7 @@ pub fn interrogate(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut dyn 
     let mut ctx = gather(g, gd);
     let pick = match rnd {
         Some(r) => pick_line(g, &mut ctx, talk, r),
-        None => pick_line(g, &mut ctx, talk, &mut |g: &mut Game| crate::math_dice::sim_random(g)),
+        None => pick_line(g, &mut ctx, talk, &mut |g: &mut Game| crate::dice::draw_of(g, "dialogue::interrogate#1", gd)),
     };
     let player = g.player;
     let holds_him = g.pl[player].holding.as_ref().map_or(false, |h| h.g == gd);

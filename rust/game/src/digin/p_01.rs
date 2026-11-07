@@ -33,7 +33,7 @@ pub fn state_of<'g>(g: &'g mut Game) -> &'g mut crate::digin::St {
 pub fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 
 /// A draw from [min, max]. (digin.ts pick)
-pub fn pick(g: &mut Game, r: [f64; 2]) -> f64 { r[0] + crate::math_dice::sim_random(g) * (r[1] - r[0]) }
+pub fn pick(g: &mut Game, r: [f64; 2]) -> f64 { r[0] + crate::dice::draw_world(g, "digin::pick#1") * (r[1] - r[0]) }
 
 /// A draw from [min, max] at the table's pace. (digin.ts paced)
 pub fn paced(g: &mut Game, r: [f64; 2]) -> f64 {
@@ -43,7 +43,7 @@ pub fn paced(g: &mut Game, r: [f64; 2]) -> f64 {
 
 /// One of these, by the die. (digin.ts oneOf)
 pub fn one_of<T: Clone + core::fmt::Debug>(g: &mut Game, a: &[T]) -> T {
-    let i = m::floor(crate::math_dice::sim_random(g) * a.len() as f64);
+    let i = m::floor(crate::dice::draw_world(g, "digin::one_of#1") * a.len() as f64);
     match a.get(i as usize) {
         Some(x) => x.clone(),
         None => a[0].clone(),
@@ -537,7 +537,7 @@ pub fn scrape(g: &mut Game, gd: GuardId, m: crate::digin::Man, r: Option<&mut cr
     let pos: V3 = [px, 0.3, pz];
     let level = if thud { m::min(1.0, g.k.digin.scrape_level + 0.1) } else { g.k.digin.scrape_level };
     let tune_rate = if thud { g.tab.props_prop[p].tune.thud_rate } else { g.tab.props_prop[p].tune.scrape_rate };
-    let rate = tune_rate * (0.95 + crate::math_dice::sim_random(g) * 0.1);
+    let rate = tune_rate * (0.95 + crate::dice::draw_of(g, "digin::scrape#1", gd) * 0.1);
     crate::audio_iface::game_audio_like_play(g, if thud { "propThud" } else { "propScrape" }, Some(pos), Some(if thud { 0.6 } else { 0.5 }), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
     let c = g.gd[gd].ch;
     let (time, who, serial) = (g.time, g.ch[c].id, g.serial());
