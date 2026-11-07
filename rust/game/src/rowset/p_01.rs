@@ -18,7 +18,8 @@ pub fn row_of_query(g: &Game, search: &RowOfQuerySearch) -> Option<ScenarioEntry
     }
 }
 
-/// `row_of_query` of words already read.
+/// The row whose own hour or weather a query is started in, or none: the first row of the query's level file that names one (THE HOUR IS THE
+/// LEVEL'S). (rowset.ts rowOfQuery, of words already read)
 pub fn row_of(g: &Game, q: &Query) -> Option<ScenarioEntry> {
     if !live(g) { return None; }
     let level = crate::scene_scenario_list::spec_of(q)?.level.filter(|l| !l.is_empty())?;

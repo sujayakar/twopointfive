@@ -7,7 +7,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// Every word of WeatherKind: the enum has no parser, and `weather_of_search` holds no game to walk WEATHER_PRESETS' keys with.
+/// Every word of WeatherKind: the enum has no parser, and `weather_of` holds no game to walk WEATHER_PRESETS' keys with.
 const ALL_KINDS: [WeatherKind; 7] = [
     WeatherKind::Clear,
     WeatherKind::Overcast,
@@ -152,7 +152,7 @@ pub fn weather_of_search(search: &crate::weather_kinds::WeatherOfSearchSearch) -
     }
 }
 
-/// `weather_of_search` of words already read.
+/// The kind a query names, if any. (weatherKinds.ts weatherOfSearch, of words already read)
 pub fn weather_of(q: &crate::query::Query) -> Option<crate::weather_kinds::WeatherKind> { startable_kind(q.get(WEATHER_KEY)?) }
 
 #[cfg(test)]
@@ -245,7 +245,7 @@ mod tests {
             ("weather=+fog", None),
         ];
         for (s, want) in rows {
-            assert_eq!(weather_of_search(&WeatherOfSearchSearch::Text(String::from(s))), want);
+            assert_eq!(weather_of(&crate::query::Query::parse(s)), want);
         }
     }
 
