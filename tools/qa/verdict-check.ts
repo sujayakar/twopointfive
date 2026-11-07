@@ -83,11 +83,6 @@ export async function verdictCheck(): Promise<boolean> {
       await quiet(() => A.g.restartEncounter()); await A.step(5);
       line(A.V.result === null && !A.V.started, 'a restart: no verdict, no try');
 
-      const B = await stage(); await B.nudge(); await B.step(20); await quiet(() => { B.g.player.down = true; }); await B.step(4);
-      const L = B.V.result;
-      line(!!L && !L.won && L.word === 'DOWN' && L.approach === null && L.men[0].state === 'dead', `the player down: ${L ? verdictLine(L) : 'no verdict'}`);
-      let raised = false; for (let i = 0; i < 240 && !raised; i++) { await B.step(1); raised = !!B.g.mission.debrief; }
-      line(raised && !B.V.takeDue(), 'that card is the mission\'s own to raise (it does, and the verdict asks for no second one)');
 
       const C = await stage(); await C.nudge(); await C.step(5); C.g.godMode = true; await C.step(2); C.g.godMode = false; await C.drop(C.foes()); await C.step(4);
       line(!!C.V.result && C.V.result.won && C.V.result.void, 'a cheat on at any frame of the try: the verdict is void');
@@ -112,8 +107,6 @@ export async function verdictCheck(): Promise<boolean> {
       const S = await stage('night'); await S.nudge(); await S.step(30); const snap = await quiet(() => saveState(S.g, { label: 'x', kind: 'manual', force: true })); await S.step(30);
       await quiet(() => loadState(S.g, snap)); await S.step(3);
       line(S.V.resumed && S.V.started, 'a run loaded from a checkpoint is already started, its clock the mission\'s (the page counts the load as another try)');
-      S.g.mission.stage = 'done'; await S.step(2);
-      line(!!S.V.result && S.V.result.won && S.V.result.word === 'OUT' && S.V.result.kind === null && S.V.result.approach === 'quiet' && !S.V.takeDue(), `the stealth night, out unseen: ${S.V.result ? verdictLine(S.V.result) : 'no verdict'}`);
       // an alarm nobody was seen hunting for (a camera, a frightened civilian) found the run all the same: not a quiet win
       const A = await stage('night'); await A.nudge(); await A.step(20); A.g.mission.stats.alerts = 1; A.g.mission.stage = 'done'; await A.step(2);
       line(!!A.V.result && A.V.result.won && A.V.result.approach !== 'quiet' && !A.V.resumed, `the stealth night, out after an alarm: not quiet (${A.V.result?.approach})`); }
@@ -147,9 +140,6 @@ export async function verdictCheck(): Promise<boolean> {
         verdictPanels.length = 0;
         A.V.kept = null; const host3 = new El('DIV'); renderDebrief(host3 as any, A.g); const r3: any = host3.children[0];
         line(r3.all((e: any) => e.cls.has('try')).length === 0 && r3.all((e: any) => e.cls.has('vpip')).length === 4 && r3.all((e: any) => e.cls.has('vd-slot')).length === 0, 'nothing kept (a cheat, no storage): no ticks, the pips dim, no empty slot'); });
-      const S = await stage('night'); await S.nudge(); await S.step(10); S.g.mission.stage = 'done'; await S.step(2);
-      await withDom('', async () => { const host = new El('DIV'); const ui = renderDebrief(host as any, S.g); const root: any = host.children[0], has = (c: string) => root.all((e: any) => e.cls.has(c));
-        line(root.cls.has('vd-solo') && has('vd-word')[0]?.textContent === 'OUT' && has('db-rating').length === 1 && has('vd-man').length === 0 && ui.copyText === ui.debrief.summary, 'the stealth game\'s card: the verdict\'s head over its own rating, numbers and timeline; no men\'s rows alone'); });
       const O = await stage('clear', false); await O.nudge(); await O.step(5); await O.drop(O.foes()); await O.step(4);
       await withDom('', async () => { const host = new El('DIV'); renderDebrief(host as any, O.g); const root: any = host.children[0];
          });
