@@ -1,7 +1,7 @@
 // THE PAGE'S OFFSETS INTO WHAT RUST DRAWS: src/draw/sections.ts, made from the declarations in rust/game_draw (a `section!` a row, `sections!` the list). A
 // row lies in the module's memory and is read there: `f[at + Fog.edge]` over one view of that memory as floats, `u[…]` over one as words (src/draw/drawn.ts).
 // Every offset is a constant of the bundle. Nothing is copied and no object is made.
-//   bun run tools/draw/gen.ts [--check]      write the file · --check: exit 1 where it would change
+//   bun run tools/draw/gen.ts [--check]      write the files · --check: exit 1 where one would change
 import { readFileSync, readdirSync, writeFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -40,9 +40,19 @@ for (const r of new Set(list.map(s => s.row))) { let at = 0;
   for (const f of r.fields) { const kind = f.ty.replace(/^\[/, '').slice(0, 3); L.push(`  /** ${kind}${f.words > 1 ? ` × ${f.words}` : ''}${f.doc ? `: ${f.doc}` : ''} */`, `  ${camel(f.name)} = ${at},`); at += f.words; }
   L.push(`  /** words a row */`, `  row = ${at},`, '}'); }
 // (a word that crosses by its number: the Rust enum's arms, in their order, each by the word it has for itself)
-const WORDS: [string, string, string, string][] = [['STUFFS', 'scene_stuff', 'BoxStuff', 'what a box may say it is made of'], ['PKINDS', 'render_particles', 'PKind', 'what a particle is'], ['EMIT_SHAPES', 'render_particles', 'EmitShape', 'how particles are thrown'], ['SMOKE_KINDS', 'smoke_types', 'SmokeEmitterKind', 'what smoke comes from']];
+const WORDS: [string, string, string, string][] = [['STUFFS', 'scene_stuff', 'BoxStuff', 'what a box may say it is made of'], ['PKINDS', 'render_particles', 'PKind', 'what a particle is'], ['EMIT_SHAPES', 'render_particles', 'EmitShape', 'how particles are thrown'], ['SMOKE_KINDS', 'smoke_types', 'SmokeEmitterKind', 'what smoke comes from'], ['FLOORS', 'floor', 'FloorMat', 'what a floor is']];
 for (const [name, mod, en, doc] of WORDS) { const text = readFileSync(join(ROOT, `rust/game_types/src/${mod}/types.rs`), 'utf8'), arms = (text.match(new RegExp(`pub enum ${en} \\{\\n([\\s\\S]*?)\\n\\}`)) ?? die(`no enum ${en}`))[1].split('\n').map(l => l.trim().replace(/,$/, '')).filter(l => /^\w+$/.test(l));
   L.push('', `/** ${doc}, by its number in Rust */`, `export const ${name} = [${arms.map(a => `'${(text.match(new RegExp(`${en}::${a} => "([^"]+)"`)) ?? [0, a[0].toLowerCase() + a.slice(1)])[1]}'`).join(', ')}] as const;`); }
-const made = L.join('\n') + '\n';
-if (process.argv.includes('--check')) { const same = existsSync(OUT) && readFileSync(OUT, 'utf8') === made; console.log(same ? `draw: src/draw/sections.ts is of these declarations (stamp ${stamp})` : 'draw: src/draw/sections.ts would change'); process.exit(same ? 0 : 1); }
-writeFileSync(OUT, made); console.log(`draw: src/draw/sections.ts written, ${list.length} sections, stamp ${stamp}`);
+// ---- what goes the other way: the commands' writer, from their declaration
+const COMMANDS = join(ROOT, 'src/draw/commands.ts'), C: string[] = ['// Written by tools/draw/gen.ts from rust/game_run/src/command.rs. To change a command, change it there.', "import { Writer } from './writer';", '',
+  '/** what a player or a panel does that is not input, in its order, until a step takes it */', 'export class Commands extends Writer {'];
+{ const src = (readFileSync(join(ROOT, 'rust/game_run/src/command.rs'), 'utf8').match(/^commands! \{\n([\s\S]*?)^\}/m) ?? die('no commands! in command.rs'))[1]; let doc = '', n = 0;
+  for (const l of src.split('\n')) { const t = l.trim(); if (t.startsWith('///')) { doc = t.replace(/^\/\/\/ ?/, ''); continue; }
+    const m = t.match(/^(\d+) (\w+) \{([^}]*)\} = /); if (!m) continue; if (Number(m[1]) !== n++) die(`commands!: ${m[2]} says ${m[1]}`);
+    const F = m[3].split(',').map(x => x.trim()).filter(Boolean).map(x => { const [name, ty] = x.split(':').map(y => y.trim()); const k = ({ u32: 'u32', i32: 'i32', f64: 'f64', '&str': 'text' } as Record<string, string>)[ty] ?? die(`commands!: ${ty}`); return { name: camel(name), k }; });
+    C.push(`  /** ${doc} */`, `  ${m[2][0].toLowerCase()}${m[2].slice(1)}(${F.map(f => `${f.name}: ${f.k === 'text' ? 'string' : 'number'}`).join(', ')}): void { this.u32(${m[1]});${F.map(f => ` this.${f.k}(${f.name});`).join('')} }`); doc = ''; }
+  C.push('}', ''); }
+const files: [string, string][] = [[OUT, L.join('\n') + '\n'], [COMMANDS, C.join('\n')]];
+if (process.argv.includes('--check')) { const off = files.filter(([p, t]) => !existsSync(p) || readFileSync(p, 'utf8') !== t).map(([p]) => p.slice(ROOT.length + 1)); console.log(off.length ? `draw: ${off.join(', ')} would change` : `draw: the page's half is of these declarations (stamp ${stamp})`); process.exit(off.length ? 1 : 0); }
+for (const [p, t] of files) writeFileSync(p, t);
+console.log(`draw: ${list.length} sections, stamp ${stamp}; src/draw/sections.ts and commands.ts written`);
