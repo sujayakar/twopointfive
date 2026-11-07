@@ -28,6 +28,9 @@ declare module 'tps-bridge/puppet-lists.json' {
   const lists: { step: string[]; start: string[] };
   export default lists;
 }
+declare module 'tps-bridge/scan' {
+  export function makeScan(g: unknown, knobs: Record<string, unknown>, send: (b: Uint8Array) => void, count: (q: string) => void, settingsOnly?: boolean): { flush(): void; rebase(): void; stats(): { settledLeft: number } & Record<string, unknown> };
+}
 declare module 'tps-bridge/poke' {
   export function makePoke(g: any, knobs: Record<string, unknown>, send: (b: Uint8Array) => void): (obj: unknown, path: string | (string | number)[], value: unknown) => void;
 }
