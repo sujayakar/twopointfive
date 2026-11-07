@@ -644,6 +644,7 @@
 "workthings"
 ],
 "probes": {
+"standdie": "i",
 "aim-door": "iii",
 "aim-door-chase": "iii",
 "aim-door-sweep": "iii",
