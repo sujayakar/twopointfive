@@ -113,7 +113,7 @@ let selAfter = 0;   // the highlighted row of the nearby list as the last tick l
 //   lock | lock-key | lock-charge   the squad stacked on the nearest locked door, then sent through it: `open and clear` with no key (the boot),
 //            with the door's key on the player's ring first (`<k> call key_add <lock>`), or `breach with a charge` and the same order again to blow it
 // Each writes what it did, and what came of it, to case.txt.
-const CASE = arg('--case', ''); let caseN = 0, caseSaw = '', caseAt = -1000, caseMan: any = null, hand: any = null;
+const CASE = arg('--case', ''); let caseN = 0, caseSaw = '', caseAt = -1000, caseMan: any = null, hand: any = null, inCase = false;
 const caseMods: any = CASE.startsWith('keeper') ? { P: await import('../../src/game/pressure.ts') } : CASE === 'sticky' ? { S: await import('../../src/game/stickycam.ts') } : {};
 function caseStep(g: any, a: any[] = []) {
   if (!CASE) return;
@@ -153,20 +153,20 @@ function caseStep(g: any, a: any[] = []) {
     return; }
   if (CASE === 'taps') { const pl = g.player, c = pl.char; if (!I || !cam || pl.down) return;
     if (!hand) { if (caseN >= 2 || k < 360 || k - caseAt < 900 || !squadUp().length) return;
-      const P = c.pos; hand = { t0: k, A: [P[0] + 4, 0, P[2]], B: [P[0], 0, P[2] + 4], C: [P[0] - 3, 0, P[2] - 3], given: (knobRegistry() as any).CMDRING ? { ...((globalThis as any).__tpsTop?.['src/game/cmdring.ts']?.CMDRING_STATS ?? {}) } : {} };
+      const P = c.pos; hand = { t0: k, A: [P[0] + 4, 0, P[2]], B: [P[0], 0, P[2] + 4], C: [P[0] - 3, 0, P[2] - 3], };
       said(`taps: the command key by hand from (${P[0].toFixed(1)}, ${P[2].toFixed(1)}); CMDRING.twice ${(knobRegistry() as any).CMDRING?.twice}, goals ${(knobRegistry() as any).CMDRING?.goals}`); }
-    const dt = k - hand.t0, S = g.orders; still();
-    const line = () => squadUp().map((m: any) => `${m.callsign}:${S.of?.(m)?.def?.id ?? '-'}`).join(' ');
+    const dt = k - hand.t0, S = g.orders, top = (globalThis as any).__tpsTop ?? {}; still();
+    const line = () => squadUp().map((m: any) => `${m.callsign}:${S.of?.(m)?.order ?? '-'}`).join(' ');
     if (dt <= 14) { cursor(hand.A); if (dt === 2 || dt === 14) I.pressed.add('KeyB'); if (dt === 12) said(`taps: after the first tap: ${line()}`); }
     else if (dt === 40) said(`taps: after the second tap in the same place: ${line()}`);
     else if (dt >= 60 && dt < 75) { cursor(hand.B); I.keys.add('ShiftLeft'); if (dt === 64) I.pressed.add('KeyB'); if (dt === 64 || dt === 65) I.keys.add('KeyB'); else I.keys.delete('KeyB'); }
     else if (dt >= 90 && dt < 105) { cursor(hand.C); I.keys.add('ShiftLeft'); if (dt === 94) I.pressed.add('KeyB'); if (dt === 94 || dt === 95) I.keys.add('KeyB'); else I.keys.delete('KeyB'); }
     else if (dt === 105) I.keys.delete('ShiftLeft');
-    else if (dt >= 140) { said(`taps: after Shift with the key on two places: ${line()}; goals ${JSON.stringify((S.goals ?? S.plan?.goals ?? []).length ?? null)}`); hand = null; caseAt = k; caseN++; }
+    else if (dt >= 140) { said(`taps: after Shift with the key on two places: ${line()}; the ring's counts ${JSON.stringify(top['src/game/cmdring.ts']?.CMDRING_STATS ?? null)}, the goals' ${JSON.stringify(top['src/game/planmode.ts']?.PLAN_STATS ?? null)}`); hand = null; caseAt = k; caseN++; }
     return; }
   if (CASE === 'orders') { const pl = g.player, c = pl.char, S = g.orders; if (pl.down) return;
     if (!hand) { if (caseN >= 3 || k < 360 || k - caseAt < 700 || !squadUp().length) return; const P = c.pos; hand = { t0: k, A: [P[0] + 5, 0, P[2] + 1], B: [P[0] - 4, 0, P[2] + 3] }; }
-    const dt = k - hand.t0, line = () => squadUp().map((m: any) => `${m.callsign}:${S.of?.(m)?.def?.id ?? '-'}`).join(' ');
+    const dt = k - hand.t0, line = () => squadUp().map((m: any) => `${m.callsign}:${S.of?.(m)?.order ?? '-'}`).join(' ');
     const give = (id: string, p?: number[]) => { const r = p ? S.give(id, S.targetAt(p), 'all') : S.give(id, undefined, 'all'); said(`orders: '${id}' -> ${JSON.stringify(r ?? null)}; ${line()}`); };
     if (dt === 0) give('move', hand.A); else if (dt === 50) give('fallIn'); else if (dt === 100) give('move', hand.B); else if (dt === 130) give('hold'); else if (dt === 220) give('cover', hand.A);
     else if (dt === 320) { give('fallIn'); hand = null; caseAt = k; caseN++; }
@@ -174,12 +174,12 @@ function caseStep(g: any, a: any[] = []) {
   if (CASE.startsWith('lock')) { const pl = g.player, c = pl.char, S = g.orders; if (pl.down) return;
     if (!hand) { if (caseN >= 2 || k < 300 || k - caseAt < 900 || !squadUp().length) return;
       const tried: Set<any> = (caseStep as any).tried ??= new Set();
-      const d = (g.doors.list as any[]).filter(d => d.locked && d.latched && !tried.has(d)).map(d => ({ d, m: flatTo(d.def.hinge, c.pos) })).filter(o => o.m < 30).sort((p, q) => p.m - q.m)[0]?.d;
-      if (!d) { if (caseSaw !== 'none') { caseSaw = 'none'; said(`lock: no locked door within 30 m (${(g.doors.list as any[]).filter(d => d.locked).length} locked on the level)`); } return; }
-      tried.add(d); const at = [d.def.hinge[0], 0, d.def.hinge[2]], t = { kind: 'door', door: d, side: g.doors.side(d, c.pos), at };
+      const d = (g.doors.list as any[]).filter(d => d.locked && d.latched && !tried.has(d)).map(d => ({ d, m: flatTo([d.def.hinge[0], 0, d.def.hinge[1]], c.pos) })).filter(o => o.m < 80).sort((p, q) => p.m - q.m)[0]?.d;
+      if (!d) { if (caseSaw !== 'none') { caseSaw = 'none'; said(`lock: no locked and latched door within 80 m (${(g.doors.list as any[]).filter(d => d.locked).length} locked on the level)`); } return; }
+      tried.add(d); const at = [d.def.hinge[0], 0, d.def.hinge[1]], t = { kind: 'door', door: d, side: g.doors.side(d, c.pos), at };
       hand = { t0: k, d, t };
       if (CASE === 'lock-key') { pl.keys.add(d.lockId); between(`${k} key_add ${d.lockId}`, 'call'); }
-      said(`${CASE}: door ${g.doors.list.indexOf(d)} '${d.def.name ?? d.def.id ?? ''}' (lock '${d.lockId}', key side ${d.keySide}, our side ${t.side}), ${flatTo(at, c.pos).toFixed(1)} m off; the ring ${JSON.stringify([...S.ring()])}; stack -> ${JSON.stringify(S.give('stack', t, 'all') ?? null)}`); }
+      said(`${CASE}: door ${g.doors.list.indexOf(d)} '${d.def.id ?? ''}' (lock '${d.lockId}', key side ${d.keySide}, our side ${t.side}), ${flatTo(at, c.pos).toFixed(1)} m off; the ring ${JSON.stringify([...S.ring()])}; stack -> ${JSON.stringify(S.give('stack', t, 'all') ?? null)}`); }
     const dt = k - hand.t0, d = hand.d, st = () => `locked ${d.locked} latched ${d.latched} broken ${d.lockBroken} angle ${(d.angle ?? 0).toFixed(2)}; ops ${(g.doorTools?.ops ?? []).map((o: any) => `${o.kind}:${o.phase}${o.kick ? ':kick' : ''}`).join(',') || '-'}`;
     if (dt === 300) said(`${CASE}: '${CASE === 'lock-charge' ? 'charge' : 'openClear'}' -> ${JSON.stringify(S.give(CASE === 'lock-charge' ? 'charge' : 'openClear', hand.t, 'all') ?? null)}; ${st()}`);
     else if (dt === 700 && CASE === 'lock-charge') said(`${CASE}: 'charge' again (blow) -> ${JSON.stringify(S.give('charge', hand.t, 'all') ?? null)}; ${st()}`);
@@ -256,7 +256,7 @@ const wallTail = (g: any, W: any) => ` wall ${W.index} ${bookOf(g).ids.get('BoxI
 function tapGives(g: any) { const O = g.orders, was = O.give; O.give = function (this: any, id: string, t: any, who: any, opts: any) {
   if (!g.ticking) { const T = t ?? this.targetAt(g.aimPoint), w = who === undefined ? '-' : typeof who === 'object' ? `g${g.guards.indexOf(who)}` : String(who);
     const tail = T.kind === 'door' ? ` door ${g.doors.list.indexOf(T.door)} ${T.side} book${bookOf(g).ids.get('DoorId')?.get(T.door)}` : T.kind === 'none' && T.man ? ` man ${g.guards.indexOf(T.man)}` : T.kind === 'foe' ? ` man ${g.guards.indexOf(T.foe)}` : T.thing ? ' UNSUPPORTED-thing' : T.wall ? wallTail(g, T.wall) : '';
-    const l = `${k + 1} ${id} ${w} ${T.kind} ${T.at.join(' ')}${tail}${opts ? ' UNSUPPORTED-opts' : ''}`; give1(l); }
+    const l = `${k + (inCase ? 0 : 1)} ${id} ${w} ${T.kind} ${T.at.join(' ')}${tail}${opts ? ' UNSUPPORTED-opts' : ''}`; give1(l); }   // (the driver gives between two ticks, before the frame that counts the next one; a staged case gives inside that frame, before its tick)
   return was.call(this, id, t, who, opts); }; }
 const was = Game.prototype.update;
 Game.prototype.update = function (this: any, ...a: any[]) {
@@ -324,7 +324,7 @@ Game.prototype.update = function (this: any, ...a: any[]) {
   //  whatever his script wants: a floor nobody walks, for a staged case)
   if (process.env.BLITZ_HOLD_SAM && k >= +process.env.BLITZ_HOLD_SAM) { const I = a.find((x: any) => x?.pressed instanceof Set && x?.keys instanceof Set); if (I) { I.keys.clear(); I.pressed.clear(); } }
   if (k === 1) dressStand();
-  caseStep(g, a);
+  inCase = true; try { caseStep(g, a); } finally { inCase = false; }
   if (k === 1 && (!g.dice || /^\d+$/.test(arg('--die', '')))) g.dice = newDice(DIE);   // (`--die N` seeds the die of a game stood WITH one too: a tutorial's)
   let err: unknown = null;
   g.stepSeats = function (this: any, dt: number, cmds: unknown) {
