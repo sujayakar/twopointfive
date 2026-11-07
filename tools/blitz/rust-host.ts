@@ -319,7 +319,7 @@ export class RustHost {
   private t0Ref: unknown = undefined; private putRef = 0; private clockRef = ''; private savesRef = 0; private dueWhy = '';
   /** IS A NEW START OWED as a tick opens, and why (null: the Rust game goes on; 'back': it stands again from its own kept bytes).
    *  A START IS WHAT THE STAGE SAYS BEGAN: the mission's clock began again (`mission.t0`), a checkpoint's file was loaded on the puppet, a snapshot was put
-   *  back on it. A mission RECORD swapped for a copy of itself (the old tour, src/game/demo.ts: `g.mission = { ...saved }` for a beat, the saved one back
+   *  back on it. A mission RECORD swapped for a copy of itself (the old tour: `g.mission = { ...saved }` for a beat, the saved one back
    *  as it ends) is the same run: no start. */
   private startWhy(): string | null { const g = this.g, m = g.mission;
     if (this.starts === 0) return 'the first step';
