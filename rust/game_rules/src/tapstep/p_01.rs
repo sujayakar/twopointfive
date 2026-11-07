@@ -28,9 +28,9 @@ pub fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::tapstep::St 
 }
 
 /// Is he stepping this frame: the footfalls are the plants', not the cycle's. (tapstep.ts tapHeld)
-pub fn tap_held(g: &crate::game::Game) -> bool {
+pub fn tap_held(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     let on = g.k.tapstep.on;
-    match g.m.tapstep.state.get(g.player) {
+    match g.m.tapstep.state.get(seat.player) {
         Some(s) => on && s.at >= 0.0 && g.time - s.at < 0.1,
         None => false,
     }
@@ -113,7 +113,7 @@ pub fn plant(g: &mut crate::game::Game, pl: PlayerId) {
     let under = g.time - mask_t <= t.mask_secs;
     let base = t.quiet + (t.scuff - t.quiet) * rush;
     let pos = g.ch[c].pos;
-    let heard = base * crate::kitload::load_heard(g, crate::kitload::LoadHeardWho::Player);
+    let heard = base * crate::kitload::load_heard(g, &crate::seats::here(g), crate::kitload::LoadHeardWho::Player);
     let level = crate::floor::tread(g, pos, heard, true) * (if under { t.mask } else { 1.0 });
     let pos = g.ch[c].pos;
     let (time, serial) = (g.time, g.serial());

@@ -422,9 +422,9 @@ pub fn fit_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
     g.tab.orders_assignment[a].fit.as_mut().unwrap().next_t = next_t;
     // what the weights hang on: the rooms known, the leaves, who else holds a deal: nothing of it changed, nothing to weigh
     let mut mates: Vec<(V3, Option<String>)> = Vec::new();
-    for man in crate::orders::squad_orders_men(g, None, None) {
+    for man in crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None) {
         if man == gd { continue; }
-        let Some(b) = crate::orders::squad_orders_of(g, man) else { continue; };
+        let Some(b) = crate::orders::squad_orders_of(g, &crate::seats::here(g), man) else { continue; };
         let row = &g.tab.orders_assignment[b];
         if let (Some(fit), Some(pos)) = (row.fit.as_ref(), row.post) { mates.push((pos, fit.key.clone())); }
     }

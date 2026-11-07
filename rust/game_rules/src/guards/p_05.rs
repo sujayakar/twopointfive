@@ -277,7 +277,7 @@ pub fn team_lit(g: &mut crate::game::Game, gd: GuardId) -> bool {
         return false;
     }
     let t = g.time;
-    let a = crate::orders::squad_orders_of(g, gd);
+    let a = crate::orders::squad_orders_of(g, &crate::seats::here(g), gd);
     let o = crate::roomfight::room_fight_op_of(g, gd);
     let o_row = o.map(|id| &g.tab.roomfight_op[id]);
     let a_row = a.map(|id| &g.tab.orders_assignment[id]);
@@ -321,15 +321,15 @@ pub fn team_pace(g: &mut crate::game::Game, gd: GuardId, speed: f64) -> f64 {
 }
 
 /// the speed his legs get for a leg asked at `speed`: one call a leg (guards.ts teamLegs)
-pub fn team_legs(g: &crate::game::Game, gd: GuardId, speed: f64) -> f64 {
-    match crate::teampace::team_run_legs(g, gd, speed) {
+pub fn team_legs(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, speed: f64) -> f64 {
+    match crate::teampace::team_run_legs(g, seat, gd, speed) {
         Some(legs) => legs,
-        None => crate::kitload::load_pace(g, gd, speed),
+        None => crate::kitload::load_pace(g, seat, gd, speed),
     }
 }
 
 /// where his muzzle is this frame, wanting yaw `to`: the team's comes round at PACE.turn, round his front (guards.ts teamTurn)
-pub fn team_turn(g: &crate::game::Game, gd: GuardId, to: f64, dt: f64) -> f64 {
+pub fn team_turn(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, to: f64, dt: f64) -> f64 {
     if !(g.k.pace.turn > 0.0) || !team_paced(g, gd) {
         return to;
     }
@@ -338,7 +338,7 @@ pub fn team_turn(g: &crate::game::Game, gd: GuardId, to: f64, dt: f64) -> f64 {
     let rel = v3::wrap_angle(aim_yaw - body_yaw);
     let want = v3::clamp(v3::wrap_angle(to - body_yaw), -1.5, 1.5);
     let turn = g.k.pace.turn;
-    let step = turn * crate::kitload::load_pace_on(g, crate::kitload::LoadPaceOnWho::Guard(gd)) * dt;
+    let step = turn * crate::kitload::load_pace_on(g, seat, crate::kitload::LoadPaceOnWho::Guard(gd)) * dt;
     body_yaw + (if m::abs(want - rel) <= step { want } else { rel + m::sign(want - rel) * step })
 }
 
@@ -347,7 +347,7 @@ pub fn team_lean(g: &mut crate::game::Game, gd: GuardId, was: f64, dt: f64) {
     if g.gd[gd].speed > was && team_paced(g, gd) {
         let now = g.gd[gd].speed;
         let accel = crate::teampace::team_accel(g, gd);
-        let load = crate::kitload::load_pace_on(g, crate::kitload::LoadPaceOnWho::Guard(gd));
+        let load = crate::kitload::load_pace_on(g, &crate::seats::here(g), crate::kitload::LoadPaceOnWho::Guard(gd));
         g.gd[gd].speed = m::min(now, was + accel * load * dt);
     }
 }
@@ -356,7 +356,7 @@ pub fn team_lean(g: &mut crate::game::Game, gd: GuardId, was: f64, dt: f64) {
 pub fn follow_path(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64) -> bool {
     let c = g.gd[gd].ch;
     let paced = team_pace(g, gd, speed);
-    let mut speed = team_legs(g, gd, paced);
+    let mut speed = team_legs(g, &crate::seats::here(g), gd, paced);
     if unstick_first(g, gd, dt) {
         return false;
     }
@@ -487,7 +487,7 @@ pub fn flood_from(g: &mut crate::game::Game, from: V3, max_m: f64, keyed: Option
     let (w, h, cs) = (g.col.nav.w, g.col.nav.h, g.col.nav.cell);
     let n = (w * h) as usize;
     let tune_sprint = g.tune.player_sprint;
-    let sprint = m::max(1.0, tune_sprint * crate::kitload::load_sprint_on(g));
+    let sprint = m::max(1.0, tune_sprint * crate::kitload::load_sprint_on(g, &crate::seats::here(g)));
     let mut secs: Vec<f32> = vec![f32::INFINITY; n];
     let mut metres: Vec<f32> = vec![f32::INFINITY; n];
     let mut closed: Vec<bool> = vec![false; n];

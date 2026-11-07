@@ -26,7 +26,7 @@ pub fn layable(g: &crate::game::Game, d: OrdersOrderDefId) -> bool {
 
 /// A man who is down is off the plan; an order nobody is left on is gone. (planlay.ts layPrune)
 pub fn lay_prune(g: &mut crate::game::Game) {
-    let s = crate::orders::squad_orders_squad(g);
+    let s = crate::orders::squad_orders_squad(g, &crate::seats::here(g));
     if g.orders.lay.laid.is_empty() || s.is_empty() {
         return;
     }
@@ -49,20 +49,20 @@ pub fn lay_prune(g: &mut crate::game::Game) {
 }
 
 /// The start a plan is kept for: the scenario up, the cast, the mark Sam stands on. (planlay.ts startKey)
-pub fn start_key(g: &crate::game::Game) -> String {
-    let c = g.pl[g.player].ch;
+pub fn start_key(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> String {
+    let c = g.pl[seat.player].ch;
     let p = g.ch[c].pos;
     let scenario = match crate::scenario_run::active_scenario(g) {
         Some(a) => a.as_str(),
         None => "none",
     };
-    let cast: Vec<String> = crate::orders::squad_orders_squad(g).iter().map(|m| g.gd[*m].callsign.clone()).collect();
+    let cast: Vec<String> = crate::orders::squad_orders_squad(g, seat).iter().map(|m| g.gd[*m].callsign.clone()).collect();
     format!("{}|{}|{},{}", scenario, cast.join(","), js::num_str(m::round(p[0] * 2.0)), js::num_str(m::round(p[2] * 2.0)))
 }
 
 /// The living men of the squad a laid order names. (planlay.ts layMen)
-pub fn lay_men(g: &crate::game::Game, o: &crate::planlay::LaidOrder) -> Vec<GuardId> {
-    let s = crate::orders::squad_orders_squad(g);
+pub fn lay_men(g: &crate::game::Game, seat: &crate::seats::SeatRef, o: &crate::planlay::LaidOrder) -> Vec<GuardId> {
+    let s = crate::orders::squad_orders_squad(g, seat);
     let mut men = Vec::new();
     for c in &o.who {
         if let Some(m) = s.iter().copied().find(|m| g.gd[*m].callsign == *c && g.gd[*m].state != crate::game::GuardState::Dead) {
@@ -90,7 +90,7 @@ pub fn target_of(g: &mut crate::game::Game, o: &crate::planlay::LaidWhere) -> Op
             None | Some("") => return Some(OrderTarget::None(OrderTargetNone { at, man: None })),
             Some(man) => man,
         };
-        let s = crate::orders::squad_orders_squad(g);
+        let s = crate::orders::squad_orders_squad(g, &crate::seats::here(g));
         let m = s.iter().copied().find(|x| g.gd[*x].callsign == man && g.gd[*x].state != crate::game::GuardState::Dead)?;
         let p = g.ch[g.gd[m].ch].pos;
         return Some(OrderTarget::None(OrderTargetNone { at: [p[0], 0.0, p[2]], man: Some(m) }));
@@ -138,7 +138,7 @@ pub fn lay_order(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::orde
     }
     let mut asked: Vec<GuardId> = Vec::new();
     for m in men.iter().copied() {
-        if g.gd[m].state != crate::game::GuardState::Dead && crate::orders::squad_orders_mine(g, m) {
+        if g.gd[m].state != crate::game::GuardState::Dead && crate::orders::squad_orders_mine(g, &crate::seats::here(g), m) {
             asked.push(m);
         }
     }
@@ -231,7 +231,7 @@ pub fn lay_order(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::orde
     }
     g.orders.lay.laid.push(o);
     g.stats.planlay.laid += 1;
-    let who = crate::orders::squad_orders_who_words(g, Some(&asked));
+    let who = crate::orders::squad_orders_who_words(g, &crate::seats::here(g), Some(&asked));
     let label = crate::orders::squad_orders_label_of(g, d, &tm);
     let text = format!("you: {} — wait · {}", who, without_count(&label));
     crate::game::game_msg(g, &text);
@@ -266,11 +266,11 @@ pub fn lay_send(g: &mut crate::game::Game) -> f64 {
     // a door tool the four can wait on is given ON THE WORD, unless every one finds its men already on its door: then this press IS the word
     let mut items: Vec<Item> = Vec::with_capacity(plan.len());
     for o in plan {
-        let men = lay_men(g, &o);
+        let men = lay_men(g, &crate::seats::here(g), &o);
         let t = target_of(g, &where_of(&o));
         let d = g.orders.defs.iter().copied().find(|x| g.tab.orders_order_def[*x].id == o.id);
         let on_word = d.map_or(false, |d| g.tab.orders_order_def[d].on_word.unwrap_or(false));
-        let tool = on_word && crate::orders::squad_orders_big(g) && matches!(t, Some(crate::orders::OrderTarget::Door(_)));
+        let tool = on_word && crate::orders::squad_orders_big(g, &crate::seats::here(g)) && matches!(t, Some(crate::orders::OrderTarget::Door(_)));
         items.push(Item { o, men, t, d, tool });
     }
     let mut every_there = true;
@@ -334,10 +334,10 @@ pub fn lay_fresh(g: &mut crate::game::Game) {
     g.orders.lay.restored_t = -1.0;
     g.orders.lay.started = false;
     g.orders.lay.laid = Vec::new();
-    if crate::orders::squad_orders_squad(g).is_empty() {
+    if crate::orders::squad_orders_squad(g, &crate::seats::here(g)).is_empty() {
         return;
     }
-    g.orders.lay.try_key = start_key(g);
+    g.orders.lay.try_key = start_key(g, &crate::seats::here(g));
     let Some(kept) = g.orders.lay.kept.as_ref() else { return };
     if g.orders.lay.kept_for != g.orders.lay.try_key {
         g.orders.lay.kept = None;

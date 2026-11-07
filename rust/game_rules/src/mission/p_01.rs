@@ -124,7 +124,7 @@ pub fn update_mission(g: &mut crate::game::Game, dt: f64, input: InputId) {
     if crate::roomclear::room_clear_scenario_active(g) || g.rescue.active {
         // the room clear or the hostage rescue has the floor: no stage of the stealth mission moves under it
     } else if g.mission.stage == MissionStage::Infiltrate {
-        let p = player_pos(g);
+        let p = player_pos(g, &crate::seats::here(g));
         let (x0, x1, z0, z1) = {
             let r = &g.level.mission.server_room;
             (r.x0, r.x1, r.z0, r.z1)
@@ -144,7 +144,7 @@ pub fn update_mission(g: &mut crate::game::Game, dt: f64, input: InputId) {
         }
     } else if g.mission.stage == MissionStage::Drive {
         let rf = g.level.mission.rack.front;
-        let p = player_pos(g);
+        let p = player_pos(g, &crate::seats::here(g));
         let in_reach = rack_dist(g, p) < crate::consts::DRIVE_REACH;
         let pl = g.player;
         if g.mission.drive_t < 0.0 {
@@ -182,7 +182,7 @@ pub fn update_mission(g: &mut crate::game::Game, dt: f64, input: InputId) {
             }
         }
     } else if g.mission.stage == MissionStage::Exfil {
-        let p = player_pos(g);
+        let p = player_pos(g, &crate::seats::here(g));
         if out_now(g, p) {
             let x = crate::quiet::exit_taken(g, p);
             let line = match &x {
@@ -192,7 +192,7 @@ pub fn update_mission(g: &mut crate::game::Game, dt: f64, input: InputId) {
             crate::chronicle::chron_objective(g, &line, None);
             g.mission.stage = MissionStage::Done;
             g.mission.debrief = true;
-            let d = crate::chronicle::debrief_of(g);
+            let d = crate::chronicle::debrief_of(g, &crate::seats::here(g));
             let mut line = format!("exfiltrated — {}", crate::game::fmt_clock(g.mission.stats.elapsed));
             if !d.grade.is_empty() {
                 line.push_str(" · ");
@@ -352,7 +352,7 @@ pub fn objective_pos(g: &mut crate::game::Game) -> Option<V3> {
     }
     let s = g.mission.stage;
     if s == MissionStage::Exfil {
-        let p = player_pos(g);
+        let p = player_pos(g, &crate::seats::here(g));
         if let Some(x) = crate::quiet::nearest_exit(g, p) {
             return Some(match crate::doors::doors_by_name(g, &x.door) {
                 Some(d) => g.dr[d].frame_centre,
@@ -417,7 +417,7 @@ pub fn objective_text(g: &mut crate::game::Game) -> String {
             if let Some(t) = g.m.mission.done_line.get(key) {
                 return t.clone();
             }
-            let d = crate::chronicle::debrief_of(g);
+            let d = crate::chronicle::debrief_of(g, &crate::seats::here(g));
             let mut t = format!("mission complete — {}", crate::game::fmt_clock(g.mission.stats.elapsed));
             if !d.grade.is_empty() {
                 t.push_str(" · ");
@@ -441,8 +441,8 @@ fn door_centre(g: &Game, name: &str) -> Option<V3> {
 }
 
 /// `g.player.char.pos`, read where the TypeScript's alias `p` is read.
-fn player_pos(g: &Game) -> V3 {
-    g.ch[g.pl[g.player].ch].pos
+fn player_pos(g: &Game, seat: &crate::seats::SeatRef) -> V3 {
+    g.ch[g.pl[seat.player].ch].pos
 }
 
 #[cfg(test)]

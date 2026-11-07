@@ -106,8 +106,8 @@ fn big_off_of(b: &crate::character::AnimBigTool) -> crate::character::BigOffB {
 }
 
 /// What the game's own rules put in Sam's right hand this frame.   (kitanim.ts kitInHand)
-pub fn kit_in_hand(g: &crate::game::Game) -> Option<crate::character::KitItem> {
-    let p = g.player;
+pub fn kit_in_hand(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<crate::character::KitItem> {
+    let p = seat.player;
     let c = g.pl[p].ch;
     if g.pl[p].down {
         return None;
@@ -121,7 +121,7 @@ pub fn kit_in_hand(g: &crate::game::Game) -> Option<crate::character::KitItem> {
     if hands_off_c(g, c) {
         return None;
     }
-    if crate::bigkit::sam_big_carry(g) {
+    if crate::bigkit::sam_big_carry(g, seat) {
         return None;
     }
     if crate::game::player_pistol_up(g, p) {
@@ -132,7 +132,7 @@ pub fn kit_in_hand(g: &crate::game::Game) -> Option<crate::character::KitItem> {
     }
     let k = crate::game::player_canister_sel(g, p);
     match k {
-        Some(k) if !g.pl[p].holstered && g.pl[p].dragging.is_none() && crate::game::game_throw_count(g, k) > 0.0 => Some(crate::character::KitItem::Can),
+        Some(k) if !g.pl[p].holstered && g.pl[p].dragging.is_none() && crate::game::game_throw_count(g, seat, k) > 0.0 => Some(crate::character::KitItem::Can),
         _ => None,
     }
 }
@@ -221,10 +221,10 @@ pub fn kit_tick(g: &mut crate::game::Game, late: Option<bool>) {
     if !crate::character::anim_kit_busy(g, c) && g.ch[c].anim.big_tool.is_none() && g.pl[p].equip_t > g.k.kitanim.plain_lock {
         g.pl[p].equip_t = g.k.kitanim.plain_lock;
     }
-    let cur = kit_in_hand(g);
+    let cur = kit_in_hand(g, &crate::seats::here(g));
     let sel = crate::game::player_canister_sel(g, p);
     // something else has his arms, or the item is not his to carry about: no errand
-    let carry = crate::bigkit::sam_big_carry(g);
+    let carry = crate::bigkit::sam_big_carry(g, &crate::seats::here(g));
     let hard = g.pl[p].down
         || g.pl[p].holding.is_some()
         || g.pl[p].takedown.is_some()
@@ -233,7 +233,7 @@ pub fn kit_tick(g: &mut crate::game::Game, late: Option<bool>) {
         || g.pl[p].picking.is_some()
         || g.pl[p].wanding.is_some()
         || g.pl[p].coding.is_some()
-        || (crate::handwork::sam_work(g).is_some() && !crate::workstow::sam_stowing(g))
+        || (crate::handwork::sam_work(g).is_some() && !crate::workstow::sam_stowing(g, &crate::seats::here(g)))
         || crate::character::anim_in_throw(g, c);
     let quiet = hard || (hands_off_c(g, c) && !carry);
     let was = g.pl[p].kit_was;
@@ -437,8 +437,8 @@ pub fn kit_show(g: &mut crate::game::Game, v: &mut crate::kitanim::KitShowV) -> 
 }
 
 /// No errand has the hands: the gun the light rides is up.   (kitanim.ts kitGunUp)
-pub fn kit_gun_up(g: &crate::game::Game) -> bool {
-    let c = g.pl[g.player].ch;
+pub fn kit_gun_up(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
+    let c = g.pl[seat.player].ch;
     g.ch[c].anim.kit_hold.is_none()
 }
 

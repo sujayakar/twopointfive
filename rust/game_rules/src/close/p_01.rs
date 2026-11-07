@@ -230,7 +230,7 @@ pub fn close_rows(g: &mut crate::game::Game, gd: GuardId, p: &[f64], busy: bool,
     if o.can && !busy {
         let is_civ = g.gd[gd].civ.is_some();
         let empty = g.pl[pl].holstered;
-        let gun = crate::player::grab_variant(g) == crate::character::HoldVariant::Gun;
+        let gun = crate::player::grab_variant(g, &crate::seats::here(g)) == crate::character::HoldVariant::Gun;
         let bare = close_bare(g);
         let two = close_lethal(g) || bare;
         let rmb = !(crate::rails::rails_hushes(g, "alt") && crate::rails::rails_hushes(g, "menu"));
@@ -448,8 +448,8 @@ pub fn close_tick(g: &mut crate::game::Game) {
     if r.is_some() { g.stats.close.ready_frames += 1; }
     let m_ = if g.pl[pl].takedown.is_some() { state_of(g).mode } else { mode_now(g, pl) };
     state_of(g).mode = m_;
-    g.ch[c].anim.creep = m_.is_some() || crate::tapstep::tap_held(g);
-    if !crate::tapstep::tap_held(g) { g.ch[c].anim.tap_u = -1.0; }
+    g.ch[c].anim.creep = m_.is_some() || crate::tapstep::tap_held(g, &crate::seats::here(g));
+    if !crate::tapstep::tap_held(g, &crate::seats::here(g)) { g.ch[c].anim.tap_u = -1.0; }
     if let Some(mm) = m_ {
         let mc = g.gd[mm].ch;
         let ch = g.ch[mc].bones.get(Bone::Chest).copied();

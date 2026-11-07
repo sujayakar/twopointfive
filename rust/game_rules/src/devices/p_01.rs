@@ -167,12 +167,12 @@ pub fn sensing(g: &crate::game::Game) -> bool {
     g.ai_enabled && !g.quiet_utility && !g.touring && g.tune.devices && !g.night_breach.active && !g.rescue.active
 }
 /// Lit-seconds per second a camera's integrator fills at.   (devices.ts lensGain)
-pub fn lens_gain(g: &crate::game::Game, dist: f64, range: f64, smoke_trans: f64) -> f64 {
-    let pl = g.player;
+pub fn lens_gain(g: &crate::game::Game, seat: &crate::seats::SeatRef, dist: f64, range: f64, smoke_trans: f64) -> f64 {
+    let pl = seat.player;
     let light = g.pl[pl].visibility;
     let dist_f = v3::clamp(1.0 - (dist - 3.0) / m::max(1.0, range - 3.0), 0.2, 1.0);
     let crouch = if g.pl[pl].crouch { 0.75 } else { 1.0 };
-    m::pow(light, 1.5) * dist_f * crouch * v3::clamp((smoke_trans - 0.3) / 0.5, 0.0, 1.0) * crate::kitload::load_seen(g, crate::kitload::LoadSeenWho::Player)
+    m::pow(light, 1.5) * dist_f * crouch * v3::clamp((smoke_trans - 0.3) / 0.5, 0.0, 1.0) * crate::kitload::load_seen(g, seat, crate::kitload::LoadSeenWho::Player)
 }
 /// The lens's look direction at yaw / pitch.   (devices.ts lensDir)
 pub fn lens_dir(yaw: f64, pitch: f64) -> V3 {
@@ -212,7 +212,7 @@ pub fn update_camera(g: &mut crate::game::Game, c_2: CameraRtId, dt: f64, live: 
     let air = smoke * crate::weather::air_trans(g, d.pos, chest);
     let vis = crate::guards::eye_contact(g, e, pc, true, false, air, None);
     if vis.in_cone { let chest = bone_or(g, pc, crate::character::Bone::Chest, [0.0, 1.1, 0.0]); crate::sensors::sensors_ask_segment(g, &key, d.pos, chest); }
-    let gain = if vis.visible { lens_gain(g, vis.dist, range, air) } else { 0.0 };
+    let gain = if vis.visible { lens_gain(g, &crate::seats::here(g), vis.dist, range, air) } else { 0.0 };
     let (now, at, sus, alarm) = (g.time, g.ch[pc].pos, g.tune.camera_suspicion_secs, g.tune.camera_alarm_secs);
     let r = crate::sim_lightshome::light_home_camera_see(g, slot, now, dt, vis.visible, gain, at, sus, alarm);
     if has(r, bit.suspect) { camera_suspect(g, c); }

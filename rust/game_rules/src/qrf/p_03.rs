@@ -11,7 +11,7 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 fn man_pos(g: &Game, m: GuardId) -> V3 { g.ch[g.gd[m].ch].pos }
 fn man_yaw(g: &Game, m: GuardId) -> f64 { g.ch[g.gd[m].ch].body_yaw }
 fn man_arrived(g: &Game, m: GuardId) -> bool { g.gd[m].script.as_ref().map_or(false, |s| s.arrived == Some(true)) }
-fn player_pos(g: &Game) -> V3 { g.ch[g.pl[g.player].ch].pos }
+fn player_pos(g: &Game, seat: &crate::seats::SeatRef) -> V3 { g.ch[g.pl[seat.player].ch].pos }
 fn say(g: &mut Game, m: GuardId, text: &str) { crate::game::game_say(g, m, text, None, None, None) }
 /// `Q.target!.plan!`
 fn target_plan(g: &Game) -> crate::scene_level::RoomClearPlan { g.qrf.target.as_ref().unwrap().plan.clone().unwrap() }
@@ -414,7 +414,7 @@ pub fn phase_drill(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
     }
     for &man in el.iter() {
         if g.gd[man].held.is_some() {   // (in Sam's arm: off the entry: the orders would walk him out of it)
-            in_cast(g, |g| { if crate::orders::squad_orders_has(g, man) { crate::orders::squad_orders_clear(g, Some(&[man])); } });
+            in_cast(g, |g| { if crate::orders::squad_orders_has(g, &crate::seats::here(g), man) { crate::orders::squad_orders_clear(g, Some(&[man])); } });
         }
     }
     in_cast(g, |g| { crate::doortools::door_tools_tick(g); crate::orders::squad_orders_tick(g); });
@@ -468,7 +468,7 @@ pub fn phase_drill(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
 
 /// Contact: every man off his script and onto the AI, on the seer's fix; the entry let go of. (qrf.ts toFight)
 pub fn to_fight(g: &mut crate::game::Game, el: &[GuardId], seer: GuardId) {
-    let fix = match g.gd[seer].last_known { Some(k) => v3::copy(k), None => v3::copy(player_pos(g)) };
+    let fix = match g.gd[seer].last_known { Some(k) => v3::copy(k), None => v3::copy(player_pos(g, &crate::seats::here(g))) };
     for &man in el {
         if g.gd[man].script.is_some() { crate::squad::end_guard_script(g, man, Some(crate::squad::EndGuardScriptState::Alert)); }
         let is_seer = man == seer;
@@ -640,7 +640,7 @@ pub fn call_perimeter(g: &mut crate::game::Game, why: Option<&str>) -> bool {
     if crate::mission::mission_live(g) { g.mission.stats.qrf = 2.0; }
     // who mans it
     let mut outside: Vec<V3> = Vec::new();   // (a mark an enemy stands by stands nobody up: the rear men go out instead)
-    for &o in mk.outside.iter() { if clear_of_foes(g, o) { outside.push(o); } }
+    for &o in mk.outside.iter() { if clear_of_foes(g, &crate::seats::here(g), o) { outside.push(o); } }
     let room = room_for(g);
     let most = most_men(g);
     let up = alive(g).len() as f64;
@@ -745,7 +745,7 @@ pub fn tick_perimeter(g: &mut crate::game::Game, dt: f64) {
                 g.gd[gd].script.as_mut().unwrap().aim_at = Some([a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u, a[2] + (b[2] - a[2]) * u]);
             }
             let eyes = perceive_scripted(g, gd, dt);
-            let him = match crate::teams::foe_char(g, gd) { Some(c) => g.ch[c].pos, None => player_pos(g) };   // (the man he has made out: perceiveScripted names him)
+            let him = match crate::teams::foe_char(g, gd) { Some(c) => g.ch[c].pos, None => player_pos(g, &crate::seats::here(g)) };   // (the man he has made out: perceiveScripted names him)
             if eyes && arrived_at < 0.0 && flat(man_pos(g, gd), him) > WALKOUT_ENGAGE_M && g.gd[gd].sup.v < 0.3 {
                 // on his way out and Sam not on top of him: he calls it (the element's fix) and keeps going: the post is the order
                 crate::mind::cap(g, gd, 0.84, "qrf");

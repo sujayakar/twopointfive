@@ -22,7 +22,7 @@ fn op_gd(g: &Game, i: usize) -> GuardId { g.tab.roomfight_op[g.fight.ops[i]].gd 
 #[inline]
 fn pos_of(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
 #[inline]
-fn player_pos(g: &Game) -> V3 { g.ch[g.pl[g.player].ch].pos }
+fn player_pos(g: &Game, seat: &crate::seats::SeatRef) -> V3 { g.ch[g.pl[seat.player].ch].pos }
 #[inline]
 fn door_centre(g: &Game, door: DoorId) -> V3 { g.dr[door].frame_centre }
 #[inline]
@@ -221,7 +221,7 @@ pub fn team_stands(g: &mut crate::game::Game, r: RoomfightRoomId) -> bool {
         let o = op_gd(g, i);
         if g.gd[o].state != crate::game::GuardState::Dead && in_room(g, r, pos_of(g, o)) { return true; }
     }
-    let p = player_pos(g);
+    let p = player_pos(g, &crate::seats::here(g));
     in_room(g, r, p)
 }
 /// the last of his side alive: nobody left to go to. (pressure.ts lastAlone)
@@ -347,7 +347,7 @@ pub fn learn(g: &mut crate::game::Game) {
             let o = op_gd(g, i);
             if g.gd[o].state != crate::game::GuardState::Dead { let p = pos_of(g, o); if bang_by(g, room, c, p) { any = true; break; } }
         }
-        let pp = player_pos(g);
+        let pp = player_pos(g, &crate::seats::here(g));
         if !any && !bang_by(g, room, c, pp) { state_of(g).stats.stun_empty += 1.0; }
     }
 }

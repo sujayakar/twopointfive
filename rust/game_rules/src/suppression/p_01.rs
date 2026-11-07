@@ -22,8 +22,8 @@ fn temperament_row(callsign: &str) -> Option<crate::game::Temperament> {
 }
 
 /// How readily this body accrues suppression, by his temperament.   (suppression.ts keenOf)
-pub fn keen_of(g: &crate::game::Game, c_2: CharId) -> f64 {
-    if c_2 == g.pl[g.player].ch { return 1.0; }
+pub fn keen_of(g: &crate::game::Game, seat: &crate::seats::SeatRef, c_2: CharId) -> f64 {
+    if c_2 == g.pl[seat.player].ch { return 1.0; }
     let mut t: Option<crate::game::Temperament> = None;
     for &x in &g.guards {
         if g.gd[x].ch == c_2 {
@@ -103,7 +103,7 @@ fn note_one(g: &mut Game, r: &Round, c: CharId, who: crate::condition::Man, held
     };
     if sup.down_t > 0.0 || sup.latched || sup.cover.is_some() { add *= g.k.suppression.down_accrual; }
     if !foe { add *= g.k.suppression.friendly_k; }
-    add *= keen_of(g, c);
+    add *= keen_of(g, &crate::seats::here(g), c);
     let (cap, shooter_id, now) = (g.k.suppression.cap, g.ch[r.shooter].id, g.time);
     let sup = match who {
         crate::condition::Man::Player(p) => &mut g.pl[p].sup,
@@ -575,9 +575,9 @@ pub fn flinching(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// Extra cone on the player's own round for his own suppression.   (suppression.ts samSpread)
-pub fn sam_spread(g: &crate::game::Game) -> f64 {
+pub fn sam_spread(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> f64 {
     if g.tune.suppression && g.puppet.is_none() {
-        let p = g.player;
+        let p = seat.player;
         let v = g.pl[p].sup.v;
         g.k.suppression.sam_spread * crate::condition::condition_sup(g, crate::condition::Man::Player(p), v)
     } else {

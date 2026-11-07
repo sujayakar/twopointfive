@@ -258,7 +258,7 @@ pub fn quiet_mission_tick(g: &mut crate::game::Game, cam: Option<CameraId>) {
     }
     if !g.quiet.fall_in { return; }
     let m = match g.quiet.ops.first().copied() { Some(m) => m, None => return };
-    if g.gd[m].state == crate::game::GuardState::Dead || !crate::orders::squad_orders_active(g) { return; }
+    if g.gd[m].state == crate::game::GuardState::Dead || !crate::orders::squad_orders_active(g, &crate::seats::here(g)) { return; }
     g.quiet.fall_in = false;
     let at = g.ch[g.pl[g.player].ch].pos;
     let target = crate::orders::squad_orders_target_at(g, at);
