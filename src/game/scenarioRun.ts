@@ -69,7 +69,7 @@ export function startFromQuery(g: Game, search: string | URLSearchParams): { spe
   g.fogOfWar.on = fogOfQuery(q);
   quietFogStart(q, g.fogOfWar.on ? quietRungOfQuery(q) : 'off');   // (a quiet mission's rung of the fog lever on the fog's two rows for the visit; none: whatever an earlier start here held is let go of)
   // ?weather=<kind> on this path too (a headless tool hands its query here; on the page main.ts already stood the game up in it — the same kind, a no-op). No key: left as it is.
-  { const wx = weatherOfSearch(q); if (wx && g.weather && g.weather.kind !== wx) g.weather.setKind(wx); }
+  { const wx = weatherOfSearch(q); if (wx && g.weather && g.weather.kind !== wx && g.weather.setKind(wx) === false) console.warn(`?weather=${wx}: refused, this game was stood in ${g.stood.weather ?? 'the level\'s own'}`); }
   const spec = specOfQuery(q);
   stickyVisitSet(g, g.fogOfWar.on ? quietCamsOfLink(q) : 0);   // (the cameras a quiet mission's link hands out — stickycam.ts: read where the card is put on the player, at this staging and every restart; none where the link's own ?nofow put the fog off — nothing for a camera to show)
   const why = spec ? startScenario(g, spec) : null;

@@ -26,7 +26,7 @@ const FULL = { rings: 5, cams: 2, wand: true }, BARE = { rings: 5, cams: 0, wand
 export async function kitStealth(): Promise<boolean> {
   console.log(`\n=== kitstealth: a stealth mission's kit is what your card starts at there${BROKEN ? ' [KITSTEALTH_BREAK=1]' : ''} ===`);
   let all = true; const verdict = (ok: boolean, label: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
-  const was = { big: K.BIGSLOT.on, on: K.KIT.on, slots: K.SLOTS.on, solo: K.KIT_SOLO.on };
+  const was = { big: K.BIGSLOT.on, on: K.KIT.on, slots: K.SLOTS.on };
   const raise = () => { K.kitMission(null); K.BIGSLOT.on = true; K.KIT.on = true; K.SLOTS.on = true; };
   try {
     // ── the card
@@ -59,7 +59,7 @@ export async function kitStealth(): Promise<boolean> {
     // ── the staging
     { K.kitLoad(null, ''); const R: any = await hushed(() => rig(17, { stage: false })); raise(); K.kitLoad(null, ''); const g = R.game, pl = () => g.player;
       const ops = g.guards.filter((gd: any) => gd.unit && gd.team === 'operative'), others = g.guards.filter((gd: any) => !(gd.unit && gd.team === 'operative'));
-      const run = (quiet: boolean, cams: number) => { K.KIT_SOLO.on = quiet; g.guards = quiet ? others : [...others, ...ops]; stickyVisitSet(g, cams); K.kitPlayer(g); return { rings: pl().rifle.rings, cams: pl().rifle.attachments.includes('cam') ? pl().rifle.cams : 0, wand: !!pl().wand, smoke: pl().canisters, stun: pl().flashbangs, frags: pl().frags, shells: pl().rifle.shells }; };
+      const run = (quiet: boolean, cams: number) => { g.soloCard = quiet; g.guards = quiet ? others : [...others, ...ops]; stickyVisitSet(g, cams); K.kitPlayer(g); return { rings: pl().rifle.rings, cams: pl().rifle.attachments.includes('cam') ? pl().rifle.cams : 0, wand: !!pl().wand, smoke: pl().canisters, stun: pl().flashbangs, frags: pl().frags, shells: pl().rifle.shells }; };
       const loud = run(false, 0), quiet = run(true, 2), dark = run(true, 0), loud2 = run(false, 0);
       K.kitMission(FULL); K.kitSet(0, 'rings', 0); K.kitMission(null); const none = run(true, 2); K.kitMission(FULL); K.kitLoadout('issued', 0); K.kitMission(null); run(false, 0);
       verdict(loud.rings === 0 && !loud.wand && loud.frags === 1 && quiet.rings === 5 && quiet.cams === 2 && quiet.wand && quiet.frags === 0 && quiet.shells === 0 && dark.rings === 5 && dark.cams === 0 && !dark.wand && dark.smoke + dark.stun === 3 && J(loud2) === J(loud) && none.rings === 0 && none.cams === 2,
@@ -67,7 +67,7 @@ export async function kitStealth(): Promise<boolean> {
       { K.kitLoad(null, ''); K.kitMission(FULL); K.kitSet(0, 'weapon', 'pistol'); K.kitMission(null); K.kitShow(g); K.kitIssuedPage(true); let les: any; try { les = run(true, 2); } finally { K.kitIssuedPage(false); } const has = pl().hasRifle; K.kitShow(g); K.kitLoad(null, ''); run(false, 0);
         verdict(has === true && les.smoke === 4 && les.stun === 2 && les.frags === 2 && les.shells === 3 && les.wand, 'A LESSON\'S PAGE wears the issue kit whatever STEALTH card this machine keeps (one with no rifle here): the rifle, what a Player is built with, and the mission\'s wand handed over it as before', `rifle ${has} · ${J(les)}`); }
       }
-  } finally { K.kitMission(null); K.BIGSLOT.on = was.big; K.KIT.on = was.on; K.SLOTS.on = was.slots; K.KIT_SOLO.on = was.solo; K.kitLoad(null, ''); K.SLOTS.on = was.slots; K.KIT.on = was.on; }
+  } finally { K.kitMission(null); K.BIGSLOT.on = was.big; K.KIT.on = was.on; K.SLOTS.on = was.slots; K.kitLoad(null, ''); K.SLOTS.on = was.slots; K.KIT.on = was.on; }
   console.log(`=== kitstealth: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;
 }

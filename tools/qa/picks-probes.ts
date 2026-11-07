@@ -41,9 +41,8 @@ if (import.meta.main && process.argv.includes('--boot')) {
     const q = new URLSearchParams(query), lf = q.get('levelFile'), levelFile = lf && /^[\w.-]+\.json$/.test(lf) ? lf : null;
     const { standUp } = await import('./headless.ts');
     const { initDifficulty, difficultyNow } = await import(`${ROOT}/src/game/difficulty.ts`);
-    const { initWeather } = await import(`${ROOT}/src/game/weatherKinds.ts`);
-    const { initHour, hourOf } = await import(`${ROOT}/src/game/hours.ts`);
-    const { startFromQuery, runningScenario, activeScenario, teamOf } = await import(`${ROOT}/src/game/scenarioRun.ts`);
+    const { hourOf } = await import(`${ROOT}/src/game/hours.ts`);
+    const { runningScenario, activeScenario, teamOf } = await import(`${ROOT}/src/game/scenarioRun.ts`);
     const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
     const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
     const { PAIRUP } = await import(`${ROOT}/src/game/pairup.ts`);
@@ -51,14 +50,14 @@ if (import.meta.main && process.argv.includes('--boot')) {
     const { digestGame } = await import(`${ROOT}/src/game/digest.ts`);
     const { hashStr } = await import(`${ROOT}/src/game/dialogue.ts`).catch(() => ({ hashStr: null as any }));
     // main.ts's order: the difficulty, the weather and the hour are read before the Game exists; the level the URL names; the Game; the scenario
-    initDifficulty(q); initWeather(q); initHour(q);
+    initDifficulty(q);   // (the weather and the hour: the stand reads them off the address before the game is made, as the page does — headless.ts `address`)
     Math.random = seeded(0x51c4);
     const level = levelFile ? (() => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', levelFile), 'utf8')); return loadLevel(data); })() : undefined;
-    const W = await standUp({ uploadEvery: 4, ...(level ? { level } : {}) });
+    const W = await standUp({ uploadEvery: 4, address: q, ...(level ? { level } : {}) });
     const g = W.game; g.godMode = true;
     SILENT.on = true;   // (the page's: the harness stands the game up with the silent rows off — src/host/standup.ts)
     if (q.has('silentstart')) SILENT.start = true;   // (main.ts's line, copied: the flag is the page's — tools/qa/startpage-look.cjs holds the page's own)
-    const { why } = startFromQuery(g, q);
+    const { why } = W.start();
     const run = runningScenario(g, levelFile), ops: any[] = teamOf(g);
     const hostile = () => g.guards.filter((x: any) => x.unit && x.team === 'hostile' && x.state !== 'dead').length;
     const word = (): string => { const d = JSON.stringify(digestGame(g, true)); return hashStr ? hashStr(d).toString(16) : String(d.length); };

@@ -42,7 +42,8 @@ import { COVER } from '../game/cover';
 import { SNEAK } from '../game/sneak';
 import { FURN } from '../game/furnblast';
 import { SNOWBOG } from '../game/snowBog';
-import { WX_OWN, SNOW, SNOW_LOOK } from '../game/weatherKinds';
+import { WX_OWN, SNOW, SNOW_LOOK, weatherAsked, snowLevelOfQuery } from '../game/weatherKinds';
+import type { StoodWith } from '../game/stood';
 import { AIR_SIM } from '../game/airSim';
 import { GUNWALL } from '../game/gunwall';
 import { REARWATCH } from '../game/rearwatch';
@@ -108,7 +109,7 @@ import { FINDTUNED, findMeStarts } from './findme';
 import { MORALE } from '../game/morale';
 import { RUNNER } from '../game/runner';
 import { STARTLE } from '../game/startle';
-import { ROWSET } from '../game/rowset';
+import { ROWSET, rowSettings } from '../game/rowset';
 import { SMOKEBREAK } from '../game/smokebreak';
 import { SHOWWHY } from '../game/showwhy';
 import { FIRE } from '../game/fire';
@@ -162,14 +163,15 @@ import { CLEANRESTART } from '../game/cleanrestart';
 import { FIRELINE } from '../game/fireline';
 import { SAVETIMELINE } from '../game/savestate';
 import { hostAfterPutBack } from './putback';
-import { kitSoloStand } from '../game/kit';
+import { kitSoloStand, kitSoloIf } from '../game/kit';
+import { startFromQuery } from '../game/scenarioRun';
 import { glassPenHarness } from '../game/glasspen';
 import { glassFxForced, GLASS } from '../game/glass';
 import { WALLPEN } from '../game/wallpen';
 import { DOORSHOT } from '../game/doorblast';
 import { WINBARS } from '../game/winbars';
 import { FRAG } from '../game/frag';
-import { HOUR, applyHour } from '../game/hours';
+import { applyHour, hourAsked } from '../game/hours';
 import { DOORPATH } from '../game/doorpath';
 import { HOLD, MOVES, TURN, TURN_FEEL, THROW_BY, HARDBREATH, RUNREADY, RUNARMS } from '../game/character';
 import { WOUND } from '../game/wounds';
@@ -209,9 +211,47 @@ export interface StandOpts {
   seed?: number | null;
   /** HOW MANY PLAYERS (src/game/seats.ts): 1 (the default) or 2, fixed for the life of the game — each seat a man, its own teammates, its own record a tick */
   seats?: number;
+  /** WHAT THE GAME IS STOOD WITH (game/stood.ts; a host reads it off an address: addressBeforeGame). Absent = the picks as they stand */
+  stood?: StoodWith;
   /** …or, with no count: the address to read it from (`?seats=2` — seats.ts seatsOfSearch; a recipe's `search`). Neither: the page's own address, 1 with no page */
   search?: string;
 }
+
+/** A MISSION'S ADDRESS IS READ IN TWO PLACES, AND EVERY HOST THAT STARTS A GAME FROM ONE READS IT IN BOTH (the page: main.ts; the harness: tools/qa/headless.ts
+ *  standUp({ address }) and its `start`; the Rust start: rust/game_start stand.rs, the same two by the same names).
+ *  BEFORE THE GAME IS MADE: the mission row's own hour and weather written onto the words (rowset.ts: FIRST, the two readers below read what it wrote), then
+ *  the weather the game is BORN in (`?weather=`, or snow on a level built for it; locked: the address's for the game's life)
+ *  and the visit's hour (`?hour=`, `?sun=`), which standGame lays over the level as the game is stood. All of it is READ INTO THE RECORD THE GAME IS MADE WITH
+ *  (game/stood.ts, Game.stood) and written nowhere of the process's: only `q` is written on. A Weather born in its kind lays its
+ *  roofs, its wet ground and its wind once. Handed the address only after the game was made, a host stood the level's own storm, put the solo night's card
+ *  on its player, and changed both afterwards: the same mission on a page and on such a host then differed in the order list's rows (one more, every later
+ *  id one on), in the kit's issue record, in the door tools and in the weather's own (found by the co-op check, on the depot in a downpour).
+ *  Answers the record; the page compiles its weather shaders by its kind (null: the level's own). */
+export function addressBeforeGame(q: URLSearchParams): StoodWith {
+  rowSettings(q);
+  const asked = weatherAsked(q), weather = snowLevelOfQuery(q) ? 'snow' : asked;   // (a level BUILT FOR SNOW is in snow whatever ?weather= said: weatherKinds.ts SNOW_LEVELS; ?snow=0 = not so)
+  const hour = hourAsked(q);
+  return { weather, locked: true, hour: hour.id, sun: hour.sun, sunGiven: hour.sunGiven, dry: hour.dry, soloStand: false };
+}
+/** THE TWO SWITCHES THE ADDRESS'S READER READS, pinned by a harness run's own words (`TPS_SNOW`, `TPS_ROWSET`: profile.ts pinned). standGame pins them as it
+ *  stands a harness game; a harness that reads an address before the game is made pins them first, by these same two lines (tools/qa/headless.ts). */
+export function pinSnow(): void { if (pinned('TPS_SNOW')) SNOW.on = String((globalThis as any).process?.env?.TPS_SNOW ?? '') === '1'; }
+export function pinRowset(): void { if (pinned('TPS_ROWSET')) ROWSET.on = String((globalThis as any).process?.env?.TPS_ROWSET ?? '') === '1'; }
+/** …AND OF THE STOOD GAME: the mission the address names, staged (scenarioRun.ts startFromQuery), then the solo card's question. A host with work of its own
+ *  between the two hands it in as `between` (a recipe's tables laid again after the staging, as the page lays them: main.ts recipeTables) or, as the page
+ *  does with its hooks, calls the two one after the other. */
+export function startAtAddress(game: Game, q: URLSearchParams, between?: () => void): ReturnType<typeof startFromQuery> {
+  if (q.has('noweather')) game.weather.setEnabled(false);   // (?noweather: the level's own storm off from the start, as the page puts it off once its game is stood: main.ts. The address's reader has told the hour so — hours.ts hourAsked, Game.stood.dry)
+  const r = startFromQuery(game, q); between?.();
+  // (A TRAINING LEVEL, one that carries a lesson, is left as it stands on a host that calls this: the page says the lesson's page before its game is
+  //  made (main.ts kitLessonPage) and its stagings then wear what the lesson asks; no other host says it yet, and the card dealt without it is neither
+  //  the page's kit nor the fresh Player the older road left there. Goes when the address's reader says the lesson's page on every host)
+  if (!game.level.scenarios?.lesson?.steps?.length) soloOfAddress(game, q);
+  return r;
+}
+/** THE SOLO CARD'S QUESTION OF AN ADDRESS (kit.ts kitSoloIf): the plain night (`?solo`, or no mission up and no quiet one), or a quiet mission alone, wears the
+ *  player's own card; a squad's mission leaves the kit to its own staging. */
+export function soloOfAddress(game: Game, q: URLSearchParams): void { kitSoloIf(game, q.has('solo') || !game.quiet.active); }
 
 export interface Stood {
   game: Game; level: Level; ch: GltfCharacter; smoke: SmokeSystemLike;
@@ -278,7 +318,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
   if (opts.harness && pinned('TPS_OPENING')) OPENING.on = String((globalThis as any).process?.env?.TPS_OPENING ?? '') === '1';   // THE NIGHT'S OPENING (src/game/opening.ts): off, so every man of the shift starts on his route's first waypoint as when every frozen digest, tally and session fixture was recorded — set before the Game exists (its constructor places them); `TPS_OPENING=1` runs any harness tool with it on, tools/qa/solo-night.ts raises it for its as-shipped stand (the shipped default is ON)
   if (opts.harness && pinned('TPS_GEAR')) GEAR.on = String((globalThis as any).process?.env?.TPS_GEAR ?? '') === '1';   // the 2010s issue kit (src/game/gear.ts): off, so the kit's names in every frozen probe's HUD, message and debrief text are the ones they were written against, and Sam's pistol holds the ten it held; `TPS_GEAR=1` turns it on (the shipped default). Words, drawn boxes and the Glock's fifteen-round magazines — set before the Game exists (its constructor loads Sam's pistol)
   if (opts.harness && pinned('TPS_AIRDUST')) AIRDUST.on = String((globalThis as any).process?.env?.TPS_AIRDUST ?? '') === '1';   // THE WEATHER'S DUST IN THE ROOMS (src/game/airDust.ts): off, so a sight line under a picked weather is cut by the leak under every roof, as when every frozen digest and tally was recorded; `TPS_AIRDUST=1` runs any tool with it (before the Game exists: its constructor seeds the field)
-  if (opts.harness && pinned('TPS_SNOW')) SNOW.on = String((globalThis as any).process?.env?.TPS_SNOW ?? '') === '1';   // a level built for snow is born in snow (src/game/weatherKinds.ts SNOW_LEVELS, weather.ts levelKind): off, so such a level stands under the weather any level has; `TPS_SNOW=1` raises it — set before the Game exists: the Weather picks its kind in its constructor
+  if (opts.harness) pinSnow();   // a level built for snow is born in snow (src/game/weatherKinds.ts SNOW_LEVELS, weather.ts levelKind): off, so such a level stands under the weather any level has; `TPS_SNOW=1` raises it — set before the Game exists: the Weather picks its kind in its constructor
   if (opts.harness && pinned('TPS_SNOWLOOK')) SNOW_LOOK.on = String((globalThis as any).process?.env?.TPS_SNOWLOOK ?? '') === '1';   // the snow's look (weatherKinds.ts SNOW_LOOK; picture only): off, so a snow level is drawn as its painted boxes
   if (opts.harness && pinned('TPS_SNOWWISPS')) SNOW_LOOK.wisps = String((globalThis as any).process?.env?.TPS_SNOWWISPS ?? '') === '1';   // … and no wisps run over its ground
   if (opts.harness && pinned('TPS_SNOWTRACKS')) SNOW_LOOK.tracks = String((globalThis as any).process?.env?.TPS_SNOWTRACKS ?? '') === '1';   // … no boot presses a trail into it
@@ -301,7 +341,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
   if (opts.harness && pinned('TPS_WALLSKIN')) WALLSKIN.on = String((globalThis as any).process?.env?.TPS_WALLSKIN ?? '') === '1';   // the paint on a wall goes with the wall (src/game/wallskin.ts): off, so a band on a holed wall is drawn whole across the hole, as it was
   const dice = opts.seed == null ? null : newDice(opts.seed); useDice(dice);   // (before the Game exists: its constructor rolls the men's construction dice)
   const seats = opts.seats ?? seatsOfSearch(opts.search ?? (typeof location !== 'undefined' ? location.search : ''));
-  const game = new Game(host, level, ch, smoke, { seats }); game.dice = dice;
+  const game = new Game(host, level, ch, smoke, { seats, stood: opts.stood }); game.dice = dice;
   // THE GAME'S STATE THAT STILL MOVES IS AT HOME FROM HERE (sim/state.ts settle, the statement every tick's open makes; said once, where every Game is
   // made, and after its die is hung): the die and the poses go into the game's block now, so a roll of the die before the first tick is the Rust
   // module's like any other. (The doors, the falls, the furniture, the slabs and the thrown things were made over the block and need no move.)
@@ -446,7 +486,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_SMOKEBREAK')) SMOKEBREAK.on = String((globalThis as any).process?.env?.TPS_SMOKEBREAK ?? '') === '1';   // a man told to have a smoke (src/game/smokebreak.ts): off, so he stands where the script sent him with his hands as they were
     if (pinned('TPS_SHOWWHY')) SHOWWHY.on = String((globalThis as any).process?.env?.TPS_SHOWWHY ?? '') === '1';   // a teammate shows why he is not acting (src/game/showwhy.ts): off, so no man of the squad signals or says anything of what holds him, as every frozen run had it
     if (pinned('TPS_FIRE')) FIRE.on = String((globalThis as any).process?.env?.TPS_FIRE ?? '') === '1';   // an open fire burns (src/game/fire.ts): off, so a brazier is its glowing lid and its steady lamp, and the light meter beside it reads a steady light
-    if (pinned('TPS_ROWSET')) ROWSET.on = String((globalThis as any).process?.env?.TPS_ROWSET ?? '') === '1';   // a mission row's own hour and weather (src/game/rowset.ts): off, so a row that names one starts at the query's, as every row did
+    pinRowset();   // a mission row's own hour and weather (src/game/rowset.ts): off, so a row that names one starts at the query's, as every row did
     if (pinned('TPS_STARTLE')) STARTLE.on = String((globalThis as any).process?.env?.TPS_STARTLE ?? '') === '1';   // enemies startle when they first see you (src/game/startle.ts): off, so a man who sees you goes for his gun the frame he knows, as in every frozen probe, tally and digest; `TPS_STARTLE=1` turns it on (the shipped default)
     if (pinned('TPS_FLINCH')) FLINCH.on = String((globalThis as any).process?.env?.TPS_FLINCH ?? '') === '1';   // a man flinches when fire comes close (src/game/flinch.ts): off, so nobody ducks but on the suppression model's own edge and no green man breaks under fire, as in every frozen probe, tally and digest; `TPS_FLINCH=1` turns it on (the shipped default)
     if (pinned('TPS_FLINCHRUN')) FLINCH.run = String((globalThis as any).process?.env?.TPS_FLINCHRUN ?? '') === '1';   // …and a green man alone kept under close fire drops it and runs (flinch.ts FLINCH.run): off with it; `TPS_FLINCHRUN=1` turns it on (the shipped default), and under TPS_PROFILE=shipped `TPS_FLINCHRUN=0` leaves the duck alone
@@ -642,7 +682,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('QA_DOORSTAY')) DOORSTAY.on = false;                 // doors stay where they are left (src/game/doors.ts): every leaf has its closer, which is what every older probe, frozen digest and session fixture was staged against — `probes.ts stay-open` and playthrough.ts turn it on (the shipped default); QA_DOORSTAY=1 turns it on for any harness run
     kitSoloStand(game);                  // the solo night's Sam (src/game/kit.ts): under the SHIPPED stand a game stood up plain wears your card as the page's ?solo does; the frozen stand: this line does nothing
   }
-  if (HOUR.id !== 'night') applyHour(game, HOUR.id);   // the visit's hour (?hour= / PT_HOUR — src/game/hours.ts) laid over the level's own night; night = this line does nothing
+  if (game.stood.hour !== 'night') applyHour(game, game.stood.hour);   // the visit's hour (?hour= / PT_HOUR — src/game/hours.ts) laid over the level's own night; night = this line does nothing
   const cam = new FollowCamera(); cam.target = v3.copy(level.playerSpawn);
   // THE HOST'S CAMERA AND KEYS ARE HANDED TO THE GAME HERE, ONCE, FOR EVERY HOST (the page, the harness, a watcher, a server): before the first export of a
   // game's state and before its first step, so every host of one game holds the same rows in the same order (game.ts hostCam)

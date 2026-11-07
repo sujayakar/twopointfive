@@ -62,6 +62,7 @@ import { Tracers } from './tracers';
 import { Particles } from '../render/particles';
 import { sparkSink, kickDustFx, lockSplinterFx, clearParticleFx, loadDust, applyDustLook } from './particleFx';
 import { Weather } from './weather';
+import { stoodOfPick, type StoodWith } from './stood';
 import { wetInstance, wetKnobs, wetLineRow, wetSummary, clearWetPrints } from './wet';
 import './takedown';   // takedowns as moves (takedown.ts): who breathes, once a frame
 import { hourAfterReset } from './hours';
@@ -917,6 +918,10 @@ export class Game {
   /** the night storm (weather.ts, E10): rain outdoors, lightning through the windows, thunder, the wet lot — on by default (?noweather boots it off; Tab ▸ Weather;
    *  window.__weather) */
   weather: Weather;
+  /** what this game was stood with (stood.ts), set once at the stand: the rules read this, never the module tables it was picked from */
+  stood: StoodWith;
+  /** THE SOLO NIGHT'S CARD (kit.ts kitSolo): your own kit on the plain night's player and on every fresh one */
+  soloCard = false;
   fxSeed = 1;               // counting seed for the seeded effects: every shot / can differs, a replayed session repeats
   audio: GameAudioLike = nullAudio;
   ocpCooldown = 0; lastStingT = -100; eventSeq = 0;
@@ -1062,7 +1067,8 @@ export class Game {
     // in view before the floor goes up a step; deviceCones = each live camera throws a faint red cone into the haze (a light slot apiece)
     ...DEVICE_TUNE_DEFAULTS };
 
-  constructor(public engine: HostApi, public level: Level, public ch: GltfCharacter, public smoke: SmokeSystemLike, opts: { seats?: number } = {}) { RUST_SURFACE?.newGame();
+  constructor(public engine: HostApi, public level: Level, public ch: GltfCharacter, public smoke: SmokeSystemLike, opts: { seats?: number; stood?: StoodWith } = {}) { RUST_SURFACE?.newGame();
+    this.stood = { ...(opts.stood ?? stoodOfPick()) };   // (its own copy. First: the Weather made below is born in it)
     { const over = levelOver(level); if (over) throw new Error(over); }   // (levelfit.ts: a level the pools cannot hold is not loaded, said before anything of it is built)
     this.seats = seatsStand(this, opts.seats ?? 1); this.localSeat = this.seats[0];   // (seats.ts: before anything is built over a seat's view; one seat = the Game is its own seat's view and nothing below differs)
     const first = this.seats[0].view;   // (the first seat's view: this Game, in a game of one)

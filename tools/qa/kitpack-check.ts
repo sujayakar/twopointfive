@@ -51,7 +51,6 @@ async function play(name: string) {
 export async function kitPack(): Promise<boolean> {
   console.log(`\n=== kitpack: a lesson the player packs for, and the plan its kit step teaches${BROKEN ? ' [KITPACK_BREAK=1]' : ''} ===`);
   let all = true; const verdict = (ok: boolean, label: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
-  const was = { solo: K.KIT_SOLO.on };
   try {
     // ── the row and its plan
     { const plans = Object.keys(KIT_PLANS), ids = packed.map(e => e.id);
@@ -105,7 +104,7 @@ export async function kitPack(): Promise<boolean> {
       for (const o of outs) verdict(o.code === 0, `PLAYED THROUGH under ${KITS[o.name].say}: every step of the mission done`, o.code === 0 ? `${o.steps} steps · ${o.secs} s of play` : `${o.why}${o.tail ? ` · ${o.tail.join(' | ')}` : ''}`);
       console.log(`    (${names.length} plays side by side, ${Math.round((Date.now() - t0) / 1000)} s)`); }
   } catch (x) { verdict(false, 'the check ran to its end', String((x as Error).stack ?? x)); }
-  finally { pageOff(); K.kitLoad(null, ''); K.KIT_SOLO.on = was.solo; }
+  finally { pageOff(); K.kitLoad(null, ''); }
   return all;
 }
 if (import.meta.main) { const k = process.argv.indexOf('--play'); if (k >= 0) { await play(process.argv[k + 1]); process.exit(0); } const ok = await kitPack(); console.log(ok ? '\n=== kitpack-check: ALL PASS ===' : '\n=== kitpack-check: FAILED ==='); process.exit(ok ? 0 : 1); }

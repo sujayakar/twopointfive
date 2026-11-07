@@ -58,7 +58,7 @@ export function defendersShown(m: Mission): string { return MYSTERY.on ? '—' :
 export type PickFn = (m: Mission, href: string) => void;
 /** the seams other screens set once: `onPick` replaces the page load (the loadout screen's way in), `startSolo` is the start card's Start (set by ui/menu.ts
  *  only while the real start card is up), `pickLabel` is the sheet's button */
-export const MISSIONS: { onPick: PickFn | null; startSolo: (() => void) | null; pickLabel: string;
+export const MISSIONS: { onPick: PickFn | null; startSolo: ((card?: boolean) => void) | null; pickLabel: string;
   /** the screen a pick hands over to (the loadout — ui/loadout.ts sets it): one of the two is up at a time, so opening the list closes it, closeMissions()
    *  closes it too (the boot card going, the start card closing), and missionsBusy() counts it */
   next: { isOpen(): boolean; close(): void } | null;

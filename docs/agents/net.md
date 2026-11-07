@@ -60,8 +60,8 @@ line).
     on both). 30 of 310 state words differ and 897,180 paths of the export, in four kinds: the picture's and the host's own carried in the state (the
     quality preset under `g.engine.settings`, the cast's meshes, the look's materials on box rows, the page's wind handed to its particles, caches
     and counters); the page's extra camera and Input rows (3 and 2 against 2 and 1), so a seat's camera is `CameraId(1)` there and `CameraId(0)` in
-    bun; the order rows (bun's table holds `thrWord` twice, 25 rows against 24); and three unplaced (`m.kit.issued_player{…}.slot`,
-    `m.kit.kit_solo.stand`, `g.director.strict`). So the whole words cannot be the alarm between a page and a server until the host's-own list
+    bun; the order rows (bun's table holds `thrWord` twice, 25 rows against 24); and two unplaced (`m.kit.issued_player{…}.slot`,
+    `g.director.strict`; a third, the harness's solo flag, is the game's own `stood.solo_stand` now, and an address stands it down on every host). So the whole words cannot be the alarm between a page and a server until the host's-own list
     covers the first kind and the rows are numbered alike. The probe and the path list: the Library's
     `rebuild/multiplayer/coop-on-rust/page-vs-bun/`.
     READ AGAIN ON THE RUST GOAL'S FOURTH BATCH (step 1905): a game of two on four bun machines agrees on every one of 307 parts, and the whole exports of

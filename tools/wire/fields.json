@@ -4113,7 +4113,6 @@
 "host_hud::View.height",
 "host_hud::View.width",
 "hours::HourState.lamps",
-"hours::HoursModHOUR.id",
 "hours::Open.len",
 "hours::Open.ray",
 "hours::Open.sky_k",
@@ -7664,7 +7663,9 @@
 "deathrecap::LostMan.known_at",
 "deathrecap::Recap.lost_live",
 "game::Game.recap",
-"deathrecap::Recap.all_down"
+"deathrecap::Recap.all_down",
+"game::Game.stood",
+"game::Game.solo_card"
 ],
 "everyTickNotCarried": [
 {
@@ -8633,7 +8634,6 @@
 "hours::HourState.storm",
 "hours::HourState.sun",
 "hours::HourState.sun_k",
-"hours::HoursModHOUR.id",
 "input::Input.orbit_dx",
 "input::Input.wheel_ctrl",
 "kit::KitModKept0.charges",
@@ -9406,8 +9406,6 @@
 "weather::weather_level_roof.crate::weather::weather_level_roofs",
 "weather_kinds::FogSpec.h",
 "weather_kinds::FogSpec.sigma",
-"weather_kinds::WeatherKindsModWEATHERBOOT.kind",
-"weather_kinds::WeatherKindsModWEATHERBOOT.locked",
 "weather_kinds::WeatherPreset.cloud",
 "weather_kinds::WeatherPreset.title",
 "weather_kinds::WeatherPreset.wind",
@@ -11339,7 +11337,6 @@
 "holdfire::HoldfireStats.lifts",
 "holdfire::State.why",
 "hours::HourState.lamps",
-"hours::HoursModHOUR.id",
 "hours::SkyState.cells",
 "input::Input.buttons",
 "input::Input.clicked",
@@ -12965,6 +12962,8 @@
 "deathrecap::LostMan.known_at",
 "deathrecap::Recap.lost_live",
 "game::Game.recap",
-"deathrecap::Recap.all_down"
+"deathrecap::Recap.all_down",
+"game::Game.stood",
+"game::Game.solo_card"
 ]
 }
