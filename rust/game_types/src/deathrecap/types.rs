@@ -1,9 +1,8 @@
-//! The types of `deathrecap`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `deathrecap`: every death explains itself (rust/game_rules/src/deathrecap).
 #![allow(unused_imports)]
 use crate::{ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use alloc::{collections::VecDeque, string::String, vec::Vec};
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum RecapCause {
     Blast,
@@ -22,7 +21,7 @@ impl RecapCause {
     }
 }
 
-/// (TypeScript: RecapMan, src/game/deathrecap.ts:52)
+/// one man of a run, as a take names him
 #[derive(Clone, Debug)]
 pub struct RecapMan {
     pub id: f64,
@@ -31,7 +30,6 @@ pub struct RecapMan {
     pub kind: crate::deathrecap::RecapManKind,
 }
 impl RecapMan {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         RecapMan {
             id: 0.0,
@@ -43,7 +41,6 @@ impl RecapMan {
 }
 impl Default for RecapMan { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum RecapManKind {
     Player,
@@ -60,7 +57,7 @@ impl RecapManKind {
     }
 }
 
-/// (TypeScript: RecapDeath, src/game/deathrecap.ts:54)
+/// One of ours going down. Plan coordinates [x, z], metres; `gaze` in radians, 0 = +z (the aim yaw he had the sample before he fell).
 #[derive(Clone, Debug)]
 pub struct RecapDeath {
     pub t: f64,
@@ -82,11 +79,11 @@ pub struct RecapDeath {
     pub off: f64,
     pub blind: bool,
     pub loud: bool,
-    /// INVENTED: g.serial() where explain makes the death (deathrecap.ts:146): take asks by identity whether this death already has a take (deathrecap.ts:195)
+    /// this death's number in the run, the record's own (a take is of one death, asked by this): dealt by the record and not by `g.serial()`, which the
+    /// recap may not move
     pub serial: u32,
 }
 impl RecapDeath {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         RecapDeath {
             t: 0.0,
@@ -114,7 +111,7 @@ impl RecapDeath {
 }
 impl Default for RecapDeath { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: RecapShot, src/game/deathrecap.ts:67)
+/// a round, or a burst. `at` = the shooter's feet
 #[derive(Clone, Debug)]
 pub struct RecapShot {
     pub t: f64,
@@ -127,7 +124,6 @@ pub struct RecapShot {
     pub loud: Option<bool>,
 }
 impl RecapShot {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         RecapShot {
             t: 0.0,
@@ -143,7 +139,6 @@ impl RecapShot {
 }
 impl Default for RecapShot { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum RecapShotKind {
     Blast,
@@ -160,7 +155,8 @@ impl RecapShotKind {
     }
 }
 
-/// (TypeScript: RecapFrame, src/game/deathrecap.ts:69)
+/// One sample of the floor. men: MAN_STRIDE floats a man = id, x, z, aim yaw, bits (1 down, 2 roused: alert or searching, 4 crouched). doors: 2 a door = the
+/// leaf's direction (NaN = off its hinges).
 #[derive(Clone, Debug)]
 pub struct RecapFrame {
     pub t: f64,
@@ -169,7 +165,6 @@ pub struct RecapFrame {
     pub doors: Vec<f32>,
 }
 impl RecapFrame {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         RecapFrame {
             t: 0.0,
@@ -181,7 +176,7 @@ impl RecapFrame {
 }
 impl Default for RecapFrame { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: RecapTake, src/game/deathrecap.ts:72)
+/// A death with its own last seconds: frames from `t0` to `t1` (the death at `death.t`), the rounds and blasts in them, every one of ours lost in them.
 #[derive(Clone, Debug)]
 pub struct RecapTake {
     pub death: crate::deathrecap::RecapDeath,
@@ -194,7 +189,6 @@ pub struct RecapTake {
     pub deaths: Vec<crate::deathrecap::RecapDeath>,
 }
 impl RecapTake {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         RecapTake {
             death: crate::deathrecap::RecapDeath::zeroed(),
@@ -210,14 +204,13 @@ impl RecapTake {
 }
 impl Default for RecapTake { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: RecapDoor, src/game/deathrecap.ts:70)
+/// where a door hangs
 #[derive(Clone, Copy, Debug)]
 pub struct RecapDoor {
     pub hinge: [f64; 2],
     pub width: f64,
 }
 impl RecapDoor {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         RecapDoor {
             hinge: [0.0; 2],
@@ -227,7 +220,9 @@ impl RecapDoor {
 }
 impl Default for RecapDoor { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: LostMan, src/game/deathrecap.ts:78)
+/// One of the squad lost while the run is on, as much as the squad knows: `from` = the way off him to where the round (the blast) came from, a unit vector on
+/// the plan to the nearest EIGHTH of the compass: a direction, never a place, and never fine enough to lay a ruler along. None until the squad has it
+/// (`known_at`), and for good when nobody still up saw him go down or heard it.
 #[derive(Clone, Debug)]
 pub struct LostMan {
     pub id: f64,
@@ -238,7 +233,6 @@ pub struct LostMan {
     pub known_at: f64,
 }
 impl LostMan {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         LostMan {
             id: 0.0,
@@ -252,32 +246,18 @@ impl LostMan {
 }
 impl Default for LostMan { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Lost, src/game/deathrecap.ts:81)
+/// What the record keeps of a man lost beside `Recap.lost_live[i]`, the same man as the squad knows him: the way it came from (handed over as `from` only when the
+/// squad has it), whether ears had it, who had a line to him as he went down (the first teammate; every player), and `done` once that is settled either way.
 #[derive(Clone, Debug)]
 pub struct Lost {
-    pub man: crate::deathrecap::LostMan,
     pub src: Option<[f64; 2]>,
     pub heard: bool,
     pub saw: Option<GuardId>,
-    pub sam_saw: bool,
+    pub players_saw: Vec<PlayerId>,
     pub done: bool,
 }
-impl Lost {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Lost {
-            man: crate::deathrecap::LostMan::zeroed(),
-            src: None,
-            heard: false,
-            saw: None,
-            sam_saw: false,
-            done: false,
-        }
-    }
-}
-impl Default for Lost { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Round, src/game/deathrecap.ts:86)
+/// the last round into a man who was up
 #[derive(Clone, Debug)]
 pub struct Round {
     pub t: f64,
@@ -290,7 +270,6 @@ pub struct Round {
     pub loud: bool,
 }
 impl Round {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         Round {
             t: 0.0,
@@ -306,96 +285,79 @@ impl Round {
 }
 impl Default for Round { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: State, src/game/deathrecap.ts:87)
+/// a death whose last second has not run yet, and when it will have
 #[derive(Clone, Debug)]
-pub struct State {
-    pub mission: u32,
+pub struct RecapDue {
+    pub death: crate::deathrecap::RecapDeath,
+    pub at: f64,
+}
+
+/// What the end card may show: the takes, and the one it opens on (the last player to go down, else the last of ours).
+#[derive(Clone, Debug)]
+pub struct DeathRecap {
+    pub takes: Vec<crate::deathrecap::RecapTake>,
+    pub main: usize,
+}
+
+/// THE RECAP'S RECORD: the game's own, written by the tick (`deathrecap::recap_tick`) and by a round landing (`recap_round`), fresh with every mission. Only
+/// `lost_live` is on the wire: the rest is handed out once, to the end card. A kept game has none of it (`recap_left_behind`), so a load starts it over: a load is a run
+/// in which that death has not happened.
+#[derive(Clone, Debug)]
+pub struct Recap {
+    /// the mission this record is of, by its serial
+    pub run: Option<u32>,
     pub last_t: f64,
+    /// when the next sample of the floor is due
     pub next: f64,
+    /// the tick has looked at the floor: who is down from now on went down in front of it (not a body a checkpoint brought back)
     pub primed: bool,
+    /// when the run ended (infinity while it has not): what the card may show of a run that is played on past its end stops there
     pub over_at: f64,
-    pub frames: Vec<crate::deathrecap::RecapFrame>,
-    pub spare: Vec<crate::deathrecap::RecapFrame>,
-    pub shots: Vec<crate::deathrecap::RecapShot>,
-    pub seen: JsSet<u32>,
+    pub frames: VecDeque<crate::deathrecap::RecapFrame>,
+    pub shots: VecDeque<crate::deathrecap::RecapShot>,
+    /// the last event read, by its serial (serials rise along the game's list of events)
+    pub seen_to: u32,
     pub down: JsSet<crate::Num>,
+    /// the last round into each man, by his character's id
     pub rounds: JsMap<crate::Num, crate::deathrecap::Round>,
     pub cast: JsMap<crate::Num, crate::deathrecap::RecapMan>,
-    pub deaths: Vec<crate::deathrecap::RecapDeath>,
-    pub due: Vec<crate::deathrecap::StateDueItem>,
+    pub deaths: VecDeque<crate::deathrecap::RecapDeath>,
+    /// how many deaths this record has dealt a number to
+    pub deaths_dealt: u32,
+    pub due: Vec<crate::deathrecap::RecapDue>,
     pub takes: Vec<crate::deathrecap::RecapTake>,
+    /// the squad's men lost so far this run, as the squad knows them: what a HUD may read while the run is on
+    pub lost_live: Vec<crate::deathrecap::LostMan>,
+    /// the same men by the same index: what the squad does not know
     pub lost: Vec<crate::deathrecap::Lost>,
     pub lost_next: f64,
 }
-impl State {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        State {
-            mission: 0,
+impl Recap {
+    /// a mission's record before the tick has looked at it
+    pub fn blank() -> Self {
+        Recap {
+            run: None,
             last_t: 0.0,
             next: 0.0,
             primed: false,
-            over_at: 0.0,
-            frames: Vec::new(),
-            spare: Vec::new(),
-            shots: Vec::new(),
-            seen: JsSet::new(),
+            over_at: f64::INFINITY,
+            frames: VecDeque::new(),
+            shots: VecDeque::new(),
+            seen_to: 0,
             down: JsSet::new(),
             rounds: JsMap::new(),
             cast: JsMap::new(),
-            deaths: Vec::new(),
+            deaths: VecDeque::new(),
+            deaths_dealt: 0,
             due: Vec::new(),
             takes: Vec::new(),
+            lost_live: Vec::new(),
             lost: Vec::new(),
             lost_next: 0.0,
         }
     }
 }
-impl Default for State { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at quiet State.mission, quiet State.mission)
-#[derive(Clone, Copy, Debug)]
-pub struct StateMission {
-}
-impl StateMission {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StateMission {
-        }
-    }
-}
-impl Default for StateMission { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/deathrecap.ts:92 State.due, src/game/deathrecap.ts:92)
-#[derive(Clone, Debug)]
-pub struct StateDueItem {
-    pub death: crate::deathrecap::RecapDeath,
-    pub at: f64,
-}
-impl StateDueItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StateDueItem {
-            death: crate::deathrecap::RecapDeath::zeroed(),
-            at: 0.0,
-        }
-    }
-}
-impl Default for StateDueItem { fn default() -> Self { Self::zeroed() } }
-
-/// the state this module keeps at its top level
-#[derive(Clone, Debug)]
-pub struct DeathrecapMod {
-    /// (src/game/deathrecap.ts:95 states)
-    pub states: Option<crate::deathrecap::State>,
-}
-impl DeathrecapMod {
-    pub fn blank() -> Self {
-        DeathrecapMod {
-            states: None,
-        }
-    }
-}
+impl Default for Recap { fn default() -> Self { Self::blank() } }
 
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]
@@ -407,17 +369,5 @@ pub struct DeathrecapStats {
     pub calls: i32,
 }
 
-/// (src/game/deathrecap.ts:83 MAN_STRIDE)
-pub const MAN_STRIDE: f64 = 5.0;
-
-/// (src/game/deathrecap.ts:132 CAUSE_SECS)
-pub const CAUSE_SECS: f64 = 0.3;
-
-/// (src/game/deathrecap.ts:134 BLAST_M)
-pub const BLAST_M: f64 = 9.0;
-
-/// (src/game/deathrecap.ts:137 LINE_M)
-pub const LINE_M: f64 = 0.6;
-
-/// (src/game/deathrecap.ts:315 NONE: a table nothing writes)
-pub fn none() -> Vec<crate::deathrecap::LostMan> { Vec::new() }
+/// floats a man in a frame
+pub const MAN_STRIDE: usize = 5;

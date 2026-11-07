@@ -91,6 +91,7 @@ side by side with a door between them and a door each to the yard, a defender in
   target of no kind, and `move` is refused there: point it somewhere else. A flash has no call of its own yet: the sandbox's is
   `game::game::game_drop_throwable(&mut p.g, game::game::ThrowKind::Flash, [x, 0.0, z])`.
   `p.falls(man, by)` puts a man down by combat's own call, for a test of what follows a death. With `Opts { seats: 2, .. }` a second player sits in: `p.seat_orders(1, …)`, `p.seat_steps(1, metres)`, `p.seat_stands(1, place)`, `p.seat_at(1)`.
+  `p.man_fires_at(man, place)` is a round from a man by combat's own call, `p.falls_as(man, how, quiet, by)` a man put down any way combat has, `p.seat_goes_down(seat)` a player out of hits with no round fired. The recap: `p.recap_card()`, `p.recap_deaths()`, `p.recap_lost()`, `p.cue_over(man)`.
 
 Three rules keep the tests honest and alive:
 

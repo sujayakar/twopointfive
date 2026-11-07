@@ -7667,7 +7667,15 @@
 "wind::WindSource.field",
 "wind::WindSource.roofs",
 "wind::WindSource.interior",
-"wind::WindSource.annex"
+"wind::WindSource.annex",
+"deathrecap::LostMan.id",
+"deathrecap::LostMan.name",
+"deathrecap::LostMan.t",
+"deathrecap::LostMan.at",
+"deathrecap::LostMan.from",
+"deathrecap::LostMan.known_at",
+"deathrecap::Recap.lost_live",
+"game::Game.recap"
 ],
 "everyTickNotCarried": [
 {
@@ -12957,6 +12965,14 @@
 "wind::WindSource.field",
 "wind::WindSource.roofs",
 "wind::WindSource.interior",
-"wind::WindSource.annex"
+"wind::WindSource.annex",
+"deathrecap::LostMan.id",
+"deathrecap::LostMan.name",
+"deathrecap::LostMan.t",
+"deathrecap::LostMan.at",
+"deathrecap::LostMan.from",
+"deathrecap::LostMan.known_at",
+"deathrecap::Recap.lost_live",
+"game::Game.recap"
 ]
 }

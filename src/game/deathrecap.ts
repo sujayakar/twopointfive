@@ -1,30 +1,26 @@
-/** EVERY DEATH EXPLAINS ITSELF — the game's half (the panel is src/ui/recap.ts).
+/** EVERY DEATH EXPLAINS ITSELF: the page's half while the end card's record is still made here (the panel is src/ui/recap.ts; the game's half is the Rust tick,
+ *  rust/game_rules/src/deathrecap, which also keeps who of the squad is lost and what the squad knows of it: `g.recap`).
  *
  *  What it keeps: for every man of OUR side who goes down (a player, a teammate, a hostage) WHO did it, FROM WHERE and with what, plus the floor's last
- *  `RECAP.secs` seconds — every man's place and gun line, every door leaf, every round — so the end card can show how it happened.
+ *  `RECAP.secs` seconds: every man's place and gun line, every door leaf, every round, so the end card can show how it happened.
  *
- *  THE RULE A SECOND PLAYER NEEDS: nothing kept here is handed out while anybody is still playing. `deathRecapOf` answers null until `recapOver` — the run is over
- *  for EVERYBODY — so a man who is down beside live friends never gets the shooter's place or the floor without its fog. What may be shown live is the squad's own
+ *  THE RULE A SECOND PLAYER NEEDS: nothing kept here is handed out while anybody is still playing. `deathRecapOf` answers null until `recapOver` (the run is over
+ *  for EVERYBODY), so a man who is down beside live friends never gets the shooter's place or the floor without its fog. What may be shown live is the squad's own
  *  knowledge and is not this function's.
  *
- *  THE FILE ONLY READS THE GAME. No dice, nothing written that the simulation reads: a run with the switch on is the run with it off, digest for digest
- *  (tools/qa/deathrecap-check.ts holds it), so the switch is ON on every stand and `?norecap` / the Tab row is the way back. State is per Game in a WeakMap and
- *  starts over with every fresh `g.mission` (a restart, a checkpoint load). It is NOT in a checkpoint: it is the picture of a death, and a load is a run in which
- *  that death has not happened.
+ *  THE FILE ONLY READS THE GAME. State is per Game in a WeakMap and starts over with every fresh `g.mission` (a restart, a checkpoint load). It is NOT in a checkpoint:
+ *  it is the picture of a death, and a load is a run in which that death has not happened.
  *
- *  Seams: combat.ts fireWeapon → `recapRound` (the round that is about to land on a man: one line), game.ts `recapTick` (last in Game.step), ui/debrief.ts
- *  mounts the panel. */
-import { men, allDown, manOf as playerOf, menUp, playerName } from './seats';
+ *  Seams: the out event of combat's fire_weapon → `recapRound`, the dress step `recapTick` (host/rustdress.ts), ui/debrief.ts mounts the panel. */
+import { men, allDown, manOf as playerOf, playerName } from './seats';
 import { SideSet, GameSideMap } from '../math/side';
-import type { Game, Guard, GameEvent, Player } from './game';
+import type { Game, Guard, GameEvent } from './game';
+import type { WeaponDef } from './weapons';
 import type { Character } from './character';
 import type { Vec3 } from '../math/vec';
-import type { WeaponDef } from './weapons';
 import { WEAPONS } from './weapons';
 import { plainShort } from './gear';
 import { civiliansShown } from './civilians';
-import { FOG, gazeOf } from './fogofwar';
-import { BoxFlag } from '../scene/boxes';
 
 export const RECAP = {
   on: true,
@@ -73,27 +69,23 @@ export interface RecapTake { death: RecapDeath; t0: number; t1: number; cast: Re
 export interface DeathRecap { takes: RecapTake[]; /** the take the card opens on: the last player to go down, else the last of ours */ main: number; }
 
 /** One of the squad lost while the run is on, as much as the squad knows: `from` = the way off him to where the round (the blast) came from, a unit vector on
- *  the plan to the nearest EIGHTH of the compass — a direction, never a place, and never fine enough to lay a ruler along — null until the squad has it
+ *  the plan to the nearest EIGHTH of the compass — a direction, never a place, and never fine enough to lay a ruler along — none until the squad has it
  *  (`knownAt`), and for good when nobody still up saw him go down or heard it. */
-export interface LostMan { id: number; name: string; t: number; at: [number, number]; from: [number, number] | null; knownAt: number; }
-/** what the recorder keeps of him beside that: the way it came from (handed over as `man.from` only when the squad has it), whether ears had it, who had a
- *  line to him as he went down (the first teammate; the player himself), and `done` once that is settled either way */
-interface Lost { man: LostMan; src: [number, number] | null; heard: boolean; saw: Guard | null; samSaw: boolean; done: boolean; }
-
+export interface LostMan { id: number; name: string; t: number; at: [number, number]; from?: [number, number] | null; knownAt: number; }
 export const MAN_STRIDE = 5;
 export const RECAP_STATS = { deaths: 0, takes: 0, rounds: 0, known: 0, calls: 0 };
 
 interface Round { t: number; by: number; byAt: [number, number]; from: [number, number]; to: [number, number]; weapon: string; blind: boolean; loud: boolean; }
+
 interface State {
   mission: object; lastT: number; next: number; primed: boolean;
   /** when the run ended (Infinity while it has not): what the card may show of a run that is played on past its end stops there */ overAt: number;
   frames: RecapFrame[]; spare: RecapFrame[]; shots: RecapShot[]; seen: WeakSet<GameEvent>;
   down: Set<number>; rounds: Map<number, Round>; cast: Map<number, RecapMan>;
   deaths: RecapDeath[]; due: { death: RecapDeath; at: number }[]; takes: RecapTake[];
-  lost: Lost[]; /** the same men as the squad knows them: what lostLive hands out */ lostPub: LostMan[]; lostNext: number;
 }
 const states = new GameSideMap<Game, State>('deathrecap.states');
-const fresh = (g: Game): State => ({ mission: g.mission, lastT: g.time, next: g.time, primed: false, overAt: Infinity, frames: [], spare: [], shots: [], seen: new SideSet(), down: new Set(), rounds: new Map(), cast: new Map(), deaths: [], due: [], takes: [], lost: [], lostPub: [], lostNext: 0 });
+const fresh = (g: Game): State => ({ mission: g.mission, lastT: g.time, next: g.time, primed: false, overAt: Infinity, frames: [], spare: [], shots: [], seen: new SideSet(), down: new Set(), rounds: new Map(), cast: new Map(), deaths: [], due: [], takes: [] });
 function stateOf(g: Game): State {
   let S = states.get(g);
   if (!S || S.mission !== g.mission || g.time < S.lastT) { S = fresh(g); states.set(g, S); }   // a restart or a load: that run's deaths are not this run's
@@ -233,95 +225,19 @@ export function recapTick(g: Game): void {
     if (gd && (gd.downKind === 'struck' || gd.downKind === 'choked') && d.cause !== 'round' && d.cause !== 'blast') return;   // put out cold by a hand (a civilian the player chokes): nobody was shot, there is nothing to explain
     S.deaths.push(d); if (S.deaths.length > 32) S.deaths.shift();
     S.due.push({ death: d, at: now + RECAP.after }); RECAP_STATS.deaths++;
-    if (gd && gd.unit && me.side === 'operative') {   // a man of the squad: what the squad may know of it while the run is on (lostLive)
-      const src = d.from ?? d.byAt, man: LostMan = { id: c.id, name: me.name, t: now, at: [d.at[0], d.at[1]], from: null, knownAt: Infinity };
-      S.lost.push({ man, src: src ? eighth(src[0] - d.at[0], src[1] - d.at[1]) : null, heard: d.loud && !!d.from && heard(g, [d.from[0], 1.3, d.from[1]]), saw: null, samSaw: false, done: false });
-      S.lostPub.push(man); S.lostNext = 0;
-    }
   });
-  if (S.lost.length && now >= S.lostNext) { S.lostNext = now + 0.25; witness(g, S); }
   S.primed = true;
   if (S.overAt === Infinity && recapOver(g)) S.overAt = now;
   if (now >= S.next) { S.next = now - S.next > 1 ? now + 1 / RECAP.hz : S.next + 1 / RECAP.hz; sample(g, S); }
   if (S.due.length) flush(g, S, false);
 }
 
-/** a way on the plan to the nearest eighth of the compass (null: no way at all) */
-function eighth(dx: number, dz: number): [number, number] | null {
-  if (Math.hypot(dx, dz) <= 0.05) return null;
-  const a = Math.round(Math.atan2(dx, dz) / (Math.PI / 4)) * (Math.PI / 4);
-  return [Math.sin(a), Math.cos(a)];
-}
-const headOf = (c: Character): Vec3 => c.bones.head ?? [c.pos[0], c.pos[1] + 1.65, c.pos[2]];
-const squadUp = (gd: Guard): boolean => !!gd.unit && gd.team === 'operative' && gd.state !== 'dead';
-/** a line from a man still up to one going down (the room fight's own 'man down' test, with a reach): blind men see nothing */
-function lineTo(g: Game, c: Character, at: [number, number]): boolean {
-  return Math.hypot(c.pos[0] - at[0], c.pos[2] - at[1]) <= RECAP.liveSeeM && !g.col.segmentBlocked(headOf(c), [at[0], 0.4, at[1]]);
-}
-/** Did anybody of the squad still up hear it. The sound model's own rule (collision.ts SoundPaths.propagate: a clear line, or over the furniture, else the
- *  walk round at the path's length, a shut leaf across it muffling it hard) asked WITHOUT its cache: that cache is the simulation's own ears', and an entry
- *  filed from here would hand them this file's answer for a cell pair in place of theirs. */
-function heard(g: Game, src: Vec3): boolean {
-  const col = g.col, reach = RECAP.liveHearM, a: Vec3 = [src[0], Math.max(src[1], 0.9), src[2]];
-  const ear = (c: Character): boolean => {
-    const h = headOf(c), b: Vec3 = [h[0], Math.max(h[1], 0.9), h[2]], straight = Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
-    if (straight > reach) return false;
-    if (!col.solidBlocked(a, b)) return true;
-    if (!col.solidBlocked([a[0], 2, a[2]], [b[0], 2, b[2]])) return straight <= reach * 0.9;
-    if (straight > 28) return false;
-    const path = col.nav.findPath(b, a, 6000); if (!path || !path.length) return false;
-    let L = 0, door = false, pa: Vec3 = [b[0], 1, b[2]];
-    for (const q of path) { const pb: Vec3 = [q[0], 1, q[2]]; L += Math.hypot(pb[0] - pa[0], pb[2] - pa[2]); if (!door && col.segmentBlockedDynamic(pa, pb, BoxFlag.SoundSeal)) door = true; pa = pb; }
-    L = Math.max(L + Math.hypot(a[0] - pa[0], a[2] - pa[2]), straight);
-    return L <= reach * (door ? 0.32 : 0.72);
-  };
-  for (const gd of g.guards) if (squadUp(gd) && ear(gd.char)) return true;
-  return menUp(g).some(pl => ear(pl.char));
-}
-/** did the player's own man see him go down: a line, and — where the fog is a cone (hard) — inside the wedge he looks down or at his shoulder */
-function samSees(g: Game, at: [number, number]): boolean { for (const pl of men(g)) if (manSees(g, pl, at)) return true; return false; }
-function manSees(g: Game, pl: Player, at: [number, number]): boolean {
-  const c = pl.char; if (pl.down || g.time < pl.dazzledUntil || !lineTo(g, c, at)) return false;
-  if (!FOG.cone) return true;
-  const dx = at[0] - c.pos[0], dz = at[1] - c.pos[2], d = Math.hypot(dx, dz); if (d <= FOG.coneNearM) return true;
-  const u = gazeOf(c); return (dx * u[0] + dz * u[2]) / d >= Math.cos(FOG.coneDeg * Math.PI / 360);
-}
-/** the side of the PLAYER's man a way lies on, in the words of the fog's own calls (fogofwar.ts sideOf, asked of a point a long way off along it) */
-function sideWord(g: Game, pl: Player, u: [number, number]): string {
-  const c = pl.char, s = g.fogOfWar.sideOf([c.pos[0] + u[0] * 50, 0, c.pos[2] + u[1] * 50]);
-  return s === 'front' ? 'from the front' : s === 'behind' ? 'from behind us' : `from the ${s}`;
-}
-/** Each man lost and not yet settled: who has a line to him inside his first second down; after the beat, if somebody saw or ears had it, the squad has the
- *  way it came from — and the teammate who saw says which side, when the player did not see it himself and stands near enough for 'left' to mean anything
- *  (cues.ts aside: a bubble of the cues' own — never Guard.bubble, no strip row, no die, nothing a run reads). Nobody saw, nobody heard: he is only down. */
-function witness(g: Game, S: State): void {
-  const pl = menUp(g)[0] ?? men(g)[0];   // (the player the side is called to: the first one up)
-  for (const L of S.lost) {
-    if (L.done) continue;
-    const M = L.man, age = g.time - M.t;
-    if (age <= RECAP.liveSawSecs) {
-      if (!L.saw) for (const gd of g.guards) if (squadUp(gd) && g.time >= gd.dazzledUntil && lineTo(g, gd.char, M.at)) { L.saw = gd; break; }
-      if (!L.samSaw) L.samSaw = samSees(g, M.at);
-    }
-    if (age < RECAP.liveBeat) continue;
-    const by = L.saw && squadUp(L.saw) ? L.saw : null, sam = L.samSaw && !pl.down;   // (a witness who has gone down himself since tells nobody)
-    if (!by && !sam && !L.heard) { if (age > RECAP.liveSawSecs) L.done = true; continue; }
-    L.done = true; M.knownAt = g.time; M.from = L.src; RECAP_STATS.known++;
-    if (RECAP.live && L.src && by && !sam && !pl.down && Math.hypot(pl.char.pos[0] - M.at[0], pl.char.pos[2] - M.at[1]) <= RECAP.liveSideM
-      && g.cues.bubbleOf(by) === by.bubble   // (no cue of the cues' own is up over him: a contact call outranks this; his own 'man down.' is followed by it)
-      && g.cues.aside(by, `${sideWord(g, pl, L.src)}!`)) RECAP_STATS.calls++;
-  }
-}
 const NONE: readonly LostMan[] = [];
-/** The squad's men lost so far this run, as the squad knows them (the HUD's read while the run is on): empty with the switch off. */
-export function lostLive(g: Game): readonly LostMan[] {
-  if (!RECAP.on || !RECAP.live) return NONE;
-  const S = states.get(g);
-  return S && S.mission === g.mission ? S.lostPub : NONE;
-}
+/** The squad's men lost so far this run, as the squad knows them (the game's record; the HUD's read while the run is on). */
+export function lostLive(g: Game): readonly LostMan[] { return RECAP.on && RECAP.live ? g.recap.lostLive : NONE; }
 /** is the live rule drawing at all (the squad block strikes every man of the squad who is down while it is: the record only adds the way it came from, drawn only under `liveArrows`) */
 export function lostShown(): boolean { return RECAP.on && RECAP.live; }
-/** is the way a lost man's round came from DRAWN — the arrow on his row, the stroke on the ground (RECAP.liveArrows; ui/overlay.ts asks before either) */
+/** is the way a lost man's round came from DRAWN: the arrow on his row, the stroke on the ground (RECAP.liveArrows; ui/overlay.ts asks before either) */
 export function lostArrowsShown(): boolean { return lostShown() && RECAP.liveArrows; }
 export function lostOf(g: Game, id: number): LostMan | null { for (const L of lostLive(g)) if (L.id === id) return L; return null; }
 
