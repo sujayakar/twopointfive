@@ -74,7 +74,7 @@ export async function holdOff(holds: readonly Hold[]): Promise<() => void> {
 
 /** Run one probe as the runner runs it, whoever calls: the words its name is owed held (holdOff, above), and round it the fence that keeps one probe's leftovers
  *  out of the next of the same process — every knob table copied before and put back after (src/game/knobs.ts: a key a probe added is dropped, every value
- *  restored in place; the cut-pieces switch is one of them), 'the plain night wears your card' (kit.ts KIT_SOLO, a flag of the visit in no knob table), and the
+ *  restored in place; the cut-pieces switch is one of them), and the
  *  loud card first in the table again (kit.ts kitMission: a probe that staged a quiet run leaves your stealth card first). Throws, after everything else is
  *  back, if the tables cannot be put back. */
 let fenceDepth = 0;
@@ -83,7 +83,7 @@ export async function asProbe<T>(name: string, fn: () => T | Promise<T>): Promis
   // (tools/qa/fold.ts: one line a probe from whoever runs the probes, the outermost. Under the runner, whose run() says it, this says nothing.)
   const says = fenceDepth === 0 && foldSpeaker('probe'); if (says) { const o = foldOutside(`before ${name}`); if (o) console.log(o); }   // (a probe run inside another's fence is the outer one's)
   const foldWas = fenceDepth === 0 ? foldMode() : null;   // (fold.ts foldFor: the fold on or off as this fence opens, put back FIRST as it closes, so the tables go back in the mode they were copied in)
-  const soloOn = kit.KIT_SOLO.on, knobs = knobsCopy(), release = await holdOff(holdsOf(name));
+  const knobs = knobsCopy(), release = await holdOff(holdsOf(name));
   // (THE DIE IS PART OF THE FENCE: every probe begins on die 1 and whatever die it leaves in `Math.random` is taken out after it, so a probe that stands a game
   // with no seed stands the same game alone, after any other probe, and on every run — tools/qa/die.ts)
   const dieWas = Math.random; if (fenceDepth === 0) Math.random = harnessDie() ?? dieWas;
@@ -94,7 +94,7 @@ export async function asProbe<T>(name: string, fn: () => T | Promise<T>): Promis
     foldFor(foldWas);
     if (fenceDepth === 1) Math.random = dieWas;
     try { kit.kitMission(null); } catch { /* (as the runner always ran it: a throw here is not the probe's verdict) */ }
-    release(); kit.KIT_SOLO.on = soloOn;
+    release();
     fenceDepth--; if (FOLD.on) { try { foldLost(); } catch { /* the put-back below still runs */ } }   // (tools/qa/fold.ts: a settled row's hold lost to a branch replaced whole is found BEFORE the tables go back, so it is named with the value the probe left it at)
     try { knobsBack(knobs); if (FOLD.on) foldLost(); }   // (…and after: the put-back makes again a branch the probe deleted, plain)
     catch (e: any) { throw new Error(`the knob tables could not be put back after '${name}' — ${e?.stack ?? e}${failed ? ` (and the probe itself threw — ${(threw as any)?.stack ?? threw})` : ''}`); }
