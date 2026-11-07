@@ -44,3 +44,13 @@ thread and "take it, use it, let it go" is the only rule, held by habit. Who own
 Left where it is, for whoever reworks those files: with BELIEF.on settled, `fix_stamp`, `pt_stamp`, `roomfight::def_fix_is_pt` and
 `fix_is_pt` (the stand-ins for the TypeScript's object identity of a man's fix) are still written and read by `def_move_pt`,
 `move_pt` and the senses. The program cannot call them dead: they are reached from code that never tested the row.
+
+## With the settings the shader cleanup removed (the drop of 49 fields of `RenderSettings`)
+
+Two settings were always false and still read: `rtMeshHits` and `sdfRigSmooth`. By hand, in TypeScript: the one read in
+`src/game/game.ts` (`oneColourHits`, now the plain `false` handed to `looks.proxies`), the same expression in `src/viewer/runtime.ts`,
+their two lines of the interface and of `defaultSettings()` in `src/settings.ts`, their rows of `tools/qa/settings-check.ts` (with
+`meshShadows`, whose only read in game.ts was in that expression) and the key `smooth` of `tools/qa/rig-identity.js`. After that
+`fold fields-gone` lists them with the other 47 and the three commands of the README drop all 49.
+Left: `whole`, the last parameter of `charLook.ts proxies` and of `render/charMaterials.ts proxyAlbedos`, is `false` at every call
+now; the comments at `src/ui/quality.ts:215` and `src/render/frame.ts:142` still name the two settings.
