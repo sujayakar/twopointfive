@@ -607,7 +607,7 @@ export function saveState(g: Game, opts: SaveOpts = {}): SaveState {
     blackout: { active: bo.active, until: infOut(bo.until), since: bo.since, permanent: bo.permanent, restoredAt: bo.restoredAt },
     flags: { aiEnabled: g.aiEnabled, godMode: g.godMode, infiniteAmmo: g.infiniteAmmo, playerInvisible: g.playerInvisible },
     player, guards, items, doors, props, propsTime: g.props.time, targets,
-    devices: g.devices?.snapshot() ?? null, mission: deepClone({ ...g.mission, driveT: -1, debrief: false }), chronicle,
+    devices: g.devices?.snapshot() ?? null, mission: deepClone({ ...g.mission, driveT: -1 }), chronicle,
     events: g.events.map(e => ({ kind: e.kind, pos: c3(e.pos), time: e.time, loud: e.loud, level: e.level, id: e.id, who: e.who, weapon: e.weapon, from: e.from ? c3(e.from) : undefined, to: e.to ? c3(e.to) : undefined, announced: e.announced, cause: e.cause, ...(e.ears ? { ears: [c3(e.ears[0]), c3(e.ears[1])] as [Vec3, Vec3] } : {}), ...(e.swAt ? { swAt: c3(e.swAt) } : {}) })),
     messages: g.messages.map(m => ({ text: m.text, t: m.t })),
     rollcall: { nextAt: R.nextAt, stage: R.stage, t0: R.t0, caller: gi(R.caller), missing: gi(R.missing), answered: R.answered, checks: R.checks },
@@ -808,7 +808,7 @@ function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number,
   if (g.qrf) { g.qrf.loudT = fin(s.qrf?.loudT, -1e9); responseWordRestore(g, s.qrf?.word); }   // (…and what was said on the net of where he is — qrf.ts RESPONSE.net; a file without it: nothing said yet)
   // ---- the mission and its chronicle
   { const M = s.mission; const stage: MissionStage = M.stage === 'drive' || M.stage === 'exfil' ? M.stage : 'infiltrate';   // (canLoad has refused 'failed' / 'done'; anything else unknown in a hand-made file is the start, not a guess)
-    g.mission = { stage, t0: fin(M.t0), driveT: -1, pulled: !!M.pulled, alarmOn: !!M.alarmOn, sweepAt: fin(M.sweepAt, -1), spottedT: fin(M.spottedT, -100), debrief: false, downCardAt: -1, handsOn: !!M.handsOn, stats: { ...M.stats } }; }
+    g.mission = { stage, t0: fin(M.t0), driveT: -1, pulled: !!M.pulled, alarmOn: !!M.alarmOn, sweepAt: fin(M.sweepAt, -1), spottedT: fin(M.spottedT, -100), downCardAt: -1, handsOn: !!M.handsOn, stats: { ...M.stats } }; }
   { const S = s.chronicle, C = new Chronicle();
     for (const e of S.events ?? []) { if (C.events.length >= MAX_EVENTS) break; C.events.push({ t: fin(e.t), kind: e.kind as ChronKind, room: e.room, pos: c3(e.pos), data: { ...(e.data as ChronData) } }); }
     C.dropped = S.dropped | 0; Object.assign(C.counts, S.counts ?? {}); for (const q of S.questioned ?? []) C.questioned.add(q);
