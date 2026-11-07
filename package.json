@@ -6,7 +6,6 @@
   "scripts": {
     "dev": "TPS_LOCAL_CLOUD=1 bun run tools/serve.ts",
     "build": "bun run tools/build.ts",
-    "build:one": "bun run tools/build-one.ts",
     "typecheck": "node vendor/typescript/bin/tsc --noEmit -p tsconfig.json",
     "typecheck:qa": "node --max-old-space-size=8192 vendor/typescript/bin/tsc --noEmit -p tools/qa/tsconfig.json",
     "map:export": "bun run tools/levels/export.ts",
