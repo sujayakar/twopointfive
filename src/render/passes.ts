@@ -160,30 +160,29 @@ export class LightingPasses implements CutSwappable {
   /** the HYBRID estimator (direct-quality lane, docs/internal/direct-quality.md): K stratified rays for each of the two carried leaders at a pixel, 0 = off (restir.wgsl HELD) — engine mirrors settings.heldRays */
   heldRays = 6; restirHueSplit = true;   // (+ the hue split: ru.cfg.w & 128 — restir.wgsl HUE SPLIT; false = the belief hue as it was)
   /** THE LIGHTING TRADES (restir.wgsl TRADES; engine mirrors settings.heldAdaptive / restirStableRetrace / restirDimClass — all off by default = the estimator's program and uniform
-   *  exactly as they were): each gives up a little accuracy for shadow rays. While any is on the encode takes restir.wgsl's RESTIR_TRADE twin, compiled on FIRST USE (every prelude ×
-   *  motion variant the page can take, together) — a boot with the rows off compiles nothing new; until the twin exists the frame takes the plain program (which never reads the rows' bits). */
+   *  exactly as they were): each gives up a little accuracy for shadow rays. While any is on the encode takes restir.wgsl's RESTIR_TRADE twin, compiled on FIRST USE (every prelude
+   *  the page can take, together) — a boot with the rows off compiles nothing new; until the twin exists the frame takes the plain program (which never reads the rows' bits). */
   heldAdaptive = false; restirStableRetrace = false; restirDimClass = 0;
-  private restirTrade = new Map<string, GPUComputePipeline | null>();   // 'b' | 'bm' | 'c' | 'cm' (boot / cut prelude, + the motion twin) → the pipeline; null = compiling, or it failed (the plain program stays)
+  private restirTrade = new Map<string, GPUComputePipeline | null>();   // 'b' | 'c' (boot / cut prelude) → the pipeline; null = compiling, or it failed (the plain program stays)
   private restirTradeHot = false;   // a hot-swapped restir (hotSwapDirect: __hotRestir / __hotCommon) has no trade twin — the hot program is what runs, the rows stay without effect until a reload
-  private restirTradePipe(motion: boolean): GPUComputePipeline | null {
+  private restirTradePipe(): GPUComputePipeline | null {
     if (this.restirTradeHot) return null;
     const cut = this.cutLive;
-    for (const c of cutSwap.enabled ? [cut, !cut] : [cut]) for (const m of [motion, !motion]) {   // (both motion twins — and, under the cut switch, both preludes — asked for together: the first camera move, or the first cut piece, after a row goes on does not start a compile of its own)
-      const key = (c ? 'c' : 'b') + (m ? 'm' : '');
+    for (const c of cutSwap.enabled ? [cut, !cut] : [cut]) {   // (under the cut switch both preludes are asked for together: the first cut piece after a row goes on does not start a compile of its own)
+      const key = c ? 'c' : 'b';
       if (this.restirTrade.has(key)) continue;
       this.restirTrade.set(key, null);
-      const code = (c ? scenePrelude(true) : scenePrelude()) + directCommonSrc + `const RESTIR_MOTION: bool = ${m};\nconst RESTIR_TRADE: bool = true;\n` + restirSrc;
-      this.device.createComputePipelineAsync({ label: 'restirT' + (m ? 'M' : ''), layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.lDirect, this.lRestir] }), compute: { module: makeShader(this.device, code, 'restirT' + (m ? 'M' : '')), entryPoint: 'main' } })
+      const code = (c ? scenePrelude(true) : scenePrelude()) + directCommonSrc + 'const RESTIR_TRADE: bool = true;\n' + restirSrc;
+      this.device.createComputePipelineAsync({ label: 'restirT', layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.lDirect, this.lRestir] }), compute: { module: makeShader(this.device, code, 'restirT'), entryPoint: 'main' } })
         .then(p => { if (!this.restirTradeHot) this.restirTrade.set(key, p); }, e => reportErrorLine('render.restir.twin', '[restir] the trade twin did not compile — the rows stay without effect', e));
     }
-    return this.restirTrade.get((cut ? 'c' : 'b') + (motion ? 'm' : '')) ?? null;
+    return this.restirTrade.get(cut ? 'c' : 'b') ?? null;
   }
   /** MOTION (lane fix/direct-motion, docs/internal/direct-motion.md; restir.wgsl header MOTION): bitmask 1 = stochastic-bilinear reservoir reprojection, 2 = motion-scaled confidence,
-   *  4 = spatial reuse wherever the pixel moves; 0 = the estimator's program exactly as it was (the RESTIR_MOTION = false pipeline). V = the screen motion in px a frame AT 1000 INTERNAL ROWS (scaled to the target like restirRadius)
+   *  4 = spatial reuse wherever the pixel moves; 0 = none of them. V = the screen motion in px a frame AT 1000 INTERNAL ROWS (scaled to the target like restirRadius)
    *  under which the history keeps full confidence — the cut ramps to Min (fraction of the M cap) by 1.6 × V, Px = the motion (px a frame at 1000 rows, scaled alike) past which (4) opens the spatial pass. Engine mirrors settings.restirMotion*. */
-  restirMotionLive = false;   // this frame dispatches the RESTIR_MOTION twin: restirMotion ≠ 0 AND the camera moved (or settings.restirMotionStatic) — engine decides; a still camera runs main's program
+  restirMotionLive = false;   // this frame's uniform carries the motion bits: restirMotion ≠ 0 AND the camera moved (or settings.restirMotionStatic) — engine decides; a still camera's frame carries none
   restirMotion = 0; restirMotionV = 1.1; restirMotionMin = 0.1; restirMotionPx = 0.5; restirMotionTaps = 0;   // (taps: (4)'s spatial tap count at a moving pixel when above the tier's own k; 0 = the tier's k)
-  private pRestirM: GPUComputePipeline | null = null;   // (a LATER twin: null until it is in — traceJobs; the encode takes pRestir meanwhile) restir.wgsl compiled a second time behind `const RESTIR_MOTION: bool = true` (pRestir carries `false` = main's text const-folded back to itself)
   /** this frame's TAAU jitter in internal pixels (engine.jitter; 0,0 without TAAU) */
   restirJitter: [number, number] = [0, 0];
   private restirJitterPrev: [number, number] = [0, 0];   // the previous restir dispatch's jitter (its reservoirs were reprojected / traced in that raster)
@@ -596,16 +595,14 @@ export class LightingPasses implements CutSwappable {
     const set = <V,>(p: Promise<V>, f: (v: V) => void) => jobs.push(p.then(f));
     // LATER (gpu/device.ts PIPE_QUEUE.later, 2026-10-26: a cold boot on Windows compiles every one of these through DXC, 5–25 s apiece before this work): in the BOOT's set the
     // twins no first frame draws with the default settings are not waited for — compiled after the boot in the queue's background lane, written in through the cut set's
-    // patch (so a live cut set keeps them for when it goes) — and their pass takes the other twin until they are in: the motion twin of restir (restirM: pRestir, the
-    // estimator as it was, while the camera moves in the first seconds), the dust twin (volDust: dust drawn as plain smoke, as when it does not compile). The cut set's own build (T is not this) waits for everything as before; PIPE_QUEUE.later false (the row 'Start on first frame shaders' off) = the boot waits for these too, as it always did.
+    // patch (so a live cut set keeps them for when it goes) — and their pass takes the other twin until they are in: the dust twin (volDust: dust drawn as plain smoke, as when it does not compile). The cut set's own build (T is not this) waits for everything as before; PIPE_QUEUE.later false (the row 'Start on first frame shaders' off) = the boot waits for these too, as it always did.
     const late = T === this && PIPE_QUEUE.later;
     const cpL = (desc: GPUComputePipelineDescriptor) => late ? laterPipelineAsync(device, desc) : cp(desc);
     const setL = <V,>(make: () => Promise<V>, key: string) => {   // (`make` is run here, where the pipeline was always made: its module is created inside it, in the order it always was)
       if (late) { void make().then(v => { if (v && !this.cutSet.baseOf(this, key)) this.cutSet.patch(this, { [key]: v }, null); }); return; }   // (a place filled meanwhile — a retune, a hot swap — keeps what it was given: the text that arrives here is the boot's)
       set(make(), v => { T[key] = v; });
     };
-    set(cp({ label: 'restir', layout: lay(sceneLayout, this.lDirect, this.lRestir), compute: { module: makeShader(device, pre + directCommonSrc + 'const RESTIR_MOTION: bool = false;\nconst RESTIR_TRADE: bool = false;\n' + restirSrc, 'restir'), entryPoint: 'main' } }), p => { T.pRestir = p; });   // (RESTIR_MOTION false = the estimator's text const-folded back to itself; the twin below carries the direct-motion lane's three levers — settings.restirMotion picks it)
-    setL(() => cpL({ label: 'restirM', layout: lay(sceneLayout, this.lDirect, this.lRestir), compute: { module: makeShader(device, pre + directCommonSrc + 'const RESTIR_MOTION: bool = true;\nconst RESTIR_TRADE: bool = false;\n' + restirSrc, 'restirM'), entryPoint: 'main' } }), 'pRestirM');
+    set(cp({ label: 'restir', layout: lay(sceneLayout, this.lDirect, this.lRestir), compute: { module: makeShader(device, pre + directCommonSrc + 'const RESTIR_TRADE: bool = false;\n' + restirSrc, 'restir'), entryPoint: 'main' } }), p => { T.pRestir = p; });   // (ONE program since 2026-11-07: the direct-motion lane's three levers are bits of its uniform, raised on the frames the camera moved)
     {   // THE GATHER: `trace` and `light`, one module
       const layX = lay(sceneLayout, this.lFGX!), xMod = mk(splitGatherSrc(), 'gatherSplit');
       set(cp({ label: 'gatherTrace', layout: layX, compute: { module: xMod, entryPoint: 'trace' } }), p => { T.pFGX = p; });
@@ -765,26 +762,18 @@ export class LightingPasses implements CutSwappable {
   private static readonly RT_IDLE_FRAMES = 600;
   private rtIdle = 0;
   /** The same for the direct-light pass (main.ts __hotRestir): a restir.wgsl variant against the staged scene — scene prelude AND
-   *  direct_common.wgsl prepended (pass `common` to swap that too), both of its pipelines replaced. */
+   *  direct_common.wgsl prepended (pass `common` to swap that too). */
   async hotSwapDirect(src: string, common: string = directCommonSrc): Promise<{ ok: boolean; messages: string[] }> {
     cutSwap.hot();   // (CUT BOXES: a hot program has no cut rule — the boot set is pinned from here, render/cutSwap.ts)
     this.restirTradeHot = true; this.restirTrade.clear();   // (… nor a lighting-trade twin: built from the bundled text and prelude, it would shadow the hot program)
-    // restir.wgsl compiles TWICE (RESTIR_MOTION false / true — the direct-motion lane's twin); a variant that declares the const itself compiles once, into both slots
-    const variants: [string, boolean | null][] = !/^const RESTIR_MOTION\b/m.test(src) ? [['const RESTIR_MOTION: bool = false;\n', false], ['const RESTIR_MOTION: bool = true;\n', true]] : [['', null]];
-    const layouts = [this.sceneLayout, this.lDirect, this.lRestir];
     const trade = !/^const RESTIR_TRADE\b/m.test(src) ? 'const RESTIR_TRADE: bool = false;\n' : '';   // (the lighting trades' const: a hot text is the plain program unless it says otherwise)
-    let messages: string[] = [];
-    for (const [decl0, motion] of variants) {
-      const decl = decl0 + trade;
-      const mod = this.device.createShaderModule({ code: scenePrelude() + common + decl + src, label: 'restir' + (motion ? 'M' : '') + '-hot' });
-      const info = await mod.getCompilationInfo();
-      const off = (scenePrelude() + common + decl).split('\n').length - 1;
-      messages = info.messages.map(m => `${m.type} ${m.lineNum - off}:${m.linePos} ${m.message}`);
-      if (info.messages.some(m => m.type === 'error')) return { ok: false, messages };
-      const p = await this.device.createComputePipelineAsync({ label: 'restir' + (motion ? 'M' : '') + '-hot', layout: this.device.createPipelineLayout({ bindGroupLayouts: layouts }), compute: { module: mod, entryPoint: 'main' } });
-      if (motion === null) { this.pRestir = p; this.pRestirM = p; }
-      else if (motion) this.pRestirM = p; else this.pRestir = p;
-    }
+    const head = scenePrelude() + common + trade;
+    const mod = this.device.createShaderModule({ code: head + src, label: 'restir-hot' });
+    const info = await mod.getCompilationInfo();
+    const off = head.split('\n').length - 1;
+    const messages = info.messages.map(m => `${m.type} ${m.lineNum - off}:${m.linePos} ${m.message}`);
+    if (info.messages.some(m => m.type === 'error')) return { ok: false, messages };
+    this.pRestir = await this.device.createComputePipelineAsync({ label: 'restir-hot', layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.lDirect, this.lRestir] }), compute: { module: mod, entryPoint: 'main' } });
     return { ok: true, messages };
   }
 
@@ -830,7 +819,7 @@ export class LightingPasses implements CutSwappable {
     const rays = Math.max(2, Math.min(6, Math.round(this.restirRays))), k = Math.max(0, Math.min(8, Math.round(this.restirSpatial))), cap = Math.max(1, Math.min(30, Math.round(this.restirHistory)));
     u[0] = rays | ((Math.max(0, Math.min(8, Math.round(this.heldRays))) & 15) << 8);   // cfg.x: rays | heldRays << 8 (restir.wgsl HELD — the hybrid estimator's K; 0 = off: the transient stratum exactly as it was)
     u[0] |= (this.heldAdaptive ? 1 << 12 : 0) | (this.restirStableRetrace ? 1 << 13 : 0) | ((Math.max(0, Math.min(100, Math.round(this.restirDimClass * 100))) & 255) << 16);   // the lighting TRADES (restir.wgsl; read only by the RESTIR_TRADE twin; all off = 0 = the word as it was)
-    const mot = this.restirMotionLive ? Math.max(0, Math.min(7, Math.round(this.restirMotion))) : 0;   // MOTION (restir.wgsl header): its three parts as cfg.w bits 256 / 512 / 1024 — read only by the RESTIR_MOTION pipeline the encode takes while mot ≠ 0
+    const mot = this.restirMotionLive ? Math.max(0, Math.min(7, Math.round(this.restirMotion))) : 0;   // MOTION (restir.wgsl header): its three parts as cfg.w bits 256 / 512 / 1024 the encode takes while mot ≠ 0
     u[1] = k | (mot ? (Math.max(0, Math.min(8, Math.round(this.restirMotionTaps))) & 15) << 8 : 0); u[2] = cap | ((Math.max(0, Math.min(30, Math.round(this.restirPenCap))) & 255) << 8) | (this.restirPenRays ? 1 << 16 : 0); u[3] = (this.restirGradient ? 1 : 0) | (this.restirSpatialAll ? 2 : 0) | (this.restirKnownDark ? 0 : 16) | (this.restirHueSplit ? 128 : 0) | (mot << 8);
     f[4] = Math.max(0, this.restirRadius) * (this.height / 1000); f[5] = Math.max(0.05, this.restirGradK); f[6] = Math.max(0, this.restirYoung); f[7] = Math.max(0, Math.min(1, this.restirAudit));
     f[8] = this.restirJitter[0]; f[9] = this.restirJitter[1]; f[10] = this.restirJitterPrev[0]; f[11] = this.restirJitterPrev[1];   // TAAU jitter in internal px: this frame's, the previous dispatch's (restir.wgsl RestirU.jitter)
@@ -876,8 +865,6 @@ export class LightingPasses implements CutSwappable {
   private sharpAtBoot = false;
   /** a fragment composite is in (one of the LATER pair, or the boot's when sharp direct was not built at boot) */
   get fragCompReady(): boolean { return !!(this.pComp || this.pCompR); }
-  /** the RESTIR_MOTION twin is in (a LATER twin too): until then a frame the camera moved runs main's program, and must be handed main's uniform */
-  get restirMReady(): boolean { return !!this.pRestirM; }
   setSharp(on: boolean) { if (on !== this.sharpOn) { this.sharpOn = on; this.compStale = true; } }
   setGbaa(on: boolean) { if (on !== this.gbaaOn) { this.gbaaOn = on; this.compStale = true; } }
   /** PARTICLE RAIN v2's scene copy on / off (engine.render mirrors settings.particleRain before resize): a switch re-makes the composite-size set so hdrCopy exists (or goes) and hdr may be copied from */
@@ -1244,8 +1231,8 @@ export class LightingPasses implements CutSwappable {
     this.restirBeliefsStale = false;
     {
       const p = enc.beginComputePass({ label: 'direct', timestampWrites: ts('direct') });
-      { this.rParity ^= 1; const pt = this.heldAdaptive || this.restirStableRetrace || this.restirDimClass > 0 ? this.restirTradePipe(this.restirMotionLive) : null;   // (the lighting trades' twin, once it exists)
-        p.setPipeline(pt ?? (this.restirMotionLive && this.pRestirM ? this.pRestirM : this.pRestir)); p.setBindGroup(0, sceneBG); p.setBindGroup(1, this.bgDirect!); p.setBindGroup(2, this.ensureRestirBG()); }   // (restirMotionLive: the RESTIR_MOTION twin on frames the camera moved — same layouts, same buffers, the reservoirs are program-agnostic)
+      { this.rParity ^= 1; const pt = this.heldAdaptive || this.restirStableRetrace || this.restirDimClass > 0 ? this.restirTradePipe() : null;   // (the lighting trades' twin, once it exists)
+        p.setPipeline(pt ?? this.pRestir); p.setBindGroup(0, sceneBG); p.setBindGroup(1, this.bgDirect!); p.setBindGroup(2, this.ensureRestirBG()); }   // (restirMotionLive: the motion bits in its uniform on frames the camera moved)
       p.dispatchWorkgroups(Math.ceil(this.width / 8), Math.ceil(this.height / 8)); p.end();
     }
     // the shadow client of the denoiser, both emitter classes, always ending in S; skipped entirely when direct light

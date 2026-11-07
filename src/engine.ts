@@ -699,14 +699,14 @@ export class Engine {
     const matSame = this.prevVpU.every((v, i) => v === cam.viewProj[i]);
     const camStill = taauOn && matSame;
     // the CAMERA's own motion this frame in output px (the look-at point and four points 3 m round it through the previous / current unjittered view-projection — an orbit leaves the
-    // look-at itself still): the motion-sharpen term of the final blit (taauSharpenMotion) and the direct-motion twin's switch below
+    // look-at itself still): the motion-sharpen term of the final blit (taauSharpenMotion) and the direct estimator's motion bits below
     let px = 0;
     if (this.havePrev && !matSame) {
       const prj = (m: ArrayLike<number>, q: Vec3): [number, number] | null => { const x = m[0] * q[0] + m[4] * q[1] + m[8] * q[2] + m[12], y = m[1] * q[0] + m[5] * q[1] + m[9] * q[2] + m[13], w = m[3] * q[0] + m[7] * q[1] + m[11] * q[2] + m[15]; return w > 1e-4 ? [x / w, y / w] : null; };
       for (const off of [[0, 0], [3, 0], [-3, 0], [0, 3], [0, -3]]) { const q: Vec3 = [cam.target[0] + off[0], cam.target[1], cam.target[2] + off[1]]; const a = prj(this.prevVpU, q), b = prj(cam.viewProj, q); if (a && b) px = Math.max(px, Math.hypot((b[0] - a[0]) * 0.5 * (this.outWidth || this.width), (b[1] - a[1]) * 0.5 * (this.outHeight || this.height))); }
     }
-    // the unjittered camera MOVED since the last render (TAAU or not; a cut is not motion): the direct-motion lane's twin ReSTIR program dispatches on these frames only. By displacement,
-    // not matrix equality — the follow camera's damping keeps nudging the f32 matrices for seconds after the picture has visibly settled, and the twin (+0.2 ms at high, its levers inert
+    // the unjittered camera MOVED since the last render (TAAU or not; a cut is not motion): the direct estimator's motion bits go up on these frames only. By displacement,
+    // not matrix equality — the follow camera's damping keeps nudging the f32 matrices for seconds after the picture has visibly settled, and the motion work (+0.2 ms at high, its levers inert
     // under a pixel's own 1 px/frame) would run all that while (review of 5a08434); 0.02 px a frame is far under anything either program does differently
     this.camMovedAny = this.havePrev && !cutNow && px > 0.02;
     let camMot = 0;
@@ -905,7 +905,7 @@ export class Engine {
     this.passes.volK0 = Math.round(s.volLightCap || 0) <= 0;   // (volumetrics.wgsl keeps the K = 0 smoke march, which no preset runs, in a twin of its own: passes.ts volK0Pipe)
     this.passes.glassRefract = !!(s.glassRefract && s.glass && this.world.glassList.length > 0);   // (glass refraction: composite's GLASS_REFRACT twin — only while there is a pane list to bend through; glass off / no panes = the module as it was)
     { const P = this.passes; P.restirRays = s.restirRays; P.restirSpatial = s.restirSpatial; P.restirHistory = s.restirHistory; P.restirRadius = s.restirRadius; P.restirGradient = s.restirGradient; P.restirGradK = s.restirGradK; P.restirYoung = s.restirYoung; P.restirSpatialAll = s.restirSpatialAll; P.restirPenCap = s.restirPenCap; P.restirPenRays = s.restirPenRays; P.restirAudit = s.restirAudit; P.heldRays = s.heldRays; P.heldAdaptive = !!s.heldAdaptive; P.restirStableRetrace = !!s.restirStableRetrace; P.restirDimClass = s.restirDimClass || 0; P.restirHueSplit = s.restirHueSplit; P.restirKnownDark = s.restirKnownDark; P.restirJitter = this.jitter;
-      P.restirMotion = s.restirMotion; P.restirMotionLive = s.restirMotion > 0 && (this.camMovedAny || s.restirMotionStatic) && P.restirMReady; P.restirMotionV = s.restirMotionV; P.restirMotionMin = s.restirMotionMin; P.restirMotionPx = s.restirMotionPx; P.restirMotionTaps = s.restirMotionTaps;   // (MOTION: 0 = main's pipeline; passes.encode picks the RESTIR_MOTION twin otherwise)
+      P.restirMotion = s.restirMotion; P.restirMotionLive = s.restirMotion > 0 && (this.camMovedAny || s.restirMotionStatic); P.restirMotionV = s.restirMotionV; P.restirMotionMin = s.restirMotionMin; P.restirMotionPx = s.restirMotionPx; P.restirMotionTaps = s.restirMotionTaps;   // (MOTION: 0 = main's pipeline; passes.encode picks the RESTIR_MOTION twin otherwise)
       P.writeRestir(this.lights); }   // ReSTIR DI: the settings are the source of truth; the uniform (cfg + last frame's slot maps and light records, kept by lights.upload above) goes up every frame the pass runs
     { // the denoiser's clients' knobs (the settings are the source of truth, mirrored like every other pass option)
       const K = this.passes.den.knobs;
