@@ -874,7 +874,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   in the Characters / Effects modes and the 'view' list in the level top bar's second row in the Level / Materials modes; `[` `]` are still exposure. The native host: backtick
   toggles its panel, no debug-view key); open page / section / scroll kept in
   localStorage `twopointsix.panel`. Rows for WIND / AIM / WHISTLE / TACTICS / NEEDS / CHAOS / QRF / DEVICES come from
-  `knobRows(spec)`; everything with custom logic stays hand-written. `tools/qa/panel-inventory.ts` (`probes.ts panel-inventory`, family `ui`) freezes the row inventory against
+  `knobRows(spec)` (which builds no row for a key the page holds at one value: the bullet 'THE DEBUGGER HAS NO BOX FOR A SETTLED SWITCH' below); everything with custom logic stays hand-written. `tools/qa/panel-inventory.ts` (`probes.ts panel-inventory`, family `ui`) freezes the row inventory against
   fixtures/panel-inventory-main.json — a row may move but never vanish (but a box of a SETTLED switch, taken out on purpose: its row leaves the fixture too, as on 2026-11-07, the bullet 'THE DEBUGGER HAS NO BOX FOR A SETTLED SWITCH' below; a row REWORDED on purpose: `--reword [map.json]` rewrites only the fixture rows that went missing, each from the live row of the same kind and label, or the label the map gives); `PORT=<dev server port> node tools/qa/panel-keys.cjs` = the keys pressed for real in headless Chromium (the software
   adapter): backtick opens / shuts the panel from the game, from its search box and from a focused slider, Tab reaches the game, no debug view is stepped (exit 0 / 1, 2 = the script died).
   Every 'Tab ▸ X ▸ Y' path in this file, in code comments and in docs/internal means the debugger's page X, section Y — the key moved, and on 10-10 the old Sandbox page's sections were dealt to the six game pages above (a 'Tab ▸ Sandbox ▸ …' path is that section on Missions / Squad / Enemy AI / Stealth / Player & weapons now, 'Team feel' the Squad page's sections; sections renamed that day: the two called 'Glass' are 'Glass (the picture)' on Renderer fx and 'Glass breaking' on Destruction, 'Renderer — decals / particles' are 'Decals' / 'Particles', the weather's is 'Weather'); a row's label is unchanged unless the page rebuild/debug-tools/read-first.md lists it (some forty were reworded), so the panel's search finds a row by the words after the last ▸.
@@ -1307,25 +1307,38 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   first-time player. (The Mission step's facts row wrote 'Defenders 11' as digits: since 10-23 no screen draws that cell, `MYSTERY`.) OPEN, for the menus' owners: a named kit a mission
   recommends (a field on its row, a mark on the Kit row's button) is not built for regular missions — only what the place asks is said. OPEN, for the
   squad mission's owner: its frame refuses the player's smoke and stun slots all mission, so of what he packs for himself only the frag is used.
-- **THE DEBUGGER HAS NO BOX FOR A SETTLED SWITCH (2026-11-07; FIRST HALF DONE).** On the page every row the switch list calls settled is held at its
+- **THE DEBUGGER HAS NO BOX FOR A SETTLED SWITCH (2026-11-07; both halves, and a probe that holds it).** On the page every row the switch list calls settled is held at its
   page value (`src/host/rustgame.ts rustSettledHold`: a read answers that value, a write is refused), so a box that showed one could not be moved. OUT:
   the 256 boxes written as `panel.toggleBox(…, () => ROW, …)` in `src/ui/bindings.ts` whose getter reads only settled rows of `tools/qa/switches.json`,
   with the imports only they used. A click test of every row (the review's, headless, the hold laid) found none of the 256 could move. Among them: 'Tab ▸
   the orders ring', which could not move but, clicked off, put the maintainer's two open ring rows off for good; and the two '(reloads)' boxes.
-  STILL ON THE PANEL AND JUST AS DEAD (the second half, not done): 286 yes/no rows built by the row helpers (`knobRows`, `feelRows`, the 'Enemy nerve'
-  rules list: DOORTOOLS 34, ROOMFIGHT 21, RESCUE 20, SQUADS 20, DOORMANNERS 18, FOG 14, DIGIN 13 and others; the nerve box, unticked, is refused and still
-  resets every man's morale), 8 sliders over settled numbers, 14 toggles of the sneak lab and one of the fire lab. NUMBERS STAY, and some are now inert
-  with their hover text pointing at a box that left: the five rows that say 'Does nothing while every mission starts the same is on' (it is held on, so two
-  sliders there move nothing), 'setup ▸ seconds it stays up unused' (the only row left in Gun setup), 'far line: distance from you (edge off)'; section
-  summaries that print a constant 'on'. THE NOTES WERE NOT SWEPT: where an area note names a debugger box for a settled switch, that box is gone. NOT
-  HELD BY A CHECK: nothing in the tree fails when a box for a settled row comes back; the click test as a probe is the second half's.
+  THE SECOND HALF, the rows built from data. THE HOLD SAYS WHAT IT HOLDS: `src/host/held.ts` (import-free), `markHeld` called by the page's hold and by
+  the tools' fold as each lays a row, `rowHeld(table, key)` true for a laid row and for a key the table has not got. Nothing is guessed from a row's
+  shape (`SLOTS.on` and `BIGSLOT.on` answer through accessors of their own and are live). WHO ASKS: `knobRows` (and `feelRows` through it) builds no
+  row, yes/no or number, for a held key, and says so on the console for a key that is not there; the sneak lab's switches (now data, `t` and `key`,
+  like its numbers) and its numbers; the fire lab's one box. A panel built BEFORE the hold is laid would get the rows after all: on the page the
+  hold is laid first (`main.ts`). Out by hand: the nine 'Enemy nerve' rule boxes (all settled; the first, unticked, was refused and still reset every
+  man's morale) and the slider 'way round a room ×'. COUNTS: 283 more boxes and 9 sliders over settled numbers gone from the debugger (1,367 rows to
+  1,075 on the page's stand; 190 boxes left). `panel-keys.cjs` wants more than 1,000 rows: 75 to spare.
+  HELD BY A PROBE: `probes.ts panel-dead` (family `ui`; `tools/qa/panel-inventory.ts panelDead`, also `panel-inventory.ts --dead`) builds the live
+  debugger under the fold, clicks every yes/no box and fails on one whose answer does not change. 190 boxes, 168 judged: three are named and not
+  clicked (`NOT_CLICKED`: two show a page object the harness fakes; the one box that reloads the page is judged by the row it shows, and a
+  '(reloads)' box that is not named there fails the line) and 19 answer no yes or no in the harness (a stand-in of the engine's: not judged).
+  `PANELDEAD_BREAK=1` (the probe adds a box over a settled row itself) fails naming it. On the old stand nothing is held and the line is not asked.
+  NOT HELD BY IT: a slider or a select over a held number (it clicks boxes only); the two labs' panels (they ask the same query, unprobed here; the
+  sneak lab's page check `stalk-page.cjs` now asks that two of its settled switches have NO box, and was NOT run).
+  NUMBERS LEFT INERT, with hover texts pointing at a box that left: the five rows that say 'Does nothing while every mission starts the same is on'
+  (it is held on, so two sliders there move nothing), 'setup ▸ seconds it stays up unused' (the only row left in Gun setup), 'far line: distance from
+  you (edge off)'; section summaries that print a constant 'on'. THE NOTES WERE NOT SWEPT: where an area note names a debugger box for a settled
+  switch, that box is gone.
   KNOWN BESIDE IT, NOT THIS CHANGE'S: `?round=0` still puts the PICTURE's half of round things off (`main.ts` reads `ROUND.on` for the GPU before the hold
   is laid) while the game holds them round; a machine that once unticked a glass box keeps `{on:false}` in its store, read back and refused at every
   visit, with no box left to rewrite it ('1 kept row … is not applied' on the panel's first line); `wallpen-page.cjs` cannot pass on this tree for its
   `?wallpen=0` arm, a settled word the hold turns away (its panel line now reads the rule's status line where it read the box; NOT run).
-  CHECKS: `panel-inventory --print` before and after: 256 toggles fewer and nothing else moved (1,622 rows to 1,366; the civilians' pleasantries box left
-  the fixture with it, so the same 5 reference rows are missing as before); `panel-keys.cjs` on the real page in headless Chromium, software adapter: ALL
-  PASS (the page boots, every page of the panel has rows, no page error). Both typechecks, the knob check and the build clean. 'Kit weight' keeps its
+  CHECKS: `panel-inventory --print` before and after: 256 toggles fewer and nothing else moved (1,622 rows to 1,366, and 1,367 with the kit weight's line; the civilians' pleasantries box left
+  the fixture with it, so the same 5 reference rows are missing as before; the second half took four more with it, the wind's four boxes); `panel-keys.cjs` on the real page
+  in headless Chromium, software adapter: ALL PASS after the first half (the page boots, every page of the panel has rows, no page error); NOT run
+  again after the second. Both typechecks, the knob check and the build clean. 'Kit weight' keeps its
   read-out as a row of its own (a section with no row is hidden). The one-off script: project files `rebuild/switch-cleanup/scripts/deadbox.cjs`.
   Never seen on a GPU.
 - **EIGHTEEN SWITCHES RULED SETTLED, TAKEN OFF THE PANELS (2026-11-07).** The port ruled these rows settled at their page value (project files
