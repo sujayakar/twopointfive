@@ -1,5 +1,6 @@
-//! THE PICTURE'S SIDE OF THE FOG OF WAR: the renderer's block, the lit fog's list of lamps, a lamp's face as the team remembers it, and a viewer's lifted
-//! draw. Everything here is computed FROM the game's state and read by nothing in it: no rule calls into this file, and what it writes is the block
+//! THE PICTURE'S SIDE OF THE FOG OF WAR: the renderer's block, the lit fog's list of lamps, a lamp's face as the team remembers it, and the list a
+//! viewer's draw with the fog off is made from (that draw itself is the page's: it lifts the fog on its own copy of the game, between two steps).
+//! Everything here is computed FROM the game's state and read by nothing in it: no rule calls into this file, and what it writes is the block
 //! (`fog_of_war.frame`), the lit fog's list and counts, the kept faces, the viewer's list, and the renderer's own fields of a light and a box
 //! (`fog`, `fog_ghost`, `fog_emit`, `fog_mark`: the upload alone reads these).
 //!
@@ -220,13 +221,6 @@ fn thin_block(g: &mut crate::game::Game) {
     }
 }
 
-/// A fresh encounter: no list kept for a lifted draw, the fog not lifted, no lamp's face kept.   (fogofwar.ts FogOfWar.reset, the picture's three)
-pub fn reset(g: &mut crate::game::Game) {
-    g.fog_of_war.raw_at = -1.0;
-    g.fog_of_war.bared = false;
-    g.fog_of_war.face_recs.clear();
-}
-
 /// The fog has gone off: the block says so, and every class and kept face is taken back off the lights and the lamps.   (fogofwar.ts FogOfWar.fullClear, and the pass's own head)
 pub fn off(g: &mut crate::game::Game) {
     let f = &mut g.fog_of_war.frame;
@@ -244,6 +238,12 @@ pub fn off(g: &mut crate::game::Game) {
     g.fog_of_war.full_stats.hidden = 0.0;
     g.fog_of_war.full_stats.ghosts = 0.0;
     g.fog_of_war.full_stats.held = 0.0;
+}
+
+/// A fresh encounter: no list kept for a viewer's draw, no lamp's face kept.   (fogofwar.ts FogOfWar.reset, the picture's two)
+pub fn reset(g: &mut crate::game::Game) {
+    g.fog_of_war.raw_at = -1.0;
+    g.fog_of_war.face_recs.clear();
 }
 
 /// The picture's face of a lamp: its boxes drawn lit or dark through `fog_emit` / `fog_mark`, which the upload alone reads; `lit` None = as it stands.   (fogofwar.ts FogOfWar.lampFace)
@@ -309,27 +309,9 @@ pub fn fog_of_war_faces_lift(g: &mut crate::game::Game) {
     }
 }
 
-/// The faces put back as the memory has them, without asking who sees what.   (fogofwar.ts FogOfWar.facesBack)
-pub fn fog_of_war_faces_back(g: &mut crate::game::Game) {
-    if !g.fog_of_war.full_on { return; }
-    let down = crate::sim_lightshome::mains_active(g);
-    let mut i = 0;
-    while i < g.targets.len() {
-        let t = g.targets[i];
-        i += 1;
-        let row = &g.tab.sim_lightshome_fixture[t];
-        let (has_light, mains) = (row.light.is_some() || row.area_lights.is_some(), row.mains);
-        if !has_light { continue; }
-        let known = g.fog_of_war.lamp_recs.get(t).copied();
-        let lit = fog_of_war_lamp_lit(g, t);
-        if let Some(known) = known {
-            if known != lit && (lit || !(mains && down)) { fog_of_war_lamp_face(g, t, Some(!lit)); }
-        }
-    }
-}
-
-/// The frame's list of boxes as it stands BEFORE the fog cuts it, kept for a viewer's lifted draw (`raw`): the doors live in place of the copies the fog
-/// keeps of them. Called just before `fog_of_war_things`; nothing is kept where no viewer has asked.   (fogofwar.ts FogOfWar.things, its head)
+/// The frame's list of boxes as it stands BEFORE the fog cuts it, kept for a viewer's draw with the fog off: the doors live in place of the copies the
+/// fog keeps of them. The page reads the list off its copy of the game (fogofwar.ts `raw`); nothing is kept where no viewer has asked. Called just
+/// before `fog_of_war_things`.   (fogofwar.ts FogOfWar.things, its head)
 pub fn keep_raw(g: &mut crate::game::Game, list: &[BoxId]) {
     if !(g.fog_of_war.viewer && fog_of_war_active(g)) { return; }
     let mut raw = core::mem::take(&mut g.fog_of_war.raw_list);
@@ -346,21 +328,9 @@ pub fn keep_raw(g: &mut crate::game::Game, list: &[BoxId]) {
     g.fog_of_war.raw_at = g.fog_of_war.frame_no;
 }
 
-/// This frame's list of boxes as it stood before the fog cut it: no viewer, the fog standing aside, or nothing kept for this frame = None.   (fogofwar.ts FogOfWar.raw)
-pub fn fog_of_war_raw(g: &crate::game::Game) -> Option<Vec<BoxId>> {
-    if g.fog_of_war.viewer && fog_of_war_active(g) && g.fog_of_war.raw_at == g.fog_of_war.frame_no { Some(g.fog_of_war.raw_list.clone()) } else { None }
-}
-
 /// The characters to draw, of the frame's list.   (fogofwar.ts FogOfWar.filter)
 pub fn fog_of_war_filter(g: &crate::game::Game, all: &[CharId]) -> Vec<CharId> {
     all.iter().copied().filter(|&c| !g.fog_of_war.hidden_chars.has(c)).collect()
-}
-
-/// For a viewer's picture without the fog: everybody, the men the fog leaves out last.   (fogofwar.ts FogOfWar.everybody)
-pub fn fog_of_war_everybody(g: &crate::game::Game, all: &[CharId]) -> Vec<CharId> {
-    let mut out = fog_of_war_filter(g, all);
-    out.extend(all.iter().copied().filter(|&c| g.fog_of_war.hidden_chars.has(c)));
-    out
 }
 
 /// The engine replay's word: a few frames under the page's fog look. (FogOfWar.pageLook)
