@@ -12,7 +12,7 @@
 // AN ECHO (schema `echo`, hand2.cjs H.bridge.echo): a field Rust owns that the TypeScript cannot hold (a place in a level script, a memo a module keeps where the walk cannot write it, the copy of the box world in the module that
 // holds it). A whole apply keeps a copy of its bytes beside the object and writes nothing; the puppet's export writes those bytes back (export.ts). So a re-export after an apply is Rust's bytes everywhere, and such a field needs no class of its own in a host's compare.
 import GAME_REF_LIST from './game-ref.json';
-import { SCHEMA, parse, bookOf, seedBook, helpersOf, compiledExpr, LOOSE, ECHO, LENS , forGame } from './export';
+import { SCHEMA, parse, bookOf, seedBook, helpersOf, compiledExpr, LOOSE, ECHO, LENS, forGame, classWord, isGameSide } from './export';
 import { rawKey, PUT_BACKS } from '../../src/math/side';
 
 export type Hooks = { made?: Record<string, (row: any, g: any) => void>; gone?: Record<string, (row: any, g: any) => void>; classes?: Record<string, { prototype: object }>; values?: Record<string, any> };
@@ -57,6 +57,8 @@ type Inverse = (o: any, v: any, c: Ctx) => void;
 const skipField: Inverse = () => {};
 /** the fields whose expression is no assignment. Each says how the value gets back, or why it need not: read `skipField` as "the export works this out from what is carried, or it is set up once and never changes" */
 const INVERSE: Record<string, Inverse> = {
+  // (the row of `nearby` he is on, the object itself: a reader asks `nearby.includes(hover)`. Rust keeps a copy, which is that row by its place and what it is)
+  'game::Game.hover': (o, v, c) => { c.fix.push(() => { o.hover = v ? (o.nearby as any[]).find(r => r.kind === v.kind && r.verb === v.verb && r.pos?.[0] === v.pos?.[0] && r.pos?.[2] === v.pos?.[2]) ?? v : null; }); },
   // (a yes or no on Rust's side, and the seat's camera on the puppet's, which the page sets and no read of the tick's finds. As a yes it would be a value that takes no field: `w.cam.peekOffset = null` throws)
   'player::WallHold.cam': () => {},
   'game::Game.view_proj': (o, v) => { o.viewProj = v; }, 'seats::SeatSet.view_proj': (o, v) => { o.viewProj = v; },
@@ -156,9 +158,9 @@ function applyGameNow(g: any, blob: Uint8Array, knobs: Record<string, unknown>, 
   function readInner(n: N, cur: any): any {
     // a table keyed by the game, or by the one thing of its kind: what is applied is its row
     if (isSide(cur) && n.k !== 'opt' && n.k !== 'bool') {
-      const P = cur.constructor.name.startsWith('GameSide') || (!(n.k === 'map' && n.K.k === 'id' && n.K.id === 'PlayerId') && cur.liveKeys().includes(G));
+      const P = isGameSide(cur) || (!(n.k === 'map' && n.K.k === 'id' && n.K.id === 'PlayerId') && cur.liveKeys().includes(G));
       if (P) { const v = read(n, cur.get ? cur.get(G) : cur.has(G)); if (cur.set) cur.set(G, v); return cur; }
-      const K = cur.liveKeys(); if (K.length && SCHEMA.onceKeys.includes(K[0].constructor?.name)) { const v = read(n, cur.get ? cur.get(K[0]) : true); if (cur.set) cur.set(K[0], v); return cur; }
+      const K = cur.liveKeys(); if (K.length && SCHEMA.onceKeys.includes(classWord(K[0]))) { const v = read(n, cur.get ? cur.get(K[0]) : true); if (cur.set) cur.set(K[0], v); return cur; }
     }
     switch (n.k) {
       case 'f64': { const v = dv.getFloat64(I.p, true); I.p += 8; if (typeof cur === 'boolean') return v !== 0; if (cur === undefined && v === 0) return undefined; if (typeof cur === 'string') return String(v); return v; }
@@ -213,8 +215,8 @@ function applyGameNow(g: any, blob: Uint8Array, knobs: Record<string, unknown>, 
     if (T.k === 'wordEnum') { for (const f of T.arms[a].fields) sk(parse(f.ty)); return cur; }   // (authored: a lesson's test stands in the TypeScript as it was written)
     if (T.k === 'handEnum') { const t = armType(T, a); if (t) { sk(parse(t)); return cur; } return T.words ? T.words[a] : cur; }
     const A = T.vars[a]; if (!A.ty) return A.str ?? (cur && typeof cur === 'object' && (cur.kind ?? cur.type) === A.kw ? cur : A.kw !== undefined ? { kind: A.kw } : cur);
-    const AT = SCHEMA.types[A.ty]; const same = (() => { if (cur === null || cur === undefined || typeof cur !== 'object') return false; if (AT?.k === 'struct') { if (A.kw !== undefined) return (cur.kind ?? cur.type) === A.kw; if (A.sn && cur.constructor?.name === A.sn) return true; return AT.fields.filter((f: any) => f.ts).every((f: any) => f.ts in cur); } return true; })();
-    if (A.sn && !AT && same && cur.constructor?.name !== A.sn) return read(parse(A.ty), FRESH);
+    const AT = SCHEMA.types[A.ty]; const same = (() => { if (cur === null || cur === undefined || typeof cur !== 'object') return false; if (AT?.k === 'struct') { if (A.kw !== undefined) return (cur.kind ?? cur.type) === A.kw; if (A.sn && classWord(cur) === A.sn) return true; return AT.fields.filter((f: any) => f.ts).every((f: any) => f.ts in cur); } return true; })();
+    if (A.sn && !AT && same && classWord(cur) !== A.sn) return read(parse(A.ty), FRESH);
     return read(parse(A.ty), same ? cur : FRESH); }
   let curQ = '';
   /** one field of a struct, its bytes next */
