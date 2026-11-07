@@ -262,6 +262,8 @@ pub struct BoxMirror {
     pub own_at: f64,
     pub played: bool,
     pub of: Option<String>,
+    /// the module's world as this game wrote it last (world.rs `stood`): a number of this process's, on no wire and in no word of the state
+    pub stood: u32,
 }
 impl BoxMirror {
     /// what a new one holds: the TypeScript's field initialisers, before its constructor
@@ -322,6 +324,7 @@ impl BoxMirror {
             own_at: -1.0,
             played: false,
             of: None,
+            stood: 0,
         }
     }
 }

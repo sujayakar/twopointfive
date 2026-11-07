@@ -78,6 +78,7 @@ import { seatsStand, seatManId, standMen, spotBeside, manById, isManId, eachSeat
 import { doorMan } from './doorthrow';
 import './mission';
 import { NO_VIEW, type TickView } from '../view/seatview';
+import type { WorldAsk } from '../view/worldask';
 import { Chronicle, chronInterrogated } from './chronicle';
 import { hiddenProps, irBeams } from './combat';
 import { irViewer, irMade } from './irlaser';
@@ -1669,6 +1670,16 @@ export class Game {
   get view(): TickView { return this.viewAsk?.() ?? NO_VIEW; }
   /** the host's: asks the Rust game for its view (src/host/rustgame.ts in a page, tools/blitz/rust-host.ts in bun) */
   viewAsk: (() => TickView) | null = null;
+  /** THE BOX WORLD, ASKED (src/view/worldask.ts) by whoever draws, hears or points: the Rust game's answer where one steps this game (the host sets `askHost`), and
+   *  this page's own copy of the level where none does (a workbench's floor, the moment before the first start) */
+  readonly ask: WorldAsk = {
+    blocked: (a, b) => this.askHost ? this.askHost.blocked(a, b) : this.col.segmentBlocked(a, b),
+    solid: (a, b) => this.askHost ? this.askHost.solid(a, b) : this.col.solidBlocked(a, b),
+    ray: (o, d, max) => this.askHost ? this.askHost.ray(o, d, max) : this.col.raycast(o, d, max),
+    hear: (from, to) => this.askHost ? this.askHost.hear(from, to) : this.col.sound.propagate(from, to),
+    together: f => this.askHost ? f() : this.col.window(f),
+  };
+  askHost: WorldAsk | null = null;
   objectivePos(): Vec3 | null { return this.view.mission?.pos ?? null; }
   objectiveText(): string { return this.view.mission?.text ?? ''; }
 

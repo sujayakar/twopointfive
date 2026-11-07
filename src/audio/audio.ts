@@ -4,8 +4,8 @@
 // Since the native-engine seams the GRAPH lives behind an AudioBackend (src/audio/backend.ts): WebAudioBackend (src/audio/webaudio.ts) is
 // today's node graph, node for node; a native host hands another. What stays HERE is the game's half — the voice budget, the propagation through the walls, the ambience emitters'
 // placement and levels, the reverb sized by the traced free path, the footstep material — exactly as it was.
+import type { WorldAsk } from '../view/worldask';
 import { Vec3, v3 } from '../math/vec';
-import { StaticCollision } from '../scene/collision';
 import { GameAudioLike } from '../game/audio_iface';
 import { FLOOR, FloorMat, floorAt } from '../game/floor';
 import { buildSfx, buildSfxLater, ROLL_LOOP, FIRE_LOOP, SfxName } from './sfx';
@@ -139,8 +139,8 @@ export class AudioEngine implements GameAudioLike {
    *  voices stopped to make room · hrtf / equalpower = positional one-shots by the panner they got · occluded / routed = propagation outcomes · wet = the reverb send now */
   stats = { voices: 0, maxVoices: 0, culled: 0, stolen: 0, hrtf: 0, equalpower: 0, occluded: 0, routed: 0, wet: 0 };
 
-  /** col.sound (propagation), col.raycast (reverb sizing) see walls, props and door leaves; `makeBackend` = the host's graph (default: Web Audio off the page's AudioContext) */
-  constructor(private col: StaticCollision, private makeBackend: (volume: { master: number; sfx: number; ambience: number }) => AudioBackend | null = v => WebAudioBackend.create(v)) {}
+  /** the box world is asked (src/view/worldask.ts) how a sound reaches and how large the room is: walls, props and door leaves; `makeBackend` = the host's graph (default: Web Audio off the page's AudioContext) */
+  constructor(private ask: WorldAsk, private makeBackend: (volume: { master: number; sfx: number; ambience: number }) => AudioBackend | null = v => WebAudioBackend.create(v)) {}
 
   /** Must be called from a user-gesture handler. */
   start() {
@@ -198,7 +198,7 @@ export class AudioEngine implements GameAudioLike {
       // propagation FIRST — straight through air (partial occlusion from side rays softens doorway edges), or, when walled off, around the corners along the walkable
       // space: it then appears to come out of the doorway/bend, at the path's length, muffled a little (a lot if a closed door sits across that doorway); sealed off →
       // through the mass — because what it says decides whether the sound is worth a voice at all (the budget above)
-      const prop = this.col.sound.propagate(pos, this.listener); const at = prop.apparent, occ = prop.muffle;
+      const prop = this.ask.hear(pos, this.listener); const at = prop.apparent, occ = prop.muffle;
       const d = v3.dist(at, this.listener);
       const level = occludedGain(gain, occ) * distanceGain(d);   // what reaches the ear: the gain the graph applies × the panner's inverse-distance law at the apparent position
       if ((trim ? occludedGain(gain0, occ) * distanceGain(d) : level) < CULL_LEVEL) { this.stats.culled++; told(1); return; }   // (judged as ASKED: a level dial turned down on a replay page still leaves the lanes a voice to hear again)                                                             // inaudible under the mix: no voice
@@ -286,7 +286,7 @@ export class AudioEngine implements GameAudioLike {
     const s = src(), full = alive >= MAX_FOLLOW;
     if (full && far && all < MAX_FOLLOW + 2 && s && v3.dist(pos, this.listener) < farD) this.unfollow(far, t);
     else if (full || all >= MAX_FOLLOW + 2 || !s) { this.stats.culled++; tap?.({ name, gain, dur: dur / rate, heard: 1 }); return; }
-    const prop = this.col.sound.propagate(pos, this.listener), at = prop.apparent, occ = prop.muffle;
+    const prop = this.ask.hear(pos, this.listener), at = prop.apparent, occ = prop.muffle;
     const lp = FOLLOW_LOOPS[name], near = hrtfFor(prop.pathLen, occludedGain(gain, occ) * distanceGain(v3.dist(at, this.listener)));
     const bv = b.play({ buffer, pos: at, gain: 0, rate: rate * (trim?.rate ?? 1) * followRate(s.k), loop: true, loopAt: lp && dur >= lp.end ? lp : undefined, maxSecs: FOLLOW_SECS + 2, bus: 'sfx', hrtf: near,
       filter: trim?.tone ? { type: 'lowpass', freq: trim.tone } : undefined, distance: { ref: REF_DIST, rolloff: ROLLOFF, max: MAX_DIST }, cutoffHz: cutoffOf(occ), send: sendOf(occ, prop.pathLen) });
@@ -335,18 +335,18 @@ export class AudioEngine implements GameAudioLike {
       b.setVoice(v.v, { gain: t - f.seen > 0.2 ? 0 : occludedGain(f.gain * (trim?.gain ?? 1), f.occ) * followGain(s.k), rate: f.rate * (trim?.rate ?? 1) * followRate(s.k) }, 0.07);
     }
     // environment probe (4×/s): mean free path around the listener → reverb amount; outdoor → less
-    if (time - this.lastEnvT > 0.25 || this.lastEnvT === 0) this.col.window(() => {   // (a dozen questions of the box world between ticks: one proof of the module's copy for all of them)
+    if (time - this.lastEnvT > 0.25 || this.lastEnvT === 0) this.ask.together(() => {
       let sum = 0; const N = 10;
-      for (let i = 0; i < N; i++) { const a = (i / N) * Math.PI * 2; const hit = this.col.raycast(this.listener, [Math.cos(a), 0, Math.sin(a)], 16); sum += hit ? hit.t : 16; }
+      for (let i = 0; i < N; i++) { const a = (i / N) * Math.PI * 2; const hit = this.ask.ray(this.listener, [Math.cos(a), 0, Math.sin(a)], 16); sum += hit ? hit.t : 16; }
       const mfp = sum / N; const outdoors = this.listener[0] < 4 || this.listener[0] > 36 || this.listener[2] < 4 || this.listener[2] > 24;
       const wet = outdoors ? 0.08 : Math.min(0.55, 0.12 + mfp * 0.045);
       b.setReverb(wet, 0.3); this.stats.wet = wet;
       this.lastEnvT = time || 1e-3;
       // loops (canister hiss) + ambience go through the same propagation as one-shots: re-aim the panner at the apparent position, retune the low-pass
-      for (const v of this.voices) if (v.loop && v.pos && v.positional && !v.dying) { const pr = this.col.sound.propagate(v.pos, this.listener); b.setVoice(v.v, { pos: pr.apparent }, 0.25); b.setVoice(v.v, { cutoffHz: cutoffOf(pr.muffle) }, 0.2); if (v.follow) v.follow.occ = pr.muffle; }
+      for (const v of this.voices) if (v.loop && v.pos && v.positional && !v.dying) { const pr = this.ask.hear(v.pos, this.listener); b.setVoice(v.v, { pos: pr.apparent }, 0.25); b.setVoice(v.v, { cutoffHz: cutoffOf(pr.muffle) }, 0.2); if (v.follow) v.follow.occ = pr.muffle; }
       for (const a of this.ambience) {
         const d = v3.dist(a.pos, this.listener); let g = a.base * Math.max(0, 1 - d / a.radius);
-        if (g > 0.01) { const pr = this.col.sound.propagate(a.pos, this.listener); g *= 1 - 0.6 * pr.muffle; b.setVoice(a.v, { pos: pr.apparent, cutoffHz: Math.min(a.f0, 300 + cutoffOf(pr.muffle)) }, 0.4); }   // (BiquadFilter.frequency.defaultValue is the spec's 350 Hz, not what we set — clamp against the authored f0)
+        if (g > 0.01) { const pr = this.ask.hear(a.pos, this.listener); g *= 1 - 0.6 * pr.muffle; b.setVoice(a.v, { pos: pr.apparent, cutoffHz: Math.min(a.f0, 300 + cutoffOf(pr.muffle)) }, 0.4); }   // (BiquadFilter.frequency.defaultValue is the spec's 350 Hz, not what we set — clamp against the authored f0)
         b.setVoice(a.v, { gain: g }, 0.5);
       }
     });

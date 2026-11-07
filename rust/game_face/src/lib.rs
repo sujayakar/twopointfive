@@ -49,6 +49,8 @@
 //!   face_export(h)                            the whole state (`io::export`) at face_out
 //!   face_verdict(h) -> 0 | 1 | 2              how the mission ended, off the record the game's tick latches: 0 not yet, 1 lost, 2 won (then the record as lines at face_out)
 //!   face_tick_view(h)                         what a HUD is told of the game as its last tick left it (a TickView at face_out); a read, nothing kept
+//!   face_line(h, what, a…, b…) -> 0 | 1 · face_ray(h, o…, d…, max) -> 0 | 1 · face_hear(h, s…, d…)
+//!                                             the box world asked of the game shared: the camera's, the sound's, the cursor's questions; nothing is kept
 //!   face_die_n(h) -> f64 · face_time(h) -> f64 · face_rows(h) -> usize
 //!                                             the die's count of draws (in the game's block), the game's clock, the rows of the box table
 //!   face_parts() -> 13 · face_part_name(i)    the parts of rust/sim's block in their order; a part's name at face_out
@@ -77,6 +79,8 @@ thread_local! {
     static GAMES: RefCell<Vec<Option<Held>>> = const { RefCell::new(Vec::new()) };
     static PANIC: RefCell<String> = const { RefCell::new(String::new()) };
     static OUT: RefCell<Vec<u8>> = const { RefCell::new(Vec::new()) };
+    /// the ways round a sound's path found this tick, and for which game
+    static WAYS: RefCell<(u32, game::ask::Ways)> = RefCell::new((0, Default::default()));
     static HASHES: Cell<[u32; 13]> = const { Cell::new([0; 13]) };
     static HOOKED: Cell<bool> = const { Cell::new(false) };
 }
@@ -102,6 +106,9 @@ fn with<R>(h: u32, f: impl FnOnce(&mut Held) -> R) -> R {
     GAMES.with(|v| v.borrow_mut()[h as usize - 1] = Some(g));
     r
 }
+/// a call that may write what it does not say (a write by path, a state read in, a rule called from outside a tick, which may stage a level): the box world's copy is put
+/// down first, and the next question or tick proves it from nothing
+fn with_unsaid<R>(h: u32, f: impl FnOnce(&mut Held) -> R) -> R { with(h, |x| { game::scene_collision::unstand(&mut x.g); f(x) }) }
 /// a call that only reads the game: what it is handed is shared, so the compiler holds it to that
 fn with_ref<R>(h: u32, f: impl FnOnce(&Held) -> R) -> R { with(h, |x| f(x)) }
 fn out(b: Vec<u8>) { OUT.with(|o| *o.borrow_mut() = b); }
@@ -144,6 +151,36 @@ pub extern "C" fn face_verdict(h: u32) -> i32 {
 pub extern "C" fn face_tick_view(h: u32) {
     use game::io::Io;
     out(with_ref(h, |x| { let g = &x.g; let mut o = game::io::W::new(); game::view::tick_view(g, &game::seats::seat(g, g.local_seat.unwrap_or(g.seat))).w(&mut o); o.b }));
+}
+// ---- the box world, asked of the game shared (game::ask::WorldAsk): the host's camera, its sound, its cursor. The copy stands from a tick's end; where a writer put it
+// down the first question stands it again, and no question proves it for itself
+fn asked<R>(h: u32, f: impl FnOnce(game::ask::WorldAsk) -> R) -> R {
+    with(h, |x| {
+        if game::ask::WorldAsk::try_of(&x.g).is_err() { game::scene_collision::stands(&mut x.g); }
+        let g: &Game = &x.g;
+        f(game::ask::WorldAsk::of(g))
+    })
+}
+/// is the line a→b stopped: `what` 0 = to an eye (glass is passed), 1 = by anything solid
+#[no_mangle]
+pub extern "C" fn face_line(h: u32, what: u32, ax: f64, ay: f64, az: f64, bx: f64, by: f64, bz: f64) -> u32 {
+    asked(h, |w| w.line([ax, ay, az], [bx, by, bz], if what == 0 { game::ask::Line::Sight } else { game::ask::Line::Solid })) as u32
+}
+/// the nearest thing along a ray, within `max` (d a unit vector): 0 nothing · 1, and at face_out five doubles: how far, the face's normal, which (a static's place, 1e6 +
+/// a leaf's)
+#[no_mangle]
+pub extern "C" fn face_ray(h: u32, ox: f64, oy: f64, oz: f64, dx: f64, dy: f64, dz: f64, max: f64) -> u32 {
+    let Some(r) = asked(h, |w| w.ray([ox, oy, oz], [dx, dy, dz], max)) else { return 0 };
+    out([r.t, r.n[0], r.n[1], r.n[2], r.index].iter().flat_map(|v| v.to_le_bytes()).collect());
+    1
+}
+/// how a sound at `s` reaches a listener at `d`: at face_out ten doubles: how far it comes, through where (x y z), from where it seems to come (x y z), how muffled (0 1),
+/// how much of it carries, and 2 direct + 1 routed. A way round is searched for once a tick between the same two places of the floor; the game remembers none of it.
+#[no_mangle]
+pub extern "C" fn face_hear(h: u32, sx: f64, sy: f64, sz: f64, dx: f64, dy: f64, dz: f64) {
+    let p = WAYS.with(|k| { let mut k = k.borrow_mut(); if k.0 != h { *k = (h, Default::default()); } asked(h, |w| w.hear_kept(&mut k.1, [sx, sy, sz], [dx, dy, dz])) });
+    let how = if p.direct { 2.0 } else { 0.0 } + if p.routed { 1.0 } else { 0.0 };
+    out([p.path_len, p.via[0], p.via[1], p.via[2], p.apparent[0], p.apparent[1], p.apparent[2], p.muffle, p.carry, how].iter().flat_map(|v| v.to_le_bytes()).collect());
 }
 /// THE GENERATION OF THE BRIDGE this module was built with (io::LAYOUT, and `layout` in schema.json): a host refuses a module of another generation.
 #[no_mangle]
@@ -218,7 +255,7 @@ pub extern "C" fn face_slot(h: u32) -> usize {
 #[no_mangle]
 pub unsafe extern "C" fn face_import_into(h: u32, p: *const u8, n: usize) {
     let b = bytes(p, n);
-    with(h, |x| game::io::import_into(&mut x.g, b));
+    with_unsaid(h, |x| game::io::import_into(&mut x.g, b));
 }
 
 /// # Safety
@@ -274,7 +311,7 @@ pub unsafe extern "C" fn face_call(h: u32, f: u32, view: i32, p: *const u8, n: u
     game::call_gen::HOST_ROLL = Some(roll_of_the_host);
     let b = bytes(p, n);
     // (a caller that hands in a seat's view is asking about that seat: the call runs as that seat, whoever stands on the game)
-    let a = with(h, |x| if view < 0 { game::call_gen::call(&mut x.g, f, b) } else { game::seats::with_seat(&mut x.g, <game::ids::SeatId as game::ids::Id>::from_ix(view as usize), &mut |g| game::call_gen::call(g, f, b)) });
+    let a = with_unsaid(h, |x| if view < 0 { game::call_gen::call(&mut x.g, f, b) } else { game::seats::with_seat(&mut x.g, <game::ids::SeatId as game::ids::Id>::from_ix(view as usize), &mut |g| game::call_gen::call(g, f, b)) });
     out(a);
 }
 /// which seat this machine shows, by its place in the game's list of seats: the host says so before an apply and before its half of a tick, whenever it may have changed
@@ -287,7 +324,7 @@ pub unsafe extern "C" fn face_show_seat(h: u32, seat: u32) {
 #[no_mangle]
 pub unsafe extern "C" fn face_write(h: u32, p: *const u8, n: usize) {
     let b = bytes(p, n);
-    with(h, |x| game::io::poke(&mut x.g, b));
+    with_unsaid(h, |x| game::io::poke(&mut x.g, b));
 }
 /// # Safety
 /// `p`, `n` name bytes the host wrote into memory from face_alloc.
@@ -325,7 +362,7 @@ pub unsafe extern "C" fn face_give(h: u32, k: usize, p: *const u8, n: usize) {
 #[no_mangle]
 pub unsafe extern "C" fn face_hostwrite(h: u32, k: usize, p: *const u8, n: usize) -> u32 {
     let l = text(p, n);
-    let (r, said) = with(h, |x| match game_run::write_before(&mut x.g, k, &l) {
+    let (r, said) = with_unsaid(h, |x| match game_run::write_before(&mut x.g, k, &l) {
         Some(t) => (1, t),
         // (the only write made after a tick is the autosave's; a line that is neither is the host's to report)
         None if l.split(' ').nth(1) == Some("chron_save") => { x.after.push((k, l.to_string())); (2, String::new()) }
