@@ -42,7 +42,7 @@ const { wgslDecls } = await import(`${ROOT}/src/gpu/wgslTrim.ts`) as typeof impo
 const BUDGET: [RegExp, number][] = [
   [/^gatherSplit \/ trace$/, 252],   // (the gather is two programs, render/gatherSplit.ts: its rays, then the light at what they hit)
   [/^gatherSplit \/ light$/, 58],   // (113 before the gather took the reflections' one-loop writing of the light loop, 2026-11-07)
-  [/^composite(S)? \/ (fs|cs)$/, 442],   // (403 until 2026-11-07: the snow's glow and sparkle are in every level's text now, asked by the frame's level word, 421 on the look's page. Two programs where four stood: the refraction is the one text's own)
+  [/^composite(R|S|SR)? \/ (fs|cs)$/, 442],   // (403 until 2026-11-07: the snow's glow and sparkle are in every level's text now, asked by the frame's level word, 421 on the look's page)
   [/^volumetricsDust \/ main$/, 433],
   [/^volumetricsF? \/ main$/, 382],
   [/^particles \/ update$/, 356],
