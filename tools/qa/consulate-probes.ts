@@ -22,7 +22,7 @@ import { exporterCheck } from './level-file.ts';
 const { RESCUE, checkRescue } = await import(`${ROOT}/src/game/rescue.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { parseLevelData, validateLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
-const { lintLevel } = await import(`${ROOT}/src/editor/lint.ts`);
+const { lintLevel } = await import(`${ROOT}/src/scene/lint.ts`);
 const { CONSULATE_ROOMS } = await import(`${ROOT}/tools/levels/consulate.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
 const { BoxFlag, MAX_GLASS } = await import(`${ROOT}/src/scene/boxes.ts`);
