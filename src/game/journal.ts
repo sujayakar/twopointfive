@@ -96,7 +96,7 @@ export function knobTables(): Record<string, object> { return knobsNamed(JOURNAL
  *  b = buttons held (on change), m = the cursor in CSS px (on change), w = wheel travel (when non-zero) — absent = unchanged (k / b / m) or nothing (p / c / w) */
 export interface InputRec { k?: string[]; p?: string[]; c?: number; b?: number; m?: [number, number]; w?: number; }
 /** the engine-side facts the simulation reads (see the head) + the fixtures' restrike stagger by target name */
-export interface EnvSnap { debrisCap: number; emissiveScale: number; flashlightRadius: number; markings: boolean; particlesOn: boolean;
+export interface EnvSnap { emissiveScale: number; markings: boolean; particlesOn: boolean;
   /** recorded under the game page's HUD (main.ts). The HUD used to null an expired speech bubble on its speaker after each update, and a replay of such a
    *  file did the same; it writes nothing of the game now (a line is over when its time is), and the field only says where the file was made */
   hud: boolean;
@@ -140,11 +140,11 @@ export function envSnapshot(g: Game): EnvSnap {
   const E = g.engine as unknown as { particles?: unknown; glassFracture?: unknown; settings: { gpuParticles?: boolean } };
   const P = (g.smoke as { params?: Record<string, number> }).params;
   const stagger: Record<string, number> = {}; for (const t of g.targets) stagger[t.name] = t.stagger;
-  return { debrisCap: num('debrisCap', 64), emissiveScale: num('emissiveScale', 1), flashlightRadius: num('flashlightRadius', 0.07), markings: S.markings !== false, particlesOn: !!(E.particles && E.settings.gpuParticles), hud: false, ...(typeof E.glassFracture === 'boolean' ? { glassFracture: E.glassFracture } : {}),
+  return { emissiveScale: num('emissiveScale', 1), markings: S.markings !== false, particlesOn: !!(E.particles && E.settings.gpuParticles), hud: false, ...(typeof E.glassFracture === 'boolean' ? { glassFracture: E.glassFracture } : {}),
     canister: P ? { canisterDuration: P.canisterDuration, canisterDensity: P.canisterDensity, canisterRadius: P.canisterRadius, canisterTemp: P.canisterTemp, canisterSpeed: P.canisterSpeed } : null, stagger, ...(DESTRUCTION.on ? { destruction: { on: true } } : {}), ...(LIVED.on ? { lived: true } : {}), ...(cutConfig.on ? { cutBoxes: true } : {}) };
 }
 /** the settings half of an env, onto an engine's settings BEFORE the Game is built on it (the marking lights are registered in the constructor) */
-export function applyEnvSettings(settings: Record<string, unknown>, env: EnvSnap): void { settings.debrisCap = env.debrisCap; settings.emissiveScale = env.emissiveScale; settings.flashlightRadius = env.flashlightRadius; settings.markings = env.markings; }
+export function applyEnvSettings(settings: Record<string, unknown>, env: EnvSnap): void { settings.emissiveScale = env.emissiveScale; settings.markings = env.markings; }
 /** the game half of an env, AFTER the checkpoint is loaded: the fixtures' restrike stagger */
 export function applyEnvGame(g: Game, env: EnvSnap): void { for (const t of g.targets) { const s = env.stagger[t.name]; if (typeof s === 'number' && Number.isFinite(s)) g.lightHome.in(LIGHT_IN.stagger, t, s); } }
 export function knobsSnapshot(g: Game): KnobsSnap {

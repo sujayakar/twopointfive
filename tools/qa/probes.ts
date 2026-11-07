@@ -35,7 +35,7 @@ const KNOWN = new Set<string>(['all', 'all-quick']);
 /** 'all-quick' = the union of the gate lists a lane is told to run before handing back (CLAUDE.md: perf · player (incl. selector) · doors · qrf · checkpoints · journal · ui + every identity
  *  card) — some twenty minutes where 'all' is hours; a dispatch line rides it when any of its names is one of these families / probes. `sh tools/qa/gate.sh all-quick` is the one-word gate. */
 const QUICK = new Set(['perf', 'player', 'doors', 'qrf', 'checkpoints', 'journal', 'ui', 'fold', 'decals-identity', 'destruction-identity', 'level-identity', 'glassbreak-off', 'director-scheduler',
-  'roomclear', 'threshold', 'silent', 'lineoffire', 'doorpath', 'kit', 'missions', 'depot', 'registry', 'shipped', 'close', 'heldclicks', 'farsight', 'farcalm', 'look', 'kitanim', 'hands', 'roomfit', 'words', 'workthings', 'handwork', 'wand', 'owncharge', 'workstow', 'squadnet', 'gunslots', 'gunroles', 'gunlook', 'kittree', 'bigslot', 'noshield', 'takedown', 'stealthpose', 'sticky', 'holds']);   // (… and, second line, the REBUILD's families: the room clear, the threshold, the silent order, lines of fire, the door walk, the kit, the missions list with its as-shipped gate, the two levels with a run of their own, and the two-stands check; + close: the close-in mode near a guard, on in the page; + words: the dialogue pass's lint, the hostages' voice)
+  'roomclear', 'threshold', 'silent', 'doorpath', 'kit', 'missions', 'depot', 'registry', 'shipped', 'close', 'heldclicks', 'farsight', 'farcalm', 'look', 'kitanim', 'hands', 'roomfit', 'words', 'workthings', 'handwork', 'wand', 'owncharge', 'workstow', 'squadnet', 'gunslots', 'gunroles', 'gunlook', 'kittree', 'bigslot', 'noshield', 'takedown', 'stealthpose', 'sticky', 'holds']);   // (… and, second line, the REBUILD's families: the room clear, the threshold, the silent order, lines of fire, the door walk, the kit, the missions list with its as-shipped gate, the two levels with a run of their own, and the two-stands check; + close: the close-in mode near a guard, on in the page; + words: the dialogue pass's lint, the hostages' voice)
 // (first line: + glass-break's switch-off identity and the Director's idle identity, landed after the list froze — wave-4 review)
 /** The probes that failed this invocation (by name), the count run, and how many of those produced anything checkable (a boolean, a PASS / FAIL line, a banner). */
 /** QA_FOLD_ONLY=<probe,probe…> beside the word that lays the fold (tools/qa/fold.ts, FOR ONE CHECK AT A TIME): the named probes alone run folded */
@@ -2796,7 +2796,7 @@ if (on('move-walktries', 'walktries', 'all')) await run('move-walktries', async 
 for (const [n, f] of [['oneway-deal', 'onewayDeal'], ['oneway-read', 'onewayRead'], ['oneway-player', 'onewayPlayer'], ['oneway-men', 'onewayMen'], ['oneway-save', 'onewaySave']] as const)
   if (on(n, 'oneway', 'all')) await run(n, async () => (await import('./oneway-probes.ts'))[f]());
 // ---------------------------------------------------------------- a frame holds a boot from the face its door opens toward (frameholds-probes.ts; game/doors.ts DOORWAY.frameHolds, game/digin.ts): 'frameholds' = the family
-for (const [n, f] of [['frameholds-tools', 'frameholdsTools'], ['frameholds-sam', 'frameholdsSam'], ['frameholds-wedge', 'frameholdsWedge']] as const)
+for (const [n, f] of [['frameholds-tools', 'frameholdsTools'], ['frameholds-sam', 'frameholdsSam']] as const)
   if (on(n, 'frameholds', 'all')) await run(n, async () => (await import('./frameholds-probes.ts'))[f]());
 // ---------------------------------------------------------------- the AI opens a door from its handle side (handleside-probes.ts; game/handleside.ts HANDLE, on the one-way doors): 'handleside' = the family
 for (const [n, f] of [['handleside-spots', 'handlesideSpots'], ['handleside-men', 'handlesideMen']] as const)   // (handleside-off went 2026-11-07: the rule is settled)
@@ -2816,21 +2816,8 @@ if (on('cues-lines', 'cues', 'all')) await run('cues-lines', async () => (await 
 if (on('cues-run', 'cues', 'all')) await run('cues-run', async () => (await import('./cues-probes.ts')).cuesRun());
 // the last few defenders of a room clear (game/laststand.ts — the call out, settled on, and the regroup, an open decision the page has off): tools/qa/laststand-probes.ts
 if (on('laststand-callout', 'laststand', 'all')) await run('laststand-callout', async () => (await import('./laststand-probes.ts')).lastStandCallOut());
-if (on('laststand-regroup', 'laststand', 'all')) await run('laststand-regroup', async () => (await import('./laststand-probes.ts')).lastStandRegroup());
-if (on('laststand-keep', 'laststand', 'all')) await run('laststand-keep', async () => (await import('./laststand-probes.ts')).lastStandKeep());
 if (on('laststand-few', 'laststand', 'all')) await run('laststand-few', async () => (await import('./laststand-probes.ts')).lastStandFew());
 if (on('laststand-fled', 'laststand', 'all')) await run('laststand-fled', async () => (await import('./laststand-probes.ts')).lastStandFled());
-// a friend in a teammate's line of fire (game/clearline.ts — one switch, off as shipped): tools/qa/lineoffire-probes.ts
-if (on('lineoffire-planted', 'lineoffire', 'all')) await run('lineoffire-planted', async () => (await import('./lineoffire-probes.ts')).lineoffirePlanted());
-if (on('lineoffire-walk', 'lineoffire', 'all')) await run('lineoffire-walk', async () => (await import('./lineoffire-probes.ts')).lineoffireWalk());
-if (on('lineoffire-mate', 'lineoffire', 'all')) await run('lineoffire-mate', async () => (await import('./lineoffire-probes.ts')).lineoffireMate());
-if (on('lineoffire-corridor', 'lineoffire', 'all')) await run('lineoffire-corridor', async () => (await import('./lineoffire-probes.ts')).lineoffireCorridor());
-if (on('lineoffire-edge', 'lineoffire', 'all')) await run('lineoffire-edge', async () => (await import('./lineoffire-probes.ts')).lineoffireEdge());
-if (on('lineoffire-entry', 'lineoffire', 'all')) await run('lineoffire-entry', async () => (await import('./lineoffire-probes.ts')).lineoffireEntry());
-if (on('lineoffire-behind', 'lineoffire', 'all')) await run('lineoffire-behind', async () => (await import('./lineoffire-probes.ts')).lineoffireBehind());
-if (on('lineoffire-still', 'lineoffire', 'all')) await run('lineoffire-still', async () => (await import('./lineoffire-probes.ts')).lineoffireStill());
-if (on('lineoffire-far', 'lineoffire', 'all')) await run('lineoffire-far', async () => (await import('./lineoffire-probes.ts')).lineoffireFar());
-if (on('lineoffire-holdstep', 'lineoffire', 'all')) await run('lineoffire-holdstep', async () => (await import('./lineoffire-probes.ts')).lineoffireHoldStep());
 // ---------------------------------------------------------------- the four-man squad (foursquad-probes.ts; NIGHTBREACH.squad = 4, ?squad4 — a red pair and a blue pair through the same order menu): 'foursquad' = the family
 if (on('foursquad-stage', 'foursquad', 'all')) await run('foursquad-stage', async () => (await import('./foursquad-probes.ts')).foursquadStage());
 if (on('foursquad-follow', 'foursquad', 'all')) await run('foursquad-follow', async () => (await import('./foursquad-probes.ts')).foursquadFollow());
@@ -3138,7 +3125,7 @@ let glassBannerPending: { f0: number } | null = null;
 // family — a fallen piece is its cell, cut children, a plate the pool drops goes as grains, determinism
 { let cgRan = false; const f0 = FAILED.length;
   const cgf = async (name: string, fn: string) => { if (on(name, 'cutglass', 'all')) { cgRan = which === 'cutglass' || which === name; await run(name, async () => ((await import('./cutglass-probes.ts')) as any)[fn]()); } };
-  await cgf('cutglass-shape', 'cutglassShape'); await cgf('cutglass-break', 'cutglassBreak'); await cgf('cutglass-gone', 'cutglassGone'); await cgf('cutglass-look', 'cutglassLook'); await cgf('cutglass-determinism', 'cutglassDeterminism');
+  await cgf('cutglass-shape', 'cutglassShape'); await cgf('cutglass-break', 'cutglassBreak'); await cgf('cutglass-look', 'cutglassLook'); await cgf('cutglass-determinism', 'cutglassDeterminism');
   if (cgRan && which === 'cutglass') here() && familyBanner('cutglass', FAILED.length - f0); }
 // ---------------------------------------------------------------- the glass TUNING round's rules, each held both ways (glasstune-probes.ts, rebuild/glass/tuning.md): 'glasstune' = the family — a stun against
 // annealed / tempered glass, raking a shot-out pane by walking at it, spall off a pane that lets nothing go, the sound and hearing-event gaps, the shard budget's floor, the stack dealt off glass, the one switch off
@@ -3386,9 +3373,6 @@ if (KNOWN.has(which) && which.startsWith('review-') && which !== 'review-b') her
 // path aside, silently (no hearing event, nothing snapped, no furniture pushed, the digest the switch-off walk's), a piece at rest in a man is pushed off him, a pinned one given up on
 { const kf = async (name: string, fn: string) => { if (on(name, 'kickrubble', 'all')) await run(name, async () => ((await import('./kickrubble-probes.ts')) as any)[fn]()); };   // (until 2026-11-07 the runner put the rubble switch off after each: a settled rule, the write was refused)
   await kf('kickrubble-walk', 'kickWalk'); await kf('kickrubble-quiet', 'kickQuiet'); await kf('kickrubble-offman', 'kickOffMan'); await kf('kickrubble-wall', 'kickWall'); await kf('kickrubble-left', 'kickLeft'); await kf('kickrubble-edge', 'kickEdge'); await kf('kickrubble-pool', 'kickPool'); }
-// ---------------------------------------------------------------- the eviction pop (src/game/breakTable.ts pick / dissolve, evictpop-probes.ts): a spawn over the cap takes the SMALLEST resting
-// piece's slot, and what it leaves is chips by its size along its length + its dust once; the knobs or the cut switch off = the oldest piece and the old ball of chips
-if (on('evictpop', 'breaks', 'all')) await run('evictpop', async () => ((await import('./evictpop-probes.ts')) as any).evictPop());
 // ---------------------------------------------------------------- furniture under a blast (src/game/furnblast.ts, furnblast-probes.ts): 'furnblast' = the family — pushable furniture thrown away
 // from a charge and shielded by a wall that held, fixed furniture near it broken for sight / feet / the feed inside the caps, a stun grenade none of it, a restart restores, the knob off = nothing, a checkpoint keeps what broke
 { const ff = async (name: string, fn: string) => { if (on(name, 'furnblast', 'all')) await run(name, async () => ((await import('./furnblast-probes.ts')) as any)[fn]()); };   // (until 2026-11-07 the runner put the destruction switch off after each: a settled rule, the write was refused)
