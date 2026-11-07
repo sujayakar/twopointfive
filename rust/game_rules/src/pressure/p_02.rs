@@ -126,8 +126,7 @@ pub fn stand_off_spot(g: &mut crate::game::Game, d: RoomfightDefId, t: Roomfight
             if tries >= STAND_OFF_TRIES || best.map_or(false, |b| k.d >= b.1) { break; }
             if k.ok == Some(false) || k.way == Some(None) || taken.iter().any(|q| flat(*q, k.p) < apart || off_line(k.p, *q, mouth) < lane || off_line(*q, k.p, mouth) < lane) { continue; }
             if k.ok.is_none() {
-                let energy = crate::glasspen::side_shot_energy(g, team);
-                k.ok = Some(!crate::scene_collision::shot_blocked(g, [k.p[0], 1.35, k.p[2]], mouth, Some(0.02), energy));
+                k.ok = Some(!crate::scene_collision::shot_blocked(g, [k.p[0], 1.35, k.p[2]], mouth, Some(0.02), None));
             }
             if k.ok != Some(true) { continue; }
             if dark {

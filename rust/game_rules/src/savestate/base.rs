@@ -29,18 +29,3 @@ pub fn checkpoints_keep(g: &mut crate::game::Game, label: &str) { g.out.push(cra
 
 
 
-pub mod local_store {
-    #[allow(unused_imports)]
-    use crate::{ids::*, js::*, Quat, V3};
-    #[allow(unused_imports)]
-    use alloc::{string::String, vec::Vec};
-    /// (src/game/savestate.ts:864 localStore.get)
-    pub fn get(k: &str) -> Option<String> { todo!() }
-
-    /// (src/game/savestate.ts:865 localStore.set)
-    pub fn set(k: &str, v: &str) -> bool { todo!() }
-
-    /// (src/game/savestate.ts:866 localStore.remove)
-    pub fn remove(k: &str) { todo!() }
-
-}

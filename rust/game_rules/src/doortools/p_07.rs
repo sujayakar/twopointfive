@@ -992,10 +992,7 @@ pub fn door_tools_hold_doors(g: &mut crate::game::Game, op: DoorOpId) {
                 };
                 taken.push(there);
             }
-            // (offSwing moves P.pos in place, and P.pos is `post`)
-            let mut moved = crate::doortools::DoorToolsOffSwingP { pos: to, watch: None };
-            door_tools_off_swing(g, &moved, Some(d), side, &taken, Some(at));
-            post = Some(moved.pos);
+            post = Some(to);
         }
         let from = match post { Some(p) => p, None => pos(g, gd) };
         let yaw = v3::yaw_to(from, w);

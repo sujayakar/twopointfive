@@ -55,6 +55,9 @@ fn collide_legs(g: &mut Game, m: &mut crate::player::Legs, y1: f64) {
 // ---- the part's functions ----
 
 /// Is what moves him this tick his walk keys and nothing else. Asked, nothing written.   (player.ts legsOwn)
+/// how a player steps to the launcher's next load (slotsetup.ts loadKeys)
+const LOAD_KEYS: &str = "press 2, then 2";
+
 pub fn legs_own(g: &mut crate::game::Game) -> bool {
     let pl = g.player;
     let busy = g.pl[pl].down || g.pl[pl].takedown.is_some() || g.pl[pl].holding.is_some() || g.pl[pl].kick.is_some() || g.pl[pl].picking.is_some()
@@ -913,7 +916,7 @@ fn load_flip_line(g: &Game, rifle: FirearmId, a: Option<crate::weapons::RifleAtt
         }
         Some(RifleAttachment::He40) => {
             let s = if g.fa[rifle].shells > 0.0 {
-                let keys = crate::slotsetup::load_keys(g);
+                let keys = LOAD_KEYS;
                 let next = next_load(g, rifle);
                 format!("40 mm grenade ×{} on the right button — goes off on what it hits, like a frag; arms {} m out (nearer: a dud); {} for {}", js::num_str(g.fa[rifle].shells), js::num_str(g.k.he40.arm_m), keys, next)
             } else { let next = next_load(g, rifle); format!("the 40 mm — but no grenades left for it (2 again for {})", next) };
@@ -932,13 +935,12 @@ fn launcher_dry_line(g: &Game, rifle: FirearmId, load: crate::weapons::RifleAtta
         RifleAttachment::Ring => {
             if g.fa[rifle].rings > 0.0 { return String::from("cycling the launcher…"); }
             let s = crate::gear::gear_text(g, if g.fa[rifle].shells > 0.0 { "no ring airfoils left — they are not coming back (2 again for the 40 mm)" } else { "no ring airfoils left — they are not coming back" });
-            let keys = crate::slotsetup::load_keys(g);
-            s.replacen("2 again", &keys, 1)
+            s.replacen("2 again", LOAD_KEYS, 1)
         }
         RifleAttachment::He40 => {
             if g.fa[rifle].shells > 0.0 { return String::from("loading the launcher…"); }
             let s = if g.fa[rifle].rings > 0.0 || g.fa[rifle].cams > 0.0 {
-                let keys = crate::slotsetup::load_keys(g);
+                let keys = LOAD_KEYS;
                 let next = next_load(g, rifle);
                 format!("no 40 mm grenades left ({} for {})", keys, next)
             } else { String::from("no 40 mm grenades left") };
