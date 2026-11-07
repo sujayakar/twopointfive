@@ -5,7 +5,7 @@ use crate::query::Query;
 use crate::scene_scenarios::ScenarioEntry;
 
 /// the switch is up (rowset.ts `live`; `ROWSET_BREAK` is a check's own word and is never up here)
-fn live(g: &Game) -> bool { g.k.rowset.on && !BREAK }
+fn live(g: &Game) -> bool { !BREAK }
 /// a row with a level file of its own that names an hour or a weather (rowset.ts `own`)
 fn own(e: &ScenarioEntry) -> bool { e.level.as_deref().is_some_and(|l| !l.is_empty()) && (e.hour.is_some() || e.weather.is_some()) }
 
