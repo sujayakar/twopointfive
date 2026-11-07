@@ -5,6 +5,13 @@ back, WebSockets, CPU senses on the server. What is built so far is the server, 
 and a page is opened with `?net=`: a page without that word is the build as it was (the loop's `tick` seam is absent, `netFromUrl` returns on its first
 line).
 
+- **CO-OP IS DOWN ON THIS BUILD** (2026-11-07; `src/net/lobby.ts COOP.down`, said by `src/ui/coop.ts lobby`). The TypeScript tick is deleted and the
+  page's game is the Rust game; the game server and the page in a game are not on it yet. So Host game, Join by a code and the invite answer with one
+  line ("Co-op can’t be played on this build yet. You can still play every mission on your own.") before a game is made or a seat taken, and an
+  address with `?net=` or `?join=` gets the page's own card (`src/main.ts`, 'NoGameHere'). No switch: the field is the switch, '' = co-op is up, and it
+  goes with the last step of the move. Seen: the three ways in, in headless Chromium on the software adapter. `tools/qa/lobby-page.cjs` is red while
+  this stands (its first line expects the older words, the rest a game). Everything below describes co-op as it was on the TypeScript game and as it
+  is to be again on the Rust one.
 - **What travels is the input timeline, never the state** (`src/net/wire.ts`). The game plays one fight to the bit from its recipe and its seats' records
   (`docs/agents/replays.md`: the game's own maths, the senses on the CPU, the input record, a record from anyone), so the server decides which record each
   seat's tick ran on, tells every client, and sends a state word (`game/digest.ts rawBits`, chained) every `NET.wordEvery` ticks as the alarm. A NETWORKED
