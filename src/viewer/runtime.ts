@@ -476,7 +476,7 @@ export class Runtime {
       if (mats) writeCharPalette(this.matPal, 0, side, c.tint, c.tint2, c.id, !charSlots(this.ch).authored);
       const po = c.parts ? placeholderTints(side) : TINTS_AS_IS;   // (game.ts: the placeholder's two colours, by the side's table)
       this.chars.setInstance(0, c.skel.jointData, po & 1 ? c.tint2 : c.tint, po & 2 ? c.tint2 : c.tint, c.id, undefined, c.parts); this.chars.setMaterials(0, mats ? (f, o) => f.set(this.matPal, o) : undefined); this.chars.finish(1);
-      engine.world.resetCapsules(); { const { caps, bound } = c.capsules(); engine.world.addCharacterCapsules(c.id, mats ? proxyAlbedos(charSlots(this.ch), this.matPal, 0, 1, (engine.settings.rtMeshHits && engine.meshShadowsOn) || engine.settings.sdfRigSmooth, (c as typeof c & { parts?: number }).parts ?? 0) : v3.lerp(c.tint, [0.5, 0.5, 0.5], 0.3), caps, bound); }
+      engine.world.resetCapsules(); { const { caps, bound } = c.capsules(); engine.world.addCharacterCapsules(c.id, mats ? proxyAlbedos(charSlots(this.ch), this.matPal, 0, 1, false, (c as typeof c & { parts?: number }).parts ?? 0) : v3.lerp(c.tint, [0.5, 0.5, 0.5], 0.3), caps, bound); }
 
       // ---- the camera's tracked focus + the studio round it
       if (st.track === 1) this.focus = v3.add(c.pos, [0, 1, 0]);
