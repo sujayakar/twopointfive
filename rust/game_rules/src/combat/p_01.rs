@@ -573,29 +573,17 @@ pub fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, i
             crate::props::prop_system_apply_impulse(g, h.prop, point, [pd[0] * j, 0.0, pd[2] * j], who, Some(true));
         }
     }
-    // bullet wake through smoke: each straight leg one line on the look page, else the row of soft dots
-    let mut lined = false;
-    if third && g.m.render_frame.look_config.stir > 0.0 {
+    // a round through the air: each straight leg is one line for the host's solver, which stirs its smoke along it or has none there to stir
+    if third {
         let far = m::min(t_hit, 25.0);
         if let Some(p) = &pen {
             for k in &p.path.segs {
                 let a = m::max(k.t0, 0.3);
                 let b = m::min(k.t0 + k.len, far);
-                if b > a { lined = crate::smoke_types::smoke_system_like_round(g, v3::mad(k.o, k.d, a - k.t0), k.d, b - a) || lined; }
+                if b > a { crate::smoke_types::smoke_system_like_round(g, v3::mad(k.o, k.d, a - k.t0), k.d, b - a); }
             }
         } else if far > 0.3 {
-            lined = crate::smoke_types::smoke_system_like_round(g, v3::mad(muzzle, dir, 0.3), dir, far - 0.3);
-        }
-    }
-    if third && !lined {
-        let mut d = 0.3;
-        while d < m::min(t_hit, 25.0) {
-            let p = match &pen { Some(q) => path_at(&q.path, d), None => v3::mad(muzzle, dir, d) };
-            if crate::smoke_types::smoke_system_like_in_smoke_domain(g, p) {
-                let along = match &pen { Some(q) => seg_at(&q.path, d).d, None => dir };
-                crate::smoke_types::smoke_system_like_push(g, crate::smoke_types::SmokePush { pos: p, dir: along, speed: 5.5, radius: 0.07, ..Default::default() });
-            }
-            d += 0.28;
+            crate::smoke_types::smoke_system_like_round(g, v3::mad(muzzle, dir, 0.3), dir, far - 0.3);
         }
     }
     // impact flash + sound

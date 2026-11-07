@@ -120,7 +120,7 @@ pub fn update_fire(g: &mut Game, dt: f64) {
         Some(f) => f,
         None => { let h = crate::seats::host_man(g); let c = g.pl[h].ch; g.ch[c].pos }
     };
-    let drawing = crate::smoke_types::smoke_system_like_drawing(g) && g.engine.settings.fire_smoke;
+    let filed = g.engine.settings.fire_smoke;   // (the graphics preset that sheds a fire's smoke; whether a solver draws it is the host's)
     let mut fires = 0.0;
     let mut lit = 0.0;
     let look = g.m.render_frame.look_config;
@@ -268,7 +268,7 @@ pub fn update_fire(g: &mut Game, dt: f64) {
         }
         // the smoke: a short source on the solver, filed afresh every `every` s while the fire is near the view
         let b = g.k.fire.smoke;
-        if moved && drawing && d < b.view_r {
+        if moved && filed && d < b.view_r {
             let slot = m::floor(time / b.every);
             let p = book(g);
             let n = p.n;
@@ -334,7 +334,7 @@ pub fn update_fire(g: &mut Game, dt: f64) {
         }
         // the flame as gas: a short source on the solver's fine lattice at the coals, filed afresh every `every` s while the fire is near the view
         let gs = g.k.fire.gas;
-        if moved && drawing && gs.on && d < gs.view_r {
+        if moved && filed && gs.on && d < gs.view_r {
             let slot = m::floor(time / gs.every);
             let p = book(g);
             let n = p.n;

@@ -41,6 +41,7 @@ pub enum OutEvent {
     ClearSnowTracks,
     Tap(crate::out_events::OutTap),
     WallFeel(crate::out_events::OutWallFeel),
+    SmokeSystemLikeRound(crate::out_events::OutSmokeSystemLikeRound),
 }
 
 #[derive(Clone, Debug)]
@@ -143,6 +144,13 @@ pub struct OutSmokeSystemLikeObstaclesChanged {
 #[derive(Clone, Debug)]
 pub struct OutSmokeSystemLikePush {
     pub p: crate::smoke_types::SmokePush,
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct OutSmokeSystemLikeRound {
+    pub from: V3,
+    pub dir: V3,
+    pub len: f64,
 }
 
 #[derive(Clone, Debug)]
