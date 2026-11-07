@@ -3,8 +3,7 @@
 // walk through the level, its logic, leading the player for game play". A story that leads the player starts where he starts and goes through the doors he
 // will use, so this asks every level whether the rule reaches them. (The rule's own arithmetic is tools/qa/ways-check.ts's, the look task's.)
 // ASKED OF THE LEVEL AS THE PAGE LOADS IT, the only reader the ways have: its file with the lived rooms laid and its dressing in, said to the loader by
-// word (`lived`, `dressing`) whatever stand the caller's harness is on (their furniture is on the walk grid), the office with its script (scene/level.ts
-// withOfficeScript: its scenarios are code, not in its file). A look twin stands on its plain file's floor with its plain file's scenarios: the plain
+// word (`lived`, `dressing`) whatever stand the caller's harness is on (their furniture is on the walk grid). A look twin stands on its plain file's floor with its plain file's scenarios: the plain
 // file is asked, a twin asked by name is its plain file (scene/look.ts LOOK_LEVELS), and line 1 holds that the twin does stand on it: the same walk
 // grid, the same doors, the same ways.
 // WHAT IS HELD:
@@ -35,7 +34,6 @@ import { loadLevel } from '../../src/scene/levelLoad.ts';
 import { parseLevelData } from '../../src/scene/levelData.ts';
 import { StaticCollision } from '../../src/scene/collision.ts';
 import { levelWays, doorMid } from '../../src/scene/ways.ts';
-import { withOfficeScript, isOfficeFamily } from '../../src/scene/level.ts';
 import { LOOK_LEVELS } from '../../src/scene/look.ts';
 import { listedLevels, levelWords } from '../../src/scene/scenarioList.ts';
 
@@ -49,7 +47,7 @@ export const plainOf = (name: string): string => { const f = `${name.replace(/\.
  *  one the page's own reader is handed: game.ts gives buildWearMap `col.nav`) and its ways. tools/levels/walked-overlay.ts draws the same.
  *  `bare` = the red path's: no routes, no scenarios */
 export function pageWays(name: string, bare = false) {
-  { const data = parseLevelData(readFileSync(`${ROOT}/levels/${name}.json`, 'utf8')), loaded = loadLevel(data, { lived: true, dressing: true }), level: any = isOfficeFamily(data) ? withOfficeScript(loaded) : loaded;
+  { const data = parseLevelData(readFileSync(`${ROOT}/levels/${name}.json`, 'utf8')), level: any = loadLevel(data, { lived: true, dressing: true });
     const nav = new StaticCollision(level.boxes).nav, ways = bare ? levelWays({ ...level, routes: [] }, undefined, nav, { hints: [] }) : levelWays(level, level.scenarios, nav);
     return { data, level, nav, ways }; }
 }

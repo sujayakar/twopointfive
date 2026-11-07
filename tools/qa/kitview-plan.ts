@@ -127,7 +127,6 @@ const cache = new Map<string, { data: Data; floor: KitPlanFloor; text: string }>
 async function levelOf(name: string) {
   let L = cache.get(name); if (L) return L;
   const text = readFileSync(`${ROOT}/levels/${name}.json`, 'utf8'), data = JSON.parse(text);
-  if (name === 'office' && !data.scenarios) data.scenarios = (await import(`${ROOT}/levels/office.scenarios.ts`)).OFFICE_SCENARIOS;
   L = { data, floor: kitPlanFloor(data.boxes), text }; cache.set(name, L); return L;
 }
 const starts = (S: Data, kind: string): Data[] => kind === 'rescue' ? [S?.rescue?.team] : kind === 'nightbreach' ? [S?.nightBreach?.team] : [S?.roomClear?.team ?? S?.nightBreach?.team, ...(S?.roomClear?.starts ?? [])];

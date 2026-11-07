@@ -30,7 +30,6 @@ const { SHARD_STATS } = await import(`${ROOT}/src/game/shards.ts`);
 const { makeBox, BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { withOfficeScript, isOfficeFamily } = await import(`${ROOT}/src/scene/level.ts`);
 
 type Vec3 = [number, number, number];
 const DT = 1 / 60, VERBOSE = process.argv.includes('--verbose'), BROKEN = process.env.GLASSREAL_BREAK === '1';
@@ -161,7 +160,7 @@ export async function glassrealCheck(): Promise<boolean> {
       for (const file of files) {
         const src = readFileSync(resolve(ROOT, 'levels', file), 'utf8'); const want = CENSUS[baseOf(file)];
         if (!/"Glass"/.test(src)) { if (want) bad.push(`${file}: the table lists glass and the file has none`); continue; }
-        const data = parseLevelData(src); const level = isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data);
+        const data = parseLevelData(src); const level = loadLevel(data);
         const W: any = await quiet(() => standUp({ level })); const g = W.game; const count = (on: boolean) => { set(false, on); const n: [number, number, number] = [0, 0, 0]; for (const bi of g.engine.world.glassStatics as number[]) { const t = g.glassBreak.typeOfPane(bi); if (t) n[t === 'tempered' ? 0 : t === 'annealed' ? 1 : 2]++; } return n; };
         const on = count(true), off = count(false); levels++; panes += on[0] + on[1] + on[2];
         if (!want) { if (on[0] + on[1] + on[2] > 0) bad.push(`${file}: ${on.join('/')} — not in the table`); continue; }

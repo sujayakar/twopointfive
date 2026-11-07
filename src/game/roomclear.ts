@@ -3,7 +3,7 @@
 // staged on the old office with what the demo already has.
 //
 // WHAT THIS FILE OWNS: the set-up and the score-keeping. The structure is LEVEL DATA (scene/scenarios.ts StructureData: Level.scenarios.roomClear — the office's is
-// levels/office.scenarios.ts, exported here as STRUCTURE for its probes; a level with no breach plan gives the team's start too and has no F drill) — the rooms, the doors into each and what lies on the other side
+// its level file's block, exported here as STRUCTURE for its probes; a level with no breach plan gives the team's start too and has no F drill) — the rooms, the doors into each and what lies on the other side
 // of them, how many men hold each room and the marks they may stand on (more marks than men: placeDefenders(seed, attempt) deals them, so a tally re-runs a
 // placement by its seed and a restart can deal another); the per-room CLEARED state (RoomClearScenario.rooms); and the two ENDS — 'taken' (every room clear) and
 // 'wiped' (Sam down). What it does NOT own: how either side fights and how the pair is ordered about. Both are the night breach's as it stands — the defenders are
@@ -39,7 +39,7 @@ import { SQUAD_MAX_MEN } from '../scene/scenarios';
 import type { Door } from './doors';
 import { frameOf } from './guards';
 import { responseTeam } from './qrf';   // (asked inside tick only: a raid's team still up)
-import { OFFICE_SCENARIOS } from '../../levels/office.scenarios';   // (plain literals with type-only imports: safe at the top of the game's import cycle)
+import officeData from '../../levels/office.json' with { type: 'json' };   // (the bundled level's own file: its scenarios block is where these knobs start from. JSON, so safe at the top of the game's import cycle)
 import { inBounds } from './squad';
 import { squadsStage, squadsStop } from './enemysquads';
 import { squadDeal } from './squaddeal';
@@ -82,9 +82,9 @@ export function freshWayOf(diceSeed: number, n: number): number { return n > 1 ?
 /** The structure's shapes are level data now (scene/scenarios.ts — a level's `scenarios.roomClear` block): the rooms, the doors into each and what lies on the
  *  other side of them, how many men hold each room and the marks they may stand on. */
 export type { StructureDoor, StructureMark, StructureRoom, StructureData } from '../scene/scenarios';
-/** THE OFFICE'S STRUCTURE (levels/office.scenarios.ts: the east wing's four rooms) under the name its probes and its tally import it by. The GAME never reads
- *  this: a staging takes the structure of the level it stands on (RoomClearScenario.structure = Level.scenarios.roomClear). */
-export const STRUCTURE: StructureData = OFFICE_SCENARIOS.roomClear;
+/** THE OFFICE'S STRUCTURE (the east wing's four rooms: the bundled level's own block, levels/office.json) under the name its probes and its tally import it
+ *  by. The GAME never reads this: a staging takes the structure of the level it stands on (RoomClearScenario.structure = Level.scenarios.roomClear). */
+export const STRUCTURE: StructureData = (officeData as unknown as { scenarios: { roomClear: StructureData } }).scenarios.roomClear;
 
 /** one dealt defender: his room (STRUCTURE id), which of its marks, and the mark itself */
 export interface Placement { room: string; mark: number; pos: Vec3; watch: string; aimAt: Vec3; name: string; }
@@ -153,7 +153,7 @@ export function checkStructure(g: Game, S: { rooms: StructureRoom[]; team?: Team
   return bad;
 }
 /** The squads block against the floor (scene/scenarios.ts SquadData; what the file alone can say — refs, one squad a room, headcounts — is levelData.ts's and is
- *  asked again here, since a structure may reach the game without passing the validator: office.scenarios.ts, a probe's own): rally points and spawn points on
+ *  asked again here, since a structure may reach the game without passing the validator: a probe's own): rally points and spawn points on
  *  floor a man can stand on, a rally inside one of its squad's rooms, spawns outside every room and joined on foot to the door they come by. Empty = sound; no
  *  squads block = nothing to say. */
 export function checkSquads(g: Game, S: { rooms: StructureRoom[]; maxMen?: number; squads?: SquadData[] }): string[] { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('checkSquads', undefined, [g, S]); if (__r !== RUST_PASS) return __r as any; } }

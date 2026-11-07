@@ -24,9 +24,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **Scenario data travels with the level** (`src/scene/scenarios.ts` `LevelScenarios`, `Level.scenarios`; docs/level-format.md *Scenarios*; how-to
   rebuild/scenario-levels/contract.md): what the night breach, the room clear (pair or four) and the hostage rescue take from a level — rooms,
   doors, defenders' marks, the team's start, hostages / captor / door man / roamers, the rescue's route — is a `scenarios` block in the LEVEL FILE, read by
-  roomclear.ts / nightbreach.ts / rescue.ts / rescueflow.ts and by nothing else. The office's file has none: its tables are `levels/office.scenarios.ts` (pure
-  literals — imported at the top of the game's import cycle, so keep it that way), attached non-enumerably by `withOfficeScript` to any `office` / `office-*`
-  level; `STRUCTURE` (roomclear.ts) and `SIDE_MARKS` (rescue.ts) remain as the office's data under the names its probes import, and the team-start knobs
+  roomclear.ts / nightbreach.ts / rescue.ts / rescueflow.ts and by nothing else. The office's file carries its block like any level's (since 2026-11-07: it was a module attached at load by the level's name, `withOfficeScript`, and every
+  tool that loaded a level file had a line for the office): its tables are written in `levels/office.scenarios.ts`, the office generator's input beside
+  `OFFICE_MARKS`, and `tools/level-export.ts` writes them into `levels/office.json` and `office-relief.json`. Nothing but the generator imports that module;
+  `STRUCTURE` (roomclear.ts) and `SIDE_MARKS` (rescue.ts) remain as the office's data under the names its probes import, and the team-start knobs
   (`NIGHTBREACH.samAt / samYaw`, `RESCUE.samAt / samYaw / opsAt`) are the office's until `start()` on another level writes that level's (once per team-start
   object: a knob moved by hand afterwards stays moved). A level with NO `plans.breach` stages the room clear without the F drill (`NightBreach.noDrill`: the
   structure's `team` gives the start, every teammate is the order menu's). New levels are generators over `officeGen.ts officeKit()`:
@@ -1417,8 +1418,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   clear turns at the side door between the server room and the manager's office (thirteen of thirty-one men fell within two and a half metres of it) and
   nothing in the picture said that door was there; the defenders come out of the break room by two doors; nobody, either side, enters the conference room;
   and the day's people (sixteen desks, a printer, a counter) had no way written to anything. THREE KINDS OF THING, each through the system that owns it.
-  WORN PATHS are data: 31 named marks where a person stands to use a thing (`Level.marks`, attached at load beside the scenarios by `withOfficeScript`, a
-  copy a Level: the level file has no slot for a mark yet) and 75 `walked` rows between them, each name one thing (a mark, a door's id, or a room's name that no door
+  WORN PATHS are data: 31 named marks where a person stands to use a thing (`Level.marks`: the builder puts them on its Level and the exporter writes them into the file's `marks`) and 75 `walked` rows between them, each name one thing (a mark, a door's id, or a room's name that no door
   shares); the look's page wears the floor by the ways field (`?walked=0` = the lanes as they were). Nothing in play reads a mark: `ways.ts` and the
   Director's lookup by a script's own id are the only readers, and the office has no script. The walked check's two count files for the office are gone:
   `--write` dropped `door conference` and `start spawn` (office) and `door conference` (office-relief), each on a way now. PAINT on a surface that was

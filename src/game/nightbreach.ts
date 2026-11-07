@@ -48,9 +48,11 @@ import { teamStartsFallenIn } from './startfile';
 import { issueStage } from './issue';   // (type-only game imports: a level that issues its own wall charges — scenarios.roomClear.wallCharges)
 import { picketMarks, postPicket } from './pressure';
 import { gunDeal } from './gunroles';   // (called inside the staging only)
-import type { TeamStart } from '../scene/scenarios';
+import type { TeamStart, NightBreachData } from '../scene/scenarios';
+import { sameTeamStart } from '../scene/scenarios';
 import type { SquadSize } from './loadout';
-import { OFFICE_SCENARIOS } from '../../levels/office.scenarios';   // (plain literals with type-only imports: safe at the top of the game's import cycle)
+import officeData from '../../levels/office.json' with { type: 'json' };   // (the bundled level's own file: its scenarios block is where these knobs start from. JSON, so safe at the top of the game's import cycle)
+const OFFICE_BREACH = (officeData as unknown as { scenarios: { nightBreach: NightBreachData } }).scenarios.nightBreach;
 import { holdFireDrill } from './holdfire';   // (called inside order() only)
 import { WORDS } from './words';   // (a leaf: the dialogue pass's one switch)
 import { RUST_PASS, RUST_SURFACE } from './crossing';
@@ -72,7 +74,7 @@ export const NIGHTBREACH = {
   loudBoot: true,
   /** where Sam stands when it is staged, and the way he faces: the LEVEL's (scene/scenarios.ts TeamStart — start() writes the team start of the level it stages
    *  on here; these are the office's until it has: beside the pair on the approach marks, in the cubicles' south aisle, facing east down it) */
-  samAt: [...OFFICE_SCENARIOS.nightBreach.team.sam] as Vec3, samYaw: OFFICE_SCENARIOS.nightBreach.team.samYaw,
+  samAt: [...OFFICE_BREACH.team.sam] as Vec3, samYaw: OFFICE_BREACH.team.samYaw,
   /** how many teammates are staged: 2 = the pair, exactly as it always was · 4 = the FOUR-MAN SQUAD (?squad4): a RED pair and a BLUE pair (SQUAD4 below), each
    *  man's pair in his papers (Guard.unit.pair; orders.ts men() is the one place to ask for the squad, a pair or a man). Red is the first pair: F's drill on the
    *  breach plan's door is theirs, Blue stands by behind them until ordered; the order menu goes to all four, a pair or one man (orders.ts `who`: T).
@@ -119,7 +121,7 @@ export interface NightBreachLayout { name: string; defenders(): NightBreachMark[
   readonly budget?: number; }
 
 /** the team start NIGHTBREACH.samAt / samYaw were last written from (start()) */
-let applied: TeamStart | null = OFFICE_SCENARIOS.nightBreach.team;   // (the knobs above ARE the office's: a knob moved by hand before the first start on the office stays moved)
+let applied: TeamStart | null = OFFICE_BREACH.team;   // (the knobs above ARE the bundled office's: a knob moved by hand before the first start on the office stays moved)
 rollbackVar('nightbreach.applied', () => applied, v => { applied = v; });   // (asked again by every staging, a restart inside a tick among them)
 
 export type NightBreachState = 'off' | 'staged' | 'stacking' | 'set' | 'going' | 'inside' | 'clear' | 'failed' | 'recalled';
@@ -156,9 +158,9 @@ export class NightBreach {
 
   /** the team start in force: the layout's, else the level's own for the night breach (Level.scenarios.nightBreach) */
   private teamOf(layout: NightBreachLayout | null): TeamStart | undefined { return layout?.team ?? this.g.level.scenarios?.nightBreach?.team; }
-  /** Sam's start knobs take the layout's team start — once per team-start OBJECT (a knob moved by hand since stays moved). Asked by start() and again by every
+  /** Sam's start knobs take the layout's team start — once per team start, by its content: scenarios.ts sameTeamStart (a knob moved by hand since stays moved). Asked by start() and again by every
    *  staging: a layout may hand another start from one staging to the next (the room clear's ways in), and another Game's start may have written the knobs since. */
-  private applyTeam(layout: NightBreachLayout | null) { const T = this.teamOf(layout); if (T && T !== applied) { applied = T; NIGHTBREACH.samAt = [...T.sam] as Vec3; NIGHTBREACH.samYaw = T.samYaw; } }
+  private applyTeam(layout: NightBreachLayout | null) { const T = this.teamOf(layout); if (T && !sameTeamStart(T, applied)) { applied = T; NIGHTBREACH.samAt = [...T.sam] as Vec3; NIGHTBREACH.samYaw = T.samYaw; } }
   /** why it cannot start right now (null = it can) — `layout`: the bigger floor it would be started on */
   canStart(layout: NightBreachLayout | null = null): string | null {
     const g = this.g, T = this.teamOf(layout);

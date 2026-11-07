@@ -1,5 +1,5 @@
 // What a SCENARIO needs from the level it is played on, as data (Level.scenarios — the level file's own `scenarios` block, docs/level-format.md 'Scenarios'; for the
-// office, levels/office.scenarios.ts attached at load). The three playtest scenarios — the night breach (game/nightbreach.ts), the room clear (game/roomclear.ts,
+// office included: its block is written into levels/office.json from levels/office.scenarios.ts by its generator). The three playtest scenarios — the night breach (game/nightbreach.ts), the room clear (game/roomclear.ts,
 // with the pair or the four) and the hostage rescue (game/rescue.ts + rescueflow.ts) — read their rooms, doors, marks and team start from here and from nowhere
 // else, so a level that carries a block is a level they run on. Types, and one pure function (scenarioQuery): nothing here imports the game.
 //
@@ -14,6 +14,13 @@ export interface Rect { x0: number; x1: number; z0: number; z1: number }
 /** Where the team stands when a scenario is staged: Sam and the way he faces; the teammates' marks (the pair's two; for the four, two more — absent, the second
  *  pair is stood on the free floor a stride behind the first) and the way THEY face (absent: east, +x, as the office has them). */
 export interface TeamStart { sam: Vec3; samYaw: number; ops?: Vec3[]; opsYaw?: number }
+/** are two team starts the same start: every field, by value (a level's block is read from its file, so two readings of one row are two objects). What a
+ *  scenario asks before it writes its start knobs again from the level's row: the same row leaves a knob moved by hand where it was moved to. */
+export function sameTeamStart(a: TeamStart | null | undefined, b: TeamStart | null | undefined): boolean {
+  if (!a || !b) return a === b;
+  const v = (p: readonly number[], q: readonly number[]) => p.length === q.length && p.every((x, i) => x === q[i]);
+  return v(a.sam, b.sam) && a.samYaw === b.samYaw && a.opsYaw === b.opsYaw && (a.ops?.length ?? -1) === (b.ops?.length ?? -1) && (a.ops ?? []).every((p, i) => v(p, b.ops![i]));
+}
 /** a place a man of theirs is put, and the point his gun rests on from it */
 export interface ScenarioMark { pos: Vec3; aimAt: Vec3 }
 

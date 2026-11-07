@@ -42,7 +42,6 @@ const { CMDRING } = await import(`${ROOT}/src/game/cmdring.ts`);
 const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { withOfficeScript, isOfficeFamily } = await import(`${ROOT}/src/scene/level.ts`);
 
 const DT = 1 / 60;
 const VERBOSE = process.argv.includes('--verbose');
@@ -59,7 +58,7 @@ const reset = () => { Object.assign(DOORTOOLS, clone(DEFAULTS.DT)); Object.assig
 /** every probe leaves the knob tables as it found them, and one that throws is a FAIL line, not a crash of the runner */
 const guarded = (fn: () => Promise<boolean>) => async () => { try { return await fn(); } catch (e) { console.log(`- FAIL — the probe threw\n    ${e instanceof Error ? e.stack : String(e)}`); return false; } finally { reset(); } };
 const quiet = <T>(fn: () => T): T => { if (VERBOSE) return fn(); const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => { }; try { return fn(); } finally { console.log = log; console.error = err; console.warn = warn; } };
-const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data); };
+const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return loadLevel(data); };
 const pct = (a: number, b: number) => b ? `${Math.round(100 * a / b)} %` : '—';
 
 interface Scn { name: string; query: string; level?: string; squad: 2 | 4 }

@@ -17,7 +17,8 @@ import * as MD from './markingDefaults';
 import { fitOpenings, fitDoorDef, exitThrough, JAMB_FACE, DOOR_HEAD, LEAF_H } from './doorSize';
 import { fitPropFootprint } from './levelLoad';
 import { pieces } from './library';
-import { DESK_CLUSTERS, OFFICE_MARKS } from '../../levels/office.scenarios';   // the desks' four places, and the office's named marks (plain literals; the builder puts them on its Level and the exporter writes them into the file)
+import { DESK_CLUSTERS, OFFICE_MARKS, OFFICE_SCENARIOS } from '../../levels/office.scenarios';   // the desks' four places, the office's named marks and its missions' data (plain literals; the builder puts them on its Level and the exporter writes them into the file)
+import type { LevelScenarios } from './scenarios';
 
 /** what the exporter asks the generator to record on the side: the editor group of every box, in box order */
 export interface GeneratorTrace { groups: string[]; }
@@ -1279,6 +1280,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
     sky: { zenith: [0.015, 0.025, 0.05], horizon: [0.04, 0.05, 0.08] },
     mission: { serverRoom: { x0: 14.12, x1: 21.88, z0: 4.12, z1: 9.94 }, entryDoor: 'server', rack: { index: DRIVE_RACK, front: rackFront, halfW: 0.33 }, exfilDoor: 'fire_exit', exfilX: 36.5, exfilZ: exitThrough(doorDefs.find(d => d.name === 'fire_exit')!, 36.5, 20.6)[1] },   // room = inside its partitions; exfilX = clear of the east wall (x 36 ± 0.12): past it you are in the lot
     kept: 1,   // (a let office with a cleaner on contract: its paint is whole and its walls one shade. The word is the level's own, the file's meta.kept: docs/agents/render.md, A LEVEL SAYS HOW KEPT IT IS)
+    scenarios: JSON.parse(JSON.stringify(OFFICE_SCENARIOS)) as LevelScenarios,   // what the night breach, the room clear and the rescue take from this level (levels/office.scenarios.ts): the level's own block, written into the file by the exporter as any level's is: last, where loadLevel puts it (the identity probe compares key order too). (A copy: a Level and the generator's tables never share an array.)
   };
 }
 

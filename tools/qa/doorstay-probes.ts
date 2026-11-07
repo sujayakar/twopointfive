@@ -26,7 +26,6 @@ const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
 const { doorPt } = await import(`${ROOT}/src/game/doortools.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { withOfficeScript, isOfficeFamily } = await import(`${ROOT}/src/scene/level.ts`);
 
 const DT = 1 / 60;
 type V3 = [number, number, number];
@@ -39,7 +38,7 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
   return { verdict: (ok, label, detail) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); }, done: () => { console.log(`=== ${title.split(':')[0]}: ${all ? 'ALL PASS' : 'FAILURES above'} ===`); return all; } };
 }
 const guarded = (fn: () => Promise<boolean>) => async () => { try { return await fn(); } catch (e) { console.log(`- FAIL — the probe threw\n    ${e instanceof Error ? e.stack : String(e)}`); return false; } finally { DOORSTAY.on = true; } };
-const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data); };
+const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return loadLevel(data); };
 /** every level a mission is played on, and the two yards (undefined = the office the harness stands by default) */
 const ALL_LEVELS: (string | undefined)[] = [undefined, 'records.json', 'depot.json', 'block.json', 'block-squads.json', 'barracks.json', 'compound.json', 'warehouse.json', 'registry.json', 'kit-yard.json', 'test-rooms.json'];
 /** STAY_LEVELS=office,depot (env): the wait over those levels only */

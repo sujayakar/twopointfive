@@ -38,8 +38,8 @@ if (import.meta.main) {
   const { knobRegistry } = await import(`${ROOT}/src/game/knobs.ts`);
   const query = arg('--query') ?? '', out = arg('--out');
   let level: any; { const lf = new URLSearchParams(query).get('levelFile'); if (lf) {   // (as playthrough.ts levelOfFile and the page: an office-family file gets the office's script)
-    const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`), { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`), { withOfficeScript, isOfficeFamily } = await import(`${ROOT}/src/scene/level.ts`);
-    const data = parseLevelData(readFileSync(`${ROOT}/levels/${lf}`, 'utf8')); level = isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data); } }
+    const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`), { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
+    const data = parseLevelData(readFileSync(`${ROOT}/levels/${lf}`, 'utf8')); level = loadLevel(data); } }
   const log = console.log; console.log = () => { /* the stand-up's own lines */ };
   const W = await standUp(level ? { level } : {});
   if (query) { const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`); const r = await startFromQuery(W.game, new URLSearchParams(query)); if (r?.why) { console.log = log; console.error(`start refused — ${r.why}`); process.exit(2); } }
