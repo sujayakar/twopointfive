@@ -14,7 +14,7 @@ export function knobPanel(app: HTMLElement, game: DrawGame): void {
     for (const k of hits.slice(0, SHOWN)) {
       const name = document.createElement('label'), v = document.createElement('input'); name.textContent = k.name; name.style.cssText = 'overflow-wrap:anywhere;';
       v.type = k.yes ? 'checkbox' : 'number'; v.style.cssText = 'font:inherit;width:8em;background:#15130f;color:inherit;border:1px solid #4a4232;'; if (k.yes) v.checked = k.value !== 0; else { v.step = 'any'; v.value = String(k.value); }
-      v.addEventListener('change', () => { const x = k.yes ? (v.checked ? 1 : 0) : v.valueAsNumber; if (Number.isFinite(x)) game.commands.knob(k.name, x); });
+      v.addEventListener('change', () => { const x = k.yes ? (v.checked ? 1 : 0) : v.valueAsNumber; if (Number.isFinite(x)) game.turn(k.name, x); });
       list.append(name, v);
     }
     const more = document.createElement('div'); more.textContent = hits.length > SHOWN ? `and ${hits.length - SHOWN} more of ${all.length}` : `${hits.length} of ${all.length}`; more.style.cssText = 'grid-column:1/3;opacity:0.6;'; list.append(more);
