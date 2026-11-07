@@ -13,6 +13,8 @@ const ROOT = join(import.meta.dir, '../..'), BLITZ = join(ROOT, 'tools/blitz'), 
 const die = (s: string): never => { console.error(`wire: ${s}`); process.exit(1); };
 const rustFile = (name: string): string => { const hits = readdirSync(join(ROOT, 'rust')).map(c => join(ROOT, 'rust', c, 'src', name)).filter(existsSync); if (hits.length !== 1) die(`${name} is in ${hits.length} crates`); return hits[0]; };
 const read = (p: string) => readFileSync(p, 'utf8'), readJ = (p: string) => JSON.parse(read(p));
+/** fields.json as it is kept: a name a line and no indent, so an add or a drop shows as its own rows in a diff and nothing else moves */
+const writeFields = (L: unknown) => writeFileSync(FIELDS, JSON.stringify(L, null, 1).replace(/^ +/gm, ''));
 const fnv = (s: string) => { let h = 0x811c9dc5; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 0x01000193) >>> 0; return h >>> 0; };
 // THE STATE WORDS: a hash of the whole game, a word a part, for two machines of one networked game to compare. What a host hands in and differs by machine is left out, and so is what is only a step's output
 const HOSTS_OWN = new Set(['m.owner', 'out', 'cmd_buf', 'local_seat', 'view_proj', 'puppet', 'm_per_px', 'taps', 'seat', 'tab.camera', 'tab.input', 'tab.cmd_seat', 'engine.settings', 'engine.view_focus', 'engine.effective_scale', 'engine.sharp_on']);
@@ -56,7 +58,7 @@ function add(q: string, ty: string, ts: string | undefined, expr: string | undef
   l = l.includes(' s } fn ri(') ? edit(l, ' s } fn ri(', ` s.${f} = Io::r(i); s } fn ri(`, q) : edit(l, ', } } fn ri(', `, ${f}: Io::r(i), } } fn ri(`, q);
   l = edit(l, / \} \}$/, ` self.${f}.ri(i); } }`, q); io[k] = l;
   const p = linesOf(io, 'Poke', path); io[p] = edit(io[p], ' k => panic!', ` ${T.fields.length - 1} => self.${f}.poke(i), k => panic!`, q); writeFileSync(ioP, io.join('\n'));
-  writeFileSync(SCHEMA, JSON.stringify(S)); const L = readJ(FIELDS), before = L.pageTick.length; for (const k2 of startOnly ? ['atStartOnly'] : ['everyTick', 'pageTick']) if (!L[k2].includes(`${mod}::${name}.${f}`)) L[k2].push(`${mod}::${name}.${f}`); writeFileSync(FIELDS, JSON.stringify(L, null, 0)); gen(false);
+  writeFileSync(SCHEMA, JSON.stringify(S)); const L = readJ(FIELDS), before = L.pageTick.length; for (const k2 of startOnly ? ['atStartOnly'] : ['everyTick', 'pageTick']) if (!L[k2].includes(`${mod}::${name}.${f}`)) L[k2].push(`${mod}::${name}.${f}`); writeFields(L); gen(false);
   console.log(`wire: ${q} is on the page's list (${startOnly ? 'at a start only' : `${before} fields a tick, now ${L.pageTick.length}`}): it costs ${widthOf(ty)}. It is read by ${R.slice(0, 3).join(', ')}${R.length > 3 ? ` and ${R.length - 3} more` : ''}. Build the module, then \`tools/wire/cost.ts\` says what a tick costs now.`); }
 function addStruct(path0: string, fields: string): void { const m = path0.match(/^([a-z_0-9]+)::([A-Za-z_0-9]+)$/); if (!m) die(`${path0}: write it module::Type`); const path = `crate::${m![1]}::${m![2]}`, S = readJ(SCHEMA); if (S.types[path]) die(`${path} is already in the table`);
   const F = fields.split(',').map(x => { const i = x.indexOf(':'); return { rust: x.slice(0, i).trim(), ty: x.slice(i + 1).trim(), ts: camel(x.slice(0, i).trim()) }; }); S.types[path] = { k: 'struct', mod: m![1], name: m![2], fields: F }; writeFileSync(SCHEMA, JSON.stringify(S));
@@ -68,7 +70,7 @@ function drop(Q: string[]): void { const S = readJ(SCHEMA), L = readJ(FIELDS), i
     const k = lineOf('Io', path); let l = io[k]; for (const [a, b] of [[` self.${f}.w(o);`, ''], [` s.${f} = Io::r(i);`, ''], [` ${f}: Io::r(i),`, ''], [` self.${f}.ri(i);`, '']]) l = l.split(a).join(b); if (new RegExp(`\\b${f}\\b`).test(l)) die(`${q}: its line on the wire is not of a form this tool knows`); io[k] = l;
     const p = lineOf('Poke', path); let i2 = 0; io[p] = io[p].replace(` ${at} => self.${f}.poke(i),`, '').replace(/ \d+ => self\.([a-z_0-9]+)\.poke\(i\),/g, (_, x) => ` ${i2++} => self.${x}.poke(i),`); }
   for (const k of ['everyTick', 'pageTick', 'atStartOnly']) { const b = L[k].length; L[k] = L[k].filter((x: string) => !set.has(x)); listed += b - L[k].length; } S.knobSettled = (S.knobSettled ?? []).filter((x: string) => !set.has(x));
-  writeFileSync(ioP, io.join('\n')); writeFileSync(SCHEMA, JSON.stringify(S)); writeFileSync(FIELDS, JSON.stringify(L, null, 0)); gen(false); console.log(`wire: ${n} fields off the wire (${listed} list rows)`); }
+  writeFileSync(ioP, io.join('\n')); writeFileSync(SCHEMA, JSON.stringify(S)); writeFields(L); gen(false); console.log(`wire: ${n} fields off the wire (${listed} list rows)`); }
 const A = process.argv.slice(2), opt = (n: string) => { const i = A.indexOf(n); return i < 0 ? undefined : A[i + 1]; };
 switch (A[0]) { case 'gen': gen(A.includes('--check')); break;
   case 'add': add(A[1], opt('--ty') ?? die('add: --ty') as never, opt('--ts'), opt('--expr'), A.includes('--start-only')); break;
