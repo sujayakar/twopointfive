@@ -6,6 +6,7 @@ use crate::m;
 
 pub mod body;
 pub mod foe;
+pub mod hearing;
 pub mod leader;
 pub mod lead;
 pub mod lock;
@@ -21,7 +22,7 @@ pub fn perceive(g: &mut Game, gd: GuardId, dt: f64, c: CharId, staff: bool) -> S
         return Saw { lvl, seen: false, dist: 99.0 };
     }
     let ear = crate::doze::doze_ear(g, gd);
-    crate::guards::hearing_check(g, gd, Some(ear[0]), Some(true), Some(ear[1]));
+    hearing::hearing_check(g, gd, Some(ear[0]), Some(true), Some(ear[1]));
     let eyes = foe::eyes(g, gd, dt, staff);
     lead::lead(g, gd, c, eyes.body);
     body::body(g, gd, c, staff, lvl);
