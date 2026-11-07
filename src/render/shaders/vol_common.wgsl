@@ -67,8 +67,7 @@ fn smokeSelfShadowIn(P: vec3f, L: vec3f, mask: u32) -> f32 {
   for (var i = 1; i <= 4; i++) { od += smokeDensityIn(P + L * (f32(i) - 0.3) * ds, mask); }
   return exp(-od * ds * smokeSelfK());
 }
-/** HOW SMOKE IS DRAWN, AS ROWS (frame.sideCfg.y and .z; the smoke lab's section of that name, host/smokelab.ts; Engine.smokeDraw). Zeros are the picture as it was, and
- *  nothing but the lab writes anything else.
+/** HOW SMOKE IS DRAWN, AS ROWS (frame.sideCfg.y and .z; render/smokeLook.ts; Engine.smokeDraw). Zeros are the picture as it was.
  *    .y  bits 0‥7    creases: how much the soft light on a sample is dimmed by the smoke crowding round it, × 100 (smokeCreaseIn below)
  *        bits 8‥15   the self-shadow's extinction per unit density, × 4 (0 = SMOKE_SELF_K)
  *        bits 16‥23  the self-shadow's reach toward the light, in 2 cm (0 = 0.72 m: four taps 0.18 m apart)
