@@ -1714,7 +1714,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   merged and then try to fix forward, especially as we clean everything up and simplify the code").** Until this the look's layers drew only with a
   `look` row on the address (the bullet below, which still says how they are made). Now `scene/look.ts lookPageOn` is true unless the address says
   `?look=old`, and `main.ts` raises `lookConfig.on` and what stands on it (the walls' two sides, the men's side rows, the smoke's shorter step, the
-  stirred smoke and the fire's column, the maps made on workers, the hills that rays see) on every boot of the game's page. `?look=key:value` still
+  stirred smoke and the fire's column, the maps made on workers) on every boot of the game's page. `?look=key:value` still
   opens the page with a row's amount; `?look=plain|0|off` is still the GWOT dress's word, read from any `look` word of the address, and no longer
   decides the picture's layers. `?look=old` IS A TEMPORARY WORD: it is the second way to draw the picture and goes with the commit that deletes
   that way (the prelude's `LOOK` constant and every branch on it). A benchmark or a pricing run asked for on it carries it to every page
@@ -1724,7 +1724,8 @@ row on his machine is the answer, and the word puts the count back on any machin
   that asks for the look BY NAME, exactly the pages that were the look's before (`/look`, `/smokelab`, `?look`, `?look=key:value`, a one-file
   build's tag). The lab's alone: the debugger opened on the look's rows (`buildLookPanel`'s `open`; on every other page the rows are a system of the
   debugger, shut until asked for, and the Team & kit picture's window builds none), the kit and the fog put down (`?lookkit=0`), the two trials that
-  rewrite the level as it loads (`geo`: a bite out of a yard wall's top, the kit's octagons as prisms; `lorry`), the seated posts (`seatPosts`,
+  rewrite the level as it loads (`geo`: a bite out of a yard wall's top, the kit's octagons as prisms; `lorry`), the hills that rays see (`hills`,
+  below), the seated posts (`seatPosts`,
   4 mm; `?seat=0`) and a snow level's broken cloud (`LOOK_SNOW_COVER`: the weather's own number, read by the light the men see by). So the lab is as
   it was, to the word, and the game's own page plays the level as its file has it. With `geo` off a round thing is the build's own
   (`scene/round.ts`, its GPU half compiled in: `roundConfig.gpu`): the look with that half in is a set of programs the look's page with `geo` on
@@ -1732,6 +1733,15 @@ row on his machine is the answer, and the word puts the count back on any machin
   snow's cloud in the weather's preset. NOT MENDED: without `seatPosts` a post built in a wall's end shares a plane with it and the two faces
   flicker under the look (the maintainer saw it on a GPU on 10-25, on the look's page before the mend); `tools/qa/zfight-check.ts` lists the
   pairs in a level file.
+  `hills` WAS ON EVERY PAGE FOR ONE STEP OF THE BUILD AND PARTED CO-OP (step 1906, the same day; mended the step after). The first cut kept it with
+  the picture as "the picture's alone". It is not: `groundRayConfig.on` is read by the game's own box world (`scene/boxes.ts groundOn`, in the Rust
+  game `scene_boxes ground_on`: the rays a sight line and the cursor's point use then meet the ground field) and `game/game.ts` builds the snow
+  field with its roll. A game server stands with no look, so a page had `on: true` beside its server's `false`: co-op's wider word (the parts of
+  the whole game's state a page and a server agree on, `src/net/agreed.ts`, part `m.scene_ground_field`) held on 0 of 282 word ticks with one seat
+  where the step before held 257 of 257. The alarm's narrow word did not part, the office being flat; on a snow level the two would have played
+  different ground. THE RULE THIS TEACHES: before a switch is called the picture's, look for its readers under `src/scene`, `src/game` and
+  `rust/`, and run `PORT=<dev server> node tools/qa/mpclient-page.cjs`: its `wider word` line is the check that a page's game is its server's.
+  If rays should see the hills on every page, that is a rule of the game with its own registered switch, laid on every machine from the recipe.
   NOT THE LOOK'S YET: the replay viewer (`/replay`, `src/replay/viewer.ts`) and the workbench (`src/workbench.ts`) have their own boots and never
   raised `lookConfig.on`: they draw the old picture until the constant goes. The headless stands have no picture and are as they were. No
   `FROZEN_HOLDS` row, no knob table, no journal key: no state a step hashes reads the look (the stirred smoke and the fire's column are the page's
@@ -1748,7 +1758,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   THE PAGE WITH NO WORD IS, PIXEL FOR PIXEL, the named head's look page with the lab's things put off by their words
   (`?look&geo=0&lorry=0&lookkit=0&seat=0` on 34cdbcbd): `tools/qa/draw-equal.cjs`, the office at night and the depot's room clear with four at
   midday, drawn frames 2 and 4, 4 of 4 captures EQUAL (both sides "not clean" alike on the office: two of three torches in frame). And read at
-  ready on the depot's room clear with four: no word = the look, `geo` and `lorry` off, `hills` on, the debugger shut, the ammunition row down, the
+  ready on the depot's room clear with four: no word = the look, `geo` and `lorry` off (and `hills` on, in that first cut), the debugger shut, the ammunition row down, the
   fog up, 802 boxes; `&look` = the lab as it was (`geo` on, the debugger open on the look's rows, the ammunition row up, the fog down, 821 boxes,
   one post seated); `&look=old` = no look, 802 boxes. No console error on any. The gate's own reads on this tree: `thrice` 93c2d1a7, and
   night-breach seed 1 the named head's file byte for byte.
