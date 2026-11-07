@@ -1,6 +1,7 @@
 // ROWS FOR THE EXPECTED REDS, PRINTED FROM A RUN: reads what `bun run tools/qa/probes.ts <name>` printed and writes one row of tools/qa/expected-red.ts for every
 // red probe whose failing lines are all the page's own side (nothing refused by the fold, no line made with the other side of a settled switch).
 //   bun run tools/qa/probes.ts glasstune > run.txt 2>&1 ; bun run tools/qa/red-rows.ts run.txt [more.txt …] [--whose "<owner>"] [--read 2026-11-07]
+// A probe that is in two of the files is read from the first one named, so the newest run goes first.
 // A row is NOT a pardon: the list changes no verdict (expected-red.ts says so). It is there so a gate's reds sort into the ones already read and the new one.
 // What the tool refuses to write a row for, and says why in a comment line instead:
 //   · a probe that still WRITES a settled row (its fold line names refused writes), or has a line under the runner's "other side" note: that red is the check's
@@ -43,7 +44,7 @@ for (const file of files) {
     const fold = /^\s*\{"fold":(\{.*\})\}\s*$/.exec(l); if (!fold) continue;
     let f: { probe: string; red: boolean; refused: { row: string }[] }; try { f = JSON.parse(fold[1]); } catch { cur = fresh(); continue; }
     const seen = cur; cur = fresh();
-    if (!f.red || done.has(f.probe)) continue; done.add(f.probe);
+    if (done.has(f.probe)) continue; done.add(f.probe); if (!f.red) continue;   // (a probe read twice: the FIRST file named wins, green or red — name the newest run first)
     if (f.refused.length || seen.other) { notes.push(`// ${f.probe}: NO ROW — it still writes settled rows (${[...new Set(f.refused.map(r => r.row))].join(', ') || 'see its lines'}): clear the check first`); continue; }
     if (!seen.fails.length && !seen.panic && !seen.threw) { notes.push(`// ${f.probe}: NO ROW — red with no failing line and no throw in this output (a silent probe, or lines this tool does not read): read its output`); continue; }
     const n = seen.fails.length, of = n + seen.passes, first = seen.fails[0] ? ` · first: ${short(seen.fails[0], 260)}` : '';
