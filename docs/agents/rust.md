@@ -2287,3 +2287,8 @@ one stops the tool by name, on an address one does nothing and says so in the co
   after on the same tree: both type checks; the missions' tallies under the Rust game by whole record and digest series; every way to start a game
   (`tools/blitz/starts.ts`, 1,480 rows); the page's flows in a headless browser WITH DRAWN FRAMES on the software adapter (`tools/blitz/delete-page.ts
   --draw N`: no other headless tool draws, and what only a draw runs is run nowhere else). Not seen: anything on a GPU.
+- **The page's frame of a start or a restart draws time 0.** A restart is a start: on the frame Shift+Enter (or Enter once down) is read, the page's
+  host stands the kept start again and returns from that step without a tick, as a first boot shows the start as it stands; the first tick comes on
+  the next frame. A check that holds the frames after a restart against a boot's matches them BY THE GAME'S CLOCK, never by their count
+  (`tools/qa/cleanrestart-page.cjs`: placed by hand on the seeded solo night, the block's `lights` part and the die read the boot's own values one
+  frame later).
