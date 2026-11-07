@@ -54,7 +54,9 @@ export async function wxWindCheck(o: { verbose?: boolean } = {}): Promise<boolea
   async function rig(file: string) {
     process.env.TPS_SNOW = '1'; process.env.TPS_OWNROOFS = '1'; process.env.TPS_SNOWWISPS = '1';
     const lvl = loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')));
-    const W: any = await quiet(() => standUp({ level: lvl, seed: 7 }));
+    // (THE DRESSING ROWS UP, as the page has them: the storm's source is a dressing row, and the harness stand keeps those down — its base and speed read 0 there and
+    //  nothing below can be asked. Where no storm blows the wisps line says so in words.)
+    const W: any = await quiet(() => standUp({ level: lvl, seed: 7, dress: true }));
     const g = W.game; const set = () => { WX_OWN.roofs = true; SNOW_LOOK.wisps = true; };
     const step = (n = 1) => { for (let i = 0; i < n; i++) { set(); W.step(DT); } };
     const at = (p: number[]) => { set(); return g.wind.at(p) as number[]; };
