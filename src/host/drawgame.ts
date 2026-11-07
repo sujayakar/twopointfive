@@ -104,6 +104,12 @@ export class DrawGame {
     this.draw();
   }
   private said: Float64Array | null = null;
+  /** every knob a person may turn (`commands.knob` turns one) */
+  knobs(): { name: string; yes: boolean; value: number }[] {
+    this.X.face_knobs(this.h); const p = this.X.face_out_ptr() >>> 0, n = this.X.face_out_len() >>> 0, b = this.memory.buffer.slice(p, p + n), d = new DataView(b), out: { name: string; yes: boolean; value: number }[] = [];
+    for (let at = 0; at < n;) { const w = d.getUint32(at, true), len = w & 0x7fffffff; out.push({ name: this.dec.decode(new Uint8Array(b, at + 4, len)), yes: w >>> 31 === 1, value: d.getFloat64(at + 4 + len, true) }); at += 12 + len; }
+    return out;
+  }
   /** a name that crosses by its number */
   nameOf(i: number): string { this.X.face_draw_name(this.h, i); return this.answer(); }
   private draw(): void { this.drawn.take(this.h); }
