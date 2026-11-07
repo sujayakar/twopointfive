@@ -55,7 +55,6 @@ const pairs = s => Object.fromEntries(s.split(/[,/]/).filter(kv => kv && !kv.sta
 //   x.lamp:0  the mains are cut for the row (every fixture on them is out): what still lights a shut room is not a lamp's
 //   x.sun:0  the hour's directional light is out for the row
 //   x.s.<name>:<number>  the engine setting of that name for the row (x.s.rtStrength:0 = no reflections)
-//   x.restir:0  the older leader and tail direct estimator for the row
 //   x.glow:0  no face glows (the frame's emissive scale at 0)
 //   x.view:N  the engine's debug view N in place of the picture (3 direct light, 4 indirect light, 5 the lit air)
 //   x.bounce:0  the cache's rays take no bounced light at what they hit (frame flag Bounce). The look row `rooms:0` is the cache as it was before the leaks were mended.
@@ -126,8 +125,6 @@ const words = s => Object.fromEntries(s.split(/[,/]/).filter(kv => kv.startsWith
       if (x.lamp === 0) { window.__game.setBlackout(3600, 'debug'); window.__dark = true; }
       window.__set0 = window.__set0 || {}; for (const k in window.__set0) E.settings[k] = window.__set0[k];
       for (const k in x) if (k.startsWith('s.')) { const n = k.slice(2); if (!(n in window.__set0)) window.__set0[n] = E.settings[n]; E.settings[n] = x[k]; }
-      if (window.__restir0 === undefined) window.__restir0 = E.settings.restir;
-      E.settings.restir = x.restir === 0 ? false : window.__restir0;
       E.rc.invalidateWorld(); E.settings.debugView = x.view > 0 ? x.view : 0;
       window.__stage({ look: v.look, yaw: v.yaw * D, pitch: v.pitch * D, dist: v.dist }, { player: { pos: v.sam, holstered: true } }); window.__park(); if (E.lookEye) E.lookEye.snap = true;
         if (v.doors) for (const d of window.__game.doors.list) { const o = v.doors.includes(d.def.name); d.latched = !o; d.vel = 0; d.angle = o ? (d.swing > 0 ? d.maxA : d.minA) * 0.85 : 0; }   // a view with doors: those stand open, every other one shut
@@ -172,9 +169,9 @@ const words = s => Object.fromEntries(s.split(/[,/]/).filter(kv => kv.startsWith
           for (const l of L.lights) { if (!l.enabled || !(l.intensity > 0)) continue; let e;
             if (l.kind === 2) e = l.intensity * Math.max(0, -l.dir[1]);
             else { const d = [l.pos[0] - P[0], l.pos[1] - P[1], l.pos[2] - P[2]], r2 = d[0] * d[0] + d[1] * d[1] + d[2] * d[2], r = Math.sqrt(r2); if (r > l.range) continue; const q = r / l.range, w = Math.max(0, 1 - q ** 4) ** 2; e = l.intensity * w / Math.max(r2, l.radius * l.radius) * Math.max(0, d[1] / r); }
-            const K = E.reach, m = l.kind === 2 ? (L.dirMasks ? (K ? K.dirOf(l) : l.reachDir) ?? null : null) : ((K ? K.of(l) : l.reach) ?? null);   // (the keeper's, render/reachKeep.ts; on a build from before 11-05 the light's own)
+            const K = E.reach, m = l.kind === 2 ? ((K ? K.dirOf(l) : l.reachDir) ?? null) : ((K ? K.of(l) : l.reach) ?? null);   // (the keeper's, render/reachKeep.ts; on a build from before 11-05 the light's own)
             out.push({ n: l.name, g: l.group, k: l.kind, e: num(e), reach: m ? (m[ci >> 4] >>> ((ci & 15) * 2)) & 3 : 'all' }); }
-          return { restir: !!E.settings.restir, dirMasks: !!L.dirMasks, top: out.sort((a, b) => b.e - a.e).slice(0, 8) }; })();
+          return { top: out.sort((a, b) => b.e - a.e).slice(0, 8) }; })();
         return { url: fr.canvas.toDataURL('image/png'), ms, gpuErrs: window.__gpuErrs.splice(0, 4), stats: fr.stats, flick,
           at: { hour: window.__hour.id, exposure: num(E.settings.exposure), samLight: num(g.player.irradiance), samVis: num(g.player.visibility), eye: E.lookEyeCfg ? Array.from(E.lookEyeCfg, num) : null, shade: E.lookShadeCfg ? Array.from(E.lookShadeCfg, num) : null, grade: E.lookGradeCfg ? Array.from(E.lookGradeCfg, num) : null, dayExp: num(E.lights.dayExp), place, dice, lit, doors: g.doors.list.map(d => d.def.name + ':' + num(d.angle)).join(' ') } };
       }, [row.id, col, VIEWS[col], SETTLE, D, FLICK, FLICK_EASE]);

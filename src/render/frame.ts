@@ -1,8 +1,7 @@
 // Per-frame uniform block (must match `struct Frame` in common.wgsl) + shared scene bind group.
 import { Mat4, Vec3 } from '../math/vec';
 import commonSrc from './shaders/common.wgsl' with { type: 'text' };
-import { KERNELS } from './kernels';
-const sdfRigSrc = KERNELS.sdfRig;   // (shaders/sdfrig.wgsl, or its compact writing with that row on: render/kernels.ts)
+import sdfRigSrc from './shaders/sdfrig.wgsl' with { type: 'text' };
 import { sdfRigWgslConsts } from './sdfrig';
 import { wgslWorldConsts } from '../scene/world';
 import { AIR_CELL, AIR_W, AIR_H, AIR_ROWS } from '../scene/airGrid';
@@ -32,15 +31,15 @@ import smokeReadSrc from './shaders/smoke_read.wgsl' with { type: 'text' };
  *    608  prevCam    vec4f              (f[152‥155])  previous frame's camera position, w = last frame's froxel near boundary
  *    624  rtCfg      vec4f              (f[156‥159])  RT reflections: max roughness traced, rays per pixel, wet-ground anisotropy (+ 2 × the wet ground's break-up in tenths), the reflection target's divisor (0 = the pass is OFF this frame)
  *    640  matCfg     vec4f              (f[160‥163])  materials: analytic-highlight gain, reflection strength, per-ray luminance bound, detail-layer amount (0 = the g-buffer's detail layer off)
- *    656  p5Cfg      vec4u              (u[164‥167])  renderer v3 phase 5 (ultra extras): gather resampling mode, its packed numbers, the reflection pass's mesh / hit-reuse bits (all 0 = the passes as they were); w = the lowest light slot holding a TRANSIENT light this frame (gather_common's subtraction walk starts there; 0 when none is alive — review R2.2)
+ *    656  p5Cfg      vec4u              (u[164‥167])  renderer v3 phase 5 (ultra extras): x, y free (the resampling gather's mode and numbers until 2026-11-07), z = the reflection pass's mesh / hit-reuse bits (all 0 = the passes as they were); w = the lowest light slot holding a TRANSIENT light this frame (gather_common's subtraction walk starts there; 0 when none is alive — review R2.2)
  *    672  jitter     vec4f              (f[168‥171])  this frame's TAAU jitter (internal px) xy, the previous render's zw
  *    688  markCfg    vec4f              (f[172‥175])  markings: base texel m (0 = off), contrast, emission ×, evaluate-at-reflection-hits
  *    704  sharpCfg   vec4f              (f[176‥179])  SHARP DIRECT (decoupled resolution): internal size xy, OUTPUT (g-buffer / composite) size zw — z 0 = off: every pass exactly as it was
- *    720  sharpCfgB  vec4f              (f[180‥183])  sharp direct's knobs: x = output-res edge rays on (1) / off (0) — informational (passes.ts picks the pipeline), y = the taps' ratio spread that flags a hard shadow edge, z = the hint width (internal px) under which an edge counts as hard, w = the same-plane weight's k
+ *    720  sharpCfgB  vec4f              (f[180‥183])  sharp direct's knob: w = the same-plane weight's k (xyz free)
  *    736  sharpCfgC  vec4f              (f[184‥187])  DECOUPLED JITTER under sharp direct (settings.sharpDecouple): xy = the jitter the INTERNAL raster carries relative to the (unjittered) OUTPUT raster, internal px — every internal ↔ output texel map adds it; 0 = the two rasters share one jitter (the sharp path as it was); zw spare
- *    752  rigCfg     vec4f              (f[188‥191])  SDF CHARACTER RIG (render/sdfrig.ts, shaders/sdfrig.wgsl): x = bits (2 smooth-union closest hit in the reflection tracer · 4 soft-shadow character visibility in the direct estimators · 8 its analytic form · 16 smooth union in the soft query · 32 the soft query for broad-class lights too · 64 character SELF-shadow in the direct estimators' shadow rays (common.wgsl selfShadowT) · 128 mesh shadows for NEAR receivers only (common.wgsl meshShadowT, MESH_NEAR_M); bit 1 retired — the round-cone proxy test is unconditional) — 0 = the plain round-cone loops, y = soft-shadow march steps, z = × the lights' angular radius in the soft query, w = the smallest tan(half-angle) it gives a light
- *    768  rigCfgB    vec4f              (f[192‥195])  x = × the per-joint smooth-union radii (0 = plain union), y = closest-hit sphere-trace steps, z = its surface epsilon (m), w = the soft query's smallest march step (m)
- *    784  giCfg      vec4f              (f[196‥199])  GI-in-motion (docs/internal/gi-motion.md): x = the final gather's ray multiplier for YOUNG-history texels (settings.giYoungRays; ≤ 1 = off: the gather as it was), y = the cap on how many texels a frame may take it (count; the rest first-come), z = the history length under which a texel counts as young (frames), w spare
+ *    752  rigCfg     vec4f              (f[188‥191])  SDF CHARACTER RIG (render/sdfrig.ts, shaders/sdfrig.wgsl): x = bits (64 character SELF-shadow in the direct estimators' shadow rays (common.wgsl selfShadowT) · 128 mesh shadows for NEAR receivers only (common.wgsl meshShadowT, MESH_NEAR_M); the bits under 64 are free — the round-cone proxy test is unconditional), yzw free
+ *    768  rigCfgB    vec4f              (f[192‥195])  free (the smooth-union and soft-query knobs went 2026-11-07)
+ *    784  giCfg      vec4f              (f[196‥199])  four FREE words (the young-history gather rays read them until 2026-11-07; no shader reads them now, the writer below still copies what it is given)
  *    800  weatherE   vec4f              (f[200‥203])  PARTICLE RAIN (game/rainFx.ts, EXPERIMENT): the near-field particle layer's disc — centre x, z, radius (m), and the share 0‥1 of the lattice rain it replaces inside it (on a snow level, where there is no lattice rain: 0, or NEGATIVE the metres past the level's rim the snow goes on falling — particles_common.wgsl snowPast) (volumetrics.wgsl rainNearKeep); w 0 = no particle layer: the lattice exactly as it was
  *    816  weatherF   vec4f              (f[204‥207])  PARTICLE RAIN v2: the drop's PHASE the lattice rain shares with the particles (volumetrics.wgsl rainLight) — x = isotropic floor, y = forward-lobe weight, z = its Henyey-Greenstein g, w = × gain; w 0 = the lattice's isotropic sum exactly as it was
  *    832  shadeCfg   vec4f              (f[208‥211])  THE LOOK PROTOTYPE, eyes adjust to shade (engine.ts lookShade; the one exposure model's, place_common.wgsl lookExpoFor, and the word composite.wgsl asks before it reads a pixel's place): x = the share of its dark a place darker than the open air is brought up by (0 = off), y = open air's mean radiance from the sky alone (the model's open air until the place field is live), z = spare (the most the rows before the model brought a pixel up), w = open ground's irradiance from the sky alone (luminances; the shoulder's white where the Contrast row says none). Zeros = the picture as it was
@@ -93,20 +92,12 @@ export interface WeatherFrame {
 export const noWeather = (): WeatherFrame => ({ rain: 0, shearX: 0, shearZ: 0, wet: 0, flash: [0, 0, 0], rainTop: 4.5, interior: [0, 0, 0, 0], annex: [0, 0, 0, 0], nearFade: [0, 0, 0, 0] });
 
 export const FrameFlags = {
-  Direct: 1, Indirect: 2, Volumetrics: 4, Smoke: 8, RcVisWeight: 16, ReachMask: 32 /* direct pass + secondary vertices: skip lights whose CPU reach mask (reach.ts) excludes the shading point's cell — set from settings.lightReach */, SmokeShadows: 64, Bounce: 128, Dither: 256, SoftShadow: 512, NightVision: 1024, Temporal: 2048, TileCull: 4096 /* direct pass: lossless per-tile light culling (set from settings.tileCull, not settings.flags) */, SoftTileSkip: 8192 /* penumbra filter: lossless tile-level pass-through (set from settings.softTileSkip) */, TailChroma: 16384, RcRoom: 32768 /* THE LOOK PROTOTYPE, light keeps to its room (engine.ts, the look panel's row `rooms`): a cache ray's hit takes its bounced light from the cell the ray itself came through (lighting_common.wgsl hitRadiance), beside the cascades' hand-over overlap (render/rc.ts overlap) */,
-  CheckerDirect: 65536 /* LOSSY: shadow rays on half the pixels per frame, checkerboard (set from settings.checkerDirect) */,
-  GridSkip: 131072 /* trace grid: DDA runs past provably empty cells without loads — lossless (set from settings.gridSkip) */,
-  GridYCull: 262144 /* trace grid: cells / boxes / globals outside the ray's remaining height span are not slab-tested — lossless (set from settings.gridYCull) */,
-  AxisBox: 524288 /* slab test: unrotated boxes skip the yaw rotation and its three divisions — lossless (set from settings.axisBoxFast) */,
-  GridSlabs: 1048576 /* trace grid: globals rejected by the ray segment's bounds on all three axes, cell height spans judged 3.5 cm tighter — lossless (set from settings.gridSlabs) */,
+  Direct: 1, Indirect: 2, Volumetrics: 4, Smoke: 8, RcVisWeight: 16, ReachMask: 32 /* direct pass + secondary vertices: skip lights whose CPU reach mask (reach.ts) excludes the shading point's cell — set from settings.lightReach */, SmokeShadows: 64, Bounce: 128, Dither: 256, SoftShadow: 512, NightVision: 1024, Temporal: 2048, RcRoom: 32768 /* THE LOOK PROTOTYPE, light keeps to its room (engine.ts, the look panel's row `rooms`): a cache ray's hit takes its bounced light from the cell the ray itself came through (lighting_common.wgsl hitRadiance), beside the cascades' hand-over overlap (render/rc.ts overlap) */,
   Gloss: 2097152 /* EXPERIMENT: traced glossy reflections on floors flagged BoxFlag.Gloss (one reflection ray per gloss texel in the final gather, its own half-res specular texture + history + one blur pass, added un-multiplied by albedo in composite) — default off; off stores / filters / reads nothing (set from settings.gloss) */,
   Decals: 4194304 /* decals (E1): the g-buffer's fragment stage applies the marks in render/decals.ts (bullet holes, scorches, scuffs, chips) to the albedo / normal / gloss-keep it stores — set from settings.decals while any decal exists; off = fsBox exactly as it was */,
   MeshShadows: 8388608 /* EXPERIMENT: every shadow / occlusion ray (direct pass, gather hits, cascades, beams, probes) tests characters against their skinned triangle mesh — a per-character refit BVH written by render/meshShadows.ts each frame, walked in common.wgsl meshShadowT — instead of the 15 analytic capsules; primary visibility and closest-hit shading (gather / gloss hits) stay as they are. Default off (settings.meshShadows); needs meshBinding.enabled; off is the untouched capsule path. */,
   Particles: 16777216 /* GPU particles (E4) (render/particles.ts — sparks, debris chips, dust, casings simulated in a compute pass and splatted into the HDR target after the composite). Set from settings.gpuParticles ∧ a Particles attached; no scene shader reads it (the pass graph does) — it rides in the flags word so the HUD / captures say which path drew the sparks. Off = the CPU box sparks exactly as they were. */,
   BounceCards: 33554432 /* torch bounce cards (settings.torchBounceCards): each carried spot light's footprint on the surface it hits is rebuilt every frame as a one-sided analytic emitter (cards.wgsl) that the final gather samples with one shadow ray instead of discovering the hotspot with its cosine rays — which exclude that light's direct term where they land inside the footprint, so nothing is counted twice (fgather.wgsl). Off = no card pass, nothing sampled or excluded: bit-identical. */,
-  DirectSeedHold: 67108864 /* direct pass: the per-pixel sampling pattern advances every OTHER frame while direct-light history is on (settings.directSeedHold) — an A/B knob for the torch-shadow boil study (docs/internal/perf-2026-08-10.md), default off = the pattern advances every frame as before */,
-  GiAdaptiveHist: 134217728 /* LOSSY: the indirect's temporal accumulation weighs reprojected history by its consistency with this frame's 3×3 neighbourhood — inside the spread: unclipped, weight 0.93; well outside: clipped as before, weight 0.7 (temporal.wgsl; settings.giAdaptiveHistory) — default off = clip + fixed 0.86 as before */,
-  Restir: 1073741824 /* ReSTIR DI is the direct-light estimator this frame (settings.restir; render/shaders/restir.wgsl) — the pass graph picks the pipeline; the one scene shader that reads it is softblur.wgsl (its per-channel ratio clamp opens to 4× for the per-light hues, as for TailChroma); it also lets the HUD / captures / dumps say which estimator drew the frame. Off = direct.wgsl's leader / tail path bit for bit */,
   Glass: 268435456 /* glass panes (E3) — boxes flagged BoxFlag.Glass are kept out of the raster and the trace grid and listed in SceneInfo.glass; composite lays Fresnel reflection (traced in the final gather like the gloss floors, sharing their specular texture + history + à-trous pass), the pane's tint and a dust glow over what the G-buffer shows behind them, and the direct pass tints light that crossed a pane (set from settings.glass; off = no pane list at all: empty openings, the level as it was) */,
   FroxelVol: 536870912 /* froxel volumetrics (renderer v3 Phase 2b, render/froxels.ts): haze + smoke in-scatter injected per froxel of a camera-frustum grid with k shadow rays, temporally accumulated, integrated front to back; composite / particles read one trilinear sample, volumetrics.wgsl keeps only the rain (set from settings.froxelVol while a grid exists; off = the per-pixel march exactly as it was) */,
 } as const;
@@ -123,12 +114,11 @@ export interface FrameParams {
   capColor: [number, number, number, number];
   post: [number, number, number, number];
   rcJitter: [number, number];
-  directCfg: [number, number, number, number];   // samplesTop, samplesOther, blurCapPx, historyWeight
-  directAdaptiveMin: number;
+  directCfg: [number, number, number, number];   // free, free, blurCapPx, free (the old estimator's ray budgets and history weight until 2026-11-07)
   numTransient: number;        // transient (ttl) lights alive this frame — lets the gather skip its subtraction loop
   secMinE: number;             // shadow-ray threshold for lights at cascade interval hits (W/m², unshadowed)
   glassCfg: [number, number, number, number];   // glass experiment: x = reflection strength (× the physical Fresnel term), y = tint depth (exponent on the pane's albedo per crossing), z = dust glow gain, w = refraction: the index of refraction while settings.glassRefract (≥ 1), 0 = off (composite.wgsl glassRefractPath)
-  lossyCfg: [number, number, number, number];   // lossy options: gather divisor (2|3), volumetric divisor (2|4), dim-ray luminance threshold (0 = off), the gather's relative firefly bound K (0 = off) — see RenderSettings
+  lossyCfg: [number, number, number, number];   // lossy options: gather divisor (2|3), volumetric divisor (2|4), free (the old estimator's dim-ray threshold until 2026-11-07), the gather's relative firefly bound K (0 = off) — see RenderSettings
   /** torch bounce cards this frame (FrameFlags.BounceCards): the light SLOTS (indices into this frame's uploaded light list) whose footprint cards.wgsl rebuilds, ≤ MAX_CARDS; empty = the card pass is not dispatched and the gather touches nothing */
   cardSlots: number[];
   weather: WeatherFrame;       // rain / splashes / sky flash in the outdoor air (volumetrics.wgsl (c)); noWeather() = nothing drawn
@@ -148,8 +138,8 @@ export interface FrameParams {
   /** materials: [analytic-highlight gain (the GGX image of point / spot / panel lights on a finish — 1 = physical), reflection strength ×, per-ray luminance bound, detail-layer amount 0‥1
    *  (the g-buffer's wear / dust / edge terms; 0 = fsBox exactly as it was)] */
   matCfg: [number, number, number, number];
-  /** renderer v3 phase 5, the ultra-only extras (engine.ts settings giResample* / rtMeshHits / rtHitReuse; all zero = every pass exactly as it was): [the final gather's resampling mode 0 off · 1 temporal ·
-   *  2 + spatial, its packed numbers (fresh rays | M cap << 8 | spatial taps << 16 | radius << 24), the reflection pass's bits (1 mesh closest-hit for characters, 2 second-ray decorrelation + hit reuse), 0] */
+  /** renderer v3 phase 5, the ultra-only extras (engine.ts settings rtMeshHits / rtHitReuse; all zero = every pass exactly as it was): [free, free (the resampling gather's mode and
+   *  numbers until 2026-11-07), the reflection pass's bits (1 mesh closest-hit for characters, 2 second-ray decorrelation + hit reuse), 0] */
   p5Cfg: [number, number, number, number];
   /** TAAU jitter in internal pixels: [this frame's x, y, the previous render's x, y] (all 0 without TAAU) */
   jitter: [number, number, number, number];
@@ -160,18 +150,17 @@ export interface FrameParams {
    *  the g-buffer, the direct light's unshadowed term, the composite and the TAA run at the output size, everything stochastic stays internal and is joint-bilateral upsampled. z = 0 = off:
    *  every pass exactly as it was (composite / taau / particles_draw read the same statements they always did). Both frame uniforms (internal-screen and output-screen) carry the same four. */
   sharpCfg: [number, number, number, number];
-  /** sharp direct's knobs: [edge rays 0|1 (informational: passes.ts dispatches the edge-ray pipeline by the setting; captures / dumps read it), edge ratio spread + hard-hint width px (sharp_edge.wgsl), same-plane k (sharp_direct.wgsl)] */
+  /** sharp direct's knob: [free, free, free, same-plane k (sharp_direct.wgsl)] */
   sharpCfgB: [number, number, number, number];
   /** DECOUPLED JITTER (settings.sharpDecouple, sharp direct only): [the internal raster's jitter relative to the output raster in internal px x, y, 0, 0] — 0 = one jitter for both (as it was) */
   sharpCfgC: [number, number, number, number];
-  /** SDF CHARACTER RIG (render/sdfrig.ts + shaders/sdfrig.wgsl; engine.ts settings sdfRigSmooth / charSoftShadow …): [bits (2 smooth closest hit in reflections · 4 soft character shadows in the direct
-   *  estimators · 8 analytic soft form · 16 smooth union in the soft query · 32 broad lights too; bit 1 retired; 0 = the plain round-cone loops), soft march steps, × light angular radius, min tan(half-angle)] */
+  /** SDF CHARACTER RIG (render/sdfrig.ts + shaders/sdfrig.wgsl): [bits (64 character self-shadow · 128 mesh shadows near only; the bits under 64 free), free, free, free] */
   rigCfg: [number, number, number, number];
-  /** [× the per-joint smooth-union radii (0 = plain union), closest-hit sphere-trace steps, its epsilon (m), the soft query's min march step (m)] */
+  /** free (the smooth-union and soft-query knobs went 2026-11-07) */
   rigCfgB: [number, number, number, number];
   /** GI-IN-MOTION (fgather.wgsl `main`): [young-history ray multiplier k (≤ 1 = off — the gather byte for byte as it was), the per-frame cap on texels that may take it (count), the history length (frames)
    *  under which a texel is 'young', 0] */
-  giCfg?: [number, number, number, number];   // (optional: fixtures / probes built before it wrote nothing there — zeros = off)
+  giCfg?: [number, number, number, number];   // (free words: see the layout above)
   shadeCfg?: [number, number, number, number];   // (THE LOOK PROTOTYPE's shade row, engine.ts lookShade: optional — absent = zeros = off)
   gradeCfg?: [number, number, number, number];   // (THE LOOK PROTOTYPE's Contrast row as the one exposure model tones a place by it, render/lookgrade.ts: optional — absent = zeros = nothing undone)
   placeCfg?: [number, number, number, number];   // (THE LOOK PROTOTYPE, light keeps its order across places: optional — absent = zeros = every pixel by its place's gain)
@@ -204,7 +193,7 @@ export function writeFrame(dst: ArrayBuffer, p: FrameParams) {
   f[80] = p.indirectScale; f[81] = p.emissiveScale; u[82] = p.volSteps; f[83] = p.secMinE;
   f[84] = p.capColor[0]; f[85] = p.capColor[1]; f[86] = p.capColor[2]; f[87] = p.capColor[3];
   f[88] = p.post[0]; f[89] = p.post[1]; f[90] = p.post[2]; f[91] = p.post[3];
-  f[92] = p.rcJitter[0]; f[93] = p.rcJitter[1]; f[94] = p.directAdaptiveMin; f[95] = p.numTransient;
+  f[92] = p.rcJitter[0]; f[93] = p.rcJitter[1]; f[94] = 0;   /* (free: the old estimator's adaptive minimum until 2026-11-07) */ f[95] = p.numTransient;
   f[96] = p.directCfg[0]; f[97] = p.directCfg[1]; f[98] = p.directCfg[2]; f[99] = p.directCfg[3];
   f[100] = p.lossyCfg[0]; f[101] = p.lossyCfg[1]; f[102] = p.lossyCfg[2]; f[103] = p.lossyCfg[3];
   const nc = Math.min(p.cardSlots.length, MAX_CARDS);
@@ -375,7 +364,7 @@ export const sharpCapConfig = { on: true };
  *  follows the shading normal, so a material's relief catches it. Only where the reflection pass makes highlights at all: a finish up to the highlights' own fade
  *  (shaders/common.wgsl RT_HI_FADE, the same on ultra, high and medium; none on low). ON THE LOOK'S PAGE ONLY, on by default there; main.ts lowers it at BOOT for ?nosunglint = every
  *  picture as it was. Without the word the shader's flag is a constant false and its lines are the lines they were, with one empty turn of the shadow
- *  loop; no kernel gains a call site (render/kernels.ts: a call is pasted whole). No game table: nothing in the update reads a reflection and the light
+ *  loop; no kernel gains a call site (a call is pasted whole where Windows compiles). No game table: nothing in the update reads a reflection and the light
  *  meter (shaders/probe.wgsl) does not either. COST on the look's page: one shadow ray to the world's top (and a smoke march, in smoke) on the pixels
  *  inside the sun's highlight. On a flat smooth floor that is all of it or none of it, by where the camera looks; a metal's highlight is wide (a steel
  *  floor passes from most bearings). Never timed, never seen on a GPU. */
@@ -424,7 +413,7 @@ export function scenePrelude(cut: boolean = cutConfig.on && !cutConfig.swap): st
     ? '@group(0) @binding(13) var<storage, read> meshData: array<vec4u>;   // mesh-shadow trees + skinned corners (render/meshShadows.ts layout; walked by meshShadowT under FLAG_MESH_SHADOWS)\nfn meshLoad(i: u32) -> vec4u { return meshData[i]; }\n'
     : 'fn meshLoad(i: u32) -> vec4u { return vec4u(0u); }   // no mesh-shadow binding on this adapter (frame.ts meshBinding): a zero header = an empty tree, and the engine never raises the flag\n';
   return wgslWorldConsts() + weatherVolWgsl() + groundRayWgsl() + roundRayWgsl(cut) + `const REACH_VEC4S: u32 = ${REACH_VEC4S}u;   // lightReach uniform: MAX_LIGHTS × REACH_ROW_WORDS u32 as vec4u (render/lights.ts)\nconst MESH_MAX_CHARS: u32 = ${MESH_MAX_CHARS}u;   // characters with a mesh-shadow tree (render/meshbvh.ts)\n` + commonText + '\n' + decl + mesh
-    + sdfRigWgslConsts() + sdfRigSrc + '\n';   // the SDF character rig (render/sdfrig.ts's per-slot table as consts + the generated charSdf fold, then shaders/sdfrig.wgsl): the round-cone primitive common.wgsl's proxy loops call, plus the smooth-union / soft-query extras — compiled only into the modules that name them, and not taken while frame.rigCfg.x is 0
+    + sdfRigWgslConsts() + sdfRigSrc + '\n';   // the SDF character rig (render/sdfrig.ts's quantum as a const, then shaders/sdfrig.wgsl): the round-cone primitive common.wgsl's proxy loops call
 }
 
 export function createSceneLayout(device: GPUDevice): GPUBindGroupLayout {

@@ -703,7 +703,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     The commit against its base, a box each: `compS` 1.73 and 1.72 before (two boxes), 1.59 after; at half scale 1.72 and 1.70, then 1.57; all passes 14.5 to 14.4.
     Three stills with the world held at 75 s of game time, the base twice and the commit once: the commit's differs from either base still by no more than the two
     base stills differ from each other (mean difference a channel 1.22 and 1.30 of 255 against 1.24; in 64-pixel blocks 0.16 and 0.18 against 0.18), falling snow and grain.
-    `snowglow-check`'s fog line holds the line where it stands, written as `evalLightRaw` writes it, and that `shaders/compact/composite.wgsl` has the term word
+    `snowglow-check`'s fog line holds the line where it stands, written as `evalLightRaw` writes it, and (until 2026-11-07, when the composite came to have one writing) that `shaders/compact/composite.wgsl` has the term word
     for word (`GLOWRANGE_BREAK=1` must fail, both stands). The wet coat's and the panes' walks in the same file have the table first too and were left: no scene
     with either was timed. NOT TIMED: any Apple chip, Windows, an AMD card, another level. The maintainer's M4 Max read `compS` 3.09 ms on the same spot at
     1481 by 1000, but a single row of that read-out is stretched where Metal runs passes side by side (its rows summed to 20.45 ms, their union was 15.84).

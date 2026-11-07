@@ -1,20 +1,16 @@
-// THE GATHER IN TWO KERNELS (render/gatherSplit.ts; Options > Graphics > Separate shadow rays, `?splitrays=1`, off by default). fgather.wgsl's `main` lights every point
-// its rays land on inside itself: directAtPoint is written at four places in it (the rays' loop, the young rays, the floor's mirror ray, the pane's), and a compiler that
-// pastes every call into its caller reads the light loop and its three shadow rays four times over. Here the same frame is two programs:
-//   trace   the gather as `main` has it, statement for statement, but for the light AT a hit. A hit that wants it is written to a buffer instead — the point, its normal,
-//           the bounce-card set it lies in, its paint, and the radiance it already has without the light (emission + the cache's bounce) — and everything that needs no
-//           light (a ray into the sky, the cards' term, the glints, a pane's dust) is summed and written beside it.
+// THE GATHER IN TWO KERNELS (render/gatherSplit.ts; the row 'Separate shadow rays' from 2026-10-26, the only gather since 2026-11-07). The one-kernel gather that went
+// lit every point its rays landed on inside itself: directAtPoint was written at four places in it (the rays' loop, the young rays, the floor's mirror ray, the pane's),
+// and a compiler that pastes every call into its caller read the light loop and its three shadow rays four times over. Here the same frame is two programs:
+//   trace   the gather's rays, but for the light AT a hit. A hit that wants it is written to a buffer instead — the point, its normal, the bounce-card set it lies in,
+//           its paint, and the radiance it already has without the light (emission + the cache's bounce) — and everything that needs no light (a ray into the sky,
+//           the cards' term, the glints, a pane's dust) is summed and written beside it.
 //   light   one loop over a texel's points with ONE directAtPoint in it: the light at each point, the hit's radiance finished, the firefly bound, the sum, the two stores.
-// This text is appended to fgather.wgsl with its two entry points taken out (gatherSplit.ts), so every helper here is that file's own: a change to cosineDirK, the glints or
-// the cards reaches both. `main`'s body, glossReflection and glassShade are written a second time below (trace, glossReflectionX, glassShadeX): a change to one of those
-// three is made in both files, or this row draws the gather as it was before the change.
-// NOT THE SAME RANDOM NUMBERS. In `main` the light loop draws from the texel's one stream, one number for each light that reaches the point, so the next ray's direction
-// depends on how many lights the last hit saw: a count only the light loop knows. Here the trace kernel's stream is `main`'s without those draws, and each point's light
-// pick draws from a stream of its own (gxFork: the texel's seed and the point's slot). Every draw is still uniform and independent, so the estimate is the same one; a
-// frame is other noise of the same size. tools/qa/splitrays-check.ts holds this text to fgather.wgsl's; the pictures are compared with tools/qa/splitrays-twin.cjs's
-// (today's one kernel drawing from these streams) by tools/qa/draw-equal.cjs.
-// NOT YET HERE (docs/agents/render.md, "Separate shadow rays"): the young-history rays (a Tab row, no preset: the multiplier reads 1 here) and the resampling gather
-// (mainGi, ultra's: the plain gather runs instead while this row is on). The shadow rays of the cards' term, the glints and a pane's dust stay in `trace`.
+// This text is appended to fgather.wgsl (gatherSplit.ts), which holds the helpers, constants and bindings and no entry point: cosineDirK, the glints and the cards are
+// that file's. The floor's mirror ray and a pane's shading are glossReflectionX and glassShadeX below.
+// THE RANDOM NUMBERS. The trace kernel draws from the texel's one stream, and each point's light pick draws from a stream of its own (gxFork: the texel's seed and
+// the point's slot), so a ray's direction does not depend on how many lights the last hit saw. Every draw is uniform and independent.
+// NOT HERE: the young-history rays and the resampling gather (ultra's) went with the one-kernel gather. The shadow rays of the cards' term, the glints and a pane's
+// dust stay in `trace`. tools/qa/splitrays-check.ts holds who reaches the light loop and the buffer's layout.
 //
 // THE BUFFER: GX_V4 vec4u a gather texel, row by row over the gather grid.
 //   [0]  the firefly bound for the rays (f32) · E without the lit points, π/K and the cards' term in (3 × f32)

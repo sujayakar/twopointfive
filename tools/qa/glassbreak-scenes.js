@@ -112,7 +112,7 @@ await (async () => {   // (top-level await: `await import('/qa/glassbreak-scenes
   /** VALIDATION: on THIS boot (the const as compiled), every preset × debug views 0 / 1 / 3 / 10 with three panes holed and shards down: a validation error scope round 12 frames each +
    *  the uncaptured-error list. Returns { ok, rows } */
   async function validate(opts = {}) {
-    const { presets = ['verylow', 'low', 'medium', 'high', 'ultra'], views = [0, 1, 3, 10], frames = 12 } = opts; const g = begin(0.5, 5153);
+    const { presets = ['verylow', 'low', 'medium', 'high'], views = [0, 1, 3, 10], frames = 12 } = opts; const g = begin(0.5, 5153);
     if (!window.__errs) { window.__errs = []; E().device.addEventListener('uncapturederror', ev => window.__errs.push(ev.error.message)); }
     stage('wide', { invisible: true, holstered: true }); g.player.slot = 'rifle'; run(20); holeThree(); run(60);
     const rows = []; const q0 = window.__quality?.current;

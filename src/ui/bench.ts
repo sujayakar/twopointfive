@@ -26,7 +26,6 @@ import type { PerfRecorder, PerfDump, PerfFrame } from './perfrec';
 import { SWEEP_ROWS, type SweepOpts } from './perfsweep';
 import type { BootSummary } from './boot';
 import { shaderRowLabel } from './shaderrows';
-import { plainAir } from '../gpu/device';
 import { pageRoom } from '../host/pace';
 import { tellSaved, savedWords, type Fate } from '../host/savefile';
 import { cloudNote } from './cloudnote';
@@ -112,8 +111,6 @@ export interface BenchSceneRun { id: string; name: string; query: string; end?: 
 /** `set` + `scenes`: which scenes the run played (absent = a file from before the scenes were floors: the one 'scene' line is the office's day showcase, and its
  *  numbers are not read against a set's)
  *  `rows`: the Shaders rows of Options this page was built with, by their URL words (ui/shaderrows.ts; [] = none; absent in a result from before 2026-10-27) */
-/** a report's note on a machine in plain air (gpu/device.ts PLAIN_AIR): its volumetric pass is another program, so its times are not another machine's */
-const PLAIN_SAID = 'smoke and fog were drawn the plain way on this machine: its volumetric times and its beams are not another machine\'s';
 /** `wait`: how many frames could be with the GPU when the page began one while it measured (host/pace.ts pageRoom; 0 = any number). ABSENT in a result
  *  from before a benchmark waited for the GPU (2026-11-04): on a machine with no display to hold the browser back (a headless cloud card) such a result's
  *  frame rates read the display's on any line whose GPU time is over the display's frame, and its features' rows are not to be believed there. */
@@ -137,7 +134,7 @@ const pct = (a: number[], p: number) => { if (!a.length) return 0; const s = [..
 const r1 = (v: number) => +v.toFixed(1);
 const same = (a: unknown, b: unknown) => a === b || JSON.stringify(a) === JSON.stringify(b);
 const copy = <T>(v: T): T => (Array.isArray(v) ? [...v] : v) as T;
-const PRESET_LABEL: Record<string, string> = { verylow: 'very low', low: 'low', medium: 'medium', high: 'high', ultra: 'ultra' };
+const PRESET_LABEL: Record<string, string> = { verylow: 'very low', low: 'low', medium: 'medium', high: 'high' };
 
 /** the card's line under a table that has the g-buffer's column: what the two GPU columns are, and how far the new one is to be believed */
 export const GBUF_SAID = 'GPU ms counts the compute passes. g-buf ms is the g-buffer pass\'s own timing, and it isn\'t in GPU ms. On Apple GPUs it was checked on an M4 Max only.';
@@ -397,7 +394,7 @@ export class Bench {
     const no = this.rec.recording ? 'a recording is running' : this.deps.blocked?.() ?? null; if (no) return `not now: ${no}`;
     this.opts = { ...BENCH_DEFAULTS, ...o };
     this.leg = leg; this.played = false; this.sceneAt = 0; this.scenes = leg ? [...leg.scenes] : []; this.boot0 = leg && leg.index > 0 ? leg.boot : undefined;
-    this.acts = []; this.go('waiting'); this.last = ''; this.result = null; this.report = ''; this.dump = null; this.steps = leg ? [...leg.steps] : []; this.notes = leg ? [...leg.notes] : []; if (plainAir() && !this.notes.includes(PLAIN_SAID)) this.notes.push(PLAIN_SAID); this.features = null; this.away = leg?.away ?? 0;
+    this.acts = []; this.go('waiting'); this.last = ''; this.result = null; this.report = ''; this.dump = null; this.steps = leg ? [...leg.steps] : []; this.notes = leg ? [...leg.notes] : []; this.features = null; this.away = leg?.away ?? 0;
     this.sceneFrom = []; this.heavyAt = -1; this.skip.clear(); this.wins = []; this.query = typeof location !== 'undefined' ? location.search : ''; this.winId = ''; this.sweeping = false;
     this.t0 = performance.now(); this.frames = 0; this.standT0 = -1; this.standSaid = false;
     try { const f = this.deps.machine?.(); this.machine = f?.now ?? null; void f?.more.catch(() => {}); } catch { this.machine = null; }

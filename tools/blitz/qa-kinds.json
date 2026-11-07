@@ -300,9 +300,6 @@
 "CLOSE.rmbHold=false",
 "CLOSE.heldClicks=false"
 ],
-"holdglass-loud": [
-"HOLDFIRE.on=false"
-],
 "inhand": [
 "FOG.cone=true",
 "INHAND.on=false"
@@ -379,12 +376,6 @@
 "OWNBLOW.on=false",
 "KITDEAL.on=false",
 "KITDEAL.stealth=false"
-],
-"kittree-off": [
-"OWNBLOW.on=false",
-"KITDEAL.on=false",
-"KITDEAL.stealth=false",
-"KITTREE.on=false"
 ],
 "kittree-sponge": [
 "OWNBLOW.on=false",
@@ -1077,6 +1068,7 @@
 "secondway",
 "selftest-fail",
 "selftest-fold",
+"selftest-side",
 "selftest-knobs",
 "selftest-pass",
 "selftest-quiet",
@@ -1278,7 +1270,6 @@
 "cues-run": "iii",
 "cues-strip": "iv-b",
 "cutboxes-lines": "ii",
-"cutboxes-off": "ii",
 "cutboxes-pack": "ii",
 "cutboxes-ray": "ii",
 "cutboxes-record": "ii",
@@ -1286,7 +1277,6 @@
 "cutglass-determinism": "iii",
 "cutglass-gone": "iii",
 "cutglass-look": "iii",
-"cutglass-off": "iii",
 "cutglass-shape": "iii",
 "darkdoor": "iii",
 "darkfoe": "iii",
@@ -1467,9 +1457,7 @@
 "gearglass-pinned": "iii",
 "glass-blast": "iii",
 "glass-flags": "iii",
-"glass-lines": "iii",
 "glass-off": "iii",
-"glass-shot": "iii",
 "glass-sight": "iii",
 "glass-sound": "iii",
 "glassbreak-blast": "iv-a",
@@ -1496,7 +1484,6 @@
 "glassreal": "iv-a",
 "glasstune-blast": "iii",
 "glasstune-budget": "iii",
-"glasstune-off": "iii",
 "glasstune-rake": "iii",
 "glasstune-sound": "iii",
 "glasstune-spall": "iii",
@@ -1570,7 +1557,6 @@
 "hold-struggle": "iii",
 "holddrop": "iii",
 "holdfire": "iv-a",
-"holdglass-loud": "iv-a",
 "holdglass-open": "iv-a",
 "holdglass-other": "iv-a",
 "holdglass-quiet": "iv-a",
@@ -1655,7 +1641,6 @@
 "kitstealth": "iii",
 "kittree-guns": "iii",
 "kittree-mate40": "iii",
-"kittree-off": "iii",
 "kittree-rows": "iv-b",
 "kittree-sponge": "iii",
 "ko-kinds": "iii",
@@ -2007,7 +1992,6 @@
 "scrum": "iii",
 "sdfrig-fit": "0",
 "sdfrig-pack": "0",
-"sdfrig-presets": "0",
 "seenwalk": "iv-b",
 "selector-input": "iii",
 "selector-noise": "iii",
@@ -2370,7 +2354,6 @@
 "airdust-off": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
 "breaks-studs": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
 "cutboxes-lines": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
-"cutboxes-off": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
 "cutboxes-pack": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
 "debrief-dom": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
 "debrief-doorname": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
