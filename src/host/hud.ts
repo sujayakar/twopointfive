@@ -21,5 +21,5 @@ export interface HudLike {
   showLightDots: boolean;
 }
 
-/** the speech bubbles (ui/bubbles.ts Bubbles): drawn after the HUD; ALSO the one HUD write to the game — an expired bubble nulled through game/journal.ts hudExpireBubbles */
+/** the speech bubbles (ui/bubbles.ts Bubbles): drawn after the HUD. It writes nothing of the game: a line is over when its time is */
 export interface BubblesLike { update(game: Game, cam: FollowCamera, view: View): void; }

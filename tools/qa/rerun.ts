@@ -174,9 +174,8 @@ export async function rerun(F: ReplayFile, opts: { toN?: number; tol?: number; e
     g.update(dt, W.input, W.cam, W.canvas);
     walk.done();
     // between two steps, as the page (host/loop.ts) and a tool's W.step do: flashes age, the world is packed again (the cursor's ray reads the boxes as of the last pack: without it
-    // it lands on men, leaves and props where they stood at stand-up), and under the page's HUD an expired bubble is let go
+    // it lands on men, leaves and props where they stood at stand-up)
     W.engine.lights.update(dt, g.time); if (want !== 'page') W.engine.world.dynamics = g.dynBoxes; W.engine.world.upload();   // (a headless tool's own step hands the world the game's whole list — headless.ts W.step; the page packs the list the step itself handed over, which under the fog of war is not the whole one)
-    if (want === 'page') J.hudExpireBubbles(g);
     opts.each?.(W, f);
     // ---- held against the trace
     const si = byN.get(f + 1);
