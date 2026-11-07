@@ -37,11 +37,6 @@ fn cover_pt(g: &mut Game, d: RoomfightDefId) {
     let (gd, pt) = (g.tab.roomfight_def[d].gd, g.tab.roomfight_def[d].pt);
     crate::belief::cover(g, gd, pt);
 }
-/// `D.room.entries[e]?.door.def.name`, for e the row's number or -1
-fn entry_name(g: &Game, room: Option<RoomfightRoomId>, e: f64) -> Option<String> {
-    let r = room?; if !(e >= 0.0) { return None; }
-    g.tab.roomfight_room[r].entries.get(e as usize).map(|x| door_name(g, x.door))
-}
 /// `DIGIN.on || squadsLive(g) || hasHim(gd, OWN.stand)`
 fn digs_in(g: &mut Game, gd: GuardId) -> bool { g.k.digin.on || crate::enemysquads::squads_live(g) || crate::owner::has_him(g, gd, crate::owner::own().stand) }
 
@@ -57,12 +52,6 @@ pub fn room_fight_rate_on(g: &mut crate::game::Game, viewer: GuardId, target: Gu
 pub fn room_fight_hot_for(g: &mut crate::game::Game, gd: GuardId) -> bool { g.time - room_fight_hot_of(g, gd) < g.k.roomfight.team_hot }
 /// (roomfight.ts hotOf)
 pub fn room_fight_hot_of(g: &mut crate::game::Game, gd: GuardId) -> f64 { match op_id(g, gd) { Some(o) => m::max(g.tab.roomfight_op[o].hot_t, g.fight.hot_t), None => g.fight.hot_t } }
-/// where a defender is watching, which entry that is, his mode.   (roomfight.ts watchOf)
-pub fn room_fight_watch_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::roomfight::RoomFightWatchOf> {
-    let d = def_of(g, gd)?; let D = &g.tab.roomfight_def[d];
-    let glancing = g.time < D.glance_until;
-    Some(RoomFightWatchOf { at: D.pt, door: entry_name(g, D.room, if glancing { D.glance_to } else { D.watch }), settled: entry_name(g, D.room, D.watch), glancing, mode: D.mode })
-}
 /// (roomfight.ts opOf)
 pub fn room_fight_op_of(g: &mut crate::game::Game, gd: GuardId) -> Option<RoomfightOpId> { op_id(g, gd) }
 /// this teammate's feet are held this frame.   (roomfight.ts short)
@@ -70,20 +59,6 @@ pub fn room_fight_short(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if !g.fight.live { return false; }
     match op_id(g, gd) { Some(o) => { let s = g.tab.roomfight_op[o].short_t; g.time - s >= 0.0 && g.time - s < 0.25 } None => false }
 }
-/// (roomfight.ts summary)
-pub fn room_fight_summary(g: &mut crate::game::Game) -> String {
-    if !g.fight.live { return String::from("room fight idle"); }
-    let mut men: Vec<String> = Vec::new();
-    for d in g.fight.defs.clone() {
-        let gd = g.tab.roomfight_def[d].gd; if is_dead(g, gd) { continue; }
-        let door = room_fight_watch_of(g, gd).and_then(|w| w.door).unwrap_or_else(|| String::from("front"));
-        men.push(alloc::format!("{} {}\u{2192}{}", g.gd[gd].callsign, g.tab.roomfight_def[d].mode.as_str(), door));
-    }
-    let o = g.fight.ops.iter().filter(|&&x| !is_dead(g, g.tab.roomfight_op[x].gd)).count(); let s = g.fight.stats;
-    let list = if men.is_empty() { String::from("none") } else { men.join(", ") };
-    alloc::format!("room fight \u{b7} team {} up ({} rounds, {} held for a friend) \u{b7} defenders {} up \u{2014} {} \u{b7} fell back {} \u{b7} cover {} \u{b7} rallied {} \u{b7} surprised {}", o, s.op_rounds, s.held_for_friend, men.len(), list, s.fell_back, s.took_cover, s.rallied, s.surprised)
-}
-
 // ---------------------------------------------------------------- the frame
 /// Once a frame from Game.update.   (roomfight.ts tick)
 pub fn room_fight_tick(g: &mut crate::game::Game, dt: f64) {

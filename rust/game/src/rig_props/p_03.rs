@@ -324,14 +324,6 @@ pub fn rig_torch_pos(g: &mut crate::game::Game, c_2: CharId, dir: V3, torch: boo
     v3::mad(fr.o, fr.z, if torch { rig.torch.light_ahead } else { rig.guard_pistol.light_ahead })
 }
 
-/// The player's rail light, parked and off until posed. (rigProps.ts railLightDef)
-pub fn rail_light_def(g: &mut crate::game::Game, owner: f64, intensity: f64) -> LightId {
-    g.tab.light.push(rail_light(owner, intensity))
-}
-fn rail_light(owner: f64, intensity: f64) -> crate::render_lights::RtLight {
-    (crate::render_lights::RtLight { name: String::from("pistol_light"), group: String::from("player"), kind: 1.0, pos: [0.0, -10.0, 0.0], dir: [0.0, 0.0, 1.0], color: [0.9, 0.96, 1.0], intensity, range: 18.0, inner_deg: 5.0, outer_deg: 15.0, radius: 0.035, volumetric: 1.0, owner, enabled: false, fixture_box: -1.0, flicker: 0.0, ttl: -1.0, age: 0.0, peak_intensity: intensity, card: true, ..crate::render_lights::RtLight::zeroed() })
-}
-
 /// A guard's torch / weapon light, warm and wider. (rigProps.ts torchLightDef)
 pub fn torch_light_def(g: &mut crate::game::Game, name: &str, owner: f64, intensity: f64, inner_deg: f64, outer_deg: f64) -> LightId {
     g.tab.light.push(torch_light(name, owner, intensity, inner_deg, outer_deg))

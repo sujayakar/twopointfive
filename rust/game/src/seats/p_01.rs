@@ -7,9 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// the tones in seat order (seats.ts SEAT_TONES; the generated `seat_tones()` holds them as words, and this answers the enum)
-const SEAT_TONES: [SeatTone; 2] = [SeatTone::You, SeatTone::Purple];
-
 // ---------------------------------------------------------------- the seams: what skeleton 5 still does not have
 
 /// seats.ts:213 `rawGame(g) !== g` with the first seat on Game: a pass over his view and a pass over the bare Game look alike here
@@ -56,36 +53,12 @@ fn unit_seat(g: &Game, gd: GuardId) -> f64 {
 /// the character id a player's man carries
 fn man_char_id(g: &Game, p: PlayerId) -> f64 { g.ch[g.pl[p].ch].id }
 
-/// the count of `seats=<digits>` in an address, by the regex `(?:^|[?&])seats=(\d+)(?:&|$)`; 1 with no such word
-fn seats_word(search: &str) -> f64 {
-    let b = search.as_bytes();
-    const WORD: &[u8] = b"seats=";
-    let mut i = 0;
-    while i + WORD.len() <= b.len() {
-        if &b[i..i + WORD.len()] == WORD && (i == 0 || b[i - 1] == b'?' || b[i - 1] == b'&') {
-            let (mut j, mut n) = (i + WORD.len(), 0.0);
-            while j < b.len() && b[j].is_ascii_digit() { n = n * 10.0 + (b[j] - b'0') as f64; j += 1; }
-            if j > i + WORD.len() && (j == b.len() || b[j] == b'&') { return n; }
-        }
-        i += 1;
-    }
-    1.0
-}
 /// a seat's part of the squad's `n`: dealt in roster order so the shares add up to the count
 fn share_of(n: f64, lo: f64, mine: f64, all: f64) -> f64 {
     m::floor(n * (lo + mine) / all) - m::floor(n * lo / all)
 }
 
 // ---------------------------------------------------------------- the seats
-
-/// how many seats an address asks for (seats.ts seatsOfSearch)
-pub fn seats_of_search(g: &mut crate::game::Game, search: Option<&str>) -> f64 {
-    let n = seats_word(search.unwrap_or(""));
-    m::max(1.0, m::min(g.k.seats.max, js::or(n, 1.0)))
-}
-
-/// a seat's view of the game (seats.ts seatView). The Proxy has no Rust form: with_seat swaps the record onto Game, and a view is named by its seat
-pub fn seat_view(g: &mut crate::game::Game, own: &mut crate::seats::SeatSet) -> SeatId { own.seat }
 
 /// the game's seats, made as its constructor begins (seats.ts seatsStand). More than one: the first seat's set is Game's own fields, a later seat's is in `Seat.own`
 pub fn seats_stand(g: &mut crate::game::Game, n: f64) -> Vec<SeatId> {
@@ -110,18 +83,6 @@ pub fn seats_stand(g: &mut crate::game::Game, n: f64) -> Vec<SeatId> {
     g.seat = seats[0];
     seats
 }
-
-/// the Game's own field of a seat's name was asked in a game of more than one seat (seats.ts miss)
-pub fn miss(g: &mut crate::game::Game, k: &str) {
-    if g.m.seats.seat_asks.strict {
-        panic!("seats: the Game's own '{}' was asked in a game of more than one seat (a player's code is handed his seat's view; the world asks men(g) / manOf / ordersOf)", k);
-    }
-    g.m.seats.seat_asks.misses += 1.0;
-    g.m.seats.seat_asks.missed.add(String::from(k));
-}
-
-/// the Game a view looks at (seats.ts rawGame): there is one Game, and bare it holds the first seat's set, so it is named by his seat
-pub fn raw_game(g: &mut crate::game::Game) -> SeatId { g.seats[0] }
 
 // ---------------------------------------------------------------- the men
 
@@ -158,16 +119,6 @@ pub fn all_down(g: &mut crate::game::Game) -> bool {
         if !g.pl[p].down { return false; }
     }
     true
-}
-
-/// is any player down (seats.ts anyDown)
-pub fn any_down(g: &mut crate::game::Game) -> bool {
-    if g.seats.len() == 1 { return g.pl[g.player].down; }
-    for i in 0..g.seats.len() {
-        let p = crate::cmd::seat_man(g, g.seats[i]);
-        if g.pl[p].down { return true; }
-    }
-    false
 }
 
 /// can a mission of this kind be played by two (seats.ts seatsKind)
@@ -265,11 +216,6 @@ pub fn seat_of_man(g: &mut crate::game::Game, pl: PlayerId) -> SeatId {
     g.seats[0]
 }
 
-/// which tone a seat's man has (seats.ts seatTone)
-pub fn seat_tone(seat: f64) -> crate::seats::SeatTone {
-    SEAT_TONES[js::rem(seat, SEAT_TONES.len() as f64) as usize]
-}
-
 /// what a player is called (seats.ts playerName)
 pub fn player_name(g: &mut crate::game::Game, pl: PlayerId) -> String {
     if g.seats.len() == 1 { return String::from("Player"); }
@@ -288,24 +234,6 @@ pub fn nearest_man(g: &mut crate::game::Game, at: &[f64]) -> Option<PlayerId> {
         if d < bd { bd = d; best = Some(p); }
     }
     best
-}
-
-/// a later seat's man and his light, made as the Game's constructor ends (seats.ts standMen)
-pub fn stand_men(g: &mut crate::game::Game) {
-    for i in 0..g.seats.len() {
-        let s = g.seats[i];
-        let index = g.tab.cmd_seat[s].index;
-        if !js::truthy(index) { continue; }
-        let spawn = v3::copy(g.level.player_spawn);
-        let at = spot_beside(g, spawn, index);
-        let fn2000 = g.fn2000;
-        let (men, rig) = (g.men, g.rig);
-        let p = crate::game::player_new(g, men, rig, at, Some(fn2000), Some(index));
-        crate::seats::with_seat(g, s, &mut |g: &mut Game| g.player = p);
-        let (owner, intensity) = (man_char_id(g, p), g.tune.player_light);
-        let def = crate::rig_props::rail_light_def(g, owner, intensity);
-        g.pl[p].light = crate::render_lights::light_set_add(g, def);
-    }
 }
 
 /// where seat `i`'s man stands when the first stands on `at` (seats.ts spotBeside)
@@ -486,13 +414,6 @@ pub fn one_book(g: &mut crate::game::Game) -> bool {
     g.seats.len() == 1 || g.in_cast
 }
 
-/// the man a teammate follows: his seat's (seats.ts leaderOf)
-pub fn leader_of(g: &mut crate::game::Game, gd: GuardId) -> PlayerId {
-    if one_book(g) { return g.player; }
-    let s = seat_of(g, gd);
-    crate::cmd::seat_man(g, s)
-}
-
 /// the game as a teammate's own player sees it (seats.ts viewOf)
 pub fn view_of(g: &mut crate::game::Game, gd: GuardId) -> SeatId {
     if one_book(g) { return g.seat; }
@@ -545,18 +466,6 @@ pub fn team_men(g: &mut crate::game::Game) -> Vec<GuardId> {
     out
 }
 
-/// is the team in more than one pair (seats.ts teamPaired)
-pub fn team_paired(g: &mut crate::game::Game) -> bool {
-    if one_book(g) { return crate::orders::squad_orders_paired(g); }
-    let mut ids: JsSet<crate::game::PairId> = JsSet::new();
-    for i in 0..g.guards.len() {
-        let gd = g.guards[i];
-        if g.gd[gd].team != crate::teams::Team::Operative { continue; }
-        if let Some(pair) = g.gd[gd].unit.as_ref().and_then(|u| u.pair) { ids.add(pair); }
-    }
-    ids.len() > 1
-}
-
 /// a seat's share of what the squad brings; `g` holds the seat's set (seats.ts seatShare)
 pub fn seat_share(g: &mut crate::game::Game, n: f64) -> f64 {
     if one_book(g) { return n; }
@@ -573,60 +482,14 @@ pub fn seat_share(g: &mut crate::game::Game, n: f64) -> f64 {
     share_of(n, lo, mine, all)
 }
 
-/// the last order anybody gave, off the books' logs (seats.ts lastOrder)
-pub fn last_order(g: &mut crate::game::Game) -> Option<crate::orders::SquadOrdersLogItem> {
-    if one_book(g) { return g.orders.log.last().cloned(); }
-    let mut best: Option<crate::orders::SquadOrdersLogItem> = None;
-    for i in 0..g.seats.len() {
-        let s = g.seats[i];
-        if let Some(e) = crate::seats::with_seat(g, s, &mut |g: &mut Game| g.orders.log.last().cloned()) {
-            if best.as_ref().map_or(true, |b| e.t > b.t) { best = Some(e); }
-        }
-    }
-    best
-}
-
-/// every seat's book, in seat order: copies, read only (seats.ts teamBooks)
-pub fn team_books(g: &mut crate::game::Game) -> Vec<crate::orders::SquadOrders> {
-    if one_book(g) { return vec![g.orders.clone()]; }
-    let mut out = Vec::new();
-    for i in 0..g.seats.len() {
-        let s = g.seats[i];
-        out.push(crate::seats::with_seat(g, s, &mut |g: &mut Game| g.orders.clone()));
-    }
-    out
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn the_address_word_reads_as_the_regex_does() {
-        assert_eq!(seats_word(""), 1.0);
-        assert_eq!(seats_word("?seats=2"), 2.0);
-        assert_eq!(seats_word("seats=2"), 2.0);
-        assert_eq!(seats_word("?a=1&seats=007&b=2"), 7.0);
-        assert_eq!(seats_word("?seats=0"), 0.0);
-        // not a whole word, no count, or a count with something after it
-        assert_eq!(seats_word("?xseats=2"), 1.0);
-        assert_eq!(seats_word("?seats="), 1.0);
-        assert_eq!(seats_word("?seats=2x"), 1.0);
-        // the first that matches, past one that does not
-        assert_eq!(seats_word("?seats=x&seats=2"), 2.0);
-    }
-
-    #[test]
     fn a_man_s_ids() {
         assert_eq!(seat_man_id(0.0), crate::consts::PLAYER_ID);
         assert_eq!(seat_man_id(1.0), crate::consts::NOBODY_ID + 1.0);
-    }
-
-    #[test]
-    fn tones_go_round() {
-        assert_eq!(seat_tone(0.0), SeatTone::You);
-        assert_eq!(seat_tone(1.0), SeatTone::Purple);
-        assert_eq!(seat_tone(2.0), SeatTone::You);
     }
 
     #[test]

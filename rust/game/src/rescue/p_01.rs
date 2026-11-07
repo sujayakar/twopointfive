@@ -129,15 +129,6 @@ pub fn check_rescue(g: &mut crate::game::Game, s: Option<&crate::scene_scenarios
     bad
 }
 
-/// A new one: the field initialisers, and its three helpers. (rescue.ts Rescue.constructor)
-pub fn rescue_new(g: &mut crate::game::Game) -> crate::rescue::Rescue {
-    let mut r = Rescue::blank();
-    r.flow = Box::new(crate::rescueflow::rescue_flow_new(g));
-    r.ending = crate::rescueend::rescue_end_new(g);
-    r.flush = crate::rescueflush::rescue_flush_new(g);
-    r
-}
-
 /// What the scenario takes from the level it stands on. (rescue.ts Rescue.data)
 pub fn rescue_data(g: &mut crate::game::Game) -> Option<crate::scene_scenarios::RescueData> {
     g.level.scenarios.as_ref().and_then(|c| c.rescue.clone())
@@ -372,11 +363,6 @@ pub fn rescue_face_of(g: &mut crate::game::Game, d: DoorId) -> f64 {
 
 /// One of the cast before he is spawned (rescue.ts stage's `cast`)
 struct CastRow { role: Role, in_room: bool, mark: crate::scene_scenarios::ScenarioMark, name: String }
-
-/// Everybody on his mark on the fresh encounter. (rescue.ts Rescue.stage)
-pub fn rescue_stage(g: &mut crate::game::Game) {
-    if let Err(e) = stage_tried(g) { panic!("{}", e); }
-}
 
 /// The staging; Err is the message of what the TypeScript's staging throws, spawnUnit's among them.
 fn stage_tried(g: &mut Game) -> Result<(), String> {

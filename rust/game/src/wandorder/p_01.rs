@@ -454,13 +454,6 @@ pub fn mate_wand_eyes(g: &mut crate::game::Game) -> Vec<crate::fogofwar::FogEye>
     out
 }
 
-/// Who is looking under what, for the checks and the debugger. (wandorder.ts wandOrderJobs)
-pub fn wand_order_jobs(g: &mut crate::game::Game) -> Vec<crate::wandorder::WandOrderJobsItem> {
-    let k = crate::seats::view_key(g);
-    let Some(st) = g.m.wandorder.states.get(k) else { return Vec::new() };
-    st.jobs.iter().map(|(gd, j)| WandOrderJobsItem { gd, door: j.door, side: j.side, live: j.live, knelt: j.knelt }).collect()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -110,18 +110,6 @@ pub fn gives_at(t: crate::game::Temperament, band: crate::dialogue::Band) -> Vec
 
 // ---------------------------------------------------------------- tokens, the line table
 
-/// The longest value each token can take, as the page has it: TOKEN_WORST with TOKEN_WORST_NOW laid over. Only the lint reads it.   (dialogue.ts tokenWorst)
-pub fn token_worst(g: &mut crate::game::Game) -> JsMap<crate::dialogue::Token, String> { token_worst_of() }
-
-fn token_worst_of() -> JsMap<Token, String> {
-    let mut t = JsMap::new();
-    for (word, v) in crate::dialogue::token_worst_table().iter() {
-        if let Some(k) = crate::dialogue::tokens().iter().find(|k| k.as_str() == word.as_str()) { t.set(*k, v.clone()); }
-    }
-    if let Some(door) = crate::dialogue::token_worst_now().door { t.set(Token::Door, door); }
-    t
-}
-
 /// A string the TypeScript's `||` would take: present and not empty.
 fn said(s: &Option<String>) -> Option<String> { s.as_ref().filter(|x| !x.is_empty()).cloned() }
 
@@ -263,11 +251,6 @@ fn of_shape_t(x: &crate::dialogue::IntelTable, shape: ShapeKey, t: crate::game::
         (ShapeKey::Menace, T::Nervy) => x.menace_nervy.as_ref(),
         (ShapeKey::Menace, T::Hard) => x.menace_hard.as_ref(),
     }
-}
-
-/// A kind's table of texts.   (dialogue.ts intelTable)
-pub fn intel_table(g: &mut crate::game::Game, kind: crate::dialogue::IntelKind) -> crate::dialogue::IntelTable {
-    table_of(kind)
 }
 
 /// The words for what was taken, off the office: DRIVE_AWAY with DRIVE_AWAY_GUIDE laid over.   (dialogue.ts driveAway)
@@ -646,14 +629,6 @@ mod tests {
         assert_eq!(d.under.as_deref(), Some("They already know it's gone. Somebody's been sent to look."));
         assert_eq!(d.hard.as_deref(), Some("They know it's gone. Somebody's on his way to look."));
         assert_eq!(d.steady, None);
-    }
-
-    #[test]
-    fn token_worst_has_every_token_and_the_new_door() {
-        let t = token_worst_of();
-        assert_eq!(t.len(), 23);
-        assert_eq!(t.get(Token::Door).map(String::as_str), Some("the phone shop back door"));
-        assert_eq!(t.get(Token::PadDoor).map(String::as_str), Some("the office side door"));
     }
 
     /// The order of TS 208: bare from a nameless man, away off the office, guide, now, text; an empty string falls through.

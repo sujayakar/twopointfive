@@ -293,31 +293,6 @@ pub fn lockdown_doors(g: &mut crate::game::Game, gd: GuardId, calm: Option<bool>
     }
 }
 
-/// 0..1 tension for the score.   (guards.ts tension)
-pub fn tension(g: &mut crate::game::Game, theirs: Option<bool>) -> f64 {
-    let theirs = theirs.unwrap_or(false);
-    let black = if crate::sim_lightshome::mains_active(g) { 0.18 } else { 0.0 };
-    let esc = if escalation_of(g) >= 2.0 { 0.22 } else if escalation_of(g) >= 1.0 { 0.12 } else { 0.0 };
-    let mut x = m::max(black, esc);
-    let live = theirs && !(g.touring || crate::director::director_showing(g));
-    let mut i = 0;
-    while i < g.guards.len() {
-        let gd = g.guards[i];
-        i += 1;
-        let state = g.gd[gd].state;
-        if state == crate::game::GuardState::Dead || (live && g.gd[gd].team == crate::teams::Team::Operative && state != crate::game::GuardState::Alert) { continue; }
-        let clearing = g.gd[gd].script.is_some() && g.clearing.as_ref().map_or(false, |c| gd == c.a || Some(gd) == c.b);
-        let s = if clearing { 0.3 }
-            else if state == crate::game::GuardState::Alert { 1.0 }
-            else if state == crate::game::GuardState::Search { 0.68 }
-            else if state == crate::game::GuardState::Suspicious { 0.45 + g.gd[gd].awareness * 0.2 }
-            else if crate::condition::condition_calm(g, gd) { 0.0 }
-            else { g.gd[gd].awareness * 0.35 };
-        x = m::max(x, s);
-    }
-    x
-}
-
 /// Stand an AI man of a side, held on a one-point route of his own. The TypeScript's throw is the Err: qrf.ts catches it.   (guards.ts spawnUnit)
 pub fn spawn_unit(g: &mut crate::game::Game, o: &crate::guards::UnitOpts) -> Result<GuardId, String> {
     if !g.tune.teams { return Err(String::from("spawnUnit: sides are switched off (Game.tune.teams) — no unit may be spawned")); }
@@ -430,11 +405,6 @@ pub fn despawn_units(g: &mut crate::game::Game) {
     for gd in g.guards.clone() {
         if g.gd[gd].unit.is_some() { despawn_unit(g, gd); }
     }
-}
-
-/// Every spawned unit standing or lying in the game.   (guards.ts units)
-pub fn units(g: &mut crate::game::Game) -> Vec<GuardId> {
-    g.guards.iter().copied().filter(|&x| g.gd[x].unit.is_some()).collect()
 }
 
 /// The engagement on this game, done or not. A copy: re-ask for it to see it move.   (guards.ts engagementOf)

@@ -460,27 +460,6 @@ pub fn room_clear_scenario_start_now(g: &mut crate::game::Game) -> Option<crate:
     s.team
 }
 
-/// where Sam was stood by the last staging   (roomclear.ts RoomClearScenario.startAt)
-pub fn room_clear_scenario_start_at(g: &mut crate::game::Game) -> Option<V3> {
-    let s = room_clear_scenario_structure(g);
-    if !room_clear_scenario_active(g) {
-        return None;
-    }
-    let s = s?;
-    let way = g.room_clear.way;
-    if way > 0.0 {
-        if let Some(t) = s.starts.as_ref().and_then(|v| v.get(way as usize - 1)) {
-            return Some(t.sam);
-        }
-    }
-    s.team.as_ref().map(|t| t.sam)
-}
-
-/// the scenario, its layout named   (roomclear.ts RoomClearScenario.constructor)
-pub fn room_clear_scenario_new(g: &mut crate::game::Game) -> crate::roomclear::RoomClearScenario {
-    crate::roomclear::RoomClearScenario::blank()
-}
-
 /// the layout's budget getter: a structure with maxMen holds Sam, the four and its men   (roomclear.ts:268 layout.budget)
 pub fn room_clear_scenario_budget(g: &mut crate::game::Game) -> Option<f64> {
     let n = match room_clear_scenario_structure(g) {
@@ -852,25 +831,6 @@ pub fn room_clear_scenario_finish(g: &mut crate::game::Game, end: crate::roomcle
     crate::game::game_msg(g, &line);
 }
 
-/// where it stands, in one word   (roomclear.ts RoomClearScenario.state)
-pub fn room_clear_scenario_state(g: &mut crate::game::Game) -> crate::roomclear::RoomClearState {
-    if !room_clear_scenario_active(g) {
-        return crate::roomclear::RoomClearState::Off;
-    }
-    match g.room_clear.end {
-        Some(crate::roomclear::RoomClearEnd::Taken) => crate::roomclear::RoomClearState::Taken,
-        Some(crate::roomclear::RoomClearEnd::Wiped) => crate::roomclear::RoomClearState::Wiped,
-        None => crate::roomclear::RoomClearState::Live,
-    }
-}
-
-/// who of the team is up   (roomclear.ts RoomClearScenario.team)
-pub fn room_clear_scenario_team(g: &mut crate::game::Game) -> crate::roomclear::RoomClearScenarioTeam {
-    let sam = !g.pl[g.player].down;
-    let ops = if room_clear_scenario_active(g) { ops_up(g) as f64 } else { 0.0 };
-    crate::roomclear::RoomClearScenarioTeam { sam, ops }
-}
-
 /// the room a floor point is in   (roomclear.ts RoomClearScenario.roomAt)
 pub fn room_clear_scenario_room_at(g: &mut crate::game::Game, p: V3) -> Option<String> {
     room_clear_scenario_structure(g)?.rooms.into_iter().find(|r| in_rect(p, r.bounds)).map(|r| r.id)
@@ -959,48 +919,6 @@ pub fn room_clear_scenario_first_open(g: &mut crate::game::Game) -> Option<crate
         }
     }
     open.into_iter().nth(best)
-}
-
-/// one line for the panel / the console   (roomclear.ts RoomClearScenario.summary)
-pub fn room_clear_scenario_summary(g: &mut crate::game::Game) -> String {
-    if !room_clear_scenario_active(g) {
-        return String::from("room clear off");
-    }
-    let t = room_clear_scenario_team(g);
-    let state = room_clear_scenario_state(g);
-    let ended = if g.room_clear.end.is_some() { format!(" ({})", g.room_clear.end_why) } else { String::new() };
-    let (seed, attempt, way) = (js::num_str(g.room_clear.seed), js::num_str(g.room_clear.attempt), g.room_clear.way);
-    let ways = match room_clear_scenario_structure(g).and_then(|s| s.starts) {
-        Some(v) if !v.is_empty() => format!(" · way in {} of {}", js::num_str(way + 1.0), 1 + v.len()),
-        _ => String::new(),
-    };
-    let rooms: Vec<String> = g
-        .room_clear
-        .rooms
-        .iter()
-        .map(|r| {
-            if r.cleared {
-                format!("{} clear", r.def.name)
-            } else {
-                format!("{} {}/{}", r.def.name, r.defenders.iter().filter(|h| up(g, **h)).count(), r.defenders.len())
-            }
-        })
-        .collect();
-    let player = if t.sam { " + player" } else { ", player down" };
-    format!(
-        "room clear {}{} · placement {}/{}{} · {} · team {}/{}{} · seed {}/{}",
-        state.as_str(),
-        ended,
-        seed,
-        attempt,
-        ways,
-        rooms.join(" · "),
-        js::num_str(t.ops),
-        g.night_breach.ops.len(),
-        player,
-        seed,
-        attempt
-    )
 }
 
 #[cfg(test)]

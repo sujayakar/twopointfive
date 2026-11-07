@@ -12,59 +12,12 @@ fn cols(g: &Game) -> &'static mut ::sim::slabs::Slabs {
     &mut ::sim::state::state(g.sim).slabs
 }
 
-/// The column starts in SLAB_F64 then SLAB_U32 order, as `names` in slab_io walks them.
-fn in_order(o: &SlabStoreO) -> [f64; 21] {
-    [o.px, o.py, o.pz, o.vx, o.vy, o.vz, o.a, o.spin, o.tip, o.tip_v, o.t, o.ang, o.wedged, o.bw, o.bl, o.bx, o.by, o.flags, o.who, o.door, o.row]
-}
-
-/// The store's own copy of the layout. (colstore.ts ColStore.O)
-fn store_o(c: &SlabCols) -> SlabStoreO {
-    SlabStoreO {
-        door: c.door, t: c.t, a: c.a, flags: c.flags, bytes: c.bytes, who: c.who, vx: c.vx, vz: c.vz, row: c.row, by: c.by, spin: c.spin,
-        px: c.px, py: c.py, pz: c.pz, vy: c.vy, wedged: c.wedged, tip: c.tip, tip_v: c.tip_v, ang: c.ang, bw: c.bw, bl: c.bl, bx: c.bx,
-    }
-}
-
-/// A family's state stays in the block for the game's life; one store a part. (state.ts SimState.keep; `born` is the slot's owner's, see notes)
-fn keep_home(g: &Game, bit: u32, name: &str) {
-    let head = &mut ::sim::state::state(g.sim).head;
-    if head.homes & bit != 0 { panic!("two stores of the {} over one game's block: a part of a block is one store's", name); }
-    head.homes |= bit;
-}
-
 /// Rows a and b change places in the moved columns; the `row` table is the caller's. (colstore.ts ColStore.swapCols with SLAB_F64, SWAPPED)
 fn swap_cols(s: &mut ::sim::slabs::Slabs, a: usize, b: usize) {
     s.px.swap(a, b); s.py.swap(a, b); s.pz.swap(a, b); s.vx.swap(a, b); s.vy.swap(a, b); s.vz.swap(a, b);
     s.a.swap(a, b); s.spin.swap(a, b); s.tip.swap(a, b); s.tip_v.swap(a, b); s.t.swap(a, b); s.ang.swap(a, b); s.wedged.swap(a, b);
     s.bw.swap(a, b); s.bl.swap(a, b); s.bx.swap(a, b); s.by.swap(a, b);
     s.flags.swap(a, b); s.who.swap(a, b); s.door.swap(a, b);
-}
-
-/// Where each column starts for columns `cap` rows long: doubles index doubles, words index words, from the part's start. (slabshome.ts slabCols, colstore.ts colsOf)
-pub fn slab_cols(cap: f64) -> crate::sim_slabshome::SlabCols {
-    let mut o = SlabCols::zeroed();
-    let mut at = SLAB_HEAD;
-    for k in [&mut o.px, &mut o.py, &mut o.pz, &mut o.vx, &mut o.vy, &mut o.vz, &mut o.a, &mut o.spin, &mut o.tip, &mut o.tip_v, &mut o.t, &mut o.ang, &mut o.wedged, &mut o.bw, &mut o.bl, &mut o.bx, &mut o.by] {
-        *k = at / 8.0;
-        at += cap * 8.0;
-    }
-    for k in [&mut o.flags, &mut o.who, &mut o.door, &mut o.row] {
-        *k = at / 4.0;
-        at += cap * 4.0;
-    }
-    o.bytes = at;
-    o
-}
-
-/// The columns of a level's slabs, over its game's block; a level of more doors than SLAB_CAP is not loaded. (slabshome.ts SlabStore.constructor)
-pub fn slab_store_new(g: &mut crate::game::Game, st: crate::Opaque, doors: f64) -> crate::sim_slabshome::SlabStore {
-    if doors > SLAB_CAP {
-        panic!("a level of {} doors: the game holds {} leaves off their hinges (sim/slabshome.ts SLAB_CAP, rust/sim/src/slabs.rs CAP)", doors, SLAB_CAP);
-    }
-    let o = store_o(&slab_cols(SLAB_CAP));
-    keep_home(g, js::to_u32(SLAB_BIT), "leaves off their hinges");
-    let at = crate::sim_state::sim_part(crate::sim_state::P_SLABS);
-    SlabStore { doors, o, home: st, b8: (js::to_u32(at) >> 3) as f64, b4: (js::to_u32(at) >> 2) as f64, cap: SLAB_CAP }
 }
 
 /// Slabs in all. (slabshome.ts SlabStore.n)
@@ -182,97 +135,6 @@ pub fn slab_store_save(g: &mut crate::game::Game, r: f64, s: crate::sim_slabshom
     c.who[r] = js::to_i32(s.who);
 }
 
-/// Where the hand-over is, asked once, after checking this file's layout is the module's own. (slabshome.ts slabIo)
-pub fn slab_io(g: &mut crate::game::Game) -> crate::sim_slabshome::SlabIo {
-    if let Some(io) = g.m.sim_slabshome.io { return io; }
-    let x = crate::sim_sim::sim();
-    let o = slab_cols(SLAB_CAP);
-    let at = in_order(&store_o(&o));
-    let doubles = slab_f64().len();
-    let names: Vec<String> = slab_f64().into_iter().chain(slab_u32()).collect();
-    let mut off: Vec<String> = Vec::new();
-    for (i, k) in names.iter().enumerate() {
-        let want = if i < doubles { at[i] * 8.0 } else { at[i] * 4.0 };
-        if ::sim::slabs::cap(100 + i as u32) as f64 != want { off.push(k.clone()); }
-    }
-    let cap = |t: u32| ::sim::slabs::cap(t) as f64;
-    if cap(0) != SLAB_CAP || cap(13) != o.bytes || !off.is_empty() || cap(100 + names.len() as u32) != 0.0 || cap(1) != SLAB_PARS {
-        let where_ = if off.is_empty() { String::new() } else { format!(" (columns not where the module has them: {})", off.join(", ")) };
-        panic!("the Rust module lays the slabs out as {} rows in {} bytes and src/sim/slabshome.ts as {} in {}{}, or the hand-over is not the same length: bun run tools/sim/build.ts", cap(0), cap(13), SLAB_CAP, o.bytes, where_);
-    }
-    let io = SlabIo { x, par: (::sim::slabs::addr(0) / 8) as f64 };
-    g.m.sim_slabshome.io = Some(io);
-    io
-}
-
-/// Word `i` of a store's bytes. (the Uint32Array views of slabDiff)
-fn word(a: &[u8], i: usize) -> u32 {
-    let at = i * 4;
-    u32::from_le_bytes([a[at], a[at + 1], a[at + 2], a[at + 3]])
-}
-
-/// Double `i` of a store's bytes. (the Float64Array views of colDiff)
-fn double(a: &[u8], i: usize) -> f64 {
-    let at = i * 8;
-    f64::from_le_bytes([a[at], a[at + 1], a[at + 2], a[at + 3], a[at + 4], a[at + 5], a[at + 6], a[at + 7]])
-}
-
-/// `Object.is` on numbers: a NaN is a NaN whatever its bits, -0 is not 0.
-fn same_double(x: f64, y: f64) -> bool {
-    (x.is_nan() && y.is_nan()) || x.to_bits() == y.to_bits()
-}
-
-/// colDiff over SLAB_F64 and SWAPPED, naming a row `door ${u[O.door + r]}`, appending to `out`. A read past a view's end is `undefined` on both sides, so no line.
-// SKELETON-GAP: sim_colstore::col_diff cannot find a column (ColDiffO holds only `bytes`, and a name K has no way to a field), so this is its walk by column start. (slabshome.ts:142, colstore.ts:58)
-fn col_diff_slabs(o: &SlabStoreO, a: &[u8], b: &[u8], rows: f64, most: f64, mut out: Vec<String>) -> Vec<String> {
-    let at = in_order(o);
-    let (doubles_long, words_long) = ((js::to_u32(o.flags) >> 1) as usize, (js::to_u32(o.bytes) >> 2) as usize);
-    let doubles = slab_f64();
-    for (i, k) in doubles.iter().enumerate() {
-        let col = at[i] as usize;
-        let mut r = 0usize;
-        while (r as f64) < rows && (out.len() as f64) < most {
-            if col + r < doubles_long && !same_double(double(a, col + r), double(b, col + r)) {
-                let door_at = o.door as usize + r;
-                let whose = if door_at < words_long { format!("{}", word(a, door_at)) } else { String::from("undefined") };
-                out.push(format!("row {} (door {}).{} {} | {}", r, whose, k, js::num_str(double(a, col + r)), js::num_str(double(b, col + r))));
-            }
-            r += 1;
-        }
-    }
-    for (i, k) in swapped().iter().enumerate() {
-        let col = at[doubles.len() + i] as usize;
-        let mut r = 0usize;
-        while (r as f64) < rows && (out.len() as f64) < most {
-            if col + r < words_long && word(a, col + r) != word(b, col + r) {
-                out.push(format!("row {}.{} {} | {}", r, k, word(a, col + r), word(b, col + r)));
-            }
-            r += 1;
-        }
-    }
-    out
-}
-
-/// Where two takes of a store's bytes differ, in words: at most `most` lines, none if they are the same state. (slabshome.ts slabDiff)
-pub fn slab_diff(g: &mut crate::game::Game, a: &[u8], b: &[u8], most: Option<f64>) -> Vec<String> {
-    let most = most.unwrap_or(4.0);
-    let (o, doors) = (g.doors.slabs.o, g.doors.slabs.doors);
-    let (ua0, ub0) = (word(a, 0), word(b, 0));
-    let mut out: Vec<String> = Vec::new();
-    if ua0 != ub0 || word(a, 1) != word(b, 1) {
-        out.push(format!("{} slabs, {} in the air | {}, {}", ua0, word(a, 1), ub0, word(b, 1)));
-    }
-    let mut k = 0.0;
-    while k < doors && (out.len() as f64) < most {
-        let at = (o.row + k) as usize;
-        if word(a, at) != word(b, at) {
-            out.push(format!("door {}'s row (plus one) {} | {}", k as usize, word(a, at), word(b, at)));
-        }
-        k += 1.0;
-    }
-    col_diff_slabs(&o, a, b, m::max(ua0 as f64, ub0 as f64), most, out)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -302,24 +164,6 @@ mod tests {
         assert_eq!(d, doors);
         assert_eq!(t, tab);
         assert_eq!((nn, ff), (n, fly));
-    }
-
-    // The numbers below are the TypeScript store's own, printed under bun.
-    #[test]
-    fn cols_are_the_typescripts_and_the_modules() {
-        let o = slab_cols(64.0);
-        let want = [2.0, 66.0, 130.0, 194.0, 258.0, 322.0, 386.0, 450.0, 514.0, 578.0, 642.0, 706.0, 770.0, 834.0, 898.0, 962.0, 1026.0, 2180.0, 2244.0, 2308.0, 2372.0];
-        assert_eq!(in_order(&store_o(&o)), want);
-        assert_eq!(o.bytes, 9744.0);
-        let small = slab_cols(3.0);
-        assert_eq!(in_order(&store_o(&small)), [2.0, 5.0, 8.0, 11.0, 14.0, 17.0, 20.0, 23.0, 26.0, 29.0, 32.0, 35.0, 38.0, 41.0, 44.0, 47.0, 50.0, 106.0, 109.0, 112.0, 115.0]);
-        assert_eq!(small.bytes, 472.0);
-        // the module's own layout, as slab_io holds it to
-        for (i, c) in in_order(&store_o(&o)).iter().enumerate() {
-            let scale = if i < 17 { 8.0 } else { 4.0 };
-            assert_eq!(::sim::slabs::COLS[i] as f64, c * scale);
-        }
-        assert_eq!(::sim::slabs::cap(13) as f64, o.bytes);
     }
 
     #[test]
@@ -370,40 +214,4 @@ mod tests {
         assert_eq!((s.side, s.rest, s.landed, s.who, s.t, s.ang, s.wedged, s.bits), (-1.0, true, true, 7.0, 11.0, 12.0, Some(13.0), all.bits));
     }
 
-    fn put_word(a: &mut [u8], i: f64, x: u32) { a[i as usize * 4..i as usize * 4 + 4].copy_from_slice(&x.to_le_bytes()); }
-    fn put_double(a: &mut [u8], i: f64, x: f64) { a[i as usize * 8..i as usize * 8 + 8].copy_from_slice(&x.to_le_bytes()); }
-
-    // The lines below are the TypeScript's own slabDiff, printed under bun over the same bytes (S = the layout of 64 rows, 8 doors).
-    #[test]
-    fn diff_says_what_the_typescripts_says() {
-        let g = &mut Game::blank();
-        let c = slab_cols(64.0);
-        g.doors.slabs.o = store_o(&c);
-        g.doors.slabs.doors = 8.0;
-        let mut a = vec![0u8; c.bytes as usize];
-        let mut b = a.clone();
-        assert!(slab_diff(g, &a, &b, None).is_empty());
-
-        for x in [&mut a, &mut b] {
-            put_word(x, 0.0, 3); put_word(x, 1.0, 2);
-            put_word(x, c.door, 4); put_word(x, c.door + 1.0, 7); put_word(x, c.door + 2.0, 2);
-        }
-        put_double(&mut a, c.px, 1.5); put_double(&mut b, c.px, 2.25);
-        put_double(&mut a, c.tip_v + 1.0, 0.0); put_double(&mut b, c.tip_v + 1.0, -0.0);
-        put_double(&mut a, c.ang + 2.0, f64::NAN); put_double(&mut b, c.ang + 2.0, f64::from_bits(0x7ff8_0000_0000_0001));
-        put_double(&mut a, c.by + 2.0, 1e21); put_double(&mut b, c.by + 2.0, f64::NAN);
-        put_double(&mut a, c.px + 3.0, 9.0); put_double(&mut b, c.px + 3.0, 8.0);
-        put_word(&mut a, c.who + 1.0, 0xffff_ffff); put_word(&mut b, c.who + 1.0, 3);
-        put_word(&mut b, c.door + 2.0, 5);
-        let four = ["row 0 (door 4).px 1.5 | 2.25", "row 1 (door 7).tipV 0 | 0", "row 2 (door 2).by 1e+21 | NaN", "row 1.who 4294967295 | 3"];
-        assert_eq!(slab_diff(g, &a, &b, Some(20.0)), [&four[..], &["row 2.door 2 | 5"][..]].concat());
-        assert_eq!(slab_diff(g, &a, &b, None), four);
-        assert_eq!(slab_diff(g, &a, &b, Some(2.0)), four[..2]);
-
-        put_word(&mut a, 1.0, 1); put_word(&mut a, 0.0, 5);
-        put_word(&mut a, c.row + 3.0, 1); put_word(&mut b, c.row + 3.0, 2);
-        put_word(&mut a, c.row + 9.0, 4);
-        assert_eq!(slab_diff(g, &a, &b, Some(20.0)), ["5 slabs, 1 in the air | 3, 2", "door 3's row (plus one) 1 | 2", "row 0 (door 4).px 1.5 | 2.25", "row 3 (door 0).px 9 | 8", "row 1 (door 7).tipV 0 | 0", "row 2 (door 2).by 1e+21 | NaN", "row 1.who 4294967295 | 3", "row 2.door 2 | 5"]);
-        assert_eq!(slab_diff(g, &a, &b, Some(1.0)), ["5 slabs, 1 in the air | 3, 2"]);
-    }
 }

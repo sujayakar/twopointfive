@@ -11,13 +11,7 @@ pub mod no_gas {
     use crate::{ids::*, js::*, Quat, V3};
     #[allow(unused_imports)]
     use alloc::{string::String, vec::Vec};
-    /// (src/game/effects.ts:200 NO_GAS.emit)
-    pub fn emit() { todo!() }
-
     /// (src/game/effects.ts:200 NO_GAS.push)
     pub fn push() { todo!() }
-
-    /// (src/game/effects.ts:200 NO_GAS.inSmokeDomain)
-    pub fn in_smoke_domain() -> bool { todo!() }
 
 }

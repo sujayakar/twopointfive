@@ -165,11 +165,6 @@ pub fn wall_charge_affordable(g: &mut crate::game::Game) -> bool {
     match g.wall_charge.carried { Some(c) => c > 0.0, None => g.door_tools.charges >= wall_charge_price(g) }
 }
 
-/// How many more walls this run could blow. (wallcharge.ts wallsLeft)
-pub fn wall_charge_walls_left(g: &mut crate::game::Game) -> f64 {
-    match g.wall_charge.carried { Some(c) => c, None => m::floor(g.door_tools.charges / wall_charge_price(g)) }
-}
-
 /// The row's words. (wallcharge.ts rowWords)
 pub fn wall_charge_row_words(g: &mut crate::game::Game) -> String {
     let (n, p) = (g.door_tools.charges, wall_charge_price(g));
@@ -228,45 +223,6 @@ pub fn wall_charge_give_back(g: &mut crate::game::Game, c_2: WallChargeId, why: 
     g.wall_charge.stats.back += 1.0;
     let line = format!("charge off wall {}: {}", index, why);
     wall_charge_note(g, &line);
-}
-
-/// The squad block's lines: what is carried, and a charge waiting for the trigger. (wallcharge.ts hudNotes)
-pub fn wall_charge_hud_notes(g: &mut crate::game::Game) -> Vec<crate::orders::OrderNote> {
-    use crate::orders::{OrderNote, OrderNoteArm1};
-    let n = g.wall_charge.set.len();
-    if !wall_charge_on(g) { return Vec::new(); }
-    let mut out = Vec::new();
-    if let Some(c) = g.wall_charge.carried {
-        if g.wall_charge.brought.unwrap_or(0.0) > 0.0 { out.push(OrderNote::Arm1(OrderNoteArm1 { key: String::new(), text: format!("wall charges {}", c) })); }
-    }
-    if n == 0 { return out; }
-    let mark = !crate::pairorders::pair_orders_waiting(g).is_empty();
-    for own in [false, true] {
-        let mut k = 0;
-        for c in g.wall_charge.set.clone() { if wall_charge_key_is(g, c) != own { k += 1; } }
-        if k == 0 { continue; }
-        let word = g.k.doortools.blow_key.replacen("Key", "", 1);
-        let key = crate::ownblow::blow_key_word(!own, &word);
-        let near = wall_charge_nearest(g, Some(&mut |g: &mut Game, c: WallChargeId| wall_charge_key_is(g, c) != own));
-        let close = wall_charge_close_words(g, near, Some(true));
-        let many = if k > 1 { format!(" ({})", k) } else { String::new() };
-        let after = if mark && !own { " · after the mark" } else { "" };
-        out.push(OrderNote::Arm1(OrderNoteArm1 { key, text: format!("blow the charge · the wall{}{}{}", many, after, close) }));
-    }
-    out
-}
-
-/// (wallcharge.ts summary)
-pub fn wall_charge_summary(g: &mut crate::game::Game) -> String {
-    let s = g.wall_charge.stats;
-    let on = if wall_charge_on(g) { format!("on ({})", g.k.wallcharge.menu.as_str()) } else { String::from("off") };
-    let mut phases = String::new();
-    for (i, o) in g.wall_charge.ops.iter().enumerate() {
-        if i > 0 { phases.push(','); }
-        phases.push_str(g.tab.wallcharge_wall_op[*o].phase.as_str());
-    }
-    if phases.is_empty() { phases.push_str("nothing under way"); }
-    format!("{} · {} charges · {} set · {} · set {} ({} by the player) blown {} holes {} · knocked {} stunned {} backblast {} · entries {}", on, g.door_tools.charges, g.wall_charge.set.len(), phases, s.set, s.by_sam, s.blown, s.holes, s.knocked, s.stunned, s.backblast, s.entries)
 }
 
 // ---------------------------------------------------------------- the place

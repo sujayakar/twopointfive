@@ -58,20 +58,6 @@ pub fn anim_door_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, l: cr
 
 // ---- handwork
 
-/// Everything the three kinds of handwork keep, back to nothing. (character.ts hwReset)
-pub fn anim_hw_reset(g: &mut crate::game::Game, c: CharId) {
-    let an = &mut g.ch[c].anim;
-    let k = &mut an.wk;
-    k.last = None; k.fed = false; k.after = 0.0;
-    k.w_l.x = 0.0; k.w_l.v = 0.0; k.w_r.x = 0.0; k.w_r.v = 0.0; k.tw.x = 0.0; k.tw.v = 0.0;
-    k.ok_l = false; k.ok_r = false; k.shown = 0.0;
-    let s = &mut an.sw;
-    s.cur = None; s.t = -1.0; s.wait = -1.0;
-    let r = &mut an.rx;
-    r.left = 0.0; r.w.x = 0.0; r.w.v = 0.0;
-    an.work = None; an.carry = None; an.sw.shown = false; an.hand_pre = None;
-}
-
 /// What the work hands are doing: the pose last fed, the shown weight, which hand, both hands? (character.ts workInfo)
 pub fn anim_work_info(g: &mut crate::game::Game, c: CharId) -> crate::character::AnimWorkInfo {
     let k = &g.ch[c].anim.wk;
@@ -87,11 +73,6 @@ pub fn anim_work_after(g: &mut crate::game::Game, c: CharId, secs: f64) {
 pub fn anim_radio(g: &mut crate::game::Game, c: CharId, secs: f64) {
     let r = &mut g.ch[c].anim.rx;
     r.left = m::max(r.left, v3::clamp(secs, 0.8, 3.0));
-}
-
-/// 0..1: how far the radio hand is up. (character.ts radioShown)
-pub fn anim_radio_shown(g: &mut crate::game::Game, c: CharId) -> f64 {
-    v3::clamp(g.ch[c].anim.rx.w.x, 0.0, 1.0)
 }
 
 /// What the gun hand visibly holds: the rule's, unless a swap is running. (character.ts swapHeld)

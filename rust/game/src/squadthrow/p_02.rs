@@ -716,17 +716,6 @@ pub fn rows(g: &mut crate::game::Game) -> Vec<OrdersOrderDefId> {
     out
 }
 
-/// The squad's HUD block: the throw just made. (squadthrow.ts notes)
-pub fn notes(g: &mut crate::game::Game) -> Vec<crate::orders::OrderNote> {
-    let key = crate::seats::view_key(g);
-    if let Some(w) = g.m.squadthrow.states.get(key).and_then(|s| s.shown.as_ref()) {
-        if g.time >= w.t && g.time - w.t < g.k.squadthrow.shown_secs {
-            return vec![crate::orders::OrderNote::Text(w.text.clone())];
-        }
-    }
-    Vec::new()
-}
-
 /// The rows on the menu while the switch is on, off it otherwise. (squadthrow.ts sync)
 pub fn sync(g: &mut crate::game::Game) {
     let has = g.orders.defs.iter().any(|d| g.tab.orders_order_def[*d].id == THROW_OPEN);
@@ -801,15 +790,6 @@ pub fn squad_throw_key(g: &mut crate::game::Game, input: InputId) -> bool {
     g.tab.input[input].pressed.delete(hit_key);
     crate::orders::squad_orders_pick(g, Some(i as f64));
     true
-}
-
-/// (squadthrow.ts squadThrowSummary)
-pub fn squad_throw_summary(g: &mut crate::game::Game) -> String {
-    if !g.k.squadthrow.on {
-        return String::from("off");
-    }
-    let (f, s) = (left(g, SquadThrowKind::Frag), left(g, SquadThrowKind::Stun));
-    format!("frag {} · stun {} · X on a spot of floor, {}, then 1 or 2 · thrown {}", f, s, g.k.frag.order_key.replacen("Key", "", 1), g.stats.squadthrow.thrown)
 }
 
 #[cfg(test)]

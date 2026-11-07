@@ -318,11 +318,6 @@ pub fn flat(a: V3, b: V3) -> f64 {
     m::hyp2(a[0] - b[0], a[2] - b[2])
 }
 
-/// A new Cues: the field initialisers, nothing more.   (cues.ts Cues.constructor)
-pub fn cues_new(g: &mut crate::game::Game) -> crate::cues::Cues {
-    Cues::blank()
-}
-
 /// The encounter is another one (a restart, a checkpoint loaded: the clock may have gone back).   (cues.ts Cues.reset)
 pub fn cues_reset(g: &mut crate::game::Game) {
     g.cues.heard_row = None;
@@ -347,12 +342,6 @@ pub fn cues_reset(g: &mut crate::game::Game) {
 fn prune_rows(g: &mut Game) {
     let (t, secs) = (g.time, g.k.cues.secs);
     g.cues.rows.retain(|r| r.t <= t && t - r.t < secs);
-}
-
-/// The rows still up, oldest first.   (cues.ts Cues.alive)
-pub fn cues_alive(g: &mut crate::game::Game) -> Vec<crate::cues::CueRow> {
-    prune_rows(g);
-    g.cues.rows.clone()
 }
 
 /// `done` of `file`: tally, log, answer.
@@ -528,13 +517,6 @@ pub fn cues_overheard(g: &mut crate::game::Game, gd: GuardId, text: &str) -> boo
     g.cues.shout_t = Some(t);
     g.cues.stats.shouts_drawn += 1.0;
     heard_done(g, t, text, "")
-}
-
-/// A word over a man for the player's eyes alone: the bubble, no strip row, no class clock.   (cues.ts Cues.aside)
-pub fn cues_aside(g: &mut crate::game::Game, gd: GuardId, text: &str) -> bool {
-    let t = g.time;
-    g.cues.bubbles.set(gd, Bubble { text: String::from(text), t, dur: crate::guards::bubble_secs(text), radio: false });
-    true
 }
 
 /// Seconds until the strip would take a line of this class without dropping it for the class's gap (0 = now).   (cues.ts Cues.netWait)
@@ -846,9 +828,6 @@ pub fn strip_rows(g: &mut crate::game::Game) -> Vec<crate::cues::StripRowsItem> 
     }
     out
 }
-
-/// Host work: the debugger's panel keeps three rows in the browser's storage. No game state moves.   (cues.ts saveCues)
-pub fn save_cues(g: &mut crate::game::Game) {}   // (the panel's rows in the browser's storage: nothing of the game moves; it answers rather than panics, as sneak's and spotted's do)
 
 
 #[doc(hidden)] pub fn cues_net(g: &mut crate::game::Game, gd: GuardId, text: &str, cls: f64) {

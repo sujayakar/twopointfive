@@ -332,36 +332,6 @@ pub fn wall_charge_rows(g: &mut crate::game::Game, p: V3, busy: bool, row: &mut 
     wall_charge_sam_rows(g, p, busy, row, offer);
 }
 
-/// The module and its two rows; the HUD's notes are asked of it from here on. The closures are enums now: orders.ts's callers match them.   (wallcharge.ts WallCharge.constructor)
-pub fn wall_charge_new(g: &mut crate::game::Game) -> crate::wallcharge::WallCharge {
-    let mut wc = crate::wallcharge::WallCharge::blank();
-    wc.knobs = g.k.wallcharge.clone();
-    wc.opener = g.tab.orders_order_def.push(crate::orders::OrderDef {
-        id: String::from(WALL_PAGE),
-        label: crate::orders::OrderLabel::Text { text: String::from("wall tools") },
-        targets: vec![crate::orders::TargetKind::Floor],
-        listed: Some(Vec::new()),
-        opens: Some(String::from(WALL_PAGE)),
-        key: Some(5.0),
-        issue: crate::orders::OrderIssue::Nothing,
-        ..crate::orders::OrderDef::zeroed()
-    });
-    wc.row = g.tab.orders_order_def.push(crate::orders::OrderDef {
-        id: String::from(WALL_ORDER),
-        label: crate::orders::OrderLabel::WallRow,
-        targets: vec![crate::orders::TargetKind::Floor],
-        listed: Some(Vec::new()),
-        ack: Some(vec![String::from("copy."), String::from("on it.")]),
-        gone: Some(crate::orders::OrderGone::WallRow),
-        can: Some(crate::orders::OrderCan::WallRow),
-        valid: Some(crate::orders::OrderValid::WallRow),
-        issue: crate::orders::OrderIssue::WallRow,
-        ..crate::orders::OrderDef::zeroed()
-    });
-    g.orders.notes.push(crate::orders::OrderNoteFn::WallCharge);
-    wc
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
