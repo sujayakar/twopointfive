@@ -1,4 +1,4 @@
-// Composite: albedo * (direct + upsampled indirect) / pi + emissive (+ the glossy floors' specular, FLAG_GLOSS; + the ray-traced reflections, frame.rtCfg.w > 0; + a wet character's clear coat, wetCoatSpec), through the glass panes' tint — bent by them under GLASS_REFRACT — then volumetrics → HDR scene colour (rgba16f).
+// Composite: albedo * (direct + upsampled indirect) / pi + emissive (+ the glossy floors' specular, FLAG_GLOSS; + the ray-traced reflections, frame.rtCfg.w > 0; + a wet character's clear coat, wetCoatSpec), through the glass panes' tint — bent by them while frame.glassCfg.w is an index — then volumetrics → HDR scene colour (rgba16f).
 // Exposure / tonemap / bloom / night vision happen in post.wgsl.
 @group(1) @binding(0) var gAlbedo: texture_2d<f32>;
 @group(1) @binding(1) var gNormal: texture_2d<f32>;
@@ -19,8 +19,10 @@
 // g-buffer bindings = the output-size raster, directTex / softTex = the output-size shadowed direct (sharp_direct.wgsl), and everything stochastic — the gather's irradiance + specular, the volumetric
 // march, the reflections — still on its INTERNAL grid: their texel ↔ pixel maps go through the internal size (frame.sharpCfg.xy) and their depth / normal / id guides are read at the output texel
 // that HOLDS the internal sample pixel (gpx: the internal g-buffer is that subsample, gdown.wgsl — the same numbers by construction).
-// ---- GLASS REFRACTION: a second prepended `const GLASS_REFRACT: bool` (passes.ts compText(sharp, refr) → four programs; the encode picks by passes.glassRefract): true = the view ray bent
-// through the glass boxes and the surface read where it comes out (glassRefractPath / refractedRead below, over refract_common.wgsl prepended ahead of this text); false = this module as it was.
+// ---- GLASS REFRACTION: the view ray bent through the glass boxes and the surface read where it comes out (glassRefractPath / refractedRead below, over
+// refract_common.wgsl prepended ahead of this text), while frame.glassCfg.w holds an index of refraction; 0 = the setting off: the read under the pixel and the
+// panes' older tint rule, in the same statements. ONE text: until 2026-11-07 a second prepended `const GLASS_REFRACT: bool` made a twin program of each composite,
+// the false one with the glass test after the reads. With no pane crossed the two computed the same picture, so the text that tests the glass first is the one kept.
 @group(1) @binding(14) var hdrOut: texture_storage_2d<rgba16float, write>;   // the compute entry point's target (the fragment pipeline's layout has no binding 14; fs never touches it)
 /** internal px per output px (1 with SHARP off — never called then) */
 fn inOverOut() -> vec2f { return frame.sharpCfg.xy / frame.screen; }
@@ -750,7 +752,7 @@ fn linearToSrgb(c: vec3f) -> vec3f {
   return select(1.055 * pow(c, vec3f(1.0 / 2.4)) - 0.055, c * 12.92, c <= vec3f(0.0031308));
 }
 
-// ---- refraction through the glass boxes (settings.glassRefract → the GLASS_REFRACT module; frame.glassCfg.w = the index of refraction n) — over refract_common.wgsl,
+// ---- refraction through the glass boxes (settings.glassRefract; frame.glassCfg.w = the index of refraction n, 0 = off) — over refract_common.wgsl,
 // the pure helpers the particle rain's water streaks share (refractDir / slabExit / beerLambert / refractProbeDist / screenRefractPx / clampRefractOffset) ----
 // The view ray that meets glass box k at X bends INTO it (Snell, 1 → n: never total going in), crosses the box to the face it leaves by (slabExit, in the box's yawed
 // frame — glassTrace's convention), and bends OUT (n → 1); a face it meets past the critical angle mirrors it instead (total internal reflection) and it crosses
@@ -1001,14 +1003,14 @@ fn compositePixel(pix0: vec2f) -> vec3f {
     color = skyRadiance(rdSky) * (1.0 - clamp(-rdSky.y * 8.0, 0.0, 1.0));
     rdT = normalize(Pfar - frame.camPos);
   } else {
-    // Where the surface this pixel shows is READ: under the pixel — or, through REFRACTING glass (GLASS_REFRACT: passes.ts compiles this module a second time with it true, taken while
-    // settings.glassRefract; false = every statement below exactly as it was, the frame hash for hash), where the ray the glass bent comes out behind it. So the glass test runs FIRST there:
+    // Where the surface this pixel shows is READ: under the pixel — or, through REFRACTING glass (settings.glassRefract), where the ray
+    // the glass bent comes out behind it. So the glass test runs FIRST:
     // the pixel's own ray (P0 / z0 / V) meets the nearest pane, glassRefractPath bends it through that box, refractedRead finds the pixel it lands on (sPix), and the tint, the cracks and the
     // pane's own terms are settled before anything is read; the tail then keys the panes' reflection field and the fog on the PIXEL (zg / Ng), the shading on what is read.
     var sPix = pix; var sPixf = pixf; var sPin = pin; var sDepth = depth; var N0 = vec3f(0.0); var z0 = 0.0;
     var glassT = vec3f(1.0); var glassPix = false;
     var specK = 1.0; var crackL = vec3f(0.0);   // the cracks' share (FLAG_DECALS × FLAG_GLASS): × the pane's reflection along crack lines, + what the crack star and its collar scatter toward the eye
-    if (GLASS_REFRACT) {
+    {
       let P0 = worldFromDepth(pixf, depth);
       z0 = distance(P0, frame.camPos);
       if ((frame.flags & FLAG_GLASS) != 0u) {
@@ -1029,7 +1031,7 @@ fn compositePixel(pix0: vec2f) -> vec3f {
               let rr = refractedRead(pixf, P0, N0, gp);
               if (rr.ok) { sPix = rr.pix; sPixf = vec2f(rr.pix) + 0.5; sDepth = rr.depth; moved = true; if (SHARP) { sPin = sPixf * inOverOut() + frame.sharpCfgC.xy; } else { sPin = sPixf; } }
             }
-          } else {   // (the setting off while this module is live — a frame at most: the old rule)
+          } else {   // (the setting off: the old rule, a pane's tint by the slant it is crossed at, and nothing bent)
             glassT = pow(max(gh.trans, vec3f(1e-3)), vec3f(frame.glassCfg.y / max(cosI, 0.35))) * (1.0 - F);
           }
           if ((frame.flags & FLAG_DECALS) != 0u || GLASS_BREAK) {   // the crack stars ON the pane where the pixel's ray crosses it (the block below, word for word — the marks sit on the glass, nothing bends them)
@@ -1083,38 +1085,13 @@ fn compositePixel(pix0: vec2f) -> vec3f {
       hiK = (1.0 - smoothstep(hf.x, hf.y, rs)) * frame.matCfg.y;
     }
     // glass (FLAG_GLASS): is there a pane between the eye and this pixel's surface? Then what the G-buffer shaded is the TRANSMITTED picture: tinted by every pane
-    // crossed (albedo^(depth ÷ cos of the crossing angle): more glass along a slanting path), less the share the nearest pane reflects instead (Schlick, at most
-    // the physical term); what that pane adds toward the eye — mirror image, glints, dust glow — comes up from the gather's specular field below. (The module as it
-    // always was: under GLASS_REFRACT all of this ran above, ahead of the reads, and this block is not compiled.)
-    if (!GLASS_REFRACT && (frame.flags & FLAG_GLASS) != 0u) {
-      let V = (P - frame.camPos) / max(z, 1e-4);
-      let gh = glassTrace(frame.camPos, V, 0.0, z - 0.02);
-      if (gh.idx >= 0) {
-        glassPix = true;
-        let cosI = clamp(dot(-V, gh.n), 0.0, 1.0);
-        let F = glassFresnel(cosI) * min(frame.glassCfg.x, 1.0);
-        glassT = pow(max(gh.trans, vec3f(1e-3)), vec3f(frame.glassCfg.y / max(cosI, 0.35))) * (1.0 - F);
-        // rounds that stopped in this pane (glass.ts glassHit → a 'glassHit' decal; decals.wgsl glassMarks): the hole, the milky collar and the crack star ON the
-        // glass where the view ray crosses it. Cracked glass and pulverised glass are diffusers: they cut what comes THROUGH (darker against the lit room), mirror
-        // more along the crack faces, and light up with whatever falls ON the pane from either side (a torch on the glazing sets the star alight; in the dark it is
-        // a dark web against the room behind). The hole itself is just dark. Only under FLAG_DECALS (up while any mark exists), only for pixels on a pane.
-        if ((frame.flags & FLAG_DECALS) != 0u || GLASS_BREAK) {
-          let X = frame.camPos + V * gh.t;
-          let paneBox = u32(scene.glass[u32(gh.idx) * 3u + 2u].w + 0.5);
-          let fpG = gh.t * 2.0 * frame.post.w * frame.invScreen.y;          // the pixel's footprint on the pane (m), as gbuffer.wgsl sizes it for the other marks
-          var gm: GlassMarks; gm.crack = 0.0; gm.frost = 0.0; gm.core = 0.0; if ((frame.flags & FLAG_DECALS) != 0u) { gm = glassMarks(X, gh.n, paneBox, fpG); }
-          if (GLASS_BREAK) { let vc = gbCracks(u32(gh.idx), X, fpG); gm.crack = max(gm.crack, vc.x); gm.frost = max(gm.frost, vc.y); }   // (GLASS BREAKING: as in the refracting path above)
-          let scat = 0.6 * gm.frost + 0.4 * gm.crack;
-          if (scat + gm.core > 0.004) {
-            glassT *= (1.0 - 0.62 * gm.crack) * (1.0 - 0.9 * gm.frost) * (1.0 - gm.core);
-            specK = (1.0 + 2.5 * gm.crack + 0.8 * gm.frost) * (1.0 - gm.core);
-            if (scat > 0.004) { crackL = paneLight(X, gh.n) * (scat * (0.62 / PI)) * (1.0 - gm.core); }   // white glass powder: albedo ≈ 0.6, lit from both faces
-          }
-        }
-      }
-    }
-    zg = z; Ng = N;                             // the panes' reflection field and the fog key on the PIXEL — its own distance, the normal AT it — not on what a bend read (≡ z / N unless GLASS_REFRACT moved the read)
-    if (GLASS_REFRACT) { zg = z0; Ng = select(N, N0, moved); }
+    // crossed, less the share the nearest pane reflects instead (Schlick, at most the physical term); what that pane adds toward the eye — mirror image, glints,
+    // dust glow — comes up from the gather's specular field below. All of it was settled above, ahead of the reads.
+    // Rounds that stopped in a pane (glass.ts glassHit → a 'glassHit' decal; decals.wgsl glassMarks): the hole, the milky collar and the crack star ON the glass
+    // where the view ray crosses it. Cracked glass and pulverised glass are diffusers: they cut what comes THROUGH (darker against the lit room), mirror more along
+    // the crack faces, and light up with whatever falls ON the pane from either side (a torch on the glazing sets the star alight; in the dark it is a dark web
+    // against the room behind). The hole itself is just dark. Only under FLAG_DECALS (up while any mark exists), only for pixels on a pane.
+    zg = z0; Ng = select(N, N0, moved);         // the panes' reflection field and the fog key on the PIXEL — its own distance, the normal AT it — not on what a bend read (≡ z / N unless the bend moved the read)
     var dif = albedo * (Ed + Ei) * (1.0 / PI);   // (the old product, untouched: the pass-off frame hashes identical to main — docs/internal/p4-materials.md §5)
     var sparkle = vec3f(0.0);                    // SNOW SPARKLE (snowSparkleFacet above): the facets' flashes at this pixel — zero unless SNOW_SPARKLE, on lit fresh snow
     if (lv(SNOW_GLOW) || lv(SNOW_SPARKLE)) {   // SNOW GLOW (snowGlow above): on a snow pixel, the light that wrapped its terminator, and shade that leans to blue — never a man's pixel or a section cap's (one walk of the lights for the glow and the sparkle)
@@ -1192,7 +1169,7 @@ fn compositePixel(pix0: vec2f) -> vec3f {
   }
   if (lv(WX_KINDS) && !WX_VOL) { if (frame.cardCfg.w != 0u && dbg == 0u) {   // WEATHER FOG (a kind picked, game/weatherKinds.ts) along the pixel's ray to its surface: the field the men's eyes are cut by (weather.ts airTrans); over the void past the lot as over the ground beside it. (The flat veil — under WX_VOL the weather's air is a volume the volumetric pass marched: it is in `vol` above)
     if (WX_EDGE && !sky) {   // (the veil at the building's shell — common.wgsl wxFogApplySurf: an outside wall's face is asked where its normal points; a man's pixel and a box he carries — bit 28 / the owner byte of the PIXEL's own id — where he stands)
-      var idg = id; if (GLASS_REFRACT) { if (moved) { idg = textureLoad(gId, pix, 0).x; } }
+      var idg = id; if (moved) { idg = textureLoad(gId, pix, 0).x; }
       color = wxFogApplySurf(color, dirS, zg, select(Ng.xz, vec2f(0.0), ((idg >> 20u) & 0x1FFu) != 0u));
     } else { color = wxFogApply(color, select(dirS, rdT, sky), select(zg, 0.0, sky), sky); }
   } }
