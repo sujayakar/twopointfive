@@ -1,12 +1,14 @@
 // Runtime analytic light list → GPU buffer (struct Light in common.wgsl, 64 B each).
 import { Vec3, v3, DEG } from '../math/vec';
 import { makeBuffer } from '../gpu/device';
-import { LightDef } from '../scene/level';
+import type { LightDef } from '../scene/level';
 import { REACH_ROW_WORDS, REACH_ALL } from './reach';
 import { lightDayK } from './photometry';
 
 export interface RtLight {
   name: string; group: string;
+  /** what it is, for what it is drawn at by day, where whoever made it says (render/photometry.ts lightClass; absent = worked out of its name and group) */
+  class?: import('./photometry').LightClass;
   kind: 0 | 1 | 2 | 3;        // point, spot, directional, area (one-sided disk: dir = normal, radius = disk radius)
   pos: Vec3; dir: Vec3;
   color: Vec3; intensity: number;

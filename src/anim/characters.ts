@@ -96,6 +96,11 @@ export class CharacterRenderer implements SkinnedDrawable {
     const was = this.scratch; was.set(f.subarray(o, o + CHAR_MAT_FLOATS)); write(f, o);
     for (let k = 0; k < CHAR_MAT_FLOATS; k++) if (f[o + k] !== was[k]) { this.matDirty = true; break; }
   }
+  /** A FRAME'S MEN WHOSE INSTANCES AND BONES ARE WRITTEN ELSEWHERE (src/draw/men.ts): how many, and the parts each wears */
+  drawn(count: number) { this.instanceCount = count; }
+  drawnParts(i: number, mask: number) { this.masks[i] = mask; }
+  /** …and their material rows, where one changed */
+  materialsOut(queue: GPUQueue) { if (this.matDirty) { queue.writeBuffer(this.charMats, 0, this.matData.buffer, 0, MAX_CHARS * CHAR_MAT_BYTES); this.matDirty = false; } }
   private scratch = new Float32Array(CHAR_MAT_FLOATS);
   // DRAWING BETWEEN TICKS (host/tween.ts): the palette as the last tick staged it (instance i's joints at i × jointFloats), who instance i is, and a write of the PICTURE's own
   // palette — a blend of two ticks', in an array of the caller's — over the GPU's copy. The staging is never written by it: what the game staged is what the next tick finds.
