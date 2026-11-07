@@ -325,6 +325,16 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   WHAT THE FOLD IS FOR NOW: it is the harness's hold of the settled rows (the page's is `src/host/rustgame.ts rustSettledHold`), and its line a
   probe names every check that still writes a settled row: the list to restage or delete from. `QA_FOLD_FOR=0` / `foldFor(false)` stays the one
   way a tool reads a settled row's own value.
+  THE SETTLED ROWS ARE RAISED IN ONE PLACE (2026-11-07; `src/host/settled.ts settledUp`, the first line of `pageSwitches`): each at its page value
+  off `tools/qa/switches.json`. WHAT WENT WITH IT: the page's 354 address words that moved settled rows and nothing else (the page held those rows
+  already, so a word said there did nothing), the journal's lines for a file from before such a row, and the reads of those rows in the files the
+  page keeps (`src/ui`, `src/host`, `src/render`; not `src/audio`: the music and the sounds page play it with no page boot). An address word quoted in these notes for a settled row does nothing: ask
+  `switches.json` whether a row is settled. A word a game module reads as it loads over a settled row (`GLASSFX=off`) does nothing either, and is
+  not said any more. MEASURED: every table after `shippedBoot()` the same as before (one row, `CUT.on`, is raised there and no longer as a game is
+  stood), and each of 708 words of the source at seven values moves the same rows that are still switches, but for three: `?autotune=0`, `?goals=0`
+  and `?qring=0` moved such rows through a settled one, as `?findtuned=0` did the outline's own table (in no registry). Seven page checks still say
+  one of the four and lose the arm or the staging they made with it: autocam-page, findme-page, findme-squad-page, findtuned-page, goals-page,
+  squadkeys-page, engine-replay-page (`fog`, `turn`). FROZEN_HOLDS, `standup.ts` and the reads in `src/game` are as they were.
   THE HOLDS TABLE IS TWO ROWS (2026-11-07; `tools/qa/holds.ts`). It held rules OFF for probes written for an older model. Fourteen of its sixteen
   rows held only settled rows: on the page's stand every such hold was refused under the fold (101 a run of `holds`, which was red in all-quick by
   it) and the probe ran on the page's model whatever the table said; on the old stand those rows are off already and the hold did nothing. Those
