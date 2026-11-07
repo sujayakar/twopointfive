@@ -19,7 +19,6 @@
 // accessor here (who()), so a second player is one place to change.
 //
 // (src/game is one import cycle: nothing here is built from another game module's exports at module load.)
-import { ofThisMission } from './thisrun';   // (the same mission by its serial, as the Rust game asks it)
 import { SideSet } from '../math/side';
 import type { Game, Guard, Player } from './game';
 import type { LessonData, LessonStep, LessonTest, Rect } from '../scene/scenarios';
@@ -77,7 +76,6 @@ export function lessonTokenFaults(w: string, line: string, cap: number, row = 't
 /** a step's line as the HUD's row says it now */
 export const lessonLine = (written: string): string => { const line = tokenLine(written), s0 = stalkClickOnly() ? stalkLine(line) : line, s = CLOSE.on && CLOSE.noKnife ? bareLine(s0) : s0; return HANDRING.on ? s.replace(WHISTLE_LINE, `Space held, then ${CMDRING.wedges}, whistles`).replace(WHEEL_LINE, WHEEL_RING) : s; };
 import { railsFaults, RAILS } from './rails';   // (railsFaults is called inside checkLesson only, the switch read inside `data`)
-import { camCap } from '../host/keymap';
 import { wallPt } from './wallcharge';   // (called inside a flag only)
 import { OWNBLOW } from './ownblow';   // (read inside lineOf only)
 import { SLOTSETUP, slotSetupOpen } from './slotsetup';   // (slotSetupOpen is called inside a flag only)
@@ -317,18 +315,18 @@ export class Lesson {
   }
   /** the step that is up for THE MISSION THAT IS RUNNING: `i` is the last pass's until tick() has met a fresh Mission (a restart between frames), and that
    *  pass's step is nobody's — not the row's, not a checkpoint's. A fresh run is on its first step. */
-  private get at(): number { return ofThisMission(this.g, this.run) ? this.i : 0; }
+  private get at(): number { return this.run === this.g.mission ? this.i : 0; }
   /** the index of the step that is up for the mission that is running (rails.ts asks this, never `i`) */
   get index(): number { return this.at; }
   get step(): LessonStep | null { return this.data?.steps[this.at] ?? null; }
   get finished(): boolean { const L = this.data; return !!L && this.at >= L.steps.length; }
 
   /** the step that is up has done its deed and is waiting for the moment to play out — its own `settle`, or the beat before the next step's card (rails.ts `settles`) — (the frame's to read: nothing more is asked of him) */
-  get settling(): boolean { return ofThisMission(this.g, this.run) && this.seen?.doneT !== undefined && this.seen.doneI === this.i; }
+  get settling(): boolean { return this.run === this.g.mission && this.seen?.doneT !== undefined && this.seen.doneI === this.i; }
 
   /** a checkpoint's slice (savestate.ts): which step is up and when the ones before it were done. The deeds a step has counted are NOT filed: a loaded step
    *  counts from the load */
-  snapshot(): LessonSnap { return { i: this.at, done: ofThisMission(this.g, this.run) ? [...this.doneAt] : [] }; }   // (a save that lands on a fresh Mission before its first tick files step 1, never the last run's step)
+  snapshot(): LessonSnap { return { i: this.at, done: this.run === this.g.mission ? [...this.doneAt] : [] }; }   // (a save that lands on a fresh Mission before its first tick files step 1, never the last run's step)
   /** a checkpoint loaded (savestate.ts, after the mission slice): the file's place among the steps — a file without the slice (made with the lesson off)
    *  leaves the lesson stood down for that run: its world is mid-way, and step 1 over it could ask for a deed already done */
   restore(s: LessonSnap | undefined) {
@@ -340,13 +338,6 @@ export class Lesson {
 
   /** the run is over, whichever scenario it was: the quiet mission's stage, the player down, a room clear taken or the team wiped (roomclear.ts `end`) */
   over(): boolean { const g = this.g; return g.mission.stage === 'failed' || g.mission.stage === 'done' || who(g).down || (!!g.roomClear?.active && !!g.roomClear.end); }
-  /** The HUD's objective while a step is up (mission.ts objectiveText / objectivePos; null = the scenario's own: no lesson, or every step done) */
-  objective(): { text: string; pos: Vec3 | null } | null {
-    const L = this.data, i = this.at; if (!L || i >= L.steps.length) return null;
-    if (this.over()) return null;   // (the run is over: the row is the scenario's own word on it)
-    const T = L.steps[i], M = T.atMan ? this.g.guards.find(x => x.route?.name === T.atMan && !downed(x)) : undefined;   // (`atMan`: the marker rides on the man of that route)
-    return { text: `training ${i + 1}/${L.steps.length} ▸ ${lessonLine(lineOf(T)).replace(/\[([^\]]+)\]/g, (_m, k: string) => k === 'Ctrl' ? camCap() : k)}`, pos: M ? [M.char.pos[0], 1, M.char.pos[2]] : T.at ?? null };   // ('[B]': a key a tutorial mission's big line draws as a key — rails.ts; plain here. '[Ctrl]' is the camera's key, whichever it is: host/keymap.ts camCap)
-  }
   summary(): string {
     const L = this.data; if (!L) return this.g.level.scenarios?.lesson ? (LESSON.on ? 'off · this level carries one (start its mission)' : 'off · switched off') : 'off · this level carries none';
     const i = this.at;

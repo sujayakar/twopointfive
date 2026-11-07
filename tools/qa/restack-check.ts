@@ -11,7 +11,12 @@
 //      second later every man is on the mark he had, still set.
 //   3. the key again: another man answers with the other line, and again nobody moves.
 //   4. the WORD's key: they go in by open and clear, all four — the word's key is the way in.
+//   5. stacked there again, the same asked for a goal's men (orders.ts quickFor): answered, nothing given.
+//   6. CONTROL — the rule off, the same stack: the key sends them in, as it did.
+//   7. CONTROL (plumbing) — a recording from before the key replays with it off; the frozen stand holds it off, the page's has it on, FROZEN_HOLDS has its row.
 //   8. two of the four taken off that stack (fall in): the key on the door is 'stack up' for all four, GIVEN — the two still on it do not answer for the rest.
+// RESTACK_BREAK=1 = the switch left off and the same lines asked: 1, 2, 3, 5 and 8 must fail (4 and 6 fall with them: the men went in at line 2).
+// (line 5 gives the men a second and a half on their marks first: a man just arrived is still shuffling his last centimetres.)
 //   exit 0 = all hold · 1 = one does not
 import { standUp, ROOT } from './headless.ts';
 const AP: any = await import(`${ROOT}/src/game/autopilot.ts`);
@@ -19,8 +24,10 @@ const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
 const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
 const { knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`);
+const { applyKnobs, knobsSnapshot } = await import(`${ROOT}/src/game/journal.ts`);
+const { FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`);
 const { AUTOPILOT, AUTOPILOT_STATS, RESTACK_LINES, autoPick, autoHint } = AP;
-const DT = 1 / 60, SEED = 5, VERBOSE = process.argv.includes('--verbose');
+const DT = 1 / 60, SEED = 5, BREAK = process.env.RESTACK_BREAK === '1', VERBOSE = process.argv.includes('--verbose');
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const dist = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 
@@ -28,11 +35,11 @@ export async function restackCheck(): Promise<boolean> {
   let fails = 0;
   const line = (ok: boolean, what: string, got: string) => { console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${what} — ${got}`); if (!ok) fails++; };
   const knobs0 = knobsCopy(), rnd0 = Math.random, squad0 = NIGHTBREACH.squad;
-  console.log("The key on a stack is 'stack up' again (src/game/autopilot.ts autoPick, AUTOPILOT.restack)");
+  console.log(`The key on a stack is 'stack up' again (src/game/autopilot.ts autoPick, AUTOPILOT.restack)${BREAK ? ' — RESTACK_BREAK=1: the switch left off, lines 1, 2, 3 and 5 must fail' : ''}`);
   try {
     const log = console.log, warn = console.warn; if (!VERBOSE) console.log = console.warn = () => { };
-    let W: any, why: any;
-    try { Object.assign(NIGHTBREACH, { squad: 4 }); Math.random = seeded(SEED); W = await standUp(); AUTOPILOT.on = true; W.game.godMode = true; why = W.game.roomClear.start(SEED); }
+    let W: any, why: any, stood = false;
+    try { Object.assign(NIGHTBREACH, { squad: 4 }); Math.random = seeded(SEED); W = await standUp(); stood = !!AUTOPILOT.restack; AUTOPILOT.on = true; AUTOPILOT.plain = true; AUTOPILOT.restack = !BREAK; W.game.godMode = true; why = W.game.roomClear.start(SEED); }
     finally { console.log = log; console.warn = warn; Object.assign(NIGHTBREACH, { squad: squad0 }); }
     const g = W.game, O = g.orders, T = g.doorTools, I = W.input;
     const quiet = <X,>(f: () => X): X => { if (VERBOSE) return f(); const l = console.log, w = console.warn; console.log = console.warn = () => { }; try { return f(); } finally { console.log = l; console.warn = w; } };
@@ -76,8 +83,21 @@ export async function restackCheck(): Promise<boolean> {
     // 4
     { const set = stacked(), had = new Set<any>(T.ops); I.pressed.add(DOORTOOLS.blowKey); step(3); const op = T.ops.find((o: any) => !had.has(o) && o.door === D);
       line(set && op?.kind === 'openClear' && op.men.length === N, '4. the WORD\'s key: they go in by open and clear, all four', `stacked and set: ${set} · the door tools: ${op?.kind ?? 'nothing'} for ${op?.men?.length ?? 0}`); }
+    // 5
+    { const set = stack() && (step(90), stacked()), n0 = O.log.length, ops0 = T.ops.length, s0 = said.length, at = marks(), got = O.quickFor(all(), O.targetAt(D.frameCentre)); step(60); const lines = said.slice(s0);
+      line(set && got === null && O.log.length === n0 && T.ops.length === ops0 && lines.length === 1 && RESTACK_LINES.includes(lines[0][1]) && moved(at) < 0.05 && stacked(), '5. stacked there again, the same asked for a goal\'s men: answered, nothing given',
+        `stacked and set: ${set} · quickFor: ${got} · rows written ${O.log.length - n0} · door tools started ${T.ops.length - ops0} · said: ${lines.map(([w, x]) => `${w?.callsign ?? '?'} '${x}'`).join(', ') || 'nothing'} · the furthest any man went ${moved(at).toFixed(2)} m`); }
+    // 6
+    { AUTOPILOT.restack = false; const set = stacked(), n0 = O.log.length, on = !!aimOf(D); I.pressed.add(ORDERS.quickKey); step(3); const row = O.log[O.log.length - 1], op = opOn(); AUTOPILOT.restack = !BREAK;
+      line(set && on && O.log.length === n0 + 1 && row?.order === 'openClear' && op?.kind === 'openClear', '6. CONTROL — the rule off, the same stack: the key sends them in, as it did', `stacked and set: ${set} · the order: ${row?.order} to ${row?.who?.length ?? 0} · the door tools: ${op?.kind ?? 'nothing'}`); }
+    // 7
+    { AUTOPILOT.restack = true; const snap = JSON.parse(JSON.stringify(knobsSnapshot(g))), old = JSON.parse(JSON.stringify(snap)); delete old.tables.AUTOPILOT.restack;
+      applyKnobs(g, old); const before = AUTOPILOT.restack; applyKnobs(g, snap); const on = AUTOPILOT.restack;
+      const shipped = String(process.env.TPS_PROFILE ?? '') === 'shipped', row = FROZEN_HOLDS['AUTOPILOT.restack'];
+      line(before === false && on === true && stood === shipped && /TPS_RESTACK=1/.test(row ?? ''), '7. CONTROL (plumbing) — a recording from before the key replays with it off; the stands and the FROZEN_HOLDS row',
+        `a file without the key: ${before} · one with it on: ${on} · this stand (${shipped ? 'the page\'s' : 'frozen'}) stood it ${stood} · the row: ${row ?? 'none'}`); }
     // 8
-    { const set = stack() && (step(90), stacked()), two = all().slice(2); O.give('fallIn', O.targetAt(g.player.char.pos), undefined, { men: two }); step(120);
+    { AUTOPILOT.restack = !BREAK; const set = stack() && (step(90), stacked()), two = all().slice(2); O.give('fallIn', O.targetAt(g.player.char.pos), undefined, { men: two }); step(120);
       const W = T.waitsOn(all(), D), on = !!aimOf(D), pick = autoPick(g, O.targetAt(D.frameCentre)), n0 = O.log.length, s0 = said.length; I.pressed.add(ORDERS.quickKey); step(3); const row = O.log[O.log.length - 1], lines = said.slice(s0);
       line(set && on && W?.set === true && W.men.length === 2 && pick.id === 'stack' && pick.why === 'first' && O.log.length === n0 + 1 && row?.order === 'stack' && row.who?.length === N && !opOn() && !lines.some(([, x]) => RESTACK_LINES.includes(x)),
         '8. two of the four taken off the stack: the key is \'stack up\' for all four, given, and the two still on it do not answer for the rest',

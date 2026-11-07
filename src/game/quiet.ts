@@ -283,13 +283,6 @@ export function quietWords(g: Game) {
   const outs = exits.length === 1 ? exits[0].name : exits.length === 2 ? `${exits[0].name} or ${exits[1].name}` : `${exits.slice(0, -1).map(x => x.name).join(', ')} or ${exits[exits.length - 1].name}`;
   return { place: P.place, holder: P.holder, thing, outs, bare: thing.replace(/^(the|a|an) /i, '') };
 }
-/** the way out nearest `p` on foot-less distance (the marker; null with none up) */
-export function nearestExit(g: Game, p: Vec3): QuietExit | null {
-  const Q = quietOf(g); if (!Q) return null;
-  let best: QuietExit | null = null, bd = Infinity;
-  for (const x of Q.exits) { const d = Math.hypot(p[0] - x.x, p[2] - x.z); if (d < bd) { bd = d; best = x; } }
-  return best;
-}
 
 // ---------------------------------------------------------------- the checker (tools/qa/quiet-check.ts; the probes): the block against the BUILT floor
 /** Everything the level file's validator cannot say (scene/levelData.ts checks shapes and names): free floor, the ways on foot, first sight. `g` is a Game stood

@@ -58,7 +58,7 @@ async function held(K: { blind?: boolean; /** the word is given while a man is o
       const u = inw(m), c = m.char, h = c.bones.head, hp = c.bones.hips ?? c.pos, mz = c.muzzle;
       if (isNaN(told) && s.i > 0) { if (h) r.lead = Math.max(r.lead, (h[0] - hp[0]) * u[0] + (h[2] - hp[2]) * u[2]); if (mz) r.gun = Math.max(r.gun, (mz[0] - hp[0]) * u[0] + (mz[2] - hp[2]) * u[2]); r.knee = Math.max(r.knee, c.anim.crouch); if (m.script?.lean) r.leanAsked = true; }
       r.walked = Math.max(r.walked, s.i); }
-    if (K.wordLean && !word.given && (T.jamb as any[]).some(m => op.slice.get(m)?.pie && !op.slice.get(m).pie.fin && (rec.get(m)?.leanFrames ?? 0) > 20)) { word.given = true; R.W.input.pressed.add('KeyF'); }
+    if (K.wordLean && !word.given && (T.jamb as any[]).some(m => op.slice.get(m)?.pie && !op.slice.get(m).pie.fin && (rec.get(m)?.leanFrames ?? 0) > 20)) { word.given = true; R.D.go(); }
     if (isNaN(told)) { for (const m of team()) if (m.state !== 'dead') over = Math.min(over, offOf(d, m.char.pos, side), m.char.bones.head ? offOf(d, m.char.bones.head, side) : Infinity);
       if (foe && (op.beats ?? []).some((b: any) => String(typeof b === 'string' ? b : b.what ?? b.text ?? '').includes(`seen · ${foe.callsign}`))) foeSeen = true;
       if (T.told) { told = g.time - t0; unseen = op.search?.left ?? -1; cells = op.search?.pts.length ?? 0; foeDown = !!foe && foe.state === 'dead'; lostAtTold = team().filter(m => m.state === 'dead').length; for (const r of rec.values()) if (r.trail.length) r.drift = flat(r.trail[0], r.trail[r.trail.length - 1]);

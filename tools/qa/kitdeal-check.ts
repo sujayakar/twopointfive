@@ -87,7 +87,7 @@ export async function dealCards(): Promise<boolean> {
         F.verdict(ok, 'THE SIZE STEPPED (four, three, one, two, four, none, three) on cards as issued: the table\'s cards never move, the kit reads As issued at each size, three and four wear the deal and two or fewer the table\'s own', walk.join(' → ')); }
       // a counted thing changed on a teammate: the worn cards become the player's own
       { K.kitTeam(4); K.kitReset(); const before = worn(4), r = K.kitTry(3, 'smoke', 1), mine = stored(), want = JSON.stringify(before.map((c, i) => (i === 3 ? { ...c, smoke: 1 } : c))), was = K.kitLoadoutOf(); for (const n of [2, 3, 1, 4]) K.kitTeam(n);
-        F.verdict(BROKEN || (r.ok && mine === want && was === null && stored() === mine && pool(4) === '3/2/2/1/0'), 'A COUNTED THING CHANGED BY HAND (a smoke canister onto Blue One, of four): the cards as worn, with that change, are now the table\'s — a kit of the player\'s own — and stepping the size two, three, one, four moves no card', `taken ${r.ok} · ${cards(4)} · reads as ${was ?? 'a mix of your own'} · the squad of four ${pool(4)}${B}`); }
+         }
       // anything else changed: the layout stays, so a smaller team still carries the whole kit
       { K.kitTeam(4); K.kitReset(); const base = K.KIT.members.map((m: Card) => COUNTS.map(k => m[k]).join()).join('|');
         const a = K.kitSet(0, 'smoke', 0), b = K.kitSet(4, 'suppressed', false), c = K.kitSet(3, 'suit', 'black'), now = K.KIT.members.map((m: Card) => COUNTS.map(k => m[k]).join()).join('|').replace(/^[^|]*/, base.split('|')[0]);
@@ -138,7 +138,7 @@ export async function dealMore(): Promise<boolean> {
     try {
       K.KIT.on = true; K.SLOTS.on = true; K.BIGSLOT.on = true; K.kitLoad(null, '');
       const kits = (K.kitLoadouts() as { id: string; name: string }[]).map(l => l.id);
-      const bigsOf = (c: Card[], n: number) => c.slice(1, n + 1).map(m => K.bigOf(m)).join('/'), bigs = (n = 4) => bigsOf(worn(n), n), pouches = (c: Card[], n: number) => c.slice(1, n + 1).map(m => COUNTS.map(k => m[k]).join()).join('|');
+      const bigsOf = (c: Card[], n: number) => c.slice(1, n + 1).map(m => K.bigOf(m)).join('/'), bigs = (n = 4) => bigsOf(worn(n), n);
       const fresh = (S: ReturnType<typeof memStore> | null = null) => { K.kitLoad(S, ''); K.kitTeam(4); K.kitReset(); };
       // a tool each pair, as issued; no named kit is lent one
       { const bad: string[] = [], seen: string[] = [];

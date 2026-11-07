@@ -17,7 +17,6 @@
 // and beside them: the drill's own man and the response's (toolSpot asked without the order's word) get the handle's place as before.
 // No GPU: nothing here looks at a picture.
 import { ROOT } from './headless.ts';
-import { sample } from './sweep.ts';
 import { stage } from './bang-tally.ts';
 const { HANDLE, HANDLE_STATS, handleSpot, handleAt, toolSpot } = await import(`${ROOT}/src/game/handleside.ts`);
 const { frameOf } = await import(`${ROOT}/src/game/guards.ts`);
@@ -87,7 +86,7 @@ export async function toolnearCheck(): Promise<boolean> {
   try {
     HANDLE.toolPost = 0;
     let drill = '';
-    for (const X of sample(DOORS, 1)) for (const row of ROWS) {
+    for (const X of DOORS) for (const row of ROWS) {
       const R = await play(X.scn, X.door, row); drill ||= R.drill;
       const PIE_REACH = HANDLE.body + 0.05;   // (how far into the corridor a man's EDGE may come while he pies the threshold: his middle stays out of it)
       const ok = R.why === null && !R.note && R.walks === 0 && R.nears + R.posts >= 1 && R.past >= 0 && R.pie >= -PIE_REACH && R.opened && R.crossed >= 1 && R.ended === 'in';

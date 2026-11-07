@@ -5,7 +5,6 @@
 import type { Game } from '../game/game';
 import type { FollowCamera } from '../game/camera';
 import type { Vec3 } from '../math/vec';
-import { hudExpireBubbles } from '../game/journal';
 import { NET_ROW, SQUADNET, netPlace } from '../game/squadnet';
 import { onScreen, headOf } from '../game/guards';
 import type { BubblesLike } from '../host/hud';
@@ -123,14 +122,15 @@ export class Bubbles implements BubblesLike {
       el.style.display = 'block'; el.style.left = `${Math.round(x)}px`; el.style.top = `${Math.round(y)}px`; el.style.opacity = a.toFixed(2);
       return true;
     };
-    hudExpireBubbles(game);   // the HUD's one write to the game — an expired bubble nulled on its speaker — made through game/journal.ts so a replay of a recording makes it too (the per-element expiry lines below then never fire)
+    // (A LINE IS OVER WHEN ITS TIME IS: `t` and `dur` are the game's, and every reader of a bubble, here and in the game's rules, asks the clock. Nothing
+    //  here writes the game's copy: the HUD used to null an expired bubble on its speaker, which the game that ticks never saw.)
     const speakers = game.civilians.length ? [...game.guards, ...game.civilians] : game.guards;   // (the cleaner / the late worker talk too — civilians.ts: their record's bubble, in the calm tone until they are frightened)
     while (this.els.length < speakers.length) this.els.push(this.make());
     for (let i = 0; i < this.els.length; i++) {
       const el = this.els[i]; const g = speakers[i]; const b = g ? game.cues.bubbleOf(g) : null;   // (his line, or a cue's — cues.ts)
       const mate = !!g && SQUADNET.on && game.orders.mine(g);   // (game/squadnet.ts: a teammate's line is drawn near you when his head is not on the screen)
       if (!g || !b || (g.state === 'dead' && !g.wound) || (g.civ && g.civ.state === 'gone') || (!mate && game.fogOfWar.hidden(g))) { el.style.display = 'none'; continue; }   // (fog of war: no bubble over a man nobody on the team sees — his line is still heard; never true while it is off)
-      if (game.time - b.t > b.dur) { g.bubble = null; el.style.display = 'none'; continue; }
+      if (game.time - b.t > b.dur) { el.style.display = 'none'; continue; }
       const head = g.char.bones.head ?? g.char.pos;
       // (a teammate off the screen: the same point and the same test his line was clicked by, guards.ts say)
       if (mate && (game.fogOfWar.hidden(g) || !onScreen(game, headOf(g)))) { if (!near(el, b, `${g.callsign}: ${b.text}`, g.char.pos, bubbleTone(g))) el.style.display = 'none'; continue; }
@@ -147,7 +147,7 @@ export class Bubbles implements BubblesLike {
     { // Sam's line to the man in his arm, over HIS head (the pair stand half a metre apart, so his and the man's take turns on much the same spot — player.ts never has both up)
       const el = (this.samEl ??= this.make()); const pl = game.player; const b = pl.bubble;
       if (!b || pl.down) el.style.display = 'none';
-      else if (game.time - b.t > b.dur) { pl.bubble = null; el.style.display = 'none'; }
+      else if (game.time - b.t > b.dur) el.style.display = 'none';
       else if (!place(el, b, pl.char.bones.head ?? pl.char.pos, 'sam')) el.style.display = 'none';
     }
   }

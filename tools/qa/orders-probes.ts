@@ -1,27 +1,41 @@
-// The 'squadorders' family (game/orders.ts — Sam's live orders to the AI squad: the quick key = the target's own order at once), run through probes.ts:
-//   bun run tools/qa/probes.ts squadorders | orders-off | orders-move | orders-cover | orders-stack | orders-fallin | orders-nightbreach | orders-seams | orders-edges   [--verbose]
+// The 'squadorders' family (game/orders.ts — Sam's live orders to the AI squad: X / the middle button = the menu, up until an order is picked; B = the target's own order at once; T = who takes them), run through probes.ts:
+//   bun run tools/qa/probes.ts squadorders | orders-off | orders-menu | orders-move | orders-cover | orders-stack | orders-fallin | orders-one | orders-nightbreach | orders-seams   [--verbose]
 // PASS / FAIL each, all headless (the Game of headless.ts). The squad is the night breach's pair (game.nightBreach.start(), as ?nightbreach stages it) unless a
-// probe says otherwise; orders are given through the quick key with the harness cursor on a world point, or give() where the row has no key. The defenders in the break
+// probe says otherwise; every order is given THROUGH THE INPUT — the harness cursor put on a world point (W.cursorAt → the game's own aim ray), X / B / T / digits /
+// the wheel / clicks / Esc written into the harness Input as a keyboard and mouse would, every one a one-frame PRESS (no order waits on a key held or let go) — never by calling give() (orders-seams apart, which says so). The defenders in the break
 // room are kept dazzled (and blind fire off) wherever a probe is about WHERE the men go: this family is not about the fight. Sam's visibility is planted dark,
 // as in the nightbreach family (no light meter headless).
-// NOT held here: how the menu reads and feels on the page, the men's carriage as a picture, sound.
-//   orders-off         no squad on the floor: the keys are dead (ten seeded seconds digest the same with and without them), no menu, no HUD block, give() refuses
-//   orders-move        move there: both men on marks round the point, 'set.' called once; hold position mid-run stops them where they are and they stay
+// NOT held here: how the menu reads and feels on the page (the panel's rows are checked as data, never drawn), the men's carriage as a picture, sound. Sam's
+// walk in orders-fallin is the harness placing him a step a frame along a nav path (teleportPlayer), not WASD; where doors are
+// one-way (DOORWAY.oneWay) he walks it on his own feet instead, since no player can be set down through a shut door.
+//   orders-off         no squad on the floor: X, B, T and the middle button are dead (ten seeded seconds digest the same with and without them), no menu, no HUD block, give() refuses
+//   orders-menu        the menu offers only what fits the reticle's target: floor = move / cover / fall in / hold · door = stack / cover / fall in / hold · Sam
+//                      himself (nothing) = fall in / hold · a teammate = his alone; a press of X puts the list up, frozen on the target, and it stays up with every key
+//                      up; Space or the middle button again gives the highlighted row; the cancel row, Esc, X again, a right click and a left click (Sam's
+//                      trigger, always) give nothing; a digit picks at once and never reaches Sam's weapon slots, the wheel moves the highlight and never
+//                      his pace; the quick key is the target's first row; an order registered for doors shows on doors only; the HUD names who and what
+//   orders-move        move there: both men on two spots abreast at the point, facing the way they were sent, 'set.' called once; hold position mid-run stops
+//                      them where they are and they stay
 //   orders-cover       cover that way / this door: each man turns his gun onto it where he stands, and stays on it
-//   orders-stack       stack up, two cases (the break room's west door, a man on each jamb; its north door from inside, both in file on the free one): off the opening,
-//                      on the side Sam is on, and they stay; 'set.' called once
-//   orders-fallin      fall in: the pair closes up; Sam walks on his own feet from the cubicles' aisle through the west door, across the break room and out of its north
-//                      door into the corridor: both men stay within a few metres the whole way and end beside him on the far side; turning on the spot does not move them
+//   orders-stack       stack up, four cases (the break room's west door from either side, its north door from the corridor and from inside): a man on each jamb
+//                      — both in file on the free one where the other has no floor — off the opening, on the side Sam is on, facing the door along the wall,
+//                      muzzles on it, and they stay; 'set.' called once
+//   orders-fallin      fall in: the pair closes up; Sam walks from the cubicles' aisle through the west door, across the break room and out of its (shut) north
+//                      door into the corridor — both men stay within a few metres the whole way, open the door themselves and end beside him on the far side;
+//                      turning on the spot does not move them
+//   orders-one         T picks one man: his order leaves the other where he was, without an order; the cursor on a teammate does the same without T; a man down
+//                      drops out of the cycle
 //   orders-nightbreach the two systems together: an order while the pair is set on the breach calls the breach off (no kick), F stacks them again; once the
-//                      breach is going an order is refused and the breach runs to 'clear'; a recall once they are inside ends the drill ('recalled'); an order that
-//                      cannot be carried out never calls the breach off
-//   orders-seams       what the later parts build on: a man the fight AI has (script ended, alert, eyes on) is left to it on his post and taken back once cold; a show
-//                      taking the floor drops every order
-//   orders-edges       what cannot be done is refused aloud; the men keep clear of Sam; the file closes up; the fight seam's clock
+//                      breach is going an order is refused and the breach runs to 'clear'; then fall in brings both out to Sam; a recall once they are inside ends
+//                      the drill ('recalled' — and a recall of one man hands the other to the fight AI); an order that cannot be carried out never calls
+//                      the breach off; with the point man dead on the stack (the drill's 'failed') the survivor still takes orders
+//   orders-seams       what the later parts build on: a man the fight AI has (script ended, alert, eyes on) is left to it on his post and taken back once cold; an
+//                      owner that refuses keeps its men; a show taking the floor drops every order
 import { standUp, ROOT } from './headless.ts';
 import { toolsRow4 } from './order-keys.ts';
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { ORDERS, doorWords } = await import(`${ROOT}/src/game/orders.ts`);   // (doorWords: a door's name as the HUD says it — its id's words, or the rooms it joins where the door names rule is on — so the expected words follow the stand)
+const { COVER } = await import(`${ROOT}/src/game/cover.ts`);
 const { WORDS } = await import(`${ROOT}/src/game/words.ts`);
 const { DOORSTAY, DOORWAY } = await import(`${ROOT}/src/game/doors.ts`);
 const { FRIENDS } = await import(`${ROOT}/src/game/friends.ts`);
@@ -32,6 +46,8 @@ const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
 const { SILENT } = await import(`${ROOT}/src/game/silent.ts`);
 const { SQUADTHROW } = await import(`${ROOT}/src/game/squadthrow.ts`);
 const { START } = await import(`${ROOT}/src/game/startfile.ts`);
+const { HOLDFIRE } = await import(`${ROOT}/src/game/holdfire.ts`);
+const { holdFireHoldsTarget } = await import(`${ROOT}/src/game/holdfire.ts`);
 
 const DT = 1 / 60;
 const VERBOSE = process.argv.includes('--verbose');
@@ -51,9 +67,11 @@ const ids = (rows: any[]) => rows.map((r: any) => r.id).join(' ');
 
 /** One game under a seed. `nb`: the night breach staged (its pair = the squad). `quiet`: the defenders kept dazzled every frame (they neither see nor fire). */
 async function rig(seed: number, o: { nb?: boolean; quiet?: boolean; knobs?: Record<string, unknown> } = {}) {
-  Object.assign(NIGHTBREACH, NB_DEFAULTS, o.knobs ?? {});
+  Object.assign(NIGHTBREACH, NB_DEFAULTS, { blindFire: false }, o.knobs ?? {});
   Math.random = seeded(seed);
   const W: any = await standUp(); const game = W.game, NB = game.nightBreach, O = game.orders, input = W.input;
+  (await import(`${ROOT}/src/game/cmdring.ts`)).CMDRING.wholeSquad = false;   // (these lines step who the orders go to with T, the wheel and the cursor, outside plan mode, as the menu was built: the rule that only plan mode picks a part of the squad is held off here and has its own lines, wholesquad-check)
+  (await import(`${ROOT}/src/game/cmdring.ts`)).CMDRING.only = false;   // (the menu's own keys and the middle button, as these lines were written: `probes.ts qonly` has the page's, where the ring carries every order)
   const why = o.nb === false ? null : NB.start();
   const R = { W, game, NB, O, input, why, quiet: o.quiet !== false, samHit: false, said: [] as { who: string; text: string; t: number }[],
     /** run before every frame (Sam's walk) */
@@ -64,7 +82,7 @@ async function rig(seed: number, o: { nb?: boolean; quiet?: boolean; knobs?: Rec
         if (R.quiet) for (const h of NB.hostiles) if (h.state !== 'dead') h.dazzledUntil = game.time + 5;
         R.pre?.();
         W.step(DT);
-        for (const gd of game.guards) { const b = gd.bubble, k = b ? `${b.text}@${b.t}` : ''; if (b && heard.get(gd.callsign) !== k) { heard.set(gd.callsign, k); R.said.push({ who: gd.callsign, text: b.text, t: game.time }); } }   // (a line is known by its words and its time: the copy's bubble object is the same one from line to line)
+        for (const gd of game.guards) { const b = gd.bubble; if (b && !heard.has(b)) { heard.add(b); R.said.push({ who: gd.callsign, text: b.text, t: game.time }); } }
         if (game.player.down || game.player.hitFlash > 0) R.samHit = true;
       }
     },
@@ -87,7 +105,7 @@ async function rig(seed: number, o: { nb?: boolean; quiet?: boolean; knobs?: Rec
     door(name: string): any { return game.doors.list.find((d: any) => d.def.name === name); },
     lines(text: RegExp, since = 0) { return R.said.filter(s => s.t >= since && text.test(s.text)); },
   };
-  const heard = new Map<string, string>();
+  const heard = new WeakSet<any>();
   return R;
 }
 /** every probe leaves the knob tables as it found them, pass, fail or throw */
@@ -115,7 +133,7 @@ export const ordersOff = guarded(async () => {
   const A = await run(false), B = await run(true); const O = B.O;
   const hud = O.hud();
   verdict(!O.active && O.menu === null && O.log.length === 0 && O.who === 'all' && hud.menu === null && hud.status.length === 0, 'inert: no squad, no menu, no order logged, no HUD block after X, T, B, a middle click and X again',
-    `active ${O.active} · menu ${O.menu} · log ${O.log.length} · hud rows ${hud.status.length}`);
+    `active ${O.active} · menu ${O.menu} · log ${O.log.length} · hud rows ${hud.status.length} · ${O.summary()}`);
   const why = O.give('fallIn');
   verdict(why === 'no squad', 'give() refuses with the reason', `give('fallIn') → ${why}`);
   const da = JSON.stringify(digestGame(A.game, true)), db = JSON.stringify(digestGame(B.game, true));
@@ -278,7 +296,7 @@ export const ordersCover = guarded(async () => {
   const offAim = (m: any, p: number[]) => Math.abs(wrap(m.char.aimYaw - yawTo(m.char.pos, p)));
   const cover = (label: string, p: number[], row: number, wantWords: RegExp, ackSince: number) => {
     const here = men.map((m: any) => [...m.char.pos]); const before = men.map((m: any) => offAim(m, p));
-    O.give('cover', O.targetAt(p)); R.step(); const l = lastOrder(O); const watch = men.map((m: any) => O.of(m)?.watch ?? [NaN, NaN, NaN]);
+    R.pick(p, row); const l = lastOrder(O); const watch = men.map((m: any) => O.of(m)?.watch ?? [NaN, NaN, NaN]);
     const on = R.until(() => men.every((m: any) => O.of(m)?.arrived), 4); const tOn = g.time - l.t;
     const off = men.map((m: any) => offAim(m, p)), moved = men.map((m: any, i: number) => dist(m.char.pos, here[i]));
     let worst = 0; for (let i = 0; i < 60 * 8; i++) { R.step(); for (const m of men) worst = Math.max(worst, offAim(m, p)); }
@@ -303,10 +321,13 @@ export const ordersCover = guarded(async () => {
 
 export const ordersStack = guarded(async () => {
   const { verdict, done } = family('orders-stack: stack up puts the men on the door\'s jambs, on Sam\'s side');
+  // (the PLAIN stack: where the men stand and face when every gun is the door's. With rear security on — COVER.stacked, as shipped — the pair's second man
+  //  faces the way they came instead: that contract is cover-order's)
+  const stackedWas = COVER.stacked; COVER.stacked = false; try {
   // three doors, each from the side Sam is put on: [door, where Sam stands, where the pair starts]
   // [door, where Sam is put, the words for that side, both men in file on one jamb?]
-  const cases: [string, number[], string, boolean][] = [['breakroom_w', [24.5, 0, 17.6], 'the cubicles\' side', false],
-    ['breakroom_n', [30.75, 0, 14.4], 'inside the break room (the counter runs off the hinge side: no floor at that jamb)', true]];
+  const cases: [string, number[], string, boolean][] = [['breakroom_w', [24.5, 0, 17.6], 'the cubicles\' side', false], ['breakroom_w', [29.6, 0, 17.6], 'inside the break room', false],
+    ['breakroom_n', [30.6, 0, 10.9], 'the corridor side', false], ['breakroom_n', [30.75, 0, 14.4], 'inside the break room (the counter runs off the hinge side: no floor at that jamb)', true]];
   let k = 0;
   for (const [name, samAt, sideWords, file] of cases) {
     const R = await rig(11 + k++); const { game: g, O } = R; const [b1, b2] = O.squad(); const men = [b1, b2];
@@ -321,10 +342,16 @@ export const ordersStack = guarded(async () => {
     const a = men.map((m: any) => along(m.char.pos)), o = men.map((m: any) => off(m.char.pos) * samSide);
     const clear = a.every(x => x < -0.15 || x > w + 0.15), jamb = a.map(x => x < 0 ? -x : x - w);   // how far past the nearer jamb
     const split = (a[0] < 0) !== (a[1] < 0);
+    // facing: along the wall, toward the opening
+    const want = a.map(x => Math.atan2(u[0] * (x < 0 ? 1 : -1), u[1] * (x < 0 ? 1 : -1))), dFace = men.map((m: any, i: number) => Math.abs(wrap(m.char.bodyYaw - want[i])));
+    const onDoor = men.map((m: any) => Math.abs(wrap(m.char.aimYaw - yawTo(m.char.pos, d.frameCentre))));
     const dPost = men.map((m: any) => O.of(m) ? dist(m.char.pos, O.of(m).post) : NaN);
     verdict(l?.order === 'stack' && l.target === `door:${name}` && set && dPost.every(x => x < 0.35), `${name} #${k}: the quick key on the door from ${sideWords} — both men reach their marks`, `${logLine(l)} · in ${f2(tSet)} s · off his mark ${dPost.map(f2).join(' / ')} m · ${men.map((m: any) => at(m.char.pos)).join(' ')}`);
     verdict(clear && split === !file && o.every(x => x > 0.25 && x < 0.9) && jamb.every(x => x < (split ? 0.8 : 1.7)) && dist(b1.char.pos, b2.char.pos) > 0.6, `${name}: ${file ? 'in file on the one free jamb' : 'a man on each jamb'} — out of the opening, against the wall, on Sam's side of it`,
       `${split ? 'one each side of the door' : 'both in file on one side'} · past the jamb ${jamb.map(f2).join(' / ')} m · off the wall (Sam's side +) ${o.map(f2).join(' / ')} m · opening 0‥${f2(w)}, the men at ${a.map(f2).join(' / ')}`);
+    // (holdfire.ts, on as shipped: a man whose gun the rule holds on a man who has not noticed the team — and who has not fired — is not turned to the door; false for every man with the rule off, where each muzzle must be on it)
+    const {  } = await import(`${ROOT}/src/game/holdfire.ts`), onMan = men.map((m: any) => { const t = g.fight.opOf(m)?.tgt; return t ? Math.abs(wrap(m.char.aimYaw - yawTo(m.char.pos, t.char.pos))) : NaN; }), heldMan = men.map((m: any, i: number) => holdFireHoldsTarget(g, m) && (g.fight.opOf(m)?.rounds ?? 0) === 0 && onMan[i] < 0.2), nHeld = heldMan.filter(Boolean).length;
+    verdict(men.every((_: any, i: number) => heldMan[i] || (dFace[i] < 0.3 && onDoor[i] < 0.6)), `${name}: bladed along the wall toward the door, muzzles on it`, `${men.length - nHeld} on the door${nHeld ? ` · ${nHeld} held on a man (hold fire, no round fired, gun ${onMan.filter((_: number, i: number) => heldMan[i]).map(f2).join(' / ')} rad off him)` : ''} · off the wall line ${dFace.map(f2).join(' / ')} rad · gun off the doorway ${onDoor.map(f2).join(' / ')} rad · stance ${men.map((m: any) => m.script?.stance).join(' / ')}`);
     // ('the door untouched': with every leaf on its closer (the harness's older stand) the door they stack on is shut, and stays shut. Where doors stay as they
     //  are left (DOORSTAY.on, as the page has it) a pair that came THROUGH it to reach Sam's side has left it open behind them: there the leaf is where their
     //  walk left it, and what the hold must not do is move it.)
@@ -333,8 +360,15 @@ export const ordersStack = guarded(async () => {
     const sets = R.lines(/^set\.$/, t0); const words = men.map((m: any) => O.statusOf(m));
     verdict(drift.every(x => x < 0.1) && sets.length === 1 && words.every((s: string) => s === `stacked · ${doorWords(d)}`) && Math.abs(d.angle - leaf0) < 0.05, `${name}: they hold the stack (six seconds, the door untouched), "set." called once, the HUD says "stacked"`,
       `drift ${drift.map(f2).join(' / ')} m · set. ${sets.map(s => `${s.who} @${f2(s.t - t0)} s`).join(', ') || 'never'} · "${words[0]}" · leaf angle ${f2(d.angle)}${leaf0 ? ` (${f2(leaf0)} as the hold began)` : ''}`);
+    if (k === 1) {   // the cursor on a stacked man is the man (he stands inside the door's pick radius), on the doorway still the door
+      const chest: number[] = [b1.char.pos[0], 1.2, b1.char.pos[2]];
+      R.openX(chest, 0.4); const tM = O.menu?.target; R.esc();
+      R.openX(d.frameCentre, 0.4); const tD = O.menu?.target; R.esc();
+      verdict(tM?.kind === 'none' && tM.man === b1 && tD?.kind === 'door' && tD.door === d, `${name}: the cursor on a man stacked beside the door addresses the man; on the doorway, the door`, `on Blue One (${f2(dist(b1.char.pos, d.frameCentre))} m from the doorway's centre): ${tM?.kind} ${tM?.man?.callsign ?? ''} · on the doorway: ${tD?.kind} ${tD?.door?.def.name ?? ''}`);
+    }
     if (!R.samHit) continue; verdict(false, `${name}: Sam was hit`, '');
   }
+  } finally { COVER.stacked = stackedWas; }
   return done();
 });
 
@@ -362,15 +396,19 @@ export const ordersFallIn = guarded(async () => {
   for (const p of legs) { const leg = g.col.nav.findPath(path[path.length - 1], p); if (!leg) { noPath = `no nav path to ${at(p)}`; break; } for (const q of leg) path.push([q[0], 0, q[2]]); path.push(p); }
   let seg = 0, t = 0; const SPEED = 1.55; let walked = 0;
   const worst = [0, 0], sum = [0, 0]; let frames = 0, far4 = 0; const nAngle: number[] = []; let nOpenedAt = NaN, firstManNorthAt = NaN;
-  // Where doors open one way (as the page has it) Sam walks the path on his own feet: the walk keys turned onto the next point of the path each frame, his reticle 4 m ahead of him.
+  // WHERE DOORS OPEN ONE WAY (DOORWAY.oneWay, as the page has it) Sam walks the same path ON HIS OWN FEET: W held, the walk's forward turned onto the next
+  // point of the path each frame (the walk keys' basis, written on the game's own seat camera for the walk and taken off after it: the heading is
+  // the harness's, the step is his), his reticle 4 m ahead of him, at his own walking pace. Nothing places him and nothing works a door for him: a shut leaf in his way is opened by his body walking into it, pushed
+  // or pulled, as a player's is. The harness carrying him through a shut leaf is a thing no player can do, and there it left the men to open both doors and
+  // take their turns at them behind a Sam who had not slowed: the distance line then measured the harness. With the switch off the walk below is the
+  // placed one, untouched.
   const feet = !!DOORWAY.oneWay; let lastAt = [...sam.pos];
   R.pre = feet ? () => {
     walked += dist(sam.pos, lastAt); lastAt = [...sam.pos];
-    while (seg < path.length - 1 && dist(sam.pos, path[seg + 1]) < 0.3) seg++;
-    if (seg >= path.length - 1) { for (const k of ['KeyW', 'KeyS', 'KeyA', 'KeyD']) R.input.keys.delete(k); return; }
-    const b = path[seg + 1], dx = b[0] - sam.pos[0], dz = b[2] - sam.pos[2], l = Math.hypot(dx, dz) || 1; const { fwd, right } = R.W.cam.planarBasis(), f = (dx * fwd[0] + dz * fwd[2]) / l, r = (dx * right[0] + dz * right[2]) / l;
-    for (const [k, v] of [['KeyW', f], ['KeyS', -f], ['KeyD', r], ['KeyA', -r]] as [string, number][]) { if (v > 0.38) R.input.keys.add(k); else R.input.keys.delete(k); }
-    R.aim([sam.pos[0] + dx / l * 4, 0, sam.pos[2] + dz / l * 4]);
+    while (seg < path.length - 1 && dist(sam.pos, path[seg + 1]) < 0.15) seg++;
+    if (seg >= path.length - 1) { R.input.keys.delete('KeyW'); return; }
+    const b = path[seg + 1], dx = b[0] - sam.pos[0], dz = b[2] - sam.pos[2], l = Math.hypot(dx, dz) || 1; const fwd = [dx / l, 0, dz / l], right = [-fwd[2], 0, fwd[0]];
+    g.seat.cam.planarBasis = () => ({ fwd, right }); R.input.keys.add('KeyW'); R.aim([sam.pos[0] + fwd[0] * 4, 0, sam.pos[2] + fwd[2] * 4]);
   } : () => {
     if (seg >= path.length - 1) return;
     let stepLeft = SPEED * DT;
@@ -387,7 +425,7 @@ export const ordersFallIn = guarded(async () => {
     frames++;
   }
   R.pre = null; const walkSecs = g.time - tWalk;
-  if (feet) { for (const k of ['KeyW', 'KeyS', 'KeyA', 'KeyD']) R.input.keys.delete(k); walked += dist(sam.pos, lastAt); }
+  if (feet) { R.input.keys.delete('KeyW'); delete g.seat.cam.planarBasis; walked += dist(sam.pos, lastAt); }
   R.until(() => men.every((m: any) => O.of(m)?.arrived), 8); R.step(60 * 2);
   const end = men.map((m: any) => dist(m.char.pos, sam.pos));
   const room = (p: number[]) => p[2] < 12.2 ? 'corridor' : p[0] > 28 ? 'break room' : 'cubicles';
@@ -451,14 +489,14 @@ export const ordersNightBreach = guarded(async () => {
   { // ---- set → an order calls it off → F again → going: refused → clear → fall in
     const R = await rig(11, { quiet: false }); const { game: g, O, NB } = R; const [b1, b2] = O.squad(); const men = [b1, b2]; const sam = g.player.char;
     const beat = (w: string) => { const b = NB.drill?.beats.find((x: any) => x.what === w); return b ? b.t : NaN; };
-    R.step(5);
+    R.step(60);
     R.key('KeyF'); const set = R.until(() => NB.state === 'set', 30); const stS = men.map((m: any) => O.statusOf(m));
     verdict(set && stS.every((s: string) => /^set · press F/.test(s)), 'F stacks the pair as before, and the HUD\'s squad block says so', `night breach ${NB.state} · "${stS.join('" / "')}"`);
     const dS = R.door('server_manager'); const tS = { kind: 'door', at: [dS.frameCentre[0], 0, dS.frameCentre[2]], door: dS, side: 1 };   // (the keypad door, from the far side of the floor: nobody can get to that face — and with ORDERS.workOut off, no floor at either jamb on it)
     const greyS = O.whyNot(O.defs.find((d: any) => d.id === 'stack'), tS); const whyS = O.give('stack', tS); R.step(30);
     verdict(!!greyS && !!whyS && NB.state === 'set' && O.log.length === 0, 'an order that cannot be carried out (a stack with no room at the door) is greyed on the menu with the reason, and trying it does not call the breach off', `the stack row on that door: "${greyS}" · give('stack') → ${whyS} · night breach ${NB.state}`);
     R.quick(AISLE); const l = lastOrder(O); const stateOff = NB.state;
-    R.until(() => men.every((m: any) => O.of(m)?.arrived), 14); R.step(60);
+    R.until(() => men.every((m: any) => O.of(m)?.arrived), 14); R.step(60 * 4);
     verdict(l?.order === 'move' && stateOff === 'staged' && NB.log.some((x: any) => x.what === 'order:off') && isNaN(beat('kick')) && men.every((m: any) => dist(m.char.pos, AISLE) < 2.55) && Math.abs(R.door('breakroom_w').angle) < 0.05,
       'an order while they are set calls the breach off: the pair leaves the door for the spot, nothing is kicked', `${logLine(l)} · night breach ${stateOff} · kick ${f2(beat('kick'))} · ${men.map((m: any) => f2(dist(m.char.pos, AISLE))).join(' / ')} m off the point · ${NB.summary()}`);
     R.key('KeyF'); R.step(5); const owned = men.map((m: any) => O.of(m));
@@ -466,19 +504,40 @@ export const ordersNightBreach = guarded(async () => {
     verdict(set2 && owned.every((a: any) => a === null), 'F again: the drill takes the pair back (their orders dropped) and stacks them', `night breach ${NB.state} · orders left ${owned.filter(Boolean).length}`);
     R.key('KeyF'); R.step(20); const going = NB.state; const n = O.log.length;
     R.quick(sam.pos); const refusedLog = O.log.length === n; const stillOwned = men.every((m: any) => O.of(m) === null);
-    const ended = R.until(() => NB.drill.phase === 'done', 45);
+    const ended = R.until(() => NB.drill.phase === 'done', 45); R.step(60);
     verdict(going === 'going' && refusedLog && stillOwned && ended && NB.state === 'clear' && !isNaN(beat('kick')) && !isNaN(beat('bang')), 'once the breach is going an order is refused, and the breach runs on to "clear"', `at the order: ${going}, logged ${!refusedLog}, taken ${!stillOwned} · ended ${NB.state} · kick @${f2(beat('kick'))} bang @${f2(beat('bang'))} clear @${f2(beat('clear'))} · ${NB.summary()}`);
+    const alive = men.filter((m: any) => m.state !== 'dead');
+    R.quick(sam.pos); const l2 = lastOrder(O);
+    const back = R.until(() => alive.every((m: any) => O.of(m)?.arrived), 25); R.step(60);
+    verdict(alive.length === 2 && l2?.order === 'fallIn' && back && alive.every((m: any) => dist(m.char.pos, sam.pos) < 3.2), 'the room taken: "fall in" brings both men out of it to Sam', `${logLine(l2)} · ${alive.map((m: any) => `${m.callsign} ${f2(dist(m.char.pos, sam.pos))} m`).join(' · ')} · night breach ${NB.state}`);
     verdict(!R.samHit, 'Sam was not hit', `hit ${R.samHit}`);
   }
   { // ---- a recall once they are inside
     const R = await rig(11, { quiet: false }); const { game: g, O, NB } = R; const [b1, b2] = O.squad(); const men = [b1, b2]; const sam = g.player.char;
-    R.step(5); R.key('KeyF'); R.until(() => NB.state === 'set', 30); R.key('KeyF');
+    R.step(60); R.key('KeyF'); R.until(() => NB.state === 'set', 30); R.key('KeyF');
     const inside = R.until(() => NB.state === 'inside', 30);
     R.quick(sam.pos); const l = lastOrder(O); const st = NB.state; let threw = '';
     try { R.step(60 * 12); } catch (e: any) { threw = String(e?.message ?? e); }
     const alive = men.filter((m: any) => m.state !== 'dead');
     verdict(inside && l?.order === 'fallIn' && st === 'recalled' && NB.drill.phase === 'done' && !threw && alive.every((m: any) => !!O.of(m)), 'an order once they are inside recalls them: the drill ends ("recalled"), the men are on Sam\'s order, the floor runs on',
       `${logLine(l)} · night breach ${st} · ${threw || 'no throw in 12 s'} · ${men.map((m: any) => `${m.callsign} ${m.state === 'dead' ? 'down' : `"${O.statusOf(m)}" ${f2(dist(m.char.pos, sam.pos))} m`}`).join(' · ')}`);
+  }
+  { // ---- a recall of ONE man: the drill is over for both — the other is not left a statue on its script
+    const R = await rig(11, { quiet: false }); const { O, NB } = R; const [b1, b2] = O.squad(); const sam = R.game.player.char;
+    R.step(60); R.key('KeyF'); R.until(() => NB.state === 'set', 30); R.key('KeyF'); R.until(() => NB.state === 'inside', 30);
+    R.key(ORDERS.whoKey); R.quick(sam.pos); const l = lastOrder(O); R.step(30);
+    verdict(l?.order === 'fallIn' && l.who.join() === 'Blue One' && NB.state === 'recalled' && !!O.of(b1) && O.of(b2) === null && (b2.state === 'dead' || (!b2.script && b2.hold && b2.pinned)),
+      'one man recalled from inside: the drill ends for both, and the man with no order is handed to the fight AI where he stands (no script)', `${logLine(l)} · night breach ${NB.state} · Blue Two: ${b2.state}, script ${!!b2.script}, hold ${b2.hold}, pinned ${b2.pinned}, "${O.statusOf(b2)}"`);
+  }
+  { // ---- the drill 'failed' with a man up: he still takes orders
+    const R = await rig(11); const { game: g, O, NB } = R; const [b1, b2] = O.squad(); const sam = g.player.char;
+    R.step(60); R.key('KeyF'); R.until(() => NB.state === 'set', 30);
+    killGuard(g, b1, [1, 0, 0], true, 'shot', 'player'); R.key('KeyF'); R.step(60 * 3);
+    const st = NB.state, was = { script: !!b2.script, hold: b2.hold, pinned: b2.pinned, state: b2.state };
+    R.quick(sam.pos); const l = lastOrder(O);
+    const back = R.until(() => !!O.of(b2)?.arrived, 20); R.step(60 * 3);
+    verdict(l?.order === 'fallIn' && l.who.join() === 'Blue Two' && back && dist(b2.char.pos, sam.pos) < 3.2 && !!b2.script && !!O.of(b2), 'the point man dead on the stack (the drill over): the survivor falls in on the order and stays on it',
+      `night breach ${st} · before: script ${was.script} hold ${was.hold} pinned ${was.pinned} ${was.state} · ${logLine(l)} · Blue Two ${f2(dist(b2.char.pos, sam.pos))} m from Sam, "${O.statusOf(b2)}"`);
   }
   return done();
 });
@@ -497,6 +556,15 @@ export const ordersSeams = guarded(async () => {
     `two seconds: scripted ${scripted}/${n} frames, pinned ${pinned}/${n} · "${[...words].join('", "')}" · ${f2(dHot)} m off his post · ${stateHot}`);
   verdict(retaken && tCold >= ORDERS.coldSecs - 0.05 && tCold < ORDERS.coldSecs + 0.2 && O.of(b1)?.order === 'move' && dist(b1.char.pos, post) < 0.35 && O.statusOf(b1).startsWith('in position') && O.of(b2)?.arrived === true,
     'his contact cold: he is back on his order, on his post', `re-taken ${f2(tCold)} s after the last sighting (coldSecs ${ORDERS.coldSecs}) · ${f2(dist(b1.char.pos, post))} m off his post · "${O.statusOf(b1)}" · state ${b1.state}`);
+  // an owner that refuses keeps its men; one that lets go loses them (direct give(): this is the module's API, not the keys)
+  let asked = 0; const owner = { name: 'test', owns: (gd: any) => gd === b2, release: (_: any) => { asked++; return 'busy — test owner'; }, status: () => 'owned by the test' };
+  O.owners.push(owner); R.step(2);
+  const dropped = O.of(b2) === null, st2 = O.statusOf(b2); const p2 = [...b2.char.pos];
+  const why = O.give('move', O.targetAt(AISLE_FAR), 1); R.step(60);
+  const whyAll = O.give('move', O.targetAt(AISLE_FAR), 'all'); R.step(60 * 3);
+  O.owners.splice(O.owners.indexOf(owner), 1);
+  verdict(dropped && st2 === 'owned by the test' && why === 'busy — test owner' && whyAll === null && asked === 2 && dist(b2.char.pos, p2) < 0.05 && O.of(b1)?.order === 'move' && dist(b1.char.pos, post) > 1,
+    'another owner of a man (a drill): his order is dropped while it has him, its words are his HUD line, an order asks it to let go and a refusal stands — for him only', `dropped ${dropped} · "${st2}" · to him: ${why} · to all: ${whyAll ?? 'given'} (asked ${asked}×) · Blue Two moved ${f2(dist(b2.char.pos, p2))} m · Blue One "${O.statusOf(b1)}"`);
   // a show takes the floor
   O.give('hold', O.targetAt(g.player.char.pos), 'all'); R.step(5); const had = men.filter((m: any) => O.of(m)).length;
   g.touring = true; R.input.pressed.add(ORDERS.key); R.step(3); const left = men.filter((m: any) => O.of(m)).length; const hud = O.hud(); g.touring = false;
@@ -521,6 +589,29 @@ export const ordersEdges = guarded(async () => {
     verdict(/can't get there/.test(grey ?? '') && !!why && O.log.length === 0 && R.lines(/can't get there/, t0).length === 1 && men.every((m: any, i: number) => had[i] ? O.of(m) === had[i] && had[i].order === 'fallIn' : !O.has(m)), 'move there onto floor no path reaches: the row is greyed, the order is refused, a man says why, nobody sets off',
       `free floor with no way to it at ${at(island)} · row: "${grey}" · give → ${why} · said: ${R.lines(/./, t0).map(l => `${l.who} "${l.text}"`).join(' ')}`);
   } else verdict(false, 'a free floor cell with no path to it exists in the office', 'none found');
+  // (b) a door locked against Sam: the squad carries no keys of its own
+  const locked = g.doors.list.filter((d: any) => d.locked && d.latched);
+  let lockLine = 'no locked door whose room has no other way in'; let lockOk = false;
+  // (ORDERS.walkTries, on in the page: a door nobody has tried is walked up to, not refused — probes.ts move-walktries has that. This line is the refusal
+  //  itself, the lock read against Sam's ring: asked with the key held off, as the door would answer once a hand had been on it)
+  const walkTries = ORDERS.walkTries; ORDERS.walkTries = false;
+  try { for (const d of locked) {
+    const th = d.def.closedDir, n = [-Math.sin(th) * -d.keySide, 0, Math.cos(th) * -d.keySide];   // into the room: away from the keyed face
+    const inside = O.freeSpot([d.frameCentre[0] + n[0] * 1.6, 0, d.frameCentre[2] + n[2] * 1.6]); if (!inside) continue;
+    const tL = { kind: 'floor', at: inside }; const grey = O.whyNot(def('move'), tL); if (!/locked/.test(grey ?? '')) continue;
+    g.player.keys.add(d.lockId); const withKey = O.whyNot(def('move'), tL); g.player.keys.delete(d.lockId);
+    lockOk = withKey === null; lockLine = `${d.def.name}: a spot behind it at ${at(inside)} → "${grey}" · with its key on Sam's ring → ${withKey === null ? 'offered' : `"${withKey}"`}`; break;
+  } } finally { ORDERS.walkTries = walkTries; }
+  verdict(lockOk, 'move there through a door locked against Sam is refused with the door named; with the key on his ring it is offered', lockLine);
+  // (c) the fixed digits, and a greyed row on the panel
+  R.openX(sam.pos, 0.4); const keysN = (O.hud().menu?.rows ?? []).slice(1, 3).map((r: any) => `${r.opts[0]?.key} ${r.opts[0]?.text}`); R.esc();
+  R.openX(AISLE, 0.4); const keysF = (O.hud().menu?.rows ?? []).slice(1, 5).map((r: any) => `${r.opts[0]?.key} ${r.opts[0]?.text}`);
+  // (d) the page losing focus takes the list down with no order; Space under the open list gives the highlighted row and is not the Space selector's press
+  const nLog = O.log.length;
+  input.pressed.add('Blur'); R.step(); const blurGone = O.menu === null && O.log.length === nLog; R.step(10);
+  R.openX(AISLE, 0.3); input.wheel += 100; R.step(); const selRow = O.menu?.sel; input.pressed.add('Space'); R.step(); const selDown = g.player.sel.downT; const spaceGave = lastOrder(O); const spaceN = O.log.length - nLog;
+  verdict(keysN.join(' | ') === '3 fall in | 4 hold position' && keysF.join(' | ') === '1 move there | 2 cover that way | 3 fall in | 4 hold position', 'the digits are the same on every target: fall in is 3 and hold is 4 with or without a target\'s own orders above them', `on Sam: ${keysN.join(' | ')} · on the floor: ${keysF.join(' | ')}`);
+  verdict(blurGone && selRow === 1 && selDown < 0 && O.menu === null && spaceN === 1 && spaceGave?.order === 'cover', 'the page losing focus takes the list down with no order; Space under the open list gives the highlighted row (wheel to row 2: cover) and does not arm the Space selector', `after the blur: menu gone, no order ${blurGone} · highlight ${selRow} · Space → ${logLine(spaceGave)} (${spaceN} order) · selector down-time ${selDown}`);
   // (e) Sam in the line of a man's gun: the muzzle comes down until he is clear
   const p1 = b1.char.pos; const through: number[] = [p1[0] + (sam.pos[0] - p1[0]) * 3, 0, p1[2] + (sam.pos[2] - p1[2]) * 3];
   O.give('cover', { kind: 'floor', at: through }, 0); R.step(60); const upIn = b1.script?.upper, stIn = b1.script?.stance, lowIn = O.of(b1)?.low;
@@ -561,10 +652,31 @@ export const ordersEdges = guarded(async () => {
   // (g4) a mark no path reaches, handed over directly (the menu would have refused it): he stops trying, says so, and the mark comes to him
   if (island) { const t0 = g.time; O.newGroup(); O.assign(b1, { order: 'move', post: [...island], face: 0, going: 'moving', there: 'in position' }); const got = R.until(() => !!O.of(b1)?.arrived, 20);
     verdict(got && O.statusOf(b1) === 'stopped short' && R.lines(/can't get through/, t0).length === 1 && g.time - t0 < ((await import(`${ROOT}/src/game/teampace.ts`)).TEAMPACE.on ? 16 : 12), 'a man sent at a mark he cannot reach gives up within seconds, says so once, and stands where he got to', `"${O.statusOf(b1)}" after ${f2(g.time - t0)} s · said: ${R.lines(/can't/, t0).map(l => `${l.who} "${l.text}"`).join(' ')} · ${f2(dist(b1.char.pos, island))} m from the mark`); }
+  // (g5) the short way is through a locked door but another way round is open: the order is offered and the men go round
+  { const Rr = await rig(11); const { game: gr, O: Or } = Rr; const mm = Or.squad(); Rr.step(30);
+    let line = 'no locked door with an open way round was found'; let ok = false;
+    for (const d of gr.doors.list.filter((x: any) => x.locked && x.latched)) {
+      const th = d.def.closedDir, n = [-Math.sin(th) * -d.keySide, 0, Math.cos(th) * -d.keySide]; const inside = Or.freeSpot([d.frameCentre[0] + n[0] * 1.6, 0, d.frameCentre[2] + n[2] * 1.6]); if (!inside) continue;
+      const others = gr.doors.list.filter((x: any) => x !== d && x.locked); const was = others.map((x: any) => x.locked); others.forEach((x: any) => { x.locked = false; });   // every other lock picked
+      const r = Or.route(mm[0], inside);
+      if (r.why || !r.via.length) { others.forEach((x: any, i: number) => { x.locked = was[i]; }); continue; }
+      const why = Or.give('move', { kind: 'floor', at: inside }, 0); let swung = 0; const t0 = gr.time;
+      const got = Rr.until(() => { swung = Math.max(swung, Math.abs(d.angle)); return !!Or.of(mm[0])?.arrived; }, 40);
+      ok = why === null && got && swung < 0.05 && dist(mm[0].char.pos, inside) < 0.6; line = `${d.def.name} locked, the other locks picked: a spot behind it at ${at(inside)} → offered, ${r.via.length} waypoints round · ${mm[0].callsign} there in ${f2(gr.time - t0)} s, ${f2(dist(mm[0].char.pos, inside))} m off it · the locked leaf swung ${f2(swung)} rad`; break;
+    }
+    verdict(ok, 'a spot whose short way in is a locked door but which has another way round: move there is offered, the man goes round, and the locked leaf never opens', line); }
   // (h) the fight seam's clock: handed over with no sighting on record he is still left alone for the cold time, and gunfire in his ear keeps him in it
   O.give('hold', { kind: 'none', at: [...b2.char.pos], man: b2 }); R.step(30);
+  const lease = { yielded: 0, retaken: 0 }; O.fight = { yielded: () => { lease.yielded++; }, retaken: () => { lease.retaken++; } };
   b2.lastSeenT = -1000; endGuardScript(b2, 'alert'); const tY = g.time; R.until(() => !!b2.script, 6); const leftFor = g.time - tY;
   endGuardScript(b2, 'alert'); const tS = g.time; R.pre = () => { if (g.time - tS < 4) b2.witness.heard.lastShotT = g.time; }; R.until(() => !!b2.script, 12); R.pre = null; const withShots = g.time - tS;
-  verdict(leftFor > ORDERS.coldSecs - 0.2 && leftFor < ORDERS.coldSecs + 0.5 && withShots > 4 + ORDERS.coldSecs - 0.3 && O.of(b2)?.order === 'hold', 'a man handed to the fight AI with no sighting on record is left to it for the cold time, and for as long as shots keep reaching his ear', `no sighting: taken back after ${f2(leftFor)} s (cold time ${ORDERS.coldSecs}) · shots heard for 4 s: after ${f2(withShots)} s`);
+  O.fight = null;
+  verdict(leftFor > ORDERS.coldSecs - 0.2 && leftFor < ORDERS.coldSecs + 0.5 && withShots > 4 + ORDERS.coldSecs - 0.3 && O.of(b2)?.order === 'hold' && lease.yielded === 2 && lease.retaken === 2, 'a man handed to the fight AI with no sighting on record is left to it for the cold time, and for as long as shots keep reaching his ear; the lease is told of each hand-over and each return, in pairs', `no sighting: taken back after ${f2(leftFor)} s (cold time ${ORDERS.coldSecs}) · shots heard for 4 s: after ${f2(withShots)} s · lease yielded ${lease.yielded}, retaken ${lease.retaken}`);
+  // (i) one man ordered off a breach stack that is still forming: the other does not walk on to the door alone
+  const R2 = await rig(11); const { game: g2, O: O2, NB: NB2 } = R2; const [c1, c2] = O2.squad();
+  R2.step(60); R2.key('KeyF'); R2.step(60); const st = NB2.state;
+  const chest: number[] = [c1.char.pos[0], 1.2, c1.char.pos[2]]; R2.quick(chest); const l2 = lastOrder(O2); const c2At = [...c2.char.pos]; R2.step(60 * 4);
+  const c2Moved = dist(c2.char.pos, c2At);
+  verdict(st === 'stacking' && l2?.order === 'fallIn' && l2.who.length === 1 && NB2.state === 'staged' && c2Moved < 0.6 && c2.speed < 0.1, 'the pair is on its way to the breach stack and one man is ordered to fall in: the breach is off and the other man stops where he is', `night breach ${st} → ${NB2.state} · ${logLine(l2)} · ${c2.callsign} moved ${f2(c2Moved)} m in the next 4 s, "${O2.statusOf(c2)}"`);
   return done();
 });

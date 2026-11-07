@@ -14,15 +14,7 @@ const { v3, wrapAngle, DEG } = await import(`${ROOT}/src/math/vec.ts`);
 const { fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);
 const { startGrab } = await import(`${ROOT}/src/game/player.ts`);
 const guardsMod = await import(`${ROOT}/src/game/guards.ts`);
-const { flankShot, standoffSummary, escalationOf, colleagueInLine, STANDOFF_DEBUG } = guardsMod;
-const STANDOFF_AIM_Y = 1.42;
-/** the pair as the copy of the game shows it: whom Sam has up in his arm, read off the player and the held man, null with no living man in it */
-export function pairOf(g: any) {
-  const H = g.player.holding; if (!H || g.player.down) return null;
-  const held = H.g; if (held.state === 'dead' || !held.char.alive || held.held?.by !== 'player') return null;
-  const pc = g.player.char, hc = held.char, sh = pc.bones.hips ?? pc.pos, hh = hc.bones.hips ?? hc.pos;
-  const sam: Vec3 = [sh[0], 0, sh[2]], heldAxis: Vec3 = [hh[0], 0, hh[2]];
-  return { key: H, held, sam, heldAxis, centre: v3.lerp(sam, heldAxis, 0.5) as Vec3, facing: pc.bodyYaw as number, aim: [sam[0], pc.pos[1] + STANDOFF_AIM_Y, sam[2]] as Vec3, vel: v3.copy(pc.vel) as Vec3 }; }
+const { pairOf, flankShot, standoffSummary, escalationOf, colleagueInLine, STANDOFF_DEBUG } = guardsMod;
 const VERBOSE = process.argv.includes('--verbose');
 /** Freeze the pair's facing: the camera swung round BEHIND Sam on `deg` (so the cursor's ray comes down over his own shoulders, through nobody else) and the puppet's
  *  aim put at his own feet — updateHold turns the pair toward the cursor only when it lies more than 0.6 m off him, so it does not turn at all. Call once; the
@@ -166,14 +158,15 @@ export async function standoffSee() {
   return allPass;
 }
 
-// ================================================================ (2) the flank: Sam's facing frozen in the break room; one man works round the ring to Sam's back: he plants on the line
-// with the pistol UP on Sam and never fires it; two men take opposite ways round
+// ================================================================ (2) the flank: Sam's facing frozen in the break room; one man works round the ring to Sam's back — with muzzle discipline (the default) he plants on the line
+// with the pistol UP on Sam and never fires it; with it off (Game.tune.muzzleDiscipline = false, the rule before) he fires single rounds only down the flank line; two men take opposite ways round either way
 export async function standoffFlank() {
-  console.log('\n=== standoff-flank: the pair planted in the break room facing WNW, Sam not turning — the observer(s) circle to his back inside ~8 s; the line held, gun up on Sam, NOT ONE round; two men split ===');
+  console.log('\n=== standoff-flank: the pair planted in the break room facing WNW, Sam not turning — the observer(s) circle to his back inside ~8 s; discipline ON: the line held, gun up on Sam, NOT ONE round; discipline OFF: single rounds only when flankShot holds, every one ≥ 0.45 m off Novak\'s axis, ≥ 1.2 s apart; two men split ===');
   let allPass = true;
   const FACE = 190;   // the pair faces bearing 190° (toward the corridor wall, a shade west): the ring is open from their front all the way round the west side to dead astern; the counter and the east wall shut the other way at once
-  for (const two of [false, true]) {
-    const S = await stageHold((two ? 322 : 321) + 2, 1, [33.0, 0, 17.8], FACE * DEG); const { W, game, victim, lines, faceDeg } = S;   // (frozen on FACE from the grab on: Sam stands and keeps facing there whatever they do)
+  for (const discipline of [true, false]) for (const two of [false, true]) {
+    const S = await stageHold((two ? 322 : 321) + (discipline ? 2 : 0), 1, [33.0, 0, 17.8], FACE * DEG); const { W, game, victim, lines, faceDeg } = S;   // (frozen on FACE from the grab on: Sam stands and keeps facing there whatever they do)
+    game.tune.muzzleDiscipline = discipline;
     const A = game.guards[0], C = game.guards[2];
     const P0 = pairOf(game)!; const centre = v3.copy(P0.centre);
     bringIn(game, A, bearingPoint(centre, faceDeg + 15, 4.6), centre);          // Kowalski just left of square in front of them (as they look), 4.6 m off
@@ -198,7 +191,7 @@ export async function standoffFlank() {
           if (T.enterT >= 0) { T.frames++; T.minDist = Math.min(T.minDist, dist); }
           for (const e of shotsNow) if (v3.distXZ(e.pos, m.char.pos) < 0.05) T.shots.push({ t, clear: roundClearance(game, m), rear: rearDeg(game, m), ok: fs.ok, dist });
         }
-        if (f % 60 === 0) log.push(`${f2(t - t0)}s ${standoffSummary(game) || men.map(m => `${m.callsign} ${m.state} ${f1(v3.distXZ(m.char.pos, P.centre))} m`).join(' | ')}${' · ' + men.map(m => `${m.callsign} ${m.char.anim.upper}/${m.char.anim.stance}${m.muzzleDown ? '(down)' : ''} fireCd ${f2(m.fireCd)}`).join(' ')}`);
+        if (f % 60 === 0) log.push(`${f2(t - t0)}s ${standoffSummary(game) || men.map(m => `${m.callsign} ${m.state} ${f1(v3.distXZ(m.char.pos, P.centre))} m`).join(' | ')}${discipline ? ' · ' + men.map(m => `${m.callsign} ${m.char.anim.upper}/${m.char.anim.stance}${m.muzzleDown ? '(down)' : ''} fireCd ${f2(m.fireCd)}`).join(' ') : ''}`);
       }
     } catch (e: any) { exc = String(e?.stack ?? e); }
     game.puppet = null; STANDOFF_DEBUG.log = null;
@@ -213,25 +206,32 @@ export async function standoffFlank() {
       if (T.lostStandoff) fails.push(`${name}'s standoff dropped on ${T.lostStandoff} frame(s) with them in view`);
       if (T.minDist < 3.1) fails.push(`${name} came within ${f2(T.minDist)} m of the pair`);
       if (T.firstLineT >= 0) anyLine = true;
-      // the shield up the whole 16 s: not one round, whatever the line — and the line his, the pistol is UP on Sam (the point of it), not lowered and not put away
-      if (T.shots.length) fails.push(`${name} FIRED ${T.shots.length} round(s) with Novak alive in the arm and muzzle discipline on: ${T.shots.map(s => `${f2(s.t - t0)}s ${Math.round(s.rear)}° clear ${f2(s.clear)}${s.ok ? ' (flank line)' : ''}`).join(', ')}`);
-      if (T.lineFrames >= 30 && T.aimOnLine < 0.9 * T.lineFrames) fails.push(`${name} held the flank line ${f1(T.lineFrames * DT)} s but had the pistol up on Sam for only ${f1(T.aimOnLine * DT)} s of it (want ≥ 90 %: point, don't fire)`);
-      if (m.fireCd < 0.35 - 1e-6) fails.push(`${name}'s fireCd ${f2(m.fireCd)} at the end (want ≥ 0.35 kept in hand for when the shield goes)`);
+      if (discipline) {   // the shield up the whole 16 s: not one round, whatever the line — and the line his, the pistol is UP on Sam (the point of it), not lowered and not put away
+        if (T.shots.length) fails.push(`${name} FIRED ${T.shots.length} round(s) with Novak alive in the arm and muzzle discipline on: ${T.shots.map(s => `${f2(s.t - t0)}s ${Math.round(s.rear)}° clear ${f2(s.clear)}${s.ok ? ' (flank line)' : ''}`).join(', ')}`);
+        if (T.lineFrames >= 30 && T.aimOnLine < 0.9 * T.lineFrames) fails.push(`${name} held the flank line ${f1(T.lineFrames * DT)} s but had the pistol up on Sam for only ${f1(T.aimOnLine * DT)} s of it (want ≥ 90 %: point, don't fire)`);
+        if (m.fireCd < 0.35 - 1e-6) fails.push(`${name}'s fireCd ${f2(m.fireCd)} at the end (want ≥ 0.35 kept in hand for when the shield goes)`);
+      } else {
+        const bad = T.shots.filter(s => !s.ok); if (bad.length) fails.push(`${name} fired ${bad.length} round(s) WITHOUT the flank line: ${bad.map(s => `${f2(s.t - t0)}s ${Math.round(s.rear)}° clear ${f2(s.clear)} ${f1(s.dist)} m`).join(', ')}`);
+        const close = T.shots.filter(s => s.clear < 0.45 - 0.02); if (close.length) fails.push(`${name}: ${close.length} round(s) passed nearer than 0.45 m to Novak's axis: ${close.map(s => f2(s.clear)).join(', ')}`);
+        for (let i = 1; i < T.shots.length; i++) if (T.shots[i].t - T.shots[i - 1].t < 1.2 - 1e-6) fails.push(`${name}: rounds ${f2(T.shots[i - 1].t - t0)} s and ${f2(T.shots[i].t - t0)} s only ${f2(T.shots[i].t - T.shots[i - 1].t)} s apart (cadence ≥ 1.2 s)`);
+      }
       if (T.shots.length) anyFired = true;
     }
     if (!two) {
       const T = tracks.get(A)!;
       if (T.firstLineT < 0 || T.firstLineT - T.enterT > 9) fails.push(`Kowalski's flank line opened ${T.firstLineT < 0 ? 'never' : f2(T.firstLineT - T.enterT) + ' s after entering'} (want within ~8 s)`);
-      { if (T.lineFrames * DT < 3) fails.push(`Kowalski held a clean line for only ${f1(T.lineFrames * DT)} s of 16 (want ≥ 3 s planted on it)`); if (!lines.some(l => l.who === A.callsign && !l.radio && l.t > t0 && /have him|got him|got a line|there you are/.test(l.text))) fails.push('no \'I have him\' from Kowalski with the line his'); }
+      if (discipline) { if (T.lineFrames * DT < 3) fails.push(`Kowalski held a clean line for only ${f1(T.lineFrames * DT)} s of 16 (want ≥ 3 s planted on it)`); if (!lines.some(l => l.who === A.callsign && !l.radio && l.t > t0 && /have him|got him|got a line|there you are/.test(l.text))) fails.push('no \'I have him\' from Kowalski with the line his'); }
+      else if (!T.shots.length) fails.push('Kowalski never fired from the flank (discipline off: the old rule should)');
       if ((A.standoff?.orbitM ?? 0) < 2 && T.firstLineT < 0) fails.push(`he walked only ${f2(A.standoff?.orbitM ?? 0)} m`);
     } else {
       const sa = A.standoff?.side, sc = C.standoff?.side;
       if (!(sa && sc && sa === -sc)) fails.push(`sides dealt: Kowalski ${sa}, Reyes ${sc} (want opposite)`);
       if (!anyLine) fails.push('neither man ever got round to a line in 16 s');
+      if (!discipline && !anyFired) fails.push('neither man ever fired in 16 s (discipline off)');
     }
-    if (hits) fails.push(`Sam was hit ${hits}× with the discipline on`);
+    if (hits && discipline) fails.push(`Sam was hit ${hits}× with the discipline on`);
     const ok = fails.length === 0; allPass &&= ok;
-    console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${two ? 'TWO men (Kowalski front-right, Reyes front-left)' : 'ONE man (Kowalski, front-right)'}: ${men.map(m => { const T = tracks.get(m)!; return `${m.callsign} side ${m.standoff?.side ?? '?'} entered +${T.enterT >= 0 ? f2(T.enterT - t0) : '—'} s, line +${T.firstLineT >= 0 ? f2(T.firstLineT - T.enterT) : '—'} s after (held ${f1(T.lineFrames * DT)} s, gun up on Sam ${f1(T.aimOnLine * DT)} s of it), ${T.shots.length} rounds [${T.shots.map(s => `${f1(s.t - t0)}s ${Math.round(s.rear)}° clear ${f2(s.clear)}`).join('; ')}], min dist ${f2(T.minDist)}, walked ${f2(m.standoff?.orbitM ?? NaN)} m, fireCd ${f2(m.fireCd)}`; }).join(' · ')}; Sam hit ${hits}× (god mode); Novak ${victim.state}; facing drift ${f2(facingDrift)}\n    lines: ${lines.filter(l => l.t > t0).map(l => `${f1(l.t - t0)}s ${l.who}${l.radio ? ' (radio)' : ''}: "${l.text}"`).join(' · ') || '—'}\n    ${log.join('\n    ')}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}${!ok || VERBOSE ? '\n    orbit plans:\n      ' + dbg.filter(s => /TAKEN|nothing|plant|out of plans/.test(s) || VERBOSE).slice(0, 60).join('\n      ') : ''}`);
+    console.log(`- ${ok ? 'PASS' : 'FAIL'} — discipline ${discipline ? 'ON ' : 'OFF'} · ${two ? 'TWO men (Kowalski front-right, Reyes front-left)' : 'ONE man (Kowalski, front-right)'}: ${men.map(m => { const T = tracks.get(m)!; return `${m.callsign} side ${m.standoff?.side ?? '?'} entered +${T.enterT >= 0 ? f2(T.enterT - t0) : '—'} s, line +${T.firstLineT >= 0 ? f2(T.firstLineT - T.enterT) : '—'} s after (held ${f1(T.lineFrames * DT)} s, gun up on Sam ${f1(T.aimOnLine * DT)} s of it), ${T.shots.length} rounds [${T.shots.map(s => `${f1(s.t - t0)}s ${Math.round(s.rear)}° clear ${f2(s.clear)}`).join('; ')}], min dist ${f2(T.minDist)}, walked ${f2(m.standoff?.orbitM ?? NaN)} m, fireCd ${f2(m.fireCd)}`; }).join(' · ')}; Sam hit ${hits}× (god mode); Novak ${victim.state}; facing drift ${f2(facingDrift)}\n    lines: ${lines.filter(l => l.t > t0).map(l => `${f1(l.t - t0)}s ${l.who}${l.radio ? ' (radio)' : ''}: "${l.text}"`).join(' · ') || '—'}\n    ${log.join('\n    ')}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}${!ok || VERBOSE ? '\n    orbit plans:\n      ' + dbg.filter(s => /TAKEN|nothing|plant|out of plans/.test(s) || VERBOSE).slice(0, 60).join('\n      ') : ''}`);
   }
   console.log(`=== standoff-flank: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`);
   return allPass;
@@ -349,7 +349,7 @@ export async function standoffEnd() {
     if (standoffGoneT < 0 || standoffGoneT - endT > DT + 1e-6) fails.push(`Kowalski's standoff dropped ${standoffGoneT < 0 ? 'never' : f2(standoffGoneT - endT) + ' s after'} (want the same frame)`);
     if (how === 'choke') {
       if (vis > 0.3) { if (firstShotT < 0 || firstShotT - endT > 1.0) fails.push(`first round ${firstShotT < 0 ? 'never' : f2(firstShotT - endT) + ' s'} after Novak dropped (want ≤ 1 s, Sam lit ${vis})`); }
-      if (firstShotT >= 0 && firstShotT - endT < 0.35 - 1e-6) fails.push(`first round only ${f2(firstShotT - endT)} s after Novak dropped (muzzle discipline keeps a beat of ≥ 0.35 s: a start, not an execution)`);
+      if (game.tune.muzzleDiscipline && firstShotT >= 0 && firstShotT - endT < 0.35 - 1e-6) fails.push(`first round only ${f2(firstShotT - endT)} s after Novak dropped (muzzle discipline keeps a beat of ≥ 0.35 s: a start, not an execution)`);
       if (foundT < 0 || foundT - endT > DT + 1e-6) fails.push(`Novak found ${foundT < 0 ? 'never' : f2(foundT - endT) + ' s after'} (want there and then)`);
       if (victim.downKind !== 'choked' || game.mission.stats.knockouts !== 1) fails.push(`Novak ${victim.downKind}, knockouts ${game.mission.stats.knockouts}`);
       if (A.witness.sawAct?.kind !== 'choked' || !A.witness.sawBody?.breathing) fails.push(`Kowalski's memory: sawAct ${JSON.stringify(A.witness.sawAct)}, sawBody ${JSON.stringify(A.witness.sawBody)} (want choked / breathing)`);

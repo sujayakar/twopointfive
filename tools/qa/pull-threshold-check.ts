@@ -3,8 +3,8 @@
 //   against the open leaf by hand — must fail)
 // the maintainer, 10-10, a pair told to work a door from outside: "guy working the door from the other side is blocked by the door." On a one-way door ordered from its
 // pull face the leaf comes round onto the team's own side and stands out from the hinge jamb, across that jamb's diagonal: the man 'holding the jamb' there had
-// the leaf between him and the doorway, and 'clear from outside' ended its arc on the same spot. Staged on an office door with floor on its pull face
-// (break room west), the room clear's pair, the defenders taken off the floor (this is about where the men stand, not the fight): 'work it from the
+// the leaf between him and the doorway, and 'clear from outside' ended its arc on the same spot. Staged on the office's two doors with floor on their pull face
+// (break room west, fire exit), the room clear's pair, the defenders taken off the floor (this is about where the men stand, not the fight): 'work it from the
 // threshold' (held) and 'clear from outside' are given from that face, and once the order holds, for each man of it who is not rear security —
 //   · the open leaf is not across his line to the point he watches, nor to the middle of the doorway;
 //   · he stands at least 0.5 m from the leaf.
@@ -18,7 +18,7 @@ const f2 = (x: number) => x.toFixed(2);
 let all = true, lines = 0;
 const verdict = (ok: boolean, what: string, detail: string) => { all &&= ok; lines++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}\n    ${detail}`); };
 console.log(`\n=== pull-threshold-check: a door worked from the face it opens toward${OFF ? ' (the lead stood against the leaf: must fail)' : ''} ===`);
-for (const kind of ['threshold', 'outside'] as const) for (const name of ['breakroom_w']) {
+for (const kind of ['threshold', 'outside'] as const) for (const name of ['breakroom_w', 'fire_exit']) {
   const R = await rig(1, { stage: 'rc' }), g = R.game, d = R.door(name);
   for (const h of [...g.guards]) if (h.team === 'hostile') despawnUnit(g, h);
   const c = d.def.closedDir, ux = Math.cos(c), uz = Math.sin(c), H = d.def.hinge, W = d.def.width;

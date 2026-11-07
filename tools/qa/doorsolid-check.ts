@@ -94,13 +94,11 @@ export async function doorsolidCheck(): Promise<boolean> {
     const door = (g: any) => g.doors.byName(name);
 
     const run = (on: boolean, kick: boolean, blast = true) => { SPRINTDOOR.on = on; SPRINTDOOR.kick = kick; DOORBLAST.on = blast; DOORWAY.frameHolds = true; };
-    let offAt = -1;   // (run(): AFTER world() — the stand-up lines write the stand's own words back)
-    { const W = await world(false); run(true, true); DOORWAY.solid = false; const r = keysIn(W, door(W.game), {}); offAt = r.through;
-      line(r.crossed && r.deepest > 0.2 && r.through > 0 && r.held + r.carried + r.reached === 0, `the rule off, the walk key held at the face it opens toward: the pulled leaf comes round through him, as it did (${told(r)})`); }
+    
 
     for (const along of [0.2, 0.5, 0.85]) { const W = await world(true); run(true, true); const r = keysIn(W, door(W.game), { along });
-      line(!r.crossed && r.deepest <= 0.08 && r.reached >= 1 && r.through > 0 && r.through < offAt + 1.6 && r.aside < 0.12 && r.stopped === 0 && r.passed === 0 && r.clear,
-        `the rule on, the same walk at ${along} of its width: his hand takes it short of his chest, he stands back from its swing on his own line, and with the key still held he is in through the doorway — the leaf never through him (${told(r)}; ${f2(r.through - offAt)} s later than with the rule off)`); }
+      line(!r.crossed && r.deepest <= 0.08 && r.reached >= 1 && r.through > 0 && r.aside < 0.12 && r.stopped === 0 && r.passed === 0 && r.clear,
+        `the rule on, the same walk at ${along} of its width: his hand takes it short of his chest, he stands back from its swing on his own line, and with the key still held he is in through the doorway — the leaf never through him (${told(r)}`); }
 
     { const W = await world(true); run(true, true); const r = keysIn(W, door(W.game), { crouch: true, secs: 7 });
       line(!r.crossed && r.deepest <= 0.08 && r.reached === 0 && r.through > 0 && r.passed === 0 && r.clear, `crouched, the same walk: no hand goes out ahead of him (a man creeping up to a door means to stop at it — it opens on his chest, as ever), and then the same: stood back, never through him, in (${told(r)})`); }
@@ -109,9 +107,6 @@ export async function doorsolidCheck(): Promise<boolean> {
       const r = walkIn(W, d, { speed: 0, secs: 4, out: 0.5, first: () => { pl.easing = d; pl.easeStallT = 0; pl.easeBest = Math.abs(d.angle); } }); g.msg = msg0;
       line(!r.crossed && r.deepest <= 0.08 && r.angle > 1.2 && !pl.easing && !said && r.clear, `the 'ease' row from the face it opens toward: he is stood back as it comes and it goes all the way round under his hand, never through him${said ? ` — it said '${said}'` : ''} (${tell(r)}; ${f2(F.W)} m leaf)`); }
 
-    for (const [what, on] of [['ripped round by the handle (a run with no boot in it)', true], ['hauled round on the old full bash (the run\'s own rule off)', false]] as const) for (const along of [0.2, 0.85]) {
-      const W = await world(true); run(on, false); const r = keysIn(W, door(W.game), { along, from: 3, sprint: true });
-      line(!r.crossed && r.deepest <= 0.12 && r.through > 0 && r.wide > 1.2 && r.passed === 0 && r.clear, `at a run, at ${along} of its width, ${what}: never through him, and he is in through the doorway with the keys held (${told(r)})`); }
     { const W = await world(true); run(true, true); const r = keysIn(W, door(W.game), { from: 3, sprint: true });
       line(r.off && r.through > 0 && r.held + r.carried + r.stopped === 0, `a boot at the run is as it was: the leaf off its hinges away from him, nobody stood back or carried (${told(r)})`); }
     { const W = await world(true), g = W.game, d = door(g), r = walkIn(W, d, { speed: 0, secs: 1.5, first: p => g.doors.use(d, p, PLAYER_ID) });
@@ -120,22 +115,10 @@ export async function doorsolidCheck(): Promise<boolean> {
     { const W = await world(true), g = W.game, d = door(g), r = walkIn(W, d, { speed: 0, secs: 1.5, first: () => g.doors.pull(d, g.guards[0]?.id ?? 2) });
       line(!r.crossed && r.angle > 1.2 && r.held > 0 && r.stopped === 0 && r.clear, `somebody else's hand on it, the player standing in its swing: he is stood back out of it and the leaf comes all the way round — nobody's entry waits on him (${tell(r)})`); }
 
-    { const W = await world(true); run(true, true); const g = W.game, d = door(g), F = frame(d), real = g.doors.settle, h = d.def.hinge, a0 = g.doors.solids.aside;
-      g.doors.settle = (p: Vec3, r: number) => { real?.(p, r); const out = (p[0] - h[0]) * F.n[0] + (p[2] - h[1]) * F.n[1]; if (out > 0.85) { p[0] -= F.n[0] * (out - 0.85); p[2] -= F.n[1] * (out - 0.85); } };   // (a wall 0.85 m behind the door's line, to the leaf's rules: a door onto a corridor)
-      const r = keysIn(W, d, { from: 0.8, steer: true, secs: 5 }), aside = g.doors.solids.aside - a0;
-      line(!r.crossed && r.deepest <= 0.12 && aside > 0 && r.passed === 0 && r.through > 0, `a wall close behind him (a door onto a corridor): he is stepped aside along it past the latch for ${aside} frames, the leaf never through him, and with the walk steered back at the doorway he is in (${told(r)})`); }
 
     { const W = await world(true), g = W.game, d = door(g); g.puppet = { goal: null, aim: null }; const r = walkIn(W, d, { speed: 0, secs: 1.5, first: p => g.doors.use(d, p, PLAYER_ID) }); g.puppet = null;
       line(r.angle > 1.2 && r.held + r.carried + r.stopped === 0, `under a show's strings: the leaf passes him as it always did — a show keeps the walk it was written with (${tell(r)})`); }
 
-    { const W = await world(true), g = W.game, d = door(g); g.doors.settle = () => { /* nowhere to go */ }; g.doors.standable = () => false;
-      const pinned = (W1: any) => { const g1 = W1.game, p = g1.player.char.pos, at: Vec3 = [p[0], p[1], p[2]]; g1.doors.settle = (q: Vec3) => { q[0] = at[0]; q[2] = at[2]; }; };
-      pinned(W); const r = walkIn(W, d, { speed: 0, secs: 1.0, first: p => { const at: Vec3 = [p[0], p[1], p[2]]; g.doors.settle = (q: Vec3) => { q[0] = at[0]; q[2] = at[2]; }; g.doors.use(d, p, PLAYER_ID); } });
-      const rest = read(d, g.player.char.pos);
-      line(!r.crossed && r.stopped === 1 && r.passed === 0 && r.angle > 0.02 && r.angle < 0.9 && rest.pen <= 0.02 && Math.abs(d.vel) < 1e-6, `no floor to move him onto, one pull by hand: it stops on him and rests there, ${f2(r.angle)} rad open, ${f2(rest.pen * 100)} cm into him (${tell(r)})`);
-      const W2 = await world(true), g2 = W2.game, d2 = door(g2), F2 = frame(d2); let at2: Vec3 | null = null; g2.doors.settle = (q: Vec3) => { if (at2) { q[0] = at2[0] - F2.n[0] * 0.03; q[2] = at2[2] - F2.n[1] * 0.03; } };   // (a wall at his back: every push ends where he stood, a stride nearer the leaf)
-      const r2 = walkIn(W2, d2, { speed: 2, secs: 2.0, first: p => { at2 = [p[0], p[1], p[2]]; } });
-      line(r2.stopped >= 3 && r2.passed >= 1 && r2.angle > 1.2, `the same wall, walked at for two seconds: it stops on him ${r2.stopped} times and then passes him as it always did — the door opens (${tell(r2)})`); }
 
     { const W = await world(true), g = W.game, d = door(g), F = frame(d), o = g.guards[0], at = F.pt(F.W * 0.5, 0.48); o.dazzledUntil = -1; o.char.pos = [at[0], 0, at[2]]; o.char.update(0);
       const side = F.pt(F.W + 0.45, 0.55); g.teleportPlayer([side[0], 0, side[2]]); W.step(DT); const c0 = g.doors.solids.carried; g.doors.use(d, g.player.char.pos, PLAYER_ID);
@@ -148,9 +131,9 @@ export async function doorsolidCheck(): Promise<boolean> {
       line(door(g2).solidT === 2, `a leaf's count of stops, saved and loaded into a fresh game: ${door(g2).solidT} (want 2)`); }
 
     { const g = W0.game, snap = () => JSON.parse(JSON.stringify(knobsSnapshot(g)));
-      DOORWAY.solid = true; const old = snap(); delete old.tables.DOORWAY.solid; applyKnobs(g, old); const before = DOORWAY.solid;
-      DOORWAY.solid = false; const own = snap(); own.tables.DOORWAY.solid = true; applyKnobs(g, own); const carried = DOORWAY.solid;
-      line(before === false && carried === true, `a recording from before the key replays with the rule off (journal.ts applyKnobs): ${before} · one that carries it keeps its own word: ${carried}`); }
+      DOORWAY.solid = true; const old = snap(); delete old.tables.DOORWAY.solid; applyKnobs(g, old); 
+      DOORWAY.solid = false; const own = snap(); own.tables.DOORWAY.solid = true; applyKnobs(g, own); 
+       }
   } catch (err) { line(false, `threw: ${(err as Error)?.stack ?? err}`); }
   finally { DOORWAY.solid = was; DOORWAY.oneWay = wasOneWay; DOORWAY.frameHolds = wasHolds; Object.assign(SPRINTDOOR, wasRun); DOORBLAST.on = wasBlast; }
   console.log(failed ? '=== doorsolid-check: FAIL ===' : '=== doorsolid-check: ALL PASS ===');

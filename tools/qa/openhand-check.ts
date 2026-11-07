@@ -8,11 +8,12 @@
 //   1. the office's break room west door, the pair (his tape's door): nobody crosses, the frag goes in and bursts inside, and they then go in; the same
 //      with one man left on the hinge hand
 //   2. the same door with the four
+//   3. every squad room clear of the Missions list, on its first held room's door: nobody in front of the opening
 // OUT 2026-11-07 (the rule's off side): 'the fault is there with the rule off', 'nobody crossed with the rule off either', 'one man left: sent across with the
 // rule off', the per-room comparison with the off run in 3 (its own numbers are kept), and 4 'a shut door is dealt the same marks with the rule on and off'.
 // Headless: nothing here says how it looks.
 import { ROOT } from './headless.ts';
-import { stage, quiet, guarded, family } from './thresholdmenu-probes.ts';
+import { stage, spotOf, quiet, guarded, family } from './thresholdmenu-probes.ts';
 const { FRAG } = await import(`${ROOT}/src/game/frag.ts`);
 const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const CBM = await import(`${ROOT}/src/game/combat.ts`);
@@ -72,6 +73,18 @@ export const openhandCheck = guarded(async () => {
         if (VERBOSE) for (const [n, o] of [['lone', ln]] as const) console.log(`    ${id} ${n}: ${o.hands}\n      marks ${o.marks}\n      ${o.beats.join(' | ')}`);
         F.verdict(ln.held && ln.open && ln.given && ln.crossed.length === 0 && ln.thrown && ln.inside === true && ln.went && ln.lost === 0, `${id}: one man left, on the hinge hand: he keeps his own hand's jamb, the frag bursts inside, he goes in`, say(ln)); }
     }
+    // ---- 3. every squad room clear, its first held room's door
+    let onN = 0, n = 0, real = 0; const rows: string[] = [];
+    for (const E of SCENARIOS.filter((s: any) => s.kind === 'roomclear')) { if (only.length && !only.includes(E.id)) continue;
+      const spot = await spotOf(E); if (typeof spot === 'string') { rows.push(`${E.id}: ${spot}`); continue; }
+      const on = await play(E, spot); n++;
+      if (on.open) onN += on.crossed.length;
+      if (on.held && on.open && on.given && on.thrown && on.went) real++;   // (a row that really asked the question: held from outside, the leaf open at the order, the frag thrown, the entry made)
+      rows.push(`${E.id} ${spot.door}: ${on.crossed.length} (${say(on)})`);
+      if (VERBOSE) console.log(`    ${rows[rows.length - 1]}\n      ${on.hands} → ${on.marks}`);
+    }
+    F.verdict(real >= Math.min(only.length || 6, n) && onN === 0, `every squad room clear's first door (${n}, ${real} held open and entered): nobody in front of the opening`,
+      `men in front of the opening before the burst: ${onN}${VERBOSE ? '' : `\n    ${rows.join('\n    ')}`}`);
   }
   return F.done();
 });

@@ -397,7 +397,7 @@ pub fn net_quiet_fall(g: &mut crate::game::Game, victim: GuardId) {
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if o == victim || !on_net(g, o) || g.gd[o].team != v_team || g.time < g.gd[o].dazzled_until {
+        if o == victim || !on_net(g, o) || g.gd[o].team != v_team || crate::control::man::blind(g, o) {
             continue;
         }
         if !crate::guards::can_see_char(g, o, v_ch, false).visible {
@@ -644,8 +644,8 @@ pub fn free(g: &mut crate::game::Game, gd: GuardId) -> bool {
         && !g.touring
         && !g.quiet_utility
         && g.gd[gd].held.is_none()
-        && g.time >= g.gd[gd].dazzled_until
-        && g.time >= g.gd[gd].stagger_until
+        && !crate::control::man::blind(g, gd)
+        && !crate::control::man::staggered(g, gd)
         && !crate::owner::has_him(g, gd, crate::owner::own().morale)
         && !crate::owner::has_him(g, gd, crate::owner::own().runner)
 }
@@ -1020,19 +1020,15 @@ fn tick_man(g: &mut Game, gd: GuardId, dt: f64) {
         settle(g, gd, d);
     }
     mind(g, gd).low = ok;
-    // where his eyes are, low on his gun: read off his own pose once he is down and still, eased
+    // where his eyes are, low on his gun: his look (the one every eye in the game is asked along) once he is down and still, eased
     let c = g.gd[gd].ch;
-    let hd = crate::character::character_head_dir(g, c);
-    let chest = g.ch[c].chest_dir;
-    let (lx, ly, lz) = (chest[0] + hd[0], chest[1] + hd[1], chest[2] + hd[2]);
-    let len = m::hyp3(lx, ly, lz);
-    if g.ch[c].anim.crouch > k.crouch - 0.15 && g.gd[gd].speed < 0.3 && len > 1e-3 {
+    if g.ch[c].anim.crouch > k.crouch - 0.15 && g.gd[gd].speed < 0.3 {
         let e = m::min(1.0, dt * 2.0);
-        let flat_k = m::hyp2(lx, lz) / len;
+        let look = crate::guards::look_of(g, c);
         let aim_yaw = g.ch[c].aim_yaw;
         let n = mind(g, gd);
-        n.eye += (v3::wrap_angle(m::atan2(lx, lz) - aim_yaw) - n.eye) * e;
-        n.eye_half += (m::acos(v3::clamp(m::cos(k.eye_deg * v3::DEG) / m::max(flat_k, 1e-3), -1.0, 1.0)) - n.eye_half) * e;
+        n.eye += (v3::wrap_angle(m::atan2(look[0], look[2]) - aim_yaw) - n.eye) * e;
+        n.eye_half += (k.eye_deg * v3::DEG - n.eye_half) * e;
     }
     watch(g, gd);
     // nothing seen, nothing heard for `alertSecs`: he is no longer 'alert'; the spot, the crouch and the arc stay

@@ -47,7 +47,7 @@ const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
 const { ORDERS, sideOf } = await import(`${ROOT}/src/game/orders.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { parseLevelData, validateLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
-const { lintLevel } = await import(`${ROOT}/src/editor/lint.ts`);
+const { lintLevel } = await import(`${ROOT}/src/scene/lint.ts`);
 const { DEPOT_ROOMS } = await import(`${ROOT}/tools/levels/depot.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
 const { GUARD_EYE, eyeContact, lightEstimateAt } = await import(`${ROOT}/src/game/guards.ts`);
@@ -310,13 +310,13 @@ export const depotDoors = guarded(async () => {
     // (each stand is the commander's side of its door and more than a file's length — 4.6 m — past any door the four walk through to reach it from the stand
     //  before: a file halted nearer than that leaves its tail standing in the doorway it came through, which is the follow's business and depot-walk's count)
     const STAND: Record<string, number[]> = { a_s: [12.4, 0, 14.6], c_n: [22.9, 0, 14.4], c_w: [13.2, 0, 20.9], b_n: [26.9, 0, 6.6], a_e: [17.3, 0, 7.2] };
-    for (const [id, stand] of Object.entries(STAND).slice(0, 2)) { const d = R.door(id);
+    for (const [id, stand] of Object.entries(STAND)) { const d = R.door(id);
       g.teleportPlayer(stand); R.stand = stand; R.step(3); O.give('fallIn', O.targetAt(g.player.char.pos)); R.until(() => men.every((m: any) => O.of(m)?.arrived), 40); R.step(30);
       R.until(() => g.doors.list.every((x: any) => x.latched), 10);   // (the leaves the file walked through swing shut behind it: a stack is called on a shut door)
       const why = R.give('stack', id); const set = R.until(() => men.every((m: any) => O.of(m)?.arrived), 30); R.step(60);
       const off = men.map((m: any) => dist(m.char.pos, O.of(m)?.post ?? [0, 0, 0])), fine = why === null && set && off.every((x: number) => x < 0.45) && minApart(men) > 0.6 && !men.some((m: any) => inDoorway(d, m.char.pos)) && men.every((m: any) => offOf(d, m.char.pos) * sideOf(d, stand) > 0);
       if (!fine) all = false; rows.push(`${id}: give → ${why} · set ${set} · ${men.map((m: any, i: number) => `${at(m.char.pos)} (${f2(off[i])} off)`).join(' ')} · nearest two ${f2(minApart(men))} m${fine ? '' : '  ← FAIL'}`); }
-    verdict(all, 'live: the four ordered to stack on doors in turn (the two yard doors: the stands of the others are reached through the doors before them) get onto their own marks — nobody in the opening, nobody in anybody, everybody on the commander\'s side', rows.join('\n    ')); }
+    verdict(all, 'live: the four ordered to stack on each of the five doors in turn get onto their own marks — nobody in the opening, nobody in anybody, everybody on the commander\'s side', rows.join('\n    ')); }
   return done();
 });
 
@@ -467,11 +467,11 @@ async function walk(legs: number[][]) {
  *  doorway: man-seconds stood in a doorway per 100 m walked (8.05 / 0.29: about one and a half times) · stuck: per cent of man-frames (0.25 / 0.60) */
 const WALK = { closest: 0.15, jam: 115, doorway: 12, stuck: 1 };
 export const depotWalk = guarded(async () => {
-  const { verdict, done } = family('depot-walk: rooms and doors with four following, against this floor\'s own measured bounds');
-  const d = await walk(DEPOT_WALK.slice(0, 16));   // (as far as the aerial park: the file through a doorway is the same at every door, and the whole floor is minutes)
+  const { verdict, done } = family('depot-walk: every room and every door with four following, against this floor\'s own measured bounds');
+  const d = await walk(DEPOT_WALK);
   const per = (n: number, w: any) => 100 * n / (4 * w.frames), dw = d.doorway / 60 / Math.max(1, d.walked) * 100;
   const line = (w: any, doors: string[]) => `${f1(w.walked)} m in ${f1(w.secs)} s through ${doors.length} doorways · stuck ${w.stuck} man-frames (${f2(per(w.stuck, w))} %), late starts ${w.late} · two men in one place ${w.jam} frames (closest ${f2(w.closest)} m) · stood in a doorway ${f1(w.doorway / 60)} man-s · strung out past 6.5 m ${f2(per(w.strung, w))} % of man-frames (furthest ${w.worst.map(f1).join(' / ')} m)`;
-  verdict(!d.noPath && d.done && d.alive, 'Sam walks in by the main gate → the duty office and out → the crew room (in a_s, out a_e) → wash room → battery room → generator room → the signals hut and out (b_n) → the aerial park', d.noPath || `${line(d, DEPOT_WALK_DOORS.slice(0, 8))} · doors: ${DEPOT_WALK_DOORS.slice(0, 8).join(' → ')}`);
+  verdict(!d.noPath && d.done && d.alive, 'Sam walks in by the main gate → the duty office and out → the crew room (in a_s, out a_e) → wash room → battery room → generator room → the signals hut and out (b_n) → the aerial park → the gap → the store (in c_n, out c_w) → bay → tyre store and back → the yard by the workshop\'s side door → the battery room and out by its yard door → out of the back gate: all thirteen doors', d.noPath || `${line(d, DEPOT_WALK_DOORS)} · doors: ${DEPOT_WALK_DOORS.join(' → ')}`);
   verdict(d.end.every((x: number) => x < 5.8) && d.left === 0 && d.endApart > 0.5, 'all four end with him, nobody left standing in a doorway, nobody on top of anybody', `${d.end.map(f2).join(' / ')} m from Sam at ${at(d.sam)} · ${d.left} in a doorway · nearest two ${f2(d.endApart)} m`);
   // (1 %, was 0.5: with doorway.ts on no place in the file is in a doorway or a leaf's swing, so when Sam halts just past a door the last man's place is a metre or
   // two further back — past this probe's 5.5 m — and he stands there, at his place, until Sam walks on: a second at a time)
@@ -524,7 +524,7 @@ export async function depotPlay(policy: 'two' | 'one', seed: number, cap = 300, 
       // entries (read off the orders' own `crossed` sets — a man who crossed and went down still crossed — and not off how an order closed: the last room's
       // orders end with the run)
       const ops = [...D.ops], outside = ops.length === 2 && ops[0].door !== ops[1].door && ops.every((op: any) => op.phase === 'ready' && op.men.every((m: any) => !inBounds(rm.def.bounds, m.char.pos)));
-      const said = R.here(() => (R.W.input.pressed.add('KeyF'), R.step(), null)); say(`the word → ${said} (${ops.map((op: any) => `${op.door.def.name}: ${op.phase}, ${op.men.map((m: any) => at(m.char.pos)).join(' ')}`).join(' · ')})`);
+      const said = R.here(() => D.go()); say(`the word → ${said} (${ops.map((op: any) => `${op.door.def.name}: ${op.phase}, ${op.men.map((m: any) => at(m.char.pos)).join(' ')}`).join(' · ')})`);
       const across = () => ops.every((op: any) => op.crossed.size > 0);
       R.until(() => over() || !D.ops.length || across(), 45); const crossed = across(); wait(() => !D.ops.length, 45);
       if (a && b && outside && crossed) two.push(P.room);

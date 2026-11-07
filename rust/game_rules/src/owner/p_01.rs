@@ -54,7 +54,7 @@ pub fn release_man(g: &mut crate::game::Game, gd: GuardId, rule: f64, t: f64) {
 }
 
 /// Does any of these rules have a hand on him? (owner.ts hasHim)
-pub fn has_him(g: &mut crate::game::Game, gd: GuardId, rules: f64) -> bool {
+pub fn has_him(g: &crate::game::Game, gd: GuardId, rules: f64) -> bool {
     let c = g.gd[gd].ch;
     crate::sim_men_store::man_owner(g, c) & js::to_u32(rules) != 0
 }

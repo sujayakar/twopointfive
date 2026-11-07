@@ -14,7 +14,6 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
-import { sample } from './sweep.ts';
 import { HandleWatch, HANDLE_REACH, BODY_R, HANDLE_IN, type HandleRow } from './handle-watch.ts';
 const { HANDLE_STATS, handleSpot } = await import(`${ROOT}/src/game/handleside.ts`);
 const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
@@ -84,7 +83,7 @@ interface Walk { n: number; skipped: number; ok: number; long: number; free: num
 /** a teammate and a defender on the AI's own walk through every door of the level, both faces; each door's opening judged by the watcher */
 async function walks(W: any, teams: readonly ('operative' | 'hostile')[]): Promise<Walk> {
   const g = W.game; clearFloor(g); g.teleportPlayer(g.level?.playerSpawn ?? g.player.char.pos); const out: Walk = { n: 0, skipped: 0, ok: 0, long: 0, free: 0, fails: [], bad: 0 };
-  for (const team of teams) for (const d of sample(g.doors.list as any[], 6)) for (const f of [1, -1]) {
+  for (const team of teams) for (const d of g.doors.list) for (const f of [1, -1]) {
     const S = spots(g, d, f); if (!S) { out.skipped++; continue; }
     for (const x of g.doors.list) fresh(x); out.n++;
     const side = against(d, S.from).side, place = handleSpot(g, d, side), face = faceWord(g, d, S.from), at = `${d.def.name} ${face} · ${team}`;
@@ -111,7 +110,7 @@ export const handlesideMen = async (): Promise<boolean> => {
   const F = family('handleside-men: a teammate and a defender on the AI\'s own walk open every door from its handle, both faces');
   for (const k of Object.keys(HANDLE_STATS)) HANDLE_STATS[k] = 0;
   let all = 0;
-  for (const file of sample(LEVELS, 1)) {
+  for (const file of LEVELS) {
     const R = await walks(await boot(file), ['operative', 'hostile']); all += R.n;
     F.verdict(R.fails.length === 0 && R.n > 0, `${nameOf(file)}: ${R.n} walks (${R.skipped} faces with no floor to stand on)`,
       R.fails.length ? few(R.fails) : `at the handle ${R.ok}${R.long ? ` · the long reach ${R.long}` : ''}${R.free ? ` · a face with no place ${R.free}` : ''} · through every one, never through the leaf`);

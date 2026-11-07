@@ -28,7 +28,6 @@
 // (and two more for a question each: flow-pass = flow's look with neither room cleared, flow-open = the copy room opened without a can.)
 // One process a run (the scenario's knobs and the team's start are module state). Numbers order the styles against each other on game logic; a bot's reaction
 // and dead-centre cursor are not a person's.
-import { sample } from './sweep.ts';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
 import { exporterCheck } from './level-file.ts';
@@ -41,7 +40,7 @@ const { spawnUnit } = await import(`${ROOT}/src/game/guards.ts`);
 const { SQUAD4_BUDGET } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { parseLevelData, validateLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
-const { lintLevel } = await import(`${ROOT}/src/editor/lint.ts`);
+const { lintLevel } = await import(`${ROOT}/src/scene/lint.ts`);
 const { REGISTRY_ROOMS } = await import(`${ROOT}/tools/levels/registry.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
 const { BoxFlag, MAX_GLASS } = await import(`${ROOT}/src/scene/boxes.ts`);
@@ -312,7 +311,7 @@ export const registryLevel = guarded(async () => {
   verdict(lint.errors === 0 && lint.warnings === 0, 'the level lint is clean (no error, no warning)', bad.length ? bad.slice(0, 5).map((f: any) => `${f.severity}: ${f.message}`).join(' · ') : `${lint.infos} notes in all`);
   const L = loadLevel(data), glass = L.boxes.filter((b: any) => (b.flags ?? 0) & BoxFlag.Glass).length, out = L.boxes.filter((b: any) => b.c[0] - b.h[0] < WORLD.min[0] - 1e-6 || b.c[0] + b.h[0] > WORLD.max[0] + 1e-6 || b.c[2] - b.h[2] < WORLD.min[2] - 1e-6 || b.c[2] + b.h[2] > WORLD.max[2] + 1e-6 || b.c[1] - b.h[1] < WORLD.min[1] - 1e-6 || b.c[1] + b.h[1] > WORLD.max[1] + 1e-6).length;
   verdict(L.boxes.length <= WORLD.maxBoxes && glass <= MAX_GLASS && out === 0, "inside the renderer's fixed sizes: the world box, the box count, the glass panes", `${L.boxes.length} boxes of ${WORLD.maxBoxes} · ${glass} glass panes of ${MAX_GLASS} · ${out} boxes outside the world box (the office: 782 boxes, 22 panes)`);
-  const W = await quiet(true, () => stand(1)), g = W.game, S = g.level.scenarios.rescue; W.step(1 / 60);   // (the first tick stands the host the rule's call crosses to)
+  const W = await quiet(true, () => stand(1)), g = W.game, S = g.level.scenarios.rescue;
   const was: string[] = checkRescue(g);
   verdict(was.length === 0, "the rescue's data sits on the floor (checkRescue, the route's own check included)", was.length ? was.join(' · ') : 'every mark where a man can be stood, clear of the furniture; the room\'s men inside it; a way on foot to every mark; the route\'s two openings each with a stand and a watch');
   const main = g.doors.byName(S.room.door).frameCentre, fast = pathLen(g, [S.team.sam, [main[0] - 1.0, 0, main[2]]]), long = pathLen(g, [S.team.sam, ...SERPENTINE, [S.side.hold[0], 0, S.side.hold[2] + 0.6]]);
@@ -377,7 +376,7 @@ export const registryDoors = guarded(async () => {
   const { g, men, P } = await team(2); const O = g.orders, lines: string[] = [], bad: string[] = [];
   const authored = new Map<any, boolean>(g.doors.list.map((d: any) => [d, d.locked]));
   const locks = (on: any | null) => { for (const d of g.doors.list) d.locked = d === on ? authored.get(d)! : false; };   // (the walk between doors is not what is measured — but each stack is ordered with ITS door locked as authored)
-  for (const s of sample(STACKS, 4)) {
+  for (const s of STACKS) {
     locks(null);
     P.order('fallIn', P.noneT()); P.go(s.from, { sprint: true, max: 60, dodge: true }); P.until(() => men.every((m: any) => flat(m.char.pos, P.pos) < 5), 12);
     const D = g.doors.byName(s.door), t0 = P.t; locks(D); if (!P.order('stack', P.doorT(s.door))) { bad.push(`${s.door}: refused — ${P.refused[P.refused.length - 1]}`); continue; }
@@ -387,7 +386,7 @@ export const registryDoors = guarded(async () => {
     if (!free || apart < 0.6 || !same || Math.min(...along) < D.def.width / 2) bad.push(`${s.door}: marks ${posts.map(at).join(' ')} — ${!free ? 'not on free floor' : apart < 0.6 ? `only ${f2(apart)} m apart` : !same ? 'on the far side' : 'in the opening'}`);
     lines.push(`${s.door}${authored.get(D) ? ' (locked)' : ''}: ${posts.map(at).join(' ')} in ${f1(P.t - t0)} s`);
   }
-  verdict(bad.length === 0, `stack room for the pair on doors of ${STACKS.length} (a sample; all under QA_SWEEP=all), each from the side it is taken from: both men on their marks — free floor, apart, out of the opening`, bad.length ? bad.join(' · ') : lines.join(' · '));
+  verdict(bad.length === 0, `stack room for the pair on ${STACKS.length} doors, each from the side it is taken from: both men on their marks — free floor, apart, out of the opening`, bad.length ? bad.join(' · ') : lines.join(' · '));
   return done();
 });
 
@@ -405,7 +404,7 @@ const WALK: { to: Vec3; words: string }[] = [
   { to: AT.sorting, words: 'sorting room' }, { to: [32.4, 0, 17.4], words: 'sorting room, its middle' }, { to: AT.sortingW, words: 'stacks' }, { to: AT.stacksN, words: 'stacks, north end' }, { to: AT.hall, words: 'hall (by the stacks\' hall door)' }, { to: AT.post, words: 'gallery' }, { to: [7.6, 0, 14.7], words: 'lobby' },
 ];
 const INSIDE_DOORS = ['reading', 'copy', 'copy_hall', 'office', 'office_side', 'stacks_w', 'stacks_hall', 'sorting'];
-export async function walk(n: 2 | 4, each?: (g: any, men: any[]) => void, legs = WALK) {   // (`each`: asked every frame of the walk, before it is counted — backturn-check.ts)
+export async function walk(n: 2 | 4, each?: (g: any, men: any[]) => void) {   // (`each`: asked every frame of the walk, before it is counted — backturn-check.ts)
   const { g, men, P } = await team(n); for (const d of g.doors.list) d.locked = false;   // (the locks are off for the walk: what they do to a line is the tally's safe runs, with the pair behind Sam)
   const sam = new Set<string>(), theirs = men.map(() => new Set<string>()), opened = new Set<string>(), last = men.map((m: any) => [...m.char.pos]), still = men.map(() => 0);
   const back = n > 2 ? 6.5 : 4.5, close = n > 2 ? 5.0 : 3.2;   // the file's length behind Sam: the pair's rear man follows ~3 m back, the four's ~4.5 m
@@ -416,18 +415,18 @@ export async function walk(n: 2 | 4, each?: (g: any, men: any[]) => void, legs =
     for (let i = 0; i < men.length; i++) for (let j = i + 1; j < men.length; j++) { const d = flat(men[i].char.pos, men[j].char.pos); closest = Math.min(closest, d); if (d < 0.5) jam++; }
     for (const d of g.doors.list) if (flat(P.pos, d.frameCentre) < 0.75) opened.add(d.def.name); };   // (a door Sam himself went through: he stood in its frame)
   P.order('fallIn', P.noneT()); const t0 = P.t;
-  for (const leg of legs) { const ok = P.go(leg.to, { max: 60, until: () => { tick(); return false; } }); if (!ok) short += `${short ? ' · ' : ''}Sam stopped short of ${at(leg.to)} (${leg.words}) at ${at(P.pos)}${short ? '' : ` — the men at ${men.map((m: any) => `${at(m.char.pos)}→${at(g.orders.of(m)?.goal ?? m.char.pos)}`).join(' ')}`}`;
+  for (const leg of WALK) { const ok = P.go(leg.to, { max: 60, until: () => { tick(); return false; } }); if (!ok) short += `${short ? ' · ' : ''}Sam stopped short of ${at(leg.to)} (${leg.words}) at ${at(P.pos)}${short ? '' : ` — the men at ${men.map((m: any) => `${at(m.char.pos)}→${at(g.orders.of(m)?.goal ?? m.char.pos)}`).join(' ')}`}`;
     P.until(() => { tick(); return men.every((m: any) => flat(m.char.pos, P.pos) < close); }, 4); }   // (a breath at each stop: the file closes up, as it would behind a man who looks before he goes on)
   for (let i = 0; i < 240; i++) { P.step(); tick(); }
   const end = men.map((m: any) => flat(m.char.pos, P.pos));
   return { n, back, secs: P.t - t0, walked, frames, stuck, closest, jam, far, short, end, sam, theirs, opened, alive: men.every((m: any) => m.state !== 'dead'), doorway: men.filter((m: any) => g.doors.list.some((d: any) => flat(m.char.pos, d.frameCentre) < 0.6)).map((m: any) => `${m.callsign} ${at(m.char.pos)}`) };
 }
 export const registryWalk = guarded(async () => {
-  const { verdict, done } = family('registry-walk: the short line\'s rooms and doors on foot, with four following');
-  const spaces = Object.keys(ROOMS).filter(k => !['stacks', 'lobby', 'sorting'].includes(k));   // (the walk stops in the office, a file's length ahead of the last man: the rest is minutes more of the same file)
+  const { verdict, done } = family('registry-walk: every room and both approaches on foot, with the pair following and with four following');
+  const spaces = Object.keys(ROOMS);
   // (one process, two games: the walk stands no scenario up, and the team's start is not read — the men are stood on marks typed here)
-  for (const n of [4] as (2 | 4)[]) {
-    const w = await walk(n, undefined, WALK.slice(0, 9)), who = n === 2 ? 'the pair' : 'four followers', missed = spaces.filter(s => !w.sam.has(s)), theirMiss = w.theirs.map((t: Set<string>) => spaces.filter(s => s !== 'office' && !t.has(s)).join('+') || '—'), doors = INSIDE_DOORS.filter(d => !['office_side', 'stacks_w', 'stacks_hall', 'sorting'].includes(d) && !w.opened.has(d));
+  for (const n of [2, 4] as const) {
+    const w = await walk(n), who = n === 2 ? 'the pair' : 'four followers', missed = spaces.filter(s => !w.sam.has(s)), theirMiss = w.theirs.map((t: Set<string>) => spaces.filter(s => !t.has(s)).join('+') || '—'), doors = INSIDE_DOORS.filter(d => !w.opened.has(d));
     verdict(!w.short && missed.length === 0 && doors.length === 0, `${who}: Sam walks every space and passes every inside door`, w.short || (missed.length ? `never in: ${missed.join(', ')}` : doors.length ? `never passed: ${doors.join(', ')}` : `${f1(w.walked)} m in ${f1(w.secs)} s at a walk · ${spaces.length} spaces · ${INSIDE_DOORS.length} doors`));
     verdict(w.alive && theirMiss.every((k: string) => k === '—') && w.end.every((d: number) => d < 5.5) && w.doorway.length === 0, `${who}: every man follows him through all of it and ends with him, nobody left in a doorway`, `at the end ${w.end.map(f2).join(' / ')} m from Sam · spaces a man never entered: ${theirMiss.join(' / ')} · ${w.doorway.length ? w.doorway.join(', ') : 'nobody'} in a doorway · farthest any man fell behind ${f1(w.far)} m`);
     verdict(100 * w.stuck / (n * w.frames) < 1, `${who}: nobody is left behind — stuck man-frames under one percent`, `${w.stuck} of ${n * w.frames} man-frames (${f2(100 * w.stuck / (n * w.frames))} %) standing still over ${w.back} m behind him · two men within half a metre on ${w.jam} frames, closest ${f2(w.closest)} m`);

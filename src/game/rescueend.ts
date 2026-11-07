@@ -38,7 +38,6 @@ export const RESCUEEND = {
 
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 /** the player a row is built for and a press is read from (one today: the place a second would be asked for) */
-const who = (g: Game): Player => g.player;
 
 
 export class RescueEnd {
@@ -78,12 +77,6 @@ export class RescueEnd {
     const O = this.out;
     if (O && this.lead && alive.every(h => flat(h.char.pos, O) < K.outM)) return 'out';
     return null;
-  }
-  /** the objective row once the room is the team's or the hostages are on their feet: where to take them */
-  objective(): { text: string; pos: Vec3 | null } {
-    if (this.lead) return { text: 'objective ▸ bring them out the way you came in', pos: this.out };
-    const p = who(this.g).char.pos, near = this.alive().reduce<Guard | null>((a, b) => !a || flat(b.char.pos, p) < flat(a.char.pos, p) ? b : a, null);
-    return { text: 'objective ▸ bring them out, or clear the building', pos: near ? [near.char.pos[0], 0, near.char.pos[2]] : null };
   }
 
 }

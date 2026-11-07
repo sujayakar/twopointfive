@@ -103,8 +103,8 @@ pub fn move_mask(g: &Game, input: InputId) -> f64 {
 }
 
 /// Which sustained verb is running right now, as an identity ('' = none). (interact.ts runningVerb)
-pub fn running_verb(g: &Game) -> String {
-    let pl = g.player;
+pub fn running_verb(g: &Game, seat: &crate::seats::SeatRef) -> String {
+    let pl = seat.player;
     if let Some(d) = g.pl[pl].easing { return format!("ease:{}", g.dr[d].def.name); }
     if let Some(d) = g.pl[pl].picking { return format!("pick:{}", g.dr[d].def.name); }
     if let Some(w) = &g.pl[pl].wanding { let d = w.door; return format!("wand:{}", g.dr[d].def.name); }
@@ -118,7 +118,7 @@ pub fn running_verb(g: &Game) -> String {
     if g.mission.drive_t >= 0.0 { return String::from("drive"); }
     if g.pl[pl].breaker_move.is_some() { return String::from("breaker"); }
     if let Some(c) = &g.pl[pl].charging { let d = c.door; return format!("charge:{}", g.dr[d].def.name); }
-    if crate::wallcharge::wall_charge_setting(g) { return String::from("charge:wall"); }
+    if crate::wallcharge::wall_charge_setting(g, seat) { return String::from("charge:wall"); }
     if crate::defuse::defuse_working(g) { return String::from("defuse"); }
     String::new()
 }
@@ -149,11 +149,11 @@ pub fn wedged(r: &crate::game::Interactable) -> bool {
 }
 
 /// the whistle has a wedge of the ring this frame (interact.ts whistleWedge)
-pub fn whistle_wedge(g: &Game) -> bool {
-    let pl = g.player;
+pub fn whistle_wedge(g: &Game, seat: &crate::seats::SeatRef) -> bool {
+    let pl = seat.player;
     if !ring_stays(g) || g.pl[pl].down || g.pl[pl].takedown.is_some() || crate::rails::rails_locks(g, "whistle") { return false; }
     let mut n = 0.0;
-    for r in &g.nearby { if r.kind != crate::game::InteractableKind::Cancel { n += 1.0; } }
+    for r in seat.nearby { if r.kind != crate::game::InteractableKind::Cancel { n += 1.0; } }
     n < g.k.cmdring.wedges
 }
 
@@ -182,11 +182,11 @@ pub fn give(g: &mut Game, r: Option<&crate::game::Interactable>) {
 }
 
 /// the digits his ring has a wedge on, a bit each, bit 1 the first (interact.ts handRingKeys)
-pub fn hand_ring_keys(g: &Game) -> f64 {
+pub fn hand_ring_keys(g: &Game, seat: &crate::seats::SeatRef) -> f64 {
     let mut keys = 0i32;
-    let n = m::min(g.nearby.len() as f64, g.k.cmdring.wedges) as usize;
-    for i in 0..n { if wedged(&g.nearby[i]) { keys |= 1 << (i + 1); } }
-    if whistle_wedge(g) { (keys | 1 << (js::to_i32(g.k.cmdring.wedges) & 31)) as f64 } else { keys as f64 }
+    let n = m::min(seat.nearby.len() as f64, g.k.cmdring.wedges) as usize;
+    for i in 0..n { if wedged(&seat.nearby[i]) { keys |= 1 << (i + 1); } }
+    if whistle_wedge(g, seat) { (keys | 1 << (js::to_i32(g.k.cmdring.wedges) & 31)) as f64 } else { keys as f64 }
 }
 
 /// Esc, ahead of the pause menu: the open selector backs out, else a running sustained verb stops. (interact.ts escapeInteract)
@@ -197,20 +197,20 @@ pub fn escape_interact(g: &mut Game) -> bool {
 }
 
 /// a standing ring's `free` (`!!S.ring?.free`)
-fn ring_free(g: &Game) -> bool {
-    g.pl[g.player].sel.ring.as_ref().map_or(false, |r| r.free.unwrap_or(false))
+fn ring_free(g: &Game, seat: &crate::seats::SeatRef) -> bool {
+    g.pl[seat.player].sel.ring.as_ref().map_or(false, |r| r.free.unwrap_or(false))
 }
 
 /// his hands are on a choice or a verb (interact.ts handsBusy)
-pub fn hands_busy(g: &Game) -> bool {
-    let pl = g.player;
-    (g.pl[pl].sel.open && !ring_free(g)) || g.pl[pl].sel.down_t >= 0.0 || !running_verb(g).is_empty()
+pub fn hands_busy(g: &Game, seat: &crate::seats::SeatRef) -> bool {
+    let pl = seat.player;
+    (g.pl[pl].sel.open && !ring_free(g, seat)) || g.pl[pl].sel.down_t >= 0.0 || !running_verb(g, seat).is_empty()
 }
 
 /// is there anything here the back key would back out of (interact.ts backableInteract)
-pub fn backable_interact(g: &Game) -> bool {
-    let pl = g.player;
-    g.pl[pl].sel.open || g.pl[pl].sel.down_t >= 0.0 || !running_verb(g).is_empty()
+pub fn backable_interact(g: &Game, seat: &crate::seats::SeatRef) -> bool {
+    let pl = seat.player;
+    g.pl[pl].sel.open || g.pl[pl].sel.down_t >= 0.0 || !running_verb(g, seat).is_empty()
 }
 
 /// anything to CHOOSE in this list (interact.ts choosable)
@@ -224,7 +224,7 @@ pub fn open_selector(g: &mut Game) {
     if g.pl[pl].sel.open { return; }
     g.pl[pl].sel.open = true;
     if g.nearby.last().map_or(false, |r| r.kind != crate::game::InteractableKind::Cancel) {
-        let row = crate::player::cancel_row(g);
+        let row = crate::player::cancel_row(g, &crate::seats::here(g));
         g.nearby.push(row);
     }
     crate::player::pick_hover(g);
@@ -255,22 +255,22 @@ pub fn close_selector(g: &mut Game, spent: bool) {
 }
 
 /// the point his ring stands on: the thing its first row is about where that is near him; else his own body (interact.ts ringSpot)
-pub fn ring_spot(g: &Game) -> V3 {
-    let p = g.ch[g.pl[g.player].ch].pos;
-    match g.nearby.iter().find(|r| wedged(r)) {
+pub fn ring_spot(g: &Game, seat: &crate::seats::SeatRef) -> V3 {
+    let p = g.ch[g.pl[seat.player].ch].pos;
+    match seat.nearby.iter().find(|r| wedged(r)) {
         Some(h) if v3::dist_xz(h.pos, p) <= RING_THING_M => h.pos,
         _ => [p[0], p[1] + RING_BODY_M, p[2]],
     }
 }
 
 /// the ring put on its thing (`open`) and kept there. True: the hand has not moved the cursor since the last look. (interact.ts ringOnThing)
-pub fn ring_on_thing(g: &Game, r: &mut crate::cmdring::RingState, input: InputId, cam: CameraId, view: crate::host_hud::View, open: Option<bool>) -> bool {
+pub fn ring_on_thing(g: &Game, seat: &crate::seats::SeatRef, r: &mut crate::cmdring::RingState, input: InputId, cam: CameraId, view: crate::host_hud::View, open: Option<bool>) -> bool {
     let open = open.unwrap_or(false);
     let (mouse_x, mouse_y) = (g.tab.input[input].mouse_x, g.tab.input[input].mouse_y);
     if open {
         r.ox = Some(0.0); r.oy = Some(0.0); r.mx = Some(mouse_x); r.my = Some(mouse_y); r.clear = Some(false); r.pt = Some(0.0);
     } else if r.at.is_none() { return false; }
-    let at = ring_spot(g);
+    let at = ring_spot(g, seat);
     r.at = Some(at);
     let (sx, sy, front) = crate::camera::follow_camera_project(g, cam, at, view.client_width, view.client_height, None, None);
     if front { crate::cmdring::ring_pin(g, r, sx, sy, view.client_width, view.client_height); }
@@ -299,7 +299,7 @@ fn lend_ring<T>(g: &mut Game, f: impl FnOnce(&mut Game, &mut crate::cmdring::Rin
 
 /// `ringOnThing(g, S.ring, input, cam, view, open)`
 fn ring_on_own(g: &mut Game, input: InputId, cam: CameraId, view: crate::host_hud::View, open: Option<bool>) -> bool {
-    lend_ring(g, |g, r| ring_on_thing(g, r, input, cam, view, open))
+    lend_ring(g, |g, r| ring_on_thing(g, &crate::seats::here(g), r, input, cam, view, open))
 }
 
 /// `x &= ~bits` on one of the Input's words of bits
@@ -318,7 +318,7 @@ pub fn update_interact(g: &mut Game, dt: f64, input: InputId, view: Option<crate
     if g.pl[pl].f_held && !down && !hit { g.pl[pl].f_held = false; }   // a spent press has come up: Space is live again
     if crate::input::input_hit(g, input, "Paused") && (g.pl[pl].sel.open || g.pl[pl].sel.down_t >= 0.0) { close_selector(g, true); }
     // ---- a sustained verb is running: Space (a fresh press), Esc, or a step INTO it stops it; nothing else is on offer meanwhile
-    let run = running_verb(g);
+    let run = running_verb(g, &crate::seats::here(g));
     if !run.is_empty() {
         let mask = move_mask(g, input);
         if run != g.pl[pl].sel.run_key {
@@ -343,13 +343,13 @@ pub fn update_interact(g: &mut Game, dt: f64, input: InputId, view: Option<crate
     }
     // ---- the press edge: armed unless this press is already spent
     let stays = ring_stays(g);
-    let free = g.pl[pl].sel.open && ring_free(g);
+    let free = g.pl[pl].sel.open && ring_free(g, &crate::seats::here(g));
     if hit && !g.pl[pl].f_held && !free {
         let s = &mut g.pl[pl].sel;
         s.down_t = 0.0; s.open = false; s.moved = false; s.ring = None; s.word = String::new();
     }
     let armed = g.pl[pl].sel.down_t >= 0.0;
-    let live = choosable(&g.nearby) || (stays && whistle_wedge(g));
+    let live = choosable(&g.nearby) || (stays && whistle_wedge(g, &crate::seats::here(g)));
     if g.pl[pl].sel.open && !live { shut_list(g); }
     // ---- THE LIST AS A RING (with HANDRING.on it is the ring that stays: `stays` holds throughout this block)
     if ring_mode(g) {
@@ -392,7 +392,7 @@ pub fn update_interact(g: &mut Game, dt: f64, input: InputId, view: Option<crate
                 _ => false,
             };
             let wedges = g.k.cmdring.wedges;
-            let keys = hand_ring_keys(g);
+            let keys = hand_ring_keys(g, &crate::seats::here(g));
             let lone = crate::ringlone::lone_key(g, &mut |_| keys);
             let at_set = g.pl[pl].sel.ring.as_ref().unwrap().at.is_some();
             let time = g.time;
@@ -400,7 +400,7 @@ pub fn update_interact(g: &mut Game, dt: f64, input: InputId, view: Option<crate
             let want0 = lend_ring(g, |g, r| crate::cmdring::ring_want(g, r, input, digit as f64, time, Some(lone), Some(shapes)));
             let pt = g.pl[pl].sel.ring.as_ref().unwrap().pt.unwrap_or(0.0);
             let want = if still && digit == 0 && want0 != pt { 0.0 } else { want0 };
-            let wh = whistle_wedge(g);
+            let wh = whistle_wedge(g, &crate::seats::here(g));
             let to_wh = wh && want == wedges;
             // (the row: `want && !toWh ? g.nearby[want - 1] : null`, off the list's end = none)
             let at: i32 = if js::truthy(want) && !to_wh && g.nearby.get((want - 1.0) as usize).map_or(false, wedged) { (want - 1.0) as i32 } else { -1 };

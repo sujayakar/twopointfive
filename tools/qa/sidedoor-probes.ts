@@ -12,7 +12,6 @@
 //   sidedoor-fight   the fight, over seeds: the server room taken by its corridor door, then the manager's office through the side door (a can while there is
 //                    one) — the order is taken and ends 'in' every time; what it costs is printed beside the same seeds taking the office by its corridor door
 import { standUp, ROOT } from './headless.ts';
-import { sample } from './sweep.ts';
 import { toolsRow4 } from './order-keys.ts';
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { ROOMCLEAR, propGap } = await import(`${ROOT}/src/game/roomclear.ts`);
@@ -112,7 +111,7 @@ export const sidedoorFeet = guarded(async () => {
   // clear from the keypad's side tries it, says the lock and holds: the boot is the player's next word, and doortest-check.ts's to hold.
   // SIDEFEET_BREAK=1 = the red path of both: the check asks for the board and the entry as they were before the two rules.
   const BREAK = process.env.SIDEFEET_BREAK === '1'; let ran = 0;
-  const CASES: [string, 2 | 4][] = sample<[string, 2 | 4]>([['openClear', 2], ['stack', 4], ['openClear', 4], ['bangClear', 4], ['charge', 4], ['thresholdHold', 4], ['charge', 2], ['outside', 4], ['stack', 2], ['bangClear', 2], ['outside', 2], ['thresholdHold', 2]], 3);
+  const CASES: [string, 2 | 4][] = [['stack', 4], ['openClear', 4], ['bangClear', 4], ['charge', 4], ['thresholdHold', 4], ['outside', 4], ['stack', 2], ['openClear', 2], ['bangClear', 2], ['charge', 2], ['thresholdHold', 2], ['outside', 2]];
   for (const [id, squad] of CASES) {
     try {
       const R = await rig(3, { squad, blind: ['manager'] }); const { O, D } = R; const d = R.door(DOOR), room = R.room('manager'), n = squad;
@@ -133,7 +132,7 @@ export const sidedoorFeet = guarded(async () => {
         if (id === 'charge') { let res: any = null; for (let i = 0; i < 60 * 60 && op && D.ops.includes(op) && !res; i++) { R.step(); if (op.phase === 'armed') res = D.blow(); }
           good &&= !!res && res.backblast === 0; tail = `blown: ${res ? `knocked ${res.knocked}, stunned ${res.stunned}, backblast ${res.backblast}` : 'never armed'} · `; }
         if (id === 'thresholdHold') { const on = R.until(() => op?.phase === 'thr' || !D.ops.includes(op), 50); R.step(60 * 4); const none = op?.crossed.size === 0;
-          const told = R.give('openClear', DOOR); good &&= on && none && told === null; tail = `held on the jambs ${on}, nobody in ${none} · told to step in → ${told} · `; }
+          const told = D.thresholdTell('step', DOOR); good &&= on && none && told === null; tail = `held on the jambs ${on}, nobody in ${none} · told to step in → ${told} · `; }
         R.until(() => !D.ops.includes(op), 70); R.step(60);
         const sent = op ? [...op.pod.keys()] : [], crossed = sent.filter((m: any) => op.crossed.has(m) || m.state === 'dead').length, stuck = R.up.filter((m: any) => inDoorway(d, m.char.pos)).map((m: any) => m.callsign);
         good &&= !!op && took === n && op.ended === 'in' && sent.length >= Math.min(n, 3) && crossed === sent.length && stuck.length === 0;

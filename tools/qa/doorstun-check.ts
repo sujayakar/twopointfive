@@ -6,6 +6,7 @@
 // leaf), on the compound's hut door with the man where the maintainer's replay had him, and on an office door for the player.
 //   (1) his door, his man: the leaf is off, the man 2.5 m behind it is 'stunned' — folded for the wound band's seconds, alive, nobody down
 //   (2) a stride behind the door, well inside the lethal radius: stunned, never killed (the leaf took the fragments)
+//   (3) behind the WALL beside that door: shielded, as ever
 //   (4) a burst too far off to take the leaf: it hangs, and he is shielded, as ever
 //   (5) the player behind a door somebody else's burst takes off: stunned (his trigger dead for the seconds, a line saying why), never hurt
 //   (7) BEFORE the burst: a man reckoning his cover (frag.ts exposedTo — who runs from a grenade, a thrower's 'none of mine in it') counts a door the burst
@@ -51,12 +52,18 @@ export async function doorstunCheck(): Promise<boolean> {
   const hit = (rep: any, gd: any) => rep.hits.find((h: any) => h.id === gd.char.id);
   /** his door: the compound's guard hut, the burst on its OUTSIDE face (the side the maintainer fired from), the hut's own man inside. Which face is which is
    *  read off the level: the hut's man is the defender staged nearest the door, and the burst goes on the face he is not on. */
-  const hut = async (where: 'tape' | 'near', off?: number, fire = true) => {
+  const hut = async (where: 'tape' | 'near' | 'wall', off?: number, fire = true) => {
     const R = await rig(true), g = R.g, d = R.door('hut_w'), mid = doorPt(d, d.def.width / 2, 0, 1, 0);
     const T = g.guards.filter((x: any) => x.team === 'hostile' && x.state !== 'dead').sort((a: any, b: any) => Math.hypot(a.char.pos[0] - mid[0], a.char.pos[2] - mid[2]) - Math.hypot(b.char.pos[0] - mid[0], b.char.pos[2] - mid[2]))[0];
     const inside: 1 | -1 = g.doors.side(d, T.char.pos), side = -inside as 1 | -1;
     { const s = doorPt(d, d.def.width / 2, 12, side, 0); g.teleportPlayer([s[0], 0, s[2]]); }   // (the player square on to the door from the yard, as he was)
-    const p: number[] | null = where === 'tape' ? doorPt(d, d.def.width / 2, 2.4, inside, 0) : doorPt(d, d.def.width / 2, 1.0, inside, 0);   // ('tape' = where the replay had him: 2.5 m straight in from the leaf)
+    let p: number[] | null = where === 'tape' ? doorPt(d, d.def.width / 2, 2.4, inside, 0) : where === 'near' ? doorPt(d, d.def.width / 2, 1.0, inside, 0) : null;   // ('tape' = where the replay had him: 2.5 m straight in from the leaf)
+    if (where === 'wall') {   // floor inside the hut the burst has no line to even with every leaf out of the way: behind the wall beside the door
+      const from = doorPt(d, d.def.width / 2, HE40.standoff + 0.03, side, 1.0), dyn = g.col.dynamicBoxes; g.col.dynamicBoxes = [];
+      try { for (let back = 0.5; back <= 3 && !p; back += 0.25) for (let out = 0.8; out <= 4 && !p; out += 0.2) for (const sgn of [1, -1]) { const q = doorPt(d, d.def.width / 2 + sgn * out, back, inside, 0);
+        if (!p && !g.col.nav.isBlocked(q[0], q[2]) && [[0, 0], [0.4, 0], [-0.4, 0], [0, 0.4], [0, -0.4]].every(([dx, dz]) => exposure(g, from, [q[0] + dx, 0, q[2] + dz], [q[0] + dx, 1.65, q[2] + dz], 'whole') === 0)) p = q; } }   // (a body's breadth of it: his head and chest are not over his feet)
+      finally { g.col.dynamicBoxes = dyn; }
+    }
     if (!p) return { R, g, d, T, side, rep: null as any, st0: 0, counted: 0, inView: false };
     for (const o of g.guards) if (o !== T && o.team === 'hostile') R.put(o, [4.8, 0, 5.8]);   // (the rest of the yard: out of this burst)
     R.put(T, p); R.step(3); R.said.length = 0;
@@ -67,20 +74,23 @@ export async function doorstunCheck(): Promise<boolean> {
     return { R, g, d, T, side, rep, st0, counted: FRAG_STATS.stunned - n0, inView };
   };
   try {
-    { const c = await hut('tape'), h = c.rep && hit(c.rep, c.T), secs = c.T.staggerUntil - c.g.time, aware = c.T.awareness; c.R.step(1);   // (what the game said reaches the check with the next step)
-      line(!!h && c.d.off && h.result === 'stunned' && c.T.state !== 'dead' && secs > 2 && secs <= FRAG.stagger[0] && c.rep.killed === 0 && c.rep.stunned === 1 && c.counted === 1 && aware >= 0.92 && c.inView === c.R.said.some((s: string) => /1 stunned behind the door/.test(s)),
-        '(1) his door, his man: the 40 mm takes the hut door off and the man 2.5 m behind it is stunned — folded, alive, and the log says so', c.rep ? `door off ${c.d.off} · ${words(c.rep, c.T, c.g)} · the player ${c.inView ? 'sees' : 'does not see'} him through the opening · counted ${c.counted} · awareness ${f2(aware)} · said "${c.R.said.join(' / ')}"` : 'NO BLAST'); }
+    { const c = await hut('tape'), h = c.rep && hit(c.rep, c.T), secs = c.T.staggerUntil - c.g.time;
+      line(!!h && c.d.off && h.result === 'stunned' && c.T.state !== 'dead' && secs > 2 && secs <= FRAG.stagger[0] && c.rep.killed === 0 && c.rep.stunned === 1 && c.counted === 1 && c.T.awareness >= 0.92 && c.inView === c.R.said.some((s: string) => /1 stunned behind the door/.test(s)),
+        '(1) his door, his man: the 40 mm takes the hut door off and the man 2.5 m behind it is stunned — folded, alive, and the log says so', c.rep ? `door off ${c.d.off} · ${words(c.rep, c.T, c.g)} · the player ${c.inView ? 'sees' : 'does not see'} him through the opening · "${c.R.said[c.R.said.length - 1] ?? ''}"` : 'NO BLAST'); }
     { const c = await hut('near'), h = c.rep && hit(c.rep, c.T);
       line(!!h && c.d.off && h.d < FRAG.lethalM && h.result === 'stunned' && c.T.state !== 'dead' && c.T.staggerUntil - c.g.time > 2.5,
         '(2) a stride behind the door, inside the lethal radius: stunned, never killed — the leaf took the fragments', c.rep ? `door off ${c.d.off} · ${words(c.rep, c.T, c.g)}` : 'NO BLAST'); }
+    { const c = await hut('wall'), h = c.rep && hit(c.rep, c.T);
+      line(!!h && c.d.off && h.result === 'shielded' && c.T.staggerUntil === c.st0 && c.rep.stunned === 0,
+        '(3) behind the wall beside that door: shielded as ever — only the opening lets it through', c.rep ? `door off ${c.d.off} · ${words(c.rep, c.T, c.g)}` : 'NO PLACE behind the wall found');  }
     { const c = await hut('tape', 4.5), h = c.rep && hit(c.rep, c.T);
       line(!!h && !c.d.off && h.result === 'shielded' && c.T.staggerUntil === c.st0,
         '(4) a burst too far off to take the leaf: the door hangs and he is shielded as ever', c.rep ? `door off ${c.d.off} · ${words(c.rep, c.T, c.g)}` : 'NO BLAST'); }
     { const R = await rig(false), g = R.g, d = R.door('manager'), pl = g.player; for (const o of g.guards) R.put(o, [8, 0, 17.6]);
       const p = doorPt(d, d.def.width / 2, 1.8, -1, 0); g.teleportPlayer([p[0], 0, p[2]]); R.step(3); R.said.length = 0;
-      const hits0 = pl.hitsLeft; const rep = R.shell(d, 1, 0); const secs = pl.staggerUntil - g.time, cd = pl.fireCd; R.step(1);   // (what the game said reaches the check with the next step)
-      line(d.off && rep.player === 'stunned' && rep.stunned === 0 && !pl.down && pl.hitsLeft === hits0 && secs > 2 && cd > 2 && R.said.some((s: string) => /came through the door, stunned/.test(s)),
-        '(5) the player behind a door a burst takes off: stunned like anybody — trigger dead for the seconds, not hurt, a line saying why', `door off ${d.off} · player ${rep.player} · down ${pl.down} · hits left ${pl.hitsLeft} of ${hits0} · stagger ${f2(secs)} s · fireCd ${f2(cd)} · "${R.said[0] ?? ''}"`); }
+      const hits0 = pl.hitsLeft; const rep = R.shell(d, 1, 0); const secs = pl.staggerUntil - g.time;
+      line(d.off && rep.player === 'stunned' && rep.stunned === 0 && !pl.down && pl.hitsLeft === hits0 && secs > 2 && pl.fireCd > 2 && R.said.some((s: string) => /came through the door, stunned/.test(s)),
+        '(5) the player behind a door a burst takes off: stunned like anybody — trigger dead for the seconds, not hurt, a line saying why', `door off ${d.off} · player ${rep.player} · down ${pl.down} · hits left ${pl.hitsLeft} of ${hits0} · stagger ${f2(secs)} s · fireCd ${f2(pl.fireCd)} · "${R.said[0] ?? ''}"`); }
     { const c = await hut('near', undefined, false), g = c.g, c2 = c.T.char, head = [c2.pos[0], 1.65, c2.pos[2]];
       const at = (o: number) => { const pt = doorPt(c.d, c.d.def.width / 2, o, c.side, 1.0); return [pt[0], pt[1], pt[2]] as V3; };
       const near = at(HE40.standoff + 0.03), far = at(4.5);

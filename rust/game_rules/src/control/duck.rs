@@ -1,6 +1,6 @@
 //! HEAD DOWN UNDER FIRE: rounds close enough, long enough, and he gets down where he is, or shifts to the cover the suppression rule found him.
 //! The rule's own code and state are suppression/ (`gd.sup`); this file says it in the list's words.
-use super::{Intent, Outcome, TakeCover};
+use super::{Outcome, Reaction, TakeCover};
 use crate::game::Game;
 use crate::ids::*;
 use crate::suppression::HeadDown;
@@ -9,9 +9,27 @@ use crate::suppression::HeadDown;
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Row { pub want: Option<TakeCover> }
 
-pub fn transition(g: &mut Game, gd: GuardId, dt: f64) {
-    let want = asked(g, gd, dt);
-    super::state_mut(g).rows.duck.at(gd).want = want;
+pub struct Rule;
+impl Reaction for Rule {
+    type Row = Row;
+    type Ask = TakeCover;
+
+    fn transition(g: &mut Game, gd: GuardId, dt: f64) {
+        let want = asked(g, gd, dt);
+        super::state_mut(g).rows.duck.at(gd).want = want;
+    }
+
+    fn propose(g: &Game, gd: GuardId) -> Option<TakeCover> { super::state(g).and_then(|s| s.rows.duck.get(gd)).and_then(|r| r.want) }
+
+    /// The shift ends where he arrives, where he is going nowhere, or when it has taken too long.
+    fn commit(g: &mut Game, gd: GuardId, o: Outcome) {
+        match o {
+            Outcome::Arrived => crate::suppression::end_displace(g, gd, "there"),
+            Outcome::GoingNowhere => crate::suppression::end_displace(g, gd, "going nowhere"),
+            Outcome::Moving => if g.time - g.gd[gd].sup.displaced_at > g.k.suppression.displace_cap_secs { crate::suppression::end_displace(g, gd, "out of time"); },
+            Outcome::Down | Outcome::Script(_) => {}
+        }
+    }
 }
 
 fn asked(g: &mut Game, gd: GuardId, dt: f64) -> Option<TakeCover> {
@@ -21,21 +39,10 @@ fn asked(g: &mut Game, gd: GuardId, dt: f64) -> Option<TakeCover> {
     let fire_wait = g.k.suppression.head_down_delay;
     // where the rounds came from, while he still remembers
     let threat = g.gd[gd].sup.src.filter(|_| g.time - g.gd[gd].sup.src_t < g.k.suppression.src_memory_secs);
-    if matches!(now, HeadDown::Down) { return Some(TakeCover { to: None, pace: 0.0, crouch: 1.0, fire_wait, threat }); }
+    if matches!(now, HeadDown::Down) { return Some(TakeCover { fire_wait, threat, ..TakeCover::down() }); }
     let cover = g.gd[gd].sup.cover.expect("a man shifting has his cover spot");
-    Some(TakeCover { to: Some(cover), pace: g.tune.guard_investigate * g.k.suppression.displace_pace, crouch: g.k.suppression.displace_crouch, fire_wait, threat })
+    // (while he cannot see or is reeling he goes nowhere, so that time is no part of what the shift may take: its clock waits with him)
+    if super::man::blind(g, gd) || super::man::staggered(g, gd) { g.gd[gd].sup.displaced_at += dt; }
+    let pace = g.tune.guard_investigate * g.k.suppression.displace_pace;
+    Some(TakeCover { crouch: g.k.suppression.displace_crouch, fire_wait, threat, ..TakeCover::to(cover, pace) })
 }
-
-pub fn propose(g: &Game, gd: GuardId) -> Option<Intent> { super::state(g).and_then(|s| s.rows.duck.get(gd)).and_then(|r| r.want).map(Intent::Cover) }
-
-/// The shift ends where he arrives, where he is going nowhere, or when it has taken too long.
-pub fn commit(g: &mut Game, gd: GuardId, o: Outcome) {
-    match o {
-        Outcome::Arrived => crate::suppression::end_displace(g, gd, "there"),
-        Outcome::GoingNowhere => crate::suppression::end_displace(g, gd, "going nowhere"),
-        Outcome::Moving => if g.time - g.gd[gd].sup.displaced_at > g.k.suppression.displace_cap_secs { crate::suppression::end_displace(g, gd, "out of time"); },
-        Outcome::Down | Outcome::Script(_) => {}
-    }
-}
-
-pub fn lost(_: &mut Game, _: GuardId) {}

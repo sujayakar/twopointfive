@@ -1,9 +1,12 @@
-// THE SQUAD REACHES YOU (src/game/squadnet.ts: SQUADNET.on), headless:
+// THE SQUAD REACHES YOU (src/game/squadnet.ts — SQUADNET.on · .clear), headless:
 //   bun run tools/qa/squadnet-check.ts [clear|end|net]  (probes.ts squadnet; SQUADNET_BREAK=1 breaks the staging: the quick key is never pressed,
 //   the rooms asked of are staged with a point of floor unseen, the teammate who speaks is never put off the screen: must fail)
+//   clear  the lead's call at an entry's end: 'clear' only of a room whose search was not cut short and that nobody stands in; 'quiet' of floor unseen
+//          with nobody in sight; nothing with an enemy in sight. (`why`, the reason the squad gave for the entry it picked, went 2026-11-07: the squad picks none, the command is the door's first row.)
 //   end    an entry into a room the mission has no name for (the office's conference room) ends with the lead's call too: 'room clear.' with all of its
 //          floor seen and nobody in it. Open floor is called 'clear so far.'.
-//   net    where a far line is put (the page's own layer, no game under it): at the view's edge on his side, along the border, never off the view.
+//   net    a teammate's line said with his head off the screen clicks (a defender's does not, a teammate's on the screen does not); a teammate going down is
+//          a row of its own for its time, with the lower click, once; a man already down when the run starts is not called.
 // Where a far line is DRAWN (ui/bubbles.ts)
 // is not looked at here, no picture is; where it is PUT is (squadnet.ts netPlace, the one place bubbles.ts asks), in `net`.
 import { standUp, ROOT } from './headless.ts';
@@ -79,31 +82,87 @@ export async function squadnetClear(): Promise<boolean> {
     const a = roomCall(g, 'mess', BREAK ? 1 : 0, false, false), b = roomCall(g, 'mess', 3, false, false), c = roomCall(g, 'mess', 3, true, false), d = roomCall(g, 'mess', 3, true, true), e = roomCall(g, 'mess', 0, true, true), f = roomCall(g, 'mess', 0, true, false);
     F.verdict(a === 'mess clear.' && b === "mess's quiet. we didn't see all of it." && c === b && d === null && e === null && f === null,
       'all of the floor seen and nobody in it: clear · floor unseen and nobody in sight: quiet · an enemy in sight, or one standing on floor they saw: nothing', `seen all, empty: ${a} · 3 unseen, empty: ${b} · 3 unseen, one inside unseen: ${c} · 3 unseen, one in sight: ${d} · seen all, one in sight: ${e} · seen all, one inside: ${f}`);
+    F.verdict(g.squadNet.stats.clears === 1 && g.squadNet.stats.quiets === 2, 'the calls are counted', `clear ${g.squadNet.stats.clears} · quiet ${g.squadNet.stats.quiets}`);
+    const pl = roomCall(g, 'bunks', 9, false, false), sg = roomCall(g, 'mess', 9, false, false);
+    F.verdict(pl === "bunks are quiet. we didn't see all of it." && sg === "mess's quiet. we didn't see all of it.", 'a room named in the plural is called as you would say it', `${pl} · ${sg}`);
   });
   return F.done();
 }
 
 export async function squadnetEnd(): Promise<boolean> {
   const F = family('squadnet-end: an entry into a room the mission has no name for ends with a call too');
-  // the entry itself: the squad goes into the nearest room that is none of the room clear's own, on the word
+  await kept(async () => {
+    const R: any = await hushed(() => rig(7)), g = R.game;
+    const a = plainCall(g, false, BREAK ? 1 : 0, false, false), b = plainCall(g, false, 3, false, false), c = plainCall(g, false, 0, true, false), d = plainCall(g, false, 3, true, true), e = plainCall(g, true, 0, true, false), f = plainCall(g, true, 0, true, true), n = g.squadNet.stats.ends;
+    F.verdict(a === 'room clear.' && b === "room's quiet. we didn't see all of it." && c === null && d === null && e === 'clear so far.' && f === null && n === 3,
+      'a room: clear, quiet or nothing by the named rooms\' own rule · open floor: \'clear so far.\' unless an enemy on it is in sight · each call counted', `seen all, empty: ${a} · 3 unseen, empty: ${b} · seen all, one inside: ${c} · one in sight: ${d} · open floor, nobody in sight: ${e} · open floor, one in sight: ${f} · counted ${n}`);
+  });
+  // the entry itself: the squad goes into the nearest room that is none of the room clear's own
   const run = () => kept(async () => {
     const S: any = await stackedOn(5, 'not'); if (S.why) return { why: String(S.why) } as any;
     const { R, D } = S, g = R.game, O = R.O, T = g.doorTools, RC = g.roomClear;
     const tm = { ...S.t, side: O.of(R.team[0])?.post ? sideOf(D, O.of(R.team[0]).post) : S.t.side }, far = farRoom(g, tm); let emptied = 0;
-    for (const x of g.guards) if (x.state !== 'dead' && x.team === 'hostile' && g.cleared.roomAt(x.char.pos) === far) { x.char.pos[0] += 400; emptied++; }   // (the room beyond is emptied: the call is the search's alone)
-    const d0 = T.done.length; R.W.input.pressed.add('KeyF'); R.step(); R.step(2); const n0 = R.bub.length; R.until(() => T.ops.length === 0, 70); R.step(30);   // (the window opens once the press has been answered)
+    for (const x of g.guards) if (x.state !== 'dead' && x.team === 'hostile' && g.cleared.roomAt(x.char.pos) === far) { x.state = 'dead'; emptied++; }   // (the room beyond is emptied: the call is the search's alone)
+    T.bangs = 3; const d0 = T.done.length; aimOf(R, D); R.W.input.pressed.add(ORDERS.quickKey); R.step(); R.step(2); const n0 = R.bub.length; R.until(() => T.ops.length === 0, 70); R.step(30);   // (the window opens once the press has been answered)
     const op = T.done.length > d0 ? T.done[T.done.length - 1] : null, lead = op?.lead;
-    return { set: S.set, door: D.def.name, emptied, went: !!op?.beats.some((b: any) => b.what === 'in'), named: !!lead && RC.rooms.some((r: any) => r.def.id === RC.roomAt(lead.char.pos)), left: op?.search ? op.search.left : NaN, calls: R.bub.slice(n0).filter(isCall) as string[] };
+    return { set: S.set, door: D.def.name, emptied, went: !!op?.beats.some((b: any) => b.what === 'in'), named: !!lead && RC.rooms.some((r: any) => r.def.id === RC.roomAt(lead.char.pos)), left: op?.search ? op.search.left : NaN, calls: R.bub.slice(n0).filter(isCall) as string[], ends: g.squadNet.stats.ends as number };
   });
   const on = await run();
   if (on.why) { F.verdict(false, 'the squad stacks on a door into a room the mission has no name for', String(on.why)); return F.done(); }
-  const tell = (r: any) => `${r.door}: stacked ${r.set} · went in ${r.went} · the lead ends in ${r.named ? 'a NAMED room' : 'no named room'} · floor unseen ${r.left} · called ${JSON.stringify(r.calls)}`;
-  F.verdict(on.set && on.went && !on.named && on.calls.length === 1 && /^room clear\.$|^room's quiet\. /.test(on.calls[0]), 'the lead calls the room though the mission has no name for it', tell(on));
+  const tell = (r: any) => `${r.door}: stacked ${r.set} · went in ${r.went} · the lead ends in ${r.named ? 'a NAMED room' : 'no named room'} · floor unseen ${r.left} · called ${JSON.stringify(r.calls)} · counted ${r.ends}`;
+  F.verdict(on.set && on.went && !on.named && on.calls.length === 1 && /^room clear\.$|^room's quiet\. /.test(on.calls[0]) && on.ends === 1, 'the lead calls the room though the mission has no name for it', tell(on));
+  // the response team runs the same door orders as a cast of its own: none of this is theirs (no call at an entry's end, no click on the squad's net)
+  await kept(async () => {
+    const { requestQrf } = await import(`${ROOT}/src/game/qrf.ts`);
+    const r = await hushed(async () => {
+      Math.random = seeded(41); const W: any = await standUp(), game = W.game;
+      const hide = () => { game.teleportPlayer([37.5, 0, 26.5]); game.player.visibility = 0.02; game.playerInvisible = true; game.player.crouch = true; };
+      game.godMode = true; game.aiEnabled = true; Object.assign(game.tune, { qrf: true, qrfEta: 14, qrfSize: 4, perimeter: false, qrfSquad: true });
+      for (let i = 0; i < 20; i++) W.step(DT);
+      hide(); game.alarm.placed = true; game.alarm.pos = [8, 0, 8]; game.alarm.raisedAt = game.time; requestQrf(game, 'panel');
+      const seen = new Set<string>(), calls: string[] = []; let ins = 0;
+      for (let f = 0; f < 60 * 150 && ins < 2; f++) { hide(); W.step(DT); ins = game.qrf.log.filter((l: any) => l.what === 'drill:in').length;
+        for (const m of game.qrf.men ?? []) { const b = m.bubble, k = b ? `${m.callsign}|${b.t}|${b.text}` : ''; if (b && !seen.has(k)) { seen.add(k); if (isCall(b.text)) calls.push(b.text); } } }
+      return { ins, calls, ends: game.squadNet.stats.ends as number, lines: game.squadNet.stats.lines as number, squad: game.orders.squad().length as number, said: seen.size };
+    });
+    F.verdict(r.ins >= 2 && r.said > 0 && r.calls.length === 0 && r.ends === 0 && r.lines === 0, 'the response team\'s own entries are not called, and its lines do not click the squad\'s net', `its entries ${r.ins} · its lines ${r.said} · calls ${JSON.stringify(r.calls)} · counted ${r.ends} · clicks owed the squad's net ${r.lines} (Sam's squad: ${r.squad} men)`);
+  });
   return F.done();
 }
 
 export async function squadnetNet(): Promise<boolean> {
-  const F = family('squadnet-net: where a far line is put');
+  const F = family('squadnet-net: a teammate\'s line from off the screen clicks, and a teammate down is called');
+  await kept(async () => {
+    const R: any = await hushed(() => rig(7)), g = R.game, N = g.squadNet; R.step(5);
+    const mate = R.team[0], foe = g.guards.find((o: any) => o.state !== 'dead' && o.team === 'hostile');
+    // (the harness has no camera of its own: a view is staged over Sam by hand — every head within a couple of metres is on it, nothing else is)
+    const vp0 = g.viewProj, pl = g.player.char.pos;
+    const view = (on: boolean) => { g.viewProj = on ? [0.5, 0, 0, 0, 0, 0, 0, 0, 0, 0.5, 0, 0, -0.5 * pl[0], -0.5 * pl[2], 0, 1] : vp0; };
+    const clicks = () => R.play.filter((p: any) => p.name === 'radio' && p.rate === SQUADNET.clickRate && Math.abs(p.gain - SQUADNET.click) < 1e-6).length;
+    const was = [...mate.char.pos], head0 = mate.char.bones.head ? [...mate.char.bones.head] : null;
+    const put = (p: number[]) => { if (BREAK) return; mate.char.pos[0] = p[0]; mate.char.pos[2] = p[2]; if (mate.char.bones.head) { mate.char.bones.head[0] = p[0]; mate.char.bones.head[2] = p[2]; } };
+    view(true);
+    // 1. his head off the screen: the line clicks, once a frame
+    put([pl[0] + 30, 0, pl[2]]); const l0 = N.stats.lines, c0 = clicks(); g.say(mate, 'stacked up.'); g.say(mate, 'moving.'); const due = N.stats.lines - l0; N.tick(); const far = clicks() - c0;
+    // 2. on the screen: nothing
+    put([pl[0] + 0.5, 0, pl[2] + 0.5]); const l1 = N.stats.lines, c1 = clicks(); g.say(mate, 'on it.'); N.tick(); const nearL = N.stats.lines - l1, nearC = clicks() - c1;
+    // 3. a defender off the screen: nothing
+    let foeL = -1, foeC = -1; if (foe) { const fw = [...foe.char.pos]; foe.char.pos[0] = pl[0] + 30; if (foe.char.bones.head) foe.char.bones.head[0] = pl[0] + 30; const l2 = N.stats.lines, c2 = clicks(); g.say(foe, 'who\'s there?', false, true); N.tick(); foeL = N.stats.lines - l2; foeC = clicks() - c2; foe.char.pos[0] = fw[0]; }
+    put(was); if (head0 && mate.char.bones.head) { mate.char.bones.head[0] = head0[0]; mate.char.bones.head[2] = head0[2]; } view(false);
+    F.verdict(due === 2 && far === 1 && nearL === 0 && nearC === 0 && foeL === 0 && foeC === 0, 'a teammate\'s line with his head off the screen clicks once; one on the screen and a defender\'s do not',
+      `off the screen: ${due} lines, ${far} click · on it: ${nearL} lines, ${nearC} clicks · a defender off it: ${foeL} lines, ${foeC} clicks`);
+    // 4. a teammate goes down: a row of its own for its time, the lower click, once
+    const m2 = R.team[1], d0 = R.play.length; m2.god = false; m2.state = 'dead'; R.step();
+    const row = N.rows[0], low = R.play.slice(d0).filter((p: any) => p.name === 'radio' && p.rate === SQUADNET.downRate && Math.abs(p.gain - SQUADNET.downGain) < 1e-6).length;
+    R.step(60); const again = N.stats.downs, rows1 = N.rows.length; R.step(Math.round((SQUADNET.downSecs + 0.2) * 60) - 60); const gone = N.rows.length;
+    F.verdict(row?.text === `${m2.callsign} is down.` && dist(row.at, m2.char.pos) < 0.01 && low === 1 && again === 1 && rows1 === 1 && gone === 0, 'a teammate down: his row from where he fell, the lower click, once, gone after its time',
+      `row "${row?.text ?? 'none'}" · lower clicks ${low} · called ${again} · rows a second on ${rows1}, after ${SQUADNET.downSecs} s ${gone}`);
+    // (the roster stood up again under the same names: the man who was down is up, and is called when he goes down again)
+    m2.state = 'patrol'; R.step(2); m2.state = 'dead'; R.step(2); const twice = N.stats.downs;
+    F.verdict(twice === 2, 'a man stood up again under the same name is called when he goes down again', `called ${twice}`);
+    // 5. a run that starts with a man already down does not call him
+    N.reset(); R.step(3); F.verdict(N.rows.length === 0 && N.stats.downs === 0, 'a man already down when the run starts is not called', `rows ${N.rows.length} · called ${N.stats.downs}`);
+  });
   // where a far line is put (netPlace, the one place ui/bubbles.ts asks): at the view's edge on his side
   await kept(() => {
     const w = 960, h = 540, px = 470, py = 300, bw = 150, bh = 22, m = Math.min(w, h), pad = SQUADNET.edgeIn * m, x0 = bw / 2 + 6, x1 = w - bw / 2 - 6, y0 = bh + 12, y1 = h - 12, free = () => false;

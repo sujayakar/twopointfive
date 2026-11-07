@@ -8,6 +8,7 @@
 //   (1) every man with a line to the doorway has his gun on it inside a second and a half
 //   (2) the man with no line to it is not turned by it (his gun ends where it does with no door worked)
 //   (3) the look ends by itself (`doorLookSecs` and a second)
+//   (4) the same creak filed as a TEAMMATE's hand: nobody is turned (every gun where it is with no door worked)
 //   (6) the same noise from a leaf that stays SHUT on its latch (a rattle, a pick, a slam to): nobody is turned
 //   (7) the leaf's second noise 0.3 s later (off its stop): no man's look is started again — one note a man, and it ends when the first would
 // (the cover's own deal brings SOME guns onto a door of the room whatever is heard: 'not turned' is asked against the same staging with NO door worked,
@@ -75,14 +76,14 @@ const show = (A: Arm) => A.note ? A.note : A.men.map(m => `${m.name}${m.line ? '
 export async function doorlookCheck(): Promise<boolean> {
   let fails = 0; const line = (ok: boolean, what: string) => { console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}`); if (!ok) fails++; };
   console.log(`=== doorlook-check · ${SCN} ${DOOR} · seed ${SEED}${BREAK ? ' · DOORLOOK_BREAK: no noise filed where the door is worked' : ''} ===`);
-  await arm(false, true, false, true);   // (the first stand-up of a process deals the men's arcs otherwise than every later one: it asks nothing, so that the arms below are held to the same deal)
-  const on = await arm(false, false, false, BREAK), off = await arm(false, true, false, true), shut = await arm(false, true), twice = await arm(false, false, true);
-  console.log(`  worked: ${show(on)}\n  no door worked: ${show(off)}\n  shut: ${show(shut)}\n  twice: ${show(twice)} · notes ${twice.notes} (once: ${on.notes})`);
+  const on = await arm(false, false, false, BREAK), off = await arm(false, true, false, true), mate = await arm(true), shut = await arm(false, true), twice = await arm(false, false, true);
+  console.log(`  worked: ${show(on)}\n  no door worked: ${show(off)}\n  ours: ${show(mate)}\n  shut: ${show(shut)}\n  twice: ${show(twice)} · notes ${twice.notes} (once: ${on.notes})`);
   const seen = (A: Arm) => A.men.filter(m => m.line), blind = (A: Arm) => A.men.filter(m => !m.line), left = (A: Arm) => seen(A).filter(m => m.at15 > AWAY);
   const same = (m: Man) => { const o = off.men.find(x => x.name === m.name); return !!o && Math.abs(o.at15 - m.at15) < 5; }, say = (ms: Man[]) => ms.map(m => `${m.name} ${m.at15.toFixed(0)}°`).join(', ');
   line(!on.note && seen(on).length === 3 && seen(on).every(m => m.turned && m.at15 <= NEAR), `every man with a line to the doorway has his gun on it a second and a half after an enemy's hand works the door (${say(seen(on)) || on.note})`);
   line(!on.note && blind(on).length === 1 && blind(on).every(m => !m.turned && same(m)), `the man with no line to the doorway is not turned by it: his gun is where it is with no door worked (${say(blind(on))})`);
   line(!on.note && on.men.every(m => m.after === 0), `the look is over a second after its time is up`);
+  line(!mate.note && mate.men.every(m => !m.turned && same(m)), `a door a teammate's hand works turns nobody: every gun is where it is with no door worked (${say(mate.men) || mate.note})`);
   line(!shut.note && shut.men.every(m => !m.turned && same(m)), `the same noise from a leaf that stays shut on its latch turns nobody (${say(shut.men) || shut.note})`);
   line(!twice.note && !on.note && twice.notes === on.notes && on.notes === seen(on).length && twice.men.every(m => m.after === 0), `the leaf's second noise 0.3 s on starts no look again: ${twice.notes} looks begun, one a man with a line, all over on time`);
   console.log(fails ? `=== doorlook-check: ${fails} FAILED ===` : '=== doorlook-check: ALL PASS ===');

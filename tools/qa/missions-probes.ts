@@ -6,14 +6,14 @@
 //                    defenders cell on each; every row's URL reads back to that row (and to nothing else), keeps the visitor's flags, drops an older run's
 //   missions-screen  the real screen: the start card's Missions button opens it; one link per mission in order; the sheet follows the highlight (title, place,
 //                    line, team, defenders, approach, level, untuned exactly where set); W S ↑ ↓ move and wrap, A D ← → set Standard | Hard and put it on every
-//                    scenario link, Enter and Space start the highlighted row = a load of ITS OWN URL (every row, both keys); `MISSIONS.onPick` takes the pick instead of the load; Esc goes back to the card; the boot card's and the plain
+//                    scenario link, Enter and Space start the highlighted row = a load of ITS OWN URL (every row, both keys); the solo night off the start
+//                    card is Start (no load); `MISSIONS.onPick` takes the pick instead of the load; Esc goes back to the card; the boot card's and the plain
 //                    pause card's buttons
-//   missions-start   rows' URLs (six, spread over the list; all under QA_SWEEP=all) booted in a process of its own (scenario-picker-probes.ts --boot, the page's own startFromQuery): it starts unrefused as
+//   missions-start   every row's URL booted in a process of its own (scenario-picker-probes.ts --boot, the page's own startFromQuery): it starts unrefused as
 //                    that row, with the row's team beside Sam and exactly the defenders the sheet says; ?solo boots the plain night — no scenario, the shift
 //                    and the civilians the solo sheet counts
 import { standUp, ROOT } from './headless.ts';
 import { groupsFit } from './listed.ts';
-import { sample } from './sweep.ts';
 import { withDom, El } from './scenario-picker-probes.ts';
 
 const { SCENARIOS, ALL_MISSIONS, SCENARIO_KEYS, pickSearch, quitSearch, entryOfQuery, specOfQuery } = await import(`${ROOT}/src/scene/scenarioList.ts`);
@@ -98,14 +98,14 @@ export async function missionsScreen(): Promise<boolean> {
       const menu = new Menu({ engine: W.engine, game: g, quality: { auto: false, current: 'high', adaptive: true, lastChange: '' }, audio: { volume: { master: 1, sfx: 1, ambience: 1, music: 1 }, setVolumes() {} }, overlay: { showLightDots: true }, onStart() { starts++; } } as any);
       const L: any[] = M.missionList();
       setDifficulty('standard', false); M.MISSIONS.onPick = null;
-      // ---- the start card
+      // ---- the title
       menu.open('start');
-      F.verdict(!!buttonOf(root, 'Missions') && !!buttonOf(root, 'Start') && root.all(e => e.cls.has('scn') || e.cls.has('mrow')).length === 0 && M.currentMissions() === null,
-        'the start card carries a Missions button beside Start and no scenario rows of its own; the list is not up until asked for', buttons(root).map(b => b.textContent).join(' · '));
-      buttonOf(root, 'Missions')!.onclick!();
+      F.verdict(!!buttonOf(root, 'Play ›') && root.all(e => e.cls.has('scn') || e.cls.has('mrow')).length === 0 && M.currentMissions() === null,
+        'the title carries Play and no scenario rows of its own; the list is not up until asked for', buttons(root).map(b => b.textContent).join(' · '));
+      M.openMissions();
       let S = M.currentMissions()!, mroot: El = S?.root as any;
       const rows = missionRowsOf(mroot);
-      F.verdict(!!S && mroot.cls.has('on') && rows.length === L.length && rows.every((r, i) => r.id === L[i].id && r.title === L[i].title && r.n === String(i + 1).padStart(2, '0')), 'Missions pressed: the list is up with one numbered row per mission, in order', rows.map(r => `${r.n} ${r.title}`).join(' · '));
+      F.verdict(!!S && mroot.cls.has('on') && rows.length === L.length && rows.every((r, i) => r.id === L[i].id && r.title === L[i].title && r.n === String(i + 1).padStart(2, '0')), 'the list opened: it is up with one numbered row per mission, in order', rows.map(r => `${r.n} ${r.title}`).join(' · '));
       F.verdict(rows.every((r, i) => r.href === M.missionHref(L[i], SEARCH) && r.href.endsWith('quality=high&mute') && r.team === M.teamTagOf(L[i]) && r.lean === L[i].lean) && rows.filter(r => r.sel).length === 1 && rows[0].sel,
         "each row is a link to its own URL (the visitor's flags kept) tagged solo / pair / four with its lean; exactly one is highlighted — the first, with nothing remembered", rows.map(r => `${r.title} [${r.team} · ${r.lean}] ${r.href}`).join('\n    '));
       // ---- the sheet follows the highlight
@@ -135,7 +135,7 @@ export async function missionsScreen(): Promise<boolean> {
           'D and → put the defenders on hard, A and ← back on standard (the buttons do the same); the choice goes on every scenario link and never on the solo night\'s', `lit: ${[l0, l1, l2, l3, l4, l5, l6].join(' → ')} · ${h1[RC].href} · ${h4[RC].href}`);
         { const V = M.openMissions({ search: '?hard&mute' }); setDifficulty('hard', false); V.select(RC); const vh = missionRowsOf(V.root as any)[RC].href; M.missionsKey({ code: 'KeyA' }); const vs = missionRowsOf(V.root as any)[RC].href, vsolo = missionRowsOf(V.root as any)[L.indexOf(M.SOLO_NIGHT)].href; V.close();
           F.verdict(vh === '?roomclear&mute&difficulty=hard' && vs === '?roomclear&mute&difficulty=standard' && vsolo === '?solo&hard&mute', 'a visitor who arrived on ?hard and switches to standard gets it SAID on the link (over the flag he came with)', `${vh} · ${vs}`); }
-        buttonOf(root, 'Missions')!.onclick!(); S = M.currentMissions()!; mroot = S.root as any;
+        M.openMissions(); S = M.currentMissions()!; mroot = S.root as any;
         S.select(L.indexOf(M.SOLO_NIGHT)); key('KeyD'); const soloD = difficultyNow(); setDifficulty('standard', false);
         F.verdict(soloD === 'standard', 'on the solo night A and D change nothing (the switch is the squad scenarios\')', `tables read: ${soloD}`); }
       // ---- the way in: the player's pick on the levels that give more than one start, on the link and nowhere else
@@ -148,7 +148,7 @@ export async function missionsScreen(): Promise<boolean> {
         S.select(SOLO); const sSolo = shown(), tSolo = M.missionsKey({ code: 'KeyK' }), hSolo = hrefAt(SOLO), rowSolo = mroot.all(e => e.cls.has('mway'))[0]?.style.display;
         const quitWay = quitSearch('?roomclear&squad4&levelFile=compound.json&way=2&mute'), overWay = pickSearch(SCENARIOS[0], '?way=2&mute');
         const V = M.openMissions({ search: '?way=2&mute' }); const leak = missionRowsOf(V.root as any).filter(r => r.id !== 'compound-four' && hasWay(r.href)).length; V.close();
-        buttonOf(root, 'Missions')!.onclick!(); S = M.currentMissions()!; mroot = S.root as any; const kept = hrefAt(CP); S.select(CP); S.setWay(0); const back = hrefAt(CP);
+        M.openMissions(); S = M.currentMissions()!; mroot = S.root as any; const kept = hrefAt(CP); S.select(CP); S.setWay(0); const back = hrefAt(CP);
         // (the same start rule on = two buttons and K steps way 2, back to the level's own; off = 'Dealt' is the third and K reaches way=any. WAYROW_BREAK=1 asks for the other stand's row: the line must FAIL)
         const same = SAMESTART.on !== (process.env.WAYROW_BREAK === '1'), dealt = same ? '' : ' | Dealt';
         const stepped = same ? !hasWay(h2) && h3.endsWith('&way=2') && !hasWay(h3b) : h2.endsWith('&way=any') && !hasWay(h3) && h3b.endsWith('&way=any');
@@ -168,13 +168,15 @@ export async function missionsScreen(): Promise<boolean> {
           'Enter and Space on each scenario row load exactly that row\'s URL (which reads back to that row); a key held down does not; the sheet\'s button loads it too; a click on a row highlights it and a double click starts it',
           `${(L.length - 1) * 2} picks checked · button → ${byButton[0]} · double click on row 6 → ${dbl[0]}` + (bad.length ? ` — NOT: ${bad.join(' · ')}` : '')); }
       // ---- the solo night off the start card is Start; anywhere else it is a load of ?solo
-      {
-        menu.open('pause'); const pauseBtn = !!buttonOf(root, 'Missions'); buttonOf(root, 'Missions')?.onclick?.(); const P = M.currentMissions()!; P.select(L.indexOf(M.SOLO_NIGHT)); loads.length = 0; P.pick();
-        F.verdict(pauseBtn && loads.length === 1 && loads[0] === '/?solo&quality=high&mute' && menu.mode === 'pause', 'the plain pause card offers Missions too; the solo night picked from there is a load of ?solo (a fresh night), not a resume', `${loads.join(',')} · menu '${menu.mode}'`);
+      { const QFS = (await import(`${ROOT}/src/game/quietfog.ts`)).QUIETFOG, soloFogWas = QFS.solo; QFS.solo = false;   // (QUIETFOG.solo down for this one: under the fog the solo night off a plain page is a load of its own link — solofog-check.ts; here, the start as it was)
+        loads.length = 0; S.select(L.indexOf(M.SOLO_NIGHT)); const before = starts; M.missionsKey({ code: 'Enter' }); QFS.solo = soloFogWas;
+        F.verdict(loads.length === 0 && starts === before + 1 && menu.mode === 'closed' && M.currentMissions() === null && !mroot.cls.has('on'), 'the solo night picked off the start card over the plain night is Start: the card closes, the list goes, nothing loads', `loads ${loads.length} · onStart ${starts - before} · menu '${menu.mode}'`);
+        menu.open('pause'); const pauseBtn = !!buttonOf(root, 'Missions'); M.openMissions(); const P = M.currentMissions()!; P.select(L.indexOf(M.SOLO_NIGHT)); loads.length = 0; P.pick();
+        F.verdict(pauseBtn && loads.length === 1 && loads[0] === '/?solo&quality=high&mute' && menu.mode === 'pause', 'the plain pause card offers Missions too; the solo night picked on the list is a load of ?solo (a fresh night), not a resume', `${loads.join(',')} · menu '${menu.mode}'`);
         P.close(); menu.close(); }
       // ---- the seam: onPick instead of the load
       { menu.open('start'); const got: string[] = []; M.MISSIONS.onPick = (m: any, href: string) => { got.push(`${m.id} ${href}`); };
-        buttonOf(root, 'Missions')!.onclick!(); const S2 = M.currentMissions()!; loads.length = 0; const before = starts;
+        M.openMissions(); const S2 = M.currentMissions()!; loads.length = 0; const before = starts;
         S2.select(L.indexOf(M.SOLO_NIGHT)); S2.pick(); M.MISSIONS.onPick = null;
         F.verdict(got.length === 1 && got[0] === `${M.SOLO_NIGHT.id} ?solo&quality=high&mute` && loads.length === 0 && starts === before && M.currentMissions() === null && menu.mode === 'start',
           'with MISSIONS.onPick set (the loadout screen\'s way in) a pick hands over the mission and its URL instead: nothing loads, nothing starts, and the list is closed first (the next screen\'s keys are its own)', got.join(' · '));
@@ -183,7 +185,7 @@ export async function missionsScreen(): Promise<boolean> {
         // ---- Esc goes back to the card
         const S2c = M.openMissions(); const took = M.missionsKey({ code: 'Escape' });
         F.verdict(took && M.currentMissions() === null && menu.mode === 'start' && !(S2c.root as any).cls.has('on') && !M.missionsKey({ code: 'Escape' }) && !M.missionsKey({ code: 'KeyS' }), 'Esc closes the list and the start card is still there under it; with the list down its keys are nobody\'s (Esc is the page\'s again)', `menu '${menu.mode}'`);
-        buttonOf(root, 'Missions')!.onclick!(); (M.currentMissions()!.root as any).all((e: El) => e.cls.has('mback'))[0].onclick(); const backed = M.currentMissions() === null;
+        M.openMissions(); (M.currentMissions()!.root as any).all((e: El) => e.cls.has('mback'))[0].onclick(); const backed = M.currentMissions() === null;
         F.verdict(backed, 'the Back button does the same', `list ${backed ? 'closed' : 'still up'}`); }
       // ---- the list opens on the URL's mission, else on the one last started here
       { const S3 = M.openMissions({ search: '?levelFile=warehouse.json&roomclear&squad4&mute' }), a = S3.selected.id; S3.close();
@@ -200,10 +202,11 @@ export async function missionsScreen(): Promise<boolean> {
           "a list with a row of its own opens on that row when the URL names it; with hand-tuned defender rows ('custom') D and ← leave them alone and only a click on the switch writes over them; on a ?solo page with the start card up the solo night is still Start, no load",
           `URL → ${onExtra} · tables ${custom} → after D, ←: ${afterKeys} → after a click on standard: ${afterClick} · ?solo page: ${soloLoads} loads, onStart ${soloStarts}`); }
       // ---- the boot card
-      { const card = bootCard(); const mb = buttonOf(root, 'Missions'), sb = buttonOf(root, 'Start'); mb?.onclick?.(); const up = M.currentMissions(), n = up ? missionRowsOf(up.root as any).length : 0; menu.open('start'); const kept = M.currentMissions() === up && !!up; card.off; M.closeMissions();
-        F.verdict(!!mb && !mb.disabled && !!sb && sb.disabled && n === L.length && kept, 'the boot card (up while the shaders compile) has Missions live beside a waiting Start; the list opened there stays up when the real card replaces the boot card under it', `${n} rows · Start disabled: ${sb?.disabled}`);
-        const card2 = bootCard(); buttonOf(root, 'Missions')!.onclick!(); card2.off();
-        F.verdict(M.currentMissions() === null, 'a boot that opens no card (a scenario URL: the run is live underneath) takes the list down with the boot card', `list ${M.currentMissions() ? 'still up' : 'closed'}`); }
+      { const card = bootCard(); const pb = buttonOf(root, 'Play ›'); M.openMissions(); const up = M.currentMissions(), n = up ? missionRowsOf(up.root as any).length : 0; menu.open('start'); const kept = M.currentMissions() === up && !!up; M.closeMissions();
+        F.verdict(!!pb && !pb.disabled && n === L.length && kept, 'the boot card (up while the shaders compile) has Play live; a list opened over it stays up when the live title replaces the boot card under it', `${n} rows · Play ${pb ? (pb.disabled ? 'disabled' : 'live') : 'absent'}`);
+        const card2 = bootCard(); M.openMissions(); card2.off();
+        F.verdict(M.currentMissions() === null, 'a boot that opens no card (a scenario URL: the run is live underneath) takes the list down with the boot card', `list ${M.currentMissions() ? 'still up' : 'closed'}`);
+        await new Promise(r => setTimeout(r, 0)); }   // (the boot card's focus timer runs while there is still a DOM)
       menu.close();
     });
   } catch (e: any) { F.verdict(false, 'the screen probe ran to its end', String(e?.stack ?? e).split('\n').slice(0, 4).join(' | ')); }
@@ -221,7 +224,7 @@ async function bootChild(query: string): Promise<any> {
 export async function missionsStart(): Promise<boolean> {
   const F = family('missions-start: every mission\'s URL booted in a process of its own — it starts as that row, with the team and the defenders its sheet says');
   setDifficulty('standard', false);
-  const L: any[] = sample(M.missionList() as any[], 6), FLAGS = '?quality=high&mute';
+  const L: any[] = M.missionList(), FLAGS = '?quality=high&mute';
   const boots = await Promise.all(L.map(m => bootChild(M.missionHref(m, FLAGS))));
   const SOLO = L.indexOf(M.SOLO_NIGHT);
   for (let i = 0; i < L.length; i++) { if (i === SOLO) continue; const m = L[i], r = boots[i], s = r.start;

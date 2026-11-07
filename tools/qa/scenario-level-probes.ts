@@ -1,7 +1,7 @@
 // SCENARIOS ON A LEVEL FILE — does this level carry what the room clear and the hostage rescue need, and do they stage, get walked and END on it?
 //   bun run tools/qa/scenario-level-probes.ts levels/<name>.json [--seeds N,…] [--only data,pair,four,rescue] [--cap 240] [--trace]
 //       exit 0 = every check passed · 1 = a FAIL line above · 2 = no such file / unknown flag (nothing run)
-//   bun run tools/qa/probes.ts scenario-levels        the same on levels/test-rooms.json (the tiny test level — tools/levels/test-rooms.ts), as a family, on a sample of the seeds (QA_SWEEP=all: all):
+//   bun run tools/qa/probes.ts scenario-levels        the same on levels/test-rooms.json (the tiny test level — tools/levels/test-rooms.ts), as a family:
 //       scenario-levels-data · scenario-levels-pair · scenario-levels-four · scenario-levels-rescue
 // A level TASK runs the first line on its own file. Any level file works — the office's too (it gets the office's own scenario data, as in the page; its `data`
 // part says four things about the office's rescue marks as shipped — three men stood in chairs, printed as notes, and one in the conference table, a FAIL: exit 1 there) — and
@@ -32,7 +32,6 @@
 // rescue's Sam walks and presses F and never fires (god mode: the pair and the level's data are what is under test, not his aim), the seeds are few.
 // THE HARNESS HAS NO GPU: no light meter (Sam is planted dark; what a man sees of another is guards.ts's direct-light estimate), no smoke sight lines, no picture.
 import { readFileSync, existsSync } from 'node:fs';
-import { sample } from './sweep.ts';
 import { resolve, basename } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
 const { validateLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
@@ -265,7 +264,7 @@ export async function scenarioClear(file: string, squad: 2 | 4, o: Opts = {}): P
   const F = family(title);
   const level = levelOf(file);
   if (!level) { F.verdict(false, 'the file is a level', dataOf(file).errs.slice(0, 4).join(' · ')); return F.done(); }
-  const seeds = o.seeds ?? (import.meta.main ? [0, 1, 2, 3] : sample([0, 1, 2, 3], 3)), runs: ClearOut[] = [];   // (0 = the level's own marks, what the page deals; 1 to 3 = dealt floors)
+  const seeds = o.seeds ?? [0, 1, 2, 3], runs: ClearOut[] = [];   // (0 = the level's own marks, what the page deals; 1 to 3 = dealt floors)
   for (const s of seeds) { const r = await playClear(file, squad, s, o.cap ?? 240, !!o.trace); runs.push(r); console.log(`    seed ${s}: ${r.end}${r.why ? ` (${r.why})` : ''} at ${f1(r.t)} s · teammates up ${r.opsUp}/${r.ops} · ${r.rooms} · entered ${r.entered.join(', ') || 'no room'} · ${r.orders} orders${r.refused.length ? ` (${r.refused.length} refused)` : ''}${r.note ? ` · ${r.note}` : ''}`); }
   const n = runs.length, errors = runs.filter(r => r.end === 'error'), unstaged = runs.filter(r => r.staged.length), ended = runs.filter(r => r.end === 'taken' || r.end === 'wiped'), taken = runs.filter(r => r.end === 'taken');
   F.verdict(!errors.length && !unstaged.length, `staged on every seed: ${squad} teammates on the level's marks, the defenders in their rooms, the structure's doors shut`, errors.length ? errors.map(r => `seed ${r.seed}: ${r.note}`).join(' · ') : unstaged.length ? unstaged.map(r => `seed ${r.seed}: ${r.staged.join(', ')}`).join(' · ') : `${n} of ${n} seeds`);
@@ -414,7 +413,7 @@ export async function scenarioRescue(file: string, o: Opts = {}): Promise<boolea
   if (dataOf(file).data && !levelOf(file).scenarios?.rescue) return skipped(title, 'no rescue block: the hostage rescue is not for this level');
   const F = family(title);
   if (!dataOf(file).data) { F.verdict(false, 'the file is a level', dataOf(file).errs.slice(0, 4).join(' · ')); return F.done(); }
-  const seeds = import.meta.main ? o.seeds ?? [1, 2, 3] : sample(o.seeds ?? [1, 2, 3], 1), runs: RescueOut[] = [];
+  const seeds = o.seeds ?? [1, 2, 3], runs: RescueOut[] = [];
   for (const s of seeds) { const r = await playRescue(file, s, o.cap ?? 150, !!o.trace); runs.push(r); console.log(`    seed ${s}: ${r.state}${r.grade ? ` (${r.grade})` : ''}${r.why ? ` — ${r.why}` : ''} at ${f1(r.t)} s · hostages ${r.hostages} · pair ${r.pair} · passed ${r.passed.join(', ') || 'nothing'} · ${r.order} · F ×${r.presses}${r.note ? ` · ${r.note}` : ''}`); }
   const n = runs.length, errors = runs.filter(r => r.state === 'error'), unstaged = runs.filter(r => r.staged.length), ended = runs.filter(r => r.state === 'rescued' || r.state === 'lost'), won = runs.filter(r => r.state === 'rescued');
   F.verdict(!errors.length && !unstaged.length, "staged on every seed: the pair, Sam, the hostages, the captor, the door man and the level's own room guards and roamers on the level's marks, the room's doors shut", errors.length ? errors.map(r => `seed ${r.seed}: ${r.note}`).join(' · ') : unstaged.length ? unstaged.map(r => `seed ${r.seed}: ${r.staged.join(', ')}`).join(' · ') : `${n} of ${n} seeds`);

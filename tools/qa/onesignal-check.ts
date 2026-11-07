@@ -2,6 +2,7 @@
 // DOORTOOLS.tossMate). The maintainer, 10-22, of a pair on each of the guardroom's two doors: "simultaneous breach on mission 2 didn't
 // really work. and the second team threw a flashbang when our guys were already on the inside".
 //   bun run tools/qa/onesignal-check.ts [--seeds 1,2]      (also `probes.ts onesignal`, in family squadorders)
+//   TPS_PROFILE=shipped bun run tools/qa/onesignal-check.ts — the same lines on the page's stand
 // The relay post (levels/tut-queue.json, the queueing tutorial's floor), the room clear with the squad of four, everybody under
 // god mode (the lines are about what is ORDERED and when, not who wins). The check raises the ring and the rule itself on either stand.
 //   1. a pair stacked on each door of the guardroom, both standing on their marks, ONE press of the word: the two entries are on one word of the
@@ -11,29 +12,34 @@
 //   2. a bang and clear given to one pair, a man of the other pair inside the room by the time the can is to leave the hand: it stays in the kit, the
 //      beat says who ('no bang · … is in there'), they go in, he is not dazzled;
 //   3. CONTROL: the same order with nobody of ours inside throws its can as it did;
+//   4. CONTROL (plumbing): a recording from before the key replays with it off, one made with it on replays on;
+//   5. CONTROL (the stands): the frozen stand holds it off, the page's has it on, and FROZEN_HOLDS carries its row with its word.
+// TOSSMATE_BREAK=1 = tossMate left off: line 2 must fail.   exit 0 = all hold · 1 = one does not
 import { readFileSync } from 'node:fs';
 import { ROOT, standUp } from './headless.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
+const { RAILS } = await import(`${ROOT}/src/game/rails.ts`);
 const { CMDRING } = await import(`${ROOT}/src/game/cmdring.ts`);
 const { AUTOPILOT } = await import(`${ROOT}/src/game/autopilot.ts`);
 const { DOORTOOLS, offOf, doorPt } = await import(`${ROOT}/src/game/doortools.ts`);
 const { knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`);
-const VERBOSE = process.argv.includes('--verbose'), LEVEL = 'tut-queue', DT = 1 / 60;
-const SEEDS = (() => { const i = process.argv.indexOf('--seeds'); return i > 0 ? process.argv[i + 1].split(',').map(Number) : [1]; })();
+const VERBOSE = process.argv.includes('--verbose'), BREAK_MATE = process.env.TOSSMATE_BREAK === '1', LEVEL = 'tut-queue', DT = 1 / 60;
+const SEEDS = (() => { const i = process.argv.indexOf('--seeds'); return i > 0 ? process.argv[i + 1].split(',').map(Number) : [1, 2]; })();
 type V = number[];
+let stood: { mate: boolean } | null = null;   // (each rule as the stand first stood it up, before the check raises it: the page's stand raises its switches once, at load)
 const f2 = (n: number) => n.toFixed(2);
 
-async function rig(seed: number) {
+async function rig(seed: number, mate: boolean) {
   const log = console.log, warn = console.warn, err = console.error; if (!VERBOSE) console.log = console.warn = console.error = () => { };
   let W: any, started: any;
   try {
-    const data: any = parseLevelData(readFileSync(`${ROOT}/levels/${LEVEL}.json`, 'utf8')); if (data.scenarios?.lesson) delete data.scenarios.lesson.rails;   // (the floor's lesson off its rails: these lines ask the word and the can)
-    const level = loadLevel(data);
-    W = await standUp({ uploadEvery: 4, level, seed });
+    const level = loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/${LEVEL}.json`, 'utf8')));
+    W = await standUp({ uploadEvery: 4, level, seed }); stood ??= { mate: DOORTOOLS.tossMate };
     // (the ring as the page has it)
-    Object.assign(CMDRING, { on: true, tapNow: true, stay: true }); AUTOPILOT.on = true;
+    RAILS.on = false; Object.assign(CMDRING, { on: true, tapNow: true, stay: true }); AUTOPILOT.on = true;
+    DOORTOOLS.tossMate = mate;
     started = startFromQuery(W.game, `?levelFile=${LEVEL}.json&roomclear=1&squad4`);
   } finally { console.log = log; console.warn = warn; console.error = err; }
   const g = W.game, O = g.orders, D = g.doorTools;
@@ -51,7 +57,7 @@ async function rig(seed: number) {
 interface OneRun { seed: number; why: string | null; kinds: string[]; worded: boolean; open: number[]; cross: number[]; bursts: number; dazzled: string[] }
 /** line 1: a pair stacked on each door, both on their marks, one word */
 async function playOne(seed: number): Promise<OneRun> {
-  const R = await rig(seed), g = R.g, O = R.O, D = R.D, out: OneRun = { seed, why: null, kinds: [], worded: false, open: [], cross: [], bursts: 0, dazzled: [] };
+  const R = await rig(seed, true), g = R.g, O = R.O, D = R.D, out: OneRun = { seed, why: null, kinds: [], worded: false, open: [], cross: [], bursts: 0, dazzled: [] };
   if (R.why) { out.why = R.why; return out; }
   const pairs: any[][] = [O.men('red'), O.men('blue')], ts = [R.target('guard'), R.target('guard_side')];
   if (pairs.some(p => p.length !== 2) || ts.some(t => !t)) { out.why = `no two pairs or no two doors (${pairs.map(p => p.length).join(' + ')} men)`; return out; }
@@ -78,14 +84,14 @@ async function playOne(seed: number): Promise<OneRun> {
 interface MateRun { seed: number; why: string | null; who: string; beats: string[]; kit0: number; kit1: number; bursts: number; crossed: boolean; dazzled: boolean }
 /** lines 2 and 3: a bang and clear for one pair on the front door; `inside`: a man of the other pair stood in the room once the door is open */
 async function playMate(seed: number, inside: boolean): Promise<MateRun> {
-  const R = await rig(seed), g = R.g, O = R.O, D = R.D, out: MateRun = { seed, why: null, who: '', beats: [], kit0: D.bangs, kit1: D.bangs, bursts: 0, crossed: false, dazzled: false };
+  const R = await rig(seed, !BREAK_MATE), g = R.g, O = R.O, D = R.D, out: MateRun = { seed, why: null, who: '', beats: [], kit0: D.bangs, kit1: D.bangs, bursts: 0, crossed: false, dazzled: false };
   if (R.why) { out.why = R.why; return out; }
   const red: any[] = O.men('red'), mate: any = O.men('blue')[0], t = R.target('guard'); if (red.length !== 2 || !mate || !t) { out.why = 'no pair, no other man or no door'; return out; }
   const d = t.door, side = t.side, inn = doorPt(d, d.def.width / 2, 0.45, -side, 1.1), nav = g.col.nav; let at: V | null = null;
   for (const [deep, lat] of [[2.0, 0], [2.6, 0], [1.6, 0], [2.0, 0.8], [2.0, -0.8], [2.6, 1.0], [2.6, -1.0]]) { const p = doorPt(d, d.def.width / 2 + lat, deep, -side, 0);
     if (!nav.isBlocked(p[0], p[2]) && offOf(d, p, side) < -0.5 && !g.col.solidBlocked(inn, [p[0], 1.1, p[2]])) { at = [p[0], 0, p[2]]; break; } }
   if (!at) { out.why = 'no floor for him inside the room'; return out; }
-  const refused = O.give('bangClear', t, undefined, { men: red }); if (refused) { out.why = refused; return out; } R.step(2); const op = D.ops.find((o: any) => o.door === d); if (!op) { out.why = 'no entry started'; return out; }
+  const op = D.start('bangClear', red, t, false); if (typeof op === 'string') { out.why = op; return out; }
   out.who = mate.callsign; out.kit0 = D.bangs + (op.bangHeld ? 1 : 0);
   const seen = new Set<any>(g.events); let crossT = NaN;
   R.post = () => { for (const e of g.events) { if (seen.has(e)) continue; seen.add(e); if (e.kind === 'bang') out.bursts++; }
@@ -98,9 +104,9 @@ async function playMate(seed: number, inside: boolean): Promise<MateRun> {
 }
 
 export async function onesignalCheck(): Promise<boolean> {
-  let all = true; const keep = { knobs: knobsCopy(), ap: AUTOPILOT.on };
+  let all = true; const keep = { on: RAILS.on, knobs: knobsCopy(), ap: AUTOPILOT.on };
   const verdict = (ok: boolean, label: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
-  console.log(`two doors on one word, and no can into a room our own men hold (levels/${LEVEL}.json, the guardroom; seeds ${SEEDS.join(', ')})`);
+  console.log(`two doors on one word, and no can into a room our own men hold (levels/${LEVEL}.json, the guardroom; seeds ${SEEDS.join(', ')})${BREAK_MATE ? ' — TOSSMATE_BREAK=1: line 2 must fail' : ''}`);
   try {
     // ---- 1
     { const runs: OneRun[] = []; for (const s of SEEDS) runs.push(await playOne(s));
@@ -112,10 +118,22 @@ export async function onesignalCheck(): Promise<boolean> {
     { const ins: MateRun[] = [], outs: MateRun[] = []; for (const s of SEEDS) { ins.push(await playMate(s, true)); outs.push(await playMate(s, false)); }
       const say = (r: MateRun, inside: boolean) => r.why ? `seed ${r.seed}: NOT RUN — ${r.why}` : `seed ${r.seed}: ${inside ? `${r.who} on the room's floor as the door opens` : 'nobody of ours inside'} · ${r.beats.filter(b => /^(shove|kick|open|toss:|bang|no bang|go)/.test(b)).join(' → ') || 'no beat'} · kit ${r.kit0} → ${r.kit1}, ${r.bursts} burst · ${r.crossed ? 'they went in' : 'NOBODY went in'}${inside ? ` · ${r.who} ${r.dazzled ? 'DAZZLED' : 'not dazzled'}` : ''}`;
       verdict(ins.every(r => !r.why && r.beats.includes(`no bang · ${r.who} is in there`) && !r.beats.some(b => /^toss:/.test(b)) && r.kit1 === r.kit0 && r.bursts === 0 && r.crossed && !r.dazzled),
-        `A TEAMMATE INSIDE BY THE TIME THE CAN IS TO LEAVE THE HAND (DOORTOOLS.tossMate): the can stays in the kit, the beat says who ('no bang · … is in there'), nothing bursts, they go in, he is not dazzled`, ins.map(r => say(r, true)).join('\n    '));
+        `A TEAMMATE INSIDE BY THE TIME THE CAN IS TO LEAVE THE HAND (DOORTOOLS.tossMate${BREAK_MATE ? ' — TOSSMATE_BREAK: left off' : ''}): the can stays in the kit, the beat says who ('no bang · … is in there'), nothing bursts, they go in, he is not dazzled`, ins.map(r => say(r, true)).join('\n    '));
       verdict(outs.every(r => !r.why && r.beats.some(b => /^toss:/.test(b)) && r.kit1 === r.kit0 - 1 && r.bursts === 1 && r.crossed),
-        `CONTROL (the rule changes nothing here) — nobody of ours inside: the same order throws its can, one burst, then they go in`, outs.map(r => say(r, false)).join('\n    ')); }
-  } finally { knobsBack(keep.knobs); AUTOPILOT.on = keep.ap; }
+        `CONTROL (the rule changes nothing here: holds${BREAK_MATE ? ', as now,' : ''} under TOSSMATE_BREAK too) — nobody of ours inside: the same order throws its can, one burst, then they go in`, outs.map(r => say(r, false)).join('\n    ')); }
+    // ---- 4
+    { const J: any = await import(`${ROOT}/src/game/journal.ts`), g = (await rig(SEEDS[0], true)).g, snap = () => JSON.parse(JSON.stringify(J.knobsSnapshot(g)));
+      DOORTOOLS.tossMate = true; const old = snap(); delete old.flags.tossMate; if (old.tables.DOORTOOLS) delete old.tables.DOORTOOLS.tossMate; J.applyKnobs(g, old); const before = DOORTOOLS.tossMate;
+      DOORTOOLS.tossMate = true; const on = snap(); DOORTOOLS.tossMate = false; J.applyKnobs(g, on); const kept = DOORTOOLS.tossMate;
+      DOORTOOLS.tossMate = false; const off = snap(); DOORTOOLS.tossMate = true; J.applyKnobs(g, off); const keptOff = DOORTOOLS.tossMate;
+      verdict(before === false && kept === true && keptOff === false, 'CONTROL (plumbing, not the rule: no break word touches it) — a recording from before the key replays with DOORTOOLS.tossMate off; one made with it on replays on, off off',
+        `from before the key: tossMate ${before} · recorded on: ${kept} · recorded off: ${keptOff}`); }
+    // ---- 5
+    { const { FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`), shipped = process.env.TPS_PROFILE === 'shipped', want = (w: string | undefined) => w !== undefined ? w === '1' : shipped;
+      const row = FROZEN_HOLDS['DOORTOOLS.tossMate'];
+      verdict(!!stood && stood.mate === want(process.env.TPS_TOSSMATE) && !!row?.includes('TPS_TOSSMATE=1'), `CONTROL (the stands) — this stand (${shipped ? 'the page\'s' : 'frozen'}) stands the rule up ${shipped ? 'on' : 'off'} unless a word says otherwise, and FROZEN_HOLDS carries its row`,
+        `tossMate ${stood?.mate} · the row: '${row}'`); }
+  } finally { RAILS.on = keep.on; knobsBack(keep.knobs); AUTOPILOT.on = keep.ap; }
   console.log(all ? 'onesignal: all hold' : 'onesignal: FAIL');
   return all;
 }

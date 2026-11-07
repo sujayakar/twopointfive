@@ -57,6 +57,22 @@ export async function retakeCheck(): Promise<boolean> {
           `the move given ${ordered} · a corner ${dist(corner, spot).toFixed(1)} m the other side of him written into each man's way · the fight had them ${yielded}, and let go ${retaken} · back on the order: corners left in the way ${via.join(' / ')}, his goal off his place ${goalOn.map(d => d.toFixed(1)).join(' / ')} m · twelve seconds on: off his place ${off.map(d => d.toFixed(1)).join(' / ')} m, stood at the old corner ${atCorner}, marked short ${short}`);
         O.give('fallIn', O.targetAt(pl.char.pos), 'all'); step(240); } }
 
+    // (3) the row's words: no bearing while the dialogue pass is on, the bearing as it was with it off
+    { const BEAR = /\b(north|south|east|west)\b/; const ask = (on: boolean) => { WORDS.on = on; O.give('fallIn', O.targetAt(pl.char.pos), 'all'); step(120);
+        let p: number[] | null = null; for (const [dx, dz] of [[-4, 0], [4, 0], [0, 4], [0, -4]]) { const q = [pl.char.pos[0] + dx, 0, pl.char.pos[2] + dz]; const t = O.targetAt(q); if (t?.kind === 'floor' && team.some(m => O.whyNot(O.defs.find((d: any) => d.id === 'cover'), t, [m]) === null)) { p = q; break; } }
+        if (!p) return null; const n0 = O.log.length; O.give('cover', O.targetAt(p), 'all'); step(30);
+        return { given: O.log.length > n0, rows: team.filter(m => O.of(m)?.order === 'cover').map(m => String(O.statusOf(m))) }; };
+      const a = ask(true), b = ask(false); WORDS.on = words0;
+      const okOn = !!a && a.rows.length > 0 && a.rows.every(w => /^covering /.test(w) && !BEAR.test(w)), okOff = !!b && b.rows.length > 0 && b.rows.every(w => /^covering (north|south|east|west|north-east|north-west|south-east|south-west)/.test(w));
+      line(okOn && (BREAK || okOff), 'a cover on a floor point: the squad row says where without a compass word while the dialogue pass is on, and says the bearing as it did with it off',
+        `the pass on: ${a ? `"${a.rows.join('" / "')}"` : 'no floor to cover'} · the pass off: ${b ? `"${b.rows.join('" / "')}"` : 'no floor to cover'}`); }
+
+    // (4) the journal and the page's flag
+    { const was = ORDERS.retakeGoal, snap = () => JSON.parse(JSON.stringify(JOURNAL.knobsSnapshot(g)));
+      ORDERS.retakeGoal = true; const old = snap(); delete old.tables.ORDERS.retakeGoal; JOURNAL.applyKnobs(g, old); const oldOff = ORDERS.retakeGoal === false;
+      const own = snap(); own.tables.ORDERS.retakeGoal = true; JOURNAL.applyKnobs(g, own); const kept = ORDERS.retakeGoal === true;
+      const sw = (q: string) => { PROFILE.pageSwitches(new URLSearchParams(q)); return ORDERS.retakeGoal; }, pageOn = sw(''), pageOff = sw('retakegoal=0'); ORDERS.retakeGoal = was;
+      line(oldOff && kept && pageOn === true && pageOff === false, 'a recording from before the key replays with the rule off, one with it keeps it; the page opens with it on and ?retakegoal=0 puts it off', `no key → off ${oldOff} · the key → kept ${kept} · the page ${pageOn} · ?retakegoal=0 ${pageOff}`); }
   } finally { Object.assign(NIGHTBREACH, { squad: squad0 }); Math.random = rnd0; knobsBack(knobs0); }
   console.log(`=== retake: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;

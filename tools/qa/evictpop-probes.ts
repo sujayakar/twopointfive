@@ -23,7 +23,7 @@ interface Emit { kind: string; pos: Vec3; n: number; opts: any }
 /** eight pieces at rest in the corridor, the pool's cap eight: [0] the plank (the oldest), [1] a mug, [2] a lump, [3] a second mug, [4‥7] slabs */
 async function stage() {
   Math.random = seeded(9103);
-  const W: any = await quiet(() => standUp({ uploadEvery: 1, dress: true })); const g = W.game;   // (the rows up: the debris pool is a dressing row, and a host that draws nothing holds no pool) g.godMode = true; g.aiEnabled = false; g.playerInvisible = true;
+  const W: any = await quiet(() => standUp({ uploadEvery: 1 })); const g = W.game; g.godMode = true; g.aiEnabled = false; g.playerInvisible = true;
   const emits: Emit[] = []; const P: any = new Particles(fake('device'), fake('sceneLayout')); const emit0 = P.emit.bind(P);   // (the real queue, on the harness's device — and a note of every record asked for)
   P.emit = (kind: string, pos: Vec3, d: Vec3, n: number, opts: any) => { emits.push({ kind, pos: [pos[0], pos[1], pos[2]], n, opts }); return emit0(kind, pos, d, n, opts); }; W.engine.particles = P; W.engine.settings.gpuParticles = true; W.engine.settings.debrisCap = 8;
   for (const gd of g.guards) { gd.hold = true; gd.heardUpTo = 1e12; }

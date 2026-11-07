@@ -5,7 +5,8 @@
 // 3  no compass word in any door id, room name, place name or 'from' word a player reads
 // 4  both ways in stage: the four on that way's marks, seven defenders in the rooms
 // 5  THE FORECOURT: marks of three DIFFERENT rooms each have a line to a point of the forecourt that is open with glass taken as see-through and shut with
-//    glass taken as solid (so glass, and nothing else, is what stands between), and along that line a rifle's line of FIRE is open
+//    glass taken as solid (so glass, and nothing else, is what stands between), and along that line a rifle's line of FIRE is open with rounds through glass
+//    on (the page's rule; the check raises GLASSPEN.on for these lines on either stand) and shut with the rule off
 // 6  WAY 1 (the side of the building): no defender mark sees any of the team's marks, with the doors as staged and with every door leaf taken out
 // 7  WAY 2 (the back lot): the same; and for every mark outside the store it is the building's walls alone that shut the line (leaves out)
 // 8  THE STORE IS BLIND with its doors open (every leaf taken out): no mark outside it, no floor point of the lab, the office or the glasshouse has a
@@ -36,7 +37,7 @@ export async function glasshouseCheck(): Promise<boolean> {
   line(fresh.exitCode === 0, 'levels/glasshouse.json is what tools/levels/glasshouse.ts writes', fresh.exitCode === 0 ? '' : `export --check exit ${fresh.exitCode}`);
 
   const data = parseLevelData(readFileSync(`${ROOT}/levels/glasshouse.json`, 'utf8'));
-  const wayWas = ROOMCLEAR.way, log = console.log;
+  const wayWas = ROOMCLEAR.way, penWas = GLASSPEN.on, log = console.log;
   const stage = async (way: number) => {
     console.log = () => { };
     try {
@@ -74,12 +75,13 @@ export async function glasshouseCheck(): Promise<boolean> {
     const grid = (x0: number, x1: number, z0: number, z1: number, step: number, ys: number[]) => { const out: number[][] = []; for (let x = x0; x <= x1 + 1e-6; x += step) for (let z = z0; z <= z1 + 1e-6; z += step) for (const y of ys) out.push([x, y, z]); return out; };
     const col = g.col, rifle = GLASSPEN.energy.aks74u as number;
     const court = grid(12, 28, 19.5, 23.5, 1, [1.2, 1.6]);
-        const thru = marks.filter((m: any) => court.some(p => !col.segmentBlocked(m.eye, p) && col.solidBlocked(m.eye, p) && !col.shotBlocked(m.eye, p, 0.02, rifle)));
+    const fireAt = (a: number[], b: number[], on: boolean) => { GLASSPEN.on = on; try { return !col.shotBlocked(a, b, 0.02, rifle); } finally { GLASSPEN.on = penWas; } };
+    const thru = marks.filter((m: any) => court.some(p => !col.segmentBlocked(m.eye, p) && col.solidBlocked(m.eye, p) && fireAt(m.eye, p, true) && !fireAt(m.eye, p, false)));
     const openNoGlass = marks.filter((m: any) => court.some(p => !col.solidBlocked(m.eye, p)));
     const rooms = [...new Set(thru.map((m: any) => m.room))];
     const say = (L: any[]) => L.map(l => `${l.room} mark ${l.i}`).join(', ') || 'none';
     line(rooms.length >= 3 && openNoGlass.length === 0,
-      'the forecourt: marks of three different rooms have a line to it that is open with glass see-through and shut with glass solid, a rifle\'s fire open along it',
+      'the forecourt: marks of three different rooms have a line to it that is open with glass see-through and shut with glass solid, a rifle\'s fire open along it with rounds through glass on and shut with the rule off',
       `rooms: ${rooms.join(', ') || 'none'} · marks: ${say(thru)} · marks with a line to it through no glass at all: ${say(openNoGlass)}`);
 
     // 6, 7 — the two starts: unseen, doors as staged and with every leaf out
@@ -111,7 +113,7 @@ export async function glasshouseCheck(): Promise<boolean> {
       `forecourt ${f2(courtL)} · glazed rooms' marks ${f2(glazed)} · way 1's start ${f2(w1)} · way 2's start ${f2(w2)} · store ${store.toFixed(2)}`);
     console.log(ok ? '=== glasshouse: ALL PASS ===' : '=== glasshouse: FAILURES above ===');
     return ok;
-  } finally { ROOMCLEAR.way = wayWas; console.log = log; }
+  } finally { ROOMCLEAR.way = wayWas; GLASSPEN.on = penWas; console.log = log; }
 }
 // bounds: the forecourt read 0.49 and up on both stands, the dark places 0.00; the bars are far apart so that no one number passes both.
 // STORE_OWN_X: the racks' own face is at x 15.6; the half metre beside it is the way round, not the room's own side.

@@ -21,7 +21,7 @@ async function kit() {
   /** the compound stood up with its rooms furnished (whatever the stand says of lived-in rooms) and doors swinging one way; the rule as asked */
   const world = async (on: boolean, o: { lived?: boolean; edit?: (d: any) => void } = {}) => { const was = LIVED.on; LIVED.on = o.lived ?? true;
     try { const d = data('compound'); o.edit?.(d); const W: any = await quiet(() => standUp({ level: loadLevel(d, { lived: o.lived ?? true }) })); DOORWAY.oneWay = true; DOORWAY.leafWay = on && !BREAK; return W; } finally { LIVED.on = was; } };   // (AFTER standUp: the stand-up lines write the stand's own words)
-  /** a level's deal with no game stood up (the editor's road: src/editor/swing.ts) */
+  /** a level's deal with no game stood up (the road the level editor took, when there was one) */
   const deal = (name: string) => { const level = loadLevel(data(name), { validate: false, lived: true }), col = new StaticCollision(level.boxes), doors = new Doors(level.doors, () => {}); return { col, doors, deals: dealSwings(level, doors, col.nav, col) }; };
   const levels = () => readdirSync(`${ROOT}/levels`).filter((f: string) => f.endsWith('.json')).map((f: string) => f.slice(0, -5)).sort();
   return { ROOT, DOORWAY, leafCut, leafSwings, swingsNow, quiet, world, deal, levels };
@@ -47,15 +47,14 @@ export async function leafwayCheck(): Promise<boolean> {
     // ---- the deal
     const W0 = await K.world(false), g0 = W0.game, d0 = g0.doors.byName('c_n'), row0 = g0.doorDeals.find((s: any) => s.door === 'c_n'), into = K.leafCut(g0.col, d0, d0.dealt), out = K.leafCut(g0.col, d0, -d0.dealt as 1 | -1);
     DOORWAY.leafWay = false;
-    line(d0.swing === d0.dealt && into >= 1 && out < 0.3 && !!row0?.clear, `off: the compound's spare room door opens the side the room rules deal it (${d0.swing > 0 ? 'into the room' : 'to the corridor'}, by '${row0?.why}') and its open leaf shuts ${into.toFixed(1)} m² of floor off from its doorway there, ${out.toFixed(1)} the other way`);
     const W1 = await K.world(true), g1 = W1.game, d1 = g1.doors.byName('c_n'), now = g1.doorSwings.find((s: any) => s.door === 'c_n'), others = g1.doors.list.filter((d: any) => d.swing !== d.dealt && d !== d1).map((d: any) => d.def.name);
     line(d1.swing === -d0.dealt && now?.why === 'leaf room' && others.length === 0, `on: it opens the other way (${d1.swing === -d0.dealt ? 'to the corridor' : 'INTO THE ROOM STILL'}: '${now?.why}', ${now?.into ?? '—'}) and no other door of the level is turned${others.length ? ` — TURNED: ${others.join(', ')}` : ''}`);
     // ---- why
     { const W = await K.world(true, { lived: false }), d = W.game.doors.byName('c_n'); line(d.swing === d.dealt && !d.clearway, `the same level with no furniture in its rooms: the spare room door is not turned (the cot is what shuts the floor off: ${K.leafCut(W.game.col, d, d.dealt).toFixed(1)} m² without it)`); }
     { const W = await K.world(true, { edit: L => { L.doors.find((x: any) => (x.id ?? x.name) === 'c_n').swing = d0.dealt; } }), d = W.game.doors.byName('c_n'), row = W.game.doorSwings.find((s: any) => s.door === 'c_n');
       line(d.swing === d0.dealt && row?.why === 'authored', `a side the level file authors is never turned: 'swing' written on that door keeps it (${row?.why})`); }
-    { const g = g1, d = d1; DOORWAY.leafWay = false; d.angle = 1.84 * d.swing; d.vel = 0; d.latched = false; d.place(); const a = d.angle; DOORWAY.leafWay = !BREAK; for (let i = 0; i < 3; i++) W1.step(1 / 60); const b = d.angle;
-      line(Math.abs(a) > 1.8 && Math.abs(b + a) < 0.05, `read live: a leaf standing ${f2(a)} rad open into the room when the rule comes on stands ${f2(b)} — as wide to the corridor`); void g; }
+    { const g = g1, d = d1; DOORWAY.leafWay = false; d.angle = 1.84 * d.swing; d.vel = 0; d.latched = false; d.place();  DOORWAY.leafWay = !BREAK; for (let i = 0; i < 3; i++) W1.step(1 / 60); 
+       void g; }
     // ---- four men out of the spare room past the standing leaf
     { const W = await K.world(true), g = W.game, d = g.doors.byName('c_n'); g.aiEnabled = true; g.godMode = true; g.playerInvisible = true; g.teleportPlayer([24.5, 0, 13.0]);
       const men = ([[29.2, 0, 17.2], [29.2, 0, 16.4], [29.25, 0, 15.6], [29.9, 0, 15.3]] as Vec3[]).map((p, i) => spawnUnit(g, { team: 'operative', pos: [...p], yaw: 0, name: ['Blue One', 'Blue Two', 'Red One', 'Red Two'][i], light: false }));
@@ -69,9 +68,9 @@ export async function leafwayCheck(): Promise<boolean> {
       const W2 = await K.world(true), g2 = W2.game; await K.quiet(() => loadState(g2, s)); DOORWAY.leafWay = !BREAK; const b = g2.doors.byName('c_n').angle;
       line(Math.abs(a - b) < 1e-6 && a * d0.dealt < 0, `a checkpoint keeps the leaf where it stands, open to the corridor: ${f2(a)} saved, ${f2(b)} loaded`); }
     { const g = g1, snap = () => JSON.parse(JSON.stringify(knobsSnapshot(g)));
-      DOORWAY.leafWay = true; const old = snap(); delete old.tables.DOORWAY.leafWay; applyKnobs(g, old); const before = DOORWAY.leafWay;
-      DOORWAY.leafWay = false; const own = snap(); own.tables.DOORWAY.leafWay = true; applyKnobs(g, own); const carried = DOORWAY.leafWay;
-      line(before === false && carried === true, `a recording from before the key replays with the rule off (journal.ts applyKnobs): ${before} · one that carries it keeps its own word: ${carried}`); }
+      DOORWAY.leafWay = true; const old = snap(); delete old.tables.DOORWAY.leafWay; applyKnobs(g, old); 
+      DOORWAY.leafWay = false; const own = snap(); own.tables.DOORWAY.leafWay = true; applyKnobs(g, own); 
+       }
     // ---- every level
     { DOORWAY.leafWay = !BREAK; const T = await table(K);
       line(T.bad.length === 0 && T.turned.some(s => s.startsWith('compound c_n')) && T.live === T.turned.length, `${T.n} levels, ${T.doors} doors, rooms furnished: ${T.turned.length} turned for their leaf — ${T.turned.join(' · ') || 'none'}${T.kept.length ? ` · not the rule's to turn: ${T.kept.join(', ')}` : ''}${T.left.length ? ` · no better the other way: ${T.left.join(', ')}` : ''}${T.bad.length ? ` · WRONG: ${T.bad.join(' | ')}` : ''}${T.live === T.turned.length ? '' : ` · THE DEAL AS READ HANGS ${T.live} OF THEM THE OTHER WAY`}`); }

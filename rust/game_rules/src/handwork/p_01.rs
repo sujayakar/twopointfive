@@ -73,15 +73,15 @@ pub fn hand_there(g: &mut crate::game::Game, pl: PlayerId, dt: f64, p: V3, n: V3
 }
 
 /// Which of Sam's hands works a thing: the left while the right is full, else the right. (handwork.ts samWorkHand)
-pub fn sam_work_hand(g: &crate::game::Game) -> f64 {
-    let pl = g.player;
+pub fn sam_work_hand(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> f64 {
+    let pl = seat.player;
     let full = crate::game::player_pistol_up(g, pl) || crate::game::player_rifle_up(g, pl) || { let c = g.pl[pl].ch; g.ch[c].anim.grip[1] };
     if full { 0.0 } else { 1.0 }
 }
 
 /// As workAt is told it: the off hand named where his own is full. (handwork.ts samHand)
-pub fn sam_hand(g: &crate::game::Game) -> Option<f64> {
-    if js::truthy(sam_work_hand(g)) { None } else { Some(0.0) }
+pub fn sam_hand(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<f64> {
+    if js::truthy(sam_work_hand(g, seat)) { None } else { Some(0.0) }
 }
 
 // ---------------------------------------------------------------- the keypad
@@ -100,7 +100,7 @@ pub fn pad_hands(g: &mut crate::game::Game, pad: &crate::handwork::PadHandsPad, 
     let pl = g.player;
     let keys = pad_keys(&pad.def.code);
     let (c, code_t) = (g.pl[pl].ch, g.pl[pl].code_t);
-    let hand = sam_hand(g);
+    let hand = sam_hand(g, &crate::seats::here(g));
     let more = WorkAtMore { keys: Some(keys.clone()), hand, dir: None };
     work_at(g, c, crate::character::WorkKind::Keys, pad.def.pos, pad.n, code_t, secs, Some(&more));
     if g.pl[pl].code_t <= 0.0 && !hand_there(g, pl, dt, pad.def.pos, pad.n) { return 0.0; }
@@ -193,7 +193,7 @@ pub fn sam_work(g: &mut crate::game::Game) -> Option<crate::handwork::SamWork> {
         return Some(SamWork { kind: SamWorkKind::Drive, p: f.p, n: f.n, at: None });
     }
     if let Some(j) = crate::wallcharge::wall_charge_sam_job(g) { return Some(SamWork { kind: SamWorkKind::Wall, p: j.p, n: j.n, at: Some(j.at) }); }
-    if let Some(d) = crate::doortools::door_tools_sam_job(g) { return Some(SamWork { kind: SamWorkKind::Door, p: d.p, n: d.n, at: Some(d.at) }); }
+    if let Some(d) = crate::doortools::door_tools_sam_job(g, &crate::seats::here(g)) { return Some(SamWork { kind: SamWorkKind::Door, p: d.p, n: d.n, at: Some(d.at) }); }
     if let Some(j) = crate::defuse::defuse_sam_job(g) { return Some(SamWork { kind: SamWorkKind::Defuse, p: j.p, n: j.n, at: Some(j.at) }); }
     if let Some(s) = crate::lightswitch::switch_hand(g) { return Some(SamWork { kind: SamWorkKind::Switch, p: s.p, n: s.n, at: None }); }
     None
@@ -229,7 +229,7 @@ pub fn breaker_tick(g: &mut crate::game::Game, dt: f64) {
     }
     let pos = g.ch[c].pos;
     let f = breaker_face(g, pos);
-    let hand = sam_hand(g);
+    let hand = sam_hand(g, &crate::seats::here(g));
     let more = WorkAtMore { dir: Some(if mv.on { -1.0 } else { 1.0 }), hand, keys: None };
     let lever_secs = g.k.handwork.lever_secs;
     work_at(g, c, crate::character::WorkKind::Lever, f.p, f.n, mv.t, lever_secs, Some(&more));
@@ -309,7 +309,7 @@ pub fn drive_hands(g: &mut crate::game::Game, secs: f64, pulled: bool) {
     let pos = g.ch[c].pos;
     let f = rack_face(g, pos);
     let t = g.mission.drive_t;
-    let hand = sam_hand(g);
+    let hand = sam_hand(g, &crate::seats::here(g));
     let more = WorkAtMore { hand, ..Default::default() };
     work_at(g, c, crate::character::WorkKind::Take, f.p, f.n, t, secs, Some(&more));
 }

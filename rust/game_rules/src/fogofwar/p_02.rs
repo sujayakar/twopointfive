@@ -58,10 +58,6 @@ pub fn fog_of_war_show(g: &mut crate::game::Game, gd: GuardId, on: bool) {
     if on { g.fog_of_war.shown.add(gd); } else { g.fog_of_war.shown.delete(gd); }
 }
 
-/// The engine replay's word: a few frames under the page's fog look. (FogOfWar.pageLook)
-pub fn fog_of_war_page_look(g: &mut crate::game::Game) {
-    g.fog_of_war.look_frames = 3.0;
-}
 
 /// `blank` is the field initialisers, and the TypeScript's constructor only keeps `g`. (FogOfWar constructor)
 pub fn fog_of_war_new(g: &crate::game::Game) -> crate::fogofwar::FogOfWar {
@@ -114,11 +110,16 @@ pub fn fog_of_war_update(g: &mut crate::game::Game, dt: f64) {
 /// The eyes, then seen or not for every man off the team, then the doors. (FogOfWar.pass)
 pub fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
     if !fog_of_war_active(g) {
-        if g.fog_of_war.frame.on || g.fog_of_war.loaded {
+        // (the fog has gone off since the pass last ran: what the team knew is dropped, and the picture's block with it)
+        if g.fog_of_war.live || g.fog_of_war.loaded {
+            crate::fogofwar::picture::off(g);
             let f = &mut g.fog_of_war;
-            f.loaded = false; f.props_loaded = false; f.frame.on = false; f.frame.count = 0.0; f.eyes = Vec::new(); f.hidden_chars.clear(); f.pending.clear(); f.door_recs.clear(); f.doors_held = 0.0; f.thing_recs.clear();
-            f.fired_n = JsMap::new(); f.fired_at = JsMap::new(); f.fire_clock = 0.0; f.lamp_recs.clear(); f.face_recs.clear(); f.frame.lit = 0.0; f.frame.light_count = 0.0; f.frame.full = false;
-            fog_of_war_full_clear(g);
+            f.loaded = false; f.props_loaded = false; f.eyes = Vec::new(); f.hidden_chars.clear(); f.pending.clear(); f.door_recs.clear(); f.doors_held = 0.0; f.thing_recs.clear();
+            f.fired_n = JsMap::new(); f.fired_at = JsMap::new(); f.fire_clock = 0.0; f.lamp_recs.clear();
+            f.live = false;
+            g.engine.lights.fog_team.on = false;
+            g.engine.lights.fog_team.owners.clear();
+            g.engine.lights.fog_team.lights.clear();
         }
         return;
     }
@@ -147,7 +148,7 @@ pub fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
             let gd = g.guards[i];
             i += 1;
             if eyes.len() as f64 >= cap { break; }
-            if !fog_of_war_on_team(g, gd) || is_dead(g, gd) || g.time < g.gd[gd].dazzled_until { continue; }
+            if !fog_of_war_on_team(g, gd) || is_dead(g, gd) || crate::control::man::blind(g, gd) { continue; }
             let e = match crate::wandorder::mate_wand_eye(g, gd) {
                 Some(e) => e,
                 None => { let c = g.gd[gd].ch; fog_of_war_eye_of(g, c) }
@@ -206,7 +207,7 @@ pub fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if fog_of_war_on_team(g, gd) && !is_dead(g, gd) && g.time >= g.gd[gd].dazzled_until {
+        if fog_of_war_on_team(g, gd) && !is_dead(g, gd) && !crate::control::man::blind(g, gd) {
             let c = g.gd[gd].ch;
             g.fog_of_war.mates.push(c);
         }
@@ -365,55 +366,50 @@ pub fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
             g.fog_of_war.doors_held += 1.0;
         }
     }
-    // ---- the renderer's block: what the fog's pass and the sight table draw from (render/fogofwar.ts FogFrame). The picture's alone, and filled here because
-    //      it is computed from the game's state: the page hands it to the renderer as it comes
-    // (the look's four rows, desat, edge, air and kept, are settled at the page's values: there is no other look to put back, and the count only runs down)
-    if g.fog_of_war.look_frames > 0.0 {
-        g.fog_of_war.look_frames -= 1.0;
+    // ---- who the team is, and each lamp as the team last saw it: the team's own, which rules read (`ours_on`, `ours_id`) and the picture below
+    fog_of_war_team(g);
+    fog_of_war_lamps_known(g);
+    // ---- the renderer's block (fogofwar/picture.rs): filled from the game's state and read by nothing in it
+    crate::fogofwar::picture::fill(g);
+}
+
+/// Who the team is this frame, for the lights' classes and for what the team's own doing shows (`ours_id`): every seat's man and every teammate, and the
+/// light each carries. From here the rule is live (`ours_on`).   (fogofwar.ts FogOfWar.fullBlock, its first half)
+fn fog_of_war_team(g: &mut crate::game::Game) {
+    g.fog_of_war.live = true;
+    g.engine.lights.fog_team.on = true;
+    g.engine.lights.fog_team.owners.clear();
+    g.engine.lights.fog_team.lights.clear();
+    for pl in crate::seats::men(g) {
+        let id = g.ch[g.pl[pl].ch].id;
+        let light = g.pl[pl].light;
+        g.engine.lights.fog_team.owners.add(crate::Num(id));
+        g.engine.lights.fog_team.lights.add(light);
     }
-    let k = g.k.fog;
-    {
-        let n = g.fog_of_war.eyes.len() as f64;
-        let f = &mut g.fog_of_war.frame;
-        f.on = true; f.count = n; f.dim = k.dim; f.desat = k.desat; f.top_pad = k.top_pad; f.edge = m::max(0.0, k.edge);
-    }
-    let fov = crate::fogofwar::field_deg(g);
-    let near = crate::fogofwar::field_near(g);
-    let all_round = fov >= 360.0;
-    let cos_half = if all_round { -2.0 } else { m::cos(m::max(1.0, fov) * 0.5 * DEG) };
-    // (the picture's soft edges are the cone's alone: a plain wedge keeps its hard line)
-    let soft = if k.cone && !all_round { m::max(0.0, m::min(m::min(k.cone_soft_deg, fov), 360.0 - fov)) } else { 0.0 };
-    let full = fog_of_war_full_block(g);
-    g.fog_of_war.frame.full = full;
-    g.fog_of_war.frame.flat = m::max(0.0, k.flat);
-    crate::fogofwar::fog_of_war_lit_block(g);
-    g.fog_of_war.frame.air = true;
-    g.fog_of_war.frame.kept = true;
-    fog_of_war_thin_block(g);
-    let n_eyes = crate::render_fogofwar::FOG_EYES as usize;
-    let pic = core::mem::take(&mut g.fog_of_war.eyes);
-    {
-        let f = &mut g.fog_of_war.frame;
-        f.soft_in = if soft > 0.0 { m::cos(m::max(0.0, fov * 0.5 - soft * 0.5) * DEG) } else { 0.0 };
-        f.soft_out = if soft > 0.0 { m::cos(m::min(180.0, fov * 0.5 + soft * 0.5) * DEG) } else { 0.0 };
-        f.near_soft = if k.cone && !all_round { m::max(0.0, k.cone_near_soft_m) } else { 0.0 };
-        if f.eyes.len() < n_eyes * 4 { f.eyes.resize(n_eyes * 4, 0.0); }
-        if f.looks.len() < n_eyes * 4 { f.looks.resize(n_eyes * 4, 0.0); }
-        for i in 0..n_eyes {
-            let o = i * 4;
-            let Some(e) = pic.get(i) else {
-                for w in 0..4 { f.eyes[o + w] = 0.0; f.looks[o + w] = 0.0; }
-                continue;
-            };
-            f.eyes[o] = e.at[0] as f32; f.eyes[o + 1] = e.at[1] as f32; f.eyes[o + 2] = e.at[2] as f32; f.eyes[o + 3] = e.id as f32;
-            let l = js::or(m::hyp2(e.look[0], e.look[2]), 1.0);
-            f.looks[o] = (e.look[0] / l) as f32; f.looks[o + 1] = (e.look[2] / l) as f32;
-            // (an eye with its own field: the wand's lens)
-            f.looks[o + 2] = (match e.fov { None => cos_half, Some(v) if v >= 360.0 => -2.0, Some(v) => m::cos(m::max(1.0, v) * 0.5 * DEG) }) as f32;
-            f.looks[o + 3] = e.near.unwrap_or(near) as f32;
+    let mut i = 0;
+    while i < g.guards.len() {
+        let gd = g.guards[i];
+        i += 1;
+        if fog_of_war_on_team(g, gd) {
+            let id = g.ch[g.gd[gd].ch].id;
+            let light = g.gd[gd].flashlight;
+            g.engine.lights.fog_team.owners.add(crate::Num(id));
+            g.engine.lights.fog_team.lights.add(light);
         }
     }
-    g.fog_of_war.eyes = pic;
+}
+
+/// Every fixture that has a light, as the team last saw it (`lamp_recs`): once a frame, in the level's order. The picture reads the record and asks nothing.
+fn fog_of_war_lamps_known(g: &mut crate::game::Game) {
+    let mut i = 0;
+    while i < g.targets.len() {
+        let t = g.targets[i];
+        i += 1;
+        let row = &g.tab.sim_lightshome_fixture[t];
+        if row.light.is_none() && row.area_lights.is_none() { continue; }
+        let lit = fog_of_war_lamp_lit(g, t);
+        fog_of_war_lamp_known(g, t, lit);
+    }
 }
 
 /// pass()'s verdict on one man.
@@ -454,13 +450,10 @@ fn judge(g: &mut crate::game::Game, gd: GuardId, lines: &JsMap<GuardId, bool>, v
     }
 }
 
-/// A man as an eye: off his head, looking between his chest and his head. (FogOfWar.eyeOf)
+/// A man as an eye: off his head, looking where he looks (`gaze_of`). (FogOfWar.eyeOf)
 pub fn fog_of_war_eye_of(g: &crate::game::Game, c_2: CharId) -> crate::fogofwar::FogEye {
     let pos = bone_or(g, c_2, crate::character::Bone::Head, 1.65);
-    let look = if g.k.fog.cone { gaze_of(g, c_2) } else {
-        let hd = crate::character::character_head_dir(g, c_2);
-        v3::normalize(v3::lerp3(g.ch[c_2].chest_dir, hd, 0.5))
-    };
+    let look = gaze_of(g, c_2);
     let p = g.ch[c_2].pos;
     let y = if g.ch[c_2].alive { EYE_STAND + (EYE_CROUCH - EYE_STAND) * m::min(1.0, m::max(0.0, g.ch[c_2].anim.crouch)) } else { EYE_CROUCH };
     crate::fogofwar::FogEye { id: g.ch[c_2].id, pos, look, at: [p[0], p[1] + y, p[2]], fov: None, near: None, wand: None }
@@ -575,7 +568,7 @@ pub fn fog_of_war_tell_calls(g: &mut crate::game::Game, dt: f64) {
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if fog_of_war_on_team(g, gd) && !is_dead(g, gd) && g.time >= g.gd[gd].dazzled_until && g.gd[gd].held.is_none() { mates.push(gd); }
+        if fog_of_war_on_team(g, gd) && !is_dead(g, gd) && !crate::control::man::blind(g, gd) && g.gd[gd].held.is_none() { mates.push(gd); }
     }
     // contact: the first teammate, in list order, with one of them in his eyes
     for &gd in mates.iter() {
@@ -631,8 +624,9 @@ pub fn fog_of_war_flush_asks(g: &mut crate::game::Game) {
 
 /// A fresh encounter: nobody has been seen, no pair asked. (FogOfWar.reset)
 pub fn fog_of_war_reset(g: &mut crate::game::Game) {
+    crate::fogofwar::picture::reset(g);
     let f = &mut g.fog_of_war;
-    f.raw_at = -1.0; f.bared = false; f.lamp_recs.clear(); f.face_recs.clear(); f.door_recs.clear(); f.doors_held = 0.0; f.thing_recs.clear(); f.props_loaded = false; f.loaded = false; f.our_landed.clear(); f.thing_since = -1.0;
+    f.lamp_recs.clear(); f.door_recs.clear(); f.doors_held = 0.0; f.thing_recs.clear(); f.props_loaded = false; f.loaded = false; f.our_landed.clear(); f.thing_since = -1.0;
     f.recs = JsMap::new(); f.asked.clear(); f.pending.clear(); f.turn = 0.0; f.frame_no = 0.0; f.hidden_chars.clear(); f.fired_n = JsMap::new(); f.fired_at = JsMap::new(); f.shown = JsSet::new(); f.fire_clock = 0.0;
     f.call_clock = 0.0; f.last_call = -1e9; f.called_t = JsMap::new(); f.known_t = JsMap::new(); f.told_step = JsMap::new(); f.call_n = 0.0; f.call_log = Vec::new(); f.call_stats = crate::fogofwar::FogOfWarCallStats { contact: 0.0, heard: 0.0 };
 }
@@ -643,20 +637,6 @@ pub fn fog_of_war_sight_blocked(g: &mut crate::game::Game, a: V3, b: V3) -> bool
     crate::scene_collision::segment_blocked(g, a, b, Some(0.02), Some(through), None)
 }
 
-/// The picture's half of FOG.thin: the row, and which statics are marked, as bits by box index. Filled every frame: a breached wall's studs come and go. (FogOfWar.thinBlock)
-pub fn fog_of_war_thin_block(g: &mut crate::game::Game) {
-    g.fog_of_war.frame.thin = true;
-    if !g.fog_of_war.frame.thin { return; }
-    for w in g.fog_of_war.frame.thin_bits.iter_mut() { *w = 0; }
-    g.fog_of_war.frame.thin_serial = g.engine.world.geom_serial;
-    let st = g.engine.world.statics.clone();
-    g.fog_of_war.frame.thin_count = st.len() as f64;
-    let thin = js::to_i32(crate::scene_boxes::box_flag().thin);
-    let n = core::cmp::min(st.len(), g.fog_of_war.frame.thin_bits.len() * 32);
-    for i in 0..n {
-        if js::to_i32(bx(g, st[i]).flags) & thin != 0 { g.fog_of_war.frame.thin_bits[i >> 5] |= 1u32 << (i & 31); }
-    }
-}
 
 /// One eye on one living man, walls and leaves only, inside the eye's field. (FogOfWar.lineToMan)
 pub fn fog_of_war_line_to_man(g: &mut crate::game::Game, e: crate::fogofwar::FogEye, gd: GuardId, chest: V3) -> bool {

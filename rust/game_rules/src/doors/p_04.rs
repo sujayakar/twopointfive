@@ -31,6 +31,11 @@ pub fn doors_pull_to(g: &mut crate::game::Game, d: DoorId, who: f64) {
     door_set_last_who(g, d, who);
 }
 
+/// A leaf pulled to and still on its way home. A body in its way, or a hand on it, stops that within a moment; the slowest it swings on its own before it latches is about 0.01 rad/s.
+pub fn doors_coming_home(g: &mut crate::game::Game, d: DoorId) -> bool {
+    door_closing(g, d) && door_vel(g, d) * door_angle(g, d) < 0.0 && m::abs(door_vel(g, d)) > 0.005
+}
+
 /// A hand on the handle from the face it opens into: unlatched with its creak, brought round at the pull's pace.   (doors.ts Doors.pull)
 pub fn doors_pull(g: &mut crate::game::Game, d: DoorId, who: f64, quiet: Option<bool>) {
     let quiet = quiet.unwrap_or(false);

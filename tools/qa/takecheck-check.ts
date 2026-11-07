@@ -5,14 +5,16 @@
 // The rule is settled on (TAKE.wired): the check asks the page's side alone and writes no switch. Until 2026-11-07 every spot was also played with the rule
 // off ("a man is sent after every take, as the build was") and the plain night with it off: out.
 // PASS / FAIL each, headless. What it holds:
-//   - on every level that carries a quiet block and at every spot of it, the thing taken and twelve seconds played: a man is sent to look at
-//     the holder (task 'rack', seven seconds after the take) exactly where the level says the holder is WIRED, and nowhere else; `mission.sweepAt` says the same
+//   - at a spot of a level with a quiet block, the thing taken and twelve seconds played (until the man goes, where one does): a man is sent to look at
+//     the holder (task 'rack', seven seconds after the take) exactly where the level says the holder is WIRED, and nowhere else; `mission.sweepAt` says the same.
+//     An ordinary run asks the police post's first holder and the relay station's wired rack; QA_SWEEP=all asks every spot of every level (23, four minutes)
 //   - the police post's case file (the play note's own mission): nobody is sent; the relay station's middle rack: a man is
 //   - the office's plain night (no quiet mission): a man is sent
 //   - a man questioned afterwards says 'somebody's been sent to look' where somebody was, and only there
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
+import { swept } from './sweep.ts';
 
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
@@ -33,6 +35,8 @@ async function stand(seed: number, file: string | null) {
   Math.random = seeded(0x7a4e + seed * 7919);
   return await hushed(() => standUp({ uploadEvery: 4, ...(file ? { level: loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8'))) } : {}) })) as any;
 }
+/** the spots an ordinary run plays (tools/qa/sweep.ts) */
+const asked = (file: string, k: number): boolean => swept(0, 1) === 1 || (file === 'police-post.json' && k === 0) || (file === 'quiet-relay.json' && k === 0);
 /** the thing taken now (the pull's own function, as the last frame of the hands' work calls it), then `secs` played with Sam where nobody sees or hears him
  *  again: was a man sent to the holder, and when */
 function takeAndWait(W: any, secs = 12): { sent: number; who: string; sweep: number; drive: boolean; free: number } {
@@ -40,7 +44,7 @@ function takeAndWait(W: any, secs = 12): { sent: number; who: string; sweep: num
   const free = g.guards.filter((x: any) => x.state === 'patrol' && !x.hold && !x.held && !x.script && !x.unit && x.team === 'guard' && !x.task).length;   // (mission.ts sendRackCheck's own test of a calm staff man free to go)
   g.mission.stage = 'drive'; const t0 = g.time; if (!BREAK) drivePulled(g); const sweep = g.mission.sweepAt > 0 ? g.mission.sweepAt - t0 : -1;
   let sent = -1, who = '';
-  for (let i = 0; i < Math.round(secs / DT); i++) { W.step(DT); if (sent < 0) { const m = g.guards.find((x: any) => x.task?.kind === 'rack'); if (m) { sent = g.time - t0; who = m.callsign; } } }
+  for (let i = 0; i < Math.round(secs / DT); i++) { W.step(DT); const m = g.guards.find((x: any) => x.task?.kind === 'rack'); if (m) { sent = g.time - t0; who = m.callsign; break; } }
   const staff = g.guards.find((x: any) => !x.unit && x.state !== 'dead' && x.team === 'guard');
   const drive = !!staff && !!D.gather(g, staff).intel.find((it: any) => it.kind === 'drive')?.live;
   return { sent, who, sweep, drive, free };
@@ -52,9 +56,10 @@ export async function takeCheck(): Promise<boolean> {
   try {
     // (1) every quiet level, every spot
     const rows: string[] = []; let okOn = true, okWords = true, spots = 0, wiredN = 0; let post = '', relay = '';
-    for (const file of quietLevels()) {
+    for (const file of quietLevels().filter(f => swept(0, 1) === 1 || f === 'police-post.json' || f === 'quiet-relay.json')) {
       const W = await stand(3, file), g = W.game, Q = g.level.scenarios.quiet; const squad = /lights-out|train-silent/.test(file) ? '&squad=1' : '';
       for (let k = 0; k < Q.spots.length; k++) {
+        if (!asked(file, k)) continue;
         const P = Q.spots[k]; let on: ReturnType<typeof takeAndWait> | null = null;
         { let found = false; for (let pin = 0; pin < 400 && !found; pin++) { await hushed(() => startFromQuery(g, `?quiet=${pin}${squad}`)); if (g.quiet.active && g.quiet.deal.spot === k) found = true; else await hushed(() => quitScenario(g)); }
           if (!found) { rows.push(`${file} '${P.holder}': no deal reaches this spot`); okOn = false; continue; }
@@ -69,7 +74,7 @@ export async function takeCheck(): Promise<boolean> {
         rows.push(row); if (file === 'police-post.json') post += (post ? ' · ' : '') + `${P.holder}: ${on.sent < 0 ? 'nobody' : on.who}`; if (file === 'quiet-relay.json') relay += (relay ? ' · ' : '') + `${P.holder}: ${on.sent < 0 ? 'nobody' : on.who}`;
       }
     }
-    verdict(okOn && spots > 0, 'a man is sent to the emptied holder exactly where the level says it is wired, seven seconds after the take, and nowhere else', `${spots} spots over ${quietLevels().length} levels, ${wiredN} wired\n    ${rows.join('\n    ')}`);
+    verdict(okOn && spots > 0, 'a man is sent to the emptied holder exactly where the level says it is wired, seven seconds after the take, and nowhere else', `${spots} spots asked, on ${quietLevels().length} levels with a quiet block, ${wiredN} wired\n    ${rows.join('\n    ')}`);
     verdict(okWords, 'a man questioned afterwards says \'somebody\'s been sent to look\' where somebody was, and only there', `${spots} spots`);
     verdict(!!post && !/: (?!nobody)/.test(post) && wiredN >= 1 && /the middle rack: (?!nobody)/.test(relay), 'the police post\'s holders send nobody; the relay station\'s middle rack, on the station\'s network, does', `police post — ${post || 'not played'}\n    relay station — ${relay || 'not played'}`);
 

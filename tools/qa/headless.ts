@@ -33,15 +33,13 @@ if (harnessProfile() === 'shipped') shippedBoot();
 // from here on, in this process and (the words are inherited) its children. Said on stderr by the first process of a tree. On the OLD stand nothing is
 // folded: a tool started there says so and takes QA_FOLD out of what its children inherit (the whole run is unfolded, its page-stand arms too); an arm on the
 // old stand under a folded runner is not folded and says nothing (the runner's notice says it once).
-{ const { foldWanted, foldSettled, foldBefore, foldActive, offAtLayText, settledOf, switchRows, FOLD } = await import('./fold.ts');
+{ const { foldWanted, foldSettled, foldActive, settledOf, switchRows, FOLD } = await import('./fold.ts');
   if (foldWanted()) {
     if (harnessProfile() !== 'shipped') { if (!process.env.QA_FOLD_SAID) console.error('THE SETTLED ROWS ARE NOT FOLDED: this is the old stand, which is the other side of those rows (QA_FOLD and TPS_GAME ask for the fold on the page\'s stand only)'); process.env.QA_FOLD_SAID ??= 'not folded'; if (process.env.QA_FOLD_SAID === 'not folded') delete process.env.QA_FOLD; }
     else { const { knobRegistry } = await import(`${ROOT}/src/game/knobs.ts`), say = !process.env.QA_FOLD_SAID; process.env.QA_FOLD_SAID = 'folded'; foldSettled(knobRegistry(), settledOf(switchRows()), process.env.FOLD_BREAK === '1');
-      const parents = process.env.QA_FOLD_OFF, off = offAtLayText(), more = parents === undefined ? [] : foldBefore(parents); process.env.QA_FOLD_OFF = off;
       if (say) console.error((foldActive() ? `THE SETTLED ROWS ARE FOLDED: ${FOLD.rows} switch rows are held at their value on the page; a write of any other is refused and counted`
         : `THE SETTLED ROWS' FOLD IS LAID AND OFF, to be put on check by check (fold.ts foldFor; QA_FOLD_ONLY in the runner): for a check it is on for, ${FOLD.rows} switch rows answer their value on the page and a write of any other is refused and counted; for every other check nothing is held`)
-        + ` (tools/qa/fold.ts; an arm on the old stand is not folded)${FOLD.skipped.length ? ` · ${FOLD.skipped.length} with a setter of their own left alone` : ''}${FOLD.missing.length ? ` · ${FOLD.missing.length} of the list are not in the tables: ${FOLD.missing.slice(0, 6).join(', ')}` : ''}${off ? ` · stood off its page value as the fold was laid${foldActive() ? ', and reads it from now on' : ' (folded, it reads its page value)'}: ${off}` : ''}`);
-      else if (more.length) console.error(`THE SETTLED ROWS ARE FOLDED, and this child was given a word its parent was not: ${more.join(', ')} stood off its page value as the fold was laid, and reads it from now on (counted as refused)`); } } }
+        + ` (tools/qa/fold.ts; an arm on the old stand is not folded)${FOLD.skipped.length ? ` · ${FOLD.skipped.length} with a setter of their own left alone` : ''}${FOLD.missing.length ? ` · ${FOLD.missing.length} of the list are not in the tables: ${FOLD.missing.slice(0, 6).join(', ')}` : ''}`); } } }
 /** the stand this file was loaded on. A tool that names its stand (`process.env.TPS_PROFILE ??= 'shipped'`) above a STATIC import of this file names it too late: imports load first, so the pins
  *  were lifted at stand-up and shippedBoot never ran, a stand that is neither of the two. standUp refuses that out loud. */
 const STAND_AT_LOAD: string = harnessProfile();
@@ -174,6 +172,9 @@ export interface Headless {
   /** one frame exactly as main.ts steps it (minus rendering): game.update → camera → lights → box upload → input.endFrame. `follow` is what main.ts calls
    *  demoPos: the showcase tour's camera look-at for this frame (Demo.update's return, called BEFORE this) — the camera then follows it and drops the aim lead */
   step(dt: number, follow?: Vec3 | null): void;
+  /** A FAILED BEAT OF THE LEVEL'S SCRIPT FAILS ITS TOOL (default true). The director fails the beat, files an `error` row in its log and lets the frame go on,
+   *  on every host alike; what to do then is the host's. This host throws after the step that filed one. false: a tool that means to watch a beat fail */
+  beatsThrow: boolean;
   /** n steps with none of the tool's code between them (the same as `step` n times) */
   steps(n: number, dt: number, follow?: Vec3 | null): void;
   /** put the cursor on a world point (what the automation hooks' __mouse does after projecting) */
@@ -229,7 +230,8 @@ export async function standUp(opts: { /** the dressing rows up, as the page has 
   if (seed === null && clockDice()) Math.random = harnessDie() ?? Math.random;   // (no game rolls the clock's dice: tools/qa/die.ts)
   // (a start writes all of a game's state: what the TypeScript keeps at a module's top is put back before the game is made — tools/qa/fresh.ts)
   (await import('./fresh.ts')).freshStart();
-  const { game, level, cam } = await standMod.standGame(engine, { ch, smoke, harness: true, seed, seats: opts.seats, ...(opts.search !== undefined ? { search: opts.search } : {}), ...(opts.level ? { level: opts.level } : {}) });
+  const input: any = Input.detached(); input.mouseX = 800; input.mouseY = 500;   // (the real class minus its DOM listeners; the cursor where the harness always put it — the aim ray reads it. Made before the stand, which hands it to the game with the stand's camera: game.ts hostCam)
+  const { game, level, cam } = await standMod.standGame(engine, { ch, smoke, harness: true, seed, input, seats: opts.seats, ...(opts.search !== undefined ? { search: opts.search } : {}), ...(opts.level ? { level: opts.level } : {}) });
   if (process.env.QA_DOORSTAY === '1') (await import(`${ROOT}/src/game/doors.ts`)).DOORSTAY.on = true;   // (the harness stands the game up with the door closers of old — standup.ts; this runs any probe, soak or tour with doors staying where they are left, as shipped)
   const audioCounts = new Map<string, number>();
   let audioLog: AudioCall[] | null = null;
@@ -256,17 +258,20 @@ export async function standUp(opts: { /** the dressing rows up, as the page has 
     try { if (game.msg !== msgOwn) for (; nSaid < heard.said.length; nSaid++) { const t = heard.said[nSaid]; if (mine.has(`m|${t}`)) owed(`m|${t}`, -1); else game.msg(t); }
       if (game.say !== sayOwn) for (; nSpoke < heard.spoke.length; nSpoke++) { const s = heard.spoke[nSpoke]; if (mine.has(`s|${s.text}`)) owed(`s|${s.text}`, -1); else game.say(s.man, s.text, s.radio); } }
     finally { saying.now = false; nSaid = heard.said.length; nSpoke = heard.spoke.length; } };
-  const input: any = Input.detached(); input.mouseX = 800; input.mouseY = 500;   // (the real class minus its DOM listeners; the cursor where the harness always put it — the aim ray reads it)
   const canvas = { clientWidth: 1600, clientHeight: 1000, width: 1600, height: 1000 };
   cam.aspect = canvas.width / canvas.height; cam.rebuild();
   engine.world.upload();
-  let frame = 0; const uploadEvery = Math.max(1, opts.uploadEvery ?? 1);
+  let frame = 0, beatSeen = ''; const uploadEvery = Math.max(1, opts.uploadEvery ?? 1);
   const W: Headless = {
     game, engine, level, input, cam, canvas, audioCounts, smoke,
     get audioLog() { return audioLog; }, set audioLog(v: AudioCall[] | null) { audioLog = v; },
+    beatsThrow: true,
     step(dt: number, follow: Vec3 | null = null) {
       game.update(dt, input, cam, canvas);
       tell();   // (what the step said, to a tool that listens: above)
+      { const L: any[] | undefined = (game as any).director?.log, n = L?.length ?? 0, last = n ? L![n - 1] : null, key = last ? `${last.run}:${last.t}:${last.beat}:${last.kind}:${last.what}` : '';   // (the rows filed since the last step: from the log's end back to the row last seen)
+        if (key !== beatSeen) { let bad: any = null; for (let i = n - 1; i >= 0; i--) { const r = L![i]; if (`${r.run}:${r.t}:${r.beat}:${r.kind}:${r.what}` === beatSeen) break; if (r.kind === 'error') bad = r; } beatSeen = key;
+          if (bad && W.beatsThrow) throw new Error(`the level's script: beat '${bad.program}/${bad.beat}' ${bad.what}`); } }
       if (opts.reach) engine.reach.tick();   // (a page's engine steps its keeper of the reach masks once each render, on the clock where the frame has the planners' pace: here on the count, only where a tool asked for one, and never a real engine's, which steps its own)
       { const me = game.hostSeat().view, look = (game as any).rustHost?.look?.();   // (a game that steps somewhere else, in a quiet run of steps: the camera's two inputs asked of it, tools/blitz/PLAY.md)
         cam.update(dt, follow ?? look?.follow ?? me.followPos(), follow || game.spectate >= 0 ? null : look?.aim ?? me.aimPoint); }   // (main.ts: demoPos ?? followPos, and no aim lead while the tour frames the shot)

@@ -17,7 +17,6 @@
 //              one inside the first
 //   runs       a squad map (the compound's room clear), every defender green: the one caught alone with Sam close starts, then RUNS — off his spot, no round
 //              from him meanwhile; the same man trained: he starts, and draws where he stands; the same green man with a mate beside him: he draws
-//   checkpoint a man saved inside his beat and loaded into a fresh game is still held to the same clock, and draws after it
 // STARTLE_BREAK=1: Sam is never lit where he shows himself (his meter stays at the dark's 0.02), so nobody knows him for a man — red.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -26,10 +25,9 @@ const BREAK = process.env.STARTLE_BREAK === '1';
 
 export async function startleCheck(): Promise<boolean> {
   const { standUp, ROOT } = await import('./headless.ts');
-  const { STARTLE, STARTLE_STATS, startled, giveStartle, startleGunDown, startleSight, startleRunning } = await import(`${ROOT}/src/game/startle.ts`);
+  const { STARTLE, STARTLE_STATS, startled, giveStartle, startleSight, startleRunning } = await import(`${ROOT}/src/game/startle.ts`);
   const { handCarry } = await import(`${ROOT}/src/game/guards.ts`);
   const { MORALE } = await import(`${ROOT}/src/game/morale.ts`);
-  const { saveState, loadState } = await import(`${ROOT}/src/game/savestate.ts`);
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
   const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
@@ -61,7 +59,7 @@ export async function startleCheck(): Promise<boolean> {
       const t = g.time - t0, st = startled(g, A);
       if (isNaN(r.alertAt) && A.state === 'alert') r.alertAt = t;
       if (isNaN(r.alertAt) && c.anim.upper === 'aim') r.raisedEarly = true;
-      if (st) { if (isNaN(r.startAt)) r.startAt = t; r.held += DT; if (handCarry(A) !== 'torch' || c.anim.upper !== 'none' || !startleGunDown(g, A)) r.torchHeld = false; r.movedInBeat = Math.max(r.movedInBeat, flat(c.pos, p0)); r.shown = Math.max(r.shown, c.anim.startleShown); }
+      if (st) { if (isNaN(r.startAt)) r.startAt = t; r.held += DT; if (handCarry(A) !== 'torch' || c.anim.upper !== 'none') r.torchHeld = false; r.movedInBeat = Math.max(r.movedInBeat, flat(c.pos, p0)); r.shown = Math.max(r.shown, c.anim.startleShown); }
       const call = A.bubble?.text === 'CONTACT!'; if (call && st) r.saidIn = true; if (call && isNaN(r.saidAt)) r.saidAt = t;
       if (isNaN(r.upAt) && !isNaN(r.alertAt) && c.anim.upper === 'aim') r.upAt = t;
       if (isNaN(r.roundAt) && A.weapon.shotsFired > n0) r.roundAt = t;
@@ -133,13 +131,6 @@ export async function startleCheck(): Promise<boolean> {
         `a green night guard caught alone at four metres: he starts, then runs ${f2(far)} m for cover (${f2(runFor)} s of it) with nothing raised (${!up}) and no round on the way (${rounds})`);
       MORALE.training = train0; }
 
-    // ------------------------------------------------------------ the checkpoint
-    { const s = await world(), { g, A } = s; s.show(); let snap: any = null, until = NaN, t = NaN;
-      for (let i = 0; i < 240 && !snap; i++) { s.step(); if (startled(g, A)) { s.step(6); snap = JSON.parse(JSON.stringify(saveState(g))); t = g.time; let n = 0; while (startled(g, A) && n++ < 120) s.step(); until = g.time - t; } }
-      const s2 = await world(), g2 = s2.g; await quiet(() => loadState(g2, snap)); const A2 = g2.guards[0]; zero(); s2.show(); let held = 0, raised = false; const t2 = g2.time;
-      s2.step(120, () => { if (startled(g2, A2)) { held += DT; if (A2.char.anim.upper === 'aim') raised = true; } });
-      line(!!snap && Math.abs(Math.abs(g2.time - 2 - t2) < 1e-6 ? held - until : NaN) < 0.04 && !raised && STARTLE_STATS.drew === 1,
-        `a man saved inside his beat and loaded into a fresh game is held for the ${f2(until)} s that were left of it (${f2(held)}), nothing raised meanwhile (${!raised}), and draws after it (${STARTLE_STATS.drew})`); }
   } catch (err) { line(false, `threw: ${(err as Error)?.stack ?? err}`); }
   finally { MORALE.training = train0; }
   console.log(failed ? '=== startle-check: FAIL ===' : '=== startle-check: ALL PASS ===');

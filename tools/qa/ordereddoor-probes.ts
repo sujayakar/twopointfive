@@ -96,6 +96,8 @@ export const ordereddoorFace = guarded(async () => {
     `${C.summary()} · office room ${office} known ${C.isKnown(office)} · corridor ${corridor} known ${C.isKnown(corridor)}`);
   const now = O.sideFor(d, men, samSide);
   verdict(now === samSide, 'the corridor face (the one whose floor is known), whatever the walks come to', `dealt ${now} · ${C.summary()}`);
+  C.mark(INSIDE); const both = O.sideFor(d, men, samSide);
+  verdict(both === -samSide, 'once one of the team has stood in the office both faces are known ground and the walks decide: the face inside the office (the four\'s shortest walk is through the open side door)', `Sam's face ${samSide} · dealt ${both}`);
   return done();
 });
 

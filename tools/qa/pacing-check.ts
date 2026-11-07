@@ -22,9 +22,7 @@ const { rig } = (await import('./outerwall-probes.ts')) as any;
 const { PACE } = await import(`${ROOT}/src/game/guards.ts`);
 const { DESTRUCTION } = await import(`${ROOT}/src/game/destructionSwitch.ts`);
 const { WALLCHARGE, WALL_ORDER } = await import(`${ROOT}/src/game/wallcharge.ts`);
-const { TEAMPACE, teamCap } = await import(`${ROOT}/src/game/teampace.ts`);
-/** the flat share of the player's walk, off the table */
-const teamWalk = (g: any): number => g.tune.playerWalk * TEAMPACE.k;
+const { TEAMPACE, teamWalk, teamWalkOf, teamCap } = await import(`${ROOT}/src/game/teampace.ts`);
 const VERBOSE = process.argv.includes('--verbose');
 const flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const f2 = (x: number) => (Number.isFinite(x) ? x.toFixed(2) : '—');
@@ -59,14 +57,34 @@ export const pacingCheck = guarded(async () => {
   const keep = { p: TEAMPACE.pacing, tp: TEAMPACE.on, rnd: Math.random, d: DESTRUCTION.on, w: WALLCHARGE.on, o: WALLCHARGE.outer };
   try {
     // ---- 1. the found case
-    const on = await walk(true);
-    F.verdict(on.there > 0 && on.top <= on.own + 0.06 && on.top > on.flat + 0.2,
-      'the found case, the pair sent to the wall from the start, the player left standing: he walks it at the player\'s own walk, never faster', `${f2(on.leg)} m, top ${f2(on.top)} m/s, mean ${f2(on.mean)}, there after ${f2(on.there)} s (flat share ${f2(on.flat)})`);
+    const off = await walk(false), on = await walk(true);
+    F.verdict(off.there > 0 && off.top <= off.flat + 0.06, 'rule off, the found case — the pair sent to the wall from the start, the player left standing: the lead walks the leg at the flat share of the player\'s walk',
+      `${f2(off.leg)} m, top ${f2(off.top)} m/s (the flat share ${f2(off.flat)}, the player's walk ${f2(off.own)}), there after ${f2(off.there)} s`);
+    F.verdict(on.there > 0 && Math.abs(on.leg - off.leg) < 0.05 && on.top <= on.own + 0.06 && on.top > on.flat + 0.2 && off.there - on.there >= 2,
+      'rule on, the same leg: he walks it at the player\'s own walk, never faster, and is there two seconds or more sooner', `${f2(on.leg)} m, top ${f2(on.top)} m/s, mean ${f2(on.mean)}, there after ${f2(on.there)} s (off: ${f2(off.there)} s)`);
+    // ---- 2. the rule itself
+    { const { R, g, m, M } = await stand(true), sam = g.player.char, own = g.tune.playerWalk as number, slow = teamWalk(g) as number, sprint = g.tune.playerSprint as number;
+      R.step(240); const p = [...m.char.pos], dm = flat(p, M), ux = (M[0] - p[0]) / dm, uz = (M[2] - p[2]) / dm;   // (four seconds on: mid-leg, the mark well ahead)
+      // (`along` his line to the mark, metres from him; the player's pace `v`, turned `deg` off that line)
+      const ask = (along: number, v: number, deg = 0) => { const c = Math.cos(deg * Math.PI / 180), sn = Math.sin(deg * Math.PI / 180); sam.pos[0] = p[0] + ux * along; sam.pos[2] = p[2] + uz * along; sam.vel[0] = (ux * c - uz * sn) * v; sam.vel[2] = (uz * c + ux * sn) * v; return [teamWalkOf(g, m) as number, teamCap(g, m) as number]; };
+      const cases: [string, number, number, number, number][] = [['behind and coming', -4, own, 0, slow], ['behind and creeping after him', -4, own * 0.5, 0, slow * 0.5], ['behind and walking off at 75°', -4, own, 75, own], ['behind and standing', -4, 0, 0, own], ['behind and walking away', -4, -own, 0, own], ['level', 0, own, 0, own], ['ahead at a walk', 4, own, 0, own], ['ahead at a sprint', 4, sprint, 0, PACE.max], ['ahead and sprinting off at 90°', 4, sprint, 90, own], ['coming from far behind', -(TEAMPACE.paceNear + 3), own, 0, own]];
+      const keepP = [...sam.pos], keepV = [...sam.vel]; const got = cases.map(([, a, v, deg]) => ask(a, v, deg)); TEAMPACE.pacing = false; const flatAll = cases.map(([, a, v, deg]) => ask(a, v, deg)); TEAMPACE.pacing = true;
+      sam.pos[0] = keepP[0]; sam.pos[2] = keepP[2]; sam.vel[0] = keepV[0]; sam.vel[2] = keepV[2];
+      F.verdict(dm > 8 && cases.every(([, , , , want], i) => Math.abs(got[i][0] - want) < 1e-6 && Math.abs(got[i][1] - want) < 1e-6) && PACE.max < TEAMPACE.runAt,
+        'rule on, the man mid-leg and the player stood by hand: behind him and walking after him he gets the flat share (half of it behind a player creeping at half a walk); behind and standing, walking away or off to the side, level, ahead at a walk, ahead and sprinting off sideways, or coming from further than paceNear, the player\'s walk; ahead and sprinting for the mark the fight\'s pace, under a run — and that is the cap his legs are given',
+        `${f2(dm)} m to his mark · ` + cases.map(([name], i) => `${name} ${f2(got[i][0])}`).join(' · ') + ` (flat share ${f2(slow)}, player's walk ${f2(own)}, the fight's pace ${f2(PACE.max)}, a run from ${f2(TEAMPACE.runAt)})`);
+      F.verdict(flatAll.every(([w, c]) => Math.abs(w - slow) < 1e-6 && Math.abs(c - slow) < 1e-6), 'rule off: the flat share in every one of those', flatAll.map(([w]) => f2(w)).join(' · ')); }
     // ---- 3. walked, the player trailing
     { const tr = await walk(true, 3);
       F.verdict(tr.trailed > 5 && tr.topTrailed > 0.5 && tr.topTrailed <= tr.flat + 0.06 && tr.there > on.there + 1,
         'rule on, the same leg with the player three seconds of the man\'s own track behind him and coming: while that lasts he goes no faster than the flat share, and he is longer over the leg than with the player left standing',
         `trailed for ${f2(tr.trailed)} s, his top then ${f2(tr.topTrailed)} m/s (flat share ${f2(tr.flat)}), there after ${f2(tr.there)} s (the player standing: ${f2(on.there)} s)`); }
+    // ---- 4. the journal
+    { const J = await import(`${ROOT}/src/game/journal.ts`), R = await rig('room-clear-four', 5), snap = () => JSON.parse(JSON.stringify(J.knobsSnapshot(R.game)));
+      TEAMPACE.pacing = true; const old = snap(); if (old.tables.TEAMPACE) delete old.tables.TEAMPACE.pacing; J.applyKnobs(R.game, old); const a = TEAMPACE.pacing;
+      TEAMPACE.pacing = true; const yes = snap(); TEAMPACE.pacing = false; J.applyKnobs(R.game, yes); const b = TEAMPACE.pacing;
+      TEAMPACE.pacing = false; const no = snap(); TEAMPACE.pacing = true; J.applyKnobs(R.game, no); const c = TEAMPACE.pacing;
+      F.verdict(a === false && b === true && c === false, 'the journal: a recording from before the key replays with it off, one made with it on replays on, one made with it off replays off', `old → ${a} · recorded on → ${b} · recorded off → ${c}`); }
   } finally { TEAMPACE.pacing = keep.p; TEAMPACE.on = keep.tp; Math.random = keep.rnd; DESTRUCTION.on = keep.d; WALLCHARGE.on = keep.w; WALLCHARGE.outer = keep.o; }
   return F.done();
 });

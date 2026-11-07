@@ -61,9 +61,9 @@ async function play(seed: number, o: { again?: number; cap?: number } = {}): Pro
   await quiet(() => step(Math.round(WAIT_S * 60)));
   const men: any[] = [...op.men], cans = D.bangs, nb = op.beats.length, t0 = g.time; R.sliced0 = !!op.thr.sliced; R.foeWas = foe.map((e: any) => e.state).join('/');
   let againT = o.again !== undefined ? t0 + o.again : Infinity;
-  await quiet(() => { W.input.pressed.add('KeyF');
+  await quiet(() => { D.go('all');
     for (let k = 0; k < (WATCH_S + 1) * 60; k++) { step(); const t = g.time - t0;
-      if (g.time >= againT) { againT = Infinity; W.input.pressed.add('KeyF'); }
+      if (g.time >= againT) { againT = Infinity; D.go('all'); }
       if (Number.isNaN(R.foeDown) && foe.every((e: any) => e.state === 'dead')) R.foeDown = t;
       if (t > WATCH_S || men.every((m: any) => m.state === 'dead')) break; } });
   R.beats = op.beats.slice(nb).map((b: any) => ({ t: b.t - t0, what: b.what })); R.lost = men.filter((m: any) => m.state === 'dead').length; R.cans = cans - D.bangs;

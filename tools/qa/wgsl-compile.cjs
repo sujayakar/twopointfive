@@ -1,6 +1,6 @@
 // DOES EVERY SHADER TEXT COMPILE (a minute, where a page boot on the software adapter is six). tools/qa/wgsl-dump.ts writes every module text the page's boot
 // makes (with the switches main.ts raises: tools/qa/pageboot.ts) under one setting of the switches; this asks for every setting the tree
-// has (the title, a snow level in its weather, the look prototype's page), hands each distinct
+// has (the title, a snow level in its weather, the smoke lab's page, the walls' row down), hands each distinct
 // text to a headless Chromium's WGSL compiler (createShaderModule + getCompilationInfo: no pipeline is made, so it is quick) and prints every error AND EVERY
 // WARNING with its line of the text (the page files each warning as a report, and a text the fold of constant switches cut badly says so first as 'code is
 // unreachable'). It says a text PARSES AND TYPE-CHECKS. It does not say a pipeline can be made of it (bindings, limits), which is still a page boot's to say
@@ -15,7 +15,7 @@ const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftsha
   // one dump a setting. (Until 2026-11-07 there were two, the second with the shader rows' words in the environment: the ten big kernels and the gather have
   // one writing now, and the row that is left, the first-frame start, changes WHEN a program is compiled and no text.)
   const mods = [], seen = new Set();
-  const SETTINGS = ['title', 'snow', ...(/\blookConfig\b/.test(fs.readFileSync(path.join(ROOT, 'src/render/frame.ts'), 'utf8')) ? ['look'] : [])];
+  const SETTINGS = ['title', 'snow', 'smokelab', 'nowalls'];
   for (const setting of SETTINGS) {
     const d = spawnSync('bun', ['run', path.join(ROOT, 'tools/qa/wgsl-dump.ts'), JSON_AT, '--setting', setting], { cwd: ROOT, encoding: 'utf8', env: process.env });
     if (d.status !== 0) { console.error(d.stdout, d.stderr); process.exit(2); }

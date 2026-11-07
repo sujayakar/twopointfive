@@ -8,7 +8,8 @@
 //                       heard the frame go and the slab land
 //   off-hinges-hung     what never does it: a boot (kickIn), a shove, a stun canister on the sill, a blast past its own reach, a blast with a wall between,
 //                       any blast at the steel stair door — the leaf stays hung every time
-//   off-hinges-restart  restartEncounter hangs it again (shut, blocking, sealing)
+//   off-hinges-restart  restartEncounter hangs it again (shut, blocking, sealing); a checkpoint taken with the slab in the air comes back with it lying where it
+//                       came to rest
 //   off-hinges-charge   the breaching charge of the door tools (set on the leaf: contact) takes the leaf off, and does to the men behind it what it did
 //   off-hinges-walk     a man sent through the doorway walks it as the open doorway it is: he arrives, and nothing about the door or the slab changes
 //   off-hinges-sweep    every ordinary door of every level, from both faces, by a frag-sized blast and by a set charge: each comes off, lands inside six seconds,
@@ -16,7 +17,6 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
-import { sample } from './sweep.ts';
 const { DOORBLAST, DOORBLAST_STATS, tearOff, OFF_ANGLE } = await import(`${ROOT}/src/game/doorblast.ts`);
 const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
 const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
@@ -102,8 +102,10 @@ export const offHingesBlast = guarded(async () => {
   const events: any[] = []; const seen = new Set<any>(); const tap = () => { for (const e of g.events) if (!seen.has(e)) { seen.add(e); events.push(e); } };
   tap(); events.length = 0;
   const side: 1 | -1 = 1, from = off(d, side, 1.0, 0.9), t0 = g.time, s0 = { ...DOORBLAST_STATS };
+  const told: string[] = []; const untell = g.doors.onTorn((x: any, who: number) => told.push(`${x.def.name} by ${who}`));
   const torn = g.doors.blast(from, DOORBLAST.tearM.frag, PLAYER_ID); tap();
   verdict(torn.length === 1 && torn[0] === d && d.off && !!d.slab && !d.slab.rest, 'Doors.blast (a frag\'s reach, a metre off the leaf) answers that door, and it is off its frame at once', `returned ${torn.map((x: any) => x.def.name).join(', ') || 'nothing'} · off ${d.off} · in the air ${!!d.slab && !d.slab.rest}`);
+  untell(); verdict(told.length === 1 && told[0] === `${d.def.name} by ${PLAYER_ID}`, 'Doors.onTorn subscribers are told once, with the door and who is blamed', told.join(' · ') || 'not told');
   let maxY = 0, tilted = false; for (let i = 0; i < 6 * 60 && !d.slab.rest; i++) { R.step(); tap(); maxY = Math.max(maxY, d.box.c[1]); tilted ||= !!d.box.rot; }
   const S = d.slab, c = d.box.c, away = offOfFrame(d, c) * -side;
   verdict(S.rest && S.landed && g.time - t0 < 4, 'it lands and comes to rest', `at rest ${S.rest} after ${f2(g.time - t0)} s · tilted on the way ${tilted} · highest centre ${f2(maxY)} m`);
@@ -116,9 +118,9 @@ export const offHingesBlast = guarded(async () => {
   verdict(isOpenDoor(d) && d.lockBroken && Math.abs(Math.abs(d.angle) - OFF_ANGLE) < 1e-9, 'to the AI\'s door tests it is an open doorway: unlatched, wide, no lock', `latched ${d.latched} · angle ${f2(d.angle)} · locked ${d.locked} · lockBroken ${d.lockBroken} · pos ${at(d.pos)} (the frame)`);
   // no verb moves it
   const snap = () => `${d.off}|${d.angle}|${d.latched}|${d.vel}|${d.box.c.join(',')}|${d.box.h.join(',')}`; const s1 = snap();
-  g.doors.use(d, from, PLAYER_ID); R.step(20); g.doors.kickIn(d, from, PLAYER_ID); R.step(20); g.doors.pullTo(d, PLAYER_ID); R.step(20); g.doors.crack(d, from, PLAYER_ID, DT); g.doors.rattle(d, PLAYER_ID);
+  g.doors.use(d, from, PLAYER_ID); R.step(20); g.doors.kickIn(d, from, PLAYER_ID); R.step(20); g.doors.pullTo(d, PLAYER_ID); R.step(20); g.doors.crack(d, from, PLAYER_ID, DT); g.doors.rattle(d, PLAYER_ID); const picked = g.doors.pick(d, PLAYER_ID, DT);
   d.vel = 3; d.latched = true; d.closing = true; d.angle = 0.3; R.step(60);   // (and a swing written straight onto it, as a drill's shove or a script would)
-  verdict(snap() === s1, 'use, kick, pull to, crack, rattle, a swing written straight onto it: nothing moves it', snap() === s1 ? 'unchanged after all of them and two seconds' : `${s1} → ${snap()}`);
+  verdict(snap() === s1 && picked === true, 'use, kick, pull to, crack, rattle, pick, a swing written straight onto it: nothing moves it (pick answers "not locked")', snap() === s1 ? 'unchanged after all of them and two seconds' : `${s1} → ${snap()}`);
   g.teleportPlayer([from[0], 0, from[2]]); R.step(20);
   const rows = (g.nearby ?? []).filter((r: any) => r.door === d || r.target === d);
   verdict(rows.length === 0, 'Sam beside it is offered no door row', `${(g.nearby ?? []).length} rows near him, ${rows.length} of this door`);
@@ -134,7 +136,7 @@ function offOfFrame(d: any, p: number[]): number { const th = d.def.closedDir, u
 export const offHingesHung = guarded(async () => {
   const { verdict, done } = family('off-hinges-hung: a kick, a shove, a stun canister, a blast out of reach or behind a wall, anything at a steel door — the leaf stays hung');
   const R = await rig(11), g = R.g, d = R.door('manager') ?? ordinary(g)[0];
-  const hung = () => !d.off && !d.slab && !d.box.rot && d.box.h.join() === d.leafH.join();
+  const hung = () => !d.off && !d.slab && !d.box.rot && d.box.h === d.leafH;
   shut(g, d); R.step(3);
   g.doors.kickIn(d, off(d, 1, 0.6), PLAYER_ID); R.step(120);
   verdict(hung() && Math.abs(d.angle) > 0.6, 'a boot through it: flung open on its hinges, still hung', `off ${d.off} · angle ${f2(d.angle)}`);
@@ -173,19 +175,35 @@ export const offHingesHung = guarded(async () => {
 
 // ---------------------------------------------------------------- restart, checkpoint
 export const offHingesRestart = guarded(async () => {
-  const { verdict, done } = family('off-hinges-restart: a restart hangs the door again');
+  const { verdict, done } = family('off-hinges-restart: a restart hangs the door again; a checkpoint keeps it off, lying where it came to rest');
   const R = await rig(13), g = R.g, d = R.door('manager') ?? ordinary(g)[0];
   d.reset(); const authored = { angle: d.angle, latched: d.latched };
   shut(g, d); R.step(3);
-  const marks0 = JSON.stringify(d.box.marks);
+  const marks0 = d.box.marks;
   g.doors.blast(off(d, 1, 0.9, 0.9), DOORBLAST.tearM.frag, PLAYER_ID); R.step(240);
   const wasOff = d.off && d.slab?.rest;
   g.restartEncounter(); R.step(5);
   { const dd = R.door(d.def.name), up = Math.abs(d.box.c[1] - (d.height / 2 + 0.01)) < 0.05;
-    verdict(wasOff && dd === d && !d.off && !d.slab && !d.box.rot && d.box.h.join() === d.leafH.join() && JSON.stringify(d.box.marks) === marks0 && up && d.latched === authored.latched && (authored.latched ? d.isClosed() : Math.abs(d.angle) > 0.25) && !d.lockBroken,
+    verdict(wasOff && dd === d && !d.off && !d.slab && !d.box.rot && d.box.h === d.leafH && d.box.marks === marks0 && up && d.latched === authored.latched && (authored.latched ? d.isClosed() : Math.abs(d.angle) > 0.25) && !d.lockBroken,
       'restartEncounter: hung again, upright, its markings back, standing as the level authored it, its lock whole', `was off ${wasOff} · off ${d.off} · centre y ${f2(d.box.c[1])} · angle ${f2(d.angle)} latched ${d.latched} (authored ${f2(authored.angle)}, ${authored.latched}) · lockBroken ${d.lockBroken}`);
     shut(g, d); R.step(3); const r = reads(g, d);
     verdict(!r.sight && !r.shot && !r.sound && r.seal, '… and shut it blocks sight, shot and sound again and seals', readsWords(r)); }
+  // checkpoint with the slab in the air
+  shut(g, d); R.step(3);
+  g.doors.blast(off(d, -1, 0.9, 0.9), DOORBLAST.tearM.frag, PLAYER_ID); R.step(12);
+  const inAir = d.off && !d.slab.rest;
+  let s: any = null, why = ''; try { s = R.W.snapshot('off-hinges', true); } catch (e) { why = String(e); }
+  const filed = s ? JSON.stringify(s).includes('"off":{') : false;
+  for (let i = 0; i < 360 && !d.slab?.rest; i++) R.step();
+  const rest = d.slab ? [d.box.c[0], d.box.c[2], d.slab.a, d.slab.side] : [];
+  if (s) R.W.restore(JSON.parse(JSON.stringify(s)));
+  R.step(2);
+  const back = d.slab ? [d.box.c[0], d.box.c[2], d.slab.a, d.slab.side] : [];
+  const same = rest.length === 4 && back.length === 4 && Math.hypot(rest[0] - back[0], rest[1] - back[1]) < 0.02 && Math.abs(rest[2] - back[2]) < 0.01 && rest[3] === back[3];
+  verdict(!!s && inAir && filed && d.off && !!d.slab?.rest && same && slabClean(g, d) === null && reads(g, d).sight && isOpenDoor(d),
+    'a checkpoint taken 0.2 s into the flight: loaded, the door is off and the slab lies where the flight ended', s ? `in the air at the save ${inAir} · filed ${filed} · flight ended ${rest.map(f2).join(', ')} · loaded ${back.map(f2).join(', ')} · ${slabClean(g, d) ?? 'clean'}` : `snapshot refused: ${why}`);
+  g.restartEncounter(); R.step(3);
+  verdict(!d.off && d.box.h === d.leafH, '… and a restart after that load hangs it again', `off ${d.off}`);
   return done();
 });
 
@@ -202,12 +220,21 @@ export const offHingesCharge = guarded(async () => {
     if (men[0]) men[0].char.pos = [near[0], 0, near[2]]; if (men[1]) men[1].char.pos = [deep[0], 0, deep[2]];
     R.step(2);
     D.set.push({ door: d, side, t: g.time, by: 'probe' });
+    // the seam with the destruction goal: its blast entry point and its change feed, listened to where the build has them and stood in for where it has not
+    const heard: any[] = [], rows: any[] = [], eng = g.destr as any, was = eng.blast?.bind(eng), feed = eng.walls ?? (eng.walls = {}), note = feed.note?.bind(feed);
+    eng.blast = (p: any, o: any) => { heard.push(o); return was?.(p, o); }; feed.note = (r: any) => { rows.push(r); return note?.(r); };
     const res = D.blow(); for (let i = 0; i < 300; i++) R.step();
-    return { g, d, res, men, R };
+    return { g, d, res, men, R, heard, rows };
   };
   const A = await run();
   verdict(A.d.off && !!A.d.slab?.rest && slabClean(A.g, A.d) === null && offOfFrame(A.d, A.d.box.c) < -0.4 && reads(A.g, A.d).sight, 'the charge blown: the leaf is off, thrown INTO the room, at rest clear of the walls, the doorway open', `off ${A.d.off} · slab ${at(A.d.box.c)} (${f2(-offOfFrame(A.d, A.d.box.c))} m in) · ${slabClean(A.g, A.d) ?? 'clean'}`);
   verdict(!!A.res && A.res.knocked >= 1, 'it knocks down a man inside its reach behind the leaf', JSON.stringify(A.res));
+  // (the feed's rows of other kinds are the blast's own: on the page's stand a piece of cover stands inside the charge's 0.8 m and is a 'cover' row beside the door's)
+  const doorRows = A.rows.filter((r: any) => r.kind === 'door'), row = doorRows[0];
+  verdict(A.heard.length === 1 && A.heard[0].radius === DOORBLAST.chargeR && A.heard[0].chaos === false && A.heard[0].who === PLAYER_ID
+    && doorRows.length === 1 && row.cause === 'blast' && row.id === A.g.doors.list.indexOf(A.d) && row.walkable && row.sight && row.dead && row.who === PLAYER_ID,
+    'the seam: the charge calls the blast entry point once at its own radius with the chaos left out, the torn leaf is one door row in the change feed',
+    `on: ${A.heard.length} call(s) ${JSON.stringify(A.heard[0] ?? null)} · ${A.rows.length} row(s) ${A.rows.map((r: any) => `${r.kind}/${r.cause} #${r.id} ${r.name ?? ''}`).join(', ') || '-'}`);
   return done();
 });
 
@@ -237,7 +264,7 @@ export const offHingesWalk = guarded(async () => {
 
 // ---------------------------------------------------------------- what is left of a blown door for the other door rules
 export const offHingesAfter = guarded(async () => {
-  const { verdict, done } = family('off-hinges-after: an empty frame is no door to the handle rule, the slab on the floor is no door to the order cursor');
+  const { verdict, done } = family('off-hinges-after: an empty frame is no door to the handle rule, the slab on the floor is no door to the order cursor, Sam\'s hands come off a lock that is gone');
   const { HANDLE_STATS } = await import(`${ROOT}/src/game/handleside.ts`);
   {
     // a man crossing the empty frame from the face the leaf used to open toward: one-way + handle side on, the leaf blown from that face (its record then reads 'open the wrong way')
@@ -260,7 +287,7 @@ export const offHingesAfter = guarded(async () => {
       'blown from either face, he walks the empty frame from its old pull face with no handle walk, no hold and no bend, in the same time', `blown from the pull face: ${txt(P)}\n    blown from the push face: ${txt(Q)}`);
     // the order cursor on the slab where it lies
     { const R = await rig(23), g = R.g, O = g.orders; let best: any = null;
-      for (const d of sample<any>(ordinary(g), 3)) for (const s of [1, -1] as const) {   // the door and face (of a sample of the level's) whose slab comes to rest furthest from its frame
+      for (const d of ordinary(g)) for (const s of [1, -1] as const) {   // the door and face whose slab comes to rest furthest from its frame
         const T = await rig(23), dd = T.door(d.def.name); shut(T.g, dd); T.step(3); T.g.doors.blast(off(dd, s, 0.9, 0.9), DOORBLAST.tearM.frag, PLAYER_ID); T.step(300);
         const far = dd.off ? Math.hypot(dd.box.c[0] - dd.frameCentre[0], dd.box.c[2] - dd.frameCentre[2]) : 0; if (!best || far > best.far) best = { name: d.def.name, s, far }; }
       const d = R.door(best.name); shut(g, d); R.step(3); g.doors.blast(off(d, best.s, 0.9, 0.9), DOORBLAST.tearM.frag, PLAYER_ID); R.step(300);
@@ -275,6 +302,11 @@ export const offHingesAfter = guarded(async () => {
       const front = onSlab;
       R.W.cursorAt([d.frameCentre[0], 1.0, d.frameCentre[2]]); R.step(2); const t2 = O.targetUnder(R.W.input, R.W.cam, R.W.canvas);
       verdict(d.off && front && onSlab && far > 1.2 && !!t && t.door !== d && t2.kind === 'door' && t2.door === d, 'a cursor on the slab is the floor it lies on, not the door; a cursor in the empty doorway is still that door', `${d.def.name}: slab ${f2(far)} m from its frame · the cursor's ray lands on the slab ${onSlab} · on the slab → ${t ? `${t.kind}${t.door ? ` (${t.door.def.name})` : ''}` : '?'} · in the doorway → ${t2.kind}${t2.door ? ` (${t2.door.def.name})` : ''}`); }
+    // Sam's hands: picking the lock, keying the pad
+    { const R = await rig(31), g = R.g, d = R.door('manager') ?? ordinary(g)[0], pl = g.player;
+      shut(g, d); R.step(3); pl.picking = d; pl.char.anim.lockpick = true; pl.coding = d; pl.codeT = 0.5; d.pick = 0.6;
+      const tore = tearOff(g, d, off(d, 1, 0.5), PLAYER_ID, 1);
+      verdict(tore && pl.picking === null && pl.coding === null && pl.codeT === 0 && !pl.char.anim.lockpick && pl.easing === null && d.pick === 0, 'the leaf torn off under his tools: the pick and the keypad entry are dropped with it', `picking ${pl.picking ? 'still' : 'null'} · coding ${pl.coding ? 'still' : 'null'} · pick ${d.pick}`); }
   }
   return done();
 });
@@ -284,11 +316,11 @@ const LEVELS = [undefined, 'records.json', 'depot.json', 'block.json', 'block-sq
 export const offHingesSweep = guarded(async () => {
   const { verdict, done } = family('off-hinges-sweep: every ordinary door of every level, both faces, by a blast and by a set charge — off, landed, clear of the walls, the doorway open');
   let total = 0, backs = 0; const bad: string[] = []; const perLevel: string[] = []; let nudged = 0, laid = 0, nudgeMax = 0;   // (summed a level at a time: a stand-up puts a game's tallies back, so the tally holds one level's — tools/qa/fresh.ts)
-  for (const file of sample(LEVELS, 3)) {
+  for (const file of LEVELS) {
     let R: Awaited<ReturnType<typeof rig>>;
     try { R = await rig(23, file); } catch (e) { bad.push(`${file ?? 'office'}: did not load (${String(e).slice(0, 60)})`); continue; }   // (a level that does not load is a FAIL and no level swept, as in doorstay-probes: it was a logged line under a PASS)
     const g = R.g, doors = ordinary(g); let n = 0, b0 = DOORBLAST_STATS.back, longest = 0; const n0 = DOORBLAST_STATS.nudged, l0 = DOORBLAST_STATS.laid; DOORBLAST_STATS.nudgeMax = 0;
-    for (const d of sample(doors as any[], 8)) for (const side of [1, -1] as const) for (const how of ['blast', 'charge', 'open'] as const) {
+    for (const d of doors) for (const side of [1, -1] as const) for (const how of ['blast', 'charge', 'open'] as const) {
       shut(g, d); for (const x of g.doors.list) if (x !== d && x.off) x.reset();
       if (how === 'open') { d.latched = false; d.angle = side * 1.2; d.place(); }   // (a leaf standing open INTO the blast's side: it still leaves away from the blast)
       R.step(1);

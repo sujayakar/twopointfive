@@ -88,21 +88,27 @@ export async function doorshotCheck(): Promise<boolean> {
       line(wall > 0, `the yardstick: a rifle into one stretch of plasterboard opens it on round ${wall} (the wall engine's table says ${Math.ceil(WALLS.tough.drywall / (CHAOS * 2))} at chaos ${CHAOS})`); }
 
     // ------------------------------------------------------------ rifle
-    { const W = await world(), g = W.game, d = door(g), st = await stage(W, D.A, 'rifle', D.at), c0 = DOORSHOT_STATS.chunks + DOORSHOT_STATS.demoted;
+    { const W = await world(), g = W.game, d = door(g), st = await stage(W, D.A, 'rifle', D.at), c0 = DOORSHOT_STATS.chunks + DOORSHOT_STATS.demoted; let deb0 = g.destr.debris.list.length;
       const seal0 = !!(d.box.flags & BoxFlag.SoundSeal), eyeA: Vec3 = [D.A[0], 1.2, D.A[2]], eyeB: Vec3 = [D.B[0], 1.2, D.B[2]], blocked0 = g.col.segmentBlocked(eyeA, eyeB);
       let early = 0; for (; early < need - 1 && !d.off; early++) fireWeapon(g, st.pc, D.at, true);
+      const other = (g.destr.debris.list as any[]).slice(deb0); deb0 = g.destr.debris.list.length;   // (a ceiling tile the beaten spot shook down — destruction.ts tileDrop, heat past CHAOS.tTile — is not the door's)
+      if (other.length) console.log(`  (the ${early} rounds before the last brought down ${other.length} piece(s) that are not the door's — a ceiling tile over the beaten spot: ${other.map(c => `${c.mat?.mat ?? c.kind ?? '?'} at ${f2(c.box.c[0])}, ${f2(c.box.c[2])}`).join(' · ')})`);
       const [m] = d.off ? [0] : until(g, st.pc, D.at, d, 3 * need), n = m < 0 ? -1 : early + m;
       line(n === need && DOORSHOT.toll === 2 && DOORSHOT.flat && n === DOORSHOT.toll * wall, `a rifle into the shut wooden leaf '${D.name}': it hangs through round ${need - 1} and goes on round ${n} (want ${need}: ${DOORSHOT.toll} times the drywall's ${wall})`);
-      const b = d.box, top = b.c[1] + b.h[1], pieces = DOORSHOT_STATS.chunks + DOORSHOT_STATS.demoted - c0, hb = d.handleBoxes as any[];
+      const b = d.box, top = b.c[1] + b.h[1], pieces = DOORSHOT_STATS.chunks + DOORSHOT_STATS.demoted - c0, deb = g.destr.debris.list.length - deb0, hb = d.handleBoxes as any[];
       const ru = [Math.cos(-b.yaw), Math.sin(-b.yaw)];   // (the rail's own axes on the floor: its width along ru, its length across it)
       const onRail = hb.every(h => { const x = h.c[0] - b.c[0], z = h.c[2] - b.c[2]; return Math.abs(x * ru[0] + z * ru[1]) + 0.06 <= b.h[0] + 0.006 && Math.abs(-x * ru[1] + z * ru[0]) <= b.h[2] + 0.005 && h.c[1] < 0.2; });   // (0.06: the lever's half length along the rail's width)
+      const mine = (g.destr.debris.list as any[]).slice(deb0), tagged = mine.filter(c => c.mat), wood = tagged.every(c => c.mat.mat === 'wood'), cutN = mine.filter(c => c.box.cut).length;
       const cells = Math.max(1, DOORSHOT.strips) * Math.max(1, DOORSHOT.lengths) - 1;
       line(n > 0 && d.off && !d.latched && !d.locked && Math.abs(Math.abs(d.angle) - Math.PI / 2) < 1e-6 && blocked0 && !g.col.segmentBlocked(eyeA, eyeB) && seal0 && !(b.flags & BoxFlag.SoundSeal),
         `then it is a door off its hinges: off ${d.off}, reads wide open (${f2(d.angle)} rad), unlatched, no lock · the line across the frame at 1.2 m was blocked ${blocked0}, is blocked ${g.col.segmentBlocked(eyeA, eyeB)} · its sound seal was ${seal0}, is ${!!(b.flags & BoxFlag.SoundSeal)}`);
-      line(pieces === cells && !!d.slab?.bits && d.slab.rest && top < 0.12 && b.h[0] < d.leafH[0] && b.h[2] < d.height / 2 && onRail,
-        `it went in pieces: ${pieces} thrown, and what is left is the lock rail lying flat — ${f2(b.h[0] * 2)} × ${f2(b.h[2] * 2)} m, its top ${f2(top)} m off the floor, ${f2(Math.hypot(b.c[0] - d.frameCentre[0], b.c[2] - d.frameCentre[2]))} m from the frame's middle, both handles whole inside its outline ${onRail}`);
+      line(pieces === cells && deb === Math.min(cells, DOORSHOT.chunks) && !!d.slab?.bits && d.slab.rest && top < 0.12 && b.h[0] < d.leafH[0] && b.h[2] < d.height / 2 && onRail,
+        `it went in pieces: ${pieces} thrown (${deb} as rigid debris in the pool), and what is left is the lock rail lying flat — ${f2(b.h[0] * 2)} × ${f2(b.h[2] * 2)} m, its top ${f2(top)} m off the floor, ${f2(Math.hypot(b.c[0] - d.frameCentre[0], b.c[2] - d.frameCentre[2]))} m from the frame's middle, both handles whole inside its outline ${onRail}`);
+      line(tagged.length === deb && wood && cutN === deb,
+        `the thrown pieces are wood to the break table whatever the leaf's paint (${tagged.length} of ${deb} tagged, all wood ${wood}), ${cutN} of them with a broken outline`);
       for (let i = 0; i < 180; i++) W.step(DT);
-      line(d.off, `three seconds on: the door still off`);
+      const moving = g.destr.debris.list.filter((c: any) => !c.rest).length, up = g.destr.debris.list.filter((c: any) => c.box.c[1] >= 0.3).length;   // (a plank that came to rest on its end, propped on something: the debris solver lets one stand)
+      line(d.off && moving === 0 && up <= 1, `three seconds on: every piece is still (${moving} moving) and down on the floor but ${up} (at most one may have come to rest on its end), the door still off`);
       const rail = [b.h[0], b.h[2], b.c[0], b.c[2]].join(); fireWeapon(g, st.pc, D.at, true);
       for (let i = 0; i < 3 * need; i++) fireWeapon(g, st.pc, [b.c[0], 0.03, b.c[2]], true);
       line(d.off && d.shot === 0 && [b.h[0], b.h[2], b.c[0], b.c[2]].join() === rail, `a round through the empty frame and ${3 * need} into the rail on the floor count nothing: the rail lies as it lay`); }

@@ -21,13 +21,13 @@ fn trail_back(g: &mut Game, gd: GuardId, extra: f64) -> Option<V3> {
 /// (cover.ts:559,586 `ordersOf(g, gd).samStopped`)
 fn sam_stopped(g: &mut Game, gd: GuardId) -> bool {
     let seat = crate::seats::view_of(g, gd);
-    crate::seats::with_seat(g, seat, &mut |g: &mut Game| crate::orders::squad_orders_sam_stopped(g))
+    crate::seats::with_seat(g, seat, &mut |g: &mut Game| crate::orders::squad_orders_sam_stopped(g, &crate::seats::here(g)))
 }
 
 /// (cover.ts:306,484 `rearPinOf(viewOf(g, gd), gd)`)
 fn rear_pin(g: &mut Game, gd: GuardId) -> Option<crate::rearwatch::RearPin> {
     let seat = crate::seats::view_of(g, gd);
-    crate::seats::with_seat(g, seat, &mut |g: &mut Game| crate::rearwatch::rear_pin_of(g, gd))
+    crate::seats::with_seat(g, seat, &mut |g: &mut Game| crate::rearwatch::rear_pin_of(g, &crate::seats::here(g), gd))
 }
 
 /// An optional boolean as a condition.
@@ -110,7 +110,7 @@ pub fn cover_spare(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) -> bool {
     if g.tab.orders_assignment[a].from.is_none() { return false; }
     if rear_pin(g, gd).map_or(false, |p| yes(p.out)) { return true; }
     let door = g.tab.orders_assignment[a].door;
-    for o in crate::seats::team_men(g) {
+    for o in crate::seats::team_men(g, &crate::seats::here(g)) {
         if o == gd { continue; }
         if let Some(b) = crate::seats::order_of(g, o) {
             let row = &g.tab.orders_assignment[b];
@@ -122,7 +122,7 @@ pub fn cover_spare(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) -> bool {
 
 /// Is this man free to be dealt an opening: the order he is under if so. (cover.ts free)
 pub fn cover_free(g: &mut Game, gd: GuardId) -> Option<OrdersAssignmentId> {
-    if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].script.is_none() || g.time < g.gd[gd].dazzled_until || g.gd[gd].held.is_some() { return None; }
+    if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].script.is_none() || crate::control::man::blind(g, gd) || g.gd[gd].held.is_some() { return None; }
     let a = crate::seats::order_of(g, gd)?;
     let plain = g.tab.orders_assignment[a].order == "fallIn" || (g.tab.orders_assignment[a].order == "hold" && g.tab.orders_assignment[a].watch.is_none());
     if !(plain || cover_spare(g, gd, a)) { return None; }
@@ -250,7 +250,7 @@ pub fn cover_tick(g: &mut Game) {
     for gd in g.cover.outs.keys() {
         if cover_free(g, gd).is_none() { cover_unturn(g, gd); }
     }
-    for gd in crate::seats::team_men(g) {
+    for gd in crate::seats::team_men(g, &crate::seats::here(g)) {
         let v = g.ch[g.gd[gd].ch].vel;
         if m::hyp2(v[0], v[2]) > 0.3 { g.cover.heading.set(gd, m::atan2(v[0], v[2])); }
     }
@@ -419,7 +419,7 @@ fn rec(z: &mut Search, i: usize, s: f64) {
 pub fn cover_deal(g: &mut Game) {
     let k = g.k.cover;
     let sams: Vec<CharId> = crate::seats::men_up(g).iter().map(|&pl| g.pl[pl].ch).collect();
-    let squad = crate::seats::team_men(g);
+    let squad = crate::seats::team_men(g, &crate::seats::here(g));
     let mut list: Vec<(GuardId, OrdersAssignmentId)> = Vec::new();
     for &gd in &squad { if let Some(a) = cover_free(g, gd) { list.push((gd, a)); } }
     {
@@ -628,7 +628,7 @@ fn deal_out(g: &mut Game, cx: &Cx, list: &[(GuardId, OrdersAssignmentId)], mut l
     // (`live` no longer changes shape from here: a row's index is its handle)
     let mut got: JsMap<GuardId, usize> = JsMap::new();
     if let (Some(ro), Some(last_m)) = (rear_l, last) {
-        if !(crate::rearwatch::room_kept(g, last_m) && pins.iter().any(|x| x.0 == last_m)) {
+        if !(crate::rearwatch::room_kept(g, &crate::seats::here(g), last_m) && pins.iter().any(|x| x.0 == last_m)) {
             let i = find_live(&live, ro).unwrap();
             got.set(last_m, i);
             live[i].by = Some(last_m);
@@ -1039,7 +1039,7 @@ pub fn cover_kept_of(g: &mut Game, gd: GuardId) -> Option<CoverJob> {
     for pl in crate::seats::men_up(g) {
         if ours(g.ch[g.pl[pl].ch].pos) { return None; }
     }
-    for mt in crate::seats::team_men(g) {
+    for mt in crate::seats::team_men(g, &crate::seats::here(g)) {
         if mt != gd && g.gd[mt].state != crate::game::GuardState::Dead && ours(pos_of(g, mt)) { return None; }
     }
     Some(j)

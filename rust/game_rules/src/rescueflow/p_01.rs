@@ -158,7 +158,7 @@ pub fn rescue_flow_lookable(g: &mut crate::game::Game, k: &mut crate::rescueflow
 }
 
 /// (rescueflow.ts RescueFlow.open)
-pub fn rescue_flow_open(g: &mut crate::game::Game, o: &crate::scene_scenarios::RouteOpening) -> bool {
+pub fn rescue_flow_open(g: &crate::game::Game, o: &crate::scene_scenarios::RouteOpening) -> bool {
     match door_of(g, o) {
         None => true,
         Some(d) => m::abs(crate::doors::door_angle(g, d)) > 0.5,
@@ -166,15 +166,15 @@ pub fn rescue_flow_open(g: &mut crate::game::Game, o: &crate::scene_scenarios::R
 }
 
 /// The team's eyes this moment: Sam's, and every living operative's who is not blind. (rescueflow.ts RescueFlow.eyes)
-pub fn rescue_flow_eyes(g: &crate::game::Game) -> Vec<V3> {
+pub fn rescue_flow_eyes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<V3> {
     let mut out: Vec<V3> = Vec::new();
-    let pl = g.player;
+    let pl = seat.player;
     if !g.pl[pl].down {
         let p = g.ch[g.pl[pl].ch].pos;
         out.push([p[0], EYE, p[2]]);
     }
     for &op in g.rescue.ops.iter() {
-        if g.gd[op].state != crate::game::GuardState::Dead && g.time >= g.gd[op].dazzled_until {
+        if g.gd[op].state != crate::game::GuardState::Dead && !crate::control::man::blind(g, op) {
             let p = g.ch[g.gd[op].ch].pos;
             out.push([p[0], EYE, p[2]]);
         }
@@ -212,7 +212,7 @@ pub fn rescue_flow_region_at(g: &crate::game::Game, p: V3) -> Option<RescueflowR
 pub fn rescue_flow_sense(g: &mut crate::game::Game) {
     let t = g.time;
     let k = g.rescue.flow.knobs;
-    let eyes = rescue_flow_eyes(g);
+    let eyes = rescue_flow_eyes(g, &crate::seats::here(g));
     let all: Vec<RescueflowRegionId> = g.rescue.flow.regions.values().copied().collect();
     {
         // the floor the eyes are on: ONE room a call, in turn
@@ -361,7 +361,7 @@ pub fn rescue_flow_sense(g: &mut crate::game::Game) {
         }
         row.share = if !row.lookable.is_empty() { n / row.lookable.len() as f64 } else { 0.0 };
         row.hot = hot;
-        row.held = rescue_flow_holder(g, &row.o);
+        row.held = rescue_flow_holder(g, &crate::seats::here(g), &row.o);
         let was = row.state;
         row.state = if hot {
             OpenState::Hot
@@ -388,7 +388,7 @@ pub fn rescue_flow_sense(g: &mut crate::game::Game) {
 }
 
 /// The man posted on this opening: on a mark of his own with his gun on it, the flow's cover or a menu order of Sam's. (rescueflow.ts RescueFlow.holder)
-pub fn rescue_flow_holder(g: &crate::game::Game, o: &crate::scene_scenarios::RouteOpening) -> Option<GuardId> {
+pub fn rescue_flow_holder(g: &crate::game::Game, seat: &crate::seats::SeatRef, o: &crate::scene_scenarios::RouteOpening) -> Option<GuardId> {
     let mut i = 0;
     while i < g.rescue.ops.len() {
         let op = g.rescue.ops[i];
@@ -396,7 +396,7 @@ pub fn rescue_flow_holder(g: &crate::game::Game, o: &crate::scene_scenarios::Rou
         if g.gd[op].state == crate::game::GuardState::Dead {
             continue;
         }
-        let Some(a) = crate::orders::squad_orders_of(g, op) else { continue };
+        let Some(a) = crate::orders::squad_orders_of(g, seat, op) else { continue };
         let Some(post) = g.tab.orders_assignment[a].post else { continue };
         if flat(g.ch[g.gd[op].ch].pos, post) > 1.2 {
             continue;
@@ -515,7 +515,7 @@ pub fn rescue_flow_tick(g: &mut crate::game::Game) {
         // (what the turn reads, as locals: a job only ever ends or changes on its own man's turn; the row itself is cloned only once the job is done)
         let Some(j) = g.rescue.flow.jobs.get(gd) else { continue };
         let (kind, ja, t0, mut on_t, said_hot, said_wait, leap, has_chain, mark, at, look, side) = (j.kind, j.a, j.t0, j.on_t, j.said_hot, j.said_wait, j.leap, !j.chain.is_empty(), j.o.mark, j.o.at, j.o.look, j.o.side);
-        let a = crate::orders::squad_orders_of(g, gd);
+        let a = crate::orders::squad_orders_of(g, &crate::seats::here(g), gd);
         if g.gd[gd].state == crate::game::GuardState::Dead || crate::rescue::rescue_owns(g, gd) {
             // (down on the job: what was queued behind him is wanted again)
             let gone = g.rescue.flow.jobs.delete(gd);
@@ -595,7 +595,7 @@ pub fn rescue_flow_tick(g: &mut crate::game::Game) {
             next = if j.chain.is_empty() { None } else { Some(j.chain.remove(0)) };
         }
         if let Some(n) = &next {
-            if rescue_flow_stays(g) {
+            if rescue_flow_stays(g, &crate::seats::here(g)) {
                 g.stats.pairup.stays += 1;
                 crate::rescue::rescue_note(g, &alloc::format!("flow:stay:{}", n.id));
                 next = None;
@@ -620,7 +620,7 @@ pub fn rescue_flow_tick(g: &mut crate::game::Game) {
         g.rescue.flow.want.clear();
         return;
     }
-    if !g.rescue.flow.want.is_empty() && rescue_flow_stays(g) {
+    if !g.rescue.flow.want.is_empty() && rescue_flow_stays(g, &crate::seats::here(g)) {
         for id in g.rescue.flow.want.keys() {
             g.stats.pairup.stays += 1;
             crate::rescue::rescue_note(g, &alloc::format!("flow:stay:{}", id));
@@ -649,7 +649,7 @@ pub fn rescue_flow_tick(g: &mut crate::game::Game) {
             crate::rescue::rescue_note(g, &note);
             continue;
         }
-        let free = rescue_flow_free(g);
+        let free = rescue_flow_free(g, &crate::seats::here(g));
         if free.is_empty() {
             continue;
         }
@@ -661,7 +661,7 @@ pub fn rescue_flow_tick(g: &mut crate::game::Game) {
                 let op = g.rescue.ops[i];
                 i += 1;
                 if g.gd[op].state != crate::game::GuardState::Dead && !crate::rescue::rescue_owns(g, op) {
-                    if let Some(a) = crate::orders::squad_orders_of(g, op) {
+                    if let Some(a) = crate::orders::squad_orders_of(g, &crate::seats::here(g), op) {
                         if g.tab.orders_assignment[a].order == "fallIn" {
                             file += 1;
                         }
@@ -682,7 +682,7 @@ pub fn rescue_flow_tick(g: &mut crate::game::Game) {
         _ => None,
     };
     if let Some(o) = c {
-        let free = rescue_flow_free(g);
+        let free = rescue_flow_free(g, &crate::seats::here(g));
         if free.len() >= 2 {
             g.rescue.flow.came_in.as_mut().unwrap().t = -1e9;
             let gd = free[0];
@@ -710,7 +710,7 @@ pub fn rescue_flow_tick(g: &mut crate::game::Game) {
                     ..Default::default()
                 },
             );
-            let a = crate::orders::squad_orders_of(g, gd).unwrap();
+            let a = crate::orders::squad_orders_of(g, &crate::seats::here(g), gd).unwrap();
             g.rescue.flow.mine.add(a);
             let id = o.id.clone();
             g.rescue.flow.jobs.set(gd, Job { kind: JobKind::Corridor, o, a, t0: t, on_t: f64::NAN, chain: Vec::new(), said_hot: false, said_wait: false, leap: false });
@@ -735,21 +735,21 @@ pub fn rescue_flow_settled(g: &crate::game::Game, o: &crate::scene_scenarios::Ro
 }
 
 /// pairup.ts 'stay': one partner, silent, not found out: the flow sends nobody. (rescueflow.ts RescueFlow.stays)
-pub fn rescue_flow_stays(g: &crate::game::Game) -> bool {
-    crate::pairup::pair_up(g, crate::pairup::PairUpRule::Stay) && crate::orders::squad_orders_squad(g).len() == 1 && crate::silent::squad_silent(g) && !crate::silent::silent_compromised(g)
+pub fn rescue_flow_stays(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
+    crate::pairup::pair_up(g, crate::pairup::PairUpRule::Stay) && crate::orders::squad_orders_squad(g, seat).len() == 1 && crate::silent::squad_silent(g, seat) && !crate::silent::silent_compromised(g, seat)
 }
 
 /// The men the flow may send: alive, falling in, not F's, not in a fight, not blind; the LAST in the file first. (rescueflow.ts RescueFlow.free)
-pub fn rescue_flow_free(g: &crate::game::Game) -> Vec<GuardId> {
+pub fn rescue_flow_free(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<GuardId> {
     let mut out: Vec<(GuardId, f64)> = Vec::new();
     let mut i = 0;
     while i < g.rescue.ops.len() {
         let gd = g.rescue.ops[i];
         i += 1;
-        if g.gd[gd].state == crate::game::GuardState::Dead || g.rescue.flow.jobs.has(gd) || crate::rescue::rescue_owns(g, gd) || g.time < g.gd[gd].dazzled_until {
+        if g.gd[gd].state == crate::game::GuardState::Dead || g.rescue.flow.jobs.has(gd) || crate::rescue::rescue_owns(g, gd) || crate::control::man::blind(g, gd) {
             continue;
         }
-        let Some(a) = crate::orders::squad_orders_of(g, gd) else { continue };
+        let Some(a) = crate::orders::squad_orders_of(g, seat, gd) else { continue };
         if g.tab.orders_assignment[a].order != "fallIn" {
             continue;
         }
@@ -783,7 +783,7 @@ pub fn rescue_flow_take(g: &mut crate::game::Game, gd: GuardId, o: &crate::scene
             ..Default::default()
         },
     );
-    let a = crate::orders::squad_orders_of(g, gd).unwrap();
+    let a = crate::orders::squad_orders_of(g, &crate::seats::here(g), gd).unwrap();
     g.rescue.flow.mine.add(a);
     let t0 = g.time;
     g.rescue.flow.jobs.set(gd, Job { kind: JobKind::Cover, o: o.clone(), a, t0, on_t: f64::NAN, chain: chain.to_vec(), said_hot: false, said_wait, leap });
@@ -812,7 +812,7 @@ pub fn rescue_flow_rejoin(g: &mut crate::game::Game, gd: GuardId, words: Option<
             ..Default::default()
         },
     );
-    if let Some(a) = crate::orders::squad_orders_of(g, gd) {
+    if let Some(a) = crate::orders::squad_orders_of(g, &crate::seats::here(g), gd) {
         g.rescue.flow.mine.add(a);
     }
     if let Some(w) = words {
@@ -824,7 +824,7 @@ pub fn rescue_flow_rejoin(g: &mut crate::game::Game, gd: GuardId, words: Option<
 pub fn rescue_flow_drop_all(g: &mut crate::game::Game, back: bool) {
     for gd in g.rescue.flow.jobs.keys() {
         let Some(j) = g.rescue.flow.jobs.delete(gd) else { continue };
-        if back && g.gd[gd].state != crate::game::GuardState::Dead && !crate::rescue::rescue_owns(g, gd) && crate::orders::squad_orders_of(g, gd) == Some(j.a) {
+        if back && g.gd[gd].state != crate::game::GuardState::Dead && !crate::rescue::rescue_owns(g, gd) && crate::orders::squad_orders_of(g, &crate::seats::here(g), gd) == Some(j.a) {
             rescue_flow_rejoin(g, gd, None);
         }
     }
@@ -862,7 +862,7 @@ pub fn rescue_flow_boxes(g: &mut crate::game::Game) {
 }
 
 /// (rescueflow.ts RescueFlow.word)
-pub fn rescue_flow_word(g: &mut crate::game::Game, k: &crate::rescueflow::Known) -> String {
+pub fn rescue_flow_word(g: &crate::game::Game, k: &crate::rescueflow::Known) -> String {
     let shut = k.o.kind == crate::scene_scenarios::RouteOpeningKind::Door && !rescue_flow_open(g, &k.o);
     let w = match k.state {
         OpenState::Hot => {
@@ -886,8 +886,8 @@ pub fn rescue_flow_word(g: &mut crate::game::Game, k: &crate::rescueflow::Known)
     String::from(w)
 }
 
-/// The objective line's tail: the openings behind Sam and what is known of each, and any hot one still ahead of him. (rescueflow.ts RescueFlow.line)
-pub fn rescue_flow_line(g: &mut crate::game::Game) -> String {
+/// The objective line's tail: the openings behind Sam and what is known of each, and any hot one still ahead of him.
+pub fn rescue_flow_line(g: &crate::game::Game) -> String {
     let mut behind: Vec<String> = Vec::new();
     let mut ahead: Vec<String> = Vec::new();
     for at in 0..g.rescue.flow.known.len() {

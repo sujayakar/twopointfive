@@ -13,6 +13,15 @@
 //!   frame   once a frame for the order itself, after the menu's input: put its row on the menu or take it off
 //!           (`def` makes the row), end what has gone stale
 //!
+//! Only `id`, `label` and `issue` must be written: `Row { frame: Some(frame), ..Row::new(ID, label, issue) }`.
+//!
+//! What an order's functions call, so that its id is written once, in its `Row`:
+//!   `list(g, &ORDER, data)`    its row on the menu (`data`: its page, its targets, its key, its words of assent). Listing again is the same row.
+//!   `unlist(g, &ORDER)`        off the menu
+//!   `listed(g, &ORDER)`        is it on the menu
+//!   `assign(g, &ORDER, man, a)`  hand a man his task under this order: where he stands, which way he faces, how he carries his gun, the two
+//!                              lines he says (`squad_orders_assign`, with the order's own id)
+//!
 //! The older orders are arms of the enums in orders/types.rs (OrderLabel, OrderCan, OrderOnly, OrderValid, OrderIssue,
 //! OrderTick) with their bodies in the matches of orders/p_03.rs and p_05.rs. Each of those enums has one arm, `Row`,
 //! through which every order written this way is called, so moving an older order here deletes its arms and adds none.
@@ -48,6 +57,24 @@ pub fn def(r: &'static Row, data: OrderDef) -> OrderDef {
         tick: r.tick.map(|_| OrderTick::Row(r)),
         ..data
     }
+}
+
+/// Put the order's row on the menu. Listing it again is the same row (`squad_orders_row`), in the place the menu deals it.
+pub fn list(g: &mut Game, r: &'static Row, data: OrderDef) -> OrdersOrderDefId {
+    let d = crate::orders::squad_orders_row(g, def(r, data));
+    crate::orders::squad_orders_register(g, d, None);
+    d
+}
+
+/// take the order's row off the menu
+pub fn unlist(g: &mut Game, r: &Row) { crate::orders::squad_orders_unregister(g, r.id) }
+
+/// is the order's row on the menu
+pub fn listed(g: &Game, seat: &crate::seats::SeatRef, r: &Row) -> bool { seat.orders.defs.iter().any(|&d| g.tab.orders_order_def[d].id == r.id) }
+
+/// Hand a man his task under this order: `a` with the order's own id (whatever `a.order` held).
+pub fn assign(g: &mut Game, r: &Row, gd: GuardId, a: crate::orders::SquadOrdersAssignA) {
+    crate::orders::squad_orders_assign(g, gd, &crate::orders::SquadOrdersAssignA { order: String::from(r.id), ..a });
 }
 
 /// Once a frame for each seat, after the menu's own input: every order's `frame`, in the list's order.
