@@ -23,7 +23,7 @@ pub fn flat(a: V3, b: V3) -> f64 {
 }
 
 /// a roll of the game's die inside a range. (buddy.ts pick)
-pub fn pick(g: &mut crate::game::Game, r: [f64; 2]) -> f64 {
+pub fn pick(g: &mut crate::game::Game, who: crate::dice::Who, r: [f64; 2]) -> f64 {
     r[0] + crate::math_dice::sim_random(g) * (r[1] - r[0])
 }
 
@@ -272,7 +272,7 @@ pub fn send(g: &mut crate::game::Game, c_2: RoomfightDefId, a: crate::buddy::Sen
         own0.call_at = m::NAN;
     }
     let answer = g.k.buddy.answer;
-    let go_at = g.time + pick(g, answer);
+    let go_at = g.time + pick(g, crate::dice::Who::Def(a.x), answer);
     let home = v3::copy(g.tab.roomfight_def[a.x].station);
     let serial = g.serial();
     state_of(g).errands.push(Errand { caller: c_2, buddy: a.x, phase: ErrandPhase::Beat, go_at, spot: a.spot, home, tries: 0.0, step_t: -100.0, t0, l: a.l, serial });
@@ -356,7 +356,7 @@ pub fn consider(g: &mut crate::game::Game, d: RoomfightDefId) {
     }
     if w.call_at.is_nan() {
         let beat = g.k.buddy.beat;
-        let at = time + pick(g, beat);
+        let at = time + pick(g, crate::dice::Who::Def(d), beat);
         man_of(g, d).call_at = at;
         return;
     }
