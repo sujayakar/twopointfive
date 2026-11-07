@@ -1709,6 +1709,23 @@ row on his machine is the answer, and the word puts the count back on any machin
   pattern, its cut faces are bare. No check holds any of this. SEEN: on the software adapter only (the compound, squad of four, very low, 800×500, one seed,
   night and midday, 118 of 118 pipelines, no GPU or console error, the same two views with and without the word). Never seen on a GPU: the look at the play
   resolution, motion, shimmer under the temporal blend, the noise it adds to bounce light, and the cost (it is raster work, which no trusted timer covers).
+- **A FLOOR IS NOT STOOD OFF, AND THE BOUNCE KEEPS TO ITS ROOM (2026-11-07; the maintainer on his M4 Max, the pass at midday: "glowing near edges").** Two
+  faults of the picture, both of light taken from the room behind a wall. No switch: an estimator's own rule put right (`?look=walls:0` puts the second off).
+  (1) A WHITE LINE ALONG EVERY OUTER WALL'S FOOT. Three readers stand a point off its own face in plan before they ask where it is: the exposure by 30 cm
+  (`place_common.wgsl lookPlaceLevels`), the fog by 6 (`fogofwar.wgsl fowSeen`) and the fog's light classes by 6 (`common.wgsl fogSeenAt`). The normal is the SHADING
+  normal, and lying snow leans with its drift: at a wall's foot, at the wall, so the spot came out in the dark room and the snow took that room's gain (and,
+  with the fog drawn, an unseen hairline). All three now ask through one line, `common.wgsl standOff`: what looks up (N.y over 0.5) lies where it lies.
+  (2) LIGHT AT A ROOM'S UPPER CORNERS. The bounce's filter (`denoise.wgsl radAtrous`, the reflections' too: one text) tells surfaces apart by plane, normal and depth, and
+  an outer wall's one face runs through two rooms past the end of a partition: the brighter room's light came round the end. A texel whose place the floor plan knows
+  (`placeOf`, over `sideAt`) takes no tap of another place, nor of a texel that takes every tap (a doorway's, one the plan is silent on), which would hand
+  the far room on at the next pass. A wall's top is of neither room and is not asked.
+  NOT REACHED: a texel over 1.2 m from any other place takes every tap (a far camera or a low preset takes taps from past that); two places past a probe's reach may share a
+  number; a window's reveal and a wall's end are parted at their wall's line; the composite's 3 × 3 upsample of the bounce, the temporal clamp's 5 × 5 and the direct
+  light's filter do not ask. A FACE still steps its whole 30 cm, as before, so beside a doorway or a corner it can be answered by the far side.
+  CHECK: `wallsides-check` (11,616 points and leaning normals at three walls' feet, 913 of the far side stood off as it was, none now; 209 pairs across a
+  partition's ends, none blended, 418 of 418 within a room kept; the shaders' texts pinned); `fog-edge`'s text hash moved (its replica is handed the spot already stood off).
+  STILLS (software adapter, High, midday): 1,604 white pixels in the bounce's debug view at a wall's foot are none; the corner reads as the wall beside it (it was nearly
+  twice). Never seen on a GPU; not timed (up to nine plan reads a gather texel an iteration, only where a wall is near; the exposure reads no more than before).
 - **THE LOOK IS EVERY PAGE'S PICTURE (2026-11-07; the maintainer: "should we work on merging the new look too?", then "we can also get everything
   merged and then try to fix forward, especially as we clean everything up and simplify the code").** Until this the look's layers drew only with a
   `look` row on the address (the bullet below, which still says how they are made). Now there is no switch: the engine draws it on every page, with what stands on it (the walls' two sides, the men's side rows, the smoke's shorter step, the

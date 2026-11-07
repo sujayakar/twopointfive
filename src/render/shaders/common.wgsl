@@ -180,6 +180,11 @@ fn sideLine(c: vec2i, m: vec2f) -> vec2f {
 }
 /// is cell `c` a doorway's that knows its line (kind 3)
 fn sideIsDoor(c: vec2i) -> bool { if (c.x < 0 || c.y < 0 || c.x >= SIDE_W || c.y >= SIDE_H) { return false; } let k = u32(c.y * SIDE_W + c.x); return (frame.sides[k >> 2u][k & 3u] & 3u) == 3u; }
+/** A SPOT STOOD `d` METRES OFF ITS OWN FACE, IN PLAN (xz; add it to the point): so that the wall a face is of does not stand in the spot's own way. WHAT LOOKS UP IS NOT
+ *  STOOD OFF: it has no wall under it to be clear of, and the normal handed here is the shading normal, which on lying snow leans with the drift. At the
+ *  foot of a wall such snow leans at the wall, and a step along it ended in the room behind: shown by that room's exposure (a white line along every outer
+ *  wall by day), and unseen by the fog's eyes (a dark one). Whoever asks where a surface stands on the plan asks through this one line. */
+fn standOff(N: vec3f, d: f32) -> vec2f { return select(N.xz * d, vec2f(0.0), N.y > 0.5); }
 /** the albedo SECONDARY rays see (gather / cascade / probe / card hits): the box's albedo with its markings' area average folded in on the CPU (boxes.ts upload) — the very same three floats as boxAlbedo for a box without markings, or with markings off */
 fn boxAlbedoSec(i: u32) -> vec3f { return boxMat[i * 4u + 3u].xyz; }
 /** × the emission of the box's emissive markings (a switchable's supply factor: game/lighting.ts) */
@@ -1323,7 +1328,7 @@ fn fogSeenAt(P: vec3f, N: vec3f) -> f32 {
   fogSeenKeyP = P; fogSeenKeyN = N; fogSeenVal = 1.0;
   let cfg = fogSight.cfg;
   if (cfg.y != 1.0) { return 1.0; }
-  let q = vec2f(P.x + N.x * 0.06, P.z + N.z * 0.06);
+  let q = P.xz + standOff(N, 0.06);
   var best = 0.0;
   let thinWas = fogEyeThin; fogEyeThin = fogThinOn();   // (FOG.thin: the walks below are fog eyes' — put back before this returns)
   for (var k = 0; k < i32(cfg.x); k++) {
