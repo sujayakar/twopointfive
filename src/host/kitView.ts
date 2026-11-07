@@ -87,6 +87,7 @@ import { FIXLOOK } from '../game/fixtureBreak';   // (a leaf table: written insi
 import { WAND_ORDER, WANDORDER_STATS } from '../game/wandorder';   // (a name and a tally, read inside a row only)
 import { kitOf, kitTreeOn } from '../game/kit';   // (asked inside a row's start only: the card a staged teammate carries · is the card laid out as a tree — your light a row of yours)
 import { SLOTSETUP } from '../game/slotsetup';   // (asked inside a row's start only: a gun's key again is its setup, not the launcher's step)
+import { END_CARD } from './endcard';
 import { exposedTo } from '../game/frag';   // (asked inside a row's tick only: has a burst THERE a line to Sam — the game's own reckoning, glass that it would break counted open)
 
 /** THE LIGHT, one table (a way's `light` in the level file lies over it, key by key). Every place is door-relative — [along the wall toward the stack, out
@@ -698,7 +699,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
   const threw = (err: unknown) => { console.error('kitview: a beat threw —', err); try { if (beat) finish(beat, 'threw'); game.puppet = null; if (!dz.work.length) dissolve(() => restage()); } catch (e2) { console.error('kitview: …and could not be taken down —', e2); dead?.(); } };
   loop.frozen = () => !kitViewLoop || state === 'none' || state === 'staging'; loop.afterFreeze = undefined; loop.hud = null; loop.bubbles = null; loop.audio = null; loop.demo = null; loop.attract = null;
   loop.hotkeys = () => { if (!kitViewLoop) return; try { before(); } catch (err) { threw(err); } };
-  loop.postUpdate = () => { if (!kitViewLoop) return; try { after(); } catch (err) { threw(err); } };
+  loop.postUpdate = () => { END_CARD.due = false; if (!kitViewLoop) return; try { after(); } catch (err) { threw(err); } };
   /** the copy of the frame just drawn, laid over the game's canvas (in the task that drew it) — false: none to be had */
   const copy = (): boolean => { try {
     const v = veil ??= (() => { const c = document.createElement('canvas'); c.id = 'kv-veil'; c.style.cssText = 'position:fixed;pointer-events:none;z-index:1'; (view.parentElement ?? document.body).appendChild(c); return c; })();

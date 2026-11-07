@@ -73,7 +73,7 @@ const CARD = () => { const m = document.getElementById('menu'), q = s => [...m.q
         await page.evaluate(PLAY, [180, ['KeyW']]);
         await page.evaluate(() => { window.__game.player.down = true; });
         await page.evaluate(PLAY, [260, []]);
-      } else { await page.evaluate(PLAY, [240, ['KeyW']]); await page.evaluate(() => { const m = window.__game.mission; m.stage = 'done'; m.debrief = true; }); await page.evaluate(PLAY, [30, []]); }
+      } else { await page.evaluate(PLAY, [240, ['KeyW']]); await page.evaluate(() => { const m = window.__game.mission; m.stage = 'done'; window.__menu.open('debrief'); }); await page.evaluate(PLAY, [30, []]); }
       await page.waitForTimeout(400);
       const c = await page.evaluate(CARD); log(name, JSON.stringify(c).slice(0, 900));
       const rec = (() => { try { return JSON.parse(c.kept || '{}')['killhouse-four|standard'] ?? JSON.parse(c.kept || '{}')['killhouse-four|hard'] ?? null; } catch { return null; } })();

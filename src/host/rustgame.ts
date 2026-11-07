@@ -56,6 +56,7 @@ import { applyGame } from 'tps-bridge/import';
 import { classTable, valueTable } from 'tps-bridge/classes';
 import { puppetRows, SLOW, VALS } from 'tps-bridge/puppet-apply';
 import { OUT, OUT_HOST } from 'tps-bridge/out-dispatch';
+import { END_CARD } from './endcard';
 import { makePoke } from 'tps-bridge/poke';
 import { makeScan } from 'tps-bridge/scan';
 import { installAsks, askNothing } from 'tps-bridge/ask';
@@ -708,6 +709,7 @@ function whole(S: Held): void {
 }
 /** an arm the host carries out itself where the generated dispatcher's call does not fit a page (none today) */
 /** A WALL CHARGE'S BLAST, as the Rust tick's report tells it (blast_feel `wall_report`): the picture's half (blastFeel.ts `wallFeelPicture`: the fireball, the dust ring, the pushes, the ceiling's dust; their later stages are let go by the dress step) */
+OUT_HOST.endCard = () => { END_CARD.due = true; };
 OUT_HOST.wallFeel = (g, at) => { RUST_GAME.wallFeels++; wallFeelPicture(g, at); };
 /** A CHECKPOINT THE TICK ASKED FOR (tools/blitz/OUT-EVENTS.md: both arms carry only the words and call this): the save controller, whose take under the
  *  word is the Rust game's own (`SNAPS.take`: the level's program stopped on the Rust side, the chronicle's row made there, the game kept in the module) */

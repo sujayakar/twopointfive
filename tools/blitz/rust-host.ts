@@ -100,7 +100,7 @@ async function bridge(): Promise<any> {
   const SU = await import('./surface.ts'), SC = await import('./scan.ts'), WA = await import('../../src/view/worldask.ts'); SU.installSurface(); const E = await import('./export.ts'), I = await import('./import.ts'), AK = await import('./ask.ts'), C = await import('./classes.ts'), P = await import('./puppet-apply.ts'), O = await import('./out-dispatch.ts'), A = await import('./audit.ts');
   const K = await import('../../src/game/knobs.ts'), D = await import('../../src/math/dice.ts'), DR = await import('../../src/game/dress.ts'); const PD = await import('../../src/host/rustdress.ts');
   const LJ = JSON.parse(readFileSync(new URL('./puppet-lists.json', import.meta.url).pathname, 'utf8'));
-  O.OUT_HOST.tap = SU.fireTap; BR = { ...E, pageDress: PD.dressStep, surfaceHost: SU.surfaceHost, readRecord: SU.readRecord, heardOf: WA.heardOf, makeTaps: SU.makeTaps, makeScan: SC.makeScan, installAsks: AK.installAsks, applyGame: I.applyGame, hooks: { classes: C.classTable(), values: C.valueTable(), made: Object.fromEntries(MEN.map(c => [c, (o: object) => { MADE_MEN.add(o); MADE.n++; }])) }, puppetRows: P.puppetRows, SLOW: P.SLOW, VALS: P.VALS, OUT: O.OUT, A, reg: K.knobRegistry(), newDice: D.newDice, dressAll: DR.dressAll, DRESS: DR.DRESS,
+  O.OUT_HOST.tap = SU.fireTap; O.OUT_HOST.endCard = (g: any) => { g.endCards = (g.endCards ?? 0) + 1; };   /* (a tool has no card: it counts them, `game.endCards`) */ BR = { ...E, pageDress: PD.dressStep, surfaceHost: SU.surfaceHost, readRecord: SU.readRecord, heardOf: WA.heardOf, makeTaps: SU.makeTaps, makeScan: SC.makeScan, installAsks: AK.installAsks, applyGame: I.applyGame, hooks: { classes: C.classTable(), values: C.valueTable(), made: Object.fromEntries(MEN.map(c => [c, (o: object) => { MADE_MEN.add(o); MADE.n++; }])) }, puppetRows: P.puppetRows, SLOW: P.SLOW, VALS: P.VALS, OUT: O.OUT, A, reg: K.knobRegistry(), newDice: D.newDice, dressAll: DR.dressAll, DRESS: DR.DRESS,
     lists: { step: new Set<string>(LJ.step), start: new Set<string>(LJ.start) } };
   BR.PUT_BACKS = (await import('../../src/math/side.ts')).PUT_BACKS;
   { const SS = await import('../../src/game/savestate.ts'); snaps(SS); BR.SNAPS = SS.SNAPS; }
@@ -515,7 +515,7 @@ export class RustHost {
   /** what the scripted player's `ended()` reads (playthrough.ts:733), the mission's stage, and how many door orders are under way: when one ends the
    *  scripted commander asks the door tools what the team knows of that door (playthrough.ts:998 `knownShut` → doortools.ts:1019 `knows`, the tools'
    *  `tried`, which is not on the filtered list: warehouse-four's and barracks-four's second `bangClear` was not given without it) */
-  private endMark(): string { const g = this.g; return `${g.mission?.stage}|${g.mission?.debrief}|${g.roomClear?.end}|${g.rescue?.result?.state}|${g.snatch?.end}|${OFF.has('doors') ? 0 : g.doorTools?.ops?.length}`; }
+  private endMark(): string { const g = this.g; return `${g.mission?.stage}|${g.endCards}|${g.roomClear?.end}|${g.rescue?.result?.state}|${g.snatch?.end}|${OFF.has('doors') ? 0 : g.doorTools?.ops?.length}`; }
   private downCount(): number { const g = this.g; let n = g.player?.down ? 1 : 0; for (const x of g.guards as any[]) if (x.state === 'dead' || x.down) n++; return n; }
 
   // ---- the applies

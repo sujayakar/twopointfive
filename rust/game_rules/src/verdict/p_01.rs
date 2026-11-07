@@ -214,7 +214,7 @@ fn close(g: &mut Game, end: (bool, &'static str, String)) {
     // the stealth mission raises its own card (the exfil, a player down, a snatch lost); every other end is this module's to announce
     let stage = g.mission.stage;
     let all_down = { let mut a = true; for i in 0..g.seats.len() { let p = crate::cmd::seat_man(g, g.seats[i]); if !g.pl[p].down { a = false; break; } } a };
-    let own = g.mission.debrief || stage == crate::game::MissionStage::Done || (stage == crate::game::MissionStage::Failed && g.mission.down_card_at > 0.0) || (stage != crate::game::MissionStage::Failed && all_down);
+    let own = stage == crate::game::MissionStage::Done || (stage == crate::game::MissionStage::Failed && g.mission.down_card_at > 0.0) || (stage != crate::game::MissionStage::Failed && all_down);
     g.verdict.card_at = if own { -1.0 } else { g.time + if won { g.k.verdict.win_secs } else { g.k.verdict.loss_secs } };
     g.verdict.res = Some(res);
 }

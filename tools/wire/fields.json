@@ -3447,7 +3447,6 @@
 "game::Interactable.target",
 "game::Interactable.verb",
 "game::Mission.alarm_on",
-"game::Mission.debrief",
 "game::Mission.down_card_at",
 "game::Mission.drive_t",
 "game::Mission.hands_on",
@@ -7711,7 +7710,8 @@
 "deathrecap::LostMan.from",
 "deathrecap::LostMan.known_at",
 "deathrecap::Recap.lost_live",
-"game::Game.recap"
+"game::Game.recap",
+"deathrecap::Recap.all_down"
 ],
 "everyTickNotCarried": [
 {
@@ -11011,7 +11011,6 @@
 "game::Interactable.target",
 "game::Interactable.verb",
 "game::Mission.alarm_on",
-"game::Mission.debrief",
 "game::Mission.down_card_at",
 "game::Mission.drive_t",
 "game::Mission.hands_on",
@@ -13038,6 +13037,7 @@
 "deathrecap::LostMan.from",
 "deathrecap::LostMan.known_at",
 "deathrecap::Recap.lost_live",
-"game::Game.recap"
+"game::Game.recap",
+"deathrecap::Recap.all_down"
 ]
 }
