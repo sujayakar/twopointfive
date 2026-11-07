@@ -163,6 +163,7 @@ pub fn report(g: &mut crate::game::Game, pl: PlayerId, at: V3) {
     let carry = 1.0 + k.carry * m::min(1.0, m::max(0.0, (d - k.carry_from) / k.carry_over));
     let (r2, r3) = { let s = state_mut(g); let r2 = 0.96 + 0.06 * dice(s); let r3 = 0.94 + 0.12 * dice(s); (r2, r3) };
     // (the crack passes NO rate: the mixer draws its own)
+    crate::out_events::push_wall_feel(g, at);   // (the picture's half of the feel: the fireball, the dust ring, the pushes, the ceiling's dust)
     crate::audio_iface::game_audio_like_play(g, "wallCrack", Some(at), Some(k.crack * (0.25 + 0.75 * dull) * carry), None);
     crate::audio_iface::game_audio_like_play(g, "wallThump", Some(at), Some(k.thump * carry), Some(&crate::audio_iface::PlayOpts::Rate { rate: r2 }));
     crate::audio_iface::game_audio_like_play(g, "wallDebris", Some(at), Some(k.debris * (0.4 + 0.6 * dull) * carry), Some(&crate::audio_iface::PlayOpts::Rate { rate: r3 }));

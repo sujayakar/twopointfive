@@ -432,9 +432,10 @@ pub fn room_clear_start(g: &mut crate::game::Game, id: RoomClearId) {
             ch.aim_pitch = 0.0;
             g.gd[gd].speed = 0.0;
         }
+        crate::control::set_hold(g, gd, false, "squad"); crate::control::set_pinned(g, gd, false, "squad");
         let man = &mut g.gd[gd];
         man.state = crate::game::GuardState::Search;
-        man.awareness = 0.0; man.last_known = None; man.hold = false; man.pinned = false; man.react_t = 0.0; man.search_t = 0.0; man.script = None;
+        man.awareness = 0.0; man.last_known = None; man.react_t = 0.0; man.search_t = 0.0; man.script = None;
         g.ch[c].anim.stance = if i == 0 { crate::character::Stance::Stack } else { crate::character::Stance::HighReady };
         if !live { crate::character::character_update(g, c, 0.0); }
     }

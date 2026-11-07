@@ -8,7 +8,7 @@ and deletes the side that can never run.
 cargo run --release --manifest-path tools/fold/Cargo.toml -- --report fold-report.md            # dry: says what it would do
 cargo run --release --manifest-path tools/fold/Cargo.toml -- --write --report fold-report.md    # and does it
 cargo run --release --manifest-path tools/fold/Cargo.toml -- --table rows.tsv                   # every row that stays a switch, tried alone
-cargo run --release --manifest-path tools/fold/Cargo.toml -- --knobs knobs-dead.md               # every leaf of the tables no body reads
+cargo run --release --manifest-path tools/fold/Cargo.toml -- --knobs knobs-dead.md --drop drop.txt   # every leaf of the tables no body reads; the settled rows among them, one a line
 ```
 
 Run it from the repository's root (or `--root DIR`). It reads `tools/qa/switches.json`, `rust/game/src/knobs.rs` (the tables at page
@@ -87,18 +87,23 @@ Three steps, each its own run, each rerunnable on a later tree:
    translations the Rust game never calls: a panel's summary string, a tuning panel's saver, a setter for an address word.
 3. **`tools/fold/sharp.sh`: the compiler's own reading, to a fixed point.** By name, a dead function that shares its name with a
    live function, a field or a local is missed. `sharp.sh` writes a copy of `rust/` in which every item of a body file is private
-   to the crate, lifts the crate's `allow(dead_code)`, runs `cargo check` on the copy and deletes from the real body files what the
-   check names (functions, methods, constants, statics; a whole `impl` when all of it went), then runs again until a round deletes
-   nothing. What stays public in the copy is what makes a thing live: the generated call surface, the wire and the tables (never
-   touched), any item whose name stands in `rust/game_face` or `rust/game_run`, and any item a unit test of a body file names (such
-   an item, public or private, is marked used in the copy, so what it reaches is live too). So a function reached only through a
-   table of handlers is live for as long as the table is, by the compiler's own reckoning, and a function only a test calls is kept
-   (`sharp.sh --dry --no-tests` counts what the tests alone hold up). A deleted function's line in `mod.rs` is dropped only from
-   the list of its own part.
+   to the crate, lifts the crate's `allow(dead_code)`, runs `cargo check --tests` on the copy and deletes from the real body files
+   what the check names (functions, methods, constants, statics; a whole `impl` when all of it went), then runs again until a round
+   deletes nothing. What stays public in the copy is what makes a thing live: the generated call surface, the wire and the tables
+   (never touched), and any item whose name stands in `rust/game_face` or `rust/game_run`. The unit tests are live too, because the
+   check is made with them: what only a test uses stays, by the compiler's own reading and not by name. So a function reached only
+   through a table of handlers is live for as long as the table is, and a function only a test calls is kept (`sharp.sh --dry
+   --no-tests` checks without the tests and so names those as well). Nothing inside a test module is deleted. A deleted function's
+   line in `mod.rs` is dropped only from the list of its own part.
 
    ON A TREE WHERE `mod.rs` ALSO HANDS ON `sig::*` (stubs that are `todo!()`), a function deleted by mistake still compiles and
    panics when called. Run steps 2 and 3 for good on a tree without those stubs, where a missing function is a compile error. Fields, variants and items
    of generated files the check names are listed, not deleted.
+
+`tools/fold/never.sh` runs steps 2 and 3 and one more reading with no test holding anything, and writes one report: lines by module
+before and after, and three lists. DELETED, NOTHING NAMED IT (the first look of step 2); DELETED, ONLY DEAD CODE NAMED IT (the later
+looks of step 2 and all of step 3); KEPT ALTHOUGH THE GAME NEVER RUNS IT (what the last reading names: only a unit test uses it, and
+deleting it is deleting that test, a hand's call).
 
 ## Readers
 

@@ -114,6 +114,7 @@ pub fn update_guard(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
         St::Dead => {}
     }
     pose(g, gd, dt, &mut f);
+    crate::control::settle(g, gd);
 }
 
 /// Dead or held: his body is settled here and nothing else of his frame runs.
@@ -121,7 +122,7 @@ fn incapable(g: &mut Game, gd: GuardId, dt: f64) -> bool {
     use crate::game::GuardState as St;
     let c = g.gd[gd].ch;
     if g.gd[gd].state == St::Dead {
-        crate::control::note(g, gd, crate::control::Holder::Dead, 0);
+        crate::control::record(g, gd, crate::control::Holder::Dead);
         let m = &mut g.gd[gd];
         m.muzzle_down = false; m.pieing = None; m.search_plan = None; m.held = None; m.standoff = None; m.speed = 0.0;
         g.ch[c].vel = [0.0, 0.0, 0.0];
@@ -133,7 +134,7 @@ fn incapable(g: &mut Game, gd: GuardId, dt: f64) -> bool {
         return true;
     }
     if g.gd[gd].held.is_some() {
-        crate::control::note(g, gd, crate::control::Holder::Held, 0);
+        crate::control::record(g, gd, crate::control::Holder::Held);
         {
             let m = &mut g.gd[gd];
             m.pieing = None; m.search_plan = None; m.body_duty = None; m.standoff = None; m.muzzle_down = false; m.saw_player_this_frame = false;
@@ -160,13 +161,14 @@ fn incapable(g: &mut Game, gd: GuardId, dt: f64) -> bool {
 fn lent(g: &mut Game, gd: GuardId, dt: f64) -> bool {
     use crate::character::UpperMode;
     // WHO HAS HIS BODY (control/): the rules of the list are asked from the top; below them his own script, below that his own state
-    let granted = crate::control::grant(g, gd);
-    if let crate::control::Grant::Lent { rule, script } = granted {
+    if let Some((rule, crate::control::Intent::Script(script))) = crate::control::grant(g, gd, dt, crate::control::Stage::Body) {
+        crate::control::record(g, gd, crate::control::Holder::Rule(rule));
         let ran = run_lent_script(g, gd, script, dt);
-        (crate::control::BODY_RULES[rule].commit)(g, gd, ran);
+        crate::control::commit(g, gd, rule, crate::control::Outcome::Script(ran));
         return true;
     }
-    if let crate::control::Grant::Script = granted {
+    if g.gd[gd].script.is_some() {
+        crate::control::record(g, gd, crate::control::Holder::Script);
         {
             let m = &mut g.gd[gd];
             m.pieing = None; m.search_plan = None; m.standoff = None;
@@ -662,7 +664,7 @@ fn suspicious(g: &mut Game, gd: GuardId, dt: f64, f: &mut Frame) {
     *f = Frame { c, route, staff, lvl, seen, dist, prev, pair, dazzled, staggered, p0x, p0z, move_speed, upper, aim_at, crouch, duck, pied };
 }
 
-/// ALERT: the fight. His legs may be a rule's (control/ LEGS_RULES); else he reacts, stands off, shoots, closes, or goes to the man he dropped.
+/// ALERT: the fight. A rule of the list's cover stage may have him first (control/); else he reacts, stands off, shoots, closes, or goes to the man he dropped.
 #[allow(unused_variables, unused_mut, unused_assignments, unused_labels, unused_imports)]
 fn alert(g: &mut Game, gd: GuardId, dt: f64, f: &mut Frame) {
     use crate::game::GuardState as St;
@@ -676,10 +678,11 @@ fn alert(g: &mut Game, gd: GuardId, dt: f64, f: &mut Frame) {
         let can_shoot = pc.is_some() && !down && !dazzled && !staggered && (g.time - g.gd[gd].last_seen_t < 0.5);
         if g.gd[gd].react_t > 0.0 || !can_shoot { g.gd[gd].shot_blocked_t = 0.0; g.gd[gd].line_in_t = 0.0; }
         if g.gd[gd].react_t > 0.0 || down || g.gd[gd].pinned { g.gd[gd].stall_ref = None; g.gd[gd].chase_t = 0.0; }
-        // HIS LEGS (control/): a rule of the legs list may take them while his own fight keeps his gun on the danger; the first row is a man getting his head down
-        let legs = crate::control::grant_legs(g, gd, dt);
+        // TAKING COVER (control/): a rule of the list's cover stage may have him before his fight does; the first is a man getting his head down
+        let cover = match crate::control::grant(g, gd, dt, crate::control::Stage::Cover) { Some((rule, crate::control::Intent::Cover(want))) => Some((rule, want)), _ => None };
         let in_standoff = g.gd[gd].standoff.is_some() && pair.is_some();
-        if let Some((rule, want)) = legs {
+        if let Some((rule, want)) = cover {
+            crate::control::record(g, gd, crate::control::Holder::Rule(rule));
             duck = true;
             g.gd[gd].shot_blocked_t = 0.0; g.gd[gd].line_in_t = 0.0; g.gd[gd].chase_t = 0.0;
             g.gd[gd].fire_cd = m::max(g.gd[gd].fire_cd, want.fire_wait);
@@ -700,18 +703,18 @@ fn alert(g: &mut Game, gd: GuardId, dt: f64, f: &mut Frame) {
                     brake(g, gd, 8.0, dt);
                     g.ch[c].vel = [0.0, 0.0, 0.0];
                     g.gd[gd].stall_ref = None;
-                    crate::control::LegsOutcome::Down
+                    crate::control::Outcome::Down
                 }
                 Some(spot) => {
                     go_to(g, gd, spot, None);
                     let arrived = follow_path(g, gd, dt, want.pace);
                     move_speed = g.gd[gd].speed;
-                    if arrived { crate::control::LegsOutcome::Arrived }
-                    else if not_getting_anywhere(g, gd, dt, 1.5) { crate::control::LegsOutcome::GoingNowhere }
-                    else { crate::control::LegsOutcome::Moving }
+                    if arrived { crate::control::Outcome::Arrived }
+                    else if not_getting_anywhere(g, gd, dt, 1.5) { crate::control::Outcome::GoingNowhere }
+                    else { crate::control::Outcome::Moving }
                 }
             };
-            (crate::control::LEGS_RULES[rule].ran)(g, gd, outcome);
+            crate::control::commit(g, gd, rule, outcome);
         } else if g.gd[gd].react_t > 0.0 {
             g.gd[gd].react_t -= dt;
             let gp = if dazzled || g.time - g.gd[gd].last_seen_t > 0.5 { crate::belief::gun_point(g, gd) } else { None };
@@ -730,97 +733,18 @@ fn alert(g: &mut Game, gd: GuardId, dt: f64, f: &mut Frame) {
             g.gd[gd].line_in_t = 0.0;
         } else if can_shoot {
             let pc = pc.unwrap();
-            let crouched = crate::teams::foe_crouched(g, gd);
-            let trunk = match g.ch[pc].bones.get(Bone::Spine2).copied() { Some(b) => Some(b), None => g.ch[pc].bones.get(Bone::Hips).copied() };
-            let pp = g.ch[pc].pos;
-            let mut aim: V3 = [match trunk { Some(t) => t[0], None => pp[0] }, pp[1] + (if crouched { 0.8 } else { 1.25 }), match trunk { Some(t) => t[2], None => pp[2] }];
-            let pinned = g.gd[gd].pinned;
-            let mut blocked = false;
-            if (!pinned || pane_first(g, c, aim)) && !clear_shot(g, c, aim) {
-                let head = match g.ch[pc].bones.get(Bone::Head).copied() { Some(b) => b, None => v3::add(pp, [0.0, if crouched { 1.05 } else { 1.6 }, 0.0]) };
-                if clear_shot(g, c, head) { aim = head; } else { blocked = true; }
-            }
-            aim_at = Some(aim);
-            if !blocked && !pinned && crate::aim::bore_fouled(g, gd) { blocked = true; }
-            if blocked {
-                let who = g.gd[gd].foe.clone();
-                if crate::coverfire::cover_seen(g, gd, who, aim) { blocked = false; }
-            }
-            let here = g.ch[c].pos;
-            let gun_yaw = crate::character::character_gun_yaw(g, c);
-            let facing_err = m::abs(v3::wrap_angle(m::atan2(aim[0] - here[0], aim[2] - here[2]) - gun_yaw));
-            let walled = !pinned && crate::gunwall::gun_wall_check(g, gd, Some(crate::gunwall::GunUp::Aim), Some(aim), dt, Some(true));
-            let poked = !pinned && (crate::combat::arm_through(g, c) || walled);
-            if poked && facing_err < 0.3 { blocked = true; }
-            g.gd[gd].shot_blocked_t = if blocked { g.gd[gd].shot_blocked_t + dt } else { 0.0 };
-            let in_line = muzzle_check(g, gd, Some(aim), dt, None);
-            let crossing_man = match in_line { Some(o) => { let v = g.ch[g.gd[o].ch].vel; m::hyp2(v[0], v[2]) > 0.4 } None => false };
-            g.gd[gd].line_in_t = if in_line.is_some() { g.gd[gd].line_in_t + dt } else { 0.0 };
-            let (mut closing, mut stepping) = (false, false);
-            if !pinned && (dist > 9.0 || blocked) && !crate::suppression::holding_cover(g, gd) {
-                let braking = crate::aim::aim_brake(g, gd, dist, blocked);
-                if braking && g.gd[gd].speed < 0.3 {
-                    brake(g, gd, 6.0, dt);
-                    g.ch[c].vel = [0.0, 0.0, 0.0];
-                    closing = true;
-                } else {
-                    go_to(g, gd, g.ch[pc].pos, None);
-                    let pace = if braking { 0.0 } else if crate::suppression::flinching(g, gd) { g.tune.guard_investigate } else { g.tune.guard_chase };
-                    closing = !follow_path(g, gd, dt, pace);
-                    if braking { brake(g, gd, 6.0, dt); }
-                }
-                move_speed = g.gd[gd].speed;
-            } else if !pinned && g.gd[gd].muzzle_down && !(crossing_man && g.gd[gd].line_in_t < 0.45) {
-                let st = line_step(g, gd, aim, in_line, dt);
-                if matches!(st, crate::guards::LineStep::Step) {
-                    stepping = true;
-                    move_speed = g.gd[gd].speed;
-                } else if matches!(st, crate::guards::LineStep::None) && dist > LINE_PUSH_MIN_M {
-                    go_to(g, gd, g.ch[pc].pos, None);
-                    follow_path(g, gd, dt, g.tune.guard_investigate);
-                    move_speed = g.gd[gd].speed;
-                } else {
-                    brake(g, gd, 6.0, dt);
-                    g.ch[c].vel = [0.0, 0.0, 0.0];
-                }
-            } else if crate::doorway::off_threshold(g, gd, Some(aim), dt, true) {
-                move_speed = g.gd[gd].speed;
-            } else {
-                brake(g, gd, 6.0, dt);
-                g.ch[c].vel = [0.0, 0.0, 0.0];
-            }
-            if !(blocked && !closing) {
+            let s = fight_sight(g, gd, c, pc, dt);
+            aim_at = Some(s.aim);
+            let (closing, stepping) = fight_legs(g, gd, c, pc, &s, dist, dt, &mut move_speed);
+            if !(s.blocked && !closing) {
                 if !stepping { g.gd[gd].stall_ref = None; }
                 g.gd[gd].chase_t = 0.0;
-            } else if g.gd[gd].shot_blocked_t > 4.0 && !pinned {
+            } else if g.gd[gd].shot_blocked_t > 4.0 && !s.pinned {
                 drop_to_search(g, gd, Some("no shot — lost him"));
                 g.gd[gd].awareness = m::min(g.gd[gd].awareness, 0.5);
                 break 'behaviour;
             }
-            g.gd[gd].fire_cd -= dt;
-            let twisted = move_speed > 0.3 && m::abs(v3::wrap_angle(g.ch[c].body_yaw - g.ch[c].aim_yaw)) > 0.9;
-            let shield = g.tune.muzzle_discipline && shield_up(g);
-            if shield { g.gd[gd].fire_cd = m::max(g.gd[gd].fire_cd, SHIELD_RELEASE_BEAT_MIN + dt); }
-            let weapon = g.gd[gd].weapon;
-            if crate::gunslots::side_locked(g, gd) {
-                // his hands are between his two guns, or off his gun for a charge: no round, no magazine
-            } else if g.gd[gd].reload_t >= 0.0 {
-                tick_reload_beat(g, gd, dt);
-            } else if g.m.weapons.weapons.get(g.fa[weapon].def).expect("a gun's def is a row").burst.is_some() {
-                let muzzle_down = g.gd[gd].muzzle_down;
-                let start_ok = !shield && facing_err < 0.25 && !blocked && !twisted && !poked && !muzzle_down && crate::aim::aim_ready(g, gd);
-                let round_ok = !shield && !twisted && !poked && !muzzle_down;
-                burst_trigger(g, gd, dt, aim, start_ok, round_ok, None);
-            } else if !shield && g.gd[gd].fire_cd <= 0.0 && facing_err < 0.25 && !blocked && !twisted && !poked && !g.gd[gd].muzzle_down
-                && !round_past_colleague(g, gd, aim, None, None) && crate::aim::aim_ready(g, gd) && crate::weapons::firearm_fire(g, weapon) {
-                let (cd, jitter) = { let w = g.m.weapons.weapons.get(g.fa[weapon].def).expect("a gun's def is a row"); (w.cd, w.cd_jitter) };
-                let mods = crate::suppression::guard_fire_mods(g, gd);
-                g.gd[gd].fire_cd = (cd + crate::math_dice::sim_random(g) * jitter) * mods.gap;
-                let round = crate::aim::guard_round(g, gd, mods.spread, None);
-                crate::combat::fire_weapon(g, c, aim, false, Some(&round));
-                crate::aim::note_bore(g, gd, aim);
-                if crate::weapons::firearm_rounds_ready(g, weapon) == 0.0 { start_reload_beat(g, gd); }
-            }
+            fight_trigger(g, gd, c, &s, move_speed, dt);
         } else if let (true, Some(pc)) = (down, pc) {
             let body = g.ch[pc].pos;
             let here = g.ch[c].pos;
@@ -879,6 +803,124 @@ fn alert(g: &mut Game, gd: GuardId, dt: f64, f: &mut Frame) {
         }
     }
     *f = Frame { c, route, staff, lvl, seen, dist, prev, pair, dazzled, staggered, p0x, p0z, move_speed, upper, aim_at, crouch, duck, pied };
+}
+
+/// What a fighting guard's gun can do about the man he sees, this tick: the point he aims at and what is in the way of the round.
+struct Sight {
+    aim: V3,
+    /// no clear line to his trunk or his head, or his own bore is fouled (and no colleague's covering fire has the point)
+    blocked: bool,
+    /// his arm or his gun is through or against a wall
+    poked: bool,
+    /// how far his gun is from the line to the point, radians
+    facing_err: f64,
+    /// a colleague in the line of his muzzle, and whether that man is walking across it
+    in_line: Option<GuardId>,
+    crossing_man: bool,
+    /// he is pinned to his post (read once, as the fight began this tick)
+    pinned: bool,
+}
+
+/// AIM of a fighting guard: the point on his man he can hit (the trunk, else the head) and what stops the round. It keeps his
+/// two clocks of a spoiled shot (`shot_blocked_t`, `line_in_t`); it moves nobody and fires nothing.
+fn fight_sight(g: &mut Game, gd: GuardId, c: CharId, pc: CharId, dt: f64) -> Sight {
+    use crate::character::Bone;
+    let crouched = crate::teams::foe_crouched(g, gd);
+    let trunk = match g.ch[pc].bones.get(Bone::Spine2).copied() { Some(b) => Some(b), None => g.ch[pc].bones.get(Bone::Hips).copied() };
+    let pp = g.ch[pc].pos;
+    let mut aim: V3 = [match trunk { Some(t) => t[0], None => pp[0] }, pp[1] + (if crouched { 0.8 } else { 1.25 }), match trunk { Some(t) => t[2], None => pp[2] }];
+    let pinned = g.gd[gd].pinned;
+    let mut blocked = false;
+    if (!pinned || pane_first(g, c, aim)) && !clear_shot(g, c, aim) {
+        let head = match g.ch[pc].bones.get(Bone::Head).copied() { Some(b) => b, None => v3::add(pp, [0.0, if crouched { 1.05 } else { 1.6 }, 0.0]) };
+        if clear_shot(g, c, head) { aim = head; } else { blocked = true; }
+    }
+    if !blocked && !pinned && crate::aim::bore_fouled(g, gd) { blocked = true; }
+    if blocked {
+        let who = g.gd[gd].foe.clone();
+        if crate::coverfire::cover_seen(g, gd, who, aim) { blocked = false; }
+    }
+    let here = g.ch[c].pos;
+    let gun_yaw = crate::character::character_gun_yaw(g, c);
+    let facing_err = m::abs(v3::wrap_angle(m::atan2(aim[0] - here[0], aim[2] - here[2]) - gun_yaw));
+    let walled = !pinned && crate::gunwall::gun_wall_check(g, gd, Some(crate::gunwall::GunUp::Aim), Some(aim), dt, Some(true));
+    let poked = !pinned && (crate::combat::arm_through(g, c) || walled);
+    if poked && facing_err < 0.3 { blocked = true; }
+    g.gd[gd].shot_blocked_t = if blocked { g.gd[gd].shot_blocked_t + dt } else { 0.0 };
+    let in_line = muzzle_check(g, gd, Some(aim), dt, None);
+    let crossing_man = match in_line { Some(o) => { let v = g.ch[g.gd[o].ch].vel; m::hyp2(v[0], v[2]) > 0.4 } None => false };
+    g.gd[gd].line_in_t = if in_line.is_some() { g.gd[gd].line_in_t + dt } else { 0.0 };
+    Sight { aim, blocked, poked, facing_err, in_line, crossing_man, pinned }
+}
+
+/// LEGS of a fighting guard: close on a man who is far or whom he cannot hit, step out of a colleague's line, clear a doorway,
+/// else stand. Returns (he is closing, he is stepping aside); `move_speed` is written only where he moved.
+fn fight_legs(g: &mut Game, gd: GuardId, c: CharId, pc: CharId, s: &Sight, dist: f64, dt: f64, move_speed: &mut f64) -> (bool, bool) {
+    let Sight { aim, blocked, in_line, crossing_man, pinned, .. } = *s;
+    let (mut closing, mut stepping) = (false, false);
+    if !pinned && (dist > 9.0 || blocked) && !crate::suppression::holding_cover(g, gd) {
+        let braking = crate::aim::aim_brake(g, gd, dist, blocked);
+        if braking && g.gd[gd].speed < 0.3 {
+            brake(g, gd, 6.0, dt);
+            g.ch[c].vel = [0.0, 0.0, 0.0];
+            closing = true;
+        } else {
+            go_to(g, gd, g.ch[pc].pos, None);
+            let pace = if braking { 0.0 } else if crate::suppression::flinching(g, gd) { g.tune.guard_investigate } else { g.tune.guard_chase };
+            closing = !follow_path(g, gd, dt, pace);
+            if braking { brake(g, gd, 6.0, dt); }
+        }
+        *move_speed = g.gd[gd].speed;
+    } else if !pinned && g.gd[gd].muzzle_down && !(crossing_man && g.gd[gd].line_in_t < 0.45) {
+        let st = line_step(g, gd, aim, in_line, dt);
+        if matches!(st, crate::guards::LineStep::Step) {
+            stepping = true;
+            *move_speed = g.gd[gd].speed;
+        } else if matches!(st, crate::guards::LineStep::None) && dist > LINE_PUSH_MIN_M {
+            go_to(g, gd, g.ch[pc].pos, None);
+            follow_path(g, gd, dt, g.tune.guard_investigate);
+            *move_speed = g.gd[gd].speed;
+        } else {
+            brake(g, gd, 6.0, dt);
+            g.ch[c].vel = [0.0, 0.0, 0.0];
+        }
+    } else if crate::doorway::off_threshold(g, gd, Some(aim), dt, true) {
+        *move_speed = g.gd[gd].speed;
+    } else {
+        brake(g, gd, 6.0, dt);
+        g.ch[c].vel = [0.0, 0.0, 0.0];
+    }
+    (closing, stepping)
+}
+
+/// HANDS of a fighting guard: the magazine and the trigger. A shield in the way, a twisted body, a gun through a wall, a muzzle
+/// held down for a colleague or a bore not yet on the point holds the round; an empty gun starts the change of magazine.
+fn fight_trigger(g: &mut Game, gd: GuardId, c: CharId, s: &Sight, move_speed: f64, dt: f64) {
+    let Sight { aim, blocked, poked, facing_err, .. } = *s;
+    g.gd[gd].fire_cd -= dt;
+    let twisted = move_speed > 0.3 && m::abs(v3::wrap_angle(g.ch[c].body_yaw - g.ch[c].aim_yaw)) > 0.9;
+    let shield = g.tune.muzzle_discipline && shield_up(g);
+    if shield { g.gd[gd].fire_cd = m::max(g.gd[gd].fire_cd, SHIELD_RELEASE_BEAT_MIN + dt); }
+    let weapon = g.gd[gd].weapon;
+    if crate::gunslots::side_locked(g, gd) {
+        // his hands are between his two guns, or off his gun for a charge: no round, no magazine
+    } else if g.gd[gd].reload_t >= 0.0 {
+        tick_reload_beat(g, gd, dt);
+    } else if g.m.weapons.weapons.get(g.fa[weapon].def).expect("a gun's def is a row").burst.is_some() {
+        let muzzle_down = g.gd[gd].muzzle_down;
+        let start_ok = !shield && facing_err < 0.25 && !blocked && !twisted && !poked && !muzzle_down && crate::aim::aim_ready(g, gd);
+        let round_ok = !shield && !twisted && !poked && !muzzle_down;
+        burst_trigger(g, gd, dt, aim, start_ok, round_ok, None);
+    } else if !shield && g.gd[gd].fire_cd <= 0.0 && facing_err < 0.25 && !blocked && !twisted && !poked && !g.gd[gd].muzzle_down
+        && !round_past_colleague(g, gd, aim, None, None) && crate::aim::aim_ready(g, gd) && crate::weapons::firearm_fire(g, weapon) {
+        let (cd, jitter) = { let w = g.m.weapons.weapons.get(g.fa[weapon].def).expect("a gun's def is a row"); (w.cd, w.cd_jitter) };
+        let mods = crate::suppression::guard_fire_mods(g, gd);
+        g.gd[gd].fire_cd = (cd + crate::math_dice::sim_random(g) * jitter) * mods.gap;
+        let round = crate::aim::guard_round(g, gd, mods.spread, None);
+        crate::combat::fire_weapon(g, c, aim, false, Some(&round));
+        crate::aim::note_bore(g, gd, aim);
+        if crate::weapons::firearm_rounds_ready(g, weapon) == 0.0 { start_reload_beat(g, gd); }
+    }
 }
 
 /// SEARCH: he has lost his man and works through the spots he could be.

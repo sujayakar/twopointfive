@@ -107,12 +107,11 @@ has not got.
 - **The orders menu's own calls** (`open`, `close`, `turn`, `pageBack`, `pick`, `cycleWho`, `address`) cross to the Rust functions the tick itself runs,
   by the call table (`tools/blitz/surface.ts` `crossing`; the page stands as a surface host): the writes made between ticks go first, then the host's half
   (the cursor, the cameras), `face_call`, and the puppet takes the state again. Inside a tick, and while the puppet is the game (before a start, while
-  one is due), the method runs as it was. `__rust.crossed` counts them. `give` goes by its own line (above).
+  one is due), the method runs as it was. `__rust.crossed` counts them. `give` goes with the target as bytes by the schema (`asks.give`), whatever the target is.
 - **A question about a row or a seat the Rust game has not got is refused, not indexed.** `face_ask` measures the row against the order table and the
   seat against the seats before it asks, and answers 1 (no such row), 2 (no such seat) or 3 (no such question) with no bytes; an index past a table is a
-  panic, and a panic is the game lost. The host then asks by the Rust game's own row of the same id where there is one (a copy of a row), and otherwise
-  hands the row's closure "nothing": its label is its name, no man can, it is not offered, an order through it is refused. One console line a row;
-  `__rust.asksRefused`, `__rust.askRefused`.
+  panic, and a panic is the game lost. The asks (`tools/blitz/ask.ts`) then answer the row's closure
+  "nothing": its label is its name, no man can, it is not offered, an order through it is refused. One console line a row; `__rust.askRefused`.
 - The page's bundle carries the call table for this (about half a megabyte). `tools/blitz/page-plugin.ts` names the bridge's files: after a pull that
   adds one, a running dev server must be started again.
 
@@ -207,21 +206,20 @@ The rule: what the simulation's own code computes from the game's state for the 
 | the fog of war's block (`fogOfWar.frame`: the team's eyes and their fields, the fog's levels, the lit fog's lamps, the thin walls' bits) | `fogofwar/p_02.rs fog_of_war_pass`, `p_03.rs` (`full_block`, `lit_block`), `render_lights pack_light` | the filtered export (the block is on both lists) |
 | the lights' fog classes (the team's ids and lights) | `fogofwar/p_03.rs fog_of_war_full_block` | the filtered export (`LightSet.fog_team`) |
 | particle records, impulses, the fires' heat | every site of `particle_fx`, `blast_look`, `destruction`, `break_table`, … through `render_particles::particles_emit` | out events (`ParticlesEmit`, `ParticlesImpulse`, `ParticlesSetHeat`) |
-| a particle record's shape (cone, burst, ring, puff) and whether it is the team's own doing (the fog's mark) | `render_particles::particles_emit` | STAND-IN `face_emits_ours` → `OUT_OWN.ParticlesEmit`: the event's schema has neither |
-| smoke sources (a shot's gas, a stun's jets and trails, the can, a holed wall's puff) | `effects`, `combat`, `destruction`, `fire`, `smokebreak` | out event `SmokeSystemLikeEmit`; its kind, its grid and what it rides by STAND-IN `face_smoke_out` → `OUT_OWN.SmokeSystemLikeEmit`: the event's schema has none of the three |
+| a particle record's shape (cone, burst, ring, puff) and whether it is the team's own doing (the fog's mark) | `render_particles::particles_emit` | fields of the out event `ParticlesEmit` (`o.shape`, `ours`) |
+| smoke sources (a shot's gas, a stun's jets and trails, the can, a holed wall's puff) | `effects`, `combat`, `destruction`, `fire`, `smokebreak` | out event `SmokeSystemLikeEmit`, with its kind, grid and what it rides (`tools/blitz/track.ts`) |
 | a burst's fragments: a wall charge's, a door charge's, a thrown can's | `blast_look/b_01.rs blast_sparks` | out events |
-| which boxes are a laser's beam, a tracer's streak, an infrared line | `thinline thin_note / thin_air`, `irlaser ir_note` | STAND-IN `face_notes_out` → `notesIn` (the page's own side tables) |
-| the wind's two lists (the sources that blow; the ones for the particles) and each source's record (speed, direction, place, reach) | `wind/p_01.rs wind_update` | STAND-IN `face_wind_out` → `windIn`; `windOut` hands them to the solver and the pool, and the rain's lean reads the storm's off the same record |
-| the weather frame, the sky's two colours, the haze, the exposure, the gloss, the box world's geometry serial | `weather`, `lighting`, `hours`, `wallbreak` | STAND-IN `face_picture_out` → `pictureIn` |
+| which boxes are a laser's beam, a tracer's streak, an infrared line | `thinline thin_note / thin_air`, `irlaser ir_note` | the filtered export, into the page's own side tables (`thinline.ts` THIN and AIR, `irlaser.ts` IR_MADE) |
+| the wind's two lists (the sources that blow; the ones for the particles) and each source's record (speed, direction, place, reach) | `wind/p_01.rs wind_update` | the filtered export (`Wind.active`, `to_pool`, the source's rows); `windOut` hands them to the |
+| the weather frame, the sky's two colours, the haze, the exposure, the gloss, the box world's geometry serial | `weather`, `lighting`, `hours`, `wallbreak` | the filtered export (`HostApi.weather`, `RenderSettings`, `BoxWorld.geom_serial`). A row moves on the page only when the Rust game's moved, so what a panel set stays until the tick changes it |
 
 What the tick has to be TOLD of the host, because a rule asks it: whether there is a particle pool (`particleFx.ts gpuFx`: with one, embers and
 fragments go to it and the sparks' own pool of streak boxes stays empty), the pool's two switches a door charge's fragments go by, and whether there is
-a reach keeper (a breached wall tells it). The bridge's engine list carries none of these: STAND-IN `face_host_has`, called beside the host's half
-before every step.
+a reach keeper (a breached wall tells it). They ride in the host's half.
 
 A wall charge's feel is in two halves. The report and the camera's kick are the Rust tick's (`blast_feel`). Its particles (the fireball, the dust
 ring, the three pushes, the ceiling's dust) are queued closures in the TypeScript and stay the page's: the host starts them on the report's own out
-event (the crack, which nothing else plays: STAND-IN, `OUT_OWN.GameAudioLikePlay`) through `blastFeel.ts wallFeelPicture`, and the dress step lets
+event (`WallFeel`, `OUT_HOST.wallFeel`) through `blastFeel.ts wallFeelPicture`, and the dress step lets
 their later stages go (`blastFeelStages`).
 
 MEASURED (software adapter; nothing here has been seen on a GPU). Four tapes, each played by the page without the word and played back on both pages

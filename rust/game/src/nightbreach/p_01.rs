@@ -161,8 +161,8 @@ fn stage_checked(g: &mut Game) -> Result<(), String> {
         };
         let man = crate::guards::spawn_unit(g, &opts)?;
         g.night_breach.hostiles.push(man);
-        g.gd[man].hold = true;
-        g.gd[man].pinned = true;
+        crate::control::set_hold(g, man, true, "nightbreach");
+        crate::control::set_pinned(g, man, true, "nightbreach");
     }
     let live = staged_live();
     g.night_breach.bang_taken = false;
@@ -202,8 +202,8 @@ fn stage_checked(g: &mut Game) -> Result<(), String> {
     for gd in standing {
         g.gd[gd].state = crate::game::GuardState::Patrol;
         g.gd[gd].awareness = 0.0;
-        g.gd[gd].hold = false;
-        g.gd[gd].pinned = false;
+        crate::control::set_hold(g, gd, false, "nightbreach");
+        crate::control::set_pinned(g, gd, false, "nightbreach");
         let c = g.gd[gd].ch;
         let patch = crate::squad::OrderPatch {
             goal: Some(None),
@@ -613,8 +613,8 @@ pub fn night_breach_tick(g: &mut crate::game::Game, dt: f64, input: InputId, cam
                 let was = script_state(g.gd[h].state);
                 crate::squad::end_guard_script(g, h, was);
             }
-            g.gd[h].hold = true;
-            g.gd[h].pinned = true;
+            crate::control::set_hold(g, h, true, "nightbreach");
+            crate::control::set_pinned(g, h, true, "nightbreach");
             let Some(aim) = g.night_breach.marks.get(i).map(|m| m.aim_at) else { continue };
             if g.gd[h].state == crate::game::GuardState::Patrol && g.gd[h].awareness < 0.3 && g.gd[h].held.is_none() {
                 let c = g.gd[h].ch;
@@ -652,8 +652,8 @@ pub fn night_breach_tick(g: &mut crate::game::Game, dt: f64, input: InputId, cam
             for o in night_breach_drill_ops(g) {
                 if g.gd[o].state != crate::game::GuardState::Dead && g.gd[o].script.is_some() && !in_his_book(g, o) {
                     crate::squad::end_guard_script(g, o, Some(crate::squad::EndGuardScriptState::Search));
-                    g.gd[o].hold = true;
-                    g.gd[o].pinned = true;
+                    crate::control::set_hold(g, o, true, "nightbreach");
+                    crate::control::set_pinned(g, o, true, "nightbreach");
                 }
             }
             let many = g.night_breach.ops.len() > 2;

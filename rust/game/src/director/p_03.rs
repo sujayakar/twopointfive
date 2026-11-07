@@ -56,7 +56,7 @@ pub fn director_beat_order(g: &mut crate::game::Game, r: DirectorRunId, b: Direc
     if o.flinch.is_some() { patch.flinch = o.flinch; }
     if o.direct.is_some() { patch.direct = o.direct; }
     if o.smoke.is_some() { patch.smoke = o.smoke; }
-    g.gd[gd].hold = false;
+    crate::control::set_hold(g, gd, false, "director");
     crate::squad::order(g, gd, patch);
     Ok(())
 }
@@ -182,7 +182,7 @@ pub fn director_beat_rout(g: &mut crate::game::Game, r: DirectorRunId, b: Direct
     if crate::owner::has_him(g, gd, crate::owner::own().runner) { return Ok(true); }
     if !crate::runner::runner_break(g, gd) { return Ok(false); } // (asked while he is still in this beat's hand: refused, he is exactly as he was)
     if g.gd[gd].script.is_some() { crate::squad::end_guard_script(g, gd, Some(crate::squad::EndGuardScriptState::Alert)); }
-    g.gd[gd].hold = false;
+    crate::control::set_hold(g, gd, false, "director");
     director_show_man(g, gd, false);
     g.tab.director_live_beat[b].touched.delete(crate::Num(u.id));
     push(g, b, DirectorPushRowKind::Note, format!("rout {}", u.callsign), None);
@@ -193,7 +193,7 @@ pub fn director_beat_release(g: &mut crate::game::Game, r: DirectorRunId, b: Dir
     let state = state.unwrap_or(crate::squad::EndGuardScriptState::Search);
     let gd = director_guard_of(g, r, u)?;
     if g.gd[gd].script.is_some() { crate::squad::end_guard_script(g, gd, Some(state)); }
-    g.gd[gd].hold = false;
+    crate::control::set_hold(g, gd, false, "director");
     director_show_man(g, gd, false);
     g.tab.director_live_beat[b].touched.delete(crate::Num(u.id));
     push(g, b, DirectorPushRowKind::Note, format!("release {}", u.callsign), Some(obj(vec![("state", text(state.as_str()))])));

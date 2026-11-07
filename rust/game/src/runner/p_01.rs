@@ -481,9 +481,8 @@ pub fn drop(g: &mut crate::game::Game, gd: GuardId) {
         o.search_plan = None;
         o.standoff = None;
         o.muzzle_down = false;
-        o.hold = true;
-        o.pinned = true;
     }
+    crate::control::set_hold(g, gd, true, "runner"); crate::control::set_pinned(g, gd, true, "runner");
     let e = known(g, gd);
     let mate = pick_mate(g, gd);
     if let Some(ma) = mate {
@@ -661,8 +660,8 @@ pub fn step(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     g.fa[w].chamber = 0.0;
     g.fa[w].mag = Some(0.0);
     g.fa[w].burst = None;
-    g.gd[gd].hold = true;
-    g.gd[gd].pinned = true;
+    crate::control::set_hold(g, gd, true, "runner");
+    crate::control::set_pinned(g, gd, true, "runner");
     if g.gd[gd].state != crate::game::GuardState::Patrol { g.gd[gd].state = crate::game::GuardState::Patrol; }
     g.gd[gd].awareness = 0.0;
     g.gd[gd].foe = None;

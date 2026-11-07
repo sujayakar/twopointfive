@@ -379,3 +379,6 @@ pub mod teamtally;
 pub mod stealthfeed;
 pub mod autoreload;
 pub mod call_gen;
+/// A function a caller names and nobody has written: the call says which, in the panic the host shows.
+pub fn no_body(name: &str) -> ! { panic!("no body: {}", name) }
+pub mod state_words;

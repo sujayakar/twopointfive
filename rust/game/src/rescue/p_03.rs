@@ -142,7 +142,7 @@ pub fn rescue_clock(g: &mut crate::game::Game, dt: f64) {
         let def = g.fight.defs.iter().copied().find(|&d| g.tab.roomfight_def[d].gd == cap);
         if let Some(d) = def { g.fight.defs.retain(|&x| x != d); }
         let held = g.gd[cap].hold;
-        g.gd[cap].hold = false;
+        crate::control::set_hold(g, cap, false, "rescue");
         if g.gd[cap].script.is_some() {
             let st = script_end_state(g.gd[cap].state);
             crate::squad::end_guard_script(g, cap, Some(st));
@@ -177,7 +177,7 @@ pub fn rescue_end_act(g: &mut crate::game::Game) {
     if g.gd[by].state != crate::game::GuardState::Dead && g.gd[by].script.is_some() {
         crate::squad::end_guard_script(g, by, Some(crate::squad::EndGuardScriptState::Alert));
     }
-    if g.gd[by].state != crate::game::GuardState::Dead { g.gd[by].hold = a.hold; }
+    if g.gd[by].state != crate::game::GuardState::Dead { crate::control::set_hold(g, by, a.hold, "rescue"); }
     if let Some(d) = a.def {
         if g.guards.contains(&by) && !g.fight.defs.iter().any(|&x| g.tab.roomfight_def[x].gd == by) {
             g.fight.defs.push(d);

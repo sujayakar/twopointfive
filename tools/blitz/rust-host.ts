@@ -17,6 +17,7 @@
 //                        ticks. It is named, counted and handed to the Rust game whole (`face_import_into`). Slow (two walks of the state a tick):
 //                        the way to find a write the fast way has no call for.
 import { faceHere, FACE_WASM } from './face-build.ts';
+import { recorded } from './record';
 import { readFileSync, existsSync, writeFileSync, appendFileSync } from 'node:fs';
 
 export interface HostOpts {
@@ -63,7 +64,7 @@ export interface HostOpts {
 }
 
 // ---- the module: one instance a process, as many games as rust/sim has slots
-export interface Face { X: any; mem: WebAssembly.Memory; NAMES: string[]; u8(): Uint8Array; u32(): Uint32Array; outText(): string; outView(): Uint8Array; panicText(): string; hand<T>(b: Uint8Array, f: (p: number, n: number) => T): T; partHashes(slot: number): number[] }
+export interface Face { X: any; mem: WebAssembly.Memory; rec: ReturnType<typeof recorded> | null; NAMES: string[]; u8(): Uint8Array; u32(): Uint32Array; outText(): string; outView(): Uint8Array; panicText(): string; hand<T>(b: Uint8Array, f: (p: number, n: number) => T): T; partHashes(slot: number): number[] }
 const FACES = new Map<string, Face>();
 /** the module a tool plays with no `--wasm`: the page's own choice (face-build.ts: a build of this machine that is up to date, else the checked-in module of these
  *  sources), so a machine with no cargo plays the same bytes the page serves; with neither, the release build's path, which `loadFace` then says is missing or which is stale by the builder's word */
@@ -71,13 +72,15 @@ export const DEFAULT_WASM = faceHere() ?? FACE_WASM;
 export function loadFace(wasm = DEFAULT_WASM, fresh = false): Face {
   let F = fresh ? undefined : FACES.get(wasm); if (F) return F;
   if (!existsSync(wasm)) throw new Error(`rust-host: no module at ${wasm} (cd rust/game_face && cargo build --target wasm32-unknown-unknown --release; or the checked-in one, which is taken only where it is of this checkout's sources: bun run tools/blitz/face-build.ts --where)`);
-  const X: any = new WebAssembly.Instance(new WebAssembly.Module(new Uint8Array(readFileSync(wasm))), { env: { face_roll: () => (globalThis as any).__tpsRoll() } }).exports, mem: WebAssembly.Memory = X.memory, dec = new TextDecoder();
+  let rec: ReturnType<typeof recorded> | null = null; const X0: any = new WebAssembly.Instance(new WebAssembly.Module(new Uint8Array(readFileSync(wasm))), { env: { face_roll: () => { const v = (globalThis as any).__tpsRoll(); rec?.roll(v); return v; } } }).exports, mem: WebAssembly.Memory = X0.memory, dec = new TextDecoder();
+  if (process.env.TPS_GAME_RECORD) rec = recorded(X0, process.env.TPS_GAME_RECORD);   // (record.ts: every call into the game, to play the run again alone)
+  const X: any = rec ? rec.X : X0;
   const u8 = () => new Uint8Array(mem.buffer), u32 = () => new Uint32Array(mem.buffer);
   // (an address past 2 GB comes back from the module as a negative number: `>>> 0`)
   const outView = () => { const p = X.face_out_ptr() >>> 0; return u8().subarray(p, p + (X.face_out_len() >>> 0)); };
   const outText = () => dec.decode(outView());
   const NAMES: string[] = []; for (let i = 0; i < X.face_parts(); i++) { X.face_part_name(i); NAMES.push(outText()); }
-  F = { X, mem, NAMES, u8, u32, outText, outView,
+  F = { X, mem, rec, NAMES, u8, u32, outText, outView,
     panicText: () => { try { const p = X.face_panic_ptr() >>> 0; return dec.decode(u8().subarray(p, p + X.face_panic_len())); } catch { return ''; } },
     hand<T>(b: Uint8Array, f: (p: number, n: number) => T): T { const p = X.face_alloc(b.length) >>> 0; u8().set(b, p); try { return f(p, b.length); } catch (e) { const w = F!.panicText(); if (w) console.error('the Rust game panicked:', w); throw e; } finally { X.face_free(p, b.length); } },
     partHashes: (slot: number) => { const at = (X.face_part_hashes(slot) >>> 0) >>> 2; return Array.from(u32().subarray(at, at + NAMES.length)); } };
@@ -118,13 +121,7 @@ const OFF_KEPT: RustHost[] = [], OFF_CAP = 6;
 const MEN = ['Character', 'Guard', 'Player'], MADE_MEN = new WeakSet<object>(), MADE = { n: 0 };
 
 const now = () => performance.now();
-/** AN ASK THE RUST GAME REFUSED, read as "nothing" by the row's closure (tools/blitz/ask.ts), the page's own answers (src/host/rustgame.ts `askNone`): the
- *  label is the row's own name, no man can, none fit, the row is not offered and is gone, an order through it is refused */
 const ASKS = ['label', 'can', 'only', 'valid', 'when', 'gone', 'word', 'mark', 'given', 'issue', 'give'];
-function askNone(kind: number, name: string): Uint8Array {
-  const str = (t: string) => { const u = enc.encode(t), o = new Uint8Array(4 + u.length); new DataView(o.buffer).setUint32(0, u.length, true); o.set(u, 4); return o; };
-  const some = (t: string) => { const b = str(t), o = new Uint8Array(1 + b.length); o[0] = 1; o.set(b, 1); return o; };
-  switch (kind) { case 0: return str(name); case 1: return some('not available'); case 2: return new Uint8Array(4); case 3: return Uint8Array.of(1); case 4: return Uint8Array.of(0); case 5: return Uint8Array.of(1); case 6: return Uint8Array.of(0); case 7: return str(''); case 8: return new Uint8Array(0); default: return some('not available'); } }
 /** how many hosted games of the process are inside their own update now (see `surfaceOpen`) */
 const BUSY = { n: 0 };
 /** a field hung on a game's object that a walk of its own keys does not meet */
@@ -206,7 +203,7 @@ export class RustHost {
     if (A.buf(mine.subarray(0, n)).equals(A.buf(theirs.subarray(0, n)))) return;
     this.partsAt ??= this.F.NAMES.map((name, i) => ({ name, off: (X.face_part_addr(0, i) >>> 0) - (X.state_addr(0) >>> 0), len: X.face_part_len(i) }));
     for (const P of this.partsAt) { if (P.name === 'poses' || P.off + P.len > n) continue; const a = mine.subarray(P.off, P.off + P.len); if (A.buf(a).equals(A.buf(theirs.subarray(P.off, P.off + P.len)))) continue;
-      theirs.set(a, P.off); this.blockWrites.set(P.name, (this.blockWrites.get(P.name) ?? 0) + 1); this.count(`the block: ${P.name} written on the puppet since the last apply (handed to the Rust game)`); } }
+      theirs.set(a, P.off); this.F.rec?.mem(theirs.byteOffset + P.off, a); this.blockWrites.set(P.name, (this.blockWrites.get(P.name) ?? 0) + 1); this.count(`the block: ${P.name} written on the puppet since the last apply (handed to the Rust game)`); } }
   private inApply = false;
   // STAND-IN (belongs in the generated poke: a write by path brings the memo's row of that path up to date): A FIELD THE TOOL WROTE AND A RULE THEN PUT
   // BACK. The walk pokes the tool's value into the Rust game; the every-tick export's memo still holds what the puppet was SENT before the tool wrote.
@@ -232,7 +229,7 @@ export class RustHost {
     if (!BR) throw new Error('rust-host: `await RustHost.ready()` first');
     // (RH_FRESH_FACE=1: a module of its own for every game, to tell what a second game of a process owes to the module's own memory from what it owes
     // to the TypeScript modules' tables)
-    const B = BR, F = loadFace(o.wasm, process.env.RH_FRESH_FACE === '1'), H = new RustHost(g, F, B, o);
+    const B = BR, F = loadFace(o.wasm, process.env.RH_FRESH_FACE === '1'), H = new RustHost(g, F, B, o); if ((F.X.face_layout?.() >>> 0) !== B.SCHEMA.layout) throw new Error(`rust-host: this module is of another generation than this checkout's bridge (its layout ${F.X.face_layout?.() >>> 0}, the bridge's ${B.SCHEMA.layout}): bun run tools/blitz/face-build.ts builds this checkout's`);
     if (o.reserveMb !== 0) { const n = (o.reserveMb ?? 48) * 1048576, p = F.X.face_alloc(n); F.X.face_free(p, n); }
     if (o.dressDown !== false && !OFF.has('dress')) dressDown(B);
     if (o.die !== null && !g.dice) g.dice = B.newDice(o.die ?? 20942);
@@ -383,6 +380,7 @@ export class RustHost {
     const X = this.F.X, i = this.F.NAMES.indexOf('dice'); if (i < 0) throw new Error('rust-host: the block has no part named dice');
     const put = (buf: ArrayBufferLike, at: number) => { const v = new DataView(buf); v.setFloat64(at, 0, true); v.setUint32(at + 8, seed >>> 0, true); };
     put(this.F.mem.buffer, X.face_part_addr(this.slot, i) >>> 0);
+    { const at = X.face_part_addr(this.slot, i) >>> 0; this.F.rec?.mem(at, new Uint8Array(this.F.mem.buffer, at, 12)); }
     const w: Uint32Array = this.g.sim.w; put(w.buffer, w.byteOffset + (X.face_part_addr(0, i) >>> 0) - (X.state_addr(0) >>> 0));   // (the puppet's copy of the block, as the next apply would leave it)
     this.dieRef = this.g.dice?.n; }
   dieSeeds = 0;
@@ -424,9 +422,9 @@ export class RustHost {
     // on the Rust side and the puppet takes the state again
     if (this.starts === 1 && this.o.asks !== false && X.face_ask) this.asks = B.installAsks(g, B.reg, (kind: number, row: number, seat: number, b: Uint8Array) => { this.asked++; const one = (r: number): number => this.F.hand(b, (p, n) => X.face_ask(this.h, kind, r, seat, p, n)) | 0; let no = one(row);
       // (`face_ask` answers a number: 0 answered; 1 the Rust game has no such order row; 2 no such seat; 3 no such question. A row object a tool's own call
-      // of the menu made asks by the Rust game's row of the same id where it has one; a refused ask reads as NOTHING, never as empty bytes: `askNone`.)
+      // of the menu made asks by the Rust game's row of the same id where it has one; a refused ask reads as NOTHING, never as empty bytes: ask.ts answers it.)
       if (no === 1) { const L = B.bookOf(g)?.listOf('OrdersOrderDefId') as any[] | undefined, id = L?.[row]?.id, twin = id === undefined || !L ? -1 : L.findIndex((x, i) => i !== row && x?.id === id); if (twin >= 0 && one(twin) === 0) { this.count('an ask by the Rust game\'s row of the same id (the puppet\'s row is one a tool\'s call made)'); return this.F.outView().slice(); } }
-      if (no) { this.asksRefused++; this.count(`AN ASK THE RUST GAME REFUSED (${ASKS[kind] ?? kind}: ${no === 1 ? `no order row ${row}` : no === 2 ? `no seat ${seat}` : `no question ${kind}`}): answered as nothing`); return askNone(kind, String((B.bookOf(g)?.listOf('OrdersOrderDefId') as any[] | undefined)?.[row]?.name ?? '')); }
+      if (no) { this.asksRefused++; this.count(`AN ASK THE RUST GAME REFUSED (${ASKS[kind] ?? kind}: ${no === 1 ? `no order row ${row}` : no === 2 ? `no seat ${seat}` : `no question ${kind}`}): answered as nothing`); return no; }
       return this.F.outView().slice(); }, () => { this.reapply('an order row issued'); });
     // THE MEMO OF THE FILTERED EXPORT is filled by a start's export. Its bytes are not applied: the puppet IS that state (the Rust game was made from it).
     // The every-tick path is then run over every row a few times, so that the first ticks do not pay for its compiling: `face_puppet_warm` sends each
@@ -646,7 +644,7 @@ export class RustHost {
     { const N = this.o.handback ?? 0; if (N && (process.env.HB_AT ? process.env.HB_AT.split(',').includes(String(at)) : at % N === 0)) { const dump = () => { X.face_debug(this.h); return this.F.outText(); }, D = process.env.HB_DEBUG, before = D ? dump() : '';
       this.F.hand(mine, (p, n) => X.face_import_into(this.h, p, n)); if (D) { writeFileSync(`${D}/before${at}.txt`, before); writeFileSync(`${D}/after${at}.txt`, dump()); }
       this.handbacks++; if ((B.bookOf(g).listOf('DirectorLiveBeatId') as any[]).some(r => r.state === 'running')) this.handbacksInBeat++; } }
-    if (blockOwed) { this.wb.block++; const a = this.lastBlock!; for (let i = 0; i < this.F.NAMES.length; i++) { const off = X.face_part_addr(0, i) - X.state_addr(0), len = X.face_part_len(i); if (!A.buf(blk.subarray(off, off + len)).equals(A.buf(a.subarray(off, off + len)))) this.BLOCKW.set(this.F.NAMES[i], (this.BLOCKW.get(this.F.NAMES[i]) ?? 0) + 1); } this.rustBlock().set(blk.subarray(0, X.state_len())); this.lastBlock = blk.slice(); }
+    if (blockOwed) { this.wb.block++; const a = this.lastBlock!; for (let i = 0; i < this.F.NAMES.length; i++) { const off = X.face_part_addr(0, i) - X.state_addr(0), len = X.face_part_len(i); if (!A.buf(blk.subarray(off, off + len)).equals(A.buf(a.subarray(off, off + len)))) this.BLOCKW.set(this.F.NAMES[i], (this.BLOCKW.get(this.F.NAMES[i]) ?? 0) + 1); } { const b = this.rustBlock(), u = blk.subarray(0, X.state_len()); b.set(u); this.F.rec?.mem(b.byteOffset, u); } this.lastBlock = blk.slice(); }
     this.T.wbImport += now() - t1; this.openState = mine; this.lastState = mine;
   }
 
