@@ -19,8 +19,17 @@ const fnv = (s: string) => { let h = 0x811c9dc5; for (let i = 0; i < s.length; i
 // THE STATE WORDS: a hash of the whole game, a word a part, for two machines of one networked game to compare. What a host hands in and differs by machine is left out, and so is what is only a step's output
 const HOSTS_OWN = new Set(['m.owner', 'out', 'cmd_buf', 'local_seat', 'view_proj', 'puppet', 'm_per_px', 'taps', 'seat', 'tab.camera', 'tab.input', 'tab.cmd_seat', 'engine.settings', 'engine.view_focus', 'engine.effective_scale', 'engine.sharp_on']);
 function stateWords(io: string): string { const fieldsOf = (path: string): string[] => { const l = io.split('\n').find(x => x.startsWith(`impl Io for ${path} {`)) ?? die(`no line for ${path}`) as never, w = l.slice(0, l.indexOf(' fn r(')); return [...w.matchAll(/self\.([a-z_0-9]+)\.w\(o\)/g)].map(m => m[1]); };
-  const P: [string, string][] = []; const push = (name: string, ex: string) => { if (!HOSTS_OWN.has(name)) P.push([name, ex]); };
-  for (const f of fieldsOf('crate::game::Game')) { if (f === 'm') for (const x of fieldsOf('crate::game::Mods')) push(`m.${x}`, `g.m.${x}`); else if (f === 'engine') for (const x of fieldsOf('crate::host_api::HostApi')) push(`engine.${x}`, `g.engine.${x}`); else push(f, `g.${f}`); }
+  // SCRATCH IS NO STATE (schema.json `scratch`, the ONE list: the rows the path diff does not compare). A part named there has no word, and a field of a
+  // part named there is left out of that part's word. A row names a part as the field of the type that holds it: `game::Game.alone_own`,
+  // `game::Mods.scene_collision`; and a field of a part as a field of the part's own type: `scene_collision::StaticCollision.mirror`. The rule a row
+  // must pass: two equal games, the part made anew in one at some tick, every OTHER word equal from there to the end. (A scratch field deeper than a
+  // part's own fields is still in its part's word: the word is of the bytes the wire's line writes.)
+  const SC: Record<string, boolean> = readJ(SCHEMA).scratch ?? {}, TY: Record<string, any> = readJ(SCHEMA).types, q = (path: string, f: string) => `${path.replace(/^crate::/, '')}.${f}`;
+  const tyOf = (holder: string, f: string): string => (TY[holder]?.fields ?? []).find((x: any) => x.rust === f)?.ty ?? '';
+  const P: [string, string][] = [];
+  const push = (name: string, ex: string, holder = '', f = '') => { if (HOSTS_OWN.has(name) || (holder && SC[q(holder, f)])) return; const ty = holder ? tyOf(holder, f) : '', own = TY[ty]?.k === 'struct' ? fieldsOf(ty) : [], cut = own.filter(x => SC[q(ty, x)]);
+    P.push([name, cut.length ? `{ ${own.filter(x => !cut.includes(x)).map(x => `${ex}.${x}.w(o);`).join(' ')} }` : ex]); };
+  for (const f of fieldsOf('crate::game::Game')) { if (f === 'm') for (const x of fieldsOf('crate::game::Mods')) push(`m.${x}`, `g.m.${x}`, 'crate::game::Mods', x); else if (f === 'engine') for (const x of fieldsOf('crate::host_api::HostApi')) push(`engine.${x}`, `g.engine.${x}`, 'crate::host_api::HostApi', x); else push(f, `g.${f}`, 'crate::game::Game', f); }
   const ex = io.slice(io.indexOf('pub fn export(g: &crate::game::Game)')), end = ex.indexOf('o.b }'); for (const m of ex.slice(0, end).matchAll(/\bg\.([a-z_0-9.]+)\.w\(&mut o\)/g)) push(m[1], `g.${m[1]}`);
   // A SEAT'S SET BY SEAT, wherever it lies: on Game for the seat standing there (which differs by machine), in `cmd_seat[k].own` for the rest. A word a key of the set, all seats in their order
   const setKeys = fieldsOf('crate::seats::SeatSet').filter(k => k !== 'seat' && !HOSTS_OWN.has(k)), inSet = new Set(fieldsOf('crate::seats::SeatSet')); for (let i = P.length - 1; i >= 0; i--) if (inSet.has(P[i][0])) P.splice(i, 1);
