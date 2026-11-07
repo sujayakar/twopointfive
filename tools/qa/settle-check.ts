@@ -38,7 +38,7 @@ line(SETTLE.on === false, 'the switch is off in the module: the page raises it (
 { const main = readFileSync(`${ROOT}/src/main.ts`, 'utf8'), brief = readFileSync(`${ROOT}/src/ui/loadbrief.ts`, 'utf8');
   const flag = /SETTLE\.on = v === null \? navigator\.webdriver !== true : v !== '0';/.test(main);
   const road = /else if \(brief && briefGo\) briefSettle\(brief\);/.test(main) && !/brief\.live\(/.test(main);
-  const waits = /b\.hold\(\); pipeQueue\.rush\(true\);/.test(main) && /out = P\.total - P\.done \+ laterProgress\.pending/.test(main) && /cutSwap\.state === 'building'\) void \(cutSwap\.ready \?\? Promise\.resolve\(false\)\)\.finally\(laterHold\(\)\)/.test(main) && /measuring: quality\.calibrating/.test(main);
+  const waits = /b\.hold\(\); pipeQueue\.rush\(true\);/.test(main) && /out = P\.total - P\.done \+ laterProgress\.pending/.test(main) && /measuring: quality\.calibrating/.test(main);
   const ends = /const end = \(\): void => \{ settling = false; pipeQueue\.rush\(false\);/.test(main) && /if \(done\) \{ end\(\); boot\.mark\('settled'\); b\.live\(run\); return; \}/.test(main) && /if \(!b\.held\) \{ end\(\); return; \}/.test(main);
   const drawn = /quality\.measuring \|\| settling \|\|/.test(main) && /settling = S\.picture;/.test(main);
   const away = /const back = \(\): void => \{ settleLast = performance\.now\(\); \};/.test(main) && /addEventListener\('visibilitychange', back\)/.test(main);

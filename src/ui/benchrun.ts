@@ -52,9 +52,7 @@ const plain = (search: string): string => { const keep = search.replace(/^\?/, '
 /** the visitor's flags that ride along from scene to scene: the ones that change the sound, the picture's quality or how its shaders are built, and nothing of
  *  the fight (an hour, a weather, a difficulty lever, a rule's off switch would make it another fight than the set's). The shader rows on trial are here by
  *  their URL words (ui/shaderrows.ts), with the compile queue's and the shader trim's: a row asked for beside ?bench is what the run was meant to measure, and
- *  until 2026-10-27 it was dropped at the first scene, so the numbers were the plain build's. (One of them is not wholly outside the fight: while the wall-cut
- *  row's set is building, broken pieces are traced whole and the light the guards are seen by can differ, render/cutSwap.ts; a page's fight was never
- *  promised to be the set's to the frame, and the report's `floors` line says which fight it saw.) A word that is NOT kept is named in the report (`left`) */
+ *  until 2026-10-27 it was dropped at the first scene, so the numbers were the plain build's. A word that is NOT kept is named in the report (`left`) */
 const CARRIED = new RegExp(`^(mute|nomusic|quality|adapt|pipequeue|shadertrim|shaderfold|framecap|smokeindirect|savepic|pace|giveway|flight|downloads|cloud|cloudfiles|cloudstats|cloudtapes|cloudprefs|${SHADER_ROW_WORDS.join('|')})(=|$)`);
 /** …AND THE LOOK PROTOTYPE'S WORDS, where the run is asked for on its page (scene/look.ts: its rows, its boot words). That page reads them once, at boot, into
  *  its shader text and its level, so a run is with the look or without it from its first scene to its last: a run that dropped them timed the plain build on

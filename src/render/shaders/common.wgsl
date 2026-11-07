@@ -438,10 +438,10 @@ fn isectCut(lo: vec3f, ld: vec3f, tmn: vec3f, tN0: f32, tF0: f32, tmax: f32, bi:
 // closest-hit walks after boxNormalFromCode. boxes.ts rayBoxRound is this on the CPU (rayBox, and collision.ts lineBox).
 // (docs/agents/levels.md, the round things' bullet, has the whole of it and what was run.)
 const ROUND_SIDE: f32 = -9.0;
-// THE CUT SET TRACES A ROUND AS ITS PICTURE'S PRISM (the prelude's ROUND_AS_CUT: a module compiled with the cut rule, unless `?roundexact=1`). The software adapter
-// writes a copy of isectBox for every place a box walk stands, and the cut set's copies already hold isectCut: with isectRound on top a newer adapter lost its
+// A RAY MEETS A ROUND AS ITS PICTURE'S PRISM (the prelude's ROUND_AS_CUT: a module compiled with the cut rule, which is every one where cut boxes are on, unless
+// `?roundexact=1`). The software adapter writes a copy of isectBox for every place a box walk stands, and those copies already hold isectCut: with isectRound on top a newer adapter lost its
 // device on the first frame a cut piece was alive (docs/agents/levels.md). A round's eight rows of the cut table are the prism the cut pass draws, in isectCut's own
-// form, so there the walk hands a round to isectCut and the cylinder's test is not written: the cut set's walks are the size they were before round things. A ray
+// form, so the walk hands a round to isectCut and the cylinder's test is not written: the walks are the size they were before round things. A ray
 // meets the round up to 3.5 % of its radius further out at the prism's twelve corners; the side's normal still turns smoothly (roundSideHit, roundNormalAt).
 const ROUND_RAY: bool = ROUND_BOXES && !ROUND_AS_CUT;
 const CUT_BITS: u32 = GEO_CUT | select(0u, GEO_ROUND, ROUND_AS_CUT);
@@ -483,7 +483,7 @@ fn isectBox(ro: vec3f, rd: vec3f, b: BoxGeo, tmax: f32, bi: u32, invRd: vec3f) -
   let tN = max(max(tmn.x, tmn.y), tmn.z);
   let tF = min(min(tmx.x, tmx.y), tmx.z);
   if (tN > tF || tF < 0.0 || tN > tmax) { return vec2f(-1.0, 0.0); }
-  if (ROUND_RAY) { if ((b.flags & GEO_ROUND) != 0u) { return isectRound(lo, ld, b.h.x, tmn.y, tmx.y, tN, tmax); } }   // ROUND THINGS: the cylinder inside the box (above); dead code without the switch, and in the cut set (ROUND_AS_CUT, above)
+  if (ROUND_RAY) { if ((b.flags & GEO_ROUND) != 0u) { return isectRound(lo, ld, b.h.x, tmn.y, tmx.y, tN, tmax); } }   // ROUND THINGS: the cylinder inside the box (above); dead code without the switch, and wherever the cut rule is in (ROUND_AS_CUT, above)
   if (CUT_BOXES) { if ((b.flags & CUT_BITS) != 0u) { return isectCut(lo, ld, tmn, tN, tF, tmax, bi); } }   // CUT BOXES: the slab interval cut down by the box's planes (below), and a round's by its prism's; dead code without the switch
   if (tN < 0.0) { return vec2f(0.0, 7.0); }
   var code = 4.0 + select(0.0, 1.0, ld.z > 0.0);
