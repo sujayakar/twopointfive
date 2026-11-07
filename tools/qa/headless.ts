@@ -262,6 +262,9 @@ export async function standUp(opts: { uploadEvery?: number; env?: any; level?: a
   // `game.update` (`rust`; `audit`), or it is stood the same way and stepped by the TypeScript tick (`ts`: the other side of a tally). Unset: nothing is loaded.
   // WHICH is tools/blitz/word.ts's to say, the one switch (the word asked for, its table, a frozen run forced to the TypeScript tick).
   { const S = (await import('../blitz/word.ts')).stand(STAND_AT_LOAD === 'frozen'); if (S.word) await (await import(RUST_HOST)).standRust(game, S.word); }
+  // QA_PERTURB=<seed> in front of any headless tool: a seeded stream of the things a person does between two ticks (orders, throws, kills, saves and loads)
+  // laid over the tool's own play (tools/blitz/perturb.ts; PLAY.md, "The fuzz"). Unset: nothing is loaded.
+  if (process.env.QA_PERTURB) await (await import('../blitz/perturb.ts')).lay(W);
   return W;
 }
 
