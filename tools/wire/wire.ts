@@ -3,6 +3,7 @@
 //   bun run tools/wire/wire.ts add <mod::Type.field> --ty <type> [--ts <name>] [--expr <e>] [--start-only]    a field the page reads; refused if nothing the page runs reads that name
 //   bun run tools/wire/wire.ts add-struct <mod::Type> <field:type,...>              a struct of the table, new: its line on the wire and its write by path
 //   bun run tools/wire/wire.ts drop <mod::Type.field>...                            fields off the wire · --file <list> takes the names one a line
+//   bun run tools/wire/wire.ts drop-type <mod::Type>...                             a type off the table once no field names it
 //   tools/blitz/rust.sh rust bun run tools/wire/cost.ts [address]                   what a tick's export and apply cost now, on the page's list
 // An enum arm needs nothing: an arm the table does not know goes out as the tag 0xffff, and the page keeps what it had.
 import { execFileSync } from 'node:child_process';
@@ -82,9 +83,16 @@ function drop(Q: string[]): void { const S = readJ(SCHEMA), L = readJ(FIELDS), i
     const p = lineOf('Poke', path); let i2 = 0; io[p] = io[p].replace(` ${at} => self.${f}.poke(i),`, '').replace(/ \d+ => self\.([a-z_0-9]+)\.poke\(i\),/g, (_, x) => ` ${i2++} => self.${x}.poke(i),`); }
   for (const k of ['everyTick', 'pageTick', 'atStartOnly']) { const b = L[k].length; L[k] = L[k].filter((x: string) => !set.has(x)); listed += b - L[k].length; } S.knobSettled = (S.knobSettled ?? []).filter((x: string) => !set.has(x));
   writeFileSync(ioP, io.join('\n')); writeFileSync(SCHEMA, JSON.stringify(S)); writeFields(L); gen(false); console.log(`wire: ${n} fields off the wire (${listed} list rows)`); }
+/** a type off the table, once no field names it: its lines on the wire go with it. The Rust type itself is a person's to delete */
+function dropType(Q: string[]): void { const S = readJ(SCHEMA), ioP = rustFile('io.rs'); let io = read(ioP).split('\n');
+  for (const q of Q) { const path = q.startsWith('crate::') ? q : `crate::${q}`, T = S.types[path]; if (!T) die(`${path} is no type of the table`); const named = new RegExp(`\\b${path.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`);
+    const users = Object.entries(S.types).filter(([k, x]: [string, any]) => k !== path && JSON.stringify([x.fields, x.vars]).match(named)).map(([k]) => k); if (users.length) die(`${path} is still named by ${users.slice(0, 5).join(', ')}`);
+    delete S.types[path]; const before = io.length; io = io.filter(l => !l.startsWith(`impl Io for ${path} {`) && !l.startsWith(`impl Poke for ${path} {`)); console.log(`wire: ${path} off the table, ${before - io.length} lines on the wire`); }
+  writeFileSync(ioP, io.join('\n')); writeFileSync(SCHEMA, JSON.stringify(S)); gen(false); }
 const A = process.argv.slice(2), opt = (n: string) => { const i = A.indexOf(n); return i < 0 ? undefined : A[i + 1]; };
 switch (A[0]) { case 'gen': gen(A.includes('--check')); break;
   case 'add': add(A[1], opt('--ty') ?? die('add: --ty') as never, opt('--ts'), opt('--expr'), A.includes('--start-only')); break;
   case 'add-struct': addStruct(A[1], A[2]); break;
+  case 'drop-type': dropType(A.slice(1)); break;
   case 'drop': { const f = opt('--file'); drop(f ? read(f).split('\n').map(x => x.trim()).filter(Boolean) : A.slice(1)); break; }
   default: console.error(read(import.meta.path).split('\n').slice(0, 7).join('\n')); process.exit(64); }
