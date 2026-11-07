@@ -48,7 +48,8 @@ if (ONLY.has('squad')) await withPage(9362, async c => { await c.open(`${AT}/?${
   if (to === null) { bad++; say(`FAIL  the squad mission: no mission '${SQUAD}'`); return; }
   await new Promise(r => setTimeout(r, 1500)); for (let i = 0; i < 600; i++) { try { if (await c.eval('document.readyState === "complete" && !!window.__ready', { timeoutMs: 2000 })) break; } catch { /* the page is changing */ } await new Promise(r => setTimeout(r, 200)); }
   await ready(c); const url = await c.eval<string>('location.href'); const before = await c.eval(state);
-  const n = await play(c, [{ n: 240, keys: ['KeyW'] }, { n: 60, keys: ['KeyQ'] }, { n: 240 }, { n: 60, keys: ['KeyF'] }, { n: 300 }, { n: 60, js: `window.__mouse(640, 360); window.__orders.open(); ` }, { n: 60, js: `window.__orders.pick(0);` }, { n: 300 },
+  const n = await play(c, [{ n: 240, keys: ['KeyW'] }, { n: 60, keys: ['KeyQ'] }, { n: 240 }, { n: 60, keys: ['KeyF'] }, { n: 300 }, { n: 60, js: `window.__mouse(640, 360);` }, { n: 300 },
+    /* (the orders menu by its KEY below, not by `__orders.open()`: the hook runs the menu's rule on the puppet, and the Rust game then panics on a row it has not got) */
     { n: 60, keys: ['KeyX'] }, { n: 60, keys: ['Escape'] }, { n: 60, keys: ['KeyT'] }, { n: 60, js: `window.__click(0);` }, { n: 240, keys: ['KeyW'] }, { n: 60, keys: ['KeyQ'] }, { n: Math.max(60, FRAMES - 1860) }]);
   const after = await c.eval(state); verdict(`the squad mission ${SQUAD}`, c, before, after, n); await census(c, `the squad mission ${url}`, n); });
 
