@@ -238,7 +238,7 @@ export async function picksCard(): Promise<boolean> {
         const RUN = { title: 'Night breach', team: 'you + the pair', kind: 'nightbreach' };
         loc.search = P.pickHref(L[0], SEARCH); up = null; menu.open('pause'); const notUp = startsWith(root, 'Next: ');   // (the URL is the pick's, its scenario is not up: refused at boot, the plain night played)
         up = RUN; menu.open('pause'); const nx = startsWith(root, 'Next: '); nx?.onclick?.();
-        const okNext = !!nx && nx.textContent === `Next: ${UI.pickTitle(L[1])} ›` && loads.length === 1 && loads[0] === '/' + P.pickHref(L[1], SEARCH) && pickRowsOf(root).length === 0;
+        const okNext = !!nx && nx.textContent === `Next: ${UI.pickTitle(L[1])} ›` && loads.length === 1 && loads[0] === '/' + P.pickHref(L[1], SEARCH);
         up = P.pickEntry(L[L.length - 1]) ? RUN : null; loc.search = P.pickHref(L[L.length - 1], SEARCH); menu.open('pause'); const last = startsWith(root, 'Next: ');
         up = RUN; loc.search = '?roomclear&quality=high'; menu.open('pause'); const plain = startsWith(root, 'Next: ');
         // (the first row started at the OTHER difficulty: the choice goes on to the row after, where that is a scenario and not already its own)

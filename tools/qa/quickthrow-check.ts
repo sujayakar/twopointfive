@@ -51,7 +51,7 @@ export async function quickthrowCheck(): Promise<boolean> {
       line(up0 && !pl.rifleUp && r.arc && r.armed && pl.canisters === 1 && thrown('smoke') === 1, 'the switch on (the frozen stand, ?quickthrow): G held and let go slings the rifle and throws the smoke can — the build as it was',
         `rifle up ${up0} → ${pl.rifleUp} · arc ${r.arc} · armed ${r.armed} · ${kitOf()} · ${thrown('smoke')} smoke can out`); }
     // (5) the words
-    { const rows = CONTROLS.filter(r => /quick/i.test(r[1]) || /(^|[ ·])G([ ·]|$)/.test(r[0]) && !/X · B · T · F/.test(r[0]) && r[0] !== 'H · G');   // (the orders-up row 'H · G': its G is the menu's own key, 'frag and clear', not a throw — it had this line red on both stands)
+    { const rows = CONTROLS.filter(r => /quick/i.test(r[1]) || /(^|[ ·])G([ ·]|$)/.test(r[0]) && !/X · B · T · F/.test(r[0]) && !/With the orders up/.test(r[1]));   // (the orders-up row 'H · G': its G is the menu's own key, 'frag and clear', not a throw — it had this line red on both stands)
       const { LESSON_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
       const steps: any[] = [...new Set((LESSON_MISSIONS as { level: string }[]).map(m => m.level))].flatMap(f => JSON.parse(readFileSync(resolve(ROOT, 'levels', f), 'utf8')).scenarios?.lesson?.steps ?? []);   // (the tutorial's missions, by the list's own rows; until 2026-10-23 this read Training 4, the kit lesson, which went with the other six)
       const asks = steps.filter(s => /\bG\b/.test(String(s.line)) || JSON.stringify(s.done).includes('"quick"'));
