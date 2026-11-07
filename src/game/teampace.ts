@@ -33,12 +33,13 @@ import type { Vec3 } from '../math/vec';
 import { SideMap } from '../math/side';
 import { PACE, teamPaced } from './guards';
 import { fragRunning } from './frag';
-import { sneaking } from './sneak';
-import { underUnseen } from './unseen';
-import { underSilence, silentStep } from './silent';
+import './sneak';
+import './unseen';
+import './silent';
 import { isHurt } from './condition';
-import { exposedAt } from './picture';
-import { loadPaceOn, loadGait, loadHeard, KITLOAD } from './kitload';
+import './picture';
+import './kitload';
+import { crossToRust, goneWithTick } from './crossing';
 
 export const TEAMPACE = {
   on: false,
@@ -101,9 +102,7 @@ export type RunWhy = 'follow' | 'blast' | 'cover' | 'told';
 /** runs taken, by reason, and the seconds spent at them (read by the checks and the tallies; nothing in the game reads it) */
 export const TEAMPACE_STATS = { follow: 0, blast: 0, cover: 0, told: 0, secs: 0 };
 export const TEAMPACE_DEBUG: { log?: (s: string) => void } = {};
-const PACING_BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.PACING_BREAK ?? '') === '1'; } catch { return false; } })();   // (QA: TEAMPACE.pacing's own check must fail with the rule's body out)
 const DOORBRISK_BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.DOORBRISK_BREAK ?? ''); } catch { return ''; } })();   // (QA, TEAMPACE.doorBrisk's own check: '1' = the rule's body out, its stack leg must fail; '2' = the rule taken for every order, its move leg must fail)
-const WALKAIM_BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.WALKAIM_BREAK ?? '') === '1'; } catch { return false; } })();   // (QA: TEAMPACE.walkAim's own check must fail with the rule's body out)
 const BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.TEAMPACE_BREAK ?? '') === '1'; } catch { return false; } })();
 
 /** what a man has leave for — 'close' a follower closing on his place, 'fight' a move the fight asks (neither is a run) — the most his legs may be asked
@@ -116,56 +115,16 @@ const ran = new SideMap<Guard, { t: number; why: RunWhy }>('teampace.ran');
 const dash = new SideMap<Guard, { t: number; x: number; z: number; yes: boolean }>('teampace.dash');
 /** the last moment a man had a reason to run, whatever his legs were doing (the checks' question: was that speed a run for a reason) */
 const reasonT = new SideMap<Guard, number>('teampace.reasonT');
-/** a leave given for 'this frame' lasts this long (s): past the next step at any frame rate the page runs */
-const FRAME = 0.1;
 
 /** this teammate's pace is the rule's this frame */
 export function teamSlow(g: Game, gd: Guard): boolean { return TEAMPACE.on && !BREAK && teamPaced(g, gd); }
-/** how far short of an order's watch point the line to it is asked (m: a door's own leaf stands in its frame, and a mark on a wall is on the wall), and
- *  how far ahead of his chest the point his gun is handed instead lies (m) */
-const AIM_SHORT = 0.5, WALK_AHEAD = 3;
 /** the watch as last asked of a man: when, where it was, the answer, and since when the line has said otherwise */
 const aimSeen = new SideMap<Guard, { t: number; x: number; z: number; blind: boolean; since: number }>('teampace.aimSeen');
-/** TEAMPACE.walkAim (orders.ts tick, of a man in an order's walking carriage with the order's own watch point `aim` in hand): the point his gun leads to
- *  instead while he has no line to the watch — straight ahead of his chest, the way he walks — or null while he sees it (and for everybody with the
- *  switch off). One line a frame from his gun's height to short of the watch. The answer has a little weight, so a gun does not flick between the watch
- *  and his front as a jamb or a pillar passes: the watch is given up once the line has been shut for `walkAimOff` seconds and is his again once it has
- *  been clear for `walkAimOn` (a watch somewhere else, or a man not asked a moment ago, is read at once). */
-export function walkLead(g: Game, gd: Guard, aim: Vec3): Vec3 | null {
-  if (!TEAMPACE.walkAim || WALKAIM_BREAK || !teamPaced(g, gd)) return null;
-  const c = gd.char, y = 1.45 - 0.45 * c.anim.crouch, dx = aim[0] - c.pos[0], dy = aim[1] - y, dz = aim[2] - c.pos[2], l = Math.hypot(dx, dy, dz), t = g.time;
-  const k = l > AIM_SHORT + 0.1 ? (l - AIM_SHORT) / l : 0, shut = k > 0 && g.col.segmentBlocked([c.pos[0], y, c.pos[2]], [c.pos[0] + dx * k, y + dy * k, c.pos[2] + dz * k]);   // (inside the last half metre he is at it)
-  const was = aimSeen.get(gd), s = was && t >= was.t && t - was.t <= 0.25 && Math.hypot(was.x - aim[0], was.z - aim[2]) < 0.5 ? was : { blind: shut, since: t };
-  const since = shut === s.blind ? t : s.since, blind = shut !== s.blind && t - since >= (shut ? TEAMPACE.walkAimOff : TEAMPACE.walkAimOn) - 1e-9 ? shut : s.blind;
-  aimSeen.set(gd, { t, x: aim[0], z: aim[2], blind, since: blind === s.blind ? since : t });
-  return blind ? [c.pos[0] + Math.sin(c.bodyYaw) * WALK_AHEAD, y, c.pos[2] + Math.cos(c.bodyYaw) * WALK_AHEAD] : null;
-}
 /** a teammate's walk, m/s */
-export function teamWalk(g: Game): number { return g.tune.playerWalk * TEAMPACE.k; }
+export function teamWalk(g: Game): number { return goneWithTick('teamWalk') as any; }
 /** THIS teammate's walk this frame, m/s (TEAMPACE.pacing: paced on the player — the header of the knob has the rule; off: teamWalk) */
-export function teamWalkOf(g: Game, gd: Guard): number {
-  const T = TEAMPACE, slow = teamWalk(g); if (!T.pacing || PACING_BREAK) return slow;
-  const own = g.tune.playerWalk, M = g.orders?.of(gd)?.post, pl = g.player; if (!M || !pl) return own;
-  const p = gd.char.pos, s = pl.char.pos; if (Math.hypot(p[0] - s[0], p[2] - s[2]) > T.paceNear) return own;
-  const dm = Math.hypot(p[0] - M[0], p[2] - M[2]), ds = Math.hypot(s[0] - M[0], s[2] - M[2]), vx = pl.char.vel[0], vz = pl.char.vel[2], v = Math.hypot(vx, vz);
-  const toward = (x: number, z: number) => { const L = Math.hypot(x - s[0], z - s[2]); return L > 1e-3 && v > 0.3 && (vx * (x - s[0]) + vz * (z - s[2])) / (L * v) >= T.paceCos; };   // (the player is moving, and at that spot)
-  if (ds > dm + T.paceGap) return toward(p[0], p[2]) ? Math.max(slow * 0.5, Math.min(slow, T.k * v)) : own;   // (behind him and walking after him: he lets the player catch up — `k` of the player's own pace, so a player creeping after him gains too)
-  if (ds < dm - T.paceGap) return toward(M[0], M[2]) ? Math.max(own, Math.min(v, PACE.max)) : own;   // (ahead of him and bound for the same mark: the player's pace, never a run — and no more than the order asks of his legs, ORDERS.brisk)
-  return own;
-}
-/** he is one of the quiet: no run of his own, none behind the player */
-function quiet(g: Game, gd: Guard): boolean { return sneaking(g, gd) || underUnseen(g, gd) || underSilence(g, gd); }
-const isRun = (why: Leave['why']): why is RunWhy => why !== 'close' && why !== 'fight';
+export function teamWalkOf(g: Game, gd: Guard): number { return goneWithTick('teamWalkOf') as any; }
 
-/** leave to go faster than the walk for `secs` more than this frame. False = none (the switch off, a man the rule has not; for a run: a quiet or a hurt man) */
-export function teamLeave(g: Game, gd: Guard, why: Leave['why'], top: number, secs = 0): boolean {
-  if (!teamSlow(g, gd)) return false;
-  if (isRun(why)) { if (why === 'follow' ? !TEAMPACE.follow : !TEAMPACE.own) return false; if (quiet(g, gd) || isHurt(g, gd)) return false; }
-  const was = leave.get(gd), until = g.time + secs + FRAME;
-  if (was && g.time <= was.until && was.until > until && was.top >= top) return true;   // (a longer leave for more pace stands: a follower's frame of closing does not end the fight's step)
-  leave.set(gd, { why, top, until });
-  return true;
-}
 function live(g: Game, gd: Guard): Leave | null { const L = leave.get(gd); return L && g.time <= L.until ? L : null; }
 /** the fight has his legs: a man in his sights, or one lost `fightSecs` ago (not a man only turning to where he heard something: that is a walk still) */
 function fighting(g: Game, gd: Guard): boolean { const O = g.fight.opOf(gd); return !!O && (!!O.tgt || g.time - O.lostAt < TEAMPACE.fightSecs); }
@@ -173,98 +132,37 @@ function fighting(g: Game, gd: Guard): boolean { const O = g.fight.opOf(gd); ret
 function blastRun(g: Game, gd: Guard): boolean { return TEAMPACE.own && !isHurt(g, gd); }
 
 /** the most a teammate's legs may be asked for this frame (guards.ts teamPace, for a man teamPaced has): PACE.max with the switch off. Asking changes nothing */
-export function teamCap(g: Game, gd: Guard): number {
-  if (!TEAMPACE.on || BREAK) return PACE.max;
-  if (fragRunning(g, gd)) return blastRun(g, gd) ? Math.max(PACE.max, g.tune.playerSprint) : PACE.max;
-  const L = live(g, gd), cap = Math.max(teamWalkOf(g, gd), L ? L.top : 0);
-  return cap < PACE.max && fighting(g, gd) ? PACE.max : cap;
-}
+export function teamCap(g: Game, gd: Guard): number { return goneWithTick('teamCap') as any; }
 /** he is at the team's walk: no leave for the fight's pace (an entry, a step of the room fight's) or for a run this frame, nobody in his sights, no grenade
  *  he is running from (guards.ts goTo asks for orders.ts ORDERS.propRound: the way round a chair is for a man walking, never for one going into a room or
  *  running from a blast — frag.ts judges a flee's leg by the plain way). A follower closing up on his place ('close') is walking still. False with the
  *  switch off */
 export function teamAtWalk(g: Game, gd: Guard): boolean { if (!teamSlow(g, gd) || fragRunning(g, gd) || fighting(g, gd)) return false; const L = live(g, gd); return !L || L.why === 'close'; }
-/** the reason he may be running for this frame, if any */
-function runWhy(g: Game, gd: Guard): RunWhy | null { if (fragRunning(g, gd)) return blastRun(g, gd) ? 'blast' : null; const L = live(g, gd); return L && isRun(L.why) ? L.why : null; }
-/** ONCE A FRAME A MAN, after his legs have moved (squad.ts): a run under a reason is written down — once a run, and its seconds */
-export function teamRan(g: Game, gd: Guard): void {
-  if (!teamSlow(g, gd)) return;
-  if (TEAMPACE.backSecs > 0 && fragRunning(g, gd)) teamLeave(g, gd, 'fight', PACE.max, TEAMPACE.backSecs);   // (the way back to his place: a door order counts the seconds its men are off it)
-  const why = runWhy(g, gd); if (!why) return;
-  reasonT.set(gd, g.time);
-  if (gd.speed < TEAMPACE.runAt) return;
-  const was = ran.get(gd), t = g.time;
-  if (!was || t - was.t > TEAMPACE.gap) { TEAMPACE_STATS[why]++; TEAMPACE_DEBUG.log?.(`${t.toFixed(2)} ${gd.callsign} runs: ${why} (${gd.speed.toFixed(1)} m/s)`); }
-  else if (t > was.t) TEAMPACE_STATS.secs += t - was.t;
-  ran.set(gd, { t, why });
-}
 /** seconds since he last had a reason to run (Infinity: never, or the rule is off) — a check that holds the team to its pace asks it of a man going faster */
 export function teamRunAgo(g: Game, gd: Guard): number { const t = reasonT.get(gd); return t === undefined || t > g.time ? Infinity : g.time - t; }
-/** × his card for a leg asked at `speed` (guards.ts teamLegs): at a run a card weighs as it does on the player's sprint — part of it. Null = as it was */
-export function teamRunLegs(g: Game, gd: Guard, speed: number): number | null {
-  if (speed < TEAMPACE.runAt || !teamSlow(g, gd)) return null;
-  return speed * (1 + (loadPaceOn(g, gd) - 1) * KITLOAD.sprint);
-}
-/** how fast his legs pick pace up (guards.ts teamLean): a man with a reason to run gets to it as a runner does — PACE.accel otherwise */
-export function teamAccel(g: Game, gd: Guard): number {
-  if (!TEAMPACE.on || BREAK) return PACE.accel;
-  return runWhy(g, gd) ? Math.max(PACE.accel, TEAMPACE.accel) : PACE.accel;
-}
 /** he is at a run this frame: gun low, nothing fired, a sprinter's boots */
-export function teamSprinting(g: Game, gd: Guard): boolean { return gd.speed >= TEAMPACE.runAt && teamSlow(g, gd); }
+export function teamSprinting(g: Game, gd: Guard): boolean { return goneWithTick('teamSprinting') as any; }
 /** A TEAMMATE'S FOOTFALL, the level one step is heard at (guards.ts, squad.ts, pressure.ts — `base`: the caller's own walking level): a run's 0.8 over the
  *  walk-or-run line his card draws, the silent squad's step or `base` under it, × what his card rattles — and at a run under the rule, a sprinter's */
-export function teamTread(g: Game, gd: Guard, speed: number, base: number): number {
-  return (speed >= TEAMPACE.runAt && teamSlow(g, gd) ? TEAMPACE.step : loadGait(g, gd, speed) > 2 ? 0.8 : silentStep(g, gd) ?? base) * loadHeard(g, gd);
-}
+export function teamTread(g: Game, gd: Guard, speed: number, base: number): number { return crossToRust('teamTread', undefined, [g, gd, speed, base]) as any; }
 
-/** fall in's pace for a man `d` off his place, the player doing `samV` (orders.ts). Null = the switch is off or the rule has not this man: as it was */
-export function teamFollow(g: Game, gd: Guard, samV: number, d: number, gain: number): number | null {
-  if (!teamSlow(g, gd)) return null;
-  const T = TEAMPACE, walk = teamWalk(g), want = samV + gain * (d - 0.3), sprint = g.tune.playerSprint;
-  if (T.follow && g.player.sprinting && !g.fight.busy(gd, 0.5)) {
-    const L = live(g, gd), running = !!L && L.why === 'follow';
-    if ((running || d > T.behindM) && teamLeave(g, gd, 'follow', sprint)) return Math.max(walk, Math.min(sprint, want));   // (once running he runs until the player stops: in his place he does the player's own pace)
-  }
-  const top = Math.max(walk, g.tune.playerWalk * T.followK);
-  if (top > walk) teamLeave(g, gd, 'close', top);
-  return Math.max(walk, Math.min(top, want));
-}
 /** a move the fight asks of him — the leg through an ordered door, a step the room fight orders, the breach drill — keeps the pace it had, for `secs` more
  *  than this frame */
-export function teamFight(g: Game, gd: Guard, secs = 0): void { if (TEAMPACE.on) teamLeave(g, gd, 'fight', PACE.max, secs); }
+export function teamFight(g: Game, gd: Guard, secs = 0): void { return crossToRust('teamFight', undefined, [g, gd, secs]) as any; }
 /** A RUN TO COVER, the question itself: loud has reached him in the last `dashHot` seconds, he has nobody in his sights (a man who has fights), the floor he
  *  is on is in a known man's line, his mark `to` (`d` off, in plain sight on the same floor; `least`: the shortest leg worth it) is out of it. `running` =
  *  asked of a man already on the leg: what STARTED him — the loud, the line on the floor under him — is not asked again (a leg begun is run out: the floor
  *  he crosses leaves the line before he is behind anything); what would stop any man still is — a man in his sights, a mark the line has found, a wall */
-export function teamDashNow(g: Game, gd: Guard, to: Vec3, d: number, least = TEAMPACE.dashM, running = false): boolean {
-  const T = TEAMPACE; if (!T.own || !teamSlow(g, gd)) return false;
-  const p = gd.char.pos;
-  return d >= least && (running || g.time - g.fight.hotOf(gd) < T.dashHot) && !g.fight.engaged(gd) && !quiet(g, gd) && !isHurt(g, gd)
-    && g.fight.roomAt(p) === g.fight.roomAt(to) && !g.col.solidBlocked([p[0], 0.45, p[2]], [to[0], 0.45, to[2]])
-    && (running || exposedAt(g, gd, p) >= T.dashSeen) && exposedAt(g, gd, to) <= 0;
-}
+export function teamDashNow(g: Game, gd: Guard, to: Vec3, d: number, least = TEAMPACE.dashM, running = false): boolean { return crossToRust('teamDashNow', undefined, [g, gd, to, d, least, running]) as any; }
 /** … and the pace to run the leg at, or null (orders.ts, of a man walking to the mark an order gave him): asked every `dashEvery` seconds a man and whenever
  *  his mark has moved, kept between; once running he runs the leg out. `stack` = his mark is a place in a stack at a door: with `doorBrisk` the leg is the
  *  fight's pace, under the fight's leave, and no run at all */
-export function teamDash(g: Game, gd: Guard, to: Vec3, d: number, stack = false): number | null {
-  const T = TEAMPACE; if (!T.own || !teamSlow(g, gd)) return null;
-  const brisk = (stack || DOORBRISK_BREAK === '2') && T.doorBrisk && DOORBRISK_BREAK !== '1';
-  const t = g.time, run = brisk ? PACE.max : g.tune.playerSprint, old = dash.get(gd), was = old && t >= old.t && t - old.t < T.dashEvery * 2 ? old : undefined;   // (an answer two asks old is a leg he LEFT — sent elsewhere, fallen in — not one he is on: asked again later of a mark by the old one, he is asked afresh)
-  const same = !!was && Math.hypot(was.x - to[0], was.z - to[2]) < 0.5;
-  let yes: boolean;
-  if (was && same && t - was.t < T.dashEvery) yes = was.yes && d > 0.6;
-  else { const on = !!was && same && was.yes; yes = teamDashNow(g, gd, to, d, on ? 0.6 : T.dashM, on); dash.set(gd, { t, x: to[0], z: to[2], yes }); }
-  return yes && teamLeave(g, gd, brisk ? 'fight' : 'cover', run) ? run : null;
-}
+export function teamDash(g: Game, gd: Guard, to: Vec3, d: number, stack = false): number | null { return crossToRust('teamDash', undefined, [g, gd, to, d, stack]) as any; }
 /** A RUN THE MISSION TELLS HIM TO MAKE (orders.ts, of a man walking to the mark an order gave him; rails.ts runs: a tutorial step's `onWay.run` — the way
  *  back to the trucks once the job is done): the pace to run the leg at, or null. One more reason, under the same leave as the others: `own` off, a quiet
  *  man and a hurt one still walk — and, as on a run to cover, a man with somebody in his sights does not turn his back and run with his gun low: he
  *  fights at the fight's pace until it is over. The caller asks only outside the last metres of the leg (orders.ts ORDERS.briskIn): they are walked in */
-export function teamTold(g: Game, gd: Guard): number | null {
-  if (!g.rails?.runs(gd) || !teamSlow(g, gd) || g.fight.engaged(gd)) return null;
-  const run = g.tune.playerSprint; return teamLeave(g, gd, 'told', run) ? run : null;
-}
+export function teamTold(g: Game, gd: Guard): number | null { return crossToRust('teamTold', undefined, [g, gd]) as any; }
 /** the pace a teammate leaves a grenade at (frag.ts, squadthrow.ts — what teamCap gives a man fragRunning): the flee's own with the rule on and a run
  *  allowed him, the old cap without */
 export function teamBlastPace(g: Game, gd: Guard, run: number): number {

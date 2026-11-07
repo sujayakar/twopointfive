@@ -8,6 +8,16 @@
 # The key is the host's secret. It is never written into dist/, a log line or the repo.
 set -e
 command -v bun >/dev/null 2>&1 || npm install -g bun
+# THE RUST GAME'S MODULE IS BUILT HERE, FROM THE SOURCES, never taken from the one checked in for machines that cannot build (tools/blitz/face-build.ts):
+# FACE_BUILD=1 says so and fails the build if it cannot be made. The profile is `play` (no link-time optimisation, one unit): measured on a 4-core
+# machine, the compiler of the `game` crate peaks at 6.2 to 7 GB and the build takes about 7 minutes (in sixteen units it is 3.5 minutes and 7.7 GB;
+# the release profile's fat link passes 10.5 GB). So a build machine needs MORE THAN 8 GB to be safe; one of 8 GB may have its compiler killed, and
+# this build then fails with that reason. A machine with no cargo gets rustup's (no toolchain yet: rust/rust-toolchain.toml names the compiler and
+# the wasm target, and the first cargo call fetches both).
+if [ ! -x "$HOME/.cargo/bin/cargo" ] && ! command -v rustup >/dev/null 2>&1; then
+  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain none
+fi
+export PATH="$HOME/.cargo/bin:$PATH" FACE_BUILD=1 FACE_PROFILE="${FACE_PROFILE:-play}"
 if [ -n "$CONVEX_DEPLOY_KEY" ]; then
   cd cloud
   npm ci --no-audit --no-fund

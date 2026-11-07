@@ -12,6 +12,7 @@ import { Vec3, Quat } from '../math/vec';
 import type { Box } from '../scene/boxes';
 import { hyp2, hyp3, hyp4 } from '../math/vec';
 import { onExact } from '../math/exact';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 /** What the ragdoll needs from the collision layer (StaticCollision satisfies it; null = a bare floor at y = 0). */
 export interface RagdollWorld {
@@ -126,11 +127,9 @@ export class Ragdoll {
     }
     this.wake(); this.awake = 0;
   }
-  /** Displace one particle in the ground plane (a door leaf leaning on the body — see Game.updateDoors); wakes it if it actually moved. */
-  nudge(i: number, dx: number, dz: number) { if (Math.abs(dx) + Math.abs(dz) < 1e-4) return; this.x[i * 3] += dx; this.x[i * 3 + 2] += dz; this.px[i * 3] += dx; this.px[i * 3 + 2] += dz; this.wake(); }
   /** Simulate again from now (a shove, a pin, a leaf moving beside it). Does not reset the MAX_AWAKE budget — only a round or being dragged does that — so
    *  something that keeps prodding a settled body a millimetre at a time cannot keep it simulating forever. */
-  wake() { if (!this.sleeping) return; this.sleeping = false; this.snapT = 0; this.snap.set(this.x); }
+  wake() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Ragdoll.wake', this, []); if (__r !== RUST_PASS) return __r as any; } } if (!this.sleeping) return; this.sleeping = false; this.snapT = 0; this.snap.set(this.x); }
   /** Hold particle i at `target` (moved there kinematically, ≤ PIN_STEP per substep); the rest of the body follows through the constraints. */
   setPin(i: number, target: Vec3) {
     this.pinT[i * 3] = target[0]; this.pinT[i * 3 + 1] = Math.max(target[1], RADIUS[i]); this.pinT[i * 3 + 2] = target[2];
@@ -148,15 +147,6 @@ export class Ragdoll {
   /** is this particle pinned */
   isPinned(i: number) { return this.pinned[i] !== 0; }
   clearPins() { if (!this.anyPin) return; for (let i = 0; i < N; i++) { this.pinned[i] = 0; this.w[i] = 1 / MASS[i]; } this.anyPin = false; this.strain = 0; this.rideOwed = false; }
-  /** A CARRIED body rides its carrier (hands.ts, a body over the shoulder): over the next step() every free particle — and where it was a substep ago, so its
-   *  velocity turns with it — is taken through the carrier's own step (dx, dz) and turn (dyaw, about the vertical through `about` = where he stood) since the
-   *  last frame, a share each substep so no limb moves further at once than a collision can answer. The pinned-body damping then acts on a limb's motion
-   *  AGAINST HIM, not over the floor: without it every free limb streamed out behind each stride and turn like a flag (40–75° off the hang at a walk).
-   *  Never called = the body exactly as it was. */
-  ride(about: Vec3, dx: number, dz: number, dyaw: number) {
-    if (this.rideOwed) { const r = this.rideV; this.rideBy(Math.min(1, MAX_STEP / Math.max(1e-9, Math.hypot(r[2], r[3]) + Math.abs(r[4])))); this.rideOwed = false; }   // (a frame with no substep in it left one owed: taken ahead of this one, to the same bound as a share)
-    const r = this.rideV; r[0] = about[0]; r[1] = about[2]; r[2] = dx; r[3] = dz; r[4] = dyaw; this.rideOwed = true;
-  }
   /** take the free particles through share `k` of what is owed, about where the carrier stands by now */
   private rideBy(k: number) {
     const r = this.rideV, x = this.x, px = this.px, ax = r[0], az = r[1], sx = r[2] * k, sz = r[3] * k, co = Math.cos(r[4] * k), si = Math.sin(r[4] * k);
@@ -175,7 +165,7 @@ export class Ragdoll {
    *  exactly where the file has it. (A body's rest shape is the trunk of the pose he DIED in; the fresh figure a load builds is seeded from its own stance:
    *  snapped to that, the choked man of checkpoint-identity came back 5 cm off his file on the page's stand, 0.4 cm on the frozen one, and the loaded game was
    *  not the saved one. The rotation is the fitted one either way, so the mesh is driven as it was.) */
-  settleAt(xs: ArrayLike<number>, rot?: ArrayLike<number>, own = false) {
+  settleAt(xs: ArrayLike<number>, rot?: ArrayLike<number>, own = false) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Ragdoll.settleAt', this, [xs, rot, own]); if (__r !== RUST_PASS) return __r as any; } }
     const x = this.x, px = this.px;
     for (let i = 0; i < N * 3; i++) { const v = Number(xs[i]); x[i] = Number.isFinite(v) ? v : x[i]; }
     for (let i = 0; i < N; i++) x[i * 3 + 1] = Math.max(x[i * 3 + 1], RADIUS[i]);
@@ -194,9 +184,6 @@ export class Ragdoll {
     const c = this.centre, pc = this.prevCentre; pc[0] = c[0]; pc[1] = c[1]; pc[2] = c[2];
     this.snap.set(x); this.snapT = 0; this.awake = 0; this.acc = 0; this.strain = 0; this.impactV = 0; this.sleeping = true;
   }
-  /** Hardest trunk / head landing (m/s along the contact normal) worth hearing (≥ min) since the last one reported, at most every `gap` seconds; 0 otherwise.
-   *  Softer contacts (and the steady press of a body at rest) neither report nor use up the gap. */
-  takeImpact(min = 1.4, gap = 0.25): number { const v = this.impactV; this.impactV = 0; if (v < min || this.sinceImpact < gap) return 0; this.sinceImpact = 0; return v; }
 
   /** Advance by dt (s): fixed 180 Hz substeps from an accumulator (at most MAX_SUBSTEPS per call — a long frame drops the remainder rather than spiral). */
   step(dt: number) {

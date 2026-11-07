@@ -10,7 +10,7 @@
 //   (4) a quiet mission gone loud calls ITS team: asked for on the net in the level's words (no 'two-six', no stairwell), the men stood up on the dealt
 //       way's muster marks, as many as dealt, the way in thrown when the dealt time is up, and in on the level's fan
 //   (5) no two calls alike: over sixteen calls on one level more than one way, more than one size, several times, all inside the block's ranges; the same
-//       seed deals the same calls; RESPONSE.deal off is the block's first answer every time
+//       seed deals the same calls
 //   (6) staging: a way whose muster an enemy stands at is never dealt; one he walks up to before they are stood there is given up for another, and
 //       control says so
 //   (7) with no word on the net the team walks the level's named places; where Sam really stands (unseen) changes nothing of it
@@ -20,7 +20,6 @@
 //   (10) the word is in a save: out and back, the same places at the same ages
 //   (11) whoever is against them is their enemy: the partner in view of the element is contact, and he is the one they turn on
 //   (12) never more of theirs up than the level's most: a man down, the second lift stands up only what the block has left
-//   (13) the switch off: the quiet level has no team (as it was)
 //   (14) a way with no door is open ground: men stood up there with an enemy in view go to the fight, they do not stand out the ten seconds
 //   (15) a raid on a level whose block says so (RESPONSE.raid): gunfire heard at the set, and the man there alive `callSecs` later asks for the team in the
 //        level's words; it comes on the DEFENDERS' side, by a way no squad man stands at, never more than eleven enemies with the garrison; it and the
@@ -58,6 +57,9 @@ const f1 = (x: number) => x.toFixed(1), flat = (a: number[], b: number[]) => Mat
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 async function hushed<T>(f: () => T | Promise<T>): Promise<T> { const log = console.log; console.log = () => {}; try { return await f(); } finally { console.log = log; } }
 const text = (file: string) => readFileSync(resolve(ROOT, 'levels', file), 'utf8');
+/** …with its block held to one answer, for a line whose subject is not the deal: the first way, the most men, the middle of the time (RESPONSE.deal is settled on) */
+async function stand1(file: string | null, seed: number, on: boolean, q: string | null = '?quiet=1', way = 0) { oneAnswer = true; try { return await stand(file, seed, on, q, way); } finally { oneAnswer = false; } }
+let oneAnswer = false;
 /** a level stood up with the switch as the line wants it; `q` starts its mission */
 async function stand(file: string | null, seed: number, on: boolean, q: string | null = '?quiet=1', way = 0) {
   Math.random = seeded(0x7e5 + seed * 7919);
@@ -66,7 +68,8 @@ async function stand(file: string | null, seed: number, on: boolean, q: string |
   if (way) ROOMCLEAR.way = way;   // (the room clear's way in: 2 = the level's first other start)
   if (q && (g.level.scenarios?.quiet || /roomclear|rescue/.test(q))) await hushed(() => startFromQuery(g, q));
   g.godMode = true; g.aiEnabled = true; g.tune.qrf = true; g.tune.perimeter = false;
-  for (let i = 0; i < 20; i++) W.step(DT);
+  if (oneAnswer) { const R = g.level.scenarios.response, e = (R.eta[0] + R.eta[1]) / 2; R.men = [R.men[1], R.men[1]]; R.eta = [e, e]; R.ways = [R.ways[0]]; }
+  W.steps(20, DT);
   return W;
 }
 const steps = (W: any, secs: number, until?: () => boolean, each?: () => void) => { for (let i = 0; i < Math.round(secs * 60); i++) { each?.(); W.step(DT); if (until?.()) return true; } return !!until?.(); };
@@ -132,13 +135,12 @@ export async function responseCheck(): Promise<boolean> {
   // ---- (5) no two calls alike
   { const deals = async (seed: number, n: number, deal = true) => { const W = await stand('bazaar.json', seed, ON); const g = W.game; hideSam(g); RESPONSE.deal = deal; const out: string[] = [];
       for (let i = 0; i < n; i++) { requestQrf(g, 'gunfire'); const D = dealOf(g); out.push(D ? `${D.way}/${D.men}/${D.eta}` : '-'); resetQrf(g); } RESPONSE.deal = true; return { out, R: g.level.scenarios.response }; };
-    const A = await deals(5, 16), B = await deals(5, 6), C = await deals(6, 6), F = await deals(5, 6, false), R = A.R;
+    const A = await deals(5, 16), B = await deals(5, 6), C = await deals(6, 6), R = A.R;
     const P = A.out.map(s => s.split('/').map(Number)), ways = new Set(P.map(p => p[0])), sizes = new Set(P.map(p => p[1])), etas = new Set(P.map(p => p[2]));
     const inside = P.every(p => p[0] >= 0 && p[0] < R.ways.length && p[1] >= R.men[0] && p[1] <= R.men[1] && p[2] >= R.eta[0] && p[2] <= R.eta[1] && p[2] % RESPONSE.etaStep === 0);
-    const first = `0/${R.men[1]}/${(R.eta[0] + R.eta[1]) / 2}`;
-    line(ways.size >= 2 && sizes.size >= 2 && etas.size >= 3 && inside && A.out.slice(0, 6).join() === B.out.join() && C.out.join() !== B.out.join() && F.out.every(s => s === first),
-      '(5) sixteen calls on the bazaar: more than one way, more than one size, several times, all inside the block\'s ranges; one seed deals the same calls, another seed others; the deal off is the block\'s first answer every time',
-      `way/men/secs: ${A.out.join(' ')} · ${ways.size} ways, ${sizes.size} sizes, ${etas.size} times · seed 5 again: ${B.out.join(' ')} · seed 6: ${C.out.join(' ')} · deal off: ${F.out.join(' ')}`); }
+    line(ways.size >= 2 && sizes.size >= 2 && etas.size >= 3 && inside && A.out.slice(0, 6).join() === B.out.join() && C.out.join() !== B.out.join(),
+      '(5) sixteen calls on the bazaar: more than one way, more than one size, several times, all inside the block\'s ranges; one seed deals the same calls, another seed others',
+      `way/men/secs: ${A.out.join(' ')} · ${ways.size} ways, ${sizes.size} sizes, ${etas.size} times · seed 5 again: ${B.out.join(' ')} · seed 6: ${C.out.join(' ')}`); }
 
   // ---- (6) staging
   { const W = await stand('bazaar.json', 7, ON); const g = W.game, Q = g.qrf, R = g.level.scenarios.response, rx = tapRadio(g); const got = new Set<number>();
@@ -152,7 +154,7 @@ export async function responseCheck(): Promise<boolean> {
       `Sam on way 2's muster, twelve calls: ways dealt ${[...got].map(w => w + 1).join(' ') || 'none'} · then dealt way ${w0 + 1}, Sam walks onto its muster: ${re ?? 'no re-deal'} · stood up at way ${w1 + 1}'s marks ${moved} · “${rx.find(l => /change of plan/.test(l.text))?.text ?? ''}”`); }
 
   // ---- (7) no word: the level's named places, wherever Sam really is
-  { const run = async (sam: Vec3) => { const W = await stand('police-post.json', 8, ON); const g = W.game, rx = tapRadio(g); RESPONSE.deal = false; hideSam(g, sam); requestQrf(g, 'gunfire'); RESPONSE.deal = true;
+  { const run = async (sam: Vec3) => { const W = await stand1('police-post.json', 8, ON); const g = W.game, rx = tapRadio(g); hideSam(g, sam); requestQrf(g, 'gunfire');
       steps(W, 110, undefined, () => hideSam(g, sam)); return { targets: notes(g).filter(n => n.startsWith('target:')), word: g.qrf.word.size, fix: g.qrf.fix, rx, brief: rx.find(l => /rolling/.test(l.text))?.text ?? '' }; };
     const A = await run([39.2, 0, 0.8]), B = await run([24.5, 0, 10.0]);   // (B: stood in the radio room, in the dark, unseen)
     const sweeps = A.targets.filter(t => t.endsWith(':sweep'));
@@ -161,7 +163,7 @@ export async function responseCheck(): Promise<boolean> {
       `“${A.brief.slice(0, 110)}” · places walked: ${sweeps.map(t => t.split(':')[2]).join(', ')} · with Sam in the radio room: ${A.targets.join() === B.targets.join() ? 'the same walk' : B.targets.map(t => t.split(':')[2]).join(', ')} · the net's word ${A.word}/${B.word}`); }
 
   // ---- (8) (10) a man on the net sees him
-  { const W = await stand('police-post.json', 9, ON); const g = W.game, Q = g.qrf, rx = tapRadio(g);
+  { const W = await stand1('police-post.json', 9, ON); const g = W.game, Q = g.qrf, rx = tapRadio(g);
     const { seer, spot } = sighting(g, 4); g.playerInvisible = false;
     steps(W, 6, () => Q.word.has('player'), () => { g.teleportPlayer(spot); g.player.visibility = 1; });
     const seenAt: Vec3 = [...(Q.word.get('player')?.at ?? [0, 0, 0])] as Vec3, had = Q.word.has('player');
@@ -171,7 +173,7 @@ export async function responseCheck(): Promise<boolean> {
     // (10) the word out to a save's rows and back
     const rows = responseWordSnapshot(g), before = JSON.stringify(rows); Q.word.clear(); responseWordRestore(g, rows); const back = JSON.stringify(responseWordSnapshot(g)) === before && rows.length > 0;
     if (Q.state !== 'idle') resetQrf(g);
-    away(); RESPONSE.deal = false; requestQrf(g, 'gunfire'); RESPONSE.deal = true;
+    away(); requestQrf(g, 'gunfire');
     steps(W, 120, () => notes(g).some(n => n.startsWith('target:')), away);
     const T = Q.target, brief = rx.find(l => /rolling/.test(l.text))?.text ?? '', samNow = g.player.char.pos;
     killGuard(g, seer, [1, 0, 0], true); steps(W, 3, undefined, away);
@@ -195,8 +197,8 @@ export async function responseCheck(): Promise<boolean> {
       `saw him ${sawIt} · on the net before he could say it ${early} · held four seconds: word ${silent ? 'none' : 'there'} · he still holds the idea ${still} · let go: word ${Q.word.has('player') ? 'there' : 'none'}`); }
 
   // ---- (11) whoever is against them is their enemy
-  { const W = await stand('crossing.json', 11, ON, '?quiet=1&squad=1'); const g = W.game, Q = g.qrf; const mate = g.guards.find((x: any) => x.team === 'operative');
-    hideSam(g); RESPONSE.deal = false; requestQrf(g, 'gunfire'); RESPONSE.deal = true;
+  { const W = await stand1('crossing.json', 11, ON, '?quiet=1&squad=1'); const g = W.game, Q = g.qrf; const mate = g.guards.find((x: any) => x.team === 'operative');
+    hideSam(g); requestQrf(g, 'gunfire');
     const far: Vec3 = [38.8, 0, 26.6]; if (mate) { mate.char.pos[0] = far[0]; mate.char.pos[2] = far[2]; }
     steps(W, 110, () => notes(g).includes('fan'), () => { hideSam(g); if (mate) { mate.char.pos[0] = far[0]; mate.char.pos[2] = far[2]; } });
     const lead = (Q.men as any[])[0]; const p = lead ? inFrontOf(g, lead, 5) : null;
@@ -205,8 +207,8 @@ export async function responseCheck(): Promise<boolean> {
     line(!!mate && contact && on > 0, '(11) the partner in view of the element is contact, and he is the one they turn on (Sam is out of it, unseen)', `partner ${mate ? 'staged' : 'missing'} · element in ${notes(g).includes('fan')} · contact ${contact} · men whose enemy is the partner ${on}/${Q.men.length}`); }
 
   // ---- (12) never more of theirs up than the level's most
-  { const W = await stand('police-post.json', 12, ON); const g = W.game, Q = g.qrf, R = g.level.scenarios.response; g.tune.perimeter = true; g.tune.perimeterEta = 6; g.tune.perimeterSize = 2;
-    hideSam(g); RESPONSE.deal = false; requestQrf(g, 'gunfire'); RESPONSE.deal = true; let most = 0; const up = () => g.guards.filter((x: any) => Q.owns(x) && x.state !== 'dead').length;
+  { const W = await stand1('police-post.json', 12, ON); const g = W.game, Q = g.qrf, R = g.level.scenarios.response; g.tune.perimeter = true; g.tune.perimeterEta = 6; g.tune.perimeterSize = 2;
+    hideSam(g); requestQrf(g, 'gunfire'); let most = 0; const up = () => g.guards.filter((x: any) => Q.owns(x) && x.state !== 'dead').length;
     steps(W, 110, () => notes(g).includes('fan'), () => hideSam(g)); const came = Q.men.length;
     if (Q.men[3]) killGuard(g, Q.men[3], [1, 0, 0], false);
     steps(W, 40, undefined, () => { hideSam(g); most = Math.max(most, up()); });
@@ -214,12 +216,8 @@ export async function responseCheck(): Promise<boolean> {
     line(came === R.men[1] && !!per && most <= R.men[1] && posted >= 1, '(12) a man of theirs down: the second lift stands up only what the level\'s most leaves room for, and its men take the posts outside the gates',
       `${came} came · ${per || 'no second lift'} · most of theirs up at once ${most} (the level's most ${R.men[1]}) · on their posts ${posted}/${Q.perim?.men.length ?? 0}`); }
 
-  // ---- (13) the switch off
-  { const W = await stand('police-post.json', 4, !ON); const g = W.game; g.teleportPlayer(sighting(g, 7).spot); goLoud(W); steps(W, 12);
-    line(g.qrf.state === 'idle' && !hasResponse(g) && !requestQrf(g, 'panel'), '(13) the switch off: the police post has no team, as it was — the same gunfire calls nobody', `${g.qrf.state} · gunfire heard ${g.qrf.loudT > -1e8} · locked down ${g.escalation} · has a team ${hasResponse(g)}`); }
-
   // ---- (14) stood up on open ground in an enemy's view
-  { const W = await stand('bazaar.json', 14, ON); const g = W.game, Q = g.qrf, R = g.level.scenarios.response; hideSam(g); RESPONSE.deal = false; requestQrf(g, 'gunfire'); RESPONSE.deal = true;
+  { const W = await stand1('bazaar.json', 14, ON); const g = W.game, Q = g.qrf, R = g.level.scenarios.response; hideSam(g); requestQrf(g, 'gunfire');
     steps(W, 100, () => Q.state === 'arriving', () => hideSam(g));
     const m0 = R.ways[0].muster[0], spot: Vec3 = [m0[0] + 6.5, 0, m0[2] + 0.5]; g.playerInvisible = false; const t0 = g.time;   // (he walks into the street's open end once they are stood there)
     const seen = steps(W, 9, () => notes(g).some(n => n.startsWith('contact:')), () => { g.teleportPlayer(spot); g.player.visibility = 1; });
@@ -258,12 +256,11 @@ export async function responseCheck(): Promise<boolean> {
     line(came > 0 && open && told && g.roomClear.end === 'taken', '(17) the depot is not taken while the escort it called is up: the last defender down, the run goes on; the escort down, it is taken',
       `${came} of the escort stood up · every defender down: ${open ? 'the run goes on' : `ended (${g.roomClear.end})`}${told ? ', and says who is left' : ''} · the escort down: ${g.roomClear.end ?? 'still going'}`); }
 
-  // ---- (18) the raid rule off, and a block with no `raid`
-  { const W = await stand('depot.json', 15, true, RAIDS['depot.json']); const g = W.game; RESPONSE.raid = BREAK; goLoud(W); steps(W, 14); const st = g.qrf.state, has = hasResponse(g);
-    const W2 = await stand(null, 18, true, '?roomclear'); const g2 = W2.game; RESPONSE.raid = !BREAK; goLoud(W2); steps(W2, 14);
+  // ---- (18) a block with no `raid`
+  { const W2 = await stand(null, 18, true, '?roomclear'); const g2 = W2.game; goLoud(W2); steps(W2, 14);
     const W3 = await stand(null, 18, true, '?rescue'); const g3 = W3.game; goLoud(W3); steps(W3, 14); const asked3 = requestQrf(g3, 'gunfire');
-    line(st === 'idle' && !has && g2.qrf.state === 'idle' && g2.nightBreach.active && g3.qrf.state === 'idle' && !asked3 && !!g3.rescue?.active, '(18) the raid rule off: the same raid on the depot calls nobody; and the office, whose block answers a quiet night, sends nobody to a room clear or to a hostage rescue (a rescue ends on its own cast: no team is ever on its way to one)',
-      `depot, rule off: ${st}, has a team ${has} · the office under a room clear: ${g2.qrf.state} (raid on ${g2.nightBreach.active}) · under a rescue: ${g3.qrf.state}, a call on gunfire taken ${asked3} (rescue on ${!!g3.rescue?.active})`); RESPONSE.raid = true; }
+    line(g2.qrf.state === 'idle' && g2.nightBreach.active && g3.qrf.state === 'idle' && !asked3 && !!g3.rescue?.active, '(18) the office, whose block answers a quiet night, sends nobody to a room clear or to a hostage rescue (a rescue ends on its own cast: no team is ever on its way to one)',
+      `the office under a room clear: ${g2.qrf.state} (raid on ${g2.nightBreach.active}) · under a rescue: ${g3.qrf.state}, a call on gunfire taken ${asked3} (rescue on ${!!g3.rescue?.active})`); }
 
   // ---- (19) a restage mid-response
   { const W = await stand('depot.json', 19, ON, RAIDS['depot.json']); const g = W.game, Q = g.qrf; goLoud(W);

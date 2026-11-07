@@ -207,6 +207,16 @@ export function simWhyNot(): string {
   if (why === null) { try { X = start(); why = ''; } catch (e) { why = String((e as Error)?.message ?? e); } }
   return why;
 }
+/** THE MODULE HANDED IN, for a host that loads the Rust GAME's module (rust/game_face: the game, and this crate's own exports over the same memory) and
+ *  must have every reader here bind to that one instance, so that a game's block is the block the Rust game steps (src/host/rustgame.ts, `?rust=1`). Called
+ *  before anything has asked for the module: one that is already started holds clips, knobs and blocks this one would not have, so that is refused. Nothing
+ *  calls it otherwise, and then nothing here changes. That module's memory GROWS in play: the views below
+ *  are made again by themselves (a detached view has no length), and the host makes a bound game's `SimState` views again after a call that grew it. */
+export function simAdopt(x: SimExports, ms: number): void {
+  if (X !== null || why) throw new Error(X !== null ? 'the simulation\'s module was started before another was handed in' : `the simulation's module could not start: ${why}`);
+  if (x.sim_abi() !== SIM_ABI) throw new Error(`the module handed in is version ${x.sim_abi()} of the simulation's exports and src/sim/sim.ts was written against ${SIM_ABI}`);
+  X = x; why = ''; simBootMs = ms;
+}
 /** the module, started on the first call (throws what simWhyNot says where it cannot run) */
 export function sim(): SimExports {
   const no = simWhyNot(); if (no) throw new Error(no);

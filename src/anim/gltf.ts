@@ -1,6 +1,7 @@
 // Minimal glTF 2.0 loader for skinned characters: nodes, one skin, mesh primitives, animations.
 import { Quat, Vec3 } from '../math/vec';
 import { lookDress } from '../scene/look';
+import { RUST_PASS, RUST_SURFACE } from '../game/crossing';
 
 export interface GltfNode { name: string; parent: number; children: number[]; t: Vec3; r: Quat; s: Vec3; }
 export interface Track { readonly node: number; readonly path: 0 | 1 | 2; readonly times: Float32Array; readonly values: Float32Array; readonly step: boolean; } // path: 0 T, 1 R, 2 S
@@ -31,7 +32,7 @@ export const SLOT_NAMES = ['skin', 'cloth_uniform', 'cloth_plain', 'webbing', 'b
 /** THE GOGGLES RULE, for whoever draws a man of the cast: `boxes` = the rig's own box goggles are drawn on him (rigProps) → neither mesh pair; else, where his variant lists a
  *  pair, the mesh pair flipped UP on the mount (kit he carries, never down and dark over his eyes). A variant with no goggles comes back as it is. */
 const nvgBits = new WeakMap<CastInfo, { up: number; down: number }>();
-export function castGoggles(cast: CastInfo, mask: number, boxes: boolean): number {
+export function castGoggles(cast: CastInfo, mask: number, boxes: boolean): number { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('castGoggles', undefined, [cast, mask, boxes]); if (__r !== RUST_PASS) return __r as any; } }
   let nb = nvgBits.get(cast);
   if (!nb) { const bit = (n: string) => { const i = cast.parts.indexOf(n); return i < 0 ? 0 : (1 << i) >>> 0; }; nvgBits.set(cast, nb = { up: bit('nvg_up'), down: bit('nvg_down') }); }
   const { up, down } = nb; if (!(mask & (up | down))) return mask >>> 0;
@@ -42,7 +43,7 @@ export function castGoggles(cast: CastInfo, mask: number, boxes: boolean): numbe
  *  packs) and less the mesh goggles, which hang on the helmet's mount — by name, so a cast file without those parts loses nothing. Here, beside castGoggles, so the
  *  game's castParts and the proxy fits solved ahead of play (render/sdfrig.ts fitRigCast) read ONE rule. */
 const suitBits = new WeakMap<CastInfo, number>();
-export function castSuit(cast: CastInfo, mask: number): number {
+export function castSuit(cast: CastInfo, mask: number): number { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('castSuit', undefined, [cast, mask]); if (__r !== RUST_PASS) return __r as any; } }
   let b = suitBits.get(cast);
   if (b === undefined) { b = 0; cast.parts.forEach((n, i) => { if (n === 'helmet' || n.startsWith('kit_')) b = (b! | (1 << i)) >>> 0; }); suitBits.set(cast, b); }
   return castGoggles(cast, (mask & ~b) >>> 0, true);

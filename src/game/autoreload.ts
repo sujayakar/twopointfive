@@ -13,6 +13,7 @@
 // Type-only game imports: nothing here is built from another game module's exports at load (src/game is one import cycle).
 import type { Game, Player } from './game';
 import type { Firearm } from './weapons';
+import { goneWithTick } from './crossing';
 
 /** the switch and its one number: off in the module, raised by the page (host/profile.ts pageSwitches; ?noautoreload = a dry gun waits for R, as it did) and by the
  *  shipped stand; the harness's frozen stand leaves it off (TPS_AUTORELOAD=1 turns it on). `delay` = seconds after the last round before the hands move (UNTUNED by eye: the round's recoil is seen first). */
@@ -23,14 +24,5 @@ import type { Firearm } from './weapons';
 export const RELOAD = { auto: false, delay: 0.25, lastMag: false };
 
 /** would THIS player's `gun` (the one in his hands: the caller's own test) start its reload by itself this frame? */
-export function autoReloadDue(g: Game, pl: Player, gun: Firearm): boolean {
-  if (!RELOAD.auto || g.touring || g.puppet || pl.equipT > 0 || pl.dragging) return false;   // (equipT: the gun is still coming out — no round leaves it yet either; dragging: an ankle in each hand)
-  // (the CHAMBER, not the rounds he has: a reload broken off between 'magazine in' and the rack leaves a full magazine under an empty chamber — a gun that
-  //  cannot fire. fire() itself never leaves that state, so the two tests differ nowhere else)
-  if (gun.chamber !== 0 || gun.reloading || (gun.spare.length === 0 && !(RELOAD.lastMag && (gun.mag ?? 0) > 0)) || (gun.infinite && gun.mag !== null)) return false;   // (unlimited ammo with a magazine seated fires on from a dry chamber: weapons.ts canFire)
-  const since = g.time - pl.lastFireT;   // (a checkpoint puts lastFireT back with the clock; a stamp ahead of the clock is no reason to wait)
-  return !(since >= 0 && since < RELOAD.delay);
-}
+export function autoReloadDue(g: Game, pl: Player, gun: Firearm): boolean { return goneWithTick('autoReloadDue') as any; }
 
-/** the words for a gun that has just gone dry / been clicked dry: with the switch on and a magazine left the reload is coming and R is not asked for */
-export function autoReloads(g: Game, gun: Firearm): boolean { return RELOAD.auto && !g.touring && !g.puppet && gun.spare.length > 0; }

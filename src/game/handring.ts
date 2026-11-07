@@ -86,7 +86,7 @@ export const HANDRING = {
   corner: false,
 };
 /** the word an empty tap files, how long before it is filed again (s), and how long the corner shows it (s) */
-export const EMPTY_WORD = 'nothing in reach', EMPTY_AGAIN_SECS = 3, EMPTY_SHOW_SECS = 1.6;
+export const EMPTY_WORD = 'nothing in reach', EMPTY_SHOW_SECS = 1.6;
 /** how far off (m) a door still answers an empty tap (its reach is 1.35), and what a thing answers after its name (interact.ts emptyThing): a door
  *  a step off `far`, a door his sprint keeps from him `run`, a thing in reach whose rows the mission's frame kept back (rails.ts `rows`) `held`, a
  *  door in reach while his hands are not his `no` */

@@ -14,6 +14,7 @@
 // Imports nothing at run time (the module is a leaf of src/game's cycle, so a top-level `ownerWitness` line in a rule's file is safe wherever the cycle starts). TypeScript for now;
 // `claimMan` and `releaseMan` move to Rust with the behaviours (wave 3 of the port), and this file is small so that it can.
 import type { Guard } from './game';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 /** the rules that can hold a man, strongest first. `why[0]` is what is shown when nothing more is said, a lower claim coming back to the top included */
 const RULES = [
@@ -61,14 +62,14 @@ function settle(gd: Guard, word: number, t: number, why: number): void {
   gd.rank = rank; gd.reason = why >= 0 ? why : 0; gd.since = t;
 }
 /** RULE `rule` TAKES HIM (nothing changes if it has him already, but for the reason it gives). `t` the game's clock; `why` an index into its row's `why` */
-export function claimMan(gd: Guard, rule: number, t: number, why = 0): void {
+export function claimMan(gd: Guard, rule: number, t: number, why = 0): void { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('claimMan', undefined, [gd, rule, t, why]); if (__r !== RUST_PASS) return __r as any; } }
   if (OWNER_QA.drop & rule) return;
   const was = gd.owner, word = was | rule;
   if (was === word) { if (rankOf(word) === rankOf(rule)) gd.reason = why; return; }
   settle(gd, word, t, rankOf(rule) === rankOf(word) ? why : -1);
 }
 /** RULE `rule` LETS GO. The rule below it, if any, has him again from now */
-export function releaseMan(gd: Guard, rule: number, t: number): void {
+export function releaseMan(gd: Guard, rule: number, t: number): void { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('releaseMan', undefined, [gd, rule, t]); if (__r !== RUST_PASS) return __r as any; } }
   const was = gd.owner; if (!(was & rule)) return;
   settle(gd, was & ~rule, t, -1);
 }

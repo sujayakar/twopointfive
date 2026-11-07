@@ -25,6 +25,7 @@ import { noShoveBegin } from './noshove';
 import { samRooted } from './samstun';
 import { isHurt } from './condition';
 import { TAPSTEP } from './tapstep';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 /** where he would be: copies, the caller's to keep */
 export interface Ahead {
@@ -39,7 +40,7 @@ export interface Ahead {
 
 /** `seat`'s man walked through `cmds` (oldest first, `dt` seconds each) from where the game has him. `path`, when given, is filled with his place after each
  *  record (`path[i]` after `cmds[i]`; its length is set). No record: where the game has him. The game, the seat and the records are as they were on return. */
-export function walkAhead(seat: Seat, cmds: readonly PlayerCmd[], dt: number, path?: Vec3[]): Ahead {
+export function walkAhead(seat: Seat, cmds: readonly PlayerCmd[], dt: number, path?: Vec3[]): Ahead { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('walkAhead', undefined, [seat, cmds, dt, path]); if (__r !== RUST_PASS) return __r as any; } }
   const v = seat.view, pl = v.player, ch = pl.char, n = cmds.length, free = legsOwn(v);
   const m: Legs = { char: { pos: [ch.pos[0], ch.pos[1], ch.pos[2]], vel: [ch.vel[0], ch.vel[1], ch.vel[2]], bodyYaw: ch.bodyYaw, aimYaw: ch.aimYaw }, safe: pl.safe ? [pl.safe[0], pl.safe[1], pl.safe[2]] : null,
     crouch: pl.crouch, sprinting: pl.sprinting, dash: pl.dash, backpedal: pl.backpedal, speedSm: pl.speedSm, pace: TWOGEARS.on ? 1 : pl.pace, dragging: null, haul: null,

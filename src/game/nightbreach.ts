@@ -33,18 +33,16 @@
 //
 // With the flag off none of this runs: Game.update's one call into tick() returns on its first line, and BreachDrill without `live` is the show's drill as it was.
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load — the knobs are a plain literal.)
-import { stageMen, cutToMen, allDown, ordersOf, eachSeat, firstOf } from './seats';
+import { stageMen, allDown, eachSeat, firstOf } from './seats';
 import { rollbackVar } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
 import type { Game, Guard, PairId } from './game';
-import type { Input } from './input';
-import type { FollowCamera } from './camera';
 import { BreachDrill, type BreachLive } from './breach';
 import { spawnUnit, despawnUnit } from './guards';
-import { HOLD } from './character';   // (read inside the tick only: HOLD.oneFacing)
-import { endGuardScript, order } from './squad';
-import { fireWeapon } from './combat';
-import { SUPPRESSION } from './suppression';
+import './character';   // (read inside the tick only: HOLD.oneFacing)
+import { order } from './squad';
+import './combat';
+import './suppression';
 import { kitStage } from './kit';
 import { teamStartsFallenIn } from './startfile';
 import { issueStage } from './issue';   // (type-only game imports: a level that issues its own wall charges — scenarios.roomClear.wallCharges)
@@ -55,7 +53,7 @@ import type { SquadSize } from './loadout';
 import { OFFICE_SCENARIOS } from '../../levels/office.scenarios';   // (plain literals with type-only imports: safe at the top of the game's import cycle)
 import { holdFireDrill } from './holdfire';   // (called inside order() only)
 import { WORDS } from './words';   // (a leaf: the dialogue pass's one switch)
-import { cover } from './belief';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 /** The scenario's knobs (Tab ▸ Sandbox ▸ Night breach, __nightbreach.knobs; read at the next staging — 'restage' applies them). */
 export const NIGHTBREACH = {
@@ -105,22 +103,6 @@ export const BLIND = { after: 0.3, stagger: 0.07, rounds: 12, every: 0.1, spread
 
 /** one defender's burst: the dazzle it answers (his dazzledUntil when it began), turns gone (fired or lost), next turn due */
 export interface BlindBurst { until: number; n: number; next: number }
-/** One defender's blind fire this frame (BLIND above; the hostage rescue's set defenders take the same turns — game/rescue.ts): while he is dazzled he keeps `door`,
- *  the entry he was covering, as his fix, and a flinch after the flash takes his burst's turns along his barrel (`k` staggers the men). Returns true when a round
- *  left the barrel. */
-export function blindTurn(g: Game, h: Guard, k: number, B: BlindBurst, door: Vec3): boolean {
-  if (h.state === 'dead' || g.time >= h.dazzledUntil) return false;
-  if (h.dazzledUntil > B.until + 1e-6) { B.until = h.dazzledUntil; B.n = 0; B.next = g.time + BLIND.after + k * BLIND.stagger; }
-  if (!h.held) cover(h, [door[0], 0, door[2]]);                         // (in Sam's arm his fix is not his own)
-  if (B.n >= BLIND.rounds || g.time < B.next) return false;
-  B.n++; B.next = g.time + BLIND.every;                                     // the turn is spent whether or not a round leaves the barrel
-  const c = h.char;
-  if (h.held || g.time < h.staggerUntil || c.gunDir[1] < -BLIND.lowGun) return false;   // in Sam's arm; doubled over a ring; a gun that is not up
-  if (g.tune.suppression && (h.sup.v >= SUPPRESSION.pinned || h.sup.latched || h.sup.downT > 0)) return false;   // head down under fire (the alert branch's own crouch, gun lowered — or over the line this frame)
-  if (!h.weapon.fire()) return false;                                       // dry or mid-reload (his reload is the fight AI's, at his next sighted pull)
-  fireWeapon(g, c, v3.mad(c.muzzle, c.gunDir, 8), false, { steady: true, spread: BLIND.spread, blind: true });
-  return true;
-}
 
 /** One defender's mark: where he stands, the point he keeps his gun on while he is calm and empties his blind burst at (the door he covers), and whether he is one
  *  of the men behind the DRILL's door (the breach plan's room: the F order's entry works against those — a man of another room is neither the drill's to engage nor
@@ -193,7 +175,7 @@ export class NightBreach {
   }
   /** Start the scenario: the floor cleared of everybody but the cast, a fresh encounter, the cast on its marks — the break room's, or `layout`'s bigger floor.
    *  Returns the reason when refused (or when the staging itself failed — then everything is put back as stop() puts it). */
-  start(layout: NightBreachLayout | null = null): string | null {
+  start(layout: NightBreachLayout | null = null): string | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('NightBreach.start', this, [layout]); if (__r !== RUST_PASS) return __r as any; } }
     if (this.active) return null;
     const why = this.canStart(layout); if (why) return why;
     this.layout = layout;
@@ -204,7 +186,7 @@ export class NightBreach {
     return this.active ? null : (this.failure ?? 'the staging failed');
   }
   /** Stop it: the cast gone, the shift back on its routes, a fresh night encounter. */
-  stop() {
+  stop() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('NightBreach.stop', this, []); if (__r !== RUST_PASS) return __r as any; } }
     if (!this.active) return;
     const g = this.g;
     this.active = false; const was = this.layout?.name ?? 'night breach'; this.layout = null;   // (a layout lasts one run)
@@ -217,9 +199,9 @@ export class NightBreach {
   }
   /** A man stood on this floor AFTER the staging joins the defenders (stress.ts — extra enemies, off unless asked for): the lists a staged defender is in, so
    *  stop() and a restart take him away with the cast and the blind fire is his too. Nothing calls this in play. */
-  adopt(gd: Guard, mark: NightBreachMark) { if (!this.active || this.hostiles.includes(gd)) return; this.hostiles.push(gd); this.marks.push(mark); this.bursts.push({ until: -1, n: 0, next: 0 }); }
+  adopt(gd: Guard, mark: NightBreachMark) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('NightBreach.adopt', this, [gd, mark]); if (__r !== RUST_PASS) return __r as any; } } if (!this.active || this.hostiles.includes(gd)) return; this.hostiles.push(gd); this.marks.push(mark); this.bursts.push({ until: -1, n: 0, next: 0 }); }
   /** Stage it afresh (the knobs re-read): a restart of the encounter, which stages. */
-  restage() { if (this.active) this.g.restartEncounter(); }
+  restage() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('NightBreach.restage', this, []); if (__r !== RUST_PASS) return __r as any; } } if (this.active) this.g.restartEncounter(); }
   /** restartEncounter's last act (game.ts): the scenario, while it is up, stages itself on the fresh encounter. A staging that throws (a budget, a plan the level
    *  lacks a piece of) ends the scenario cleanly rather than leaving it half up to throw again every frame. */
   onEncounterRestart() {
@@ -294,10 +276,9 @@ export class NightBreach {
     return best;
   }
   private note(what: string) { this.log.push({ t: this.g.time, what }); if (this.log.length > 400) this.log.splice(0, 100); }
-  private once(key: string, text: string) { if (!this.said.has(key)) { this.said.add(key); this.g.msg(text); } }
 
   /** Sam's word (F): the first sends the pair to the stack, the second sends them in. Returns what the press did. */
-  order(): 'stack' | 'go' | null {
+  order(): 'stack' | 'go' | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('NightBreach.order', this, []); if (__r !== RUST_PASS) return __r as any; } }
     const D = this.drill; if (!this.active || !D) return null;
     if (allDown(this.g) || D.phase === 'done') return null;
     if (this.live.orders === 0) { this.live.orders = 1; this.note('order:stack'); this.g.msg('you: stack up — side door'); return 'stack'; }
@@ -326,56 +307,12 @@ export class NightBreach {
     }
   }
 
-  /** Once a frame from Game.update, after the Director and before the guards move: a return on its first line while the scenario is off. */
-  tick(dt: number, input: Input, cam: FollowCamera | null) {
-    if (!this.active) return;
-    const g = this.g;
-    if ((!this.drill && !this.noDrill) || [...this.ops, ...this.hostiles].some(x => !g.guards.includes(x) && !x.fled)) {   // the cast was despawned under it by something short of a restart (a bare resetGuards — the panel's reset, a console): a full restart, which stages
-      g.restartEncounter(); if (!this.active || (!this.drill && !this.noDrill)) return;
-    }
-    if (this.cut && cam) { this.cut = false; cutToMen(g); }
-    const D = this.drill;
-    if (D && g.seats.some(s => !s.view.player.down && s.input.hit('KeyF'))) this.order();   // (the word is any player's who is up: seats.ts)
-    // the defenders: the fight AI's men, kept on their marks (held: no walking off to look at a noise; pinned: they fire from where they stand), and while they are
-    // calm their chests — the gun follows — on the door they were told to watch
-    // — with the room fight on (roomfight.ts, the default) none of that is done here: where each man looks, what his burst goes down and whether he stays are his
-    // own read of what he has seen and heard, and this only keeps the count. ROOMFIGHT.on false = the branch as it was (plan-forced aims, the burst down the plan's door).
-    const own = g.fight.on;
-    if (!own) this.hostiles.forEach((h, i) => {
-      if (h.state === 'dead') return;
-      if (h.script) endGuardScript(h, h.state);
-      h.hold = true; h.pinned = true;
-      const m = this.marks[i]; if (m && h.state === 'patrol' && h.awareness < 0.3 && !(HOLD.oneFacing && h.held)) h.char.bodyYaw = v3.yawTo(h.char.pos, m.aimAt);
-    });
-    D?.tick(dt);
-    if (own) this.blindRounds = g.fight.blindRounds; else if (this.blind) this.blindFire();
-    if (!D) { if (!this.layout && this.hostiles.length && this.hostiles.every(h => h.state === 'dead' || h.fled)) this.once('clear', 'room clear. press Shift+Enter to restart'); return; }   // (no breach plan on this level, or fewer than two teammates: no drill — the team is the order menu's, the layout keeps the score; the break room alone says its own end)
-    for (; this.beatsSeen < D.beats.length; this.beatsSeen++) this.note(D.beats[this.beatsSeen].what);
-    switch (this.state) {
-      case 'set': this.once('set', 'stacked and set. press F to send them in'); break;
-      case 'clear': if (!this.layout) this.once('clear', 'room clear. press Shift+Enter to restart'); break;
-      case 'recalled':   // (one of Sam's menu orders took a man out of the room mid-clear — orders.ts: the drill is over; a man it did not order is left as below)
-      case 'failed':
-        for (const o of this.drillOps) if (o.state !== 'dead' && o.script && !ordersOf(g, o).has(o)) { endGuardScript(o, 'search'); o.hold = true; o.pinned = true; }   // (the drill is over with a man still up — the point man fell before the door went in: he is the fight AI's now, holding where he stands with his own eyes and ears, not a statue on a script)
-        if (this.state === 'recalled') this.once('recalled', `breach called off, and the ${this.ops.length > 2 ? 'squad' : 'pair'} takes your orders now (X). press Shift+Enter to restart`);
-        else if (!this.layout) this.once('failed', `${this.drillOps.every(o => o.state === 'dead') ? (this.ops.length > 2 ? 'the red pair is down' : 'both teammates are down') : 'your point man is down at the door'}, so you'll have to take the room yourself${this.ops.length > 2 && this.ops.some(o => o.state !== 'dead') ? ' (the rest take your orders with X)' : ''}, or press Shift+Enter to restart`);
-        break;
-    }
-  }
 
-  /** BLIND FIRE (the head comment; BLIND above): every defender who is dazzled — the drill's charge, or one of Sam's own — keeps the door he was covering as his
-   *  fix (the fight AI points a dazzled man's gun at his fix: left alone that becomes the spot the charge went off) and, a flinch after the flash, takes his burst's
-   *  turns along his barrel. A charge that lengthens the dazzle of a man still dazzled is a fresh burst. Nothing from a dead man or one whose dazzle has run out;
-   *  a turn that comes while he is held, doubled over a ring, head down under fire, gun down, dry or mid-reload is lost. Off with the sandbox's AI switch. */
-  private blindFire() {
-    const g = this.g; if (!g.aiEnabled) return;
-    this.hostiles.forEach((h, k) => { const B = this.bursts[k], m = this.marks[k]; if (B && m && blindTurn(g, h, k, B, m.aimAt)) this.blindRounds++; });
-  }
 
   /** The HUD's objective while the night breach is up BY ITSELF (mission.ts objectiveText / objectivePos — a layout's scenario, the room clear, words its own
    *  first; null = not this scenario's to say): the held room, a marker on the plan's door until the room is taken. Without it the line read the solo night's
    *  'reach the server room' with its diamond on the server door, all through a scenario about another room. */
-  objective(): { text: string; pos: Vec3 | null } | null {
+  objective(): { text: string; pos: Vec3 | null } | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('NightBreach.objective', this, []); if (__r !== RUST_PASS) return __r as any; } }
     if (!this.active || this.layout || !this.hostiles.length) return null;
     const g = this.g, P = g.level.breach, room = P?.room ?? 'room';
     const taken = this.hostiles.every(h => h.state === 'dead' || h.fled);

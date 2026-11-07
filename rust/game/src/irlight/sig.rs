@@ -1,0 +1,75 @@
+#![allow(unused_variables)]
+//! Every function and method of `irlight`, with an empty body. Written by the skeleton's program.
+#[allow(unused_imports)]
+use crate::{ids::*, js::*, Quat, V3};
+#[allow(unused_imports)]
+use alloc::{string::String, vec::Vec};
+
+/// (src/game/irlight.ts:101 irFlags)
+pub fn ir_flags(g: &mut crate::game::Game) { todo!() }
+
+/// (src/game/irlight.ts:118 kitOf)
+pub fn kit_of(g: &mut crate::game::Game) -> &mut crate::irlight::Kit { todo!() }
+
+/// (src/game/irlight.ts:119 lamp)
+pub fn lamp(g: &mut crate::game::Game, name: &str, owner: f64) -> LightId { todo!() }
+
+/// (src/game/irlight.ts:123 pose)
+pub fn pose(g: &mut crate::game::Game, l: LightId, c_2: CharId) { todo!() }
+
+/// (src/game/irlight.ts:132 darkAt)
+pub fn dark_at(g: &mut crate::game::Game, x: f64, z: f64) -> bool { todo!() }
+
+/// (src/game/irlight.ts:138 fanDark)
+pub fn fan_dark(g: &mut crate::game::Game, at: V3, yaw: f64) -> bool { todo!() }
+
+/// (src/game/irlight.ts:149 skey)
+pub fn skey(key: f64, i: f64) -> String { todo!() }
+
+/// (src/game/irlight.ts:150 forget)
+pub fn forget(g: &mut crate::game::Game, key: f64) { todo!() }
+
+/// (src/game/irlight.ts:152 fanDarks)
+pub fn fan_darks(g: &mut crate::game::Game, at: V3, yaw: f64) -> Vec<f64> { todo!() }
+
+/// (src/game/irlight.ts:161 shownDark)
+pub fn shown_dark(g: &mut crate::game::Game, cpu: f64, e: Option<f64>) -> Option<bool> { todo!() }
+
+/// (src/game/irlight.ts:167 drop)
+pub fn drop(g: &mut crate::game::Game, key: f64) { todo!() }
+
+/// (src/game/irlight.ts:174 burn)
+pub fn burn(g: &mut crate::game::Game, key: f64, at: V3, yaw: f64, each: bool, live: bool, own_key: Option<&str>) -> f64 { todo!() }
+
+/// (src/game/irlight.ts:213 samOn)
+pub fn sam_on(g: &mut crate::game::Game, pl: PlayerId) -> bool { todo!() }
+
+/// (src/game/irlight.ts:215 out)
+pub fn out(g: &mut crate::game::Game, l: Option<LightId>) { todo!() }
+
+/// (src/game/irlight.ts:221 nearK)
+pub fn near_k(g: &mut crate::game::Game, key: f64, l: LightId) -> f64 { todo!() }
+
+/// (src/game/irlight.ts:231 irNearOf)
+pub fn ir_near_of(g: &mut crate::game::Game, key: f64) -> f64 { todo!() }
+
+/// (src/game/irlight.ts:233 irLightTick)
+pub fn ir_light_tick(g: &mut crate::game::Game) { todo!() }
+
+/// (src/game/irlight.ts:268 irLightAt)
+pub fn ir_light_at(g: &mut crate::game::Game, p: V3, skip: Option<f64>) -> f64 { todo!() }
+
+/// (src/game/irlight.ts:286 irOnMan)
+pub fn ir_on_man(g: &mut crate::game::Game, o: GuardId) -> f64 { todo!() }
+
+/// (src/game/irlight.ts:295 irShowsAt)
+pub fn ir_shows_at(g: &mut crate::game::Game, m: GuardId, p: V3) -> bool { todo!() }
+
+/// (src/game/irlight.ts:303 irCarried)
+pub fn ir_carried(g: &mut crate::game::Game) -> bool { todo!() }
+
+/// (src/game/irlight.ts:306 irLightState)
+pub fn ir_light_state(g: &mut crate::game::Game) -> crate::irlight::IrLightState { todo!() }
+
+/// (src/game/irlight.ts:311 irLightSummary)
+pub fn ir_light_summary(g: &mut crate::game::Game) -> String { todo!() }
