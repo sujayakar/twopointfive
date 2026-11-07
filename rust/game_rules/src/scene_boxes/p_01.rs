@@ -19,23 +19,21 @@ const USAGE_STORAGE: f64 = 128.0;
 /// `BoxWorld.RS` as an index
 const RS: usize = BOX_WORLD_RS as usize;
 
-// THE TABLE OF BOX ROWS. SKELETON-GAP: skeleton 5 has `g.col.boxes: Vec<BoxId>` and no `Tab<BoxId, Box>`, while the index says `g.col.boxes[id]`. These four are
-// every line of this file that says where a box lives. On a skeleton with the table each body is one line: `&g.tab.boxes[id]`, `&mut g.tab.boxes[id]`,
-// `g.tab.boxes.push(b)`; `seam_box_push_no_g` needs `g` on box_of's stub as well. Tests have a table of their own, at the foot of this file.
+// These three are every line of this file that says where a box lives. Tests have a table of their own, at the foot of this file.
 /// the box an ID names
 #[cfg(not(test))]
 #[inline]
-fn bx(g: &Game, id: BoxId) -> &Bx { &g.tab.boxes[id] }
+fn bx(g: &Game, id: impl Into<AnyBoxId>) -> &Bx { &g.tab[id.into()] }
 /// the box an ID names, to write
 #[cfg(not(test))]
 #[inline]
-fn bx_mut(g: &mut Game, id: BoxId) -> &mut Bx { &mut g.tab.boxes[id] }
+fn bx_mut(g: &mut Game, id: impl Into<AnyBoxId>) -> &mut Bx { &mut g.tab[id.into()] }
 /// a new box into the table of every box (boxes.ts:186 and :204 hand back the object itself)
 #[cfg(not(test))]
 fn seam_box_push(g: &mut Game, b: Bx) -> BoxId { crate::scene_boxes::box_new(g, b) }
 
 /// A piece of the picture, which no game ray meets. (boxes.ts lookKeyed)
-pub fn look_keyed(g: &mut crate::game::Game, b: BoxId) -> bool {
+pub fn look_keyed(g: &mut crate::game::Game, b: AnyBoxId) -> bool {
     let (dress, mkey) = { let x = bx(g, b); (x.dress, x.mkey) };
     dress == Some(true) || (match mkey { Some(k) => js::to_u32(k) >> 24 == js::to_u32(crate::scene_boxes::mkey().look) >> 24, None => false })
 }
@@ -207,7 +205,7 @@ fn footprint_of(b: &Bx) -> [f64; 2] {
 pub fn box_world_list(g: &mut crate::game::Game) -> f64 {
     let w = &mut g.engine.world;
     w.all.clear();
-    w.all.extend_from_slice(&w.statics);
+    w.all.extend(w.statics.iter().map(|&b| AnyBoxId::World(b)));
     w.all.extend_from_slice(&w.dynamics);
     if w.all.len() as f64 > w.max_boxes { panic!("too many boxes: {}", w.all.len()); }
     let n_stat = w.statics.len();
@@ -440,13 +438,13 @@ pub fn box_world_build_ray_grid(g: &mut crate::game::Game, n: f64) {
 }
 
 /// Is this box's record a shape's and no break's? (boxes.ts shapeCut)
-pub fn shape_cut(g: &crate::game::Game, b: BoxId) -> bool {
-    let x = &g.tab.boxes[b];
+pub fn shape_cut(g: &crate::game::Game, b: AnyBoxId) -> bool {
+    let x = &g.tab[b];
     x.shaped == Some(true) && x.cut.is_some()
 }
 
 /// Is this box's cut record met by the game's rays? Ask it only of a box that has one. (boxes.ts cutMet; CUT.on is settled on)
-pub fn cut_met(g: &mut crate::game::Game, b: BoxId) -> bool {
+pub fn cut_met(g: &mut crate::game::Game, b: AnyBoxId) -> bool {
     bx(g, b).cut.as_ref().unwrap().len() > 0
 }
 
@@ -570,7 +568,7 @@ fn ray_round(ro: V3, rd: V3, b: &Bx, tmax: f64) -> Option<(f64, V3)> {
 }
 
 /// The closest hit of a ray on one box; origin inside = no hit. (boxes.ts rayBox)
-pub fn ray_box(g: &mut crate::game::Game, ro: V3, rd: V3, b: BoxId, tmax: f64) -> Option<crate::scene_boxes::RayBox> {
+pub fn ray_box(g: &mut crate::game::Game, ro: V3, rd: V3, b: AnyBoxId, tmax: f64) -> Option<crate::scene_boxes::RayBox> {
     let (round, has_cut) = { let x = bx(g, b); (x.round == Some(true), x.cut.is_some()) };
     if round { return ray_box_round(g, ro, rd, b, tmax).map(|r| crate::scene_boxes::RayBox { t: r.t, n: r.n }); }
     if has_cut && cut_met(g, b) { return ray_box_cut(g, ro, rd, b, tmax).map(|r| crate::scene_boxes::RayBox { t: r.t, n: r.n }); }
@@ -583,7 +581,7 @@ pub fn ray_box(g: &mut crate::game::Game, ro: V3, rd: V3, b: BoxId, tmax: f64) -
 }
 
 /// The test against a box with a cut record: the slab interval, cut down by the record's planes. (boxes.ts rayBoxCut)
-pub fn ray_box_cut(g: &mut crate::game::Game, ro: V3, rd: V3, b: BoxId, tmax: f64) -> Option<crate::scene_boxes::RayBoxCut> {
+pub fn ray_box_cut(g: &mut crate::game::Game, ro: V3, rd: V3, b: AnyBoxId, tmax: f64) -> Option<crate::scene_boxes::RayBoxCut> {
     let (c, h, yaw, rot) = { let x = bx(g, b); (x.c, x.h, x.yaw, x.rot) };
     let (mut cs, mut sn) = (1.0, 0.0);
     let (px, py, pz) = (ro[0] - c[0], ro[1] - c[1], ro[2] - c[2]);
@@ -618,7 +616,7 @@ pub fn ray_box_cut(g: &mut crate::game::Game, ro: V3, rd: V3, b: BoxId, tmax: f6
 }
 
 /// (boxes.ts rayBoxRound)
-pub fn ray_box_round(g: &mut crate::game::Game, ro: V3, rd: V3, b: BoxId, tmax: f64) -> Option<crate::scene_boxes::RayBoxRound> {
+pub fn ray_box_round(g: &mut crate::game::Game, ro: V3, rd: V3, b: AnyBoxId, tmax: f64) -> Option<crate::scene_boxes::RayBoxRound> {
     ray_round(ro, rd, bx(g, b), tmax).map(|(t, n)| crate::scene_boxes::RayBoxRound { t, n })
 }
 
@@ -670,7 +668,7 @@ mod tests {
                 if f3 > 0.9 { b.dress = Some(true); }
             }
             let id = seam_box_push(g, b);
-            if dynamic { g.engine.world.dynamics.push(id); } else { box_world_add_static(g, id); }
+            if dynamic { g.engine.world.dynamics.push(id.into()); } else { box_world_add_static(g, id); }
         }
     }
 
@@ -706,7 +704,7 @@ mod tests {
         let mut seen = 2166136261u32;
         seen = fnv_f(seen, g.engine.world.ray_grid_stats.globals);
         seen = fnv_f(seen, g.engine.world.ray_grid_stats.items);
-        for i in 0..200 { let id = g.engine.world.all[i]; let f = box_world_footprint(&mut g, id); seen = fnv_f(seen, f[0]); seen = fnv_f(seen, f[1]); }
+        for i in 0..200 { let id = g.engine.world.statics[i]; let f = box_world_footprint(&mut g, id); seen = fnv_f(seen, f[0]); seen = fnv_f(seen, f[1]); }
         assert_eq!(seen, TS_GRID, "grid and footprints");
         let hits = rays(&mut g, &mut x);
         assert_eq!(hits, TS_RAYS, "the rays through the grid");
@@ -791,11 +789,11 @@ extern crate std;
 #[cfg(test)]
 std::thread_local! { static TEST_ROWS: core::cell::RefCell<Vec<*mut Bx>> = core::cell::RefCell::new(Vec::new()); }
 #[cfg(test)]
-fn test_row(id: BoxId) -> *mut Bx { TEST_ROWS.with(|r| r.borrow()[id.ix()]) }
+fn test_row(id: AnyBoxId) -> *mut Bx { let id = id.world().expect("the tests' table holds boxes of the world"); TEST_ROWS.with(|r| r.borrow()[id.ix()]) }
 #[cfg(test)]
-fn bx(g: &Game, id: BoxId) -> &Bx { unsafe { &*test_row(id) } }
+fn bx(g: &Game, id: impl Into<AnyBoxId>) -> &Bx { unsafe { &*test_row(id.into()) } }
 #[cfg(test)]
-fn bx_mut(g: &mut Game, id: BoxId) -> &mut Bx { unsafe { &mut *test_row(id) } }
+fn bx_mut(g: &mut Game, id: impl Into<AnyBoxId>) -> &mut Bx { unsafe { &mut *test_row(id.into()) } }
 #[cfg(test)]
 fn seam_box_push_no_g(b: Bx) -> BoxId {
     let row = Box::into_raw(Box::new(b));

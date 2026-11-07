@@ -89,7 +89,7 @@ pub fn kind_of(g: &crate::game::Game, b: BoxId, cut_on: bool) -> f64 {
         let x = &g.tab.boxes[b];
         (x.rot.is_some(), x.round == Some(true), x.cut.is_some(), x.cut.as_ref().map_or(0, |c| c.len()))
     };
-    let cut = has_cut && (cut_on || crate::scene_boxes::shape_cut(g, b)) && cut_len > 0;
+    let cut = has_cut && (cut_on || crate::scene_boxes::shape_cut(g, b.into())) && cut_len > 0;
     ((if rot { K_ROT_ } else { 0 }) | (if round { K_ROUND_ } else { 0 }) | (if cut { K_CUT_ } else { 0 })) as f64
 }
 

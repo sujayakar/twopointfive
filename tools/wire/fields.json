@@ -3126,7 +3126,6 @@
 "game::Game.door_tools",
 "game::Game.doors",
 "game::Game.dyn_boxes",
-"game::Game.dyn_raw",
 "game::Game.entry",
 "game::Game.escalation",
 "game::Game.escalation_t",

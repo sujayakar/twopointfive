@@ -24,7 +24,7 @@ pub fn sam_laser_on(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool
 /// Sam's own infrared laser, muzzle to whatever it meets, in the tube's picture only (combat.ts handProps asks, right after his rig).
 /// NOT a boundary no-op, though it draws: its line and its dot are two boxes of the FRAME'S LIST, which the fog of war, the listing of the box world and
 /// every table numbered by reach count. Left empty, a goggled player's frame was two boxes short from the moment his gun came up.   (irlaser.ts samLaserBoxes)
-pub fn sam_laser_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
+pub fn sam_laser_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     if !sam_laser_on(g, &crate::seats::here(g)) || !ir_viewer(g) { return; }
     let c = g.pl[g.player].ch;
     if let Some(r) = crate::combat::laser_reach(g, c, None, Some(true)) { crate::combat::beam_boxes(g, r.from, r.dir, r.l, out, r.dot, Some(true), Some(true)); }
@@ -32,9 +32,9 @@ pub fn sam_laser_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
 
 /// The mark "this box is an infrared line the step drew for its own tube": the set beside the boxes that a picture with the tube off leaves out by
 /// (`ir_made`). It goes when the box's row is freed (`ir_forget`).   (irlaser.ts:78 irNote)
-pub fn ir_note(g: &mut crate::game::Game, b: BoxId) -> BoxId { g.m.irlaser.ir_made.add(b); b }
+pub fn ir_note(g: &mut crate::game::Game, b: AnyBoxId) -> AnyBoxId { g.m.irlaser.ir_made.add(b); b }
 /// A box's row is free again: the mark of the box that stood in it goes with it.
-pub fn ir_forget(g: &mut crate::game::Game, b: BoxId) { if !g.m.irlaser.ir_made.is_empty() { g.m.irlaser.ir_made.delete(b); } }
+pub fn ir_forget(g: &mut crate::game::Game, b: AnyBoxId) { if !g.m.irlaser.ir_made.is_empty() { g.m.irlaser.ir_made.delete(b); } }
 
 /// SOME PLAYER'S PICTURE IS A TUBE'S, so the infrared lines are made this step; a replay viewer's own tube, while one is set, answers instead.
 /// It asks EVERY seat's man, never the one this machine shows: the lines are boxes of the frame's list, so whether they are made is the game's and
@@ -55,7 +55,7 @@ pub fn ir_view_as<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, tube: 
 }
 
 /// Is this box an infrared line the step drew for its own tube (`ir_note`)?   (irlaser.ts irMade)
-pub fn ir_made(g: &mut crate::game::Game, b: BoxId) -> bool {
+pub fn ir_made(g: &mut crate::game::Game, b: AnyBoxId) -> bool {
     g.m.irlaser.ir_made.has(b)
 }
 
