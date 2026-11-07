@@ -74,12 +74,34 @@ pub fn room_fight_tick_op(g: &mut crate::game::Game, o: RoomfightOpId, dt: f64) 
     crate::seats::with_seat(g, seat, &mut |g: &mut Game| tick_op_in_view(g, o, dt));
 }
 
+/// one frame of a squad man, with his player's seat on the game (`room_fight_tick_op`)
 pub(super) fn tick_op_in_view(g: &mut Game, o: RoomfightOpId, dt: f64) {
     let gd = g.tab.roomfight_op[o].gd;
     let c = g.gd[gd].ch;
     let sk = skill_operative(g);
     g.gd[gd].skill = Some(crate::game::GuardSkill { settle_k: sk.settle_k, spread_k: sk.spread_k });
     if g.gd[gd].state == crate::game::GuardState::Dead { g.tab.roomfight_op[o].tgt = None; g.tab.roomfight_op[o].turn = None; g.tab.roomfight_op[o].step = None; room_fight_restore(g, o); return; }
+    feeds(g, o, dt);
+    calls_mate_down(g, o);
+    if g.gd[gd].script.is_none() { under_the_fight_ai(g, o); return; }
+    let vel = g.ch[c].vel;
+    let speed = m::hyp2(vel[0], vel[2]);
+    feet(g, o, speed, dt);
+    let blind = crate::control::man::blind(g, gd) || crate::control::man::staggered(g, gd) || g.gd[gd].held.is_some();
+    let since_hot = g.time - m::max(g.tab.roomfight_op[o].hot_t, g.fight.hot_t);
+    let hot = since_hot < g.k.roomfight.team_hot || crate::spotted::spotted_keen(g, gd);
+    let mut best = his_eyes(g, o, dt, &sk, blind, hot);
+    if blind { best = None; g.tab.roomfight_op[o].turn = None; } // he has nobody: no round goes on the memory of where a man was
+    if best != g.tab.roomfight_op[o].tgt { muzzle_to(g, o, best, &sk); }
+    own_step_back(g, o, since_hot);
+    if g.tab.roomfight_op[o].tgt.is_none() { nobody_in_sight(g, o, dt, speed, blind); return; }
+    engage(g, o, dt, speed, &sk);
+}
+
+/// his gun's own feeding, heard on its clock, and his sidearm let go of once he has nobody
+fn feeds(g: &mut Game, o: RoomfightOpId, dt: f64) {
+    let gd = g.tab.roomfight_op[o].gd;
+    let c = g.gd[gd].ch;
     if g.tab.roomfight_op[o].reload_until > 0.0 { // his gun's own feeding heard on this clock, the hand's stations dealt
         let fa = g.gd[gd].weapon;
         let now = crate::weapons::firearm_reload_row(g, fa).dur - (g.tab.roomfight_op[o].reload_until - g.time);
@@ -90,7 +112,12 @@ pub(super) fn tick_op_in_view(g: &mut Game, o: RoomfightOpId, dt: f64) {
     }
     if g.tab.roomfight_op[o].reload_until > 0.0 && g.time >= g.tab.roomfight_op[o].reload_until { let fa = g.gd[gd].weapon; crate::weapons::firearm_rearm(g, fa); g.tab.roomfight_op[o].reload_until = 0.0; }
     if g.tab.roomfight_op[o].tgt.is_some() { crate::gunslots::side_seen(g, gd); }
-    // a mate down in his view: said once
+}
+
+/// a mate down in his view: said once
+fn calls_mate_down(g: &mut Game, o: RoomfightOpId) {
+    let gd = g.tab.roomfight_op[o].gd;
+    let c = g.gd[gd].ch;
     let mut i = 0;
     while i < g.fight.ops.len() {
         let xo = g.fight.ops[i];
@@ -104,36 +131,43 @@ pub(super) fn tick_op_in_view(g: &mut Game, o: RoomfightOpId, dt: f64) {
         let text = if g.gd[x].wound.is_some() { alloc::format!("{}'s hit — breathing.", g.gd[x].callsign) } else { String::from("man down.") };
         room_fight_speak(g, o, &text, Some(0.0));
     }
-    if g.gd[gd].script.is_none() { // the fight AI has him: Sam is not on its list, so his line is kept here
-        room_fight_restore(g, o);
-        g.tab.roomfight_op[o].tgt = None;
-        g.tab.roomfight_op[o].turn = None;
-        g.tab.roomfight_op[o].step = None;
-        let fc = match g.gd[gd].foe { Some(crate::game::Foe::Guard(f)) => Some(g.gd[f].ch), _ => None };
-        if let (crate::game::GuardState::Alert, Some(fc)) = (g.gd[gd].state, fc) {
-            let muzzle = g.ch[c].muzzle;
-            let at = chest_of(g, fc);
-            if matches!(room_fight_friend_in_line(g, muzzle, at, gd, None), Some(RoomFightFriendInLine::Player)) {
-                g.gd[gd].muzzle_down = true;
-                g.gd[gd].muzzle_clear_t = 0.0;
-                g.tab.roomfight_op[o].held_for_friend += 1.0;
-                g.fight.stats.held_for_friend += 1.0;
-            }
+}
+
+/// the fight AI has him (no script of an order's): Sam is not on its list, so his line is kept here
+fn under_the_fight_ai(g: &mut Game, o: RoomfightOpId) {
+    let gd = g.tab.roomfight_op[o].gd;
+    let c = g.gd[gd].ch;
+    room_fight_restore(g, o);
+    g.tab.roomfight_op[o].tgt = None;
+    g.tab.roomfight_op[o].turn = None;
+    g.tab.roomfight_op[o].step = None;
+    let fc = match g.gd[gd].foe { Some(crate::game::Foe::Guard(f)) => Some(g.gd[f].ch), _ => None };
+    if let (crate::game::GuardState::Alert, Some(fc)) = (g.gd[gd].state, fc) {
+        let muzzle = g.ch[c].muzzle;
+        let at = chest_of(g, fc);
+        if matches!(room_fight_friend_in_line(g, muzzle, at, gd, None), Some(RoomFightFriendInLine::Player)) {
+            g.gd[gd].muzzle_down = true;
+            g.gd[gd].muzzle_clear_t = 0.0;
+            g.tab.roomfight_op[o].held_for_friend += 1.0;
+            g.fight.stats.held_for_friend += 1.0;
         }
-        return;
     }
-    let vel = g.ch[c].vel;
-    let speed = m::hyp2(vel[0], vel[2]);
+}
+
+/// how his feet move his aim, let go of slowly
+fn feet(g: &mut Game, o: RoomfightOpId, speed: f64, dt: f64) {
     if !g.touring {
         let since = match g.tab.roomfight_op[o].feet_t { None => dt, Some(t) => m::max(dt, g.time - t) };
         let prev = g.tab.roomfight_op[o].feet_sm.unwrap_or(0.0);
         g.tab.roomfight_op[o].feet_sm = Some(crate::aimcost::feet_hold(g, prev, speed, since));
         g.tab.roomfight_op[o].feet_t = Some(g.time);
     }
-    let blind = crate::control::man::blind(g, gd) || crate::control::man::staggered(g, gd) || g.gd[gd].held.is_some();
-    let since_hot = g.time - m::max(g.tab.roomfight_op[o].hot_t, g.fight.hot_t);
-    let hot = since_hot < g.k.roomfight.team_hot || crate::spotted::spotted_keen(g, gd);
-    // ---- his eyes: every living hostile through the game's sight test, at the game's rate
+}
+
+/// HIS EYES: every living hostile through the game's sight test, at the game's rate; whom his muzzle should be on, of those he has made out
+fn his_eyes(g: &mut Game, o: RoomfightOpId, dt: f64, sk: &FightSkill, blind: bool, hot: bool) -> Option<GuardId> {
+    let gd = g.tab.roomfight_op[o].gd;
+    let c = g.gd[gd].ch;
     let mut best: Option<GuardId> = None;
     let mut bs = -1.0;
     let mut i = 0;
@@ -195,62 +229,69 @@ pub(super) fn tick_op_in_view(g: &mut Game, o: RoomfightOpId, dt: f64) {
             if sc > bs { bs = sc; best = Some(h); }
         }
     }
-    if blind { best = None; g.tab.roomfight_op[o].turn = None; } // he has nobody: no round goes on the memory of where a man was
-    // ---- who his muzzle is on
-    if best != g.tab.roomfight_op[o].tgt {
-        if let Some(b) = best {
-            let cp = g.ch[c].pos;
-            let bp = g.ch[g.gd[b].ch].pos;
-            let off = m::abs(v3::wrap_angle(v3::yaw_to(cp, bp) - g.ch[c].aim_yaw));
-            let t = g.time;
-            let beat = if g.tab.roomfight_op[o].tgt.is_some() || t - g.tab.roomfight_op[o].lost_at < 1.5 {
-                pick(g, crate::dice::Who::Op(o), sk.shift)
-            } else if off > sk.sector_deg * crate::v3::DEG && !g.tab.roomfight_op[o].turn.map_or(false, |u| u.to == b && t >= u.at) {
-                let a = pick(g, crate::dice::Who::Op(o), sk.react);
-                a + pick(g, crate::dice::Who::Op(o), sk.surprise)
-            } else {
-                pick(g, crate::dice::Who::Op(o), sk.react) * sk.ready
-            };
-            g.tab.roomfight_op[o].ready_at = t + beat;
-            g.tab.roomfight_op[o].track = 0.0;
-            g.tab.roomfight_op[o].n = 0.0;
-            g.tab.roomfight_op[o].next = 0.0;
-            g.tab.roomfight_op[o].fell = Some(false);
-            let raised = match g.gd[gd].script.as_ref() { Some(s) => s.over.is_some() || s.upper.unwrap_or(crate::character::UpperMode::Aim) == crate::character::UpperMode::Aim, None => false };
-            g.tab.roomfight_op[o].pre = raised && off < g.k.roomfight.preaim_deg * crate::v3::DEG; // on the line his gun was already held on
-            if let (None, Some(k)) = (g.tab.roomfight_op[o].tgt, g.tab.roomfight_op[o].kept) {
-                if k.h == b && t - k.t < 1.5 { // the man he was on a moment ago: neither his track nor the beat starts from nothing
-                    let gap = (t - k.t) / 1.5;
-                    g.tab.roomfight_op[o].track = k.track * (1.0 - gap);
-                    g.tab.roomfight_op[o].ready_at = t + pick(g, crate::dice::Who::Op(o), sk.shift) * gap;
-                }
-            }
-            if !g.fight.called.has(b) {
-                g.fight.called.add(b);
-                let rel = v3::wrap_angle(v3::yaw_to(cp, bp) - g.ch[c].body_yaw);
-                room_fight_speak(g, o, if rel > 0.5 { "contact left." } else if rel < -0.5 { "contact right." } else { "contact front." }, Some(0.4));
-            }
-            let text = alloc::format!("eyes on {}", g.gd[b].callsign);
-            room_fight_note(g, Some(gd), &text);
+    best
+}
+
+/// WHO HIS MUZZLE IS ON, changed: how long before it is on the new man, and what he says of it
+fn muzzle_to(g: &mut Game, o: RoomfightOpId, best: Option<GuardId>, sk: &FightSkill) {
+    let gd = g.tab.roomfight_op[o].gd;
+    let c = g.gd[gd].ch;
+    if let Some(b) = best {
+        let cp = g.ch[c].pos;
+        let bp = g.ch[g.gd[b].ch].pos;
+        let off = m::abs(v3::wrap_angle(v3::yaw_to(cp, bp) - g.ch[c].aim_yaw));
+        let t = g.time;
+        let beat = if g.tab.roomfight_op[o].tgt.is_some() || t - g.tab.roomfight_op[o].lost_at < 1.5 {
+            pick(g, crate::dice::Who::Op(o), sk.shift)
+        } else if off > sk.sector_deg * crate::v3::DEG && !g.tab.roomfight_op[o].turn.map_or(false, |u| u.to == b && t >= u.at) {
+            let a = pick(g, crate::dice::Who::Op(o), sk.react);
+            a + pick(g, crate::dice::Who::Op(o), sk.surprise)
         } else {
-            let was = g.tab.roomfight_op[o].tgt;
-            let fell = was.map_or(false, |t| g.gd[t].state == crate::game::GuardState::Dead);
-            if let (Some(t), true) = (was, fell) {
-                let mine = g.gd[t].killer_id == g.ch[c].id;
-                let text: &str = if g.gd[t].wound.is_some() {
-                    if mine { crate::words::wg(g, &"he's hit — he's down and out of the fight.", &"he's hit — down, gun's out of it.") } else { "he's down, breathing." }
-                } else if mine { "tango down." } else { "he's down." };
-                room_fight_speak(g, o, text, Some(0.6));
+            pick(g, crate::dice::Who::Op(o), sk.react) * sk.ready
+        };
+        g.tab.roomfight_op[o].ready_at = t + beat;
+        g.tab.roomfight_op[o].track = 0.0;
+        g.tab.roomfight_op[o].n = 0.0;
+        g.tab.roomfight_op[o].next = 0.0;
+        g.tab.roomfight_op[o].fell = Some(false);
+        let raised = match g.gd[gd].script.as_ref() { Some(s) => s.over.is_some() || s.upper.unwrap_or(crate::character::UpperMode::Aim) == crate::character::UpperMode::Aim, None => false };
+        g.tab.roomfight_op[o].pre = raised && off < g.k.roomfight.preaim_deg * crate::v3::DEG; // on the line his gun was already held on
+        if let (None, Some(k)) = (g.tab.roomfight_op[o].tgt, g.tab.roomfight_op[o].kept) {
+            if k.h == b && t - k.t < 1.5 { // the man he was on a moment ago: neither his track nor the beat starts from nothing
+                let gap = (t - k.t) / 1.5;
+                g.tab.roomfight_op[o].track = k.track * (1.0 - gap);
+                g.tab.roomfight_op[o].ready_at = t + pick(g, crate::dice::Who::Op(o), sk.shift) * gap;
             }
-            g.tab.roomfight_op[o].fell = Some(fell);
-            g.tab.roomfight_op[o].lost_at = g.time;
-            g.tab.roomfight_op[o].kept = match was { Some(t) if !fell => Some(OpKept { h: t, track: g.tab.roomfight_op[o].track, t: g.time }), _ => None };
         }
-        g.tab.roomfight_op[o].tgt = best;
-        g.tab.roomfight_op[o].line_t = 0.0;
-        g.tab.roomfight_op[o].block_t = 0.0;
+        if !g.fight.called.has(b) {
+            g.fight.called.add(b);
+            let rel = v3::wrap_angle(v3::yaw_to(cp, bp) - g.ch[c].body_yaw);
+            room_fight_speak(g, o, if rel > 0.5 { "contact left." } else if rel < -0.5 { "contact right." } else { "contact front." }, Some(0.4));
+        }
+        let text = alloc::format!("eyes on {}", g.gd[b].callsign);
+        room_fight_note(g, Some(gd), &text);
+    } else {
+        let was = g.tab.roomfight_op[o].tgt;
+        let fell = was.map_or(false, |t| g.gd[t].state == crate::game::GuardState::Dead);
+        if let (Some(t), true) = (was, fell) {
+            let mine = g.gd[t].killer_id == g.ch[c].id;
+            let text: &str = if g.gd[t].wound.is_some() {
+                if mine { crate::words::wg(g, &"he's hit — he's down and out of the fight.", &"he's hit — down, gun's out of it.") } else { "he's down, breathing." }
+            } else if mine { "tango down." } else { "he's down." };
+            room_fight_speak(g, o, text, Some(0.6));
+        }
+        g.tab.roomfight_op[o].fell = Some(fell);
+        g.tab.roomfight_op[o].lost_at = g.time;
+        g.tab.roomfight_op[o].kept = match was { Some(t) if !fell => Some(OpKept { h: t, track: g.tab.roomfight_op[o].track, t: g.time }), _ => None };
     }
-    // ---- a step of this module's handed back: re-ordered under it, the new order stands; else, the reason gone, the order's own legs again
+    g.tab.roomfight_op[o].tgt = best;
+    g.tab.roomfight_op[o].line_t = 0.0;
+    g.tab.roomfight_op[o].block_t = 0.0;
+}
+
+/// a step of this module's handed back: re-ordered under it, the new order stands; else, the reason gone, the order's own legs again
+fn own_step_back(g: &mut Game, o: RoomfightOpId, since_hot: f64) {
+    let gd = g.tab.roomfight_op[o].gd;
     if let Some(st) = g.tab.roomfight_op[o].step {
         let goal = g.gd[gd].script.as_ref().and_then(|s| s.goal);
         if goal != Some(st.mine) {
@@ -260,33 +301,41 @@ pub(super) fn tick_op_in_view(g: &mut Game, o: RoomfightOpId, dt: f64) {
             if gone { room_fight_hand_back(g, o); }
         }
     }
-    if g.tab.roomfight_op[o].tgt.is_none() {
-        // nobody in his sight: a round at his side, or the man a mate has just called, brings his muzzle round to look; never a round at a noise
-        if !blind { room_fight_cue(g, o); }
-        let look = match g.tab.roomfight_op[o].turn { Some(u) if g.time >= u.at && g.gd[u.to].state != crate::game::GuardState::Dead => Some(u), _ => None };
-        if let Some(u) = look {
-            let tc = chest_of(g, g.gd[u.to].ch);
-            let to = match u.pt {
-                Some(pt) => { let e = eye_of(g, c); if crate::guards::eye_blocked(g, gd, e, tc) { pt } else { tc } }
-                None => tc,
-            };
-            room_fight_sam_in_line(g, o, to);
-            room_fight_point(g, o, to, dt, speed);
-        } else if !blind && crate::coverfire::cover_op(g, o, dt, speed, &mut |g: &mut Game, to: V3| room_fight_point(g, o, to, dt, speed)) {
-            // a man he knows is behind something breakable: his rounds go into it
-        } else if over_is_mine(g, gd) {
-            if g.time - g.tab.roomfight_op[o].lost_at > 0.5 || (g.tab.roomfight_op[o].fell == Some(true) && crate::doortools::door_tools_owes_corner(g, &crate::seats::here(g), gd)) {
-                room_fight_restore(g, o);
-            } else if flat(g.ch[c].pos, g.tab.roomfight_op[o].aim) < 2.5 { // the half second his gun stays where the man was: a BEARING
-                let (p, yaw) = (g.ch[c].pos, g.ch[c].aim_yaw);
-                g.tab.roomfight_op[o].aim[0] = p[0] + m::sin(yaw) * 2.5;
-                g.tab.roomfight_op[o].aim[2] = p[2] + m::cos(yaw) * 2.5;
-                over_follow(g, o);
-            }
+}
+
+/// NOBODY IN HIS SIGHT: a round at his side, or the man a mate has just called, brings his muzzle round to look; never a round at a noise
+fn nobody_in_sight(g: &mut Game, o: RoomfightOpId, dt: f64, speed: f64, blind: bool) {
+    let gd = g.tab.roomfight_op[o].gd;
+    let c = g.gd[gd].ch;
+    if !blind { room_fight_cue(g, o); }
+    let look = match g.tab.roomfight_op[o].turn { Some(u) if g.time >= u.at && g.gd[u.to].state != crate::game::GuardState::Dead => Some(u), _ => None };
+    if let Some(u) = look {
+        let tc = chest_of(g, g.gd[u.to].ch);
+        let to = match u.pt {
+            Some(pt) => { let e = eye_of(g, c); if crate::guards::eye_blocked(g, gd, e, tc) { pt } else { tc } }
+            None => tc,
+        };
+        room_fight_sam_in_line(g, o, to);
+        room_fight_point(g, o, to, dt, speed);
+    } else if !blind && crate::coverfire::cover_op(g, o, dt, speed, &mut |g: &mut Game, to: V3| room_fight_point(g, o, to, dt, speed)) {
+        // a man he knows is behind something breakable: his rounds go into it
+    } else if over_is_mine(g, gd) {
+        if g.time - g.tab.roomfight_op[o].lost_at > 0.5 || (g.tab.roomfight_op[o].fell == Some(true) && crate::doortools::door_tools_owes_corner(g, &crate::seats::here(g), gd)) {
+            room_fight_restore(g, o);
+        } else if flat(g.ch[c].pos, g.tab.roomfight_op[o].aim) < 2.5 { // the half second his gun stays where the man was: a BEARING
+            let (p, yaw) = (g.ch[c].pos, g.ch[c].aim_yaw);
+            g.tab.roomfight_op[o].aim[0] = p[0] + m::sin(yaw) * 2.5;
+            g.tab.roomfight_op[o].aim[2] = p[2] + m::cos(yaw) * 2.5;
+            over_follow(g, o);
         }
-        room_fight_doorway(g, o, dt, speed);
-        return;
     }
+    room_fight_doorway(g, o, dt, speed);
+}
+
+/// HE HAS A MAN: his gun on him, what is in the way, and the round
+fn engage(g: &mut Game, o: RoomfightOpId, dt: f64, speed: f64, sk: &FightSkill) {
+    let gd = g.tab.roomfight_op[o].gd;
+    let c = g.gd[gd].ch;
     g.tab.roomfight_op[o].turn = None;
     let h = g.tab.roomfight_op[o].tgt.unwrap();
     let hc = g.gd[h].ch;
@@ -310,7 +359,15 @@ pub(super) fn tick_op_in_view(g: &mut Game, o: RoomfightOpId, dt: f64) {
         if let Some(f @ RoomFightFriendInLine::Guard(_)) = room_fight_friend_in_line(g, from, chest, gd, None) { crate::clearline::clear_line_blocked(g, gd, h, chest, clear_by(f)); }
     }
     room_fight_doorway(g, o, dt, speed);
-    // ---- the track (aim.ts's law, this side's K) and the pair
+    if let Some(to) = tracked(g, o, h, dt, speed, dist, brg, sk) { fires(g, o, h, to, dt, speed, dist, sk); }
+}
+
+/// THE TRACK (aim.ts's law, this side's K): whether a round may go now, and at what point of him
+fn tracked(g: &mut Game, o: RoomfightOpId, h: GuardId, dt: f64, speed: f64, dist: f64, brg: f64, sk: &FightSkill) -> Option<V3> {
+    let gd = g.tab.roomfight_op[o].gd;
+    let c = g.gd[gd].ch;
+    let hc = g.gd[h].ch;
+    let chest = chest_of(g, hc);
     let p = g.k.aim.guard;
     let facing_err = m::abs(v3::wrap_angle(brg - g.ch[c].aim_yaw));
     let on_man = g.time >= g.tab.roomfight_op[o].ready_at && facing_err < p.on_deg * crate::v3::DEG + m::atan2(0.35, m::max(dist, 0.3)) && v3::dist(g.tab.roomfight_op[o].aim, chest) < 0.3;
@@ -328,14 +385,14 @@ pub(super) fn tick_op_in_view(g: &mut Game, o: RoomfightOpId, dt: f64) {
             let waited = g.tab.roomfight_op[o].wall_t;
             if room_fight_side_step(g, o, chest, speed, Some(waited), Some("steps aside: his gun is in a wall")) { g.tab.roomfight_op[o].wall_t = 0.0; }
         }
-        return;
+        return None;
     }
     g.tab.roomfight_op[o].wall_t = 0.0;
     if !on { g.tab.roomfight_op[o].block_t = m::max(0.0, g.tab.roomfight_op[o].block_t - dt); } // off him, the count runs back down
-    if g.tab.roomfight_op[o].track < p.acquire_min - 1e-9 || g.time < g.tab.roomfight_op[o].next || g.time < g.tab.roomfight_op[o].reload_until || crate::gunslots::side_locked(g, gd) || !on { return; }
+    if g.tab.roomfight_op[o].track < p.acquire_min - 1e-9 || g.time < g.tab.roomfight_op[o].next || g.time < g.tab.roomfight_op[o].reload_until || crate::gunslots::side_locked(g, gd) || !on { return None; }
     if crate::silent::round_held(g, gd, h) { // the man has not noticed the team: the gun stays on him, no round goes
         room_fight_speak(g, o, "eyes on. holding.", Some(8.0));
-        return;
+        return None;
     }
     let mut to = chest;
     if !crate::guards::clear_shot(g, c, to) {
@@ -346,7 +403,7 @@ pub(super) fn tick_op_in_view(g: &mut Game, o: RoomfightOpId, dt: f64) {
             g.tab.roomfight_op[o].held_for_line += 1.0;
             g.tab.roomfight_op[o].block_t += dt;
             room_fight_walk_on(g, o);
-            return;
+            return None;
         }
     }
     g.tab.roomfight_op[o].block_t = 0.0;
@@ -357,8 +414,17 @@ pub(super) fn tick_op_in_view(g: &mut Game, o: RoomfightOpId, dt: f64) {
             let time = g.time;
             g.tab.roomfight_op[o].meters.get_mut(h).unwrap().glass_t = Some(time);
         }
-        return;
+        return None;
     }
+    Some(to)
+}
+
+/// THE ROUND: how wide it may go, who else it could find, and what follows it
+fn fires(g: &mut Game, o: RoomfightOpId, h: GuardId, to: V3, dt: f64, speed: f64, dist: f64, sk: &FightSkill) {
+    let gd = g.tab.roomfight_op[o].gd;
+    let c = g.gd[gd].ch;
+    let hc = g.gd[h].ch;
+    let p = g.k.aim.guard;
     let def = weapon_def_of(g, gd);
     let spread = def.ai_spread;
     let hands = (spread.base + m::max(0.0, dist - spread.range_from) * spread.range_k) * sk.spread_k;
