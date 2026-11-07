@@ -234,11 +234,12 @@ async function main() {
   // NO MODULE, NO GAME (sim/sim.ts): the simulation is the Rust module's and nothing else works it out, so a page that cannot run it stops here, before
   // anything is built. With no WebAssembly (a browser whose policy turns this site's JIT off) it is the card below; anything else is a fault of the build
   // THE RUST GAME IS THE PAGE'S GAME (host/rustgame.ts): its module is fetched and compiled here, before anything has asked for the simulation's, and handed to
-  // src/sim as the one instance, so `__ready` waits on it behind the boot card. `?rust=0` = the TypeScript game, for as long as that is still here (nothing of the
-  // module is loaded then). A page that is a game server's client or its door (`?net=`, `?join=`) or that plays a tape (`?playtape=`) is the TypeScript game's as
-  // well until those have been played on the Rust one: `?rust=1` asks it of them all the same
-  const rustWord = q.get('rust'), rustGame = rustWord === '1' || (rustWord !== '0' && ![NETPLAY, NET_JOIN, PLAYTAPE].some(k => q.has(k))) ? await import('./host/rustgame') : null;
-  if (rustGame) await rustGame.rustBoot();
+  // src/sim as the one instance, so `__ready` waits on it behind the boot card. There is no other game.
+  // (THE ONLY GAME. A co-op game hosted or joined and a tape played back each stepped the TypeScript tick, which is gone, and their own paths onto the Rust game are
+  // not here yet: those three addresses get a plain card before anything boots)
+  if ([NETPLAY, NET_JOIN, PLAYTAPE].some(k => q.has(k))) throw Object.assign(new Error('this address has no game on this build yet'), { name: 'NoGameHere' });
+  const rustGame = await import('./host/rustgame');
+  await rustGame.rustBoot();
   { const no = simWhyNot(); if (no) { console.info(simSay()); throw noWasm() ? new NoWasmError(no) : new Error(`the Rust simulation did not start: ${no}`); } }
   if (!kitViewOn && await cloudAdopt(q)) return;   // a browser handed another's id (`?player=`) takes it and its settings before a single key is read, then loads once more without the word (cloud/cloud.ts; no request at all on a build with no backend)
   keymap.KEYMAP.handWhen = () => HANDRING.on;   // (…and his own actions on the key that leaves spare, the whistle's row with no key: host/keymap.ts HAND, the rule game/handring.ts)
@@ -1839,5 +1840,5 @@ FATAL.tell = (r, card) => {
   try { setTimeout(once, 1500); void fetch('/qa/commit', { cache: 'no-store' }).then(x => x.ok ? x.text() : '').then(t => once(t.trim()), () => once()); } catch { once(); }
 };
 
-main().catch(e => { console.error(e); if (kitViewOn) kitViewFatal(); if (e instanceof NoWasmError) showFatal(NO_WASM_WORDS, { report: { message: e.message.slice(0, 400), stage: 'wasm' } }); else if ((e as Error)?.name === 'RustGameError') showFatal((e as Error).message, { report: { message: (e as Error).message.slice(0, 400), stage: 'rust game' } });   // (?rust=1: the Rust game's own failure, in its plain words: host/rustgame.ts)
+main().catch(e => { console.error(e); if (kitViewOn) kitViewFatal(); if ((e as Error)?.name === 'NoGameHere') showFatal("This link opens a co-op game or a replay, and this build can't play those yet. You can still play every mission on your own from the title."); else if (e instanceof NoWasmError) showFatal(NO_WASM_WORDS, { report: { message: e.message.slice(0, 400), stage: 'wasm' } }); else if ((e as Error)?.name === 'RustGameError') showFatal((e as Error).message, { report: { message: (e as Error).message.slice(0, 400), stage: 'rust game' } });   // (?rust=1: the Rust game's own failure, in its plain words: host/rustgame.ts)
   else showFatalError(e); readyReject(e); });

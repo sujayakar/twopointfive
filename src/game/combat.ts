@@ -8,12 +8,12 @@ import { Vec3, v3, clamp, lerp, quat } from '../math/vec';
 import { lookConfig } from '../render/frame';
 import { wandDrop } from './wand';
 import { DOORBLAST } from './doorblast';
-import { Character, THROW_BY, THROW_RELEASE } from './character';
+import { Character } from './character';
 import { CanisterParams } from '../smoke/types';
 import { Box, BoxFlag, makeBox, rayBox, MKEY } from '../scene/boxes';
 import { Item } from './throwables';
 import * as fx from './effects';
-import { rigBoxes, holsterBoxes, gogglesBoxes, wristTieBoxes, bigBoxes, bigClearOf, hungBoxes, longHold, torchHold, freeCanBoxes, packSideBind, RIG } from './rigProps';
+import { rigBoxes, holsterBoxes, gogglesBoxes, wristTieBoxes, bigBoxes, hungBoxes, longHold, torchHold, freeCanBoxes, packSideBind, RIG } from './rigProps';
 import { sideLocal } from './packside';   // (a leaf)
 import { sideHung } from './gunslots';   // (called inside handProps only)
 import { voiceOf, flameOf } from './gunlook';   // (called inside fireWeapon only)
@@ -24,12 +24,12 @@ import { chronShot, chronLightShot, chronDown, chronHit } from './chronicle';
 import { plainShort } from './gear';   // (a leaf: a weapon's name as a chronicle row writes it — the same on and off the 2010s kit)
 import { witnessKill, hostageHitBark, inHand, rigOf } from './guards';
 import { runnerBare } from './runner';
-import { handworkOn, swapHeld, beltTorch, workProps } from './handwork';
+import { handworkOn, swapHeld, beltTorch } from './handwork';
 import { tacticsManDown } from './tactics';
 import { moraleManDown } from './morale';
 import { netQuietFall } from './netquiet';
-import { CLOSE, closeBare } from './close';
-import { KITANIM, kitShow, kitGunUp, kitSlingFront, kitSlingRest } from './kitanim';
+import './close';
+import './kitanim';
 import { Firearm, WEAPONS, WeaponDef, DropKind } from './weapons';
 import { noteRound } from './suppression';
 import { AIM_DEBUG } from './aim';
@@ -46,7 +46,7 @@ import { isHostile, foeChar, teamOfId, type Team } from './teams';
 import { w } from './words';   // (a leaf: the dialogue pass's one switch)
 import { fightLive, drilledK } from './roomfight';
 import { nvgWorn, nvgDown } from './nvg';
-import { kitPistol, kitIndex, kitYouNvg } from './kit';
+import { kitPistol, kitIndex } from './kit';
 import { INHAND, IN_PISTOL } from './inhand';
 import { sideOfTeam } from './charLook';
 import { laserBand, laserOn, irViewer, irNote, irViewAs, paintsOwn, samLaserBoxes, IR_TINT } from './irlaser';
@@ -59,18 +59,18 @@ import { lampGlass, deadLamp, CARLAMPS_STATS } from './carlamps';   // a vehicle
 import { civilianDown, civilianBodies, civiliansShown } from './civilians';
 import { roundDoes, woundDown } from './wounds';
 import { fireShell, pelletDrops, pelletEnd, type Shell } from './shotgun';
-import { fragFuse, fragInFist, FRAG } from './frag';
+import { fragInFist, FRAG } from './frag';
 import { GUNHAND } from './gunhand';
 import { SAMSTUN, staggerPlayer, dazzlePlayer } from './samstun';
 import { recapRound } from './deathrecap';
 import { wallReport } from './blastFeel';
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import { ffLive, ffBody, ffSide, ffUnpressed, ffNote, ffPast } from './friendlyfire';   // (called inside fireWeapon only)
-import { disarmHand } from './disarm';   // (called inside handProps only)
 import { holdFireShot } from './holdfire';   // (called inside fireWeapon only)
 import { sneakSuit } from './cast';   // (called inside handProps only: the sneaking suit's rifle is drawn black)
 import { LIGHT_IN } from '../sim/lightshome';
 import { word } from './belief';
+import { RUST_PASS, RUST_SURFACE, crossToRust } from './crossing';
 
 // ------------------------------------------------------------ shooting
 /** Per-round extras for fireWeapon. Everything a round IS comes from the weapon's row (weapons.ts); these are the shooter's circumstances. */
@@ -93,7 +93,7 @@ export interface FireOpts {
 /** The Firearm this character carries: the gun in Sam's hand (the Five-seveN drawn, or the FN2000 off the sling — else his pistol, which is what every scripted
  *  round of his has always been), or the weapon of the guard whose body it is. (A Character that is neither — nothing in the game, a stray in a harness — fires
  *  the 9 mm service pistol, which is all `isPlayer false` ever meant.) */
-export function firearmOf(g: Game, shooter: Character, isPlayer: boolean): Firearm {
+export function firearmOf(g: Game, shooter: Character, isPlayer: boolean): Firearm { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('firearmOf', undefined, [g, shooter, isPlayer]); if (__r !== RUST_PASS) return __r as any; } }
   if (isPlayer) return g.player.gunInHand() ?? g.player.pistol;
   return g.guards.find(x => x.char === shooter)?.weapon ?? (strayGun ??= new Firearm(WEAPONS.guard9mm));
 }
@@ -118,7 +118,7 @@ function aiWide(g: Game, sg: Guard | null, shooter: Character, def: WeaponDef): 
   return S.base + Math.min(S.moveCap, tv * S.moveK) + Math.max(0, range - S.rangeFrom) * S.rangeK;
 }
 /** (the round's sparks, chips and dust are its shooter's doing — fogofwar.ts FOG.ours: a teammate's are drawn under the fog) */
-export function fireWeapon(g: Game, shooter: Character, target: Vec3, isPlayer: boolean, o: FireOpts = {}) { g = viewOfBody(g, shooter); const was = g.fogOfWar.begin(shooter.id); try { return fireWeaponRaw(g, shooter, target, isPlayer, o); } finally { barsUnmeet(g); g.fogOfWar.done(was); } }   // (fogofwar.ts FOG.ours: what a round throws up is its shooter's doing)
+export function fireWeapon(g: Game, shooter: Character, target: Vec3, isPlayer: boolean, o: FireOpts = {}) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('fireWeapon', undefined, [g, shooter, target, isPlayer, o]); if (__r !== RUST_PASS) return __r as any; } } g = viewOfBody(g, shooter); const was = g.fogOfWar.begin(shooter.id); try { return fireWeaponRaw(g, shooter, target, isPlayer, o); } finally { barsUnmeet(g); g.fogOfWar.done(was); } }   // (fogofwar.ts FOG.ours: what a round throws up is its shooter's doing)
 function fireWeaponRaw(g: Game, shooter: Character, target: Vec3, isPlayer: boolean, o: FireOpts) {
   const sg = isPlayer ? null : g.guards.find(x => x.char === shooter) ?? null;   // the guard whose round this is (null: Sam, or a stray in a harness)
   if (sg?.workStow) stowFired(sg);   // (workstow.ts: a round out of a gun let go of for a two-handed job — it is in his hands at once; the fire site's own gate keeps this from happening)
@@ -344,12 +344,12 @@ function wallAcrossArm(g: Game, c: Character, def: WeaponDef) {
 /** The pistol itself poked out through a panel — the gun shoulder and the muzzle on opposite sides of a static or of a leaf standing (as good as) shut: a man
  *  pressed to a door has the reach to put his muzzle out of its far face, and a bore that starts beyond the wood sees nothing of it. fireWeapon puts that round
  *  into the panel at the muzzle; the guard AI (guards.ts) will not fire it, and steps clear if it lasts. An open leaf's free edge does not count (solidBetween). */
-export function armThrough(g: Game, c: Character): boolean { return solidBetween(g, c.bones.upperArmR ?? v3.add(c.pos, [0, 1.4, 0]), c.muzzle); }
+export function armThrough(g: Game, c: Character): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('armThrough', undefined, [g, c]); if (__r !== RUST_PASS) return __r as any; } } return solidBetween(g, c.bones.upperArmR ?? v3.add(c.pos, [0, 1.4, 0]), c.muzzle); }
 
 /** A panel between `from` and `to` — the things that keep two pressed men apart: a static (partition, jamb), or a leaf standing shut or as good as (within 0.3 rad
  *  of its frame: the SoundSeal bit Door.place keeps — latched or not, a leaf pulled to and resting on somebody is a full panel). A leaf standing open does not
  *  count: at its free edge the two are as good as touching, and it yields to them. (Short segments only: an arm, or two chests within a metre or so.) */
-export function solidBetween(g: Game, from: Vec3, to: Vec3): boolean {
+export function solidBetween(g: Game, from: Vec3, to: Vec3): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('solidBetween', undefined, [g, from, to]); if (__r !== RUST_PASS) return __r as any; } }
   if (g.col.segmentBlockedDynamic(from, to, BoxFlag.SoundSeal)) return true;
   const d = v3.sub(to, from); const L = v3.len(d); if (L < 1e-3) return false; const rd = v3.scale(d, 1 / L);
   const n = g.col.gather(Math.min(from[0], to[0]) - 0.1, Math.min(from[2], to[2]) - 0.1, Math.max(from[0], to[0]) + 0.1, Math.max(from[2], to[2]) + 0.1, Math.min(from[1], to[1]) - 0.1, Math.max(from[1], to[1]) + 0.1, solidScratch);
@@ -385,7 +385,7 @@ export function bodyHit(c: Character, ro: Vec3, rd: Vec3, tmax: number, contact:
  *  TODO (docs/internal/grab-interrogate-design.md §6, item 9b): a breathing man could come round after a few minutes — there is no way back from a ragdoll today
  *  (Character.ragdollize is one-way, no get-up clip), so nobody wakes; and a body on the floor cannot be shot (Character.rayHit skips the fallen), so a knockout
  *  cannot be finished off by a round either (a burst can: frag.ts FRAG.downKill). */
-export function killGuard(g: Game, gd: Guard, dir: Vec3, quiet = false, how: DownKind = quiet ? 'struck' : 'shot', by: DownBy = 'player', line?: string, zone?: 'side' | 'leg') {
+export function killGuard(g: Game, gd: Guard, dir: Vec3, quiet = false, how: DownKind = quiet ? 'struck' : 'shot', by: DownBy = 'player', line?: string, zone?: 'side' | 'leg') { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('killGuard', undefined, [g, gd, dir, quiet, how, by, line, zone]); if (__r !== RUST_PASS) return __r as any; } }
   // (below: state checks come first everywhere, but a corpse should not carry choreography around)
   if (gd.civ) { civilianDown(g, gd, dir, quiet, how, by, line); return; }   // a CIVILIAN (the cleaner, the late worker — every path that puts a 'Guard' down comes through here: the round, the cross, the choke, the whip, the ring): her own record, her own price on the card, nothing in her hands to fall (civilians.ts)
   if (gd.bubble && g.time - gd.bubble.t < 0.8 && !w(g.messages.some(m => m.t === gd.bubble!.t && m.text.endsWith(gd.bubble!.text)), false)) g.msg(w(gd.unit ? `${gd.callsign}: ` : 'guard: ', 'guard: ') + gd.bubble.text);   // he did not get to finish saying it on screen (a unit's cut-off line goes under his own name, as guards.ts say files it: a teammate's 'man down.' is not a guard's) — and a line say already put in the log (out of sight, or over the net: its row carries the bubble's own stamp) is not put there a second time
@@ -415,7 +415,7 @@ export function killGuard(g: Game, gd: Guard, dir: Vec3, quiet = false, how: Dow
  *  dropped torch — guards.ts attachFlashlight rides gd.dropped whatever it is); `suppressed` = drawn with its can (fill 1: Sam's Five-seveN). Once down it is set
  *  dressing: nothing on the floor is picked up — a guard's magazines do not fit the Five-seveN, so a dead man's gun is no ammunition (player.ts buildInteractables
  *  offers no row for it). */
-export function dropFromHand(g: Game, c: Character, kind: 'torch' | DropKind, along: Vec3, dir: Vec3, suppressed = false, quiet = false, from?: Vec3): Item {
+export function dropFromHand(g: Game, c: Character, kind: 'torch' | DropKind, along: Vec3, dir: Vec3, suppressed = false, quiet = false, from?: Vec3): Item { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('dropFromHand', undefined, [g, c, kind, along, dir, suppressed, quiet, from]); if (__r !== RUST_PASS) return __r as any; } }
   const h = from ?? c.bones.handR ?? v3.add(c.pos, [0, 1.0, 0]);   // (`from`: a thing that was not in his hand — runner.ts, the sidearm off his thigh)
   const v: Vec3 = [c.vel[0] * 0.6 + dir[0] * 1.1 + (simRandom() - 0.5) * 0.6, 0.9 + simRandom() * 0.6, c.vel[2] * 0.6 + dir[2] * 1.1 + (simRandom() - 0.5) * 0.6];
   const it = g.items.spawn(kind, [h[0], Math.max(0.25, h[1]), h[2]], v, { who: c.id, fill: suppressed ? 1 : 0, heading: v3.yawOf(along), yaw: v3.yawOf(along), life: kind === 'torch' ? 90 : GUN_ITEM_LIFE });
@@ -426,7 +426,7 @@ export function dropFromHand(g: Game, c: Character, kind: 'torch' | DropKind, al
 /** seconds a dropped gun lies there, sidearm or rifle (a torch goes sooner: 90) */
 const GUN_ITEM_LIFE = 240;
 
-export function hitPlayer(g: Game, fromDir: Vec3) {
+export function hitPlayer(g: Game, fromDir: Vec3) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('hitPlayer', undefined, [g, fromDir]); if (__r !== RUST_PASS) return __r as any; } }
   const pl = g.player; if (pl.down) return;
   pl.hitsLeft = Math.max(0, pl.hitsLeft - 1);
   if (pl.hitsLeft === 0) {
@@ -444,61 +444,11 @@ export function hitPlayer(g: Game, fromDir: Vec3) {
 
 /** Held / worn props as small oriented boxes (traced; lit lenses raster-only): the Five-seveN (+ can + rail light) in the player's hand and the trifocal goggles on
  *  their head, pistol or torch with a glowing lens for guards. All placement numbers live in rigProps.RIG (tune them in viewer.html). */
-export function handProps(g: Game, out: Box[]) {
-  const n0 = out.length;
-  handPropsRaw(g, out);
-  // MOTION IDENTITY (scene/boxes.ts MKEY.rig): every rig box carries its man's id in `owner`; key = owner + the box's ordinal among HIS boxes this frame — stable for as long as his kit state
-  // holds (a holster / draw reshuffles his parts for one frame, which the old index rule got wrong for everybody after him in the list every such frame)
-  rigKeys(out, n0);   // (owner 0 = the weapon lasers' beam + dot, shared by every hunting man and re-cut every frame: left on the index rule)
-}
+export function handProps(g: Game, out: Box[]): void { return crossToRust('handProps', undefined, [g, out]) as any; }
 const handOrd = new Uint16Array(256);
 function rigKeys(out: Box[], n0: number) {
   const ord = handOrd; ord.fill(0);
   for (let k = n0; k < out.length; k++) { const b = out[k]; const o = b.owner & 0xff; if (o === 0) continue; b.mkey = MKEY.rig + (o << 8) + Math.min(255, ord[o]++); }
-}
-function handPropsRaw(g: Game, out: Box[]) {
-  eachSeat(g, v => playerProps(v, out));   // (each player's own kit, over his seat's view — seats.ts)
-  for (const gd of g.guards) {
-    if (g.fogOfWar.hidden(gd)) { gd.char.inHand = null; continue; }   // fog of war (fogofwar.ts): a man nobody on the team sees is not drawn — nor what he carries (never true while it is off)
-    guardProps(g, gd, out);
-  }
-  for (const cv of civiliansShown(g)) { const an = cv.char.anim; if (an.bound === 1 && an.mv2Shown.bound > 0.6 && cv.state !== 'dead' && !g.fogOfWar.hidden(cv)) wristTieBoxes(cv.char, out); }   // a hostage's wrists are tied (rigProps.ts): the strap, while the binding shows
-}
-/** what the PLAYER carries and wears, as boxes (handPropsRaw's first rows) */
-function playerProps(g: Game, out: Box[]) {
-  const pl = g.player, mine0 = out.length;
-  const busy = pl.char.anim.hideHeldItem;   // hands on the lock tools (anim.lockpick) or both round a held man (the arm variant): empty hand, the Five-seveN on the thigh, no can, no lit lens — whatever the kit says. Holding a man with the pistol drawn (the gun variant) it stays in the hand — up beside his head, laid along the hold layer's gun hand like any carry — and its rail light with it if L had it on (updateHold poses the light off the same hand); drawn mid-hold (E) it comes into the fist as the animator's hand-over passes half way (holdGunSide), the fist then behind the man's shoulder; holstered mid-hold it is on the thigh from the key's frame like any E
-  // the can in the hand: during a throw it is the one being thrown until the release frame and nothing for the rest of the swing (whatever the
-  // count says — the count drops at release, which used to pop the next can into the follow-through and empty the hand while winding up the last one)
-  // Which can, if any: the ONE rule is Player.canisterSel — a canister slot SELECTED (and, below, drawn: not holstered / busy / down …). It used to read 'any slot but
-  // the pistol's', which was every canister slot in the three-slot kit and became 'the rifle too' the day the kit grew a fourth: the smoke can rode in the fist
-  // beside the FN2000 (playtest 08-08). player.ts throws by the same accessor, so what the fist shows is what a click would throw.
-  const kindSel = pl.canisterSel; const an = pl.char.anim; const pistolUpNow = pl.pistolUp && !busy;   // (close.ts: the knife of the close-in tell is in the right fist only when no pistol is)
-  const heldNow: ThrowKind | null = pl.down || busy || !kindSel || pl.holstered || pl.dragging || pl.sprinting ? null
-    : an.inThrow ? (an.throwing ? (pl.pendingThrow ? pl.pendingThrow.kind : THROW_BY.on && an.throwTime >= THROW_RELEASE ? null : kindSel) : null)   // (THROW_BY: the can is out of the fist the frame it is in the air — `throwing` runs three frames past the release, and the fist used to show the next can under the one just thrown; a wind-up called off before that keeps its can, as ever)
-    : g.throwCount(kindSel) > 0 ? kindSel : null;
-  an.noKnife = closeBare(g);   // (close.ts CLOSE.noKnife: nothing of his reaches for a blade)
-  const knifeNow = !an.noKnife && ((!!pl.holding && pl.holding.variant === 'arm' && !pl.down && !an.holdGunSide && !disarmHand(pl.holding)) || (an.knifeShown && !pl.down && !pl.holding && !pistolUpNow));   // a man held with the hands empty: the knife is out, in the fist at his throat (character.ts holdLayer poses it) — for exactly as long as the hold lasts, sheathed again the frame it ends however it ends; swapped mid-hold (E) the old tool leaves the fist on the key's frame (the variant / Player.holstered change there) and the other arrives half way through the animator's hand-over, the fist then back behind the man's shoulder (holdGunSide) — never the two in one fist
-  // the FN2000: in both hands (selected and off the sling, hands not busy on a lock or a man, not hauling a body — the animator's long gun then, player.ts), else slung across
-  // his back for as long as the kit has it; gone from a downed man's hands if that is where the round found it (hitPlayer dropped the item), still on his back if it was there.
-  // One place a frame.
-  const rifleNow: 'hand' | 'slung' | null = !pl.hasRifle ? null : pl.down ? (pl.rifleGone ? null : 'slung') : pl.rifleUp && !busy ? 'hand' : 'slung';
-  const pistolNow = pl.pistolUp && !pl.down && !busy;   // (rigProps' `slot`: 1 = the Five-seveN in the right hand, anything else = not — it never was the kit's slot number, only ever compared with 1)
-  // KIT ANIMATIONS (kitanim.ts): while his hand is carrying a thing to where it lives or bringing one out, what the fist shows is the HAND's word, not the slot's
-  const show = { pistolInHand: pistolNow, rifle: rifleNow, held: heldNow, knife: knifeNow }, kit = KITANIM.on ? kitShow(g, show) : undefined;
-  const { pistolInHand, rifle, held, knife } = show, lensUp = !KITANIM.on || kitGunUp(g);   // (kitanim.ts: a gun on its way to or from where it lives shows no lit lens — its light is off: player.ts poseGunLight)
-  const fit = KITANIM.on && KITANIM.grips && !g.touring; an.gripCan = fit && held !== null;   // (kitanim.ts: held things drawn IN the hand — rigProps GRIPFIT)
-  const bigS = bigCarried(g, pl.char);   // (bigkit.ts: the hammer or the breaching shotgun in his big slot — on his back, or in his hands for its beat (the animator's bigK; his own gun is then away through `busy` above); null with the switch off: nothing below is added)
-  const bigOver = rifle === 'slung' && !(KITANIM.on && kitSlingFront(g));   // (his rifle lies ACROSS HIS BACK under it this frame — not in his hands, not on its sling in front: only then does the tool ride clear of anything)
-  an.bigSide = bigS === 'hammer' ? hammerSide(pl.char) : null;   // (packside.ts: he wears a pack — the hammer stands at its side, and the DRAWN hand is carried there: Character.packSidePass)
-  an.bigClear = bigS === 'hammer' && bigOver ? bigClearOf(pl.char, 'hammer') : 0;   // (the hand that goes for the handle reaches where the drawer has it — character.ts bigLayer)
-  const inHand = INHAND.on && !pl.down;   // (inhand.ts: his pistol is laid out in the hand's own frame, and the figure is told what its right hand holds — a frame behind, as gripCan is: its look-only pass turns that hand onto the aim line; a rifle drawn without kit handling's fit has the hand moved onto its grip instead)
-  pl.char.inHand = !inHand ? null : pistolInHand ? IN_PISTOL : rifle === 'hand' && !fit && INHAND.long ? longHold('sc20k') : null;
-  an.grip[1] = held !== null;   // the fist round a can stays a fist (character.ts HAND: the hand pass would otherwise let an 'empty' right hand hang open through the can) — fingers only, read by nothing; by what the fist SHOWS
-  rigBoxes(pl.char, { goggles: kitYouNvg(pl) /* (kittree.ts: a card that left them at home — nothing is worn) */, nv: pl.nv, slot: pistolInHand ? 1 : 0, lightOn: pl.pistol.lightOn && pistolInHand && !pl.sprinting && lensUp, isGuard: false, holster: !(pl.down && pl.pistolUp), held, knife, rifle, rifleBlack: sneakSuit(g, pl.char), rifleLight: rifle === 'hand' && pl.rifle.lightOn && !pl.sprinting && lensUp, ...(CLOSE.on && !CLOSE.noKnife ? { sheath: true } : null), ...(kit ? { kit } : null), ...(fit ? { fit } : null), ...(inHand ? { inHand } : null), ...(KITANIM.on && rifle === 'slung' && kitSlingFront(g) ? { slingFront: true, slingRest: kitSlingRest(g) } : null), ...(pl.char.anim.nvShown !== undefined ? { nvK: pl.char.anim.nvShown } : null), ...(bigS ? { big: bigS, bigK: pl.down ? 0 : an.bigK, bigClear: bigOver } : null) }, out);   // (close.ts: the knife he reaches for is drawn in its sheath on his chest only with the close-in switch on)   // holstered (E): empty hands, the pistol drawn on the thigh   // canister up (or the rifle in the hands): gun on the thigh, can in the fist only if a can is what is selected; down: whatever was in the hand has left it (dropFromHand) — a holstered gun stays holstered, the goggles stay on   // (the light itself is forced off while down / sprinting: no blazing lens then)   // (a downed player's light is forced off in updatePlayer: no lit lens on the body either)
-  workProps(pl.char, out);   // (handwork.ts: the objective in his hands as it comes out of its rack)
-  samLaserBoxes(g, out);   // (irlaser.ts: the IR laser on the gun in his hands, his goggles down, a scenario's team on the floor — nothing otherwise)
-  if (g.rails?.skyOn) out.length = mine0;   // (rails.ts, the seat with nobody on the floor: the parked player is not drawn — game.ts drawMen — and neither is his kit)
 }
 /** PACK SIDE (packside.ts): where the hammer's grip point and handle are at the side of the pack this man wears, in his chest joint's own space — the drawer's
  *  place (rigProps.ts packSideBind) said to the hand that is DRAWN going for it (Character.packSidePass). null: no pack, or the switch off */
@@ -554,7 +504,7 @@ function guardKit(g: Game, gd: Guard, out: Box[], hang: boolean) {
 }
 /** …and what the men the fog of war leaves OUT carry — for a viewer's picture without the fog (Game.fogLift: a replay played in the engine). Never part of a
  *  step: the frame's own list (handProps) is what every ray and rule reads. */
-export function hiddenProps(g: Game, out: Box[]) {
+export function hiddenProps(g: Game, out: Box[]) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('hiddenProps', undefined, [g, out]); if (__r !== RUST_PASS) return __r as any; } }
   const n0 = out.length, fog = g.fogOfWar;
   for (const gd of g.guards) if (fog.hidden(gd)) guardProps(g, gd, out);
   for (const cv of civiliansShown(g)) { const an = cv.char.anim; if (an.bound === 1 && an.mv2Shown.bound > 0.6 && cv.state !== 'dead' && fog.hidden(cv)) wristTieBoxes(cv.char, out); }
@@ -582,7 +532,7 @@ export const LASER = { enemy: false };
  *  emissive geometry flagged NoShadow, so no ray (light, sight, bullet, cursor) ever sees it; in the haze it reads exactly like a laser in smoke, and it
  *  tells you precisely where he is looking. An ENEMY's (a man hostile to Sam) is drawn only under LASER.enemy. A TEAMMATE's is infrared while his goggles are
  *  down (irlaser.ts laserBand): the same line, drawn only while the picture is the tube's. */
-export function laserBoxes(g: Game, gd: Guard, out: Box[]) {
+export function laserBoxes(g: Game, gd: Guard, out: Box[]) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('laserBoxes', undefined, [g, gd, out]); if (__r !== RUST_PASS) return __r as any; } }
   if (!LASER.enemy && isHostile(gd.team, 'player')) return;
   const ir = laserBand(g, gd) === 'ir'; if (ir && !irViewer(g)) return;   // (beamBoxes holds the rule; asked here first to spare the ray)   // (irlaser.ts: 'visible' for everybody with IR.on off, and always for a man with no goggles)
   const R = laserReach(g, gd.char, gd, ir); if (!R) return; const { from, dir, L, dot } = R;
@@ -600,7 +550,7 @@ export function laserBoxes(g: Game, gd: Guard, out: Box[]) {
  *  shows — whether it ends ON something (the dot), and the man it ends on (`on`; null: a wall, a prop, nothing). `self` = the guard carrying it (null: Sam's own, irlaser.ts). `civ`: a standing civilian — a hostage —
  *  stops it too (the infrared lasers ask: they lie along every shouldered gun in the rescues; the red one never did and is left as it was). null = no beam
  *  (no bore, or the muzzle is against what it meets). */
-export function laserReach(g: Game, c: Character, self: Guard | null, civ = false): { from: Vec3; dir: Vec3; L: number; dot: boolean; on: Character | null } | null {
+export function laserReach(g: Game, c: Character, self: Guard | null, civ = false): { from: Vec3; dir: Vec3; L: number; dot: boolean; on: Character | null } | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('laserReach', undefined, [g, c, self, civ]); if (__r !== RUST_PASS) return __r as any; } }
   const from = v3.mad(c.muzzle, c.gunDir, 0.02); const dir = c.gunDir;
   if (!isFinite(dir[0]) || v3.len(dir) < 0.5) return null;
   let L = 30, on: Character | null = null; const wh = g.engine.world.raycast(from, dir, L, BoxFlag.NoShadow | BoxFlag.Glass, c.id & 0xff); if (wh) L = wh.t;   // (glass: the dot lands on the man behind the pane, as the light does) · ceilings (NoPrimary) DO stop it — a flailing dazzled man must not paint a 30 m line through the roof
@@ -627,41 +577,10 @@ export function beamBoxes(g: Game, from: Vec3, dir: Vec3, L: number, out: Box[],
   else if (air) thinAir(line, null);   // (air: a WEAPON laser — the renderer may draw the pair as light in the air, settings.beamAir; the boxes are the same either way)   // the dot: a small bright bead where the beam lands
 }
 
-export function updateItems(g: Game, dt: number) {
-  g.items.update(dt, g);
-  for (const it of g.items.items) {
-    if (it.kind === 'smoke') {
-      if (!it.fired) { it.fuse -= dt; if (it.fuse <= 0) { it.fired = true; startCanister(g, it); } }
-      else if (it.emitT > 0) { it.emitT -= dt; }
-    } else if (it.kind === 'flash' && !it.fired) {
-      // stun canister: the fuse runs from first contact (it goes off where it lands, ON a surface — the whole shape depends on that). maxAir is a
-      // cap on FLIGHT only — once it has landed the fuse alone decides, or a long throw would eat into it and `bang.fuse` would stop meaning anything
-      const landed = it.bounces > 0 || it.settled;
-      if (landed) it.fuse -= dt;
-      if (it.fuse <= 0 || (!landed && it.age > fx.bang.maxAir)) { it.fired = true; detonateStun(g, it); }
-    } else if (it.kind === 'frag') fragFuse(g, it, dt);   // the fragmentation grenade (frag.ts): its fuse runs from the hand, in the air or on the floor
-  }
-}
 
 /** the attached solver's canister tuning (SmokeSystem.params), or null behind a stand-in without any */
 export function smokeParams(g: Game): CanisterParams | null { return g.smoke.params ?? null; }
 
-export function startCanister(g: Game, it: Item) {
-  let seconds: number;
-  if (fx.flags.ventCanister) {
-    // the graded can: a cold dense jet along the throw direction that hugs the floor and piles up (effects.ts `vent`); the mouth follows the can while it still rolls
-    const yaw = it.heading;
-    seconds = fx.spawnVent(g.smoke, fx.ventMouth(it.pos, yaw), yaw, { track: () => ({ pos: fx.ventMouth(it.pos, yaw), dir: [Math.sin(yaw), 0, Math.cos(yaw)] }) });
-  } else {
-    const P = smokeParams(g) ?? { canisterDuration: 32, canisterDensity: 95, canisterRadius: 0.2, canisterTemp: 1.6, canisterSpeed: 1.9 }; seconds = P.canisterDuration;
-    g.smoke.emit({ pos: v3.add(it.pos, [0, 0.1, 0]), dir: [0, 1, 0], speed: P.canisterSpeed, radius: P.canisterRadius, density: P.canisterDensity, temperature: P.canisterTemp, ttl: P.canisterDuration, age: 0, kind: 'canister',
-      track: () => ({ pos: v3.add(it.pos, [0, 0.12, 0]), dir: [0, 1, 0] }) });
-  }
-  it.emitT = seconds;
-  g.audio.play('smokeHiss', it.pos, 1, { duration: seconds });
-  g.msg('smoke deployed');
-  g.events.push({ kind: 'shot', pos: v3.copy(it.pos), time: g.time, loud: false });   // the pop draws attention nearby
-}
 
 /** THE FLASHBANG IN A ROOM FIGHT (a scenario: units on the floor, roomfight.ts fightLive — the night game's stun canister keeps effects.ts bang's numbers, as ever).
  *  What it does to a man is three things, each falling off from the can to the edge of bang.dazzleRadius:
@@ -682,7 +601,7 @@ export function flashFuse(g: Game): number { return FLASH.on && fightLive(g) ? F
 /** The stun canister goes off: graded burst (jets, wisp, sparks + trails) on the coarse smoke lattice, the white flash, the bang every guard on the
  *  floor hears, and the gameplay effect — guards with line of sight within bang.dazzleRadius are dazzled (Guard.dazzledUntil: canSee() fails, they
  *  cannot fire, and reactT roots them to the spot), then go and look at where it went off like any other loud noise. */
-export function detonateStun(g: Game, it: Item, borrowed = false, sam?: { side?: Team; spare?: boolean }) { return g.fogOfWar.doing(it.who, () => detonateStunRaw(g, it, borrowed, sam)); }   // (its sparks and dust are its thrower's doing: fogofwar.ts FOG.ours)
+export function detonateStun(g: Game, it: Item, borrowed = false, sam?: { side?: Team; spare?: boolean }) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('detonateStun', undefined, [g, it, borrowed, sam]); if (__r !== RUST_PASS) return __r as any; } } return g.fogOfWar.doing(it.who, () => detonateStunRaw(g, it, borrowed, sam)); }   // (its sparks and dust are its thrower's doing: fogofwar.ts FOG.ours)
 function detonateStunRaw(g: Game, it: Item, borrowed: boolean, sam?: { side?: Team; spare?: boolean }) {   // (`borrowed`: a door or wall charge using the canister's report and flash — to destruction.ts it stays a blast, not a stun)
   const B = fx.bang; const at: Vec3 = [it.pos[0], it.pos[1] + B.height, it.pos[2]];
   g.doors.blast(at, DOORBLAST.tearM.stun, it.who ?? 0);   // the doors' side of a blast (doorblast.ts): a stun charge's reach on a leaf is 0 — it takes none off
@@ -749,7 +668,7 @@ function detonateStunRaw(g: Game, it: Item, borrowed: boolean, sam?: { side?: Te
 }
 
 /** Sandbox / panel: drop an armed canister at `p` as if it had just landed there, thrown from where the player stands (short fuse, no inventory cost). */
-export function dropThrowable(g: Game, kind: ThrowKind, p: Vec3) {
+export function dropThrowable(g: Game, kind: ThrowKind, p: Vec3) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('dropThrowable', undefined, [g, kind, p]); if (__r !== RUST_PASS) return __r as any; } }
   const from = g.player.char.pos; const heading = v3.yawTo(from, p);
   const it = g.items.spawn(kind, [p[0], Math.max(p[1], 0) + 0.25, p[2]], [Math.sin(heading) * 0.5, 0, Math.cos(heading) * 0.5], { fuse: kind === 'frag' ? FRAG.fuse : 0.35, heading });   // (a frag dropped from the panel keeps its whole fuse: time to get clear, and for the room to react)
   it.onBounce = (sp, q, g) => g.audio.play('canisterBounce', q, Math.min(1, sp / 4));

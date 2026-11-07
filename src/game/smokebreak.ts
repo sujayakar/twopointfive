@@ -18,10 +18,11 @@
 // raises it there). Off, a man told to smoke stands where he was sent with his hands as they were. tools/qa/smokebreak-check.ts (SMOKEBREAK_BREAK=1 fails it).
 // The numbers are set from the solver's arithmetic and the breath's own; NEVER SEEN ON A GPU.
 import { SideMap } from '../math/side';
-import { Vec3, clamp } from '../math/vec';
+import { Vec3 } from '../math/vec';
 import type { Game, Guard } from './game';
 import type { Character } from './character';
-import { gpuFx } from './particleFx';
+import './particleFx';
+import { crossToRust, goneWithTick } from './crossing';
 
 export const SMOKEBREAK = {
   on: false,
@@ -64,103 +65,15 @@ interface Man { /** s since he was first asked */ t: number; flamed: boolean; /*
  *  them. `frame` = this file's frames on this host; `threads`, `records` = how many this run. No rule reads any of it back. */
 export interface SmokeShown { men: Map<number, { thread: boolean; gen: number; beat: number; left: number; gap: number }>; frame: number; threads: number; records: number }
 /** the host's side of it, for the panel's line and the tools; undefined before the first frame a man smokes in, and behind a load */
-export function smokeShown(g: Game): Readonly<SmokeShown> | undefined { return g.engine.hostBooks?.smokeBreak; }
+export function smokeShown(g: Game): Readonly<SmokeShown> | undefined { return goneWithTick('smokeShown') as any; }
 interface State { men: SideMap<Character, Man>; stats: SmokeBreakStats; seed: number }
 const states = new SideMap<Game, State>('smokebreak.states');
 const fresh = (): SmokeBreakStats => ({ men: 0, lit: 0, draws: 0, flames: 0, embers: 0, breaths: 0, frames: 0 });
-function stateOf(g: Game): State { let s = states.get(g); if (!s) { s = { men: new SideMap(), stats: fresh(), seed: 0x51607e }; states.set(g, s); } return s; }
 /** the counts a probe or the panel reads (a game nobody has smoked in: a blank row, and none is made for it) */
 export function smokeBreakStats(g: Game): SmokeBreakStats { return states.get(g)?.stats ?? fresh(); }
-const mix = (x: number): number => { x = (x ^ 61) ^ (x >>> 16); x = (x + (x << 3)) >>> 0; x ^= x >>> 4; x = Math.imul(x, 0x27d4eb2d) >>> 0; x ^= x >>> 15; return x >>> 0; };
 
 /** is this man smoking now: the switch, a script that says so, on his feet where it sent him, nobody's arm round him */
-export function smoking(gd: Guard): boolean {
-  const s = gd.script;
-  return SMOKEBREAK.on && !!s?.smoke && gd.state !== 'dead' && !gd.held && gd.char.alive && (s.goal === null || !!s.arrived);
-}
-/** how far up his hand is asked this second of his smoke (0‥1), and whether the end is at his mouth (a draw, or the lighting of it) */
-function handAt(t: number): { up: number; drawn: boolean; cycle: number; into: number } {
-  const K = SMOKEBREAK;
-  if (t < K.lightSecs) { const up = t >= K.lightUp[0] && t < K.lightUp[1]; return { up: up ? 1 : 0, drawn: up && t >= K.flameAt + K.flame * 0.5, cycle: -1, into: t }; }
-  const u = t - K.lightSecs, cycle = Math.floor(u / K.every), into = u - cycle * K.every, at = K.every - K.draw;   // (the draw ends each round: he has just lit it)
-  const up = into >= at;
-  return { up: up ? 1 : 0, drawn: up && into >= at + 0.6, cycle, into };
-}
-function mouthOf(c: Character): { pos: Vec3; dir: Vec3 } {
-  const K = SMOKEBREAK, hd = c.headDir(), head = c.bones.head!, hl = Math.hypot(hd[0], hd[2]);
-  const fx = hl > 0.2 ? hd[0] / hl : Math.sin(c.bodyYaw), fz = hl > 0.2 ? hd[2] / hl : Math.cos(c.bodyYaw), l = Math.hypot(1, K.breath.down);
-  return { pos: [head[0] + fx * K.mouthAhead, head[1] - K.mouthDown, head[2] + fz * K.mouthAhead], dir: [fx / l, -K.breath.down / l, fz / l] };
-}
-/** the lit end: off the left hand's joint along the forearm's line, a little up (the joint is the wrist) */
-function tipOf(c: Character): Vec3 | null {
-  const h = c.bones.handL, e = c.bones.forearmL ?? c.bones.elbowL; if (!h) return null;
-  const K = SMOKEBREAK; let d: Vec3 = [Math.sin(c.bodyYaw), 0, Math.cos(c.bodyYaw)];
-  if (e) { const x = h[0] - e[0], y = h[1] - e[1], z = h[2] - e[2], l = Math.hypot(x, y, z); if (l > 1e-4) d = [x / l, y / l, z / l]; }
-  return [h[0] + d[0] * K.tipOut, h[1] + d[1] * K.tipOut + K.tipUp, h[2] + d[2] * K.tipOut];
-}
+export function smoking(gd: Guard): boolean { return goneWithTick('smoking') as any; }
 
 /** Once a frame, after the characters are posed (game.ts, beside the breath in the cold). */
-export function updateSmokeBreak(g: Game, dt: number) {
-  const st = states.get(g);
-  if (!SMOKEBREAK.on) { if (st) for (const gd of g.guards as Guard[]) { const m = st.men.get(gd.char); if (m?.live) { m.live = false; gd.char.anim.smoke = null; } } if (g.engine.hostBooks?.smokeBreak) g.engine.hostBooks.smokeBreak = undefined; return; }
-  if (!(dt > 0)) return;
-  let any = false; for (const gd of g.guards as Guard[]) if (gd.script?.smoke || gd.char.anim.smoke !== null) { any = true; break; }
-  if (!any) return;   // (nothing of this file runs on a floor where nobody was told to smoke)
-  const S = stateOf(g), K = SMOKEBREAK, T = S.stats; T.frames++; let men = 0;
-  const H: SmokeShown = (g.engine.hostBooks ??= {}).smokeBreak ??= { men: new Map(), frame: 0, threads: 0, records: 0 }; H.frame++;
-  for (const gd of g.guards as Guard[]) {
-    const c = gd.char; let m = S.men.get(c);
-    if (!smoking(gd)) { if (m?.live || c.anim.smoke !== null) { c.anim.smoke = null; if (m) m.live = false; } H.men.delete(c.id);
-      if (m && !gd.script?.smoke) S.men.delete(c);   // (told again later, he lights another)
-      continue; }
-    if (!m) { m = { t: 0, flamed: false, draws: 0, outs: 0, emberT: 0, live: true }; S.men.set(c, m); T.lit++; }
-    m.live = true; men++;
-    let h = H.men.get(c.id); if (!h) { h = { thread: false, gen: 0, beat: 0, left: 0, gap: 0 }; H.men.set(c.id, h); }
-    const was = handAt(m.t); m.t += dt; const now = handAt(m.t);
-    c.anim.smoke = now.up;
-    const hidden = g.fogOfWar.hidden(gd), tip = tipOf(c);
-    // the lighter's flame, once
-    if (!m.flamed && m.t >= K.flameAt) { m.flamed = true; const a = mouthOf(c); g.engine.lights.flash([a.pos[0] + a.dir[0] * 0.06, a.pos[1], a.pos[2] + a.dir[2] * 0.06], K.flameColor, K.flameK, K.flameRange, K.flame, c.id); T.flames++; }
-    // the end: a low glow all the while it is lit, bright at a draw
-    if (m.t >= K.flameAt + K.flame * 0.5 && tip) { m.emberT -= dt; if (m.emberT <= 0) { m.emberT = K.emberEvery; g.engine.lights.flash(tip, K.emberColor, now.drawn ? K.emberDrawK : K.emberK, K.emberRange, K.emberEvery * 1.6, c.id); T.embers++; } }
-    if (now.up && !was.up && now.cycle >= 0) { m.draws++; T.draws++; }
-    if (hidden) continue;   // (nothing live shows in the fog: the lights are the meter's and stay, the smoke is the picture's)
-    const drawing = g.smoke.drawing?.() === true;
-    // the thread off the end: one source that rides his hand for as long as he smokes
-    if (drawing && h.thread && H.frame - h.beat > K.threadGone) h.thread = false;   // (the solver has not asked after it: it let the thread go, whatever the reason)
-    if (drawing && !h.thread && tip && m.t >= K.flameAt + K.flame) {
-      const mine = m, shown = h, B = K.thread, gen = ++H.threads;
-      // (the source lives while he smokes AND it is the thread the host's book has for him: an older filing, a book dropped, a row struck from it is a thread let go.
-      //  And while he is SEEN: a thread filed in view went on riding his hand into the fog, where nothing live shows — let go there, and filed again when he is seen)
-      const at = (): { pos: Vec3; dir: Vec3 } | null => { if (!mine.live || !SMOKEBREAK.on || states.get(g) !== S || S.men.get(c) !== mine || smokeShown(g) !== H || H.men.get(c.id) !== shown || shown.gen !== gen || g.fogOfWar.hidden(gd)) { if (shown.gen === gen) shown.thread = false; return null; }
-        shown.beat = H.frame; const p = tipOf(c); return p ? { pos: p, dir: [c.vel[0] * 0.5, B.speed, c.vel[2] * 0.5] } : null; };
-      g.smoke.emit({ pos: tip, dir: [0, 1, 0], speed: B.speed, radius: B.radius, minVoxels: B.cells, density: B.density, temperature: B.temp, ttl: 600, age: 0, kind: 'breath', push: B.push, jitter: B.jitter,
-        lattice: 'fine', confined: true, look: true, trackVel: true, tint: K.color, track: at });
-      h.thread = true; h.gen = gen; h.beat = H.frame;
-    }
-    // what he breathes out: after the lighting and after every draw, as the hand comes down
-    const due = was.up && !now.up ? m.t : -1;
-    if (due >= 0) { m.outs++; (m as Man & { outAt?: number }).outAt = m.t + K.outAfter; }
-    const outAt = (m as Man & { outAt?: number }).outAt;
-    if (outAt !== undefined && m.t >= outAt) {
-      (m as Man & { outAt?: number }).outAt = undefined; T.breaths++;
-      if (drawing) {
-        const mine = m, B = K.breath, born = m.outs;
-        const at = (): { pos: Vec3; dir: Vec3 } | null => { if (!mine.live || mine.outs !== born || !SMOKEBREAK.on || states.get(g) !== S || smokeShown(g) !== H) return null; const a = mouthOf(c); return { pos: a.pos, dir: [a.dir[0] * B.speed + c.vel[0] * 0.3, a.dir[1] * B.speed, a.dir[2] * B.speed + c.vel[2] * 0.3] }; };
-        const a0 = at();
-        if (a0) g.smoke.emit({ pos: a0.pos, dir: a0.dir, speed: B.speed, radius: B.radius, minVoxels: B.cells, density: B.density, temperature: B.temp, ttl: K.out, age: 0, kind: 'breath', push: B.push, expand: B.expand,
-          attack: B.attack, jitter: B.jitter, lattice: 'fine', confined: true, look: true, trackVel: true, tint: K.color, track: at });
-      } else { h.left = Math.max(1, Math.round(K.puffs.records)); h.gap = 0; }
-    }
-    if (h.left > 0) { h.gap -= dt; if (h.gap <= 0) { h.gap += K.out / Math.max(1, Math.round(K.puffs.records)); h.left--;
-      const P = gpuFx(g), Q = K.puffs;
-      if (P) { const a = mouthOf(c); const n = P.emit('dust', a.pos, a.dir, Math.max(1, Math.round(Q.count)), { shape: 'cone', speed: Q.speed, speedJit: 0.35, spread: Q.spread, life: Q.life, lifeJit: 0.25, size: Q.size, sizeJit: 0.3, posJit: 0.012,
-        owner: c.id, color: K.color, steam: clamp(Q.opacity, 0, 1), seed: mix((Math.imul(c.id + 1, 3266489917) ^ Math.imul(m.outs * 16 + h.left + 1, 668265263) ^ S.seed) >>> 0) }); if (n > 0) H.records++; } } }
-  }
-  T.men = men;
-}
-/** one line for the panel / the probes */
-export function smokeBreakSummary(g: Game): string {
-  const T = smokeBreakStats(g), P = smokeShown(g);
-  return SMOKEBREAK.on ? `smoke break ▸ ${T.men} smoking · ${T.lit} lit, ${T.draws} draws, ${T.breaths} breathed out (${P?.threads ?? 0} threads on the solver, ${P?.records ?? 0} puff records)` : 'smoke break: the switch is off';
-}
+export function updateSmokeBreak(g: Game, dt: number): void { return crossToRust('updateSmokeBreak', undefined, [g, dt]) as any; }

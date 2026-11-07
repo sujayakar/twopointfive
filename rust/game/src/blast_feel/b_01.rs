@@ -41,7 +41,7 @@ pub fn hash_u(n: f64) -> f64 {
 pub fn dice(s: &mut crate::blast_feel::State) -> f64 { let n = s.serial; s.serial += 1.0; hash_u(n) / 4294967296.0 }
 
 /// DESTRUCTION.on && FEEL.on && chaosOf(g) > 0 (src/game/blastFeel.ts:98 live)
-pub fn live(g: &mut crate::game::Game) -> bool { g.k.destruction.on && g.m.blast_feel.feel.on && crate::destruction::chaos_of(g) > 0.0 }
+pub fn live(g: &mut crate::game::Game) -> bool { g.m.blast_feel.feel.on && crate::destruction::chaos_of(g) > 0.0 }
 /// (src/game/blastFeel.ts:99 thick)
 pub fn thick(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> f64 { let h = g.tab.boxes[w.box_].h; 2.0 * (if w.along_x { h[2] } else { h[0] }) }
 /// (src/game/blastFeel.ts:100 near)

@@ -109,7 +109,7 @@ pub fn squad_log_row(g: &mut crate::game::Game, gd: GuardId, order: &str, at: V3
 /// The assignment that walks him to his throw, under the row's own id. (squadthrow.ts walkTo)
 pub fn walk_to(g: &mut crate::game::Game, gd: GuardId, kind: crate::squadthrow::SquadThrowKind, post: V3, at: V3, arc: Option<&crate::squadthrow::Arc>) -> Option<OrdersAssignmentId> {
     let face = match arc {
-        Some(a) if g.k.squadthrow.lob => v3::yaw_of(a.sol.v0),
+        Some(a) => v3::yaw_of(a.sol.v0),
         _ => v3::yaw_to(post, at),
     };
     let w = word(kind).as_str();
@@ -225,7 +225,7 @@ pub fn squad_lend(g: &mut crate::game::Game, gd: GuardId, t: &crate::orders::Ord
 
 /// The throw is made, or will not be: back to where he stood and to what he was doing. (squadthrow.ts squadHandBack)
 pub fn squad_hand_back(g: &mut crate::game::Game, w: &mut crate::squadthrow::Lent, back: Option<bool>) {
-    let back = back.unwrap_or(g.k.squadthrow.back);
+    let back = back.unwrap_or(true);
     let gd = w.gd;
     let c = g.gd[gd].ch;
     let p = g.ch[c].pos;
@@ -304,12 +304,10 @@ fn look_again(g: &mut Game, key: PlayerId, gd: GuardId) -> bool {
         None => return false,
     };
     let th = if again < 2.0 {
-        let mut lob = if g.k.squadthrow.lob {
+        let mut lob = {
             let walls = crate::throwplan::throw_walls(g, at);
             let n = g.k.squadthrow.lob_sims;
             Some(Lob { walls, lim: LobLim { n }, clean: LobClean::LookAgain { kind, at, gd }, dirty: None })
-        } else {
-            None
         };
         walk_spot(g, &[gd], at, kind, Some(true), lob.as_mut())
     } else {
@@ -376,7 +374,7 @@ pub fn walk_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) 
         }
         return;
     }
-    if !g.k.squadthrow.on || !g.k.squadthrow.walk {
+    if !g.k.squadthrow.on {
         return end_walk(g, key, gd, None);
     }
     if spent > g.k.squadthrow.walk_secs {
@@ -395,13 +393,12 @@ pub fn walk_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) 
         }
         w.on_t
     };
-    let lob = g.k.squadthrow.lob;
-    if lob && (now - on_t < g.k.squadthrow.settle_secs || g.gd[gd].speed > 0.3) {
+    if now - on_t < g.k.squadthrow.settle_secs || g.gd[gd].speed > 0.3 {
         return;
     }
     let roll = roll_of(g, kind);
     let mut arc: Option<Arc> = crate::squadsmoke::squad_arc_to(g, gd, at, roll, None).map(|t| Arc { from: t.from, sol: t.sol, rest: t.rest });
-    if arc.is_none() && lob {
+    if arc.is_none() {
         let (held_at, held_t, was) = {
             let w = walk_of(g, key, gd).unwrap();
             (w.held_at, w.held_t, w.arc.clone())
@@ -444,7 +441,7 @@ pub fn walk_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) 
     if let Some(w) = walk_of(g, key, gd) {
         w.arc = arc.clone();
     }
-    let toward = if lob { v3::yaw_of(arc.sol.v0) } else { v3::yaw_to(p, at) };
+    let toward = v3::yaw_of(arc.sol.v0);
     if m::abs(v3::wrap_angle(g.ch[c].body_yaw - toward)) > 0.9 && now - on_t < g.k.squadthrow.turn_secs {
         return;
     }
@@ -453,10 +450,9 @@ pub fn walk_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) 
         return end_walk(g, key, gd, Some(w));
     }
     if kind == SquadThrowKind::Frag {
-        let sam = !sam_calls(g);
-        let who = squad_frag_catches(g, arc.rest, at, Some(SquadFragCatchesMoved { gd, at: p }), Some(sam), None, None);
+        let who = squad_frag_catches(g, arc.rest, at, Some(SquadFragCatchesMoved { gd, at: p }), Some(false), None, None);
         if let Some(who) = who {
-            if lob && who == format!("{} is in it.", g.gd[gd].callsign) && look_again(g, key, gd) {
+            if who == format!("{} is in it.", g.gd[gd].callsign) && look_again(g, key, gd) {
                 return;
             }
             g.stats.squadthrow.refused += 1;
@@ -481,15 +477,14 @@ fn preview_plan(g: &mut Game, men: &[GuardId], at: V3, kind: SquadThrowKind) -> 
     let th = th?;
     let pos = g.ch[g.gd[th.gd].ch].pos;
     if kind == SquadThrowKind::Frag {
-        let sam = !sam_calls(g);
-        if squad_frag_catches(g, th.rest, at, Some(SquadFragCatchesMoved { gd: th.gd, at: th.post.unwrap_or(pos) }), Some(sam), Some(true), None).is_some() {
+        if squad_frag_catches(g, th.rest, at, Some(SquadFragCatchesMoved { gd: th.gd, at: th.post.unwrap_or(pos) }), Some(false), Some(true), None).is_some() {
             return None;
         }
     }
     let mut walk = None;
     if let Some(post) = th.post {
         // (`c.th === th` of the TypeScript always holds here: an answer with a `post` came out of this very slot: see notes)
-        let slot = format!("v{}{}", kind.as_str(), if g.k.squadthrow.lob && men.len() == 1 { "1" } else { "" });
+        let slot = format!("v{}{}", kind.as_str(), if men.len() == 1 { "1" } else { "" });
         let key = crate::seats::view_key(g);
         let kept = g.m.squadthrow.states.get(key).and_then(|s| s.kept.get(slot.clone())).map(|c| c.line.clone());
         walk = Some(match kept {
@@ -581,8 +576,7 @@ fn row_caught(g: &mut Game, th: &SquadThrower, at: V3, kind: SquadThrowKind, fre
         return None;
     }
     let pos = g.ch[g.gd[th.gd].ch].pos;
-    let sam = !sam_calls(g);
-    squad_frag_catches(g, th.rest, at, Some(SquadFragCatchesMoved { gd: th.gd, at: th.post.unwrap_or(pos) }), Some(sam), Some(!fresh), None)
+    squad_frag_catches(g, th.rest, at, Some(SquadFragCatchesMoved { gd: th.gd, at: th.post.unwrap_or(pos) }), Some(false), Some(!fresh), None)
 }
 
 /// Why not (Err), or the throw (Ok; with `post`: after a walk). (the rows' `ask`)
@@ -590,7 +584,7 @@ fn ask(g: &mut Game, men: &[GuardId], at: V3, kind: SquadThrowKind, fresh: bool)
     if left(g, kind) <= 0.0 {
         return Err(String::from(none(g, kind).as_str()));
     }
-    let asked = if g.k.squadthrow.lob && men.len() == 1 {
+    let asked = if men.len() == 1 {
         let key = state_key(g);
         g.m.squadthrow.states.get(key).unwrap().asked.get(kind).cloned()
     } else {
@@ -635,11 +629,9 @@ pub fn row_label(g: &mut crate::game::Game, kind: crate::squadthrow::SquadThrowK
 
 /// The order is one man's, the thrower's: the arm OrderOnly::ThrowRow. (squadthrow.ts:556 one.only)
 pub fn row_only(g: &mut crate::game::Game, men: &[GuardId], at: V3, kind: crate::squadthrow::SquadThrowKind) -> Vec<GuardId> {
-    if g.k.squadthrow.lob {
-        let key = state_key(g);
-        let k = key_of(at);
-        g.m.squadthrow.states.get_mut(key).unwrap().asked.set(kind, StateAskedValue { key: k, men: men.to_vec() });
-    }
+    let key = state_key(g);
+    let k = key_of(at);
+    g.m.squadthrow.states.get_mut(key).unwrap().asked.set(kind, StateAskedValue { key: k, men: men.to_vec() });
     match squad_throw_plan(g, men, at, kind, None, None) {
         Some(th) => vec![th.gd],
         None => Vec::new(),
@@ -659,7 +651,7 @@ pub fn row_valid(g: &mut crate::game::Game, men: &[GuardId], at: V3, kind: crate
         g.m.squadthrow.states.get_mut(key).unwrap().warn = warn;
     } else {
         let on = match &a {
-            Ok(th) => sam_calls(g) && squad_frag_on_sam(g, th.rest, at),
+            Ok(th) => squad_frag_on_sam(g, th.rest, at),
             Err(_) => false,
         };
         let warn = if on { Some(StateWarnFrag { key: key_of(at), text: String::from(" · too close: you") }) } else { None };

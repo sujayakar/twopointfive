@@ -2273,3 +2273,15 @@ one stops the tool by name, on an address one does nothing and says so in the co
   has built the crate on a Mac or on Windows.
 
 - **The weather** (`rust/sim/src/wind.rs`, `weather.rs`, `air.rs`, `snow.rs`; a part `weather` of a block, an always-home tenant; asked through `src/sim/weatherhome.ts`, `collision.ts ruleOpen`): what it is, what is gameplay and dressing file by file, and what holds it: `docs/agents/weather.md`, the bullet "The weather that play reads". The hour is not in it yet. A man's place, head and coat are a call's numbers until the men's columns land.
+
+- **The TypeScript tick is deleted** (`tools/blitz/DELETION.md`, written by `tools/blitz/delete-tick.ts`). The Rust game (`rust/game`) is the only game that
+  steps; there is no word for another (`?rust`, `TPS_GAME=ts` name nothing now), and an address that hosts or joins a co-op game or plays a tape back
+  shows a plain card until its own path onto the Rust game is here. What is left under `src/game`, `src/anim`, `src/math`, `src/sim`, `src/scene` is
+  what stands a game before it crosses into Rust, the readers over the puppet, and the workbench's and the menus' own code. A function there is one of
+  five things, and `tools/blitz/delete-plan.tsv` says which: kept; kept behind the call surface's guard (a line of its own source: a tool's call between
+  ticks crosses to the Rust rule, a start's runs the TypeScript); a crossing (its body is the call of the Rust rule: `crossToRust`, `src/game/crossing.ts`);
+  gone with a signature that throws by name (the Rust game has no row for it); or removed. NEW TYPESCRIPT THAT STEPS THE GAME IS A MISTAKE: a rule is
+  written in Rust. A check that named a function which went is a row of `tools/blitz/delete-lost.tsv`: fix it forward from there. Measured before and
+  after on the same tree: both type checks; the missions' tallies under the Rust game by whole record and digest series; every way to start a game
+  (`tools/blitz/starts.ts`, 1,480 rows); the page's flows in a headless browser WITH DRAWN FRAMES on the software adapter (`tools/blitz/delete-page.ts
+  --draw N`: no other headless tool draws, and what only a draw runs is run nowhere else). Not seen: anything on a GPU.

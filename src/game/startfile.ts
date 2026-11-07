@@ -14,13 +14,14 @@
 // Type-only game imports: nothing here is built from another game module's exports at load (src/game is one import cycle).
 import { rawGame, dealSeats, inSeat } from './seats';
 import type { Game, Guard } from './game';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 /** the switch: off in the module, raised by the page (host/profile.ts pageSwitches; ?nofallin = the men start with no order, as they did) and by the shipped stand;
  *  the harness's frozen stand leaves it off (TPS_FALLIN=1 turns it on) */
 export const START = { fallIn: false };
 
 /** Called by a scenario as it stages, after its men are on their marks and Sam is on his: every living one of `men` on 'fall in'. Returns how many took it. */
-export function teamStartsFallenIn(g: Game, men: Guard[]): number {
+export function teamStartsFallenIn(g: Game, men: Guard[]): number { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('teamStartsFallenIn', undefined, [g, men]); if (__r !== RUST_PASS) return __r as any; } }
   if (!START.fallIn) return 0;
   if (g.seats.length > 1 && rawGame(g) === g) { dealSeats(g); let k = 0; for (const s of g.seats) k += teamStartsFallenIn(s.view, men.filter(m => inSeat(s, m))); return k; }   // (each pair on its own player — seats.ts)
   const S = g.orders, up = men.filter(m => m.state !== 'dead'); if (!up.length) return 0;

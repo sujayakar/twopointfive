@@ -309,7 +309,7 @@ pub fn anim_update_standing(g: &mut crate::game::Game, c: CharId, dt: f64) {
     }
     let a = &mut g.ch[c].anim;
     a.tap_was = if g_h > 0.0 { a.tap_u } else { -1.0 };
-    if g.k.wallsnap.on && g.k.wallsnap.pose {   // the wall hold's own step clock, signed along the wall
+    if g.k.wallsnap.on {   // the wall hold's own step clock, signed along the wall
         if a.stance == Stance::Wall {
             let st_ = wall_pose().gait.step;
             a.wall_gait = js::rem(a.wall_gait + dt * s * a.stack_side * rev / (2.0 * v3::lerp(st_[0], st_[1], v3::clamp(a.crouch, 0.0, 1.0))) + 100.0, 1.0);
@@ -333,7 +333,7 @@ pub fn anim_update_standing(g: &mut crate::game::Game, c: CharId, dt: f64) {
     // stand pose
     anim_stand_pose(g, c, ph, w_idle, w_walk, w_jog, w_sprint);
     let a = &g.ch[c].anim;
-    if g.k.runarms.on && a.lg.run > 1e-3 && a.lg.w.x < 0.999 { let (r, sp) = (a.lg.run, a.lg.sprint); anim_run_arms(g, c, p_a, r, sp); }
+    if a.lg.run > 1e-3 && a.lg.w.x < 0.999 { let (r, sp) = (a.lg.run, a.lg.sprint); anim_run_arms(g, c, p_a, r, sp); }
     if w_run > 1e-3 && soft_knee().on > 0.5 { anim_soft_knees(g, c, p_a, w_run); }
     // the run's stance feet pinned to the floor and the ground's speed through each stance window
     let w_pin = if rl.depth > 0.0 { w_run } else { 0.0 };

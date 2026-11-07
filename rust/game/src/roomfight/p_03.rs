@@ -61,10 +61,7 @@ fn move_pt(g: &mut Game, d: RoomfightDefId, to: V3) {
 /// `cover(gd, D.pt)` (belief.ts cover): rule off that is `gd.lastKnown = D.pt`, a new fix only if it was not that object already (def_fix_to_pt's body)
 fn cover_pt(g: &mut Game, d: RoomfightDefId) {
     let (gd, pt) = (g.tab.roomfight_def[d].gd, g.tab.roomfight_def[d].pt);
-    if g.k.belief.on { crate::belief::cover(g, gd, pt); return; }
-    let own = fix_is_pt(g, d);
-    g.gd[gd].last_known = Some(pt);
-    if !own { g.gd[gd].fix_stamp = g.gd[gd].fix_stamp.wrapping_add(1); g.tab.roomfight_def[d].pt_stamp = Some(g.gd[gd].fix_stamp); }
+    crate::belief::cover(g, gd, pt);
 }
 
 // ---------------------------------------------------------------- the men in the rooms
@@ -1126,7 +1123,7 @@ mod tests {
         assert!(g.gd[gd].script.as_ref().unwrap().over.is_none());
     }
 
-    /// D.pt moved in place carries a cover or a fix that IS it, with no new fix; a point given once and a noise stay. Rule off, `cover` is a new fix once, not twice.
+    /// D.pt moved in place carries a cover or a fix that IS it, with no new fix; a point given once and a noise stay.
     #[test]
     fn the_post_moved_takes_what_is_on_it() {
         let (mut g, gd, _) = man_with_overlay();
@@ -1138,16 +1135,6 @@ mod tests {
         move_pt(&mut g, d, [2.0, 0.0, 2.0]);
         assert_eq!(g.gd[gd].covers, Some([2.0, 0.0, 2.0]));
         assert_eq!(g.gd[gd].last_known, Some([1.0, 0.0, 1.0]));
-        g.k.belief.on = false;
-        let was = g.gd[gd].fix_stamp;
-        cover_pt(&mut g, d);
-        assert_eq!(g.gd[gd].last_known, Some([2.0, 0.0, 2.0]));
-        assert_eq!(g.gd[gd].fix_stamp, was.wrapping_add(1));
-        cover_pt(&mut g, d);
-        assert_eq!(g.gd[gd].fix_stamp, was.wrapping_add(1));
-        move_pt(&mut g, d, [3.0, 0.0, 3.0]);
-        assert_eq!(g.gd[gd].last_known, Some([3.0, 0.0, 3.0]));
-        assert_eq!(g.gd[gd].fix_stamp, was.wrapping_add(1));
     }
 
     /// Stood still: he turns once a point is past 1.2 rad off his chest, and finishes the turn down to 0.3 rad.

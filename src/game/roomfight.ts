@@ -38,54 +38,49 @@
 // What is asked of the renderer goes through Game.sensors (the smoke between each operative / defender pair in reach, ≤ ROOMFIGHT.pairs segments a frame, keys
 // 'fightS<a>_<b>'); headless nothing answers and the air is clear. guards.ts reads it back through pairSmoke() for every AI-on-AI sight test.
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load.)
-import { men, manOf, facedView, orderOf, viewOf } from './seats';
+import { men, manOf } from './seats';
 import { SideSet } from '../math/side';
-import { conditionSup } from './condition';
-import { Vec3, v3, clamp, lerp, damp, wrapAngle, approachAngle, DEG } from '../math/vec';
+import './condition';
+import { Vec3, v3, clamp, DEG } from '../math/vec';
 import type { Game, Guard, Foe } from './game';
 import type { Door } from './doors';
 import type { Character } from './character';
-import { teamFight, teamSprinting } from './teampace';   // (read inside methods only)
-import { canSee, canSeeChar, eyesOn, sightGain, sightGainOn, hearingCheck, clearShot, doorCells, frameOf, bodyVisibility, BODY_LIGHT, LIGHTS, gunOnLitMan, eyeBlocked } from './guards';
+import './teampace';   // (read inside methods only)
+import { doorCells, frameOf, bodyVisibility, BODY_LIGHT } from './guards';
 import { order, endGuardScript } from './squad';
-import { fireWeapon } from './combat';
-import { squadSkill, squadDrill } from './enemysquads';   // (hard on a squads level: the defenders' row as a drilled garrison has it — the same object otherwise)
+import './combat';
+import './enemysquads';   // (hard on a squads level: the defenders' row as a drilled garrison has it — the same object otherwise)
 import { SUPPRESSION, coverFrom } from './suppression';
 import { PICTURE, PICTURE_STATS, exposureAsker, believedOf } from './picture';   // (asked inside breakOff only)
-import { isHostile, foeChar } from './teams';
-import { AIM } from './aim';
-import { BLIND } from './nightbreach';
-import { DIGIN, digInTick, digInStays, digInReset, digInBraced, digInLook } from './digin';
-import { wallReactLook } from './wallreact';
-import { squadsLive, squadRally } from './enemysquads';
-import { PRESSURE, pressTick, pressStop, pressKeepsHome, run as pressRun, charge as pressCharge } from './pressure';
-import { buddyTick, buddyStop, buddyPaired } from './buddy';
-import { pairPasses } from './pairorders';
-import { workPasses } from './workthings';
-import { spottedKeen } from './spotted';
-import { coverSeen, coverOp } from './coverfire';
-import { lastStandTick, lastStandStop } from './laststand';
-import { netQuietLook } from './netquiet';
-import { laneBars, laneThrows, laneKnownAt } from './lanes';
-import { BELIEF, cover, eyesFix, uncover, word } from './belief';
-import { shotEnergy } from './glasspen';
-import { hearPath, airTrans } from './weather';
-import { CLEARLINE, clearLineBlocked } from './clearline';
-import { gunWallIs } from './gunwall';
-import { feedBegin, feedDeal, feedTick } from './gunreload';   // (called inside tickOp only)
-import { sideOut, sideSeen, sideLocked } from './gunslots';   // (called inside tickOp only)
-import { gunString, gunStringGap, gunStringGrow, gunBlindGap } from './gunroles';   // (called inside tickOp only)
-import { AIMCOST, feetHold } from './aimcost';
-import { friendInCone, ffHeld } from './friendlyfire';
-import { wg } from './words';   // (a leaf: the dialogue pass's one switch)
+import { isHostile } from './teams';
+import './aim';
+import './nightbreach';
+import { digInReset } from './digin';
+import './wallreact';
+import { squadRally } from './enemysquads';
+import { PRESSURE, pressStop, run as pressRun } from './pressure';
+import { buddyStop } from './buddy';
+import './pairorders';
+import './workthings';
+import './spotted';
+import './coverfire';
+import { lastStandStop } from './laststand';
+import './netquiet';
+import './lanes';
+import './glasspen';
+import { airTrans } from './weather';
+import './clearline';
+import './gunwall';
+import './gunslots';   // (called inside tickOp only)
+import './gunroles';   // (called inside tickOp only)
+import './aimcost';
+import './friendlyfire';
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
-import { railsDown } from './rails';   // (a spared teammate on his knee stops no defender on the move: asked inside tickMove only)
+import './rails';   // (a spared teammate on his knee stops no defender on the move: asked inside tickMove only)
 import { hasHim, OWN } from './owner';
-import { silentHoldsGlass, roundHeld } from './silent';
+import './silent';
+import { RUST_PASS, RUST_SURFACE, crossToRust, goneWithTick } from './crossing';
 
-/** The module's switches and the few numbers that are not a side's. */
-/** the check's own break word (tools/qa coverkeep-probes.ts): the cover rule's switch reads on and the rule does nothing */
-const COVER_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.COVERKEEP_BREAK === '1';
 /** the check's own break word (tools/qa doorshots-check.ts): the doorway rule's switch reads on and the rule does nothing */
 const DOORSHOT_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.DOORSHOTS_BREAK === '1';
 export const ROOMFIGHT = {
@@ -311,8 +306,6 @@ interface Def {
   /** startle.ts (bolt): he is running FROM a man in his eyes — until this time that man does not stop him to fight (−1: never set) */
   boltUntil: number; boltFrom: Foe;
 }
-/** how long a man held for the glass stays passed over for anybody else his teammate may shoot (the scoring in tickOp; re-stamped every frame the hold lasts) */
-const GLASS_LOOK = 4;
 interface Meter { m: number; seenT: number; /** when he last held a round at this man for the standing glass in the way (silent.ts silentHoldsGlass; unset = never) */ glassT?: number }
 interface Op {
   gd: Guard; meters: Map<Guard, Meter>;
@@ -344,14 +337,12 @@ interface Op {
 export interface FightNote { t: number; who: string; what: string }
 
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
-const pick = (r: [number, number]) => r[0] + simRandom() * (r[1] - r[0]);
 const eyeOf = (c: Character): Vec3 => c.bones.head ?? v3.add(c.pos, [0, 1.65, 0]);
-const chestOf = (c: Character): Vec3 => c.bones.chest ?? v3.add(c.pos, [0, 1.1, 0]);
 const pairKey = (a: number, b: number) => a < b ? `fightS${a}_${b}` : `fightS${b}_${a}`;
 
 /** The smoke between two AI men as the renderer last answered it (1 = clear air: no answer yet, headless, or the pair not in reach of each other) — what
  *  guards.ts canSeeChar / sightGainOn put between an AI eye and an AI man, as Guard.smokeTrans stands between a guard's eye and Sam. */
-export function pairSmoke(g: Game, a: Character, b: Character): number {
+export function pairSmoke(g: Game, a: Character, b: Character): number { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('pairSmoke', undefined, [g, a, b]); if (__r !== RUST_PASS) return __r as any; } }
   const T = g.fight?.trans.get(pairKey(a.id, b.id)) ?? 1;
   // (a picked weather's FOG stands between them as smoke does — weather.ts airTrans, chest to chest; exactly 1 with no kind picked: T as it was)
   return g.weather?.fog ? T * airTrans(g, a.bones.chest ?? v3.add(a.pos, [0, 1.1, 0]), b.bones.chest ?? v3.add(b.pos, [0, 1.1, 0])) : T;
@@ -410,13 +401,10 @@ export class RoomFight {
   // ================================================================ what the other parts call
   /** an operative's muzzle is on a man (or coming onto him) — breach.ts: his sweep waits */
   engaged(gd: Guard): boolean { return !!this.ops.find(o => o.gd === gd)?.tgt; }
-  /** seconds he has been ON his man with no round at him from where he stands — a jamb across his bore, his gun in a wall (blockT) —: doortools.ts thrPie
-   *  asks it of a man on a cut, who brings the gun round after the eye */
-  noShot(gd: Guard): number { const O = this.ops.find(o => o.gd === gd); return O?.tgt ? O.blockT : 0; }   // (no man, no count: blockT is not run down once he has let the man go)
   /** an operative is on a man, turning to one, or lost one inside the last `secs` — rescueflow.ts: not the moment to hand him his next errand */
-  busy(gd: Guard, secs: number): boolean { const O = this.ops.find(o => o.gd === gd); return !!O && (!!O.tgt || !!O.turn || this.g.time - O.lostAt < secs); }
+  busy(gd: Guard, secs: number): boolean { return goneWithTick('RoomFight.busy') as any; }
   /** an operative has a living hostile in his sight right now (target or not) */
-  contact(gd: Guard): boolean { const O = this.ops.find(o => o.gd === gd); if (!O) return false; for (const [h, M] of O.meters) if (h.state !== 'dead' && this.g.time - M.seenT < 0.3) return true; return false; }
+  contact(gd: Guard): boolean { return goneWithTick('RoomFight.contact') as any; }
   /** does any living teammate see this man right now — the scripted ones by this module's meters, one on the fight AI by its own eyes (the fog of war's question) */
   teamSees(h: Guard): boolean { return this.seenBy(h).length > 0; }
   seenBy(h: Guard): Guard[] {
@@ -426,17 +414,7 @@ export class RoomFight {
   }
   /** THE sight test between two AI men, in one call (cone, range, line of sight, smoke; then the sight-gain rate off the light on the man): `sighting` is the
    *  game's own line for a real one (rate over 0.25). Stateless — anybody may ask it of any pair. */
-  sightOn(viewer: Guard, target: Guard): { visible: boolean; rate: number; dist: number; sighting: boolean } {
-    const vis = canSeeChar(this.g, viewer, target.char, false); const known = (this.ops.find(o => o.gd === viewer)?.meters.get(target)?.m ?? 0) >= FIGHT_SKILL.operative.notice;
-    const rate = vis.visible ? this.rateOn(viewer, target, vis.dist, known) : 0;
-    return { visible: vis.visible, rate, dist: vis.dist, sighting: rate > 0.25 };
-  }
-  /** guards.ts sightGainOn, with the hunting man's ×2.2 for a scripted man (his state is his script's, never 'alert') while the fight is hot or once he has
-   *  made this man out (`known`: his meter past notice) — the staff's own order of things: a glimpse fills the meter, the roused eye then holds him */
-  private rateOn(viewer: Guard, target: Guard, dist: number, known = false): number {
-    const r = sightGainOn(this.g, viewer, target, dist);
-    return viewer.state !== 'alert' && viewer.state !== 'search' && (known || this.g.time - this.hotOf(viewer) < (viewer.team === 'operative' ? ROOMFIGHT.teamHot : 10)) ? r * 2.2 : r;
-  }
+  sightOn(viewer: Guard, target: Guard): { visible: boolean; rate: number; dist: number; sighting: boolean } { return crossToRust('RoomFight.sightOn', this, [viewer, target]) as any; }
   /** is the floor HOT in this teammate's ears — a shot, a charge or a boot inside `teamHot` (doortools.ts: a door worked on a hot floor gets a can first) */
   hotFor(gd: Guard): boolean { return this.g.time - this.hotOf(gd) < ROOMFIGHT.teamHot; }
   hotOf(gd: Guard): number { const O = this.ops.find(o => o.gd === gd); return O ? Math.max(O.hotT, this.hotT) : this.hotT; }
@@ -448,80 +426,8 @@ export class RoomFight {
   }
   opOf(gd: Guard): Op | null { return this.ops.find(o => o.gd === gd) ?? null; }
   /** LIGHTS.litMan's feet half: this teammate's feet are held this frame — in the dark on a lit man, Sam in his line to him (orders.ts: his order's leg waits, its clocks with it) */
-  short(gd: Guard): boolean { if (!LIGHTS.litMan || !this.live) return false; const O = this.opOf(gd); return !!O && this.g.time - O.shortT >= 0 && this.g.time - O.shortT < 0.25; }
-  summary(): string {
-    if (!this.live) return `room fight ${ROOMFIGHT.on ? 'idle' : 'off'}`;
-    const d = this.defs.filter(x => x.gd.state !== 'dead'), o = this.ops.filter(x => x.gd.state !== 'dead');
-    return `room fight · team ${o.length} up (${this.stats.opRounds} rounds, ${this.stats.heldForFriend} held for a friend) · defenders ${d.length} up — ${d.map(x => `${x.gd.callsign} ${x.mode}→${this.watchOf(x.gd)?.door ?? 'front'}`).join(', ') || 'none'}`
-      + ` · fell back ${this.stats.fellBack} · cover ${this.stats.tookCover} · rallied ${this.stats.rallied} · surprised ${this.stats.surprised}`;
-  }
+  short(gd: Guard): boolean { return goneWithTick('RoomFight.short') as any; }
 
-  // ================================================================ the frame
-  /** Once a frame from Game.update, after the stagers have given their orders and before anybody moves. */
-  tick(dt: number) {
-    const g = this.g;
-    if (!this.on) { if (this.live) this.stop(); return; }
-    let any = false; for (const x of g.guards) if (x.unit && (x.team === 'hostile' || x.team === 'operative')) { any = true; break; }
-    if (!any) { if (this.live) this.stop(); return; }
-    this.live = true;
-    g.seats.forEach((s, i) => { const p = s.view.player.char.pos, A = this.sams[i] ??= { x: 0, z: 0, t: -Infinity, v: [0, 0], known: 0 }, V = A.v, since = g.time - A.t;
-      if (since > 1e-4 && since < 0.25) { const k = 1 - Math.exp(-since / 0.12); V[0] += ((p[0] - A.x) / since - V[0]) * k; V[1] += ((p[2] - A.z) / since - V[1]) * k; A.known += since; }
-      else if (since !== 0) { V[0] = V[1] = 0; A.known = 0; }   // (the module was not running, or a load put the clock back: nothing known)
-      A.x = p[0]; A.z = p[2]; A.t = g.time; });
-    // the roster: men gone from the floor forgotten, new ones taken up (dead men stay on it — a mate counts them)
-    this.defs = this.defs.filter(d => g.guards.includes(d.gd)); this.ops = this.ops.filter(o => g.guards.includes(o.gd));
-    for (const x of g.guards) {
-      if (!x.unit || x.state === 'dead') continue;
-      if (x.team === 'hostile' && x.hold && !this.defs.some(d => d.gd === x)) this.defs.push(this.adopt(x));
-      else if (x.team === 'operative' && !this.ops.some(o => o.gd === x)) this.ops.push(this.newOp(x));
-    }
-    for (const e of g.events) {   // what is loud enough to rouse a man, by the hearing model's own rule (guards.ts hearingCheck: gunfire at level ≥ 1 and charges carry 80 m, a boot 40 — a suppressed pistol is neither)
-      if (this.heardEv.has(e)) continue;
-      if (e.kind === 'step' && e.who !== undefined) { if (!ROOMFIGHT.stepEars) continue;   // a hostile unit's footfall (updateGuard's tread files them): heard by a teammate as any man hears a step — inside 9 m of path, by its loudness and what is in the way
-        this.heardEv.add(e);
-        const w = g.guards.find(x => x.char.id === e.who); if (!w || w.team !== 'hostile') continue;
-        let near: Op | null = null, nd = Infinity, from: Vec3 = e.pos;   // whose look it is: of the men it reached, the one with a line to him and the least turn to make — else the nearest ears
-        for (const O of this.ops) { if (O.gd.state === 'dead' || v3.dist(e.pos, O.gd.char.pos) > 9) continue;
-          const oc = O.gd.char, pr = hearPath(g, v3.add(e.pos, [0, 1, 0]), v3.add(oc.pos, [0, 1.5, 0]));
-          if (!(pr.carry > 0.5 && (e.level ?? 0.3) * clamp(1 - pr.pathLen / 9, 0, 1) * pr.carry > 0.12)) continue;
-          O.stepT = e.time;
-          const sc = eyeBlocked(g, O.gd, eyeOf(oc), chestOf(w.char)) ? 100 + pr.pathLen : Math.abs(wrapAngle(v3.yawTo(oc.pos, w.char.pos) - oc.aimYaw));
-          if (sc < nd) { nd = sc; near = O; from = pr.routed ? pr.via : e.pos; } }
-        if (near) near.stepBy = { by: w, t: e.time, at: [from[0], 1.1, from[2]] };
-        continue;
-      }
-      if (e.kind === 'door' && e.who !== undefined && ROOMFIGHT.doorEars) {   // a door noise under an enemy's hand (a boot is its own kind, below): kept for cue(), which looks only at a leaf that has come OPEN
-        this.heardEv.add(e);
-        const w = g.guards.find(x => x.char.id === e.who); if (!w || w.team !== 'hostile' || !w.unit) continue;
-        let dr: Door | null = null, dm = 1.6; for (const x of g.doors.list) { const q = flat(x.pos, e.pos); if (q < dm) { dm = q; dr = x; } }   // (the noise is filed at the leaf's middle: which door it is)
-        if (!dr || dr.off) continue;
-        const fc = dr.frameCentre; let free = 0, post: Op | null = null, postAt: Vec3 | null = null, postTurn = Infinity;
-        for (const O of this.ops) { const oc = O.gd.char, d = flat(fc, oc.pos); if (O.gd.state === 'dead' || d > 9 || d < 0.5) continue;
-          if (O.doorBy && O.doorBy.door === dr && e.time - O.doorBy.t < 0.6) continue;   // (the same opening's next noise — the leaf on its stop: one look, one beat)
-          const k = 0.35 / d, at: Vec3 = [fc[0] + (oc.pos[0] - fc[0]) * k, 1.1, fc[2] + (oc.pos[2] - fc[2]) * k];   // (the doorway as he sees it: a hand's width his side of the middle of the opening)
-          const pr = hearPath(g, at, v3.add(oc.pos, [0, 1.5, 0]));
-          if (!(pr.carry > 0.5 && (e.level ?? 0.3) * clamp(1 - pr.pathLen / 9, 0, 1) * pr.carry > 0.05) || g.col.segmentBlocked(eyeOf(oc), at)) continue;
-          const A = orderOf(g, O.gd);   // a gun an order has ON ANOTHER DOOR (a stack's, a threshold's jamb man, a door he was told to cover) keeps it while a freer man can look
-          if (A && A.arrived && A.door && A.door !== dr && !A.spare && A.watch && flat(A.watch, A.door.frameCentre) < 1.6) {
-            const turn = Math.abs(wrapAngle(v3.yawTo(oc.pos, at) - oc.aimYaw)); if (turn < postTurn) { postTurn = turn; post = O; postAt = at; } continue; }
-          O.doorBy = { by: w, t: e.time, at, door: dr }; free++; }
-        if (!free && post && postAt) post.doorBy = { by: w, t: e.time, at: postAt, door: dr };   // (nobody free: the one of them with the least turn to make looks, the rest keep their door)
-        continue;
-      }
-      const gunfire = (e.kind === 'shot' || e.kind === 'guardShot') && (e.level ?? 0) >= 1;
-      if (!gunfire && e.kind !== 'bang' && e.kind !== 'kick') continue;
-      this.heardEv.add(e);
-      for (const O of this.ops) if (O.gd.state !== 'dead' && v3.dist(e.pos, O.gd.char.pos) <= (e.kind === 'kick' ? 40 : 80) && e.time > O.hotT) O.hotT = e.time;
-      if (e.kind === 'guardShot') { const w = g.guards.find(x => x.char.id === e.who); if (w && w.team === 'hostile') this.reports.push(ROOMFIGHT.doorShots && e.from && e.to ? { by: w, t: e.time, from: e.from, to: e.to } : { by: w, t: e.time }); }   // (doorShots: the way the round flew, for the doorway it came through)
-    }
-    while (this.reports.length && g.time - this.reports[0].t > 2) this.reports.shift();
-    this.smoke();
-    this.defs.forEach((D, k) => { if (D.gd.state !== 'dead') this.tickDef(D, dt, k); });
-    for (const O of this.ops) this.tickOp(O, dt);
-    pressTick(g, this, dt);
-    lastStandTick(g, this);                                // laststand.ts (default off): the last few defenders' radio check, their stand in one room
-    buddyTick(g, this);                                    // buddy.ts (default off): a man left alone in his room radios for a colleague
-  }
   private stop() {
     pressStop(this.g); buddyStop(this.g); lastStandStop(this.g);
     for (const O of this.ops) { this.restore(O); this.handBack(O); }
@@ -538,25 +444,10 @@ export class RoomFight {
   /** a fresh staging: everything this module remembers about the last one dropped (the stager calls it; a restart that swaps every Guard object does it anyway) */
   reset() { this.stop(); this.blindFire = true; this.drillSaid = false; this.log.length = 0; for (const k of Object.keys(this.stats) as (keyof RoomFight['stats'])[]) this.stats[k] = 0; }
 
-  /** the smoke between every operative and every defender in reach of each other: read every frame, asked ROOMFIGHT.pairs at a time */
-  private smoke() {
-    const g = this.g; const pairs: [Guard, Guard][] = [];
-    for (const O of this.ops) { if (O.gd.state === 'dead') continue; for (const D of this.defs) if (D.gd.state !== 'dead' && flat(O.gd.char.pos, D.gd.char.pos) < 18) pairs.push([O.gd, D.gd]); }
-    if (!pairs.length) { for (const k of this.trans.keys()) g.sensors.forget(k); this.trans.clear(); return; }
-    const live = new Set<string>();
-    pairs.forEach(([a, b], i) => {
-      const key = pairKey(a.char.id, b.char.id); live.add(key);
-      const ask = ((i - this.rr) % pairs.length + pairs.length) % pairs.length < ROOMFIGHT.pairs;
-      const v = g.sensors.segment(key, eyeOf(a.char), chestOf(b.char), ask);
-      this.trans.set(key, v !== undefined && Number.isFinite(v) ? v : 1);
-    });
-    this.rr = (this.rr + ROOMFIGHT.pairs) % pairs.length;
-    for (const k of [...this.trans.keys()]) if (!live.has(k)) { this.trans.delete(k); g.sensors.forget(k); }   // (unit ids are dealt again from 20: a stale answer must not meet the next pair under the same key)
-  }
 
   // ================================================================ rooms
   /** the room a point stands in: the nav cells reachable from it without crossing a doorway, and the doors on its edge (cached: neither moves) */
-  roomAt(p: Vec3): Room | null {
+  roomAt(p: Vec3): Room | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('RoomFight.roomAt', this, [p]); if (__r !== RUST_PASS) return __r as any; } }
     const g = this.g, nav = g.col.nav, cs = nav.cell, W = nav.W, H = nav.H; const dc = doorCells(g);
     const gap = g.destr?.walls.shellGaps;   // (a breach in an OUTER wall is a doorway with no door: the flood stops at its cells — wallbreak.ts shellGaps; empty unless one was blown)
     const free = (x: number, z: number) => x >= 0 && z >= 0 && x < W && z < H && nav.blocked[nav.idx(x, z)] !== 1 && !dc.has(nav.idx(x, z)) && !gap?.has(nav.idx(x, z));
@@ -591,154 +482,7 @@ export class RoomFight {
     return room;
   }
   private inRoom(R: Room | null, p: Vec3): boolean { if (!R) return false; const nav = this.g.col.nav; return R.cells.has(nav.idx(Math.floor(p[0] / nav.cell), Math.floor(p[2] / nav.cell))); }
-  private freeNear(p: Vec3): Vec3 | null {
-    const nav = this.g.col.nav; if (!nav.isBlocked(p[0], p[2])) return [p[0], 0, p[2]];
-    for (const r of [0.5, 1.0, 1.5]) for (let a = 0; a < 8; a++) { const x = p[0] + Math.cos(a * Math.PI / 4) * r, z = p[2] + Math.sin(a * Math.PI / 4) * r; if (!nav.isBlocked(x, z)) return [x, 0, z]; }
-    return null;
-  }
 
-  // ================================================================ defenders
-  private adopt(gd: Guard): Def {
-    const c = gd.char, S = squadSkill(this.g, FIGHT_SKILL.hostile); const f = c.forward(); const room = this.roomAt(c.pos);
-    this.note(gd, `adopt room ${room ? room.id + ' entries ' + room.entries.map(e => e.door.def.name).join('/') : 'none'}`);
-    return { gd, pinned0: gd.pinned, station: v3.copy(c.pos), home: [c.pos[0] + f[0] * 6, 0, c.pos[2] + f[2] * 6], room, ev: room ? room.entries.map(() => 0) : [], watch: -1, want: -1, wantAt: 0,
-      glanceTo: -1, glanceUntil: -1, glanceNext: this.g.time + pick(S.hold), pt: [c.pos[0] + f[0] * 6, 0, c.pos[2] + f[2] * 6],
-      heardT: gd.witness.heard.lastT, cnt: { shots: gd.witness.heard.shots, kick: gd.witness.heard.kick, bang: gd.witness.heard.bang, small: gd.witness.heard.small }, noiseAt: null, noiseT: -100, noiseOut: false,
-      lastState: gd.state, lastSeen: gd.lastSeenT, fixKeep: -1, pre: false, nerve: pick(S.nerve), lostAt: 0, movedAt: -100, rallyAt: NaN, rallyGo: false,
-      mode: 'hold', moveKind: 'cover', moveT: 0, cameBy: null, stallAt: v3.copy(c.pos), stallT: 0, freeAt: 0, burst: { until: -1, n: 0, next: 0, broke: false, daze: 0 }, boltUntil: -1, boltFrom: null };
-  }
-  private tickDef(D: Def, dt: number, k: number) {
-    const g = this.g, gd = D.gd;
-    gd.skill = FIGHT_SKILL.hostile;
-    if (gd.held) { this.blind(D, k); return; }             // in Sam's arm: nothing of his is his own (the burst's clock still runs: its turns are lost, not kept)
-    if (hasHim(gd, OWN.morale)) return;                            // morale.ts (false with its switch off): a blast has him ducked or broken — that file's sequence has his body and his rounds until it lets him go
-    if (hasHim(gd, OWN.runner)) return;                            // runner.ts (false with its switch off): he has said he is done — dropping it, running, gone: nothing of the fight's is his
-    if ((DIGIN.on || squadsLive(g) || hasHim(gd, OWN.stand)) && g.level.scenarios?.roomClear?.digIn !== false && !laneThrows(g, gd)) digInTick(this, D, dt); // digin.ts (default off): a man who knows they are coming gets ready for them — may put him on the move (enemysquads.ts: a squad that barricades does it through the same file, whatever the switch) — not a man whose grenade is leaving his hand for a covered lane (lanes.ts LANES.fragOwn, false with its switch off): that second is the throw's
-    if (D.mode === 'move') { this.tickMove(D, dt); return; }
-    if (D.mode === 'free') { this.tickFree(D); return; }
-    if (gd.script && g.director?.lessonRuns) { D.staged = true; return; }   // a staged moment of a tutorial mission's own script has him (director.ts lessonRuns): his body is its, and he stays this roster's man
-    if (D.staged) {                                                        // …and is a man holding a post again the moment it lets him go (a script's order takes `hold` off a man):
-      D.staged = false; gd.hold = true;
-      if (v3.distXZ(gd.char.pos, D.station) > 1.5) { this.defs = this.defs.filter(d => d !== D); this.note(gd, 'left on a new post by the lesson\'s script'); return; }   // his old post where it left him there; where it walked him to, as a held man this roster does not know is taken up (tick: `adopt`)
-    }
-    if (gd.script) endGuardScript(gd, gd.state === 'dead' ? 'patrol' : gd.state);   // (somebody else's script on a man holding a room: he is the fight AI's)
-    if (!gd.hold) {   // somebody else has let him off his post (guards.ts engage() — the Director's drill.exchange —, a stager): he is theirs — off this roster, and taken up again only if he is put to hold again
-      gd.skill = null; this.defs = this.defs.filter(d => d !== D);   // (his pin is whatever they wrote with it: engage() always writes one)
-      this.note(gd, 'let off his post by somebody else: not this module\'s man'); return;
-    }
-    gd.pinned = true;                                      // he holds where he stands and fights from there (the fight AI's own flag for it)
-    const dazzled = g.time < gd.dazzledUntil;
-    this.evidence(D, dt);
-    if (!dazzled) { this.chooseWatch(D); this.applyWatch(D, dt); }   // (a man with magnesium in his eyes keeps the last thing he was watching)
-    this.reactions(D);
-    this.blind(D, k);
-    if (!dazzled) { this.lost(D); this.rally(D); }
-  }
-  /** what his own senses have put at each entry since last frame */
-  private evidence(D: Def, dt: number) {
-    const g = this.g, gd = D.gd, H = gd.witness.heard, E = D.room?.entries ?? [];
-    const k = Math.exp(-dt / ROOMFIGHT.evidenceSecs * Math.log(3)); for (let i = 0; i < D.ev.length; i++) D.ev[i] *= k;
-    if (H.lastT > D.heardT) {
-      const loud = H.shots > D.cnt.shots || H.kick > D.cnt.kick || H.bang > D.cnt.bang;
-      const fix = BELIEF.on ? H.loudAt : gd.lastKnown && gd.lastKnown !== D.pt ? gd.lastKnown : null;   // where his own ears put it (hearingCheck)
-      const at = loud ? fix ?? D.noiseAt : H.small > D.cnt.small && H.smallWhere ? H.smallWhere : fix;
-      if (at) {
-        const e = this.entryToward(D, at); if (e >= 0) D.ev[e] = Math.min(3, D.ev[e] + (loud ? 1 : 0.45));
-        if (loud) { D.noiseAt = v3.copy(at); D.noiseT = g.time; D.noiseOut = !this.inRoom(D.room, at); D.glanceUntil = -1; }
-        if (H.kick > D.cnt.kick && e >= 0 && flat(E[e].at, at) < 2.5 && g.time >= gd.dazzledUntil) {   // a door of HIS room booted in: the flinch (FIGHT_SKILL startle)
-          const S = FIGHT_SKILL.hostile; if (S.startle[1] > 0 && !((DIGIN.on || squadsLive(g) || hasHim(gd, OWN.stand)) && digInBraced(g, gd, E[e].door))) { gd.reactT = Math.max(gd.reactT, pick(S.startle) * (this.drilled() ? DRILLED.shaken : 1)); this.stats.startled++; this.note(gd, `flinches: ${E[e].door.def.name} booted in`); } }
-        this.note(gd, `heard ${loud ? 'loud' : 'small'} → ${e >= 0 ? E[e].door.def.name : 'nowhere'}`);
-      }
-      D.heardT = H.lastT; D.cnt = { shots: H.shots, kick: H.kick, bang: H.bang, small: H.small };
-    }
-    const seen = g.time - gd.lastSeenT < 0.3 ? eyesFix(gd, D.pt) : null; if (seen) { const e = this.entryToward(D, seen); if (e >= 0) D.ev[e] = Math.min(3, D.ev[e] + 1.2 * dt); }   // an enemy in his sight: the way he came is the way to fear
-  }
-  /** runner.ts (called only with its switch on): a man of his own side has run in and TOLD him where they are — what evidence() does for a loud noise his own
-   *  ears put there: the entry that way is the one to fear, the noise record reads the place, and whatever glance he was on ends. False = no post of this file's */
-  told(gd: Guard, at: Vec3): boolean {
-    const D = this.defs.find(X => X.gd === gd); if (!D) return false;
-    const e = this.entryToward(D, at); if (e >= 0) D.ev[e] = Math.min(3, D.ev[e] + 1);
-    D.noiseAt = v3.copy(at); D.noiseT = this.g.time; D.noiseOut = !this.inRoom(D.room, at); D.glanceUntil = -1;
-    if (BELIEF.on) word(this.g, gd, at);
-    return true;
-  }
-  private entryToward(D: Def, at: Vec3): number {
-    const E = D.room?.entries ?? []; let best = -1, bd = Infinity;
-    E.forEach((e, i) => { const d = flat(e.at, at); if (d < bd) { bd = d; best = i; } });
-    return best;
-  }
-  private chooseWatch(D: Def) {
-    const g = this.g, gd = D.gd, S = squadSkill(g, FIGHT_SKILL.hostile), E = D.room?.entries ?? [];
-    let best = -1, bs = ROOMFIGHT.fearMin; const eye = eyeOf(gd.char);
-    E.forEach((e, i) => {
-      if (D.ev[i] <= 0.02) return;
-      const view = g.col.segmentBlocked(eye, [e.at[0] - e.out[0] * 0.5, 1.2, e.at[2] - e.out[1] * 0.5]) ? 0.6 : 1;   // a door he cannot see from where he stands is a poorer thing to stare at
-      let mates = 0; for (const X of this.defs) if (X !== D && X.gd.state !== 'dead' && X.room === D.room && X.mode === 'hold' && X.watch === i) mates++;
-      const s = D.ev[i] * view - ROOMFIGHT.crowd * mates + (i === D.watch ? ROOMFIGHT.sticky : 0);
-      if (s > bs) { bs = s; best = i; }
-    });
-    if (best !== D.want) { D.want = best; D.wantAt = g.time + pick(S.shift); }
-    if (D.want !== D.watch && g.time >= D.wantAt) { D.watch = D.want; this.note(gd, `watch → ${D.watch >= 0 ? E[D.watch].door.def.name : 'front'}`); }
-    // the wandering eye: nothing in his sight, nothing loud just now — every so often a look at some other door
-    if (E.length && g.time >= D.glanceNext && g.time - gd.lastSeenT > 2 && g.time - D.noiseT > 3 && !squadDrill(g)?.drillAngles) {   // (drillAngles: a drilled garrison's eyes stay on the door)
-      const others = E.map((_, i) => i).filter(i => i !== D.watch); if (D.watch >= 0) others.push(-1);
-      D.glanceTo = others[Math.floor(simRandom() * others.length)] ?? -1; D.glanceUntil = g.time + pick(S.glance); D.glanceNext = D.glanceUntil + pick(S.hold);
-    }
-  }
-  /** what he watches becomes where he faces (calm) and the fix his gun covers (roused, nobody in sight) */
-  private applyWatch(D: Def, dt: number) {
-    const g = this.g, gd = D.gd, c = gd.char, S = FIGHT_SKILL.hostile, E = D.room?.entries ?? [];
-    const e = g.time < D.glanceUntil ? D.glanceTo : D.watch; const tgt = e >= 0 && E[e] ? E[e].at : D.home;
-    D.pt[0] = tgt[0]; D.pt[1] = 0; D.pt[2] = tgt[2];
-    if (DIGIN.on || squadsLive(g) || hasHim(gd, OWN.stand)) digInLook(g, gd, D.pt);                  // digin.ts: dug in off a door's line, his gun rests on the floor they must cross
-    if (g.rescue?.active) g.rescue.crewLook(gd, D.pt);     // rescue.ts, Hard's crew: a man with a line of fire to the hostage door's outside rests his gun there
-    netQuietLook(gd, D.pt);                                // netquiet.ts (a return on its first line with its switch off): the last man low on his spot watches the arc his doors sit in; a jumpy man has the noise he has just heard
-    wallReactLook(g, gd, D.pt);                            // wallreact.ts: a port or a hole in a wall that he knows of and has more against than that door takes his gun (a return on its first line with nothing broken)
-    if (gd.state === 'patrol') { c.bodyYaw = approachAngle(c.wantBody, v3.yawTo(c.pos, D.pt), S.turn * dt); return; }   // (wantBody: his body yaw — or, turning under weight (character.ts TURN), where this easing left it)
-    if (g.time - gd.lastSeenT < 0.6) { uncover(gd); return; }   // eyes on a man: the fix is the man, and the fight AI's
-    const seen = eyesFix(gd, D.pt); if (seen && g.time - gd.sightT < 1 && this.inRoom(D.room, seen)) D.fixKeep = g.time + 3;   // he has just lost a man INSIDE the room: that spot is covered a while before the doors are
-    if (g.time >= D.fixKeep) cover(gd, D.pt); else uncover(gd);
-  }
-  /** the untrained man's beats: slower off the mark, slower still when the man shows where he was not looking */
-  private reactions(D: Def) {
-    const g = this.g, gd = D.gd, c = gd.char, S = squadSkill(g, FIGHT_SKILL.hostile);
-    if (gd.state === 'alert' && D.lastState !== 'alert') gd.reactT = Math.max(gd.reactT, pick(S.react));
-    const fc = foeChar(g, gd);
-    if (fc && gd.lastSeenT > D.lastSeen + 1.5 && g.time - gd.lastSeenT < 0.1) {   // eyes on a man he did not have a moment ago: his beat — half of it where he was already looking, all of it and more where he was not
-      const off = Math.abs(wrapAngle(v3.yawTo(c.pos, fc.pos) - v3.yawTo(c.pos, D.pt)));
-      const dazed = g.time < D.burst.until + D.burst.daze;   // the flash has only just left his eyes
-      const caught = dazed || off > S.sectorDeg * DEG; const lim = ROOMFIGHT.preaimDeg * DEG;
-      gd.reactT = Math.max(gd.reactT, pick(S.react) * (caught ? 1 : S.ready) + (caught ? pick(S.surprise) : 0));
-      D.pre = !dazed && gd.state !== 'patrol' && off < lim && Math.abs(wrapAngle(v3.yawTo(c.pos, fc.pos) - c.aimYaw)) < lim;   // he showed on the line the gun was already held on
-      if (caught) { this.stats.surprised++; this.note(gd, dazed ? 'still dazed: the man is a surprise' : `surprised ${(off / DEG).toFixed(0)}° off his watch`); }
-    }
-    if (D.pre) {
-      if (g.time - gd.lastSeenT > 1) D.pre = false;
-      else if (gd.state === 'alert' && gd.reactT <= 0) { gd.aim.track = Math.max(gd.aim.track, S.preaim); gd.fireCd = Math.min(gd.fireCd, 0); D.pre = false; }   // (the beat over: the angle he held is most of a line-up, and the fight AI's first-round pause is not owed again)
-    }
-    D.lastSeen = gd.lastSeenT; D.lastState = gd.state;
-  }
-  /** BLIND FIRE (nightbreach.ts BLIND): a dazzled defender keeps what he was watching as his fix and, a flinch after the flash, empties a burst down it without
-   *  seeing anything — or (bangBreak) ducks for the length of it. A turn that comes while he is held, doubled over, head down, gun down, dry or mid-reload is lost. */
-  private blind(D: Def, k: number) {
-    const g = this.g, h = D.gd, B = D.burst, S = squadSkill(g, FIGHT_SKILL.hostile); if (g.time >= h.dazzledUntil) return;
-    if (h.dazzledUntil > B.until + 1e-6) {
-      B.until = h.dazzledUntil; B.n = 0; B.next = g.time + BLIND.after + k * BLIND.stagger; B.broke = simRandom() < S.bangBreak; B.daze = S.daze[1] > 0 ? pick(S.daze) * (this.drilled() ? DRILLED.shaken : 1) : 0;
-      if (B.broke) { this.stats.broke++; this.note(h, 'breaks under the bang'); }
-    }
-    if (!h.held) cover(h, D.pt);
-    if (B.broke) { if (g.tune.suppression) h.sup.downT = Math.max(h.sup.downT, 0.2); return; }   // head down (suppression.ts headDown: crouched, gun lowered) for as long as he cannot see
-    if (!this.blindFire || B.n >= BLIND.rounds || g.time < B.next) return;
-    B.n++; B.next = g.time + gunBlindGap(h, BLIND.every);   // (gunroles.ts: a dealt pistol fires at a pistol's rate; BLIND.every with its switch off)
-    const c = h.char;
-    if (h.held || g.time < h.staggerUntil || c.gunDir[1] < -BLIND.lowGun) return;
-    if (g.tune.suppression && (h.sup.v >= SUPPRESSION.pinned || h.sup.latched || h.sup.downT > 0)) return;
-    if (!h.weapon.fire()) return;
-    fireWeapon(g, c, v3.mad(c.muzzle, c.gunDir, 8), false, { steady: true, spread: BLIND.spread, blind: true });
-    this.blindRounds++;
-    if (!this.drillSaid && this.drilled()) { this.drillSaid = true; g.say(h, wg('can\'t see — shoot through the doorway!', 'can\'t see — put it down the door!')); }   // (the cue, once a staging: the first drilled man to fire blind says what they are doing)
-  }
-  private drilled(): boolean { return drilledOn(this.g); }   // (DRILLED above)
   private drillSaid = false;
   /** is the room lost, as far as HE can tell: enough of its men down in his sight, with the enemy on him — or, alone, pinned with nowhere to put his head up */
   private lost(D: Def) {
@@ -776,16 +520,6 @@ export class RoomFight {
     if (gd.sup.src && g.time - gd.sup.srcT < SUPPRESSION.srcMemorySecs) return gd.sup.src;
     let bi = -1, bv = 0.3; D.ev.forEach((v, i) => { if (v > bv) { bv = v; bi = i; } });
     return bi >= 0 && D.room ? D.room.entries[bi].at : D.pt;
-  }
-  /** startle.ts: a man on a post caught unaware and alone goes the way a man whose nerve has gone goes (breakOff). true = he is on his way, and for `clearSecs`
-   *  the man he runs from does not stop him to fight; false = he has a post here and nowhere to go from it; null = no post of this file's */
-  bolt(gd: Guard, clearSecs: number): boolean | null {
-    const g = this.g, D = this.defs.find(X => X.gd === gd); if (!D) return null;
-    if (D.mode !== 'hold' || gd.state === 'dead' || gd.held) return false;
-    const moved = D.movedAt, out = this.stats.fallBackOut, pic = PICTURE_STATS.moved; this.breakOff(D);
-    if (D.mode === 'hold') { D.movedAt = moved; this.stats.fallBackOut = out; PICTURE_STATS.moved = pic; return false; }   // (nowhere: the nerve rule's own clock and the tallies of a fall-back that was not one are left as they stood)
-    D.boltUntil = g.time + clearSecs; D.boltFrom = gd.foe;   // (the man he is running from is in his eyes: tickMove would stop him to fight on his first stride — him, nobody else)
-    return true;
   }
   /** out of the room by a door nothing has come at, to hold it from the far side; no such door, to cover */
   private breakOff(D: Def) {
@@ -849,103 +583,8 @@ export class RoomFight {
     }
   }
   /** a defender on the move (his script's legs, his own senses): an enemy seen close stops him to fight; there, or going nowhere, he plants */
-  private tickMove(D: Def, dt: number) {
-    const g = this.g, gd = D.gd, c = gd.char, S = squadSkill(g, FIGHT_SKILL.hostile); const s = gd.script;
-    if (!s) { this.plant(D, 'script gone'); return; }
-    D.moveT += dt;
-    hearingCheck(g, gd);
-    let contact: 'player' | Guard | null = null;
-    if (g.time >= gd.dazzledUntil) {
-      const from = g.time < D.boltUntil ? D.boltFrom : null;   // (startle.ts's bolt: the one he ran from does not stop him for its first strides; null for every other man)
-      const fg = facedView(g, gd);   // (the player he has in mind: seats.ts)
-      if (from !== 'player' && isHostile(gd.team, 'player') && !fg.player.down && !g.playerInvisible) { const vis = canSee(fg, gd); if (vis.visible && vis.dist < ROOMFIGHT.moveEngageM && sightGain(fg, gd, vis.dist) > 0.25) contact = 'player'; }
-      for (const o of g.guards) { if (contact) break; if (o === from || o.state === 'dead' || !isHostile(gd.team, o.team) || railsDown(g, o)) continue; const vis = canSeeChar(g, gd, o.char, false); if (vis.visible && vis.dist < ROOMFIGHT.moveEngageM && sightGainOn(g, gd, o, vis.dist) > 0.25) contact = o; }
-    }
-    if (contact) {
-      const fc = contact === 'player' ? facedView(g, gd).player.char : contact.char;
-      gd.foe = contact; gd.aim.clear(); this.plant(D, 'contact'); gd.awareness = 1; gd.reactT = pick(S.react); eyesOn(g, gd, fc.pos);
-      return;
-    }
-    if (flat(c.pos, D.stallAt) > 0.4) { D.stallAt = v3.copy(c.pos); D.stallT = 0; } else D.stallT += dt;
-    if (s.arrived || D.stallT > 1.5 || D.moveT > 10) this.plant(D, s.arrived ? 'there' : 'going nowhere');
-  }
-  /** pressure.ts, stand and fight with `PRESSURE.secondKeeps`: a free hunter with his eyes on a man is planted where he stands WITH that man still his — no
-   *  scripted leg (a frame without his senses, his aim let go), no fix moved to a door. `set` (PRESSURE.secondSet): he is a SET GUN ON THAT MAN — the point he
-   *  holds is the man, so `reactions` gives him what it gives any set defender whose man shows where he is looking (the short beat, and the pre-aim only if
-   *  his gun was already on him). Not set: no beat and no pre-aim at all — he goes on as the walking hunter he was, stood still */
-  standOn(D: Def, set: boolean) {
-    const gd = D.gd, fix = gd.lastKnown;
-    D.moveKind = 'fallback'; D.cameBy = null; D.rallyAt = NaN;
-    this.plant(D, 'stands and fights');
-    if (fix && fix !== D.pt) { gd.lastKnown = fix; uncover(gd); if (set) { D.pt[0] = fix[0]; D.pt[2] = fix[2]; } }
-    D.lastState = gd.state; if (!set) D.lastSeen = gd.lastSeenT;
-  }
-  /** lanes.ts: a man whose way lies down a lane his side knows is covered stops short of it — where he stands is his post now, his gun on `look` (where the
-   *  lane opens before him), no door of the room he stopped in bumped for it */
-  laneStop(gd: Guard, look: Vec3): boolean {
-    const D = this.defs.find(d => d.gd === gd); if (!D || gd.state === 'dead' || gd.held) return false;
-    D.moveKind = 'fallback'; D.cameBy = null; D.rallyAt = NaN;
-    this.plant(D, 'a covered lane ahead');
-    if (D.room) D.ev = D.room.entries.map(() => 0);
-    D.watch = D.want = -1; D.home = [look[0], 0, look[2]]; D.pt[0] = look[0]; D.pt[1] = 0; D.pt[2] = look[2]; cover(gd, D.pt);
-    return true;
-  }
-  /** where he has got to is his post now: held and pinned there, roused, watching the door he came through (or the way the trouble was) */
-  private plant(D: Def, why: string) {
-    const g = this.g, gd = D.gd, c = gd.char; const threat = v3.copy(this.threatOf(D));
-    if (gd.script) endGuardScript(gd, 'alert');
-    gd.state = 'alert'; gd.awareness = Math.max(gd.awareness, 0.92); gd.hold = true; gd.pinned = true;
-    const was = D.room; const room = this.roomAt(c.pos); const through = room !== was;   // through = he made it out: the door he came by is what he holds. Stopped short in the SAME room, the trouble is where it was — not behind him at his way out
-    D.mode = 'hold'; D.station = v3.copy(c.pos); D.room = room; if (through) D.ev = room ? room.entries.map(() => 0) : []; D.watch = D.want = -1; D.glanceUntil = -1; D.fixKeep = -1; D.movedAt = g.time;
-    const e = through && D.cameBy && D.room ? D.room.entries.findIndex(x => x.door === D.cameBy) : this.entryToward(D, threat);
-    if (e >= 0 && (D.moveKind === 'fallback' || !through)) { D.ev[e] = Math.max(D.ev[e], 1.5); D.watch = D.want = e; }
-    D.home = e >= 0 && D.room ? v3.copy(D.room.entries[e].at) : [threat[0], 0, threat[2]];
-    D.pt[0] = D.home[0]; D.pt[1] = 0; D.pt[2] = D.home[2]; cover(gd, D.pt);
-    if (D.moveKind === 'cover' && g.tune.suppression) gd.sup.downT = Math.max(gd.sup.downT, 1.0);   // into cover: a breath with his head down before he looks again
-    this.note(gd, `plants (${why}) room ${D.room?.id ?? '-'} watching ${e >= 0 && D.room ? D.room.entries[e].door.def.name : 'the threat'}`);
-  }
-  /** a fight he can hear at a post of his side's in ANOTHER room than his: after his own few seconds he goes (or, a quarter of the time, does not) */
-  private rally(D: Def) {
-    const g = this.g, gd = D.gd, S = FIGHT_SKILL.hostile;
-    if (!ROOMFIGHT.rally || !D.noiseAt) return;
-    if (hasHim(gd, OWN.squad)) return;  // (enemysquads.ts: a squad's man goes to another squad's fight on his squad's word, not his own)
-    if (hasHim(gd, OWN.press) || pressKeepsHome(g, D)) return;   // (pressure.ts, off by default: with it on he forms up outside that room with the others instead of walking over by himself)
-    if (DIGIN.on && digInStays(g, gd)) return;             // digin.ts: digging in, he holds his room
-    if (laneBars(g, gd, D.noiseAt) || laneKnownAt(g, gd, D.noiseAt)) { if (D.rallyAt !== Infinity) D.rallyAt = NaN; return; }   // (lanes.ts: held short of a lane his side knows is covered — he keeps its mouth; and nobody walks over ALONE to a fight at such a lane's guns)
-    if (hasHim(D.gd, OWN.stand)) { D.rallyAt = NaN; return; }   // (laststand.ts, default off: the last stand holds its room — no man of it walks off to a noise next door)
-    if (hasHim(gd, OWN.lastMan)) { D.rallyAt = NaN; return; }   // (netquiet.ts, false on its first line with its switch off: the last man up, who knows nobody answers him, does not walk off to a fight next door)
-    if (hasHim(D.gd, OWN.buddy) || buddyPaired(g, D)) { D.rallyAt = NaN; return; }   // (buddy.ts, off by default: a colleague is on his way to him, or the two have just paired up — he waits, and no rally clock is left running to send him the frame he is let go)
-    const fresh = g.time - D.noiseT < 1.5 && g.time - gd.lastSeenT > 3;
-    if (!fresh) { if (g.time - D.noiseT > 4) D.rallyAt = NaN; return; }
-    const at = D.noiseAt;
-    if (!this.defs.some(X => X !== D && X.room !== D.room && X.mode !== 'free' && flat(X.station, at) < 9)) return;   // gunfire in his OWN room is his fight already; gunfire somewhere his side has nobody posted: he holds his room and watches the way it came
-    if (isNaN(D.rallyAt)) { D.rallyAt = g.time + pick(S.rally); D.rallyGo = simRandom() < S.rallyChance * ROOMFIGHT.rallyK; return; }
-    if (g.time < D.rallyAt) return;
-    if (!D.rallyGo) { D.rallyAt = g.time + 6; D.rallyGo = simRandom() < S.rallyChance * ROOMFIGHT.rallyK; return; }
-    D.mode = 'free'; D.freeAt = g.time; D.rallyAt = NaN; gd.hold = false; gd.pinned = false;
-    gd.state = 'alert'; gd.awareness = Math.max(gd.awareness, 0.92); gd.lastKnown = v3.copy(at); gd.path = []; gd.pathGoal = null;
-    this.stats.rallied++; this.note(gd, 'goes to the fight next door'); g.say(gd, 'they\'re hitting the others — move!');
-    // (THE KIT LEVER — difficulty.ts `kit`, with the press off: a man who goes with a stun charge on him takes the door of the room being hit as the doorway
-    // drill, charge first (the press's own rule for its men, pressure.ts charge; tactics.ts's doorway does the rest). Nobody carries one unless the lever says so)
-    if (PRESSURE.stuns > 0 && !PRESSURE.on) { const R = this.roomAt(at); let best: Entry | null = null;
-      for (const e of R?.entries ?? []) if (!best || flat(e.at, gd.char.pos) < flat(best.at, gd.char.pos)) best = e;
-      if (best) pressCharge(g, D, best.door); }
-  }
-  /** off his post on the fight AI's own hunt: once he is calm again, wherever that is, he holds there */
-  private tickFree(D: Def) {
-    const g = this.g, gd = D.gd, c = gd.char;
-    if (g.time - D.freeAt < 6 || !(gd.state === 'patrol' || (gd.state === 'suspicious' && gd.awareness < 0.3))) return;
-    const f = c.forward();
-    D.mode = 'hold'; D.station = v3.copy(c.pos); D.room = this.roomAt(c.pos); D.ev = D.room ? D.room.entries.map(() => 0) : []; D.watch = D.want = -1; D.home = [c.pos[0] + f[0] * 6, 0, c.pos[2] + f[2] * 6]; D.movedAt = g.time;
-    gd.hold = true; gd.pinned = true; this.note(gd, `holds where he ended up (room ${D.room?.id ?? '-'})`);
-  }
+  private tickMove(D: Def, dt: number): void { return goneWithTick('RoomFight.tickMove') as any; }
 
-  // ================================================================ teammates
-  private newOp(gd: Guard): Op {
-    const aim: Vec3 = [0, 0, 0];
-    return { gd, meters: new Map(), tgt: null, turn: null, pass: null, kept: null, track: 0, pre: false, readyAt: 0, n: 0, next: 0, lostAt: -100, first: true, aim, ov: { aimAt: aim, face: null }, step: null, hotT: -100, stepT: -100, stepBy: null, doorBy: null,
-      funnelT: 0, lineT: 0, lineBy: null, lineAt: -100, wallT: 0, stepUntil: 0, reloadUntil: 0, saidT: -100, rounds: 0, heldForFriend: 0, heldForLine: 0, blockT: 0, shortSeen: -100, shortSince: -100, shortT: -100 };
-  }
   /** a friend — Sam, or another living operative — within a body's breadth of the line from → to (and a metre past it), wider for one on the move */
   friendInLine(from: Vec3, to: Vec3, self: Guard, samStill = false): 'player' | Guard | null {   // (samStill: asked AS IF the player stood still where he is — clearline.ts's question, never the fire gate's)
     const g = this.g; const dx = to[0] - from[0], dz = to[2] - from[2]; const L2 = dx * dx + dz * dz; if (L2 < 0.0025) return null;
@@ -959,282 +598,16 @@ export class RoomFight {
     for (const o of g.guards) if (o !== self && o.state !== 'dead' && o.char.alive && !isHostile(self.team, o.team) && hit(o.char, o.team === 'operative' && !!o.unit)) return o;
     return null;
   }
-  /** Sam between a teammate's gun and what it is on (or a metre past it): the gun goes to the low ready while he is there (the script runner's own muzzle
-   *  discipline knows only the men on the guard list — Sam is not on it — and lets it back up once the line has been clear a moment) */
-  private samInLine(O: Op, to: Vec3): boolean {
-    const gd = O.gd, c = gd.char; if (!ROOMFIGHT.samLine) return false;
-    if (this.friendInLine(c.bones.upperArmR ?? v3.add(c.pos, [0, 1.4, 0]), to, gd) !== 'player') return false;
-    gd.muzzleDown = true; gd.muzzleClearT = 0; return true;
-  }
-  private speak(O: Op, text: string, gap = 1.2) { if (this.g.time - O.saidT < gap) return; O.saidT = this.g.time; this.g.say(O.gd, text); }
-  /** ROOMFIGHT.coverKeep: true of an enemy who is NOT this covering man's — off his ordered way, and a mate has him (see the table). */
-  private coverPasses(g: Game, O: Op, h: Guard): boolean {
-    const R = ROOMFIGHT; if (!R.coverKeep || COVER_BREAK) return false;
-    const A = g.orders.of(O.gd); if (!A || A.order !== 'cover' || !A.watch || !A.post) return false;
-    const c = O.gd.char, hc = h.char;
-    if (flat(c.pos, A.post) > 0.8 || flat(c.pos, hc.pos) < R.coverNearM) return false;   // not on his post yet · a man this close is anybody's
-    if (Math.abs(wrapAngle(v3.yawTo(c.pos, hc.pos) - v3.yawTo(c.pos, A.watch))) <= R.coverHalfDeg * DEG) return false;   // in the angle he was given
-    if (Math.abs(wrapAngle(v3.yawTo(hc.pos, c.pos) - hc.aimYaw)) < 0.35) return false;   // a muzzle on him is his own business
-    // a mate HAS the man: his gun on him and a round to send — not behind a jamb (blockT), not reloading, no friend in his line, his muzzle not down.
-    // And a man this one is already ON is handed over only to a mate past his own beat to fire (readyAt): no gap with nobody's rounds going at him
-    const g0 = g.time, mine = O.tgt === h;
-    for (const X of this.ops) if (X !== O && X.tgt === h && X.gd.state !== 'dead' && X.blockT < R.noShot && X.lineT === 0 && g0 >= X.reloadUntil && !X.gd.muzzleDown && (!mine || g0 >= X.readyAt)) return true;
-    return false;
-  }
-  private tickOp(O: Op, dt: number) {
-    const g = viewOf(this.g, O.gd), gd = O.gd, c = gd.char, S = FIGHT_SKILL.operative;
-    gd.skill = S;
-    if (gd.state === 'dead') { O.tgt = null; O.turn = null; O.step = null; this.restore(O); return; }
-    if (O.reloadUntil > 0) { const now = gd.weapon.reloadRow.dur - (O.reloadUntil - g.time); feedDeal(c.anim, c.anim.longGun ? gd.weapon : null, true); feedTick(g, c, gd.weapon.def, now - dt, now, undefined, gd.weapon); }   // (gunreload.ts: his gun's own feeding heard on this clock, the hand's stations dealt — nothing with gunlook.ts off. This reload never dropped anything and does not now)
-    if (O.reloadUntil > 0 && g.time >= O.reloadUntil) { gd.weapon.rearm(); O.reloadUntil = 0; }
-    if (O.tgt) sideSeen(g, gd);   // (gunslots.ts: a man in front of him — a sidearm that is out stays out)
-    // a mate down in his view: said once
-    for (const X of this.ops) if (X !== O && X.gd.state === 'dead' && !this.downCalled.has(X.gd) && !g.col.segmentBlocked(eyeOf(c), [X.gd.char.pos[0], 0.4, X.gd.char.pos[2]])) { this.downCalled.add(X.gd); this.speak(O, X.gd.wound ? `${X.gd.callsign}'s hit — breathing.` : 'man down.', 0); }
-    if (!gd.script) {   // the fight AI has him (its eyes, its trigger, its muzzle discipline for the men on the guard list): Sam is not on that list — his line is kept here
-      this.restore(O); O.tgt = null; O.turn = null; O.step = null;
-      const fc = gd.foe && gd.foe !== 'player' ? gd.foe.char : null;
-      if (gd.state === 'alert' && fc && this.friendInLine(c.muzzle, chestOf(fc), gd) === 'player') { gd.muzzleDown = true; gd.muzzleClearT = 0; O.heldForFriend++; this.stats.heldForFriend++; }
-      return;
-    }
-    const s = gd.script; const speed = Math.hypot(c.vel[0], c.vel[2]);
-    if (AIMCOST.move && !g.touring) { O.feetSm = feetHold(O.feetSm ?? 0, speed, O.feetT == null ? dt : Math.max(dt, g.time - O.feetT)); O.feetT = g.time; }
-    const blind = g.time < gd.dazzledUntil || g.time < gd.staggerUntil || !!gd.held; const sinceHot = g.time - Math.max(O.hotT, this.hotT), hot = sinceHot < ROOMFIGHT.teamHot || spottedKeen(g, gd);
-    // ---- his eyes: every living hostile through the game's sight test, at the game's rate
-    let best: Guard | null = null, bs = -1;
-    for (const h of g.guards) {
-      if (h.team === gd.team || !isHostile(gd.team, h.team)) continue;
-      let M = O.meters.get(h); if (!M) { M = { m: 0, seenT: -100 }; O.meters.set(h, M); }
-      if (h.state === 'dead') { M.m = 0; continue; }
-      if (h.fled) { M.m = 0; continue; }   // (runner.ts, false with its switch off: a man who dropped it and ran is nobody's target — the team's eyes pass over him)
-      let noShot = false;
-      if (O.pass && O.pass.h === h) { if (g.time >= O.pass.until) O.pass = null; else if (!O.pass.noShot) continue; else noShot = true; }   // a masked man let go of (letGo): not his again for that long
-      const vis = blind ? null : canSeeChar(g, gd, h.char, false); const rate = vis?.visible ? this.rateOn(gd, h, vis.dist, M.m >= S.notice) : 0;
-      if (rate > 0.05) { M.m = Math.min(1, M.m + rate * dt); if (rate > 0.25) M.seenT = g.time; } else M.m = Math.max(0, M.m - 0.5 * dt);
-      if (noShot) { if (vis?.visible && (clearShot(g, c, chestOf(h.char)) || clearShot(g, c, h.char.bones.head ?? v3.add(h.char.pos, [0, 1.6, 0])))) O.pass = null; else continue; }   // (walked on from for want of a shot — walkOn: seen all the while, and his again the moment there is one)
-      if (g.time - M.seenT < 0.25 && (M.m >= S.notice || hot) && !pairPasses(g, gd, h) && !workPasses(g, gd, h) && !this.coverPasses(g, O, h)) {   // a real sighting now (the alert AI's own licence: rate > 0.25) — and either he has made the shape out over time (a calm floor) or the floor is hot, when the sighting is enough, as it is for any roused man
-        const hc = h.char; const onUs = Math.abs(wrapAngle(v3.yawTo(hc.pos, c.pos) - hc.aimYaw)) < 0.35 ? 2 : 0;   // a muzzle on him outranks one that is not
-        const R = ROOMFIGHT, d = vis?.dist ?? 9;
-        const alarm = h.state === 'alert' || h.state === 'search', passed = M.glassT !== undefined;   // (passed: he has held a round at this man for a pane in the way — silent.ts; never true of a loud squad)
-        const sc = passed && !alarm && g.time - M.glassT! < GLASS_LOOK ? 0.01 / (1 + d)   // (… just now: anybody he MAY shoot takes his muzzle)
-          : (h === O.tgt && !(R.nearest && O.blockT >= R.noShot) ? 10 : 0) + onUs + (R.nearest && onUs && d < R.closeM ? 10 : 0) + 1 / (1 + d)
-            + (passed && alarm && O.tgt && O.tgt.state !== 'alert' && O.tgt.state !== 'search' ? 20 : 0);   // (… and when that man raises the alarm he takes it from any man who has not — the one his gun moved on to and is only holding on)
-        if (sc > bs) { bs = sc; best = h; }
-      }
-    }
-    if (blind) { best = null; O.turn = null; }   // eyes full of magnesium, staggered, or in somebody's arm: he has nobody — no round goes on the memory of where a man was
-    // ---- who his muzzle is on
-    if (best !== O.tgt) {
-      if (best) {
-        const off = Math.abs(wrapAngle(v3.yawTo(c.pos, best.char.pos) - c.aimYaw));
-        O.readyAt = g.time + (O.tgt || g.time - O.lostAt < 1.5 ? pick(S.shift) : off > S.sectorDeg * DEG && !(ROOMFIGHT.cued && O.turn && O.turn.to === best && g.time >= O.turn.at) ? pick(S.react) + pick(S.surprise) : pick(S.react) * S.ready);
-        O.track = 0; O.n = 0; O.next = 0; O.fell = false; O.pre = (!!s.over || (s.upper ?? 'aim') === 'aim') && off < ROOMFIGHT.preaimDeg * DEG;   // on the line his gun was already held on
-        if (ROOMFIGHT.keepTrack && !O.tgt && O.kept && O.kept.h === best && g.time - O.kept.t < 1.5) { const gap = (g.time - O.kept.t) / 1.5; O.track = O.kept.track * (1 - gap); O.readyAt = g.time + pick(S.shift) * gap; }   // (the man he was on a moment ago: neither his track nor the beat to take him up starts from nothing — both by how long he was gone)
-        if (!this.called.has(best)) { this.called.add(best); const rel = wrapAngle(v3.yawTo(c.pos, best.char.pos) - c.bodyYaw); this.speak(O, rel > 0.5 ? 'contact left.' : rel < -0.5 ? 'contact right.' : 'contact front.', 0.4); }
-        this.note(gd, `eyes on ${best.callsign}`);
-      } else {
-        if (O.tgt && O.tgt.state === 'dead') { this.speak(O, O.tgt.wound ? (O.tgt.killerId === c.id ? wg('he\'s hit — he\'s down and out of the fight.', 'he\'s hit — down, gun\'s out of it.') : 'he\'s down, breathing.') : O.tgt.killerId === c.id ? 'tango down.' : 'he\'s down.', 0.6); }
-        O.fell = !!O.tgt && O.tgt.state === 'dead'; O.lostAt = g.time; O.kept = O.tgt && O.tgt.state !== 'dead' ? { h: O.tgt, track: O.track, t: g.time } : null;
-      }
-      O.tgt = best; O.lineT = 0; O.blockT = 0;   // (how long a friend has stood in his line is counted per man he is on)
-    }
-    // ---- a step of this module's handed back: re-ordered under it, the new order stands; else, the reason gone (nobody to shoot for a second — and for a doorway
-    // step back INTO an opening, the fight gone quiet), the order's own legs again
-    if (O.step) {
-      if (s.goal !== O.step.mine) O.step = null;
-      else if (g.time >= O.stepUntil && !O.tgt && g.time - O.lostAt > 1 && (!O.step.door || sinceHot >= 10 || !O.step.goal || !this.funnelOf(O.step.goal))) this.handBack(O);
-    }
-    if (!O.tgt) {
-      // nobody in his sight: a round fired at his side from where he has a line, or the man a mate has just called, brings his muzzle (and his light) round to
-      // look — the sight test above then says whether there is a man there to shoot (return fire is a look first, never a round at a noise)
-      if (!blind) this.cue(O);
-      if (O.turn && g.time >= O.turn.at && O.turn.to.state !== 'dead') { const tc = chestOf(O.turn.to.char);
-        const to = O.turn.pt && eyeBlocked(g, O.gd, eyeOf(c), tc) ? O.turn.pt : tc; this.samInLine(O, to); this.point(O, to, dt, speed); }
-      else if (!blind && coverOp(g, O, dt, speed, to => this.point(O, to, dt, speed))) { /* coverfire.ts: a man he knows is behind something breakable — his rounds go into it */ }
-      else if (s.over === O.ov) { if (g.time - O.lostAt > 0.5 || (O.fell && viewOf(g, gd).doorTools?.owesCorner(gd))) this.restore(O);   // (DOORTOOLS.collapse: his man down and a corner of his entry still owed — the corner has his muzzle now)
-        else if (flat(c.pos, O.aim) < 2.5) { O.aim[0] = c.pos[0] + Math.sin(c.aimYaw) * 2.5; O.aim[2] = c.pos[2] + Math.cos(c.aimYaw) * 2.5; } }   // (the half second his gun stays where the man was: a BEARING — walking over the spot itself would swing it right round)
-      this.doorway(O, dt, speed); return;
-    }
-    O.turn = null;
-    const h = O.tgt, hc = h.char; const chest = chestOf(hc), dist = flat(c.pos, hc.pos);
-    const brg = this.point(O, chest, dt, speed);
-    const samIn = this.samInLine(O, chest); if (samIn) this.holdShort(O);
-    if (samIn && g.time >= O.readyAt && g.time >= O.reloadUntil) { O.heldForFriend++; this.stats.heldForFriend++; O.lineT += dt; O.lineBy = 'player'; O.lineAt = g.time; if (!clearLineBlocked(g, gd, h, chest, 'player')) this.sideStep(O, chest, speed); this.letGo(O); if (!O.tgt) return; }   // (the fire gate's own answer to a friend in the line, taken here: with the gun down he never gets that far)
-    if (CLEARLINE.on && !samIn && g.time >= O.readyAt && g.time >= O.reloadUntil) { const m = this.friendInLine(c.bones.upperArmR ?? v3.add(c.pos, [0, 1.4, 0]), chest, gd); if (m && m !== 'player') clearLineBlocked(g, gd, h, chest, m); }   // (clearline.ts: a MATE in his line — the runner has his gun down for it, so the fire gate below is never reached and nothing asked him to move)
-    this.doorway(O, dt, speed);
-    // ---- the track (aim.ts's law, this side's K) and the pair
-    const P = AIM.guard; const facingErr = Math.abs(wrapAngle(brg - c.aimYaw));
-    const onMan = g.time >= O.readyAt && facingErr < P.onDeg * DEG + Math.atan2(0.35, Math.max(dist, 0.3)) && v3.dist(O.aim, chest) < 0.3, on = onMan && !gd.muzzleDown && !teamSprinting(g, gd);   // (teampace.ts: nothing is fired at a run)
-    const settle = Math.max(P.settleSecs, 1e-3) * clamp(dist / Math.max(P.rangeRef, 0.1), P.nearK, 1) * S.settleK;
-    if (on && O.pre) { O.track = Math.max(O.track, S.preaim); O.pre = false; }
-    O.track = on ? Math.min(1, O.track + dt / settle) : Math.max(0, O.track - P.loseRate * dt);
-    if (!g.tune.aimModel) O.track = on ? 1 : 0;
-    if (onMan && gunWallIs(g, c)) { O.heldForLine++; O.blockT += dt; O.wallT += dt; this.walkOn(O); if (O.tgt && this.sideStep(O, chest, speed, O.wallT, 'steps aside: his gun is in a wall')) O.wallT = 0; return; }   // (gunwall.ts: on his man with the gun IN a wall, so at the low ready — no shot from here, as with no line: an order's walk goes on for one, a planted man steps aside for one)
-    O.wallT = 0;
-    if (!on) O.blockT = Math.max(0, O.blockT - dt);   // (no shot is counted only while his gun is on the man: off him, the count runs back down)
-    if (O.track < P.acquireMin - 1e-9 || g.time < O.next || g.time < O.reloadUntil || sideLocked(g, gd) || !on) return;
-    if (roundHeld(g, gd, h)) { this.speak(O, 'eyes on. holding.', 8); return; }   // (silent.ts: the man has not noticed the team — the gun stays on him, no round goes)
-    let to = chest;
-    if (!clearShot(g, c, to)) { const head = hc.bones.head ?? v3.add(hc.pos, [0, 1.6, 0]); if (clearShot(g, c, head)) to = head; else if (!coverSeen(g, gd, h, chest)) { O.heldForLine++; O.blockT += dt; this.walkOn(O); return; } }   // (coverfire.ts: no line, and what blocks it is breakable and worth the rounds — they go into it)
-    O.blockT = 0;
-    if (silentHoldsGlass(g, gd, h, c, to)) { const M = O.meters.get(h); if (M) { if (M.glassT === undefined || g.time - M.glassT > GLASS_LOOK) this.speak(O, 'eyes on, behind glass. holding.', 8); M.glassT = g.time; } return; }   // (silent.ts: the round would have to break a pane on its way to a man who has raised no alarm — held, the gun on him, said once a hold; glassT on HIS meter of that man: … who is not a man to stay on while there is anybody he may shoot — the scoring above)
-    const R = gd.weapon.def.aiSpread; const hands = (R.base + Math.max(0, dist - R.rangeFrom) * R.rangeK) * S.spreadK;
-    const supK = g.tune.suppression && conditionSup(g, gd, gd.sup.v) >= SUPPRESSION.flinch ? 1.6 : 1;
-    const str = gunString(gd);   // (gunroles.ts: a belt-fed gun's string, the Mk 12's single aimed round — 0: the controlled pair, as ever)
-    const wide = hands * lerp(P.unsettledK, 1, clamp(O.track, 0, 1)) * supK + (str > 1 ? gunStringGrow(gd, O.n % str) : 0) + (AIMCOST.move && !g.touring ? Math.max(speed, O.feetSm ?? 0) * AIMCOST.moveK : speed) * P.shooterMoveK * 0.5;   // (how wide this round would be thrown: asked of here so that the care below can ask about the round as it would fly)
-    let inLine = this.friendInLine(c.muzzle, to, gd);
-    if (!inLine) { inLine = friendInCone(g, gd, c.muzzle, to, wide + (gd.weapon.def.pellets ? gd.weapon.def.pellets.cone * 2 : 0), undefined, hc); if (inLine) ffHeld(); }   // (friendlyfire.ts, a return of null with the switch off: a friend anywhere this round could go — past his man, at the edge of its spread — holds it as one in the lane does)
-    if (inLine) { O.heldForFriend++; this.stats.heldForFriend++; O.lineT += dt; O.lineBy = inLine; O.lineAt = g.time; if (inLine === 'player') this.holdShort(O); if (!clearLineBlocked(g, gd, h, to, inLine)) this.sideStep(O, to, speed); this.letGo(O); return; }
-    O.lineT = 0;
-    if (!gd.weapon.fire()) { if (sideOut(g, gd, dist)) return;   // (gunslots.ts: dry on a man close in front of him — his sidearm, not a magazine change)
-      O.reloadUntil = g.time + feedBegin(gd.weapon).dur; this.speak(O, 'reloading.', 0); return; }
-    fireWeapon(g, c, to, false, { steady: true, spread: wide });
-    O.rounds++; O.n++; this.stats.opRounds++;
-    O.next = g.time + (str ? (O.n % str === 0 ? pick(S.shift) : gunStringGap(gd)) : O.n % 2 === 0 ? pick(S.shift) : S.pair);
-    if (gd.weapon.def.pellets) O.next = Math.max(O.next, g.time + gd.weapon.def.cd);   // (a pump gun: no controlled pair comes faster than its action is worked — shotgun.ts)
-  }
-  /** The muzzle onto a point: his script carries this module's overlay (GuardScript.over) while this holds — the runner aims at O.aim with the gun up, and, the
-   *  point behind his shoulder and he stood still, squares him round to it. Nothing the order holds is written. Returns the bearing to the point. */
-  private point(O: Op, to: Vec3, dt: number, speed: number): number {
-    const gd = O.gd, c = gd.char, s = gd.script!;
-    if (s.over !== O.ov) { const r = Math.max(1, flat(c.pos, to)); O.aim[0] = c.pos[0] + Math.sin(c.aimYaw) * r; O.aim[1] = 1.2; O.aim[2] = c.pos[2] + Math.cos(c.aimYaw) * r; O.ov.face = null; s.over = O.ov; }   // (from where the muzzle is: it travels, it does not snap)
-    for (let i = 0; i < 3; i++) O.aim[i] = damp(O.aim[i], to[i], 16, dt);
-    const brg = Math.atan2(to[0] - c.pos[0], to[2] - c.pos[2]); const off = Math.abs(wrapAngle(brg - c.bodyYaw));
-    const walk = ROOMFIGHT.turnWalk && speed >= 0.3;   // (… or walking: squad.ts walks him on with his chest to it, backwards or sideways)
-    if (walk) {   // (walking, it is the way he is GOING the point is behind, or not: his chest follows his path whenever it is not turned to the man, so a test on the chest itself would turn him to and fro)
-      const offGo = Math.abs(wrapAngle(brg - Math.atan2(c.vel[0], c.vel[2])));
-      O.ov.face = offGo > 1.2 || (O.ov.walk === true && offGo > 0.7) ? brg : null;
-    } else O.ov.face = speed < 0.3 && (off > 1.2 || (O.ov.face !== null && off > 0.3)) ? brg : null;   // behind his shoulder and he is stood: he turns to it (and finishes the turn)
-    O.ov.walk = walk && O.ov.face !== null;
-    return brg;
-  }
-  /** what turns a teammate with nobody in his sight: a hostile's round in the last moments from where he has a line (the nearest such shooter), else the man a
-   *  mate's muzzle is on if he has a line to him — after his reaction beat, for a couple of seconds */
-  private cue(O: Op) {
-    const g = viewOf(this.g, O.gd), c = O.gd.char, S = FIGHT_SKILL.operative;
-    if (O.turn && (g.time > O.turn.until || O.turn.to.state === 'dead' || (!O.turn.door && (workPasses(g, O.gd, O.turn.to) || this.coverPasses(g, O, O.turn.to))))) { O.turn = null; O.lostAt = g.time; }   // (… or workthings.ts: he is stood at the thing he was sent to work, and the look is for a man no round of his may go at — a door come open is still looked at)
-    const look = O.turn && O.turn.pt ? O.turn : null;   // (a look at where steps come from — it follows them and lasts while they keep coming, `stepLookSecs` at most, and gives way to a shot or a mate's call)
-    if (look && !look.door && O.stepBy && O.stepBy.by === look.to && g.time - O.stepBy.t < 0.6) { look.pt = O.stepBy.at; look.until = Math.min(Math.max(look.until, O.stepBy.t + 2.5), (look.t0 ?? g.time) + ROOMFIGHT.stepLookSecs); }
-    if (O.turn && !look) return;
-    const eye = eyeOf(c); let who: Guard | null = null, bd = 16, call = false, pt: Vec3 | null = null;
-    const gone = O.pass && O.pass.noShot && g.time < O.pass.until ? O.pass.h : null;   // (the man he has just walked on from for want of a shot: no mate's call, no burst into the pane and no footfall of his turns him back — the eye loop does, when there is a round at him)
-    const A = orderOf(g, O.gd), arc = A && A.order === 'hold' && A.watch && A.arrived ? v3.yawTo(c.pos, A.watch) : null;
-    const mine = (h: Guard) => arc === null || Math.abs(wrapAngle(v3.yawTo(c.pos, h.char.pos) - arc)) < ROOMFIGHT.arcHalfDeg * DEG;
-    for (const r of this.reports) { if (g.time - r.t > 0.6 || r.by.state === 'dead' || r.by === gone || this.coverPasses(g, O, r.by)) continue; const d = flat(c.pos, r.by.char.pos); if (d < bd && !eyeBlocked(g, O.gd, eye, chestOf(r.by.char))) { bd = d; who = r.by; } }
-    if (!who) for (const X of this.ops) if (X !== O && X.tgt && X.tgt !== gone && X.tgt.state !== 'dead' && X.gd.state !== 'dead' && flat(c.pos, X.tgt.char.pos) < 16 && mine(X.tgt) && !eyeBlocked(g, O.gd, eye, chestOf(X.tgt.char)) && !workPasses(g, O.gd, X.tgt) && !this.coverPasses(g, O, X.tgt)) { who = X.tgt; call = true; }   // (workthings.ts: not a man stood at the thing he was sent to work, for a man no round of his may go at)
-    if (!who && O.stepBy && g.time - O.stepBy.t < 0.6 && O.stepBy.by.state !== 'dead' && O.stepBy.by !== gone && mine(O.stepBy.by) && !workPasses(g, O.gd, O.stepBy.by) && !this.coverPasses(g, O, O.stepBy.by)) {   // footsteps coming, and his the nearest ears: he looks
-      if (!eyeBlocked(g, O.gd, eye, chestOf(O.stepBy.by.char))) { who = O.stepBy.by; call = true; }
-      else if (ROOMFIGHT.stepLook && !look && !(A && A.door && !A.arrived)) { who = O.stepBy.by; call = true; pt = O.stepBy.at; }   // … at where they come from, with no line to the man himself (never on his way to a door's mark or through it: his corner is his)
-    }
-    let secs = 2.5, door: Door | null = null; const DB = O.doorBy;
-    if (DB && (g.time - DB.t >= 0.6 || DB.by.state === 'dead' || (look && look.door === DB.door))) O.doorBy = null;   // (stale, or the door he is already looking at)
-    else if (DB && !who && DB.by !== gone && !DB.door.latched && Math.abs(DB.door.angle) > 0.1 && !(A && A.door && !A.arrived)   // a door an enemy's hand has OPENED in his sight (a rattle, a pick, a leaf slammed to or latched is no opening): he looks at its doorway
-      && (arc === null || Math.abs(wrapAngle(v3.yawTo(c.pos, DB.at) - arc)) < ROOMFIGHT.arcHalfDeg * DEG)) { who = DB.by; call = true; pt = DB.at; secs = ROOMFIGHT.doorLookSecs; door = DB.door; O.doorBy = null; this.note(O.gd, 'a door has come open in his sight: he looks at it'); }
-    let shotDoor: Door | null = null;   // (ROOMFIGHT.doorShots, last of all: a man in his line, a mate's call, a footfall and a door just opened each come first)
-    if (!who && ROOMFIGHT.doorShots && !DOORSHOT_BREAK && !(A && A.door && !A.arrived)) { const DS = this.doorShot(O, eye, gone, arc, A, look && look.door ? look.door : null); if (DS) { who = DS.by; pt = DS.at; secs = ROOMFIGHT.doorLookSecs; door = shotDoor = DS.door; if (!look || look.door !== DS.door) this.note(O.gd, 'rounds are coming through a doorway in his sight: he looks at it'); } }
-    if (who) O.turn = { to: who, at: look && (look.to === who || (shotDoor && look.door === shotDoor)) ? (door ? look.at : Math.min(look.at, g.time)) : g.time + pick(S.react) + (call ? 0.25 : 0), until: g.time + secs, pt, t0: g.time, door };   // (the man he was already looking for by ear, now in his line: no second beat)
-  }
-  /** ROOMFIGHT.doorShots: the nearest OPEN doorway he can see that a hostile's round has just flown through towards his side of its wall, with no line of his
-   *  to the shooter — who fired, the point of the doorway to look at, and the door. `only`: the door his look is already on (no other is asked). */
-  private doorShot(O: Op, eye: Vec3, gone: Guard | null, arc: number | null, A: ReturnType<Game['orders']['of']>, only: Door | null): { by: Guard; at: Vec3; door: Door } | null {
-    const g = viewOf(this.g, O.gd), R = ROOMFIGHT, p = O.gd.char.pos; let best: { by: Guard; at: Vec3; door: Door } | null = null, bd = Infinity;
-    for (const r of this.reports) { const a = r.from, b = r.to; if (!a || !b || g.time - r.t > 0.6 || r.by.state === 'dead' || r.by === gone || this.coverPasses(g, O, r.by)) continue;
-      for (const d of g.doors.list) { if ((only && d !== only) || (!d.off && (d.latched || Math.abs(d.angle) <= 0.1))) continue;   // (a door he is already looking at keeps his look until it lapses: no flapping between two · a shut leaf is no opening)
-        if (A && A.arrived && A.door && A.door !== d && !A.spare && A.watch && flat(A.watch, A.door.frameCentre) < 1.6) continue;   // (a gun an order has on ANOTHER door keeps it, as it does for a door that opens: doorEars)
-        const fc = d.frameCentre, far = flat(fc, a), near = flat(fc, p); if (far > R.doorShotM || near > 9 || near < 0.5 || near >= bd) continue;
-        const th = d.def.closedDir, nx = -Math.sin(th), nz = Math.cos(th), sa = (a[0] - fc[0]) * nx + (a[2] - fc[2]) * nz, sb = (b[0] - fc[0]) * nx + (b[2] - fc[2]) * nz;
-        if (sa * sb >= 0 || sa * ((p[0] - fc[0]) * nx + (p[2] - fc[2]) * nz) >= 0) continue;   // (the round did not cross that wall's line · or it was fired from his own side of it)
-        const k = sa / (sa - sb), cx = a[0] + (b[0] - a[0]) * k, cz = a[2] + (b[2] - a[2]) * k;
-        if (Math.abs((cx - fc[0]) * Math.cos(th) + (cz - fc[2]) * Math.sin(th)) > d.def.width / 2 + 0.1) continue;   // (… or crossed it somewhere else than this opening)
-        const q = 0.35 / near, at: Vec3 = [fc[0] + (p[0] - fc[0]) * q, 1.1, fc[2] + (p[2] - fc[2]) * q];   // (the doorway as he sees it, as a door that opens is looked at)
-        if (g.col.segmentBlocked(eye, at) || (arc !== null && Math.abs(wrapAngle(v3.yawTo(p, at) - arc)) >= R.arcHalfDeg * DEG)) continue;
-        bd = near; best = { by: r.by, at, door: d }; } }
-    return best;
-  }
   /** the feet half of LIGHTS.litMan — in the dark on a lit man, Sam in the line to him, and an order's walk still to make: his feet wait (orders.ts reads
    *  short() and asks his legs for nothing; the order, its mark and its carriage are untouched and are his again a quarter of a second after this stops being stamped) */
-  private holdShort(O: Op) {
-    const g = viewOf(this.g, O.gd), R = ROOMFIGHT, gd = O.gd, s = gd.script, h = O.tgt, p = gd.char.pos;
-    if (!h || !s || !s.goal || s.arrived || O.step || flat(s.goal, h.char.pos) > flat(p, h.char.pos) - 0.3 || !gunOnLitMan(g, gd) || this.funnelOf(p)) return;
-    if (g.time - O.shortSeen > 1 || g.time < O.shortSeen) { O.shortSince = g.time; this.note(gd, `holds short of ${h.callsign} in the dark: the player in his line`); }
-    O.shortSeen = g.time;
-    if (g.time - O.shortSince < R.holdShortSecs) O.shortT = g.time;
-  }
-  /** held off his man for a friend in the line (and no step taken that cleared it): a hostile who has fired in the last moments from where he has a line takes
-   *  his eyes — the masked man is let go for two seconds, the shooter looked for at once */
-  private letGo(O: Op) {
-    const g = viewOf(this.g, O.gd), c = O.gd.char; if (!(ROOMFIGHT.letGo > 0) || O.lineT < ROOMFIGHT.letGo || !O.tgt || O.step) return;
-    const eye = eyeOf(c); let who: Guard | null = null, bd = 16;
-    for (const r of this.reports) { if (g.time - r.t > 1.5 || r.by.state === 'dead' || r.by === O.tgt) continue; const d = flat(c.pos, r.by.char.pos); if (d < bd && !eyeBlocked(g, O.gd, eye, chestOf(r.by.char))) { bd = d; who = r.by; } }
-    if (!who) return;
-    this.note(O.gd, `lets ${O.tgt.callsign} go (a friend in the line) for ${who.callsign}, who is shooting`);
-    O.pass = { h: O.tgt, until: g.time + 2 }; O.tgt = null; O.kept = null; O.lostAt = g.time; O.lineT = 0; O.track = 0; O.turn = { to: who, at: g.time, until: g.time + 2.5 };
-  }
-  /** on his man with no round at him (clearShot: glass, a jamb, furniture) for ROOMFIGHT.noShotGo s, and an order's walk still to make: he says so, lets the man
-   *  go for a while and walks on — the man is called already, and whoever is posted on the way he would come has him */
-  private walkOn(O: Op) {
-    const g = viewOf(this.g, O.gd), R = ROOMFIGHT, s = O.gd.script; if (!(R.noShotGo > 0) || O.blockT < R.noShotGo || !O.tgt || O.step || !s || !s.goal || s.arrived) return;
-    this.note(O.gd, `no shot at ${O.tgt.callsign} for ${O.blockT.toFixed(1)} s: walks on`); this.speak(O, 'no shot — moving.', 3);
-    O.pass = { h: O.tgt, until: g.time + R.noShotPass, noShot: true }; O.tgt = null; O.kept = null; O.lostAt = g.time; O.lineT = 0; O.blockT = 0; O.track = 0;
-  }
+  private holdShort(O: Op): void { return goneWithTick('RoomFight.holdShort') as any; }
   /** his muzzle back to the order: the overlay off his script (the order's own aim, carriage and facing were never touched) */
   private restore(O: Op) { const s = O.gd.script; if (s && s.over === O.ov) s.over = null; O.track = 0; }
-  /** a step of this module's: the order's legs kept, then the step ordered */
-  private stepTo(O: Op, p: Vec3, door: boolean, patch: Parameters<typeof order>[1]) {
-    const s = O.gd.script!;
-    if (O.step && s.goal === O.step.mine) { O.step.mine = p; O.step.door = O.step.door || door; }
-    else O.step = { mine: p, goal: s.goal, speed: s.speed, strafe: s.strafe, face: s.face, door };
-    order(O.gd, { ...patch, goal: p }); teamFight(this.g, O.gd, 2);   // (teampace.ts: the fight's own step keeps its pace)
-  }
   /** …and handed back: the order as it stood before the step, if nobody has ordered him since */
   private handBack(O: Op) {
     const b = O.step; O.step = null; const s = O.gd.script;
     if (b && s && s.goal === b.mine && O.gd.state !== 'dead') order(O.gd, { goal: b.goal, speed: b.speed, strafe: b.strafe, face: b.face });
   }
   /** the open doorway `p` stands in (its frame's span, within 0.75 m of the frame line; a shut leaf is a wall, not an opening) */
-  funnelOf(p: Vec3): Door | null {
-    for (const d of this.g.doors.list) {
-      if (d.latched || Math.abs(d.angle) < 0.6) continue;
-      const F = frameOf(d); const along = (p[0] - F.hx) * F.ux + (p[2] - F.hz) * F.uz, off = (p[0] - F.hx) * F.nx + (p[2] - F.hz) * F.nz;
-      if (along > -0.05 && along < F.W + 0.05 && Math.abs(off) < 0.75) return d;
-    }
-    return null;
-  }
-  private spotFree(p: Vec3, self: Guard): boolean {
-    const g = this.g; if (g.col.nav.isBlocked(p[0], p[2])) return false;
-    for (const pl of men(g)) if (!pl.down && flat(pl.char.pos, p) < 0.8) return false;
-    for (const o of g.guards) if (o !== self && o.state !== 'dead' && flat(o.char.pos, p) < 0.8) return false;
-    return true;
-  }
-  /** stopped in an open doorway with the fight on: through it and off the opening on the side he faces, else back off it */
-  private doorway(O: Op, dt: number, speed: number) {
-    const g = viewOf(this.g, O.gd), gd = O.gd, c = gd.char, S = FIGHT_SKILL.operative;
-    if (!ROOMFIGHT.doorway || g.time < O.stepUntil) { O.funnelT = 0; return; }
-    const d = speed < 0.4 ? this.funnelOf(c.pos) : null;
-    const fight = !!O.tgt || this.ops.some(X => X.tgt) || g.time - O.hotT < 3;   // a man in his sight, a mate's muzzle on one (his call), or a shot / a charge in HIS ears just now
-    if (!d || !fight) { O.funnelT = 0; return; }
-    if ((O.funnelT += dt) < S.funnel) return;
-    const F = frameOf(d), f = c.forward(); const sgn = f[0] * F.nx + f[2] * F.nz >= 0 ? 1 : -1;
-    for (const side of [sgn, -sgn]) for (const lat of [F.W + 0.65, -0.65]) {
-      const p: Vec3 = [F.hx + F.ux * lat + F.nx * side * 1.05, 0, F.hz + F.uz * lat + F.nz * side * 1.05];
-      if (!this.spotFree(p, gd)) continue;
-      this.stepTo(O, p, true, { speed: 2.6, strafe: false }); O.stepUntil = g.time + 1.5; O.funnelT = 0; this.stats.stepped++; this.note(gd, `steps off ${d.def.name}'s opening`);
-      return;
-    }
-    O.stepUntil = g.time + 0.5;
-  }
-  /** a friend has stood in his line a while (`waited`; or his own gun in a wall — gunwall.ts) and he is planted: a step to the side that opens it. True: he steps */
-  private sideStep(O: Op, to: Vec3, speed: number, waited = O.lineT, why = 'steps round a friend in his line'): boolean {
-    const g = viewOf(this.g, O.gd), gd = O.gd, c = gd.char, S = FIGHT_SKILL.operative; const s = gd.script;
-    if (!ROOMFIGHT.sideStep || !s || waited < S.line || speed > 0.3 || g.time < O.stepUntil || (s.goal && !s.arrived)) return false;
-    const dx = to[0] - c.pos[0], dz = to[2] - c.pos[2]; const L = Math.hypot(dx, dz) || 1;
-    for (const w of [0.9, -0.9, 1.6, -1.6, 2.4, -2.4]) {
-      const p: Vec3 = [c.pos[0] + dz / L * w, 0, c.pos[2] - dx / L * w];
-      if (!this.spotFree(p, gd) || this.funnelOf(p) || g.col.solidBlocked([c.pos[0], 0.45, c.pos[2]], [p[0], 0.45, p[2]])) continue;
-      const from: Vec3 = [p[0], 1.4, p[2]];
-      if (g.col.shotBlocked(from, to, 0.02, shotEnergy(g, gd.char, gd.weapon.def)) || this.friendInLine(from, to, gd) || friendInCone(g, gd, from, to, 0.08)) continue;   // (friendlyfire.ts, null with the switch off: nor a spot whose round would still have a friend in its cone)
-      this.stepTo(O, p, false, { speed: 2.2, strafe: true, face: c.bodyYaw }); O.stepUntil = g.time + 2; O.lineT = 0; this.stats.stepped++; this.note(gd, why);
-      return true;
-    }
-    O.stepUntil = g.time + 1; return false;
-  }
+  funnelOf(p: Vec3): Door | null { return goneWithTick('RoomFight.funnelOf') as any; }
 }

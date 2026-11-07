@@ -131,8 +131,6 @@ function wallReportOf(g: Game, at: Vec3, picture = false): boolean {
   return true;
 }
 
-/** game.ts update, once a frame: the charges that stand set remembered for next frame's blast, the queued stages let go, the kick written to the camera */
-export function blastFeelTick(g: Game, cam: FollowCamera) { const was = g.fogOfWar.begin(g.player.char.id); try { blastFeelTickRaw(g, cam); } finally { g.fogOfWar.done(was); } }   // (a wall charge and every later stage of its blast — the dust ring, the roll, the soot, the crumbs — are the team's doing: fogofwar.ts FOG.ours)
 function blastFeelTickRaw(g: Game, cam: FollowCamera | null) {
   const S0 = STATE.get(g), WC = g.wallCharge;
   if (!WC || !live(g)) { if (S0) { S0.seen.length = 0; S0.queue.length = 0; S0.kicks.length = 0; } if (cam?.kick) cam.kick = null; return; }

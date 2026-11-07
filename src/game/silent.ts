@@ -53,18 +53,16 @@
 import { viewOf } from './seats';
 import { SideMap, SideSet } from '../math/side';
 import type { Game, Guard } from './game';
-import { fragRunning } from './frag';
-import type { OrderDef, SquadOrders } from './orders';
+import './frag';
 import type { Door } from './doors';
-import { sneakStep } from './sneak';
-import { unseenPace, unseenStep, unseenDark, unseenHush, unseenEase, unseenHolds, unseenGlass, unseenGlassHeld, unseenWord } from './unseen';
-import { glassOnLine } from './glasspen';
-import { holdFireHolds, holdFireGlass, holdFireGlassHeld, holdFireLoud } from './holdfire';
-import { shotOrigin } from './guards';
-import type { Character } from './character';
-import type { Vec3 } from '../math/vec';
-import { pairHoldsRound } from './pairorders';
-import { spottedHoldsRound } from './spotted';
+import './sneak';
+import { unseenDark, unseenHush, unseenEase } from './unseen';
+import './glasspen';
+import './holdfire';
+import './guards';
+import './pairorders';
+import './spotted';
+import { RUST_PASS, RUST_SURFACE, crossToRust, goneWithTick } from './crossing';
 
 export const SILENT = {
   /** THE switch: off = no rows on the menu, no word on the HUD, the team as it was whatever the state says */
@@ -119,7 +117,7 @@ const castOf = (g: Game) => g.orders.squad();
 /** is the squad silent right now (false with the switch off, with nobody ever told, with no squad) */
 export function squadSilent(g: Game): boolean { if (!SILENT.on) return false; const s = states.get(g); return !!s && s.silent && g.orders.active; }
 /** put the squad in silent / take it out (the orders' issue; the panel; a loadout screen staging a run) */
-export function setSilent(g: Game, on: boolean, by: By = 'api') {
+export function setSilent(g: Game, on: boolean, by: By = 'api') { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('setSilent', undefined, [g, on, by]); if (__r !== RUST_PASS) return __r as any; } }
   let s = states.get(g); if (!s) states.set(g, s = { cast: castOf(g), silent: false, since: g.time, hot: false });
   if (s.silent === on) return;
   s.silent = on; s.since = g.time; s.hot = false; s.was = false; s.booted = undefined; SILENT_STATS[on ? 'silent' : 'loud']++;
@@ -130,44 +128,33 @@ export function underSilence(g: Game, gd: Guard): boolean { return squadSilent(v
 
 // ------------------------------------------------------------ the rules (each a return on its first line while the squad is loud)
 /** the speed his legs may be asked for */
-export function silentPace(g: Game, gd: Guard, speed: number): number {
-  if (!underSilence(g, gd)) { const cap = unseenPace(g, gd); return cap !== null && speed > cap && !fragRunning(g, gd) ? cap : speed; }   // (unseen.ts: a loud squad nobody has found, Sam sneaking — null with its switch off)
-  if (!(SILENT.pace > 0) || speed <= SILENT.pace || fragRunning(g, gd)) return speed;   // (frag.ts: nobody walks quietly off a live grenade)
-  return SILENT.hotPace && reached(g, gd) ? speed : SILENT.pace;
-}
-/** loud has reached this man since the order: gunfire, a bang or a kick in his ears (roomfight.ts's hot clock), newer than the word that made them silent */
-function reached(g: Game, gd: Guard): boolean { const s = states.get(g); return !!s && g.fight.hotFor(gd) && g.fight.hotOf(gd) >= s.since; }
+export function silentPace(g: Game, gd: Guard, speed: number): number { return crossToRust('silentPace', undefined, [g, gd, speed]) as any; }
 /** a hostage's life is on it: the captor of a live rescue at his last warning (rescue.ts — asked of the room's doors, as the door tools ask it) */
-export function urgent(g: Game): boolean { return g.doors.list.some(d => g.rescue.lastWarning(d)); }
+export function urgent(g: Game): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('urgent', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } } return g.doors.list.some(d => g.rescue.lastWarning(d)); }
 /** the two above, for spotted.ts's own fire rule beside this one */
-export const silentReached = reached, silentUrgent = urgent;
+export const silentUrgent = urgent;
 /** a walking footfall's base level — null: his usual */
-export function silentStep(g: Game, gd: Guard): number | null {
-  if (!underSilence(g, gd)) return unseenStep(g, gd);
-  const own = SILENT.step > 0 ? sneakStep(g, gd) ?? SILENT.step : null;   // (… a crouched one's under the sneak: sneak.ts, null with its switch off)
-  const low = gd.char.anim.crouch > 0.5 ? unseenStep(g, gd) : null;   // (unseen.ts: crouched with Sam and nobody has found them — the ordered squad is never the louder one in the same crouch)
-  return low === null ? own : own === null ? low : Math.min(own, low);
-}
+export function silentStep(g: Game, gd: Guard): number | null { return crossToRust('silentStep', undefined, [g, gd]) as any; }
 /** his weapon light / torch is held off */
-export function silentDark(g: Game, gd: Guard): boolean { return underSilence(g, gd) ? SILENT.lights : unseenDark(g, gd); }   // (… or unseen.ts: the loud squad sneaking with Sam, his own light off)
+export function silentDark(g: Game, gd: Guard): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('silentDark', undefined, [g, gd]); if (__r !== RUST_PASS) return __r as any; } } return underSilence(g, gd) ? SILENT.lights : unseenDark(g, gd); }   // (… or unseen.ts: the loud squad sneaking with Sam, his own light off)
 /** his line goes over the net */
-export function silentHush(g: Game, gd: Guard): boolean { return underSilence(g, gd) ? SILENT.hush : unseenHush(g, gd); }   // (under the order, the order's own rule; else unseen.ts's)
+export function silentHush(g: Game, gd: Guard): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('silentHush', undefined, [g, gd]); if (__r !== RUST_PASS) return __r as any; } } return underSilence(g, gd) ? SILENT.hush : unseenHush(g, gd); }   // (under the order, the order's own rule; else unseen.ts's)
 /** he eases a door */
-export function silentEase(g: Game, gd: Guard): boolean { return underSilence(g, gd) ? SILENT.doors : unseenEase(g, gd); }
+export function silentEase(g: Game, gd: Guard): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('silentEase', undefined, [g, gd]); if (__r !== RUST_PASS) return __r as any; } } return underSilence(g, gd) ? SILENT.doors : unseenEase(g, gd); }
 /** the boot is held back (the door tools ask at a locked door) */
-export function silentNoBoot(g: Game): boolean {
+export function silentNoBoot(g: Game): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('silentNoBoot', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } }
   if (!SILENT.kicks || !squadSilent(g) || urgent(g)) return false;
   SILENT_STATS.locked++; return true;
 }
 /** … and the lock is worked instead (the door tools ask before the boot's own question, and every frame the pick is on: the squad told loud, a loud tool
  *  picked, a captor at his last warning = false, and the boot takes over) */
-export function silentPick(g: Game): boolean { return SILENT.picks && SILENT.kicks && squadSilent(g) && !urgent(g); }
+export function silentPick(g: Game): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('silentPick', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } } return SILENT.picks && SILENT.kicks && squadSilent(g) && !urgent(g); }
 /** A door NO pick opens (the door tools' own test: a wedge kicked under it from inside, a keypad's bolt) in front of a silent squad that HAS BEEN
  *  COMPROMISED since the order — at any point: the men behind a door do not forget in the 45 s the HUD's word lasts, and a boot that went by the last loud
  *  thing would stall a squad that fought its way to the door a minute ago. The boot goes — asked before silentNoBoot. 'first': nobody has said so at this
  *  door since the order · 'again': somebody has. null: the boot is not let go here (never compromised since the order, the switch off, boots not held at
  *  all, or a captor at his last warning — then it is the ordinary boot, with its ordinary line) */
-export function silentBoot(g: Game, d: Door): 'first' | 'again' | null {
+export function silentBoot(g: Game, d: Door): 'first' | 'again' | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('silentBoot', undefined, [g, d]); if (__r !== RUST_PASS) return __r as any; } }
   const s = states.get(g); if (!SILENT.bootWedged || !SILENT.kicks || !squadSilent(g) || !s?.was || urgent(g)) return null;
   const said = (s.booted ??= new SideSet()); if (said.has(d)) return 'again';
   said.add(d); SILENT_STATS.booted++; return 'first';
@@ -176,40 +163,13 @@ export function silentBoot(g: Game, d: Door): 'first' | 'again' | null {
 export function silentNoCans(g: Game): boolean { return SILENT.cans && squadSilent(g); }
 /** IS HIS GUN QUIET — the one place that asks (a loadout's kit plugs in here). Today by the weapon's own report: under the gunshot level and not flagged loud,
  *  which the team's FN2000 is not, suppressor or no (weapons.ts: its report is level 1). A man with a quiet gun has no round held. */
-export function quietGun(gd: Guard): boolean { const r = gd.weapon.def.report; return !r.loud && r.level < 1; }
-/** the order's own hold on a silent man's round at `h`, nothing counted */
-function ownHold(g: Game, gd: Guard, h: Guard): boolean {
-  if (!SILENT.holdFire || reached(g, gd) || quietGun(gd)) return false;
-  return !(h.state === 'alert' || h.state === 'search' || h.awareness >= SILENT.noticed || urgent(g));
-}
-/** his round at `h` is held: the man has not noticed the team, and nothing loud has reached this teammate (roomfight.ts's fire gate: the gun stays on him) */
-/** IS THIS ROUND HELD: the room fight's and the cover's fire's one question, not one about who has the shooter. The silent squad's hold, the pair's 'watch him', the hands going onto him; each rule's own stat counts as it answers */
-export function roundHeld(g: Game, gd: Guard, h: Guard): boolean { return silentHoldsRound(g, gd, h) || pairHoldsRound(g, gd, h) || spottedHoldsRound(g, gd, h); }
-export function silentHoldsRound(g: Game, gd: Guard, h: Guard): boolean {
-  if (!underSilence(g, gd)) return (!holdFireLoud(g) && unseenHolds(g, gd, h, SILENT.noticed, quietGun(gd), () => urgent(g))) || holdFireHolds(g, gd, h, SILENT.noticed, quietGun(gd), () => urgent(g));   // (unseen.ts: a loud squad nobody has found, Sam sneaking — the same hold without the order; false with its switch off)
-  if (!ownHold(g, gd, h)) return false;
-  SILENT_STATS.held++; return true;
-}
+export function quietGun(gd: Guard): boolean { return goneWithTick('quietGun') as any; }
+export function silentHoldsRound(g: Game, gd: Guard, h: Guard): boolean { return crossToRust('silentHoldsRound', undefined, [g, gd, h]) as any; }
 /** THE MAN THE ROOM FIGHT HAS HIM ON IS ONE THE SILENT ORDER WILL NOT LET HIM SHOOT (orders.ts asks, for a man on his stack mark whose gun is not on his
  *  door): a silent teammate with a living man as his target whom the fire hold above holds. The hold's own conditions asked afresh, nothing counted, so it
  *  stands through a change of man. Only that hold: a round held for standing glass alone (a man past `noticed` behind a pane) or by another module's rule
  *  (spotted.ts, the pair's 'watch him') is not asked. Never a loud man (holdfire.ts holdFireHoldsTarget is his). False with `stackSet` off. */
-export function silentHoldsTarget(g: Game, gd: Guard): boolean {
-  if (!SILENT.stackSet || !underSilence(g, gd)) return false;
-  const h = g.fight.opOf(gd)?.tgt; return !!h && h.state !== 'dead' && ownHold(g, gd, h);
-}
-/** … and his round at `h`, which would have to go THROUGH STANDING GLASS to reach `to`, is held: the squad is silent, nothing loud has reached this teammate,
- *  no hostage's life is on it, and the man has raised no alarm (suspicious, half sure of a shape: he may yet look away — and the pane going tells the floor
- *  where they are, whatever the gun; alert or searching, the floor is up already and he is shot as ever). Part of the fire hold: nothing with `holdFire` off.
- *  Asked by roomfight.ts's fire gate once clearShot has passed the line (`c`: the teammate's own body, for that same line); the gun stays on the man. */
-export function silentHoldsGlass(g: Game, gd: Guard, h: Guard, c: Character, to: Vec3): boolean {
-  const sil = underSilence(g, gd), uns = !sil && !holdFireLoud(g) && unseenGlass(g, gd);   // (holdfire.ts: his 'go loud' to a silent squad is standing — the sneak's hold is not asked, here or in silentHoldsRound; false with its switch off)
-  if (sil ? !SILENT.glass || !SILENT.holdFire || reached(g, gd) : !uns && !holdFireGlass(g, gd)) return false;   // (… or holdfire.ts: a loud squad nobody has found, whatever Sam's posture — asked only where unseen.ts's does not answer; false with its switch off)   // (… or, for a loud squad, unseen.ts's hold by this same rule — and by ITS switches, UNSEEN.glass / UNSEEN.hold: SILENT.glass / holdFire are a silent man's alone)
-  if (h.state === 'alert' || h.state === 'search' || urgent(g)) return false;
-  if (!glassOnLine(g, shotOrigin(c), to)) return false;   // (the whole line, gun to the point on the man: a pane he stands against is glass in the way too)
-  if (sil) SILENT_STATS.heldGlass++; else if (uns) unseenGlassHeld(); else holdFireGlassHeld();
-  return true;
-}
+export function silentHoldsTarget(g: Game, gd: Guard): boolean { return crossToRust('silentHoldsTarget', undefined, [g, gd]) as any; }
 /** a loud tool is being used: a silent squad is loud from here, with one line (the menu's loud rows — LOUD_ROWS — and the door tools' own bang and clear) */
 export function silentTool(g: Game, loud: boolean) {
   if (!loud || !SILENT.toolsLoud || !squadSilent(g)) return;
@@ -218,52 +178,8 @@ export function silentTool(g: Game, loud: boolean) {
 /** is the silent squad compromised right now (loud in a teammate's ears, and the order still standing) */
 export function silentCompromised(g: Game): boolean { return squadSilent(g) && !!states.get(g)?.hot; }
 
-// ------------------------------------------------------------ the menu's rows, the HUD's word
-const TARGETS: OrderDef['targets'] = ['floor', 'door', 'none'], LISTED: OrderDef['listed'] = ['floor', 'none'];
-const HEAD = 'the whole squad';
-function rows(g: Game): [OrderDef, OrderDef] {
-  const all = (S: SquadOrders) => S.men();   // (whoever the menu was addressed to: the posture is the squad's)
-  return [
-    { id: 'silent', head: HEAD, label: 'go silent', targets: TARGETS, listed: LISTED, free: true, only: all, ack: ['going quiet.', 'copy. silent.'],
-      issue: () => { setSilent(g, true, 'order'); } },
-    { id: 'loud', head: HEAD, label: 'go loud', targets: TARGETS, listed: LISTED, free: true, only: all, ack: ['going loud.', 'copy. loud.'],
-      standsIn: { for: 'silent', when: () => squadSilent(g) }, issue: () => { setSilent(g, false, 'order'); } },
-  ];
-}
 const seats = new SideMap<Game, { on: boolean; goDigit: boolean }>('silent.seats');
-/** The rows on the menu (off it with the switch off), on the first page's spare digit — which is the word's on a build that gives the word by a digit
- *  (DOORTOOLS.wordOnKey off): there the word keeps 5, as it had it, and these rows are reached by the wheel. Asked every frame; work only when that changes. */
-const loudWord = (w: string | null) => w ? `loud · ${w}` : 'loud';
-function seat(g: Game) {
-  const S = g.orders, go = S.defs.find(d => d.id === 'go'), goDigit = !!go && !go.hotKey, was = seats.get(g);
-  if (was && was.on === SILENT.on && was.goDigit === goDigit) return;
-  seats.set(g, { on: SILENT.on, goDigit });
-  S.unregister('loud'); S.unregister('silent');
-  if (!SILENT.on) { S.posture = null; return; }
-  if (go && goDigit) S.register(go);   // (dealt its digit again with these rows off the table: 5)
-  const [silent, loud] = rows(g);
-  S.register(silent, 'go'); S.register(loud);
-  S.posture = {
-    word: () => S.active ? (squadSilent(g) ? (silentCompromised(g) ? 'SILENT · compromised' : 'SILENT') : loudWord(unseenWord(g))) : null,
-    mark: def => SILENT.toolsLoud && squadSilent(g) && LOUD_ROWS.includes(def.id) ? ' · LOUD' : '',
-    given: def => silentTool(g, LOUD_ROWS.includes(def.id)),
-  };
-}
 
-/** Once a frame, before the orders pose the men: the rows kept where they belong, a NEW cast (a staging, a restart: not a man of the last one in it) stood
- *  up in SILENT.start — a man joining or leaving the squad Sam has leaves his word standing —, and the silent squad's one line the moment loud reaches it. */
-export function silentTick(g: Game) {
-  seat(g);
-  const s = states.get(g);
-  if (!s) { if (!SILENT.on || !SILENT.start) return; const cast = castOf(g); if (!cast.length) return;
-    states.set(g, { cast, silent: false, since: g.time, hot: false }); setSilent(g, true, 'start'); return; }
-  const cast = castOf(g), fresh = cast.length > 0 && !cast.some(gd => s.cast.includes(gd));
-  s.cast = cast; if (fresh) { s.since = g.time; s.hot = s.was = false; s.booted = undefined; setSilent(g, SILENT.on && SILENT.start, 'start'); }   // (the new men have heard nothing: a squad that starts silent as the last one ended starts clean too)
-  if (!squadSilent(g)) { s.hot = false; return; }
-  const hot = cast.find(gd => gd.state !== 'dead' && reached(g, gd));
-  if (hot && !s.hot) { SILENT_STATS.compromised++; if (!s.was) g.say(hot, 'compromised.'); }   // (said the first time since the order: not again after every quiet spell — nor at their own boot)
-  s.hot = !!hot; if (hot) s.was = true;
-}
 
 export function silentSummary(g: Game): string {
   if (!SILENT.on) return 'off';

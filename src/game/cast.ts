@@ -22,6 +22,7 @@ import { nvgWorn } from './nvg';
 import { activeScenario, teamOf } from './scenarioRun';   // (called inside sneakSuit only)
 import { PACKSIDE, packMask } from './packside';   // (a leaf)
 import { bigCarried } from './bigkit';   // (called inside castParts only)
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 const worn = new SideMap<Character, CastVariant>('cast.worn');
 
@@ -76,7 +77,7 @@ export function sneakSuit(g: Game, c: Character): boolean {
 }
 /** the part mask to DRAW this man with this frame (0 with no cast loaded): his variant's, with the goggles as the game has them (the head comment; anim/gltf.ts castGoggles)
  *  — and, in the sneaking suit, without the helmet, the back kit and the mesh goggles (anim/gltf.ts castSuit) */
-export function castParts(g: Game, c: Character): number {
+export function castParts(g: Game, c: Character): number { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('castParts', undefined, [g, c]); if (__r !== RUST_PASS) return __r as any; } }
   const v = castVariantOf(g, c); if (!v) return 0;
   const cast = c.ch.cast!;
   if (sneakSuit(g, c)) return castSuit(cast, v.mask);

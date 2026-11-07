@@ -19,6 +19,7 @@ import type { WeaponDef, WeaponId } from './weapons';
 import { gunLookOn } from './gunlook';   // (called inside casingFx only)
 import * as fx from './effects';
 import { blastSparks } from './blastLook';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 /** the live GPU particle system, or null → the caller keeps to the CPU path (read straight off the engine so the harness's engine stand-in — no `particles`
  *  field at all — is simply 'off') */
@@ -249,11 +250,6 @@ export function lockSplinterFx(g: Game, d: Door, from: Vec3) {
   P.emit('debris', v3.mad(keep, m, 0.04), m, PFX.lockScrews, { speed: 2.6, speedJit: 0.5, spread: 0.5, life: 40, lifeJit: 0.2, size: 0.005, sizeJit: 0.3, color: [0.5, 0.5, 0.47] });   // the strike plate's screws / the keep's bits (metal-grey crumbs)
 }
 
-/** The ring airfoil meeting a wall / a desk: a few sparks off the clack. */
-export function clackFx(g: Game, at: Vec3) {
-  const P = gpuFx(g); if (!P) return;
-  P.emit('spark', v3.add(at, [0, 0.02, 0]), [0, 1, 0], PFX.clackSparks, { speed: 2.5, speedJit: 0.6, spread: 1.3, life: 0.3, lifeJit: 0.4, size: PFX.sparkSize });
-}
 
 /** The tracer's ember where it stops in geometry (tracers.ts ember → its spark sink): the same few sparks back off the surface, on the GPU. */
 export function emberFx(P: Particles, at: Vec3, dir: Vec3, o: { count: number; speed: number; cone: number; life: number }) {
@@ -291,7 +287,7 @@ const STATE = new SideMap<Game, FxState>('particleFx.STATE');
 const stateOf = (g: Game): FxState => { let s = STATE.get(g); if (!s) { s = { tinks: [], n: 0 }; STATE.set(g, s); } return s; };
 /** One spent case out of `shooter`'s gun of row `def`: ejected where and how the row says, carrying his stride, its rays blind to his own arm; and the sound of it
  *  landing, `tink` s later where it will roughly come down. */
-export function casingFx(g: Game, shooter: Character, def: WeaponDef) {
+export function casingFx(g: Game, shooter: Character, def: WeaponDef) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('casingFx', undefined, [g, shooter, def]); if (__r !== RUST_PASS) return __r as any; } }
   const P = gpuFx(g); if (!P) return;
   const C = casingOf(def); if (!C) return;
   const F = fx.muzzleFrame(shooter.muzzle, shooter.gunDir);   // z = bore, y = up out of the receiver, x = the shooter's LEFT (right-handed, +Z south)
@@ -303,12 +299,6 @@ export function casingFx(g: Game, shooter: Character, def: WeaponDef) {
   const st = stateOf(g);
   const land: Vec3 = [port[0] + dir[0] * C.speed * C.tink, 0.02, port[2] + dir[2] * C.speed * C.tink];
   st.tinks.push({ t: g.time + C.tink, pos: land, rate: 0.9 + ((st.n++ * 7) % 11) * 0.03 });   // (a little spread in pitch, dealt not drawn)
-}
-/** Once a frame (game.ts update): the cases due to land are heard landing. Nothing else of the particles lives on the CPU. */
-export function updateParticleFx(g: Game) {
-  const st = STATE.get(g); if (!st || st.tinks.length === 0) return;
-  const P = gpuFx(g);
-  for (let i = st.tinks.length - 1; i >= 0; i--) { const k = st.tinks[i]; if (k.t > g.time) continue; st.tinks.splice(i, 1); if (P) g.audio.play('casingTink', k.pos, PFX.tinkGain, { rate: k.rate }); }
 }
 /** encounter restart / the tour's cuts: nothing in the air, nothing on the floor, nothing waiting to be heard */
 export function clearParticleFx(g: Game) {
@@ -325,7 +315,7 @@ export function sparkSink(g: Game): { emitCone(at: Vec3, dir: Vec3, o: { count: 
 }
 
 /** Panel / hook: a test burst of `kind` at `at` (the cursor's point): what the sites above throw, without firing anything. */
-export function testBurst(g: Game, kind: 'sparks' | 'debris' | 'dust' | 'casings' | 'bang' | 'sheets', at: Vec3): number {
+export function testBurst(g: Game, kind: 'sparks' | 'debris' | 'dust' | 'casings' | 'bang' | 'sheets', at: Vec3): number { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('testBurst', undefined, [g, kind, at]); if (__r !== RUST_PASS) return __r as any; } }
   const P = gpuFx(g); if (!P) return 0;
   const up: Vec3 = [0, 1, 0]; const p = v3.add(at, [0, 0.05, 0]);
   switch (kind) {

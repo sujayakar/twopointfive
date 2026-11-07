@@ -21,12 +21,8 @@
 // (cover.ts, rearwatch.ts), finds a way (orders.ts route) or touches the entry (doortools.ts). No state: four sight lines a frame for a man on his last
 // steps, asked of the level's solids and the leaves as they stand — nothing to save, no dice, nothing read off a camera or a graphics setting.
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load.)
-import type { Vec3 } from '../math/vec';
-import type { Game, Guard } from './game';
-import type { Door } from './doors';
-import type { Assignment } from './orders';
-import { frameOf } from './guards';
-import { squadSilent } from './silent';
+import './guards';
+import './silent';
 
 export const STACKLINE = {
   /** THE switch: off = the slow last steps onto a stack mark whatever the door, as they were */
@@ -42,21 +38,3 @@ export const STACKLINE = {
 /** frames a man was kept at the brisk pace */
 export const STACKLINE_STATS = { paced: 0 };
 
-/** a leaf that stands open (or is off its hinges): what is beyond it sees through it NOW */
-export function stackLineOpen(d: Door): boolean { return !!d.off || (!d.latched && Math.abs(d.angle) >= STACKLINE.ajar); }
-/** has the floor point `p`, on the face `face` of `d`, a clear line at chest height to the mouth of its opening (a point `inset` out from any strip of it)
- *  — the level's solids and the leaves as they stand. Wider than 'some floor beyond sees him' by the jambs' thickness: a man hard beside the frame counts */
-export function stackLineSees(g: Game, d: Door, p: Vec3, face: 1 | -1): boolean {
-  const K = STACKLINE, F = frameOf(d);
-  for (let k = 0; k < K.bins; k++) { const a = F.W * (k + 0.5) / K.bins, dx = F.hx + F.ux * a + F.nx * face * K.inset - p[0], dz = F.hz + F.uz * a + F.nz * face * K.inset - p[2], L = Math.hypot(dx, dz);
-    if (L < 0.05 || !g.col.raycast([p[0], K.eye, p[2]], [dx / L, 0, dz / L], L)) return true; }
-  return false;
-}
-/** THE PACE for a man `left` metres short of his mark: `brisk` (the caller's own brisk walk), or null — not a man walking up to a stack on a door that
- *  stands open with a line to its mouth (the head comment's terms) */
-export function stackLinePace(g: Game, gd: Guard, A: Assignment, left: number, brisk: number): number | null {
-  const K = STACKLINE; if (!K.on || A.order !== 'stack' || !A.shy || A.shy !== A.door || !A.post || left < K.onMark) return null;
-  const d = A.shy, p = gd.char.pos; if (!stackLineOpen(d) || squadSilent(g)) return null;
-  const F = frameOf(d), face = (A.post[0] - F.hx) * F.nx + (A.post[2] - F.hz) * F.nz >= 0 ? 1 : -1; if (((p[0] - F.hx) * F.nx + (p[2] - F.hz) * F.nz) * face < 0.05 || !stackLineSees(g, d, p, face)) return null;
-  STACKLINE_STATS.paced++; return brisk;
-}

@@ -221,7 +221,7 @@ pub fn seed_of(r: &mut crate::fixture_break::Rec) -> f64 {
 /// boxes. (src/game/fixtureBreak.ts:197 fixtureBreakBoxes)
 pub fn fixture_break_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>, dt: f64) {
     let f = g.m.fixture_break.fixlook.clone();
-    if !g.k.destruction.on || !f.on {
+    if !f.on {
         if let Some(s) = g.m.fixture_break.state.as_mut() { let gone = core::mem::take(&mut s.recs); s.last_t = -1.0; for r in gone.iter() { let_go(g, r); } }
         return;
     }

@@ -364,15 +364,12 @@ pub fn wind_reroof(g: &mut crate::game::Game, roofs: Option<&[[f64; 4]]>, own: O
 /// The storm record says whether the one field outdoors is on, and carries the roofs it blows between. (wind.ts Wind.syncField)
 pub fn wind_sync_field(g: &mut crate::game::Game) {
     let st = g.wind.storm;
-    g.tab.wind_wind_source[st].field = if g.k.wx_own.wind { Some(true) } else { None };
+    g.tab.wind_wind_source[st].field = Some(true);
     g.tab.wind_wind_source[st].roofs = wind_field_roofs(g);
 }
 
 /// The roofs the storm blows between one by one, where the switch is up and the level has three or four of its own. (wind.ts Wind.fieldRoofs)
 pub fn wind_field_roofs(g: &mut crate::game::Game) -> Option<Vec<Vec<f64>>> {
-    if !g.k.wx_own.wind {
-        return None;
-    }
     match &g.wind.lv_roofs {
         Some(r) if r.len() > 2 => Some(r.clone()),
         _ => None,

@@ -94,15 +94,12 @@ export class Sensors {
   get stats(): SensorStats { return this.s.stats; }
   /** replay: the first divergence of the run (null = none yet) and the first few after it */
   get firstDivergence(): SensorDivergence | null { return this.s.firstDivergence; }
-  get divergenceLog(): SensorDivergence[] { return this.s.divergenceLog; }
 
   /** THE SENSES ON THE CPU (sense.ts SENSE.cpu; set by the Game, null = off): a sight line's transmittance worked out by the game itself, in the step that asks.
    *  While it is set nothing is asked of the probe and nothing of the probe's is served: a LIGHT read has no answer (every meter's own estimate stands in, as it
    *  always has until the first answer), a SEGMENT read is `own`'s for the line last asked under that key. Record files those values, replay serves what was filed. */
   own: ((a: Vec3, b: Vec3) => number) | null = null;
   private ownVals = new Map<string, number>();
-  /** hand the sight lines to the game's own working (null = back to the probe); answers kept from before are dropped */
-  setOwn(f: ((a: Vec3, b: Vec3) => number) | null): void { this.own = f; this.ownVals.clear(); }
   /** a new encounter: no line's answer outlives the world it was worked out in */
   ownReset(): void { this.ownVals.clear(); }
   /** `probeOf` hands the probe as it stands now (the harness swaps its methods mid-run) */
@@ -137,16 +134,6 @@ export class Sensors {
   // ---- the named forms the sites use
   /** a sight line's smoke transmittance: ask along a → b (unless `ask` is false — a budgeted site out of slots) and read; undefined = not answered (clear air to the caller) */
   segment(key: string, a: Vec3, b: Vec3, ask = true): number | undefined { if (ask) this.askSegment(key, a, b); return this.read(key); }
-  /** a light METER: two queries at a chest and a head under their keys with `id`'s own proxies skipped, read back as the max of the two when both have finite
-   *  answers; undefined = no reading yet. NOTHING CALLS IT today: Sam's 'playerChest' / 'playerHead' pair asks and reads this object directly (game.ts), and a
-   *  held man's / a unit's / a civilian's goes through g.lightQuery / g.lightAt (guards.ts meterOf), the hooks the harness swaps, with the CPU estimate standing in */
-  meterPair(kc: string, kh: string, pc: Vec3, ph: Vec3, id: number): number | undefined {
-    this.ask(kc, pc, id); this.ask(kh, ph, id);
-    const r1 = this.read(kc), r2 = this.read(kh);
-    return r1 !== undefined && r2 !== undefined && Number.isFinite(r1) && Number.isFinite(r2) ? Math.max(r1, r2) : undefined;
-  }
-  /** the light on a point (a body's trunk, a hiding spot): ask (unless out of budget) and read; undefined / non-finite = no reading */
-  lightAt(key: string, pos: Vec3, skipOwner = 0, ask = true): number | undefined { if (ask) this.ask(key, pos, skipOwner); return this.read(key); }
 
   // ================================================================================================== frames
   /** the top of a simulated frame (Game.update): record files reads under the new frame number; replay lays out what the recording delivered on it */

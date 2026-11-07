@@ -45,7 +45,7 @@
 import type { Game } from './game';
 import type { Input } from './input';
 import type { Vec3 } from '../math/vec';
-import { onPill, RING_BOX, RING_HOLE } from './ringlone';
+import { RUST_PASS, RUST_SURFACE, crossToRust, goneWithTick } from './crossing';
 
 export const CMDRING = {
   /** the ring's key puts the order menu up as a ring at the cursor and, let go, gives the lit wedge (false: the key is nobody's, as it was) */
@@ -211,15 +211,8 @@ export interface RingView { x: number; y: number; zoom: number; lit: number; ton
 /** how much larger than CMDRING's px a ring stands in a view this size (1 up to `ref`) */
 export function ringZoom(w: number, h: number): number { return Math.max(1, Math.min(w / CMDRING.ref[0], h / CMDRING.ref[1])); }
 
-/** A ring opened at the cursor, `lit` its first lit wedge: at the edge of the view it stands whole just inside it — and the cursor, then out of its
- *  middle, lights nothing until it has come back in (`w`, `h`: the view; 0 = not known, no edge) */
-export function ringOpen(input: Input, w: number, h: number, time: number, lit = 1): RingState {
-  const C = CMDRING, z = w && h ? ringZoom(w, h) : 1, cl = (v: number, m: number, max: number) => max > 2 * m ? Math.max(m, Math.min(max - m, v)) : v;
-  const ax = cl(input.mouseX, C.edgeX * z, w), ay = cl(input.mouseY, C.edgeY * z, h);
-  return { ax, ay, z, t0: time, lit, armed: Math.hypot(input.mouseX - ax, input.mouseY - ay) < C.flickPx * z };
-}
 /** (CMDRING.pin) the ring put back over its place — `sx, sy`: where that place is in the view now — whole inside the view's edge, as it was opened */
-export function ringPin(R: RingState, sx: number, sy: number, w: number, h: number): void {
+export function ringPin(R: RingState, sx: number, sy: number, w: number, h: number): void { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('ringPin', undefined, [R, sx, sy, w, h]); if (__r !== RUST_PASS) return __r as any; } }
   const C = CMDRING, cl = (v: number, m: number, max: number) => max > 2 * m ? Math.max(m, Math.min(max - m, v)) : v;
   R.ax = cl(sx + (R.ox ?? 0), C.edgeX * R.z, w); R.ay = cl(sy + (R.oy ?? 0), C.edgeY * R.z, h);
 }
@@ -231,18 +224,7 @@ export function ringPin(R: RingState, sx: number, sy: number, w: number, h: numb
  *  above). The cursor ON a drawn wedge — its fifth of the wheel from the hole out as far as its words may lie (the ring's own box, RING_BOX: a row is
  *  pointed at on its words as well as on its slice), or the pill's place — is on that wedge with no visit to the middle, once it has been off every
  *  drawn wedge since the ring last changed under it; a place of the wheel with no wedge is not one, nor anywhere outside the ring's box. */
-export function ringWant(R: RingState, input: Input, digit: number, time: number, lone = 0, shapes = 0): number {
-  const C = CMDRING, dx = input.mouseX - R.ax, dy = input.mouseY - R.ay, d = Math.hypot(dx, dy), out = d >= C.flickPx * R.z, early = time - R.t0 < C.tapSecs - 1e-6;
-  const pill = lone > 0 && onPill(lone, C.wedges, dx / R.z, dy / R.z), at = wedgeAt(dx, dy, C.wedges);
-  const on = shapes !== 0 && (lone ? pill : d >= RING_HOLE * R.z && Math.abs(dx) <= RING_BOX.x * R.z && Math.abs(dy) <= RING_BOX.y * R.z && (shapes >> at & 1) === 1);
-  if (shapes && !on) R.clear = true;
-  if (early) { if (out) R.armed = false; } else if (!out) R.armed = true;
-  if (digit) { R.armed = false; R.clear = false; return digit <= C.wedges ? digit : 0; }
-  if (early) return 0;
-  if (on && R.clear) return lone || at;
-  if (!out || !R.armed) return 0;
-  return pill ? lone : at;
-}
+export function ringWant(R: RingState, input: Input, digit: number, time: number, lone = 0, shapes = 0): number { return crossToRust('ringWant', undefined, [R, input, digit, time, lone, shapes]) as any; }
 
 /** a menu row as the seats read it (orders.ts OrderDef) */
 export interface SeatRow { key?: number; hotKey?: string; opens?: string; free?: boolean; targets: readonly string[]; listed?: readonly string[] }
@@ -303,25 +285,12 @@ export function flatSeats(rows: readonly FlatRow[], kind: string, wordKey: strin
 
 /** how long the key is kept down before its ring goes up (s): `stayHoldSecs` for a ring that stays, `holdSecs` for one that goes with its key */
 export function ringHoldSecs(): number { return CMDRING.stay ? CMDRING.stayHoldSecs : CMDRING.holdSecs; }
-/** THE LATCH of a ring that stays (CMDRING.stay), one frame of it — `keyDown`: its key is down · `keyHit`: its key went down this frame · `pointed`: the
- *  cursor is out of the middle on the lit wedge. The press that opened it still down: 'hold'. That press coming up with the cursor out on a wedge:
- *  'give' (hold, go out, let go — the ring as it was built); coming up in the middle: the ring is free, 'stay'. Free, the key again: 'give' (the lit
- *  wedge; with none lit the caller puts the ring away). Digits, clicks and what closes it are the caller's own. */
-export function ringLatch(R: RingState, keyDown: boolean, keyHit: boolean, pointed: boolean): 'hold' | 'stay' | 'give' {
-  if (R.free) return keyHit ? 'give' : 'stay';
-  if (keyDown) return 'hold';
-  if (pointed) return 'give';
-  R.free = true; return 'stay';
-}
 
 /** what a ring would open on, as the hint names it (orders.ts hintView) */
 export type RingHint = 'door' | 'wall' | 'man' | 'floor' | 'thing' | 'foe' | 'squad';
 
 /** the wedge a direction points at: 1 at the top, clockwise, `n` of them */
-export function wedgeAt(dx: number, dy: number, n: number): number {
-  const k = Math.round(Math.atan2(dx, -dy) / (2 * Math.PI / n));
-  return ((k % n) + n) % n + 1;
-}
+export function wedgeAt(dx: number, dy: number, n: number): number { return goneWithTick('wedgeAt') as any; }
 
 /** a file holds no ring (a held key is not state): a load, or the switch put off, finds the key up — savestate.ts, ui/bindings.ts */
 export function ringRestore(g: Game): void {

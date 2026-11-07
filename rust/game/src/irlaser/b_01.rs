@@ -12,7 +12,6 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 /// down.   (irlaser.ts samLaserOn)
 pub fn sam_laser_on(g: &mut crate::game::Game) -> bool {
     let pl = g.player;
-    if !(g.k.ir.on && g.k.ir.sam) { return false; }
     if !crate::roomfight::fight_live(g) || !g.pl[pl].nv { return false; }
     if !(crate::game::player_pistol_up(g, pl) || crate::game::player_rifle_up(g, pl)) { return false; }
     let c = g.pl[pl].ch;

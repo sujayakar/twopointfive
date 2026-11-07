@@ -22,8 +22,6 @@
 // the step that opens the action `blow`, or the squad's word (the key that had it): until then a tap beside his own charge does nothing. A step whose
 // line names the squad's key for it carries a `blowLine` for this switch (scene/scenarios.ts LessonStep, lesson.ts lineOf).
 // No dice, no clock of its own, no state: the row is derived from the charges that stand set.
-import type { Game, Interactable } from './game';
-import { Vec3, v3 } from '../math/vec';
 
 export const OWNBLOW = {
   /** the switch (above). false = the squad's key blows any set charge, his own among them, and his list has no row for it */
@@ -39,27 +37,3 @@ export const blowKeyWord = (keyIs: boolean, key: string): string => keyIs ? key 
  *  nothing for his own — its row, with the key it is on, is on his list */
 export const blowTail = (keyIs: boolean, key: string, sep = ' · '): string => keyIs ? `${sep}press ${key} to blow it` : '';
 
-/** the nearest free charge of his own, a door's or a wall's (null: none) */
-function ownSet(g: Game): { at: Vec3; words: string; where: string; /** it would put him down where he stands */ fatal: boolean; go: () => void } | null {
-  const D = g.doorTools, W = g.wallCharge; if (!D?.set.length && !W?.set.length) return null;
-  const p = g.player.char.pos, d = D?.samSet() ?? null, w = W?.samSet() ?? null; if (!d && !w) return null;
-  const wAt = w ? W!.samAt(w) : null;
-  if (d && (!wAt || v3.distXZ(d.door.frameCentre, p) <= v3.distXZ(wAt, p))) return { at: d.door.pos, words: D.closeWords(d), where: D.samWhere(d), fatal: false, go: () => D.trigger(d) };   // (a door's charge dazzles or stuns him, as it does anyone: the row's words warn, and it is his to take)
-  return { at: wAt!, words: W!.samWords(w!), where: 'the wall', fatal: W!.samFatal(w!), go: () => { W!.blow(w!); } };
-}
-/** player.ts buildInteractables: the row, or null (the switch, no charge of his own standing free, a mission on rails that does not offer it yet) */
-export function ownBlowRow(g: Game): Interactable | null {
-  if (!OWNBLOW.on) return null; const c = ownSet(g); if (!c) return null;   // (first: nothing set is nearly every frame)
-  const R = g.rails; if (!(R.offers('blow') || R.offers('charge')) || (R.locks('blow') && R.locks('word'))) return null;   // (on rails: from the step that opens `blow` — or the squad's word, the key that had it)
-  return { kind: 'charge', pos: c.at, line1: `charge set${c.words} · ${c.where}`, line2: 'Space  blow the charge', inReach: true, off: c.fatal, verb: 'blow', running: false };   // (greyed by the very test that refuses the bare tap)
-}
-/** interact.ts, at a bare tap's release: is the highlighted row his own charge where it would put him down (the tap gives nothing; the row is greyed) */
-export function ownBlowHeld(g: Game, r: Interactable | null): boolean {
-  if (!OWNBLOW.on || r?.kind !== 'charge' || r.verb !== 'blow' || !ownSet(g)?.fatal) return false;
-  g.msg('too close to your own charge'); return true;
-}
-/** game.ts, where this frame's act is read: the row given */
-export function ownBlowAct(g: Game) {
-  const a = g.act; if (!OWNBLOW.on || a?.kind !== 'charge' || a.verb !== 'blow' || g.player.down) return;
-  ownSet(g)?.go();
-}

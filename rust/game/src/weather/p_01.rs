@@ -310,7 +310,7 @@ pub fn weather_sync_roofs(g: &mut crate::game::Game, tell_wind: Option<bool>) { 
 
 /// syncRoofs, with `built` false while the constructor runs: `g.wind` is built after this object and has nothing to be told yet.
 fn sync_roofs(g: &mut Game, tell_wind: bool, built: bool) {
-    let own = g.weather.kind_now.is_none() && g.k.wx_own.roofs && g.m.weather_kinds.weather_boot.packed && !own_floor(g) && !weather_office_fit(g);
+    let own = g.weather.kind_now.is_none() && g.m.weather_kinds.weather_boot.packed && !own_floor(g) && !weather_office_fit(g);
     if own == g.weather.own && !tell_wind { return; }
     if own != g.weather.own {
         g.weather.own = own;

@@ -33,6 +33,7 @@ import { WORDS } from './words';
 import { watchedPlace } from './dialogue';
 import { roomRead, type RoomRead, type RoomWay } from './roomread';
 import { doorwayInWay } from './doorway';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 /** The knobs (no panel rows: ?noroomfit for a visit, the table by name from the console / a play-through's --set — it is in knobs.ts's registry). */
 export const ROOMFIT = {
@@ -128,18 +129,6 @@ function sees(g: Game, q: Vec3, T: Threat): boolean {
 /** One thing a man could have his gun on from where he stands: where, how heavy, its name, its bearing from him, how far, and whether it is a way (a door's
  *  frame, an opening) or a run of floor. */
 export interface Watchable { at: Vec3; w: number; key: string; yaw: number; dist: number; way: boolean }
-/** WHAT A MAN STOOD AT `p` WITH HIS EYES SPARE COULD WATCH, heaviest first (cover.ts's rear man at a mark with no door: COVER.rearRead): the read 'move there'
- *  weighs its watches by, asked of one standing man out to `reach` — the ways out of the floor he is on and the long runs of it, each only where he has a
- *  line to it, it is not under his feet, and nobody of `bodies` stands in the line. `front`: the bearing things weigh a little heavier on (the way his back
- *  is to what his order watches). Reads the level, the doors and the rooms the team knows; no dice, nothing kept. */
-export function watchablesAt(g: Game, p: Vec3, front: number, reach: number, bodies: readonly Vec3[]): Watchable[] {
-  const K = ROOMFIT, at: Vec3 = [p[0], 0, p[2]], R = roomRead(g, at, reach, at), out: Watchable[] = [];
-  for (const T of threatsOf(g, R, at, front, reach)) {
-    const dist = flat(at, T.at); if (dist <= 1 || !sees(g, at, T) || bodies.some(b => offLine(b, at, T.at) < K.laneM)) continue;
-    out.push({ at: T.at, w: T.w, key: T.key, yaw: yawTo(at, T.at), dist, way: !!T.way });
-  }
-  return out;
-}
 /** is `q` in the funnel of this way, on the space's own face of it */
 function inFunnel(q: Vec3, W: RoomWay): boolean {
   const K = ROOMFIT, x = q[0] - W.o.at[0], z = q[2] - W.o.at[2], dn = x * W.inN[0] + z * W.inN[1]; if (dn < -0.2 || dn > K.funnelM) return false;
@@ -149,7 +138,7 @@ function inFunnel(q: Vec3, W: RoomWay): boolean {
 /** THE DEAL: a place and a watch for each of `n` men sent to `at` — `front`: the way Sam pointed (his yaw to the point) · `from`: where he gave it from ·
  *  `bodies`: where anybody the order does not move stands (their room is kept) · `held`: what those men already watch under a deal of their own, by key (a
  *  gun on one of those is a second gun). null: the rule is off, or there is no floor there to deal. */
-export function fitSpots(g: Game, at: Vec3, n: number, front: number, from: Vec3, bodies: Vec3[] = [], held: readonly string[] = []): Fit[] | null {
+export function fitSpots(g: Game, at: Vec3, n: number, front: number, from: Vec3, bodies: Vec3[] = [], held: readonly string[] = []): Fit[] | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('fitSpots', undefined, [g, at, n, front, from, bodies, held]); if (__r !== RUST_PASS) return __r as any; } }
   const K = ROOMFIT; if (!K.on || n < 1) return null;
   const nav = g.col.nav, cs = nav.cell, R = roomRead(g, at, K.reach, from); if (!R.cells.length) return null;
   const T = threatsOf(g, R, at, front);
