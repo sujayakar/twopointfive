@@ -1048,9 +1048,8 @@ fn tick_run(g: &mut Game, q: EnemysquadsSquadId, i: usize, s: Sent, d: Roomfight
             }
             let (home_at, was) = { let x = &g.tab.roomfight_def[d]; (x.home, x.pt) };
             let to: V3 = [home_at[0], was[1], home_at[2]];
-            crate::roomfight::def_move_pt(g, d, to);   // (D.pt moved in place: his fix, if it is D.pt, moves with it)
+            crate::roomfight::def_move_pt(g, d, to);
             if !seen {
-                // `cover(gd, D.pt)`. Rule off it is `gd.lastKnown = D.pt`, and only the Def's own call keeps pt_stamp for def_fix_is_pt
                 crate::belief::cover(g, gd, to);
             } else if g.gd[gd].covers == Some(was) {
                 g.gd[gd].covers = Some(to);   // (`covers` IS D.pt in the TypeScript, and D.pt has just moved)
