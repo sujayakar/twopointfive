@@ -20,6 +20,14 @@ and a unit test does). Where every caller hands in the game's own table, it is f
 - `wallsnap/p_01.rs`: `take_secs` (WALLSNAP.slow, yes) and `press_near` (WALLSNAP.pressRun, yes) take the yes side; the halves of
   `take_secs_bits` and `press_near_bits` that set the row to no are deleted.
 
+A settled row a body writes is kept by the program. Where the write lays the page's own value over itself it goes by hand, and the
+program then folds the row:
+
+- `fogofwar/p_02.rs`, the renderer's block: for a few frames after the engine replay's word (`fog_of_war_page_look`) the look's rows
+  FOG.desat, .edge, .air and .kept were laid from the module's copy of the page's values. Once the dead code is gone that lay is the
+  rows' only writer, and what it writes is what they hold: the lay is deleted (the count of frames still runs down), and FOG.air and
+  FOG.kept fold (four reads in `fogofwar/p_02.rs` and `p_03.rs`). FOG.desat and FOG.edge are numbers and stay numbers.
+
 Left where it is, for whoever reworks those files: with BELIEF.on settled, `fix_stamp`, `pt_stamp`, `roomfight::def_fix_is_pt` and
 `fix_is_pt` (the stand-ins for the TypeScript's object identity of a man's fix) are still written and read by `def_move_pt`,
 `move_pt` and the senses. The program cannot call them dead: they are reached from code that never tested the row.
