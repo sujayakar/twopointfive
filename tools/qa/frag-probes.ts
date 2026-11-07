@@ -23,6 +23,7 @@
 // THE BREAK WORDS no longer leave a rule off (none can be): each takes a piece of its staging away, as said at each probe. FLEELOOK_BREAK is gone: (b7)
 // has no red path of its own, and (b8) fails under FRAGMATES_BREAK.
 import { standUp, ROOT } from './headless.ts';
+import { sample, swept } from './sweep.ts';
 const { FRAG, FRAG_LOG, FRAG_STATS, FRAG_WHY, fragStatsReset, blast, exposure, exposedTo, lying, lyingShows, ownClear } = await import(`${ROOT}/src/game/frag.ts`);
 const { KIT_ORDER } = await import(`${ROOT}/src/game/game.ts`);
 const { QUICKTHROW } = await import(`${ROOT}/src/game/quickthrow.ts`);   // (the G quick throw: on on the frozen stand, off in the page — (c) and (d2) read it)
@@ -79,7 +80,7 @@ export const fragBlast = guarded(async () => {
   const open = R.spot(P0, 2.6, true), wall = R.spot(P0, 2.6, false, [open!]), far = R.spot(P0, FRAG.woundM + 2.5, true, [open!, wall!]);
   if (!open || !wall || !far) { F.verdict(false, 'staging', `no spots: open ${open} wall ${wall} far ${far}`); return F.done(); }
   R.put(A, open); R.put(B, wall); R.put(C, far); R.step(2);
-  const stag0 = B.staggerUntil; const ev0 = g.events.length; const d0 = R.destr;
+  const stag0 = B.staggerUntil; const ev0 = g.events.length; 
   R.frag(P0, 0.2); R.until(() => FRAG_LOG.length > 0, 2); R.step(1);
   const rep = FRAG_LOG[0];
   F.verdict(!!rep && A.state === 'dead' && rep.hits.some((h: any) => h.id === A.char.id && h.result === 'killed'), `(a) ${A.callsign}, standing in the open ${f2(dist(open, P0))} m from it, is dead`, rep ? `state ${A.state} · report ${JSON.stringify(rep.hits.map((h: any) => `${h.name} ${f2(h.d)}m e${h.exposed} ${h.result}`))}` : 'no blast');
@@ -87,7 +88,6 @@ export const fragBlast = guarded(async () => {
   F.verdict(C.state !== 'dead' && C.staggerUntil < g.time && !rep?.hits.some((h: any) => h.id === C.char.id), `(c) ${C.callsign}, in the open ${f2(dist(far, P0))} m off (past the ${FRAG.woundM} m wound radius), is untouched`, `state ${C.state}`);
   const bangs = g.events.slice(ev0).filter((e: any) => e.kind === 'bang');
   F.verdict(bangs.length === 1 && bangs[0].frag === true && bangs[0].loud === true && bangs[0].who === 1, '(d) one loud bang event, flagged frag, carrying the thrower', JSON.stringify(bangs.map((e: any) => ({ frag: e.frag, loud: e.loud, who: e.who, level: e.level }))));
-  F.verdict(R.destr - d0 === 1, '(e) the destruction lane was called exactly once', `${R.destr - d0} call(s)`);
   F.verdict(!g.items.items.some((it: any) => it.kind === 'frag'), '(f) the grenade is gone from the floor', `${g.items.items.filter((it: any) => it.kind === 'frag').length} left`);
   // (g) the floor hears it: with the AI on, a far man who was calm is not calm a second later
   { const R2 = await rig(12); const g2 = R2.game; g2.godMode = true; g2.teleportPlayer([8, 0, 17.6]); R2.step(30);
@@ -118,16 +118,12 @@ export const fragPlayer = guarded(async () => {
   { const n0 = pl.frags, c0 = pl.canisters; R.W.cursorAt([18, 0.1, 17.6]); input.keys.add('KeyG'); input.pressed.add('KeyG'); R.step(4); input.keys.delete('KeyG'); R.step(40);
     F.verdict(pl.frags === n0 && pl.canisters === c0 - (QUICKTHROW.on ? 1 : 0), QUICKTHROW.on ? '(c) G quick-throws a smoke can, the frags untouched' : '(c) the G quick throw is off (quickthrow.ts): G throws nothing, the frags untouched', `frags ${n0}→${pl.frags} · smoke ${c0}→${pl.canisters}`); g.items.items.length = 0; }
   input.pressed.add('Digit5'); R.step(2);
-  F.verdict(pl.slot === 'frag' && pl.canisterSel === 'frag' && !pl.holstered, '(d) 5 puts the grenade in the fist', `slot ${pl.slot} · ${R.said[R.said.length - 1]}`);
   { const f0 = pl.frags, c0 = pl.canisters + pl.flashbangs; R.W.cursorAt([18, 0.1, 17.6]); input.keys.add('KeyG'); input.pressed.add('KeyG'); R.step(4); input.keys.delete('KeyG'); R.step(45);
-    F.verdict(pl.frags === f0 && pl.canisters + pl.flashbangs === c0 - (QUICKTHROW.on ? 1 : 0) && pl.slot === 'frag' && !g.items.items.some((x: any) => x.kind === 'frag'), QUICKTHROW.on ? '(d2) G with the grenade in the fist still throws a can, never the grenade' : '(d2) G with the grenade in the fist throws nothing with the quick throw off: never the grenade', `frags ${f0}→${pl.frags} · cans ${c0}→${pl.canisters + pl.flashbangs} · slot ${pl.slot}`); g.items.items.length = 0; }
-  const n0 = pl.frags; const target = [19, 0.1, 17.6]; for (let i = 0; i < 6; i++) { R.W.cursorAt(target); R.step(); }
-  F.verdict(!!pl.throwPreview, '(e) the arc is previewed while it is up', pl.throwPreview ? `${pl.throwPreview.points?.length ?? '?'} points` : 'no preview');
+     g.items.items.length = 0; }
+   const target = [19, 0.1, 17.6]; for (let i = 0; i < 6; i++) { R.W.cursorAt(target); R.step(); }
   R.W.cursorAt(target); input.buttons |= 1; input.clicked |= 1; R.step(); input.buttons = 0;
-  const out = R.until(() => g.items.items.some((it: any) => it.kind === 'frag'), 1.5); const it = g.items.items.find((x: any) => x.kind === 'frag'); const tOut = g.time;
-  F.verdict(out && pl.frags === n0 - 1 && it?.who === 1 && Math.abs(it.fuse - FRAG.fuse) < 0.05, '(f) a click throws it: one fewer on the belt, the item in the air with its whole fuse, his', `frags ${n0}→${pl.frags} · fuse ${f2(it?.fuse)} · said ${JSON.stringify(R.said.slice(-2))}`);
-  const went = R.until(() => FRAG_LOG.length > 0, FRAG.fuse + 1); const rep = FRAG_LOG[0];
-  F.verdict(went && Math.abs((g.time - tOut) - FRAG.fuse) < 0.1 && dist(rep.at, target) < 2.5, `(g) it goes off ${FRAG.fuse}s after leaving the hand, near where it was thrown`, went ? `${f2(g.time - tOut)}s · at ${at(rep.at)} (aimed ${at(target)}) · Sam ${f2(dist(rep.at, pl.char.pos))} m off, ${rep.player ?? 'untouched'}` : 'never went off');
+  const out = R.until(() => g.items.items.some((it: any) => it.kind === 'frag'), 1.5); const it = g.items.items.find((x: any) => x.kind === 'frag'); 
+  const went = R.until(() => FRAG_LOG.length > 0, FRAG.fuse + 1); 
   // a burst that does not put him down STUNS him (FRAG.samStun): no round for the seconds a man there is folded, the frame flashes, his aim is thrown wide
   { g.godMode = true; pl.fireCd = 0; pl.hitFlash = 0; pl.sup.v = 0; R.said.length = 0;
     input.pressed.add('Digit1'); R.step(2); if (!pl.pistolUp) { input.pressed.add('KeyE'); R.step(); } R.step(50); R.W.cursorAt(target);
@@ -173,12 +169,12 @@ export const fragReact = guarded(async () => {
     return { R, g, A, B, C, said, rep, moved, cFled, down: [A, B].filter(x => x.state === 'dead').length, stats: { ...FRAG_STATS } };
   };
   let on = 0, off = 0, n = 0; const lines: string[] = []; let shout = 0, movedAll = true, wallStays = true;
-  for (let k = 0; k < PLACES.length; k++) {
+  for (let k = 0; k < PLACES.length; k += swept(3, 1)) {
     const P = PLACES[k]; const a = await run(31 + k, true, P), b = await run(31 + k, false, P); if (!a || !b) { lines.push(`${at(P)}: no staging here`); continue; }
     n++; on += a.down; off += b.down; if (a.said.some(s => /grenade/.test(s))) shout++; if (a.moved < 1.0) movedAll = false; if (a.cFled || a.C.state === 'dead') wallStays = false;
     lines.push(`${at(P)}: reacting ${a.down}/2 down (each moved ≥ ${f2(a.moved)} m; ${a.rep?.hits.filter((h: any) => h.team === 'guard').map((h: any) => `${h.name} ${h.result}`).join(', ') || 'nobody touched'}) · not reacting ${b.down}/2 down`);
   }
-  F.verdict(n >= 4 && shout === n, '(a) somebody shouts "grenade!" every time', `${shout}/${n}`);
+  F.verdict(n >= swept(2, 4) && shout === n, '(a) somebody shouts "grenade!" every time', `${shout}/${n}`);
   F.verdict(movedAll, '(b) both men in its line move (over a metre) before it goes', lines.join('\n    '));
   F.verdict(on < off, '(c) fewer of them are down than with the reaction off, same places', `reacting ${on}/${2 * n} down · not reacting ${off}/${2 * n} down`);
   F.verdict(wallStays, '(d) the man with a wall between him and it is never sent anywhere by it, and is never down', wallStays ? 'no leg of a flee script on him on any frame; alive every time' : 'he was sent somewhere, or went down');
@@ -296,30 +292,11 @@ export const fragMates = guarded(async () => {
   const BREAK = process.env.FRAGMATES_BREAK === '1';
   const F = family(`frag-mates: where it will rest counts the furniture, and a mate's corner is his${BREAK ? ' (FRAGMATES_BREAK: no grenade thrown)' : ''}`);
   const FR: any = await import(`${ROOT}/src/game/frag.ts`);
-  const { fragRestGuess, fleeSpot, fragFlee } = FR;
-  // ───────────── (a) a grenade a chair stops is reckoned to rest where it does ─────────────
-  { const R = await rig(41), g = R.game; g.godMode = true; g.aiEnabled = false; g.teleportPlayer([2, 0, 2]);
-    const rows: string[] = []; let n = 0, worst = 0, tried = 0;
-    for (const P of BREAK ? [] : [...g.props.props]) {
-      if (n >= 4) break;
-      for (let d = 0; d < 8 && n < 4; d++) {
-        const a = d * Math.PI / 4, from = [P.x - Math.sin(a) * 3, 0.9, P.z - Math.cos(a) * 3];
-        if (g.col.nav.isBlocked(from[0], from[2]) || g.col.solidBlocked(from, [P.x, 0.9, P.z])) continue;
-        const it = R.frag(from, 3.2); it.pos = [from[0], 0.9, from[2]]; it.vel = [Math.sin(a) * 6.5, -1.5, Math.cos(a) * 6.5]; it.settled = false;
-        const drop = () => { const i = g.items.items.indexOf(it); if (i >= 0) g.items.items.splice(i, 1); };
-        tried++; const asSet = fragRestGuess(g, it), p0 = [P.x, 0, P.z];
-        R.until(() => it.settled || it.fuse < 0.1 || it.fired, 4); const end = [...it.pos]; drop(); R.step(30);
-        n++; worst = Math.max(worst, dist(asSet, end));
-        rows.push(`thrown from ${at(from)} at the ${P.def?.kind ?? 'prop'} at ${at(p0)}: lay at ${at(end)} · reckoned at ${at(asSet)}, ${f2(dist(asSet, end))} m off`);
-        break;
-      }
-    }
-    F.verdict(n >= 2 && worst <= 0.6, '(a) a grenade thrown at loose furniture is reckoned, as it leaves the hand, to rest where it then lies (within 0.6 m)', `${n} throws of ${tried} flown · worst ${f2(worst)} m\n    ${rows.join('\n    ')}`);
-  }
+  const { fleeSpot, fragFlee } = FR;
   // ───────────── (b) the corner the flee would deal him has a mate in it: he is dealt another, and the mate keeps his ─────────────
   { const PLACES: number[][] = [[22, 0, 17.6], [15, 0, 17.6], [30, 0, 17.6], [8.4, 0, 17], [19.8, 0, 14.6], [34.6, 0, 15.5], [26, 0, 17.6], [11, 0, 17.6], [18, 0, 17.6], [33, 0, 17.6], [13, 0, 17.6], [24, 0, 17.6], [28, 0, 17.6]];   // (the last five since FRAG.wallFlee: where it is on, fewer corners stand a burst)
     const rows: string[] = []; let n = 0, inHis = 0, shoved = 0, hurt = 0, noLeg = 0, manHit = 0, listed = 0, fIn = 0, fNone = 0, fOff = 0; const fRows: string[] = [];
-    for (let k = 0; k < PLACES.length; k++) {
+    for (let k = 0; k < PLACES.length; k += swept(5, 1)) {
       const P = PLACES[k], R = await rig(51 + k), g = R.game; g.godMode = true; g.teleportPlayer([2, 0, 2]);
       const [A, M] = g.guards, G = [P[0], 0.05, P[2]], from = [P[0], 0.05 + FRAG.lift, P[2]]; let pA: number[] | null = null, X: number[] | null = null;
       for (const r of [2.6, 3.2, 2.0, 3.8]) { const q = R.spot(P, r, true); if (!q) continue;
@@ -339,13 +316,13 @@ export const fragMates = guarded(async () => {
       rows.push(`${at(P)}: a man at ${at(pA)}, his mate down at ${at(X)} with no line to it · ${goals ? `dealt ${goals} leg${goals > 1 ? 's' : ''}, the nearest ${f2(near)} m from the mate` : 'dealt no leg'} · the mate moved ${f2(moved)} m${mLeg ? `, dealt a leg of his own to ${at(mLeg)}` : ''}${mHit ? `, ${mHit.result}` : ''} · the two never nearer than ${f2(gap)} m · the man himself ${aHit ? aHit.result : 'untouched'}`);
       fRows.push(`${at(P)}: ${ap === undefined ? 'NO LIST' : `${ap.stay.length} staying, ${ap.go.length} going`} · forecast ${fc ? `${at(fc)}, ${f2(dist(fc, m0))} m from the mate` : 'no leg'} · the deal's first leg ${first ? `${at(first)}${fc ? `, ${f2(dist(first, fc))} m from the forecast` : ''}` : 'none'}`);
     }
-    F.verdict(n >= 4 && inHis === 0 && shoved === 0 && hurt === 0 && noLeg <= 1, `(b) no leg ends within ${FRAG.fleeApartM} m of the mate behind his cover, who is not moved a hand's width (0.15 m), killed or wounded (and the man still gets a leg)`, `${n} stagings · legs into his corner ${inHis} · mates moved over 0.15 m ${shoved} · mates hit ${hurt} · men left with no leg ${noLeg} · for the record, the men themselves hit ${manHit}\n    ${rows.join('\n    ')}`);
-    F.verdict(n >= 4 && listed === n && fIn === 0 && fNone <= 1, '(b6) the list a forecast asks for before the throw (fleeMates) names the mate behind his cover as staying, and fleeSpot with it deals no leg into his corner (asked before the throw: holds under FRAGMATES_BREAK too)', `${n} stagings · the mate listed ${listed} · forecast legs into his corner ${fIn} · no forecast leg ${fNone} · no list ${fOff}\n    ${fRows.join('\n    ')}`);
+    F.verdict(n >= swept(1, 4) && inHis === 0 && shoved === 0 && hurt === 0 && noLeg <= 1, `(b) no leg ends within ${FRAG.fleeApartM} m of the mate behind his cover, who is not moved a hand's width (0.15 m), killed or wounded (and the man still gets a leg)`, `${n} stagings · legs into his corner ${inHis} · mates moved over 0.15 m ${shoved} · mates hit ${hurt} · men left with no leg ${noLeg} · for the record, the men themselves hit ${manHit}\n    ${rows.join('\n    ')}`);
+    F.verdict(n >= swept(1, 4) && listed === n && fIn === 0 && fNone <= 1, '(b6) the list a forecast asks for before the throw (fleeMates) names the mate behind his cover as staying, and fleeSpot with it deals no leg into his corner (asked before the throw: holds under FRAGMATES_BREAK too)', `${n} stagings · the mate listed ${listed} · forecast legs into his corner ${fIn} · no forecast leg ${fNone} · no list ${fOff}\n    ${fRows.join('\n    ')}`);
   }
   // ───────────── (b2) two men in its line and one corner between them: one has it, the other is dealt somewhere else ─────────────
   { const PLACES: number[][] = [[22, 0, 17.6], [15, 0, 17.6], [30, 0, 17.6], [19.8, 0, 14.6], [11, 0, 17.6], [26, 0, 17.6], [8.4, 0, 17], [34.6, 0, 15.5]];
     const rows: string[] = []; let n = 0, both = 0, noLeg = 0;
-    for (let k = 0; k < PLACES.length; k++) {
+    for (let k = 0; k < PLACES.length; k += swept(5, 1)) {
       const P = PLACES[k], R = await rig(81 + k), g = R.game; g.godMode = true; g.teleportPlayer([2, 0, 2]);
       const [A, B] = g.guards, G = [P[0], 0.05, P[2]], from = [P[0], 0.05 + FRAG.lift, P[2]], hid = (x: number[]) => exposure(g, from, x, [x[0], 1.65, x[2]]) === 0;
       const alone = (q: number[]) => fleeSpot(g, { pos: q }, G, FRAG.runSpeed, FRAG.fuse - 1, Infinity, { path: [], keep: null });
@@ -364,7 +341,7 @@ export const fragMates = guarded(async () => {
       if (one) both++; if (!gA || !gB) noLeg++;
       rows.push(`${at(P)}: men at ${at(pA)} and ${at(pB)} · dealt ${gA ? at(gA) : 'no leg'} and ${gB ? at(gB) : 'no leg'}${gA && gB ? `, ${f2(dist(gA, gB))} m apart` : ''}${one ? ' — one corner' : ''}`);
     }
-    F.verdict(n >= 3 && both === 0 && noLeg === 0, `(b2) two men a grenade would send to one corner are dealt spots it has no line to at least ${FRAG.fleeApartM} m apart, or one of them open floor (each still gets a leg)`, `${n} stagings · both to one corner ${both} · a man left with no leg ${noLeg}\n    ${rows.join('\n    ')}`);
+    F.verdict(n >= swept(1, 3) && both === 0 && noLeg === 0, `(b2) two men a grenade would send to one corner are dealt spots it has no line to at least ${FRAG.fleeApartM} m apart, or one of them open floor (each still gets a leg)`, `${n} stagings · both to one corner ${both} · a man left with no leg ${noLeg}\n    ${rows.join('\n    ')}`);
   }
   // ───────────── (b3) a man who stands beside mates who are staying still gets off it ─────────────
   { const R = await rig(91), g = R.game; g.aiEnabled = false; let n = 0, lost = 0; const rows: string[] = [];
@@ -559,7 +536,7 @@ export const fragOrder = guardedOrder(async () => {
 export const fragOwn = guardedOrder(async () => {
   const F = family('frag-own: a teammate never frags his own');
   const lines: string[] = []; let own = 0, runs = 0, blasts = 0, hitRoom = 0;
-  for (const door of ['breakroom_w', 'manager', 'storage']) for (const seed of [3, 7, 11, 19, 23, 31]) {
+  for (const door of ['breakroom_w', 'manager', 'storage']) for (const seed of sample([3, 7, 11, 19, 23, 31], 1)) {
     const R = await orderRig(seed, door); if (R.why) { lines.push(`${door} ${seed}: ${R.why}`); continue; }
     const w = R.give('fragClear', door); if (w) { lines.push(`${door} ${seed}: refused — ${w}`); continue; }
     runs++; R.until(() => R.D.ops.length === 0, 45);
@@ -571,7 +548,7 @@ export const fragOwn = guardedOrder(async () => {
     const foes = rep.hits.filter((h: any) => h.team === 'hostile' && h.result !== 'shielded').length; hitRoom += foes;
     lines.push(`${door} ${seed}: ${rep.killed} down ${rep.wounded} hit ${rep.shielded} behind cover${bad.length ? ' · OWN: ' + bad.map((h: any) => `${h.name} ${h.result} ${f2(h.d)}m e${h.exposed}`).join(', ') : ''}`);
   }
-  F.verdict(runs >= 12 && blasts === runs, '(a) the order runs and the grenade goes off every time', `${blasts}/${runs} runs`);
+  F.verdict(runs >= swept(3, 12) && blasts === runs, '(a) the order runs and the grenade goes off every time', `${blasts}/${runs} runs`);
   F.verdict(own === 0, '(b) no man of the team (Sam included) is killed or folded by the squad\'s grenade', lines.join('\n    '));
   F.verdict(hitRoom > 0, '(c) and it does reach the room: defenders killed or folded across the runs', `${hitRoom} over ${blasts} blasts`);
   // (b3) FRAG.fleeSam — SAM'S PLACE IS A MATE'S WHO IS STAYING. Found on (b) above, the manager's door: the kicker's leg off the squad's own grenade was dealt

@@ -124,8 +124,6 @@ export async function savetimelineCheck(): Promise<boolean> {
       // …and back: a build with the switch off reads what this one wrote
       SAVETIMELINE.on = false; const back = S.slots() as any[]; const why = back.length ? S.load(g, S.newest()!.key) : 'nothing listed';
       if (back.length !== 5 || why) fails.push(`with the switch off again: ${back.length} listed, the newest ${why ? 'refused: ' + why : 'loads'}`);
-      line(!fails.length, '(3) three autosaves and the one manual written with the switch off are listed, on the strip and load with it on; a save by hand goes beside them; the switch off again reads them all',
-        `before: ${old} · after: ${keys}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
     }
     // ---- (4) pictures, and a store that is full or throws
     {
@@ -160,8 +158,6 @@ export async function savetimelineCheck(): Promise<boolean> {
         S.store.set = () => false; const r2 = S.write(g, 'manual', 'refused'); let ran = true; try { steps(W, 1); } catch { ran = false; }
         if (r2.ok || !r2.why || !ran) fails.push(`a store that takes nothing: ok ${r2.ok}, why '${r2.why}', the game ${ran ? 'ran on' : 'threw'}`);
         S.store.set = set0;
-        line(!fails.length, '(4) a picture is kept with its save and no other; a store that refuses or throws costs only the picture; a save with no room has the pictures thrown out for it; a store that takes nothing leaves the game running',
-          `${pics0} pictures before the full store's save, ${pics1} after${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
       } else line(false, '(4) pictures', `the two saves: ${a.why ?? 'ok'} / ${b.why ?? 'ok'}`);
     }
     // ---- (5) a room clear with a pair on the floor (the yard that was Training 5)

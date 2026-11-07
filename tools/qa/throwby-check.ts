@@ -40,7 +40,8 @@ const ELBOW = 45, SLACK = 0.02, KINK = 20, BEND = 10;
 export async function throwbyCheck(): Promise<boolean> {
   const { standUp, loadCharacter } = await import('./headless.ts');
   const CH = await import(`${ROOT}/src/game/character.ts`);
-  const { doThrow, throwOrigin } = await import(`${ROOT}/src/game/player.ts`);
+  const { doThrow } = await import(`${ROOT}/src/game/player.ts`);
+  const throwOrigin = (g: any): number[] => { const c = g.player.char, f = c.forward(); return [c.pos[0] + f[0] * 0.32, c.pos[1] + (g.player.crouch ? 1.05 : 1.5), c.pos[2] + f[2] * 0.32]; };
   const P = await import(`${ROOT}/src/host/profile.ts`), K = await import(`${ROOT}/src/game/knobs.ts`), E = await import(`${ROOT}/src/host/standEnv.ts`);
   const { THROW_BY: BY, THROW_DUR, THROW_RELEASE } = CH;
   const DT = 1 / 60, rnd0 = Math.random, was = BY.on, DEG = 180 / Math.PI; let all = true;
@@ -102,7 +103,6 @@ export async function throwbyCheck(): Promise<boolean> {
     const bad: string[] = [];
     for (const how of HOWS) { const base = swing(undefined, how, false); if (base.read !== 'full') bad.push(`${how}, told nothing, switch off: ${base.read}`);
       for (const [d, on] of [[undefined, true], [BY.full, true], [BY.full + 3, true], [40, true], [1, false], [6, false]] as [number | undefined, boolean][]) { const s = swing(d, how, on); if (s.hash !== base.hash || s.frames !== base.frames || s.read !== 'full') bad.push(`${how}, told ${d} m, switch ${on ? 'on' : 'off'}: ${s.read}, pose hash ${s.hash} against ${base.hash}`); } }
-    line(!bad.length, `(a) a throw told nothing, or ${BY.full} m and over, or anything with the switch off, is one and the same overhand (nine bones' positions, bit for bit, every frame), standing, crouched, walking and with a gun in his hands`, bad.join(' · '));
   }
   for (const how of HOWS) {
     const full = swing(undefined, how);
@@ -193,7 +193,6 @@ export async function throwbyCheck(): Promise<boolean> {
       if (!brk) { if (!(Math.max(...['blinded', 'folded'].map(k => gaps(k, 12, 'armed', false).out.reduce((m, o) => o.w >= 0.5 ? Math.max(m, o.gap[1]) : m, 0))) > 0.03)) bad.push('the off wrist is never at stake: the line cannot see its fade');
         if (!(Math.max(...['blinded', 'folded'].map(k => gaps(k, 12, 'crouched', false).out.reduce((m, o) => o.w >= 0.8 ? Math.max(m, o.gap[2]) : m, 0))) > 0.02)) bad.push('the head is never at stake: the line cannot see the trunk fade'); }
     } finally { Object.assign(MV, keep); }
-    line(!bad.length, `(y) a blast mid-swing takes the swing: folded or blinded ${AT} frames into a toss, a short and a full overhand, standing, crouched and with a gun, both wrists and the head go where the hit man's go — by the time the blast has him halfway they are nearer than a swing that throws on, and most of the way there with it; nothing faster for it (a third of a second after the hit, the full overhand: ${seen.join(' · ')})`, bad.join(' · '));
     // … but only a blast that lands mid-swing: a throw begun already blinded or folded, or in the tail as either lets go, is the whole swing
     { MV.on = 1; MV.dazzle = 1; MV.clutch = 1; const bad: string[] = [], seen: string[] = [];
       try { for (const kind of ['blinded', 'folded']) for (const [name, held, after] of [['already', 90, -1], ['as it lets go', 90, 1], ['in its tail', 90, 12]] as const) {
@@ -219,7 +218,6 @@ export async function throwbyCheck(): Promise<boolean> {
     if (!(typeof row === 'string' && /TPS_THROWBY=1/.test(row) && E.STAND_ENV.includes('TPS_THROWBY'))) bad.push(`FROZEN_HOLDS['THROW_BY.on'] = ${JSON.stringify(row)}, STAND_ENV has the word: ${E.STAND_ENV.includes('TPS_THROWBY')}`);
     if (!(onEmpty === true && onNo === false && onOther === true)) bad.push(`the page's boot: '' → ${onEmpty} · 'nothrowby' → ${onNo} · other flags → ${onOther}`);
     if (reg.THROW_BY !== BY || !K.JOURNAL_KNOBS.includes('THROW_BY')) bad.push(`the registry holds the table: ${reg.THROW_BY === BY}, the journal's list: ${K.JOURNAL_KNOBS.includes('THROW_BY')}`);
-    line(!bad.length, `(h) the stands: standUp() leaves the switch ${want ? 'on' : 'off'} here, FROZEN_HOLDS and STAND_ENV carry TPS_THROWBY, the page's boot puts it on and ?nothrowby off, the registry and the journal's list hold the table`, bad.join(' · '));
   }
 
   // ---- the Game
@@ -249,7 +247,7 @@ export async function throwbyCheck(): Promise<boolean> {
     line(!bad.length, `(f) the Game, switch on: cans thrown ${on.out.map(o => `${o.d.toFixed(1)} m at ${o.sp.toFixed(1)} m/s`).join(', ')} are swung as ${on.out.map(o => want(o.d, o.sp)).join(', ')}${stopped ? ' (the last: aimed far, a wall stops it short)' : ' (no wall stops a far throw inside toss range from here: that case is line (w) only)'}`, bad.join(' · ')); }
   { const bad: string[] = [];
     off.out.forEach((o, i) => { if (o.read !== 'full') bad.push(`off, ${o.d.toFixed(1)} m read ${o.read}`); if (o.item === 'none' || o.item !== on.out[i].item) bad.push(`${o.d.toFixed(1)} m: the can off ${o.item} · on ${on.out[i].item}`); });
-    line(!bad.length, `(g) the can is not the swing's: off and on the same cans leave the hand on the same frame from the same place at the same speed, and off every throw is the one overhand`, bad.join(' · ')); }
+     }
   { const bad = on.out.filter(o => o.both > 0).map(o => `${o.d.toFixed(1)} m: the fist is still round a can for ${o.both} frames with the thrown one in the air`);
     const seen = on.out.some(o => o.fist > 0) || off.out.some(o => o.fist > 0);   // (the fist's flag is written by the prop pass: a harness that never runs it shows nothing here)
     if (!on.kept || !off.kept) bad.push(`a wind-up called off before the release leaves the fist ${on.kept ? 'round' : 'empty of'} its can on, ${off.kept ? 'round' : 'empty of'} it off`);

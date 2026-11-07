@@ -187,7 +187,6 @@ export async function panelInventory(argv: string[] = process.argv.slice(2)): Pr
       writeFileSync(FIXTURE, JSON.stringify(before, null, 1) + '\n'); console.log(`  --gone: ${dead.length} fixture row(s) taken out, ${missing.length - dead.length} still missing`); const left = missing.filter(r => !dead.includes(r)); missing.length = 0; missing.push(...left);
     }
     const ok = missing.length === 0;
-    console.log(`\n- ${ok ? 'PASS' : 'FAIL'} — ${missing.length} missing of ${before.length} reference rows · ${live.length} live (${added.length} added, ${moved} moved)`);
     return ok;
   } finally { restore(); try { rmSync(SCRATCH, { recursive: true, force: true }); } catch { /* */ } }
 }

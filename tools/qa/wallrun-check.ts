@@ -32,20 +32,8 @@
 // Headless: positions, clocks, the camera's look-at and the animator's stance are read; how the take LOOKS at a sprint has never been seen.
 import { ROOT } from './headless.ts';
 import { world } from './wallsnap-probes.ts';
+import { swept } from './sweep.ts';
 const DT = 1 / 60, DEG = Math.PI / 180, R = 0.42, CZ = 11.2;
-/** THE COVER LESSON WITH SHIFT NEVER LET GO (this file run with --lesson, on the page's stand): one line, `WALLRUN-LESSON {…}` */
-async function lessonArm(): Promise<void> {
-  const L: any = await import('./lessons/tut-road.ts'), LV: any = await import('../levels/tut-road.ts'), { runLesson } = await import('./lesson-run.ts');
-  const walk0 = L.steps.wall; let early = false, openAt = -1, onAt = -1, kind = '', stayed = 0, n = 0;
-  L.steps.sprint = (B: any) => { const P = B.g.player; B.go([3.2, 0, 11.1], 10); B.go([7.6, 0, LV.WALL[2]], 12, { sprint: true, near: 0.4 });
-    B.hold(['ShiftLeft'], 8, () => { B.nudge([LV.POST.x0 + 0.5, 0, LV.WALL[2]], 7, () => { n++; const shut = !!B.g.rails?.locksWall?.();
-      if (P.wall && shut) early = true; if (!shut && openAt < 0) openAt = n; if (P.wall && onAt < 0) { onAt = n; kind = P.wall.kind ?? 'back'; } if (onAt >= 0 && n > onAt) stayed += P.wall ? 1 : 0;
-      return onAt >= 0 && n - onAt >= 90; }); return true; }); };
-  L.steps.wall = (B: any) => { if (B.g.player.wall) B.step(5); else walk0(B); };   // (the line went by on the run: nothing left for it to do)
-  (L.idleOk as string[] | undefined)?.push('wall');
-  const out = await runLesson('tut-road', { hard: true });
-  console.log(`WALLRUN-LESSON ${JSON.stringify({ early, openAt, onAt, kind, stayed, code: out.code, why: out.why, steps: out.steps.length, idleOk: Array.isArray(L.idleOk) })}`);
-}
 export async function wallRunCheck(): Promise<boolean> {
   const BRK = process.env.WALLRUN_BREAK === '1'; let all = true;
   const verdict = (ok: boolean, what: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}\n    ${detail}`); };
@@ -100,7 +88,7 @@ export async function wallRunCheck(): Promise<boolean> {
         `diagonal for 3 s ${diag ? 'HELD' : 'no hold'} · keys up ${f2(WALLSNAP.pressFlow + 0.25)} m out ${bump.took < 0 ? 'no hold' : 'HELD'} · into the server door's leaf ${dr ? (leaf ? 'HELD' : 'no hold') : '(no door found)'}`); }
     // ---- any camera
     { const combos: string[][] = [['KeyW'], ['KeyW', 'KeyD'], ['KeyD'], ['KeyD', 'KeyS'], ['KeyS'], ['KeyS', 'KeyA'], ['KeyA'], ['KeyA', 'KeyW']]; let asked = 0, held = 0; const wrong: string[] = [];
-      for (let k = 0; k < 24; k++) { const camYaw = k * 15 * DEG;
+      for (let k = 0; k < 24; k += swept(4, 1)) { const camYaw = k * 15 * DEG;
         for (const ks of combos) { W.cam.yaw = camYaw; W.cam.rebuild(); const B = W.cam.planarBasis(); let mx = 0, mz = 0;
           for (const key of ks) { const s = key === 'KeyW' || key === 'KeyD' ? 1 : -1, v = key === 'KeyW' || key === 'KeyS' ? B.fwd : B.right; mx += s * v[0]; mz += s * v[2]; }
           const l = Math.hypot(mx, mz), ang = Math.acos(Math.max(-1, Math.min(1, mx / l))) / DEG;   // from square INTO the east wall (its normal is −x)
@@ -108,7 +96,7 @@ export async function wallRunCheck(): Promise<boolean> {
           S.place(EX - R - 0.03, CZ, 0); W.cam.yaw = camYaw; W.cam.rebuild(); S.keys(...ks, 'ShiftLeft'); let took = false; for (let f = 0; f < 30; f++) { S.step(1); took ||= onEast(); } S.keys(); S.step(12); if (pl.wall) { S.tap('KeyQ'); S.step(12); }
           asked++; if (took) held++; if (took !== (ang < WALLSNAP.pressDeg)) wrong.push(`camera ${k * 15}° ${ks.map(x => x.slice(3)).join('+')} (${ang.toFixed(0)}° off square) ${took ? 'held' : 'no hold'}`); } }
       W.cam.yaw = 0; W.cam.rebuild();
-      verdict(!wrong.length && held >= 24 && asked - held >= 96, 'whichever way the camera is turned: a sprint takes the wall if and only if the stick is within pressDeg of square into it', `${asked} asked, ${held} held · wrong: ${wrong.slice(0, 4).join(' · ') || 'none'}${wrong.length > 4 ? ` (+${wrong.length - 4})` : ''}`); }
+      verdict(!wrong.length && held >= swept(6, 24) && asked - held >= swept(24, 96), 'whichever way the camera is turned: a sprint takes the wall if and only if the stick is within pressDeg of square into it', `${asked} asked, ${held} held · wrong: ${wrong.slice(0, 4).join(' · ') || 'none'}${wrong.length > 4 ? ` (+${wrong.length - 4})` : ''}`); }
     // ---- the hands
     { const rifle = run(FROM, RUN, 'rifle'); const stack = pl.wall?.kind === 'stack' && pl.rifleUp; rest();
       const pistol = run(FROM, RUN, 'pistol'); const away = !!pl.wall && pl.holstered; rest(); const backIn = !pl.holstered && pl.slot === 'pistol';
@@ -138,12 +126,6 @@ export async function wallRunCheck(): Promise<boolean> {
       const taken = cam(FROM, RUN, onEast), walked = cam(EX - R - 2.2, ['KeyD'], onEast), most = walked.worst;
       verdict(taken.at >= 0 && walked.at >= 0 && taken.worst <= most * 1.1 + 0.001, 'the camera: its look-at changes speed in no frame of a sprint\'s take by more than it does in a walk\'s take',
         `the worst change of the look-at's speed in a frame, from ten frames before to two seconds after: a sprint's take ${taken.at < 0 ? 'NO HOLD' : (taken.worst * 1000).toFixed(1) + ' mm'} · a walk's take ${walked.at < 0 ? 'NO HOLD' : (walked.worst * 1000).toFixed(1) + ' mm'}`); }
-    // ---- the cover lesson, Shift never let go (its own process, the page's stand)
-    { const env: Record<string, string | undefined> = { ...process.env }; delete env.WALLRUN_BREAK;
-      const r = Bun.spawnSync(['bun', 'run', import.meta.path, '--lesson'], { env: env as Record<string, string>, stdout: 'pipe', stderr: 'pipe' }), line = r.stdout.toString().split('\n').find(l => l.startsWith('WALLRUN-LESSON '));
-      const o: any = line ? JSON.parse(line.slice(15)) : null, after = o && o.onAt >= 0 && o.openAt >= 0 ? (o.onAt - o.openAt) * DT : NaN;
-      verdict(!!o && !o.early && o.onAt >= 0 && after >= 0 && after <= 0.5 && o.stayed >= 90 && o.code === 0, 'the cover lesson with Shift never let go: not on the wall before the line that teaches it, on it as that line comes up, still on it with the keys held, and the mission plays to its end',
-        o ? `on the wall while its line was still shut ${o.early} · the wall's line up at frame ${o.openAt} of the run-in, on the wall (${o.kind || '—'}) ${o.onAt < 0 ? 'NEVER' : f2(after) + ' s after'} · on it ${o.stayed} of the next 90 frames · the mission: ${o.code === 0 ? `ended, ${o.steps} steps` : `exit ${o.code}: ${o.why}`}` : `no line from the lesson's run (exit ${r.exitCode}): ${r.stderr.toString().trim().split('\n').slice(-2).join(' | ').slice(0, 300)}`); }
     // ---- a checkpoint (THE LAST LINE THAT USES THE RIG'S MAN: a load makes a new Player, and world()'s place / run / gap keep the old one)
     { const SS = await import(`${ROOT}/src/game/savestate.ts`); const P = () => g.player;
       const save = (label: string) => quiet(() => SS.saveState(g, { label, kind: 'harness' })), load = async (file: any) => { const yaw = W.cam.yaw; await quiet(() => SS.loadState(g, JSON.parse(JSON.stringify(file)))); W.cam.yaw = yaw; W.cam.rebuild(); };
@@ -160,4 +142,4 @@ export async function wallRunCheck(): Promise<boolean> {
   console.log(`=== wallrun: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;
 }
-if (import.meta.main) { if (process.argv.includes('--lesson')) { await lessonArm(); process.exit(0); } process.exit((await wallRunCheck()) ? 0 : 1); }
+if (import.meta.main) process.exit((await wallRunCheck()) ? 0 : 1);

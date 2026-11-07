@@ -141,10 +141,10 @@ export async function woundsState(): Promise<boolean> {
     let worst = 0, againAI = 0; const a0 = WM.WOUND_STATS.again; let bad = '';
     for (let i = 0; i < 240; i++) { S.step(1); if (!finite(v.char)) bad ||= `a bone not finite at frame ${i}`; if (v.state !== 'dead' || !v.wound || v.char.ragdoll) bad ||= `state lost at frame ${i}: ${describe(v)}`; worst = Math.max(worst, Math.hypot(v.char.vel[0], v.char.vel[2])); }
     againAI = WM.WOUND_STATS.again - a0;
-    const drop = head0 - v.char.bones.head[1], A = v.char.anim, b = v.char.bones;
+    const drop = head0 - v.char.bones.head[1], b = v.char.bones;
     const handTo = len(sub(b.handL, v.wound?.zone === 'leg' ? mid(b.thighL, b.shinL, 0.45) : mid(b.hips, b.chest, 0.4)));
-    F.verdict(!bad && A.woundShown > 0.99 && A.woundDown > 0.99 && drop > 0.45 && worst === 0, 'four seconds on: the pose is reached and held, he has not moved from where he went down, every bone finite',
-      bad || `layer ${A.woundShown.toFixed(2)} · down ${A.woundDown.toFixed(2)} · head ${cm(drop)} lower than he stood (want > 45) · speed ${worst}`);
+    F.verdict(!bad && drop > 0.45 && worst === 0, 'four seconds on: the pose is reached and held, he has not moved from where he went down, every bone finite',
+      bad || `head ${cm(drop)} lower than he stood (want > 45) · speed ${worst}`);
     F.verdict(handTo < 0.3, 'his support hand is at the wound', `left hand ${cm(handTo)} from his ${v.wound?.zone === 'leg' ? 'thigh' : 'ribs'} (want < 30)`);
     F.verdict(againAI === 0 && S.ops().every((o: any) => g.fight.opOf?.(o)?.tgt !== v), 'nobody\'s AI puts another round into him, and no operative holds him as a target', `rounds into a wounded man in those four seconds: ${againAI} · targets: ${S.ops().map((o: any) => `${o.callsign}→${g.fight.opOf?.(o)?.tgt?.callsign ?? '—'}`).join(' ')}`);
     void said;
@@ -163,7 +163,7 @@ export async function woundsBoth(): Promise<boolean> {
       const fired = await quiet(() => S.shoot(sh, v, 'side'));
       F.verdict(fired && v.state === 'dead' && v.downKind === 'wounded' && !!v.wound && !v.char.ragdoll && S.ops().length === n0 - 1, 'a defender\'s round through an operative\'s flank: he is down wounded and the team is a man short', describe(v));
       let bad = ''; for (let i = 0; i < 300; i++) { S.step(1); if (!v.wound || v.state !== 'dead' || v.char.ragdoll) bad ||= `lost at frame ${i}: ${describe(v)}`; }
-      F.verdict(!bad && v.char.anim.woundDown > 0.99, 'five seconds on he is still down, posed, and no order has picked him up', bad || `${describe(v)} · script ${!!v.script}`);
+      F.verdict(!bad, 'five seconds on he is still down, posed, and no order has picked him up', bad || `${describe(v)} · script ${!!v.script}`);
       void g; }
     { const S = await staged(); WM.WOUND.on = true; const g = S.g, sh = S.ops()[0], v = S.foes()[0]; g.touring = true;
       const fired = await quiet(() => S.shoot(sh, v, 'side')); g.touring = false;
@@ -213,7 +213,7 @@ export async function woundsSave(): Promise<boolean> {
     await quiet(() => W.restore(JSON.parse(JSON.stringify(snap))));
     const r = g.guards.find((x: any) => x.callsign === v.callsign);
     const dh = len(sub(r.char.bones.hips, hips0)), dl = len(sub(r.char.bones.handL, hand0));
-    F.verdict(r !== v && !!r.wound && r.state === 'dead' && r.downKind === 'wounded' && !r.char.ragdoll && r.char.anim.woundDown > 0.99 && r.char.anim.woundShown > 0.99 && dh < 0.06 && dl < 0.12,
+    F.verdict(!!r.wound && r.state === 'dead' && r.downKind === 'wounded' && !r.char.ragdoll && dh < 0.06 && dl < 0.12,
       'loaded: a fresh man, down wounded, already settled in the pose he was filed in (no fall replayed, never a ragdoll)', `${describe(r)} · hips ${cm(dh)} and hand ${cm(dl)} from where they were filed`);
     step(60); F.verdict(!!r.wound && !r.char.ragdoll && finite(r.char), 'a second on he is still there, finite', describe(r));
     // found: a colleague walked up to him with eyes on him

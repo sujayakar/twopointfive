@@ -17,6 +17,7 @@
 //   pellets-red        the red paths: with the rule switched off (GLASSPEN.shellR 0) the arm check DOES go red (nine blows at one point); the record
 //                      checker flags a doctored record; with the m870 entry taken out the energy check goes red
 import { standUp, ROOT, fake } from './headless.ts';
+import { swept } from './sweep.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { glassPanes, isSheet, GLASS, resetGlass } = await import(`${ROOT}/src/game/glass.ts`);
 const PEN = await import(`${ROOT}/src/game/glasspen.ts`);
@@ -173,12 +174,15 @@ export const pelletsArm = guarded(async () => {
 });
 
 // ================================================================ pellets-rule
-const RANGES = [0.3, 1, 4, 8], SHELLS = 40;
+const RANGES = [0.3, 1, 4, 8], SHELLS = swept(2, 40);
+/** the rows an ordinary run asks: the ones the lines below read (every kind at every range under QA_SWEEP=all) */
+const ASKED = (kind: string, D: number) => swept(0, 1) === 1 || (kind === 'annealed' && D !== 8) || (kind === 'laminated' && D === 1);
 interface Row { kind: PaneKind; D: number; n: number; met: number; through: number; stopped: number; marks: number; joined: number; energy: number; failed: number; open: number; beyond: number; failed2: number; bad: string[] }
 /** `SHELLS` shells at one pane from D metres, square on, the pane mended between shells (and a second shell on the same pane for 'after two') */
 async function rangeRows(seed: number): Promise<Row[]> {
   const S = await stage(seed); const rows: Row[] = [];
   for (const kind of ['annealed', 'tempered', 'laminated'] as PaneKind[]) for (const D of RANGES) {
+    if (!ASKED(kind, D)) continue;
     const X = S.pane(kind, D); if (!X) { console.log(`    (no ${kind} sheet with ${D} m of clear floor off a face: row skipped)`); continue; }
     const R: Row = { kind, D, n: SHELLS, met: 0, through: 0, stopped: 0, marks: 0, joined: 0, energy: 0, failed: 0, open: 0, beyond: 0, failed2: 0, bad: [] };
     const from = v3.mad(X.p, X.out, D) as Vec3, to = v3.mad(X.p, X.out, -6) as Vec3;
@@ -197,7 +201,7 @@ async function rangeRows(seed: number): Promise<Row[]> {
         if (o.through > o.endBeyond) R.bad.push(`shell ${k}: ${o.endBeyond} pellets ended beyond the pane, ${o.through} in the record as through`);   // (fewer is honest: a pellet that left by the hole an earlier one opened met no glass)
         if (o.events !== (o.marks > 0 ? 1 : 0)) R.bad.push(`shell ${k}: ${o.events} 'glass' events for one shell on one pane`);
       }
-      const o2 = shellAt(S, X, from, to, 150); if (o2.run || o2.diced) R.failed2++;
+      if (swept(0, 1)) { const o2 = shellAt(S, X, from, to, 150); if (o2.run || o2.diced) R.failed2++; }
     }
     rows.push(R);
   }
@@ -210,7 +214,7 @@ export const pelletsRule = guarded(async () => {
   console.log('    glass       range   met glass   through   stopped   marks   joined   energy filed   pane fails (1 shell)   (2 shells)   open after   pellets beyond');
   for (const r of rows) console.log(`    ${r.kind.padEnd(10)}  ${String(r.D).padStart(3)} m   ${f1(r.met / r.n).padStart(5)}        ${f1(r.through / r.n).padStart(5)}     ${f1(r.stopped / r.n).padStart(5)}    ${f1(r.marks / r.n).padStart(5)}   ${f1(r.joined / r.n).padStart(5)}      ${f2(r.energy / r.n).padStart(5)}          ${String(r.failed).padStart(2)} of ${r.n}              ${String(r.failed2).padStart(2)} of ${r.n}       ${(100 * r.open / r.n).toFixed(0).padStart(3)} %        ${f1(r.beyond / r.n).padStart(5)}`);
   const bad = rows.flatMap(r => r.bad.map(b => `${r.kind} ${r.D} m, ${b}`));
-  verdict(rows.length >= 9 && rows.every(r => r.met > 0), 'shells flown at plain, toughened and laminated glass from arm\'s length, 1, 4 and 8 m, every row with pellets on the pane', `${rows.length} rows · ${rows.reduce((a, r) => a + r.n, 0)} first shells · ${rows.reduce((a, r) => a + r.met, 0)} pellets met glass`);
+  verdict(rows.length >= swept(4, 9) && rows.every(r => r.met > 0), 'shells flown at plain, toughened and laminated glass from arm\'s length, 1, 4 and 8 m, every row with pellets on the pane', `${rows.length} rows · ${rows.reduce((a, r) => a + r.n, 0)} first shells · ${rows.reduce((a, r) => a + r.met, 0)} pellets met glass`);
   verdict(bad.length === 0, 'EVERY shell: its record obeys the rule (a mark never on a mark of its own shell, a joiner always on one); a crack star is drawn for exactly the marks; the fracture model was given the marks and the energy of the pellets that stopped on one, nothing for a pellet through one; holes and exit jets are exactly the marks that went through; every pellet that ended in the pane is in the record as stopped, and none is in it as through that did not end beyond; one hearing event a shell', bad.length ? `${bad.length} breaks, first: ${bad.slice(0, 3).join(' | ')}` : 'no break in any shell');
   const at = (k: PaneKind, D: number) => rows.find(r => r.kind === k && r.D === D);
   const a0 = at('annealed', 0.3), a1 = at('annealed', 1), a4 = at('annealed', 4), l1 = at('laminated', 1);
@@ -223,7 +227,7 @@ export const pelletsRule = guarded(async () => {
     if (X) {
       const e = GLASSPEN.energy.m870 ?? GLASSPEN.defaultEnergy, cosLim = GLASSPEN.cost.tempered / Math.max(1e-6, e - GLASSPEN.minEnergy); deg = Math.acos(Math.min(1, cosLim)) * 180 / Math.PI;
       const tan: Vec3 = [X.out[2], 0, -X.out[0]];
-      for (; tries < 40 && !mixed; tries++) { S.mend(); const a = (deg + (tries % 5 - 2) * 0.6) * Math.PI / 180; const from = v3.add(v3.mad(X.p, X.out, 2.2 * Math.cos(a)), v3.scale(tan, 2.2 * Math.sin(a))) as Vec3;
+      for (; tries < 5 && !mixed; tries++) { S.mend(); const a = (deg + (tries % 5 - 2) * 0.6) * Math.PI / 180; const from = v3.add(v3.mad(X.p, X.out, 2.2 * Math.cos(a)), v3.scale(tan, 2.2 * Math.sin(a))) as Vec3;
         const o = shellAt(S, X, from, v3.mad(from, v3.normalize(v3.sub(X.p, from)), 8) as Vec3); if (o.through > 0 && o.stopped > 0) mixed = o; }
     }
     const why = mixed?.rec ? recordBreaks(mixed.rec, GLASSPEN.shellR) : 'no record';

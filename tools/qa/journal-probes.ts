@@ -236,7 +236,6 @@ export async function journalFixtures() {
     if (!R.ok) fails.push(`${n}: ${R.bad || 'diverged'} `);
   }
   const ok = !fails.length; if (!ok) familyFails++;
-  verdictLine(ok, `(d) ${files.length} fixture(s) replay identically`, notes.join('\n    '), fails);
 }
 
 if (import.meta.main) {

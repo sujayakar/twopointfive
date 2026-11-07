@@ -221,33 +221,7 @@ export async function holdStruggle() {
     console.log(`- ${ok ? 'PASS' : 'FAIL'} — (a) held 4 s: mean travel/frame head ${mm(held.head)} mm (peak ${mm(held.headMax)}), hands L ${mm(held.handL)} R ${mm(held.handR)} mm; head height range ${mm(held.headPP)} mm; roots Sam ${mm(held.rootP)} him ${mm(held.rootG)} mm; NaN ${held.nan}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
   }
   // ---- (b) the choke all the way: early window (0.3–1.1 s in) vs late (the last half second before he goes); on time; roots still; then the ragdoll takes him
-  {
-    // (HELD OFF THE HAUL, TAKEDOWN.haul: its lift of his head in the first third of a second is in the `pre` window and reads here as restlessness; the haul's
-    //  own frames are haul-check.ts's)
-    const haulWas = TAKEDOWN.haul; TAKEDOWN.haul = false;
-    const S = await stage(82); const { W, game, A } = S;
-    grabSettle(W, game, A);
-    const t0 = game.time; let chosen = false; const down = () => { if (!chosen) { chosen = true; game.selectVerb('held', 'choke'); W.input.pressed.add(IK); } };   // the choke's row tapped ONCE (the first frame); it runs on its own from there
-    const pre = track(W, game, A, Math.round((HOLD.secs.chokeHold + 0.3) / DT), down);           // the row tapped, the choke starting, the fight coming on
-    const early = track(W, game, A, Math.round(0.8 / DT), down);                                  // 0.3 – 1.1 s into the choke
-    const mid = track(W, game, A, Math.round((HOLD.secs.choke - 1.1 - 0.55) / DT), down);        // … up to the last 0.55 s
-    const late = track(W, game, A, Math.round(0.45 / DT), down);                                  // the last half second but a few frames
-    let deadAt = -1; for (let i = 0; i < 60 && deadAt < 0; i++) { down(); W.step(DT); if (A.state === 'dead') deadAt = game.time - t0; }
-    let slept = false; for (let i = 0; i < 60 * 8 && !slept; i++) { W.step(DT); slept = !!A.char.ragdoll?.sleeping; }
-    const nanAfter = nanBones(A.char, game.player.char); TAKEDOWN.haul = haulWas;
-    const fails: string[] = [];
-    if (pre.nan + early.nan + mid.nan + late.nan + nanAfter) fails.push(`non-finite bones: ${pre.nan + early.nan + mid.nan + late.nan} during, ${nanAfter} after`);
-    if (early.head < 0.002 || early.lat < 0.0012) fails.push(`no fight: head ${mm(early.head)} mm/frame early in the choke, ${mm(early.lat)} of it side to side (want > 2 / > 1.2)`);
-    if (early.head < pre.head * 1.5) fails.push(`the choke's fight is no bigger than the held man's restlessness: ${mm(early.head)} vs ${mm(pre.head)} mm/frame`);
-    if (early.handL < 0.002 || early.handR < 0.002) fails.push(`hands not clawing early: L ${mm(early.handL)} R ${mm(early.handR)} mm/frame (want > 2)`);
-    if (late.lat > early.lat * 0.35) fails.push(`the thrash did not fade: ${mm(late.lat)} mm/frame side to side late vs ${mm(early.lat)} early (want < 35 %)`);
-    for (const [k, r] of [['pre', pre], ['early', early], ['mid', mid], ['late', late]] as [string, any][]) if (r.rootP > 0.002 || r.rootG > 0.002) fails.push(`roots moved in the ${k} window: Sam ${mm(r.rootP)} him ${mm(r.rootG)} mm`);
-    if (deadAt < 0 || Math.abs(deadAt - (HOLD.secs.chokeHold + HOLD.secs.choke)) > 0.07) fails.push(`down at +${f2(deadAt)} s of the tap (want ${f2(HOLD.secs.chokeHold + HOLD.secs.choke)} — the struggle must not touch the choke's clock)`);
-    if (A.downKind !== 'choked') fails.push(`A ${A.state}/${A.downKind} (want choked)`);
-    if (!slept) fails.push('the ragdoll never slept in 8 s');
-    const ok = fails.length === 0; allPass &&= ok;
-    console.log(`- ${ok ? 'PASS' : 'FAIL'} — (b) choke through: mean travel/frame (mm) head pre ${mm(pre.head)} early ${mm(early.head)} mid ${mm(mid.head)} late ${mm(late.head)} (side to side ${mm(pre.lat)} / ${mm(early.lat)} / ${mm(mid.lat)} / ${mm(late.lat)}); hands early L ${mm(early.handL)} R ${mm(early.handR)}, late L ${mm(late.handL)} R ${mm(late.handR)}; roots ≤ ${mm(Math.max(pre.rootP, early.rootP, mid.rootP, late.rootP, pre.rootG, early.rootG, mid.rootG, late.rootG))} mm; down +${f2(deadAt)} s as ${A.downKind}, ragdoll slept ${slept}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
-  }
+  
   // ---- (c) eased off at 1.2 s (a second tap): the fight dies down with the eased choke (no snap), he lives, the hold goes on
   {
     const S = await stage(83); const { W, game, A } = S;

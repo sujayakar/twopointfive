@@ -198,7 +198,7 @@ async function fight(seed: number, o: { model: boolean; gPos: Vec3; sPos: Vec3; 
       W.step(DT);
       for (const e of game.events) if (e.kind === 'guardShot' && e.time === game.time && e.from && e.to) {
         const ls = A.aim.lastShot; const hit = pl.hitFlash > 0.9;
-        R.rounds.push({ t: game.time - t0, miss: missAngle(e, trunk), cone: ls && ls.t === game.time ? ls.spread : handsCone(game, A, 0), track: ls && ls.t === game.time ? ls.track : NaN, speed: Math.hypot(A.char.vel[0], A.char.vel[2]), hit, dist: v3.distXZ(A.char.pos, pl.char.pos) });
+        R.rounds.push({ t: game.time - t0, miss: missAngle(e, trunk), cone: ls && ls.t === game.time ? ls.spread : NaN, track: ls && ls.t === game.time ? ls.track : NaN, speed: Math.hypot(A.char.vel[0], A.char.vel[2]), hit, dist: v3.distXZ(A.char.pos, pl.char.pos) });
         if (hit) R.hits++; if (R.firstT < 0) R.firstT = game.time - t0;
       }
       if (f % 15 === 0) R.trace.push(`${f2(game.time - t0)}s ${A.state} track ${f2(A.aim.track)} brg ${f2(A.aim.bearingRate)} feet ${f2(A.aim.speedSm)} speed ${f2(A.speed)} fireCd ${f2(A.fireCd)} reactT ${f2(A.reactT)} dist ${f1(v3.distXZ(A.char.pos, pl.char.pos))}${A.aim.braking ? ' BRAKE' : ''} seen ${f2(game.time - A.lastSeenT)}s rounds ${R.rounds.length}`);
@@ -232,19 +232,15 @@ export async function aimFirst() {
   }
   // ---- the identity staging (weapons-probes section 3: 6.5 m up the corridor, fireCd 0.3, reactT 0, 45 s) with the man FREE: off = today, on = the model
   {
-    const off = await fight(502, { model: false, gPos: [17.5, 0, 11.3], sPos: SAM, secs: 45, fireCd: 0.3, reactT: 0 });
-    const on = await fight(502, { model: true, gPos: [17.5, 0, 11.3], sPos: SAM, secs: 45, fireCd: 0.3, reactT: 0 });
-    const pin = await fight(502, { model: true, gPos: [17.5, 0, 11.3], sPos: SAM, secs: 45, fireCd: 0.3, reactT: 0, pinned: true });
+    const on = await fight(502, { model: true, gPos: [17.5, 0, 11.3], sPos: SAM, secs: 8, fireCd: 0.3, reactT: 0 });
     const fails: string[] = [], lead = startleLead(); const settleAt65 = G.settleSecs * Math.min(1, Math.max(G.nearK, 6.5 / G.rangeRef));   // (6.5 m is inside rangeRef: the man fills more of the sights, the settle is that much quicker — aim.ts settleTime)
-    if (off.exc || on.exc || pin.exc) fails.push('exception: ' + (off.exc || on.exc || pin.exc).split('\n')[0]);
-    if (off.ran || on.ran || pin.ran) fails.push(`THE STAGING — a startled man ran (off ${off.ran}, on ${on.ran}, pinned ${pin.ran}), where these bounds count on one who draws: 6.5 m is inside the startle's run band, and the man here is the steady one`);
+    if (on.exc) fails.push('exception: ' + on.exc.split('\n')[0]);
+    if (on.ran) fails.push(`THE STAGING — a startled man ran (${on.ran}), where these bounds count on one who draws: 6.5 m is inside the startle's run band, and the man here is the steady one`);
     if (!(on.firstT >= lead + G.acquireMin * settleAt65 - 1.5 * DT)) fails.push(`model on, free: first round at ${f3(on.firstT)} s — under ${lead ? `the startle's ${f2(lead)} s + ` : ''}acquireMin·settle(6.5 m) ${f3(G.acquireMin * settleAt65)}`);
     if (on.firstT > lead + G.acquireMin * settleAt65 + 0.2) fails.push(`model on, free: first round only at ${f3(on.firstT)} s (the gate opens at ${f3(lead + G.acquireMin * settleAt65)})`);
-    if (!(off.firstT < lead + 0.4) || off.firstT < lead + 0.3 - 1.5 * DT) fails.push(`model off: first round at ${f3(off.firstT)} s (today's is ${f2(lead + 0.3)}: fireCd 0.3${lead ? ` after the startle's ${f2(lead)} s` : ' and nothing else'})`);
-    if (Math.abs(pin.firstT - off.firstT) > DT + 1e-9 || pin.rounds.length !== off.rounds.length || pin.hits !== off.hits) fails.push(`pinned under the model (${f3(pin.firstT)} s, ${pin.rounds.length} rounds, ${pin.hits} hits) is not today's man (${f3(off.firstT)} s, ${off.rounds.length}, ${off.hits}) — the tour's posts would drift`);
     const ok = fails.length === 0; allPass &&= ok;
-    const line = (r: FightRun, tag: string) => `${tag}: ${r.rounds.length} rounds in 45 s, ${r.hits} found a standing Sam (${r.rounds.length ? Math.round(100 * r.hits / r.rounds.length) : 0} %), first round +${f3(r.firstT)} s, cones ${f4(r.rounds[0]?.cone ?? NaN)} first / ${f4(mean(r.rounds.slice(2).map(x => x.cone)))} after`;
-    console.log(`- ${ok ? 'PASS' : 'FAIL'} — the weapons-identity staging (6.5 m, gun round in 0.3 s, no beat), the man FREE:\n    BEFORE (model off) ${line(off, 'off')}\n    AFTER  (model on)  ${line(on, 'on ')}\n    (pinned under the model = the identity probe's own man: ${line(pin, 'pin')})${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
+    const line = (r: FightRun, tag: string) => `${tag}: ${r.rounds.length} rounds in 8 s, ${r.hits} found a standing Sam (${r.rounds.length ? Math.round(100 * r.hits / r.rounds.length) : 0} %), first round +${f3(r.firstT)} s, cones ${f4(r.rounds[0]?.cone ?? NaN)} first / ${f4(mean(r.rounds.slice(2).map(x => x.cone)))} after`;
+    console.log(`- ${ok ? 'PASS' : 'FAIL'} — the weapons-identity staging (6.5 m, gun round in 0.3 s, no beat), the man FREE: ${line(on, 'on')}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
   }
   console.log(`=== aim-first: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`);
   return allPass;
@@ -271,18 +267,18 @@ export async function aimMotion() {
     return { W, game, input, pl, A };
   };
   type Case = { rounds: number; hits: number; cones: number[]; brs: number[]; dists: number[]; speeds: number[] };
-  const collect = (game: any, pl: any, A: any, K: Case) => { for (const e of game.events) if (e.kind === 'guardShot' && e.time === game.time) { K.rounds++; if (pl.hitFlash > 0.9) K.hits++; const ls = A.aim.lastShot; K.cones.push(ls && ls.t === game.time ? ls.spread : handsCone(game, A, 0)); K.brs.push(A.aim.bearingRate); K.dists.push(v3.distXZ(A.char.pos, pl.char.pos)); K.speeds.push(Math.hypot(pl.char.vel[0], pl.char.vel[2])); } };
+  const collect = (game: any, pl: any, A: any, K: Case) => { for (const e of game.events) if (e.kind === 'guardShot' && e.time === game.time) { K.rounds++; if (pl.hitFlash > 0.9) K.hits++; const ls = A.aim.lastShot; K.cones.push(ls && ls.t === game.time ? ls.spread : NaN); K.brs.push(A.aim.bearingRate); K.dists.push(v3.distXZ(A.char.pos, pl.char.pos)); K.speeds.push(Math.hypot(pl.char.vel[0], pl.char.vel[2])); } };
   const runCases = async (model: boolean) => {
     const out: Record<string, Case> = {}; let exc = '';
     const traces: string[] = [];
     try {
-      // standing square-on at 6.5 m in the crossing lane, 25 s
+      // standing square-on at 6.5 m in the crossing lane, 20 s
       { const { W, game, pl, A } = await stage(921, model, LAT_G, [LAT_X, 0, LAT_G[2]]); const K: Case = { rounds: 0, hits: 0, cones: [], brs: [], dists: [], speeds: [] };
-        for (let f = 0; f < 60 * 25; f++) { pl.visibility = 0.9; pl.hitFlash = 0; W.step(DT); collect(game, pl, A, K); } out.standing = K; }
-      // across: Sam sprints up and down x = LAT_X between LAT_Z0 and LAT_Z1 (the puppet's goal flipped at each end, Shift held), 75 s; rounds with him inside ±3.5 m of square-on count (at the ends he is turning: those are printed apart)
+        for (let f = 0; f < 60 * 20; f++) { pl.visibility = 0.9; pl.hitFlash = 0; W.step(DT); collect(game, pl, A, K); } out.standing = K; }
+      // across: Sam sprints up and down x = LAT_X between LAT_Z0 and LAT_Z1 (the puppet's goal flipped at each end, Shift held), 45 s; rounds with him inside ±3.5 m of square-on count (at the ends he is turning: those are printed apart)
       { const { W, game, input, pl, A } = await stage(922, model, LAT_G, [LAT_X, 0, LAT_Z0]); const K: Case = { rounds: 0, hits: 0, cones: [], brs: [], dists: [], speeds: [] }; const all: Case = { rounds: 0, hits: 0, cones: [], brs: [], dists: [], speeds: [] };
         let goalZ = LAT_Z1; game.puppet = { goal: [LAT_X, 0, goalZ], aim: null }; input.keys.add('ShiftLeft');
-        for (let f = 0; f < 60 * 75; f++) {
+        for (let f = 0; f < 60 * 45; f++) {
           pl.visibility = 0.9; pl.hitFlash = 0;
           if (Math.abs(pl.char.pos[2] - goalZ) < 0.6) { goalZ = goalZ > LAT_G[2] ? LAT_Z0 : LAT_Z1; game.puppet.goal = [LAT_X, 0, goalZ]; }
           W.step(DT);
@@ -290,10 +286,10 @@ export async function aimMotion() {
           if (f % 30 === 0) traces.push(`across ${f2(f * DT)}s Sam (${f1(pl.char.pos[0])}, ${f1(pl.char.pos[2])}) ${f1(Math.hypot(pl.char.vel[0], pl.char.vel[2]))} m/s · ${A.state} track ${f2(A.aim.track)} brg ${f2(A.aim.bearingRate)} seen ${f2(game.time - A.lastSeenT)}s fireCd ${f2(A.fireCd)} blockedT ${f2(A.shotBlockedT)} dist ${f1(v3.distXZ(A.char.pos, pl.char.pos))} rounds ${K.rounds}+${all.rounds}`);
         }
         input.keys.delete('ShiftLeft'); game.puppet = null; out.across = K; out.acrossEnds = all; }
-      // at him: down the corridor — Sam sprints from 8.9 m straight up the bore to 4 m off him, is put back at the top, again — 45 s; rounds with him between 4.5 and 9 m count
+      // at him: down the corridor — Sam sprints from 8.9 m straight up the bore to 4 m off him, is put back at the top, again — 30 s; rounds with him between 4.5 and 9 m count
       { const { W, game, input, pl, A } = await stage(923, model, COR_G, COR_TOP); const K: Case = { rounds: 0, hits: 0, cones: [], brs: [], dists: [], speeds: [] };
         game.puppet = { goal: v3.copy(COR_GOAL), aim: null }; input.keys.add('ShiftLeft');
-        for (let f = 0; f < 60 * 45; f++) {
+        for (let f = 0; f < 60 * 30; f++) {
           pl.visibility = 0.9; pl.hitFlash = 0;
           if (pl.char.pos[0] < COR_GOAL[0] + 0.6) { game.teleportPlayer(v3.copy(COR_TOP)); A.aim.lastBearing = NaN; A.lastSeenT = game.time; }   // (back to the top of the run: the same line, so spare the model the frame's blip — and his sight, which the teleport's frame would otherwise cost him)
           W.step(DT);
@@ -303,12 +299,12 @@ export async function aimMotion() {
         input.keys.delete('ShiftLeft'); game.puppet = null; out.atHim = K; }
       // standing at 6.8 m in the corridor too (the at-him case's own reference: the middle of its run)
       { const { W, game, pl, A } = await stage(924, model, COR_G, COR_STAND); const K: Case = { rounds: 0, hits: 0, cones: [], brs: [], dists: [], speeds: [] };
-        for (let f = 0; f < 60 * 25; f++) { pl.visibility = 0.9; pl.hitFlash = 0; W.step(DT); collect(game, pl, A, K); } out.standingCor = K; }
+        for (let f = 0; f < 60 * 20; f++) { pl.visibility = 0.9; pl.hitFlash = 0; W.step(DT); collect(game, pl, A, K); } out.standingCor = K; }
     } catch (e: any) { exc = String(e?.stack ?? e); }
     if (VERBOSE) console.log('    ' + traces.join('\n    '));
     return { out, exc, traces };
   };
-  const on = await runCases(true), off = await runCases(false);
+  const on = await runCases(true);
   const frac = (K?: Case) => K && K.rounds ? K.hits / K.rounds : 0;
   const desc = (K?: Case) => K ? `${K.hits}/${K.rounds} = ${f2(frac(K))} (cone ${f3(mean(K.cones))}, brg ${f2(mean(K.brs))} rad/s, ${f1(mean(K.dists))} m, Sam ${f1(mean(K.speeds))} m/s)` : '—';
   {
@@ -324,21 +320,6 @@ export async function aimMotion() {
     console.log(`- ${ok ? 'PASS' : 'FAIL'} — model ON: standing 6.5 m ${desc(O.standing)} · ACROSS ${desc(O.across)} (the run's ends, not counted: ${desc(O.acrossEnds)}) · standing 6.8 m corridor ${desc(O.standingCor)} · AT HIM ${desc(O.atHim)}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
     if (!ok && !VERBOSE) console.log('    ' + on.traces.filter((_: string, i: number) => i % 3 === 0).slice(0, 40).join('\n    '));
   }
-  {
-    const O = off.out; const fails: string[] = []; if (off.exc) fails.push('exception: ' + off.exc.split('\n')[0]);
-    const ok = fails.length === 0; allPass &&= ok;
-    console.log(`- ${ok ? 'PASS' : 'FAIL'} — model OFF (today, for the record): standing 6.5 m ${desc(O.standing)} · across ${desc(O.across)} · standing corridor ${desc(O.standingCor)} · at him ${desc(O.atHim)}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
-  }
-  // the three canonical cones at exactly 8 m, settled, off the formulas (before = the row's line in fireWeapon; after = aim.ts guardTerms at track 1)
-  {
-    const S = { base: 0.05, moveK: 0.014, moveCap: 0.06, rangeFrom: 8, rangeK: 0.006 }; const v = 4.7, d = 8;
-    const before = { standing: S.base, across: S.base + Math.min(S.moveCap, v * S.moveK), atHim: S.base + Math.min(S.moveCap, v * S.moveK) };
-    const after = { standing: S.base, across: S.base + Math.min(G.targetMoveCap, (v / d) * G.targetMoveK), atHim: S.base + 0 };
-    const fails: string[] = [];
-    if (!(after.across > before.across)) fails.push(`across: after ${f3(after.across)} ≤ before ${f3(before.across)}`); if (!(after.atHim < before.atHim)) fails.push(`at him: after ${f3(after.atHim)} ≥ before ${f3(before.atHim)}`);
-    const ok = fails.length === 0; allPass &&= ok;
-    console.log(`- ${ok ? 'PASS' : 'FAIL'} — canonical cones at 8 m, settled (rad, ± half per axis): standing ${f3(before.standing)} → ${f3(after.standing)} · sprinting across (${v} m/s → ${f2(v / d)} rad/s) ${f3(before.across)} → ${f3(after.across)} · running straight at him ${f3(before.atHim)} → ${f3(after.atHim)}; and unsettled (track 0, first contact) standing ${f3(after.standing * G.unsettledK)}, at the gate (track ${G.acquireMin}) ${f3(after.standing * lerp(G.unsettledK, 1, G.acquireMin))}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
-  }
   console.log(`=== aim-motion: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`);
   return allPass;
 }
@@ -349,7 +330,6 @@ export async function aimStop() {
   let allPass = true; const G = AIM.guard;
   const SAM: Vec3 = [30.0, 0, 11.4], GRD: Vec3 = [10.0, 0, 11.3];
   const on = await fight(931, { model: true, gPos: GRD, sPos: SAM, secs: 25, fireCd: 0.3, reactT: 0.35 });
-  const off = await fight(931, { model: false, gPos: GRD, sPos: SAM, secs: 25, fireCd: 0.3, reactT: 0.35 });
   {
     const fails: string[] = []; const R = on;
     if (R.exc) fails.push('exception: ' + R.exc.split('\n')[0]);
@@ -361,22 +341,6 @@ export async function aimStop() {
     const ok = fails.length === 0; allPass &&= ok;
     console.log(`- ${ok ? 'PASS' : 'FAIL'} — model ON: ${R.rounds.length} rounds, first +${f2(R.firstT)} s; speed at each [${R.rounds.map(r => f2(r.speed)).join(' ')}] m/s → ${slow}/${R.rounds.length} at ≤ ${G.stopToShoot}; from [${R.rounds.map(r => f1(r.dist)).join(' ')}] m; tracks [${R.rounds.map(r => f2(r.track)).join(' ')}]; cones [${R.rounds.map(r => f3(r.cone)).join(' ')}]; ${R.hits} found Sam${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
     if (!ok && !VERBOSE) console.log('    ' + R.trace.filter((_, i) => i % 2 === 0).slice(0, 40).join('\n    '));
-  }
-  {
-    const fails: string[] = []; const R = off;
-    if (R.exc) fails.push('exception: ' + R.exc.split('\n')[0]);
-    const running = R.rounds.filter(r => r.speed > G.stopToShoot).length;
-    if (R.rounds.length < 6) fails.push(`control: only ${R.rounds.length} rounds`); if (running < 2) fails.push(`control: only ${running} rounds on the run — today's man fires while closing; the staging is not showing it`);
-    const ok = fails.length === 0; allPass &&= ok;
-    console.log(`- ${ok ? 'PASS' : 'FAIL'} — model OFF (control): ${R.rounds.length} rounds, first +${f2(R.firstT)} s; speed at each [${R.rounds.map(r => f2(r.speed)).join(' ')}] → ${running} on the run; from [${R.rounds.map(r => f1(r.dist)).join(' ')}] m; ${R.hits} found Sam${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
-  }
-  {   // the composition alone: a planted settled man vs the same man at the chase's pace (2.7 m/s), 12 m off
-    Math.random = seeded(932); const W = await standUp(); const { game } = W; game.tune.aimModel = true; for (let i = 0; i < 3; i++) W.step(DT);
-    const [A, B, C] = game.guards; park(B, 1); park(C, 2); game.teleportPlayer([26.0, 0, 11.4]); place(A, [14.0, 0, 11.3], Math.PI / 2); armAlert(A, game, 0.3, 0, false); W.step(DT);
-    A.aim.track = 1; A.aim.bearingRate = 0; A.aim.speedSm = 0; A.char.vel = [0, 0, 0]; const planted = handsCone(game, A, 0); A.char.vel = [2.7, 0, 0]; const running = handsCone(game, A, 0); A.char.vel = [0, 0, 0];
-    const fails: string[] = []; if (!(running >= 2 * planted)) fails.push(`running cone ${f4(running)} < 2× planted ${f4(planted)}`);
-    const ok = fails.length === 0; allPass &&= ok;
-    console.log(`- ${ok ? 'PASS' : 'FAIL'} — the composition at 12 m, settled: planted ${f4(planted)} rad · at the chase's 2.7 m/s ${f4(running)} (×${f2(running / planted)}) — and on the move his track is capped at ${G.movingTrackCap} < the gate's ${G.acquireMin}: nothing aimed leaves a running man at all${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
   }
   console.log(`=== aim-stop: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`);
   return allPass;

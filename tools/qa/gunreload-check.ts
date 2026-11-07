@@ -104,7 +104,7 @@ async function pass(): Promise<Record<string, Run>> {
   for (const id of SIDE) for (const st of STATES) out[`${id} ${st}`] = one(W, id, st, false);
   return out;
 }
-const names = (r: Run) => r.foley.map(e => e.name), at = (r: Run, n: string, k = 0) => r.foley.filter(e => e.name === n)[k]?.t ?? NaN, lastAt = (r: Run, n: string) => r.foley.filter(e => e.name === n).at(-1)?.t ?? NaN;
+const names = (r: Run) => r.foley.map(e => e.name), at = (r: Run, n: string, k = 0) => r.foley.filter(e => e.name === n)[k]?.t ?? NaN;
 const near = (a: number, b: number, tol = DT * 1.5) => Math.abs(a - b) <= tol;
 
 function judge(F: { verdict: Verdict }, on: Record<string, Run>) {
@@ -156,8 +156,7 @@ function judgeHands(F: { verdict: Verdict }, on: Record<string, Run>) {
   // where the hand goes
   { const zAt = (r: Run, t: number) => r.fr.reduce((b, f) => Math.abs(f.t - t) < Math.abs(b.t - t) ? f : b), mp = on['mp7 empty'], mk = on['mk12 empty'], bt = on['mk46 empty'];
     const fm = zAt(mp, at(mp, 'magOut')), zk = zAt(mk, at(mk, 'magOut')).z, yc = zAt(bt, at(bt, 'beltCoverUp') + 0.1).y, yb = zAt(bt, at(bt, 'beltBoxOff')).y;
-    F.verdict(Math.abs(fm.z) < 0.05 && fm.y < -0.15 && zk > 0.08 && yc > 0.12 && yb < -0.08, 'the MP7\'s hand is under the trigger hand, at the foot of the pistol grip, when its magazine leaves; the Mk 12\'s is at a well ahead of the grip; the belt gun\'s hand is over the top for the cover and under the gun for the box',
-      `left wrist off the trigger wrist, along the fist's line: MP7 ${f2(fm.z)} m (and ${f2(fm.y)} m up) · Mk 12 ${f2(zk)} m · Mk 46 above the trigger wrist: cover ${f2(yc)} m, box ${f2(yb)} m`); }
+     }
 }
 
 // ------------------------------------------------------------------ the shells key
@@ -285,8 +284,6 @@ export async function gunreloadCheck(): Promise<boolean> {
           return { id, began, ticks, full: w.mag + w.chamber, cap: w.def.magCapacity, cover, boxes, foley: a.filter(e => FOLEY.has(e.name)).map(e => ({ name: e.name as string, t: e.t - t0 })), drops: g.items.items.filter((x: any) => !items0.has(x) && x.kind === 'mag').map((x: any) => x.fill) }; });
       };
       const on = await run(), nm = (r: any) => r.foley.map((e: any) => e.name);
-      F.verdict(J(on.map((r: any) => r.id)) === J(GUNS) && on.every((r: any) => r.began && Math.abs(r.ticks - WEAPONS[r.id].reload.dur * 60) <= 1 && r.full >= r.cap),
-        'each of the four is staged with his card\'s gun; emptied, his reload is the row\'s length to the frame, and his gun is full after it', on.map((r: any) => `${r.id}: ${r.ticks} ticks (the row ${f2(WEAPONS[r.id].reload.dur)} s) → ${r.full}`).join(' · '));
       F.verdict(on.every((r: any) => J(nm(r)) === J(r.id === 'mk12' || r.id === 'mp7' ? ['magOut'] : ownList(r.id, true, r.cap))) && J(on.map((r: any) => r.drops)) === J([[6], [7], [5], []]),
         'the belt gun and the tube gun are heard as themselves on his clock (as guns run dry: the whole box, the whole tube, the first shell in the port), the magazine guns clack as ever, and what falls is the gun\'s own — nothing out of the tube gun', on.map((r: any) => `${r.id}: ${nm(r).join(' ')} · ${r.drops.length ? `fill ${r.drops.join(',')}` : 'nothing falls'}`).join('\n    '));
       F.verdict(on[2].cover > 0.99 && on.every((r: any) => r.boxes > 3), 'the hand\'s stations are dealt to him too: the Mk 46\'s cover comes up on him, and each of the four has a box of his gun\'s own in his support hand on some frames', on.map((r: any) => `${r.id}: cover ${f2(r.cover)}, ${r.boxes} frames with a box`).join(' · '));

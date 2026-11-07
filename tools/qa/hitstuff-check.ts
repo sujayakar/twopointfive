@@ -37,7 +37,7 @@ const sized = (b: any, h: number[]) => near(b.h[0], h[0]) && near(b.h[1], h[1]) 
 /** what one stood-up game lets the check do: put the man where a round of his meets box `i`, fire `n` of them, and say what each knocked out */
 function range(W: any) {
   const { game, input } = W, pl = game.player, c = pl.char, st: any[] = game.engine.world.statics;
-  const eye = (p: number[]) => [p[0], 1.35, p[2]];
+  
   const draw = () => { for (let i = 0; i < 3 && !pl.pistolUp; i++) { input.pressed.add(i === 0 ? 'Digit1' : 'KeyE'); for (let k = 0; k < 50; k++) W.step(DT); } };
   /** where a round is aimed in box i: its middle, `low` of its half height under that (a car's body under its glass: the gun is held higher than the body's top) */
   const aimAt = (i: number, low = 0): number[] => { const b = st[i]; return [b.c[0], b.c[1] - low * b.h[1], b.c[2]]; };
