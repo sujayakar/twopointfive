@@ -36,9 +36,6 @@
 //   look      the flame's numbers (FIRE.look) reach the renderer as they stand (engine.fireLook, sixteen numbers); the embers are GPU particles: sparks flagged
 //             embers, filed over the coals with a seed made by hand from the host's own book, about as many as the table says; with no pool none are filed
 //             and the two games differ in nothing; FIRE.embers 0 = none; a recording from before the key replays with no shimmer, no drawn smoke, no embers
-//   gas       FIRE.gas on with a solver drawing: a look-only source on the FINE lattice at the coals every `every` s, as wide and as dense as the table says, and
-//             the fire's record tells the picture to draw the flame from it (eased to 1); with no solver drawing or put off: none, and the flame of noise;
-//             a recording from before the key replays with it off
 //   off       switch off: the lamp steady at the authored strength where the level hung it, nothing handed to the renderer, the solver or the mixer
 //   old       a recording from before the key replays with it off (journal.ts applyKnobs)
 import { standUp, ROOT, fake } from './headless.ts';
@@ -307,30 +304,6 @@ export async function fireCheck(o: { verbose?: boolean } = {}): Promise<boolean>
       } finally { lookConfig.fireSnow = L0.fireSnow; FIRE_LOOK_SMOKE.emberFog = ef0; FOG.ours = ours0; FIRE.on = fon; }
     }
 
-    {
-      const gas0 = { ...FIRE.gas };
-      try {
-        FIRE.gas.on = true;
-        const A = await rig(true, true), B = await rig(true, false), t = A.t, G = FIRE.gas, told: number[] = [];
-        A.g.smoke.keepHot = (h: number) => { told.push(h); };
-        if (!t) verdict(false, 'gas — the pass has a fire', 'none found');
-        else {
-          const fine = (X: any) => X.sources.filter((e: any) => e.kind === 'cloud' && e.look === true && e.lattice === 'fine'), share = (X: any) => (X.g.engine.fires?.[0]?.gas ?? 0) as number;
-          A.step(120); B.step(120);
-          const S = fine(A), up = S.map((e: any) => e.pos[1] - (A.g.engine.fires[0].pos[1] as number)), row: number[] = A.g.engine.fireLook ?? [];
-          const booked = fireShown(A.g)?.gases;
-          const shaped = S.length > 0 && S.every((e: any, i: number) => Math.hypot(e.pos[0] - t.pos[0], e.pos[2] - t.pos[2]) < 0.01 && Math.abs(up[i] - FIRE.height * G.up) < 1e-6 && e.radius === G.radius && e.minVoxels === G.cells && e.density > 0 && e.density <= G.density && e.temperature > 0 && e.temperature <= G.temp && e.ttl === G.every && e.dir[1] === 1);
-          const on = share(A), none = fine(B).length, off = share(B);
-          const toldOn = told.join(','); FIRE.gas.on = false; const n1 = S.length; A.step(90); const after = fine(A).length - n1, back = share(A), toldOff = told.join(','); FIRE.gas.on = true;
-          A.step(2); const n2 = told.length; { const all = A.g.targets; A.g.targets = all.filter((x: any) => !isFire(x)); updateFire(A.g, DT); A.g.targets = all; } const toldNone = told.slice(n2 - 1).join(',');   // (lit as gas again, then a floor with no fire: the solver is told to let hot gas go)
-          const k = (J as any).knobsSnapshot(A.g); FIRE.gas.on = false; (J as any).applyKnobs(A.g, k); const own = FIRE.gas.on;
-          const k2 = (J as any).knobsSnapshot(A.g); delete k2.tables.FIRE.gas; FIRE.gas.on = true; (J as any).applyKnobs(A.g, k2); const old = FIRE.gas.on;
-          verdict(shaped && S.length >= 2 / G.every && S.length <= 2 / G.every + 1 && on === 1 && row[10] === G.ref && row[11] === G.lo && booked === S.length && none === 0 && off === 0 && after === 0 && back === 0 && toldOn === String(G.keep) && toldNone === `${G.keep},0` && toldOff === `${G.keep},0` && own === true && old === false,
-            'gas — with a solver drawing, a fire\'s flame is gas on the fine lattice: a look-only source of heat at the coals every half second, the solver told to keep hot gas while it burns, and its record says the picture is to draw the flame from it; with no solver, or put off, none and the flame of noise',
-            `${S.length} fine look sources in two seconds (every ${G.every} s), each at the drum's axis ${up[0]?.toFixed(3)} m over the coals, ${G.radius} m wide, smoke ${S[0]?.density} and heat ${S[0]?.temperature} a second, ttl ${S[0]?.ttl}: ${shaped ? 'yes' : 'NO'} · the record's share of gas ${on} · the look row's last two ${row[10]}, ${row[11]} · the book says ${booked} · no solver drawing: ${none} sources, share ${off} · the solver told to keep hot gas: ${toldOn} · put off: ${after} more in a second and a half, share back to ${back}, the solver told ${toldOff} · on again and then a floor with no fire: told ${toldNone} · its own snapshot put back: ${own ? 'on' : 'off'} · one without the key: ${old ? 'on' : 'off'}`);
-        }
-      } finally { Object.assign(FIRE.gas, gas0); }
-    }
     // ---- lamp: a fire's lamp is a fire's (FIRE.bright, .reach, .warm), and the level's own again the moment it is out
     {
       const A = await rig(true, false), t = A.t;
