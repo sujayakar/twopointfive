@@ -757,7 +757,8 @@ pub fn plan_clears(g: &mut crate::game::Game, force: Option<bool>, cause: Option
         crate::game::game_note(g, "nothing near to clear — those rooms were done a minute ago");
         return false;
     }
-    let c = crate::squad::clearing_new(g, &rooms, a, b);
+    let mut c = crate::squad::clearing_new(g, &rooms, a, b);
+    c.serial = g.serial();
     g.clearing = Some(c);
     true
 }
