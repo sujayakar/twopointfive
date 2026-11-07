@@ -45,10 +45,10 @@ What a row does NOT hold:
 | `tut-queue` | `tut-queue.json` | yes | 0 | 300 in step | 0 |  |
 | `tut-quiet` | `tut-quiet.json` | yes | 0 | 300 in step | 0 |  |
 | `tut-pair` | `tut-pair.json` | yes | 0 | 300 in step | 0 |  |
-| `night-breach` (off the list) | `office.json` | yes | 0 | 300 in step | 0 | its missions are not in its file (levels/office.scenarios.ts, attached by name): held on a copy of the file with them written in |
-| `room-clear-pair` | `office.json` | yes | 0 | 300 in step | 0 | its missions are not in its file (levels/office.scenarios.ts, attached by name): held on a copy of the file with them written in |
-| `room-clear-four` (off the list) | `office.json` | yes | 0 | 300 in step | 0 | its missions are not in its file (levels/office.scenarios.ts, attached by name): held on a copy of the file with them written in |
-| `hostage-rescue` | `office.json` | yes | 0 | 300 in step | 0 | its missions are not in its file (levels/office.scenarios.ts, attached by name): held on a copy of the file with them written in |
+| `night-breach` (off the list) | `office.json` | yes | 0 | 300 in step | 0 |  |
+| `room-clear-pair` | `office.json` | yes | 0 | 300 in step | 0 |  |
+| `room-clear-four` (off the list) | `office.json` | yes | 0 | 300 in step | 0 |  |
+| `hostage-rescue` | `office.json` | yes | 0 | 300 in step | 0 |  |
 | `records-pair` | `records-gwot.json` | yes | 0 | 300 in step | 0 |  |
 | `depot-four` | `depot-gwot.json` | yes | 0 | 300 in step | 0 |  |
 | `block-four` | `block-gwot.json` | yes | 0 | 300 in step | 0 |  |
@@ -96,10 +96,10 @@ TypeScript start makes for two, and that the two stay in step while nobody moves
 | `tut-queue` | `tut-queue.json` | yes | 0 | 300 in step | 0 |  |
 | `tut-quiet` | `tut-quiet.json` | not for this many players |  |  |  | the game refuses it for 2 players (it takes one player today) |
 | `tut-pair` | `tut-pair.json` | not for this many players |  |  |  | the game refuses it for 2 players (it takes one player today) |
-| `night-breach` (off the list) | `office.json` | yes | 0 | 300 in step | 0 | its missions are not in its file (levels/office.scenarios.ts, attached by name): held on a copy of the file with them written in |
-| `room-clear-pair` | `office.json` | yes | 0 | 300 in step | 0 | its missions are not in its file (levels/office.scenarios.ts, attached by name): held on a copy of the file with them written in |
-| `room-clear-four` (off the list) | `office.json` | yes | 0 | 300 in step | 0 | its missions are not in its file (levels/office.scenarios.ts, attached by name): held on a copy of the file with them written in |
-| `hostage-rescue` | `office.json` | not for this many players |  |  |  | the game refuses it for 2 players (it takes one player today) · its missions are not in its file (levels/office.scenarios.ts, attached by name): held on a copy of the file with them written in |
+| `night-breach` (off the list) | `office.json` | yes | 0 | 300 in step | 0 |  |
+| `room-clear-pair` | `office.json` | yes | 0 | 300 in step | 0 |  |
+| `room-clear-four` (off the list) | `office.json` | yes | 0 | 300 in step | 0 |  |
+| `hostage-rescue` | `office.json` | not for this many players |  |  |  | the game refuses it for 2 players (it takes one player today) |
 | `records-pair` | `records-gwot.json` | yes | 0 | 300 in step | 0 |  |
 | `depot-four` | `depot-gwot.json` | yes | 0 | 300 in step | 0 |  |
 | `block-four` | `block-gwot.json` | yes | 0 | 300 in step | 0 |  |

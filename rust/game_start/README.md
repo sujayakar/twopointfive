@@ -134,9 +134,6 @@ it, and today it names nothing. `stand` REFUSES a file with anything on that lis
 - NOT READ: `connectors` (a stair or a ladder between floors: the TypeScript loader passes them by too, and no file has one).
 - NOT CHECKED: the file's own rules (`validateLevelData`). A file is taken as one the TypeScript validator has passed; a wrong value stops the
   reader with its place in the file, a wrong level does not.
-- NOT IN A FILE: **the office's missions.** Every other level carries its `scenarios` in its file; the office's are a TypeScript module
-  (`levels/office.scenarios.ts`) attached to the level by its name (`scene/level.ts withOfficeScript`, `isOfficeFamily`). `levels/office.json`
-  itself is read whole. The compare writes a copy of the file with the block in it, and stands both starts on that (`LEVELS.md`).
 
 Which missions start in Rust equal to the TypeScript start, row by row: [`LEVELS.md`](LEVELS.md), written by `tools/blitz/start-levels.ts`.
 
@@ -172,7 +169,7 @@ that the picture, the sound, the HUD and the menus read (`src/host/rustgame.ts`,
 6. **The character's files twice.** `gltf.rs` reads the rig, the clips and the cast's variants for the simulation. The picture's meshes and
    skins are read from the same files by `src/anim/gltf.ts`. One reader, or two that must agree.
 7. **Which file.** The page loads a level's file in the look that is on (`scene/look.ts lookLevelFile`) and fetches it. Here the caller hands
-   the file's text in. The office is item "NOT IN A FILE" above.
+   the file's text in. (The office was the one level whose missions were not in its file: they are now, and it starts as the others do.)
 8. **The file's checks.** `validateLevelData` is TypeScript. A page that starts in Rust still validates in TypeScript, or the rules move.
 9. **What stands a game again from outside a tick.** A mission staged from a menu, a show, a kit view that sinks boxes: each is a TypeScript
    call on the puppet today, after which the Rust game is started again from the puppet. With a Rust start each becomes a call into the module.

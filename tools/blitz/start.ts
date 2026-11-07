@@ -9,7 +9,7 @@
 // With `--scenario` the mission is started by the game's own `startScenario` (a spec of that kind, `--squad` teammates, `--deal` its seed) before the
 // state is taken. `--mission <id>` is a row of the mission list (scene/scenarioList.ts): the level file the page loads for it (the look's,
 // scene/look.ts lookLevelFile) and the mission its link names (scenarios.ts scenarioQuery read by specOfQuery, as the page reads it), both written
-// to DIR/mission.txt for the Rust side (the office's missions: on a copy of its file with its scenarios written in, below). The mission is started by `startScenario`, NOT by the page's `startFromQuery`, which first lays the row's
+// to DIR/mission.txt for the Rust side. The mission is started by `startScenario`, NOT by the page's `startFromQuery`, which first lays the row's
 // hour and weather, the fog and a quiet mission's cameras off the address: the Rust game has no type for an address's words yet. No tick is run.
 import { STAND } from '../qa/stand.ts';
 import { writeFileSync, mkdirSync, readFileSync, existsSync } from 'node:fs';
@@ -26,14 +26,6 @@ if (MISSION || argv.includes('--missions')) {
   if (!MISSION) { for (const e of ALL_MISSIONS) { const r = row(e); say(`${r.id}\t${r.file}\t${r.link}\t${r.listed ? 'listed' : 'off the list'}`); } process.exit(0); }
   const e = ALL_MISSIONS.find((m: any) => m.id === MISSION); if (!e) { say(`start.ts: no mission '${MISSION}' (start.ts --missions lists them)`); process.exit(64); }
   const r = row(e); file = r.file; spec = specOfQuery(r.link);
-  // THE OFFICE's missions are not in its file: a TypeScript module holds them and they are attached by the level's name (scene/level.ts withOfficeScript).
-  // Both starts are stood on a COPY of the bundled file with that block written in, as every other level carries its own (the loader takes a file's own block).
-  if (!e.level) {
-    if (!outDir) { say('start.ts: --mission of the office needs --out DIR (the copy of its file is written there)'); process.exit(64); }
-    const { OFFICE_DATA, OFFICE_SCENARIOS } = await import('../../src/scene/level.ts');
-    mkdirSync(outDir, { recursive: true }); file = resolve(outDir, 'office-with-scenarios.json');
-    writeFileSync(file, JSON.stringify({ ...OFFICE_DATA, scenarios: OFFICE_SCENARIOS }));
-  }
   if (outDir) { mkdirSync(outDir, { recursive: true }); writeFileSync(`${outDir}/mission.txt`, `${file}\n${spec.kind}\n${spec.squad}\n${spec.seed ?? ''}\n`); }
 }
 if (!file || (file.startsWith('--') && !MISSION) || !outDir) { say("start.ts <level file> --out DIR [--seed N] [--scenario <kind> [--squad N] [--deal N]] · start.ts --mission <id> --out DIR · start.ts --missions"); process.exit(64); }
