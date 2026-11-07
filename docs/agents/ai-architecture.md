@@ -696,125 +696,55 @@ tick. It is honest (he notices he has lost the man) but it must not become a bac
 - No planner, no behaviour tree, no archetype ECS.
 - The squad's code is one code for both sides, reached in steps; tonight only the shared records and arbiter.
 
-## 15. Plan: the fog of war keeps two records (not built)
+## 15. The fog of war keeps two records
 
-The fog's record (`fogofwar::FogOfWar`, one part of the game's state) holds two different things. WHAT THE
-TEAM KNOWS is the game's: who has been seen and where, which doors, lamps and loose things are remembered and
-how, who is left out. Rules read it, so every machine of one game must hold it the same. THE PICTURE'S BLOCK
-is one machine's: the renderer's rows, the lamps picked for the lit fog, the switches of a viewer's lifted
-draw. Two machines showing different seats need not agree on it, and a host that draws nothing need not fill it.
+**What stands.** `g.fog_of_war` (`fogofwar::FogOfWar`) is WHAT THE TEAM KNOWS: who has been seen and where, which
+doors, lamps and loose things are remembered and how, who is left out, who the team is. It is the game's: rules
+read it, it is a part of the state, and every machine of one game holds it the same. `g.fog_picture`
+(`fogofwar::FogPicture`) is THE PICTURE'S BLOCK: the renderer's rows (`frame`), the lit fog's list of lamps and
+its counts (`lamp_pick`, `lamp_n`, `lit_stats`), a lamp's glow as last seen (`face_recs`), the count of lights by
+class (`full_stats`), and what a viewer's draw with the fog off is made from (`viewer`, `raw_list`, `raw_at`;
+`look_frames`, which nothing reads). It is one machine's: the wire tool lists it among the host's own
+(`HOSTS_OWN`, `tools/wire/wire.ts`), so it has no word of the state. Two machines that show different seats
+need not agree on it: the lit fog's lamps are cut by distance from the seat a machine shows.
 
-Today they are one record and one word of the state, and two places cross the line:
+**The code follows the data.** `fogofwar/picture.rs` is the only file that names `g.fog_picture` (and the stand,
+which makes it blank). The fog's pass (`fogofwar/p_02.rs`) settles the team's record, ends with
+`fog_of_war_team` (who the team is; the rule is `live` from here) and `fog_of_war_lamps_known` (each fixture
+with a light as the team last saw it, once a frame), and then calls `picture::fill`. The picture reads the
+team's record and asks nothing; no rule calls into the picture's file.
 
-- `fog_of_war_lamp_take` measures each lamp from `seats::host_man`, the seat this machine shows; when a level
-  has more lamps than `FOG_LIGHTS` the list is sorted by that distance and cut, so `lamp_pick`, `frame.lights`,
-  `frame.lights_u`, `frame.light_count` and `lit_stats.lights` differ by machine, inside the state.
-- `fog_of_war_hidden` and `fog_of_war_air_hides` ask `!bared` first, the switch of a viewer's lifted draw:
-  a rule's answer goes through the picture. (`bared` is only ever true between two steps, so no tick has
-  read it true; the mend changes nothing played.)
+**The page keeps ONE fog object.** `game::Game.fog_picture` is on the wire under the page's name `fogOfWar`, so
+both records are applied into the page's `game.fogOfWar` and nothing under `src/` changed. A write by path of
+`['fogOfWar', 'on']` finds the team's record (the first field of that page name); a write to a field of the
+picture's goes by its Rust name (`['fog_picture', 'viewer']`).
 
-### Which field goes where
+**A draw with the fog off is the page's.** The page lifts the fog on its own copy of the game between two steps
+and hands it back (game.ts `fogLift`, `fogBack`). The Rust translation of that pair had no caller left and is
+deleted, with the five fields only it used. One fault found and NOT mended, for whoever owns what the page
+shows: the page never raises `viewer` on the Rust game, so the Rust tick keeps no list of the frame as it stood
+before the fog cut it, and a replay watched with the fog off cannot be showing what the fog cut. The cure is one
+write by path of `['fog_picture', 'viewer']` where the page raises its own (`replay/engineplay.ts`,
+`host/kitView.ts`); `picture::keep_raw` and the wire's `raw_list` and `raw_at` are there for it.
 
-`g.fog_of_war` keeps the name and becomes the team's record. The picture's block is a new part,
-`g.fog_picture: fogofwar::FogPicture`, a field of the game listed among the host's own (`HOSTS_OWN` of
-`tools/wire/wire.ts`), so it has no word of the state.
+**How it was done.** Three commits. The code cut with every field in place: `hold check`, 120 of 120 runs the
+same in every part. The Rust lift deleted, and then the ten fields moved by a program
+(`tools/blitz/sweeps/fog-picture.py`: types, bodies, the wire by the wire tool's own commands, each field on the
+lists it was on): `hold check --but fog_of_war`, 120 of 120 the same in the other 315 parts, with `men_all`,
+`men_statured`, `men_bare` and `fog_held` reported as having left the state. The fog's own word is not compared
+across those two commits, its bytes having changed by design. Two native tests hold the line from here
+(`rust/game_start/tests/fog.rs`): a game whose picture's block is made anew every frame is the game that kept
+it, in every part of the state; and a game watched by a viewer is the unwatched game. The first was broken three
+ways to learn its reach: it goes red when the team's knowledge of a lamp is made to wait on the block, and does
+not when `fog_of_war_hidden` or `fog_of_war_ours_on` are, because on a host with the dressing down nothing that
+asks those leaves a mark on the state in a quiet four seconds.
 
-| stays in `FogOfWar` (the team's; a word of the state) | why |
-|---|---|
-| `on`, `eyes`, `mates` | the switch a scenario sets; this tick's eyes, which `spot_seen`, the doors and the sticky camera read |
-| `recs`, `shown`, `hidden_chars` | who is seen, framed, scripted in; who is left out: read by some forty rules through `hidden`, `seen`, `sighting`, `drawn` |
-| `fired_n`, `fired_at`, `fire_clock` | the squad's fire shows the man it is at |
-| `door_recs` (`shown` and `ghost`), `doors_held`, `door_from`, `door_n` | a door as last seen, and its copies on the frame's list |
-| `lamp_recs` | a lamp as last seen |
-| `thing_recs`, `thing_out`, `thing_since`, `thing_stats`, `cell_seen`, `span_x`, `span_z`, `rig_from`, `rig_to`, `our_chunks`, `our_landed` | loose things as last seen, and the step's own working values |
-| `frame_no`, `turn`, `asked`, `pending` | the pass's count and its smoke asks |
-| `call_clock`, `last_call`, `called_t`, `known_t`, `told_step`, `call_n`, `call_log`, `call_stats` | the calls a teammate makes of what he sees |
-| `stats` | the pass's counts |
-| `full_on` | read by rules (`ours_on`, `ours_id`, `air_hides`); renamed `live`, see below |
-| `loaded`, `props_loaded` | nothing sets either true since saves went; left for whoever brings a saved fog back (`FogSnap`) |
-
-| moves to `FogPicture` (the host's; no word) | why |
-|---|---|
-| `frame` (all of `render_fogofwar::FogFrame`) | the renderer's block |
-| `lamp_pick`, `lamp_n`, `lit_stats` | the lit fog's list, cut by distance from the shown seat |
-| `face_recs`, `full_stats` | a lamp's glow as last seen, which only `lamp_face` reads to paint `fog_emit`; the count of lights by class |
-| `viewer`, `bared`, `raw_list`, `raw_at` | a viewer's lifted draw |
-| `look_frames` | counted down and read by nothing; goes with the picture until it is deleted |
-| from `Game`: `fog_held`, `men_bare`, `men_all`, `men_statured` | what `game_fog_lift` keeps to hand back; become `fog_picture.held`, `.men_bare`, `.men_all`, `.men_statured` |
-
-### Which function goes where
-
-`fogofwar/picture.rs` (new, the host's side; may read all of the game, writes only `g.fog_picture` and the
-renderer's own fields named below): `fog_of_war_lit_block`, `fog_of_war_lamp_take`, `fog_of_war_thin_block`,
-`fog_of_war_lamp_face`, `face_of`, `fog_of_war_face_seen`, `fog_of_war_faces_lift`, `fog_of_war_faces_back`,
-`fog_of_war_raw`, `fog_of_war_filter`, `fog_of_war_everybody`, `fog_of_war_page_look`, the tail of
-`fog_of_war_pass` from "the renderer's block" down (as `picture::fill`), and the half of `fog_of_war_full_block`
-that paints (`tab.light[..].fog`, `.fog_ghost`, a box's `fog_emit` and `fog_mark`: by their own notes the
-upload alone reads these). `game_fog_lift` and `game_fog_back` already are the host's (they are called between
-two steps, never in one) and move beside them.
-
-Everything else stays the team's. Four cuts make the line clean:
-
-1. **A lamp's knowledge is written by the pass, not by the picture.** `fog_of_war_lamp_known` is the only
-   writer of `lamp_recs`, and today it is called from inside `full_block` and again from `lit_block`. The pass
-   gets its own step before the block, one call a fixture that has a light, in the order of `g.targets`; the
-   picture then reads `lamp_recs` and asks nothing. (The second call a frame goes. It could only count a test
-   twice: `thing_stats.tests` is zeroed by `fog_of_war_things` later in the same frame, so no word kept at a
-   frame's end moves. By reading; `hold` says.)
-2. **Who the team is belongs to the team.** `full_block` fills `engine.lights.fog_team` (its `owners` are read
-   by `things_ours` and `ours_id`) and sets `full_on`. That loop moves into the pass with the lamp step.
-   `full_on` is true exactly while the fog is active and the pass has run, so it becomes the team's `live`,
-   and the pass's own test "was I on last frame" reads `live`, not `frame.on` as it does now.
-3. **`hidden` and `air_hides` drop `!bared`.** Every caller found is a rule or a step of the tick (the AI's
-   picture, aim, orders, markers, cues, props on the frame's list). A host reader that wants "as drawn now"
-   gets `picture::hidden_as_drawn` (`!fog_picture.bared && hidden`); none is known, so it is written only if the
-   grep at the time finds one.
-4. **The list before the fog cut it is kept by the picture.** The first lines of `fog_of_war_things`, under
-   `viewer`, copy the frame's list into `raw_list`. They become `picture::keep_raw(g, &list)`, called by
-   `game_draw_characters` just before `things`; `things` then never reads `viewer`.
-
-`picture::fill` stays where the tail of the pass is today, called once a tick on every machine. It is the
-picture's by what it may write, not by where it runs; a host that draws nothing may later leave it out, and
-the check below is what makes that safe.
-
-### The ghosts: does a machine with no viewer make the same rows?
-
-Yes for `viewer`, by reading. `viewer` gates only `raw_list` and `raw_at`. The copies the fog keeps of a door
-moved unseen (`fog_of_war_door_boxes`, `copy_box`) and of a thing moved unseen (`thing_take`, `ghost_box`,
-`box_let_go`) are made by every machine alike, in the order of the frame's list, whenever the fog is active and
-there is an eye. And they are the game's, not the picture's: they go on the frame's list, which becomes
-`world.all`, and `box_world_raycast` over `world.all` is what a seat's cursor, an order's click, a weapon
-laser's reach and a device's beam meet. Two seats aim at the same remembered chair. So the ghosts stay rows
-of the game's table, and `thing_recs` and `door_recs.ghost` stay the team's.
-
-Not the same for a host with dressing rows down, also by reading. The list handed to `things` is gathered by
-`game_step_fx_and_dyn_boxes`, where three dressing steps add boxes: moths (their key is one the rule passes
-over), one-frame effects (no key was found on them: they only move `cell_seen` and `thing_stats.out`), and a broken fixture's
-pieces (`fixture_break`, keyed in the fixture range, so each gets a `thing_recs` row and, out of sight, ghost
-rows). With `fixtures` down those rows are never made, the box table hands out other ids from there on, and
-the state parts from a host with the row up. The dressing check's five missions are the same with the rows
-down, so either none of them breaks a fixture out of the team's sight or this reading is wrong: the new test
-below plays it both ways and says which. A parting is REPORTED, not mended here: a networked game stands every
-machine with the dressing rows up, so the question only matters to a host that draws nothing.
-
-### Order of work, and what proves each
-
-1. **The cuts, with every field where it is.** The four cuts above and the move of functions into
-   `picture.rs`; the record and the wire are untouched. Proof: `hold check`, the same after every frame on all
-   120 runs, every part of the state compared.
-2. **The fields move**, by a program (`g.fog_of_war.X` to `g.fog_picture.X` for the second table, the four
-   fields of `Game`, the row of `HOSTS_OWN`, the types made again). The fog's word and the part count change, so
-   `hold` cannot compare the trees whole: `hold check --but fog_of_war` leaves that part out by name, and the
-   check is every other part the same on the 120 runs, plus the two-seat kept games.
-3. **`lamp_take` measures from the picture's own seat** (it already does; it is now out of state), and one
-   native test stands two games of one seed on a level with more lamps than `FOG_LIGHTS`, one with a viewer
-   set (and, where the start seats two, another seat shown), one without, and compares every state word
-   after every frame. The same test once more with the dressing rows down in one game, for the fixtures
-   question.
-
-Not part of this: what the smoke along a sight line reads. `fog_of_war_pass` asks the sensors (`sensors_read`),
-and a machine whose senses are the host's probe may answer differently from one whose senses are the game's
-own. That is a question about which senses a networked game stands on, not about this record.
+**Not known.** Whether a host with the dressing rows DOWN makes the same rows of the game's table as one with
+them up when a fixture breaks out of the team's sight: by reading it does not (a broken fixture's pieces get
+their rows of `thing_recs` only where the `fixtures` row runs). Not staged. A networked game stands every
+machine with the rows up, so it matters only to a host that draws nothing. And what the smoke along a sight
+line reads on a machine whose senses are the host's probe: a question about which senses a networked game
+stands on, not about this record.
 
 ## 16. Plan: a seat is a value (not built)
 
