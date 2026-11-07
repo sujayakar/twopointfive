@@ -57,7 +57,7 @@ export const DRIVES: { name: string; speed: (p: AnimParams) => number; crouch: n
   { name: 'backpedal (crouch)', speed: p => p.crouchSpeed, crouch: 1, reverse: true },
 ];
 export const TRACK = ['— (free focus)', 'root + 1 m', 'head', 'right hand', 'chest', 'a bone (outliner)'];
-export const DEBUG_VIEWS = ['final', 'albedo', 'normals', 'direct', 'indirect', 'volumetrics', 'depth', 'RC dice', 'lighting only', 'denoise hints', 'specular', 'restir history', 'restir rays', 'denoise state', 'RT reflections', 'material (rough / metal)', 'gi reservoirs', 'RT raw'];   // engine.settings.debugView indices (same order as main.ts debugNames and the game panel's 'debug view' row: all 18)
+export const DEBUG_VIEWS = ['final', 'albedo', 'normals', 'direct', 'indirect', 'volumetrics', 'depth', 'RC dice', 'lighting only', 'denoise hints', 'specular', 'restir history', 'restir rays', 'denoise state', 'RT reflections', 'material (rough / metal)', '(16: free)', 'RT raw'];   // engine.settings.debugView indices (same order as main.ts debugNames and the game panel's 'debug view' row: all 18)
 export const HOLD_PHASES: HoldPhase[] = ['grab', 'held', 'choke', 'whip', 'kill'];
 export const HOLD_VARIANTS: HoldVariant[] = ['arm', 'gun'];
 

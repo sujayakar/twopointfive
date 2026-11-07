@@ -1562,8 +1562,6 @@ fn lightReachLevel(slot: u32, P: vec3f) -> u32 {
   return (reachWord(w) >> ((ci & 15u) * 2u)) & 3u;
 }
 fn lightReaches(slot: u32, P: vec3f) -> bool { return lightReachLevel(slot, P) != 0u; }
-/** ranking weight for a reach level: a light seen from a sliver of the cell competes for leader slots at a quarter of its score */
-fn reachRankWeight(lv: u32) -> f32 { return select(select(0.25, 0.6, lv == 2u), 1.0, lv >= 3u); }
 
 /// evalLight as the PICTURE takes it: the light's irradiance under the fog's light classes (lightFogK — a torch nobody on the team sees the spot of gives nothing
 /// there). Every pass of the picture asks this one; the game's own readings (probe.wgsl: the light meter, the guards' eyes) ask evalLightTrue.

@@ -68,7 +68,7 @@ export interface RenderSettings {
   // moments → variance, history length, neighbourhood clamp, variance-guided edge-stopped à-trous) behind three clients — the direct pass's shadow ratio per emitter class (full res), the
   // gather's diffuse irradiance and its specular field (gather res). The dn*
   // knobs are the clients' (iterations / history caps per tier from ui/quality.ts; Tab ▸ Denoiser rows);
-  // directHistory > 0 is the shadow client's temporal switch, directBlurCap its penumbra-width cap. dnShadowOccl (default ON, ?noleakfix) = the shadow client reads every
+  // directHistory is the shadow client's temporal switch, directBlurCap its penumbra-width cap. dnShadowOccl (default ON, ?noleakfix) = the shadow client reads every
   // tap and its own history under BOTH hypotheses about the light that differs between them — as visible as the rest (the ratio stands) or hidden (the ratio × U there / U here) —
   // and takes the one nearer this pixel's own ratio: a carried torch on the far side of a wall is in U but in nobody's S, and ratios averaged across its cone's edge or across the
   // frames it bobbed over drew that cone, faint, on whatever another light showed behind the wall. The same switch keeps texels where a class has NO light (the prior, ratio 1) out of
@@ -184,7 +184,7 @@ export interface RenderSettings {
   restirMotionDither: boolean; // (1)'s pick: false = a per-pixel bilinear draw among the four texels (lineages diffuse; neighbours may adopt one parent and coalesce), true = ONE global sub-pixel offset a frame
                                // (an R2 sequence: a bijective shift whose average over frames is the true flow — nothing duplicated, the pattern registered to ± ½ px)
   // direct light's shadow denoise knobs (render/denoise.ts, the shadow client)
-  directHistory: number;       // the shadow client's temporal switch: 0 = history-free, anything above = its history is on (the number itself is no longer a weight)
+  directHistory: boolean;      // the shadow client's temporal reuse (off = history-free shadows, for inspection). A weight until 2026-11-07, when the estimator that blended by it went
   directBlurCap: number;       // max penumbra filter radius in px
   secMinE: number;             // shadow-ray threshold (W/m² unshadowed) for lights at cascade interval hits
   flashlightRadius: number;    // emitter radius used for torches / the rail light (m): a real bezel is ~0.015-0.02; larger = softer torch shadows
@@ -365,7 +365,7 @@ export const defaultSettings = (): RenderSettings => ({
   nvAmount: 0, nvGain: 475, hitFlash: 0,   // nvGain = intensifier tube gain (log curve), not a linear multiplier
   restirRays: 4, restirSpatial: 3, restirHistory: 20, restirRadius: 16, restirGradient: true, restirGradK: 5, restirYoung: 8, restirSpatialAll: false, restirCoherent: false, restirSampleHue: false, restirRatioRaw: false, restirKnownDark: true, restirAudit: 0.25, restirPermute: false, restirPenCap: 0, restirPenRays: false,   // ReSTIR DI on; the presets place rays / taps / cap per tier (quality.ts), these are 'high'
   restirMotion: 6, restirMotionV: 1.1, restirMotionMin: 0.35, restirMotionPx: 0.5, restirMotionDither: false, restirMotionTaps: 6, restirMotionStatic: false,   // MOTION (direct-motion lane, docs/internal/direct-motion.md; these are HIGH's — floor .35 / 6 taps since the 08-12 SPRINT take: at three times the walking pan the .1 floor made the light's edge noisier than no cut at all, .35 + taps sits between; the walking pan keeps most of its win): 6 = the motion-scaled confidence (2) + wider spatial reuse under motion (4) — measured at high: the light's edge under a walking pan −43 % flow, the lit floor −27 %, the dark floor −7 % (−46 / −32 with 6 taps), a slow pan and the still picture unchanged, main's 1–3.7 % motion darkening gone; the stochastic reprojection (1) stays an A/B row (a NEGATIVE at slow pans: +12‥34 %); the presets tier Min / Taps; 0 (?norestirmotion) = the estimator's program byte for byte
-  directHistory: 0.5, directBlurCap: 10, secMinE: 0.006, flashlightRadius: 0.07,
+  directHistory: true, directBlurCap: 10, secMinE: 0.006, flashlightRadius: 0.07,
   lightReach: true,
   giFireflyK: 4,
   tileCull: true,              // proven exact: 4 views × final/direct/indirect bit-identical off vs on under the deterministic capture protocol (08-06); toggle stays in the Direct light panel
