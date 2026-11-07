@@ -305,8 +305,6 @@ export interface RenderSettings {
                                // little darker, off the level's traffic map: patrol routes + door thresholds), grime where the mop does not reach (floor-wall edges), scuffed skirting, dust on top
                                // faces above eye level (rougher, greyer), edge wear on metal (brighter bare metal within 2 cm of an edge). No image textures, no albedo noise. 0 = the g-buffer exactly
                                // as it was; default 0.35 ('lived-in'); Tab ▸ Materials
-  // ---- RENDERER V3 PHASE 5 — the ULTRA-only extras (docs/internal/p5-ultra.md). Each behind its own switch; every switch off = every pass byte for byte as it was (frame.p5Cfg all zero); the ultra
-  // preset turns them on, every other preset leaves them off (quality.ts Preset.p5). ----
   // ---- MARKINGS (scene/markings.ts, shaders/markings.wgsl; docs/review/legibility.html): pixel-art signifiers ON box faces — key caps, packing tape + glyphs on cartons, drawer seams, the vending
   // product window, text bars, LEDs — flat colour per world-space texel from a ≤ 3-colour palette, AA only at texel edges, minified to their mean under a pixel a texel; written into the g-buffer's
   // albedo / roughness, their emission added in composite and at reflection hits, their area average folded into the secondary rays' albedo, an emissive marking registered as a real area light ----
@@ -317,18 +315,12 @@ export interface RenderSettings {
   markingReflect: boolean;     // markings are evaluated at REFLECTION hits (reflect.wgsl shadeReflHit: the vending window in the lino) — off = the hit's plain secondary albedo / no emission
   markingReflPattern: boolean; // the analytic highlight of a marking's light is textured with the marking's pattern at the mirror point (reflect.wgsl rtGlints → markings.wgsl markPatternAtMirror); off = the uniform rectangle (A/B only: the sign of frame.markCfg.w)
   markingReflCone: number;     // × the lobe's α added to the ray-cone growth that band-limits a marking at a TRACED reflection hit (0 = the pixel's own cone only — the ray distribution + the specular denoiser realise the lobe; 2 = the whole lobe again = the double blur that erased the vending cans in the lino; default 0.25 trades a little bias for 1-ray noise)
-  rtMeshHits: boolean;         // reflections see characters as their skinned MESH (reflect_p5.wgsl: a closest-hit walk of the mesh-shadow trees — render/meshShadows.ts, refit under settings.meshShadows — instead of the
-                               // 15 round-cone proxies; the proxy path when meshShadows is off or unavailable). Off = traceClosest's round cones exactly as before
-  rtHitReuse: boolean;         // reflections: the second VNDF ray takes the antithetic azimuth of the first (the pair straddles the lobe), and each hit's LIGHTING (albedo/π × direct + bounce) is blended with last frame's
-                               // record at this texel when the hit points match (a path-space history keyed on the hit, not the pixel — the one-shadow-ray light pick at an off-screen hit stops flickering
-                               // a rough mirror); off = every ray shaded fresh, the R2 pair as before
+  rtMeshHits: boolean;         // ALWAYS FALSE: ultra's mesh hits in reflections went 2026-11-07. The field stays because game/game.ts reads it; it goes with that read
   // ---- SDF CHARACTER RIG (render/sdfrig.ts fits it, shaders/sdfrig.wgsl traces it, docs/internal/sdf-characters.md): every mannequin's 15 shadow / reflection proxies ARE round cones with radii
   // least-squares fitted to the mesh — unconditionally, at every tier, once a fit is attached (Engine.setRigFit; BoxWorld.upload packs it into the frame's proxy list). What stays switchable is the two
   // extras below, both rows (no preset touches them; ?sdfsmooth / ?charsoft set them from boot): frame.rigCfg bits 2 and 4/8/16/32, all 0 = the plain round-cone loops everywhere. ----
-  sdfRigSmooth: boolean;       // (ii) the reflection pass's closest character hit is the sphere-traced SMOOTH UNION of his cones (polynomial smin, a blend radius per joint) with the field's gradient as the normal — a mannequin
-                               // in the lino instead of sausage links; dispatches the reflect_p5.wgsl variant like the ultra mesh hits (which win when both are on)
+  sdfRigSmooth: boolean;       // ALWAYS FALSE: the smooth-union closest hit in reflections went 2026-11-07 with the reflection twin that traced it. Kept for game/game.ts's read, like rtMeshHits
   sdfRigK: number;             // × the per-joint blend radii (render/sdfrig.ts RIG_K; 1 = as authored, 0 = the plain union of the cones) — also pads the cull spheres by the blend's bulge
-  sdfRigSteps: number;         // closest-hit sphere-trace steps (24)
   charSoftShadow: boolean;     // (iii) EXPERIMENT: in the direct estimators (restir.wgsl AND direct.wgsl, through direct_common shadowSample) a shadow ray's CHARACTER visibility is the SDF soft-shadow query toward the emitter's
                                // centre with the emitter's angular radius as the cone — deterministic per pixel per light, so a walking man's penumbra needs no history to converge — multiplied with the
                                // ray-traced BOX visibility (still stochastic); the mesh-shadow / round-cone any-hit is then not asked about characters in that pass
@@ -402,8 +394,7 @@ export const defaultSettings = (): RenderSettings => ({
   glassRefract: true, glassIor: 1.5,   // refraction through the glass boxes: ON (?norefract boots without it; Tab ▸ Renderer — glass; __glass.refract / .ior)
   rtReflect: false, rtReflectDiv: 2, rtRays: 1, rtMaxRough: 0.45, rtAniso: 0.7, wetBreakup: 1, beamReflect: true, beamAir: true, wetMirror: true, beamAirK: 1, rtStrength: 1, rtGlints: 1, rtAtrous: 3, rtHistory: 32,   // RT reflections: OFF here — the presets switch it on with their own divisor / rays / cutoff (quality.ts); Tab ▸ Materials
   detail: 0.35,                // the detail layer: 'lived-in' (Tab ▸ Materials; ?detail=0 boots without it — with ?nortreflect the untouched frame)
-     // phase 5: OFF here — the ultra preset switches the three on (quality.ts Preset.p5); Tab ▸ Indirect light / Materials rows
-  rtMeshHits: false, rtHitReuse: false,
+  rtMeshHits: false,
   markings: true, markingTexel: 0.025, markingContrast: 1, markingEmissive: 1, markingReflect: true, markingReflPattern: true, markingReflCone: 0.25,   // markings ON (?nomarkings boots without them; Tab ▸ Renderer — markings)
-  sdfRigSmooth: false, sdfRigK: 1, sdfRigSteps: 24, charSoftShadow: false, charSoftAnalytic: true, charSoftSteps: 20, charSoftK: 1, charSoftMinDeg: 0.35, charSoftSmooth: false, charSoftBroad: false, charSelfShadow: true,   // the SDF character rig's two extras: OFF (self-shadow: ON, all tiers) (rows on Tab ▸ Renderer — SDF character rig; ?sdfsmooth / ?charsoft from boot; no preset touches them) — the round cones themselves have no switch
+  sdfRigSmooth: false, sdfRigK: 1, charSoftShadow: false, charSoftAnalytic: true, charSoftSteps: 20, charSoftK: 1, charSoftMinDeg: 0.35, charSoftSmooth: false, charSoftBroad: false, charSelfShadow: true,   // the SDF character rig's two extras: OFF (self-shadow: ON, all tiers) (rows on Tab ▸ Renderer — SDF character rig; ?sdfsmooth / ?charsoft from boot; no preset touches them) — the round cones themselves have no switch
 });
