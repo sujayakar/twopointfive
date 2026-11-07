@@ -70,7 +70,10 @@ struct Held {
     cmds: Option<Vec<game::cmd::PlayerCmd>>,
     /// the lines of hostwrites.txt that are written as a tick's last thing
     after: Vec<(usize, String)>,
+    /// what the last tick left to be drawn (a host that draws)
+    drawn: game_draw::Drawn,
 }
+impl Held { fn new(g: Box<Game>) -> Held { Held { g, cmd: None, cmds: None, after: Vec::new(), drawn: Default::default() } } }
 
 thread_local! {
     static GAMES: RefCell<Vec<Option<Held>>> = const { RefCell::new(Vec::new()) };
@@ -182,7 +185,7 @@ pub unsafe extern "C" fn face_new(state: *const u8, n: usize, block: *const u8, 
     let Some(slot) = free_slot() else { return 0 };
     let (g, said) = game_run::start(bytes(state, n), bytes(block, bn), slot);
     out(said.join("\n").into_bytes());
-    put(Held { g, cmd: None, cmds: None, after: Vec::new() })
+    put(Held::new(g))
 }
 #[no_mangle]
 pub extern "C" fn face_blank() -> u32 {
@@ -193,7 +196,7 @@ pub extern "C" fn face_blank() -> u32 {
     // (a block with nothing in it is zeros under the layout's word: whatever game stood in the slot before is gone)
     unsafe { core::ptr::write_bytes(sim::state::addr(slot) as *mut u8, 0, core::mem::size_of::<sim::state::State>()); }
     sim::state::state(slot).head.layout = sim::state::LAYOUT;
-    put(Held { g, cmd: None, cmds: None, after: Vec::new() })
+    put(Held::new(g))
 }
 #[no_mangle]
 pub extern "C" fn face_drop(h: u32) {

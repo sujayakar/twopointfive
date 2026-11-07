@@ -19,6 +19,10 @@
 //!   face_probe_took(h)                 the host's frame has sent the table to the GPU: it is empty again here, and whose turn it is on a full frame is
 //!                                      kept (`probe_like_take_asks`)
 //!   face_probe_results(h, p, n)        the answers the host holds now, before a step: u32 count, each a key and its three numbers
+//!   face_draw(h, want) -> p            WHAT THE LAST TICK LEFT TO BE DRAWN (the crate game_draw): the sections of `want` made again from the game as it
+//!                                      stands, which is not written. `p` is a table of two words a section, its address and its rows; they lie here
+//!                                      until the next call. Once a tick.
+//!   face_draw_layout() -> stamp        the stamp of the sections' declarations (and their text at face_out): a page whose offsets are of another is refused
 //!   face_poke(h, what, v) -> 1 | 0     a host's switch written between ticks, by number: 0 god mode · 1 the AI on · 2 infinite ammunition · 3 the
 //!                                      player unseen · 4 the launcher's held button let go unsent (the pause card: host/loop.ts). `v` != 0 = on.
 //!   face_mem() -> bytes                the module's memory now (a host holds its typed arrays to this: a memory that grew has detached them)
@@ -82,7 +86,7 @@ pub unsafe extern "C" fn face_start(p: *const u8, n: usize, slot: i32, seed: u32
     if slot >= sim::state::GAMES { return 0; }
     let o = game_start::stand::StartOpts { seed, seats, slot, dress: flags & 1 != 0, cpu_senses: flags & 2 != 0, ..Default::default() };
     let stood = game_start::handed::stand_handed(super::bytes(p, n), &o);
-    let h = super::put(super::Held { g: stood.game, cmd: None, cmds: None, after: Vec::new() });
+    let h = super::put(super::Held::new(stood.game));
     crate::memo::forget(h);
     h
 }
@@ -98,7 +102,7 @@ pub unsafe extern "C" fn face_new_at(state: *const u8, n: usize, slot: usize) ->
     let block = std::slice::from_raw_parts(sim::state::addr(slot) as *const u8, len).to_vec();
     let (g, said) = game_run::start(super::bytes(state, n), &block, slot);
     super::out(said.join("\n").into_bytes());
-    let h = super::put(super::Held { g, cmd: None, cmds: None, after: Vec::new() });
+    let h = super::put(super::Held::new(g));
     crate::memo::forget(h);
     h
 }
@@ -150,6 +154,18 @@ pub unsafe extern "C" fn face_probe_results(h: u32, p: *const u8, n: usize) {
             x.g.probe.results.set(key, [f64_at(at), f64_at(at + 8), f64_at(at + 16)]); at += 24;
         }
     });
+}
+#[no_mangle]
+pub extern "C" fn face_draw(h: u32, want: u32) -> *const u32 {
+    super::with(h, |x| { x.drawn.take(&x.g, want); x.drawn.table().as_ptr() })
+}
+#[no_mangle]
+pub extern "C" fn face_draw_layout() -> u32 {
+    let t = game_draw::layout();
+    let mut s = 0x811c_9dc5u32;
+    for b in t.bytes() { s = (s ^ b as u32).wrapping_mul(0x0100_0193); }
+    super::out(t.into_bytes());
+    s
 }
 #[no_mangle]
 pub extern "C" fn face_poke(h: u32, what: u32, v: f64) -> u32 {
@@ -248,7 +264,7 @@ pub extern "C" fn face_stand(k: u32, slot: usize) -> u32 {
     });
     let Some(mut g) = made else { return 0 };
     g.serial_next = g.serial_next.max(SERIAL_SEEN.with(|s| s.get()));
-    let h = super::put(super::Held { g, cmd: None, cmds: None, after: Vec::new() });
+    let h = super::put(super::Held::new(g));
     crate::memo::forget(h);
     h
 }

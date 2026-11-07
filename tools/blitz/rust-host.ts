@@ -18,6 +18,8 @@
 //                        the way to find a write the fast way has no call for.
 import { faceHere, FACE_WASM } from './face-build.ts';
 import { recorded } from './record';
+import { ALL, Drawn, drawRefused } from '../../src/draw/drawn';
+import { fogFrom } from '../../src/draw/fog';
 import { readFileSync, existsSync, writeFileSync, appendFileSync } from 'node:fs';
 
 export interface HostOpts {
@@ -91,6 +93,7 @@ export function loadFace(wasm = DEFAULT_WASM, fresh = false): Face {
     panicText: () => { try { const p = X.face_panic_ptr() >>> 0; return dec.decode(u8().subarray(p, p + X.face_panic_len())); } catch { return ''; } },
     hand<T>(b: Uint8Array, f: (p: number, n: number) => T): T { const p = X.face_alloc(b.length) >>> 0; u8().set(b, p); try { return f(p, b.length); } catch (e) { const w = F!.panicText(); if (w) console.error('the Rust game panicked:', w); throw e; } finally { X.face_free(p, b.length); } },
     partHashes: (slot: number) => { const at = (X.face_part_hashes(slot) >>> 0) >>> 2; return Array.from(u32().subarray(at, at + NAMES.length)); } };
+  const no = drawRefused(X); if (no) throw new Error(`rust-host: ${no}`);
   if (!fresh) FACES.set(wasm, F); return F; }
 
 // ---- the bridge, loaded once and after the game's own modules (classes.ts enters src/game by game.ts, the one door)
@@ -516,7 +519,9 @@ export class RustHost {
   // holds it to the list by identity (the soak's `selector-highlight`; the scripted player's own highlight). The bridge carries `Game.hover` as a value,
   // so the apply leaves a row of its own beside the list. Put back on the list's row here. Belongs in the schema: `hover` a reference into `nearby`.
   private hoverRow(): void { const g = this.g, hv = g.hover, N = g.nearby; if (!hv || !Array.isArray(N) || N.includes(hv) || OFF.has('hoverrow')) return; const r = N[g.player?.nearSel ?? 0]; if (r && r.kind === hv.kind && r.verb === hv.verb) g.hover = r; }
-  private after(R: any): void { this.asks?.after(); this.took(R); this.hoverRow(); this.visApplied = this.g.player?.visibility; this.hoverApplied = this.g.hover; this.dieRef = this.g.dice?.n; this.clockRef = this.clock(); this.putRef = this.B.PUT_BACKS.n; if (!this.startDue) this.loadsRef = this.g.chronicle?.counts?.loads ?? 0; if (!this.tookRow) this.savesRef = this.g.chronicle?.counts?.saves ?? 0; }
+  /** WHAT THE PICTURE IS TOLD BY SECTION (src/draw): on a tool's game every section is asked for */
+  get drawn(): Drawn { return this.drawnOf ??= new Drawn(this.F.X, this.F.mem, ALL); } private drawnOf: Drawn | null = null;
+  private after(R: any): void { this.drawn.take(this.h); fogFrom(this.g.fogOfWar.frame, this.drawn); this.asks?.after(); this.took(R); this.hoverRow(); this.visApplied = this.g.player?.visibility; this.hoverApplied = this.g.hover; this.dieRef = this.g.dice?.n; this.clockRef = this.clock(); this.putRef = this.B.PUT_BACKS.n; if (!this.startDue) this.loadsRef = this.g.chronicle?.counts?.loads ?? 0; if (!this.tookRow) this.savesRef = this.g.chronicle?.counts?.saves ?? 0; }
   private copyBlock(): void { const t = now(), mine = this.tsBlock(), theirs = this.rustBlock(); mine.set(theirs.subarray(0, mine.length)); if (this.audit) this.lastBlock = mine.slice(); this.T.block += now() - t; }
   /** THE FILTERED APPLY: the listed fields of what changed since the last one, and the step's out events */
   applyStep(): void {

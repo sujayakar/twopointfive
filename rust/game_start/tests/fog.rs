@@ -1,6 +1,6 @@
 //! THE FOG OF WAR KEEPS TWO RECORDS. What the team knows (`g.fog_of_war`: who is seen, which doors, lamps and loose things are remembered, who is
-//! left out) is the game's, and every machine of one game holds it the same. The picture's block (`g.fog_picture`: the renderer's rows, the lit
-//! fog's list of lamps, a lamp's kept glow, the list kept for a viewer's draw with the fog off) is one machine's, made from the game every tick.
+//! left out) is the game's, and every machine of one game holds it the same. The picture's block (`g.fog_picture`: a lamp's kept glow, the list kept for a
+//! viewer's draw with the fog off) is one machine's, made from the game every tick.
 //! These tests hold the line between them: nothing in the game reads the picture's block.
 use game_start::play::{Opts, Play};
 
@@ -71,7 +71,6 @@ fn a_viewer_watching_is_no_part_of_the_game() {
         p.g.fog_picture.viewer = true;
         p.run(1.0);
         assert!(game::fogofwar::fog_of_war_active(&p.g), "seed {s}: the mission's link starts the fog of war");
-        assert!(p.g.fog_picture.frame.on, "seed {s}: a second in, the renderer's block does not say the fog is on");
         assert_eq!(p.g.fog_picture.raw_at, p.g.fog_of_war.frame_no, "seed {s}: the list kept for the viewer is not this frame's");
         assert!(!p.g.fog_picture.raw_list.is_empty(), "seed {s}: the list kept for the viewer is empty");
         drop(p);
@@ -79,5 +78,31 @@ fn a_viewer_watching_is_no_part_of_the_game() {
         let mut p = office(s);
         p.run(1.0);
         assert_eq!(p.g.fog_picture.raw_at, -1.0, "seed {s}: with no viewer a list was kept all the same");
+    }
+}
+
+/// THE RULE: what the fog's pass draws from is made of a game that stands (rust/game_draw `fog`) and is no state of it: on while the fog is, an eye for
+/// each the game has, every lamp the team knows lit, and the same of the same game however often it is asked.
+/// A FAILURE MEANS: a page draws no fog, or draws it from other eyes than the game sees by.
+#[test]
+fn the_fogs_section_says_what_the_game_has() {
+    for s in SEEDS {
+        let mut p = office(s);
+        p.run(1.0);
+        let mut d = game_draw::Drawn::default();
+        d.take(&p.g, 1);
+        let f = d.fog[0];
+        assert_eq!((d.fog.len(), f.on), (1, 1), "seed {s}: a second in, the section does not say the fog is on");
+        assert_eq!(f.count as usize, p.g.fog_of_war.eyes.len(), "seed {s}: the section's eyes are not the game's");
+        assert_eq!([f.eyes[0], f.eyes[2]], [p.g.fog_of_war.eyes[0].at[0] as f32, p.g.fog_of_war.eyes[0].at[2] as f32], "seed {s}: the first eye is somewhere else");
+        assert!(f.light_count > 0, "seed {s}: the office's lamps are lit and the lit fog has none");
+        assert_eq!(f.thin_count as usize, p.g.engine.world.statics.len(), "seed {s}: the thin statics are of another list");
+        let before = words(&mut p);
+        d.take(&p.g, 1);
+        assert_eq!(d.fog[0], f, "seed {s}: the same game drawn twice is drawn two ways");
+        assert_eq!(before, words(&mut p), "seed {s}: drawing the game changed it");
+        p.g.fog_of_war.on = false;
+        d.take(&p.g, 1);
+        assert_eq!((d.fog[0].on, d.fog[0].count), (0, 0), "seed {s}: the fog is off and the section says on");
     }
 }
