@@ -50,7 +50,7 @@ export const undone = (d: Deeds): string[] => [...(d.whistled ? [] : ['never whi
 const SCRIPT_BREAK = process.env.JOURNALSCRIPT_BREAK === '1';
 /** RECORD the scripted session headless → the file (parsed back through JSON, as off a disk) + notes. Everything after request() is INPUT: keys, cursor, clicks.
  *  `page` = as on the game page where the harness can imitate it: a GPU that answers (answeringProbe, a frame late), a ragged rAF dt, the HUD's bubble expiry after
- *  every update (journal.ts hudExpireBubbles) with the file flagged env.hud, and the stop DEFERRED to the end of the next update as F10's is. */
+ *  every update (it did, until the HUD stopped writing the game: 2026-11-07) with the file flagged env.hud, and the stop DEFERRED to the end of the next update as F10's is. */
 export async function recordScripted(seed = 6011, page = false, seconds = 90): Promise<{ file: any; notes: string[]; game: any; deeds: Deeds }> {
   Math.random = mulberry32(seed);
   const W = await standUp(); const { game, input } = W; const notes: string[] = [];
@@ -66,7 +66,7 @@ export async function recordScripted(seed = 6011, page = false, seconds = 90): P
   /** the trigger, pulled and let go over two frames — or, on the red path, two frames with no trigger */
   const click = () => { if (!SCRIPT_BREAK) { input.clicked |= 1; input.buttons |= 1; } stepN(2); input.buttons &= ~1; };
   const aimAt = (p: Vec3) => W.cursorAt(p);
-  let f = 0; const stepN = (n: number) => { for (let i = 0; i < n; i++) { for (const k of hold) input.keys.add(k); gpu?.tick(); W.step(dtOf()); if (page) J.hudExpireBubbles(game); f++; } };
+  let f = 0; const stepN = (n: number) => { for (let i = 0; i < n; i++) { for (const k of hold) input.keys.add(k); gpu?.tick(); W.step(dtOf()); f++; } };
   const setHold = (...ks: string[]) => { for (const k of [...input.keys]) if (!ks.includes(k)) input.keys.delete(k); hold.clear(); for (const k of ks) hold.add(k); };
   // t 0–2.5 s: walk east across the lobby
   setHold('KeyD'); stepN(150);
