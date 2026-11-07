@@ -7590,7 +7590,14 @@
 "game::Mods.thinline",
 "game::Mods.irlaser",
 "game::Game.host_cam",
-"game::Game.host_input"
+"game::Game.host_input",
+"par::Par.live",
+"par::Par.run",
+"par::Par.marks",
+"par::Par.fired0",
+"par::Par.t0",
+"par::Par.res",
+"game::Game.par"
 ],
 "everyTickNotCarried": [
 {
@@ -12837,6 +12844,13 @@
 "game::Mods.thinline",
 "game::Mods.irlaser",
 "game::Game.host_cam",
-"game::Game.host_input"
+"game::Game.host_input",
+"par::Par.live",
+"par::Par.run",
+"par::Par.marks",
+"par::Par.fired0",
+"par::Par.t0",
+"par::Par.res",
+"game::Game.par"
 ]
 }
