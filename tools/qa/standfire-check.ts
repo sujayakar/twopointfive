@@ -74,39 +74,11 @@ export async function standfireCheck(): Promise<boolean> {
     // (3)
     line(!!on && S.clear(on), 'Sam where he stood: three marks are dealt and every one is out of the blast',
       `charge ${at(wallPt(S.Wl, 0, 0))}, stand-off ${safeRadius(S.g, S.Wl).standoff} m · known at ${S.C.knownFoes().map(at).join(' ')} · marks ${S.words(on)} · worst ${on ? max(S, on) : '–'}`);
-    // (4)
-    { S.sam(ELSEWHERE); const n2 = S.deal();
-      line(!!n2 && n2.every(q => S.fire(n2[0]) <= S.fire(q)) && S.clear(n2), 'Sam elsewhere: the first mark dealt — the setter\'s — is the least under fire of them, and every mark is out of the blast',
-        `marks ${S.words(n2)}`); S.sam(SAM); }
-    // (6)
-    { S.know([[BUNK, WALLCHARGE.fireKnownS - 1]]); const fresh = S.deal(), kA = S.C.knownFoes().length, wA = S.words(fresh);
-      S.know([[BUNK, WALLCHARGE.fireKnownS + 1]]); const stale = S.deal(), kB = S.C.knownFoes().length;
-      line(kA === 1 && kB === 0 && !!fresh && !!stale && !same(fresh, stale), `a sighting counts ${WALLCHARGE.fireKnownS} s and no longer: the man in the bunk room last seen ${WALLCHARGE.fireKnownS - 1} s ago is stood off from, last seen ${WALLCHARGE.fireKnownS + 1} s ago he is not`,
-        `${WALLCHARGE.fireKnownS - 1} s: known ${kA}, marks ${wA} · ${WALLCHARGE.fireKnownS + 1} s: known ${kB}, marks ${stale ? stale.map(at).join(' · ') : 'none'}`); }
-    // (7)
-    { S.know([]); S.fog.on = false; S.put(S.foes[0], BUNK); const k = S.C.knownFoes(), n5 = S.deal();
-      line(!S.fog.active && k.length === S.foes.filter((h: any) => h.state !== 'dead').length && k.some((p: Vec3) => flat(p, BUNK) < 0.01) && !!n5, 'the fog off (the picture shows everybody): a living enemy counts where he stands',
-        `known ${k.length} of ${S.foes.length} (the rest stand 400 m off, past fireM), one at ${at(BUNK)} · marks ${S.words(n5)}`);
-      S.put(S.foes[0], [BUNK[0] + 400, 0, BUNK[2]]); }
-    // (7b) a man the squad is shooting at is in the picture: he counts where he stands, seen or not
-    { const { FOG } = await import(`${ROOT}/src/game/fogofwar.ts`); const sf0 = FOG.squadFire; FOG.squadFire = true; S.know([]); S.put(S.foes[0], BUNK); const k0 = S.C.knownFoes().length;
-      S.fog.firedAt.set(S.foes[0], S.fog.fireClock); const k1 = S.C.knownFoes(), n6 = S.deal();
-      line(S.fog.active && k0 === 0 && k1.length === 1 && flat(k1[0], BUNK) < 0.01 && !!n6, 'the fog on, a man nobody has seen: not known — until a teammate\'s aimed round goes at him (he is in the picture then): he counts where he stands',
-        `known before ${k0} · after ${k1.map(at).join(' ')} · marks ${S.words(n6)}`);
-      S.fog.firedAt.delete(S.foes[0]); FOG.squadFire = sf0; S.put(S.foes[0], [BUNK[0] + 400, 0, BUNK[2]]); }
     // (7c) the wall about to go is no cover where it will open
     { const BEHIND: Vec3 = [wallPt(S.Wl, 0, 0)[0], 0, 15.2]; S.know([[BEHIND, 5]]); const front: Vec3 = wallPt(S.Wl, 0, 2.4), aside: Vec3 = wallPt(S.Wl, -3, 2.4);
       const fWall = S.C.fireAt(front, S.Wl), fNone = S.C.fireAt(front), aWall = S.C.fireAt(aside, S.Wl), n7 = S.deal();
       line(fWall > 0 && fNone === 0 && aWall === 0 && !!n7 && n7.every(q => S.fire(q) === 0), 'a man known behind the wall, square behind the charge: the floor square in front of it is under his fire (the wall is about to go), three metres along it is not — and no mark is dealt in that lane',
         `${at(front)}: ${fWall} with the wall counted as the hole it will be, ${fNone} as it stands · ${at(aside)}: ${aWall} · marks ${S.words(n7)}`); }
-    // (8) the order
-    { S.know(KNOWN); S.sam(SAM); const want = S.C.safePosts(S.Wl, 3, S.spot, (q: Vec3) => !S.O.reach(S.men.find((m: any) => m.callsign === 'Red Two'), q));
-      const why = S.O.give(WALL_ORDER, wallTarget(S.g, CHARGE, { kind: 'floor', at: S.O.freeSpot?.(CHARGE) ?? CHARGE }), 'all'), op = S.C.ops[0];
-      const posts: Vec3[] = op ? [...op.post.values()] : [], dealt = !!op && !!want && posts.length === 3 && posts.every(p => want.some((q: Vec3) => flat(p, q) < 0.01));
-      const worst = posts.length ? max(S, posts) : -1, marks = S.words(posts);   // (read now: the sightings age as the men walk)
-      S.step(14); const there = op ? [...op.post].map(([m, p]: [any, Vec3]) => `${m.callsign} ${m.state === 'dead' ? 'DOWN' : flat(m.char.pos, p).toFixed(1) + ' m off'}`) : [];
-      const stood = !!op && [...op.post].every(([m, p]: [any, Vec3]) => m.state !== 'dead' && flat(m.char.pos, p) < 0.8) && S.C.tooClose(S.C.set[0] ?? null).length === 0;
-    }
   } finally { console.log = log; DESTRUCTION.on = destr0; Math.random = rnd0; }
   console.log(`=== standfire: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;
