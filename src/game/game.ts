@@ -1592,9 +1592,8 @@ export class Game {
       const down = new Set<Character>(); for (const gd of this.guards) if (gd.state === 'dead') down.add(gd.char);
       if (down.size) drawn = [...drawn.filter(c => !down.has(c)), ...drawn.filter(c => down.has(c))];
     }
-    const looks = draw ? charLookFrame(this) : null;
+    const looks = draw ? charLookFrame(this) : null;   // CHARACTER MATERIALS (charLook.ts): null unless settings.charMats — then every man is his two tints, as ever
     const sideOf = this.ch.cast ? charSides(this) : null;   // (the cast's placeholder colours go over by side — below; nothing with the mannequin loaded)
-    const oneColourHits = (this.engine.settings.rtMeshHits && this.engine.settings.meshShadows) || this.engine.settings.sdfRigSmooth;   // mesh hits / the smooth union read ONE colour a man (proxy record 0): it then carries all of him, not his lower trunk   // CHARACTER MATERIALS (charLook.ts): null unless settings.charMats — then every man is his two tints, as ever
     // ONE MAN'S FAULT IS ONE MAN'S: a man who cannot be posed or handed over (a row with no rig behind it) is left out of this frame and SAID once by name
     // in the console; the men after him are drawn. `n` counts the men handed over, so nobody's instance is left a hole.
     let n = 0;
@@ -1614,7 +1613,7 @@ export class Game {
       this.chars.setMaterials(i, looks ? (f, o) => f.set(looks.palette(c), o) : undefined);
       let capAlb = v3.lerp(c.tint, [0.5, 0.5, 0.5], 0.3);
       if (wetOn && c.wet > 0) { const k = 1 - 0.35 * c.wet; capAlb = [capAlb[0] * k, capAlb[1] * k, capAlb[2] * k]; }   // his shadow proxies (what bounce rays and reflections see of him) darken with the coat like the fabric on screen
-      const { caps, bound } = drawnCapsules(c, c.capsules(), tall); world.addCharacterCapsules(c.id, looks ? looks.proxies(c, wetOn && c.wet > 0 ? 1 - 0.35 * c.wet : 1, oneColourHits) : capAlb, caps, bound);   // (per slot: one colour per proxy — his head bounces as helmet and skin, his legs as trousers)
+      const { caps, bound } = drawnCapsules(c, c.capsules(), tall); world.addCharacterCapsules(c.id, looks ? looks.proxies(c, wetOn && c.wet > 0 ? 1 - 0.35 * c.wet : 1, false) : capAlb, caps, bound);   // (per slot: one colour per proxy — his head bounces as helmet and skin, his legs as trousers)
       n++;
     } catch (e) { manNotDrawn(this, c, e); } }
     this.chars.finish(draw ? n : 0);
