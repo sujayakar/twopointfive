@@ -19,12 +19,12 @@ pub fn arc_length(sol: &crate::throwables::ThrowSolution) -> f64 {
 }
 
 /// Would a round that flew this arc be armed where it lands. (he40.ts arcArmed)
-pub fn arc_armed(g: &mut crate::game::Game, sol: &crate::throwables::ThrowSolution) -> bool {
+pub fn arc_armed(g: &crate::game::Game, sol: &crate::throwables::ThrowSolution) -> bool {
     arc_length(sol) >= g.k.he40.arm_m
 }
 
 /// The living man under the reticle a round can meet, never one of Sam's own side. (he40.ts shellMan)
-pub fn shell_man(g: &mut crate::game::Game) -> Option<GuardId> {
+pub fn shell_man(g: &crate::game::Game) -> Option<GuardId> {
     let puppet_target = match &g.puppet {
         Some(p) => p.target,
         None => None,
@@ -116,7 +116,7 @@ pub fn shell_solve(g: &mut crate::game::Game, from: V3, target: V3, bodies: Opti
 }
 
 /// The point to send a round at: the chest of the man under the reticle, led; else the fixture; else the cursor's point. (he40.ts shellAimPoint)
-pub fn shell_aim_point(g: &mut crate::game::Game, from: V3) -> V3 {
+pub fn shell_aim_point(g: &crate::game::Game, from: V3) -> V3 {
     if let Some(gd) = shell_man(g) {
         let c = g.gd[gd].ch;
         let bone = g.ch[c].bones.get(crate::character::Bone::Chest).copied();
@@ -188,7 +188,7 @@ pub fn burst(g: &mut crate::game::Game, sh: crate::he40::Shell, pt: V3, met: cra
 }
 
 /// A dud's velocity coming back off a surface with normal `n`. (he40.ts bounceOff)
-pub fn bounce_off(g: &mut crate::game::Game, v: V3, n: V3) -> V3 {
+pub fn bounce_off(g: &crate::game::Game, v: V3, n: V3) -> V3 {
     let vn = v3::dot(v, n);
     let v_n = v3::scale(n, vn);
     let v_t = v3::sub(v, v_n);

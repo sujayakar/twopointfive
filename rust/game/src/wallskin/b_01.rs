@@ -31,7 +31,7 @@ fn out_of_b(b: &Bx, l: V3) -> V3 { let (cs, sn) = (m::cos(b.yaw), m::sin(b.yaw))
 /// A point in a box's own frame (its centre the origin, its yaw undone). (src/game/wallskin.ts:82 into)
 pub fn into(g: &mut crate::game::Game, b: BoxId, p: [f64; 3]) -> [f64; 3] { into_b(&g.tab.boxes[b], p) }
 /// … and back. (src/game/wallskin.ts:83 outOf)
-pub fn out_of(g: &mut crate::game::Game, b: BoxId, l: [f64; 3]) -> [f64; 3] { out_of_b(&g.tab.boxes[b], l) }
+pub fn out_of(g: &crate::game::Game, b: BoxId, l: [f64; 3]) -> [f64; 3] { out_of_b(&g.tab.boxes[b], l) }
 /// (src/game/wallskin.ts:84 inside)
 pub fn inside(r: [f64; 4], u: f64, v: f64) -> bool { u > r[0] && u < r[1] && v > r[2] && v < r[3] }
 
@@ -82,14 +82,14 @@ pub fn standing(hu: f64, hv: f64, on: &[[f64; 4]], near: &[f64], open: &[Vec<[f6
 // ---------------------------------------------------------------- the three asks the TypeScript hands the constructor as closures
 
 /// Static j has a road of its own (a fixture's box, one of the lane's destructibles) and is no sheet of this rule. (wallbreak.ts:198, the first closure)
-pub fn wall_skin_own(g: &mut crate::game::Game, j: f64) -> bool { g.destr.walls.fixture_boxes.has(crate::Num(j)) || g.destr.items.has(crate::Num(j)) }
+pub fn wall_skin_own(g: &crate::game::Game, j: f64) -> bool { g.destr.walls.fixture_boxes.has(crate::Num(j)) || g.destr.items.has(crate::Num(j)) }
 /// the breakable whose own box static k is, if wallbreak opens it
 fn brk_id(g: &Game, k: f64) -> Option<WallbreakBreakableId> { let b = g.destr.walls.owner.get(crate::Num(k)).copied()?; if g.tab.wallbreak_breakable[b].id == k { Some(b) } else { None } }
 // ---------------------------------------------------------------- the lane's books
 
 /// The authored statics that could be a sheet (drawn and nothing else, level, lightless) and those that are solid (met by rays and drawn, level, square).
 /// (src/game/wallskin.ts:139 WallSkin.constructor)
-pub fn wall_skin_new(g: &mut crate::game::Game, authored: f64) -> crate::wallskin::WallSkin {
+pub fn wall_skin_new(g: &crate::game::Game, authored: f64) -> crate::wallskin::WallSkin {
     let f = crate::scene_boxes::box_flag();
     let lone = js::to_i32(f.no_shadow) | js::to_i32(f.no_primary) | js::to_i32(f.glass) | js::to_i32(f.dynamic);
     let mut w = WallSkin::blank();

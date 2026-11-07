@@ -149,7 +149,7 @@ pub fn layer_ran(g: &mut crate::game::Game, code: f64, c: CharId) {
         if bits & 1 != 0 {
             let l = &g.m.anim_skeleton.layers.lists[i];
             let fk = &mut g.ch[c].anim.fk;
-            let b = ::sim::skeleton::bench();
+            let b = ::sim::skeleton::bench_read();
             for k in 0..l.len() {
                 let n = l[k] as usize;
                 let (r, p) = (n * 4, n * 3);
@@ -197,7 +197,7 @@ pub fn bench_rig(g: &mut crate::game::Game, ch: RigId, owed: Option<bool>) -> Op
 /// A pose written to place `slot` of the bench.   (skeleton.ts benchPut)
 pub fn bench_put(g: &mut crate::game::Game, p: crate::anim_skeleton::Pose, slot: f64) {
     let o = (slot * BENCH_SLOT) as usize;
-    let d = cols_of(g, p);
+    let d = cols_of_read(g, p);
     let b = ::sim::skeleton::bench();
     for k in 0..d.len() {
         ::sim::single::put(&mut b.pose, o + k, d[k] as f64);
@@ -209,7 +209,7 @@ pub fn bench_get(g: &mut crate::game::Game, p: crate::anim_skeleton::Pose, slot:
     let o = (slot * BENCH_SLOT) as usize;
     let (n_, n) = (rows_of(p), p.nodes as usize);
     let d = cols_of(g, p);
-    let b = ::sim::skeleton::bench();
+    let b = ::sim::skeleton::bench_read();
     for c in 0..10 {
         for i in 0..n {
             d[c * n_ + i] = ::sim::single::get(&b.pose, o + c * n_ + i) as f32;
@@ -237,7 +237,7 @@ pub fn bench_put_fk(fk: &crate::anim_skeleton::PoseFK) {
 
 /// The run-forward bones back off the bench.   (skeleton.ts benchGetFK)
 pub fn bench_get_fk(fk: &mut crate::anim_skeleton::PoseFK) {
-    let b = ::sim::skeleton::bench();
+    let b = ::sim::skeleton::bench_read();
     let (mut r, mut p) = (0usize, 0usize);
     for i in 0..fk.rot.len() {
         let (q, v) = (&mut fk.rot[i], &mut fk.pos[i]);
@@ -384,7 +384,7 @@ pub fn pose_copy(g: &mut crate::game::Game, this: crate::anim_skeleton::Pose, sr
     if src == this {
         return;
     }
-    let from = cols_of(g, src);
+    let from = cols_of_read(g, src);
     cols_of(g, this).copy_from_slice(from);
 }
 
@@ -392,7 +392,7 @@ pub fn pose_copy(g: &mut crate::game::Game, this: crate::anim_skeleton::Pose, sr
 pub fn pose_rot(g: &mut crate::game::Game, this: crate::anim_skeleton::Pose, i: f64) -> Quat {
     let n_ = rows_of(this);
     let o = ((3 * n_) as isize + i as isize) as usize;
-    let d = cols_of(g, this);
+    let d = cols_of_read(g, this);
     [d[o] as f64, d[o + n_] as f64, d[o + 2 * n_] as f64, d[o + 3 * n_] as f64]
 }
 
@@ -414,7 +414,7 @@ pub fn pose_set_rot(g: &mut crate::game::Game, this: crate::anim_skeleton::Pose,
 pub fn pose_pos(g: &mut crate::game::Game, this: crate::anim_skeleton::Pose, i: f64) -> V3 {
     let n_ = rows_of(this);
     let i = i as isize;
-    let d = cols_of(g, this);
+    let d = cols_of_read(g, this);
     [d[i as usize] as f64, d[(n_ as isize + i) as usize] as f64, d[((2 * n_) as isize + i) as usize] as f64]
 }
 
@@ -446,7 +446,7 @@ pub fn pose_pool_room() -> f64 {
 }
 
 /// Singles of the pool this set fills when it has made every pose it can (none made yet: none, it has no rig to count by).   (skeleton.ts poseSetMost)
-pub fn pose_set_most(g: &mut crate::game::Game, s: PoseSetId) -> f64 {
+pub fn pose_set_most(g: &crate::game::Game, s: PoseSetId) -> f64 {
     let set = &g.tab.pose_set[s];
     match set.list.first() {
         Some(p) => set.most * rows_of(*p) as f64 * 10.0,
@@ -455,12 +455,12 @@ pub fn pose_set_most(g: &mut crate::game::Game, s: PoseSetId) -> f64 {
 }
 
 /// Is this pose's floats in the block. A handle gets its place as it is made and a copy of it could not take a later one, so a pose with none stays so: false.   (skeleton.ts poseIn)
-pub fn pose_in(g: &mut crate::game::Game, p: crate::anim_skeleton::Pose) -> bool {
+pub fn pose_in(g: &crate::game::Game, p: crate::anim_skeleton::Pose) -> bool {
     p.at < Pose::LOOSE
 }
 
 /// A pose out of the block: it keeps its place and its floats, as there is nowhere else for them.   (skeleton.ts poseOut)
-pub fn pose_out(g: &mut crate::game::Game, p: crate::anim_skeleton::Pose) {}
+pub fn pose_out(g: &crate::game::Game, p: crate::anim_skeleton::Pose) {}
 
 /// Every pose of a set at home in the game's block; false = the pool had no room for one of them, see `stray`.   (skeleton.ts poseSetIn)
 pub fn pose_set_in(g: &mut crate::game::Game, s: PoseSetId) -> bool {
@@ -954,7 +954,7 @@ fn blend_own(d: &mut [f32], a: (usize, usize), b: (usize, usize), out: (usize, u
 // ---------------------------------------------------------------- a body's world of joints
 
 /// Every node's global matrix and rotation at rest values, and room for the skinning matrices.   (skeleton.ts SkeletonInstance.constructor)
-pub fn skeleton_instance_new(g: &mut crate::game::Game, ch: RigId) -> crate::anim_skeleton::SkeletonInstance {
+pub fn skeleton_instance_new(g: &crate::game::Game, ch: RigId) -> crate::anim_skeleton::SkeletonInstance {
     let rig = &g.tab.rig[ch];
     SkeletonInstance {
         rig: ch,
@@ -966,7 +966,7 @@ pub fn skeleton_instance_new(g: &mut crate::game::Game, ch: RigId) -> crate::ani
 
 /// Model-space matrices of all nodes from a local pose, with model-space twists and per-node overrides, then the skinning matrices.   (skeleton.ts SkeletonInstance.update)
 pub fn skeleton_instance_update(g: &mut crate::game::Game, this: &mut crate::anim_skeleton::SkeletonInstance, pose: crate::anim_skeleton::Pose, world: &crate::v3::m4::Mat4, twists: Option<&[crate::anim_skeleton::TwistSpec]>, overrides: Option<&[Option<crate::anim_skeleton::NodeOverride>]>) {
-    let d = cols_of(g, pose);
+    let d = cols_of_read(g, pose);
     let rig = &g.tab.rig[this.rig];
     let n_ = rows_of(pose);
     // several layers may push a twist for the same node: they accumulate
@@ -1047,7 +1047,7 @@ pub fn skeleton_instance_update(g: &mut crate::game::Game, this: &mut crate::ani
 }
 
 /// Model-space origin of a node.   (skeleton.ts SkeletonInstance.nodePos)
-pub fn skeleton_instance_node_pos(this: &mut crate::anim_skeleton::SkeletonInstance, node: f64) -> V3 {
+pub fn skeleton_instance_node_pos(this: &crate::anim_skeleton::SkeletonInstance, node: f64) -> V3 {
     let g = &this.globals[node as usize];
     [g[12] as f64, g[13] as f64, g[14] as f64]
 }
@@ -1077,7 +1077,7 @@ fn set_sub(nodes: &[crate::anim_gltf::GltfNode], mask: &mut [f32], i: usize, w: 
 }
 
 /// A per-node mask: a weight for listed node names and (optionally) all their descendants.   (skeleton.ts buildMask)
-pub fn build_mask(g: &mut crate::game::Game, ch: RigId, entries: &[crate::anim_skeleton::BuildMaskEntriesItem]) -> Vec<f32> {
+pub fn build_mask(g: &crate::game::Game, ch: RigId, entries: &[crate::anim_skeleton::BuildMaskEntriesItem]) -> Vec<f32> {
     let rig = &g.tab.rig[ch];
     let mut mask = vec![0.0f32; rig.nodes.len()];
     for e in entries {
@@ -1096,7 +1096,7 @@ pub fn build_mask(g: &mut crate::game::Game, ch: RigId, entries: &[crate::anim_s
 // ---------------------------------------------------------------- forward kinematics of a local pose
 
 /// Every node's rotation the identity and its origin nought.   (skeleton.ts PoseFK.constructor)
-pub fn pose_fk_new(g: &mut crate::game::Game, ch: RigId) -> crate::anim_skeleton::PoseFK {
+pub fn pose_fk_new(g: &crate::game::Game, ch: RigId) -> crate::anim_skeleton::PoseFK {
     let rig = &g.tab.rig[ch];
     PoseFK {
         rot: rig.nodes.iter().map(|_| v3::quat::ident()).collect(),
@@ -1115,7 +1115,7 @@ pub fn pose_fk_run(g: &mut crate::game::Game, this: &mut crate::anim_skeleton::P
         bench_get_fk(this);
         return;
     }
-    let d = cols_of(g, pose);
+    let d = cols_of_read(g, pose);
     fk_own(this, d, rows_of(pose), &g.tab.rig[this.rig]);
 }
 

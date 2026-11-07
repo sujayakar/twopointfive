@@ -128,7 +128,7 @@ pub fn door_tools_walk_len(g: &mut crate::game::Game, a: V3, b: V3, lim: f64) ->
 }
 
 /// walkLen for one deal's questions, each pair measured once, to the longest reach DOORTOOLS.buddy asks about (doortools.ts DoorTools.walks)
-pub fn door_tools_walks(g: &mut crate::game::Game) -> crate::doortools::Walks {
+pub fn door_tools_walks(g: &crate::game::Game) -> crate::doortools::Walks {
     let k = &g.k.doortools;
     Walks::Memo { memo: JsMap::new(), lim: m::max_n(&[k.buddy_m, k.buddy_pair_m, k.buddy_left_m]) }
 }
@@ -149,7 +149,7 @@ pub fn door_tools_walks_len(g: &mut crate::game::Game, w: &mut crate::doortools:
 }
 
 /// away(): mateOf: the man of `m`'s pair among the squad and `gd`
-fn mate_of(g: &mut Game, squad: &[GuardId], gd: GuardId, m: GuardId) -> Option<GuardId> {
+fn mate_of(g: &Game, squad: &[GuardId], gd: GuardId, m: GuardId) -> Option<GuardId> {
     let id = crate::orders::squad_orders_pair_of(g, m)?;
     for &x in squad.iter().chain(core::iter::once(&gd)) {
         if x != m && crate::orders::squad_orders_pair_of(g, x) == Some(id) { return Some(x); }
@@ -329,7 +329,7 @@ pub fn door_tools_flows(g: &mut crate::game::Game, op: DoorOpId, sr: DoortoolsRo
 }
 
 /// flowIn: cellOf: the point of the room's list on this cell of the nav grid
-fn cell_of(g: &mut Game, at: &JsMap<crate::Num, f64>, x: f64, z: f64) -> Option<usize> {
+fn cell_of(g: &Game, at: &JsMap<crate::Num, f64>, x: f64, z: f64) -> Option<usize> {
     let cs = g.col.nav.cell;
     let (ix, iz) = (m::floor(x / cs), m::floor(z / cs));
     if ix < 0.0 || iz < 0.0 || ix >= g.col.nav.w { return None; }
@@ -774,7 +774,7 @@ pub fn door_tools_pods(g: &mut crate::game::Game, d: DoorId, side: f64, n: Optio
 }
 
 /// doorway.ts MARKS (DOORMANNERS.podClear): off on the page, so a point stays where it is (doortools.ts DoorTools.offSwing)
-pub fn door_tools_off_swing(g: &mut crate::game::Game, p: &mut crate::doortools::DoorToolsOffSwingP, d: Option<DoorId>, side: f64, taken: &[V3], see: Option<V3>) {}
+pub fn door_tools_off_swing(g: &crate::game::Game, p: &crate::doortools::DoorToolsOffSwingP, d: Option<DoorId>, side: f64, taken: &[V3], see: Option<V3>) {}
 
 /// the points before entrypoints.ts looks at them (doortools.ts DoorTools.podsAsWere)
 pub fn door_tools_pods_as_were(g: &mut crate::game::Game, d: DoorId, side: f64, n: Option<f64>) -> Vec<crate::entrypoints::Pod> {
@@ -816,7 +816,7 @@ fn pods_fit(g: &mut Game, d: DoorId, mid: V3, p: V3, out: &[crate::entrypoints::
 }
 
 /// DOORTOOLS.podFrames: `p` stands in the opening of a door other than `d`, or the line to it from `mid` passes through one (doortools.ts DoorTools.inFrame)
-pub fn door_tools_in_frame(g: &mut crate::game::Game, d: DoorId, mid: V3, p: V3) -> bool {
+pub fn door_tools_in_frame(g: &crate::game::Game, d: DoorId, mid: V3, p: V3) -> bool {
     let frame_m = g.k.doortools.pod_frame_m;
     for &o in g.doors.list.iter() {
         if o == d { continue; }

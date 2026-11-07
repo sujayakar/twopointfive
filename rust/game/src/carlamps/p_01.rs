@@ -114,12 +114,12 @@ pub fn car_lamp_targets(g: &mut crate::game::Game, boxes: &[BoxId]) -> Vec<crate
 }
 
 /// A vehicle's lamp: glass a round breaks whether it burns or not. (carlamps.ts lampGlass)
-pub fn lamp_glass(g: &mut crate::game::Game, t: FixtureId) -> bool {
+pub fn lamp_glass(g: &crate::game::Game, t: FixtureId) -> bool {
     g.tab.sim_lightshome_fixture[t].group == VEHICLE_GROUP
 }
 
 /// A vehicle's lamp that was dark already: breaking it puts no light out. (carlamps.ts deadLamp)
-pub fn dead_lamp(g: &mut crate::game::Game, t: FixtureId) -> bool {
+pub fn dead_lamp(g: &crate::game::Game, t: FixtureId) -> bool {
     let f = &g.tab.sim_lightshome_fixture[t];
     f.group == VEHICLE_GROUP && !(f.base_emissive[0] > 0.0 || f.base_emissive[1] > 0.0 || f.base_emissive[2] > 0.0)
 }
@@ -187,9 +187,9 @@ mod tests_need_box_rows {
     #[test]
     fn a_lamp_needs_its_twin_across_the_vehicle() {
         let mut g = Game::blank();
-        let (a, b) = (tail(&mut g, 0.0, 0.0), tail(&mut g, 0.0, 1.24));
-        let lone = tail(&mut g, 9.0, 9.0);
-        let found = find_car_lamps(&mut g, &[lone, a, b]);
+        let (a, b) = (tail(&g, 0.0, 0.0), tail(&g, 0.0, 1.24));
+        let lone = tail(&g, 9.0, 9.0);
+        let found = find_car_lamps(&g, &[lone, a, b]);
         let at: Vec<f64> = found.iter().map(|l| l.box_).collect();
         assert_eq!(at, vec![1.0, 2.0]);
         assert!(found.iter().all(|l| l.lit && l.what == FoundLampWhat::TailLamp));
@@ -198,22 +198,22 @@ mod tests_need_box_rows {
     #[test]
     fn a_tilted_box_is_no_lamp_and_a_glowing_one_no_lens() {
         let mut g = Game::blank();
-        let (a, b) = (tail(&mut g, 0.0, 0.0), tail(&mut g, 0.0, 1.24));
+        let (a, b) = (tail(&g, 0.0, 0.0), tail(&g, 0.0, 1.24));
         g.col.boxes[a].rot = Some([0.0, 0.0, 0.0, 1.0]);
-        assert!(find_car_lamps(&mut g, &[a, b]).is_empty());
+        assert!(find_car_lamps(&g, &[a, b]).is_empty());
         let lens = g.col.boxes.push(WorldBox { h: [0.02, 0.07, 0.14], albedo: [0.8, 0.8, 0.75], ..WorldBox::zeroed() });
         let s = sigs()[1];
-        assert!(fits(&mut g, lens, s));
+        assert!(fits(&g, lens, s));
         g.col.boxes[lens].emissive = [0.0, 0.1, 0.0];
-        assert!(!fits(&mut g, lens, s));
+        assert!(!fits(&g, lens, s));
     }
 
     #[test]
     fn targets_number_each_kind_and_count_for_the_checks() {
         let mut g = Game::blank();
-        let (a, b) = (tail(&mut g, 0.0, 0.0), tail(&mut g, 0.0, 1.24));
+        let (a, b) = (tail(&g, 0.0, 0.0), tail(&g, 0.0, 1.24));
         g.stats.carlamps.found = 7;
-        let t = car_lamp_targets(&mut g, &[a, b]);
+        let t = car_lamp_targets(&g, &[a, b]);
         assert_eq!((t[0].name.as_str(), t[1].name.as_str()), ("tail lamp 1", "tail lamp 2"));
         assert_eq!(t[1].boxes, vec![1.0]);
         assert_eq!(t[0].group, VEHICLE_GROUP);

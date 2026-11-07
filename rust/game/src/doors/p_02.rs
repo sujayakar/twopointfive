@@ -11,7 +11,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 #[inline]
 fn col(g: &mut Game, id: DoorId, k: usize) -> f64 {
     let i = g.dr[id].i as usize;
-    ::sim::state::state(g.sim).doors.c[k][i]
+    ::sim::state::state_read(g.sim).doors.c[k][i]
 }
 #[inline]
 fn set_col(g: &mut Game, id: DoorId, k: usize, v: f64) {
@@ -351,7 +351,7 @@ pub fn door_kept_pos(g: &mut crate::game::Game, id: DoorId, p: V3) {
     set_col(g, id, ::sim::doors::POS_Z, p[2]);
 }
 /// the kept centre as it stands, whatever angle the leaf has now   (doors.ts Door.keptAt)
-pub fn door_kept_at(g: &mut crate::game::Game, id: DoorId) -> V3 { g.dr[id].pos_at }
+pub fn door_kept_at(g: &crate::game::Game, id: DoorId) -> V3 { g.dr[id].pos_at }
 /// `fn_` asked aside: what each of `doors` kept of its centre is put back after   (doors.ts Door.posAside)
 pub fn door_pos_aside<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, doors: &mut Vec<DoorId>, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
     let mut a = Vec::with_capacity(doors.len());
@@ -445,7 +445,7 @@ pub fn door_place(g: &mut crate::game::Game, id: DoorId) {
     crate::scene_box_mirror::leaf_wrote(g);
 }
 /// Where the leaf's box and its two handles stand with the leaf at `angle`   (doors.ts Door.poseAt)
-pub fn door_pose_at(g: &mut crate::game::Game, id: DoorId, angle: f64) -> crate::doors::DoorPoseAt {
+pub fn door_pose_at(g: &crate::game::Game, id: DoorId, angle: f64) -> crate::doors::DoorPoseAt {
     let d = &g.dr[id];
     pose_of(d.def.hinge, d.def.width, d.def.closed_dir, d.thick, d.height, angle)
 }
@@ -482,7 +482,7 @@ pub fn doors_new(g: &mut crate::game::Game, defs: &[crate::doors::DoorDef], emit
     crate::doors::Doors { list, store, slabs, ..crate::doors::Doors::blank() }
 }
 /// (doors.ts Doors.byName)
-pub fn doors_by_name(g: &mut crate::game::Game, n: &str) -> Option<DoorId> {
+pub fn doors_by_name(g: &crate::game::Game, n: &str) -> Option<DoorId> {
     for i in 0..g.doors.list.len() {
         let d = g.doors.list[i];
         if g.dr[d].def.name == n { return Some(d); }
@@ -495,7 +495,7 @@ pub fn doors_pull_face(g: &mut crate::game::Game, d: DoorId, from: V3) -> bool {
     ((from[0] - hinge[0]) * -m::sin(c) + (from[2] - hinge[1]) * m::cos(c)) * door_swing(g, d) >= 0.0
 }
 /// DOORWAY.frameHolds as it applies right now: no showcase on the stage   (doors.ts Doors.frameRule)
-pub fn doors_frame_rule(g: &mut crate::game::Game) -> bool { !doors_staged(g) }
+pub fn doors_frame_rule(g: &crate::game::Game) -> bool { !doors_staged(g) }
 /// WOULD THE FRAME HOLD A BOOT thrown at d from `from`   (doors.ts Doors.bootHolds)
 pub fn doors_boot_holds(g: &mut crate::game::Game, d: DoorId, from: V3) -> bool {
     doors_frame_rule(g) && !door_off(g, d) && g.dr[d].def.steel != Some(true) && m::abs(door_angle(g, d)) < SHUT_HOME && doors_pull_face(g, d, from)
@@ -532,11 +532,11 @@ pub fn door_swing_sweeps(s: &crate::doors::DoorSwing, x: f64, z: f64, pad: Optio
     (th >= 0.0 && th <= open) || swing_seg(s, x, z, c) <= pad || swing_seg(s, x, z, c + sw * open) <= pad
 }
 /// a showcase / the tour / the attract reel has the stage (game.ts:1200)   (doors.ts Doors.staged)
-pub fn doors_staged(g: &mut crate::game::Game) -> bool { g.touring }
+pub fn doors_staged(g: &crate::game::Game) -> bool { g.touring }
 /// DOORSTAY as it applies right now: leaves stay where they are left   (doors.ts Doors.stay)
-pub fn doors_stay(g: &mut crate::game::Game) -> bool { !doors_staged(g) }
+pub fn doors_stay(g: &crate::game::Game) -> bool { !doors_staged(g) }
 /// does this leaf's hydraulic closer work   (doors.ts Doors.hasCloser)
-pub fn doors_has_closer(g: &mut crate::game::Game, d: DoorId) -> bool { !doors_stay(g) && g.dr[d].def.closer != Some(false) }
+pub fn doors_has_closer(g: &crate::game::Game, d: DoorId) -> bool { !doors_stay(g) && g.dr[d].def.closer != Some(false) }
 /// Which face of d the point is on: +1 the CCW side of the leaf, -1 the other   (doors.ts Doors.side)
 pub fn doors_side(g: &mut crate::game::Game, d: DoorId, from: V3) -> f64 {
     let u = door_dir(g, d);
@@ -555,7 +555,7 @@ pub fn doors_key_opens(g: &mut crate::game::Game, d: DoorId, from: V3, keys: Opt
     (match keys { Some(k) => crate::squadcast::ring_has(k, &g.dr[d].lock_id), None => false }) && doors_locked_out(g, d, from, None)
 }
 /// DOORTHROW as it applies right now: no showcase on the stage   (doors.ts Doors.throws)
-pub fn doors_throws(g: &mut crate::game::Game) -> bool { !doors_staged(g) }
+pub fn doors_throws(g: &crate::game::Game) -> bool { !doors_staged(g) }
 /// would a turn of sign `dir` take d further OPEN (one-way: the way it opens)   (doors.ts Doors.opening)
 pub fn doors_opening(g: &mut crate::game::Game, d: DoorId, dir: f64) -> bool { dir == door_swing(g, d) }
 /// DOORTHROW: somebody drove d open   (doors.ts Doors.driven)
@@ -722,7 +722,7 @@ pub fn doors_hand_over(g: &mut crate::game::Game, dt: f64, contacts: &[crate::do
     let man = crate::cmd::seat_man(g, first);
     io.par[::sim::doors::P_SETTLE_Y1] = if g.pl[man].crouch { 1.0 } else { 1.7 };
     let ev = ::sim::doors::update(g.sim, slot as usize);
-    let wrong = step_io().par[::sim::doors::P_WRONG];
+    let wrong = step_io_read().par[::sim::doors::P_WRONG];
     if js::truthy(wrong) {
         panic!("the doors' step in the Rust module could not be what it was handed ({})", if wrong == 1.0 { "more noises than its list holds" } else if wrong == 2.0 { "the man of a door's last hand was not asked of the game" } else { "more doors or contacts than its tables hold" });
     }

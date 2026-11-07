@@ -138,7 +138,7 @@ pub fn seg_at(g: &mut crate::game::Game, out: &mut Vec<BoxId>, g_2: crate::rig_p
 }
 
 /// Flattened head 'forward'; the body's heading when the head looks nearly straight up or down. (rigProps.ts headFlatForward)
-pub fn head_flat_forward(g: &mut crate::game::Game, c_2: CharId) -> V3 {
+pub fn head_flat_forward(g: &crate::game::Game, c_2: CharId) -> V3 {
     let hd = crate::character::character_head_dir(g, c_2);
     let flat = m::hyp2(hd[0], hd[2]);
     if flat > 0.2 {

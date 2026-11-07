@@ -192,7 +192,7 @@ pub fn squad_orders_stack_seen(g: &mut crate::game::Game, d: DoorId, side: f64, 
 }
 
 /// what the makers of marks tick, and the room rule's book, as they stand: the returned call puts them back (orders.ts marksKeep)
-pub fn squad_orders_marks_keep(g: &mut crate::game::Game) -> crate::orders::MarksKeep {
+pub fn squad_orders_marks_keep(g: &crate::game::Game) -> crate::orders::MarksKeep {
     let leaf = g.orders.leaf_out_gave;
     let (stack_own, doorway, stackroom, glasspen) = (g.m.doorway.stack_own.clone(), g.stats.doorway.clone(), g.stats.stackroom.clone(), g.stats.glasspen.clone());
     let book = crate::stackroom::stack_room_book_keep(g);
@@ -297,7 +297,7 @@ pub fn squad_orders_own_mark_first(g: &mut crate::game::Game, d: DoorId, side: f
 }
 
 /// the marks men of an order STAND on, on this face of this door (orders.ts ownMarks)
-pub fn squad_orders_own_marks(g: &mut crate::game::Game, d: DoorId, side: f64, men: &[GuardId]) -> Vec<V3> {
+pub fn squad_orders_own_marks(g: &crate::game::Game, d: DoorId, side: f64, men: &[GuardId]) -> Vec<V3> {
     let th = g.dr[d].def.closed_dir;
     let nx = -m::sin(th) * side;
     let nz = m::cos(th) * side;
@@ -331,12 +331,12 @@ pub fn squad_orders_no_room_words(g: &mut crate::game::Game, plain: &str, ask: &
 }
 
 /// where Sam stands, as the makers of marks ask it: nowhere during ownMarkFirst's second ask (orders.ts samPlace)
-pub fn squad_orders_sam_place(g: &mut crate::game::Game) -> V3 {
+pub fn squad_orders_sam_place(g: &crate::game::Game) -> V3 {
     if g.orders.sam_out { nowhere() } else { squad_orders_sam_stood(g) }
 }
 
 /// where Sam stands, to the marks the door code makes; to another cast he is nowhere (orders.ts samStood)
-pub fn squad_orders_sam_stood(g: &mut crate::game::Game) -> V3 {
+pub fn squad_orders_sam_stood(g: &crate::game::Game) -> V3 {
     if g.orders.cast.is_some() { return nowhere(); }
     let c = g.pl[g.player].ch;
     g.ch[c].pos

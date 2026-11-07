@@ -158,17 +158,17 @@ pub fn wall_charge_raise_carried(g: &mut crate::game::Game, n: f64) {
 }
 
 /// What a wall takes out of the bag now. (wallcharge.ts price)
-pub fn wall_charge_price(g: &mut crate::game::Game) -> f64 {
+pub fn wall_charge_price(g: &crate::game::Game) -> f64 {
     if g.wall_charge.carried.is_some() { 0.0 } else { m::max(1.0, m::floor(g.k.wallcharge.cost)) }
 }
 
 /// Can one be set. (wallcharge.ts affordable)
-pub fn wall_charge_affordable(g: &mut crate::game::Game) -> bool {
+pub fn wall_charge_affordable(g: &crate::game::Game) -> bool {
     match g.wall_charge.carried { Some(c) => c > 0.0, None => g.door_tools.charges >= wall_charge_price(g) }
 }
 
 /// The row's words. (wallcharge.ts rowWords)
-pub fn wall_charge_row_words(g: &mut crate::game::Game) -> String {
+pub fn wall_charge_row_words(g: &crate::game::Game) -> String {
     let (n, p) = (g.door_tools.charges, wall_charge_price(g));
     if let Some(c) = g.wall_charge.carried { return format!("breach with a wall charge · {} left", c); }
     if p <= 1.0 { format!("breach with a charge · {} left", n) }
@@ -177,7 +177,7 @@ pub fn wall_charge_row_words(g: &mut crate::game::Game) -> String {
 }
 
 /// The refusal's words, with none to set. (wallcharge.ts noneWords)
-pub fn wall_charge_none_words(g: &mut crate::game::Game) -> String {
+pub fn wall_charge_none_words(g: &crate::game::Game) -> String {
     if g.wall_charge.carried.is_some() {
         if g.wall_charge.brought == Some(0.0) { return String::from(crate::words::wg(g, &"nobody brought a wall charge.", &"no wall charge carried.")); }
         return String::from("no wall charge left.");
@@ -229,12 +229,12 @@ pub fn wall_charge_give_back(g: &mut crate::game::Game, c_2: WallChargeId, why: 
 
 // ---------------------------------------------------------------- the place
 /// (wallcharge.ts chargeOn)
-pub fn wall_charge_charge_on(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> Option<WallChargeId> {
+pub fn wall_charge_charge_on(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> Option<WallChargeId> {
     g.wall_charge.set.iter().copied().find(|c| same_wall(&g.tab.wallcharge_set_wall_charge[*c].wall, w))
 }
 
 /// (wallcharge.ts chargeOnTarget)
-pub fn wall_charge_charge_on_target(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) -> Option<WallChargeId> {
+pub fn wall_charge_charge_on_target(g: &crate::game::Game, t: &crate::orders::OrderTarget) -> Option<WallChargeId> {
     match t {
         crate::orders::OrderTarget::Floor(f) => match &f.wall { Some(w) => wall_charge_charge_on(g, w), None => None },
         _ => None,
@@ -394,7 +394,7 @@ pub fn wall_charge_floor_after(g: &mut crate::game::Game, w: &crate::wallcharge:
 }
 
 /// In a doorway: no place for a man to wait or to hold from. (wallcharge.ts inFrame)
-pub fn wall_charge_in_frame(g: &mut crate::game::Game, q: V3, m: Option<f64>) -> bool {
+pub fn wall_charge_in_frame(g: &crate::game::Game, q: V3, m: Option<f64>) -> bool {
     let m = m.unwrap_or(g.k.wallcharge.off_frame);
     m > 0.0 && g.doors.list.iter().any(|d| flat(q, g.dr[*d].frame_centre) < m)
 }

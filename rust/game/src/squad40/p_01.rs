@@ -33,10 +33,10 @@ fn at_of(t: &crate::orders::OrderTarget) -> V3 {
 }
 
 /// A TEAMMATE'S 40 MM WORKS IN THIS BUILD: settled on the page. (squad40.ts squad40Here)
-pub fn squad40_here(g: &mut crate::game::Game) -> bool { true }
+pub fn squad40_here(g: &crate::game::Game) -> bool { true }
 
 /// the launcher is under the gun in his hands: a long gun whose row has one. (squad40.ts tubeUp)
-pub fn tube_up(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn tube_up(g: &crate::game::Game, gd: GuardId) -> bool {
     let d = g.fa[g.gd[gd].weapon].def;
     let r = g.m.weapons.weapons.get(d).unwrap();
     r.cls != crate::weapons::WeaponClass::Pistol && r.pellets.is_none() && r.launcher != Some(false)
@@ -52,14 +52,14 @@ fn left_in(g: &Game, s: &State) -> f64 {
 }
 
 /// the rounds the squad's men on their feet have between them. (squad40.ts squad40Left)
-pub fn squad40_left(g: &mut crate::game::Game) -> f64 {
+pub fn squad40_left(g: &crate::game::Game) -> f64 {
     let key = crate::seats::view_key(g);
     let g: &Game = g;
     match g.m.squad40.states.get(key) { Some(s) => left_in(g, s), None => 0.0 }
 }
 
 /// the words the throws' row adds while the order is on the page. (squad40.ts squad40Word)
-pub fn squad40_word(g: &mut crate::game::Game) -> String {
+pub fn squad40_word(g: &crate::game::Game) -> String {
     let key = crate::seats::view_key(g);
     let brought = g.m.squad40.states.get(key).map(|s| s.brought);
     match brought {
@@ -119,13 +119,13 @@ pub fn bodies(g: &mut crate::game::Game) -> crate::squad40::Bodies {
 }
 
 /// he faces the spot. (squad40.ts onIt)
-pub fn on_it(g: &mut crate::game::Game, gd: GuardId, at: V3) -> bool {
+pub fn on_it(g: &crate::game::Game, gd: GuardId, at: V3) -> bool {
     let c = g.gd[gd].ch;
     m::abs(v3::wrap_angle(g.ch[c].aim_yaw - v3::yaw_to(g.ch[c].pos, at))) < g.k.squad40.aim_rad
 }
 
 /// his gun is UP and on the spot: in a fight, or under an order that has it at his shoulder. (squad40.ts gunOn)
-pub fn gun_on(g: &mut crate::game::Game, gd: GuardId, at: V3) -> bool {
+pub fn gun_on(g: &crate::game::Game, gd: GuardId, at: V3) -> bool {
     if !on_it(g, gd, at) { return false; }
     if g.gd[gd].state == crate::game::GuardState::Alert { return true; }
     if let Some(o) = crate::roomfight::room_fight_op_of(g, gd) {

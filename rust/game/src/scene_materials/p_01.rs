@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 /// The columns of a word; the default row's for a word the table does not have.   (materials.ts doesOfWord)
-pub fn does_of_word(g: &mut crate::game::Game, w: Option<&str>) -> crate::scene_materials::Does {
+pub fn does_of_word(g: &crate::game::Game, w: Option<&str>) -> crate::scene_materials::Does {
     match w.and_then(|w| g.m.scene_materials.rows.get(String::from(w))) {
         Some(d) => d.clone(),
         None => crate::scene_materials::default(),
@@ -16,12 +16,12 @@ pub fn does_of_word(g: &mut crate::game::Game, w: Option<&str>) -> crate::scene_
 }
 
 /// What a box does: its own word's row, else the default row.   (materials.ts doesOf)
-pub fn does_of(g: &mut crate::game::Game, b: Option<crate::scene_materials::DoesWord>) -> crate::scene_materials::Does {
+pub fn does_of(g: &crate::game::Game, b: Option<crate::scene_materials::DoesWord>) -> crate::scene_materials::Does {
     does_of_word(g, b.map(crate::scene_materials::DoesWord::as_str))
 }
 
 /// What a box does while soaked: the row its `wet` word names, else its own.   (materials.ts doesWet)
-pub fn does_wet(g: &mut crate::game::Game, b: Option<crate::scene_materials::DoesWord>) -> crate::scene_materials::Does {
+pub fn does_wet(g: &crate::game::Game, b: Option<crate::scene_materials::DoesWord>) -> crate::scene_materials::Does {
     let d = does_of(g, b);
     match d.wet.as_deref() {
         Some(w) => does_of_word(g, Some(w)),

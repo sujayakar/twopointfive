@@ -407,7 +407,7 @@ pub fn door_tools_shallow_pods(g: &mut crate::game::Game, d: DoorId, side: f64, 
     for i in 0..pts.len() {
         let taken: Vec<V3> = pts.iter().enumerate().filter(|&(j, _)| j != i).map(|(_, o)| o.pos).collect();
         let mut p = DoorToolsOffSwingP { pos: pts[i].pos, watch: pts[i].watch };
-        door_tools_off_swing(g, &mut p, Some(d), side, &taken, None);
+        door_tools_off_swing(g, &p, Some(d), side, &taken, None);
         pts[i].pos = p.pos;
     }
     pts

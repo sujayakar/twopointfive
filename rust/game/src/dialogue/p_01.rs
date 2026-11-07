@@ -93,7 +93,7 @@ pub fn agitation_terms(g: &mut crate::game::Game, gd: GuardId) -> crate::dialogu
 }
 
 /// By callsign; a spawned unit, whatever it is called, is a fighting man: hard.   (dialogue.ts temperamentOf)
-pub fn temperament_of(g: &mut crate::game::Game, gd: GuardId) -> crate::game::Temperament {
+pub fn temperament_of(g: &crate::game::Game, gd: GuardId) -> crate::game::Temperament {
     if g.gd[gd].unit.is_some() { return crate::game::Temperament::Hard; }
     let callsign = g.gd[gd].callsign.clone();
     crate::game::temperament().iter().find(|(k, _)| *k == callsign.as_str()).map(|(_, t)| *t).unwrap_or(crate::game::Temperament::Steady)
@@ -114,7 +114,7 @@ pub fn gives_at(t: crate::game::Temperament, band: crate::dialogue::Band) -> Vec
 fn said(s: &Option<String>) -> Option<String> { s.as_ref().filter(|x| !x.is_empty()).cloned() }
 
 /// The words of a row as they are said to this man and by him.   (dialogue.ts saidText)
-pub fn said_text(g: &mut crate::game::Game, l: &crate::dialogue::SaidTextL, ctx: &crate::dialogue::DialogueCtx) -> String { said_of(l, ctx) }
+pub fn said_text(g: &crate::game::Game, l: &crate::dialogue::SaidTextL, ctx: &crate::dialogue::DialogueCtx) -> String { said_of(l, ctx) }
 
 fn said_of(l: &crate::dialogue::SaidTextL, ctx: &crate::dialogue::DialogueCtx) -> String {
     if ctx.nameless == Some(true) { if let Some(x) = said(&l.bare) { return x; } }
@@ -254,7 +254,7 @@ fn of_shape_t(x: &crate::dialogue::IntelTable, shape: ShapeKey, t: crate::game::
 }
 
 /// The words for what was taken, off the office: DRIVE_AWAY with DRIVE_AWAY_GUIDE laid over.   (dialogue.ts driveAway)
-pub fn drive_away(g: &mut crate::game::Game) -> crate::dialogue::DriveAway { drive_away_of() }
+pub fn drive_away(g: &crate::game::Game) -> crate::dialogue::DriveAway { drive_away_of() }
 
 fn drive_away_of() -> crate::dialogue::DriveAway {
     let (was, now) = (crate::dialogue::drive_away_table(), crate::dialogue::drive_away_guide());
@@ -287,7 +287,7 @@ pub fn shaped_intel_text(g: &mut crate::game::Game, kind: crate::dialogue::Intel
 }
 
 /// The checker's own words when he is the man walking the silent colleague's route.   (dialogue.ts checkOnSelf)
-pub fn check_on_self(g: &mut crate::game::Game) -> String {
+pub fn check_on_self(g: &crate::game::Game) -> String {
     st(crate::dialogue::CHECKON_SELF_NOW)
 }
 

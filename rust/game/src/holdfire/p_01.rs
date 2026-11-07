@@ -19,24 +19,24 @@ pub fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::holdfire::St
 }
 
 /// Which player's squad this is.   (holdfire.ts leadOf)
-pub fn lead_of(g: &mut crate::game::Game) -> PlayerId {
+pub fn lead_of(g: &crate::game::Game) -> PlayerId {
     g.player
 }
 
 /// A teammate under orders.   (holdfire.ts mate)
-pub fn mate(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn mate(g: &crate::game::Game, gd: GuardId) -> bool {
     g.gd[gd].team == crate::teams::Team::Operative && g.gd[gd].unit.is_some()
 }
 
 /// The squad's living men.   (holdfire.ts living)
-pub fn living(g: &mut crate::game::Game) -> Vec<GuardId> {
+pub fn living(g: &crate::game::Game) -> Vec<GuardId> {
     let mut men = crate::orders::squad_orders_squad(g);
     men.retain(|&gd| g.gd[gd].state != crate::game::GuardState::Dead);
     men
 }
 
 /// The squad has been found: something loud in a man's ears, or a defender roused who has really seen them.   (holdfire.ts holdFireFound)
-pub fn hold_fire_found(g: &mut crate::game::Game, men: &[GuardId]) -> Option<String> {
+pub fn hold_fire_found(g: &crate::game::Game, men: &[GuardId]) -> Option<String> {
     for &gd in men {
         if crate::roomfight::room_fight_hot_for(g, gd) {
             return Some(String::from("loud"));
@@ -59,7 +59,7 @@ pub fn hold_fire_found(g: &mut crate::game::Game, men: &[GuardId]) -> Option<Str
 }
 
 /// A door order of the squad is being worked, or a rescue's clock is running. Waiting is not working.   (holdfire.ts working)
-pub fn working(g: &mut crate::game::Game) -> bool {
+pub fn working(g: &crate::game::Game) -> bool {
     let dead = crate::game::GuardState::Dead;
     if g.door_tools.ops.iter().any(|&id| {
         let op = &g.tab.doortools_door_op[id];
@@ -175,7 +175,7 @@ pub fn hold_fire_order(g: &mut crate::game::Game, id_2: &str, o: Option<crate::h
 }
 
 /// Asked before an order's row is issued: is this 'go loud' told to a squad that is silent right now.   (holdfire.ts holdFireSilent)
-pub fn hold_fire_silent(g: &mut crate::game::Game, id_2: &str) -> bool {
+pub fn hold_fire_silent(g: &crate::game::Game, id_2: &str) -> bool {
     id_2 == crate::holdfire::LOUD_ORDER && crate::silent::squad_silent(g)
 }
 

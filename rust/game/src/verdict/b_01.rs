@@ -9,7 +9,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// The file a mission row names for the level this game stands on (None: the bundled office). Read back off the level's own name.   (verdict.ts rowFile)
-pub fn row_file(g: &mut crate::game::Game) -> Option<String> {
+pub fn row_file(g: &crate::game::Game) -> Option<String> {
     let name = crate::scene_level_load::level_name_of(g)?;
     if name.is_empty() || name == "office" { return None; }
     let file = alloc::format!("{}.json", name);
@@ -20,7 +20,7 @@ pub fn row_file(g: &mut crate::game::Game) -> Option<String> {
 }
 
 /// The mission that is up is the stealth game's kind on a row that leans loud: nothing grades that run as a sneak. VERDICT.loudCard is settled ON on the page.   (verdict.ts loudRow)
-pub fn loud_row(g: &mut crate::game::Game) -> bool {
+pub fn loud_row(g: &crate::game::Game) -> bool {
     let file = row_file(g);
     let run = crate::scenario_run::running_scenario(g, file.as_deref(), None);
     match run {
@@ -36,7 +36,7 @@ pub fn loud_row(g: &mut crate::game::Game) -> bool {
 /// writes nothing and keeps nothing, so the first tick it answers is the end and the asker keeps the answer (the TypeScript's verdict latches it on
 /// the puppet, with the men's tracks and the card, which stay the page's). While the answer is None it reads a few flags and allocates nothing.
 /// (verdict.ts Verdict.ended, under Verdict.live)
-pub fn verdict_ended(g: &mut crate::game::Game) -> Option<(bool, &'static str, String)> {
+pub fn verdict_ended(g: &crate::game::Game) -> Option<(bool, &'static str, String)> {
     use crate::scenario_run::ActiveScenario as K;
     if !g.k.verdict.on || g.touring || g.quiet_utility || g.puppet.is_some() || g.mission_in_tour { return None; }
     let kind = crate::scenario_run::active_scenario(g);

@@ -27,7 +27,7 @@ fn post_of(g: &mut Game, m: GuardId) -> Option<V3> {
     let a = of(g, m)?;
     g.tab.orders_assignment[a].post
 }
-fn spare_of(g: &mut Game, a: OrdersAssignmentId) -> bool {
+fn spare_of(g: &Game, a: OrdersAssignmentId) -> bool {
     g.tab.orders_assignment[a].spare.unwrap_or(false)
 }
 fn pos_of(g: &Game, m: GuardId) -> V3 {
@@ -56,7 +56,7 @@ fn is_entry(k: crate::doortools::DoorToolKind) -> bool {
     matches!(k, DoorToolKind::OpenClear | DoorToolKind::BangClear | DoorToolKind::Charge)
 }
 /// three or more living men on an entry that is not a threshold's hold (rearwatch.ts carries, and the head of rearWatcher)
-fn carries(g: &mut Game, op: DoorOpId) -> bool {
+fn carries(g: &Game, op: DoorOpId) -> bool {
     let r = &g.tab.doortools_door_op[op];
     if r.thr.is_some() || !is_entry(r.kind) {
         return false;
@@ -193,7 +193,7 @@ fn short_of(g: &mut Game, key: PlayerId, m: GuardId) -> bool {
 }
 
 /// The man of this order already pinned behind this stack, who is not its lead nor the lane's man. (rearwatch.ts rearWatchTick hadOf)
-fn had_of(g: &mut Game, key: PlayerId, op: DoorOpId, men: &[GuardId], lane: Option<GuardId>) -> Option<GuardId> {
+fn had_of(g: &Game, key: PlayerId, op: DoorOpId, men: &[GuardId], lane: Option<GuardId>) -> Option<GuardId> {
     let (door, side, lead) = {
         let r = &g.tab.doortools_door_op[op];
         (r.door, r.side, r.lead)
@@ -978,7 +978,7 @@ pub fn walk_to(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
 }
 
 /// orders.ts, the fall-in leg: this man's feet stay where they are, in his seat's book. (rearwatch.ts roomKept)
-pub fn room_kept(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn room_kept(g: &crate::game::Game, gd: GuardId) -> bool {
     // (viewOf: his seat's book; a cast is one book, its own)
     let key = if g.in_cast {
         crate::seats::view_key(g)
@@ -1036,7 +1036,7 @@ pub fn rear_sees(g: &mut crate::game::Game, p: V3, o: CoverOpeningId, front: V3)
 }
 
 /// cover.ts deal(): the way this man is pinned to. (rearwatch.ts rearPinOf)
-pub fn rear_pin_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::rearwatch::RearPin> {
+pub fn rear_pin_of(g: &crate::game::Game, gd: GuardId) -> Option<crate::rearwatch::RearPin> {
     let key = crate::seats::view_key(g);
     let b = g.m.rearwatch.books.get(key)?;
     match b.pins.get(gd) {
@@ -1046,7 +1046,7 @@ pub fn rear_pin_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::rear
 }
 
 /// doortools.ts, the entry's queue: nobody is held back, REARWATCH.hold being off on the page. (rearwatch.ts rearWatcherWaits)
-pub fn rear_watcher_waits(g: &mut crate::game::Game, op: DoorOpId, gd: GuardId) -> bool {
+pub fn rear_watcher_waits(g: &crate::game::Game, op: DoorOpId, gd: GuardId) -> bool {
     false
 }
 
@@ -1069,7 +1069,7 @@ pub fn rear_last(g: &mut crate::game::Game, op: DoorOpId, turn: &[GuardId], firs
 }
 
 /// doortools.ts firstIn(): the man of this order pinned on a way behind and held on it through the entry. (rearwatch.ts rearWatcher)
-pub fn rear_watcher(g: &mut crate::game::Game, op: DoorOpId) -> Option<GuardId> {
+pub fn rear_watcher(g: &crate::game::Game, op: DoorOpId) -> Option<GuardId> {
     if !carries(g, op) {
         return None;
     }

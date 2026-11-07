@@ -97,7 +97,7 @@ pub fn sam_aftermath(g: &mut crate::game::Game, dt: f64) {
     let pl = g.player;
     let c = g.pl[pl].ch;
     mem_at(g, c);
-    let raining = m::max(0.0, ::sim::weather::of(g.sim).rain_now) > 0.001 && open_sky_of(g, c);
+    let raining = m::max(0.0, ::sim::weather::of_read(g.sim).rain_now) > 0.001 && open_sky_of(g, c);
     if raining {
         if g.ch[c].wet > 0.5 {
             let (prints, now) = (g.k.wet.prints, g.time);
@@ -156,7 +156,7 @@ pub fn wet_footfall(g: &mut crate::game::Game, left_hint: bool) {
     let c = g.pl[pl].ch;
     let prints_left = mem_at(g, c).prints_left;
     if prints_left <= 0.0 || g.ch[c].wet < 0.15 { return; }
-    if m::max(0.0, ::sim::weather::of(g.sim).rain_now) > 0.001 && open_sky_of(g, c) { return; } // still out in it: the ground is wetter than his soles
+    if m::max(0.0, ::sim::weather::of_read(g.sim).rain_now) > 0.001 && open_sky_of(g, c) { return; } // still out in it: the ground is wetter than his soles
     let bone = |g: &Game, b: Bone| g.ch[c].bones.get(b).copied();
     let mut left = left_hint;
     if let (Some(fl), Some(fr)) = (bone(g, Bone::FootL), bone(g, Bone::FootR)) {
@@ -187,10 +187,10 @@ pub fn wet_footfall(g: &mut crate::game::Game, left_hint: bool) {
 }
 
 /// BOUNDARY NO-OP: the list it ages is empty while `decals_add` answers no decal, and the TypeScript with an empty list does nothing. (src/game/wet.ts:158 agePrints)
-pub fn age_prints(g: &mut crate::game::Game) {}
+pub fn age_prints(g: &crate::game::Game) {}
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/game/wet.ts:179 clearWetPrints)
-pub fn clear_wet_prints(g: &mut crate::game::Game) {}
+pub fn clear_wet_prints(g: &crate::game::Game) {}
 
 /// BOUNDARY: the host's debug panel and `__wet.summary()` write this line (coats, prints, drips) at the swap; a headless run has no panel, so no line.   (src/game/wet.ts:204 wetSummary)
-pub fn wet_summary(g: &mut crate::game::Game) -> String { String::new() }
+pub fn wet_summary(g: &crate::game::Game) -> String { String::new() }

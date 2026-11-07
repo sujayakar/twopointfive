@@ -322,18 +322,18 @@ pub fn frag_flee(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::game::
 }
 
 /// Is he on his legs off a live grenade this frame.   (frag.ts fragRunning)
-pub fn frag_running(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn frag_running(g: &crate::game::Game, gd: GuardId) -> bool {
     let Some(b) = g.m.frag.books.as_ref() else { return false };
     b.iter().any(|l| l.flee.get(gd).and_then(|s| s.as_ref()).map_or(false, |s| s.goal.is_some()))
 }
 
 /// A grenade's bang that his OWN side threw.   (frag.ts ownBang)
-pub fn own_bang(g: &mut crate::game::Game, gd: GuardId, e: crate::frag::OwnBangE) -> bool {
+pub fn own_bang(g: &crate::game::Game, gd: GuardId, e: crate::frag::OwnBangE) -> bool {
     e.frag.unwrap_or(false) && own_noise(g, gd, e.who)
 }
 
 /// A noise filed under the id of a man of his own side.   (frag.ts ownNoise)
-pub fn own_noise(g: &mut crate::game::Game, gd: GuardId, who: Option<f64>) -> bool {
+pub fn own_noise(g: &crate::game::Game, gd: GuardId, who: Option<f64>) -> bool {
     let Some(who) = who else { return false };
     if who == 0.0 { return false; }
     let t = crate::teams::team_of_id(g, who);
@@ -384,7 +384,7 @@ pub fn frag_step_off(g: &mut crate::game::Game, speed: Option<f64>) -> Option<V3
 }
 
 /// The men of the floor who may carry a frag.   (frag.ts defendersOf)
-pub fn defenders_of(g: &mut crate::game::Game) -> Vec<GuardId> {
+pub fn defenders_of(g: &crate::game::Game) -> Vec<GuardId> {
     g.guards.iter().copied().filter(|&gd| g.gd[gd].team == crate::teams::Team::Hostile && g.gd[gd].unit.is_some()).collect()
 }
 
@@ -635,7 +635,7 @@ pub fn wind_up(g: &mut crate::game::Game, c_2: usize, head: V3, from: V3, aim: V
 }
 
 /// The grenade of a throw under way is still in his fist: swung, not yet let go.   (frag.ts fragInFist)
-pub fn frag_in_fist(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn frag_in_fist(g: &crate::game::Game, gd: GuardId) -> bool {
     let Some(b) = g.m.frag.def_books.as_ref() else { return false };
     b.carriers.iter().find(|c| c.gd == gd).and_then(|c| c.wind).map_or(false, |w| w.swung)
 }
@@ -700,7 +700,7 @@ pub fn frag_throw_at(g: &mut crate::game::Game, gd: GuardId, at: V3, stand: V3, 
 }
 
 /// He has shouted and the grenade is not yet out of his hand.   (frag.ts fragWinding)
-pub fn frag_winding(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn frag_winding(g: &crate::game::Game, gd: GuardId) -> bool {
     g.m.frag.def_books.as_ref().map_or(false, |b| b.carriers.iter().any(|x| x.gd == gd && x.wind.is_some()))
 }
 
@@ -715,7 +715,7 @@ pub fn lands(g: &mut crate::game::Game, sol: V3, p: V3, tol: f64) -> bool {
 }
 
 /// A live hostage in what a grenade there would reach.   (frag.ts hostageNear)
-pub fn hostage_near(g: &mut crate::game::Game, p: V3) -> bool {
+pub fn hostage_near(g: &crate::game::Game, p: V3) -> bool {
     let reach = g.k.frag.wound_m + g.k.frag.def_scatter[1];
     g.rescue.hostages.iter().any(|&h| g.gd[h].state != crate::game::GuardState::Dead && flat(g.ch[g.gd[h].ch].pos, p) < reach)
 }

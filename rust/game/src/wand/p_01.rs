@@ -18,23 +18,23 @@ pub fn wand_offered(g: &mut crate::game::Game, pl: PlayerId, d: DoorId) -> bool 
 }
 
 /// The wait before the lens is through: the squat's own blend in where it is drawn, else the kneel's. (wand.ts wandFeedSecs)
-pub fn wand_feed_secs(g: &mut crate::game::Game, squat: Option<bool>) -> f64 {
+pub fn wand_feed_secs(g: &crate::game::Game, squat: Option<bool>) -> f64 {
     if squat.unwrap_or(false) { g.k.stealthpose.cable_in } else { g.k.wand.quick_secs }
 }
 
 /// Is the lens through this step, for a man the caller has found planted. `t` went with the old feed. (wand.ts wandThrough)
-pub fn wand_through(g: &mut crate::game::Game, t: f64, age: f64, crouch: f64, squat: Option<bool>) -> bool {
+pub fn wand_through(g: &crate::game::Game, t: f64, age: f64, crouch: f64, squat: Option<bool>) -> bool {
     age >= wand_feed_secs(g, squat) - 1e-6 && crouch >= g.k.wand.quick_down
 }
 
 /// The wedge in force, degrees. (wand.ts wandFov)
-pub fn wand_fov(g: &mut crate::game::Game) -> f64 {
+pub fn wand_fov(g: &crate::game::Game) -> f64 {
     let wedge = if g.k.fog.cone { crate::fogofwar::field_deg(g) } else { g.k.wand.fov_deg };
     m::min(170.0, m::max(20.0, wedge))
 }
 
 /// The most the lens turns off square, rad. (wand.ts wandPanMax)
-pub fn wand_pan_max(g: &mut crate::game::Game) -> f64 {
+pub fn wand_pan_max(g: &crate::game::Game) -> f64 {
     m::max(0.0, 90.0 - wand_fov(g) * 0.5 - g.k.wand.blind_deg) * m::PI / 180.0
 }
 
