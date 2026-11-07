@@ -361,7 +361,7 @@ export class TapePlay {
     if (L.audio) { const p = g.player.char.pos; L.audio.setListener([p[0], p[1] + 1.6, p[2]], cam.forward); L.audio.update(dt, L.time); }
     L.smoke?.update(pdt);
     cam.update(dt, g.followPos(), null);
-    L.hud?.setCaption('', ''); L.hud?.setTimeline(null, () => { /* */ });
+    L.hud?.setCaption('', ''); L.hud?.setTimeline(null);
     cam.kickIn();
     try { g.fogLift(this.nofog, tube, g.viewPx(cam, h.canvas));   // (the fog taken off the picture and its HUD, the infrared lines the viewer's tube shows or does not, and laser lines / tracers re-fit to THIS picture's pixel — the step sized them for the recording's view — for this draw only; Game.fogBack puts the step's own lists back)
       if (blent) { try { tw!.pose(a); L.render(cam, tPic, pdt, L.present()); } finally { tw!.unpose(); } }   // (the blend hangs on the drawn things for the render alone: the HUD below, and the next step, read the game's own)
