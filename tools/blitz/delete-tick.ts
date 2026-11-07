@@ -359,6 +359,8 @@ for (const sf of program.getSourceFiles()) { const file = rel(sf.fileName); if (
   for (const st of sf.statements) if (st.kind === SK.ImportDeclaration && st.importClause) { const c = st.importClause; const names = [c.name, ...(c.namedBindings?.elements?.map((x: any) => x.name) ?? [])].filter(Boolean);
     for (const n of names) { const s = targetOf(checker.getSymbolAtLocation(n)); for (const d of s?.declarations ?? []) { const u = unitOfDecl(d); if (u) out.push({ to: u, at: n.getStart(sf), file, how: 'imports it' }); } } }
   for (const e of out) ROOT_EDGES.push({ file, who, e }); }
+/** the simulation's files that a tool writes: their first line says so */
+const TOOL_WRITTEN = new Set<string>(simFiles.filter((sf: any) => /^\/\/ WRITTEN BY tools\//.test(sf.text)).map((sf: any) => rel(sf.fileName)));
 /** THE TICK: its body is the Rust game's. */
 const TICK = UNITS.find(u => u.key === 'Game.stepSeats' && u.file === 'src/game/game.ts');
 if (!TICK || !GAME) { console.error('no Game.stepSeats in src/game/game.ts: this is not the tree the program was written for'); process.exit(2); }
@@ -426,6 +428,9 @@ function plan(skipRoot?: (r: RootEdge) => boolean): Plan {
   // signature left to throw by name, and the tools that named it are listed.
   for (const r of ROOT_EDGES) { if (skipRoot?.(r)) continue; const tool = r.who === 'tool', t = r.e.to; follow(r.e, tool && (!t || t.guard || (t.fnLike && OF_TICK.has(t))) ? 1 : 2, r.file, tool); }
   for (const u of UNITS) if (u.kind === 'stmt' && !u.cls) hit(u, 2, 'the module', u.file, 'a top-level statement');
+  // A FILE A TOOL WRITES (its first line says so: `// WRITTEN BY tools/… — never by hand`: the built module, a table written from a schema) is that
+  // tool's, and its check reads the file's shape: nothing in it is edited, whatever reaches what
+  for (const u of UNITS) if (TOOL_WRITTEN.has(u.file)) hit(u, 2, 'a file a tool writes', u.file, 'its file is written by a tool, never by hand');
   for (const [file, names] of Object.entries<string[]>(SCHEMA.top)) for (const n of new Set(names)) { const u = UNITS.find(x => x.file === file && x.name === n && !x.cls); if (u) hit(u, 2, 'the bridge', 'tools/blitz/schema.json', 'a top-level name the schema reads'); }
   // THE CENSUS ADDS, AND TAKES NOTHING AWAY BUT A HOST'S LOOSE NAME: what it saw run as TypeScript stays, however it was reached (a computed key, a
   // function stored and called by a table: what the checker cannot follow)
@@ -646,6 +651,7 @@ function writeOut(mode: Mode): void {
     patch('tools/blitz/word.ts', "export const DEFAULT_WORD: string = 'none';", "export const DEFAULT_WORD: string = 'rust';", T); }
   if (mode === 'instrument') { T.set('tools/blitz/delete-census-preload.ts', CENSUS_PRELOAD_TS); T.set('tools/blitz/delete-census-ids.json', JSON.stringify(W.ids));
     patch('bunfig.toml', 'preload = ["./tools/blitz/preload.ts"]', 'preload = ["./tools/blitz/delete-census-preload.ts", "./tools/blitz/preload.ts"]', T); }
+  for (const file of T.keys()) if (TOOL_WRITTEN.has(file)) throw new Error(`${file} is written by a tool and the deletion would edit it: it must not`);
   for (const [file, text] of T) writeFileSync(join(ROOT, file), text);
   say(`${mode === 'instrument' ? 'the census\'s tree' : 'the deletion'}: ${T.size} files written under ${ROOT}`); }
 
