@@ -38,10 +38,9 @@ const unknownOf = (line: string | undefined) => { if (!line) return 'did not run
   const off = [m[1] === '0' ? '' : `${m[1]} (${(m[2] ?? '').trim()})`, blk && blk[1] !== '0' ? `the block differs in ${blk[1]} bytes` : ''].filter(Boolean).join(' · '); return off || '0'; };
 async function rowOf(m: typeof missions[number]): Promise<Row> {
   const row: Row = { ...m, ended: 'DID NOT RUN', lacks: '', start: '', beside: '', end: '' };
-  const office = !m.link.includes('levelFile=');   // (its missions are a TypeScript module's, attached by name: start.ts stands both starts on a copy of the file with them written in)
   const lk = (await runLater(resolve(ROOT, 'rust/game_start/target/debug/start'), ['--lacks', `levels/${m.file}`])).out.split('\n').map(l => l.split('\t')).find(c => c.length >= 3);
   if (!lk) { row.lacks = 'the reader could not read the file'; return row; }
-  row.lacks = [lk[2], office ? 'its missions are not in its file (levels/office.scenarios.ts, attached by name): held on a copy of the file with them written in' : ''].filter(Boolean).join(' · ');
+  row.lacks = lk[2] ?? '';
   if (lk[1] !== 'carried') { row.ended = 'no'; return row; }
   const out = resolve(KEEP, m.id); mkdirSync(out, { recursive: true });
   const r = await runLater('bash', ['tools/blitz/start.sh', '--mission', m.id, ...(SEATS > 1 ? ['--seats', String(SEATS)] : []), '--frames', String(FRAMES), '--no-build', '--show', '4', '--out', out]);
