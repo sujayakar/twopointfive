@@ -1,5 +1,5 @@
 // THE TYPESCRIPT START OF A LEVEL FILE, exported by the bridge: what rust/game_start's own start is held to (rust/game_start/README.md, "The compare").
-//   bun run --preload ./tools/blitz/expose.ts tools/blitz/start.ts <level file> --out DIR [--seed N] [--scenario roomclear|nightbreach|rescue|quiet [--squad N] [--deal N]]
+//   bun run --preload ./tools/blitz/expose.ts tools/blitz/start.ts <level file> --out DIR [--seed N] [--seats 2] [--scenario roomclear|nightbreach|rescue|quiet [--squad N] [--deal N]]
 //   bun run --preload ./tools/blitz/expose.ts tools/blitz/start.ts --mission <id> --out DIR [--seed N]     a row of the mission list, as a click on it starts it
 //   bun run --preload ./tools/blitz/expose.ts tools/blitz/start.ts --missions                              the list's rows: id, the file the page loads, the link
 // Stands the level headless on the page's stand through the one stand-up (src/host/standup.ts standGame), with the game's own die seeded BEFORE the Game is
@@ -16,7 +16,7 @@ import { writeFileSync, mkdirSync, readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 const argv = process.argv.slice(2), arg = (n: string, d: string) => { const i = argv.indexOf(n); return i < 0 ? d : argv[i + 1]; };
 const say = (s = '') => process.stdout.write(s + '\n');
-const outDir = arg('--out', ''), SEED = +arg('--seed', '20942'), SCN = arg('--scenario', ''), MISSION = arg('--mission', '');
+const outDir = arg('--out', ''), SEED = +arg('--seed', '20942'), SEATS = +arg('--seats', '1'), SCN = arg('--scenario', ''), MISSION = arg('--mission', '');
 let file = argv[0], spec: any = null;
 if (STAND !== 'shipped') { say(`start.ts: the stand is '${STAND}': the Rust start is the page's, so this compare is too`); process.exit(64); }
 if (MISSION || argv.includes('--missions')) {
@@ -47,7 +47,7 @@ const { standUp, ROOT } = await import('../qa/headless.ts');
 const path = existsSync(file) ? file : resolve(ROOT, 'levels', file);
 const level = loadLevel(parseLevelData(readFileSync(path, 'utf8')));
 dressAll(false);
-const W = await standUp({ level, seed: SEED });
+const W = await standUp({ level, seed: SEED, seats: SEATS });
 const g: any = W.game;
 if (SCN && !['roomclear', 'nightbreach', 'rescue', 'quiet'].includes(SCN)) { say(`start.ts: no scenario kind '${SCN}' (roomclear | nightbreach | rescue | quiet)`); process.exit(64); }
 if (SCN && !spec) { const deal = arg('--deal', ''); spec = { kind: SCN, squad: +arg('--squad', '4'), ...(deal !== '' ? { seed: +deal } : {}) }; }
@@ -60,5 +60,5 @@ g.sim.settle(g);
 const w: Uint32Array = g.sim.w;
 writeFileSync(`${outDir}/c1.bin`, exportGame(g, knobRegistry()));
 writeFileSync(`${outDir}/s0.bin`, new Uint8Array(w.buffer, w.byteOffset, w.byteLength).slice());
-say(`start.ts: ${path} stood on the page's stand, die seed ${SEED}${spec ? `, ${spec.kind} with ${spec.squad}${spec.seed !== undefined ? `, deal ${spec.seed}` : ''}` : ''}: ${g.guards.length} guards, ${level.boxes.length} boxes, ${g.doors.list.length} doors; die n=${g.dice?.n ?? '?'}; state in ${outDir}/c1.bin`);
+say(`start.ts: ${path} stood on the page's stand, die seed ${SEED}${SEATS > 1 ? `, ${SEATS} seats` : ''}${spec ? `, ${spec.kind} with ${spec.squad}${spec.seed !== undefined ? `, deal ${spec.seed}` : ''}` : ''}: ${g.guards.length} guards, ${level.boxes.length} boxes, ${g.doors.list.length} doors; die n=${g.dice?.n ?? '?'}; state in ${outDir}/c1.bin`);
 process.exit(0);
