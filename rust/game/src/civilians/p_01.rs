@@ -43,10 +43,6 @@ fn own_spots_of(sc: &crate::scene_scenarios::LevelScenarios) -> crate::civilians
     crate::civilians::CivSpots { phones: stands(&q.phones), exits: stands(&q.wayouts) }
 }
 
-/// (civilians.ts withDice) Has no `g` to hand `fn_` or to reach the die with: make_civilian, its one caller, goes through with_dice_on.
-pub fn with_dice<T: Clone + core::fmt::Debug>(seed: f64, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
-    todo!("needs: g as with_dice's first parameter; with_dice_on is the body")
-}
 
 /// Runs `fn_` with a private seeded die in the game die's place, so a civilian's construction moves the game's stream by no draw.   (civilians.ts withDice)
 fn with_dice_on<T>(g: &mut Game, seed: f64, fn_: &mut dyn FnMut(&mut Game) -> T) -> T {

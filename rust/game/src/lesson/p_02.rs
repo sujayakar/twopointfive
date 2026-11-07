@@ -250,15 +250,7 @@ pub fn lesson_count(g: &mut crate::game::Game, s: &mut crate::lesson::StepSeen) 
     }
 }
 
-/// Not translated: a clone of Game replaces it (conventions 6).   (lesson.ts Lesson.snapshot)
-pub fn lesson_snapshot(g: &mut crate::game::Game) -> crate::lesson::LessonSnap {
-    todo!("not translated: a checkpoint is a clone of Game")
-}
 
-/// Not translated: a clone of Game replaces it (conventions 6); see notes, Decisions, for what the load must still do.   (lesson.ts Lesson.restore)
-pub fn lesson_restore(g: &mut crate::game::Game, s: Option<&crate::lesson::LessonSnap>) {
-    todo!("not translated: a checkpoint is a clone of Game")
-}
 
 /// The run is over, whichever scenario it was.   (lesson.ts Lesson.over)
 pub fn lesson_over(g: &mut crate::game::Game) -> bool {
@@ -307,10 +299,6 @@ pub fn lesson_objective(g: &mut crate::game::Game) -> Option<crate::lesson::Less
     Some(crate::lesson::LessonObjective { text, pos })
 }
 
-/// Not translated: host work, the debugger's `window.__lesson` alone reads it.   (lesson.ts Lesson.summary)
-pub fn lesson_summary(g: &mut crate::game::Game) -> String {
-    todo!("not translated: host work")
-}
 
 /// One line of the lesson's own log, kept to its last rows.   (lesson.ts Lesson.note)
 pub fn lesson_note(g: &mut crate::game::Game, s: &str) {
@@ -333,10 +321,6 @@ pub fn step_line(g: &mut crate::game::Game, t: &crate::scene_scenarios::LessonSt
     lesson_line(g, &line)
 }
 
-/// Not translated: tooling, tools/qa/lesson-check.ts and the probes.   (lesson.ts checkLesson)
-pub fn check_lesson(g: &mut crate::game::Game) -> Vec<String> {
-    todo!("not translated: tooling")
-}
 
 /// The taught player is down (`who(g).down`).
 fn who_down(g: &mut Game) -> bool {

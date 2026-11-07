@@ -70,21 +70,16 @@ fn mem_no(g: &mut Game, run: &str) -> Option<String> {
     None
 }
 
-/// Checkpoints.load of a key not on the shelf: `read` finds nothing or an empty text, gone; else the file's own load. (src/game/savestate.ts:1171, :1169)
+/// Checkpoints.load of a key not on the shelf (src/game/savestate.ts:1171). A file's save is the host's: its store is a boundary that holds nothing on
+/// this side (`save_store_get`), and `read` of a key with nothing behind it is "gone". The host that keeps saves hands them over on the shelf.
 fn load_off_shelf(g: &mut Game, key: &str) -> Option<String> {
-    match save_store_get(g, key) {
-        Some(raw) if !raw.is_empty() => crate::savestate::checkpoints_load(g, &crate::savestate::CheckpointsLoadFrom::Text(String::from(key))),
-        _ => Some(String::from("that checkpoint is gone")),
-    }
+    Some(String::from("that checkpoint is gone"))
 }
 
-/// Every stored checkpoint, newest first: the index's rows (no text under the index: none), then the shelf's. (src/game/savestate.ts:1063 Checkpoints.slots, :1055 index)
+/// Every stored checkpoint, newest first (src/game/savestate.ts:1063 Checkpoints.slots). This game is the one "stepped elsewhere, which keeps its own
+/// saves" (SNAPS.own): the store's index is another page's and is not read; the rows are the shelf's.
 fn slots_now(g: &mut Game) -> Vec<crate::savestate::SlotInfo> {
-    let mut all: Vec<crate::savestate::SlotInfo> = match save_store_get(g, &crate::savestate::key_index()) {
-        Some(raw) if !raw.is_empty() => crate::savestate::checkpoints_index(g).slots.values().cloned().collect(),
-        _ => Vec::new(),
-    };
-    all.extend(g.saves.shelf.m.values().map(|e| e.info.clone()));
+    let mut all: Vec<crate::savestate::SlotInfo> = g.saves.shelf.m.values().map(|e| e.info.clone()).collect();
     js::sort_by(&mut all, |a, b| b.saved_at - a.saved_at);
     all
 }

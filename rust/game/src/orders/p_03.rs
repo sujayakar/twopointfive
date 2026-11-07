@@ -166,7 +166,8 @@ fn seam_arm_label(g: &mut Game, arm: &OrderLabel, t: &OrderTarget) -> String {
             let men = recipients_of(g, t); let w = crate::doortools::door_tools_waiting_words(g, &men);
             if w.is_empty() { String::from("go") } else { format!("go · {}", w) }
         }
-        other => todo!("an OrderLabel arm with no body here: {:?}", other),
+        // (the arms order_label takes itself, named so that a new row of the enum is a build error here and never a stop in play)
+        OrderLabel::Text { .. } | OrderLabel::Cover | OrderLabel::WallRow | OrderLabel::ThrowRow { .. } | OrderLabel::ThrowOpen | OrderLabel::Shell40 | OrderLabel::Work | OrderLabel::Smoke | OrderLabel::PairGo => unreachable!("order_label answers this arm itself"),
     }
 }
 /// Err(None): false, Err(Some): the word for why not
@@ -243,7 +244,8 @@ fn seam_arm_valid(g: &mut Game, arm: &OrderValid, t: &OrderTarget, men: &[GuardI
             let (now, was) = (String::from("nobody's holding that door."), String::from("nobody is holding that door."));
             Err(Some(crate::words::wg(g, &now, &was)))
         }
-        other => todo!("an OrderValid arm with no body here: {:?}", other),
+        // (the arms order_valid takes itself, named so that a new row of the enum is a build error here and never a stop in play)
+        OrderValid::Move | OrderValid::Stack | OrderValid::WallRow | OrderValid::ShutDoor | OrderValid::ThrowRow { .. } | OrderValid::Wand | OrderValid::Shell40 | OrderValid::Work | OrderValid::Smoke | OrderValid::PairTake | OrderValid::PairWatch | OrderValid::PairGo => unreachable!("order_valid answers this arm itself"),
     }
 }
 /// Some: refused, in those words
@@ -293,7 +295,8 @@ fn seam_arm_issue(g: &mut Game, arm: &OrderIssue, men: &[GuardId], t: &OrderTarg
         OrderIssue::PairTake { mode } => crate::pairorders::p_01::take_issue(g, *mode, men, t),
         OrderIssue::PairWatch => crate::pairorders::p_01::watch_issue(g, men, t),
         OrderIssue::PairDark => crate::pairorders::p_01::dark_issue(g, men, t),
-        other => todo!("an OrderIssue arm with no body here (Shell40, Smoke, PairTake, PairWatch, PairDark: orders.ts:877): {:?}", other),
+        // (the arms order_issue takes itself, named so that a new row of the enum is a build error here and never a stop in play)
+        OrderIssue::Nothing | OrderIssue::Move | OrderIssue::Stack | OrderIssue::Cover | OrderIssue::FallIn | OrderIssue::Hold | OrderIssue::Silent | OrderIssue::Loud | OrderIssue::ShutDoor | OrderIssue::ThrowRow { .. } | OrderIssue::WallRow | OrderIssue::Wand | OrderIssue::Work | OrderIssue::PairGo => unreachable!("order_issue answers this arm itself"),
     }
 }
 

@@ -263,15 +263,7 @@ fn copy_to_gpu(g: &mut Game) {
     }
 }
 
-/// Not translated: a save is a clone of Game (conventions 6). No part calls it. (airDust.ts AirDust.snapshot)
-pub fn air_dust_snapshot(g: &mut crate::game::Game) -> Option<crate::air_dust::AirDustSnap> {
-    todo!("not translated: checkpoints are a clone of Game")
-}
 
-/// Not translated: a save is a clone of Game (conventions 6). No part calls it. (airDust.ts AirDust.restore)
-pub fn air_dust_restore(g: &mut crate::game::Game, sn: Option<&crate::air_dust::AirDustSnap>) {
-    todo!("not translated: checkpoints are a clone of Game")
-}
 
 /// One line for the debugger. (airDust.ts AirDust.summary)
 pub fn air_dust_summary(g: &mut crate::game::Game) -> String {
