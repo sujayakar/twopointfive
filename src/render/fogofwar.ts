@@ -160,6 +160,9 @@ export class FogPass {
     return { main, pre };
   }
   private put(mode: FogPassMode, P: FogProgram, into: Record<string, unknown>) { if (mode === 'old') into.pipeOld = P.main; else { into.pipeHint = P.main; into.pipePre = P.pre; } }
+  /** ASKED FOR AHEAD OF ITS FIRST USE (engine.ts warmFirstUse, once a page's boot is in): the pass made its program the first frame a mission drew the fog,
+   *  so the title never built it and the first squad mission of a visit compiled it under play. Nothing waits for it. */
+  warm(mode: FogPassMode = 'hint') { this.build(mode); }
   private build(mode: FogPassMode = 'hint') {
     if (this.built[mode] || this.building[mode] || this.bad[mode]) return;
     this.building[mode] = true; this.resources();
@@ -293,6 +296,8 @@ export class FogSight implements CutSwappable {
     const d = this.device;
     return d.createComputePipelineAsync({ label, layout: d.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.layout] }), compute: { module: makeShader(d, text, label), entryPoint: 'main' } });
   }
+  /** asked for ahead of its first use, like the pass's own (FogPass.warm) */
+  warm() { this.build(); }
   private build() {
     if (this.pipe || this.building || this.bad) return;
     this.building = true;

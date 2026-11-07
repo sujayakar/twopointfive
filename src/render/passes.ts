@@ -128,6 +128,8 @@ export class LightingPasses implements CutSwappable {
   /** FOG OF WAR (render/fogofwar.ts; engine mirrors the game's FogFrame.on before resize — setFog): after GBAA and before the resolve, pixels none of the team's eyes see are dimmed in place
    *  (hdr is a storage texture that can be copied from then, as under GBAA). Off = no texture, no pass, hdr as it was. */
   fogOn = false; fogFrame: FogFrame | null = null; private fogPass: FogPass | null = null;
+  /** the fog of war's pass asked for ahead of the first frame that draws it (engine.ts warmFirstUse) */
+  warmFog() { (this.fogPass ??= new FogPass(this.device, this.sceneLayout)).warm(); }
   setFog(on: boolean) { if (on !== this.fogOn) { const was = this.hdrUsage(); this.fogOn = on; if (this.hdrUsage() !== was) this.compStale = true; if (!on) this.fogPass?.release(); } }   // (the composite's set is re-made only when the fog changes what hdr must be: with GBAA on — every tier's default — hdr is already a storage texture that can be copied from, and re-making the set made a second hdr / hdrCopy / sharpE pair of the same description, 53 MB at high, beside the first one parked for a minute and a half)
   /** the outline in the dark (render/outline.ts; the engine mirrors its frame each render, null under a debug view): its pass is made the first frame the row is on */
   outline: OutlineFrame | null = null; private outlinePass: OutlinePass | null = null;
