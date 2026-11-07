@@ -1957,17 +1957,16 @@ export function puppetRows(C: Ctx) {
     { let c = o.nav; if (!c || typeof c !== 'object') c = o.nav = C.made("crate::scene_collision::NavGrid"); f_scene_collision_NavGrid(c, m + 1); }   // nav
     { let c = o.sound; if (!c || typeof c !== 'object') c = o.sound = C.made("crate::scene_collision::SoundPaths"); f_scene_collision_SoundPaths(c, m + 5); }   // sound
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const t = T_BoxId(); let a = o.boxes; if (a === null || a === undefined) { if (L || a === undefined) a = o.boxes = []; } if (a && Array.isArray(a) && (a.length === 0 || typeof a[0] !== 'number')) { for (let i = 0; i < L; i++) { const v = dv.getUint32(C.p, true); C.p += 4; const r = t[v]; if (a[i] !== r) a[i] = r; } if (a.length !== L) a.length = L; } else if (a) { for (let i = 0; i < L; i++) { a[i] = dv.getUint32(C.p, true); C.p += 4; } if (a.length !== L) a.length = L; } }   // boxes
-    { let c = o.mirror; if (!c || typeof c !== 'object') c = o.mirror = C.made("crate::scene_box_mirror::BoxMirror"); f_scene_box_mirror_BoxMirror(c, m + 8); }   // mirror
-    if (b[MP + ((m + 65) >> 3)] & (1 << ((m + 65) & 7))) { const v = b[C.p++] !== 0; const c = o.windowed; if (typeof c === 'boolean') { if (c !== v) o.windowed = v; } else if (c === null) { if (v) o.windowed = v; } else if (typeof c === 'object') { if (!v) o.windowed = null; } else if (!(c === undefined && !v)) o.windowed = v; }   // windowed
-    if (b[MP + ((m + 66) >> 3)] & (1 << ((m + 66) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.stamp; if (a === null || a === undefined) { if (L || a === undefined) a = o.stamp = new Int32Array(L); } else if (ArrayBuffer.isView(a) && (a as any).length !== L) a = o.stamp = new (a as any).constructor(L); if (L) for (let i = 0; i < L; i++) { const x = dv.getInt32(C.p + 4 * i, true); if (!Object.is(a[i], x)) a[i] = x; } if (a && !ArrayBuffer.isView(a) && a.length !== L) a.length = L; C.p += 4 * L; }   // stamp
-    if (b[MP + ((m + 67) >> 3)] & (1 << ((m + 67) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.stampId; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.stampId = v !== 0 as any; else o.stampId = v; } }   // stamp_id
-    if (b[MP + ((m + 68) >> 3)] & (1 << ((m + 68) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.trigYaw; if (a === null || a === undefined) { if (L || a === undefined) a = o.trigYaw = []; } else if (ArrayBuffer.isView(a) && (a as any).length !== L) a = o.trigYaw = new (a as any).constructor(L); if (L) for (let i = 0; i < L; i++) { const x = dv.getFloat64(C.p + 8 * i, true); if (!Object.is(a[i], x)) a[i] = x; } if (a && !ArrayBuffer.isView(a) && a.length !== L) a.length = L; C.p += 8 * L; }   // trig_yaw
-    if (b[MP + ((m + 69) >> 3)] & (1 << ((m + 69) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.trigCos; if (a === null || a === undefined) { if (L || a === undefined) a = o.trigCos = []; } else if (ArrayBuffer.isView(a) && (a as any).length !== L) a = o.trigCos = new (a as any).constructor(L); if (L) for (let i = 0; i < L; i++) { const x = dv.getFloat64(C.p + 8 * i, true); if (!Object.is(a[i], x)) a[i] = x; } if (a && !ArrayBuffer.isView(a) && a.length !== L) a.length = L; C.p += 8 * L; }   // trig_cos
-    if (b[MP + ((m + 70) >> 3)] & (1 << ((m + 70) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.trigSin; if (a === null || a === undefined) { if (L || a === undefined) a = o.trigSin = []; } else if (ArrayBuffer.isView(a) && (a as any).length !== L) a = o.trigSin = new (a as any).constructor(L); if (L) for (let i = 0; i < L; i++) { const x = dv.getFloat64(C.p + 8 * i, true); if (!Object.is(a[i], x)) a[i] = x; } if (a && !ArrayBuffer.isView(a) && a.length !== L) a.length = L; C.p += 8 * L; }   // trig_sin
-    if (b[MP + ((m + 71) >> 3)] & (1 << ((m + 71) & 7))) C.slow(269, o);   // pane_rule
-    if (b[MP + ((m + 72) >> 3)] & (1 << ((m + 72) & 7))) C.slow(270, o);   // pane_rows
-    if (b[MP + ((m + 73) >> 3)] & (1 << ((m + 73) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const t = T_BoxId(); let a = o.dynamicBoxes; if (a === null || a === undefined) { if (L || a === undefined) a = o.dynamicBoxes = []; } if (a && Array.isArray(a) && (a.length === 0 || typeof a[0] !== 'number')) { for (let i = 0; i < L; i++) { const v = dv.getUint32(C.p, true); C.p += 4; const r = t[v]; if (a[i] !== r) a[i] = r; } if (a.length !== L) a.length = L; } else if (a) { for (let i = 0; i < L; i++) { a[i] = dv.getUint32(C.p, true); C.p += 4; } if (a.length !== L) a.length = L; } }   // dynamic_boxes
-    { let c = o.lampQ; if (!c || typeof c !== 'object') c = o.lampQ = C.made("crate::scene_collision::StaticCollisionLampQ"); f_scene_collision_StaticCollisionLampQ(c, m + 74); }   // lamp_q
+    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { const v = b[C.p++] !== 0; const c = o.windowed; if (typeof c === 'boolean') { if (c !== v) o.windowed = v; } else if (c === null) { if (v) o.windowed = v; } else if (typeof c === 'object') { if (!v) o.windowed = null; } else if (!(c === undefined && !v)) o.windowed = v; }   // windowed
+    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.stamp; if (a === null || a === undefined) { if (L || a === undefined) a = o.stamp = new Int32Array(L); } else if (ArrayBuffer.isView(a) && (a as any).length !== L) a = o.stamp = new (a as any).constructor(L); if (L) for (let i = 0; i < L; i++) { const x = dv.getInt32(C.p + 4 * i, true); if (!Object.is(a[i], x)) a[i] = x; } if (a && !ArrayBuffer.isView(a) && a.length !== L) a.length = L; C.p += 4 * L; }   // stamp
+    if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.stampId; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.stampId = v !== 0 as any; else o.stampId = v; } }   // stamp_id
+    if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.trigYaw; if (a === null || a === undefined) { if (L || a === undefined) a = o.trigYaw = []; } else if (ArrayBuffer.isView(a) && (a as any).length !== L) a = o.trigYaw = new (a as any).constructor(L); if (L) for (let i = 0; i < L; i++) { const x = dv.getFloat64(C.p + 8 * i, true); if (!Object.is(a[i], x)) a[i] = x; } if (a && !ArrayBuffer.isView(a) && a.length !== L) a.length = L; C.p += 8 * L; }   // trig_yaw
+    if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.trigCos; if (a === null || a === undefined) { if (L || a === undefined) a = o.trigCos = []; } else if (ArrayBuffer.isView(a) && (a as any).length !== L) a = o.trigCos = new (a as any).constructor(L); if (L) for (let i = 0; i < L; i++) { const x = dv.getFloat64(C.p + 8 * i, true); if (!Object.is(a[i], x)) a[i] = x; } if (a && !ArrayBuffer.isView(a) && a.length !== L) a.length = L; C.p += 8 * L; }   // trig_cos
+    if (b[MP + ((m + 13) >> 3)] & (1 << ((m + 13) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.trigSin; if (a === null || a === undefined) { if (L || a === undefined) a = o.trigSin = []; } else if (ArrayBuffer.isView(a) && (a as any).length !== L) a = o.trigSin = new (a as any).constructor(L); if (L) for (let i = 0; i < L; i++) { const x = dv.getFloat64(C.p + 8 * i, true); if (!Object.is(a[i], x)) a[i] = x; } if (a && !ArrayBuffer.isView(a) && a.length !== L) a.length = L; C.p += 8 * L; }   // trig_sin
+    if (b[MP + ((m + 14) >> 3)] & (1 << ((m + 14) & 7))) C.slow(269, o);   // pane_rule
+    if (b[MP + ((m + 15) >> 3)] & (1 << ((m + 15) & 7))) C.slow(270, o);   // pane_rows
+    if (b[MP + ((m + 16) >> 3)] & (1 << ((m + 16) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const t = T_BoxId(); let a = o.dynamicBoxes; if (a === null || a === undefined) { if (L || a === undefined) a = o.dynamicBoxes = []; } if (a && Array.isArray(a) && (a.length === 0 || typeof a[0] !== 'number')) { for (let i = 0; i < L; i++) { const v = dv.getUint32(C.p, true); C.p += 4; const r = t[v]; if (a[i] !== r) a[i] = r; } if (a.length !== L) a.length = L; } else if (a) { for (let i = 0; i < L; i++) { a[i] = dv.getUint32(C.p, true); C.p += 4; } if (a.length !== L) a.length = L; } }   // dynamic_boxes
+    { let c = o.lampQ; if (!c || typeof c !== 'object') c = o.lampQ = C.made("crate::scene_collision::StaticCollisionLampQ"); f_scene_collision_StaticCollisionLampQ(c, m + 17); }   // lamp_q
   }
   function f_sensors_Sensors(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(271, o);   // own_vals
@@ -2939,96 +2938,95 @@ export function puppetRows(C: Ctx) {
   function f_game_Mods(o: any, m: number) {
     f_scene_cut_SceneCutMod(o, m + 0);   // scene_cut
     f_thinline_ThinlineMod(o, m + 1);   // thinline
-    f_scene_box_mirror_SceneBoxMirrorMod(o, m + 3);   // scene_box_mirror
-    f_scene_collision_SceneCollisionMod(o, m + 8);   // scene_collision
-    f_anim_skeleton_AnimSkeletonMod(o, m + 14);   // anim_skeleton
-    f_character_CharacterMod(o, m + 15);   // character
-    f_opening_OpeningMod(o, m + 17);   // opening
-    f_kitload_KitloadMod(o, m + 18);   // kitload
-    f_holdfire_HoldfireMod(o, m + 19);   // holdfire
-    f_picture_PictureMod(o, m + 21);   // picture
-    f_fire_FireMod(o, m + 22);   // fire
-    f_winbars_WinbarsMod(o, m + 23);   // winbars
-    f_glasspen_GlasspenMod(o, m + 24);   // glasspen
-    f_doorway_DoorwayMod(o, m + 25);   // doorway
-    f_nightbreach_NightbreachMod(o, m + 27);   // nightbreach
-    f_handleside_HandlesideMod(o, m + 28);   // handleside
-    f_runner_RunnerMod(o, m + 32);   // runner
-    f_netquietfeed_NetquietfeedMod(o, m + 33);   // netquietfeed
-    f_netquiet_NetquietMod(o, m + 35);   // netquiet
-    f_laststand_LaststandMod(o, m + 37);   // laststand
-    f_stackroom_StackroomMod(o, m + 38);   // stackroom
-    f_rearwatch_RearwatchMod(o, m + 39);   // rearwatch
-    f_coverfire_CoverfireMod(o, m + 40);   // coverfire
-    f_wallreact_WallreactMod(o, m + 41);   // wallreact
-    f_tactics_TacticsMod(o, m + 42);   // tactics
-    f_lanes_LanesMod(o, m + 44);   // lanes
-    f_digin_DiginMod(o, m + 45);   // digin
-    f_pressure_PressureMod(o, m + 48);   // pressure
-    f_difficulty_DifficultyMod(o, m + 49);   // difficulty
-    f_quietfog_QuietfogMod(o, m + 56);   // quietfog
-    f_calmtorch_CalmtorchMod(o, m + 57);   // calmtorch
-    f_buddy_BuddyMod(o, m + 58);   // buddy
-    f_powerout_PoweroutMod(o, m + 59);   // powerout
-    f_darkfoe_DarkfoeMod(o, m + 60);   // darkfoe
-    f_whistle_WhistleMod(o, m + 61);   // whistle
-    f_attention_AttentionMod(o, m + 65);   // attention
-    f_doze_DozeMod(o, m + 67);   // doze
-    f_needs_NeedsMod(o, m + 68);   // needs
-    f_gunwall_GunwallMod(o, m + 71);   // gunwall
-    f_lightswitch_LightswitchMod(o, m + 73);   // lightswitch
-    f_stalk_StalkMod(o, m + 74);   // stalk
-    f_tapstep_TapstepMod(o, m + 75);   // tapstep
-    f_darkdoor_DarkdoorMod(o, m + 76);   // darkdoor
-    f_startle_StartleMod(o, m + 78);   // startle
-    f_flinch_FlinchMod(o, m + 79);   // flinch
-    f_rescue_RescueMod(o, m + 80);   // rescue
-    f_rescuecheck_RescuecheckMod(o, m + 81);   // rescuecheck
-    f_seenwalk_SeenwalkMod(o, m + 82);   // seenwalk
-    f_he40_He40Mod(o, m + 83);   // he40
-    f_samlook_SamlookMod(o, m + 84);   // samlook
-    f_irlight_IrlightMod(o, m + 85);   // irlight
-    f_nvg_NvgMod(o, m + 86);   // nvg
-    f_irlaser_IrlaserMod(o, m + 88);   // irlaser
-    f_gunhold_GunholdMod(o, m + 89);   // gunhold
-    f_clearline_ClearlineMod(o, m + 92);   // clearline
-    f_unseen_UnseenMod(o, m + 96);   // unseen
-    f_squadsmoke_SquadsmokeMod(o, m + 98);   // squadsmoke
-    f_squad40_Squad40Mod(o, m + 100);   // squad40
-    f_squadthrow_SquadthrowMod(o, m + 102);   // squadthrow
-    f_kitanim_KitanimMod(o, m + 105);   // kitanim
-    f_smokebreak_SmokebreakMod(o, m + 106);   // smokebreak
-    f_showwhy_ShowwhyMod(o, m + 107);   // showwhy
-    f_fireline_FirelineMod(o, m + 110);   // fireline
-    f_doorforce_DoorforceMod(o, m + 112);   // doorforce
-    f_glassbreak_GlassbreakMod(o, m + 113);   // glassbreak
-    f_glass_GlassMod(o, m + 114);   // glass
-    f_enemysquads_EnemysquadsMod(o, m + 115);   // enemysquads
-    f_morale_MoraleMod(o, m + 118);   // morale
-    f_doortools_DoortoolsMod(o, m + 122);   // doortools
-    f_shotgun_ShotgunMod(o, m + 123);   // shotgun
-    f_player_PlayerMod(o, m + 124);   // player
-    f_close_CloseMod(o, m + 128);   // close
-    f_spotted_SpottedMod(o, m + 131);   // spotted
-    f_pairorders_PairordersMod(o, m + 134);   // pairorders
-    f_pairup_PairupMod(o, m + 135);   // pairup
-    f_sneak_SneakMod(o, m + 136);   // sneak
-    f_silent_SilentMod(o, m + 141);   // silent
-    f_snow_bog_SnowBogMod(o, m + 144);   // snow_bog
-    f_frag_FragMod(o, m + 145);   // frag
-    f_teampace_TeampaceMod(o, m + 150);   // teampace
-    f_squad_SquadMod(o, m + 154);   // squad
-    f_workthings_WorkthingsMod(o, m + 156);   // workthings
-    f_hours_HoursMod(o, m + 157);   // hours
-    f_kit_KitMod(o, m + 160);   // kit
-    f_wandorder_WandorderMod(o, m + 168);   // wandorder
-    f_fogofwar_FogofwarMod(o, m + 169);   // fogofwar
-    f_guards_GuardsMod(o, m + 170);   // guards
-    f_dialogue_DialogueMod(o, m + 183);   // dialogue
-    f_civilians_CiviliansMod(o, m + 189);   // civilians
-    f_orders_OrdersMod(o, m + 192);   // orders
-    f_particle_fx_ParticleFxMod(o, m + 193);   // particle_fx
-    f_weapons_WeaponsMod(o, m + 194);   // weapons
+    f_scene_collision_SceneCollisionMod(o, m + 3);   // scene_collision
+    f_anim_skeleton_AnimSkeletonMod(o, m + 9);   // anim_skeleton
+    f_character_CharacterMod(o, m + 10);   // character
+    f_opening_OpeningMod(o, m + 12);   // opening
+    f_kitload_KitloadMod(o, m + 13);   // kitload
+    f_holdfire_HoldfireMod(o, m + 14);   // holdfire
+    f_picture_PictureMod(o, m + 16);   // picture
+    f_fire_FireMod(o, m + 17);   // fire
+    f_winbars_WinbarsMod(o, m + 18);   // winbars
+    f_glasspen_GlasspenMod(o, m + 19);   // glasspen
+    f_doorway_DoorwayMod(o, m + 20);   // doorway
+    f_nightbreach_NightbreachMod(o, m + 22);   // nightbreach
+    f_handleside_HandlesideMod(o, m + 23);   // handleside
+    f_runner_RunnerMod(o, m + 27);   // runner
+    f_netquietfeed_NetquietfeedMod(o, m + 28);   // netquietfeed
+    f_netquiet_NetquietMod(o, m + 30);   // netquiet
+    f_laststand_LaststandMod(o, m + 32);   // laststand
+    f_stackroom_StackroomMod(o, m + 33);   // stackroom
+    f_rearwatch_RearwatchMod(o, m + 34);   // rearwatch
+    f_coverfire_CoverfireMod(o, m + 35);   // coverfire
+    f_wallreact_WallreactMod(o, m + 36);   // wallreact
+    f_tactics_TacticsMod(o, m + 37);   // tactics
+    f_lanes_LanesMod(o, m + 39);   // lanes
+    f_digin_DiginMod(o, m + 40);   // digin
+    f_pressure_PressureMod(o, m + 43);   // pressure
+    f_difficulty_DifficultyMod(o, m + 44);   // difficulty
+    f_quietfog_QuietfogMod(o, m + 51);   // quietfog
+    f_calmtorch_CalmtorchMod(o, m + 52);   // calmtorch
+    f_buddy_BuddyMod(o, m + 53);   // buddy
+    f_powerout_PoweroutMod(o, m + 54);   // powerout
+    f_darkfoe_DarkfoeMod(o, m + 55);   // darkfoe
+    f_whistle_WhistleMod(o, m + 56);   // whistle
+    f_attention_AttentionMod(o, m + 60);   // attention
+    f_doze_DozeMod(o, m + 62);   // doze
+    f_needs_NeedsMod(o, m + 63);   // needs
+    f_gunwall_GunwallMod(o, m + 66);   // gunwall
+    f_lightswitch_LightswitchMod(o, m + 68);   // lightswitch
+    f_stalk_StalkMod(o, m + 69);   // stalk
+    f_tapstep_TapstepMod(o, m + 70);   // tapstep
+    f_darkdoor_DarkdoorMod(o, m + 71);   // darkdoor
+    f_startle_StartleMod(o, m + 73);   // startle
+    f_flinch_FlinchMod(o, m + 74);   // flinch
+    f_rescue_RescueMod(o, m + 75);   // rescue
+    f_rescuecheck_RescuecheckMod(o, m + 76);   // rescuecheck
+    f_seenwalk_SeenwalkMod(o, m + 77);   // seenwalk
+    f_he40_He40Mod(o, m + 78);   // he40
+    f_samlook_SamlookMod(o, m + 79);   // samlook
+    f_irlight_IrlightMod(o, m + 80);   // irlight
+    f_nvg_NvgMod(o, m + 81);   // nvg
+    f_irlaser_IrlaserMod(o, m + 83);   // irlaser
+    f_gunhold_GunholdMod(o, m + 84);   // gunhold
+    f_clearline_ClearlineMod(o, m + 87);   // clearline
+    f_unseen_UnseenMod(o, m + 91);   // unseen
+    f_squadsmoke_SquadsmokeMod(o, m + 93);   // squadsmoke
+    f_squad40_Squad40Mod(o, m + 95);   // squad40
+    f_squadthrow_SquadthrowMod(o, m + 97);   // squadthrow
+    f_kitanim_KitanimMod(o, m + 100);   // kitanim
+    f_smokebreak_SmokebreakMod(o, m + 101);   // smokebreak
+    f_showwhy_ShowwhyMod(o, m + 102);   // showwhy
+    f_fireline_FirelineMod(o, m + 105);   // fireline
+    f_doorforce_DoorforceMod(o, m + 107);   // doorforce
+    f_glassbreak_GlassbreakMod(o, m + 108);   // glassbreak
+    f_glass_GlassMod(o, m + 109);   // glass
+    f_enemysquads_EnemysquadsMod(o, m + 110);   // enemysquads
+    f_morale_MoraleMod(o, m + 113);   // morale
+    f_doortools_DoortoolsMod(o, m + 117);   // doortools
+    f_shotgun_ShotgunMod(o, m + 118);   // shotgun
+    f_player_PlayerMod(o, m + 119);   // player
+    f_close_CloseMod(o, m + 123);   // close
+    f_spotted_SpottedMod(o, m + 126);   // spotted
+    f_pairorders_PairordersMod(o, m + 129);   // pairorders
+    f_pairup_PairupMod(o, m + 130);   // pairup
+    f_sneak_SneakMod(o, m + 131);   // sneak
+    f_silent_SilentMod(o, m + 136);   // silent
+    f_snow_bog_SnowBogMod(o, m + 139);   // snow_bog
+    f_frag_FragMod(o, m + 140);   // frag
+    f_teampace_TeampaceMod(o, m + 145);   // teampace
+    f_squad_SquadMod(o, m + 149);   // squad
+    f_workthings_WorkthingsMod(o, m + 151);   // workthings
+    f_hours_HoursMod(o, m + 152);   // hours
+    f_kit_KitMod(o, m + 155);   // kit
+    f_wandorder_WandorderMod(o, m + 163);   // wandorder
+    f_fogofwar_FogofwarMod(o, m + 164);   // fogofwar
+    f_guards_GuardsMod(o, m + 165);   // guards
+    f_dialogue_DialogueMod(o, m + 178);   // dialogue
+    f_civilians_CiviliansMod(o, m + 184);   // civilians
+    f_orders_OrdersMod(o, m + 187);   // orders
+    f_particle_fx_ParticleFxMod(o, m + 188);   // particle_fx
+    f_weapons_WeaponsMod(o, m + 189);   // weapons
   }
   function f_scene_cut_CutPlane(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const c = o.n; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.n = a; } } }   // n
@@ -4407,64 +4405,14 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(851, o);   // cache
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.now; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.now = v !== 0 as any; else o.now = v; } }   // now
   }
-  function f_scene_box_mirror_BoxMirror(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(852, o);   // x
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = b[C.p++] !== 0; const c = o.live; if (typeof c === 'boolean') { if (c !== v) o.live = v; } else if (c === null) { if (v) o.live = v; } else if (typeof c === 'object') { if (!v) o.live = null; } else if (!(c === undefined && !v)) o.live = v; }   // live
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = b[C.p++] !== 0; const c = o.lines; if (typeof c === 'boolean') { if (c !== v) o.lines = v; } else if (c === null) { if (v) o.lines = v; } else if (typeof c === 'object') { if (!v) o.lines = null; } else if (!(c === undefined && !v)) o.lines = v; }   // lines
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = b[C.p++] !== 0; const c = o.rays; if (typeof c === 'boolean') { if (c !== v) o.rays = v; } else if (c === null) { if (v) o.rays = v; } else if (typeof c === 'object') { if (!v) o.rays = null; } else if (!(c === undefined && !v)) o.rays = v; }   // rays
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = b[C.p++] !== 0; const c = o.circles; if (typeof c === 'boolean') { if (c !== v) o.circles = v; } else if (c === null) { if (v) o.circles = v; } else if (typeof c === 'object') { if (!v) o.circles = null; } else if (!(c === undefined && !v)) o.circles = v; }   // circles
-    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = b[C.p++] !== 0; const c = o.owes; if (typeof c === 'boolean') { if (c !== v) o.owes = v; } else if (c === null) { if (v) o.owes = v; } else if (typeof c === 'object') { if (!v) o.owes = null; } else if (!(c === undefined && !v)) o.owes = v; }   // owes
-    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(853, o);   // glass
-    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { if (b[C.p++]) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.sheetsIn; if (a === null || a === undefined) { if (L || a === undefined) a = o.sheetsIn = []; } else if (ArrayBuffer.isView(a) && (a as any).length !== L) a = o.sheetsIn = new (a as any).constructor(L); if (L) for (let i = 0; i < L; i++) { const x = dv.getFloat64(C.p + 8 * i, true); if (!Object.is(a[i], x)) a[i] = x; } if (a && !ArrayBuffer.isView(a) && a.length !== L) a.length = L; C.p += 8 * L; } else if (o.sheetsIn !== null) o.sheetsIn = null; }   // sheets_in
-    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.owed; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.owed = v !== 0 as any; else o.owed = v; } }   // owed
-    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { const v = b[C.p++] !== 0; const c = o.glassAngles; if (typeof c === 'boolean') { if (c !== v) o.glassAngles = v; } else if (c === null) { if (v) o.glassAngles = v; } else if (typeof c === 'object') { if (!v) o.glassAngles = null; } else if (!(c === undefined && !v)) o.glassAngles = v; }   // glass_angles
-    if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) { const v = b[C.p++] !== 0; const c = o.viewLengths; if (typeof c === 'boolean') { if (c !== v) o.viewLengths = v; } else if (c === null) { if (v) o.viewLengths = v; } else if (typeof c === 'object') { if (!v) o.viewLengths = null; } else if (!(c === undefined && !v)) o.viewLengths = v; }   // view_lengths
-    if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.glassN; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.glassN = v !== 0 as any; else o.glassN = v; } }   // glass_n
-    if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) { const v = b[C.p++] !== 0; const c = o.rowLines; if (typeof c === 'boolean') { if (c !== v) o.rowLines = v; } else if (c === null) { if (v) o.rowLines = v; } else if (typeof c === 'object') { if (!v) o.rowLines = null; } else if (!(c === undefined && !v)) o.rowLines = v; }   // row_lines
-    if (b[MP + ((m + 13) >> 3)] & (1 << ((m + 13) & 7))) { const v = b[C.p++] !== 0; const c = o.rowRays; if (typeof c === 'boolean') { if (c !== v) o.rowRays = v; } else if (c === null) { if (v) o.rowRays = v; } else if (typeof c === 'object') { if (!v) o.rowRays = null; } else if (!(c === undefined && !v)) o.rowRays = v; }   // row_rays
-    if (b[MP + ((m + 14) >> 3)] & (1 << ((m + 14) & 7))) { const v = b[C.p++] !== 0; const c = o.rowCircles; if (typeof c === 'boolean') { if (c !== v) o.rowCircles = v; } else if (c === null) { if (v) o.rowCircles = v; } else if (typeof c === 'object') { if (!v) o.rowCircles = null; } else if (!(c === undefined && !v)) o.rowCircles = v; }   // row_circles
-    if (b[MP + ((m + 15) >> 3)] & (1 << ((m + 15) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.listCap; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.listCap = v !== 0 as any; else o.listCap = v; } }   // list_cap
-    if (b[MP + ((m + 16) >> 3)] & (1 << ((m + 16) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.scratchLen; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.scratchLen = v !== 0 as any; else o.scratchLen = v; } }   // scratch_len
-    if (b[MP + ((m + 17) >> 3)] & (1 << ((m + 17) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.lampCap; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.lampCap = v !== 0 as any; else o.lampCap = v; } }   // lamp_cap
-    if (b[MP + ((m + 18) >> 3)] & (1 << ((m + 18) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.blobCap; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.blobCap = v !== 0 as any; else o.blobCap = v; } }   // blob_cap
-    if (b[MP + ((m + 19) >> 3)] & (1 << ((m + 19) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.windCap; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.windCap = v !== 0 as any; else o.windCap = v; } }   // wind_cap
-    if (b[MP + ((m + 20) >> 3)] & (1 << ((m + 20) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.navCap; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.navCap = v !== 0 as any; else o.navCap = v; } }   // nav_cap
-    if (b[MP + ((m + 21) >> 3)] & (1 << ((m + 21) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.lampSet; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.lampSet = v !== 0 as any; else o.lampSet = v; } }   // lamp_set
-    if (b[MP + ((m + 22) >> 3)] & (1 << ((m + 22) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.lampN; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.lampN = v !== 0 as any; else o.lampN = v; } }   // lamp_n
-    if (b[MP + ((m + 23) >> 3)] & (1 << ((m + 23) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.blobSet; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.blobSet = v !== 0 as any; else o.blobSet = v; } }   // blob_set
-    if (b[MP + ((m + 24) >> 3)] & (1 << ((m + 24) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.blobN; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.blobN = v !== 0 as any; else o.blobN = v; } }   // blob_n
-    if (b[MP + ((m + 25) >> 3)] & (1 << ((m + 25) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.ruleSet; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.ruleSet = v !== 0 as any; else o.ruleSet = v; } }   // rule_set
-    if (b[MP + ((m + 26) >> 3)] & (1 << ((m + 26) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.rulePanes; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.rulePanes = v !== 0 as any; else o.rulePanes = v; } }   // rule_panes
-    if (b[MP + ((m + 27) >> 3)] & (1 << ((m + 27) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.copy; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.copy = v !== 0 as any; else o.copy = v; } }   // copy
-    if (b[MP + ((m + 28) >> 3)] & (1 << ((m + 28) & 7))) { const v = b[C.p++] !== 0; const c = o.gridOver; if (typeof c === 'boolean') { if (c !== v) o.gridOver = v; } else if (c === null) { if (v) o.gridOver = v; } else if (typeof c === 'object') { if (!v) o.gridOver = null; } else if (!(c === undefined && !v)) o.gridOver = v; }   // grid_over
-    if (b[MP + ((m + 29) >> 3)] & (1 << ((m + 29) & 7))) { const v = b[C.p++] !== 0; const c = o.cellsWrote; if (typeof c === 'boolean') { if (c !== v) o.cellsWrote = v; } else if (c === null) { if (v) o.cellsWrote = v; } else if (typeof c === 'object') { if (!v) o.cellsWrote = null; } else if (!(c === undefined && !v)) o.cellsWrote = v; }   // cells_wrote
-    if (b[MP + ((m + 30) >> 3)] & (1 << ((m + 30) & 7))) C.slow(854, o);   // grid_of
-    if (b[MP + ((m + 31) >> 3)] & (1 << ((m + 31) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.used; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.used = v !== 0 as any; else o.used = v; } }   // used
-    { let c = o.caps; if (!c || typeof c !== 'object') c = o.caps = C.made("crate::scene_box_mirror::BoxMirrorCaps"); f_scene_box_mirror_BoxMirrorCaps(c, m + 32); }   // caps
-    if (b[MP + ((m + 42) >> 3)] & (1 << ((m + 42) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.thingsAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.thingsAt = v !== 0 as any; else o.thingsAt = v; } }   // things_at
-    if (b[MP + ((m + 43) >> 3)] & (1 << ((m + 43) & 7))) { const v = b[C.p++] !== 0; const c = o.thingsOk; if (typeof c === 'boolean') { if (c !== v) o.thingsOk = v; } else if (c === null) { if (v) o.thingsOk = v; } else if (typeof c === 'object') { if (!v) o.thingsOk = null; } else if (!(c === undefined && !v)) o.thingsOk = v; }   // things_ok
-    if (b[MP + ((m + 44) >> 3)] & (1 << ((m + 44) & 7))) { const v = b[C.p++] !== 0; const c = o.thingsAll; if (typeof c === 'boolean') { if (c !== v) o.thingsAll = v; } else if (c === null) { if (v) o.thingsAll = v; } else if (typeof c === 'object') { if (!v) o.thingsAll = null; } else if (!(c === undefined && !v)) o.thingsAll = v; }   // things_all
-    if (b[MP + ((m + 45) >> 3)] & (1 << ((m + 45) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.snowLen; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.snowLen = v !== 0 as any; else o.snowLen = v; } }   // snow_len
-    if (b[MP + ((m + 46) >> 3)] & (1 << ((m + 46) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.boxes; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.boxes = v !== 0 as any; else o.boxes = v; } }   // boxes
-    if (b[MP + ((m + 47) >> 3)] & (1 << ((m + 47) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.nTilted; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.nTilted = v !== 0 as any; else o.nTilted = v; } }   // n_tilted
-    if (b[MP + ((m + 48) >> 3)] & (1 << ((m + 48) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.epoch; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.epoch = v !== 0 as any; else o.epoch = v; } }   // epoch
-    if (b[MP + ((m + 49) >> 3)] & (1 << ((m + 49) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.putBacks; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.putBacks = v !== 0 as any; else o.putBacks = v; } }   // put_backs
-    if (b[MP + ((m + 50) >> 3)] & (1 << ((m + 50) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.cutOf; if (a === null || a === undefined) { if (L || a === undefined) a = o.cutOf = new Int32Array(L); } else if (ArrayBuffer.isView(a) && (a as any).length !== L) a = o.cutOf = new (a as any).constructor(L); if (L) for (let i = 0; i < L; i++) { const x = dv.getInt32(C.p + 4 * i, true); if (!Object.is(a[i], x)) a[i] = x; } if (a && !ArrayBuffer.isView(a) && a.length !== L) a.length = L; C.p += 4 * L; }   // cut_of
-    if (b[MP + ((m + 51) >> 3)] & (1 << ((m + 51) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.cutFree; if (a === null || a === undefined) { if (L || a === undefined) a = o.cutFree = []; } else if (ArrayBuffer.isView(a) && (a as any).length !== L) a = o.cutFree = new (a as any).constructor(L); if (L) for (let i = 0; i < L; i++) { const x = dv.getFloat64(C.p + 8 * i, true); if (!Object.is(a[i], x)) a[i] = x; } if (a && !ArrayBuffer.isView(a) && a.length !== L) a.length = L; C.p += 8 * L; }   // cut_free
-    if (b[MP + ((m + 52) >> 3)] & (1 << ((m + 52) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.cutNext; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.cutNext = v !== 0 as any; else o.cutNext = v; } }   // cut_next
-    if (b[MP + ((m + 53) >> 3)] & (1 << ((m + 53) & 7))) { if (b[C.p++]) { const L = dv.getUint32(C.p, true); C.p += 4; const t = T_BoxId(); let a = o.own; if (a === null || a === undefined) { if (L || a === undefined) a = o.own = []; } if (a && Array.isArray(a) && (a.length === 0 || typeof a[0] !== 'number')) { for (let i = 0; i < L; i++) { const v = dv.getUint32(C.p, true); C.p += 4; const r = t[v]; if (a[i] !== r) a[i] = r; } if (a.length !== L) a.length = L; } else if (a) { for (let i = 0; i < L; i++) { a[i] = dv.getUint32(C.p, true); C.p += 4; } if (a.length !== L) a.length = L; } } else if (o.own !== null) o.own = null; }   // own
-    if (b[MP + ((m + 54) >> 3)] & (1 << ((m + 54) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.ownLen; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.ownLen = v !== 0 as any; else o.ownLen = v; } }   // own_len
-    if (b[MP + ((m + 55) >> 3)] & (1 << ((m + 55) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.ownAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.ownAt = v !== 0 as any; else o.ownAt = v; } }   // own_at
-    if (b[MP + ((m + 56) >> 3)] & (1 << ((m + 56) & 7))) { const v = b[C.p++] !== 0; const c = o.played; if (typeof c === 'boolean') { if (c !== v) o.played = v; } else if (c === null) { if (v) o.played = v; } else if (typeof c === 'object') { if (!v) o.played = null; } else if (!(c === undefined && !v)) o.played = v; }   // played
-  }
   function f_scene_collision_StaticCollisionLampQ(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = b[C.p++] !== 0; const c = o.on; if (typeof c === 'boolean') { if (c !== v) o.on = v; } else if (c === null) { if (v) o.on = v; } else if (typeof c === 'object') { if (!v) o.on = null; } else if (!(c === undefined && !v)) o.on = v; }   // on
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { if (b[C.p++]) { const c = o.P; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.P = a; } } } else if (o.P !== null) o.P = null; }   // p
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.stands; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.stands = v !== 0 as any; else o.stands = v; } }   // stands
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(855, o);   // k
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(852, o);   // k
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.nb; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.nb = v !== 0 as any; else o.nb = v; } }   // nb
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.parts; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.parts = v !== 0 as any; else o.parts = v; } }   // parts
-    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(856, o);   // rows
+    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(853, o);   // rows
   }
   function f_sense_Blob(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.x; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.x = v !== 0 as any; else o.x = v; } }   // x
@@ -4561,7 +4509,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.calledAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.calledAt = v !== 0 as any; else o.calledAt = v; } }   // called_at
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.etaAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.etaAt = v !== 0 as any; else o.etaAt = v; } }   // eta_at
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.setAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.setAt = v !== 0 as any; else o.setAt = v; } }   // set_at
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(857, o);   // men
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(854, o);   // men
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.spawned; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.spawned = v !== 0 as any; else o.spawned = v; } }   // spawned
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.peeled; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.peeled = v !== 0 as any; else o.peeled = v; } }   // peeled
   }
@@ -4571,7 +4519,7 @@ export function puppetRows(C: Ctx) {
   }
   function f_qrf_Target(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_116[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(858, o);   // plan
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(855, o);   // plan
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.room; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.room = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // room
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const c = o.pos; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.pos = a; } } }   // pos
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.word; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.word = v !== 0 as any; else o.word = v; } } else if (o.word !== undefined) o.word = undefined; }   // word
@@ -4593,7 +4541,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.coming; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.coming = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // coming
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { if (b[C.p++]) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.clear; if (!strEq(c, b, C.p, L)) o.clear = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; } else if (o.clear !== null) o.clear = null; }   // clear
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { const v = b[C.p++] !== 0; const c = o.stairs; if (typeof c === 'boolean') { if (c !== v) o.stairs = v; } else if (c === null) { if (v) o.stairs = v; } else if (typeof c === 'object') { if (!v) o.stairs = null; } else if (!(c === undefined && !v)) o.stairs = v; }   // stairs
-    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) C.slow(859, o);   // posts
+    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) C.slow(856, o);   // posts
     if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.outside; if (a === null || a === undefined) { if (L || a === undefined) a = o.outside = []; } for (let i = 0; i < L; i++) { const c = a[i], p0 = C.p; let same = !!c && c.length === 3; if (same) for (let k = 0; k < 3; k++) if (!Object.is(dv.getFloat64(p0 + 8 * k, true), c[k])) { same = false; break; } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let k = 0; k < 3; k++) (c as any)[k] = dv.getFloat64(p0 + 8 * k, true); } else { const x = new Array(3); for (let k = 0; k < 3; k++) x[k] = dv.getFloat64(p0 + 8 * k, true); a[i] = x; } } } if (a && a.length !== L) a.length = L; }   // outside
     if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.site; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.site = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // site
     if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.at; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.at = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // at
@@ -4619,40 +4567,40 @@ export function puppetRows(C: Ctx) {
   }
   function f_wallbreak_WallBreak(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.serial; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.serial = v !== 0 as any; else o.serial = v; } }   // serial
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(860, o);   // changes
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(857, o);   // changes
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const t = T_WallbreakBreakableId(); let a = o.list; if (a === null || a === undefined) { if (L || a === undefined) a = o.list = []; } if (a && Array.isArray(a) && (a.length === 0 || typeof a[0] !== 'number')) { for (let i = 0; i < L; i++) { const v = dv.getUint32(C.p, true); C.p += 4; const r = t[v]; if (a[i] !== r) a[i] = r; } if (a.length !== L) a.length = L; } else if (a) { for (let i = 0; i < L; i++) { a[i] = dv.getUint32(C.p, true); C.p += 4; } if (a.length !== L) a.length = L; } }   // list
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(861, o);   // owner
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(862, o);   // hidden
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(858, o);   // owner
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(859, o);   // hidden
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.counter; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.counter = v !== 0 as any; else o.counter = v; } }   // counter
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const v = b[C.p++] !== 0; const c = o.dirty; if (typeof c === 'boolean') { if (c !== v) o.dirty = v; } else if (c === null) { if (v) o.dirty = v; } else if (typeof c === 'object') { if (!v) o.dirty = null; } else if (!(c === undefined && !v)) o.dirty = v; }   // dirty
-    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) C.slow(863, o);   // shell_gaps
-    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) C.slow(864, o);   // hung_now
-    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) C.slow(865, o);   // hung_gone
+    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) C.slow(860, o);   // shell_gaps
+    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) C.slow(861, o);   // hung_now
+    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) C.slow(862, o);   // hung_gone
   }
   function f_edge_look_EdgeLook(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(866, o);   // decor
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(867, o);   // dirty
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(868, o);   // rubble
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(863, o);   // decor
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(864, o);   // dirty
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(865, o);   // rubble
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.flying; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.flying = v !== 0 as any; else o.flying = v; } }   // flying
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.serial; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.serial = v !== 0 as any; else o.serial = v; } }   // serial
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.room; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.room = v !== 0 as any; else o.room = v; } }   // room
-    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(869, o);   // blasted
-    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) C.slow(870, o);   // todo
+    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(866, o);   // blasted
+    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) C.slow(867, o);   // todo
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { const v = b[C.p++] !== 0; const c = o.held; if (typeof c === 'boolean') { if (c !== v) o.held = v; } else if (c === null) { if (v) o.held = v; } else if (typeof c === 'object') { if (!v) o.held = null; } else if (!(c === undefined && !v)) o.held = v; }   // held
     { let c = o.footBook; if (!c || typeof c !== 'object') c = o.footBook = C.made("crate::debris::FootBook"); f_debris_FootBook(c, m + 9); }   // foot_book
   }
   function f_furnblast_Furniture(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(871, o);   // groups
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(872, o);   // member_at
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(873, o);   // hidden
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(868, o);   // groups
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(869, o);   // member_at
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(870, o);   // hidden
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.goneProps; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.goneProps = v !== 0 as any; else o.goneProps = v; } }   // gone_props
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(874, o);   // gone
-    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(875, o);   // gone_mouth
-    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(876, o);   // kept
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(871, o);   // gone
+    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(872, o);   // gone_mouth
+    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(873, o);   // kept
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.fronts; if (a === null || a === undefined) { if (L || a === undefined) a = o.fronts = []; } for (let i = 0; i < L; i++) { const c = a[i], p0 = C.p; let same = !!c && c.length === 3; if (same) for (let k = 0; k < 3; k++) if (!Object.is(dv.getFloat64(p0 + 8 * k, true), c[k])) { same = false; break; } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let k = 0; k < 3; k++) (c as any)[k] = dv.getFloat64(p0 + 8 * k, true); } else { const x = new Array(3); for (let k = 0; k < 3; k++) x[k] = dv.getFloat64(p0 + 8 * k, true); a[i] = x; } } } if (a && a.length !== L) a.length = L; }   // fronts
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.counter; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.counter = v !== 0 as any; else o.counter = v; } }   // counter
-    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) C.slow(877, o);   // last
-    if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) C.slow(878, o);   // row_kept
+    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) C.slow(874, o);   // last
+    if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) C.slow(875, o);   // row_kept
     if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.fling; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.fling = v !== 0 as any; else o.fling = v; } }   // fling
     { let c = o.mouthMemo; if (!c || typeof c !== 'object') c = o.mouthMemo = C.made("crate::furnblast::FurnitureMouthMemo"); f_furnblast_FurnitureMouthMemo(c, m + 12); }   // mouth_memo
   }
@@ -4695,18 +4643,18 @@ export function puppetRows(C: Ctx) {
     { let c = o.o; if (!c || typeof c !== 'object') c = o.o = C.made("crate::shards::SprayOpts"); f_shards_SprayOpts(c, m + 0); }   // o
   }
   function f_director_Manifest(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(879, o);   // marks
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(880, o);   // volumes
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(881, o);   // routes
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(882, o);   // doors
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(883, o);   // devices
-    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(884, o);   // plans
-    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(885, o);   // loadouts
-    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) C.slow(886, o);   // groups
-    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) C.slow(887, o);   // variants
-    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) C.slow(888, o);   // programs
-    if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) C.slow(889, o);   // expects
-    if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) C.slow(890, o);   // systems
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(876, o);   // marks
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(877, o);   // volumes
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(878, o);   // routes
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(879, o);   // doors
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(880, o);   // devices
+    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(881, o);   // plans
+    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(882, o);   // loadouts
+    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) C.slow(883, o);   // groups
+    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) C.slow(884, o);   // variants
+    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) C.slow(885, o);   // programs
+    if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) C.slow(886, o);   // expects
+    if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) C.slow(887, o);   // systems
   }
   function f_director_LintProblem(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_119[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.level !== v) o.level = v; }   // level
@@ -4719,7 +4667,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.beat; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.beat = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // beat
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = WORDS_120[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.what; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.what = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // what
-    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(891, o);   // data
+    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(888, o);   // data
   }
   function f_director_DirectorLastRun(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.serial; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.serial = v !== 0 as any; else o.serial = v; } }   // serial
@@ -4752,20 +4700,20 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.tNext; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.tNext = v !== 0 as any; else o.tNext = v; } }   // t_next
     if (b[MP + ((m + 13) >> 3)] & (1 << ((m + 13) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.tStacked2; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.tStacked2 = v !== 0 as any; else o.tStacked2 = v; } }   // t_stacked2
     if (b[MP + ((m + 14) >> 3)] & (1 << ((m + 14) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.tDone; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.tDone = v !== 0 as any; else o.tDone = v; } }   // t_done
-    if (b[MP + ((m + 15) >> 3)] & (1 << ((m + 15) & 7))) C.slow(892, o);   // beats
+    if (b[MP + ((m + 15) >> 3)] & (1 << ((m + 15) & 7))) C.slow(889, o);   // beats
     if (b[MP + ((m + 16) >> 3)] & (1 << ((m + 16) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.rounds; if (a === null || a === undefined) { if (L || a === undefined) a = o.rounds = []; } else if (ArrayBuffer.isView(a) && (a as any).length !== L) a = o.rounds = new (a as any).constructor(L); if (L) for (let i = 0; i < L; i++) { const x = dv.getFloat64(C.p + 8 * i, true); if (!Object.is(a[i], x)) a[i] = x; } if (a && !ArrayBuffer.isView(a) && a.length !== L) a.length = L; C.p += 8 * L; }   // rounds
     if (b[MP + ((m + 17) >> 3)] & (1 << ((m + 17) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
-    if (b[MP + ((m + 18) >> 3)] & (1 << ((m + 18) & 7))) C.slow(893, o);   // done
+    if (b[MP + ((m + 18) >> 3)] & (1 << ((m + 18) & 7))) C.slow(890, o);   // done
     if (b[MP + ((m + 19) >> 3)] & (1 << ((m + 19) & 7))) { const c = o.aimA; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.aimA = a; } } }   // aim_a
     if (b[MP + ((m + 20) >> 3)] & (1 << ((m + 20) & 7))) { const c = o.aimB; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.aimB = a; } } }   // aim_b
     if (b[MP + ((m + 21) >> 3)] & (1 << ((m + 21) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.wpA; if (a === null || a === undefined) { if (L || a === undefined) a = o.wpA = []; } for (let i = 0; i < L; i++) { const c = a[i], p0 = C.p; let same = !!c && c.length === 3; if (same) for (let k = 0; k < 3; k++) if (!Object.is(dv.getFloat64(p0 + 8 * k, true), c[k])) { same = false; break; } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let k = 0; k < 3; k++) (c as any)[k] = dv.getFloat64(p0 + 8 * k, true); } else { const x = new Array(3); for (let k = 0; k < 3; k++) x[k] = dv.getFloat64(p0 + 8 * k, true); a[i] = x; } } } if (a && a.length !== L) a.length = L; }   // wp_a
     if (b[MP + ((m + 22) >> 3)] & (1 << ((m + 22) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.wpB; if (a === null || a === undefined) { if (L || a === undefined) a = o.wpB = []; } for (let i = 0; i < L; i++) { const c = a[i], p0 = C.p; let same = !!c && c.length === 3; if (same) for (let k = 0; k < 3; k++) if (!Object.is(dv.getFloat64(p0 + 8 * k, true), c[k])) { same = false; break; } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let k = 0; k < 3; k++) (c as any)[k] = dv.getFloat64(p0 + 8 * k, true); } else { const x = new Array(3); for (let k = 0; k < 3; k++) x[k] = dv.getFloat64(p0 + 8 * k, true); a[i] = x; } } } if (a && a.length !== L) a.length = L; }   // wp_b
     if (b[MP + ((m + 23) >> 3)] & (1 << ((m + 23) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.can; if (typeof c === 'number') { if (c !== v) o.can = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.can = null; } else { const r = T_ItemId()[v]; if (r !== c) o.can = r; } } else if (o.can !== null) o.can = null; }   // can
     if (b[MP + ((m + 24) >> 3)] & (1 << ((m + 24) & 7))) { const v = b[C.p++] !== 0; const c = o.chopped; if (typeof c === 'boolean') { if (c !== v) o.chopped = v; } else if (c === null) { if (v) o.chopped = v; } else if (typeof c === 'object') { if (!v) o.chopped = null; } else if (!(c === undefined && !v)) o.chopped = v; }   // chopped
-    if (b[MP + ((m + 25) >> 3)] & (1 << ((m + 25) & 7))) C.slow(894, o);   // down_logged
-    if (b[MP + ((m + 26) >> 3)] & (1 << ((m + 26) & 7))) C.slow(895, o);   // flows
+    if (b[MP + ((m + 25) >> 3)] & (1 << ((m + 25) & 7))) C.slow(891, o);   // down_logged
+    if (b[MP + ((m + 26) >> 3)] & (1 << ((m + 26) & 7))) C.slow(892, o);   // flows
     if (b[MP + ((m + 27) >> 3)] & (1 << ((m + 27) & 7))) { const v = b[C.p++] !== 0; const c = o.guaranteeDowns; if (typeof c === 'boolean') { if (c !== v) o.guaranteeDowns = v; } else if (c === null) { if (v) o.guaranteeDowns = v; } else if (typeof c === 'object') { if (!v) o.guaranteeDowns = null; } else if (!(c === undefined && !v)) o.guaranteeDowns = v; }   // guarantee_downs
-    if (b[MP + ((m + 28) >> 3)] & (1 << ((m + 28) & 7))) C.slow(896, o);   // live
+    if (b[MP + ((m + 28) >> 3)] & (1 << ((m + 28) & 7))) C.slow(893, o);   // live
     if (b[MP + ((m + 29) >> 3)] & (1 << ((m + 29) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.tRun; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.tRun = v !== 0 as any; else o.tRun = v; } }   // t_run
     { let c = o.plan; if (!c || typeof c !== 'object') c = o.plan = C.made("crate::scene_level::BreachPlan"); f_scene_level_BreachPlan(c, m + 30); }   // plan
     if (b[MP + ((m + 31) >> 3)] & (1 << ((m + 31) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.tAllDone; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.tAllDone = v !== 0 as any; else o.tAllDone = v; } }   // t_all_done
@@ -4780,7 +4728,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.next; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.next = v !== 0 as any; else o.next = v; } }   // next
   }
   function f_scene_scenarios_QuietData(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(897, o);   // spots
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(894, o);   // spots
   }
   function f_quiet_QuietMissionAuthored(o: any, m: number) {
     { let c = o.mission; if (!c || typeof c !== 'object') c = o.mission = C.made("crate::quiet::QuietMissionAuthoredMission"); f_quiet_QuietMissionAuthoredMission(c, m + 0); }   // mission
@@ -4795,17 +4743,17 @@ export function puppetRows(C: Ctx) {
   }
   function f_lesson_StepSeen(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t0; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t0 = v !== 0 as any; else o.t0 = v; } }   // t0
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(898, o);   // n
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(895, o);   // n
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.chron; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.chron = v !== 0 as any; else o.chron = v; } }   // chron
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(899, o);   // heard
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(896, o);   // heard
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.held; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.held = v !== 0 as any; else o.held = v; } }   // held
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.doneT; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.doneT = v !== 0 as any; else o.doneT = v; } } else if (o.doneT !== undefined) o.doneT = undefined; }   // done_t
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.idle !== v) o.idle = v; } else if (o.idle !== undefined) o.idle = undefined; }   // idle
-    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) C.slow(900, o);   // last_order
-    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) C.slow(901, o);   // last_pair
+    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) C.slow(897, o);   // last_order
+    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) C.slow(898, o);   // last_pair
     if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.chron0; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.chron0 = v !== 0 as any; else o.chron0 = v; } }   // chron0
     if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.heldAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.heldAt = v !== 0 as any; else o.heldAt = v; } }   // held_at
-    if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) C.slow(902, o);   // words
+    if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) C.slow(899, o);   // words
     if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.yaw0; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.yaw0 = v !== 0 as any; else o.yaw0 = v; } }   // yaw0
     if (b[MP + ((m + 13) >> 3)] & (1 << ((m + 13) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.dist0; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.dist0 = v !== 0 as any; else o.dist0 = v; } }   // dist0
     if (b[MP + ((m + 14) >> 3)] & (1 << ((m + 14) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.yawLast; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.yawLast = v !== 0 as any; else o.yawLast = v; } }   // yaw_last
@@ -4817,8 +4765,8 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { if (b[C.p++]) { const c = o.mid; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.mid = a; } } } else if (o.mid !== null) o.mid = null; }   // mid
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.midT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.midT = v !== 0 as any; else o.midT = v; } }   // mid_t
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = b[C.p++] !== 0; const c = o.parked; if (typeof c === 'boolean') { if (c !== v) o.parked = v; } else if (c === null) { if (v) o.parked = v; } else if (typeof c === 'object') { if (!v) o.parked = null; } else if (!(c === undefined && !v)) o.parked = v; }   // parked
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(903, o);   // was
-    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(904, o);   // view
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(900, o);   // was
+    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(901, o);   // view
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const v = b[C.p++] !== 0; const c = o.again; if (typeof c === 'boolean') { if (c !== v) o.again = v; } else if (c === null) { if (v) o.again = v; } else if (typeof c === 'object') { if (!v) o.again = null; } else if (!(c === undefined && !v)) o.again = v; }   // again
   }
   function f_fogofwar_FogEye(o: any, m: number) {
@@ -4853,14 +4801,14 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = b[C.p++] !== 0; const c = o.led; if (typeof c === 'boolean') { if (c !== v) o.led = v; } else if (c === null) { if (v) o.led = v; } else if (typeof c === 'object') { if (!v) o.led = null; } else if (!(c === undefined && !v)) o.led = v; }   // led
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = b[C.p++] !== 0; const c = o.sent; if (typeof c === 'boolean') { if (c !== v) o.sent = v; } else if (c === null) { if (v) o.sent = v; } else if (typeof c === 'object') { if (!v) o.sent = null; } else if (!(c === undefined && !v)) o.sent = v; }   // sent
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.inAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.inAt = v !== 0 as any; else o.inAt = v; } }   // in_at
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(905, o);   // jobs
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(902, o);   // jobs
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { if (b[C.p++]) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.coming; if (!strEq(c, b, C.p, L)) o.coming = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; } else if (o.coming !== null) o.coming = null; }   // coming
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const v = b[C.p++] !== 0; const c = o.moving; if (typeof c === 'boolean') { if (c !== v) o.moving = v; } else if (c === null) { if (v) o.moving = v; } else if (typeof c === 'object') { if (!v) o.moving = null; } else if (!(c === undefined && !v)) o.moving = v; }   // moving
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.bounds; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.bounds = v !== 0 as any; else o.bounds = v; } }   // bounds
-    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) C.slow(906, o);   // last
-    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) C.slow(907, o);   // told
-    if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) C.slow(908, o);   // hot
-    if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) C.slow(909, o);   // turned
+    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) C.slow(903, o);   // last
+    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) C.slow(904, o);   // told
+    if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) C.slow(905, o);   // hot
+    if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) C.slow(906, o);   // turned
   }
   function f_defuse_DefuseLogItem(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
@@ -4885,10 +4833,10 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.name; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.name = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // name
   }
   function f_orders_Menu(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(910, o);   // target
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(907, o);   // target
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const t = T_GuardId(); let a = o.men; if (a === null || a === undefined) { if (L || a === undefined) a = o.men = []; } if (a && Array.isArray(a) && (a.length === 0 || typeof a[0] !== 'number')) { for (let i = 0; i < L; i++) { const v = dv.getUint32(C.p, true); C.p += 4; const r = t[v]; if (a[i] !== r) a[i] = r; } if (a.length !== L) a.length = L; } else if (a) { for (let i = 0; i < L; i++) { a[i] = dv.getUint32(C.p, true); C.p += 4; } if (a.length !== L) a.length = L; } }   // men
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const t = T_OrdersOrderDefId(); let a = o.rows; if (a === null || a === undefined) { if (L || a === undefined) a = o.rows = []; } if (a && Array.isArray(a) && (a.length === 0 || typeof a[0] !== 'number')) { for (let i = 0; i < L; i++) { const v = dv.getUint32(C.p, true); C.p += 4; const r = t[v]; if (a[i] !== r) a[i] = r; } if (a.length !== L) a.length = L; } else if (a) { for (let i = 0; i < L; i++) { a[i] = dv.getUint32(C.p, true); C.p += 4; } if (a.length !== L) a.length = L; } }   // rows
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(911, o);   // why
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(908, o);   // why
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.sel; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.sel = v !== 0 as any; else o.sel = v; } }   // sel
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.wheelAcc; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.wheelAcc = v !== 0 as any; else o.wheelAcc = v; } }   // wheel_acc
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.readT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.readT = v !== 0 as any; else o.readT = v; } }   // read_t
@@ -4920,27 +4868,27 @@ export function puppetRows(C: Ctx) {
   }
   function f_orders_SquadOrdersCmdPress(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t0; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t0 = v !== 0 as any; else o.t0 = v; } }   // t0
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(912, o);   // t
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(909, o);   // t
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.add !== v) o.add = v; } else if (o.add !== undefined) o.add = undefined; }   // add
   }
   function f_orders_SquadOrdersTapWas(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.at; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.at = v !== 0 as any; else o.at = v; } }   // at
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(913, o);   // t
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(910, o);   // t
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.x; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.x = v !== 0 as any; else o.x = v; } }   // x
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.y; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.y = v !== 0 as any; else o.y = v; } }   // y
   }
   function f_orders_SquadOrdersLogItem(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.order; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.order = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // order
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(914, o);   // who
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(911, o);   // who
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.target; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.target = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // target
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.auto !== v) o.auto = v; } else if (o.auto !== undefined) o.auto = undefined; }   // auto
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.laid !== v) o.laid = v; } else if (o.laid !== undefined) o.laid = undefined; }   // laid
-    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(915, o);   // serial
+    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(912, o);   // serial
   }
   function f_planlay_LayState(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(916, o);   // laid
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(917, o);   // kept
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(913, o);   // laid
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(914, o);   // kept
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.keptFor; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.keptFor = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // kept_for
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.tryKey; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.tryKey = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // try_key
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = b[C.p++] !== 0; const c = o.started; if (typeof c === 'boolean') { if (c !== v) o.started = v; } else if (c === null) { if (v) o.started = v; } else if (typeof c === 'object') { if (!v) o.started = null; } else if (!(c === undefined && !v)) o.started = v; }   // started
@@ -4950,7 +4898,7 @@ export function puppetRows(C: Ctx) {
   function f_orders_SquadOrdersView(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.input; if (typeof c === 'number') { if (c !== v) o.input = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.input = null; } else { const r = T_InputId()[v]; if (r !== c) o.input = r; } } else if (o.input !== null) o.input = null; }   // input
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.cam; if (typeof c === 'number') { if (c !== v) o.cam = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.cam = null; } else { const r = T_CameraId()[v]; if (r !== c) o.cam = r; } } else if (o.cam !== null) o.cam = null; }   // cam
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(918, o);   // canvas
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(915, o);   // canvas
   }
   function f_orders_SquadOrdersDoorMarksItem(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.door; if (typeof c === 'number') { if (c !== v) o.door = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.door = null; } else { const r = T_DoorId()[v]; if (r !== c) o.door = r; } }   // door
@@ -4960,7 +4908,7 @@ export function puppetRows(C: Ctx) {
   }
   function f_orders_OtherCast(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_12[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.team !== v) o.team = v; }   // team
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(919, o);   // ring
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(916, o);   // ring
   }
   function f_orders_SquadOrdersAsideMemValue(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const c = o.q; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.q = a; } } }   // q
@@ -5199,7 +5147,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.w; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.w = v !== 0 as any; else o.w = v; } }   // w
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const t = T_GuardId(); let a = o.can; if (a === null || a === undefined) { if (L || a === undefined) a = o.can = []; } if (a && Array.isArray(a) && (a.length === 0 || typeof a[0] !== 'number')) { for (let i = 0; i < L; i++) { const v = dv.getUint32(C.p, true); C.p += 4; const r = t[v]; if (a[i] !== r) a[i] = r; } if (a.length !== L) a.length = L; } else if (a) { for (let i = 0; i < L; i++) { a[i] = dv.getUint32(C.p, true); C.p += 4; } if (a.length !== L) a.length = L; } }   // can
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const t = T_GuardId(); let a = o.edge; if (a === null || a === undefined) { if (L || a === undefined) a = o.edge = []; } if (a && Array.isArray(a) && (a.length === 0 || typeof a[0] !== 'number')) { for (let i = 0; i < L; i++) { const v = dv.getUint32(C.p, true); C.p += 4; const r = t[v]; if (a[i] !== r) a[i] = r; } if (a.length !== L) a.length = L; } else if (a) { for (let i = 0; i < L; i++) { a[i] = dv.getUint32(C.p, true); C.p += 4; } if (a.length !== L) a.length = L; } }   // edge
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(920, o);   // at
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(917, o);   // at
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.by; if (typeof c === 'number') { if (c !== v) o.by = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.by = null; } else { const r = T_GuardId()[v]; if (r !== c) o.by = r; } } else if (o.by !== null) o.by = null; }   // by
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.edgeBy; if (typeof c === 'number') { if (c !== v) o.edgeBy = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.edgeBy = null; } else { const r = T_GuardId()[v]; if (r !== c) o.edgeBy = r; } } else if (o.edgeBy !== null) o.edgeBy = null; }   // edge_by
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { const v = b[C.p++] !== 0; const c = o.sam; if (typeof c === 'boolean') { if (c !== v) o.sam = v; } else if (c === null) { if (v) o.sam = v; } else if (typeof c === 'object') { if (!v) o.sam = null; } else if (!(c === undefined && !v)) o.sam = v; }   // sam
@@ -5237,7 +5185,7 @@ export function puppetRows(C: Ctx) {
   function f_cover_CoverReadsValue(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const c = o.at; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.at = a; } } }   // at
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(921, o);   // pick
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(918, o);   // pick
   }
   function f_cover_CoverKeptValue(o: any, m: number) {
     { let c = o.J; if (!c || typeof c !== 'object') c = o.J = C.made("crate::cover::CoverJob"); f_cover_CoverJob(c, m + 0); }   // j
@@ -5263,7 +5211,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.mouth; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.mouth = v !== 0 as any; else o.mouth = v; } }   // mouth
   }
   function f_rescue_Entry(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(922, o);   // ops
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(919, o);   // ops
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.gate; if (typeof c === 'number') { if (c !== v) o.gate = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.gate = null; } else { const r = T_DoorGateId()[v]; if (r !== c) o.gate = r; } }   // gate
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const t = T_GuardId(); let a = o.men; if (a === null || a === undefined) { if (L || a === undefined) a = o.men = []; } if (a && Array.isArray(a) && (a.length === 0 || typeof a[0] !== 'number')) { for (let i = 0; i < L; i++) { const v = dv.getUint32(C.p, true); C.p += 4; const r = t[v]; if (a[i] !== r) a[i] = r; } if (a.length !== L) a.length = L; } else if (a) { for (let i = 0; i < L; i++) { a[i] = dv.getUint32(C.p, true); C.p += 4; } if (a.length !== L) a.length = L; } }   // men
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = b[C.p++] !== 0; const c = o.split; if (typeof c === 'boolean') { if (c !== v) o.split = v; } else if (c === null) { if (v) o.split = v; } else if (typeof c === 'object') { if (!v) o.split = null; } else if (!(c === undefined && !v)) o.split = v; }   // split
@@ -5286,7 +5234,7 @@ export function puppetRows(C: Ctx) {
   function f_rescue_Def(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_126[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.role !== v) o.role = v; }   // role
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = b[C.p++] !== 0; const c = o.inRoom; if (typeof c === 'boolean') { if (c !== v) o.inRoom = v; } else if (c === null) { if (v) o.inRoom = v; } else if (typeof c === 'object') { if (!v) o.inRoom = null; } else if (!(c === undefined && !v)) o.inRoom = v; }   // in_room
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(923, o);   // mark
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(920, o);   // mark
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.learned; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.learned = v !== 0 as any; else o.learned = v; } }   // learned
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = b[C.p++] !== 0; const c = o.set; if (typeof c === 'boolean') { if (c !== v) o.set = v; } else if (c === null) { if (v) o.set = v; } else if (typeof c === 'object') { if (!v) o.set = null; } else if (!(c === undefined && !v)) o.set = v; }   // set
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = b[C.p++] !== 0; const c = o.sawFoe; if (typeof c === 'boolean') { if (c !== v) o.sawFoe = v; } else if (c === null) { if (v) o.sawFoe = v; } else if (typeof c === 'object') { if (!v) o.sawFoe = null; } else if (!(c === undefined && !v)) o.sawFoe = v; }   // saw_foe
@@ -5296,7 +5244,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) { const v = WORDS_127[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.crew !== v) o.crew = v; }   // crew
     if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) { if (b[C.p++]) { const c = o.look; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.look = a; } } } else if (o.look !== null) o.look = null; }   // look
     if (b[MP + ((m + 13) >> 3)] & (1 << ((m + 13) & 7))) { if (b[C.p++]) { const c = o.spot; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.spot = a; } } } else if (o.spot !== null) o.spot = null; }   // spot
-    if (b[MP + ((m + 14) >> 3)] & (1 << ((m + 14) & 7))) C.slow(924, o);   // noise0
+    if (b[MP + ((m + 14) >> 3)] & (1 << ((m + 14) & 7))) C.slow(921, o);   // noise0
   }
   function f_rescue_RescueAct(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.by; if (typeof c === 'number') { if (c !== v) o.by = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.by = null; } else { const r = T_GuardId()[v]; if (r !== c) o.by = r; } }   // by
@@ -5306,19 +5254,19 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = b[C.p++] !== 0; const c = o.hold; if (typeof c === 'boolean') { if (c !== v) o.hold = v; } else if (c === null) { if (v) o.hold = v; } else if (typeof c === 'object') { if (!v) o.hold = null; } else if (!(c === undefined && !v)) o.hold = v; }   // hold
   }
   function f_rescueflow_RescueFlow(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(925, o);   // known
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(926, o);   // jobs
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(927, o);   // passed
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(928, o);   // want
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(922, o);   // known
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(923, o);   // jobs
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(924, o);   // passed
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(925, o);   // want
     { let c = o.stats; if (!c || typeof c !== 'object') c = o.stats = C.made("crate::rescueflow::RescueFlowStats"); f_rescueflow_RescueFlowStats(c, m + 4); }   // stats
-    if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) C.slow(929, o);   // regions
-    if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) C.slow(930, o);   // mine
+    if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) C.slow(926, o);   // regions
+    if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) C.slow(927, o);   // mine
     if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.senseAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.senseAt = v !== 0 as any; else o.senseAt = v; } }   // sense_at
     if (b[MP + ((m + 13) >> 3)] & (1 << ((m + 13) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.turn; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.turn = v !== 0 as any; else o.turn = v; } }   // turn
     if (b[MP + ((m + 14) >> 3)] & (1 << ((m + 14) & 7))) { const v = b[C.p++] !== 0; const c = o.built; if (typeof c === 'boolean') { if (c !== v) o.built = v; } else if (c === null) { if (v) o.built = v; } else if (typeof c === 'object') { if (!v) o.built = null; } else if (!(c === undefined && !v)) o.built = v; }   // built
     { let c = o.room; if (!c || typeof c !== 'object') c = o.room = C.made("crate::scene_scenarios::Rect"); f_scene_scenarios_Rect(c, m + 15); }   // room
-    if (b[MP + ((m + 19) >> 3)] & (1 << ((m + 19) & 7))) C.slow(931, o);   // corr
-    if (b[MP + ((m + 20) >> 3)] & (1 << ((m + 20) & 7))) C.slow(932, o);   // came_in
+    if (b[MP + ((m + 19) >> 3)] & (1 << ((m + 19) & 7))) C.slow(928, o);   // corr
+    if (b[MP + ((m + 20) >> 3)] & (1 << ((m + 20) & 7))) C.slow(929, o);   // came_in
   }
   function f_rescue_RescueSearchAValue(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.A; if (typeof c === 'number') { if (c !== v) o.A = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.A = null; } else { const r = T_OrdersAssignmentId()[v]; if (r !== c) o.A = r; } }   // a
@@ -5336,8 +5284,8 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.nextAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.nextAt = v !== 0 as any; else o.nextAt = v; } }   // next_at
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.goneAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.goneAt = v !== 0 as any; else o.goneAt = v; } }   // gone_at
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.count; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.count = v !== 0 as any; else o.count = v; } }   // count
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(933, o);   // sent
-    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(934, o);   // barred
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(930, o);   // sent
+    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(931, o);   // barred
   }
   function f_doortools_DoorToolsLogItem(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
@@ -5375,8 +5323,8 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 28) >> 3)] & (1 << ((m + 28) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.flowLate; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.flowLate = v !== 0 as any; else o.flowLate = v; } }   // flow_late
   }
   function f_floorseen_FloorSeen(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(935, o);   // at
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(936, o);   // asked
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(932, o);   // at
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(933, o);   // asked
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.frame; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.frame = v !== 0 as any; else o.frame = v; } }   // frame
   }
   function f_doortools_DoorToolsLed(o: any, m: number) {
@@ -5450,13 +5398,13 @@ export function puppetRows(C: Ctx) {
   function f_workthings_WorkThingsCache(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.key; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.key = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // key
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(937, o);   // list
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(934, o);   // list
   }
   function f_wallcharge_WallChargeDoneItem(o: any, m: number) {
     { let c = o.wall; if (!c || typeof c !== 'object') c = o.wall = C.made("crate::wallcharge::WallSpot"); f_wallcharge_WallSpot(c, m + 0); }   // wall
-    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) C.slow(938, o);   // queue
-    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) C.slow(939, o);   // pod
-    if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) C.slow(940, o);   // beats
+    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) C.slow(935, o);   // queue
+    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) C.slow(936, o);   // pod
+    if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) C.slow(937, o);   // beats
     if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.ended; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.ended = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // ended
   }
   function f_wallcharge_WallChargeStats(o: any, m: number) {
@@ -5517,10 +5465,10 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.len; if (a === null || a === undefined) { if (L || a === undefined) a = o.len = []; } else if (ArrayBuffer.isView(a) && (a as any).length !== L) a = o.len = new (a as any).constructor(L); if (L) for (let i = 0; i < L; i++) { const x = dv.getFloat64(C.p + 8 * i, true); if (!Object.is(a[i], x)) a[i] = x; } if (a && !ArrayBuffer.isView(a) && a.length !== L) a.length = L; C.p += 8 * L; }   // len
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.s; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.s = v !== 0 as any; else o.s = v; } }   // s
     if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.laidT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.laidT = v !== 0 as any; else o.laidT = v; } }   // laid_t
-    if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) C.slow(941, o);   // near
+    if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) C.slow(938, o);   // near
     if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.lane; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.lane = v !== 0 as any; else o.lane = v; } }   // lane
     if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.via; if (a === null || a === undefined) { if (L || a === undefined) a = o.via = []; } for (let i = 0; i < L; i++) { const c = a[i], p0 = C.p; let same = !!c && c.length === 3; if (same) for (let k = 0; k < 3; k++) if (!Object.is(dv.getFloat64(p0 + 8 * k, true), c[k])) { same = false; break; } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let k = 0; k < 3; k++) (c as any)[k] = dv.getFloat64(p0 + 8 * k, true); } else { const x = new Array(3); for (let k = 0; k < 3; k++) x[k] = dv.getFloat64(p0 + 8 * k, true); a[i] = x; } } } if (a && a.length !== L) a.length = L; }   // via
-    if (b[MP + ((m + 13) >> 3)] & (1 << ((m + 13) & 7))) C.slow(942, o);   // arr
+    if (b[MP + ((m + 13) >> 3)] & (1 << ((m + 13) & 7))) C.slow(939, o);   // arr
     if (b[MP + ((m + 14) >> 3)] & (1 << ((m + 14) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.arrN; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.arrN = v !== 0 as any; else o.arrN = v; } }   // arr_n
     if (b[MP + ((m + 15) >> 3)] & (1 << ((m + 15) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.yieldT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.yieldT = v !== 0 as any; else o.yieldT = v; } }   // yield_t
     if (b[MP + ((m + 16) >> 3)] & (1 << ((m + 16) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.yields; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.yields = v !== 0 as any; else o.yields = v; } }   // yields
@@ -5532,10 +5480,10 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 22) >> 3)] & (1 << ((m + 22) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.inM; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.inM = v !== 0 as any; else o.inM = v; } }   // in_m
     if (b[MP + ((m + 23) >> 3)] & (1 << ((m + 23) & 7))) { const c = o.pod0; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.pod0 = a; } } }   // pod0
     if (b[MP + ((m + 24) >> 3)] & (1 << ((m + 24) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.bodyT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.bodyT = v !== 0 as any; else o.bodyT = v; } }   // body_t
-    if (b[MP + ((m + 25) >> 3)] & (1 << ((m + 25) & 7))) C.slow(943, o);   // serial
+    if (b[MP + ((m + 25) >> 3)] & (1 << ((m + 25) & 7))) C.slow(940, o);   // serial
   }
   function f_doorpath_DoorPathLastOfValue(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(944, o);   // w
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(941, o);   // w
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.n; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.n = v !== 0 as any; else o.n = v; } }   // n
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
   }
@@ -5561,7 +5509,7 @@ export function puppetRows(C: Ctx) {
   }
   function f_doorpath_DoorPathLentItem(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.gd; if (typeof c === 'number') { if (c !== v) o.gd = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.gd = null; } else { const r = T_GuardId()[v]; if (r !== c) o.gd = r; } }   // gd
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const c = o.s; if (c !== null && typeof c === 'object') C.slow(945, o); else { const v = dv.getUint32(C.p, true); C.p += 4; if (c !== v && !(c === undefined && v === 0)) o.s = v; } }   // s
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const c = o.s; if (c !== null && typeof c === 'object') C.slow(942, o); else { const v = dv.getUint32(C.p, true); C.p += 4; if (c !== v && !(c === undefined && v === 0)) o.s = v; } }   // s
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const c = o.mine; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.mine = a; } } }   // mine
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const c = o.aimAt; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.aimAt = a; } } } else if (o.aimAt !== undefined && o.aimAt !== null) o.aimAt = null; }   // aim_at
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.face; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.face = v !== 0 as any; else o.face = v; } } else if (o.face !== undefined && o.face !== null) o.face = null; }   // face
@@ -5602,23 +5550,23 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.fog; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.fog = v !== 0 as any; else o.fog = v; } } else if (o.fog !== undefined) o.fog = undefined; }   // fog
   }
   function f_scene_scenarios_LevelScenarios(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(946, o);   // night_breach
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(947, o);   // room_clear
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(948, o);   // rescue
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(949, o);   // places
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(950, o);   // quiet
-    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(951, o);   // par
-    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(952, o);   // snatch
-    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) C.slow(953, o);   // response
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(943, o);   // night_breach
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(944, o);   // room_clear
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(945, o);   // rescue
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(946, o);   // places
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(947, o);   // quiet
+    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(948, o);   // par
+    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(949, o);   // snatch
+    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) C.slow(950, o);   // response
   }
   function f_scene_level_LevelBreaker(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const c = o.pos; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.pos = a; } } }   // pos
   }
   function f_scene_level_BreachPlan(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(954, o);   // bounds
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(951, o);   // bounds
   }
   function f_quiet_QuietMissionAuthoredMission(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(955, o);   // server_room
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(952, o);   // server_room
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.entryDoor; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.entryDoor = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // entry_door
     { let c = o.rack; if (!c || typeof c !== 'object') c = o.rack = C.made("crate::quiet::QuietMissionAuthoredMissionRack"); f_quiet_QuietMissionAuthoredMissionRack(c, m + 2); }   // rack
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.exfilDoor; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.exfilDoor = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // exfil_door
@@ -5626,383 +5574,376 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.exfilZ; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.exfilZ = v !== 0 as any; else o.exfilZ = v; } }   // exfil_z
   }
   function f_scene_cut_SceneCutMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(956, o);   // cut_clip
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(953, o);   // cut_clip
   }
   function f_thinline_ThinlineMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(957, o);   // thin
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(958, o);   // air
-  }
-  function f_scene_box_mirror_SceneBoxMirrorMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(959, o);   // held
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(960, o);   // clock
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(961, o);   // copies
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(962, o);   // leaves
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(963, o);   // things
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(954, o);   // thin
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(955, o);   // air
   }
   function f_scene_collision_SceneCollisionMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(964, o);   // both
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(965, o);   // anytime
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(966, o);   // sensed
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(967, o);   // lamps
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(968, o);   // rays
-    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(969, o);   // priced
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(956, o);   // both
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(957, o);   // anytime
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(958, o);   // sensed
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(959, o);   // lamps
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(960, o);   // rays
+    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(961, o);   // priced
   }
   function f_anim_skeleton_AnimSkeletonMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(970, o);   // clip_side
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(962, o);   // clip_side
   }
   function f_character_CharacterMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(971, o);   // hold_show
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(972, o);   // at0
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(963, o);   // hold_show
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(964, o);   // at0
   }
   function f_opening_OpeningMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(973, o);   // spots
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(965, o);   // spots
   }
   function f_kitload_KitloadMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(974, o);   // man_load
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(966, o);   // man_load
   }
   function f_holdfire_HoldfireMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(975, o);   // holdfire_log
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(976, o);   // states
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(967, o);   // holdfire_log
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(968, o);   // states
   }
   function f_picture_PictureMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(977, o);   // states
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(969, o);   // states
   }
   function f_fire_FireMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(978, o);   // states
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(970, o);   // states
   }
   function f_winbars_WinbarsMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(979, o);   // state
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(971, o);   // state
   }
   function f_glasspen_GlasspenMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(980, o);   // states
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(972, o);   // states
   }
   function f_doorway_DoorwayMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(981, o);   // stack_own
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(982, o);   // states
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(973, o);   // stack_own
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(974, o);   // states
   }
   function f_nightbreach_NightbreachMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(983, o);   // applied
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(975, o);   // applied
   }
   function f_handleside_HandlesideMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(984, o);   // states
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(985, o);   // rested
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(986, o);   // lined
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(987, o);   // faces
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(976, o);   // states
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(977, o);   // rested
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(978, o);   // lined
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(979, o);   // faces
   }
   function f_runner_RunnerMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(988, o);   // state_of
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(980, o);   // state_of
   }
   function f_netquietfeed_NetquietfeedMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(989, o);   // netfeed
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(990, o);   // filed
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(981, o);   // netfeed
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(982, o);   // filed
   }
   function f_netquiet_NetquietMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(991, o);   // netquiet_log
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(992, o);   // state_of
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(983, o);   // netquiet_log
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(984, o);   // state_of
   }
   function f_laststand_LaststandMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(993, o);   // states
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(985, o);   // states
   }
   function f_stackroom_StackroomMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(994, o);   // books
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(986, o);   // books
   }
   function f_rearwatch_RearwatchMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(995, o);   // books
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(987, o);   // books
   }
   function f_coverfire_CoverfireMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(996, o);   // states
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(988, o);   // states
   }
   function f_wallreact_WallreactMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(997, o);   // wall_react
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(989, o);   // wall_react
   }
   function f_tactics_TacticsMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(998, o);   // states
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(999, o);   // kit
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(990, o);   // states
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(991, o);   // kit
   }
   function f_lanes_LanesMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1000, o);   // states
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(992, o);   // states
   }
   function f_digin_DiginMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1001, o);   // digin_log
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1002, o);   // digin_shut
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1003, o);   // states
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(993, o);   // digin_log
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(994, o);   // digin_shut
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(995, o);   // states
   }
   function f_pressure_PressureMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1004, o);   // states
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(996, o);   // states
   }
   function f_difficulty_DifficultyMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1005, o);   // here
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1006, o);   // base
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1007, o);   // set
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1008, o);   // cone_visit
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1009, o);   // own_was
-    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1010, o);   // own_for
-    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1011, o);   // held
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(997, o);   // here
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(998, o);   // base
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(999, o);   // set
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1000, o);   // cone_visit
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1001, o);   // own_was
+    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1002, o);   // own_for
+    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1003, o);   // held
   }
   function f_quietfog_QuietfogMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1012, o);   // held
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1004, o);   // held
   }
   function f_calmtorch_CalmtorchMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1013, o);   // state_of
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1005, o);   // state_of
   }
   function f_buddy_BuddyMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1014, o);   // states
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1006, o);   // states
   }
   function f_powerout_PoweroutMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1015, o);   // states
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1007, o);   // states
   }
   function f_darkfoe_DarkfoeMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1016, o);   // state_of
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1008, o);   // state_of
   }
   function f_whistle_WhistleMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1017, o);   // mem_of
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1018, o);   // blower_of
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1019, o);   // res_of
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1020, o);   // whistle_log
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1009, o);   // mem_of
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1010, o);   // blower_of
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1011, o);   // res_of
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1012, o);   // whistle_log
   }
   function f_attention_AttentionMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1021, o);   // mem_of
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1022, o);   // attention_log
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1013, o);   // mem_of
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1014, o);   // attention_log
   }
   function f_doze_DozeMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1023, o);   // rec
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1015, o);   // rec
   }
   function f_needs_NeedsMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1024, o);   // mem_of
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1025, o);   // floor_of
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1026, o);   // needs_log
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1016, o);   // mem_of
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1017, o);   // floor_of
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1018, o);   // needs_log
   }
   function f_gunwall_GunwallMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1027, o);   // st
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1028, o);   // fight
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1019, o);   // st
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1020, o);   // fight
   }
   function f_lightswitch_LightswitchMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1029, o);   // states
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1021, o);   // states
   }
   function f_stalk_StalkMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1030, o);   // state
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1022, o);   // state
   }
   function f_tapstep_TapstepMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1031, o);   // state
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1023, o);   // state
   }
   function f_darkdoor_DarkdoorMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1032, o);   // state_of
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1033, o);   // reads_of
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1024, o);   // state_of
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1025, o);   // reads_of
   }
   function f_startle_StartleMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1034, o);   // state_of
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1026, o);   // state_of
   }
   function f_flinch_FlinchMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1035, o);   // state_of
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1027, o);   // state_of
   }
   function f_rescue_RescueMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1036, o);   // applied
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1028, o);   // applied
   }
   function f_rescuecheck_RescuecheckMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1037, o);   // states
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1029, o);   // states
   }
   function f_seenwalk_SeenwalkMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1038, o);   // shared
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1030, o);   // shared
   }
   function f_he40_He40Mod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1039, o);   // he40_log
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1031, o);   // he40_log
   }
   function f_samlook_SamlookMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1040, o);   // state
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1032, o);   // state
   }
   function f_irlight_IrlightMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1041, o);   // kits
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1033, o);   // kits
   }
   function f_nvg_NvgMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1042, o);   // nvg_log
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1043, o);   // teams
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1034, o);   // nvg_log
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1035, o);   // teams
   }
   function f_irlaser_IrlaserMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1044, o);   // ir_made
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1036, o);   // ir_made
   }
   function f_gunhold_GunholdMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1045, o);   // knowns
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1046, o);   // states
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1047, o);   // stats_of
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1037, o);   // knowns
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1038, o);   // states
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1039, o);   // stats_of
   }
   function f_clearline_ClearlineMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1048, o);   // clearline_log
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1049, o);   // mem
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1050, o);   // sam_at
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1051, o);   // entered
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1040, o);   // clearline_log
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1041, o);   // mem
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1042, o);   // sam_at
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1043, o);   // entered
   }
   function f_unseen_UnseenMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1052, o);   // unseen_log
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1053, o);   // states
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1044, o);   // unseen_log
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1045, o);   // states
   }
   function f_squadsmoke_SquadsmokeMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1054, o);   // states
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1055, o);   // squadsmoke_log
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1046, o);   // states
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1047, o);   // squadsmoke_log
   }
   function f_squad40_Squad40Mod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1056, o);   // states
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1057, o);   // squad40_log
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1048, o);   // states
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1049, o);   // squad40_log
   }
   function f_squadthrow_SquadthrowMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1058, o);   // states
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1059, o);   // squadthrow_log
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1060, o);   // duck_mates
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1050, o);   // states
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1051, o);   // squadthrow_log
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1052, o);   // duck_mates
   }
   function f_kitanim_KitanimMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1061, o);   // kitanim_log
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1053, o);   // kitanim_log
   }
   function f_smokebreak_SmokebreakMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1062, o);   // states
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1054, o);   // states
   }
   function f_showwhy_ShowwhyMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1063, o);   // mem
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1064, o);   // op_mem
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1065, o);   // states
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1055, o);   // mem
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1056, o);   // op_mem
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1057, o);   // states
   }
   function f_fireline_FirelineMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1066, o);   // states
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1067, o);   // fired
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1058, o);   // states
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1059, o);   // fired
   }
   function f_doorforce_DoorforceMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1068, o);   // states
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1060, o);   // states
   }
   function f_glassbreak_GlassbreakMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1069, o);   // gb_host
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1061, o);   // gb_host
   }
   function f_glass_GlassMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1070, o);   // states
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1062, o);   // states
   }
   function f_enemysquads_EnemysquadsMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1071, o);   // states
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1072, o);   // ctx
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1073, o);   // bangs
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1063, o);   // states
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1064, o);   // ctx
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1065, o);   // bangs
   }
   function f_morale_MoraleMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1074, o);   // morale_log
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1075, o);   // state_of
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1076, o);   // blasts_of
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1077, o);   // mix_at
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1066, o);   // morale_log
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1067, o);   // state_of
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1068, o);   // blasts_of
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1069, o);   // mix_at
   }
   function f_doortools_DoortoolsMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1078, o);   // sky
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1070, o);   // sky
   }
   function f_shotgun_ShotgunMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1079, o);   // shotgun_last
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1071, o);   // shotgun_last
   }
   function f_player_PlayerMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1080, o);   // ws_pend
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1081, o);   // ws_press
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1082, o);   // press_things
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1083, o);   // light_at
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1072, o);   // ws_pend
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1073, o);   // ws_press
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1074, o);   // press_things
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1075, o);   // light_at
   }
   function f_close_CloseMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1084, o);   // close_log
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1085, o);   // state
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1086, o);   // seated
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1076, o);   // close_log
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1077, o);   // state
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1078, o);   // seated
   }
   function f_spotted_SpottedMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1087, o);   // men
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1088, o);   // spotted_log
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1089, o);   // drops
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1079, o);   // men
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1080, o);   // spotted_log
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1081, o);   // drops
   }
   function f_pairorders_PairordersMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1090, o);   // pair_log
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1082, o);   // pair_log
   }
   function f_pairup_PairupMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1091, o);   // pair_held
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1083, o);   // pair_held
   }
   function f_sneak_SneakMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1092, o);   // sneak_log
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1093, o);   // leaf_t
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1094, o);   // states
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1095, o);   // live_at
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1096, o);   // kept_lines
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1084, o);   // sneak_log
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1085, o);   // leaf_t
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1086, o);   // states
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1087, o);   // live_at
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1088, o);   // kept_lines
   }
   function f_silent_SilentMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1097, o);   // states
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1098, o);   // silent_log
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1099, o);   // seats
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1089, o);   // states
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1090, o);   // silent_log
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1091, o);   // seats
   }
   function f_snow_bog_SnowBogMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1100, o);   // ground_of
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1092, o);   // ground_of
   }
   function f_frag_FragMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1101, o);   // frag_log
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1102, o);   // walls_for
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1103, o);   // torn
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1104, o);   // books
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1105, o);   // def_books
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1093, o);   // frag_log
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1094, o);   // walls_for
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1095, o);   // torn
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1096, o);   // books
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1097, o);   // def_books
   }
   function f_teampace_TeampaceMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1106, o);   // leave
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1107, o);   // ran
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1108, o);   // dash
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1109, o);   // aim_seen
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1098, o);   // leave
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1099, o);   // ran
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1100, o);   // dash
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1101, o);   // aim_seen
   }
   function f_squad_SquadMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1110, o);   // settle_watch
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1111, o);   // walk_watch
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1102, o);   // settle_watch
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1103, o);   // walk_watch
   }
   function f_workthings_WorkthingsMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1112, o);   // errands
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1104, o);   // errands
   }
   function f_hours_HoursMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1113, o);   // hour
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1114, o);   // states
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1115, o);   // nights
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1105, o);   // hour
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1106, o);   // states
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1107, o);   // nights
   }
   function f_kit_KitMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1116, o);   // hand
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1117, o);   // kit
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1118, o);   // loud_you
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1119, o);   // stealth_you
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1120, o);   // man_of
-    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1121, o);   // kit_staged
-    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1122, o);   // issued_player
-    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) C.slow(1123, o);   // you_bare
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1108, o);   // hand
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1109, o);   // kit
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1110, o);   // loud_you
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1111, o);   // stealth_you
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1112, o);   // man_of
+    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1113, o);   // kit_staged
+    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1114, o);   // issued_player
+    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) C.slow(1115, o);   // you_bare
   }
   function f_wandorder_WandorderMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1124, o);   // states
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1116, o);   // states
   }
   function f_fogofwar_FogofwarMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1125, o);   // fog_page
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1117, o);   // fog_page
   }
   function f_guards_GuardsMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1126, o);   // ground_track
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1127, o);   // body_meters
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1128, o);   // body_probe_n
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1129, o);   // held_meters
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1130, o);   // unstick_legs
-    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1131, o);   // unstick
-    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1132, o);   // lit_seen
-    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) C.slow(1133, o);   // dark_seen
-    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) C.slow(1134, o);   // wall_seen
-    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) C.slow(1135, o);   // torch_low_seen
-    if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) C.slow(1136, o);   // lit_man_seen
-    if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) C.slow(1137, o);   // rollcalls
-    if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) C.slow(1138, o);   // engagements
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1118, o);   // ground_track
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1119, o);   // body_meters
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1120, o);   // body_probe_n
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1121, o);   // held_meters
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1122, o);   // unstick_legs
+    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1123, o);   // unstick
+    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1124, o);   // lit_seen
+    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) C.slow(1125, o);   // dark_seen
+    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) C.slow(1126, o);   // wall_seen
+    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) C.slow(1127, o);   // torch_low_seen
+    if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) C.slow(1128, o);   // lit_man_seen
+    if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) C.slow(1129, o);   // rollcalls
+    if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) C.slow(1130, o);   // engagements
   }
   function f_dialogue_DialogueMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1139, o);   // room_rects
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1140, o);   // own_rects
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1141, o);   // sam_mem_by_game
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1142, o);   // script_by_talk
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1143, o);   // radio_by_game
-    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1144, o);   // ambient_by_game
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1131, o);   // room_rects
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1132, o);   // own_rects
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1133, o);   // sam_mem_by_game
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1134, o);   // script_by_talk
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1135, o);   // radio_by_game
+    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1136, o);   // ambient_by_game
   }
   function f_civilians_CiviliansMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1145, o);   // own_spots
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1146, o);   // civ_log
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1147, o);   // floors
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1137, o);   // own_spots
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1138, o);   // civ_log
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1139, o);   // floors
   }
   function f_orders_OrdersMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1148, o);   // follow_word
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1140, o);   // follow_word
   }
   function f_particle_fx_ParticleFxMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1149, o);   // state
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1141, o);   // state
   }
   function f_weapons_WeaponsMod(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1150, o);   // weapons
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1142, o);   // weapons
   }
   function f_anim_skeleton_TwistSpec(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.node; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.node = v !== 0 as any; else o.node = v; } }   // node
@@ -6010,12 +5951,12 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.pitch; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.pitch = v !== 0 as any; else o.pitch = v; } }   // pitch
   }
   function f_character_AnimWallTakeFeet(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1151, o);   // l
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1152, o);   // r
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1143, o);   // l
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1144, o);   // r
   }
   function f_character_AnimWtk(o: any, m: number) {
     { let c = o.L; if (!c || typeof c !== 'object') c = o.L = C.made("crate::character::AnimWtkL"); f_character_AnimWtkL(c, m + 0); }   // l
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1153, o);   // r
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1145, o);   // r
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.first; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.first = v !== 0 as any; else o.first = v; } }   // first
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.last; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.last = v !== 0 as any; else o.last = v; } }   // last
   }
@@ -6039,7 +5980,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.kill !== v) o.kill = v; } else if (o.kill !== undefined) o.kill = undefined; }   // kill
     if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.beats !== v) o.beats = v; } else if (o.beats !== undefined) o.beats = undefined; }   // beats
     if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.haul !== v) o.haul = v; } else if (o.haul !== undefined) o.haul = undefined; }   // haul
-    if (b[MP + ((m + 13) >> 3)] & (1 << ((m + 13) & 7))) C.slow(1154, o);   // strip
+    if (b[MP + ((m + 13) >> 3)] & (1 << ((m + 13) & 7))) C.slow(1146, o);   // strip
   }
   function f_character_HeldPose(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.yank; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.yank = v !== 0 as any; else o.yank = v; } } else if (o.yank !== undefined) o.yank = undefined; }   // yank
@@ -6055,7 +5996,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.kill !== v) o.kill = v; } else if (o.kill !== undefined) o.kill = undefined; }   // kill
     if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.beats !== v) o.beats = v; } else if (o.beats !== undefined) o.beats = undefined; }   // beats
     if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.haul !== v) o.haul = v; } else if (o.haul !== undefined) o.haul = undefined; }   // haul
-    if (b[MP + ((m + 13) >> 3)] & (1 << ((m + 13) & 7))) C.slow(1155, o);   // strip
+    if (b[MP + ((m + 13) >> 3)] & (1 << ((m + 13) & 7))) C.slow(1147, o);   // strip
   }
   function f_character_DoorPush(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const c = o.p; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.p = a; } } }   // p
@@ -6179,7 +6120,7 @@ export function puppetRows(C: Ctx) {
   function f_character_AnimRlc(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.k; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.k = v !== 0 as any; else o.k = v; } }   // k
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.h; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.h = v !== 0 as any; else o.h = v; } }   // h
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1156, o);   // ch
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1148, o);   // ch
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.at; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.at = v !== 0 as any; else o.at = v; } }   // at
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.still; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.still = v !== 0 as any; else o.still = v; } }   // still
   }
@@ -6198,7 +6139,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.roll0; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.roll0 = v !== 0 as any; else o.roll0 = v; } }   // roll0
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { const v = b[C.p++] !== 0; const c = o.re; if (typeof c === 'boolean') { if (c !== v) o.re = v; } else if (c === null) { if (v) o.re = v; } else if (typeof c === 'object') { if (!v) o.re = null; } else if (!(c === undefined && !v)) o.re = v; }   // re
     if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { const v = b[C.p++] !== 0; const c = o.front; if (typeof c === 'boolean') { if (c !== v) o.front = v; } else if (c === null) { if (v) o.front = v; } else if (typeof c === 'object') { if (!v) o.front = null; } else if (!(c === undefined && !v)) o.front = v; }   // front
-    if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) C.slow(1157, o);   // cap
+    if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) C.slow(1149, o);   // cap
   }
   function f_character_AnimMv2(o: any, m: number) {
     { let c = o.bd; if (!c || typeof c !== 'object') c = o.bd = C.made("crate::character::Spring"); f_character_Spring(c, m + 0); }   // bd
@@ -6274,7 +6215,7 @@ export function puppetRows(C: Ctx) {
   function f_character_AnimLg(o: any, m: number) {
     { let c = o.w; if (!c || typeof c !== 'object') c = o.w = C.made("crate::character::Spring"); f_character_Spring(c, m + 0); }   // w
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { if (b[C.p++]) { const v = WORDS_75[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.seen !== v) o.seen = v; } else if (o.seen !== null) o.seen = null; }   // seen
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1158, o);   // ch
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1150, o);   // ch
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const c = o.pull; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.pull = a; } } }   // pull
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const c = o.lat; let same = c !== null && c !== undefined && c.length === 2; const p0 = C.p; if (same) for (let i = 0; i < 2; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 16; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 2; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(2); for (let i = 0; i < 2; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.lat = a; } } }   // lat
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.run; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.run = v !== 0 as any; else o.run = v; } }   // run
@@ -6283,13 +6224,13 @@ export function puppetRows(C: Ctx) {
   function f_character_AnimDp(o: any, m: number) {
     { let c = o.wL; if (!c || typeof c !== 'object') c = o.wL = C.made("crate::character::Spring"); f_character_Spring(c, m + 0); }   // w_l
     { let c = o.wR; if (!c || typeof c !== 'object') c = o.wR = C.made("crate::character::Spring"); f_character_Spring(c, m + 1); }   // w_r
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1159, o);   // last
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1151, o);   // last
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = b[C.p++] !== 0; const c = o.right; if (typeof c === 'boolean') { if (c !== v) o.right = v; } else if (c === null) { if (v) o.right = v; } else if (typeof c === 'object') { if (!v) o.right = null; } else if (!(c === undefined && !v)) o.right = v; }   // right
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = b[C.p++] !== 0; const c = o.reachOK; if (typeof c === 'boolean') { if (c !== v) o.reachOK = v; } else if (c === null) { if (v) o.reachOK = v; } else if (typeof c === 'object') { if (!v) o.reachOK = null; } else if (!(c === undefined && !v)) o.reachOK = v; }   // reach_ok
     { let c = o.tw; if (!c || typeof c !== 'object') c = o.tw = C.made("crate::character::Spring"); f_character_Spring(c, m + 5); }   // tw
   }
   function f_character_AnimWk(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1160, o);   // last
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1152, o);   // last
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = b[C.p++] !== 0; const c = o.fed; if (typeof c === 'boolean') { if (c !== v) o.fed = v; } else if (c === null) { if (v) o.fed = v; } else if (typeof c === 'object') { if (!v) o.fed = null; } else if (!(c === undefined && !v)) o.fed = v; }   // fed
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.after; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.after = v !== 0 as any; else o.after = v; } }   // after
     { let c = o.wL; if (!c || typeof c !== 'object') c = o.wL = C.made("crate::character::Spring"); f_character_Spring(c, m + 3); }   // w_l
@@ -6329,7 +6270,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.sw; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.sw = v !== 0 as any; else o.sw = v; } }   // sw
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.wC; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.wC = v !== 0 as any; else o.wC = v; } }   // w_c
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.wH; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.wH = v !== 0 as any; else o.wH = v; } }   // w_h
-    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) C.slow(1161, o);   // pic
+    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) C.slow(1153, o);   // pic
     if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) { const v = b[C.p++] !== 0; const c = o.picOn; if (typeof c === 'boolean') { if (c !== v) o.picOn = v; } else if (c === null) { if (v) o.picOn = v; } else if (typeof c === 'object') { if (!v) o.picOn = null; } else if (!(c === undefined && !v)) o.picOn = v; }   // pic_on
     if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.nodUp !== v) o.nodUp = v; } else if (o.nodUp !== undefined) o.nodUp = undefined; }   // nod_up
   }
@@ -6355,7 +6296,7 @@ export function puppetRows(C: Ctx) {
   }
   function f_character_AnimRunGait(o: any, m: number) {
     { let c = o.jog; if (!c || typeof c !== 'object') c = o.jog = C.made("crate::character::AnimRunGaitJog"); f_character_AnimRunGaitJog(c, m + 0); }   // jog
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1162, o);   // sprint
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1154, o);   // sprint
   }
   function f_character_AnimPlantL(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.dev; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.dev = v !== 0 as any; else o.dev = v; } }   // dev
@@ -6389,7 +6330,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.w; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.w = v !== 0 as any; else o.w = v; } }   // w
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.gate; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.gate = v !== 0 as any; else o.gate = v; } }   // gate
     { let c = o.L; if (!c || typeof c !== 'object') c = o.L = C.made("crate::character::AnimFeetL"); f_character_AnimFeetL(c, m + 2); }   // l
-    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) C.slow(1163, o);   // r
+    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) C.slow(1155, o);   // r
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.next; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.next = v !== 0 as any; else o.next = v; } }   // next
   }
   function f_character_AnimThrLast(o: any, m: number) {
@@ -6413,14 +6354,14 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.pos; if (a === null || a === undefined) { if (L || a === undefined) a = o.pos = []; } for (let i = 0; i < L; i++) { const c = a[i], p0 = C.p; let same = !!c && c.length === 3; if (same) for (let k = 0; k < 3; k++) if (!Object.is(dv.getFloat64(p0 + 8 * k, true), c[k])) { same = false; break; } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let k = 0; k < 3; k++) (c as any)[k] = dv.getFloat64(p0 + 8 * k, true); } else { const x = new Array(3); for (let k = 0; k < 3; k++) x[k] = dv.getFloat64(p0 + 8 * k, true); a[i] = x; } } } if (a && a.length !== L) a.length = L; }   // pos
   }
   function f_character_AnimHn(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1164, o);   // nodes
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1165, o);   // fist
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1166, o);   // own
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1167, o);   // open
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1156, o);   // nodes
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1157, o);   // fist
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1158, o);   // own
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1159, o);   // open
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.trig; if (a === null || a === undefined) { if (L || a === undefined) a = o.trig = new Float32Array(L); } else if (ArrayBuffer.isView(a) && (a as any).length !== L) a = o.trig = new (a as any).constructor(L); if (L) for (let i = 0; i < L; i++) { const x = dv.getFloat32(C.p + 4 * i, true); if (!Object.is(a[i], x)) a[i] = x; } if (a && !ArrayBuffer.isView(a) && a.length !== L) a.length = L; C.p += 4 * L; }   // trig
-    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1168, o);   // thumb
-    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1169, o);   // base
-    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) C.slow(1170, o);   // note
+    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1160, o);   // thumb
+    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1161, o);   // base
+    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) C.slow(1162, o);   // note
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.seed; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.seed = v !== 0 as any; else o.seed = v; } }   // seed
     if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.built; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.built = v !== 0 as any; else o.built = v; } }   // built
     if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) { const v = b[C.p++] !== 0; const c = o.quiet; if (typeof c === 'boolean') { if (c !== v) o.quiet = v; } else if (c === null) { if (v) o.quiet = v; } else if (typeof c === 'object') { if (!v) o.quiet = null; } else if (!(c === undefined && !v)) o.quiet = v; }   // quiet
@@ -6449,9 +6390,9 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const c = o.gunR; let same = c !== null && c !== undefined && c.length === 4; const p0 = C.p; if (same) for (let i = 0; i < 4; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 32; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 4; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(4); for (let i = 0; i < 4; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.gunR = a; } } }   // gun_r
   }
   function f_anim_skeleton_LayerCast(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1171, o);   // nodes
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1172, o);   // lists
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1173, o);   // nums
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1163, o);   // nodes
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1164, o);   // lists
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1165, o);   // nums
   }
   function f_character_AnimHdIdle(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_30[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.upper !== v) o.upper = v; }   // upper
@@ -6523,7 +6464,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) { const v = b[C.p++] !== 0; const c = o.visited; if (typeof c === 'boolean') { if (c !== v) o.visited = v; } else if (c === null) { if (v) o.visited = v; } else if (typeof c === 'object') { if (!v) o.visited = null; } else if (!(c === undefined && !v)) o.visited = v; }   // visited
     if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.by; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.by = v !== 0 as any; else o.by = v; } }   // by
     if (b[MP + ((m + 13) >> 3)] & (1 << ((m + 13) & 7))) { const v = b[C.p++] !== 0; const c = o.unreachable; if (typeof c === 'boolean') { if (c !== v) o.unreachable = v; } else if (c === null) { if (v) o.unreachable = v; } else if (typeof c === 'object') { if (!v) o.unreachable = null; } else if (!(c === undefined && !v)) o.unreachable = v; }   // unreachable
-    if (b[MP + ((m + 14) >> 3)] & (1 << ((m + 14) & 7))) C.slow(1174, o);   // samples
+    if (b[MP + ((m + 14) >> 3)] & (1 << ((m + 14) & 7))) C.slow(1166, o);   // samples
   }
   function f_game_GuardTaskArm0(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_138[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
@@ -6568,13 +6509,13 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.next; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.next = v !== 0 as any; else o.next = v; } }   // next
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.done; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.done = v !== 0 as any; else o.done = v; } }   // done
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.gave !== v) o.gave = v; } else if (o.gave !== undefined) o.gave = undefined; }   // gave
-    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) C.slow(1175, o);   // moves
+    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) C.slow(1167, o);   // moves
   }
   function f_doortools_DoorToolsDoneItemLaneBack(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.face; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.face = v !== 0 as any; else o.face = v; } } else if (o.face !== null) o.face = null; }   // face
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1176, o);   // move_
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1177, o);   // fit
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1178, o);   // tries
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1168, o);   // move_
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1169, o);   // fit
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1170, o);   // tries
   }
   function f_doortools_DoorToolsDoneItemKickGun(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.n; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.n = v !== 0 as any; else o.n = v; } }   // n
@@ -6618,7 +6559,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const v = WORDS_62[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.event !== v) o.event = v; } else if (o.event !== undefined) o.event = undefined; }   // event
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { if (b[C.p++]) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.name; if (!strEq(c, b, C.p, L)) o.name = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; } else if (o.name !== undefined) o.name = undefined; }   // name
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { if (b[C.p++]) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.volume; if (!strEq(c, b, C.p, L)) o.volume = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; } else if (o.volume !== undefined) o.volume = undefined; }   // volume
-    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1179, o);   // who
+    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1171, o);   // who
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.once !== v) o.once = v; } else if (o.once !== undefined) o.once = undefined; }   // once
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { if (b[C.p++]) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.label; if (!strEq(c, b, C.p, L)) o.label = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; } else if (o.label !== undefined) o.label = undefined; }   // label
   }
@@ -6632,7 +6573,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = b[C.p++] !== 0; const c = o.invisible; if (typeof c === 'boolean') { if (c !== v) o.invisible = v; } else if (c === null) { if (v) o.invisible = v; } else if (typeof c === 'object') { if (!v) o.invisible = null; } else if (!(c === undefined && !v)) o.invisible = v; }   // invisible
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = b[C.p++] !== 0; const c = o.quiet; if (typeof c === 'boolean') { if (c !== v) o.quiet = v; } else if (c === null) { if (v) o.quiet = v; } else if (typeof c === 'object') { if (!v) o.quiet = null; } else if (!(c === undefined && !v)) o.quiet = v; }   // quiet
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = b[C.p++] !== 0; const c = o.touring; if (typeof c === 'boolean') { if (c !== v) o.touring = v; } else if (c === null) { if (v) o.touring = v; } else if (typeof c === 'object') { if (!v) o.touring = null; } else if (!(c === undefined && !v)) o.touring = v; }   // touring
-    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1180, o);   // cam
+    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1172, o);   // cam
   }
   function f_director_Shot(o: any, m: number) {
     { let c = o.spec; if (!c || typeof c !== 'object') c = o.spec = C.made("crate::director::CameraShotSpec"); f_director_CameraShotSpec(c, m + 0); }   // spec
@@ -6656,7 +6597,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = b[C.p++] !== 0; const c = o.heard; if (typeof c === 'boolean') { if (c !== v) o.heard = v; } else if (c === null) { if (v) o.heard = v; } else if (typeof c === 'object') { if (!v) o.heard = null; } else if (!(c === undefined && !v)) o.heard = v; }   // heard
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = b[C.p++] !== 0; const c = o.held; if (typeof c === 'boolean') { if (c !== v) o.held = v; } else if (c === null) { if (v) o.held = v; } else if (typeof c === 'object') { if (!v) o.held = null; } else if (!(c === undefined && !v)) o.held = v; }   // held
-    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1181, o);   // small0
+    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1173, o);   // small0
   }
   function f_enemysquads_Looker(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.gd; if (typeof c === 'number') { if (c !== v) o.gd = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.gd = null; } else { const r = T_GuardId()[v]; if (r !== c) o.gd = r; } }   // gd
@@ -6689,14 +6630,14 @@ export function puppetRows(C: Ctx) {
   }
   function f_director_CondArm2(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_144[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.k !== v) o.k = v; }   // k
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1182, o);   // test
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1174, o);   // test
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.label; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.label = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // label
   }
   function f_director_CondArm3(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_145[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.k !== v) o.k = v; }   // k
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_146[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { if (b[C.p++]) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.name; if (!strEq(c, b, C.p, L)) o.name = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; } else if (o.name !== undefined) o.name = undefined; }   // name
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1183, o);   // got
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1175, o);   // got
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.tick0; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.tick0 = v !== 0 as any; else o.tick0 = v; } }   // tick0
   }
   function f_director_CondArm4(o: any, m: number) {
@@ -6706,7 +6647,7 @@ export function puppetRows(C: Ctx) {
   }
   function f_director_CondArm5(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_149[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.k !== v) o.k = v; }   // k
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1184, o);   // of
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1176, o);   // of
   }
   function f_hands_Lie(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const c = o.p; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.p = a; } } }   // p
@@ -6729,31 +6670,12 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
     { let c = o.r; if (!c || typeof c !== 'object') c = o.r = C.made("crate::scene_collision::Propagation"); f_scene_collision_Propagation(c, m + 1); }   // r
   }
-  function f_scene_box_mirror_BoxMirrorGridOf(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1185, o);   // cells
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.tiltedAt; if (a === null || a === undefined) { if (L || a === undefined) a = o.tiltedAt = []; } else if (ArrayBuffer.isView(a) && (a as any).length !== L) a = o.tiltedAt = new (a as any).constructor(L); if (L) for (let i = 0; i < L; i++) { const x = dv.getFloat64(C.p + 8 * i, true); if (!Object.is(a[i], x)) a[i] = x; } if (a && !ArrayBuffer.isView(a) && a.length !== L) a.length = L; C.p += 8 * L; }   // tilted_at
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.W; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.W = v !== 0 as any; else o.W = v; } }   // w
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.H; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.H = v !== 0 as any; else o.H = v; } }   // h
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.cs; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.cs = v !== 0 as any; else o.cs = v; } }   // cs
-  }
-  function f_scene_box_mirror_BoxMirrorCaps(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.boxes; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.boxes = v !== 0 as any; else o.boxes = v; } }   // boxes
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.leaves; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.leaves = v !== 0 as any; else o.leaves = v; } }   // leaves
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.cuts; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.cuts = v !== 0 as any; else o.cuts = v; } }   // cuts
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.panes; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.panes = v !== 0 as any; else o.panes = v; } }   // panes
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.cells; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.cells = v !== 0 as any; else o.cells = v; } }   // cells
-    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.items; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.items = v !== 0 as any; else o.items = v; } }   // items
-    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.tilted; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.tilted = v !== 0 as any; else o.tilted = v; } }   // tilted
-    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.things; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.things = v !== 0 as any; else o.things = v; } }   // things
-    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.glass; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.glass = v !== 0 as any; else o.glass = v; } }   // glass
-    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.view; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.view = v !== 0 as any; else o.view = v; } }   // view
-  }
   function f_weather_Stroke(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1186, o);   // pulses
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1177, o);   // pulses
   }
   function f_qrf_PerimeterMenItem(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.gd; if (typeof c === 'number') { if (c !== v) o.gd = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.gd = null; } else { const r = T_GuardId()[v]; if (r !== c) o.gd = r; } }   // gd
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1187, o);   // post
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1178, o);   // post
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.arrivedAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.arrivedAt = v !== 0 as any; else o.arrivedAt = v; } }   // arrived_at
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = b[C.p++] !== 0; const c = o.fighting; if (typeof c === 'boolean') { if (c !== v) o.fighting = v; } else if (c === null) { if (v) o.fighting = v; } else if (typeof c === 'object') { if (!v) o.fighting = null; } else if (!(c === undefined && !v)) o.fighting = v; }   // fighting
   }
@@ -6798,8 +6720,8 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.foot; if (typeof c === 'number') { if (c !== v) o.foot = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.foot = null; } else { const r = T_DebrisChunkId()[v]; if (r !== c) o.foot = r; } } else if (o.foot !== undefined) o.foot = undefined; }   // foot
   }
   function f_edge_look_EdgeLookTodoItem(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1188, o);   // b
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1189, o);   // f
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1179, o);   // b
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1180, o);   // f
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.c; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.c = v !== 0 as any; else o.c = v; } }   // c
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const c = o.dir; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.dir = a; } } } else if (o.dir !== null) o.dir = null; }   // dir
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = b[C.p++] !== 0; const c = o.blast; if (typeof c === 'boolean') { if (c !== v) o.blast = v; } else if (c === null) { if (v) o.blast = v; } else if (typeof c === 'object') { if (!v) o.blast = null; } else if (!(c === undefined && !v)) o.blast = v; }   // blast
@@ -6815,15 +6737,15 @@ export function puppetRows(C: Ctx) {
   }
   function f_furnblast_FurnitureRowKept(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const c = o.first; if (c !== null && typeof c === 'object') C.slow(1190, o); else { const v = dv.getUint32(C.p, true); C.p += 4; if (c !== v && !(c === undefined && v === 0)) o.first = v; } }   // first
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const c = o.first; if (c !== null && typeof c === 'object') C.slow(1181, o); else { const v = dv.getUint32(C.p, true); C.p += 4; if (c !== v && !(c === undefined && v === 0)) o.first = v; } }   // first
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.origins; if (a === null || a === undefined) { if (L || a === undefined) a = o.origins = []; } for (let i = 0; i < L; i++) { const c = a[i], p0 = C.p; let same = !!c && c.length === 3; if (same) for (let k = 0; k < 3; k++) if (!Object.is(dv.getFloat64(p0 + 8 * k, true), c[k])) { same = false; break; } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let k = 0; k < 3; k++) (c as any)[k] = dv.getFloat64(p0 + 8 * k, true); } else { const x = new Array(3); for (let k = 0; k < 3; k++) x[k] = dv.getFloat64(p0 + 8 * k, true); a[i] = x; } } } if (a && a.length !== L) a.length = L; }   // origins
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1191, o);   // gone
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1182, o);   // gone
   }
   function f_furnblast_FurnitureMouthMemo(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.serial; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.serial = v !== 0 as any; else o.serial = v; } }   // serial
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1192, o);   // can
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1193, o);   // under
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1183, o);   // can
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1184, o);   // under
   }
   function f_destruction_RateCap(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.ts; if (a === null || a === undefined) { if (L || a === undefined) a = o.ts = []; } else if (ArrayBuffer.isView(a) && (a as any).length !== L) a = o.ts = new (a as any).constructor(L); if (L) for (let i = 0; i < L; i++) { const x = dv.getFloat64(C.p + 8 * i, true); if (!Object.is(a[i], x)) a[i] = x; } if (a && !ArrayBuffer.isView(a) && a.length !== L) a.length = L; C.p += 8 * L; }   // ts
@@ -6865,7 +6787,7 @@ export function puppetRows(C: Ctx) {
   function f_director_ManifestExpectsItem(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_153[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { if (b[C.p++]) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.program; if (!strEq(c, b, C.p, L)) o.program = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; } else if (o.program !== undefined) o.program = undefined; }   // program
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1194, o);   // beats
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1185, o);   // beats
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.a; if (!strEq(c, b, C.p, L)) o.a = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; } else if (o.a !== undefined) o.a = undefined; }   // a
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { if (b[C.p++]) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.b; if (!strEq(c, b, C.p, L)) o.b = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; } else if (o.b !== undefined) o.b = undefined; }   // b
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.max; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.max = v !== 0 as any; else o.max = v; } } else if (o.max !== undefined) o.max = undefined; }   // max
@@ -6947,7 +6869,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.A; if (typeof c === 'number') { if (c !== v) o.A = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.A = null; } else { const r = T_OrdersAssignmentId()[v]; if (r !== c) o.A = r; } }   // a
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t0; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t0 = v !== 0 as any; else o.t0 = v; } }   // t0
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.onT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.onT = v !== 0 as any; else o.onT = v; } }   // on_t
-    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1195, o);   // chain
+    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1186, o);   // chain
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const v = b[C.p++] !== 0; const c = o.saidHot; if (typeof c === 'boolean') { if (c !== v) o.saidHot = v; } else if (c === null) { if (v) o.saidHot = v; } else if (typeof c === 'object') { if (!v) o.saidHot = null; } else if (!(c === undefined && !v)) o.saidHot = v; }   // said_hot
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { const v = b[C.p++] !== 0; const c = o.saidWait; if (typeof c === 'boolean') { if (c !== v) o.saidWait = v; } else if (c === null) { if (v) o.saidWait = v; } else if (typeof c === 'object') { if (!v) o.saidWait = null; } else if (!(c === undefined && !v)) o.saidWait = v; }   // said_wait
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { const v = b[C.p++] !== 0; const c = o.leap; if (typeof c === 'boolean') { if (c !== v) o.leap = v; } else if (c === null) { if (v) o.leap = v; } else if (typeof c === 'object') { if (!v) o.leap = null; } else if (!(c === undefined && !v)) o.leap = v; }   // leap
@@ -6986,34 +6908,34 @@ export function puppetRows(C: Ctx) {
   }
   function f_render_lights_LightSetFogTeam(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = b[C.p++] !== 0; const c = o.on; if (typeof c === 'boolean') { if (c !== v) o.on = v; } else if (c === null) { if (v) o.on = v; } else if (typeof c === 'object') { if (!v) o.on = null; } else if (!(c === undefined && !v)) o.on = v; }   // on
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1196, o);   // owners
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1197, o);   // lights
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1187, o);   // owners
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1188, o);   // lights
   }
   function f_scene_scenarios_NightBreachData(o: any, m: number) {
     { let c = o.team; if (!c || typeof c !== 'object') c = o.team = C.made("crate::scene_scenarios::TeamStart"); f_scene_scenarios_TeamStart(c, m + 0); }   // team
   }
   function f_scene_scenarios_StructureData(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1198, o);   // team
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1199, o);   // rooms
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1200, o);   // starts
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1201, o);   // squads
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1189, o);   // team
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1190, o);   // rooms
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1191, o);   // starts
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1192, o);   // squads
   }
   function f_scene_scenarios_RescueData(o: any, m: number) {
     { let c = o.team; if (!c || typeof c !== 'object') c = o.team = C.made("crate::scene_scenarios::TeamStart"); f_scene_scenarios_TeamStart(c, m + 0); }   // team
     { let c = o.room; if (!c || typeof c !== 'object') c = o.room = C.made("crate::scene_scenarios::RescueDataRoom"); f_scene_scenarios_RescueDataRoom(c, m + 1); }   // room
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1202, o);   // side
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1203, o);   // flow
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1193, o);   // side
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1194, o);   // flow
   }
   function f_scene_scenarios_PlacesData(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1204, o);   // areas
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1195, o);   // areas
   }
   function f_scene_scenarios_SnatchData(o: any, m: number) {
     { let c = o.man; if (!c || typeof c !== 'object') c = o.man = C.made("crate::scene_scenarios::SnatchDataMan"); f_scene_scenarios_SnatchDataMan(c, m + 0); }   // man
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1205, o);   // exits
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1206, o);   // van
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1196, o);   // exits
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1197, o);   // van
   }
   function f_scene_scenarios_ResponseData(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1207, o);   // ways
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1198, o);   // ways
   }
   function f_quiet_QuietMissionAuthoredMissionRack(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.index; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.index = v !== 0 as any; else o.index = v; } }   // index
@@ -7030,18 +6952,6 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.k; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.k = v !== 0 as any; else o.k = v; } }   // k
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const c = o.e; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.e = a; } } }   // e
   }
-  function f_scene_box_mirror_SceneBoxMirrorModCLOCK(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.n; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.n = v !== 0 as any; else o.n = v; } }   // n
-  }
-  function f_scene_box_mirror_SceneBoxMirrorModCOPIES(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.n; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.n = v !== 0 as any; else o.n = v; } }   // n
-  }
-  function f_scene_box_mirror_SceneBoxMirrorModLEAVES(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.n; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.n = v !== 0 as any; else o.n = v; } }   // n
-  }
-  function f_scene_box_mirror_SceneBoxMirrorModTHINGS(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.n; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.n = v !== 0 as any; else o.n = v; } }   // n
-  }
   function f_scene_collision_SceneCollisionModBOTH(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.asked; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.asked = v !== 0 as any; else o.asked = v; } }   // asked
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.differ; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.differ = v !== 0 as any; else o.differ = v; } }   // differ
@@ -7052,7 +6962,7 @@ export function puppetRows(C: Ctx) {
   function f_scene_collision_SceneCollisionModANYTIME(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.proofs; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.proofs = v !== 0 as any; else o.proofs = v; } }   // proofs
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.windows; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.windows = v !== 0 as any; else o.windows = v; } }   // windows
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1208, o);   // who
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1199, o);   // who
   }
   function f_scene_collision_SceneCollisionModSENSED(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.sight; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.sight = v !== 0 as any; else o.sight = v; } }   // sight
@@ -7075,7 +6985,7 @@ export function puppetRows(C: Ctx) {
   }
   function f_anim_skeleton_ClipSide(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.lines; if (a === null || a === undefined) { if (L || a === undefined) a = o.lines = new Uint8Array(L); } else if (ArrayBuffer.isView(a) && (a as any).length !== L) a = o.lines = new (a as any).constructor(L); if (L) for (let i = 0; i < L; i++) { const x = dv.getUint8(C.p + 1 * i); if (!Object.is(a[i], x)) a[i] = x; } if (a && !ArrayBuffer.isView(a) && a.length !== L) a.length = L; C.p += 1 * L; }   // lines
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1209, o);   // at
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1200, o);   // at
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.need; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.need = v !== 0 as any; else o.need = v; } }   // need
   }
   function f_character_CharacterModHOLDSHOW(o: any, m: number) {
@@ -7089,7 +6999,7 @@ export function puppetRows(C: Ctx) {
   }
   function f_opening_OpeningModSpotsValue(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.key; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.key = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // key
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1210, o);   // at
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1201, o);   // at
   }
   function f_holdfire_HoldfireModHOLDFIRELOGItem(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
@@ -7104,11 +7014,11 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.loudT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.loudT = v !== 0 as any; else o.loudT = v; } }   // loud_t
   }
   function f_picture_State(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1211, o);   // men
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1202, o);   // men
     { let c = o.sam; if (!c || typeof c !== 'object') c = o.sam = C.made("crate::picture::Pic"); f_picture_Pic(c, m + 1); }   // sam
     if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.tellT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.tellT = v !== 0 as any; else o.tellT = v; } }   // tell_t
-    if (b[MP + ((m + 13) >> 3)] & (1 << ((m + 13) & 7))) C.slow(1212, o);   // done
-    if (b[MP + ((m + 14) >> 3)] & (1 << ((m + 14) & 7))) C.slow(1213, o);   // view
+    if (b[MP + ((m + 13) >> 3)] & (1 << ((m + 13) & 7))) C.slow(1203, o);   // done
+    if (b[MP + ((m + 14) >> 3)] & (1 << ((m + 14) & 7))) C.slow(1204, o);   // view
     if (b[MP + ((m + 15) >> 3)] & (1 << ((m + 15) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.viewT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.viewT = v !== 0 as any; else o.viewT = v; } }   // view_t
   }
   function f_fire_FireStats(o: any, m: number) {
@@ -7122,10 +7032,10 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.n; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.n = v !== 0 as any; else o.n = v; } }   // n
   }
   function f_winbars_BarState(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1214, o);   // met
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1205, o);   // met
   }
   function f_glasspen_PenState(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1215, o);   // log
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1206, o);   // log
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.rev; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.rev = v !== 0 as any; else o.rev = v; } }   // rev
   }
   function f_doorway_DoorwayModSTACKOWN(o: any, m: number) {
@@ -7143,7 +7053,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { if (b[C.p++]) { const c = o.spot; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.spot = a; } } } else if (o.spot !== null) o.spot = null; }   // spot
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.door; if (typeof c === 'number') { if (c !== v) o.door = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.door = null; } else { const r = T_DoorId()[v]; if (r !== c) o.door = r; } } else if (o.door !== null) o.door = null; }   // door
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.side; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.side = v !== 0 as any; else o.side = v; } }   // side
-    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) C.slow(1216, o);   // path
+    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) C.slow(1207, o);   // path
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.noSpot; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.noSpot = v !== 0 as any; else o.noSpot = v; } }   // no_spot
     if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.roundT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.roundT = v !== 0 as any; else o.roundT = v; } }   // round_t
     if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.funnelT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.funnelT = v !== 0 as any; else o.funnelT = v; } }   // funnel_t
@@ -7177,7 +7087,7 @@ export function puppetRows(C: Ctx) {
   }
   function f_handleside_HandlesideModFacesValue(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.swing; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.swing = v !== 0 as any; else o.swing = v; } }   // swing
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1217, o);   // at
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1208, o);   // at
   }
   function f_runner_Run(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_160[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
@@ -7197,7 +7107,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 14) >> 3)] & (1 << ((m + 14) & 7))) { const v = b[C.p++] !== 0; const c = o.bare; if (typeof c === 'boolean') { if (c !== v) o.bare = v; } else if (c === null) { if (v) o.bare = v; } else if (typeof c === 'object') { if (!v) o.bare = null; } else if (!(c === undefined && !v)) o.bare = v; }   // bare
     if (b[MP + ((m + 15) >> 3)] & (1 << ((m + 15) & 7))) { const v = b[C.p++] !== 0; const c = o.drive; if (typeof c === 'boolean') { if (c !== v) o.drive = v; } else if (c === null) { if (v) o.drive = v; } else if (typeof c === 'object') { if (!v) o.drive = null; } else if (!(c === undefined && !v)) o.drive = v; }   // drive
     if (b[MP + ((m + 16) >> 3)] & (1 << ((m + 16) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.driveT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.driveT = v !== 0 as any; else o.driveT = v; } }   // drive_t
-    if (b[MP + ((m + 17) >> 3)] & (1 << ((m + 17) & 7))) C.slow(1218, o);   // script
+    if (b[MP + ((m + 17) >> 3)] & (1 << ((m + 17) & 7))) C.slow(1209, o);   // script
   }
   function f_netquietfeed_NetquietfeedModNETFEED(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = b[C.p++] !== 0; const c = o.live; if (typeof c === 'boolean') { if (c !== v) o.live = v; } else if (c === null) { if (v) o.live = v; } else if (typeof c === 'object') { if (!v) o.live = null; } else if (!(c === undefined && !v)) o.live = v; }   // live
@@ -7217,9 +7127,9 @@ export function puppetRows(C: Ctx) {
   }
   function f_netquiet_Mind(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.quiet; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.quiet = v !== 0 as any; else o.quiet = v; } }   // quiet
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1219, o);   // asked
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1220, o);   // known
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1221, o);   // paid
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1210, o);   // asked
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1211, o);   // known
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1212, o);   // paid
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.say; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.say = v !== 0 as any; else o.say = v; } }   // say
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.sayT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.sayT = v !== 0 as any; else o.sayT = v; } }   // say_t
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.sayName; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.sayName = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // say_name
@@ -7252,63 +7162,63 @@ export function puppetRows(C: Ctx) {
   function f_laststand_State(o: any, m: number) {
     { let c = o.die; if (!c || typeof c !== 'object') c = o.die = C.made("crate::math_dice::Die"); f_math_dice_Die(c, m + 0); }   // die
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.nextAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.nextAt = v !== 0 as any; else o.nextAt = v; } }   // next_at
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1222, o);   // check
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1223, o);   // known
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1224, o);   // named
-    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1225, o);   // stand
-    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1226, o);   // spots
-    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) C.slow(1227, o);   // at
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1213, o);   // check
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1214, o);   // known
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1215, o);   // named
+    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1216, o);   // stand
+    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1217, o);   // spots
+    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) C.slow(1218, o);   // at
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { const v = b[C.p++] !== 0; const c = o.loneSaid; if (typeof c === 'boolean') { if (c !== v) o.loneSaid = v; } else if (c === null) { if (v) o.loneSaid = v; } else if (typeof c === 'object') { if (!v) o.loneSaid = null; } else if (!(c === undefined && !v)) o.loneSaid = v; }   // lone_said
     if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.fewN; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.fewN = v !== 0 as any; else o.fewN = v; } }   // few_n
-    if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) C.slow(1228, o);   // told
-    if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) C.slow(1229, o);   // said
+    if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) C.slow(1219, o);   // told
+    if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) C.slow(1220, o);   // said
     { let c = o.stats; if (!c || typeof c !== 'object') c = o.stats = C.made("crate::laststand::StateStats"); f_laststand_StateStats(c, m + 12); }   // stats
     if (b[MP + ((m + 32) >> 3)] & (1 << ((m + 32) & 7))) { const v = b[C.p++] !== 0; const c = o.stale; if (typeof c === 'boolean') { if (c !== v) o.stale = v; } else if (c === null) { if (v) o.stale = v; } else if (typeof c === 'object') { if (!v) o.stale = null; } else if (!(c === undefined && !v)) o.stale = v; }   // stale
-    if (b[MP + ((m + 33) >> 3)] & (1 << ((m + 33) & 7))) C.slow(1230, o);   // post
+    if (b[MP + ((m + 33) >> 3)] & (1 << ((m + 33) & 7))) C.slow(1221, o);   // post
     if (b[MP + ((m + 34) >> 3)] & (1 << ((m + 34) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.key; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.key = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // key
-    if (b[MP + ((m + 35) >> 3)] & (1 << ((m + 35) & 7))) C.slow(1231, o);   // rot
+    if (b[MP + ((m + 35) >> 3)] & (1 << ((m + 35) & 7))) C.slow(1222, o);   // rot
     if (b[MP + ((m + 36) >> 3)] & (1 << ((m + 36) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.clsAt; if (a === null || a === undefined) { if (L || a === undefined) a = o.clsAt = []; } else if (ArrayBuffer.isView(a) && (a as any).length !== L) a = o.clsAt = new (a as any).constructor(L); if (L) for (let i = 0; i < L; i++) { const x = dv.getFloat64(C.p + 8 * i, true); if (!Object.is(a[i], x)) a[i] = x; } if (a && !ArrayBuffer.isView(a) && a.length !== L) a.length = L; C.p += 8 * L; }   // cls_at
-    if (b[MP + ((m + 37) >> 3)] & (1 << ((m + 37) & 7))) C.slow(1232, o);   // later
+    if (b[MP + ((m + 37) >> 3)] & (1 << ((m + 37) & 7))) C.slow(1223, o);   // later
   }
   function f_stackroom_Book(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.sig; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.sig = v !== 0 as any; else o.sig = v; } }   // sig
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.doors; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.doors = v !== 0 as any; else o.doors = v; } }   // doors
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { if (b[C.p++]) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.near; if (a === null || a === undefined) { if (L || a === undefined) a = o.near = new Uint8Array(L); } else if (ArrayBuffer.isView(a) && (a as any).length !== L) a = o.near = new (a as any).constructor(L); if (L) for (let i = 0; i < L; i++) { const x = dv.getUint8(C.p + 1 * i); if (!Object.is(a[i], x)) a[i] = x; } if (a && !ArrayBuffer.isView(a) && a.length !== L) a.length = L; C.p += 1 * L; } else if (o.near !== null) o.near = null; }   // near
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1233, o);   // floors
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1224, o);   // floors
   }
   function f_rearwatch_Book(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1234, o);   // pins
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1235, o);   // by_op
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1236, o);   // short
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1237, o);   // let_off
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1238, o);   // log
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1225, o);   // pins
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1226, o);   // by_op
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1227, o);   // short
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1228, o);   // let_off
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1229, o);   // log
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.rows; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.rows = v !== 0 as any; else o.rows = v; } }   // rows
-    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1239, o);   // keeps
-    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) C.slow(1240, o);   // was
-    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) C.slow(1241, o);   // shut
+    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1230, o);   // keeps
+    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) C.slow(1231, o);   // was
+    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) C.slow(1232, o);   // shut
   }
   function f_coverfire_State(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.lastT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.lastT = v !== 0 as any; else o.lastT = v; } }   // last_t
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1242, o);   // men
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1233, o);   // men
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.serial; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.serial = v !== 0 as any; else o.serial = v; } }   // serial
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1243, o);   // base
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1244, o);   // stats
-    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1245, o);   // by_id
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1234, o);   // base
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1235, o);   // stats
+    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1236, o);   // by_id
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.saidT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.saidT = v !== 0 as any; else o.saidT = v; } }   // said_t
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.pruneT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.pruneT = v !== 0 as any; else o.pruneT = v; } }   // prune_t
   }
   function f_wallreact_WallReact(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const t = T_WallreactBreachId(); let a = o.breaches; if (a === null || a === undefined) { if (L || a === undefined) a = o.breaches = []; } if (a && Array.isArray(a) && (a.length === 0 || typeof a[0] !== 'number')) { for (let i = 0; i < L; i++) { const v = dv.getUint32(C.p, true); C.p += 4; const r = t[v]; if (a[i] !== r) a[i] = r; } if (a.length !== L) a.length = L; } else if (a) { for (let i = 0; i < L; i++) { a[i] = dv.getUint32(C.p, true); C.p += 4; } if (a.length !== L) a.length = L; } }   // breaches
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1246, o);   // queue
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1237, o);   // queue
   }
   function f_tactics_TState(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const t = T_TacticsPlanId(); let a = o.plans; if (a === null || a === undefined) { if (L || a === undefined) a = o.plans = []; } if (a && Array.isArray(a) && (a.length === 0 || typeof a[0] !== 'number')) { for (let i = 0; i < L; i++) { const v = dv.getUint32(C.p, true); C.p += 4; const r = t[v]; if (a[i] !== r) a[i] = r; } if (a.length !== L) a.length = L; } else if (a) { for (let i = 0; i < L; i++) { a[i] = dv.getUint32(C.p, true); C.p += 4; } if (a.length !== L) a.length = L; } }   // plans
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1247, o);   // roles
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1248, o);   // lone
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1238, o);   // roles
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1239, o);   // lone
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const t = T_TacticsDangerRecId(); let a = o.danger; if (a === null || a === undefined) { if (L || a === undefined) a = o.danger = []; } if (a && Array.isArray(a) && (a.length === 0 || typeof a[0] !== 'number')) { for (let i = 0; i < L; i++) { const v = dv.getUint32(C.p, true); C.p += 4; const r = t[v]; if (a[i] !== r) a[i] = r; } if (a.length !== L) a.length = L; } else if (a) { for (let i = 0; i < L; i++) { a[i] = dv.getUint32(C.p, true); C.p += 4; } if (a.length !== L) a.length = L; } }   // danger
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1249, o);   // gates
-    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1250, o);   // cleared
-    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1251, o);   // seen_ev
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1240, o);   // gates
+    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1241, o);   // cleared
+    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1242, o);   // seen_ev
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.planSerial; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.planSerial = v !== 0 as any; else o.planSerial = v; } }   // plan_serial
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.lastLoneCallT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.lastLoneCallT = v !== 0 as any; else o.lastLoneCallT = v; } }   // last_lone_call_t
     if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.dealFailT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.dealFailT = v !== 0 as any; else o.dealFailT = v; } }   // deal_fail_t
@@ -7321,30 +7231,30 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.serial; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.serial = v !== 0 as any; else o.serial = v; } }   // serial
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { if (b[C.p++]) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.mask; if (a === null || a === undefined) { if (L || a === undefined) a = o.mask = new Uint8Array(L); } else if (ArrayBuffer.isView(a) && (a as any).length !== L) a = o.mask = new (a as any).constructor(L); if (L) for (let i = 0; i < L; i++) { const x = dv.getUint8(C.p + 1 * i); if (!Object.is(a[i], x)) a[i] = x; } if (a && !ArrayBuffer.isView(a) && a.length !== L) a.length = L; C.p += 1 * L; } else if (o.mask !== null) o.mask = null; }   // mask
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.ver; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.ver = v !== 0 as any; else o.ver = v; } }   // ver
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1252, o);   // own
-    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1253, o);   // seen
-    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1254, o);   // banged
-    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) C.slow(1255, o);   // push
-    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) C.slow(1256, o);   // flank
-    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) C.slow(1257, o);   // flank_of
-    if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) C.slow(1258, o);   // dropped
-    if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) C.slow(1259, o);   // fail_t
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1243, o);   // own
+    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1244, o);   // seen
+    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1245, o);   // banged
+    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) C.slow(1246, o);   // push
+    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) C.slow(1247, o);   // flank
+    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) C.slow(1248, o);   // flank_of
+    if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) C.slow(1249, o);   // dropped
+    if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) C.slow(1250, o);   // fail_t
     if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) { const v = b[C.p++] !== 0; const c = o.skip; if (typeof c === 'boolean') { if (c !== v) o.skip = v; } else if (c === null) { if (v) o.skip = v; } else if (typeof c === 'object') { if (!v) o.skip = null; } else if (!(c === undefined && !v)) o.skip = v; }   // skip
-    if (b[MP + ((m + 13) >> 3)] & (1 << ((m + 13) & 7))) C.slow(1260, o);   // held
+    if (b[MP + ((m + 13) >> 3)] & (1 << ((m + 13) & 7))) C.slow(1251, o);   // held
     if (b[MP + ((m + 14) >> 3)] & (1 << ((m + 14) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const t = T_ItemId(); let a = o.cans; if (a === null || a === undefined) { if (L || a === undefined) a = o.cans = []; } if (a && Array.isArray(a) && (a.length === 0 || typeof a[0] !== 'number')) { for (let i = 0; i < L; i++) { const v = dv.getUint32(C.p, true); C.p += 4; const r = t[v]; if (a[i] !== r) a[i] = r; } if (a.length !== L) a.length = L; } else if (a) { for (let i = 0; i < L; i++) { a[i] = dv.getUint32(C.p, true); C.p += 4; } if (a.length !== L) a.length = L; } }   // cans
     if (b[MP + ((m + 15) >> 3)] & (1 << ((m + 15) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.roll; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.roll = v !== 0 as any; else o.roll = v; } }   // roll
-    if (b[MP + ((m + 16) >> 3)] & (1 << ((m + 16) & 7))) C.slow(1261, o);   // due
-    if (b[MP + ((m + 17) >> 3)] & (1 << ((m + 17) & 7))) C.slow(1262, o);   // look
-    if (b[MP + ((m + 18) >> 3)] & (1 << ((m + 18) & 7))) C.slow(1263, o);   // post
-    if (b[MP + ((m + 19) >> 3)] & (1 << ((m + 19) & 7))) C.slow(1264, o);   // back_t
+    if (b[MP + ((m + 16) >> 3)] & (1 << ((m + 16) & 7))) C.slow(1252, o);   // due
+    if (b[MP + ((m + 17) >> 3)] & (1 << ((m + 17) & 7))) C.slow(1253, o);   // look
+    if (b[MP + ((m + 18) >> 3)] & (1 << ((m + 18) & 7))) C.slow(1254, o);   // post
+    if (b[MP + ((m + 19) >> 3)] & (1 << ((m + 19) & 7))) C.slow(1255, o);   // back_t
     if (b[MP + ((m + 20) >> 3)] & (1 << ((m + 20) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.saidT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.saidT = v !== 0 as any; else o.saidT = v; } }   // said_t
     if (b[MP + ((m + 21) >> 3)] & (1 << ((m + 21) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
     if (b[MP + ((m + 22) >> 3)] & (1 << ((m + 22) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.tickT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.tickT = v !== 0 as any; else o.tickT = v; } }   // tick_t
     { let c = o.stats; if (!c || typeof c !== 'object') c = o.stats = C.made("crate::lanes::StateStats"); f_lanes_StateStats(c, m + 23); }   // stats
-    if (b[MP + ((m + 45) >> 3)] & (1 << ((m + 45) & 7))) C.slow(1265, o);   // peek
-    if (b[MP + ((m + 46) >> 3)] & (1 << ((m + 46) & 7))) C.slow(1266, o);   // reloads
-    if (b[MP + ((m + 47) >> 3)] & (1 << ((m + 47) & 7))) C.slow(1267, o);   // frag_no
-    if (b[MP + ((m + 48) >> 3)] & (1 << ((m + 48) & 7))) C.slow(1268, o);   // near
+    if (b[MP + ((m + 45) >> 3)] & (1 << ((m + 45) & 7))) C.slow(1256, o);   // peek
+    if (b[MP + ((m + 46) >> 3)] & (1 << ((m + 46) & 7))) C.slow(1257, o);   // reloads
+    if (b[MP + ((m + 47) >> 3)] & (1 << ((m + 47) & 7))) C.slow(1258, o);   // frag_no
+    if (b[MP + ((m + 48) >> 3)] & (1 << ((m + 48) & 7))) C.slow(1259, o);   // near
   }
   function f_digin_DiginModDIGINLOGItem(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
@@ -7359,41 +7269,41 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.left; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.left = v !== 0 as any; else o.left = v; } }   // left
   }
   function f_digin_St(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1269, o);   // men
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1270, o);   // rooms
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1271, o);   // wedges
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1272, o);   // fix
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1273, o);   // called
-    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1274, o);   // used
-    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1275, o);   // away
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1260, o);   // men
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1261, o);   // rooms
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1262, o);   // wedges
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1263, o);   // fix
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1264, o);   // called
+    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1265, o);   // used
+    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1266, o);   // away
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.frameT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.frameT = v !== 0 as any; else o.frameT = v; } }   // frame_t
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.bangCall; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.bangCall = v !== 0 as any; else o.bangCall = v; } }   // bang_call
   }
   function f_pressure_State(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1276, o);   // presses
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1277, o);   // of
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1278, o);   // outs
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1267, o);   // presses
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1268, o);   // of
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1269, o);   // outs
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.serial; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.serial = v !== 0 as any; else o.serial = v; } }   // serial
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = b[C.p++] !== 0; const c = o.stale; if (typeof c === 'boolean') { if (c !== v) o.stale = v; } else if (c === null) { if (v) o.stale = v; } else if (typeof c === 'object') { if (!v) o.stale = null; } else if (!(c === undefined && !v)) o.stale = v; }   // stale
-    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1279, o);   // think
-    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1280, o);   // stay
-    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) C.slow(1281, o);   // called
+    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1270, o);   // think
+    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1271, o);   // stay
+    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) C.slow(1272, o);   // called
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.stoodT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.stoodT = v !== 0 as any; else o.stoodT = v; } }   // stood_t
-    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) C.slow(1282, o);   // sent
-    if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) C.slow(1283, o);   // done_at
-    if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) C.slow(1284, o);   // last
-    if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) C.slow(1285, o);   // tried
-    if (b[MP + ((m + 13) >> 3)] & (1 << ((m + 13) & 7))) C.slow(1286, o);   // ear
-    if (b[MP + ((m + 14) >> 3)] & (1 << ((m + 14) & 7))) C.slow(1287, o);   // warn
-    if (b[MP + ((m + 15) >> 3)] & (1 << ((m + 15) & 7))) C.slow(1288, o);   // told
-    if (b[MP + ((m + 16) >> 3)] & (1 << ((m + 16) & 7))) C.slow(1289, o);   // heard
-    if (b[MP + ((m + 17) >> 3)] & (1 << ((m + 17) & 7))) C.slow(1290, o);   // ev_seen
-    if (b[MP + ((m + 18) >> 3)] & (1 << ((m + 18) & 7))) C.slow(1291, o);   // marks
-    if (b[MP + ((m + 19) >> 3)] & (1 << ((m + 19) & 7))) C.slow(1292, o);   // bangs
-    if (b[MP + ((m + 20) >> 3)] & (1 << ((m + 20) & 7))) C.slow(1293, o);   // last_held
-    if (b[MP + ((m + 21) >> 3)] & (1 << ((m + 21) & 7))) C.slow(1294, o);   // word
+    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) C.slow(1273, o);   // sent
+    if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) C.slow(1274, o);   // done_at
+    if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) C.slow(1275, o);   // last
+    if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) C.slow(1276, o);   // tried
+    if (b[MP + ((m + 13) >> 3)] & (1 << ((m + 13) & 7))) C.slow(1277, o);   // ear
+    if (b[MP + ((m + 14) >> 3)] & (1 << ((m + 14) & 7))) C.slow(1278, o);   // warn
+    if (b[MP + ((m + 15) >> 3)] & (1 << ((m + 15) & 7))) C.slow(1279, o);   // told
+    if (b[MP + ((m + 16) >> 3)] & (1 << ((m + 16) & 7))) C.slow(1280, o);   // heard
+    if (b[MP + ((m + 17) >> 3)] & (1 << ((m + 17) & 7))) C.slow(1281, o);   // ev_seen
+    if (b[MP + ((m + 18) >> 3)] & (1 << ((m + 18) & 7))) C.slow(1282, o);   // marks
+    if (b[MP + ((m + 19) >> 3)] & (1 << ((m + 19) & 7))) C.slow(1283, o);   // bangs
+    if (b[MP + ((m + 20) >> 3)] & (1 << ((m + 20) & 7))) C.slow(1284, o);   // last_held
+    if (b[MP + ((m + 21) >> 3)] & (1 << ((m + 21) & 7))) C.slow(1285, o);   // word
     if (b[MP + ((m + 22) >> 3)] & (1 << ((m + 22) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.swept; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.swept = v !== 0 as any; else o.swept = v; } }   // swept
-    if (b[MP + ((m + 23) >> 3)] & (1 << ((m + 23) & 7))) C.slow(1295, o);   // look
+    if (b[MP + ((m + 23) >> 3)] & (1 << ((m + 23) & 7))) C.slow(1286, o);   // look
     if (b[MP + ((m + 24) >> 3)] & (1 << ((m + 24) & 7))) { if (b[C.p++]) { const L = dv.getUint32(C.p, true); C.p += 4; const t = T_RoomfightDefId(); let a = o.out; if (a === null || a === undefined) { if (L || a === undefined) a = o.out = []; } if (a && Array.isArray(a) && (a.length === 0 || typeof a[0] !== 'number')) { for (let i = 0; i < L; i++) { const v = dv.getUint32(C.p, true); C.p += 4; const r = t[v]; if (a[i] !== r) a[i] = r; } if (a.length !== L) a.length = L; } else if (a) { for (let i = 0; i < L; i++) { a[i] = dv.getUint32(C.p, true); C.p += 4; } if (a.length !== L) a.length = L; } } else if (o.out !== null) o.out = null; }   // out
     if (b[MP + ((m + 25) >> 3)] & (1 << ((m + 25) & 7))) { const v = b[C.p++] !== 0; const c = o.lookLost; if (typeof c === 'boolean') { if (c !== v) o.lookLost = v; } else if (c === null) { if (v) o.lookLost = v; } else if (typeof c === 'object') { if (!v) o.lookLost = null; } else if (!(c === undefined && !v)) o.lookLost = v; }   // look_lost
     if (b[MP + ((m + 26) >> 3)] & (1 << ((m + 26) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.lookT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.lookT = v !== 0 as any; else o.lookT = v; } }   // look_t
@@ -7406,7 +7316,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const v = WORDS_3[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.told !== v) o.told = v; } else if (o.told !== undefined) o.told = undefined; }   // told
   }
   function f_quietfog_Held(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1296, o);   // serial
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1287, o);   // serial
   }
   function f_calmtorch_TorchState(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = b[C.p++] !== 0; const c = o.dark; if (typeof c === 'boolean') { if (c !== v) o.dark = v; } else if (c === null) { if (v) o.dark = v; } else if (typeof c === 'object') { if (!v) o.dark = null; } else if (!(c === undefined && !v)) o.dark = v; }   // dark
@@ -7416,8 +7326,8 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.held; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.held = v !== 0 as any; else o.held = v; } }   // held
   }
   function f_buddy_State(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1297, o);   // men
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1298, o);   // errands
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1288, o);   // men
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1289, o);   // errands
     { let c = o.stats; if (!c || typeof c !== 'object') c = o.stats = C.made("crate::buddy::StateStats"); f_buddy_StateStats(c, m + 2); }   // stats
     if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) { const v = b[C.p++] !== 0; const c = o.stale; if (typeof c === 'boolean') { if (c !== v) o.stale = v; } else if (c === null) { if (v) o.stale = v; } else if (typeof c === 'object') { if (!v) o.stale = null; } else if (!(c === undefined && !v)) o.stale = v; }   // stale
   }
@@ -7428,14 +7338,14 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.wayM; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.wayM = v !== 0 as any; else o.wayM = v; } }   // way_m
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.overdueAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.overdueAt = v !== 0 as any; else o.overdueAt = v; } }   // overdue_at
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { if (b[C.p++]) { const c = o.fell; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.fell = a; } } } else if (o.fell !== null) o.fell = null; }   // fell
-    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1299, o);   // seen
+    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1290, o);   // seen
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.lookAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.lookAt = v !== 0 as any; else o.lookAt = v; } }   // look_at
-    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) C.slow(1300, o);   // men
+    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) C.slow(1291, o);   // men
     if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { const v = b[C.p++] !== 0; const c = o.decided; if (typeof c === 'boolean') { if (c !== v) o.decided = v; } else if (c === null) { if (v) o.decided = v; } else if (typeof c === 'object') { if (!v) o.decided = null; } else if (!(c === undefined && !v)) o.decided = v; }   // decided
     if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) { const v = b[C.p++] !== 0; const c = o.word; if (typeof c === 'boolean') { if (c !== v) o.word = v; } else if (c === null) { if (v) o.word = v; } else if (typeof c === 'object') { if (!v) o.word = null; } else if (!(c === undefined && !v)) o.word = v; }   // word
     if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.parties; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.parties = v !== 0 as any; else o.parties = v; } }   // parties
     if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) { const v = b[C.p++] !== 0; const c = o.lost; if (typeof c === 'boolean') { if (c !== v) o.lost = v; } else if (c === null) { if (v) o.lost = v; } else if (typeof c === 'object') { if (!v) o.lost = null; } else if (!(c === undefined && !v)) o.lost = v; }   // lost
-    if (b[MP + ((m + 13) >> 3)] & (1 << ((m + 13) & 7))) C.slow(1301, o);   // events
+    if (b[MP + ((m + 13) >> 3)] & (1 << ((m + 13) & 7))) C.slow(1292, o);   // events
   }
   function f_darkfoe_FoeState(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = b[C.p++] !== 0; const c = o.knows; if (typeof c === 'boolean') { if (c !== v) o.knows = v; } else if (c === null) { if (v) o.knows = v; } else if (typeof c === 'object') { if (!v) o.knows = null; } else if (!(c === undefined && !v)) o.knows = v; }   // knows
@@ -7451,7 +7361,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) { if (b[C.p++]) { const c = o.to; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.to = a; } } } else if (o.to !== null) o.to = null; }   // to
   }
   function f_whistle_Resolution(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1302, o);   // hearers
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1293, o);   // hearers
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.responder; if (typeof c === 'number') { if (c !== v) o.responder = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.responder = null; } else { const r = T_GuardId()[v]; if (r !== c) o.responder = r; } } else if (o.responder !== null) o.responder = null; }   // responder
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.answeredBy; if (typeof c === 'number') { if (c !== v) o.answeredBy = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.answeredBy = null; } else { const r = T_GuardId()[v]; if (r !== c) o.answeredBy = r; } } else if (o.answeredBy !== null) o.answeredBy = null; }   // answered_by
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
@@ -7459,15 +7369,15 @@ export function puppetRows(C: Ctx) {
   function f_whistle_WhistleModWHISTLELOGItem(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const c = o.pos; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.pos = a; } } }   // pos
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1303, o);   // hearers
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1294, o);   // hearers
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.responder; if (!strEq(c, b, C.p, L)) o.responder = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; } else if (o.responder !== null) o.responder = null; }   // responder
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { if (b[C.p++]) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.answered; if (!strEq(c, b, C.p, L)) o.answered = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; } else if (o.answered !== null) o.answered = null; }   // answered
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = b[C.p++] !== 0; const c = o.search; if (typeof c === 'boolean') { if (c !== v) o.search = v; } else if (c === null) { if (v) o.search = v; } else if (typeof c === 'object') { if (!v) o.search = null; } else if (!(c === undefined && !v)) o.search = v; }   // search
   }
   function f_attention_Mem(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1304, o);   // hold
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1305, o);   // cand
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1306, o);   // lent
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1295, o);   // hold
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1296, o);   // cand
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1297, o);   // lent
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.takes; if (a === null || a === undefined) { if (L || a === undefined) a = o.takes = []; } else if (ArrayBuffer.isView(a) && (a as any).length !== L) a = o.takes = new (a as any).constructor(L); if (L) for (let i = 0; i < L; i++) { const x = dv.getFloat64(C.p + 8 * i, true); if (!Object.is(a[i], x)) a[i] = x; } if (a && !ArrayBuffer.isView(a) && a.length !== L) a.length = L; C.p += 8 * L; }   // takes
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.tick; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.tick = v !== 0 as any; else o.tick = v; } }   // tick
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.toldAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.toldAt = v !== 0 as any; else o.toldAt = v; } }   // told_at
@@ -7508,8 +7418,8 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 19) >> 3)] & (1 << ((m + 19) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.wokeAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.wokeAt = v !== 0 as any; else o.wokeAt = v; } }   // woke_at
   }
   function f_needs_NeedMem(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1307, o);   // needs
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1308, o);   // trip
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1298, o);   // needs
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1299, o);   // trip
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.lastBackAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.lastBackAt = v !== 0 as any; else o.lastBackAt = v; } }   // last_back_at
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.trips; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.trips = v !== 0 as any; else o.trips = v; } }   // trips
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.cancels; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.cancels = v !== 0 as any; else o.cancels = v; } }   // cancels
@@ -7528,7 +7438,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = b[C.p++] !== 0; const c = o.low; if (typeof c === 'boolean') { if (c !== v) o.low = v; } else if (c === null) { if (v) o.low = v; } else if (typeof c === 'object') { if (!v) o.low = null; } else if (!(c === undefined && !v)) o.low = v; }   // low
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = b[C.p++] !== 0; const c = o.mine; if (typeof c === 'boolean') { if (c !== v) o.mine = v; } else if (c === null) { if (v) o.mine = v; } else if (typeof c === 'object') { if (!v) o.mine = null; } else if (!(c === undefined && !v)) o.mine = v; }   // mine
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1309, o);   // hold
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1300, o);   // hold
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.wood; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.wood = v !== 0 as any; else o.wood = v; } }   // wood
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = b[C.p++] !== 0; const c = o.rose; if (typeof c === 'boolean') { if (c !== v) o.rose = v; } else if (c === null) { if (v) o.rose = v; } else if (typeof c === 'object') { if (!v) o.rose = null; } else if (!(c === undefined && !v)) o.rose = v; }   // rose
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.px; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.px = v !== 0 as any; else o.px = v; } }   // px
@@ -7542,9 +7452,9 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.until; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.until = v !== 0 as any; else o.until = v; } }   // until
   }
   function f_lightswitch_St(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1310, o);   // all
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1311, o);   // list
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1312, o);   // hands
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1301, o);   // all
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1302, o);   // list
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1303, o);   // hands
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.serial; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.serial = v !== 0 as any; else o.serial = v; } }   // serial
   }
   function f_stalk_St(o: any, m: number) {
@@ -7557,7 +7467,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.orbitR; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.orbitR = v !== 0 as any; else o.orbitR = v; } } else if (o.orbitR !== undefined) o.orbitR = undefined; }   // orbit_r
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.orbitT; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.orbitT = v !== 0 as any; else o.orbitT = v; } } else if (o.orbitT !== undefined) o.orbitT = undefined; }   // orbit_t
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { if (b[C.p++]) { const c = o.orbitAsk; let same = c !== null && c !== undefined && c.length === 4; const p0 = C.p; if (same) for (let i = 0; i < 4; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 32; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 4; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(4); for (let i = 0; i < 4; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.orbitAsk = a; } } } else if (o.orbitAsk !== undefined) o.orbitAsk = undefined; }   // orbit_ask
-    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) C.slow(1313, o);   // broke
+    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) C.slow(1304, o);   // broke
   }
   function f_tapstep_St(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.st; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.st = v !== 0 as any; else o.st = v; } }   // st
@@ -7601,8 +7511,8 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.lag; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.lag = v !== 0 as any; else o.lag = v; } }   // lag
     if (b[MP + ((m + 13) >> 3)] & (1 << ((m + 13) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.armed; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.armed = v !== 0 as any; else o.armed = v; } }   // armed
     if (b[MP + ((m + 14) >> 3)] & (1 << ((m + 14) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.armT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.armT = v !== 0 as any; else o.armT = v; } }   // arm_t
-    if (b[MP + ((m + 15) >> 3)] & (1 << ((m + 15) & 7))) C.slow(1314, o);   // quits
-    if (b[MP + ((m + 16) >> 3)] & (1 << ((m + 16) & 7))) C.slow(1315, o);   // pass
+    if (b[MP + ((m + 15) >> 3)] & (1 << ((m + 15) & 7))) C.slow(1305, o);   // quits
+    if (b[MP + ((m + 16) >> 3)] & (1 << ((m + 16) & 7))) C.slow(1306, o);   // pass
     if (b[MP + ((m + 17) >> 3)] & (1 << ((m + 17) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.said; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.said = v !== 0 as any; else o.said = v; } }   // said
     if (b[MP + ((m + 18) >> 3)] & (1 << ((m + 18) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.idle; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.idle = v !== 0 as any; else o.idle = v; } }   // idle
     if (b[MP + ((m + 19) >> 3)] & (1 << ((m + 19) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.ask; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.ask = v !== 0 as any; else o.ask = v; } }   // ask
@@ -7629,7 +7539,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.runAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.runAt = v !== 0 as any; else o.runAt = v; } }   // run_at
     if (b[MP + ((m + 13) >> 3)] & (1 << ((m + 13) & 7))) { if (b[C.p++]) { const c = o.ref; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.ref = a; } } } else if (o.ref !== null) o.ref = null; }   // ref_
     if (b[MP + ((m + 14) >> 3)] & (1 << ((m + 14) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.refT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.refT = v !== 0 as any; else o.refT = v; } }   // ref_t
-    if (b[MP + ((m + 15) >> 3)] & (1 << ((m + 15) & 7))) C.slow(1316, o);   // script
+    if (b[MP + ((m + 15) >> 3)] & (1 << ((m + 15) & 7))) C.slow(1307, o);   // script
   }
   function f_flinch_FlinchModStateOfValue(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.under; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.under = v !== 0 as any; else o.under = v; } }   // under
@@ -7642,37 +7552,37 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t0; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t0 = v !== 0 as any; else o.t0 = v; } }   // t0
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.caller; if (typeof c === 'number') { if (c !== v) o.caller = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.caller = null; } else { const r = T_GuardId()[v]; if (r !== c) o.caller = r; } } else if (o.caller !== null) o.caller = null; }   // caller
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.about; if (typeof c === 'number') { if (c !== v) o.about = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.about = null; } else { const r = T_GuardId()[v]; if (r !== c) o.about = r; } } else if (o.about !== null) o.about = null; }   // about
-    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1317, o);   // known
-    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) C.slow(1318, o);   // where_
-    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) C.slow(1319, o);   // worded
-    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) C.slow(1320, o);   // kept
-    if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) C.slow(1321, o);   // out
-    if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) C.slow(1322, o);   // events
+    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1308, o);   // known
+    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) C.slow(1309, o);   // where_
+    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) C.slow(1310, o);   // worded
+    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) C.slow(1311, o);   // kept
+    if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) C.slow(1312, o);   // out
+    if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) C.slow(1313, o);   // events
   }
   function f_seenwalk_Shared(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.known; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.known = v !== 0 as any; else o.known = v; } }   // known
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.stamp; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.stamp = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // stamp
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1323, o);   // eyes
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1324, o);   // memo
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1314, o);   // eyes
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1315, o);   // memo
   }
   function f_he40_ShellEnd(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const c = o.at; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.at = a; } } }   // at
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.flown; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.flown = v !== 0 as any; else o.flown = v; } }   // flown
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = b[C.p++] !== 0; const c = o.armed; if (typeof c === 'boolean') { if (c !== v) o.armed = v; } else if (c === null) { if (v) o.armed = v; } else if (typeof c === 'object') { if (!v) o.armed = null; } else if (!(c === undefined && !v)) o.armed = v; }   // armed
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = WORDS_168[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.met !== v) o.met = v; }   // met
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1325, o);   // report
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1316, o);   // report
   }
   function f_samlook_St(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.on; if (typeof c === 'number') { if (c !== v) o.on = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.on = null; } else { const r = T_GuardId()[v]; if (r !== c) o.on = r; } } else if (o.on !== null) o.on = null; }   // on
   }
   function f_irlight_Kit(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.sam; if (typeof c === 'number') { if (c !== v) o.sam = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.sam = null; } else { const r = T_LightId()[v]; if (r !== c) o.sam = r; } } else if (o.sam !== null) o.sam = null; }   // sam
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1326, o);   // more
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1327, o);   // men
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1328, o);   // seen
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1329, o);   // need
-    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1330, o);   // near
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1317, o);   // more
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1318, o);   // men
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1319, o);   // seen
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1320, o);   // need
+    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1321, o);   // near
   }
   function f_nvg_NvgNote(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
@@ -7683,7 +7593,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_169[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.mode !== v) o.mode = v; }   // mode
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_170[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.why !== v) o.why = v; }   // why
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1331, o);   // men
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1322, o);   // men
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.leadLitT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.leadLitT = v !== 0 as any; else o.leadLitT = v; } }   // lead_lit_t
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.huntT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.huntT = v !== 0 as any; else o.huntT = v; } }   // hunt_t
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.alarmT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.alarmT = v !== 0 as any; else o.alarmT = v; } }   // alarm_t
@@ -7697,7 +7607,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.facing; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.facing = v !== 0 as any; else o.facing = v; } }   // facing
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.fixT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.fixT = v !== 0 as any; else o.fixT = v; } }   // fix_t
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.goneT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.goneT = v !== 0 as any; else o.goneT = v; } }   // gone_t
-    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1332, o);   // expo
+    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1323, o);   // expo
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { const c = o.expoAt; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.expoAt = a; } } }   // expo_at
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.expoT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.expoT = v !== 0 as any; else o.expoT = v; } }   // expo_t
     if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.talker; if (typeof c === 'number') { if (c !== v) o.talker = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.talker = null; } else { const r = T_GuardId()[v]; if (r !== c) o.talker = r; } } else if (o.talker !== null) o.talker = null; }   // talker
@@ -7751,14 +7661,14 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.seenT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.seenT = v !== 0 as any; else o.seenT = v; } }   // seen_t
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.saidT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.saidT = v !== 0 as any; else o.saidT = v; } }   // said_t
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.said; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.said = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // said
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1333, o);   // doing
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1324, o);   // doing
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.restUntil; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.restUntil = v !== 0 as any; else o.restUntil = v; } }   // rest_until
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.tryT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.tryT = v !== 0 as any; else o.tryT = v; } }   // try_t
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.runT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.runT = v !== 0 as any; else o.runT = v; } }   // run_t
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.runOf; if (typeof c === 'number') { if (c !== v) o.runOf = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.runOf = null; } else { const r = T_GuardId()[v]; if (r !== c) o.runOf = r; } } else if (o.runOf !== null) o.runOf = null; }   // run_of
     if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.leadT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.leadT = v !== 0 as any; else o.leadT = v; } }   // lead_t
     if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) { if (b[C.p++]) { const c = o.leadP; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.leadP = a; } } } else if (o.leadP !== null) o.leadP = null; }   // lead_p
-    if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) C.slow(1334, o);   // lead_of
+    if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) C.slow(1325, o);   // lead_of
     if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.leadFor; if (typeof c === 'number') { if (c !== v) o.leadFor = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.leadFor = null; } else { const r = T_GuardId()[v]; if (r !== c) o.leadFor = r; } } else if (o.leadFor !== null) o.leadFor = null; }   // lead_for
   }
   function f_clearline_ClearlineModSamAtValue(o: any, m: number) {
@@ -7780,7 +7690,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = b[C.p++] !== 0; const c = o.live; if (typeof c === 'boolean') { if (c !== v) o.live = v; } else if (c === null) { if (v) o.live = v; } else if (typeof c === 'object') { if (!v) o.live = null; } else if (!(c === undefined && !v)) o.live = v; }   // live
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.sneakT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.sneakT = v !== 0 as any; else o.sneakT = v; } }   // sneak_t
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.cueT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.cueT = v !== 0 as any; else o.cueT = v; } }   // cue_t
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1335, o);   // hold
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1326, o);   // hold
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.sgn; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.sgn = v !== 0 as any; else o.sgn = v; } }   // sgn
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.why; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.why = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // why
   }
@@ -7788,7 +7698,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.brought; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.brought = v !== 0 as any; else o.brought = v; } }   // brought
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.cans; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.cans = v !== 0 as any; else o.cans = v; } }   // cans
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = b[C.p++] !== 0; const c = o.noted; if (typeof c === 'boolean') { if (c !== v) o.noted = v; } else if (c === null) { if (v) o.noted = v; } else if (typeof c === 'object') { if (!v) o.noted = null; } else if (!(c === undefined && !v)) o.noted = v; }   // noted
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1336, o);   // last
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1327, o);   // last
   }
   function f_squadsmoke_SquadsmokeModSQUADSMOKELOGItem(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
@@ -7800,13 +7710,13 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.left; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.left = v !== 0 as any; else o.left = v; } }   // left
   }
   function f_squad40_State(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1337, o);   // rounds
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1328, o);   // rounds
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.brought; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.brought = v !== 0 as any; else o.brought = v; } }   // brought
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1338, o);   // last
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1339, o);   // turns
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1329, o);   // last
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1330, o);   // turns
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = b[C.p++] !== 0; const c = o.noted; if (typeof c === 'boolean') { if (c !== v) o.noted = v; } else if (c === null) { if (v) o.noted = v; } else if (typeof c === 'object') { if (!v) o.noted = null; } else if (!(c === undefined && !v)) o.noted = v; }   // noted
-    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1340, o);   // shown
-    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1341, o);   // kept
+    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1331, o);   // shown
+    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1332, o);   // kept
   }
   function f_squad40_Squad40ModSQUAD40LOGItem(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
@@ -7818,16 +7728,16 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const v = b[C.p++] !== 0; const c = o.turned; if (typeof c === 'boolean') { if (c !== v) o.turned = v; } else if (c === null) { if (v) o.turned = v; } else if (typeof c === 'object') { if (!v) o.turned = null; } else if (!(c === undefined && !v)) o.turned = v; }   // turned
   }
   function f_squadthrow_State(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1342, o);   // last
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1333, o);   // last
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = b[C.p++] !== 0; const c = o.noted; if (typeof c === 'boolean') { if (c !== v) o.noted = v; } else if (c === null) { if (v) o.noted = v; } else if (typeof c === 'object') { if (!v) o.noted = null; } else if (!(c === undefined && !v)) o.noted = v; }   // noted
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1343, o);   // shown
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1344, o);   // warn
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1345, o);   // warn_frag
-    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1346, o);   // caught
-    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1347, o);   // asked
-    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) C.slow(1348, o);   // walks
-    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) C.slow(1349, o);   // kept
-    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) C.slow(1350, o);   // scratch
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1334, o);   // shown
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1335, o);   // warn
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1336, o);   // warn_frag
+    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1337, o);   // caught
+    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1338, o);   // asked
+    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) C.slow(1339, o);   // walks
+    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) C.slow(1340, o);   // kept
+    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) C.slow(1341, o);   // scratch
   }
   function f_squadthrow_SquadthrowModSQUADTHROWLOGItem(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
@@ -7847,7 +7757,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.secs; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.secs = v !== 0 as any; else o.secs = v; } }   // secs
   }
   function f_smokebreak_State(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1351, o);   // men
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1342, o);   // men
     { let c = o.stats; if (!c || typeof c !== 'object') c = o.stats = C.made("crate::smokebreak::SmokeBreakStats"); f_smokebreak_SmokeBreakStats(c, m + 1); }   // stats
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.seed; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.seed = v !== 0 as any; else o.seed = v; } }   // seed
   }
@@ -7870,17 +7780,17 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 15) >> 3)] & (1 << ((m + 15) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.keepT0; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.keepT0 = v !== 0 as any; else o.keepT0 = v; } }   // keep_t0
     if (b[MP + ((m + 16) >> 3)] & (1 << ((m + 16) & 7))) { const v = b[C.p++] !== 0; const c = o.keepSaid; if (typeof c === 'boolean') { if (c !== v) o.keepSaid = v; } else if (c === null) { if (v) o.keepSaid = v; } else if (typeof c === 'object') { if (!v) o.keepSaid = null; } else if (!(c === undefined && !v)) o.keepSaid = v; }   // keep_said
     if (b[MP + ((m + 17) >> 3)] & (1 << ((m + 17) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.keepSaidT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.keepSaidT = v !== 0 as any; else o.keepSaidT = v; } }   // keep_said_t
-    if (b[MP + ((m + 18) >> 3)] & (1 << ((m + 18) & 7))) C.slow(1352, o);   // owed
+    if (b[MP + ((m + 18) >> 3)] & (1 << ((m + 18) & 7))) C.slow(1343, o);   // owed
   }
   function f_showwhy_OpMem(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1353, o);   // turns
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1344, o);   // turns
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.fistT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.fistT = v !== 0 as any; else o.fistT = v; } }   // fist_t
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getInt32(C.p, true); C.p += 4; if (o.fists !== v) o.fists = v; }   // fists
   }
   function f_showwhy_State(o: any, m: number) {
     { let c = o.stats; if (!c || typeof c !== 'object') c = o.stats = C.made("crate::showwhy::ShowWhyStats"); f_showwhy_ShowWhyStats(c, m + 0); }   // stats
-    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1354, o);   // log
+    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1345, o);   // log
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.afterYouT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.afterYouT = v !== 0 as any; else o.afterYouT = v; } }   // after_you_t
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.keepSayT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.keepSayT = v !== 0 as any; else o.keepSayT = v; } }   // keep_say_t
     if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.lineSayT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.lineSayT = v !== 0 as any; else o.lineSayT = v; } }   // line_say_t
@@ -7904,9 +7814,9 @@ export function puppetRows(C: Ctx) {
   }
   function f_doorforce_State(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.lastT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.lastT = v !== 0 as any; else o.lastT = v; } }   // last_t
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1355, o);   // men
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1356, o);   // kickers
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1357, o);   // boots
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1346, o);   // men
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1347, o);   // kickers
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1348, o);   // boots
   }
   function f_glassbreak_GlassbreakModGBHOST(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.shards; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.shards = v !== 0 as any; else o.shards = v; } }   // shards
@@ -7916,17 +7826,17 @@ export function puppetRows(C: Ctx) {
   }
   function f_glass_GlassState(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.panes; if (a === null || a === undefined) { if (L || a === undefined) a = o.panes = []; } else if (ArrayBuffer.isView(a) && (a as any).length !== L) a = o.panes = new (a as any).constructor(L); if (L) for (let i = 0; i < L; i++) { const x = dv.getFloat64(C.p + 8 * i, true); if (!Object.is(a[i], x)) a[i] = x; } if (a && !ArrayBuffer.isView(a) && a.length !== L) a.length = L; C.p += 8 * L; }   // panes
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1358, o);   // seen
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1349, o);   // seen
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.hits; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.hits = v !== 0 as any; else o.hits = v; } }   // hits
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.lastHitT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.lastHitT = v !== 0 as any; else o.lastHitT = v; } }   // last_hit_t
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1359, o);   // log
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1350, o);   // log
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.crackAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.crackAt = v !== 0 as any; else o.crackAt = v; } }   // crack_at
   }
   function f_enemysquads_State(o: any, m: number) {
     { let c = o.S; if (!c || typeof c !== 'object') c = o.S = C.made("crate::scene_scenarios::StructureData"); f_scene_scenarios_StructureData(c, m + 0); }   // s
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1360, o);   // net
-    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1361, o);   // nc
-    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1362, o);   // word
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1351, o);   // net
+    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1352, o);   // nc
+    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1353, o);   // word
   }
   function f_enemysquads_RoundCtx(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
@@ -7934,8 +7844,8 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.key; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.key = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // key
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.rear; if (a === null || a === undefined) { if (L || a === undefined) a = o.rear = []; } for (let i = 0; i < L; i++) { const c = a[i], p0 = C.p; let same = !!c && c.length === 3; if (same) for (let k = 0; k < 3; k++) if (!Object.is(dv.getFloat64(p0 + 8 * k, true), c[k])) { same = false; break; } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let k = 0; k < 3; k++) (c as any)[k] = dv.getFloat64(p0 + 8 * k, true); } else { const x = new Array(3); for (let k = 0; k < 3; k++) x[k] = dv.getFloat64(p0 + 8 * k, true); a[i] = x; } } } if (a && a.length !== L) a.length = L; }   // rear
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.mouths; if (a === null || a === undefined) { if (L || a === undefined) a = o.mouths = []; } for (let i = 0; i < L; i++) { const c = a[i], p0 = C.p; let same = !!c && c.length === 3; if (same) for (let k = 0; k < 3; k++) if (!Object.is(dv.getFloat64(p0 + 8 * k, true), c[k])) { same = false; break; } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let k = 0; k < 3; k++) (c as any)[k] = dv.getFloat64(p0 + 8 * k, true); } else { const x = new Array(3); for (let k = 0; k < 3; k++) x[k] = dv.getFloat64(p0 + 8 * k, true); a[i] = x; } } } if (a && a.length !== L) a.length = L; }   // mouths
-    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1363, o);   // cost
-    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1364, o);   // held
+    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1354, o);   // cost
+    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1355, o);   // held
   }
   function f_enemysquads_EnemysquadsModBANGSValue(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.n; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.n = v !== 0 as any; else o.n = v; } }   // n
@@ -7978,7 +7888,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 25) >> 3)] & (1 << ((m + 25) & 7))) { const v = b[C.p++] !== 0; const c = o.shout; if (typeof c === 'boolean') { if (c !== v) o.shout = v; } else if (c === null) { if (v) o.shout = v; } else if (typeof c === 'object') { if (!v) o.shout = null; } else if (!(c === undefined && !v)) o.shout = v; }   // shout
     if (b[MP + ((m + 26) >> 3)] & (1 << ((m + 26) & 7))) { const v = b[C.p++] !== 0; const c = o.drive; if (typeof c === 'boolean') { if (c !== v) o.drive = v; } else if (c === null) { if (v) o.drive = v; } else if (typeof c === 'object') { if (!v) o.drive = null; } else if (!(c === undefined && !v)) o.drive = v; }   // drive
     if (b[MP + ((m + 27) >> 3)] & (1 << ((m + 27) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.driveT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.driveT = v !== 0 as any; else o.driveT = v; } }   // drive_t
-    if (b[MP + ((m + 28) >> 3)] & (1 << ((m + 28) & 7))) C.slow(1365, o);   // script
+    if (b[MP + ((m + 28) >> 3)] & (1 << ((m + 28) & 7))) C.slow(1356, o);   // script
   }
   function f_morale_Blast(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const c = o.at; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.at = a; } } }   // at
@@ -7994,8 +7904,8 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = b[C.p++] !== 0; const c = o.open; if (typeof c === 'boolean') { if (c !== v) o.open = v; } else if (c === null) { if (v) o.open = v; } else if (typeof c === 'object') { if (!v) o.open = null; } else if (!(c === undefined && !v)) o.open = v; }   // open
   }
   function f_shotgun_ShotgunModSHOTGUNLAST(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1366, o);   // ends
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1367, o);   // glass
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1357, o);   // ends
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1358, o);   // glass
   }
   function f_player_PlayerModWsPendValue(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
@@ -8021,7 +7931,7 @@ export function puppetRows(C: Ctx) {
   }
   function f_close_State(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1368, o);   // best
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1359, o);   // best
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.mode; if (typeof c === 'number') { if (c !== v) o.mode = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.mode = null; } else { const r = T_GuardId()[v]; if (r !== c) o.mode = r; } } else if (o.mode !== null) o.mode = null; }   // mode
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.modeD; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.modeD = v !== 0 as any; else o.modeD = v; } }   // mode_d
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.rmbT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.rmbT = v !== 0 as any; else o.rmbT = v; } }   // rmb_t
@@ -8048,8 +7958,8 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.saidT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.saidT = v !== 0 as any; else o.saidT = v; } }   // said_t
     if (b[MP + ((m + 13) >> 3)] & (1 << ((m + 13) & 7))) { const v = b[C.p++] !== 0; const c = o.real; if (typeof c === 'boolean') { if (c !== v) o.real = v; } else if (c === null) { if (v) o.real = v; } else if (typeof c === 'object') { if (!v) o.real = null; } else if (!(c === undefined && !v)) o.real = v; }   // real
     if (b[MP + ((m + 14) >> 3)] & (1 << ((m + 14) & 7))) { const v = b[C.p++] !== 0; const c = o.told; if (typeof c === 'boolean') { if (c !== v) o.told = v; } else if (c === null) { if (v) o.told = v; } else if (typeof c === 'object') { if (!v) o.told = null; } else if (!(c === undefined && !v)) o.told = v; }   // told
-    if (b[MP + ((m + 15) >> 3)] & (1 << ((m + 15) & 7))) C.slow(1369, o);   // take
-    if (b[MP + ((m + 16) >> 3)] & (1 << ((m + 16) & 7))) C.slow(1370, o);   // take_no
+    if (b[MP + ((m + 15) >> 3)] & (1 << ((m + 15) & 7))) C.slow(1360, o);   // take
+    if (b[MP + ((m + 16) >> 3)] & (1 << ((m + 16) & 7))) C.slow(1361, o);   // take_no
     if (b[MP + ((m + 17) >> 3)] & (1 << ((m + 17) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.realT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.realT = v !== 0 as any; else o.realT = v; } }   // real_t
     if (b[MP + ((m + 18) >> 3)] & (1 << ((m + 18) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.tickT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.tickT = v !== 0 as any; else o.tickT = v; } }   // tick_t
   }
@@ -8061,15 +7971,15 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { if (b[C.p++]) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.of; if (!strEq(c, b, C.p, L)) o.of = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; } else if (o.of !== null) o.of = null; }   // of
   }
   function f_spotted_SpottedModDropsValue(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1371, o);   // down
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1372, o);   // at
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1362, o);   // down
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1363, o);   // at
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = b[C.p++] !== 0; const c = o.seen; if (typeof c === 'boolean') { if (c !== v) o.seen = v; } else if (c === null) { if (v) o.seen = v; } else if (typeof c === 'object') { if (!v) o.seen = null; } else if (!(c === undefined && !v)) o.seen = v; }   // seen
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
   }
   function f_pairorders_PairordersModPAIRLOGItem(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.what; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.what = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // what
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1373, o);   // serial
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1364, o);   // serial
   }
   function f_pairup_PairupModPAIRHELD(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.row !== v) o.row = v; } else if (o.row !== null) o.row = null; }   // row
@@ -8085,10 +7995,10 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
   }
   function f_sneak_State(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1374, o);   // trail
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1365, o);   // trail
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.off; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.off = v !== 0 as any; else o.off = v; } }   // off
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1375, o);   // men
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1366, o);   // men
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = b[C.p++] !== 0; const c = o.live; if (typeof c === 'boolean') { if (c !== v) o.live = v; } else if (c === null) { if (v) o.live = v; } else if (typeof c === 'object') { if (!v) o.live = null; } else if (!(c === undefined && !v)) o.live = v; }   // live
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.amb; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.amb = v !== 0 as any; else o.amb = v; } }   // amb
   }
@@ -8101,7 +8011,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.z; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.z = v !== 0 as any; else o.z = v; } }   // z
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = b[C.p++] !== 0; const c = o.low; if (typeof c === 'boolean') { if (c !== v) o.low = v; } else if (c === null) { if (v) o.low = v; } else if (typeof c === 'object') { if (!v) o.low = null; } else if (!(c === undefined && !v)) o.low = v; }   // low
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1376, o);   // map
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1367, o);   // map
   }
   function f_silent_State(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const t = T_GuardId(); let a = o.cast; if (a === null || a === undefined) { if (L || a === undefined) a = o.cast = []; } if (a && Array.isArray(a) && (a.length === 0 || typeof a[0] !== 'number')) { for (let i = 0; i < L; i++) { const v = dv.getUint32(C.p, true); C.p += 4; const r = t[v]; if (a[i] !== r) a[i] = r; } if (a.length !== L) a.length = L; } else if (a) { for (let i = 0; i < L; i++) { a[i] = dv.getUint32(C.p, true); C.p += 4; } if (a.length !== L) a.length = L; } }   // cast
@@ -8109,7 +8019,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.since; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.since = v !== 0 as any; else o.since = v; } }   // since
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = b[C.p++] !== 0; const c = o.hot; if (typeof c === 'boolean') { if (c !== v) o.hot = v; } else if (c === null) { if (v) o.hot = v; } else if (typeof c === 'object') { if (!v) o.hot = null; } else if (!(c === undefined && !v)) o.hot = v; }   // hot
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.was !== v) o.was = v; } else if (o.was !== undefined) o.was = undefined; }   // was
-    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1377, o);   // booted
+    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1368, o);   // booted
   }
   function f_silent_SilentModSILENTLOGItem(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
@@ -8126,7 +8036,7 @@ export function puppetRows(C: Ctx) {
   function f_frag_BlastReport(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const c = o.at; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.at = a; } } }   // at
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.who; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.who = v !== 0 as any; else o.who = v; } }   // who
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1378, o);   // hits
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1369, o);   // hits
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.killed; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.killed = v !== 0 as any; else o.killed = v; } }   // killed
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.finished; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.finished = v !== 0 as any; else o.finished = v; } }   // finished
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.wounded; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.wounded = v !== 0 as any; else o.wounded = v; } }   // wounded
@@ -8137,7 +8047,7 @@ export function puppetRows(C: Ctx) {
   function f_frag_FragModWALLSFORValue(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.time; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.time = v !== 0 as any; else o.time = v; } }   // time
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.serial; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.serial = v !== 0 as any; else o.serial = v; } }   // serial
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1379, o);   // at
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1370, o);   // at
   }
   function f_frag_FragModTORNValue(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.time; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.time = v !== 0 as any; else o.time = v; } }   // time
@@ -8146,20 +8056,20 @@ export function puppetRows(C: Ctx) {
   function f_frag_Live(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.it; if (typeof c === 'number') { if (c !== v) o.it = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.it = null; } else { const r = T_ItemId()[v]; if (r !== c) o.it = r; } }   // it
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_12[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.side !== v) o.side = v; }   // side
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1380, o);   // knows
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1381, o);   // shouted
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1382, o);   // flee
-    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1383, o);   // via
-    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1384, o);   // flee_at
-    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) C.slow(1385, o);   // deal_t
-    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) C.slow(1386, o);   // counted
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1371, o);   // knows
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1372, o);   // shouted
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1373, o);   // flee
+    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1374, o);   // via
+    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1375, o);   // flee_at
+    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) C.slow(1376, o);   // deal_t
+    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) C.slow(1377, o);   // counted
     if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { const v = b[C.p++] !== 0; const c = o.cued; if (typeof c === 'boolean') { if (c !== v) o.cued = v; } else if (c === null) { if (v) o.cued = v; } else if (typeof c === 'object') { if (!v) o.cued = null; } else if (!(c === undefined && !v)) o.cued = v; }   // cued
-    if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) C.slow(1387, o);   // rest
-    if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) C.slow(1388, o);   // made
+    if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) C.slow(1378, o);   // rest
+    if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) C.slow(1379, o);   // made
   }
   function f_frag_DefBook(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const t = T_GuardId(); let a = o.men; if (a === null || a === undefined) { if (L || a === undefined) a = o.men = []; } if (a && Array.isArray(a) && (a.length === 0 || typeof a[0] !== 'number')) { for (let i = 0; i < L; i++) { const v = dv.getUint32(C.p, true); C.p += 4; const r = t[v]; if (a[i] !== r) a[i] = r; } if (a.length !== L) a.length = L; } else if (a) { for (let i = 0; i < L; i++) { a[i] = dv.getUint32(C.p, true); C.p += 4; } if (a.length !== L) a.length = L; } }   // men
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1389, o);   // carriers
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1380, o);   // carriers
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.lastT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.lastT = v !== 0 as any; else o.lastT = v; } }   // last_t
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.serial; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.serial = v !== 0 as any; else o.serial = v; } }   // serial
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.thrown; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.thrown = v !== 0 as any; else o.thrown = v; } }   // thrown
@@ -8199,26 +8109,26 @@ export function puppetRows(C: Ctx) {
   function f_workthings_WorkthingsModErrandsValue(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.key; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.key = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // key
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1390, o);   // e
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1381, o);   // e
   }
   function f_hours_HoursModHOUR(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_188[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.id !== v) o.id = v; }   // id
   }
   function f_hours_HourState(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1391, o);   // lamps
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1392, o);   // storm
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1382, o);   // lamps
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1383, o);   // storm
     { let c = o.box; if (!c || typeof c !== 'object') c = o.box = C.made("crate::hours::SkyStateBox"); f_hours_SkyStateBox(c, m + 2); }   // box_
-    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) C.slow(1393, o);   // cells
-    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) C.slow(1394, o);   // fine
+    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) C.slow(1384, o);   // cells
+    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) C.slow(1385, o);   // fine
   }
   function f_hours_SkyState(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.sun; if (typeof c === 'number') { if (c !== v) o.sun = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.sun = null; } else { const r = T_LightId()[v]; if (r !== c) o.sun = r; } } else if (o.sun !== null) o.sun = null; }   // sun
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const c = o.toSun; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.toSun = a; } } }   // to_sun
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.casters; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.casters = v !== 0 as any; else o.casters = v; } }   // casters
     { let c = o.box; if (!c || typeof c !== 'object') c = o.box = C.made("crate::hours::SkyStateBox"); f_hours_SkyStateBox(c, m + 3); }   // box_
-    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) C.slow(1395, o);   // cells
-    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) C.slow(1396, o);   // fine
-    if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) C.slow(1397, o);   // dome
+    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) C.slow(1386, o);   // cells
+    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) C.slow(1387, o);   // fine
+    if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) C.slow(1388, o);   // dome
     if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.at; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.at = v !== 0 as any; else o.at = v; } } else if (o.at !== undefined) o.at = undefined; }   // at
   }
   function f_kit_KitHand(o: any, m: number) {
@@ -8227,7 +8137,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = b[C.p++] !== 0; const c = o.wand; if (typeof c === 'boolean') { if (c !== v) o.wand = v; } else if (c === null) { if (v) o.wand = v; } else if (typeof c === 'object') { if (!v) o.wand = null; } else if (!(c === undefined && !v)) o.wand = v; }   // wand
   }
   function f_kit_KitModKIT(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1398, o);   // members
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1389, o);   // members
   }
   function f_kit_KitModManOfValue(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.i; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.i = v !== 0 as any; else o.i = v; } }   // i
@@ -8258,7 +8168,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = b[C.p++] !== 0; const c = o.nvg; if (typeof c === 'boolean') { if (c !== v) o.nvg = v; } else if (c === null) { if (v) o.nvg = v; } else if (typeof c === 'object') { if (!v) o.nvg = null; } else if (!(c === undefined && !v)) o.nvg = v; }   // nvg
   }
   function f_wandorder_State(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1399, o);   // jobs
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1390, o);   // jobs
   }
   function f_fogofwar_FogofwarModFOGPAGE(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.desat; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.desat = v !== 0 as any; else o.desat = v; } }   // desat
@@ -8335,13 +8245,13 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t0; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t0 = v !== 0 as any; else o.t0 = v; } }   // t0
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.timeout; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.timeout = v !== 0 as any; else o.timeout = v; } }   // timeout
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = b[C.p++] !== 0; const c = o.done; if (typeof c === 'boolean') { if (c !== v) o.done = v; } else if (c === null) { if (v) o.done = v; } else if (typeof c === 'object') { if (!v) o.done = null; } else if (!(c === undefined && !v)) o.done = v; }   // done
-    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1400, o);   // result
-    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1401, o);   // kills
-    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) C.slow(1402, o);   // rounds
-    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) C.slow(1403, o);   // alive
+    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1391, o);   // result
+    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1392, o);   // kills
+    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) C.slow(1393, o);   // rounds
+    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) C.slow(1394, o);   // alive
   }
   function f_dialogue_DialogueModRoomRectsValue(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1404, o);   // rooms
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1395, o);   // rooms
     { let c = o.building; if (!c || typeof c !== 'object') c = o.building = C.made("crate::dialogue::Rect"); f_dialogue_Rect(c, m + 1); }   // building
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const v = b[C.p++] !== 0; const c = o.office; if (typeof c === 'boolean') { if (c !== v) o.office = v; } else if (c === null) { if (v) o.office = v; } else if (typeof c === 'object') { if (!v) o.office = null; } else if (!(c === undefined && !v)) o.office = v; }   // office
   }
@@ -8349,17 +8259,17 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { if (b[C.p++]) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.id; if (!strEq(c, b, C.p, L)) o.id = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; } else if (o.id !== null) o.id = null; }   // id
   }
   function f_dialogue_SamMemory(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1405, o);   // said
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1396, o);   // said
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { if (b[C.p++]) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.last; if (!strEq(c, b, C.p, L)) o.last = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; } else if (o.last !== null) o.last = null; }   // last
   }
   function f_dialogue_Script(o: any, m: number) {
     { let c = o.beats; if (!c || typeof c !== 'object') c = o.beats = C.made("crate::dialogue::ScriptBeats"); f_dialogue_ScriptBeats(c, m + 0); }   // beats
   }
   function f_dialogue_RadioState(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1406, o);   // run
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1407, o);   // done
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1408, o);   // queue
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1409, o);   // reply
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1397, o);   // run
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1398, o);   // done
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1399, o);   // queue
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1400, o);   // reply
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.lastAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.lastAt = v !== 0 as any; else o.lastAt = v; } }   // last_at
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.esc; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.esc = v !== 0 as any; else o.esc = v; } }   // esc
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const v = b[C.p++] !== 0; const c = o.blackout; if (typeof c === 'boolean') { if (c !== v) o.blackout = v; } else if (c === null) { if (v) o.blackout = v; } else if (typeof c === 'object') { if (!v) o.blackout = null; } else if (!(c === undefined && !v)) o.blackout = v; }   // blackout
@@ -8367,13 +8277,13 @@ export function puppetRows(C: Ctx) {
   }
   function f_dialogue_AmbientState(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.next; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.next = v !== 0 as any; else o.next = v; } }   // next
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1410, o);   // run
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1411, o);   // played
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1401, o);   // run
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1402, o);   // played
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.count; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.count = v !== 0 as any; else o.count = v; } }   // count
   }
   function f_civilians_CivSpots(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1412, o);   // phones
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1413, o);   // exits
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1403, o);   // phones
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1404, o);   // exits
   }
   function f_civilians_CiviliansModCIVLOGItem(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
@@ -8383,14 +8293,14 @@ export function puppetRows(C: Ctx) {
   function f_civilians_CiviliansModFloorsValue(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = b[C.p++] !== 0; const c = o.evacTold; if (typeof c === 'boolean') { if (c !== v) o.evacTold = v; } else if (c === null) { if (v) o.evacTold = v; } else if (typeof c === 'object') { if (!v) o.evacTold = null; } else if (!(c === undefined && !v)) o.evacTold = v; }   // evac_told
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.greetAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.greetAt = v !== 0 as any; else o.greetAt = v; } }   // greet_at
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1414, o);   // pending
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1405, o);   // pending
   }
   function f_orders_OrdersModFOLLOWWORDValue(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = b[C.p++] !== 0; const c = o.on; if (typeof c === 'boolean') { if (c !== v) o.on = v; } else if (c === null) { if (v) o.on = v; } else if (typeof c === 'object') { if (!v) o.on = null; } else if (!(c === undefined && !v)) o.on = v; }   // on
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.outT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.outT = v !== 0 as any; else o.outT = v; } }   // out_t
   }
   function f_particle_fx_FxState(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1415, o);   // tinks
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1406, o);   // tinks
   }
   function f_character_AnimWtkL(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const c = o.p; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.p = a; } } }   // p
@@ -8495,15 +8405,15 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.id; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.id = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // id
   }
   function f_scene_scenarios_RescueDataRoom(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1416, o);   // bounds
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1407, o);   // bounds
   }
   function f_scene_scenarios_RescueDataSide(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1417, o);   // from
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1408, o);   // from
   }
   function f_scene_scenarios_RescueFlowData(o: any, m: number) {
     { let c = o.corridor; if (!c || typeof c !== 'object') c = o.corridor = C.made("crate::scene_scenarios::Rect"); f_scene_scenarios_Rect(c, m + 0); }   // corridor
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1418, o);   // regions
-    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1419, o);   // route
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1409, o);   // regions
+    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1410, o);   // route
   }
   function f_scene_scenarios_PlaceArea(o: any, m: number) {
     { let c = o.bounds; if (!c || typeof c !== 'object') c = o.bounds = C.made("crate::scene_scenarios::Rect"); f_scene_scenarios_Rect(c, m + 0); }   // bounds
@@ -8523,11 +8433,11 @@ export function puppetRows(C: Ctx) {
   }
   function f_picture_Pic(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.owner; if (typeof c === 'number') { if (c !== v) o.owner = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.owner = null; } else { const r = T_GuardId()[v]; if (r !== c) o.owner = r; } } else if (o.owner !== null) o.owner = null; }   // owner
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1420, o);   // ideas
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1421, o);   // downs
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1422, o);   // heard
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1411, o);   // ideas
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1412, o);   // downs
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1413, o);   // heard
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.lookT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.lookT = v !== 0 as any; else o.lookT = v; } }   // look_t
-    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1423, o);   // step
+    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1414, o);   // step
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.stepAsk; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.stepAsk = v !== 0 as any; else o.stepAsk = v; } } else if (o.stepAsk !== undefined) o.stepAsk = undefined; }   // step_ask
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.stepIn; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.stepIn = v !== 0 as any; else o.stepIn = v; } } else if (o.stepIn !== undefined) o.stepIn = undefined; }   // step_in
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.stepNext; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.stepNext = v !== 0 as any; else o.stepNext = v; } } else if (o.stepNext !== undefined) o.stepNext = undefined; }   // step_next
@@ -8535,7 +8445,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) { if (b[C.p++]) { const c = o.stepBad; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.stepBad = a; } } } else if (o.stepBad !== undefined && o.stepBad !== null) o.stepBad = null; }   // step_bad
   }
   function f_picture_PictureView(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1424, o);   // cover
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1415, o);   // cover
   }
   function f_winbars_BarMet(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.index; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.index = v !== 0 as any; else o.index = v; } }   // index
@@ -8545,14 +8455,14 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.flags; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.flags = v !== 0 as any; else o.flags = v; } }   // flags
   }
   function f_handleside_Face(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1425, o);   // stand
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1426, o);   // via
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1416, o);   // stand
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1417, o);   // via
   }
   function f_laststand_Check(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.caller; if (typeof c === 'number') { if (c !== v) o.caller = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.caller = null; } else { const r = T_RoomfightDefId()[v]; if (r !== c) o.caller = r; } }   // caller
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.closeAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.closeAt = v !== 0 as any; else o.closeAt = v; } }   // close_at
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1427, o);   // due
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1418, o);   // due
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const t = T_RoomfightDefId(); let a = o.got; if (a === null || a === undefined) { if (L || a === undefined) a = o.got = []; } if (a && Array.isArray(a) && (a.length === 0 || typeof a[0] !== 'number')) { for (let i = 0; i < L; i++) { const v = dv.getUint32(C.p, true); C.p += 4; const r = t[v]; if (a[i] !== r) a[i] = r; } if (a.length !== L) a.length = L; } else if (a) { for (let i = 0; i < L; i++) { a[i] = dv.getUint32(C.p, true); C.p += 4; } if (a.length !== L) a.length = L; } }   // got
   }
   function f_laststand_Stand(o: any, m: number) {
@@ -8561,15 +8471,15 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.the; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.the = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // the
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const c = o.anchor; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.anchor = a; } } }   // anchor
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
-    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1428, o);   // in_
-    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1429, o);   // out
-    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) C.slow(1430, o);   // movers
+    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1419, o);   // in_
+    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1420, o);   // out
+    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) C.slow(1421, o);   // movers
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { const v = b[C.p++] !== 0; const c = o.setSaid; if (typeof c === 'boolean') { if (c !== v) o.setSaid = v; } else if (c === null) { if (v) o.setSaid = v; } else if (typeof c === 'object') { if (!v) o.setSaid = null; } else if (!(c === undefined && !v)) o.setSaid = v; }   // set_said
     if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.setT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.setT = v !== 0 as any; else o.setT = v; } }   // set_t
     if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.thumpAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.thumpAt = v !== 0 as any; else o.thumpAt = v; } }   // thump_at
     if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.lookT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.lookT = v !== 0 as any; else o.lookT = v; } }   // look_t
-    if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) C.slow(1431, o);   // orders
-    if (b[MP + ((m + 13) >> 3)] & (1 << ((m + 13) & 7))) C.slow(1432, o);   // homed
+    if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) C.slow(1422, o);   // orders
+    if (b[MP + ((m + 13) >> 3)] & (1 << ((m + 13) & 7))) C.slow(1423, o);   // homed
   }
   function f_laststand_Said(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.key; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.key = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // key
@@ -8580,7 +8490,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.saidT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.saidT = v !== 0 as any; else o.saidT = v; } }   // said_t
   }
   function f_laststand_Hint(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1433, o);   // spots
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1424, o);   // spots
   }
   function f_laststand_LastStandSaid(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
@@ -8653,10 +8563,10 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const c = o.at; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.at = a; } } }   // at
   }
   function f_coverfire_Man(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1434, o);   // know
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1435, o);   // chew
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1436, o);   // gave
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1437, o);   // no
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1425, o);   // know
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1426, o);   // chew
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1427, o);   // gave
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1428, o);   // no
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.saidT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.saidT = v !== 0 as any; else o.saidT = v; } }   // said_t
   }
   function f_coverfire_StateByIdValue(o: any, m: number) {
@@ -8706,7 +8616,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 29) >> 3)] & (1 << ((m + 29) & 7))) { const v = b[C.p++] !== 0; const c = o.goalNear; if (typeof c === 'boolean') { if (c !== v) o.goalNear = v; } else if (c === null) { if (v) o.goalNear = v; } else if (typeof c === 'object') { if (!v) o.goalNear = null; } else if (!(c === undefined && !v)) o.goalNear = v; }   // goal_near
     if (b[MP + ((m + 30) >> 3)] & (1 << ((m + 30) & 7))) { const v = b[C.p++] !== 0; const c = o.opened; if (typeof c === 'boolean') { if (c !== v) o.opened = v; } else if (c === null) { if (v) o.opened = v; } else if (typeof c === 'object') { if (!v) o.opened = null; } else if (!(c === undefined && !v)) o.opened = v; }   // opened
     if (b[MP + ((m + 31) >> 3)] & (1 << ((m + 31) & 7))) { const v = b[C.p++] !== 0; const c = o.crossed; if (typeof c === 'boolean') { if (c !== v) o.crossed = v; } else if (c === null) { if (v) o.crossed = v; } else if (typeof c === 'object') { if (!v) o.crossed = null; } else if (!(c === undefined && !v)) o.crossed = v; }   // crossed
-    if (b[MP + ((m + 32) >> 3)] & (1 << ((m + 32) & 7))) C.slow(1438, o);   // hs
+    if (b[MP + ((m + 32) >> 3)] & (1 << ((m + 32) & 7))) C.slow(1429, o);   // hs
     if (b[MP + ((m + 33) >> 3)] & (1 << ((m + 33) & 7))) { const v = WORDS_193[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.action !== v) o.action = v; }   // action
     if (b[MP + ((m + 34) >> 3)] & (1 << ((m + 34) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.thrower; if (typeof c === 'number') { if (c !== v) o.thrower = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.thrower = null; } else { const r = T_GuardId()[v]; if (r !== c) o.thrower = r; } } else if (o.thrower !== null) o.thrower = null; }   // thrower
   }
@@ -8761,8 +8671,8 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const c = o.to; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.to = a; } } }   // to
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.lineT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.lineT = v !== 0 as any; else o.lineT = v; } }   // line_t
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { if (b[C.p++]) { const c = o.eye; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.eye = a; } } } else if (o.eye !== undefined) o.eye = undefined; }   // eye
-    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) C.slow(1439, o);   // fire
-    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) C.slow(1440, o);   // frag
+    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) C.slow(1430, o);   // fire
+    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) C.slow(1431, o);   // frag
   }
   function f_lanes_StateFragNoValue(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.lane; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.lane = v !== 0 as any; else o.lane = v; } }   // lane
@@ -8823,7 +8733,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.bracer; if (typeof c === 'number') { if (c !== v) o.bracer = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.bracer = null; } else { const r = T_GuardId()[v]; if (r !== c) o.bracer = r; } } else if (o.bracer !== null) o.bracer = null; }   // bracer
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.wedged; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.wedged = v !== 0 as any; else o.wedged = v; } }   // wedged
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.cueAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.cueAt = v !== 0 as any; else o.cueAt = v; } }   // cue_at
-    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) C.slow(1441, o);   // cues
+    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) C.slow(1432, o);   // cues
     if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.enteredAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.enteredAt = v !== 0 as any; else o.enteredAt = v; } }   // entered_at
     if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.readyAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.readyAt = v !== 0 as any; else o.readyAt = v; } }   // ready_at
     if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) { const v = b[C.p++] !== 0; const c = o.callout; if (typeof c === 'boolean') { if (c !== v) o.callout = v; } else if (c === null) { if (v) o.callout = v; } else if (typeof c === 'object') { if (!v) o.callout = null; } else if (!(c === undefined && !v)) o.callout = v; }   // callout
@@ -8982,7 +8892,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.stepT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.stepT = v !== 0 as any; else o.stepT = v; } }   // step_t
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t0; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t0 = v !== 0 as any; else o.t0 = v; } }   // t0
     if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.L; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.L = v !== 0 as any; else o.L = v; } }   // l
-    if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) C.slow(1442, o);   // serial
+    if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) C.slow(1433, o);   // serial
   }
   function f_buddy_StateStats(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.calls; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.calls = v !== 0 as any; else o.calls = v; } }   // calls
@@ -9011,7 +8921,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.stepT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.stepT = v !== 0 as any; else o.stepT = v; } }   // step_t
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.heard0; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.heard0 = v !== 0 as any; else o.heard0 = v; } }   // heard0
     if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.thereT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.thereT = v !== 0 as any; else o.thereT = v; } }   // there_t
-    if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) C.slow(1443, o);   // calm
+    if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) C.slow(1434, o);   // calm
   }
   function f_powerout_PowerOutEvent(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
@@ -9039,7 +8949,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.ears; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.ears = v !== 0 as any; else o.ears = v; } }   // ears
     if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.noises; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.noises = v !== 0 as any; else o.noises = v; } }   // noises
     if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.yaw; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.yaw = v !== 0 as any; else o.yaw = v; } } else if (o.yaw !== null) o.yaw = null; }   // yaw
-    if (b[MP + ((m + 13) >> 3)] & (1 << ((m + 13) & 7))) C.slow(1444, o);   // serial
+    if (b[MP + ((m + 13) >> 3)] & (1 << ((m + 13) & 7))) C.slow(1435, o);   // serial
   }
   function f_attention_MemCand(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const c = o.at; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.at = a; } } }   // at
@@ -9085,7 +8995,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const c = o.a; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.a = a; } } }   // a
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const c = o.b; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.b = a; } } }   // b
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { const v = b[C.p++] !== 0; const c = o.hot; if (typeof c === 'boolean') { if (c !== v) o.hot = v; } else if (c === null) { if (v) o.hot = v; } else if (typeof c === 'object') { if (!v) o.hot = null; } else if (!(c === undefined && !v)) o.hot = v; }   // hot
-    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) C.slow(1445, o);   // serial
+    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) C.slow(1436, o);   // serial
   }
   function f_lightswitch_WallSwitch(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.id; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.id = v !== 0 as any; else o.id = v; } }   // id
@@ -9184,8 +9094,8 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t0; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t0 = v !== 0 as any; else o.t0 = v; } }   // t0
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.firedT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.firedT = v !== 0 as any; else o.firedT = v; } }   // fired_t
     { let c = o.shot; if (!c || typeof c !== 'object') c = o.shot = C.made("crate::squad40::Shot"); f_squad40_Shot(c, m + 3); }   // shot
-    if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) C.slow(1446, o);   // t
-    if (b[MP + ((m + 13) >> 3)] & (1 << ((m + 13) & 7))) C.slow(1447, o);   // back
+    if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) C.slow(1437, o);   // t
+    if (b[MP + ((m + 13) >> 3)] & (1 << ((m + 13) & 7))) C.slow(1438, o);   // back
   }
   function f_squad40_StateShown(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
@@ -9193,7 +9103,7 @@ export function puppetRows(C: Ctx) {
   }
   function f_squad40_StateKeptValue(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.key; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.key = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // key
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1448, o);   // a
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1439, o);   // a
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { if (b[C.p++]) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.who; if (!strEq(c, b, C.p, L)) o.who = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; } else if (o.who !== null) o.who = null; }   // who
   }
   function f_squadthrow_StateShown(o: any, m: number) {
@@ -9217,12 +9127,12 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.onT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.onT = v !== 0 as any; else o.onT = v; } }   // on_t
     if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.thrownT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.thrownT = v !== 0 as any; else o.thrownT = v; } }   // thrown_t
     if (b[MP + ((m + 13) >> 3)] & (1 << ((m + 13) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.again; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.again = v !== 0 as any; else o.again = v; } }   // again
-    if (b[MP + ((m + 14) >> 3)] & (1 << ((m + 14) & 7))) C.slow(1449, o);   // held
+    if (b[MP + ((m + 14) >> 3)] & (1 << ((m + 14) & 7))) C.slow(1440, o);   // held
     if (b[MP + ((m + 15) >> 3)] & (1 << ((m + 15) & 7))) { if (b[C.p++]) { const c = o.heldAt; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.heldAt = a; } } } else if (o.heldAt !== undefined) o.heldAt = undefined; }   // held_at
     if (b[MP + ((m + 16) >> 3)] & (1 << ((m + 16) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.heldT; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.heldT = v !== 0 as any; else o.heldT = v; } } else if (o.heldT !== undefined) o.heldT = undefined; }   // held_t
     if (b[MP + ((m + 17) >> 3)] & (1 << ((m + 17) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.line; if (a === null || a === undefined) { if (L || a === undefined) a = o.line = []; } for (let i = 0; i < L; i++) { const c = a[i], p0 = C.p; let same = !!c && c.length === 3; if (same) for (let k = 0; k < 3; k++) if (!Object.is(dv.getFloat64(p0 + 8 * k, true), c[k])) { same = false; break; } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let k = 0; k < 3; k++) (c as any)[k] = dv.getFloat64(p0 + 8 * k, true); } else { const x = new Array(3); for (let k = 0; k < 3; k++) x[k] = dv.getFloat64(p0 + 8 * k, true); a[i] = x; } } } if (a && a.length !== L) a.length = L; }   // line
-    if (b[MP + ((m + 18) >> 3)] & (1 << ((m + 18) & 7))) C.slow(1450, o);   // t
-    if (b[MP + ((m + 19) >> 3)] & (1 << ((m + 19) & 7))) C.slow(1451, o);   // back
+    if (b[MP + ((m + 18) >> 3)] & (1 << ((m + 18) & 7))) C.slow(1441, o);   // t
+    if (b[MP + ((m + 19) >> 3)] & (1 << ((m + 19) & 7))) C.slow(1442, o);   // back
   }
   function f_smokebreak_Man(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
@@ -9266,11 +9176,11 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { if (b[C.p++]) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.line; if (!strEq(c, b, C.p, L)) o.line = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; } else if (o.line !== null) o.line = null; }   // line
   }
   function f_doorforce_Man(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1452, o);   // beliefs
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1453, o);   // saw
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1454, o);   // on
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1455, o);   // kick
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1456, o);   // rest
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1443, o);   // beliefs
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1444, o);   // saw
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1445, o);   // on
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1446, o);   // kick
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1447, o);   // rest
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.served; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.served = v !== 0 as any; else o.served = v; } }   // served
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.cfT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.cfT = v !== 0 as any; else o.cfT = v; } }   // cf_t
   }
@@ -9286,10 +9196,10 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t0; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t0 = v !== 0 as any; else o.t0 = v; } }   // t0
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.caller; if (typeof c === 'number') { if (c !== v) o.caller = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.caller = null; } else { const r = T_GuardId()[v]; if (r !== c) o.caller = r; } } else if (o.caller !== null) o.caller = null; }   // caller
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.about; if (typeof c === 'number') { if (c !== v) o.about = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.about = null; } else { const r = T_EnemysquadsSquadId()[v]; if (r !== c) o.about = r; } } else if (o.about !== null) o.about = null; }   // about
-    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1457, o);   // done
-    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1458, o);   // tried
-    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) C.slow(1459, o);   // queried
-    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) C.slow(1460, o);   // say
+    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1448, o);   // done
+    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1449, o);   // tried
+    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) C.slow(1450, o);   // queried
+    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) C.slow(1451, o);   // say
     { let c = o.die; if (!c || typeof c !== 'object') c = o.die = C.made("crate::math_dice::Die"); f_math_dice_Die(c, m + 9); }   // die
     if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.tickT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.tickT = v !== 0 as any; else o.tickT = v; } }   // tick_t
   }
@@ -9298,7 +9208,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.saidT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.saidT = v !== 0 as any; else o.saidT = v; } }   // said_t
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = b[C.p++] !== 0; const c = o.lost; if (typeof c === 'boolean') { if (c !== v) o.lost = v; } else if (c === null) { if (v) o.lost = v; } else if (typeof c === 'object') { if (!v) o.lost = null; } else if (!(c === undefined && !v)) o.lost = v; }   // lost
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const L = dv.getUint32(C.p, true); C.p += 4; const t = T_GuardId(); let a = o.out; if (a === null || a === undefined) { if (L || a === undefined) a = o.out = []; } if (a && Array.isArray(a) && (a.length === 0 || typeof a[0] !== 'number')) { for (let i = 0; i < L; i++) { const v = dv.getUint32(C.p, true); C.p += 4; const r = t[v]; if (a[i] !== r) a[i] = r; } if (a.length !== L) a.length = L; } else if (a) { for (let i = 0; i < L; i++) { a[i] = dv.getUint32(C.p, true); C.p += 4; } if (a.length !== L) a.length = L; } } else if (o.out !== null) o.out = null; }   // out
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1461, o);   // call
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1452, o);   // call
   }
   function f_shotgun_ShellEndsItem(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.index; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.index = v !== 0 as any; else o.index = v; } }   // index
@@ -9307,7 +9217,7 @@ export function puppetRows(C: Ctx) {
   }
   function f_close_CloseOffer(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.guard; if (typeof c === 'number') { if (c !== v) o.guard = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.guard = null; } else { const r = T_GuardId()[v]; if (r !== c) o.guard = r; } }   // guard
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1462, o);   // win
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1453, o);   // win
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.dist; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.dist = v !== 0 as any; else o.dist = v; } }   // dist
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.bearing; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.bearing = v !== 0 as any; else o.bearing = v; } }   // bearing
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = b[C.p++] !== 0; const c = o.inReach; if (typeof c === 'boolean') { if (c !== v) o.inReach = v; } else if (c === null) { if (v) o.inReach = v; } else if (typeof c === 'object') { if (!v) o.inReach = null; } else if (!(c === undefined && !v)) o.inReach = v; }   // in_reach
@@ -9353,7 +9263,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.backT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.backT = v !== 0 as any; else o.backT = v; } }   // back_t
     if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.hideT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.hideT = v !== 0 as any; else o.hideT = v; } }   // hide_t
     if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.hidI; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.hidI = v !== 0 as any; else o.hidI = v; } }   // hid_i
-    if (b[MP + ((m + 13) >> 3)] & (1 << ((m + 13) & 7))) C.slow(1463, o);   // mem
+    if (b[MP + ((m + 13) >> 3)] & (1 << ((m + 13) & 7))) C.slow(1454, o);   // mem
     if (b[MP + ((m + 14) >> 3)] & (1 << ((m + 14) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.crossFrom; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.crossFrom = v !== 0 as any; else o.crossFrom = v; } }   // cross_from
     if (b[MP + ((m + 15) >> 3)] & (1 << ((m + 15) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.crossTo; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.crossTo = v !== 0 as any; else o.crossTo = v; } }   // cross_to
     if (b[MP + ((m + 16) >> 3)] & (1 << ((m + 16) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.crossT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.crossT = v !== 0 as any; else o.crossT = v; } }   // cross_t
@@ -9384,9 +9294,9 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.blockedT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.blockedT = v !== 0 as any; else o.blockedT = v; } }   // blocked_t
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.bunchT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.bunchT = v !== 0 as any; else o.bunchT = v; } }   // bunch_t
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.tryAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.tryAt = v !== 0 as any; else o.tryAt = v; } }   // try_at
-    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1464, o);   // wind
+    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1455, o);   // wind
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.away; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.away = v !== 0 as any; else o.away = v; } } else if (o.away !== undefined) o.away = undefined; }   // away
-    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) C.slow(1465, o);   // spots
+    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) C.slow(1456, o);   // spots
   }
   function f_workthings_BreakerErrand(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const c = o.goal; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.goal = a; } } }   // goal
@@ -9411,7 +9321,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.side; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.side = v !== 0 as any; else o.side = v; } }   // side
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const c = o.stand; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.stand = a; } } }   // stand
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.yaw; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.yaw = v !== 0 as any; else o.yaw = v; } }   // yaw
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1466, o);   // aside
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1457, o);   // aside
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.A; if (typeof c === 'number') { if (c !== v) o.A = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.A = null; } else { const r = T_OrdersAssignmentId()[v]; if (r !== c) o.A = r; } }   // a
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t0; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t0 = v !== 0 as any; else o.t0 = v; } }   // t0
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.liveT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.liveT = v !== 0 as any; else o.liveT = v; } }   // live_t
@@ -9423,8 +9333,8 @@ export function puppetRows(C: Ctx) {
   function f_guards_EngageResult(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_213[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.outcome !== v) o.outcome = v; }   // outcome
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.secs; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.secs = v !== 0 as any; else o.secs = v; } }   // secs
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1467, o);   // kills
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1468, o);   // rounds
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1458, o);   // kills
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1459, o);   // rounds
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.operativesLeft; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.operativesLeft = v !== 0 as any; else o.operativesLeft = v; } }   // operatives_left
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.hostilesLeft; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.hostilesLeft = v !== 0 as any; else o.hostilesLeft = v; } }   // hostiles_left
   }
@@ -9457,12 +9367,12 @@ export function puppetRows(C: Ctx) {
   function f_dialogue_AmbientRun(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.a; if (typeof c === 'number') { if (c !== v) o.a = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.a = null; } else { const r = T_GuardId()[v]; if (r !== c) o.a = r; } }   // a
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.b; if (typeof c === 'number') { if (c !== v) o.b = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.b = null; } else { const r = T_GuardId()[v]; if (r !== c) o.b = r; } }   // b
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1469, o);   // talk
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1460, o);   // talk
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.i; if (c !== v && !(c === undefined && v === 0)) o.i = v; }   // i
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.at; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.at = v !== 0 as any; else o.at = v; } }   // at
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { if (b[C.p++]) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.other; if (!strEq(c, b, C.p, L)) o.other = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; } else if (o.other !== null) o.other = null; }   // other
-    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1470, o);   // pad
-    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) C.slow(1471, o);   // held
+    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1461, o);   // pad
+    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) C.slow(1462, o);   // held
   }
   function f_civilians_Pending(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.at; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.at = v !== 0 as any; else o.at = v; } }   // at
@@ -9482,13 +9392,13 @@ export function puppetRows(C: Ctx) {
   }
   function f_scene_scenarios_RescueDataSideFrom(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.door; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.door = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // door
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1472, o);   // bounds
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1463, o);   // bounds
   }
   function f_scene_scenarios_RescueFlowDataRegionsItem(o: any, m: number) {
     { let c = o.rect; if (!c || typeof c !== 'object') c = o.rect = C.made("crate::scene_scenarios::Rect"); f_scene_scenarios_Rect(c, m + 0); }   // rect
   }
   function f_picture_Step(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1473, o);   // key
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1464, o);   // key
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const c = o.mark; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.mark = a; } } }   // mark
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const c = o.at; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.at = a; } } }   // at
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = b[C.p++] !== 0; const c = o.low; if (typeof c === 'boolean') { if (c !== v) o.low = v; } else if (c === null) { if (v) o.low = v; } else if (typeof c === 'object') { if (!v) o.low = null; } else if (!(c === undefined && !v)) o.low = v; }   // low
@@ -9523,7 +9433,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { const v = b[C.p++] !== 0; const c = o.quiet; if (typeof c === 'boolean') { if (c !== v) o.quiet = v; } else if (c === null) { if (v) o.quiet = v; } else if (typeof c === 'object') { if (!v) o.quiet = null; } else if (!(c === undefined && !v)) o.quiet = v; }   // quiet
   }
   function f_coverfire_Know(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1474, o);   // who
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1465, o);   // who
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const c = o.at; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.at = a; } } }   // at
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.y0; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.y0 = v !== 0 as any; else o.y0 = v; } }   // y0
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const c = o.v; let same = c !== null && c !== undefined && c.length === 2; const p0 = C.p; if (same) for (let i = 0; i < 2; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 16; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 2; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(2); for (let i = 0; i < 2; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.v = a; } } }   // v
@@ -9533,7 +9443,7 @@ export function puppetRows(C: Ctx) {
   function f_coverfire_Chew(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.id; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.id = v !== 0 as any; else o.id = v; } }   // id
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.kind; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.kind = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // kind
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1475, o);   // who
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1466, o);   // who
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const c = o.to; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.to = a; } } }   // to
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const c = o.hit; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.hit = a; } } }   // hit
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const c = o.h0; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.h0 = a; } } }   // h0
@@ -9601,9 +9511,9 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { const v = b[C.p++] !== 0; const c = o.aimed; if (typeof c === 'boolean') { if (c !== v) o.aimed = v; } else if (c === null) { if (v) o.aimed = v; } else if (typeof c === 'object') { if (!v) o.aimed = null; } else if (!(c === undefined && !v)) o.aimed = v; }   // aimed
   }
   function f_squadthrow_LentBack(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1476, o);   // move_
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1477, o);   // fit
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1478, o);   // tries
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1467, o);   // move_
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1468, o);   // fit
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1469, o);   // tries
   }
   function f_squadthrow_Arc(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const c = o.from; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.from = a; } } }   // from
@@ -9611,9 +9521,9 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const c = o.rest; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.rest = a; } } }   // rest
   }
   function f_squadthrow_WalkBack(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1479, o);   // move_
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1480, o);   // fit
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1481, o);   // tries
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1470, o);   // move_
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1471, o);   // fit
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1472, o);   // tries
   }
   function f_doorforce_Belief(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.door; if (typeof c === 'number') { if (c !== v) o.door = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.door = null; } else { const r = T_DoorId()[v]; if (r !== c) o.door = r; } }   // door
@@ -9690,32 +9600,32 @@ export function puppetRows(C: Ctx) {
   }
   function f_dialogue_Beat(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.sam; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.sam = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // sam
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1482, o);   // him
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1473, o);   // him
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { if (b[C.p++]) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.after; if (!strEq(c, b, C.p, L)) o.after = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; } else if (o.after !== undefined) o.after = undefined; }   // after
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.samNow; if (!strEq(c, b, C.p, L)) o.samNow = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; } else if (o.samNow !== undefined) o.samNow = undefined; }   // sam_now
   }
   function f_fogofwar_FogPicture(o: any, m: number) {
     { let c = o.frame; if (!c || typeof c !== 'object') c = o.frame = C.made("crate::render_fogofwar::FogFrame"); f_render_fogofwar_FogFrame(c, m + 0); }   // frame
-    if (b[MP + ((m + 26) >> 3)] & (1 << ((m + 26) & 7))) C.slow(1483, o);   // lamp_pick
+    if (b[MP + ((m + 26) >> 3)] & (1 << ((m + 26) & 7))) C.slow(1474, o);   // lamp_pick
     if (b[MP + ((m + 27) >> 3)] & (1 << ((m + 27) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.lampN; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.lampN = v !== 0 as any; else o.lampN = v; } }   // lamp_n
     { let c = o.litStats; if (!c || typeof c !== 'object') c = o.litStats = C.made("crate::fogofwar::FogOfWarLitStats"); f_fogofwar_FogOfWarLitStats(c, m + 28); }   // lit_stats
     { let c = o.fullStats; if (!c || typeof c !== 'object') c = o.fullStats = C.made("crate::fogofwar::FogOfWarFullStats"); f_fogofwar_FogOfWarFullStats(c, m + 31); }   // full_stats
     if (b[MP + ((m + 34) >> 3)] & (1 << ((m + 34) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.lookFrames; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.lookFrames = v !== 0 as any; else o.lookFrames = v; } }   // look_frames
     if (b[MP + ((m + 35) >> 3)] & (1 << ((m + 35) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const t = T_BoxId(); let a = o.rawList; if (a === null || a === undefined) { if (L || a === undefined) a = o.rawList = []; } if (a && Array.isArray(a) && (a.length === 0 || typeof a[0] !== 'number')) { for (let i = 0; i < L; i++) { const v = dv.getUint32(C.p, true); C.p += 4; const r = t[v]; if (a[i] !== r) a[i] = r; } if (a.length !== L) a.length = L; } else if (a) { for (let i = 0; i < L; i++) { a[i] = dv.getUint32(C.p, true); C.p += 4; } if (a.length !== L) a.length = L; } }   // raw_list
     if (b[MP + ((m + 36) >> 3)] & (1 << ((m + 36) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.rawAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.rawAt = v !== 0 as any; else o.rawAt = v; } }   // raw_at
-    if (b[MP + ((m + 37) >> 3)] & (1 << ((m + 37) & 7))) C.slow(1484, o);   // face_recs
+    if (b[MP + ((m + 37) >> 3)] & (1 << ((m + 37) & 7))) C.slow(1475, o);   // face_recs
   }
   function f_par_Par(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = b[C.p++] !== 0; const c = o.live; if (typeof c === 'boolean') { if (c !== v) o.live = v; } else if (c === null) { if (v) o.live = v; } else if (typeof c === 'object') { if (!v) o.live = null; } else if (!(c === undefined && !v)) o.live = v; }   // live
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1485, o);   // run
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1486, o);   // marks
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1476, o);   // run
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1477, o);   // marks
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.fired0; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.fired0 = v !== 0 as any; else o.fired0 = v; } }   // fired0
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t0; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t0 = v !== 0 as any; else o.t0 = v; } }   // t0
-    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1487, o);   // res
+    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1478, o);   // res
   }
   return { __set(d: DataView, bb: Uint8Array) { dv = d; b = bb; },
     __top: {
-    "game::Game.col": (g: any) => { MP = C.p; C.p += 11; let c = g.col; if (!c || typeof c !== 'object') c = g.col = C.made("crate::scene_collision::StaticCollision"); f_scene_collision_StaticCollision(c, 0); },
+    "game::Game.col": (g: any) => { MP = C.p; C.p += 3; let c = g.col; if (!c || typeof c !== 'object') c = g.col = C.made("crate::scene_collision::StaticCollision"); f_scene_collision_StaticCollision(c, 0); },
     "game::Game.sensors": (g: any) => { MP = C.p; C.p += 1; let c = g.sensors; if (!c || typeof c !== 'object') c = g.sensors = C.made("crate::sensors::Sensors"); f_sensors_Sensors(c, 0); },
     "game::Game.cpu_smoke": (g: any) => { MP = C.p; C.p += 1; let c = g.cpuSmoke; if (!c || typeof c !== 'object') c = g.cpuSmoke = C.made("crate::sense::CpuSmoke"); f_sense_CpuSmoke(c, 0); },
     "game::Game.light_home": (g: any) => { MP = C.p; C.p += 1; let c = g.lightHome; if (!c || typeof c !== 'object') c = g.lightHome = C.made("crate::sim_lightshome::LightHome"); f_sim_lightshome_LightHome(c, 0); },
@@ -9761,7 +9671,6 @@ export function puppetRows(C: Ctx) {
     "game::Game.k": (g: any) => { MP = C.p; C.p += 31; f_knobs_Knobs(g, 0); },
     "game::Mods.scene_cut": (g: any) => { MP = C.p; C.p += 1; f_scene_cut_SceneCutMod(g, 0); },
     "game::Mods.thinline": (g: any) => { MP = C.p; C.p += 1; f_thinline_ThinlineMod(g, 0); },
-    "game::Mods.scene_box_mirror": (g: any) => { MP = C.p; C.p += 1; f_scene_box_mirror_SceneBoxMirrorMod(g, 0); },
     "game::Mods.scene_collision": (g: any) => { MP = C.p; C.p += 1; f_scene_collision_SceneCollisionMod(g, 0); },
     "game::Mods.anim_skeleton": (g: any) => { MP = C.p; C.p += 1; f_anim_skeleton_AnimSkeletonMod(g, 0); },
     "game::Mods.character": (g: any) => { MP = C.p; C.p += 1; f_character_CharacterMod(g, 0); },
@@ -9905,5 +9814,5 @@ export function puppetRows(C: Ctx) {
     "FirearmId": (o: any) => { MP = C.p; C.p += 4; f_weapons_Firearm(o, 0); },
   } as any;
 }
-export const SLOW = [{"type":"crate::autopilot::AutoPick","field":"t"},{"type":"crate::combat::FireOpts","field":"weapon"},{"type":"crate::devices::DevicesSnap","field":"log"},{"type":"crate::doors::DoorContact","field":"keys"},{"type":"crate::doors::DoorContact","field":"run"},{"type":"crate::doors::DoorContact","field":"struck"},{"type":"crate::furnblast::BlastFirst","field":"serial"},{"type":"crate::furnblast::FurnitureInventory","field":"list"},{"type":"crate::orders::HoverKept","field":"hov"},{"type":"crate::orders::SquadOrdersAssignA","field":"move_"},{"type":"crate::orders::SquadOrdersAssignA","field":"fit"},{"type":"crate::orders::SquadOrdersAssignA","field":"tries"},{"type":"crate::orders::SquadOrdersHud","field":"menu"},{"type":"crate::orders::SquadOrdersHud","field":"status"},{"type":"crate::player::Legs","field":"haul"},{"type":"crate::roomclear::CheckSquadsS","field":"rooms"},{"type":"crate::roomclear::CheckSquadsS","field":"squads"},{"type":"crate::roomclear::CheckStructureS","field":"rooms"},{"type":"crate::roomclear::CheckStructureS","field":"team"},{"type":"crate::roomclear::CheckStructureS","field":"starts"},{"type":"crate::roomclear::CheckStructureS","field":"squads"},{"type":"crate::savestate::SaveResult","field":"state"},{"type":"crate::savestate::SaveState","field":"quiet"},{"type":"crate::savestate::SaveState","field":"lay"},{"type":"crate::savestate::SaveState","field":"guards"},{"type":"crate::savestate::SaveState","field":"doors"},{"type":"crate::savestate::SaveState","field":"devices"},{"type":"crate::savestate::SaveState","field":"mission"},{"type":"crate::savestate::SaveState","field":"events"},{"type":"crate::savestate::SaveState","field":"weather"},{"type":"crate::savestate::SaveState","field":"civilians"},{"type":"crate::savestate::SaveState","field":"wall_hold"},{"type":"crate::savestate::SaveState","field":"morale"},{"type":"crate::sensors::SensorJournal","field":"keys"},{"type":"crate::squadthrow::SquadThrowKept","field":"kept"},{"type":"crate::squadthrow::SquadThrowKept","field":"caught"},{"type":"crate::squadthrow::SquadThrowKept","field":"scratch"},{"type":"crate::squadthrow::SquadThrowKept","field":"duck"},{"type":"crate::workthings::WorkThingsNear","field":"target"},{"type":"crate::director::CondResult","field":"event"},{"type":"crate::doortools::DoorToolsDoneItemSliceValue","field":"looks"},{"type":"crate::doortools::DoorToolsDoneItemSliceValue","field":"pie"},{"type":"crate::laststand::Spoken","field":"spot"},{"type":"crate::scene_boxes::Box","field":"marks"},{"type":"crate::scene_boxes::Box","field":"cut"},{"type":"crate::scene_boxes::Box","field":"cut_glass"},{"type":"crate::scene_boxes::Box","field":"was"},{"type":"crate::scene_boxes::Box","field":"shape"},{"type":"crate::anim_skeleton::PoseSet","field":"list"},{"type":"crate::character::Character","field":"bones"},{"type":"crate::character::Character","field":"in_hand"},{"type":"crate::character::Character","field":"gun_look"},{"type":"crate::character::Character","field":"in_hand_cur"},{"type":"crate::character::Character","field":"in_hand_ov"},{"type":"crate::character::Character","field":"prev_bones"},{"type":"crate::character::Character","field":"sim_bones"},{"type":"crate::character::Character","field":"prev_sim"},{"type":"crate::character::Character","field":"gun_hand"},{"type":"crate::character::Character","field":"rd"},{"type":"crate::character::Character","field":"breathe"},{"type":"crate::character::Character","field":"guide"},{"type":"crate::character::Character","field":"br"},{"type":"crate::character::Character","field":"tn"},{"type":"crate::character::Character","field":"who"},{"type":"crate::character::Character","field":"man_row"},{"type":"crate::character::Character","field":"man_kept"},{"type":"crate::input::Input","field":"keys"},{"type":"crate::input::Input","field":"pressed"},{"type":"crate::input::Input","field":"lock_except"},{"type":"crate::camera::FollowCamera","field":"desired"},{"type":"crate::camera::FollowCamera","field":"pin"},{"type":"crate::camera::FollowCamera","field":"before_pin"},{"type":"crate::camera::FollowCamera","field":"draw_held"},{"type":"crate::camera::FollowCamera","field":"desired_serial"},{"type":"crate::game::Guard","field":"foe"},{"type":"crate::game::Guard","field":"unit"},{"type":"crate::game::Guard","field":"skill"},{"type":"crate::game::Guard","field":"held"},{"type":"crate::game::Guard","field":"bubble"},{"type":"crate::game::Guard","field":"wound"},{"type":"crate::game::Guard","field":"keys"},{"type":"crate::game::Guard","field":"line_fail"},{"type":"crate::game::Guard","field":"body_duty"},{"type":"crate::game::Guard","field":"slung"},{"type":"crate::game::Guard","field":"second"},{"type":"crate::game::Guard","field":"big_out"},{"type":"crate::game::Guard","field":"work_stow"},{"type":"crate::game::Guard","field":"search_plan"},{"type":"crate::game::Guard","field":"pieing"},{"type":"crate::game::Guard","field":"script"},{"type":"crate::game::Guard","field":"task"},{"type":"crate::game::Guard","field":"post"},{"type":"crate::game::Player","field":"haul"},{"type":"crate::game::Player","field":"door_move"},{"type":"crate::game::Player","field":"takedown"},{"type":"crate::game::Player","field":"holding"},{"type":"crate::game::Player","field":"bubble"},{"type":"crate::game::Player","field":"setup"},{"type":"crate::game::Player","field":"setup_hand"},{"type":"crate::game::Player","field":"setup_key"},{"type":"crate::game::Player","field":"sling_rest"},{"type":"crate::game::Player","field":"keys"},{"type":"crate::game::Player","field":"codes"},{"type":"crate::game::Player","field":"breaker_move"},{"type":"crate::game::Player","field":"throw_preview"},{"type":"crate::game::Player","field":"pending_throw"},{"type":"crate::game::Player","field":"kick"},{"type":"crate::game::Player","field":"wanding"},{"type":"crate::game::Player","field":"kit_load"},{"type":"crate::game::Player","field":"charging"},{"type":"crate::game::Player","field":"work_stow"},{"type":"crate::game::Player","field":"wall"},{"type":"crate::debris::Chunk","field":"sfx"},{"type":"crate::debris::Chunk","field":"glass"},{"type":"crate::debris::Chunk","field":"contact"},{"type":"crate::debris::Chunk","field":"mat"},{"type":"crate::cmd::Seat","field":"own"},{"type":"crate::cmd::Seat","field":"cmd"},{"type":"crate::cmd::Seat","field":"waiting"},{"type":"crate::cmd::Seat","field":"mark"},{"type":"crate::render_lights::RtLight","field":"steady"},{"type":"crate::render_lights::RtLight","field":"portal"},{"type":"crate::furnblast::Member","field":"group"},{"type":"crate::doortools::DoorOp","field":"fled"},{"type":"crate::doortools::DoorOp","field":"rear"},{"type":"crate::doortools::DoorOp","field":"lane"},{"type":"crate::doortools::DoorOp","field":"from"},{"type":"crate::doortools::DoorOp","field":"mine"},{"type":"crate::doortools::DoorOp","field":"post"},{"type":"crate::doortools::DoorOp","field":"kick"},{"type":"crate::doortools::DoorOp","field":"queue"},{"type":"crate::doortools::DoorOp","field":"pod"},{"type":"crate::doortools::DoorOp","field":"on_pod"},{"type":"crate::doortools::DoorOp","field":"slice"},{"type":"crate::doortools::DoorOp","field":"crossed"},{"type":"crate::doortools::DoorOp","field":"corner"},{"type":"crate::doortools::DoorOp","field":"aim"},{"type":"crate::doortools::DoorOp","field":"pass"},{"type":"crate::doortools::DoorOp","field":"beats"},{"type":"crate::doortools::DoorOp","field":"thr"},{"type":"crate::doortools::DoorOp","field":"thr_pre"},{"type":"crate::doortools::DoorOp","field":"other"},{"type":"crate::doortools::DoorOp","field":"threat"},{"type":"crate::orders::Assignment","field":"move_"},{"type":"crate::orders::Assignment","field":"fit"},{"type":"crate::orders::Assignment","field":"tries"},{"type":"crate::doortools::RoomSearch","field":"los"},{"type":"crate::doortools::RoomSearch","field":"yaw"},{"type":"crate::doortools::RoomSearch","field":"at"},{"type":"crate::doortools::RoomSearch","field":"cell_at"},{"type":"crate::orders::OrderDef","field":"targets"},{"type":"crate::orders::OrderDef","field":"listed"},{"type":"crate::orders::OrderDef","field":"ack"},{"type":"crate::orders::OrderDef","field":"ack_now"},{"type":"crate::orders::OrderDef","field":"stands_in"},{"type":"crate::roomfight::Def","field":"bolt_from"},{"type":"crate::roomfight::Room","field":"cells"},{"type":"crate::roomfight::Room","field":"entries"},{"type":"crate::tactics::Role","field":"avoid"},{"type":"crate::tactics::Plan","field":"roles"},{"type":"crate::tactics::Plan","field":"corridor"},{"type":"crate::lanes::Lane","field":"saw"},{"type":"crate::lanes::Lane","field":"knowers"},{"type":"crate::lanes::Lane","field":"cells"},{"type":"crate::lanes::Lane","field":"re"},{"type":"crate::lanes::Lane","field":"who"},{"type":"crate::lanes::Lane","field":"moved"},{"type":"crate::lanes::Lane","field":"can"},{"type":"crate::rescueflow::Region","field":"hot"},{"type":"crate::squad::RoomClear","field":"done"},{"type":"crate::director::Run","field":"dice"},{"type":"crate::director::Run","field":"fired"},{"type":"crate::director::Run","field":"signals"},{"type":"crate::director::Run","field":"flags"},{"type":"crate::director::Run","field":"units"},{"type":"crate::director::Run","field":"bursts"},{"type":"crate::director::Run","field":"kicks"},{"type":"crate::director::Run","field":"show"},{"type":"crate::director::Run","field":"objective"},{"type":"crate::director::Run","field":"systems_saved"},{"type":"crate::roomfight::Op","field":"meters"},{"type":"crate::roomfight::Op","field":"turn"},{"type":"crate::roomfight::Op","field":"pass"},{"type":"crate::roomfight::Op","field":"kept"},{"type":"crate::roomfight::Op","field":"step"},{"type":"crate::roomfight::Op","field":"step_by"},{"type":"crate::roomfight::Op","field":"door_by"},{"type":"crate::roomfight::Op","field":"line_by"},{"type":"crate::wallcharge::WallOp","field":"mine"},{"type":"crate::wallcharge::WallOp","field":"post"},{"type":"crate::wallcharge::WallOp","field":"hole"},{"type":"crate::wallcharge::WallOp","field":"queue"},{"type":"crate::wallcharge::WallOp","field":"stage"},{"type":"crate::wallcharge::WallOp","field":"pod"},{"type":"crate::wallcharge::WallOp","field":"crossed"},{"type":"crate::wallcharge::WallOp","field":"last"},{"type":"crate::wallcharge::WallOp","field":"beats"},{"type":"crate::wallcharge::WallOp","field":"repick_bad"},{"type":"crate::wallcharge::WallOp","field":"redealt"},{"type":"crate::wallcharge::WallOp","field":"repick_kept"},{"type":"crate::scene_level::PatrolRoute","field":"keys"},{"type":"crate::enemysquads::Squad","field":"rooms"},{"type":"crate::enemysquads::Squad","field":"fix"},{"type":"crate::enemysquads::Squad","field":"called_room"},{"type":"crate::enemysquads::Squad","field":"fallen"},{"type":"crate::enemysquads::Squad","field":"stayed"},{"type":"crate::enemysquads::Squad","field":"hit_room"},{"type":"crate::enemysquads::Squad","field":"rc"},{"type":"crate::enemysquads::Squad","field":"calls"},{"type":"crate::enemysquads::Squad","field":"call_die"},{"type":"crate::enemysquads::Squad","field":"hung"},{"type":"crate::enemysquads::Squad","field":"ask_die"},{"type":"crate::enemysquads::Squad","field":"sent"},{"type":"crate::enemysquads::Squad","field":"went"},{"type":"crate::enemysquads::Squad","field":"due"},{"type":"crate::enemysquads::Squad","field":"events"},{"type":"crate::director::LiveBeat","field":"it"},{"type":"crate::director::LiveBeat","field":"waiting"},{"type":"crate::director::LiveBeat","field":"touched"},{"type":"crate::civilians::Civ","field":"target"},{"type":"crate::civilians::Civ","field":"told"},{"type":"crate::civilians::Civ","field":"known_bodies"},{"type":"crate::civilians::Civ","field":"dice"},{"type":"crate::civilians::Civ","field":"log"},{"type":"crate::game::Talk","field":"said"},{"type":"crate::game::Talk","field":"said_n"},{"type":"crate::game::Talk","field":"given"},{"type":"crate::game::Talk","field":"last"},{"type":"crate::weapons::Firearm","field":"beat"},{"type":"crate::weapons::Firearm","field":"burst"},{"type":"crate::weapons::Firearm","field":"attachments"},{"type":"crate::weapons::Firearm","field":"att_idx"},{"type":"crate::weapons::Firearm","field":"rings"},{"type":"crate::weapons::Firearm","field":"ring_cd"},{"type":"crate::weapons::Firearm","field":"shells"},{"type":"crate::weapons::Firearm","field":"cams"},{"type":"crate::out_events::OutParticlesSetHeat","field":"srcs"},{"type":"crate::cmd::PlayerCmd","field":"view"},{"type":"crate::orders::OrderTargetFloor","field":"wall"},{"type":"crate::orders::OrderTargetFloor","field":"thing"},{"type":"crate::orders::OrderTargetFloor","field":"serial"},{"type":"crate::orders::HoverKeptHov","field":"v"},{"type":"crate::orders::OrderHudMenu","field":"rows"},{"type":"crate::orders::OrderHudRow","field":"opts"},{"type":"crate::picture::Idea","field":"who"},{"type":"crate::hands::Haul","field":"from"},{"type":"crate::hands::Haul","field":"carry"},{"type":"crate::scene_scenarios::StructureRoom","field":"doors"},{"type":"crate::scene_scenarios::SquadData","field":"arrive"},{"type":"crate::planlay::LaySnap","field":"laid"},{"type":"crate::planlay::LaySnap","field":"kept"},{"type":"crate::savestate::PlayerSnap","field":"kit_load"},{"type":"crate::savestate::GuardSnap","field":"wound"},{"type":"crate::savestate::DoorSnap","field":"drive"},{"type":"crate::game::Mission","field":"serial"},{"type":"crate::savestate::ChronSnap","field":"events"},{"type":"crate::game::GameEvent","field":"ears"},{"type":"crate::game::GameEvent","field":"serial"},{"type":"crate::needs::NeedsSnap","field":"men"},{"type":"crate::whistle::WhistleSnap","field":"men"},{"type":"crate::weather::WeatherSnap","field":"thunders"},{"type":"crate::civilians::CivSnap","field":"list"},{"type":"crate::player::WallSnap","field":"hold"},{"type":"crate::morale::MoraleSnap","field":"blasts"},{"type":"crate::squadthrow::StateKeptValue","field":"th"},{"type":"crate::squadthrow::SquadThrowKeptDuck","field":"m"},{"type":"crate::director::EventView","field":"data"},{"type":"crate::doortools::DoorToolsDoneItemSliceValuePie","field":"knee"},{"type":"crate::scene_collision::StaticCollision","field":"cells"},{"type":"crate::scene_collision::StaticCollision","field":"pane_rule"},{"type":"crate::scene_collision::StaticCollision","field":"pane_rows"},{"type":"crate::sensors::Sensors","field":"own_vals"},{"type":"crate::sense::CpuSmoke","field":"blobs"},{"type":"crate::sense::CpuSmoke","field":"grid"},{"type":"crate::sim_lightshome::LightHome","field":"mains"},{"type":"crate::props::PropSystem","field":"said"},{"type":"crate::squad::Clearing","field":"cur"},{"type":"crate::squad::Clearing","field":"wps"},{"type":"crate::squad::Clearing","field":"rooms"},{"type":"crate::squad::Clearing","field":"serial"},{"type":"crate::sparks::Sparks","field":"pool"},{"type":"crate::tracers::Tracers","field":"pool"},{"type":"crate::weather::Weather","field":"flash"},{"type":"crate::weather::Weather","field":"touched"},{"type":"crate::game::GameMessagesItem","field":"serial"},{"type":"crate::chronicle::Chronicle","field":"events"},{"type":"crate::chronicle::Chronicle","field":"questioned"},{"type":"crate::chronicle::Chronicle","field":"heard_of"},{"type":"crate::chronicle::Chronicle","field":"heard_no_row"},{"type":"crate::qrf::Qrf","field":"perim"},{"type":"crate::qrf::Qrf","field":"heard_at"},{"type":"crate::qrf::Qrf","field":"heard_events"},{"type":"crate::qrf::Qrf","field":"log"},{"type":"crate::qrf::Qrf","field":"target"},{"type":"crate::qrf::Qrf","field":"cleared"},{"type":"crate::qrf::Qrf","field":"wps"},{"type":"crate::qrf::Qrf","field":"seen_ids"},{"type":"crate::qrf::Qrf","field":"aim_pts"},{"type":"crate::qrf::Qrf","field":"stations"},{"type":"crate::qrf::Qrf","field":"cast"},{"type":"crate::qrf::Qrf","field":"spent"},{"type":"crate::qrf::Qrf","field":"marks"},{"type":"crate::qrf::Qrf","field":"word"},{"type":"crate::devices::Devices","field":"log"},{"type":"crate::destruction::Destruction","field":"items"},{"type":"crate::destruction::Destruction","field":"hidden"},{"type":"crate::destruction::Destruction","field":"tiles_down"},{"type":"crate::destruction::Destruction","field":"broke"},{"type":"crate::destruction::Destruction","field":"roofs"},{"type":"crate::destruction::Destruction","field":"dust_queue"},{"type":"crate::wind::Wind","field":"to_pool"},{"type":"crate::glassbreak::GlassBreak","field":"view_of"},{"type":"crate::glassbreak::GlassBreak","field":"gusts"},{"type":"crate::shards::GlassShards","field":"lives"},{"type":"crate::shards::GlassShards","field":"breaks"},{"type":"crate::shards::GlassShards","field":"sound_at"},{"type":"crate::shards::GlassShards","field":"sound_owed"},{"type":"crate::shards::GlassShards","field":"deferred"},{"type":"crate::shards::GlassShards","field":"pane_mem"},{"type":"crate::director::Director","field":"manifest"},{"type":"crate::director::Director","field":"problems"},{"type":"crate::director::Director","field":"log"},{"type":"crate::director::Director","field":"last_run"},{"type":"crate::director::Director","field":"frame"},{"type":"crate::director::Director","field":"seen"},{"type":"crate::director::Director","field":"due_keys"},{"type":"crate::director::Director","field":"shown"},{"type":"crate::nightbreach::NightBreach","field":"drill"},{"type":"crate::nightbreach::NightBreach","field":"layout"},{"type":"crate::nightbreach::NightBreach","field":"marks"},{"type":"crate::nightbreach::NightBreach","field":"log"},{"type":"crate::nightbreach::NightBreach","field":"bang_by"},{"type":"crate::nightbreach::NightBreach","field":"bursts"},{"type":"crate::nightbreach::NightBreach","field":"said"},{"type":"crate::quiet::QuietMission","field":"log"},{"type":"crate::quiet::QuietMission","field":"data"},{"type":"crate::quiet::QuietMission","field":"authored"},{"type":"crate::quiet::QuietMission","field":"was"},{"type":"crate::quiet::QuietMission","field":"mine"},{"type":"crate::quiet::QuietMission","field":"pending"},{"type":"crate::lesson::Lesson","field":"done_at"},{"type":"crate::lesson::Lesson","field":"log"},{"type":"crate::lesson::Lesson","field":"seen"},{"type":"crate::lesson::Lesson","field":"run"},{"type":"crate::rails::Rails","field":"run"},{"type":"crate::rails::Rails","field":"spared"},{"type":"crate::rails::Rails","field":"log"},{"type":"crate::rails::Rails","field":"lookout"},{"type":"crate::rails::Rails","field":"step_look"},{"type":"crate::snatch::Snatch","field":"killer"},{"type":"crate::snatch::Snatch","field":"log"},{"type":"crate::snatch::Snatch","field":"run"},{"type":"crate::defuse::Defuse","field":"states"},{"type":"crate::defuse::Defuse","field":"safe_by"},{"type":"crate::defuse::Defuse","field":"log"},{"type":"crate::defuse::Defuse","field":"run"},{"type":"crate::defuse::Defuse","field":"last_order"},{"type":"crate::defuse::Defuse","field":"sam"},{"type":"crate::defuse::Defuse","field":"marker"},{"type":"crate::roomclear::RoomClearScenario","field":"rooms"},{"type":"crate::roomclear::RoomClearScenario","field":"placement"},{"type":"crate::roomclear::RoomClearScenario","field":"log"},{"type":"crate::roomclear::RoomClearScenario","field":"clear_due"},{"type":"crate::roomclear::RoomClearScenario","field":"layout"},{"type":"crate::orders::SquadOrders","field":"knobs"},{"type":"crate::orders::SquadOrders","field":"owners"},{"type":"crate::orders::SquadOrders","field":"posture"},{"type":"crate::orders::SquadOrders","field":"people"},{"type":"crate::orders::SquadOrders","field":"who"},{"type":"crate::orders::SquadOrders","field":"menu"},{"type":"crate::orders::SquadOrders","field":"cmd_ring"},{"type":"crate::orders::SquadOrders","field":"cmd_press"},{"type":"crate::orders::SquadOrders","field":"tap_was"},{"type":"crate::orders::SquadOrders","field":"log"},{"type":"crate::orders::SquadOrders","field":"shows"},{"type":"crate::orders::SquadOrders","field":"asg"},{"type":"crate::orders::SquadOrders","field":"ours"},{"type":"crate::orders::SquadOrders","field":"door_marks"},{"type":"crate::orders::SquadOrders","field":"cast"},{"type":"crate::orders::SquadOrders","field":"aside_mem"},{"type":"crate::orders::SquadOrders","field":"back_fix"},{"type":"crate::orders::SquadOrders","field":"rest_of"},{"type":"crate::orders::SquadOrders","field":"held_of"},{"type":"crate::orders::SquadOrders","field":"short_of"},{"type":"crate::orders::SquadOrders","field":"apart_of"},{"type":"crate::orders::SquadOrders","field":"glass_at"},{"type":"crate::orders::SquadOrders","field":"worked"},{"type":"crate::orders::SquadOrders","field":"reached"},{"type":"crate::fogofwar::FogOfWar","field":"eyes"},{"type":"crate::fogofwar::FogOfWar","field":"hidden_chars"},{"type":"crate::fogofwar::FogOfWar","field":"fired_n"},{"type":"crate::fogofwar::FogOfWar","field":"fired_at"},{"type":"crate::fogofwar::FogOfWar","field":"shown"},{"type":"crate::fogofwar::FogOfWar","field":"recs"},{"type":"crate::fogofwar::FogOfWar","field":"door_recs"},{"type":"crate::fogofwar::FogOfWar","field":"lamp_recs"},{"type":"crate::fogofwar::FogOfWar","field":"thing_recs"},{"type":"crate::fogofwar::FogOfWar","field":"cell_seen"},{"type":"crate::fogofwar::FogOfWar","field":"asked"},{"type":"crate::fogofwar::FogOfWar","field":"pending"},{"type":"crate::fogofwar::FogOfWar","field":"call_log"},{"type":"crate::fogofwar::FogOfWar","field":"called_t"},{"type":"crate::fogofwar::FogOfWar","field":"known_t"},{"type":"crate::fogofwar::FogOfWar","field":"told_step"},{"type":"crate::fogofwar::FogOfWar","field":"our_chunks"},{"type":"crate::fogofwar::FogOfWar","field":"our_landed"},{"type":"crate::roomfight::RoomFight","field":"skill"},{"type":"crate::roomfight::RoomFight","field":"trans"},{"type":"crate::roomfight::RoomFight","field":"log"},{"type":"crate::roomfight::RoomFight","field":"room_of_cell"},{"type":"crate::roomfight::RoomFight","field":"called"},{"type":"crate::roomfight::RoomFight","field":"down_called"},{"type":"crate::roomfight::RoomFight","field":"reports"},{"type":"crate::roomfight::RoomFight","field":"sams"},{"type":"crate::cues::Cues","field":"rows"},{"type":"crate::cues::Cues","field":"kinds"},{"type":"crate::cues::Cues","field":"log"},{"type":"crate::cues::Cues","field":"bubbles"},{"type":"crate::cues::Cues","field":"men"},{"type":"crate::cues::Cues","field":"last_note"},{"type":"crate::cues::Cues","field":"said"},{"type":"crate::cues::Cues","field":"class_t"},{"type":"crate::cues::Cues","field":"squad_t"},{"type":"crate::cues::Cues","field":"kind_t"},{"type":"crate::cues::Cues","field":"heard_row"},{"type":"crate::cues::Cues","field":"heard_log"},{"type":"crate::cues::Cues","field":"heard_said"},{"type":"crate::cover::Cover","field":"jobs"},{"type":"crate::cover::Cover","field":"live"},{"type":"crate::cover::Cover","field":"steps"},{"type":"crate::cover::Cover","field":"stood"},{"type":"crate::cover::Cover","field":"no_step"},{"type":"crate::cover::Cover","field":"door_try"},{"type":"crate::cover::Cover","field":"log"},{"type":"crate::cover::Cover","field":"rears"},{"type":"crate::cover::Cover","field":"reads"},{"type":"crate::cover::Cover","field":"kept"},{"type":"crate::cover::Cover","field":"outs"},{"type":"crate::entrypoints::EntryPoints","field":"been"},{"type":"crate::entrypoints::EntryPoints","field":"log"},{"type":"crate::cleared::ClearedRooms","field":"seeds"},{"type":"crate::rescue::Rescue","field":"plan"},{"type":"crate::rescue::Rescue","field":"entry"},{"type":"crate::rescue::Rescue","field":"log"},{"type":"crate::rescue::Rescue","field":"result"},{"type":"crate::rescue::Rescue","field":"defs"},{"type":"crate::rescue::Rescue","field":"act"},{"type":"crate::rescue::Rescue","field":"executed"},{"type":"crate::rescue::Rescue","field":"counted"},{"type":"crate::rescue::Rescue","field":"last_order"},{"type":"crate::rescue::Rescue","field":"said"},{"type":"crate::rescue::Rescue","field":"search_t"},{"type":"crate::rescue::Rescue","field":"search_a"},{"type":"crate::rescue::Rescue","field":"auto"},{"type":"crate::doortools::DoorTools","field":"log"},{"type":"crate::doortools::DoorTools","field":"seen"},{"type":"crate::doortools::DoorTools","field":"tried"},{"type":"crate::doortools::DoorTools","field":"close_at"},{"type":"crate::doortools::DoorTools","field":"gate_asked"},{"type":"crate::doortools::DoorTools","field":"held"},{"type":"crate::doortools::DoorTools","field":"big_said"},{"type":"crate::pairorders::PairOrders","field":"jobs"},{"type":"crate::pairorders::PairOrders","field":"glance"},{"type":"crate::pairorders::PairOrders","field":"dark"},{"type":"crate::pairorders::PairOrders","field":"dark_memo"},{"type":"crate::pairorders::PairOrders","field":"ways"},{"type":"crate::pairorders::PairOrders","field":"lit_cells"},{"type":"crate::workthings::WorkThings","field":"jobs"},{"type":"crate::workthings::WorkThings","field":"hands"},{"type":"crate::workthings::WorkThings","field":"cache"},{"type":"crate::wallcharge::WallCharge","field":"done"},{"type":"crate::wallcharge::WallCharge","field":"away"},{"type":"crate::wallcharge::WallCharge","field":"away_marks"},{"type":"crate::wallcharge::WallCharge","field":"away_none"},{"type":"crate::wallcharge::WallCharge","field":"log"},{"type":"crate::wallcharge::WallCharge","field":"sam"},{"type":"crate::wallcharge::WallCharge","field":"offered"},{"type":"crate::wallcharge::WallCharge","field":"walks"},{"type":"crate::wallcharge::WallCharge","field":"last_blow"},{"type":"crate::wallcharge::WallCharge","field":"marker"},{"type":"crate::doorpath::DoorPath","field":"walks"},{"type":"crate::doorpath::DoorPath","field":"last_of"},{"type":"crate::doorpath::DoorPath","field":"low"},{"type":"crate::doorpath::DoorPath","field":"lent"},{"type":"crate::host_api::HostApi","field":"weather"},{"type":"crate::scene_level::Level","field":"chokepoints"},{"type":"crate::scene_level::Level","field":"clear_plans"},{"type":"crate::scene_level::Level","field":"civilians"},{"type":"crate::scene_level::Level","field":"scenarios"},{"type":"crate::scene_level::Level","field":"breach"},{"type":"crate::knobs::Knobs","field":"aim"},{"type":"crate::knobs::Knobs","field":"trained"},{"type":"crate::knobs::Knobs","field":"ai_tune"},{"type":"crate::knobs::Knobs","field":"body_light"},{"type":"crate::knobs::Knobs","field":"guard_eye"},{"type":"crate::knobs::Knobs","field":"needs"},{"type":"crate::knobs::Knobs","field":"whistle"},{"type":"crate::knobs::Knobs","field":"wet"},{"type":"crate::knobs::Knobs","field":"wind"},{"type":"crate::knobs::Knobs","field":"civ"},{"type":"crate::knobs::Knobs","field":"chaos"},{"type":"crate::knobs::Knobs","field":"ring"},{"type":"crate::knobs::Knobs","field":"launcher"},{"type":"crate::knobs::Knobs","field":"he40"},{"type":"crate::knobs::Knobs","field":"launcher40"},{"type":"crate::knobs::Knobs","field":"frag"},{"type":"crate::knobs::Knobs","field":"shotgun"},{"type":"crate::knobs::Knobs","field":"glass"},{"type":"crate::knobs::Knobs","field":"glassfx"},{"type":"crate::knobs::Knobs","field":"glassbreak"},{"type":"crate::knobs::Knobs","field":"glasspen"},{"type":"crate::knobs::Knobs","field":"shards"},{"type":"crate::knobs::Knobs","field":"talk_tune"},{"type":"crate::knobs::Knobs","field":"hold"},{"type":"crate::knobs::Knobs","field":"suppression"},{"type":"crate::knobs::Knobs","field":"rifle_spread"},{"type":"crate::knobs::Knobs","field":"footfall"},{"type":"crate::knobs::Knobs","field":"twogears"},{"type":"crate::knobs::Knobs","field":"crouchrun"},{"type":"crate::knobs::Knobs","field":"runready"},{"type":"crate::knobs::Knobs","field":"runarms"},{"type":"crate::knobs::Knobs","field":"samlook"},{"type":"crate::knobs::Knobs","field":"dash"},{"type":"crate::knobs::Knobs","field":"watch"},{"type":"crate::knobs::Knobs","field":"stalk"},{"type":"crate::knobs::Knobs","field":"tapstep"},{"type":"crate::knobs::Knobs","field":"overhear"},{"type":"crate::knobs::Knobs","field":"score"},{"type":"crate::knobs::Knobs","field":"badge"},{"type":"crate::knobs::Knobs","field":"ckpt"},{"type":"crate::knobs::Knobs","field":"fog"},{"type":"crate::knobs::Knobs","field":"moves"},{"type":"crate::knobs::Knobs","field":"mv"},{"type":"crate::knobs::Knobs","field":"turn"},{"type":"crate::knobs::Knobs","field":"wound"},{"type":"crate::knobs::Knobs","field":"doorpath"},{"type":"crate::knobs::Knobs","field":"walls"},{"type":"crate::knobs::Knobs","field":"wallcharge"},{"type":"crate::knobs::Knobs","field":"wallshot"},{"type":"crate::knobs::Knobs","field":"wallkill"},{"type":"crate::knobs::Knobs","field":"hardbreath"},{"type":"crate::knobs::Knobs","field":"castor"},{"type":"crate::knobs::Knobs","field":"wallreact"},{"type":"crate::knobs::Knobs","field":"coverfire"},{"type":"crate::knobs::Knobs","field":"furnblast"},{"type":"crate::knobs::Knobs","field":"doorway"},{"type":"crate::knobs::Knobs","field":"doorblast"},{"type":"crate::knobs::Knobs","field":"doorshot"},{"type":"crate::knobs::Knobs","field":"doorthrow"},{"type":"crate::knobs::Knobs","field":"winbars"},{"type":"crate::knobs::Knobs","field":"opening"},{"type":"crate::knobs::Knobs","field":"doorstay"},{"type":"crate::knobs::Knobs","field":"handle"},{"type":"crate::knobs::Knobs","field":"doormanners"},{"type":"crate::knobs::Knobs","field":"breaks"},{"type":"crate::knobs::Knobs","field":"furn"},{"type":"crate::knobs::Knobs","field":"snowbog"},{"type":"crate::knobs::Knobs","field":"rubble"},{"type":"crate::knobs::Knobs","field":"evict"},{"type":"crate::knobs::Knobs","field":"debris"},{"type":"crate::knobs::Knobs","field":"lightwall"},{"type":"crate::knobs::Knobs","field":"airdust"},{"type":"crate::knobs::Knobs","field":"wallsnap"},{"type":"crate::knobs::Knobs","field":"gunwall"},{"type":"crate::knobs::Knobs","field":"close"},{"type":"crate::knobs::Knobs","field":"plan"},{"type":"crate::knobs::Knobs","field":"gear"},{"type":"crate::knobs::Knobs","field":"start"},{"type":"crate::knobs::Knobs","field":"samestart"},{"type":"crate::knobs::Knobs","field":"take"},{"type":"crate::knobs::Knobs","field":"reload"},{"type":"crate::knobs::Knobs","field":"quickthrow"},{"type":"crate::knobs::Knobs","field":"samstun"},{"type":"crate::knobs::Knobs","field":"recap"},{"type":"crate::knobs::Knobs","field":"aimweight"},{"type":"crate::knobs::Knobs","field":"aimcost"},{"type":"crate::knobs::Knobs","field":"friends"},{"type":"crate::knobs::Knobs","field":"teamtally"},{"type":"crate::knobs::Knobs","field":"friendlyfire"},{"type":"crate::knobs::Knobs","field":"lightswitch"},{"type":"crate::knobs::Knobs","field":"carlamps"},{"type":"crate::knobs::Knobs","field":"hitstuff"},{"type":"crate::knobs::Knobs","field":"markcut"},{"type":"crate::knobs::Knobs","field":"marksit"},{"type":"crate::knobs::Knobs","field":"plan_pace"},{"type":"crate::knobs::Knobs","field":"reach_pace"},{"type":"crate::knobs::Knobs","field":"coatfinish"},{"type":"crate::knobs::Knobs","field":"solidglass"},{"type":"crate::knobs::Knobs","field":"wallskin"},{"type":"crate::knobs::Knobs","field":"cleanrestart"},{"type":"crate::knobs::Knobs","field":"fireline"},{"type":"crate::knobs::Knobs","field":"savetimeline"},{"type":"crate::knobs::Knobs","field":"handslot"},{"type":"crate::knobs::Knobs","field":"handring"},{"type":"crate::knobs::Knobs","field":"throwback"},{"type":"crate::knobs::Knobs","field":"ownblow"},{"type":"crate::knobs::Knobs","field":"sprintdoor"},{"type":"crate::knobs::Knobs","field":"teampace"},{"type":"crate::knobs::Knobs","field":"noshove"},{"type":"crate::knobs::Knobs","field":"rails"},{"type":"crate::knobs::Knobs","field":"belief"},{"type":"crate::knobs::Knobs","field":"doorforce"},{"type":"crate::knobs::Knobs","field":"slotsetup"},{"type":"crate::knobs::Knobs","field":"glassreal"},{"type":"crate::knobs::Knobs","field":"quietfog"},{"type":"crate::knobs::Knobs","field":"told"},{"type":"crate::knobs::Knobs","field":"words"},{"type":"crate::knobs::Knobs","field":"kitanim"},{"type":"crate::knobs::Knobs","field":"kit"},{"type":"crate::knobs::Knobs","field":"throw_by"},{"type":"crate::knobs::Knobs","field":"hands"},{"type":"crate::knobs::Knobs","field":"work"},{"type":"crate::knobs::Knobs","field":"wand"},{"type":"crate::knobs::Knobs","field":"sticky"},{"type":"crate::knobs::Knobs","field":"peeksight"},{"type":"crate::knobs::Knobs","field":"owncharge"},{"type":"crate::knobs::Knobs","field":"gunslots"},{"type":"crate::knobs::Knobs","field":"gunlook"},{"type":"crate::knobs::Knobs","field":"gunroles"},{"type":"crate::knobs::Knobs","field":"kittree"},{"type":"crate::knobs::Knobs","field":"squadthrow"},{"type":"crate::knobs::Knobs","field":"squad40"},{"type":"crate::knobs::Knobs","field":"autopilot"},{"type":"crate::knobs::Knobs","field":"planlay"},{"type":"crate::knobs::Knobs","field":"cmdring"},{"type":"crate::knobs::Knobs","field":"torch"},{"type":"crate::knobs::Knobs","field":"backkey"},{"type":"crate::knobs::Knobs","field":"fixedstep"},{"type":"crate::knobs::Knobs","field":"tween"},{"type":"crate::knobs::Knobs","field":"savepic"},{"type":"crate::knobs::Knobs","field":"evenpace"},{"type":"crate::knobs::Knobs","field":"findtuned"},{"type":"crate::knobs::Knobs","field":"autocam"},{"type":"crate::knobs::Knobs","field":"morale"},{"type":"crate::knobs::Knobs","field":"condition"},{"type":"crate::knobs::Knobs","field":"inhand"},{"type":"crate::knobs::Knobs","field":"packside"},{"type":"crate::knobs::Knobs","field":"gunhand"},{"type":"crate::knobs::Knobs","field":"runner"},{"type":"crate::knobs::Knobs","field":"startle"},{"type":"crate::knobs::Knobs","field":"rowset"},{"type":"crate::knobs::Knobs","field":"smokebreak"},{"type":"crate::knobs::Knobs","field":"showwhy"},{"type":"crate::knobs::Knobs","field":"fire"},{"type":"crate::knobs::Knobs","field":"flinch"},{"type":"crate::knobs::Knobs","field":"darkdoor"},{"type":"crate::knobs::Knobs","field":"darkfoe"},{"type":"crate::knobs::Knobs","field":"powerout"},{"type":"crate::knobs::Knobs","field":"squaddeal"},{"type":"crate::knobs::Knobs","field":"stayask"},{"type":"crate::knobs::Knobs","field":"rescuecheck"},{"type":"crate::knobs::Knobs","field":"kitload"},{"type":"crate::knobs::Knobs","field":"rescueend"},{"type":"crate::knobs::Knobs","field":"rescueflush"},{"type":"crate::knobs::Knobs","field":"snatchout"},{"type":"crate::knobs::Knobs","field":"posemath"},{"type":"crate::knobs::Knobs","field":"sense"},{"type":"crate::knobs::Knobs","field":"cmdcheck"},{"type":"crate::knobs::Knobs","field":"seats"},{"type":"crate::knobs::Knobs","field":"doze"},{"type":"crate::knobs::Knobs","field":"netquiet"},{"type":"crate::knobs::Knobs","field":"attention"},{"type":"crate::knobs::Knobs","field":"picture"},{"type":"crate::knobs::Knobs","field":"response"},{"type":"crate::knobs::Knobs","field":"handwork"},{"type":"crate::knobs::Knobs","field":"workstow"},{"type":"crate::knobs::Knobs","field":"squadnet"},{"type":"crate::knobs::Knobs","field":"takedown"},{"type":"crate::knobs::Knobs","field":"stealthpose"},{"type":"crate::knobs::Knobs","field":"look"},{"type":"crate::knobs::Knobs","field":"music"},{"type":"crate::knobs::Knobs","field":"lived"},{"type":"crate::knobs::Knobs","field":"underfoot"},{"type":"crate::knobs::Knobs","field":"round"},{"type":"crate::knobs::Knobs","field":"env"},{"type":"crate::knobs::Knobs","field":"shapes"},{"type":"crate::knobs::Knobs","field":"flash"},{"type":"crate::knobs::Knobs","field":"pace"},{"type":"crate::knobs::Knobs","field":"lights"},{"type":"crate::knobs::Knobs","field":"nvg"},{"type":"crate::knobs::Knobs","field":"ir"},{"type":"crate::knobs::Knobs","field":"irlight"},{"type":"crate::knobs::Knobs","field":"wallpen"},{"type":"crate::knobs::Knobs","field":"laser"},{"type":"crate::knobs::Knobs","field":"doortools"},{"type":"crate::knobs::Knobs","field":"roomfight"},{"type":"crate::knobs::Knobs","field":"orders"},{"type":"crate::knobs::Knobs","field":"cover"},{"type":"crate::knobs::Knobs","field":"roomfit"},{"type":"crate::knobs::Knobs","field":"entry"},{"type":"crate::knobs::Knobs","field":"rear"},{"type":"crate::knobs::Knobs","field":"silent"},{"type":"crate::knobs::Knobs","field":"pair"},{"type":"crate::knobs::Knobs","field":"rescue"},{"type":"crate::knobs::Knobs","field":"digin"},{"type":"crate::knobs::Knobs","field":"haulhome"},{"type":"crate::knobs::Knobs","field":"pressure"},{"type":"crate::knobs::Knobs","field":"lanes"},{"type":"crate::knobs::Knobs","field":"gunhold"},{"type":"crate::knobs::Knobs","field":"hard"},{"type":"crate::knobs::Knobs","field":"hard_at"},{"type":"crate::knobs::Knobs","field":"drilled"},{"type":"crate::knobs::Knobs","field":"squads"},{"type":"crate::knobs::Knobs","field":"drill_at"},{"type":"crate::knobs::Knobs","field":"cues"},{"type":"crate::knobs::Knobs","field":"buddy"},{"type":"crate::knobs::Knobs","field":"wx_sim"},{"type":"crate::knobs::Knobs","field":"wx_own"},{"type":"crate::knobs::Knobs","field":"snow"},{"type":"crate::knobs::Knobs","field":"snow_look"},{"type":"crate::knobs::Knobs","field":"air_sim"},{"type":"crate::knobs::Knobs","field":"laststand"},{"type":"crate::knobs::Knobs","field":"clearline"},{"type":"crate::knobs::Knobs","field":"stackroom"},{"type":"crate::knobs::Knobs","field":"rearwatch"},{"type":"crate::knobs::Knobs","field":"stackline"},{"type":"crate::knobs::Knobs","field":"sneak"},{"type":"crate::knobs::Knobs","field":"pairup"},{"type":"crate::knobs::Knobs","field":"spotted"},{"type":"crate::knobs::Knobs","field":"nightbreach"},{"type":"crate::knobs::Knobs","field":"roomclear"},{"type":"crate::knobs::Knobs","field":"lesson"},{"type":"crate::knobs::Knobs","field":"snatch"},{"type":"crate::knobs::Knobs","field":"defuse"},{"type":"crate::knobs::Knobs","field":"par"},{"type":"crate::knobs::Knobs","field":"issue"},{"type":"crate::knobs::Knobs","field":"verdict"},{"type":"crate::knobs::Knobs","field":"unseen"},{"type":"crate::knobs::Knobs","field":"seenwalk"},{"type":"crate::knobs::Knobs","field":"holdfire"},{"type":"crate::knobs::Knobs","field":"slots"},{"type":"crate::knobs::Knobs","field":"destruction"},{"type":"crate::knobs::Knobs","field":"bigslot"},{"type":"crate::knobs::Knobs","field":"kitdeal"},{"type":"crate::knobs::Knobs","field":"cut"},{"type":"crate::character::Anim","field":"pose"},{"type":"crate::character::Anim","field":"p_a"},{"type":"crate::character::Anim","field":"p_b"},{"type":"crate::character::Anim","field":"p_c"},{"type":"crate::character::Anim","field":"p_upper"},{"type":"crate::character::Anim","field":"rest"},{"type":"crate::character::Anim","field":"p_aim"},{"type":"crate::character::Anim","field":"twists"},{"type":"crate::character::Anim","field":"params"},{"type":"crate::character::Anim","field":"wall_take_feet"},{"type":"crate::character::Anim","field":"wtk"},{"type":"crate::character::Anim","field":"hold_pose"},{"type":"crate::character::Anim","field":"held_pose"},{"type":"crate::character::Anim","field":"door_push"},{"type":"crate::character::Anim","field":"work"},{"type":"crate::character::Anim","field":"haul"},{"type":"crate::character::Anim","field":"big_tool"},{"type":"crate::character::Anim","field":"big_side"},{"type":"crate::character::Anim","field":"raw_clip"},{"type":"crate::character::Anim","field":"act"},{"type":"crate::character::Anim","field":"wound"},{"type":"crate::character::Anim","field":"dazzle"},{"type":"crate::character::Anim","field":"reload_row"},{"type":"crate::character::Anim","field":"kit"},{"type":"crate::character::Anim","field":"arms_pre"},{"type":"crate::character::Anim","field":"arms_buf"},{"type":"crate::character::Anim","field":"bw"},{"type":"crate::character::Anim","field":"tk"},{"type":"crate::character::Anim","field":"hd_fix"},{"type":"crate::character::Anim","field":"hl_last"},{"type":"crate::character::Anim","field":"he_hr"},{"type":"crate::character::Anim","field":"hand_pre"},{"type":"crate::character::Anim","field":"sw_buf"},{"type":"crate::character::Anim","field":"hand_buf"},{"type":"crate::character::Anim","field":"under_buf"},{"type":"crate::character::Anim","field":"stealth"},{"type":"crate::character::Anim","field":"sp"},{"type":"crate::character::Anim","field":"jog_seam"},{"type":"crate::character::Anim","field":"plant_r"},{"type":"crate::character::Anim","field":"thr_last"},{"type":"crate::character::Anim","field":"thr_carry"},{"type":"crate::character::Anim","field":"kick_from"},{"type":"crate::character::Anim","field":"clips"},{"type":"crate::character::Anim","field":"fingers"},{"type":"crate::character::Anim","field":"thumbs"},{"type":"crate::character::Anim","field":"grip"},{"type":"crate::character::Anim","field":"nodes"},{"type":"crate::character::Anim","field":"nv"},{"type":"crate::character::Anim","field":"big_buf"},{"type":"crate::character::RagDrive","field":"pose"},{"type":"crate::character::RagDrive","field":"ov"},{"type":"crate::character::RagDrive","field":"hips"},{"type":"crate::character::RagDrive","field":"limb_ov"},{"type":"crate::character::FallGuide","field":"pins"},{"type":"crate::character::Breath","field":"hold_ov"},{"type":"crate::character::Breath","field":"saved"},{"type":"crate::game::Witness","field":"saw_act"},{"type":"crate::game::Witness","field":"saw_body"},{"type":"crate::game::Witness","field":"called_to_body"},{"type":"crate::game::Witness","field":"saw_held"},{"type":"crate::aim::AimState","field":"fouled"},{"type":"crate::aim::AimState","field":"last_shot"},{"type":"crate::guards::SearchPlan","field":"spots"},{"type":"crate::guards::Pieing","field":"path_ref"},{"type":"crate::game::GuardScript","field":"over"},{"type":"crate::game::GuardScript","field":"serial"},{"type":"crate::player::Hold","field":"ask"},{"type":"crate::player::Hold","field":"after"},{"type":"crate::player::Hold","field":"strip"},{"type":"crate::player::Hold","field":"serial"},{"type":"crate::game::PlayerSel","field":"ring"},{"type":"crate::game::PlayerKick","field":"tool"},{"type":"crate::player::WallHold","field":"serial"},{"type":"crate::seats::SeatSet","field":"hover"},{"type":"crate::seats::SeatSet","field":"interactables"},{"type":"crate::seats::SeatSet","field":"nearby"},{"type":"crate::seats::SeatSet","field":"act"},{"type":"crate::doortools::DoorToolsDoneItemKick","field":"gun"},{"type":"crate::doortools::Threshold","field":"pods"},{"type":"crate::doortools::Threshold","field":"contact"},{"type":"crate::doortools::Threshold","field":"fled"},{"type":"crate::doortools::DoorToolsDoneItemThreat","field":"deal"},{"type":"crate::lanes::LaneRe","field":"set"},{"type":"crate::scene_level::RoomClearPlan","field":"bounds"},{"type":"crate::director::ProgramDef","field":"beats"},{"type":"crate::director::ProgramDef","field":"triggers"},{"type":"crate::director::RunSignalsItem","field":"data"},{"type":"crate::director::RunBurstsItem","field":"at"},{"type":"crate::director::RunBurstsItem","field":"serial"},{"type":"crate::director::ShowState","field":"shot"},{"type":"crate::director::ShowState","field":"chapters"},{"type":"crate::director::ShowState","field":"ending"},{"type":"crate::director::ShowState","field":"weather_saved"},{"type":"crate::wallcharge::Pod","field":"hold"},{"type":"crate::enemysquads::Check","field":"silent"},{"type":"crate::enemysquads::Check","field":"known"},{"type":"crate::enemysquads::Check","field":"looked"},{"type":"crate::enemysquads::Check","field":"look"},{"type":"crate::enemysquads::Check","field":"cut"},{"type":"crate::enemysquads::Check","field":"promised"},{"type":"crate::enemysquads::Check","field":"afield"},{"type":"crate::enemysquads::Check","field":"out"},{"type":"crate::enemysquads::Check","field":"asked"},{"type":"crate::enemysquads::Check","field":"net_out"},{"type":"crate::enemysquads::Call","field":"room"},{"type":"crate::enemysquads::SquadDueItem","field":"room"},{"type":"crate::civilians::CivTarget","field":"spot"},{"type":"crate::smoke_types::WindGpuSource","field":"bound"},{"type":"crate::doortools::DoorToolsDoneItemLaneBackTriesOn","field":"move_"},{"type":"crate::doortools::DoorToolsDoneItemLaneBackTriesOn","field":"fit"},{"type":"crate::doortools::DoorToolsDoneItemLaneBackTriesOn","field":"tries"},{"type":"crate::hands::HaulCarry","field":"to"},{"type":"crate::planlay::LaidOrder","field":"who"},{"type":"crate::chronicle::ChronEvent","field":"data"},{"type":"crate::needs::NeedsManSnap","field":"needs"},{"type":"crate::civilians::CivSnapOne","field":"down"},{"type":"crate::scene_collision::SoundPaths","field":"cache"},{"type":"crate::scene_box_mirror::BoxMirror","field":"x"},{"type":"crate::scene_box_mirror::BoxMirror","field":"glass"},{"type":"crate::scene_box_mirror::BoxMirror","field":"grid_of"},{"type":"crate::scene_collision::StaticCollisionLampQ","field":"k"},{"type":"crate::scene_collision::StaticCollisionLampQ","field":"rows"},{"type":"crate::qrf::Perimeter","field":"men"},{"type":"crate::qrf::Target","field":"plan"},{"type":"crate::qrf::Marks","field":"posts"},{"type":"crate::wallbreak::WallBreak","field":"changes"},{"type":"crate::wallbreak::WallBreak","field":"owner"},{"type":"crate::wallbreak::WallBreak","field":"hidden"},{"type":"crate::wallbreak::WallBreak","field":"shell_gaps"},{"type":"crate::wallbreak::WallBreak","field":"hung_now"},{"type":"crate::wallbreak::WallBreak","field":"hung_gone"},{"type":"crate::edge_look::EdgeLook","field":"decor"},{"type":"crate::edge_look::EdgeLook","field":"dirty"},{"type":"crate::edge_look::EdgeLook","field":"rubble"},{"type":"crate::edge_look::EdgeLook","field":"blasted"},{"type":"crate::edge_look::EdgeLook","field":"todo"},{"type":"crate::furnblast::Furniture","field":"groups"},{"type":"crate::furnblast::Furniture","field":"member_at"},{"type":"crate::furnblast::Furniture","field":"hidden"},{"type":"crate::furnblast::Furniture","field":"gone"},{"type":"crate::furnblast::Furniture","field":"gone_mouth"},{"type":"crate::furnblast::Furniture","field":"kept"},{"type":"crate::furnblast::Furniture","field":"last"},{"type":"crate::furnblast::Furniture","field":"row_kept"},{"type":"crate::director::Manifest","field":"marks"},{"type":"crate::director::Manifest","field":"volumes"},{"type":"crate::director::Manifest","field":"routes"},{"type":"crate::director::Manifest","field":"doors"},{"type":"crate::director::Manifest","field":"devices"},{"type":"crate::director::Manifest","field":"plans"},{"type":"crate::director::Manifest","field":"loadouts"},{"type":"crate::director::Manifest","field":"groups"},{"type":"crate::director::Manifest","field":"variants"},{"type":"crate::director::Manifest","field":"programs"},{"type":"crate::director::Manifest","field":"expects"},{"type":"crate::director::Manifest","field":"systems"},{"type":"crate::director::LogRow","field":"data"},{"type":"crate::breach::BreachDrill","field":"beats"},{"type":"crate::breach::BreachDrill","field":"done"},{"type":"crate::breach::BreachDrill","field":"down_logged"},{"type":"crate::breach::BreachDrill","field":"flows"},{"type":"crate::breach::BreachDrill","field":"live"},{"type":"crate::scene_scenarios::QuietData","field":"spots"},{"type":"crate::lesson::StepSeen","field":"n"},{"type":"crate::lesson::StepSeen","field":"heard"},{"type":"crate::lesson::StepSeen","field":"last_order"},{"type":"crate::lesson::StepSeen","field":"last_pair"},{"type":"crate::lesson::StepSeen","field":"words"},{"type":"crate::rails::RailsSky","field":"was"},{"type":"crate::rails::RailsSky","field":"view"},{"type":"crate::snatchout::SnatchOut","field":"jobs"},{"type":"crate::snatchout::SnatchOut","field":"last"},{"type":"crate::snatchout::SnatchOut","field":"told"},{"type":"crate::snatchout::SnatchOut","field":"hot"},{"type":"crate::snatchout::SnatchOut","field":"turned"},{"type":"crate::orders::Menu","field":"target"},{"type":"crate::orders::Menu","field":"why"},{"type":"crate::orders::SquadOrdersCmdPress","field":"t"},{"type":"crate::orders::SquadOrdersTapWas","field":"t"},{"type":"crate::orders::SquadOrdersLogItem","field":"who"},{"type":"crate::orders::SquadOrdersLogItem","field":"serial"},{"type":"crate::planlay::LayState","field":"laid"},{"type":"crate::planlay::LayState","field":"kept"},{"type":"crate::orders::SquadOrdersView","field":"canvas"},{"type":"crate::orders::OtherCast","field":"ring"},{"type":"crate::cover::LiveOpening","field":"at"},{"type":"crate::cover::CoverReadsValue","field":"pick"},{"type":"crate::rescue::Entry","field":"ops"},{"type":"crate::rescue::Def","field":"mark"},{"type":"crate::rescue::Def","field":"noise0"},{"type":"crate::rescueflow::RescueFlow","field":"known"},{"type":"crate::rescueflow::RescueFlow","field":"jobs"},{"type":"crate::rescueflow::RescueFlow","field":"passed"},{"type":"crate::rescueflow::RescueFlow","field":"want"},{"type":"crate::rescueflow::RescueFlow","field":"regions"},{"type":"crate::rescueflow::RescueFlow","field":"mine"},{"type":"crate::rescueflow::RescueFlow","field":"corr"},{"type":"crate::rescueflow::RescueFlow","field":"came_in"},{"type":"crate::rescueflush::RescueFlush","field":"sent"},{"type":"crate::rescueflush::RescueFlush","field":"barred"},{"type":"crate::floorseen::FloorSeen","field":"at"},{"type":"crate::floorseen::FloorSeen","field":"asked"},{"type":"crate::workthings::WorkThingsCache","field":"list"},{"type":"crate::wallcharge::WallChargeDoneItem","field":"queue"},{"type":"crate::wallcharge::WallChargeDoneItem","field":"pod"},{"type":"crate::wallcharge::WallChargeDoneItem","field":"beats"},{"type":"crate::doorpath::Walk","field":"near"},{"type":"crate::doorpath::Walk","field":"arr"},{"type":"crate::doorpath::Walk","field":"serial"},{"type":"crate::doorpath::DoorPathLastOfValue","field":"w"},{"type":"crate::doorpath::DoorPathLentItem","field":"s"},{"type":"crate::scene_scenarios::LevelScenarios","field":"night_breach"},{"type":"crate::scene_scenarios::LevelScenarios","field":"room_clear"},{"type":"crate::scene_scenarios::LevelScenarios","field":"rescue"},{"type":"crate::scene_scenarios::LevelScenarios","field":"places"},{"type":"crate::scene_scenarios::LevelScenarios","field":"quiet"},{"type":"crate::scene_scenarios::LevelScenarios","field":"par"},{"type":"crate::scene_scenarios::LevelScenarios","field":"snatch"},{"type":"crate::scene_scenarios::LevelScenarios","field":"response"},{"type":"crate::scene_level::BreachPlan","field":"bounds"},{"type":"crate::quiet::QuietMissionAuthoredMission","field":"server_room"},{"type":"crate::scene_cut::SceneCutMod","field":"cut_clip"},{"type":"crate::thinline::ThinlineMod","field":"thin"},{"type":"crate::thinline::ThinlineMod","field":"air"},{"type":"crate::scene_box_mirror::SceneBoxMirrorMod","field":"held"},{"type":"crate::scene_box_mirror::SceneBoxMirrorMod","field":"clock"},{"type":"crate::scene_box_mirror::SceneBoxMirrorMod","field":"copies"},{"type":"crate::scene_box_mirror::SceneBoxMirrorMod","field":"leaves"},{"type":"crate::scene_box_mirror::SceneBoxMirrorMod","field":"things"},{"type":"crate::scene_collision::SceneCollisionMod","field":"both"},{"type":"crate::scene_collision::SceneCollisionMod","field":"anytime"},{"type":"crate::scene_collision::SceneCollisionMod","field":"sensed"},{"type":"crate::scene_collision::SceneCollisionMod","field":"lamps"},{"type":"crate::scene_collision::SceneCollisionMod","field":"rays"},{"type":"crate::scene_collision::SceneCollisionMod","field":"priced"},{"type":"crate::anim_skeleton::AnimSkeletonMod","field":"clip_side"},{"type":"crate::character::CharacterMod","field":"hold_show"},{"type":"crate::character::CharacterMod","field":"at0"},{"type":"crate::opening::OpeningMod","field":"spots"},{"type":"crate::kitload::KitloadMod","field":"man_load"},{"type":"crate::holdfire::HoldfireMod","field":"holdfire_log"},{"type":"crate::holdfire::HoldfireMod","field":"states"},{"type":"crate::picture::PictureMod","field":"states"},{"type":"crate::fire::FireMod","field":"states"},{"type":"crate::winbars::WinbarsMod","field":"state"},{"type":"crate::glasspen::GlasspenMod","field":"states"},{"type":"crate::doorway::DoorwayMod","field":"stack_own"},{"type":"crate::doorway::DoorwayMod","field":"states"},{"type":"crate::nightbreach::NightbreachMod","field":"applied"},{"type":"crate::handleside::HandlesideMod","field":"states"},{"type":"crate::handleside::HandlesideMod","field":"rested"},{"type":"crate::handleside::HandlesideMod","field":"lined"},{"type":"crate::handleside::HandlesideMod","field":"faces"},{"type":"crate::runner::RunnerMod","field":"state_of"},{"type":"crate::netquietfeed::NetquietfeedMod","field":"netfeed"},{"type":"crate::netquietfeed::NetquietfeedMod","field":"filed"},{"type":"crate::netquiet::NetquietMod","field":"netquiet_log"},{"type":"crate::netquiet::NetquietMod","field":"state_of"},{"type":"crate::laststand::LaststandMod","field":"states"},{"type":"crate::stackroom::StackroomMod","field":"books"},{"type":"crate::rearwatch::RearwatchMod","field":"books"},{"type":"crate::coverfire::CoverfireMod","field":"states"},{"type":"crate::wallreact::WallreactMod","field":"wall_react"},{"type":"crate::tactics::TacticsMod","field":"states"},{"type":"crate::tactics::TacticsMod","field":"kit"},{"type":"crate::lanes::LanesMod","field":"states"},{"type":"crate::digin::DiginMod","field":"digin_log"},{"type":"crate::digin::DiginMod","field":"digin_shut"},{"type":"crate::digin::DiginMod","field":"states"},{"type":"crate::pressure::PressureMod","field":"states"},{"type":"crate::difficulty::DifficultyMod","field":"here"},{"type":"crate::difficulty::DifficultyMod","field":"base"},{"type":"crate::difficulty::DifficultyMod","field":"set"},{"type":"crate::difficulty::DifficultyMod","field":"cone_visit"},{"type":"crate::difficulty::DifficultyMod","field":"own_was"},{"type":"crate::difficulty::DifficultyMod","field":"own_for"},{"type":"crate::difficulty::DifficultyMod","field":"held"},{"type":"crate::quietfog::QuietfogMod","field":"held"},{"type":"crate::calmtorch::CalmtorchMod","field":"state_of"},{"type":"crate::buddy::BuddyMod","field":"states"},{"type":"crate::powerout::PoweroutMod","field":"states"},{"type":"crate::darkfoe::DarkfoeMod","field":"state_of"},{"type":"crate::whistle::WhistleMod","field":"mem_of"},{"type":"crate::whistle::WhistleMod","field":"blower_of"},{"type":"crate::whistle::WhistleMod","field":"res_of"},{"type":"crate::whistle::WhistleMod","field":"whistle_log"},{"type":"crate::attention::AttentionMod","field":"mem_of"},{"type":"crate::attention::AttentionMod","field":"attention_log"},{"type":"crate::doze::DozeMod","field":"rec"},{"type":"crate::needs::NeedsMod","field":"mem_of"},{"type":"crate::needs::NeedsMod","field":"floor_of"},{"type":"crate::needs::NeedsMod","field":"needs_log"},{"type":"crate::gunwall::GunwallMod","field":"st"},{"type":"crate::gunwall::GunwallMod","field":"fight"},{"type":"crate::lightswitch::LightswitchMod","field":"states"},{"type":"crate::stalk::StalkMod","field":"state"},{"type":"crate::tapstep::TapstepMod","field":"state"},{"type":"crate::darkdoor::DarkdoorMod","field":"state_of"},{"type":"crate::darkdoor::DarkdoorMod","field":"reads_of"},{"type":"crate::startle::StartleMod","field":"state_of"},{"type":"crate::flinch::FlinchMod","field":"state_of"},{"type":"crate::rescue::RescueMod","field":"applied"},{"type":"crate::rescuecheck::RescuecheckMod","field":"states"},{"type":"crate::seenwalk::SeenwalkMod","field":"shared"},{"type":"crate::he40::He40Mod","field":"he40_log"},{"type":"crate::samlook::SamlookMod","field":"state"},{"type":"crate::irlight::IrlightMod","field":"kits"},{"type":"crate::nvg::NvgMod","field":"nvg_log"},{"type":"crate::nvg::NvgMod","field":"teams"},{"type":"crate::irlaser::IrlaserMod","field":"ir_made"},{"type":"crate::gunhold::GunholdMod","field":"knowns"},{"type":"crate::gunhold::GunholdMod","field":"states"},{"type":"crate::gunhold::GunholdMod","field":"stats_of"},{"type":"crate::clearline::ClearlineMod","field":"clearline_log"},{"type":"crate::clearline::ClearlineMod","field":"mem"},{"type":"crate::clearline::ClearlineMod","field":"sam_at"},{"type":"crate::clearline::ClearlineMod","field":"entered"},{"type":"crate::unseen::UnseenMod","field":"unseen_log"},{"type":"crate::unseen::UnseenMod","field":"states"},{"type":"crate::squadsmoke::SquadsmokeMod","field":"states"},{"type":"crate::squadsmoke::SquadsmokeMod","field":"squadsmoke_log"},{"type":"crate::squad40::Squad40Mod","field":"states"},{"type":"crate::squad40::Squad40Mod","field":"squad40_log"},{"type":"crate::squadthrow::SquadthrowMod","field":"states"},{"type":"crate::squadthrow::SquadthrowMod","field":"squadthrow_log"},{"type":"crate::squadthrow::SquadthrowMod","field":"duck_mates"},{"type":"crate::kitanim::KitanimMod","field":"kitanim_log"},{"type":"crate::smokebreak::SmokebreakMod","field":"states"},{"type":"crate::showwhy::ShowwhyMod","field":"mem"},{"type":"crate::showwhy::ShowwhyMod","field":"op_mem"},{"type":"crate::showwhy::ShowwhyMod","field":"states"},{"type":"crate::fireline::FirelineMod","field":"states"},{"type":"crate::fireline::FirelineMod","field":"fired"},{"type":"crate::doorforce::DoorforceMod","field":"states"},{"type":"crate::glassbreak::GlassbreakMod","field":"gb_host"},{"type":"crate::glass::GlassMod","field":"states"},{"type":"crate::enemysquads::EnemysquadsMod","field":"states"},{"type":"crate::enemysquads::EnemysquadsMod","field":"ctx"},{"type":"crate::enemysquads::EnemysquadsMod","field":"bangs"},{"type":"crate::morale::MoraleMod","field":"morale_log"},{"type":"crate::morale::MoraleMod","field":"state_of"},{"type":"crate::morale::MoraleMod","field":"blasts_of"},{"type":"crate::morale::MoraleMod","field":"mix_at"},{"type":"crate::doortools::DoortoolsMod","field":"sky"},{"type":"crate::shotgun::ShotgunMod","field":"shotgun_last"},{"type":"crate::player::PlayerMod","field":"ws_pend"},{"type":"crate::player::PlayerMod","field":"ws_press"},{"type":"crate::player::PlayerMod","field":"press_things"},{"type":"crate::player::PlayerMod","field":"light_at"},{"type":"crate::close::CloseMod","field":"close_log"},{"type":"crate::close::CloseMod","field":"state"},{"type":"crate::close::CloseMod","field":"seated"},{"type":"crate::spotted::SpottedMod","field":"men"},{"type":"crate::spotted::SpottedMod","field":"spotted_log"},{"type":"crate::spotted::SpottedMod","field":"drops"},{"type":"crate::pairorders::PairordersMod","field":"pair_log"},{"type":"crate::pairup::PairupMod","field":"pair_held"},{"type":"crate::sneak::SneakMod","field":"sneak_log"},{"type":"crate::sneak::SneakMod","field":"leaf_t"},{"type":"crate::sneak::SneakMod","field":"states"},{"type":"crate::sneak::SneakMod","field":"live_at"},{"type":"crate::sneak::SneakMod","field":"kept_lines"},{"type":"crate::silent::SilentMod","field":"states"},{"type":"crate::silent::SilentMod","field":"silent_log"},{"type":"crate::silent::SilentMod","field":"seats"},{"type":"crate::snow_bog::SnowBogMod","field":"ground_of"},{"type":"crate::frag::FragMod","field":"frag_log"},{"type":"crate::frag::FragMod","field":"walls_for"},{"type":"crate::frag::FragMod","field":"torn"},{"type":"crate::frag::FragMod","field":"books"},{"type":"crate::frag::FragMod","field":"def_books"},{"type":"crate::teampace::TeampaceMod","field":"leave"},{"type":"crate::teampace::TeampaceMod","field":"ran"},{"type":"crate::teampace::TeampaceMod","field":"dash"},{"type":"crate::teampace::TeampaceMod","field":"aim_seen"},{"type":"crate::squad::SquadMod","field":"settle_watch"},{"type":"crate::squad::SquadMod","field":"walk_watch"},{"type":"crate::workthings::WorkthingsMod","field":"errands"},{"type":"crate::hours::HoursMod","field":"hour"},{"type":"crate::hours::HoursMod","field":"states"},{"type":"crate::hours::HoursMod","field":"nights"},{"type":"crate::kit::KitMod","field":"hand"},{"type":"crate::kit::KitMod","field":"kit"},{"type":"crate::kit::KitMod","field":"loud_you"},{"type":"crate::kit::KitMod","field":"stealth_you"},{"type":"crate::kit::KitMod","field":"man_of"},{"type":"crate::kit::KitMod","field":"kit_staged"},{"type":"crate::kit::KitMod","field":"issued_player"},{"type":"crate::kit::KitMod","field":"you_bare"},{"type":"crate::wandorder::WandorderMod","field":"states"},{"type":"crate::fogofwar::FogofwarMod","field":"fog_page"},{"type":"crate::guards::GuardsMod","field":"ground_track"},{"type":"crate::guards::GuardsMod","field":"body_meters"},{"type":"crate::guards::GuardsMod","field":"body_probe_n"},{"type":"crate::guards::GuardsMod","field":"held_meters"},{"type":"crate::guards::GuardsMod","field":"unstick_legs"},{"type":"crate::guards::GuardsMod","field":"unstick"},{"type":"crate::guards::GuardsMod","field":"lit_seen"},{"type":"crate::guards::GuardsMod","field":"dark_seen"},{"type":"crate::guards::GuardsMod","field":"wall_seen"},{"type":"crate::guards::GuardsMod","field":"torch_low_seen"},{"type":"crate::guards::GuardsMod","field":"lit_man_seen"},{"type":"crate::guards::GuardsMod","field":"rollcalls"},{"type":"crate::guards::GuardsMod","field":"engagements"},{"type":"crate::dialogue::DialogueMod","field":"room_rects"},{"type":"crate::dialogue::DialogueMod","field":"own_rects"},{"type":"crate::dialogue::DialogueMod","field":"sam_mem_by_game"},{"type":"crate::dialogue::DialogueMod","field":"script_by_talk"},{"type":"crate::dialogue::DialogueMod","field":"radio_by_game"},{"type":"crate::dialogue::DialogueMod","field":"ambient_by_game"},{"type":"crate::civilians::CiviliansMod","field":"own_spots"},{"type":"crate::civilians::CiviliansMod","field":"civ_log"},{"type":"crate::civilians::CiviliansMod","field":"floors"},{"type":"crate::orders::OrdersMod","field":"follow_word"},{"type":"crate::particle_fx::ParticleFxMod","field":"state"},{"type":"crate::weapons::WeaponsMod","field":"weapons"},{"type":"crate::character::AnimWallTakeFeet","field":"l"},{"type":"crate::character::AnimWallTakeFeet","field":"r"},{"type":"crate::character::AnimWtk","field":"r"},{"type":"crate::character::HoldPose","field":"strip"},{"type":"crate::character::HeldPose","field":"strip"},{"type":"crate::character::AnimRlc","field":"ch"},{"type":"crate::character::AnimKit","field":"cap"},{"type":"crate::character::AnimLg","field":"ch"},{"type":"crate::character::AnimDp","field":"last"},{"type":"crate::character::AnimWk","field":"last"},{"type":"crate::character::AnimSp","field":"pic"},{"type":"crate::character::AnimRunGait","field":"sprint"},{"type":"crate::character::AnimFeet","field":"r"},{"type":"crate::character::AnimHn","field":"nodes"},{"type":"crate::character::AnimHn","field":"fist"},{"type":"crate::character::AnimHn","field":"own"},{"type":"crate::character::AnimHn","field":"open"},{"type":"crate::character::AnimHn","field":"thumb"},{"type":"crate::character::AnimHn","field":"base"},{"type":"crate::character::AnimHn","field":"note"},{"type":"crate::anim_skeleton::LayerCast","field":"nodes"},{"type":"crate::anim_skeleton::LayerCast","field":"lists"},{"type":"crate::anim_skeleton::LayerCast","field":"nums"},{"type":"crate::guards::SearchSpot","field":"samples"},{"type":"crate::game::PlayerKickTool","field":"moves"},{"type":"crate::doortools::DoorToolsDoneItemLaneBack","field":"move_"},{"type":"crate::doortools::DoorToolsDoneItemLaneBack","field":"fit"},{"type":"crate::doortools::DoorToolsDoneItemLaneBack","field":"tries"},{"type":"crate::director::TriggerDef","field":"who"},{"type":"crate::director::ShowStateSaved","field":"cam"},{"type":"crate::enemysquads::Quiet","field":"small0"},{"type":"crate::director::CondArm2","field":"test"},{"type":"crate::director::CondArm3","field":"got"},{"type":"crate::director::CondArm5","field":"of"},{"type":"crate::scene_box_mirror::BoxMirrorGridOf","field":"cells"},{"type":"crate::weather::Stroke","field":"pulses"},{"type":"crate::qrf::PerimeterMenItem","field":"post"},{"type":"crate::edge_look::EdgeLookTodoItem","field":"b"},{"type":"crate::edge_look::EdgeLookTodoItem","field":"f"},{"type":"crate::furnblast::FurnitureRowKept","field":"first"},{"type":"crate::furnblast::FurnitureRowKept","field":"gone"},{"type":"crate::furnblast::FurnitureMouthMemo","field":"can"},{"type":"crate::furnblast::FurnitureMouthMemo","field":"under"},{"type":"crate::director::ManifestExpectsItem","field":"beats"},{"type":"crate::rescueflow::Job","field":"chain"},{"type":"crate::render_lights::LightSetFogTeam","field":"owners"},{"type":"crate::render_lights::LightSetFogTeam","field":"lights"},{"type":"crate::scene_scenarios::StructureData","field":"team"},{"type":"crate::scene_scenarios::StructureData","field":"rooms"},{"type":"crate::scene_scenarios::StructureData","field":"starts"},{"type":"crate::scene_scenarios::StructureData","field":"squads"},{"type":"crate::scene_scenarios::RescueData","field":"side"},{"type":"crate::scene_scenarios::RescueData","field":"flow"},{"type":"crate::scene_scenarios::PlacesData","field":"areas"},{"type":"crate::scene_scenarios::SnatchData","field":"exits"},{"type":"crate::scene_scenarios::SnatchData","field":"van"},{"type":"crate::scene_scenarios::ResponseData","field":"ways"},{"type":"crate::scene_collision::SceneCollisionModANYTIME","field":"who"},{"type":"crate::anim_skeleton::ClipSide","field":"at"},{"type":"crate::opening::OpeningModSpotsValue","field":"at"},{"type":"crate::picture::State","field":"men"},{"type":"crate::picture::State","field":"done"},{"type":"crate::picture::State","field":"view"},{"type":"crate::winbars::BarState","field":"met"},{"type":"crate::glasspen::PenState","field":"log"},{"type":"crate::doorway::St","field":"path"},{"type":"crate::handleside::HandlesideModFacesValue","field":"at"},{"type":"crate::runner::Run","field":"script"},{"type":"crate::netquiet::Mind","field":"asked"},{"type":"crate::netquiet::Mind","field":"known"},{"type":"crate::netquiet::Mind","field":"paid"},{"type":"crate::laststand::State","field":"check"},{"type":"crate::laststand::State","field":"known"},{"type":"crate::laststand::State","field":"named"},{"type":"crate::laststand::State","field":"stand"},{"type":"crate::laststand::State","field":"spots"},{"type":"crate::laststand::State","field":"at"},{"type":"crate::laststand::State","field":"told"},{"type":"crate::laststand::State","field":"said"},{"type":"crate::laststand::State","field":"post"},{"type":"crate::laststand::State","field":"rot"},{"type":"crate::laststand::State","field":"later"},{"type":"crate::stackroom::Book","field":"floors"},{"type":"crate::rearwatch::Book","field":"pins"},{"type":"crate::rearwatch::Book","field":"by_op"},{"type":"crate::rearwatch::Book","field":"short"},{"type":"crate::rearwatch::Book","field":"let_off"},{"type":"crate::rearwatch::Book","field":"log"},{"type":"crate::rearwatch::Book","field":"keeps"},{"type":"crate::rearwatch::Book","field":"was"},{"type":"crate::rearwatch::Book","field":"shut"},{"type":"crate::coverfire::State","field":"men"},{"type":"crate::coverfire::State","field":"base"},{"type":"crate::coverfire::State","field":"stats"},{"type":"crate::coverfire::State","field":"by_id"},{"type":"crate::wallreact::WallReact","field":"queue"},{"type":"crate::tactics::TState","field":"roles"},{"type":"crate::tactics::TState","field":"lone"},{"type":"crate::tactics::TState","field":"gates"},{"type":"crate::tactics::TState","field":"cleared"},{"type":"crate::tactics::TState","field":"seen_ev"},{"type":"crate::lanes::State","field":"own"},{"type":"crate::lanes::State","field":"seen"},{"type":"crate::lanes::State","field":"banged"},{"type":"crate::lanes::State","field":"push"},{"type":"crate::lanes::State","field":"flank"},{"type":"crate::lanes::State","field":"flank_of"},{"type":"crate::lanes::State","field":"dropped"},{"type":"crate::lanes::State","field":"fail_t"},{"type":"crate::lanes::State","field":"held"},{"type":"crate::lanes::State","field":"due"},{"type":"crate::lanes::State","field":"look"},{"type":"crate::lanes::State","field":"post"},{"type":"crate::lanes::State","field":"back_t"},{"type":"crate::lanes::State","field":"peek"},{"type":"crate::lanes::State","field":"reloads"},{"type":"crate::lanes::State","field":"frag_no"},{"type":"crate::lanes::State","field":"near"},{"type":"crate::digin::St","field":"men"},{"type":"crate::digin::St","field":"rooms"},{"type":"crate::digin::St","field":"wedges"},{"type":"crate::digin::St","field":"fix"},{"type":"crate::digin::St","field":"called"},{"type":"crate::digin::St","field":"used"},{"type":"crate::digin::St","field":"away"},{"type":"crate::pressure::State","field":"presses"},{"type":"crate::pressure::State","field":"of"},{"type":"crate::pressure::State","field":"outs"},{"type":"crate::pressure::State","field":"think"},{"type":"crate::pressure::State","field":"stay"},{"type":"crate::pressure::State","field":"called"},{"type":"crate::pressure::State","field":"sent"},{"type":"crate::pressure::State","field":"done_at"},{"type":"crate::pressure::State","field":"last"},{"type":"crate::pressure::State","field":"tried"},{"type":"crate::pressure::State","field":"ear"},{"type":"crate::pressure::State","field":"warn"},{"type":"crate::pressure::State","field":"told"},{"type":"crate::pressure::State","field":"heard"},{"type":"crate::pressure::State","field":"ev_seen"},{"type":"crate::pressure::State","field":"marks"},{"type":"crate::pressure::State","field":"bangs"},{"type":"crate::pressure::State","field":"last_held"},{"type":"crate::pressure::State","field":"word"},{"type":"crate::pressure::State","field":"look"},{"type":"crate::quietfog::Held","field":"serial"},{"type":"crate::buddy::State","field":"men"},{"type":"crate::buddy::State","field":"errands"},{"type":"crate::powerout::State","field":"seen"},{"type":"crate::powerout::State","field":"men"},{"type":"crate::powerout::State","field":"events"},{"type":"crate::whistle::Resolution","field":"hearers"},{"type":"crate::whistle::WhistleModWHISTLELOGItem","field":"hearers"},{"type":"crate::attention::Mem","field":"hold"},{"type":"crate::attention::Mem","field":"cand"},{"type":"crate::attention::Mem","field":"lent"},{"type":"crate::needs::NeedMem","field":"needs"},{"type":"crate::needs::NeedMem","field":"trip"},{"type":"crate::gunwall::St","field":"hold"},{"type":"crate::lightswitch::St","field":"all"},{"type":"crate::lightswitch::St","field":"list"},{"type":"crate::lightswitch::St","field":"hands"},{"type":"crate::stalk::St","field":"broke"},{"type":"crate::darkdoor::Fear","field":"quits"},{"type":"crate::darkdoor::Fear","field":"pass"},{"type":"crate::startle::St","field":"script"},{"type":"crate::rescuecheck::State","field":"known"},{"type":"crate::rescuecheck::State","field":"where_"},{"type":"crate::rescuecheck::State","field":"worded"},{"type":"crate::rescuecheck::State","field":"kept"},{"type":"crate::rescuecheck::State","field":"out"},{"type":"crate::rescuecheck::State","field":"events"},{"type":"crate::seenwalk::Shared","field":"eyes"},{"type":"crate::seenwalk::Shared","field":"memo"},{"type":"crate::he40::ShellEnd","field":"report"},{"type":"crate::irlight::Kit","field":"more"},{"type":"crate::irlight::Kit","field":"men"},{"type":"crate::irlight::Kit","field":"seen"},{"type":"crate::irlight::Kit","field":"need"},{"type":"crate::irlight::Kit","field":"near"},{"type":"crate::nvg::Team","field":"men"},{"type":"crate::gunhold::Known","field":"expo"},{"type":"crate::clearline::Mem","field":"doing"},{"type":"crate::clearline::Mem","field":"lead_of"},{"type":"crate::unseen::State","field":"hold"},{"type":"crate::squadsmoke::State","field":"last"},{"type":"crate::squad40::State","field":"rounds"},{"type":"crate::squad40::State","field":"last"},{"type":"crate::squad40::State","field":"turns"},{"type":"crate::squad40::State","field":"shown"},{"type":"crate::squad40::State","field":"kept"},{"type":"crate::squadthrow::State","field":"last"},{"type":"crate::squadthrow::State","field":"shown"},{"type":"crate::squadthrow::State","field":"warn"},{"type":"crate::squadthrow::State","field":"warn_frag"},{"type":"crate::squadthrow::State","field":"caught"},{"type":"crate::squadthrow::State","field":"asked"},{"type":"crate::squadthrow::State","field":"walks"},{"type":"crate::squadthrow::State","field":"kept"},{"type":"crate::squadthrow::State","field":"scratch"},{"type":"crate::smokebreak::State","field":"men"},{"type":"crate::showwhy::Mem","field":"owed"},{"type":"crate::showwhy::OpMem","field":"turns"},{"type":"crate::showwhy::State","field":"log"},{"type":"crate::doorforce::State","field":"men"},{"type":"crate::doorforce::State","field":"kickers"},{"type":"crate::doorforce::State","field":"boots"},{"type":"crate::glass::GlassState","field":"seen"},{"type":"crate::glass::GlassState","field":"log"},{"type":"crate::enemysquads::State","field":"net"},{"type":"crate::enemysquads::State","field":"nc"},{"type":"crate::enemysquads::State","field":"word"},{"type":"crate::enemysquads::RoundCtx","field":"cost"},{"type":"crate::enemysquads::RoundCtx","field":"held"},{"type":"crate::morale::Mind","field":"script"},{"type":"crate::shotgun::ShotgunModSHOTGUNLAST","field":"ends"},{"type":"crate::shotgun::ShotgunModSHOTGUNLAST","field":"glass"},{"type":"crate::close::State","field":"best"},{"type":"crate::spotted::Man","field":"take"},{"type":"crate::spotted::Man","field":"take_no"},{"type":"crate::spotted::SpottedModDropsValue","field":"down"},{"type":"crate::spotted::SpottedModDropsValue","field":"at"},{"type":"crate::pairorders::PairordersModPAIRLOGItem","field":"serial"},{"type":"crate::sneak::State","field":"trail"},{"type":"crate::sneak::State","field":"men"},{"type":"crate::sneak::SneakModKeptLinesValue","field":"map"},{"type":"crate::silent::State","field":"booted"},{"type":"crate::frag::BlastReport","field":"hits"},{"type":"crate::frag::FragModWALLSFORValue","field":"at"},{"type":"crate::frag::Live","field":"knows"},{"type":"crate::frag::Live","field":"shouted"},{"type":"crate::frag::Live","field":"flee"},{"type":"crate::frag::Live","field":"via"},{"type":"crate::frag::Live","field":"flee_at"},{"type":"crate::frag::Live","field":"deal_t"},{"type":"crate::frag::Live","field":"counted"},{"type":"crate::frag::Live","field":"rest"},{"type":"crate::frag::Live","field":"made"},{"type":"crate::frag::DefBook","field":"carriers"},{"type":"crate::workthings::WorkthingsModErrandsValue","field":"e"},{"type":"crate::hours::HourState","field":"lamps"},{"type":"crate::hours::HourState","field":"storm"},{"type":"crate::hours::HourState","field":"cells"},{"type":"crate::hours::HourState","field":"fine"},{"type":"crate::hours::SkyState","field":"cells"},{"type":"crate::hours::SkyState","field":"fine"},{"type":"crate::hours::SkyState","field":"dome"},{"type":"crate::kit::KitModKIT","field":"members"},{"type":"crate::wandorder::State","field":"jobs"},{"type":"crate::guards::Engagement","field":"result"},{"type":"crate::guards::Engagement","field":"kills"},{"type":"crate::guards::Engagement","field":"rounds"},{"type":"crate::guards::Engagement","field":"alive"},{"type":"crate::dialogue::DialogueModRoomRectsValue","field":"rooms"},{"type":"crate::dialogue::SamMemory","field":"said"},{"type":"crate::dialogue::RadioState","field":"run"},{"type":"crate::dialogue::RadioState","field":"done"},{"type":"crate::dialogue::RadioState","field":"queue"},{"type":"crate::dialogue::RadioState","field":"reply"},{"type":"crate::dialogue::AmbientState","field":"run"},{"type":"crate::dialogue::AmbientState","field":"played"},{"type":"crate::civilians::CivSpots","field":"phones"},{"type":"crate::civilians::CivSpots","field":"exits"},{"type":"crate::civilians::CiviliansModFloorsValue","field":"pending"},{"type":"crate::particle_fx::FxState","field":"tinks"},{"type":"crate::scene_scenarios::RescueDataRoom","field":"bounds"},{"type":"crate::scene_scenarios::RescueDataSide","field":"from"},{"type":"crate::scene_scenarios::RescueFlowData","field":"regions"},{"type":"crate::scene_scenarios::RescueFlowData","field":"route"},{"type":"crate::picture::Pic","field":"ideas"},{"type":"crate::picture::Pic","field":"downs"},{"type":"crate::picture::Pic","field":"heard"},{"type":"crate::picture::Pic","field":"step"},{"type":"crate::picture::PictureView","field":"cover"},{"type":"crate::handleside::Face","field":"stand"},{"type":"crate::handleside::Face","field":"via"},{"type":"crate::laststand::Check","field":"due"},{"type":"crate::laststand::Stand","field":"in_"},{"type":"crate::laststand::Stand","field":"out"},{"type":"crate::laststand::Stand","field":"movers"},{"type":"crate::laststand::Stand","field":"orders"},{"type":"crate::laststand::Stand","field":"homed"},{"type":"crate::laststand::Hint","field":"spots"},{"type":"crate::coverfire::Man","field":"know"},{"type":"crate::coverfire::Man","field":"chew"},{"type":"crate::coverfire::Man","field":"gave"},{"type":"crate::coverfire::Man","field":"no"},{"type":"crate::tactics::Gate","field":"hs"},{"type":"crate::lanes::Peek","field":"fire"},{"type":"crate::lanes::Peek","field":"frag"},{"type":"crate::digin::RoomSt","field":"cues"},{"type":"crate::buddy::Errand","field":"serial"},{"type":"crate::powerout::Man","field":"calm"},{"type":"crate::attention::Hold","field":"serial"},{"type":"crate::gunwall::Hold","field":"serial"},{"type":"crate::squad40::Turn","field":"t"},{"type":"crate::squad40::Turn","field":"back"},{"type":"crate::squad40::StateKeptValue","field":"a"},{"type":"crate::squadthrow::Walk","field":"held"},{"type":"crate::squadthrow::Walk","field":"t"},{"type":"crate::squadthrow::Walk","field":"back"},{"type":"crate::doorforce::Man","field":"beliefs"},{"type":"crate::doorforce::Man","field":"saw"},{"type":"crate::doorforce::Man","field":"on"},{"type":"crate::doorforce::Man","field":"kick"},{"type":"crate::doorforce::Man","field":"rest"},{"type":"crate::enemysquads::NetCheck","field":"done"},{"type":"crate::enemysquads::NetCheck","field":"tried"},{"type":"crate::enemysquads::NetCheck","field":"queried"},{"type":"crate::enemysquads::NetCheck","field":"say"},{"type":"crate::enemysquads::StateWord","field":"call"},{"type":"crate::close::CloseOffer","field":"win"},{"type":"crate::sneak::Man","field":"mem"},{"type":"crate::frag::Carrier","field":"wind"},{"type":"crate::frag::Carrier","field":"spots"},{"type":"crate::wandorder::Job","field":"aside"},{"type":"crate::guards::EngageResult","field":"kills"},{"type":"crate::guards::EngageResult","field":"rounds"},{"type":"crate::dialogue::AmbientRun","field":"talk"},{"type":"crate::dialogue::AmbientRun","field":"pad"},{"type":"crate::dialogue::AmbientRun","field":"held"},{"type":"crate::scene_scenarios::RescueDataSideFrom","field":"bounds"},{"type":"crate::picture::Step","field":"key"},{"type":"crate::coverfire::Know","field":"who"},{"type":"crate::coverfire::Chew","field":"who"},{"type":"crate::squadthrow::LentBack","field":"move_"},{"type":"crate::squadthrow::LentBack","field":"fit"},{"type":"crate::squadthrow::LentBack","field":"tries"},{"type":"crate::squadthrow::WalkBack","field":"move_"},{"type":"crate::squadthrow::WalkBack","field":"fit"},{"type":"crate::squadthrow::WalkBack","field":"tries"},{"type":"crate::dialogue::Beat","field":"him"},{"type":"crate::fogofwar::FogPicture","field":"lamp_pick"},{"type":"crate::fogofwar::FogPicture","field":"face_recs"},{"type":"crate::par::Par","field":"run"},{"type":"crate::par::Par","field":"marks"},{"type":"crate::par::Par","field":"res"}];
+export const SLOW = [{"type":"crate::autopilot::AutoPick","field":"t"},{"type":"crate::combat::FireOpts","field":"weapon"},{"type":"crate::devices::DevicesSnap","field":"log"},{"type":"crate::doors::DoorContact","field":"keys"},{"type":"crate::doors::DoorContact","field":"run"},{"type":"crate::doors::DoorContact","field":"struck"},{"type":"crate::furnblast::BlastFirst","field":"serial"},{"type":"crate::furnblast::FurnitureInventory","field":"list"},{"type":"crate::orders::HoverKept","field":"hov"},{"type":"crate::orders::SquadOrdersAssignA","field":"move_"},{"type":"crate::orders::SquadOrdersAssignA","field":"fit"},{"type":"crate::orders::SquadOrdersAssignA","field":"tries"},{"type":"crate::orders::SquadOrdersHud","field":"menu"},{"type":"crate::orders::SquadOrdersHud","field":"status"},{"type":"crate::player::Legs","field":"haul"},{"type":"crate::roomclear::CheckSquadsS","field":"rooms"},{"type":"crate::roomclear::CheckSquadsS","field":"squads"},{"type":"crate::roomclear::CheckStructureS","field":"rooms"},{"type":"crate::roomclear::CheckStructureS","field":"team"},{"type":"crate::roomclear::CheckStructureS","field":"starts"},{"type":"crate::roomclear::CheckStructureS","field":"squads"},{"type":"crate::savestate::SaveResult","field":"state"},{"type":"crate::savestate::SaveState","field":"quiet"},{"type":"crate::savestate::SaveState","field":"lay"},{"type":"crate::savestate::SaveState","field":"guards"},{"type":"crate::savestate::SaveState","field":"doors"},{"type":"crate::savestate::SaveState","field":"devices"},{"type":"crate::savestate::SaveState","field":"mission"},{"type":"crate::savestate::SaveState","field":"events"},{"type":"crate::savestate::SaveState","field":"weather"},{"type":"crate::savestate::SaveState","field":"civilians"},{"type":"crate::savestate::SaveState","field":"wall_hold"},{"type":"crate::savestate::SaveState","field":"morale"},{"type":"crate::sensors::SensorJournal","field":"keys"},{"type":"crate::squadthrow::SquadThrowKept","field":"kept"},{"type":"crate::squadthrow::SquadThrowKept","field":"caught"},{"type":"crate::squadthrow::SquadThrowKept","field":"scratch"},{"type":"crate::squadthrow::SquadThrowKept","field":"duck"},{"type":"crate::workthings::WorkThingsNear","field":"target"},{"type":"crate::director::CondResult","field":"event"},{"type":"crate::doortools::DoorToolsDoneItemSliceValue","field":"looks"},{"type":"crate::doortools::DoorToolsDoneItemSliceValue","field":"pie"},{"type":"crate::laststand::Spoken","field":"spot"},{"type":"crate::scene_boxes::Box","field":"marks"},{"type":"crate::scene_boxes::Box","field":"cut"},{"type":"crate::scene_boxes::Box","field":"cut_glass"},{"type":"crate::scene_boxes::Box","field":"was"},{"type":"crate::scene_boxes::Box","field":"shape"},{"type":"crate::anim_skeleton::PoseSet","field":"list"},{"type":"crate::character::Character","field":"bones"},{"type":"crate::character::Character","field":"in_hand"},{"type":"crate::character::Character","field":"gun_look"},{"type":"crate::character::Character","field":"in_hand_cur"},{"type":"crate::character::Character","field":"in_hand_ov"},{"type":"crate::character::Character","field":"prev_bones"},{"type":"crate::character::Character","field":"sim_bones"},{"type":"crate::character::Character","field":"prev_sim"},{"type":"crate::character::Character","field":"gun_hand"},{"type":"crate::character::Character","field":"rd"},{"type":"crate::character::Character","field":"breathe"},{"type":"crate::character::Character","field":"guide"},{"type":"crate::character::Character","field":"br"},{"type":"crate::character::Character","field":"tn"},{"type":"crate::character::Character","field":"who"},{"type":"crate::character::Character","field":"man_row"},{"type":"crate::character::Character","field":"man_kept"},{"type":"crate::input::Input","field":"keys"},{"type":"crate::input::Input","field":"pressed"},{"type":"crate::input::Input","field":"lock_except"},{"type":"crate::camera::FollowCamera","field":"desired"},{"type":"crate::camera::FollowCamera","field":"pin"},{"type":"crate::camera::FollowCamera","field":"before_pin"},{"type":"crate::camera::FollowCamera","field":"draw_held"},{"type":"crate::camera::FollowCamera","field":"desired_serial"},{"type":"crate::game::Guard","field":"foe"},{"type":"crate::game::Guard","field":"unit"},{"type":"crate::game::Guard","field":"skill"},{"type":"crate::game::Guard","field":"held"},{"type":"crate::game::Guard","field":"bubble"},{"type":"crate::game::Guard","field":"wound"},{"type":"crate::game::Guard","field":"keys"},{"type":"crate::game::Guard","field":"line_fail"},{"type":"crate::game::Guard","field":"body_duty"},{"type":"crate::game::Guard","field":"slung"},{"type":"crate::game::Guard","field":"second"},{"type":"crate::game::Guard","field":"big_out"},{"type":"crate::game::Guard","field":"work_stow"},{"type":"crate::game::Guard","field":"search_plan"},{"type":"crate::game::Guard","field":"pieing"},{"type":"crate::game::Guard","field":"script"},{"type":"crate::game::Guard","field":"task"},{"type":"crate::game::Guard","field":"post"},{"type":"crate::game::Player","field":"haul"},{"type":"crate::game::Player","field":"door_move"},{"type":"crate::game::Player","field":"takedown"},{"type":"crate::game::Player","field":"holding"},{"type":"crate::game::Player","field":"bubble"},{"type":"crate::game::Player","field":"setup"},{"type":"crate::game::Player","field":"setup_hand"},{"type":"crate::game::Player","field":"setup_key"},{"type":"crate::game::Player","field":"sling_rest"},{"type":"crate::game::Player","field":"keys"},{"type":"crate::game::Player","field":"codes"},{"type":"crate::game::Player","field":"breaker_move"},{"type":"crate::game::Player","field":"throw_preview"},{"type":"crate::game::Player","field":"pending_throw"},{"type":"crate::game::Player","field":"kick"},{"type":"crate::game::Player","field":"wanding"},{"type":"crate::game::Player","field":"kit_load"},{"type":"crate::game::Player","field":"charging"},{"type":"crate::game::Player","field":"work_stow"},{"type":"crate::game::Player","field":"wall"},{"type":"crate::debris::Chunk","field":"sfx"},{"type":"crate::debris::Chunk","field":"glass"},{"type":"crate::debris::Chunk","field":"contact"},{"type":"crate::debris::Chunk","field":"mat"},{"type":"crate::cmd::Seat","field":"own"},{"type":"crate::cmd::Seat","field":"cmd"},{"type":"crate::cmd::Seat","field":"waiting"},{"type":"crate::cmd::Seat","field":"mark"},{"type":"crate::render_lights::RtLight","field":"steady"},{"type":"crate::render_lights::RtLight","field":"portal"},{"type":"crate::furnblast::Member","field":"group"},{"type":"crate::doortools::DoorOp","field":"fled"},{"type":"crate::doortools::DoorOp","field":"rear"},{"type":"crate::doortools::DoorOp","field":"lane"},{"type":"crate::doortools::DoorOp","field":"from"},{"type":"crate::doortools::DoorOp","field":"mine"},{"type":"crate::doortools::DoorOp","field":"post"},{"type":"crate::doortools::DoorOp","field":"kick"},{"type":"crate::doortools::DoorOp","field":"queue"},{"type":"crate::doortools::DoorOp","field":"pod"},{"type":"crate::doortools::DoorOp","field":"on_pod"},{"type":"crate::doortools::DoorOp","field":"slice"},{"type":"crate::doortools::DoorOp","field":"crossed"},{"type":"crate::doortools::DoorOp","field":"corner"},{"type":"crate::doortools::DoorOp","field":"aim"},{"type":"crate::doortools::DoorOp","field":"pass"},{"type":"crate::doortools::DoorOp","field":"beats"},{"type":"crate::doortools::DoorOp","field":"thr"},{"type":"crate::doortools::DoorOp","field":"thr_pre"},{"type":"crate::doortools::DoorOp","field":"other"},{"type":"crate::doortools::DoorOp","field":"threat"},{"type":"crate::orders::Assignment","field":"move_"},{"type":"crate::orders::Assignment","field":"fit"},{"type":"crate::orders::Assignment","field":"tries"},{"type":"crate::doortools::RoomSearch","field":"los"},{"type":"crate::doortools::RoomSearch","field":"yaw"},{"type":"crate::doortools::RoomSearch","field":"at"},{"type":"crate::doortools::RoomSearch","field":"cell_at"},{"type":"crate::orders::OrderDef","field":"targets"},{"type":"crate::orders::OrderDef","field":"listed"},{"type":"crate::orders::OrderDef","field":"ack"},{"type":"crate::orders::OrderDef","field":"ack_now"},{"type":"crate::orders::OrderDef","field":"stands_in"},{"type":"crate::roomfight::Def","field":"bolt_from"},{"type":"crate::roomfight::Room","field":"cells"},{"type":"crate::roomfight::Room","field":"entries"},{"type":"crate::tactics::Role","field":"avoid"},{"type":"crate::tactics::Plan","field":"roles"},{"type":"crate::tactics::Plan","field":"corridor"},{"type":"crate::lanes::Lane","field":"saw"},{"type":"crate::lanes::Lane","field":"knowers"},{"type":"crate::lanes::Lane","field":"cells"},{"type":"crate::lanes::Lane","field":"re"},{"type":"crate::lanes::Lane","field":"who"},{"type":"crate::lanes::Lane","field":"moved"},{"type":"crate::lanes::Lane","field":"can"},{"type":"crate::rescueflow::Region","field":"hot"},{"type":"crate::squad::RoomClear","field":"done"},{"type":"crate::director::Run","field":"dice"},{"type":"crate::director::Run","field":"fired"},{"type":"crate::director::Run","field":"signals"},{"type":"crate::director::Run","field":"flags"},{"type":"crate::director::Run","field":"units"},{"type":"crate::director::Run","field":"bursts"},{"type":"crate::director::Run","field":"kicks"},{"type":"crate::director::Run","field":"show"},{"type":"crate::director::Run","field":"objective"},{"type":"crate::director::Run","field":"systems_saved"},{"type":"crate::roomfight::Op","field":"meters"},{"type":"crate::roomfight::Op","field":"turn"},{"type":"crate::roomfight::Op","field":"pass"},{"type":"crate::roomfight::Op","field":"kept"},{"type":"crate::roomfight::Op","field":"step"},{"type":"crate::roomfight::Op","field":"step_by"},{"type":"crate::roomfight::Op","field":"door_by"},{"type":"crate::roomfight::Op","field":"line_by"},{"type":"crate::wallcharge::WallOp","field":"mine"},{"type":"crate::wallcharge::WallOp","field":"post"},{"type":"crate::wallcharge::WallOp","field":"hole"},{"type":"crate::wallcharge::WallOp","field":"queue"},{"type":"crate::wallcharge::WallOp","field":"stage"},{"type":"crate::wallcharge::WallOp","field":"pod"},{"type":"crate::wallcharge::WallOp","field":"crossed"},{"type":"crate::wallcharge::WallOp","field":"last"},{"type":"crate::wallcharge::WallOp","field":"beats"},{"type":"crate::wallcharge::WallOp","field":"repick_bad"},{"type":"crate::wallcharge::WallOp","field":"redealt"},{"type":"crate::wallcharge::WallOp","field":"repick_kept"},{"type":"crate::scene_level::PatrolRoute","field":"keys"},{"type":"crate::enemysquads::Squad","field":"rooms"},{"type":"crate::enemysquads::Squad","field":"fix"},{"type":"crate::enemysquads::Squad","field":"called_room"},{"type":"crate::enemysquads::Squad","field":"fallen"},{"type":"crate::enemysquads::Squad","field":"stayed"},{"type":"crate::enemysquads::Squad","field":"hit_room"},{"type":"crate::enemysquads::Squad","field":"rc"},{"type":"crate::enemysquads::Squad","field":"calls"},{"type":"crate::enemysquads::Squad","field":"call_die"},{"type":"crate::enemysquads::Squad","field":"hung"},{"type":"crate::enemysquads::Squad","field":"ask_die"},{"type":"crate::enemysquads::Squad","field":"sent"},{"type":"crate::enemysquads::Squad","field":"went"},{"type":"crate::enemysquads::Squad","field":"due"},{"type":"crate::enemysquads::Squad","field":"events"},{"type":"crate::director::LiveBeat","field":"it"},{"type":"crate::director::LiveBeat","field":"waiting"},{"type":"crate::director::LiveBeat","field":"touched"},{"type":"crate::civilians::Civ","field":"target"},{"type":"crate::civilians::Civ","field":"told"},{"type":"crate::civilians::Civ","field":"known_bodies"},{"type":"crate::civilians::Civ","field":"dice"},{"type":"crate::civilians::Civ","field":"log"},{"type":"crate::game::Talk","field":"said"},{"type":"crate::game::Talk","field":"said_n"},{"type":"crate::game::Talk","field":"given"},{"type":"crate::game::Talk","field":"last"},{"type":"crate::weapons::Firearm","field":"beat"},{"type":"crate::weapons::Firearm","field":"burst"},{"type":"crate::weapons::Firearm","field":"attachments"},{"type":"crate::weapons::Firearm","field":"att_idx"},{"type":"crate::weapons::Firearm","field":"rings"},{"type":"crate::weapons::Firearm","field":"ring_cd"},{"type":"crate::weapons::Firearm","field":"shells"},{"type":"crate::weapons::Firearm","field":"cams"},{"type":"crate::out_events::OutParticlesSetHeat","field":"srcs"},{"type":"crate::cmd::PlayerCmd","field":"view"},{"type":"crate::orders::OrderTargetFloor","field":"wall"},{"type":"crate::orders::OrderTargetFloor","field":"thing"},{"type":"crate::orders::OrderTargetFloor","field":"serial"},{"type":"crate::orders::HoverKeptHov","field":"v"},{"type":"crate::orders::OrderHudMenu","field":"rows"},{"type":"crate::orders::OrderHudRow","field":"opts"},{"type":"crate::picture::Idea","field":"who"},{"type":"crate::hands::Haul","field":"from"},{"type":"crate::hands::Haul","field":"carry"},{"type":"crate::scene_scenarios::StructureRoom","field":"doors"},{"type":"crate::scene_scenarios::SquadData","field":"arrive"},{"type":"crate::planlay::LaySnap","field":"laid"},{"type":"crate::planlay::LaySnap","field":"kept"},{"type":"crate::savestate::PlayerSnap","field":"kit_load"},{"type":"crate::savestate::GuardSnap","field":"wound"},{"type":"crate::savestate::DoorSnap","field":"drive"},{"type":"crate::game::Mission","field":"serial"},{"type":"crate::savestate::ChronSnap","field":"events"},{"type":"crate::game::GameEvent","field":"ears"},{"type":"crate::game::GameEvent","field":"serial"},{"type":"crate::needs::NeedsSnap","field":"men"},{"type":"crate::whistle::WhistleSnap","field":"men"},{"type":"crate::weather::WeatherSnap","field":"thunders"},{"type":"crate::civilians::CivSnap","field":"list"},{"type":"crate::player::WallSnap","field":"hold"},{"type":"crate::morale::MoraleSnap","field":"blasts"},{"type":"crate::squadthrow::StateKeptValue","field":"th"},{"type":"crate::squadthrow::SquadThrowKeptDuck","field":"m"},{"type":"crate::director::EventView","field":"data"},{"type":"crate::doortools::DoorToolsDoneItemSliceValuePie","field":"knee"},{"type":"crate::scene_collision::StaticCollision","field":"cells"},{"type":"crate::scene_collision::StaticCollision","field":"pane_rule"},{"type":"crate::scene_collision::StaticCollision","field":"pane_rows"},{"type":"crate::sensors::Sensors","field":"own_vals"},{"type":"crate::sense::CpuSmoke","field":"blobs"},{"type":"crate::sense::CpuSmoke","field":"grid"},{"type":"crate::sim_lightshome::LightHome","field":"mains"},{"type":"crate::props::PropSystem","field":"said"},{"type":"crate::squad::Clearing","field":"cur"},{"type":"crate::squad::Clearing","field":"wps"},{"type":"crate::squad::Clearing","field":"rooms"},{"type":"crate::squad::Clearing","field":"serial"},{"type":"crate::sparks::Sparks","field":"pool"},{"type":"crate::tracers::Tracers","field":"pool"},{"type":"crate::weather::Weather","field":"flash"},{"type":"crate::weather::Weather","field":"touched"},{"type":"crate::game::GameMessagesItem","field":"serial"},{"type":"crate::chronicle::Chronicle","field":"events"},{"type":"crate::chronicle::Chronicle","field":"questioned"},{"type":"crate::chronicle::Chronicle","field":"heard_of"},{"type":"crate::chronicle::Chronicle","field":"heard_no_row"},{"type":"crate::qrf::Qrf","field":"perim"},{"type":"crate::qrf::Qrf","field":"heard_at"},{"type":"crate::qrf::Qrf","field":"heard_events"},{"type":"crate::qrf::Qrf","field":"log"},{"type":"crate::qrf::Qrf","field":"target"},{"type":"crate::qrf::Qrf","field":"cleared"},{"type":"crate::qrf::Qrf","field":"wps"},{"type":"crate::qrf::Qrf","field":"seen_ids"},{"type":"crate::qrf::Qrf","field":"aim_pts"},{"type":"crate::qrf::Qrf","field":"stations"},{"type":"crate::qrf::Qrf","field":"cast"},{"type":"crate::qrf::Qrf","field":"spent"},{"type":"crate::qrf::Qrf","field":"marks"},{"type":"crate::qrf::Qrf","field":"word"},{"type":"crate::devices::Devices","field":"log"},{"type":"crate::destruction::Destruction","field":"items"},{"type":"crate::destruction::Destruction","field":"hidden"},{"type":"crate::destruction::Destruction","field":"tiles_down"},{"type":"crate::destruction::Destruction","field":"broke"},{"type":"crate::destruction::Destruction","field":"roofs"},{"type":"crate::destruction::Destruction","field":"dust_queue"},{"type":"crate::wind::Wind","field":"to_pool"},{"type":"crate::glassbreak::GlassBreak","field":"view_of"},{"type":"crate::glassbreak::GlassBreak","field":"gusts"},{"type":"crate::shards::GlassShards","field":"lives"},{"type":"crate::shards::GlassShards","field":"breaks"},{"type":"crate::shards::GlassShards","field":"sound_at"},{"type":"crate::shards::GlassShards","field":"sound_owed"},{"type":"crate::shards::GlassShards","field":"deferred"},{"type":"crate::shards::GlassShards","field":"pane_mem"},{"type":"crate::director::Director","field":"manifest"},{"type":"crate::director::Director","field":"problems"},{"type":"crate::director::Director","field":"log"},{"type":"crate::director::Director","field":"last_run"},{"type":"crate::director::Director","field":"frame"},{"type":"crate::director::Director","field":"seen"},{"type":"crate::director::Director","field":"due_keys"},{"type":"crate::director::Director","field":"shown"},{"type":"crate::nightbreach::NightBreach","field":"drill"},{"type":"crate::nightbreach::NightBreach","field":"layout"},{"type":"crate::nightbreach::NightBreach","field":"marks"},{"type":"crate::nightbreach::NightBreach","field":"log"},{"type":"crate::nightbreach::NightBreach","field":"bang_by"},{"type":"crate::nightbreach::NightBreach","field":"bursts"},{"type":"crate::nightbreach::NightBreach","field":"said"},{"type":"crate::quiet::QuietMission","field":"log"},{"type":"crate::quiet::QuietMission","field":"data"},{"type":"crate::quiet::QuietMission","field":"authored"},{"type":"crate::quiet::QuietMission","field":"was"},{"type":"crate::quiet::QuietMission","field":"mine"},{"type":"crate::quiet::QuietMission","field":"pending"},{"type":"crate::lesson::Lesson","field":"done_at"},{"type":"crate::lesson::Lesson","field":"log"},{"type":"crate::lesson::Lesson","field":"seen"},{"type":"crate::lesson::Lesson","field":"run"},{"type":"crate::rails::Rails","field":"run"},{"type":"crate::rails::Rails","field":"spared"},{"type":"crate::rails::Rails","field":"log"},{"type":"crate::rails::Rails","field":"lookout"},{"type":"crate::rails::Rails","field":"step_look"},{"type":"crate::snatch::Snatch","field":"killer"},{"type":"crate::snatch::Snatch","field":"log"},{"type":"crate::snatch::Snatch","field":"run"},{"type":"crate::defuse::Defuse","field":"states"},{"type":"crate::defuse::Defuse","field":"safe_by"},{"type":"crate::defuse::Defuse","field":"log"},{"type":"crate::defuse::Defuse","field":"run"},{"type":"crate::defuse::Defuse","field":"last_order"},{"type":"crate::defuse::Defuse","field":"sam"},{"type":"crate::defuse::Defuse","field":"marker"},{"type":"crate::roomclear::RoomClearScenario","field":"rooms"},{"type":"crate::roomclear::RoomClearScenario","field":"placement"},{"type":"crate::roomclear::RoomClearScenario","field":"log"},{"type":"crate::roomclear::RoomClearScenario","field":"clear_due"},{"type":"crate::roomclear::RoomClearScenario","field":"layout"},{"type":"crate::orders::SquadOrders","field":"knobs"},{"type":"crate::orders::SquadOrders","field":"owners"},{"type":"crate::orders::SquadOrders","field":"posture"},{"type":"crate::orders::SquadOrders","field":"people"},{"type":"crate::orders::SquadOrders","field":"who"},{"type":"crate::orders::SquadOrders","field":"menu"},{"type":"crate::orders::SquadOrders","field":"cmd_ring"},{"type":"crate::orders::SquadOrders","field":"cmd_press"},{"type":"crate::orders::SquadOrders","field":"tap_was"},{"type":"crate::orders::SquadOrders","field":"log"},{"type":"crate::orders::SquadOrders","field":"shows"},{"type":"crate::orders::SquadOrders","field":"asg"},{"type":"crate::orders::SquadOrders","field":"ours"},{"type":"crate::orders::SquadOrders","field":"door_marks"},{"type":"crate::orders::SquadOrders","field":"cast"},{"type":"crate::orders::SquadOrders","field":"aside_mem"},{"type":"crate::orders::SquadOrders","field":"back_fix"},{"type":"crate::orders::SquadOrders","field":"rest_of"},{"type":"crate::orders::SquadOrders","field":"held_of"},{"type":"crate::orders::SquadOrders","field":"short_of"},{"type":"crate::orders::SquadOrders","field":"apart_of"},{"type":"crate::orders::SquadOrders","field":"glass_at"},{"type":"crate::orders::SquadOrders","field":"worked"},{"type":"crate::orders::SquadOrders","field":"reached"},{"type":"crate::fogofwar::FogOfWar","field":"eyes"},{"type":"crate::fogofwar::FogOfWar","field":"hidden_chars"},{"type":"crate::fogofwar::FogOfWar","field":"fired_n"},{"type":"crate::fogofwar::FogOfWar","field":"fired_at"},{"type":"crate::fogofwar::FogOfWar","field":"shown"},{"type":"crate::fogofwar::FogOfWar","field":"recs"},{"type":"crate::fogofwar::FogOfWar","field":"door_recs"},{"type":"crate::fogofwar::FogOfWar","field":"lamp_recs"},{"type":"crate::fogofwar::FogOfWar","field":"thing_recs"},{"type":"crate::fogofwar::FogOfWar","field":"cell_seen"},{"type":"crate::fogofwar::FogOfWar","field":"asked"},{"type":"crate::fogofwar::FogOfWar","field":"pending"},{"type":"crate::fogofwar::FogOfWar","field":"call_log"},{"type":"crate::fogofwar::FogOfWar","field":"called_t"},{"type":"crate::fogofwar::FogOfWar","field":"known_t"},{"type":"crate::fogofwar::FogOfWar","field":"told_step"},{"type":"crate::fogofwar::FogOfWar","field":"our_chunks"},{"type":"crate::fogofwar::FogOfWar","field":"our_landed"},{"type":"crate::roomfight::RoomFight","field":"skill"},{"type":"crate::roomfight::RoomFight","field":"trans"},{"type":"crate::roomfight::RoomFight","field":"log"},{"type":"crate::roomfight::RoomFight","field":"room_of_cell"},{"type":"crate::roomfight::RoomFight","field":"called"},{"type":"crate::roomfight::RoomFight","field":"down_called"},{"type":"crate::roomfight::RoomFight","field":"reports"},{"type":"crate::roomfight::RoomFight","field":"sams"},{"type":"crate::cues::Cues","field":"rows"},{"type":"crate::cues::Cues","field":"kinds"},{"type":"crate::cues::Cues","field":"log"},{"type":"crate::cues::Cues","field":"bubbles"},{"type":"crate::cues::Cues","field":"men"},{"type":"crate::cues::Cues","field":"last_note"},{"type":"crate::cues::Cues","field":"said"},{"type":"crate::cues::Cues","field":"class_t"},{"type":"crate::cues::Cues","field":"squad_t"},{"type":"crate::cues::Cues","field":"kind_t"},{"type":"crate::cues::Cues","field":"heard_row"},{"type":"crate::cues::Cues","field":"heard_log"},{"type":"crate::cues::Cues","field":"heard_said"},{"type":"crate::cover::Cover","field":"jobs"},{"type":"crate::cover::Cover","field":"live"},{"type":"crate::cover::Cover","field":"steps"},{"type":"crate::cover::Cover","field":"stood"},{"type":"crate::cover::Cover","field":"no_step"},{"type":"crate::cover::Cover","field":"door_try"},{"type":"crate::cover::Cover","field":"log"},{"type":"crate::cover::Cover","field":"rears"},{"type":"crate::cover::Cover","field":"reads"},{"type":"crate::cover::Cover","field":"kept"},{"type":"crate::cover::Cover","field":"outs"},{"type":"crate::entrypoints::EntryPoints","field":"been"},{"type":"crate::entrypoints::EntryPoints","field":"log"},{"type":"crate::cleared::ClearedRooms","field":"seeds"},{"type":"crate::rescue::Rescue","field":"plan"},{"type":"crate::rescue::Rescue","field":"entry"},{"type":"crate::rescue::Rescue","field":"log"},{"type":"crate::rescue::Rescue","field":"result"},{"type":"crate::rescue::Rescue","field":"defs"},{"type":"crate::rescue::Rescue","field":"act"},{"type":"crate::rescue::Rescue","field":"executed"},{"type":"crate::rescue::Rescue","field":"counted"},{"type":"crate::rescue::Rescue","field":"last_order"},{"type":"crate::rescue::Rescue","field":"said"},{"type":"crate::rescue::Rescue","field":"search_t"},{"type":"crate::rescue::Rescue","field":"search_a"},{"type":"crate::rescue::Rescue","field":"auto"},{"type":"crate::doortools::DoorTools","field":"log"},{"type":"crate::doortools::DoorTools","field":"seen"},{"type":"crate::doortools::DoorTools","field":"tried"},{"type":"crate::doortools::DoorTools","field":"close_at"},{"type":"crate::doortools::DoorTools","field":"gate_asked"},{"type":"crate::doortools::DoorTools","field":"held"},{"type":"crate::doortools::DoorTools","field":"big_said"},{"type":"crate::pairorders::PairOrders","field":"jobs"},{"type":"crate::pairorders::PairOrders","field":"glance"},{"type":"crate::pairorders::PairOrders","field":"dark"},{"type":"crate::pairorders::PairOrders","field":"dark_memo"},{"type":"crate::pairorders::PairOrders","field":"ways"},{"type":"crate::pairorders::PairOrders","field":"lit_cells"},{"type":"crate::workthings::WorkThings","field":"jobs"},{"type":"crate::workthings::WorkThings","field":"hands"},{"type":"crate::workthings::WorkThings","field":"cache"},{"type":"crate::wallcharge::WallCharge","field":"done"},{"type":"crate::wallcharge::WallCharge","field":"away"},{"type":"crate::wallcharge::WallCharge","field":"away_marks"},{"type":"crate::wallcharge::WallCharge","field":"away_none"},{"type":"crate::wallcharge::WallCharge","field":"log"},{"type":"crate::wallcharge::WallCharge","field":"sam"},{"type":"crate::wallcharge::WallCharge","field":"offered"},{"type":"crate::wallcharge::WallCharge","field":"walks"},{"type":"crate::wallcharge::WallCharge","field":"last_blow"},{"type":"crate::wallcharge::WallCharge","field":"marker"},{"type":"crate::doorpath::DoorPath","field":"walks"},{"type":"crate::doorpath::DoorPath","field":"last_of"},{"type":"crate::doorpath::DoorPath","field":"low"},{"type":"crate::doorpath::DoorPath","field":"lent"},{"type":"crate::host_api::HostApi","field":"weather"},{"type":"crate::scene_level::Level","field":"chokepoints"},{"type":"crate::scene_level::Level","field":"clear_plans"},{"type":"crate::scene_level::Level","field":"civilians"},{"type":"crate::scene_level::Level","field":"scenarios"},{"type":"crate::scene_level::Level","field":"breach"},{"type":"crate::knobs::Knobs","field":"aim"},{"type":"crate::knobs::Knobs","field":"trained"},{"type":"crate::knobs::Knobs","field":"ai_tune"},{"type":"crate::knobs::Knobs","field":"body_light"},{"type":"crate::knobs::Knobs","field":"guard_eye"},{"type":"crate::knobs::Knobs","field":"needs"},{"type":"crate::knobs::Knobs","field":"whistle"},{"type":"crate::knobs::Knobs","field":"wet"},{"type":"crate::knobs::Knobs","field":"wind"},{"type":"crate::knobs::Knobs","field":"civ"},{"type":"crate::knobs::Knobs","field":"chaos"},{"type":"crate::knobs::Knobs","field":"ring"},{"type":"crate::knobs::Knobs","field":"launcher"},{"type":"crate::knobs::Knobs","field":"he40"},{"type":"crate::knobs::Knobs","field":"launcher40"},{"type":"crate::knobs::Knobs","field":"frag"},{"type":"crate::knobs::Knobs","field":"shotgun"},{"type":"crate::knobs::Knobs","field":"glass"},{"type":"crate::knobs::Knobs","field":"glassfx"},{"type":"crate::knobs::Knobs","field":"glassbreak"},{"type":"crate::knobs::Knobs","field":"glasspen"},{"type":"crate::knobs::Knobs","field":"shards"},{"type":"crate::knobs::Knobs","field":"talk_tune"},{"type":"crate::knobs::Knobs","field":"hold"},{"type":"crate::knobs::Knobs","field":"suppression"},{"type":"crate::knobs::Knobs","field":"rifle_spread"},{"type":"crate::knobs::Knobs","field":"footfall"},{"type":"crate::knobs::Knobs","field":"twogears"},{"type":"crate::knobs::Knobs","field":"crouchrun"},{"type":"crate::knobs::Knobs","field":"runready"},{"type":"crate::knobs::Knobs","field":"runarms"},{"type":"crate::knobs::Knobs","field":"samlook"},{"type":"crate::knobs::Knobs","field":"dash"},{"type":"crate::knobs::Knobs","field":"watch"},{"type":"crate::knobs::Knobs","field":"stalk"},{"type":"crate::knobs::Knobs","field":"tapstep"},{"type":"crate::knobs::Knobs","field":"overhear"},{"type":"crate::knobs::Knobs","field":"score"},{"type":"crate::knobs::Knobs","field":"badge"},{"type":"crate::knobs::Knobs","field":"ckpt"},{"type":"crate::knobs::Knobs","field":"fog"},{"type":"crate::knobs::Knobs","field":"moves"},{"type":"crate::knobs::Knobs","field":"mv"},{"type":"crate::knobs::Knobs","field":"turn"},{"type":"crate::knobs::Knobs","field":"wound"},{"type":"crate::knobs::Knobs","field":"doorpath"},{"type":"crate::knobs::Knobs","field":"walls"},{"type":"crate::knobs::Knobs","field":"wallcharge"},{"type":"crate::knobs::Knobs","field":"wallshot"},{"type":"crate::knobs::Knobs","field":"wallkill"},{"type":"crate::knobs::Knobs","field":"hardbreath"},{"type":"crate::knobs::Knobs","field":"castor"},{"type":"crate::knobs::Knobs","field":"wallreact"},{"type":"crate::knobs::Knobs","field":"coverfire"},{"type":"crate::knobs::Knobs","field":"furnblast"},{"type":"crate::knobs::Knobs","field":"doorway"},{"type":"crate::knobs::Knobs","field":"doorblast"},{"type":"crate::knobs::Knobs","field":"doorshot"},{"type":"crate::knobs::Knobs","field":"doorthrow"},{"type":"crate::knobs::Knobs","field":"winbars"},{"type":"crate::knobs::Knobs","field":"opening"},{"type":"crate::knobs::Knobs","field":"doorstay"},{"type":"crate::knobs::Knobs","field":"handle"},{"type":"crate::knobs::Knobs","field":"doormanners"},{"type":"crate::knobs::Knobs","field":"breaks"},{"type":"crate::knobs::Knobs","field":"furn"},{"type":"crate::knobs::Knobs","field":"snowbog"},{"type":"crate::knobs::Knobs","field":"rubble"},{"type":"crate::knobs::Knobs","field":"evict"},{"type":"crate::knobs::Knobs","field":"debris"},{"type":"crate::knobs::Knobs","field":"lightwall"},{"type":"crate::knobs::Knobs","field":"airdust"},{"type":"crate::knobs::Knobs","field":"wallsnap"},{"type":"crate::knobs::Knobs","field":"gunwall"},{"type":"crate::knobs::Knobs","field":"close"},{"type":"crate::knobs::Knobs","field":"plan"},{"type":"crate::knobs::Knobs","field":"gear"},{"type":"crate::knobs::Knobs","field":"start"},{"type":"crate::knobs::Knobs","field":"samestart"},{"type":"crate::knobs::Knobs","field":"take"},{"type":"crate::knobs::Knobs","field":"reload"},{"type":"crate::knobs::Knobs","field":"quickthrow"},{"type":"crate::knobs::Knobs","field":"samstun"},{"type":"crate::knobs::Knobs","field":"recap"},{"type":"crate::knobs::Knobs","field":"aimweight"},{"type":"crate::knobs::Knobs","field":"aimcost"},{"type":"crate::knobs::Knobs","field":"friends"},{"type":"crate::knobs::Knobs","field":"teamtally"},{"type":"crate::knobs::Knobs","field":"friendlyfire"},{"type":"crate::knobs::Knobs","field":"lightswitch"},{"type":"crate::knobs::Knobs","field":"carlamps"},{"type":"crate::knobs::Knobs","field":"hitstuff"},{"type":"crate::knobs::Knobs","field":"markcut"},{"type":"crate::knobs::Knobs","field":"marksit"},{"type":"crate::knobs::Knobs","field":"plan_pace"},{"type":"crate::knobs::Knobs","field":"reach_pace"},{"type":"crate::knobs::Knobs","field":"coatfinish"},{"type":"crate::knobs::Knobs","field":"solidglass"},{"type":"crate::knobs::Knobs","field":"wallskin"},{"type":"crate::knobs::Knobs","field":"cleanrestart"},{"type":"crate::knobs::Knobs","field":"fireline"},{"type":"crate::knobs::Knobs","field":"savetimeline"},{"type":"crate::knobs::Knobs","field":"handslot"},{"type":"crate::knobs::Knobs","field":"handring"},{"type":"crate::knobs::Knobs","field":"throwback"},{"type":"crate::knobs::Knobs","field":"ownblow"},{"type":"crate::knobs::Knobs","field":"sprintdoor"},{"type":"crate::knobs::Knobs","field":"teampace"},{"type":"crate::knobs::Knobs","field":"noshove"},{"type":"crate::knobs::Knobs","field":"rails"},{"type":"crate::knobs::Knobs","field":"belief"},{"type":"crate::knobs::Knobs","field":"doorforce"},{"type":"crate::knobs::Knobs","field":"slotsetup"},{"type":"crate::knobs::Knobs","field":"glassreal"},{"type":"crate::knobs::Knobs","field":"quietfog"},{"type":"crate::knobs::Knobs","field":"told"},{"type":"crate::knobs::Knobs","field":"words"},{"type":"crate::knobs::Knobs","field":"kitanim"},{"type":"crate::knobs::Knobs","field":"kit"},{"type":"crate::knobs::Knobs","field":"throw_by"},{"type":"crate::knobs::Knobs","field":"hands"},{"type":"crate::knobs::Knobs","field":"work"},{"type":"crate::knobs::Knobs","field":"wand"},{"type":"crate::knobs::Knobs","field":"sticky"},{"type":"crate::knobs::Knobs","field":"peeksight"},{"type":"crate::knobs::Knobs","field":"owncharge"},{"type":"crate::knobs::Knobs","field":"gunslots"},{"type":"crate::knobs::Knobs","field":"gunlook"},{"type":"crate::knobs::Knobs","field":"gunroles"},{"type":"crate::knobs::Knobs","field":"kittree"},{"type":"crate::knobs::Knobs","field":"squadthrow"},{"type":"crate::knobs::Knobs","field":"squad40"},{"type":"crate::knobs::Knobs","field":"autopilot"},{"type":"crate::knobs::Knobs","field":"planlay"},{"type":"crate::knobs::Knobs","field":"cmdring"},{"type":"crate::knobs::Knobs","field":"torch"},{"type":"crate::knobs::Knobs","field":"backkey"},{"type":"crate::knobs::Knobs","field":"fixedstep"},{"type":"crate::knobs::Knobs","field":"tween"},{"type":"crate::knobs::Knobs","field":"savepic"},{"type":"crate::knobs::Knobs","field":"evenpace"},{"type":"crate::knobs::Knobs","field":"findtuned"},{"type":"crate::knobs::Knobs","field":"autocam"},{"type":"crate::knobs::Knobs","field":"morale"},{"type":"crate::knobs::Knobs","field":"condition"},{"type":"crate::knobs::Knobs","field":"inhand"},{"type":"crate::knobs::Knobs","field":"packside"},{"type":"crate::knobs::Knobs","field":"gunhand"},{"type":"crate::knobs::Knobs","field":"runner"},{"type":"crate::knobs::Knobs","field":"startle"},{"type":"crate::knobs::Knobs","field":"rowset"},{"type":"crate::knobs::Knobs","field":"smokebreak"},{"type":"crate::knobs::Knobs","field":"showwhy"},{"type":"crate::knobs::Knobs","field":"fire"},{"type":"crate::knobs::Knobs","field":"flinch"},{"type":"crate::knobs::Knobs","field":"darkdoor"},{"type":"crate::knobs::Knobs","field":"darkfoe"},{"type":"crate::knobs::Knobs","field":"powerout"},{"type":"crate::knobs::Knobs","field":"squaddeal"},{"type":"crate::knobs::Knobs","field":"stayask"},{"type":"crate::knobs::Knobs","field":"rescuecheck"},{"type":"crate::knobs::Knobs","field":"kitload"},{"type":"crate::knobs::Knobs","field":"rescueend"},{"type":"crate::knobs::Knobs","field":"rescueflush"},{"type":"crate::knobs::Knobs","field":"snatchout"},{"type":"crate::knobs::Knobs","field":"posemath"},{"type":"crate::knobs::Knobs","field":"sense"},{"type":"crate::knobs::Knobs","field":"cmdcheck"},{"type":"crate::knobs::Knobs","field":"seats"},{"type":"crate::knobs::Knobs","field":"doze"},{"type":"crate::knobs::Knobs","field":"netquiet"},{"type":"crate::knobs::Knobs","field":"attention"},{"type":"crate::knobs::Knobs","field":"picture"},{"type":"crate::knobs::Knobs","field":"response"},{"type":"crate::knobs::Knobs","field":"handwork"},{"type":"crate::knobs::Knobs","field":"workstow"},{"type":"crate::knobs::Knobs","field":"squadnet"},{"type":"crate::knobs::Knobs","field":"takedown"},{"type":"crate::knobs::Knobs","field":"stealthpose"},{"type":"crate::knobs::Knobs","field":"look"},{"type":"crate::knobs::Knobs","field":"music"},{"type":"crate::knobs::Knobs","field":"lived"},{"type":"crate::knobs::Knobs","field":"underfoot"},{"type":"crate::knobs::Knobs","field":"round"},{"type":"crate::knobs::Knobs","field":"env"},{"type":"crate::knobs::Knobs","field":"shapes"},{"type":"crate::knobs::Knobs","field":"flash"},{"type":"crate::knobs::Knobs","field":"pace"},{"type":"crate::knobs::Knobs","field":"lights"},{"type":"crate::knobs::Knobs","field":"nvg"},{"type":"crate::knobs::Knobs","field":"ir"},{"type":"crate::knobs::Knobs","field":"irlight"},{"type":"crate::knobs::Knobs","field":"wallpen"},{"type":"crate::knobs::Knobs","field":"laser"},{"type":"crate::knobs::Knobs","field":"doortools"},{"type":"crate::knobs::Knobs","field":"roomfight"},{"type":"crate::knobs::Knobs","field":"orders"},{"type":"crate::knobs::Knobs","field":"cover"},{"type":"crate::knobs::Knobs","field":"roomfit"},{"type":"crate::knobs::Knobs","field":"entry"},{"type":"crate::knobs::Knobs","field":"rear"},{"type":"crate::knobs::Knobs","field":"silent"},{"type":"crate::knobs::Knobs","field":"pair"},{"type":"crate::knobs::Knobs","field":"rescue"},{"type":"crate::knobs::Knobs","field":"digin"},{"type":"crate::knobs::Knobs","field":"haulhome"},{"type":"crate::knobs::Knobs","field":"pressure"},{"type":"crate::knobs::Knobs","field":"lanes"},{"type":"crate::knobs::Knobs","field":"gunhold"},{"type":"crate::knobs::Knobs","field":"hard"},{"type":"crate::knobs::Knobs","field":"hard_at"},{"type":"crate::knobs::Knobs","field":"drilled"},{"type":"crate::knobs::Knobs","field":"squads"},{"type":"crate::knobs::Knobs","field":"drill_at"},{"type":"crate::knobs::Knobs","field":"cues"},{"type":"crate::knobs::Knobs","field":"buddy"},{"type":"crate::knobs::Knobs","field":"wx_sim"},{"type":"crate::knobs::Knobs","field":"wx_own"},{"type":"crate::knobs::Knobs","field":"snow"},{"type":"crate::knobs::Knobs","field":"snow_look"},{"type":"crate::knobs::Knobs","field":"air_sim"},{"type":"crate::knobs::Knobs","field":"laststand"},{"type":"crate::knobs::Knobs","field":"clearline"},{"type":"crate::knobs::Knobs","field":"stackroom"},{"type":"crate::knobs::Knobs","field":"rearwatch"},{"type":"crate::knobs::Knobs","field":"stackline"},{"type":"crate::knobs::Knobs","field":"sneak"},{"type":"crate::knobs::Knobs","field":"pairup"},{"type":"crate::knobs::Knobs","field":"spotted"},{"type":"crate::knobs::Knobs","field":"nightbreach"},{"type":"crate::knobs::Knobs","field":"roomclear"},{"type":"crate::knobs::Knobs","field":"lesson"},{"type":"crate::knobs::Knobs","field":"snatch"},{"type":"crate::knobs::Knobs","field":"defuse"},{"type":"crate::knobs::Knobs","field":"par"},{"type":"crate::knobs::Knobs","field":"issue"},{"type":"crate::knobs::Knobs","field":"verdict"},{"type":"crate::knobs::Knobs","field":"unseen"},{"type":"crate::knobs::Knobs","field":"seenwalk"},{"type":"crate::knobs::Knobs","field":"holdfire"},{"type":"crate::knobs::Knobs","field":"slots"},{"type":"crate::knobs::Knobs","field":"destruction"},{"type":"crate::knobs::Knobs","field":"bigslot"},{"type":"crate::knobs::Knobs","field":"kitdeal"},{"type":"crate::knobs::Knobs","field":"cut"},{"type":"crate::character::Anim","field":"pose"},{"type":"crate::character::Anim","field":"p_a"},{"type":"crate::character::Anim","field":"p_b"},{"type":"crate::character::Anim","field":"p_c"},{"type":"crate::character::Anim","field":"p_upper"},{"type":"crate::character::Anim","field":"rest"},{"type":"crate::character::Anim","field":"p_aim"},{"type":"crate::character::Anim","field":"twists"},{"type":"crate::character::Anim","field":"params"},{"type":"crate::character::Anim","field":"wall_take_feet"},{"type":"crate::character::Anim","field":"wtk"},{"type":"crate::character::Anim","field":"hold_pose"},{"type":"crate::character::Anim","field":"held_pose"},{"type":"crate::character::Anim","field":"door_push"},{"type":"crate::character::Anim","field":"work"},{"type":"crate::character::Anim","field":"haul"},{"type":"crate::character::Anim","field":"big_tool"},{"type":"crate::character::Anim","field":"big_side"},{"type":"crate::character::Anim","field":"raw_clip"},{"type":"crate::character::Anim","field":"act"},{"type":"crate::character::Anim","field":"wound"},{"type":"crate::character::Anim","field":"dazzle"},{"type":"crate::character::Anim","field":"reload_row"},{"type":"crate::character::Anim","field":"kit"},{"type":"crate::character::Anim","field":"arms_pre"},{"type":"crate::character::Anim","field":"arms_buf"},{"type":"crate::character::Anim","field":"bw"},{"type":"crate::character::Anim","field":"tk"},{"type":"crate::character::Anim","field":"hd_fix"},{"type":"crate::character::Anim","field":"hl_last"},{"type":"crate::character::Anim","field":"he_hr"},{"type":"crate::character::Anim","field":"hand_pre"},{"type":"crate::character::Anim","field":"sw_buf"},{"type":"crate::character::Anim","field":"hand_buf"},{"type":"crate::character::Anim","field":"under_buf"},{"type":"crate::character::Anim","field":"stealth"},{"type":"crate::character::Anim","field":"sp"},{"type":"crate::character::Anim","field":"jog_seam"},{"type":"crate::character::Anim","field":"plant_r"},{"type":"crate::character::Anim","field":"thr_last"},{"type":"crate::character::Anim","field":"thr_carry"},{"type":"crate::character::Anim","field":"kick_from"},{"type":"crate::character::Anim","field":"clips"},{"type":"crate::character::Anim","field":"fingers"},{"type":"crate::character::Anim","field":"thumbs"},{"type":"crate::character::Anim","field":"grip"},{"type":"crate::character::Anim","field":"nodes"},{"type":"crate::character::Anim","field":"nv"},{"type":"crate::character::Anim","field":"big_buf"},{"type":"crate::character::RagDrive","field":"pose"},{"type":"crate::character::RagDrive","field":"ov"},{"type":"crate::character::RagDrive","field":"hips"},{"type":"crate::character::RagDrive","field":"limb_ov"},{"type":"crate::character::FallGuide","field":"pins"},{"type":"crate::character::Breath","field":"hold_ov"},{"type":"crate::character::Breath","field":"saved"},{"type":"crate::game::Witness","field":"saw_act"},{"type":"crate::game::Witness","field":"saw_body"},{"type":"crate::game::Witness","field":"called_to_body"},{"type":"crate::game::Witness","field":"saw_held"},{"type":"crate::aim::AimState","field":"fouled"},{"type":"crate::aim::AimState","field":"last_shot"},{"type":"crate::guards::SearchPlan","field":"spots"},{"type":"crate::guards::Pieing","field":"path_ref"},{"type":"crate::game::GuardScript","field":"over"},{"type":"crate::game::GuardScript","field":"serial"},{"type":"crate::player::Hold","field":"ask"},{"type":"crate::player::Hold","field":"after"},{"type":"crate::player::Hold","field":"strip"},{"type":"crate::player::Hold","field":"serial"},{"type":"crate::game::PlayerSel","field":"ring"},{"type":"crate::game::PlayerKick","field":"tool"},{"type":"crate::player::WallHold","field":"serial"},{"type":"crate::seats::SeatSet","field":"hover"},{"type":"crate::seats::SeatSet","field":"interactables"},{"type":"crate::seats::SeatSet","field":"nearby"},{"type":"crate::seats::SeatSet","field":"act"},{"type":"crate::doortools::DoorToolsDoneItemKick","field":"gun"},{"type":"crate::doortools::Threshold","field":"pods"},{"type":"crate::doortools::Threshold","field":"contact"},{"type":"crate::doortools::Threshold","field":"fled"},{"type":"crate::doortools::DoorToolsDoneItemThreat","field":"deal"},{"type":"crate::lanes::LaneRe","field":"set"},{"type":"crate::scene_level::RoomClearPlan","field":"bounds"},{"type":"crate::director::ProgramDef","field":"beats"},{"type":"crate::director::ProgramDef","field":"triggers"},{"type":"crate::director::RunSignalsItem","field":"data"},{"type":"crate::director::RunBurstsItem","field":"at"},{"type":"crate::director::RunBurstsItem","field":"serial"},{"type":"crate::director::ShowState","field":"shot"},{"type":"crate::director::ShowState","field":"chapters"},{"type":"crate::director::ShowState","field":"ending"},{"type":"crate::director::ShowState","field":"weather_saved"},{"type":"crate::wallcharge::Pod","field":"hold"},{"type":"crate::enemysquads::Check","field":"silent"},{"type":"crate::enemysquads::Check","field":"known"},{"type":"crate::enemysquads::Check","field":"looked"},{"type":"crate::enemysquads::Check","field":"look"},{"type":"crate::enemysquads::Check","field":"cut"},{"type":"crate::enemysquads::Check","field":"promised"},{"type":"crate::enemysquads::Check","field":"afield"},{"type":"crate::enemysquads::Check","field":"out"},{"type":"crate::enemysquads::Check","field":"asked"},{"type":"crate::enemysquads::Check","field":"net_out"},{"type":"crate::enemysquads::Call","field":"room"},{"type":"crate::enemysquads::SquadDueItem","field":"room"},{"type":"crate::civilians::CivTarget","field":"spot"},{"type":"crate::smoke_types::WindGpuSource","field":"bound"},{"type":"crate::doortools::DoorToolsDoneItemLaneBackTriesOn","field":"move_"},{"type":"crate::doortools::DoorToolsDoneItemLaneBackTriesOn","field":"fit"},{"type":"crate::doortools::DoorToolsDoneItemLaneBackTriesOn","field":"tries"},{"type":"crate::hands::HaulCarry","field":"to"},{"type":"crate::planlay::LaidOrder","field":"who"},{"type":"crate::chronicle::ChronEvent","field":"data"},{"type":"crate::needs::NeedsManSnap","field":"needs"},{"type":"crate::civilians::CivSnapOne","field":"down"},{"type":"crate::scene_collision::SoundPaths","field":"cache"},{"type":"crate::scene_collision::StaticCollisionLampQ","field":"k"},{"type":"crate::scene_collision::StaticCollisionLampQ","field":"rows"},{"type":"crate::qrf::Perimeter","field":"men"},{"type":"crate::qrf::Target","field":"plan"},{"type":"crate::qrf::Marks","field":"posts"},{"type":"crate::wallbreak::WallBreak","field":"changes"},{"type":"crate::wallbreak::WallBreak","field":"owner"},{"type":"crate::wallbreak::WallBreak","field":"hidden"},{"type":"crate::wallbreak::WallBreak","field":"shell_gaps"},{"type":"crate::wallbreak::WallBreak","field":"hung_now"},{"type":"crate::wallbreak::WallBreak","field":"hung_gone"},{"type":"crate::edge_look::EdgeLook","field":"decor"},{"type":"crate::edge_look::EdgeLook","field":"dirty"},{"type":"crate::edge_look::EdgeLook","field":"rubble"},{"type":"crate::edge_look::EdgeLook","field":"blasted"},{"type":"crate::edge_look::EdgeLook","field":"todo"},{"type":"crate::furnblast::Furniture","field":"groups"},{"type":"crate::furnblast::Furniture","field":"member_at"},{"type":"crate::furnblast::Furniture","field":"hidden"},{"type":"crate::furnblast::Furniture","field":"gone"},{"type":"crate::furnblast::Furniture","field":"gone_mouth"},{"type":"crate::furnblast::Furniture","field":"kept"},{"type":"crate::furnblast::Furniture","field":"last"},{"type":"crate::furnblast::Furniture","field":"row_kept"},{"type":"crate::director::Manifest","field":"marks"},{"type":"crate::director::Manifest","field":"volumes"},{"type":"crate::director::Manifest","field":"routes"},{"type":"crate::director::Manifest","field":"doors"},{"type":"crate::director::Manifest","field":"devices"},{"type":"crate::director::Manifest","field":"plans"},{"type":"crate::director::Manifest","field":"loadouts"},{"type":"crate::director::Manifest","field":"groups"},{"type":"crate::director::Manifest","field":"variants"},{"type":"crate::director::Manifest","field":"programs"},{"type":"crate::director::Manifest","field":"expects"},{"type":"crate::director::Manifest","field":"systems"},{"type":"crate::director::LogRow","field":"data"},{"type":"crate::breach::BreachDrill","field":"beats"},{"type":"crate::breach::BreachDrill","field":"done"},{"type":"crate::breach::BreachDrill","field":"down_logged"},{"type":"crate::breach::BreachDrill","field":"flows"},{"type":"crate::breach::BreachDrill","field":"live"},{"type":"crate::scene_scenarios::QuietData","field":"spots"},{"type":"crate::lesson::StepSeen","field":"n"},{"type":"crate::lesson::StepSeen","field":"heard"},{"type":"crate::lesson::StepSeen","field":"last_order"},{"type":"crate::lesson::StepSeen","field":"last_pair"},{"type":"crate::lesson::StepSeen","field":"words"},{"type":"crate::rails::RailsSky","field":"was"},{"type":"crate::rails::RailsSky","field":"view"},{"type":"crate::snatchout::SnatchOut","field":"jobs"},{"type":"crate::snatchout::SnatchOut","field":"last"},{"type":"crate::snatchout::SnatchOut","field":"told"},{"type":"crate::snatchout::SnatchOut","field":"hot"},{"type":"crate::snatchout::SnatchOut","field":"turned"},{"type":"crate::orders::Menu","field":"target"},{"type":"crate::orders::Menu","field":"why"},{"type":"crate::orders::SquadOrdersCmdPress","field":"t"},{"type":"crate::orders::SquadOrdersTapWas","field":"t"},{"type":"crate::orders::SquadOrdersLogItem","field":"who"},{"type":"crate::orders::SquadOrdersLogItem","field":"serial"},{"type":"crate::planlay::LayState","field":"laid"},{"type":"crate::planlay::LayState","field":"kept"},{"type":"crate::orders::SquadOrdersView","field":"canvas"},{"type":"crate::orders::OtherCast","field":"ring"},{"type":"crate::cover::LiveOpening","field":"at"},{"type":"crate::cover::CoverReadsValue","field":"pick"},{"type":"crate::rescue::Entry","field":"ops"},{"type":"crate::rescue::Def","field":"mark"},{"type":"crate::rescue::Def","field":"noise0"},{"type":"crate::rescueflow::RescueFlow","field":"known"},{"type":"crate::rescueflow::RescueFlow","field":"jobs"},{"type":"crate::rescueflow::RescueFlow","field":"passed"},{"type":"crate::rescueflow::RescueFlow","field":"want"},{"type":"crate::rescueflow::RescueFlow","field":"regions"},{"type":"crate::rescueflow::RescueFlow","field":"mine"},{"type":"crate::rescueflow::RescueFlow","field":"corr"},{"type":"crate::rescueflow::RescueFlow","field":"came_in"},{"type":"crate::rescueflush::RescueFlush","field":"sent"},{"type":"crate::rescueflush::RescueFlush","field":"barred"},{"type":"crate::floorseen::FloorSeen","field":"at"},{"type":"crate::floorseen::FloorSeen","field":"asked"},{"type":"crate::workthings::WorkThingsCache","field":"list"},{"type":"crate::wallcharge::WallChargeDoneItem","field":"queue"},{"type":"crate::wallcharge::WallChargeDoneItem","field":"pod"},{"type":"crate::wallcharge::WallChargeDoneItem","field":"beats"},{"type":"crate::doorpath::Walk","field":"near"},{"type":"crate::doorpath::Walk","field":"arr"},{"type":"crate::doorpath::Walk","field":"serial"},{"type":"crate::doorpath::DoorPathLastOfValue","field":"w"},{"type":"crate::doorpath::DoorPathLentItem","field":"s"},{"type":"crate::scene_scenarios::LevelScenarios","field":"night_breach"},{"type":"crate::scene_scenarios::LevelScenarios","field":"room_clear"},{"type":"crate::scene_scenarios::LevelScenarios","field":"rescue"},{"type":"crate::scene_scenarios::LevelScenarios","field":"places"},{"type":"crate::scene_scenarios::LevelScenarios","field":"quiet"},{"type":"crate::scene_scenarios::LevelScenarios","field":"par"},{"type":"crate::scene_scenarios::LevelScenarios","field":"snatch"},{"type":"crate::scene_scenarios::LevelScenarios","field":"response"},{"type":"crate::scene_level::BreachPlan","field":"bounds"},{"type":"crate::quiet::QuietMissionAuthoredMission","field":"server_room"},{"type":"crate::scene_cut::SceneCutMod","field":"cut_clip"},{"type":"crate::thinline::ThinlineMod","field":"thin"},{"type":"crate::thinline::ThinlineMod","field":"air"},{"type":"crate::scene_collision::SceneCollisionMod","field":"both"},{"type":"crate::scene_collision::SceneCollisionMod","field":"anytime"},{"type":"crate::scene_collision::SceneCollisionMod","field":"sensed"},{"type":"crate::scene_collision::SceneCollisionMod","field":"lamps"},{"type":"crate::scene_collision::SceneCollisionMod","field":"rays"},{"type":"crate::scene_collision::SceneCollisionMod","field":"priced"},{"type":"crate::anim_skeleton::AnimSkeletonMod","field":"clip_side"},{"type":"crate::character::CharacterMod","field":"hold_show"},{"type":"crate::character::CharacterMod","field":"at0"},{"type":"crate::opening::OpeningMod","field":"spots"},{"type":"crate::kitload::KitloadMod","field":"man_load"},{"type":"crate::holdfire::HoldfireMod","field":"holdfire_log"},{"type":"crate::holdfire::HoldfireMod","field":"states"},{"type":"crate::picture::PictureMod","field":"states"},{"type":"crate::fire::FireMod","field":"states"},{"type":"crate::winbars::WinbarsMod","field":"state"},{"type":"crate::glasspen::GlasspenMod","field":"states"},{"type":"crate::doorway::DoorwayMod","field":"stack_own"},{"type":"crate::doorway::DoorwayMod","field":"states"},{"type":"crate::nightbreach::NightbreachMod","field":"applied"},{"type":"crate::handleside::HandlesideMod","field":"states"},{"type":"crate::handleside::HandlesideMod","field":"rested"},{"type":"crate::handleside::HandlesideMod","field":"lined"},{"type":"crate::handleside::HandlesideMod","field":"faces"},{"type":"crate::runner::RunnerMod","field":"state_of"},{"type":"crate::netquietfeed::NetquietfeedMod","field":"netfeed"},{"type":"crate::netquietfeed::NetquietfeedMod","field":"filed"},{"type":"crate::netquiet::NetquietMod","field":"netquiet_log"},{"type":"crate::netquiet::NetquietMod","field":"state_of"},{"type":"crate::laststand::LaststandMod","field":"states"},{"type":"crate::stackroom::StackroomMod","field":"books"},{"type":"crate::rearwatch::RearwatchMod","field":"books"},{"type":"crate::coverfire::CoverfireMod","field":"states"},{"type":"crate::wallreact::WallreactMod","field":"wall_react"},{"type":"crate::tactics::TacticsMod","field":"states"},{"type":"crate::tactics::TacticsMod","field":"kit"},{"type":"crate::lanes::LanesMod","field":"states"},{"type":"crate::digin::DiginMod","field":"digin_log"},{"type":"crate::digin::DiginMod","field":"digin_shut"},{"type":"crate::digin::DiginMod","field":"states"},{"type":"crate::pressure::PressureMod","field":"states"},{"type":"crate::difficulty::DifficultyMod","field":"here"},{"type":"crate::difficulty::DifficultyMod","field":"base"},{"type":"crate::difficulty::DifficultyMod","field":"set"},{"type":"crate::difficulty::DifficultyMod","field":"cone_visit"},{"type":"crate::difficulty::DifficultyMod","field":"own_was"},{"type":"crate::difficulty::DifficultyMod","field":"own_for"},{"type":"crate::difficulty::DifficultyMod","field":"held"},{"type":"crate::quietfog::QuietfogMod","field":"held"},{"type":"crate::calmtorch::CalmtorchMod","field":"state_of"},{"type":"crate::buddy::BuddyMod","field":"states"},{"type":"crate::powerout::PoweroutMod","field":"states"},{"type":"crate::darkfoe::DarkfoeMod","field":"state_of"},{"type":"crate::whistle::WhistleMod","field":"mem_of"},{"type":"crate::whistle::WhistleMod","field":"blower_of"},{"type":"crate::whistle::WhistleMod","field":"res_of"},{"type":"crate::whistle::WhistleMod","field":"whistle_log"},{"type":"crate::attention::AttentionMod","field":"mem_of"},{"type":"crate::attention::AttentionMod","field":"attention_log"},{"type":"crate::doze::DozeMod","field":"rec"},{"type":"crate::needs::NeedsMod","field":"mem_of"},{"type":"crate::needs::NeedsMod","field":"floor_of"},{"type":"crate::needs::NeedsMod","field":"needs_log"},{"type":"crate::gunwall::GunwallMod","field":"st"},{"type":"crate::gunwall::GunwallMod","field":"fight"},{"type":"crate::lightswitch::LightswitchMod","field":"states"},{"type":"crate::stalk::StalkMod","field":"state"},{"type":"crate::tapstep::TapstepMod","field":"state"},{"type":"crate::darkdoor::DarkdoorMod","field":"state_of"},{"type":"crate::darkdoor::DarkdoorMod","field":"reads_of"},{"type":"crate::startle::StartleMod","field":"state_of"},{"type":"crate::flinch::FlinchMod","field":"state_of"},{"type":"crate::rescue::RescueMod","field":"applied"},{"type":"crate::rescuecheck::RescuecheckMod","field":"states"},{"type":"crate::seenwalk::SeenwalkMod","field":"shared"},{"type":"crate::he40::He40Mod","field":"he40_log"},{"type":"crate::samlook::SamlookMod","field":"state"},{"type":"crate::irlight::IrlightMod","field":"kits"},{"type":"crate::nvg::NvgMod","field":"nvg_log"},{"type":"crate::nvg::NvgMod","field":"teams"},{"type":"crate::irlaser::IrlaserMod","field":"ir_made"},{"type":"crate::gunhold::GunholdMod","field":"knowns"},{"type":"crate::gunhold::GunholdMod","field":"states"},{"type":"crate::gunhold::GunholdMod","field":"stats_of"},{"type":"crate::clearline::ClearlineMod","field":"clearline_log"},{"type":"crate::clearline::ClearlineMod","field":"mem"},{"type":"crate::clearline::ClearlineMod","field":"sam_at"},{"type":"crate::clearline::ClearlineMod","field":"entered"},{"type":"crate::unseen::UnseenMod","field":"unseen_log"},{"type":"crate::unseen::UnseenMod","field":"states"},{"type":"crate::squadsmoke::SquadsmokeMod","field":"states"},{"type":"crate::squadsmoke::SquadsmokeMod","field":"squadsmoke_log"},{"type":"crate::squad40::Squad40Mod","field":"states"},{"type":"crate::squad40::Squad40Mod","field":"squad40_log"},{"type":"crate::squadthrow::SquadthrowMod","field":"states"},{"type":"crate::squadthrow::SquadthrowMod","field":"squadthrow_log"},{"type":"crate::squadthrow::SquadthrowMod","field":"duck_mates"},{"type":"crate::kitanim::KitanimMod","field":"kitanim_log"},{"type":"crate::smokebreak::SmokebreakMod","field":"states"},{"type":"crate::showwhy::ShowwhyMod","field":"mem"},{"type":"crate::showwhy::ShowwhyMod","field":"op_mem"},{"type":"crate::showwhy::ShowwhyMod","field":"states"},{"type":"crate::fireline::FirelineMod","field":"states"},{"type":"crate::fireline::FirelineMod","field":"fired"},{"type":"crate::doorforce::DoorforceMod","field":"states"},{"type":"crate::glassbreak::GlassbreakMod","field":"gb_host"},{"type":"crate::glass::GlassMod","field":"states"},{"type":"crate::enemysquads::EnemysquadsMod","field":"states"},{"type":"crate::enemysquads::EnemysquadsMod","field":"ctx"},{"type":"crate::enemysquads::EnemysquadsMod","field":"bangs"},{"type":"crate::morale::MoraleMod","field":"morale_log"},{"type":"crate::morale::MoraleMod","field":"state_of"},{"type":"crate::morale::MoraleMod","field":"blasts_of"},{"type":"crate::morale::MoraleMod","field":"mix_at"},{"type":"crate::doortools::DoortoolsMod","field":"sky"},{"type":"crate::shotgun::ShotgunMod","field":"shotgun_last"},{"type":"crate::player::PlayerMod","field":"ws_pend"},{"type":"crate::player::PlayerMod","field":"ws_press"},{"type":"crate::player::PlayerMod","field":"press_things"},{"type":"crate::player::PlayerMod","field":"light_at"},{"type":"crate::close::CloseMod","field":"close_log"},{"type":"crate::close::CloseMod","field":"state"},{"type":"crate::close::CloseMod","field":"seated"},{"type":"crate::spotted::SpottedMod","field":"men"},{"type":"crate::spotted::SpottedMod","field":"spotted_log"},{"type":"crate::spotted::SpottedMod","field":"drops"},{"type":"crate::pairorders::PairordersMod","field":"pair_log"},{"type":"crate::pairup::PairupMod","field":"pair_held"},{"type":"crate::sneak::SneakMod","field":"sneak_log"},{"type":"crate::sneak::SneakMod","field":"leaf_t"},{"type":"crate::sneak::SneakMod","field":"states"},{"type":"crate::sneak::SneakMod","field":"live_at"},{"type":"crate::sneak::SneakMod","field":"kept_lines"},{"type":"crate::silent::SilentMod","field":"states"},{"type":"crate::silent::SilentMod","field":"silent_log"},{"type":"crate::silent::SilentMod","field":"seats"},{"type":"crate::snow_bog::SnowBogMod","field":"ground_of"},{"type":"crate::frag::FragMod","field":"frag_log"},{"type":"crate::frag::FragMod","field":"walls_for"},{"type":"crate::frag::FragMod","field":"torn"},{"type":"crate::frag::FragMod","field":"books"},{"type":"crate::frag::FragMod","field":"def_books"},{"type":"crate::teampace::TeampaceMod","field":"leave"},{"type":"crate::teampace::TeampaceMod","field":"ran"},{"type":"crate::teampace::TeampaceMod","field":"dash"},{"type":"crate::teampace::TeampaceMod","field":"aim_seen"},{"type":"crate::squad::SquadMod","field":"settle_watch"},{"type":"crate::squad::SquadMod","field":"walk_watch"},{"type":"crate::workthings::WorkthingsMod","field":"errands"},{"type":"crate::hours::HoursMod","field":"hour"},{"type":"crate::hours::HoursMod","field":"states"},{"type":"crate::hours::HoursMod","field":"nights"},{"type":"crate::kit::KitMod","field":"hand"},{"type":"crate::kit::KitMod","field":"kit"},{"type":"crate::kit::KitMod","field":"loud_you"},{"type":"crate::kit::KitMod","field":"stealth_you"},{"type":"crate::kit::KitMod","field":"man_of"},{"type":"crate::kit::KitMod","field":"kit_staged"},{"type":"crate::kit::KitMod","field":"issued_player"},{"type":"crate::kit::KitMod","field":"you_bare"},{"type":"crate::wandorder::WandorderMod","field":"states"},{"type":"crate::fogofwar::FogofwarMod","field":"fog_page"},{"type":"crate::guards::GuardsMod","field":"ground_track"},{"type":"crate::guards::GuardsMod","field":"body_meters"},{"type":"crate::guards::GuardsMod","field":"body_probe_n"},{"type":"crate::guards::GuardsMod","field":"held_meters"},{"type":"crate::guards::GuardsMod","field":"unstick_legs"},{"type":"crate::guards::GuardsMod","field":"unstick"},{"type":"crate::guards::GuardsMod","field":"lit_seen"},{"type":"crate::guards::GuardsMod","field":"dark_seen"},{"type":"crate::guards::GuardsMod","field":"wall_seen"},{"type":"crate::guards::GuardsMod","field":"torch_low_seen"},{"type":"crate::guards::GuardsMod","field":"lit_man_seen"},{"type":"crate::guards::GuardsMod","field":"rollcalls"},{"type":"crate::guards::GuardsMod","field":"engagements"},{"type":"crate::dialogue::DialogueMod","field":"room_rects"},{"type":"crate::dialogue::DialogueMod","field":"own_rects"},{"type":"crate::dialogue::DialogueMod","field":"sam_mem_by_game"},{"type":"crate::dialogue::DialogueMod","field":"script_by_talk"},{"type":"crate::dialogue::DialogueMod","field":"radio_by_game"},{"type":"crate::dialogue::DialogueMod","field":"ambient_by_game"},{"type":"crate::civilians::CiviliansMod","field":"own_spots"},{"type":"crate::civilians::CiviliansMod","field":"civ_log"},{"type":"crate::civilians::CiviliansMod","field":"floors"},{"type":"crate::orders::OrdersMod","field":"follow_word"},{"type":"crate::particle_fx::ParticleFxMod","field":"state"},{"type":"crate::weapons::WeaponsMod","field":"weapons"},{"type":"crate::character::AnimWallTakeFeet","field":"l"},{"type":"crate::character::AnimWallTakeFeet","field":"r"},{"type":"crate::character::AnimWtk","field":"r"},{"type":"crate::character::HoldPose","field":"strip"},{"type":"crate::character::HeldPose","field":"strip"},{"type":"crate::character::AnimRlc","field":"ch"},{"type":"crate::character::AnimKit","field":"cap"},{"type":"crate::character::AnimLg","field":"ch"},{"type":"crate::character::AnimDp","field":"last"},{"type":"crate::character::AnimWk","field":"last"},{"type":"crate::character::AnimSp","field":"pic"},{"type":"crate::character::AnimRunGait","field":"sprint"},{"type":"crate::character::AnimFeet","field":"r"},{"type":"crate::character::AnimHn","field":"nodes"},{"type":"crate::character::AnimHn","field":"fist"},{"type":"crate::character::AnimHn","field":"own"},{"type":"crate::character::AnimHn","field":"open"},{"type":"crate::character::AnimHn","field":"thumb"},{"type":"crate::character::AnimHn","field":"base"},{"type":"crate::character::AnimHn","field":"note"},{"type":"crate::anim_skeleton::LayerCast","field":"nodes"},{"type":"crate::anim_skeleton::LayerCast","field":"lists"},{"type":"crate::anim_skeleton::LayerCast","field":"nums"},{"type":"crate::guards::SearchSpot","field":"samples"},{"type":"crate::game::PlayerKickTool","field":"moves"},{"type":"crate::doortools::DoorToolsDoneItemLaneBack","field":"move_"},{"type":"crate::doortools::DoorToolsDoneItemLaneBack","field":"fit"},{"type":"crate::doortools::DoorToolsDoneItemLaneBack","field":"tries"},{"type":"crate::director::TriggerDef","field":"who"},{"type":"crate::director::ShowStateSaved","field":"cam"},{"type":"crate::enemysquads::Quiet","field":"small0"},{"type":"crate::director::CondArm2","field":"test"},{"type":"crate::director::CondArm3","field":"got"},{"type":"crate::director::CondArm5","field":"of"},{"type":"crate::weather::Stroke","field":"pulses"},{"type":"crate::qrf::PerimeterMenItem","field":"post"},{"type":"crate::edge_look::EdgeLookTodoItem","field":"b"},{"type":"crate::edge_look::EdgeLookTodoItem","field":"f"},{"type":"crate::furnblast::FurnitureRowKept","field":"first"},{"type":"crate::furnblast::FurnitureRowKept","field":"gone"},{"type":"crate::furnblast::FurnitureMouthMemo","field":"can"},{"type":"crate::furnblast::FurnitureMouthMemo","field":"under"},{"type":"crate::director::ManifestExpectsItem","field":"beats"},{"type":"crate::rescueflow::Job","field":"chain"},{"type":"crate::render_lights::LightSetFogTeam","field":"owners"},{"type":"crate::render_lights::LightSetFogTeam","field":"lights"},{"type":"crate::scene_scenarios::StructureData","field":"team"},{"type":"crate::scene_scenarios::StructureData","field":"rooms"},{"type":"crate::scene_scenarios::StructureData","field":"starts"},{"type":"crate::scene_scenarios::StructureData","field":"squads"},{"type":"crate::scene_scenarios::RescueData","field":"side"},{"type":"crate::scene_scenarios::RescueData","field":"flow"},{"type":"crate::scene_scenarios::PlacesData","field":"areas"},{"type":"crate::scene_scenarios::SnatchData","field":"exits"},{"type":"crate::scene_scenarios::SnatchData","field":"van"},{"type":"crate::scene_scenarios::ResponseData","field":"ways"},{"type":"crate::scene_collision::SceneCollisionModANYTIME","field":"who"},{"type":"crate::anim_skeleton::ClipSide","field":"at"},{"type":"crate::opening::OpeningModSpotsValue","field":"at"},{"type":"crate::picture::State","field":"men"},{"type":"crate::picture::State","field":"done"},{"type":"crate::picture::State","field":"view"},{"type":"crate::winbars::BarState","field":"met"},{"type":"crate::glasspen::PenState","field":"log"},{"type":"crate::doorway::St","field":"path"},{"type":"crate::handleside::HandlesideModFacesValue","field":"at"},{"type":"crate::runner::Run","field":"script"},{"type":"crate::netquiet::Mind","field":"asked"},{"type":"crate::netquiet::Mind","field":"known"},{"type":"crate::netquiet::Mind","field":"paid"},{"type":"crate::laststand::State","field":"check"},{"type":"crate::laststand::State","field":"known"},{"type":"crate::laststand::State","field":"named"},{"type":"crate::laststand::State","field":"stand"},{"type":"crate::laststand::State","field":"spots"},{"type":"crate::laststand::State","field":"at"},{"type":"crate::laststand::State","field":"told"},{"type":"crate::laststand::State","field":"said"},{"type":"crate::laststand::State","field":"post"},{"type":"crate::laststand::State","field":"rot"},{"type":"crate::laststand::State","field":"later"},{"type":"crate::stackroom::Book","field":"floors"},{"type":"crate::rearwatch::Book","field":"pins"},{"type":"crate::rearwatch::Book","field":"by_op"},{"type":"crate::rearwatch::Book","field":"short"},{"type":"crate::rearwatch::Book","field":"let_off"},{"type":"crate::rearwatch::Book","field":"log"},{"type":"crate::rearwatch::Book","field":"keeps"},{"type":"crate::rearwatch::Book","field":"was"},{"type":"crate::rearwatch::Book","field":"shut"},{"type":"crate::coverfire::State","field":"men"},{"type":"crate::coverfire::State","field":"base"},{"type":"crate::coverfire::State","field":"stats"},{"type":"crate::coverfire::State","field":"by_id"},{"type":"crate::wallreact::WallReact","field":"queue"},{"type":"crate::tactics::TState","field":"roles"},{"type":"crate::tactics::TState","field":"lone"},{"type":"crate::tactics::TState","field":"gates"},{"type":"crate::tactics::TState","field":"cleared"},{"type":"crate::tactics::TState","field":"seen_ev"},{"type":"crate::lanes::State","field":"own"},{"type":"crate::lanes::State","field":"seen"},{"type":"crate::lanes::State","field":"banged"},{"type":"crate::lanes::State","field":"push"},{"type":"crate::lanes::State","field":"flank"},{"type":"crate::lanes::State","field":"flank_of"},{"type":"crate::lanes::State","field":"dropped"},{"type":"crate::lanes::State","field":"fail_t"},{"type":"crate::lanes::State","field":"held"},{"type":"crate::lanes::State","field":"due"},{"type":"crate::lanes::State","field":"look"},{"type":"crate::lanes::State","field":"post"},{"type":"crate::lanes::State","field":"back_t"},{"type":"crate::lanes::State","field":"peek"},{"type":"crate::lanes::State","field":"reloads"},{"type":"crate::lanes::State","field":"frag_no"},{"type":"crate::lanes::State","field":"near"},{"type":"crate::digin::St","field":"men"},{"type":"crate::digin::St","field":"rooms"},{"type":"crate::digin::St","field":"wedges"},{"type":"crate::digin::St","field":"fix"},{"type":"crate::digin::St","field":"called"},{"type":"crate::digin::St","field":"used"},{"type":"crate::digin::St","field":"away"},{"type":"crate::pressure::State","field":"presses"},{"type":"crate::pressure::State","field":"of"},{"type":"crate::pressure::State","field":"outs"},{"type":"crate::pressure::State","field":"think"},{"type":"crate::pressure::State","field":"stay"},{"type":"crate::pressure::State","field":"called"},{"type":"crate::pressure::State","field":"sent"},{"type":"crate::pressure::State","field":"done_at"},{"type":"crate::pressure::State","field":"last"},{"type":"crate::pressure::State","field":"tried"},{"type":"crate::pressure::State","field":"ear"},{"type":"crate::pressure::State","field":"warn"},{"type":"crate::pressure::State","field":"told"},{"type":"crate::pressure::State","field":"heard"},{"type":"crate::pressure::State","field":"ev_seen"},{"type":"crate::pressure::State","field":"marks"},{"type":"crate::pressure::State","field":"bangs"},{"type":"crate::pressure::State","field":"last_held"},{"type":"crate::pressure::State","field":"word"},{"type":"crate::pressure::State","field":"look"},{"type":"crate::quietfog::Held","field":"serial"},{"type":"crate::buddy::State","field":"men"},{"type":"crate::buddy::State","field":"errands"},{"type":"crate::powerout::State","field":"seen"},{"type":"crate::powerout::State","field":"men"},{"type":"crate::powerout::State","field":"events"},{"type":"crate::whistle::Resolution","field":"hearers"},{"type":"crate::whistle::WhistleModWHISTLELOGItem","field":"hearers"},{"type":"crate::attention::Mem","field":"hold"},{"type":"crate::attention::Mem","field":"cand"},{"type":"crate::attention::Mem","field":"lent"},{"type":"crate::needs::NeedMem","field":"needs"},{"type":"crate::needs::NeedMem","field":"trip"},{"type":"crate::gunwall::St","field":"hold"},{"type":"crate::lightswitch::St","field":"all"},{"type":"crate::lightswitch::St","field":"list"},{"type":"crate::lightswitch::St","field":"hands"},{"type":"crate::stalk::St","field":"broke"},{"type":"crate::darkdoor::Fear","field":"quits"},{"type":"crate::darkdoor::Fear","field":"pass"},{"type":"crate::startle::St","field":"script"},{"type":"crate::rescuecheck::State","field":"known"},{"type":"crate::rescuecheck::State","field":"where_"},{"type":"crate::rescuecheck::State","field":"worded"},{"type":"crate::rescuecheck::State","field":"kept"},{"type":"crate::rescuecheck::State","field":"out"},{"type":"crate::rescuecheck::State","field":"events"},{"type":"crate::seenwalk::Shared","field":"eyes"},{"type":"crate::seenwalk::Shared","field":"memo"},{"type":"crate::he40::ShellEnd","field":"report"},{"type":"crate::irlight::Kit","field":"more"},{"type":"crate::irlight::Kit","field":"men"},{"type":"crate::irlight::Kit","field":"seen"},{"type":"crate::irlight::Kit","field":"need"},{"type":"crate::irlight::Kit","field":"near"},{"type":"crate::nvg::Team","field":"men"},{"type":"crate::gunhold::Known","field":"expo"},{"type":"crate::clearline::Mem","field":"doing"},{"type":"crate::clearline::Mem","field":"lead_of"},{"type":"crate::unseen::State","field":"hold"},{"type":"crate::squadsmoke::State","field":"last"},{"type":"crate::squad40::State","field":"rounds"},{"type":"crate::squad40::State","field":"last"},{"type":"crate::squad40::State","field":"turns"},{"type":"crate::squad40::State","field":"shown"},{"type":"crate::squad40::State","field":"kept"},{"type":"crate::squadthrow::State","field":"last"},{"type":"crate::squadthrow::State","field":"shown"},{"type":"crate::squadthrow::State","field":"warn"},{"type":"crate::squadthrow::State","field":"warn_frag"},{"type":"crate::squadthrow::State","field":"caught"},{"type":"crate::squadthrow::State","field":"asked"},{"type":"crate::squadthrow::State","field":"walks"},{"type":"crate::squadthrow::State","field":"kept"},{"type":"crate::squadthrow::State","field":"scratch"},{"type":"crate::smokebreak::State","field":"men"},{"type":"crate::showwhy::Mem","field":"owed"},{"type":"crate::showwhy::OpMem","field":"turns"},{"type":"crate::showwhy::State","field":"log"},{"type":"crate::doorforce::State","field":"men"},{"type":"crate::doorforce::State","field":"kickers"},{"type":"crate::doorforce::State","field":"boots"},{"type":"crate::glass::GlassState","field":"seen"},{"type":"crate::glass::GlassState","field":"log"},{"type":"crate::enemysquads::State","field":"net"},{"type":"crate::enemysquads::State","field":"nc"},{"type":"crate::enemysquads::State","field":"word"},{"type":"crate::enemysquads::RoundCtx","field":"cost"},{"type":"crate::enemysquads::RoundCtx","field":"held"},{"type":"crate::morale::Mind","field":"script"},{"type":"crate::shotgun::ShotgunModSHOTGUNLAST","field":"ends"},{"type":"crate::shotgun::ShotgunModSHOTGUNLAST","field":"glass"},{"type":"crate::close::State","field":"best"},{"type":"crate::spotted::Man","field":"take"},{"type":"crate::spotted::Man","field":"take_no"},{"type":"crate::spotted::SpottedModDropsValue","field":"down"},{"type":"crate::spotted::SpottedModDropsValue","field":"at"},{"type":"crate::pairorders::PairordersModPAIRLOGItem","field":"serial"},{"type":"crate::sneak::State","field":"trail"},{"type":"crate::sneak::State","field":"men"},{"type":"crate::sneak::SneakModKeptLinesValue","field":"map"},{"type":"crate::silent::State","field":"booted"},{"type":"crate::frag::BlastReport","field":"hits"},{"type":"crate::frag::FragModWALLSFORValue","field":"at"},{"type":"crate::frag::Live","field":"knows"},{"type":"crate::frag::Live","field":"shouted"},{"type":"crate::frag::Live","field":"flee"},{"type":"crate::frag::Live","field":"via"},{"type":"crate::frag::Live","field":"flee_at"},{"type":"crate::frag::Live","field":"deal_t"},{"type":"crate::frag::Live","field":"counted"},{"type":"crate::frag::Live","field":"rest"},{"type":"crate::frag::Live","field":"made"},{"type":"crate::frag::DefBook","field":"carriers"},{"type":"crate::workthings::WorkthingsModErrandsValue","field":"e"},{"type":"crate::hours::HourState","field":"lamps"},{"type":"crate::hours::HourState","field":"storm"},{"type":"crate::hours::HourState","field":"cells"},{"type":"crate::hours::HourState","field":"fine"},{"type":"crate::hours::SkyState","field":"cells"},{"type":"crate::hours::SkyState","field":"fine"},{"type":"crate::hours::SkyState","field":"dome"},{"type":"crate::kit::KitModKIT","field":"members"},{"type":"crate::wandorder::State","field":"jobs"},{"type":"crate::guards::Engagement","field":"result"},{"type":"crate::guards::Engagement","field":"kills"},{"type":"crate::guards::Engagement","field":"rounds"},{"type":"crate::guards::Engagement","field":"alive"},{"type":"crate::dialogue::DialogueModRoomRectsValue","field":"rooms"},{"type":"crate::dialogue::SamMemory","field":"said"},{"type":"crate::dialogue::RadioState","field":"run"},{"type":"crate::dialogue::RadioState","field":"done"},{"type":"crate::dialogue::RadioState","field":"queue"},{"type":"crate::dialogue::RadioState","field":"reply"},{"type":"crate::dialogue::AmbientState","field":"run"},{"type":"crate::dialogue::AmbientState","field":"played"},{"type":"crate::civilians::CivSpots","field":"phones"},{"type":"crate::civilians::CivSpots","field":"exits"},{"type":"crate::civilians::CiviliansModFloorsValue","field":"pending"},{"type":"crate::particle_fx::FxState","field":"tinks"},{"type":"crate::scene_scenarios::RescueDataRoom","field":"bounds"},{"type":"crate::scene_scenarios::RescueDataSide","field":"from"},{"type":"crate::scene_scenarios::RescueFlowData","field":"regions"},{"type":"crate::scene_scenarios::RescueFlowData","field":"route"},{"type":"crate::picture::Pic","field":"ideas"},{"type":"crate::picture::Pic","field":"downs"},{"type":"crate::picture::Pic","field":"heard"},{"type":"crate::picture::Pic","field":"step"},{"type":"crate::picture::PictureView","field":"cover"},{"type":"crate::handleside::Face","field":"stand"},{"type":"crate::handleside::Face","field":"via"},{"type":"crate::laststand::Check","field":"due"},{"type":"crate::laststand::Stand","field":"in_"},{"type":"crate::laststand::Stand","field":"out"},{"type":"crate::laststand::Stand","field":"movers"},{"type":"crate::laststand::Stand","field":"orders"},{"type":"crate::laststand::Stand","field":"homed"},{"type":"crate::laststand::Hint","field":"spots"},{"type":"crate::coverfire::Man","field":"know"},{"type":"crate::coverfire::Man","field":"chew"},{"type":"crate::coverfire::Man","field":"gave"},{"type":"crate::coverfire::Man","field":"no"},{"type":"crate::tactics::Gate","field":"hs"},{"type":"crate::lanes::Peek","field":"fire"},{"type":"crate::lanes::Peek","field":"frag"},{"type":"crate::digin::RoomSt","field":"cues"},{"type":"crate::buddy::Errand","field":"serial"},{"type":"crate::powerout::Man","field":"calm"},{"type":"crate::attention::Hold","field":"serial"},{"type":"crate::gunwall::Hold","field":"serial"},{"type":"crate::squad40::Turn","field":"t"},{"type":"crate::squad40::Turn","field":"back"},{"type":"crate::squad40::StateKeptValue","field":"a"},{"type":"crate::squadthrow::Walk","field":"held"},{"type":"crate::squadthrow::Walk","field":"t"},{"type":"crate::squadthrow::Walk","field":"back"},{"type":"crate::doorforce::Man","field":"beliefs"},{"type":"crate::doorforce::Man","field":"saw"},{"type":"crate::doorforce::Man","field":"on"},{"type":"crate::doorforce::Man","field":"kick"},{"type":"crate::doorforce::Man","field":"rest"},{"type":"crate::enemysquads::NetCheck","field":"done"},{"type":"crate::enemysquads::NetCheck","field":"tried"},{"type":"crate::enemysquads::NetCheck","field":"queried"},{"type":"crate::enemysquads::NetCheck","field":"say"},{"type":"crate::enemysquads::StateWord","field":"call"},{"type":"crate::close::CloseOffer","field":"win"},{"type":"crate::sneak::Man","field":"mem"},{"type":"crate::frag::Carrier","field":"wind"},{"type":"crate::frag::Carrier","field":"spots"},{"type":"crate::wandorder::Job","field":"aside"},{"type":"crate::guards::EngageResult","field":"kills"},{"type":"crate::guards::EngageResult","field":"rounds"},{"type":"crate::dialogue::AmbientRun","field":"talk"},{"type":"crate::dialogue::AmbientRun","field":"pad"},{"type":"crate::dialogue::AmbientRun","field":"held"},{"type":"crate::scene_scenarios::RescueDataSideFrom","field":"bounds"},{"type":"crate::picture::Step","field":"key"},{"type":"crate::coverfire::Know","field":"who"},{"type":"crate::coverfire::Chew","field":"who"},{"type":"crate::squadthrow::LentBack","field":"move_"},{"type":"crate::squadthrow::LentBack","field":"fit"},{"type":"crate::squadthrow::LentBack","field":"tries"},{"type":"crate::squadthrow::WalkBack","field":"move_"},{"type":"crate::squadthrow::WalkBack","field":"fit"},{"type":"crate::squadthrow::WalkBack","field":"tries"},{"type":"crate::dialogue::Beat","field":"him"},{"type":"crate::fogofwar::FogPicture","field":"lamp_pick"},{"type":"crate::fogofwar::FogPicture","field":"face_recs"},{"type":"crate::par::Par","field":"run"},{"type":"crate::par::Par","field":"marks"},{"type":"crate::par::Par","field":"res"}];
 export const VALS = [];

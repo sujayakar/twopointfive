@@ -270,7 +270,7 @@ export function autoRead(A: AutoCam, g: Game, input: Input, dt: number): AutoSce
       if (gd.state === 'dead' || gd.held || !isHostile('player', gd.team)) continue;
       if (gd.state === 'alert') onto = true;   // (the soft lock's fight: a man onto him anywhere, in the picture or not — the one shooting from the far end)
       const q = gd.char.pos; if (flat(p, q) > K.fightM || fog?.hidden(gd)) continue;
-      const inLine = !g.col.segmentBlocked(eye, [q[0], 1.3, q[2]]); if (inLine) { A.seen.push([q[0], 0, q[2]]); A.lineT.set(gd, now); }
+      const inLine = !g.ask.blocked(eye, [q[0], 1.3, q[2]]); if (inLine) { A.seen.push([q[0], 0, q[2]]); A.lineT.set(gd, now); }
       const last = A.lineT.get(gd); if (last !== undefined && now >= last && now - last <= K.swayLinger) A.fight.push([q[0], 0, q[2]]);   // (a man of the fight: the sway's)
       // the soft lock's man: the nearest in his line who is not onto him — the one it has until another is clearly nearer, and through a moment out of the line
       if (K.lock && gd.state !== 'alert' && (inLine || gd === had && last !== undefined && now >= last && now - last <= K.lockLinger)) { const d = flat(p, q) - (gd === had ? K.lockStick : 0); if (d < lockD) { lockD = d; A.lockGd = gd; } }
