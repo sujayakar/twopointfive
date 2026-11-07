@@ -1098,6 +1098,8 @@ pub fn report(root: &Path, state: &Path, bare: Option<&str>, calls_json: Option<
             let mut any_mut = false;
             for a in &f.sig.inputs {
                 let FnArg::Typed(t) = a else { any_mut |= matches!(a, FnArg::Receiver(r) if r.mutability.is_some()); continue };
+                // (a `mut` anywhere in a parameter's type: `&mut T`, `Option<&mut T>`, `&mut dyn FnMut(…)`)
+                any_mut |= files[fi].2[t.ty.span().byte_range()].contains("mut ");
                 let Type::Reference(r) = &*t.ty else { continue };
                 any_mut |= r.mutability.is_some();
                 if let Type::Path(p) = &*r.elem {
@@ -1186,4 +1188,80 @@ pub fn report(root: &Path, state: &Path, bare: Option<&str>, calls_json: Option<
         let _ = writeln!(o, "{}", only.join(", "));
     }
     Ok((o, reads_json))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// a small tree under the system's temp folder: (path from the root, text)
+    fn tree(name: &str, files: &[(&str, &str)]) -> PathBuf {
+        let root = std::env::temp_dir().join(format!("fold-readers-test-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        for (p, t) in files {
+            let f = root.join(p);
+            std::fs::create_dir_all(f.parent().unwrap()).unwrap();
+            std::fs::write(f, t).unwrap();
+        }
+        root
+    }
+
+    fn taint_of(root: &Path) -> HashSet<(String, String)> {
+        let files = bodies(root);
+        let parsed: Vec<syn::File> = files.iter().map(|(_, _, src)| syn::parse_file(src).unwrap()).collect();
+        let all: Vec<Vec<FnAt>> = files.iter().zip(parsed.iter()).map(|((_, _, src), f)| fns_of(src, f)).collect();
+        tainted_fns(root, &files, &parsed, &all)
+    }
+
+    const SIM_DOORS: &str = "static mut IO: [f64; 4] = [0.0; 4];\nfn io() -> &'static mut [f64; 4] { unsafe { &mut *core::ptr::addr_of_mut!(IO) } }\npub fn update(g: usize, w: usize) -> u32 { let o = io(); o[0] = 1.0; 0 }\npub fn cap(t: u32) -> usize { 4 }\n";
+    const SIM_STATE: &str = "pub struct State { pub doors: [f64; 4] }\nstatic mut ALL: [State; 1] = [State { doors: [0.0; 4] }];\npub fn state(g: usize) -> &'static mut State { unsafe { &mut (*core::ptr::addr_of_mut!(ALL))[g] } }\npub fn state_read(g: usize) -> &'static State { unsafe { &(*core::ptr::addr_of!(ALL))[g] } }\n";
+
+    fn has(t: &HashSet<(String, String)>, m: &str, f: &str) -> bool {
+        t.contains(&(m.to_string(), f.to_string()))
+    }
+
+    /// The case that got through once: the game's module `doors` steps the sim's `doors`. The path names the sim's function, not
+    /// one of the module's own, and the step writes the block: the caller is no reader, whatever its parameter says.
+    #[test]
+    fn a_step_of_the_sim_taints_its_caller_in_a_module_of_the_same_name() {
+        let root = tree("step", &[
+            ("rust/game/src/doors/p_01.rs", "pub fn doors_update_here(g: &Game, dt: f64) { let w = g.slot; let _ = ::sim::doors::update(g.sim, w); }\npub fn door_cap(g: &Game) -> usize { ::sim::doors::cap(5) }\npub fn door_angle(g: &Game, i: usize) -> f64 { ::sim::state::state_read(g.sim).doors[i] }\npub fn door_set(g: &Game, i: usize, v: f64) { ::sim::state::state(g.sim).doors[i] = v; }\npub fn door_step_twice(g: &Game) { doors_update_here(g, 0.0); }\n"),
+            ("rust/sim/src/doors.rs", SIM_DOORS),
+            ("rust/sim/src/state.rs", SIM_STATE),
+        ]);
+        let t = taint_of(&root);
+        assert!(has(&t, "doors", "doors_update_here"), "a step of the sim is a write");
+        assert!(has(&t, "doors", "door_step_twice"), "and so is calling one that steps it");
+        assert!(has(&t, "doors", "door_set"), "the block handed out to write taints");
+        assert!(!has(&t, "doors", "door_cap"), "a function of the sim that touches nothing is clean");
+        assert!(!has(&t, "doors", "door_angle"), "the reading twin is clean");
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    /// A function of the sim brought in by a `use` and called by its bare name is followed too.
+    #[test]
+    fn a_bare_call_of_an_imported_step_taints() {
+        let root = tree("bare", &[
+            ("rust/game/src/props/p_01.rs", "use ::sim::doors::update;\npub fn props_step(g: &Game) { update(g.sim, 0); }\npub fn props_count(g: &Game) -> usize { 3 }\n"),
+            ("rust/sim/src/doors.rs", SIM_DOORS),
+        ]);
+        let t = taint_of(&root);
+        assert!(has(&t, "props", "props_step"));
+        assert!(!has(&t, "props", "props_count"));
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    /// `read` in a name is no licence: only a function that hands back `&'static` and no `mut` is a reading twin.
+    #[test]
+    fn a_function_only_named_read_is_no_twin() {
+        let root = tree("named", &[
+            ("rust/game/src/sensors/p_01.rs", "static mut N: f64 = 0.0;\npub fn sensors_read(g: &Game) -> f64 { unsafe { N += 1.0; N } }\npub fn lights_read(g: &Game) -> &'static [f64; 4] { unsafe { &*(0 as *const [f64; 4]) } }\npub fn first(g: &Game) -> f64 { lights_read(g)[0] }\npub fn tick(g: &Game) -> f64 { sensors_read(g) }\n"),
+        ]);
+        let t = taint_of(&root);
+        assert!(has(&t, "sensors", "sensors_read"));
+        assert!(has(&t, "sensors", "tick"));
+        assert!(!has(&t, "sensors", "lights_read"));
+        assert!(!has(&t, "sensors", "first"));
+        let _ = std::fs::remove_dir_all(&root);
+    }
 }
