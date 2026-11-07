@@ -144,14 +144,6 @@ pub fn in_rect(r: &[f64], x: f64, z: f64) -> bool {
     x >= r[0] && z >= r[1] && x <= r[2] && z <= r[3]
 }
 
-/// The kind a query string or the host's query names, if any. (weatherKinds.ts weatherOfSearch)
-pub fn weather_of_search(search: &crate::weather_kinds::WeatherOfSearchSearch) -> Option<crate::weather_kinds::WeatherKind> {
-    match search {
-        WeatherOfSearchSearch::Text(s) => weather_of(&crate::query::Query::parse(s)),
-        WeatherOfSearchSearch::URLSearchParams(q) => weather_of(q),
-    }
-}
-
 /// The kind a query names, if any. (weatherKinds.ts weatherOfSearch, of words already read)
 pub fn weather_of(q: &crate::query::Query) -> Option<crate::weather_kinds::WeatherKind> { startable_kind(q.get(WEATHER_KEY)?) }
 
