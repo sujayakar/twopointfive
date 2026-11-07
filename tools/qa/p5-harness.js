@@ -262,7 +262,6 @@
     await stepDo('rt off', () => { s.rtReflect = false; }); await stepDo('rt on', () => { s.rtReflect = true; });
     for (const d of [1, 3, 2]) await stepDo('div' + d, () => { s.rtReflectDiv = d; });
     await stepDo('gatherThird on', () => { s.gatherThird = true; }); await stepDo('gatherThird off', () => { s.gatherThird = false; });
-    await stepDo('legacy dn', () => { s.denoiser = 'legacy'; }); await stepDo('v3 dn', () => { s.denoiser = 'v3'; });
     await stepDo('taau off', () => { s.taau = false; }); await stepDo('taau on', () => { s.taau = true; });
     await stepDo('scale .6', () => { s.renderScale = 0.6; }); await stepDo('scale 1', () => { s.renderScale = 1.0; });
     await stepDo('indirect off', () => { s.flags &= ~2; }); await stepDo('indirect on', () => { s.flags |= 2; });
