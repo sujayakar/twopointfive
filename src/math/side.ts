@@ -124,6 +124,16 @@ export function rollbackRoot<T extends object>(name: string, obj: T): T {
   NAMES.add(name); ROOTS.push({ name, obj }); return obj;
 }
 
+/** WHAT SAYS WHERE A KNOB TABLE'S NUMBERS CAME FROM GOES BACK WITH THE TABLE. A mission's start writes its level's team numbers into its knob table once
+ *  a level, and keeps beside the table the start they were last written from (nightbreach.ts, rescue.ts `applied`), so that a knob moved by hand since
+ *  stays moved. A copy of the tables put back (game/knobs.ts knobsCopy / knobsBack) that left that note alone would leave the table holding one level's
+ *  numbers under a note that names another, and the next start on that other level would write nothing. So the module says its note of a table here,
+ *  and the copy carries it. */
+export interface TableNote { table: string; get: () => unknown; set: (v: never) => void }
+const NOTES: TableNote[] = [];
+export function tableNote<T>(table: string, get: () => T, set: (v: T) => void): void { NOTES.push({ table, get, set: set as (v: never) => void }); }
+export function tableNotes(): readonly TableNote[] { return NOTES; }
+
 /** fields that hold a reading of the WALL clock (a timer's `ms`, a run's name made of the time): kept and put back by a snapshot like any field, but never compared —
  *  two plays of one seed differ in them and in nothing else. Marked on the object that holds them, where it is made: `stats = wallClock({ awake: 0, ms: 0 }, 'ms')` */
 const CLOCKED = new WeakMap<object, readonly string[]>();
