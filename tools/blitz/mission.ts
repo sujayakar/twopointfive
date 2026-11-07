@@ -106,6 +106,7 @@ let selAfter = 0;   // the highlighted row of the nearby list as the last tick l
 //   ff       friendly fire: the rifle into his hands (the 2 key), the cursor on the nearest teammate up 2.5 to 12 m off, a second of the left button
 //   hostage  the same on the nearest hostage up
 //   ownfrag  a frag (the 5 key) thrown by a click at the feet of the nearest teammate up 5 to 12 m off: a frag into our own men
+//   drag     a teammate down: the player walks to the body, takes it by its own row of the nearby list (Space), drags it three seconds, sets it down
 //   taps     the command key by hand: a tap on the floor 4 m off (the quick order), a second tap in the same place inside the window (CMDRING.twice:
 //            cancel and fall in), then Shift with the key on two other places (a goal each, queued)
 //   orders   orders by the menu's own call, one after another with the men still walking: move, fall in 50 ticks later, move elsewhere, hold, cover
@@ -135,6 +136,20 @@ function caseStep(g: any, a: any[] = []) {
     if (dt >= (CASE === 'ownfrag' ? 330 : 150)) { const x = hand.x;
       said(`${CASE}: after ${dt} ticks he is '${x.state}' (was '${hand.state}'); the player holds '${pl.slot}', frags ${hand.frags} -> ${pl.frags}, rounds ${hand.rounds} -> ${pl.rifle?.roundsReady}; squad up ${squadUp().length}; scenario end ${JSON.stringify(g.roomClear?.end ?? g.rescue?.end ?? null)}`);
       hand = null; caseAt = k; caseN++; }
+    return; }
+  if (CASE === 'drag') { const pl = g.player, c = pl.char; if (!I || !cam || pl.down) return;
+    const walk = (to: number[]) => { still(); const dx = to[0] - c.pos[0], dz = to[2] - c.pos[2], d = Math.hypot(dx, dz); if (d < 0.1) return;
+      const { fwd, right } = cam.planarBasis(), f = (dx * fwd[0] + dz * fwd[2]) / d, r = (dx * right[0] + dz * right[2]) / d, T = 0.3827; if (f > T) I.keys.add('KeyW'); if (f < -T) I.keys.add('KeyS'); if (r > T) I.keys.add('KeyD'); if (r < -T) I.keys.add('KeyA'); };
+    const row = (v: string) => (g.nearby as any[]).some(r => r.kind === 'body' && r.verb === v);
+    if (!hand) { if (caseN >= 2 || k < 300) return; const tried: Set<any> = (caseStep as any).tried ??= new Set();
+      const m = (g.orders?.squad?.() ?? []).filter((x: any) => x.state === 'dead' && !tried.has(x)).map((x: any) => ({ x, d: flatTo(x.char.pos, c.pos) })).filter((o: any) => o.d < 25).sort((p: any, q: any) => p.d - q.d)[0]; if (!m) return;
+      tried.add(m.x); hand = { x: m.x, t0: k, from: [c.pos[0], 0, c.pos[2]], phase: 'walk', at0: [m.x.char.pos[0], m.x.char.pos[2]] }; said(`drag: ${m.x.callsign} is down ${m.d.toFixed(1)} m off; the player walks to him`); }
+    const dt = k - hand.t0, p = hand.x.char.pos;
+    if (hand.phase === 'walk') { walk(p); if (row('drag') && g.selectVerb('body', 'drag')) { I.pressed.add('Space'); hand.phase = 'take'; hand.t1 = k; said(`drag: Space on his row 'drag' at ${flatTo(p, c.pos).toFixed(2)} m`); }
+      else if (dt > 900) { said(`drag: never got his row in 900 ticks (${flatTo(p, c.pos).toFixed(1)} m off; rows ${(g.nearby as any[]).map(r => r.kind + ':' + r.verb).join(' ') || 'none'})`); hand = null; caseN++; } }
+    else if (hand.phase === 'take') { still(); if (k - hand.t1 > 120) { hand.phase = 'haul'; hand.t1 = k; said(`drag: dragging ${!!pl.dragging}, haul ${pl.haul?.phase ?? '-'}`); } }
+    else if (hand.phase === 'haul') { walk(hand.from); if (k - hand.t1 > 180) { still(); const ok = (row('drop') && g.selectVerb('body', 'drop')) || (row('drag') && g.selectVerb('body', 'drag')); if (ok) I.pressed.add('Space'); hand.phase = 'drop'; hand.t1 = k; said(`drag: the body moved ${Math.hypot(p[0] - hand.at0[0], p[2] - hand.at0[1]).toFixed(2)} m; Space to set him down (${ok ? 'his row' : 'NO ROW'})`); } }
+    else if (k - hand.t1 > 90) { said(`drag: after the set-down: dragging ${!!pl.dragging}, haul ${pl.haul?.phase ?? '-'}, the body ${Math.hypot(p[0] - hand.at0[0], p[2] - hand.at0[1]).toFixed(2)} m from where he fell`); hand = null; caseAt = k; caseN++; }
     return; }
   if (CASE === 'taps') { const pl = g.player, c = pl.char; if (!I || !cam || pl.down) return;
     if (!hand) { if (caseN >= 2 || k < 360 || k - caseAt < 900 || !squadUp().length) return;
