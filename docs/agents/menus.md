@@ -850,6 +850,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   records the particles get, a probe at the cursor; ~0.35 ms CPU at its 534-sample maximum, nothing when off, the frame untouched.
 
 <!-- added 2026-10-13, after the cut -->
+- **THE RECAP'S RECORD IS THE RUST TICK'S (2026-11-07).** `rust/game_rules/src/deathrecap` keeps who of ours fell, to whom, from where, with what, the floor's last seconds and what the squad knows of a man lost (`Game.recap`; only `lost_live` is on the wire), last in the tick, with `rust/game_start/tests/recap.rs` holding each rule. A kept game has none of it: a load starts it over. The bullet below is the rules as they were written and the page's side of them.
 - **The down card says who shot you, and from where** (the death recap goal, 'Every death explains itself'; `src/game/deathrecap.ts` `RECAP.on` + `src/ui/recap.ts`; step 1 = commit
   456c2e1b, in the build since 8d2c2785; its page is rebuild/death-recap/read-first.md): when Sam goes down the down
   card has a small plan above the route map — the man who shot him in the menu's orange with his name, the line of the round with an arrowhead, Sam as a white cross, a faint wedge for where
