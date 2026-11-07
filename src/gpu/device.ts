@@ -218,17 +218,17 @@ function track<T>(label: string, p: Promise<T>, desc: object): Promise<T> {
 // HTML (the HUD, the cards, the menus) through Dawn and makes its little pipelines on the same workers. On D3D12 a big kernel of ours is a DXC compile of 5–25 s (the
 // gathers, the march, the composites: everything in them is inlined into one function), so a burst of twenty of them holds every worker for that long — and Graphite's
 // pipelines, asked for while the burst runs, wait behind it. The page then cannot be drawn at all: the trace of a played floor showed the raster's flush blocked 3–7 s at a
-// time while the second (cut-box) set compiled after the boot, the picture frozen with it (15 s in one take). Metal compiles in a fraction of that, so the burst never
+// time while a second set of the ray programs (the cut-box set, gone since 2026-11-07) compiled after the boot, the picture frozen with it (15 s in one take). Metal compiles in a fraction of that, so the burst never
 // starved anything on a Mac. So every …Async creation goes through this queue: at most `boot` in flight while the start card counts the boot's pipelines in (biggest module
 // first, so the slowest compiles are not the last to start), and after the boot (`pipeQueue.settle()`, main.ts) at most `after` in flight, of which at most `low` are the
-// background set's (modules compiled behind the cut prelude: `const CUT_BOXES: bool = true;`) — first come first served among the rest, so a pass's first-use pipeline
-// is not stuck behind twenty background twins. A switch of the page, not a rule of the game (no knob, no FROZEN_HOLDS row: every stand compiles the same programs, only
+// background's (the LATER pipelines: laterPipelineAsync below) — first come first served among the rest, so a pass's first-use pipeline
+// is not stuck behind the background twins. A switch of the page, not a rule of the game (no knob, no FROZEN_HOLDS row: every stand compiles the same programs, only
 // in a different order); `?pipequeue=0` = every creation straight to the browser, as it was.
 // ON ONLY WHERE IT WAS MEASURED: a browser on Windows (`pipeQueueFor`). Anywhere else the compiles are quick and nothing was ever starved, while the queue has a price:
 // the background set is ready later (on the software adapter the page tools run on it was not in 21 minutes after the page was), and the first use of a pass waits its
 // turn. So a Mac and the tools get every creation straight to the browser, as they always did, until the queue is measured there. `?pipequeue=1` = on wherever the page
 // is (how a Mac or a tool tries it); a number over 1 = on, with that many in flight at the boot.
-export const PIPE_QUEUE = { on: false, /** in flight while the boot's count is open (0 = the machine's threads less two, at least 4) */ boot: 0, /** in flight after the boot */ after: 4, /** …of which background (cut-set) compiles */ low: 2,
+export const PIPE_QUEUE = { on: false, /** in flight while the boot's count is open (0 = the machine's threads less two, at least 4) */ boot: 0, /** in flight after the boot */ after: 4, /** …of which background (LATER) compiles */ low: 2,
   /** LATER (2026-10-26): the twins no first frame draws with the default settings (laterPipelineAsync below) are left out of the boot and compiled after it in the background lane; false = the boot waits for them too, as it always did. The row 'Start on first frame shaders' (ui/shaderrows.ts, `?firstframe`: on where a person sits, off in the harness and on a page a script drives), read once at import; the Team & kit picture and the workbench lower it before they build (main.ts, workbench/main.ts) */ later: useShaderRow('firstFrame') };
 /** whether the queue is on for a browser that calls itself `userAgent`, given the page's `?pipequeue` word (null = none) */
 export function pipeQueueFor(userAgent: string, word: string | null): boolean { return word === '0' ? false : word !== null && /^\d+$/.test(word) ? true : /\bWindows\b/.test(userAgent); }
@@ -274,7 +274,7 @@ export function watchPipes(device: GPUDevice) {
   D.createComputePipelineAsync = watch(device.createComputePipelineAsync.bind(device) as (desc: object) => unknown);
   D.createRenderPipelineAsync = watch(device.createRenderPipelineAsync.bind(device) as (desc: object) => unknown);
 }
-interface PipeJob { cost: number; low: boolean; later: boolean; seq: number; go: () => void }
+interface PipeJob { cost: number; /** a LATER pipeline: the background lane's */ later: boolean; seq: number; go: () => void }
 /** the descriptors laterPipelineAsync handed the browser: the queue keeps them out of the boot and puts them in the background lane after it */
 const laterDescs = new WeakSet<object>();
 /** the queue's state (window.__pipeQueue on the page: in flight, waiting, the phase, the most that ever waited) */
@@ -293,14 +293,14 @@ export const pipeQueue = {
       for (let i = 0; i < this.waiting.length; i++) {
         const j = this.waiting[i];
         if (j.later && this.phase === 'boot' && (this.inflight > 0 || this.waiting.some(w => !w.later))) continue;   // (a LATER twin never takes a worker from the boot's own pipelines: before settle() only once they are all done — a page that never settles still gets it)
-        if (j.low && this.phase === 'after' && !this.rushed && this.inflightLow >= PIPE_QUEUE.low) continue;
+        if (j.later && this.phase === 'after' && !this.rushed && this.inflightLow >= PIPE_QUEUE.low) continue;
         if (pick < 0) { pick = i; continue; }
         const p = this.waiting[pick];
-        const better = this.phase === 'boot' ? j.cost > p.cost : (p.low && !j.low) || (p.low === j.low && j.seq < p.seq);   // boot: biggest first · after: the foreground first, then in order
+        const better = this.phase === 'boot' ? j.cost > p.cost : (p.later && !j.later) || (p.later === j.later && j.seq < p.seq);   // boot: biggest first · after: the foreground first, then in order
         if (better) pick = i;
       }
       if (pick < 0) return;
-      const job = this.waiting.splice(pick, 1)[0]; this.inflight++; if (job.low) this.inflightLow++; job.go();
+      const job = this.waiting.splice(pick, 1)[0]; this.inflight++; if (job.later) this.inflightLow++; job.go();
     }
   },
 };
@@ -308,16 +308,16 @@ export const pipeQueue = {
 export function installPipeQueue(device: GPUDevice) {
   watchPipes(device);   // (beneath the queue: what is in hand is counted at a creation's turn)
   const D = device as unknown as Record<string, unknown>;
-  const meta = new WeakMap<GPUShaderModule, { cost: number; low: boolean }>();
+  const meta = new WeakMap<GPUShaderModule, number>();   // a module's cost: the length of its text
   const csm = device.createShaderModule.bind(device);
-  D.createShaderModule = (desc: GPUShaderModuleDescriptor) => { const m = csm(desc); meta.set(m, { cost: desc.code.length, low: desc.code.includes('const CUT_BOXES: bool = true;') }); return m; };
-  const of = (mods: (GPUShaderModule | undefined)[]) => { let cost = 0, low = false; for (const m of new Set(mods)) { const x = m && meta.get(m); if (x) { cost += x.cost; low ||= x.low; } } return { cost, low }; };
+  D.createShaderModule = (desc: GPUShaderModuleDescriptor) => { const m = csm(desc); meta.set(m, desc.code.length); return m; };
+  const costOf = (mods: (GPUShaderModule | undefined)[]) => { let cost = 0; for (const m of new Set(mods)) cost += (m && meta.get(m)) || 0; return cost; };
   const queued = <T,>(desc: object, mods: (GPUShaderModule | undefined)[], make: () => Promise<T>, later = false): Promise<T> => new Promise<T>((resolve, reject) => {
-    const { cost, low } = of(mods); const Q = pipeQueue;
-    const job: PipeJob = { cost, low: low || later, later, seq: Q.seq++, go: () => {
+    const cost = costOf(mods), Q = pipeQueue;
+    const job: PipeJob = { cost, later, seq: Q.seq++, go: () => {
       if (desc && typeof desc === 'object' && typeof performance !== 'undefined') pipeStarted.set(desc, performance.now());
       let p: Promise<T>; try { p = Promise.resolve(make()); } catch (e) { p = Promise.reject(e); }   // (a throw or a stand-in's non-thenable answer must not keep the slot)
-      p.then(resolve, reject).finally(() => { Q.inflight--; if (job.low) Q.inflightLow--; Q.pump(); });
+      p.then(resolve, reject).finally(() => { Q.inflight--; if (job.later) Q.inflightLow--; Q.pump(); });
     } };
     Q.waiting.push(job); Q.maxWaiting = Math.max(Q.maxWaiting, Q.waiting.length);
     queueMicrotask(() => Q.pump());   // (a burst made in one task is all queued before the first pick: the biggest of it starts first)

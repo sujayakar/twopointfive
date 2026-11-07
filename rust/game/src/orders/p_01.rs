@@ -15,25 +15,6 @@ pub fn digit_of(code: &str) -> f64 {
     }
 }
 
-/// A key code as the HUD names it: one leading `Key` or `Digit` off.   (orders.ts keyName)
-pub fn key_name(code: &str) -> String {
-    String::from(code.strip_prefix("Key").or_else(|| code.strip_prefix("Digit")).unwrap_or(code))
-}
-
-/// The bearing's word. A yaw that is not finite has none: the array read gives `undefined`, and every reader puts it in a template string.   (orders.ts compass)
-pub fn compass(yaw: f64) -> String {
-    let at = js::rem(js::rem(m::round(yaw / (m::PI / 4.0)), 8.0) + 8.0, 8.0);
-    if at.is_nan() {
-        return String::from("undefined");
-    }
-    crate::orders::compass_table().swap_remove(at as usize)
-}
-
-/// A store for one asker of `hover` (the page's, a check's).   (orders.ts hoverStore)
-pub fn hover_store() -> crate::orders::HoverKept {
-    crate::orders::HoverKept { hov: None, cam: Vec::new() }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -46,34 +27,4 @@ mod tests {
         }
     }
 
-    #[test]
-    fn key_name_takes_one_prefix_at_the_start() {
-        for (code, want) in [("Digit1", "1"), ("Digit0", "0"), ("Digit10", "10"), ("Digit", ""), ("KeyX", "X"), ("Digit5\n", "5\n"), ("xDigit1", "xDigit1"), ("", ""), ("Space", "Space"), ("KeyKeyX", "KeyX"), ("DigitKey1", "Key1"), ("KeyDigit1", "Digit1"), ("Keys", "s"), ("xKey", "xKey")] {
-            assert_eq!(key_name(code), want, "{code:?}");
-        }
-    }
-
-    #[test]
-    fn compass_as_the_typescript_rounds_it() {
-        let p = m::PI;
-        for (yaw, want) in [
-            (0.0, "south"), (-0.0, "south"), (0.1, "south"), (-0.1, "south"),
-            (p / 8.0, "south-east"), (-p / 8.0, "south"), (p / 4.0, "south-east"), (p / 2.0, "east"),
-            (p, "north"), (-p, "north"), (3.0 * p / 4.0, "north-east"), (-3.0 * p / 4.0, "north-west"),
-            (3.0 * p / 8.0, "east"), (5.0 * p / 8.0, "north-east"), (-p / 2.0, "west"),
-            (2.0 * p, "south"), (-2.0 * p, "south"), (7.0, "south-east"), (-7.0, "south-west"),
-            (100.0, "south-west"), (-100.0, "south-east"), (1e9, "south-east"), (-1e9, "south-west"), (1e300, "south"),
-            (0.39269908169872414, "south-east"), (0.3926990816987241, "south"),
-            (-0.39269908169872414, "south"), (-0.3926990816987242, "south-west"),
-            (f64::NAN, "undefined"), (f64::INFINITY, "undefined"), (f64::NEG_INFINITY, "undefined"),
-        ] {
-            assert_eq!(compass(yaw), want, "{yaw:?}");
-        }
-    }
-
-    #[test]
-    fn a_new_store_holds_nothing() {
-        let s = hover_store();
-        assert!(s.hov.is_none() && s.cam.is_empty());
-    }
 }

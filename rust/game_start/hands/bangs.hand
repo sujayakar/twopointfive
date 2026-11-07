@@ -1,0 +1,11 @@
+# BANGS: live cans land among the men who are not Sam's, and the squad is told to fall in on him.
+# REACHES: the body rules (a man running from a grenade, a man shaken by a blast), flashed and staggered men, blasts on doors,
+# props and glass, wounds, the fall-in order.
+# DOES NOT REACH: a startled man (no hand here does: on the 24 default floors that rule never has a man), a gunfight of any
+# length, the squad's door work, Sam's own gun.
+unhurt
+at 2              frag nearest
+at 5              flash nearest
+at 6              order fallIn sam all
+every 9 from 12   frag nearest
+every 9 from 16   flash nearest

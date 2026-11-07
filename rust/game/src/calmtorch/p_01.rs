@@ -178,40 +178,6 @@ pub fn click(g: &mut crate::game::Game, gd: GuardId, on: bool) {
     crate::audio_iface::game_audio_like_play(g, "click", Some(pos), Some(0.25), None);
 }
 
-/// What the rule has of a man; None = never asked of him. (calmtorch.ts calmTorchOf)
-pub fn calm_torch_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::calmtorch::CalmTorchOf> {
-    g.m.calmtorch.state_of.get(gd).map(|s| crate::calmtorch::CalmTorchOf {
-        dark: s.dark,
-        read: s.read,
-        against: s.against,
-        ask: s.ask,
-        held: s.held,
-    })
-}
-
-/// The panel's line: each staff man's torch and why. (calmtorch.ts calmTorchSummary)
-pub fn calm_torch_summary(g: &mut crate::game::Game) -> String {
-    let guards = g.guards.clone();
-    let mut parts: Vec<String> = Vec::new();
-    for gd in guards {
-        if g.gd[gd].unit.is_some() || g.gd[gd].team != crate::teams::Team::Guard || g.gd[gd].state == crate::game::GuardState::Dead {
-            continue;
-        }
-        let word = if !calm_torch_ruled(g, gd) {
-            "burning (not calm)"
-        } else {
-            match g.m.calmtorch.state_of.get(gd) {
-                None => "\u{2014}",
-                Some(s) if s.dark => "off (lit place)",
-                Some(_) => "ON (dark)",
-            }
-        };
-        parts.push(alloc::format!("{} {}", g.gd[gd].callsign, word));
-    }
-    let men = if parts.is_empty() { String::from("nobody on the floor") } else { parts.join(" \u{b7} ") };
-    alloc::format!("calm torches \u{25b8} {}", men)
-}
-
 /// The load has posed the lights: time counts again. (calmtorch.ts calmTorchPosed)
 pub fn calm_torch_posed(g: &mut crate::game::Game) {
     g.m.calmtorch.posing = false;

@@ -396,8 +396,8 @@ pub fn rescue_defenders(g: &mut crate::game::Game) {
                 if g.gd[h].script.is_some() { crate::squad::end_guard_script(g, h, Some(crate::squad::EndGuardScriptState::Alert)); }
                 if g.gd[h].state != GuardState::Alert || g.gd[h].foe.is_none() || g.time - g.gd[h].last_seen_t > 1.0 {
                     let to = match g.rescue.noise { Some(n) => n, None => rescue_room_point(g, RescueRoomPointWhich::Outside) };
-                    g.gd[h].state = GuardState::Alert;
-                    g.gd[h].awareness = 1.0;
+                    crate::mind::set_state(g, h, GuardState::Alert, "rescue");
+                    crate::mind::set(g, h, 1.0, "rescue");
                     g.gd[h].react_t = 0.0;
                     crate::belief::word(g, h, to);
                     crate::guards::reset_chase(g, h);
@@ -493,8 +493,8 @@ fn crew_on_row(g: &mut Game, h: GuardId, d: Def, f: Option<RoomfightDefId>) -> b
             if flat(x, pos_of(g, h)) > 0.4 {
                 rescue_crew_move(g, h, f, x, None);
             } else {
-                g.gd[h].state = GuardState::Alert;
-                g.gd[h].awareness = m::max(g.gd[h].awareness, 0.92);
+                crate::mind::set_state(g, h, GuardState::Alert, "rescue");
+                crate::mind::raise(g, h, 0.92, "rescue");
             }
             let noise = g.rescue.noise_serial;
             let row = g.rescue.defs.get_mut(h).unwrap();
@@ -529,8 +529,8 @@ fn crew_on_row(g: &mut Game, h: GuardId, d: Def, f: Option<RoomfightDefId>) -> b
             if let Some(y) = y {
                 rescue_crew_move(g, h, f, y, None);
             } else {
-                g.gd[h].state = GuardState::Alert;
-                g.gd[h].awareness = m::max(g.gd[h].awareness, 0.92);
+                crate::mind::set_state(g, h, GuardState::Alert, "rescue");
+                crate::mind::raise(g, h, 0.92, "rescue");
             }
             let noise = g.rescue.noise_serial;
             let row = g.rescue.defs.get_mut(h).unwrap();
@@ -595,8 +595,8 @@ fn crew_on_row(g: &mut Game, h: GuardId, d: Def, f: Option<RoomfightDefId>) -> b
         fd.mode = DefMode::Free; fd.free_at = now; fd.rally_at = f64::NAN;
         if g.gd[h].script.is_some() { crate::squad::end_guard_script(g, h, Some(crate::squad::EndGuardScriptState::Alert)); }
         if g.gd[h].state != GuardState::Alert || g.gd[h].foe.is_none() || g.time - g.gd[h].last_seen_t > 1.0 {
-            g.gd[h].state = GuardState::Alert;
-            g.gd[h].awareness = 1.0;
+            crate::mind::set_state(g, h, GuardState::Alert, "rescue");
+            crate::mind::set(g, h, 1.0, "rescue");
             g.gd[h].react_t = 0.0;
             crate::belief::word(g, h, pt);
             crate::guards::reset_chase(g, h);

@@ -1,6 +1,7 @@
 // THE DIFF of two whole states (a TypeScript export and a Rust one) in O(file) memory, walking both by the schema side by side: no list of every path is built
 // (paths.ts's diff holds 2 to 3 GB for a 10 MB state; a state grows by the frame's boxes every tick).
 //   bun run tools/blitz/diff.ts <a.bin> <b.bin> [--show 30] [--out file.tsv] [--canon BoxId,LightId | --canon-file canon.txt] [--known known.txt[,more.txt]] [--blocks s.bin ns.bin] [--why] [--dump <path regex> [--dump-max 400]] [--dynboxes] [--leave-out skin,look]
+//   bun run tools/blitz/diff.ts <a.bin> <a.bin> --tables     how many rows each table of a state holds
 //   exit 0 the same but for what is known · 1 they part
 // CANON: a table named in --canon (default BoxId) is compared BY REACH, not by row number: each side's rows are numbered in the order one fixed walk first meets them
 // (the root, then every other table's rows in order, then the rows those reach), and a row nothing reaches is not compared. The TypeScript's walk numbers a made box
@@ -231,6 +232,8 @@ function cmp(n: Node, A: Side, B: Side, mod: string): void {
 }
 const A = new Side(new Uint8Array(readFileSync(argv[0]))), B = new Side(new Uint8Array(readFileSync(argv[1])));
 index(A); index(B);
+// --tables: how many rows each table of the first state holds, a line a table (`<the TypeScript's name of a row>\t<rows>`), and nothing else
+if (argv.includes('--tables')) { for (const t of SCHEMA.tables) console.log(`${t.ts}\t${A.tableLen.get(t.id) ?? 0}`); process.exit(0); }
 A.p = 0; B.p = 0; P.push('g'); cmp(ROOT, A, B, 'game'); P.pop();
 for (const t of SCHEMA.tables) { const N = parse(t.ty), mod = t.mod ?? 'game', ra = A.rows.get(t.id)!, rb = B.rows.get(t.id)!;
   if (CANON.has(t.id)) { const oa = A.order.get(t.id)!, ob = B.order.get(t.id)!; P.push(`g.${t.table}`);

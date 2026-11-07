@@ -31,8 +31,8 @@ async function open(query, o = {}) {
   browser ??= chromium.launch({ headless: true, channel: 'chromium', args: FLAGS });
   const page = await (await browser).newPage({ viewport: { width: +o.w || W, height: +o.h || H }, deviceScaleFactor: 1 });
   const errors = []; page.on('pageerror', e => errors.push(String(e.message ?? e))); page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errors.push(m.text().slice(0, 300)); });
-  // ?paused: nothing runs until stepped · ?cutprograms=boot: one set of ray programs with the cut rule in (no second compile behind the page's back)
-  await page.goto(`http://localhost:${PORT}/?paused&quality=${o.quality || 'high'}&mute&cutprograms=boot&${query}`, { timeout: 0 });   // (the bundle alone can take a minute beside a page that is drawing)
+  // ?paused: nothing runs until stepped
+  await page.goto(`http://localhost:${PORT}/?paused&quality=${o.quality || 'high'}&mute&${query}`, { timeout: 0 });   // (the bundle alone can take a minute beside a page that is drawing)
   const fatal = await page.evaluate(async () => { await window.__ready; window.__testVisible = true; window.__menu.close(); window.__game.godMode = true; return document.getElementById('fatal')?.textContent || ''; });
   if (fatal) { await page.close(); throw new Error('boot: ' + fatal); }
   await page.addScriptTag({ content: director() });

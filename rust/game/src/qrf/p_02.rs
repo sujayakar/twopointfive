@@ -23,11 +23,6 @@ fn way_open(g: &mut Game, y: &crate::scene_scenarios::ResponseWay) -> bool {
 fn marks_door(g: &mut Game, mk: &crate::qrf::Marks) -> Option<DoorId> {
     match word(&mk.door) { None => None, Some(d) => crate::doors::doors_by_name(g, d) }
 }
-/// a whole write of a man's fix (Guard.fix_stamp counts them)
-fn set_last_known(g: &mut Game, x: GuardId, at: V3) {
-    g.gd[x].last_known = Some(at);
-    g.gd[x].fix_stamp = g.gd[x].fix_stamp.wrapping_add(1);
-}
 /// `st[0] = want[0]; st[1] = 0; st[2] = want[2]` on his station. In the TypeScript the station IS his script's goal once he has been ordered onto it, so the
 /// goal creeps with it and no new leg starts. Returns the station and whether his goal was that very point (by value: the Vec3 is no object here).
 fn write_station(g: &mut Game, x: GuardId, want: V3) -> (V3, bool) {
@@ -260,12 +255,11 @@ pub fn arriving(g: &mut crate::game::Game, quiet: bool) {
         };
         let seq = g.event_seq;
         crate::control::set_hold(g, gd, false, "qrf");
-        let x = &mut g.gd[gd];
-        x.trained = true;
-        x.state = crate::game::GuardState::Search;
-        x.awareness = HUNT_AWARENESS;
-        x.foe = Some(crate::game::Foe::Player);
-        x.heard_up_to = seq;
+        g.gd[gd].trained = true;
+        crate::mind::set_state(g, gd, crate::game::GuardState::Search, "qrf");
+        crate::mind::set(g, gd, HUNT_AWARENESS, "qrf");
+        g.gd[gd].foe = Some(crate::game::Foe::Player);
+        g.gd[gd].heard_up_to = seq;
         // at the high port at the muster, facing the door
         crate::squad::order(g, gd, crate::squad::OrderPatch { goal: Some(None), face: Some(Some(yaw)), stance: Some(Some(crate::character::Stance::HighReady)), upper: Some(Some(crate::character::UpperMode::None)), aim_at: Some(None), crouch: Some(Some(false)), ..Default::default() });
         g.qrf.men.push(gd);
@@ -376,15 +370,14 @@ pub fn tick_men(g: &mut crate::game::Game, dt: f64) {
     for x in all {
         let cap = g.k.trained.react_cap;
         let t = g.time;
-        let s = &mut g.gd[x];
-        if t >= s.dazzled_until && t >= s.stagger_until && s.react_t > cap { s.react_t = cap; }
-        if s.script.is_none() && (s.state == GuardState::Patrol || s.state == GuardState::Suspicious) {
-            s.state = GuardState::Search;
-            s.awareness = m::max(s.awareness, HUNT_AWARENESS);
-            s.search_t = 0.0;
+        if t >= g.gd[x].dazzled_until && t >= g.gd[x].stagger_until && g.gd[x].react_t > cap { g.gd[x].react_t = cap; }
+        if g.gd[x].script.is_none() && (g.gd[x].state == GuardState::Patrol || g.gd[x].state == GuardState::Suspicious) {
+            crate::mind::set_state(g, x, GuardState::Search, "qrf");
+            crate::mind::raise(g, x, HUNT_AWARENESS, "qrf");
+            g.gd[x].search_t = 0.0;
         }
-        s.body_duty = None;
-        s.task = None;
+        g.gd[x].body_duty = None;
+        g.gd[x].task = None;
     }
     // DOORSTAY: the last man through pulls the stair door to, once they are all on the floor and clear of it
     if g.qrf.state == crate::qrf::QrfState::Deployed && !g.qrf.door_pulled && crate::doors::doors_stay(g) && g.time - g.qrf.deployed_at > 1.5 {
@@ -467,7 +460,7 @@ pub fn tick_men(g: &mut crate::game::Game, dt: f64) {
             g.qrf.fix = Some(v3::copy(g.gd[c].last_known.unwrap_or(player_pos(g))));
             g.qrf.fix_t = g.time;
             g.qrf.cue_rush = true;
-            g.gd[c].awareness = m::min(g.gd[c].awareness, 0.84);
+            crate::mind::cap(g, c, 0.84, "qrf");
         }
     }
 }
@@ -505,8 +498,8 @@ pub fn perceive_scripted(g: &mut crate::game::Game, m: GuardId, dt: f64) -> bool
             glimpse = true;
             let t = g.time;
             let pp = player_pos(g);
-            g.gd[m].awareness = v3::clamp(g.gd[m].awareness + rate * dt, 0.0, 1.0);
-            set_last_known(g, m, v3::copy(pp));
+            { let to = v3::clamp(g.gd[m].awareness + rate * dt, 0.0, 1.0); crate::mind::set(g, m, to, "qrf"); }
+            crate::mind::fix(g, m, Some(v3::copy(pp)), "qrf");
             g.gd[m].sight_pos = v3::copy(pp);
             g.gd[m].sight_t = t;
             if rate > 0.25 { g.gd[m].last_seen_t = t; }
@@ -516,8 +509,8 @@ pub fn perceive_scripted(g: &mut crate::game::Game, m: GuardId, dt: f64) -> bool
     let pp = player_pos(g);
     let gp = pos_of(g, m);
     if !g.pl[g.player].down && !g.player_invisible && crate::m::hyp2(pp[0] - gp[0], pp[2] - gp[2]) < 0.62 {
-        g.gd[m].awareness = 1.0;
-        set_last_known(g, m, v3::copy(pp));
+        crate::mind::set(g, m, 1.0, "qrf");
+        crate::mind::fix(g, m, Some(v3::copy(pp)), "qrf");
         g.gd[m].last_seen_t = g.time;
         seen = true;
     }
@@ -540,8 +533,8 @@ pub fn perceive_scripted(g: &mut crate::game::Game, m: GuardId, dt: f64) -> bool
             glimpse = true;
             let t = g.time;
             let op = g.ch[oc].pos;
-            g.gd[m].awareness = v3::clamp(g.gd[m].awareness + rate * dt, 0.0, 1.0);
-            set_last_known(g, m, v3::copy(op));
+            { let to = v3::clamp(g.gd[m].awareness + rate * dt, 0.0, 1.0); crate::mind::set(g, m, to, "qrf"); }
+            crate::mind::fix(g, m, Some(v3::copy(op)), "qrf");
             g.gd[m].sight_pos = v3::copy(op);
             g.gd[m].sight_t = t;
             if rate > 0.25 { g.gd[m].last_seen_t = t; }
@@ -565,7 +558,7 @@ pub fn perceive_scripted(g: &mut crate::game::Game, m: GuardId, dt: f64) -> bool
             g.qrf.cue_rush = h_shot >= g.time - 1e-6 || (h_kick > 0.0 && h_last >= g.time - 1e-6);
         }
     }
-    g.gd[m].awareness = v3::clamp(g.gd[m].awareness, HUNT_AWARENESS * 0.85, 0.8);
+    { let to = v3::clamp(g.gd[m].awareness, HUNT_AWARENESS * 0.85, 0.8); crate::mind::set(g, m, to, "qrf"); }
     // a colleague down in his view: found, said once, and they push on
     if g.time - g.gd[m].saw_body_t > 6.0 {
         if let Some(o) = crate::guards::body_in_view(g, m) {
@@ -664,8 +657,8 @@ pub fn phase_file(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
     while g.qrf.filed < due {
         let i = g.qrf.filed as usize;
         let x = match el.get(i) { Some(&x) => x, None => break };
-        g.gd[x].state = crate::game::GuardState::Search;
-        g.gd[x].awareness = m::max(g.gd[x].awareness, HUNT_AWARENESS);
+        crate::mind::set_state(g, x, crate::game::GuardState::Search, "qrf");
+        crate::mind::raise(g, x, HUNT_AWARENESS, "qrf");
         let e = mk.entry.get(i).copied().unwrap_or(mk.entry[0]);
         let ef = mk.entry_face.get(i).copied().unwrap_or(m::PI / 2.0);
         route(g, x, &[e], Some(crate::squad::OrderPatch { speed: Some(Some(2.4)), face: Some(Some(ef)), stance: Some(Some(crate::character::Stance::None)), upper: Some(Some(crate::character::UpperMode::Aim)), aim_at: Some(Some(sector_point(e, ef, None, None))), crouch: Some(Some(i == 3)), strafe: Some(Some(false)), ..Default::default() }));
@@ -963,7 +956,7 @@ pub fn start_move(g: &mut crate::game::Game, el: &[GuardId]) {
     route(g, lead, &[goal], Some(crate::squad::OrderPatch { speed: Some(Some(speed)), face: Some(None), strafe: Some(Some(false)), stance: Some(Some(Stance::None)), upper: Some(Some(UpperMode::Aim)), aim_at: Some(None), crouch: Some(Some(false)), ..Default::default() }));
     for (i, &x) in el.iter().enumerate() {
         if i == 0 { continue; }
-        g.gd[x].state = crate::game::GuardState::Search;
+        crate::mind::set_state(g, x, crate::game::GuardState::Search, "qrf");
         let p = pos_of(g, x);
         let (st, _) = write_station(g, x, p);
         g.qrf.wps.delete(x);

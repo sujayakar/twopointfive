@@ -474,8 +474,8 @@ pub fn to_fight(g: &mut crate::game::Game, el: &[GuardId], seer: GuardId) {
         let is_seer = man == seer;
         crate::control::set_hold(g, man, false, "qrf");
         crate::control::set_pinned(g, man, false, "qrf");
-        g.gd[man].state = crate::game::GuardState::Alert;
-        g.gd[man].awareness = m::max(g.gd[man].awareness, if is_seer { 1.0 } else { 0.95 });
+        crate::mind::set_state(g, man, crate::game::GuardState::Alert, "qrf");
+        crate::mind::raise(g, man, if is_seer { 1.0 } else { 0.95 }, "qrf");
         let known = match g.gd[man].last_known { Some(k) if is_seer => k, _ => fix };
         crate::belief::word(g, man, known);
         let react = if is_seer { 0.12 } else { 0.2 + crate::math_dice::sim_random(g) * 0.25 };
@@ -523,8 +523,8 @@ pub fn phase_fight(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
         let bf = fix_of(g);
         for &man in el.iter() {
             if g.gd[man].state != crate::game::GuardState::Alert {
-                g.gd[man].state = crate::game::GuardState::Alert;
-                g.gd[man].awareness = m::max(g.gd[man].awareness, 0.9);
+                crate::mind::set_state(g, man, crate::game::GuardState::Alert, "qrf");
+                crate::mind::raise(g, man, 0.9, "qrf");
                 g.gd[man].react_t = 0.15;
                 if let Some(bf) = bf { crate::belief::word(g, man, bf.pos); }
                 g.gd[man].search_t = 0.0;
@@ -544,8 +544,8 @@ pub fn phase_fight(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
         g.gd[man].standoff = None;
         g.gd[man].pieing = None;
         g.gd[man].search_plan = None;
-        g.gd[man].state = crate::game::GuardState::Search;
-        g.gd[man].awareness = HUNT_AWARENESS;
+        crate::mind::set_state(g, man, crate::game::GuardState::Search, "qrf");
+        crate::mind::set(g, man, HUNT_AWARENESS, "qrf");
         let yaw = f + [0.0, -m::PI / 2.0, m::PI / 2.0, m::PI][k % 4];
         if k == 0 {
             let aim = sector_point(man_pos(g, man), f, None, None);
@@ -656,8 +656,8 @@ pub fn call_perimeter(g: &mut crate::game::Game, why: Option<&str>) -> bool {
             Ok(gd) => {
                 g.gd[gd].trained = true;
                 crate::control::set_hold(g, gd, false, "qrf");
-                g.gd[gd].state = crate::game::GuardState::Search;
-                g.gd[gd].awareness = HUNT_AWARENESS;
+                crate::mind::set_state(g, gd, crate::game::GuardState::Search, "qrf");
+                crate::mind::set(g, gd, HUNT_AWARENESS, "qrf");
                 g.gd[gd].heard_up_to = g.event_seq;
                 let p = g.qrf.perim.as_mut().unwrap();
                 let post = mk.posts[p.men.len()].clone();
@@ -681,7 +681,7 @@ pub fn call_perimeter(g: &mut crate::game::Game, why: Option<&str>) -> bool {
     while (i as f64) < n_peel {
         let gd = el[el.len() - 1 - i];   // the rear men go out
         if g.gd[gd].script.is_some() { crate::squad::end_guard_script(g, gd, Some(crate::squad::EndGuardScriptState::Search)); }
-        g.gd[gd].state = crate::game::GuardState::Search;
+        crate::mind::set_state(g, gd, crate::game::GuardState::Search, "qrf");
         g.gd[gd].standoff = None;
         g.gd[gd].pieing = None;
         g.gd[gd].search_plan = None;
@@ -748,15 +748,15 @@ pub fn tick_perimeter(g: &mut crate::game::Game, dt: f64) {
             let him = match crate::teams::foe_char(g, gd) { Some(c) => g.ch[c].pos, None => player_pos(g) };   // (the man he has made out: perceiveScripted names him)
             if eyes && arrived_at < 0.0 && flat(man_pos(g, gd), him) > WALKOUT_ENGAGE_M && g.gd[gd].sup.v < 0.3 {
                 // on his way out and Sam not on top of him: he calls it (the element's fix) and keeps going: the post is the order
-                g.gd[gd].awareness = m::min(g.gd[gd].awareness, 0.84);
+                crate::mind::cap(g, gd, 0.84, "qrf");
                 g.qrf.fix = Some(v3::copy(him));
                 g.qrf.fix_t = g.time;
             } else if eyes {
                 // eyes on him from the post (or at arm's length on the way): the AI fires from where he stands, the others are told where
                 crate::squad::end_guard_script(g, gd, Some(crate::squad::EndGuardScriptState::Alert));
                 crate::control::set_pinned(g, gd, arrived_at >= 0.0, "qrf");
-                g.gd[gd].state = crate::game::GuardState::Alert;
-                g.gd[gd].awareness = 1.0;
+                crate::mind::set_state(g, gd, crate::game::GuardState::Alert, "qrf");
+                crate::mind::set(g, gd, 1.0, "qrf");
                 g.gd[gd].react_t = 0.35;
                 g.gd[gd].fire_cd = m::max(g.gd[gd].fire_cd, 0.4);
                 crate::guards::reset_chase(g, gd);
@@ -775,8 +775,8 @@ pub fn tick_perimeter(g: &mut crate::game::Game, dt: f64) {
             // fighting from the post; eight seconds cold (or the AI talked him down a state) and he squares back up to the door
             let cold = g.time - m::max(g.gd[gd].last_seen_t, g.gd[gd].witness.heard.last_shot_t) > REGROUP_SECS && !g.gd[gd].saw_player_this_frame && !g.gd[gd].saw_foe_this_frame;
             if cold || g.gd[gd].state != crate::game::GuardState::Alert {
-                g.gd[gd].state = crate::game::GuardState::Search;
-                g.gd[gd].awareness = HUNT_AWARENESS;
+                crate::mind::set_state(g, gd, crate::game::GuardState::Search, "qrf");
+                crate::mind::set(g, gd, HUNT_AWARENESS, "qrf");
                 g.gd[gd].standoff = None;
                 g.gd[gd].search_plan = None;
                 to_post(g, idx);

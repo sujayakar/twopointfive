@@ -4,6 +4,7 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
+use crate::query::Query;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
@@ -13,32 +14,36 @@ pub fn team_words(e: crate::scene_scenario_list::TeamWordsE) -> String { crate::
 /// What a query string asks for, read as the page starts it: which scenario, how many teammates, which level file and seed; None when it names none.
 /// (scenarioList.ts specOfQuery)
 pub fn spec_of_query(search: &crate::scene_scenario_list::SpecOfQuerySearch) -> Option<crate::scene_scenario_list::ScenarioSpec> {
-    let (q, asked) = match search {
-        SpecOfQuerySearch::Text(s) => (crate::query::Query::parse(s).words().to_vec(), crate::loadout::SquadOfQuerySearch::Text(s.clone())),
-        SpecOfQuerySearch::URLSearchParams(p) => (p.words().to_vec(), crate::loadout::SquadOfQuerySearch::URLSearchParams(p.clone())),
-    };
-    let kind = kind_of(&q)?;
+    match search {
+        SpecOfQuerySearch::Text(s) => spec_of(&Query::parse(s)),
+        SpecOfQuerySearch::URLSearchParams(q) => spec_of(q),
+    }
+}
+
+/// `spec_of_query` of words already read: what every reader in the game that holds an address's words asks.
+pub fn spec_of(q: &Query) -> Option<crate::scene_scenario_list::ScenarioSpec> {
+    let kind = kind_of(q)?;
     // a quiet mission is alone unless `squad=1`; any bigger size it is asked for is the one partner
     let squad = if kind == ScenarioSpecKind::Quiet {
-        if crate::loadout::squad_of_query(&asked, Some(false)).unwrap_or(0.0) > 0.0 { 1.0 } else { 0.0 }
+        if crate::loadout::squad_of(q, false).unwrap_or(0.0) > 0.0 { 1.0 } else { 0.0 }
     } else {
-        crate::loadout::squad_of_query(&asked, Some(kind != ScenarioSpecKind::Rescue)).unwrap_or(2.0)
+        crate::loadout::squad_of(q, kind != ScenarioSpecKind::Rescue).unwrap_or(2.0)
     };
-    let (level, seed) = place_of(kind, &q);
+    let (level, seed) = place_of(kind, q);
     Some(ScenarioSpec { kind, squad, level, seed })
 }
 
 
 /// `?squad4` alone is the room clear with the four; beside another scenario's flag it is only that scenario's size.
-fn kind_of(q: &[(String, String)]) -> Option<ScenarioSpecKind> {
-    let four = has(q, "squad4");
-    if has(q, "roomclear") || (four && !has(q, "nightbreach") && !has(q, "rescue") && !has(q, "quiet")) {
+fn kind_of(q: &Query) -> Option<ScenarioSpecKind> {
+    let four = q.has("squad4");
+    if q.has("roomclear") || (four && !q.has("nightbreach") && !q.has("rescue") && !q.has("quiet")) {
         Some(ScenarioSpecKind::Roomclear)
-    } else if has(q, "nightbreach") {
+    } else if q.has("nightbreach") {
         Some(ScenarioSpecKind::Nightbreach)
-    } else if has(q, "rescue") {
+    } else if q.has("rescue") {
         Some(ScenarioSpecKind::Rescue)
-    } else if has(q, "quiet") {
+    } else if q.has("quiet") {
         Some(ScenarioSpecKind::Quiet)
     } else {
         None
@@ -46,11 +51,11 @@ fn kind_of(q: &[(String, String)]) -> Option<ScenarioSpecKind> {
 }
 
 /// The level file and the placement seed the query pins for this kind.
-fn place_of(kind: ScenarioSpecKind, q: &[(String, String)]) -> (Option<String>, Option<f64>) {
-    let level = get(q, "levelFile").filter(|lf| is_level_file(lf)).map(String::from);
+fn place_of(kind: ScenarioSpecKind, q: &Query) -> (Option<String>, Option<f64>) {
+    let level = q.get("levelFile").filter(|lf| is_level_file(lf)).map(String::from);
     let seed = match kind {
-        ScenarioSpecKind::Roomclear => seed_of_word(get(q, "roomclear").filter(|s| !s.is_empty()).or(get(q, "squad4"))),
-        ScenarioSpecKind::Quiet => seed_of_word(get(q, "quiet")),
+        ScenarioSpecKind::Roomclear => seed_of_word(q.get("roomclear").filter(|s| !s.is_empty()).or(q.get("squad4"))),
+        ScenarioSpecKind::Quiet => seed_of_word(q.get("quiet")),
         _ => None,
     };
     (level, seed)
@@ -58,7 +63,7 @@ fn place_of(kind: ScenarioSpecKind, q: &[(String, String)]) -> (Option<String>, 
 
 /// `s && Number.isFinite(Number(s))` then `Math.floor(Number(s))`.
 fn seed_of_word(s: Option<&str>) -> Option<f64> {
-    let n = crate::query::number_of(s.filter(|s| !s.is_empty())?);
+    let n = js::number_of(s.filter(|s| !s.is_empty())?);
     if n.is_finite() { Some(m::floor(n)) } else { None }
 }
 
@@ -69,11 +74,6 @@ fn is_level_file(lf: &str) -> bool {
         None => false,
     }
 }
-
-/// URLSearchParams.has
-fn has(q: &[(String, String)], key: &str) -> bool { q.iter().any(|(k, _)| k == key) }
-/// URLSearchParams.get: the first value of the key
-fn get<'a>(q: &'a [(String, String)], key: &str) -> Option<&'a str> { q.iter().find(|(k, _)| k == key).map(|(_, v)| v.as_str()) }
 
 #[cfg(test)]
 mod tests {
@@ -193,7 +193,7 @@ mod tests {
     #[test]
     fn reads_every_query_as_the_typescript_does() {
         for &(text, kind, level, seed) in CASES {
-            let q = crate::query::Query::parse(text).words().to_vec();
+            let q = Query::parse(text);
             let got = kind_of(&q);
             assert_eq!(got, kind, "kind of {text:?}");
             let Some(k) = got else { continue };

@@ -12,27 +12,15 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 fn cols(g: &Game) -> &'static mut sim::props::Props {
     &mut sim::state::state(g.sim).props
 }
+/// the same part, to read
+#[inline]
+fn cols_read(g: &Game) -> &'static sim::props::Props {
+    &sim::state::state_read(g.sim).props
+}
 /// where thing `id` is now   (propshome.ts rowOf)
 #[inline]
 fn row(s: &sim::props::Props, id: PropId) -> usize {
     s.row[id.0 as usize] as usize
-}
-/// the double column at offset `o`, in doubles from the part's start, as the TypeScript's `O` has it (props.rs COLS / 8)
-fn col_f(s: &mut sim::props::Props, o: f64) -> &mut [f64; sim::props::CAP] {
-    let at = o as usize * 8;
-    let c = &sim::props::COLS;
-    if at == c[0] { &mut s.x }
-    else if at == c[1] { &mut s.z }
-    else if at == c[2] { &mut s.yaw }
-    else if at == c[3] { &mut s.vx }
-    else if at == c[4] { &mut s.vz }
-    else if at == c[5] { &mut s.w }
-    else if at == c[6] { &mut s.cs }
-    else if at == c[7] { &mut s.sn }
-    else if at == c[8] { &mut s.idle }
-    else if at == c[9] { &mut s.push_t }
-    else if at == c[10] { &mut s.noise_t }
-    else { panic!("no double column of the furniture at that offset") }
 }
 /// a truth of a row written   (props.ts Prop.setBit)
 #[inline]
@@ -44,14 +32,15 @@ fn set_flag(s: &mut sim::props::Props, r: usize, mask: u32, v: bool) {
 fn io() -> &'static mut sim::props::Io {
     unsafe { &mut *(sim::props::addr(0) as *mut sim::props::Io) }
 }
+/// the same hand-over, to read
+fn io_read() -> &'static sim::props::Io {
+    unsafe { &*(sim::props::addr(0) as *const sim::props::Io) }
+}
 /// the one target of the TypeScript's stored `emit` (game.ts:1233), called by name
 #[inline]
 fn emit(g: &mut Game, e: PropEvent) {
     crate::game::game_on_prop_event(g, e);
 }
-/// In Rust there is one maths (`crate::m`, whatever `maths_epoch` says), so the kept cos and sin are never out of date   (props.ts freshTrig)
-pub fn fresh_trig(g: &mut crate::game::Game) {}
-
 /// the speed caps, on a row of the columns   (props.ts clampRow)
 fn clamp_row(c: &mut sim::props::Props, r: usize) {
     let s = m::hyp2(c.vx[r], c.vz[r]);
@@ -73,33 +62,6 @@ fn turn_row(c: &mut sim::props::Props, r: usize, y: f64) {
 
 /// A box's row (`Box.c`, `Box.yaw`, scene/boxes.ts:66). Skeleton 5 has `g.col.boxes: Vec<BoxId>` and no table of Box rows: once the table is back the body is that row
 fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
-
-/// a double column of this thing, by the column's offset   (props.ts Prop.f)
-pub fn prop_f(g: &mut crate::game::Game, id: PropId, o: f64) -> f64 {
-    let s = cols(g);
-    let r = row(s, id);
-    col_f(s, o)[r]
-}
-
-/// …written   (props.ts Prop.pf)
-pub fn prop_pf(g: &mut crate::game::Game, id: PropId, o: f64, v: f64) {
-    let s = cols(g);
-    let r = row(s, id);
-    col_f(s, o)[r] = v;
-}
-
-/// a truth of this thing   (props.ts Prop.bit)
-pub fn prop_bit(g: &mut crate::game::Game, id: PropId, m: f64) -> bool {
-    let s = cols(g);
-    s.flags[row(s, id)] & (m as u32) != 0
-}
-
-/// …written   (props.ts Prop.setBit)
-pub fn prop_set_bit(g: &mut crate::game::Game, id: PropId, m: f64, v: bool) {
-    let s = cols(g);
-    let r = row(s, id);
-    set_flag(s, r, m as u32, v);
-}
 
 /// (props.ts Prop.x)
 pub fn prop_x(g: &mut crate::game::Game, id: PropId) -> f64 {
@@ -196,22 +158,10 @@ pub fn prop_set_asleep(g: &mut crate::game::Game, id: PropId, v: bool) {
 }
 
 /// (props.ts Prop.idle)
-pub fn prop_idle(g: &mut crate::game::Game, id: PropId) -> f64 {
-    let s = cols(g);
-    s.idle[row(s, id)]
-}
-
-/// (props.ts Prop.idle)
 pub fn prop_set_idle(g: &mut crate::game::Game, id: PropId, v: f64) {
     let s = cols(g);
     let r = row(s, id);
     s.idle[r] = v;
-}
-
-/// (props.ts Prop.dirty)
-pub fn prop_dirty(g: &mut crate::game::Game, id: PropId) -> bool {
-    let s = cols(g);
-    s.flags[row(s, id)] & sim::props::F_DIRTY != 0
 }
 
 /// (props.ts Prop.dirty)
@@ -369,20 +319,9 @@ pub fn prop_wake(g: &mut crate::game::Game, id: PropId) {
     prop_set_idle(g, id, 0.0);
 }
 
-/// (props.ts Prop.speed)
-pub fn prop_speed(g: &mut crate::game::Game, id: PropId) -> f64 {
-    let (vx, vz) = (prop_vx(g, id), prop_vz(g, id));
-    m::hyp2(vx, vz)
-}
-
 /// the system's clock, a number of the block   (props.ts PropSystem.time)
 pub fn prop_system_time(g: &mut crate::game::Game) -> f64 {
     cols(g).time
-}
-
-/// (props.ts PropSystem.time)
-pub fn prop_system_set_time(g: &mut crate::game::Game, v: f64) {
-    cols(g).time = v;
 }
 
 /// a noise: held while a step is being taken, heard at once otherwise   (props.ts PropSystem.say)
@@ -412,11 +351,6 @@ pub fn prop_system_new(g: &mut crate::game::Game, defs: &[crate::scene_level::Pr
     let old = core::mem::replace(&mut g.props, sys);
     prop_system_settle(g);
     core::mem::replace(&mut g.props, old)
-}
-
-/// the thing that owns a part's box, or none   (props.ts PropSystem.propOf)
-pub fn prop_system_prop_of(g: &mut crate::game::Game, b: BoxId) -> Option<PropId> {
-    g.props.by_box.get(b).copied()
 }
 
 /// every part box of what is in the level, in its order   (props.ts PropSystem.boxes)
@@ -504,11 +438,6 @@ pub fn prop_system_settle(g: &mut crate::game::Game) {
         prop_place(g, p);
     }
     g.props.muted = false;
-}
-
-/// TWIN   (props.ts PropSystem.settleHere)
-pub fn prop_system_settle_here(g: &mut crate::game::Game) {
-    sim::props::settle(g.sim, g.col.mirror.slot as usize);
 }
 
 /// the box world's copy standing for the passes; in Rust the module always takes them   (props.ts PropSystem.settleWorld)

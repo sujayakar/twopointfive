@@ -127,19 +127,9 @@ pub fn drive_cols_p(g: &mut crate::game::Game, id: DriveColsId, k: f64, v: f64) 
     ::sim::state::state(g.sim).doors.c[k as usize][id.0 as usize] = v;
 }
 
-/// The man who drove it.   (doors.ts DriveCols.who)
-pub fn drive_cols_who(g: &mut crate::game::Game, id: DriveColsId) -> f64 {
-    drive_cols_g(g, id, crate::sim_doorshome::dc().drive_who)
-}
-
 /// (doors.ts DriveCols.who)
 pub fn drive_cols_set_who(g: &mut crate::game::Game, id: DriveColsId, v: f64) {
     drive_cols_p(g, id, crate::sim_doorshome::dc().drive_who, v)
-}
-
-/// The sign of the turn.   (doors.ts DriveCols.dir)
-pub fn drive_cols_dir(g: &mut crate::game::Game, id: DriveColsId) -> f64 {
-    drive_cols_g(g, id, crate::sim_doorshome::dc().drive_dir)
 }
 
 /// (doors.ts DriveCols.dir)
@@ -159,19 +149,9 @@ pub fn drive_cols_set_kind(g: &mut crate::game::Game, id: DriveColsId, v: crate:
     v
 }
 
-/// Seconds since.   (doors.ts DriveCols.t)
-pub fn drive_cols_t(g: &mut crate::game::Game, id: DriveColsId) -> f64 {
-    drive_cols_g(g, id, crate::sim_doorshome::dc().drive_t)
-}
-
 /// (doors.ts DriveCols.t)
 pub fn drive_cols_set_t(g: &mut crate::game::Game, id: DriveColsId, v: f64) {
     drive_cols_p(g, id, crate::sim_doorshome::dc().drive_t, v)
-}
-
-/// The angle it stood at.   (doors.ts DriveCols.from)
-pub fn drive_cols_from(g: &mut crate::game::Game, id: DriveColsId) -> f64 {
-    drive_cols_g(g, id, crate::sim_doorshome::dc().drive_from)
 }
 
 /// (doors.ts DriveCols.from)
@@ -189,19 +169,9 @@ pub fn drive_cols_set_quiet(g: &mut crate::game::Game, id: DriveColsId, v: bool)
     drive_cols_p(g, id, crate::sim_doorshome::dc().drive_quiet, if v { 1.0 } else { 0.0 })
 }
 
-/// Whose man he was (MAN_SIDE).   (doors.ts DriveCols.side)
-pub fn drive_cols_side(g: &mut crate::game::Game, id: DriveColsId) -> f64 {
-    drive_cols_g(g, id, crate::sim_doorshome::dc().drive_side)
-}
-
 /// (doors.ts DriveCols.side)
 pub fn drive_cols_set_side(g: &mut crate::game::Game, id: DriveColsId, v: f64) {
     drive_cols_p(g, id, crate::sim_doorshome::dc().drive_side, v)
-}
-
-/// Rad/s a hand or a stride was turning it at.   (doors.ts DriveCols.rate)
-pub fn drive_cols_rate(g: &mut crate::game::Game, id: DriveColsId) -> f64 {
-    drive_cols_g(g, id, crate::sim_doorshome::dc().drive_rate)
 }
 
 /// (doors.ts DriveCols.rate)
@@ -209,19 +179,9 @@ pub fn drive_cols_set_rate(g: &mut crate::game::Game, id: DriveColsId, v: f64) {
     drive_cols_p(g, id, crate::sim_doorshome::dc().drive_rate, v)
 }
 
-/// Where he stood when the last update ended, x.   (doors.ts DriveCols.px)
-pub fn drive_cols_px(g: &mut crate::game::Game, id: DriveColsId) -> f64 {
-    drive_cols_g(g, id, crate::sim_doorshome::dc().drive_px)
-}
-
 /// (doors.ts DriveCols.px)
 pub fn drive_cols_set_px(g: &mut crate::game::Game, id: DriveColsId, v: f64) {
     drive_cols_p(g, id, crate::sim_doorshome::dc().drive_px, v)
-}
-
-/// Where he stood when the last update ended, z.   (doors.ts DriveCols.pz)
-pub fn drive_cols_pz(g: &mut crate::game::Game, id: DriveColsId) -> f64 {
-    drive_cols_g(g, id, crate::sim_doorshome::dc().drive_pz)
 }
 
 /// (doors.ts DriveCols.pz)
@@ -237,11 +197,6 @@ pub fn drive_cols_hit(g: &mut crate::game::Game, id: DriveColsId) -> f64 {
 /// (doors.ts DriveCols.hit)
 pub fn drive_cols_set_hit(g: &mut crate::game::Game, id: DriveColsId, v: f64) {
     drive_cols_p(g, id, crate::sim_doorshome::dc().drive_hit, v)
-}
-
-/// A door's drive as a plain record, or None: `door_drive` already hands out a copy.   (doors.ts driveOf)
-pub fn drive_of(g: &mut crate::game::Game, d: DoorId) -> Option<crate::doors::DoorDrive> {
-    door_drive(g, d)
 }
 
 /// `T.rowOf(this.door)`, for a read of the row: a SlabRow is good only while its door has a slab (Door.slab answers null otherwise).
@@ -303,18 +258,6 @@ fn place_of(v: crate::doors::DoorDriveKind) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    /// The column's numbers are DRIVE_KINDS' places, the same as rust/sim's BOOT = 0 and on; the enums are declared in another order.
-    #[test]
-    fn drive_kinds_keep_their_places() {
-        let words = crate::sim_doorshome::drive_kinds();
-        for (i, w) in words.iter().enumerate() {
-            assert_eq!(kind_at(i as f64).as_str(), w.as_str());
-        }
-        for v in [DoorDriveKind::Boot, DoorDriveKind::Swing, DoorDriveKind::Body, DoorDriveKind::Hand] {
-            assert_eq!(words[place_of(v) as usize].as_str(), v.as_str());
-        }
-    }
 
     /// A word is a 32-bit AND, whatever else is set in it, and SLF's bits are rust/sim's.
     #[test]

@@ -19,7 +19,7 @@ const T0 = Date.now(); const log = (...a) => console.log(`[${((Date.now() - T0) 
   const opts = { rounds: Number(A.rounds || 2), n: Number(A.n || 5), warm: Number(A.warm ?? 1), smoke: false };
   if (A.cases) opts.cases = String(A.cases).split(','); if (A.noswap) opts.swap = false; if (A.gate) opts.gate = true; if (A.mix) opts.pool = { mix: A.mix };
   const out = await page.evaluate(async o => {
-    await window.__ready; window.__testVisible = true; if (window.__cut && window.__cut.programs && window.__cut.programs.swap) await window.__cut.programs.ready;   /* the second set of ray programs (render/cutSwap.ts) compiles after boot: a cut piece is traced whole until it is in */ window.__pauseLoop = true; window.__menu.close();
+    await window.__ready; window.__testVisible = true; window.__pauseLoop = true; window.__menu.close();
     const dev = window.__engine.device; const gpu = []; dev.addEventListener('uncapturederror', ev => gpu.push(String(ev.error && ev.error.message).slice(0, 300)));
     await import('/qa/cut-cost.js');
     const r = await window.__cc.run(o); r.gpuErrors = gpu; return r;

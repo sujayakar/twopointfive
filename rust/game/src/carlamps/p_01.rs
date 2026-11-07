@@ -113,11 +113,6 @@ pub fn car_lamp_targets(g: &mut crate::game::Game, boxes: &[BoxId]) -> Vec<crate
     out
 }
 
-/// A recording from before the table is played with no lamp a target. A value here is `Opaque`, so only absence is seen, not a null. (carlamps.ts carLampsTape)
-pub fn car_lamps_tape(g: &mut crate::game::Game, tables: &JsMap<String, crate::Opaque>) {
-    if !tables.has(String::from("CARLAMPS")) { g.k.carlamps.on = false; }
-}
-
 /// A vehicle's lamp: glass a round breaks whether it burns or not. (carlamps.ts lampGlass)
 pub fn lamp_glass(g: &mut crate::game::Game, t: FixtureId) -> bool {
     g.tab.sim_lightshome_fixture[t].group == VEHICLE_GROUP
@@ -177,17 +172,6 @@ mod tests {
         assert!(dead_lamp(&mut g, dark) && !dead_lamp(&mut g, lit) && !dead_lamp(&mut g, room));
     }
 
-    #[test]
-    fn a_tape_without_the_table_puts_the_row_down() {
-        let mut g = Game::blank();
-        g.k.carlamps.on = true;
-        let mut tables: JsMap<String, crate::Opaque> = JsMap::new();
-        tables.set(String::from("CARLAMPS"), crate::Opaque);
-        car_lamps_tape(&mut g, &tables);
-        assert!(g.k.carlamps.on);
-        car_lamps_tape(&mut g, &JsMap::new());
-        assert!(!g.k.carlamps.on);
-    }
 }
 
 // These stand on g.col.boxes as a table of rows, as skeleton 4 had it. Compiled out until the table is back (notes.md, ## Skeleton).

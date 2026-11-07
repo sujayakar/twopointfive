@@ -5,7 +5,6 @@
 // history weight), consumers the integrated volume's view, and the per-pixel smoke march (volumetrics.wgsl) the J view. The grid follows the preset (H, D, k — ui/quality.ts) and the WINDOW aspect (W = H × aspect, engine.ts): a change re-creates the volumes and restarts
 // the history (a preset hop or a window reshape; the render scale never touches it — the grid is not per pixel). settings.froxelVol off = nothing here is
 // dispatched or read (composite / particles / volumetrics.wgsl take their old paths under the frame flag) and, after a while off, the volumes are let go.
-import { cutSwap, ProgramSet } from './cutSwap';
 import { makeShader, computePipelineAsync, laterPipelineAsync, PIPE_QUEUE } from '../gpu/device';
 import { scenePrelude } from './frame';
 import lightingCommon from './shaders/lighting_common.wgsl' with { type: 'text' };
@@ -61,22 +60,11 @@ export class Froxels {
    *  background lane and the engine keeps FrameFlags.FroxelVol down (the per-pixel march draws the haze and the smoke, as with the row off) until `ready`. The row off =
    *  the boot waits for them as it did. */
   async init(): Promise<void> {
-    if (PIPE_QUEUE.later) { cutSwap.add(this); void this.buildPipelines(this.mod, true).then(ok => { this.ready = ok; }); return; }
-    await this.buildPipelines(this.mod); this.ready = true; cutSwap.add(this);   // (the row off: the order it always had)
+    if (PIPE_QUEUE.later) { void this.buildPipelines(this.mod, true).then(ok => { this.ready = ok; }); return; }
+    await this.buildPipelines(this.mod); this.ready = true;   // (the row off: the order it always had)
   }
   /** the five kernels are in (the engine raises FrameFlags.FroxelVol only then) */
   ready = false;
-  // ---- CUT BOXES — a calm room pays nothing (render/cutSwap.ts): the two kernels that trace (inject, injectJ) a second time, behind the cut prelude
-  private cutSet = new ProgramSet();
-  async buildCut(): Promise<void> {
-    const d = this.device; const lay = (l: GPUBindGroupLayout) => d.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, l] });
-    const mod = makeShader(d, scenePrelude(true) + lightingCommon + volCommon + froxelSrc, 'froxelCut');
-    const [pInject, pInjectJ] = await Promise.all([
-      computePipelineAsync(d, { label: 'froxelInjectCut', layout: lay(this.lInject), compute: { module: mod, entryPoint: 'inject' } }),
-      computePipelineAsync(d, { label: 'froxelInjectJCut', layout: lay(this.lInjectJ), compute: { module: mod, entryPoint: 'injectJ' } }) ]);
-    this.cutSet.set(this, { pInject, pInjectJ });
-  }
-  useCut(on: boolean) { this.cutSet.use(this, on); }
   /** resolves true when the five are in; false = a LATER one failed to compile (logged by the device module): nothing is put in and the per-pixel march goes on drawing */
   private async buildPipelines(mod: GPUShaderModule, later = false): Promise<boolean> {
     const d = this.device; const lay = (l: GPUBindGroupLayout) => d.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, l] });
@@ -89,13 +77,11 @@ export class Froxels {
       make(d, { label: 'froxelIntegrate', layout: lay(this.lInteg), compute: { module: mod, entryPoint: 'integrate' } }) ]);
     if (ps.some(p => !p)) return false;
     const [pCull, pInject, pInjectJ, pTemp, pInteg] = ps as GPUComputePipeline[];
-    if (later) this.cutSet.patch(this, { pCull, pInject, pInjectJ, pTemp, pInteg }, null);   // (a LATER set lands through the cut set's patch: a live cut set keeps its two twins and gets these back when it goes)
-    else { this.pCull = pCull; this.pInject = pInject; this.pInjectJ = pInjectJ; this.pTemp = pTemp; this.pInteg = pInteg; }
+    this.pCull = pCull; this.pInject = pInject; this.pInjectJ = pInjectJ; this.pTemp = pTemp; this.pInteg = pInteg;
     return true;
   }
   /** Dev / measurement hook (main.ts __hotFroxel): rebuild the five pipelines from a froxel.wgsl variant; the old ones stay on a compile error. */
   async hotSwap(body: string): Promise<{ ok: boolean; messages: string[] }> {
-    cutSwap.hot();   // (CUT BOXES: a hot program has no cut rule — the boot set is pinned from here, render/cutSwap.ts)
     const mod = this.device.createShaderModule({ code: Froxels.source(body), label: 'froxel-hot' });
     const info = await mod.getCompilationInfo();
     const messages = info.messages.map(m => `${m.type} ${m.lineNum}:${m.linePos} ${m.message}`);

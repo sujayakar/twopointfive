@@ -1,5 +1,5 @@
 // DOES EVERY SHADER TEXT COMPILE (a minute, where a page boot on the software adapter is six). tools/qa/wgsl-dump.ts writes every module text the page's boot
-// makes (the cut-box set too, with the switches main.ts raises: tools/qa/pageboot.ts) under one setting of the switches; this asks for every setting the tree
+// makes (with the switches main.ts raises: tools/qa/pageboot.ts) under one setting of the switches; this asks for every setting the tree
 // has (the title, a snow level in its weather, the look prototype's page), hands each distinct
 // text to a headless Chromium's WGSL compiler (createShaderModule + getCompilationInfo: no pipeline is made, so it is quick) and prints every error AND EVERY
 // WARNING with its line of the text (the page files each warning as a report, and a text the fold of constant switches cut badly says so first as 'code is

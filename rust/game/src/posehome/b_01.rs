@@ -20,13 +20,6 @@ pub fn each_posed(g: &mut crate::game::Game, f: &mut dyn FnMut(&mut crate::game:
     for c in posed_chars(g) { let s = g.ch[c].anim.poses; f(g, s); }
 }
 
-/// singles of the pool one man fills at most, by the biggest rig among the men who stand   (posehome.ts:38 manSingles)
-pub fn man_singles(g: &mut crate::game::Game) -> f64 {
-    let mut worst = 0.0;
-    each_posed(g, &mut |g, s| { let m = crate::anim_skeleton::pose_set_most(g, s); if m > worst { worst = m; } });
-    worst
-}
-
 /// Every handle on a pose one character keeps besides his set's own list: his animator's stages and buffers, and his ragdoll's pose.
 /// A handle is a COPY of a place in the pool (the TypeScript's is the pose object, whose place is written in it), so whatever moves a pose rewrites these.
 fn handles(ch: &mut crate::character::Character, f: &mut dyn FnMut(&mut Pose)) {

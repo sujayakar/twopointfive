@@ -83,6 +83,14 @@ fn open_sky_of(g: &mut Game, c: CharId) -> bool {
     })
 }
 
+/// Is `c` under the open sky, asked from outside the tick (a panel's line, a check). The same ask as the tick's, so it moves his sky's memory as the
+/// TypeScript's did. (src/game/wet.ts:75 openSky)
+pub fn open_sky(g: &mut Game, c_2: CharId) -> bool { open_sky_of(g, c_2) }
+
+/// Is `p` under one of the roofs the rain is cut by: the weather's own footprints in force. (src/game/wet.ts:64 underRoofRect; its arm for a caller with
+/// no game, the office's two fixed rectangles, has no caller here: a Rust game always has its weather)
+pub fn under_roof_rect(g: &mut Game, p: V3) -> bool { crate::weather::weather_under_roof(g, p[0], p[2]) }
+
 /// Sam indoors after the rain: his print budget and his drip clock. The drops themselves are GPU particles (`drip` below: nothing with no particle
 /// system), but the ask of the sky is the rule's and moves his sky's memory, which the next soak reads. (src/game/wet.ts:115 samAftermath)
 pub fn sam_aftermath(g: &mut crate::game::Game, dt: f64) {
@@ -183,15 +191,6 @@ pub fn age_prints(g: &mut crate::game::Game) {}
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/game/wet.ts:179 clearWetPrints)
 pub fn clear_wet_prints(g: &mut crate::game::Game) {}
-
-/// BOUNDARY NO-OP (the picture's / the host's): (src/game/wet.ts:183 wetInstance)
-pub fn wet_instance(g: &mut crate::game::Game, c_2: CharId, on: bool, out: &mut Vec<f32>, o: f64) {}
-
-/// BOUNDARY NO-OP (the picture's / the host's): (src/game/wet.ts:190 wetLineRow)
-pub fn wet_line_row(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<f32>, o: f64) {}
-
-/// BOUNDARY NO-OP (the picture's / the host's): (src/game/wet.ts:195 wetKnobs)
-pub fn wet_knobs(g: &mut crate::game::Game, out: &mut Vec<f32>, o: f64) {}
 
 /// BOUNDARY: the host's debug panel and `__wet.summary()` write this line (coats, prints, drips) at the swap; a headless run has no panel, so no line.   (src/game/wet.ts:204 wetSummary)
 pub fn wet_summary(g: &mut crate::game::Game) -> String { String::new() }

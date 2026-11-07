@@ -8,7 +8,7 @@
 //   · (once a boot, after its views) the switch flipped live to the other program and back: the fog on every frame, the program asked for running once compiled;
 //   · the drawn frame itself read back (sha256 + raw RGBA): two boots of two builds / two flags staged alike compare frame for frame with `compare`.
 //   node tools/qa/fog-pass-check.cjs run <outDir> [--root <checkout>] [--levels compound,depot] [--difficulty standard,hard] [--q 'fogpass=old'] [--quality medium] [--size 640x360] [--views early,late,cut] [--jobs 2]
-//       (`cut` = the late view again with cut test pieces alive: the frame, and both programs run again, on the second set of programs — render/cutSwap.ts)
+//       (`cut` = the late view again with cut test pieces alive: the frame, and both programs run again, with cut shapes for their rays to meet)
 //       exit 0 = every boot clean (no console / page / GPU error), old == hinted on every view, no disagreement; 1 = not. A build without FogPass.qaRun (the base)
 //       is only drawn and read back.
 //   node tools/qa/fog-pass-check.cjs compare <dirA> <dirB>      frame for frame: EQUAL, or the differing pixels counted (+ the largest channel difference)
@@ -63,12 +63,12 @@ const STAGE = ([view, w, h]) => {
   const F = g.fogOfWar;
   return { eyes: F.eyes.map(e => ({ id: e.id, at: (e.at || e.pos).map(x => +x.toFixed(2)) })), count: F.frame.count, hidden: g.guards.filter(x => x.state !== 'dead' && !F.drawn(x)).length, pin: window.__cam.pin && { look: window.__cam.pin.look.map(x => +x.toFixed(2)), dist: +window.__cam.pin.dist.toFixed(2) } };
 };
-// the late view again with cut pieces alive (scene/cut.ts): the second set of programs awaited, a test wedge stood a stride from each eye and one at the look-at,
-// frames drawn until the frame is on the cut set — the fog's rays then meet cut shapes, and qaRun compiles both programs behind the cut prelude
+// the late view again with cut pieces alive (scene/cut.ts): a test wedge stood a stride from each eye and one at the look-at, one frame drawn — the fog's rays
+// then meet cut shapes (every ray program carries the cut rule: there is one set of them since 2026-11-07)
 const STAGECUT = async () => {
   const g = window.__game, Q = window.__fq, C = window.__cut, F = g.fogOfWar;
   if (!C || !C.on) return { skipped: 'cut boxes are off in this build' };
-  const ready = await C.programs.ready; const pin = window.__cam.pin; if (!pin) return { skipped: 'no pinned view to stand the pieces in (the cut view follows early or late)' };
+  const pin = window.__cam.pin; if (!pin) return { skipped: 'no pinned view to stand the pieces in (the cut view follows early or late)' };
   // (a loose thing is in the picture only where the team sees the floor it stands on — FOG.things: each piece goes on the first seen spot round an eye)
   const at = [], seen = (x, z) => !F.spotSeen || F.spotSeen(x, z); if (seen(pin.look[0], pin.look[2])) at.push([pin.look[0], 0, pin.look[2]]);
   for (const e of F.eyes.slice(0, F.frame.count)) { const p = e.at || e.pos; let put = false;
@@ -79,10 +79,8 @@ const STAGECUT = async () => {
   //  one thing each, judged where it stands.)
   at.forEach((p, k) => { const b = C.test(p, k % 2 ? 'wedge' : 'lump', { scale: k % 2 ? 2.4 : 3, yaw: k * 0.7 }); if (b && b.mkey !== undefined) b.mkey = b.mkey - (b.mkey & 0xFFF) + 0xC00 + (k << 5); });
   const mid = at.reduce((m, p) => [m[0] + p[0] / at.length, m[1] + p[2] / at.length], [0, 0]);
-  const P = Q.pass(), twins = () => !!(P && P.cutSet && P.cutSet.cut);   // the fog pass joins the swap late (its programs are made on the first fogged frame): its own cut twins in too —
-  for (let i = 0; i < 2400 && !twins() && C.programs.state !== 'failed' && !(P && P.failed); i++) await new Promise(r => setTimeout(r, 250));   // waited for by state (a loaded box compiles for minutes), not drawn through
-  const n = 1; await Q.draw(n);   // (a fixed count: the first frame with a piece alive takes the cut set)
-  return { ready, twins: twins(), pieces: at.length, traced: C.stats.traced, middleSeen: seen(mid[0], mid[1]), frames: n, live: !!(C.programs.live && P && P.cutSet.live), info: C.programs.info, stats: C.stats, things: F.thingStats ? { ...F.thingStats } : null, eyes: F.frame.count, hidden: g.guards.filter(x => x.state !== 'dead' && !F.drawn(x)).length };
+  const n = 1; await Q.draw(n);
+  return { pieces: at.length, traced: C.stats.traced, middleSeen: seen(mid[0], mid[1]), frames: n, live: C.stats.traced > 0, stats: C.stats, things: F.thingStats ? { ...F.thingStats } : null, eyes: F.frame.count, hidden: g.guards.filter(x => x.state !== 'dead' && !F.drawn(x)).length };
 };
 // the first drawn frames, THE SAME COUNT ON EVERY BUILD (two boots compare frame for frame only after the same call sequence): one frame asks for the program, the
 // compile is waited for without drawing, one more frame runs it
@@ -101,7 +99,7 @@ const SHOOT = async (k) => {
   const d = fr.data; if (fr.bgra) for (let i = 0; i < d.length; i += 4) { const b = d[i]; d[i] = d[i + 2]; d[i + 2] = b; }
   for (let i = 3; i < d.length; i += 4) d[i] = 255;
   let s = ''; const CH = 0x8000; for (let i = 0; i < d.length; i += CH) s += String.fromCharCode.apply(null, d.subarray(i, i + CH));
-  return { w: fr.w, h: fr.h, ran: P ? (d0 === undefined ? (P.ready ? k : 0) : P.dispatched - d0) : 0, mode: P ? P.ran ?? '(base)' : null, cutSet: !!(P && P.cutSet && P.cutSet.live), b64: btoa(s), gpuErrs: window.__gpuErrs.slice(), comp: [E.passes.cw, E.passes.ch] };
+  return { w: fr.w, h: fr.h, ran: P ? (d0 === undefined ? (P.ready ? k : 0) : P.dispatched - d0) : 0, mode: P ? P.ran ?? '(base)' : null, b64: btoa(s), gpuErrs: window.__gpuErrs.slice(), comp: [E.passes.cw, E.passes.ch] };
 };
 // THE SWITCH, LIVE (FogFrame.pass — what a sweep row flips): to the other program and back. Every frame keeps its fog (the program that is in draws while the
 // other compiles), and once compiled the one asked for is the one that runs.
@@ -123,7 +121,7 @@ const AB = async () => {
     let pre = null; if (r.pre) { let pt = 0, pc = 0; for (const v of r.pre) { pt += v & 0xffff; pc += v >>> 16; } pre = { rays: r.pre.length, tests: pt, cells: pc }; }
     return { rays, hints, tests, cells, disagree: bad, clipped, raysHist: hist, pre }; };
   const old = await sum('old'), hint = await sum('hint');
-  return { w: a.w, h: a.h, cut: !!a.cut, pixels: n, differ: diff, maxDelta: maxD, old, hint, gpuErrs: window.__gpuErrs.slice() };
+  return { w: a.w, h: a.h, pixels: n, differ: diff, maxDelta: maxD, old, hint, gpuErrs: window.__gpuErrs.slice() };
 };
 
 // ---- node side ---------------------------------------------------------------------------------------------------------------------------------------------
@@ -143,14 +141,14 @@ async function boot(browser, port, level, difficulty, opt, outDir) {
   for (const view of opt.views) {
     const V = R.views[view] = { staged: view === 'cut' ? await page.evaluate(STAGECUT) : await page.evaluate(STAGE, [view, VW, VH]) };
     if (V.staged.skipped) { log(name, view, V.staged.skipped); delete R.views[view]; continue; }
-    if (view === 'cut') { const s = V.staged; log(name, 'cut staged', JSON.stringify({ ready: s.ready, twins: s.twins, pieces: s.pieces, traced: s.traced, middleSeen: s.middleSeen, live: s.live, things: s.things }));
-      if (!s.live) errors.push(`cut: the frame never took the cut programs — ${!s.ready ? 'the second set of programs did not compile' : !s.twins ? "the fog pass's own cut twins never came in" : !s.traced ? `none of the ${s.pieces} test pieces reached the frame's traced list (kept out of the picture: the fog's things rule?)` : 'pieces traced, set not live'} (${JSON.stringify(s.info)})`); }
+    if (view === 'cut') { const s = V.staged; log(name, 'cut staged', JSON.stringify({ pieces: s.pieces, traced: s.traced, middleSeen: s.middleSeen, live: s.live, things: s.things }));
+      if (!s.live) errors.push(`cut: none of the ${s.pieces} test pieces reached the frame's traced list (kept out of the picture: the fog's things rule?) (${JSON.stringify(s.stats)})`); }
     if (!warmed) { V.warm = await page.evaluate(WARM); warmed = true; }
     const shot = await page.evaluate(SHOOT, opt.frames); const rgba = Buffer.from(shot.b64 || '', 'base64'); delete shot.b64;
     shot.sha256 = crypto.createHash('sha256').update(rgba).digest('hex'); V.shot = shot;
     fs.writeFileSync(path.join(outDir, `${name}-${view}.rgba`), rgba); await page.screenshot({ path: path.join(outDir, `${name}-${view}.png`) });
     V.ab = await page.evaluate(AB);
-    log(name, view, JSON.stringify({ eyes: V.staged.count, hidden: V.staged.hidden, warm: V.warm, ran: shot.ran, mode: shot.mode, cutSet: shot.cutSet, sha: shot.sha256.slice(0, 16), ab: V.ab && (V.ab.err ? V.ab : { cut: V.ab.cut, differ: V.ab.differ, disagree: [V.ab.old.disagree, V.ab.hint.disagree], rays: [V.ab.old.rays, V.ab.hint.rays], tests: [V.ab.old.tests, V.ab.hint.tests + V.ab.hint.hints], pre: V.ab.hint.pre }) }));
+    log(name, view, JSON.stringify({ eyes: V.staged.count, hidden: V.staged.hidden, warm: V.warm, ran: shot.ran, mode: shot.mode, sha: shot.sha256.slice(0, 16), ab: V.ab && (V.ab.err ? V.ab : { differ: V.ab.differ, disagree: [V.ab.old.disagree, V.ab.hint.disagree], rays: [V.ab.old.rays, V.ab.hint.rays], tests: [V.ab.old.tests, V.ab.hint.tests + V.ab.hint.hints], pre: V.ab.hint.pre }) }));
   }
   R.flip = await page.evaluate(FLIP); if (R.flip) { log(name, 'flip', JSON.stringify(R.flip)); if (!R.flip.ok) errors.push(`flip: ${JSON.stringify(R.flip.steps)}`); }
   R.errors = errors; R.gpuErrs = [...new Set([...Object.values(R.views).flatMap(v => [...(v.shot.gpuErrs || []), ...((v.ab && v.ab.gpuErrs) || [])]), ...((R.flip && R.flip.gpuErrs) || [])])];
@@ -182,7 +180,7 @@ async function run() {
       if (A.err) { bad++; console.log(`${R.name} ${v}: ${A.err}`); continue; }
       const o = A.old, h = A.hint, wo = o.tests, wh = h.tests + h.hints + (h.pre ? h.pre.tests : 0);
       if (A.differ || o.disagree || h.disagree || o.clipped || h.clipped) bad++;
-      console.log(`${R.name} ${v}${A.cut ? ' (cut programs)' : ''}: ${A.differ ? `${A.differ} PIXELS DIFFER (largest ${A.maxDelta})` : 'old == hinted, every half'} · disagreements ${o.disagree}+${h.disagree}${o.clipped || h.clipped ? ` · ${o.clipped}+${h.clipped} PIXELS PAST THE COUNTER'S RANGE` : ''} · walks ${o.rays} → ${h.rays}${h.pre ? ` + ${h.pre.rays} table` : ''} (${(100 * (h.rays + (h.pre ? h.pre.rays : 0)) / Math.max(1, o.rays)).toFixed(1)} %) · box tests ${wo} → ${wh} (${(100 * wh / Math.max(1, wo)).toFixed(1)} %) · cells ${o.cells} → ${h.cells + (h.pre ? h.pre.cells : 0)} · frame ${V.shot.sha256.slice(0, 16)}`); } }
+      console.log(`${R.name} ${v}: ${A.differ ? `${A.differ} PIXELS DIFFER (largest ${A.maxDelta})` : 'old == hinted, every half'} · disagreements ${o.disagree}+${h.disagree}${o.clipped || h.clipped ? ` · ${o.clipped}+${h.clipped} PIXELS PAST THE COUNTER'S RANGE` : ''} · walks ${o.rays} → ${h.rays}${h.pre ? ` + ${h.pre.rays} table` : ''} (${(100 * (h.rays + (h.pre ? h.pre.rays : 0)) / Math.max(1, o.rays)).toFixed(1)} %) · box tests ${wo} → ${wh} (${(100 * wh / Math.max(1, wo)).toFixed(1)} %) · cells ${o.cells} → ${h.cells + (h.pre ? h.pre.cells : 0)} · frame ${V.shot.sha256.slice(0, 16)}`); } }
   console.log(bad ? `=== fog-pass-check: ${bad} FAILED ===` : '=== fog-pass-check: ALL PASS ===');
   process.exit(bad ? 1 : 0);
 }

@@ -23,12 +23,6 @@ pub fn squad_smoke_left(g: &mut crate::game::Game) -> f64 {
     match g.m.squadsmoke.states.get(key) { Some(s) => s.cans, None => 0.0 }
 }
 
-/// What this staging brought. (squadsmoke.ts squadSmokeBrought)
-pub fn squad_smoke_brought(g: &mut crate::game::Game) -> f64 {
-    let key = crate::seats::view_key(g);
-    match g.m.squadsmoke.states.get(key) { Some(s) => s.brought, None => 0.0 }
-}
-
 /// A scenario has just staged its team: the squad's smoke is `cans`, and the row is on the menu only if that is one or more. (squadsmoke.ts squadSmokeStage)
 pub fn squad_smoke_stage(g: &mut crate::game::Game, cans: f64) {
     let n = m::max(0.0, js::or(m::floor(cans), 0.0));
@@ -233,15 +227,6 @@ pub fn squad_smoke_key(g: &mut crate::game::Game, input: InputId) -> bool {
     g.tab.input[input].pressed.delete(key);
     crate::orders::squad_orders_pick(g, Some(i as f64));
     true
-}
-
-/// A line of what the squad's smoke stands at. (squadsmoke.ts squadSmokeSummary)
-pub fn squad_smoke_summary(g: &mut crate::game::Game) -> String {
-    let key = crate::seats::view_key(g);
-    match g.m.squadsmoke.states.get(key) {
-        Some(s) if js::truthy(s.brought) => format!("{} of {} left · {} with the menu up on a spot of floor", js::num_str(s.cans), js::num_str(s.brought), squadsmoke().order_key.replacen("Key", "", 1)),
-        _ => String::from("none brought (no card carries smoke)"),
-    }
 }
 
 #[cfg(test)]

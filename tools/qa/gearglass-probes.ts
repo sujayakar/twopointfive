@@ -1,6 +1,6 @@
 // The 'gearglass' family (`bun run tools/qa/probes.ts gearglass | gearglass-joined | gearglass-pinned`): what the three gear-and-glass parts could not check
 // alone — BOTH records of a pane live at once (the fracture model's, which a burst writes: game/frag.ts → glassbreak.ts blast; and a shell's own, which a load
-// of shot writes: shotgun.ts Shell.glass → glasspen.ts, the shell rule) — and the one line a pinned defender is asked about under ?glassfoes=0.
+// of shot writes: shotgun.ts Shell.glass → glasspen.ts, the shell rule) — and a pinned defender's fire through glass.
 // PASS / FAIL each, all headless on the real game with the glass parts ON (raised by name, put back after); staged on the conference room's glazing (three
 // 1 × 2 m panes over a half-metre sill along z = 10, the room north of them, the corridor south). No picture and no sound.
 //   gearglass-joined   (a) a shell at a frame a burst has EMPTIED (toughened glass, diced): nothing is filed — no row in the shell's record, no blow, no hole
@@ -11,9 +11,9 @@
 //                      through the shell's hole before it goes off; and over a grid of points beyond the glazing a line the blast takes as open is open
 //                      once the glass has fallen, and no other. Also: the same shell four frames behind the burst (pieces still queued), a shell on a laminated sheet a
 //                      burst has starred (marks and joins, the energy on top of the blast's), and the grenade's own report of a man behind a shell's hole
-//   gearglass-pinned   ?glassfoes=0, a room defender held on his post (pinned: the alert branch never asks him clearShot) with a lit man in plain view
-//                      behind standing glass and nothing else in the line: no round leaves his gun, the glass is untouched, and he stays on his man (he is
-//                      not sent to search for somebody he can see). The default (his side shoots through glass): he fires through it, as before
+//   gearglass-pinned   a room defender held on his post (pinned: the alert branch never asks him clearShot) with a lit man in plain view behind standing
+//                      glass and nothing else in the line: he fires through it. ("Defenders shoot through glass" is a settled rule: until 2026-11-07 three
+//                      lines here asked the page under ?glassfoes=0, where he held his fire)
 import { standUp, ROOT } from './headless.ts';
 import { CONF_PANES } from './office-pane.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
@@ -38,16 +38,16 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
 /** the conference room's glazing along z = 10 (its three sheets: x 6‥7, 7‥8, 8‥9; y 0.5‥2.5) */
 const [PW, PM, PE] = CONF_PANES, PANES = [PW, PM, PE], GZ = 10;   // (by where they stand, office-pane.ts: the door-size export moved each index up one)
 const FRAG_DEFAULTS = JSON.parse(JSON.stringify(FRAG));
-const SWITCHES = { pen: GLASSPEN.on, foes: GLASSPEN.foesThrough, fx: GLASSFX.on, random: Math.random };
+const SWITCHES = { random: Math.random };
 /** every probe leaves the module switches and knobs as it found them (the runner's next probe stands up on them) */
-const guarded = (fn: () => Promise<boolean>) => async () => { try { return await fn(); } finally { Object.assign(FRAG, JSON.parse(JSON.stringify(FRAG_DEFAULTS))); GLASSPEN.on = SWITCHES.pen; GLASSPEN.foesThrough = SWITCHES.foes; GLASSFX.on = SWITCHES.fx; Math.random = SWITCHES.random; } };
+const guarded = (fn: () => Promise<boolean>) => async () => { try { return await fn(); } finally { Object.assign(FRAG, JSON.parse(JSON.stringify(FRAG_DEFAULTS))); Math.random = SWITCHES.random; } };
 
 /** One office under a seed with the glass parts on (fracture, rounds through glass, shards as the stand-up leaves them), AI off, Sam out of it. */
 async function rig(seed: number) {
   Object.assign(FRAG, JSON.parse(JSON.stringify(FRAG_DEFAULTS))); fragStatsReset(); for (const k of Object.keys(GB_STATS)) (GB_STATS as any)[k] = 0;
   Math.random = seeded(seed);
   const W: any = await standUp(); const g = W.game;
-  GLASSFX.on = true; GLASSPEN.on = true; GLASSPEN.foesThrough = true; g.tune.glassBreak = true; g.tune.chaos = 0.5;
+  g.tune.glassBreak = true; g.tune.chaos = 0.5;
   g.aiEnabled = false; g.godMode = true; g.teleportPlayer([24, 0, 17.6]);
   const gb = g.glassBreak; const seen = new WeakSet<any>(), events: any[] = [];
   const R = { W, g, gb, events,
@@ -198,8 +198,8 @@ export const gearglassJoined = guarded(async () => {
 
 // ================================================================ gearglass-pinned
 /** a room defender put north of the conference glazing and held there, a lit Sam in the corridor south of it in plain view, nobody else near; six seconds */
-async function pinnedCase(seed: number, foes: boolean, type = 'annealed') {
-  const R = await rig(seed); const g = R.g; g.aiEnabled = true; g.godMode = true; GLASSPEN.foesThrough = foes;
+async function pinnedCase(seed: number, type = 'annealed') {
+  const R = await rig(seed); const g = R.g; g.aiEnabled = true; g.godMode = true;
   g.roomClear.start(seed); R.step(32); R.types(type);
   const C = g.nightBreach.hostiles[0]; const CAR = [7.4, 0, 5.3], T1 = [7.3, 0, 11.2];
   g.guards.filter((x: any) => x !== C).forEach((x: any, i: number) => R.put(x, [60 + 2 * i, 0, 60]));
@@ -215,17 +215,10 @@ async function pinnedCase(seed: number, foes: boolean, type = 'annealed') {
     line: `${C.callsign} ${C.state} (alert ${f2(alertT)} s, pinned ${f2(pinnedT)} s of it, searching ${f2(searchT)} s) · his gun's energy for a pane ${energy === undefined ? 'the default' : f2(energy as number)} · rounds fired ${shots}${shots ? ` (first at ${f2(firstT)} s)` : ''} · panes crossed ${GLASSPEN_STATS.crossed - x0} · blows on glass ${GB_STATS.impacts - imp0} · ${PANES.map(bi => R.pane(bi)).join(' | ')}` };
 }
 export const gearglassPinned = guarded(async () => {
-  const F = family('gearglass-pinned: ?glassfoes=0 holds a PINNED defender\'s fire through standing glass');
+  const F = family('gearglass-pinned: a PINNED defender fires through standing glass at a man he sees');
   const SEEDS = [3, 5, 8];
-  { let held = 0, staged = 0, calm = 0; const lines: string[] = [];
-    for (const s of SEEDS) { const a = await pinnedCase(s, false);
-      if (a.pinnedT > 3 && a.energy === 0) staged++; if (a.shots === 0 && a.crossed === 0 && a.impacts === 0 && a.whole) held++; if (a.searchT === 0) calm++;
-      lines.push(`seed ${s}: ${a.line}`); }
-    F.verdict(staged === SEEDS.length, '(1) staged: the defender is alert on a lit man he sees through the glazing, pinned on his post, his gun at energy 0 for a pane', `${staged}/${SEEDS.length}\n    ${lines.join('\n    ')}`);
-    F.verdict(held === SEEDS.length, '(2) ?glassfoes=0: no round leaves his gun, no pane is crossed, the glass is untouched (without the one condition in guards.ts he puts rounds through it inside three seconds)', `${held}/${SEEDS.length} held their fire for the six seconds`);
-    F.verdict(calm === SEEDS.length, '(3) …and he stays on his man: never sent to search for somebody he can see', `${calm}/${SEEDS.length} never left alert`); }
   { let through = 0; const lines: string[] = [];
-    for (const s of SEEDS) { const a = await pinnedCase(s, true); if (a.shots > 0 && a.crossed > 0 && (a.energy ?? 0) > 0) through++; lines.push(`seed ${s}: ${a.line}`); }
-    F.verdict(through === SEEDS.length, '(4) the default (his side shoots through glass): the same man fires through the pane, as before — the staging has the line', `${through}/${SEEDS.length}\n    ${lines.join('\n    ')}`); }
+    for (const s of SEEDS) { const a = await pinnedCase(s); if (a.shots > 0 && a.crossed > 0 && (a.energy ?? 0) > 0) through++; lines.push(`seed ${s}: ${a.line}`); }
+    F.verdict(through === SEEDS.length, 'pinned on his post, alert on a lit man he sees through the glazing: he fires through the pane', `${through}/${SEEDS.length}\n    ${lines.join('\n    ')}`); }
   return F.done();
 });

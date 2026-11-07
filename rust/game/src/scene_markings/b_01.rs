@@ -22,11 +22,6 @@ fn face_at(f: MarkFace) -> usize {
     match f { MarkFace::X => 0, MarkFace::X2 => 1, MarkFace::Y => 2, MarkFace::Y2 => 3, MarkFace::Z => 4, MarkFace::Z2 => 5 }
 }
 
-/// MARK_RES.indexOf(r), the order the shader reads: fine, base, coarse. (markings.ts:32)
-fn res_at(r: MarkRes) -> f64 {
-    match r { MarkRes::Fine => 0.0, MarkRes::Base => 1.0, MarkRes::Coarse => 2.0 }
-}
-
 /// CELL_CHARS.indexOf of one cell's character; −1 for anything else.
 fn cell_at(ch: Option<&u8>) -> i32 {
     match ch {
@@ -52,16 +47,6 @@ fn albedo_of(p: Option<&MarkPal>, base: V3) -> V3 {
     if let Some(a) = p.albedo { return [a[0], a[1], a[2]]; }
     let k = p.mul.unwrap_or(1.0);
     [m::min(base[0] * k, 1.0), m::min(base[1] * k, 1.0), m::min(base[2] * k, 1.0)]
-}
-
-/// The total of faceAreas: 4·hu·hv over the six faces, in their order. (markings.ts faceAreas)
-fn total_area(h: V3) -> f64 {
-    let mut total = 0.0;
-    for f in 0..6 {
-        let s = half_of(h, f);
-        total += 4.0 * s.hu * s.hv;
-    }
-    total
 }
 
 /// A marking's coverage fractions, resolved albedos, mean radiance and area. (markings.ts markStats)
@@ -92,71 +77,6 @@ pub fn mark_stats(m: &crate::scene_markings::MarkingDef, base: V3, texel_base: O
         }
     }
     MarkStats { texel: t, w, h, f, alb, mean_l, area: (w * t) * (h * t), d_albedo, emask: emask as f64 }
-}
-
-/// Rows the packed record takes. (markings.ts markRecordRows)
-pub fn mark_record_rows(m: &crate::scene_markings::MarkingDef) -> f64 {
-    MARK_HEAD_ROWS + m::ceil(m.size[0] * m.size[1] / CELLS_PER_ROW)
-}
-
-/// A Float32Array's store: the double rounded to single once; past the end, nothing.
-fn put(out: &mut [f32], at: usize, v: f64) {
-    if let Some(slot) = out.get_mut(at) { *slot = v as f32; }
-}
-
-/// The record at vec4 row `row` of the table that the host uploads to the GPU. Pure: it touches only `out`. (markings.ts packMarking)
-pub fn pack_marking(out: &mut Vec<f32>, row: f64, m: &crate::scene_markings::MarkingDef, st: crate::scene_markings::MarkStats, last: bool, any_emit: bool, area_lit: bool) {
-    let o = (row * 4.0) as usize;
-    let end = core::cmp::min((row * 4.0 + mark_record_rows(m) * 4.0) as usize, out.len());
-    if o < end { out[o..end].fill(0.0); }
-    let mut pal_flags = 0_i32;
-    for k in 0..3 {
-        let Some(p) = m.pal.get(k) else { continue };
-        if p.albedo.is_some() || p.mul.is_some_and(|x| x != 1.0) { pal_flags |= 1 << k; }
-        if p.rough.is_some() { pal_flags |= 8 << k; }
-    }
-    let meta = face_at(m.face) as f64 + 8.0 * res_at(m.res.unwrap_or(MarkRes::Base)) + 32.0 * (if last { 1.0 } else { 0.0 }) + 64.0 * (if any_emit { 1.0 } else { 0.0 }) + 128.0 * (if area_lit { 1.0 } else { 0.0 }) + 256.0 * st.emask + 2048.0 * pal_flags as f64;
-    put(out, o, m.at[0]); put(out, o + 1, m.at[1]); put(out, o + 2, m.size[0]); put(out, o + 3, m.size[1]);
-    put(out, o + 4, meta); put(out, o + 5, st.f[0]); put(out, o + 6, st.f[1]); put(out, o + 7, st.f[2]);
-    for k in 0..3 {
-        let p = m.pal.get(k);
-        let b = o + 8 + k * 8;
-        let a = st.alb[k];
-        put(out, b, a[0]); put(out, b + 1, a[1]); put(out, b + 2, a[2]);
-        put(out, b + 3, p.and_then(|p| p.rough).unwrap_or(-1.0));
-        let emit = p.and_then(|p| p.emit);
-        put(out, b + 4, emit.map_or(0.0, |e| e[0])); put(out, b + 5, emit.map_or(0.0, |e| e[1])); put(out, b + 6, emit.map_or(0.0, |e| e[2]));
-        put(out, b + 7, 0.0);
-    }
-    let (w, h) = (m.size[0] as usize, m.size[1] as usize);
-    let cb = o + MARK_HEAD_ROWS as usize * 4;
-    let per_float = CELLS_PER_FLOAT as usize;
-    for j in 0..h {
-        let row_str = m.cells[h - 1 - j].as_bytes();
-        for i in 0..w {
-            let e = cell_at(row_str.get(i));
-            if e <= 0 { continue; }
-            let c = j * w + i;
-            let at = cb + c / per_float;
-            if let Some(slot) = out.get_mut(at) { *slot = (*slot as f64 + (e << (2 * (c % per_float))) as f64) as f32; }
-        }
-    }
-}
-
-/// The albedo the secondary rays see for a marked box: base + each marking's mean change × its share of the box's surface. (markings.ts secondaryAlbedo)
-pub fn secondary_albedo(base: V3, h: V3, marks: &[crate::scene_markings::MarkingDef], texel_base: Option<f64>) -> V3 {
-    let texel_base = texel_base.unwrap_or(MARKING_TEXEL);
-    let total = total_area(h);
-    if total <= 0.0 { return [base[0], base[1], base[2]]; }
-    let mut out = [base[0], base[1], base[2]];
-    for mk in marks.iter() {
-        let st = mark_stats(mk, base, Some(texel_base));
-        let w = m::min(st.area / total, 1.0);
-        out[0] += st.d_albedo[0] * w;
-        out[1] += st.d_albedo[1] * w;
-        out[2] += st.d_albedo[2] * w;
-    }
-    [m::min(m::max(out[0], 0.0), 1.0), m::min(m::max(out[1], 0.0), 1.0), m::min(m::max(out[2], 0.0), 1.0)]
 }
 
 /// The world centre, half sizes and outward normal of a marking's bitmap on box (c, h, yaw): where the game stands its light. (markings.ts markWorldRect)
