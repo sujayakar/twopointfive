@@ -53,7 +53,7 @@ import * as charLookMod from './game/charLook';
 import { buildLookPanel, LOOK_SNOW_COVER } from './ui/lookpanel';
 import { lookAmounts, lookParts, lookSync } from './render/gbuffer';
 import { LOOK_WORKERS } from './render/lookWorkers';   // (the look's maps on workers: on in the page, ?lookworkers=0)
-import { scenePrelude, traceConfig, commonSource, glassBreakConfig, weatherKindConfig, weatherEdgeConfig, weatherVolConfig, rainShadowConfig, rainScaleConfig, rainWallsConfig, bounceWallsConfig, reflWallsConfig, sunGlintConfig, glintPickConfig, highlightConfig, wallSidesConfig, lookConfig, snowConfig, snowLookConfig } from './render/frame';
+import { scenePrelude, glassBreakConfig, weatherKindConfig, weatherEdgeConfig, weatherVolConfig, rainShadowConfig, rainScaleConfig, rainWallsConfig, bounceWallsConfig, reflWallsConfig, sunGlintConfig, glintPickConfig, highlightConfig, wallSidesConfig, lookConfig, snowConfig, snowLookConfig } from './render/frame';
 import { smokeGridConfig } from './smoke/smokeGrid';
 import * as cutMod from './scene/cut';
 import { cutConfig, initCutSwitch, cutBoxesOn, type CutPlane } from './scene/cut';
@@ -468,8 +468,8 @@ async function main() {
     await rb.mapAsync(GPUMapMode.READ); const out = new Float32Array(rb.getMappedRange().slice(0)); rb.unmap(); rb.destroy(); inBuf.destroy(); outBuf.destroy();
     return out;
   };
-  rendererFlagsAndHotSwaps(engine);   // (holds URL flags written BEFORE the preset is applied, as they were: it stays above `new Quality`)
-  traceLabHooks(engine, game);
+  rendererFlags(engine);   // (holds URL flags written BEFORE the preset is applied, as they were: it stays above `new Quality`)
+  daylightHook(game);
   giMotionHooks(engine);
   let benchOn: () => boolean = () => false;   // (a benchmark is running: set where it is built, below — ui/bench.ts)
   { let lastHint = -10; input.onLockedInput = () => { const now = performance.now() / 1000; if (show() && !benchOn() && now - lastHint > 3) { lastHint = now; game.msg(demo.active ? 'hands-off tour — P to stop · Esc to pause' : 'hands-off showcase — P to stop · Esc to pause'); } }; }
@@ -1162,7 +1162,6 @@ function urlFlagsBeforeEngine(q: URLSearchParams) {
   if (q.get('sunlooks') === 'old') REACH_OPTS.solidLooks = true;   // ?sunlooks=old: the sun's and the moon's reach masks as they were, a look that falls inside a wall counted as seeing the sky (render/reach.ts reachMaskForDirectional)
   (window as any).__reachOpts = REACH_OPTS;   // (a page run can set solidLooks and ask engine.reach.dir again, to draw the old mask and the new in one boot)
   if (q.has('reachUniform')) reachBinding.storage = false;   // A/B only: force the reach rows' uniform binding (the adapter fallback itself is the Engine's decision — render/frame.ts, engine.ts)
-  { const tv = Number(q.get('trace')); if (q.has('trace') && Number.isFinite(tv) && tv >= 0) traceConfig.variant = tv | 0; }
   if (glassMod.glassFxBoot() && (q.has('glassbreak') ? q.get('glassbreak') !== '0' : glassBreakPersisted())) glassBreakConfig.on = true;   // GLASS BREAKING (game/glassbreak.ts): the renderer's half is the scene prelude's compile-time const — raised here, before the Engine builds a pipeline, from the switch kept on this machine (Tab ▸ Destruction ▸ Glass; ?glassbreak / ?glassbreak=0 force it for one boot without touching the stored switch); off = every shader is main's program   // ?trace=N: the ray-traversal lab's compile-time variant const in every scene shader (render/frame.ts traceConfig, docs/internal/trace-perf.md; only 0 = today's walk exists on main) — must be set before the Engine builds any pipeline
   groundRayConfig.on = hillRaysOn(q); if (groundRayConfig.on && q.has('roll')) { const r = Number(q.get('roll')); if (Number.isFinite(r)) groundRayConfig.roll = Math.max(0, Math.min(0.25, r)); }   // (?roll=<m>: the open ground's snow swells this deep — the trial's second half, off unless asked)
   initCutSwitch();
@@ -1427,24 +1426,13 @@ function soloNightHooks(game: Game) {
   (window as any).__needs = { send: (i = 0, kind: NeedKind = 'coffee') => needsSend(game, game.guards.filter(x => x.team === 'guard' && !x.unit)[i], kind), trip: (i = 0) => needsTrip(game.guards.filter(x => x.team === 'guard' && !x.unit)[i]), knobs: NEEDS, stats: NEEDS_STATS, log: NEEDS_LOG, summary: () => game.needsSummary() };   // automation / console: the needs (needs.ts) — __needs.send(0) = 'send Kowalski for a coffee' with the whole telegraph, .trip(0) his trip record, .log the last things that happened
 }
 
-/** the renderer URL flags that stood above `new Quality` (?norestirmotion ?restirmotion ?nosmokediffuse) and the __hot* shader swaps they sat among, __rt */
-function rendererFlagsAndHotSwaps(engine: Engine) {
-  // __hotVol(src?): recompile the volumetric pass from a volumetrics.wgsl variant against the live device and swap it in (passes.hotSwapVol) — no src = refetch
-  // the file as it is on disk from the dev server (/qa/shader/volumetrics.wgsl), so an edit can be timed against a staged stress scene without rebooting it
-  (window as any).__hotVol = async (src?: string) => engine.passes.hotSwapVol(src ?? await (await fetch('/qa/shader/volumetrics.wgsl', { cache: 'no-store' })).text());
-  const hotCommon = async () => (await fetch('/qa/shader/direct_common.wgsl', { cache: 'no-store' })).text();   // the direct-light estimator gets direct_common.wgsl prepended, as passes.ts builds it
-  (window as any).__hotRestir = async (src?: string) => engine.passes.hotSwapDirect(src ?? await (await fetch('/qa/shader/restir.wgsl', { cache: 'no-store' })).text(), await hotCommon());   // the same for the direct-light pass (restir.wgsl variants)
-  (window as any).__hotSharp = async (src?: string) => engine.passes.hotSwapSharp(src ?? await (await fetch('/qa/shader/sharp_direct.wgsl', { cache: 'no-store' })).text(), await hotCommon());   // … sharp_direct.wgsl (both variants; direct-quality lane)
-  (window as any).__hotGbaa = async (src?: string) => engine.passes.hotSwapGbaa(src ?? await (await fetch('/qa/shader/gbaa.wgsl', { cache: 'no-store' })).text());   // … gbaa.wgsl
+/** the renderer URL flags that stood above `new Quality` (?norestirmotion ?restirmotion ?nosmokediffuse), __rt */
+function rendererFlags(engine: Engine) {
   { const q = new URLSearchParams(location.search); if (q.get('holedepth') === '0') engine.settings.portalHole = false;   // &holedepth=0: an opening's daylight is its whole rectangle again (settings.portalHole)
     { const pw = Number(q.get('portalworth')); if (pw > 0) engine.settings.portalWorth = pw; }   // &portalworth=<number>: how far an opening's own light reaches, for the visit (settings.portalWorth; 0.003 = until 11-05)
     if (q.has('norestirmotion')) engine.settings.restirMotion = 0; const rm = q.get('restirmotion'); if (rm !== null && rm !== '') engine.settings.restirMotion = Math.max(0, Math.min(7, parseInt(rm, 10) || 0)); }   // ?norestirmotion / ?restirmotion=N: the direct-motion lane's reservoir-reprojection levers from boot (docs/internal/direct-motion.md; 0 = the estimator's program byte for byte)
   if (new URLSearchParams(location.search).get('nvoval') === '1') engine.passes.nvOval = 1;   // ?nvoval=1: the goggles' dark oval over the picture, as it was (off by default: it hid too much of the screen — picture only, nothing reads it)
   if (new URLSearchParams(location.search).has('nosmokediffuse')) engine.passes.smokeDiffuse = 0;   // ?nosmokediffuse: smoke attenuates only, nothing behind it blurred (the final blit as it was)
-  // __hotDenoise(src?): the same for the v3 denoiser core (render/denoise.ts hotSwap ← /qa/shader/denoise.wgsl)
-  (window as any).__hotDenoise = async (src?: string) => engine.passes.den.hotSwap(src ?? await (await fetch('/qa/shader/denoise.wgsl', { cache: 'no-store' })).text());
-  // __hotReflect(src?): … and for the reflection pass (passes.hotSwapReflect ← /qa/shader/reflect_p5.wgsl while the phase-5 variant is the one dispatched, else reflect.wgsl; a given src goes to whichever its bindings say)
-  (window as any).__hotReflect = async (src?: string) => engine.passes.hotSwapReflect(src ?? await (await fetch('/qa/shader/reflect.wgsl', { cache: 'no-store' })).text());
   // __rt: materials + reflections (renderer v3 phase 4) for the console / automation
   (window as any).__rt = {
     get on() { return engine.settings.rtReflect; }, set on(v: boolean) { engine.settings.rtReflect = !!v; },
@@ -1453,41 +1441,11 @@ function rendererFlagsAndHotSwaps(engine: Engine) {
     set: (k: Partial<{ on: boolean; div: number; rays: number; maxRough: number; atrous: number; aniso: number; strength: number; glints: number; detail: number; history: number; specClampK: number }>) => { const S = engine.settings; if (k.on !== undefined) S.rtReflect = k.on; if (k.div !== undefined) S.rtReflectDiv = k.div; if (k.rays !== undefined) S.rtRays = k.rays; if (k.maxRough !== undefined) S.rtMaxRough = k.maxRough; if (k.atrous !== undefined) S.rtAtrous = k.atrous; if (k.aniso !== undefined) S.rtAniso = k.aniso; if (k.strength !== undefined) S.rtStrength = k.strength; if (k.glints !== undefined) S.rtGlints = k.glints; if (k.detail !== undefined) S.detail = k.detail; if (k.history !== undefined) S.rtHistory = k.history; if (k.specClampK !== undefined) S.dnSpecClampK = k.specClampK; return (window as any).__rt.knobs(); },
     summary: () => { const S = engine.settings, P = engine.passes; return `rt ${S.rtReflect ? `on ÷${P.rtDiv} ${P.rw}×${P.rh} · ${S.rtRays} ray/px · rough ≤ ${S.rtMaxRough} · ${S.rtAtrous} à-trous` : 'off'} · detail ${S.detail.toFixed(2)} · gloss row ${S.gloss ? (S.rtReflect ? 'set, superseded' : 'on') : 'off'}`; },
   };
-  // __hotGather(src?): recompile the gather's two pipelines (gather_split.wgsl's trace and light over the helpers ← /qa/shader/fgather.wgsl) against the staged scene
-  (window as any).__hotGather = async (src?: string) => engine.passes.hotSwapGather(src ?? await (await fetch('/qa/shader/fgather.wgsl', { cache: 'no-store' })).text(), await (await fetch('/qa/shader/gather_common.wgsl', { cache: 'no-store' })).text());   // (the gather's own common text from disk too: the two move together)
 }
 
-/** the ray-traversal lab: __daylight, __scenePrelude, __traceConfig, __commonSource, __hotCommon */
-function traceLabHooks(engine: Engine, game: Game) {
-  // ---- RAY-TRAVERSAL LAB (ported from exp/trace-perf; tools/qa/trace-lab.js drives these — docs/internal/trace-perf.md §0): __scenePrelude(lighting?) = the prelude every scene shader is
-  // compiled behind RIGHT NOW (world consts + TRACE_VARIANT + common.wgsl [+ lighting_common]); __traceConfig = render/frame.ts traceConfig; __commonSource() = the common.wgsl text in
-  // use; __hotCommon(src?, variant?) installs an edited common.wgsl text (no arg / null = refetch the file from disk; '' = back to the bundled text) and/or a TRACE_VARIANT, then rebuilds
-  // EVERY pipeline that traces rays — direct + restir, the four gathers, the live reflection kernel, the volumetric march, the three cascade kernels, the particles'
-  // sim — against the staged scene, so a traversal change is timed and pixel-compared without a reboot (composite's wet-coat side ray, the light probe and the bounce cards keep the boot
-  // prelude: reboot with ?trace=N for whole-frame identity). __daylight(on?) = the level's daylight swap by hand (lighting.ts setDaylight, bit for bit) for the lab's sun-shadow scene B5.
+/** __daylight(on?) = the level's daylight swap by hand (lighting.ts setDaylight, bit for bit) */
+function daylightHook(game: Game) {
   (window as any).__daylight = (on?: boolean) => { if (on !== undefined && !!on !== isDaylight(game)) setDaylight(game, !!on); return isDaylight(game); };
-  (window as any).__scenePrelude = (lighting = false) => scenePrelude() + (lighting ? lightingCommonSrc : '');
-  (window as any).__traceConfig = traceConfig;
-  (window as any).__commonSource = commonSource;
-  (window as any).__hotCommon = async (src?: string | null, variant?: number) => {
-    const shader = async (n: string) => (await fetch(`/qa/shader/${n}.wgsl`, { cache: 'no-store' })).text();
-    if (src === undefined || src === null) traceConfig.common = await shader('common'); else traceConfig.common = src === '' ? null : src;
-    if (variant !== undefined && Number.isFinite(variant)) traceConfig.variant = variant | 0;
-    const t0 = performance.now(); const P = engine.passes; const out: Record<string, { ok: boolean; messages: string[] }> = {};
-    const dc = await shader('direct_common');
-    const jobs: [string, Promise<{ ok: boolean; messages: string[] }>][] = [
-      ['restir', P.hotSwapDirect(await shader('restir'), dc)],
-      ['gather', P.hotSwapGather(await shader('fgather'), await shader('gather_common'))],
-      ['reflect', P.hotSwapReflect(await shader('reflect'))],
-      ['vol', P.hotSwapVol(await shader('volumetrics'))],
-      ['rc', engine.rc.hotSwap()],
-    ];
-    if (engine.particles) jobs.push(['particles', engine.particles.hotSwapSim()]);
-    const rs = await Promise.all(jobs.map(j => j[1].catch(e => ({ ok: false, messages: [String((e as Error)?.message ?? e)] }))));
-    jobs.forEach((j, i) => { out[j[0]] = rs[i]; });
-    const bad = Object.entries(out).filter(([, r]) => !r.ok);
-    return { ok: bad.length === 0, variant: traceConfig.variant, commonChars: (traceConfig.common ?? '').length, ms: Math.round(performance.now() - t0), failed: Object.fromEntries(bad.map(([k, r]) => [k, r.messages.slice(0, 6)])), warnings: Object.fromEntries(Object.entries(out).filter(([, r]) => r.ok && r.messages.length).map(([k, r]) => [k, r.messages.slice(0, 4)])) };
-  };
 }
 
 /** __gimo, __dmo */
@@ -1576,7 +1534,7 @@ function marksParticlesFlagsAndHooks(engine: Engine, game: Game) {
   };
 }
 
-/** __destr, __wind, __wet, the particle rain's URL flags (?norain2 ?prain ?rainv1: after the preset, as they were), __hotRain, __rain */
+/** __destr, __wind, __wet, the particle rain's URL flags (?norain2 ?prain ?rainv1: after the preset, as they were), __rain */
 function destructionWeatherFlagsAndHooks(engine: Engine, game: Game) {
   // __destr: the destruction lane (game/destruction.ts) for the console / automation — the knob, the counters, the log, the debris pool, the index, a staged bang / burst
   { const dm = destrMod;
@@ -1642,8 +1600,6 @@ function destructionWeatherFlagsAndHooks(engine: Engine, game: Game) {
     if (qs.has('prain')) engine.settings.particleRain = true;
     rainMod.loadPrain();   // its v2 look / wind knobs kept per machine (the Rain — particles rows)
     if (qs.has('rainv1')) rainMod.setPrain(rainMod.PRAIN_V1_LOOK); }
-  // __hotRain(): rebuild the particles' three pipelines from particles_common / particles / particles_draw.wgsl as they are on disk (the rain look's kernels + splat under a staged storm, no reboot)
-  (window as any).__hotRain = async () => { const P = engine.particles; if (!P) return { ok: false, messages: ['no particles'] }; const f = (n: string) => fetch('/qa/shader/' + n, { cache: 'no-store' }).then(r => r.text()); const [c, a, d, rf, pc] = await Promise.all([f('particles_common.wgsl'), f('particles.wgsl'), f('particles_draw.wgsl'), f('refract_common.wgsl'), f('place_common.wgsl')]); return P.hotSwapAll(c, a, d, rf, pc); };
   // __rain: particle rain for the console / automation — on/off, the knobs by name, the recycler's numbers, the ring's, the drip lines, a reseed; v2: .look / .setLook({}) / .resetLook() (PRAIN), .wind (the air it rides + the lattice's lean)
   (window as any).__rain = {
     get look() { return rainMod.PRAIN; }, setLook: (k: Record<string, number>) => { const r = rainMod.setPrain(k as any); rainMod.savePrain(); return r; }, resetLook: () => { rainMod.resetPrain(); return rainMod.PRAIN; }, get lookDefaults() { return rainMod.PRAIN_DEFAULTS; },
