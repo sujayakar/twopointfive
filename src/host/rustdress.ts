@@ -73,8 +73,6 @@ export function dressStep(g: Game, dt: number, side: SideList): void {
   run('men', () => { G.menAll = all; G.menStatured = statured; G.menBare = false; G.drawMen(all, statured, false, DRESS.men); });
   run('snowBreath', () => updateSnowBreath(g, dt));
   if (DRESS.snow) run('snowTracks', () => G.stepSnowTracks(dt));
-  // THE VERDICT stays TypeScript for now: it reads the game and writes only its own record (the par clock is the Rust tick's: rust/game_rules/src/par)
-  run('verdict', () => G.verdict?.tick());
   if (DRESS.recap) run('recap', () => recapTick(g));
   // ---- the side list onto the frame's list, past a filter of its own: with the fog of war off everything; else a box with no thing's key where the team
   // sees its cell, and a keyed one as it is (the moths). STAND-IN: a fixture's piece is treated as unkeyed, so one that fell unseen is not kept where it
