@@ -60,6 +60,11 @@ pub fn fall_style(style: crate::character::BlowStyle) -> crate::character::FallS
     }
 }
 
+/// The way a body faces, on the floor. (takedown.ts fwd)
+pub fn fwd(g: &mut crate::game::Game, c_2: CharId) -> V3 {
+    fwd_of(g.ch[c_2].body_yaw)
+}
+
 /// The way a yaw faces, on the floor. (takedown.ts fwd)
 fn fwd_of(yaw: f64) -> V3 {
     [m::sin(yaw), 0.0, m::cos(yaw)]

@@ -57,6 +57,20 @@ pub fn overlap_xz(a: crate::wallbreak::AABB, b: crate::wallbreak::AABB, eps: Opt
     m::min(a.x1, b.x1) - m::max(a.x0, b.x0) > eps && m::min(a.z1, b.z1) - m::max(a.z0, b.z0) > eps
 }
 
+// ------------------------------------------------------------------ standing up
+/// The engine as a level stands: `g.destr` must already hold the Destruction with its items indexed, `index` reads them. (WallBreak.constructor)
+pub fn wall_break_new(g: &mut crate::game::Game) -> crate::wallbreak::WallBreak {
+    let mut w = WallBreak::blank();
+    w.authored = g.col.boxes.len() as f64;
+    // index() files into g.destr.walls, so the new one stands there for the call, and whatever stood there goes back
+    let old = core::mem::replace(&mut *g.destr.walls, w);
+    wall_break_index(g);
+    let col = crate::levelfit::StoodCol { boxes: g.col.boxes.clone(), dynamic_boxes: g.col.dynamic_boxes.clone() };
+    let tables = crate::scene_box_mirror::box_mirror_tables(g);
+    g.destr.walls.room = crate::levelfit::break_room(g, &col, &tables);
+    core::mem::replace(&mut *g.destr.walls, old)
+}
+
 /// Would `need` more pieces of B be more than this level may stand up. (WallBreak.over)
 pub fn wall_break_over(g: &mut crate::game::Game, b: WallbreakBreakableId, need: f64) -> bool {
     let n = pieces_up(g) + need;
@@ -71,6 +85,98 @@ pub fn wall_break_over(g: &mut crate::game::Game, b: WallbreakBreakableId, need:
         if slots != 0 { filed += slots as f64 * crate::scene_collision::foot_entries(g, bx); }
     }
     filed > r.items
+}
+
+/// How many pieces the room surely holds, whichever things are broken. (WallBreak.piecesSure)
+pub fn wall_break_pieces_sure(g: &mut crate::game::Game) -> f64 {
+    let r = g.destr.walls.room;
+    if r.items == f64::INFINITY { return f64::INFINITY; }
+    let mut foot = 1.0;
+    for i in 0..g.destr.walls.list.len() {
+        let bx = g.tab.wallbreak_breakable[g.destr.walls.list[i]].box_;
+        foot = m::max(foot, crate::scene_collision::foot_entries(g, bx));
+    }
+    let authored = g.destr.walls.authored as usize;
+    for i in 0..authored {
+        if wall_break_adoptable(g, i as f64) {
+            let bx = at(g, i as f64);
+            foot = m::max(foot, crate::scene_collision::foot_entries(g, bx));
+        }
+    }
+    m::max(0.0, m::min(m::min(r.boxes, r.cuts), m::floor(r.items / foot)))
+}
+
+/// May a man stand under a roof at this plan point (true with no interior map at all). (index's `roofed`)
+fn roofed(interior: Option<&[u8]>, min: [f64; 3], w: f64, h: f64, x: f64, z: f64) -> bool {
+    let Some(interior) = interior else { return true };
+    let cx = m::floor(x - min[0]); let cz = m::floor(z - min[2]);
+    cx >= 0.0 && cz >= 0.0 && cx < w && cz < h && interior[(cz * w + cx) as usize] == 1
+}
+/// a length's whole divisions into cells (index's `div`)
+fn div(len: f64, col: f64) -> f64 { m::max(1.0, m::round(len / col)) }
+
+/// Finds what can break, by shape and by the box's word, as the level stands. (WallBreak.index)
+pub fn wall_break_index(g: &mut crate::game::Game) {
+    for t in g.targets.clone() {
+        for bi in g.tab.sim_lightshome_fixture[t].boxes.clone() { g.destr.walls.fixture_boxes.add(crate::Num(bi)); }
+    }
+    for k in 0..g.level.lights.len() {
+        if let Some(fb) = g.level.lights[k].fixture_box { if fb >= 0.0 { g.destr.walls.fixture_boxes.add(crate::Num(fb)); } }
+    }
+    let world = crate::scene_world::world();
+    let (w_, h_) = (world.grid_w, world.grid_h);
+    let f = flag();
+    let (shadow, primary, glass, dynamic) = (js::to_i32(f.no_shadow), js::to_i32(f.no_primary), js::to_i32(f.glass), js::to_i32(f.dynamic));
+    let any = shadow | primary | glass | dynamic;
+    for i in 0..g.col.boxes.len() {
+        let b = g.col.boxes[i]; let fi = i as f64;
+        let (c, h, yaw, flags, em, rot, piece, round) = { let x = seam_box(g, b); (x.c, x.h, x.yaw, js::to_i32(x.flags), x.emissive, x.rot.is_some(), x.piece == Some(true), x.round == Some(true)) };
+        if (flags & any) == shadow && !piece && c[1] - h[1] > 0.06 && c[0] > world.min[0] && c[0] < world.max[0] && c[2] > world.min[2] && c[2] < world.max[2] { g.destr.walls.ghosts.push(fi); }
+        if (flags & any) != 0 { continue; }
+        if rot || em[0] + em[1] + em[2] > 0.0 || g.destr.walls.fixture_boxes.has(crate::Num(fi)) || crate::destruction::destruction_item_of(g, fi).is_some() { continue; }
+        if c[0] < world.min[0] || c[0] > world.max[0] || c[2] < world.min[2] || c[2] > world.max[2] { continue; }
+        let does = does_of_box(g, b);
+        if does.wall.is_none() && does.cover.is_none() { continue; }
+        let y0 = c[1] - h[1]; let y1 = c[1] + h[1]; let sx = h[0] * 2.0; let sz = h[2] * 2.0; let thin = m::min(sx, sz); let long = m::max(sx, sz);
+        let part = does.wall == Some(crate::scene_materials::DoesWall::Screen);
+        let mut kind: Option<BKind> = None; let mut surf = crate::scene_materials::Surf::Drywall;
+        if y0 <= 0.1 && y1 >= g.k.walls.wall_min_top && does.wall.is_some() {
+            if thin > g.k.walls.wall_max_thick || long < g.k.walls.wall_min_len || m::abs(m::sin(yaw)) > 1e-6 || crate::scene_boxes::shape_cut(g, b) { continue; }
+            let along_x = sx >= sz; let mut in2 = 0; let mut n = 0;
+            for u in [-0.6, 0.0, 0.6] {
+                let px = c[0] + (if along_x { u * h[0] } else { 0.0 }); let pz = c[2] + (if along_x { 0.0 } else { u * h[2] });
+                n += 1;
+                let interior = g.reach_interior.as_deref();
+                if roofed(interior, world.min, w_, h_, px + (if along_x { 0.0 } else { 0.6 }), pz + (if along_x { 0.6 } else { 0.0 }))
+                    && roofed(interior, world.min, w_, h_, px - (if along_x { 0.0 } else { 0.6 }), pz - (if along_x { 0.6 } else { 0.0 })) { in2 += 1; }
+            }
+            if in2 * 2 <= n { continue; }
+            kind = Some(BKind::Wall);
+        } else if y0 <= 0.25 && y1 >= g.k.walls.cover_min_top && long >= g.k.walls.cover_min_len && thin >= 0.03 {
+            if let Some(cover) = does.cover {
+                surf = match cover { crate::scene_materials::DoesCover::Wood => crate::scene_materials::Surf::Wood, crate::scene_materials::DoesCover::Cardboard => crate::scene_materials::Surf::Cardboard };
+            } else if part && thin <= 0.13 { surf = crate::scene_materials::Surf::Fabric; }
+            else if does.wall == Some(crate::scene_materials::DoesWall::Board) && y1 < g.k.walls.wall_min_top { surf = crate::scene_materials::Surf::Drywall; }
+            else { continue; }
+            kind = Some(BKind::Cover);
+        }
+        let Some(kind) = kind else { continue };
+        let (mut nx, mut ny, mut nz) = (1.0, 1.0, 1.0); let mut yb: Vec<f64> = vec![-h[1], h[1]];
+        let col = g.k.walls.col;
+        if kind == BKind::Wall {
+            if sx >= sz { nx = m::min(32.0, div(sx, col)); } else { nz = m::min(32.0, div(sz, col)); }
+            ny = 2.0;
+            yb.insert(1, -h[1] + (g.k.walls.sill - y0));
+        } else if !round && !crate::scene_boxes::shape_cut(g, b) {
+            nx = div(sx, col); nz = div(sz, col);
+            while nx * nz > g.k.walls.cover_max_cells { if nx >= nz { nx -= 1.0; } else { nz -= 1.0; } }
+        }
+        let n = (nx * ny * nz) as usize;
+        let row = Breakable { id: fi, kind, surf, box_: b, flags0: flags as f64, nx, ny, nz, yb, open: vec![0u8; n], dmg: vec![0f32; n], slots: Vec::new(), live: 0.0, n_open: 0.0, hard: None };
+        let id = g.tab.wallbreak_breakable.push(row);
+        g.destr.walls.list.push(id);
+        g.destr.walls.owner.set(crate::Num(fi), id);
+    }
 }
 
 /// The breakable a static index belongs to, an authored box or one of its pieces: what a round met. (WallBreak.breakableAt)

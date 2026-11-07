@@ -33,6 +33,13 @@ fn has_data(g: &Game) -> bool {
     g.level.scenarios.as_ref().map_or(false, |s| s.snatch.is_some())
 }
 
+/// A new overlay with its van rule. (snatch.ts Snatch.constructor)
+pub fn snatch_new(g: &mut crate::game::Game) -> crate::snatch::Snatch {
+    let mut s = Snatch::blank();
+    s.out = Box::new(crate::snatchout::snatch_out_new(g));
+    s
+}
+
 /// This level's block. (snatch.ts Snatch.block)
 pub fn snatch_block(g: &mut crate::game::Game) -> Option<crate::scene_scenarios::SnatchData> {
     snatch_data(g)

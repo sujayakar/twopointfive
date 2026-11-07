@@ -7,6 +7,15 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
+/// The doors' columns in the game's block: says how many doors there are and where the part starts; `home` is `g.sim`. (doorshome.ts DoorStore.constructor)
+pub fn door_store_new(g: &mut crate::game::Game, home: crate::Opaque, cap: f64) -> crate::sim_doorshome::DoorStore {
+    if cap > DOOR_CAP {
+        panic!("a level of {} doors: the game holds {} (sim/doorshome.ts DOOR_CAP, rust/sim/src/doors.rs CAP)", cap, DOOR_CAP);
+    }
+    let base = (js::to_u32(crate::sim_state::sim_part(crate::sim_state::P_DOORS)) >> 3) as f64;
+    DoorStore { base, stride: DOOR_CAP, home, cap }
+}
+
 /// Where the doors' hand-over tables are and how much they hold, asked once. An index is a byte address / 8. (doorshome.ts doorIo)
 pub fn door_io(g: &mut crate::game::Game) -> crate::sim_doorshome::DoorIo {
     if let Some(io) = g.m.sim_doorshome.io {

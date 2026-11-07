@@ -7,6 +7,9 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
+/// The rule is live: settled on the page (WORKSTOW.on, HANDWORK.on), so always.   (workstow.ts live)
+pub fn live(g: &mut crate::game::Game) -> bool { true }
+
 /// A charge is going on by your own hands.   (workstow.ts samJob)
 pub fn sam_job(g: &mut crate::game::Game) -> bool {
     crate::doortools::door_tools_sam_job(g).is_some() || crate::wallcharge::wall_charge_sam_job(g).is_some()

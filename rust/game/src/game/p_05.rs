@@ -529,6 +529,40 @@ pub fn game_toggle_drag(g: &mut crate::game::Game, which: Option<GuardId>) { cra
 
 // ------------------------------------------------------------ update
 
+/// One tick as a host calls it: its live input and view sampled into the tick's record, the sim run off that record alone.   (game.ts update)
+pub fn game_update(g: &mut crate::game::Game, dt: f64, input: InputId, cam: CameraId, canvas: crate::host_hud::View) {
+    crate::math_dice::use_dice(g);
+    crate::quiet::quiet_mission_current(g);
+    let me = game_host_seat(g);
+    if g.restart_cut {
+        g.restart_cut = false;
+        let cut = crate::cmd::seat_take_cut(g, me);
+        if let Some(cut) = cut {
+            if g.tab.camera[cam].pin.is_none() {
+                cut_lens(g, cam, cut);
+                crate::camera::follow_camera_rebuild(g, cam);
+            }
+        }
+    }
+    crate::director::director_inject_input(g, input);
+    game_host_before(g, input);
+    crate::director::director_attach(g, crate::director::DirectorAttachO { cam: Some(cam), input: Some(input) });
+    let into = g.cmd_buf.take();
+    let c = crate::seats::with_seat(g, me, &mut |g| crate::cmd::sample_cmd(g, input, cam, canvas, into.as_ref()));
+    g.cmd_buf = Some(c.clone());
+    if g.seats.len() == 1 {
+        game_step(g, dt, &c);
+    } else {
+        let seats = g.seats.clone();
+        let mut cmds = Vec::with_capacity(seats.len());
+        for s in seats {
+            if Some(s) == g.local_seat { cmds.push(c.clone()); } else { cmds.push(crate::cmd::seat_handed(g, s, &c)); }
+        }
+        game_step_seats(g, dt, &cmds);
+    }
+    game_host_after(g, input, cam, canvas);
+}
+
 /// What the host's input is told before a step: a held press's cursor is followed off the view only while the creep reads the mouse as a stick.   (game.ts hostBefore)
 pub fn game_host_before(g: &mut crate::game::Game, input: InputId) {
     g.tab.input[input].drag_off = g.k.stalk.drag;

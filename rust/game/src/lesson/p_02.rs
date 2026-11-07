@@ -7,6 +7,11 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
+/// A new lesson: nothing done, no run yet.   (lesson.ts Lesson.constructor)
+pub fn lesson_new(g: &mut crate::game::Game) -> crate::lesson::Lesson {
+    crate::lesson::Lesson::blank()
+}
+
 /// The lesson in force (None: not live).   (lesson.ts Lesson.data)
 pub fn lesson_data(g: &mut crate::game::Game) -> Option<crate::scene_scenarios::LessonData> {
     let on_rails = match g.level.scenarios.as_ref().and_then(|s| s.lesson.as_ref()) {

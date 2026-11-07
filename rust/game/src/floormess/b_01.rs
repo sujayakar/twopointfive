@@ -8,6 +8,9 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
+/// BOUNDARY NO-OP (the picture's / the host's): (src/game/floormess.ts:87 spread)
+pub fn spread(g: &mut crate::game::Game, x: f64, z: f64, s: crate::floormess::Spread, size: f64, face: Option<[f64; 2]>) {}
+
 
 
 

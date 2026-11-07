@@ -226,6 +226,12 @@ pub fn room_of(g: &mut crate::game::Game, p: V3) -> String {
     String::from("west side")
 }
 
+/// Inside the building's footprint.   (chronicle.ts indoors)
+pub fn indoors(p: V3) -> bool {
+    let b = crate::floor::building();
+    p[0] >= b.x0 && p[0] < b.x1 && p[2] >= b.z0 && p[2] < b.z1
+}
+
 // ------------------------------------------------------------ the record
 
 /// The core append; `None` when the caps refuse it, else the row's place in `events`.   (chronicle.ts Chronicle.add)

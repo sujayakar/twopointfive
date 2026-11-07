@@ -84,6 +84,107 @@ pub fn vent_due(v: &crate::scene_level::VentDef, t: f64) -> bool {
     !(ph > duty)
 }
 
+/// Every source the level can have, built once. `reroof` is reached with this Wind stood at `g.wind` for the call. (wind.ts Wind.constructor)
+pub fn wind_new(g: &mut crate::game::Game) -> crate::wind::Wind {
+    let mut w = crate::wind::Wind::blank();
+    let vents = g.level.vents.clone().unwrap_or_default();
+    for v in vents {
+        let dir = v3::normalize(v.dir);
+        let size = match v.size {
+            Some(s) => s,
+            None => crate::scene_level_data::vent_defaults().size,
+        };
+        let d_max = shape(g, CUT_K) * v.reach;
+        let tan_spread = m::tan(m::max(0.0, m::min(89.0, v.spread)) * DEG);
+        let r0 = shape(g, CORE_K) * size;
+        let bc = v3::mad(v.pos, dir, d_max / 2.0);
+        let br = m::hyp2(d_max / 2.0, r0 + d_max * tan_spread) * 1.05 + 0.3;
+        let seed = crate::math_dice::hash_str(&v.name);
+        let id = g.tab.wind_wind_source.push(WindSource {
+            why: WindWhy::Vent,
+            base: v.speed,
+            on: 1.0,
+            gust: 1.0,
+            seed,
+            door: None,
+            kind: WindSourceKind::Jet,
+            name: v.name.clone(),
+            pos: v3::copy(v.pos),
+            dir,
+            speed: 0.0,
+            reach: v.reach,
+            tan_spread,
+            r0,
+            d_max,
+            floor_y: Some(0.0),
+            interior: None,
+            annex: None,
+            roofs: None,
+            field: None,
+            bound: crate::smoke_types::WindGpuSourceBound { c: bc, r: br },
+            vent: Some(v),
+            kinds: None,
+            heat: None,
+        });
+        w.all.push(id);
+    }
+    let interior = crate::weather::interior();
+    let annex = crate::weather::annex();
+    let cx = (interior[0] + interior[2]) / 2.0;
+    let cz = (interior[1] + interior[3]) / 2.0;
+    w.storm = g.tab.wind_wind_source.push(WindSource {
+        why: WindWhy::Storm,
+        base: 0.0,
+        on: 1.0,
+        gust: 1.0,
+        seed: crate::math_dice::hash_str("storm"),
+        vent: None,
+        door: None,
+        kind: WindSourceKind::Storm,
+        name: String::from("storm"),
+        pos: [0.0, 0.0, 0.0],
+        dir: [1.0, 0.0, 0.0],
+        speed: 0.0,
+        reach: 0.0,
+        tan_spread: 0.0,
+        r0: 0.0,
+        d_max: 0.0,
+        floor_y: None,
+        interior: Some(interior),
+        annex: Some(annex),
+        roofs: None,
+        field: None,
+        bound: crate::smoke_types::WindGpuSourceBound { c: [cx, 1.0, cz], r: 1e6 },
+        kinds: None,
+        heat: None,
+    });
+    w.all.push(w.storm);
+    let doors = g.doors.list.clone();
+    for d in doors {
+        if !g.dr[d].def.exterior.unwrap_or(false) {
+            continue;
+        }
+        let cd = g.dr[d].def.closed_dir;
+        let n1: V3 = [-m::sin(cd), 0.0, m::cos(cd)];
+        let fc = g.dr[d].frame_centre;
+        let inward: V3 = if in_rect(fc[0] + n1[0], fc[2] + n1[2], &interior) { n1 } else { [-n1[0], 0.0, -n1[2]] };
+        if in_rect(fc[0] - inward[0], fc[2] - inward[2], &annex) {
+            w.annexed.push(d);
+            continue;
+        }
+        let s = wind_door_source(g, d, inward);
+        w.all.push(s);
+    }
+    if crate::weather::weather_level_roofs(g) {
+        let roofs = crate::weather::weather_roofs(g);
+        let own = crate::weather::weather_own_storm(g);
+        let before = core::mem::replace(&mut g.wind, w);
+        wind_reroof(g, Some(&roofs), Some(own));
+        w = core::mem::replace(&mut g.wind, before);
+    }
+    w
+}
+
 /// The gust through an exterior door: a jet from just outside the frame, chest height, along `inward`. (wind.ts Wind.doorSource)
 pub fn wind_door_source(g: &mut crate::game::Game, d: DoorId, inward: V3) -> WindWindSourceId {
     let fc = g.dr[d].frame_centre;

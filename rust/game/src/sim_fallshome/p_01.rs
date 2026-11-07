@@ -53,6 +53,17 @@ fn took_there(g: &mut Game) {
     g.m.sim_fallshome.falls.there += 1.0;
 }
 
+/// The store over the game's block: its bit stands in the head, and neither list has told the floor of anything yet. (fallshome.ts FallStore.constructor)
+pub fn fall_store_new(g: &mut crate::game::Game, home: crate::Opaque) -> crate::sim_fallshome::FallStore {
+    let st = sim::state::state(g.sim);
+    let bit = FALL_BIT as u32;
+    debug_assert!(st.head.homes & bit == 0, "two stores of the falls over one game's block");
+    st.head.homes |= bit;
+    let base = (js::to_u32(crate::sim_state::sim_part(crate::sim_state::P_FALLS)) >> 3) as f64;
+    st.falls.last_event_t = [NEVER; sim::falls::NLIST];
+    FallStore { base, home }
+}
+
 
 /// Landings waiting in the glass's list. (fallshome.ts FallStore.waiting)
 pub fn fall_store_waiting(g: &mut crate::game::Game) -> f64 {

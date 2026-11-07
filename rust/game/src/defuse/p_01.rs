@@ -22,6 +22,9 @@ pub fn mmss(s: f64) -> String {
 /// A charge's planar normal as a vector.   (defuse.ts n3)
 pub fn n3(d: &crate::scene_scenarios::DefuseDevice) -> V3 { [d.n[0], 0.0, d.n[1]] }
 
+/// A fresh Defuse: the field initialisers are the whole of it.   (defuse.ts Defuse.constructor)
+pub fn defuse_new(g: &mut crate::game::Game) -> crate::defuse::Defuse { crate::defuse::Defuse::blank() }
+
 /// The block in force (None: not live).   (defuse.ts Defuse.data)
 pub fn defuse_data(g: &mut crate::game::Game) -> Option<crate::scene_scenarios::DefuseData> {
     let has = match g.level.scenarios.as_ref().and_then(|s| s.defuse.as_ref()) {

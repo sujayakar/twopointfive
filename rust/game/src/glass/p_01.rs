@@ -51,6 +51,9 @@ fn blast_step(s: u32) -> u32 {
 
 // ---- the part ----
 
+/// the choice kept on this machine: the browser's storage is the host's, which sets g.k.glassfx and g.k.glass.crack_gap; with no storage the TypeScript's own try does nothing (glass.ts loadGlassFx)
+pub fn load_glass_fx(g: &mut crate::game::Game) {}
+
 /// per-Game glass bookkeeping, made at first asking: the row itself (glass.ts glassState)
 pub fn glass_state<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::glass::GlassState {
     if g.m.glass.states.is_none() {
@@ -125,6 +128,12 @@ pub fn nearest_on_box(g: &mut crate::game::Game, b: BoxId, p: V3) -> crate::glas
     let lz = v3::clamp(sn * dx + cs * dz, -h[2], h[2]);
     let q: V3 = [c[0] + cs * lx + sn * lz, c[1] + ly, c[2] - sn * lx + cs * lz];
     NearestOnBox { q, d: v3::dist(p, q) }
+}
+
+/// one number of a seed, to the millimetre, folded into the word so far (glass.ts seedMix)
+pub fn seed_mix(h: f64, x: f64) -> f64 {
+    let h = m::imul(js::to_i32(h) ^ js::to_i32(m::round(x * 1000.0)), 0x85EBCA77u32 as i32) as u32;
+    (h ^ (h >> 13)) as f64
 }
 
 /// what a box is, as one 32-bit word: its centre and half sizes to the millimetre (glass.ts boxSeed)

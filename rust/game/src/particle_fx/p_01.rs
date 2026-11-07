@@ -16,6 +16,30 @@ pub fn gpu_fx(g: &mut crate::game::Game) -> bool {
 
 // ---------------------------------------------------------------- dust: every puff goes through one table
 
+/// Nothing of the game's: the table is kept in the browser's storage, the host's; with no storage the TypeScript's own try does nothing. (particleFx.ts loadDust)
+pub fn load_dust(g: &mut crate::game::Game) {}
+
+/// The shipped table back, the look onto the live system. Forgetting the kept copy is the host's. (particleFx.ts resetDust)
+pub fn reset_dust(g: &mut crate::game::Game) {
+    let t = crate::particle_fx::dust_defaults();
+    g.m.particle_fx.dust = crate::particle_fx::ParticleFxModDUST { count: t.emit.count, size: t.emit.size, life: t.emit.life, speed: t.emit.speed, rise: t.emit.rise, spread: t.emit.spread };
+    g.m.particle_fx.dust_look = crate::particle_fx::ParticleFxModDUSTLOOK { opacity: t.look.opacity, growth: t.look.growth, fade_in: t.look.fade_in, soft: t.look.soft, wrap: t.look.wrap, ambient: t.look.ambient };
+    if gpu_fx(g) { apply_dust_look(g); }
+}
+
+/// The look table onto the kind's numbers the kernels read; no system = nothing to do. Reads the attached system, setting or no. (particleFx.ts applyDustLook)
+pub fn apply_dust_look(g: &mut crate::game::Game) {
+    let l = g.m.particle_fx.dust_look;
+    let Some(p) = g.engine.particles.as_mut() else { return; };
+    let Some(d) = p.params.get_mut(crate::render_particles::PKind::Dust) else { return; };
+    d.bright_or_opacity = l.opacity;
+    d.shutter_or_growth = l.growth;
+    d.sleep_v = l.fade_in;
+    d.hold_or_fade = l.soft;
+    d.restitution = l.wrap;
+    d.keep = l.ambient;
+}
+
 /// THE dust emit: the site's numbers times the table; the count rounded, never below 1 where a site asked for any. (particleFx.ts emitDust)
 pub fn emit_dust(g: &mut crate::game::Game, pos: V3, dir: V3, count: f64, o: crate::render_particles::EmitOpts) -> f64 {
     if !gpu_fx(g) { return 0.0; }
@@ -540,6 +564,22 @@ mod tests {
         update_particle_fx(&mut g);
         let p = pending_tinks(&mut g);
         assert_eq!((p.len(), p[0].t), (1, 2.0));
+    }
+
+    /// The look goes onto the attached system whatever the setting says; reset gives back the shipped table and, setting off, does not touch the system.
+    #[test]
+    fn dust_look_and_reset() {
+        let mut g = crate::game::Game::blank();
+        g.m.particle_fx.dust.count = 3.0;
+        g.m.particle_fx.dust_look.opacity = 0.9;
+        let mut sys = crate::render_particles::Particles::blank();
+        sys.params.set(crate::render_particles::PKind::Dust, crate::render_particles::KindParams::zeroed());
+        g.engine.particles = Some(sys);
+        apply_dust_look(&mut g);
+        assert_eq!(g.engine.particles.as_mut().unwrap().params.get_mut(crate::render_particles::PKind::Dust).unwrap().bright_or_opacity, 0.9);
+        reset_dust(&mut g);
+        assert_eq!((g.m.particle_fx.dust.count, g.m.particle_fx.dust_look.opacity), (1.0, 0.3));
+        assert_eq!(g.engine.particles.as_mut().unwrap().params.get_mut(crate::render_particles::PKind::Dust).unwrap().bright_or_opacity, 0.9);
     }
 
     /// A leaf with no box as wood, nothing as concrete: the paths that reach no box's row. Those that do wait on the table of Box rows (notes.md, ## Skeleton).

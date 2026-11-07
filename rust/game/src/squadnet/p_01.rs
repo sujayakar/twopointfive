@@ -12,6 +12,11 @@ pub fn new_stats() -> crate::squadnet::SquadNetStats {
     crate::squadnet::SquadNetStats { lines: 0.0, downs: 0.0, whys: 0.0, quiets: 0.0, clears: 0.0, ends: 0.0 }
 }
 
+/// The net as a game starts it; the class's constructor adds nothing to its initialisers. (squadnet.ts SquadNet.constructor)
+pub fn squad_net_new(g: &mut crate::game::Game) -> crate::squadnet::SquadNet {
+    crate::squadnet::SquadNet::blank()
+}
+
 /// A fresh encounter: everything but `last_t`, which the TypeScript leaves standing. (squadnet.ts SquadNet.reset)
 pub fn squad_net_reset(g: &mut crate::game::Game) {
     let n = &mut g.squad_net;

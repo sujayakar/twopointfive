@@ -33,6 +33,14 @@ pub fn look_of(g: &mut Game, h: GuardId) -> [f64; 2] {
     if l > 1e-4 { [x / l, z / l] } else { let y = g.ch[c].body_yaw; [m::sin(y), m::cos(y)] }
 }
 
+/// The quiet orders for one partner; the squad orders' people and note are hung here   (PairOrders.constructor)
+pub fn pair_orders_new(g: &mut Game) -> crate::pairorders::PairOrders {
+    // (SquadOrdersPeople has no fields: being set is what orders' squad_orders_people_near and _ray test)
+    g.orders.people = Some(crate::orders::SquadOrdersPeople::zeroed());
+    g.orders.notes.push(crate::orders::OrderNoteFn::Pair);
+    crate::pairorders::PairOrders::blank()
+}
+
 // ------------------------------------------------------------ who, what
 /// the rows are on the menu: the switch, a squad on the floor, and not more of it than a pair's orders are for   (PairOrders.up)
 pub fn pair_orders_up(g: &mut Game) -> bool {

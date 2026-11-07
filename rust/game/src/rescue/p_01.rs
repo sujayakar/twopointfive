@@ -129,6 +129,15 @@ pub fn check_rescue(g: &mut crate::game::Game, s: Option<&crate::scene_scenarios
     bad
 }
 
+/// A new one: the field initialisers, and its three helpers. (rescue.ts Rescue.constructor)
+pub fn rescue_new(g: &mut crate::game::Game) -> crate::rescue::Rescue {
+    let mut r = Rescue::blank();
+    r.flow = Box::new(crate::rescueflow::rescue_flow_new(g));
+    r.ending = crate::rescueend::rescue_end_new(g);
+    r.flush = crate::rescueflush::rescue_flush_new(g);
+    r
+}
+
 /// What the scenario takes from the level it stands on. (rescue.ts Rescue.data)
 pub fn rescue_data(g: &mut crate::game::Game) -> Option<crate::scene_scenarios::RescueData> {
     g.level.scenarios.as_ref().and_then(|c| c.rescue.clone())

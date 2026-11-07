@@ -71,6 +71,9 @@ fn crossed_hook(g: &mut Game, x: &PaneCross, who: f64) {
 
 // ---------------------------------------------------------------- host work: nothing here on the page's path
 
+/// the switch kept per machine: browser storage, and the rows it wrote are settled (glasspen.ts loadGlassPen)
+pub fn load_glass_pen(g: &mut crate::game::Game) {}
+
 // ---------------------------------------------------------------- the switch, a round's energy
 
 /// the one gate: no showcase running (glasspen.ts glassPenLive)
