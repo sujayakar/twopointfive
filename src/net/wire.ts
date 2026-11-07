@@ -125,10 +125,10 @@ export type ToServer = Hello | Ready | In | Lost;
 /** the answer to a hello: the seat (−1 a watcher) of how many, the recipe to stand the game from, and how many ticks have run (they follow, as `tape` messages) */
 export interface Welcome { k: 'welcome'; proto: number; game: string; build: string; seat: number; seats: number; hz: number; recipe: Recipe; tick: number; state: NetState; }
 /** tick `t` as it ran: each seat's record (0 = the seat's record of the tick before with its edges off), and every `wordEvery` ticks the state word after it */
-export interface Tick { k: 't'; t: number; c: (WireCmd | 0)[]; w?: string; }
+export interface Tick { k: 't'; t: number; c: (WireCmd | 0)[]; w?: string; /** with `w`: the wider word (net/step.ts netWatch), watched and never an alarm */ v?: string; }
 /** a stretch of the run for whoever is behind (a joiner; a connection that was backed up): ticks `from` on, each as a Tick's `c` (and `w` where the tick carried
  *  one). A stretch may begin before the tick its reader is due: he passes over what he has */
-export interface Tape { k: 'tape'; from: number; ticks: { c: (WireCmd | 0)[]; w?: string }[]; }
+export interface Tape { k: 'tape'; from: number; ticks: { c: (WireCmd | 0)[]; w?: string; v?: string }[]; }
 /** how your records are arriving: when tick `t` ran the server held `l` of yours for later ticks (under NET.lead: send sooner; over NET.leadMax: later) */
 export interface Pace { k: 'pace'; t: number; l: number; }
 /** `names`: each seat's player's name as his client last said it ('' = none), kept when he leaves */

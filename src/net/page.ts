@@ -37,7 +37,7 @@ import type { Recipe } from './wire';
 import { NET, recipeWhy } from './wire';
 import { FORESEE, Foresee } from './foresee';
 import { onWay, wayOff, type Way } from './delay';
-import { netStep, netStand, netWord, netQuiet, netWhole, wordTick, NET_WORD_SEED, type StepHost } from './step';
+import { netStep, netStand, netWord, netWatch, netQuiet, netWhole, wordTick, NET_WORD_SEED, type StepHost } from './step';
 import { myName, setSeatNames } from '../host/names';
 
 /** the address's words: the server's WebSocket address, the game's id, the seat's key (read once, then kept for the tab under KEEP) */
@@ -92,6 +92,7 @@ export interface NetHost {
   ahead?: { capture(id: number, from: Stand, to: Stand): void; rest(): void; last?: unknown; readonly draws: number } | null;
 }
 export interface NetPageState { seat: number; state: string; confirmed: number; heard: number; behind: number; far: boolean; wordsOk: number; bad: { t: number; server: string; mine: string } | null; word: string;
+  /** the wider word, watched (client.ts): word ticks it was the server's, was not, and the first that was not */ watchOk: number; watchOff: number; watchFirst: number | null;
   sent: number; holds: number; skips: number; /** a message from the server waited this long in the page's own queue (ms, eased: a worse connection asked for) */ heldMs: number; margin: number; lead: number; pending: number; broken: string; bye: string; refuse: string; outcome: unknown; walkMs: number;
   /** his own man ahead of the game (null: drawn where the game has him): records played, where they take him and how far that is from where the game has him
    *  (m), what is left of a correction (m), corrections so far past a centimetre and the longest (m), and what a look ahead costs (ms, eased) */
@@ -145,7 +146,7 @@ export class NetPlay {
   private ws: WebSocket | null = null; private rs: RecipeStand | null = null; private host: NetHost | null = null;
   /** the whole game's words after the last word tick, with the ticks walked by then, kept while a check asks for them (`__net.keepWhole(true)`, read as `__net.whole`: which part parted, step.ts netWhole) */
   private whole: { t: number; names: string[]; words: number[] } | null = null; private keepWhole = false;
-  private word: number = NET_WORD_SEED; private first = true; private walkMs = 0; private line: HTMLElement | null = null; private said = '';
+  private word: number = NET_WORD_SEED; private watch: string | null = null; private first = true; private walkMs = 0; private line: HTMLElement | null = null; private said = '';
   /** catching up (NETPAGE.far): the mixer's own switch as it was, null = not catching up */
   private audioWas: boolean | null = null;
   private note = ''; private noteUntil = 0;
@@ -235,13 +236,13 @@ export class NetPlay {
       this.rs?.env(h.engine.settings); this.rs?.flags(g);
       { const d = h.ahead?.draws ?? 0; if (d !== this.drawsAt) { this.drawsAt = d; h.engine.world.relist(); } }   // (THE LIST A TICK READS IS THE LAST TICK'S, as on the server: a draw since then listed the boxes as it DREW them — between two ticks, his own man ahead — and the world's ray reads that list. So the first tick after a draw lists them again as the game has them)
       this.stepping = true; try { netStep(g, h.engine, cmds); } finally { this.stepping = false; }
-      this.word = netWord(g, this.word); if (this.keepWhole && wordTick(c.confirmed)) { const A = netWhole(g); if (A) this.whole = { t: c.confirmed + 1, ...A }; }   // (inside the client's walk: `confirmed` is still the tick this step ran)
+      this.word = netWord(g, this.word); if (wordTick(c.confirmed)) this.watch = netWatch(g); if (this.keepWhole && wordTick(c.confirmed)) { const A = netWhole(g); if (A) this.whole = { t: c.confirmed + 1, ...A }; }   // (inside the client's walk: `confirmed` is still the tick this step ran)
       if (far) { h.smoke?.update(1 / NET.hz); const tw = h.loop.tween; if (tw && !tw.stale) tw.rest(); }   // (unseen ticks: the smoke keeps the game's time, and nothing is drawn between two of them — as under a replay's seek)
     };
     // (ONE QUIET RUN A WALK, step.ts netQuiet: nothing of this page reads the game between two ticks of a walk, so what the picture reads is brought up
     //  once as the walk ends. A walk of one tick is the step it always was; a page that is behind, or far behind, pays for one bring-up and not for one a tick)
     netQuiet(g, true);
-    try { while (c.behind && n < most && (n < 1 || performance.now() - t0 < ms)) n += c.walk({ step, word: () => this.word.toString(36) }, 1); } finally { netQuiet(g, false); }
+    try { while (c.behind && n < most && (n < 1 || performance.now() - t0 < ms)) n += c.walk({ step, word: () => this.word.toString(36), watch: () => this.watch }, 1); } finally { netQuiet(g, false); }
     if (n) this.walkMs = (performance.now() - t0) / n;
     if (far && c.behind <= NET.lead) this.catching(false);
     if ((c.bad || c.broken) && this.ws) { if (far) this.catching(false); this.close(); }   // (parted from the server: the seat is let go — the server holds no key for a seat nobody sits in — and the page stands where it is)
@@ -257,7 +258,7 @@ export class NetPlay {
 
   state(): NetPageState {
     const c = this.client, F = this.fore;
-    return { seat: c.seat, state: c.state, confirmed: c.confirmed, heard: c.heard, behind: c.behind, far: this.audioWas !== null, wordsOk: c.wordsOk, bad: c.bad, word: this.word.toString(36), sent: c.sent, holds: c.holds, skips: c.skips, heldMs: this.heldMs,
+    return { seat: c.seat, state: c.state, confirmed: c.confirmed, heard: c.heard, behind: c.behind, far: this.audioWas !== null, wordsOk: c.wordsOk, bad: c.bad, word: this.word.toString(36), watchOk: c.watchOk, watchOff: c.watchOff, watchFirst: c.watchFirst, sent: c.sent, holds: c.holds, skips: c.skips, heldMs: this.heldMs,
       margin: c.margin, lead: c.lead, pending: c.pending.length, broken: c.broken, bye: c.bye, refuse: this.refuse, outcome: c.outcome, walkMs: this.walkMs,
       ahead: F.last ? { n: F.last.n, pos: Array.from(F.last.to.pos), move: Math.hypot(F.last.by[0], F.last.by[1], F.last.by[2]), off: F.rest, fixes: F.fixes, fixMax: F.fixMax, ms: F.ms } : null };
   }

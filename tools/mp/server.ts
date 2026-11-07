@@ -61,7 +61,7 @@ const { NetServer } = await import(`${ROOT}/src/net/server.ts`), { NET } = await
 // `wordEvery` ticks late). The state word is the game's own and needs no copy.
 let quiet = false;
 const step = (cmds: PlayerCmd[]): void => { if (!quiet) { stood.quiet(true); quiet = true; } stood.step(cmds); if (stood.ticks % NET.wordEvery === 0) { stood.quiet(false); quiet = false; } };
-const core = new NetServer({ now: () => performance.now(), step, word: () => stood.word(), ended: () => stood.ended() },
+const core = new NetServer({ now: () => performance.now(), step, word: () => stood.word(), watch: () => stood.watch(), ended: () => stood.ended() },
   { game, build, recipe, seatKeys, idleS: num('MP_IDLE_S', 60), maxS: num('MP_MAX_S', 3600), graceS: num('MP_GRACE_S', 15) });
 
 // ---- the heartbeat
