@@ -66,8 +66,8 @@ fn until(id: u32) -> Cond { crate::director::director_beat_until(crate::director
 /// c.any(a, c.until(id))
 fn any_until(a: Cond, id: u32) -> Cond { crate::director::director_beat_any(vec![a, until(id)]) }
 fn rand(g: &mut Game, r: DirectorRunId) -> f64 { crate::director::director_beat_rand(g, r) }
-fn unit(g: &mut Game, r: DirectorRunId, callsign: &str) -> Option<UnitRef> { crate::director::director_beat_unit(g, r, callsign) }
-fn alive(g: &mut Game, r: DirectorRunId, u: &UnitRef) -> bool { crate::director::director_query_alive(g, r, u) }
+fn unit(g: &Game, r: DirectorRunId, callsign: &str) -> Option<UnitRef> { crate::director::director_beat_unit(g, r, callsign) }
+fn alive(g: &Game, r: DirectorRunId, u: &UnitRef) -> bool { crate::director::director_query_alive(g, r, u) }
 fn order(g: &mut Game, r: DirectorRunId, b: DirectorLiveBeatId, u: &UnitRef, o: Patch) -> Result<(), String> { crate::director::director_beat_order(g, r, b, u, &o) }
 fn release(g: &mut Game, r: DirectorRunId, b: DirectorLiveBeatId, u: &UnitRef, state: EndState) -> Result<(), String> { crate::director::director_beat_release(g, r, b, u, Some(state)) }
 fn say_radio(g: &mut Game, r: DirectorRunId, b: DirectorLiveBeatId, u: &UnitRef, line: &str) -> Result<(), String> { crate::director::director_beat_say(g, r, b, u, line, Some(true)) }
@@ -78,14 +78,14 @@ fn burst(g: &mut Game, r: DirectorRunId, b: DirectorLiveBeatId, u: &UnitRef, at:
     crate::director::director_beat_burst(g, r, b, u, crate::director::RunBurstsItemAt::List(at), rounds, Some(cadence), Some(spread))
 }
 /// the run's bunkhouse door (define pass)
-fn bunk_door(g: &mut Game, r: DirectorRunId) -> crate::director::DoorRef { tut_sky_vars(g, r).bunk_door.clone().unwrap() }
+fn bunk_door(g: &Game, r: DirectorRunId) -> crate::director::DoorRef { tut_sky_vars(g, r).bunk_door.clone().unwrap() }
 
 // ---- c.flag
-fn flag_is_true(g: &mut Game, r: DirectorRunId, name: &str) -> bool {
+fn flag_is_true(g: &Game, r: DirectorRunId, name: &str) -> bool {
     matches!(g.tab.director_run[r].flags.get(String::from(name)), Some(Some(Json::Bool(true))))
 }
 /// `c.flag.x` as a condition
-fn flag_truthy(g: &mut Game, r: DirectorRunId, name: &str) -> bool {
+fn flag_truthy(g: &Game, r: DirectorRunId, name: &str) -> bool {
     match g.tab.director_run[r].flags.get(String::from(name)) {
         None | Some(None) => false,
         Some(Some(Json::Bool(v))) => *v,
@@ -98,7 +98,7 @@ fn flag_set(g: &mut Game, r: DirectorRunId, name: &str) { g.tab.director_run[r].
 
 // ---- the script's closures
 /// names.map(c.unit).filter(alive) (torchMen, squad)
-fn alive_of(g: &mut Game, r: DirectorRunId, names: &[&str]) -> Vec<UnitRef> {
+fn alive_of(g: &Game, r: DirectorRunId, names: &[&str]) -> Vec<UnitRef> {
     let mut out = Vec::new();
     for n in names { if let Some(u) = unit(g, r, n) { if alive(g, r, &u) { out.push(u); } } }
     out
@@ -116,20 +116,20 @@ fn block(g: &mut Game, r: DirectorRunId, b: DirectorLiveBeatId, spawn: bool) -> 
     }
     Ok(out)
 }
-fn torch_men(g: &mut Game, r: DirectorRunId) -> Vec<UnitRef> { alive_of(g, r, &TORCH_MEN) }
+fn torch_men(g: &Game, r: DirectorRunId) -> Vec<UnitRef> { alive_of(g, r, &TORCH_MEN) }
 fn squad(g: &mut Game, r: DirectorRunId) -> Vec<UnitRef> { alive_of(g, r, &SQUAD) }
 /// (tut-sky.script.ts:64 inBunk)
-fn in_bunk(g: &mut Game, r: DirectorRunId, u: &UnitRef) -> Result<bool, String> {
+fn in_bunk(g: &Game, r: DirectorRunId, u: &UnitRef) -> Result<bool, String> {
     let p = crate::director::director_query_pos_unit(g, r, u)?;
     Ok(p[0] > 29.1 && p[0] < 35.9 && p[2] > 13.6 && p[2] < 19.9)
 }
 /// (tut-sky.script.ts:65 atBunk)
-fn at_bunk(g: &mut Game, r: DirectorRunId, u: &UnitRef) -> Result<bool, String> {
+fn at_bunk(g: &Game, r: DirectorRunId, u: &UnitRef) -> Result<bool, String> {
     let p = crate::director::director_query_pos_unit(g, r, u)?;
     Ok(m::hyp2(p[0] - BUNK_DOOR[0], p[2] - BUNK_DOOR[2]) < 3.6)
 }
 /// (tut-sky.script.ts:66 inYard)
-fn in_yard(g: &mut Game, r: DirectorRunId, u: &UnitRef) -> Result<bool, String> {
+fn in_yard(g: &Game, r: DirectorRunId, u: &UnitRef) -> Result<bool, String> {
     let p = crate::director::director_query_pos_unit(g, r, u)?;
     Ok(p[0] > YARD_X0 && p[0] < YARD_X1 && p[2] > YARD_Z0 && p[2] < YARD_Z1)
 }
@@ -154,7 +154,7 @@ fn say_first(g: &mut Game, r: DirectorRunId, b: DirectorLiveBeatId, name: &str, 
     Ok(())
 }
 /// a rake's or a harass's `stop` (lines 125, 167)
-fn stop(g: &mut Game, r: DirectorRunId, which: u16) -> bool {
+fn stop(g: &Game, r: DirectorRunId, which: u16) -> bool {
     match which {
         STOP_SMOKE_OR_BROKE => flag_is_true(g, r, "smoke") || flag_is_true(g, r, "broke"),
         _ => flag_is_true(g, r, "through"),
@@ -205,7 +205,7 @@ pub fn tut_sky_hold_step(g: &mut crate::game::Game, r: DirectorRunId, b: Directo
     }
 }
 /// (tut-sky.script.ts:112) 0: a man of the squad at the door
-pub fn tut_sky_hold_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_sky::TutSkyHoldFrame, id: u32) -> Result<bool, String> {
+pub fn tut_sky_hold_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_sky::TutSkyHoldFrame, id: u32) -> Result<bool, String> {
     for u in squad(g, r) { if at_bunk(g, r, &u)? { return Ok(true); } }
     Ok(false)
 }
@@ -263,7 +263,7 @@ pub fn tut_sky_pinned_step(g: &mut crate::game::Game, r: DirectorRunId, b: Direc
     }
 }
 /// (tut-sky.script.ts:129) 0: the smoke is out or the squad has broken
-pub fn tut_sky_pinned_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_sky::TutSkyPinnedFrame, id: u32) -> Result<bool, String> {
+pub fn tut_sky_pinned_test(g: &crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_sky::TutSkyPinnedFrame, id: u32) -> Result<bool, String> {
     Ok(flag_is_true(g, r, "smoke") || flag_is_true(g, r, "broke"))
 }
 
@@ -316,7 +316,7 @@ pub fn tut_sky_smoke_step(g: &mut crate::game::Game, r: DirectorRunId, b: Direct
     }
 }
 /// (tut-sky.script.ts:153) 0: the squad has broken
-pub fn tut_sky_smoke_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_sky::TutSkySmokeFrame, id: u32) -> Result<bool, String> {
+pub fn tut_sky_smoke_test(g: &crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_sky::TutSkySmokeFrame, id: u32) -> Result<bool, String> {
     Ok(flag_is_true(g, r, "broke"))
 }
 
@@ -343,7 +343,7 @@ pub fn tut_sky_break_step(g: &mut crate::game::Game, r: DirectorRunId, b: Direct
     }
 }
 /// (tut-sky.script.ts:157, :160) 0: the squad has broken · 1: all of it is in the yard
-pub fn tut_sky_break_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_sky::TutSkyBreakFrame, id: u32) -> Result<bool, String> {
+pub fn tut_sky_break_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_sky::TutSkyBreakFrame, id: u32) -> Result<bool, String> {
     match id {
         0 => Ok(flag_is_true(g, r, "broke")),
         _ => {
@@ -586,7 +586,7 @@ pub fn tut_sky_torches_step(g: &mut crate::game::Game, r: DirectorRunId, b: Dire
     }
 }
 /// (tut-sky.script.ts:236, :238) 0: one of them down, or both where they were going · 1: both down
-pub fn tut_sky_torches_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_sky::TutSkyTorchesFrame, id: u32) -> Result<bool, String> {
+pub fn tut_sky_torches_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_sky::TutSkyTorchesFrame, id: u32) -> Result<bool, String> {
     match id {
         0 => {
             if down(g, r, &f.men) { return Ok(true); }
@@ -598,7 +598,7 @@ pub fn tut_sky_torches_test(g: &mut crate::game::Game, r: DirectorRunId, b: Dire
 }
 
 /// `c.flag.torchHome ?? []` as its rows (line 245). A row of another shape is what the TypeScript's destructuring would throw on
-fn torch_home(g: &mut Game, r: DirectorRunId) -> Result<Vec<(String, V3)>, String> {
+fn torch_home(g: &Game, r: DirectorRunId) -> Result<Vec<(String, V3)>, String> {
     let rows = match g.tab.director_run[r].flags.get(String::from("torchHome")) {
         None | Some(None) => return Ok(Vec::new()),
         Some(Some(Json::Array(rows))) => rows,
@@ -707,7 +707,7 @@ pub fn tut_sky_inside_step(g: &mut crate::game::Game, r: DirectorRunId, b: Direc
     }
 }
 /// (tut-sky.script.ts:248) 0: one of the men down
-pub fn tut_sky_inside_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_sky::TutSkyInsideFrame, id: u32) -> Result<bool, String> {
+pub fn tut_sky_inside_test(g: &crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_sky::TutSkyInsideFrame, id: u32) -> Result<bool, String> {
     for m in &f.men { if !alive(g, r, m.u.as_ref().unwrap()) { return Ok(true); } }
     Ok(false)
 }

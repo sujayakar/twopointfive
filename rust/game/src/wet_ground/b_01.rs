@@ -9,5 +9,5 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/game/wetGround.ts:101 WetGround.follow)
-pub fn wet_ground_follow(g: &mut crate::game::Game) {}
+pub fn wet_ground_follow(g: &crate::game::Game) {}
 

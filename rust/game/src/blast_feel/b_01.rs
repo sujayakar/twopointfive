@@ -43,7 +43,7 @@ pub fn dice(s: &mut crate::blast_feel::State) -> f64 { let n = s.serial; s.seria
 /// DESTRUCTION.on && FEEL.on && chaosOf(g) > 0 (src/game/blastFeel.ts:98 live)
 pub fn live(g: &mut crate::game::Game) -> bool { g.m.blast_feel.feel.on && crate::destruction::chaos_of(g) > 0.0 }
 /// (src/game/blastFeel.ts:99 thick)
-pub fn thick(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> f64 { let h = g.tab.boxes[w.box_].h; 2.0 * (if w.along_x { h[2] } else { h[0] }) }
+pub fn thick(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> f64 { let h = g.tab.boxes[w.box_].h; 2.0 * (if w.along_x { h[2] } else { h[0] }) }
 /// (src/game/blastFeel.ts:100 near)
 pub fn near(a: V3, b: V3, m: f64) -> bool { m::abs(a[0] - b[0]) + m::abs(a[1] - b[1]) + m::abs(a[2] - b[2]) < m }
 /// Where a wall charge's borrowed stun burst stands. (src/game/blastFeel.ts:102 burstAt)
@@ -174,4 +174,4 @@ pub fn report(g: &mut crate::game::Game, pl: PlayerId, at: V3) {
 pub fn emit(g: &mut crate::game::Game, pl: PlayerId, kind: crate::render_particles::PKind, pos: V3, dir: V3, count: f64, o: crate::render_particles::EmitOpts) {}
 
 /// BOUNDARY NO-OP (the picture's: particles): (src/game/blastFeel.ts:213 ceiling)
-pub fn ceiling(g: &mut crate::game::Game, pl: PlayerId, faces: &[crate::blast_feel::Face]) {}
+pub fn ceiling(g: &crate::game::Game, pl: PlayerId, faces: &[crate::blast_feel::Face]) {}

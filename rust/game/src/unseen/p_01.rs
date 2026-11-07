@@ -40,12 +40,12 @@ pub fn lead(g: &mut Game) -> PlayerId {
 }
 
 /// (unseen.ts mate)
-pub fn mate(g: &mut Game, gd: GuardId) -> bool {
+pub fn mate(g: &Game, gd: GuardId) -> bool {
     g.gd[gd].team == crate::teams::Team::Operative && g.gd[gd].unit.is_some()
 }
 
 /// on a wall, as the sneak counts it: his back on it `wall_secs`, where the hold keeps that clock (unseen.ts onWall)
-pub fn on_wall(g: &mut Game, pl: PlayerId) -> bool {
+pub fn on_wall(g: &Game, pl: PlayerId) -> bool {
     let Some(w) = &g.pl[pl].wall else { return false };
     match w.hit_t {
         None => true,
@@ -54,12 +54,12 @@ pub fn on_wall(g: &mut Game, pl: PlayerId) -> bool {
 }
 
 /// Sam is sneaking: low, on a wall, or with the wheel right down, and not sprinting (unseen.ts samSneaks)
-pub fn sam_sneaks(g: &mut Game, pl: PlayerId) -> bool {
+pub fn sam_sneaks(g: &Game, pl: PlayerId) -> bool {
     !g.pl[pl].down && !g.pl[pl].sprinting && !g.pl[pl].dash && (g.pl[pl].crouch || on_wall(g, pl) || g.pl[pl].pace <= g.k.unseen.pace_at + 1e-6)
 }
 
 /// what has given the squad away (None: nothing) (unseen.ts squadFound)
-pub fn squad_found(g: &mut Game, men: &[GuardId]) -> Option<String> {
+pub fn squad_found(g: &Game, men: &[GuardId]) -> Option<String> {
     for &gd in men {
         if crate::roomfight::room_fight_hot_for(g, gd) {
             return Some(String::from("loud"));
@@ -163,7 +163,7 @@ pub fn under_unseen(g: &mut Game, gd: GuardId) -> bool {
 }
 
 /// he is one of a door tool's men right now: that work is the door's own (unseen.ts entering)
-pub fn entering(g: &mut Game, gd: GuardId) -> bool {
+pub fn entering(g: &Game, gd: GuardId) -> bool {
     g.door_tools.ops.iter().any(|&op| g.tab.doortools_door_op[op].men.contains(&gd))
 }
 
@@ -315,7 +315,7 @@ pub fn unseen_step(g: &mut Game, gd: GuardId) -> Option<f64> {
 }
 
 /// his light is held off because Sam's is: UNSEEN.lights is off on the page, so never (unseen.ts unseenDark)
-pub fn unseen_dark(g: &mut Game, gd: GuardId) -> bool {
+pub fn unseen_dark(g: &Game, gd: GuardId) -> bool {
     false
 }
 

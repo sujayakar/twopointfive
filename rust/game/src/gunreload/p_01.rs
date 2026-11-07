@@ -206,7 +206,7 @@ pub fn feed_deal(g: &mut crate::game::Game, ch: CharId, gun: Option<FirearmId>, 
 }
 
 /// the switch is up (gunreload.ts feedLive)
-pub fn feed_live(g: &mut crate::game::Game) -> bool {
+pub fn feed_live(g: &crate::game::Game) -> bool {
     crate::gunlook::gun_look_on(g)
 }
 

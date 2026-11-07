@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// A rule is in force: the switch, and its own row (settled on, on the page).   (pairup.ts pairUp)
-pub fn pair_up(g: &mut crate::game::Game, k: crate::pairup::PairUpRule) -> bool {
+pub fn pair_up(g: &crate::game::Game, k: crate::pairup::PairUpRule) -> bool {
     g.k.pairup.on
 }
 

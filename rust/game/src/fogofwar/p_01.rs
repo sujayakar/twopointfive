@@ -8,17 +8,17 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// The field every eye has this frame, degrees in plan: the cone's rows under FOG.cone, else fovDeg.   (fogofwar.ts fieldDeg)
-pub fn field_deg(g: &mut crate::game::Game) -> f64 {
+pub fn field_deg(g: &crate::game::Game) -> f64 {
     if g.k.fog.cone { m::min(g.k.fog.fov_deg, g.k.fog.cone_deg) } else { g.k.fog.fov_deg }
 }
 
 /// Its all-round near field, metres.   (fogofwar.ts fieldNear)
-pub fn field_near(g: &mut crate::game::Game) -> f64 {
+pub fn field_near(g: &crate::game::Game) -> f64 {
     if g.k.fog.cone { g.k.fog.cone_near_m } else { g.k.fog.near_m }
 }
 
 /// Where a man looks, for the cone (unit, in plan): his head, or his aim with a long gun in the shoulder and level.   (fogofwar.ts gazeOf)
-pub fn gaze_of(g: &mut crate::game::Game, c_2: CharId) -> V3 {
+pub fn gaze_of(g: &crate::game::Game, c_2: CharId) -> V3 {
     let h = crate::character::character_head_dir(g, c_2);
     let body_yaw = g.ch[c_2].body_yaw;
     let aim = if g.ch[c_2].alive && g.ch[c_2].anim.long_shown == Some(crate::character::LongStance::Shoulder) {
@@ -63,7 +63,7 @@ pub fn fog_eye_count(v: f64) -> f64 {
 }
 
 /// The address's words for the fog, read by the Game's constructor. With no page it does nothing, as the TypeScript's catch does; the host owns the address.   (fogofwar.ts fogFlags)
-pub fn fog_flags(g: &mut crate::game::Game) {}
+pub fn fog_flags(g: &crate::game::Game) {}
 
 #[cfg(test)]
 mod tests {

@@ -34,7 +34,7 @@ pub fn end(g: &mut crate::game::Game, pl: PlayerId, why: crate::stalk::Why) {
 }
 
 /// His bearing to a point, off his facing (0 = dead ahead). (stalk.ts bearingOf)
-pub fn bearing_of(g: &mut crate::game::Game, gd: GuardId, p: &[f64]) -> f64 {
+pub fn bearing_of(g: &crate::game::Game, gd: GuardId, p: &[f64]) -> f64 {
     let c = g.gd[gd].ch;
     let pos = g.ch[c].pos;
     v3::wrap_angle(m::atan2(p[0] - pos[0], p[2] - pos[2]) - g.ch[c].body_yaw)
@@ -75,17 +75,17 @@ pub fn able(g: &mut crate::game::Game) -> bool {
 }
 
 /// How far off a press can begin one. (stalk.ts beginM)
-pub fn begin_m(g: &mut crate::game::Game) -> f64 {
+pub fn begin_m(g: &crate::game::Game) -> f64 {
     m::max(g.k.close.mode_m, g.k.stalk.low_begin_m)
 }
 
 /// How far off one is given up. (stalk.ts outM)
-pub fn out_m(g: &mut crate::game::Game) -> f64 {
+pub fn out_m(g: &crate::game::Game) -> f64 {
     m::max(g.k.close.mode_out_m, g.k.stalk.low_out_m)
 }
 
 /// (stalk.ts stalkBeginM)
-pub fn stalk_begin_m(g: &mut crate::game::Game) -> f64 {
+pub fn stalk_begin_m(g: &crate::game::Game) -> f64 {
     begin_m(g)
 }
 
@@ -367,7 +367,7 @@ pub fn dragged(g: &mut crate::game::Game, pl: PlayerId, gd: GuardId, p: &[f64], 
 }
 
 /// The share of a way into the man left to it at `dist`: all until 20 cm outside `keyM`, none from 4 cm outside. (stalk.ts intoKeep)
-pub fn into_keep(g: &mut crate::game::Game, dist: f64) -> f64 {
+pub fn into_keep(g: &crate::game::Game, dist: f64) -> f64 {
     v3::clamp((dist - g.k.stalk.key_m - 0.04) / 0.16, 0.0, 1.0)
 }
 
@@ -516,7 +516,7 @@ pub fn stalk_wait(g: &mut crate::game::Game) -> Option<crate::stalk::StalkWait> 
 }
 
 /// A man is being stalked, or the stalk has just become a grab: this frame's left click is no blow. (stalk.ts stalkHas)
-pub fn stalk_has(g: &mut crate::game::Game) -> bool {
+pub fn stalk_has(g: &crate::game::Game) -> bool {
     match g.m.stalk.state.get(g.player) {
         Some(s) => s.t == g.time && (s.on.is_some() || s.grab.is_some()),
         None => false,
@@ -524,7 +524,7 @@ pub fn stalk_has(g: &mut crate::game::Game) -> bool {
 }
 
 /// The man the stalk reached this frame: the grab to take now. (stalk.ts stalkGrab)
-pub fn stalk_grab(g: &mut crate::game::Game) -> Option<GuardId> {
+pub fn stalk_grab(g: &crate::game::Game) -> Option<GuardId> {
     match g.m.stalk.state.get(g.player) {
         Some(s) if s.t == g.time => s.grab,
         _ => None,
@@ -551,7 +551,7 @@ pub fn stalk_key_took(g: &mut crate::game::Game) {
 }
 
 /// The man being stalked right now. (stalk.ts stalkOn)
-pub fn stalk_on(g: &mut crate::game::Game) -> Option<GuardId> {
+pub fn stalk_on(g: &crate::game::Game) -> Option<GuardId> {
     g.m.stalk.state.get(g.player).and_then(|s| s.on)
 }
 

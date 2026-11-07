@@ -9,4 +9,4 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/anim/characters.ts:108 CharacterRenderer.finish)
-pub fn character_renderer_finish(g: &mut crate::game::Game, count: f64) {}
+pub fn character_renderer_finish(g: &crate::game::Game, count: f64) {}

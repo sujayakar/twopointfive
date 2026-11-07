@@ -193,7 +193,7 @@ fn group_count(groups: &[f64], cur: &[usize], l: &[usize]) -> f64 {
 }
 
 /// orders.ts:2532 `rec`: every way of dealing the men from man `i` on
-fn pair_rec(g: &mut Game, s: &mut PairDeal, i: usize, walk: f64) {
+fn pair_rec(g: &Game, s: &mut PairDeal, i: usize, walk: f64) {
     if i == s.men.len() {
         let mut c = walk;
         if let Some(groups) = s.groups {
@@ -326,7 +326,7 @@ pub fn squad_orders_status_of(g: &mut crate::game::Game, gd: GuardId) -> String 
 }
 
 /// Who the next order goes to, as the panel names it.   (orders.ts SquadOrders.whoTag)
-pub fn squad_orders_who_tag(g: &mut crate::game::Game) -> crate::orders::SquadOrdersWhoTag {
+pub fn squad_orders_who_tag(g: &crate::game::Game) -> crate::orders::SquadOrdersWhoTag {
     if g.orders.menu.as_ref().map_or(false, |x| x.part.is_some()) {
         let men = g.orders.menu.as_ref().unwrap().men.clone();
         let tag = if !men.is_empty() { squad_orders_who_words(g, Some(&men)) } else { String::from("nobody") };
@@ -352,7 +352,7 @@ pub fn squad_orders_who_tag(g: &mut crate::game::Game) -> crate::orders::SquadOr
 }
 
 /// A target in the panel's words: what an order from the menu would be about.   (orders.ts SquadOrders.hoverWords)
-pub fn squad_orders_hover_words(g: &mut crate::game::Game, t: Option<&crate::orders::OrderTarget>) -> String {
+pub fn squad_orders_hover_words(g: &crate::game::Game, t: Option<&crate::orders::OrderTarget>) -> String {
     match t {
         None => String::new(),
         Some(OrderTarget::Door(t)) => door_words(g, t.door),
@@ -385,7 +385,7 @@ fn way_len(from: V3, w: &[V3]) -> f64 {
 }
 
 /// orders.ts:2647 `doors`: the doors a way crosses, each once, in the order it crosses them
-fn way_doors(g: &mut Game, from: V3, w: &[V3]) -> Vec<DoorId> {
+fn way_doors(g: &Game, from: V3, w: &[V3]) -> Vec<DoorId> {
     let mut out: Vec<DoorId> = Vec::new();
     let mut q = from;
     for &c in w {
@@ -401,7 +401,7 @@ fn way_doors(g: &mut Game, from: V3, w: &[V3]) -> Vec<DoorId> {
 }
 
 /// Of the way over the statics alone and the way laid with movable things dear, the one he walks.   (orders.ts propWay)
-pub fn prop_way(g: &mut crate::game::Game, from: V3, plain: &[V3], round: Option<&[V3]>) -> Vec<V3> {
+pub fn prop_way(g: &crate::game::Game, from: V3, plain: &[V3], round: Option<&[V3]>) -> Vec<V3> {
     let round = match round { Some(r) if !r.is_empty() => r, _ => return plain.to_vec() };
     if way_len(from, round) > way_len(from, plain) + g.k.orders.prop_round_more { return plain.to_vec(); }
     let a = way_doors(g, from, plain);
@@ -456,7 +456,7 @@ pub fn prop_penalty(g: &mut crate::game::Game, gd: GuardId, pen: Option<&crate::
 }
 
 /// What a PropPenalty answers for a cell: dear or not, times what `pen` asks.   (orders.ts:2660, the closure propPenalty returns)
-pub fn prop_penalty_at(g: &mut crate::game::Game, p: &crate::orders::PropPenalty, ix: f64, iz: f64) -> f64 {
+pub fn prop_penalty_at(g: &crate::game::Game, p: &crate::orders::PropPenalty, ix: f64, iz: f64) -> f64 {
     let PropPenalty::Dear { dear, cost, pen } = p;
     let here = if dear.has(crate::Num(crate::scene_collision::nav_grid_idx(g, ix, iz))) { *cost } else { 1.0 };
     here * match pen.as_ref() { Some(q) => crate::lanes::lane_penalty_at(q, ix, iz), None => 1.0 }
@@ -496,7 +496,7 @@ pub fn far_off(a: &[V3], b: &[V3]) -> crate::orders::FarOff {
 // ------------------------------------------------------------ a door's frame and its name
 
 /// How far off a door's frame line a point is (signed: sideOf's sign).   (orders.ts offLine)
-pub fn off_line(g: &mut crate::game::Game, d: DoorId, p: V3) -> f64 {
+pub fn off_line(g: &crate::game::Game, d: DoorId, p: V3) -> f64 {
     let (th, h) = (g.dr[d].def.closed_dir, g.dr[d].def.hinge);
     m::cos(th) * (p[2] - h[1]) - m::sin(th) * (p[0] - h[0])
 }
@@ -508,7 +508,7 @@ pub fn side_of(g: &mut crate::game::Game, d: DoorId, p: V3) -> f64 {
 }
 
 /// A door's name as the squad says it.   (orders.ts doorWords)
-pub fn door_words(g: &mut crate::game::Game, d: DoorId) -> String {
+pub fn door_words(g: &crate::game::Game, d: DoorId) -> String {
     if let Some(said) = crate::doornames::door_said_name(g, d) { return said; }
     let name = g.dr[d].def.name.clone();
     door_id_words(g, &name)
@@ -523,7 +523,7 @@ fn id_words(id: &str) -> String {
 }
 
 /// A door's id said as words: compass letters as words, no token dropped.   (orders.ts doorIdWords)
-pub fn door_id_words(g: &mut crate::game::Game, id_2: &str) -> String { id_words(id_2) }
+pub fn door_id_words(g: &crate::game::Game, id_2: &str) -> String { id_words(id_2) }
 
 #[cfg(test)]
 mod tests {

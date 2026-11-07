@@ -22,7 +22,7 @@ fn temperament_row(callsign: &str) -> Option<crate::game::Temperament> {
 }
 
 /// How readily this body accrues suppression, by his temperament.   (suppression.ts keenOf)
-pub fn keen_of(g: &mut crate::game::Game, c_2: CharId) -> f64 {
+pub fn keen_of(g: &crate::game::Game, c_2: CharId) -> f64 {
     if c_2 == g.pl[g.player].ch { return 1.0; }
     let mut t: Option<crate::game::Temperament> = None;
     for &x in &g.guards {
@@ -249,7 +249,7 @@ pub fn suppression_lines(moment: Option<crate::suppression::SupMoment>) -> Vec<S
 }
 
 /// May this man's behaviour react at all this frame.   (suppression.ts reacts)
-pub fn reacts(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn reacts(g: &crate::game::Game, gd: GuardId) -> bool {
     g.tune.suppression && g.ai_enabled && g.gd[gd].state != crate::game::GuardState::Dead && g.gd[gd].held.is_none() && g.gd[gd].script.is_none()
 }
 
@@ -472,7 +472,7 @@ pub fn end_displace(g: &mut crate::game::Game, gd: GuardId, why: &str) {
 }
 
 /// May the plain fight close on the player right now, or is he holding the cover he has just reached.   (suppression.ts holdingCover)
-pub fn holding_cover(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn holding_cover(g: &crate::game::Game, gd: GuardId) -> bool {
     g.tune.suppression && g.time < g.gd[gd].sup.cover_until
 }
 
@@ -562,7 +562,7 @@ pub fn cover_from(g: &mut crate::game::Game, gd: GuardId, threat: V3) -> Option<
 }
 
 /// What suppression does to a guard's next round: extra cone, and x the cadence he draws after it.   (suppression.ts guardFireMods)
-pub fn guard_fire_mods(g: &mut crate::game::Game, gd: GuardId) -> crate::suppression::GuardFireMods {
+pub fn guard_fire_mods(g: &crate::game::Game, gd: GuardId) -> crate::suppression::GuardFireMods {
     if !g.tune.suppression { return GuardFireMods { spread: 0.0, gap: 1.0 }; }
     let v = g.gd[gd].sup.v;
     let spread = g.k.suppression.guard_spread * crate::condition::condition_sup(g, crate::condition::Man::Guard(gd), v);
@@ -570,12 +570,12 @@ pub fn guard_fire_mods(g: &mut crate::game::Game, gd: GuardId) -> crate::suppres
 }
 
 /// Is he rattled (over the flinch line, reactions on).   (suppression.ts flinching)
-pub fn flinching(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn flinching(g: &crate::game::Game, gd: GuardId) -> bool {
     reacts(g, gd) && g.gd[gd].sup.v >= g.k.suppression.flinch
 }
 
 /// Extra cone on the player's own round for his own suppression.   (suppression.ts samSpread)
-pub fn sam_spread(g: &mut crate::game::Game) -> f64 {
+pub fn sam_spread(g: &crate::game::Game) -> f64 {
     if g.tune.suppression && g.puppet.is_none() {
         let p = g.player;
         let v = g.pl[p].sup.v;

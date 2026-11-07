@@ -464,7 +464,7 @@ pub fn press_stop(g: &mut crate::game::Game) {
 }
 
 /// when the look this man is on was called (called and not yet gone, or still out), or none. Words only   (pressure.ts lookSince)
-pub fn look_since(g: &mut crate::game::Game, gd: GuardId) -> Option<f64> {
+pub fn look_since(g: &crate::game::Game, gd: GuardId) -> Option<f64> {
     let st = g.m.pressure.states.as_ref()?;
     let is_his = |d: &RoomfightDefId| g.tab.roomfight_def[*d].gd == gd;
     let on_look = st.look.as_ref().map_or(false, |l| l.men.iter().any(is_his));
@@ -477,5 +477,5 @@ pub fn reset_pressure(g: &mut crate::game::Game) {
 }
 
 /// the host's stored copy of the table: nothing here   (pressure.ts savePressure)
-pub fn save_pressure(g: &mut crate::game::Game) {}
+pub fn save_pressure(g: &crate::game::Game) {}
 

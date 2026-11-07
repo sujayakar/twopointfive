@@ -145,7 +145,7 @@ pub fn chatty(g: &mut crate::game::Game, x: GuardId) -> bool {
 }
 
 /// Still fit to keep talking (the hold flag is ours by now). (dialogue.ts stillChatty)
-pub fn still_chatty(g: &mut crate::game::Game, x: GuardId) -> bool {
+pub fn still_chatty(g: &crate::game::Game, x: GuardId) -> bool {
     let m = &g.gd[x];
     m.state == crate::game::GuardState::Patrol && m.held.is_none() && m.script.is_none() && m.task.is_none()
         && m.body_duty.is_none() && m.awareness < 0.3 && g.guards.contains(&x)

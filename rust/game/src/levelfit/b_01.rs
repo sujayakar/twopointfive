@@ -11,7 +11,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 // ---- the terms of the count: called by the bodies below, stubs with no other caller, written here so no refusal panics on an empty stub
 
 /// Men a game holds at once, at most.   (levelfit.ts menMost)
-pub fn men_most(g: &mut crate::game::Game, civilians: f64) -> f64 {
+pub fn men_most(g: &crate::game::Game, civilians: f64) -> f64 {
     crate::guards::MAX_SKINNED + civilians + g.k.seats.max - 1.0
 }
 
@@ -24,7 +24,7 @@ pub fn men_held(g: &mut crate::game::Game) -> f64 {
 }
 
 /// What one step is handed of the men, at most.   (levelfit.ts handOverMost)
-pub fn hand_over_most(g: &mut crate::game::Game, civilians: f64) -> crate::levelfit::HandOverMost {
+pub fn hand_over_most(g: &crate::game::Game, civilians: f64) -> crate::levelfit::HandOverMost {
     let door_men = men_most(g, civilians) * (crate::game::body_door_particles().len() as f64 + 1.0);
     let prop_men = men_most(g, civilians);
     crate::levelfit::HandOverMost { door_men, prop_men }
@@ -98,7 +98,7 @@ pub fn level_counts(g: &mut crate::game::Game, level: &crate::levelfit::LevelCou
 }
 
 /// Statics that carry a cut record.   (levelfit.ts cutStatics)
-pub fn cut_statics(g: &mut crate::game::Game, boxes: &[BoxId]) -> f64 {
+pub fn cut_statics(g: &crate::game::Game, boxes: &[BoxId]) -> f64 {
     let mut n = 0.0;
     for &b in boxes.iter() { if g.tab.boxes[b].cut.as_ref().is_some_and(|c| !c.is_empty()) { n += 1.0; } }
     n
@@ -240,7 +240,7 @@ pub fn civ_most(g: &mut crate::game::Game) -> f64 {
 }
 
 /// A level the game will not load, said by its name where it has one.   (levelfit.ts levelTooBig)
-pub fn level_too_big(g: &mut crate::game::Game, why: &str) -> String {
+pub fn level_too_big(g: &crate::game::Game, why: &str) -> String {
     let name = crate::scene_level_load::level_name_of(g);
     crate::scene_box_mirror::too_big(name.as_deref(), why)
 }
@@ -275,7 +275,7 @@ pub fn level_over(g: &mut crate::game::Game, level: &crate::levelfit::LevelCount
 }
 
 /// The room a level leaves for its pieces: how many more statics, entries of the grid's cells and cut rows the copy holds than the level stands with. Infinity where there is no module.   (levelfit.ts breakRoom)
-pub fn break_room(g: &mut crate::game::Game, col: &crate::levelfit::StoodCol, tables: &JsMap<String, f64>) -> crate::levelfit::BreakRoom {
+pub fn break_room(g: &crate::game::Game, col: &crate::levelfit::StoodCol, tables: &JsMap<String, f64>) -> crate::levelfit::BreakRoom {
     let boxes = table(tables, "boxes").unwrap_or(0.0);
     if !js::truthy(boxes) { return crate::levelfit::BreakRoom { boxes: f64::INFINITY, items: f64::INFINITY, cuts: f64::INFINITY }; }
     let (_, entries, _) = grid_count(g);

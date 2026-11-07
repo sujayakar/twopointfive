@@ -58,10 +58,10 @@ pub fn stature_tick(g: &mut crate::game::Game, men: &[CharId], dt: f64) -> bool 
 }
 
 /// The scale this man is drawn at this frame (1 = as the skeleton has him). (src/game/stature.ts:59 statureOf)
-pub fn stature_of(g: &mut crate::game::Game, c_2: CharId) -> f64 { g.m.stature.shown.get(c_2).copied().unwrap_or(1.0) }
+pub fn stature_of(g: &crate::game::Game, c_2: CharId) -> f64 { g.m.stature.shown.get(c_2).copied().unwrap_or(1.0) }
 
 /// Where a point of the simulation's man is DRAWN: scaled about his feet. (src/game/stature.ts:62 drawnPoint)
-pub fn drawn_point(g: &mut crate::game::Game, c_2: CharId, p: V3, s: Option<f64>) -> V3 {
+pub fn drawn_point(g: &crate::game::Game, c_2: CharId, p: V3, s: Option<f64>) -> V3 {
     let s = match s { Some(s) => s, None => stature_of(g, c_2) };
     let f = g.ch[c_2].pos;
     if s == 1.0 { p } else { [f[0] + (p[0] - f[0]) * s, f[1] + (p[1] - f[1]) * s, f[2] + (p[2] - f[2]) * s] }
@@ -69,7 +69,7 @@ pub fn drawn_point(g: &mut crate::game::Game, c_2: CharId, p: V3, s: Option<f64>
 
 /// The boxes out[from‥] that carry a drawn man's owner byte (his rig, a can in his fist): where the picture is to draw them (Box.dc / dh). The box
 /// itself is not moved. (src/game/stature.ts:94 drawnBoxes)
-pub fn drawn_boxes(g: &mut crate::game::Game, men: &[CharId], out: &mut Vec<BoxId>, from: f64) {
+pub fn drawn_boxes(g: &mut crate::game::Game, men: &[CharId], out: &Vec<BoxId>, from: f64) {
     let mut any = false;
     for &c in men { if stature_of(g, c) != 1.0 { let i = (js::to_i32(g.ch[c].id) & 0xff) as usize; g.m.stature.by_id[i] = Some(c); any = true; } }
     let mut k = from as usize;
@@ -90,7 +90,7 @@ pub fn drawn_boxes(g: &mut crate::game::Game, men: &[CharId], out: &mut Vec<BoxI
 
 /// A weapon laser's ray as drawn: it leaves the DRAWN muzzle and still ends on the simulation's point (from + dir · L). `k` = drawn length ÷ the
 /// simulation's. (src/game/stature.ts:103 drawnBeam)
-pub fn drawn_beam(g: &mut crate::game::Game, c_2: CharId, from: V3, dir: V3, l: f64) -> crate::stature::DrawnBeam {
+pub fn drawn_beam(g: &crate::game::Game, c_2: CharId, from: V3, dir: V3, l: f64) -> crate::stature::DrawnBeam {
     let s = stature_of(g, c_2);
     if s == 1.0 || !(l > 1e-4) { return DrawnBeam { from, dir, k: 1.0 }; }
     let a = drawn_point(g, c_2, from, Some(s));

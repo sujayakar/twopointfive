@@ -175,7 +175,7 @@ pub fn row_stack_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::or
     None
 }
 /// 'cover'.label (orders.ts:605)
-pub fn row_cover_label(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) -> String {
+pub fn row_cover_label(g: &crate::game::Game, t: &crate::orders::OrderTarget) -> String {
     String::from(if matches!(t, OrderTarget::Door(_)) { "cover this door" } else { "cover that way" })
 }
 /// 'cover'.can (orders.ts:606)
@@ -305,7 +305,7 @@ pub fn row_hold_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::ord
 // ------------------------------------------------------------ the night breach's owner (orders.ts:630-637)
 
 /// owner 'nightbreach'.owns: of four, the drill's are the first pair alone
-pub fn nightbreach_owns(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn nightbreach_owns(g: &crate::game::Game, gd: GuardId) -> bool {
     g.night_breach.active && crate::nightbreach::night_breach_drill_ops(g).contains(&gd) && crate::nightbreach::night_breach_owns_pair(g)
 }
 /// owner 'nightbreach'.release: the drill is the pair's, letting go of one man ends it for both
@@ -313,7 +313,7 @@ pub fn nightbreach_release(g: &mut crate::game::Game, gd: GuardId) -> Option<Str
     if g.night_breach.active && crate::nightbreach::night_breach_drill_ops(g).contains(&gd) { crate::nightbreach::night_breach_call_off(g) } else { None }
 }
 /// owner 'nightbreach'.status
-pub fn nightbreach_status(g: &mut crate::game::Game, gd: GuardId) -> Option<String> {
+pub fn nightbreach_status(g: &crate::game::Game, gd: GuardId) -> Option<String> {
     use crate::nightbreach::NightBreachState as St;
     if !g.night_breach.active || !g.night_breach.ops.contains(&gd) { return None; }
     let state = crate::nightbreach::night_breach_state(g);
@@ -389,7 +389,7 @@ pub fn squad_orders_new(g: &mut crate::game::Game, cast: Option<&crate::orders::
 }
 
 /// Is there a squad to order at all (a living operative unit, outside any show).   (orders.ts SquadOrders.active)
-pub fn squad_orders_active(g: &mut crate::game::Game) -> bool {
+pub fn squad_orders_active(g: &crate::game::Game) -> bool {
     if g.touring || g.quiet_utility || g.puppet.is_some() || crate::director::director_showing(g) { return false; }
     let mut i = 0;
     while i < g.guards.len() {
@@ -401,7 +401,7 @@ pub fn squad_orders_active(g: &mut crate::game::Game) -> bool {
 }
 
 /// The roster: every operative unit on the guard list, in its order, down or up.   (orders.ts SquadOrders.squad)
-pub fn squad_orders_squad(g: &mut crate::game::Game) -> Vec<GuardId> {
+pub fn squad_orders_squad(g: &crate::game::Game) -> Vec<GuardId> {
     let mut out = Vec::new();
     let mut i = 0;
     while i < g.guards.len() {
@@ -413,7 +413,7 @@ pub fn squad_orders_squad(g: &mut crate::game::Game) -> Vec<GuardId> {
 }
 
 /// Is he one of the men these orders move: the one roster test.   (orders.ts SquadOrders.mine)
-pub fn squad_orders_mine(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn squad_orders_mine(g: &crate::game::Game, gd: GuardId) -> bool {
     if g.orders.cast.is_some() { return g.qrf.men.contains(&gd); }   // (OtherCast.mine: its one closure, qrf.ts:1021)
     if g.gd[gd].unit.is_none() || g.gd[gd].team != crate::teams::Team::Operative { return false; }
     let seat = g.seat;
@@ -421,12 +421,12 @@ pub fn squad_orders_mine(g: &mut crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// The player is one of these men's own.   (orders.ts SquadOrders.sams)
-pub fn squad_orders_sams(g: &mut crate::game::Game) -> bool {
+pub fn squad_orders_sams(g: &crate::game::Game) -> bool {
     g.orders.cast.is_none()
 }
 
 /// Whose side a can of theirs is.   (orders.ts SquadOrders.team)
-pub fn squad_orders_team(g: &mut crate::game::Game) -> crate::teams::Team {
+pub fn squad_orders_team(g: &crate::game::Game) -> crate::teams::Team {
     match &g.orders.cast {
         Some(c) => c.team,
         None => crate::teams::Team::Operative,
@@ -434,7 +434,7 @@ pub fn squad_orders_team(g: &mut crate::game::Game) -> crate::teams::Team {
 }
 
 /// The keys a locked door is tried with for them: Sam's ring and the codes he has learned.   (orders.ts SquadOrders.ring)
-pub fn squad_orders_ring(g: &mut crate::game::Game) -> JsSet<String> {
+pub fn squad_orders_ring(g: &crate::game::Game) -> JsSet<String> {
     if let Some(c) = &g.orders.cast { return c.ring.clone(); }
     let p = g.player;
     let mut out = g.pl[p].keys.clone();
@@ -443,7 +443,7 @@ pub fn squad_orders_ring(g: &mut crate::game::Game) -> JsSet<String> {
 }
 
 /// The living men an order would go to: the teammate under the reticle, else `who`.   (orders.ts SquadOrders.recipients)
-pub fn squad_orders_recipients(g: &mut crate::game::Game, t: Option<&crate::orders::OrderTarget>, who: Option<crate::orders::Who>) -> Vec<GuardId> {
+pub fn squad_orders_recipients(g: &crate::game::Game, t: Option<&crate::orders::OrderTarget>, who: Option<crate::orders::Who>) -> Vec<GuardId> {
     if let Some(OrderTarget::None(x)) = t {
         if let Some(man) = x.man {
             return if !is_dead(g, man) && squad_orders_squad(g).contains(&man) { vec![man] } else { Vec::new() };
@@ -454,7 +454,7 @@ pub fn squad_orders_recipients(g: &mut crate::game::Game, t: Option<&crate::orde
 }
 
 /// The one place to ask for men: the squad, a pair, or a man; the living unless `down`.   (orders.ts SquadOrders.men)
-pub fn squad_orders_men(g: &mut crate::game::Game, sel: Option<crate::orders::SquadOrdersMenSel>, opts: Option<crate::orders::SquadOrdersMenOpts>) -> Vec<GuardId> {
+pub fn squad_orders_men(g: &crate::game::Game, sel: Option<crate::orders::SquadOrdersMenSel>, opts: Option<crate::orders::SquadOrdersMenOpts>) -> Vec<GuardId> {
     let s = squad_orders_squad(g);
     let pair_is = |g: &Game, gd: GuardId, id: crate::game::PairId| g.gd[gd].unit.as_ref().and_then(|u| u.pair) == Some(id);
     let list: Vec<GuardId> = match sel.unwrap_or(SquadOrdersMenSel::All) {
@@ -473,17 +473,17 @@ pub fn squad_orders_men(g: &mut crate::game::Game, sel: Option<crate::orders::Sq
 }
 
 /// The squad of four (any roster of more than two).   (orders.ts SquadOrders.big)
-pub fn squad_orders_big(g: &mut crate::game::Game) -> bool {
+pub fn squad_orders_big(g: &crate::game::Game) -> bool {
     squad_orders_men(g, Some(SquadOrdersMenSel::All), Some(SquadOrdersMenOpts { down: Some(true) })).len() > 2
 }
 
 /// The pair a man was dealt into.   (orders.ts SquadOrders.pairOf)
-pub fn squad_orders_pair_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::game::PairId> {
+pub fn squad_orders_pair_of(g: &crate::game::Game, gd: GuardId) -> Option<crate::game::PairId> {
     g.gd[gd].unit.as_ref().and_then(|u| u.pair)
 }
 
 /// The pairs on the roster, in its order.   (orders.ts SquadOrders.pairs)
-pub fn squad_orders_pairs(g: &mut crate::game::Game) -> Vec<crate::game::PairId> {
+pub fn squad_orders_pairs(g: &crate::game::Game) -> Vec<crate::game::PairId> {
     let mut out = Vec::new();
     for gd in squad_orders_squad(g) {
         if let Some(id) = g.gd[gd].unit.as_ref().and_then(|u| u.pair) {
@@ -494,7 +494,7 @@ pub fn squad_orders_pairs(g: &mut crate::game::Game) -> Vec<crate::game::PairId>
 }
 
 /// Is the squad dealt into more than one pair.   (orders.ts SquadOrders.paired)
-pub fn squad_orders_paired(g: &mut crate::game::Game) -> bool {
+pub fn squad_orders_paired(g: &crate::game::Game) -> bool {
     squad_orders_pairs(g).len() > 1
 }
 
@@ -522,7 +522,7 @@ pub fn squad_orders_cycle_who(g: &mut crate::game::Game, dir: Option<f64>) -> cr
 }
 
 /// CMDRING.wholeSquad, the player's own squad: every order of his is everyone's.   (orders.ts SquadOrders.whole)
-pub fn squad_orders_whole(g: &mut crate::game::Game) -> bool {
+pub fn squad_orders_whole(g: &crate::game::Game) -> bool {
     g.orders.cast.is_none()
 }
 
@@ -535,7 +535,7 @@ pub fn squad_orders_address(g: &mut crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// Who these men are, in a word or two.   (orders.ts SquadOrders.whoWords)
-pub fn squad_orders_who_words(g: &mut crate::game::Game, men: Option<&[GuardId]>) -> String {
+pub fn squad_orders_who_words(g: &crate::game::Game, men: Option<&[GuardId]>) -> String {
     let own;
     let men: &[GuardId] = match men {
         Some(m) => m,
@@ -556,7 +556,7 @@ pub fn squad_orders_who_words(g: &mut crate::game::Game, men: Option<&[GuardId]>
 }
 
 /// The element's colour for the panel.   (orders.ts SquadOrders.toneOf)
-pub fn squad_orders_tone_of(g: &mut crate::game::Game, men: &[GuardId]) -> Option<crate::orders::Tone> {
+pub fn squad_orders_tone_of(g: &crate::game::Game, men: &[GuardId]) -> Option<crate::orders::Tone> {
     if !squad_orders_paired(g) || men.is_empty() { return None; }
     let id = squad_orders_pair_of(g, men[0]);
     if let Some(id) = id {
@@ -571,12 +571,12 @@ pub fn squad_orders_tone_of(g: &mut crate::game::Game, men: &[GuardId]) -> Optio
 }
 
 /// (orders.ts SquadOrders.has)
-pub fn squad_orders_has(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn squad_orders_has(g: &crate::game::Game, gd: GuardId) -> bool {
     g.orders.asg.has(gd)
 }
 
 /// (orders.ts SquadOrders.of)
-pub fn squad_orders_of(g: &mut crate::game::Game, gd: GuardId) -> Option<OrdersAssignmentId> {
+pub fn squad_orders_of(g: &crate::game::Game, gd: GuardId) -> Option<OrdersAssignmentId> {
     g.orders.asg.get(gd).copied()
 }
 
@@ -596,7 +596,7 @@ pub fn squad_orders_follow_word(g: &mut crate::game::Game, a: OrdersAssignmentId
 }
 
 /// Is he shown as there: a follower's is the latch, every other order's is `arrived`.   (orders.ts SquadOrders.shownThere)
-pub fn squad_orders_shown_there(g: &mut crate::game::Game, a: OrdersAssignmentId) -> bool {
+pub fn squad_orders_shown_there(g: &crate::game::Game, a: OrdersAssignmentId) -> bool {
     let row = &g.tab.orders_assignment[a];
     if row.post.is_some() { return row.arrived; }
     match g.m.orders.follow_word.get(a) {
@@ -613,7 +613,7 @@ fn listed_on(d: &OrderDef) -> &[TargetKind] {
     }
 }
 /// Is this digit taken on `def`'s page by a row offered on one of its targets (orders.ts:714)
-fn digit_clash(g: &mut Game, def: OrdersOrderDefId, k: f64) -> bool {
+fn digit_clash(g: &Game, def: OrdersOrderDefId, k: f64) -> bool {
     let me = &g.tab.orders_order_def[def];
     let page = me.page.as_deref().unwrap_or("");
     g.orders.defs.iter().any(|&o| {
@@ -776,7 +776,7 @@ fn ray_on_door(ro: V3, rd: V3, c: V3, th: f64, width: f64, height: f64, pad: f64
 }
 
 /// The door a ray is on as drawn: the nearest doorway it crosses with nothing of the scene nearer.   (orders.ts SquadOrders.doorOnRay)
-pub fn squad_orders_door_on_ray(g: &mut crate::game::Game, ro: V3, rd: V3, t_scene: Option<f64>) -> Option<DoorId> {
+pub fn squad_orders_door_on_ray(g: &crate::game::Game, ro: V3, rd: V3, t_scene: Option<f64>) -> Option<DoorId> {
     let t_scene = t_scene.unwrap_or(f64::INFINITY);
     let pad = g.k.orders.door_ray_pad;
     let mut best: Option<DoorId> = None;

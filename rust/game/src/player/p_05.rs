@@ -785,12 +785,12 @@ pub fn start_whip(g: &mut crate::game::Game) {
 }
 
 /// The knife's clock in the hold.   (player.ts killSecs)
-pub fn kill_secs(g: &mut crate::game::Game) -> f64 {
+pub fn kill_secs(g: &crate::game::Game) -> f64 {
     g.k.hold.secs.kill
 }
 
 /// Seconds into the knife's clock at which the blade is in: the hold broken from there on leaves the man dead all the same.   (player.ts killCut)
-pub fn kill_cut(g: &mut crate::game::Game) -> f64 {
+pub fn kill_cut(g: &crate::game::Game) -> f64 {
     g.k.hold.kill.hit * kill_secs(g)
 }
 
@@ -873,7 +873,7 @@ pub fn keep_held_off_guards(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// Where the exchange with the man in his arm stands. `speaking` says the man's bubble is his answer: a write goes to `g.gd[h.g].bubble`.   (player.ts heldTalk)
-pub fn held_talk(g: &mut crate::game::Game, h: &crate::player::Hold) -> crate::player::HeldTalk {
+pub fn held_talk(g: &crate::game::Game, h: &crate::player::Hold) -> crate::player::HeldTalk {
     let gd = h.g;
     let talk = g.gd[gd].talk;
     let last_t = g.tab.game_talk[talk].last_t;

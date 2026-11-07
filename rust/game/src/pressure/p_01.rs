@@ -56,12 +56,12 @@ pub fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::pressure::St
 }
 
 /// PRESSURE.wayOut on a floor whose structure asks for it. (pressure.ts wayOut)
-pub fn way_out(g: &mut crate::game::Game) -> bool {
+pub fn way_out(g: &crate::game::Game) -> bool {
     g.k.pressure.way_out && g.level.scenarios.as_ref().and_then(|s| s.room_clear.as_ref()).and_then(|r| r.way_out) == Some(true)
 }
 
 /// The press forms up outside the doors before it goes; `gather` is off on the page and under hard. (pressure.ts forms)
-pub fn forms(g: &mut crate::game::Game) -> bool {
+pub fn forms(g: &crate::game::Game) -> bool {
     way_out(g)
 }
 
@@ -77,7 +77,7 @@ pub fn pick(g: &mut crate::game::Game, who: crate::dice::Who, r: [f64; 2]) -> f6
 }
 
 /// (pressure.ts alive)
-pub fn alive(g: &mut crate::game::Game, d: RoomfightDefId) -> bool {
+pub fn alive(g: &crate::game::Game, d: RoomfightDefId) -> bool {
     let gd = g.tab.roomfight_def[d].gd;
     g.gd[gd].state != crate::game::GuardState::Dead
 }
@@ -92,13 +92,13 @@ pub fn note(g: &mut crate::game::Game, gd: GuardId, what: &str) {
 }
 
 /// The nav grid's cell a point falls in. (pressure.ts cellOf)
-pub fn cell_of(g: &mut crate::game::Game, p: V3) -> f64 {
+pub fn cell_of(g: &crate::game::Game, p: V3) -> f64 {
     let cell = g.col.nav.cell;
     crate::scene_collision::nav_grid_idx(g, m::floor(p[0] / cell), m::floor(p[2] / cell))
 }
 
 /// Where his eyes are: the head bone, or a standing man's height. (pressure.ts eyeOf)
-pub fn eye_of(g: &mut crate::game::Game, gd: GuardId) -> V3 {
+pub fn eye_of(g: &crate::game::Game, gd: GuardId) -> V3 {
     let c = g.gd[gd].ch;
     match g.ch[c].bones.get(crate::character::Bone::Head) {
         Some(h) => [h[0], h[1], h[2]],
@@ -191,7 +191,7 @@ pub fn press_wants(g: &mut crate::game::Game, def: RoomfightDefId) -> bool {
 }
 
 /// digin.ts asks this too: true = a press has left him to keep his room, and a mate of that room has gone. (pressure.ts pressKeeps)
-pub fn press_keeps(g: &mut crate::game::Game, def: RoomfightDefId) -> bool {
+pub fn press_keeps(g: &crate::game::Game, def: RoomfightDefId) -> bool {
     if !g.k.pressure.on {
         return false;
     }
@@ -285,7 +285,7 @@ pub fn gather_spot(g: &mut crate::game::Game, d: RoomfightDefId, t: RoomfightRoo
 }
 
 /// A living mate stands within a body's width of p (gatherSpot's `F.defs.some`).
-fn mate_stands_on(g: &mut Game, d: RoomfightDefId, p: V3) -> bool {
+fn mate_stands_on(g: &Game, d: RoomfightDefId, p: V3) -> bool {
     let mut i = 0;
     while i < g.fight.defs.len() {
         let x = g.fight.defs[i];

@@ -48,7 +48,7 @@ fn new_man(t: f64) -> crate::spotted::Man {
 pub fn flat(a: &[f64], b: &[f64]) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 
 /// a man's eyes: the head bone, or 1.6 over his feet (spotted.ts eyeOf)
-pub fn eye_of(g: &mut crate::game::Game, gd: GuardId) -> V3 {
+pub fn eye_of(g: &crate::game::Game, gd: GuardId) -> V3 {
     let c = g.gd[gd].ch;
     if let Some(h) = g.ch[c].bones.get(crate::character::Bone::Head) { return *h; }
     let p = g.ch[c].pos;
@@ -72,7 +72,7 @@ pub fn lit_at(g: &mut crate::game::Game, q: &[f64]) -> f64 {
 }
 
 /// his foe is Sam on his feet, or a live operative (spotted.ts ours)
-pub fn ours(g: &mut crate::game::Game, h: GuardId) -> bool {
+pub fn ours(g: &crate::game::Game, h: GuardId) -> bool {
     match g.gd[h].foe {
         Some(crate::game::Foe::Player) => !g.pl[g.player].down,
         Some(crate::game::Foe::Guard(f)) => g.gd[f].team == crate::teams::Team::Operative && g.gd[f].state != crate::game::GuardState::Dead,
@@ -81,7 +81,7 @@ pub fn ours(g: &mut crate::game::Game, h: GuardId) -> bool {
 }
 
 /// an alert man with a real sighting of one of them inside `freshSecs` (spotted.ts hasThem)
-pub fn has_them(g: &mut crate::game::Game, h: GuardId) -> bool {
+pub fn has_them(g: &crate::game::Game, h: GuardId) -> bool {
     let since = g.time - g.gd[h].last_seen_t;
     g.gd[h].state == crate::game::GuardState::Alert && since >= 0.0 && since < g.k.spotted.fresh_secs && ours(g, h)
 }
@@ -211,7 +211,7 @@ pub fn cue(g: &mut crate::game::Game, gd: GuardId, text: &str, gap: Option<f64>)
 }
 
 /// candidate spots round `p`, nearest first: on the floor, a straight walk from where he stands, off every doorway and off Sam (spotted.ts ring)
-pub fn ring(g: &mut crate::game::Game, p: V3, max_m: f64) -> Vec<V3> {
+pub fn ring(g: &crate::game::Game, p: V3, max_m: f64) -> Vec<V3> {
     let sam = sam_pos(g);
     let mut spots = Vec::new();
     let mut r = 0.8;
@@ -231,7 +231,7 @@ pub fn ring(g: &mut crate::game::Game, p: V3, max_m: f64) -> Vec<V3> {
 }
 
 /// between Sam's gun and the man it may be on (spotted.ts inSamsLine)
-pub fn in_sams_line(g: &mut crate::game::Game, q: V3, h: GuardId) -> bool {
+pub fn in_sams_line(g: &crate::game::Game, q: V3, h: GuardId) -> bool {
     let (a, b) = (sam_pos(g), pos(g, h));
     let (dx, dz) = (b[0] - a[0], b[2] - a[2]);
     let l = m::hyp2(dx, dz);
@@ -605,7 +605,7 @@ pub fn spotted_tick(g: &mut crate::game::Game) {
 }
 
 /// The panel's rows kept in the browser's storage: host work, nothing of the game moves. pairup.ts:85 calls it, so it answers rather than panics. (spotted.ts saveSpotted)
-pub fn save_spotted(g: &mut crate::game::Game) {}
+pub fn save_spotted(g: &crate::game::Game) {}
 
 #[cfg(test)]
 mod tests {

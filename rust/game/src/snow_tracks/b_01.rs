@@ -10,10 +10,10 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/game/snowTracks.ts:237 press)
-pub fn press(t: &mut crate::snow_tracks::Stamp, ax: f64, az: f64, bx: f64, bz: f64, r: f64, r0: Option<f64>) {}
+pub fn press(t: &crate::snow_tracks::Stamp, ax: f64, az: f64, bx: f64, bz: f64, r: f64, r0: Option<f64>) {}
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/game/snowTracks.ts:475 updateSnowTracks)
-pub fn update_snow_tracks(g: &mut crate::game::Game, t: &mut crate::snow_tracks::SnowTracks, field: &crate::render_snow_field::SnowField, dt: f64) {}
+pub fn update_snow_tracks(g: &crate::game::Game, t: &crate::snow_tracks::SnowTracks, field: &crate::render_snow_field::SnowField, dt: f64) {}
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/game/snowTracks.ts:502 mark)
 pub fn mark(g: &mut crate::game::Game, t: &mut crate::snow_tracks::SnowTracks, k: f64, a: &[f64]) {}

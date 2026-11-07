@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// ?irpower and ?irnear read the address, which is the host's: with no page the TypeScript does nothing, and so does this. (irlight.ts irFlags)
-pub fn ir_flags(g: &mut crate::game::Game) {}
+pub fn ir_flags(g: &crate::game::Game) {}
 
 /// The kit's row, made if there is none. The TypeScript's literal holds nothing but empty lists, which is what `zeroed` holds. (irlight.ts kitOf)
 pub fn kit_of(g: &mut crate::game::Game) -> &mut crate::irlight::Kit {
@@ -146,7 +146,7 @@ pub fn fan_darks(g: &mut crate::game::Game, at: V3, yaw: f64) -> Vec<f64> {
 }
 
 /// Is a place the CPU calls dark (its direct light `cpu`) dark in the picture, by the renderer's answer? None: no answer yet. (irlight.ts shownDark)
-pub fn shown_dark(g: &mut crate::game::Game, cpu: f64, e: Option<f64>) -> Option<bool> {
+pub fn shown_dark(g: &crate::game::Game, cpu: f64, e: Option<f64>) -> Option<bool> {
     let e = match e {
         Some(e) if e.is_finite() => e,
         _ => return None,
@@ -307,7 +307,7 @@ pub fn burn(g: &mut crate::game::Game, key: f64, at: V3, yaw: f64, each: bool, l
 }
 
 /// His burns exactly while the picture is the tube's. (irlight.ts samOn)
-pub fn sam_on(g: &mut crate::game::Game, pl: PlayerId) -> bool {
+pub fn sam_on(g: &crate::game::Game, pl: PlayerId) -> bool {
     g.pl[pl].nv_amount > 0.5
 }
 
@@ -358,7 +358,7 @@ pub fn near_k(g: &mut crate::game::Game, key: f64, l: LightId) -> f64 {
 }
 
 /// (QA) how far a carrier's light stands turned down this frame: 1 not at all, or no reading of his this frame. (irlight.ts irNearOf)
-pub fn ir_near_of(g: &mut crate::game::Game, key: f64) -> f64 {
+pub fn ir_near_of(g: &crate::game::Game, key: f64) -> f64 {
     let s = g.m.irlight.kits.as_ref().and_then(|kit| kit.near.get(crate::Num(key)).copied());
     match s {
         Some(s) if s.t == g.time => s.k,
@@ -551,7 +551,7 @@ pub fn ir_on_man(g: &mut crate::game::Game, o: GuardId) -> f64 {
 }
 
 /// Would his own illuminator show him a standing man at `p`, if he looked that way with a clear line? (irlight.ts irShowsAt)
-pub fn ir_shows_at(g: &mut crate::game::Game, m: GuardId, p: V3) -> bool {
+pub fn ir_shows_at(g: &crate::game::Game, m: GuardId, p: V3) -> bool {
     let at = g.ch[g.gd[m].ch].pos;
     let dx = p[0] - at[0];
     let dz = p[2] - at[2];
@@ -574,7 +574,7 @@ pub fn ir_shows_at(g: &mut crate::game::Game, m: GuardId, p: V3) -> bool {
 }
 
 /// He carries an illuminator of his own: both of its rows are settled on on the page. (irlight.ts irCarried)
-pub fn ir_carried(g: &mut crate::game::Game) -> bool {
+pub fn ir_carried(g: &crate::game::Game) -> bool {
     true
 }
 

@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// The hand frame the pistol group lives in: wrist origin, z the bore, y the top of the slide.   (rigProps.ts pistolFrame)
-pub fn pistol_frame(g: &mut crate::game::Game, c_2: CharId, hand: V3, p: crate::rig_props::PistolFrameP, in_hand: Option<bool>) -> crate::rig_props::PistolFrame {
+pub fn pistol_frame(g: &crate::game::Game, c_2: CharId, hand: V3, p: crate::rig_props::PistolFrameP, in_hand: Option<bool>) -> crate::rig_props::PistolFrame {
     let in_hand = in_hand.unwrap_or(false);
     let hf = if in_hand { Some(crate::character::character_grip_frame_r(g, c_2)) } else { None };
     let hand_f = match hf {
@@ -51,7 +51,7 @@ pub fn holster_frame_of(th: V3, kn: V3, hp: V3, fwd: V3, h: Option<crate::rig_pr
 }
 
 /// The long model drawn for a gun in his hands, or for the one that is not (slung, hung); none = the group's own parts.   (rigProps.ts longLookOf)
-pub fn long_look_of(g: &mut crate::game::Game, c_2: CharId, held: bool) -> Option<crate::rig_props::LongLookOf> {
+pub fn long_look_of(g: &crate::game::Game, c_2: CharId, held: bool) -> Option<crate::rig_props::LongLookOf> {
     let k = g.ch[c_2].gun_look?;
     let a = if held { k.hand } else { k.long };
     if let Some(l) = crate::gunlook::long_model(g, a) {
@@ -65,7 +65,7 @@ pub fn long_look_of(g: &mut crate::game::Game, c_2: CharId, held: bool) -> Optio
 }
 
 /// A long model's support-hand grip for the animator; `fit` moves it with the gun as drawn, and a fist round a post into the hook of the fingers.   (rigProps.ts modelGrip)
-pub fn model_grip(g: &mut crate::game::Game, id_2: crate::weapons::GunModelId, fit: Option<bool>, rig: Option<crate::rig_props::Rig>) -> Option<crate::character::AnimLongGrip> {
+pub fn model_grip(g: &crate::game::Game, id_2: crate::weapons::GunModelId, fit: Option<bool>, rig: Option<crate::rig_props::Rig>) -> Option<crate::character::AnimLongGrip> {
     let fit = fit.unwrap_or(false);
     let rig = rig.unwrap_or_else(|| crate::rig_props::rig());
     let l = crate::gunlook::long_model(g, Some(id_2))?;
@@ -86,7 +86,7 @@ pub fn model_grip(g: &mut crate::game::Game, id_2: crate::weapons::GunModelId, f
 }
 
 /// How far ahead of the wrist along the bore a long model's muzzle is.   (rigProps.ts modelMuzzleAhead)
-pub fn model_muzzle_ahead(g: &mut crate::game::Game, id_2: crate::weapons::GunModelId, rig: Option<crate::rig_props::Rig>) -> Option<f64> {
+pub fn model_muzzle_ahead(g: &crate::game::Game, id_2: crate::weapons::GunModelId, rig: Option<crate::rig_props::Rig>) -> Option<f64> {
     let rig = rig.unwrap_or_else(|| crate::rig_props::rig());
     let l = crate::gunlook::long_model(g, Some(id_2))?;
     Some(muzzle_ahead_of(rig.sc20k.adj, Seg { l0: 0.0, l1: l.ahead, thick: 0.0, tall: 0.0, adj: None }))
@@ -98,7 +98,7 @@ fn sheath_w(c: &crate::character::CharacterChestFrame, v: V3) -> V3 {
 }
 
 /// The sheath's frame in the world this frame: origin the sheathed handle's grip, z handle to tip, x off the chest. None before his first update.   (rigProps.ts sheathFrame)
-pub fn sheath_frame(g: &mut crate::game::Game, c_2: CharId, s: Option<crate::rig_props::RigSheath>) -> Option<crate::rig_props::Frame> {
+pub fn sheath_frame(g: &crate::game::Game, c_2: CharId, s: Option<crate::rig_props::RigSheath>) -> Option<crate::rig_props::Frame> {
     let s = s.unwrap_or_else(|| crate::rig_props::rig().sheath);
     let c = crate::character::character_chest_frame(g, c_2)?;
     let z = v3::normalize(sheath_w(&c, s.along));
@@ -108,7 +108,7 @@ pub fn sheath_frame(g: &mut crate::game::Game, c_2: CharId, s: Option<crate::rig
 }
 
 /// The carbine's group frame: the sidearm's hand frame moved by the group adj onto the bore above the trigger.   (rigProps.ts carbineFrame)
-pub fn carbine_frame(g: &mut crate::game::Game, c_2: CharId, hand: V3, c_3: crate::rig_props::RigCarbine) -> crate::rig_props::CarbineFrame {
+pub fn carbine_frame(g: &crate::game::Game, c_2: CharId, hand: V3, c_3: crate::rig_props::RigCarbine) -> crate::rig_props::CarbineFrame {
     let f = pistol_frame(g, c_2, hand, PistolFrameP { adj: c_3.adj }, None);
     CarbineFrame { hand_f: f.hand_f, g: f.g }
 }
@@ -153,7 +153,7 @@ pub fn muzzle_ahead_of(group_adj: Option<crate::rig_props::Adj>, part: crate::ri
 }
 
 /// The right hand that holds the rifle as it hangs in front, in the torso's axes off the mid-back joint.   (rigProps.ts slingFrontHand)
-pub fn sling_front_hand(g: &mut crate::game::Game, s: Option<crate::rig_props::RigSc20k>, rest: Option<f64>) -> crate::rig_props::SlingFrontHand {
+pub fn sling_front_hand(g: &crate::game::Game, s: Option<crate::rig_props::RigSc20k>, rest: Option<f64>) -> crate::rig_props::SlingFrontHand {
     let s = s.unwrap_or_else(|| crate::rig_props::rig().sc20k);
     let rest = rest.unwrap_or(0.0);
     let p = sling_front();
@@ -192,7 +192,7 @@ fn owner_of(g: &mut crate::game::Game, c: CharId) -> f64 {
 }
 
 /// One of his bones, none before his first update.
-fn bone(g: &mut crate::game::Game, c: CharId, b: crate::character::Bone) -> Option<V3> {
+fn bone(g: &crate::game::Game, c: CharId, b: crate::character::Bone) -> Option<V3> {
     g.ch[c].bones.get(b).copied()
 }
 
@@ -252,7 +252,7 @@ pub fn mix_adj(a: Option<crate::rig_props::Adj>, b: Option<crate::rig_props::Adj
 }
 
 /// The gun group's frame as the hand itself has it (bore wrist to knuckles, top the thumb side), `roll` of the way from the usual frame.   (rigProps.ts kitGunFrame)
-pub fn kit_gun_frame(g: &mut crate::game::Game, c_2: CharId, hand: V3, p: crate::rig_props::KitGunFrameP, g_2: crate::rig_props::Frame, roll: f64) -> crate::rig_props::Frame {
+pub fn kit_gun_frame(g: &crate::game::Game, c_2: CharId, hand: V3, p: crate::rig_props::KitGunFrameP, g_2: crate::rig_props::Frame, roll: f64) -> crate::rig_props::Frame {
     let kn = bone(g, c_2, crate::character::Bone::FingerR);
     let kn = match kn {
         Some(kn) if roll > 0.0 => kn,
@@ -618,7 +618,7 @@ pub fn long_model_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>, l: &cra
 }
 
 /// The pistol model drawn for his sidearm: the one in his hand if `held` and it is one, else the one on his thigh.   (rigProps.ts pistolLookOf)
-pub fn pistol_look_of(g: &mut crate::game::Game, c_2: CharId, held: bool) -> Option<crate::gunlook::PistolModel> {
+pub fn pistol_look_of(g: &crate::game::Game, c_2: CharId, held: bool) -> Option<crate::gunlook::PistolModel> {
     let k = g.ch[c_2].gun_look?;
     if held {
         if let Some(pm) = crate::gunlook::pistol_model(g, k.hand) {

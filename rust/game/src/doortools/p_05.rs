@@ -31,18 +31,18 @@ fn pos_of(g: &mut Game, gd: GuardId) -> V3 {
     let c = g.gd[gd].ch;
     g.ch[c].pos
 }
-fn sam_pos(g: &mut Game) -> V3 {
+fn sam_pos(g: &Game) -> V3 {
     let c = g.pl[g.player].ch;
     g.ch[c].pos
 }
-fn is_dead(g: &mut Game, gd: GuardId) -> bool {
+fn is_dead(g: &Game, gd: GuardId) -> bool {
     g.gd[gd].state == crate::game::GuardState::Dead
 }
-fn callsigns(g: &mut Game, men: &[GuardId]) -> String {
+fn callsigns(g: &Game, men: &[GuardId]) -> String {
     let names: Vec<String> = men.iter().map(|&m| g.gd[m].callsign.clone()).collect();
     names.join(", ")
 }
-fn alive(g: &mut Game, men: &[GuardId]) -> Vec<GuardId> {
+fn alive(g: &Game, men: &[GuardId]) -> Vec<GuardId> {
     men.iter().copied().filter(|&m| g.gd[m].state != crate::game::GuardState::Dead).collect()
 }
 fn any_shared(a: &[GuardId], b: &[GuardId]) -> bool {
@@ -90,7 +90,7 @@ fn give_go(g: &mut Game, p: V3, men: &[GuardId]) -> Option<String> {
     crate::orders::squad_orders_give(g, "go", Some(&t), None, Some(&opts))
 }
 /// the row of the menu that is up with this hot key: -1 with none (or no menu)
-fn menu_row_hot(g: &mut Game, key: &str) -> i32 {
+fn menu_row_hot(g: &Game, key: &str) -> i32 {
     let Some(rows) = g.orders.menu.as_ref().map(|m| m.rows.clone()) else { return -1 };
     match rows.iter().position(|&d| g.tab.orders_order_def[d].hot_key.as_deref() == Some(key)) {
         Some(i) => i as i32,
@@ -254,7 +254,7 @@ pub fn door_tools_stack_words(g: &mut crate::game::Game, men: &[GuardId]) -> Str
     unique_joined(words)
 }
 /// the men of a waiting thing (`x.men`)
-fn item_men(g: &mut Game, x: &DoorToolsWaitingAnyItem) -> Vec<GuardId> {
+fn item_men(g: &Game, x: &DoorToolsWaitingAnyItem) -> Vec<GuardId> {
     match x {
         DoorToolsWaitingAnyItem::DoorOp(op) => dop!(g, *op).men.clone(),
         DoorToolsWaitingAnyItem::Arm1(s) => s.men.clone(),
@@ -359,7 +359,7 @@ pub fn door_tools_waits_on(g: &mut crate::game::Game, men: &[GuardId], d: DoorId
     Some(DoorToolsWaitsOn { kind: DoorToolsWaitsOnKind::Stack, men: st, set })
 }
 /// that set charge is on a word that has not gone yet (doortools.ts wordPending)
-pub fn door_tools_word_pending(g: &mut crate::game::Game, c_2: ChargeId) -> bool {
+pub fn door_tools_word_pending(g: &crate::game::Game, c_2: ChargeId) -> bool {
     door_tools_on_pending_word(g, c_2)
 }
 /// (doortools.ts waitingWords)
@@ -394,7 +394,7 @@ pub fn door_tools_go(g: &mut crate::game::Game, who: Option<crate::orders::Who>)
     }
 }
 /// every door held on the word is one the word steps into with no can (doortools.ts wordQuiet)
-pub fn door_tools_word_quiet(g: &mut crate::game::Game) -> bool {
+pub fn door_tools_word_quiet(g: &crate::game::Game) -> bool {
     let ops = g.door_tools.ops.clone();
     let held: Vec<DoorOpId> = ops.into_iter().filter(|&o| dop!(g, o).thr.is_some()).collect();
     if held.is_empty() {
@@ -496,7 +496,7 @@ pub fn door_tools_word_owed(g: &mut crate::game::Game, op: DoorOpId) -> bool {
     true
 }
 /// does the word at this held door step in with no can (doortools.ts wordSteps)
-pub fn door_tools_word_steps(g: &mut crate::game::Game, op: DoorOpId) -> bool {
+pub fn door_tools_word_steps(g: &crate::game::Game, op: DoorOpId) -> bool {
     let o = &dop!(g, op);
     o.thr.as_ref().unwrap().word_step.unwrap_or(o.thr_hold.unwrap_or(false))
 }
@@ -519,7 +519,7 @@ pub fn door_tools_word_on_hold(g: &mut crate::game::Game, men: &[GuardId]) -> bo
     door_tools_word_early(g, men) || any
 }
 /// is a can of this order's that went in first still in the air or its burst running (doortools.ts wordEarly, wordKeyHeld)
-fn can_first_on(g: &mut Game, op: DoorOpId) -> bool {
+fn can_first_on(g: &Game, op: DoorOpId) -> bool {
     matches!(dop!(g, op).thr.as_ref().and_then(|t| t.first), Some(ThresholdFirst::Can) | Some(ThresholdFirst::Burst))
 }
 /// the word while a can that went in first is still out: it is kept, and taken when they step out (doortools.ts wordEarly)
@@ -536,7 +536,7 @@ pub fn door_tools_word_early(g: &mut crate::game::Game, men: &[GuardId]) -> bool
     true
 }
 /// would the word's key, pressed now with the menu that is up, be a held threshold's word (doortools.ts wordKeyHeld)
-pub fn door_tools_word_key_held(g: &mut crate::game::Game) -> bool {
+pub fn door_tools_word_key_held(g: &crate::game::Game) -> bool {
     if crate::orders::squad_orders_big(g) || g.pl[g.player].down {
         return false;
     }
@@ -683,7 +683,7 @@ pub fn door_tools_from_stack(g: &mut crate::game::Game, men: &[GuardId], d: Door
     Some(op)
 }
 /// the orders on this word
-fn word_ops(g: &mut Game, w: WordId) -> Vec<DoorOpId> {
+fn word_ops(g: &Game, w: WordId) -> Vec<DoorOpId> {
     let ops = g.door_tools.ops.clone();
     ops.into_iter().filter(|&o| dop!(g, o).word == Some(w)).collect()
 }
@@ -1344,7 +1344,7 @@ pub fn door_tools_input(g: &mut crate::game::Game, input: InputId) {
     }
 }
 /// the charge of these nearest `p`: a stable sort by the distance to its door's frame, the first (doortools.ts input, nearest)
-fn nearest_of(g: &mut Game, list: Vec<ChargeId>, p: V3) -> Option<ChargeId> {
+fn nearest_of(g: &Game, list: Vec<ChargeId>, p: V3) -> Option<ChargeId> {
     let mut by: Vec<(ChargeId, f64)> = list
         .into_iter()
         .map(|c| {
@@ -1356,7 +1356,7 @@ fn nearest_of(g: &mut Game, list: Vec<ChargeId>, p: V3) -> Option<ChargeId> {
     by.first().map(|x| x.0)
 }
 /// a set charge whose order is on a word that has not gone yet (doortools.ts onPendingWord)
-pub fn door_tools_on_pending_word(g: &mut crate::game::Game, c_2: ChargeId) -> bool {
+pub fn door_tools_on_pending_word(g: &crate::game::Game, c_2: ChargeId) -> bool {
     let door = g.tab.doortools_set_charge[c_2].door;
     g.door_tools.ops.iter().any(|&o| {
         let O = &g.tab.doortools_door_op[o];
@@ -1530,7 +1530,7 @@ fn tick_op(g: &mut Game, op: DoorOpId) {
     }
 }
 /// (doortools.ts arrived)
-pub fn door_tools_arrived(g: &mut crate::game::Game, op: DoorOpId, gd: GuardId) -> bool {
+pub fn door_tools_arrived(g: &crate::game::Game, op: DoorOpId, gd: GuardId) -> bool {
     match dop!(g, op).mine.get(gd) {
         Some(&a) => g.tab.orders_assignment[a].arrived,
         None => false,

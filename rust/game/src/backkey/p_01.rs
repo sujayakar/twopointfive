@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 /// The back key went down this tick: read, not taken. Tab backs out as Esc does (settled: `BACKKEY.tab`). (backkey.ts backHit)
-pub fn back_hit(g: &mut crate::game::Game, input: InputId) -> bool {
+pub fn back_hit(g: &crate::game::Game, input: InputId) -> bool {
     crate::input::input_hit(g, input, "Escape") || crate::input::input_hit(g, input, "Tab")
 }
 

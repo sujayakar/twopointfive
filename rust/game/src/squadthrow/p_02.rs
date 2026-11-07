@@ -172,7 +172,7 @@ pub fn start_walk(g: &mut crate::game::Game, th: &mut crate::squadthrow::SquadTh
 }
 
 /// What a man is doing NOW, kept so that he can be handed back to it. (squadthrow.ts squadLend)
-pub fn squad_lend(g: &mut crate::game::Game, gd: GuardId, t: &crate::orders::OrderTarget) -> crate::squadthrow::Lent {
+pub fn squad_lend(g: &crate::game::Game, gd: GuardId, t: &crate::orders::OrderTarget) -> crate::squadthrow::Lent {
     let c = g.gd[gd].ch;
     let p = g.ch[c].pos;
     let was = crate::orders::squad_orders_of(g, gd);

@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// The pool of thrown things, over the game's block `st`.   (throwables.ts Throwables.constructor)
-pub fn throwables_new(g: &mut crate::game::Game, st: Option<crate::Opaque>) -> crate::throwables::Throwables {
+pub fn throwables_new(g: &crate::game::Game, st: Option<crate::Opaque>) -> crate::throwables::Throwables {
     let mut t = Throwables::blank();
     t.store = crate::sim_itemshome::item_store_new(g, st.unwrap_or_default());
     t

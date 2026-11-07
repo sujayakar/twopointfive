@@ -61,7 +61,7 @@ fn emit_chips(g: &mut Game, at: V3, dir: V3, k: f64, speed: f64, size: f64, aspe
 
 // ---------------------------------------------------------------- the dice, the pool's plain questions
 /// (breakTable.ts Breaks.constructor)
-pub fn breaks_new(g: &mut crate::game::Game) -> crate::break_table::Breaks { Breaks::blank() }
+pub fn breaks_new(g: &crate::game::Game) -> crate::break_table::Breaks { Breaks::blank() }
 
 /// The die that lays out what a cell throws. (breakTable.ts Breaks.hash)
 pub fn breaks_hash(g: &mut crate::game::Game) -> f64 {
@@ -87,15 +87,15 @@ pub fn breaks_reset(g: &mut crate::game::Game) {
 }
 
 /// (breakTable.ts Breaks.small)
-pub fn breaks_small(g: &mut crate::game::Game) -> bool { crate::debris::debris_cap(g) < 64.0 }
+pub fn breaks_small(g: &crate::game::Game) -> bool { crate::debris::debris_cap(g) < 64.0 }
 
 /// A chunk's serial counted from the pool's last clear. (breakTable.ts Breaks.rel)
-pub fn breaks_rel(g: &mut crate::game::Game, c_2: DebrisChunkId) -> f64 {
+pub fn breaks_rel(g: &crate::game::Game, c_2: DebrisChunkId) -> f64 {
     g.tab.debris_chunk[c_2].serial - g.destr.debris.serial0 + 1.0
 }
 
 /// The rigid pool's share of one blast. (breakTable.ts Breaks.share)
-pub fn breaks_share(g: &mut crate::game::Game) -> crate::break_table::BreaksShare {
+pub fn breaks_share(g: &crate::game::Game) -> crate::break_table::BreaksShare {
     let s = {
         let t = g.k.breaks.share.big;
         BreaksShare { thrown: t.thrown, heap: t.heap, furniture: t.furniture }
@@ -239,7 +239,7 @@ pub fn breaks_tick(g: &mut crate::game::Game) {
 
 // ---------------------------------------------------------------- small and fine
 /// (breakTable.ts Breaks.tint)
-pub fn breaks_tint(g: &mut crate::game::Game, row: &crate::break_table::BreakRow, paint: V3, k: f64) -> V3 {
+pub fn breaks_tint(g: &crate::game::Game, row: &crate::break_table::BreakRow, paint: V3, k: f64) -> V3 {
     v3::lerp3(paint, core_of(row, paint), k)
 }
 
@@ -788,7 +788,7 @@ pub fn breaks_heap(g: &mut crate::game::Game, surf: crate::scene_materials::Surf
 
 // ---------------------------------------------------------------- what still stands
 /// The colour a standing piece's ragged end shows. (breakTable.ts Breaks.endCore)
-pub fn breaks_end_core(g: &mut crate::game::Game, surf: &str, paint: V3) -> Option<V3> {
+pub fn breaks_end_core(g: &crate::game::Game, surf: &str, paint: V3) -> Option<V3> {
     let mat = surf_mat_of_word(surf)?;
     face_core(break_row(mat), paint)
 }

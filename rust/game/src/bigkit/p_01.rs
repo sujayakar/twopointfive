@@ -221,7 +221,7 @@ pub fn sam_big_walk(g: &mut crate::game::Game, dt: f64) -> f64 {
 }
 
 /// What the animator is told of the beat this frame.   (bigkit.ts samBigPose)
-pub fn sam_big_pose(g: &mut crate::game::Game) -> Option<crate::character::AnimBigTool> {
+pub fn sam_big_pose(g: &crate::game::Game) -> Option<crate::character::AnimBigTool> {
     let pid = g.player;
     let t = g.pl[pid].kick.as_ref()?.tool.as_ref()?;
     let mv = t.moves.as_ref()?;
@@ -236,17 +236,17 @@ pub fn sam_big_pose(g: &mut crate::game::Game) -> Option<crate::character::AnimB
 }
 
 /// The tool changes hands with the weight of a gun swap: on, on the page.   (bigkit.ts weighed)
-pub fn weighed(g: &mut crate::game::Game) -> bool {
+pub fn weighed(g: &crate::game::Game) -> bool {
     true
 }
 
 /// … is on (kitanim.ts asks).   (bigkit.ts bigWeighed)
-pub fn big_weighed(g: &mut crate::game::Game) -> bool {
+pub fn big_weighed(g: &crate::game::Game) -> bool {
     weighed(g)
 }
 
 /// Seconds from the hand leaving for the tool to the tool in his hands.   (bigkit.ts bigEquip)
-pub fn big_equip(g: &mut crate::game::Game, kind: crate::bigkit::BigEquipKind) -> f64 {
+pub fn big_equip(g: &crate::game::Game, kind: crate::bigkit::BigEquipKind) -> f64 {
     match kind {
         BigEquipKind::Hammer => g.k.bigslot.equip_w,
         BigEquipKind::Shotgun => g.k.bigslot.draw_w,
@@ -254,12 +254,12 @@ pub fn big_equip(g: &mut crate::game::Game, kind: crate::bigkit::BigEquipKind) -
 }
 
 /// Seconds to put it back.   (bigkit.ts bigStow)
-pub fn big_stow(g: &mut crate::game::Game) -> f64 {
+pub fn big_stow(g: &crate::game::Game) -> f64 {
     g.k.bigslot.stow_w
 }
 
 /// After which a hammer's wind-up may begin (a shell: the same as bigEquip).   (bigkit.ts bigOutBy)
-pub fn big_out_by(g: &mut crate::game::Game, kind: crate::bigkit::BigOutByKind) -> f64 {
+pub fn big_out_by(g: &crate::game::Game, kind: crate::bigkit::BigOutByKind) -> f64 {
     match kind {
         BigOutByKind::Hammer => {
             let equip = big_equip(g, BigEquipKind::Hammer);
@@ -287,7 +287,7 @@ pub fn sam_big_lead_of(g: &mut crate::game::Game) -> f64 {
 }
 
 /// That errand is the kit's to run this frame.   (bigkit.ts samBigCarry)
-pub fn sam_big_carry(g: &mut crate::game::Game) -> bool {
+pub fn sam_big_carry(g: &crate::game::Game) -> bool {
     let pid = g.player;
     let c = g.pl[pid].ch;
     let Some(t) = g.pl[pid].kick.as_ref().and_then(|k| k.tool.as_ref()) else { return false };
@@ -299,24 +299,24 @@ pub fn sam_big_carry(g: &mut crate::game::Game) -> bool {
 }
 
 /// The hammer's wind-up (s).   (bigkit.ts bigWind)
-pub fn big_wind(g: &mut crate::game::Game) -> f64 {
+pub fn big_wind(g: &crate::game::Game) -> f64 {
     g.k.bigslot.heft
 }
 
 /// From one blow to the next: never less than a follow-through and a wind-up.   (bigkit.ts bigSwing)
-pub fn big_swing(g: &mut crate::game::Game) -> f64 {
+pub fn big_swing(g: &crate::game::Game) -> f64 {
     m::max(g.k.bigslot.swing, crate::character::big_rebound(crate::character::BigReboundKind::Hammer) + g.k.bigslot.heft)
 }
 
 /// The beat is over and his legs are his own, the tool still going back onto him.   (bigkit.ts samBigTail)
-pub fn sam_big_tail(g: &mut crate::game::Game) -> bool {
+pub fn sam_big_tail(g: &crate::game::Game) -> bool {
     let pid = g.player;
     let c = g.pl[pid].ch;
     g.ch[c].anim.big_tool.is_some() && !g.pl[pid].kick.as_ref().map_or(false, |k| k.tool.is_some())
 }
 
 /// What is left of the tail (s).   (bigkit.ts samBigLeft)
-pub fn sam_big_left(g: &mut crate::game::Game) -> f64 {
+pub fn sam_big_left(g: &crate::game::Game) -> f64 {
     let c = g.pl[g.player].ch;
     match &g.ch[c].anim.big_tool {
         Some(b) if b.end >= 0.0 => m::max(0.0, b.end + b.stow - b.t),
@@ -550,12 +550,12 @@ pub fn hammer_blows(g: &mut crate::game::Game, d: DoorId, p: &[f64]) -> f64 {
 }
 
 /// Which face of d he is on (the lock point's side).   (bigkit.ts bigSide)
-pub fn big_side(g: &mut crate::game::Game, d: DoorId, p: &[f64]) -> f64 {
+pub fn big_side(g: &crate::game::Game, d: DoorId, p: &[f64]) -> f64 {
     if crate::doortools::off_of(g, d, [p[0], p[1], p[2]], 1.0) >= 0.0 { 1.0 } else { -1.0 }
 }
 
 /// The big slot's tool a man carries, for the drawer.   (bigkit.ts bigCarried)
-pub fn big_carried(g: &mut crate::game::Game, c_2: crate::bigkit::BigCarriedC) -> Option<crate::bigkit::BigCarried> {
+pub fn big_carried(g: &crate::game::Game, c_2: crate::bigkit::BigCarriedC) -> Option<crate::bigkit::BigCarried> {
     if !g.k.bigslot.on {
         return None;
     }
@@ -573,7 +573,7 @@ pub fn big_carried(g: &mut crate::game::Game, c_2: crate::bigkit::BigCarriedC) -
 }
 
 /// He carries the hammer in his big slot.   (bigkit.ts carriesHammer)
-pub fn carries_hammer(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn carries_hammer(g: &crate::game::Game, gd: GuardId) -> bool {
     g.gd[gd].state != crate::game::GuardState::Dead && crate::kit::kit_big(g, gd) == crate::kit::BigKit::Hammer
 }
 

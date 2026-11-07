@@ -204,7 +204,7 @@ pub fn tut_solo_road_step(g: &mut crate::game::Game, r: DirectorRunId, b: Direct
 }
 
 /// the beat 'road' c.until: 0 = the sentry is down (tut-solo.script.ts:72)
-pub fn tut_solo_road_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_solo::TutSoloRoadFrame, id: u32) -> Result<bool, String> {
+pub fn tut_solo_road_test(g: &crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_solo::TutSoloRoadFrame, id: u32) -> Result<bool, String> {
     match id {
         0 => Ok(!director_query_alive(g, r, f.s.as_ref().unwrap())),
         _ => Err(format!("tut-solo road: no test {}", id)),
@@ -421,7 +421,7 @@ const TRUCKS_ONE_DOWN: u32 = 1;
 const TRUCKS_SHOW_OVER: u32 = 2;
 
 /// the beat 'trucks' closure `up`: how many of the last two stand (tut-solo.script.ts:138)
-fn trucks_up(g: &mut Game, r: DirectorRunId, men: &[TutSoloTrucksMen]) -> f64 {
+fn trucks_up(g: &Game, r: DirectorRunId, men: &[TutSoloTrucksMen]) -> f64 {
     let mut n = 0.0;
     for m in men { if director_query_alive(g, r, m.u.as_ref().unwrap()) { n += 1.0; } }
     n
@@ -518,7 +518,7 @@ pub fn tut_solo_trucks_step(g: &mut crate::game::Game, r: DirectorRunId, b: Dire
 }
 
 /// the beat 'trucks' c.untils: 0 = in the doorway, 1 = one of them is down, 2 = the show is over (tut-solo.script.ts:140, :145, :146)
-pub fn tut_solo_trucks_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_solo::TutSoloTrucksFrame, id: u32) -> Result<bool, String> {
+pub fn tut_solo_trucks_test(g: &crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_solo::TutSoloTrucksFrame, id: u32) -> Result<bool, String> {
     match id {
         TRUCKS_ARRIVED => {
             for m in &f.men {

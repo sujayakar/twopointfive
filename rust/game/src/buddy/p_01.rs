@@ -28,7 +28,7 @@ pub fn pick(g: &mut crate::game::Game, who: crate::dice::Who, r: [f64; 2]) -> f6
 }
 
 /// (buddy.ts alive)
-pub fn alive(g: &mut crate::game::Game, d: RoomfightDefId) -> bool {
+pub fn alive(g: &crate::game::Game, d: RoomfightDefId) -> bool {
     let gd = g.tab.roomfight_def[d].gd;
     g.gd[gd].state != crate::game::GuardState::Dead
 }
@@ -43,7 +43,7 @@ pub fn note(g: &mut crate::game::Game, gd: GuardId, what: &str) {
 }
 
 /// the nav grid's cell of a point. (buddy.ts cellOf)
-pub fn cell_of(g: &mut crate::game::Game, p: V3) -> f64 {
+pub fn cell_of(g: &crate::game::Game, p: V3) -> f64 {
     let cell = g.col.nav.cell;
     crate::scene_collision::nav_grid_idx(g, m::floor(p[0] / cell), m::floor(p[2] / cell))
 }
@@ -75,7 +75,7 @@ pub fn mates(g: &mut crate::game::Game, d: RoomfightDefId) -> Vec<RoomfightDefId
 }
 
 /// where the team is, as far as the defenders know. Never the team's true positions. (buddy.ts teamKnown)
-pub fn team_known(g: &mut crate::game::Game) -> Vec<V3> {
+pub fn team_known(g: &crate::game::Game) -> Vec<V3> {
     let mut out = Vec::new();
     let mut i = 0;
     while i < g.fight.defs.len() {
@@ -550,7 +550,7 @@ pub fn tick_errand(g: &mut crate::game::Game, e: &mut crate::buddy::Errand) -> b
 }
 
 /// the door of a room nearest a point, as an index, -1 for none. (buddy.ts nearestEntry)
-pub fn nearest_entry(g: &mut crate::game::Game, r: RoomfightRoomId, p: V3) -> f64 {
+pub fn nearest_entry(g: &crate::game::Game, r: RoomfightRoomId, p: V3) -> f64 {
     let mut best = -1.0;
     let mut bd = m::INF;
     for (i, e) in g.tab.roomfight_room[r].entries.iter().enumerate() {
@@ -586,7 +586,7 @@ pub fn buddy_say(g: &mut crate::game::Game) {
 }
 
 /// for a moment after, the two have just paired up: he waits. (buddy.ts buddyPaired)
-pub fn buddy_paired(g: &mut crate::game::Game, d: RoomfightDefId) -> bool {
+pub fn buddy_paired(g: &crate::game::Game, d: RoomfightDefId) -> bool {
     let keep_t = g.m.buddy.states.as_ref().and_then(|st| st.men.get(d)).map_or(-100.0, |w| w.keep_t);
     g.k.buddy.on && g.time < keep_t
 }

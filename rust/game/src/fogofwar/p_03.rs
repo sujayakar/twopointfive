@@ -652,13 +652,13 @@ pub fn fog_of_war_beam_runs(g: &mut crate::game::Game, from: V3, dir: V3, l: f64
 }
 
 /// Does anybody on the team see him, as of this frame's update. True for the team, and for everybody while the fog is off.   (fogofwar.ts FogOfWar.seen)
-pub fn fog_of_war_seen(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn fog_of_war_seen(g: &crate::game::Game, gd: GuardId) -> bool {
     if !fog_of_war_active(g) || fog_of_war_on_team(g, gd) { return true; }
     g.fog_of_war.recs.get(gd).map_or(false, |r| r.seen)
 }
 
 /// Where the team last had him and how long ago; null = never.   (fogofwar.ts FogOfWar.sighting)
-pub fn fog_of_war_sighting(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::fogofwar::FogOfWarSighting> {
+pub fn fog_of_war_sighting(g: &crate::game::Game, gd: GuardId) -> Option<crate::fogofwar::FogOfWarSighting> {
     let c = g.gd[gd].ch;
     if !fog_of_war_active(g) { return Some(FogOfWarSighting { at: g.ch[c].pos, age: 0.0 }); }
     let r = g.fog_of_war.recs.get(gd).copied();
@@ -669,7 +669,7 @@ pub fn fog_of_war_sighting(g: &mut crate::game::Game, gd: GuardId) -> Option<cra
 }
 
 /// Is he in the picture: seen, seen a moment ago, fired on by the squad, or a body the team has seen.   (fogofwar.ts FogOfWar.drawn)
-pub fn fog_of_war_drawn(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn fog_of_war_drawn(g: &crate::game::Game, gd: GuardId) -> bool {
     if !fog_of_war_active(g) || fog_of_war_on_team(g, gd) { return true; }
     let r = match g.fog_of_war.recs.get(gd).copied() { Some(r) => r, None => return false };
     if r.seen || (g.gd[gd].state == crate::game::GuardState::Dead && r.body) { return true; }
@@ -678,7 +678,7 @@ pub fn fog_of_war_drawn(g: &mut crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// Is the squad shooting at him: a teammate's aimed round went at him inside FOG.squadFireSecs.   (fogofwar.ts FogOfWar.firedOn)
-pub fn fog_of_war_fired_on(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn fog_of_war_fired_on(g: &crate::game::Game, gd: GuardId) -> bool {
     match g.fog_of_war.fired_at.get(gd) {
         Some(&t) => g.fog_of_war.fire_clock - t < g.k.fog.squad_fire_secs,
         None => false,
@@ -686,17 +686,17 @@ pub fn fog_of_war_fired_on(g: &mut crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// Left out of the picture this frame; false for everybody while the fog is off.   (fogofwar.ts FogOfWar.hidden)
-#[doc(hidden)] pub fn fog_of_war_hidden__body(g: &mut crate::game::Game, gd: GuardId) -> bool {
+#[doc(hidden)] pub fn fog_of_war_hidden__body(g: &crate::game::Game, gd: GuardId) -> bool {
     !g.fog_of_war.bared && g.fog_of_war.hidden_chars.len() > 0 && g.fog_of_war.hidden_chars.has(g.gd[gd].ch)
 }
 
 /// The rule is live: the fog on, and the full picture's block filled.   (fogofwar.ts FogOfWar.oursOn)
-pub fn fog_of_war_ours_on(g: &mut crate::game::Game) -> bool {
+pub fn fog_of_war_ours_on(g: &crate::game::Game) -> bool {
     fog_of_war_active(g) && g.fog_of_war.full_on
 }
 
 /// Is what `who` does the team's own to see, off the list of the team `full_block` filled.   (fogofwar.ts FogOfWar.oursId)
-pub fn fog_of_war_ours_id(g: &mut crate::game::Game, who: Option<f64>) -> bool {
+pub fn fog_of_war_ours_id(g: &crate::game::Game, who: Option<f64>) -> bool {
     let w = match who { Some(w) if js::truthy(w) => w, _ => return false };
     fog_of_war_ours_on(g) && g.engine.lights.fog_team.owners.has(crate::Num(w))
 }
@@ -738,24 +738,24 @@ pub fn fog_of_war_hush(g: &mut crate::game::Game) {
 }
 
 /// What a hidden man puts into the air is not filed: true = `c` is out of the picture.   (fogofwar.ts FogOfWar.airHides)
-pub fn fog_of_war_air_hides(g: &mut crate::game::Game, c_2: CharId) -> bool {
+pub fn fog_of_war_air_hides(g: &crate::game::Game, c_2: CharId) -> bool {
     g.fog_of_war.full_on && !g.fog_of_war.bared && g.fog_of_war.hidden_chars.len() > 0 && g.fog_of_war.hidden_chars.has(c_2)
 }
 
 /// The characters to draw, of the frame's list.   (fogofwar.ts FogOfWar.filter)
-pub fn fog_of_war_filter(g: &mut crate::game::Game, all: &[CharId]) -> Vec<CharId> {
+pub fn fog_of_war_filter(g: &crate::game::Game, all: &[CharId]) -> Vec<CharId> {
     all.iter().copied().filter(|&c| !g.fog_of_war.hidden_chars.has(c)).collect()
 }
 
 /// For a viewer's picture without the fog: everybody, the men the fog leaves out last.   (fogofwar.ts FogOfWar.everybody)
-pub fn fog_of_war_everybody(g: &mut crate::game::Game, all: &[CharId]) -> Vec<CharId> {
+pub fn fog_of_war_everybody(g: &crate::game::Game, all: &[CharId]) -> Vec<CharId> {
     let mut out = fog_of_war_filter(g, all);
     out.extend(all.iter().copied().filter(|&c| g.fog_of_war.hidden_chars.has(c)));
     out
 }
 
 /// This frame's list of boxes as it stood before the fog cut it: no viewer, the fog standing aside, or nothing kept for this frame = None.   (fogofwar.ts FogOfWar.raw)
-pub fn fog_of_war_raw(g: &mut crate::game::Game) -> Option<Vec<BoxId>> {
+pub fn fog_of_war_raw(g: &crate::game::Game) -> Option<Vec<BoxId>> {
     if g.fog_of_war.viewer && fog_of_war_active(g) && g.fog_of_war.raw_at == g.fog_of_war.frame_no { Some(g.fog_of_war.raw_list.clone()) } else { None }
 }
 
