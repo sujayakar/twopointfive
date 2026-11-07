@@ -3,10 +3,22 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
+#[cold] fn refused(name: &str, ix: usize, n: usize) -> ! { panic!("a {} from outside the game names row {}, and its table holds {}", name, ix, n) }
 pub struct W { pub b: Vec<u8>, /** the filtered export: the fields only the harness reads go too (puppet.rs, PuppetMemo.wide) */ pub wide: bool }
 impl W { pub fn new() -> Self { W { b: Vec::new(), wide: false } } }
-pub struct R<'a> { pub b: &'a [u8], pub p: usize }
-impl<'a> R<'a> { pub fn new(b: &'a [u8]) -> Self { R { b, p: 0 } } pub fn take(&mut self, n: usize) -> &'a [u8] { let s = &self.b[self.p..self.p + n]; self.p += n; s } }
+pub struct R<'a> { pub b: &'a [u8], pub p: usize, /** AN ID FROM OUTSIDE IS MEASURED: each table's length, by the ID's name (a call, a question, a write) */ pub known: Option<&'a [(&'static str, usize)]>, /** …or, where the tables are read in the same bytes, the largest of each kind seen, for after (an import) */ pub most: Option<Vec<(&'static str, usize)>> }
+impl<'a> R<'a> { pub fn new(b: &'a [u8]) -> Self { R { b, p: 0, known: None, most: None } }
+    /// reading what a caller outside the game sent: an ID past its table is refused here, by name, and goes no further into the game
+    pub fn measured(b: &'a [u8], known: &'a [(&'static str, usize)]) -> Self { R { b, p: 0, known: Some(known), most: None } }
+    /// reading a whole game: `refuse_past` says afterwards whether an ID in it named a row its tables do not hold
+    pub fn tallied(b: &'a [u8]) -> Self { R { b, p: 0, known: None, most: Some(Vec::new()) } }
+    #[inline] fn id_from_outside(&mut self, name: &'static str, ix: usize) {
+        if let Some(k) = self.known { if let Some(&(_, n)) = k.iter().find(|e| e.0 == name) { if ix >= n { refused(name, ix, n); } } }
+        else if let Some(m) = self.most.as_mut() { match m.iter_mut().find(|e| e.0 == name) { Some(e) => if ix > e.1 { e.1 = ix; }, None => m.push((name, ix)) } }
+    }
+    /// the end of a whole game's bytes: every ID against the tables they brought
+    pub fn refuse_past(&self, known: &[(&'static str, usize)]) { for &(name, most) in self.most.iter().flatten() { if let Some(&(_, n)) = known.iter().find(|e| e.0 == name) { if most >= n { refused(name, most, n); } } } }
+    pub fn take(&mut self, n: usize) -> &'a [u8] { let s = &self.b[self.p..self.p + n]; self.p += n; s } }
 pub trait Io: Sized { fn w(&self, o: &mut W); fn r(i: &mut R) -> Self; /** read over what stands here: what the walk does not carry stays as it was */ fn ri(&mut self, i: &mut R) { *self = Self::r(i); } }
 macro_rules! num { ($($t:ty),*) => { $( impl Io for $t { #[inline] fn w(&self, o: &mut W) { o.b.extend_from_slice(&self.to_le_bytes()); } #[inline] fn r(i: &mut R) -> Self { let mut a = [0u8; core::mem::size_of::<$t>()]; a.copy_from_slice(i.take(core::mem::size_of::<$t>())); <$t>::from_le_bytes(a) } } )* } }
 num!(f64, f32, u8, i8, u16, i16, u32, i32, u64, i64);
@@ -41,7 +53,7 @@ impl<A: Io, B: Io, C: Io> Poke for (A, B, C) {}
 impl<A: Io, B: Io, C: Io, D: Io> Poke for (A, B, C, D) {}
 impl<K: Io + Ord + Clone, V: Poke> Poke for JsMap<K, V> { fn poke(&mut self, i: &mut R) { if u8::r(i) == 0 { self.ri(i) } else { let k = K::r(i); self.get_mut(k).expect("bridge: a write into a map at no such key").poke(i) } } }
 impl<K: Io + Ord + Clone> Poke for JsSet<K> {}
-macro_rules! ids { ($($t:ident),*) => { $( impl Io for $t { fn w(&self, o: &mut W) { (self.ix() as u32).w(o) } fn r(i: &mut R) -> Self { <$t as Id>::from_ix(u32::r(i) as usize) } } )* } }
+macro_rules! ids { ($($t:ident),*) => { $( impl Io for $t { fn w(&self, o: &mut W) { (self.ix() as u32).w(o) } fn r(i: &mut R) -> Self { let ix = u32::r(i) as usize; i.id_from_outside(<$t as Id>::NAME, ix); <$t as Id>::from_ix(ix) } } )* } }
 ids!(BoxId, ClipId, AnimGltfMeshDataId, AnimGltfCastVariantId, AnimGltfCastInfoId, RigId, PoseSetId, RagdollId, CharId, DoorId, SlabRowId, DriveColsId, PropId, InputId, CameraId, ItemId, GuardId, PlayerId, DebrisChunkId, SeatId, LightId, FixtureId, CameraRtId, LaserRtId, WallbreakBreakableId, FurnblastMemberId, WindWindSourceId, DoorOpId, OrdersAssignmentId, DoortoolsRoomSearchId, WordId, DoorGateId, DoortoolsKnownThreatId, ChargeId, OrdersOrderDefId, RoomfightDefId, RoomfightRoomId, CoverOpeningId, WallreactBreachId, TacticsRoleId, TacticsPlanId, TacticsDangerRecId, LanesLaneId, PressureManId, StickyCamId, RescueflowRegionId, RoomClearId, DirectorRunId, RoomfightOpId, WallOpId, WallChargeId, RouteId, EnemysquadsSquadId, DirectorLiveBeatId, GuardsStandoffId, CivId, GameTalkId, FirearmId);
 leaf!(BoxId, ClipId, AnimGltfMeshDataId, AnimGltfCastVariantId, AnimGltfCastInfoId, RigId, PoseSetId, RagdollId, CharId, DoorId, SlabRowId, DriveColsId, PropId, InputId, CameraId, ItemId, GuardId, PlayerId, DebrisChunkId, SeatId, LightId, FixtureId, CameraRtId, LaserRtId, WallbreakBreakableId, FurnblastMemberId, WindWindSourceId, DoorOpId, OrdersAssignmentId, DoortoolsRoomSearchId, WordId, DoorGateId, DoortoolsKnownThreatId, ChargeId, OrdersOrderDefId, RoomfightDefId, RoomfightRoomId, CoverOpeningId, WallreactBreachId, TacticsRoleId, TacticsPlanId, TacticsDangerRecId, LanesLaneId, PressureManId, StickyCamId, RescueflowRegionId, RoomClearId, DirectorRunId, RoomfightOpId, WallOpId, WallChargeId, RouteId, EnemysquadsSquadId, DirectorLiveBeatId, GuardsStandoffId, CivId, GameTalkId, FirearmId);
 
@@ -5221,7 +5233,7 @@ impl Poke for crate::doorforce::KickPhase {}
 impl Poke for crate::dialogue::Him {}
 
 /// WRITE ONE CARRIED FIELD OF THE GAME FROM OUTSIDE THE TICK (bridge/poke.ts writes the bytes): which table and row, or none for the Game; then the way down by the schema, field by field; then the value
-pub fn poke(g: &mut crate::game::Game, b: &[u8]) { let mut i = R::new(b); let t = u32::r(&mut i); if t == 0xffffffff { g.poke(&mut i); } else { let r = u32::r(&mut i) as usize; match t {
+pub fn poke(g: &mut crate::game::Game, b: &[u8]) { let known = crate::id_tables::id_tables(g); let mut i = R::measured(b, &known); let t = u32::r(&mut i); if t == 0xffffffff { g.poke(&mut i); } else { let r = u32::r(&mut i) as usize; match t {
     0 => g.tab.boxes[<BoxId as Id>::from_ix(r)].poke(&mut i),
     1 => g.tab.clip[<ClipId as Id>::from_ix(r)].poke(&mut i),
     2 => g.tab.anim_gltf_mesh_data[<AnimGltfMeshDataId as Id>::from_ix(r)].poke(&mut i),
@@ -5341,7 +5353,7 @@ pub fn export(g: &crate::game::Game) -> Vec<u8> { let mut o = W::new(); g.w(&mut
     g.serial_next.w(&mut o); g.loose_poses.w(&mut o); o.b }
 
 /// the bytes of tools/blitz/export.ts or of export above, as a game. What the walk does not carry stands at its blank
-pub fn import(b: &[u8]) -> crate::game::Game { let mut i = R::new(b); let mut g = crate::game::Game::r(&mut i);
+pub fn import(b: &[u8]) -> crate::game::Game { let mut i = R::tallied(b); let mut g = crate::game::Game::r(&mut i);
     g.tab.boxes = Io::r(&mut i);
     g.tab.clip = Io::r(&mut i);
     g.tab.anim_gltf_mesh_data = Io::r(&mut i);
@@ -5398,10 +5410,10 @@ pub fn import(b: &[u8]) -> crate::game::Game { let mut i = R::new(b); let mut g 
     g.cv = Io::r(&mut i);
     g.tab.game_talk = Io::r(&mut i);
     g.fa = Io::r(&mut i);
-    g.serial_next = Io::r(&mut i); g.loose_poses = Io::r(&mut i); assert!(i.p == b.len(), "bridge: bytes left over"); refuse_mid_script(&g); deal_closures(&mut g); deal_scripts(&mut g); g.col.mirror.slot = g.sim as f64; g }
+    g.serial_next = Io::r(&mut i); g.loose_poses = Io::r(&mut i); assert!(i.p == b.len(), "bridge: bytes left over"); i.refuse_past(&crate::id_tables::id_tables(&g)); refuse_mid_script(&g); deal_closures(&mut g); deal_scripts(&mut g); g.col.mirror.slot = g.sim as f64; g }
 
 /// the same bytes over a game that already stands: what the walk does not carry (closures as enums, what a body sets up at new) stays as this game has it
-pub fn import_into(g: &mut crate::game::Game, b: &[u8]) { let mut i = R::new(b); g.ri(&mut i);
+pub fn import_into(g: &mut crate::game::Game, b: &[u8]) { let mut i = R::tallied(b); g.ri(&mut i);
     g.tab.boxes.ri(&mut i);
     g.tab.clip.ri(&mut i);
     g.tab.anim_gltf_mesh_data.ri(&mut i);
@@ -5458,7 +5470,7 @@ pub fn import_into(g: &mut crate::game::Game, b: &[u8]) { let mut i = R::new(b);
     g.cv.ri(&mut i);
     g.tab.game_talk.ri(&mut i);
     g.fa.ri(&mut i);
-    g.serial_next = Io::r(&mut i); g.loose_poses = Io::r(&mut i); assert!(i.p == b.len(), "bridge: bytes left over"); refuse_mid_script(g); deal_closures(g); deal_scripts(g); }
+    g.serial_next = Io::r(&mut i); g.loose_poses = Io::r(&mut i); assert!(i.p == b.len(), "bridge: bytes left over"); i.refuse_past(&crate::id_tables::id_tables(g)); refuse_mid_script(g); deal_closures(g); deal_scripts(g); }
 
 
 /// WHAT THE WALK CANNOT READ, DEALT BY KEY: every order row's closures by its id (the arms as the parts register them), the 'go' row by which of its two the game has dealt.
@@ -5575,7 +5587,7 @@ impl Io for crate::director::CondTest { fn w(&self, o: &mut W) { match self { Se
 pub fn ask(g: &mut crate::game::Game, kind: u32, row: u32, seat: u32, args: &[u8]) -> Vec<u8> {
     use crate::orders::OrderTarget as T;
     let s = <SeatId as Id>::from_ix(seat as usize); let d = <OrdersOrderDefId as Id>::from_ix(row as usize);
-    crate::seats::with_seat(g, s, &mut |g: &mut crate::game::Game| { let mut i = R::new(args); let mut o = W::new(); match kind {
+    crate::seats::with_seat(g, s, &mut |g: &mut crate::game::Game| { let known = crate::id_tables::id_tables(g); let mut i = R::measured(args, &known); let mut o = W::new(); match kind {
         0 => { let t: T = Io::r(&mut i); crate::orders::order_label(g, d, &t).w(&mut o); }
         1 => { let gd: GuardId = Io::r(&mut i); let t: T = Io::r(&mut i); crate::orders::order_can(g, d, gd, &t).w(&mut o); }
         2 => { let men: Vec<GuardId> = Io::r(&mut i); let t: T = Io::r(&mut i); crate::orders::order_only(g, d, &men, &t).w(&mut o); }
@@ -5592,6 +5604,15 @@ pub fn ask(g: &mut crate::game::Game, kind: u32, row: u32, seat: u32, args: &[u8
 }
 
 
+#[cfg(test)]
+mod measure_test {
+    use super::*; use crate::ids::*;
+    #[test] #[should_panic(expected = "a BoxId from outside the game names row 9, and its table holds 2")]
+    fn an_id_past_its_table_is_refused_by_name() { let b = 9u32.to_le_bytes(); let k = [("BoxId", 2usize)]; let _: BoxId = Io::r(&mut R::measured(&b, &k)); }
+    #[test] fn an_id_in_its_table_is_read() { let b = 1u32.to_le_bytes(); let k = [("BoxId", 2usize)]; let v: BoxId = Io::r(&mut R::measured(&b, &k)); assert_eq!(v.ix(), 1); }
+    #[test] #[should_panic(expected = "a BoxId from outside the game names row 5, and its table holds 5")]
+    fn a_whole_game_is_measured_against_the_tables_it_brought() { let b = [5u32.to_le_bytes(), 1u32.to_le_bytes()].concat(); let mut i = R::tallied(&b); let _: BoxId = Io::r(&mut i); let _: BoxId = Io::r(&mut i); i.refuse_past(&[("BoxId", 5)]); }
+}
 #[cfg(test)]
 mod bridge_test {
     extern crate std;
