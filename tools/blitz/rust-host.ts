@@ -186,7 +186,7 @@ export class RustHost {
   surfaceCall(row: number, bytes: Uint8Array): Uint8Array { const X = this.F.X; this.scanFlush(); this.busy++; try { { const hb: Uint8Array = this.B.hostHalf(this.g, this.B.reg, this.lastCmds ?? []); this.F.hand(hb, (p, n) => X.face_host_half(this.h, p, n)); this.viewLive(); }   /* (a rule that crosses reads the cursor and the cameras: they come with the host's half, and the tool has moved them since the tick) */ this.F.hand(bytes, (p, n) => X.face_call(this.h, row, p, n)); const out = this.F.outView().slice(); this.applyStep(); this.dispatch(); return out; } finally { this.busy--; this.scanRebase(); } }
   /** what the tool wrote since the walk last looked goes to the Rust game */
   private scanFlush(): void { if (this.audit || !this.h) return; this.tapsOn?.sweep(); this.blockBack(); if (process.env.TPS_GAME_SCAN === '0') return; const t = now(); if (!this.scan) { this.scan = this.B.makeScan(this.g, this.B.reg, (b: Uint8Array) => { this.F.hand(b, (p, n) => this.F.X.face_write(this.h, p, n)); }, (q: string) => this.count(`scan: ${q}`)); this.scan.rebase(); } else this.scan.flush(); this.T.scan += now() - t; }
-  /** WHAT THE TOOL WROTE INTO rust/sim's BLOCK. A door's swing and latch, a man's place and the die live in the block (the puppet's objects read and
+  /** STAND-IN (belongs with the scan: a write by name of a field that lives in the block): WHAT THE TOOL WROTE INTO rust/sim's BLOCK. A door's swing and latch, a man's place and the die live in the block (the puppet's objects read and
    *  write its copy of it: `d.vel = 2`, `d.latched = false`), and no walk of the schema's fields meets them. After every apply the puppet's copy IS the
    *  Rust game's; where a part of it differs as a tick opens or a call is about to cross, the tool (or TypeScript run on the puppet) wrote it, and that
    *  part goes to the Rust game whole. `poses` is left out: a pose is posed again on either side and the two differ by design from the first death. */
@@ -658,10 +658,10 @@ export class RustHost {
     const made0 = MADE.n; this.applyStep();
     let rust: Uint8Array | null = null;
     if (this.audit) rust = this.applyWhole('audit');
-    // (A MAN THE STEP'S APPLY MADE, the Rust game having restarted or spawned inside its tick, holds only the fields of the every-tick list: his rifle's
+    // (STAND-IN, belongs in the importer (a made row is filled whole): A MAN THE STEP'S APPLY MADE, the Rust game having restarted or spawned inside its tick, holds only the fields of the every-tick list: his rifle's
     // rows, his kit, read `undefined` to whatever reads the puppet next. The puppet takes the whole state at once.)
     else { const why = MADE.n !== made0 ? 'the apply made a man' : this.wholeOwed(k); if (why) this.applyWhole(why); }
-    // THE RUST GAME BEGAN ITS MISSION AGAIN INSIDE THE TICK (the player's own restart: Enter once down, Shift+Enter). The TypeScript's restart makes a new
+    // STAND-IN (belongs in the importer: the record as a row, or a restart's out event): THE RUST GAME BEGAN ITS MISSION AGAIN INSIDE THE TICK (the player's own restart: Enter once down, Shift+Enter). The TypeScript's restart makes a new
     // mission RECORD, and that identity is how everything outside the tick knows a run began (the save controller's `missionRef`: a fresh run, an empty
     // shelf; a driver's own `game.mission !== before`). The apply wrote the fields into the record that stood, so the puppet is given a new one here.
     if (this.cutDue) { this.cutDue = false; g.restartCut = true; }

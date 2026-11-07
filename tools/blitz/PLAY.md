@@ -293,13 +293,27 @@ The gate's forms of the tour and the soak (`--runs 3`; three seeds, twelve minut
 
 ## Stand-ins (each marked `STAND-IN:` in the code with its reason and where it belongs)
 
-- **A weak table lists the keys of the game being walked** (rust-host.ts `ownKeys`, `reach`). A start finds the game's own keys by reach: the game is
-  exported on a book of its own with every weak table listing only the keys the walk has numbered so far (and the game and its views), again until an
-  export numbers no key it had left out; the game's book is put back as it was and the start's export lists exactly those keys (three exports a start
-  where it was one: 46 keys of a room clear are met late, through other rows). After a start: those keys, and a key first seen since unless a start
-  left it out or it is in another hosted game's book. An apply deletes and orders only this game's keys. NOT COVERED: a game with no host that makes
-  new things while a hosted game plays beside it. Belongs in the generated export.ts (`keysOf`, the once-keyed and game-keyed reads) and import.ts
-  (`orderSide`, every `liveKeys()`).
+- **A call's game where its receiver is not the game** (rust-host.ts `surfaceOpen`, `BUSY`; `step` re-points the surface's fallback). surface.ts finds a
+  call's host by `self.rustSurface`, an argument's, else THE HOST THAT ATTACHED LAST: `g.quiet.current()`, the first line of every `Game.update`, so
+  crossed from the first game's own update into the sixth game stood. Here nothing crosses while any hosted game of the process is inside its update,
+  and the fallback is the game that stepped last. A tool's call on an object of a game it did not step last still goes to the wrong game. Belongs in
+  surface.ts: the host by the receiver's game, never a fallback.
+- **The window's guards under `table`** (word.ts `spellForWindow`, preload.ts). expose.ts puts the surface's guards and the taps in only where `TPS_GAME`
+  is spelt `rust`; by the table the preload spells it so and keeps the word asked for in `TPS_GAME_BY`. Belongs in expose.ts.
+- **What a tool writes into rust/sim's block** (rust-host.ts `blockBack`): a door's swing and latch, a man's place, the die. The puppet's copy of the block
+  is held to the Rust game's as a tick opens and before a call crosses, and each part that differs (but `poses`) is handed over whole. Belongs with the
+  scan (a write by name of a field that lives in the block).
+- **A file's `loadState` on the puppet known by the caller's name on the stack** (rust-host.ts, the wrapper on `restartEncounter`): its restart must not
+  cross. Belongs on the call surface: `loadState` a row the host answers.
+- **The highlighted row put back on the nearby list's own row** after an apply (rust-host.ts `hoverRow`): the bridge carries `Game.hover` as a value.
+  Belongs in the schema (a reference into `nearby`).
+- **The mission record made anew** when the Rust game restarted inside its tick (rust-host.ts `tail`): the apply writes the fields into the record
+  that stood, and a run's beginning is known outside the tick by the record's identity. Belongs in the importer (a restart's out event, or the record
+  as a row).
+- **A whole apply when a step's apply made a man** (rust-host.ts `tail`): a made row has the every-tick list's fields only. Belongs in the importer
+  (a made row is filled whole).
+- **`face_loaded`, `face_saves_in`, `face_saves_asked`** (the page's own stand-ins in rust/game_face/src/page.rs, now the harness's too): what the save
+  controller does to the game round a load, its shelf as the tick reads it, what the tick asked of it. Belong in rust/game's savestate.
 - **The game's die seeded on the Rust side by a write into the block** (rust-host.ts `seedDie`: the `dice` part found by its name, the count and the word
   by their offsets). Belongs in the face: one call that seeds the die of the game in a slot.
 - **The list-alone call tapped by hand** (rust-host.ts: `world.relist` → `face_upload`, beside the tap on `upload`). Belongs with the generated taps.
