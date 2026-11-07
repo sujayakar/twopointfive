@@ -102,6 +102,10 @@ fn main() {
         let rows0 = g.tab.boxes.len();
         let (mut n_parted, mut was_same, mut die_parted, mut done) = (0usize, true, 0usize, 0usize);
         let mut verdict_said = false;
+        let mut post_file = std::env::var("BLITZ_POST").ok().map(|p| { use std::io::Write; let mut f = std::io::BufWriter::new(std::fs::File::create(&p).unwrap_or_else(|e| panic!("BLITZ_POST {}: {}", p, e))); writeln!(f, "{}", head.join(" ")).unwrap(); f });
+        let clear: Option<(String, usize)> = std::env::var("BLITZ_CLEAR").ok().map(|s| { let (p, n) = s.split_once('@').expect("BLITZ_CLEAR=<part>@<tick>"); (p.to_string(), n.parse().expect("a tick")) });
+        let mut state_file = std::env::var("BLITZ_STATE").ok().map(|p| { use std::io::Write; let mut f = std::io::BufWriter::new(std::fs::File::create(&p).unwrap_or_else(|e| panic!("BLITZ_STATE {}: {}", p, e))); writeln!(f, "names {}", game::state_words::STATE_NAMES.join(" ")).unwrap(); f });
+        let (mut sw_o, mut sw) = (game::io::W::new(), Vec::<u32>::new());
         for k in 1..=ticks {
             // THE HOST PUT A CHECKPOINT BACK in the TypeScript's run before this tick opened (`<k> chron_load`): the whole game was replaced by a saved one,
             // which no stepper can follow from its own state. The Rust game takes the TypeScript's state as this tick opens (L<k>.bin, Ls<k>.bin) as a NEW
@@ -147,11 +151,25 @@ fn main() {
             // HOST STEP: the flag the player's own restart leaves for the host's next frame is put down (game_run::restart_cut)
             if !skip("restartcut") { game_run::restart_cut(&mut g); }
             let dt = host[k - 1][0];
+            // (BLITZ_CLEAR=<part>@<tick>: that part of the game made anew before that tick opens, for the test of whether a part is scratch: two equal
+            //  games, the part cleared in one, every OTHER state word equal from there to the end. A part that fails is state)
+            if let Some((part, at)) = &clear { if k == *at {
+                match part.as_str() {
+                    "col.mirror" => g.col.mirror = game::scene_box_mirror::BoxMirror::blank(),
+                    "alone_own" => g.alone_own = game::game::AsideOwn::blank(),
+                    "m.scene_box_mirror" => g.m.scene_box_mirror = game::scene_box_mirror::SceneBoxMirrorMod::blank(),
+                    "m.scene_collision" => g.m.scene_collision = game::scene_collision::SceneCollisionMod::blank(),
+                    p => panic!("BLITZ_CLEAR: no part {} (col.mirror | alone_own | m.scene_box_mirror | m.scene_collision)", p),
+                }
+                println!("CLEARED {} before tick {}", part, k);
+            } }
             TICK.store(k, Ordering::Relaxed);
             let t0 = std::time::Instant::now();
             game_run::step_seats(&mut g, dt, &cmd);
             let el = t0.elapsed(); spent += el; if el > worst { worst = el; }
             done = k;
+            // (BLITZ_STATE=<file>: the game's state words after every tick, a line a tick, for two processes or two games to be held word by word)
+            if let Some(f) = state_file.as_mut() { use std::io::Write; game::state_words::state_words(&mut g, &mut sw_o, &mut sw); let mut l = format!("{}", k); for w in &sw { l.push(' '); l.push_str(&format!("{:08x}", w)); } writeln!(f, "{}", l).unwrap(); f.flush().unwrap(); }
             // (the mission's verdict as the game itself answers it, game::verdict::verdict_ended: the first tick it does, once)
             if !verdict_said { if let Some((won, word, why)) = game::verdict::verdict_ended(&mut g) { verdict_said = true; println!("VERDICT at tick {}: {} {}{}", k, if won { "won" } else { "lost" }, word, if why.is_empty() { String::new() } else { format!(" ({})", why) }); } }
             // (a level script's beats as they stand: every beat this game started, how many resumes it has had, where it is)
@@ -167,6 +185,9 @@ fn main() {
             }
             let d = &sim::state::state(0).dice;
             let w = unsafe { std::slice::from_raw_parts(sim::state::addr(0) as *const u32, len / 4) };
+            // (BLITZ_POST=<file>: this game's OWN series, in post.txt's form, to keep a run whose series is the Rust game's where the TypeScript's was
+            //  another on purpose, or was never made: tools/blitz/keep.sh)
+            if let Some(f) = post_file.as_mut() { use std::io::Write; let mut l = format!("{} {} {} {}", k, d.n, d.s, g.time); for P in sim::state::PARTS.iter() { l.push(' '); l.push_str(&part_hash(&w[P.off / 4..(P.off + P.len) / 4]).to_string()); } writeln!(f, "{}", l).unwrap(); f.flush().unwrap(); }
             let p = post.get(k - 1);
             let mut off: Vec<&str> = Vec::new();
             if let Some(p) = p { for (i, P) in sim::state::PARTS.iter().enumerate() { if p.get(4 + i).map(|s| s.as_str()) != Some(part_hash(&w[P.off / 4..(P.off + P.len) / 4]).to_string().as_str()) { off.push(NAMES[i]); } } } else { off.push("no line of post.txt"); }
