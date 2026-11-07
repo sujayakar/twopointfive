@@ -626,23 +626,6 @@ impl CuesAt {
 }
 impl Default for CuesAt { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/cues.ts:355 stripRows ->, src/game/cues.ts:355)
-#[derive(Clone, Debug)]
-pub struct StripRowsItem {
-    pub text: String,
-    pub t: f64,
-}
-impl StripRowsItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StripRowsItem {
-            text: String::new(),
-            t: 0.0,
-        }
-    }
-}
-impl Default for StripRowsItem { fn default() -> Self { Self::zeroed() } }
-
 /// (src/game/cues.ts:80 CUES_DEFAULTS: a table nothing writes)
 pub fn cues_defaults() -> crate::knobs::CuesK { crate::knobs::page_cues() }
 

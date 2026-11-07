@@ -63,7 +63,7 @@ const READ = () => { const cv = document.querySelector('#view'), cr = cv.getBoun
   const stage = (dx, dz) => page.evaluate(({ dx, dz }) => { const g = window.__game, S = g.orders.squad().filter(m => m.state !== 'dead'), c = S[0].char.pos; g.teleportPlayer([c[0] + dx, 0, c[2] + dz]); window.__play(40, 1 / 60); return { squad: S.map(m => m.callsign), on: S.map(m => window.__cam.project(m.char.bones.head ?? m.char.pos, 1, 1, 0.9)[2]) }; }, { dx, dz });
   for (const [name, dx, dz] of [['east', 14, 0], ['north', 0, -12]]) {
     const st = await stage(dx, dz); log('staged', name, JSON.stringify(st));
-    await page.evaluate(() => { const g = window.__game, S = g.orders.squad().filter(m => m.state !== 'dead'); g.say(S[0], 'stacked up.'); if (S[2]) g.say(S[2], "can't get there."); window.__play(12, 1 / 60); });
+    await page.evaluate(() => { const g = window.__game, S = g.orders.squad().filter(m => m.state !== 'dead'); const say = (m, t) => window.__rust.call('Game.say', g, [m, t, false, false, true]); say(S[0], 'stacked up.'); if (S[2]) say(S[2], "can't get there."); window.__play(12, 1 / 60); });
     out[name] = await page.evaluate(READ); log(name, JSON.stringify(out[name])); await shot(`line-${name}`);
     await page.evaluate(() => window.__play(300, 1 / 60));
   }

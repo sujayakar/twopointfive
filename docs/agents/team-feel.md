@@ -866,10 +866,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   stun (in the yellow it had) and 'zz' / '✚' / '✕' on the floor. NO SWITCH: the HUD only — nothing the simulation, a save or a digest reads.
   NOT MENDED HERE: `Guard.awareness` is written on a teammate as before, and what reads it off every man still does (guards.ts `tension`,
   the score's intensity: a teammate a frag left at 0.92 holds it at 0.32 until his order ends); a teammate's speech bubble kept the wary
-  yellow while he was left searching — MENDED 10-17 by the dialogue pass, the same way and with no switch: `bubbles.ts bubbleTone` gives a living man of the
+  yellow while he was left searching — MENDED 10-17 by the dialogue pass, the same way and with no switch: `cues.rs bubble_tone` (`bubbles.ts bubbleTone` until it moved) gives a living man of the
   player's own the calm tone while he is searching or suspicious (the red of a fight stays his, as his '!' does; a defender's and a civilian's tones as they
-  were); the check's lines (2b), the defender's bubble line and the bubbles.ts line say so, and `HEADMARK_BREAK=1` puts the yellow back with the marks. Check `tools/qa/headmark-check.ts` (`probes.ts headmark`, family `ui`; the same on both
-  stands; `HEADMARK_BREAK=1` puts the marks back and lines 1, 2, 2b and 3 must fail) asks `headMark` what would be drawn over each man of a staged
+  were); `rust/game_start/tests/radio.rs` `a_line_sounds_as_the_man_is` says so. Check `tools/qa/headmark-check.ts` (`probes.ts headmark`, family `ui`; the same on both
+  stands; `HEADMARK_BREAK=1` puts the marks back and lines 1, 2 and 3 must fail) asks `headMark` what would be drawn over each man of a staged
   room clear; `tools/qa/headmark-page.cjs` reads the marks off the real page on the software adapter. Never seen on a GPU, never played.
 - **A man's condition: a blast that leaves a man standing leaves him HURT** (`src/game/condition.ts`, table `CONDITION {on, hurtPace 1.5, hurtSup
   0.35, hurtSecs 0, ownCalm, looks}`; ON in the page, `?nocondition`; OFF in the module and on the frozen stand, `TPS_CONDITION=1`; in the knob registry
