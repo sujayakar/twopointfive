@@ -9,6 +9,7 @@
 //   bun run tools/blitz/page-decides.ts --md out.md     the same as a page, a table a sort (the sorts a person made, and what is left)
 //   bun run tools/blitz/page-decides.ts --why <file>:<function>[,…]  how the frame and the page reach it, and each act with its line
 //   bun run tools/blitz/page-decides.ts --hubs [n]      the largest branches of the frame's reach (to find a stand or a menu that is not yet a stop)
+//   bun run tools/blitz/page-decides.ts --doors         the deciding rows the page's own code walks in through, each with how many stand behind it
 //   bun run tools/blitz/page-decides.ts --check         exit 1 while a row is UNSORTED or sorted `decides` or `throws`, or a line of the sorts' file sorts
 //                                                       nothing, or sorts more rows than a person has read
 //   bun run tools/blitz/page-decides.ts --pin           write, on each line of the sorts' file that is not `decides`, how many rows it sorts now
@@ -27,6 +28,8 @@
 //              (rust/game_rules, or a row of the call surface, tools/blitz/calls.json): the same rule in two languages. THE PAGE INSTALLS NO CALL SURFACE
 //              (src/game/crossing.ts `setSurface` is called by the tools' preload only), so on the page the TypeScript answers, on the copy, where a
 //              headless tool that asks the same function between ticks is answered by the Rust game.
+//   (a judge that is ONE LINE and hands on one thing with at most a default or one comparison, calling nothing that decides, is sorted `reads`: it is
+//    how the page reads the game's record, and no rule)
 //   THROWS     has only the crossing for a body (`crossToRust`, `goneWithTick`): with no surface it throws by name if the page calls it
 // NOT ACTS, by ruling: a write of a tally (`…_STATS`, a `stats` record), of a field the schema calls scratch, of a field of an object the function has
 // just made itself, and a class's own first values (its constructor and field lines).
@@ -354,7 +357,14 @@ for (const u of UNITS.values()) { if (u.file === 'src/game/crossing.ts') continu
   let reason = frame ? '' : w.startsWith('behind') ? `the frame reaches it only past ${w.slice(7)} (page-decides.roots.json says where its reach stops, and why)` : w === 'start or hand' ? 'no root of the frame reaches it: it runs as the page loads or a game is stood, or on a key, a click or a tool\'s hook' : w === 'other page' ? 'reached only from a page that plays no Rust game' : 'no page reaches it';
   for (const { h, re } of HANDRE) if (re.test(u.id)) { kind = h.kind; if (frame) { h.used++; if (!u.stub) { sort = h.sort; reason = h.reason; } } break; }   // (a crossing the frame reaches stays `throws`, whatever its file's line says)
   rows.push({ sort, kind: kind || u.file.replace(/^src\//, '').replace(/\.ts$/, ''), when: w, unit: u, judges, twin, reason }); }
-const ORDER = ['UNSORTED', 'throws', 'decides', 'moving', 'hand', 'host', 'picture', 'networked page', 'save', 'start or hand', 'other page', 'dead'];
+// A READ OF THE RECORD is no decision: a one-line function of the simulation's that hands on one thing with at most a default or one comparison (`get locked()
+// { return this.g(DC.locked) !== 0; }`, `pairOf(gd) { return gd.unit?.pair ?? null; }`) and calls nothing that decides. It is how the page reads the game's
+// record, and it stays when the page only draws. Found by the program (never by a line of the sorts' file), and only among rows that judge: a row that acts
+// is never one. A row that calls a deciding row is that row's pass-through and goes with it.
+{ const READ_WORKS = 2, cand = new Map(rows.filter(r => r.sort === 'decides' && !r.unit.acts.length && r.judges && r.unit.lines <= 1 && r.unit.works <= READ_WORKS).map(r => [r.unit.id, r])), deciding = new Set(rows.filter(r => r.sort === 'decides' || r.sort === 'UNSORTED' || r.sort === 'throws').map(r => r.unit.id));
+  for (let again = true; again;) { again = false; for (const [id, r] of cand) if ([...r.unit.callsOut.keys()].some(t => t !== id && deciding.has(t) && !cand.has(t))) { cand.delete(id); again = true; } }
+  for (const r of cand.values()) { r.sort = 'reads'; r.reason = 'a one-line read of the game\'s record (a field handed on with at most a default or one comparison, calling nothing that decides): how the page reads what the game keeps'; } }
+const ORDER = ['UNSORTED', 'throws', 'decides', 'moving', 'reads', 'hand', 'host', 'picture', 'networked page', 'save', 'start or hand', 'other page', 'dead'];
 rows.sort((a, b) => ORDER.indexOf(a.sort) - ORDER.indexOf(b.sort) || a.kind.localeCompare(b.kind) || a.unit.id.localeCompare(b.unit.id));
 const actsText = (r: Row, max = 6) => { const by = new Map<string, Set<string>>(); for (const a of r.unit.acts) { if (!by.has(a.kind)) by.set(a.kind, new Set()); by.get(a.kind)!.add((a.loose ? '~' : '') + a.what); } const parts = [...by].map(([k, v]) => `${k} ${[...v].slice(0, max).join(', ')}${v.size > max ? `, +${v.size - max}` : ''}`); if (r.judges) parts.push(`judges (${r.unit.reads.size ? `reads ${r.unit.reads.size} carried fields` : 'reads carried state through what it calls'}; Rust has ${r.judges})`); if (r.unit.stub) parts.push(`THROWS on the page (${r.unit.stub})`); return parts.join(' · ') + (r.twin && !r.judges ? ` · [Rust has ${r.twin}]` : ''); };
 
@@ -363,6 +373,11 @@ for (const why of (opt('--why') ?? '').split(',').filter(Boolean)) { const u = U
   for (const a of u.acts) console.log(`  ${u.file}:${a.line}  ${a.kind} ${a.loose ? '~' : ''}${a.what}`); if (u.reads.size) console.log(`  reads ${u.reads.size} carried fields: ${[...u.reads].slice(0, 12).join(', ')}`); const t = rustTwin(u); if (t) console.log(`  Rust has ${t}`); }
 if (opt('--why')) process.exit(0);
 
+if (flag('--doors')) { /* THE DOORS: of the rows that decide, the ones the page's own code walks in through (its caller on the frame's road is no deciding row),
+   each with how many deciding rows stand behind it. A door is one question the page asks: what a view of the game has to answer in its place. */
+  const dec = new Map(rows.filter(r => r.sort === 'decides').map(r => [r.unit.id, r])), behind = new Map<string, number>();
+  for (const id of dec.keys()) { let d = id; for (let up = reachFrame.get(d); up && dec.has(up); up = reachFrame.get(d)) d = up; behind.set(d, (behind.get(d) ?? 0) + 1); }
+  console.log(`${dec.size} rows decide, behind ${behind.size} doors:`); for (const [d, n] of [...behind].sort((x, y) => dec.get(x[0])!.kind.localeCompare(dec.get(y[0])!.kind) || y[1] - x[1])) { const r = dec.get(d)!; console.log(`  ${String(n).padStart(4)}  ${r.kind}\t${d.replace(/^src\//, '')}\t← ${String(reachFrame.get(d) ?? 'seen in the frame').replace(/^src\//, '')}\t${r.unit.acts.length ? 'acts' : 'judges'}`); } process.exit(0); }
 const bySort = new Map<string, number>(); for (const r of rows) bySort.set(r.sort, (bySort.get(r.sort) ?? 0) + 1);
 console.log(`page-decides: ${rows.length} functions under src/ act on the game's copy, judge it again or would throw · ` + ORDER.filter(s => bySort.has(s)).map(s => `${s} ${bySort.get(s)}`).join(' · '));
 if (flag('--kinds') || !(opt('--tsv') || opt('--md'))) { for (const s of ORDER) { const R = rows.filter(r => r.sort === s); if (!R.length) continue; const k = new Map<string, number>(); for (const r of R) k.set(r.kind, (k.get(r.kind) ?? 0) + 1); const all = flag('--kinds') || s === 'UNSORTED' || s === 'decides' || s === 'throws'; console.log(`  ${s}: ${[...k].sort((a, b) => b[1] - a[1]).slice(0, all ? 1000 : 12).map(([n, c]) => `${n} ${c}`).join(', ')}${k.size > 12 && !all ? `, … (${k.size} kinds)` : ''}`); } }
@@ -371,7 +386,7 @@ if (flag('--kinds') || !(opt('--tsv') || opt('--md'))) { for (const s of ORDER) 
 const unused = HAND.filter(h => !h.used); if (unused.length) console.log(`  ${unused.length} lines of page-decides.rows.tsv sort no every-frame row any more (take them out): ${unused.slice(0, 12).map(h => h.pat).join(', ')}`);
 const grown = HAND.filter(h => h.sort !== 'decides' && h.used > h.pin); if (grown.length && !flag('--pin')) console.log(`  ${grown.length} lines of page-decides.rows.tsv sort more rows than when they were last read (read the new rows, then --pin): ${grown.slice(0, 12).map(h => `${h.pat} ${h.pin < 0 ? 'never read' : h.pin}→${h.used}`).join(', ')}`);
 if (flag('--pin')) { const by = new Map(HAND.map(h => [h.pat, h])); writeFileSync(HAND_FILE, readFileSync(HAND_FILE, 'utf8').split('\n').map(l => { if (!l || l.startsWith('#')) return l; const c = l.split('\t'), h = by.get(c[0])!; return h.sort === 'decides' ? c.slice(0, 4).join('\t') : [...c.slice(0, 4), String(h.used)].join('\t'); }).join('\n')); console.log(`  page-decides.rows.tsv: the counts written (${HAND.filter(h => h.sort !== 'decides').length} lines)`); }
-const tsvTo = opt('--tsv'); if (tsvTo) writeFileSync(tsvTo, ['sort\tkind\tfile\tfunction\tline\tlines\twhen it runs\twhat it does\treason', ...rows.map(r => [r.sort, r.kind, r.unit.file, r.unit.name, r.unit.line, r.unit.lines, r.when, actsText(r, 40), r.reason].join('\t'))].join('\n') + '\n');
+const tsvTo = opt('--tsv'); if (tsvTo) writeFileSync(tsvTo, ['sort\tkind\tfile\tfunction\tline\tlines\twhen it runs\twhat it does\treason\tworks', ...rows.map(r => [r.sort, r.kind, r.unit.file, r.unit.name, r.unit.line, r.unit.lines, r.when, actsText(r, 40), r.reason, r.unit.works].join('\t'))].join('\n') + '\n');
 const mdTo = opt('--md'); if (mdTo) { const L: string[] = []; for (const s of ORDER) { const R = rows.filter(r => r.sort === s); if (!R.length) continue; if (s === 'start or hand' || s === 'other page' || s === 'dead' || s === 'networked page' || s === 'save') { const k = new Map<string, number>(); for (const r of R) k.set(r.kind, (k.get(r.kind) ?? 0) + 1); L.push(`## ${s} (${R.length})`, '', `Sorted by the program: ${R[0].reason}. By file: ${[...k].sort((a, b) => b[1] - a[1]).map(([n, c]) => `${n} ${c}`).join(', ')}.`, ''); continue; }
     L.push(`## ${s} (${R.length})`, '', '| kind | function | what it does | reason |', '|---|---|---|---|'); for (const r of R) L.push(`| ${r.kind} | \`${r.unit.file.replace(/^src\//, '')}\` ${r.unit.name.replace(/\|/g, '\\|')} | ${actsText(r).replace(/\|/g, '\\|')} | ${r.reason} |`); L.push(''); } writeFileSync(mdTo, L.join('\n')); }
 if (flag('--check')) process.exit((bySort.get('UNSORTED') ?? 0) + (bySort.get('decides') ?? 0) + (bySort.get('throws') ?? 0) + unused.length + grown.length ? 1 : 0);
