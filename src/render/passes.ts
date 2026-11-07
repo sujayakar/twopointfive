@@ -804,7 +804,7 @@ export class LightingPasses implements CutSwappable {
     return { ok: true, messages: [note, ...a.messages] };
   }
   /** Dev / measurement hook (main.ts __hotGather): rebuild the gather's programs from an fgather.wgsl variant (its helpers) and, if given, a variant of the gather's own
-   *  common text (shaders/gather_split_common.wgsl). All three or none: a variant that fails to compile leaves the live ones as they were. */
+   *  common text (shaders/gather_common.wgsl). All three or none: a variant that fails to compile leaves the live ones as they were. */
   async hotSwapGather(src: string, common?: string): Promise<{ ok: boolean; messages: string[] }> { return this.hotSwapSplit(src, common); }
   /** frames the RT-reflection set may stay allocated with the pass off before it goes back to the pool (setRt; review R1.1) */
   private static readonly RT_IDLE_FRAMES = 600;
