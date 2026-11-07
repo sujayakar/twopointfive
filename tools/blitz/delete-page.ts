@@ -17,7 +17,7 @@ const COUNTER = `window.__tpsN = new Map(); window.__tpsRan = (id) => { window._
 const word = (q: string) => [q, WORD].filter(Boolean).join('&');
 let bad = 0; const say = (s: string) => console.log(s);
 
-async function withPage<T>(port: number, f: (c: Cdp) => Promise<T>): Promise<T> { const c = await Cdp.launch({ port, width: W, height: H, dpr: 1, extraArgs: FLAGS }); try { if (CENSUS) await c.send('Page.addScriptToEvaluateOnNewDocument', { source: COUNTER }); return await f(c); } finally { await c.close(); } }
+async function withPage(port: number, f: (c: Cdp) => Promise<unknown>): Promise<void> { const c = await Cdp.launch({ port, width: W, height: H, dpr: 1, extraArgs: FLAGS }); try { if (CENSUS) await c.send('Page.addScriptToEvaluateOnNewDocument', { source: COUNTER }); await f(c); } catch (e) { bad++; say(`FAIL  a flow threw in the driver or the page: ${String((e as Error)?.message ?? e).slice(0, 400)}`); } finally { await c.close(); } }
 /** the page's own errors, but for the ones a headless browser makes of itself */
 const errorsOf = (c: Cdp) => c.errors.filter(e => !/favicon|ERR_FILE_NOT_FOUND.*\.map|AudioContext|autoplay/i.test(e));
 async function census(c: Cdp, what: string, frames: number): Promise<void> { if (!CENSUS) return; const ran = await c.eval<[number, number][]>('[...(window.__tpsN ?? [])]'); appendFileSync(CENSUS, JSON.stringify({ page: true, argv: what, frames, ran }) + '\n'); await c.eval('window.__tpsN && window.__tpsN.clear()'); }
@@ -69,6 +69,8 @@ if (ONLY.has('title')) await withPage(9363, async c => { const url = `${AT}/?${w
   for (let i = 0; i < 6 && !to; i++) { await press('Enter', 13); for (let k = 0; k < 20 && !to; k++) { await new Promise(r => setTimeout(r, 500)); const h = await c.eval<string>('location.href').catch(() => ''); if (h && h.split('#')[0] !== url) to = h; } seen.push(await where()); }
   say(`      the title: ${seen.map(s => s.replace(AT, '')).join('  →  ')}`);
   if (!to) { bad++; say(`FAIL  the title, Play, Deploy: Enter six times loaded no mission`); return; }
+  /* (Deploy's own load is still fetching: it is stopped and the tab emptied before the same address is opened paused, or its aborted fetch is what `__ready` says) */
+  await c.send('Page.stopLoading').catch(() => {}); await c.open('about:blank', 30000).catch(() => {}); c.errors.length = 0;
   const paused = to + (to.includes('?') ? '&' : '?') + 'paused'; await c.open(paused, 120000); await ready(c); await c.eval(`window.__menu.close()`); const before = await c.eval(state);
   const n = await play(c, [{ n: 240, keys: ['KeyW'] }, { n: 60, keys: ['KeyQ'] }, { n: Math.max(60, Math.min(FRAMES, 1200) - 300) }]);
   const after = await c.eval(state); verdict(`the title, Play, Deploy (${to.replace(AT, '')})`, c, before, after, n); await census(c, `the title to play ${paused}`, n); });
