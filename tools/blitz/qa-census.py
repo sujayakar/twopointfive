@@ -40,7 +40,7 @@ snake = lambda s: re.sub(r'([a-z0-9])([A-Z])', r'\1_\2', s).lower()
 
 # ---- the simulation's functions: the port's signatures (every function of the tick has one), and the inventory's verdicts
 SIG = collections.defaultdict(list)   # snake name -> [(module, args)]
-for f in [x for x in glob.glob('rust/game/src/*/*.rs') if not x.endswith(('/types.rs', '/mod.rs'))]:
+for f in [x for x in glob.glob('rust/game_rules/src/*/*.rs') if not x.endswith(('/types.rs', '/mod.rs'))]:
     mod = f.split('/')[-2]
     for m in re.finditer(r'pub fn (\w+)\(([^{]*)\)[^{]*\{', open(f).read()): SIG[m.group(1)].append((mod, m.group(2)))
 SCRATCH = re.compile(r'^(StaticCollision\.|SkyState\.|BoxWorld\.|AABB\.|AirDust\.|Weather\.|Box\.(albedo|aniso|flags|rough)$|Game\.sim$|PropSystemStats\.)')

@@ -63,7 +63,7 @@
 //                 nobody has looked into since; a lamp that is LIT but remembered out is class 1. The mains follow at once (told to the whole floor).
 //        no class: the level's own lamps as they stand, the sun, the moon and the lightning, the team's own lights.
 //      WHAT IS NOT LIGHT goes by the same table: with FOG.air off the picture's march of the smoke takes no density over floor the team does not see
-//      (common.wgsl fogSmoke — volumetrics.wgsl and its dust twin; with it on, as the page has it, a plume is drawn wherever it stands), and a spark, a puff, a chip, a case, a sheet or a shard there is not drawn (particles_draw.wgsl; the weather's
+//      (common.wgsl fogSmoke — volumetrics.wgsl, its dust look too; with it on, as the page has it, a plume is drawn wherever it stands), and a spark, a puff, a chip, a case, a sheet or a shard there is not drawn (particles_draw.wgsl; the weather's
 //      drops stay: the same everywhere). Shadow rays and the game's readings take the smoke as it is.
 //      The game's own readings of light (the meter's direct term, the guards' eyes — probe.wgsl) take the lights as they ARE. NOT PICTURE ONLY ON A GPU,
 //      though: the BOUNCE the meter adds is read from the picture's cascades, which hold class 1 as the picture has it — a torch on a wall nobody on the team

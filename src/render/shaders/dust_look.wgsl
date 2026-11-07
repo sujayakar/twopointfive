@@ -1,6 +1,8 @@
-// HOW DESTRUCTION DUST IS DRAWN (look only). Compiled into ONE program: the volumetric pass's dust twin (render/dustLookVol.ts builds it from volumetrics.wgsl's own
-// text; passes.ts dispatches it only on frames some brick of smoke carries dust). volumetrics.wgsl, common.wgsl and every other module are not touched: with no dust
-// alive the frame runs the programs it always ran.
+// HOW DESTRUCTION DUST IS DRAWN (look only). It is part of the volumetric pass's ONE text (volumetrics.wgsl's two lit marches call dustDensity where they read the
+// smoke, tint their in-scatter by dustTintOf and take smokeSelfShadowLook where the sample is dust), behind a bit of the frame: sideCfg.z bit 1, up on the frames some
+// brick of smoke carries dust (SmokeBinding.dusty). With the bit down dustDensity IS the march's masked read, the tint is exactly 1 and the self-shadow is the plain
+// one, so a frame with no dust alive draws what it always drew. It was a second program until 2026-11-07 (the march's text with five statements swapped at eleven
+// sites, chosen by the frame): the slowest program of the page to build, and dust was plain smoke until it was in.
 //
 // WHOSE smoke is dust is per CELL: the atlas texel carries it (smoke/smoke.wgsl publish): .x the density every reader takes, .yzw that density × (1 − tint) averaged over whatever
 // is in the cell. So dust drifting into a canister's plume tints and shapes only where it is, in proportion, and the plume beside it stays white smoke. Where a cell is dust, in
@@ -11,7 +13,7 @@
 //   (3) breaks the body into slow billows (mean kept): the coarse lattice's field in a filled room is smooth, and smooth lit fog reads as one flat blob;
 // the in-scatter takes the tint, weighted by whose density is at the sample (gypsum is not white smoke; plain smoke sharing the ray keeps its white); and where the
 // sample is dust the march's own self-shadow taps read the same drawn density, so a billow has a lit side and a fold.
-// EVERY OTHER READER IS UNTOUCHED: the scene's shadow rays, the haze's and the froxels' smoke terms, and above all the light probe's sight lines read .x through
+// EVERY OTHER READER IS UNTOUCHED: the scene's shadow rays, the haze's smoke terms, and above all the light probe's sight lines read .x through
 // smoke_read.wgsl like any smoke, so this file cannot move a sight line. The price, said plainly: the picture and the sight lines no longer read
 // the very same field in a dust cloud — the outer 0.2‥0.5 m of a cloud and its thinnest veil are drawn thinner than a man's sight line (and the cloud's shadow on
 // the floor) reads them, and through the body a ray crossing a billow's crest is drawn denser, one crossing a trough thinner, than the smooth field the sight line reads (the same on
@@ -44,7 +46,12 @@ fn dustShapeAt(p: vec3f, v: f32, fine: bool, fire: f32) -> f32 {
   return veil * soft * mix(1.0, n * n * 3.7, DUST_BILLOW);
 }
 struct DustDens { d: f32, tn: vec3f, dust: f32 }
+fn dustAlive() -> bool { return (frame.sideCfg.z & 2u) != 0u; }
 fn dustDensity(p: vec3f, mask: u32, fine: bool) -> DustDens {
+  if (!dustAlive()) { return DustDens(smokeDensityIn(p, mask), vec3f(0.0), 0.0); }   // (no dust alive: the march's own read, a tint of exactly 1, the plain self-shadow)
+  return dustDrawn(p, fine);
+}
+fn dustDrawn(p: vec3f, fine: bool) -> DustDens {   // (the density as drawn where dust is alive; the self-shadow's taps ask it straight, they are only made at a dust sample)
   let x = smokeTexelAt(p);
   var o = DustDens(x.x, vec3f(0.0), 0.0);
   let w = clamp((x.y + x.z + x.w) / (3.0 * DUST_FULL_AT * max(x.x, 1e-6)), 0.0, 1.0);
@@ -58,6 +65,6 @@ fn dustDensity(p: vec3f, mask: u32, fine: bool) -> DustDens {
 fn dustTintOf(dl: DustDens) -> vec3f { return vec3f(1.0) + dl.tn / max(dl.d, 1e-6); }
 fn smokeSelfShadowLook(P: vec3f, L: vec3f, mask: u32) -> f32 {
   var od = 0.0; let ds = smokeSelfStep();   // (the lab's rows move both self-shadows alike: vol_common.wgsl)
-  for (var i = 1; i <= 4; i++) { od += dustDensity(P + L * (f32(i) - 0.3) * ds, mask, false).d; }
+  for (var i = 1; i <= 4; i++) { od += dustDrawn(P + L * (f32(i) - 0.3) * ds, false).d; }
   return exp(-od * ds * smokeSelfK());
 }

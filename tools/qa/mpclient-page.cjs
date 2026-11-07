@@ -3,11 +3,13 @@
 // sends its player's records and walks the server's confirmed ticks; a scripted watcher (tools/mp/bot.ts, bun) walks the same game beside it.
 //   PORT=5231 node tools/qa/mpclient-page.cjs [--ticks 600] [--setup '{"scenario":"?rescue&levelFile=consulate.json","seed":3}']     (a dev server on that port)
 //   --seats 2             a game of TWO players: the page sits in the SECOND seat (its own man, its own pair, its own records) and the bun client plays the first
+//   --words DIR           the whole game's state words of every machine after each word tick, a file a machine in DIR (the server's and the bun client's by
+//                         MP_WORDS, the page's from `__net.whole`): one game's folder for tools/mp/agreed.ts, which makes the wider word's list from such runs
 //   MPCLIENT_BREAK=1 …    the red path: after tick 90 the page steps one record with another walk key than the server ran — its state words must part from the server's and the check FAIL
 //   MPCLIENT_BREAK=way    the Network page's red path: the check picks the connection as it is where it should pick a long one — the `network page` line must FAIL
 //   MPCLIENT_BREAK=ahead  the look ahead's red path: the page is opened with netpredict=0 (its own man drawn where the game has him) — the `ahead` line must FAIL
 // PASS = the page was moved to the recipe's address, the seat's key no longer on it · it took the seat and the fight started only after it stood · every state word of N ticks was the
-// server's (V8 with the page's engine against JavaScriptCore with none) · the server ran ticks on the page's own records and its man moved · a tab that
+// server's (V8 with the page's engine against JavaScriptCore with none), and so was the WIDER word on every word tick (watched: src/net/step.ts netWatch) · the server ran ticks on the page's own records and its man moved · a tab that
 // sleeps wakes far behind, catches up and still matches, and its man stood still only when the hands were taken off first · no page error.
 // AHEAD (src/net/foresee.ts, host/ahead.ts): on the frame a walk key first goes down the page's look ahead has its own man moved while the game has not moved
 // him yet (and how many frames later the game does is printed); through the run he is ahead of the game while he walks; on frames that are DRAWN his palette
@@ -20,6 +22,7 @@ const { resolve } = require('node:path');
 const ROOT = resolve(__dirname, '../..');
 const PORT = process.env.PORT || 5199, BREAK = process.env.MPCLIENT_BREAK === '1', NO_AHEAD = process.env.MPCLIENT_BREAK === 'ahead', BAD_WAY = process.env.MPCLIENT_BREAK === 'way', QUALITY = process.env.QUALITY || 'verylow';
 const arg = (k, d) => { const i = process.argv.indexOf(`--${k}`); return i >= 0 ? process.argv[i + 1] : d; };
+const WORDS = arg('words', ''); if (WORDS) { require('node:fs').mkdirSync(WORDS, { recursive: true }); for (const f of require('node:fs').readdirSync(WORDS)) if (f.endsWith('.words')) require('node:fs').unlinkSync(`${WORDS}/${f}`); }
 const N = Number(arg('ticks', '600')), setup = JSON.parse(arg('setup', '{"scenario":"?roomclear&squad4","seed":7}')), TWO = arg('seats', '1') === '2';
 if (TWO) setup.scenario += '&seats=2';
 const KEYS = TWO ? ['seat-one', 'seat-two'] : ['seat-one'], MINE = KEYS.length - 1;   // (the page takes the last seat)
@@ -31,11 +34,11 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 const health = async () => { try { return await (await fetch(`http://127.0.0.1:${MP}/health`)).json(); } catch { return null; } };
 
 (async () => {
-  const srv = spawn('bun', ['run', 'tools/mp/server.ts'], { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, MP_PORT: String(MP), MP_BUILD: '', MP_IDLE_S: '600', MP_GRACE_S: '900', MP_SETUP: JSON.stringify({ game: 'check', ...setup, seatKeys: KEYS }) } });
+  const srv = spawn('bun', ['run', 'tools/mp/server.ts'], { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, ...(WORDS ? { MP_WORDS: `${resolve(WORDS)}/server` } : {}), MP_PORT: String(MP), MP_BUILD: '', MP_IDLE_S: '600', MP_GRACE_S: '900', MP_SETUP: JSON.stringify({ game: 'check', ...setup, seatKeys: KEYS }) } });
   let srvErr = ''; srv.stderr.on('data', d => { srvErr += d; }); srv.stdout.on('data', () => {});
   let h0 = null; for (let i = 0; i < 200 && !h0; i++) { h0 = await health(); if (!h0) await sleep(100); }
   if (!h0) { srv.kill(); console.log(`mpclient-page: the server did not come up: ${srvErr.trim().split('\n').slice(-2).join(' / ')}`); process.exit(2); }
-  const bot = spawn('bun', ['run', 'tools/mp/bot.ts', '--url', `ws://127.0.0.1:${MP}`, '--game', 'check', '--build', '', '--ticks', String(N), '--timeout', '900', ...(TWO ? ['--key', 'seat-one'] : [])], { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'] });
+  const bot = spawn('bun', ['run', 'tools/mp/bot.ts', '--url', `ws://127.0.0.1:${MP}`, '--game', 'check', '--build', '', '--ticks', String(N), '--timeout', '900', ...(TWO ? ['--key', 'seat-one'] : [])], { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, ...(WORDS ? { MP_WORDS: `${resolve(WORDS)}/bun` } : {}) } });
   let botOut = ''; bot.stdout.on('data', d => { botOut += d; }); const botDone = new Promise(r => bot.on('exit', r));
 
   let browser = null, out; const errs = [];
@@ -48,6 +51,8 @@ const health = async () => { try { return await (await fetch(`http://127.0.0.1:$
     const moved = await page.evaluate(() => location.search);
     let hWait = null; for (let i = 0; i < 600; i++) { hWait = await health(); if (hWait && hWait.seats[MINE]) break; await sleep(50); }   // (asked the moment the moved page has said hello: it has the seat and its game is nowhere near stood — the server must be waiting, no tick run)
     await page.evaluate(() => window.__ready);
+    // (--words: the page keeps its whole words, and every run of frames this check asks for leaves the last word tick's on a list)
+    if (WORDS) await page.evaluate(() => { window.__net.keepWhole(true); const was = window.__runFrames, L = window.__mpcWords = []; let last = -1; window.__runFrames = function () { const r = was.apply(this, arguments), w = window.__net.whole; if (w && w.t !== last) { last = w.t; window.__mpcNames = window.__mpcNames || w.names.join(' '); L.push(`${w.t} ${w.words.map(x => x.toString(36)).join(' ')}`); } return r; }; });
     out = await page.evaluate(async ({ N, BREAK, NO_AHEAD, PICK }) => {
       window.__testVisible = true;
       const g = window.__game, start = [...g.player.char.pos], t0 = performance.now(); let broke = false;
@@ -107,7 +112,11 @@ const health = async () => { try { return await (await fetch(`http://127.0.0.1:$
       // hands taken off as a hidden tab or a card does (one record: he stays). Each time the page wakes far behind and catches up to the server's word.
       const main = { base, confirmed: S().confirmed, wordsOk: S().wordsOk, words: S().wordsOk - w0, secs: +((performance.now() - tm) / 1000).toFixed(1) };
       const yieldNow = () => new Promise(r => setTimeout(r, 0)), at = () => [g.player.char.pos[0], g.player.char.pos[2]];
-      const level = async keys => { const t = performance.now(); let far = false; while ((S().behind > 2 || S().far) && !S().bad && performance.now() - t < 180000) { window.__runFrames(10, 1 / 60, keys, 'none'); far = far || S().far; await yieldNow(); } return far; };
+      // (LEVEL WITH ITS SERVER, as level as a driven page gets: the ten frames of one turn here take their time, and the server confirms a tick every sixtieth of
+      //  a second of it, so right after a turn the page is that many ticks behind however fast it walks. Asked to be within two of the server it never was on a
+      //  small box (6 to 8 behind at every look, with a turn of 110 ms) and each call ran out its three minutes; the bar is two past what the turn itself cost,
+      //  and never past ten: a page that is catching up takes long turns, and that page is not level)
+      const level = async keys => { const t = performance.now(); let far = false, owed = 0; while ((S().behind > 2 + owed || S().far) && !S().bad && performance.now() - t < 180000) { const a = performance.now(); window.__runFrames(10, 1 / 60, keys, 'none'); owed = Math.min(8, Math.ceil((performance.now() - a) * 60 / 1000)); far = far || S().far; await yieldNow(); } return far; };
       const walk = async (key, n) => { const a = at(); for (let i = 0; i < n; i++) { window.__runFrames(10, 1 / 60, [key], 'none'); await yieldNow(); } await level([key]); const b = at(); return Math.hypot(b[0] - a[0], b[1] - a[1]); };
       // (the floor for the walk: the way a nap walks is back over floor he has just walked, so a wall at his shoulder says nothing. He walks each way two
       //  seconds until one gives him two metres; the nap's key is the one that takes him back)
@@ -173,6 +182,11 @@ const health = async () => { try { return await (await fetch(`http://127.0.0.1:$
     line(new URLSearchParams(moved).has('roomclear') === /roomclear/.test(setup.scenario) && new URLSearchParams(moved).get('seed') === String(setup.seed) && new URLSearchParams(moved).has('net') && !new URLSearchParams(moved).has('netkey'), `moved: the page was sent to the game's own address, the seat's key kept off it (${moved.slice(0, 120)})`);
     line(!!hWait && hWait.state === 'waiting' && hWait.tick === 0 && hWait.seats[MINE] === true, `ready: while the page stood its game the server held the seat and waited (${hWait?.state}, tick ${hWait?.tick})`);
     line(M.confirmed >= M.base + N && !S.bad && M.words >= words && M.wordsOk >= Math.floor(M.confirmed / 30) && !S.broken && !out.fatal, `same fight: the page walked ${M.confirmed} ticks (the last ${M.confirmed - M.base} in ${M.secs} s, walking and firing) and matched ${M.wordsOk} of ${Math.floor(M.confirmed / 30)} state words${S.bad ? ` (FIRST DIFFERENT after tick ${S.bad.t}: server ${S.bad.server}, its own ${S.bad.mine})` : ''}${S.broken ? ` (${S.broken})` : ''}; a confirmed tick cost ${S.walkMs.toFixed(1)} ms here${out.line ? `; the page said "${out.line}"` : ''}`);
+    // THE WIDER WORD, WATCHED (src/net/step.ts netWatch): the whole game's words of the parts every kind of host agrees on (src/net/agreed.ts), which the page
+    // holds against its server's on every word tick and only counts. A page beside a bun server is the pair that list was made for
+    // (WITH TWO SEATS the count is said and not held: the second seat's machine numbers its rows differently from the server until the Rust game's start
+    //  numbers them alike, and the list was made from few games of two)
+    line(TWO ? S.watchOk + S.watchOff > 0 : S.watchOk > 0 && !S.watchOff, `wider word: beside the state word the page held the wider one (the parts a page and a server agree on) against its server's on ${S.watchOk + S.watchOff} word ticks and had it on ${S.watchOk}${S.watchOff ? ` (FIRST DIFFERENT after tick ${S.watchFirst})` : ''}; it is watched, never an alarm`);
     line(S.seat === MINE && S.sent > 20 && !!hEnd && hEnd.lines[MINE].own > 20 && out.moved > 0.5 && out.mine === MINE, `its own man: seat ${S.seat}${TWO ? ` of ${hEnd?.lines.length} (the page shows seat ${out.mine}'s man)` : ''}, ${S.sent} records sent, the server ran ${hEnd?.lines[MINE].own} ticks on them (${hEnd?.lines[MINE].late} late, ${hEnd?.lines[MINE].held} on a held one), the man moved ${out.moved} m; it aims ${S.margin} ticks past the server's`);
     { const K = out.key, A = out.ahead, a = S.ahead;
       line(K.rec >= 0 && K.ahead > 1e-4 && K.game < 1e-6 && K.later > 0 && A.on > A.samples / 2 && ((A.drawn === 2 && A.moved === A.drawn && A.men === 1 && A.caps === 1 && A.boxes > 0) || (!!A.gave && (A.gave.down || A.gave.over) && A.moved === A.drawn)) && !S.bad && out.after.wordsOk >= Math.floor(out.after.confirmed / 30),
@@ -184,12 +198,13 @@ const health = async () => { try { return await (await fetch(`http://127.0.0.1:$
       const up = !Z.held.down && !Z.rest.down;   // (a man shot down walks nowhere: then only the waking is asked)
       line(Z.held.far && Z.rest.far && !Z.bad && !S.far && (!up || (Z.held.walked > 1 && Z.rest.walked < Z.held.walked / 3)), `a tab that sleeps: ${up ? `asleep 3.5 s with a walk key down (${Z.held.key}, back over ${Z.held.room} m he had just walked) and nothing said, the server walked the man on ${Z.held.walked} m; with the hands taken off first (${Z.rest.key}), ${Z.rest.walked} m` : 'the man was down by then, so how far he walks on was NOT asked'}; each time the page woke ${Z.held.behind} and ${Z.rest.behind} ticks behind, caught up with the mixer shut and still matched every state word (${Z.words} by tick ${Z.heard})`); }
     line(errs.length === 0, `no page error${errs.length ? `: ${errs.slice(0, 3).join(' | ')}` : ''}`);
+    if (WORDS) { const P = await page.evaluate(() => ({ names: window.__mpcNames || '', rows: window.__mpcWords || [] })); if (P.names) require('node:fs').writeFileSync(`${WORDS}/page.0.words`, `names ${P.names}\n${P.rows.join('\n')}\n`); console.log(`  (--words: the page's whole words of ${P.rows.length} word ticks, the server's and the bun client's, are in ${WORDS})`); }
     await page.close();
     await Promise.race([botDone, sleep(20000)]);
     const bl = botOut.split('\n').find(x => x.startsWith('MPBOT ')), B = bl ? JSON.parse(bl.slice(6)) : null;
     line(!!B && B.confirmed >= N && !B.bad && B.wordsOk >= words, `beside it: a ${TWO ? 'client in the first seat' : 'watcher'} on bun walked the same ${B?.confirmed ?? 0} ticks and matched ${B?.wordsOk ?? 0} words`);
   } catch (e) { line(false, `the page could not be driven: ${String(e && e.stack || e).slice(0, 400)}${errs.length ? ` · page errors: ${errs.slice(0, 3).join(' | ')}` : ''}`); }
   try { await browser?.close(); } catch { /* gone */ } try { bot.kill(); } catch { /* gone */ } srv.kill();
-  console.log(fails ? `mpclient-page: ${fails} line${fails === 1 ? '' : 's'} FAILED${BREAK ? ' (MPCLIENT_BREAK=1: the same-fight line must and the ahead line with it, and its-own-man may: a page out of step stops sending)' : NO_AHEAD ? ' (MPCLIENT_BREAK=ahead: the ahead line must, and no other)' : BAD_WAY ? ' (MPCLIENT_BREAK=way: the network page line must, and no other)' : ''}` : 'mpclient-page: every line passed');
+  console.log(fails ? `mpclient-page: ${fails} line${fails === 1 ? '' : 's'} FAILED${BREAK ? ' (MPCLIENT_BREAK=1: the same-fight line must, the wider word and the ahead line with it, and its-own-man may: a page out of step stops sending)' : NO_AHEAD ? ' (MPCLIENT_BREAK=ahead: the ahead line must, and no other)' : BAD_WAY ? ' (MPCLIENT_BREAK=way: the network page line must, and no other)' : ''}` : 'mpclient-page: every line passed');
   process.exit(fails ? 1 : 0);
 })().catch(e => { console.log(`mpclient-page: ${String(e && e.stack || e).slice(0, 400)}`); process.exit(2); });

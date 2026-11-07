@@ -362,7 +362,7 @@ As a game is stood, the probe running then (the runner names it) or the tool's o
    `RH_FOLDED`: 185 probes; the TypeScript tick;
 4. `waits`: a check SEEN RED ON THE RUST GAME and green on the TypeScript tick, by hand, with what it waits on; the TypeScript tick until its row is taken out;
 5. everything else (kinds i and ii that are in none of the lists): the Rust game;
-6. a stand-alone tool by its row: `ts`, or `none` (stood with no word at all: `tools/qa/coop-check.ts`, whose second engine is node), else the Rust game.
+6. a stand-alone tool by its row: `ts`, or `none` (stood with no word at all: `tools/qa/exact-check.ts`, whose second engine is node), else the Rust game.
 
 Each check kept off the Rust game says so as its first game is stood (`[the game: <name> is stood on the TYPESCRIPT TICK by the table (kind iii); its
 verdict is not the Rust game's]`) and the run ends on one line that counts both sides and names them (`=== the game, by the table: … ===`), so a green
@@ -372,7 +372,7 @@ word's own stand (the game owns its die, the dress rows down), under which every
 families tried: `weapons-identity` 2 of 2 red, `workstow` 2 of 5, green both with no word and under `'none'`). A FROZEN run is always stood as with no word.
 
 A stand-alone tool: by its row, `rust` (seen to play the same on the Rust game: `playthrough.ts`, `seats-run.ts`, `bench-seeds.ts`, `thrice.ts`,
-`die-check.ts`), `ts` (`tour.ts`, `soak.ts`, `seats-check.ts`, `lesson-run.ts`) or `none` (`coop-check.ts`, `exact-check.ts`, `dice-check.ts`). A TOOL
+`die-check.ts`), `ts` (`tour.ts`, `soak.ts`, `seats-check.ts`, `lesson-run.ts`) or `none` (`exact-check.ts`, `dice-check.ts`). A TOOL
 WITH NO ROW is kept on the TypeScript tick and counted like a probe with none (485 files of tools/qa stand a game; run as its own main a check file has
 no probe name). One of this folder's own tools with no row stands its games itself and gets no word. A process that is not bun (a child under node)
 has no bridge: its game is stood with no word, said and counted.
@@ -456,7 +456,7 @@ have a probe on the Rust game by the table. They are not converted: the census a
 | `seats-run.ts` | 87 s PASS | 170 s PASS | |
 | `seats-check.ts` | 319 s PASS | 477 s, 3 red | `rollback`, `twin`: a word made by walking the JavaScript objects (and `walkAhead` on the puppet); `down`: calls `hitPlayer` |
 | `mpserver-check.ts` | 226 s, 2 red (clocks) | 443 s, 4 red | `same fight`, `late joiner`: the check runs on the wall clock and the games stepped 650 to 917 of 1,200 ticks, at 120 to 175 ms a tick: THE RUST GAME NEVER LISTED ITS WORLD there (a networked tick calls `world.relist()`, which had no tap), so its state grew 35 KB a tick and the every-tick export slowed with it. Tapped since ("Numbers", below); `lag`, `ahead` red under `ts` too |
-| `tools/qa/coop-check.ts` | 209 s, 4 red | 520 s, 4 red | its second engine (node) has no preload under either word: by the table it is stood with no word (ALL PASS, 226 s). Its bun half alone (`--one hostage-rescue 1`) under each word: the same row, and the chained raw float bits equal on all 107 half seconds (it was 3,797 frames against 10,528: the tool's counter on `Math.random` made every die put back a new function, so the TypeScript tick left the game's die; under a word it now gives the same function back) |
+| `tools/qa/coop-check.ts` (DELETED 2026-11-07 with the TypeScript tick it checked; the row is the record) | 209 s, 4 red | 520 s, 4 red | its second engine (node) has no preload under either word: by the table it is stood with no word (ALL PASS, 226 s). Its bun half alone (`--one hostage-rescue 1`) under each word: the same row, and the chained raw float bits equal on all 107 half seconds (it was 3,797 frames against 10,528: the tool's counter on `Math.random` made every die put back a new function, so the TypeScript tick left the game's die; under a word it now gives the same function back) |
 | `dice-check.ts` | 24 s, 1 red | 51 s, 2 red | `default`: the word gives the game a die (both words); `same seed`: provokes its fight by a rule (`teleportPlayer`), not the die. The tool checks the TypeScript die's own rule: by the table it is stood with no word (6 of 6) |
 | `tour.ts --runs 1 --seed 1 --quiet` | 22 s PASS | 52 s, 9 FAIL | kind iii: the showcase's own Demo (src/game/demo.ts, host-side) calls rules and writes fields on the puppet between ticks; first: `stop2-hand` (Sam's hand never on the fire exit's leaf), then the takedown, the hold, the firefight, the room clear's drill. By the table (its row `ts`): PASS |
 | `soak.ts --seeds 1 --minutes 3 --quiet` | 34 s ALL PASS | 62 s, dies at 2.5 min | kind iii / iv-a: its stimuli call rules on the puppet: first `f2530 exception (stim:mission-step): Attempted to assign to readonly property` (player.ts:1107 `w.cam.peekOffset = null` under `teleportPlayer`: an object the apply left frozen), then `S.u` and `h.where` undefined (a `PoseSet.home` the apply left undefined, skeleton.ts:203), the last one uncaught. By the table (its row `ts`): ALL PASS |
@@ -680,6 +680,14 @@ tick's line equal.
 compiler's proof; made by the program that demotes `&mut Game` wherever the crate still compiles). After a crossing of such a row the host exports
 and applies nothing and walks no second time (`RH_OFF=reads`: as any row). The list is EMPTY today: all three of the tally's rows take `&mut Game`.
 Never a guess from a row's history: a tool that reads the puppet after a call that did write must read what it wrote.
+
+**`tools/blitz/reads-contract.json`**: a second list, written by hand, that the host reads with the first. A row here takes `&mut Game` and still
+leaves the game as it found it, by its own contract: it puts back what it takes. Each row carries the sentence of that contract and the check that
+holds it, and the check has a red path. One row today, `walkAhead` (a co-op client's look ahead for its own man: his legs walked on a copy of him,
+`seats::with_seat` and `game::game_aside`): `tools/qa/seats-check.ts twin` reads the whole game's state words before and after the looks of every
+tenth tick of two firefights and lets no part differ but the scratch a look leaves (`SEATS_BREAK=look` must fail it). Measured on a 4 core cloud box,
+one look of five records in bun: 13.4 ms as any row, 5.1 ms as a row that reads, 1.6 ms in a stand that also walks no puppet for a tool's writes
+(`standUp({ scan: false })`, what `tools/mp/stand.ts` asks: nothing writes a networked game between two ticks but a seat's record).
 
 `RH_WHO=1`: the fiftieth crossing of each row is counted with the source lines that led to it.
 

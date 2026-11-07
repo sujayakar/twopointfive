@@ -19,7 +19,7 @@ import { SeatLine } from './timeline';
 
 /** what the host gives: its clock (ms, never going back), one tick of its game on the seats' records (and whatever it does between two ticks), the game's
  *  chained state word after the last tick, and how the mission ended (null while it has not) */
-export interface ServerHost { now(): number; step(cmds: PlayerCmd[]): void; word(): string; ended(): Outcome | null; }
+export interface ServerHost { now(): number; step(cmds: PlayerCmd[]): void; word(): string; /** the wider word after the last word tick (step.ts netWatch), where the host has one */ watch?(): string | null; ended(): Outcome | null; }
 /** a connection as the core sees it. `send` answers what became of the text: above 0 it went, below 0 it was taken but the socket is backed up (the host says
  *  `drained` when it no longer is), 0 it was NOT taken */
 export interface Conn { send(text: string): number; close(why: string): void; }
@@ -30,7 +30,7 @@ interface Sitter { line: SeatLine; conn: Conn | null; ready: boolean; prev: Wire
 /** a connection that has said hello: its seat (−1 a watcher), the next tick it is to be sent, whether its socket is backed up (and since when), whether it has
  *  said its game parted from the server's */
 interface Peer { seat: number; at: number; slow: boolean; slowAt: number; lost: boolean; }
-type Row = { c: (WireCmd | 0)[]; w?: string };
+type Row = { c: (WireCmd | 0)[]; w?: string; v?: string };
 
 export class NetServer {
   state: NetState = 'waiting'; tick = 0;
@@ -134,7 +134,7 @@ export class NetServer {
     this.host.step(wire.map(fromWire));
     this.tick = t + 1;
     const row: Row = { c: sent };
-    if (this.tick % NET.wordEvery === 0) row.w = this.host.word();
+    if (this.tick % NET.wordEvery === 0) { row.w = this.host.word(); const v = this.host.watch?.(); if (v) row.v = v; }
     this.cur.push(row);
     const m: Tick = { k: 't', t, ...row }, text = netText(m);
     for (const [conn, P] of this.peers) if (P.at === t && this.put(conn, text) !== 0) P.at = t + 1;   // (one that would not take it is behind now: catchUp sends it the stretch)

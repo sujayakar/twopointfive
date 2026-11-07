@@ -746,7 +746,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   table rays beside the spot's bearing, and the exact ray walked only where they disagree (a sight edge, a wall seen along its length), cached per spot;
   `fogSeenBins` = the table alone, for the vertex stage (which does not see the grid). (2) LIGHT CLASSES in the light record's kind word (bits 25 / 26,
   `lights.ts LIGHT_FOG_SEEN / _UNSEEN`), asked by `evalLight` (→ `evalLightRaw` × `lightFogK`) and by the four places that work a light out themselves
-  (`reflect.wgsl` ≡ `reflect_p5.wgsl` glints, `cards.wgsl` — a torch's bounce card, where its footprint falls — `froxel.wgsl`, + the volumetric march's
+  (`reflect.wgsl` ≡ `reflect_p5.wgsl` glints, `cards.wgsl` — a torch's bounce card, where its footprint falls — + the volumetric march's
   K-beam pick): class 1 = lights only what the team sees — every carried light not the team's and every flash / timed light not a teammate's own, DECIDED AT
   THE UPLOAD (`LightSet.fogClass` from `fogTeam`, which `fullBlock` keeps: a tracer's ember or a blast's afterglow born after the fog's turn is classed on its
   first frame); class 2 = lights only what it does not — a lamp OUT that the team last saw lit (`RtLight.fogGhost`: uploaded at its base strength, glass mask
@@ -1210,7 +1210,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   untouched. With this up `reachUp` has nothing to raise, and its check stages with this key down. Switch: ON in the page (`?handslow=0` off; Tab ▸ Closer
   than ever ▸ 'crouched ▸ hands stay low until the move'), OFF in the module and on the frozen stand (`FROZEN_HOLDS` 'CLOSE.handsLow': `TPS_HANDSLOW=1`;
   `TPS_HANDSLOW=0` holds it off on the shipped stand), in the journal's `CLOSE` table, and a recording from before the key replays with it off. CHECK:
-  `bun run tools/qa/handslow-check.ts` (probe `handslow`, families handslow / close / player), both stands; `HANDSLOW_BREAK=1` must fail `low`. Lines: low
+  `bun run tools/qa/handslow-check.ts` (probe `handslow`, families handslow / close / player), both stands; `HANDSLOW_BREAK=1` must fail `low` (the line `low` went 11-07 with the knife it asked of: the word has nothing to fail there now). Lines: low
   (the three gaps above), offer (the grab is still offered and its row is there), stand (standing, and with the pistol up, the pose is the same to the bit),
   harness. One staging, no seeds, and no line stages a low man (the neck bar is read from the code alone). Pictures: `close-stills.ts --scene stops-crouch` with and without `--set '{"CLOSE":{"handsLow":false}}'`. WHAT IT COSTS:
   crouched, nothing on Sam's body now says "the grab is on" before he presses; the row says it. NOT MENDED: the grab still takes him from the crouch to

@@ -33,7 +33,8 @@
 //   depot-run       scripted runs over seeds, the commander a ghost who only gives orders off the menu: the OBVIOUS PLAN (the crew room first, across the lit
 //                   yard) by TWO PAIRS, TWO DOORS where a room has two, against ONE STACK through each room's first door. Judged: no run stalls at the cap,
 //                   one at least is taken, few orders refused, no teammate down to a teammate. Printed: who wins, teammates lost, seconds, two-door entries
-//   depot-home      (by name only, not in the family: it judges nothing) the same runs with ROOMFIGHT.rally off — the defenders kept in their rooms
+//   (depot-home, the same runs with ROOMFIGHT.rally written off, went 2026-11-07: the rally is settled. So did the runs' own pin, ROOMCLEAR.pairOnly on: it
+//   is settled off and the write was refused)
 // The game takes the structure and the team's start from the level it stands on (Level.scenarios.roomClear): nothing here reaches into the game's tables but
 // the knobs a probe names, and those are put back.
 import { readFileSync } from 'node:fs';
@@ -93,10 +94,10 @@ const outsideOf = (d: any, room: Rect): 1 | -1 => (inBounds(room, doorPoint(d, 1
 /** One game under a seed on `where`: the room clear staged with four teammates, Sam in god mode and dark.
  *  `quiet`: the defenders dazzled every frame · `empty`: the defenders stood out on the north verge, out of everybody's sight (a walk is about feet) ·
  *  `ghost`: Sam unseen, unheard and parked outside the wall's south-east corner except for the instant an order is read off where he stands (the tally runner's commander) ·
- *  `fight` / `clear`: ROOMFIGHT / ROOMCLEAR knobs for this game, set before it is staged (restore() puts the tables back). */
+ *  `clear`: ROOMCLEAR knobs for this game, set before it is staged (restore() puts the table back). */
 const PARK = [38.6, 0, 26.2];
-export async function rig(seed: number, where: Where, o: { quiet?: boolean; empty?: boolean; ghost?: boolean; fight?: Record<string, unknown>; clear?: Record<string, unknown>; stage?: boolean } = {}) {
-  restore(); Object.assign(NIGHTBREACH, { squad: 4 }); Object.assign(ROOMFIGHT, o.fight ?? {}); Object.assign(ROOMCLEAR, o.clear ?? {});   // (every knob in place BEFORE the staging reads any of them)
+export async function rig(seed: number, where: Where, o: { quiet?: boolean; empty?: boolean; ghost?: boolean; clear?: Record<string, unknown>; stage?: boolean } = {}) {
+  restore(); Object.assign(NIGHTBREACH, { squad: 4 }); Object.assign(ROOMCLEAR, o.clear ?? {});   // (every knob in place BEFORE the staging reads any of them)
   Math.random = seeded(seed);
   const W: any = await standUp(where === 'depot' ? { level: depotLevel() } : {}); const game = W.game; const RC = game.roomClear, NB = game.nightBreach, O = game.orders, D = game.doorTools;
   game.godMode = true; if (o.ghost) game.playerInvisible = true;
@@ -500,9 +501,9 @@ export interface DepotRun { policy: string; seed: number; end: string; t: number
 /** One scripted run. `two`: red and blue stack on a door each and go on one word (red with a bang, blue quietly as it bursts) where the room has two doors.
  *  `one`: all four bang and clear through the room's first door. Then, either way, whoever is up sweeps: every room still held, door by door, and the floor between the rooms (a defender who
  *  left his room for a fight is out there, and his room is not clear while he lives) — round and round until the end. Ends 'taken' (every defender down),
- *  'wiped' (all four down) or 'stalled' (`cap` seconds gone). `fight`: ROOMFIGHT knobs for the run, in place before it is staged. */
-export async function depotPlay(policy: 'two' | 'one', seed: number, cap = 300, fight: Record<string, unknown> = {}, trace = false): Promise<DepotRun> {
-  const R = await rig(seed, 'depot', { ghost: true, fight, clear: { pairOnly: true } }); const { game: g, O, D, RC } = R;
+ *  'wiped' (all four down) or 'stalled' (`cap` seconds gone). */
+export async function depotPlay(policy: 'two' | 'one', seed: number, cap = 300, trace = false): Promise<DepotRun> {
+  const R = await rig(seed, 'depot', { ghost: true }); const { game: g, O, D, RC } = R;
   const t0 = g.time, over = () => !!RC.end || g.time - t0 > cap, room = (id: string) => RC.rooms.find((r: any) => r.def.id === id), up = (who: any) => R.men(who).length > 0;
   const two: string[] = [], refused: string[] = [], home: Record<string, string> = {}; const say = (s: string) => { if (trace) console.log(`  ${f1(g.time - t0).padStart(6)}  ${s}`); };
   const wait = (pred: () => boolean, secs: number) => R.until(() => over() || pred(), secs);
@@ -546,7 +547,7 @@ const mean = (a: number[]) => a.reduce((s, x) => s + x, 0) / Math.max(1, a.lengt
 const runSum = (rs: DepotRun[]) => { const tk = rs.filter(r => r.end === 'taken'); return `${tk.length} of ${rs.length} taken · wiped ${rs.filter(r => r.end === 'wiped').length} · stalled ${rs.filter(r => r.end === 'stalled').length} · teammates lost ${f2(mean(rs.map(r => r.lost)))} a run (runs with nobody lost ${rs.filter(r => r.lost === 0).length}) · ${f1(mean(tk.map(r => r.t)))} s when taken`; };
 const runRows = (rs: DepotRun[]) => rs.map(r => `seed ${r.seed}: ${r.end} at ${f1(r.t)} s · lost ${r.lost} · two-door rooms ${r.two.join(', ') || 'none'} · defenders at home when its turn came: ${Object.entries(r.home).map(([k, v]) => `${k} ${v}`).join(', ')} · rallied ${r.rallied}${r.refused.length ? ` · refused ${r.refused.length}` : ''}`).join('\n    ');
 const twoDoor = (rs: DepotRun[]) => ['crew', 'store'].map(room => `${room} ${rs.filter(r => r.two.includes(room)).length}`).join(' · ') + ` of ${rs.length}`;
-async function runsOf(policy: 'two' | 'one', fight: Record<string, unknown> = {}) { const out: DepotRun[] = []; for (const seed of RUN_SEEDS) { out.push(await depotPlay(policy, seed, 300, fight)); restore(); } return out; }
+async function runsOf(policy: 'two' | 'one') { const out: DepotRun[] = []; for (const seed of RUN_SEEDS) { out.push(await depotPlay(policy, seed, 300)); restore(); } return out; }
 export const depotRun = guarded(async () => {
   const { verdict, done } = family('depot-run: scripted runs of the obvious plan — two pairs through two doors beside one stack through one (who wins is printed, not judged)');
   const tw = await runsOf('two'), on = await runsOf('one');
@@ -555,14 +556,5 @@ export const depotRun = guarded(async () => {
   verdict(all.every(r => r.fratricide === 0), 'no teammate goes down to a teammate in any run of either policy', `${all.reduce((s, r) => s + r.fratricide, 0)} over ${all.length} runs`);
   verdict(true, 'TWO PAIRS, TWO DOORS on the crew room and the store, all four through the hut\'s one (printed, not judged)', `${runSum(tw)} · rooms entered from two doors on one word: ${twoDoor(tw)}\n    ${runRows(tw)}`);
   verdict(true, 'beside it, ONE STACK through each room\'s first door (printed, not judged)', `${runSum(on)}\n    ${runRows(on)}`);
-  return done();
-});
-/** NOT in the 'depot' family (it judges nothing and takes as long as depot-run): the same two policies with ROOMFIGHT.rally off — nobody leaves his room for a
- *  fight next door. As shipped they do, so the last room is often half empty when its turn comes; this is the table for the page's question about that. */
-export const depotHome = guarded(async () => {
-  const { verdict, done } = family('depot-home: the same runs with the defenders kept at home (ROOMFIGHT.rally off) — printed, not judged');
-  const tw = await runsOf('two', { rally: false }), on = await runsOf('one', { rally: false });
-  verdict(true, 'TWO PAIRS, TWO DOORS, defenders at home', `${runSum(tw)} · rooms that got a two-door entry: ${twoDoor(tw)}\n    ${runRows(tw)}`);
-  verdict(true, 'ONE STACK, defenders at home', `${runSum(on)}\n    ${runRows(on)}`);
   return done();
 });

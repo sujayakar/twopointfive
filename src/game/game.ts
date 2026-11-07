@@ -1469,6 +1469,7 @@ export class Game {
     this.cmdBuf = sampleCmd(me.view, input, cam, canvas, this.cmdBuf);
     if (this.seats.length === 1) this.step(dt, this.cmdBuf); else this.stepSeats(dt, this.seats.map(s => s === this.localSeat ? this.cmdBuf! : s.handed(this.cmdBuf!)));
     this.hostAfter(input, cam, canvas);
+    this.journal.frameEnd();     // the session journal closes the frame (the sensors' reads folded in, a digest on the beat): after everything, so a digest is the whole settled frame
   }
   /** THE HOST'S HALF OF A TICK, round the step — `update`'s own lines, named for a host that steps the game by records it did not sample itself (a networked
    *  page: net/page.ts). Before: what the host's INPUT is told. After: what the tick hands back for the camera of the seat this host shows (`hostSeat`), and
@@ -1554,7 +1555,7 @@ export class Game {
    *  everything that reads them, stay the tape's.
    *  `px` (over 0: the picture's own pixel in metres, `viewPx` of the camera and window it is drawn with): the thin lines a step sized for ITS view's pixel — laser beams,
    *  tracer streaks (thinline.ts) — are handed over re-sized for the picture's. A tape recorded at another zoom or window size drew a beam as a fat pale bar. */
-  fogLift(want: boolean, tube: boolean | null = null, px = 0) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Game.fogLift', this, [want, tube, px]); if (__r !== RUST_PASS) return __r as any; } }
+  fogLift(want: boolean, tube: boolean | null = null, px = 0) {
     if (this.fogHeld) return;   // (already lifted for this draw)
     const fog = this.fogOfWar, bare = want && fog.viewer && fog.active;
     const ir = fog.viewer && tube !== null && !(this.engine.settings.debugView > 0) && tube !== irViewer(this);   // (the viewer's tube is not the run's: the infrared lines follow the picture — a debug view shows no tube, so none are added to one)
@@ -1573,7 +1574,7 @@ export class Game {
     if (thin) B = thinFit(B, px) ?? B;
     world.dynamics = B;
   }
-  fogBack() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Game.fogBack', this, []); if (__r !== RUST_PASS) return __r as any; } }
+  fogBack() {
     const H = this.fogHeld; if (!H) return; this.fogHeld = null;
     const fog = this.fogOfWar, world = this.engine.world;
     if (fog.bared) fog.facesBack();

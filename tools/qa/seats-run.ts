@@ -20,7 +20,6 @@ const { FollowCamera } = await import(`${ROOT}/src/game/camera.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { stateHash } = await import(`${ROOT}/src/game/rollback.ts`);
 const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
-const { WALL_STATS } = await import(`${ROOT}/src/game/wallbreak.ts`);
 const { mulberry32 } = await import(`${ROOT}/src/math/dice.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
@@ -34,10 +33,9 @@ const KEYS = ['KeyG', 'KeyF', 'KeyE', 'KeyQ', 'KeyB', 'KeyC', 'KeyR', 'KeyV', 'K
 
 /** a game of two on `query` (the room clear with four by default), its die `seed`, its floor `level` (a name under levels/, or the page's own). `idle`: the
  *  hands do nothing (no key, no button, the cursor where it lies): for a driver that gives its orders between ticks and wants the players out of the way */
-export async function standTwo(query = 'roomclear&squad4', seed = 9, level: string | null = null, idle = false): Promise<Two> {
-  for (const k of Object.keys(WALL_STATS)) if (typeof WALL_STATS[k] === 'number') WALL_STATS[k] = 0;   // (a tally of the process's that coverfire.ts keeps a copy of in the game's state: two games of one process start level only from a level tally)
+export async function standTwo(query = 'roomclear&squad4', seed = 9, level: string | null = null, idle = false, dress = false): Promise<Two> {
   Math.random = mulberry32(0xc0de);
-  const W: any = await standUp({ seed, seats: 2, ...(level ? { level: loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/${level}.json`, 'utf8'))) } : {}) }), g = W.game;
+  const W: any = await standUp({ seed, seats: 2, ...(dress ? { dress: true } : {}), ...(level ? { level: loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/${level}.json`, 'utf8'))) } : {}) }), g = W.game;
   const r = startFromQuery(g, query); if (r.why) throw new Error(`seats-run: ${query} refused: ${r.why}`);
   const v0 = g.seats[0].view, v1 = g.seats[1].view, I1: any = Input.detached(), cam1: any = new FollowCamera(); cam1.aspect = W.cam.aspect; cam1.target = [...v1.player.char.pos]; cam1.rebuild();
   const hands: any[] = [{ v: v0, I: W.input, cam: W.cam, held: null }, { v: v1, I: I1, cam: cam1, held: null }];

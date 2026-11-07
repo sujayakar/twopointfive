@@ -6,6 +6,19 @@ version = 4
 name = "game"
 version = "0.1.0"
 dependencies = [
+ "game_rules",
+ "game_types",
+ "game_wire",
+ "prim",
+ "sim",
+]
+
+[[package]]
+name = "game_rules"
+version = "0.1.0"
+dependencies = [
+ "game_types",
+ "game_wire",
  "prim",
  "sim",
 ]
@@ -15,6 +28,23 @@ name = "game_start"
 version = "0.1.0"
 dependencies = [
  "game",
+ "sim",
+]
+
+[[package]]
+name = "game_types"
+version = "0.1.0"
+dependencies = [
+ "prim",
+ "sim",
+]
+
+[[package]]
+name = "game_wire"
+version = "0.1.0"
+dependencies = [
+ "game_types",
+ "prim",
  "sim",
 ]
 

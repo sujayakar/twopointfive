@@ -43,7 +43,7 @@
       const res = { shots: out, stats: { ...D().stats }, debris: D().debris, log: D().log.slice(-10) };
       end(); return res;
     },
-    /** DUST: a burst into the corridor's north wall (plaster) beside the fixed torch — the beam crossing the dust the rounds knock out (froxels), chips on the lino.
+    /** DUST: a burst into the corridor's north wall (plaster) beside the fixed torch — the beam crossing the dust the rounds knock out, chips on the lino.
      *  Strip: pre · mid · end · +1 s · +3 s (the haze thinning). */
     async dust(opts = {}) {
       const { chaos = 1.0, tag = '' } = opts; const g = begin(chaos, 12);
@@ -129,7 +129,7 @@
         }
         const stat = a => { if (!a || !a.length) return null; const s = [...a].sort((x, y) => x - y); const m = a.reduce((x, y) => x + y, 0) / a.length; return { mean: +m.toFixed(2), p95: +s[Math.floor(0.95 * (s.length - 1))].toFixed(2), max: +s[s.length - 1].toFixed(2) }; };
         const passes = {}; for (const [k, a] of per) passes[k] = stat(a);
-        takes[c] = { frames: got, union: stat(unions), particles: passes.particles, pdraw: passes.pdraw, smoke: passes.smoke, gbuffer: passes.gbuffer, direct: passes.direct, restir: passes.restir, volFroxel: passes.volFroxel, volumetrics: passes.volumetrics, peakMoving, peakLive, stats: { ...D().stats }, pslots: E().particles?.liveSlots, res: [e.width, e.height], preset: window.__quality?.label };
+        takes[c] = { frames: got, union: stat(unions), particles: passes.particles, pdraw: passes.pdraw, smoke: passes.smoke, gbuffer: passes.gbuffer, direct: passes.direct, restir: passes.restir, volumetrics: passes.volumetrics, peakMoving, peakLive, stats: { ...D().stats }, pslots: E().particles?.liveSlots, res: [e.width, e.height], preset: window.__quality?.label };
         S.log.push(`chaos ${c}: union ${JSON.stringify(takes[c].union)} particles ${JSON.stringify(passes.particles)} movers ${peakMoving}`);
       }
       D().chaos = S.chaos0;

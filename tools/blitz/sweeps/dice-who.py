@@ -4,7 +4,7 @@
     python3 tools/blitz/sweeps/dice-who.py [--check]
 
 Some draws are made by a small helper (`pick(g, range)`: a number in a range) that many rules call. The helper does not
-know whom it draws for, so under keyed draws (rust/game/src/dice.rs) all its callers would share one site and nobody,
+know whom it draws for, so under keyed draws (rust/game_rules/src/dice.rs) all its callers would share one site and nobody,
 and the order two men reached it in one tick would still be play. This program gives each helper below a second
 parameter, `who: crate::dice::Who`, and writes at each call the man its caller is about:
 
@@ -20,7 +20,7 @@ NO CHANGE OF PLAY by itself: the helpers do not use `who` until tools/blitz/swee
 """
 import glob, os, re, sys
 
-ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', 'rust', 'game', 'src')
+ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', 'rust', 'game_rules', 'src')
 WHO = 'crate::dice::Who'
 # (module, helper): every helper that draws and does not know for whom
 HELPERS = [('buddy', 'pick'), ('digin', 'pick'), ('digin', 'paced'), ('digin', 'one_of'), ('doze', 'span'), ('enemysquads', 'pick'),

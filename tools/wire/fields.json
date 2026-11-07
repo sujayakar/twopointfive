@@ -9631,7 +9631,6 @@
 "character::Character.muzzle_ahead",
 "character::Character.parts",
 "character::Character.pos",
-"character::Character.prev_bones",
 "character::Character.prev_dt",
 "character::Character.prev_sim",
 "character::Character.radius",

@@ -76,8 +76,9 @@ export { mulberry32 } from '../math/dice';
 
 // ---- THE RAW BITS: the digest above rounds (to the mm, to the hundredth) — right for 'the same game for every purpose', blind to two games whose arithmetic parted
 // in the last place and have not yet drifted. This walk folds the float64 BITS of what moves into one word, chained: hand the last word back in and a difference at
-// any step stays in every later word. Two readers: tools/qa/coop-check.ts (one fight under two JavaScript engines) and the page's `__digest` (main.ts), which
-// tools/qa/samefight-page.cjs holds against a headless re-run of the page's own tape.
+// any step stays in every later word. It walks the JavaScript objects, so since the Rust game steps it reads the
+// puppet: a networked game's state word is not this walk but the game's own words (net/step.ts netWord). Readers left: the page's `__digest` (main.ts) and
+// the tools that chain it after an update (dress-check, tickcost, simstate-check among them).
 const RB_F64 = new Float64Array(1), RB_U32 = new Uint32Array(RB_F64.buffer);
 export const RAW_BITS_SEED = 0x811c9dc5;
 type RawMan = { pos: number[]; vel?: number[]; bodyYaw: number; aimYaw: number; aimPitch?: number };

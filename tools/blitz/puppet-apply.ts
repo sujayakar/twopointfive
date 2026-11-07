@@ -74,214 +74,215 @@ export function puppetRows(C: Ctx) {
   const WORDS_7 = ["loadout"];
   const WORDS_8 = ["carpet","grass","rubber","metal","glass","wood","plastic","fabric","steel","enamel","tarmac","mud wall","plaster","block","earth","gravel","slab","sheet","cloth","paint","veneer","carpaint","stucco","skim","gloss block","board concrete","cast panel","paver","brushed","louvre","plain","waits"];
   const WORDS_9 = ["snow","carpet","lino","stone","grass","wood","plastic","concrete","fabric","steel","enamel","tarmac","casing","screen","unnamed dark","plasterboard","partition","ceiling","laminate","pane","dark carpet","card","frame","plant","packed snow","old snow","unnamed","unnamed grey","unnamed light","unnamed light grey","unnamed pale","unnamed pale grey","dark plastic","grey plastic","dark glass"];
-  const WORDS_10 = ["fold","topple","sink","cut","slump"];
-  const WORDS_11 = ["guard","operative","hostile","player","civilian"];
-  const WORDS_12 = ["patrol","suspicious","alert","search","dead"];
-  const WORDS_13 = ["shot","struck","choked","wounded"];
-  const WORDS_14 = ["guard","player","world"];
-  const WORDS_15 = ["pistol","rifle","smoke","flash","frag"];
-  const WORDS_16 = ["smoke","flash","frag"];
-  const WORDS_17 = ["pistol","rifle","can","knife"];
-  const WORDS_18 = ["ring","he40","cam"];
-  const WORDS_19 = ["pistol","rifle","smoke","flash","frag","can","knife"];
-  const WORDS_20 = ["shotgun","none","hammer"];
-  const WORDS_21 = ["tile","shard","housing","clutter","binder","chunk"];
-  const WORDS_22 = ["wall","cover"];
-  const WORDS_23 = ["carpet","metal","glass","wood","plastic","cardboard","drywall","concrete","fabric","foliage"];
-  const WORDS_24 = ["door","glass","storm","vent"];
-  const WORDS_25 = ["jet","storm"];
-  const WORDS_26 = ["charge","outside","bangClear","openClear","threshold"];
-  const WORDS_27 = ["slice","kick","held","stack","wait","place","standoff","armed","enter","fuse","ready","toss","thr","pocket"];
-  const WORDS_28 = ["none","wall","stack","highReady","lowReady"];
-  const WORDS_29 = ["none","torch","aim","relaxed"];
-  const WORDS_30 = ["shot","seen"];
-  const WORDS_31 = ["hold","move","free"];
-  const WORDS_32 = ["cover","fallback"];
-  const WORDS_33 = ["door","mouth","gap","rear"];
-  const WORDS_34 = ["second","presser","flanker"];
-  const WORDS_35 = ["push","approach","done"];
-  const WORDS_36 = ["body","drop","press","rounds"];
-  const WORDS_37 = ["press","flank"];
-  const WORDS_38 = ["search","kick","breach","stack","enter","resolve"];
-  const WORDS_39 = ["wait","place","standoff","armed","enter"];
-  const WORDS_40 = ["fiveseven","guard9mm","aks74u","ak74m","akms","fn2000","m870","mk12","mp7","mk46","m1014","hk45","g18","pkm","mk18bare","g19bare"];
-  const WORDS_41 = ["down","contact","hold","alerted","barricade","flank","help"];
-  const WORDS_42 = ["barricade","flank","help"];
-  const WORDS_43 = ["done","failed","running","cancelled"];
-  const WORDS_44 = ["held","work","startled","alarmed","flee","report","phone","cower","evacuate","gone"];
-  const WORDS_45 = ["shot","bang","body","sam","gun","gunfire","scream","noise","grabbed","panel"];
-  const WORDS_46 = ["semi","auto","burst"];
-  const WORDS_47 = ["pistol","rifle"];
-  const WORDS_48 = ["dead","code","alarm","trip","suspicion","deny","overheard"];
-  const WORDS_49 = ["boot","open","slam"];
-  const WORDS_50 = ["cam","guard","breaker","door","light","body","objective","held","wall","switch","charge","cancel"];
-  const WORDS_51 = ["push","hammer","rattle","pick","unlock","kick","code","drive","charge","cancel","pull","ease","nocode","wand","breach","grab","question","choke","whip","comply","drag","drop","breakerOff","breakerOn","blow","defuse","takeCam","lightsOff","lightsOn","lead","stay"];
-  const WORDS_52 = ["behind","side","front","seat"];
-  const WORDS_53 = ["pistol","rifle","shotgun"];
-  const WORDS_54 = ["issued","black","grey","navy","olive","jungle","khaki","desert"];
-  const WORDS_55 = ["red","blue","issued","black","green","amber","white"];
-  const WORDS_56 = ["cam","guard","breaker","door","light","body","objective","held","wall","switch","charge","cancel"];
-  const WORDS_57 = ["heard","seen","told","fix"];
-  const WORDS_58 = ["head","feet"];
-  const WORDS_59 = ["set","reach","rise","carry"];
-  const WORDS_60 = ["drive","infiltrate","exfil","done","failed"];
-  const WORDS_61 = ["shot","bang","kick","door","lightOut","guardShot","step","prop","whistle","glass"];
-  const WORDS_62 = ["shot","ocp"];
-  const WORDS_63 = ["shot","bang","kick","door","lightOut","guardShot","step","prop","whistle","glass","signal"];
-  const WORDS_64 = ["approach","done","muster","drill"];
-  const WORDS_65 = ["idle","requested","inbound","arriving","deployed"];
-  const WORDS_66 = ["gunfire","panel","silent","bodies"];
-  const WORDS_67 = ["bang","fan","breach","hold","move","stack","called","drill","fight","flow","regroup","landing","file"];
-  const WORDS_68 = ["lost","won"];
-  const WORDS_69 = ["dead","gone"];
-  const WORDS_70 = ["failed","safe","over"];
-  const WORDS_71 = ["taken","wiped"];
-  const WORDS_72 = ["waiting","shouting","counting","about to","stopped"];
-  const WORDS_73 = ["torch","weapon"];
-  const WORDS_74 = ["patrolLong","lowLong","shoulder","portLong"];
-  const WORDS_75 = ["m870","mk12","mp7","mk46","m1014","hk45","g18"];
-  const WORDS_76 = ["hold","go","rally","aside","squeeze"];
-  const WORDS_77 = ["watch","neck"];
-  const WORDS_78 = ["cross","jab"];
-  const WORDS_79 = ["grab","seat","strike","grabGun"];
-  const WORDS_80 = ["left","right"];
-  const WORDS_81 = ["red","blue"];
-  const WORDS_82 = ["player"];
-  const WORDS_83 = ["gun","arm"];
-  const WORDS_84 = ["held","grab","choke","whip","kill"];
-  const WORDS_85 = ["body","held","radio","sound","sight"];
-  const WORDS_86 = ["finder","called"];
-  const WORDS_87 = ["fan","to","cover"];
-  const WORDS_88 = ["flinch","friendly","pinned","displace","recover"];
-  const WORDS_89 = ["done","look","walk","sweep"];
-  const WORDS_90 = ["slice","approach","cross"];
-  const WORDS_91 = ["hand","swing"];
-  const WORDS_92 = ["stack"];
-  const WORDS_93 = ["annealed","laminated","tempered"];
-  const WORDS_94 = ["carpet","tile","metal","glass","wood","plastic","cardboard","fabric","screen","plasterboard","paper","plant","masonry","blockwork","glassTough","glassLam"];
-  const WORDS_95 = ["burst","can","done"];
-  const WORDS_96 = ["ears","net"];
-  const WORDS_97 = ["idle","called","asked"];
-  const WORDS_98 = ["look","flank","help","reinforce"];
-  const WORDS_99 = ["set","run","loose"];
-  const WORDS_100 = ["down","back","contact","lost","quiet","found","said","sweep","barricade","flank","help","reinforce","in position","met","rally","stays","follows","check","asks","looks","no sign","glimpse","calls","cut off","net check","net query","net asks","net looks","net help"];
-  const WORDS_101 = ["cleaner","worker"];
-  const WORDS_102 = ["guard","phone","exit"];
-  const WORDS_103 = ["jet","storm"];
-  const WORDS_104 = ["breaker","device","objective"];
-  const WORDS_105 = ["none","door","floor"];
-  const WORDS_106 = ["wall","thing"];
-  const WORDS_107 = ["side","leg"];
-  const WORDS_108 = ["knee","back"];
-  const WORDS_109 = ["boot","body","hand","swing"];
-  const WORDS_110 = ["down","shot","blackout","heard","objective","grab","ocp","thrown","radio","spotted","contact","lost","calm","alarm","lightShot","interrogated","keyTaken","ko","kill","bodyFound","doorKicked","lockPicked","hit","needBreak","civilianSpotted","civilianReported","civilianComplied","civilianKO","civilianKilled","cameraSpotted","cameraAlarm","laserTripped","deviceDown","codeLearned","codeEntered","checkpoint"];
-  const WORDS_111 = ["thud","scrape","roll"];
-  const WORDS_112 = ["start","stop"];
-  const WORDS_113 = ["none","solid","flesh"];
-  const WORDS_114 = ["set","called"];
-  const WORDS_115 = ["room","point"];
-  const WORDS_116 = ["screen","paper","housing","clutter","binder","tv"];
-  const WORDS_117 = ["blown","wary","counted"];
-  const WORDS_118 = ["error","warn"];
-  const WORDS_119 = ["camera","radio","error","spawn","drill","note","program","beat","trigger","yield","stimulus"];
-  const WORDS_120 = ["clear","bang","kick","approach","breach","stack","done","wait","enter","restack"];
-  const WORDS_121 = ["heard","contact"];
-  const WORDS_122 = ["heard","stay","calm","cover","flinch","still","call","help","stayOurs","huntOver","fellBack","planted","pinnedIn","squadHears","squadCopies","squadWaits","squadCopiesWaits","squadStays","squadQuiet","surprised","raw"];
-  const WORDS_123 = ["lost","rescued"];
-  const WORDS_124 = ["failed","clean","costly"];
-  const WORDS_125 = ["guard","door","captor","roamer"];
-  const WORDS_126 = ["","cross","out","wait","going","in"];
-  const WORDS_127 = ["mark","now"];
-  const WORDS_128 = ["keys","charge","take","lever"];
-  const WORDS_129 = ["shotgun","hammer"];
-  const WORDS_130 = ["knee","back"];
-  const WORDS_131 = ["ribs","thigh"];
-  const WORDS_132 = ["mouth","sweep","slash","chop","palm"];
-  const WORDS_133 = ["arch","hunch","snap"];
-  const WORDS_134 = ["torch","weapon"];
-  const WORDS_135 = ["shot","struck","choked","wounded","grab"];
-  const WORDS_136 = ["wall","prop","open","corner","leaf"];
-  const WORDS_137 = ["breaker","device","rack"];
-  const WORDS_138 = ["shotgun","hammer"];
-  const WORDS_139 = ["start","enter","after","event","signal","when"];
-  const WORDS_140 = ["pred"];
-  const WORDS_141 = ["time"];
-  const WORDS_142 = ["frames"];
-  const WORDS_143 = ["pred"];
-  const WORDS_144 = ["event"];
-  const WORDS_145 = ["shot","bang","kick","door","lightOut","guardShot","step","prop","whistle","glass","signal"];
-  const WORDS_146 = ["beat"];
-  const WORDS_147 = ["done","started"];
-  const WORDS_148 = ["all","any"];
-  const WORDS_149 = ["smoke","coffee","water","stretch"];
-  const WORDS_150 = ["door","cover","hole","port","reset"];
-  const WORDS_151 = ["blast","fire","load","reset","collapse"];
-  const WORDS_152 = ["order","within","never"];
-  const WORDS_153 = ["hold","wait","into","corner","centre"];
-  const WORDS_154 = ["held","unknown","cleared","hot","looked"];
-  const WORDS_155 = ["cover","corridor"];
-  const WORDS_156 = ["out","side","noise","room"];
-  const WORDS_157 = ["shot","order","drill"];
-  const WORDS_158 = ["go","wait","thru","turn"];
-  const WORDS_159 = ["low","out","gone","mates","say"];
-  const WORDS_160 = ["body","asked"];
-  const WORDS_161 = ["body","name","last","why","alone","ask"];
-  const WORDS_162 = ["door","light","noise","whistle","lent"];
-  const WORDS_163 = ["down","work","up","spent","going","no","asleep","stir"];
-  const WORDS_164 = ["light","alarm","noise","taken","time","net","bump"];
-  const WORDS_165 = ["none","with","balk","solo","come"];
-  const WORDS_166 = ["idle","called","asked"];
-  const WORDS_167 = ["prop","air","man","floor","static"];
-  const WORDS_168 = ["off","free","dark"];
-  const WORDS_169 = ["your light","your goggles","not compromised","compromised","no rule"];
-  const WORDS_170 = ["back","run","cover","plan","line","react","peek","flank"];
-  const WORDS_171 = ["cover","step","end","kneel"];
-  const WORDS_172 = ["off","on"];
-  const WORDS_173 = ["frag","stun"];
-  const WORDS_174 = ["reload","swap"];
-  const WORDS_175 = ["dry","empty","tactical"];
-  const WORDS_176 = ["dust","bait"];
-  const WORDS_177 = ["down","reload","burst","none","back","hold","stand","flinch","duck","bait"];
-  const WORDS_178 = ["hard","mixed"];
-  const WORDS_179 = ["grab","seat","take","unseat"];
-  const WORDS_180 = ["calm","wary","caught"];
-  const WORDS_181 = ["step","freeze","slip"];
-  const WORDS_182 = ["silent","loud"];
-  const WORDS_183 = ["start","order","tool","api"];
-  const WORDS_184 = ["wounded","killed","shielded","stunned"];
-  const WORDS_185 = ["blast","cover","follow","told","close","fight"];
-  const WORDS_186 = ["blast","cover","follow","told"];
-  const WORDS_187 = ["overcast","night","dawn","midday","dusk"];
-  const WORDS_188 = ["idle","called","asked"];
-  const WORDS_189 = ["set","go","order","short","lastAt","in","check1","checkN","checkStand","checkLoneAt","ansAt","ansFreeAt","fewAt","lastGo","movedAt","movedFree","orderFrom","orderStay","orderShut","orderOut","cant","setOpen","setLone","setLoneOpen"];
-  const WORDS_190 = ["slice","bang","cross","stack","done","wait","open","toss","stacked"];
-  const WORDS_191 = ["lead","second"];
-  const WORDS_192 = ["slice","toss"];
-  const WORDS_193 = ["set","go","walk"];
-  const WORDS_194 = ["out","back"];
-  const WORDS_195 = ["set","idle","shut","haul","think","toRoom","toProp","toDoor","wedge","toCover"];
-  const WORDS_196 = ["go","word","gather"];
-  const WORDS_197 = ["heard","called","over"];
-  const WORDS_198 = ["back","run","beat"];
-  const WORDS_199 = ["cover","lever"];
-  const WORDS_200 = ["out","back","wait","there"];
-  const WORDS_201 = ["stay","lost","home","go","there","said","noticed","nobody","abort","wrecked","restored","overdue"];
-  const WORDS_202 = ["go","look","lent"];
-  const WORDS_203 = ["going","telegraph","dwell","returning"];
-  const WORDS_204 = ["out","back","there"];
-  const WORDS_205 = ["lost","home","there","word","found","kept","empty","check","asks","nobody","abort","goes"];
-  const WORDS_206 = ["cover","step","kneel"];
-  const WORDS_207 = ["door","stack","line","keep","hurt"];
-  const WORDS_208 = ["idle","called","asked"];
-  const WORDS_209 = ["cross","back","wait","stand","walk"];
-  const WORDS_210 = ["door","near","open","lit","long"];
-  const WORDS_211 = ["door","cover"];
-  const WORDS_212 = ["wiped","reset","cleared","timeout","superseded"];
-  const WORDS_213 = ["blackout","drive","alarm","rack","lockdown","server","bodyKo","bodyDead"];
-  const WORDS_214 = ["greetReply","reportRadio","escalate","outsideCall","complyLine","foundReport","bodyEsc","outrage"];
-  const WORDS_215 = ["run","beat"];
-  const WORDS_216 = ["kick","set","walk"];
-  const WORDS_217 = ["behind","front","left","right"];
+  const WORDS_10 = ["hips","spine2","chest","neck","head","upperArmL","forearmL","handL","upperArmR","forearmR","handR","thighL","shinL","footL","toeL","thighR","shinR","footR","toeR","fingerR","fingerL","headTop"];
+  const WORDS_11 = ["fold","topple","sink","cut","slump"];
+  const WORDS_12 = ["guard","operative","hostile","player","civilian"];
+  const WORDS_13 = ["patrol","suspicious","alert","search","dead"];
+  const WORDS_14 = ["shot","struck","choked","wounded"];
+  const WORDS_15 = ["guard","player","world"];
+  const WORDS_16 = ["pistol","rifle","smoke","flash","frag"];
+  const WORDS_17 = ["smoke","flash","frag"];
+  const WORDS_18 = ["pistol","rifle","can","knife"];
+  const WORDS_19 = ["ring","he40","cam"];
+  const WORDS_20 = ["pistol","rifle","smoke","flash","frag","can","knife"];
+  const WORDS_21 = ["shotgun","none","hammer"];
+  const WORDS_22 = ["tile","shard","housing","clutter","binder","chunk"];
+  const WORDS_23 = ["wall","cover"];
+  const WORDS_24 = ["carpet","metal","glass","wood","plastic","cardboard","drywall","concrete","fabric","foliage"];
+  const WORDS_25 = ["door","glass","storm","vent"];
+  const WORDS_26 = ["jet","storm"];
+  const WORDS_27 = ["charge","outside","bangClear","openClear","threshold"];
+  const WORDS_28 = ["slice","kick","held","stack","wait","place","standoff","armed","enter","fuse","ready","toss","thr","pocket"];
+  const WORDS_29 = ["none","wall","stack","highReady","lowReady"];
+  const WORDS_30 = ["none","torch","aim","relaxed"];
+  const WORDS_31 = ["shot","seen"];
+  const WORDS_32 = ["hold","move","free"];
+  const WORDS_33 = ["cover","fallback"];
+  const WORDS_34 = ["door","mouth","gap","rear"];
+  const WORDS_35 = ["second","presser","flanker"];
+  const WORDS_36 = ["push","approach","done"];
+  const WORDS_37 = ["body","drop","press","rounds"];
+  const WORDS_38 = ["press","flank"];
+  const WORDS_39 = ["search","kick","breach","stack","enter","resolve"];
+  const WORDS_40 = ["wait","place","standoff","armed","enter"];
+  const WORDS_41 = ["fiveseven","guard9mm","aks74u","ak74m","akms","fn2000","m870","mk12","mp7","mk46","m1014","hk45","g18","pkm","mk18bare","g19bare"];
+  const WORDS_42 = ["down","contact","hold","alerted","barricade","flank","help"];
+  const WORDS_43 = ["barricade","flank","help"];
+  const WORDS_44 = ["done","failed","running","cancelled"];
+  const WORDS_45 = ["held","work","startled","alarmed","flee","report","phone","cower","evacuate","gone"];
+  const WORDS_46 = ["shot","bang","body","sam","gun","gunfire","scream","noise","grabbed","panel"];
+  const WORDS_47 = ["semi","auto","burst"];
+  const WORDS_48 = ["pistol","rifle"];
+  const WORDS_49 = ["dead","code","alarm","trip","suspicion","deny","overheard"];
+  const WORDS_50 = ["boot","open","slam"];
+  const WORDS_51 = ["cam","guard","breaker","door","light","body","objective","held","wall","switch","charge","cancel"];
+  const WORDS_52 = ["push","hammer","rattle","pick","unlock","kick","code","drive","charge","cancel","pull","ease","nocode","wand","breach","grab","question","choke","whip","comply","drag","drop","breakerOff","breakerOn","blow","defuse","takeCam","lightsOff","lightsOn","lead","stay"];
+  const WORDS_53 = ["behind","side","front","seat"];
+  const WORDS_54 = ["pistol","rifle","shotgun"];
+  const WORDS_55 = ["issued","black","grey","navy","olive","jungle","khaki","desert"];
+  const WORDS_56 = ["red","blue","issued","black","green","amber","white"];
+  const WORDS_57 = ["cam","guard","breaker","door","light","body","objective","held","wall","switch","charge","cancel"];
+  const WORDS_58 = ["heard","seen","told","fix"];
+  const WORDS_59 = ["head","feet"];
+  const WORDS_60 = ["set","reach","rise","carry"];
+  const WORDS_61 = ["drive","infiltrate","exfil","done","failed"];
+  const WORDS_62 = ["shot","bang","kick","door","lightOut","guardShot","step","prop","whistle","glass"];
+  const WORDS_63 = ["shot","ocp"];
+  const WORDS_64 = ["shot","bang","kick","door","lightOut","guardShot","step","prop","whistle","glass","signal"];
+  const WORDS_65 = ["approach","done","muster","drill"];
+  const WORDS_66 = ["idle","requested","inbound","arriving","deployed"];
+  const WORDS_67 = ["gunfire","panel","silent","bodies"];
+  const WORDS_68 = ["bang","fan","breach","hold","move","stack","called","drill","fight","flow","regroup","landing","file"];
+  const WORDS_69 = ["lost","won"];
+  const WORDS_70 = ["dead","gone"];
+  const WORDS_71 = ["failed","safe","over"];
+  const WORDS_72 = ["taken","wiped"];
+  const WORDS_73 = ["waiting","shouting","counting","about to","stopped"];
+  const WORDS_74 = ["torch","weapon"];
+  const WORDS_75 = ["patrolLong","lowLong","shoulder","portLong"];
+  const WORDS_76 = ["m870","mk12","mp7","mk46","m1014","hk45","g18"];
+  const WORDS_77 = ["hold","go","rally","aside","squeeze"];
+  const WORDS_78 = ["watch","neck"];
+  const WORDS_79 = ["cross","jab"];
+  const WORDS_80 = ["grab","seat","strike","grabGun"];
+  const WORDS_81 = ["left","right"];
+  const WORDS_82 = ["red","blue"];
+  const WORDS_83 = ["player"];
+  const WORDS_84 = ["gun","arm"];
+  const WORDS_85 = ["held","grab","choke","whip","kill"];
+  const WORDS_86 = ["body","held","radio","sound","sight"];
+  const WORDS_87 = ["finder","called"];
+  const WORDS_88 = ["fan","to","cover"];
+  const WORDS_89 = ["flinch","friendly","pinned","displace","recover"];
+  const WORDS_90 = ["done","look","walk","sweep"];
+  const WORDS_91 = ["slice","approach","cross"];
+  const WORDS_92 = ["hand","swing"];
+  const WORDS_93 = ["stack"];
+  const WORDS_94 = ["annealed","laminated","tempered"];
+  const WORDS_95 = ["carpet","tile","metal","glass","wood","plastic","cardboard","fabric","screen","plasterboard","paper","plant","masonry","blockwork","glassTough","glassLam"];
+  const WORDS_96 = ["burst","can","done"];
+  const WORDS_97 = ["ears","net"];
+  const WORDS_98 = ["idle","called","asked"];
+  const WORDS_99 = ["look","flank","help","reinforce"];
+  const WORDS_100 = ["set","run","loose"];
+  const WORDS_101 = ["down","back","contact","lost","quiet","found","said","sweep","barricade","flank","help","reinforce","in position","met","rally","stays","follows","check","asks","looks","no sign","glimpse","calls","cut off","net check","net query","net asks","net looks","net help"];
+  const WORDS_102 = ["cleaner","worker"];
+  const WORDS_103 = ["guard","phone","exit"];
+  const WORDS_104 = ["jet","storm"];
+  const WORDS_105 = ["breaker","device","objective"];
+  const WORDS_106 = ["none","door","floor"];
+  const WORDS_107 = ["wall","thing"];
+  const WORDS_108 = ["side","leg"];
+  const WORDS_109 = ["knee","back"];
+  const WORDS_110 = ["boot","body","hand","swing"];
+  const WORDS_111 = ["down","shot","blackout","heard","objective","grab","ocp","thrown","radio","spotted","contact","lost","calm","alarm","lightShot","interrogated","keyTaken","ko","kill","bodyFound","doorKicked","lockPicked","hit","needBreak","civilianSpotted","civilianReported","civilianComplied","civilianKO","civilianKilled","cameraSpotted","cameraAlarm","laserTripped","deviceDown","codeLearned","codeEntered","checkpoint"];
+  const WORDS_112 = ["thud","scrape","roll"];
+  const WORDS_113 = ["start","stop"];
+  const WORDS_114 = ["none","solid","flesh"];
+  const WORDS_115 = ["set","called"];
+  const WORDS_116 = ["room","point"];
+  const WORDS_117 = ["screen","paper","housing","clutter","binder","tv"];
+  const WORDS_118 = ["blown","wary","counted"];
+  const WORDS_119 = ["error","warn"];
+  const WORDS_120 = ["camera","radio","error","spawn","drill","note","program","beat","trigger","yield","stimulus"];
+  const WORDS_121 = ["clear","bang","kick","approach","breach","stack","done","wait","enter","restack"];
+  const WORDS_122 = ["heard","contact"];
+  const WORDS_123 = ["heard","stay","calm","cover","flinch","still","call","help","stayOurs","huntOver","fellBack","planted","pinnedIn","squadHears","squadCopies","squadWaits","squadCopiesWaits","squadStays","squadQuiet","surprised","raw"];
+  const WORDS_124 = ["lost","rescued"];
+  const WORDS_125 = ["failed","clean","costly"];
+  const WORDS_126 = ["guard","door","captor","roamer"];
+  const WORDS_127 = ["","cross","out","wait","going","in"];
+  const WORDS_128 = ["mark","now"];
+  const WORDS_129 = ["keys","charge","take","lever"];
+  const WORDS_130 = ["shotgun","hammer"];
+  const WORDS_131 = ["knee","back"];
+  const WORDS_132 = ["ribs","thigh"];
+  const WORDS_133 = ["mouth","sweep","slash","chop","palm"];
+  const WORDS_134 = ["arch","hunch","snap"];
+  const WORDS_135 = ["torch","weapon"];
+  const WORDS_136 = ["shot","struck","choked","wounded","grab"];
+  const WORDS_137 = ["wall","prop","open","corner","leaf"];
+  const WORDS_138 = ["breaker","device","rack"];
+  const WORDS_139 = ["shotgun","hammer"];
+  const WORDS_140 = ["start","enter","after","event","signal","when"];
+  const WORDS_141 = ["pred"];
+  const WORDS_142 = ["time"];
+  const WORDS_143 = ["frames"];
+  const WORDS_144 = ["pred"];
+  const WORDS_145 = ["event"];
+  const WORDS_146 = ["shot","bang","kick","door","lightOut","guardShot","step","prop","whistle","glass","signal"];
+  const WORDS_147 = ["beat"];
+  const WORDS_148 = ["done","started"];
+  const WORDS_149 = ["all","any"];
+  const WORDS_150 = ["smoke","coffee","water","stretch"];
+  const WORDS_151 = ["door","cover","hole","port","reset"];
+  const WORDS_152 = ["blast","fire","load","reset","collapse"];
+  const WORDS_153 = ["order","within","never"];
+  const WORDS_154 = ["hold","wait","into","corner","centre"];
+  const WORDS_155 = ["held","unknown","cleared","hot","looked"];
+  const WORDS_156 = ["cover","corridor"];
+  const WORDS_157 = ["out","side","noise","room"];
+  const WORDS_158 = ["shot","order","drill"];
+  const WORDS_159 = ["go","wait","thru","turn"];
+  const WORDS_160 = ["low","out","gone","mates","say"];
+  const WORDS_161 = ["body","asked"];
+  const WORDS_162 = ["body","name","last","why","alone","ask"];
+  const WORDS_163 = ["door","light","noise","whistle","lent"];
+  const WORDS_164 = ["down","work","up","spent","going","no","asleep","stir"];
+  const WORDS_165 = ["light","alarm","noise","taken","time","net","bump"];
+  const WORDS_166 = ["none","with","balk","solo","come"];
+  const WORDS_167 = ["idle","called","asked"];
+  const WORDS_168 = ["prop","air","man","floor","static"];
+  const WORDS_169 = ["off","free","dark"];
+  const WORDS_170 = ["your light","your goggles","not compromised","compromised","no rule"];
+  const WORDS_171 = ["back","run","cover","plan","line","react","peek","flank"];
+  const WORDS_172 = ["cover","step","end","kneel"];
+  const WORDS_173 = ["off","on"];
+  const WORDS_174 = ["frag","stun"];
+  const WORDS_175 = ["reload","swap"];
+  const WORDS_176 = ["dry","empty","tactical"];
+  const WORDS_177 = ["dust","bait"];
+  const WORDS_178 = ["down","reload","burst","none","back","hold","stand","flinch","duck","bait"];
+  const WORDS_179 = ["hard","mixed"];
+  const WORDS_180 = ["grab","seat","take","unseat"];
+  const WORDS_181 = ["calm","wary","caught"];
+  const WORDS_182 = ["step","freeze","slip"];
+  const WORDS_183 = ["silent","loud"];
+  const WORDS_184 = ["start","order","tool","api"];
+  const WORDS_185 = ["wounded","killed","shielded","stunned"];
+  const WORDS_186 = ["blast","cover","follow","told","close","fight"];
+  const WORDS_187 = ["blast","cover","follow","told"];
+  const WORDS_188 = ["overcast","night","dawn","midday","dusk"];
+  const WORDS_189 = ["idle","called","asked"];
+  const WORDS_190 = ["set","go","order","short","lastAt","in","check1","checkN","checkStand","checkLoneAt","ansAt","ansFreeAt","fewAt","lastGo","movedAt","movedFree","orderFrom","orderStay","orderShut","orderOut","cant","setOpen","setLone","setLoneOpen"];
+  const WORDS_191 = ["slice","bang","cross","stack","done","wait","open","toss","stacked"];
+  const WORDS_192 = ["lead","second"];
+  const WORDS_193 = ["slice","toss"];
+  const WORDS_194 = ["set","go","walk"];
+  const WORDS_195 = ["out","back"];
+  const WORDS_196 = ["set","idle","shut","haul","think","toRoom","toProp","toDoor","wedge","toCover"];
+  const WORDS_197 = ["go","word","gather"];
+  const WORDS_198 = ["heard","called","over"];
+  const WORDS_199 = ["back","run","beat"];
+  const WORDS_200 = ["cover","lever"];
+  const WORDS_201 = ["out","back","wait","there"];
+  const WORDS_202 = ["stay","lost","home","go","there","said","noticed","nobody","abort","wrecked","restored","overdue"];
+  const WORDS_203 = ["go","look","lent"];
+  const WORDS_204 = ["going","telegraph","dwell","returning"];
+  const WORDS_205 = ["out","back","there"];
+  const WORDS_206 = ["lost","home","there","word","found","kept","empty","check","asks","nobody","abort","goes"];
+  const WORDS_207 = ["cover","step","kneel"];
+  const WORDS_208 = ["door","stack","line","keep","hurt"];
+  const WORDS_209 = ["idle","called","asked"];
+  const WORDS_210 = ["cross","back","wait","stand","walk"];
+  const WORDS_211 = ["door","near","open","lit","long"];
+  const WORDS_212 = ["door","cover"];
+  const WORDS_213 = ["wiped","reset","cleared","timeout","superseded"];
+  const WORDS_214 = ["blackout","drive","alarm","rack","lockdown","server","bodyKo","bodyDead"];
+  const WORDS_215 = ["greetReply","reportRadio","escalate","outsideCall","complyLine","foundReport","bodyEsc","outrage"];
+  const WORDS_216 = ["run","beat"];
+  const WORDS_217 = ["kick","set","walk"];
+  const WORDS_218 = ["behind","front","left","right"];
   function f_autopilot_AutoPick(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = b[C.p++] !== 0; const c = o.word; if (typeof c === 'boolean') { if (c !== v) o.word = v; } else if (c === null) { if (v) o.word = v; } else if (typeof c === 'object') { if (!v) o.word = null; } else if (!(c === undefined && !v)) o.word = v; }   // word
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(0, o);   // t
@@ -561,7 +562,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 525) >> 3)] & (1 << ((m + 525) & 7))) { const c = o.world; let same = c !== null && c !== undefined && c.length === 16; const p0 = C.p; if (same) for (let i = 0; i < 16; i++) { const x = dv.getFloat32(p0 + 4 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 64; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 16; i++) (c as any)[i] = dv.getFloat32(p0 + 4 * i, true); } else { const a = new Array(16); for (let i = 0; i < 16; i++) a[i] = dv.getFloat32(p0 + 4 * i, true); o.world = a; } } }   // world
     if (b[MP + ((m + 526) >> 3)] & (1 << ((m + 526) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.radius; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.radius = v !== 0 as any; else o.radius = v; } }   // radius
     if (b[MP + ((m + 527) >> 3)] & (1 << ((m + 527) & 7))) { const v = b[C.p++] !== 0; const c = o.alive; if (typeof c === 'boolean') { if (c !== v) o.alive = v; } else if (c === null) { if (v) o.alive = v; } else if (typeof c === 'object') { if (!v) o.alive = null; } else if (!(c === undefined && !v)) o.alive = v; }   // alive
-    if (b[MP + ((m + 528) >> 3)] & (1 << ((m + 528) & 7))) C.slow(49, o);   // bones
+    if (b[MP + ((m + 528) >> 3)] & (1 << ((m + 528) & 7))) { const p0 = C.p, L = dv.getUint32(C.p, true); C.p += 4; let r = o.bones; if (r === null || typeof r !== 'object') r = o.bones = {}; const W = WORDS_10; for (let i = 0; i < L; i++) { const k = W[dv.getUint16(C.p, true)]; C.p += 2; const c = r[k]; let same = !!c && c.length === 3; if (same) for (let j = 0; j < 3; j++) if (!Object.is(dv.getFloat64(C.p + 8 * j, true), c[j])) { same = false; break; } if (!same) { const a = new Array(3); for (let j = 0; j < 3; j++) a[j] = dv.getFloat64(C.p + 8 * j, true); r[k] = a; } C.p += 24; } if (Object.keys(r).length !== L) { C.p = p0; C.slow(49, o); } }   // bones
     if (b[MP + ((m + 529) >> 3)] & (1 << ((m + 529) & 7))) { const c = o.bonesAt; let same = c !== null && c !== undefined && c.length === 2; const p0 = C.p; if (same) for (let i = 0; i < 2; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 16; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 2; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(2); for (let i = 0; i < 2; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.bonesAt = a; } } }   // bones_at
     if (b[MP + ((m + 530) >> 3)] & (1 << ((m + 530) & 7))) { const c = o.gunDir; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.gunDir = a; } } }   // gun_dir
     if (b[MP + ((m + 531) >> 3)] & (1 << ((m + 531) & 7))) { const c = o.muzzle; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.muzzle = a; } } }   // muzzle
@@ -586,14 +587,14 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 550) >> 3)] & (1 << ((m + 550) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.inHandK; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.inHandK = v !== 0 as any; else o.inHandK = v; } }   // in_hand_k
     if (b[MP + ((m + 551) >> 3)] & (1 << ((m + 551) & 7))) { if (b[C.p++]) { const c = o.simHandR; let same = c !== null && c !== undefined && c.length === 4; const p0 = C.p; if (same) for (let i = 0; i < 4; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 32; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 4; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(4); for (let i = 0; i < 4; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.simHandR = a; } } } else if (o.simHandR !== null) o.simHandR = null; }   // sim_hand_r
     if (b[MP + ((m + 552) >> 3)] & (1 << ((m + 552) & 7))) C.slow(53, o);   // in_hand_ov
-    if (b[MP + ((m + 553) >> 3)] & (1 << ((m + 553) & 7))) C.slow(54, o);   // prev_bones
+    if (b[MP + ((m + 553) >> 3)] & (1 << ((m + 553) & 7))) { const p0 = C.p, L = dv.getUint32(C.p, true); C.p += 4; let r = o.prevBones; if (r === null || typeof r !== 'object') r = o.prevBones = {}; const W = WORDS_10; for (let i = 0; i < L; i++) { const k = W[dv.getUint16(C.p, true)]; C.p += 2; const c = r[k]; let same = !!c && c.length === 3; if (same) for (let j = 0; j < 3; j++) if (!Object.is(dv.getFloat64(C.p + 8 * j, true), c[j])) { same = false; break; } if (!same) { const a = new Array(3); for (let j = 0; j < 3; j++) a[j] = dv.getFloat64(C.p + 8 * j, true); r[k] = a; } C.p += 24; } if (Object.keys(r).length !== L) { C.p = p0; C.slow(54, o); } }   // prev_bones
     if (b[MP + ((m + 554) >> 3)] & (1 << ((m + 554) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.prevDt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.prevDt = v !== 0 as any; else o.prevDt = v; } }   // prev_dt
     if (b[MP + ((m + 555) >> 3)] & (1 << ((m + 555) & 7))) C.slow(55, o);   // sim_bones
     if (b[MP + ((m + 556) >> 3)] & (1 << ((m + 556) & 7))) C.slow(56, o);   // prev_sim
     if (b[MP + ((m + 557) >> 3)] & (1 << ((m + 557) & 7))) C.slow(57, o);   // gun_hand
     if (b[MP + ((m + 558) >> 3)] & (1 << ((m + 558) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.ragdoll; if (typeof c === 'number') { if (c !== v) o.ragdoll = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.ragdoll = null; } else { const r = T_RagdollId()[v]; if (r !== c) o.ragdoll = r; } } else if (o.ragdoll !== null) o.ragdoll = null; }   // ragdoll
     if (b[MP + ((m + 559) >> 3)] & (1 << ((m + 559) & 7))) C.slow(58, o);   // rd
-    if (b[MP + ((m + 560) >> 3)] & (1 << ((m + 560) & 7))) { if (b[C.p++]) { const v = WORDS_10[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.fallAs !== v) o.fallAs = v; } else if (o.fallAs !== null) o.fallAs = null; }   // fall_as
+    if (b[MP + ((m + 560) >> 3)] & (1 << ((m + 560) & 7))) { if (b[C.p++]) { const v = WORDS_11[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.fallAs !== v) o.fallAs = v; } else if (o.fallAs !== null) o.fallAs = null; }   // fall_as
     if (b[MP + ((m + 561) >> 3)] & (1 << ((m + 561) & 7))) { if (b[C.p++]) { const c = o.fallFrom; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.fallFrom = a; } } } else if (o.fallFrom !== null) o.fallFrom = null; }   // fall_from
     if (b[MP + ((m + 562) >> 3)] & (1 << ((m + 562) & 7))) { const v = b[C.p++] !== 0; const c = o.fallTight; if (typeof c === 'boolean') { if (c !== v) o.fallTight = v; } else if (c === null) { if (v) o.fallTight = v; } else if (typeof c === 'object') { if (!v) o.fallTight = null; } else if (!(c === undefined && !v)) o.fallTight = v; }   // fall_tight
     if (b[MP + ((m + 563) >> 3)] & (1 << ((m + 563) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.fallAhead; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.fallAhead = v !== 0 as any; else o.fallAhead = v; } }   // fall_ahead
@@ -667,15 +668,15 @@ export function puppetRows(C: Ctx) {
   function f_throwables_Item(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.r; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.r = v !== 0 as any; else o.r = v; } }   // r
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { if (b[C.p++]) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.kept; if (a === null || a === undefined) { if (L || a === undefined) a = o.kept = []; } else if (ArrayBuffer.isView(a) && (a as any).length !== L) a = o.kept = new (a as any).constructor(L); if (L) for (let i = 0; i < L; i++) { const x = dv.getFloat64(C.p + 8 * i, true); if (!Object.is(a[i], x)) a[i] = x; } if (a && !ArrayBuffer.isView(a) && a.length !== L) a.length = L; C.p += 8 * L; } else if (o.kept !== null) o.kept = null; }   // kept
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { if (b[C.p++]) { const v = WORDS_11[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.side !== v) o.side = v; } else if (o.side !== undefined) o.side = undefined; }   // side
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { if (b[C.p++]) { const v = WORDS_12[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.side !== v) o.side = v; } else if (o.side !== undefined) o.side = undefined; }   // side
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.clatters; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.clatters = v !== 0 as any; else o.clatters = v; } } else if (o.clatters !== undefined) o.clatters = undefined; }   // clatters
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.hand !== v) o.hand = v; } else if (o.hand !== undefined) o.hand = undefined; }   // hand
   }
   function f_game_Guard(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.char; if (typeof c === 'number') { if (c !== v) o.char = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.char = null; } else { const r = T_CharId()[v]; if (r !== c) o.char = r; } }   // ch
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_12[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.state !== v) o.state = v; }   // state
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_13[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.state !== v) o.state = v; }   // state
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.callsign; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.callsign = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // callsign
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = WORDS_11[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.team !== v) o.team = v; }   // team
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = WORDS_12[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.team !== v) o.team = v; }   // team
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(74, o);   // foe
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.faces; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.faces = v !== 0 as any; else o.faces = v; } } else if (o.faces !== undefined) o.faces = undefined; }   // faces
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.route; if (typeof c === 'number') { if (c !== v) o.route = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.route = null; } else { const r = T_RouteId()[v]; if (r !== c) o.route = r; } }   // route
@@ -700,8 +701,8 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 25) >> 3)] & (1 << ((m + 25) & 7))) C.slow(77, o);   // held
     if (b[MP + ((m + 26) >> 3)] & (1 << ((m + 26) & 7))) C.slow(78, o);   // bubble
     if (b[MP + ((m + 27) >> 3)] & (1 << ((m + 27) & 7))) { const v = b[C.p++] !== 0; const c = o.found; if (typeof c === 'boolean') { if (c !== v) o.found = v; } else if (c === null) { if (v) o.found = v; } else if (typeof c === 'object') { if (!v) o.found = null; } else if (!(c === undefined && !v)) o.found = v; }   // found
-    if (b[MP + ((m + 28) >> 3)] & (1 << ((m + 28) & 7))) { if (b[C.p++]) { const v = WORDS_13[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.downKind !== v) o.downKind = v; } else if (o.downKind !== null) o.downKind = null; }   // down_kind
-    if (b[MP + ((m + 29) >> 3)] & (1 << ((m + 29) & 7))) { if (b[C.p++]) { const v = WORDS_14[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.downBy !== v) o.downBy = v; } else if (o.downBy !== null) o.downBy = null; }   // down_by
+    if (b[MP + ((m + 28) >> 3)] & (1 << ((m + 28) & 7))) { if (b[C.p++]) { const v = WORDS_14[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.downKind !== v) o.downKind = v; } else if (o.downKind !== null) o.downKind = null; }   // down_kind
+    if (b[MP + ((m + 29) >> 3)] & (1 << ((m + 29) & 7))) { if (b[C.p++]) { const v = WORDS_15[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.downBy !== v) o.downBy = v; } else if (o.downBy !== null) o.downBy = null; }   // down_by
     if (b[MP + ((m + 30) >> 3)] & (1 << ((m + 30) & 7))) C.slow(79, o);   // wound
     { let c = o.witness; if (!c || typeof c !== 'object') c = o.witness = C.made("crate::game::Witness"); f_game_Witness(c, m + 31); }   // witness
     if (b[MP + ((m + 48) >> 3)] & (1 << ((m + 48) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.talk; if (typeof c === 'number') { if (c !== v) o.talk = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.talk = null; } else { const r = T_GameTalkId()[v]; if (r !== c) o.talk = r; } }   // talk
@@ -850,8 +851,8 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 87) >> 3)] & (1 << ((m + 87) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.canisters; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.canisters = v !== 0 as any; else o.canisters = v; } }   // canisters
     if (b[MP + ((m + 88) >> 3)] & (1 << ((m + 88) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.flashbangs; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.flashbangs = v !== 0 as any; else o.flashbangs = v; } }   // flashbangs
     if (b[MP + ((m + 89) >> 3)] & (1 << ((m + 89) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.frags; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.frags = v !== 0 as any; else o.frags = v; } }   // frags
-    if (b[MP + ((m + 90) >> 3)] & (1 << ((m + 90) & 7))) { const v = WORDS_15[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.slot !== v) o.slot = v; }   // slot
-    if (b[MP + ((m + 91) >> 3)] & (1 << ((m + 91) & 7))) { const v = WORDS_16[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.throwKind !== v) o.throwKind = v; }   // throw_kind
+    if (b[MP + ((m + 90) >> 3)] & (1 << ((m + 90) & 7))) { const v = WORDS_16[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.slot !== v) o.slot = v; }   // slot
+    if (b[MP + ((m + 91) >> 3)] & (1 << ((m + 91) & 7))) { const v = WORDS_17[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.throwKind !== v) o.throwKind = v; }   // throw_kind
     if (b[MP + ((m + 92) >> 3)] & (1 << ((m + 92) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.rifle; if (typeof c === 'number') { if (c !== v) o.rifle = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.rifle = null; } else { const r = T_FirearmId()[v]; if (r !== c) o.rifle = r; } }   // rifle
     if (b[MP + ((m + 93) >> 3)] & (1 << ((m + 93) & 7))) { const v = b[C.p++] !== 0; const c = o.hasRifle; if (typeof c === 'boolean') { if (c !== v) o.hasRifle = v; } else if (c === null) { if (v) o.hasRifle = v; } else if (typeof c === 'object') { if (!v) o.hasRifle = null; } else if (!(c === undefined && !v)) o.hasRifle = v; }   // has_rifle
     if (b[MP + ((m + 94) >> 3)] & (1 << ((m + 94) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.equipT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.equipT = v !== 0 as any; else o.equipT = v; } }   // equip_t
@@ -859,11 +860,11 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 96) >> 3)] & (1 << ((m + 96) & 7))) C.slow(98, o);   // setup_hand
     if (b[MP + ((m + 97) >> 3)] & (1 << ((m + 97) & 7))) C.slow(99, o);   // setup_key
     if (b[MP + ((m + 98) >> 3)] & (1 << ((m + 98) & 7))) { const v = b[C.p++] !== 0; const c = o.rifleGone; if (typeof c === 'boolean') { if (c !== v) o.rifleGone = v; } else if (c === null) { if (v) o.rifleGone = v; } else if (typeof c === 'object') { if (!v) o.rifleGone = null; } else if (!(c === undefined && !v)) o.rifleGone = v; }   // rifle_gone
-    if (b[MP + ((m + 99) >> 3)] & (1 << ((m + 99) & 7))) { if (b[C.p++]) { if (b[C.p++]) { const v = WORDS_17[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kitWas !== v) o.kitWas = v; } else if (o.kitWas !== undefined && o.kitWas !== null) o.kitWas = null; } else if (o.kitWas !== undefined) o.kitWas = undefined; }   // kit_was
-    if (b[MP + ((m + 100) >> 3)] & (1 << ((m + 100) & 7))) { if (b[C.p++]) { const v = WORDS_16[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kitCan !== v) o.kitCan = v; } else if (o.kitCan !== null) o.kitCan = null; }   // kit_can
-    if (b[MP + ((m + 101) >> 3)] & (1 << ((m + 101) & 7))) { if (b[C.p++]) { const v = WORDS_18[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.launchHeld !== v) o.launchHeld = v; } else if (o.launchHeld !== null) o.launchHeld = null; }   // launch_held
+    if (b[MP + ((m + 99) >> 3)] & (1 << ((m + 99) & 7))) { if (b[C.p++]) { if (b[C.p++]) { const v = WORDS_18[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kitWas !== v) o.kitWas = v; } else if (o.kitWas !== undefined && o.kitWas !== null) o.kitWas = null; } else if (o.kitWas !== undefined) o.kitWas = undefined; }   // kit_was
+    if (b[MP + ((m + 100) >> 3)] & (1 << ((m + 100) & 7))) { if (b[C.p++]) { const v = WORDS_17[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kitCan !== v) o.kitCan = v; } else if (o.kitCan !== null) o.kitCan = null; }   // kit_can
+    if (b[MP + ((m + 101) >> 3)] & (1 << ((m + 101) & 7))) { if (b[C.p++]) { const v = WORDS_19[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.launchHeld !== v) o.launchHeld = v; } else if (o.launchHeld !== null) o.launchHeld = null; }   // launch_held
     if (b[MP + ((m + 102) >> 3)] & (1 << ((m + 102) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.kitOwed; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.kitOwed = v !== 0 as any; else o.kitOwed = v; } }   // kit_owed
-    if (b[MP + ((m + 103) >> 3)] & (1 << ((m + 103) & 7))) { if (b[C.p++]) { const v = WORDS_19[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kitOwedFor !== v) o.kitOwedFor = v; } else if (o.kitOwedFor !== null) o.kitOwedFor = null; }   // kit_owed_for
+    if (b[MP + ((m + 103) >> 3)] & (1 << ((m + 103) & 7))) { if (b[C.p++]) { const v = WORDS_20[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kitOwedFor !== v) o.kitOwedFor = v; } else if (o.kitOwedFor !== null) o.kitOwedFor = null; }   // kit_owed_for
     if (b[MP + ((m + 104) >> 3)] & (1 << ((m + 104) & 7))) C.slow(100, o);   // sling_rest
     if (b[MP + ((m + 105) >> 3)] & (1 << ((m + 105) & 7))) { const v = b[C.p++] !== 0; const c = o.ocpHinted; if (typeof c === 'boolean') { if (c !== v) o.ocpHinted = v; } else if (c === null) { if (v) o.ocpHinted = v; } else if (typeof c === 'object') { if (!v) o.ocpHinted = null; } else if (!(c === undefined && !v)) o.ocpHinted = v; }   // ocp_hinted
     if (b[MP + ((m + 106) >> 3)] & (1 << ((m + 106) & 7))) { const v = b[C.p++] !== 0; const c = o.holstered; if (typeof c === 'boolean') { if (c !== v) o.holstered = v; } else if (c === null) { if (v) o.holstered = v; } else if (typeof c === 'object') { if (!v) o.holstered = null; } else if (!(c === undefined && !v)) o.holstered = v; }   // holstered
@@ -883,7 +884,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 129) >> 3)] & (1 << ((m + 129) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.light; if (typeof c === 'number') { if (c !== v) o.light = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.light = null; } else { const r = T_LightId()[v]; if (r !== c) o.light = r; } }   // light
     if (b[MP + ((m + 130) >> 3)] & (1 << ((m + 130) & 7))) { const v = b[C.p++] !== 0; const c = o.throwEaten; if (typeof c === 'boolean') { if (c !== v) o.throwEaten = v; } else if (c === null) { if (v) o.throwEaten = v; } else if (typeof c === 'object') { if (!v) o.throwEaten = null; } else if (!(c === undefined && !v)) o.throwEaten = v; }   // throw_eaten
     if (b[MP + ((m + 131) >> 3)] & (1 << ((m + 131) & 7))) { const v = b[C.p++] !== 0; const c = o.throwHeld; if (typeof c === 'boolean') { if (c !== v) o.throwHeld = v; } else if (c === null) { if (v) o.throwHeld = v; } else if (typeof c === 'object') { if (!v) o.throwHeld = null; } else if (!(c === undefined && !v)) o.throwHeld = v; }   // throw_held
-    if (b[MP + ((m + 132) >> 3)] & (1 << ((m + 132) & 7))) { const v = WORDS_16[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.heldKind !== v) o.heldKind = v; }   // held_kind
+    if (b[MP + ((m + 132) >> 3)] & (1 << ((m + 132) & 7))) { const v = WORDS_17[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.heldKind !== v) o.heldKind = v; }   // held_kind
     if (b[MP + ((m + 133) >> 3)] & (1 << ((m + 133) & 7))) C.slow(104, o);   // throw_preview
     if (b[MP + ((m + 134) >> 3)] & (1 << ((m + 134) & 7))) C.slow(105, o);   // pending_throw
     if (b[MP + ((m + 135) >> 3)] & (1 << ((m + 135) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.easing; if (typeof c === 'number') { if (c !== v) o.easing = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.easing = null; } else { const r = T_DoorId()[v]; if (r !== c) o.easing = r; } } else if (o.easing !== null) o.easing = null; }   // easing
@@ -894,7 +895,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 140) >> 3)] & (1 << ((m + 140) & 7))) { const v = b[C.p++] !== 0; const c = o.fHeld; if (typeof c === 'boolean') { if (c !== v) o.fHeld = v; } else if (c === null) { if (v) o.fHeld = v; } else if (typeof c === 'object') { if (!v) o.fHeld = null; } else if (!(c === undefined && !v)) o.fHeld = v; }   // f_held
     if (b[MP + ((m + 141) >> 3)] & (1 << ((m + 141) & 7))) { const v = b[C.p++] !== 0; const c = o.wand; if (typeof c === 'boolean') { if (c !== v) o.wand = v; } else if (c === null) { if (v) o.wand = v; } else if (typeof c === 'object') { if (!v) o.wand = null; } else if (!(c === undefined && !v)) o.wand = v; }   // wand
     if (b[MP + ((m + 142) >> 3)] & (1 << ((m + 142) & 7))) C.slow(107, o);   // wanding
-    if (b[MP + ((m + 143) >> 3)] & (1 << ((m + 143) & 7))) { const v = WORDS_20[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.bigKit !== v) o.bigKit = v; }   // big_kit
+    if (b[MP + ((m + 143) >> 3)] & (1 << ((m + 143) & 7))) { const v = WORDS_21[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.bigKit !== v) o.bigKit = v; }   // big_kit
     if (b[MP + ((m + 144) >> 3)] & (1 << ((m + 144) & 7))) C.slow(108, o);   // kit_load
     if (b[MP + ((m + 145) >> 3)] & (1 << ((m + 145) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const t = T_StickyCamId(); let a = o.cams; if (a === null || a === undefined) { if (L || a === undefined) a = o.cams = []; } if (a && Array.isArray(a) && (a.length === 0 || typeof a[0] !== 'number')) { for (let i = 0; i < L; i++) { const v = dv.getUint32(C.p, true); C.p += 4; const r = t[v]; if (a[i] !== r) a[i] = r; } if (a.length !== L) a.length = L; } else if (a) { for (let i = 0; i < L; i++) { a[i] = dv.getUint32(C.p, true); C.p += 4; } if (a.length !== L) a.length = L; } }   // cams
     if (b[MP + ((m + 146) >> 3)] & (1 << ((m + 146) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.camSeq; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.camSeq = v !== 0 as any; else o.camSeq = v; } }   // cam_seq
@@ -908,7 +909,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 154) >> 3)] & (1 << ((m + 154) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.stepAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.stepAt = v !== 0 as any; else o.stepAt = v; } }   // step_at
   }
   function f_debris_Chunk(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_21[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_22[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.box; if (typeof c === 'number') { if (c !== v) o.box = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.box = null; } else { const r = T_BoxId()[v]; if (r !== c) o.box = r; } }   // box_
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const c = o.v; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.v = a; } } }   // v
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const c = o.w; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.w = a; } } }   // w
@@ -986,8 +987,8 @@ export function puppetRows(C: Ctx) {
   }
   function f_wallbreak_Breakable(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.id; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.id = v !== 0 as any; else o.id = v; } }   // id
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_22[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_23[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.surf !== v) o.surf = v; }   // surf
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_23[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_24[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.surf !== v) o.surf = v; }   // surf
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.box; if (typeof c === 'number') { if (c !== v) o.box = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.box = null; } else { const r = T_BoxId()[v]; if (r !== c) o.box = r; } }   // box_
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.flags0; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.flags0 = v !== 0 as any; else o.flags0 = v; } }   // flags0
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.nx; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.nx = v !== 0 as any; else o.nx = v; } }   // nx
@@ -1011,12 +1012,12 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) C.slow(122, o);   // group
   }
   function f_wind_WindSource(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_24[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.why !== v) o.why = v; }   // why
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_25[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.why !== v) o.why = v; }   // why
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.base; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.base = v !== 0 as any; else o.base = v; } }   // base
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.on; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.on = v !== 0 as any; else o.on = v; } }   // on
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.gust; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.gust = v !== 0 as any; else o.gust = v; } }   // gust
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.seed; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.seed = v !== 0 as any; else o.seed = v; } }   // seed
-    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = WORDS_25[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = WORDS_26[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const c = o.pos; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.pos = a; } } }   // pos
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { const c = o.dir; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.dir = a; } } }   // dir
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.speed; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.speed = v !== 0 as any; else o.speed = v; } }   // speed
@@ -1027,7 +1028,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 13) >> 3)] & (1 << ((m + 13) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.floorY; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.floorY = v !== 0 as any; else o.floorY = v; } } else if (o.floorY !== undefined) o.floorY = undefined; }   // floor_y
   }
   function f_doortools_DoorOp(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_26[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_27[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.door; if (typeof c === 'number') { if (c !== v) o.door = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.door = null; } else { const r = T_DoorId()[v]; if (r !== c) o.door = r; } }   // door
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.side; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.side = v !== 0 as any; else o.side = v; } }   // side
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.coded !== v) o.coded = v; } else if (o.coded !== undefined) o.coded = undefined; }   // coded
@@ -1041,7 +1042,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) C.slow(124, o);   // rear
     if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) C.slow(125, o);   // lane
     if (b[MP + ((m + 13) >> 3)] & (1 << ((m + 13) & 7))) C.slow(126, o);   // from
-    if (b[MP + ((m + 14) >> 3)] & (1 << ((m + 14) & 7))) { const v = WORDS_27[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
+    if (b[MP + ((m + 14) >> 3)] & (1 << ((m + 14) & 7))) { const v = WORDS_28[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
     if (b[MP + ((m + 15) >> 3)] & (1 << ((m + 15) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t0; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t0 = v !== 0 as any; else o.t0 = v; } }   // t0
     if (b[MP + ((m + 16) >> 3)] & (1 << ((m + 16) & 7))) { const v = b[C.p++] !== 0; const c = o.bangHeld; if (typeof c === 'boolean') { if (c !== v) o.bangHeld = v; } else if (c === null) { if (v) o.bangHeld = v; } else if (typeof c === 'object') { if (!v) o.bangHeld = null; } else if (!(c === undefined && !v)) o.bangHeld = v; }   // bang_held
     if (b[MP + ((m + 17) >> 3)] & (1 << ((m + 17) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.frag !== v) o.frag = v; } else if (o.frag !== undefined) o.frag = undefined; }   // frag
@@ -1097,8 +1098,8 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { if (b[C.p++]) { const c = o.watch; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.watch = a; } } } else if (o.watch !== null) o.watch = null; }   // watch
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.door; if (typeof c === 'number') { if (c !== v) o.door = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.door = null; } else { const r = T_DoorId()[v]; if (r !== c) o.door = r; } } else if (o.door !== null) o.door = null; }   // door
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.strafe !== v) o.strafe = v; } else if (o.strafe !== undefined) o.strafe = undefined; }   // strafe
-    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { const v = WORDS_28[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.stance !== v) o.stance = v; }   // stance
-    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { const v = WORDS_29[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.upper !== v) o.upper = v; }   // upper
+    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { const v = WORDS_29[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.stance !== v) o.stance = v; }   // stance
+    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { const v = WORDS_30[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.upper !== v) o.upper = v; }   // upper
     if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.stackSide; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.stackSide = v !== 0 as any; else o.stackSide = v; } }   // stack_side
     if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) C.slow(143, o);   // move_
     if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.going; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.going = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // going
@@ -1169,7 +1170,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const c = o.at; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.at = a; } } }   // at
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.by; if (typeof c === 'number') { if (c !== v) o.by = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.by = null; } else { const r = T_GuardId()[v]; if (r !== c) o.by = r; } } else if (o.by !== null) o.by = null; }   // by
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = WORDS_30[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.how !== v) o.how = v; }   // how
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = WORDS_31[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.how !== v) o.how = v; }   // how
   }
   function f_doortools_SetCharge(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.door; if (typeof c === 'number') { if (c !== v) o.door = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.door = null; } else { const r = T_DoorId()[v]; if (r !== c) o.door = r; } }   // door
@@ -1222,8 +1223,8 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 28) >> 3)] & (1 << ((m + 28) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.movedAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.movedAt = v !== 0 as any; else o.movedAt = v; } }   // moved_at
     if (b[MP + ((m + 29) >> 3)] & (1 << ((m + 29) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.rallyAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.rallyAt = v !== 0 as any; else o.rallyAt = v; } }   // rally_at
     if (b[MP + ((m + 30) >> 3)] & (1 << ((m + 30) & 7))) { const v = b[C.p++] !== 0; const c = o.rallyGo; if (typeof c === 'boolean') { if (c !== v) o.rallyGo = v; } else if (c === null) { if (v) o.rallyGo = v; } else if (typeof c === 'object') { if (!v) o.rallyGo = null; } else if (!(c === undefined && !v)) o.rallyGo = v; }   // rally_go
-    if (b[MP + ((m + 31) >> 3)] & (1 << ((m + 31) & 7))) { const v = WORDS_31[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.mode !== v) o.mode = v; }   // mode
-    if (b[MP + ((m + 32) >> 3)] & (1 << ((m + 32) & 7))) { const v = WORDS_32[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.moveKind !== v) o.moveKind = v; }   // move_kind
+    if (b[MP + ((m + 31) >> 3)] & (1 << ((m + 31) & 7))) { const v = WORDS_32[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.mode !== v) o.mode = v; }   // mode
+    if (b[MP + ((m + 32) >> 3)] & (1 << ((m + 32) & 7))) { const v = WORDS_33[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.moveKind !== v) o.moveKind = v; }   // move_kind
     if (b[MP + ((m + 33) >> 3)] & (1 << ((m + 33) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.moveT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.moveT = v !== 0 as any; else o.moveT = v; } }   // move_t
     if (b[MP + ((m + 34) >> 3)] & (1 << ((m + 34) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.cameBy; if (typeof c === 'number') { if (c !== v) o.cameBy = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.cameBy = null; } else { const r = T_DoorId()[v]; if (r !== c) o.cameBy = r; } } else if (o.cameBy !== null) o.cameBy = null; }   // came_by
     if (b[MP + ((m + 35) >> 3)] & (1 << ((m + 35) & 7))) { const c = o.stallAt; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.stallAt = a; } } }   // stall_at
@@ -1240,7 +1241,7 @@ export function puppetRows(C: Ctx) {
   }
   function f_cover_Opening(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.id; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.id = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // id
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_33[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_34[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const c = o.at; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.at = a; } } }   // at
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const c = o.n; let same = c !== null && c !== undefined && c.length === 2; const p0 = C.p; if (same) for (let i = 0; i < 2; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 16; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 2; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(2); for (let i = 0; i < 2; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.n = a; } } }   // n
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.half; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.half = v !== 0 as any; else o.half = v; } }   // half
@@ -1249,7 +1250,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { if (b[C.p++]) { const c = o.far; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.far = a; } } } else if (o.far !== null) o.far = null; }   // far
   }
   function f_tactics_Role(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_34[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_35[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.plan; if (typeof c === 'number') { if (c !== v) o.plan = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.plan = null; } else { const r = T_TacticsPlanId()[v]; if (r !== c) o.plan = r; } }   // plan
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { if (b[C.p++]) { const c = o.holdAt; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.holdAt = a; } } } else if (o.holdAt !== null) o.holdAt = null; }   // hold_at
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.route; if (a === null || a === undefined) { if (L || a === undefined) a = o.route = []; } for (let i = 0; i < L; i++) { const c = a[i], p0 = C.p; let same = !!c && c.length === 3; if (same) for (let k = 0; k < 3; k++) if (!Object.is(dv.getFloat64(p0 + 8 * k, true), c[k])) { same = false; break; } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let k = 0; k < 3; k++) (c as any)[k] = dv.getFloat64(p0 + 8 * k, true); } else { const x = new Array(3); for (let k = 0; k < 3; k++) x[k] = dv.getFloat64(p0 + 8 * k, true); a[i] = x; } } } if (a && a.length !== L) a.length = L; }   // route
@@ -1268,14 +1269,14 @@ export function puppetRows(C: Ctx) {
   }
   function f_tactics_Plan(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.id; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.id = v !== 0 as any; else o.id = v; } }   // id
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_11[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.team !== v) o.team = v; }   // team
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_12[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.team !== v) o.team = v; }   // team
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const c = o.target; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.target = a; } } }   // target
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t0; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t0 = v !== 0 as any; else o.t0 = v; } }   // t0
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.replannedAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.replannedAt = v !== 0 as any; else o.replannedAt = v; } }   // replanned_at
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.replans; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.replans = v !== 0 as any; else o.replans = v; } }   // replans
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const t = T_GuardId(); let a = o.members; if (a === null || a === undefined) { if (L || a === undefined) a = o.members = []; } if (a && Array.isArray(a) && (a.length === 0 || typeof a[0] !== 'number')) { for (let i = 0; i < L; i++) { const v = dv.getUint32(C.p, true); C.p += 4; const r = t[v]; if (a[i] !== r) a[i] = r; } if (a.length !== L) a.length = L; } else if (a) { for (let i = 0; i < L; i++) { a[i] = dv.getUint32(C.p, true); C.p += 4; } if (a.length !== L) a.length = L; } }   // members
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) C.slow(159, o);   // roles
-    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { const v = WORDS_35[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
+    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { const v = WORDS_36[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
     if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.goT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.goT = v !== 0 as any; else o.goT = v; } }   // go_t
     if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.why; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.why = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // why
     if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.presserBearing; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.presserBearing = v !== 0 as any; else o.presserBearing = v; } }   // presser_bearing
@@ -1287,10 +1288,10 @@ export function puppetRows(C: Ctx) {
   }
   function f_tactics_DangerRec(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.door; if (typeof c === 'number') { if (c !== v) o.door = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.door = null; } else { const r = T_DoorId()[v]; if (r !== c) o.door = r; } }   // door
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_11[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.team !== v) o.team = v; }   // team
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_12[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.team !== v) o.team = v; }   // team
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.until; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.until = v !== 0 as any; else o.until = v; } }   // until
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t0; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t0 = v !== 0 as any; else o.t0 = v; } }   // t0
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = WORDS_36[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.why !== v) o.why = v; }   // why
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = WORDS_37[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.why !== v) o.why = v; }   // why
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { if (b[C.p++]) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.victim; if (!strEq(c, b, C.p, L)) o.victim = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; } else if (o.victim !== null) o.victim = null; }   // victim
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const v = b[C.p++] !== 0; const c = o.banged; if (typeof c === 'boolean') { if (c !== v) o.banged = v; } else if (c === null) { if (v) o.banged = v; } else if (typeof c === 'object') { if (!v) o.banged = null; } else if (!(c === undefined && !v)) o.banged = v; }   // banged
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { const v = b[C.p++] !== 0; const c = o.entered; if (typeof c === 'boolean') { if (c !== v) o.entered = v; } else if (c === null) { if (v) o.entered = v; } else if (typeof c === 'object') { if (!v) o.entered = null; } else if (!(c === undefined && !v)) o.entered = v; }   // entered
@@ -1334,7 +1335,7 @@ export function puppetRows(C: Ctx) {
   }
   function f_pressure_Man(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.D; if (typeof c === 'number') { if (c !== v) o.D = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.D = null; } else { const r = T_RoomfightDefId()[v]; if (r !== c) o.D = r; } }   // d
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_37[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.role !== v) o.role = v; }   // role
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_38[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.role !== v) o.role = v; }   // role
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.door; if (typeof c === 'number') { if (c !== v) o.door = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.door = null; } else { const r = T_DoorId()[v]; if (r !== c) o.door = r; } }   // door
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const c = o.spot; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.spot = a; } } }   // spot
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.from; if (typeof c === 'number') { if (c !== v) o.from = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.from = null; } else { const r = T_RoomfightRoomId()[v]; if (r !== c) o.from = r; } } else if (o.from !== null) o.from = null; }   // from
@@ -1375,7 +1376,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.wasIn; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.wasIn = v !== 0 as any; else o.wasIn = v; } }   // was_in
   }
   function f_squad_RoomClear(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_38[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_39[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.tKick; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.tKick = v !== 0 as any; else o.tKick = v; } }   // t_kick
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.tEnter; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.tEnter = v !== 0 as any; else o.tEnter = v; } }   // t_enter
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.tEnter2; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.tEnter2 = v !== 0 as any; else o.tEnter2 = v; } }   // t_enter2
@@ -1471,7 +1472,7 @@ export function puppetRows(C: Ctx) {
     { let c = o.wall; if (!c || typeof c !== 'object') c = o.wall = C.made("crate::wallcharge::WallSpot"); f_wallcharge_WallSpot(c, m + 0); }   // wall
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const t = T_GuardId(); let a = o.men; if (a === null || a === undefined) { if (L || a === undefined) a = o.men = []; } if (a && Array.isArray(a) && (a.length === 0 || typeof a[0] !== 'number')) { for (let i = 0; i < L; i++) { const v = dv.getUint32(C.p, true); C.p += 4; const r = t[v]; if (a[i] !== r) a[i] = r; } if (a.length !== L) a.length = L; } else if (a) { for (let i = 0; i < L; i++) { a[i] = dv.getUint32(C.p, true); C.p += 4; } if (a.length !== L) a.length = L; } }   // men
     if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.lead; if (typeof c === 'number') { if (c !== v) o.lead = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.lead = null; } else { const r = T_GuardId()[v]; if (r !== c) o.lead = r; } }   // lead
-    if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) { const v = WORDS_39[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
+    if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) { const v = WORDS_40[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
     if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t0; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t0 = v !== 0 as any; else o.t0 = v; } }   // t0
     if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.setT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.setT = v !== 0 as any; else o.setT = v; } }   // set_t
     if (b[MP + ((m + 13) >> 3)] & (1 << ((m + 13) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.owes !== v) o.owes = v; } else if (o.owes !== undefined) o.owes = undefined; }   // owes
@@ -1502,14 +1503,14 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.name; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.name = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // name
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.points; if (a === null || a === undefined) { if (L || a === undefined) a = o.points = []; } for (let i = 0; i < L; i++) { const c = a[i], p0 = C.p; let same = !!c && c.length === 3; if (same) for (let k = 0; k < 3; k++) if (!Object.is(dv.getFloat64(p0 + 8 * k, true), c[k])) { same = false; break; } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let k = 0; k < 3; k++) (c as any)[k] = dv.getFloat64(p0 + 8 * k, true); } else { const x = new Array(3); for (let k = 0; k < 3; k++) x[k] = dv.getFloat64(p0 + 8 * k, true); a[i] = x; } } } if (a && a.length !== L) a.length = L; }   // points
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.wait; if (a === null || a === undefined) { if (L || a === undefined) a = o.wait = []; } else if (ArrayBuffer.isView(a) && (a as any).length !== L) a = o.wait = new (a as any).constructor(L); if (L) for (let i = 0; i < L; i++) { const x = dv.getFloat64(C.p + 8 * i, true); if (!Object.is(a[i], x)) a[i] = x; } if (a && !ArrayBuffer.isView(a) && a.length !== L) a.length = L; C.p += 8 * L; }   // wait
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const v = WORDS_40[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.weapon !== v) o.weapon = v; } else if (o.weapon !== undefined) o.weapon = undefined; }   // weapon
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const v = WORDS_41[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.weapon !== v) o.weapon = v; } else if (o.weapon !== undefined) o.weapon = undefined; }   // weapon
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(200, o);   // keys
   }
   function f_enemysquads_Squad(o: any, m: number) {
     { let c = o.def; if (!c || typeof c !== 'object') c = o.def = C.made("crate::scene_scenarios::SquadData"); f_scene_scenarios_SquadData(c, m + 0); }   // def
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(201, o);   // rooms
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_41[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.state !== v) o.state = v; }   // state
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const v = WORDS_42[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.state0 !== v) o.state0 = v; } else if (o.state0 !== null) o.state0 = null; }   // state0
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_42[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.state !== v) o.state = v; }   // state
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const v = WORDS_43[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.state0 !== v) o.state0 = v; } else if (o.state0 !== null) o.state0 = null; }   // state0
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(202, o);   // fix
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.newsT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.newsT = v !== 0 as any; else o.newsT = v; } }   // news_t
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.decideAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.decideAt = v !== 0 as any; else o.decideAt = v; } }   // decide_at
@@ -1541,7 +1542,7 @@ export function puppetRows(C: Ctx) {
     { let c = o.result; if (!c || typeof c !== 'object') c = o.result = C.made("crate::director::CondResult"); f_director_CondResult(c, m + 3); }   // result
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t0; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t0 = v !== 0 as any; else o.t0 = v; } }   // t0
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.step; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.step = v !== 0 as any; else o.step = v; } }   // step
-    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { const v = WORDS_43[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.state !== v) o.state = v; }   // state
+    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { const v = WORDS_44[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.state !== v) o.state = v; }   // state
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) C.slow(218, o);   // touched
     if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { const v = b[C.p++] !== 0; const c = o.pinnedCamera; if (typeof c === 'boolean') { if (c !== v) o.pinnedCamera = v; } else if (c === null) { if (v) o.pinnedCamera = v; } else if (typeof c === 'object') { if (!v) o.pinnedCamera = null; } else if (!(c === undefined && !v)) o.pinnedCamera = v; }   // pinned_camera
     { let c = o.flow; if (!c || typeof c !== 'object') c = o.flow = C.made("crate::director::LiveBeatFlow"); f_director_LiveBeatFlow(c, m + 10); }   // flow
@@ -1569,7 +1570,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.label; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.label = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // label
     if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.she; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.she = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // she
     if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.her; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.her = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // her
-    if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) { const v = WORDS_44[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.state !== v) o.state = v; }   // state
+    if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) { const v = WORDS_45[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.state !== v) o.state = v; }   // state
     if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.stateAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.stateAt = v !== 0 as any; else o.stateAt = v; } }   // state_at
     if (b[MP + ((m + 13) >> 3)] & (1 << ((m + 13) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.taskT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.taskT = v !== 0 as any; else o.taskT = v; } }   // task_t
     if (b[MP + ((m + 14) >> 3)] & (1 << ((m + 14) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.riseT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.riseT = v !== 0 as any; else o.riseT = v; } }   // rise_t
@@ -1578,7 +1579,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 17) >> 3)] & (1 << ((m + 17) & 7))) { if (b[C.p++]) { const c = o.lookAt; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.lookAt = a; } } } else if (o.lookAt !== null) o.lookAt = null; }   // look_at
     if (b[MP + ((m + 18) >> 3)] & (1 << ((m + 18) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.lookUntil; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.lookUntil = v !== 0 as any; else o.lookUntil = v; } }   // look_until
     if (b[MP + ((m + 19) >> 3)] & (1 << ((m + 19) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.shrugAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.shrugAt = v !== 0 as any; else o.shrugAt = v; } }   // shrug_at
-    if (b[MP + ((m + 20) >> 3)] & (1 << ((m + 20) & 7))) { if (b[C.p++]) { const v = WORDS_45[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.cause !== v) o.cause = v; } else if (o.cause !== null) o.cause = null; }   // cause
+    if (b[MP + ((m + 20) >> 3)] & (1 << ((m + 20) & 7))) { if (b[C.p++]) { const v = WORDS_46[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.cause !== v) o.cause = v; } else if (o.cause !== null) o.cause = null; }   // cause
     if (b[MP + ((m + 21) >> 3)] & (1 << ((m + 21) & 7))) { if (b[C.p++]) { const c = o.causePos; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.causePos = a; } } } else if (o.causePos !== null) o.causePos = null; }   // cause_pos
     if (b[MP + ((m + 22) >> 3)] & (1 << ((m + 22) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.causeAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.causeAt = v !== 0 as any; else o.causeAt = v; } }   // cause_at
     if (b[MP + ((m + 23) >> 3)] & (1 << ((m + 23) & 7))) { const v = b[C.p++] !== 0; const c = o.armed; if (typeof c === 'boolean') { if (c !== v) o.armed = v; } else if (c === null) { if (v) o.armed = v; } else if (typeof c === 'object') { if (!v) o.armed = null; } else if (!(c === undefined && !v)) o.armed = v; }   // armed
@@ -1649,7 +1650,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 16) >> 3)] & (1 << ((m + 16) & 7))) C.slow(229, o);   // burst
     if (b[MP + ((m + 17) >> 3)] & (1 << ((m + 17) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.bursts; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.bursts = v !== 0 as any; else o.bursts = v; } }   // bursts
     if (b[MP + ((m + 18) >> 3)] & (1 << ((m + 18) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.lastBurstT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.lastBurstT = v !== 0 as any; else o.lastBurstT = v; } }   // last_burst_t
-    if (b[MP + ((m + 19) >> 3)] & (1 << ((m + 19) & 7))) { const v = WORDS_46[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.mode !== v) o.mode = v; }   // mode
+    if (b[MP + ((m + 19) >> 3)] & (1 << ((m + 19) & 7))) { const v = WORDS_47[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.mode !== v) o.mode = v; }   // mode
     if (b[MP + ((m + 20) >> 3)] & (1 << ((m + 20) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.autoIdx; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.autoIdx = v !== 0 as any; else o.autoIdx = v; } }   // auto_idx
     if (b[MP + ((m + 21) >> 3)] & (1 << ((m + 21) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.autoSince; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.autoSince = v !== 0 as any; else o.autoSince = v; } }   // auto_since
     if (b[MP + ((m + 22) >> 3)] & (1 << ((m + 22) & 7))) { const v = b[C.p++] !== 0; const c = o.lightOn; if (typeof c === 'boolean') { if (c !== v) o.lightOn = v; } else if (c === null) { if (v) o.lightOn = v; } else if (typeof c === 'object') { if (!v) o.lightOn = null; } else if (!(c === undefined && !v)) o.lightOn = v; }   // light_on
@@ -1668,13 +1669,13 @@ export function puppetRows(C: Ctx) {
   }
   function f_weapons_WeaponDef(o: any, m: number) {
     { let c = o.reload; if (!c || typeof c !== 'object') c = o.reload = C.made("crate::weapons::WeaponDefReload"); f_weapons_WeaponDefReload(c, m + 0); }   // reload
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = WORDS_47[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.drop !== v) o.drop = v; }   // drop
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = WORDS_48[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.drop !== v) o.drop = v; }   // drop
   }
   function f_devices_DeviceLogRow(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.seq; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.seq = v !== 0 as any; else o.seq = v; } }   // seq
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.device; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.device = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // device
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = WORDS_48[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.what !== v) o.what = v; }   // what
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = WORDS_49[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.what !== v) o.what = v; }   // what
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.where; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.where = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // where_
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { if (b[C.p++]) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.sent; if (!strEq(c, b, C.p, L)) o.sent = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; } else if (o.sent !== null) o.sent = null; }   // sent
   }
@@ -1686,7 +1687,7 @@ export function puppetRows(C: Ctx) {
   function f_doors_DoorStrike(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.door; if (typeof c === 'number') { if (c !== v) o.door = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.door = null; } else { const r = T_DoorId()[v]; if (r !== c) o.door = r; } }   // door
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.by; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.by = v !== 0 as any; else o.by = v; } }   // by
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_49[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.tier !== v) o.tier = v; }   // tier
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_50[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.tier !== v) o.tier = v; }   // tier
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = b[C.p++] !== 0; const c = o.floor; if (typeof c === 'boolean') { if (c !== v) o.floor = v; } else if (c === null) { if (v) o.floor = v; } else if (typeof c === 'object') { if (!v) o.floor = null; } else if (!(c === undefined && !v)) o.floor = v; }   // floor
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const c = o.dir; let same = c !== null && c !== undefined && c.length === 2; const p0 = C.p; if (same) for (let i = 0; i < 2; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 16; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 2; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(2); for (let i = 0; i < 2; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.dir = a; } } }   // dir
   }
@@ -1714,7 +1715,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = b[C.p++] !== 0; const c = o.steady; if (typeof c === 'boolean') { if (c !== v) o.steady = v; } else if (c === null) { if (v) o.steady = v; } else if (typeof c === 'object') { if (!v) o.steady = null; } else if (!(c === undefined && !v)) o.steady = v; }   // steady
   }
   function f_game_Interactable(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_50[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_51[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const c = o.pos; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.pos = a; } } }   // pos
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.line1; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.line1 = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // line1
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.line2; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.line2 = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // line2
@@ -1724,31 +1725,31 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.target; if (typeof c === 'number') { if (c !== v) o.target = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.target = null; } else { const r = T_FixtureId()[v]; if (r !== c) o.target = r; } } else if (o.target !== undefined) o.target = undefined; }   // target
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.door; if (typeof c === 'number') { if (c !== v) o.door = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.door = null; } else { const r = T_DoorId()[v]; if (r !== c) o.door = r; } } else if (o.door !== undefined) o.door = undefined; }   // door
     if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.guard; if (typeof c === 'number') { if (c !== v) o.guard = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.guard = null; } else { const r = T_GuardId()[v]; if (r !== c) o.guard = r; } } else if (o.guard !== undefined) o.guard = undefined; }   // guard
-    if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) { if (b[C.p++]) { const v = WORDS_51[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.verb !== v) o.verb = v; } else if (o.verb !== undefined) o.verb = undefined; }   // verb
+    if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) { if (b[C.p++]) { const v = WORDS_52[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.verb !== v) o.verb = v; } else if (o.verb !== undefined) o.verb = undefined; }   // verb
     if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.running !== v) o.running = v; } else if (o.running !== undefined) o.running = undefined; }   // running
-    if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) { if (b[C.p++]) { const v = WORDS_52[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.close !== v) o.close = v; } else if (o.close !== undefined) o.close = undefined; }   // close
+    if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) { if (b[C.p++]) { const v = WORDS_53[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.close !== v) o.close = v; } else if (o.close !== undefined) o.close = undefined; }   // close
     if (b[MP + ((m + 13) >> 3)] & (1 << ((m + 13) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.past !== v) o.past = v; } else if (o.past !== undefined) o.past = undefined; }   // past
     if (b[MP + ((m + 14) >> 3)] & (1 << ((m + 14) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.framed !== v) o.framed = v; } else if (o.framed !== undefined) o.framed = undefined; }   // framed
   }
   function f_kit_MemberKit(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_53[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.weapon !== v) o.weapon = v; }   // weapon
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_54[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.weapon !== v) o.weapon = v; }   // weapon
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.bangs; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.bangs = v !== 0 as any; else o.bangs = v; } }   // bangs
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.smoke; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.smoke = v !== 0 as any; else o.smoke = v; } }   // smoke
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.frags; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.frags = v !== 0 as any; else o.frags = v; } }   // frags
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.shells; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.shells = v !== 0 as any; else o.shells = v; } }   // shells
-    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = WORDS_54[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.suit !== v) o.suit = v; }   // suit
-    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const v = WORDS_55[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.trim !== v) o.trim = v; }   // trim
+    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = WORDS_55[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.suit !== v) o.suit = v; }   // suit
+    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const v = WORDS_56[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.trim !== v) o.trim = v; }   // trim
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { const v = b[C.p++] !== 0; const c = o.wand; if (typeof c === 'boolean') { if (c !== v) o.wand = v; } else if (c === null) { if (v) o.wand = v; } else if (typeof c === 'object') { if (!v) o.wand = null; } else if (!(c === undefined && !v)) o.wand = v; }   // wand
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.cams; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.cams = v !== 0 as any; else o.cams = v; } }   // cams
-    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { const v = WORDS_20[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.big !== v) o.big = v; }   // big
+    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { const v = WORDS_21[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.big !== v) o.big = v; }   // big
     if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.rings; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.rings = v !== 0 as any; else o.rings = v; } }   // rings
   }
   function f_orders_HoverKeptHov(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(241, o);   // v
   }
   function f_doortools_DoorToolsDoneItemLaneBackMove(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_28[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.stance !== v) o.stance = v; }   // stance
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_29[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.upper !== v) o.upper = v; }   // upper
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_29[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.stance !== v) o.stance = v; }   // stance
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_30[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.upper !== v) o.upper = v; }   // upper
   }
   function f_roomfit_Fit(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const c = o.at; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.at = a; } } }   // at
@@ -1773,7 +1774,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(242, o);   // rows
   }
   function f_orders_OrderHudRow(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_56[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_57[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.label; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.label = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // label
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(243, o);   // opts
   }
@@ -1785,13 +1786,13 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const c = o.at; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.at = a; } } }   // at
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.since; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.since = v !== 0 as any; else o.since = v; } }   // since
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = WORDS_57[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.how !== v) o.how = v; }   // how
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = WORDS_58[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.how !== v) o.how = v; }   // how
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.by; if (typeof c === 'number') { if (c !== v) o.by = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.by = null; } else { const r = T_GuardId()[v]; if (r !== c) o.by = r; } } else if (o.by !== null) o.by = null; }   // by
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const v = b[C.p++] !== 0; const c = o.lost; if (typeof c === 'boolean') { if (c !== v) o.lost = v; } else if (c === null) { if (v) o.lost = v; } else if (typeof c === 'object') { if (!v) o.lost = null; } else if (!(c === undefined && !v)) o.lost = v; }   // lost
   }
   function f_hands_Haul(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_58[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.end !== v) o.end = v; }   // end
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_59[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_59[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.end !== v) o.end = v; }   // end
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_60[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.iL; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.iL = v !== 0 as any; else o.iL = v; } }   // i_l
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.iR; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.iR = v !== 0 as any; else o.iR = v; } }   // i_r
@@ -1829,7 +1830,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(253, o);   // drive
   }
   function f_game_Mission(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_60[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.stage !== v) o.stage = v; }   // stage
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_61[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.stage !== v) o.stage = v; }   // stage
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t0; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t0 = v !== 0 as any; else o.t0 = v; } }   // t0
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.driveT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.driveT = v !== 0 as any; else o.driveT = v; } }   // drive_t
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = b[C.p++] !== 0; const c = o.pulled; if (typeof c === 'boolean') { if (c !== v) o.pulled = v; } else if (c === null) { if (v) o.pulled = v; } else if (typeof c === 'object') { if (!v) o.pulled = null; } else if (!(c === undefined && !v)) o.pulled = v; }   // pulled
@@ -1848,17 +1849,17 @@ export function puppetRows(C: Ctx) {
   }
   function f_game_GameEvent(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.announced !== v) o.announced = v; } else if (o.announced !== undefined) o.announced = undefined; }   // announced
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_61[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_62[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const c = o.pos; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.pos = a; } } }   // pos
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.time; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.time = v !== 0 as any; else o.time = v; } }   // time
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = b[C.p++] !== 0; const c = o.loud; if (typeof c === 'boolean') { if (c !== v) o.loud = v; } else if (c === null) { if (v) o.loud = v; } else if (typeof c === 'object') { if (!v) o.loud = null; } else if (!(c === undefined && !v)) o.loud = v; }   // loud
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.level; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.level = v !== 0 as any; else o.level = v; } } else if (o.level !== undefined) o.level = undefined; }   // level
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.id; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.id = v !== 0 as any; else o.id = v; } } else if (o.id !== undefined) o.id = undefined; }   // id
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.who; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.who = v !== 0 as any; else o.who = v; } } else if (o.who !== undefined) o.who = undefined; }   // who
-    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { if (b[C.p++]) { const v = WORDS_40[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.weapon !== v) o.weapon = v; } else if (o.weapon !== undefined) o.weapon = undefined; }   // weapon
+    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { if (b[C.p++]) { const v = WORDS_41[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.weapon !== v) o.weapon = v; } else if (o.weapon !== undefined) o.weapon = undefined; }   // weapon
     if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { if (b[C.p++]) { const c = o.from; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.from = a; } } } else if (o.from !== undefined) o.from = undefined; }   // from
     if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) { if (b[C.p++]) { const c = o.to; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.to = a; } } } else if (o.to !== undefined) o.to = undefined; }   // to
-    if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) { if (b[C.p++]) { const v = WORDS_62[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.cause !== v) o.cause = v; } else if (o.cause !== undefined) o.cause = undefined; }   // cause
+    if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) { if (b[C.p++]) { const v = WORDS_63[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.cause !== v) o.cause = v; } else if (o.cause !== undefined) o.cause = undefined; }   // cause
     if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) { if (b[C.p++]) { const c = o.swAt; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.swAt = a; } } } else if (o.swAt !== undefined) o.swAt = undefined; }   // sw_at
     if (b[MP + ((m + 13) >> 3)] & (1 << ((m + 13) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.blind !== v) o.blind = v; } else if (o.blind !== undefined) o.blind = undefined; }   // blind
     if (b[MP + ((m + 14) >> 3)] & (1 << ((m + 14) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.lure !== v) o.lure = v; } else if (o.lure !== undefined) o.lure = undefined; }   // lure
@@ -1924,7 +1925,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(265, o);   // m
   }
   function f_director_EventView(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_63[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_64[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const c = o.pos; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.pos = a; } } }   // pos
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.level; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.level = v !== 0 as any; else o.level = v; } }   // level
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = b[C.p++] !== 0; const c = o.loud; if (typeof c === 'boolean') { if (c !== v) o.loud = v; } else if (c === null) { if (v) o.loud = v; } else if (typeof c === 'object') { if (!v) o.loud = null; } else if (!(c === undefined && !v)) o.loud = v; }   // loud
@@ -2024,7 +2025,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.raisedAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.raisedAt = v !== 0 as any; else o.raisedAt = v; } }   // raised_at
   }
   function f_squad_Clearing(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_64[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.stage !== v) o.stage = v; }   // stage
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_65[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.stage !== v) o.stage = v; }   // stage
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.roomI; if (c !== v && !(c === undefined && v === 0)) o.roomI = v; }   // room_i
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.drill; if (typeof c === 'number') { if (c !== v) o.drill = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.drill = null; } else { const r = T_RoomClearId()[v]; if (r !== c) o.drill = r; } } else if (o.drill !== null) o.drill = null; }   // drill
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(276, o);   // cur
@@ -2094,8 +2095,8 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 34) >> 3)] & (1 << ((m + 34) & 7))) C.slow(288, o);   // heard_no_row
   }
   function f_qrf_Qrf(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_65[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.state !== v) o.state = v; }   // state
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { if (b[C.p++]) { const v = WORDS_66[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.reason !== v) o.reason = v; } else if (o.reason !== null) o.reason = null; }   // reason
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_66[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.state !== v) o.state = v; }   // state
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { if (b[C.p++]) { const v = WORDS_67[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.reason !== v) o.reason = v; } else if (o.reason !== null) o.reason = null; }   // reason
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.requestedAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.requestedAt = v !== 0 as any; else o.requestedAt = v; } }   // requested_at
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.arriveAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.arriveAt = v !== 0 as any; else o.arriveAt = v; } }   // arrive_at
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.deployedAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.deployedAt = v !== 0 as any; else o.deployedAt = v; } }   // deployed_at
@@ -2119,7 +2120,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 22) >> 3)] & (1 << ((m + 22) & 7))) { const v = b[C.p++] !== 0; const c = o.silentSaid; if (typeof c === 'boolean') { if (c !== v) o.silentSaid = v; } else if (c === null) { if (v) o.silentSaid = v; } else if (typeof c === 'object') { if (!v) o.silentSaid = null; } else if (!(c === undefined && !v)) o.silentSaid = v; }   // silent_said
     if (b[MP + ((m + 23) >> 3)] & (1 << ((m + 23) & 7))) { const v = b[C.p++] !== 0; const c = o.silentSpent; if (typeof c === 'boolean') { if (c !== v) o.silentSpent = v; } else if (c === null) { if (v) o.silentSpent = v; } else if (typeof c === 'object') { if (!v) o.silentSpent = null; } else if (!(c === undefined && !v)) o.silentSpent = v; }   // silent_spent
     if (b[MP + ((m + 24) >> 3)] & (1 << ((m + 24) & 7))) C.slow(292, o);   // log
-    if (b[MP + ((m + 25) >> 3)] & (1 << ((m + 25) & 7))) { const v = WORDS_67[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
+    if (b[MP + ((m + 25) >> 3)] & (1 << ((m + 25) & 7))) { const v = WORDS_68[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
     if (b[MP + ((m + 26) >> 3)] & (1 << ((m + 26) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.phaseT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.phaseT = v !== 0 as any; else o.phaseT = v; } }   // phase_t
     if (b[MP + ((m + 27) >> 3)] & (1 << ((m + 27) & 7))) C.slow(293, o);   // target
     if (b[MP + ((m + 28) >> 3)] & (1 << ((m + 28) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.targetAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.targetAt = v !== 0 as any; else o.targetAt = v; } }   // target_at
@@ -2309,9 +2310,9 @@ export function puppetRows(C: Ctx) {
   }
   function f_snatch_Snatch(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.man; if (typeof c === 'number') { if (c !== v) o.man = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.man = null; } else { const r = T_GuardId()[v]; if (r !== c) o.man = r; } } else if (o.man !== null) o.man = null; }   // man
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { if (b[C.p++]) { const v = WORDS_68[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.end !== v) o.end = v; } else if (o.end !== null) o.end = null; }   // end
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { if (b[C.p++]) { const v = WORDS_69[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.end !== v) o.end = v; } else if (o.end !== null) o.end = null; }   // end
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.why; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.why = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // why
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const v = WORDS_69[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.lost !== v) o.lost = v; } else if (o.lost !== null) o.lost = null; }   // lost
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const v = WORDS_70[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.lost !== v) o.lost = v; } else if (o.lost !== null) o.lost = null; }   // lost
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(349, o);   // killer
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = b[C.p++] !== 0; const c = o.handsUp; if (typeof c === 'boolean') { if (c !== v) o.handsUp = v; } else if (c === null) { if (v) o.handsUp = v; } else if (typeof c === 'object') { if (!v) o.handsUp = null; } else if (!(c === undefined && !v)) o.handsUp = v; }   // hands_up
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const v = b[C.p++] !== 0; const c = o.tied; if (typeof c === 'boolean') { if (c !== v) o.tied = v; } else if (c === null) { if (v) o.tied = v; } else if (typeof c === 'object') { if (!v) o.tied = null; } else if (!(c === undefined && !v)) o.tied = v; }   // tied
@@ -2331,7 +2332,7 @@ export function puppetRows(C: Ctx) {
   function f_defuse_Defuse(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(352, o);   // states
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(353, o);   // safe_by
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { if (b[C.p++]) { const v = WORDS_70[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.end !== v) o.end = v; } else if (o.end !== null) o.end = null; }   // end
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { if (b[C.p++]) { const v = WORDS_71[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.end !== v) o.end = v; } else if (o.end !== null) o.end = null; }   // end
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t0; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t0 = v !== 0 as any; else o.t0 = v; } }   // t0
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.tEnd; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.tEnd = v !== 0 as any; else o.tEnd = v; } }   // t_end
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(354, o);   // log
@@ -2347,7 +2348,7 @@ export function puppetRows(C: Ctx) {
   }
   function f_roomclear_RoomClearScenario(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(359, o);   // rooms
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { if (b[C.p++]) { const v = WORDS_71[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.end !== v) o.end = v; } else if (o.end !== null) o.end = null; }   // end
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { if (b[C.p++]) { const v = WORDS_72[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.end !== v) o.end = v; } else if (o.end !== null) o.end = null; }   // end
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.endAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.endAt = v !== 0 as any; else o.endAt = v; } }   // end_at
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.endWhy; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.endWhy = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // end_why
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.endSay; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.endSay = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // end_say
@@ -2556,7 +2557,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 17) >> 3)] & (1 << ((m + 17) & 7))) C.slow(450, o);   // executed
     if (b[MP + ((m + 18) >> 3)] & (1 << ((m + 18) & 7))) C.slow(451, o);   // counted
     if (b[MP + ((m + 19) >> 3)] & (1 << ((m + 19) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.securedAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.securedAt = v !== 0 as any; else o.securedAt = v; } }   // secured_at
-    if (b[MP + ((m + 20) >> 3)] & (1 << ((m + 20) & 7))) { const v = WORDS_72[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.step !== v) o.step = v; }   // step
+    if (b[MP + ((m + 20) >> 3)] & (1 << ((m + 20) & 7))) { const v = WORDS_73[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.step !== v) o.step = v; }   // step
     if (b[MP + ((m + 21) >> 3)] & (1 << ((m + 21) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.barkAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.barkAt = v !== 0 as any; else o.barkAt = v; } }   // bark_at
     if (b[MP + ((m + 22) >> 3)] & (1 << ((m + 22) & 7))) { if (b[C.p++]) { const c = o.noise; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.noise = a; } } } else if (o.noise !== null) o.noise = null; }   // noise
     if (b[MP + ((m + 23) >> 3)] & (1 << ((m + 23) & 7))) C.slow(452, o);   // last_order
@@ -3060,13 +3061,13 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.speed; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.speed = v !== 0 as any; else o.speed = v; } }   // speed
     if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) { const v = b[C.p++] !== 0; const c = o.reverse; if (typeof c === 'boolean') { if (c !== v) o.reverse = v; } else if (c === null) { if (v) o.reverse = v; } else if (typeof c === 'object') { if (!v) o.reverse = null; } else if (!(c === undefined && !v)) o.reverse = v; }   // reverse
     if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.crouchTarget; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.crouchTarget = v !== 0 as any; else o.crouchTarget = v; } }   // crouch_target
-    if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) { const v = WORDS_29[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.upper !== v) o.upper = v; }   // upper
+    if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) { const v = WORDS_30[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.upper !== v) o.upper = v; }   // upper
     if (b[MP + ((m + 13) >> 3)] & (1 << ((m + 13) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.aimYawOffset; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.aimYawOffset = v !== 0 as any; else o.aimYawOffset = v; } }   // aim_yaw_offset
     if (b[MP + ((m + 14) >> 3)] & (1 << ((m + 14) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.aimPitch; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.aimPitch = v !== 0 as any; else o.aimPitch = v; } }   // aim_pitch
     if (b[MP + ((m + 15) >> 3)] & (1 << ((m + 15) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.lookYawExtra; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.lookYawExtra = v !== 0 as any; else o.lookYawExtra = v; } }   // look_yaw_extra
     if (b[MP + ((m + 16) >> 3)] & (1 << ((m + 16) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.lookPitchExtra; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.lookPitchExtra = v !== 0 as any; else o.lookPitchExtra = v; } }   // look_pitch_extra
     if (b[MP + ((m + 17) >> 3)] & (1 << ((m + 17) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.turnLead; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.turnLead = v !== 0 as any; else o.turnLead = v; } }   // turn_lead
-    if (b[MP + ((m + 18) >> 3)] & (1 << ((m + 18) & 7))) { const v = WORDS_28[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.stance !== v) o.stance = v; }   // stance
+    if (b[MP + ((m + 18) >> 3)] & (1 << ((m + 18) & 7))) { const v = WORDS_29[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.stance !== v) o.stance = v; }   // stance
     if (b[MP + ((m + 19) >> 3)] & (1 << ((m + 19) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.stackSide; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.stackSide = v !== 0 as any; else o.stackSide = v; } }   // stack_side
     if (b[MP + ((m + 20) >> 3)] & (1 << ((m + 20) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.wallYaw; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.wallYaw = v !== 0 as any; else o.wallYaw = v; } }   // wall_yaw
     if (b[MP + ((m + 21) >> 3)] & (1 << ((m + 21) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.wallPeek; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.wallPeek = v !== 0 as any; else o.wallPeek = v; } }   // wall_peek
@@ -3096,16 +3097,16 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 48) >> 3)] & (1 << ((m + 48) & 7))) C.slow(750, o);   // held_pose
     if (b[MP + ((m + 49) >> 3)] & (1 << ((m + 49) & 7))) C.slow(751, o);   // door_push
     if (b[MP + ((m + 50) >> 3)] & (1 << ((m + 50) & 7))) C.slow(752, o);   // work
-    if (b[MP + ((m + 51) >> 3)] & (1 << ((m + 51) & 7))) { if (b[C.p++]) { if (b[C.p++]) { const v = WORDS_73[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.carry !== v) o.carry = v; } else if (o.carry !== undefined && o.carry !== null) o.carry = null; } else if (o.carry !== undefined) o.carry = undefined; }   // carry
+    if (b[MP + ((m + 51) >> 3)] & (1 << ((m + 51) & 7))) { if (b[C.p++]) { if (b[C.p++]) { const v = WORDS_74[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.carry !== v) o.carry = v; } else if (o.carry !== undefined && o.carry !== null) o.carry = null; } else if (o.carry !== undefined) o.carry = undefined; }   // carry
     if (b[MP + ((m + 52) >> 3)] & (1 << ((m + 52) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.swapLag; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.swapLag = v !== 0 as any; else o.swapLag = v; } }   // swap_lag
     if (b[MP + ((m + 53) >> 3)] & (1 << ((m + 53) & 7))) C.slow(753, o);   // haul
     if (b[MP + ((m + 54) >> 3)] & (1 << ((m + 54) & 7))) { const v = b[C.p++] !== 0; const c = o.longGun; if (typeof c === 'boolean') { if (c !== v) o.longGun = v; } else if (c === null) { if (v) o.longGun = v; } else if (typeof c === 'object') { if (!v) o.longGun = null; } else if (!(c === undefined && !v)) o.longGun = v; }   // long_gun
-    if (b[MP + ((m + 55) >> 3)] & (1 << ((m + 55) & 7))) { if (b[C.p++]) { const v = WORDS_74[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.longStance !== v) o.longStance = v; } else if (o.longStance !== null) o.longStance = null; }   // long_stance
+    if (b[MP + ((m + 55) >> 3)] & (1 << ((m + 55) & 7))) { if (b[C.p++]) { const v = WORDS_75[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.longStance !== v) o.longStance = v; } else if (o.longStance !== null) o.longStance = null; }   // long_stance
     if (b[MP + ((m + 56) >> 3)] & (1 << ((m + 56) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.gunWall; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.gunWall = v !== 0 as any; else o.gunWall = v; } }   // gun_wall
     if (b[MP + ((m + 57) >> 3)] & (1 << ((m + 57) & 7))) { const v = b[C.p++] !== 0; const c = o.runReady; if (typeof c === 'boolean') { if (c !== v) o.runReady = v; } else if (c === null) { if (v) o.runReady = v; } else if (typeof c === 'object') { if (!v) o.runReady = null; } else if (!(c === undefined && !v)) o.runReady = v; }   // run_ready
     { let c = o.longGrip; if (!c || typeof c !== 'object') c = o.longGrip = C.made("crate::character::AnimLongGrip"); f_character_AnimLongGrip(c, m + 58); }   // long_grip
     if (b[MP + ((m + 61) >> 3)] & (1 << ((m + 61) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.longSteady; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.longSteady = v !== 0 as any; else o.longSteady = v; } }   // long_steady
-    if (b[MP + ((m + 62) >> 3)] & (1 << ((m + 62) & 7))) { if (b[C.p++]) { const v = WORDS_74[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.longShown !== v) o.longShown = v; } else if (o.longShown !== null) o.longShown = null; }   // long_shown
+    if (b[MP + ((m + 62) >> 3)] & (1 << ((m + 62) & 7))) { if (b[C.p++]) { const v = WORDS_75[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.longShown !== v) o.longShown = v; } else if (o.longShown !== null) o.longShown = null; }   // long_shown
     if (b[MP + ((m + 63) >> 3)] & (1 << ((m + 63) & 7))) { const v = b[C.p++] !== 0; const c = o.hideHeldItem; if (typeof c === 'boolean') { if (c !== v) o.hideHeldItem = v; } else if (c === null) { if (v) o.hideHeldItem = v; } else if (typeof c === 'object') { if (!v) o.hideHeldItem = null; } else if (!(c === undefined && !v)) o.hideHeldItem = v; }   // hide_held_item
     if (b[MP + ((m + 64) >> 3)] & (1 << ((m + 64) & 7))) { const v = b[C.p++] !== 0; const c = o.stowed; if (typeof c === 'boolean') { if (c !== v) o.stowed = v; } else if (c === null) { if (v) o.stowed = v; } else if (typeof c === 'object') { if (!v) o.stowed = null; } else if (!(c === undefined && !v)) o.stowed = v; }   // stowed
     if (b[MP + ((m + 65) >> 3)] & (1 << ((m + 65) & 7))) C.slow(754, o);   // big_tool
@@ -3156,7 +3157,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 142) >> 3)] & (1 << ((m + 142) & 7))) { const v = b[C.p++] !== 0; const c = o.reloadMag; if (typeof c === 'boolean') { if (c !== v) o.reloadMag = v; } else if (c === null) { if (v) o.reloadMag = v; } else if (typeof c === 'object') { if (!v) o.reloadMag = null; } else if (!(c === undefined && !v)) o.reloadMag = v; }   // reload_mag
     if (b[MP + ((m + 143) >> 3)] & (1 << ((m + 143) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.reloadAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.reloadAt = v !== 0 as any; else o.reloadAt = v; } }   // reload_at
     if (b[MP + ((m + 144) >> 3)] & (1 << ((m + 144) & 7))) C.slow(760, o);   // reload_row
-    if (b[MP + ((m + 145) >> 3)] & (1 << ((m + 145) & 7))) { if (b[C.p++]) { const v = WORDS_75[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.feed !== v) o.feed = v; } else if (o.feed !== null) o.feed = null; }   // feed
+    if (b[MP + ((m + 145) >> 3)] & (1 << ((m + 145) & 7))) { if (b[C.p++]) { const v = WORDS_76[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.feed !== v) o.feed = v; } else if (o.feed !== null) o.feed = null; }   // feed
     if (b[MP + ((m + 146) >> 3)] & (1 << ((m + 146) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.feedN; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.feedN = v !== 0 as any; else o.feedN = v; } }   // feed_n
     if (b[MP + ((m + 147) >> 3)] & (1 << ((m + 147) & 7))) { const v = b[C.p++] !== 0; const c = o.feedPort; if (typeof c === 'boolean') { if (c !== v) o.feedPort = v; } else if (c === null) { if (v) o.feedPort = v; } else if (typeof c === 'object') { if (!v) o.feedPort = null; } else if (!(c === undefined && !v)) o.feedPort = v; }   // feed_port
     if (b[MP + ((m + 148) >> 3)] & (1 << ((m + 148) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.rlT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.rlT = v !== 0 as any; else o.rlT = v; } }   // rl_t
@@ -3166,7 +3167,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 164) >> 3)] & (1 << ((m + 164) & 7))) C.slow(761, o);   // kit
     if (b[MP + ((m + 165) >> 3)] & (1 << ((m + 165) & 7))) { const v = b[C.p++] !== 0; const c = o.kitFront; if (typeof c === 'boolean') { if (c !== v) o.kitFront = v; } else if (c === null) { if (v) o.kitFront = v; } else if (typeof c === 'object') { if (!v) o.kitFront = null; } else if (!(c === undefined && !v)) o.kitFront = v; }   // kit_front
     if (b[MP + ((m + 166) >> 3)] & (1 << ((m + 166) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.kitRest; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.kitRest = v !== 0 as any; else o.kitRest = v; } }   // kit_rest
-    if (b[MP + ((m + 167) >> 3)] & (1 << ((m + 167) & 7))) { if (b[C.p++]) { if (b[C.p++]) { const v = WORDS_17[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kitHold !== v) o.kitHold = v; } else if (o.kitHold !== undefined && o.kitHold !== null) o.kitHold = null; } else if (o.kitHold !== undefined) o.kitHold = undefined; }   // kit_hold
+    if (b[MP + ((m + 167) >> 3)] & (1 << ((m + 167) & 7))) { if (b[C.p++]) { if (b[C.p++]) { const v = WORDS_18[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kitHold !== v) o.kitHold = v; } else if (o.kitHold !== undefined && o.kitHold !== null) o.kitHold = null; } else if (o.kitHold !== undefined) o.kitHold = undefined; }   // kit_hold
     if (b[MP + ((m + 168) >> 3)] & (1 << ((m + 168) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.kitStow; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.kitStow = v !== 0 as any; else o.kitStow = v; } }   // kit_stow
     if (b[MP + ((m + 169) >> 3)] & (1 << ((m + 169) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.kitRoll; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.kitRoll = v !== 0 as any; else o.kitRoll = v; } }   // kit_roll
     if (b[MP + ((m + 170) >> 3)] & (1 << ((m + 170) & 7))) { if (b[C.p++]) { const c = o.kitLie; let same = c !== null && c !== undefined && c.length === 4; const p0 = C.p; if (same) for (let i = 0; i < 4; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 32; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 4; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(4); for (let i = 0; i < 4; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.kitLie = a; } } } else if (o.kitLie !== null) o.kitLie = null; }   // kit_lie
@@ -3183,13 +3184,13 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 189) >> 3)] & (1 << ((m + 189) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.kickT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.kickT = v !== 0 as any; else o.kickT = v; } }   // kick_t
     if (b[MP + ((m + 190) >> 3)] & (1 << ((m + 190) & 7))) { const v = b[C.p++] !== 0; const c = o.kickHit; if (typeof c === 'boolean') { if (c !== v) o.kickHit = v; } else if (c === null) { if (v) o.kickHit = v; } else if (typeof c === 'object') { if (!v) o.kickHit = null; } else if (!(c === undefined && !v)) o.kickHit = v; }   // kick_hit
     if (b[MP + ((m + 191) >> 3)] & (1 << ((m + 191) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.sigT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.sigT = v !== 0 as any; else o.sigT = v; } }   // sig_t
-    if (b[MP + ((m + 192) >> 3)] & (1 << ((m + 192) & 7))) { const v = WORDS_76[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.sigKind !== v) o.sigKind = v; }   // sig_kind
+    if (b[MP + ((m + 192) >> 3)] & (1 << ((m + 192) & 7))) { const v = WORDS_77[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.sigKind !== v) o.sigKind = v; }   // sig_kind
     if (b[MP + ((m + 193) >> 3)] & (1 << ((m + 193) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.sigSide; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.sigSide = v !== 0 as any; else o.sigSide = v; } }   // sig_side
     if (b[MP + ((m + 194) >> 3)] & (1 << ((m + 194) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.tellT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.tellT = v !== 0 as any; else o.tellT = v; } }   // tell_t
-    if (b[MP + ((m + 195) >> 3)] & (1 << ((m + 195) & 7))) { const v = WORDS_77[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.tellK !== v) o.tellK = v; }   // tell_k
+    if (b[MP + ((m + 195) >> 3)] & (1 << ((m + 195) & 7))) { const v = WORDS_78[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.tellK !== v) o.tellK = v; }   // tell_k
     if (b[MP + ((m + 196) >> 3)] & (1 << ((m + 196) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.tellShown; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.tellShown = v !== 0 as any; else o.tellShown = v; } }   // tell_shown
-    if (b[MP + ((m + 197) >> 3)] & (1 << ((m + 197) & 7))) { const v = WORDS_78[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.strikeK !== v) o.strikeK = v; }   // strike_k
-    if (b[MP + ((m + 198) >> 3)] & (1 << ((m + 198) & 7))) { if (b[C.p++]) { const v = WORDS_79[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.ready !== v) o.ready = v; } else if (o.ready !== null) o.ready = null; }   // ready
+    if (b[MP + ((m + 197) >> 3)] & (1 << ((m + 197) & 7))) { const v = WORDS_79[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.strikeK !== v) o.strikeK = v; }   // strike_k
+    if (b[MP + ((m + 198) >> 3)] & (1 << ((m + 198) & 7))) { if (b[C.p++]) { const v = WORDS_80[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.ready !== v) o.ready = v; } else if (o.ready !== null) o.ready = null; }   // ready
     if (b[MP + ((m + 199) >> 3)] & (1 << ((m + 199) & 7))) { if (b[C.p++]) { const c = o.readyAt; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.readyAt = a; } } } else if (o.readyAt !== null) o.readyAt = null; }   // ready_at
     if (b[MP + ((m + 200) >> 3)] & (1 << ((m + 200) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.readyShown; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.readyShown = v !== 0 as any; else o.readyShown = v; } }   // ready_shown
     if (b[MP + ((m + 201) >> 3)] & (1 << ((m + 201) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.readyUp; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.readyUp = v !== 0 as any; else o.readyUp = v; } }   // ready_up
@@ -3246,14 +3247,14 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 260) >> 3)] & (1 << ((m + 260) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.hdSw; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.hdSw = v !== 0 as any; else o.hdSw = v; } }   // hd_sw
     if (b[MP + ((m + 261) >> 3)] & (1 << ((m + 261) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.heSw; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.heSw = v !== 0 as any; else o.heSw = v; } }   // he_sw
     if (b[MP + ((m + 262) >> 3)] & (1 << ((m + 262) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.readyW; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.readyW = v !== 0 as any; else o.readyW = v; } }   // ready_w
-    if (b[MP + ((m + 263) >> 3)] & (1 << ((m + 263) & 7))) { const v = WORDS_79[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.readyK !== v) o.readyK = v; }   // ready_k
+    if (b[MP + ((m + 263) >> 3)] & (1 << ((m + 263) & 7))) { const v = WORDS_80[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.readyK !== v) o.readyK = v; }   // ready_k
     if (b[MP + ((m + 264) >> 3)] & (1 << ((m + 264) & 7))) { if (b[C.p++]) { const c = o.rdAt; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.rdAt = a; } } } else if (o.rdAt !== null) o.rdAt = null; }   // rd_at
     if (b[MP + ((m + 265) >> 3)] & (1 << ((m + 265) & 7))) { const v = b[C.p++] !== 0; const c = o.rdLive; if (typeof c === 'boolean') { if (c !== v) o.rdLive = v; } else if (c === null) { if (v) o.rdLive = v; } else if (typeof c === 'object') { if (!v) o.rdLive = null; } else if (!(c === undefined && !v)) o.rdLive = v; }   // rd_live
     if (b[MP + ((m + 266) >> 3)] & (1 << ((m + 266) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.rd; if (a === null || a === undefined) { if (L || a === undefined) a = o.rd = []; } else if (ArrayBuffer.isView(a) && (a as any).length !== L) a = o.rd = new (a as any).constructor(L); if (L) for (let i = 0; i < L; i++) { const x = dv.getFloat64(C.p + 8 * i, true); if (!Object.is(a[i], x)) a[i] = x; } if (a && !ArrayBuffer.isView(a) && a.length !== L) a.length = L; C.p += 8 * L; }   // rd
     if (b[MP + ((m + 267) >> 3)] & (1 << ((m + 267) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.idleT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.idleT = v !== 0 as any; else o.idleT = v; } }   // idle_t
     { let c = o.st; if (!c || typeof c !== 'object') c = o.st = C.made("crate::character::AnimSt"); f_character_AnimSt(c, m + 268); }   // st
     { let c = o.wst; if (!c || typeof c !== 'object') c = o.wst = C.made("crate::character::AnimWst"); f_character_AnimWst(c, m + 279); }   // wst
-    if (b[MP + ((m + 283) >> 3)] & (1 << ((m + 283) & 7))) { const v = WORDS_28[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.stanceSeen !== v) o.stanceSeen = v; }   // stance_seen
+    if (b[MP + ((m + 283) >> 3)] & (1 << ((m + 283) & 7))) { const v = WORDS_29[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.stanceSeen !== v) o.stanceSeen = v; }   // stance_seen
     { let c = o.lpW; if (!c || typeof c !== 'object') c = o.lpW = C.made("crate::character::Spring"); f_character_Spring(c, m + 284); }   // lp_w
     if (b[MP + ((m + 285) >> 3)] & (1 << ((m + 285) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.lpT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.lpT = v !== 0 as any; else o.lpT = v; } }   // lp_t
     { let c = o.hlW; if (!c || typeof c !== 'object') c = o.hlW = C.made("crate::character::Spring"); f_character_Spring(c, m + 286); }   // hl_w
@@ -3319,7 +3320,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 439) >> 3)] & (1 << ((m + 439) & 7))) { const v = b[C.p++] !== 0; const c = o.thrOff; if (typeof c === 'boolean') { if (c !== v) o.thrOff = v; } else if (c === null) { if (v) o.thrOff = v; } else if (typeof c === 'object') { if (!v) o.thrOff = null; } else if (!(c === undefined && !v)) o.thrOff = v; }   // thr_off
     { let c = o.idleFeet; if (!c || typeof c !== 'object') c = o.idleFeet = C.made("crate::character::AnimIdleFeet"); f_character_AnimIdleFeet(c, m + 440); }   // idle_feet
     if (b[MP + ((m + 444) >> 3)] & (1 << ((m + 444) & 7))) C.slow(779, o);   // kick_from
-    if (b[MP + ((m + 445) >> 3)] & (1 << ((m + 445) & 7))) { const v = WORDS_80[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kickLeg !== v) o.kickLeg = v; }   // kick_leg
+    if (b[MP + ((m + 445) >> 3)] & (1 << ((m + 445) & 7))) { const v = WORDS_81[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kickLeg !== v) o.kickLeg = v; }   // kick_leg
     if (b[MP + ((m + 446) >> 3)] & (1 << ((m + 446) & 7))) C.slow(780, o);   // clips
     if (b[MP + ((m + 447) >> 3)] & (1 << ((m + 447) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.upperMask; if (a === null || a === undefined) { if (L || a === undefined) a = o.upperMask = new Float32Array(L); } else if (ArrayBuffer.isView(a) && (a as any).length !== L) a = o.upperMask = new (a as any).constructor(L); if (L) for (let i = 0; i < L; i++) { const x = dv.getFloat32(C.p + 4 * i, true); if (!Object.is(a[i], x)) a[i] = x; } if (a && !ArrayBuffer.isView(a) && a.length !== L) a.length = L; C.p += 4 * L; }   // upper_mask
     if (b[MP + ((m + 448) >> 3)] & (1 << ((m + 448) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.armRMask; if (a === null || a === undefined) { if (L || a === undefined) a = o.armRMask = new Float32Array(L); } else if (ArrayBuffer.isView(a) && (a as any).length !== L) a = o.armRMask = new (a as any).constructor(L); if (L) for (let i = 0; i < L; i++) { const x = dv.getFloat32(C.p + 4 * i, true); if (!Object.is(a[i], x)) a[i] = x; } if (a && !ArrayBuffer.isView(a) && a.length !== L) a.length = L; C.p += 4 * L; }   // arm_r_mask
@@ -3369,9 +3370,9 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.jointData; if (a === null || a === undefined) { if (L || a === undefined) a = o.jointData = new Float32Array(L); } else if (ArrayBuffer.isView(a) && (a as any).length !== L) a = o.jointData = new (a as any).constructor(L); if (L) for (let i = 0; i < L; i++) { const x = dv.getFloat32(C.p + 4 * i, true); if (!Object.is(a[i], x)) a[i] = x; } if (a && !ArrayBuffer.isView(a) && a.length !== L) a.length = L; C.p += 4 * L; }   // joint_data
   }
   function f_gunlook_GunLook(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { if (b[C.p++]) { const v = WORDS_75[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.hand !== v) o.hand = v; } else if (o.hand !== null) o.hand = null; }   // hand
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { if (b[C.p++]) { const v = WORDS_75[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.long !== v) o.long = v; } else if (o.long !== null) o.long = null; }   // long
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { if (b[C.p++]) { const v = WORDS_75[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.side !== v) o.side = v; } else if (o.side !== null) o.side = null; }   // side
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { if (b[C.p++]) { const v = WORDS_76[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.hand !== v) o.hand = v; } else if (o.hand !== null) o.hand = null; }   // hand
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { if (b[C.p++]) { const v = WORDS_76[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.long !== v) o.long = v; } else if (o.long !== null) o.long = null; }   // long
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { if (b[C.p++]) { const v = WORDS_76[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.side !== v) o.side = v; } else if (o.side !== null) o.side = null; }   // side
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.bareLong !== v) o.bareLong = v; } else if (o.bareLong !== undefined) o.bareLong = undefined; }   // bare_long
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.bareSide !== v) o.bareSide = v; } else if (o.bareSide !== undefined) o.bareSide = undefined; }   // bare_side
   }
@@ -3439,14 +3440,14 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.name; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.name = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // name
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.spawnedAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.spawnedAt = v !== 0 as any; else o.spawnedAt = v; } }   // spawned_at
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = b[C.p++] !== 0; const c = o.light; if (typeof c === 'boolean') { if (c !== v) o.light = v; } else if (c === null) { if (v) o.light = v; } else if (typeof c === 'object') { if (!v) o.light = null; } else if (!(c === undefined && !v)) o.light = v; }   // light
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const v = WORDS_81[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.pair !== v) o.pair = v; } else if (o.pair !== undefined) o.pair = undefined; }   // pair
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const v = WORDS_82[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.pair !== v) o.pair = v; } else if (o.pair !== undefined) o.pair = undefined; }   // pair
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.seat; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.seat = v !== 0 as any; else o.seat = v; } } else if (o.seat !== undefined) o.seat = undefined; }   // seat
   }
   function f_game_GuardHeld(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_82[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.by !== v) o.by = v; }   // by
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_83[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.by !== v) o.by = v; }   // by
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.since; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.since = v !== 0 as any; else o.since = v; } }   // since
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_83[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.variant !== v) o.variant = v; }   // variant
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = WORDS_84[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_84[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.variant !== v) o.variant = v; }   // variant
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = WORDS_85[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = b[C.p++] !== 0; const c = o.reverse; if (typeof c === 'boolean') { if (c !== v) o.reverse = v; } else if (c === null) { if (v) o.reverse = v; } else if (typeof c === 'object') { if (!v) o.reverse = null; } else if (!(c === undefined && !v)) o.reverse = v; }   // reverse
   }
   function f_game_GuardBubble(o: any, m: number) {
@@ -3458,7 +3459,7 @@ export function puppetRows(C: Ctx) {
   function f_game_Witness(o: any, m: number) {
     { let c = o.heard; if (!c || typeof c !== 'object') c = o.heard = C.made("crate::game::WitnessHeard"); f_game_WitnessHeard(c, m + 0); }   // heard
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.peakAwareness; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.peakAwareness = v !== 0 as any; else o.peakAwareness = v; } }   // peak_awareness
-    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { if (b[C.p++]) { const v = WORDS_85[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.alertedBy !== v) o.alertedBy = v; } else if (o.alertedBy !== null) o.alertedBy = null; }   // alerted_by
+    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { if (b[C.p++]) { const v = WORDS_86[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.alertedBy !== v) o.alertedBy = v; } else if (o.alertedBy !== null) o.alertedBy = null; }   // alerted_by
     if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.alertT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.alertT = v !== 0 as any; else o.alertT = v; } }   // alert_t
     if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) C.slow(794, o);   // saw_act
     if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) C.slow(795, o);   // saw_body
@@ -3474,8 +3475,8 @@ export function puppetRows(C: Ctx) {
   }
   function f_game_GuardBodyDuty(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.body; if (typeof c === 'number') { if (c !== v) o.body = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.body = null; } else { const r = T_GuardId()[v]; if (r !== c) o.body = r; } }   // body
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_86[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.role !== v) o.role = v; }   // role
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_87[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.stage !== v) o.stage = v; }   // stage
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_87[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.role !== v) o.role = v; }   // role
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_88[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.stage !== v) o.stage = v; }   // stage
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t0; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t0 = v !== 0 as any; else o.t0 = v; } }   // t0
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { if (b[C.p++]) { const c = o.spot; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.spot = a; } } } else if (o.spot !== null) o.spot = null; }   // spot
@@ -3498,8 +3499,8 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 14) >> 3)] & (1 << ((m + 14) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.displaces; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.displaces = v !== 0 as any; else o.displaces = v; } }   // displaces
     if (b[MP + ((m + 15) >> 3)] & (1 << ((m + 15) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.coverUntil; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.coverUntil = v !== 0 as any; else o.coverUntil = v; } }   // cover_until
     if (b[MP + ((m + 16) >> 3)] & (1 << ((m + 16) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.barkT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.barkT = v !== 0 as any; else o.barkT = v; } }   // bark_t
-    if (b[MP + ((m + 17) >> 3)] & (1 << ((m + 17) & 7))) { if (b[C.p++]) { const v = WORDS_88[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.barkWas !== v) o.barkWas = v; } else if (o.barkWas !== null) o.barkWas = null; }   // bark_was
-    if (b[MP + ((m + 18) >> 3)] & (1 << ((m + 18) & 7))) { if (b[C.p++]) { const v = WORDS_88[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.pending !== v) o.pending = v; } else if (o.pending !== null) o.pending = null; }   // pending
+    if (b[MP + ((m + 17) >> 3)] & (1 << ((m + 17) & 7))) { if (b[C.p++]) { const v = WORDS_89[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.barkWas !== v) o.barkWas = v; } else if (o.barkWas !== null) o.barkWas = null; }   // bark_was
+    if (b[MP + ((m + 18) >> 3)] & (1 << ((m + 18) & 7))) { if (b[C.p++]) { const v = WORDS_89[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.pending !== v) o.pending = v; } else if (o.pending !== null) o.pending = null; }   // pending
     if (b[MP + ((m + 19) >> 3)] & (1 << ((m + 19) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.pendingT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.pendingT = v !== 0 as any; else o.pendingT = v; } }   // pending_t
     if (b[MP + ((m + 20) >> 3)] & (1 << ((m + 20) & 7))) { const v = b[C.p++] !== 0; const c = o.wasPinned; if (typeof c === 'boolean') { if (c !== v) o.wasPinned = v; } else if (c === null) { if (v) o.wasPinned = v; } else if (typeof c === 'object') { if (!v) o.wasPinned = null; } else if (!(c === undefined && !v)) o.wasPinned = v; }   // was_pinned
   }
@@ -3519,7 +3520,7 @@ export function puppetRows(C: Ctx) {
   }
   function f_game_GuardSlung(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.own; if (typeof c === 'number') { if (c !== v) o.own = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.own = null; } else { const r = T_FirearmId()[v]; if (r !== c) o.own = r; } }   // own
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { if (b[C.p++]) { const v = WORDS_40[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.ownId !== v) o.ownId = v; } else if (o.ownId !== undefined) o.ownId = undefined; }   // own_id
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { if (b[C.p++]) { const v = WORDS_41[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.ownId !== v) o.ownId = v; } else if (o.ownId !== undefined) o.ownId = undefined; }   // own_id
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.ahead; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.ahead = v !== 0 as any; else o.ahead = v; } }   // ahead
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.gun; if (typeof c === 'number') { if (c !== v) o.gun = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.gun = null; } else { const r = T_FirearmId()[v]; if (r !== c) o.gun = r; } }   // gun
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = b[C.p++] !== 0; const c = o.out; if (typeof c === 'boolean') { if (c !== v) o.out = v; } else if (c === null) { if (v) o.out = v; } else if (typeof c === 'object') { if (!v) o.out = null; } else if (!(c === undefined && !v)) o.out = v; }   // out
@@ -3527,7 +3528,7 @@ export function puppetRows(C: Ctx) {
   }
   function f_game_GuardSecond(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.gun; if (typeof c === 'number') { if (c !== v) o.gun = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.gun = null; } else { const r = T_FirearmId()[v]; if (r !== c) o.gun = r; } }   // gun
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_40[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.id !== v) o.id = v; }   // id
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_41[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.id !== v) o.id = v; }   // id
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.ahead; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.ahead = v !== 0 as any; else o.ahead = v; } }   // ahead
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = b[C.p++] !== 0; const c = o.out; if (typeof c === 'boolean') { if (c !== v) o.out = v; } else if (c === null) { if (v) o.out = v; } else if (typeof c === 'object') { if (!v) o.out = null; } else if (!(c === undefined && !v)) o.out = v; }   // out
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
@@ -3552,7 +3553,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.floodAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.floodAt = v !== 0 as any; else o.floodAt = v; } }   // flood_at
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(800, o);   // spots
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.current; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.current = v !== 0 as any; else o.current = v; } }   // current
-    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { const v = WORDS_89[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
+    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { const v = WORDS_90[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.phaseT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.phaseT = v !== 0 as any; else o.phaseT = v; } }   // phase_t
     if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.visits; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.visits = v !== 0 as any; else o.visits = v; } }   // visits
     if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.rr; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.rr = v !== 0 as any; else o.rr = v; } }   // rr
@@ -3560,7 +3561,7 @@ export function puppetRows(C: Ctx) {
   }
   function f_guards_Pieing(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.door; if (typeof c === 'number') { if (c !== v) o.door = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.door = null; } else { const r = T_DoorId()[v]; if (r !== c) o.door = r; } }   // door
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_90[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_91[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.side; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.side = v !== 0 as any; else o.side = v; } }   // side
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const c = o.at; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.at = a; } } }   // at
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.near; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.near = v !== 0 as any; else o.near = v; } }   // near
@@ -3575,11 +3576,11 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.face; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.face = v !== 0 as any; else o.face = v; } } else if (o.face !== undefined && o.face !== null) o.face = null; }   // face
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.strafe !== v) o.strafe = v; } else if (o.strafe !== undefined) o.strafe = undefined; }   // strafe
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { if (b[C.p++]) { const c = o.aimAt; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.aimAt = a; } } } else if (o.aimAt !== undefined && o.aimAt !== null) o.aimAt = null; }   // aim_at
-    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { if (b[C.p++]) { const v = WORDS_28[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.stance !== v) o.stance = v; } else if (o.stance !== undefined) o.stance = undefined; }   // stance
+    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { if (b[C.p++]) { const v = WORDS_29[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.stance !== v) o.stance = v; } else if (o.stance !== undefined) o.stance = undefined; }   // stance
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.stackSide; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.stackSide = v !== 0 as any; else o.stackSide = v; } } else if (o.stackSide !== undefined) o.stackSide = undefined; }   // stack_side
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.crouch !== v) o.crouch = v; } else if (o.crouch !== undefined) o.crouch = undefined; }   // crouch
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.lean; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.lean = v !== 0 as any; else o.lean = v; } } else if (o.lean !== undefined) o.lean = undefined; }   // lean
-    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { if (b[C.p++]) { const v = WORDS_29[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.upper !== v) o.upper = v; } else if (o.upper !== undefined) o.upper = undefined; }   // upper
+    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { if (b[C.p++]) { const v = WORDS_30[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.upper !== v) o.upper = v; } else if (o.upper !== undefined) o.upper = undefined; }   // upper
     if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.light !== v) o.light = v; } else if (o.light !== undefined) o.light = undefined; }   // light
     if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.arrived !== v) o.arrived = v; } else if (o.arrived !== undefined) o.arrived = undefined; }   // arrived
     if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.hot !== v) o.hot = v; } else if (o.hot !== undefined) o.hot = undefined; }   // hot
@@ -3594,7 +3595,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = b[C.p++] !== 0; const c = o.open; if (typeof c === 'boolean') { if (c !== v) o.open = v; } else if (c === null) { if (v) o.open = v; } else if (typeof c === 'object') { if (!v) o.open = null; } else if (!(c === undefined && !v)) o.open = v; }   // open
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.target; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.target = v !== 0 as any; else o.target = v; } }   // target
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = WORDS_91[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.stage !== v) o.stage = v; }   // stage
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = WORDS_92[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.stage !== v) o.stage = v; }   // stage
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { if (b[C.p++]) { const c = o.goal; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.goal = a; } } } else if (o.goal !== null) o.goal = null; }   // goal
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.stallT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.stallT = v !== 0 as any; else o.stallT = v; } }   // stall_t
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.best; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.best = v !== 0 as any; else o.best = v; } }   // best
@@ -3605,7 +3606,7 @@ export function puppetRows(C: Ctx) {
   function f_game_PlayerTakedown(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.g; if (typeof c === 'number') { if (c !== v) o.g = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.g = null; } else { const r = T_GuardId()[v]; if (r !== c) o.g = r; } }   // g
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { if (b[C.p++]) { const v = WORDS_52[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; } else if (o.kind !== undefined) o.kind = undefined; }   // kind
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { if (b[C.p++]) { const v = WORDS_53[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; } else if (o.kind !== undefined) o.kind = undefined; }   // kind
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.from; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.from = v !== 0 as any; else o.from = v; } } else if (o.from !== undefined) o.from = undefined; }   // from
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.alert !== v) o.alert = v; } else if (o.alert !== undefined) o.alert = undefined; }   // alert
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.yaw; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.yaw = v !== 0 as any; else o.yaw = v; } } else if (o.yaw !== undefined) o.yaw = undefined; }   // yaw
@@ -3615,8 +3616,8 @@ export function puppetRows(C: Ctx) {
   }
   function f_player_Hold(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.g; if (typeof c === 'number') { if (c !== v) o.g = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.g = null; } else { const r = T_GuardId()[v]; if (r !== c) o.g = r; } }   // g
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_83[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.variant !== v) o.variant = v; }   // variant
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_84[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_84[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.variant !== v) o.variant = v; }   // variant
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_85[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.since; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.since = v !== 0 as any; else o.since = v; } }   // since
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.windT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.windT = v !== 0 as any; else o.windT = v; } }   // wind_t
@@ -3663,17 +3664,17 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.cost; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.cost = v !== 0 as any; else o.cost = v; } }   // cost
   }
   function f_game_PlayerSetup(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_47[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.gun !== v) o.gun = v; }   // gun
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_48[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.gun !== v) o.gun = v; }   // gun
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.seen; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.seen = v !== 0 as any; else o.seen = v; } }   // seen
   }
   function f_game_PlayerSetupHand(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { if (b[C.p++]) { const v = WORDS_47[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.gun !== v) o.gun = v; } else if (o.gun !== null) o.gun = null; }   // gun
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { if (b[C.p++]) { const v = WORDS_48[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.gun !== v) o.gun = v; } else if (o.gun !== null) o.gun = null; }   // gun
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.own; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.own = v !== 0 as any; else o.own = v; } } else if (o.own !== undefined) o.own = undefined; }   // own
   }
   function f_game_PlayerSetupKey(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_47[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.gun !== v) o.gun = v; }   // gun
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_48[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.gun !== v) o.gun = v; }   // gun
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
   }
   function f_game_PlayerSlingRest(o: any, m: number) {
@@ -3700,7 +3701,7 @@ export function puppetRows(C: Ctx) {
   function f_game_PlayerPendingThrow(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
     { let c = o.sol; if (!c || typeof c !== 'object') c = o.sol = C.made("crate::throwables::ThrowSolution"); f_throwables_ThrowSolution(c, m + 1); }   // sol
-    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = WORDS_16[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = WORDS_17[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
   }
   function f_game_PlayerKick(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.door; if (typeof c === 'number') { if (c !== v) o.door = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.door = null; } else { const r = T_DoorId()[v]; if (r !== c) o.door = r; } }   // door
@@ -3760,7 +3761,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 23) >> 3)] & (1 << ((m + 23) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.yaw0; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.yaw0 = v !== 0 as any; else o.yaw0 = v; } } else if (o.yaw0 !== undefined) o.yaw0 = undefined; }   // yaw0
     if (b[MP + ((m + 24) >> 3)] & (1 << ((m + 24) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.yawD; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.yawD = v !== 0 as any; else o.yawD = v; } } else if (o.yawD !== undefined) o.yawD = undefined; }   // yaw_d
     if (b[MP + ((m + 25) >> 3)] & (1 << ((m + 25) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.hitT; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.hitT = v !== 0 as any; else o.hitT = v; } } else if (o.hitT !== undefined) o.hitT = undefined; }   // hit_t
-    if (b[MP + ((m + 26) >> 3)] & (1 << ((m + 26) & 7))) { if (b[C.p++]) { const v = WORDS_92[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; } else if (o.kind !== undefined) o.kind = undefined; }   // kind
+    if (b[MP + ((m + 26) >> 3)] & (1 << ((m + 26) & 7))) { if (b[C.p++]) { const v = WORDS_93[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; } else if (o.kind !== undefined) o.kind = undefined; }   // kind
     if (b[MP + ((m + 27) >> 3)] & (1 << ((m + 27) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.up; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.up = v !== 0 as any; else o.up = v; } } else if (o.up !== undefined) o.up = undefined; }   // up
     if (b[MP + ((m + 28) >> 3)] & (1 << ((m + 28) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.lean; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.lean = v !== 0 as any; else o.lean = v; } } else if (o.lean !== undefined) o.lean = undefined; }   // lean
     if (b[MP + ((m + 29) >> 3)] & (1 << ((m + 29) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.leanWant !== v) o.leanWant = v; } else if (o.leanWant !== undefined) o.leanWant = undefined; }   // lean_want
@@ -3782,7 +3783,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.gen; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.gen = v !== 0 as any; else o.gen = v; } }   // gen_
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.area; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.area = v !== 0 as any; else o.area = v; } }   // area
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const c = o.tint; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.tint = a; } } }   // tint
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = WORDS_93[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.type !== v) o.type = v; }   // type_
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = WORDS_94[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.type !== v) o.type = v; }   // type_
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.seed; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.seed = v !== 0 as any; else o.seed = v; } }   // seed
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.littered !== v) o.littered = v; } else if (o.littered !== undefined) o.littered = undefined; }   // littered
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { if (b[C.p++]) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.poly; if (a === null || a === undefined) { if (L || a === undefined) a = o.poly = []; } for (let i = 0; i < L; i++) { const c = a[i], p0 = C.p; let same = !!c && c.length === 2; if (same) for (let k = 0; k < 2; k++) if (!Object.is(dv.getFloat64(p0 + 8 * k, true), c[k])) { same = false; break; } C.p += 16; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let k = 0; k < 2; k++) (c as any)[k] = dv.getFloat64(p0 + 8 * k, true); } else { const x = new Array(2); for (let k = 0; k < 2; k++) x[k] = dv.getFloat64(p0 + 8 * k, true); a[i] = x; } } } if (a && a.length !== L) a.length = L; } else if (o.poly !== undefined) o.poly = undefined; }   // poly
@@ -3793,7 +3794,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.rest; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.rest = v !== 0 as any; else o.rest = v; } }   // rest
   }
   function f_break_table_BreakMeta(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_94[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.mat !== v) o.mat = v; }   // mat
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_95[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.mat !== v) o.mat = v; }   // mat
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.gen; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.gen = v !== 0 as any; else o.gen = v; } }   // gen_
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const c = o.paint; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.paint = a; } } }   // paint
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.fixed !== v) o.fixed = v; } else if (o.fixed !== undefined) o.fixed = undefined; }   // fixed
@@ -3841,7 +3842,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const t = T_FurnblastMemberId(); let a = o.members; if (a === null || a === undefined) { if (L || a === undefined) a = o.members = []; } if (a && Array.isArray(a) && (a.length === 0 || typeof a[0] !== 'number')) { for (let i = 0; i < L; i++) { const v = dv.getUint32(C.p, true); C.p += 4; const r = t[v]; if (a[i] !== r) a[i] = r; } if (a.length !== L) a.length = L; } else if (a) { for (let i = 0; i < L; i++) { a[i] = dv.getUint32(C.p, true); C.p += 4; } if (a.length !== L) a.length = L; } }   // members
     { let c = o.a; if (!c || typeof c !== 'object') c = o.a = C.made("crate::furnblast::AABB"); f_furnblast_AABB(c, m + 2); }   // a
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.heavy; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.heavy = v !== 0 as any; else o.heavy = v; } }   // heavy
-    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { const v = WORDS_23[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.surf !== v) o.surf = v; }   // surf
+    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { const v = WORDS_24[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.surf !== v) o.surf = v; }   // surf
   }
   function f_doortools_DoorToolsDoneItemLane(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.gd; if (typeof c === 'number') { if (c !== v) o.gd = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.gd = null; } else { const r = T_GuardId()[v]; if (r !== c) o.gd = r; } }   // gd
@@ -3927,7 +3928,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 27) >> 3)] & (1 << ((m + 27) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.stepOwed !== v) o.stepOwed = v; } else if (o.stepOwed !== undefined) o.stepOwed = undefined; }   // step_owed
     if (b[MP + ((m + 28) >> 3)] & (1 << ((m + 28) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.owedT; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.owedT = v !== 0 as any; else o.owedT = v; } } else if (o.owedT !== undefined) o.owedT = undefined; }   // owed_t
     if (b[MP + ((m + 29) >> 3)] & (1 << ((m + 29) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.cutOwed !== v) o.cutOwed = v; } else if (o.cutOwed !== undefined) o.cutOwed = undefined; }   // cut_owed
-    if (b[MP + ((m + 30) >> 3)] & (1 << ((m + 30) & 7))) { if (b[C.p++]) { const v = WORDS_95[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.first !== v) o.first = v; } else if (o.first !== undefined && o.first !== null) o.first = null; }   // first
+    if (b[MP + ((m + 30) >> 3)] & (1 << ((m + 30) & 7))) { if (b[C.p++]) { const v = WORDS_96[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.first !== v) o.first = v; } else if (o.first !== undefined && o.first !== null) o.first = null; }   // first
     if (b[MP + ((m + 31) >> 3)] & (1 << ((m + 31) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.wide !== v) o.wide = v; } else if (o.wide !== undefined) o.wide = undefined; }   // wide
     if (b[MP + ((m + 32) >> 3)] & (1 << ((m + 32) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.early !== v) o.early = v; } else if (o.early !== undefined) o.early = undefined; }   // early
     if (b[MP + ((m + 33) >> 3)] & (1 << ((m + 33) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.asked !== v) o.asked = v; } else if (o.asked !== undefined) o.asked = undefined; }   // asked
@@ -4135,11 +4136,11 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const c = o.at; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.at = a; } } }   // at
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.ally; if (typeof c === 'number') { if (c !== v) o.ally = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.ally = null; } else { const r = T_EnemysquadsSquadId()[v]; if (r !== c) o.ally = r; } } else if (o.ally !== null) o.ally = null; }   // ally
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = WORDS_96[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.by !== v) o.by = v; }   // by
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = WORDS_97[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.by !== v) o.by = v; }   // by
   }
   function f_enemysquads_Check(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.nextAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.nextAt = v !== 0 as any; else o.nextAt = v; } }   // next_at
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_97[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.stage !== v) o.stage = v; }   // stage
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_98[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.stage !== v) o.stage = v; }   // stage
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t0; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t0 = v !== 0 as any; else o.t0 = v; } }   // t0
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.caller; if (typeof c === 'number') { if (c !== v) o.caller = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.caller = null; } else { const r = T_GuardId()[v]; if (r !== c) o.caller = r; } } else if (o.caller !== null) o.caller = null; }   // caller
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.who; if (typeof c === 'number') { if (c !== v) o.who = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.who = null; } else { const r = T_GuardId()[v]; if (r !== c) o.who = r; } } else if (o.who !== null) o.who = null; }   // who
@@ -4178,8 +4179,8 @@ export function puppetRows(C: Ctx) {
   }
   function f_enemysquads_Sent(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.gd; if (typeof c === 'number') { if (c !== v) o.gd = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.gd = null; } else { const r = T_GuardId()[v]; if (r !== c) o.gd = r; } }   // gd
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_98[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.role !== v) o.role = v; }   // role
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_99[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_99[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.role !== v) o.role = v; }   // role
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_100[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.hold !== v) o.hold = v; } else if (o.hold !== undefined) o.hold = undefined; }   // hold
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { if (b[C.p++]) { const c = o.spot; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.spot = a; } } } else if (o.spot !== null) o.spot = null; }   // spot
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.door; if (typeof c === 'number') { if (c !== v) o.door = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.door = null; } else { const r = T_DoorId()[v]; if (r !== c) o.door = r; } } else if (o.door !== null) o.door = null; }   // door
@@ -4204,7 +4205,7 @@ export function puppetRows(C: Ctx) {
   }
   function f_enemysquads_SquadEvent(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_100[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.what !== v) o.what = v; }   // what
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_101[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.what !== v) o.what = v; }   // what
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.n; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.n = v !== 0 as any; else o.n = v; } }   // n
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.why; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.why = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // why
   }
@@ -4213,7 +4214,7 @@ export function puppetRows(C: Ctx) {
   }
   function f_scene_level_CivilianDef(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.name; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.name = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // name
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_101[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_102[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const c = o.tint; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.tint = a; } } }   // tint
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const c = o.tint2; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.tint2 = a; } } } else if (o.tint2 !== undefined) o.tint2 = undefined; }   // tint2
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.points; if (a === null || a === undefined) { if (L || a === undefined) a = o.points = []; } for (let i = 0; i < L; i++) { const c = a[i], p0 = C.p; let same = !!c && c.length === 3; if (same) for (let k = 0; k < 3; k++) if (!Object.is(dv.getFloat64(p0 + 8 * k, true), c[k])) { same = false; break; } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let k = 0; k < 3; k++) (c as any)[k] = dv.getFloat64(p0 + 8 * k, true); } else { const x = new Array(3); for (let k = 0; k < 3; k++) x[k] = dv.getFloat64(p0 + 8 * k, true); a[i] = x; } } } if (a && a.length !== L) a.length = L; }   // points
@@ -4221,7 +4222,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { if (b[C.p++]) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.face; if (a === null || a === undefined) { if (L || a === undefined) a = o.face = []; } else if (ArrayBuffer.isView(a) && (a as any).length !== L) a = o.face = new (a as any).constructor(L); if (L) for (let i = 0; i < L; i++) { const x = dv.getFloat64(C.p + 8 * i, true); if (!Object.is(a[i], x)) a[i] = x; } if (a && !ArrayBuffer.isView(a) && a.length !== L) a.length = L; C.p += 8 * L; } else if (o.face !== undefined) o.face = undefined; }   // face
   }
   function f_civilians_CivTarget(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_102[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_103[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.guard; if (typeof c === 'number') { if (c !== v) o.guard = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.guard = null; } else { const r = T_GuardId()[v]; if (r !== c) o.guard = r; } } else if (o.guard !== null) o.guard = null; }   // guard
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(844, o);   // spot
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const c = o.pos; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.pos = a; } } }   // pos
@@ -4248,7 +4249,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { if (b[C.p++]) { const c = o.off; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.off = a; } } } else if (o.off !== null) o.off = null; }   // off
   }
   function f_smoke_types_WindGpuSource(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_103[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_104[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.name; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.name = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // name
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const c = o.pos; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.pos = a; } } }   // pos
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const c = o.dir; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.dir = a; } } }   // dir
@@ -4261,7 +4262,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.heat !== v) o.heat = v; } else if (o.heat !== undefined) o.heat = undefined; }   // heat
   }
   function f_workthings_WorkThing(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_104[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_105[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const c = o.face; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.face = a; } } }   // face
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const c = o.n; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.n = a; } } }   // n
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const c = o.stand; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.stand = a; } } } else if (o.stand !== null) o.stand = null; }   // stand
@@ -4297,23 +4298,23 @@ export function puppetRows(C: Ctx) {
   function f_planlay_LaidOrder(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.id; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.id = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // id
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(850, o);   // who
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_105[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_106[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const c = o.at; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.at = a; } } }   // at
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.door; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.door = v !== 0 as any; else o.door = v; } } else if (o.door !== undefined) o.door = undefined; }   // door
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { if (b[C.p++]) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.man; if (!strEq(c, b, C.p, L)) o.man = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; } else if (o.man !== undefined) o.man = undefined; }   // man
-    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { if (b[C.p++]) { const v = WORDS_106[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.found !== v) o.found = v; } else if (o.found !== undefined) o.found = undefined; }   // found
+    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { if (b[C.p++]) { const v = WORDS_107[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.found !== v) o.found = v; } else if (o.found !== undefined) o.found = undefined; }   // found
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { if (b[C.p++]) { const c = o.pick; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.pick = a; } } } else if (o.pick !== undefined) o.pick = undefined; }   // pick
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
   }
   function f_savestate_GuardSnapWound(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_107[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.zone !== v) o.zone = v; }   // zone
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_108[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.pose !== v) o.pose = v; }   // pose
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_108[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.zone !== v) o.zone = v; }   // zone
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_109[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.pose !== v) o.pose = v; }   // pose
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
   }
   function f_doors_DoorDrive(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.who; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.who = v !== 0 as any; else o.who = v; } }   // who
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.dir; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.dir = v !== 0 as any; else o.dir = v; } }   // dir
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_109[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_110[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.from; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.from = v !== 0 as any; else o.from = v; } }   // from
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = b[C.p++] !== 0; const c = o.quiet; if (typeof c === 'boolean') { if (c !== v) o.quiet = v; } else if (c === null) { if (v) o.quiet = v; } else if (typeof c === 'object') { if (!v) o.quiet = null; } else if (!(c === undefined && !v)) o.quiet = v; }   // quiet
@@ -4340,7 +4341,7 @@ export function puppetRows(C: Ctx) {
   }
   function f_chronicle_ChronEvent(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_110[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_111[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.room; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.room = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // room
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const c = o.pos; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.pos = a; } } }   // pos
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(851, o);   // data
@@ -4516,13 +4517,13 @@ export function puppetRows(C: Ctx) {
   }
   function f_props_PropEvent(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.prop; if (typeof c === 'number') { if (c !== v) o.prop = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.prop = null; } else { const r = T_PropId()[v]; if (r !== c) o.prop = r; } }   // prop
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_111[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.sound !== v) o.sound = v; }   // sound
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_112[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.sound !== v) o.sound = v; }   // sound
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const c = o.pos; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.pos = a; } } }   // pos
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.who; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.who = v !== 0 as any; else o.who = v; } }   // who
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.level; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.level = v !== 0 as any; else o.level = v; } }   // level
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.speed; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.speed = v !== 0 as any; else o.speed = v; } }   // speed
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const v = b[C.p++] !== 0; const c = o.rolling; if (typeof c === 'boolean') { if (c !== v) o.rolling = v; } else if (c === null) { if (v) o.rolling = v; } else if (typeof c === 'object') { if (!v) o.rolling = null; } else if (!(c === undefined && !v)) o.rolling = v; }   // rolling
-    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { if (b[C.p++]) { const v = WORDS_112[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.roll !== v) o.roll = v; } else if (o.roll !== undefined) o.roll = undefined; }   // roll
+    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { if (b[C.p++]) { const v = WORDS_113[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.roll !== v) o.roll = v; } else if (o.roll !== undefined) o.roll = undefined; }   // roll
   }
   function f_sim_itemshome_ItemStore(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.at; if (a === null || a === undefined) { if (L || a === undefined) a = o.at = []; } else if (ArrayBuffer.isView(a) && (a as any).length !== L) a = o.at = new (a as any).constructor(L); if (L) for (let i = 0; i < L; i++) { const x = dv.getFloat64(C.p + 8 * i, true); if (!Object.is(a[i], x)) a[i] = x; } if (a && !ArrayBuffer.isView(a) && a.length !== L) a.length = L; C.p += 8 * L; }   // at
@@ -4546,7 +4547,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.frames; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.frames = v !== 0 as any; else o.frames = v; } }   // frames
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { const c = o.color; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.color = a; } } }   // color
     if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.owner; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.owner = v !== 0 as any; else o.owner = v; } }   // owner
-    if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) { const v = WORDS_113[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.impact !== v) o.impact = v; }   // impact
+    if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) { const v = WORDS_114[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.impact !== v) o.impact = v; }   // impact
     if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) { const v = b[C.p++] !== 0; const c = o.arrived; if (typeof c === 'boolean') { if (c !== v) o.arrived = v; } else if (c === null) { if (v) o.arrived = v; } else if (typeof c === 'object') { if (!v) o.arrived = null; } else if (!(c === undefined && !v)) o.arrived = v; }   // arrived
     if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.light; if (typeof c === 'number') { if (c !== v) o.light = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.light = null; } else { const r = T_LightId()[v]; if (r !== c) o.light = r; } } else if (o.light !== null) o.light = null; }   // light
   }
@@ -4570,7 +4571,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.aniso !== v) o.aniso = v; } else if (o.aniso !== undefined) o.aniso = undefined; }   // aniso
   }
   function f_qrf_Perimeter(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_114[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.state !== v) o.state = v; }   // state
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_115[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.state !== v) o.state = v; }   // state
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.calledAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.calledAt = v !== 0 as any; else o.calledAt = v; } }   // called_at
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.etaAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.etaAt = v !== 0 as any; else o.etaAt = v; } }   // eta_at
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.setAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.setAt = v !== 0 as any; else o.setAt = v; } }   // set_at
@@ -4583,7 +4584,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.what; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.what = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // what
   }
   function f_qrf_Target(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_115[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_116[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(861, o);   // plan
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.room; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.room = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // room
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const c = o.pos; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.pos = a; } } }   // pos
@@ -4676,7 +4677,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.kinkT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.kinkT = v !== 0 as any; else o.kinkT = v; } }   // kink_t
   }
   function f_destruction_Destructible(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_116[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_117[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
   }
   function f_destruction_DestructionCaps(o: any, m: number) {
     { let c = o.puff; if (!c || typeof c !== 'object') c = o.puff = C.made("crate::destruction::RateCap"); f_destruction_RateCap(c, m + 0); }   // puff
@@ -4688,7 +4689,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const c = o.p; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.p = a; } } }   // p
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const c = o.n; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.n = a; } } }   // n
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.scale; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.scale = v !== 0 as any; else o.scale = v; } }   // scale
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = WORDS_23[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.surf !== v) o.surf = v; }   // surf
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = WORDS_24[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.surf !== v) o.surf = v; }   // surf
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
   }
   function f_air_dust_AirDustStats(o: any, m: number) {
@@ -4700,7 +4701,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.open; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.open = v !== 0 as any; else o.open = v; } }   // open
   }
   function f_glassbreak_GlassBreakViewOf(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_117[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_118[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const c = o.from; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.from = a; } } }   // from
     { let c = o.size; if (!c || typeof c !== 'object') c = o.size = C.made("crate::glassbreak::GlassBlastOpts"); f_glassbreak_GlassBlastOpts(c, m + 2); }   // size
   }
@@ -4722,7 +4723,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) C.slow(893, o);   // systems
   }
   function f_director_LintProblem(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_118[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.level !== v) o.level = v; }   // level
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_119[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.level !== v) o.level = v; }   // level
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.what; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.what = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // what
   }
   function f_director_LogRow(o: any, m: number) {
@@ -4730,7 +4731,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.run; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.run = v !== 0 as any; else o.run = v; } }   // run
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.program; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.program = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // program
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.beat; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.beat = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // beat
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = WORDS_119[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = WORDS_120[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.what; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.what = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // what
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(894, o);   // data
   }
@@ -4750,7 +4751,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const v = b[C.p++] !== 0; const c = o.handedOver; if (typeof c === 'boolean') { if (c !== v) o.handedOver = v; } else if (c === null) { if (v) o.handedOver = v; } else if (typeof c === 'object') { if (!v) o.handedOver = null; } else if (!(c === undefined && !v)) o.handedOver = v; }   // handed_over
   }
   function f_breach_BreachDrill(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_120[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_121[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.tStack; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.tStack = v !== 0 as any; else o.tStack = v; } }   // t_stack
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.tSet; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.tSet = v !== 0 as any; else o.tSet = v; } }   // t_set
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.tGo; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.tGo = v !== 0 as any; else o.tGo = v; } }   // t_go
@@ -4972,7 +4973,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.standoff; if (a === null || a === undefined) { if (L || a === undefined) a = o.standoff = []; } for (let i = 0; i < L; i++) { const c = a[i], p0 = C.p; let same = !!c && c.length === 3; if (same) for (let k = 0; k < 3; k++) if (!Object.is(dv.getFloat64(p0 + 8 * k, true), c[k])) { same = false; break; } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let k = 0; k < 3; k++) (c as any)[k] = dv.getFloat64(p0 + 8 * k, true); } else { const x = new Array(3); for (let k = 0; k < 3; k++) x[k] = dv.getFloat64(p0 + 8 * k, true); a[i] = x; } } } if (a && a.length !== L) a.length = L; }   // standoff
   }
   function f_orders_OtherCast(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_11[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.team !== v) o.team = v; }   // team
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_12[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.team !== v) o.team = v; }   // team
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(922, o);   // ring
   }
   function f_orders_SquadOrdersAsideMemValue(o: any, m: number) {
@@ -5097,7 +5098,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.who; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.who = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // who
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.of; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.of = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // of
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = WORDS_121[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = WORDS_122[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.text; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.text = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // text
   }
   function f_fogofwar_FogOfWarCallStats(o: any, m: number) {
@@ -5173,7 +5174,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.who; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.who = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // who
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.text; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.text = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // text
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.cls; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.cls = v !== 0 as any; else o.cls = v; } }   // cls
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = WORDS_122[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = WORDS_123[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = b[C.p++] !== 0; const c = o.drawn; if (typeof c === 'boolean') { if (c !== v) o.drawn = v; } else if (c === null) { if (v) o.drawn = v; } else if (typeof c === 'object') { if (!v) o.drawn = null; } else if (!(c === undefined && !v)) o.drawn = v; }   // drawn
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.why; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.why = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // why
   }
@@ -5289,15 +5290,15 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.what; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.what = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // what
   }
   function f_rescue_RescueResult(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_123[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.state !== v) o.state = v; }   // state
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_124[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.grade !== v) o.grade = v; }   // grade
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_124[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.state !== v) o.state = v; }   // state
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_125[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.grade !== v) o.grade = v; }   // grade
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.why; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.why = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // why
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.hostages; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.hostages = v !== 0 as any; else o.hostages = v; } }   // hostages
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.team; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.team = v !== 0 as any; else o.team = v; } }   // team
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.secs; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.secs = v !== 0 as any; else o.secs = v; } }   // secs
   }
   function f_rescue_Def(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_125[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.role !== v) o.role = v; }   // role
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_126[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.role !== v) o.role = v; }   // role
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = b[C.p++] !== 0; const c = o.inRoom; if (typeof c === 'boolean') { if (c !== v) o.inRoom = v; } else if (c === null) { if (v) o.inRoom = v; } else if (typeof c === 'object') { if (!v) o.inRoom = null; } else if (!(c === undefined && !v)) o.inRoom = v; }   // in_room
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(926, o);   // mark
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.learned; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.learned = v !== 0 as any; else o.learned = v; } }   // learned
@@ -5306,7 +5307,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const v = b[C.p++] !== 0; const c = o.released; if (typeof c === 'boolean') { if (c !== v) o.released = v; } else if (c === null) { if (v) o.released = v; } else if (typeof c === 'object') { if (!v) o.released = null; } else if (!(c === undefined && !v)) o.released = v; }   // released
     { let c = o.burst; if (!c || typeof c !== 'object') c = o.burst = C.made("crate::nightbreach::BlindBurst"); f_nightbreach_BlindBurst(c, m + 7); }   // burst
     if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.k; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.k = v !== 0 as any; else o.k = v; } }   // k
-    if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) { const v = WORDS_126[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.crew !== v) o.crew = v; }   // crew
+    if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) { const v = WORDS_127[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.crew !== v) o.crew = v; }   // crew
     if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) { if (b[C.p++]) { const c = o.look; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.look = a; } } } else if (o.look !== null) o.look = null; }   // look
     if (b[MP + ((m + 13) >> 3)] & (1 << ((m + 13) & 7))) { if (b[C.p++]) { const c = o.spot; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.spot = a; } } } else if (o.spot !== null) o.spot = null; }   // spot
     if (b[MP + ((m + 14) >> 3)] & (1 << ((m + 14) & 7))) C.slow(927, o);   // noise0
@@ -5411,7 +5412,7 @@ export function puppetRows(C: Ctx) {
   }
   function f_pairorders_Job(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.foe; if (typeof c === 'number') { if (c !== v) o.foe = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.foe = null; } else { const r = T_GuardId()[v]; if (r !== c) o.foe = r; } }   // foe
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_127[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.mode !== v) o.mode = v; }   // mode
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_128[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.mode !== v) o.mode = v; }   // mode
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = b[C.p++] !== 0; const c = o.go; if (typeof c === 'boolean') { if (c !== v) o.go = v; } else if (c === null) { if (v) o.go = v; } else if (typeof c === 'object') { if (!v) o.go = null; } else if (!(c === undefined && !v)) o.go = v; }   // go
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = b[C.p++] !== 0; const c = o.set; if (typeof c === 'boolean') { if (c !== v) o.set = v; } else if (c === null) { if (v) o.set = v; } else if (typeof c === 'object') { if (!v) o.set = null; } else if (!(c === undefined && !v)) o.set = v; }   // set
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = b[C.p++] !== 0; const c = o.setSaid; if (typeof c === 'boolean') { if (c !== v) o.setSaid = v; } else if (c === null) { if (v) o.setSaid = v; } else if (typeof c === 'object') { if (!v) o.setSaid = null; } else if (!(c === undefined && !v)) o.setSaid = v; }   // set_said
@@ -6043,9 +6044,9 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.step; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.step = v !== 0 as any; else o.step = v; } } else if (o.step !== undefined) o.step = undefined; }   // step
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { if (b[C.p++]) { const c = o.man; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.man = a; } } } else if (o.man !== undefined) o.man = undefined; }   // man
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.pull; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.pull = v !== 0 as any; else o.pull = v; } } else if (o.pull !== undefined) o.pull = undefined; }   // pull
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = WORDS_84[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = WORDS_85[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
-    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { if (b[C.p++]) { const v = WORDS_83[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.variant !== v) o.variant = v; } else if (o.variant !== undefined) o.variant = undefined; }   // variant
+    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { if (b[C.p++]) { const v = WORDS_84[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.variant !== v) o.variant = v; } else if (o.variant !== undefined) o.variant = undefined; }   // variant
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.gunOut; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.gunOut = v !== 0 as any; else o.gunOut = v; } } else if (o.gunOut !== undefined) o.gunOut = undefined; }   // gun_out
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.gunPitch; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.gunPitch = v !== 0 as any; else o.gunPitch = v; } } else if (o.gunPitch !== undefined) o.gunPitch = undefined; }   // gun_pitch
     if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.low; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.low = v !== 0 as any; else o.low = v; } } else if (o.low !== undefined) o.low = undefined; }   // low
@@ -6057,10 +6058,10 @@ export function puppetRows(C: Ctx) {
   function f_character_HeldPose(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.yank; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.yank = v !== 0 as any; else o.yank = v; } } else if (o.yank !== undefined) o.yank = undefined; }   // yank
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.pull; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.pull = v !== 0 as any; else o.pull = v; } } else if (o.pull !== undefined) o.pull = undefined; }   // pull
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_84[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_85[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.agitation; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.agitation = v !== 0 as any; else o.agitation = v; } }   // agitation
-    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { if (b[C.p++]) { const v = WORDS_83[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.variant !== v) o.variant = v; } else if (o.variant !== undefined) o.variant = undefined; }   // variant
+    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { if (b[C.p++]) { const v = WORDS_84[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.variant !== v) o.variant = v; } else if (o.variant !== undefined) o.variant = undefined; }   // variant
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.bare !== v) o.bare = v; } else if (o.bare !== undefined) o.bare = undefined; }   // bare
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.shot; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.shot = v !== 0 as any; else o.shot = v; } } else if (o.shot !== undefined) o.shot = undefined; }   // shot
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.armed !== v) o.armed = v; } else if (o.armed !== undefined) o.armed = undefined; }   // armed
@@ -6079,7 +6080,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.reach !== v) o.reach = v; } else if (o.reach !== undefined) o.reach = undefined; }   // reach
   }
   function f_character_WorkPose(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_128[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_129[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const c = o.p; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.p = a; } } }   // p
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const c = o.n; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.n = a; } } }   // n
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
@@ -6103,7 +6104,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const c = o.back; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.back = a; } } }   // back
   }
   function f_character_AnimBigTool(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_129[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_130[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.equip; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.equip = v !== 0 as any; else o.equip = v; } }   // equip
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.windup; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.windup = v !== 0 as any; else o.windup = v; } }   // windup
@@ -6124,8 +6125,8 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.out; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.out = v !== 0 as any; else o.out = v; } } else if (o.out !== undefined) o.out = undefined; }   // out
   }
   function f_character_AnimWound(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_130[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.pose !== v) o.pose = v; }   // pose
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_131[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.at !== v) o.at = v; }   // at
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_131[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.pose !== v) o.pose = v; }   // pose
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_132[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.at !== v) o.at = v; }   // at
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.settled !== v) o.settled = v; } else if (o.settled !== undefined) o.settled = undefined; }   // settled
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.clock; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.clock = v !== 0 as any; else o.clock = v; } } else if (o.clock !== undefined) o.clock = undefined; }   // clock
   }
@@ -6202,8 +6203,8 @@ export function puppetRows(C: Ctx) {
   }
   function f_character_AnimKit(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { if (b[C.p++]) { const v = WORDS_17[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.from !== v) o.from = v; } else if (o.from !== null) o.from = null; }   // from
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { if (b[C.p++]) { const v = WORDS_17[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.to !== v) o.to = v; } else if (o.to !== null) o.to = null; }   // to
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { if (b[C.p++]) { const v = WORDS_18[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.from !== v) o.from = v; } else if (o.from !== null) o.from = null; }   // from
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { if (b[C.p++]) { const v = WORDS_18[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.to !== v) o.to = v; } else if (o.to !== null) o.to = null; }   // to
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.tA; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.tA = v !== 0 as any; else o.tA = v; } }   // t_a
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.tR; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.tR = v !== 0 as any; else o.tR = v; } }   // t_r
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.D; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.D = v !== 0 as any; else o.D = v; } }   // d
@@ -6239,7 +6240,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
   }
   function f_character_BlowRun(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_132[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.style !== v) o.style = v; }   // style
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_133[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.style !== v) o.style = v; }   // style
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.hit; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.hit = v !== 0 as any; else o.hit = v; } }   // hit
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.end; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.end = v !== 0 as any; else o.end = v; } }   // end
@@ -6249,7 +6250,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { if (b[C.p++]) { const c = o.at2; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.at2 = a; } } } else if (o.at2 !== null) o.at2 = null; }   // at2
   }
   function f_character_AnimTk(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_133[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.style !== v) o.style = v; }   // style
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_134[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.style !== v) o.style = v; }   // style
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.delay; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.delay = v !== 0 as any; else o.delay = v; } }   // delay
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.off; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.off = v !== 0 as any; else o.off = v; } }   // off
@@ -6286,7 +6287,7 @@ export function puppetRows(C: Ctx) {
   }
   function f_character_AnimLg(o: any, m: number) {
     { let c = o.w; if (!c || typeof c !== 'object') c = o.w = C.made("crate::character::Spring"); f_character_Spring(c, m + 0); }   // w
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { if (b[C.p++]) { const v = WORDS_74[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.seen !== v) o.seen = v; } else if (o.seen !== null) o.seen = null; }   // seen
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { if (b[C.p++]) { const v = WORDS_75[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.seen !== v) o.seen = v; } else if (o.seen !== null) o.seen = null; }   // seen
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1161, o);   // ch
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const c = o.pull; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.pull = a; } } }   // pull
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const c = o.lat; let same = c !== null && c !== undefined && c.length === 2; const p0 = C.p; if (same) for (let i = 0; i < 2; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 16; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 2; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(2); for (let i = 0; i < 2; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.lat = a; } } }   // lat
@@ -6315,9 +6316,9 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.shown; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.shown = v !== 0 as any; else o.shown = v; } }   // shown
   }
   function f_character_AnimSw(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { if (b[C.p++]) { if (b[C.p++]) { const v = WORDS_134[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.cur !== v) o.cur = v; } else if (o.cur !== undefined && o.cur !== null) o.cur = null; } else if (o.cur !== undefined) o.cur = undefined; }   // cur
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { if (b[C.p++]) { const v = WORDS_134[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.from !== v) o.from = v; } else if (o.from !== null) o.from = null; }   // from
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { if (b[C.p++]) { const v = WORDS_134[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.to !== v) o.to = v; } else if (o.to !== null) o.to = null; }   // to
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { if (b[C.p++]) { if (b[C.p++]) { const v = WORDS_135[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.cur !== v) o.cur = v; } else if (o.cur !== undefined && o.cur !== null) o.cur = null; } else if (o.cur !== undefined) o.cur = undefined; }   // cur
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { if (b[C.p++]) { const v = WORDS_135[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.from !== v) o.from = v; } else if (o.from !== null) o.from = null; }   // from
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { if (b[C.p++]) { const v = WORDS_135[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.to !== v) o.to = v; } else if (o.to !== null) o.to = null; }   // to
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.dur; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.dur = v !== 0 as any; else o.dur = v; } }   // dur
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = b[C.p++] !== 0; const c = o.shown; if (typeof c === 'boolean') { if (c !== v) o.shown = v; } else if (c === null) { if (v) o.shown = v; } else if (typeof c === 'object') { if (!v) o.shown = null; } else if (!(c === undefined && !v)) o.shown = v; }   // shown
@@ -6467,10 +6468,10 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1176, o);   // nums
   }
   function f_character_AnimHdIdle(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_29[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.upper !== v) o.upper = v; }   // upper
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_30[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.upper !== v) o.upper = v; }   // upper
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = b[C.p++] !== 0; const c = o.long; if (typeof c === 'boolean') { if (c !== v) o.long = v; } else if (c === null) { if (v) o.long = v; } else if (typeof c === 'object') { if (!v) o.long = null; } else if (!(c === undefined && !v)) o.long = v; }   // long
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.crouch; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.crouch = v !== 0 as any; else o.crouch = v; } }   // crouch
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { if (b[C.p++]) { const v = WORDS_134[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.carry !== v) o.carry = v; } else if (o.carry !== undefined && o.carry !== null) o.carry = null; } else if (o.carry !== undefined) o.carry = undefined; }   // carry
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { if (b[C.p++]) { const v = WORDS_135[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.carry !== v) o.carry = v; } else if (o.carry !== undefined && o.carry !== null) o.carry = null; } else if (o.carry !== undefined) o.carry = undefined; }   // carry
   }
   function f_character_GuidePin(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.i; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.i = v !== 0 as any; else o.i = v; } }   // i
@@ -6488,7 +6489,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.lastT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.lastT = v !== 0 as any; else o.lastT = v; } }   // last_t
   }
   function f_game_WitnessSawAct(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_135[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_136[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.victim; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.victim = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // victim
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
   }
@@ -6525,7 +6526,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const c = o.pos; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.pos = a; } } }   // pos
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.cell; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.cell = v !== 0 as any; else o.cell = v; } }   // cell
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.key; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.key = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // key
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = WORDS_136[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = WORDS_137[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = b[C.p++] !== 0; const c = o.hidden; if (typeof c === 'boolean') { if (c !== v) o.hidden = v; } else if (c === null) { if (v) o.hidden = v; } else if (typeof c === 'object') { if (!v) o.hidden = null; } else if (!(c === undefined && !v)) o.hidden = v; }   // hidden
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.cover; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.cover = v !== 0 as any; else o.cover = v; } }   // cover
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.dark; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.dark = v !== 0 as any; else o.dark = v; } }   // dark
@@ -6539,7 +6540,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 14) >> 3)] & (1 << ((m + 14) & 7))) C.slow(1177, o);   // samples
   }
   function f_game_GuardTaskArm0(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_137[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_138[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const c = o.pos; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.pos = a; } } }   // pos
   }
   function f_game_GuardTaskCheckOn(o: any, m: number) {
@@ -6558,7 +6559,7 @@ export function puppetRows(C: Ctx) {
   }
   function f_disarm_Strip(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_47[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_48[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = b[C.p++] !== 0; const c = o.supp; if (typeof c === 'boolean') { if (c !== v) o.supp = v; } else if (c === null) { if (v) o.supp = v; } else if (typeof c === 'object') { if (!v) o.supp = null; } else if (!(c === undefined && !v)) o.supp = v; }   // supp
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const c = o.at; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.at = a; } } }   // at
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.item; if (typeof c === 'number') { if (c !== v) o.item = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.item = null; } else { const r = T_ItemId()[v]; if (r !== c) o.item = r; } } else if (o.item !== null) o.item = null; }   // item
@@ -6572,7 +6573,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.whistle !== v) o.whistle = v; } else if (o.whistle !== undefined) o.whistle = undefined; }   // whistle
   }
   function f_game_PlayerKickTool(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_138[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_139[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.side; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.side = v !== 0 as any; else o.side = v; } }   // side
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.lead; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.lead = v !== 0 as any; else o.lead = v; } } else if (o.lead !== undefined) o.lead = undefined; }   // lead
@@ -6625,10 +6626,10 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = b[C.p++] !== 0; const c = o.atomic; if (typeof c === 'boolean') { if (c !== v) o.atomic = v; } else if (c === null) { if (v) o.atomic = v; } else if (typeof c === 'object') { if (!v) o.atomic = null; } else if (!(c === undefined && !v)) o.atomic = v; }   // atomic
   }
   function f_director_TriggerDef(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_139[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_140[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.beat; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.beat = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // beat
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.secs; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.secs = v !== 0 as any; else o.secs = v; } } else if (o.secs !== undefined) o.secs = undefined; }   // secs
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const v = WORDS_61[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.event !== v) o.event = v; } else if (o.event !== undefined) o.event = undefined; }   // event
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const v = WORDS_62[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.event !== v) o.event = v; } else if (o.event !== undefined) o.event = undefined; }   // event
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { if (b[C.p++]) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.name; if (!strEq(c, b, C.p, L)) o.name = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; } else if (o.name !== undefined) o.name = undefined; }   // name
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { if (b[C.p++]) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.volume; if (!strEq(c, b, C.p, L)) o.volume = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; } else if (o.volume !== undefined) o.volume = undefined; }   // volume
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) C.slow(1182, o);   // who
@@ -6636,7 +6637,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { if (b[C.p++]) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.label; if (!strEq(c, b, C.p, L)) o.label = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; } else if (o.label !== undefined) o.label = undefined; }   // label
   }
   function f_director_RunBurstsItemCond(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_140[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.k !== v) o.k = v; }   // k
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_141[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.k !== v) o.k = v; }   // k
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.label; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.label = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // label
   }
   function f_director_ShowStateSaved(o: any, m: number) {
@@ -6692,33 +6693,33 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.at; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.at = v !== 0 as any; else o.at = v; } }   // at
   }
   function f_director_CondArm0(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_141[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.k !== v) o.k = v; }   // k
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_142[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.k !== v) o.k = v; }   // k
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.until; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.until = v !== 0 as any; else o.until = v; } }   // until
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { if (b[C.p++]) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.label; if (!strEq(c, b, C.p, L)) o.label = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; } else if (o.label !== undefined) o.label = undefined; }   // label
   }
   function f_director_CondArm1(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_142[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.k !== v) o.k = v; }   // k
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_143[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.k !== v) o.k = v; }   // k
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.due; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.due = v !== 0 as any; else o.due = v; } }   // due
   }
   function f_director_CondArm2(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_143[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.k !== v) o.k = v; }   // k
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_144[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.k !== v) o.k = v; }   // k
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1185, o);   // test
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.label; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.label = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // label
   }
   function f_director_CondArm3(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_144[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.k !== v) o.k = v; }   // k
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_145[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_145[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.k !== v) o.k = v; }   // k
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_146[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { if (b[C.p++]) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.name; if (!strEq(c, b, C.p, L)) o.name = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; } else if (o.name !== undefined) o.name = undefined; }   // name
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1186, o);   // got
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.tick0; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.tick0 = v !== 0 as any; else o.tick0 = v; } }   // tick0
   }
   function f_director_CondArm4(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_146[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.k !== v) o.k = v; }   // k
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_147[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.k !== v) o.k = v; }   // k
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.name; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.name = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // name
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_147[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.state !== v) o.state = v; }   // state
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_148[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.state !== v) o.state = v; }   // state
   }
   function f_director_CondArm5(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_148[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.k !== v) o.k = v; }   // k
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_149[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.k !== v) o.k = v; }   // k
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1187, o);   // of
   }
   function f_hands_Lie(o: any, m: number) {
@@ -6729,7 +6730,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const c = o.kr; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.kr = a; } } }   // kr
   }
   function f_needs_Need(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_149[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_150[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.level; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.level = v !== 0 as any; else o.level = v; } }   // level
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.fillMin; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.fillMin = v !== 0 as any; else o.fillMin = v; } }   // fill_min
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.wp; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.wp = v !== 0 as any; else o.wp = v; } }   // wp
@@ -6782,8 +6783,8 @@ export function puppetRows(C: Ctx) {
   function f_wallbreak_LevelChange(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.serial; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.serial = v !== 0 as any; else o.serial = v; } }   // serial
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_150[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = WORDS_151[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.cause !== v) o.cause = v; }   // cause
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_151[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = WORDS_152[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.cause !== v) o.cause = v; }   // cause
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.id; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.id = v !== 0 as any; else o.id = v; } }   // id
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const c = o.pos; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.pos = a; } } }   // pos
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const c = o.rect; let same = c !== null && c !== undefined && c.length === 4; const p0 = C.p; if (same) for (let i = 0; i < 4; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 32; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 4; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(4); for (let i = 0; i < 4; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.rect = a; } } }   // rect
@@ -6867,8 +6868,8 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.yaw; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.yaw = v !== 0 as any; else o.yaw = v; } } else if (o.yaw !== undefined) o.yaw = undefined; }   // yaw
   }
   function f_director_LoadoutSpec(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_11[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.team !== v) o.team = v; }   // team
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { if (b[C.p++]) { const v = WORDS_40[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.weapon !== v) o.weapon = v; } else if (o.weapon !== undefined) o.weapon = undefined; }   // weapon
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_12[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.team !== v) o.team = v; }   // team
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { if (b[C.p++]) { const v = WORDS_41[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.weapon !== v) o.weapon = v; } else if (o.weapon !== undefined) o.weapon = undefined; }   // weapon
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { if (b[C.p++]) { const c = o.tint; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.tint = a; } } } else if (o.tint !== undefined) o.tint = undefined; }   // tint
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const c = o.tint2; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.tint2 = a; } } } else if (o.tint2 !== undefined) o.tint2 = undefined; }   // tint2
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.light !== v) o.light = v; } else if (o.light !== undefined) o.light = undefined; }   // light
@@ -6876,7 +6877,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.god !== v) o.god = v; } else if (o.god !== undefined) o.god = undefined; }   // god
   }
   function f_director_ManifestExpectsItem(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_152[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_153[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { if (b[C.p++]) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.program; if (!strEq(c, b, C.p, L)) o.program = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; } else if (o.program !== undefined) o.program = undefined; }   // program
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1197, o);   // beats
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.a; if (!strEq(c, b, C.p, L)) o.a = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; } else if (o.a !== undefined) o.a = undefined; }   // a
@@ -6889,7 +6890,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.what; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.what = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // what
   }
   function f_breach_OpFlow(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_153[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.st !== v) o.st = v; }   // st
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_154[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.st !== v) o.st = v; }   // st
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t0; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t0 = v !== 0 as any; else o.t0 = v; } }   // t0
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.wps; if (a === null || a === undefined) { if (L || a === undefined) a = o.wps = []; } for (let i = 0; i < L; i++) { const c = a[i], p0 = C.p; let same = !!c && c.length === 3; if (same) for (let k = 0; k < 3; k++) if (!Object.is(dv.getFloat64(p0 + 8 * k, true), c[k])) { same = false; break; } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let k = 0; k < 3; k++) (c as any)[k] = dv.getFloat64(p0 + 8 * k, true); } else { const x = new Array(3); for (let k = 0; k < 3; k++) x[k] = dv.getFloat64(p0 + 8 * k, true); a[i] = x; } } } if (a && a.length !== L) a.length = L; }   // wps
     { let c = o.sweep; if (!c || typeof c !== 'object') c = o.sweep = C.made("crate::squad::Sweep"); f_squad_Sweep(c, m + 3); }   // sweep
@@ -6950,12 +6951,12 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.lookable; if (a === null || a === undefined) { if (L || a === undefined) a = o.lookable = []; } else if (ArrayBuffer.isView(a) && (a as any).length !== L) a = o.lookable = new (a as any).constructor(L); if (L) for (let i = 0; i < L; i++) { const x = dv.getFloat64(C.p + 8 * i, true); if (!Object.is(a[i], x)) a[i] = x; } if (a && !ArrayBuffer.isView(a) && a.length !== L) a.length = L; C.p += 8 * L; }   // lookable
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = b[C.p++] !== 0; const c = o.builtOpen; if (typeof c === 'boolean') { if (c !== v) o.builtOpen = v; } else if (c === null) { if (v) o.builtOpen = v; } else if (typeof c === 'object') { if (!v) o.builtOpen = null; } else if (!(c === undefined && !v)) o.builtOpen = v; }   // built_open
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.share; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.share = v !== 0 as any; else o.share = v; } }   // share
-    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = WORDS_154[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.state !== v) o.state = v; }   // state
+    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = WORDS_155[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.state !== v) o.state = v; }   // state
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.held; if (typeof c === 'number') { if (c !== v) o.held = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.held = null; } else { const r = T_GuardId()[v]; if (r !== c) o.held = r; } } else if (o.held !== null) o.held = null; }   // held
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { const v = b[C.p++] !== 0; const c = o.hot; if (typeof c === 'boolean') { if (c !== v) o.hot = v; } else if (c === null) { if (v) o.hot = v; } else if (typeof c === 'object') { if (!v) o.hot = null; } else if (!(c === undefined && !v)) o.hot = v; }   // hot
   }
   function f_rescueflow_Job(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_155[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_156[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
     { let c = o.o; if (!c || typeof c !== 'object') c = o.o = C.made("crate::scene_scenarios::RouteOpening"); f_scene_scenarios_RouteOpening(c, m + 1); }   // o
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.A; if (typeof c === 'number') { if (c !== v) o.A = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.A = null; } else { const r = T_OrdersAssignmentId()[v]; if (r !== c) o.A = r; } }   // a
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t0; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t0 = v !== 0 as any; else o.t0 = v; } }   // t0
@@ -6985,7 +6986,7 @@ export function puppetRows(C: Ctx) {
   function f_rescueflush_Sent(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.at; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.at = v !== 0 as any; else o.at = v; } }   // at
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.n; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.n = v !== 0 as any; else o.n = v; } }   // n
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_156[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.goal !== v) o.goal = v; }   // goal
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_157[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.goal !== v) o.goal = v; }   // goal
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.via; if (a === null || a === undefined) { if (L || a === undefined) a = o.via = []; } for (let i = 0; i < L; i++) { const c = a[i], p0 = C.p; let same = !!c && c.length === 3; if (same) for (let k = 0; k < 3; k++) if (!Object.is(dv.getFloat64(p0 + 8 * k, true), c[k])) { same = false; break; } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let k = 0; k < 3; k++) (c as any)[k] = dv.getFloat64(p0 + 8 * k, true); } else { const x = new Array(3); for (let k = 0; k < 3; k++) x[k] = dv.getFloat64(p0 + 8 * k, true); a[i] = x; } } } if (a && a.length !== L) a.length = L; }   // via
   }
   function f_wallcharge_WallChargeAwayMarksValueR(o: any, m: number) {
@@ -7106,12 +7107,12 @@ export function puppetRows(C: Ctx) {
   }
   function f_holdfire_HoldfireModHOLDFIRELOGItem(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_157[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.why !== v) o.why = v; }   // why
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_158[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.why !== v) o.why = v; }   // why
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.what; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.what = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // what
   }
   function f_holdfire_State(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.liftT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.liftT = v !== 0 as any; else o.liftT = v; } }   // lift_t
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { if (b[C.p++]) { const v = WORDS_157[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.why !== v) o.why = v; } else if (o.why !== null) o.why = null; }   // why
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { if (b[C.p++]) { const v = WORDS_158[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.why !== v) o.why = v; } else if (o.why !== null) o.why = null; }   // why
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const t = T_GuardId(); let a = o.cast; if (a === null || a === undefined) { if (L || a === undefined) a = o.cast = []; } if (a && Array.isArray(a) && (a.length === 0 || typeof a[0] !== 'number')) { for (let i = 0; i < L; i++) { const v = dv.getUint32(C.p, true); C.p += 4; const r = t[v]; if (a[i] !== r) a[i] = r; } if (a.length !== L) a.length = L; } else if (a) { for (let i = 0; i < L; i++) { a[i] = dv.getUint32(C.p, true); C.p += 4; } if (a.length !== L) a.length = L; } }   // cast
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.by; if (typeof c === 'number') { if (c !== v) o.by = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.by = null; } else { const r = T_PlayerId()[v]; if (r !== c) o.by = r; } } else if (o.by !== null) o.by = null; }   // by
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.loudT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.loudT = v !== 0 as any; else o.loudT = v; } }   // loud_t
@@ -7173,7 +7174,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.door; if (typeof c === 'number') { if (c !== v) o.door = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.door = null; } else { const r = T_DoorId()[v]; if (r !== c) o.door = r; } }   // door
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.side; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.side = v !== 0 as any; else o.side = v; } }   // side
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const c = o.spot; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.spot = a; } } }   // spot
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = WORDS_158[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = WORDS_159[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.seen; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.seen = v !== 0 as any; else o.seen = v; } }   // seen
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { if (b[C.p++]) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.way; if (a === null || a === undefined) { if (L || a === undefined) a = o.way = []; } for (let i = 0; i < L; i++) { const c = a[i], p0 = C.p; let same = !!c && c.length === 3; if (same) for (let k = 0; k < 3; k++) if (!Object.is(dv.getFloat64(p0 + 8 * k, true), c[k])) { same = false; break; } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let k = 0; k < 3; k++) (c as any)[k] = dv.getFloat64(p0 + 8 * k, true); } else { const x = new Array(3); for (let k = 0; k < 3; k++) x[k] = dv.getFloat64(p0 + 8 * k, true); a[i] = x; } } } if (a && a.length !== L) a.length = L; } else if (o.way !== undefined) o.way = undefined; }   // way
@@ -7193,7 +7194,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1220, o);   // at
   }
   function f_runner_Run(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_159[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_160[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const c = o.from; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.from = a; } } }   // from
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const c = o.goal; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.goal = a; } } } else if (o.goal !== null) o.goal = null; }   // goal
@@ -7216,7 +7217,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = b[C.p++] !== 0; const c = o.live; if (typeof c === 'boolean') { if (c !== v) o.live = v; } else if (c === null) { if (v) o.live = v; } else if (typeof c === 'object') { if (!v) o.live = null; } else if (!(c === undefined && !v)) o.live = v; }   // live
   }
   function f_netquietfeed_NetFeed(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_160[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.what !== v) o.what = v; }   // what
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_161[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.what !== v) o.what = v; }   // what
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.by; if (typeof c === 'number') { if (c !== v) o.by = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.by = null; } else { const r = T_GuardId()[v]; if (r !== c) o.by = r; } } else if (o.by !== null) o.by = null; }   // by
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.who; if (typeof c === 'number') { if (c !== v) o.who = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.who = null; } else { const r = T_GuardId()[v]; if (r !== c) o.who = r; } } else if (o.who !== null) o.who = null; }   // who
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const t = T_GuardId(); let a = o.men; if (a === null || a === undefined) { if (L || a === undefined) a = o.men = []; } if (a && Array.isArray(a) && (a.length === 0 || typeof a[0] !== 'number')) { for (let i = 0; i < L; i++) { const v = dv.getUint32(C.p, true); C.p += 4; const r = t[v]; if (a[i] !== r) a[i] = r; } if (a.length !== L) a.length = L; } else if (a) { for (let i = 0; i < L; i++) { a[i] = dv.getUint32(C.p, true); C.p += 4; } if (a.length !== L) a.length = L; } }   // men
@@ -7224,7 +7225,7 @@ export function puppetRows(C: Ctx) {
   function f_netquiet_NetquietModNETQUIETLOGItem(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.id; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.id = v !== 0 as any; else o.id = v; } }   // id
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_161[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_162[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.text; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.text = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // text
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = b[C.p++] !== 0; const c = o.radio; if (typeof c === 'boolean') { if (c !== v) o.radio = v; } else if (c === null) { if (v) o.radio = v; } else if (typeof c === 'object') { if (!v) o.radio = null; } else if (!(c === undefined && !v)) o.radio = v; }   // radio
   }
@@ -7495,12 +7496,12 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.who; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.who = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // who
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.what; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.what = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // what
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = WORDS_162[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = WORDS_163[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.secs; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.secs = v !== 0 as any; else o.secs = v; } }   // secs
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getInt32(C.p, true); C.p += 4; if (o.nth !== v) o.nth = v; }   // nth
   }
   function f_doze_Doze(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_163[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_164[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.wp; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.wp = v !== 0 as any; else o.wp = v; } }   // wp
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.chair; if (typeof c === 'number') { if (c !== v) o.chair = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.chair = null; } else { const r = T_PropId()[v]; if (r !== c) o.chair = r; } } else if (o.chair !== null) o.chair = null; }   // chair
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.mon; if (typeof c === 'number') { if (c !== v) o.mon = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.mon = null; } else { const r = T_FixtureId()[v]; if (r !== c) o.mon = r; } } else if (o.mon !== null) o.mon = null; }   // mon
@@ -7518,7 +7519,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 15) >> 3)] & (1 << ((m + 15) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.lit; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.lit = v !== 0 as any; else o.lit = v; } }   // lit
     if (b[MP + ((m + 16) >> 3)] & (1 << ((m + 16) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.ask; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.ask = v !== 0 as any; else o.ask = v; } }   // ask
     if (b[MP + ((m + 17) >> 3)] & (1 << ((m + 17) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.push; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.push = v !== 0 as any; else o.push = v; } }   // push
-    if (b[MP + ((m + 18) >> 3)] & (1 << ((m + 18) & 7))) { if (b[C.p++]) { const v = WORDS_164[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.why !== v) o.why = v; } else if (o.why !== null) o.why = null; }   // why
+    if (b[MP + ((m + 18) >> 3)] & (1 << ((m + 18) & 7))) { if (b[C.p++]) { const v = WORDS_165[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.why !== v) o.why = v; } else if (o.why !== null) o.why = null; }   // why
     if (b[MP + ((m + 19) >> 3)] & (1 << ((m + 19) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.wokeAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.wokeAt = v !== 0 as any; else o.wokeAt = v; } }   // woke_at
   }
   function f_needs_NeedMem(o: any, m: number) {
@@ -7600,7 +7601,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 23) >> 3)] & (1 << ((m + 23) & 7))) { const v = b[C.p++] !== 0; const c = o.set; if (typeof c === 'boolean') { if (c !== v) o.set = v; } else if (c === null) { if (v) o.set = v; } else if (typeof c === 'object') { if (!v) o.set = null; } else if (!(c === undefined && !v)) o.set = v; }   // set
   }
   function f_darkdoor_Fear(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_165[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.act !== v) o.act = v; }   // act
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_166[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.act !== v) o.act = v; }   // act
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.door; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.door = v !== 0 as any; else o.door = v; } }   // door
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.side; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.side = v !== 0 as any; else o.side = v; } }   // side
@@ -7652,7 +7653,7 @@ export function puppetRows(C: Ctx) {
   function f_rescuecheck_State(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.nextAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.nextAt = v !== 0 as any; else o.nextAt = v; } }   // next_at
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.n; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.n = v !== 0 as any; else o.n = v; } }   // n
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_166[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.stage !== v) o.stage = v; }   // stage
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_167[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.stage !== v) o.stage = v; }   // stage
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t0; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t0 = v !== 0 as any; else o.t0 = v; } }   // t0
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.caller; if (typeof c === 'number') { if (c !== v) o.caller = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.caller = null; } else { const r = T_GuardId()[v]; if (r !== c) o.caller = r; } } else if (o.caller !== null) o.caller = null; }   // caller
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.about; if (typeof c === 'number') { if (c !== v) o.about = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.about = null; } else { const r = T_GuardId()[v]; if (r !== c) o.about = r; } } else if (o.about !== null) o.about = null; }   // about
@@ -7674,7 +7675,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const c = o.at; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.at = a; } } }   // at
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.flown; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.flown = v !== 0 as any; else o.flown = v; } }   // flown
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = b[C.p++] !== 0; const c = o.armed; if (typeof c === 'boolean') { if (c !== v) o.armed = v; } else if (c === null) { if (v) o.armed = v; } else if (typeof c === 'object') { if (!v) o.armed = null; } else if (!(c === undefined && !v)) o.armed = v; }   // armed
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = WORDS_167[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.met !== v) o.met = v; }   // met
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = WORDS_168[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.met !== v) o.met = v; }   // met
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1329, o);   // report
   }
   function f_samlook_St(o: any, m: number) {
@@ -7695,8 +7696,8 @@ export function puppetRows(C: Ctx) {
   }
   function f_nvg_Team(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_168[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.mode !== v) o.mode = v; }   // mode
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_169[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.why !== v) o.why = v; }   // why
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_169[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.mode !== v) o.mode = v; }   // mode
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_170[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.why !== v) o.why = v; }   // why
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1335, o);   // men
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.leadLitT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.leadLitT = v !== 0 as any; else o.leadLitT = v; } }   // lead_lit_t
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.huntT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.huntT = v !== 0 as any; else o.huntT = v; } }   // hunt_t
@@ -7720,7 +7721,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) { const v = b[C.p++] !== 0; const c = o.saidShot; if (typeof c === 'boolean') { if (c !== v) o.saidShot = v; } else if (c === null) { if (v) o.saidShot = v; } else if (typeof c === 'object') { if (!v) o.saidShot = null; } else if (!(c === undefined && !v)) o.saidShot = v; }   // said_shot
   }
   function f_gunhold_St(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_170[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_171[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.goT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.goT = v !== 0 as any; else o.goT = v; } }   // go_t
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { if (b[C.p++]) { const c = o.spot; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.spot = a; } } } else if (o.spot !== null) o.spot = null; }   // spot
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = b[C.p++] !== 0; const c = o.low; if (typeof c === 'boolean') { if (c !== v) o.low = v; } else if (c === null) { if (v) o.low = v; } else if (typeof c === 'object') { if (!v) o.low = null; } else if (!(c === undefined && !v)) o.low = v; }   // low
@@ -7755,7 +7756,7 @@ export function puppetRows(C: Ctx) {
   function f_clearline_ClearNote(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.who; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.who = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // who
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_171[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.what !== v) o.what = v; }   // what
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_172[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.what !== v) o.what = v; }   // what
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.by; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.by = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // by
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { if (b[C.p++]) { const c = o.at; let same = c !== null && c !== undefined && c.length === 2; const p0 = C.p; if (same) for (let i = 0; i < 2; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 16; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 2; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(2); for (let i = 0; i < 2; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.at = a; } } } else if (o.at !== null) o.at = null; }   // at
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.walk; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.walk = v !== 0 as any; else o.walk = v; } }   // walk
@@ -7786,7 +7787,7 @@ export function puppetRows(C: Ctx) {
   }
   function f_unseen_UnseenModUNSEENLOGItem(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_172[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.what !== v) o.what = v; }   // what
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_173[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.what !== v) o.what = v; }   // what
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.why; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.why = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // why
   }
   function f_unseen_State(o: any, m: number) {
@@ -7845,7 +7846,7 @@ export function puppetRows(C: Ctx) {
   }
   function f_squadthrow_SquadthrowModSQUADTHROWLOGItem(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_173[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_174[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.who; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.who = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // who
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const c = o.from; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.from = a; } } }   // from
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const c = o.at; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.at = a; } } }   // at
@@ -7854,10 +7855,10 @@ export function puppetRows(C: Ctx) {
   }
   function f_kitanim_KitanimModKITANIMLOGItem(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_174[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.what !== v) o.what = v; }   // what
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { if (b[C.p++]) { const v = WORDS_17[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.from !== v) o.from = v; } else if (o.from !== undefined && o.from !== null) o.from = null; }   // from
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const v = WORDS_17[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.to !== v) o.to = v; } else if (o.to !== undefined && o.to !== null) o.to = null; }   // to
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { if (b[C.p++]) { const v = WORDS_175[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; } else if (o.kind !== undefined) o.kind = undefined; }   // kind
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_175[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.what !== v) o.what = v; }   // what
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { if (b[C.p++]) { const v = WORDS_18[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.from !== v) o.from = v; } else if (o.from !== undefined && o.from !== null) o.from = null; }   // from
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const v = WORDS_18[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.to !== v) o.to = v; } else if (o.to !== undefined && o.to !== null) o.to = null; }   // to
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { if (b[C.p++]) { const v = WORDS_176[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; } else if (o.kind !== undefined) o.kind = undefined; }   // kind
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.secs; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.secs = v !== 0 as any; else o.secs = v; } }   // secs
   }
   function f_smokebreak_State(o: any, m: number) {
@@ -7961,7 +7962,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const c = o.from; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.from = a; } } }   // from
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const c = o.at; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.at = a; } } }   // at
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = WORDS_176[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.of !== v) o.of = v; }   // of
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = WORDS_177[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.of !== v) o.of = v; }   // of
   }
   function f_morale_Mind(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.shock; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.shock = v !== 0 as any; else o.shock = v; } }   // shock
@@ -7978,7 +7979,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.heard; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.heard = v !== 0 as any; else o.heard = v; } }   // heard
     if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) { const v = b[C.p++] !== 0; const c = o.said; if (typeof c === 'boolean') { if (c !== v) o.said = v; } else if (c === null) { if (v) o.said = v; } else if (typeof c === 'object') { if (!v) o.said = null; } else if (!(c === undefined && !v)) o.said = v; }   // said
     if (b[MP + ((m + 13) >> 3)] & (1 << ((m + 13) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.brokeT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.brokeT = v !== 0 as any; else o.brokeT = v; } }   // broke_t
-    if (b[MP + ((m + 14) >> 3)] & (1 << ((m + 14) & 7))) { const v = WORDS_177[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.act !== v) o.act = v; }   // act
+    if (b[MP + ((m + 14) >> 3)] & (1 << ((m + 14) & 7))) { const v = WORDS_178[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.act !== v) o.act = v; }   // act
     if (b[MP + ((m + 15) >> 3)] & (1 << ((m + 15) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
     if (b[MP + ((m + 16) >> 3)] & (1 << ((m + 16) & 7))) { if (b[C.p++]) { const c = o.hole; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.hole = a; } } } else if (o.hole !== null) o.hole = null; }   // hole
     if (b[MP + ((m + 17) >> 3)] & (1 << ((m + 17) & 7))) { if (b[C.p++]) { const c = o.goal; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.goal = a; } } } else if (o.goal !== null) o.goal = null; }   // goal
@@ -8001,7 +8002,7 @@ export function puppetRows(C: Ctx) {
   }
   function f_morale_MoraleModMixAtValue(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.key; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.key = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // key
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_178[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.mix !== v) o.mix = v; }   // mix
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_179[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.mix !== v) o.mix = v; }   // mix
   }
   function f_doortools_DoortoolsModSKYValue(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.n; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.n = v !== 0 as any; else o.n = v; } }   // n
@@ -8028,8 +8029,8 @@ export function puppetRows(C: Ctx) {
   function f_close_CloseModCLOSELOGItem(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.who; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.who = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // who
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_179[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.what !== v) o.what = v; }   // what
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const v = WORDS_52[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; } else if (o.kind !== null) o.kind = null; }   // kind
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_180[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.what !== v) o.what = v; }   // what
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const v = WORDS_53[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; } else if (o.kind !== null) o.kind = null; }   // kind
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.bearing; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.bearing = v !== 0 as any; else o.bearing = v; } }   // bearing
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.dist; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.dist = v !== 0 as any; else o.dist = v; } }   // dist
   }
@@ -8047,7 +8048,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = b[C.p++] !== 0; const c = o.down; if (typeof c === 'boolean') { if (c !== v) o.down = v; } else if (c === null) { if (v) o.down = v; } else if (typeof c === 'object') { if (!v) o.down = null; } else if (!(c === undefined && !v)) o.down = v; }   // down
   }
   function f_spotted_Man(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_180[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.mode !== v) o.mode = v; }   // mode
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_181[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.mode !== v) o.mode = v; }   // mode
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.since; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.since = v !== 0 as any; else o.since = v; } }   // since
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const t = T_GuardId(); let a = o.wary; if (a === null || a === undefined) { if (L || a === undefined) a = o.wary = []; } if (a && Array.isArray(a) && (a.length === 0 || typeof a[0] !== 'number')) { for (let i = 0; i < L; i++) { const v = dv.getUint32(C.p, true); C.p += 4; const r = t[v]; if (a[i] !== r) a[i] = r; } if (a.length !== L) a.length = L; } else if (a) { for (let i = 0; i < L; i++) { a[i] = dv.getUint32(C.p, true); C.p += 4; } if (a.length !== L) a.length = L; } }   // wary
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.by; if (typeof c === 'number') { if (c !== v) o.by = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.by = null; } else { const r = T_GuardId()[v]; if (r !== c) o.by = r; } } else if (o.by !== null) o.by = null; }   // by
@@ -8055,7 +8056,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.waryT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.waryT = v !== 0 as any; else o.waryT = v; } }   // wary_t
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.caughtT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.caughtT = v !== 0 as any; else o.caughtT = v; } }   // caught_t
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { if (b[C.p++]) { const c = o.spot; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.spot = a; } } } else if (o.spot !== null) o.spot = null; }   // spot
-    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { if (b[C.p++]) { const v = WORDS_181[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.what !== v) o.what = v; } else if (o.what !== null) o.what = null; }   // what
+    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { if (b[C.p++]) { const v = WORDS_182[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.what !== v) o.what = v; } else if (o.what !== null) o.what = null; }   // what
     if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.askT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.askT = v !== 0 as any; else o.askT = v; } }   // ask_t
     if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) { const v = b[C.p++] !== 0; const c = o.exposed; if (typeof c === 'boolean') { if (c !== v) o.exposed = v; } else if (c === null) { if (v) o.exposed = v; } else if (typeof c === 'object') { if (!v) o.exposed = null; } else if (!(c === undefined && !v)) o.exposed = v; }   // exposed
     if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) { const v = b[C.p++] !== 0; const c = o.trail; if (typeof c === 'boolean') { if (c !== v) o.trail = v; } else if (c === null) { if (v) o.trail = v; } else if (typeof c === 'object') { if (!v) o.trail = null; } else if (!(c === undefined && !v)) o.trail = v; }   // trail
@@ -8070,7 +8071,7 @@ export function puppetRows(C: Ctx) {
   function f_spotted_SpottedModSPOTTEDLOGItem(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.who; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.who = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // who
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_180[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.to !== v) o.to = v; }   // to
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_181[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.to !== v) o.to = v; }   // to
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.what; if (!strEq(c, b, C.p, L)) o.what = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; } else if (o.what !== null) o.what = null; }   // what
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { if (b[C.p++]) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.of; if (!strEq(c, b, C.p, L)) o.of = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; } else if (o.of !== null) o.of = null; }   // of
   }
@@ -8127,8 +8128,8 @@ export function puppetRows(C: Ctx) {
   }
   function f_silent_SilentModSILENTLOGItem(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_182[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.to !== v) o.to = v; }   // to
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_183[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.by !== v) o.by = v; }   // by
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_183[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.to !== v) o.to = v; }   // to
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_184[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.by !== v) o.by = v; }   // by
   }
   function f_silent_SilentModSeatsValue(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = b[C.p++] !== 0; const c = o.on; if (typeof c === 'boolean') { if (c !== v) o.on = v; } else if (c === null) { if (v) o.on = v; } else if (typeof c === 'object') { if (!v) o.on = null; } else if (!(c === undefined && !v)) o.on = v; }   // on
@@ -8146,7 +8147,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.wounded; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.wounded = v !== 0 as any; else o.wounded = v; } }   // wounded
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.shielded; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.shielded = v !== 0 as any; else o.shielded = v; } }   // shielded
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.stunned; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.stunned = v !== 0 as any; else o.stunned = v; } }   // stunned
-    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { if (b[C.p++]) { const v = WORDS_184[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.player !== v) o.player = v; } else if (o.player !== null) o.player = null; }   // player
+    if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { if (b[C.p++]) { const v = WORDS_185[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.player !== v) o.player = v; } else if (o.player !== null) o.player = null; }   // player
   }
   function f_frag_FragModWALLSFORValue(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.time; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.time = v !== 0 as any; else o.time = v; } }   // time
@@ -8159,7 +8160,7 @@ export function puppetRows(C: Ctx) {
   }
   function f_frag_Live(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.it; if (typeof c === 'number') { if (c !== v) o.it = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.it = null; } else { const r = T_ItemId()[v]; if (r !== c) o.it = r; } }   // it
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_11[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.side !== v) o.side = v; }   // side
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_12[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.side !== v) o.side = v; }   // side
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1384, o);   // knows
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1385, o);   // shouted
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1386, o);   // flee
@@ -8179,13 +8180,13 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.thrown; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.thrown = v !== 0 as any; else o.thrown = v; } }   // thrown
   }
   function f_teampace_Leave(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_185[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.why !== v) o.why = v; }   // why
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_186[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.why !== v) o.why = v; }   // why
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.top; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.top = v !== 0 as any; else o.top = v; } }   // top
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.until; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.until = v !== 0 as any; else o.until = v; } }   // until
   }
   function f_teampace_TeampaceModRanValue(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_186[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.why !== v) o.why = v; }   // why
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_187[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.why !== v) o.why = v; }   // why
   }
   function f_teampace_TeampaceModDashValue(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
@@ -8216,7 +8217,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1394, o);   // e
   }
   function f_hours_HoursModHOUR(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_187[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.id !== v) o.id = v; }   // id
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_188[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.id !== v) o.id = v; }   // id
   }
   function f_hours_HourState(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1395, o);   // lamps
@@ -8255,14 +8256,14 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = b[C.p++] !== 0; const c = o.rifle; if (typeof c === 'boolean') { if (c !== v) o.rifle = v; } else if (c === null) { if (v) o.rifle = v; } else if (typeof c === 'object') { if (!v) o.rifle = null; } else if (!(c === undefined && !v)) o.rifle = v; }   // rifle
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.gun; if (typeof c === 'number') { if (c !== v) o.gun = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.gun = null; } else { const r = T_FirearmId()[v]; if (r !== c) o.gun = r; } }   // gun
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.side; if (typeof c === 'number') { if (c !== v) o.side = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.side = null; } else { const r = T_FirearmId()[v]; if (r !== c) o.side = r; } }   // side
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = WORDS_15[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.slot !== v) o.slot = v; }   // slot
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = WORDS_16[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.slot !== v) o.slot = v; }   // slot
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.smoke; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.smoke = v !== 0 as any; else o.smoke = v; } }   // smoke
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.stun; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.stun = v !== 0 as any; else o.stun = v; } }   // stun
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.frags; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.frags = v !== 0 as any; else o.frags = v; } }   // frags
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.shells; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.shells = v !== 0 as any; else o.shells = v; } }   // shells
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.rings; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.rings = v !== 0 as any; else o.rings = v; } }   // rings
     if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { const v = b[C.p++] !== 0; const c = o.wand; if (typeof c === 'boolean') { if (c !== v) o.wand = v; } else if (c === null) { if (v) o.wand = v; } else if (typeof c === 'object') { if (!v) o.wand = null; } else if (!(c === undefined && !v)) o.wand = v; }   // wand
-    if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) { const v = WORDS_20[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.big !== v) o.big = v; }   // big
+    if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) { const v = WORDS_21[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.big !== v) o.big = v; }   // big
     if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.cams; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.cams = v !== 0 as any; else o.cams = v; } }   // cams
     if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) { const c = o.tint; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.tint = a; } } }   // tint
     if (b[MP + ((m + 13) >> 3)] & (1 << ((m + 13) & 7))) { const c = o.tint2; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.tint2 = a; } } }   // tint2
@@ -8336,7 +8337,7 @@ export function puppetRows(C: Ctx) {
   }
   function f_guards_Rollcall(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.nextAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.nextAt = v !== 0 as any; else o.nextAt = v; } }   // next_at
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_188[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.stage !== v) o.stage = v; }   // stage
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_189[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.stage !== v) o.stage = v; }   // stage
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t0; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t0 = v !== 0 as any; else o.t0 = v; } }   // t0
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.caller; if (typeof c === 'number') { if (c !== v) o.caller = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.caller = null; } else { const r = T_GuardId()[v]; if (r !== c) o.caller = r; } } else if (o.caller !== null) o.caller = null; }   // caller
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.missing; if (typeof c === 'number') { if (c !== v) o.missing = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.missing = null; } else { const r = T_GuardId()[v]; if (r !== c) o.missing = r; } } else if (o.missing !== null) o.missing = null; }   // missing
@@ -8458,7 +8459,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.chapter; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.chapter = v !== 0 as any; else o.chapter = v; } } else if (o.chapter !== undefined) o.chapter = undefined; }   // chapter
   }
   function f_enemysquads_Calm(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_12[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.state !== v) o.state = v; }   // state
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_13[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.state !== v) o.state = v; }   // state
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.awareness; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.awareness = v !== 0 as any; else o.awareness = v; } }   // awareness
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = b[C.p++] !== 0; const c = o.hold; if (typeof c === 'boolean') { if (c !== v) o.hold = v; } else if (c === null) { if (v) o.hold = v; } else if (typeof c === 'object') { if (!v) o.hold = null; } else if (!(c === undefined && !v)) o.hold = v; }   // hold
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = b[C.p++] !== 0; const c = o.pinned; if (typeof c === 'boolean') { if (c !== v) o.pinned = v; } else if (c === null) { if (v) o.pinned = v; } else if (typeof c === 'object') { if (!v) o.pinned = null; } else if (!(c === undefined && !v)) o.pinned = v; }   // pinned
@@ -8629,7 +8630,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.at; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.at = v !== 0 as any; else o.at = v; } }   // at
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t0; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t0 = v !== 0 as any; else o.t0 = v; } }   // t0
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.gd; if (typeof c === 'number') { if (c !== v) o.gd = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.gd = null; } else { const r = T_GuardId()[v]; if (r !== c) o.gd = r; } }   // gd
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = WORDS_189[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = WORDS_190[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.text; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.text = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // text
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.cls; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.cls = v !== 0 as any; else o.cls = v; } }   // cls
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.tpl; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.tpl = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // tpl
@@ -8690,14 +8691,14 @@ export function puppetRows(C: Ctx) {
   function f_tactics_Gate(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.door; if (typeof c === 'number') { if (c !== v) o.door = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.door = null; } else { const r = T_DoorId()[v]; if (r !== c) o.door = r; } }   // door
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.rec; if (typeof c === 'number') { if (c !== v) o.rec = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.rec = null; } else { const r = T_TacticsDangerRecId()[v]; if (r !== c) o.rec = r; } }   // rec
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_190[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_191[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t0; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t0 = v !== 0 as any; else o.t0 = v; } }   // t0
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.side; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.side = v !== 0 as any; else o.side = v; } }   // side
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.nearA; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.nearA = v !== 0 as any; else o.nearA = v; } }   // near_a
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { const c = o.spot; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.spot = a; } } }   // spot
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.face; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.face = v !== 0 as any; else o.face = v; } }   // face
-    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { const v = WORDS_191[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.role !== v) o.role = v; }   // role
+    if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { const v = WORDS_192[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.role !== v) o.role = v; }   // role
     if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.lead; if (typeof c === 'number') { if (c !== v) o.lead = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.lead = null; } else { const r = T_GuardId()[v]; if (r !== c) o.lead = r; } } else if (o.lead !== null) o.lead = null; }   // lead
     if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.slicePts; if (a === null || a === undefined) { if (L || a === undefined) a = o.slicePts = []; } for (let i = 0; i < L; i++) { const c = a[i], p0 = C.p; let same = !!c && c.length === 3; if (same) for (let k = 0; k < 3; k++) if (!Object.is(dv.getFloat64(p0 + 8 * k, true), c[k])) { same = false; break; } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let k = 0; k < 3; k++) (c as any)[k] = dv.getFloat64(p0 + 8 * k, true); } else { const x = new Array(3); for (let k = 0; k < 3; k++) x[k] = dv.getFloat64(p0 + 8 * k, true); a[i] = x; } } } if (a && a.length !== L) a.length = L; }   // slice_pts
     if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; let a = o.sliceLook; if (a === null || a === undefined) { if (L || a === undefined) a = o.sliceLook = []; } for (let i = 0; i < L; i++) { const c = a[i], p0 = C.p; let same = !!c && c.length === 3; if (same) for (let k = 0; k < 3; k++) if (!Object.is(dv.getFloat64(p0 + 8 * k, true), c[k])) { same = false; break; } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let k = 0; k < 3; k++) (c as any)[k] = dv.getFloat64(p0 + 8 * k, true); } else { const x = new Array(3); for (let k = 0; k < 3; k++) x[k] = dv.getFloat64(p0 + 8 * k, true); a[i] = x; } } } if (a && a.length !== L) a.length = L; }   // slice_look
@@ -8721,7 +8722,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 30) >> 3)] & (1 << ((m + 30) & 7))) { const v = b[C.p++] !== 0; const c = o.opened; if (typeof c === 'boolean') { if (c !== v) o.opened = v; } else if (c === null) { if (v) o.opened = v; } else if (typeof c === 'object') { if (!v) o.opened = null; } else if (!(c === undefined && !v)) o.opened = v; }   // opened
     if (b[MP + ((m + 31) >> 3)] & (1 << ((m + 31) & 7))) { const v = b[C.p++] !== 0; const c = o.crossed; if (typeof c === 'boolean') { if (c !== v) o.crossed = v; } else if (c === null) { if (v) o.crossed = v; } else if (typeof c === 'object') { if (!v) o.crossed = null; } else if (!(c === undefined && !v)) o.crossed = v; }   // crossed
     if (b[MP + ((m + 32) >> 3)] & (1 << ((m + 32) & 7))) C.slow(1442, o);   // hs
-    if (b[MP + ((m + 33) >> 3)] & (1 << ((m + 33) & 7))) { const v = WORDS_192[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.action !== v) o.action = v; }   // action
+    if (b[MP + ((m + 33) >> 3)] & (1 << ((m + 33) & 7))) { const v = WORDS_193[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.action !== v) o.action = v; }   // action
     if (b[MP + ((m + 34) >> 3)] & (1 << ((m + 34) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.thrower; if (typeof c === 'number') { if (c !== v) o.thrower = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.thrower = null; } else { const r = T_GuardId()[v]; if (r !== c) o.thrower = r; } } else if (o.thrower !== null) o.thrower = null; }   // thrower
   }
   function f_lanes_StateOwnValue(o: any, m: number) {
@@ -8729,7 +8730,7 @@ export function puppetRows(C: Ctx) {
   }
   function f_lanes_Flank(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.lane; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.lane = v !== 0 as any; else o.lane = v; } }   // lane
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_193[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_194[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const c = o.at; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.at = a; } } }   // at
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.n; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.n = v !== 0 as any; else o.n = v; } }   // n
@@ -8768,7 +8769,7 @@ export function puppetRows(C: Ctx) {
   }
   function f_lanes_Peek(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.lane; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.lane = v !== 0 as any; else o.lane = v; } }   // lane
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_194[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_195[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const c = o.home; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.home = a; } } }   // home
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const c = o.look; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.look = a; } } }   // look
@@ -8800,7 +8801,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.gatherTo; if (typeof c === 'number') { if (c !== v) o.gatherTo = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.gatherTo = null; } else { const r = T_RoomfightRoomId()[v]; if (r !== c) o.gatherTo = r; } } else if (o.gatherTo !== null) o.gatherTo = null; }   // gather_to
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { const v = b[C.p++] !== 0; const c = o.dugOnce; if (typeof c === 'boolean') { if (c !== v) o.dugOnce = v; } else if (c === null) { if (v) o.dugOnce = v; } else if (typeof c === 'object') { if (!v) o.dugOnce = null; } else if (!(c === undefined && !v)) o.dugOnce = v; }   // dug_once
     if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { const v = b[C.p++] !== 0; const c = o.ordered; if (typeof c === 'boolean') { if (c !== v) o.ordered = v; } else if (c === null) { if (v) o.ordered = v; } else if (typeof c === 'object') { if (!v) o.ordered = null; } else if (!(c === undefined && !v)) o.ordered = v; }   // ordered
-    if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) { const v = WORDS_195[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
+    if (b[MP + ((m + 10) >> 3)] & (1 << ((m + 10) & 7))) { const v = WORDS_196[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
     if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.until; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.until = v !== 0 as any; else o.until = v; } }   // until
     if (b[MP + ((m + 12) >> 3)] & (1 << ((m + 12) & 7))) { const c = o.know; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.know = a; } } }   // know
     if (b[MP + ((m + 13) >> 3)] & (1 << ((m + 13) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.knowT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.knowT = v !== 0 as any; else o.knowT = v; } }   // know_t
@@ -8860,7 +8861,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.room; if (typeof c === 'number') { if (c !== v) o.room = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.room = null; } else { const r = T_RoomfightRoomId()[v]; if (r !== c) o.room = r; } }   // room
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const c = o.at; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.at = a; } } }   // at
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t0; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t0 = v !== 0 as any; else o.t0 = v; } }   // t0
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = WORDS_196[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = WORDS_197[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = b[C.p++] !== 0; const c = o.teamIn; if (typeof c === 'boolean') { if (c !== v) o.teamIn = v; } else if (c === null) { if (v) o.teamIn = v; } else if (typeof c === 'object') { if (!v) o.teamIn = null; } else if (!(c === undefined && !v)) o.teamIn = v; }   // team_in
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.setAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.setAt = v !== 0 as any; else o.setAt = v; } }   // set_at
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { if (b[C.p++]) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.loneAt; if (c !== v ? !(c !== c && v !== v) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.loneAt = v !== 0 as any; else o.loneAt = v; } } else if (o.loneAt !== undefined) o.loneAt = undefined; }   // lone_at
@@ -8896,7 +8897,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.at; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.at = v !== 0 as any; else o.at = v; } }   // at
   }
   function f_pressure_Warn(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_197[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_198[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t0; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t0 = v !== 0 as any; else o.t0 = v; } }   // t0
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.by; if (typeof c === 'number') { if (c !== v) o.by = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.by = null; } else { const r = T_RoomfightDefId()[v]; if (r !== c) o.by = r; } }   // by
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.callT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.callT = v !== 0 as any; else o.callT = v; } }   // call_t
@@ -8915,7 +8916,7 @@ export function puppetRows(C: Ctx) {
   }
   function f_pressure_StateMarksValue(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.R; if (typeof c === 'number') { if (c !== v) o.R = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.R = null; } else { const r = T_RoomfightRoomId()[v]; if (r !== c) o.R = r; } } else if (o.R !== null) o.R = null; }   // r
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_11[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.team !== v) o.team = v; }   // team
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_12[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.team !== v) o.team = v; }   // team
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = b[C.p++] !== 0; const c = o.own; if (typeof c === 'boolean') { if (c !== v) o.own = v; } else if (c === null) { if (v) o.own = v; } else if (typeof c === 'object') { if (!v) o.own = null; } else if (!(c === undefined && !v)) o.own = v; }   // own
   }
   function f_pressure_StateWord(o: any, m: number) {
@@ -8988,7 +8989,7 @@ export function puppetRows(C: Ctx) {
   function f_buddy_Errand(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.caller; if (typeof c === 'number') { if (c !== v) o.caller = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.caller = null; } else { const r = T_RoomfightDefId()[v]; if (r !== c) o.caller = r; } }   // caller
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.buddy; if (typeof c === 'number') { if (c !== v) o.buddy = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.buddy = null; } else { const r = T_RoomfightDefId()[v]; if (r !== c) o.buddy = r; } }   // buddy
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_198[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_199[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.goAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.goAt = v !== 0 as any; else o.goAt = v; } }   // go_at
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const c = o.spot; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.spot = a; } } }   // spot
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const c = o.home; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.home = a; } } }   // home
@@ -9016,8 +9017,8 @@ export function puppetRows(C: Ctx) {
   }
   function f_powerout_Man(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.gd; if (typeof c === 'number') { if (c !== v) o.gd = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.gd = null; } else { const r = T_GuardId()[v]; if (r !== c) o.gd = r; } }   // gd
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_199[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.role !== v) o.role = v; }   // role
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_200[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_200[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.role !== v) o.role = v; }   // role
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_201[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const c = o.goal; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.goal = a; } } }   // goal
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const c = o.from; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.from = a; } } }   // from
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { if (b[C.p++]) { const c = o.watch; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.watch = a; } } } else if (o.watch !== null) o.watch = null; }   // watch
@@ -9029,7 +9030,7 @@ export function puppetRows(C: Ctx) {
   }
   function f_powerout_PowerOutEvent(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_201[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.what !== v) o.what = v; }   // what
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_202[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.what !== v) o.what = v; }   // what
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.who; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.who = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // who
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.why; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.why = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // why
   }
@@ -9041,8 +9042,8 @@ export function puppetRows(C: Ctx) {
   }
   function f_attention_Hold(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const c = o.at; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.at = a; } } }   // at
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_162[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_202[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.mode !== v) o.mode = v; }   // mode
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_163[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_203[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.mode !== v) o.mode = v; }   // mode
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t0; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t0 = v !== 0 as any; else o.t0 = v; } }   // t0
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.secs; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.secs = v !== 0 as any; else o.secs = v; } }   // secs
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.until; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.until = v !== 0 as any; else o.until = v; } }   // until
@@ -9057,7 +9058,7 @@ export function puppetRows(C: Ctx) {
   }
   function f_attention_MemCand(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const c = o.at; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.at = a; } } }   // at
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_162[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_163[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
   }
   function f_attention_MemLent(o: any, m: number) {
@@ -9067,9 +9068,9 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.noises; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.noises = v !== 0 as any; else o.noises = v; } }   // noises
   }
   function f_needs_Trip(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_149[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_150[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
     { let c = o.spot; if (!c || typeof c !== 'object') c = o.spot = C.made("crate::needs::NeedSpot"); f_needs_NeedSpot(c, m + 1); }   // spot
-    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const v = WORDS_203[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
+    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const v = WORDS_204[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { const v = b[C.p++] !== 0; const c = o.forced; if (typeof c === 'boolean') { if (c !== v) o.forced = v; } else if (c === null) { if (v) o.forced = v; } else if (typeof c === 'object') { if (!v) o.forced = null; } else if (!(c === undefined && !v)) o.forced = v; }   // forced
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t0; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t0 = v !== 0 as any; else o.t0 = v; } }   // t0
     if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.departAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.departAt = v !== 0 as any; else o.departAt = v; } }   // depart_at
@@ -9137,7 +9138,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.about; if (typeof c === 'number') { if (c !== v) o.about = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.about = null; } else { const r = T_GuardId()[v]; if (r !== c) o.about = r; } }   // about
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const c = o.goal; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.goal = a; } } }   // goal
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const c = o.from; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.from = a; } } }   // from
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = WORDS_204[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = WORDS_205[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.thereT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.thereT = v !== 0 as any; else o.thereT = v; } }   // there_t
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.tries; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.tries = v !== 0 as any; else o.tries = v; } }   // tries
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.stepT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.stepT = v !== 0 as any; else o.stepT = v; } }   // step_t
@@ -9146,7 +9147,7 @@ export function puppetRows(C: Ctx) {
   }
   function f_rescuecheck_RescueCheckEvent(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_205[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.what !== v) o.what = v; }   // what
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_206[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.what !== v) o.what = v; }   // what
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.who; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.who = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // who
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.why; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.why = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // why
   }
@@ -9179,7 +9180,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.run; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.run = v !== 0 as any; else o.run = v; } }   // run
   }
   function f_clearline_Doing(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_206[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.what !== v) o.what = v; }   // what
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_207[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.what !== v) o.what = v; }   // what
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const c = o.spot; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.spot = a; } } }   // spot
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.of; if (typeof c === 'number') { if (c !== v) o.of = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.of = null; } else { const r = T_GuardId()[v]; if (r !== c) o.of = r; } }   // of
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t0; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t0 = v !== 0 as any; else o.t0 = v; } }   // t0
@@ -9222,7 +9223,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const t = T_GuardId(); let a = o.men; if (a === null || a === undefined) { if (L || a === undefined) a = o.men = []; } if (a && Array.isArray(a) && (a.length === 0 || typeof a[0] !== 'number')) { for (let i = 0; i < L; i++) { const v = dv.getUint32(C.p, true); C.p += 4; const r = t[v]; if (a[i] !== r) a[i] = r; } if (a.length !== L) a.length = L; } else if (a) { for (let i = 0; i < L; i++) { a[i] = dv.getUint32(C.p, true); C.p += 4; } if (a.length !== L) a.length = L; } }   // men
   }
   function f_squadthrow_Walk(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_173[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_174[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const c = o.at; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.at = a; } } }   // at
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const c = o.post; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.post = a; } } }   // post
     { let c = o.arc; if (!c || typeof c !== 'object') c = o.arc = C.made("crate::squadthrow::Arc"); f_squadthrow_Arc(c, m + 3); }   // arc
@@ -9257,7 +9258,7 @@ export function puppetRows(C: Ctx) {
   }
   function f_showwhy_Owed(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.text; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.text = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // text
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_207[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.why !== v) o.why = v; }   // why
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_208[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.why !== v) o.why = v; }   // why
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.by; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.by = v !== 0 as any; else o.by = v; } }   // by
   }
   function f_showwhy_OpMemTurnsItem(o: any, m: number) {
@@ -9275,8 +9276,8 @@ export function puppetRows(C: Ctx) {
   function f_showwhy_WhyNote(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.who; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.who = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // who
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_207[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.why !== v) o.why = v; }   // why
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const v = WORDS_76[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.signal !== v) o.signal = v; } else if (o.signal !== null) o.signal = null; }   // signal
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_208[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.why !== v) o.why = v; }   // why
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const v = WORDS_77[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.signal !== v) o.signal = v; } else if (o.signal !== null) o.signal = null; }   // signal
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { if (b[C.p++]) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.line; if (!strEq(c, b, C.p, L)) o.line = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; } else if (o.line !== null) o.line = null; }   // line
   }
   function f_doorforce_Man(o: any, m: number) {
@@ -9296,7 +9297,7 @@ export function puppetRows(C: Ctx) {
   }
   function f_enemysquads_NetCheck(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.nextAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.nextAt = v !== 0 as any; else o.nextAt = v; } }   // next_at
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_208[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.stage !== v) o.stage = v; }   // stage
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_209[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.stage !== v) o.stage = v; }   // stage
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t0; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t0 = v !== 0 as any; else o.t0 = v; } }   // t0
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.caller; if (typeof c === 'number') { if (c !== v) o.caller = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.caller = null; } else { const r = T_GuardId()[v]; if (r !== c) o.caller = r; } } else if (o.caller !== null) o.caller = null; }   // caller
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.about; if (typeof c === 'number') { if (c !== v) o.about = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.about = null; } else { const r = T_EnemysquadsSquadId()[v]; if (r !== c) o.about = r; } } else if (o.about !== null) o.about = null; }   // about
@@ -9357,10 +9358,10 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.i; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.i = v !== 0 as any; else o.i = v; } }   // i
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.lostT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.lostT = v !== 0 as any; else o.lostT = v; } }   // lost_t
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = WORDS_209[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.mode !== v) o.mode = v; }   // mode
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = WORDS_210[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.mode !== v) o.mode = v; }   // mode
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.planT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.planT = v !== 0 as any; else o.planT = v; } }   // plan_t
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.waitT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.waitT = v !== 0 as any; else o.waitT = v; } }   // wait_t
-    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const v = WORDS_210[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.why !== v) o.why = v; }   // why
+    if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { const v = WORDS_211[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.why !== v) o.why = v; }   // why
     if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { const v = b[C.p++] !== 0; const c = o.nagged; if (typeof c === 'boolean') { if (c !== v) o.nagged = v; } else if (c === null) { if (v) o.nagged = v; } else if (typeof c === 'object') { if (!v) o.nagged = null; } else if (!(c === undefined && !v)) o.nagged = v; }   // nagged
     if (b[MP + ((m + 8) >> 3)] & (1 << ((m + 8) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.cueT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.cueT = v !== 0 as any; else o.cueT = v; } }   // cue_t
     if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.voiceT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.voiceT = v !== 0 as any; else o.voiceT = v; } }   // voice_t
@@ -9379,12 +9380,12 @@ export function puppetRows(C: Ctx) {
   function f_frag_BlastHit(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.id; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.id = v !== 0 as any; else o.id = v; } }   // id
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.name; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.name = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // name
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_11[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.team !== v) o.team = v; }   // team
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = WORDS_12[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.team !== v) o.team = v; }   // team
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.d; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.d = v !== 0 as any; else o.d = v; } }   // d
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.exposed; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.exposed = v !== 0 as any; else o.exposed = v; } }   // exposed
-    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = WORDS_184[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.result !== v) o.result = v; }   // result
+    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = WORDS_185[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.result !== v) o.result = v; }   // result
     if (b[MP + ((m + 6) >> 3)] & (1 << ((m + 6) & 7))) { if (b[C.p++]) { const v = b[C.p++] !== 0; if (o.down !== v) o.down = v; } else if (o.down !== undefined) o.down = undefined; }   // down
-    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { if (b[C.p++]) { const v = WORDS_211[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.behind !== v) o.behind = v; } else if (o.behind !== undefined) o.behind = undefined; }   // behind
+    if (b[MP + ((m + 7) >> 3)] & (1 << ((m + 7) & 7))) { if (b[C.p++]) { const v = WORDS_212[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.behind !== v) o.behind = v; } else if (o.behind !== undefined) o.behind = undefined; }   // behind
   }
   function f_frag_Rest(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
@@ -9435,7 +9436,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 11) >> 3)] & (1 << ((m + 11) & 7))) { const v = b[C.p++] !== 0; const c = o.again; if (typeof c === 'boolean') { if (c !== v) o.again = v; } else if (c === null) { if (v) o.again = v; } else if (typeof c === 'object') { if (!v) o.again = null; } else if (!(c === undefined && !v)) o.again = v; }   // again
   }
   function f_guards_EngageResult(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_212[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.outcome !== v) o.outcome = v; }   // outcome
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_213[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.outcome !== v) o.outcome = v; }   // outcome
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.secs; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.secs = v !== 0 as any; else o.secs = v; } }   // secs
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1471, o);   // kills
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1472, o);   // rounds
@@ -9444,7 +9445,7 @@ export function puppetRows(C: Ctx) {
   }
   function f_guards_EngageResultKillsItem(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.victim; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.victim = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // victim
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_11[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.team !== v) o.team = v; }   // team
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_12[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.team !== v) o.team = v; }   // team
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.by; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.by = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // by
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
   }
@@ -9463,7 +9464,7 @@ export function puppetRows(C: Ctx) {
   }
   function f_dialogue_RadioStateQueueItem(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.at; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.at = v !== 0 as any; else o.at = v; } }   // at
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_213[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.beat !== v) o.beat = v; }   // beat
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_214[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.beat !== v) o.beat = v; }   // beat
   }
   function f_dialogue_RadioStateReply(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.text; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.text = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // text
@@ -9480,7 +9481,7 @@ export function puppetRows(C: Ctx) {
   }
   function f_civilians_Pending(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.at; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.at = v !== 0 as any; else o.at = v; } }   // at
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_214[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_215[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.cv; if (typeof c === 'number') { if (c !== v) o.cv = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.cv = null; } else { const r = T_GuardId()[v]; if (r !== c) o.cv = r; } }   // cv
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { if (b[C.p++]) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.o; if (typeof c === 'number') { if (c !== v) o.o = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.o = null; } else { const r = T_GuardId()[v]; if (r !== c) o.o = r; } } else if (o.o !== null) o.o = null; }   // o
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { if (b[C.p++]) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.key; if (!strEq(c, b, C.p, L)) o.key = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; } else if (o.key !== undefined) o.key = undefined; }   // key
@@ -9528,7 +9529,7 @@ export function puppetRows(C: Ctx) {
   }
   function f_laststand_Mover(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.D; if (typeof c === 'number') { if (c !== v) o.D = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.D = null; } else { const r = T_RoomfightDefId()[v]; if (r !== c) o.D = r; } }   // d
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_215[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_216[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.goAt; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.goAt = v !== 0 as any; else o.goAt = v; } }   // go_at
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const c = o.spot; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.spot = a; } } }   // spot
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.tries; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.tries = v !== 0 as any; else o.tries = v; } }   // tries
@@ -9600,7 +9601,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 9) >> 3)] & (1 << ((m + 9) & 7))) { const c = o.pt; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.pt = a; } } }   // pt
   }
   function f_needs_NeedSpot(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_149[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_150[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const L = dv.getUint32(C.p, true); C.p += 4; const c = o.name; if (!strEq(c, b, C.p, L) && !(c === undefined && L === 0)) o.name = DEC.decode(b.subarray(C.p, C.p + L)); C.p += L; }   // name
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const c = o.pos; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.pos = a; } } }   // pos
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.face; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.face = v !== 0 as any; else o.face = v; } }   // face
@@ -9657,7 +9658,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.door; if (typeof c === 'number') { if (c !== v) o.door = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.door = null; } else { const r = T_DoorId()[v]; if (r !== c) o.door = r; } }   // door
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const c = o.spot; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.spot = a; } } }   // spot
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.yaw; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.yaw = v !== 0 as any; else o.yaw = v; } }   // yaw
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = WORDS_216[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = WORDS_217[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.phase !== v) o.phase = v; }   // phase
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t0; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t0 = v !== 0 as any; else o.t0 = v; } }   // t0
     if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.setT; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.setT = v !== 0 as any; else o.setT = v; } }   // set_t
   }
@@ -9674,8 +9675,8 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.w; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.w = v !== 0 as any; else o.w = v; } }   // w
   }
   function f_close_CloseWindow(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_217[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.id !== v) o.id = v; }   // id
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_52[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
+    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_218[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.id !== v) o.id = v; }   // id
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = WORDS_53[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.mid; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.mid = v !== 0 as any; else o.mid = v; } }   // mid
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.half; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.half = v !== 0 as any; else o.half = v; } }   // half
     if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.cosHalf; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.cosHalf = v !== 0 as any; else o.cosHalf = v; } }   // cos_half

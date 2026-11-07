@@ -1,7 +1,7 @@
 // THE WIRE OF A NETWORKED GAME (two-player co-op: a game server with authority, src/net/server.ts, and its clients, src/net/client.ts). What travels is the
-// INPUT TIMELINE, never the state: the game plays the same fight to the bit from its recipe and its seats' records (tools/qa/coop-check.ts, samefight-page.cjs)
-// once the senses are the CPU's and the maths the game's own, so the server decides which record each seat's tick ran on and tells everybody; a state word
-// (game/digest.ts rawBits, chained) twice a second is the alarm. Messages are JSON text over a WebSocket, numbers to the bit (cmd.ts numWord / wordNum).
+// INPUT TIMELINE, never the state: the game plays the same fight to the bit from its recipe and its seats' records on every machine (tools/qa/mpclient-page.cjs holds a
+// Chromium page to a bun server state word by state word), so the server decides which record each seat's tick ran on and tells everybody; a state word
+// (net/step.ts netWord: the game's own words, chained) twice a second is the alarm. Messages are JSON text over a WebSocket, numbers to the bit (cmd.ts numWord / wordNum).
 //   A RECORD ON THE WIRE (WireCmd) is a PlayerCmd minus what the game works out again for a seat it does not trust (cmd.ts checkCmd: the eye, the forward, both
 //   view matrices, from the look-at, the angles, the distance and the lens). EVERY seat of a networked game is such a seat on EVERY machine — the server and each
 //   client, a client's own seat too — so one working makes the view everywhere and about a hundred bytes travel a tick, not a kilobyte.
@@ -125,10 +125,10 @@ export type ToServer = Hello | Ready | In | Lost;
 /** the answer to a hello: the seat (−1 a watcher) of how many, the recipe to stand the game from, and how many ticks have run (they follow, as `tape` messages) */
 export interface Welcome { k: 'welcome'; proto: number; game: string; build: string; seat: number; seats: number; hz: number; recipe: Recipe; tick: number; state: NetState; }
 /** tick `t` as it ran: each seat's record (0 = the seat's record of the tick before with its edges off), and every `wordEvery` ticks the state word after it */
-export interface Tick { k: 't'; t: number; c: (WireCmd | 0)[]; w?: string; }
+export interface Tick { k: 't'; t: number; c: (WireCmd | 0)[]; w?: string; /** with `w`: the wider word (net/step.ts netWatch), watched and never an alarm */ v?: string; }
 /** a stretch of the run for whoever is behind (a joiner; a connection that was backed up): ticks `from` on, each as a Tick's `c` (and `w` where the tick carried
  *  one). A stretch may begin before the tick its reader is due: he passes over what he has */
-export interface Tape { k: 'tape'; from: number; ticks: { c: (WireCmd | 0)[]; w?: string }[]; }
+export interface Tape { k: 'tape'; from: number; ticks: { c: (WireCmd | 0)[]; w?: string; v?: string }[]; }
 /** how your records are arriving: when tick `t` ran the server held `l` of yours for later ticks (under NET.lead: send sooner; over NET.leadMax: later) */
 export interface Pace { k: 'pace'; t: number; l: number; }
 /** `names`: each seat's player's name as his client last said it ('' = none), kept when he leaves */

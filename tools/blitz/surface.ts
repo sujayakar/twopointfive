@@ -8,10 +8,11 @@ import CALLS from './calls.json';
 import TAPS from './taps.json';
 import { WEAPONS } from '../../src/game/weapons';
 import { simRandom } from '../../src/math/dice';
+import { RAW } from '../../src/math/side';
 const PASS = Symbol('run the TypeScript');
 const DIE: { f: (() => number) | null } = { f: null }; (globalThis as any).__tpsRoll = () => { if (!DIE.f) throw new Error('the call surface: the Rust game asked a die no caller handed in'); return DIE.f(); };
 const DEC = new TextDecoder();
-export interface SurfaceHost { g: any; knobs: Record<string, unknown>; surfaceOpen(): boolean; surfaceDispatching(): boolean; surfaceCall(row: number, bytes: Uint8Array): Uint8Array; count?(s: string): void }
+export interface SurfaceHost { g: any; knobs: Record<string, unknown>; surfaceOpen(): boolean; surfaceDispatching(): boolean; surfaceCall(row: number, bytes: Uint8Array, view?: number): Uint8Array; count?(s: string): void }
 const TALLY: any = (globalThis as any).__tpsTally ?? { crossed: 0, pass() {} };   // (expose.ts keeps it, from before any game is stood, and prints it)
 const passed = (key: string, how: 'noHost' | 'noRow' | 'unlisted' | 'closed') => TALLY.pass(key, how);
 // (no list of every host that ever stood: it kept every game of a process alive, 11 MB a game; a call's game is its receiver's, else the game stood last)
@@ -39,6 +40,8 @@ function val(n: any, I: In, bk: any): any { const dv = I.dv; switch (n.k) {
 // A ROW IS NAMED BY ITS NUMBER (`id`), which is the Rust dispatcher's arm (rust/game/src/call_gen.rs), not by its place in the file: a row taken off the
 // table leaves a hole, and no other row moves. (Taken off so far: the picture's own functions, whose TypeScript body is the whole of them: SURFACE.md.)
 const ROWS: any[] = []; for (const r of (CALLS as any).rows) ROWS[r.id] = r;
+/** A SEAT'S VIEW AMONG THE ARGUMENTS SAYS WHOSE THE CALL IS. In the TypeScript a rule handed a view read "the player" through it; the Rust game keeps those fields on Game for whichever seat stands there, so the call runs under that seat. By what the value is, for every row (a one-seat game's Game is no view: -1, the game as it stands) */
+function viewSeat(self: any, args: any[]): number { for (const a of [self, self?.g, ...args]) if (a && typeof a === 'object' && a[RAW] && a.seat) return a.seat.index; return -1; }
 function call(row: number, self: any, args: any[]): any { const H = hostOf(self, args); if (!H) { passed(ROWS[row].key, 'noHost'); return PASS; } if (H.surfaceDispatching()) return undefined; if (!H.surfaceOpen()) { passed(ROWS[row].key, 'closed'); return PASS; }
   // A DIE THE CALLER HANDS IN (`rnd`): the game's own is no argument at all. A tool's own is asked as the Rust function asks it, by the face's import `face_roll`
   const C = ROWS[row], g = H.g, parts: [string, unknown][] = []; let die: (() => number) | null = null; for (const a of C.args) { if (a.ty === 'rnd') { const f = args[a.from]; die = typeof f === 'function' && f !== simRandom ? f : null; parts.push(['bool', die !== null]); continue; } parts.push([a.ty, a.from === 'this' ? self : args[a.from]]); }
@@ -50,7 +53,7 @@ function call(row: number, self: any, args: any[]): any { const H = hostOf(self,
   // bytes are written first and the exporter counts every id it wrote for a row the Rust game has not got (export.ts PAST): a door gate made by hand
   // on the puppet and handed to `DoorTools.order` went over as gate 0 of a table of none, and the Rust body indexed past it
   const past0 = PAST.n, bytes = exportPart(g, H.knobs, parts); if (PAST.n !== past0) { passed(C.key, 'noRow'); H.count?.(`passed, an argument holds a row Rust has not got (${PAST.id}): ${C.key}`); return PASS; }
-  TALLY.crossed++; H.count?.(`crossed: ${C.key}`); const dieWas = DIE.f; DIE.f = die; let out: Uint8Array; try { out = H.surfaceCall(row, bytes); } finally { DIE.f = dieWas; } const bk = bookOf(g), I = new In(out); let r: any;
+  TALLY.crossed++; H.count?.(`crossed: ${C.key}`); const dieWas = DIE.f; DIE.f = die; let out: Uint8Array; try { out = H.surfaceCall(row, bytes, viewSeat(self, args)); } finally { DIE.f = dieWas; } const bk = bookOf(g), I = new In(out); let r: any;
   if (C.result) { if (I.b[I.p++]) { throw new Error(val({ k: 'str' }, I, bk)); } } if (C.ret) r = val(parse(C.ret), I, bk);
   for (const a of C.args) if (a.mut) { const v = val(parse(a.ty), I, bk), t = a.from === 'this' ? self : args[a.from]; if (Array.isArray(t) && Array.isArray(v)) { t.length = v.length; for (let i = 0; i < v.length; i++) t[i] = v[i]; } else if (t && typeof t === 'object' && v && typeof v === 'object') Object.assign(t, v); }
   return r; }

@@ -48,7 +48,7 @@ async function recipeOfSetup(setup: Setup): Promise<Recipe> {
 let stood, recipe: Recipe;
 try {
   recipe = asked.recipe ?? await recipeOfSetup({ search: String(asked.scenario ?? ''), seed: Number(asked.seed), ...(asked.knobs ? { tables: asked.knobs } : {}) });
-  stood = await standRecipe(recipe);
+  stood = await standRecipe(recipe); stood.begin();   // (the Rust game's start is made here, before anybody is let in: the first tick of the fight then costs a tick)
 } catch (e) { console.error(`server.ts: ${(e as Error).message}`); process.exit(1); }
 for (const w of stood.warnings) say(`note: ${w}`);
 const seatsN = stood.W.game.seats.length as number;
@@ -61,7 +61,7 @@ const { NetServer } = await import(`${ROOT}/src/net/server.ts`), { NET } = await
 // `wordEvery` ticks late). The state word is the game's own and needs no copy.
 let quiet = false;
 const step = (cmds: PlayerCmd[]): void => { if (!quiet) { stood.quiet(true); quiet = true; } stood.step(cmds); if (stood.ticks % NET.wordEvery === 0) { stood.quiet(false); quiet = false; } };
-const core = new NetServer({ now: () => performance.now(), step, word: () => stood.word(), ended: () => stood.ended() },
+const core = new NetServer({ now: () => performance.now(), step, word: () => stood.word(), watch: () => stood.watch(), ended: () => stood.ended() },
   { game, build, recipe, seatKeys, idleS: num('MP_IDLE_S', 60), maxS: num('MP_MAX_S', 3600), graceS: num('MP_GRACE_S', 15) });
 
 // ---- the heartbeat

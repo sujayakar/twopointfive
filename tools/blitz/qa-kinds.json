@@ -9,10 +9,6 @@
 "word": "ts",
 "why": "calls the tick's rules between ticks and wraps a rule's tick (kind iv-a)"
 },
-"tools/qa/coop-check.ts": {
-"word": "none",
-"why": "it holds two TypeScript engines (bun and node) to each other bit for bit, and node has no bridge preload: a check of the TypeScript tick's arithmetic"
-},
 "tools/qa/exact-check.ts": {
 "word": "none",
 "why": "it holds the game's own maths under bun to the same under node, and node has no bridge preload: a check of the TypeScript tick's arithmetic"
@@ -95,93 +91,9 @@
 "checkpoint-turn": [
 "SAVETIMELINE.turn=false"
 ],
-"civilians-identity": [
-"CIV.greet=false"
-],
-"close-dark": [
-"STALK.on=false",
-"CLOSE.noKnife=false",
-"CLOSE.rmbHold=false",
-"CLOSE.dark=false"
-],
-"close-duo": [
-"STALK.on=false",
-"CLOSE.noKnife=false",
-"CLOSE.rmbHold=false",
-"NETQUIET.on=false",
-"CLOSE.dark=false",
-"CLOSE.on=false"
-],
-"close-grab": [
-"STALK.on=false",
-"CLOSE.noKnife=false",
-"CLOSE.rmbHold=false",
-"CLOSE.on=false"
-],
-"close-held": [
-"STALK.on=false",
-"CLOSE.noKnife=false",
-"CLOSE.rmbHold=false",
-"CLOSE.mode=false"
-],
-"close-marks": [
-"STALK.on=false",
-"CLOSE.noKnife=false",
-"CLOSE.rmbHold=false",
-"CLOSE.marks=true"
-],
-"close-melee": [
-"STALK.on=false",
-"CLOSE.noKnife=false",
-"CLOSE.rmbHold=false",
-"CLOSE.alertStrike=false",
-"CLOSE.lethal=false"
-],
-"close-mode": [
-"STALK.on=false",
-"CLOSE.noKnife=false",
-"CLOSE.rmbHold=false"
-],
-"close-offer": [
-"STALK.on=false",
-"CLOSE.noKnife=false",
-"CLOSE.rmbHold=false"
-],
-"close-rows": [
-"STALK.on=false",
-"CLOSE.noKnife=false",
-"CLOSE.rmbHold=false",
-"CLOSE.lethal=false",
-"CLOSE.on=false"
-],
-"close-seat": [
-"STALK.on=false",
-"CLOSE.noKnife=false",
-"CLOSE.rmbHold=false"
-],
-"close-tell": [
-"STALK.on=false",
-"CLOSE.noKnife=false",
-"CLOSE.rmbHold=false",
-"CLOSE.ready=false"
-],
-"close-windows": [
-"STALK.on=false",
-"CLOSE.noKnife=false",
-"CLOSE.rmbHold=false"
-],
 "deathrecap": [
 "RECAP.on=false",
 "RECAP.live=false"
-],
-"depot-run": [
-"ROOMCLEAR.pairOnly=true"
-],
-"disarm": [
-"HOLD.stripFirst=false",
-"STALK.on=false",
-"CLOSE.noKnife=false",
-"HOLD.disarm=false"
 ],
 "farcalm": [
 "GUARD_EYE.farCalm=false",
@@ -196,14 +108,6 @@
 ],
 "fog-filed": [
 "FOG.things=false"
-],
-"fresh-start": [
-"SAMESTART.on=false",
-"ROOMCLEAR.fresh=false"
-],
-"guidewords": [
-"WORDS.guide=false",
-"WORDS.on=false"
 ],
 "gunlook-bare": [
 "OWNBLOW.on=false",
@@ -272,12 +176,6 @@
 "OWNBLOW.on=false",
 "HANDS.team=false"
 ],
-"handslow": [
-"STALK.on=false",
-"CLOSE.noKnife=false",
-"CLOSE.rmbHold=false",
-"CLOSE.handsLow=false"
-],
 "handwork-swap": [
 "HANDWORK.on=false",
 "HANDWORK.radio=false"
@@ -286,19 +184,8 @@
 "OWNBLOW.on=false",
 "HANDWORK.on=false"
 ],
-"haul": [
-"CLOSE.noKnife=false",
-"CLOSE.rmbHold=false",
-"TAKEDOWN.haul=false"
-],
 "headmark": [
 "OWNBLOW.on=false"
-],
-"heldclicks": [
-"STALK.on=false",
-"CLOSE.noKnife=false",
-"CLOSE.rmbHold=false",
-"CLOSE.heldClicks=false"
 ],
 "inhand": [
 "FOG.cone=true",
@@ -361,9 +248,6 @@
 "KITDEAL.on=false",
 "KITDEAL.more=false"
 ],
-"kitlent-tiles": [
-"GUNSLOTS.on=false"
-],
 "kitstealth": [
 "OWNBLOW.on=false",
 "KITDEAL.on=false"
@@ -381,49 +265,6 @@
 "OWNBLOW.on=false",
 "KITDEAL.stealth=false"
 ],
-"lineoffire-behind": [
-"CLEARLINE.holdStep=false"
-],
-"lineoffire-corridor": [
-"CLEARLINE.holdStep=false",
-"CLEARLINE.cover=false"
-],
-"lineoffire-edge": [
-"CLEARLINE.holdStep=false"
-],
-"lineoffire-entry": [
-"CLEARLINE.holdStep=false",
-"FRAG.defenders=false",
-"CLEARLINE.inEntry=false"
-],
-"lineoffire-far": [
-"CLEARLINE.holdStep=false"
-],
-"lineoffire-holdstep": [
-"CLEARLINE.holdStep=false"
-],
-"lineoffire-mate": [
-"CLEARLINE.holdStep=false"
-],
-"lineoffire-off": [
-"CLEARLINE.holdStep=false"
-],
-"lineoffire-planted": [
-"CLEARLINE.holdStep=false"
-],
-"lineoffire-still": [
-"CLEARLINE.holdStep=false"
-],
-"lineoffire-walk": [
-"CLEARLINE.holdStep=false"
-],
-"noknife": [
-"STALK.on=false",
-"CLOSE.noKnife=false"
-],
-"noshield-staged": [
-"ISSUE.on=false"
-],
 "owncharge-door": [
 "OWNBLOW.on=false",
 "OWNCHARGE.on=false"
@@ -437,37 +278,6 @@
 "packside": [
 "PACKSIDE.on=false"
 ],
-"pellets-identity": [
-"GLASSPEN.on=false",
-"GLASSFX.on=false"
-],
-"qrf-element": [
-"RESPONSE.on=false"
-],
-"qrf-gating": [
-"RESPONSE.on=false"
-],
-"qrf-limits": [
-"RESPONSE.on=false"
-],
-"qrf-perimeter": [
-"RESPONSE.on=false"
-],
-"qrf-reset": [
-"RESPONSE.on=false"
-],
-"qrf-timeline": [
-"RESPONSE.on=false"
-],
-"qrf-trigger": [
-"RESPONSE.on=false"
-],
-"qrf-wave": [
-"RESPONSE.on=false"
-],
-"radiohome": [
-"WORDS.radioHome=false"
-],
 "rails": [
 "AUTOPILOT.plain=false",
 "AUTOPILOT.restack=false",
@@ -475,102 +285,10 @@
 "STALK.key=false",
 "FOG.eyes=5"
 ],
-"reachup": [
-"STALK.on=false",
-"CLOSE.handsLow=false",
-"CLOSE.noKnife=false",
-"CLOSE.rmbHold=false",
-"CLOSE.reachUp=false"
-],
-"rmbhold": [
-"STALK.key=false",
-"STALK.on=false",
-"STALK.low=false",
-"CLOSE.noKnife=false",
-"CLOSE.rmbHold=false"
-],
-"roomclear-ends": [
-"ROOMCLEAR.pairOnly=true",
-"WORDS.on=false"
-],
-"roomclear-restart": [
-"SAMESTART.on=false",
-"ROOMCLEAR.reroll=false"
-],
-"roomclear-rooms": [
-"NIGHTBREACH.blindFire=false"
-],
-"roomfit-walk": [
-"NIGHTBREACH.blindFire=false"
-],
 "savetimeline": [
 "MOVES.on=0",
 "SAVETIMELINE.since=false",
 "SAVETIMELINE.on=false"
-],
-"silent-boot": [
-"DOORTOOLS.testDoor=false",
-"DOORTOOLS.outsidePlain=false",
-"KITDEAL.more=false",
-"SILENT.bootWedged=false"
-],
-"silent-cans": [
-"DOORTOOLS.testDoor=false",
-"DOORTOOLS.outsidePlain=false"
-],
-"silent-doors": [
-"DOORTOOLS.testDoor=false",
-"DOORTOOLS.outsidePlain=false",
-"SILENT.picks=false"
-],
-"silent-fire": [
-"DOORTOOLS.testDoor=false",
-"DOORTOOLS.outsidePlain=false",
-"SILENT.holdFire=false"
-],
-"silent-hud": [
-"DOORTOOLS.testDoor=false",
-"DOORTOOLS.outsidePlain=false"
-],
-"silent-hush": [
-"DOORTOOLS.testDoor=false",
-"DOORTOOLS.outsidePlain=false"
-],
-"silent-off": [
-"DOORTOOLS.testDoor=false",
-"DOORTOOLS.outsidePlain=false",
-"SILENT.kicks=false"
-],
-"silent-order": [
-"DOORTOOLS.testDoor=false",
-"DOORTOOLS.outsidePlain=false",
-"DOORTOOLS.wordOnKey=false"
-],
-"silent-pick": [
-"KITDEAL.more=false",
-"DOORTOOLS.testDoor=false",
-"DOORTOOLS.outsidePlain=false"
-],
-"silent-set": [
-"DOORTOOLS.testDoor=false",
-"DOORTOOLS.outsidePlain=false",
-"SILENT.stackSet=false"
-],
-"silent-start": [
-"NVG.on=false",
-"DOORTOOLS.testDoor=false",
-"DOORTOOLS.outsidePlain=false"
-],
-"silent-tools": [
-"KITDEAL.more=false",
-"DOORTOOLS.testDoor=false",
-"DOORTOOLS.outsidePlain=false",
-"SILENT.toolsLoud=false"
-],
-"silent-walk": [
-"DOORTOOLS.testDoor=false",
-"DOORTOOLS.outsidePlain=false",
-"NVG.on=false"
 ],
 "smokebreak": [
 "SMOKEBREAK.on=false"
@@ -583,189 +301,6 @@
 "SNATCHOUT.hold=false",
 "RESPONSE.on=false",
 "SNATCHOUT.on=false"
-],
-"squadnet-clear": [
-"AUTOPILOT.plain=false",
-"AUTOPILOT.restack=false"
-],
-"squadnet-end": [
-"AUTOPILOT.plain=false",
-"AUTOPILOT.restack=false",
-"SQUADNET.endCall=false"
-],
-"squadnet-net": [
-"AUTOPILOT.plain=false",
-"AUTOPILOT.restack=false",
-"SQUADNET.why=false",
-"SQUADNET.clear=false",
-"SQUADNET.on=false"
-],
-"squadnet-why": [
-"AUTOPILOT.plain=false",
-"AUTOPILOT.restack=false",
-"SQUADNET.endCall=false"
-],
-"stay-open-after": [
-"DOORSTAY.on=false"
-],
-"stay-open-floor": [
-"DOORSTAY.on=false"
-],
-"stay-open-off": [
-"DOORSTAY.on=false"
-],
-"stay-open-pass": [
-"DOORSTAY.on=false"
-],
-"stealthpose-cable": [
-"STEALTHPOSE.nod=false",
-"STEALTHPOSE.on=false"
-],
-"stealthpose-creep": [
-"STALK.on=false",
-"CLOSE.noKnife=false",
-"CLOSE.rmbHold=false",
-"STEALTHPOSE.on=false"
-],
-"stealthpose-standdown": [
-"STEALTHPOSE.on=false"
-],
-"sticky-default": [
-"SLOTSETUP.on=false",
-"SLOTSETUP.pop=false",
-"GUNSLOTS.on=false",
-"FOG.cone=true",
-"FOG.own=true"
-],
-"sticky-fly": [
-"SLOTSETUP.on=false",
-"SLOTSETUP.pop=false",
-"GUNSLOTS.on=false"
-],
-"sticky-fog": [
-"SLOTSETUP.on=false",
-"SLOTSETUP.pop=false",
-"GUNSLOTS.on=false"
-],
-"sticky-kit": [
-"SLOTSETUP.on=false",
-"SLOTSETUP.pop=false",
-"GUNSLOTS.on=false"
-],
-"sticky-mark": [
-"FOG.cone=true",
-"SLOTSETUP.on=false",
-"SLOTSETUP.pop=false",
-"GUNSLOTS.on=false",
-"STICKY.mark=false"
-],
-"sticky-save": [
-"SLOTSETUP.on=false",
-"SLOTSETUP.pop=false",
-"GUNSLOTS.on=false"
-],
-"sticky-take": [
-"SLOTSETUP.on=false",
-"SLOTSETUP.pop=false",
-"GUNSLOTS.on=false",
-"STICKY.take=false"
-],
-"sticky-wand": [
-"SLOTSETUP.on=false",
-"SLOTSETUP.pop=false",
-"GUNSLOTS.on=false",
-"QUIETFOG.wand=false",
-"WAND.on=false"
-],
-"sticky-ways": [
-"SLOTSETUP.on=false",
-"SLOTSETUP.pop=false",
-"TOLD.on=false",
-"TOLD.fogOff=false",
-"GUNSLOTS.on=false"
-],
-"takedown-beats": [
-"HOLD.disarm=false",
-"CLOSE.noKnife=false",
-"CLOSE.rmbHold=false",
-"TAKEDOWN.haul=false",
-"TAKEDOWN.chokeBeats=false"
-],
-"takedown-kill": [
-"CLOSE.noKnife=false",
-"CLOSE.rmbHold=false",
-"TAKEDOWN.kill=false"
-],
-"takedown-lower": [
-"TAKEDOWN.haul=false",
-"TAKEDOWN.lower=false",
-"TAKEDOWN.on=false",
-"TAKEDOWN.chokeBeats=false"
-],
-"takedown-rules": [
-"TAKEDOWN.on=false"
-],
-"threshold-doors": [
-"DOORTOOLS.wordNoCan=false"
-],
-"threshold-first": [
-"DOORTOOLS.wordNoCan=false",
-"DOORTOOLS.outsidePlain=false",
-"DOORTOOLS.thrFirstOnly=false"
-],
-"threshold-four": [
-"DOORTOOLS.wordNoCan=false"
-],
-"threshold-grenade": [
-"DOORTOOLS.wordNoCan=false",
-"DOORTOOLS.thrHand=false",
-"DOORTOOLS.thrFragHold=false"
-],
-"threshold-hand": [
-"DOORTOOLS.wordNoCan=false",
-"DOORTOOLS.thrNoCan=false",
-"DOORTOOLS.thrFragHold=false",
-"DOORTOOLS.thrHand=false"
-],
-"threshold-hold": [
-"SQUADDEAL.on=false",
-"DOORTOOLS.wordNoCan=false",
-"DOORTOOLS.thrPie=false",
-"DOORTOOLS.behindSam=false"
-],
-"threshold-last": [
-"DOORTOOLS.thrLast=false",
-"DOORTOOLS.wordNoCan=false"
-],
-"threshold-leaf": [
-"DOORTOOLS.wordNoCan=false",
-"DOORTOOLS.thrDoorsLeaf=false"
-],
-"threshold-pair": [
-"DOORTOOLS.wordNoCan=false"
-],
-"trail-doors": [
-"ORDERS.trailDoors=false"
-],
-"wand-kit": [
-"WAND.mate=false",
-"KITTREE.on=false"
-],
-"wand-look": [
-"WAND.nv=false",
-"WAND.on=false",
-"FOG.cone=true"
-],
-"wand-mate": [
-"KITDEAL.on=false",
-"WAND.mate=false",
-"FOG.own=true"
-],
-"wand-off": [
-"WAND.on=false"
-],
-"wand-quick": [
-"WAND.quick=false"
 ],
 "weapons-identity": [
 "SLOTSETUP.on=false",
@@ -821,7 +356,6 @@
 "breaks-determinism": "the scan for writes by name: it writes the game's fields between ticks (kind ii)",
 "breaks-furniture": "the scan for writes by name: it writes the game's fields between ticks (kind ii)",
 "breaks-look": "the scan for writes by name: it writes the game's fields between ticks (kind ii)",
-"breaks-off": "the scan for writes by name: it writes the game's fields between ticks (kind ii)",
 "breaks-overflow": "the scan for writes by name: it writes the game's fields between ticks (kind ii)",
 "breaks-wall": "the scan for writes by name: it writes the game's fields between ticks (kind ii)",
 "charmats-cast": "a look: red on the Rust game by input alone (a cast man's cloth tint with the switch off), kind i",
@@ -919,7 +453,6 @@
 "kitanim",
 "kitcan",
 "kitdeal",
-"kitlent",
 "kitpaste",
 "kittree",
 "laststand",
@@ -976,7 +509,6 @@
 "sneak",
 "spotted",
 "squadnet",
-"squadplay",
 "squadsmoke",
 "standoff",
 "startfile",
@@ -1022,9 +554,7 @@
 "lasers",
 "marksight",
 "outerwall-hard",
-"outerwall-inside",
 "outerwall-live",
-"outerwall-off",
 "outerwall-reset",
 "outerwall-rooms",
 "outerwall-sam",
@@ -1087,7 +617,6 @@
 "wallcharge-cost",
 "wallcharge-hold",
 "wallcharge-menu",
-"wallcharge-off",
 "wallcharge-refusals",
 "wallcharge-reset",
 "wallcharge-sam",
@@ -1175,7 +704,6 @@
 "breaks-determinism": "ii",
 "breaks-furniture": "ii",
 "breaks-look": "ii",
-"breaks-off": "ii",
 "breaks-overflow": "ii",
 "breaks-shapes": "ii",
 "breaks-studs": "ii",
@@ -1189,11 +717,7 @@
 "burst-whole": "iii",
 "burstglass": "iii",
 "by-eye": "iv-a",
-"calls-held": "iii",
 "calls-lastseen": "iii",
-"calls-leave": "iii",
-"calls-menu": "iii",
-"calls-rally": "iii",
 "calls-shipped": "iii",
 "calmtorch": "iii",
 "camspace": "0",
@@ -1224,7 +748,6 @@
 "civilians-comply": "iii",
 "civilians-determinism": "iii",
 "civilians-hearing": "iii",
-"civilians-identity": "iii",
 "civilians-phone": "iii",
 "civilians-scoring": "iii",
 "civilians-sight": "iii",
@@ -1234,7 +757,6 @@
 "close-dark": "iii",
 "close-duo": "iv-b",
 "close-grab": "iii",
-"close-harness": "iii",
 "close-held": "iii",
 "close-marks": "iii",
 "close-melee": "iii",
@@ -1252,7 +774,6 @@
 "consulate-run": "i",
 "consulate-stage": "iii",
 "controls-behind": "iii",
-"cornerlead-corners": "iii",
 "cornerlead-lead": "iii",
 "corpse": "iii",
 "corridor": "0",
@@ -1261,7 +782,6 @@
 "cover-openings": "iii",
 "cover-order": "iii",
 "cover-settle": "iii",
-"cover-side": "iii",
 "cover-step": "iii",
 "cover-walk": "iii",
 "crouchrun": "iii",
@@ -1299,7 +819,6 @@
 "decals-sites": "iv-a",
 "defuse": "iii",
 "depot-doors": "iii",
-"depot-home": "iii",
 "depot-level": "ii",
 "depot-openings": "iii",
 "depot-run": "iii",
@@ -1342,7 +861,6 @@
 "doorforce": "iii",
 "doorlook": "iii",
 "doormenu-drawn": "iii",
-"doormenu-knobs": "iii",
 "doormenu-man": "iii",
 "doormenu-open": "iii",
 "doormenu-rows": "iii",
@@ -1361,7 +879,6 @@
 "doortools-firstman": "iii",
 "doortools-lights": "iii",
 "doortools-menu": "iii",
-"doortools-outside": "iii",
 "doze": "iii",
 "draworder": "ii",
 "editor-doc": "iv-b",
@@ -1375,7 +892,6 @@
 "enemysquads-stage": "iv-a",
 "entrypoints-count": "ii",
 "entrypoints-known": "ii",
-"entrypoints-off": "iv-a",
 "everygone": "iv-a",
 "evictpop": "iv-a",
 "far-refix": "iii",
@@ -1439,11 +955,9 @@
 "frag-react": "iv-a",
 "frag-theirs": "iv-a",
 "frag-wallflee": "iv-a",
-"frameholds-boot": "iv-a",
 "frameholds-sam": "iv-a",
 "frameholds-tools": "iv-a",
 "frameholds-wedge": "iii",
-"fresh-start": "ii",
 "friendlyfire": "iv-b",
 "friends": "iv-b",
 "furnblast-break": "iii",
@@ -1498,7 +1012,6 @@
 "grab-walk": "iii",
 "grabvoice": "iii",
 "guard-key": "iv-a",
-"guidewords": "ii",
 "gunhand-reload": "ii",
 "gunhand-throw": "iv-a",
 "gunhand-whistle": "iii",
@@ -1523,17 +1036,14 @@
 "gunwall": "iii",
 "halftwice": "iii",
 "handleside-men": "iii",
-"handleside-off": "iii",
 "handleside-spots": "iii",
 "handleside-tools": "iii",
 "handring": "iv-a",
 "hands-body": "iii",
 "hands-door": "iii",
-"hands-harness": "iii",
 "hands-team": "iii",
 "handslot": "iii",
 "handslow": "iii",
-"handwork-harness": "iii",
 "handwork-radio": "iii",
 "handwork-swap": "iii",
 "handwork-work": "iii",
@@ -1604,7 +1114,6 @@
 "kickglass": "iii",
 "kickrubble-edge": "iv-a",
 "kickrubble-left": "iv-a",
-"kickrubble-off": "iv-a",
 "kickrubble-offman": "iv-a",
 "kickrubble-pool": "iv-a",
 "kickrubble-quiet": "iv-a",
@@ -1632,8 +1141,6 @@
 "kitdeal-more": "0",
 "kitdeal-run": "ii",
 "kitdeal-screen": "0",
-"kitdeal-stands": "iv-a",
-"kitlent-tiles": "iv-a",
 "kitload": "iii",
 "kitpack": "iii",
 "kitpaste-cases": "0",
@@ -1716,11 +1223,9 @@
 "moves-cast": "iv-a",
 "moves-dazzle": "0",
 "moves-entry": "0",
-"moves-gait": "0",
 "moves-game": "iv-b",
 "moves-hands": "iv-b",
 "moves-kept": "0",
-"moves-off": "0",
 "moves-react": "ii",
 "moves-recoil": "0",
 "moves-reload": "0",
@@ -1755,9 +1260,7 @@
 "nvg-fight": "iii",
 "nvg-lead": "iii",
 "nvg-loud": "iii",
-"nvg-off": "iii",
 "nvg-quiet": "iii",
-"nvg-rig": "iii",
 "nvg-sight": "iii",
 "off-hinges-after": "iii",
 "off-hinges-blast": "iii",
@@ -1771,7 +1274,6 @@
 "oneway-deal": "ii",
 "oneway-leaf": "iv-a",
 "oneway-men": "iii",
-"oneway-off": "ii",
 "oneway-player": "iii",
 "oneway-read": "i",
 "oneway-save": "ii",
@@ -1795,9 +1297,9 @@
 "orders-one": "iii",
 "orders-seams": "iii",
 "orders-stack": "iii",
-"orderui-door": "iii",
+"orderui-block": "iii",
 "orderui-four": "iii",
-"orderui-hud": "iii",
+"orderui-half": "iii",
 "orderui-keys": "iii",
 "ownblow": "iii",
 "owncharge-door": "iii",
@@ -1829,7 +1331,6 @@
 "pairup-grip": "iii",
 "pairup-hands": "iii",
 "pairup-hunted": "iii",
-"pairup-identity": "iv-a",
 "pairup-one-eye": "iv-a",
 "pairup-rejoin": "iii",
 "pairup-stay": "iii",
@@ -1837,8 +1338,8 @@
 "pairup-voice": "iii",
 "pairup-word": "iii",
 "pall": "iv-a",
-"panel-inventory": "iv-a",
 "panel-dead": "0",
+"panel-inventory": "iv-a",
 "par": "iii",
 "particles-determinism": "iii",
 "particles-off": "iii",
@@ -1849,7 +1350,6 @@
 "peek-sight": "iii",
 "pellets-arm": "iv-a",
 "pellets-energy": "iv-a",
-"pellets-identity": "iv-a",
 "pellets-red": "iv-a",
 "pellets-rule": "iv-a",
 "perf-cards": "0",
@@ -1963,7 +1463,6 @@
 "roomfight-flank": "iii",
 "roomfight-friends": "iii",
 "roomfight-nextroom": "iii",
-"roomfight-off": "iii",
 "roomfight-orders": "iii",
 "roomfight-sight": "iii",
 "roomfit-cleared": "iii",
@@ -2011,7 +1510,6 @@
 "shipped-profile": "i",
 "shotgun-card": "iii",
 "shotgun-door": "iii",
-"shotgun-identity": "iii",
 "shotgun-range": "iii",
 "showwhy": "iii",
 "shutdoor-file": "iii",
@@ -2090,13 +1588,6 @@
 "squadnet-clear": "iv-a",
 "squadnet-end": "iv-a",
 "squadnet-net": "iv-a",
-"squadnet-why": "iv-a",
-"squadplay-go": "iii",
-"squadplay-key": "iii",
-"squadplay-off": "iii",
-"squadplay-side": "iv-a",
-"squadplay-try": "iii",
-"squadplay-wait": "iii",
 "squadsmoke-issued": "iii",
 "squadsmoke-order": "iii",
 "squadsmoke-restart": "iii",
@@ -2123,13 +1614,11 @@
 "standupgc": "i",
 "startfile-f": "iii",
 "startfile-follow": "iii",
-"startfile-off": "iii",
 "startfile-restart": "iii",
 "startfile-stage": "iii",
 "startle": "iii",
 "statediff": "ii",
 "stay-open-after": "iii",
-"stay-open-digin": "iii",
 "stay-open-edge": "iii",
 "stay-open-floor": "iv-a",
 "stay-open-lock": "iii",
@@ -2142,7 +1631,6 @@
 "stayask": "iii",
 "stealthpose-cable": "ii",
 "stealthpose-creep": "ii",
-"stealthpose-harness": "ii",
 "stealthpose-idle": "ii",
 "stealthpose-rise": "ii",
 "stealthpose-standdown": "ii",
@@ -2155,7 +1643,6 @@
 "sticky-save": "ii",
 "sticky-take": "iv-a",
 "sticky-wand": "iii",
-"sticky-ways": "ii",
 "stripfirst": "iii",
 "sunglint": "0",
 "sup-hostage": "iii",
@@ -2176,13 +1663,9 @@
 "takecheck": "iii",
 "takedown-beats": "iii",
 "takedown-breathe": "iii",
-"takedown-harness": "ii",
-"takedown-kill": "iii",
 "takedown-lower": "iii",
 "takedown-moves": "iii",
-"takedown-off": "iii",
 "takedown-partner": "iii",
-"takedown-rules": "iii",
 "takedown-wall": "iii",
 "tapstep": "iii",
 "teampace": "iii",
@@ -2201,7 +1684,6 @@
 "threshold-grenade": "iii",
 "threshold-hand": "iii",
 "threshold-hold": "iii",
-"threshold-identity": "iii",
 "threshold-last": "iii",
 "threshold-leaf": "iii",
 "threshold-pair": "iii",
@@ -2264,7 +1746,6 @@
 "wallfelt": "iii",
 "wallfurn": "iii",
 "wallissue": "iii",
-"wallkeep": "iv-a",
 "wallkill": "iii",
 "wallmen": "iv-a",
 "wallpen": "iv-a",
@@ -2361,13 +1842,10 @@
 "glasshouse": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
 "hourwx-air": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
 "oneway-deal": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
-"oneway-off": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
 "oneway-save": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
 "owncharge-kit": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
 "rowset": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
 "solo-fog": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
-"stealthpose-harness": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
-"takedown-harness": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
 "words-doornames": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
 "work-harness": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process"
 }

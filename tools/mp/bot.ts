@@ -14,7 +14,7 @@
 //                  millimetre, `fixes` and `fixMax` the corrections, `records` the records a look played (mean), `ms` what one cost
 //   --no-ahead     (the red path of that) the look ahead plays no record
 //   --why          with --predict: every clean look that was off by a millimetre or more, a line each on stderr (where, by how much, his state)
-// Prints one line: MPBOT {seat, confirmed, heard, wordsOk, bad, word, sent, holds, skips, margin, lead, moved, shots, bye, stoodMs, tickMs}. Exit 0 = it walked its ticks.
+// Prints one line: MPBOT {seat, confirmed, heard, wordsOk, bad, word, watchOk, watchOff, watchFirst (the wider word, watched: src/net/step.ts netWatch), sent, holds, skips, margin, lead, moved, shots, bye, stoodMs, tickMs}. Exit 0 = it walked its ticks.
 // (`moved`: the length of the way its man went, m, tick by tick.)
 import { resolve } from 'node:path';
 import type { PlayerCmd } from '../../src/game/cmd.ts';
@@ -38,7 +38,7 @@ let stood: Stood | null = null, standing = false, stoodMs = 0, closed = false;
 const down: (f: () => void) => void = onWay(WAY, (f: () => void) => f(), roll);   // (what comes down the socket, its close too, in the order it came)
 /** the longest wait between two messages down once the game ran (ms), and when the last one came */
 let gapMax = 0, gapAt = 0, stalledOnce = false;
-const take = (text: string): void => down(() => { const t = performance.now(); if (gapAt && client.confirmed > 60) gapMax = Math.max(gapMax, t - gapAt); gapAt = t; client.message(text, t); if (client.welcome && !stood && !standing) { standing = true; const t0 = performance.now(); standRecipe(client.welcome.recipe).then(s => { stood = s; stoodMs = performance.now() - t0; if (client.seat >= 0) { s.W.game.localSeat = s.W.game.seats[client.seat]; client.ready(); } }, e => { console.error(`bot.ts: ${(e as Error).message}`); process.exit(1); }); } });
+const take = (text: string): void => down(() => { const t = performance.now(); if (gapAt && client.confirmed > 60) gapMax = Math.max(gapMax, t - gapAt); gapAt = t; client.message(text, t); if (client.welcome && !stood && !standing) { standing = true; const t0 = performance.now(); standRecipe(client.welcome.recipe).then(s => { stood = s; stoodMs = performance.now() - t0; if (client.seat >= 0) s.W.game.localSeat = s.W.game.seats[client.seat]; s.begin(); stoodMs = performance.now() - t0; if (client.seat >= 0) client.ready(); }, e => { console.error(`bot.ts: ${(e as Error).message}`); process.exit(1); }); } });
 ws.onopen = () => client.hello();
 ws.onmessage = (ev: { data: unknown }) => take(String(ev.data));
 ws.onclose = () => down(() => { closed = true; });
@@ -57,7 +57,7 @@ function hands(S: Stood): PlayerCmd {
   return sampleCmd(W.game.hostSeat().view, I, W.cam, W.canvas);
 }
 function report(code: number): never {
-  console.log('MPBOT ' + JSON.stringify({ seat: client.seat, names: client.names, confirmed: client.confirmed, heard: client.heard, wordsOk: client.wordsOk, bad: client.bad, word: stood?.word() ?? '', sent: client.sent, holds: client.holds, skips: client.skips, margin: client.margin, lead: client.lead, broken: client.broken, stalled: Math.round(gapMax),
+  console.log('MPBOT ' + JSON.stringify({ seat: client.seat, names: client.names, confirmed: client.confirmed, heard: client.heard, wordsOk: client.wordsOk, bad: client.bad, word: stood?.word() ?? '', watchOk: client.watchOk, watchOff: client.watchOff, watchFirst: client.watchFirst, sent: client.sent, holds: client.holds, skips: client.skips, margin: client.margin, lead: client.lead, broken: client.broken, stalled: Math.round(gapMax),
     moved: +walked.toFixed(3), shots, bye: client.bye, state: client.state, stoodMs: Math.round(stoodMs), tickMs: tickN ? +(tickMs / tickN).toFixed(2) : 0,
     ...(PREDICT ? { ahead: { first: seen.first, firstMoved: seen.gameMoved, n: seen.n, mean: seen.n ? +(seen.sum / seen.n).toFixed(4) : 0, max: +seen.max.toFixed(4), exact: seen.exact, unfree: seen.unfree, clean: seen.clean, cleanMean: seen.clean ? +(seen.cleanSum / seen.clean).toFixed(4) : 0, cleanMax: +seen.cleanMax.toFixed(4), cleanExact: seen.cleanExact, worst: seen.worst, fixes: fore.fixes, fixMax: +fore.fixMax.toFixed(4), records: seen.looks ? +(seen.recs / seen.looks).toFixed(1) : 0, ms: +fore.ms.toFixed(2) } } : {}) }));
   process.exit(code);
@@ -117,7 +117,7 @@ const loop = setInterval(() => {
   S.quiet(true);
   const n = client.walk({ step: (cmds: PlayerCmd[]) => { const t = client.confirmed; heldBy[t] = client.heldRun; ran.push(t);
     if (BREAK && !broke && t >= 90) { broke = true; const i = Math.max(0, client.seat), c = cmds[i]; cmds[i] = { ...c, keys: c.keys.includes('KeyA') ? ['KeyD'] : ['KeyA'] }; }
-    S.step(cmds); }, word: () => S.word() }, Math.min(8, want - client.confirmed));   // (never past the tick asked for: two bots' last words are held against each other)
+    S.step(cmds); }, word: () => S.word(), watch: () => S.watch() }, Math.min(8, want - client.confirmed));   // (never past the tick asked for: two bots' last words are held against each other)
   S.quiet(false);
   if (n) { { const p = g.hostSeat().view.player.char.pos as number[]; if (at) walked += Math.hypot(p[0] - at[0], p[2] - at[2]); at = [p[0], p[1], p[2]]; } if (PREDICT) met(S, ran); led(); }
   if (n) { tickMs += performance.now() - a; tickN += n; }

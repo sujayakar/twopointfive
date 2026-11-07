@@ -1083,7 +1083,7 @@ export class DoorTools {
   /** the menu's release (OrderDef.issue: a reason when it cannot be done) */
   private issue(kind: DoorToolKind, men: Guard[], t: OrderTarget, onWord = false): string | void { const r = this.start(kind, men, t, onWord); return typeof r === 'string' ? r : undefined; }
   /** A fresh gate (DoorGate): hand it to order() for each door that is to go on the one signal. `go` false = they stack and hold until somebody raises it. */
-  together(go = true): DoorGate { return { ops: [], go, openT: NaN }; }
+  together(go = true): DoorGate { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('DoorTools.together', this, [go]); if (__r !== RUST_PASS) return __r as any; } } return { ops: [], go, openT: NaN }; }
   /** One of the entry orders given by code instead of off the menu (the hostage rescue's F — rescue.ts): the same order, to exactly these men, on that face of
    *  that door; through `gate` when it is to go with other doors'. Returns the order under way, or why not. Nothing is said and orders.ts logs nothing: the
    *  caller words it. */

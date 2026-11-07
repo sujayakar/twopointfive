@@ -124,7 +124,7 @@ export const SERIALS = new Set<string>();
 let G: any; let BK: Book; let B: any;
 const isTyped = (v: any) => ArrayBuffer.isView(v) && !(v instanceof DataView);
 /** a weak table's row of a player who is no longer in the game (the man before a mission's fresh deal) is that man's, and is not this game's state */
-const isWeak = (v: any) => typeof v?.liveKeys === 'function', seated = (k: unknown): boolean => { const S = CUR?.seats; if (!S) return true; const r = rawKey(k as object); return rawKey(CUR.player) === r || S.some((s: any) => rawKey(s.view?.player) === r); };
+const isWeak = (v: any) => typeof v?.liveKeys === 'function', seated = (k: unknown): boolean => { const S = CUR?.seats; if (!S) return true; const r = rawKey(k as object); if (r === rawKey(CUR)) return true;   /* (a seat's table, keyed by the Game: in a game of one seat that is its view. wKey writes it as the first seat's man, the walk having the first seat standing) */ return rawKey(CUR.player) === r || S.some((s: any) => rawKey(s.view?.player) === r); };
 function keysOf(v: any): { keys: unknown[]; get: (k: any) => unknown } | null {
   if (v instanceof Map) return { keys: [...v.keys()], get: k => v.get(k) };
   if (v instanceof Set) return { keys: [...v], get: k => k };
@@ -163,7 +163,7 @@ function wr(n: Node, v: any, o: Out): void {
     case 'tup': { if (!Array.isArray(v)) { miss('not a tuple', v); zero(n, o); return; } n.of.forEach((x: Node, i: number) => wr(x, v[i], o)); return; }
     case 'map': { const E = keysOf(v); if (!E) { miss('not a map', v); o.u32(0); return; } const K = n.K.k === 'id' && n.K.id === 'PlayerId' && isWeak(v) ? E.keys.filter(seated) : E.keys; o.u32(K.length); for (const k of K) { wKey(n.K, k, o); wr(n.V, E.get(k), o); } return; }
     case 'set': { const E = keysOf(v); if (!E) { miss('not a set', v); o.u32(0); return; } o.u32(E.keys.length); for (const k of E.keys) wKey(n.K, k, o); return; }
-    case 'id': { if (v && typeof v === 'object') { const e = SCHEMA.idExpr[n.id]; if (e) { const r = compiled(e)(v, G, B); if (typeof r === 'number') { if (r >= (BK.known?.get(n.id) ?? Infinity) && r !== 0xffffffff) { PAST.n++; PAST.id = n.id; } o.u32(r); return; } } const i = BK.idOf(n.id, v); if (i >= (BK.known?.get(n.id) ?? Infinity)) { PAST.n++; PAST.id = n.id; } o.u32(i); return; } if (typeof v === 'number') { o.u32(v); return; } miss(`nothing for ${n.id}`, v); o.u32(0xffffffff); return; }
+    case 'id': { if (v && typeof v === 'object') { const e = SCHEMA.idExpr[n.id]; if (e) { const r = compiled(e)(v, G, B); if (typeof r === 'number') { if (r >= (BK.known?.get(n.id) ?? Infinity) && r !== 0xffffffff) { PAST.n++; PAST.id = n.id; } o.u32(r); return; } } const i = BK.idOf(n.id, v); if (i >= (BK.known?.get(n.id) ?? Infinity)) { PAST.n++; PAST.id = n.id; } o.u32(i); return; } if (typeof v === 'number') { o.u32(v); return; } throw new Error(`export: ${AT}: no object for ${n.id} (found ${String(v)})`); }
     case 'type': return wType(n, v, o);
   }
   throw new Error(`bridge: no writer for ${n.k}`);
@@ -224,7 +224,10 @@ export function fieldAt(g: any, knobs: Record<string, unknown>, path: string[]):
   for (const p of path) { const T = SCHEMA.types[ty.replace(/^alloc::boxed::Box<(.*)>$/, '$1')]; if (!T || T.k !== 'struct') throw new Error('fieldAt: ' + ty + ' is no struct'); const f = T.fields.find((x: any) => x.rust === p); if (!f) throw new Error('fieldAt: no ' + p + ' in ' + ty);
     v = f.expr !== undefined ? compiled(f.expr)(v, G, B) : (f.ts !== undefined ? v[f.ts] : undefined); ty = f.ty; }
   return { ty, v }; }
-export function exportGame(g: any, knobs: Record<string, unknown>): Uint8Array { return forGame(g, () => exportGameNow(g, knobs)); }
+/** the place in the list of seats of the seat this host shows (the Rust game is told it: `face_show_seat`) */
+export function shownSeat(g: any): number { const i = g.seats?.indexOf?.(g.localSeat) ?? 0; return i > 0 ? i : 0; }
+/** A GAME'S ROWS ARE NUMBERED THE SAME ON EVERY MACHINE. The walk meets the rows of the seat the accessors answer first, so it walks with the first seat standing, whichever seat this host shows */
+export function exportGame(g: any, knobs: Record<string, unknown>): Uint8Array { return forGame(g, () => { if (!(g.seats?.length > 1)) return exportGameNow(g, knobs); const shown = g.localSeat; g.localSeat = g.seats[0]; try { return exportGameNow(g, knobs); } finally { g.localSeat = shown; } }); }
 function exportGameNow(g: any, knobs: Record<string, unknown>): Uint8Array {
   G = g; let bk = BOOKS.get(g); if (!bk) { bk = new Book(); BOOKS.set(g, bk); } BK = bk; REP = new Map(); AT = ''; B = helpers(g, knobs);
   for (const [id, e] of Object.entries(SCHEMA.seeds as Record<string, string>)) { let L: any; try { L = compiled(e)(g, g, B); } catch { L = null; } if (L && Symbol.iterator in Object(L)) for (const x of L) if (x && typeof x === 'object') BK.idOf(id, x); else miss(`a seed of ${id} not a list`); }
@@ -234,7 +237,6 @@ function exportGameNow(g: any, knobs: Record<string, unknown>): Uint8Array {
   for (let grew = true; grew;) { grew = false; for (const t of SCHEMA.tables) { const L = BK.listOf(t.id); let i = done.get(t.id)!; const o = buf.get(t.id)!; const N = parse(t.ty); while (i < L.length) { AT = `${t.id}[row]`; ROWAT = BK.first.get(L[i]) ?? ''; wr(N, L[i], o); i++; grew = true; } ROWAT = ''; done.set(t.id, i); } }
   for (const t of SCHEMA.tables) { const b = buf.get(t.id)!; if (b.n > 4096) SIZES.set(`table ${t.table}`, b.n); }
   // an order row the import has no closures for (rust's io::deal_closures): it would stand at its blank there
-  for (const r of BK.listOf('OrdersOrderDefId') as any[]) if (!SCHEMA.dealtRows.includes(r.id)) { AT = 'orders::OrderDef'; miss(`no closures by id for the row ${r.id}: add it to hand2.cjs ROWS`, r.id); }
   // a beat under way whose place Rust never wrote: rust's import refuses this state by name (io::refuse_mid_script), because a generator's place cannot be read
   for (const r of BK.listOf('DirectorLiveBeatId') as any[]) if (r.state === 'running' && !hasEcho(r, 'director::LiveBeat.it')) { AT = 'director::LiveBeat'; miss(`the beat ${r.name} is running: this state cannot be imported`, r.name); }
   const out = new Out(); out.bytes(main.view());
