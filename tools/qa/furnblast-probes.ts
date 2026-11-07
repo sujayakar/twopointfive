@@ -8,10 +8,12 @@
 //   (stun)    a stun grenade of its own breaks and throws nothing; a charge's BORROWED bang (the door charge's road) does; the wall charge's own borrowed bang, on
 //             the frame of its blast, is merged with it;
 //   (reset)   restartEncounter puts every static's flags, every prop and the nav grid back, and the same blast again gives the same pieces (deterministic);
-//   (off)     the knob off, chaos 0 or the tour: the same charge leaves all of it standing and counts nothing;
+//   (off)     chaos 0 or the tour: the same charge leaves all of it standing and counts nothing;
 //   (save)    a checkpoint keeps what a blast broke: after a load the same statics are gone for sight and feet, the props that came apart stay out, no piece is
-//             on the floor (none is filed); a file from before the slice loads as it did (the furniture whole); nothing broke = no slice; with cut pieces on too;
+//             on the floor (none is filed); a file from before the slice loads as it did (the furniture whole); nothing broke = no slice;
 //   (levels)  on every loud level, a wall-strength blast beside each of up to 8 pieces of furniture: nothing NaN, the pool inside its cap, a restart restores.
+// 2026-11-07: furniture under a blast, the destruction lane and cut pieces are settled rules. Gone with their off sides: 'off' no longer asks the knob off or
+// the destruction switch off (chaos 0 and the tour stay: those are the run's own), 'save' no longer runs a second time with cut pieces off or asks the knob off.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
@@ -25,7 +27,6 @@ const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
 const { NOBODY_ID, PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
 const { LOUD_LEVELS } = await import(`${ROOT}/tools/levels/dress.ts`);
 const { canLoad } = await import(`${ROOT}/src/game/savestate.ts`);
-const { cutConfig } = await import(`${ROOT}/src/scene/cut.ts`);
 
 type Vec3 = [number, number, number];
 const DT = 1 / 60;
@@ -48,8 +49,8 @@ interface Stage { W: any; game: any }
  *  staged BY HAND on the warehouse's office — a charge, a desk, a chair and two cabinets at marks measured in the room as its generator drew it — so it stands
  *  that room without the lived-in furniture (`lived: false`; the frozen stand's room exactly): with it the marks are among other pieces, the blast's first group
  *  is another one, and three of them (throw / reset / save) read red on the shipped stand for the staging alone */
-async function stage(file = OFFICE.file, opts: { on?: boolean; knob?: boolean; chaos?: number; seed?: number; asStands?: boolean } = {}): Promise<Stage> {
-  Math.random = seeded(opts.seed ?? 4401); DESTRUCTION.on = opts.on ?? true; FURNBLAST.on = opts.knob ?? true; resetStats();
+async function stage(file = OFFICE.file, opts: { chaos?: number; seed?: number; asStands?: boolean } = {}): Promise<Stage> {
+  Math.random = seeded(opts.seed ?? 4401); DESTRUCTION.on = true; FURNBLAST.on = true; resetStats();
   const W: any = await quiet(() => standUp({ uploadEvery: 1, level: loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')), opts.asStands ? {} : { lived: false }) })); const game = W.game;
   game.tune.chaos = opts.chaos ?? 0.5; game.godMode = true; game.aiEnabled = false; game.playerInvisible = true;
   for (let f = 0; f < 5; f++) W.step(DT);
@@ -152,9 +153,9 @@ export async function furnReset(): Promise<boolean> {
   return Fm.done();
 }
 
-/** The knob off, chaos 0, the tour: nothing. */
+/** Chaos 0, the tour: nothing. */
 export async function furnOff(): Promise<boolean> {
-  const Fm = family('furnblast-off: knob off, chaos 0 or the tour — the same charge leaves the furniture standing');
+  const Fm = family('furnblast-off: chaos 0 or the tour — the same charge leaves the furniture standing');
   const one = async (label: string, opts: Parameters<typeof stage>[1], pre?: (g: any) => void) => {
     const S = await stage(OFFICE.file, opts); const g = S.game; pre?.(g); const desk = groupAt(g, OFFICE.desk); const poses = posesOf(g);
     wallCharge(S, OFFICE.charge); const it = g.items.spawn('flash', [8.2, 0.5, 19.7], [0, 0, 0], { fuse: 9, heading: 0, who: NOBODY_ID }); it.fired = true; detonateStun(g, it, true); run(S, 60);
@@ -162,11 +163,8 @@ export async function furnOff(): Promise<boolean> {
     const broke = desk.members.filter((i: number) => g.destr.furn.broken(i)).length;
     return { ok: zero && broke === 0 && posesOf(g) === poses, detail: `${label}: counts all zero ${zero} · desk statics this module broke ${broke} (standing ${up}/${desk.members.length}) · props unmoved ${posesOf(g) === poses}` };
   };
-  const a = await one('knob off (the page\'s ?nofurnblast)', { knob: false }); Fm.verdict(a.ok, 'FURNBLAST.on false: a wall charge and a borrowed bang count nothing', a.detail);
   const b = await one('chaos 0', { chaos: 0 }); Fm.verdict(b.ok, 'chaos 0', b.detail);
-  const c = await one('destruction switch off', { on: false }); Fm.verdict(c.ok, 'THE ONE SWITCH off', c.detail);
   const d = await one('touring', {}, g => { g.touring = true; }); Fm.verdict(d.ok, 'under the tour', d.detail);
-  FURNBLAST.on = true;
   return Fm.done();
 }
 
@@ -188,13 +186,11 @@ export async function furnLevels(): Promise<boolean> {
 /** A checkpoint keeps what a blast broke (savestate.ts `furn` ← furnblast.ts snapshot / check / restore). */
 export async function furnSave(): Promise<boolean> {
   const Fm = family('furnblast-save: a checkpoint load keeps broken furniture broken — and a file from before the slice loads as it did');
-  const cut0 = cutConfig.on;
   const authored = (g: any) => { const n = g.destr.walls.authored; return g.col.boxes.slice(0, n).map((b: any) => b.flags).join(','); };
   const outProps = (g: any) => g.props.all.filter((p: any) => !g.props.props.includes(p)).map((p: any) => p.id).join(',');
   const seen = (g: any, [x, z]: [number, number]) => !g.col.segmentBlocked([x - 0.6, 0.45, z], [x + 0.6, 0.45, z]);   // a low line through where the desk stood
-  try {
-    for (const cut of [false, true]) {
-      cutConfig.on = cut; const tag = cut ? 'cut pieces ON' : 'cut pieces off';
+  {
+    { const tag = 'the save';
       // (1) the wall charge on the office wall, then a blast beside the chair so a prop comes apart too; save; load into the same game
       const S = await stage(); const g = S.game; const desk = groupAt(g, OFFICE.desk); const chair = propAt(g, OFFICE.chair);
       const whole = authored(g), nav0 = navOf(g);
@@ -225,7 +221,6 @@ export async function furnSave(): Promise<boolean> {
       const bad3 = JSON.parse(JSON.stringify(file)); bad3.furn.s = [structural];
       Fm.verdict(typeof canLoad(g3, bad) === 'string' && typeof canLoad(g3, bad2) === 'string' && typeof canLoad(g3, bad3) === 'string', `${tag}: a slice naming a static that is not furniture (out of range, or the building's own) or a prop the level does not have is refused`, `${canLoad(g3, bad)} · ${canLoad(g3, bad3)} · ${canLoad(g3, bad2)}`);
     }
-    cutConfig.on = cut0;
     // (6) the door charge's road, inside the office: its bang knocks things off the desk BEFORE the furniture under them breaks. After the load nothing that had
     //     gone stands again (a mug back in the air over a desk that stays gone), and the feed's last word is the load's.
     { const S = await stage(); const g = S.game; const desk = groupAt(g, OFFICE.desk);
@@ -246,7 +241,6 @@ export async function furnSave(): Promise<boolean> {
       Fm.verdict(!!file.furn && !file.walls && down > 0 && authored(g) === flags && navOf(g) === nav && last?.kind === 'reset' && last?.cause === 'load', 'the furniture slice alone (no walls\' slice in the file): gone again after the load, nav re-baked, the feed told', `piece ${G.id}: ${down}/${G.members.length} parts down · file: furn ${file.furn?.s.length} statics, walls ${!!file.walls} · flags as at the save ${authored(g) === flags} · nav ${navOf(g) === nav} · last row ${last?.kind} / ${last?.cause}`); }
     // (8) nothing broke: no slice, whatever the switches say
     { const S = await stage(); Fm.verdict(S.W.snapshot('none').furn === undefined && !('furn' in JSON.parse(JSON.stringify(S.W.snapshot('none')))), 'nothing broke: the file has no furniture slice', 'snapshot().furn undefined, no key in the JSON'); }
-    { const S = await stage(OFFICE.file, { knob: false }); wallCharge(S, OFFICE.charge); run(S, 120); const f = S.W.snapshot('off'); Fm.verdict(f.furn === undefined && !!f.walls, 'the furniture knob off: a wall charge files its hole and no furniture slice', `furn ${f.furn === undefined ? 'absent' : 'present'} · walls ${!!f.walls}`); FURNBLAST.on = true; }
-  } finally { cutConfig.on = cut0; }
+  }
   return Fm.done();
 }
