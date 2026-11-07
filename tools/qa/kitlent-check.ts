@@ -6,9 +6,12 @@
 // kit.ts kitPlayer on a card with the rifle) and, where quietfog.ts QUIETFOG.wand is up, an optical wand with them. The Team & kit card read his CARD
 // alone: 'none' beside a thing he was about to be handed. This check opens the loadout screen on a headless DOM (as wand-check's tile lines do) and reads
 // the tiles: under the fog with the cameras on, the cameras tile and the wand tile show what he will have and are marked `lent`; with the fog off, the
-// cameras lever on None, the mission's wand off, a card that already carries as much, a squad mission, the solo night, a teammate's card or the switch
-// off, they read the card as ever; and nothing of his card or his pouches is written by any of it. It sets the switches it needs itself, so it asks the
-// same on either stand. Looks at no picture: never seen on a GPU.
+// cameras lever on None, a card that already carries as much, a squad mission, the solo night, a teammate's card or the switch off, they read the card
+// as ever; and nothing of his card or his pouches is written by any of it. Looks at no picture: never seen on a GPU.
+// SINCE 2026-11-07 NOTHING HERE WRITES A SETTLED ROW (the wand, the sticky cameras, the quiet fog and its wand, the solo night under the fog: constants
+// of the game). The line that asked the tiles with the mission's wand off is cut; the solo night is no longer staged "as it was" for the ELSEWHERE
+// line, which so asks the solo night of today (under the fog it is handed the mission's cameras and wand: solofog-check.ts). KIT_LENT, the card's own
+// switch (`?nokitlent`), is no row of the settled list and is still written.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
@@ -16,7 +19,6 @@ import { asProbe } from './holds.ts';   // (run alone, each part runs as the pro
 import { withDom, El } from './scenario-picker-probes.ts';
 
 const K = await import(`${ROOT}/src/game/kit.ts`);
-const { WAND } = await import(`${ROOT}/src/game/wand.ts`);
 const { STICKY } = await import(`${ROOT}/src/game/stickycam.ts`);
 const QF = await import(`${ROOT}/src/game/quietfog.ts`);
 const { harnessProfile } = await import(`${ROOT}/src/host/profile.ts`);
@@ -37,15 +39,15 @@ type Tile = { lent: boolean; idle: boolean; val: string; title: string; note: st
 
 export async function lentTiles(): Promise<boolean> {
   const F = family('kitlent-tiles: the cameras and the wand a quiet mission hands you show on your card\'s own tiles');
-  const G = globalThis as any, hadLS = 'localStorage' in G, prevLS = G.localStorage, Q = QF.QUIETFOG;
-  const was = { cards: K.KIT.members.map((m: any) => ({ ...m })), on: K.KIT.on, slots: K.SLOTS.on, wand: WAND.on, sticky: STICKY.on, qf: Q.on, def: Q.def, qwand: Q.wand, team: K.kitTeam(), solo: K.KIT_SOLO.on };
+  const G = globalThis as any, hadLS = 'localStorage' in G, prevLS = G.localStorage;
+  const was = { cards: K.KIT.members.map((m: any) => ({ ...m })), on: K.KIT.on, slots: K.SLOTS.on, team: K.kitTeam(), solo: K.KIT_SOLO.on };
   let KC: any = null, lentWas = true;
   try {
     await withDom('?quality=high&mute', async () => {
       G.localStorage = memStore(); G.location.pathname = '/'; G.location.hash = ''; G.location.assign = () => { }; G.location.reload = () => { };
       const M = await import(`${ROOT}/src/ui/missions.ts`), UI = await import(`${ROOT}/src/ui/loadout.ts`); KC = await import(`${ROOT}/src/ui/kitCard.ts`);
       lentWas = KC.KIT_LENT.on; KC.KIT_LENT.on = !BROKEN;
-      K.KIT.on = true; K.SLOTS.on = true; WAND.on = true; STICKY.on = true; Q.on = true; Q.wand = true; QF.quietFogForget();
+      K.KIT.on = true; K.SLOTS.on = true; QF.quietFogForget();
       K.kitLoad(null, ''); K.kitReset(); K.kitSet(0, 'wand', false); K.kitSet(0, 'cams', 0);
       const SEARCH = '?quality=high&mute', list: any[] = M.missionList(), pickWas = M.MISSIONS.onPick, up: any[] = []; M.MISSIONS.onPick = null;
       const N = STICKY.issue as number, HAND = `${N} · ${KC.LENT_WORD}`;
@@ -71,10 +73,6 @@ export async function lentTiles(): Promise<boolean> {
         press(quiet.root, 'fog', 'data-rung', 'off'); const noFog = tiles(quiet.root); press(quiet.root, 'fog', 'data-rung', 'team'); press(quiet.root, 'cams', 'data-cams', '1');
         F.verdict(plain(noCams) && back.cams.lent && back.wand.lent && plain(noFog), 'THE LEVERS ON THAT SCREEN: the cameras put on None and both tiles are empty tiles again at once; put back, lent again; the fog put off, empty again', `None: ${say(noCams)}\n    back on: ${say(back)}\n    fog off: ${say(noFog)}${BROKEN ? ' · KITLENT_BREAK=1' : ''}`);
 
-        // the mission's wand off (quietfog.ts QUIETFOG.wand): the cameras are still handed, no wand
-        Q.wand = false; const q2 = open('bazaar-quiet'), b = tiles(q2.root); Q.wand = true;
-        F.verdict(b.cams.lent && b.cams.val === HAND && !b.wand.lent && b.wand.dimIco && !b.wand.title, 'THE MISSION\'S WAND OFF: the cameras are still shown as handed, the wand tile is an empty tile', `${say(b)}${BROKEN ? ' · KITLENT_BREAK=1' : ''}`);
-
         // a card that carries as much reads as his own; one camera of his under the mission's is the mission's count
         for (const f of ['smoke', 'bangs', 'frags', 'shells']) K.kitSet(0, f, 0);   // (room in his pouches for them)
         const tw = K.kitTry(0, 'wand', 1), tc = K.kitTry(0, 'cams', N); const q3 = open('bazaar-quiet'), c = tiles(q3.root);
@@ -96,15 +94,14 @@ export async function lentTiles(): Promise<boolean> {
         { const L = open('bazaar-quiet'), link = L.L.search() as string, t = tiles(L.root), q = new URLSearchParams(link.replace(/^[^?]*\?/, '')), file = q.get('levelFile') ?? specOfQuery(q)?.level;
           const promised = { cams: t.cams.lent ? N : 0, wand: t.wand.lent };
           const W: any = await hushed(() => standUp({ uploadEvery: 1, ...(file ? { level: loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8'))) } : {}) })), g = W.game;
-          Q.on = true; Q.wand = true; STICKY.on = true; WAND.on = true; K.KIT.on = true; K.SLOTS.on = true;   // (a game stood up puts the stand's rows back: raised again, as the screen had them)
-          await hushed(() => { startFromQuery(g, link); K.kitSoloIf(g, false); }); for (let i = 0; i < 10; i++) W.step(1 / 60);   // (kitSoloIf: the page's own question after a start — a quiet mission alone wears your card; the frozen stand never asks it by itself)
+          K.KIT.on = true; K.SLOTS.on = true;   // (a game stood up puts the stand's rows back: raised again, as the screen had them)
+          await hushed(() => { startFromQuery(g, link); K.kitSoloIf(g, false); }); for (let i = 0; i < 10; i++) W.step(1 / 60);   // (kitSoloIf: the page's own question after a start — a quiet mission alone wears your card)
           const pl = g.player, got = { cams: pl.rifle?.cams ?? 0, wand: !!pl.wand };
           F.verdict(!!specOfQuery(q) && got.cams === promised.cams && promised.cams === N && got.wand === promised.wand && promised.wand, 'THE GAME\'S OWN WORD: that screen\'s link started in a game — the cameras the tile promised are the cameras on his rifle, and the wand is on him (quietfog.ts quietWand)', `link ${link} · promised ${JSON.stringify(promised)} · on him ${JSON.stringify(got)}${BROKEN ? ' · KITLENT_BREAK=1' : ''}`);
           await hushed(() => quitScenario(g)); }
 
         // elsewhere nothing is handed: a squad mission, the solo night, a teammate's card on the quiet mission
-        const soloFogWas = QF.QUIETFOG.solo; QF.QUIETFOG.solo = false;   // (the solo night as it was: under the fog it is handed the mission's cameras and wand as a quiet mission is — solofog-check.ts)
-        const four = tiles(open('room-clear-four').root), solo = tiles(open('solo-night').root); QF.QUIETFOG.solo = soloFogWas;
+        const four = tiles(open('room-clear-four').root), solo = tiles(open('solo-night').root);
         const duo = list.find(x => /quiet/.test(x.id) && /duo|two|pair/.test(x.id)); let mate: Record<string, Tile> | null = null;
         if (duo) { const L = open(duo.id); L.L.pick(1); mate = tiles(L.root); }
         F.verdict(plain(four) && !solo.cams.lent && !solo.wand.lent && (!mate || Object.values(mate).every(r => !r.lent)), 'ELSEWHERE: a squad mission, the solo night and a teammate\'s card show nothing as handed', `room clear: ${say(four)} · solo night: ${say(solo)} · a teammate's card on ${duo ? duo.id : '(no quiet mission for two on the list: not asked)'}: ${mate ? Object.entries(mate).filter(([, r]) => r.lent).map(([f]) => f).join(' ') || 'none lent' : 'n/a'}`);
@@ -117,7 +114,7 @@ export async function lentTiles(): Promise<boolean> {
   } catch (e) { F.verdict(false, 'the check ran', String((e as Error)?.stack ?? e)); }
   finally {
     if (KC) KC.KIT_LENT.on = lentWas;
-    K.kitLoad(null, ''); WAND.on = was.wand; STICKY.on = was.sticky; Q.on = was.qf; Q.def = was.def; Q.wand = was.qwand; K.SLOTS.on = was.slots; K.KIT.on = was.on; K.kitTeam(was.team); K.KIT_SOLO.on = was.solo;
+    K.kitLoad(null, ''); K.SLOTS.on = was.slots; K.KIT.on = was.on; K.kitTeam(was.team); K.KIT_SOLO.on = was.solo;
     for (let i = 0; i < was.cards.length; i++) K.KIT.members[i] = was.cards[i];
     if (hadLS) G.localStorage = prevLS; else delete G.localStorage;
   }
@@ -125,7 +122,7 @@ export async function lentTiles(): Promise<boolean> {
 }
 
 export async function kitlentCheck(): Promise<boolean> {
-  console.log(`kitlent-check on the ${STAND.toUpperCase()} stand (it sets the switches it needs itself)${BROKEN ? ' — KITLENT_BREAK=1: the switch is put off under it, the lines that ask for a lent tile must FAIL' : ''}`);
+  console.log(`kitlent-check on the ${STAND.toUpperCase()} stand ${BROKEN ? ' — KITLENT_BREAK=1: the switch is put off under it, the lines that ask for a lent tile must FAIL' : ''}`);
   const ok = await lentTiles();
   console.log(`\nkitlent-check (${STAND} stand): ${ok ? 'ALL PASS' : 'FAILED'}`);
   return ok;

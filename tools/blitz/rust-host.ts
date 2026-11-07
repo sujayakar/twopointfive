@@ -95,9 +95,9 @@ let BR: any = null;
 async function bridge(): Promise<any> {
   if (BR) return BR;
   const SU = await import('./surface.ts'), SC = await import('./scan.ts'); SU.installSurface(); const E = await import('./export.ts'), I = await import('./import.ts'), AK = await import('./ask.ts'), C = await import('./classes.ts'), P = await import('./puppet-apply.ts'), O = await import('./out-dispatch.ts'), A = await import('./audit.ts');
-  const K = await import('../../src/game/knobs.ts'), D = await import('../../src/math/dice.ts'), DR = await import('../../src/game/dress.ts');
+  const K = await import('../../src/game/knobs.ts'), D = await import('../../src/math/dice.ts'), DR = await import('../../src/game/dress.ts'); const PD = await import('../../src/host/rustdress.ts');
   const LJ = JSON.parse(readFileSync(new URL('./puppet-lists.json', import.meta.url).pathname, 'utf8'));
-  O.OUT_HOST.tap = SU.fireTap; BR = { ...E, surfaceHost: SU.surfaceHost, makeTaps: SU.makeTaps, makeScan: SC.makeScan, installAsks: AK.installAsks, applyGame: I.applyGame, hooks: { classes: C.classTable(), values: C.valueTable(), made: Object.fromEntries(MEN.map(c => [c, (o: object) => { MADE_MEN.add(o); MADE.n++; }])) }, puppetRows: P.puppetRows, SLOW: P.SLOW, VALS: P.VALS, OUT: O.OUT, A, reg: K.knobRegistry(), newDice: D.newDice, dressAll: DR.dressAll, DRESS: DR.DRESS,
+  O.OUT_HOST.tap = SU.fireTap; BR = { ...E, pageDress: PD.dressStep, surfaceHost: SU.surfaceHost, makeTaps: SU.makeTaps, makeScan: SC.makeScan, installAsks: AK.installAsks, applyGame: I.applyGame, hooks: { classes: C.classTable(), values: C.valueTable(), made: Object.fromEntries(MEN.map(c => [c, (o: object) => { MADE_MEN.add(o); MADE.n++; }])) }, puppetRows: P.puppetRows, SLOW: P.SLOW, VALS: P.VALS, OUT: O.OUT, A, reg: K.knobRegistry(), newDice: D.newDice, dressAll: DR.dressAll, DRESS: DR.DRESS,
     lists: { step: new Set<string>(LJ.step), start: new Set<string>(LJ.start) } };
   BR.PUT_BACKS = (await import('../../src/math/side.ts')).PUT_BACKS;
   { const SS = await import('../../src/game/savestate.ts'); snaps(SS); BR.SNAPS = SS.SNAPS; }
@@ -770,8 +770,10 @@ export class RustHost {
     if (SAY_FN) sayLine(this.audit ? 'audit' : 'rust', g, k);
   }
   /** after a step, or a quiet run of them: the apply, the out events, the dress step. Returns the whole Rust state where the audit took one */
+  /** the page's dress step's side list (boxes only the picture has) */
+  private side = { list: [] as unknown[], of: null as unknown, base: 0 };
   private tail(dt: number, k: number): Uint8Array | null {
-    const g = this.g, X = this.F.X; let t = now();
+    const g = this.g, X = this.F.X, B = this.B; let t = now();
     // ---- the apply
     this.applyStep();
     let rust: Uint8Array | null = null;
@@ -786,7 +788,11 @@ export class RustHost {
     t = now(); const nest0 = this.nest;
     if (this.o.dress !== false) {
       // (the par clock and the verdict are the debrief's: a throw of theirs on the puppet is counted and is not the play's end)
-      for (const n of ['par', 'verdict'] as const) try { g[n]?.tick(); } catch (e) { this.count(`${n}.tick THREW on the puppet (first at tick ${this.threw[n] ??= k}): ${String((e as any)?.message ?? e).slice(0, 100)}`); }
+      // THE PICTURE'S HALF, for a game stood with the dressing rows up (a check about what is drawn): the page's own dress step, one path with the
+      // page (src/host/rustdress.ts: the men handed to the renderer, the wind's hand-over, the air, the stature). It ticks the par clock and the
+      // verdict itself. With the rows down nothing reads the picture's lists and only those two are run.
+      if (this.o.dressDown === false && !OFF.has('pagedress')) { try { B.pageDress(g, dt, this.side); } catch (e) { this.count(`the page's dress step THREW on the puppet: ${String((e as any)?.message ?? e).slice(0, 100)}`); } }
+      else for (const n of ['par', 'verdict'] as const) try { g[n]?.tick(); } catch (e) { this.count(`${n}.tick THREW on the puppet (first at tick ${this.threw[n] ??= k}): ${String((e as any)?.message ?? e).slice(0, 100)}`); }
       const S = g.saves;
       // (a take is due this tick: an authored checkpoint a rule asked for, a save by hand, a load. The puppet takes the whole state first. An autosave
       // the controller decides on inside its tick takes the whole state as the take starts: `taps`. Its gate and its triggers read the puppet as the

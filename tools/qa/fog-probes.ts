@@ -50,7 +50,7 @@ const names = (l: any[]) => l.map(x => x.callsign).join(', ') || '—';
 async function rig(seed: number, o: { fog?: boolean; breach?: boolean; chaos?: number; posts?: boolean } = {}) {
   Object.assign(NIGHTBREACH, NB_DEFAULTS); Object.assign(FOG, FOG_DEFAULTS);
   const dice = seeded(seed); Math.random = dice;
-  const W: any = await standUp(); const game = W.game; const FW = game.fogOfWar; const NB = game.nightBreach;
+  const W: any = await standUp({ dress: true }); const game = W.game; const FW = game.fogOfWar; const NB = game.nightBreach;
   FOG.things = true;   // (the frozen stand has just pinned the rule off — TPS_FOGTHINGS: this family asks about the fog as it ships)
   game.tune.chaos = o.chaos ?? 0;
   const inst: number[] = [], caps: number[] = []; let finished = -1;

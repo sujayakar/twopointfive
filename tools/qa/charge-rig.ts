@@ -43,9 +43,12 @@ export function samSets(W: Stand, w: any, each?: () => void): Breach & { charge:
   const g = W.game, C = g.wallCharge, D = g.doorTools, I = W.input, out: Breach & { charge: any } = { set: false, blown: false, hole: null, wall: w, why: '', charge: null };
   if (!w || !w.ok) { out.why = `no place for a charge on that wall${w?.why ? ` (${w.why})` : ''}`; return out; }
   D.alone(DOORTOOLS.charges); C.setCarried(null);   // (a man who sets it himself has the door tools' bag, and a wall takes its charges out of it)
+  // (WITH A SQUAD ON THE FLOOR `alone` deals nothing: the bag is the roster's, and one wall may have emptied it. The game then offers no row, by its own
+  //  rule (WallCharge.affordable). A second charge is then one that was BROUGHT, the kit's own count, as squadBreach puts it)
+  if (!C.affordable) C.setCarried(1);
   const n0 = C.set.length, on: Vec3 = wallPt(w, 0, 0, 1.0) as Vec3;   // (a point of the wall's near face a metre up: where a cursor on that wall lies. Its top edge is no pick of it)
   g.teleportPlayer(wallPt(w, 0, 0.55)); steps(W, 90, () => { each?.(); W.cursorAt(on); });   // (the cursor held on the wall while the camera settles on him)
-  if (!g.selectVerb('wall', 'charge')) { out.why = `no 'breach the wall' row at its foot (rows: ${(g.nearby as any[]).map(r => `${r.kind}:${r.verb ?? '-'}`).join(' ') || 'none'})`; return out; }
+  if (!g.selectVerb('wall', 'charge')) { out.why = `no 'breach the wall' row at its foot (rows: ${(g.nearby as any[]).map(r => `${r.kind}:${r.verb ?? '-'}`).join(' ') || 'none'} · the bag: ${D.charges} charges, ${C.carried ?? 'no'} wall charges carried, roster ${D.roster?.length ?? '-'})`; return out; }
   I.pressed.add('Space'); W.step(DT);
   if (!until(W, () => C.set.length > n0, DOORTOOLS.setSecs + 1, each)) { out.why = `the charge was not on the wall ${DOORTOOLS.setSecs + 1} s after the row was given`; return out; }
   out.charge = C.set[C.set.length - 1]; out.set = true; out.wall = out.charge.wall; return out;

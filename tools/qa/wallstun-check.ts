@@ -9,12 +9,14 @@
 //   (3) the man about 2.5 m behind it: the same
 //   (4) the NEXT burst there, a frame later: judged through the hole — a hole is a hole from then on
 //   (5) walls that do not break (the wall dial off): shielded and not a beat lost, as ever
-//   (6) FRAG.wallStun off: (1) again is judged through the fresh hole — the blast as it was
 //   (7) the player behind the wall somebody else's burst holes: stunned (his trigger dead for the seconds, a line saying why), never hurt
-//   (8) a man in the open on the burst's own side: the rule changes nothing for him
+//   (8) a man in the open on the burst's own side: exposed to it, and not counted behind anything
 //   (9) the log's count names the man folded behind what it broke, seen by the player through the hole
-// It raises what it needs itself (the destruction switch and dial), so it passes on the frozen stand and under TPS_PROFILE=shipped.
-// WALLSTUN_BREAK=1 = the rule left off where the lines want it on: they are asked all the same and must fail.   exit 0 = all hold · 1 = one does not
+// THE RULE IS SETTLED (FRAG.wallStun, blasts taking doors off and the destruction switch are constants of the game), so since 2026-11-07 nothing here
+// writes them. Gone: (6), the same burst with the rule off, and the half of (8) that held the man in the open against the same run with the rule off.
+// It still sets the destruction dial and the wall dial (Game.tune), a game's own.
+// WALLSTUN_BREAK=1 was the rule left off. It now breaks the staging: no wall breaks (the wall dial off for every floor), so each line that wants the
+// wall opened must fail: (1), (2), (3), (4), (7) and (9).   exit 0 = all hold · 1 = one does not
 import { resolve } from 'node:path';
 const ROOT = resolve(import.meta.dir, '../..');
 type V3 = [number, number, number];
@@ -23,20 +25,18 @@ function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; le
 
 export async function wallstunCheck(): Promise<boolean> {
   const { standUp } = (await import('./headless.ts')) as any;
-  const { DOORBLAST } = await import(`${ROOT}/src/game/doorblast.ts`);
   const { FRAG, FRAG_STATS, blast, exposure } = await import(`${ROOT}/src/game/frag.ts`);
-  const { DESTRUCTION } = await import(`${ROOT}/src/game/destructionSwitch.ts`);
   const { HE40 } = await import(`${ROOT}/src/game/he40.ts`);
-  const BREAK = process.env.WALLSTUN_BREAK === '1', ON = !BREAK; let all = true;
-  const was = { frag: JSON.parse(JSON.stringify(FRAG)), door: DOORBLAST.on, sw: DESTRUCTION.on, rnd: Math.random };
+  const BREAK = process.env.WALLSTUN_BREAK === '1'; let all = true;
+  const was = { rnd: Math.random };
   const line = (ok: boolean, label: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
-  console.log(`\n=== wallstun: a burst that holes a wall stuns the men behind it${BREAK ? ' (WALLSTUN_BREAK: the rule left off)' : ''} ===`);
+  console.log(`\n=== wallstun: a burst that holes a wall stuns the men behind it${BREAK ? ' (WALLSTUN_BREAK: no wall breaks)' : ''} ===`);
   type Site = { id: number; c: V3; n: V3; thin: number; /** metres behind the wall the far man stands, metres in front of it the man in the open does */ back: number; open: number };
   let site = null as Site | null;   // the wall every line is asked on: found once, on the first floor stood up
-  /** a fresh office floor with walls that break (or not: `walls`), the rule as told */
-  const rig = async (rule: boolean, walls = true) => {
-    Math.random = seeded(7); DOORBLAST.on = true; DESTRUCTION.on = true; FRAG.wallStun = rule;   // (raised before the floor stands up: every rig is the same floor)
-    const W: any = await standUp({}); const g = W.game; g.tune.chaos = 0.5; g.tune.wallBreak = walls;
+  /** a fresh office floor with walls that break (or not: `walls`; never under WALLSTUN_BREAK) */
+  const rig = async (walls = true) => {
+    Math.random = seeded(7);   // (every rig is the same floor)
+    const W: any = await standUp({}); const g = W.game; g.tune.chaos = 0.5; g.tune.wallBreak = walls && !BREAK;
     g.aiEnabled = false; g.godMode = false;
     const said: string[] = []; { const msg = g.msg.bind(g); g.msg = (t: string) => { said.push(t); msg(t); }; }
     const step = (n = 1) => { for (let i = 0; i < n; i++) { g.player.visibility = 0.05; W.step(DT); } };
@@ -69,46 +69,43 @@ export async function wallstunCheck(): Promise<boolean> {
   const words = (rep: any, gd: any, g: any) => `${rep.hits.filter((h: any) => h.id === gd.char.id).map((h: any) => `${h.name} ${h.result}${h.behind ? ` (behind ${h.behind})` : ''} at ${f2(h.d)} m, exposed ${h.exposed}`).join('') || 'not in the report'} · ${gd.state} · folded ${f2(Math.max(0, gd.staggerUntil - g.time))} s · report ${rep.killed} down ${rep.wounded} hit ${rep.stunned} stunned ${rep.shielded} behind cover`;
   const hit = (rep: any, gd: any) => rep.hits.find((h: any) => h.id === gd.char.id);
   /** one man `back` metres behind the wall, one burst on its other face */
-  const one = async (rule: boolean, kind: 'he40' | 'frag', far: boolean, walls = true) => {
-    const R = await rig(rule, walls), g = R.g, S = site; if (!S) return null;
+  const one = async (kind: 'he40' | 'frag', far: boolean, walls = true) => {
+    const R = await rig(walls), g = R.g, S = site; if (!S) return null;
     const T = g.guards.find((x: any) => x.state !== 'dead' && !x.civ), at = R.off(S, 1, 0.3, 1.0);
     R.clear(T, at); R.put(T, R.off(S, -1, far ? S.back : 1.0)); R.step(3); R.said.length = 0;
     const st0 = T.staggerUntil, n0 = FRAG_STATS.stunned, open0 = R.wall(S).open; const rep = R.burst(S, kind, 0);
     return { R, g, S, T, rep, st0, counted: FRAG_STATS.stunned - n0, opened: R.wall(S).open - open0 };
   };
   try {
-    { const c = await one(ON, 'he40', false), h = c && hit(c.rep, c.T), secs = c ? c.T.staggerUntil - c.g.time : 0;
+    { const c = await one('he40', false), h = c && hit(c.rep, c.T), secs = c ? c.T.staggerUntil - c.g.time : 0;
       line(!!c && !!h && c.opened > 0 && h.result === 'stunned' && h.behind === 'cover' && h.d < FRAG.lethalM && c.T.state !== 'dead' && secs > 2 && secs <= FRAG.stagger[0] && c.rep.killed === 0 && c.rep.stunned === 1 && c.counted === 1 && c.T.awareness >= 0.92,
         '(1) a 40 mm on the wall, a man a stride behind it: the wall opens and he is stunned — folded, alive, nobody down', c ? `wall ${c.S.id} at (${f2(c.S.c[0])}, ${f2(c.S.c[2])}) · cells opened ${c.opened} · ${words(c.rep, c.T, c.g)}` : 'NO WALL with floor both sides found'); }
-    { const c = await one(ON, 'frag', false), h = c && hit(c.rep, c.T);
+    { const c = await one('frag', false), h = c && hit(c.rep, c.T);
       line(!!c && !!h && c.opened > 0 && h.result === 'stunned' && h.behind === 'cover' && c.T.state !== 'dead' && c.T.staggerUntil - c.g.time > 2 && c.rep.killed === 0,
         '(2) a hand grenade at the foot of the same wall: the same', c ? `cells opened ${c.opened} · ${words(c.rep, c.T, c.g)}` : 'NO WALL'); }
-    { const c = await one(ON, 'he40', true), h = c && hit(c.rep, c.T);
+    { const c = await one('he40', true), h = c && hit(c.rep, c.T);
       line(!!c && !!h && c.opened > 0 && h.result === 'stunned' && c.T.state !== 'dead' && c.T.staggerUntil > c.st0 && c.rep.killed === 0,
         '(3) the man 2.5 m behind it: stunned too, never killed — the wall took the fragments', c ? `${c.S.back} m behind · cells opened ${c.opened} · ${words(c.rep, c.T, c.g)}` : 'NO WALL');
       if (c) { c.R.step(1); const again = c.R.burst(c.S, 'he40', 0), h2 = hit(again, c.T);
         line(!!h2 && h2.exposed > 0 && !h2.behind && (h2.result === 'killed' || h2.result === 'wounded'),
           '(4) the next burst there, a frame later: judged through the hole — a hole is a hole from then on', words(again, c.T, c.g)); }
       else line(false, '(4) the next burst there, a frame later', 'NO WALL'); }
-    { const c = await one(true, 'he40', false, false), h = c && hit(c.rep, c.T);
+    { const c = await one('he40', false, false), h = c && hit(c.rep, c.T);
       line(!!c && !!h && c.opened === 0 && h.result === 'shielded' && c.T.staggerUntil === c.st0 && c.rep.stunned === 0,
         '(5) walls that do not break: shielded and not a beat lost, as ever', c ? `cells opened ${c.opened} · ${words(c.rep, c.T, c.g)}` : 'NO WALL'); }
-    { const c = await one(false, 'he40', false), h = c && hit(c.rep, c.T);
-      line(!!c && !!h && c.opened > 0 && h.exposed > 0 && !h.behind && (h.result === 'killed' || h.result === 'wounded') && c.rep.stunned === 0 && c.counted === 0,
-        '(6) FRAG.wallStun off: the same burst, the same man — judged through the fresh hole, the blast as it was', c ? `cells opened ${c.opened} · ${words(c.rep, c.T, c.g)}` : 'NO WALL'); }
-    { const R = await rig(ON), g = R.g, S = site, pl = g.player;
+    { const R = await rig(), g = R.g, S = site, pl = g.player;
       if (S) { const at = R.off(S, 1, 0.3, 1.0), p = R.off(S, -1, 1.0); R.clear(null, at, true); g.teleportPlayer([p[0], 0, p[2]]); R.step(3); R.said.length = 0;
         const hits0 = pl.hitsLeft, open0 = R.wall(S).open; const rep = R.burst(S, 'he40', 0); const secs = pl.staggerUntil - g.time;
         line(R.wall(S).open > open0 && rep.player === 'stunned' && rep.stunned === 0 && !pl.down && pl.hitsLeft === hits0 && secs > 2 && pl.fireCd > 2 && R.said.some((s: string) => /broke through your cover, stunned/.test(s)),
           '(7) the player behind a wall a burst holes: stunned like anybody — trigger dead for the seconds, not hurt, a line saying why', `cells opened ${R.wall(S).open - open0} · player ${rep.player} · down ${pl.down} · hits left ${pl.hitsLeft} of ${hits0} · stagger ${f2(secs)} s · fireCd ${f2(pl.fireCd)} · "${R.said[0] ?? ''}"`); }
       else line(false, '(7) the player behind a wall a burst holes', 'NO WALL'); }
-    { const open = async (rule: boolean) => { const R = await rig(rule), g = R.g, S = site; if (!S) return null;
+    { const open = async () => { const R = await rig(), g = R.g, S = site; if (!S) return null;
         const T = g.guards.find((x: any) => x.state !== 'dead' && !x.civ), at = R.off(S, 1, 0.3, 1.0); R.clear(T, at); R.put(T, R.off(S, 1, S.open)); R.step(3);
         const rep = R.burst(S, 'he40', 0), h = hit(rep, T); return { h, text: words(rep, T, g) }; };
-      const a = await open(ON), b = await open(false);
-      line(!!a?.h && !!b?.h && a.h.result === b.h.result && a.h.exposed === b.h.exposed && a.h.exposed > 0 && !a.h.behind,
-        '(8) a man in the open on the burst\'s own side: the rule changes nothing for him', a && b ? `rule on: ${a.text}\n    rule off: ${b.text}` : 'NO WALL'); }
-    { const R = await rig(ON), g = R.g, S = site;
+      const a = await open();
+      line(!!a?.h && a.h.exposed > 0 && !a.h.behind,
+        '(8) a man in the open on the burst\'s own side: exposed to it, and not counted behind anything', a ? a.text : 'NO WALL'); }
+    { const R = await rig(), g = R.g, S = site;
       if (S) { const T = g.guards.find((x: any) => x.state !== 'dead' && !x.civ), at = R.off(S, 1, 0.3, 1.0); R.clear(T, at); R.put(T, R.off(S, -1, 1.0));
         const stand = R.off(S, 1, S.open); g.godMode = true; g.teleportPlayer([stand[0], 0, stand[2]]); R.step(3); R.said.length = 0;   // (the player square on to the wall in front of the burst, kept on his feet to read the line)
         const rep = R.burst(S, 'he40', 0), eye = g.player.char.bones.head ?? [g.player.char.pos[0], 1.6, g.player.char.pos[2]];
@@ -118,7 +115,7 @@ export async function wallstunCheck(): Promise<boolean> {
           '(9) the log counts the man folded behind what it broke, seen through the hole', `player ${f2(Math.hypot(stand[0] - at[0], stand[2] - at[2]))} m off on the burst's side · ${inView ? 'sees' : 'does not see'} him · "${last}"`); }
       else line(false, '(9) the log line', 'NO WALL'); }
   } catch (e) { all = false; console.log(`- FAIL — the check threw\n    ${e instanceof Error ? e.stack : String(e)}`); }
-  finally { Object.assign(FRAG, was.frag); DOORBLAST.on = was.door; DESTRUCTION.on = was.sw; Math.random = was.rnd; }
+  finally { Math.random = was.rnd; }
   console.log(`=== wallstun: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;
 }

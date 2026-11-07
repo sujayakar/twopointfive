@@ -1078,7 +1078,7 @@ export class BoxWorld {
   /** one candidate of raycast(): the brute force's per-box test, statement for statement, + the tie rule the index order gave it */
   private rayTest(i: number, ro: Vec3, rd: Vec3, skipFlags: number, skipOwner: number) {
     const b = this.all[i]; if (b.flags & skipFlags) return; if (skipOwner && b.owner === skipOwner) return;   // (e.g. the cursor's aim ray must not land on the player's own gun / goggles)
-    const r = rayBox(ro, rd, b, this.rcBest);
+    const r = rayBoxOwn(ro, rd, b, this.rcBest);
     if (r && (r.t < this.rcBest || (r.t === this.rcBest && i < this.rcBi))) {
       if (this.glassOpen && (b.flags & BoxFlag.Glass) && i < this.statics.length && this.glassOpen(i, [ro[0] + rd[0] * r.t, ro[1] + rd[1] * r.t, ro[2] + rd[2] * r.t])) return;   // through the hole in a holed pane
       this.rcBest = r.t; this.rcBi = i; this.rcBn = r.n;
@@ -1141,6 +1141,11 @@ export const shapeCut = (b: Box): boolean => b.shaped === true && b.cut !== unde
  *  the simulation's, and a picture setting may not move it (as a round thing, scene/round.ts). Ask it only of a box that has a record. */
 export const cutMet = (b: Box): boolean => (cutConfig.on || b.shaped === true) && b.cut!.length > 0;
 export function rayBox(ro: Vec3, rd: Vec3, b: Box, tmax: number): { t: number; n: Vec3 } | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('rayBox', undefined, [ro, rd, b, tmax]); if (__r !== RUST_PASS) return __r as any; } }
+  return rayBoxOwn(ro, rd, b, tmax);
+}
+/** The test itself, with no crossing: for the box world's own raycast (BoxWorld.raycast is the host's and walks the host's list, a thousand boxes a ray:
+ *  asked of the Rust game once a box, one ray from outside a tick cost most of a second). */
+function rayBoxOwn(ro: Vec3, rd: Vec3, b: Box, tmax: number): { t: number; n: Vec3 } | null {
   if (b.round === true) return rayBoxRound(ro, rd, b, tmax);   // ROUND THINGS (scene/round.ts): the cylinder (below)
   if (b.cut !== undefined && cutMet(b)) return rayBoxCut(ro, rd, b, tmax);   // CUT BOXES: the cut solid (below) — every other box takes the lines it always took
   if (b.rot) return rayBoxRot(ro, rd, b, tmax);
