@@ -528,21 +528,18 @@ async function swing(h: number, k: number, aim: number, body: number, secs = 2.5
   return { t, tb, peak, peakB, jerk, past, rel: rel(), c };
 }
 export async function turnOff(): Promise<boolean> {
-  const F = family('turn-off: with the weight off — or a man nobody weighs — his yaws are the ones written, to the bit');
+  const F = family('turn-off: a man nobody weighs — his yaws are the ones written, to the bit');
   try {
-    CH.TURN.on = 0; let c = await man(1); c.turn.on = true; let worst = 0;
+    const c = await man(1); c.turn.on = false; let worst = 0;
     for (let i = 0; i < 120; i++) { const b = Math.sin(i * 0.37) * 2, a = b + Math.cos(i * 0.91); c.turnBegin(); c.bodyYaw = b; c.aimYaw = a; c.update(DT); worst = Math.max(worst, Math.abs(c.bodyYaw - b), Math.abs(c.aimYaw - a)); }
-    F.verdict(worst === 0, 'TURN.on 0: bodyYaw and aimYaw come out of update() as they went in', `worst difference over 120 frames of thrown yaws: ${worst}`);
-    CH.TURN.on = 1; c = await man(1); c.turn.on = false; worst = 0;
-    for (let i = 0; i < 120; i++) { const b = Math.sin(i * 0.37) * 2, a = b + Math.cos(i * 0.91); c.turnBegin(); c.bodyYaw = b; c.aimYaw = a; c.update(DT); worst = Math.max(worst, Math.abs(c.bodyYaw - b), Math.abs(c.aimYaw - a)); }
-    F.verdict(worst === 0, 'a man not weighed (Sam, a civilian, a showcase\'s cast): the same, with TURN on', `worst difference ${worst}`);
+    F.verdict(worst === 0, 'a man not weighed (Sam, a civilian, a showcase\'s cast): bodyYaw and aimYaw come out of update() as they went in', `worst difference over 120 frames of thrown yaws: ${worst}`);
   } finally { restoreTurn(); restore(); }
   return F.done();
 }
 export async function turnWeight(): Promise<boolean> {
   const F = family('turn-weight: a muzzle and a body come round as masses — up to speed, a top rate by the weapon, off speed onto the point and never past it');
   try {
-    CH.TURN.on = 1; const T = CH.TURN, Q = Math.PI / 2;
+    const T = CH.TURN, Q = Math.PI / 2;
     const car = await swing(0.82, 1, Q, 0), pis = await swing(1, 1, Q, 0), rif = await swing(0.7, 1, Q, 0), green = await swing(0.82, 0.12, Q, 0);
     F.verdict(car.t > 0.2 && car.t < 0.5 && (BREAK ? car.t < 0.1 : true), 'a trained man brings a carbine a quarter turn round in over a fifth and under half a second (it was 0.2 s flat out, no run-up)', `90° with handling 0.82: on the point (inside 3°) after ${car.t.toFixed(2)} s`);
     F.verdict(car.peak <= T.aim * 0.82 + 0.05 && car.peak > 4, 'its top rate is the weapon\'s', `peak ${deg(car.peak)}/s — the cap ${deg(T.aim * 0.82)}/s`);
@@ -554,18 +551,18 @@ export async function turnWeight(): Promise<boolean> {
     F.verdict(piv.tb > 0.5 && piv.tb < 1.0 && piv.peakB <= T.body * (1 - T.bodyShare * 0.18) + 0.05, 'an about-face takes over half a second, at the body\'s own top rate', `176°: body on it after ${piv.tb.toFixed(2)} s, peak ${deg(piv.peakB)}/s (unweighed, bodies in whole play-throughs turned at a flat 290‥340°/s)`);
     { const ts: number[] = [], was = { ...T };   // the three named settings (TURN_FEEL; `?turn=light|medium|heavy`, `TPS_TURN=<name>`): each heavier than the last, and setTurn is the one way in
       for (const k of ['light', 'medium', 'heavy'] as const) { CH.setTurn(k); ts.push((await swing(0.8, 1, Q, 0)).t); }
-      const named = CH.turnFeel(), own = (CH.setTurn('1,aim=9'), CH.turnFeel()), offW = (CH.setTurn('0'), CH.turnFeel()); Object.assign(T, was);
-      F.verdict(ts[0] < ts[1] && ts[1] < ts[2] && named === 'heavy' && own === 'own numbers' && offW === 'off', 'light, medium, heavy: each named setting is slower than the last, and the switch says which one is live', `the team's rifle a quarter turn: ${ts.map(t => t.toFixed(2) + ' s').join(' · ')} · after 'heavy': ${named} · after '1,aim=9': ${own} · after '0': ${offW}`);
-      const warn = console.warn; let said = 0; console.warn = () => { said++; }; let bad: boolean, badOn: number, typo: boolean, typoAim: number;
-      try { bad = CH.setTurn('hevy', 0); badOn = T.on; Object.assign(T, was); typo = CH.setTurn('1,aimm=7'); typoAim = T.aim; } finally { console.warn = warn; Object.assign(T, was); }
-      F.verdict(!bad && badOn === 0 && !typo && typoAim === was.aim && said === 2, 'a mistyped name or number is refused aloud, never quietly taken as another setting', `'hevy' → understood ${bad}, on ${badOn} · '1,aimm=7' → understood ${typo}, aim still ${typoAim} · warnings ${said}`); }
+      const named = CH.turnFeel(), own = (CH.setTurn('1,aim=9'), CH.turnFeel()); Object.assign(T, was);
+      F.verdict(ts[0] < ts[1] && ts[1] < ts[2] && named === 'heavy' && own === 'own numbers', 'light, medium, heavy: each named setting is slower than the last, and the game says which one is live', `the team's rifle a quarter turn: ${ts.map(t => t.toFixed(2) + ' s').join(' · ')} · after 'heavy': ${named} · after '1,aim=9': ${own}`);
+      const warn = console.warn; let said = 0; console.warn = () => { said++; }; let bad: boolean, typo: boolean, typoAim: number;
+      try { bad = CH.setTurn('hevy'); Object.assign(T, was); typo = CH.setTurn('1,aimm=7'); typoAim = T.aim; } finally { console.warn = warn; Object.assign(T, was); }
+      F.verdict(!bad && !typo && typoAim === was.aim && said === 2, 'a mistyped name or number is refused aloud, never quietly taken as another setting', `'hevy' → understood ${bad} · '1,aimm=7' → understood ${typo}, aim still ${typoAim} · warnings ${said}`); }
   } finally { restoreTurn(); restore(); }
   return F.done();
 }
 export async function turnEasing(): Promise<boolean> {
   const F = family('turn-easing: the AI\'s own easings still arrive (they run wish to wish), a point behind his back swings the gun across his front, a staging is taken as written');
   try {
-    CH.TURN.on = 1; const { approachAngle } = await import(`${ROOT}/src/math/vec.ts`); const Q = Math.PI / 2;
+    const { approachAngle } = await import(`${ROOT}/src/math/vec.ts`); const Q = Math.PI / 2;
     // (a) an easing at 8 rad/s (guards.ts PACE.turn) through turnBegin, as updateGuard runs it
     let c = await man(1); c.turn.on = true; c.turn.h = 0.82; c.turn.k = 1; c.bodyYaw = c.aimYaw = 0; c.update(DT); let t = NaN;
     for (let i = 0; i < 120; i++) { c.turnBegin(); c.aimYaw = approachAngle(c.aimYaw, Q, 8 * DT); c.update(DT); if (isNaN(t) && Math.abs(c.aimYaw - Q) < 3 / 57.2958) t = (i + 1) * DT; }
@@ -599,8 +596,7 @@ export async function turnEasing(): Promise<boolean> {
     c = await man(1); c.turn.on = true; c.turn.h = 0.82; c.turn.k = 1; c.bodyYaw = c.aimYaw = 0; c.update(DT);
     c.turnBegin(); c.aimYaw = Q; c.update(DT); c.turnBegin(); const g1 = c.gunYaw, w1 = c.aimYaw; c.update(DT);
     for (let i = 0; i < 60; i++) { c.turnBegin(); c.aimYaw = Q; c.update(DT); } c.turnBegin(); const g2 = c.gunYaw; c.update(DT);
-    CH.TURN.on = 0; const o = await man(1); o.turn.on = true; o.aimYaw = 1.23; o.update(DT); const g3 = o.gunYaw === 1.23; CH.TURN.on = 1;
-    F.verdict(w1 === Q && g1 < 0.1 && Math.abs(g2 - Q) < 1e-6 && g3, 'inside his own update the gates read the gun, not the wish: a frame into a quarter turn it is still near where it was, and it ends on the point', `wish ${deg(w1)}, gun ${deg(g1)} a frame in · gun ${deg(g2)} once round · weight off: gunYaw is aimYaw ${g3}`);
+    F.verdict(w1 === Q && g1 < 0.1 && Math.abs(g2 - Q) < 1e-6, 'inside his own update the gates read the gun, not the wish: a frame into a quarter turn it is still near where it was, and it ends on the point', `wish ${deg(w1)}, gun ${deg(g1)} a frame in · gun ${deg(g2)} once round`);
   } finally { restoreTurn(); restore(); }
   return F.done();
 }
@@ -608,7 +604,7 @@ export async function turnGame(): Promise<boolean> {
   const F = family('turn-game: a staged fight with the weight on — who is weighed and by what, nobody turns faster than his weapon lets him, every yaw finite');
   try {
     const { stage } = await import('./bang-tally.ts'); const { handlingOf } = await import(`${ROOT}/src/game/weapons.ts`);
-    const S: any = await quiet(() => stage('night-breach', 2)); const { g, step } = S; CH.TURN.on = 1; step(5);
+    const S: any = await quiet(() => stage('night-breach', 2)); const { g, step } = S; step(5);
     const men = g.guards.filter((x: any) => x.state !== 'dead');
     F.verdict(men.length > 3 && men.every((x: any) => x.char.turn.on && x.char.turn.h === handlingOf(x.weapon.def)) && !g.player.char.turn.on, 'every man on the floor is weighed by the handling of what he carries; Sam is not',
       men.slice(0, 4).map((x: any) => `${x.callsign} ${x.weapon.def.short} ${x.char.turn.h}`).join(' · ') + ` · the player ${g.player.char.turn.on}`);
