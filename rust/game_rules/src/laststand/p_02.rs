@@ -529,15 +529,12 @@ pub fn stand_say(g: &mut crate::game::Game) {
 /// Once a frame from RoomFight.tick, after the defenders', the press's and the buddy call's own ticks.   (laststand.ts lastStandTick)
 pub fn last_stand_tick(g: &mut crate::game::Game) {
     step_stand(g);
-    if g.k.laststand.regroup { stand_say(g); }
 }
 
 /// The frame of the endgame: 'most are down' starts it; then the lines waiting, the check, who has moved, the stand.   (laststand.ts stepStand)
 pub fn step_stand(g: &mut crate::game::Game) {
-    if !g.k.laststand.regroup {
-        // (the switch flipped mid-stand; callOut is settled on, so the frame goes on)
-        if let Some(s) = g.m.laststand.states.as_ref().and_then(|st| st.stand.clone()) { dissolve(g, &s); }
-    }
+    // (the switch flipped mid-stand; callOut is settled on, so the frame goes on)
+    if let Some(s) = g.m.laststand.states.as_ref().and_then(|st| st.stand.clone()) { dissolve(g, &s); }
     if !crate::roomclear::room_clear_scenario_active(g) || g.room_clear.end.is_some() || g.rescue.active { return; }
     if g.m.laststand.states.as_ref().map_or(true, |st| st.stale) {
         let all = g.night_breach.hostiles.clone();

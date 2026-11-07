@@ -108,7 +108,6 @@ pub fn room_fight_tick(g: &mut crate::game::Game, dt: f64) {
     while i < g.fight.ops.len() { let o = g.fight.ops[i]; i += 1; room_fight_tick_op(g, o, dt); }
     crate::pressure::press_tick(g, dt);
     crate::laststand::last_stand_tick(g);
-    crate::buddy::buddy_tick(g);
 }
 /// an enemy's footfall: heard by a teammate as any man hears a step (roomfight.ts:480)
 fn hear_step(g: &mut Game, key: u32, e: crate::game::GameEvent) {

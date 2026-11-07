@@ -561,13 +561,9 @@ fn tick_op_in_view(g: &mut Game, o: RoomfightOpId, dt: f64) {
         g.tab.roomfight_op[o].line_t += dt;
         g.tab.roomfight_op[o].line_by = Some(OpLineBy::Player);
         g.tab.roomfight_op[o].line_at = g.time;
-        if !crate::clearline::clear_line_blocked(g, gd, h, chest, crate::clearline::LeadsBy::Player) { room_fight_side_step(g, o, chest, speed, None, None); }
+        room_fight_side_step(g, o, chest, speed, None, None);
         room_fight_let_go(g, o);
         if g.tab.roomfight_op[o].tgt.is_none() { return; }
-    }
-    if g.k.clearline.on && !sam_in && g.time >= g.tab.roomfight_op[o].ready_at && g.time >= g.tab.roomfight_op[o].reload_until { // a MATE in his line: nothing else asks him to move
-        let from = shoulder_of(g, c);
-        if let Some(f @ RoomFightFriendInLine::Guard(_)) = room_fight_friend_in_line(g, from, chest, gd, None) { crate::clearline::clear_line_blocked(g, gd, h, chest, clear_by(f)); }
     }
     room_fight_doorway(g, o, dt, speed);
     // ---- the track (aim.ts's law, this side's K) and the pair
