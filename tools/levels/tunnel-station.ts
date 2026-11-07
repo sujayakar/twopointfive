@@ -1,4 +1,4 @@
-// THE FIRST TUTORIAL MISSION: a squad led from above (levels/tut-sky.json; `bun run tools/levels/export.ts tut-sky`), on a place made for it:
+// THE FLOOR tools/levels/tut-team.ts builds on (this file was the generator of a mission led from above, cut 2026-11-07; its beats below are what the floor was made for):
 // THE TUNNEL STATION. The road over the pass goes into the mountain here, and the men who keep the tunnel open in winter live beside its mouth: one long
 // range under the cut rock (the tea room, the kitchen, the store), a bunkhouse across the yard on the road, a court behind it for the generator and the fuel,
 // and a wide yard between them where the plough lorry stands by the grit heap. One gate onto the road.
@@ -54,7 +54,7 @@ import { rockOf } from './snowRock';
 import { BoxFlag } from '../../src/scene/boxes';
 import { drawnAs, PANEL_GREY } from '../../src/scene/stuff';
 
-export const NAME = 'tut-sky';
+export const NAME = 'tunnel-station';
 export const MATERIALS = { ...GWOT_MATERIALS, ...SNOW_MATERIALS };
 export const NOTES = 'The first tutorial mission, on a place of its own: the tunnel station, a walled road-keepers\' post beside a tunnel\'s mouth on a pass road, at night, in winter. The squad\'s two pickups in the west of the road, a roadblock and a gun truck at the tunnel in the east of it; seven men in four rooms round a wide yard under snow. Regenerate: bun run tools/levels/export.ts tut-sky';
 

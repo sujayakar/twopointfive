@@ -115,7 +115,7 @@ export async function responseCheck(): Promise<boolean> {
 
   // ---- (3) no block, no team
   { const out: string[] = []; let ok = true;
-    for (const f of ['quiet-yard.json', 'quiet-relay.json']) { const W = await stand(f, 3, ON); const g = W.game; goLoud(W); steps(W, 12);
+    for (const f of ['quiet-relay.json']) { const W = await stand(f, 3, ON); const g = W.game; goLoud(W); steps(W, 12);
       const idle = g.qrf.state === 'idle', heard = g.qrf.loudT > -1e8, panel = requestQrf(g, 'panel'), none = !g.guards.some((x: any) => g.qrf.owns(x));
       ok &&= idle && heard && !panel && none && !hasResponse(g) && notes(g).some(n => n === 'no-team:this level has none'); out.push(`${f}: gunfire heard ${heard} · locked down ${g.escalation} · ${g.qrf.state} · panel call ${panel ? 'taken' : 'refused'}`); }
     line(ok, '(3) a level with no block has no team: the same gunfire on a locked-down floor calls nobody, and the panel\'s own call is refused', out.join(' · ')); }

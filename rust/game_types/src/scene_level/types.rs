@@ -7,13 +7,10 @@ use alloc::{string::String, vec::Vec};
 #[derive(Clone, Copy, Debug)]
 pub enum LevelScriptFn {
     Unset,
-    TutSky,
     TutTeam,
     TutQueue,
-    TutSolo,
     TutRoad,
     TutKit,
-    TutSquad,
     TutQuiet,
     TutPair,
 }

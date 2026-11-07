@@ -93,19 +93,16 @@ const LEVEL_BASE: Record<string, string> = {
 
   // the tunnel station, played with no fog of war (its lesson's rails.fog); its last step tells the squad to run back to the trucks (onWay.run); the
   // brazier's melt patch laid round (eight turned slabs where two square ones were); the mission takes the flat ring (its lesson's rails.flatRing)
-  'tut-sky.json': '30f2f52a2',
   'tut-team.json': 'e034f58cc',   // (the squad's tutorial on the ground: the station's floor, its own mission)
 
   // the fuel stop, alone: the ground laid as the place is used and a gate for its trucks, the moon behind the shop; then the inner wall and its wooden
   // door, the lines re-cut round it (full auto, the door shot out, the reload), `settle` on the steps that end in a shot or a blast, and no sponge round
   // on his card or swap among his lines
-  'tut-solo.json': 'f469ec380',
   'tut-kit.json': '12ffcd0b',   // (the kit mission as it was first made: tut-solo's fuel halt with a road, two back rooms and a wash yard)
 
   // the squad mission: the hall's street window moved to the corner men's line and narrowed, the bags behind the gun over a man's head and longer, the can
   // and its oil inside the nest (so only the strip in front of the glass has a line to the hall's two); then its steps at the workshop, where plan
   // mode is opened and closed (three steps where one was: no box moved); then a cue on the window's step, which the hall's two wait for
-  'tut-squad.json': 'd82feec01',
 };
 /** A LEVEL'S BASE AS A FILE OF ITS OWN (the dressing of every level, 11-03): `tools/qa/fixtures/level-base/<name>.txt` for `levels/<name>.json` holds the
  *  GIT BLOB ID of that level file as meant, and WINS over the level's row in LEVEL_BASE (and over a look twin's fall to the plain level's row, and over

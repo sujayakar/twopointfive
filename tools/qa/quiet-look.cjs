@@ -11,7 +11,7 @@
 // Exit 1 on a FAIL or a page error. The software adapter's smoke-pipeline console noise is passed over as tools/qa/missions-look.cjs does.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const fs = require('fs'), path = require('path');
-const outDir = process.argv[2] || 'quiet-look', LEVEL = process.argv[3] || 'quiet-yard.json';
+const outDir = process.argv[2] || 'quiet-look', LEVEL = process.argv[3] || 'vault.json';
 const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow';
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage textures \(5\) in the Compute stage/, NOISE_MAX = 80;
