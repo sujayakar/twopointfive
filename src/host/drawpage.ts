@@ -28,7 +28,8 @@ import { machineAfter, machineBefore } from './machine';
 import { EVENPACE, FLIGHT_PAGE, pacer, pageRoom, rateMeter } from './pace';
 import { PLAN_PACE } from '../render/planPace';
 import { RENDER_PASSES } from '../gpu/timer';
-import { DrawGame } from './drawgame';
+import { DrawGame, GameLost } from './drawgame';
+import { lostCard } from './lostcard';
 import { camKey, keysBoot } from './keymap';
 import { Section, Sky, View } from '../draw/sections';
 import { AudioEngine } from '../audio/audio';
@@ -191,6 +192,15 @@ async function main(): Promise<void> {
   const pace = pacer(), rate = rateMeter(), rendered = [...RENDER_PASSES]; let resolved = -1;
   EVENPACE.on = true; EVENPACE.flight = FLIGHT_PAGE; PLAN_PACE.on = true;
   document.addEventListener('visibilitychange', () => { last = performance.now(); pace.reset(); rate.reset(); });
+  /** a game lost to a panic stands again, and nothing of the lost one's last frame goes with it */
+  let backAt = -1e9;
+  const standAgain = (newest: boolean): string | null => {
+    const label = game.recover(newest); if (label === null) return null;
+    input.keys.clear(); input.buttons = 0; input.endFrame(); acc = 0; drift = 0; behind = carry = null;
+    cam.kickOut(); cam.drawOut(); stood = 0; anew(); lens(); cam.rebuild();
+    backAt = newest ? game.ticks : -1e9; last = performance.now(); requestAnimationFrame(loop);
+    return label;
+  };
   const loop = (ts: number): void => {
     try {
       const room = pageRoom({ calibrating: quality.calibrating, measuring: false, kitView: false });
@@ -203,7 +213,10 @@ async function main(): Promise<void> {
       frame(Math.min(1 / 20, raw));
       if (room > 0) { const w = pace.sent(performance.now()), end = (): void => pace.done(w, performance.now(), 0); gpu.device.queue.onSubmittedWorkDone().then(end, end); }
       requestAnimationFrame(loop);
-    } catch (e) { console.error(e); showFatal(`The frame loop threw and has been stopped:\n\n${(e as Error)?.stack ?? e}`); }
+    } catch (e) {
+      // (lost to a panic: the picture stands as it was, and the card says what Enter puts back)
+      if (e instanceof GameLost) { lostCard(document.getElementById('app')!, e, { kept: () => game.kept(), back: standAgain }, e.tick - backAt < 120); return; }
+      console.error(e); showFatal(`The frame loop threw and has been stopped:\n\n${(e as Error)?.stack ?? e}`); }
   };
   loading.style.display = 'none';
   // (for a tool: the page's parts, and frames stepped by hand)
