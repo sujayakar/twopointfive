@@ -180,6 +180,14 @@ that the picture, the sound, the HUD and the menus read (`src/host/rustgame.ts`,
     itself refuses for two). Nobody at the second seat's controls, no server, no rollback here.
 11. **The module.** This crate is kept out of the crates the page's module is built from. In it, the level reader, the JSON reader and the
     character's reader are new code for the module to carry, and a level's text and the character's bytes have to cross into it once.
+12. **The team's start is the office's until a start says otherwise.** The rescue's and the night breach's knob tables are made holding the
+    office's team start (`samAt`, `samYaw`, `opsAt`): the TypeScript reads them off `levels/office.json` as the module loads, the Rust holds
+    them as the table's values (`knobs.rs`), and each keeps `applied`, the start the knobs were last written from, so that a start on a level
+    that names another writes its own over them and a knob moved by hand stays moved. A game made in Rust is made before any level, so it
+    cannot read a file for them. The end to aim at: the team's start is the level's alone (`level.scenarios`), and the knob is an override
+    that starts empty. That touches, in both languages: the two knob tables and their rows in the registry and on the wire, `applied` and
+    the compare in each start (`rescue.ts`, `nightbreach.ts`; `rescue/p_01.rs`, `nightbreach/p_01.rs`), the debugger's rows for them, and
+    every check that moves a team's start by its knob before a start. It goes with the start moving to Rust, not before.
 
 ## The compare (`tools/blitz/start.sh`)
 
@@ -187,7 +195,7 @@ that the picture, the sound, the HUD and the menus read (`src/host/rustgame.ts`,
 tools/blitz/start.sh kit-yard.json                                   # a level of levels/, as its file has it
 tools/blitz/start.sh kit-yard.json --scenario roomclear --frames 1800
 tools/blitz/start.sh depot-gwot.json --link '?levelFile=depot.json&roomclear&squad4' --frames 300   # started as the page starts it
-tools/blitz/start.sh --mission depot-four --frames 300               # a row of the mission list: its file, kind, team size and deal
+tools/blitz/start.sh --mission depot-four --frames 300               # a row of the mission list: its file, started from its link
 tools/blitz/start.sh rust/game_start/target/scenes/two-rooms.json --scenario roomclear --cpu --frames 900
 bun run tools/blitz/start-levels.ts --write                          # every mission, and LEVELS.md written from the result (--seats 2: as games of two)
 ```
