@@ -870,44 +870,6 @@ impl Raycast {
 }
 impl Default for Raycast { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/collision.ts:866 raycastAsk ->, src/scene/collision.ts:866)
-#[derive(Clone, Copy, Debug)]
-pub struct RaycastAsk {
-    pub t: f64,
-    pub index: f64,
-    pub n: V3,
-}
-impl RaycastAsk {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RaycastAsk {
-            t: 0.0,
-            index: 0.0,
-            n: [0.0; 3],
-        }
-    }
-}
-impl Default for RaycastAsk { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/scene/collision.ts:884 raycastHere ->, src/scene/collision.ts:884)
-#[derive(Clone, Copy, Debug)]
-pub struct RaycastHere {
-    pub t: f64,
-    pub index: f64,
-    pub n: V3,
-}
-impl RaycastHere {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RaycastHere {
-            t: 0.0,
-            index: 0.0,
-            n: [0.0; 3],
-        }
-    }
-}
-impl Default for RaycastHere { fn default() -> Self { Self::zeroed() } }
-
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct SceneCollisionMod {

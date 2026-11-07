@@ -321,12 +321,12 @@ pub fn shot_passes(g: &mut crate::game::Game, a: V3, rd: V3, panes: &[crate::sce
     ok
 }
 
-/// glass is not cover: how many of `eyes` have a line of fire to `p` through glass, the leaves taken out for the asking (glasspen.ts shotThroughGlass)
+/// glass is not cover: how many of `eyes` have a line of fire to `p` through glass, no door leaf in the way (glasspen.ts shotThroughGlass)
 pub fn shot_through_glass(g: &mut crate::game::Game, eyes: &[V3], p: V3, energy: Option<f64>) -> f64 {
     let energy = energy.unwrap_or(g.k.glasspen.stack_energy);
     if !glass_pen_live(g) { return 0.0; }
     let panes = crate::glass::glass_panes(g);
-    let leaves = core::mem::replace(&mut g.col.dynamic_boxes, Vec::new());
+    let walls = crate::ask::Over::statics();
     let mut n = 0.0;
     for &e in eyes.iter() {
         let d = v3::sub(p, e);
@@ -340,9 +340,8 @@ pub fn shot_through_glass(g: &mut crate::game::Game, eyes: &[V3], p: V3, energy:
                 if s.t1 > 0.0 && s.t0 < l { glass = true; break; }
             }
         }
-        if glass && !crate::scene_collision::shot_blocked(g, e, p, Some(0.02), Some(energy)) { n += 1.0; }
+        if glass && !crate::scene_collision::shot_blocked_over(g, &walls, e, p, Some(0.02), Some(energy)) { n += 1.0; }
     }
-    g.col.dynamic_boxes = leaves;
     n
 }
 

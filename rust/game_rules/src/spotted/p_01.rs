@@ -58,11 +58,9 @@ pub fn eye_of(g: &crate::game::Game, gd: GuardId) -> V3 {
 /// a line from a man's eyes to a body at `q`, asked of the walls and furniture only: no door leaves (spotted.ts inLine)
 pub fn in_line(g: &mut crate::game::Game, h: GuardId, q: &[f64], low: bool) -> bool {
     let eye = eye_of(g, h);
-    let dyn_boxes = core::mem::take(&mut g.col.dynamic_boxes);
-    let seen = !crate::scene_collision::segment_blocked(g, eye, [q[0], if low { 0.75 } else { 1.25 }, q[2]], None, None, None)
-        || !crate::scene_collision::segment_blocked(g, eye, [q[0], if low { 1.05 } else { 1.6 }, q[2]], None, None, None);
-    g.col.dynamic_boxes = dyn_boxes;
-    seen
+    let walls = crate::ask::Over::statics();
+    !crate::scene_collision::segment_blocked_over(g, &walls, eye, [q[0], if low { 0.75 } else { 1.25 }, q[2]], None, None)
+        || !crate::scene_collision::segment_blocked_over(g, &walls, eye, [q[0], if low { 1.05 } else { 1.6 }, q[2]], None, None)
 }
 
 /// the meter's reading for a man knelt at `q` (spotted.ts litAt)

@@ -7,6 +7,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
+use crate::ask::{Leaves, Over};
 use crate::v3::quat;
 use sim::world::ASK_HOST;
 
@@ -415,7 +416,7 @@ pub fn gather_ask(g: &mut crate::game::Game, x0: f64, z0: f64, x1: f64, z1: f64,
 pub fn gather_here(g: &mut crate::game::Game, x0: f64, z0: f64, x1: f64, z1: f64, y0: f64, y1: f64, out: &mut Vec<i32>) -> f64 {
     let w = slot(g);
     let n = sim::collide::gather(w, x0, z0, x1, z1, y0, y1, out.len());
-    let list = &sim::world::world_read(w).list;
+    let list = &sim::world::asking(w).list;
     for i in 0..n {
         out[i] = list[i] as i32;
     }
@@ -446,7 +447,7 @@ pub fn circle_touches_here(g: &mut crate::game::Game, x: f64, z: f64, r: f64, y0
     let v = sim::collide::touches(w, x, z, r, y0, y1, cap);
     let full = v < 0;
     let (n, k) = if full { (cap, -1.0) } else { ((v as u32 & 0xffff) as usize, (v as u32 >> 16) as f64) };
-    let list = &sim::world::world_read(w).list;
+    let list = &sim::world::asking(w).list;
     for i in 0..n {
         out[i] = list[i] as i32;
     }
@@ -475,7 +476,7 @@ pub fn collide_circle_here(g: &mut crate::game::Game, p: &mut V3, r: f64, y0: f6
     let w = slot(g);
     let y0 = foot_band(g, y0);
     let hit = sim::collide::circle(w, p[0], p[2], r, y0, y1, js::to_u32(iterations)) != 0;
-    let pt = sim::world::world_read(w).pt;
+    let pt = sim::world::asking(w).pt;
     p[0] = pt[0];
     p[2] = pt[1];
     hit
@@ -558,6 +559,22 @@ fn leaves_set(g: &mut Game) -> i32 {
     let set = crate::scene_box_mirror::box_mirror_leaves(g, &d);
     if set == -2.0 { panic!("{} leaves, and a list of the box world holds {}", d.len(), sim::world::MAX_LEAVES); }
     set as i32
+}
+/// the world as a question takes it, in the module's words, for the question `f`
+fn over_lent<R>(g: &mut Game, over: &Over, f: impl FnOnce(&mut Game, &sim::world::Over) -> R) -> R {
+    if over.plain() { let set = leaves_set(g); return f(g, &sim::world::Over::with(set)); }
+    let set = if over.leaves == Leaves::None { -1 } else { leaves_set(g) };
+    let but: Vec<u32> = match &over.leaves { Leaves::But(l) if set >= 0 => (0..g.col.dynamic_boxes.len() as u32).filter(|&i| l.contains(&g.col.dynamic_boxes[i as usize])).collect(), _ => Vec::new() };
+    let (extra, extra_cut) = if over.extra.is_empty() { (Vec::new(), Vec::new()) } else { crate::scene_box_mirror::rows_of(g, &over.extra) };
+    f(g, &sim::world::Over { set, but: &but, open: &over.open, extra: &extra, extra_cut: &extra_cut })
+}
+/// a question past the proof: alone it is proven for and shut behind it
+fn proven<R>(g: &mut Game, f: impl FnOnce(&mut Game) -> R) -> R {
+    if !alone(g) { ready(g); return f(g); }
+    ready(g);
+    let r = f(g);
+    crate::scene_box_mirror::box_mirror_shut(g);
+    r
 }
 /// the pane rule for a question that will be answered; below nought there is nobody else to answer
 fn ask_of(g: &Game) -> u32 {
@@ -709,7 +726,7 @@ pub fn dynamic_hit(g: &mut crate::game::Game, a: V3, r0: f64, r1: f64, r2: f64, 
 }
 
 /// the module's line a→b, past the proof. Panes in the way are added to `panes` where it is given (static, metres along). (collision.ts segmentBlockedAsk's call of lines_blocked)
-fn line(g: &mut Game, a: V3, b: V3, shrink: f64, through: f64, panes: Option<&mut Vec<crate::scene_collision::SegmentBlockedPanesItem>>) -> bool {
+fn line(g: &mut Game, over: &Over, a: V3, b: V3, shrink: f64, through: f64, panes: Option<&mut Vec<crate::scene_collision::SegmentBlockedPanesItem>>) -> bool {
     let (a0, a1, a2) = (a[0], a[1], a[2]);
     let (d0, d1, d2) = (b[0] - a0, b[1] - a1, b[2] - a2);
     let len = m::hyp3(d0, d1, d2);
@@ -717,15 +734,14 @@ fn line(g: &mut Game, a: V3, b: V3, shrink: f64, through: f64, panes: Option<&mu
     if !(len < 1e6) { return false; }   // (TRAP: a length that is no length of this world's; the walk it went to answered no)
     let thr = js::to_u32(through);
     debug_assert!(thr & !js::to_u32(crate::scene_box_mirror::mirrored()) == 0, "a flag the box world does not keep");
-    let set = leaves_set(g);
     let ask = if thr & sim::world::F_GLASS != 0 { 0 } else { ask_of(g) };
     let w = slot(g);
     let word = ask | if panes.is_some() { sim::lines::ASK_PANES } else { 0 };
-    let r = sim::lines::blocked(w, a0, a1, a2, b[0], b[1], b[2], len, shrink, thr, set, word);
+    let r = over_lent(g, over, |_, v| sim::lines::blocked_over(w, v, a0, a1, a2, b[0], b[1], b[2], len, shrink, thr, word));
     if r == -2 { panic!("more glass on one line than the box world lists ({})", sim::world::MAX_PANES); }
     if r > 0 {
         if let Some(out) = panes {
-            let o = sim::world::world_read(w);
+            let o = sim::world::asking(w);
             for i in 0..r as usize {
                 out.push(SegmentBlockedPanesItem { bi: o.pane_bi[i] as f64, t: o.pane_t[i] });
             }
@@ -748,29 +764,45 @@ fn line(g: &mut Game, a: V3, b: V3, shrink: f64, through: f64, panes: Option<&mu
 pub fn segment_blocked_ask(g: &mut crate::game::Game, a: V3, b: V3, shrink: Option<f64>, through: Option<f64>, panes: Option<&mut Vec<crate::scene_collision::SegmentBlockedPanesItem>>) -> bool {
     let (shrink, through) = (shrink.unwrap_or(0.02), through.unwrap_or(crate::scene_boxes::box_flag().glass));
     ready(g);
-    line(g, a, b, shrink, through, panes)
+    line(g, &Over::OWN, a, b, shrink, through, panes)
+}
+/// …of the world as the question takes it
+pub fn segment_blocked_over(g: &mut crate::game::Game, over: &Over, a: V3, b: V3, shrink: Option<f64>, through: Option<f64>) -> bool {
+    let (shrink, through) = (shrink.unwrap_or(0.02), through.unwrap_or(crate::scene_boxes::box_flag().glass));
+    proven(g, |g| line(g, over, a, b, shrink, through, None))
 }
 
 /// segmentBlocked with nothing passed: the solid test. (collision.ts StaticCollision.solidBlocked)
 pub fn solid_blocked(g: &mut crate::game::Game, a: V3, b: V3, shrink: Option<f64>) -> bool {
     segment_blocked(g, a, b, Some(shrink.unwrap_or(0.02)), Some(0.0), None)
 }
+/// …of the world as the question takes it
+pub fn solid_blocked_over(g: &mut crate::game::Game, over: &Over, a: V3, b: V3, shrink: Option<f64>) -> bool {
+    segment_blocked_over(g, over, a, b, shrink, Some(0.0))
+}
 
 /// the line of fire: anything a round would stop in. (collision.ts StaticCollision.shotBlocked)
 pub fn shot_blocked(g: &mut crate::game::Game, a: V3, b: V3, shrink: Option<f64>, energy: Option<f64>) -> bool {
+    shot_blocked_over(g, &Over::OWN, a, b, shrink, energy)
+}
+/// …of the world as the question takes it
+pub fn shot_blocked_over(g: &mut crate::game::Game, over: &Over, a: V3, b: V3, shrink: Option<f64>, energy: Option<f64>) -> bool {
     let shrink = shrink.unwrap_or(0.02);
     let pass = match g.col.fire_pass {
         Some(FirePass::Bars) => if crate::winbars::bars_live(g) { crate::scene_boxes::box_flag().bar } else { 0.0 },
         None => 0.0,
     };
-    if !crate::glasspen::glass_pen_live(g) {
-        return segment_blocked(g, a, b, Some(shrink), Some(pass), None);
-    }
     let mut panes: Vec<SegmentBlockedPanesItem> = Vec::new();
-    if segment_blocked(g, a, b, Some(shrink), Some(pass), Some(&mut panes)) { return true; }
+    let pen = crate::glasspen::glass_pen_live(g);
+    let blocked = if over.plain() {
+        segment_blocked(g, a, b, Some(shrink), Some(pass), if pen { Some(&mut panes) } else { None })
+    } else {
+        proven(g, |g| line(g, over, a, b, shrink, pass, if pen { Some(&mut panes) } else { None }))
+    };
+    if blocked || !pen { return blocked; }
     if panes.is_empty() { return false; }
     js::sort_by(&mut panes, |x, y| x.t - y.t);
-        let d = v3::sub(b, a);
+    let d = v3::sub(b, a);
     !crate::glasspen::shot_passes(g, a, v3::scale(d, 1.0 / v3::len(d)), &panes, energy)
 }
 
@@ -778,36 +810,26 @@ pub fn shot_blocked(g: &mut crate::game::Game, a: V3, b: V3, shrink: Option<f64>
 
 /// the closest static or leaf along a ray; a leaf's index is 1e6 + its place. (collision.ts StaticCollision.raycast)
 pub fn raycast(g: &mut crate::game::Game, ro: V3, rd: V3, tmax: f64) -> Option<crate::scene_collision::Raycast> {
+    raycast_over(g, &Over::OWN, ro, rd, tmax)
+}
+/// …of the world as the question takes it. A leaf's place is its place among the game's own, whichever are let through; a box the question adds is 2e6 + its place.
+pub fn raycast_over(g: &mut crate::game::Game, over: &Over, ro: V3, rd: V3, tmax: f64) -> Option<crate::scene_collision::Raycast> {
     if !(tmax > 0.0) { return None; }
-    let r = if alone(g) {
-        let r = raycast_ask(g, ro, rd, tmax);
-        crate::scene_box_mirror::box_mirror_shut(g);
-        r
-    } else {
-        raycast_ask(g, ro, rd, tmax)
-    };
-    r.map(|h| Raycast { t: h.t, index: h.index, n: h.n })
-}
-
-/// (collision.ts StaticCollision.raycastAsk)
-pub fn raycast_ask(g: &mut crate::game::Game, ro: V3, rd: V3, tmax: f64) -> Option<crate::scene_collision::RaycastAsk> {
-    ready(g);
-    let r = raycast_here(g, ro, rd, tmax);
+    let r = proven(g, |g| raycast_here(g, over, ro, rd, tmax));
     g.m.scene_collision.rays.n += 1.0;
-    r.map(|h| RaycastAsk { t: h.t, index: h.index, n: h.n })
+    r
 }
-
-/// TWIN: the module's ray. A ray that is no number is the caller's mistake, by name (noNumber). (collision.ts StaticCollision.raycastHere)
-pub fn raycast_here(g: &mut crate::game::Game, ro: V3, rd: V3, tmax: f64) -> Option<crate::scene_collision::RaycastHere> {
+/// the module's ray. A ray that is no number is the caller's mistake, by name.
+fn raycast_here(g: &mut Game, over: &Over, ro: V3, rd: V3, tmax: f64) -> Option<crate::scene_collision::Raycast> {
     let ask = ask_of(g) != 0;
-    let set = leaves_set(g);
     let mut out = [0.0; 4];
-    let k = sim::lines::ray(slot(g), ro[0], ro[1], ro[2], rd[0], rd[1], rd[2], tmax, set, ask, &mut out);
+    let w = slot(g);
+    let k = over_lent(g, over, |_, v| sim::lines::ray_over(w, v, ro[0], ro[1], ro[2], rd[0], rd[1], rd[2], tmax, ask, &mut out));
     if k == sim::lines::RAY_HOST {
         panic!("a ray that is no number: from {:?} along {:?} for {}: where it starts, the way it goes and how far are numbers, and how far is finite", ro, rd, tmax);
     }
     if k < 0 { return None; }
-    Some(RaycastHere { t: out[0], index: k as f64, n: [out[1], out[2], out[3]] })
+    Some(Raycast { t: out[0], index: k as f64, n: [out[1], out[2], out[3]] })
 }
 
 // ---- the senses, the module's alone (rust/sim fog.rs, sight.rs, light.rs, smoke.rs, bricks.rs): what it cannot take is the asker's mistake, by name

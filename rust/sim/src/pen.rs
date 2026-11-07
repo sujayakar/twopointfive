@@ -8,7 +8,7 @@ use crate::knobs::*;
 use crate::lines::{self, line_box, RAY_LEAF};
 use crate::maths::{acos, cos, hypot3, sin, tan};
 use crate::panes::{self, norm3, point_seed, type_of_pane, box_seed, Ctx, ANNEALED, LAMINATED, NO_TYPE, TEMPERED};
-use crate::world::{clamp, js_abs, js_max, js_min, world, F_GLASS, F_NO_SHADOW, REC, R_COS, R_H, R_SIN};
+use crate::world::{asking, clamp, js_abs, js_max, js_min, world, F_GLASS, F_NO_SHADOW, REC, R_COS, R_H, R_SIN};
 use prim::sqrt;
 
 const PI: f64 = core::f64::consts::PI;
@@ -115,7 +115,7 @@ fn born_in(c: &Ctx, p: [f64; 3], d: [f64; 3], me: u32) -> i32 {
     let mut sheet = -1;
     for i in 0..n {
         let o = world(c.w);
-        let bi = o.list[i];
+        let bi = asking(c.w).list[i];
         if bi == me {
             continue;
         }

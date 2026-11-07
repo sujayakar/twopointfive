@@ -20,7 +20,7 @@
 use crate::collide;
 use crate::maths::{cos, exp, hypot2, sin};
 use crate::state::state;
-use crate::world::{clamp, js_abs, js_max, js_min, world, REC, R_C, R_COS, R_SIN, R_YAW};
+use crate::world::{asking, clamp, js_abs, js_max, js_min, world, REC, R_C, R_COS, R_SIN, R_YAW};
 use core::mem::size_of;
 use prim::{floor, sqrt};
 
@@ -482,7 +482,7 @@ impl Step {
     /// collision.ts collideCircle: (x, z) pushed out of the statics over [0.2, y1]
     fn collide(&self, x: &mut f64, z: &mut f64, r: f64, y1: f64, iterations: u32) -> bool {
         let hit = collide::circle(self.w, *x, *z, r, self.io.par[P_FOOT], y1, iterations) != 0;
-        let pt = world(self.w).pt;
+        let pt = asking(self.w).pt;
         *x = pt[0];
         *z = pt[1];
         hit

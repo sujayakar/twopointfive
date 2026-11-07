@@ -1,5 +1,6 @@
 //! src/game/orders.ts lines 1726 to 2099
 use super::*;                      // your own module: its types, its other parts' functions
+use crate::ask::Over;
 use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
@@ -19,16 +20,16 @@ fn marks_put_back(g: &mut Game, keep: crate::orders::MarksKeep) {
 }
 
 /// the line from the doorway's front to a place, asked three times a hand apart when `seam` is set (orders.ts stackFileOn, stackPlaces `line`)
-fn clear_line(g: &mut Game, front: V3, q: V3, seam: f64) -> bool {
-    if crate::scene_collision::solid_blocked(g, front, [q[0], 0.45, q[2]], None) { return false; }
+fn clear_line(g: &mut Game, over: &Over, front: V3, q: V3, seam: f64) -> bool {
+    if crate::scene_collision::solid_blocked_over(g, over, front, [q[0], 0.45, q[2]], None) { return false; }
     if !(seam > 0.0) { return true; }
     let dx = q[0] - front[0];
     let dz = q[2] - front[2];
     let l = js::or(m::hyp2(dx, dz), 1.0);
     let ox = -dz / l * seam;
     let oz = dx / l * seam;
-    !crate::scene_collision::solid_blocked(g, [front[0] + ox, 0.45, front[2] + oz], [q[0] + ox, 0.45, q[2] + oz], None)
-        && !crate::scene_collision::solid_blocked(g, [front[0] - ox, 0.45, front[2] - oz], [q[0] - ox, 0.45, q[2] - oz], None)
+    !crate::scene_collision::solid_blocked_over(g, over, [front[0] + ox, 0.45, front[2] + oz], [q[0] + ox, 0.45, q[2] + oz], None)
+        && !crate::scene_collision::solid_blocked_over(g, over, [front[0] - ox, 0.45, front[2] - oz], [q[0] - ox, 0.45, q[2] - oz], None)
 }
 
 /// n spots for a move order round `at`, abreast across the facing (orders.ts spotsAt)
@@ -200,7 +201,7 @@ pub fn squad_orders_marks_keep(g: &crate::game::Game, seat: &crate::seats::SeatR
 }
 
 /// THE WHOLE ORDER FILED ON ONE HAND OF THE DOOR (orders.ts stackFileOn)
-pub fn squad_orders_stack_file_on(g: &mut crate::game::Game, d: DoorId, side: f64, men: &[GuardId], ignore: &[GuardId], latch: bool, replaced: &[crate::orders::StackPost]) -> Option<Vec<crate::orders::StackPost>> {
+pub fn squad_orders_stack_file_on(g: &mut crate::game::Game, over: &Over, d: DoorId, side: f64, men: &[GuardId], ignore: &[GuardId], latch: bool, replaced: &[crate::orders::StackPost]) -> Option<Vec<crate::orders::StackPost>> {
     let (jamb_out, jamb_past, file_gap, seam) = (g.k.orders.jamb_out, g.k.orders.jamb_past, g.k.orders.file_gap, g.k.orders.seam_m);
     let th = g.dr[d].def.closed_dir;
     let u = [m::cos(th), m::sin(th)];
@@ -226,7 +227,7 @@ pub fn squad_orders_stack_file_on(g: &mut crate::game::Game, d: DoorId, side: f6
         let kf = k as f64;
         let pos = at(if latch { w + jamb_past + kf * file_gap } else { -jamb_past - kf * file_gap });
         k += 1;
-        if crate::scene_collision::nav_grid_is_blocked(g, pos[0], pos[2]) || !clear_line(g, front, pos, seam) || !crate::stackroom::stack_room_has(g, d, side, pos) { break; }
+        if crate::scene_collision::nav_grid_is_blocked(g, pos[0], pos[2]) || !clear_line(g, over, front, pos, seam) || !crate::stackroom::stack_room_has_over(g, over, d, side, pos) { break; }
         if v3::dist_xz(sam, pos) < 0.7 || held.iter().any(|q| v3::dist_xz(*q, pos) < 0.7) || squad_orders_on_furniture(g, pos) { continue; }
         out.push(crate::orders::StackPost { pos, face, stack_side, lead: kf == 0.0, group: if men.len() > 2 { Some((out.len() >> 1) as f64) } else { None } });
     }
@@ -353,11 +354,7 @@ pub fn squad_orders_stack_posts_marks(g: &mut crate::game::Game, d: DoorId, side
     let front: V3 = [c[0] + n[0] * jamb_out, 0.45, c[2] + n[1] * jamb_out];
     let sam = squad_orders_sam_place(g, &crate::seats::here(g));
     let held = squad_orders_held_on(g, &crate::seats::here(g), d, men, Some(ignore));
-    let all: Vec<BoxId> = g.col.dynamic_boxes.clone();
-    let lines: Vec<BoxId> = if g.orders.leaf_out_gave {
-        let leaf = g.dr[d].box_;
-        all.iter().copied().filter(|b| *b != leaf).collect()
-    } else { all.clone() };
+    let over = if g.orders.leaf_out_gave { Over::but_door(g, d) } else { Over::OWN };
     let mut i = 0;
     while i < out.len() {
         let p = out[i].clone();
@@ -367,10 +364,7 @@ pub fn squad_orders_stack_posts_marks(g: &mut crate::game::Game, d: DoorId, side
         for (j, o) in out.iter().enumerate() { if j != i { taken.push(o.pos); } }
         let q = crate::doorway::doorway_clear_near(g, p.pos, &mut |g: &mut Game, q: V3| {
             if crate::doorway::doorway_in_way(g, q) || (q[0] - c[0]) * n[0] + (q[2] - c[2]) * n[1] < 0.3 { return true; }
-            g.col.dynamic_boxes = lines.clone();
-            let cut = crate::scene_collision::solid_blocked(g, front, [q[0], 0.45, q[2]], None);
-            g.col.dynamic_boxes = all.clone();
-            cut
+            crate::scene_collision::solid_blocked_over(g, &over, front, [q[0], 0.45, q[2]], None)
         }, Some(&taken), Some(0.75), None);
         if let Some(q) = q {
             g.stats.doorway.marks += 1;
@@ -384,35 +378,31 @@ pub fn squad_orders_stack_posts_marks(g: &mut crate::game::Game, d: DoorId, side
 /// doorway.ts OWN LEAF: where the answer was 'no room', the door's own open leaf is left out of the walls (orders.ts stackPostsAsWere)
 pub fn squad_orders_stack_posts_as_were(g: &mut crate::game::Game, d: DoorId, side: f64, men: &[GuardId], ignore: Option<&[GuardId]>) -> Option<Vec<crate::orders::StackPost>> {
     let ignore: &[GuardId] = ignore.unwrap_or(&[]);
-    let out = squad_orders_stack_posts_leaf_in(g, d, side, men, Some(ignore));
+    let out = squad_orders_stack_posts_leaf_in(g, &Over::OWN, d, side, men, Some(ignore));
     g.orders.leaf_out_gave = false;
     if out.is_some() || m::abs(crate::doors::door_angle(g, d)) < 0.3 || crate::doors::door_off(g, d) { return out; }
-    let all: Vec<BoxId> = g.col.dynamic_boxes.clone();
-    let leaf = g.dr[d].box_;
-    g.col.dynamic_boxes = all.iter().copied().filter(|b| *b != leaf).collect();
-    let marks = squad_orders_stack_posts_leaf_in(g, d, side, men, Some(ignore));
+    let marks = squad_orders_stack_posts_leaf_in(g, &Over::but_door(g, d), d, side, men, Some(ignore));
     if marks.is_some() {
         g.m.doorway.stack_own.leaf += 1.0;
         g.orders.leaf_out_gave = true;
     }
-    g.col.dynamic_boxes = all;
     marks
 }
 
 /// the passes for places: glass first, then the walls' own, then a passage's file, and stackSeen's trial on one hand (orders.ts stackPostsLeafIn)
-pub fn squad_orders_stack_posts_leaf_in(g: &mut crate::game::Game, d: DoorId, side: f64, men: &[GuardId], ignore: Option<&[GuardId]>) -> Option<Vec<crate::orders::StackPost>> {
+pub fn squad_orders_stack_posts_leaf_in(g: &mut crate::game::Game, over: &Over, d: DoorId, side: f64, men: &[GuardId], ignore: Option<&[GuardId]>) -> Option<Vec<crate::orders::StackPost>> {
     let ignore: &[GuardId] = ignore.unwrap_or(&[]);
     let mut as_ = None;
     if crate::glasspen::glass_pen_live(g) && g.k.glasspen.stack_eyes > 0.0 {
-        as_ = squad_orders_stack_posts_on(g, d, side, men, ignore, true, None);
-        if as_.is_none() { as_ = squad_orders_stack_least_glass(g, d, side, men, ignore); }
+        as_ = squad_orders_stack_posts_on(g, over, d, side, men, ignore, true, None);
+        if as_.is_none() { as_ = squad_orders_stack_least_glass(g, over, d, side, men, ignore); }
     }
-    if as_.is_none() { as_ = squad_orders_stack_posts_on(g, d, side, men, ignore, false, None); }
-    let out = match as_ { Some(x) => Some(x), None => squad_orders_stack_posts_on(g, d, side, men, ignore, false, Some(true)) };
+    if as_.is_none() { as_ = squad_orders_stack_posts_on(g, over, d, side, men, ignore, false, None); }
+    let out = match as_ { Some(x) => Some(x), None => squad_orders_stack_posts_on(g, over, d, side, men, ignore, false, Some(true)) };
     let file_hand = g.orders.file_hand;
     if file_hand == 0.0 { return out; }
     let out = match out { Some(o) => o, None => return None };
-    let file = squad_orders_stack_file_on(g, d, side, men, ignore, file_hand > 0.0, &out);
+    let file = squad_orders_stack_file_on(g, over, d, side, men, ignore, file_hand > 0.0, &out);
     if file.is_some() { g.orders.file_gave = true; }
     match file { Some(f) => Some(f), None => Some(out) }
 }
@@ -463,7 +453,7 @@ pub fn squad_orders_glass_eyes(g: &mut crate::game::Game, d: DoorId, side: f64, 
 }
 
 /// GLASS AT BOTH HANDS OF A DOOR: everybody on the one hand fewer of those lines reach (orders.ts stackLeastGlass, GLASSPEN.stackLeast)
-pub fn squad_orders_stack_least_glass(g: &mut crate::game::Game, d: DoorId, side: f64, men: &[GuardId], ignore: &[GuardId]) -> Option<Vec<crate::orders::StackPost>> {
+pub fn squad_orders_stack_least_glass(g: &mut crate::game::Game, over: &Over, d: DoorId, side: f64, men: &[GuardId], ignore: &[GuardId]) -> Option<Vec<crate::orders::StackPost>> {
     if men.is_empty() { return None; }
     let (jamb_out, jamb_past, file_gap) = (g.k.orders.jamb_out, g.k.orders.jamb_past, g.k.orders.file_gap);
     let th = g.dr[d].def.closed_dir;
@@ -476,7 +466,7 @@ pub fn squad_orders_stack_least_glass(g: &mut crate::game::Game, d: DoorId, side
     let n_h = squad_orders_glass_eyes(g, d, side, at(-jamb_past), None);
     let stack_eyes = g.k.glasspen.stack_eyes;
     if n_l < stack_eyes || n_h < stack_eyes || n_l == n_h { return None; }
-    let base = match squad_orders_stack_posts_on(g, d, side, men, ignore, false, None) { Some(b) => b, None => return None };
+    let base = match squad_orders_stack_posts_on(g, over, d, side, men, ignore, false, None) { Some(b) => b, None => return None };
     let latch = n_h > n_l;
     let toward = if latch { -1.0 } else { 1.0 };
     let f = [u[0] * toward, u[1] * toward];
@@ -492,7 +482,7 @@ pub fn squad_orders_stack_least_glass(g: &mut crate::game::Game, d: DoorId, side
         let kf = k as f64;
         let pos = at(if latch { w + jamb_past + kf * file_gap } else { -jamb_past - kf * file_gap });
         k += 1;
-        if crate::scene_collision::nav_grid_is_blocked(g, pos[0], pos[2]) || crate::scene_collision::solid_blocked(g, front, [pos[0], 0.45, pos[2]], None) { break; }
+        if crate::scene_collision::nav_grid_is_blocked(g, pos[0], pos[2]) || crate::scene_collision::solid_blocked_over(g, over, front, [pos[0], 0.45, pos[2]], None) { break; }
         if v3::dist_xz(sam, pos) < 0.7 || held.iter().any(|q| v3::dist_xz(*q, pos) < 0.7) { continue; }
         out.push(crate::orders::StackPost { pos, face, stack_side, lead: kf == 0.0, group: if men.len() > 2 { Some((out.len() >> 1) as f64) } else { None } });
     }
@@ -505,7 +495,7 @@ pub fn squad_orders_stack_least_glass(g: &mut crate::game::Game, d: DoorId, side
 }
 
 /// A DOOR ACROSS A PASSAGE: may a man wait at `pos` on this face of it (orders.ts hallStands, ORDERS.hallFile)
-pub fn squad_orders_hall_stands(g: &mut crate::game::Game, d: DoorId, side: f64, pos: V3) -> bool {
+pub fn squad_orders_hall_stands(g: &mut crate::game::Game, over: &Over, d: DoorId, side: f64, pos: V3) -> bool {
     let jamb_out = g.k.orders.jamb_out;
     let th = g.dr[d].def.closed_dir;
     let nx = -m::sin(th) * side;
@@ -520,7 +510,7 @@ pub fn squad_orders_hall_stands(g: &mut crate::game::Game, d: DoorId, side: f64,
     for k in [0.0, 0.08, -0.08] {
         let ox = -dz / len * k;
         let oz = dx / len * k;
-        if crate::scene_collision::solid_blocked(g, [fx + ox, 0.45, fz + oz], [pos[0] + ox, 0.45, pos[2] + oz], None) { return false; }
+        if crate::scene_collision::solid_blocked_over(g, over, [fx + ox, 0.45, fz + oz], [pos[0] + ox, 0.45, pos[2] + oz], None) { return false; }
     }
     for i in 0..g.doors.list.len() {
         let o = g.doors.list[i];
@@ -537,7 +527,7 @@ pub fn squad_orders_hall_stands(g: &mut crate::game::Game, d: DoorId, side: f64,
 }
 
 /// A DOOR ACROSS A PASSAGE: up to `k` places back down the passage on this face, behind the door's jamb marks (orders.ts hallPlaces)
-pub fn squad_orders_hall_places(g: &mut crate::game::Game, d: DoorId, side: f64, k: f64, from: f64, taken: &mut dyn FnMut(&mut crate::game::Game, V3) -> bool) -> Vec<crate::orders::StackPost> {
+pub fn squad_orders_hall_places(g: &mut crate::game::Game, over: &Over, d: DoorId, side: f64, k: f64, from: f64, taken: &mut dyn FnMut(&mut crate::game::Game, V3) -> bool) -> Vec<crate::orders::StackPost> {
     let (jamb_out, jamb_past, file_gap) = (g.k.orders.jamb_out, g.k.orders.jamb_past, g.k.orders.file_gap);
     let th = g.dr[d].def.closed_dir;
     let u = [m::cos(th), m::sin(th)];
@@ -555,17 +545,17 @@ pub fn squad_orders_hall_places(g: &mut crate::game::Game, d: DoorId, side: f64,
     let walled = |g: &mut Game, s: i32, p: V3| -> bool {
         let wd = if s == 0 { 1.0 } else { -1.0 };
         for e in [0.0, 0.08, -0.08] {
-            if crate::scene_collision::solid_blocked(g, [p[0] + n[0] * e, 0.45, p[2] + n[1] * e], [p[0] + n[0] * e + u[0] * wd * 0.8, 0.45, p[2] + n[1] * e + u[1] * wd * 0.8], None) { return true; }
+            if crate::scene_collision::solid_blocked_over(g, over, [p[0] + n[0] * e, 0.45, p[2] + n[1] * e], [p[0] + n[0] * e + u[0] * wd * 0.8, 0.45, p[2] + n[1] * e + u[1] * wd * 0.8], None) { return true; }
         }
         false
     };
     let mut cols: Vec<(f64, crate::orders::StackPost)> = Vec::new();
     for s in [0, 1] {
         let j = at(s, jamb_out);
-        if !squad_orders_hall_stands(g, d, side, j) || !walled(g, s, j) { continue; }
+        if !squad_orders_hall_stands(g, over, d, side, j) || !walled(g, s, j) { continue; }
         let mut good = |g: &mut Game, off: f64| -> Option<V3> {
             let p = at(s, off);
-            if squad_orders_hall_stands(g, d, side, p) && walled(g, s, p) && !taken(g, p) { Some(p) } else { None }
+            if squad_orders_hall_stands(g, over, d, side, p) && walled(g, s, p) && !taken(g, p) { Some(p) } else { None }
         };
         let mut last = -m::INF;
         let mut n0 = 0.0;
@@ -603,12 +593,12 @@ pub fn squad_orders_hall_places(g: &mut crate::game::Game, d: DoorId, side: f64,
 }
 
 /// doorway.ts FURNITURE: where keeping off the furniture leaves 'no room', the same places are asked with it left in (orders.ts stackPostsOn)
-pub fn squad_orders_stack_posts_on(g: &mut crate::game::Game, d: DoorId, side: f64, men: &[GuardId], ignore: &[GuardId], glass: bool, hall: Option<bool>) -> Option<Vec<crate::orders::StackPost>> {
+pub fn squad_orders_stack_posts_on(g: &mut crate::game::Game, over: &Over, d: DoorId, side: f64, men: &[GuardId], ignore: &[GuardId], glass: bool, hall: Option<bool>) -> Option<Vec<crate::orders::StackPost>> {
     let hall = hall.unwrap_or(false);
-    let out = squad_orders_stack_places(g, d, side, men, ignore, glass, hall);
+    let out = squad_orders_stack_places(g, over, d, side, men, ignore, glass, hall);
     if out.is_some() || g.orders.fur_in { return out; }
     g.orders.fur_in = true;
-    let again = squad_orders_stack_places(g, d, side, men, ignore, glass, hall);
+    let again = squad_orders_stack_places(g, over, d, side, men, ignore, glass, hall);
     g.orders.fur_in = false;
     again
 }
@@ -642,7 +632,7 @@ fn prop_by(g: &Game, p: V3) -> bool {
 }
 
 /// the places a stack can have on this face of a door (orders.ts stackPlaces)
-pub fn squad_orders_stack_places(g: &mut crate::game::Game, d: DoorId, side: f64, men: &[GuardId], ignore: &[GuardId], glass: bool, hall: bool) -> Option<Vec<crate::orders::StackPost>> {
+pub fn squad_orders_stack_places(g: &mut crate::game::Game, over: &Over, d: DoorId, side: f64, men: &[GuardId], ignore: &[GuardId], glass: bool, hall: bool) -> Option<Vec<crate::orders::StackPost>> {
     let (jamb_out, jamb_past, file_gap, seam) = (g.k.orders.jamb_out, g.k.orders.jamb_past, g.k.orders.file_gap, g.k.orders.seam_m);
     let th = g.dr[d].def.closed_dir;
     let u = [m::cos(th), m::sin(th)];
@@ -664,7 +654,7 @@ pub fn squad_orders_stack_places(g: &mut crate::game::Game, d: DoorId, side: f64
         false
     };
     let floor = |g: &mut Game, p: V3| -> bool {
-        !crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) && clear_line(g, front, p, seam) && !(glass && squad_orders_behind_glass(g, d, side, p))
+        !crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) && clear_line(g, over, front, p, seam) && !(glass && squad_orders_behind_glass(g, d, side, p))
     };
     let fur = |g: &mut Game, p: V3| -> bool { squad_orders_on_furniture(g, p) && !squad_orders_stood_on(g, &crate::seats::here(g), d, men, p) };
     let free = |g: &mut Game, p: V3| -> bool { floor(g, p) && !sam_on(g, p) && !fur(g, p) };
@@ -744,17 +734,17 @@ pub fn squad_orders_stack_places(g: &mut crate::game::Game, d: DoorId, side: f64
         if !out.is_empty() && out.len() < nn {
             let mut taken: Vec<V3> = out.iter().map(|o| o.pos).collect();
             taken.extend(held.iter().copied());
-            let rear = squad_orders_rear_posts(g, d, side, (nn - out.len()) as f64, &taken);
+            let rear = squad_orders_rear_posts_over(g, over, d, side, (nn - out.len()) as f64, &taken);
             out.extend(rear);
         }
         if hall && out.len() < nn {
             let mut kept: Vec<crate::orders::StackPost> = Vec::new();
             for p in out.iter() {
-                if squad_orders_hall_stands(g, d, side, p.pos) && floor(g, p.pos) { kept.push(p.clone()); }
+                if squad_orders_hall_stands(g, over, d, side, p.pos) && floor(g, p.pos) { kept.push(p.clone()); }
             }
             out = kept;
             let more = (nn - out.len()) as f64;
-            let places = squad_orders_hall_places(g, d, side, more, jamb_out + file_gap, &mut |g: &mut Game, q: V3| {
+            let places = squad_orders_hall_places(g, over, d, side, more, jamb_out + file_gap, &mut |g: &mut Game, q: V3| {
                 sam_on(g, q) || fur(g, q) || held.iter().any(|h| v3::dist_xz(*h, q) < 0.7) || out.iter().any(|o| v3::dist_xz(o.pos, q) < 0.7)
             });
             out.extend(places);
@@ -804,7 +794,7 @@ pub fn squad_orders_stack_places(g: &mut crate::game::Game, d: DoorId, side: f64
         let mut rank = if ok_l { mk(w + jamb_past, -1.0, jamb_out + file_gap) } else { mk(-jamb_past, 1.0, jamb_out + file_gap) };
         rank.lead = false;
         if free(g, rank.pos) { return Some(vec![first, rank]); }
-        let rear_all = squad_orders_rear_posts(g, d, side, 4.0, &[first.pos]);
+        let rear_all = squad_orders_rear_posts_over(g, over, d, side, 4.0, &[first.pos]);
         let mut rear: Vec<crate::orders::StackPost> = Vec::new();
         for p in rear_all { if floor(g, p.pos) { rear.push(p); } }
         if !rear.is_empty() { return Some(vec![first, rear.swap_remove(0)]); }

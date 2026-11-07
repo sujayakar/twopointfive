@@ -113,9 +113,8 @@ pub fn breaker_errand(g: &mut crate::game::Game) -> Option<crate::workthings::Br
     let at: V3 = [face[0] + n[0] * 0.05, 1.0, face[2] + n[2] * 0.05];
     let fixed: V3 = [bp[0] - 0.4, 0.0, bp[2] - 0.9];
     // walls only: a door leaf swung across the spot for a moment does not move the errand
-    let dyn_boxes = core::mem::take(&mut g.col.dynamic_boxes);
-    let kept = !crate::scene_collision::nav_grid_is_blocked(g, fixed[0], fixed[2]) && !crate::scene_collision::solid_blocked(g, [fixed[0], 1.0, fixed[2]], at, None);
-    g.col.dynamic_boxes = dyn_boxes;
+    let walls = crate::ask::Over::statics();
+    let kept = !crate::scene_collision::nav_grid_is_blocked(g, fixed[0], fixed[2]) && !crate::scene_collision::solid_blocked_over(g, &walls, [fixed[0], 1.0, fixed[2]], at, None);
     let stand = if kept { Some(fixed) } else { stand_for(g, bp, Some(n), None) };
     let e = if kept {
         Some(BreakerErrand { goal: fixed, mid: [bp[0], 0.0, bp[2] - 0.6], at })
