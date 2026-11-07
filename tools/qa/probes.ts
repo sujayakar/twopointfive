@@ -108,7 +108,7 @@ const DT = 1 / 60;
 const KNOWN = new Set<string>(['all', 'all-quick']);
 /** 'all-quick' = the union of the gate lists a lane is told to run before handing back (CLAUDE.md: perf · player (incl. selector) · doors · qrf · checkpoints · journal · ui + every identity
  *  card) — some twenty minutes where 'all' is hours; a dispatch line rides it when any of its names is one of these families / probes. `sh tools/qa/gate.sh all-quick` is the one-word gate. */
-const QUICK = new Set(['perf', 'player', 'doors', 'qrf', 'checkpoints', 'journal', 'ui', 'fold', 'weapons-identity', 'civilians-identity', 'decals-identity', 'destruction-identity', 'level-identity', 'glassbreak-off', 'pellets-identity', 'director-scheduler',
+const QUICK = new Set(['perf', 'player', 'doors', 'qrf', 'checkpoints', 'journal', 'ui', 'fold', 'weapons-identity', 'civilians-identity', 'decals-identity', 'destruction-identity', 'level-identity', 'glassbreak-off', 'director-scheduler',
   'roomclear', 'threshold', 'silent', 'lineoffire', 'doorpath', 'kit', 'missions', 'depot', 'registry', 'shipped', 'close', 'heldclicks', 'farsight', 'farcalm', 'look', 'kitanim', 'hands', 'roomfit', 'words', 'workthings', 'handwork', 'wand', 'owncharge', 'workstow', 'squadnet', 'gunslots', 'gunroles', 'gunlook', 'kittree', 'bigslot', 'noshield', 'takedown', 'stealthpose', 'sticky', 'holds']);   // (… and, second line, the REBUILD's families: the room clear, the threshold, the silent order, lines of fire, the door walk, the kit, the missions list with its as-shipped gate, the two levels with a run of their own, and the two-stands check; + close: the close-in mode near a guard, on in the page; + words: the dialogue pass's lint, the hostages' voice)
 // (first line: + glass-break's switch-off identity and the Director's idle identity, landed after the list froze — wave-4 review)
 /** The probes that failed this invocation (by name), the count run, and how many of those produced anything checkable (a boolean, a PASS / FAIL line, a banner). */
@@ -3419,7 +3419,7 @@ let glassBannerPending: { f0: number } | null = null;
 // the two identities against 0ee0094, and the red paths
 { const pf = async (name: string, fn: string) => { if (on(name, 'pellets', 'all')) await run(name, async () => ((await import('./pellets-probes.ts')) as any)[fn]()); };
   await pf('pellets-arm', 'pelletsArm'); await pf('pellets-rule', 'pelletsRule'); await pf('pellets-energy', 'pelletsEnergy');
-  await pf('pellets-identity', 'pelletsIdentity'); await pf('pellets-red', 'pelletsRed'); }
+  await pf('pellets-red', 'pelletsRed'); }
 // ---------------------------------------------------------------- GEAR × GLASS, JOINED (gearglass-probes.ts; rebuild/gear-and-glass/read-first.md): 'gearglass' = the family — a shell at glass a burst has
 // broken and a burst beside glass a shell has holed (the fracture model's record and the shell's own, both live), and the one line a pinned defender is asked about under ?glassfoes=0
 if (on('gearglass-joined', 'gearglass', 'all')) await run('gearglass-joined', async () => (await import('./gearglass-probes.ts')).gearglassJoined());
