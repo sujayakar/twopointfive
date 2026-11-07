@@ -10,11 +10,13 @@
 //   bun run tools/blitz/delete-tick.ts --bridges [n]       the references out of the page and the hosts that keep the most, by what each alone keeps
 //   bun run tools/blitz/delete-tick.ts --instrument        THE CENSUS'S TREE: nothing deleted, the surface's lines written into the source, and a counter
 //                                                          at the top of every function (tools/blitz/delete-census.sh runs the plays on it)
-//   --census file.json   what the census saw run (default tools/blitz/delete-census.json; `--no-census`: every loose reference is followed)
+//   --census file.json   what the census saw run (default tools/blitz/delete-census.json; `--no-census`: a host's loose references are followed too)
+//   --census-settles-all the census settles the page's loose references as it does a host's (deletes more; rests on the census having played every path)
 //
 // WHAT STAYS REACHABLE (the roots), and how far each reaches:
-//   the page      every file of src/ outside the simulation's folders. The page has no call surface: what it calls on the puppet runs as TypeScript, so a
-//                 function it reaches keeps its BODY, and so does everything that body reaches.
+//   the page      every file of src/ outside the simulation's folders, the game's page and the pages with no Rust game alike (the workbench, the replay
+//                 viewer, the sound pages). The page has no call surface: what it calls on the puppet runs as TypeScript, so a function it reaches
+//                 keeps its BODY, and so does everything that body reaches.
 //   the hosts     the files of tools/ that a page or a host loads (the bridge's generated files, the harness's host, the dev server, the build, the
 //                 game server): found by following imports from the entry points in `HOST_ENTRIES`. They run inside the host's own lines: BODY.
 //   the module    a simulation file's own top-level statements, and the top-level names the bridge's schema reads through its window (schema.json `top`).
@@ -22,12 +24,18 @@
 //                 names keeps its SIGNATURE. With a row on the call surface (calls.json) its body becomes the crossing; with none it is GONE: it throws,
 //                 by name, and the tools that named it are listed.
 //   Game.stepSeats  is the tick. Its body goes; a host hangs its own step on the game object.
-// EXACT AND LOOSE. A reference the checker resolves to a declaration is exact, and so is a member of an interface for every class that says it implements
-// it. Two kinds are loose: a name read off a value typed `any`, and a member of a type that a class answers only by its shape. A loose reference names
-// every method it could mean. Followed blindly they keep most of the tick (a host's `G.par?.tick()` would keep every `tick`), so they are settled by
-// THE CENSUS: the plays of the Rust game on a tree with a counter in every function. A function the census saw run as TypeScript keeps its body whatever
-// reaches it; a loose candidate it never saw keeps its signature only, and throws by name if it is ever reached. With no census every loose reference
-// is followed. A name read off `any` through two or more steps that resolve as a path from the `Game` class is taken as that path, exactly.
+// EXACT AND LOOSE. A reference the checker resolves to a declaration is exact. So are: a member of an interface for every class that says it implements
+// it; an object handed where another type is asked for (the members that type names); a cast (`x as unknown as T`: a flow, private members too); a name
+// read through a cast or through a constant given one, by the type under the cast; a name read off `any` through two or more steps that are a path from
+// the `Game` class; a name read off a module loaded by a written path. What is left is LOOSE, and who makes the reference decides what it holds:
+//   the page and the simulation's own kept code: by the checker ALONE, no census asked. A name off a value typed `any` holds the classes' members of that
+//     name where the read could run one (a call, a test for it; a read that only looks at a value is a read of data); a member of a type a class answers
+//     only by its shape holds that class's where an untyped value is handed to the type somewhere (elsewhere `handed` has the reference exactly).
+//   a host's own lines (the bridge's files, which read the puppet by name on every tick of every play): THE CENSUS settles it. A candidate it saw run
+//     keeps its body; one it never saw keeps at most a crossing, unless the read tests for the function.
+//   a tool: nothing. The tool is listed.
+// THE CENSUS (the plays of the Rust game on a tree with a counter in every function) otherwise only ADDS: what it saw run as TypeScript stays, however
+// it was reached. Nothing the page can reach is deleted on the census's word: it has seen ticks, starts and a few flows of the page, not every draw.
 // A function reached with its body AND on the call surface keeps the surface's guard as a line of its own source (expose.ts wrote it at load, by a place
 // in the file that this program's edits move).
 import { readFileSync, writeFileSync, readdirSync, statSync, existsSync } from 'node:fs';
@@ -83,7 +91,7 @@ const stubKey = (() => { const n = new Map<string, number>(); for (const r of CA
 
 // ---- units: what can stay or go as one thing
 type Kind = 'fn' | 'method' | 'accessor' | 'ctor' | 'field' | 'var' | 'class' | 'type' | 'stmt';
-interface Edge { to?: Unit; name?: string; iface?: any; at: number; file: string; how?: string; /** a loose read that does not throw where the function is gone: anything but a plain call of it */ soft?: boolean }
+interface Edge { to?: Unit; name?: string; iface?: any; at: number; file: string; how?: string; /** a loose read that tests for the function, and would not throw if it were gone */ soft?: boolean; /** a loose read that only looks at the value (`o.round !== undefined`, `f(smp.input)`): of data, never a call of a method */ bare?: boolean }
 interface Unit { id: number; file: string; key: string; name: string; kind: Kind; nodes: any[]; cls?: Unit; members?: Unit[]; /** a function: its body can go and its signature stay */ fnLike: boolean; isStatic: boolean;
   sig: Edge[]; body: Edge[]; /** what the type of its answer names, where the answer's type is not written (found when its body is to go) */ ret?: Edge[]; row?: any; guard?: any; tap?: any; lines: number }
 const UNITS: Unit[] = [], unitOfNode = new Map<any, Unit>(), /** class members by name */ byName = new Map<string, Unit[]>(), /** top-level functions, variables and classes by name: what a module loaded untyped is read for */ topByName = new Map<string, Unit[]>();
@@ -138,7 +146,7 @@ const implOf = (u: Unit): any => u.nodes.filter(n => bodyOf(n)).pop();
 
 // ---- references
 const pos = (file: string, p: number) => `${file}:${lineOf(sfByRel.get(file), p)}`;
-const STATS = { dyn: 0, pathTyped: 0, castTyped: 0, softHeld: 0 };
+const STATS = { dyn: 0, pathTyped: 0, castTyped: 0, castNone: 0, softHeld: 0, fed: 0 };
 function targetOf(sym: any): any { if (!sym) return undefined; if (sym.flags & ts.SymbolFlags.Alias) { try { sym = checker.getAliasedSymbol(sym); } catch { return undefined; } } return sym; }
 const GAME = UNITS.find(u => u.kind === 'class' && u.key === 'Game' && u.file === 'src/game/game.ts');
 const GAME_TYPE = GAME ? checker.getDeclaredTypeOfSymbol(checker.getSymbolAtLocation(GAME.nodes[0].name)) : undefined;
@@ -152,12 +160,19 @@ function chainOf(e: any, hops: number): string[] | null { const names: string[] 
 function anyChain(nameNode: any): string[] | null { const c = chainOf(nameNode.parent.expression, 0); return c ? [...c, nameNode.text] : null; }
 /** the expression a constant was given (`const fog = g.fogOfWar as unknown as Record<string, any>`): a name read off the constant is read off that */
 function constInit(e: any): any { if (e?.kind !== SK.Identifier) return undefined; const d = checker.getSymbolAtLocation(e)?.valueDeclaration; return d?.kind === SK.VariableDeclaration && d.initializer && (d.parent.flags & ts.NodeFlags.Const) && d.name.kind === SK.Identifier ? d.initializer : undefined; }
-/** THE CLASS AN OBJECT IS, SEEN THROUGH A CAST: `(x as any).m`, `(x as unknown as Record<string, any>).m`, and the same through a constant. The checker
- *  has no symbol for `m` there; the expression under the casts still has its class. */
-function classThroughCast(e: any): Unit | undefined { for (let hop = 0; hop < 4 && e; hop++) { let cast = false;
+/** A NAME READ THROUGH A CAST: `(x as any).a.b`, `(x as unknown as Record<string, any>).m`, and the same through a constant. The checker has no symbol for
+ *  the names after the cast, but the expression under it still has its type, and the names are read off THAT: the property's own symbol where the type
+ *  declares the whole path, `'none'` where it declares no such name (`(g as any).pair?.waiting?.()` on a game with no `pair`: a read of nothing the
+ *  simulation declares, whatever a later build may hang there), undefined where no cast with a known type is under the chain. */
+function castRooted(nameNode: any): any { const names: string[] = [nameNode.text]; let e = nameNode.parent.expression, hops = 0;
+  for (;;) { let cast = false;
     while (e.kind === SK.NonNullExpression || e.kind === SK.ParenthesizedExpression || e.kind === SK.AsExpression || e.kind === SK.TypeAssertionExpression) { if (e.type) cast = true; e = e.expression; }
-    if (cast) { let t: any; try { t = checker.getNonNullableType(checker.getTypeAtLocation(e)); } catch { return undefined; } const C = t?.symbol && (t.flags & ts.TypeFlags.Object) && !checker.getSignaturesOfType(t, ts.SignatureKind.Construct).length ? classOfSym.get(t.symbol) : undefined; if (C) return C; }
-    e = constInit(e); } return undefined; }
+    if (cast) { let t: any; try { t = checker.getNonNullableType(checker.getTypeAtLocation(e)); } catch { return undefined; }
+      if (t && !(t.flags & (ts.TypeFlags.Any | ts.TypeFlags.Unknown)) && (t.flags & ts.TypeFlags.Object) && !checker.getSignaturesOfType(t, ts.SignatureKind.Construct).length) { let prop: any;
+        for (let i = 0; i < names.length; i++) { prop = checker.getPropertyOfType(t, names[i]); if (!prop) { const C = t.symbol && classOfSym.get(t.symbol); return C && !subDeclares(C, names[i]) ? 'none' : undefined; } /* (a class's object has what the class, or a class under it, declares: a type that is no class says nothing of what else its object has) */ if (i + 1 < names.length) { t = checker.getNonNullableType(checker.getTypeOfSymbol(prop)); if (t.flags & (ts.TypeFlags.Any | ts.TypeFlags.Unknown)) return undefined; } }
+        return prop; } }
+    if (e.kind === SK.PropertyAccessExpression) { names.unshift(e.name.text); e = e.expression; continue; }
+    const init = hops++ < 4 ? constInit(e) : undefined; if (!init) return undefined; e = init; } }
 function gamePathFrom(names: string[]): any { let t = GAME_TYPE, prop: any; for (const n of names) { if (!t) return undefined; prop = checker.getPropertyOfType(checker.getNonNullableType(t), n); if (!prop) return undefined; t = checker.getTypeOfSymbol(prop); } return prop; }
 /** the last two names or more of the chain, where they are a path from the game (`P.g.cues.stats`: `cues.stats`) */
 function gamePath(names: string[]): any { for (let i = 0; i + 2 <= names.length; i++) { const p = gamePathFrom(names.slice(i)); if (p) return p; } return undefined; }
@@ -168,7 +183,8 @@ const SIM_CLASS_SYMS = new Set<any>(), classOfSym = new Map<any, Unit>(); for (c
  *  simulation's classes is written where the type asked for is another one (an interface, a type written in place, a union of them), every member
  *  that type names is a use of the class's member of that name. This is exact: the checker says both types at that place. */
 const memberOf = (C: Unit, name: string): Unit | undefined => { for (const K of [C, ...allSupersLazy(C)]) { const m = K.members!.find(x => x.name === name && x.kind !== 'ctor' && !x.isStatic); if (m) return m; } return undefined; };
-let allSupersLazy: (C: Unit) => Iterable<Unit> = () => [];
+let allSupersLazy: (C: Unit) => Iterable<Unit> = () => [], allSubsLazy: (C: Unit) => Iterable<Unit> = () => [];
+const subDeclares = (C: Unit, name: string): boolean => { for (const D of allSubsLazy(C)) if (D.members!.some(x => x.name === name)) return true; return false; };
 const flowMemo = new Map<string, Unit[]>();
 function handed(n: any, out: Edge[], sf: any, file: string): void {
   let t: any; try { t = checker.getTypeAtLocation(n); } catch { return; } const C = t?.symbol && classOfSym.get(t.symbol); if (!C || !(t.flags & ts.TypeFlags.Object)) return;
@@ -209,6 +225,13 @@ function softRead(n: any): boolean { let x = n.parent;
   if (par.kind === SK.ConditionalExpression) return par.condition === x;
   if (par.kind === SK.IfStatement || par.kind === SK.WhileStatement || par.kind === SK.DoStatement) return par.expression === x;
   return false; }
+/** A READ THAT COULD RUN THE FUNCTION: a call of it (`x.f(…)`, `x.f?.(…)`), a `.call` / `.apply` / `.bind` on it, or a test for it (softRead: the call
+ *  follows the test). Any other read of a name off an untyped value looks at a value: level data, an options object, a pipeline. A method is not run by it. */
+function runRead(n: any): boolean { if (softRead(n)) return true; let x = n.parent;
+  if (!(x.kind === SK.PropertyAccessExpression && x.name === n) && !(x.kind === SK.ElementAccessExpression && x.argumentExpression === n)) return true;   // (a binding: the name goes on as a variable)
+  let par = x.parent; while (par.kind === SK.ParenthesizedExpression || par.kind === SK.NonNullExpression) { x = par; par = par.parent; }
+  if ((par.kind === SK.CallExpression || par.kind === SK.NewExpression || par.kind === SK.TaggedTemplateExpression) && (par.expression === x || par.tag === x)) return true;
+  return par.kind === SK.PropertyAccessExpression && par.expression === x && /^(call|apply|bind)$/.test(par.name.text); }
 /** every reference made inside `node`, but for the subtrees `skip` names */
 function refs(node: any, out: Edge[], skip?: (n: any) => boolean): void {
   const sf = node.getSourceFile(), file = rel(sf.fileName);
@@ -219,9 +242,9 @@ function refs(node: any, out: Edge[], skip?: (n: any) => boolean): void {
       if ((d.kind === SK.MethodSignature || d.kind === SK.PropertySignature) && (d.parent.kind === SK.InterfaceDeclaration || d.parent.kind === SK.TypeLiteral)) out.push({ iface: d.parent, name: nameText(d.name), at: at.getStart(sf), file, soft: softRead(at) }); } };
   const loose = (name: string, n: any) => {
     if (n.parent.kind === SK.PropertyAccessExpression) {
-      const C = classThroughCast(n.parent.expression), m = C && memberOf(C, name); if (m) { STATS.castTyped++; out.push({ to: m, at: n.getStart(sf), file, how: 'reads it off its class\'s object, seen through a cast' }); return; }
+      const r = castRooted(n); if (r === 'none') { STATS.castNone++; return; } if (r) { STATS.castTyped++; add(r, n, 'reads it off an object seen through a cast, by the type under the cast'); return; }
       const ch = anyChain(n); if (ch && ch.length >= 2) { const p = gamePath(ch); if (p) { STATS.pathTyped++; add(p, n, 'reads it off a value typed any, by a path that is the game\'s'); return; } } }
-    out.push({ name, at: n.getStart(sf), file, soft: softRead(n) }); };
+    out.push({ name, at: n.getStart(sf), file, soft: softRead(n), bare: !runRead(n) }); };
   const MV = modVars(sf), LOADS = 'reads it off a module it loads by a written path';
   /** the module an expression is: a variable that holds one, or the load itself */
   const modOf = (e: any): any => { while (e && (e.kind === SK.ParenthesizedExpression || e.kind === SK.NonNullExpression || e.kind === SK.AsExpression)) e = e.expression; if (e?.kind === SK.Identifier) { const sy = checker.getSymbolAtLocation(e); return sy ? MV.get(sy) : undefined; } return moduleOfExpr(e); };
@@ -245,7 +268,7 @@ function refs(node: any, out: Edge[], skip?: (n: any) => boolean): void {
         else if (p.kind === SK.PropertyAccessExpression && p.name === n) loose(n.text ?? String(n.escapedText), n);
         else if (p.kind === SK.BindingElement && p.propertyName === n) out.push({ name: n.text, at: n.getStart(sf), file }); }
       return; }
-    if ((n.kind === SK.StringLiteral || n.kind === SK.NoSubstitutionTemplateLiteral) && n.parent.kind === SK.ElementAccessExpression && n.parent.argumentExpression === n) { const sym = checker.getSymbolAtLocation(n); if (sym) add(sym, n); else out.push({ name: n.text, at: n.getStart(sf), file, soft: softRead(n) }); return; }
+    if ((n.kind === SK.StringLiteral || n.kind === SK.NoSubstitutionTemplateLiteral) && n.parent.kind === SK.ElementAccessExpression && n.parent.argumentExpression === n) { const sym = checker.getSymbolAtLocation(n); if (sym) add(sym, n); else out.push({ name: n.text, at: n.getStart(sf), file, soft: softRead(n), bare: !runRead(n) }); return; }
     if (n.kind === SK.ElementAccessExpression && n.argumentExpression && n.argumentExpression.kind !== SK.StringLiteral && n.argumentExpression.kind !== SK.NumericLiteral) STATS.dyn++;
     ts.forEachChild(n, visit); };
   visit(node); }
@@ -256,7 +279,7 @@ for (const C of UNITS) if (C.kind === 'class') for (const h of C.nodes[0].herita
 for (const sf of program.getSourceFiles()) { if (sf.isDeclarationFile) continue; const v = (n: any): void => { if (n.kind === SK.InterfaceDeclaration) for (const h of n.heritageClauses ?? []) for (const t of h.types) { const s = targetOf(checker.getSymbolAtLocation(t.expression)); for (const d of s?.declarations ?? []) if (d.kind === SK.InterfaceDeclaration) push(ifaceSubs, d, n); } ts.forEachChild(n, v); }; for (const st of sf.statements) v(st); }
 const allSubs = (C: Unit, out = new Set<Unit>()): Set<Unit> => { for (const s of subs.get(C) ?? []) if (!out.has(s)) { out.add(s); allSubs(s, out); } return out; };
 const allSupers = (C: Unit, out = new Set<Unit>()): Set<Unit> => { for (const s of supers.get(C) ?? []) if (!out.has(s)) { out.add(s); allSupers(s, out); } return out; };
-allSupersLazy = C => allSupers(C);
+allSupersLazy = C => allSupers(C); allSubsLazy = C => allSubs(C);
 /** the classes that SAY they implement an interface (or one that extends it), with their subclasses */
 const saidCache = new Map<any, Set<Unit>>();
 function saidImplementers(I: any): Set<Unit> { let s = saidCache.get(I); if (s) return s; s = new Set(); saidCache.set(I, s); const seen = new Set<any>(), go = (i: any) => { if (seen.has(i)) return; seen.add(i); for (const C of implementers.get(i) ?? []) { s!.add(C); for (const D of allSubs(C)) s!.add(D); } for (const j of ifaceSubs.get(i) ?? []) go(j); }; go(I); return s; }
@@ -309,15 +332,25 @@ const whoOf = (file: string): Who => file.startsWith('src/') ? 'page' : HOSTS.ha
 const HOST_LINES = new Set<string>(HOSTS);
 { const bridgeUsers = [...sfByRel.keys()].filter(f => f.startsWith('src/') && !SIM.test(f) && sfByRel.get(f).statements.some((st: any) => st.kind === SK.ImportDeclaration && BRIDGE_ALIAS.test(st.moduleSpecifier.text)));
   for (const f of bridgeUsers) { HOST_LINES.add(f); for (const st of sfByRel.get(f).statements) if (st.kind === SK.ImportDeclaration && !st.importClause?.isTypeOnly && st.moduleSpecifier.text.startsWith('./')) { const r = rel(resolve(dirname(join(ROOT, f)), st.moduleSpecifier.text)) + '.ts'; if (sfByRel.has(r) && !SIM.test(r)) HOST_LINES.add(r); } } }
-/** THE PAGES WITH NO RUST GAME (the workbench with its viewer and editor, the replay viewer, the sound and music pages): a page of the repository's root
- *  whose script, followed by its imports, never loads the page's host of the Rust game. Nothing crosses there and nothing is applied over: what such a page
- *  names runs as TypeScript all the way down, a rule too, so its files reach like a host's own lines. A file the game's page loads as well is still one of
- *  theirs. */
-const NO_RUST = new Set<string>(), PAGE_ENTRIES: { html: string; entry: string; rust: boolean; files: number }[] = [];
-{ const bridge = new Set([...sfByRel.keys()].filter(f => f.startsWith('src/') && sfByRel.get(f).statements.some((st: any) => st.kind === SK.ImportDeclaration && BRIDGE_ALIAS.test(st.moduleSpecifier.text))));
-  for (const html of readdirSync(ROOT).filter(f => f.endsWith('.html')).sort()) for (const m of readFileSync(join(ROOT, html), 'utf8').matchAll(/<script[^>]*\bsrc="\.?\/?(src\/[^"]+\.ts)"/g)) { const entry = m[1]; if (!sfByRel.has(entry)) continue;
-    const seen = new Set<string>([entry]), todo = [entry]; while (todo.length) for (const i of importsOf(todo.pop()!)) if (!seen.has(i)) { seen.add(i); todo.push(i); }
-    const rust = [...seen].some(f => bridge.has(f)); PAGE_ENTRIES.push({ html, entry, rust, files: seen.size }); if (!rust) for (const f of seen) if (!SIM.test(f)) NO_RUST.add(f); } }
+/** THE TYPES AN UNTYPED VALUE IS HANDED TO, outside the tools: an interface or a type written in place that some value typed `any` (or `unknown`, by a
+ *  cast) is written where it is asked for. Only for these can a class answer "by its shape" without the checker having seen its object handed over
+ *  (`host.skin: unknown`, then `skin as Partial<TweenSkin>`): everywhere else an object reaches such a type at a place the checker types on both
+ *  sides, which `handed` reads exactly. */
+const FED = new Set<any>();
+{ const mark = (ct: any, d = 0): void => { if (!ct || d > 2) return; for (const T0 of ct.types ?? [ct]) { let T: any; try { T = checker.getNonNullableType(T0); } catch { continue; } if (!T || !(T.flags & (ts.TypeFlags.Object | ts.TypeFlags.Intersection))) continue;
+      if (T.types) { mark(T, d + 1); continue; } for (const pr of checker.getPropertiesOfType(T)) for (const dd of pr.declarations ?? []) if ((dd.kind === SK.MethodSignature || dd.kind === SK.PropertySignature) && (dd.parent.kind === SK.InterfaceDeclaration || dd.parent.kind === SK.TypeLiteral)) FED.add(dd.parent); } };
+  // (… and on from there: a value whose own type is one of those, written where ANOTHER type is asked for, carries the untyped object with it. Passes
+  // until nothing is added.)
+  const fedType = (t: any): boolean => { for (const T of t.types ?? [t]) { if (!T || !(T.flags & ts.TypeFlags.Object) || (T.symbol && classOfSym.has(T.symbol))) continue; for (const d of [...(T.symbol?.declarations ?? []), ...(T.aliasSymbol?.declarations ?? [])]) if (FED.has(d) || (d.kind === SK.TypeAliasDeclaration && FED.has(d.type))) return true; } return false; };
+  const untyped = (e: any, cast: boolean): boolean => { try { const t = checker.getTypeAtLocation(e); return !!t && (!!(t.flags & (cast ? ts.TypeFlags.Any | ts.TypeFlags.Unknown : ts.TypeFlags.Any)) || (FED.size > 0 && fedType(t))); } catch { return false; } };
+  for (let pass = 0, was = -1; pass < 4 && was !== FED.size; pass++) { was = FED.size; for (const sf of program.getSourceFiles()) { const file = rel(sf.fileName); if (sf.isDeclarationFile || file.startsWith('..') || whoOf(file) === 'tool') continue;
+    const v = (n: any): void => { const p = n.parent;
+      if ((n.kind === SK.AsExpression || n.kind === SK.TypeAssertionExpression) && n.type.kind !== SK.AnyKeyword && n.type.kind !== SK.UnknownKeyword) { let e = n.expression; while (e.kind === SK.AsExpression || e.kind === SK.TypeAssertionExpression || e.kind === SK.ParenthesizedExpression || e.kind === SK.NonNullExpression) e = e.expression; if (untyped(e, true)) { try { mark(checker.getTypeFromTypeNode(n.type)); } catch { /* no type */ } } }
+      // (a value typed `any` written where a type is asked for: an argument, an initializer, the right of an assignment, an answer, a property of an object)
+      else if (p && ((p.kind === SK.CallExpression || p.kind === SK.NewExpression) && p.arguments?.includes(n) || (p.kind === SK.VariableDeclaration || p.kind === SK.PropertyDeclaration || p.kind === SK.Parameter || p.kind === SK.PropertyAssignment) && p.initializer === n || p.kind === SK.BinaryExpression && p.right === n && p.operatorToken.kind === SK.EqualsToken || p.kind === SK.ReturnStatement || p.kind === SK.ArrowFunction && p.body === n || p.kind === SK.ArrayLiteralExpression || p.kind === SK.ShorthandPropertyAssignment)
+        && n.kind !== SK.ObjectLiteralExpression && n.kind !== SK.ArrowFunction && n.kind !== SK.FunctionExpression && untyped(n, false)) { try { const ct = p.kind === SK.BinaryExpression ? checker.getTypeAtLocation(p.left) : checker.getContextualType(n); if (ct && !(ct.flags & (ts.TypeFlags.Any | ts.TypeFlags.Unknown))) mark(ct); } catch { /* no contextual type */ } }
+      ts.forEachChild(n, v); }; v(sf); } }
+  STATS.fed = FED.size; }
 interface RootEdge { file: string; who: Who; e: Edge }
 const ROOT_EDGES: RootEdge[] = [];
 for (const sf of program.getSourceFiles()) { const file = rel(sf.fileName); if (SIM.test(file) || sf.isDeclarationFile || file.startsWith('..')) continue;
@@ -346,17 +379,11 @@ const KEEP: { u: Unit; why: string }[] = [];
 { const f = join(ROOT, 'tools/blitz/delete-keep.json'); if (existsSync(f)) for (const k of JSON.parse(readFileSync(f, 'utf8'))) { const u = UNITS.find(x => x.file === k.file && x.key === k.key); if (!u) { console.error(`delete-keep.json names ${k.key} (${k.file}), which this tree has not got`); process.exit(2); } KEEP.push({ u, why: String(k.why) }); } }
 
 // ---- reach
-/** A RULE THE RUST GAME HAS IS NOT FOLLOWED INTO unless the census saw it run as TypeScript outside the tick (`--no-barrier`: followed wherever the checker
- *  reaches it). A RULE here is a function on the call surface that TAKES A GAME (a method of one of the simulation's classes, or a parameter that is one)
- *  and that the surface's table says WRITES. Run as TypeScript once a Rust game stands, such a function writes a puppet the next apply writes over: only
- *  a start (the game stood in TypeScript before it crosses whole) runs one rightly, and the census plays the starts. A function on the surface that takes
- *  no game (the kit's tables, a lookup) can be called with no game stood, by a menu: it is followed like any other. */
-const BARRIER = !flag('--no-barrier'), SOFT = !flag('--no-soft'), FIRST = !flag('--no-first'), NORUST = !flag('--no-norust');
-const ruleMemo = new Map<Unit, boolean>();
-function takesGame(u: Unit): boolean { if (u.cls && !u.isStatic) return true; const f = fnOf(implOf(u) ?? u.nodes[0]);
-  const isSim = (t: any, d = 0): boolean => !!t && (SIM_CLASS_SYMS.has(t.symbol) || (d < 2 && (t.types ?? []).some((x: any) => isSim(x, d + 1))));
-  return (f?.parameters ?? []).some((p: any) => isSim(checker.getTypeAtLocation(p))); }
-function isRule(u: Unit): boolean { let v = ruleMemo.get(u); if (v === undefined) { v = !!u.guard && (u.row.writes ?? 1) > 0 && takesGame(u); ruleMemo.set(u, v); } return v; }
+/** `--census-settles-all`: a loose reference made by the page or by the simulation's own kept code is settled by the census too, as a host's is. It deletes
+ *  about a third more, and rests on the census having played every path that makes such a call, a draw's and a panel's too. Not the default. */
+const CENSUS_ALL = flag('--census-settles-all');
+// (each of the three readings below can be put off to see what it is worth: nothing else reads these words)
+const SHAPE_BY_FLOW = !flag('--shape-anywhere'), MEMBERS_ONLY = !flag('--tops-as-members'), BARE_IS_DATA = !flag('--bare-runs');
 interface Why { from: Unit | string; at: string; how: string; /** made by the signature of `from`, which stands at any reach */ sig?: boolean }
 interface Plan { reach: Uint8Array; why: (Why | undefined)[]; why1: (Why | undefined)[]; /** the tools that name it exactly */ namedBy: Map<Unit, Set<string>>; /** where the page or a host reads its name loosely */ looseMiss: Map<Unit, Set<string>>; /** the tools that read its name off a value typed any */ looseTools: Map<Unit, Set<string>>; /** the places in tools that read a function with no row in a way that does not throw once it is gone */ softTools: Map<Unit, Set<string>> }
 /** WHAT THE TICK REACHES: every declaration `Game.stepSeats` leads to by exact references, overrides and said interfaces. A function in here is the
@@ -365,53 +392,57 @@ const OF_TICK = new Set<Unit>();
 { const q: Unit[] = [TICK!]; OF_TICK.add(TICK!); const add = (u?: Unit) => { if (u && !OF_TICK.has(u)) { OF_TICK.add(u); q.push(u); } };
   while (q.length) { const u = q.pop()!; for (const e of [...u.sig, ...u.body]) { if (e.to) add(e.to); else if (e.iface) { const said = saidImplementers(e.iface); for (const m of byName.get(e.name!) ?? []) if (m.cls && said.has(m.cls)) add(m); } }
     if (u.cls && (u.kind === 'method' || u.kind === 'accessor' || u.kind === 'field')) for (const D of allSubs(u.cls)) for (const m of D.members!) if (m.name === u.name && m.kind !== 'ctor') add(m); } }
-/** REACH: 0 nothing · 1 its signature · 2 its body, with rules not followed into · 3 its body and every body under it (the host's own lines: an apply, the
- *  out events' dispatch, the dress step run where nothing crosses, so a rule reached from them is run as TypeScript and no census is asked) */
+/** REACH: 0 nothing · 1 its signature (the body goes) · 2 its body */
 function plan(skipRoot?: (r: RootEdge) => boolean): Plan {
   const reach = new Uint8Array(UNITS.length), why: (Why | undefined)[] = new Array(UNITS.length), why1: (Why | undefined)[] = new Array(UNITS.length), queue: Unit[] = [], namedBy = new Map<Unit, Set<string>>(), looseMiss = new Map<Unit, Set<string>>(), looseTools = new Map<Unit, Set<string>>(), softTools = new Map<Unit, Set<string>>();
   const note = (m: Map<Unit, Set<string>>, u: Unit, v: string, cap = 1e9) => { let s = m.get(u); if (!s) m.set(u, s = new Set()); if (s.size < cap) s.add(v); };
   let SIG = false;
-  const hit = (u: Unit, k: 1 | 2 | 3, from: Unit | string, at: string, how: string) => { if (!u.fnLike && k < 2) k = 2; if (reach[u.id] >= k) return; if (!reach[u.id]) why1[u.id] = { from, at, how, sig: SIG }; if (k >= 2 && reach[u.id] < 2) why[u.id] = { from, at, how, sig: SIG }; reach[u.id] = k; queue.push(u); };
-  /** a loose candidate: followed where there is no census, or the census saw it run. Else a name alone holds nothing: with a row on the surface it crosses,
-   *  with none it goes if nothing else keeps it, and the place is kept for the note */
-  const maybe = (u: Unit, k: 1 | 2 | 3, from: Unit | string, at: string, how: string) => { if (u.fnLike && CENSUS && !SEEN.has(u)) { note(looseMiss, u, at, 6); if (u.guard) hit(u, 1, from, at, how + ' (loose: the census never saw it run; it is on the surface, and crosses)'); return; } hit(u, k, from, at, how); };
-  /** a reference that holds what it names: its body, but for a rule nobody saw run as TypeScript outside the tick, which crosses. `first`: made by a file
-   *  of the page itself, which has no call surface, so what the page names keeps its body, a rule too (what THAT calls is held as anything else is) */
-  const exact = (u: Unit, k: 1 | 2 | 3, from: Unit | string, at: string, how: string, first: boolean) => {
-    if (BARRIER && !first && k === 2 && CENSUS && !SEEN.has(u) && isRule(u)) { hit(u, 1, from, at, how + ' (a rule the Rust game has, never seen to run as TypeScript outside the tick: it crosses)'); return; }
-    hit(u, k, from, at, how); };
-  /** a tool's loose read: a candidate with a row on the surface keeps its crossing; one with none is not held by a name alone, and the tool is listed */
+  const hit = (u: Unit, k: 1 | 2, from: Unit | string, at: string, how: string) => { if (!u.fnLike && k < 2) k = 2; if (reach[u.id] >= k) return; if (!reach[u.id]) why1[u.id] = { from, at, how, sig: SIG }; if (k >= 2 && reach[u.id] < 2) why[u.id] = { from, at, how, sig: SIG }; reach[u.id] = k; queue.push(u); };
+  // A LOOSE REFERENCE names every declaration of that name (or every class that answers a type by its shape). WHO MAKES IT decides what it holds:
+  //   the page, or the simulation's own kept code: every candidate, its body. Whatever the page can reach stays, by the checker alone: the census has
+  //     seen ticks and starts and a few flows of the page, never every draw and every panel, and no headless check here draws.
+  //   a host's own lines (the bridge's files: the apply, the export, the out events), which read the puppet by name through values typed `any` on every
+  //     tick of every play: the census settles it. A candidate it saw run keeps its body; one it never saw is not held by the name (with a row on the
+  //     surface it stays as a crossing), unless the read is one that TESTS for the function (softRead), which holds it as the page's would.
+  //   a tool: nothing but a crossing where there is a row. The tool is listed, and the place where its read would not throw.
+  const settled = (file: string) => !!CENSUS && (CENSUS_ALL || HOST_LINES.has(file));
+  const loose = (u: Unit, e: Edge, k: 1 | 2, from: Unit | string, at: string, how: string) => {
+    if (u.fnLike && settled(e.file) && !SEEN.has(u) && !e.soft) { note(looseMiss, u, at, 6); if (u.guard) hit(u, 1, from, at, how + ' (loose, from a host\'s own lines: the census never saw it run; it is on the surface, and crosses)'); return; }
+    if (e.soft && settled(e.file)) STATS.softHeld++; hit(u, k, from, at, how + (e.soft ? ' (a read that tests for it)' : '')); };
   const toolLoose = (u: Unit, file: string, at: string, how: string, soft?: boolean) => { note(looseTools, u, file); if (soft && u.fnLike && !u.guard) note(softTools, u, at, 8); if (u.guard || !u.fnLike) hit(u, 1, file, at, how); };
-  // A LOOSE READ THAT WOULD NOT THROW (`soft`: softRead above) holds every candidate like an exact reference does: a function gone under a plain call
-  // throws, and a throw is seen; a function gone under `x.f?.()` or `typeof x.f === 'function'` is a branch quietly not taken, on a path the census may
-  // never have played (it steps undrawn frames: it has seen no draw). A tool's is not held, and is listed with its place.
-  const follow = (e: Edge, k: 1 | 2 | 3, from: Unit | string, tool = false, first = false) => { const at = pos(e.file, e.at);
-    if (e.to) { if (tool) note(namedBy, e.to, e.file); exact(e.to, k, from, at, e.how ?? 'names it', first); return; }
+  const follow = (e: Edge, k: 1 | 2, from: Unit | string, tool = false) => { const at = pos(e.file, e.at);
+    if (e.to) { if (tool) note(namedBy, e.to, e.file); hit(e.to, k, from, at, e.how ?? 'names it'); return; }
     if (e.iface) { const said = saidImplementers(e.iface); for (const m of byName.get(e.name!) ?? []) { if (!m.cls || m.isStatic) continue;
         if (said.has(m.cls)) { if (tool) note(namedBy, m, e.file); hit(m, k, from, at, `calls ${e.name} on an interface its class implements`); }
-        else if (answers(m.cls, e.iface)) { const how = `${e.soft ? 'reads' : 'calls'} ${e.name} on a type its class answers by shape`; if (tool) toolLoose(m, e.file, at, how, e.soft); else if (e.soft && SOFT) { STATS.softHeld++; exact(m, k, from, at, how + ' (a read that would not throw if it were gone)', false); } else maybe(m, k, from, at, how); } } return; }
-    for (const m of looseOf(e.name!)) { const how = `reads .${e.name} off a value typed any`; if (tool) toolLoose(m, e.file, at, how, e.soft); else if (e.soft && SOFT) { STATS.softHeld++; exact(m, k, from, at, how + ' (a read that would not throw if it were gone)', false); } else maybe(m, k, from, at, how); } };
+        // (BY ITS SHAPE: only where an untyped value is handed to that type somewhere outside the tools (FED). Elsewhere the object got there at a place
+        // the checker types, and `handed` has the exact reference.)
+        else if (answers(m.cls, e.iface)) { const how = `${e.soft ? 'reads' : 'calls'} ${e.name} on a type its class answers by shape`; if (tool) toolLoose(m, e.file, at, how, e.soft); else if (FED.has(e.iface) || !SHAPE_BY_FLOW) loose(m, e, k, from, at, how + ', and an untyped value is handed to that type'); } } return; }
+    // (OFF A VALUE TYPED `any`. A property of an object is never a module's own function, but for a host that reads a module by name: outside the
+    // hosts the candidates are the classes' members. And a method is not run by a read that only looks at a value.)
+    const host = HOST_LINES.has(e.file);
+    for (const m of tool || host || !MEMBERS_ONLY ? looseOf(e.name!) : byName.get(e.name!) ?? []) { const how = `reads .${e.name} off a value typed any`; if (tool) toolLoose(m, e.file, at, how, e.soft); else if (e.bare && m.fnLike && BARE_IS_DATA && !host) continue; else loose(m, e, k, from, at, how); } };
   // A TOOL'S EXACT REFERENCE. A function on the surface keeps its signature and crosses. One with no row has no Rust function to cross to: where it is
   // not the tick's own it stays as it is; where it is the tick's own (a rule's inner step that a check calls by name) it goes with the tick, its
   // signature left to throw by name, and the tools that named it are listed.
-  for (const r of ROOT_EDGES) { if (skipRoot?.(r)) continue; const tool = r.who === 'tool', t = r.e.to; follow(r.e, tool ? (!t || t.guard || (t.fnLike && OF_TICK.has(t)) ? 1 : 2) : HOST_LINES.has(r.file) || (NORUST && NO_RUST.has(r.file)) ? 3 : 2, r.file, tool, FIRST && !tool); }
+  for (const r of ROOT_EDGES) { if (skipRoot?.(r)) continue; const tool = r.who === 'tool', t = r.e.to; follow(r.e, tool && (!t || t.guard || (t.fnLike && OF_TICK.has(t))) ? 1 : 2, r.file, tool); }
   for (const u of UNITS) if (u.kind === 'stmt' && !u.cls) hit(u, 2, 'the module', u.file, 'a top-level statement');
   for (const [file, names] of Object.entries<string[]>(SCHEMA.top)) for (const n of new Set(names)) { const u = UNITS.find(x => x.file === file && x.name === n && !x.cls); if (u) hit(u, 2, 'the bridge', 'tools/blitz/schema.json', 'a top-level name the schema reads'); }
+  // THE CENSUS ADDS, AND TAKES NOTHING AWAY BUT A HOST'S LOOSE NAME: what it saw run as TypeScript stays, however it was reached (a computed key, a
+  // function stored and called by a table: what the checker cannot follow)
   for (const u of SEEN.keys()) if (u !== TICK) hit(u, 2, 'the census', rel(CENSUS_FILE), 'was seen to run as TypeScript while the Rust game stepped');
   for (const k of KEEP) hit(k.u, 2, 'kept by hand', 'tools/blitz/delete-keep.json', k.why);
-  while (queue.length) { const u = queue.pop()!, k = reach[u.id] as 1 | 2 | 3;
+  while (queue.length) { const u = queue.pop()!, k = reach[u.id] as 1 | 2;
     SIG = true;   // (what follows from a declaration standing at all, whatever its reach)
     if (u.cls) hit(u.cls, 2, u, u.file, 'its class');
     if (u.kind === 'class') for (const m of u.members!) if (m.kind === 'ctor' || m.kind === 'stmt' || (m.kind === 'field' && !m.fnLike)) hit(m, 2, u, u.file, 'the class as data');
-    const kk = (k === 1 ? 2 : k) as 2 | 3;   // (what a signature names is whole, at the reach of whoever stands)
     // (virtual dispatch: an override answers a call of what it overrides; an override that stays keeps the declaration it overrides)
     if (u.cls && (u.kind === 'method' || u.kind === 'accessor' || u.kind === 'field')) {
       for (const D of allSubs(u.cls)) for (const m of D.members!) if (m.name === u.name && m.kind !== 'ctor') hit(m, k, u, u.file, 'overrides it');
       for (const B of allSupers(u.cls)) for (const m of B.members!) if (m.name === u.name && m.kind !== 'ctor') hit(m, 1, u, u.file, 'is overridden by it'); }
-    for (const e of u.sig) if (e.to !== u) follow(e, kk, u);
+    for (const e of u.sig) if (e.to !== u) follow(e, 2, u);   // (what a signature names is whole)
     if (k === 1) for (const e of retEdges(u)) follow(e, 2, u);   // (its body goes: the type of its answer is written in its place)
     SIG = false;   // (a declaration's own name is in its signature: not a use of it)
-    if (k >= 2 && u !== TICK) for (const e of u.body) follow(e, k as 2 | 3, u); }
+    if (k >= 2 && u !== TICK) for (const e of u.body) follow(e, 2, u); }
   if (reach[TICK!.id] < 1) reach[TICK!.id] = 1;
   return { reach, why, why1, namedBy, looseMiss, looseTools, softTools }; }
 const P = plan();
@@ -436,8 +467,7 @@ function summary(): string[] { const L: string[] = [];
   const o = count(UNITS.filter(u => !u.fnLike)); L.push(`other declarations: ${UNITS.length - fnUnits.length}: kept ${o.kept?.[0] ?? 0} (${o.kept?.[1] ?? 0} lines), deleted ${o.deleted?.[0] ?? 0} (${o.deleted?.[1] ?? 0} lines)`);
   const kept = fnUnits.filter(u => P.reach[u.id] >= 2), byRoot = new Map<string, [number, number]>(); for (const u of kept) { const r = rootOf(u), w = r.startsWith('src/') ? 'the page' : r.startsWith('tools/') ? 'the hosts' : r; const a = byRoot.get(w) ?? [0, 0]; a[0]++; a[1] += u.lines; byRoot.set(w, a); }
   L.push(`kept with a body, by the root of the first chain found: ${[...byRoot].sort((a, b) => b[1][0] - a[1][0]).map(([r, [n, l]]) => `${r} ${n} (${l} lines)`).join(' · ')}`);
-  L.push(`loose candidates left as a signature: ${P.looseMiss.size} · names read off any and typed as a path from the game: ${STATS.pathTyped}, as a class seen through a cast: ${STATS.castTyped} · loose reads that would not throw, held: ${STATS.softHeld}; in tools, listed: ${P.softTools.size} · element reads by a computed key (not followed): ${STATS.dyn}`);
-  L.push(`pages: ${PAGE_ENTRIES.map(e => `${e.html} (${e.entry}, ${e.files} files, ${e.rust ? 'stands the Rust game' : 'NO Rust game: what it names runs as TypeScript all the way down'})`).join(' · ')} · files of pages with no Rust game: ${NO_RUST.size}`);
+  L.push(`loose candidates left as a signature: ${P.looseMiss.size} · names read off any and typed as a path from the game: ${STATS.pathTyped}, through a cast by the type under it: ${STATS.castTyped} (${STATS.castNone} of a name the class has not got) · types an untyped value is handed to: ${STATS.fed} · a host's reads that test for a function, held: ${STATS.softHeld}; in tools, listed: ${P.softTools.size} · element reads by a computed key (not followed): ${STATS.dyn}`);
   return L; }
 
 

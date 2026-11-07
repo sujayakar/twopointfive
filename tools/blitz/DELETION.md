@@ -27,39 +27,45 @@ The simulation's folders are `src/game`, `src/anim`, `src/math`, `src/sim` and `
 
 | root | what it is | what a function it reaches keeps |
 |---|---|---|
-| the page | every file of `src/` outside the simulation's folders | its body, a rule's too. The page has no call surface: what it names on the puppet runs as TypeScript. What THAT calls is held like anything else |
-| a page with no Rust game | the files a page of the repository's root loads (its script, followed by imports) where that page never loads the host of the Rust game: the workbench with its viewer and editor, the replay viewer, the sound and music pages | its body and every body under it. Nothing crosses there and nothing is applied over |
+| the page | every file of `src/` outside the simulation's folders: the game's page, and the pages with no Rust game (the workbench with its viewer and editor, the replay viewer, the sound and music pages) | its body, and everything that body reaches. The page has no call surface: what it calls on the puppet runs as TypeScript |
 | the hosts | the files of `tools/` that a page or a host loads, found by following imports from the entry points in `HOST_ENTRIES` | its body. They run inside the host's own lines (a start, the apply, the out events, the dress step), where nothing crosses |
 | the module | a simulation file's own top-level statements, and the names the bridge's schema reads through its window | all of it |
-| a tool | every other file of `tools/` (the checks) | with a row on the call surface: its signature, and the body becomes the crossing. With no row there is no Rust function to cross to: its body |
-| the census | a function seen to run as TypeScript while the Rust game stepped | its body |
+| a tool | every other file of `tools/` (the checks) | with a row on the call surface: its signature, and the body becomes the crossing. The tick's own function with no row: its signature, which throws by name. Any other function with no row: its body |
+| the census | a function seen to run as TypeScript while the Rust game stepped | its body, however it was reached |
 | `Game.stepSeats` | the tick | nothing: its body goes, and a host hangs its own step on the game object |
 
-**A rule is not followed into.** A function on the call surface that takes a game (a method of one of the simulation's classes, or a parameter that
-is one) and that the surface's table says writes is a RULE. Run as TypeScript once a Rust game stands, a rule writes a puppet that the next apply
-writes over, so no reference keeps a rule's body by itself: only the census does, by having seen it run as TypeScript outside the tick, which is what
-a start does (the game is stood in TypeScript and crosses whole afterwards). A rule nobody saw run keeps its signature and crosses. A function of the
-surface that takes no game (the kit's tables, a lookup) can be called by a menu with no game stood, and is followed like any other. `--no-barrier`
-follows every reference the checker finds; it keeps about half as much again.
+**Nothing the page can reach is deleted on the census's word.** The census plays ticks, starts and a few flows of the page. It has not seen every draw
+or every panel, and no headless check here draws by default, so "never seen to run" is no proof for code a draw can reach. What the page and the
+simulation's own kept code reach is decided by the checker alone. The census ADDS (what it saw run stays, whatever the checker could follow: a
+computed key, a function kept in a table), and it settles one thing only: a host's loose names, below.
 
-**Exact and loose references.** A reference the checker resolves to a declaration is exact. So is a member of an interface for every class that says
-it implements it, a name read off a module loaded by a written path (``await import(`${ROOT}/src/game/x.ts`)``, which is how the tools load the game),
-and a name read off a value typed `any` through two or more steps that are a path from the `Game` class (`g.cues.stats`). A cast is a flow, whatever
-the checker thinks of the two types: `g.destr as unknown as { doorsFor?(…): … }` is a use of the class's `doorsFor`, a private member too, and a name
-read off `(x as any)` or off a constant that was given such a cast is that class's member. Two kinds are loose: a single name read off a value typed
-`any`, and a member of a type that a class answers only by its shape. A loose reference could mean every declaration of that name, and followed blindly
-they keep most of the tick, so the census settles them: a candidate it saw run keeps its body; one it never saw is not held by the name alone (with a
-row on the surface it stays as a crossing). With no census at all every loose reference is followed.
+**Exact references.** A reference the checker resolves to a declaration. A member of an interface, for every class that says it implements it. An
+object handed where another type is asked for: the members that type names are uses of the class's (`loop({ demo })` hands a `Demo` where a `DemoLike`
+is asked for). A cast, which is a flow whatever the checker thinks of the two types: `g.destr as unknown as { doorsFor?(…): … }` is a use of the
+class's `doorsFor`, a private member too. A name read through a cast, or off a constant that was given one, is read by the type under the cast
+(`const fog = g.fogOfWar as unknown as Record<string, any>; fog.cellSeenAt?.(…)`). A name read off a value typed `any` through two or more steps
+that are a path from the `Game` class (`P.g.cues.stats`). A name read off a module loaded by a written path (``await import(`${ROOT}/src/game/x.ts`)``,
+which is how the tools load the game).
 
-**Nothing may go missing quietly.** The census plays ticks and starts, and of the page only what its flows reach; it has not seen every draw or every
-panel. A function that is gone under a plain call throws by name, and a throw is seen by the gates below and by whoever plays. A function that is gone
-under a read that TESTS for it (`x.f?.()`, `typeof x.f === 'function'`, `x.f && x.f()`, `if (x.f)`) is a branch quietly not taken. So a loose read of
-that kind, in the page or in the simulation's own kept code, holds every candidate as an exact reference would, census or no census. In a tool it holds
-nothing, and the place is listed below with the checks that lost a function they called.
+**Loose references**, and what each holds by who makes it:
+
+| who reads | a name off a value typed `any` | a member of a type a class answers only by its shape |
+|---|---|---|
+| the page, the simulation's kept code | the classes' members of that name, where the read could RUN one: a call, a `.call` / `.bind`, a test for it (`x.f?.()`, `typeof x.f === 'function'`, `x.f && …`). A read that only looks at a value (`o.round !== undefined`, `readAccessor(smp.input)`) is a read of data. A module's own function is never a property of an object | that class's member, where an untyped value is handed to the type somewhere outside the tools (`host.skin: unknown`, then `skin as Partial<TweenSkin>`), or to a type that is handed on to it. Elsewhere the object got there at a place the checker types on both sides, and the reference is exact |
+| a host's own lines (the bridge's files read the puppet by name through `any` on every tick of every play) | THE CENSUS: a candidate it saw run keeps its body; one it never saw keeps at most a crossing. A read that tests for the function holds it regardless: a branch quietly not taken is seen by nobody | the same |
+| a tool | nothing but a crossing where there is a row. The tool is listed below | the same |
+
+What the checker cannot follow at all, and so what the census and the gates are for: an element read by a computed key (`obj[key]()`), a method read
+bare off an untyped value and called later, and a tool's own flows.
+
+`--census-settles-all` lets the census settle the page's loose references as it does a host's. It deletes more and rests on the census having
+played every path that makes such a call; it is not the default, and the gates below would have to be drawn on a real GPU to carry it.
 
 ## The gate of starts
 
-The rule above rests on one claim: every rule a start runs was seen by the census. So the census does not sample starts, it stands a TABLE of them:
+A start is the one place where the simulation's TypeScript still runs as the game: the game is stood in TypeScript and crosses whole afterwards. What a
+start runs is reached by the checker from the page and the hosts; the table of starts is the check that it was, on every way a game can be started,
+and the census's widest play. So the census does not sample starts, it stands a TABLE of them:
 `tools/blitz/starts.json`, written by `tools/blitz/starts.ts --table` from the game's own lists, never by hand. For every mission of
 `src/scene/scenarioList.ts` and the plain night: the mission as its row gives it; each squad size from 0 to 4; each weather kind; each hour; Standard
 and Hard; each rung of each lever, the fog lever's bottom rung and the three words under the switch; one mixed row; and three deeds after the first
