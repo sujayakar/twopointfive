@@ -659,7 +659,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   boot (`main.ts`: the switch AND the cut switch); a round box has no `BOX_CUT_BIT`, its prism's eight planes sit in its own rows of the cut
   table with `ROUND_CORE_W` in the core row, it is listed at the cut list's picture-only end, and `BoxWorld.cutTraced` does not count it, so the
   cut swap (`render/cutSwap.ts`, "a calm room pays nothing") is as it was and every ray program holds a round rule from boot (the cylinder's in
-  the calm set, the prism's in the cut set). `GEO_ROUND` is
+  the calm set, the prism's in the cut set). SINCE 2026-11-07 THERE IS ONE SET (`docs/agents/render.md`): every ray meets a round as its prism at all
+  times, and wherever this bullet says "the cut set" read "every ray program". `GEO_ROUND` is
   bit 3 of the GPU flags word, which is the CPU's `Dynamic`: no shader reads that bit, and it is masked out of the word only while the round's
   GPU half is up, so with it down the words are as they were. THE SWITCH IS THE SIMULATION'S: a picture setting may not move it. On a page with
   `?nocutboxes` (or if the cut pipeline fails to compile) a round thing is DRAWN, and traced by the GPU, as the square box round it, while the

@@ -2,7 +2,6 @@
 import { makeShader, makeBuffer, renderPipelineAsync, renderPipelineOrNull } from '../gpu/device';
 import { KEPT } from '../gpu/keep';   // (the kept page's lease: the look's maps are worked out once a visit — makeLayers)
 import { EXACT } from '../math/exact';
-import { cutSwap } from './cutSwap';
 import { scenePrelude, snowLookConfig, lookConfig } from './frame';
 import { decalWgslConsts } from './decals';
 import { TexturePool } from './texpool';
@@ -164,8 +163,8 @@ export class GBuffer {
     this.targets = [{ format: 'rgba8unorm' }, { format: 'rgb10a2unorm' }, { format: 'r32uint' }, { format: 'rg16float' }, { format: 'rg8unorm' }, { format: 'rg8unorm' }];   // (+ the material and GBAA edge targets: 8 + 8 + 4 + 4 + 2 + 2 = 28 bytes per sample of the 32 the default limits allow, by WebGPU's attachment accounting — rgba8 / rgb10a2 count 8 each)
     this.depthStencil = { format: 'depth32float', depthWriteEnabled: true, depthCompare: 'less' };
     this.mod = mod;   // (the box pipeline: init(), awaited by the engine before the first frame)
-    // CUT BOXES: the same text + gbuffer_cut.wgsl as a second module, made only in a build with the switch — the module above and its pipelines are the build's without it
-    if (cutConfig.on) this.cutMod = makeShader(device, scenePrelude(true) + `const PREV_MAT_BASE: u32 = ${maxBoxes * GEO_STRIDE / 4}u;\n` + decalWgslConsts(3) + decalsSrc + detailSrc + lookWgsl() + snowSrc + markingsSrc + gbufSrc + gbufCutSrc, 'gbufferCut');
+    // CUT BOXES: the same text + gbuffer_cut.wgsl as a second module, made only in a build with the switch
+    if (cutConfig.on) this.cutMod = makeShader(device, scenePrelude() + `const PREV_MAT_BASE: u32 = ${maxBoxes * GEO_STRIDE / 4}u;\n` + decalWgslConsts(3) + decalsSrc + detailSrc + lookWgsl() + snowSrc + markingsSrc + gbufSrc + gbufCutSrc, 'gbufferCut');
     const S = GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST;
     this.prevBoxes = makeBuffer(device, maxBoxes * (GEO_STRIDE + MAT_STRIDE) * 4, S, 'prevBoxes');
     this.prevJoints = makeBuffer(device, 256, S, 'prevJointsDummy');   // (replaced by one the size of the skin's palette the first time a skin is drawn)
@@ -351,13 +350,13 @@ export class GBuffer {
       primitive: { topology: 'triangle-list', cullMode: 'none' },
       depthStencil: this.depthStencil,
     }, 'the snow\'s drifts are drawn as the level\'s boxes').then(p => { this.snowPipe = p; }));
-    if (this.cutMod) jobs.push(renderPipelineOrNull(this.device, {   // CUT BOXES: the cut solids' pipeline (same targets, same depth rule; its fragment stage discards). One that fails to compile is left null: encode() then draws cut boxes whole, and the rays are held to whole boxes too (cutSwap.rasterFailed)
+    if (this.cutMod) jobs.push(renderPipelineOrNull(this.device, {   // CUT BOXES: the cut solids' pipeline (same targets, same depth rule; its fragment stage discards). One that fails to compile is left null: encode() then draws cut boxes whole (the rays still meet the cut shapes: wrong at the cut, never missing)
       label: 'gbufBoxesCut', layout: this.pipeLayout,
       vertex: { module: this.cutMod, entryPoint: 'vsBoxCut' },
       fragment: { module: this.cutMod, entryPoint: 'fsBoxCut', targets: this.targets },
       primitive: { topology: 'triangle-list', cullMode: 'back' },
       depthStencil: this.depthStencil,
-    }, 'cut pieces are drawn and traced as whole boxes').then(p => { this.cutPipe = p; if (!p) cutSwap.rasterFailed(); }));
+    }, 'cut pieces are DRAWN as whole boxes; rays still meet their cut shape').then(p => { this.cutPipe = p; }));
     await Promise.all(jobs);
   }
   /** Compile the skinned-mesh pipeline for this joint-index format ahead of the first frame that draws a skin (main.ts / the viewer, once the glTF says which format) — the same
@@ -483,7 +482,7 @@ export class GBuffer {
   }
 
   /** decalBuf: the decal buffer (Decals.buf), or any storage buffer while none is attached — it is only read under FrameFlags.Decals, which the engine never raises then */
-  encode(enc: GPUCommandEncoder, sceneBG: GPUBindGroup, visibleBuf: GPUBuffer, visibleCount: number, skin: SkinnedDrawable | null, dummy: GPUBuffer, decalBuf: GPUBuffer, ts?: GPURenderPassTimestampWrites, cutCount = 0, cutWhole = 0) {
+  encode(enc: GPUCommandEncoder, sceneBG: GPUBindGroup, visibleBuf: GPUBuffer, visibleCount: number, skin: SkinnedDrawable | null, dummy: GPUBuffer, decalBuf: GPUBuffer, ts?: GPURenderPassTimestampWrites, cutCount = 0) {
     if (skin && this.prevJointsFor !== skin.jointMats) { this.prevJoints.destroy(); this.prevJoints = makeBuffer(this.device, skin.jointMats.size, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST, 'prevJoints'); this.prevJointsFor = skin.jointMats; }   // (a palette-sized 'previous' the first frame a skin shows up; zeros until the first snapshot — that frame's skinned motion is garbage, and the resolve is reset on a first frame anyway)
     const S = this.sharp;   // SHARP DIRECT: rasterise at the OUTPUT size into the O set (encodeDown then derives the internal view); off = the internal targets, exactly as before
     const pass = enc.beginRenderPass({
@@ -504,8 +503,8 @@ export class GBuffer {
     if (this.snowPipe && snowLookConfig.surface && this.snowQuads && this.snowQuadCount > 0) {   // (…on a page whose level raised the snow's surface, as when the pipeline was made only there: the fragment's own shading asks lv(SNOW_SURF))
       pass.setPipeline(this.snowPipe); pass.setVertexBuffer(0, this.snowQuads); pass.draw(6, this.snowQuadCount); }   // THE SNOW'S HILLS, first: the ground and the boxes under them then fail the depth test instead of being shaded twice
     pass.setPipeline(this.boxPipe);
-    if (!this.cutPipe) cutWhole = cutCount;   // (a build whose cut pipeline failed to compile draws the cut boxes WHOLE with this one — wrong at the cut, never missing)
-    pass.draw(36, visibleCount + cutWhole);   // `cutWhole` = the first so-many of the cut list drawn as their whole boxes: the traceable ones, on a frame whose ray programs have no cut rule (render/cutSwap.ts — picture and rays agree)
+    const cutWhole = this.cutPipe ? 0 : cutCount;   // (a build whose cut pipeline failed to compile draws the cut boxes WHOLE with this one — wrong at the cut, never missing: the rays still meet the cut shape)
+    pass.draw(36, visibleCount + cutWhole);
     if (cutCount > cutWhole) { pass.setPipeline(this.cutPipe!); pass.draw(36 + 6 * CUT_ROWS, cutCount - cutWhole, 0, visibleCount + cutWhole); }   // CUT BOXES: listed after the plain ones in `visible` (BoxWorld.visibleCutCount); six faces + a quad per plane
     if (skin && skin.instanceCount > 0) {
       pass.setPipeline(this.skinPipe(skin.jointsFormat));
