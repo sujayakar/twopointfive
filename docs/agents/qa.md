@@ -911,7 +911,7 @@ but synthetic writes still work.
   `bun run tools/retire/lines.ts run <dir> [--tree <the tree before>] <the check files the fold's report names>` before and after, `lines.ts diff <before>
   <after> --drop places.json`, `retire.ts --drop-lines places.json --write`, and `run` once more. (`diff` also says a check that DIED after the fold, one
   that throws exits 1 as a red check does, and does not count a line that was red before under other words.) After a fold that took a row with a slider
-  out: `bun run tools/gen-scene-notes.ts` (the scene panel's notes are keyed by row). WHAT GOES THAT WAY, by kind: the stand's and the journal's
+  out. WHAT GOES THAT WAY, by kind: the stand's and the journal's
   lines, the off arm, the on arm measured against the off arm ("a quarter of those metres"), and the lines of a check that held a newer rule off for its
   length; in the first fifteen checks of the squad's family that was 65 of 147 lines. A check left saying nothing goes whole (`--drop`). THE TOOL'S OWN CHECK:
   `bun run tools/retire/retire-check.ts` runs it on a small tree of its own (`tools/retire/fixture`) and holds that each of its cases there (110 today) answers the same,
