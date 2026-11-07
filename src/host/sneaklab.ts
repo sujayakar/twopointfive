@@ -8,6 +8,7 @@
 // Nothing here is the game's: it writes the same tables the panel's other rows write, and two of the sandbox's flags. Without the word none of it is made.
 import type { Game, Guard } from '../game/game';
 import type { Panel } from '../ui/panel';
+import { rowHeld } from './held';
 import type { FollowCamera } from '../game/camera';
 import type { Vec3 } from '../math/vec';
 import { STALK, STALK_STATS, stalkOn } from '../game/stalk';
@@ -151,23 +152,23 @@ const ARCS: { key: 'beginCos' | 'outCos'; label: string; tip: string }[] = [
   { key: 'outCos', label: 'ends if he turns °', tip: 'he turned around: the creep ends once Sam is less than this far round from his nose' },
 ];
 /** the switches, each in its group: a short name and a hover that says what on and off are and what to try */
-const TOGS = (): { g: Grp; label: string; get: () => boolean; set: (v: boolean) => void; tip: string }[] => [
-  { g: 'step', label: 'keys are steps in a crouch', get: () => TAPSTEP.on, set: v => { TAPSTEP.on = v; }, tip: 'on: crouched, a press lifts his foot, holding reaches and letting go plants it, and between steps he stands still. Shift is still the fast crouch walk. Off = the crouch walk' },
-  { g: 'start', label: 'hold click to creep', get: () => STALK.on, set: v => { STALK.on = v; }, tip: 'on: hold the left button on a man from behind and Sam creeps up on him, let go and he stops. Off = the build before it: your own keys all the way in, and the grab on its key' },
-  { g: 'start', label: 'drag to steer', get: () => STALK.drag, set: v => { STALK.drag = v; }, tip: 'on: press on a man from behind, keep the button down and drag the mouse the way you want Sam to creep, like a stick centred where you pressed. Further = faster. Back to where you pressed = he holds still. He always faces the man and stops just behind him. Off = the hold walks him in by itself' },
-  { g: 'start', label: 'weight in the step', get: () => STALK.heft, set: v => { STALK.heft = v; }, tip: 'on: his back, shoulders and arms go with his legs, a beat behind them. off: the arms as they were, held still. Look for: does he look heavy and careful as he steps, and does he settle when he stops?' },
-  { g: 'start', label: 'keys go round him', get: () => STALK.orbit, set: v => { STALK.orbit = v; }, tip: 'on: with the button held on a man, a move key takes Sam round him on a circle, still facing him, and the stick does the same. Toward or away still closes or opens the gap. Off = a move key ends the creep. Try: hold the click behind him and tap A or D' },
-  { g: 'start', label: 'click is the only way in', get: () => STALK.only, set: v => { STALK.only = v; }, tip: 'off = the grab\'s row is back beside the held click. It only matters with "press the key to grab" off' },
-  { g: 'pose', label: 'lower, hands down', get: () => STALK.low, set: v => { STALK.low = v; }, tip: 'on: no arm comes up and he sinks lower and slower as he closes, then springs up into the grab. Off = the old pose: the arm comes up and he rises as he closes' },
-  { g: 'pose', label: 'arms out', get: () => STALK.wide, set: v => { STALK.wide = v; }, tip: 'on: as he closes on a man in his crouch his arms come out a little from his sides, elbows bent and back, open hands by his knees with the left ahead, and stay out while he waits behind him. Off = his hands hang by his knees. Needs "lower, hands down". Try: flip it while stopped a metre and a half behind a man' },
-  { g: 'pose', label: 'body shows distance', get: () => STALK.tell, set: v => { STALK.tell = v; }, tip: 'on: his pose changes as he closes on the man\'s back, by distance, so a pause holds the pose. Off = the pose in reach alone' },
-  { g: 'grab', label: 'press the key to grab', get: () => STALK.key, set: v => { STALK.key = v; }, tip: 'on: holding the click only sneaks you up behind him, and you press the action key to grab. Off = the hold ends in the grab by itself' },
-  { g: 'grab', label: 'gun out before the arm', get: () => HOLD.stripFirst, set: v => { HOLD.stripFirst = v; }, tip: 'grabbing a man with a gun in his hands: on = Sam strips the gun first and the arm lands a beat later, with the strip heard before the catch. Off = both at once. Try: the rifleman, with sound on' },
-  { g: 'rmb', label: 'tap knocks out, hold chokes', get: () => CLOSE.rmbHold, set: v => { CLOSE.rmbHold = v; }, tip: 'on: a quick right click behind him is the knockout (fast, a little louder), and the right button kept down takes him into your arm and chokes him while you hold it (quiet, slow). Off = the right click is the knockout alone' },
-  { g: 'pass', label: 'head goes to the man', get: () => SAMLOOK.on, set: v => { SAMLOOK.on = v; }, tip: 'on: he looks at the nearest man in front of him, and at a man who is starting to notice him before a nearer one. The cursor still aims. Off = his head stays where his body faces' },
-  { g: 'pass', label: 'gives a man room', get: () => SAMLOOK.slip, set: v => { SAMLOOK.slip = v; }, tip: 'on: crouched beside a man he tips away, sinks, and the arm on that side goes out low. Off = the plain crouch' },
-  { g: 'run', label: 'Shift is a fast crouch walk', get: () => CROUCHRUN.on, set: v => { CROUCHRUN.on = v; }, tip: 'on: Shift in a crouch keeps you down and moves you quickly, and you stand up to sprint. Off = Shift stands you up into the sprint' },
-  { g: 'corner', label: 'click on a wall waits', get: () => STALK.corner, set: v => { STALK.corner = v; }, tip: 'on: with your back on a wall and empty hands, hold the left button and the man who walks past the corner is grabbed as he passes. Off = the button on a wall does nothing' },
+const TOGS = (): { g: Grp; label: string; t: Record<string, unknown>; key: string; tip: string }[] => [
+  { g: 'step', label: 'keys are steps in a crouch', t: TAPSTEP, key: 'on', tip: 'on: crouched, a press lifts his foot, holding reaches and letting go plants it, and between steps he stands still. Shift is still the fast crouch walk. Off = the crouch walk' },
+  { g: 'start', label: 'hold click to creep', t: STALK, key: 'on', tip: 'on: hold the left button on a man from behind and Sam creeps up on him, let go and he stops. Off = the build before it: your own keys all the way in, and the grab on its key' },
+  { g: 'start', label: 'drag to steer', t: STALK, key: 'drag', tip: 'on: press on a man from behind, keep the button down and drag the mouse the way you want Sam to creep, like a stick centred where you pressed. Further = faster. Back to where you pressed = he holds still. He always faces the man and stops just behind him. Off = the hold walks him in by itself' },
+  { g: 'start', label: 'weight in the step', t: STALK, key: 'heft', tip: 'on: his back, shoulders and arms go with his legs, a beat behind them. off: the arms as they were, held still. Look for: does he look heavy and careful as he steps, and does he settle when he stops?' },
+  { g: 'start', label: 'keys go round him', t: STALK, key: 'orbit', tip: 'on: with the button held on a man, a move key takes Sam round him on a circle, still facing him, and the stick does the same. Toward or away still closes or opens the gap. Off = a move key ends the creep. Try: hold the click behind him and tap A or D' },
+  { g: 'start', label: 'click is the only way in', t: STALK, key: 'only', tip: 'off = the grab\'s row is back beside the held click. It only matters with "press the key to grab" off' },
+  { g: 'pose', label: 'lower, hands down', t: STALK, key: 'low', tip: 'on: no arm comes up and he sinks lower and slower as he closes, then springs up into the grab. Off = the old pose: the arm comes up and he rises as he closes' },
+  { g: 'pose', label: 'arms out', t: STALK, key: 'wide', tip: 'on: as he closes on a man in his crouch his arms come out a little from his sides, elbows bent and back, open hands by his knees with the left ahead, and stay out while he waits behind him. Off = his hands hang by his knees. Needs "lower, hands down". Try: flip it while stopped a metre and a half behind a man' },
+  { g: 'pose', label: 'body shows distance', t: STALK, key: 'tell', tip: 'on: his pose changes as he closes on the man\'s back, by distance, so a pause holds the pose. Off = the pose in reach alone' },
+  { g: 'grab', label: 'press the key to grab', t: STALK, key: 'key', tip: 'on: holding the click only sneaks you up behind him, and you press the action key to grab. Off = the hold ends in the grab by itself' },
+  { g: 'grab', label: 'gun out before the arm', t: HOLD, key: 'stripFirst', tip: 'grabbing a man with a gun in his hands: on = Sam strips the gun first and the arm lands a beat later, with the strip heard before the catch. Off = both at once. Try: the rifleman, with sound on' },
+  { g: 'rmb', label: 'tap knocks out, hold chokes', t: CLOSE, key: 'rmbHold', tip: 'on: a quick right click behind him is the knockout (fast, a little louder), and the right button kept down takes him into your arm and chokes him while you hold it (quiet, slow). Off = the right click is the knockout alone' },
+  { g: 'pass', label: 'head goes to the man', t: SAMLOOK, key: 'on', tip: 'on: he looks at the nearest man in front of him, and at a man who is starting to notice him before a nearer one. The cursor still aims. Off = his head stays where his body faces' },
+  { g: 'pass', label: 'gives a man room', t: SAMLOOK, key: 'slip', tip: 'on: crouched beside a man he tips away, sinks, and the arm on that side goes out low. Off = the plain crouch' },
+  { g: 'run', label: 'Shift is a fast crouch walk', t: CROUCHRUN, key: 'on', tip: 'on: Shift in a crouch keeps you down and moves you quickly, and you stand up to sprint. Off = Shift stands you up into the sprint' },
+  { g: 'corner', label: 'click on a wall waits', t: STALK, key: 'corner', tip: 'on: with your back on a wall and empty hands, hold the left button and the man who walks past the corner is grabbed as he passes. Off = the button on a wall does nothing' },
 ];
 const WHY: Record<string, string> = { '': 'nothing yet', grab: 'the grab', let: 'you let go', far: 'he got too far away', turned: 'he turned around', wall: 'a wall or a door came between you', him: 'he noticed you, or he is out of it', hands: 'your hands were busy or not empty', keys: 'you moved by yourself' };
 
@@ -195,7 +196,8 @@ function gap(g: Game) {
 /** ONCE, after the panel is built: the lab's system, its rows, the panel open on it */
 export function sneakLabBoot(game: Game, panel: Panel) {
   SNEAKLAB.on = true; STALKVIZ.on = true;
-  const nums = NUMS(), was = nums.map(n => n.t[n.key] as number), wasArc = ARCS.map(a => STALK[a.key]);
+  const nums = NUMS().filter(n => !rowHeld(n.t, n.key)), was = nums.map(n => n.t[n.key] as number);   // (no slider for a number the page holds at one value: host/held.ts)
+  const wasArc = ARCS.map(a => STALK[a.key]);
   let copied = '';
   const asText = () => JSON.stringify(Object.fromEntries([...nums.map(n => [`${n.name}.${n.key}`, n.t[n.key]] as [string, unknown]), ...ARCS.map(a => [`STALK.${a.key}`, +STALK[a.key].toFixed(3)] as [string, unknown])]));
   panel.system(SNEAKLAB_SYSTEM, { icon: '◔', short: 'sneak', title: 'play the close-in on a man and move its numbers while you play' });
@@ -218,13 +220,13 @@ export function sneakLabBoot(game: Game, panel: Panel) {
   panel.toggleBox(now, 'keep Sam clear of this panel', () => SNEAKLAB.clear, v => { SNEAKLAB.clear = v; }, 'the view slides over so Sam stands in the middle of what this panel leaves; off = the middle of the page, as the game has him');
   panel.toggleBox(now, 'draw the geometry on the floor', () => STALKVIZ.on, v => { STALKVIZ.on = v; }, 'round the nearest man: the ring it can begin inside and the one it lets go past, the edges of his rear arc, the point Sam is walked to, the ring the grab fires inside');
   // (the knobs in named groups that fold, each with its own '↺' and a count of what has been moved; every row has a dot that puts its own number back)
-  const togs = TOGS(), wasTog = togs.map(t => t.get()), moved = (n: Num, i: number) => Math.abs((n.t[n.key] as number) - was[i]) > n.step * 0.5;
+  const togs = TOGS().filter(t => !rowHeld(t.t, t.key)), wasTog = togs.map(t => !!t.t[t.key]), moved = (n: Num, i: number) => Math.abs((n.t[n.key] as number) - was[i]) > n.step * 0.5;
   for (const G of GROUPS) {
     const mine = nums.map((n, i) => ({ n, i })).filter(x => x.n.g === G.id), arcs = G.id === 'start' ? ARCS.map((a, i) => ({ a, i })) : [];
     const sec = panel.section(G.name, { open: G.open, title: G.title, resetTitle: 'this group\'s numbers back to the build\'s',
       reset: () => { for (const { n, i } of mine) n.t[n.key] = was[i]; for (const { a, i } of arcs) STALK[a.key] = wasArc[i]; },
       summary: () => { const c = mine.filter(x => moved(x.n, x.i)).length + arcs.filter(x => Math.abs(STALK[x.a.key] - wasArc[x.i]) > 1e-4).length; return c ? `${c} moved` : ''; } });
-    togs.forEach((t, i) => { if (t.g === G.id) panel.toggleBox(sec, t.label, t.get, t.set, t.tip, wasTog[i]); });
+    togs.forEach((t, i) => { if (t.g === G.id) panel.toggleBox(sec, t.label, () => !!t.t[t.key], v => { t.t[t.key] = v; }, t.tip, wasTog[i]); });   // (no box for a switch the page holds at one value: host/held.ts)
     for (const { n, i } of mine) panel.slider(sec, n.label, n.min, n.max, n.step, () => n.t[n.key] as number, v => { n.t[n.key] = v; }, n.tip, was[i]);
     for (const { a, i } of arcs) panel.slider(sec, a.label, 60, 180, 1, () => deg(STALK[a.key]), v => { STALK[a.key] = cosOf(v); }, a.tip, deg(wasArc[i]));
   }

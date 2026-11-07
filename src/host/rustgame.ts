@@ -48,6 +48,7 @@ import { loneMen } from '../sim/men/store';
 import { useDice } from '../math/dice';
 import { sampleCmd, stillCmd, type PlayerCmd } from '../game/cmd';
 import { dressStep, DRESS_MS } from './rustdress';
+import { markHeld } from './held';
 import { wallFeelPicture } from '../game/blastFeel';
 import { exportGame, hostHalf, bookOf, report, SCHEMA } from 'tps-bridge/export';
 import { applyGame } from 'tps-bridge/import';
@@ -261,7 +262,7 @@ export function rustSettledHold(): void {
     const d = Object.getOwnPropertyDescriptor(o, key); if (!d || d.get || d.set || !d.configurable) { R.skipped++; continue; }
     const page = r.page; if (!sameRow(d.value, page)) R.off.push(`${r.row} (${rowWord(d.value)}; held at ${rowWord(page)})`);
     Object.defineProperty(o, key, { enumerable: true, configurable: true, get: () => page, set: (v: unknown) => { if (sameRow(v, page)) return; const e = R.refused.get(r.row) ?? { value: v, n: 0 }; e.value = v; e.n++; R.refused.set(r.row, e); } });
-    R.held++; }
+    markHeld(o, key); R.held++; }
 }
 /** what the hold has turned away so far, in a line (the debugger panel's first; '' with nothing), said in the console once each time it grows */
 export function rustSettledLine(): string {
