@@ -189,7 +189,7 @@ pub fn stack_lean(g: &mut crate::game::Game, dt: f64, cam: CameraId, pl: PlayerI
         let kept_out = yes(w0.lean_want);
         let mut ap = g.aim_point;
         let u_end = if edge > 0.0 { w0.hi } else { w0.lo };
-        if ws.lean_over && ap[1] > ws.lean_over_y && g.aim_guard.is_none() {
+        if ap[1] > ws.lean_over_y && g.aim_guard.is_none() {
             let cam_pos = g.tab.camera[cam].pos;
             let dy = ap[1] - cam_pos[1];
             if dy < -0.5 {

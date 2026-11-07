@@ -118,12 +118,6 @@ pub fn fall_store_schedule(g: &mut crate::game::Game, t: f64, x: f64, y: f64, z:
     sim::falls::schedule(g.sim, l, t, x, y, z, n, gain, rate, amount, who, event, level, dust, cap) != 0
 }
 
-/// `amount` m² of glass laid at (x, z). (fallshome.ts FallStore.deposit)
-pub fn fall_store_deposit(g: &mut crate::game::Game, x: f64, z: f64, amount: f64) {
-    took_there(g);
-    sim::falls::deposit(&mut sim::state::state(g.sim).falls, x, z, amount);
-}
-
 /// The landings of list `l` whose time has come, in order: each one's glass laid and the floor told. (fallshome.ts FallStore.due)
 pub fn fall_store_due(g: &mut crate::game::Game, time: f64, level: f64, gap: f64, l: Option<f64>) -> Vec<crate::sim_fallshome::FallDue> {
     let Some(l) = list_of(l.unwrap_or(FALL_GLASS)) else { return none() };

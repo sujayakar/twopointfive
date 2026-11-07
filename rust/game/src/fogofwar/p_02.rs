@@ -175,8 +175,8 @@ pub fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
     {
         let e = crate::rails::rails_eye(g);
         let s = crate::rails::rails_step_eye(g);
-        let first = s.is_some() && crate::rails::rails_eye_first(g);
-        let own = (e.is_some() || s.is_some()) && crate::rails::rails_eye_view(g);
+        let first = s.is_some();
+        let own = e.is_some() || s.is_some();
         if own { pic_own = Some(eyes.clone()); view = Some(Vec::new()); }
         let pic: &mut Vec<crate::fogofwar::FogEye> = match pic_own.as_mut() { Some(p) => p, None => &mut eyes };
         if let (Some(s), true) = (s, first) {

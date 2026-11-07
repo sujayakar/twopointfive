@@ -394,7 +394,7 @@ pub fn rescue_defenders(g: &mut crate::game::Game) {
                     fd.mode = DefMode::Free; fd.free_at = now; fd.rally_at = f64::NAN;
                 }
                 if g.gd[h].script.is_some() { crate::squad::end_guard_script(g, h, Some(crate::squad::EndGuardScriptState::Alert)); }
-                if g.gd[h].state != GuardState::Alert || g.gd[h].foe.is_none() || (g.k.belief.on && g.time - g.gd[h].last_seen_t > 1.0) {
+                if g.gd[h].state != GuardState::Alert || g.gd[h].foe.is_none() || g.time - g.gd[h].last_seen_t > 1.0 {
                     let to = match g.rescue.noise { Some(n) => n, None => rescue_room_point(g, RescueRoomPointWhich::Outside) };
                     g.gd[h].state = GuardState::Alert;
                     g.gd[h].awareness = 1.0;
@@ -594,7 +594,7 @@ fn crew_on_row(g: &mut Game, h: GuardId, d: Def, f: Option<RoomfightDefId>) -> b
         let fd = &mut g.tab.roomfight_def[f];
         fd.mode = DefMode::Free; fd.free_at = now; fd.rally_at = f64::NAN;
         if g.gd[h].script.is_some() { crate::squad::end_guard_script(g, h, Some(crate::squad::EndGuardScriptState::Alert)); }
-        if g.gd[h].state != GuardState::Alert || g.gd[h].foe.is_none() || (g.k.belief.on && g.time - g.gd[h].last_seen_t > 1.0) {
+        if g.gd[h].state != GuardState::Alert || g.gd[h].foe.is_none() || g.time - g.gd[h].last_seen_t > 1.0 {
             g.gd[h].state = GuardState::Alert;
             g.gd[h].awareness = 1.0;
             g.gd[h].react_t = 0.0;

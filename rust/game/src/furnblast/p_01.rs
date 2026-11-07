@@ -410,18 +410,11 @@ fn break_static_in(g: &mut Game, i: f64, ghost: bool, at: V3, shatter: bool, kk:
     let b = bx(i); let c = seam_box(g, b).c; let dir = furniture_away(g, at, c);
     if crate::destruction::destruction_item_of(g, i).is_some() {   // the lane's own destructible: its road, plus the blast's shove
         let sp = (1.0 + 3.0 * kk) * g.destr.furn.fling; g.stats.furnblast.items += 1;
-        if g.k.debris.dress {   // (the shove is said BEFORE the thing is knocked off; the budget is spent by what was KNOCKED OFF)
-            let knocks = g.destr.knocks; g.destr.debris.fling = Some([dir[0] * sp, 0.6 + 1.2 * kk, dir[2] * sp]);
-            crate::destruction::destruction_drop_item(g, i, dir, Some(who), None);
-            g.destr.debris.fling = None;
-            *budget -= g.destr.knocks - knocks; return false;
-        }
-        let had = g.destr.debris.list.clone(); crate::destruction::destruction_drop_item(g, i, dir, Some(who), None);
-        let now = g.destr.debris.list.clone();
-        for ci in now { if !had.contains(&ci) {
-            let r = &mut g.tab.debris_chunk[ci]; r.v[0] += dir[0] * sp; r.v[1] += 0.6 + 1.2 * kk; r.v[2] += dir[2] * sp; *budget -= 1.0;
-        } }
-        return false;
+        // (the shove is said BEFORE the thing is knocked off; the budget is spent by what was KNOCKED OFF)
+        let knocks = g.destr.knocks; g.destr.debris.fling = Some([dir[0] * sp, 0.6 + 1.2 * kk, dir[2] * sp]);
+        crate::destruction::destruction_drop_item(g, i, dir, Some(who), None);
+        g.destr.debris.fling = None;
+        *budget -= g.destr.knocks - knocks; return false;
     }
     if let Some(br) = crate::wallbreak::wall_break_breakable_at(g, i) {   // a cover panel: the wall engine's road
         if raze(g, br.id, who, dir, budget) { g.stats.furnblast.razed += 1; }

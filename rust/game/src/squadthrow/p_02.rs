@@ -225,7 +225,7 @@ pub fn squad_lend(g: &mut crate::game::Game, gd: GuardId, t: &crate::orders::Ord
 
 /// The throw is made, or will not be: back to where he stood and to what he was doing. (squadthrow.ts squadHandBack)
 pub fn squad_hand_back(g: &mut crate::game::Game, w: &mut crate::squadthrow::Lent, back: Option<bool>) {
-    let back = back.unwrap_or(g.k.squadthrow.back);
+    let back = back.unwrap_or(true);
     let gd = w.gd;
     let c = g.gd[gd].ch;
     let p = g.ch[c].pos;

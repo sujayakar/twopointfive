@@ -533,7 +533,7 @@ pub fn wall_press(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Camer
         || in_hand.map_or(false, |gun| crate::weapons::firearm_reloading(g, gun))
         || g.pl[pl].equip_t > 0.0 || now - g.pl[pl].last_fire_t < g.k.wallsnap.press_after_shot;
     let alert_enemy = || g.guards.iter().any(|&h| g.gd[h].state == crate::game::GuardState::Alert && g.gd[h].team != crate::teams::Team::Operative && g.gd[h].team != crate::teams::Team::Civilian);
-    if busy || (g.k.wallsnap.press_calm && gun_away && alert_enemy()) { g.m.player.ws_press.get_mut(pl).unwrap().t = 0.0; return; }
+    if busy || (gun_away && alert_enemy()) { g.m.player.ws_press.get_mut(pl).unwrap().t = 0.0; return; }
     let mut thing = false;
     let mut i = 0;
     while i < g.nearby.len() {
@@ -562,7 +562,7 @@ pub fn wall_press(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Camer
 
 /// Does the rifle, drawn on this hold, stack on it? (player.ts wallStacks)
 pub fn wall_stacks(g: &mut crate::game::Game, w: crate::player::WallHold) -> bool {
-    g.k.wallsnap.on && g.k.wallsnap.stack && g.k.wallsnap.stack_draw && w.take_t.is_some()
+    g.k.wallsnap.on && g.k.wallsnap.stack && w.take_t.is_some()
 }
 
 /// The take's turn: his body comes round on the take's own clock. False = not taking. (player.ts wallTakeYaw)
