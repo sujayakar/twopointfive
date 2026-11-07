@@ -64,6 +64,30 @@ fn a_flashed_man_sent_to_cover_stays_where_he_is_until_he_can_see() {
     }
 }
 
+/// THE RULE: the time he cannot see is no part of the time his shift may take. A man sent to cover and flashed for longer than that goes to the
+/// same spot once his eyes are back, however long they were gone.
+/// A FAILURE MEANS: the shift's clock runs while he is kept from shifting, and he gives up his cover the moment he could use it.
+#[test]
+fn a_man_flashed_for_longer_than_his_shift_may_take_still_goes_to_his_cover() {
+    for s in SEEDS {
+        let (mut p, gd) = yard(s);
+        let (spot, mut k) = pinned_and_sent(&mut p, gd, s);
+        let t0 = p.time();
+        let cap = p.g.k.suppression.displace_cap_secs;
+        // a flash at his feet again each time his eyes are nearly back, until they have been gone for a second more than the shift may take
+        let mut next = 0.0;
+        while p.time() - t0 < cap + 1.0 {
+            if p.time() >= next { let at = p.at(gd); p.flash_lands([at[0] + 0.3, at[1]]); next = p.time() + 2.0; }
+            frame_under_fire(&mut p, gd, k); k += 1;
+        }
+        while p.blind(gd) { frame_under_fire(&mut p, gd, k); k += 1; }
+        assert!(p.sent_to_cover(gd).map_or(false, |c| dist(c, spot) < 0.1), "seed {s}: his eyes came back {:.1} s after he was sent and his spot is gone ({})", p.time() - t0, p.roll());
+        let mut got = false;
+        for _ in 0..(4 * 60) { p.frame(); if dist(p.at(gd), spot) < 0.8 { got = true; break; } }   // (Sam holds his fire: the man is on the move now)
+        assert!(got, "seed {s}: four seconds after his eyes came back he is {:.2} m from his spot ({})", dist(p.at(gd), spot), p.roll());
+    }
+}
+
 /// THE CONTROL: with no flash the same man does go to his spot, so the rule above is not a man who never moves.
 #[test]
 fn the_same_man_with_his_eyes_goes_to_his_cover() {
