@@ -3,7 +3,6 @@
 //   await __rb.measure(n)       n serialized frames → mean/sd of direct, softblur, union (CLAUDE.md protocol: onSubmittedWorkDone + MessageChannel yields per frame)
 //   await __rb.ab(fnA, fnB, r)  interleaved A/B (r rounds of A,B,B,A) → { A, B } means
 //   await __rb.diag(view)       debug view 11 / 12 read back from the raw S0 texture over a region → histograms (history M, gradient resets, rays / pixel, taps)
-//   await __rb.hot(edit)        hot-swap restir.wgsl with edit(src) applied (string → string); __rb.hot() restores the file as on disk
 //   await __rb.slope(groups)    direct ms vs lights: switch the level's light groups off cumulatively (game lighting API), measure each step, restore
 (async () => {
   if (!window.__perf) await import('/qa/perf-harness.js');
@@ -63,12 +62,6 @@
       const top = hh => Object.entries(hh).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([k, v]) => `${k}:${(v / n * 100).toFixed(0)}%`).join(' ');
       if (view === 12) return { litPixels: n, raysPerPixel: +(sums[0] / n * 6).toFixed(3), tapsPerPixel: +(sums[1] / n * 2 * Math.max(1, S.restirSpatial)).toFixed(3), neighbourShadedFrac: +(sums[2] / n * 2).toFixed(3), raysHist: top(h[0]) };
       return { litPixels: n, M0: top(h[0]), M1: top(h[1]), gradientCut: top(h[2]), meanM0: +(sums[0] / n).toFixed(3), meanM1: +(sums[1] / n).toFixed(3), meanCut: +(sums[2] / n).toFixed(4) };
-    },
-    async hot(edit = null) {
-      const src = await (await fetch('/qa/shader/restir.wgsl', { cache: 'no-store' })).text();
-      const v = edit ? edit(src) : src;
-      if (edit && v === src) return { ok: false, messages: ['edit changed nothing'] };
-      return window.__hotRestir(v);
     },
     /** direct ms vs active light count: switch the level's light GROUPS off one after another (cumulative, through game.setGroup so the lighting update does not put them
      *  back), n frames each; every target's switch restored after. → rows + least-squares ms per light */
@@ -190,5 +183,5 @@
     errors() { return window.__gpuErrs.slice(-10); },
   };
   window.__rb = B;
-  return 'restir bench ready: __rb.{stage,measure,ab,diag,hot,slope,errors}';
+  return 'restir bench ready: __rb.{stage,measure,ab,diag,slope,errors}';
 })();
