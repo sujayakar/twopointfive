@@ -290,7 +290,7 @@ export const ROLLBACK_EXEMPT: Record<string, string> = {
   'src/scene/cut.ts cutConfig': 'CONFIG · written by cutBoxesInit from the URL / store (cut.ts:44-47) and the knob roads; read by boxes.ts, wallpen.ts',
   'src/scene/look.ts lookPlace': 'CONFIG · written by setLookPlace only (look.ts:36: the page says it once at boot)',
   'src/scene/look.ts suitAsked': 'CONFIG · (no initialiser). Written by setSuitAs only (look.ts:24: a window\'s host says it for its own picture)',
-  'src/scene/picks.ts PICKS_UI': 'CONFIG · written from the URL at boot (picks.ts:86: ?nopicks, ?pickstraight)',
+  'src/scene/picks.ts PICKS_UI': 'CONFIG · written from the URL at boot (?nopicks)',
   'src/game/aim.ts AIM_HOOKS': 'CONST · its one write is a top-level statement of player.ts:176 (installs the function at module load); aim.ts:308 only calls it',
   'src/game/attention.ts ATTENTION_LOG': 'TALLY · pushed (and trimmed) in attention.ts; no file under src/game, src/scene or src/anim reads a row back',
   'src/game/civilians.ts CIV_LOG': 'TALLY · pushed (and trimmed) in civilians.ts; no file under src/game, src/scene or src/anim reads a row back (main.ts:1041 hands it to the page hook)',
