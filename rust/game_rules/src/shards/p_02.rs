@@ -299,7 +299,7 @@ pub fn glass_shards_cut_plates(g: &mut crate::game::Game, f: &crate::shards::Gla
 
 /// One plate into the debris pool, inside glass's share: over it the oldest resting plate crumbles; none resting = refused.   (shards.ts GlassShards.plate)
 pub fn glass_shards_plate(g: &mut crate::game::Game, box_: BoxId, v: V3, w: V3, who: f64, meta: &crate::shards::PlateMeta, cut: Option<&crate::shards::GlassShardsPlateCut>) -> Option<DebrisChunkId> {
-    let pool_cap = crate::debris::debris_cap(g);
+    let pool_cap = crate::debris::DEBRIS_CAP;
     let cap = m::max(2.0, m::floor(pool_cap * g.k.shards.plate_share));
     let mut mine = 0.0;
     for c in g.destr.debris.list.iter() { if g.tab.debris_chunk[*c].glass.is_some() { mine += 1.0; } }
