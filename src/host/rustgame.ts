@@ -44,6 +44,7 @@ import type { Snapshot } from '../game/rollback';
 import type { Game } from '../game/game';
 import { NO_VIEW, type TickView } from '../view/seatview';
 import { heardOf, type WorldAsk } from '../view/worldask';
+import { pageSay } from '../view/pagesaid';
 import { CharacterAnimator } from '../game/character';
 import { SkeletonInstance } from '../anim/skeleton';
 import { sampleCmd, stillCmd, type PlayerCmd } from '../game/cmd';
@@ -643,8 +644,6 @@ function settle(S: Held): void {
   pokes(S);
   call('face_loaded', () => hand(enc.encode(b.label), (p, n) => X!.face_loaded(S.h, p, n, b.loads, b.saves))); grown(g);
   apply(S, true);
-  // (the HUD's lines are the saved moment's again, by the long list; the controller's own line of the load, savestate.ts:1132, said after them)
-  { const M = (g as unknown as Record<string, any>).messages as { text: string; t: number }[]; M.push({ text: `checkpoint loaded${b.label ? ` \u2014 ${b.label}` : ''}`, t: g.time }); if (M.length > 5) M.shift(); }
   RUST_GAME.backMs.hand = performance.now() - t;
 }
 /** THE HOST'S SWITCHES written between ticks (the options' and the pause card's god mode / AI / ammunition rows; the pause card letting go of the launcher's
@@ -677,7 +676,7 @@ function toStart(S: Held, said?: string): void {
   apply(S, true); sweep(S);   // (what the filtered export last sent was forgotten with the game that stood: the long list again, the HUD's lines as the start had them)
   for (const [, path, v] of mine) { let o: any = g; for (let i = 0; i < path.length - 1 && o; i++) o = o[path[i]]; if (o && !Object.is(o[path[path.length - 1]], v)) o[path[path.length - 1]] = v; }
   pokes(S);
-  if (said) g.msg(said);
+  if (said) pageSay(said);
   try { G.saves?.onPutBack?.({ key: '', slot: 'auto', n: 0, label: 'the start', kind: 'auto', savedAt: 0, missionT: 0, stage: String(G.mission?.stage ?? ''), runId: '', bytes: 0, mem: true }); } catch (e) { RUST_GAME.outThrew['restart.host'] ??= String((e as Error)?.stack ?? e).slice(0, 600); }
   if (CLEANRESTART.on && CLEANRESTART.picture) G.engine?.restartPicture?.('level restarted');
   RUST_GAME.restarts++;

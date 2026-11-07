@@ -12,12 +12,15 @@ src/game/deathrecap.ts:*	decides	debrief	the dress step runs recapTick on the co
 src/game/chronicle.ts:*	decides	debrief	the debrief reads the chronicle through TypeScript's own counts and words, and the save controller adds its checkpoint row on the copy
 src/game/lesson.ts:*	decides	lesson conditions	a lesson's step, its line and whether it is over are worked out again on the copy (the camera and the HUD ask Lesson.step each frame)
 src/game/rails.ts:*	decides	lesson conditions	what a tutorial's rails allow, offer and teach is worked out again on the copy each frame (its key locks wait for the host's half to be redrawn)
-src/game/cues.ts:*	decides	radio and spoken lines	the radio strip's rows and whose bubble shows are worked out on the copy, and a line the page says is filed on the copy only
-src/game/dialogue.ts:*	decides	radio and spoken lines	the room and place names the lines use are worked out again on the copy
+src/game/cues.ts:Cues.aside	decides	debrief	the death recap's witness files his word on the copy: it goes when the recap is the tick's (its aside is a bubble of the cues' own, and the view tells it with the rest)
+src/game/cues.ts:Cues.bubbleOf	decides	debrief	the death recap's witness asks whether a cue stands over him, on the copy: it goes with him
+src/game/dialogue.ts:roomName	decides	squad status words	the squad block's row names the floor a man covers (Cover.words): goes when the HUD reads the squad's words
+src/game/dialogue.ts:watchedPlace	decides	squad status words	the squad block's row names the floor a man covers (Cover.words): goes when the HUD reads the squad's words
+src/game/dialogue.ts:ownPlace	moving	the verdict	asked by the verdict's watch (chronicle.ts roomOf): goes when the verdict is the tick's	1
+src/game/dialogue.ts:isOffice	moving	the verdict	asked by the verdict's watch (chronicle.ts roomOf): goes when the verdict is the tick's	1
+src/game/dialogue.ts:levelRects	decides	debrief	the debrief's map names its rooms: goes when the debrief is the Rust game's
 src/game/doornames.ts:*	decides	radio and spoken lines	a door's said and written name are worked out again on the copy
-src/game/squadnet.ts:*	decides	radio and spoken lines	the squad net's "why" words are worked out again on the copy
-src/game/game.ts:Game.msg	decides	radio and spoken lines	a line pushed by the page lands in the copy's log only: the Rust game never hears it and the next apply may drop it
-src/main.ts:main › {said}	decides	radio and spoken lines	the page's own notes are pushed into the copy's log as if the game had said them
+src/game/squadnet.ts:whyWords	decides	orders menu and hand ring	worded off the pick under the cursor (autoPick, on the page until the world ask and the one plan): goes with it
 # ---- decides: the same rule worked out twice (the HUD asks TypeScript, on the copy, what the Rust game already answers)
 src/game/mission.ts:*	decides	HUD mission lines	"is the mission live" and how far the rack is are worked out again on the copy
 src/game/nightbreach.ts:*	decides	HUD mission lines	the plain night's state is worked out again on the copy

@@ -548,19 +548,66 @@ pub fn cues_aside(g: &mut crate::game::Game, gd: GuardId, text: &str) {
     g.cues.bubbles.set(gd, Bubble { text: String::from(text), t, dur: crate::guards::bubble_secs(text), radio: false });
 }
 
-/// What a man is saying: his line (Guard.bubble) or a cue of this file's, whichever is the later and still running. A copy: `=== by.bubble` of the TypeScript compares `.t` and `.text` here.   (cues.ts Cues.bubbleOf)
-pub fn cues_bubble_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::cues::Bubble> {
+/// What a man is saying: his line (Guard.bubble) or a cue of this file's, whichever is the later and still running. A cue that has had its time is passed over and
+/// left where it is: the next one takes its place.   (cues.ts Cues.bubbleOf)
+pub fn cues_bubble_of(g: &crate::game::Game, gd: GuardId) -> Option<crate::cues::Bubble> {
     let b = g.gd[gd].bubble.as_ref().map(|b| Bubble { text: b.text.clone(), t: b.t, dur: b.dur, radio: b.radio });
     let Some(c) = g.cues.bubbles.get(gd).cloned() else { return b; };
     let t = g.time;
-    if t < c.t || t - c.t > c.dur {
-        g.cues.bubbles.delete(gd);
-        return b;
-    }
+    if t < c.t || t - c.t > c.dur { return b; }
     match b {
         Some(b) if b.t >= c.t => Some(b),
         _ => Some(c),
     }
+}
+
+/// A man's bubble as a HUD words it: a civilian by his own state; anybody else calm, wary while he is searching or suspicious, the red of a fight while alert. A
+/// man of the player's own never wears the wary tone: left searching after a fight went cold, he speaks calmly.
+fn bubble_tone(g: &crate::game::Game, gd: GuardId) -> crate::view::BubbleTone {
+    use crate::civilians::CivState as C;
+    use crate::game::GuardState as S;
+    use crate::view::BubbleTone as T;
+    let m = &g.gd[gd];
+    if let Some(c) = m.civ {
+        return match g.cv[c].state { C::Work | C::Held => T::Calm, C::Startled | C::Cower => T::Sus, _ => T::Alert };
+    }
+    match m.state {
+        S::Alert => T::Alert,
+        S::Suspicious | S::Search if m.team != crate::teams::Team::Operative => T::Sus,
+        _ => T::Calm,
+    }
+}
+
+/// WHAT A SEAT'S HUD IS TOLD IS BEING SAID ON THE FLOOR, each line with where it goes. A man nobody on the team sees has no line over him (his line is still heard); a
+/// man of the seat's own is drawn at the edge of the view while he is off the screen, and always while the fog hides him from the shown picture; a man of the
+/// team who went down is called from where he fell; the seat's own man has his line to the man in his arm. A man is named by his character's id.
+pub fn bubbles_view(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<crate::view::BubbleView> {
+    use crate::view::{BubblePlace, BubbleTone, BubbleView};
+    let t = g.time;
+    let up = |said: f64, dur: f64| said <= t && t - said <= dur;
+    let mut out = Vec::new();
+    for &gd in g.guards.iter().chain(g.civilians.iter()) {
+        let Some(b) = cues_bubble_of(g, gd) else { continue; };
+        let m = &g.gd[gd];
+        if !up(b.t, b.dur) || (m.state == crate::game::GuardState::Dead && m.wound.is_none()) { continue; }
+        if m.civ.map_or(false, |c| g.cv[c].state == crate::civilians::CivState::Gone) { continue; }
+        let hidden = crate::fogofwar::fog_of_war_hidden__body(g, gd);
+        let place = if !crate::orders::squad_orders_mine(g, seat, gd) {
+            if hidden { continue; }
+            BubblePlace::Over
+        } else if hidden { BubblePlace::Edge } else { BubblePlace::OverOrEdge };
+        let c = &g.ch[m.ch];
+        out.push(BubbleView { man: Some(c.id), edge: alloc::format!("{}: {}", m.callsign, b.text), text: b.text, age: t - b.t, dur: b.dur, radio: b.radio, tone: bubble_tone(g, gd), place, at: c.pos });
+    }
+    for r in g.squad_net.rows.iter().filter(|r| up(r.t, r.dur)) {
+        out.push(BubbleView { man: None, text: r.text.clone(), edge: r.text.clone(), age: t - r.t, dur: r.dur, radio: false, tone: BubbleTone::Alert, place: BubblePlace::OverOrEdge, at: r.at });
+    }
+    let me = &g.pl[seat.player];
+    if let Some(b) = me.bubble.as_ref().filter(|b| !me.down && up(b.t, b.dur)) {
+        let c = &g.ch[me.ch];
+        out.push(BubbleView { man: Some(c.id), text: b.text.clone(), edge: b.text.clone(), age: t - b.t, dur: b.dur, radio: b.radio, tone: BubbleTone::Own, place: BubblePlace::Over, at: c.pos });
+    }
+    out
 }
 
 // ---------------------------------------------------------------- the words
@@ -825,16 +872,17 @@ pub fn cues_summary(g: &crate::game::Game) -> String {
     alloc::format!("{} of {} net lines drawn · {} new lines{}", js::num_str(drawn), js::num_str(of), js::num_str(S.cues), held)
 }
 
-/// The strip's rows this frame as 'radio: …' rows, and at most one 'heard: …' row in a place no other row wants, oldest first.   (cues.ts stripRows)
-pub fn strip_rows(g: &crate::game::Game) -> Vec<crate::cues::StripRowsItem> {
+/// THE RADIO STRIP, oldest first: the rows alive on the net, and at most one shout that reached an ear, only in a place no other row wants.
+pub fn radio_rows(g: &crate::game::Game) -> Vec<crate::view::RadioRow> {
+    use crate::view::{RadioKind, RadioRow};
     let (t, secs, most) = (g.time, g.k.cues.secs, g.k.cues.rows);
     let live: Vec<&CueRow> = g.cues.rows.iter().filter(|r| r.t <= t && t - r.t < secs).collect();
     let from = tail_from(live.len(), most);
-    let mut out: Vec<StripRowsItem> = live[from..].iter().map(|r| StripRowsItem { text: alloc::format!("radio: {}", r.text), t: r.t }).collect();
+    let mut out: Vec<RadioRow> = live[from..].iter().map(|r| RadioRow { kind: RadioKind::Net, text: r.text.clone(), age: t - r.t }).collect();
     if let Some(h) = &g.cues.heard_row {
         if (out.len() as f64) < most && h.t <= t && t - h.t < secs {
-            out.push(StripRowsItem { text: alloc::format!("heard: {}", h.text), t: h.t });
-            js::sort_by(&mut out, |a, b| a.t - b.t);
+            out.push(RadioRow { kind: RadioKind::Heard, text: h.text.clone(), age: t - h.t });
+            js::sort_by(&mut out, |a, b| b.age - a.age);
         }
     }
     out
@@ -1013,7 +1061,7 @@ mod tests {
 
     #[test]
     fn the_readers_are_the_typescripts() {
-        // (bun: the TypeScript's own Cues, adopt, stripRows, summary and cueLines with WORDS.on, WORDS.guide and CUES.overheard up)
+        // (bun, while they had TypeScript: Cues, adopt, stripRows, summary and cueLines with WORDS.on, WORDS.guide and CUES.overheard up)
         let mut game = Game::blank();
         let g = &mut game;
         g.time = 20.0;
@@ -1021,7 +1069,7 @@ mod tests {
         cues_adopt(g, &[msg("radio: a", 1.0), msg("Sam: x", 2.0), msg("radio: b", 3.0), msg("radio: c", 15.0), msg("radio: d", 16.0)]);
         let rows: Vec<(f64, &str, f64, f64)> = g.cues.rows.iter().map(|r| (r.t, r.text.as_str(), r.cls, r.rank)).collect();
         assert_eq!(rows, [(3.0, "b", 0.0, 1.0), (15.0, "c", 0.0, 1.0), (16.0, "d", 0.0, 1.0)]);
-        fn strip(g: &mut Game) -> Vec<(String, f64)> { strip_rows(g).into_iter().map(|r| (r.text, r.t)).collect() }
+        fn strip(g: &mut Game) -> Vec<(String, f64)> { radio_rows(g).into_iter().map(|r| (alloc::format!("{}: {}", if r.kind == crate::view::RadioKind::Heard { "heard" } else { "radio" }, r.text), g.time - r.age)).collect() }
         fn want(v: &[(&str, f64)]) -> Vec<(String, f64)> { v.iter().map(|r| (String::from(r.0), r.1)).collect() }
         assert_eq!(strip(g), want(&[("radio: c", 15.0), ("radio: d", 16.0)]));
         let row = |t: f64, text: &str| CueRow { t, text: String::from(text), cls: 1.0, rank: 3.0, who: String::new() };

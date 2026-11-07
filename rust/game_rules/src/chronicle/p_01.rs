@@ -205,7 +205,7 @@ fn man_pos(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
 // ------------------------------------------------------------ rooms
 
 /// The room a floor point is in, by name; outside the building the side of it.   (chronicle.ts roomOf)
-pub fn room_of(g: &mut crate::game::Game, p: V3) -> String {
+pub fn room_of(g: &crate::game::Game, p: V3) -> String {
     if !crate::dialogue::is_office(g) {
         return match crate::dialogue::own_place(g, p) {
             Some(w) => without_the(&w.rect.name),
