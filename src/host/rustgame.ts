@@ -333,16 +333,14 @@ let HOOKS: { classes: Record<string, { prototype: object }>; values: Record<stri
  *  (`picture()`: skeleton.ts SkeletonInstance and PoseFK, character.ts CharacterAnimator), on the made row itself. Those functions draw no die and
  *  write no state field, so nothing of the game is touched and no second man is built. A gun needs none: the one field a made `Firearm` lacks
  *  (`ev`) is read by nothing.
- *  STAND-IN (the apply's, for every class: a carried part whose type is a declared class is made a plain object): the made man's `skel` is given its
- *  class here before its picture half. His animator's springs stay plain objects with the right values and his seven named poses are not the set's:
- *  no code the page runs calls either on a made man (the animator's update is the Rust tick's). */
+ *  A made man's parts have their classes and his typed leaves are typed (tools/wire/class-defaults.ts). His seven named poses are not yet the set's:
+ *  no code the page runs calls those on a made man (the animator's update is the Rust tick's). */
 function madeHooks(): Record<string, (row: any, g: any) => void> {
   const took = (cls: string, n: number) => { RUST_GAME.madeTook[cls] = (RUST_GAME.madeTook[cls] ?? 0) + n; };
   const guard = (cls: string, f: (row: any, g: any) => number) => (row: any, g: any) => { try { took(cls, f(row, g)); } catch (e) { const why = String((e as Error)?.message ?? e).slice(0, 300); if (!RUST_GAME.madeThrew[cls]) console.error(`rust=1: a ${cls} the game made could not be given its picture half: ${why}`); RUST_GAME.madeThrew[cls] = why; } };
   const own: Record<string, (row: any, g: any) => void> = {
     Character: guard('Character', (row, g) => {
       const ch = row.ch ?? g.ch; row.ch ??= ch;
-      if (row.skel && Object.getPrototypeOf(row.skel) !== SkeletonInstance.prototype) Object.setPrototypeOf(row.skel, SkeletonInstance.prototype);
       (row.skel as SkeletonInstance).picture(ch);
       row.anim.ch ??= ch; (row.anim as CharacterAnimator).picture();
       return 1;
