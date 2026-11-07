@@ -151,7 +151,7 @@ src/game/            game.ts (Game: state, constructor, event plumbing, doors/pr
                      drill, live Clearing dispatcher), qrf.ts (the response to going loud: trigger, radio telegraph, the four-man
                      element through the west stair door, the perimeter tier), consts.ts),
                      marks.ts (decal emit sites), particleFx.ts (GPU particle sites), glass.ts (rounds star panes), weather.ts (the storm), wet.ts (wet characters: the model + prints / drips),
-                     demo.ts (the old showcase tour: Shot list + puppet choreography; console and tools/qa/tour.ts only), breach.ts (BreachDrill: the two-man
+                     breach.ts (BreachDrill: the two-man
                      breach the night breach scenario runs live), character.ts (anim graph, aim, tactical stances /
                      kick / signals / lockpick layers), camera.ts (follow cam; spectate auto-yaw + low pitch up close),
                      ragdoll.ts, doors.ts, props.ts (pushable furniture), throwables.ts (canisters, dropped mags/
