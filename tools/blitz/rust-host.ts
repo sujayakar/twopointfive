@@ -30,7 +30,7 @@ export interface HostOpts {
   wholeEvery?: number;
   /** audit: the ticks on which the headless host lists the box world (headless.ts `uploadEvery`), made on the Rust side before the apply */
   uploadEvery?: number;
-  /** false: the par clock, the verdict and the autosave are not run on the puppet */
+  /** false: the verdict and the autosave are not run on the puppet */
   dress?: boolean;
   /** the seed of the game's own die where it has none (mission.ts stands its game the same way); null: the game is left as it is */
   die?: number | null;
@@ -66,7 +66,7 @@ export interface HostOpts {
    *  same never reaches the Rust game */
   scan?: boolean;
   /** false: the dressing rows are up FOR THE GAME'S SAKE and nothing is drawn here, so the page's own dress step is not run on the puppet (the men
-   *  handed to a renderer, the wind's hand-over, the air): a game server and a scripted client. The par clock and the verdict still tick */
+   *  handed to a renderer, the wind's hand-over, the air): a game server and a scripted client. The verdict still ticks */
   draws?: boolean;
 }
 
@@ -798,12 +798,12 @@ export class RustHost {
     // replay loop makes them, and the puppet takes the state again.)
     t = now(); const nest0 = this.nest;
     if (this.o.dress !== false) {
-      // (the par clock and the verdict are the debrief's: a throw of theirs on the puppet is counted and is not the play's end)
+      // (the verdict is the debrief's: a throw of its on the puppet is counted and is not the play's end; the par clock is the Rust tick's)
       // THE PICTURE'S HALF, for a game stood with the dressing rows up (a check about what is drawn): the page's own dress step, one path with the
-      // page (src/host/rustdress.ts: the men handed to the renderer, the wind's hand-over, the air, the stature). It ticks the par clock and the
-      // verdict itself. With the rows down nothing reads the picture's lists and only those two are run.
+      // page (src/host/rustdress.ts: the men handed to the renderer, the wind's hand-over, the air, the stature). It ticks the verdict
+      // itself. With the rows down nothing reads the picture's lists and only the verdict is run.
       if (this.o.dressDown === false && this.o.draws !== false && !OFF.has('pagedress')) { try { B.pageDress(g, dt, this.side); } catch (e) { this.count(`the page's dress step THREW on the puppet: ${String((e as any)?.message ?? e).slice(0, 100)}`); } }
-      else for (const n of ['par', 'verdict'] as const) try { g[n]?.tick(); } catch (e) { this.count(`${n}.tick THREW on the puppet (first at tick ${this.threw[n] ??= k}): ${String((e as any)?.message ?? e).slice(0, 100)}`); }
+      else for (const n of ['verdict'] as const) try { g[n]?.tick(); } catch (e) { this.count(`${n}.tick THREW on the puppet (first at tick ${this.threw[n] ??= k}): ${String((e as any)?.message ?? e).slice(0, 100)}`); }
       const S = g.saves;
       // (a take is due this tick: an authored checkpoint a rule asked for, a save by hand, a load. The puppet takes the whole state first. An autosave
       // the controller decides on inside its tick takes the whole state as the take starts: `taps`. Its gate and its triggers read the puppet as the
@@ -834,7 +834,7 @@ export class RustHost {
   // its own steps after it, and the camera's two numbers: no export, no apply, no out event dispatched, no dress step. As the run ends the puppet takes
   // what changed over the whole run in ONE filtered apply (the export's memo holds what was last sent), the out events of every tick of the run are
   // dispatched in their order, and the dress step runs once. WHAT DIFFERS from the same steps taken one by one: an autosave that fell due inside the
-  // run is taken as it ends; the par clock and the verdict tick once for the run, over the run's whole time; an out event reaches the host's objects late.
+  // run is taken as it ends; the verdict ticks once for the run, over the run's whole time; an out event reaches the host's objects late.
   quietOn = false; quietSteps = 0; quietRuns = 0; private quietOwed = 0; private lastDt = 1 / 60; private lookNow: { follow: number[]; aim: number[] } | null = null;
   private tsUpload: (() => void) | null = null; tsOnly = false;
   /** true where the host can step quietly (the fast way, a face that answers `face_look`) */

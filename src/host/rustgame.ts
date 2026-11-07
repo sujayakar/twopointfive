@@ -320,11 +320,11 @@ export async function rustBoot(): Promise<void> {
 /** what a slot of the save controller holds here in a snapshot's place: the number of a game kept in the module, and the records of the game that are
  *  the PAGE'S OWN (`OWN`, below), which no kept Rust game holds */
 interface KeptGame { game: Game; rust: number; own: unknown[] }
-/** THE RECORDS OF THE GAME THAT ONLY THE PAGE WRITES (the dress step's: SWAP.md, "the par clock, the verdict"): the Rust game does not hold them and no apply
- *  writes them, so a game kept without them comes back under the verdict and the par of the moment that was abandoned (seen: after a load the save
+/** THE RECORDS OF THE GAME THAT ONLY THE PAGE WRITES (the dress step's: the verdict; the par clock was one until the Rust tick took it): the Rust game does not hold them and no apply
+ *  writes them, so a game kept without them comes back under the verdict of the moment that was abandoned (seen: after a load the save
  *  controller refused every save, 'the run is over', by the verdict of the death the load undid). Each is copied with a kept game and written back with
  *  it: its own numbers, lists, maps and sets by value; what it holds OF the game (a man, the mission, a row of the orders' log) by reference. */
-const OWN = ['verdict', 'par'] as const;
+const OWN = ['verdict'] as const;
 function ownCopy(v: any, depth = 0): any {
   if (v === null || typeof v !== 'object') return v;
   if (Array.isArray(v)) return depth > 4 ? v : v.map(x => ownCopy(x, depth + 1));
