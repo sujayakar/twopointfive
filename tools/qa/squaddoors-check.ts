@@ -9,8 +9,10 @@
 // Staged: a leaf opened with no teammate near stays as the picture had it; a teammate within reach with a line brings it up to date whichever way he faces;
 // one within reach behind a wall does not, nor one a metre past the reach with a line, nor a dazzled one at the leaf.
 // The rule is settled on: the check asks the page's side alone and no longer writes it. Until 2026-11-07 it also played each door with the rule off ('the
-// fault is there to fix'), staged 'the same with the switch off', and asked the frozen stand's word.
+// fault is there to fix'), staged 'the same with the switch off', and asked the frozen stand's word. An ordinary run plays one door for 15 s under 'only my own
+// eyes' (the fewest eyes that can bring a leaf up to date); QA_SWEEP=all plays three doors for 30 s under both.
 import { standUp, ROOT } from './headless.ts';
+import { sample, swept } from './sweep.ts';
 import { standWall, wallBetween, type WallSpec } from './standwall.ts';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -26,7 +28,7 @@ export async function squaddoorsCheck(): Promise<boolean> {
 
 async function check(): Promise<boolean> {
   const DT = 1 / 60, argv = process.argv.slice(2), file = argv.find(a => a.endsWith('.json')) ?? 'records.json';
-  const nDoors = Number(argv[argv.indexOf('--doors') + 1]) > 0 && argv.includes('--doors') ? Number(argv[argv.indexOf('--doors') + 1]) : 3, verbose = argv.includes('--verbose') || argv.includes('--trace'), trace = argv.includes('--trace');
+  const nDoors = Number(argv[argv.indexOf('--doors') + 1]) > 0 && argv.includes('--doors') ? Number(argv[argv.indexOf('--doors') + 1]) : swept(1, 3), verbose = argv.includes('--verbose') || argv.includes('--trace'), trace = argv.includes('--trace');
   const seed = argv.includes('--seed') && Number.isFinite(Number(argv[argv.indexOf('--seed') + 1])) ? Number(argv[argv.indexOf('--seed') + 1]) : 1;
   /** a man this near the doorway's middle is AT it: what walking through a leaf is counted by, and where a stale leaf is the fault and not the fog's memory */
   const AT_M = 1.0;
@@ -76,7 +78,7 @@ async function check(): Promise<boolean> {
       const op: any = await quiet(() => g.doorTools.order('openClear', men, d, side)); if (typeof op === 'string') continue;
       T.ordered++; const [mx, mz] = mid(d); const was = new Map<any, number>(men.map((m: any) => [m, g.doors.side(d, m.char.pos) >= 0 ? 1 : -1]));
       let run = 0, worst = 0, held = 0, at = 0, atRun = 0, atWorst = 0, cross = 0, opened = false; const notes: string[] = [];
-      await quiet(() => { for (let f = 0; f < 60 * 30; f++) { holdFoes(); samAway(d); W.step(DT);
+      await quiet(() => { for (let f = 0; f < 60 * swept(15, 30); f++) { holdFoes(); samAway(d); W.step(DT);
         if (Math.abs(d.angle) > 0.3) opened = true;
         const h = FW.doorHeld(d); if (h) { held++; run++; worst = Math.max(worst, run); } else run = 0;
         const near = h && Math.abs(d.angle - FW.doorShown(d)) > OFF_RAD ? men.filter((m: any) => m.state !== 'dead' && Math.hypot(m.char.pos[0] - mx, m.char.pos[2] - mz) < AT_M) : [];
@@ -99,7 +101,7 @@ async function check(): Promise<boolean> {
   for (const name of all) { if (names.length >= nDoors) break; await fresh(false, false); const d = g.doors.byName(name), men = g.orders.men('all'); if (Math.abs(d.angle) > 0.05 || men.length < 2) continue;
     const op: any = await quiet(() => g.doorTools.order('openClear', men, d, g.doors.side(d, men[0].char.pos) >= 0 ? 1 : -1)); if (typeof op !== 'string') names.push(name); }
   log(`${file}: 'open and clear' by the four on ${names.join(', ')} · Sam at his start, back to the door`);
-  for (const [label, cone, own] of [['hard\'s cones', true, false], ['only my own eyes', false, true]] as const) {
+  for (const [label, cone, own] of sample([['only my own eyes', false, true], ['hard\'s cones', true, false]] as const, 1)) {
     const on = await play(cone, own, names);
     if (verbose) for (const x of on.doors) log(`    ${x}`);
     const row = (t: Tally) => `${t.opened} doors opened · drawn stale with a man at the doorway ${t.at} frames, longest ${(t.atWorst / 60).toFixed(2)} s · in all ${t.stale} frames, longest ${(t.worst / 60).toFixed(2)} s · men through a leaf drawn shut ${t.crossed}`;
