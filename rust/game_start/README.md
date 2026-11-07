@@ -180,8 +180,10 @@ that the picture, the sound, the HUD and the menus read (`src/host/rustgame.ts`,
 10. **Two players.** `StartOpts.seats` reaches `game_new`, and the compare runs every mission as a game of two (`LEVELS.md`, the second
     table): the 23 missions the game stages for two start equal and stay in step with the second seat idle (the other 15 the game
     itself refuses for two). Nobody at the second seat's controls, no server, no rollback here.
-11. **The module.** This crate is kept out of the crates the page's module is built from. In it, the level reader, the JSON reader and the
-    character's reader are new code for the module to carry, and a level's text and the character's bytes have to cross into it once.
+11. **The module.** DONE AS FAR AS THE START ITSELF. The page's module carries this crate (`rust/game_face` links it without its `std`
+    feature), and `face_start` stands a game inside the module from one run of handed bytes (`src/handed.rs`: the level file's text, the
+    address's words, the character's files, the host's knob tables). `tools/blitz/start-module.ts` holds the game the module starts to the
+    game the native start makes, mission by mission ("The module's start", below). Nothing plays a game started that way yet: item 13.
 12. **The team's start is the office's until a start says otherwise.** The rescue's and the night breach's knob tables are made holding the
     office's team start (`samAt`, `samYaw`, `opsAt`): the TypeScript reads them off `levels/office.json` as the module loads, the Rust holds
     them as the table's values (`knobs.rs`), and each keeps `applied`, the start the knobs were last written from, so that a start on a level
@@ -190,6 +192,19 @@ that the picture, the sound, the HUD and the menus read (`src/host/rustgame.ts`,
     that starts empty. That touches, in both languages: the two knob tables and their rows in the registry and on the wire, `applied` and
     the compare in each start (`rescue.ts`, `nightbreach.ts`; `rescue/p_01.rs`, `nightbreach/p_01.rs`), the debugger's rows for them, and
     every check that moves a team's start by its knob before a start. It goes with the start moving to Rust, not before.
+13. **THE PUPPET'S BOOK IS NUMBERED BY THE TYPESCRIPT'S WALK, AND A RUST-STARTED GAME BY ITS OWN MAKING.** The one thing a game started in
+    the module needs that the old road never did. The bridge's book (`tools/blitz/export.ts Book`) gives a TypeScript object its number when
+    the export's walk first meets it; on the old road the Rust game is MADE FROM those numbers, so every later apply finds its object. The
+    Rust start numbers a row when it makes it, and keeps rows that were made and dropped (a gun the kit replaced, the men a staging took off
+    the floor). The two starts are the same game BY REACH, which is how `LEVELS.md` compares them; by raw row number they differ in tens of
+    thousands of paths (clips, characters, lights, guns, guards, the players). A tally played on a module-started game with the puppet's book
+    as it stood stopped in half a second on the wrong object. Two ways out. The book rekeyed to the Rust game's rows at the start (the
+    pairs by reach, which `diff.ts index` numbers for a tool; the host's own Input and camera paired by role, since neither walk reaches
+    them before the first update; the rows only Rust holds made or left out): a puppet one program built paired with rows another made, by
+    the shape of a walk, and thrown away the day the page makes its picture from the game's rows. Or no puppet kept at all: every object
+    the picture reads MADE from the Rust game's rows, as a man the tick makes at run time already is (items 2 to 6). THE SECOND IS THE WAY:
+    a start, a restart and a man made in play then become one act. Until then a module-started game is whole for a host with NO puppet (a
+    game server stands N seats from a level's text today), and the page keeps its road.
 
 ## The compare (`tools/blitz/start.sh`)
 
@@ -220,3 +235,29 @@ bun run tools/blitz/start-levels.ts --write                          # every mis
 
 Where things stand is [`LEVELS.md`](LEVELS.md). The tests' scenes are held the same way: the three of `tests/behaviour.rs`, each 0 paths not known
 and the block equal to the byte, 900 frames in step.
+
+## The module's start (`tools/blitz/start-module.ts`)
+
+The page's module can start a game itself. `face_start(p, n, slot, seed, seats, flags)` (`rust/game_face/src/page.rs`) runs `stand` inside the
+module on what the host hands in one run of bytes (`src/handed.rs` reads it, `tools/blitz/start-pack.ts` writes it): the level file's text,
+the address's words, the mannequin's gltf and buffer, the two casts' gltf, and the host's knob tables as the bridge writes them (empty: the
+page's own). The knob tables are laid on the blank game before the start reads its first knob (`stand_with`), as they stand when the
+TypeScript stands a game. `slot` below 0 = a free slot of rust/sim; `flags`: 1 = the rows that dress the picture are up, 2 = the game works
+its senses out itself.
+
+```sh
+bun run tools/blitz/start-module.ts                     # every mission: the module's start against the native start, three starts each
+bun run tools/blitz/start-module.ts --only depot-four --wasm rust/game_face/target/wasm32-unknown-unknown/debug/game_face.wasm
+```
+
+For each mission the native start (`start <file> --link <link>`) writes its state and block, the module is handed the same bytes and starts
+the mission three times (in a fresh slot, in the slot the first gave up, in a second slot beside a standing game), and each is compared:
+rust/sim's block byte for byte, the state path for path with ONE thing forgiven by name (`tools/blitz/known-module.txt`: where the box mirror's
+tables stand in memory, 29 addresses, which a module and a native process cannot share). Read: 38 of 38, three starts each, on a module built
+at opt-level 0 (the machine it was run on cannot hold the optimised build's compile).
+
+`tests/slots.rs` holds the same natively: a game is the same game in slot 1 as in slot 0, and two games stepped turn about in two slots are
+each the game they are alone.
+
+What this does NOT hold: that a game started this way can be PLAYED through a puppet. It cannot yet: item 13 of the list above. A host with
+no puppet (a game server) needs nothing more than this.
