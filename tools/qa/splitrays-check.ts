@@ -29,10 +29,10 @@ export async function splitraysCheck(): Promise<boolean> {
   const calls = (m: Map<string, string>, body: string, self: string) => [...m.keys()].filter(n => n !== self && new RegExp(`\\b${n}\\(`).test(body));
   const reach = (m: Map<string, string>, from: string) => { const seen = new Set<string>([from]), todo = [from]; while (todo.length) { const f = todo.pop()!; for (const n of calls(m, m.get(f) ?? '', f)) if (!seen.has(n)) { seen.add(n); todo.push(n); } } return seen; };
   const sites = (m: Map<string, string>, within: Set<string>, callee: string) => [...within].reduce((s, f) => s + (f === callee ? 0 : (m.get(f) ?? '').split(new RegExp(`\\b${callee}\\(`)).length - 1), 0);
-  { const LIT = 'directAtPoint(Ph, n, b.w)', text0 = splitGatherSrc(false), m = fns(BRK ? text0.replace(LIT, `${LIT} + ${LIT}`) : text0), ms = fns(splitGatherSrc(true)), entries = (x: Map<string, string>) => [...x].filter(([, d]) => d.startsWith('@compute')).map(([n]) => n).sort().join(' ');
+  { const LIT = 'directAtPoint(Ph, n, b.w)', text0 = splitGatherSrc(), m = fns(BRK ? text0.replace(LIT, `${LIT} + ${LIT}`) : text0), entries = (x: Map<string, string>) => [...x].filter(([, d]) => d.startsWith('@compute')).map(([n]) => n).sort().join(' ');
     const helpers = fns(gatherHelpers());
-    line(text0.includes(LIT) && entries(m) === 'light trace' && entries(ms) === 'light trace' && !wgslDecls(fgather).some(d => /^@compute\b/.test(d)) && helpers.has('cardIrradiance'),
-      'the gather\'s module: fgather.wgsl\'s helpers, which hold no entry point, and two entry points of its own (the strata twin the same)', `entry points: ${entries(m)} · ${helpers.size} helper functions`);
+    line(text0.includes(LIT) && entries(m) === 'light trace' && !wgslDecls(fgather).some(d => /^@compute\b/.test(d)) && helpers.has('cardIrradiance'),
+      'the gather\'s module: fgather.wgsl\'s helpers, which hold no entry point, and two entry points of its own', `entry points: ${entries(m)} · ${helpers.size} helper functions`);
     const tr = reach(m, 'trace'), li = reach(m, 'light');
     line(m.has('directAtPoint') && !tr.has('directAtPoint') && !tr.has('directOnScreen'),
       '`trace` reaches no light loop: neither directAtPoint nor directOnScreen, nor a helper that calls one', `trace reaches ${tr.size} functions: ${[...tr].filter(f => /X$|^gx/.test(f)).join(', ')} of its own`);
@@ -66,8 +66,8 @@ export async function splitraysCheck(): Promise<boolean> {
     let j: Sizes | null = null; try { j = JSON.parse(readFileSync(f, 'utf8')) as Sizes; } catch { /* no file: the line says so */ }
     const KB = (n: number) => `${Math.round(n / 1024)} KB`, gathers = (re: RegExp) => (j?.kernels ?? []).filter(k => re.test(k.module) && k.setting !== 'title');   // (the size tool's file carries the title's kernels after the page's own: one page is counted here)
     const old = gathers(/^fgatherS?$/), own = gathers(/^gatherSplit/), pipes = (set: string) => own.filter(k => k.set === set).flatMap(k => k.pipelines).sort().join(' ');
-    line(old.length === 0 && !(j?.modules ?? []).some(m => /^fgather/.test(m.label)) && pipes('boot') === 'gatherLight gatherTrace gatherTraceS' && pipes('cut') === pipes('boot'),
-      'a load compiles the gather\'s three pipelines in both sets and no one-kernel gather', `one-kernel gathers ${old.length} · boot set: ${pipes('boot') || 'none'} · cut set: ${pipes('cut') || 'none'}`);
+    line(old.length === 0 && !(j?.modules ?? []).some(m => /^fgather/.test(m.label)) && pipes('boot') === 'gatherLight gatherTrace' && pipes('cut') === pipes('boot'),
+      'a load compiles the gather\'s two pipelines in both sets and no one-kernel gather', `one-kernel gathers ${old.length} · boot set: ${pipes('boot') || 'none'} · cut set: ${pipes('cut') || 'none'}`);
     line(own.length > 0 && green && own.every(k => k.budgetKB !== null && k.budgetKB < 300),
       'each of the gather\'s kernels has a budget row of its own under 300 KB, and the size tool is green', `as their rows hold them, the cut test's text apart: ${[...new Set(own.map(k => `${k.entry} ${KB(k.pasted - (k.cut ?? 0))} of ${k.budgetKB}`))].join(' · ')} · size tool: ${text.trim().split('\n').slice(-1)[0] ?? ''}`);
   } finally { rmSync(tmp, { recursive: true, force: true }); }

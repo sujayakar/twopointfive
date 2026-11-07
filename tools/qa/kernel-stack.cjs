@@ -19,7 +19,7 @@
 const { spawn, spawnSync } = require('node:child_process'); const fs = require('node:fs'); const net = require('node:net'); const path = require('node:path');
 const { chromium } = require('playwright');
 const ROOT = path.resolve(__dirname, '../..'); const argv = process.argv.slice(2), flag = (n, d) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : d; };
-const QUERY = flag('--query', ''), LIST = argv.includes('--list'), ALT = flag('--text', ''), WANT = flag('--kernel', 'gatherSplitS/trace').split(',');
+const QUERY = flag('--query', ''), LIST = argv.includes('--list'), ALT = flag('--text', ''), WANT = flag('--kernel', 'gatherSplit/trace').split(',');
 const BASE = argv.includes('--plain') ? '?roomclear&squad4&levelFile=pass.json' : '?look&roomclear&squad4&levelFile=pass.json';
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const freePort = () => new Promise((res, rej) => { const s = net.createServer(); s.unref(); s.on('error', rej); s.listen(0, '127.0.0.1', () => { const p = s.address().port; s.close(() => res(p)); }); });

@@ -26,9 +26,7 @@ export function gatherHelpers(fgather: string = fgatherSrc): string {
   const text = wgslDecls(fgather).filter(d => !/^@compute\b/.test(d)).join('\n') + '\n'; if (fgather === fgatherSrc) own = text;
   return text;
 }
-/** the module both programs are made from, less the scene prelude and lighting_common the caller puts in front of every tracing module: entry points `trace` and `light`
- *  (a variant that declares GATHER_STRATA itself keeps its own line) */
-export function splitGatherSrc(strata: boolean, fgather: string = fgatherSrc, common: string = gatherCommonSrc): string {
-  const helpers = gatherHelpers(fgather);
-  return common + (/^const GATHER_STRATA\b/m.test(helpers) ? '' : `const GATHER_STRATA: bool = ${strata};\n`) + helpers + splitSrc;
+/** the module both programs are made from, less the scene prelude and lighting_common the caller puts in front of every tracing module: entry points `trace` and `light` */
+export function splitGatherSrc(fgather: string = fgatherSrc, common: string = gatherCommonSrc): string {
+  return common + gatherHelpers(fgather) + splitSrc;
 }

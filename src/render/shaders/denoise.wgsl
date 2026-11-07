@@ -40,9 +40,7 @@ struct DnParams {
   sh: vec4f,       // SHADOW   x = clamp k (σ), y = history cap (frames; 0 = no temporal reuse), z = σ_l (luminance edge-stop scale), w = light-motion threshold: relative change of a class's unshadowed luminance per frame past which its history drops to the moving length (flags.z)
   sh2: vec4f,      //          x = depth weight k (plane distance ÷ (z·k)), y = normal power, z = history-length scale this frame (1; ½ after a resize carried the histories), w = ratio clamp hi (1, or 4 under the chroma-exact tail / ReSTIR hues)
   gi: vec4f,       // DIFFUSE  x = clamp k, y = history cap, z = σ_l, w = fast-history cap (frames; 0 = clamp on the raw neighbourhood mean)
-  gi2: vec4f,      //          x = depth k, y = normal power, z = firefly: incoming luminance ≤ mean + z·σ of the 5×5 (0 = off), w = 0 in the main and reflection blocks (written non-zero there it changed the
-                   //          REFLECTION chain's frame under ?legacydenoise — docs/internal/tjank.md 'identity' — although every read of it there sits behind SPEC; not chased, avoided); in the
-                   //          INTERNAL-RES diffuse chain's own block (denoise.ts paramsFull) it carries the RAW gather's divisor 2 | 3 (radApronRaw / giTemporalF / giUpsample map pixels ↔ texels with it)
+  gi2: vec4f,      //          x = depth k, y = normal power, z = firefly: incoming luminance ≤ mean + z·σ of the 5×5 (0 = off), w = free (0)
   sp: vec4f,       // SPECULAR x = clamp k, y = history cap, z = σ_l, w = roughness STAND-IN (0 = mirror … 1) for the gather-res chain (glass panes / the legacy gloss floors), whose texels have no material of their own
   sp2: vec4f,      //          x = depth k, y = normal power, z = virtual-hit reprojection share override (< 0: derived from roughness), w = PER-PIXEL ROUGHNESS mode: > 0 = this chain is the reflection
                    //          pass's (reflect.wgsl) — roughness per texel from the g-buffer's material target (gMatR), texels rougher than this value hold no term (weight 0, history 0), the
@@ -583,9 +581,8 @@ struct RadOut { hist: vec4f, mom: vec4f, fast: vec4f };
 var<workgroup> wgSum: array<vec4f, 64>;   // per-pixel specular: per-lane partial sums of the apron's term texels (specTemporal)
 var<workgroup> wgFill: vec4f;   // per-pixel specular: a texel of this tile that holds a term (or −1 in .a if none does) — the apron's no-term slots are filled with it for the statistics, and a no-term texel's
                                 //  value history takes it (see radTemporalCore); the diffuse entry point never touches it
-/** the radiance clients' temporal step for grid texel gid.xy (the apron already staged by radApron / radApronRaw): `cur4` = this texel's raw estimate (the apron's centre slot for the
- *  gather-grid clients; the guided upsample's value for the internal-res diffuse client), `sc` = the apron cell its 5×5 statistics are centred on (its own slot; the RAW gather texel under
- *  the pixel for the internal-res client); `hf` = the reprojected fast history is fetched here only when haveFastTex (every entry point but the stand-in specular binds it) */
+/** the radiance clients' temporal step for grid texel gid.xy (the apron already staged by radApron): `cur4` = this texel's raw estimate (the apron's centre slot),
+ *  `sc` = the apron cell its 5×5 statistics are centred on (its own slot); `hf` = the reprojected fast history is fetched here only when haveFastTex (every entry point but the stand-in specular binds it) */
 fn radTemporalCore(gid: vec3u, haveFastTex: bool, cur4: vec4f, sc: vec2i) -> RadOut {
   var o: RadOut;
   let od = vec2i(textureDimensions(rtHist));   // (the HISTORY's grid: = rtCur's for the gather-grid clients; the internal size for the internal-res diffuse client, whose rtCur is the raw gather it takes its statistics from)
@@ -732,71 +729,6 @@ fn giTemporal(@builtin(global_invocation_id) gid: vec3u, @builtin(workgroup_id) 
   textureStore(rtHistOut, gid.xy, o.hist); textureStore(rtMomOut, gid.xy, o.mom); textureStore(rtFastOut, gid.xy, o.fast);
 }
 
-// ---- the diffuse client at the INTERNAL resolution (settings.giFullRes, docs/internal/gi-motion.md): the raw ⅓ / ½-res gather is first brought to the internal grid by the same joint-bilateral
-// 3×3 the composite always upsampled it with (giUpsample: depth-plane + normal guides at each texel's own sample pixel), and THAT is what the temporal step accumulates — history, moments,
-// fast history and the à-trous chain all at internal res (dn.flags.y = 1 in this chain's parameter block: fullPx / gatherTexel are the identity), so a moving camera's reprojection error is
-// an internal pixel instead of a gather texel and what residual noise survives is pixel-sized instead of texel-sized. The neighbourhood STATISTICS (clamp box, firefly bound, young
-// variance) still come from the RAW gather texels — 5×5 of them round the pixel's own, staged from the gather-res texture (radApronRaw): the box that decides how much history a
-// pixel may keep must span the estimator's real correlation length, not 5 interpolated pixels of it (a box that narrow clamps the long history down to the fast one and the picture
-// boils MORE). Composite then reads the à-trous chain's output 1 : 1. ----
-@group(1) @binding(74) var rtCurF: texture_2d<f32>;      // giTemporalF: the upsampled estimate at internal res (its own pixel's value); rtCur is then the RAW gather (the apron's statistics)
-@group(1) @binding(84) var upOut: texture_storage_2d<rgba16float, write>;   // giUpsample's target (internal res)
-/** stage 12×12 RAW gather texels centred on the texel under this 8×8 pixel tile's centre → wgA; returns the apron's origin texel (a pixel's own texel − it = its cell) */
-fn radApronRaw(wid: vec3u, li: u32) -> vec2i {
-  let gdiv = max(1, i32(dn.gi2.w));
-  let rhi = vec2i(textureDimensions(rtCur)) - 1;
-  let centreTexel = (vec2i(wid.xy) * 8 + 4) / gdiv;   // (composite's / giUpsample's `base = pix / gdiv`: the texel a pixel takes as its own)
-  let org = centreTexel - AW / 2;
-  for (var i = li; i < AN; i += 64u) { let q = clamp(org + vec2i(i32(i) % AW, i32(i) / AW), vec2i(0), rhi); wgA[i] = textureLoad(rtCur, q, 0); }
-  workgroupBarrier();
-  return org;
-}
-@compute @workgroup_size(8, 8)
-fn giTemporalF(@builtin(global_invocation_id) gid: vec3u, @builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_id) lid: vec3u, @builtin(local_invocation_index) li: u32) {
-  let org = radApronRaw(wid, li);
-  let od = textureDimensions(rtCurF);
-  if (gid.x >= od.x || gid.y >= od.y) { return; }
-  let gdiv = max(1, i32(dn.gi2.w));
-  let ownTexel = vec2i(gid.xy) / gdiv;                              // the raw texel this pixel takes as its own (composite's / giUpsample's `base`)
-  let sc = clamp(ownTexel - org, vec2i(APR), vec2i(AW - 1 - APR)) - APR;   // stats5 adds APR back: the 5×5 round the pixel's own texel, kept inside the apron (an 8-px tile spans < 4 texels: it always is, the clamp is belt and braces)
-  let o = radTemporalCore(gid, true, textureLoad(rtCurF, vec2i(gid.xy), 0), sc);
-  textureStore(rtHistOut, gid.xy, o.hist); textureStore(rtMomOut, gid.xy, o.mom); textureStore(rtFastOut, gid.xy, o.fast);
-}
-/** the guided upsample: internal pixel ← the 3×3 raw gather texels round its own, weighed spatial × depth × normal exactly as composite.wgsl upsampleIndirect does (its statements) */
-@compute @workgroup_size(8, 8)
-fn giUpsample(@builtin(global_invocation_id) gid: vec3u) {
-  let od = textureDimensions(upOut);
-  if (gid.x >= od.x || gid.y >= od.y) { return; }
-  let pix = vec2i(gid.xy);
-  let d0 = textureLoad(gDepth, pix, 0);
-  if (d0 >= 1.0) { textureStore(upOut, pix, vec4f(0.0)); return; }
-  let P0 = worldFromDepth(vec2f(pix) + 0.5, d0);
-  let z = distance(P0, frame.camPos);
-  let N = normalize(textureLoad(gNormal, pix, 0).xyz * 2.0 - 1.0);
-  let hdims = vec2i(textureDimensions(rtCur));
-  let gdiv = max(1, i32(dn.gi2.w)); let goff = (gdiv - 1) / 2;
-  let inHi = vec2i(frame.screen) - 1;
-  let base = pix / gdiv;
-  var acc = vec3f(0.0); var wsum = 0.0;
-  for (var dy = -1; dy <= 1; dy++) {
-    for (var dx = -1; dx <= 1; dx++) {
-      let h = clamp(base + vec2i(dx, dy), vec2i(0), hdims - 1);
-      let src = min(h * gdiv + goff, inHi);                            // guides from exactly the pixel the texel was traced at
-      let d = textureLoad(gDepth, src, 0);
-      if (d >= 1.0) { continue; }
-      let zs = distance(worldFromDepth(vec2f(src) + 0.5, d), frame.camPos);
-      let ns = textureLoad(gNormal, src, 0).xyz * 2.0 - 1.0;
-      let sp = vec2f(src - pix);
-      var w = exp(-dot(sp, sp) * (0.18 * (4.0 / f32(gdiv * gdiv))));
-      w *= exp(-abs(zs - z) / max(z * 0.02, 0.02));
-      w *= pow(max(dot(ns, N), 0.0), 8.0) + 0.001;
-      acc += textureLoad(rtCur, h, 0).xyz * w; wsum += w;
-    }
-  }
-  var E = textureLoad(rtCur, clamp(base, vec2i(0), hdims - 1), 0).xyz;
-  if (wsum >= 1e-5) { E = acc / wsum; }
-  textureStore(upOut, pix, vec4f(E, 1.0));
-}
 @compute @workgroup_size(8, 8)
 fn specTemporal(@builtin(global_invocation_id) gid: vec3u, @builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_id) lid: vec3u, @builtin(local_invocation_index) li: u32) {
   radApron(wid, li);
