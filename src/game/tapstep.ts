@@ -17,7 +17,6 @@
 // What it does not touch: what the men see of a crouched Sam (a still man is a still man), Shift in a crouch (the quick crouch walk, for when the steps are too slow), the
 // held click, the wall hold, a body in tow.
 // A prototype: up in the sneak lab and with ?tapstep=1, down in the plain page and on the frozen stand, so no FROZEN_HOLDS row. Off = the build as it was.
-// Check: tools/qa/tapstep-check.ts (TAPSTEP_BREAK=1 must fail).
 import { SideMap } from '../math/side';
 import { Vec3 } from '../math/vec';
 import type { Game, Guard } from './game';

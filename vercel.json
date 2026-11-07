@@ -6,18 +6,6 @@
   "outputDirectory": "dist",
   "cleanUrls": true,
   "trailingSlash": false,
-  "redirects": [
-    {
-      "source": "/sneaklab",
-      "destination": "/?levelFile=sneak-lab.json&solo&sneaklab",
-      "permanent": false
-    },
-    {
-      "source": "/firelab",
-      "destination": "/?levelFile=pass.json&roomclear&squad4&nofow&firelab",
-      "permanent": false
-    }
-  ],
   "headers": [
     {
       "source": "/qa/commit",
