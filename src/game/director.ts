@@ -18,8 +18,8 @@
 // Game.update, a setTimeout wait runs on wall time — both wrong under fixed stepping); each tick: drills tick → triggers → every running beat whose condition now holds
 // is resumed synchronously until it yields an unsatisfied one (≤ MAX_RESUMES a beat a tick) → the showcase tail (camera shot, veil, the cut). start(name) is
 // SYNCHRONOUS: it stages the world between frames exactly as the old Breach.start() did (onStart beats run their synchronous prefix there and then). Every it.next()
-// is try/caught: a throw fails that beat, logs it with its step, releases the men it held to the AI, drops a camera pin it held, and the frame goes on (strict, set by
-// the harness, rethrows). Everything is logged: director.log {t, run, program, beat, kind, what, data} — trigger fires, beat start / label / note / end, spawns,
+// is try/caught: a throw fails that beat, logs it with its step, releases the men it held to the AI, drops a camera pin it held, and the frame goes on (what a HOST does with
+// a failed beat is the host's: the harness throws after the step on the `error` row filed here, tools/qa/headless.ts). Everything is logged: director.log {t, run, program, beat, kind, what, data} — trigger fires, beat start / label / note / end, spawns,
 // drill beats (forwarded with the drill's own clock), radio lines, stimuli, camera shots — the probes' substrate and, one day, the panel's timeline. Nothing here
 // reads performance.now() or Math.random: a program's dice are its own mulberry32.
 // M1's cut (the doc §2.3 / §7): beats are atomic — a checkpoint is refused while any program runs (savestate.ts canSave asks blocksSave()); volumes got their runtime
@@ -426,8 +426,6 @@ export class Director {
   /** the beat log across runs (a ring of LOG_CAP rows — a whole run's worth and more); `run` = the running program, `lastRun` = the one before (its rows stay in the log for the probes) */
   readonly log: LogRow[] = [];
   run: Run | null = null; lastRun: { serial: number; name: string; t: number; finished: boolean } | null = null;
-  /** rethrow a beat's exception instead of failing the beat and going on (tools/qa/headless.ts sets it: a probe must go red, a player's frame must not die) */
-  strict = false;
   /** called at the very end of a program's teardown: main.ts puts the start card back after a finished showcase */
   onProgramEnd: ((name: string, finished: boolean) => void) | null = null;
   frame: DirectorFrame | null = null;
@@ -599,7 +597,6 @@ export class Director {
     if (typeof console !== 'undefined') console.error(`director: beat '${R.name}/${b.name}' failed at step ${b.step} — ${msg}`);
     for (const id of b.touched) { const u = R.units.get(id); const gd = u ? u.gd : this.g.guards.find(x => x.char.id === id) ?? null; if (gd && gd.script && gd.state !== 'dead' && !R.drills.some(d => !d.done && d.men.includes(gd))) endGuardScript(gd, gd.team === 'guard' ? 'search' : 'alert'); }   // armed men are never left frozen (a man a live drill still holds stays the drill's)
     if (b.pinnedCamera && this.cam) { this.cam.pin = null; if (R.show) R.show.shot = null; }
-    if (this.strict) throw e;
     if (R.show && !R.finishing) { R.failedShow = true; this.beginFinish(R); }   // a broken show does not hold the screen: cut, restore, and report it stopped rather than finished
   }
   private beginFinish(R: Run) {

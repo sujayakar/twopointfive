@@ -172,6 +172,9 @@ export interface Headless {
   /** one frame exactly as main.ts steps it (minus rendering): game.update → camera → lights → box upload → input.endFrame. `follow` is what main.ts calls
    *  demoPos: the showcase tour's camera look-at for this frame (Demo.update's return, called BEFORE this) — the camera then follows it and drops the aim lead */
   step(dt: number, follow?: Vec3 | null): void;
+  /** A FAILED BEAT OF THE LEVEL'S SCRIPT FAILS ITS TOOL (default true). The director fails the beat, files an `error` row in its log and lets the frame go on,
+   *  on every host alike; what to do then is the host's. This host throws after the step that filed one. false: a tool that means to watch a beat fail */
+  beatsThrow: boolean;
   /** n steps with none of the tool's code between them (the same as `step` n times) */
   steps(n: number, dt: number, follow?: Vec3 | null): void;
   /** put the cursor on a world point (what the automation hooks' __mouse does after projecting) */
@@ -237,12 +240,16 @@ export async function standUp(opts: { /** the dressing rows up, as the page has 
   const canvas = { clientWidth: 1600, clientHeight: 1000, width: 1600, height: 1000 };
   cam.aspect = canvas.width / canvas.height; cam.rebuild();
   engine.world.upload();
-  let frame = 0; const uploadEvery = Math.max(1, opts.uploadEvery ?? 1);
+  let frame = 0, beatSeen = ''; const uploadEvery = Math.max(1, opts.uploadEvery ?? 1);
   const W: Headless = {
     game, engine, level, input, cam, canvas, audioCounts, smoke,
     get audioLog() { return audioLog; }, set audioLog(v: AudioCall[] | null) { audioLog = v; },
+    beatsThrow: true,
     step(dt: number, follow: Vec3 | null = null) {
       game.update(dt, input, cam, canvas);
+      { const L: any[] | undefined = (game as any).director?.log, n = L?.length ?? 0, last = n ? L![n - 1] : null, key = last ? `${last.run}:${last.t}:${last.beat}:${last.kind}:${last.what}` : '';   // (the rows filed since the last step: from the log's end back to the row last seen)
+        if (key !== beatSeen) { let bad: any = null; for (let i = n - 1; i >= 0; i--) { const r = L![i]; if (`${r.run}:${r.t}:${r.beat}:${r.kind}:${r.what}` === beatSeen) break; if (r.kind === 'error') bad = r; } beatSeen = key;
+          if (bad && W.beatsThrow) throw new Error(`the level's script: beat '${bad.program}/${bad.beat}' ${bad.what}`); } }
       if (opts.reach) engine.reach.tick();   // (a page's engine steps its keeper of the reach masks once each render, on the clock where the frame has the planners' pace: here on the count, only where a tool asked for one, and never a real engine's, which steps its own)
       { const me = game.hostSeat().view, look = (game as any).rustHost?.look?.();   // (a game that steps somewhere else, in a quiet run of steps: the camera's two inputs asked of it, tools/blitz/PLAY.md)
         cam.update(dt, follow ?? look?.follow ?? me.followPos(), follow || game.spectate >= 0 ? null : look?.aim ?? me.aimPoint); }   // (main.ts: demoPos ?? followPos, and no aim lead while the tour frames the shot)
