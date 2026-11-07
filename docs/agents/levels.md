@@ -921,22 +921,6 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   run by digest; the vault's scripted runs (five plans, the breaker's among them, seeds 1 and 2) and Lights out's (three plans), each record the same.
   No mission of the list's 21 loads one of the eight, so the 42 say nothing of them (they are the same too). A checkpoint or a recording made on one of
   the eight before this is refused after it: the level's fingerprint reads every box to the centimetre. Never seen on a GPU and not played.
-- **THE SMOKE LAB'S FLOOR** (11-01; `levels/smoke-lab.json` from `tools/levels/smoke-lab.ts`, the GWOT kit; opened by the dev server's `/smokelab`, in no
-  mission list, nobody on it but Sam; the lab's panel is `docs/agents/render.md`, THE SMOKE LAB). The maintainer asked for "a separate smoke lab that's more
-  suited to playing with it". Each place shows one thing smoke does and is there for nothing else: the YARD (open ground under the sky and a low wall of
-  sandbags: the wind takes smoke, and smoke parts round a thing), the TUNNEL (a roofed passage 16 m long up the screen, shut at its far end, its mouth to the
-  camera: smoke rolls down a passage and out), the KITCHEN (a door to the yard, a door to the pantry and a window hole with no glass: smoke leaks through a
-  hole all the time and through a door when it opens), the PANTRY (the room beside it, shut by its two doors) and the SHED (four walls and one door: a shut
-  room fills). TWO LIT FRONTS (11-01, the maintainer: "can we add something like the lit sign (or the vending machine from the office) to smoke bench to
-  test it?"): the office's red and blue vending machines, its own boxes and markings at its own brightness, backs to the house's yard wall between the
-  kitchen's window and the pantry's door, facing down the screen, switchable group `fronts`: a bright sharp thing to look at through smoke and a light
-  that colours it. Never seen on a GPU there. Five doors, three roofs, a bulb a room, two in the tunnel, one floodlight and a moon. Level data only: no switch, no game code. Check:
-  `bun run tools/qa/smokelab-check.ts` (the file is its generator's; by the renderer's own floor plan the shed and the pantry are shut rooms with their doors
-  shut, the kitchen is joined to the yard by its window, the tunnel by its mouth, the two rooms are one with the door between them open; roofs; the page's
-  address; no mission names it; `SMOKELAB_BREAK=1` leaves the shed's door open and fails). `level-needs smoke-lab` passes with two notes (no mission row; 211 m²
-  of the yard is one finish, left bare on purpose: nothing there should stop the wind). Every bulb is lit. The address opens it at a dry dusk (`&hour=dusk&weather=clear`: the plain page's own night came up in rain, which is noise over
-  smoke); an hour or a weather on the address wins. Drawn on the software adapter only (the whole floor at dusk with cans burning in the yard, the tunnel,
-  the kitchen and the shed, no GPU errors): never seen on a GPU, and nobody has thrown smoke on it by hand.
 - **The library: every object and every paint, once (`docs/library.md`, dress every level, 11-03; tools and level data, no switch).** The maintainer: "as we
   dress the levels, I'd love for us to have a library of objects, materials, etc. that we reuse across them". What exists is SIX KITS with their own pieces and
   paints: `src/scene/gwotKit.ts` (the look's), `src/scene/officeGen.ts officeKit`, `tools/levels/livedKit.ts`, `livedPieces.ts`, `lived-quiet.ts`,
