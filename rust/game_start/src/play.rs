@@ -34,6 +34,11 @@ pub struct Opts {
 }
 impl Default for Opts { fn default() -> Self { Opts { seed: 1, squad: 4, cpu_senses: true } } }
 
+/// What stands on a level's floor: its boxes (the round things, the boxes that stand shaped and the pieces of trim among them), and who and what
+/// the game made of the file's civilians, devices and vents.
+#[derive(Debug, PartialEq)]
+pub struct Floor { pub boxes: usize, pub round: usize, pub shaped: usize, pub trim: usize, pub civilians: usize, pub cameras: usize, pub lasers: usize, pub keypads: usize, pub vents: usize, pub daylight: bool }
+
 /// a mouse button, by its bit in the Input
 #[derive(Clone, Copy, Debug)]
 pub enum Button { Left = 1, Middle = 2, Right = 4 }
@@ -209,6 +214,17 @@ impl Play {
     /// every man of the game's list in a line, for a failure's message
     pub fn roll(&self) -> String {
         self.g.guards.iter().map(|&gd| { let o = &self.g.gd[gd]; let p = self.at(gd); format!("{} {:?} {:?} at ({:.1}, {:.1})", o.callsign, o.team, o.state, p[0], p[1]) }).collect::<Vec<_>>().join("; ")
+    }
+
+    /// what stands on the level's floor, counted off the game (for a test of the start itself)
+    pub fn floor(&self) -> Floor {
+        let g = &self.g;
+        let count = |f: &dyn Fn(&game::scene_boxes::Box) -> bool| g.col.boxes.iter().filter(|&&b| f(&g.tab.boxes[b])).count();
+        Floor {
+            boxes: g.col.boxes.len(), round: count(&|b| b.round == Some(true)), shaped: count(&|b| b.shaped == Some(true)), trim: count(&|b| b.piece == Some(true)),
+            civilians: g.civilians.len(), cameras: g.devices.cameras.len(), lasers: g.devices.lasers.len(), keypads: g.devices.keypads.len(),
+            vents: g.level.vents.as_ref().map_or(0, |v| v.len()), daylight: g.level.daylight.is_some(),
+        }
     }
 
     // ---- what a man is doing, read off the game

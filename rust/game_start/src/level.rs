@@ -2,20 +2,21 @@
 //! The level's boxes become rows of `g.tab.boxes` (listed in the answer, in the file's order: index i of the file IS static box i), its routes rows
 //! of `g.tab.route`, and `g.level` is the `Level` the game's constructor reads.
 //!
-//! WHAT IS NOT CARRIED YET IS SAID, NEVER PASSED OVER: `lacks` lists every record of the file this reader has no line for (a box's shape, a
-//! civilian, a device, a kind of scenario), by its place in the file. A start refuses a file with any (`load`), because a level stood without
-//! part of itself is another level; `lacks_of` is the same list with nothing made, for a tool that asks how far the reader is from a file.
+//! WHAT IS NOT CARRIED IS SAID, NEVER PASSED OVER. The file's tree remembers every member a reader asked for (`json.rs`), so when the file has
+//! been read, whatever nobody asked for is named by its place: a record this reader has no line for, a member a record gained since. A start
+//! refuses a file with any (`load`), because a level stood without part of itself is another level; `lacks_of` is the same list for a tool.
+//! What the loader leaves behind BY RULE it passes by in so many words (`skip`: a floor, an author's notes, the editor's own block).
 //! The file's own checks (`levelData.ts validateLevelData`: unknown keys, ids that point nowhere) are not here either: a file is taken as one the
 //! TypeScript's validator has passed.
 use crate::json::Json;
-use alloc::{format, string::String, string::ToString, vec, vec::Vec};
+use alloc::{format, string::String, vec, vec::Vec};
 use game::game::Game;
 use game::ids::*;
 use game::scene_boxes::MakeBoxP;
 use game::scene_level::*;
 use game::scene_markings::{MarkFace, MarkPal, MarkRes, MarkingDef};
 use game::scene_materials::DoesWord;
-use game::scene_scenarios as sc;
+use crate::read::FromJson;
 use game::scene_stuff::BoxStuff;
 use game::V3;
 
@@ -33,7 +34,7 @@ words!(mark_face, MarkFace, [X, X2, Y, Y2, Z, Z2]);
 words!(mark_res, MarkRes, [Base, Fine, Coarse]);
 words!(light_kind, LightDefKind, [Spot, Dir, Point]);
 words!(volume_kind, VolumeDefKind, [Trigger, Hide, Utility]);
-words!(floor_mat, game::floor::FloorMat, [Carpet, Lino, Stone, Tile, Asphalt, Grass]);
+
 
 /// the box flags a file may say, as the bits of `Box.flags` (levelData.ts FLAG_BITS)
 fn flags_to_bits(names: &Json) -> f64 {
@@ -47,6 +48,7 @@ fn flags_to_bits(names: &Json) -> f64 {
 
 fn v3(j: &Json, what: &str) -> V3 { j.v3().unwrap_or_else(|| panic!("level: {} is not three numbers", what)) }
 fn num(j: &Json, what: &str) -> f64 { j.num().unwrap_or_else(|| panic!("level: {} is not a number", what)) }
+fn texts(j: &Json, what: &str) -> Vec<String> { j.items().iter().map(|x| text(x, what)).collect() }
 fn text(j: &Json, what: &str) -> String { String::from(j.str().unwrap_or_else(|| panic!("level: {} is not text", what))) }
 fn rect(j: &Json, what: &str) -> [f64; 4] { [num(j.get("x0"), what), num(j.get("x1"), what), num(j.get("z0"), what), num(j.get("z1"), what)] }
 
@@ -93,6 +95,30 @@ impl<'a> Paint<'a> {
     }
 }
 
+/// a shape's form as the file says it: its planes copied (shapes.ts formOf)
+fn form_of(f: &Json) -> (Option<f64>, Option<game::scene_shapes::ShapeFormArc>, Option<Vec<[f64; 4]>>, Option<bool>) {
+    let round = f.get("round").num().filter(|&r| r != 0.0);
+    let arc = if f.has("arc") { Some(game::scene_shapes::ShapeFormArc { axis: num(f.get("arc").get("axis"), "an arc's axis"), rise: num(f.get("arc").get("rise"), "an arc's rise") }) } else { None };
+    let cut = if f.has("cut") { Some(f.get("cut").items().iter().map(|q| { let q = q.nums(); [q[0], q[1], q[2], q[3]] }).collect()) } else { None };
+    (round, arc, cut, if f.get("old").bool() == Some(true) { Some(true) } else { None })
+}
+/// A BOX'S SHAPE, carried on the box as authored: a piece's paint, finish and word read as a box's are, and a piece that says no paint left
+/// with none (it wears its box's: the shape pass) (levelLoad.ts)
+fn shape_of(s: &Json, paint: &Paint) -> game::scene_shapes::BoxShape {
+    let (round, arc, cut, old) = form_of(s);
+    let with = if s.has("with") { Some(s.get("with").items().iter().map(|w| {
+        let (round, arc, cut, old) = form_of(w);
+        let painted = w.has("material") || w.has("albedo");
+        game::scene_shapes::ShapePiece {
+            off: v3(w.get("off"), "a piece's off"), h: v3(w.get("h"), "a piece's h"), yaw: w.get("yaw").num().filter(|&y| y != 0.0),
+            albedo: if painted { Some(paint.albedo(w)) } else { None }, rough: if painted { paint.rough(w) } else { None }, metal: if painted { paint.metal(w) } else { None },
+            stuff: if painted { paint.stuff(w) } else { None }, does: if painted { paint.does(w) } else { None },
+            round, arc, cut, old,
+        }
+    }).collect()) } else { None };
+    game::scene_shapes::BoxShape { with, round, arc, cut, old }
+}
+
 /// (levelLoad.ts fitPropFootprint: a loose thing's half size in plan and its height, fitted from its parts)
 fn fit_prop_footprint(parts: &[PropPart]) -> ([f64; 2], f64) {
     use game::m;
@@ -113,42 +139,63 @@ pub struct Loaded {
     pub boxes: Vec<BoxId>,
 }
 
-/// EVERY RECORD OF THE FILE THIS READER HAS NO LINE FOR, by its place in the file; empty = the whole file is carried.
-pub fn lacks_of(data: &Json) -> Vec<String> {
-    let mut l: Vec<String> = Vec::new();
-    if data.get("version").num() != Some(1.0) { l.push(format!("version {:?}: this reader reads version 1", data.get("version"))); }
-    let n = |k: &str| data.get(k).items().len();
-    let shaped = data.get("boxes").items().iter().filter(|b| b.has("shape")).count();
-    if shaped > 0 { l.push(format!("boxes[].shape: {} boxes say a shape (scene/shapes.ts shapeLevel, cut.ts cutRecord)", shaped)); }
-    if n("civilians") > 0 { l.push(format!("civilians[]: {} (levelLoad.ts civilians)", n("civilians"))); }
-    if n("devices") > 0 { l.push(format!("devices[]: {} (levelLoad.ts deviceOf)", n("devices"))); }
-    if n("vents") > 0 { l.push(format!("vents[]: {}", n("vents"))); }
-    if n("connectors") > 0 { l.push(format!("connectors[]: {}", n("connectors"))); }
-    if data.has("daylight") { l.push(String::from("daylight")); }
-    if !data.get("plans").get("roomClear").items().is_empty() { l.push(format!("plans.roomClear[]: {} (the office's clear plans)", data.get("plans").get("roomClear").items().len())); }
-    if data.get("plans").has("breach") { l.push(String::from("plans.breach")); }
-    for (k, _) in data.get("scenarios").members() {
-        match k.as_str() { "roomClear" | "places" | "doorNames" => {} k => l.push(format!("scenarios.{}", k)) }
+/// THE RECORDS OF THE FILE THAT THE GAME KEEPS AS ITS OWN TYPES (`records.rs`), read member for member.
+struct Typed {
+    scenarios: Option<game::scene_scenarios::LevelScenarios>, surfaces: Option<game::scene_level_data::SurfacesData>,
+    devices: Vec<DeviceDef>, vents: Option<Vec<VentDef>>, civilians: Option<Vec<CivilianDef>>, clear_plans: Vec<RoomClearPlan>, breach: Option<BreachPlan>,
+}
+fn typed(data: &Json) -> Typed {
+    fn opt<T: FromJson>(data: &Json, key: &str) -> Option<T> { if data.has(key) { Some(T::from_json(data.get(key), key)) } else { None } }
+    let plans = data.get("plans");
+    Typed {
+        scenarios: opt(data, "scenarios"), surfaces: opt(data, "surfaces"),
+        devices: FromJson::from_json(data.get("devices"), "devices"), vents: opt(data, "vents"), civilians: opt(data, "civilians"),
+        clear_plans: FromJson::from_json(plans.get("roomClear"), "plans.roomClear"),
+        breach: if plans.has("breach") { Some(FromJson::from_json(plans.get("breach"), "plans.breach")) } else { None },
     }
-    if game::director::level_script_of(data.get("name").str().unwrap_or("")).is_some() { /* a script is found by the level's name: carried */ }
-    l
+}
+
+/// EVERY PART OF THE FILE THIS READER DOES NOT CARRY, by its place in the file; empty = the whole file is carried. The file is read as `load`
+/// reads it, into a game nobody keeps, and the file's own tree says which members were never asked for (`json.rs`).
+pub fn lacks_of(data: &Json) -> Vec<String> {
+    let mut g = alloc::boxed::Box::new(Game::blank());
+    read(&mut g, data, true, true).1
 }
 
 /// THE LEVEL FILE `data` INTO `g`: its boxes and routes as rows, `g.level`, the level's name and its script. Refuses a file it does not carry whole.
 /// `dressing` / `lived`: the two switches a file's optional furniture stands under (levelLoad.ts: DESTRUCTION.on, LIVED.on).
 pub fn load(g: &mut Game, data: &Json, dressing: bool, lived: bool) -> Loaded {
-    let lacks = lacks_of(data);
+    let (loaded, lacks) = read(g, data, dressing, lived);
+    if !lacks.is_empty() { panic!("level '{}': this start does not carry {} parts of the file:\n  {}", loaded.name, lacks.len(), lacks.join("\n  ")); }
+    loaded
+}
+
+/// what the loader leaves behind of a record BY RULE, as the TypeScript loader does: the floor a thing is on (one floor is played), an author's notes
+const PASSED_BY: [&str; 2] = ["floor", "notes"];
+
+fn read(g: &mut Game, data: &Json, dressing: bool, lived: bool) -> (Loaded, Vec<String>) {
+    let mut lacks: Vec<String> = Vec::new();
+    if data.get("version").num() != Some(1.0) { lacks.push(format!("version {:?}: this reader reads version 1", data.get("version"))); }
+    if !data.get("connectors").items().is_empty() { lacks.push(format!("connectors[]: {} (a stair or a ladder between floors: the TypeScript loader passes them by too)", data.get("connectors").items().len())); }
     let name = text(data.get("name"), "name");
-    if !lacks.is_empty() { panic!("level '{}': this start does not carry {} of the file's records yet:\n  {}", name, lacks.len(), lacks.join("\n  ")); }
+    // (the editor's and the generator's own words, the floors' list and the paint rows nothing wears: read by nobody in the game)
+    data.get("floors").skip_all();
+    data.get("meta").skip(&["grid", "bounds", "generator", "notes"]);
+    // (an objective and a beacon are found by their kind and their box: the file's ids for them name nothing in the game)
+    for o in data.get("mission").get("objectives").items() { o.skip(&["id"]); }
+    for b in data.get("beacons").items() { b.skip(&["id"]); }
+    for (_, row) in data.get("materials").members() { row.skip(&["albedo", "rough", "metal", "stuff", "does", "notes"]); }
     let paint = Paint { name: &name, mats: data.get("materials") };
     // (the DRESSING and the LIVED things are left out with their switch off: every other box keeps its index)
     let is_lived = |id: Option<&str>| id.map_or(false, |s| s.starts_with("lived."));
-    let file_boxes: Vec<&Json> = data.get("boxes").items().iter().filter(|b| (dressing || b.get("group").str() != Some("dressing")) && (lived || !is_lived(b.get("group").str()))).collect();
-    let keep = |j: &&Json| lived || !is_lived(j.get("id").str());
+    let stays = |b: &&Json| { let group = b.get("group").str(); let keep = (dressing || group != Some("dressing")) && (lived || !is_lived(group)); if !keep { b.skip_all(); } keep };
+    let file_boxes: Vec<&Json> = data.get("boxes").items().iter().filter(stays).collect();
+    let keep = |j: &&Json| { let keep = lived || !is_lived(j.get("id").str()); if !keep { j.skip_all(); } keep };
     // boxes, in file order (index i of the file IS static box i)
     let mut ids: Vec<String> = Vec::new();
     let mut boxes: Vec<BoxId> = Vec::new();
     for b in file_boxes.iter() {
+        b.skip(&PASSED_BY);
         ids.push(text(b.get("id"), "a box's id"));
         let mut p = MakeBoxP { c: v3(b.get("c"), "a box's c"), h: v3(b.get("h"), "a box's h"), ..blank_box() };
         p.yaw = Some(b.get("yaw").num().unwrap_or(0.0));
@@ -160,6 +207,7 @@ pub fn load(g: &mut Game, data: &Json, dressing: bool, lived: bool) -> Loaded {
         if let Some(x) = b.get("cutHeight").num() { p.cut_height = Some(x); }
         p.marks = copy_markings(b.get("markings"));
         p.rough = paint.rough(b); p.metal = paint.metal(b); p.stuff = paint.stuff(b); p.does = paint.does(b);
+        if b.has("shape") { p.shape = Some(shape_of(b.get("shape"), &paint)); }
         boxes.push(game::scene_boxes::make_box(g, &p));
     }
     let bx = |id: &Json| -> f64 { let id = id.str().unwrap_or(""); ids.iter().position(|x| x == id).unwrap_or_else(|| panic!("level '{}': unknown box '{}'", name, id)) as f64 };
@@ -203,13 +251,22 @@ pub fn load(g: &mut Game, data: &Json, dressing: bool, lived: bool) -> Loaded {
     let ob = |k: &str| data.get("mission").get("objectives").items().iter().find(|o| o.get("kind").str() == Some(k)).unwrap_or_else(|| panic!("level '{}': the mission has no '{}' objective", name, k));
     let (reach, drive, exfil) = (ob("reach"), ob("drive"), ob("exfil"));
     let area = rect(reach.get("area"), "the reach objective's area");
+    let records = typed(data);
     let mut level = Level::zeroed();
     level.props = props; level.lights = lights; level.switchables = switchables; level.doors = doors;
-    level.devices = Some(Vec::new());
+    level.devices = Some(records.devices); level.vents = records.vents; level.civilians = records.civilians; level.breach = records.breach;
+    if data.has("daylight") {
+        let d = data.get("daylight");
+        level.daylight = Some(DaylightDef {
+            sun: light_of(d.get("sun")), sky: DaylightDefSky { zenith: v3(d.get("sky").get("zenith"), "daylight.sky.zenith"), horizon: v3(d.get("sky").get("horizon"), "daylight.sky.horizon") },
+            groups_on: texts(d.get("groupsOn"), "daylight.groupsOn"), groups_off: texts(d.get("groupsOff"), "daylight.groupsOff"),
+            lights_off: texts(d.get("lightsOff"), "daylight.lightsOff"), haze: num(d.get("haze"), "daylight.haze"), exposure: num(d.get("exposure"), "daylight.exposure"),
+        });
+    }
     level.breaker = LevelBreaker { pos: v3(data.get("breaker").get("pos"), "the breaker's pos"), boxes: vec![bx(data.get("breaker").get("panel")), bx(data.get("breaker").get("led"))], fumble: data.get("breaker").get("fumble").num() };
     level.beacons = data.get("beacons").items().iter().map(|b| LevelBeaconsItem { pos: v3(b.get("pos"), "a beacon's pos"), box_: bx(b.get("box")) }).collect();
     level.player_spawn = v3(data.get("mission").get("playerSpawn"), "mission.playerSpawn");
-    level.routes = routes; level.chokepoints = Some(chokepoints); level.clear_plans = Some(Vec::new());
+    level.routes = routes; level.chokepoints = Some(chokepoints); level.clear_plans = Some(records.clear_plans);
     if !data.get("volumes").items().is_empty() {
         level.volumes = Some(data.get("volumes").items().iter().map(|v| VolumeDef { name: text(v.get("id"), "a volume's id"), kind: volume_kind(v.get("kind").str().unwrap_or("")).expect("a volume's kind"), c: v3(v.get("c"), "a volume's c"), h: v3(v.get("h"), "a volume's h"), yaw: v.get("yaw").num() }).collect());
     }
@@ -225,59 +282,13 @@ pub fn load(g: &mut Game, data: &Json, dressing: bool, lived: bool) -> Loaded {
     };
     level.mark_texel = data.get("meta").get("markTexel").num();
     level.kept = data.get("meta").get("kept").num();
-    if data.has("scenarios") { level.scenarios = Some(scenarios_of(data.get("scenarios"))); }
-    if data.has("surfaces") { level.surfaces = Some(surfaces_of(data.get("surfaces"))); }
+    // the scenarios' block and the footsteps' map: the runtime structs verbatim (scene/scenarios.ts), each record as the game's own type (records.rs)
+    level.scenarios = records.scenarios; level.surfaces = records.surfaces;
     level.script = game::director::level_script_of(&name);   // (a level that carries a script: scene/levelScripts.ts, by the file's name)
     g.level = level;
     g.m.scene_level_load.level_names = Some(name.clone());
-    Loaded { name, boxes }
-}
-
-fn team_start(t: &Json) -> sc::TeamStart {
-    sc::TeamStart { sam: v3(t.get("sam"), "a team's sam"), sam_yaw: num(t.get("samYaw"), "samYaw"), ops: if t.has("ops") { Some(t.get("ops").items().iter().map(|p| v3(p, "a teammate's mark")).collect()) } else { None }, ops_yaw: t.get("opsYaw").num() }
-}
-fn sc_rect(j: &Json) -> sc::Rect { let r = rect(j, "a room's bounds"); sc::Rect { x0: r[0], x1: r[1], z0: r[2], z1: r[3] } }
-
-/// the runtime structs verbatim (scene/scenarios.ts): the kinds this reader carries (`lacks_of` names the rest)
-fn scenarios_of(s: &Json) -> sc::LevelScenarios {
-    let mut out = sc::LevelScenarios::zeroed();
-    let rc = s.get("roomClear");
-    if !rc.is_null() {
-        out.room_clear = Some(sc::StructureData {
-            name: text(rc.get("name"), "roomClear.name"),
-            team: if rc.has("team") { Some(team_start(rc.get("team"))) } else { None },
-            rooms: rc.get("rooms").items().iter().map(|r| sc::StructureRoom {
-                id: text(r.get("id"), "a room's id"), name: text(r.get("name"), "a room's name"), bounds: sc_rect(r.get("bounds")),
-                doors: r.get("doors").items().iter().map(|d| sc::StructureDoor { id: text(d.get("id"), "a room's door"), from: text(d.get("from"), "a room door's from") }).collect(),
-                garrison: num(r.get("garrison"), "a room's garrison"),
-                marks: r.get("marks").items().iter().map(|m| sc::StructureMark { pos: v3(m.get("pos"), "a mark's pos"), watch: text(m.get("watch"), "a mark's watch"), aim_at: v3(m.get("aimAt"), "a mark's aimAt") }).collect(),
-            }).collect(),
-            starts: if rc.has("starts") { Some(rc.get("starts").items().iter().map(team_start).collect()) } else { None },
-            max_men: rc.get("maxMen").num(), way_out: rc.get("wayOut").bool(), dig_in: rc.get("digIn").bool(), wall_charges: rc.get("wallCharges").num(),
-            squads: if rc.has("squads") { Some(rc.get("squads").items().iter().map(|q| sc::SquadData {
-                id: text(q.get("id"), "a squad's id"), name: q.get("name").str().map(String::from),
-                rooms: if q.has("rooms") { Some(q.get("rooms").items().iter().map(|r| text(r, "a squad's room")).collect()) } else { None },
-                rally: q.get("rally").v3(),
-                barricade: if q.has("barricade") { Some(q.get("barricade").items().iter().map(|r| text(r, "a squad's door")).collect()) } else { None },
-                may_leave: q.get("mayLeave").bool(),
-                training: q.get("training").str().map(|w| match w { "trained" => sc::SquadDataTraining::Trained, "green" => sc::SquadDataTraining::Green, "mixed" => sc::SquadDataTraining::Mixed, w => panic!("level: a squad's training '{}'", w) }),
-                arrive: if q.has("arrive") { let a = q.get("arrive"); Some(sc::SquadArrive { door: text(a.get("door"), "arrive.door"), spawn: a.get("spawn").items().iter().map(|p| v3(p, "arrive.spawn")).collect(), men: num(a.get("men"), "arrive.men") }) } else { None },
-            }).collect()) } else { None },
-        });
-    }
-    if s.has("places") { out.places = Some(sc::PlacesData { areas: s.get("places").get("areas").items().iter().map(|a| sc::PlaceArea { name: text(a.get("name"), "a place's name"), bounds: sc_rect(a.get("bounds")) }).collect() }); }
-    if s.has("doorNames") { out.door_names = Some(s.get("doorNames").items().iter().map(|d| sc::LevelScenariosDoorNamesItem { door: text(d.get("door"), "doorNames.door"), name: text(d.get("name"), "doorNames.name") }).collect()); }
-    out
-}
-
-fn surfaces_of(s: &Json) -> game::scene_level_data::SurfacesData {
-    use game::scene_level_data as ld;
-    let mat = |j: &Json| floor_mat(j.str().unwrap_or("")).unwrap_or_else(|| panic!("level: a floor of {:?}", j));
-    let b = rect(s.get("building"), "surfaces.building");
-    ld::SurfacesData {
-        building: ld::Rect { x0: b[0], x1: b[1], z0: b[2], z1: b[3] }, grass_edge: num(s.get("grassEdge"), "grassEdge"), inside: mat(s.get("inside")), outside: mat(s.get("outside")), verge: mat(s.get("verge")),
-        zones: s.get("zones").items().iter().map(|z| ld::SurfacesDataZonesItem { id: text(z.get("id"), "a zone's id"), mat: mat(z.get("mat")), x0: num(z.get("x0"), "x0"), z0: num(z.get("z0"), "z0"), x1: num(z.get("x1"), "x1"), z1: num(z.get("z1"), "z1"), notes: z.get("notes").str().map(|n| n.to_string()) }).collect(),
-    }
+    data.unread("", &mut lacks);
+    (Loaded { name, boxes }, lacks)
 }
 
 /// `makeBox`'s argument with nothing said but a place and a size
