@@ -90,7 +90,7 @@ async function bridge(): Promise<any> {
   O.OUT_HOST.tap = SU.fireTap; BR = { ...E, surfaceHost: SU.surfaceHost, makeTaps: SU.makeTaps, makeScan: SC.makeScan, installAsks: AK.installAsks, applyGame: I.applyGame, hooks: { classes: C.classTable(), values: C.valueTable(), made: Object.fromEntries(MEN.map(c => [c, (o: object) => { MADE_MEN.add(o); MADE.n++; }])) }, puppetRows: P.puppetRows, SLOW: P.SLOW, VALS: P.VALS, OUT: O.OUT, A, reg: K.knobRegistry(), newDice: D.newDice, dressAll: DR.dressAll, DRESS: DR.DRESS,
     lists: { step: new Set<string>(LJ.step), start: new Set<string>(LJ.start) } };
   BR.PUT_BACKS = (await import('../../src/math/side.ts')).PUT_BACKS;
-  snaps(await import('../../src/game/savestate.ts'));
+  { const SS = await import('../../src/game/savestate.ts'); snaps(SS); BR.SNAPS = SS.SNAPS; }
   return BR; }
 
 // ---- A GAME KEPT IS THE RUST GAME'S OWN, one path with the page (src/host/rustgame.ts; rust/game_face/src/page.rs `face_keep` / `face_back` / `face_loaded`).
@@ -283,6 +283,9 @@ export class RustHost {
   /** THE KEPT GAME STANDS AGAIN and the puppet takes its whole state: one whole apply; what the filtered export last sent is the whole state */
   private backTo(k: number, why: string): void { const X = this.F.X;
     if (!this.h || !X.face_back(this.h, k)) throw new Error(`rust-host: that kept game is gone (it was of a game that has been stood again since); asked by ${toolLine()}`);
+    // (the puppet's camera takes the saved moment's rows with the rest, as the TypeScript's snapshot puts them back. What goes on differing in the host's
+    // half afterwards is the lens's serial alone, the bridge's own count of the camera's `desired` arrays: 1 past the saved moment's here, the frame's on
+    // the TypeScript side. No rule reads its size.)
     this.applyWhole(why); X.face_puppet(this.h, 1); this.refs(); this.scanRebase(); this.shelfSig = ''; this.backs++; if (this.rec) this.rec.backs = this.backs; }
   /** A SAVE (savestate.ts writeMem, through SNAPS.take). The controller has just written the chronicle's row on the puppet; the row is made on the Rust
    *  side first (`face_checkpoint`), so the kept game holds it. No state is walked in TypeScript and nothing is applied whole. */
@@ -630,8 +633,7 @@ export class RustHost {
       if (asked & 2) this.cutDue = true; }
     this.o.afterStep?.(this);
     // (RH_HALF=<ticks, comma>: the host's half of those ticks, a line a field's value, for two runs to be held to each other by `diff`)
-    if (process.env.RH_HALF?.split(',').includes(String(k))) { const A = B.A; for (const [ty, v] of B.hostHalfParts(g, cmds) as [string, any][]) { if (ty === 'u32') continue; const b: Uint8Array = B.exportPart(g, B.reg, [[ty, v]]); const offs: number[] = []; for (let i = 0; i < b.length; i += 8) offs.push(i);
-      for (const x of A.locate(b, offs, null, true, ty, ty.split('::').pop())) { let f = NaN; try { f = new DataView(b.buffer, b.byteOffset + x.off, 8).getFloat64(0, true); } catch { /* the last bytes */ } process.stderr.write(`half ${k} ${x.path} ${f}\n`); } } }
+    if (process.env.RH_HALF?.split(',').includes(String(k))) halfSay(B, g, cmds, k);
     if (TICKS_DIR) { if (k === 1 || this.ticksFile === '') { this.ticksFile = ticksFile(this.audit ? 'audit' : 'rust'); writeFileSync(this.ticksFile, ''); } tickLine(this.F, this.ticksFile, k, this.dieN(), this.rustBlock(), hb, this.gave.map(l => { const w = l.split(' '); return `${w[0]}:${w[1]}`; }).join(',')); }
     // ---- the host's steps after a tick, on the Rust side: the lights' update, the host's view of a level on rails, the camera's ask
     t = now(); X.face_lights(this.h, dt); X.face_view(this.h); X.face_follow?.(this.h);
@@ -642,7 +644,10 @@ export class RustHost {
     this.lastDt = dt;
     if (this.quietOn) { const at = (X.face_look(this.h) >>> 0) >>> 3, L = new Float64Array(this.F.mem.buffer).subarray(at, at + 6); this.lookNow = { follow: [L[0], L[1], L[2]], aim: [L[3], L[4], L[5]] };
       this.quietOwed++; this.quietSteps++; this.inStep = false; return; }
-    const rust = this.tail(dt, k);
+    const backs0 = this.backs; const rust = this.tail(dt, k);
+    // (a kept game stood again inside this update, Enter once down: the tick's line is the game as the update left it, as the TypeScript's own line is;
+    //  a reader of the file takes a tick's LAST line)
+    if (TICKS_DIR && this.backs !== backs0) tickLine(this.F, this.ticksFile, k, this.dieN(), this.rustBlock(), hb, this.gave.map(l => { const w = l.split(' '); return `${w[0]}:${w[1]}`; }).join(','));
     this.refs(); this.inStep = false; this.dieRef = g.dice?.n; if (this.busy === 0) this.scanRebase();
     this.auditAfter(rust, k);
   }
@@ -751,8 +756,12 @@ export async function standRust(g: any, word: string): Promise<RustHost | null> 
   hang(g, 'gameWord', word);   // (the word this game was stood under: tools/qa/headless.ts `seedGame` reads it)
   if (process.env.RH_DIE_SAY) appendFileSync(process.env.RH_DIE_SAY, `${process.argv.slice(2).join(' ')} die ${die}\n`);   // (to play the same game again by hand: mission.ts --die, play.ts --die)
   if (word === 'ts') { const B = await bridge(); dressDown(B); if (die !== null) g.dice = B.newDice(die);
+    // THE SAME STAND: under the Rust word every save is one in memory (the Rust game's own clone, as on the page); so under `ts` every save is the
+    // TypeScript's snapshot in memory (rollback.ts, what a squad's save already is) and none a file. A file's load stages the encounter again and pours
+    // the file in: not the saved moment to the bit, and no game could be held to it tick for tick.
+    if (!OFF.has('keep')) B.SNAPS.own = true;
     // (the trace under `ts`: the same line a game, its ticks counted round the TypeScript tick itself)
-    if (TICKS_DIR) { const F = loadFace(), file = ticksFile(word), was = g.stepSeats, gave: string[] = []; let k = 0; writeFileSync(file, ''); const B = await bridge(); g.stepSeats = function (this: any, ...a: any[]) { let half: Uint8Array | null = null; try { if (!k) { g.sim.settle(g); B.exportGame(g, B.reg); const O = g.orders, was2 = O?.give; if (was2) hang(O, 'give', function (this: any, id: string, ...r: any[]) { gave.push(`${k + 1}:${id}`); return was2.call(this, id, ...r); }); }   /* (the bridge's book, as the host's start makes it) */ half = B.hostHalf(g, B.reg, a[1]); } catch { /* a game the bridge has no book for yet */ } const r = was.apply(this, a); const w: Uint32Array = g.sim.w; tickLine(F, file, ++k, g.dice?.n, new Uint8Array(w.buffer, w.byteOffset, w.byteLength), half, gave.join(',')); return r; }; }
+    if (TICKS_DIR) { const F = loadFace(), file = ticksFile(word), was = g.stepSeats, gave: string[] = []; let k = 0; writeFileSync(file, ''); const B = await bridge(); g.stepSeats = function (this: any, ...a: any[]) { let half: Uint8Array | null = null; try { if (!k) { g.sim.settle(g); B.exportGame(g, B.reg); const O = g.orders, was2 = O?.give; if (was2) hang(O, 'give', function (this: any, id: string, ...r: any[]) { gave.push(`${k + 1}:${id}`); return was2.call(this, id, ...r); }); }   /* (the bridge's book, as the host's start makes it) */ half = B.hostHalf(g, B.reg, a[1]); } catch { /* a game the bridge has no book for yet */ } if (half && process.env.RH_HALF?.split(',').includes(String(k + 1))) halfSay(B, g, a[1], k + 1); const r = was.apply(this, a); const w: Uint32Array = g.sim.w; tickLine(F, file, ++k, g.dice?.n, new Uint8Array(w.buffer, w.byteOffset, w.byteLength), half, gave.join(',')); return r; }; }
     if (process.env.RH_TRACE) { const rec = traceRec(word), was = g.stepSeats; g.stepSeats = function (this: any, ...a: any[]) { rec.k++; if (SITES) site(rec); if (CAP_AT && (rec.k & 31) === 0 && Date.now() > CAP_AT) process.exit(143); return was.apply(this, a); }; }
     return null; }
   if (word !== 'rust' && word !== 'audit') throw new Error(`TPS_GAME=${word}: rust (the Rust game steps), audit, or ts (the same stand, the TypeScript tick)`);
@@ -774,6 +783,9 @@ function timed(H: RustHost): void {
 // ---- RH_TICKS=<folder>: a line a tick under either word (the tick, the die's count, a hash of each part of rust/sim's block but `poses`), in a file
 // named by the word and the tool's own arguments: two plays of one tool under `ts` and `rust` are then held to each other tick by tick, where the tool's
 // own stand (its die, its own draws) is not one `play.ts` can make again
+/** RH_HALF=<ticks, comma>: the host's half of those ticks, a line a field's value, under either word */
+function halfSay(B: any, g: any, cmds: readonly any[], k: number): void { const A = B.A; for (const [ty, v] of B.hostHalfParts(g, cmds) as [string, any][]) { if (ty === 'u32') { process.stderr.write(`half ${k} u32 ${v}\n`); continue; } const b: Uint8Array = B.exportPart(g, B.reg, [[ty, v]]); process.stderr.write(`half ${k} part ${ty} ${b.length} bytes ${Buffer.from(b).toString('hex')}\n`); const offs: number[] = []; for (let i = 0; i < b.length; i += 8) offs.push(i);
+      for (const x of A.locate(b, offs, null, true, ty, ty.split('::').pop())) { let f = NaN; try { f = new DataView(b.buffer, b.byteOffset + x.off, 8).getFloat64(0, true); } catch { /* the last bytes */ } process.stderr.write(`half ${k} ${x.path} ${f}\n`); } } }
 const TICKS_DIR = process.env.RH_TICKS ?? '';
 function tickLine(F: Face, file: string, k: number, die: unknown, block: Uint8Array, half: Uint8Array | null, gave = ''): void { const X = F.X, base = X.state_addr(0) >>> 0; let l = `${k} ${die} ${half ? Bun.hash(half).toString(36) : '-'}|${gave}`;   // (the third word: the host's half handed in as the tick opened)
   for (let i = 0; i < F.NAMES.length; i++) { if (F.NAMES[i] === 'poses') continue; const off = (X.face_part_addr(0, i) >>> 0) - base, len = X.face_part_len(i); l += ` ${Bun.hash(block.subarray(off, off + len)).toString(36)}`; }

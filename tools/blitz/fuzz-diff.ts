@@ -12,7 +12,9 @@ import { readFileSync, existsSync } from 'node:fs';
 const dir = process.argv[2], asJson = process.argv.includes('--json');
 if (!dir) { console.error('fuzz-diff.ts <folder> [--json]'); process.exit(64); }
 const read = (f: string): string[] => existsSync(`${dir}/${f}`) ? readFileSync(`${dir}/${f}`, 'utf8').split('\n') : [];
-const T = read('ts-run.txt').filter(Boolean), R = read('rust-run.txt').filter(Boolean), TL = read('ts.log'), RL = read('rust.log');
+// (a tick written twice is a tick a kept game stood again in: its last line is the game as that update left it)
+const last = (L: string[]): string[] => { const out: string[] = []; for (const l of L) { if (!l) continue; const k = l.slice(0, l.indexOf(' ')); if (out.length && out[out.length - 1].startsWith(k + ' ')) out[out.length - 1] = l; else out.push(l); } return out; };
+const T = last(read('ts-run.txt')), R = last(read('rust-run.txt')), TL = read('ts.log'), RL = read('rust.log');
 if (!T.length || !R.length) { const why = `fuzz-diff: ${!T.length ? 'the TypeScript side' : 'the Rust side'} wrote no tick (${dir}); its log ends: ${(T.length ? RL : TL).filter(Boolean).slice(-3).join(' / ').slice(0, 500)}`; if (asJson) console.log(JSON.stringify({ dir, ran: false, why, kind: /panicked/.test(RL.join('\n')) ? 'a panic' : 'a throw in the host' })); else console.log(why); process.exit(3); }
 // a line: `<k> <die> <half>|<gives> <part hashes…>`
 const cut = (l: string) => { const w = l.split(' '); return { k: +w[0], die: w[1], half: w[2], game: w.slice(3).join(' ') }; };
@@ -32,11 +34,14 @@ const viol = (L: string[]) => { const M = new Map<string, string>(); for (const 
 const vT = viol(TL), vR = viol(RL), onlyRust = [...vR].filter(([k]) => !vT.has(k)).map(([k, l]) => ({ kind: k, line: l }));
 const surface = RL.find(l => l.startsWith('the call surface:'))?.slice(0, 1600) ?? '';
 const stimAt = [...tsNear].reverse().find(r => r.s.startsWith('STIM ') && r.f >= at - 1), lastStim = [...tsNear].reverse().find(r => r.s.startsWith('STIM '));
+// (what the soak does that is no scheduled stimulus: Enter once down, Shift+Enter, a tour's end: `press …` in its timeline)
+const pressAt = [...tsNear].reverse().find(r => /^press /.test(r.s) && r.f >= at - 2);
 const name = (r?: { s: string }) => r ? r.s.replace(/^STIM /, '').split(':')[0].trim() : '';
 const kind = !first ? 'none' : panic ? 'a panic'
   : excR && !excT ? 'a throw in the host'
+  : pressAt ? `the driver's ${pressAt.s.replace(/\s*\(.*$/, '')}`
   : stimAt ? `the stimulus ${name(stimAt)}` : lastStim && at - lastStim.f <= 60 ? `within a second of the stimulus ${name(lastStim)}` : 'a difference in play';
-const out = { dir, ran: true, ticks: { ts: T.length, rust: R.length, compared: n }, parted: first, halfParted: half, parts: parts.map(j => j < 0 ? 'the die' : `part ${j}`), kind, stimAt: stimAt ? `${stimAt.f} ${stimAt.s}`.slice(0, 200) : '', lastStim: lastStim ? `f${lastStim.f} ${lastStim.s}`.slice(0, 200) : '', excRust: excR, excTs: excT, panic, surface, onlyRust, soak: { ts: TL.find(l => l.startsWith('=== soak:'))?.slice(0, 160) ?? '', rust: RL.find(l => l.startsWith('=== soak:'))?.slice(0, 160) ?? '' } };
+const out = { dir, ran: true, ticks: { ts: T.length, rust: R.length, compared: n }, parted: first, halfParted: half, parts: parts.map(j => j < 0 ? 'the die' : `part ${j}`), kind, stimAt: pressAt ? `f${pressAt.f} ${pressAt.s}`.slice(0, 200) : stimAt ? `f${stimAt.f} ${stimAt.s}`.slice(0, 200) : '', lastStim: lastStim ? `f${lastStim.f} ${lastStim.s}`.slice(0, 200) : '', excRust: excR, excTs: excT, panic, surface, onlyRust, soak: { ts: TL.find(l => l.startsWith('=== soak:'))?.slice(0, 160) ?? '', rust: RL.find(l => l.startsWith('=== soak:'))?.slice(0, 160) ?? '' } };
 if (asJson) { console.log(JSON.stringify(out)); process.exit(first ? 1 : 0); }
 if (onlyRust.length) console.log(`fuzz-diff: the soak's own invariants, on the Rust side only: ${onlyRust.map(v => v.kind).join(', ')}\n  first: ${onlyRust[0].line}`);
 if (!first) console.log(`fuzz-diff: EQUAL on all ${n} ticks (the die, every part of the block)${half ? `; the host's half differs from tick ${half}` : ', the host\'s half too'}`);
