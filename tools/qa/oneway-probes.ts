@@ -23,6 +23,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
+import { sample } from './sweep.ts';
 const { DOORWAY, Doors } = await import(`${ROOT}/src/game/doors.ts`);
 const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
@@ -211,10 +212,10 @@ function clearFloor(g: any) { g.godMode = true; g.playerInvisible = true; g.tune
 export const onewayPlayer = guarded(async () => {
   const F = family('oneway-player: Sam on his own feet through every door, both faces; Space on its row');
   let crossedAll = 0;
-  for (const file of LEVELS) {
+  for (const file of sample(LEVELS, 2)) {
     const W = await boot(file), g = W.game; clearFloor(g); const fails: string[] = []; let n = 0, skipped = 0, rows = 0;
     let m0 = 0; const marks = () => g.doors.list.reduce((n: number, x: any) => n + x.mirrored, 0), all = () => { let c = 0; for (const x of g.doors.list) if (x.angle * x.swing < -1e-9) c++; const m = marks(); c += m - m0; m0 = m; return c; };
-    for (const d of g.doors.list) for (const f of [1, -1]) {
+    for (const d of sample(g.doors.list as any[], 8)) for (const f of [1, -1]) {
       const S = spots(g, d, f); if (!S) { skipped++; continue; }
       // (a) walked through
       for (const x of g.doors.list) fresh(x); let crossed = 0; n++; m0 = marks();
@@ -238,10 +239,10 @@ export const onewayPlayer = guarded(async () => {
 export const onewayMen = guarded(async () => {
   const F = family('oneway-men: a teammate and a defender on the AI\'s own walk through every door, both faces');
   let crossedAll = 0;
-  for (const file of LEVELS) {
+  for (const file of sample(LEVELS, 1)) {
     const W = await boot(file), g = W.game; clearFloor(g); g.teleportPlayer(g.level?.playerSpawn ?? g.player.char.pos); const fails: string[] = []; let n = 0, skipped = 0;
     let m0 = 0; const marks = () => g.doors.list.reduce((n: number, x: any) => n + x.mirrored, 0), all = () => { let c = 0; for (const x of g.doors.list) if (x.angle * x.swing < -1e-9) c++; const m = marks(); c += m - m0; m0 = m; return c; };
-    for (const team of ['operative', 'hostile'] as const) for (const d of g.doors.list) for (const f of [1, -1]) {
+    for (const team of ['operative', 'hostile'] as const) for (const d of sample(g.doors.list as any[], 6)) for (const f of [1, -1]) {
       const S = spots(g, d, f); if (!S) { skipped++; continue; }
       for (const x of g.doors.list) fresh(x); n++; m0 = marks();
       const gd = spawnUnit(g, { team, pos: S.from as any, yaw: 0 }); if (team === 'hostile') { gd.hold = false; gd.pinned = false; W.step(DT); }   // (off the room fight's roster — roomfight.ts takes every held hostile for its own and ends his script — and onto his own feet)

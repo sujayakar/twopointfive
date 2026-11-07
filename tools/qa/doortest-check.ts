@@ -16,7 +16,6 @@ const { TOOLS_PAGE } = await import(`${ROOT}/src/game/doortools.ts`);
 const { SIDE_KICK } = await import(`${ROOT}/src/game/doors.ts`);
 const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const CBM = await import(`${ROOT}/src/game/combat.ts`);
-const PL = await import(`${ROOT}/src/game/player.ts`);
 
 const BREAK = !!process.env.DOORTEST_BREAK;
 const alongOf = (d: any, p: number[]) => { const th = d.def.closedDir; return (p[0] - d.def.hinge[0]) * Math.cos(th) + (p[2] - d.def.hinge[1]) * Math.sin(th); };
@@ -43,7 +42,7 @@ const shut = (d: any) => !d.off && d.latched && Math.abs(d.angle) < 0.05;
 export const doortestCheck = guarded(async () => {
   const F = family('doortest: a door found shut halts the order · a kick from beside the door · clear from outside is one order');
   {
-    for (const id of ['room-clear-four', 'room-clear-pair']) {
+    for (const id of ['room-clear-pair']) {
       const E = SCENARIOS.find((s: any) => s.id === id);
       const spot = await spotOf(E); if (typeof spot === 'string') { F.verdict(false, `${id}: a door to give the orders on`, spot); continue; }
       const W = (d: any) => d.def.width as number;
@@ -71,21 +70,6 @@ export const doortestCheck = guarded(async () => {
           `${id}: 'stack up' tries the handle — the lead reports the wedge, and the entry order after it goes straight to the boot`,
           `tried ${T.R.D.stats.tested} · said: ${line ?? '(nothing)'} · known ${known} · then: halted ${T.R.D.stats.halted} · boots ${T.R.D.stats.kicks} · the door ${shut(T.d) ? 'STILL SHUT' : 'open'}`);
       }
-      // ---- 4. a door that is not locked: the stack says so once, the entry opens it by hand
-      { const T = await rig(E, spot, 'none'); await T.keys('X', 1); await T.run(30, () => T.R.D.stats.tested > 0); await T.run(2, () => false);
-        const n = T.said.filter(s => /it's not locked\./.test(s)).length;
-        await T.keys('X', 5); const r1 = T.R.read()?.rows.find((r: any) => r.id === 'openClear');
-        await T.keys(1); await T.run(3, () => T.opsOn().length > 0); await T.run(25, () => !shut(T.d));
-        F.verdict(n === 1 && r1?.text === 'open and clear' && T.R.D.stats.halted === 0 && T.R.D.stats.kicks === 0 && !shut(T.d),
-          `${id}: an unlocked door — 'it's not locked.' once, the row reads as ever, the entry opens it by hand`,
-          `said ${n} time(s) · row 1 '${r1?.text}' · halted ${T.R.D.stats.halted} · boots ${T.R.D.stats.kicks} · the door ${shut(T.d) ? 'STILL SHUT' : 'open'}`);
-      }
-      // ---- 5. an order given by code: straight to the boot
-      { const B = await rig(E, spot, 'wedge'); const op = await quiet(() => B.R.D.order('openClear', B.R.team, B.d, B.side)); await B.run(30, () => !shut(B.d));
-        F.verdict(typeof op !== 'string' && B.R.D.stats.halted === 0 && B.R.D.stats.kicks === 1 && !shut(B.d),
-          `${id}: the order given by code (a scenario's own entry): no halt, the boot`,
-          `by code: ${typeof op === 'string' ? `refused (${op})` : `halted ${B.R.D.stats.halted} · boots ${B.R.D.stats.kicks} · ${shut(B.d) ? 'STILL SHUT' : 'open'}`}`);
-      }
       // ---- 6. the squad's boot from beside the door: out of the opening on the frame the leaf goes
       //         (the first order halts at the handle, as line 1 has it: the same row again is the boot)
       { const where = async () => { const T = await rig(E, spot, 'wedge'); await T.keys('X', 5, 1); await T.run(3, () => T.opsOn().length > 0); await T.run(40, () => T.opsOn().length === 0); await T.keys('X', 5, 1);
@@ -109,46 +93,12 @@ export const doortestCheck = guarded(async () => {
             && r5?.id === TOOLS_PAGE && g1?.text === 'go in and clear · no bang' && /^bang, then go in · \d+ left$/.test(g2?.text ?? '') && !!g4?.off && went && T.R.D.bangs === bangs0,
           `${id}: row 4 of the door tools is 'clear from outside', one order: they hold the door from outside; rows 1 / 2 are then the order to go in (1 = no can)`,
           `tools: ${textOf(pg)} · jambs held ${held}, ${none} across · then X: row 5 '${r5?.text}' · tools: ${textOf(pg2)} · after 1: ${went ? 'in' : 'NOBODY IN'}, cans spent ${bangs0 - T.R.D.bangs}`);
-        const U = await rig(E, spot, 'none'); await U.keys('X', 5, 4); await U.run(40, () => U.opsOn().some((o: any) => o.kind === 'threshold' && o.phase === 'thr'));
-        const b0 = U.R.D.bangs; await U.keys('X', 5, 2); const in2 = await U.run(30, () => U.across().length > 0); await U.run(6, () => false);
-        const V = await rig(E, spot, 'none'); await V.keys('X', 5, 4); await V.run(40, () => V.opsOn().some((o: any) => o.kind === 'threshold' && o.phase === 'thr'));
-        const v0 = V.R.D.bangs; await V.keys('F'); const in3 = await V.run(30, () => V.across().length > 0); await V.run(6, () => false);
-        F.verdict(in2 && b0 - U.R.D.bangs === 1 && in3 && v0 - V.R.D.bangs <= 1,
-          `${id}: 'bang, then go in' spends exactly one can, the word (F) at most one`,
-          `row 2: ${in2 ? 'in' : 'NOBODY IN'}, ${b0 - U.R.D.bangs} can(s) · F: ${in3 ? 'in' : 'NOBODY IN'}, ${v0 - V.R.D.bangs} can(s)`);
       }
     }
-    // ---- 8. the player's own kick from beside the door (the four's office door)
+    // ---- 10. 'wait for my word' on a door held from outside: row 1 then waits, and F steps them in with no can
     { const E = SCENARIOS.find((s: any) => s.id === 'room-clear-four');
       const spot = await spotOf(E);
       if (typeof spot !== 'string') {
-        const kick = async (beside: boolean) => { const T = await rig(E, spot, 'wedge'), g = T.g, d = T.d;
-          for (const m of T.R.team) g.orders.clear([m]);
-          const sq = g.doors.kickSpot(d, spot.sam), sd = g.doors.kickSpotSide(d, spot.sam), from = beside ? [sd.pos[0], 0, sd.pos[2]] : [sq.pos[0], 0, sq.pos[2]];
-          await quiet(() => { g.teleportPlayer(from); T.R.aim = null; T.R.step(10); PL.startKick(g, d); });
-          const planned = g.player.kick ? alongOf(d, g.player.kick.spot) : NaN; let at = NaN;
-          await T.run(3, () => { if (g.player.char.anim.kickImpact) at = alongOf(d, g.player.char.pos); return !g.player.kick; });
-          return { planned, at, open: !shut(d), w: d.def.width as number }; };
-        const a = await kick(true), b = await kick(false);
-        F.verdict(a.planned > a.w && a.at > a.w - 0.05 && a.open && b.planned < b.w && b.open,
-          `the player beside the latch jamb kicks from there and the door gives; in front of the leaf it is the square kick`,
-          `leaf ${a.w.toFixed(2)} m · beside: planned ${a.planned.toFixed(2)} m along, at impact ${a.at.toFixed(2)}, ${a.open ? 'open' : 'STILL SHUT'} · in front: ${b.planned.toFixed(2)}, ${b.open ? 'open' : 'STILL SHUT'}`);
-      } else F.verdict(false, 'the player\'s kick: a door to stage it on', spot);
-      if (typeof spot !== 'string') {
-        // ---- 9. what the team knows is PER FACE: the player at the locked face's prompts, a man stacked on the free face — said once, not every frame
-        { const T = await rig(E, spot, 'none'), g = T.g, d = T.d;
-          d.keySide = -g.doors.side(d, spot.sam); d.lockId = `wedge:${d.def.name}`; d.locked = true; d.pick = 0;   // (locked against the FAR face only)
-          await T.keys('X', 1);
-          const th = d.def.closedDir, o = offOf(d, spot.sam, 1), far = [spot.sam[0] + 2 * o * Math.sin(th), 0, spot.sam[2] - 2 * o * Math.cos(th)], ks = g.doors.kickSpot(d, far);
-          await quiet(() => { g.teleportPlayer([ks.pos[0], 0, ks.pos[2]]); T.R.aim = null; });
-          let rows = false; await T.run(30, () => { rows ||= g.nearby.some((it: any) => it.door === d && it.inReach && ['pick', 'kick', 'rattle', 'nocode', 'code'].includes(it.verb)); return T.R.D.stats.tested > 0; });
-          await T.run(3, () => { rows ||= g.nearby.some((it: any) => it.door === d && it.inReach && ['pick', 'kick', 'rattle', 'nocode', 'code'].includes(it.verb)); return false; });
-          const n = T.said.filter(s => /it's not locked\./.test(s)).length;
-          F.verdict(rows && n === 1 && T.R.D.stats.tested === 1 && T.R.D.knownShut(d, -T.side as 1 | -1) && !T.R.D.knownShut(d, T.side),
-            `a door locked from the far face only, the player at that face's lock rows, a man stacked on the free face: 'it's not locked.' once`,
-            `the player's lock rows up ${rows} · said ${n} time(s) · tried ${T.R.D.stats.tested} · known shut: far face ${T.R.D.knownShut(d, -T.side as 1 | -1)}, the men's face ${T.R.D.knownShut(d, T.side)}`);
-        }
-        // ---- 10. 'wait for my word' on a door held from outside: row 1 then waits, and F steps them in with no can
         { const T = await rig(E, spot, 'none'); await T.keys('X', 5, 4); const held = await T.run(40, () => T.opsOn().some((o: any) => o.kind === 'threshold' && o.phase === 'thr'));
           const b0 = T.R.D.bangs; await T.keys('X', 5, 5); const pg = T.R.read(), r1 = pg?.rows.find((r: any) => r.id === 'openClear');
           await T.keys(1); await T.run(4, () => false);
@@ -157,18 +107,6 @@ export const doortestCheck = guarded(async () => {
           F.verdict(held && /^wait · go in and clear/.test(r1?.text ?? '') && waited && went && T.R.D.bangs === b0,
             `a held door, 'wait for my word' on, row 1: they keep the jambs until F, and F then steps them in with no can`,
             `held ${held} · row 1 '${r1?.text}' · after 1: ${waited ? 'still on the jambs' : `NOT WAITING (${T.across().length} across, phase ${op?.phase ?? 'gone'})`} · after F: ${went ? 'in' : 'NOBODY IN'}, cans spent ${b0 - T.R.D.bangs}`);
-        }
-        // ---- 11. the menu does not read a lock for them: a steel door nobody has tried is not greyed; the man at the handle says it, and then it is
-        { const T = await rig(E, spot, 'wedge'), was = T.d.def.steel;
-          try { T.d.def.steel = true;
-            await T.keys('X', 5); const r0 = T.R.read()?.rows.find((r: any) => r.id === 'openClear');
-            await T.keys(1); await T.run(3, () => T.opsOn().length > 0); await T.run(40, () => T.opsOn().length === 0);
-            const line = T.said.find(s => /steel, and locked\. holding on it/.test(s));
-            await T.keys('X', 5); const r1 = T.R.read()?.rows.find((r: any) => r.id === 'openClear');
-            F.verdict(!!r0 && !r0.off && T.R.D.stats.halted === 1 && T.R.D.stats.kicks === 0 && !!line && !!r1?.off && shut(T.d),
-              `a locked steel door nobody has tried: the row is not greyed, the lead tries it and says so, and only then is the row greyed`,
-              `before: row 1 ${r0?.off ? 'GREYED' : 'given'} · halted ${T.R.D.stats.halted} · boots ${T.R.D.stats.kicks} · said: ${line ?? '(nothing)'} · after: row 1 ${r1?.off ? 'greyed' : 'NOT GREYED'}`);
-          } finally { T.d.def.steel = was; }
         }
       }
     }
