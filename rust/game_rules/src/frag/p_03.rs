@@ -43,7 +43,7 @@ pub fn taken_by(g: &mut crate::game::Game, l: Option<usize>, gd: GuardId, dz: V3
         let q = if on_leg { s.as_ref().unwrap().goal.unwrap() } else { p };
         if flat(q, me) > 8.5 { continue; }
         if on_leg { go.push(q); }
-        else if s.is_some() || g.time < g.gd[o].stagger_until || g.time < g.gd[o].dazzled_until || flat(p, dz) > g.k.frag.flee_m || { let h = head_of(g, oc); exposed_to(g, from, p, h, None) <= 0.0 } { stay.push(p); }
+        else if s.is_some() || crate::control::man::staggered(g, o) || crate::control::man::blind(g, o) || flat(p, dz) > g.k.frag.flee_m || { let h = head_of(g, oc); exposed_to(g, from, p, h, None) <= 0.0 } { stay.push(p); }
     }
     if team == crate::teams::Team::Operative {
         for pl in crate::seats::men(g) {
@@ -136,7 +136,7 @@ fn tick_man(g: &mut Game, i: usize, it: ItemId, at: V3, eye_at: V3, wise: &crate
         if d > m::max(g.k.frag.see_m, g.k.frag.flee_m) { return; }
         let mut when = -1.0;
         if same_side(live!(g, i).side, team) { when = g.time + 0.1; }
-        else if g.time >= g.gd[gd].dazzled_until {
+        else if !crate::control::man::blind(g, gd) {
             let head = head_of(g, c);
             let to = m::atan2(at[0] - pos[0], at[2] - pos[2]);
             let mut off = to - g.ch[c].aim_yaw;
@@ -157,7 +157,7 @@ fn tick_man(g: &mut Game, i: usize, it: ItemId, at: V3, eye_at: V3, wise: &crate
         if when >= 0.0 { live!(g, i).knows.set(gd, when); }
     }
     match live!(g, i).knows.get(gd).copied() { Some(k) if g.time >= k => {} _ => return }
-    if !live!(g, i).shouted.has(team) && !same_side(live!(g, i).side, team) && g.time >= g.gd[gd].stagger_until {
+    if !live!(g, i).shouted.has(team) && !same_side(live!(g, i).side, team) && !crate::control::man::staggered(g, gd) {
         live!(g, i).shouted.add(team);
         crate::game::game_say(g, gd, "grenade!", None, None, None);
         g.stats.frag.shouts += 1;
@@ -227,7 +227,7 @@ fn tick_man(g: &mut Game, i: usize, it: ItemId, at: V3, eye_at: V3, wise: &crate
     }
     if flee_of(g, i, gd).is_some() { return; }
     // in its line and close enough to matter: move. (Blind or folded, he cannot.)
-    if flat(pos, dz) > g.k.frag.flee_m || g.time < g.gd[gd].stagger_until || g.time < g.gd[gd].dazzled_until { return; }
+    if flat(pos, dz) > g.k.frag.flee_m || crate::control::man::staggered(g, gd) || crate::control::man::blind(g, gd) { return; }
     let head = head_of(g, c);
     let burst: V3 = [dz[0], dz[1] + g.k.frag.lift, dz[2]];
     if exposed_to(g, burst, pos, head, None) <= 0.0 {   // a wall already between him and it: he stays behind it, down
@@ -294,7 +294,7 @@ pub fn frag_flee_transition(g: &mut crate::game::Game, gd: GuardId) {
     let n = match g.m.frag.books.as_ref() { Some(b) if !b.is_empty() => b.len(), _ => return };
     for i in 0..n {
         if let Some(s) = flee_of(g, i, gd) {
-            if g.time < g.gd[gd].stagger_until { return; }
+            if crate::control::man::staggered(g, gd) { return; }
             if s.goal.is_some() && arrived(&s) {
                 if let Some(Some(row)) = live!(g, i).flee.get_mut(gd) { row.crouch = Some(true); }
             }
@@ -308,7 +308,7 @@ pub fn frag_flee_propose(g: &crate::game::Game, gd: GuardId) -> Option<crate::ga
     let n = match g.m.frag.books.as_ref() { Some(b) if !b.is_empty() => b.len(), _ => return None };
     for i in 0..n {
         if let Some(s) = flee_of(g, i, gd) {
-            if g.time < g.gd[gd].stagger_until { return None; }
+            if crate::control::man::staggered(g, gd) { return None; }
             return Some(s);
         }
     }
@@ -445,7 +445,7 @@ fn tick_carrier(g: &mut Game, ci: usize, dt: f64) {
     let c = g.gd[gd].ch;
     if !js::truthy(car!(g, ci).frags) { return; }
     if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].held.is_some() || { let r = crate::owner::own().runner; crate::owner::has_him(g, gd, r) } { car!(g, ci).wind = None; return; }
-    let out = g.time < g.gd[gd].stagger_until || g.time < g.gd[gd].dazzled_until;
+    let out = crate::control::man::staggered(g, gd) || crate::control::man::blind(g, gd);
     let head = head_of(g, c);
     if car!(g, ci).wind.is_some() { tick_wind(g, ci, gd, c, out); return; }
     if out || frag_flee(g, gd).is_some() { clear_clocks(g, ci); return; }
@@ -539,7 +539,7 @@ fn sights(g: &mut Game, gd: GuardId, c: CharId, head: V3, p: V3, hd: Option<V3>)
     let pos = g.ch[c].pos;
     let mut off = m::atan2(p[0] - pos[0], p[2] - pos[2]) - g.ch[c].aim_yaw;
     off = m::atan2(m::sin(off), m::cos(off));
-    m::abs(off) < 0.785 && g.time >= g.gd[gd].dazzled_until && flat(p, pos) < 16.0 && !crate::scene_collision::segment_blocked(g, head, hd.unwrap_or_else(|| v3::add(p, [0.0, 1.5, 0.0])), None, None, None)
+    m::abs(off) < 0.785 && !crate::control::man::blind(g, gd) && flat(p, pos) < 16.0 && !crate::scene_collision::segment_blocked(g, head, hd.unwrap_or_else(|| v3::add(p, [0.0, 1.5, 0.0])), None, None, None)
 }
 
 /// Does this seat's man count in the bunch (`v` is the game with that seat's set in).
@@ -656,7 +656,7 @@ pub fn free(g: &mut crate::game::Game, gd: GuardId) -> Option<usize> {
     let b = g.m.frag.def_books.as_ref()?;
     let ci = b.carriers.iter().position(|x| x.gd == gd)?;
     if !js::truthy(b.carriers[ci].frags) || b.carriers[ci].wind.is_some() { return None; }
-    if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].held.is_some() || { let r = crate::owner::own().runner; crate::owner::has_him(g, gd, r) } || g.time < g.gd[gd].stagger_until || g.time < g.gd[gd].dazzled_until || frag_flee(g, gd).is_some() || g.time - book!(g).last_t < g.k.frag.def_gap { return None; }
+    if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].held.is_some() || { let r = crate::owner::own().runner; crate::owner::has_him(g, gd, r) } || crate::control::man::staggered(g, gd) || crate::control::man::blind(g, gd) || frag_flee(g, gd).is_some() || g.time - book!(g).last_t < g.k.frag.def_gap { return None; }
     Some(ci)
 }
 

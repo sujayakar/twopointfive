@@ -114,7 +114,7 @@ pub fn known(g: &mut crate::game::Game, gd: GuardId) -> Vec<crate::runner::Foe> 
 
 /// the nearest enemy plainly in his eyes inside `closeM`; nobody for a man with magnesium in his eyes   (runner.ts closeFoe)
 pub fn close_foe(g: &mut crate::game::Game, gd: GuardId) -> Option<CharId> {
-    if g.time < g.gd[gd].dazzled_until { return None; }
+    if crate::control::man::blind(g, gd) { return None; }
     let mut best: Option<CharId> = None;
     let mut bd = g.k.runner.close_m;
     let p = crate::seats::faced_man(g, gd);

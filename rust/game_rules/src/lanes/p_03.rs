@@ -292,7 +292,7 @@ pub fn lane_gate(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if g.time - last_look < 0.2 { return false; }
     let now = g.time;
     s(g).look.set(gd, now);
-    if close_fight(g, &crate::seats::here(g), gd) || g.time < g.gd[gd].dazzled_until || crate::frag::frag_flee(g, gd).is_some() { return false; }
+    if close_fight(g, &crate::seats::here(g), gd) || crate::control::man::blind(g, gd) || crate::frag::frag_flee(g, gd).is_some() { return false; }
     let here = in_mask(g, Some(&m), pos_of(g, gd));
     let Some(mut first) = ahead(g, &m, gd, here) else { return false };
     if !here {

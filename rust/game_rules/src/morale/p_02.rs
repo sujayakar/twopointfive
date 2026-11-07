@@ -43,7 +43,7 @@ pub fn step(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
         let st = g.m.morale.state_of.get_mut(gd).unwrap();
         if st.calls > 0.0 { st.call_t += dt; }
     }
-    let rooted = g.time < g.gd[gd].stagger_until;
+    let rooted = crate::control::man::staggered(g, gd);
     let act = row(g, gd).act;
     if act == MoraleAct::Duck {
         {
