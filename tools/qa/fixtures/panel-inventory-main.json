@@ -2938,85 +2938,9 @@
  },
  {
   "path": "Renderer fx ▸ SDF character rig",
-  "kind": "slider",
-  "label": "joint blend ×",
-  "min": 0,
-  "max": 2,
-  "step": 0.05,
-  "title": "× the per-joint smooth-union radii of render/sdfrig.ts RIG_K (knee / elbow ~4 / 3 cm, shoulder line 5, arms against the trunk 2): 1 = as authored, 0 = the plain union of the cones",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Renderer fx ▸ SDF character rig",
-  "kind": "toggle",
-  "label": "(iii) EXPERIMENT: soft character shadows in the direct light",
-  "title": "the direct estimators' shadow rays skip characters and multiply in an ANALYTIC visibility instead: toward the emitter's centre with its angular radius as the cone, each limb blocks its exact strip share of the light's disc (or, in the march form, the classic SDF soft-shadow query over the union field) — deterministic per pixel per light, so a walking man's penumbra needs no history to converge; the boxes' visibility stays ray-traced. Sharp-class lights only unless the next row",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Renderer fx ▸ SDF character rig",
-  "kind": "toggle",
-  "label": "soft: analytic strip form (else sphere march)",
-  "title": "true = per cone the closest approach of the shadow segment to its axis, the limb as a strip across the disc, two circular-segment areas (exact for one straight limb, thin limbs partial); false = the field marched with iq's h ∕ (t·tan θ) rule + Aaltonen's triangulation, smoothstep remap (one edge per light, thin limbs read solid)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Renderer fx ▸ SDF character rig",
   "kind": "toggle",
   "label": "character self-shadow",
   "title": "a man's own body shadows him in the direct light: the shadow rays from his pixels test HIS OWN round cones (his mesh under mesh shadows) from an origin lifted 3.5 cm off the surface and 5 cm along the ray, counting only what the ray enters beyond that (common.wgsl selfShadowT) — his hunched trunk darkens the tops of his thighs, boots and tucked forearms that the plain owner skip left glowing under a light behind him. Default ON at every tier; off = every part of him lit as if the rest of him were not there (?noselfshadow from boot)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Renderer fx ▸ SDF character rig",
-  "kind": "toggle",
-  "label": "soft: broad-class lights too",
-  "title": "apply the query to ceiling panels / area lights as well; off = the sharp class only (torches, lamps, the moon) — a panel's character shadow is all penumbra already, and its disc dwarfs a limb, where the one-strip-per-man rule under-counts a whole body's cover",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Renderer fx ▸ SDF character rig",
-  "kind": "toggle",
-  "label": "soft: smooth union in the march",
-  "title": "the march form folds the cones with the smooth union (else their plain min — the blend only shows within a joint's radius of a joint)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Renderer fx ▸ SDF character rig",
-  "kind": "slider",
-  "label": "soft: march steps",
-  "min": 4,
-  "max": 64,
-  "step": 1,
-  "title": "the march form's step budget per character crossed (20; sphere steps floored at 1.2 cm; out of steps keeps the clearance found so far)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Renderer fx ▸ SDF character rig",
-  "kind": "slider",
-  "label": "soft: light angular radius ×",
-  "min": 0.25,
-  "max": 3,
-  "step": 0.05,
-  "title": "× every light's angular radius in the query: 1 = physical (the emitter's authored radius over its distance), 2 = penumbrae twice as wide, ¼ = nearly hard",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Renderer fx ▸ SDF character rig",
-  "kind": "slider",
-  "label": "soft: min half-angle (°)",
-  "min": 0.05,
-  "max": 3,
-  "step": 0.05,
-  "title": "the smallest angular radius a light is given (0.35°): a 1.5 cm bezel two metres off would otherwise draw an edge inside a pixel that the raster then aliases",
   "def": false,
   "extra": ""
  },

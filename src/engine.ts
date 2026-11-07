@@ -715,7 +715,7 @@ export class Engine {
     const t0 = performance.now();
     this.world.glassEnabled = this.settings.glass; this.world.glassFocus = cam.focus;   // (the pane list is nearest-to-the-look-at first, and empty with the experiment off)
     this.world.markingsEnabled = this.settings.markings;   // markings: off = every box uploads slot 0 and its plain albedo in the secondary row (the frame as it was)
-    this.world.rig = this.rigFit ? { r0: this.rigFit.r0, r1: this.rigFit.r1, kPad: RIG_KPAD * Math.max(1, this.settings.sdfRigK ?? 1), byOwner: this.rigFit.byOwner } : null;   // the SDF rig: the fit packed into this frame's proxy list at upload (r0 over the hand radius, r1 in misc's top byte, the cull sphere fitted + the smooth union's bulge at k ≥ 1 — never tighter than the k = 1 sphere: it is also the mesh shadows' broad phase at ultra, and a finger can reach a few cm past the forearm cone) — null = no fit attached: the list as the game wrote it
+    this.world.rig = this.rigFit ? { r0: this.rigFit.r0, r1: this.rigFit.r1, kPad: RIG_KPAD, byOwner: this.rigFit.byOwner } : null;   // the SDF rig: the fit packed into this frame's proxy list at upload (r0 over the hand radius, r1 in misc's top byte, the cull sphere fitted + the smooth union's bulge at k ≥ 1 — never tighter than the k = 1 sphere: it is also the mesh shadows' broad phase at ultra, and a finger can reach a few cm past the forearm cone) — null = no fit attached: the list as the game wrote it
     this.world.motionIds = this.settings.motionIds !== false;   // motion identity: keyed dynamic boxes hand the g-buffer last frame's index of their key (off = the bare index, the old rule)
     { const mt = Math.max(0.005, Math.min(0.2, this.settings.markingTexel)); if (this.settings.markings && mt !== this.world.markingTexel) this.world.repackMarkings(mt); }   // the base texel moved (the review page's A/B): every list repacked at the new lattice
     // THE PLANNERS' PACE (render/planPace.ts, render/steps.ts): this frame's allowance of planning, between the order the statics are drawn in (made
@@ -764,7 +764,7 @@ export class Engine {
     const decalsOn = this.decalsOn;      // FrameFlags.Decals this frame (setting ∧ a list attached ∧ something in it)
     const partOn = this.particlesOn;     // FrameFlags.Particles this frame (setting ∧ a Particles attached): its emits are dealt slots and uploaded now, stepped after the cascades, drawn after the composite
     const rtOn = s.rtReflect;            // RT reflections this frame (frame.rtCfg.w = the divisor, 0 while off) — and Gloss is then held DOWN whatever settings.gloss says (the reflection pass covers the polished floors: rtReflect ⊃ gloss)
-    const rigBits = (s.charSoftShadow ? 4 : 0) | (s.charSoftShadow && s.charSoftAnalytic ? 8 : 0) | (s.charSoftSmooth ? 16 : 0) | (s.charSoftBroad ? 32 : 0) | (s.charSelfShadow ? 64 : 0) | (s.meshShadowsNear ? 128 : 0);   // the SDF character rig's EXTRAS this frame (frame.rigCfg.x: 4/8/16/32 the soft character query · 64 character self-shadow · 128 mesh shadows near-only; bits 1 and 2 retired — the round cones themselves are unconditional)
+    const rigBits = (s.charSelfShadow ? 64 : 0) | (s.meshShadowsNear ? 128 : 0);   // the SDF character rig's EXTRAS this frame (frame.rigCfg.x: 64 character self-shadow · 128 mesh shadows near-only; the bits under 64 are free — the round cones themselves are unconditional)
     this.particles?.prepare(dt, partOn, s.particleBirths);
     // froxel volumetrics (Phase 2b): the grid follows the preset's rows / slices and the window's aspect (a preset hop or a reshape re-makes it and restarts its history; the render scale never
     // touches it); a spell off lets the volumes go after ten seconds. FrameFlags.FroxelVol is up exactly while a grid is dispatched.
@@ -852,8 +852,7 @@ export class Engine {
       sharpCfgC: [decouple ? this.jitter[0] : 0, decouple ? this.jitter[1] : 0,   // DECOUPLED JITTER: what every internal ↔ output texel map adds under it (0 = one raster jitter, the sharp path as it was)
         (Math.max(0, Math.min(3, Math.round(s.sharpSliver))) & 3) | ((Math.max(0, Math.min(3, Math.round(s.sharpDiag))) & 3) << 4) | ((Math.max(0, Math.min(64, Math.round(s.sharpSliverCap))) & 127) << 8) | (s.dnShadowOccl ? 1 << 15 : 0),   // .z = the SLIVER rule | diag paint << 4 | per-tile ray cap << 8 (sharp_direct.wgsl; 0 = the fallback as it was) — an exact small integer
         s.gbaaClamp ? 1 : 0],   // .w = GBAA's same-surface clamp (gbaa.wgsl; 0 = the blend as it was)
-      rigCfg: [rigBits, Math.max(4, Math.min(64, Math.round(s.charSoftSteps ?? 20))), Math.max(0.05, s.charSoftK ?? 1), Math.tan(Math.max(0.02, Math.min(5, s.charSoftMinDeg ?? 0.35)) * Math.PI / 180)],   // the SDF character rig: the extras' bits (0 = the plain round-cone loops) + the soft query's numbers
-      rigCfgB: [Math.max(0, Math.min(3, s.sdfRigK ?? 1)), 0, 0, 0.012],   // × the joint blend radii, closest-hit steps, its epsilon, the soft march's smallest step,
+      rigCfg: [rigBits, 0, 0, 0], rigCfgB: [0, 0, 0, 0],   // (.x the rig's two bits; the rest free: the soft shadow and smooth union trials' numbers until 2026-11-07)
     };
     this.froxelPrevNear = froxNear;
     this.passes.smokeSlots = fp.numSmoke;   // (what the shaders are told: 0 = no smoke march anywhere this frame, so the smoke diffusion's blur chain has no reader — passes.ts)
