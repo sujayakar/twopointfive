@@ -13214,14 +13214,12 @@ impl Default for KitdealK { fn default() -> Self { Self::zeroed() } }
 #[derive(Clone, Copy, Debug)]
 pub struct CutK {
     pub on: bool,
-    pub swap: bool,
 }
 impl CutK {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         CutK {
             on: false,
-            swap: false,
         }
     }
 }
@@ -14204,7 +14202,7 @@ pub fn page_kitdeal() -> KitdealK {
 }
 
 pub fn page_cut() -> CutK {
-    crate::knobs::CutK { on: true, swap: true }
+    crate::knobs::CutK { on: true }
 }
 
 /// every knob table
