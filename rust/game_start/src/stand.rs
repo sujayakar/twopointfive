@@ -91,19 +91,32 @@ pub fn settle(g: &mut Game) {
     sim::state::state(g.sim).head.homes |= 2 | 4 | 32 | 128 | 256;
 }
 
+/// the canvas of a host that draws nothing (headless.ts standUp `canvas`)
+fn canvas() -> game::host_hud::View { game::host_hud::View { client_width: 1600.0, client_height: 1000.0, width: 1600.0, height: 1000.0 } }
+
 /// THE HOST'S OWN INPUT AND CAMERA for a game that stands (headless.ts standUp): a detached Input with the cursor where the harness always put it,
 /// a canvas of 1600 by 1000, a follow camera on the level's spawn, and the box world listed once.
 pub fn host_new(g: &mut Game) -> Host {
     let input = game::input::input_detached(g);
     g.tab.input[input].mouse_x = 800.0;
     g.tab.input[input].mouse_y = 500.0;
-    let canvas = game::host_hud::View { client_width: 1600.0, client_height: 1000.0, width: 1600.0, height: 1000.0 };
+    let canvas = canvas();
     let cam = g.tab.camera.push(game::camera::FollowCamera::blank());
     g.tab.camera[cam].target = g.level.player_spawn;
     g.tab.camera[cam].aspect = canvas.width / canvas.height;
     game::camera::follow_camera_rebuild(g, cam);
     game::host_api::b_01::host_world_upload(g);
+    // (the host's camera and keys are handed to the game here, once, as standGame hands a TypeScript host's: game.ts hostCam)
+    g.host_cam = Some(cam);
+    g.host_input = Some(input);
     Host { input, cam, canvas }
+}
+
+/// THE HOST OF A GAME THAT WAS HANDED ITS ROWS ELSEWHERE (a start made by another host and brought across): the game's own `host_cam` and
+/// `host_input`, on this host's canvas. None where the game was handed none.
+pub fn host_of(g: &Game) -> Option<Host> {
+    let (cam, input) = (g.host_cam?, g.host_input?);
+    Some(Host { input, cam, canvas: canvas() })
 }
 
 /// STAND A GAME on the level file `data` (the file's text, parsed).

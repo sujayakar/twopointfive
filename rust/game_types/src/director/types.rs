@@ -168,8 +168,6 @@ pub struct Director {
     pub run: Option<DirectorRunId>,
     pub last_run: Option<crate::director::DirectorLastRun>,
     pub frame: Option<crate::director::DirectorFrame>,
-    pub cam: Option<CameraId>,
-    pub input: Option<InputId>,
     pub serial: f64,
     pub seen: JsSet<u32>,
     pub exiting: bool,
@@ -188,8 +186,6 @@ impl Director {
             run: None,
             last_run: None,
             frame: None,
-            cam: None,
-            input: None,
             serial: 0.0,
             seen: JsSet::new(),
             exiting: false,
@@ -2196,22 +2192,6 @@ impl LintManifestLevel {
 }
 impl Default for LintManifestLevel { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/director.ts:453 attach(o), src/game/director.ts:453)
-#[derive(Clone, Copy, Debug)]
-pub struct DirectorAttachO {
-    pub cam: Option<CameraId>,
-    pub input: Option<InputId>,
-}
-impl DirectorAttachO {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DirectorAttachO {
-            cam: None,
-            input: None,
-        }
-    }
-}
-impl Default for DirectorAttachO { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/director.ts:478 objective ->, src/game/director.ts:478)
 #[derive(Clone, Debug)]
