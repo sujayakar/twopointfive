@@ -20,7 +20,7 @@ import { NO_VIEW } from '../../src/view/seatview';
 import { faceHere, FACE_WASM } from './face-build.ts';
 import { recorded } from './record';
 import { Drawn, drawRefused } from '../../src/draw/drawn';
-import { Section } from '../../src/draw/sections';
+import { Want } from '../../src/draw/sections';
 import { fogFrom } from '../../src/draw/fog';
 import { readFileSync, existsSync, writeFileSync, appendFileSync } from 'node:fs';
 
@@ -545,7 +545,7 @@ export class RustHost {
   // so the apply leaves a row of its own beside the list. Put back on the list's row here. Belongs in the schema: `hover` a reference into `nearby`.
   private hoverRow(): void { const g = this.g, hv = g.hover, N = g.nearby; if (!hv || !Array.isArray(N) || N.includes(hv) || OFF.has('hoverrow')) return; const r = N[g.player?.nearSel ?? 0]; if (r && r.kind === hv.kind && r.verb === hv.verb) g.hover = r; }
   /** WHAT THE PICTURE IS TOLD BY SECTION (src/draw): the fog's, as the page he plays asks */
-  get drawn(): Drawn { return this.drawnOf ??= new Drawn(this.F.X, this.F.mem, 1 << Section.fog); } private drawnOf: Drawn | null = null;
+  get drawn(): Drawn { return this.drawnOf ??= new Drawn(this.F.X, this.F.mem, Want.fog); } private drawnOf: Drawn | null = null;
   private after(R: any): void { this.drawn.take(this.h); fogFrom(this.g.fogOfWar.frame, this.drawn); this.asks?.after(); this.took(R); this.hoverRow(); this.visApplied = this.g.player?.visibility; this.hoverApplied = this.g.hover; this.dieRef = this.g.dice?.n; this.clockRef = this.clock(); this.putRef = this.B.PUT_BACKS.n; if (!this.startDue) this.loadsRef = this.g.chronicle?.counts?.loads ?? 0; }
   private copyBlock(): void { const t = now(), mine = this.tsBlock(), theirs = this.rustBlock(); mine.set(theirs.subarray(0, mine.length)); if (this.audit) this.lastBlock = mine.slice(); this.T.block += now() - t; }
   /** THE FILTERED APPLY: the listed fields of what changed since the last one, and the step's out events */

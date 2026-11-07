@@ -95,7 +95,7 @@ impl Men {
     fn man(&mut self, g: &Game, id: CharId) {
         let c = &g.ch[id];
         // (a man with no pose yet has no bones to be drawn by)
-        if c.skel.joint_data.is_empty() { return; }
+        if c.skel.joint_data.is_empty() || c.bones.get(game::character::Bone::Hips).is_none() { return; }
         let (side, suit) = dress(g, id);
         let s = game::stature::stature_of(g, id);
         let f3 = |v: [f64; 3]| v.map(|x| x as f32);
