@@ -18,7 +18,7 @@
 // steps INTO THE LOADOUT, where W S A D are its rows, Enter deploys (on a row with a press of its own: that press) and Esc steps back to the rows. So from a
 // row, Enter Enter is in the game with what the page shows; Esc on the rows is the card behind (the controls and the sandbox row). A click anywhere moves the
 // keys to where it landed. No held keys, no digits.
-// A ROW OF THE SHORT LIST KEEPS ITS SETTINGS: highlighted, it puts its own hour on the Hour row (the barracks by day) until an hour is picked by hand, and
+// A ROW OF THE SHORT LIST KEEPS ITS SETTINGS: highlighted, it puts its own hour on the Hour row (where a row sets one: none does today) until an hour is picked by hand, and
 // deployed with the short list's settings still on it the page it loads is that pick's own URL (scene/picks.ts pickHref) — so the pause card's 'Next' and
 // the 'played' mark work as they did off the short list. Anything else is the mission list's own link for the row. Coming onto a short-list row puts ITS
 // hour on the Hour row; leaving it puts the player's own back (an hour picked by hand on a row is the player's from then on).
