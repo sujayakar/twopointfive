@@ -32,7 +32,7 @@
 import { resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
 const ROOT = resolve(import.meta.dir, '../..');
-const LEVEL = 'quiet-yard.json', PIN = 0.35, KNOCK = 0.6;
+const LEVEL = 'vault.json', PIN = 0.35, KNOCK = 0.6;
 type P3 = [number, number, number];
 /** the places, in the level's own metres (x, z) */
 const GATE_OUT: P3 = [7.0, 0, 14.25], GATE_IN: P3 = [9.7, 0, 14.3], MOUTH: P3 = [9.3, 0, 12.7], HIDE: P3 = [8.9, 0, 9.0], READY: P3 = [9.5, 0, 10.9], LURE: P3 = [12.0, 0, 18.4], OUT: P3 = [10.2, 0, 14.2], DOOR: P3 = [13.8, 0, 12.75];

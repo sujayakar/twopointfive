@@ -1,6 +1,6 @@
 // A TUTORIAL MISSION'S FRAME — the check behind src/game/rails.ts (RAILS.on: on in the page, ?rails=0; off on the frozen stand, TPS_RAILS=1).
 //   bun run tools/qa/rails-check.ts [--verbose]      (also `probes.ts rails`, family missions; run it on BOTH stands: plain, and TPS_PROFILE=shipped in front)
-// Headless, on levels/tut-sky.json (the first tutorial mission), the switch thrown by hand after each stand-up. Nothing here looks at a picture.
+// Headless, on levels/tut-team.json (the squad's tutorial mission), the switch thrown by hand after each stand-up. Nothing here looks at a picture.
 //   1. the level's lesson block is whole (lesson-check's own faults, the rails keys among them);
 //   2. SWITCH OFF: the level is its mission alone — no lesson, the player stands on the floor where the file starts him, nothing is locked (the command key orders the
 //      squad on the first step), the level's program is not started;
@@ -44,7 +44,7 @@ const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { RAILS, RAILS_STATS } = await import(`${ROOT}/src/game/rails.ts`);
 const { checkLesson } = await import(`${ROOT}/src/game/lesson.ts`);
 const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
-const VERBOSE = process.argv.includes('--verbose'), LEVEL = 'tut-sky', DT = 1 / 60;
+const VERBOSE = process.argv.includes('--verbose'), LEVEL = 'tut-team', DT = 1 / 60;
 const YARD = [11.4, 0.02, 16.4];
 type V = number[];
 const flat = (a: V, b: V) => Math.hypot(a[0] - b[0], a[2] - b[2]);
