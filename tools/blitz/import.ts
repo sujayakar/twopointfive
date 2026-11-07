@@ -12,13 +12,13 @@
 // AN ECHO (schema `echo`, hand2.cjs H.bridge.echo): a field Rust owns that the TypeScript cannot hold (a place in a level script, a memo a module keeps where the walk cannot write it, the copy of the box world in the module that
 // holds it). A whole apply keeps a copy of its bytes beside the object and writes nothing; the puppet's export writes those bytes back (export.ts). So a re-export after an apply is Rust's bytes everywhere, and such a field needs no class of its own in a host's compare.
 import GAME_REF_LIST from './game-ref.json';
-import { SCHEMA, parse, bookOf, seedBook, helpersOf, compiledExpr, LOOSE, ECHO, LENS , forGame } from './export';
+import { SCHEMA, parse, bookOf, seedBook, helpersOf, compiledExpr, LOOSE, ECHO, LENS, forGame, classWord, isGameSide } from './export';
 import { rawKey, PUT_BACKS } from '../../src/math/side';
 
 export type Hooks = { made?: Record<string, (row: any, g: any) => void>; gone?: Record<string, (row: any, g: any) => void>; classes?: Record<string, { prototype: object }>; values?: Record<string, any> };
 export type Puppet = { lists: { step: Set<string>; start: Set<string> }; start: boolean; rows?: any; ctx?: any; slowTable?: { type: string; field: string }[]; vals?: string[] };
 export type ApplyOpts = { only?: Set<string>; hooks?: Hooks; puppet?: Puppet };
-export type Report = { out?: { arm: string; e: any }[]; phases: Record<string, number>; counts: Record<string, number>; made: Record<string, number>; noWay: Map<string, number>; noSetter: Map<string, number>; noWindow: Set<string>; deadSerials: number; bytes: number; ms: number };
+export type Report = { changed?: boolean; out?: { arm: string; e: any }[]; phases: Record<string, number>; counts: Record<string, number>; made: Record<string, number>; noWay: Map<string, number>; noSetter: Map<string, number>; noWindow: Set<string>; deadSerials: number; bytes: number; ms: number };
 
 const DEC = new TextDecoder();
 const PROF = !!process.env.PUP_PROF, DEBUG = !!process.env.PUP_DEBUG;
@@ -57,6 +57,8 @@ type Inverse = (o: any, v: any, c: Ctx) => void;
 const skipField: Inverse = () => {};
 /** the fields whose expression is no assignment. Each says how the value gets back, or why it need not: read `skipField` as "the export works this out from what is carried, or it is set up once and never changes" */
 const INVERSE: Record<string, Inverse> = {
+  // (the row of `nearby` he is on, the object itself: a reader asks `nearby.includes(hover)`. Rust keeps a copy, which is that row by its place and what it is)
+  'game::Game.hover': (o, v, c) => { c.fix.push(() => { o.hover = v ? (o.nearby as any[]).find(r => r.kind === v.kind && r.verb === v.verb && r.pos?.[0] === v.pos?.[0] && r.pos?.[2] === v.pos?.[2]) ?? v : null; }); },
   // (a yes or no on Rust's side, and the seat's camera on the puppet's, which the page sets and no read of the tick's finds. As a yes it would be a value that takes no field: `w.cam.peekOffset = null` throws)
   'player::WallHold.cam': () => {},
   'game::Game.view_proj': (o, v) => { o.viewProj = v; }, 'seats::SeatSet.view_proj': (o, v) => { o.viewProj = v; },
@@ -90,7 +92,7 @@ const BLOCK_ROW: Record<string, (o: any, g: any) => void> = { Item: (o, g) => { 
 let looseOrder: object[] = [];
 const looseAt = (_c: Ctx, o: object, i: number) => { looseOrder[i] = o; };
 const bySerial = new WeakMap<object, Map<number, object>>();
-function serialIs(c: Ctx, o: object, s: number) { const BK = c.BK; const old = BK.serial.get(o); if (old === s) return; BK.serial.set(o, s); serialMap(BK).set(s, o); if (s >= BK.nextSerial) BK.nextSerial = s + 1; }
+function serialIs(c: Ctx, o: object, s: number) { const BK = c.BK; const old = BK.serial.get(o); if (old === s) return; BK.serial.set(o, s); serialMap(BK).set(s, o); if (s >= BK.nextSerial && s < 0x40000000) BK.nextSerial = s + 1; }
 function serialMap(BK: any): Map<number, object> { let M = bySerial.get(BK); if (!M) { bySerial.set(BK, M = new Map()); const O = BK.serialOfObjects?.(); if (O) for (const [k, v] of O) M.set(v, k); } return M; }
 function objOfSerial(c: Ctx, s: number): object { const M = serialMap(c.BK); let o = M.get(s); if (!o) { o = { deadSerial: s }; c.R.deadSerials++; M.set(s, o); c.BK.serial.set(o, s); } return o; }
 const AFTER_APPLY: ((g: any) => void)[] = (SCHEMA.afterApply as string[] ?? []).map(e => new Function('g', e) as (g: any) => void);
@@ -139,6 +141,8 @@ function applyGameNow(g: any, blob: Uint8Array, knobs: Record<string, unknown>, 
   else { sk({ k: 'type', path: SCHEMA.root }); for (const t of SCHEMA.tables) { const n = dv.getUint32(I.p, true); I.p += 4; const N = parse(t.ty); const at = I.p; for (let k = 0; k < n; k++) sk(N); heads.push({ t, n, at, N, whole: n, entries: n }); } }
   { const K: Map<string, number> = (BK as any).known ??= new Map(); for (const h of heads) K.set(h.t.id, h.n); }   // (how many rows of each table the Rust game has: a row past that was made in TypeScript since, and neither the scan nor a crossing may name it)
   serialNext = dv.getUint32(I.p, true); I.p += 4; tail = I.p;
+  // (WHETHER THE RUST GAME'S STATE MOVED AT ALL since the last export: no part and no row sent, the same table sizes. A host then has no need to look at the puppet again)
+  if (pup && !pup.start) { const mainLen = dv.getUint32(0, true); let any = heads.some(h => h.entries > 0 || h.n !== h.whole); for (let k = 4; !any && k < 4 + mainLen; k++) if (blob[k]) any = true; R.changed = any; } else R.changed = true;
   const t2 = performance.now(); R.phases.skim = t2 - t1; for (const { t, n } of heads) { const L = BK.listOf(t.id); if (L.length >= n) continue; const T0 = SCHEMA.types[t.ty.replace(/^alloc::boxed::Box<(.*)>$/, '$1')]; const proto = CLASSES.get(`${T0?.mod}::${T0?.name}`) ?? (L.length ? Object.getPrototypeOf(L[0]) : Object.prototype); const made: any[] = []; while (BK.listOf(t.id).length < n) { const o = Object.create(proto); BK.idOf(t.id, o); madeRows.add(o); made.push(o); } R.made[t.ts] = made.length; (c as any)[`made:${t.id}`] = made; }
 
   // ---- a new row that stands in the game's block, before its fields go in
@@ -156,9 +160,9 @@ function applyGameNow(g: any, blob: Uint8Array, knobs: Record<string, unknown>, 
   function readInner(n: N, cur: any): any {
     // a table keyed by the game, or by the one thing of its kind: what is applied is its row
     if (isSide(cur) && n.k !== 'opt' && n.k !== 'bool') {
-      const P = cur.constructor.name.startsWith('GameSide') || (!(n.k === 'map' && n.K.k === 'id' && n.K.id === 'PlayerId') && cur.liveKeys().includes(G));
+      const P = isGameSide(cur) || (!(n.k === 'map' && n.K.k === 'id' && n.K.id === 'PlayerId') && cur.liveKeys().includes(G));
       if (P) { const v = read(n, cur.get ? cur.get(G) : cur.has(G)); if (cur.set) cur.set(G, v); return cur; }
-      const K = cur.liveKeys(); if (K.length && SCHEMA.onceKeys.includes(K[0].constructor?.name)) { const v = read(n, cur.get ? cur.get(K[0]) : true); if (cur.set) cur.set(K[0], v); return cur; }
+      const K = cur.liveKeys(); if (K.length && SCHEMA.onceKeys.includes(classWord(K[0]))) { const v = read(n, cur.get ? cur.get(K[0]) : true); if (cur.set) cur.set(K[0], v); return cur; }
     }
     switch (n.k) {
       case 'f64': { const v = dv.getFloat64(I.p, true); I.p += 8; if (typeof cur === 'boolean') return v !== 0; if (cur === undefined && v === 0) return undefined; if (typeof cur === 'string') return String(v); return v; }
@@ -213,8 +217,8 @@ function applyGameNow(g: any, blob: Uint8Array, knobs: Record<string, unknown>, 
     if (T.k === 'wordEnum') { for (const f of T.arms[a].fields) sk(parse(f.ty)); return cur; }   // (authored: a lesson's test stands in the TypeScript as it was written)
     if (T.k === 'handEnum') { const t = armType(T, a); if (t) { sk(parse(t)); return cur; } return T.words ? T.words[a] : cur; }
     const A = T.vars[a]; if (!A.ty) return A.str ?? (cur && typeof cur === 'object' && (cur.kind ?? cur.type) === A.kw ? cur : A.kw !== undefined ? { kind: A.kw } : cur);
-    const AT = SCHEMA.types[A.ty]; const same = (() => { if (cur === null || cur === undefined || typeof cur !== 'object') return false; if (AT?.k === 'struct') { if (A.kw !== undefined) return (cur.kind ?? cur.type) === A.kw; if (A.sn && cur.constructor?.name === A.sn) return true; return AT.fields.filter((f: any) => f.ts).every((f: any) => f.ts in cur); } return true; })();
-    if (A.sn && !AT && same && cur.constructor?.name !== A.sn) return read(parse(A.ty), FRESH);
+    const AT = SCHEMA.types[A.ty]; const same = (() => { if (cur === null || cur === undefined || typeof cur !== 'object') return false; if (AT?.k === 'struct') { if (A.kw !== undefined) return (cur.kind ?? cur.type) === A.kw; if (A.sn && classWord(cur) === A.sn) return true; return AT.fields.filter((f: any) => f.ts).every((f: any) => f.ts in cur); } return true; })();
+    if (A.sn && !AT && same && classWord(cur) !== A.sn) return read(parse(A.ty), FRESH);
     return read(parse(A.ty), same ? cur : FRESH); }
   let curQ = '';
   /** one field of a struct, its bytes next */
@@ -261,7 +265,7 @@ function applyGameNow(g: any, blob: Uint8Array, knobs: Record<string, unknown>, 
   // THE ONE CLOSURE A MADE RECORD HOLDS: the second cast's `mine` (qrf.ts squadCast's call). Rust answers it by the team's rows and carries no closure
   { const Q = g.qrf, O = Q?.cast?.orders?.cast; if (O && !O.mine) { O.mine = (gd: any) => Q.men.includes(gd); if (O.ring?.has('*')) O.ring.has = () => true; } }   // (orders.ts EVERY_KEY: a set that holds every key, carried as its one word)
   // ---- what the export keeps at the end
-  I.K = null; BK.nextSerial = serialNext; I.p = tail; const nl = dv.getUint32(I.p, true); I.p += 4; if (!pup) BK.loose.clear();
+  I.K = null; BK.nextSerial = serialNext; BK.rustDeals = true; I.p = tail; const nl = dv.getUint32(I.p, true); I.p += 4; if (!pup) BK.loose.clear();
   for (let i = 0; i < nl; i++) { const nodes = dv.getUint32(I.p, true); I.p += 4; const len = dv.getUint32(I.p, true); I.p += 4; const p: any = looseOrder[i]; if (p) { if (!p.own || p.own.length !== len) p.own = new Float32Array(len); p.home = null; for (let k = 0; k < len; k++) p.own[k] = dv.getFloat32(I.p + 4 * k, true); p.numNodes = nodes; BK.loose.set(p, i); } I.p += 4 * len; }
   if (pup) { const OE = SCHEMA.types['crate::out_events::OutEvent']; const n = dv.getUint32(I.p, true); I.p += 4; const out: { arm: string; e: any }[] = []; for (let i = 0; i < n; i++) { const a = dv.getUint16(I.p, true); I.p += 2; const A: string = OE.arms[a]; const m = A.match(/^(\w+)(?:\((.*)\))?$/)!; out.push({ arm: m[1], e: m[2] ? read(parse(m[2]), FRESH) : null }); } R.out = out; }
   for (const { t } of heads) { const M = (c as any)[`made:${t.id}`]; const h = hooks.made?.[t.ts]; if (M && h) for (const o of M) h(o, g); }

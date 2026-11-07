@@ -254,13 +254,17 @@ export async function standUp(opts: { uploadEvery?: number; env?: any; level?: a
     steps(n: number, dt: number, follow: Vec3 | null = null) { const H = (game as any).rustHost, q = n > 1 && !!H?.quietBegin?.();
       try { for (let i = 0; i < n; i++) W.step(dt, follow); } finally { if (q) H.quietEnd(); } },
     cursorAt(p) { const [sx, sy, front] = cam.project(p, canvas.clientWidth, canvas.clientHeight); if (front) { input.mouseX = sx; input.mouseY = sy; } return front; },
-    snapshot(label = 'harness', force = true) { return saveState(game, { label, kind: 'harness', force }); },
-    restore(s) { loadState(game, s); cam.target = v3.copy(game.player.char.pos); input.keys.clear(); input.pressed.clear(); input.buttons = 0; input.clicked = 0; },
+    // (a game that steps somewhere else, TPS_GAME: the host keeps that game beside the file, and the same file put back unchanged is that game standing again; tools/blitz/PLAY.md)
+    snapshot(label = 'harness', force = true) { const s = saveState(game, { label, kind: 'harness', force }); (game as any).rustHost?.keptFor?.(s); return s; },
+    restore(s) { if (!(game as any).rustHost?.backFor?.(s)) loadState(game, s); cam.target = v3.copy(game.player.char.pos); input.keys.clear(); input.pressed.clear(); input.buttons = 0; input.clicked = 0; },
   };
   // TPS_GAME in front of any headless tool (tools/blitz/PLAY.md): the game stood here is a PUPPET of the Rust game, which steps in its place from the first
   // `game.update` (`rust`; `audit`), or it is stood the same way and stepped by the TypeScript tick (`ts`: the other side of a tally). Unset: nothing is loaded.
   // WHICH is tools/blitz/word.ts's to say, the one switch (the word asked for, its table, a frozen run forced to the TypeScript tick).
   { const S = (await import('../blitz/word.ts')).stand(STAND_AT_LOAD === 'frozen'); if (S.word) await (await import(RUST_HOST)).standRust(game, S.word); }
+  // QA_PERTURB=<seed> in front of any headless tool: a seeded stream of the things a person does between two ticks (orders, throws, kills, saves and loads)
+  // laid over the tool's own play (tools/blitz/perturb.ts; PLAY.md, "The fuzz"). Unset: nothing is loaded.
+  if (process.env.QA_PERTURB) await (await import('../blitz/perturb.ts')).lay(W);
   return W;
 }
 

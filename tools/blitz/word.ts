@@ -23,9 +23,15 @@ const kept = (): 'ts' | 'none' => process.env.TPS_KEPT === 'none' ? 'none' : pro
 
 export type Word = '' | 'rust' | 'audit' | 'ts';
 /** the word asked for, before the table and the stand are looked at ('' = none) */
-export function asked(): string { const w = process.env.TPS_GAME ?? DEFAULT_WORD; return w === 'none' || w === 'off' ? '' : w; }
+export function asked(): string { const E = process.env, w = (E.TPS_GAME === 'rust' && E.TPS_GAME_BY ? E.TPS_GAME_BY : E.TPS_GAME) ?? DEFAULT_WORD; return w === 'none' || w === 'off' ? '' : w; }
+/** STAND-IN: THE GENERATED WINDOW (tools/blitz/expose.ts) PUTS THE CALL SURFACE'S GUARDS AND TAPS IN ONLY WHERE `TPS_GAME` IS SPELT `rust`. By the table a
+ *  check stood on the Rust game needs them as much (without them its calls of the tick's rules run the TypeScript on the puppet and a tapped function
+ *  answers twice), so under `table` the preload spells the word `rust` for the window and keeps the word asked for beside it (`TPS_GAME_BY`), for this
+ *  process and its children; `asked()` reads both. A child handed another word by name (`TPS_GAME=ts`) is that word's. Belongs in expose.ts: the guards
+ *  go in under every word that can stand the Rust game, asked of this file. */
+export function spellForWindow(): void { if (asked() === 'table' && process.env.TPS_GAME !== 'rust') { process.env.TPS_GAME_BY = 'table'; process.env.TPS_GAME = 'rust'; } }
 
-interface Kinds { probes: Record<string, string>; tools: Record<string, { word: string; why: string }>; pins?: Record<string, string[]>; waits?: Record<string, string>; both?: Record<string, string>; families?: string[]; unread?: string[] }
+interface Kinds { /** a probe's row from the sweep of every family three ways (tools/blitz/qa-sweep.py): where it stands and what was seen */ sweep?: Record<string, { on: 'rust' | 'ts'; as: string; why?: string }>; probes: Record<string, string>; tools: Record<string, { word: string; why: string }>; pins?: Record<string, string[]>; waits?: Record<string, string>; both?: Record<string, string>; families?: string[]; unread?: string[] }
 let KINDS: Kinds | null = null;
 export function kinds(): Kinds { return KINDS ??= JSON.parse(readFileSync(new URL('./qa-kinds.json', import.meta.url).pathname, 'utf8')); }
 // (kinds iii and iv: a check that CALLS the tick's rules between ticks, hangs its own function on a game object, checks a TypeScript function with no
@@ -54,6 +60,10 @@ function decide(frozen: boolean): Stood {
   if (a !== 'table') return { word: a, who, why: `TPS_GAME=${a}`, kind: 'asked' };
   const K = kinds(), probe = probeNow();
   if (probe) {
+    // (THE SWEEP'S ROW FIRST: the probe was run on the Rust game and on the folded TypeScript tick, the reference. On the Rust game where it is green
+    // there, or red there and on the reference with the same failing lines (`both`: staging debt, not the Rust game's); kept where it is green on the
+    // reference and red on the Rust game, or was not measured. A probe the sweep has no row for falls to the rows by kind below.)
+    { const sw = K.sweep?.[probe]; if (sw) return sw.on === 'rust' ? { word: 'rust', who, why: sw.as, kind: sw.as } : { word: 'ts', who, why: sw.why ?? sw.as, kind: sw.as }; }
     const k = K.probes[probe];
     // (A NAME THE TABLE HAS NO ROW FOR: a probe added since the census was run, or one the census found no line for. Counted and printed.)
     if (k === undefined) return { word: 'ts', who, why: 'no row in the table', kind: 'no row' };
@@ -103,6 +113,23 @@ function atExit(): void { const file = process.env[TALLY], stood = SAID.rust.siz
   if (file) { try { if (existsSync(file)) { for (const l of readFileSync(file, 'utf8').split('\n')) if (l) sum(l); unlinkSync(file); } } catch { /* as above */ } }
   if (SAID.rust.size + SAID.ts.size + SAID.none.size > 0) process.stdout.write(closing()); }
 function hook(): void { if (SAID.hooked) return; SAID.hooked = true; process.on('exit', atExit); }
+// ---- THE FOLD, A CHECK AT A TIME (tools/qa/fold.ts `foldFor`). The settled switch rows are constants of the Rust game, so a check stood on the Rust game runs
+// with them held at their page values, on either tick; a check KEPT on the TypeScript tick runs as with no word, its pins taking. By the table the fold
+// therefore starts off and is laid or lifted between checks: as the runner names the next probe (the first statement of probes.ts `run`, before the probe's
+// own code and before the runner asks the fold anything about it) the table's verdict for that name says which. A stand-alone tool's verdict is its row's,
+// said once as its process starts. The fold carries the answer to a child itself (QA_FOLD_FOR).
+let FOLD_FOR: ((on: boolean) => void) | null = null;
+const foldWant = (): boolean => { const S = decide(false); return S.word === 'rust' || S.word === 'audit'; };
+function foldBy(): void { FOLD_FOR?.(foldWant()); }
+/** before the fold's file is read (its mode as a process starts is read once, there): by the table the fold starts as the check or the tool this process
+ *  is for wants it, unless a parent has already said (QA_FOLD_FOR rides to a child). The window's spelling (`spellForWindow`) would otherwise read to the
+ *  fold as the plain Rust word, under which it starts on. */
+export function foldStart(): void { if (asked() === 'table' && !process.env.QA_FOLD_FOR && process.env.QA_FOLD !== '1') process.env.QA_FOLD_FOR = foldWant() ? '1' : '0'; }
+/** the preload hands the fold's switch over (only under `table`, and only where the fold has one) */
+export function foldHook(f: (on: boolean) => void): void { if (asked() !== 'table' || FOLD_FOR) return; FOLD_FOR = f;
+  let now: string | null = (globalThis as any).__probeNow ?? null;
+  Object.defineProperty(globalThis, '__probeNow', { configurable: true, enumerable: true, get: () => now, set: (v: string | null) => { now = v; if (v) foldBy(); } });
+  foldBy(); }
 /** called once by the bridge's preload in every process under a word: the first of a run becomes the one that says the closing line */
 export function top(): void { if (!asked()) return; if (!process.env[TALLY]) { isTop = true; process.env[TALLY] = `${tmpdir()}/tps-game-${process.pid}-${Date.now().toString(36)}.jsonl`; } hook(); }
 /** the same, for the game being stood now: counted, and said where it is not the Rust game's */
