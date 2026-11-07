@@ -409,12 +409,6 @@ export function loadoutForMission(m: Mission, href?: string, opts: LoadoutOpts =
 }
 /** ONE FLOW (main.ts, once): a pick on the mission list opens this screen instead of loading the row; the list's button says so. */
 export function wireMissions() { MISSIONS.onPick = (m, href) => { loadoutForMission(m, href); }; MISSIONS.pickLabel = 'Loadout ›'; MISSIONS.next = { isOpen: () => !!current, close: closeLoadout }; }
-/** the page's `?loadout=<mission id>` (main.ts, once the start card is up): that mission's loadout screen. Returns it, or null (no flag, no such mission). */
-export function loadoutFromQuery(search: string | URLSearchParams, list: Mission[] = missionList()): LoadoutScreen | null {
-  const q = typeof search === 'string' ? new URLSearchParams(search) : search, id = q.get('loadout');
-  const m = id ? list.find(x => x.id === id) : undefined;
-  return m ? loadoutForMission(m, undefined, { squad: squadOfQuery(q, false) ?? undefined }) : null;   // (`?loadout=<id>&squad=N` opens on N)
-}
 
 // every key is the screen's while it is up (registered at module load: ahead of main.ts's Esc — which would close the start card under it — and of the game's Input)
 const eaten = new Set<string>();

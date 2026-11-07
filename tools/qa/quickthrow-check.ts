@@ -14,7 +14,7 @@ const ROOT = resolve(import.meta.dir, '../..');
 export async function quickthrowCheck(): Promise<boolean> {
   const { stage } = await import('./fn2000-probes.ts');
   const { QUICKTHROW } = await import(`${ROOT}/src/game/quickthrow.ts`);
-  const { CONTROLS } = await import(`${ROOT}/src/ui/menu.ts`) as { CONTROLS: [string, string][] };
+  const { KEYS } = await import(`${ROOT}/src/ui/options.ts`) as { KEYS: { rows: [string[], string, string?][] }[] }, CONTROLS = KEYS.flatMap(g => g.rows.map(r => [r[0].join(' · '), [r[1], r[2]].filter(Boolean).join(' · ')] as [string, string]));
   const DT = 1 / 60; let all = true;
   const line = (ok: boolean, s: string, detail = '') => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${s}${detail ? `\n    ${detail}` : ''}`); };
   console.log('\n=== quickthrow: G throws nothing in the page; a can goes from its slot with a click ===');

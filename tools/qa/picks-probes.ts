@@ -1,7 +1,6 @@
-// The 'picks' family (THE SHORT LIST — scene/picks.ts PICKS, ui/picks.ts on ui/menu.ts's cards, main.ts's ?pick= redirect), run through probes.ts:
+// The 'picks' family (THE SHORT LIST — scene/picks.ts PICKS, ui/picks.ts for ui/menu.ts's cards, main.ts's ?pick= redirect), run through probes.ts:
 //   bun run tools/qa/probes.ts picks | picks-list | picks-card | picks-boot          (or this file: bun run tools/qa/picks-probes.ts [name …])
 //   bun run tools/qa/probes.ts picks-play                          (minutes; not in the family) every scenario row played to its end by the scripted commander, its settings on
-//   bun run tools/qa/card-digest.ts [--nopicks]                      the cards as one word, to hold a tree against another (the switch's 'off = the build as it was')
 // PASS / FAIL each, all headless. Nothing here looks at a picture.
 //   picks-list   the table as data: ids unique and URL-safe, every mission on the build, a plain line on each, five to seven rows; each row's URL names its
 //                mission, team size, difficulty, hour, weather and switches OUT (nothing left to what a machine keeps), reads back to that row and to no other,
@@ -9,10 +8,8 @@
 //                the row after each; a quit out of a pick takes its settings off the URL and leaves every other URL as the build's quit leaves it; the rules the
 //                maintainer set for the list (a four-person loud breach on a squad map first; the barracks by day and every other row at its level's own night
 //                and weather; no kit on a row); and THE ONE CHOICE: every scenario row's URL at the other difficulty differs in that one value and is the same pick
-//   picks-card   the real Menu on a fake DOM: the start card and the boot card open on the rows, in order — number, title, tags, line, a link to the row's own
-//                URL; a click is a load of exactly that URL and is remembered as started; beside every scenario row a link to the same mission at the other
-//                difficulty (standard / hard — the one choice a row offers); Missions (every mission) and Start are still on the card; the pause card of a run
-//                a pick started offers the next row, carrying a difficulty chosen over the row's own; with the switch off the cards carry no row and no 'next'
+//   picks-card   the real Menu on a fake DOM: the pause card of a run a pick started offers the next row, carrying a difficulty chosen over the row's own;
+//                with the switch off no 'next'
 //   picks-boot   every row's URL booted in a process of its own with the page's own start-up order (the URL where modules read it, the difficulty, the weather,
 //                the hour, the level file, startFromQuery): it starts unrefused as its mission on its level, with the row's team, difficulty, hour, weather and
 //                switches in force (on a machine that keeps the OTHER difficulty; the harness stands most page-default feature switches off, so 'in force' is the
@@ -60,7 +57,7 @@ if (import.meta.main && process.argv.includes('--boot')) {
     const W = await standUp({ uploadEvery: 4, ...(level ? { level } : {}) });
     const g = W.game; g.godMode = true;
     SILENT.on = true;   // (the page's: the harness stands the game up with the silent rows off — src/host/standup.ts)
-    if (q.has('silentstart')) SILENT.start = true;   // (main.ts's line, copied: the flag is the page's — tools/qa/picks-look.cjs holds the page's own)
+    if (q.has('silentstart')) SILENT.start = true;   // (main.ts's line, copied: the flag is the page's — tools/qa/startpage-look.cjs holds the page's own)
     const { why } = startFromQuery(g, q);
     const run = runningScenario(g, levelFile), ops: any[] = teamOf(g);
     const hostile = () => g.guards.filter((x: any) => x.unit && x.team === 'hostile' && x.state !== 'dead').length;
@@ -98,11 +95,6 @@ const first = (r: El, cls: string) => r.all(e => e.cls.has(cls))[0];
 const buttons = (root: El) => root.all(e => e.tagName === 'BUTTON');
 const buttonOf = (root: El, text: string) => buttons(root).find(b => b.textContent === text);
 const startsWith = (root: El, text: string) => buttons(root).find(b => b.textContent.startsWith(text));
-interface PRow { id: string; href: string; n: string; title: string; tags: string[]; line: string; played: boolean; go: string; done: string; el: El }
-const pickRowsOf = (root: El): PRow[] => root.all(e => e.cls.has('prow')).map(a => ({ id: a.attrs['data-pick'] ?? '', href: a.attrs.href ?? '', n: first(a, 'pn')?.textContent ?? '', title: first(a, 'ptitle')?.textContent ?? '',
-  tags: a.all(e => e.cls.has('ptag')).map(e => e.textContent), line: first(a, 'pline')?.textContent ?? '', played: a.cls.has('played'), go: first(a, 'pgo')?.textContent ?? '', done: first(a, 'pdone')?.textContent ?? '', el: a }));
-const gosOf = (root: El): { id: string; href: string; text: string; el: El }[] => root.all(e => e.cls.has('palt') && e.cls.has('go')).map(a => ({ id: a.attrs['data-go'] ?? '', href: a.attrs.href ?? '', text: a.textContent, el: a }));
-const altsOf = (root: El): { id: string; href: string; text: string; el: El }[] => root.all(e => e.cls.has('palt') && !e.cls.has('go')).map(a => ({ id: a.attrs['data-alt'] ?? '', href: a.attrs.href ?? '', text: a.textContent, el: a }));
 const paramsOf = (href: string) => new URLSearchParams(href.replace(/^[^?]*\?/, ''));
 const otherOf = (d: string | null) => (d === 'hard' ? 'standard' : 'hard');
 /** what a pick's settings say its URL must carry — written here from the row, not from pickHref */
@@ -230,47 +222,17 @@ async function withStore<T>(fn: (store: Map<string, string>) => Promise<T> | T):
   try { return await fn(m); } finally { if (had) G.localStorage = prev; else delete G.localStorage; }
 }
 export async function picksCard(): Promise<boolean> {
-  const F = family('picks-card: the real Menu on a fake DOM — the start card opens on the short list, a click is a load of the row\'s own URL, the rest is still there');
+  const F = family('picks-card: the real Menu on a fake DOM — the pause card of a run a pick started offers the next row');
   const SEARCH = '?quality=high&mute', L: any[] = P.PICKS;
   try {
     await withStore(store => withDom(SEARCH, async (root) => {
-      const { Menu, bootCard } = await import(`${ROOT}/src/ui/menu.ts`), UI = await import(`${ROOT}/src/ui/picks.ts`), MS = await import(`${ROOT}/src/ui/missions.ts`);
+      const { Menu } = await import(`${ROOT}/src/ui/menu.ts`), UI = await import(`${ROOT}/src/ui/picks.ts`);
       const loads: string[] = []; Object.assign((globalThis as any).location, { pathname: '/', hash: '', assign: (u: string) => { loads.push(u); }, reload: () => { loads.push('(reload)'); } });
       Math.random = seeded(0x51c4); setDifficulty('standard', false); P.PICKS_UI.on = true;
-      P.PICKS_UI.loadout = false;   // (?pickstraight: a click starts the row — the card as it was, held first; the loadout-first card is held at the foot)
       const W = await quiet(() => standUp({ uploadEvery: 4 })); let starts = 0;
       let up: any = null, refused: string | null = null;   // (what main.ts's scenario seam would say is running under the card)
       const menu = new Menu(menuDeps(W, { onStart() { starts++; }, scenario: { current: () => up, refused: () => refused, quit() {} } }) as any);
       menu.open('start');
-      const rows = pickRowsOf(root);
-      F.verdict(rows.length === L.length && rows.every((r, i) => r.id === L[i].id && r.n === String(i + 1) && r.title === UI.pickTitle(L[i]) && r.line === L[i].line && !r.played), 'the start card opens on one numbered row per pick, in play order, each with its title and its one line',
-        rows.map(r => `${r.n} ${r.title} [${r.tags.join(' · ')}] ${r.line}`).join('\n    '));
-      F.verdict(rows.every((r, i) => r.href === P.pickHref(L[i], SEARCH) && hrefSays(L[i], r.href) === null), "each row is a link to its own URL: the row's mission and settings, the visitor's flags behind them", rows.map(r => r.href).join('\n    '));
-      { const bad = rows.filter((r, i) => { const w = wantOf(L[i]), t = r.tags.map(x => x.toLowerCase()); return t.length < 1 || (w.squad > 0) !== /^you \+ /.test(t[0]) || (w.difficulty === 'hard') !== t.includes('hard') || (!!w.hour || !!w.weather || (L[i].tags ?? []).length > 0) !== t.length > 1 + (w.difficulty === 'hard' ? 1 : 0); });
-        F.verdict(bad.length === 0, 'each row is tagged with its team in words that count the player (you + …), and with exactly what is not the mission as it was made (hard, an hour, a weather, a named switch)', rows.map(r => `${r.id}: ${r.tags.join(' · ')}`).join(' · ')); }
-      F.verdict(!!buttonOf(root, 'Missions') && !!buttonOf(root, 'Start') && !buttons(root).some(b => b.textContent.startsWith('Next')) && MS.currentMissions() === null, 'Missions (every mission) and Start (the solo night straight in) are on the same card; no "next" on a start card',
-        buttons(root).map(b => b.textContent).join(' · '));
-      { buttonOf(root, 'Missions')!.onclick!(); const up = MS.currentMissions(), n = up ? (up.root as any).all((e: El) => e.cls.has('mrow')).length : 0; MS.closeMissions();
-        F.verdict(n === ALL_MISSIONS.length + 1, 'Missions opens the whole list as before: every mission (the squad\'s and the quiet ones) and the solo night', `${n} rows`); }
-      // ---- the one choice on a row: the other difficulty
-      { const alts = altsOf(root), S = L.filter(p => P.pickOtherDifficulty(p));
-        const ok = alts.length === S.length && S.every(p => { const a = alts.find(x => x.id === p.id), d = otherOf(wantOf(p).difficulty); return !!a && a.text === `${d} ›` && a.href === P.pickHref(p, SEARCH, undefined, undefined, d) && hrefSays(p, a.href, d) === null && a.el.cls.has(d); });
-        F.verdict(ok, "beside every scenario row that has two, one link to the same mission at the other difficulty, in the build's own words (standard / hard); none on the solo night, none on a row with one difficulty", alts.map(a => `${a.id}: ${a.text} → ${a.href}`).join('\n    ') + ` · none on: ${L.filter(p => !P.pickOtherDifficulty(p)).map(p => p.id).join(', ')}`);
-        const a0 = alts[0]; a0?.el.onclick!(); const kept = JSON.parse(store.get('twopointsix.picks') ?? '[]');
-        F.verdict(!!a0 && loads.length === 1 && loads[0] === '/' + a0.href && starts === 0 && kept.length === 1 && kept[0] === a0.id, 'a click on it is ONE page load of that URL, and the row is remembered as started', `${loads.join(' · ')} · kept ${JSON.stringify(kept)}`);
-        loads.length = 0; store.delete('twopointsix.picks'); store.delete('twopointsix.mission'); }
-      // ---- a click
-      { const k = Math.min(2, L.length - 1); rows[k].el.onclick!();
-        const kept = JSON.parse(store.get('twopointsix.picks') ?? '[]');
-        F.verdict(loads.length === 1 && loads[0] === '/' + rows[k].href && starts === 0 && kept.length === 1 && kept[0] === L[k].id && store.get('twopointsix.mission') === L[k].mission, "a click on a row is ONE page load of that row's URL (the game under the card is not started); the row is remembered as started, and the mission list will open on its mission",
-          `${loads.join(' · ')} · kept ${JSON.stringify(kept)} · list opens on ${store.get('twopointsix.mission')}`);
-        menu.open('start'); const again = pickRowsOf(root);
-        F.verdict(again[k].played && again[k].done === 'played' && again[k].go === 'again ›' && again.every((r, i) => r.n === String(i + 1)) && again.filter(r => r.played || r.done).length === 1 && again[k].href === rows[k].href && again.filter(r => r.go !== 'start ›').length === 1,
-          "the card drawn again marks the row that was started 'played' (its number and its link stay) and no other", again.map(r => `${r.n} ${r.id}${r.done ? ` (${r.done})` : ''}`).join(' · ')); }
-      // ---- the boot card
-      { const card = bootCard(), b = pickRowsOf(root), mb = buttonOf(root, 'Missions'), sb = buttonOf(root, 'Start');
-        F.verdict(b.length === L.length && b.every((r, i) => r.href === rows[i].href) && !!mb && !mb.disabled && !!sb && sb.disabled, 'the boot card (up while the shaders compile) carries the same rows, already live: a pick is a page load and waits for nothing; Start waits',
-          `${b.length} rows · Missions ${mb?.disabled ? 'disabled' : 'live'} · Start ${sb?.disabled ? 'disabled' : 'live'}`); card.off(); }
       // ---- the pause card of a run a pick started: the next row
       { const loc = (globalThis as any).location, was = loc.search; loads.length = 0;
         const RUN = { title: 'Night breach', team: 'you + the pair', kind: 'nightbreach' };
@@ -294,51 +256,14 @@ export async function picksCard(): Promise<boolean> {
         loc.search = was; up = null;
         F.verdict(okNext && !last && !plain && !notUp, "the pause card of a run a pick started offers 'Next: <the row after>' = that row's own page load; the last row's offers none, a run started any other way offers none, and neither does a pick's page whose scenario is not what is up; no rows on a pause card",
           `after ${L[0].id}: ${nx?.textContent ?? 'none'} → ${loads[0] ?? 'no load'} · after the last: ${last?.textContent ?? 'none'} · ?roomclear: ${plain?.textContent ?? 'none'} · the pick's URL with no scenario up: ${notUp?.textContent ?? 'none'}`); }
-      // ---- a page that is booting a mission: no rows on its cards
-      { const loc = (globalThis as any).location, was = loc.search, seen: string[] = [];
-        for (const u of ['?levelFile=depot.json&roomclear&squad4&quality=high', P.pickHref(L[0], SEARCH), '?solo']) { loc.search = u; menu.open('start'); const a = pickRowsOf(root).length, mp = buttonOf(root, 'Missions')?.cls.has('primary'); const bc = bootCard(); const b = pickRowsOf(root).length; bc.off(); seen.push(`${u}: ${a} / ${b}${mp ? '' : ' (Missions not primary)'}`); }
-        loc.search = was;
-        F.verdict(seen.every(x => / 0 \/ 0$/.test(x)), "a page whose URL names a mission (a pick's own included) carries no rows on its boot card or its start card: it is booting that mission, and Missions is the primary button as before", seen.join(' · ')); }
       // ---- the switch off
       { P.PICKS_UI.on = false; const loc = (globalThis as any).location, was = loc.search;
-        menu.open('start'); const off = pickRowsOf(root).length, mb = buttonOf(root, 'Missions'), notes = root.all(e => e.cls.has('note')).map(e => e.textContent).join(' ');
-        const bc = bootCard(); const offBoot = pickRowsOf(root).length, bm = buttonOf(root, 'Missions'); bc.off();
-        loc.search = P.pickHref(L[0], SEARCH); menu.open('pause'); const nx = startsWith(root, 'Next: '); loc.search = was;
-        const redirect = P.pickRedirect(`?pick=${L[0].id}`);   // (pure: main.ts asks PICKS_UI.on before it — held by the page check, tools/qa/picks-look.cjs)
-        P.PICKS_UI.on = true;
-        F.verdict(off === 0 && offBoot === 0 && !!mb && mb.cls.has('primary') && !!bm && bm.cls.has('primary') && !nx && /^MISSIONS lists every scenario/.test(notes) && redirect !== null, 'with the switch off the start card and the boot card carry no row, Missions is the primary button again under the old note, and no pause card offers a next',
-          `rows ${off} / ${offBoot} · Missions ${mb?.cls.has('primary') ? 'primary' : 'plain'} · note: ${notes.slice(0, 48)}… · next: ${nx?.textContent ?? 'none'}`); }
-      // ---- THE LOADOUT FIRST (PICKS_UI.loadout, the page's default): a row opens its mission's loadout screen, Deploy is the load; 'go ›' is straight in
-      { const LO = await import(`${ROOT}/src/ui/loadout.ts`), { squadSearch } = await import(`${ROOT}/src/game/loadout.ts`);
-        const noGo = gosOf(root).length; (globalThis as any).document.body = new El('BODY');   // (the screen is an overlay of its own on the page's body)
-        P.PICKS_UI.loadout = true; loads.length = 0; for (const k of [...store.keys()]) store.delete(k);
-        menu.open('start'); const rows2 = pickRowsOf(root), gos = gosOf(root), alts = altsOf(root);
-        F.verdict(noGo === 0 && rows2.length === L.length && gos.length === L.length && gos.every((g, i) => g.id === L[i].id && g.href === rows2[i].href && g.text === 'go ›') && rows2.every((r, i) => r.href === rows[i].href && r.go === 'loadout ›') && alts.length === L.filter(p => P.pickOtherDifficulty(p)).length,
-          "loadout first: the same rows and URLs, each row's end says 'loadout ›', and every row has a 'go ›' link to its own URL beside the difficulty link; with the switch off there is no such link", `${gos.length} go links · without the switch ${noGo} · ${rows2.map(r => r.go).join(' ')}`);
-        // a click on every row: its mission's loadout, no load; Deploy = ONE load of the row's URL (at the size the screen opened on), remembered as started
-        const bad: string[] = [], said: string[] = [];
-        for (let i = 0; i < L.length; i++) { const p = L[i], e: any = P.pickEntry(p); loads.length = 0; rows2[i].el.onclick!();
-          const S = LO.loadoutOpen(), id = e ? e.id : P.SOLO_ID, opened = !!S && S.entry.id === id && loads.length === 0 && starts === 0;
-          const want = S ? squadSearch(rows2[i].href, S.squad, e ? e.squad : 0) : ''; S?.deploy();
-          const kept: string[] = JSON.parse(store.get('twopointsix.picks') ?? '[]'), ownSize = !!S && S.squad === (e ? (p.squad ?? e.squad) : 0);
-          const ok = opened && LO.loadoutOpen() === null && loads.length === 1 && loads[0] === '/' + want && kept.includes(p.id) && store.get('twopointsix.mission') === p.mission && (!ownSize || P.pickOfQuery(want) === p);
-          said.push(`${p.id}: ${S ? `loadout '${S.entry.title}' at +${S.squad}` : 'no screen'} → ${loads[0] ?? 'no load'}`); if (!ok) bad.push(said[said.length - 1]); }
-        F.verdict(bad.length === 0, "a click on a row opens THAT mission's loadout screen and loads nothing; its Deploy is ONE page load of the row's own URL with the team size on it (at the row's size it reads back as the pick, so 'next' works), and the row is remembered as started", (bad.length ? bad : said).join('\n    '));
-        // Esc: back on the card, nothing loaded
-        { loads.length = 0; rows2[0].el.onclick!(); const S = LO.loadoutOpen(); S?.key('Escape');
-          F.verdict(!!S && !S.open && LO.loadoutOpen() === null && MS.currentMissions() === null && loads.length === 0 && pickRowsOf(root).length === L.length, 'Esc on that screen is the start card again: no load, no mission list, the rows still there', `open ${S?.open} · list ${MS.currentMissions() ? 'up' : 'not up'} · loads ${loads.length}`); }
-        // the other difficulty: the same screen, said in its title; Deploy loads the row at that difficulty
-        { const a0 = alts[0], p = L.find(x => x.id === a0?.id), d = p ? P.pickOtherDifficulty(p) : null; loads.length = 0; a0?.el.onclick!(); const S = LO.loadoutOpen(), title = S?.entry.title ?? '', none = loads.length; S?.deploy();
-          F.verdict(!!S && !!p && !!d && (d !== 'hard' || / · hard$/.test(title)) && none === 0 && loads.length === 1 && P.pickOfQuery(loads[0].slice(1)) === p && new URLSearchParams(loads[0].slice(1)).get('difficulty') === d,
-            "the row's other-difficulty link opens the same screen (hard is said in its title) and its Deploy loads the row at that difficulty", `'${title}' → ${loads[0] ?? 'no load'}`); }
-        // go ›: straight in
-        { loads.length = 0; for (const k of [...store.keys()]) store.delete(k); const g = gos[Math.min(3, gos.length - 1)]; g.el.onclick!(); const kept = JSON.parse(store.get('twopointsix.picks') ?? '[]');
-          F.verdict(LO.loadoutOpen() === null && loads.length === 1 && loads[0] === '/' + g.href && kept.length === 1 && kept[0] === g.id, "'go ›' is straight in: ONE page load of the row's own URL, no screen between, the row remembered as started", `${loads.join(' · ')} · kept ${JSON.stringify(kept)}`); }
-        loads.length = 0; }
+        loc.search = P.pickHref(L[0], SEARCH); menu.open('pause'); const nx = startsWith(root, 'Next: '); loc.search = was; P.PICKS_UI.on = true;
+        F.verdict(!nx, "with the switch off the pause card carries no 'Next'", `next: ${nx?.textContent ?? 'none'}`); }
       menu.close();
     }));
   } catch (e: any) { F.verdict(false, 'the card probe ran to its end', String(e?.stack ?? e).split('\n').slice(0, 4).join(' | ')); }
-  finally { P.PICKS_UI.on = true; P.PICKS_UI.loadout = true; }
+  finally { P.PICKS_UI.on = true; }
   return F.done();
 }
 

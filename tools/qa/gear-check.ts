@@ -28,7 +28,7 @@ const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
 const { reloadMarks } = await import(`${ROOT}/src/game/character.ts`);
 const { WEAPONS, Pistol } = await import(`${ROOT}/src/game/weapons.ts`);
 const R = await import(`${ROOT}/src/game/rigProps.ts`);
-const { CONTROLS } = await import(`${ROOT}/src/ui/menu.ts`) as { CONTROLS: [string, string][] };   // (the card's own list of keys: the lines a player reads the kit's names in)
+const { KEYS } = await import(`${ROOT}/src/ui/options.ts`) as { KEYS: { rows: [string[], string, string?][] }[] }, CONTROLS = KEYS.flatMap(g => g.rows.map(r => [r[0].join(' · '), [r[1], r[2]].filter(Boolean).join(' · ')] as [string, string]));   // (Options ▸ Controls: the lines a player reads the kit's names in)
 
 let failed = false; const line = (ok: boolean, s: string) => { if (!ok) failed = true; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${s}`); };
 const W: any = await standUp(); const game = W.game ?? W.g, c = game.player.char; c.update(1 / 60);
