@@ -3,6 +3,7 @@
 //   bun run tools/wire/wire.ts add <mod::Type.field> --ty <type> [--ts <name>] [--expr <e>] [--start-only]    a field the page reads; refused if nothing the page runs reads that name
 //   bun run tools/wire/wire.ts add-struct <mod::Type> <field:type,...>              a struct of the table, new: its line on the wire and its write by path
 //   bun run tools/wire/wire.ts drop <mod::Type.field>...                            fields off the wire · --file <list> takes the names one a line
+//   bun run tools/wire/wire.ts add-enum <mod::Type> <word[:Tag],...>                a plain enum of the table, new: its line on the wire
 //   bun run tools/wire/wire.ts drop-type <mod::Type>...                             a type off the table once no field names it
 //   tools/blitz/rust.sh rust bun run tools/wire/cost.ts [address]                   what a tick's export and apply cost now, on the page's list
 // An enum arm needs nothing: an arm the table does not know goes out as the tag 0xffff, and the page keeps what it had.
@@ -85,6 +86,13 @@ function drop(Q: string[]): void { const S = readJ(SCHEMA), L = readJ(FIELDS), i
     const p = lineOf('Poke', path); let i2 = 0; io[p] = io[p].replace(` ${at} => self.${f}.poke(i),`, '').replace(/ \d+ => self\.([a-z_0-9]+)\.poke\(i\),/g, (_, x) => ` ${i2++} => self.${x}.poke(i),`); }
   for (const k of ['everyTick', 'pageTick', 'atStartOnly']) { const b = L[k].length; L[k] = L[k].filter((x: string) => !set.has(x)); listed += b - L[k].length; } S.knobSettled = (S.knobSettled ?? []).filter((x: string) => !set.has(x));
   writeFileSync(ioP, io.join('\n')); writeFileSync(SCHEMA, JSON.stringify(S)); writeFields(L); gen(false); console.log(`wire: ${n} fields off the wire (${listed} list rows)`); }
+/** a plain enum on the table: its words, `word` or `word:Tag` where the Rust arm is not the word with a capital first. An arm it doesn't know goes out as the tag 0xffff and the page keeps what it had */
+function addEnum(path0: string, list: string): void { const m = path0.match(/^([a-z_0-9]+)::([A-Za-z_0-9]+)$/); if (!m) die(`${path0}: write it module::Type`); const path = `crate::${m![1]}::${m![2]}`, S = readJ(SCHEMA); if (S.types[path]) die(`${path} is on the table already`);
+  const rows = list.split(',').map(x => x.trim()).filter(Boolean).map(x => { const [w, tag] = x.split(':'); return { w, tag: tag ?? w[0].toUpperCase() + w.slice(1) }; }); if (!rows.length) die('add-enum: no words'); for (const r of rows) if (!/^[A-Z][A-Za-z0-9_]*$/.test(r.tag)) die(`add-enum: ${r.tag} is no Rust arm: write ${r.w}:Tag`);
+  S.types[path] = { k: 'enum', mod: m![1], name: m![2], words: rows.map(r => r.w), tags: rows.map(r => r.tag) }; writeFileSync(SCHEMA, JSON.stringify(S));
+  const ioP = rustFile('io.rs'), t = read(ioP).replace(/\npub const LAYOUT: u32 = \d+;\n?/, '').trimEnd();
+  const w = rows.map((r, i) => `Self::${r.tag} => ${i}u16,`).join(' '), rr = rows.map((r, i) => `${i} => Self::${r.tag},`).join(' ');
+  writeFileSync(ioP, `${t}\nimpl Io for ${path} { fn w(&self, o: &mut W) { { let t: u16 = match self { ${w} #[allow(unreachable_patterns)] _ => 0xffff, }; t.w(o) } } fn r(i: &mut R) -> Self { match u16::r(i) { ${rr} _ => panic!("bridge: no such word of ${m![2]}") } } }\nimpl Poke for ${path} {}\n`); gen(false); console.log(`wire: ${path} is in the table, with ${rows.length} words`); }
 /** a type off the table, once no field names it: its lines on the wire go with it. The Rust type itself is a person's to delete */
 function dropType(Q: string[]): void { const S = readJ(SCHEMA), ioP = rustFile('io.rs'); let io = read(ioP).split('\n');
   for (const q of Q) { const path = q.startsWith('crate::') ? q : `crate::${q}`, T = S.types[path]; if (!T) die(`${path} is no type of the table`); const named = new RegExp(`\\b${path.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`);
@@ -95,6 +103,7 @@ const A = process.argv.slice(2), opt = (n: string) => { const i = A.indexOf(n); 
 switch (A[0]) { case 'gen': gen(A.includes('--check')); break;
   case 'add': add(A[1], opt('--ty') ?? die('add: --ty') as never, opt('--ts'), opt('--expr'), A.includes('--start-only')); break;
   case 'add-struct': addStruct(A[1], A[2]); break;
+  case 'add-enum': addEnum(A[1], A[2]); break;
   case 'drop-type': dropType(A.slice(1)); break;
   case 'drop': { const f = opt('--file'); drop(f ? read(f).split('\n').map(x => x.trim()).filter(Boolean) : A.slice(1)); break; }
   default: console.error(read(import.meta.path).split('\n').slice(0, 7).join('\n')); process.exit(64); }
