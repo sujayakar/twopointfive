@@ -9,13 +9,14 @@ const CAP: usize = 64;
 
 /// A small slab over the man's head, `i` of a grid wide enough for the whole pool.
 fn slab(p: &mut Play, i: usize, up: f64) -> bool {
-    let at = p.g.pl[0].char.pos;
+    let at = p.g.ch[p.g.pl[p.g.player].ch].pos;
     let c = [at[0] + 0.3 * ((i % 8) as f64 - 3.5), up, at[2] + 0.3 * ((i / 8) as f64 - 3.5)];
     let b = game::scene_boxes::make_box(&mut p.g, &game::scene_boxes::MakeBoxP { c, h: [0.05, 0.01, 0.05], ..game::scene_boxes::MakeBoxP::zeroed() });
     game::debris::debris_spawn_raw(&mut p.g, ChunkKind::Chunk, b, [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], None, None).is_some()
 }
 
-fn stand_a_game() -> Play { Play::level("pass.json", false, &Opts::default()) }
+/// (the pool is dressing, and the test game stands without it unless asked: the page has it on)
+fn stand_a_game() -> Play { let mut p = Play::level("pass.json", false, &Opts::default()); p.g.m.dress.dress.debris = true; p }
 
 #[test]
 fn a_pool_full_of_pieces_in_the_air_refuses_the_next() {
