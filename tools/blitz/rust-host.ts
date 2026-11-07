@@ -428,7 +428,7 @@ export class RustHost {
   applyStep(): void {
     const g = this.g, X = this.F.X, B = this.B, t0 = now(), made0 = MADE.n; let t = t0; this.mBefore = g.mission;
     X.face_puppet(this.h, 0); const blob = this.F.outView(); this.stepBytes += blob.length; this.T.exportStep += now() - t;
-    t = now(); const R = B.applyGame(g, blob, B.reg, { hooks: B.hooks, puppet: { ...this.pup, start: false } }); const el = now() - t; this.T.applyStep += el; if (el > this.worstApply) this.worstApply = el;
+    t = now(); const R = B.applyGame(g, blob, B.reg, { hooks: B.hooks, puppet: { ...this.pup, start: false } }); const el = now() - t; this.T.applyStep += el; if (el > this.worstApply) this.worstApply = el; this.missionRef = g.mission;   // (a mission the Rust game wrote is no start of a new game: only one a tool wrote behind it is)
     if (R.out?.length) for (const e of R.out) this.outQ.push(e);
     this.after(R); this.copyBlock(); this.steps++; this.nest += now() - t0;
     // (STAND-IN, belongs in the importer (a made row is filled whole): A MAN THE APPLY MADE, the Rust game having restarted or spawned (inside its tick, or
