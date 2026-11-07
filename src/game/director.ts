@@ -1,5 +1,5 @@
 // The DIRECTOR: a level's bespoke scripting, run on the game clock (docs/design/level-scripting.md — milestone M1; the notebook is docs/internal/director.md).
-// ONE LEVEL HAS A SCRIPT TODAY: the first tutorial mission's (levels/tut-sky.script.ts, attached by scene/levelLoad.ts off scene/levelScripts.ts; its one play
+// ONLY THE TUTORIAL'S LEVELS HAVE A SCRIPT TODAY: each tutorial mission's (levels/<name>.script.ts, attached by scene/levelLoad.ts off scene/levelScripts.ts; its one play
 // program 'tutorial' is started by game/rails.ts, and only with that switch on). The office's (the night and day showcases, its programs 'night' and 'breach')
 // was removed with the two showcases, so on every other level the Director has no manifest and idles (tick() returns on its first line); the checks stage
 // scripts of their own (tools/qa/director-probes.ts).
