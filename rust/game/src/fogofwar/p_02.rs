@@ -382,8 +382,8 @@ pub fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
     g.fog_of_war.frame.full = full;
     g.fog_of_war.frame.flat = m::max(0.0, k.flat);
     crate::fogofwar::fog_of_war_lit_block(g);
-    g.fog_of_war.frame.air = k.air;
-    g.fog_of_war.frame.kept = k.kept;
+    g.fog_of_war.frame.air = true;
+    g.fog_of_war.frame.kept = true;
     fog_of_war_thin_block(g);
     let n_eyes = crate::render_fogofwar::FOG_EYES as usize;
     let pic = core::mem::take(&mut g.fog_of_war.eyes);

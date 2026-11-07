@@ -184,11 +184,11 @@ pub fn fog_of_war_full_block(g: &mut crate::game::Game) -> bool {
         let lit = fog_of_war_lamp_lit(g, t);
         let known = fog_of_war_lamp_known(g, t, lit);
         if known == lit {
-            if lit && g.k.fog.kept { fog_of_war_face_seen(g, t); }
+            if lit { fog_of_war_face_seen(g, t); }
             continue;
         }
         g.fog_of_war.full_stats.held += 1.0;
-        if g.k.fog.kept && (lit || !(mains && down)) { fog_of_war_lamp_face(g, t, Some(!lit)); }
+        if lit || !(mains && down) { fog_of_war_lamp_face(g, t, Some(!lit)); }
         if lit {
             if let Some(l) = light { g.tab.light[l].fog = Some(1.0); }
             for al in &areas { g.tab.light[al.light].fog = Some(1.0); }
