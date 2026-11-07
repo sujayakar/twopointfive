@@ -100,24 +100,60 @@ Three steps, each its own run, each rerunnable on a later tree:
    panics when called. Run steps 2 and 3 for good on a tree without those stubs, where a missing function is a compile error. Fields, variants and items
    of generated files the check names are listed, not deleted.
 
-`tools/fold/never.sh` runs steps 2 and 3 and one more reading with no test holding anything, and writes one report: lines by module
-before and after, and three lists. DELETED, NOTHING NAMED IT (the first look of step 2); DELETED, ONLY DEAD CODE NAMED IT (the later
-looks of step 2 and all of step 3); KEPT ALTHOUGH THE GAME NEVER RUNS IT (what the last reading names: only a unit test uses it, and
-deleting it is deleting that test, a hand's call).
+`tools/fold/never.sh` runs steps 2 and 3 and one more reading without the tests, and writes one report: lines by module before and
+after, and the lists. DELETED, NOTHING NAMED IT (the first look of step 2); DELETED, ONLY DEAD CODE NAMED IT (the later looks of step 2
+and all of step 3); KEPT ALTHOUGH THE GAME NEVER RUNS IT (what the last reading names: only a unit test uses it).
+
+`never.sh --tests-too` goes on: a unit test that is there for code the game never runs goes, and then what it alone held up
+(`fold tests-cut`, then the compiler's pass again). A test goes when it uses something only the tests use and calls no live function of
+a body file, itself or through its module's own helpers; a test that does both is a test of live code leaning on a helper only tests
+use, and it stays with its helper. Which item a use means is read off how it is written (`f(…)` its own module's, `m::f(…)` module
+m's, `T::f(…)` a method of T; `x.f(…)` can keep a test and never dooms one), so the rule errs toward keeping. The program chooses only
+which TESTS go: what code goes after them is the compiler's reading again, so nothing a remaining test or the game reaches can go.
+The report gains a fourth list, DELETED WITH THE TESTS THAT WERE ITS ONLY USERS, with the tests. Run `cargo test --lib` in `rust/game`
+after it.
 
 ## Readers
 
-`tools/fold/readers.sh` makes a function's signature say whether it writes. Every `&mut T` parameter of a body function is made
-`&T`; `cargo check` names each place that needed the `mut`; it is put back on the parameter the error is about and along the calls
+`tools/fold/readers.sh [--soften]` makes a function's signature say whether it writes. Every `&mut T` parameter of a body function is
+made `&T`; `cargo check` names each place that needed the `mut`; it is put back on the parameter the error is about and along the calls
 (a function that hands its parameter to a `&mut` parameter of another needs its own back), and the check runs again until it names
 nothing, for the game and then for the crates that use it. What is left `&` is a reader by the compiler's word.
 
-The compiler cannot see one kind of write: `sim::state::state(slot)` hands out the simulation block from a number, and a static or
-a cell can be written through `&`. So after the compiler's rounds the program taints by function: one that names `sim::`, a
-static or a cell, or hands back a `&mut`, and every function that calls one (by module and name, to a fixed point), keeps `&mut`.
-Then `&Game` means "moves nothing" and not only "moves nothing of the Game struct". It is a conservative reading: a pure query of
-`sim::` taints too. The report counts readers by module, lists the rows of the call surface whose function takes `&Game`, and
-gives the compiler's bare answer before the taint as a second list (a map of who touches the struct, not a proof).
+**`--soften`: a read should look like a read.** In the same pass, every read spelled as a write inside a body or one of the file's
+own `macro_rules!` becomes its shared twin: `.as_mut()` `.as_ref()`, `.get_mut(` `.get(`, `.iter_mut()` `.iter()`, `.last_mut()`,
+`.first_mut()`, `.values_mut()`, `.as_deref_mut()`, `&mut x` `&x`, `ref mut` `ref`, and a call of a function that has a READING TWIN
+becomes a call of the twin. The compiler says which needed the `mut` after all: a softened place on a line an error points at (its own
+line, a note's, the macro's own text) goes back first; an error about a local puts back every softened place of its function. Without
+this a function that only reads still borrowed `&mut` because of how the read was spelled, and so did everything that called it.
+A softened read that compiles reads the same thing: the shared twin of each of these hands out the same place.
+
+**Reading twins.** A block of the sim was handed out as `&'static mut` from a slot number whether it was read or written. Beside such a
+function a twin named `…_read` hands the same thing out as `&'static` with no `mut` (`sim::state::state_read`, a body's `wx_read`:
+written by hand, `HAND.md` lists them). The pass finds the pairs by that shape and moves every call that compiles onto the twin.
+
+**The taint: what the compiler cannot see.** A function can write with only `&Game` in hand through anything that is `unsafe`, a
+static or a cell, or through a `&mut` some function hands back, which is how every block of the sim is written. So after the
+compiler's rounds the program taints by function: one whose words are `unsafe`, a `static mut`, a cell or an atomic, or that hands
+back a `&mut`; and to a fixed point everything that uses one. A use is read off the function's own words, inside a macro call too:
+`f` its own module's (else any module's of that name), `m::f` module m's, `sim::m::f` the sim crate's (its functions are followed
+like the bodies', so a call into the sim taints only when what it calls can write; one it cannot find is taken for a write), `T::f`
+and `x.f(…)` any method of that name; a `macro_rules!` of the file is followed like a function. A reading twin is clean by its
+shape. A tainted function keeps `&mut` on its parameters. One that was WRITTEN `&Game` and is tainted is not changed (making it
+`&mut` would break its callers' borrows): it is listed, and it is no reader for this program. It errs toward the taint.
+
+The report counts by module the SURE READERS (`&Game`, no `&mut` parameter of any type, not tainted), lists the functions the taint
+contradicts, and gives the compiler's bare answer before the taint as a second list (a map of who touches the struct, not a proof).
+`--reads FILE` writes the rows of the call surface (`tools/blitz/calls.json`, by key) whose function cannot write the game: a sure
+reader, or one that takes no game, no `&mut` and is not tainted.
+
+How it runs: the files as they were are kept beside the state file, and every round writes each file whole from that text plus what
+still stands changed, so words move inside their lines and no line is added or lost (an error's line is the same line of the file
+from before). An error inside a macro is placed where the macro was called; a function handed on as a value where a `&mut` one is
+wanted is found by the compiler's note on its signature; an error that fits nothing puts `mut` back on every parameter of its file
+(counted), so a run always ends. What it does not do: split a macro that is used for reads and for writes (one write through it keeps
+it `mut` for every user), or follow a read through the sim crate's own private accessors (a function of the sim that reads a
+`static mut` is tainted like one that writes it).
 
 ## The report
 
