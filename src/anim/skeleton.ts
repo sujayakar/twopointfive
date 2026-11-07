@@ -6,6 +6,7 @@ import { RUST, sim, f32, f64, i32, u32, u8, type SimExports, FELL, fell } from '
 import { EXACT } from '../math/exact';
 import { simPart, simPartLen, P_POSES, SimState } from '../sim/state';
 import { SideMap } from '../math/side';
+import { RUST_PASS, RUST_SURFACE } from '../game/crossing';
 
 // ---- RUST.poses (src/sim/sim.ts): the functions of this file asked of the module (rust/sim/src/skeleton.rs: each of them statement for statement).
 // A question says where its pose is. A pose a character keeps lives in its game's block of the module's memory (Pose.home; whatever the row says:
@@ -152,7 +153,6 @@ export class Pose {
   rot(i: number): Quat { const d = this.cols, N = this.rows, o = 3 * N + i; return [d[o], d[o + N], d[o + 2 * N], d[o + 3 * N]]; }
   setRot(i: number, q: Quat) { if (!(i >= 0 && i < this.numNodes)) return; const d = this.cols, N = this.rows, o = 3 * N + i; d[o] = q[0]; d[o + N] = q[1]; d[o + 2 * N] = q[2]; d[o + 3 * N] = q[3]; }
   pos(i: number): Vec3 { const d = this.cols, N = this.rows; return [d[i], d[N + i], d[2 * N + i]]; }
-  setPos(i: number, p: Vec3) { if (!(i >= 0 && i < this.numNodes)) return; const d = this.cols, N = this.rows; d[i] = p[0]; d[N + i] = p[1]; d[2 * N + i] = p[2]; }
 }
 /** THE POSES ONE CHARACTER KEEPS from one tick to the next (its animator's: the blend's stages, the layers' own buffers). They are made through the set so
  *  that they can be moved, all of them, into the game's block and out of it (game/posehome.ts, as a tick opens under RUST.poses); a pose made while the set
@@ -181,7 +181,7 @@ function poseIn(p: Pose, st: SimState): boolean {
 }
 function poseOut(p: Pose): void { if (p.home === null) return; const own = new Float32Array(p.cols); p.home = null; p.at = 0; p.own = own; }
 /** every pose of a set into the block of `st`, and the poses it makes from now on (false: the pool had no room for one of them, see `stray`) */
-export function poseSetIn(s: PoseSet, st: SimState): boolean { s.home = st; let stray = 0; for (const p of s.list) if (!poseIn(p, st)) stray++; s.stray = stray; return stray === 0; }
+export function poseSetIn(s: PoseSet, st: SimState): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('poseSetIn', undefined, [s, st]); if (__r !== RUST_PASS) return __r as any; } } s.home = st; let stray = 0; for (const p of s.list) if (!poseIn(p, st)) stray++; s.stray = stray; return stray === 0; }
 /** …and out again, each into an array of its own */
 export function poseSetOut(s: PoseSet): void { s.home = null; s.stray = 0; for (const p of s.list) poseOut(p); }
 /** THE STAGE — an animator's update runs over poses that STAND IN A BLOCK OF THE MODULE (its layers are handed their poses by their places in
@@ -209,8 +209,6 @@ export function stageOpen(s: PoseSet): boolean {
   STAGE.lent++; return true;
 }
 export function stageShut(s: PoseSet): void { poseSetOut(s); sim().pose_clear(STAGE.st!.bind()); }
-/** how many updates were lent the stage (a tool's count) */
-export const stageLent = (): number => STAGE.lent;
 /** WHERE THE MODULE FINDS A POSE, for a question: the slot of the block it lives in — or −1, the bench (the pose is an array of its own, or its block
  *  stands parked: a question never moves a block, because the caller may be holding the pose's `cols`) */
 const slotOf = (p: Pose): number => p.home === null ? -1 : p.home.where;
@@ -271,7 +269,7 @@ export function clipNo(clip: Clip, nodes: number): number {
  *  own numbers lie on the bench, and a clip the store has no room for, a track it cannot take, or a clip that writes a node past a pose of `nodes` is
  *  refused before the first tick. Whatever row or maths stand (the bench is owed, as layerSlot's is), and a rig of more nodes than the bench holds is
  *  refused here too: nothing else would pose it. */
-export function layerClipsFit(clips: Iterable<Clip>, nodes: number): void {
+export function layerClipsFit(clips: Iterable<Clip>, nodes: number): void { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('layerClipsFit', undefined, [clips, nodes]); if (__r !== RUST_PASS) return __r as any; } }
   if (nodes > BENCH_NODES) throw new Error(`posing: a rig of ${nodes} nodes is more than the Rust module's bench holds (${BENCH_NODES}: anim/skeleton.ts BENCH_NODES with rust/sim/src/skeleton.rs), and a layer is posed nowhere else`);
   if (!POSE_BENCH.x && benchFor(nodes, true)) POSE_BENCH.asked--;   // (the bench stood up for this, and it is not a question)
   for (const c of clips) clipNo(c, nodes);
@@ -540,15 +538,6 @@ export class PoseFK {
   /** model-space rotation of node i's parent straight from the pose (walks up the chain: no run() needed, always current). Returns ONE SHARED SCRATCH quaternion — read it before the
    *  next call, never keep it (its two callers, Character.turn / shift, consume it inside one expression; the chain used to allocate two arrays a level) */
   private prScratch: Quat = [0, 0, 0, 1];
-  parentRot(pose: Pose, i: number): Quat {
-    { const x = benchRig(this.ch); if (x) { { const g = lend(pose, 0); known(x.pose_parent_rot(g, g < 0 ? 0 : pose.at, i)); } const m = f64(), o = POSE_BENCH.args, q = this.prScratch; q[0] = m[o]; q[1] = m[o + 1]; q[2] = m[o + 2]; q[3] = m[o + 3]; return q; } }
-    let x = 0, y = 0, z = 0, w = 1; const nodes = this.ch.nodes; const d = pose.cols, N = pose.rows;
-    for (let p = nodes[i].parent; p >= 0; p = nodes[p].parent) {   // q = quat.mul(pose.rot(p), q), operand for operand
-      const ax = d[3 * N + p], ay = d[4 * N + p], az = d[5 * N + p], aw = d[6 * N + p]; const bx = x, by = y, bz = z, bw = w;
-      x = aw * bx + ax * bw + ay * bz - az * by; y = aw * by - ax * bz + ay * bw + az * bx; z = aw * bz + ax * by - ay * bx + az * bw; w = aw * bw - ax * bx - ay * by - az * bz;
-    }
-    const q = this.prScratch; q[0] = x; q[1] = y; q[2] = z; q[3] = w; return q;
-  }
 }
 
 /** local ← local · q: turn node i in its own frame. On this rig (Rigify DEF bones: +Y along the bone) local +X is the hinge axis — elbow, knee and finger flexion

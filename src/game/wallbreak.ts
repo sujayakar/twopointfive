@@ -56,6 +56,7 @@ import { messOpened } from './floormess';
 import { leafRound } from './doorblast';
 import { breakRoom, type BreakRoom } from './levelfit';
 import { WallSkin } from './wallskin';
+import { RUST_PASS, RUST_SURFACE, goneWithTick } from './crossing';
 
 // ------------------------------------------------------------------ knobs
 export const WALLS = {
@@ -288,23 +289,7 @@ export class WallBreak {
   /** what the cell a round stopping in static `index` at `hitP` (travelling `dir`) would count on still wants before it gives, in round()'s own weighted units
    *  (a rifle round at chaos 0.5 = 1) — null: not a breakable, a door leaf, or that cell already gone. Reads only: the AI asks it before it spends rounds on a
    *  piece (coverfire.ts). The cell is found exactly as round() finds it, the sill-under-a-standing-upper rule included. */
-  workLeft(index: number, hitP: Vec3, dir: Vec3, through = 0): number | null {
-    const B = index < 1e6 ? this.owner.get(index) : undefined; if (!B || B.hard) return null;   // (a hard wall is nothing rounds work on)
-    const cell = (ix: number, iy: number, iz: number): [number, number | null] => {
-      if (B.kind === 'wall' && iy === 0 && !B.open[this.ci(B, ix, 1, iz)]) iy = 1;
-      const c = this.ci(B, ix, iy, iz);
-      return [c, B.open[c] ? null : Math.max(0, (WALLS.tough[B.surf] ?? 8) * (B.kind === 'wall' && iy === 0 ? WALLS.sillK : 1) - B.dmg[c])];
-    };
-    const [c0, first] = cell(...this.cellAt(B, v3.mad(hitP, dir, 0.02), this.g.col.boxes[index])); if (first === null || through <= 0) return first;
-    // `through` m: plus every further standing cell of this breakable the line crosses within that far (a stack several cells deep is that many cells' work to a
-    // man behind it; cells beyond where he is are none of it)
-    let sum = first; const seen = new Set([c0]), h = B.box.h;
-    for (let s = 0.1; s < through; s += 0.1) {
-      const p = v3.mad(hitP, dir, s), l = this.toLocal(B, p); if (Math.abs(l[0]) > h[0] || Math.abs(l[1]) > h[1] || Math.abs(l[2]) > h[2]) break;
-      const [c, left] = cell(...this.cellAt(B, p)); if (!seen.has(c)) { seen.add(c); if (left !== null) sum += left; }
-    }
-    return sum;
-  }
+  workLeft(index: number, hitP: Vec3, dir: Vec3, through = 0): number | null { return goneWithTick('WallBreak.workLeft') as any; }
   /** every breakable (authored index, kind, box, cells open / total) — the panel, the probes, the AI part */
   all(): { id: number; kind: BKind; surf: Surf; box: Box; open: number; cells: number }[] { return this.list.map(B => ({ id: B.id, kind: B.kind, surf: B.surf, box: B.box, open: B.nOpen, cells: B.open.length })); }
 
@@ -554,7 +539,7 @@ export class WallBreak {
    *  authored static off the floor against the face (`hangers`' own test), thin and broad (WALLS.hung) — within `r` of the charge on the plan and standing
    *  anywhere between the charge and the blast's eye over it. Never a thing with a road of its own: the lane's destructibles (a set, a stack), a light's or a
    *  fixture's box, the breaker; never a tilted box (the pieces are cut square to the wall). Ascending; [] for a wall this engine does not own. Pure: the level as it stands, nothing drawn, nothing written. */
-  hungAt(wall: number, at: Vec3, r: number): number[] {
+  hungAt(wall: number, at: Vec3, r: number): number[] { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('WallBreak.hungAt', this, [wall, at, r]); if (__r !== RUST_PASS) return __r as any; } }
     const g = this.g, B = this.owner.get(wall); if (!B || B.kind !== 'wall') return [];
     const K = WALLS.hung, wa = aabbOf(B.box), alongX = B.nx > 1 || B.box.h[0] >= B.box.h[2], side = (alongX ? at[2] - B.box.c[2] : at[0] - B.box.c[0]) >= 0 ? 1 : -1;
     const n = g.col.gather(at[0] - r - 0.4, at[2] - r - 0.4, at[0] + r + 0.4, at[2] + r + 0.4, 0.25, wa.y1, this.scratch); const out: number[] = [];
@@ -641,7 +626,7 @@ export class WallBreak {
 
   // ---------------------------------------------------------------- the sites
   /** A round stopped in static `index` (as col.raycast reports it; ≥ 1e6 = a door leaf) at `hitP` travelling `dir`. Destruction.round calls it (chaos > 0). */
-  round(who: number, hitP: Vec3, dir: Vec3, index: number, def: WeaponDef, chaos: number) {
+  round(who: number, hitP: Vec3, dir: Vec3, index: number, def: WeaponDef, chaos: number) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('WallBreak.round', this, [who, hitP, dir, index, def, chaos]); if (__r !== RUST_PASS) return __r as any; } }
     const g = this.g; if (!wallBreakOn(g)) return;
     const w = (def.cls === 'pistol' ? WALLS.pistolK : 1) * chaos * 2;
     if (index >= 1e6) { leafRound(g, index, who, hitP, dir, w); return; }   // a door leaf: the doors' own (doorblast.ts DOORSHOT — the same weight a cell here takes)
@@ -725,7 +710,7 @@ export class WallBreak {
    *  pass meets that leaf as a slab lying at the frame where this read met it standing). NOT in `left`: bare studs and ragged cut ends (the cut switch's
    *  picture: a listed wall is read with no studs at all, so a line through a stud bay reads open), and whatever the opening then lets fall (`settle`).
    *  A hard (outer) wall is listed only for THE charge set on it (`opts.breach`), as in the blast. No stats, no serial, no dice; [] with the engine off. */
-  wouldOpen(at: Vec3, opts: BlastOpts = {}): WallOpening[] {
+  wouldOpen(at: Vec3, opts: BlastOpts = {}): WallOpening[] { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('WallBreak.wouldOpen', this, [at, opts]); if (__r !== RUST_PASS) return __r as any; } }
     const g = this.g; if (!wallBreakOn(g)) return [];
     const R = (opts.radius ?? WALLS.blast.radius) * (opts.power ?? 1); if (!(R > 0)) return [];
     const out: WallOpening[] = [];

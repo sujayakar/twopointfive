@@ -5,7 +5,7 @@
 // child `bun` the tool starts in the repository's root.
 import { resolve } from 'node:path';
 import { asked, top, spellForWindow, foldHook, foldStart } from './word.ts';
-if (asked()) { top(); spellForWindow(); await import('./expose.ts');
+if (asked()) { top(); spellForWindow(); await import('./expose.ts'); await import('./crossing-keys.ts');
   // (by the table the fold is laid a check at a time: tools/qa/fold.ts imports nothing of the game's, so it can be read here, before any source file.
   // A fold with no `foldFor` is laid for the whole process as it was, and nothing is hooked.)
   if (asked() === 'table') { foldStart(); const F: any = await import('../qa/fold.ts'); if (typeof F.foldFor === 'function') foldHook(F.foldFor); } }

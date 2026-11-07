@@ -1,23 +1,24 @@
 // Lights as game objects: switchable fixtures and their groups, the OCP, the mains breaker (blackout / restrike / beacons / a guard sent to reset it), light events into the hearing model.
 // (Split out of game.ts mechanically: plain functions taking the Game as their first argument; Game keeps one-line delegators for
 //  anything other files call.)
-import { men } from './seats';
+import './seats';
 import { SideMap, GameSideMap } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
 import { leverHands } from './handwork';
 import { missionLive } from './mission';
-import { chronBlackout, chronOcp, fixtureName } from './chronicle';
+import { chronBlackout } from './chronicle';
 import type { Game, Guard, LightTarget } from './game';
 import { lightFromDef } from '../render/lights';
 import type { RtLight } from '../render/lights';
 import { hourOf, applyHour, sunStrength, sunGiven, setSunStrength, type HourId } from './hours';
 import { isHostile } from './teams';
 import { WORDS, wg } from './words';   // (a leaf: the dialogue pass's one switch)
-import { breakerErrand, samPanelPoint, workNotHis, workStaysPut } from './workthings';   // (a teammate neither takes the breaker errand nor re-arms it on his own, with that module's switch on)
+import { breakerErrand, workNotHis, workStaysPut } from './workthings';   // (a teammate neither takes the breaker errand nor re-arms it on his own, with that module's switch on)
 import { powerOut, powerOutRules } from './powerout';   // (the room fight's defenders answer a blackout by that module's rule: its switch off, both are a return on their first line)
 import { carLampPaint, deadLamp } from './carlamps';   // a broken vehicle lamp's paint; a dark lens breaking is no light going out (a leaf)
 import { LIGHT_IN, LIGHT_EV, MAINS } from '../sim/lightshome';   // (the state itself: rust/sim/src/lights.rs)
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
+import { RUST_PASS, RUST_SURFACE, crossToRust, goneWithTick } from './crossing';
 
 /** A WEAPON LIGHT STOPS AT A WALL. A man's light is a light AT ITS LENS — on the carbine's handguard, under the pistol's rail, at the hand torch's glass — and a man
  *  pressed to a wall (stacked on a door, crossing its frame, backed into a corner) has the reach to carry that lens into the wall or out through its far face: a
@@ -37,7 +38,7 @@ const LENS_SLANT = 0.3;   // the least |cos| between the line and the surface's 
  *  One collision ray over the statics and the leaves (collision.ts raycast; loose furniture is not asked, as for rounds), cast far enough past the lens that
  *  the pull-back begins at nothing and grows as he closes on a slanted wall — it never jumps. The beam's direction is the caller's and is left alone.
  *  `light`: remembered with its `from` for lensRecheck. */
-export function lensClear(g: Game, from: Vec3, lens: Vec3, radius: number, light?: RtLight): Vec3 {
+export function lensClear(g: Game, from: Vec3, lens: Vec3, radius: number, light?: RtLight): Vec3 { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('lensClear', undefined, [g, from, lens, radius, light]); if (__r !== RUST_PASS) return __r as any; } }
   if (!LIGHTWALL.on) return lens;
   if (light) LENS_FROM.set(light, from);
   const d = v3.sub(lens, from); const L = v3.len(d); if (L < 1e-3) return lens;
@@ -49,21 +50,13 @@ export function lensClear(g: Game, from: Vec3, lens: Vec3, radius: number, light
   LENS_STATS.pulled++; LENS_STATS.maxBack = Math.max(LENS_STATS.maxBack, L - Math.max(0, t));
   return v3.mad(from, rd, Math.max(0, t));
 }
-/** …and once more after the doors have moved (game.ts, right after updateDoors): the men were placed against last frame's leaves, and a leaf that swung onto
- *  the line this frame would have the light beyond it for that frame. Only burning carried lights, from where each was placed; nothing with the rule off. */
-export function lensRecheck(g: Game): void {
-  if (!LIGHTWALL.on) return;
-  const one = (L: RtLight) => { const from = LENS_FROM.get(L); if (from && L.enabled) L.pos = lensClear(g, from, L.pos, L.radius); };
-  for (const gd of g.guards) one(gd.flashlight);
-  for (const pl of men(g)) one(pl.light);
-}
 
 /** words.ts: the mains are the business of the side whose building it is — one of Sam's own teammates neither walks off to the breaker Sam threw nor puts it back in and
  *  says so on the net (the switch off: any living man, as it was) */
 const theirMains = (gd: Guard) => !WORDS.on || isHostile(gd.team, 'player');
 /** THE re-arm's gate for one man: the mains out by a trip he can undo, a few seconds old, and he — alive, not in Sam's arm (a man walked past the panel in
  *  it resets nothing — review finding) — within its reach of the panel's front. Read by the reset below and by handwork.ts (his step up to the lever). */
-export function breakerResetNear(g: Game, gd: Guard): boolean {
+export function breakerResetNear(g: Game, gd: Guard): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('breakerResetNear', undefined, [g, gd]); if (__r !== RUST_PASS) return __r as any; } }
   const bo = g.blackout, bp = g.level.breaker.pos;
   if (!(bo.active && !bo.permanent && g.time - bo.since > 3 && gd.state !== 'dead' && !gd.held)) return false;
   const E = breakerErrand(g), p = gd.char.pos;   // (workthings.ts: the reach in front of the panel's own face, and nothing solid between him and it — the fixed offset below reached through the wall a panel hangs on wherever it does not face the way the office's does)
@@ -72,7 +65,7 @@ export function breakerResetNear(g: Game, gd: Guard): boolean {
   return Math.hypot(gd.char.pos[0] - bp[0], gd.char.pos[2] - (bp[2] - 0.6)) < 1.3;
 }
 
-export function updateTargets(g: Game, dt: number) {
+export function updateTargets(g: Game, dt: number) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('updateTargets', undefined, [g, dt]); if (__r !== RUST_PASS) return __r as any; } }
   const time = g.time, H = g.lightHome, bo = g.blackout;
   // who is at the (intact) panel, for the module's timer (a guard who reaches it resets it after fumbling for a moment): that is one of theirs, and the hand and the words are this file's
   let near: Guard | null = null;
@@ -93,7 +86,7 @@ export function updateTargets(g: Game, dt: number) {
 }
 
 /** Trip the mains: everything fed from the breaker goes dark, emergency beacons spin up. Restrike is staggered per contactor group. */
-export function setBlackout(g: Game, seconds: number, cause: 'ocp' | 'shot' | 'debug' | 'hand') {
+export function setBlackout(g: Game, seconds: number, cause: 'ocp' | 'shot' | 'debug' | 'hand') { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('setBlackout', undefined, [g, seconds, cause]); if (__r !== RUST_PASS) return __r as any; } }
   const took = g.lightHome.in(LIGHT_IN.trip, null, g.time, seconds);
   if (took === 0) return;   // (the mains are gone for good already)
   const fresh = took === 3;
@@ -116,7 +109,7 @@ export function setBlackout(g: Game, seconds: number, cause: 'ocp' | 'shot' | 'd
   if (fresh) powerOut(g);   // (powerout.ts: a mission's defenders see the lights die, say what they do about it and then do it)
 }
 
-export function endBlackout(g: Game) {
+export function endBlackout(g: Game) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('endBlackout', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } }
   if (g.lightHome.in(LIGHT_IN.back, null, g.time) !== 0) mainsBack(g);
 }
 /** the mains have come back (the module has said so): what goes with it */
@@ -125,7 +118,7 @@ function mainsBack(g: Game) {
   for (const gd of g.guards) if (gd.task?.kind === 'breaker') gd.task = null;
 }
 
-export function lightEvent(g: Game, t: LightTarget, cause: 'ocp' | 'shot' = 'shot', swAt?: Vec3) {
+export function lightEvent(g: Game, t: LightTarget, cause: 'ocp' | 'shot' = 'shot', swAt?: Vec3) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('lightEvent', undefined, [g, t, cause, swAt]); if (__r !== RUST_PASS) return __r as any; } }
   if (deadLamp(t)) return;   // (carlamps.ts: a vehicle's lens that was dark already — nothing went out for anybody to see)
   g.events.push({ kind: 'lightOut', pos: [t.pos[0], 0, t.pos[2]], time: g.time, loud: false, from: v3.copy(t.pos), cause, ...(swAt ? { swAt: v3.copy(swAt) } : null) });   // (from: the fixture itself, up where it hangs — what a man's eye needs a line to before a light going out is a thing he SAW: guards.ts lightOutSeen)
 }
@@ -133,40 +126,9 @@ export function lightEvent(g: Game, t: LightTarget, cause: 'ocp' | 'shot' = 'sho
 /** Is there something under the reticle the OCP would act on right now? The snapped fixture / breaker (Game.aimTarget — even one that is off: pressing then says
  *  so), or the man the ring sits on IF a light of his is burning (his torch on patrol, his weapon light drawn: electronics like any fixture). A man with no light
  *  on is nothing to the OCP: no affordance on the ring (overlay.ts), and the right button does nothing there (player.ts) — not a click, not a line, not a charge. */
-export function ocpable(g: Game): boolean {
-  if (g.aimTarget) return !deadLamp(g.aimTarget);   // (carlamps.ts: a vehicle's lens that burns nothing is glass, not electronics)
-  const gd = g.aimGuard;
-  return !!gd && gd.state !== 'dead' && gd.flashlight.enabled && g.time >= gd.lightDeadUntil;
-}
+export function ocpable(g: Game): boolean { return goneWithTick('ocpable') as any; }
 
-export function ocp(g: Game, t: LightTarget | null) {
-  const o = g.player.ocp;
-  if (!o.ready()) { g.msg('OCP recharging'); g.audio.play('deny', null, 0.5); return; }
-  if (!t) {
-    const gd = g.aimGuard;
-    if (gd && gd.state !== 'dead') {
-      if (!ocpable(g)) return;   // no light of his is burning: nothing to knock out (the caller already keeps the button dead there; this keeps the rule in one place for the hold's path and the harness)
-      o.use(); g.audio.play('ocp', g.player.char.muzzle, 1);
-      gd.lightDeadUntil = g.time + g.tune.ocpDuration * 0.7; g.msg("OCP → guard's flashlight fried"); chronOcp(g, `${gd.callsign}'s torch`, gd.char.pos);
-      if (gd.state === 'patrol') { gd.awareness = Math.max(gd.awareness, 0.32); gd.lastKnown = v3.add(gd.char.pos, v3.scale(gd.char.forward(), 2)); }
-      g.audio.play('lightOff', gd.char.pos, 0.6);
-      return;
-    }
-    g.audio.play('deny', null, 0.5); return;   // nothing under the cursor: just the click
-  }
-  if (t.kind === 'breaker') {
-    const eye = g.player.char.bones.head ?? v3.add(g.player.char.pos, [0, 1.6, 0]);
-    const own = samPanelPoint(g, g.player.char.pos);   // (workthings.ts WORK.samFace: a panel hung facing another way is seen at its own face)
-    if (g.col.segmentBlocked(eye, v3.add(t.pos, [0, 0, -0.18])) && !(own && !g.col.segmentBlocked(eye, own))) { g.msg("the OCP can't see the breaker from here"); g.audio.play('deny', null, 0.5); return; }
-    if (g.blackout.active) { g.msg('power is already off'); g.audio.play('deny', null, 0.5); return; }
-    o.use(); g.audio.play('ocp', g.player.char.muzzle, 1); g.setBlackout(g.tune.ocpDuration * 2.5, 'ocp'); return;
-  }
-  if (t.factor <= 0) { g.msg(`OCP: ${t.name} already off`); return; }
-  o.use();
-  g.audio.play('ocp', g.player.char.muzzle, 1);
-  g.lightHome.in(LIGHT_IN.blind, t, g.time + g.tune.ocpDuration); g.msg(`OCP → ${t.name} disabled`); if (t.kind !== 'device') g.lightEvent(t, 'ocp'); chronOcp(g, fixtureName(t), t.pos);   // (a camera's or a laser's LED winking out is nothing a man across the floor sees: no event for a device)
-  g.audio.play('lightOff', t.pos, 0.7);
-}
+export function ocp(g: Game, t: LightTarget | null): void { return crossToRust('ocp', undefined, [g, t]) as any; }
 
 // ------------------------------------------------------------ lights
 export function setGroup(g: Game, group: string, on: boolean) { for (const t of g.targets) if (t.group === group) g.lightHome.in(LIGHT_IN.on, t, on ? 1 : 0); }
@@ -183,7 +145,7 @@ export function isDaylight(g: Game): boolean { return dayStates.has(g); }
  *  is another show). Off restores exactly what On recorded — every switch as it stood (not as authored: a fixture the player shot stays shot, one he switched off
  *  comes back off), the disabled lights, sky, haze, exposure — and takes the sun out of the set again, so a true → false round trip leaves the light list and the
  *  frame's sky bit for bit as they were (tools/qa probes 'breach-daylight'). Idempotent both ways; a level without a daylight block ignores it. */
-export function setDaylight(g: Game, on: boolean) {
+export function setDaylight(g: Game, on: boolean) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('setDaylight', undefined, [g, on]); if (__r !== RUST_PASS) return __r as any; } }
   const D = g.level.daylight, S = g.engine.settings, L = g.engine.lights;
   const cur = dayStates.get(g);
   if (on) {
@@ -217,7 +179,7 @@ export function setDaylight(g: Game, on: boolean) {
 export function toggleTarget(g: Game, t: LightTarget) { g.lightHome.in(LIGHT_IN.toggle, t); }
 
 /** All fixtures repaired, OCP timers cleared, mains back (panel 'repair' + encounter restart). */
-export function repairLights(g: Game) { for (const t of g.targets) { g.lightHome.in(LIGHT_IN.mend, t); g.lightHome.in(LIGHT_IN.blind, t, -1); } if (g.blackout.active) g.endBlackout(); }
+export function repairLights(g: Game) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('repairLights', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } } for (const t of g.targets) { g.lightHome.in(LIGHT_IN.mend, t); g.lightHome.in(LIGHT_IN.blind, t, -1); } if (g.blackout.active) g.endBlackout(); }
 
 /** A RESTART'S LIGHTS (cleanrestart.ts): the level's lights as a level just opened has them, from this tick — every fixture whole, no OCP timer running, the mains
  *  in with no restrike left to play and no beacon left turning (`restoredAt` and `since` as a new Game has them), nothing said and nothing sounded. The switches

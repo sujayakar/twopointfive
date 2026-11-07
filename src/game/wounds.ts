@@ -24,6 +24,7 @@ import { v3, type Vec3 } from '../math/vec';
 import { missionLive } from './mission';
 import { chronDown } from './chronicle';
 import { witnessKill } from './guards';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 export type WoundZone = 'head' | 'centre' | 'side' | 'leg';
 /** the record on a wounded man (Guard.wound; null on everybody else): where the round landed, how he is posed, when, and whose side's round it was */
@@ -98,7 +99,7 @@ export function roundDoes(g: Game, gd: Guard, ro: Vec3, rd: Vec3, tHit: number, 
 
 /** combat.ts killGuard, how 'wounded', where a shot man is handed to the ragdoll: he stays a posed figure — on his back if the round took a leg from in front of
  *  him and there is floor behind to land on, else down on one knee where he stood — everything about the fight cleared off him. */
-export function woundDown(g: Game, gd: Guard, dir: Vec3, zone: 'side' | 'leg' = 'side') {
+export function woundDown(g: Game, gd: Guard, dir: Vec3, zone: 'side' | 'leg' = 'side') { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('woundDown', undefined, [g, gd, dir, zone]); if (__r !== RUST_PASS) return __r as any; } }
   const c = gd.char;
   c.turnDrop();   // (TURN: he goes down as the body that was drawn, and nothing turns him from here — character.ts update leaves a wounded figure's yaws alone)
   const f = c.forward(), fromFront = f[0] * dir[0] + f[2] * dir[2] < -0.25;

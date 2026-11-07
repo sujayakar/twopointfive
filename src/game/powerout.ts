@@ -49,19 +49,18 @@ import type { Game, Guard } from './game';
 import type { RoomFight } from './roomfight';
 import { Vec3, v3 } from '../math/vec';
 import { isHostile } from './teams';
-import { order, endGuardScript } from './squad';
-import { run, boots } from './pressure';
-import { breakerErrand } from './workthings';
-import { breakerResetNear } from './lighting';
-import { cover } from './belief';
+import { order } from './squad';
+import { run } from './pressure';
+import './workthings';
+import './lighting';
 import { lightEstimateAt } from './guards';
 import { carriesDarkLamp } from './darkfoe';
-import { digInPhase } from './digin';
-import { wg } from './words';   // (a leaf: the dialogue pass's one switch)
-import { gunKeepsPost } from './gunroles';
-import { claimMan, releaseMan, hasHim, ownerWitness, OWN } from './owner';
-import { pressKeepsHome } from './pressure';
-import { buddyPaired } from './buddy';
+import './digin';
+import './gunroles';
+import { claimMan, releaseMan, ownerWitness, OWN } from './owner';
+import './pressure';
+import './buddy';
+import { goneWithTick } from './crossing';
 
 /** the switch and its numbers: off in the module, raised by the page (host/profile.ts pageSwitches; ?nopowerout = the garrison stands in the dark, as it did)
  *  and by the shipped stand; the harness's frozen stand leaves it off (TPS_POWEROUT=1 turns it on). UNTUNED by play: nobody has played against it. */
@@ -117,8 +116,6 @@ const frac = (x: number) => x - Math.floor(x);
 const idShare = (gd: Guard) => frac(gd.char.id * 0.6180339887);
 const alive = (gd: Guard) => gd.state !== 'dead' && gd.char.alive && !gd.fled;
 const fit = (g: Game, gd: Guard) => alive(gd) && !gd.held && g.time >= gd.dazzledUntil && g.time >= gd.staggerUntil;
-const roused = (gd: Guard) => gd.state === 'alert' || gd.state === 'search';
-const loudHeard = (gd: Guard) => { const H = gd.witness.heard; return H.shots + H.kick + H.bang; };
 const defOf = (g: Game, gd: Guard): Def | undefined => g.fight.defs.find(D => D.gd === gd);
 /** the rule's men: the room fight's defenders on the other side from the player, in live play */
 function ruled(g: Game): Def[] {
@@ -157,66 +154,8 @@ function floorWatched(g: Game, gd: Guard): number {
   return best;
 }
 const carried = () => true;
-/** why a defender is not free to go (null = he is): calm, on a post the room fight gave him, and nobody else's */
-export function powerOutKept(g: Game, D: Def): string | null {
-  const gd = D.gd;
-  if (!fit(g, gd)) return 'not his own man';
-  if (D.mode !== 'hold') return 'on the move';
-  if (D.rallyAt === Infinity) return 'the mission\'s man';   // (roomfight's word for a man a mission placed and keeps: rescue's crew, a last stand)
-  if (gd.script) return 'on a script';
-  if (roused(gd)) return 'in a fight';
-  if (g.rescue.crewHides(gd) || g.rescue.captor() === gd || hasHim(gd, OWN.stand)) return 'the captor / lying in wait / last stand';
-  if (digInPhase(g, gd) !== 'idle') return 'dug in';
-  if (hasHim(gd, OWN.squadWord)) return 'his squad\'s';
-  if (!POWEROUT.stayers && gd.staysInRooms) return 'his squad stays in its rooms';
-  if (gunKeepsPost(gd) || hasHim(gd, OWN.lane | OWN.lastMan)) return 'holds a lane / the last man';
-  if (hasHim(D.gd, OWN.press | OWN.buddy) || pressKeepsHome(g, D, false) || buddyPaired(g, D)) return 'the press\'s';
-  return null;
-}
-/** where the man at the lever stands (workthings.ts: the panel's own face; the fixed spot with that rule off, as lighting.ts has it) */
-function leverSpot(g: Game): Vec3 {
-  const E = breakerErrand(g), bp = g.level.breaker.pos;
-  return E ? v3.copy(E.goal) : [bp[0] - 0.4, 0, bp[2] - 0.9];
-}
-/** the way from a man to a spot as the walk grid stands, and its length; null = none that ends there */
-function wayTo(g: Game, from: Vec3, to: Vec3): { path: Vec3[]; L: number } | null {
-  if (flat(from, to) < 0.5) return { path: [to], L: flat(from, to) };
-  const path = g.col.nav.findPath(from, to, 20000); if (!path?.length) return null;
-  let L = 0, w0 = from; for (const w of path) { L += flat(w0, w); w0 = w; }
-  return flat(w0, to) > 1.0 ? null : { path, L };
-}
-/** the second man's place: free floor `coverM` short of the lever with a line to it, nearest the way they came; and what he watches from it (that way) */
-function coverSpot(g: Game, lever: Vec3, way: Vec3[], from: Vec3): { spot: Vec3; watch: Vec3 } {
-  const nav = g.col.nav, cs = nav.cell, [r0, r1] = POWEROUT.coverM;
-  // the point of the way about six metres before its end: where anybody following them would come from
-  let back = from, left = 6; for (let i = way.length - 1; i > 0 && left > 0; i--) { left -= flat(way[i], way[i - 1]); back = way[i - 1]; }
-  let best: Vec3 | null = null, bd = Infinity;
-  for (let r = r0; r <= r1 + 1e-6; r += 0.8) for (let k = 0; k < 12; k++) {
-    const a = k * Math.PI / 6, p: Vec3 = [lever[0] + Math.sin(a) * r, 0, lever[2] + Math.cos(a) * r];
-    if (nav.isBlocked(p[0], p[2]) || nav.isBlocked(p[0] + cs, p[2]) || nav.isBlocked(p[0] - cs, p[2]) || nav.isBlocked(p[0], p[2] + cs) || nav.isBlocked(p[0], p[2] - cs)) continue;
-    if (g.col.segmentBlocked([p[0], 1.2, p[2]], [lever[0], 1.2, lever[2]])) continue;
-    const d = flat(p, back); if (d < bd) { bd = d; best = p; }
-  }
-  return { spot: best ?? v3.copy(lever), watch: v3.copy(back) };
-}
-export function calmOf(D: Def): Calm {
-  const gd = D.gd;
-  return { awareness: gd.awareness, hold: gd.hold, pinned: gd.pinned, station: v3.copy(D.station), home: v3.copy(D.home), room: D.room, ev: [...D.ev], watch: D.watch, want: D.want, pt: v3.copy(D.pt) };
-}
 /** a leg of the walk: pressure.ts's scripted leg at the pace of a man going to look (the tick below ends it itself, before the room fight's plant would) */
 function walk(g: Game, D: Def, to: Vec3) { run(g, D, to, null); order(D.gd, { speed: g.tune.guardInvestigate }); }
-/** back on the post he left, as he held it — `wary`: the breaker was no fault, he is not calmed down again */
-function settle(g: Game, st: State, M: Man, D: Def) {
-  calmBack(D, M.calm!, st.word);   // (only a calm man steps off — powerOutKept — so the post he left was a calm one)
-}
-/** a man back on the post he left, as `calmOf` read it there — `wary`: he is not calmed down again (rescuecheck.ts puts its man back the same way) */
-export function calmBack(D: Def, c: Calm, wary: boolean) {
-  const gd = D.gd;
-  if (gd.script) endGuardScript(gd, wary ? 'suspicious' : 'patrol');
-  gd.awareness = wary ? Math.min(0.45, Math.max(c.awareness, 0.35)) : c.awareness; gd.hold = c.hold; gd.pinned = c.pinned;
-  D.mode = 'hold'; D.station = c.station; D.home = c.home; D.room = c.room; D.ev = c.ev; D.watch = c.watch; D.want = c.want; D.pt[0] = c.pt[0]; D.pt[1] = c.pt[1]; D.pt[2] = c.pt[2];
-  D.glanceUntil = -1; D.fixKeep = -1; D.rallyAt = NaN; D.lastState = gd.state; D.lastSeen = gd.lastSeenT; cover(gd, D.pt);
-}
 /** a kept post as a checkpoint carries it (its room by id) and back */
 export type CalmSnap = Omit<Calm, 'room'> & { room: number };
 export const calmSave = (c: Calm): CalmSnap => ({ ...c, station: v3.copy(c.station), home: v3.copy(c.home), ev: [...c.ev], pt: v3.copy(c.pt), room: c.room ? c.room.id : -1 });
@@ -258,7 +197,7 @@ export function powerOutLit(g: Game, gd: Guard): boolean {
   const M = STATES.get(g)?.men.find(m => m.gd === gd); return !!M && M.phase !== 'wait' && carriesDarkLamp(gd);   // (a man the mission dealt no lamp at all has none to burn: darkfoe.ts `carry`)
 }
 /** darkfoe.ts hasWord: their side holds this dark for the team's doing */
-export function powerOutWord(g: Game, gd: Guard): boolean { return POWEROUT.on && g.blackout.active && !!STATES.get(g)?.word && isHostile(gd.team, 'player'); }
+export function powerOutWord(g: Game, gd: Guard): boolean { return goneWithTick('powerOutWord') as any; }
 /** is he out for the lights (or about to step off)? */
 /** what was said and done, oldest first (the check and the debugger read it; nothing in the game does) */
 export function powerOutTimeline(g: Game): PowerOutEvent[] { return STATES.get(g)?.events ?? []; }
@@ -266,140 +205,7 @@ export function powerOutReset(g: Game) { STATES.delete(g); breakerSay(g); }
 /** WHO THE BREAKER'S PARTY HAS (src/game/owner.ts): out for the lights, or waiting to be sent */
 function breakerSay(g: Game): void { const men = POWEROUT.on ? STATES.get(g)?.men : undefined; for (const gd of g.guards) { if (men?.some(m => m.gd === gd)) claimMan(gd, OWN.breaker, g.time); else releaseMan(gd, OWN.breaker, g.time); } }
 
-/** their word: who goes, or why nobody does */
-function decide(g: Game, st: State, defs: Def[]) {
-  st.decided = true;
-  const live = defs.filter(D => alive(D.gd)), speaker = live.find(D => fit(g, D.gd) && sawThemDie(g, D.gd)) ?? live.find(D => fit(g, D.gd));
-  if (!speaker) return;
-  const stay = (line: string, why: string, word: boolean) => { st.word ||= word; g.say(speaker.gd, line, true); event(g, st, 'stay', speaker.gd, why); };
-  if (live.some(D => roused(D.gd) || loudHeard(D.gd) > 0 || D.gd.witness.alertedBy !== null)) return stay("power's out — that's them! Stay on your doors!", 'a man of theirs is roused or has heard the team: nobody walks out to mend a fuse', true);
-  if (g.rescue.captor()) return stay("power's out — that's them! Stay on your doors!", 'men holding hostages take the dark for the assault (rescue.ts: every one of them has learned of the team by it)', true);
-  if (st.lost) return stay("power's out again — nobody goes. Stay on your doors!", 'the last men sent for the lights did not all come back', true);
-  if (st.parties >= POWEROUT.parties) return stay(wg("power's out again — that's no accident. Stay on your doors!", "power's out again — that's no fault. Stay on your doors!"), `the lights have gone ${st.parties + 1} times this fight`, true);
-  const lever = leverSpot(g), free = live.filter(D => powerOutKept(g, D) === null);
-  // the breaker in a defender's own room: its nearest man, alone, without leaving it
-  const R = g.fight.roomAt(lever);
-  const own = R ? free.filter(D => D.room === R).sort((a, b) => flat(a.gd.char.pos, lever) - flat(b.gd.char.pos, lever))[0] : undefined;
-  let go: { D: Def; way: { path: Vec3[]; L: number } }[] = [];
-  if (own) { const way = wayTo(g, own.gd.char.pos, lever); if (way) go = [{ D: own, way }]; }
-  const ownGoes = go.length > 0;
-  if (!go.length) {
-    const near = [...free].sort((a, b) => flat(a.gd.char.pos, lever) - flat(b.gd.char.pos, lever)).slice(0, POWEROUT.ask);   // (a path each is the dear part: only the nearest are asked)
-    const ways = near.map(D => ({ D, way: wayTo(g, D.gd.char.pos, lever) })).filter((x): x is { D: Def; way: { path: Vec3[]; L: number } } => !!x.way && x.way.L <= POWEROUT.maxM).sort((a, b) => a.way.L - b.way.L);
-    const inRoom = new Map<Def['room'], number>(); for (const D of live) if (D.mode === 'hold') inRoom.set(D.room, (inRoom.get(D.room) ?? 0) + 1);
-    for (const x of ways) { if (go.length >= POWEROUT.men) break; const n = inRoom.get(x.D.room) ?? 0; if (!x.D.room || n < 2) continue; inRoom.set(x.D.room, n - 1); go.push(x); }   // (a man left in every room that had one)
-    if (!go.length && POWEROUT.lone && ways.length) go = [ways[0]];
-    if (!go.length) return stay("power's out — nobody to spare. Stay on your doors!", free.length ? `no way to the breaker inside ${POWEROUT.maxM} m for a man who is free` : 'no man of theirs is free to go', false);
-  }
-  const lead = go[0], second = go[1];
-  st.men.push({ gd: lead.D.gd, role: 'lever', phase: 'wait', goal: lever, from: v3.copy(lead.D.station), watch: null, tries: 0, stepT: -100, heard0: 0, thereT: -1, calm: null });
-  if (second) { const c = coverSpot(g, lever, lead.way.path, lead.D.gd.char.pos); st.men.push({ gd: second.D.gd, role: 'cover', phase: 'wait', goal: c.spot, from: v3.copy(second.D.station), watch: c.watch, tries: 0, stepT: -100, heard0: 0, thereT: -1, calm: null }); }
-  st.parties++; st.goAt = g.time + POWEROUT.beat; st.wayM = lead.way.L;
-  g.say(lead.D.gd, second ? "power's out — two moving to the breaker!" : "power's out — on my way to the breaker!", true);
-  event(g, st, 'said', lead.D.gd, `${go.map(x => x.D.gd.callsign).join(' and ')} for the breaker, ${lead.way.L.toFixed(0)} m off by the way he walks${ownGoes ? ', in his own room' : second ? '' : ', alone'}; they step off in ${POWEROUT.beat} s`);
-}
 
-/** once a frame, before the room fight's own tick (game.ts): their word when it is due, and every man out a step on — a return on its first line with the
- *  switch off or no blackout answered */
-export function powerOutTick(g: Game, dt: number) { stepPowerOut(g, dt); breakerSay(g); }
-function stepPowerOut(g: Game, _dt: number) {
-  const st = STATES.get(g); if (!st) return;
-  const defs = ruled(g); if (!defs.length) { if (st.men.length) standDown(g, st); return; }   // (the switch thrown off, or a show taking the floor, in the middle of a walk)
-  const bo = g.blackout;
-  if (!st.decided && st.lookAt >= 0 && g.time >= st.lookAt) {
-    const hit = bo.active && bo.since === st.since ? st.seen.find(s => { const gd = g.guards[s.i]; return !!gd && fit(g, gd) && floorWatched(g, gd) < s.lit * POWEROUT.dropK; }) : undefined;
-    if (hit) noticed(g, st, g.guards[hit.i], 'the floor he is watching goes dark'); else nobody(g, st);
-  }
-  if (!st.decided && bo.active && bo.since === st.since && g.time >= st.decideAt) decide(g, st, defs);
-  const fight = defs.some(D => alive(D.gd) && roused(D.gd));
-  if (!st.men.length) { missed(g, st, defs, fight); return; }
-  if (st.men.some(m => m.phase === 'wait') && g.time >= st.goAt) stepOff(g, st, fight);
-  const lever = st.men.find(m => m.role === 'lever');
-  st.men = st.men.filter(M => {
-    const gd = M.gd, D = defOf(g, gd);
-    if (!alive(gd)) { st.lost = true; if (M.phase !== 'wait') st.fell = v3.copy(gd.char.pos); event(g, st, 'lost', gd, 'down while he was out for the lights: nobody is sent again this fight'); return false; }
-    if (!D || gd.held) {   // (in Sam's arm, or no defender of the fight's any more: whoever has him has him)
-      st.lost = true; if (gd.script && M.phase !== 'wait') endGuardScript(gd, gd.state === 'suspicious' || gd.state === 'alert' || gd.state === 'search' ? gd.state : 'patrol');
-      event(g, st, 'lost', gd, gd.held ? 'taken while he was out for the lights: nobody is sent again this fight' : 'no man of the fight\'s any more'); return false; }
-    if (M.phase === 'wait') return true;
-    M.stepT = boots(g, gd, M.stepT);
-    const atLever = M.role === 'lever' && M.phase === 'there';
-    if (D.mode !== 'move') { event(g, st, 'abort', gd, 'the room fight has him where he stands'); return false; }   // (met on the way: tickMove planted him, roused — its man)
-    if (st.fell && ((M.phase === 'there' && !lever) || (flat(gd.char.pos, st.fell) <= POWEROUT.seeM && !g.col.segmentBlocked([gd.char.pos[0], 1.5, gd.char.pos[2]], [st.fell[0], 0.4, st.fell[2]])))) {   // his mate on the floor in his plain view — or he is set short of the lever, a line to it, and no mate at it
-      st.fell = null; st.word = true; g.say(gd, "he's down at the breaker — that's them! Stay on your doors!", true);
-      run(g, D, M.from, null); event(g, st, 'abort', gd, 'sees the man he came with on the floor: says so, and back to his post at a run'); return false;
-    }
-    if ((fight || roused(gd) || loudHeard(gd) > M.heard0) && !(atLever && bo.active && !bo.permanent)) {
-      run(g, D, M.from, null); event(g, st, 'abort', gd, `${roused(gd) ? 'he is roused' : loudHeard(gd) > M.heard0 ? 'a shot, a boot or a charge in his ears' : `a fight (${defs.find(X => alive(X.gd) && roused(X.gd))?.gd.callsign} is roused)`}: back to his post at a run`); return false;   // (the leg ends in the room fight's plant: its man from here)
-    }
-    if (M.phase !== 'back' && !bo.active) {   // the mains are back — his mate's hand, the trip's own clock, anybody's
-      M.phase = 'back'; M.tries = 0; walk(g, D, M.from);
-      if (M.role === 'lever' || !lever) event(g, st, 'restored', gd, `the mains are back ${(g.time - st.since).toFixed(1)} s after they went: back to their posts`);
-      return true;
-    }
-    const goal = M.phase === 'back' ? M.from : M.goal, d = flat(gd.char.pos, goal);
-    const reached = !!gd.script?.arrived || d < 0.5 || (M.phase !== 'back' && M.role === 'lever' && breakerResetNear(g, gd));
-    if (M.phase === 'there') {
-      // he stands where he was sent (still his leg: the room fight plants a man who has arrived, or stood a second and a half)
-      if (gd.script) gd.script.arrived = false; D.stallT = 0; D.moveT = 0;
-      if (M.role === 'lever') {
-        if (bo.active && !bo.permanent && g.time - M.thereT > POWEROUT.leverSecs) {   // (a lever that will not take his hand — something solid between them: he does not stand at it for ever)
-          event(g, st, 'abort', gd, `${POWEROUT.leverSecs} s at a lever he cannot get a hand to: back to their posts`);
-          for (const X of st.men) { const XD = defOf(g, X.gd); if (XD && XD.mode === 'move' && X.phase !== 'wait') { X.phase = 'back'; X.tries = 0; walk(g, XD, X.from); } }
-          return true;
-        }
-        const bp = g.level.breaker.pos; order(gd, { face: Math.atan2(bp[0] - gd.char.pos[0], bp[2] - gd.char.pos[2]), aimAt: null, upper: 'none' });
-        if (bo.permanent && g.time - M.thereT > POWEROUT.lookSecs) {
-          st.word = true; g.say(gd, "breaker's wrecked — that's them! Stay on your doors!", true); event(g, st, 'wrecked', gd, 'the breaker is shot to scrap: no fault, and nothing to mend');
-          for (const X of st.men) { const XD = defOf(g, X.gd); if (XD && XD.mode === 'move' && X.phase !== 'wait') { X.phase = 'back'; X.tries = 0; walk(g, XD, X.from); } }
-        }
-      } else if (M.watch) order(gd, { aimAt: [M.watch[0], 1.2, M.watch[2]], upper: 'aim' });
-      if (M.role === 'cover' && (!lever || lever.phase === 'back')) { M.phase = 'back'; M.tries = 0; walk(g, D, M.from); }
-      return true;
-    }
-    if (!reached) {
-      if (D.stallT <= 1.3 && D.moveT <= 8) return true;   // on his way
-      if (M.tries < POWEROUT.tries) { M.tries++; walk(g, D, goal); return true; }   // (the room fight ends a leg at ten seconds, or a second and a half of going nowhere: a longer way is walked in legs, a shut way tried again)
-      if (M.phase === 'back') { event(g, st, 'abort', gd, 'no way back to his post: the room fight plants him where he is'); return false; }
-      M.phase = 'back'; M.tries = 0; walk(g, D, M.from); event(g, st, 'abort', gd, 'no way to the breaker: back to his post'); return true;
-    }
-    if (M.phase === 'back') { settle(g, st, M, D); event(g, st, 'home', gd, `back on his post ${(g.time - st.since).toFixed(1)} s after the lights went`); return false; }
-    M.phase = 'there'; M.thereT = g.time; if (gd.script) gd.script.arrived = false; D.stallT = 0; D.moveT = 0;
-    event(g, st, 'there', gd, M.role === 'lever' ? `at the lever ${(g.time - st.since).toFixed(1)} s after the lights went` : 'set short of the lever, watching the way they came');
-    return true;
-  });
-}
-/** the beat is up: the party steps off as one. The mains back or a fight started: nobody goes. The first man no longer free (dazzled, taken, another rule's):
- *  the second goes for the lever in his place; neither free: nobody goes. A walk nobody started is not counted against the next blackout. */
-function stepOff(g: Game, st: State, fight: boolean) {
-  const wait = st.men.filter(m => m.phase === 'wait'), bo = g.blackout;
-  const all = !bo.active ? 'the mains are back' : fight ? 'a fight has started' : null;
-  const why = new Map(wait.map(M => { const D = defOf(g, M.gd); return [M, all ?? (!D ? 'no man of the fight\'s any more' : powerOutKept(g, D))] as const; }));
-  const goes = wait.filter(M => why.get(M) === null);
-  for (const M of wait) if (why.get(M) !== null) event(g, st, 'abort', M.gd, `does not step off: ${why.get(M)}`);
-  st.men = st.men.filter(M => M.phase !== 'wait' || goes.includes(M));
-  if (!goes.length) { if (!st.men.length) st.parties = Math.max(0, st.parties - 1); return; }
-  if (!st.men.some(m => m.role === 'lever')) { const M = goes[0]; M.role = 'lever'; M.goal = leverSpot(g); M.watch = null; }
-  for (const M of goes) { const D = defOf(g, M.gd)!, gd = M.gd;
-    M.calm = calmOf(D); M.heard0 = loudHeard(gd); M.phase = 'out'; walk(g, D, M.goal);
-    event(g, st, 'go', gd, `${M.role === 'lever' ? 'walks to the lever' : 'goes with him to cover it'}, ${flat(gd.char.pos, M.goal).toFixed(0)} m off, ${(g.time - st.since).toFixed(1)} s after the lights went`); }
-  st.overdueAt = g.time + st.wayM / Math.max(0.5, g.tune.guardInvestigate) + POWEROUT.overdue;
-}
-/** nobody is out any more. A party that lost a man and sent no word: once it is `overdue` their side says so and holds the dark for the team's doing — what they
- *  did NOT hear is what they act on, not a fall nobody saw. (A man of theirs already roused knows: no line.) */
-function missed(g: Game, st: State, defs: Def[], fight: boolean) {
-  if (st.overdueAt < 0) return;
-  if (!st.lost || st.word || !g.blackout.active) { st.overdueAt = -1; return; }
-  if (g.time < st.overdueAt) return;
-  st.overdueAt = -1; st.word = true;
-  const speaker = defs.find(D => fit(g, D.gd)); if (!speaker || fight) return;
-  g.say(speaker.gd, "nothing from the breaker — that's them! Stay on your doors!", true); event(g, st, 'overdue', speaker.gd, 'the men sent for the lights have not been heard from and the mains are still down');
-}
-/** the rule let go of in the middle of a walk: every man out goes back to his post at a run, and is the room fight's from there */
-function standDown(g: Game, st: State) {
-  for (const M of st.men) { const D = defOf(g, M.gd); if (D && D.mode === 'move' && M.phase !== 'wait' && alive(M.gd) && !M.gd.held) run(g, D, M.from, null); }
-  st.men = []; st.overdueAt = -1; st.fell = null;
-}
 
 // ---------------------------------------------------------------- the state's pair (new module state the game depends on rides a snapshot)
 export type PowerOutSnap = { since: number; decideAt: number; goAt: number; wayM: number; overdueAt: number; fell: Vec3 | null; seen: { i: number; lit: number }[]; lookAt: number; decided: boolean; word: boolean; parties: number; lost: boolean;

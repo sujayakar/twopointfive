@@ -19,6 +19,7 @@ import type { GunModelId } from './weapons';
 import { INHAND, BELT_TORCH, InHandWord } from './inhand';   // (a leaf: the switch and its numbers)
 import { GUNHAND } from './gunhand';   // (a leaf: the switch and its keys)
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
+import { RUST_PASS, RUST_SURFACE, goneWithTick } from './crossing';
 
 export type UpperMode = 'none' | 'relaxed' | 'aim' | 'torch';
 /** Procedural ready postures layered over the locomotion (see CharacterAnimator.stance). */
@@ -79,8 +80,6 @@ export interface WorkPose { kind: WorkKind; p: Vec3; n: Vec3; t: number; dur: nu
 /** …its numbers: s before the first key (the hand's way there), m from the wrist joint to the forefinger's tip, m the tip hovers off a key and the key's face stands
  *  off p, m a lever's handle travels either side of p */
 export const WORK = { keyLead: 0.2, tipLen: 0.215, hover: 0.022, keyOff: 0.03, lever: 0.035 };
-/** when key k (0‥3) of a code is pressed, on a verb `dur` long */
-export const workKeyBeat = (k: number, dur: number) => WORK.keyLead + (k + 0.5) * (dur - WORK.keyLead) / 4;
 /** THE TORCH ↔ SIDEARM SWAP (CharacterAnimator.carry; swapLayer): what the gun hand carries, and the move between the two — s to draw / to put the gun away, and the
  *  fractions of either at which the first thing is out of the hand and the second is in it */
 export type CarryKind = 'torch' | 'weapon' | null;
@@ -357,7 +356,6 @@ export const defaultAnimParams: AnimParams = { walkSpeed: 1.06, jogSpeed: 3.3, c
 export const BLEND = { walkIn0: 0.12, walkIn1: 0.55, walkTop: 1.6, jogAt: 2.7 };
 /** how much of the run clip's pelvis bounce survives (its authored 23 cm crest-to-trough is twice a real jog's) */
 export const BOB = { keep: 0.55 };   // (a field, not a bare const: the gait lab turns it live)
-export const BOB_KEEP = 0.55;      // the authored default, for reference
 /** the run clip's stride warp at a full jog: feet travel this fraction of the clip's fore-aft excursion (the cadence rises by its inverse to keep the ground speed);
  *  held right through the hand-off to the sprint (whose own feet are warped below), so the two blended runs' legs agree */
 export const RUN_WARP = { stride: 0.62 };
@@ -804,9 +802,6 @@ export const HAND = { can: { curl: [0.56, 0.58, 0.62, 0.68], thumb: 0.3 }, curl:
 /** the angle (rad) between the unit quaternions at a[i‥i+3] and b[k‥k+3] */
 /** the angle between the rotation at a[i] (its four numbers `s` apart: a pose's rows, or 1 in a plain list of rotations) and the one at b[k‥k+3] */
 const qAng = (a: ArrayLike<number>, i: number, s: number, b: ArrayLike<number>, k: number) => { const d = Math.abs(a[i] * b[k] + a[i + s] * b[k + 1] + a[i + 2 * s] * b[k + 2] + a[i + 3 * s] * b[k + 3]); return d >= 1 ? 0 : 2 * Math.acos(d); };
-/** MOVES.entry's lane (THE rule, for the game and the strips alike): something (dx, dz) from a man stands before his muzzle — within arm's length-and-a-half
- *  down the line his GUN points (gunYaw) and inside a body's half-width of it */
-export function inDipLane(dx: number, dz: number, gunYaw: number): boolean { const L = MV2.dip.lane, fx = Math.sin(gunYaw), fz = Math.cos(gunYaw), along = dx * fx + dz * fz; return along > L[0] && along < L[1] && Math.abs(dx * fz - dz * fx) < L[2]; }
 /** MOVES.reload's marks on a long gun, off the trigger hand's wrist in the gun's frame (QA reads them: the probes hold the hand to them and to rigProps' magazine) */
 export const reloadMarks = (back: boolean) => back ? MV2.reload.back : MV2.reload.box;
 /** a weapon's reload beat as the animator takes it (weapons.ts WeaponDef.reload is one): seconds to the magazine out / the fresh one in / the handle; `rack: null` = no handle this time */
@@ -1590,8 +1585,6 @@ export class CharacterAnimator {
    *  goal's hand to the ribs, at WOUND_AT) or the thigh. `settled` = start him already down (a checkpoint's man). Cleared → the graph has him back at once. */
   wound: { pose: 'knee' | 'back'; at: 'ribs' | 'thigh'; settled?: boolean; clock?: number } | null = null;
   private wdT = 0; private wdW = 0; private wdClip: Clip | null = null; private wdPose = '';
-  /** output: the wound layer's weight this frame (0 = none of it in the pose) and how far down he is (0 on his feet … 1 on the floor) — the probes read them */
-  get woundShown(): number { return this.wdW; }
   /** the layer's own clock, s since he started down (a checkpoint files it: his breath comes back where it was) */
   get woundClock(): number { return this.wdT; }
   get woundDown(): number { const wd = this.wound; if (!wd || !this.wdClip) return 0; const K = WOUND_POSE[wd.pose]; return clamp(this.wdT * K.rate / K.hold[0], 0, 1); }
@@ -1930,7 +1923,7 @@ export class CharacterAnimator {
     this.hn.seed = seed;   // (the hand pass: whose relaxed hands these are — built on first use)
   }
 
-  fire() {
+  fire() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('CharacterAnimator.fire', this, []); if (__r !== RUST_PASS) return __r as any; } }
     this.shootT = 0; this.hn.fired = 0;   // (the hand pass: his finger is on the trigger — nothing else reads it)
     if (this.longGun && mvOn('recoil')) {   // MOVES: each round adds to the recoil's decaying sums (update() bleeds them off, longArms / recoilTrunk show them)
       const m = this.mvs, R = MV.recoil, T = clamp(this.trained, 0, 1), k = (p: readonly [number, number]) => lerp(p[0], p[1], T);
@@ -1939,9 +1932,9 @@ export class CharacterAnimator {
       m.rock += k(R.rock); m.sho += k(R.shoulder); m.head += k(R.head);
     }
   }
-  hit() { this.hitT = 0; }
+  hit() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('CharacterAnimator.hit', this, []); if (__r !== RUST_PASS) return __r as any; } } this.hitT = 0; }
   /** startle: same recoil as taking a round (Hit_Chest layer), no damage implied */
-  flinch() { if (mvOn('flinch')) this.flinchFrom(null); else this.hit(); }
+  flinch() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('CharacterAnimator.flinch', this, []); if (__r !== RUST_PASS) return __r as any; } } if (mvOn('flinch')) this.flinchFrom(null); else this.hit(); }
   /** MOVES: rounds going past — a DUCK away from where they come from (`toward`: world direction from him to the source; null = his front): head down and turned
    *  off it, trunk folded over the gun, knees soft; both hands stay on the weapon. Big and slow for an untrained man, a dip of the head for a trained one.
    *  With the pass off this is the old flinch (the Hit_Chest twitch). */
@@ -1957,19 +1950,11 @@ export class CharacterAnimator {
   }
   /** the duck at a round is showing (0 = not, else how much of the whole untrained duck: its envelope × his training's share × what the round was worth) */
   get flinchShown(): number { const m = this.mvs, T = clamp(this.trained, 0, 1); return m.flT >= 0 ? clamp(curve(m.flT / lerp(MV.flinch.dur[0], MV.flinch.dur[1], T), MV_FLINCH_ENV), 0, 1) * lerp(MV.flinch.amp[0], MV.flinch.amp[1], T) * m.flK : 0; }
-  /** MOVES: the START of a man who has just seen what he did not expect (`toward`: world direction from him to it; null = his front) — the jolt back off it,
-   *  the head snapped round to it, the arms flung out from his sides (MV_STARTLE). One at a time: a second call while the first still shows is the same start.
-   *  With the pass off this is the old flinch (the Hit_Chest twitch). Presentation only: what it buys the man who caused it is the caller's (game/startle.ts). */
-  startleFrom(toward: Vec3 | null) {
-    if (!mvOn('flinch')) { this.hitT = 0; return; }
-    const m = this.mvs; if (m.stT >= 0) return;
-    m.stD = toward ? this.flatModel(toward, [0, 0, 1]) : [0, 0, 1]; m.stT = 0;
-  }
   /** the start is showing (0 = not, else how much of it: its envelope) */
   get startleShown(): number { const m = this.mvs; return m.stT >= 0 ? clamp(curve(m.stT / lerp(MV_STARTLE.dur[0], MV_STARTLE.dur[1], clamp(this.trained, 0, 1)), MV_STARTLE.env), 0, 1) : 0; }
   /** MOVES: a round that went home on a man who stays up (`along`: the world direction the round was travelling; null = from his front): the torso knocked along
    *  it and twisted off the struck shoulder, the pelvis shoved, the head lagging — then he fights back to where he was. Off = the old Hit_Chest clip. */
-  hitFrom(along: Vec3 | null) {
+  hitFrom(along: Vec3 | null) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('CharacterAnimator.hitFrom', this, [along]); if (__r !== RUST_PASS) return __r as any; } }
     if (!mvOn('flinch')) { this.hitT = 0; return; }
     const m = this.mvs;
     // a second round while the first still has him: the blow restarts from the lean he shows (the clock goes to that point of the knock; its direction stays the first's while any of it shows)
@@ -1985,34 +1970,25 @@ export class CharacterAnimator {
     if (!mvOn('toss')) { this.signal('go'); return; }
     const m = this.mvs; if (m.tsT >= 0) return; m.tsT = 0; m.tsRel = clamp(release, 0.08, 0.6);
   }
-  get tossing() { return this.mvs.tsT >= 0; }
   /** a world direction, flattened, in the figure's un-twisted model frame (fallback when it has no length) */
   private flatModel(w: Vec3, fb: Vec3): Vec3 { const d = this.toModelD([w[0], 0, w[2]]); const l = hyp2(d[0], d[2]); return l > 1e-4 ? [d[0] / l, 0, d[2] / l] : fb; }
   /** takedown strike (full upper body, brief): Punch_Cross — or, `kind` 'jab', the library's Punch_Jab played the same way (the lead hand: a man taken from the
    *  front); a tree whose library has no jab plays the cross. `lethal` = the KNIFE's blow: the same clip carries the body and the left arm, the right hand draws
    *  the knife from the sheath on his chest (straight out if it was resting on the hilt), cuts / stabs and puts it back inside the clip (knifeBlow, KNIFE_BLOW;
    *  knifeShown while it is out). Without it nothing of that runs: the blow the build always played, to the bit. */
-  strike(kind: StrikeKind = 'cross', lethal = false) { this.strikeT = 0; this.strikeK = kind; this.kbSlash = this.kbBack = false; this.bw = null; this.bwRise = 0; if (lethal || this.strikeLeth) { this.strikeLeth = lethal; this.kbR0 = this.reachShown; this.kbT = 0; this.knifeShown = false; } }
-  /** the blow under way is the knife's (strike(kind, true)) — false once its clip has ended */
-  get strikeLethal() { return this.strikeT >= 0 && this.strikeLeth; }
+  strike(kind: StrikeKind = 'cross', lethal = false) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('CharacterAnimator.strike', this, [kind, lethal]); if (__r !== RUST_PASS) return __r as any; } } this.strikeT = 0; this.strikeK = kind; this.kbSlash = this.kbBack = false; this.bw = null; this.bwRise = 0; if (lethal || this.strikeLeth) { this.strikeLeth = lethal; this.kbR0 = this.reachShown; this.kbT = 0; this.knifeShown = false; } }
   get striking() { return this.strikeT >= 0; }
   /** A TAKEDOWN'S OWN MOVE (game/takedown.ts, right after the strike() it rides): `at` = where the blow lands, `at2` = where the free hand goes (world points
    *  on the man), landing `hit` s in and over by `end`; with `vic` both points ride his neck / head as he moves (the blow's until it lands). Poses only: the
    *  game's own clock still says when he is out. */
-  blow(style: BlowStyle, at: Vec3, at2: Vec3 | null = null, o: BlowOpts = {}) {
-    this.bw = { style, t: 0, hit: o.hit ?? 0.28, end: o.end ?? 0.62, tail: o.tail ? BLOW.tail : 0, rise: o.rise ?? true, at: v3.copy(at), at2: at2 ? v3.copy(at2) : null, live: o.live ?? null };
-    this.kbSlash = style === 'slash'; this.kbBack = style === 'mouth';
-  }
-  /** the move called off (the man stepped out of the hands; the order ended): eased out from where it is, never snapped */
-  blowCancel() { const B = this.bw; if (!B) return; B.end = Math.min(B.end, B.t + 0.18); B.tail = 0; B.live = null; }
+  blow(style: BlowStyle, at: Vec3, at2: Vec3 | null = null, o: BlowOpts = {}): void { return goneWithTick('CharacterAnimator.blow') as any; }
   /** the man it was being done to, let go of: his reaction eases out over a fifth of a second (one not yet begun never begins) */
-  takenCancel() { const T = this.tk; if (!T) return; if (T.t - T.delay <= 0) this.tk = null; else if (T.off < 0) T.off = 0; }
+  takenCancel(): void { return goneWithTick('CharacterAnimator.takenCancel') as any; }
   /** …AND THE MAN IT IS DONE TO, while he is still on his feet: from `delay` s on he arches back onto the knife man's shoulder / hunches under a blow from
    *  behind, knees going / his head snaps back off one from in front. Eases out by itself after TAKEN.secs (he is mostly a ragdoll long before). */
-  taken(style: TakenStyle, delay = 0) { this.tk = { style, t: 0, delay, off: -1 }; }
-  get blowing() { return this.bw !== null; }
+  taken(style: TakenStyle, delay = 0): void { return goneWithTick('CharacterAnimator.taken') as any; }
   /** the reload one-shot (Pistol_Reload over the upper body), retimed to take `dur` seconds — the weapon's own beat: the Five-seveN's 1.6, the SC-20K's 2.4 */
-  reload(dur = 1.6, beat?: ReloadBeat) {
+  reload(dur = 1.6, beat?: ReloadBeat) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('CharacterAnimator.reload', this, [dur, beat]); if (__r !== RUST_PASS) return __r as any; } }
     this.reloadT = 0; this.reloadDur = Math.max(0.3, dur);
     this.rlBeat(beat ?? { dur: this.reloadDur }); this.rlSrc = null; this.rlT = 0;   // (MOVES: the support hand's magazine change runs over the weapon's own beat — out / in / rack where the game's reload has them; no beat given = the clip's length)
   }
@@ -2061,11 +2037,7 @@ export class CharacterAnimator {
   nvShown: number | undefined = undefined;
   /** the goggles go down (or up): by the left hand if `hand`, else a nod. A flip already under way is turned round from where the goggles are; a hand already
    *  up there stays up (the clip is joined where its reach has the arm as high as it is). */
-  nvFlip(down: boolean, hand: boolean) {
-    const H = KIT.nv.hand, k0 = this.nvShown ?? (down ? 0 : 1); let t = 0;
-    if (hand && this.nv?.hand && this.nvArm > 0.02) { let a = 0, b = H.reach; for (let i = 0; i < 14; i++) { const m = (a + b) / 2; if (smoothstep(0, H.reach, m) < this.nvArm) a = m; else b = m; } t = a; }
-    this.nv = { t, hand, down, k0, c0: this.nv ? this.nvNod : 0 }; this.nvShown = k0;   // (c0: a nod cut short by this press is let go of over KIT.nv.nod.carry, not dropped in a frame)
-  }
+  nvFlip(down: boolean, hand: boolean): void { return goneWithTick('CharacterAnimator.nvFlip') as any; }
   /** the flip let go of where it is (he is down, a show has the stage): the goggles are where the game says */
   /** SMOKING (game/smokebreak.ts, which alone writes it): how far the LEFT hand is asked up to the mouth, 0‥1 — eased here at a hand's pace (smokeLayer) and
    *  given up the frame anything else has the arm. null = nobody asked: nothing of the layer runs for a figure that was never told to smoke. */
@@ -2074,15 +2046,9 @@ export class CharacterAnimator {
   nvCancel() { this.nv = null; this.nvArm = 0; this.nvNod = 0; this.nvA = 0; this.nvShown = undefined; }
   /** KIT: the errand under way has the rifle in it (going to the sling or coming off it) */
   private get kitRifle(): boolean { const k = this.kit; return !!k && (k.from === 'rifle' || k.to === 'rifle'); }
-  /** KIT: the support hand's magazine work can be shown at all (it is the MOVES' reload layer) */
-  get kitHandsOn(): boolean { return MOVES.on > 0.5 && MOVES.reload > 0.5; }
   /** KIT: a magazine change as the drawer needs it — is the magazine out of the gun, and is one in the support hand (the kept one on its way to the pouch, the
    *  fresh one on its way to the well). null = no change shown. */
-  get reloadShow(): { out: boolean; hand: boolean } | null {
-    if (!(this.mv2Shown.reload > 0.5)) return null;
-    const B = this.rlB, t = this.mv2.rlAt;
-    return { out: t >= B.out && t < B.in_, hand: (B.keep >= 0 && t >= B.out && t < B.keep) || (t >= B.fresh + 0.04 && t < B.in_) };
-  }
+  get reloadShow(): { out: boolean; hand: boolean } | null { return goneWithTick('CharacterAnimator.reloadShow') as any; }
   /** the change the support hand is SHOWING, as its beat and where it is on it (gunreload.ts reloadShow / reloadHandBoxes work a gun's own feeding out from this
    *  and nothing else: no state of their own). null = no change shown. */
   get feedClock(): { t: number; dur: number; out: number; in_: number; rack: number; pull: boolean; keep: number; fresh: number } | null {
@@ -2099,7 +2065,7 @@ export class CharacterAnimator {
    *  switch on); `speed` (m/s over the floor it leaves at, where the caller knows it) keeps a hard throw from being a toss; no distance = the overhand as
    *  authored. The clock is the same for every one of them. GUNHAND.throwFree: begun with a long gun in the hands it is the LEFT hand's — the same swing
    *  mirrored, the gun kept in the trigger hand at the low ready (`thrOff`, throwLayer). */
-  throwItem(dist?: number, speed?: number) {
+  throwItem(dist?: number, speed?: number) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('CharacterAnimator.throwItem', this, [dist, speed]); if (__r !== RUST_PASS) return __r as any; } }
     this.thrCarry = this.throwT >= 0 && this.thrLast ? { r: v3.copy(this.thrLast.r), l: v3.copy(this.thrLast.l) } : null; this.throwT = 0;
     this.thrOff = GUNHAND.on && GUNHAND.throwFree && this.longGun;
     this.thrLow = -1; this.thrFar = 1; this.thrHang = -1; this.thrHit0 = Math.max(clamp(this.mvs.cf.x, 0, 1), clamp(this.mvs.dz.x, 0, 1));   // (how far a fold or a blinding already has him as the swing starts: throwLayer gives way only to what lands after)
@@ -2139,10 +2105,8 @@ export class CharacterAnimator {
    *  idle's own spot, then the weight settles forward. The pelvis counter-rotates and leans back, the pistol is pulled into a compressed high ready throughout.
    *  `leg: 'left'` throws the same kick mirrored — off the LEFT leg, the weight on the right (kickBody mirrors every lateral offset, yaw and roll and swaps the
    *  legs); the default right-leg kick is untouched by it. */
-  kickDoor(opts: { leg?: 'left' | 'right' } = {}) { if (this.kickT < 0) { this.kickT = 0; this.kickHit = false; this.kickFrom = null; this.kickLeg = opts.leg ?? 'right'; } }
+  kickDoor(opts: { leg?: 'left' | 'right' } = {}) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('CharacterAnimator.kickDoor', this, [opts]); if (__r !== RUST_PASS) return __r as any; } } if (this.kickT < 0) { this.kickT = 0; this.kickHit = false; this.kickFrom = null; this.kickLeg = opts.leg ?? 'right'; } }
   get kicking() { return this.kickT >= 0; }
-  /** which leg the kick in progress (or the last one) swings */
-  get kickingLeg(): 'left' | 'right' { return this.kickLeg; }
   /** seconds into the kick, −1 when not kicking (KICK_IMPACT is the contact instant) */
   get kickTime() { return this.kickT; }
   /** true for exactly one update — the one in which the sole reached the door: swing the door / play the crack on this */
@@ -2151,25 +2115,13 @@ export class CharacterAnimator {
    *  then chopped forward to point the way, 'rally' open hand circling above the head, 'aside' the open hand pushed twice at chest height
    *  ("off my line": showwhy.ts) — out to his own left, or with `side` -1 across his front to his right: the way he wants the man gone. Ignored while one is
    *  still playing. */
-  signal(kind: SignalKind, side: 1 | -1 = 1) { if (kind === 'squeeze' && !mvOn('squeeze')) kind = 'hold'; if (this.sigT < 0) { this.sigT = 0; this.sigKind = kind; this.sigSide = side; } }
+  signal(kind: SignalKind, side: 1 | -1 = 1) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('CharacterAnimator.signal', this, [kind, side]); if (__r !== RUST_PASS) return __r as any; } } if (kind === 'squeeze' && !mvOn('squeeze')) kind = 'hold'; if (this.sigT < 0) { this.sigT = 0; this.sigKind = kind; this.sigSide = side; } }
   get signalling() { return this.sigT >= 0; }
-  /** His left hand is his own this frame: what leaves the gun arm its own (gunArmOwn below: no signal or tell still playing, no throw, reload, hit, blow,
-   *  hold, lock, kit, wound), no kick or flash in his eyes, and none of the left hand's own layers out (showwhy.ts asks before it has him signal: a gesture
-   *  is never laid over hands at work). */
-  get signalFree(): boolean {
-    return this.gunArmOwn && this.kickT < 0 && !this.dazzle && this.reloadAt < 0 && this.rlT < 0   // (… nor a magazine change on the game's own clock, which is no clip of this file's)
-      && this.rx.w.x < 0.02 && this.wk.wL.x < 0.02 && this.dp.wL.x < 0.02 && !this.nv?.hand;   // (… nor the hand on the handset, at work on a thing, out to a door leaf, or at the goggles)
-  }
   /** An idle tell, the LEFT arm and the head only (the right hand keeps the torch / the pistol grip, so it layers over the calm carry like a signal does): 'watch' —
    *  the forearm comes up across the chest, turned over, and the head drops to read it (~1 s); 'neck' — the hand goes to the back of the neck and works at it, the
    *  chest lifting a little into the stretch, the head tipping away (~1.3 s). Ignored while one is still playing (or a signal is: they share the arm). game/needs.ts
    *  plays them on a man about to leave his route; nothing else reads them. */
-  tell(kind: TellKind) { if (this.tellT < 0 && this.sigT < 0) { this.tellT = 0; this.tellK = kind; } }
-  /** drop a tell where it is (the trip it belonged to was broken off: the arm is the aim's / the flinch's from this frame) */
-  cancelTell() { this.tellT = -1; this.tellShown = 0; }
-  get telling() { return this.tellT >= 0; }
-  /** which tell is playing (or played last) */
-  get tellKind(): TellKind { return this.tellK; }
+  tell(kind: TellKind): void { return goneWithTick('CharacterAnimator.tell') as any; }
 
   /** (the update, over poses that stand in a block of the module for its length: anim/skeleton.ts, the stage) */
   update(dt: number) { const lent = stageOpen(this.poses); try { this.updateStanding(dt); } finally { if (lent) stageShut(this.poses); } }
@@ -2685,8 +2637,6 @@ export class CharacterAnimator {
     for (let sd = 0; sd < 2; sd++) for (let i = 0; i < 4; i++) m[o + 3 + sd * 4 + i] = F[sd][i];
     this.handsAsk(() => POSE_BENCH.x!.layer_wound_limbs(g, this.pA.at, this.pB.at, this.rest.at));
   }
-  /** seconds into the action clip now playing (0 with none) — the probes, and a caller timing a one-shot such as 'Interact' */
-  get actTime(): number { return this.actClip ? this.actT : 0; }
 
   // ================================================================ MOVES (the loud demo's motion pass — see MOVES / MV)
   private mvOut: MvGait = { live: false, g: 0, u: 0, st: 0 };
@@ -3958,7 +3908,7 @@ export class CharacterAnimator {
   private toModelP(wp: Vec3): Vec3 { const cy = Math.cos(this.bodyYawIn), sy = Math.sin(this.bodyYawIn), P0 = this.posIn; const dx = wp[0] - P0[0], dz = wp[2] - P0[2]; return [dx * cy - dz * sy, wp[1] - P0[1], dx * sy + dz * cy]; }
   private toModelD(wd: Vec3): Vec3 { const cy = Math.cos(this.bodyYawIn), sy = Math.sin(this.bodyYawIn); return [wd[0] * cy - wd[2] * sy, wd[1], wd[0] * sy + wd[2] * cy]; }
   /** the door hand's eased weights per arm (0‥1) and which arm is the wanted one — for whoever wants to know a hand is on a leaf (the QA probe; hand props one day) */
-  doorHands(): { L: number; R: number; right: boolean } { return { L: clamp(this.dp.wL.x, 0, 1), R: clamp(this.dp.wR.x, 0, 1), right: this.dp.right }; }
+  doorHands(): { L: number; R: number; right: boolean } { return goneWithTick('CharacterAnimator.doorHands') as any; }
 
   /** A hand on the door leaf he is pushing open (doorPush — game.ts knows which leaf, which face, whether he is pushing, and which hand it would rather; the weight
    *  is this layer's own springs: in ≈ 0.15 s, out ≈ 0.25 s, a change of hand cross-fading one arm out as the other comes in). The FREE arm only: the wanted one
@@ -3994,13 +3944,11 @@ export class CharacterAnimator {
   private hwReset() { const K = this.wk, S = this.sw, R = this.rx; K.last = null; K.fed = false; K.after = 0; K.wL.x = K.wL.v = K.wR.x = K.wR.v = K.tw.x = K.tw.v = 0; K.okL = K.okR = false; K.shown = 0; S.cur = undefined; S.t = S.wait = -1; R.left = 0; R.w.x = R.w.v = 0; this.work = null; this.carry = undefined; S.shown = false; this.handPre = null; }
   /** what the work hands are doing — for the props, the clocks that wait on the hand, the probes: the pose last fed (null once it has run out), the working hand's
    *  eased weight, which hand that is and whether the other is on the thing too */
-  workInfo(): { pose: WorkPose | null; w: number; hand: 0 | 1; two: boolean } { const K = this.wk; return { pose: K.last, w: K.shown, hand: K.main, two: K.two }; }
+  workInfo(): { pose: WorkPose | null; w: number; hand: 0 | 1; two: boolean } { return goneWithTick('CharacterAnimator.workInfo') as any; }
   /** the verb is done: the pose carries on by itself for `secs` past its end (a thing taken is put away, a hand comes off a lever) */
   workAfter(secs: number) { if (this.wk.last) this.wk.after = secs; }
   /** a line over the radio: the left hand goes up to the handset at his collar for about `secs` (asked again while it is up: it stays up) */
   radio(secs: number) { this.rx.left = Math.max(this.rx.left, clamp(secs, 0.8, 3)); }
-  /** 0‥1: how far the radio hand is up */
-  get radioShown(): number { return clamp(this.rx.w.x, 0, 1); }
   /** what the gun hand VISIBLY holds: `rule` (what the game says he carries) unless a swap is running — then the thing he had until the hand has put it away,
    *  nothing while it crosses from the belt to the holster (or back), the other from when the hand has it */
   swapHeld(rule: CarryKind): CarryKind { const S = this.sw; if (S.t < 0) return rule && S.cur && S.cur !== rule ? S.cur : rule;   // (the rule changed after this frame's pose was taken: the move starts next frame, from what he has)
@@ -4008,7 +3956,6 @@ export class CharacterAnimator {
   /** the swap's progress 0‥1 (−1: none running) and what it goes to */
   /** how far the swap's hand is at the torch on his belt this frame, 0‥1 (swapLayer; for the eye: Character.inHandPass draws the hand out to where the torch hangs) */
   get swapBelt(): number { return this.sw.belt; }
-  swapInfo(): { a: number; to: CarryKind; pending: boolean } { const S = this.sw; return { a: S.t < 0 ? -1 : S.t / S.dur, to: S.to, pending: S.wait >= 0 }; }
 
   /** THE TORCH ↔ SIDEARM SWAP — a small layer over the right arm, not an animation: the hand goes down to the belt (the torch hangs there) and the holster on the
    *  thigh, in the order the change needs — torch away THEN the gun, or the gun away THEN the torch — and comes back up into whatever the pose beneath has for
@@ -4404,7 +4351,7 @@ export class Character extends ManCols {
   }
 
   /** (his turn is a rule asked where his layers are, so the stage is his for the whole of this and not only for the animator's part: anim/skeleton.ts) */
-  update(dt: number) { const lent = stageOpen(this.anim.poses); try { this.updateStanding(dt); } finally { if (lent) stageShut(this.anim.poses); } }
+  update(dt: number) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Character.update', this, [dt]); if (__r !== RUST_PASS) return __r as any; } } const lent = stageOpen(this.anim.poses); try { this.updateStanding(dt); } finally { if (lent) stageShut(this.anim.poses); } }
   private updateStanding(dt: number) {
     if (this.ragdoll) { this.updateRagdoll(dt); return; }
     if (this.turn.on && TURN.on > 0.5 && dt > 0 && !this.anim.wound) this.turnWeigh(dt);   // (a man down wounded turns to nothing: wounds.ts dropped his turn as he went)
@@ -4570,16 +4517,9 @@ export class Character extends ManCols {
   }
   /** TURN let go of (wounds.ts: a man going down wounded stays a posed figure): his yaws become the ones that were drawn, and no turn is carried on */
   turnDrop() { if (this.tn) { this.bodyYaw = this.tn.body; this.aimYaw = this.tn.aim; this.tn = null; } }
-  /** TURN: his AI is about to ease his yaws (guards.ts updateGuard's first line) — they read back as it LEFT them, so its easings run from where it wanted
-   *  him and not from where his weight has let him get to (an easing fed its own slowed result only ever sees one step ahead: he would crawl). A yaw somebody
-   *  has written since (a staging, a mark) is not touched: it is the new wish. Nothing with the weight off — and a man whose weight has just been taken off
-   *  (grabbed, a showcase starting) keeps facing where he had got to. */
-  turnBegin() { const T = this.tn; if (!T || this.ragdoll || !this.turn.on || TURN.on <= 0.5) return; if (this.bodyYaw === T.body) this.bodyYaw = T.ib; if (this.aimYaw === T.aim) this.aimYaw = T.ia; }
   /** where his GUN is in yaw — for a fire gate that runs inside his own AI update (guards.ts, aim.ts), where aimYaw reads as the wish: he may not fire down a line his
    *  gun has not reached. aimYaw itself with the weight off, and wherever aimYaw is already the turned yaw (everything outside his update). */
   get gunYaw(): number { const T = this.tn; return T && !this.ragdoll ? T.aim : this.aimYaw; }
-  /** where his AI wants his body, for an easing that runs outside his own update (roomfight.ts applyWatch); his body yaw itself with the weight off */
-  get wantBody(): number { const T = this.tn; return T && this.bodyYaw === T.body ? T.ib : this.bodyYaw; }
 
   /** the world-space joint positions off the skeleton's current globals, into `b` */
   /** A joint as the GAME reads it: where it is under the moves' look-only arms while one shows (a can leaves the hand the fight has, not one mid magazine change), the
@@ -4621,7 +4561,7 @@ export class Character extends ManCols {
    *  along `dir` carries the body that way and pitches it head-first the same way (shot from the front: over backwards, away from the shooter; in the back:
    *  onto its face), knees kicked out so it drops rather than topples like a plank; `quiet` (takedown) is the same fold, gentler, along `dir` = his own
    *  facing. `world` = what it collides with (null: just the floor). */
-  ragdollize(world: RagdollWorld | null, dir: Vec3, quiet: boolean) {
+  ragdollize(world: RagdollWorld | null, dir: Vec3, quiet: boolean) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Character.ragdollize', this, [world, dir, quiet]); if (__r !== RUST_PASS) return __r as any; } }
     if (this.tn) { this.bodyYaw = this.tn.body; this.aimYaw = this.tn.aim; this.tn = null; }   // (TURN: dropped inside his own update, his yaws are his AI's wish — the body that falls is the one that was drawn)
     if (this.ragdoll) { this.fallAs = null; this.fallFrom = null; this.fallTight = false; this.fallAhead = 0; return; }
     if (!this.bones.hips) this.update(0);

@@ -14,6 +14,7 @@ import { stickyVisitSet } from './stickycam';   // (called inside functions only
 import { ALL_MISSIONS, LESSON_MISSIONS, specOfQuery, teamWords, type ScenarioSpec } from '../scene/scenarioList';
 import type { ScenarioEntry } from '../scene/scenarios';
 import type { SquadSize } from './loadout';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 const WORDS: Record<ScenarioSpec['kind'], string> = { nightbreach: 'night breach', roomclear: 'room clear', rescue: 'hostage rescue', quiet: 'quiet mission' };
 
@@ -48,7 +49,7 @@ export function fogOfLink(q: URLSearchParams): boolean {
 }
 
 /** Stage `spec` on this game: the squad's size written to the knob the staging reads, then the scenario's own start(). Returns its refusal, or null. */
-export function startScenario(g: Game, spec: ScenarioSpec): string | null {
+export function startScenario(g: Game, spec: ScenarioSpec): string | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('startScenario', undefined, [g, spec]); if (__r !== RUST_PASS) return __r as any; } }
   if (spec.kind !== 'roomclear') difficultyHere('');   // (difficulty.ts HARD_AT: a level's own hard rows are its room clear's — roomclear.ts start() names the structure)
   if (spec.kind === 'quiet') { /* the quiet mission stages its own one partner (quiet.ts): neither knob is its */ }
   else if (spec.kind !== 'rescue') g.nightBreach.knobs.squad = spec.squad; else g.rescue.knobs.squad = spec.squad;   // (the rescue stages its own team off its own knob)
@@ -99,7 +100,7 @@ export function runningScenario(g: Game, levelFile: string | null = null, list: 
 
 /** Quit whichever scenario is up, back to the floor the start card sits over: its cast gone, the shift back, a fresh night encounter, the squad knob at the
  *  pair and fog of war as a URL with no scenario on it would have it (`fog`). Returns what was stopped (null: nothing was up). */
-export function quitScenario(g: Game, fog = false): ScenarioSpec['kind'] | null {
+export function quitScenario(g: Game, fog = false): ScenarioSpec['kind'] | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('quitScenario', undefined, [g, fog]); if (__r !== RUST_PASS) return __r as any; } }
   const was = activeScenario(g);
   if (was) stickyVisitSet(g, 0);   // (before the stop: a quiet mission's stop restarts the encounter, and the card put on that fresh player must not read the mission's cameras)
   if (was === 'roomclear') g.roomClear.stop(); else if (was === 'nightbreach') g.nightBreach.stop(); else if (was === 'rescue') g.rescue.stop(); else if (was === 'quiet') g.quiet.stop();

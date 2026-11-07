@@ -34,20 +34,21 @@
 //
 // ON in the page (`?lightswitch=0` = as it was), OFF in the module and on the frozen harness stand (`TPS_LIGHTSWITCH=1`): a FROZEN_HOLDS row, in the knob
 // registry and a journal's tables; a recording from before the table replays with it off.
-import { SideMap, GameSideMap } from '../math/side';
+import { GameSideMap } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
-import { Box, BoxFlag, makeBox, MKEY } from '../scene/boxes';
-import type { Game, Guard, Interactable, LightTarget, Player, Verb } from './game';
+import { BoxFlag } from '../scene/boxes';
+import type { Game, LightTarget, Player, Verb } from './game';
 import type { Character } from './character';
 import type { Door } from './doors';
 import { frameOf } from './guards';
-import { isHostile } from './teams';
-import { workAt, handworkOn, samHand, HANDWORK, WORK_TURN } from './handwork';
+import './teams';
+import './handwork';
 import { samStaggered } from './samstun';
 import { HANDRING } from './handring';
-import { NEARBY_M } from './player';
-import { dozeAsleep } from './doze';
+import './player';
+import './doze';
 import { LIGHT_IN } from '../sim/lightshome';
+import { RUST_PASS, RUST_SURFACE, crossToRust } from './crossing';
 
 export const LIGHTSWITCH = {
   on: false,
@@ -89,8 +90,6 @@ interface Hand { c: Character; sw: WallSwitch; at: number; dir: 1 | -1; dur: num
 interface St { /** every plate the level was given */ all: WallSwitch[]; /** those whose wall stands */ list: WallSwitch[]; hands: Hand[]; /** the level's geometry serial the walls were last asked after at */ serial: number }
 const states = new GameSideMap<Game, St>('lightswitch.states');
 
-/** is the rule running (nothing under a show: its lights are its script's) */
-export function switchesLive(g: Game): boolean { return LIGHTSWITCH.on && !g.touring && !g.director.showing; }
 
 // ---------------------------------------------------------------- finding them
 /** is this fixture one a wall switch works: on the mains, and a light of the room — any analytic light, or a flat fixture that faces down from overhead */
@@ -191,7 +190,7 @@ function build(g: Game): WallSwitch[] {
   return out;
 }
 /** the level's plates (none with the rule off) */
-export function wallSwitches(g: Game): WallSwitch[] {
+export function wallSwitches(g: Game): WallSwitch[] { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('wallSwitches', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } }
   if (!LIGHTSWITCH.on) return NONE;
   let st = states.get(g);
   if (!st) { const all = build(g); states.set(g, st = { all, list: all.filter(sw => wallStands(g, sw)), hands: [], serial: geomSerial(g) }); }
@@ -210,107 +209,20 @@ export function lightSwitchReset(g: Game) { states.delete(g); for (const t of g.
 // ---------------------------------------------------------------- the flip
 /** are the room's lights on at the switch (any fixture of it switched on — a shot one, a tripped one and the mains are not the switch's business) */
 export const switchLit = (sw: WallSwitch): boolean => sw.targets.some(t => t.on);
-/** (handring.ts `turn`) may Sam be planted at a plate for his hand's move: the rule on, hands at work on, and not from a wall hold — pressed to the wall
- *  beside the door he reaches the plate from where he is, as he did (a plant would take him off the wall) */
-const plants = (g: Game, by: Character): boolean => HANDRING.turn && by === g.player.char && handworkOn('work') && !g.puppet && !g.player.wall;
-/** …the time his turn to the plate and his step in to it take: his hand's move waits that long on top of its own (handwork.ts workStand walks him there,
- *  player.ts updateWorkPlant turns him at WORK_TURN) */
-function turnSecs(by: Character, sw: WallSwitch): number {
-  const face = Math.atan2(-sw.n[0], -sw.n[2]), d = Math.atan2(Math.sin(face - by.bodyYaw), Math.cos(face - by.bodyYaw));
-  const step = Math.max(0, Math.hypot(sw.pos[0] + sw.n[0] * HANDWORK.standM - by.pos[0], sw.pos[2] + sw.n[2] * HANDWORK.standM - by.pos[2]) - 0.15);
-  return Math.min(HANDRING.turnMax, Math.abs(d) / WORK_TURN + step / HANDWORK.stepPace);
-}
 /** …what breaks the plant off (the breaker's own ways out, handwork.ts breakerTick): he is down, has a man or a body in hand, is folded by a blast, or
  *  has been moved off the plate. The lights went on the press and stay as they are; only his stand at the plate ends. */
 const plantBroken = (g: Game, h: Hand): boolean => { const pl = g.player; return !HANDRING.turn || !!pl.down || !!pl.holding || !!pl.takedown || !!pl.dragging || !!pl.wall || samStaggered(g) || v3.distXZ(h.sw.pos, pl.char.pos) > 1.6; };
-/** (handring.ts `turn`) the plate Sam is planted at, while he is: stood at it and squared to it (handwork.ts samWork → player.ts updateWorkPlant). It is
- *  a short follow-through of a flip already made, not a verb: nothing waits on it, a click lets go of it and so does any row given (switchLetGo: the
- *  lights are out, the trigger and his hands are his — the plate's own row is on offer under it, a second tap flips the room back as it always
- *  could), and a save inside it does not keep it. */
-export function switchLetGo(g: Game): void { for (const h of states.get(g)?.hands ?? []) if (h.c === g.player.char) h.plant = false; }
 export function switchHand(g: Game): { p: Vec3; n: Vec3 } | null {
   const h = states.get(g)?.hands.find(x => x.plant && x.c === g.player.char);
   return h && g.time >= h.at && g.time - h.at < h.dur && !plantBroken(g, h) ? { p: h.sw.pos, n: h.sw.n } : null;
 }
 /** Work a switch. Off: every fixture of the room that is on, each one that was burning seen to go by whoever has a line to it, and each marked with the time
  *  a hand put it out. On: what the hand put out; in a room no hand put out, the room as authored (all of it, where the level left the whole room dark). */
-export function flipSwitch(g: Game, sw: WallSwitch, on: boolean, by: Character) {
-  const K = LIGHTSWITCH;
-  if (!on) for (const t of sw.targets) if (t.on && t.factor > 0) { g.lightEvent(t, 'shot', sw.floor); LIGHTSWITCH_STATS.events++; }   // (one a hand put out before stays the hand's and says nothing. cause: as a light put out for good — a man who sees it comes; and it says where the hand was)
-  g.lightHome.flip(sw.targets, on, g.time, K.strike);   // (rust/sim/src/lights.rs flip: the circuit's own rule)
-  g.audio.play('click', sw.pos, 0.8); if (!on) g.audio.play('lightOff', sw.pos, 0.5);
-  const st = states.get(g); if (st) { st.hands = st.hands.filter(h => h.c !== by); const plant = plants(g, by); st.hands.push({ c: by, sw, at: g.time, dir: on ? -1 : 1, dur: K.handSecs + (plant ? turnSecs(by, sw) : 0), plant }); }
-}
+export function flipSwitch(g: Game, sw: WallSwitch, on: boolean, by: Character): void { return crossToRust('flipSwitch', undefined, [g, sw, on, by]) as any; }
 
-// ---------------------------------------------------------------- Sam's row (player.ts buildInteractables) and its deed (game.ts, where a breaker's is acted on)
-type RowFn = (base: Interactable, verb: Verb, text: string, hints?: string, over?: Partial<Interactable>) => Interactable;
-type OfferFn = (it: Interactable, verbs: Interactable[]) => void;
-const handsFree = (pl: Player) => !pl.dragging && !pl.sprinting && !pl.takedown && !pl.holding;
 /** the plate nearest `pl`'s feet within `r` m that he has a clear line to from his chest (one on the far face of the wall is not his to reach) */
-export function switchNear(g: Game, pl: Player, r: number): WallSwitch | null {
-  if (!switchesLive(g)) return null;
-  const p = pl.char.pos, eye: Vec3 = [p[0], pl.crouch ? 0.9 : 1.3, p[2]];
-  let best: WallSwitch | null = null, bd = r;
-  for (const sw of wallSwitches(g)) { const d = v3.distXZ(sw.pos, p); if (d < bd && !g.col.solidBlocked(eye, v3.mad(sw.pos, sw.n, 0.05))) { best = sw; bd = d; } }
-  return best;
-}
-/** the NEAREST plate only (two in reach would be one row to the selector): a marker from NEARBY_M, the row in reach with the hands free */
-export function switchRows(g: Game, pl: Player, busy: boolean, row: RowFn, offer: OfferFn) {
-  const sw = switchNear(g, pl, NEARBY_M); if (!sw) return;
-  const near = v3.distXZ(sw.pos, pl.char.pos) < LIGHTSWITCH.reach, reach = near && handsFree(pl), lit = switchLit(sw);
-  const it: Interactable = { kind: 'switch', pos: sw.pos, line1: lit ? 'switch · on' : 'switch · off', line2: reach ? '' : !near ? 'step closer' : pl.sprinting ? 'stop sprinting' : 'hands full', inReach: reach, off: !lit };
-  offer(it, reach && !busy ? [lit ? row(it, 'lightsOff', 'lights off') : row(it, 'lightsOn', 'lights on')] : []);
-}
+export function switchNear(g: Game, pl: Player, r: number): WallSwitch | null { return crossToRust('switchNear', undefined, [g, pl, r]) as any; }
 /** Space on that row: the plate in reach is worked the way the row said. False = none in reach now, or it already stands that way. */
-export function switchAct(g: Game, pl: Player, verb: Verb): boolean {
-  const sw = handsFree(pl) ? switchNear(g, pl, LIGHTSWITCH.reach) : null; if (!sw) return false;
-  const on = verb === 'lightsOn'; if (switchLit(sw) === on) return false;
-  flipSwitch(g, sw, on, pl.char); LIGHTSWITCH_STATS.flips++;
-  return true;
-}
+export function switchAct(g: Game, pl: Player, verb: Verb): boolean { return crossToRust('switchAct', undefined, [g, pl, verb]) as any; }
 
-// ---------------------------------------------------------------- once a frame (game.ts, before the fixtures are written)
-/** can this man put a room's lights back: a living defender on his own feet and his own business — calm or come to look, not in a fight, not blind,
- *  doubled over or asleep, nobody's script, his hands his own (attention.ts's own test of a calm man, less its limits on what may draw him) */
-const putsBack = (g: Game, gd: Guard) => (gd.state === 'patrol' || gd.state === 'suspicious') && gd.char.alive && !gd.held && !gd.civ && !gd.wound && !gd.script && !gd.bodyDuty
-  && g.time >= gd.dazzledUntil && g.time >= gd.staggerUntil && !dozeAsleep(gd) && isHostile(gd.team, 'player');
-export function lightSwitchTick(g: Game) {
-  if (!switchesLive(g)) return;
-  const K = LIGHTSWITCH; wallSwitches(g); const st = states.get(g)!;
-  // a plate goes with its wall (a charge, a blast) and is back with it (a load): asked after only when the level's geometry has moved
-  if (st.serial !== geomSerial(g)) { st.serial = geomSerial(g); const n = st.list.length; st.list = st.all.filter(sw => wallStands(g, sw)); LIGHTSWITCH_STATS.gone += Math.max(0, n - st.list.length); }
-  const L = st.list;
-  // a room the level had lit and a hand put out: a calm defender at its switch puts it back, a beat after the hand at the soonest
-  if (K.guards && !g.blackout.active && g.aiEnabled) for (const sw of L) {
-    let since = -1; for (const t of sw.targets) if (t.handOff !== undefined && !t.on && g.authoredOn(t)) since = Math.max(since, g.time - t.handOff);
-    if (since < K.guardSecs) continue;   // (no fixture of it a hand put out that the level had lit, or too soon after the hand)
-    for (const gd of g.guards) {
-      const p = gd.char.pos; if (!putsBack(g, gd) || (v3.distXZ(p, sw.pos) > K.reach && v3.distXZ(p, sw.floor) > 0.6)) continue;   // (within a stride of the spot he was sent to counts: a walk ends on a cell's centre)
-      if (g.col.solidBlocked([p[0], 1.3, p[2]], v3.mad(sw.pos, sw.n, 0.05))) continue;
-      flipSwitch(g, sw, true, gd.char); LIGHTSWITCH_STATS.guardOn++; g.say(gd, 'who turned these off?', false);
-      break;
-    }
-  }
-  // the hand at the plate for a moment after the flip (the picture: handwork.ts's lever pose, nothing with that switch off) — a plant broken off stays off
-  if (st.hands.length) {
-    st.hands = st.hands.filter(h => g.time >= h.at && g.time - h.at < h.dur && h.c.alive);
-    for (const h of st.hands) { if (h.plant && plantBroken(g, h)) h.plant = false;
-      workAt(h.c, 'lever', h.sw.pos, h.sw.n, g.time - h.at, h.dur, { dir: h.dir, hand: h.plant ? samHand(g) : undefined }); }
-  }
-}
 
-// ---------------------------------------------------------------- drawing (into Game.dynBoxes, beside the keypads' plates)
-const PLATE: Vec3 = [0.62, 0.6, 0.55], ROCKER: Vec3 = [0.74, 0.72, 0.66], GLOW: Vec3 = [1.6, 0.8, 0.16];
-const SW_KEY = 0x400000;   // (MKEY.device's range: devices.ts keys its own by ordinal from 0, stickycam.ts from 0x800000 — a device's key is also what the fog of war lets through wherever it hangs)
-/** the plate, its rocker (the top proud with the lights on, the bottom with them off) and, in a room whose lights are off at the switch, the small amber
- *  pilot that says where the plate is — a decal's depth, nobody's collision, no shadow */
-export function switchBoxes(g: Game, out: Box[]) {
-  if (!LIGHTSWITCH.on) return;
-  const deco = BoxFlag.Dynamic | BoxFlag.NoShadow;
-  for (const sw of wallSwitches(g)) {
-    const yaw = v3.yawOf(sw.n), lit = switchLit(sw), key = MKEY.device + SW_KEY + sw.id * 4;
-    out.push(makeBox({ c: v3.mad(sw.pos, sw.n, 0.006), h: [0.042, 0.06, 0.006], yaw, albedo: PLATE, flags: deco, mkey: key }));
-    out.push(makeBox({ c: v3.add(v3.mad(sw.pos, sw.n, 0.015), [0, lit ? 0.012 : -0.012, 0]), h: [0.016, 0.018, 0.005], yaw, albedo: ROCKER, flags: deco, mkey: key + 1 }));
-    out.push(makeBox({ c: v3.add(v3.mad(sw.pos, sw.n, 0.013), [0, -0.045, 0]), h: [0.007, 0.004, 0.002], yaw, albedo: [0.05, 0.03, 0.01], emissive: lit ? [0, 0, 0] : GLOW, flags: deco, mkey: key + 2 }));
-  }
-}

@@ -38,18 +38,19 @@ import { Vec3, v3 } from '../math/vec';
 import { Box, BoxFlag, makeBox } from '../scene/boxes';
 import { VIEW_BLOWN, VIEW_GIVES, type PaneView } from '../scene/boxMirror';
 import type { Game } from './game';
-import { men } from './seats';
+import './seats';
 import { glassImpact, glassEvent, GLASSFX, glassPanes, isSheet } from './glass';
 import { hash01 } from './debris';
 import { chaosOf } from './destruction';
 import { gpuFx } from './particleFx';
-import { WIND, WIND_FIELD, type WindSource } from './wind';
+import { type WindSource } from './wind';
 import { segSegClosest } from './devices';
 import { GP_MAX_SITES, GP_FRAGS_PER_SITE, GP_MAX_SECTORS, GP_BANDS, type GpSite, type GpFrag, type GpDice, type Pt, gpPolyArea, gpDiceKey, gpFragments } from './glassPattern';
 import { sim as simX, f64, u32, type SimExports } from '../sim/sim';
 import { type SimState, simPart, P_PANES } from '../sim/state';
 import { knobsToRust, RUST_KNOBS } from './rustknobs';
 import { SHARD } from './shardModel';
+import { RUST_PASS, RUST_SURFACE, goneWithTick } from './crossing';
 
 export type GlassType = 'annealed' | 'tempered' | 'laminated';
 /** the knobs (Tab ▸ Destruction ▸ Glass edits breakE / hangArea / blastM live; kept per machine by saveGlassBreak) */
@@ -210,7 +211,7 @@ const OUT_LEN = 32, O_PANE = 0, O_TYPE = 1, O_KIND = 2, O_PTS = 3, O_NPTS = 4, O
 // …a row's fields (panes_field), found once
 let F: number[] | null = null;
 const FIELDS = 32;
-const F_D = 0, F_W = 1, F_E = 2, F_HITS = 3, F_C = 4, F_HU = 5, F_HV = 6, F_HT = 7, F_ENERGY = 8, F_DAMAGE = 9, F_NEXT = 10, F_DIR = 11, F_UV = 12, F_SOUND = 13, F_WHO = 14, F_KEY = 15, F_TY = 16, F_AXIS = 17, F_EXT = 18, F_HITN = 19, F_NOPEN = 20, F_DNEXT = 21, F_WALK = 22, F_Q0 = 23, F_QN = 24, F_QLEN = 26, F_QAT = 27, F_QFROM = 28, F_QK = 29, F_QFID = 30, F_QCAUSE = 31;
+const F_D = 0, F_W = 1, F_E = 2, F_HITS = 3, F_HU = 5, F_HV = 6, F_HT = 7, F_ENERGY = 8, F_DAMAGE = 9, F_NEXT = 10, F_DIR = 11, F_UV = 12, F_SOUND = 13, F_WHO = 14, F_KEY = 15, F_TY = 16, F_AXIS = 17, F_EXT = 18, F_HITN = 19, F_NOPEN = 20, F_DNEXT = 21, F_WALK = 22, F_Q0 = 23, F_QN = 24, F_QLEN = 26, F_QAT = 27, F_QFROM = 28, F_QK = 29, F_QFID = 30, F_QCAUSE = 31;
 function fields(x: SimExports): number[] { if (!F) { F = []; for (let i = 0; i < FIELDS; i++) F.push(x.panes_field(i)); } return F; }
 // glass.rs: a row's words and flags
 const GW_COLS = 2, GW_ROWS = 3, GW_DSEED = 4, GW_N = 5, GW_SEED = 13, GW_OPEN = 21, GW_FLAGS = 1, G_GONE = 1, G_DICE = 2, G_RUN = 4, G_SITE = 9, G_DICE_AT = 72;
@@ -290,7 +291,7 @@ export class GlassBreak {
     for (const f of list) this.letGo(f, x);
   }
   /** a fragment the rule let go, told to the game: its one way out */
-  letGo(f: GlassFragment & { key: number; heard: boolean; bi: number }, x: SimExports): void {
+  letGo(f: GlassFragment & { key: number; heard: boolean; bi: number }, x: SimExports): void { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('GlassBreak.letGo', this, [f, x]); if (__r !== RUST_PASS) return __r as any; } }
     {
       const key = f.key, V = this.geom(f.bi, x);
       if (f.heard) {   // a round's own piece was heard as the round (glass.ts glassImpact); what falls LATER — by support, a blast, the dice — is heard here, once per pane per crackGap
@@ -343,11 +344,11 @@ export class GlassBreak {
     return TYPES[this.ask((x) => bi >= 0 ? x.panes_type_place(bi) : x.panes_type_box(b.h[0], b.h[1], b.h[2], b.c[1], this.doorGap(b)))];   // (a box the level does not hold, a tool's question: indoors, by its place)
   }
   /** the type of pane bi as it will break (an override from setType, else typeOf) — null for anything that is not a sheet of glass */
-  typeOfPane(bi: number): GlassType | null {
+  typeOfPane(bi: number): GlassType | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('GlassBreak.typeOfPane', this, [bi]); if (__r !== RUST_PASS) return __r as any; } }
     const t = this.ask((x) => x.panes_type(bi)); return t === NO_TYPE ? null : TYPES[t];
   }
   /** make pane bi break as `type` from here on (tuning, probes, a level's own table); the pane is made whole first. null = back to typeOf. An override is the level's word on the pane: reset() keeps it */
-  setType(bi: number, type: GlassType | null) {
+  setType(bi: number, type: GlassType | null) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('GlassBreak.setType', this, [bi, type]); if (__r !== RUST_PASS) return __r as any; } }
     const gusts = (): void => { const src = this.gusts.get(bi); if (src) { const i = this.g.wind.all.indexOf(src); if (i >= 0) this.g.wind.all.splice(i, 1); this.gusts.delete(bi); } };
     this.ask((x, s) => { x.panes_set_type(s, bi, type ? TYPES.indexOf(type) : NO_OVER); }); this.g.col.wrote(); gusts();
   }
@@ -373,7 +374,7 @@ export class GlassBreak {
     return n;
   }
   /** A BLAST at `at` (destruction's blast entry point calls this; a stun charge's 'bang' comes through glass.ts at bangPower): every sheet whose nearest point is within the radius takes it by type and by k = power × (1 − d / radius). Returns the panes it changed. */
-  blast(at: Vec3, opts: GlassBlastOpts = {}): number {
+  blast(at: Vec3, opts: GlassBlastOpts = {}): number { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('GlassBreak.blast', this, [at, opts]); if (__r !== RUST_PASS) return __r as any; } }
     if (!glassBreakLive(this.g)) return 0;
     const radius = opts.radius ?? GLASSBREAK.blastM, power = opts.power ?? 1, who = opts.who ?? 0;
     let changed = 0;
@@ -384,7 +385,7 @@ export class GlassBreak {
     return changed;
   }
   /** a stun charge went off at `at` (glass.ts updateGlass, off the 'bang' event): a blast at bangPower */
-  bang(at: Vec3, who: number): number { return this.blast(at, { radius: GLASSBREAK.blastM, power: GLASSBREAK.bangPower, who }); }
+  bang(at: Vec3, who: number): number { return goneWithTick('GlassBreak.bang') as any; }
 
   // ---------------------------------------------------------------- a burst's view of the glass (frag.ts: fragments are stopped by glass that stands, and by none that the blast took)
   private viewOf: { kind: 'blown' | 'wary' | 'counted'; from: Vec3; size: GlassBlastOpts } | null = null;
@@ -407,48 +408,11 @@ export class GlassBreak {
   }
 
   // ---------------------------------------------------------------- per frame
-  update(dt: number) {
-    const g = this.g, sim = simX(), s = this.untouched ? -1 : g.sim.bind();
-    if (s >= 0 && sim.panes_take_gust(s)) this.gustDirty = true;
-    if (this.gusts.size || this.gustDirty) { this.updateGusts(); this.gustDirty = this.gusts.size > 0; }
-    if (!glassBreakLive(g)) return;   // (as impact / blast: a pane still shedding when the tour starts, the switch goes off or chaos drops to 0 sheds nothing more and files no noise)
-    const n = s >= 0 ? sim.panes_row_n(s) : 0;
-    if (n > 0) this.ask((x, gs) => {
-      x.panes_frame_begin(gs);
-      // who may walk into what is left of a pane: any player's man, on his feet with his hands free (seats.ts)
-      const M = f64(), at = x.panes_men_addr() / 8; let k = 0;
-      for (const pl of men(g)) { if (!pl || pl.down || pl.holding || pl.dragging || pl.wall) continue; const c = pl.char, o = at + 7 * k++; M[o] = c.pos[0]; M[o + 1] = c.pos[1]; M[o + 2] = c.pos[2]; M[o + 3] = c.vel[0]; M[o + 4] = c.vel[1]; M[o + 5] = c.vel[2]; M[o + 6] = c.id; }
-      x.panes_men(k);
-      for (let r = 0; r < n; r++) { x.panes_step(r); if (x.panes_take_wrote()) g.col.wrote(); this.drain(x); }
-    });
-  }
+  update(dt: number): void { return goneWithTick('GlassBreak.update') as any; }
   /** a pane on an outside wall has changed: the gusts ask again */
   gustDirty = false;
   /** GUSTS through shot-out exterior panes: one wind source per pane more than a quarter open (a jet along the inward normal like an open door's, wind.ts 'glass'), its speed each frame = the storm at that face × the open share — the particles (papers by the window) and the smoke solver read the one field */
   private gusts = new Map<number, WindSource>();
-  private updateGusts() {
-    const g = this.g; const swv = g.wind.stormWind();   // wind.ts's ONE storm test (weather on, night, WIND.storm, the storm or rain actually running): a dead calm or the daylight breach blows nothing through a hole
-    const sw = swv ? [swv[0], swv[2]] : null;
-    const stormSpeed = sw ? Math.hypot(sw[0], sw[1]) : 0;
-    const x = simX(), s = g.sim.bind(), Fl = fields(x), w = g.sim.w, dd = g.sim.d;
-    for (let r = 0, n = x.panes_row_n(s); r < n; r++) {
-      const at = x.panes_row_addr(s, r); if (w[(at + Fl[F_EXT]) >>> 2] === 0) continue;   // (a row's few words, read where they stand: every tick of a storm)
-      const bi = w[(at + Fl[F_W]) >>> 2], st = { bi, key: w[(at + Fl[F_KEY]) >>> 2], box: g.level.boxes[bi], uAxis: w[(at + Fl[F_AXIS]) >>> 2] === 0 ? 0 : 2, hu: dd[(at + Fl[F_HU]) >>> 3] };
-      const open = this.openFraction(st.bi);
-      let src = this.gusts.get(st.bi);
-      if (open < 0.25 || stormSpeed < 0.05) { if (src) src.base = 0; continue; }
-      if (!src) {
-        const b = st.box, cs = Math.cos(b.yaw), sn = Math.sin(b.yaw), n: Vec3 = st.uAxis === 0 ? [sn, 0, cs] : [cs, 0, -sn]; const c = b.c;
-        const inward: Vec3 = this.ask((x) => x.panes_sky(st.bi)) > 0 ? v3.scale(n, -1) : n;   // away from the face the sky is over (the level's own geometry, as exterior itself)
-        const reach = WIND.doorReach, dMax = WIND_FIELD.cutK * reach, tanSpread = Math.tan(WIND.doorSpreadDeg * Math.PI / 180), r0 = st.hu * 0.7;
-        const pos: Vec3 = [c[0] - inward[0] * 0.15, c[1], c[2] - inward[2] * 0.15];
-        src = { kind: 'jet', why: 'glass', name: `glass:${st.bi}`, pos, dir: inward, speed: 0, base: 0, on: 1, gust: 1, reach, tanSpread, r0, dMax, bound: { c: v3.mad(pos, inward, dMax / 2), r: Math.hypot(dMax / 2, r0 + dMax * tanSpread) + 0.3 }, seed: (0x61A55 ^ Math.imul(st.key, 2654435761)) >>> 0 } as WindSource;
-        g.wind.all.push(src); this.gusts.set(st.bi, src);
-      }
-      const facing = Math.max(0, (sw![0] * src.dir[0] + sw![1] * src.dir[2]) / Math.max(1e-3, stormSpeed));
-      src.base = stormSpeed * WIND.doorK * open * (0.35 + 0.65 * facing) * GLASSBREAK.gustSpeedK / 0.6;
-    }
-  }
 
   // ---------------------------------------------------------------- queries
   /** NOTHING OF A PANE'S IS IN THE BLOCK: read where the block stands, parked or not, so a question about glass nobody has touched neither calls the module nor moves anything */
@@ -462,7 +426,7 @@ export class GlassBreak {
   /** open fraction of pane bi (0 = whole) — by area */
   openFraction(bi: number): number { return this.untouched ? 0 : simX().panes_fraction(this.g.sim.bind(), bi); }
   /** what a sibling needs to know about pane bi without touching it (works for a pane never hit); null = not a sheet of glass */
-  paneInfo(bi: number): { type: GlassType; thickness: number; exterior: boolean; openFraction: number; walkable: boolean; gone: boolean; run: boolean; sites: number; energy: number } | null {
+  paneInfo(bi: number): { type: GlassType; thickness: number; exterior: boolean; openFraction: number; walkable: boolean; gone: boolean; run: boolean; sites: number; energy: number } | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('GlassBreak.paneInfo', this, [bi]); if (__r !== RUST_PASS) return __r as any; } }
     const type = this.typeOfPane(bi); if (!type) return null; const b = this.g.level.boxes[bi]; const st = this.panes.get(bi);
     return { type, thickness: 2 * Math.min(b.h[0], b.h[2]), exterior: this.ask((x) => x.panes_sky(bi)) !== 0, openFraction: this.openFraction(bi), walkable: this.walkable(bi), gone: !!st?.gone, run: !!st?.run, sites: st?.sites.length ?? 0, energy: st?.energy ?? 0 };
   }
@@ -551,7 +515,7 @@ export class GlassBreak {
     return true;
   }
   /** the panel's 'break test': three rounds' worth on the pane on Sam's line to the cursor, through glass.ts's path exactly as rounds would arrive — returns the pane or −1 */
-  breakTest(): number {
+  breakTest(): number { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('GlassBreak.breakTest', this, []); if (__r !== RUST_PASS) return __r as any; } }
     const g = this.g; const aim = g.aimPoint; const from: Vec3 = v3.add(g.player.char.pos, [0, 1.3, 0]);
     const d = v3.sub(aim, from); const L = v3.len(d); if (L < 1e-3) return -1;
     const rd = v3.scale(d, 1 / L);
@@ -565,13 +529,13 @@ export class GlassBreak {
     }
     return -1;
   }
-  summary(): string {
+  summary(): string { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('GlassBreak.summary', this, []); if (__r !== RUST_PASS) return __r as any; } }
     const T = this.g.tune as GbTune;
     let s = `glass breaking ${T.glassBreak ? (glassBreakLive(this.g) ? 'ON' : 'on — but inert (chaos 0 / the tour)') : 'off'} ▸ ${this.panes.size} panes touched · ${GB_STATS.impacts} impacts · ${GB_STATS.sites} stars · ${GB_STATS.runs} run · ${GB_STATS.dropped} fragments out (${GB_STATS.clumps} clumps) · diced ${GB_STATS.diced}${this.onRelease ? ` · ${GB_STATS.hooked} to the shards hook` : ` · stand-in: ${GB_STATS.shards} shards (${GB_STATS.refused} refused), ${GB_STATS.chips} chips`}`;
     for (const st of this.panes.values()) if (st.nOpen || st.dice || st.gone) s += ` | pane ${st.bi} ${st.type} ${Math.round(100 * this.openFraction(st.bi))}% open${st.run ? ' run' : ''}${st.walkable ? ' (walkable)' : ''}`;
     return s;
   }
-  reset() {
+  reset() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('GlassBreak.reset', this, []); if (__r !== RUST_PASS) return __r as any; } }
     const s = this.g.sim; if (s.open) simX().panes_reset(s.bind());
     this.g.col.wrote();
     for (const src of this.gusts.values()) { const i = this.g.wind.all.indexOf(src); if (i >= 0) this.g.wind.all.splice(i, 1); } this.gusts.clear(); this.gustDirty = false;

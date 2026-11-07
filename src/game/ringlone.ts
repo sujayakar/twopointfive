@@ -28,6 +28,7 @@
 // This file is the shape, with no page under it (handring-check asks it).
 import { HANDRING } from './handring';
 import type { RingView } from './cmdring';
+import { goneWithTick } from './crossing';
 
 /** px, in the ring's own: the wheel's hole — and the middle's own ring beside a pill */
 export const RING_HOLE = 17;
@@ -46,7 +47,7 @@ export const wedgeMid = (key: number, n: number): number => (-90 + (key - 1) * 3
 /** the one row of a ring that has one (null: the wheel) — the page's, for what it draws */
 export function loneWedge(V: RingView | null): RingView['wedges'][number] | null { return HANDRING.lone && V?.wedges.length === 1 ? V.wedges[0] : null; }
 /** …and the game's: its digit, from the digits that have a wedge (a bit each, bit 1 the first; asked only while the rule is on); 0 = the wheel, or no ring */
-export function loneKey(keys: () => number): number { if (!HANDRING.lone) return 0; const k = keys(); return k > 0 && !(k & (k - 1)) ? 31 - Math.clz32(k) : 0; }
+export function loneKey(keys: () => number): number { return goneWithTick('loneKey') as any; }
 /** a wedge's words as drawn */
 export const wedgeWords = (w: Wedge): string => w.opens ? `${w.text} ▸` : w.text;
 /** where a wedge's outline, digit and words go: on the wheel, or as a pill */
@@ -83,6 +84,4 @@ export function lonePill(w: Wedge, n: number): LonePill {
   return { d, nx: left ? x1 - e : x0 + e, ny: cy + 4, tx: left ? x1 - L.h : x0 + L.h, ty: lines[0].y, anchor: left ? 'end' : 'start', x0, y0, x1, y1, textW, lines };
 }
 /** the place the game reads for wedge `key`'s pill: the longest pill's box, two lines tall under loneWrap (no words in it — see the head) */
-export const pillBox = (key: number, n: number) => boxOf(key, n, LONE.max * LONE.char, HANDRING.loneWrap);
-/** is a point of the ring's own px (from its middle) on the place of wedge `key`'s pill */
-export function onPill(key: number, n: number, x: number, y: number): boolean { const P = pillBox(key, n); return x >= P.x0 && x <= P.x1 && y >= P.y0 && y <= P.y1; }
+export const pillBox = (key: number, n: number): { x0: number; y0: number; x1: number; y1: number; px: number; py: number; left: boolean; } => goneWithTick('pillBox') as any;

@@ -20,9 +20,10 @@ import { SideMap } from '../math/side';
 import { Vec3, Quat, v3, quat } from '../math/vec';
 import { Box, BoxFlag, makeBox, MKEY } from '../scene/boxes';
 import { wordFor, madeOf } from '../scene/stuff';   // (no game module: the table of what a paint is made of)
-import { DESTRUCTION } from './destructionSwitch';
-import { gpuFx } from './particleFx';
+import './destructionSwitch';
+import './particleFx';
 import type { Game, LightTarget } from './game';
+import { crossToRust } from './crossing';
 
 /** the look's numbers (no switch of its own: it rides the destruction switch; `on` is for the proofs and the probe) */
 export const FIXLOOK = {
@@ -68,15 +69,6 @@ function h01(x: number): number { x = Math.imul((x ^ 0x68E31DA4) >>> 0, 0x9E3779
 const LOOK = BoxFlag.Dynamic | BoxFlag.NoShadow;
 const DOWN: Vec3 = [0, -1, 0];
 
-/** 1 = a ceiling panel (a flat NoPrimary emissive slab under the ceiling: the full look), 2 = a lamp with a light of its own (sparks only), 0 = not ours (screens, LEDs, beacons, the breaker, devices) */
-function kindOf(g: Game, t: LightTarget): 0 | 1 | 2 {
-  if (!t.interactive) return 0;
-  if (t.kind === 'analytic') return t.light ? 2 : 0;
-  if (t.kind !== 'emissive' || !t.boxes.length) return 0;
-  const b = g.engine.world.statics[t.boxes[0]]; if (!b) return 0;
-  const long = Math.max(b.h[0], b.h[2]), short = Math.min(b.h[0], b.h[2]);
-  return (b.flags & BoxFlag.NoPrimary) && b.h[1] <= 0.06 && b.c[1] > 2.2 && long >= 0.25 && long <= 1.2 && short >= 0.1 ? 1 : 0;
-}
 
 /** the top of whatever lies under (x, z): the level's statics by one ray down, the furniture by its boxes' footprints (a read; nothing is asked that play asks differently for it) */
 function floorAt(g: Game, x: number, z: number, from: number): number {
@@ -181,84 +173,9 @@ function land(r: Rec, s: number) {
   const a = r.skew * s, cs = Math.cos(a), sn = Math.sin(a); r.uh = [r.uh0[0] * cs - r.uh0[2] * sn, 0, r.uh0[0] * sn + r.uh0[2] * cs];
 }
 
-/** the arc at the torn lead `a` seconds after the light died: 0‥1 (a pop's peak = its gain), and whether a pop or a spit STARTS inside this frame (→ sparks) */
-function glowAt(r: Rec, a: number, out: { sparks: number }): number {
-  const F = FIXLOOK; let gl = 0; out.sparks = 0;
-  for (let k = 0; k < F.pops.length; k++) { const tk = F.pops[k] * (0.85 + 0.3 * h01(r.seed + 11 * k + 5)); if (a < tk) break; gl += F.popGain[k] * Math.exp(-(a - tk) / F.popTau); if (k >= r.pop) { r.pop = k + 1; out.sparks += F.popSparks[k]; } }
-  if (a > F.spitFrom && a < F.spitSecs) { const slot = Math.floor(a / 0.11); const h = h01(r.seed + slot * 31 + 7), p = F.spitRate * Math.exp(-a / F.spitTau);
-    if (h < p) { gl += F.spitGain * (0.5 + h01(r.seed + slot * 17 + 3)); if (slot !== r.lastSlot && h < p * 0.4) out.sparks += 4; } r.lastSlot = slot; }
-  return gl;
-}
-const SPARKS = { sparks: 0 };
-/** the seed of the fixture's next emit (its own count, hashed with its place) */
-function seedOf(r: Rec): number { return (Math.imul((r.seed ^ 0x51ED270B) + r.emits++ * 7919, 0x9E3779B1) >>> 0) || 1; }
 
 /** Once a frame (game.ts, with the other dynamic boxes): notice fixtures that broke or were repaired, move what is moving, hand the frame the look's boxes. */
-export function fixtureBreakBoxes(g: Game, out: Box[], dt: number) {
-  let S = STATE.get(g);
-  if (!DESTRUCTION.on || !FIXLOOK.on) { if (S) { S.recs.length = 0; S.by.clear(); S.lastT = -1; } return; }
-  if (!S) STATE.set(g, S = { recs: [], by: new Map(), prev: new SideMap(), kind: new SideMap(), lastT: -1, scan: 0, keys: 0 });
-  const now = g.time; const running = S.lastT >= 0 && now >= S.lastT && now - S.lastT < 0.5;   // (the clock ran on from the last frame: a target broken since then BROKE — after a load or a restart it is just found broken)
-  if (!running && S.recs.length) { S.recs.length = 0; S.by.clear(); }   // (the clock jumped — a checkpoint load: whatever is broken now is found broken, hanging at rest)
-  S.lastT = now; S.scan++;
-  for (const t of g.targets) {
-    let k = S.kind.get(t); if (k === undefined) S.kind.set(t, k = kindOf(g, t)); if (!k) continue;
-    const was = S.prev.get(t); if (was !== t.broken) S.prev.set(t, t.broken);
-    const r = S.by.get(t);
-    if (r) { if (t.broken) r.seen = S.scan; continue; }
-    if (t.broken) { const n = add(S, g, t, k, running && was === false ? now : -1e9); S.recs.push(n); S.by.set(t, n); }
-  }
-  if (!S.recs.length) return;
-  let dropped = false; for (const r of S.recs) if (r.seen !== S.scan) { S.by.delete(r.t); dropped = true; }   // repaired (a restart, the panel's 'repair lights') or no longer a target: gone
-  if (dropped) S.recs = S.recs.filter(r => r.seen === S!.scan);
-  const P = gpuFx(g); const F = FIXLOOK; let boxes = 0;
-  for (const r of S.recs) {
-    const a = now - r.born;
-    if (r.hang.length && r.phase === 2 && ((S.scan + (r.seed & 63)) & 63) === 0) {   // about once a second: is what it lies on still there? (furniture shoved away, a thing on a desk knocked off: it drops to what is under it now)
-      const y = restOn(g, r.hinge[0], r.hinge[2], r.uh[0], r.uh[2], r.L, r.lie[1] + 0.05).y + 0.046;
-      if (y < r.lie[1] - 0.03) { r.h0 = v3.copy(r.hinge); r.uh0 = v3.copy(r.uh); r.skew = 0; r.th0 = 0; r.t0 = a; r.lie = [r.hinge[0], y, r.hinge[2]]; r.phase = 1; r.still = false; }
-    }
-    if (r.hang.length && r.phase === 0 && a >= r.fallAt) { r.phase = 1; r.th0 = r.th; r.t0 = a; r.still = false; }   // the other end tears out
-    if (r.hang.length && r.phase === 1) {   // coming down: the hinge end in free fall, the tray flattening out as it goes, flat as it lands
-      const T = Math.sqrt(2 * Math.max(0.1, r.h0[1] - r.lie[1]) / 9.8), s = Math.min(1, Math.max(0, a - r.t0) / T);
-      r.th = r.th0 * (1 - s); if (s > r.lay) r.lay = s; land(r, s);
-      if (s >= 1) { r.phase = 2; r.still = true;
-        if (P) P.emit('debris', [r.hinge[0] + r.uh[0] * r.L / 2, r.lie[1], r.hinge[2] + r.uh[2] * r.L / 2], [0, 1, 0], 10, { speed: 1.2, speedJit: 0.7, spread: 1.4, life: 25, lifeJit: 0.3, size: 0.012, sizeJit: 0.6, aspect: 1.6, posJit: Math.min(0.3, r.L * 0.3), color: [0.88, 0.92, 0.92], seed: seedOf(r) }); }
-      pose(r);
-    } else if (r.hang.length && !r.still) {   // the swing: a damped spring about the rest angle, the ceiling its stop
-      const h = Math.min(dt, 1 / 30); r.om += (-F.swingK * (r.th - r.rest) - F.swingC * r.om) * h; r.th += r.om * h;
-      if (r.th < 0) { r.th = 0; r.om = Math.abs(r.om) * 0.3; } if (r.th > 1.45) { r.th = 1.45; r.om = -Math.abs(r.om) * 0.3; }
-      if (a > 3 && Math.abs(r.th - r.rest) < 0.004 && Math.abs(r.om) < 0.02) { r.th = r.rest; r.still = true; }
-      pose(r);
-    }
-    if (a < F.spitSecs) {
-      const gl = glowAt(r, Math.max(0, a), SPARKS); const warm = Math.min(1, Math.max(0, a) / 1.5);
-      if (r.hang.length) { const e = F.glowTip * gl; r.hang[5].emissive = [e * (0.8 + 0.2 * warm), e * (0.9 - 0.25 * warm), e * (1 - 0.8 * warm)]; }
-      // (every emit carries a seed of the fixture's own, so the particles' serial — what every other effect's births hash — is never advanced by the look)
-      if (P && SPARKS.sparks > 0) { const d: Vec3 = r.phase === 2 ? [r.uh[0] * F.sparkAside, F.sparkUp, r.uh[2] * F.sparkAside] : r.hang.length ? [r.uh[0] * F.sparkAside, -F.sparkDown, r.uh[2] * F.sparkAside] : [r.uh[0] * F.sparkAside * 0.5, -1, r.uh[2] * F.sparkAside * 0.5];   // (out past its free end and down from where it hangs, out and up off where it lies; a lamp's or a panel past the cap: down, leaning a little along its own line)
-        P.emit('spark', r.tip, v3.normalize(d), SPARKS.sparks, { ...F.spark, seed: seedOf(r) }); FIXLOOK_STATS.sparks += SPARKS.sparks; }
-      if (P && !r.glassOut && a >= F.glassAt && r.hang.length) { r.glassOut = true;   // born well under the ceiling, in two lots along the fixture
-        for (const k of [0.3, 0.7]) P.emit('debris', [r.hinge[0] + r.uh[0] * r.L * k, r.hinge[1] - 0.3, r.hinge[2] + r.uh[2] * r.L * k], DOWN, F.glass >> 1,
-          { speed: 1.3, speedJit: 0.8, spread: 1.25, life: 25, lifeJit: 0.3, size: F.glassSize, sizeJit: 0.6, aspect: 1.7, posJit: Math.min(0.2, r.L * 0.2), color: [0.88, 0.92, 0.92], seed: seedOf(r) }); }
-    } else if (r.hang.length && r.hang[5].emissive[0] > 0) r.hang[5].emissive = [0, 0, 0];
-    for (const p of r.pieces) {
-      if (p.rest && p.on && (p.on.c[0] !== p.onX || p.on.c[2] !== p.onZ)) { p.on = null; p.rest = false; p.bounced = true; p.floorY = floorAt(g, p.box.c[0], p.box.c[2], p.box.c[1] - 0.05); p.v = [0, 0, 0]; p.rate = 0; }   // what it lay on was moved away: down to what is under it now
-      if (!p.rest) {
-        if (a < p.delay) continue;   // (still in the fixture: not drawn yet)
-        const h = Math.min(dt, 1 / 30), b = p.box; p.v[1] -= 9.8 * h; b.c = [b.c[0] + p.v[0] * h, b.c[1] + p.v[1] * h, b.c[2] + p.v[2] * h]; p.ang += p.rate * h; b.rot = quat.mul(quat.axisAngle(p.axis, p.ang), p.q0);
-        const lie = p.floorY + b.h[1] + 0.002;
-        if (b.c[1] <= lie + (p.bounced ? 0 : Math.max(b.h[0], b.h[2]) * 0.5)) {   // down: one dead bounce for a diffuser piece, then flat where it stopped
-          if (!p.bounced && !p.glass) { p.bounced = true; p.v = [p.v[0] * 0.4, 1.1, p.v[2] * 0.4]; p.rate *= 0.5; b.c[1] = lie + Math.max(b.h[0], b.h[2]) * 0.5;
-            if (P) P.emit('debris', [b.c[0], p.floorY + 0.03, b.c[2]], [0, 1, 0], 8, { speed: 1.4, speedJit: 0.7, spread: 1.3, life: 25, lifeJit: 0.3, size: 0.012, sizeJit: 0.6, aspect: 1.6, posJit: 0.15, color: [0.88, 0.92, 0.92], seed: seedOf(r) }); }
-          else { p.rest = true; b.c[1] = lie; b.rot = quat.yaw(p.yaw + p.ang * 0.3); b.yaw = p.yaw + p.ang * 0.3; }
-        }
-      }
-      out.push(p.box); boxes++;
-    }
-    for (const b of r.hang) out.push(b); boxes += r.hang.length;
-  }
-  FIXLOOK_STATS.boxes = boxes;
-}
+export function fixtureBreakBoxes(g: Game, out: Box[], dt: number): void { return crossToRust('fixtureBreakBoxes', undefined, [g, out, dt]) as any; }
 
 /** QA: what the look holds for this game (the probe and the page's console) */
 export function fixtureLookState(g: Game): { recs: number; hanging: number; boxes: number; moving: number; trays: { from: Vec3; y: number; corners: Vec3[] }[] } {
