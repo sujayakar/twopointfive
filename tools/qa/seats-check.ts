@@ -4,6 +4,8 @@
 //   bun run tools/qa/seats-check.ts                  every line below; exit 0 = all pass, 1 = one failed (named)
 //   SEATS_BREAK=1 bun run tools/qa/seats-check.ts    the red path: the second seat's tick runs on the FIRST seat's record — one player's hands in two
 //                                                    bodies; `walk`, `orders` and `ahead` must FAIL
+//   SEATS_BREAK=look bun run tools/qa/seats-check.ts the red path of a look's contract: the state words are read again after the TICK that follows the
+//                                                    looks, not after the looks — `twin` must FAIL
 // The mission is the room clear with the four (the page's `?roomclear&squad4`: fog of war up).
 // THE WORD a line holds a game to (`word` below) is the game's own: its die's count and the hash of every part of its block, what a networked game's
 // machines compare (src/net/step.ts netWord). It sees where every body, door and thing is, not a seat's aim or a man's mind (docs/agents/net.md).
@@ -31,7 +33,10 @@
 //             the middle of the sprint); the game's word, the seat and the records are as they were; no record answers where he stands, and so does a
 //             man who is down. Prints what it costs beside a whole tick
 //   twin      a firefight played twice, each in a fresh process — plain, and with a look ahead for both seats before every tick (the last eight records, throws and
-//             rounds in flight among them) — is the same game: the word the same every second and at the end
+//             rounds in flight among them) — is the same game: the word the same every second and at the end. AND A LOOK WRITES NOTHING: on every
+//             tenth tick the WHOLE game's state words (the host's `wholeWords`, one a part) are read before and after the two looks, and no part
+//             differs but the scratch a look leaves (LOOK_SCRATCH). That is the contract tools/blitz/reads-contract.json lists walkAhead under: the
+//             host takes nothing back after a crossed look because of it
 //   refuses   a mission written round one commander (the hostage rescue) refuses a game of two, in words
 // NOT HELD HERE ANY MORE (2026-11-07): the count of asks of the Game for "the player" inside a tick (the TypeScript tick's, gone with it). The three
 // kinds of fault a game of two had (docs/agents/net.md, the known seat faults) are the Rust game's to hold: tools/blitz/coop-check.ts.
@@ -54,6 +59,9 @@ const { mulberry32 } = await import(`${ROOT}/src/math/dice.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const BREAK = process.env.SEATS_BREAK === '1', DT = 1 / 60;
+/** the state words a look ahead may leave changed: scratch of the collision and box-mirror walks, which no tick reads before it writes (the Rust goal
+ *  takes them off the state words; then this list is empty) */
+const LOOK_SCRATCH = new Set(['col', 'alone_own', 'm.scene_box_mirror', 'm.scene_collision']), BREAK_LOOK = process.env.SEATS_BREAK === 'look';
 /** the game's own word for where it stands (the head says what it sees) */
 const word = (g: any): string => { const W = g.stateWords?.(); if (!W) throw new Error('seats-check: the game stood here answers no state words (no Rust game steps it)'); return [W.die, ...Array.from(W.parts as ArrayLike<number>)].map(x => x.toString(36)).join('.'); };
 /** one tick on both seats' records, and what a headless host does round it (tools/qa/seats-run.ts tick) */
@@ -68,7 +76,7 @@ const at = (p: ArrayLike<number>) => `(${p[0].toFixed(1)}, ${p[2].toFixed(1)})`;
 // process does not start as the first did (found 2026-11-07 with tools/mp/words-diff.ts: the modules holdfire, nvg, kit and guards carry something of the
 // last game into the next one's start), so two games that are to be the same game are each stood in a fresh process.
 if (process.argv[2] === '--fight') { const [q, secs, ahead, seed, level] = JSON.parse(process.argv[3]); const log = console.log; console.log = () => {};
-  let F: unknown; try { F = await fight(q, secs, ahead, seed, level); } catch (e) { F = { ticks: 0, down: 0, hurt: 0, err: String((e as Error)?.stack ?? e).split('\n').slice(0, 4).join(' | '), words: [] }; }
+  let F: unknown; try { F = await fight(q, secs, ahead, seed, level); } catch (e) { F = { ticks: 0, down: 0, hurt: 0, err: String((e as Error)?.stack ?? e).split('\n').slice(0, 4).join(' | '), words: [], looks: 0, wrote: [] }; }
   log('SEATSFIGHT ' + JSON.stringify(F)); process.exit(0); }
 
 // ---- one
@@ -212,9 +220,11 @@ if (first !== null) { let second = ''; try { second = await play(true); } catch 
       + `\n    cost here: ${N} records ahead ${crossedMs.toFixed(2)} ms crossed to the Rust rule, ${bodyMs.toFixed(2)} ms by the TypeScript body · a whole tick ${fullMs.toFixed(2)} ms`); } }
 
 // ---- the fights: both players walk at the nearest enemy and fire, a key of the game's every second and a half (tools/qa/seats-run.ts has the same hands)
-async function fight(query: string, secs: number, ahead = false, seed = 9, level: string | null = null): Promise<{ ticks: number; down: number; hurt: number; err: string; words: string[] }> {
+async function fight(query: string, secs: number, ahead = false, seed = 9, level: string | null = null): Promise<{ ticks: number; down: number; hurt: number; err: string; words: string[]; looks: number; wrote: string[] }> {
   for (const k of Object.keys(WALL_STATS)) if (typeof WALL_STATS[k] === 'number') WALL_STATS[k] = 0;   // (a tally of the process's: coverfire.ts keeps where it stood when a game began, in the game's state — two games of one process start level only from a level tally)
-  Math.random = mulberry32(0xc0de); const W: any = await standUp({ seed, seats: 2, ...(level ? { level: loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/${level}.json`, 'utf8'))) } : {}) }), g = W.game; const r = startFromQuery(g, query); if (r.why) return { ticks: 0, down: 0, hurt: 0, err: r.why, words: [] };
+  Math.random = mulberry32(0xc0de); const W: any = await standUp({ seed, seats: 2, ...(level ? { level: loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/${level}.json`, 'utf8'))) } : {}) }), g = W.game; const r = startFromQuery(g, query); if (r.why) return { ticks: 0, down: 0, hurt: 0, err: r.why, words: [], looks: 0, wrote: [] };
+  let looks = 0; const wrote = new Map<string, number>(), whole = (): number[] | null => { const A = g.wholeWords?.(); return A ? Array.from(A as ArrayLike<number>) : null; };
+  const held = (a: number[]): void => { const b = whole(), N: string[] = g.wholeNames?.() ?? []; if (!b) return; looks++; for (let k = 0; k < a.length; k++) if (a[k] !== b[k] && !LOOK_SCRATCH.has(N[k])) wrote.set(N[k] ?? `part ${k}`, (wrote.get(N[k] ?? `part ${k}`) ?? 0) + 1); };
   const v0 = g.seats[0].view, v1 = g.seats[1].view, I1: any = Input.detached(), cam1: any = new FollowCamera(); cam1.aspect = W.cam.aspect; cam1.target = [...v1.player.char.pos]; cam1.rebuild();
   const hands: any[] = [{ v: v0, I: W.input, cam: W.cam, held: null }, { v: v1, I: I1, cam: cam1, held: null }];
   const KEYS = ['KeyG', 'KeyF', 'KeyE', 'KeyQ', 'KeyB', 'KeyC', 'KeyR', 'KeyV', 'KeyT', 'KeyH', 'KeyN', 'KeyX', 'KeyZ', 'Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Space', 'Tab'];
@@ -229,17 +239,19 @@ async function fight(query: string, secs: number, ahead = false, seed = 9, level
       const ph = (i + hi * 37) % 240; if (ph > 120 && ph < 200) { I.buttons |= 1; if (ph === 121) I.clicked |= 1; } else I.buttons &= ~1;
       if ((i + hi * 53) % 90 === 0) { const k = KEYS[Math.floor((i + hi * 53) / 90) % KEYS.length]; I.keys.add(k); I.pressed.add(k); h.held = k; } else if ((i + hi * 53) % 90 === 6 && h.held) { I.keys.delete(h.held); h.held = null; } });
     try { const cmds = hands.map(h => cmdFromText(cmdText(sampleCmd(h.v, h.I, h.cam, W.canvas))));
+      const before = ahead && i % 10 === 0 ? whole() : null;
       if (ahead) hands.forEach((_h, hi) => { const q = late[hi]; q.push(cmds[hi]); if (q.length > 8) q.shift(); walkAhead(g.seats[hi], q, DT); });
-      tick(g, cmds); if (i % 60 === 59) words.push(word(g)); for (const h of hands) { h.cam.update(DT, h.v.followPos(), h.v.aimPoint); h.I.endFrame(); } } catch (e) { err = String((e as Error)?.stack ?? e).split('\n').slice(0, 5).join(' | '); }
+      if (before && !BREAK_LOOK) held(before);
+      tick(g, cmds); if (before && BREAK_LOOK) held(before); if (i % 60 === 59) words.push(word(g)); for (const h of hands) { h.cam.update(DT, h.v.followPos(), h.v.aimPoint); h.I.endFrame(); } } catch (e) { err = String((e as Error)?.stack ?? e).split('\n').slice(0, 5).join(' | '); }
   }
-  return { ticks: i, hurt: g.guards.filter((x: any) => x.state === 'dead').length + men(g).filter((m: any) => m.down).length, down: foes0 - g.guards.filter((x: any) => x.state !== 'dead' && !(x.unit && x.team === 'operative')).length, err, words };
+  return { ticks: i, hurt: g.guards.filter((x: any) => x.state === 'dead').length + men(g).filter((m: any) => m.down).length, down: foes0 - g.guards.filter((x: any) => x.state !== 'dead' && !(x.unit && x.team === 'operative')).length, err, words, looks, wrote: [...wrote].map(([k, n]) => `${k} (${n})`) };
 }
 /** a fight's line: it ran to its end and it was a fight */
 function fightLine(name: string, q: string, secs: number, F: { ticks: number; down: number; hurt: number; err: string }) {
   verdict(!F.err && F.ticks === secs * 60 && (BREAK || F.hurt > 0), `${name} (${q}): ${secs} s of both players in a firefight runs to its end`,
     F.err ? `after ${F.ticks} ticks: ${F.err}` : `${F.ticks} ticks · ${F.hurt} men down in it, ${F.down} of them the other side's`);
 }
-const NONE = () => ({ ticks: 0, down: 0, hurt: 0, err: 'did not run', words: [] as string[] });
+const NONE = () => ({ ticks: 0, down: 0, hurt: 0, err: 'did not run', words: [] as string[], looks: 0, wrote: [] as string[] });
 /** a fight in a fresh process (the head of this file's `--fight`) */
 const apart = (q: string, secs: number, ahead = false, seed = 9, level: string | null = null): ReturnType<typeof NONE> => {
   const r = Bun.spawnSync([process.execPath, 'run', import.meta.path, '--fight', JSON.stringify([q, secs, ahead, seed, level])], { env: process.env, stdout: 'pipe', stderr: 'pipe' });
@@ -251,8 +263,10 @@ for (const [q, secs] of [['roomclear&squad4', 40], ['nightbreach', 30]] as const
   // ---- twin   (the same fight again in a fresh process, a look ahead for both seats before every tick)
   { const T = apart(q, secs, true);
     let part = -1; for (let k = 0; k < Math.max(F.words.length, T.words.length); k++) if (F.words[k] !== T.words[k]) { part = k; break; }
-    verdict(!F.err && !T.err && F.words.length === secs && part < 0, `twin (${q}): the fight with a look ahead for both seats every tick is the same game`,
-      T.err ? `after ${T.ticks} ticks: ${T.err}` : part < 0 ? `${T.words.length} seconds, the game's word the same at each` : `THE GAMES PART in second ${part + 1}`); }
+    verdict(!F.err && !T.err && F.words.length === secs && part < 0 && T.looks > 0 && !T.wrote.length, `twin (${q}): the fight with a look ahead for both seats every tick is the same game, and a look writes nothing`,
+      T.err ? `after ${T.ticks} ticks: ${T.err}` : (part < 0 ? `${T.words.length} seconds, the game's word the same at each` : `THE GAMES PART in second ${part + 1}`)
+        + (!T.looks ? ' · NO LOOK WAS HELD (this host has no whole words)' : T.wrote.length ? ` · A LOOK CHANGED THE GAME: of ${T.looks} pairs of looks held by the whole game's state words, these parts differed after one (times): ${T.wrote.slice(0, 12).join(', ')}${T.wrote.length > 12 ? ` and ${T.wrote.length - 12} more` : ''}`
+          : ` · ${T.looks} pairs of looks held by the whole game's state words: none changed a part but the scratch a look leaves (${[...LOOK_SCRATCH].join(', ')})`)); }
 }
 // ---- long   (two and a half minutes each, on another die and on another floor)
 for (const [q, secs, seed, level] of [['roomclear&squad4', 150, 5, null], ['roomclear&squad4', 150, 3, 'compound']] as const) {
