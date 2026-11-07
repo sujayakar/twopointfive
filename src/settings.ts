@@ -145,14 +145,9 @@ export interface RenderSettings {
   restirYoung: number;         // below restirRays 5 (no final ray) spatial reuse runs only where the pixel's own history is younger than this many candidates (disocclusions, resets),
                                // where its visibility bias is transient; at 5+ it runs everywhere with the final ray
   restirSpatialAll: boolean;   // A/B: spatial reuse everywhere even without the final ray (biased near shadow edges: a neighbour's visibility stands in for ours)
-                               // traces near-parallel rays (a SIMD group walks one sort of ray: −0.6 ms of 4 at high on the M4) at the price of one-frame noise correlated in 8×8 blocks (the history decorrelates it)
   restirPenCap: number;        // D5 (image-quality program): the temporal M cap INSIDE PENUMBRAE (pixels whose inherited reservoir carries a blocker hint) — shorter memory where the estimate is a coin
                                // flip's EMA turns its slow random walk into per-frame noise the ratio filter + TAA average; 0 = off (the tier's cap everywhere)
   restirPenRays: boolean;      // D1: a second fresh candidate + shadow ray in those penumbra pixels whatever the tier's ray count (+1 ray where it matters; an auditing tile's penumbra lanes skip their audit)
-                               // pixel inherits a NEIGHBOUR's history: the reservoirs' slow random walk (temporally red noise the filters cannot average) becomes whiter frame to frame at the price of a
-                               // little cross-pixel reuse bias inside penumbrae; the texel's own depth test still rejects across edges. Default off
-                               // twice a flicker period) instead of the ratio with each side ÷ its light's power (intensity / hue changes keep the history; a swept cone or a moved lamp still lets go)
-                               // class's believed-visible unshadowed mix at the pixel (restir.wgsl BELIEFS: per-tile lit / dark verdicts from the tile's own rays + the pixel's darkSlot)
   restirKnownDark: boolean;    // the lights an 8×8 tile's own rays found dark everywhere last frame leave its fresh draw (known dark like a reach-masked light: no ray, no coin-flip noise from a lamp
                                // behind the wall — the 'dark speckle' on the break-room lino); false = A/B the unbiased first-cut draw over every live light
   restirAudit: number;         // 0‥1: the share of a tile's frames (spread over every 64, staggered across tiles) on which ALL its lanes spend one extra ray re-testing a tile-dark light (votes only) —
@@ -169,7 +164,6 @@ export interface RenderSettings {
   restirMotionTaps: number;    // (4)'s tap count at such a pixel when above the tier's restirSpatial (0‥8; 0 = the tier's own k) — wider spatial reuse only where the history was cut
   restirMotionStatic: boolean; // run the twin program under a STILL camera too (object motion — a walking man's own pixels — then gets the levers; +0.2 ms direct at high for the bigger kernel); false = a still camera
                                // dispatches main's program, so at rest the pass is main's byte for byte and costs the same
-                               // (an R2 sequence: a bijective shift whose average over frames is the true flow — nothing duplicated, the pattern registered to ± ½ px)
   // direct light's shadow denoise knobs (render/denoise.ts, the shadow client)
   directHistory: boolean;      // the shadow client's temporal reuse (off = history-free shadows, for inspection). A weight until 2026-11-07, when the estimator that blended by it went
   directBlurCap: number;       // max penumbra filter radius in px
@@ -352,5 +346,5 @@ export const defaultSettings = (): RenderSettings => ({
   detail: 0.35,                // the detail layer: 'lived-in' (Tab ▸ Materials; ?detail=0 boots without it — with ?nortreflect the untouched frame)
   rtMeshHits: false,
   markings: true, markingTexel: 0.025, markingContrast: 1, markingEmissive: 1, markingReflect: true, markingReflPattern: true, markingReflCone: 0.25,   // markings ON (?nomarkings boots without them; Tab ▸ Renderer — markings)
-  sdfRigSmooth: false, charSelfShadow: true,   // the SDF character rig's two extras: OFF (self-shadow: ON, all tiers) (rows on Tab ▸ Renderer — SDF character rig; ?sdfsmooth / ?charsoft from boot; no preset touches them) — the round cones themselves have no switch
+  sdfRigSmooth: false, charSelfShadow: true,   // the SDF character rig's two extras: OFF (self-shadow: ON, all tiers) (a row on Tab ▸ Renderer — SDF character rig; no preset touches them) — the round cones themselves have no switch
 });

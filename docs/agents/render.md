@@ -161,7 +161,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   the four composites, restir and its twin, the gather, both sharp kernels): all 115 boot texts and the four made on first use compile in Chromium's compiler with
   no warning; the other 31 modules are the same text by hash. The Rust crate's mirror of the settings (`rust/game/src/root_settings`) still lists the removed
   fields: the port's to regenerate. **Never seen on a GPU.**
-- **Character proxies = the SDF character rig** — every mannequin's 15 shadow / reflection proxies are round cones fitted at load (`render/sdfrig.ts`, `shaders/sdfrig.wgsl`), no switch; extras in `frame.rigCfg` (`settings.charSelfShadow` default ON, `?noselfshadow`; `?sdfsmooth` / `?charsoft` / `?charsoftmarch` experiments); `__sdfrig`, `__rigTrace` — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
+- **Character proxies = the SDF character rig** — every mannequin's 15 shadow / reflection proxies are round cones fitted at load (`render/sdfrig.ts`, `shaders/sdfrig.wgsl`), no switch; extras in `frame.rigCfg` (`settings.charSelfShadow` default ON, `?noselfshadow`; the `?sdfsmooth` / `?charsoft` / `?charsoftmarch` experiments and `__rigTrace` went 2026-11-07); `__sdfrig` — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
 
 <!-- was CLAUDE.md lines 2658–2728 -->
 - **Effects numbers** are tuned by the user in the viewer and pasted back; treat `effects.ts` / `RIG` values as
@@ -832,9 +832,8 @@ row on his machine is the answer, and the word puts the count back on any machin
   41 other hashes held) and the denoiser's ratio clamp is 4 always. Frame words `directCfg.x, .y`, `rcJitter.z` and `lossyCfg.z` are FREE; `directCfg.w` is
   still written and read by nobody. `settings.directHistory` is a switch now (above 0 = the shadow client's history on), not a weight. The debugger lost
   24 rows: `panel-inventory.ts --gone --only labels.json` takes deleted rows out of its fixture (and `--reword --only` rewords named ones) without touching
-  another lane's missing rows. **ONE KERNEL IS STILL IN TWO WRITINGS**: `shaders/gather_split_common.wgsl` (the gather's: directAtPoint as `light` calls it) beside
-  `shaders/gather_common.wgsl` (the reflection passes': one call site a heavy function). Making them one changes the gather's text, so it waits for a same-frame
-  comparison. **What was measured**: `tools/qa/shaderinline-check.ts --json` before the change with the two rows' words in front and after it with none, on the
+  another lane's missing rows. **THE LAST KERNEL IN TWO WRITINGS** was the gather's light loop (`shaders/gather_split_common.wgsl` beside `shaders/gather_common.wgsl`): one since the
+  same day, the bullet 'THE GATHER'S LIGHT LOOP HAS ONE WRITING' above. **What was measured**: `tools/qa/shaderinline-check.ts --json` before the change with the two rows' words in front and after it with none, on the
   title, a snow level and the look's page: all 66, 66 and 67 module texts the boot hands the browser are the same by their hashes, in both sets, and the same
   127, 129 and 130 kernels are asked for at the same sizes. So the page as it opens compiles character for character what it did. **What changed for a
   tool**: `shaderinline-check` has one budget table; `shaderrows-check` has two arms (off, first) and its store cases are the one row's (its stand-in device
