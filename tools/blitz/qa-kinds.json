@@ -190,10 +190,6 @@
 "fog-filed": [
 "FOG.things=false"
 ],
-"guidewords": [
-"WORDS.guide=false",
-"WORDS.on=false"
-],
 "gunlook-bare": [
 "OWNBLOW.on=false",
 "KITDEAL.on=false",
@@ -413,9 +409,6 @@
 ],
 "qrf-wave": [
 "RESPONSE.on=false"
-],
-"radiohome": [
-"WORDS.radioHome=false"
 ],
 "rails": [
 "AUTOPILOT.plain=false",
@@ -1278,7 +1271,6 @@
 "grab-walk": "iii",
 "grabvoice": "iii",
 "guard-key": "iv-a",
-"guidewords": "ii",
 "gunhand-reload": "ii",
 "gunhand-throw": "iv-a",
 "gunhand-whistle": "iii",
@@ -1893,7 +1885,6 @@
 "standupgc": "i",
 "startfile-f": "iii",
 "startfile-follow": "iii",
-"startfile-off": "iii",
 "startfile-restart": "iii",
 "startfile-stage": "iii",
 "startle": "iii",
@@ -2033,7 +2024,6 @@
 "wallfelt": "iii",
 "wallfurn": "iii",
 "wallissue": "iii",
-"wallkeep": "iv-a",
 "wallkill": "iii",
 "wallmen": "iv-a",
 "wallpen": "iv-a",
