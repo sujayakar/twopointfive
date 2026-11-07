@@ -53,6 +53,9 @@ enum Bind {
     Alias(KPath, bool),
     /// `let fast = true/*@F*/;`
     BoolLit(bool),
+    /// a parameter typed with a table's struct (`k: &CoverK`): it may be the game's table or a caller's own copy,
+    /// so a read through it is never folded; a write through it still keeps the row out
+    Param(KPath),
 }
 
 struct Binding {
@@ -88,7 +91,7 @@ pub struct Pass<'a> {
     pub take: &'a HashSet<String>,
     pub fns: &'a FnTable,
     /// functions each module defines, for a bare call's meaning
-    pub module_fns: &'a HashMap<String, HashSet<String>>,
+    pub module_fns: &'a HashMap<String, HashMap<String, usize>>,
     /// (module, function): its body is a plain reading, with no effects (`pure_fns`)
     pub pure_fns: &'a HashSet<(String, String)>,
     /// true: only count and report, substitute nothing
@@ -101,6 +104,7 @@ pub struct Pass<'a> {
     delim: HashSet<(usize, usize)>,
     receiver: HashSet<(usize, usize)>,
     claimed: HashSet<(usize, usize)>,
+    in_test: usize,
     fn_bodies: HashSet<(usize, usize)>,
     logic_operand: HashSet<(usize, usize)>,
     line_starts: Vec<usize>,
@@ -115,7 +119,86 @@ fn is_atomic(e: &Expr) -> bool {
 }
 
 fn diverges(s: &Stmt) -> bool {
-    matches!(s, Stmt::Expr(Expr::Return(_) | Expr::Break(_) | Expr::Continue(_), _))
+    matches!(s, Stmt::Expr(e @ (Expr::Return(_) | Expr::Break(_) | Expr::Continue(_)), _) if expr_attrs(e).is_empty())
+}
+
+/// A number written with no type of its own (`0.1`, `-2`, `3 * 0.5`): what it is depends on where it stands.
+fn bare_number(e: &Expr) -> bool {
+    match e {
+        Expr::Lit(l) => match &l.lit {
+            syn::Lit::Int(i) => i.suffix().is_empty(),
+            syn::Lit::Float(f) => f.suffix().is_empty(),
+            _ => false,
+        },
+        Expr::Paren(p) => bare_number(&p.expr),
+        Expr::Unary(u) => matches!(u.op, UnOp::Neg(_)) && bare_number(&u.expr),
+        Expr::Binary(b) => bare_number(&b.left) && bare_number(&b.right),
+        _ => false,
+    }
+}
+
+/// The names a format string takes by itself: `"{n}"`, `"{fast:?}"`.
+fn captures(lit: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    if !lit.contains('"') {
+        return out;
+    }
+    let c: Vec<char> = lit.chars().collect();
+    let mut i = 0;
+    while i < c.len() {
+        if c[i] == '{' {
+            if i + 1 < c.len() && c[i + 1] == '{' {
+                i += 2;
+                continue;
+            }
+            let mut j = i + 1;
+            let mut name = String::new();
+            while j < c.len() && (c[j].is_alphanumeric() || c[j] == '_') {
+                name.push(c[j]);
+                j += 1;
+            }
+            if !name.is_empty() && !name.chars().next().unwrap().is_ascii_digit() && j < c.len() && (c[j] == '}' || c[j] == ':') {
+                out.push(name);
+            }
+            i = j;
+        }
+        i += 1;
+    }
+    out
+}
+
+fn expr_attrs(e: &Expr) -> &[syn::Attribute] {
+    match e {
+        Expr::If(x) => &x.attrs,
+        Expr::ForLoop(x) => &x.attrs,
+        Expr::While(x) => &x.attrs,
+        Expr::Block(x) => &x.attrs,
+        Expr::Assign(x) => &x.attrs,
+        Expr::Call(x) => &x.attrs,
+        Expr::Return(x) => &x.attrs,
+        Expr::Break(x) => &x.attrs,
+        Expr::Continue(x) => &x.attrs,
+        Expr::Match(x) => &x.attrs,
+        Expr::Loop(x) => &x.attrs,
+        Expr::MethodCall(x) => &x.attrs,
+        Expr::Macro(x) => &x.attrs,
+        _ => &[],
+    }
+}
+
+fn pat_has_ref_mut(p: &Pat) -> bool {
+    match p {
+        Pat::Ident(i) => (i.by_ref.is_some() && i.mutability.is_some()) || i.subpat.as_ref().map(|(_, s)| pat_has_ref_mut(s)).unwrap_or(false),
+        Pat::Or(o) => o.cases.iter().any(pat_has_ref_mut),
+        Pat::Paren(x) => pat_has_ref_mut(&x.pat),
+        Pat::Reference(r) => r.mutability.is_some() || pat_has_ref_mut(&r.pat),
+        Pat::Slice(s) => s.elems.iter().any(pat_has_ref_mut),
+        Pat::Struct(s) => s.fields.iter().any(|f| pat_has_ref_mut(&f.pat)),
+        Pat::Tuple(t) => t.elems.iter().any(pat_has_ref_mut),
+        Pat::TupleStruct(t) => t.elems.iter().any(pat_has_ref_mut),
+        Pat::Type(t) => pat_has_ref_mut(&t.pat),
+        _ => false,
+    }
 }
 
 fn single_ident(e: &Expr) -> Option<String> {
@@ -152,7 +235,7 @@ pub fn pat_idents(p: &Pat, out: &mut Vec<String>) {
 }
 
 const PURE_METHODS: &[&str] = &[
-    "is_some", "is_none", "len", "is_empty", "abs", "min", "max", "sqrt", "clone", "copied", "cloned", "unwrap_or", "as_ref", "as_str", "contains", "get", "first", "last",
+    "is_some", "is_none", "len", "is_empty", "abs", "min", "max", "sqrt", "clone", "copied", "cloned", "unwrap_or", "as_ref", "as_str", "contains", "get", "first",
     "floor", "ceil", "round", "signum", "to_bits", "is_finite", "is_nan", "powi", "sin", "cos", "atan2", "hypot", "eq", "ne", "starts_with", "ends_with", "is_ok", "is_err",
     "contains_key", "has", "trunc", "clamp", "to_string", "as_deref", "unwrap_or_default", "is_some_and", "is_none_or",
 ];
@@ -160,14 +243,14 @@ const PURE_METHODS: &[&str] = &[
 const PARSED_MACROS: &[&str] = &["vec", "format", "assert", "assert_eq", "assert_ne", "debug_assert", "debug_assert_eq", "debug_assert_ne", "println", "eprintln", "print", "eprint", "panic", "write", "writeln", "matches", "unreachable"];
 
 impl<'a> Pass<'a> {
-    pub fn new(src: &'a str, file: &'a str, module: &'a str, rows: &'a Rows, take: &'a HashSet<String>, fns: &'a FnTable, module_fns: &'a HashMap<String, HashSet<String>>, pure_fns: &'a HashSet<(String, String)>, scan_only: bool) -> Self {
+    pub fn new(src: &'a str, file: &'a str, module: &'a str, rows: &'a Rows, take: &'a HashSet<String>, fns: &'a FnTable, module_fns: &'a HashMap<String, HashMap<String, usize>>, pure_fns: &'a HashSet<(String, String)>, scan_only: bool) -> Self {
         let mut line_starts = vec![0];
         for (i, b) in src.bytes().enumerate() {
             if b == b'\n' {
                 line_starts.push(i + 1);
             }
         }
-        Pass { src, file, module, rows, take, fns, module_fns, pure_fns, scan_only, edits: Vec::new(), report: Report::default(), scopes: Vec::new(), impl_ty: None, paren_inner: HashMap::new(), delim: HashSet::new(), receiver: HashSet::new(), claimed: HashSet::new(), fn_bodies: HashSet::new(), logic_operand: HashSet::new(), line_starts }
+        Pass { src, file, module, rows, take, fns, module_fns, pure_fns, scan_only, edits: Vec::new(), report: Report::default(), scopes: Vec::new(), impl_ty: None, paren_inner: HashMap::new(), delim: HashSet::new(), receiver: HashSet::new(), claimed: HashSet::new(), in_test: 0, fn_bodies: HashSet::new(), logic_operand: HashSet::new(), line_starts }
     }
 
     fn line_of(&self, at: usize) -> usize {
@@ -269,11 +352,9 @@ impl<'a> Pass<'a> {
 
     fn type_bind(&self, t: &Type) -> Bind {
         let mut inner = t;
-        let mut is_mut = false;
         loop {
             match inner {
                 Type::Reference(r) => {
-                    is_mut |= r.mutability.is_some();
                     inner = &r.elem;
                 }
                 Type::Paren(p) => inner = &p.elem,
@@ -292,12 +373,12 @@ impl<'a> Pass<'a> {
                             return Bind::Game;
                         }
                         if let Some(path) = self.rows.type_path.get(t) {
-                            return Bind::Alias(KPath { ty: t.clone(), path: path.clone() }, is_mut);
+                            return Bind::Param(KPath { ty: t.clone(), path: path.clone() });
                         }
                     }
                 }
                 if let Some(path) = self.rows.type_path.get(&n) {
-                    return Bind::Alias(KPath { ty: n, path: path.clone() }, is_mut);
+                    return Bind::Param(KPath { ty: n, path: path.clone() });
                 }
             }
         }
@@ -307,11 +388,11 @@ impl<'a> Pass<'a> {
     fn bind_sig(&mut self, sig: &syn::Signature) {
         for a in &sig.inputs {
             match a {
-                FnArg::Receiver(r) => {
+                FnArg::Receiver(_) => {
                     let k = match &self.impl_ty {
                         Some(t) if t == "Game" => Bind::Game,
                         Some(t) => match self.rows.type_path.get(t) {
-                            Some(p) => Bind::Alias(KPath { ty: t.clone(), path: p.clone() }, r.mutability.is_some()),
+                            Some(p) => Bind::Param(KPath { ty: t.clone(), path: p.clone() }),
                             None => Bind::Other,
                         },
                         None => Bind::Other,
@@ -369,32 +450,51 @@ impl<'a> Pass<'a> {
                 let n = single_ident(e)?;
                 match self.lookup(&n) {
                     Some(Binding { kind: Bind::Alias(kp, _), .. }) => Some(kp.clone()),
+                    Some(Binding { kind: Bind::Param(kp), .. }) => Some(kp.clone()),
                     _ => None,
                 }
             }
         }
     }
+    /// The name an expression is rooted in: `k` of `k.on`, `(*k).on`, `k.a.b`.
+    fn root_name(e: &Expr) -> Option<String> {
+        match e {
+            Expr::Field(f) => Self::root_name(&f.base),
+            Expr::Paren(p) => Self::root_name(&p.expr),
+            Expr::Unary(u) if matches!(u.op, UnOp::Deref(_)) => Self::root_name(&u.expr),
+            Expr::Reference(r) => Self::root_name(&r.expr),
+            Expr::MethodCall(m) if m.method == "clone" && m.args.is_empty() => Self::root_name(&m.receiver),
+            _ => single_ident(e),
+        }
+    }
     fn is_table(&self, k: &KPath) -> bool {
         self.rows.tree.contains_key(&k.ty)
     }
-    /// A `.k.` chain off a root this pass does not know for the game, that would be a settled row off the game.
-    fn unknown_root_row(&self, e: &Expr) -> Option<String> {
+    /// A `.k.<table>…` chain off a root this pass cannot type: (the knob path, is it a table, is the root one plain name).
+    fn unknown_root_path(&self, e: &Expr) -> Option<(String, bool, bool)> {
         let mut names: Vec<String> = Vec::new();
         let mut cur = e;
+        let simple;
         loop {
             match cur {
                 Expr::Field(f) => {
                     let Member::Named(m) = &f.member else { return None };
                     let m = m.to_string();
                     if m == "k" {
+                        simple = single_ident(&f.base).is_some();
                         break;
                     }
                     names.push(m);
                     cur = &f.base;
                 }
                 Expr::Paren(p) => cur = &p.expr,
+                Expr::Unary(u) if matches!(u.op, UnOp::Deref(_)) => cur = &u.expr,
                 _ => return None,
             }
+        }
+        if names.is_empty() {
+            // a bare `x.k`: other structs have a field of that name, and nothing here says which this is
+            return None;
         }
         names.reverse();
         let mut ty = "Knobs".to_string();
@@ -402,12 +502,31 @@ impl<'a> Pass<'a> {
             let fs = self.rows.tree.get(&ty)?;
             ty = fs.iter().find(|(f, _)| f == n)?.1.clone();
         }
-        let p = names.join(".");
-        if self.take.contains(&p) {
-            Some(p)
-        } else {
-            None
+        Some((names.join("."), self.rows.tree.contains_key(&ty), simple))
+    }
+    /// The same, where it is a row this run folds.
+    fn unknown_root_row(&self, e: &Expr) -> Option<String> {
+        match self.unknown_root_path(e) {
+            Some((p, false, _)) if self.take.contains(&p) => Some(p),
+            _ => None,
         }
+    }
+    /// A write through a root this pass cannot type keeps the row (or the whole table) out, like any write.
+    /// Inside a unit test it is the test's own game, and the test rules speak instead.
+    fn foreign_write(&mut self, target: &Expr, what: &str) -> bool {
+        if self.in_test > 0 || self.resolve(target).is_some() {
+            return false;
+        }
+        let Some((p, table, _)) = self.unknown_root_path(target) else { return false };
+        let at = self.r(target).start;
+        let line: String = self.line_text(at).chars().take(160).collect();
+        let note = format!("{} {what}, through a name this program cannot type: {}", self.place(at), line);
+        if table {
+            self.report.table_writes.entry(p).or_default().push(note);
+        } else {
+            self.report.writes.entry(p).or_default().push(note);
+        }
+        true
     }
 
     fn marked_bool(&self, e: &Expr) -> Option<bool> {
@@ -424,31 +543,29 @@ impl<'a> Pass<'a> {
         format!("{b}{MARK}")
     }
 
-    /// The function of this crate a call names: (module, function).
+    /// The function of this crate a call names: (module, function). Only where the path leaves no doubt: a bare name
+    /// or `super::name` for this module's own function, `crate::<module>::name` for another's, and in both cases a
+    /// name the module defines exactly once (a private twin in another part, or a `cfg` pair, is a doubt).
     fn call_target(&self, c: &syn::ExprCall) -> Option<(String, String)> {
         let Expr::Path(p) = &*c.func else { return None };
-        if p.qself.is_some() {
+        if p.qself.is_some() || p.path.leading_colon.is_some() {
             return None;
         }
         let segs: Vec<String> = p.path.segments.iter().map(|s| s.ident.to_string()).collect();
-        let name = segs.last()?.clone();
-        let module = if segs.len() == 1 {
-            if self.lookup(&name).is_some() {
-                return None;
+        let (module, name) = match segs.as_slice() {
+            [n] => {
+                if self.lookup(n).is_some() {
+                    return None;
+                }
+                (self.module.to_string(), n.clone())
             }
-            if self.module_fns.get(self.module).map(|s| s.contains(&name)).unwrap_or(false) {
-                self.module.to_string()
-            } else {
-                return None;
-            }
-        } else {
-            let m = &segs[segs.len() - 2];
-            if m == "super" || m == "self" {
-                self.module.to_string()
-            } else {
-                m.clone()
-            }
+            [a, n] if a == "super" || a == "self" => (self.module.to_string(), n.clone()),
+            [a, m, n] if a == "crate" => (m.clone(), n.clone()),
+            _ => return None,
         };
+        if self.module_fns.get(&module).and_then(|s| s.get(&name)).copied() != Some(1) {
+            return None;
+        }
         Some((module, name))
     }
     fn call_fact(&self, c: &syn::ExprCall) -> Option<FnFact> {
@@ -469,10 +586,14 @@ impl<'a> Pass<'a> {
             }
             Expr::Paren(p) => self.pure(&p.expr),
             Expr::Cast(c) => self.pure(&c.expr),
-            Expr::Reference(r) => self.pure(&r.expr),
+            Expr::Reference(r) => r.mutability.is_none() && self.pure(&r.expr),
             Expr::Tuple(t) => t.elems.iter().all(|x| self.pure(x)),
             Expr::Array(a) => a.elems.iter().all(|x| self.pure(x)),
-            Expr::MethodCall(m) => PURE_METHODS.contains(&m.method.to_string().as_str()) && self.pure(&m.receiver) && m.args.iter().all(|x| self.pure(x)),
+            Expr::MethodCall(m) => {
+                let name = m.method.to_string();
+                // (`min` and `max` of two numbers; with no argument they drain an iterator)
+                PURE_METHODS.contains(&name.as_str()) && !((name == "min" || name == "max") && m.args.len() != 1) && self.pure(&m.receiver) && m.args.iter().all(|x| self.pure(x))
+            }
             Expr::Call(c) => {
                 if !c.args.iter().all(|x| self.pure(x)) {
                     return false;
@@ -621,12 +742,41 @@ impl<'a> Pass<'a> {
                             return true;
                         }
                     }
+                    // a name a format string takes by itself: "{n}"
+                    TokenTree::Literal(l) => {
+                        if captures(&l.to_string()).iter().any(|c| names.iter().any(|n| n == c)) {
+                            return true;
+                        }
+                    }
                     _ => {}
                 }
             }
             false
         }
         walk(ts, names)
+    }
+    /// A string that runs over lines: moving its lines would change what it says.
+    fn multiline_literal(&self, r: Range<usize>) -> bool {
+        let Ok(ts) = self.src[r].parse::<TokenStream>() else { return true };
+        fn walk(ts: TokenStream) -> bool {
+            for t in ts {
+                match t {
+                    TokenTree::Literal(l) => {
+                        if l.span().start().line != l.span().end().line {
+                            return true;
+                        }
+                    }
+                    TokenTree::Group(g) => {
+                        if walk(g.stream()) {
+                            return true;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            false
+        }
+        walk(ts)
     }
 
     /// `if <yes or no> {A} else {B}` standing as a statement of `parent` at `i`.
@@ -647,13 +797,17 @@ impl<'a> Pass<'a> {
             (Some(b), _) => {
                 let (names, items) = Self::declares(b);
                 let rest = stmt_r.end..self.r(parent).end - 1;
-                let clash = items || self.mentions(rest.clone(), &names);
+                let clash = items || self.mentions(rest.clone(), &names) || self.multiline_literal(self.r(b));
                 if clash {
                     let t = self.text(self.r(b)).to_string();
                     self.edit(stmt_r, t, "if: the side kept, in its braces");
                     return;
                 }
                 let tail_stays = is_last && !semi;
+                if tail_stays && ifx.else_branch.is_some() && matches!(b.stmts.last(), Some(Stmt::Expr(x, None)) if bare_number(x)) {
+                    self.left(stmt_r.start, "the side kept ends in a bare number, whose type the other side may have given: it stays");
+                    return;
+                }
                 let mut text = self.spliced(b, stmt_r.start, !tail_stays);
                 let mut end = stmt_r.end;
                 let last = b.stmts.last().unwrap();
@@ -722,6 +876,14 @@ impl<'a> Pass<'a> {
 
     fn macro_tokens(&mut self, mac: &syn::Macro) {
         let name = mac.path.segments.last().map(|s| s.ident.to_string()).unwrap_or_default();
+        // a name a format string takes by itself (`"{n}"`) is a use no expression shows
+        for t in flat(mac.tokens.clone()) {
+            if let TokenTree::Literal(l) = t {
+                for c in captures(&l.to_string()) {
+                    self.used(&c);
+                }
+            }
+        }
         if PARSED_MACROS.contains(&name.as_str()) {
             if name == "matches" {
                 // `matches!(value, pattern if guard)`: the guard is code, under the pattern's names
@@ -770,43 +932,73 @@ impl<'a> Pass<'a> {
                 return;
             }
         }
-        // not read as code: every name in it counts as used, and a row read in it is left by name
+        // not read as code: every name in it counts as used, and a knob it names may be written there
         let at = self.r(mac).start;
-        let toks: Vec<TokenTree> = flat(mac.tokens.clone());
+        self.unread_tokens(mac.tokens.clone(), at, &format!("inside `{name}!`, which is not read as code"));
+    }
+
+    /// Tokens this pass cannot read as code (a macro's own words, a `macro_rules!` body).
+    fn unread_tokens(&mut self, ts: TokenStream, at: usize, what: &str) {
+        let toks: Vec<TokenTree> = flat(ts);
         let mut i = 0;
         while i < toks.len() {
-            if let TokenTree::Ident(id) = &toks[i] {
-                let n = id.to_string();
-                let mut chain = vec![n.clone()];
-                let mut j = i + 1;
-                while j + 1 < toks.len() {
-                    match (&toks[j], &toks[j + 1]) {
-                        (TokenTree::Punct(p), TokenTree::Ident(f)) if p.as_char() == '.' => {
-                            chain.push(f.to_string());
-                            j += 2;
+            match &toks[i] {
+                TokenTree::Ident(id) => {
+                    let n = id.to_string();
+                    // `<anything>.k.<table>…` or `<alias>.<row>`: taken for a write
+                    let mut chain: Vec<String> = Vec::new();
+                    let mut j = i + 1;
+                    while j + 1 < toks.len() {
+                        match (&toks[j], &toks[j + 1]) {
+                            (TokenTree::Punct(p), TokenTree::Ident(f)) if p.as_char() == '.' => {
+                                chain.push(f.to_string());
+                                j += 2;
+                            }
+                            _ => break,
                         }
-                        _ => break,
+                    }
+                    let after_dot = i > 0 && matches!(&toks[i - 1], TokenTree::Punct(p) if p.as_char() == '.');
+                    let start: Option<KPath> = if n == "k" && after_dot {
+                        Some(KPath { ty: "Knobs".into(), path: vec![] })
+                    } else if after_dot {
+                        None
+                    } else {
+                        match self.lookup(&n) {
+                            Some(Binding { kind: Bind::Alias(k, _), .. }) | Some(Binding { kind: Bind::Param(k), .. }) => Some(k.clone()),
+                            _ => None,
+                        }
+                    };
+                    if let Some(mut kp) = start {
+                        let from = kp.path.len();
+                        for f in chain.iter() {
+                            let Some(fs) = self.rows.tree.get(&kp.ty) else { break };
+                            let Some((_, t)) = fs.iter().find(|(x, _)| x == f) else { break };
+                            kp.path.push(f.clone());
+                            kp.ty = t.clone();
+                        }
+                        if kp.path.len() > from || !kp.path.is_empty() {
+                            let line: String = self.line_text(at).chars().take(160).collect();
+                            let note = format!("{} named {what}: {}", self.place(at), line);
+                            let p = kp.path.join(".");
+                            if self.in_test > 0 {
+                                if self.take.contains(&p) {
+                                    self.left(at, &format!("{p} named {what}"));
+                                }
+                            } else if self.is_table(&kp) {
+                                self.report.table_writes.entry(p).or_default().push(note);
+                            } else {
+                                self.report.writes.entry(p).or_default().push(note);
+                            }
+                        }
+                    }
+                    self.used(&n);
+                }
+                TokenTree::Literal(l) => {
+                    for c in captures(&l.to_string()) {
+                        self.used(&c);
                     }
                 }
-                let base: Option<KPath> = match self.lookup(&n) {
-                    Some(Binding { kind: Bind::Game, .. }) if chain.len() > 1 && chain[1] == "k" => Some(KPath { ty: "Knobs".into(), path: vec![] }),
-                    Some(Binding { kind: Bind::Alias(k, _), .. }) => Some(k.clone()),
-                    _ => None,
-                };
-                let skip = if matches!(self.lookup(&n), Some(Binding { kind: Bind::Game, .. })) { 2 } else { 1 };
-                if let Some(mut kp) = base {
-                    for f in chain.iter().skip(skip) {
-                        let Some(fs) = self.rows.tree.get(&kp.ty) else { break };
-                        let Some((_, t)) = fs.iter().find(|(x, _)| x == f) else { break };
-                        kp.path.push(f.clone());
-                        kp.ty = t.clone();
-                    }
-                    let p = kp.path.join(".");
-                    if self.take.contains(&p) {
-                        self.left(at, &format!("{p} read inside `{name}!`, which is not read as code"));
-                    }
-                }
-                self.used(&n);
+                _ => {}
             }
             i += 1;
         }
@@ -833,7 +1025,13 @@ impl<'a> Pass<'a> {
             return false;
         }
         *self.report.read_files.entry(p.clone()).or_default().entry(self.file.to_string()).or_default() += 1;
-        *self.report.reads.entry(p).or_default() += 1;
+        *self.report.reads.entry(p.clone()).or_default() += 1;
+        if let Some(n) = Self::root_name(e) {
+            if matches!(self.lookup(&n), Some(Binding { kind: Bind::Param(_), .. })) {
+                self.left(self.r(e).start, &format!("{p} read through a parameter typed with its table's struct: the caller may hand in a copy of its own, so it stays"));
+                return false;
+            }
+        }
         let r = self.r(e);
         self.edit(r, format!("{}{MARK}", row.value), "a settled row read");
         true
@@ -864,7 +1062,36 @@ impl<'ast, 'a> Visit<'ast> for Pass<'a> {
         visit::visit_item_impl(self, i);
         self.impl_ty = was;
     }
+    fn visit_item_mod(&mut self, m: &'ast syn::ItemMod) {
+        let test = m.attrs.iter().any(|a| a.path().is_ident("cfg") && a.meta.require_list().map(|l| l.tokens.to_string().contains("test")).unwrap_or(false));
+        if test {
+            self.in_test += 1;
+        }
+        visit::visit_item_mod(self, m);
+        if test {
+            self.in_test -= 1;
+        }
+    }
+    fn visit_item_macro(&mut self, m: &'ast syn::ItemMacro) {
+        // a `macro_rules!` body: what it writes it writes wherever it is used
+        let at = self.r(m).start;
+        self.unread_tokens(m.mac.tokens.clone(), at, "in a macro's own body");
+    }
+    fn visit_trait_item_fn(&mut self, f: &'ast syn::TraitItemFn) {
+        let saved = std::mem::take(&mut self.scopes);
+        self.push();
+        self.bind_sig(&f.sig);
+        if let Some(b) = &f.default {
+            self.visit_block(b);
+        }
+        self.pop();
+        self.scopes = saved;
+    }
     fn visit_item_fn(&mut self, f: &'ast syn::ItemFn) {
+        let test = f.attrs.iter().any(|a| a.path().is_ident("cfg") && a.meta.require_list().map(|l| l.tokens.to_string().contains("test")).unwrap_or(false));
+        if test {
+            self.in_test += 1;
+        }
         let saved = std::mem::take(&mut self.scopes);
         self.push();
         self.bind_sig(&f.sig);
@@ -874,6 +1101,9 @@ impl<'ast, 'a> Visit<'ast> for Pass<'a> {
         self.visit_block(&f.block);
         self.pop();
         self.scopes = saved;
+        if test {
+            self.in_test -= 1;
+        }
     }
     fn visit_impl_item_fn(&mut self, f: &'ast syn::ImplItemFn) {
         let saved = std::mem::take(&mut self.scopes);
@@ -886,8 +1116,20 @@ impl<'ast, 'a> Visit<'ast> for Pass<'a> {
 
     fn visit_block(&mut self, b: &'ast Block) {
         self.push();
+        // a function written inside the block shadows the module's of that name
+        for s in &b.stmts {
+            if let Stmt::Item(syn::Item::Fn(f)) = s {
+                self.bind(f.sig.ident.to_string(), Bind::Other, None);
+            }
+        }
         for (i, s) in b.stmts.iter().enumerate() {
+            // an attribute on a statement (`#[cfg(test)] if …`) is part of what it means: no rule touches it
+            let plain = match s {
+                Stmt::Expr(e, _) => expr_attrs(e).is_empty(),
+                _ => true,
+            };
             match s {
+                _ if !plain => {}
                 Stmt::Expr(Expr::If(ifx), semi) => {
                     if let Some(on) = self.marked_bool(&ifx.cond) {
                         self.claimed.insert(self.key(ifx));
@@ -923,17 +1165,14 @@ impl<'ast, 'a> Visit<'ast> for Pass<'a> {
                     }
                 }
                 Stmt::Expr(Expr::ForLoop(f), _) if self.emptied(&f.body) => {
-                    if self.pure(&f.expr) {
-                        self.delete_stmt(b, i);
-                    } else {
-                        self.left(self.r(f).start, "a loop over nothing now, what it walks not plainly free of effects");
-                    }
+                    // (walking a thing can be an effect of its own: an iterator that rolls the die as it goes)
+                    self.left(self.r(f).start, "a loop over nothing now: it stays, for what walking it may do");
                 }
                 Stmt::Expr(Expr::Block(x), _) if x.label.is_none() && self.emptied(&x.block) => self.delete_stmt(b, i),
                 Stmt::Expr(Expr::While(w), _) if self.emptied(&w.body) => self.left(self.r(w).start, "a `while` with nothing in it now"),
                 Stmt::Expr(Expr::Assign(a), Some(_)) => {
                     // a write of the row's own value off a root this pass cannot type (a test's own game): a dead store
-                    if self.resolve(&a.left).is_none() {
+                    if self.in_test > 0 && self.resolve(&a.left).is_none() && matches!(self.unknown_root_path(&a.left), Some((_, false, true))) {
                         if let Some(p) = self.unknown_root_row(&a.left) {
                             let page = self.rows.by_path.get(&p).and_then(|r| r.bool_value);
                             if matches!(&*a.right, Expr::Lit(l) if matches!(&l.lit, syn::Lit::Bool(b) if Some(b.value) == page)) {
@@ -982,6 +1221,9 @@ impl<'ast, 'a> Visit<'ast> for Pass<'a> {
         let mut alias_init = false;
         if let Some(init) = &l.init {
             self.delim.insert(self.key(&*init.expr));
+            if pat_has_ref_mut(&l.pat) && !self.knob_write(&init.expr, "taken by `ref mut`") {
+                self.foreign_write(&init.expr, "taken by `ref mut`");
+            }
             if let Some((_, is_mut)) = &simple {
                 // `let k = g.k.cover;` · `let k = &g.k.cover;` · `let k = g.k.cover.clone();` · `let k = &mut g.k.cover;`
                 let mut e: &Expr = &init.expr;
@@ -1006,13 +1248,20 @@ impl<'ast, 'a> Visit<'ast> for Pass<'a> {
                                 let note = format!("{} borrowed `&mut`: {}", self.place(at), line);
                                 self.report.table_writes.entry(kp.path.join(".")).or_default().push(note);
                             }
-                            if !*is_mut {
+                            if !*is_mut && !matches!(Self::root_name(e).and_then(|n| self.lookup(&n).map(|b| matches!(b.kind, Bind::Param(_)))), Some(true)) {
                                 kind = Bind::Alias(kp, by_mut);
-                                decl = if by_mut { None } else { Some(self.r(l)) };
+                                decl = if by_mut || !l.attrs.is_empty() { None } else { Some(self.r(l)) };
                                 alias_init = true;
+                                // (an alias of an alias uses the first)
+                                if let Some(n) = Self::root_name(e) {
+                                    self.used(&n);
+                                }
                             }
                         }
-                    } else if !*is_mut {
+                    } else if self.is_game(e) {
+                        // `let v = &mut *g;`: another name for the game
+                        kind = Bind::Game;
+                    } else if !*is_mut && l.attrs.is_empty() {
                         if let Some(b) = self.marked_bool(&init.expr) {
                             kind = Bind::BoolLit(b);
                             decl = Some(self.r(l));
@@ -1027,6 +1276,12 @@ impl<'ast, 'a> Visit<'ast> for Pass<'a> {
                 self.visit_expr(d);
             }
         }
+        // `let v: &mut Game = …;`
+        if let (Bind::Other, Pat::Type(t)) = (&kind, &l.pat) {
+            if matches!(self.type_bind(&t.ty), Bind::Game) {
+                kind = Bind::Game;
+            }
+        }
         match simple {
             Some((n, _)) => self.bind(n, kind, decl),
             None => self.bind_pat(&l.pat),
@@ -1036,7 +1291,18 @@ impl<'ast, 'a> Visit<'ast> for Pass<'a> {
     fn visit_expr_closure(&mut self, c: &'ast syn::ExprClosure) {
         self.push();
         for p in &c.inputs {
-            self.bind_pat(p);
+            // `|v: &mut Game| …`: the game under another name
+            match p {
+                Pat::Type(t) if matches!(&*t.pat, Pat::Ident(_)) => {
+                    let kind = self.type_bind(&t.ty);
+                    let mut v = Vec::new();
+                    pat_idents(&t.pat, &mut v);
+                    for n in v {
+                        self.bind(n, kind.clone(), None);
+                    }
+                }
+                _ => self.bind_pat(p),
+            }
         }
         self.delim.insert(self.key(&*c.body));
         self.visit_expr(&c.body);
@@ -1075,6 +1341,7 @@ impl<'ast, 'a> Visit<'ast> for Pass<'a> {
         if let Some((else_tok, e)) = &ifx.else_branch {
             let then_end = self.r(&ifx.then_branch).end;
             match &**e {
+                Expr::If(inner) if !inner.attrs.is_empty() || !ifx.attrs.is_empty() => {}
                 Expr::If(inner) => {
                     if let Some(on) = self.marked_bool(&inner.cond) {
                         self.claimed.insert(self.key(inner));
@@ -1127,11 +1394,7 @@ impl<'ast, 'a> Visit<'ast> for Pass<'a> {
                         }
                     }
                     // a table, or a row the fold does not take: only its names are walked
-                    let mut cur = e;
-                    while let Expr::Field(f) = cur {
-                        cur = &f.base;
-                    }
-                    if let Some(n) = single_ident(cur) {
+                    if let Some(n) = Self::root_name(e) {
                         self.used(&n);
                     }
                     return;
@@ -1157,6 +1420,23 @@ impl<'ast, 'a> Visit<'ast> for Pass<'a> {
                     return;
                 }
                 self.delim.insert(self.key(&*a.right));
+                if matches!(&*a.left, Expr::Unary(u) if matches!(u.op, UnOp::Deref(_)) && self.is_game(&u.expr)) {
+                    let at = self.r(e).start;
+                    let line: String = self.line_text(at).chars().take(160).collect();
+                    let note = format!("{} the whole game assigned: {}", self.place(at), line);
+                    self.report.table_writes.entry(String::new()).or_default().push(note);
+                }
+                // `v.k = Knobs::page()` through a name this pass cannot type: every table at once
+                if self.in_test == 0 && matches!(&*a.left, Expr::Field(f) if matches!(&f.member, Member::Named(m) if m == "k") && !self.is_game(&f.base)) && self.text(self.r(&*a.right)).contains("Knobs") {
+                    let at = self.r(e).start;
+                    let line: String = self.line_text(at).chars().take(160).collect();
+                    let note = format!("{} every table assigned, through a name this program cannot type: {}", self.place(at), line);
+                    self.report.table_writes.entry(String::new()).or_default().push(note);
+                }
+                if self.foreign_write(&a.left, "assigned") {
+                    self.visit_expr(&a.right);
+                    return;
+                }
                 if let Some(p) = self.unknown_root_row(&a.left) {
                     let page = self.rows.by_path.get(&p).and_then(|r| r.bool_value);
                     if !matches!(&*a.right, Expr::Lit(l) if matches!(&l.lit, syn::Lit::Bool(b) if Some(b.value) == page)) {
@@ -1167,7 +1447,7 @@ impl<'ast, 'a> Visit<'ast> for Pass<'a> {
                 }
             }
             Expr::Reference(r) if r.mutability.is_some() => {
-                if self.knob_write(&r.expr, "borrowed `&mut`") {
+                if self.knob_write(&r.expr, "borrowed `&mut`") || self.foreign_write(&r.expr, "borrowed `&mut`") {
                     return;
                 }
             }
@@ -1178,7 +1458,7 @@ impl<'ast, 'a> Visit<'ast> for Pass<'a> {
             }
             Expr::Binary(b) => {
                 let assign = matches!(b.op, BinOp::AddAssign(_) | BinOp::SubAssign(_) | BinOp::MulAssign(_) | BinOp::DivAssign(_) | BinOp::RemAssign(_) | BinOp::BitXorAssign(_) | BinOp::BitAndAssign(_) | BinOp::BitOrAssign(_) | BinOp::ShlAssign(_) | BinOp::ShrAssign(_));
-                if assign && self.knob_write(&b.left, "assigned") {
+                if assign && (self.knob_write(&b.left, "assigned") || self.foreign_write(&b.left, "assigned")) {
                     self.visit_expr(&b.right);
                     return;
                 }
@@ -1271,6 +1551,16 @@ impl<'ast, 'a> Visit<'ast> for Pass<'a> {
                 }
             }
             Expr::MethodCall(m) => {
+                // a method on a whole table may write it (`&mut self` shows nowhere at the call)
+                if m.method != "clone" {
+                    if let Some(kp) = self.resolve(&m.receiver) {
+                        if self.is_table(&kp) {
+                            self.knob_write(&m.receiver, &format!("`.{}()` called on it", m.method));
+                        }
+                    } else if matches!(self.unknown_root_path(&m.receiver), Some((_, true, _))) {
+                        self.foreign_write(&m.receiver, &format!("`.{}()` called on it", m.method));
+                    }
+                }
                 self.receiver.insert(self.key(&*m.receiver));
                 for a in &m.args {
                     self.delim.insert(self.key(a));
@@ -1325,6 +1615,9 @@ impl<'ast, 'a> Visit<'ast> for Pass<'a> {
                 return;
             }
             Expr::Match(m) => {
+                if m.arms.iter().any(|a| pat_has_ref_mut(&a.pat)) && !self.knob_write(&m.expr, "taken by `ref mut`") {
+                    self.foreign_write(&m.expr, "taken by `ref mut`");
+                }
                 self.delim.insert(self.key(&*m.expr));
                 if self.marked_bool(&m.expr).is_some() {
                     self.left(self.r(e).start, "a `match` on a settled yes or no");
@@ -1332,9 +1625,16 @@ impl<'ast, 'a> Visit<'ast> for Pass<'a> {
             }
             Expr::If(ifx) => {
                 // an `if` standing as a value
-                if !self.claimed.contains(&self.key(ifx)) {
+                if !self.claimed.contains(&self.key(ifx)) && ifx.attrs.is_empty() {
                     if let Some(on) = self.marked_bool(&ifx.cond) {
                         let whole = self.r(e);
+                        let kept_block: Option<&Block> = if on { Some(&ifx.then_branch) } else { match ifx.else_branch.as_ref().map(|(_, x)| &**x) { Some(Expr::Block(b)) => Some(&b.block), _ => None } };
+                        let kept_tail: Option<&Expr> = kept_block.and_then(|b| b.stmts.last()).and_then(|s| match s { Stmt::Expr(x, None) => Some(x), _ => None });
+                        if ifx.else_branch.is_some() && kept_tail.map(bare_number).unwrap_or(false) {
+                            self.left(whole.start, "the side kept is a bare number, whose type the other side may have given: it stays");
+                            visit::visit_expr(self, e);
+                            return;
+                        }
                         let chosen: Option<&Expr> = if on { None } else { ifx.else_branch.as_ref().map(|(_, x)| &**x) };
                         let block: Option<&Block> = if on {
                             Some(&ifx.then_branch)
@@ -1371,19 +1671,24 @@ impl<'ast, 'a> Visit<'ast> for Pass<'a> {
 
 /// The free functions of a body file whose body is a plain reading: `let`s of expressions with no effects, then
 /// one such expression. `pass` is a scan pass over the same file (for what its calls name and what is known pure).
-pub fn pure_fns_of(file: &syn::File, pass: &Pass) -> Vec<String> {
+/// A function under a `cfg` is not judged: its twin may differ.
+pub fn pure_fns_of(file: &syn::File, pass: &mut Pass) -> Vec<String> {
     let mut out = Vec::new();
     for it in &file.items {
         let syn::Item::Fn(f) = it else { continue };
         let n = f.block.stmts.len();
-        if n == 0 {
+        if n == 0 || f.attrs.iter().any(|a| a.path().is_ident("cfg")) {
             continue;
         }
+        // (its own parameters shadow the module's functions: `roll()` may be a closure handed in)
+        pass.push();
+        pass.bind_sig(&f.sig);
         let ok = f.block.stmts.iter().enumerate().all(|(i, s)| match s {
             Stmt::Local(l) => i + 1 < n && matches!(&l.pat, Pat::Ident(p) if p.mutability.is_none() && p.by_ref.is_none()) && matches!(&l.init, Some(init) if init.diverge.is_none() && pass.pure(&init.expr)),
             Stmt::Expr(e, None) => i + 1 == n && pass.pure(e),
             _ => false,
         });
+        pass.scopes.pop();
         if ok {
             out.push(f.sig.ident.to_string());
         }
@@ -1396,6 +1701,9 @@ pub fn fn_facts(src: &str, file: &syn::File) -> Vec<(String, FnFact)> {
     let mut out = Vec::new();
     for it in &file.items {
         let syn::Item::Fn(f) = it else { continue };
+        if f.attrs.iter().any(|a| a.path().is_ident("cfg")) {
+            continue;
+        }
         let name = f.sig.ident.to_string();
         let body = &src[f.block.span().byte_range()];
         let unit = matches!(f.sig.output, syn::ReturnType::Default);

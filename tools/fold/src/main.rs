@@ -18,6 +18,7 @@
 mod dead;
 mod fields;
 mod fold;
+mod readers;
 mod rows;
 mod sharp;
 
@@ -62,7 +63,10 @@ struct Engine<'a> {
     rows: &'a Rows,
     bodies: &'a [Body],
     modules: Vec<String>,
-    mfns: HashMap<String, HashSet<String>>,
+    /// each body's part name (`p_02`), as its module's mod.rs names it
+    stems: Vec<String>,
+    /// module -> function name -> how many body functions of the module bear it
+    mfns: HashMap<String, HashMap<String, usize>>,
     /// functions that are plain readings (fold::pure_fns_of), to a fixed point over the tree as it stood
     pure: HashSet<(String, String)>,
     world: dead::World,
@@ -172,7 +176,7 @@ impl<'a> Engine<'a> {
             }
             texts[i] = strip_marks(&texts[i]);
         }
-        let s = dead::fixpoint(&self.world, base, &self.modules, texts, &ch, spare, true);
+        let s = dead::fixpoint(&self.world, base, &self.modules, &self.stems, texts, &ch, spare, true);
         for (i, t) in texts.iter().enumerate() {
             if *t != self.bodies[i].was {
                 out.texts.insert(i, t.clone());
@@ -300,11 +304,78 @@ fn sharp_main(cmd: &str, args: &[String]) -> ! {
     }
 }
 
+/// `fold readers-demote | readers-restore [--diag FILE] | readers-report`, each with `--state FILE`:
+/// whether a function writes, said by its signature (readers.rs; tools/fold/readers.sh drives them).
+fn readers_main(cmd: &str, args: &[String]) -> ! {
+    let mut root = PathBuf::from(".");
+    let mut state = std::env::temp_dir().join("fold-readers.txt");
+    let mut diag: Option<String> = None;
+    let mut taint = false;
+    let mut bare: Option<String> = None;
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        let mut val = || it.next().cloned().unwrap_or_default();
+        match a.as_str() {
+            "--root" => root = PathBuf::from(val()),
+            "--state" => state = PathBuf::from(val()),
+            "--diag" => diag = Some(val()),
+            "--taint" => taint = true,
+            "--bare" => bare = Some(val()),
+            x => {
+                eprintln!("fold {cmd}: no option {x}");
+                std::process::exit(64);
+            }
+        }
+    }
+    let fail = |e: String| -> ! {
+        eprintln!("fold: {e}");
+        std::process::exit(3)
+    };
+    match cmd {
+        "readers-demote" => match readers::demote(&root, &state) {
+            Ok(s) => println!("fold: {s}"),
+            Err(e) => fail(e),
+        },
+        "readers-restore" => {
+            let text = diag.map(|d| std::fs::read_to_string(&d).unwrap_or_else(|e| fail(format!("cannot read {d}: {e}"))));
+            match readers::restore(&root, &state, text.as_deref(), taint) {
+                Ok(r) => {
+                    println!("fold: `mut` put back on {} parameters the compiler named, {} that write past the compiler's sight, {} more by the calls; {} stay `&`", r.by_error, r.by_taint, r.by_calls, r.left);
+                    for u in r.unplaced.iter().take(12) {
+                        println!("  an error this program could not place: {u}");
+                    }
+                    std::process::exit(if r.by_error + r.by_taint + r.by_calls > 0 { 10 } else if r.unplaced.is_empty() { 0 } else { 4 });
+                }
+                Err(e) => fail(e),
+            }
+        }
+        "readers-report" => {
+            let b = bare.map(|f| std::fs::read_to_string(&f).unwrap_or_else(|e| fail(format!("cannot read {f}: {e}"))));
+            match readers::report(&root, &state, b.as_deref()) {
+                Ok(s) => print!("{s}"),
+                Err(e) => fail(e),
+            }
+        }
+        "readers-now" => match readers::readers_now(&root) {
+            Ok(v) => println!("{}", v.join("\n")),
+            Err(e) => fail(e),
+        },
+        x => {
+            eprintln!("fold: no command {x}");
+            std::process::exit(64);
+        }
+    }
+    std::process::exit(0);
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if let Some(c) = args.first() {
         if c == "sharp-prep" || c == "sharp-apply" {
             sharp_main(c, &args[1..]);
+        }
+        if c.starts_with("readers-") {
+            readers_main(c, &args[1..]);
         }
     }
     let mut write = false;
@@ -398,12 +469,12 @@ fn main() {
         let rel = p.strip_prefix(&root).unwrap_or(p).to_string_lossy().to_string();
         bodies.push(Body { path: p.clone(), rel, module, was: read(p.clone()) });
     }
-    let mut mfns: HashMap<String, HashSet<String>> = HashMap::new();
+    let mut mfns: HashMap<String, HashMap<String, usize>> = HashMap::new();
     for b in &bodies {
         if let Ok(f) = syn::parse_file(&b.was) {
             for it in &f.items {
                 if let syn::Item::Fn(x) = it {
-                    mfns.entry(b.module.clone()).or_default().insert(x.sig.ident.to_string());
+                    *mfns.entry(b.module.clone()).or_default().entry(x.sig.ident.to_string()).or_default() += 1;
                 }
             }
         }
@@ -419,8 +490,8 @@ fn main() {
             let mut grew = false;
             for (b, f) in bodies.iter().zip(parsed.iter()) {
                 let Some(f) = f else { continue };
-                let p = Pass::new(&b.was, &b.rel, &b.module, &rows, &none_taken, &no_facts, &mfns, &pure, true);
-                let names = fold::pure_fns_of(f, &p);
+                let mut p = Pass::new(&b.was, &b.rel, &b.module, &rows, &none_taken, &no_facts, &mfns, &pure, true);
+                let names = fold::pure_fns_of(f, &mut p);
                 drop(p);
                 for n in names {
                     grew |= pure.insert((b.module.clone(), n));
@@ -431,7 +502,7 @@ fn main() {
             }
         }
     }
-    let eng = Engine { rows: &rows, bodies: &bodies, modules: bodies.iter().map(|b| b.module.clone()).collect(), mfns, pure, world: dead::world(&root, &body_paths) };
+    let eng = Engine { rows: &rows, bodies: &bodies, modules: bodies.iter().map(|b| b.module.clone()).collect(), stems: bodies.iter().map(|b| b.path.file_stem().and_then(|n| n.to_str()).unwrap_or("").to_string()).collect(), mfns, pure, world: dead::world(&root, &body_paths) };
     let pristine: Vec<String> = bodies.iter().map(|b| b.was.clone()).collect();
     let no_fns: FnTable = HashMap::new();
 
@@ -466,9 +537,9 @@ fn main() {
     let base = dead::cache(&eng.world, &pristine);
     let dead_before: HashSet<(String, String)> = {
         let mut t = pristine.clone();
-        dead::fixpoint(&eng.world, &base, &eng.modules, &mut t, &[], &HashSet::new(), true).deleted.into_iter().collect()
+        dead::fixpoint(&eng.world, &base, &eng.modules, &eng.stems, &mut t, &[], &HashSet::new(), true).deleted.into_iter().collect()
     };
-    let surface_before: HashSet<(String, String)> = dead::fixpoint(&eng.world, &base, &eng.modules, &mut pristine.clone(), &[], &HashSet::new(), false).surface_only.into_iter().collect();
+    let surface_before: HashSet<(String, String)> = dead::fixpoint(&eng.world, &base, &eng.modules, &eng.stems, &mut pristine.clone(), &[], &HashSet::new(), false).surface_only.into_iter().collect();
     let mut texts = pristine.clone();
     // with --unnamed the functions nothing named BEFORE the fold go too
     let spare: HashSet<(String, String)> = if unnamed { HashSet::new() } else { dead_before.clone() };
@@ -588,7 +659,7 @@ fn main() {
     if !unnamed {
         let dead_lines: usize = {
             let mut t = pristine.clone();
-            dead::fixpoint(&eng.world, &base, &eng.modules, &mut t, &[], &HashSet::new(), true);
+            dead::fixpoint(&eng.world, &base, &eng.modules, &eng.stems, &mut t, &[], &HashSet::new(), true);
             lines_before - t.iter().map(|x| lines_of(x)).sum::<usize>()
         };
         let _ = writeln!(o, "\n## Functions nothing named before the fold either ({}, {dead_lines} lines): not touched (--unnamed deletes them)\n", dead_before.len());

@@ -24,7 +24,8 @@ pub struct Counts {
 
 fn count(src: &str) -> Counts {
     let mut c = Counts::default();
-    let Ok(ts) = src.parse::<TokenStream>() else { return c };
+    // (a file that cannot be read into tokens would count as naming nothing: stop instead)
+    let ts = src.parse::<TokenStream>().unwrap_or_else(|e| panic!("fold: a Rust file under rust/ does not read as tokens ({e}): its names cannot be counted"));
     fn walk(ts: TokenStream, c: &mut Counts) {
         let mut prev_fn = false;
         for t in ts {
@@ -58,22 +59,25 @@ fn add(into: &mut Counts, from: &Counts, sign: i64) {
     }
 }
 
-/// The names a `mod.rs` hands on by name (`pub use p_01::{a, b}`), each with where it stands.
-fn use_names(src: &str) -> Vec<(String, Range<usize>)> {
+/// The names a `mod.rs` hands on by name (`pub use p_01::{a, b}`): (name, where it stands, the part it is handed on from).
+fn use_names(src: &str) -> Vec<(String, Range<usize>, String)> {
     let mut out = Vec::new();
     let Ok(f) = syn::parse_file(src) else { return out };
-    fn walk(t: &syn::UseTree, out: &mut Vec<(String, Range<usize>)>) {
+    fn walk(t: &syn::UseTree, part: &str, out: &mut Vec<(String, Range<usize>, String)>) {
         match t {
-            syn::UseTree::Path(p) => walk(&p.tree, out),
-            syn::UseTree::Group(g) => g.items.iter().for_each(|x| walk(x, out)),
-            syn::UseTree::Name(n) => out.push((n.ident.to_string(), n.ident.span().byte_range())),
-            syn::UseTree::Rename(r) => out.push((r.ident.to_string(), r.span().byte_range())),
+            syn::UseTree::Path(p) => {
+                let own = p.ident.to_string();
+                walk(&p.tree, if part.is_empty() { &own } else { part }, out)
+            }
+            syn::UseTree::Group(g) => g.items.iter().for_each(|x| walk(x, part, out)),
+            syn::UseTree::Name(n) => out.push((n.ident.to_string(), n.ident.span().byte_range(), part.to_string())),
+            syn::UseTree::Rename(r) => out.push((r.ident.to_string(), r.span().byte_range(), part.to_string())),
             syn::UseTree::Glob(_) => {}
         }
     }
     for it in &f.items {
         if let syn::Item::Use(u) = it {
-            walk(&u.tree, &mut out);
+            walk(&u.tree, "", &mut out);
         }
     }
     out
@@ -180,8 +184,10 @@ fn item_lines(src: &str, r: Range<usize>) -> Range<usize> {
     start..end
 }
 
-pub fn drop_use_name(text: &str, name: &str) -> String {
-    let Some((_, r)) = use_names(text).into_iter().find(|(n, _)| n == name) else { return text.to_string() };
+/// `name` out of the list `mod.rs` hands on from the part `part` (`p_02`): never from another part's list, where a
+/// function of the same name may be live.
+pub fn drop_use_name(text: &str, name: &str, part: &str) -> String {
+    let Some((_, r, _)) = use_names(text).into_iter().find(|(n, _, p)| n == name && p == part) else { return text.to_string() };
     let mut s = text.to_string();
     let after = &text[r.end..];
     let before = &text[..r.start];
@@ -212,7 +218,7 @@ pub struct Swept {
 
 /// Delete dead functions until none is left. `texts` are the body files (`changed` = the ones that differ from
 /// what `base` was counted on). `spare` are never deleted, and so keep what they name.
-pub fn fixpoint(w: &World, base: &Cache, modules: &[String], texts: &mut [String], changed: &[usize], spare: &HashSet<(String, String)>, delete: bool) -> Swept {
+pub fn fixpoint(w: &World, base: &Cache, modules: &[String], stems: &[String], texts: &mut [String], changed: &[usize], spare: &HashSet<(String, String)>, delete: bool) -> Swept {
     let mut c = base.clone();
     for &i in changed {
         add(&mut c.sum, &c.counts[i], -1);
@@ -229,7 +235,7 @@ pub fn fixpoint(w: &World, base: &Cache, modules: &[String], texts: &mut [String
         for (m, (_, text)) in &w.modrs {
             let t = modrs.get(m).unwrap_or(text);
             add(&mut mc, &count(t), 1);
-            for (n, _) in use_names(t) {
+            for (n, _, _) in use_names(t) {
                 *handed.entry(n).or_default() += 1;
             }
         }
@@ -267,7 +273,7 @@ pub fn fixpoint(w: &World, base: &Cache, modules: &[String], texts: &mut [String
                 t.replace_range(r, "");
                 if let Some((_, text)) = w.modrs.get(&modules[bi]) {
                     let cur = modrs.get(&modules[bi]).unwrap_or(text);
-                    let next = drop_use_name(cur, &name);
+                    let next = drop_use_name(cur, &name, &stems[bi]);
                     if &next != text {
                         modrs.insert(modules[bi].clone(), next);
                     }
