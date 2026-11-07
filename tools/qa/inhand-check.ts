@@ -4,8 +4,9 @@
 // Seen in play: a teammate crouched on the rear of a sneaking pair, his sidearm out — the gun stood on the simulation's aim line and his two fists where the
 // crouch had leaned the aim clip, a hand's breadth apart. And for the fifth of a second the aim clip takes to come up, the gun was on the line before his arms.
 //
-// THE BENCH (no game: one figure of each side, driven the way the controllers drive the animator; the same script run twice, the rule off and on):
-//   (1) the stand: the switch as the stand says, FROZEN_HOLDS carries its row and word, the word is in STAND_ENV;
+// THE BENCH (no game: two figures of each side stepped by the same calls, driven the way the controllers drive the animator — one with the thing in his
+// hand handed to the pose (Character.inHand), one without. 'Rule off' in a line's words is that second figure: the animator's own pose, which is what any
+// man with empty hands still gets. The switch itself is settled on and never written here):
 //   (2) rule off, the fault is there: crouched on an aim the grip stands off the fist's hollow and the bore across the hand; worse while the aim comes up;
 //   (3) rule on, IN THE HAND: in every frame of every script (stand, walk, crouch, crouch-walk, a point to the side, up, down, the aim coming up and let go)
 //       the grip is in the fist's hollow and the bore lies along the hand's own knuckle line — both sides' pistols;
@@ -17,17 +18,16 @@
 //   (12) a TORCH: rule off the fist is a hand's breadth from it; on, the fist is round its body and turned along it — the torch itself where it was;
 //   (13) a LONG GUN: rule off its grip is 4 cm short of the palm; on, the palm is on it — a teammate's rifle and a defender's carbine — the gun, the hand on its
 //        fore-end and every box where they were, the arm no longer or shorter than its bones;
-//   (14) worn: a defender's holster stands 3 cm further off his thigh, the torch on his belt outside his shirt (both where they were with the rule off);
+//   (14) worn: a defender's holster stands 3 cm further off his thigh;
 //   (15) a SHOT: fired as the gun comes up from a crouched low ready, the drawn gun is on the round's line and in the hand on the frame it fires;
 //   (16) it STANDS DOWN: through a reload, a flinch, a blow and a kit errand the gun hand is the animator's own again within a fifth of a second.
-//   (17) THE SWAP'S HAND: as a guard's hand goes to his belt for the torch ↔ sidearm swap, the drawn hand is over the torch where it now hangs — as near it as
-//        it was to the torch's old place — and the hand the game reads has not moved.
 // THE GAME (the mission the maintainer's shot was taken in, a teammate with his sidearm, the player walked about standing and crouched):
-//   (9) the teammate's pistol is in his hand in every frame he holds it; (10) the run is the same run with the rule off and on (the game's own digest) — the player's own pistol drawn, aimed, swapped for a can and back, reloaded and fired on the way;
-//   (11) a recording from before the key replays with it off, one that carries it keeps it; the page opens with it on and ?inhand=0 puts it off.
+//   (9) the teammate's pistol is in his hand in every frame he holds it — the player's own pistol drawn, aimed, swapped for a can and back, reloaded and fired on the way.
+// SINCE 2026-11-07: out are (1) the stand, the belt torch's half of (14) and all of (17) (both read the switch itself, which cannot be put off: (17) had
+// no number of its own without it), (10) the same run by digest with the rule off and on, and (11) the recording from before the key and ?inhand=0.
 //
-//   bun run tools/qa/inhand-check.ts [--verbose]        (both stands: it raises the switch itself)
-//   INHAND_BREAK=1 …                                    (the rule left off for the 'on' lines: (3), (9), (12), (13), (14), (15) and (17) must fail)
+//   bun run tools/qa/inhand-check.ts [--verbose]
+//   INHAND_BREAK=1 …                                    (the bench hands the second figure no hold either: (3), (12), (13), (14) and (15) must fail)
 import './stand.ts';   // (the stand's word, written down before this file reads it)
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -61,10 +61,6 @@ export async function inhandCheck(): Promise<boolean> {
   const CB: any = await import(`${ROOT}/src/game/combat.ts`);
   const KT: any = await import(`${ROOT}/src/game/kit.ts`);
   const KN: any = await import(`${ROOT}/src/game/knobs.ts`);
-  const JO: any = await import(`${ROOT}/src/game/journal.ts`);
-  const PROFILE: any = await import(`${ROOT}/src/host/profile.ts`);
-  const { STAND_ENV } = await import(`${ROOT}/src/host/standEnv.ts`);
-  const { digestGame } = await import(`${ROOT}/src/game/digest.ts`);
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
   const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
@@ -75,11 +71,6 @@ export async function inhandCheck(): Promise<boolean> {
   console.log('\n=== inhand: a pistol is drawn in the hand that holds it, and the hand is turned onto the line the gun points ===');
   const knobs0 = KN.knobsCopy(), kit0 = JSON.parse(JSON.stringify(KT.KIT.members));
   try {
-    // (1) the stand — asked first, before anything here writes the switch
-    { const W: any = await hushed(() => H.standUp({ uploadEvery: 4, seed: 1 })); void W; const stood = INHAND.on;
-      const shipped = process.env.TPS_PROFILE === 'shipped', env = process.env.TPS_INHAND, want = env !== undefined ? env === '1' : shipped, row = PROFILE.FROZEN_HOLDS['INHAND.on'];
-      line(stood === want && typeof row === 'string' && row.includes('TPS_INHAND=1') && (STAND_ENV as readonly string[]).includes('TPS_INHAND'), `(1) the stand: ${want ? 'on, as the page opens' : 'held off, as every frozen probe was recorded'}; FROZEN_HOLDS carries the row and its word`, `after the stand-up: ${stood} · row '${row}'`); }
-
     // ------------------------------------------------------------ the bench
     const ch: any = await H.loadCastCharacter(); const DT = 1 / 60;
     type Held = 'pistol' | 'torch' | 'rifle' | null;
@@ -103,7 +94,7 @@ export async function inhandCheck(): Promise<boolean> {
     /** one script, both stands of the rule side by side: two figures of one id stepped by the same calls, one posed with the rule off and one with it as `on` */
     const play = (side: 'operator' | 'defender', held: Held, script: Script, on: boolean): Row[] => {
       const A = man(side), B = man(side), rows: Row[] = []; let lastR: number[] | null = null, lastL: number[] | null = null;
-      const step = (m: Man, rule: boolean) => { INHAND.on = rule; m.c.inHand = !rule ? null : m.held === 'pistol' ? IN_PISTOL : m.held === 'torch' ? RP.torchHold(beamOf(m.c)) : m.held === 'rifle' ? RP.longHold(m.side === 'operator' ? 'sc20k' : 'carbine') : null; const c = m.c; if (c.vel) c.pos = [c.pos[0] + c.vel[0] * DT, c.pos[1], c.pos[2] + c.vel[2] * DT]; c.update(DT); };
+      const step = (m: Man, rule: boolean) => { m.c.inHand = !rule ? null : m.held === 'pistol' ? IN_PISTOL : m.held === 'torch' ? RP.torchHold(beamOf(m.c)) : m.held === 'rifle' ? RP.longHold(m.side === 'operator' ? 'sc20k' : 'carbine') : null; const c = m.c; if (c.vel) c.pos = [c.pos[0] + c.vel[0] * DT, c.pos[1], c.pos[2] + c.vel[2] * DT]; c.update(DT); };
       const run = (secs: number) => { for (let i = 0; i < Math.round(secs * 60); i++) {
         step(A, false); step(B, on); const n = B.c.anim.nodes, sk = B.c.skel;
         const meta: any[] = [], bx = draw(B, on, meta), r = held === 'pistol' ? read(B.c, bx) : null, dist = (x: any, a: number, b: number) => len(sub(x.skel.nodePos(a), x.skel.nodePos(b)));
@@ -119,7 +110,7 @@ export async function inhandCheck(): Promise<boolean> {
         lastR = qR; lastL = qL; } };
       for (const m of [A, B]) arm(m, held); for (let i = 0; i < 30; i++) { step(A, false); step(B, on); }
       const both: Man = { c: null, side, held }; void both;
-      script(new Proxy(A, { get: (_t, k) => k === 'c' ? twin(A.c, B.c) : (A as any)[k] }) as Man, run, fn => { INHAND.on = false; fn(A.c); INHAND.on = on; fn(B.c); });
+      script(new Proxy(A, { get: (_t, k) => k === 'c' ? twin(A.c, B.c) : (A as any)[k] }) as Man, run, fn => { fn(A.c); fn(B.c); });
       return rows; };
     /** writes to one figure land on both (the scripts set animator fields and yaws; they read none back but bodyYaw) */
     const twin = (a: any, b: any): any => new Proxy(a, { get: (_t, k) => { const v = a[k]; return v && typeof v === 'object' && !Array.isArray(v) ? twin(v, b[k]) : v; }, set: (_t, k, v) => { a[k] = v; b[k] = Array.isArray(v) ? [...v] : v; return true; } });
@@ -203,11 +194,10 @@ export async function inhandCheck(): Promise<boolean> {
       line(ok, '(13) a long gun: rule off its grip is short of the palm; on, the palm is on it — the gun, its light, the hand on the fore-end and everything the game reads where they were, the arm no longer or shorter than its bones', say.join('\n    ')); }
 
     // (14) worn
-    { const HW: any = await import(`${ROOT}/src/game/handwork.ts`); const m = man('defender'); INHAND.on = false; for (let i = 0; i < 30; i++) m.c.update(DT);
-      const belt = (rule: boolean) => { INHAND.on = rule; const out: any[] = []; HW.beltTorch(m.c, out); const hp = m.c.bones.hips; return Math.hypot(out[0].c[0] - hp[0], out[0].c[2] - hp[2]); };
+    { const m = man('defender'); for (let i = 0; i < 30; i++) m.c.update(DT);
       const hol = (by: number) => { const out: any[] = []; RP.rigBoxes(m.c, { goggles: false, nv: false, slot: 1, lightOn: false, isGuard: true, torch: true, weapon: 'pistol', ...(by ? { holsterOut: by } : null) }, out); const b = out[out.length - 1], hp = m.c.bones.hips; return Math.hypot(b.c[0] - hp[0], b.c[2] - hp[2]); };
-      const b0 = belt(false), b1 = belt(ON), h0 = hol(0), h1 = hol(ON ? INHAND.holsterOut : 0);
-      line(b1 - b0 > 0.06 && h1 - h0 > 0.02 && h1 - h0 < 0.04, '(14) worn: a defender\'s holster stands further off his thigh and the torch on his belt hangs outside his shirt; both where they were with the rule off', `belt torch ${f1(b0 * 100)} → ${f1(b1 * 100)} cm from his hips · holster ${f1(h0 * 100)} → ${f1(h1 * 100)} cm`); }
+      const h0 = hol(0), h1 = hol(ON ? INHAND.holsterOut : 0);
+      line(h1 - h0 > 0.02 && h1 - h0 < 0.04, '(14) worn: a defender\'s holster stands 2 to 4 cm further off his thigh than rigProps draws it with no word', `holster ${f1(h0 * 100)} → ${f1(h1 * 100)} cm from his hips`); }
 
     // (15) a shot
     { const pick = (R: Record<string, Row[]>) => Object.values(R).flatMap(rs => rs.filter(r => r.fire)), a = pick(shotOff), b = pick(shotOn), mx = (rs: Row[], f: (r: Row) => number) => rs.reduce((m, r) => Math.max(m, f(r)), 0);
@@ -219,20 +209,10 @@ export async function inhandCheck(): Promise<boolean> {
       for (const [k, rs] of Object.entries(busyOn)) { let since = 0, worst = 0, n = 0; for (const r of rs) { since = r.busy ? since + 1 : 0; if (since > 12) { n++; worst = Math.max(worst, r.apart); } } ok &&= n >= 5 && worst <= 1; say.push(`${k} ${worst.toFixed(2)}° (${n})`); }
       line(ok, '(16) it stands down: a fifth of a second into a reload, a flinch, a blow or a kit errand the gun hand is the animator\'s own again (to 1°)', `the gun hand off the animator's, worst (frames): ${say.join(' · ')}`); }
 
-    // (17) the swap's hand at the belt
-    { const HW: any = await import(`${ROOT}/src/game/handwork.ts`); const A = man('defender'), B = man('defender'); let sim = true, at = 0, a0 = 9, b1 = 9, moved = 0, n = 0;
-      const step = (carry: 'torch' | 'weapon') => { for (const [m, rule] of [[A, false], [B, ON]] as [Man, boolean][]) { INHAND.on = rule; m.c.inHand = null; m.c.anim.carry = carry; m.c.update(DT); } };
-      const torchAt = (m: Man, rule: boolean): V3 => { INHAND.on = rule; const out: any[] = []; HW.beltTorch(m.c, out); return out[0].c; }, flat = (a: V3, b: V3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
-      for (let i = 0; i < 40; i++) step('torch');
-      for (const carry of ['weapon', 'torch'] as const) for (let i = 0; i < 70; i++) { step(carry); sim &&= simOf(A.c) === simOf(B.c);
-        const k = A.c.anim.swapBelt; if (k > 0.9) { n++; const wa = wristOf(A.c), wb = wristOf(B.c), da = flat(wa, torchAt(A, false)), db = flat(wb, torchAt(B, ON)); if (k > at) { at = k; } a0 = Math.min(a0, da); b1 = Math.min(b1, db); moved = Math.max(moved, flat(wa, wb)); } }
-      line(n >= 6 && sim && moved >= 0.05 && b1 <= a0 + 0.01, '(17) the swap\'s hand: as a guard\'s hand goes to his belt, the drawn hand is over the torch where it now hangs, as near it as it was to the torch\'s old place; the hand the game reads has not moved',
-        `over the torch (level distance, at its nearest): rule off ${f1(a0 * 100)} cm · on ${f1(b1 * 100)} cm · the drawn hand out by ${f1(moved * 100)} cm · ${n} frames at the belt, both ways · what the game reads ${sim ? 'equal' : 'DIFFERS'}`); }
-
     // ------------------------------------------------------------ the game
     const level = () => loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels/lights-out.json'), 'utf8')));
-    const game = async (rule: boolean) => {
-      const W: any = await hushed(() => H.standUp({ uploadEvery: 4, level: level(), seed: 1 })); const g = W.game, I = W.input; INHAND.on = rule;   // (after the stand-up: the frozen stand pins it off, the shipped one on)
+    const game = async () => {
+      const W: any = await hushed(() => H.standUp({ uploadEvery: 4, level: level(), seed: 1 })); const g = W.game, I = W.input;
       KT.KIT.members[1].weapon = 'pistol';
       await hushed(() => startFromQuery(g, '?levelFile=lights-out.json&quiet&squad=1&difficulty=hard&quietfog=cones'));
       const mate = g.guards.find((x: any) => x.team === 'operative' && x.char && x.weapon?.def?.cls === 'pistol') ?? g.guards.find((x: any) => x.team === 'operative' && x.char);
@@ -247,21 +227,13 @@ export async function inhandCheck(): Promise<boolean> {
       // the player's own pistol, crouched: drawn, aimed, swapped for a can and back, reloaded, fired — kit handling starts its errands from the hand's frame (kitanim.ts)
       const tap = (k: string, frames: number) => { I.pressed.add(k); for (let i = 0; i < frames; i++) W.step(1 / 60); };
       tap('Digit1', 90); tap('Digit3', 100); tap('Digit1', 100); tap('KeyR', 150); I.clicked |= 1; tap('Digit2', 100); tap('Digit1', 100);
-      return { g, W, rows, mate, digest: JSON.stringify(digestGame(g)) };
+      return { g, W, rows, mate };
     };
-    const g0 = await game(false), g1 = await game(ON);
+    const g1 = await game();
     // (9)
-    { const w = (G: typeof g0) => G.rows.reduce((a, r) => r.gap > a.gap ? r : a, { gap: 0, across: 0, tag: '-' }), wa = (G: typeof g0) => G.rows.reduce((a, r) => Math.max(a, r.across), 0), a = w(g0), b = w(g1);
-      line(g1.mate?.weapon?.def?.cls === 'pistol' && g1.rows.length > 600 && b.gap <= 0.024 && wa(g1) <= 3 && (BREAK || a.gap > 0.05),
-        '(9) in the mission the shot was taken in, the teammate\'s pistol is in his hand in every frame he holds it — standing, walking, crouched and creeping behind the player', `rule on: worst ${f1(b.gap * 100)} cm (${b.tag}), ${wa(g1).toFixed(2)}° across the hand, ${g1.rows.length} frames · rule off: worst ${f1(a.gap * 100)} cm (${a.tag}), ${f1(wa(g0))}°`); }
-    // (10)
-    line(g0.digest === g1.digest && g0.digest.length > 200, '(10) the run is the same run with the rule off and on (the game\'s own digest after it)', `digest ${g0.digest.length} chars · ${g0.digest === g1.digest ? 'equal' : 'DIFFER'}`);
-    // (11)
-    { const g = g1.g, snap = () => JSON.parse(JSON.stringify(JO.knobsSnapshot(g)));
-      INHAND.on = true; const old = snap(); delete old.tables.INHAND; JO.applyKnobs(g, old); const without = INHAND.on;
-      INHAND.on = true; const own = snap(); INHAND.on = false; JO.applyKnobs(g, own); const withIt = INHAND.on;
-      PROFILE.pageSwitches(new URLSearchParams('')); const a = INHAND.on; PROFILE.pageSwitches(new URLSearchParams('inhand=0')); const b = INHAND.on;
-      line(without === false && withIt === true && a === true && b === false, '(11) a recording from before the key replays with the rule off, one that carries it keeps it; the page opens with it on and ?inhand=0 puts it off', `applyKnobs with no key → ${without} · with it on → ${withIt} · '' → ${a} · 'inhand=0' → ${b}`); }
+    { const w = (G: typeof g1) => G.rows.reduce((a, r) => r.gap > a.gap ? r : a, { gap: 0, across: 0, tag: '-' }), wa = (G: typeof g1) => G.rows.reduce((a, r) => Math.max(a, r.across), 0), b = w(g1);
+      line(g1.mate?.weapon?.def?.cls === 'pistol' && g1.rows.length > 600 && b.gap <= 0.024 && wa(g1) <= 3,
+        '(9) in the mission the shot was taken in, the teammate\'s pistol is in his hand in every frame he holds it — standing, walking, crouched and creeping behind the player', `worst ${f1(b.gap * 100)} cm (${b.tag}), ${wa(g1).toFixed(2)}° across the hand, ${g1.rows.length} frames`); }
   } finally { KN.knobsBack(knobs0); KT.KIT.members.splice(0, KT.KIT.members.length, ...kit0); }
   return all;
 }
