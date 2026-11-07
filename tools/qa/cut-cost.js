@@ -181,7 +181,7 @@
     return { on: cutOn(), boxes: all.length, statics: nS, dynamics: all.length - nS, cutStatics: cutS, cutDynamics: cutD, planes, planesHist: hist.slice(1).join(' '),
       drawnPlain, drawnCut, vertices: drawnPlain * 36 + drawnCut * 84, verticesIfPlain: (drawnPlain + drawnCut) * 36,
       cutBytesPerFrame: cutOn() && hi >= lo ? (hi - lo + 1) * (C().mod.CUT_STRIDE ?? 8) * 16 : 0,   // the dynamics' index range of the cut table, re-sent every frame (BoxWorld.upload); statics only when re-cut
-      debris: (() => { try { return G().destr.debris.list.length; } catch { return null; } })(), debrisCap: E().settings.debrisCap };
+      debris: (() => { try { return G().destr.debris.list.length; } catch { return null; } })() };
   }
   // the uncut slab of box b against ro + t·rd over [0, tmax] (rayBoxCut's frame change): true = a GPU ray on this line reaches the cut loop of a cut box
   function slabHit(b, ro, rd, tmax) {

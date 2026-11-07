@@ -1,5 +1,5 @@
-// The renderer's SETTINGS — the knob table every surface reads and writes (the Tab panel, the presets, the URL flags, the game's few reads: emissiveScale, flashlightRadius,
-// debrisCap, decals, markings …) — kept in a module of their own so a host that is not the WebGPU Engine (the QA harness's stand-in) can build a settings object without importing src/engine.ts and the whole render pass graph behind it. src/engine.ts re-exports both names, so every existing import
+// The renderer's SETTINGS — the knob table every surface reads and writes (the Tab panel, the presets, the URL flags, the game's few reads: emissiveScale,
+// decals, markings …) — kept in a module of their own so a host that is not the WebGPU Engine (the QA harness's stand-in) can build a settings object without importing src/engine.ts and the whole render pass graph behind it. src/engine.ts re-exports both names, so every existing import
 // (`import { RenderSettings, defaultSettings } from '../engine'`) still resolves; the values are the same object, byte for byte.
 import type { Vec3 } from './math/vec';
 import { FrameFlags } from './render/frame';
@@ -163,7 +163,6 @@ export interface RenderSettings {
   directHistory: boolean;      // the shadow client's temporal reuse (off = history-free shadows, for inspection). A weight until 2026-11-07, when the estimator that blended by it went
   directBlurCap: number;       // max penumbra filter radius in px
   secMinE: number;             // shadow-ray threshold (W/m² unshadowed) for lights at cascade interval hits
-  flashlightRadius: number;    // emitter radius used for torches / the rail light (m): a real bezel is ~0.015-0.02; larger = softer torch shadows
   lightReach: boolean;         // direct pass + secondary vertices: per-light CPU reach masks over the level grid (FrameFlags.ReachMask; reach.ts) — a walled-off light never competes for a pixel's leader slots
   giFireflyK: number;          // final gather: each ray's radiance is bounded by giFireflyK × what the radiance cache says the shading point plausibly receives (÷π) — outlier rejection against the LOCAL light field instead of a global 24, so a torch hotspot on a wall cannot boil the bounce round it; 0 = off (the old absolute clamp only). A one-sided clamp, so the presets set it like a trade-off (ui/quality.ts: 4 on high‥verylow, 0 on ultra)
   // ---- LOSSY trade-offs (all default off; each independently switchable at runtime for A/B — off is exactly the untouched path) ----
@@ -191,7 +190,6 @@ export interface RenderSettings {
                                // plume instead of stopping at its shell; frame.volCfg.w bits 12‥15 = round(× 10); Tab ▸ Volumetrics ▸ Smoke solver
   smokeShadowSteps: number;    // samples those rays take across the hull of the boxes they cross: 8 = as ever (0 also = 8); 3‥15 (frame.volCfg.w; 6 saves ~0.2 ms of direct with three plumes up, 4 ~0.4 but blotches the plume's floor shadow — §4 there)
   particleBirths: number;      // GPU particle births a frame (render/particles.ts maxBirthsPerFrame — Phase 0 cap; the emit queue carries the rest into the next frames, long-lived kinds first, stale sparks shed): presets 512 / 384 / 256 / 192 / 128
-  debrisCap: number;           // the destruction lane's rigid-debris pool (game/debris.ts: ceiling tiles, monitor housings, desk clutter as tumbling shadow-casting boxes): presets 64 / 64 / 32 / 32 / 32 — the image-quality program's chaos budget (docs/internal/image-quality.md §4)
   torchBounceCards: boolean;   // final gather: every carried spot light's footprint (torches, weapon lights, Sam's rail light — RtLight.card) on the surface its beam hits is rebuilt each frame as a one-sided analytic emitter (render/shaders/cards.wgsl: axis ray + 64 cone samples → claim disc, flux-weighted centroid / radius, radiance × area from the flux that actually landed there × the albedo it landed on) and the gather takes that patch's bounce analytically with ONE shadow ray instead of finding the hotspot with its cosine rays — which drop that light's direct term wherever they land inside the footprint, so nothing is counted twice (fgather.wgsl). The boil round a torch near a wall goes by construction, and the firefly bound stops eating the bounce there. FrameFlags.BounceCards; off = no card pass, nothing sampled or excluded: bit-identical (docs/internal/perf-2026-08-10.md)
   // ---- EXPERIMENTS (default off, not part of any preset; off is exactly the untouched path) ----
   gloss: boolean;              // traced glossy reflections on the polished floors (BoxFlag.Gloss: lobby stone, corridor + break-room lino): the final gather spends one jittered mirror ray per gloss texel, shades its hit like a gather hit (+ the fixture's own emission), weights it by Schlick Fresnel on the view angle, and composite adds it after the diffuse terms via its own half-res texture with history + one à-trous pass (FrameFlags.Gloss; costs ~1 extra trace per gloss texel at gather res + two half-res filter dispatches)
@@ -293,7 +291,7 @@ export const defaultSettings = (): RenderSettings => ({
   nvAmount: 0, nvGain: 475, hitFlash: 0,   // nvGain = intensifier tube gain (log curve), not a linear multiplier
   restirRays: 4, restirSpatial: 3, restirHistory: 20, restirRadius: 16, restirGradient: true, restirGradK: 5, restirYoung: 8, restirSpatialAll: false, restirKnownDark: true, restirAudit: 0.25, restirPenCap: 0, restirPenRays: false,   // ReSTIR DI on; the presets place rays / taps / cap per tier (quality.ts), these are 'high'
   restirMotion: 6, restirMotionV: 1.1, restirMotionMin: 0.35, restirMotionPx: 0.5, restirMotionTaps: 6, restirMotionStatic: false,   // MOTION (direct-motion lane, docs/internal/direct-motion.md; these are HIGH's — floor .35 / 6 taps since the 08-12 SPRINT take: at three times the walking pan the .1 floor made the light's edge noisier than no cut at all, .35 + taps sits between; the walking pan keeps most of its win): 6 = the motion-scaled confidence (2) + wider spatial reuse under motion (4) — measured at high: the light's edge under a walking pan −43 % flow, the lit floor −27 %, the dark floor −7 % (−46 / −32 with 6 taps), a slow pan and the still picture unchanged, main's 1–3.7 % motion darkening gone; the stochastic reprojection (1) stays an A/B row (a NEGATIVE at slow pans: +12‥34 %); the presets tier Min / Taps; 0 (?norestirmotion) = the estimator's program byte for byte
-  directHistory: true, directBlurCap: 10, secMinE: 0.006, flashlightRadius: 0.07,
+  directHistory: true, directBlurCap: 10, secMinE: 0.006,
   lightReach: true,
   giFireflyK: 4,
   gatherThird: false, rcHalfRate: false, volQuarter: false,
@@ -304,7 +302,6 @@ export const defaultSettings = (): RenderSettings => ({
   wxAirSteps: 0,
   smokeShadowSteps: 8,                                       // shadow rays take eight samples through the smoke they cross — the estimator as it always was (docs/internal/smoke-perf.md §4 has 6 / 4's cost and look); Tab ▸ Smoke
   particleBirths: 6144,        // = MAX_NEW_PER_FRAME, i.e. uncapped, until a preset places it; Tab ▸ Renderer — particles
-  debrisCap: 64,               // the chaos budget's upper figure until a preset places it; Tab ▸ Sandbox ▸ chaos rows
   torchBounceCards: false,     // default off until the presets place it (quality.ts); Tab ▸ Indirect light
   gloss: false,
   decals: true,                // decals (E1): bullet holes, scorches, scuffs, chips in the g-buffer's fragment stage — on by default (Tab ▸ Renderer — decals; ?nodecals)

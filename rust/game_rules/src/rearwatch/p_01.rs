@@ -1045,11 +1045,6 @@ pub fn rear_pin_of(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: Guar
     }
 }
 
-/// doortools.ts, the entry's queue: nobody is held back, REARWATCH.hold being off on the page. (rearwatch.ts rearWatcherWaits)
-pub fn rear_watcher_waits(g: &crate::game::Game, op: DoorOpId, gd: GuardId) -> bool {
-    false
-}
-
 /// doortools.ts enter(): the turn the men go in by, with the rear man put last. (rearwatch.ts rearLast)
 pub fn rear_last(g: &mut crate::game::Game, op: DoorOpId, turn: &[GuardId], first: GuardId) -> Vec<GuardId> {
     if turn.len() < 3 {

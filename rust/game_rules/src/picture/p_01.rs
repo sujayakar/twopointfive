@@ -397,12 +397,12 @@ pub fn on_net(g: &mut crate::game::Game, a: Option<GuardId>, b: Option<GuardId>)
     if !fighter(g, bo) || g.gd[bo].held.is_some() {
         return false;
     }
-    let runner = crate::owner::own().runner;
-    if crate::owner::has_him(g, bo, runner) {
+    let runner = crate::owner::by::RUNNER;
+    if crate::owner::has(g, bo, runner) {
         return false;
     }
     if let Some(ao) = a {
-        if crate::owner::has_him(g, ao, runner) {
+        if crate::owner::has(g, ao, runner) {
             return false;
         }
     }

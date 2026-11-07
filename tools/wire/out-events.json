@@ -329,29 +329,6 @@
 "answer": null
 },
 {
-"call": "SessionRecorder.cut",
-"rust": "crate::journal::session_recorder_cut",
-"sites": 1,
-"ts": "cut",
-"of": "SessionRecorder",
-"file": "src/game/journal.ts",
-"why": "this",
-"params": [
-{
-"ts": "why",
-"rust": "why"
-},
-{
-"ts": "lost",
-"rust": "lost"
-}
-],
-"sig": "pub fn session_recorder_cut(g: &mut crate::game::Game, why: &str, lost: Option<bool>)",
-"bodyFile": "journal/b_01.rs",
-"mode": "body",
-"answer": null
-},
-{
 "call": "SmokeSystemLike.clearAll",
 "rust": "crate::smoke_types::smoke_system_like_clear_all",
 "sites": 5,
@@ -974,13 +951,6 @@
 "sites": 1,
 "why": "answers a value (bool)",
 "body": "let t = g.time; if !is_shout(text) || g.gd[gd].state == crate::game::GuardState:"
-},
-{
-"call": "Debris.cap",
-"rust": "crate::debris::debris_cap",
-"sites": 1,
-"why": "answers a value (f64)",
-"body": "let c = g.engine.settings.debris_cap; m::max(4.0, m::floor(c))"
 },
 {
 "call": "Debris.feet",

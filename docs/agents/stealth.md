@@ -1676,26 +1676,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   away), upright, grab (held on frame 29 either way), harness. Judged on CPU stills next to the footage's frames
   (`close-stills.ts` scene `stalk-rifle`, the page's stand). One
   seed: a fixed staging. Nobody has seen the new shape on a GPU.
-- **Drag to steer the creep, a prototype (10-23; `STALK.drag`, `dragDead` 14 px, `dragFull` 140 px; `stalk.ts dragged`; lab only:
-  `?sneaklab` raises it, `?stalkdrag=1` anywhere, `?stalkdrag=0` in the lab; `TPS_STALKDRAG=1`).** The maintainer: "you click on the guy
-  and then you can drag towards him to move in that direction. like a joystick centered on the guy. that would make things feel more
-  controlled than right now which feels automatic." THE RULE: the press on a man still begins the creep (the same arc, range and
-  cursor test) and the screen point it was made at is the stick's middle. While the button is down the mouse's way from there is the
-  way Sam creeps (screen up = the camera's forward, as the move keys have it, so the camera following him does not feed the stick) and
-  its length from `dragDead` to `dragFull` is the share of `pace`. Left at the press he holds still in the pose. He faces the man
-  throughout; the way into the man is taken off the stick over the last 20 cm before `keyM`, so he stops there and can still go round.
-  Everything else is the creep's (the arc ends it, a wall ends it, the key grabs). NOT the switch rule on purpose: it changes how the
-  hold plays everywhere (the tutorials teach "hold left click"), so it is down in the plain page and on both stands until the
-  maintainer has tried it; there is no `FROZEN_HOLDS` row because the stands agree. The line over the man reads "press and drag to
-  sneak up on him" while it is up. THE CHECK is `stalkdrag-check.ts` (`probes.ts stalkdrag`; `STALKDRAG_BREAK=1` reds four of seven),
-  both stands: still (2 s, 0 cm moved), toward (the whole drag 1.6 m/s, half of it 0.8), side (across, 2° off the man), stops (0.79 m
-  behind him, the key takes him), outside, off, harness. OFF THE VIEW: a press made on the view goes on being the stick with the mouse
-  over the panel or the HUD (`input.ts` window `mousemove`), only while `Input.dragOff`, which `Game.update` writes on the host's input
-  from `STALK.on && STALK.drag` each frame (the editor imports `Input`, so input.ts does not import stalk.ts). It asks the event's own
-  `buttons` (a button let go outside the window sends no mouseup), calls `modsUp` first, keeps tracking through a lock as the view's
-  listener does, and follows no press begun off the view (a lab slider). The `outside` line drives it on a window of lists. The page
-  drive drags the real mouse in the lab (on the real page the drag goes over the panel: 139 px of 140 read with the listener, 46 without). No hand has held it and nobody has
-  seen it on a GPU.
+- **Press and drag to steer the creep (`STALK.drag`) is cut** (2026-11-07, his list): settled off and folded out of the game, with its page rows and its check. The last commit with it is the parent of the commit that settled it.
 - **Weight in it: his trunk and arms go with his legs (10-25; `STALK.heft`, numbers `heft*` in `stalk.ts`, springs in `character.ts CREEP.heft`; `?stalkheft=0`,
   `TPS_STALKHEFT=1`; acts only under `STALK.wide`).** The maintainer, of the arms in the creep on a GPU: "(1) looks weird, but (2) also just looks like very static. the chaos
   theory animations have some real weight but also smoothness and precision to them". Read frame by frame off the footage (Nos. 24 and 59): the back bows hard, the shoulders
@@ -1856,4 +1837,4 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   asks; (f) the room fight's turn-to lines and the player's line for the net are held only as written (the check counts the calls and asks the bare
   line across one pair), not by a fought run that needs them; (g) `lanes.ts gunsManned` and `pointInView` (a teammate's view of a place or a
   body) still stop at a thin thing.
-- **Tap to step (`src/game/tapstep.ts` TAPSTEP, a prototype; `tools/qa/tapstep-check.ts`, also `probes.ts tapstep`).** The maintainer, 2026-10-25: "i love the tap to step idea! curious how we can make this feel awesome. and also generalize between creeping on a guy to grab him vs slithering through guards". Crouched, the move keys are steps: a press lifts the foot, the key kept down reaches (`reachM`), let go plants it (a tap is `tapM`), and between steps he stands dead still. A step is a least-jerk curve from rest to rest over `secs` (less for a shorter one), walked on its own numbers: his first cut, a trapezoid at 2 m/s, drew "the rhythm of them is nice but it looks like it'd be loud. the legs move in abrupt movements"; now 0.12 m/s at most in a frame, top 1.66 m/s, and the legs nearly stopped as the foot comes down. The legs go from wherever they stand to the next plant, and a creep let go of hands them over untouched: the first cut forced them back to its last plant, half a cycle in one frame, which he read as a snap to idle ("the animation can be paused at any point"). After a plant his weight settles for `settle` s: a held key waits it out, so holding is always the safe pace (about 0.75 m/s); a press inside it steps at once, quicker by `rushed`, and scuffs (up to `scuff`); a press just after it is on the beat, a `beatM` tap. A plant just after a near man's footfall is under it (`mask`). A press toward the back of a man he could stalk, inside `landM` of the spot `STALK.keyM` behind him and `landCos` of its line, bends onto that spot, settled at the press, and keys turned away take it back; on the spot a key is a plain step. His replay of the first cut: "weird snapping to the guard, stuck on them afterwards" (a tap carried 1.1 m, then every key was a step of no length). Behind a walker `follow` of his speed goes into the step. Shift is still the quick crouch walk. Switch: up in the lab and with `?tapstep=1`, `?tapstep=0` puts it down in the lab; down in the plain page and on the frozen stand (`TPS_TAPSTEP=1`), so no FROZEN_HOLDS row, as with `stalkdrag`. Rides a recording; one from before the key replays with it down. `TAPSTEP_BREAK=1` fails on both stands' lines; soft, away and letgo were also run against the first cut and fail there. Every number has a row under Tap to step in the lab. A replay of the lab can't be rerun headless yet (its scene is staged by the page, not on the tape). Never seen on a GPU.
+- **Tap to step (`TAPSTEP.on`) is cut** (2026-11-07, his list): settled off and folded out of the game, with its page rows and its check. The last commit with it is the parent of the commit that settled it.

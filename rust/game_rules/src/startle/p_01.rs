@@ -31,7 +31,7 @@ pub fn blank() -> crate::startle::St {
 /// THE START, for any caller: he jolts toward `at`; for `secs` his gun stays down. False = not given.   (startle.ts giveStartle)
 pub fn give_startle(g: &mut crate::game::Game, gd: GuardId, at: V3, secs: Option<f64>, torch: Option<bool>) -> bool {
     let secs = secs.unwrap_or(g.k.startle.beat);
-    if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].held.is_some() || g.gd[gd].civ.is_some() || crate::owner::has_him(g, gd, crate::owner::own().runner) { return false; }
+    if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].held.is_some() || g.gd[gd].civ.is_some() || crate::owner::has(g, gd, crate::owner::by::RUNNER) { return false; }
     if g.time < g.m.startle.state_of.get_or_insert_with(gd, blank).until { return false; }
     let c = g.gd[gd].ch;
     let torch = match torch { Some(t) => t, None => crate::guards::hand_carry(g, gd) == crate::guards::HandCarry::Torch };
@@ -125,7 +125,7 @@ pub fn startle_running(g: &crate::game::Game, gd: GuardId) -> bool {
 fn stop(g: &mut crate::game::Game, gd: GuardId, hold: bool) -> Option<crate::game::GuardScript> {
     g.m.startle.state_of.get_mut(gd).unwrap().run = None;
     let now = g.time;
-    crate::owner::release_man(g, gd, crate::owner::own().startle, now);
+    crate::owner::release(g, gd, crate::owner::by::STARTLE, now);
     let s = g.m.startle.state_of.get_mut(gd).unwrap();
     s.ref_ = None; s.script = None;
     if hold { crate::suppression::end_displace(g, gd, "ran for it"); }
@@ -205,7 +205,7 @@ pub fn runs(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if way.map_or(true, |w| w.is_empty()) { return false; }
     let now = g.time;
     g.m.startle.state_of.get_mut(gd).unwrap().run = Some(p);
-    crate::owner::claim_man(g, gd, crate::owner::own().startle, now, None);
+    crate::owner::claim(g, gd, crate::owner::by::STARTLE, now, None);
     let row = g.m.startle.state_of.get_mut(gd).unwrap();
     row.run_at = now; row.ref_ = None; row.script = None;
     crate::game::guard_set_path(g, gd, Vec::new());

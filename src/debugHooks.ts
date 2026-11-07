@@ -7,7 +7,6 @@
 import type { Engine } from './engine';
 import type { Game } from './game/game';
 import type { FollowCamera } from './game/camera';
-import type { Demo } from './game/demo';
 import type { Input } from './game/input';
 import type { SmokeSystem } from './smoke/smoke';
 import type { Menu } from './ui/menu';
@@ -35,7 +34,7 @@ declare global {
     __shot?: (name: string, quality?: number, scale?: number) => Promise<string>;
 
     // ---- game page
-    __game?: Game; __demo?: Demo; __input?: Input; __smoke?: SmokeSystem; __menu?: Menu; __audio?: AudioEngine; __quality?: Quality;
+    __game?: Game; __input?: Input; __smoke?: SmokeSystem; __menu?: Menu; __audio?: AudioEngine; __quality?: Quality;
     /** n fixed steps of dt with the given key codes held (synthetic input; works with the rAF loop paused) */
     __runFrames?: (n: number, dt?: number, keys?: string[], draw?: boolean) => void;
     /** move the synthetic cursor (CSS px in the canvas); buttons: 1 LMB, 4 RMB held */
@@ -83,8 +82,6 @@ declare global {
     __perfsweep?: import('./ui/perfsweep').PerfSweep;
     /** THE list of knob tables (game/knobs.ts): `registry()` every switch table by name (the live objects), `copy()` a deep copy, `back(copy)` puts one back */
     __knobs?: { registry(): Record<string, object>; copy(names?: readonly string[]): Record<string, Record<string, unknown>>; back(copy: Record<string, Record<string, unknown>>): void };
-    /** the session journal (game/journal.ts, F10): start / stop / hand the last file to the door again (host/savefile.ts), its state and counters */
-    __journal?: { start(opts?: { seed?: number; note?: string }): string; stop(immediate?: boolean): unknown; toggle(): string; save(): string; readonly state: string; readonly file: unknown; readonly stats: Record<string, unknown>; check(f?: unknown): string; summary(): string; [k: string]: unknown };
     /** staging: drop guard i as if shot / struck (killGuard through the real path); false if he is already down */
     __killGuard?: (i: number, how?: 'shot' | 'struck' | 'wounded', zone?: 'side' | 'leg', dir?: [number, number, number]) => boolean;
     /** the animation's life-layer / foot-lock constant tables (character.ts LIFE, FEET) — noise measurements zero their `on` */
@@ -96,7 +93,6 @@ declare global {
     /** the civilians by hand: list, panic(i, 'panic' | 'phone'), set(on), knobs, stats, log, spots, check, summary */
     __civ?: KnobHook & { panic(i?: number, what?: 'panic' | 'phone'): unknown; set(on: boolean): unknown };
     /** wounds (game/wounds.ts, ?wounds): on, knobs, stats, men() */
-    __wounds?: { on: boolean; [k: string]: unknown };
     __wallsnap?: { on: boolean; [k: string]: unknown };
     /** the 2010s issue kit (game/gear.ts, ?oldgear = off): the switch, live */
     __gear?: { on: boolean };

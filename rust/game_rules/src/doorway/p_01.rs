@@ -216,9 +216,6 @@ pub fn leaf_stalled(g: &mut crate::game::Game, gd: GuardId) -> bool {
     false
 }
 
-/// STAND: is the file's switch on: settled, always.   (doorway.ts doorwayFile)
-pub fn doorway_file(g: &crate::game::Game) -> bool { true }
-
 /// The first frame his walk goes through within `reach`.   (doorway.ts doorAhead)
 pub fn door_ahead(g: &crate::game::Game, gd: GuardId) -> Option<crate::doorway::DoorAhead> {
     let pos = g.ch[g.gd[gd].ch].pos;

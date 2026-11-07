@@ -342,11 +342,5 @@ pub const MKEY_LOOK: f64 = 150994944.0;
 /// (src/game/edgeLook.ts:88 STEEL: a table nothing writes)
 pub fn steel() -> V3 { [0.5, 0.52, 0.54] }
 
-/// (src/game/edgeLook.ts:88 CORE: a table nothing writes)
-pub fn core() -> V3 { [0.8, 0.79, 0.75] }
-
-/// (src/game/edgeLook.ts:88 PAPER: a table nothing writes)
-pub fn paper() -> V3 { [0.52, 0.47, 0.39] }
-
 /// (src/game/edgeLook.ts:89 UP: a table nothing writes)
 pub fn up() -> V3 { [0.0, 1.0, 0.0] }

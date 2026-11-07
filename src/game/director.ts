@@ -1,5 +1,5 @@
 // The DIRECTOR: a level's bespoke scripting, run on the game clock (docs/design/level-scripting.md — milestone M1; the notebook is docs/internal/director.md).
-// ONE LEVEL HAS A SCRIPT TODAY: the first tutorial mission's (levels/tut-sky.script.ts, attached by scene/levelLoad.ts off scene/levelScripts.ts; its one play
+// ONLY THE TUTORIAL'S LEVELS HAVE A SCRIPT TODAY: each tutorial mission's (levels/<name>.script.ts, attached by scene/levelLoad.ts off scene/levelScripts.ts; its one play
 // program 'tutorial' is started by game/rails.ts, and only with that switch on). The office's (the night and day showcases, its programs 'night' and 'breach')
 // was removed with the two showcases, so on every other level the Director has no manifest and idles (tick() returns on its first line); the checks stage
 // scripts of their own (tools/qa/director-probes.ts).
@@ -24,7 +24,7 @@
 // reads performance.now() or Math.random: a program's dice are its own mulberry32.
 // M1's cut (the doc §2.3 / §7): beats are atomic — a checkpoint is refused while any program runs (savestate.ts canSave asks blocksSave()); volumes got their runtime
 // slot (Level.volumes) so onEnter is real; loadouts and marks are declared IN the script with literals until LevelData v2 (M3) gives them a home; drill.advance and
-// the units[] / director save slices wait for M3; the tour stays demo.ts (M2). With no program running tick() is a return on its first line: the game is the game.
+// the units[] / director save slices wait for M3. With no program running tick() is a return on its first line: the game is the game.
 // WHAT THE NIGHT SHOWCASE ADDED (the removed program 'night' — the tour as a story; the verbs stay), all small,
 // all documented at their sites: D.device(id) (a handle on a level device — the keypad — linted like the doors); c.learnCode(device, from) (devices.ts learnCode: the
 // man in Sam's arm gives the pad's digits and Sam KNOWS them — the code row opens the door a minute later); c.say(unit) is FORCED (a scripted line is deliberate: a
@@ -459,7 +459,7 @@ export class Director {
     const P = this.manifest.programs.get(name); if (!P) return `no program '${name}' (programs: ${this.programs.join(', ') || 'none'})`;
     if (!this.armed) return 'the script is not armed (lint errors — see the console)';
     if (this.run && !this.run.ended) return `program '${this.run.name}' is running`;
-    if (P.opts.showcase && this.g.touring) return 'the tour or attract mode has the floor';   // (a caller stops them first; a bare start() over them would fight their resets — review 08-10 #22)
+    if (P.opts.showcase && this.g.touring) return 'attract mode has the floor';   // (a caller stops them first; a bare start() over them would fight their resets — review 08-10 #22)
     if (P.opts.showcase && (this.g.qrf?.state !== undefined && this.g.qrf.state !== 'idle' || this.g.guards.some(x => x.unit))) return 'a response unit is on the floor (the cast would not fit the character budget)';
     if (P.opts.showcase && !this.g.tune.teams && [...this.manifest.loadouts.values()].length && [...P.beats.values()].some(B => /\.\s*spawn\s*\(/.test(String(B.fn)))) return 'sides are switched off (tune.teams) — the cast cannot be spawned';   // (only a program whose beats spawn anybody: the night showcase casts the shift itself and runs with sides off)
     return null;

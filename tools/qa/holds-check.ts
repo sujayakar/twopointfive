@@ -86,15 +86,15 @@ const probeNames = [...known].filter(n => ran.has(n)).sort(), heldNames = probeN
     const ok = one.word === '1' && one.row === true && oneAfter === '1' && one.otherWord === '0' && zero.word === '0' && zero.row === false && zeroAfter === '0' && zeroRow === true;
     line(ok, '(3) a word whoever runs the tool set himself is left as he set it: =1 is his to ask, =0 is the hold itself', `${name}: ${mine.word}=1 reads ${one.word} inside with ${at(mine)} ${one.row}, ${other ? `${other.word} ${one.otherWord ?? 'unset'}` : 'no second row on any probe (not asked)'} · ${mine.word}=0 reads ${zero.word} inside with ${at(mine)} ${zero.row}, the word ${zeroAfter ?? 'gone'} after and the row ${zeroRow === true ? 'back' : 'not back'}`); } }
 
-// (4) the fence: a knob a probe wrote, the cut-pieces switch and the plain night's card are back after it; and a row the registry has not stops a hold by name
-{ const cut = (await import(`${ROOT}/src/scene/cut.ts`)).cutConfig, kit = await import(`${ROOT}/src/game/kit.ts`);
-  const [tName, T] = Object.entries(R).find(([, t]) => Object.values(t).some(v => typeof v === 'number'))!, key = Object.keys(T).find(k => typeof T[k] === 'number')!, was = T[key] as number, cutWas = cut.on, soloWas = kit.KIT_SOLO.on;
-  await under('holds-check-fence', () => { T[key] = was + 1; T.addedByTheCheck = 1; cut.on = !cutWas; kit.KIT_SOLO.on = !soloWas; });
+// (4) the fence: a knob a probe wrote and the cut-pieces switch are back after it; and a row the registry has not stops a hold by name
+{ const cut = (await import(`${ROOT}/src/scene/cut.ts`)).cutConfig;
+  const [tName, T] = Object.entries(R).find(([, t]) => Object.values(t).some(v => typeof v === 'number'))!, key = Object.keys(T).find(k => typeof T[k] === 'number')!, was = T[key] as number, cutWas = cut.on;
+  await under('holds-check-fence', () => { T[key] = was + 1; T.addedByTheCheck = 1; cut.on = !cutWas; });
   let refused = ''; try { (await holdOff([{ word: 'TPS_HOLDS_CHECK', table: 'NO_SUCH_TABLE', key: 'on', now: true }]))(); } catch (e: any) { refused = String(e?.message ?? e); }
-  const ok = T[key] === was && !('addedByTheCheck' in T) && cut.on === cutWas && kit.KIT_SOLO.on === soloWas && /NO_SUCH_TABLE\.on/.test(refused) && process.env.TPS_HOLDS_CHECK === undefined;
-  const detail = `${tName}.${key} ${T[key] === was ? 'back' : 'LEFT WRITTEN'} · an added key ${'addedByTheCheck' in T ? 'LEFT' : 'dropped'} · cut pieces ${cut.on === cutWas ? 'back' : 'LEFT'} · the plain night's card ${kit.KIT_SOLO.on === soloWas ? 'back' : 'LEFT'} · a row no table has ${refused ? 'refused by name' : 'NOT refused'}`;
-  T[key] = was; delete T.addedByTheCheck; cut.on = cutWas; kit.KIT_SOLO.on = soloWas; delete process.env.TPS_HOLDS_CHECK;
-  line(ok, '(4) what a probe wrote is put back after it: a knob, a key it added, the cut-pieces switch, the plain night\'s card', detail); }
+  const ok = T[key] === was && !('addedByTheCheck' in T) && cut.on === cutWas && /NO_SUCH_TABLE\.on/.test(refused) && process.env.TPS_HOLDS_CHECK === undefined;
+  const detail = `${tName}.${key} ${T[key] === was ? 'back' : 'LEFT WRITTEN'} · an added key ${'addedByTheCheck' in T ? 'LEFT' : 'dropped'} · cut pieces ${cut.on === cutWas ? 'back' : 'LEFT'} · a row no table has ${refused ? 'refused by name' : 'NOT refused'}`;
+  T[key] = was; delete T.addedByTheCheck; cut.on = cutWas; delete process.env.TPS_HOLDS_CHECK;
+  line(ok, '(4) what a probe wrote is put back after it: a knob, a key it added, the cut-pieces switch', detail); }
 
 // (5) a check file with a main of its own (or a script the runner runs as a child), dispatched under a name in the table: (a) it runs through asProbe /
 // asProbes, (b) each such probe stands in it by its name (the name its main runs it under), and where the file keeps a table of its probes the name is beside

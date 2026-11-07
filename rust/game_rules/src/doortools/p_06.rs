@@ -574,7 +574,6 @@ fn step_enter(g: &mut Game, op: DoorOpId, cx: &Cx) {
     while i > 0 {
         i -= 1;
         let q = o!(g, op).queue[i];
-        if crate::rearwatch::rear_watcher_waits(g, op, q.gd) { continue; }
         let mq = crate::doorpath::DoorPathMayGoQ { gd: q.gd, pod: crate::doorpath::DoorPathMayGoQPod { pos: q.pod.pos } };
         if !crate::doorpath::door_path_may_go(g, op, mq, i as f64) { continue; }
         o!(g, op).queue.remove(i);

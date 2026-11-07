@@ -58,17 +58,6 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
         return { names, shut, rows: rows.length, cut, bare, tries, headTips: heads.filter(h => (h.title || '').length > 10).length }; });
       say(P.names.length >= 10 && P.shut >= 5 && P.rows >= 60 && P.cut.length === 0 && P.bare.length === 0 && P.headTips >= 10 && P.tries >= P.rows * 0.6,
         `the lab's knobs are in ${P.names.length} groups (${P.shut} of them shut to begin with, ${P.headTips} with a hover of their own); of ${P.rows} rows, ${P.cut.length} have a name cut short${P.cut.length ? ' (' + P.cut.slice(0, 4).join(' · ') + ')' : ''}, ${P.bare.length} have no hover${P.bare.length ? ' (' + P.bare.slice(0, 4).join(' · ') + ')' : ''}, and ${P.tries} hovers say what to look for or what the ends mean`); }
-    { // (stalk.ts STALK.drag, the lab's prototype: the press on him is the stick's middle; the real mouse is dragged toward him, then the lines below are run with it down)
-      const dragUp = await page.evaluate(() => !!window.__knobs.registry().STALK.drag);
-      if (dragUp && !NOKEY) {
-        await behind(3.0); const [x, y] = await chest(); await page.mouse.move(x, y); await frames(2); await page.mouse.down(); const s0 = await frames(60);
-        const [sx, sy] = await page.evaluate(() => { const g = window.__game, v = document.getElementById('view'), r = v.getBoundingClientRect(), [a, b] = window.__cam.project([g.player.char.pos[0], 0.6, g.player.char.pos[2]], r.width, r.height); return [r.left + a, r.top + b]; });
-        const L = Math.hypot(x - sx, y - sy) || 1, full = await page.evaluate(() => window.__knobs.registry().STALK.dragFull);
-        await page.mouse.move(x + (x - sx) / L * full, y + (y - sy) / L * full, { steps: 6 }); const s1 = await frames(45), stick = await page.evaluate(([x, y]) => { const I = window.__input, v = document.getElementById('view').getBoundingClientRect(); return Math.hypot(I.mouseX + v.left - x, I.mouseY + v.top - y); }, [x, y]); await page.mouse.move(x, y, { steps: 6 }); const s2 = await frames(40); await page.mouse.up(); await frames(5);
-        say(Math.abs(s0.gap - 3.0) < 0.1 && s0.speed < 0.05 && s1.gap < s0.gap - 0.5 && s1.speed > 1 && s2.speed < 0.1, `the lab has drag to steer up: pressed on him 3 m behind, he holds still (${s0.gap.toFixed(2)} m, ${s0.speed.toFixed(2)} m/s); the mouse dragged toward him, he closes (${s1.gap.toFixed(2)} m, ${s1.speed.toFixed(2)} m/s, the game read the stick ${stick.toFixed(0)} px of ${full}); back to the press, he stops (${s2.speed.toFixed(2)} m/s)`);
-        await page.evaluate(() => { window.__knobs.registry().STALK.drag = false; });   // (the lines below are the hold's own)
-      } else { say(NOKEY && dragUp, `?stalkkey=0&stalklow=0: the lab still has drag to steer up (${dragUp}); it is put down for the lines below`); await page.evaluate(() => { window.__knobs.registry().STALK.drag = false; }); }
-    }
     { // (stalk.ts STALK.orbit: the real button held on him and a real move key down — the one that takes him most round the man, of the four)
       const orbitUp = await page.evaluate(() => !!window.__knobs.registry().STALK.orbit);
       const pose = () => page.evaluate(() => { const g = window.__game, c = g.player.char, A = g.guards[0].char; const dx = c.pos[0] - A.pos[0], dz = c.pos[2] - A.pos[2], to = Math.atan2(-dx, -dz), f = Math.atan2(Math.sin(c.aimYaw - to), Math.cos(c.aimYaw - to));
@@ -175,12 +164,6 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
       const ok = got.every(Boolean), seen = ok ? got.map(c => c.seen) : [];
       say(ok && new Set(got.map(c => c.at)).size === 5 && new Set(got.map(c => c.line)).size === 5 && got.every(c => c.bare && c.low) && seen.join() === 'false,false,true,true,false',
         `the lab's five scenario buttons each put Sam at his own start, hands empty and low, with their own line, and only the dark ones let the men see him (${ok ? got.map(c => c.at).join(' · ') : 'a button is missing'})`);
-    }
-    { // (src/game/tapstep.ts: the keyboard's own events in the dark corridor; a move key is a step, and between steps he stands)
-      await page.evaluate(async () => { [...document.querySelectorAll('#panel button')].find(x => x.textContent.trim() === 'dark corridor').click(); await window.__runFrames(60, 1 / 60, [], 'none'); });
-      const at = () => page.evaluate(() => { const g = window.__game, c = g.player.char; return { x: c.pos[0], z: c.pos[2], v: Math.hypot(c.vel[0], c.vel[2]) }; }); let best = 0, stopped = false;
-      for (const code of ['KeyW', 'KeyS', 'KeyA', 'KeyD']) { const a = await at(); await page.keyboard.down(code); await frames(4); await page.keyboard.up(code); await frames(50); const b = await at(), d = Math.hypot(b.x - a.x, b.z - a.z); if (d > best) { best = d; stopped = b.v < 0.01; } if (best > 0.2) break; }
-      say(best > 0.2 && best < 0.45 && stopped, `in the dark corridor a tap of a move key is one short step and he stops dead (${best.toFixed(2)} m)`);
     }
   }
   if (errors.length) { rows.push(false); console.log(`- FAIL — page errors: ${errors.join(' | ')}`); }

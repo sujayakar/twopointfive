@@ -274,9 +274,9 @@ export const workFour = () => keep(async () => {
 
 export const workObjective = () => keep(async () => {
   console.log('\n=== work-objective: the partner of a quiet mission takes the thing ===');
-  const R = await rig(g => startFromQuery(g, '?levelFile=quiet-yard.json&quiet&squad=1').why, true, 2, 'quiet-yard');
+  const R = await rig(g => startFromQuery(g, '?levelFile=crossing.json&quiet&squad=1').why, true, 2, 'crossing');
   const { g, O } = R; const ops: any[] = O.squad(), Wd = quietWords(g);
-  verdict(!R.why && ops.length === 1 && !!Wd, 'staged: a quiet mission (levels/quiet-yard.json) with one partner', `refusal ${R.why} · partner ${ops.map(o => o.callsign).join(', ')} · thing "${Wd?.thing}" in "${Wd?.holder}" (${Wd?.place})`);
+  verdict(!R.why && ops.length === 1 && !!Wd, 'staged: a quiet mission (levels/crossing.json) with one partner', `refusal ${R.why} · partner ${ops.map(o => o.callsign).join(', ')} · thing "${Wd?.thing}" in "${Wd?.holder}" (${Wd?.place})`);
   if (!Wd || !ops.length) return;
   const rf = g.level.mission.rack.front;
   verdict(g.mission.stage !== 'drive' && !g.work.things().some((x: any) => x.kind === 'objective'), 'before the objective is to take it, the holder is no thing to work (as Sam\'s own row)', `stage ${g.mission.stage} · things ${g.work.things().map((x: any) => x.name).join(', ')}`);
@@ -455,7 +455,7 @@ export const workDefuse = () => keep(async () => {
     verdict(!after.some((s: string) => /charge is safe|it's (already|gone)/.test(s)) && WORK_STATS.done === done0 && WORK_STATS.moot === moot0 + 1, 'he says nothing of the charge, no job is counted done, and his job ended as moot', `said after: ${after.join(' | ') || 'nothing'} · done +${WORK_STATS.done - done0} · moot +${WORK_STATS.moot - moot0}`);
     verdict(!g.work.onDevice(0) && !g.work.things().some((x: any) => x.kind === 'device'), 'nobody is left at it, and the charge is no longer a thing to work', `at it ${g.work.onDevice(0)?.gd?.callsign ?? 'nobody'} · things ${g.work.things().map((x: any) => x.name).join(', ') || 'none'}`); }
   // (c) the same on a quiet mission as two: the partner's hands in the holder, then Sam down — he neither takes it nor says it is 'already gone'
-  { const R = await rig(g => startFromQuery(g, '?levelFile=quiet-yard.json&quiet&squad=1').why, true, 2, 'quiet-yard'); const { g, O } = R, rf = g.level.mission.rack.front, A = g.level.mission.serverRoom;
+  { const R = await rig(g => startFromQuery(g, '?levelFile=crossing.json&quiet&squad=1').why, true, 2, 'crossing'); const { g, O } = R, rf = g.level.mission.rack.front, A = g.level.mission.serverRoom;
     let spot: number[] | null = null;
     for (let x = A.x0 + 0.5; x < A.x1 && !spot; x += 0.4) for (let z = A.z0 + 0.5; z < A.z1 && !spot; z += 0.4) if (!g.col.nav.isBlocked(x, z) && flat([x, 0, z], rf) > 1.6) spot = [x, 0, z];
     g.teleportPlayer(spot ?? [(A.x0 + A.x1) / 2, 0, (A.z0 + A.z1) / 2]); R.step(30); R.gather(8);

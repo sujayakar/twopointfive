@@ -423,10 +423,6 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 424 => {  let r = crate::rescue::rescue_captor(g); r.w(&mut o);  }
 425 => { let a1: DoorId = Io::r(&mut i); let r = crate::rescue::rescue_last_warning(g, a1); r.w(&mut o);  }
 426 => {  crate::rescuecheck::rescue_check_reset(g);  }
-427 => { let a1: OrdersOrderDefId = Io::r(&mut i); let a2: crate::orders::OrderTarget = Io::r(&mut i); let a3: Vec<GuardId> = Io::r(&mut i); let r = crate::planlay::lay_order(g, a1, &a2, &a3); r.w(&mut o);  }
-428 => {  let r = crate::planlay::lay_send(g); r.w(&mut o);  }
-429 => {  crate::planlay::lay_fresh(g);  }
-430 => {  crate::planlay::lay_clear(g);  }
 431 => {  crate::air_dust::air_dust_ready(g);  }
 432 => { let a1: f64 = Io::r(&mut i); let a2: f64 = Io::r(&mut i); let r = crate::air_dust::air_dust_share_at(g, a1, a2); r.w(&mut o);  }
 433 => {  crate::air_dust::air_dust_reseed(g);  }
@@ -1064,7 +1060,6 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 1074 => { let a1: FixtureId = Io::r(&mut i); let a2: Option<crate::game::GameLightEventCause> = Io::r(&mut i); let a3: Option<V3> = Io::r(&mut i); crate::game::game_light_event(g, a1, a2, a3);  }
 1075 => { let a1: Option<FixtureId> = Io::r(&mut i); crate::game::game_ocp(g, a1);  }
 1076 => { let a1: Option<GuardId> = Io::r(&mut i); crate::game::game_toggle_drag(g, a1);  }
-1077 => { let a1: InputId = Io::r(&mut i); crate::game::game_host_before(g, a1);  }
 1078 => { let a1: InputId = Io::r(&mut i); let a2: CameraId = Io::r(&mut i); let a3: crate::host_hud::View = Io::r(&mut i); crate::game::game_host_after(g, a1, a2, a3);  }
 1081 => { let a1: crate::game::InteractableKind = Io::r(&mut i); let a2: Option<crate::game::Verb> = Io::r(&mut i); let r = crate::game::game_select_verb(g, a1, a2); r.w(&mut o);  }
 1082 => {  let r = crate::game::game_escape(g); r.w(&mut o);  }

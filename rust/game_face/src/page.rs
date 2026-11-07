@@ -511,7 +511,7 @@ pub unsafe extern "C" fn face_saves_in(h: u32, p: *const u8, n: usize) {
         let s = &mut x.g.saves;
         s.run_id = run;
         s.shelf.m.clear();
-        for info in list { s.shelf.m.set(info.key.clone(), MemSave { info, pic: None, take: 0.0 }); }
+        for info in list { s.shelf.m.set(info.key.clone(), MemSave { info, pic: None }); }
     });
 }
 #[no_mangle]

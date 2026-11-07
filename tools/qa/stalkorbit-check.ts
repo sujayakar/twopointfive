@@ -10,9 +10,8 @@
 //   in, out   the key that points most at him closes the gap and stops at the waiting distance, never nearer; the one that points away opens it.
 //   walking   the man walking away at 1.2 m/s and the key across him held a second: the circle goes with him, the gap within 20 cm, the creep on.
 //   reach     from 0.9 m (in reach), the key across him held four seconds: he stops where the grab is still on offer, and the key then takes him.
-//   stick     the lab's stick (STALK.drag) dragged across him: taken round him the same way.
 //   letgo     the key let go with the button still held: the creep walks him in to reach, as it did.
-// The key is settled on, and so are the rules round it: the check asks the page's side alone and writes no settled switch (the lab's stick, STALK.drag, is
+// The key is settled on, and so are the rules round it: the check asks the page's side alone and writes no settled switch (STALK.drag is
 // an open row: `stick` still raises it, and every other part holds it down). The part `off` (the key down: a move key ends the creep) and the harness part
 // went with that.
 // STALKORBIT_BREAK=1 = the button is never pressed on the man, so no creep is ever on: every part must FAIL.   exit 0 = all hold · 1 = one does not
@@ -29,9 +28,8 @@ const verdict = (ok: boolean, label: string, detail: string) => { allPass &&= ok
 async function quiet<T>(fn: () => Promise<T>): Promise<T> { const log = console.log; console.log = () => {}; try { return await fn(); } finally { console.log = log; } }
 const f2 = (x: number) => x.toFixed(2), deg = (a: number) => Math.abs(Math.atan2(Math.sin(a), Math.cos(a))) * 180 / Math.PI;
 /** the lobby's floor, the rifleman facing east with Sam `gap` m behind him, crouched with empty hands, the rest parked; the button pressed on the man's chest and held */
-async function world(gap = 1.6, walk = 0, drag = false, yaw = 0) {
+async function world(gap = 1.6, walk = 0, yaw = 0) {
   const W: any = await quiet(() => standUp({ seed: 11 } as any)), g = W.game;
-  STALK.drag = drag;   // (an open row: the lab's stick, up for `stick` alone)
   g.godMode = true; g.aiEnabled = false; g.playerInvisible = true; g.player.slot = 'pistol'; g.player.holstered = true;
   g.tune.carbineGuards = 'reyes'; for (let i = 0; i < 5; i++) W.step(DT);
   const A = g.guards.find((x: any) => x.callsign === 'Reyes'), rest = g.guards.filter((x: any) => x !== A);
@@ -40,7 +38,7 @@ async function world(gap = 1.6, walk = 0, drag = false, yaw = 0) {
   W.cam.yaw = yaw; W.cam.rebuild?.(); g.teleportPlayer([AT[0] - gap, 0, AT[2]]); g.player.crouch = true;
   const c = g.player.char;
   let wt: number | null = null;   // (`walk`: when the man set off, east at `walk` m/s — `go()`)
-  const step = (n = 1) => { for (let i = 0; i < n; i++) { STALK.drag = drag; const on = wt !== null; A.char.vel = [on ? walk : 0, 0, 0]; A.char.pos = [AT[0] + (on ? walk * (g.time - wt!) : 0), 0, AT[2]]; A.char.bodyYaw = EAST; W.step(DT); g.player.visibility = 0.02; } };
+  const step = (n = 1) => { for (let i = 0; i < n; i++) { const on = wt !== null; A.char.vel = [on ? walk : 0, 0, 0]; A.char.pos = [AT[0] + (on ? walk * (g.time - wt!) : 0), 0, AT[2]]; A.char.bodyYaw = EAST; W.step(DT); g.player.visibility = 0.02; } };
   const go = () => { wt = g.time; };
   step(40); W.cursorAt([A.char.pos[0], 1.2, A.char.pos[2]]); if (!BREAK) { W.input.buttons |= 1; W.input.clicked |= 1; } step(1); W.input.clicked &= ~1;
   /** the move key that points most across the man (or `into` him, or away), from where Sam stands, by the camera's floor axes */
@@ -65,7 +63,7 @@ async function roundLine() {
 }
 async function slant() {
   console.log('\n=== slant: the view turned 12°, so the key across him is a little off ===');
-  const run = async (snap: number) => { const C = await world(1.6, 0, false, 12 * Math.PI / 180); STALK.orbitSnap = snap; C.step(20); const k = C.pick('across'), g0 = C.gapNow(), b0 = C.round(); let most = 0;
+  const run = async (snap: number) => { const C = await world(1.6, 0, 12 * Math.PI / 180); STALK.orbitSnap = snap; C.step(20); const k = C.pick('across'), g0 = C.gapNow(), b0 = C.round(); let most = 0;
     C.W.input.keys.add(k); for (let i = 0; i < 60; i++) { C.step(); most = Math.max(most, Math.abs(C.gapNow() - g0)); }
     const r = { k, g0, most, turned: deg(C.round() - b0), on: C.on() }; C.W.input.keys.delete(k); return r; };
   const snap = STALK.orbitSnap, a = await run(snap), b = await run(0); STALK.orbitSnap = snap;
@@ -121,14 +119,6 @@ async function reach() {
   verdict(on && held && at <= BEHIND_COS, 'from 0.9 m, in reach, the key across him held four seconds: he stops where the grab is still on offer, and the key then takes him',
     `${k}: stopped at ${f2(at)} (the grab\'s arc ends at ${BEHIND_COS}) · the creep on ${on} · in his arm ${held}`);
 }
-async function stick() {
-  console.log('\n=== stick: the lab\'s stick dragged across him ===');
-  const C = await world(1.6, 0, true), I = C.W.input, mid = [I.mouseX, I.mouseY], g0 = C.gapNow(), b0 = C.round(); let most = 0;
-  I.mouseX = mid[0]; I.mouseY = mid[1] - STALK.dragFull; for (let i = 0; i < 60; i++) { C.step(); most = Math.max(most, Math.abs(C.gapNow() - g0)); }
-  const turned = deg(C.round() - b0), on = C.on();
-  verdict(on && most < 0.06 && turned > 20, 'the lab\'s stick dragged the whole way across the screen for a second: taken round him the same way, the gap never more than 6 cm off',
-    `the gap ${f2(g0)} m, at most ${f2(most)} m off it · ${turned.toFixed(0)}° round him · the creep on ${on}`);
-}
 async function letgo() {
   console.log('\n=== letgo: the key let go, the button still held ===');
   const C = await world(), k = C.pick('across'); C.W.input.keys.add(k); C.step(30); C.W.input.keys.delete(k);
@@ -137,9 +127,9 @@ async function letgo() {
 }
 /** the whole card (probes.ts 'stalkorbit'): true = every check passed. The open row it writes (the lab's stick) and orbitSnap are put back as found. */
 export async function stalkorbitCheck(): Promise<boolean> {
-  const drag0 = STALK.drag, snap0 = STALK.orbitSnap; allPass = true;
-  try { await roundLine(); await slant(); await nogun(); await edge(); await inOut(); await walking(); await reach(); await stick(); await letgo(); }
-  finally { STALK.drag = drag0; STALK.orbitSnap = snap0; }
+  const snap0 = STALK.orbitSnap; allPass = true;
+  try { await roundLine(); await slant(); await nogun(); await edge(); await inOut(); await walking(); await reach(); await letgo(); }
+  finally { STALK.orbitSnap = snap0; }
   console.log(`\n=== stalkorbit: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`); return allPass;
 }
 if (import.meta.main) process.exit((await stalkorbitCheck()) ? 0 : 1);

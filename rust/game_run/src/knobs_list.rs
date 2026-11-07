@@ -1034,7 +1034,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("stalk.heft_pole.0", offset_of!(Knobs, stalk.heft_pole), false),
     ("stalk.heft_pole.1", offset_of!(Knobs, stalk.heft_pole) + 8, false),
     ("stalk.heft_pole.2", offset_of!(Knobs, stalk.heft_pole) + 16, false),
-    ("stalk.drag", offset_of!(Knobs, stalk.drag), true),
     ("stalk.drag_dead", offset_of!(Knobs, stalk.drag_dead), false),
     ("stalk.drag_full", offset_of!(Knobs, stalk.drag_full), false),
     ("stalk.orbit_k", offset_of!(Knobs, stalk.orbit_k), false),
@@ -1042,7 +1041,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("stalk.orbit_snap", offset_of!(Knobs, stalk.orbit_snap), false),
     ("stalk.low_begin_m", offset_of!(Knobs, stalk.low_begin_m), false),
     ("stalk.low_out_m", offset_of!(Knobs, stalk.low_out_m), false),
-    ("tapstep.on", offset_of!(Knobs, tapstep.on), true),
     ("tapstep.tap_m", offset_of!(Knobs, tapstep.tap_m), false),
     ("tapstep.beat_m", offset_of!(Knobs, tapstep.beat_m), false),
     ("tapstep.reach_m", offset_of!(Knobs, tapstep.reach_m), false),
@@ -1223,7 +1221,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("turn.aim_acc", offset_of!(Knobs, turn.aim_acc), false),
     ("turn.body", offset_of!(Knobs, turn.body), false),
     ("turn.body_acc", offset_of!(Knobs, turn.body_acc), false),
-    ("wound.on", offset_of!(Knobs, wound.on), true),
     ("wound.centre", offset_of!(Knobs, wound.centre), false),
     ("wound.head", offset_of!(Knobs, wound.head), false),
     ("wound.lead", offset_of!(Knobs, wound.lead), false),
@@ -1240,7 +1237,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("doorpath.cap", offset_of!(Knobs, doorpath.cap), false),
     ("doorpath.move_m", offset_of!(Knobs, doorpath.move_m), false),
     ("doorpath.apart_m", offset_of!(Knobs, doorpath.apart_m), false),
-    ("doorpath.gun", offset_of!(Knobs, doorpath.gun), true),
     ("doorpath.gun_m", offset_of!(Knobs, doorpath.gun_m), false),
     ("doorpath.gun_ajar", offset_of!(Knobs, doorpath.gun_ajar), false),
     ("doorpath.gun_lead", offset_of!(Knobs, doorpath.gun_lead), false),
@@ -1515,10 +1511,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("breaks.share.big.thrown", offset_of!(Knobs, breaks.share.big.thrown), false),
     ("breaks.share.big.heap", offset_of!(Knobs, breaks.share.big.heap), false),
     ("breaks.share.big.furniture", offset_of!(Knobs, breaks.share.big.furniture), false),
-    ("breaks.share.small.thrown", offset_of!(Knobs, breaks.share.small.thrown), false),
-    ("breaks.share.small.heap", offset_of!(Knobs, breaks.share.small.heap), false),
-    ("breaks.share.small.furniture", offset_of!(Knobs, breaks.share.small.furniture), false),
-    ("breaks.small_pool_chip_k", offset_of!(Knobs, breaks.small_pool_chip_k), false),
     ("breaks.refuse_chips.0", offset_of!(Knobs, breaks.refuse_chips), false),
     ("breaks.refuse_chips.1", offset_of!(Knobs, breaks.refuse_chips) + 8, false),
     ("breaks.crumble_chips.0", offset_of!(Knobs, breaks.crumble_chips), false),
@@ -2516,7 +2508,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("fire.smoke.every", offset_of!(Knobs, fire.smoke.every), false),
     ("fire.smoke.view_r", offset_of!(Knobs, fire.smoke.view_r), false),
     ("fire.smoke.lean", offset_of!(Knobs, fire.smoke.lean), false),
-    ("fire.gas.on", offset_of!(Knobs, fire.gas.on), true),
     ("fire.gas.up", offset_of!(Knobs, fire.gas.up), false),
     ("fire.gas.radius", offset_of!(Knobs, fire.gas.radius), false),
     ("fire.gas.cells", offset_of!(Knobs, fire.gas.cells), false),
@@ -3442,7 +3433,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("cues.still_quiet", offset_of!(Knobs, cues.still_quiet), false),
     ("cues.stay_secs", offset_of!(Knobs, cues.stay_secs), false),
     ("cues.overheard_gap", offset_of!(Knobs, cues.overheard_gap), false),
-    ("buddy.on", offset_of!(Knobs, buddy.on), true),
     ("buddy.loud_secs", offset_of!(Knobs, buddy.loud_secs), false),
     ("buddy.beat.0", offset_of!(Knobs, buddy.beat), false),
     ("buddy.beat.1", offset_of!(Knobs, buddy.beat) + 8, false),
@@ -3474,7 +3464,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("air_sim.sigma_max", offset_of!(Knobs, air_sim.sigma_max), false),
     ("air_sim.puff_rate", offset_of!(Knobs, air_sim.puff_rate), false),
     ("air_sim.settle", offset_of!(Knobs, air_sim.settle), false),
-    ("laststand.regroup", offset_of!(Knobs, laststand.regroup), true),
     ("laststand.moved_secs", offset_of!(Knobs, laststand.moved_secs), false),
     ("laststand.still_secs", offset_of!(Knobs, laststand.still_secs), false),
     ("laststand.moved_gap", offset_of!(Knobs, laststand.moved_gap), false),
@@ -3501,7 +3490,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("laststand.thump.0", offset_of!(Knobs, laststand.thump), false),
     ("laststand.thump.1", offset_of!(Knobs, laststand.thump) + 8, false),
     ("laststand.thump_level", offset_of!(Knobs, laststand.thump_level), false),
-    ("clearline.on", offset_of!(Knobs, clearline.on), true),
     ("clearline.after", offset_of!(Knobs, clearline.after), false),
     ("clearline.reach_m", offset_of!(Knobs, clearline.reach_m), false),
     ("clearline.pace", offset_of!(Knobs, clearline.pace), false),
@@ -4541,7 +4529,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.stalk.heft_fwd;
     let _: &f64 = &k.stalk.heft_lead;
     let _: &[f64; 3] = &k.stalk.heft_pole;
-    let _: &bool = &k.stalk.drag;
     let _: &f64 = &k.stalk.drag_dead;
     let _: &f64 = &k.stalk.drag_full;
     let _: &f64 = &k.stalk.orbit_k;
@@ -4549,7 +4536,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.stalk.orbit_snap;
     let _: &f64 = &k.stalk.low_begin_m;
     let _: &f64 = &k.stalk.low_out_m;
-    let _: &bool = &k.tapstep.on;
     let _: &f64 = &k.tapstep.tap_m;
     let _: &f64 = &k.tapstep.beat_m;
     let _: &f64 = &k.tapstep.reach_m;
@@ -4715,7 +4701,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.turn.aim_acc;
     let _: &f64 = &k.turn.body;
     let _: &f64 = &k.turn.body_acc;
-    let _: &bool = &k.wound.on;
     let _: &f64 = &k.wound.centre;
     let _: &f64 = &k.wound.head;
     let _: &f64 = &k.wound.lead;
@@ -4732,7 +4717,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.doorpath.cap;
     let _: &f64 = &k.doorpath.move_m;
     let _: &f64 = &k.doorpath.apart_m;
-    let _: &bool = &k.doorpath.gun;
     let _: &f64 = &k.doorpath.gun_m;
     let _: &f64 = &k.doorpath.gun_ajar;
     let _: &f64 = &k.doorpath.gun_lead;
@@ -4999,10 +4983,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.breaks.share.big.thrown;
     let _: &f64 = &k.breaks.share.big.heap;
     let _: &f64 = &k.breaks.share.big.furniture;
-    let _: &f64 = &k.breaks.share.small.thrown;
-    let _: &f64 = &k.breaks.share.small.heap;
-    let _: &f64 = &k.breaks.share.small.furniture;
-    let _: &f64 = &k.breaks.small_pool_chip_k;
     let _: &[f64; 2] = &k.breaks.refuse_chips;
     let _: &[f64; 2] = &k.breaks.crumble_chips;
     let _: &[f64; 2] = &k.breaks.sized_chips;
@@ -5891,7 +5871,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.fire.smoke.every;
     let _: &f64 = &k.fire.smoke.view_r;
     let _: &f64 = &k.fire.smoke.lean;
-    let _: &bool = &k.fire.gas.on;
     let _: &f64 = &k.fire.gas.up;
     let _: &f64 = &k.fire.gas.radius;
     let _: &f64 = &k.fire.gas.cells;
@@ -6796,7 +6775,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.cues.still_quiet;
     let _: &f64 = &k.cues.stay_secs;
     let _: &f64 = &k.cues.overheard_gap;
-    let _: &bool = &k.buddy.on;
     let _: &f64 = &k.buddy.loud_secs;
     let _: &[f64; 2] = &k.buddy.beat;
     let _: &f64 = &k.buddy.quiet;
@@ -6826,7 +6804,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.air_sim.sigma_max;
     let _: &f64 = &k.air_sim.puff_rate;
     let _: &f64 = &k.air_sim.settle;
-    let _: &bool = &k.laststand.regroup;
     let _: &f64 = &k.laststand.moved_secs;
     let _: &f64 = &k.laststand.still_secs;
     let _: &f64 = &k.laststand.moved_gap;
@@ -6846,7 +6823,6 @@ fn typed(k: &Knobs) {
     let _: &[f64; 2] = &k.laststand.dig;
     let _: &[f64; 2] = &k.laststand.thump;
     let _: &f64 = &k.laststand.thump_level;
-    let _: &bool = &k.clearline.on;
     let _: &f64 = &k.clearline.after;
     let _: &f64 = &k.clearline.reach_m;
     let _: &f64 = &k.clearline.pace;

@@ -58,7 +58,7 @@ export function defendersShown(m: Mission): string { return MYSTERY.on ? '—' :
 export type PickFn = (m: Mission, href: string) => void;
 /** the seams other screens set once: `onPick` replaces the page load (the loadout screen's way in), `startSolo` is the start card's Start (set by ui/menu.ts
  *  only while the real start card is up), `pickLabel` is the sheet's button */
-export const MISSIONS: { onPick: PickFn | null; startSolo: (() => void) | null; pickLabel: string;
+export const MISSIONS: { onPick: PickFn | null; startSolo: ((card?: boolean) => void) | null; pickLabel: string;
   /** the screen a pick hands over to (the loadout — ui/loadout.ts sets it): one of the two is up at a time, so opening the list closes it, closeMissions()
    *  closes it too (the boot card going, the start card closing), and missionsBusy() counts it */
   next: { isOpen(): boolean; close(): void } | null;
@@ -544,15 +544,6 @@ export function drawMissionMap(cv: HTMLCanvasElement, m: Mission, search: string
   const w = wayOfLink(m, search), file = lookLevelFile(m.scenario?.level ?? OFFICE);
   cv.width = width; cv.height = Math.round(width * PLAN_D / PLAN_W);
   return drawPlan(cv, file, false, true, { kind: m.scenario ? m.scenario.kind : 'solo', way: w < 0 ? 0 : w }).then(() => cv.style?.display !== 'none' && !!cv.getContext?.('2d'));
-}
-/** WHERE SPOTS OF THE PLACE FALL ON A DRAWN SHEET: `spots` (x, z on the floor) as fractions of the canvas `cv`, which this list drew a small sheet on
- *  (its `data-level` names the file, `data-sheet` the size it was drawn at). Null: no sheet is drawn there (no file, a plain plan, a still picture). For a caller that pins words on
- *  the map (ui/kitBrief.ts: a tutorial's plan names the rooms of its street). */
-export function sheetSpots(cv: HTMLCanvasElement, spots: number[][]): Promise<number[][] | null> {
-  const file = cv.getAttribute?.('data-level') ?? '', sheet = cv.getAttribute?.('data-sheet') ?? ''; if (!file || !sheet || cv.getAttribute?.('data-still') || !cv.width || !cv.height) return Promise.resolve(null);
-  return planOf(file).then(P => { if (!P || cv.getAttribute('data-level') !== file) return null;
-    const V = sheetView(P.art, cv.width, cv.height, [P.min[0], P.min[1], P.max[0], P.max[1]], Object.values(P.starts).flat(), sheet === 'small');   // (the view it was drawn through)
-    return spots.map(([x, z]) => [V.x(x) / cv.width, V.y(z) / cv.height]); });
 }
 function drawPlan(cv: HTMLCanvasElement, file: string, thumb = false, map = false, mark?: PlanMark, small = thumb): Promise<void> {
   cv.setAttribute('data-level', file); cv.setAttribute('data-sheet', map ? (small ? 'small' : 'full') : ''); cv.setAttribute('data-mark', mark ? `${mark.kind}|${mark.way}` : '');

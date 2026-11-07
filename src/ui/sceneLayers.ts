@@ -178,8 +178,7 @@ export function sceneLayers(engine: Engine, game: Game): TweakLayer[] {
       mk('tune.flashIntensity', 'squad torches', 'src/game/game.ts tune', () => tune.flashIntensity, v => { tune.flashIntensity = v; }, { min: 0, max: 300, step: 5, play: true }, 'every carried torch and every unit\'s weapon light'),
       mk('tune.playerLight', 'your light', 'src/game/game.ts tune', () => tune.playerLight, v => { tune.playerLight = v; }, { min: 0, max: 300, step: 5, play: true }, 'your own rail light'),
       mk('tune.flashOuter', 'cone outer °', 'src/game/game.ts tune', () => tune.flashOuter, v => { tune.flashOuter = v; tune.flashInner = Math.min(tune.flashInner, v - 2); }, { min: 8, max: 45, step: 1, play: true }),
-      mk('tune.flashInner', 'cone inner °', 'src/game/game.ts tune', () => tune.flashInner, v => { tune.flashInner = Math.min(v, tune.flashOuter - 2); }, { min: 1, max: 30, step: 1, play: true }),
-      setting('flashlightRadius', 'bezel radius', { min: 0.005, max: 0.1, step: 0.005, play: true }) ];
+      mk('tune.flashInner', 'cone inner °', 'src/game/game.ts tune', () => tune.flashInner, v => { tune.flashInner = Math.min(v, tune.flashOuter - 2); }, { min: 1, max: 30, step: 1, play: true }) ];
     layers.push({ id: 'torch', name: 'Torches', group: 'Light', vars, on: { ...muting(vars, ['tune.flashIntensity', 'tune.playerLight']), play: true } }); }
   layers.push({ id: 'bounce', name: 'Bounce light', group: 'Light', on: flagSwitch(FrameFlags.Indirect), vars: [setting('indirectScale', 'bounce ×', { min: 0, max: 2, step: 0.05 })] });
   layers.push({ id: 'beams', name: 'Beams in the air', group: 'Light', on: flagSwitch(FrameFlags.Volumetrics), vars: [setting('hazeDensity', 'haze', { min: 0, max: 0.2, step: 0.002 })] });

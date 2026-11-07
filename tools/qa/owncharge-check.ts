@@ -42,8 +42,8 @@ const dist = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const isOpen = (d: any) => !d.latched && Math.abs(d.angle) >= 0.6;
 /** the kit table, its rules and the switch as they stood, put back after `fn` (the store the table writes to is left on nothing) */
 async function kept<T>(fn: () => Promise<T> | T): Promise<T> {
-  const cards = K.KIT.members.map((m: any) => ({ ...m })), on = K.KIT.on, slots = K.SLOTS.on, big = BIG?.on, solo = { ...K.KIT_SOLO }, rnd = Math.random;
-  try { return await fn(); } finally { K.kitLoad(null, ''); if (BIG) BIG.on = !!big; for (let i = 0; i < cards.length; i++) K.KIT.members[i] = cards[i]; K.KIT.on = on; K.SLOTS.on = slots; Object.assign(K.KIT_SOLO, solo); Math.random = rnd; }
+  const cards = K.KIT.members.map((m: any) => ({ ...m })), on = K.KIT.on, slots = K.SLOTS.on, big = BIG?.on, rnd = Math.random;
+  try { return await fn(); } finally { K.kitLoad(null, ''); if (BIG) BIG.on = !!big; for (let i = 0; i < cards.length; i++) K.KIT.members[i] = cards[i]; K.KIT.on = on; K.SLOTS.on = slots; Math.random = rnd; }
 }
 /** YOUR CARD FOR A NIGHT ALONE, AS THE BUILD STAGES IT. Where a stealth mission wears a card of its own (kit.ts KITDEAL.stealth, on in the page: the night
  *  alone is one) the charges go on THAT card, the way the loadout screen would have them there: as issued its pouches are full of the mission's kit, so what

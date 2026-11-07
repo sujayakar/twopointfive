@@ -266,7 +266,7 @@ export const glassBreakConfig = { on: false };
  *  level, from ONE text. A branch a level does not raise is not taken; it is no longer left out of the program. Nothing in the update reads the word. */
 /** WEATHER KINDS (game/weatherKinds.ts, game/weather.ts): their shader reads (the level's own roofs and the fog in the outdoor air: common.wgsl wx*, read by
  *  composite / vol_common / volumetrics / fgather / particles_common). main.ts raises it at BOOT when the page is opened with ?weather=<kind>, or
- *  (WX_OWN.roofs) on a level that is not the office's family — its own storm reads its own roofs; false = no such statement runs. */
+ *  on a level that is not the office's family, or once a game is stood under its own roofs (Weather.levelRoofs) — its own storm reads its own roofs; false = no such statement runs. */
 export const weatherKindConfig = { on: false };
 /** SNOW (game/weatherKinds.ts SNOW_LEVELS, game/snowFx.ts): the particle shaders' flake half, `lv(WX_SNOW)` (particles.wgsl rainStep: a flake rides the air,
  *  flutters, wraps round the view's disc and lands without a splash; particles_draw.wgsl rainFragment: a soft round flake, nothing refracted). main.ts raises

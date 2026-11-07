@@ -240,11 +240,6 @@ pub fn weighed(g: &crate::game::Game) -> bool {
     true
 }
 
-/// … is on (kitanim.ts asks).   (bigkit.ts bigWeighed)
-pub fn big_weighed(g: &crate::game::Game) -> bool {
-    weighed(g)
-}
-
 /// Seconds from the hand leaving for the tool to the tool in his hands.   (bigkit.ts bigEquip)
 pub fn big_equip(g: &crate::game::Game, kind: crate::bigkit::BigEquipKind) -> f64 {
     match kind {

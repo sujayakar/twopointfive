@@ -253,6 +253,8 @@ impl Default for ChunkContact { fn default() -> Self { Self::zeroed() } }
 pub struct FootMan {
     pub pos: V3,
     pub vel: V3,
+    /// a place on a man down, not a man on his feet: at his floor's height, under one of his bones
+    pub body: bool,
 }
 impl FootMan {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -260,6 +262,7 @@ impl FootMan {
         FootMan {
             pos: [0.0; 3],
             vel: [0.0; 3],
+            body: false,
         }
     }
 }

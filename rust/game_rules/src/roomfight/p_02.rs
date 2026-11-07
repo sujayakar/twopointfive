@@ -32,7 +32,7 @@ fn cover_pt(g: &mut Game, d: RoomfightDefId) {
     crate::belief::cover(g, gd, pt);
 }
 /// `DIGIN.on || squadsLive(g) || hasHim(gd, OWN.stand)`
-fn digs_in(g: &mut Game, gd: GuardId) -> bool { g.k.digin.on || crate::enemysquads::squads_live(g) || crate::owner::has_him(g, gd, crate::owner::own().stand) }
+fn digs_in(g: &mut Game, gd: GuardId) -> bool { g.k.digin.on || crate::enemysquads::squads_live(g) || crate::owner::has(g, gd, crate::owner::by::STAND) }
 
 // ---------------------------------------------------------------- what the other parts call
 /// the sight gain, with the hunting man's x2.2 for a scripted man.   (roomfight.ts rateOn)
@@ -108,7 +108,6 @@ pub fn room_fight_tick(g: &mut crate::game::Game, dt: f64) {
     while i < g.fight.ops.len() { let o = g.fight.ops[i]; i += 1; room_fight_tick_op(g, o, dt); }
     crate::pressure::press_tick(g, dt);
     crate::laststand::last_stand_tick(g);
-    crate::buddy::buddy_tick(g);
 }
 /// an enemy's footfall: heard by a teammate as any man hears a step (roomfight.ts:480)
 fn hear_step(g: &mut Game, key: u32, e: crate::game::GameEvent) {
@@ -292,7 +291,7 @@ pub fn room_fight_free_near(g: &crate::game::Game, p: V3) -> Option<V3> {
 // ---------------------------------------------------------------- defenders
 /// (roomfight.ts adopt)
 pub fn room_fight_adopt(g: &mut crate::game::Game, gd: GuardId) -> RoomfightDefId {
-    let c = g.gd[gd].ch; let s = crate::enemysquads::squad_skill(g, hostile_skill(g));
+    let c = g.gd[gd].ch; let s = hostile_skill(g);
     let f = crate::character::character_forward(g, c); let p = g.ch[c].pos;
     let room = room_fight_room_at(g, p);
     let what = match room {
@@ -320,8 +319,8 @@ pub fn room_fight_tick_def(g: &mut crate::game::Game, d: RoomfightDefId, dt: f64
     let gd = g.tab.roomfight_def[d].gd; let base = hostile_skill(g);
     g.gd[gd].skill = Some(crate::game::GuardSkill { settle_k: base.settle_k, spread_k: base.spread_k });
     if g.gd[gd].held.is_some() { room_fight_blind(g, d, k); return; }
-    if crate::owner::has_him(g, gd, crate::owner::own().morale) { return; }
-    if crate::owner::has_him(g, gd, crate::owner::own().runner) { return; }
+    if crate::owner::has(g, gd, crate::owner::by::MORALE) { return; }
+    if crate::owner::has(g, gd, crate::owner::by::RUNNER) { return; }
     if digs_in(g, gd) {
         let keeps = g.level.scenarios.as_ref().and_then(|s| s.room_clear.as_ref()).and_then(|r| r.dig_in) != Some(false);
         if keeps && !crate::lanes::lane_throws(g, gd) { crate::digin::dig_in_tick(g, d, dt); }
@@ -414,7 +413,7 @@ pub fn room_fight_entry_toward(g: &crate::game::Game, d: RoomfightDefId, at: V3)
 }
 /// (roomfight.ts chooseWatch)
 pub fn room_fight_choose_watch(g: &mut crate::game::Game, d: RoomfightDefId) {
-    let gd = g.tab.roomfight_def[d].gd; let s = crate::enemysquads::squad_skill(g, hostile_skill(g));
+    let gd = g.tab.roomfight_def[d].gd; let s = hostile_skill(g);
     let room = g.tab.roomfight_def[d].room; let ent = entries_of(g, room);
     let (mut best, mut bs) = (-1.0, g.k.roomfight.fear_min);
     let c = g.gd[gd].ch; let eye = eye_of(g, c);
@@ -475,7 +474,7 @@ pub fn room_fight_apply_watch(g: &mut crate::game::Game, d: RoomfightDefId, dt: 
 }
 /// the untrained man's beats.   (roomfight.ts reactions)
 pub fn room_fight_reactions(g: &mut crate::game::Game, d: RoomfightDefId) {
-    let gd = g.tab.roomfight_def[d].gd; let c = g.gd[gd].ch; let s = crate::enemysquads::squad_skill(g, hostile_skill(g));
+    let gd = g.tab.roomfight_def[d].gd; let c = g.gd[gd].ch; let s = hostile_skill(g);
     if g.gd[gd].state == crate::game::GuardState::Alert && g.tab.roomfight_def[d].last_state != "alert" { let p = pick(g, crate::dice::Who::Def(d), s.react); g.gd[gd].react_t = m::max(g.gd[gd].react_t, p); }
     let fc = crate::teams::foe_char(g, gd);
     if let Some(fc) = fc { if g.gd[gd].last_seen_t > g.tab.roomfight_def[d].last_seen + 1.5 && g.time - g.gd[gd].last_seen_t < 0.1 {
@@ -506,7 +505,7 @@ pub fn room_fight_reactions(g: &mut crate::game::Game, d: RoomfightDefId) {
 }
 /// a dazzled defender empties a burst down what he was watching, or ducks.   (roomfight.ts blind)
 pub fn room_fight_blind(g: &mut crate::game::Game, d: RoomfightDefId, k: f64) {
-    let h = g.tab.roomfight_def[d].gd; let s = crate::enemysquads::squad_skill(g, hostile_skill(g));
+    let h = g.tab.roomfight_def[d].gd; let s = hostile_skill(g);
     if !crate::control::man::blind(g, h) { return; }
     let bl = crate::nightbreach::blind();
     if g.gd[h].dazzled_until > g.tab.roomfight_def[d].burst.until + 1e-6 {
@@ -630,7 +629,7 @@ const BEYOND: [(f64, f64); 9] = [(3.0, 1.6), (3.0, -1.6), (2.4, 1.2), (2.4, -1.2
 pub fn room_fight_break_off(g: &mut crate::game::Game, d: RoomfightDefId) {
     let gd = g.tab.roomfight_def[d].gd; let c = g.gd[gd].ch; let threat = room_fight_threat_of(g, d);
     g.tab.roomfight_def[d].moved_at = g.time;
-    let stays = crate::owner::has_him(g, gd, crate::owner::own().stand);
+    let stays = crate::owner::has(g, gd, crate::owner::by::STAND);
     let rp = if stays { None } else { crate::enemysquads::squad_rally(g, gd, threat) };
     if let Some(rp) = rp {
         crate::pressure::run(g, d, rp, None, Some(0.3));
@@ -697,7 +696,7 @@ pub fn room_fight_break_off(g: &mut crate::game::Game, d: RoomfightDefId) {
 }
 /// a defender on the move: an enemy seen close stops him to fight; there, or going nowhere, he plants.   (roomfight.ts tickMove)
 pub fn room_fight_tick_move(g: &mut crate::game::Game, d: RoomfightDefId, dt: f64) {
-    let gd = g.tab.roomfight_def[d].gd; let c = g.gd[gd].ch; let s = crate::enemysquads::squad_skill(g, hostile_skill(g));
+    let gd = g.tab.roomfight_def[d].gd; let c = g.gd[gd].ch; let s = hostile_skill(g);
     let arrived0 = match &g.gd[gd].script { Some(x) => x.arrived.unwrap_or(false), None => { room_fight_plant(g, d, "script gone"); return; } };
     g.tab.roomfight_def[d].move_t += dt;
     crate::guards::hearing_check(g, gd, None, None, None);

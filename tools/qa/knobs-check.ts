@@ -24,7 +24,6 @@ const UNREGISTERED: Record<string, string> = {
   'FIXLOOK (fixtureBreak.ts)': 'a fixture seen to break: the look only (its `on` is for its own proofs)',
   'BLAST_PACE (destructionSwitch.ts)': "when the blast frame's picture-only work runs (reach masks, rain drip lines, the furniture index made ahead): play is the same either way — TPS_BLASTPACE=old in front of a headless tool is its off",
   'KIT (kit.ts)': "each man's kit card, kept per machine and written by kitLoad / the loadout screen: a stand reads it through kitLoad, never as a knob",
-  'KIT_SOLO (kit.ts)': "raised by the start card's Start on the solo night (kitSolo): a flag of that visit, not a knob",
 };
 
 export async function knobsCheck(): Promise<boolean> {

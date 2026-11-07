@@ -202,10 +202,10 @@ pub fn weather_new(g: &mut crate::game::Game) -> crate::weather::Weather {
     weather_set_last_bark_t(g, -1e9);
     weather_set_die(g, 20260809.0);
     weather_set_roofs(g, &[interior(), annex()]);
-    let boot = g.m.weather_kinds.weather_boot;
+    let stood = g.stood;
     let born = match weather_level_kind(g) {
         Some(k) => Some(k),
-        None => if boot.kind == Some(crate::weather_kinds::WeatherKind::Snow) { None } else { boot.kind },
+        None => if stood.weather == Some(crate::weather_kinds::WeatherKind::Snow) { None } else { stood.weather },
     };
     if born.is_none() && own_floor(g) { weather_own_night(g); }
     let wet = if weather_rain_rate(g) > 0.0 { 1.0 } else { 0.0 };
@@ -217,8 +217,8 @@ pub fn weather_new(g: &mut crate::game::Game) -> crate::weather::Weather {
 /// A level built for snow is born in the kind 'snow' and stays in it; None = any other level. (weather.ts Weather.levelKind)
 pub fn weather_level_kind(g: &crate::game::Game) -> Option<crate::weather_kinds::WeatherKind> {
     let name = crate::scene_level_load::level_name_of(g);
-    let boot = g.m.weather_kinds.weather_boot;
-    if crate::weather_kinds::snow_level(g, name.as_deref()) && (!boot.locked || boot.kind == Some(crate::weather_kinds::WeatherKind::Snow)) { Some(crate::weather_kinds::WeatherKind::Snow) } else { None }
+    let stood = g.stood;
+    if crate::weather_kinds::snow_level(g, name.as_deref()) && (!stood.locked || stood.weather == Some(crate::weather_kinds::WeatherKind::Snow)) { Some(crate::weather_kinds::WeatherKind::Snow) } else { None }
 }
 
 /// No weather picked on a floor that is none of the office's: its own night is dry and still, under its own roofs. (weather.ts Weather.ownNight)
@@ -258,7 +258,7 @@ pub fn weather_sync_roofs(g: &mut crate::game::Game, tell_wind: Option<bool>) { 
 
 /// syncRoofs, with `built` false while the constructor runs: `g.wind` is built after this object and has nothing to be told yet.
 fn sync_roofs(g: &mut Game, tell_wind: bool, built: bool) {
-    let own = g.weather.kind_now.is_none() && g.m.weather_kinds.weather_boot.packed && !own_floor(g) && !weather_office_fit(g);
+    let own = g.weather.kind_now.is_none() && !own_floor(g) && !weather_office_fit(g);
     if own == g.weather.own && !tell_wind { return; }
     if own != g.weather.own {
         g.weather.own = own;
@@ -289,8 +289,7 @@ pub fn weather_set_kind_2(g: &mut crate::game::Game, kind: Option<crate::weather
 fn set_kind_at(g: &mut Game, kind: Option<crate::weather_kinds::WeatherKind>, built: bool) -> bool {
     let own = weather_level_kind(g);
     if own.is_some() && kind != own { return false; }   // a level built for snow stays in it
-    let boot = g.m.weather_kinds.weather_boot;
-    if boot.locked && kind != boot.kind { return false; }
+    if g.stood.locked && kind != g.stood.weather { return false; }
     weather_set_wet_2(g, false);   // (what is wet depends on the kind)
     weather_set_kind(g, kind);
     g.weather.own = false;

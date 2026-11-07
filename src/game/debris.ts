@@ -3,7 +3,7 @@
 // sphere-vs-box contact against the statics, leaves and furniture (the support distance is the box's own extent along the surface normal, so a tile lands
 // on its face and a binder on its edge), dead-ish bounces, a turn toward lying flat on each floor touch, settle, SLEEP; drawn as one dynamic shadow-casting
 // box each. Bounded by construction (renderer v3 stage 2's chaos budget, docs/internal/image-quality.md §4: 64 tumbling casters cost +2 ms at high with no
-// boil): the pool holds at most `cap()` chunks (settings.debrisCap: 64 ultra / high, 32 below) — a spawn over the cap evicts the oldest chunk already AT REST,
+// boil): the pool holds at most `cap()` chunks (64) — a spawn over the cap evicts the oldest chunk already AT REST,
 // and with none at rest it REFUSES (null) and the caller demotes the break-off to a particle burst (Control's rule). Landing is heard: the first hard touch
 // plays its knock and files a 'prop' hearing event at the chunk's level (a tile 0.4, a monitor 0.5, clutter 0.25) blamed on WHOEVER CAUSED IT (Chunk.who: the
 // shooter whose round knocked it off / dropped the tile, the thrower of the charge that shoved it — so a guard's own burst is his side's clumsiness to the men
@@ -85,8 +85,8 @@ export class Debris {
   stats = { spawned: 0, refused: 0, evicted: 0, landed: 0, peakLive: 0, peakMoving: 0, kicked: 0, told: 0 };
   constructor(private g: Game) {}
 
-  /** the pool's size on this tier (ui/quality.ts Caps.debris → settings.debrisCap; 64 without one) */
-  cap(): number { const c = (this.g.engine.settings as { debrisCap?: number }).debrisCap; return Math.max(4, Math.floor(c ?? 64)); }
+  /** the pool's size (rust: debris::DEBRIS_CAP) */
+  cap(): number { return 64; }
   get moving(): number { let n = 0; for (const c of this.list) if (!c.rest && !c.foot) n++; return n; }   // (thrown and not yet down: a piece a boot slid is not part of the mayhem)
 
   /** A chunk of `kind` = the box `box` (taken over as is: centre, half extents, yaw / rot, albedo) thrown at `v` (m/s) turning at `w` (rad/s), its landing blamed on
