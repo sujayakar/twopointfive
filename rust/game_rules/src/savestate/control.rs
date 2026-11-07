@@ -30,11 +30,11 @@ fn here(g: &mut Game) -> String { let p = g.ch[g.pl[g.player].ch].pos; crate::ch
 fn rank(s: MissionStage) -> u32 { match s { MissionStage::Infiltrate => 0, MissionStage::Drive => 1, MissionStage::Exfil => 2, MissionStage::Done | MissionStage::Failed => 3 } }
 
 /// Why the game cannot be kept right now; `authored` = a tutorial's own checkpoint, taken whatever is on the floor.   (savestate.ts runNo, for a save in memory)
-pub fn run_no(g: &Game, authored: bool) -> Option<String> {
+pub fn run_no(g: &Game, seat: &crate::seats::SeatRef, authored: bool) -> Option<String> {
     if g.touring || g.quiet_utility || g.puppet.is_some() { return Some(String::from("a show is running")); }
     if !authored { if let Some(r) = g.director.run { let r = &g.tab.director_run[r]; if !r.ended { return Some(format!("the level script's program '{}' is running", r.name)); } } }
     if g.seats.len() > 1 { return Some(String::from("two players (a checkpoint holds one player today)")); }
-    if g.pl[g.player].down { return Some(String::from("the player is down")); }
+    if g.pl[seat.player].down { return Some(String::from("the player is down")); }
     if matches!(g.mission.stage, MissionStage::Failed | MissionStage::Done) { return Some(format!("the run is over ({}) \u{2014} nothing to come back to", g.mission.stage.as_str())); }
     if crate::verdict::verdict_ended(g).is_some() { return Some(String::from("the run is over \u{2014} nothing to come back to")); }
     if authored { return None; }
@@ -67,7 +67,7 @@ fn unsettled(g: &mut Game) -> Option<String> {
     if crate::lighting::is_daylight(g) { return Some(String::from("daylight is in")); }
     if g.clearing.is_some() { return Some(String::from("the lockdown pair is clearing rooms")); }
     if let Some(&x) = g.guards.iter().find(|&&x| g.gd[x].script.is_some() && g.gd[x].state != GuardState::Dead) { return Some(format!("{} is scripted", g.gd[x].callsign)); }
-    if let Some(busy) = busy(g) { return Some(format!("the player is {busy}")); }
+    if let Some(busy) = busy(g, &crate::seats::here(g)) { return Some(format!("the player is {busy}")); }
     for it in g.items.items.clone() {
         let live = matches!(crate::throwables::item_kind(g, it), crate::throwables::ItemKind::Smoke | crate::throwables::ItemKind::Flash | crate::throwables::ItemKind::Frag) && !crate::throwables::item_fired(g, it);
         if live || !crate::throwables::item_settled(g, it) { return Some(String::from("a thrown thing is still in the air or on its fuse")); }
@@ -80,8 +80,8 @@ fn unsettled(g: &mut Game) -> Option<String> {
     None
 }
 /// what his hands or his feet are in the middle of   (savestate.ts playerBusy)
-fn busy(g: &Game) -> Option<&'static str> {
-    let p = &g.pl[g.player];
+fn busy(g: &Game, seat: &crate::seats::SeatRef) -> Option<&'static str> {
+    let p = &g.pl[seat.player];
     let a = &g.ch[p.ch].anim;
     if p.holding.is_some() { return Some("holding somebody"); }
     if p.takedown.is_some() { return Some("mid-takedown"); }
@@ -92,7 +92,7 @@ fn busy(g: &Game) -> Option<&'static str> {
     if p.breaker_move.is_some() { return Some("at the breaker"); }
     if p.easing.is_some() { return Some("easing a door"); }
     if p.door_move.is_some() { return Some("working a door"); }
-    if crate::wallcharge::wall_charge_setting(g, &crate::seats::here(g)) || p.charging.is_some() || p.work_stow.is_some() { return Some("setting a charge"); }
+    if crate::wallcharge::wall_charge_setting(g, seat) || p.charging.is_some() || p.work_stow.is_some() { return Some("setting a charge"); }
     if crate::defuse::defuse_working(g) { return Some("at a charge"); }
     if p.kick.is_some() || (p.door_kick_tail && crate::character::anim_kicking(g, p.ch)) { return Some("kicking a door"); }
     if p.pending_throw.is_some() || p.throw_held || crate::character::anim_in_throw(g, p.ch) { return Some("throwing"); }
@@ -110,7 +110,7 @@ fn busy(g: &Game) -> Option<&'static str> {
 fn gate(g: &mut Game) -> Option<String> {
     if !crate::mission::mission_live(g) { return Some(String::from("not a live run")); }
     if !g.ai_enabled { return Some(String::from("AI off")); }
-    if let Some(why) = run_no(g, false) { return Some(why); }
+    if let Some(why) = run_no(g, &crate::seats::here(g), false) { return Some(why); }
     // (a team on the floor: hands and the air are in what is kept)
     if !g.guards.iter().any(|&x| g.gd[x].unit.is_some()) { if let Some(why) = unsettled(g) { return Some(why); } }
     for &x in &g.guards {
@@ -249,7 +249,7 @@ fn regret(g: &mut Game) {
 
 /// A save into its ring's next slot.   (Checkpoints.writeMem)
 fn write(g: &mut Game, slot: SlotInfoSlot, label: &str, authored: bool) -> Option<Do> {
-    if let Some(why) = run_no(g, authored) {
+    if let Some(why) = run_no(g, &crate::seats::here(g), authored) {
         g.saves.stats.refused += 1.0;
         note(g, format!("refused: {why}"));
         if slot == SlotInfoSlot::Manual { crate::game::game_msg(g, &format!("not saved: {why}")); }
