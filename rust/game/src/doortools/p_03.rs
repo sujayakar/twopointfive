@@ -990,41 +990,6 @@ pub fn door_tools_hand_of(g: &mut crate::game::Game, d: DoorId, side: f64, p: V3
     if v3::dist_xz(p, j) > 0.5 && crate::scene_collision::solid_blocked(g, [p[0], 0.45, p[2]], [j[0], 0.45, j[2]], None) { 0.0 } else { h }
 }
 
-/// a charge order whose door came open under it: a man still on his way whose mark is on the other hand of the opening stops where he is (doortools.ts DoorTools.stayHands)
-pub fn door_tools_stay_hands(g: &mut crate::game::Game, op: DoorOpId) {
-    let (d, side) = (g.tab.doortools_door_op[op].door, g.tab.doortools_door_op[op].side);
-    let name = crate::orders::door_words(g, d);
-    let c = g.dr[d].frame_centre;
-    for m in g.tab.doortools_door_op[op].men.clone() {
-        let Some(a) = g.tab.doortools_door_op[op].mine.get(m).copied() else { continue };
-        if is_dead(g, m) || crate::orders::squad_orders_of(g, m) != Some(a) { continue; }
-        let Some(post) = g.tab.orders_assignment[a].post else { continue };
-        if door_tools_arrived(g, op, m) { continue; }
-        let p = pos_of(g, m);
-        let at: V3 = [p[0], 0.0, p[2]];
-        if !door_tools_crosses_open(g, d, side, at, post) { continue; }
-        let assign = crate::orders::SquadOrdersAssignA {
-            order: String::from("stack"),
-            post: Some(at),
-            face: Some(m::atan2(c[0] - at[0], c[2] - at[2])),
-            watch: Some([c[0], 1.05, c[2]]),
-            door: Some(d),
-            shy: Some(d),
-            stance: Some(crate::character::Stance::HighReady),
-            upper: Some(crate::character::UpperMode::None),
-            move_: Some(crate::doortools::DoorToolsDoneItemLaneBackMove { stance: crate::character::Stance::None, upper: crate::character::UpperMode::Aim }),
-            stack_side: Some(g.tab.orders_assignment[a].stack_side),
-            going: format!("stacking · {}", name),
-            there: format!("stacked · {}", name),
-            ..Default::default()
-        };
-        crate::orders::squad_orders_assign(g, m, &assign);
-        g.door_tools.stats.hand_kept += 1.0;
-        let line = format!("hand kept · {}", g.gd[m].callsign);
-        door_tools_beat(g, op, &line);
-    }
-}
-
 /// a walk from where he stands to that place changes hands in front of the opening (doortools.ts DoorTools.crossesOpen)
 pub fn door_tools_crosses_open(g: &mut crate::game::Game, d: DoorId, side: f64, from: V3, to: V3) -> bool {
     let h = door_tools_hand_of(g, d, side, from);
