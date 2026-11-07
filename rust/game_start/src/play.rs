@@ -249,6 +249,19 @@ impl Play {
     pub fn menu_rows(&self) -> Vec<String> { self.g.tab.orders_order_def.iter().map(|(_, r)| r.id.clone()).collect() }
     /// The rows on the menu now, by id, in the menu's order.
     pub fn menu(&self) -> Vec<String> { self.g.orders.defs.iter().map(|&d| self.g.tab.orders_order_def[d].id.clone()).collect() }
+    /// is the order of that id on the squad's menu now
+    pub fn on_menu(&self, id: &str) -> bool { self.menu().iter().any(|r| r == id) }
+    /// the living men of the red pair, and of the blue (the menu's own call, `SquadOrders.men`)
+    pub fn red(&self) -> Vec<GuardId> { game::orders::squad_orders_men(&self.g, Some(game::orders::SquadOrdersMenSel::Red), None) }
+    pub fn blue(&self) -> Vec<GuardId> { game::orders::squad_orders_men(&self.g, Some(game::orders::SquadOrdersMenSel::Blue), None) }
+    /// The rule of the list that has him this tick, by the words of its line ("head down under fire"); None when his script or his own
+    /// state has him.
+    pub fn rule(&self, gd: GuardId) -> Option<&'static str> {
+        use game::control::{rule_name, state, Holder};
+        match state(&self.g)?.of(gd)?.holder[0] { Holder::Rule(r) => Some(rule_name(r)), _ => None }
+    }
+    /// why he is doing that, in a line: who has him and since when, which rules said no, who holds him to his post
+    pub fn why(&self, gd: GuardId) -> String { game::control::control_line(&self.g, gd) }
     /// the way a man's body faces, radians: 0 looks along +z (south), a quarter turn (π/2) along +x (east), π north (his forward is (sin, cos))
     pub fn facing(&self, gd: GuardId) -> f64 { self.g.ch[self.g.gd[gd].ch].body_yaw }
     /// calm, suspicious, alert, searching or dead
@@ -270,6 +283,14 @@ impl Play {
 }
 
 impl Drop for Play { fn drop(&mut self) { HOLDS.with(|h| h.set(false)); } }
+
+/// A number in -1..1 that is a fixed function of the seed and of `k` (which of a scene's numbers it moves): a test moves a mark, a range, a
+/// door or a landing point by it, so that three seeds are three different fights.
+pub fn nudge(seed: u32, k: u32) -> f64 {
+    let mut x = seed.wrapping_mul(0x9E37_79B9) ^ k.wrapping_mul(0x85EB_CA6B);
+    x ^= x >> 16; x = x.wrapping_mul(0x7FEB_352D); x ^= x >> 15; x = x.wrapping_mul(0x846C_A68B); x ^= x >> 16;
+    x as f64 / 2_147_483_648.0 - 1.0
+}
 
 /// metres between two places in plan
 pub fn dist(a: [f64; 2], b: [f64; 2]) -> f64 { ((a[0] - b[0]).powi(2) + (a[1] - b[1]).powi(2)).sqrt() }
