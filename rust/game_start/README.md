@@ -147,8 +147,15 @@ that the picture, the sound, the HUD and the menus read (`src/host/rustgame.ts`,
 
 1. **The address.** The page starts a mission by `startFromQuery(g, search)`: the row's hour and weather, the fog of war, a quiet mission's fog
    rung and cameras, the team's size, then the mission. In the Rust game an address's words are a type that holds nothing (`crate::Opaque`), so
-   `start_from_query`, `hour_from_query`, `weather_of_search`, `spec_of_query`, the quiet fog's and the loadout's readers stop at their first
-   line. This start takes a `ScenarioSpec` (kind, team size, deal) and calls `start_scenario`. What a link adds to that is not started here.
+   every reader of them stops at its first line: `start_from_query`, `spec_of_query`, `hour_from_query`, `weather_of_search`,
+   `fog_of_query`, `quiet_rung_of_query`, `row_settings`, the loadout's, the gear's, the morale's and the words' (17 functions that take the
+   words, 7 types with an arm for them, a private stand-in for `has` and `get` in each module). This start takes a `ScenarioSpec` (kind, team
+   size, deal) and calls `start_scenario`: what a link adds to that is not started here.
+   THE TYPE THEY WAIT FOR IS WRITTEN: `src/query.rs`, `Query`, the browser's rules for reading the text and the four calls the game makes on
+   it (`has`, `get`, `set`, `delete`), held to the browser's own reader case by case. What is left is in the game crate, whose types are
+   written by a program today: `Query` in place of `crate::Opaque` in those signatures, and each module's stand-ins gone for `q.has` and
+   `q.get`. Then `StartOpts` takes the address's text, the page hands `location.search` across once, and the compare starts a mission from
+   its link on both sides.
 2. **The puppet's objects.** The picture reads TypeScript objects that only the TypeScript start builds, and the apply writes onto objects it
    finds: of a man, his rig, his row of the men's columns, his capsules and his entry in the light probe's table; of the level, the box world
    the GPU is packed from (`BoxWorld`: the pack, the cut and round tables, the glass listed to the GPU), the light set, the marks' texture, the
@@ -169,7 +176,9 @@ that the picture, the sound, the HUD and the menus read (`src/host/rustgame.ts`,
 8. **The file's checks.** `validateLevelData` is TypeScript. A page that starts in Rust still validates in TypeScript, or the rules move.
 9. **What stands a game again from outside a tick.** A mission staged from a menu, a show, a kit view that sinks boxes: each is a TypeScript
    call on the puppet today, after which the Rust game is started again from the puppet. With a Rust start each becomes a call into the module.
-10. **Two players.** `StartOpts.seats` reaches `game_new`; nothing here has stood or stepped a game of two seats.
+10. **Two players.** `StartOpts.seats` reaches `game_new`, and the compare runs every mission as a game of two (`LEVELS.md`, the second
+    table): the 23 missions the game stages for two start equal and stay in step with the second seat idle (the other 15 the game
+    itself refuses for two). Nobody at the second seat's controls, no server, no rollback here.
 11. **The module.** This crate is kept out of the crates the page's module is built from. In it, the level reader, the JSON reader and the
     character's reader are new code for the module to carry, and a level's text and the character's bytes have to cross into it once.
 
@@ -180,13 +189,16 @@ tools/blitz/start.sh kit-yard.json                                   # a level o
 tools/blitz/start.sh kit-yard.json --scenario roomclear --frames 1800
 tools/blitz/start.sh --mission depot-four --frames 300               # a row of the mission list: its file, kind, team size and deal
 tools/blitz/start.sh rust/game_start/target/scenes/two-rooms.json --scenario roomclear --cpu --frames 900
-bun run tools/blitz/start-levels.ts --write                          # every mission, and LEVELS.md written from the result
+bun run tools/blitz/start-levels.ts --write                          # every mission, and LEVELS.md written from the result (--seats 2: as games of two)
 ```
 
 1. `tools/blitz/start.ts` stands the file with the TypeScript start on the page's stand and exports the state over the bridge.
 2. `rust/game_start`'s bin `start` stands the same file here and exports its own.
 3. `tools/blitz/diff.ts` lists the paths that differ, minus `known.txt` and `known-start.txt`: what a Rust start may differ in, each with its
-   reason (the picture's tables, memos, addresses). Anything a rule reads is mended in the start, never named there.
+   reason (the picture's tables, memos, addresses). Anything a rule reads is mended in the start, never named there. The diff is BY REACH FROM
+   THE LIVE GAME (`--live`): the TypeScript keeps some tables weakly, by the object, and lists a man a mission took off the floor for as long
+   as its collector leaves him, so compared by key a start was equal or not by when the collector ran. What that rule hides is at the head of
+   `diff.ts` (a strong table keyed by a row nothing else holds).
 4. With `--frames N`, the TypeScript's start is IMPORTED and both games are stepped in Rust by the same host frame with an idle hand: the die's
    count and every part of the block compared after every frame (the bytes themselves), then the two end states by path. This holds what a path diff of two starts
    cannot see (state the bridge does not carry, what the import mends as it reads).
