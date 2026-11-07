@@ -13,6 +13,10 @@ const AIR_CELL: f64 = crate::scene_air_grid::AIR_CELL;
 fn air(g: &Game) -> &'static mut ::sim::air::Air {
     &mut ::sim::weather::of(g.sim).air
 }
+/// The same table, to read.
+fn air_read(g: &Game) -> &'static ::sim::air::Air {
+    &::sim::weather::of_read(g.sim).air
+}
 
 /// The slot's tables, made if they are owed. (rust/sim/src/lib.rs air_of)
 fn plan(g: &mut Game) -> &'static mut ::sim::air::Plan {
