@@ -1244,7 +1244,7 @@ const youBare = new SideMap<object, { light: boolean; nvg: boolean }>('kit.youBa
 export const kitYouLight = (pl: object): boolean => !youBare.get(pl)?.light;
 export const kitYouNvg = (pl: object): boolean => goneWithTick('kitYouNvg') as any;
 /** KITTREE: a run that is played quietly — a quiet mission, or the plain night alone off the loadout screen: the mission hands you its sponge rounds */
-const stealthRun = (g: Game): boolean => !!g.quiet?.active || (KIT_SOLO.on && !g.guards.some(gd => !!gd.unit && gd.team === 'operative'));
+const stealthRun = (g: Game): boolean => !!g.quiet?.active || (g.soloCard && !g.guards.some(gd => !!gd.unit && gd.team === 'operative'));
 /** the sponge rounds a mission of this kind hands you over your card (the loadout screen's tile shows them as the mission's) */
 export const kitRingsLent = (stealth: boolean, m?: MemberKit): number => (treeUp() && !stealthOn() && stealth && (!m || tubed(m)) ? KITTREE.lend : 0);   // (KITDEAL.stealth: nothing is handed over a card — they are the stealth card's own)
 /** the card is the tree (ui/loadout.ts: the squad's row of kits is then the one list of named kits, at every team size) */
@@ -1303,26 +1303,28 @@ function kitAlone(g: Game) {
   g.doorTools.alone(chargeRow(0) ? KIT.members[0].charges : 0);
   if (SLOTS.on && wallHere()) g.wallCharge.setCarried(kitWalls(0));
 }
-/** THE SOLO NIGHT WEARS YOUR CARD: raised by the page when the plain night was started through the loadout screen (its Deploy: `?solo` — main.ts — or, off
+/** THE HARNESS'S PICK (host/profile.ts shippedBoot, a tool's own write): a game stood plain asks the solo card's question by kitSoloStand. Read once, into the game's record (stood.ts): no rule reads it and the bridge does not carry it. */
+export const KIT_SOLO = { stand: false };
+/** THE SOLO NIGHT WEARS YOUR CARD (Game.soloCard, this game's own): raised by the page when the plain night was started through the loadout screen (its Deploy: `?solo` — main.ts — or, off
  *  the start card over the plain night, the card's own Start), never by the harness. While it is up every fresh Player of the plain night gets kitPlayer
  *  (game.ts restartEncounter and the start card's Start → kitFresh), so the card outlives a restart like it does in a scenario, whose staging calls kitStage
  *  again. A CHECKPOINT LOAD brings back what the save holds — the rifle, the cans (savestate.ts) — over the card; only the two colours, which no save holds,
  *  stay the card's. A SHOWCASE's player is the show's: kitShow takes the card off as one starts, and nothing puts it on while one runs. Off = the plain
  *  night is nobody's business here: Start on the card is as it ever was. */
-export const KIT_SOLO = { on: false, stand: false };
-export function kitSolo(g: Game) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitSolo', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } } KIT_SOLO.on = true; eachSeat(g, kitPlayer); }   // (every player's man — seats.ts)
+export function kitSolo(g: Game) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitSolo', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } } g.soloCard = true; eachSeat(g, kitPlayer); }   // (every player's man — seats.ts)
 /** THE PAGE'S OWN QUESTION, in one place (main.ts asks it at boot with `solo` = its URL has ?solo): the plain night off the loadout screen, or a quiet mission
  *  alone, and no squad scenario up → your card goes on the player and on every fresh one after (kitSolo). */
 export function kitSoloIf(g: Game, solo: boolean) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitSoloIf', undefined, [g, solo]); if (__r !== RUST_PASS) return __r as any; } } if ((solo || (g.quiet?.active && !g.quiet.squad)) && !g.nightBreach?.active && !g.rescue?.active) kitSolo(g); }
-/** … AND THE HARNESS'S SHIPPED STAND ASKS IT TOO (`KIT_SOLO.stand`, raised by src/host/profile.ts shippedBoot and by nothing else: the frozen stand never
- *  comes past the first line, so its Sam is what a Player is built with and nothing is written). A headless game has no URL: stood up plain it IS the solo
+/** A MISSION STARTED LOWERS THE CARD, ON EVERY HOST (scenarioRun.ts startFromQuery calls this at its end; a page calls startFromQuery once at boot, with the card down, and asks
+ *  its own question after: main.ts soloOfAddress). … AND THE HARNESS'S SHIPPED STAND ASKS THE QUESTION TOO (`Game.stood.soloStand`, off the pick `KIT_SOLO.stand`, raised by
+ *  src/host/profile.ts shippedBoot: any other game goes no further than that lowering, so a game of the frozen stand has its Sam as a Player is built). A headless game has no URL: stood up plain it IS the solo
  *  night as the mission list deploys it (`?solo`), until a tool starts a scenario on it (scenarioRun.ts startFromQuery: `plain` false) — then the answer is
  *  the page's for that scenario's URL: a quiet mission alone wears your card, a squad's mission leaves it to its own staging (kitStage) and the flag comes
  *  down, as on a page that never had ?solo. Without this the shipped stand's solo Sam carried the eleven things a Player is built with where the page's
  *  carries the four he is issued. A TRAINING level (one that carries a lesson) is left alone: its page plays your counts as built (kitIssuedPage), and with
  *  nothing kept on the machine that is the fresh Player as he stands. */
-export function kitSoloStand(g: Game, plain = true) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitSoloStand', undefined, [g, plain]); if (__r !== RUST_PASS) return __r as any; } } if (!KIT_SOLO.stand) return; KIT_SOLO.on = false; if (!g.level.scenarios?.lesson?.steps?.length) kitSoloIf(g, plain); }
-export function kitFresh(g: Game) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitFresh', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } } if (KIT_SOLO.on && !g.touring && !g.director?.showing) kitPlayer(g); }
+export function kitSoloStand(g: Game, plain = true) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitSoloStand', undefined, [g, plain]); if (__r !== RUST_PASS) return __r as any; } } g.soloCard = false; if (!g.stood.soloStand) return; if (!g.level.scenarios?.lesson?.steps?.length) kitSoloIf(g, plain); }
+export function kitFresh(g: Game) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitFresh', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } } if (g.soloCard && !g.touring && !g.director?.showing) kitPlayer(g); }
 /** a showcase is about to start on this Player (main.ts): his card comes off — what he carried before it is his again */
 export function kitShow(g: Game) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitShow@src/game/kit.ts', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } }
   const pl = g.player, was = issuedPlayer.get(pl); if (!was) return;

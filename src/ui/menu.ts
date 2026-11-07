@@ -6,6 +6,7 @@
 // it stands beside the menu (ui/debrief.ts). DEBRIEF: the mission's card proper — up on mission complete (Again / Keep playing) and, a beat after Sam drops, as
 // the down card (Restart): the rating word and score, the numbers, the badges, the floor map with his path and the pins, the timeline. While any of them is
 // open main.ts freezes the simulation and keeps rendering the frozen frame underneath. Plain DOM, styled in index.html (#menu…) with ui/theme.ts's tokens.
+import { kitSolo } from '../game/kit';   // (the mission list's solo night off the start card: your card, on this game)
 export { loadSandbox } from '../game/sandbox';
 import { Engine } from '../engine';
 import { Game } from '../game/game';
@@ -147,7 +148,7 @@ export class Menu {
   /** Auto's calibration has just settled (main.ts wires Quality.onCalibrated): the options screen's live line follows, if it is the one up */
   refreshQualityNote() { refreshOptions(); }
 
-  open(mode: 'start' | 'pause' | 'debrief') { if (mode === 'debrief') closeOptions(); this.mode = mode; MISSIONS.startSolo = mode === 'start' ? () => this.close() : null; this.render(); this.root.classList.add('on'); }   // (the mission list's solo night off the start card IS Start)
+  open(mode: 'start' | 'pause' | 'debrief') { if (mode === 'debrief') closeOptions(); this.mode = mode; MISSIONS.startSolo = mode === 'start' ? (card) => { this.close(); if (card) kitSolo(this.d.game); } : null; this.render(); this.root.classList.add('on'); }   // (the mission list's solo night off the start card IS Start)
   close() { closeOptions(); MISSIONS.startSolo = null; closeMissions(); if (this.mode === 'start') this.d.onStart(); this.mode = 'closed'; this.run = false; this.root.classList.remove('on'); this.d.focusGame?.(); }   // keys go to the game, not the (now hidden) button that had focus
   /** the pause card with 'Run so far' open beside it (Tab, while that is what Tab is trying out: ui/tabkey.ts) */
   openRun() { this.run = true; this.open('pause'); }

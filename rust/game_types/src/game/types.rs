@@ -668,9 +668,38 @@ impl GameEventCause {
     }
 }
 
+/// What a game was stood with (src/game/stood.ts): its own record, set once at the stand, and the one rules read
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct StoodWith {
+    /// the weather the game is born in, None the level's own
+    pub weather: Option<crate::weather_kinds::WeatherKind>,
+    /// the weather is the address's for the life of the game
+    pub locked: bool,
+    /// the hour the stand lays over the level
+    pub hour: crate::hours::HourId,
+    /// that hour's sun's strength, and whether it was said
+    pub sun: f64,
+    pub sun_given: bool,
+    /// the hour holds the level's own storm off
+    pub dry: bool,
+    /// a harness game stood plain, whose missions ask the solo card's question by kit_solo_stand
+    pub solo_stand: bool,
+}
+impl StoodWith {
+    /// what a game stood with nothing said for it holds: the level's own weather, at the level's own night
+    pub fn blank() -> Self {
+        StoodWith { weather: None, locked: false, hour: crate::hours::HourId::Night, sun: 1.0, sun_given: false, dry: true, solo_stand: false }
+    }
+}
+impl Default for StoodWith { fn default() -> Self { Self::blank() } }
+
 /// (TypeScript: Game, src/game/game.ts:785)
 #[derive(Clone, Debug)]
 pub struct Game {
+    /// what this game was stood with
+    pub stood: crate::game::StoodWith,
+    /// the solo night's card: your own kit on the plain night's player and on every fresh one
+    pub solo_card: bool,
     pub col: crate::scene_collision::StaticCollision,
     pub snow_field: Option<crate::render_snow_field::SnowField>,
     pub snow_tracks: Option<crate::snow_tracks::SnowTracks>,
@@ -862,6 +891,8 @@ impl Game {
     /// what a new one holds: the TypeScript's field initialisers, before its constructor
     pub fn blank() -> Self {
         Game {
+            stood: crate::game::StoodWith::blank(),
+            solo_card: false,
             col: crate::scene_collision::StaticCollision::blank(),
             snow_field: None,
             snow_tracks: None,

@@ -196,7 +196,7 @@ if (!names.length || names.includes('tut-road')) { console.log('\n=== lesson-che
       const after = K.KIT.members[0].weapon, stored2 = K.kitTry(0, 'trim', 1).ok && kept().trim === K.KIT.members[0].trim; const B = await standRow(alone);
       verdict(threw && after === 'pistol' && stored2 && B.g.player.hasRifle === true, 'a staging that throws leaves the kept table and its store in place, and the next lesson start is still the issue kit', `threw ${threw} · table '${after}' · a change written ${stored2} · next start's rifle ${B.g.player.hasRifle}`);
     });
-  } finally { UI.loadoutOpen()?.close(); K.kitIssuedPage(false); K.KIT_SOLO.on = false; K.kitLoad(null, ''); LESSON.on = lessonOn; }
+  } finally { UI.loadoutOpen()?.close(); K.kitIssuedPage(false); K.kitLoad(null, ''); LESSON.on = lessonOn; }
 }
 console.log(fails ? `\n=== lesson-check: ${fails} FAIL of ${checks} ===` : `\n=== lesson-check: ALL PASS (${checks} checks) ===`);
 process.exit(fails ? 1 : 0);
