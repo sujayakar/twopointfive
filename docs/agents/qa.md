@@ -346,8 +346,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   it are plain until the next look, which lays them again and names them `lost`; the fence looks before and after it puts the tables back); a
   row a module copied into a local before the fold was laid; a child killed before it ends hands over nothing. UNDER IT `holds` IS RED: every
   hold of `holds.ts` over a settled row is refused, which is the point; those holds go as their checks are re-aimed or deleted.
-  THE LIST: 992 rows, each `row`, `page` (its value on the page) and `kind`: 866 settled, 93 open decision (stays a switch), 33 player's or
-  run-time (stays a variable). It is WRITTEN from the port's switch list (project files, `rebuild/rust-sim/port/blitz/port-list.json`: the
+  THE LIST: 992 rows, each `row`, `page` (its value on the page) and `kind`: 866 settled, 85 open decision (stays a switch), 41 player's or
+  run-time (stays a variable; eight of them were called open until 2026-11-07: Hard turns PRESSURE.on and DIGIN.on on, a quiet mission with a squad
+  turns on PAIRUP.on, PAIR.on, SNEAK.on and SPOTTED.on, WALLSNAP.press is an Options row, POSEMATH.singles is written inside the tick). It is WRITTEN from the port's switch list (project files, `rebuild/rust-sim/port/blitz/port-list.json`: the
   source; a row changes kind there): `bun run tools/qa/switch-list.ts make <that list>`, and `… same <that list>` says whether the two agree.
   A NEW RULE'S SWITCH joins by `bun run tools/qa/switch-list.ts new` (an open decision at its page value; needs no list from outside; `make`
   keeps such a row until the port's list has it): without it `fold` line (2) is red, since every true/false row of the tables must be on the
