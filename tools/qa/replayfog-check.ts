@@ -32,7 +32,7 @@ export async function replayfogCheck(): Promise<boolean> {
   const { FOG } = await import(`${ROOT}/src/game/fogofwar.ts`);
   const { digestGame } = await import(`${ROOT}/src/game/digest.ts`);
   const { thinWant } = await import(`${ROOT}/src/game/thinline.ts`);
-  const { irMade } = await import(`${ROOT}/src/game/irlaser.ts`);
+  const { irMade, IR } = await import(`${ROOT}/src/game/irlaser.ts`);
   const log = console.log;
   const quiet = async <T>(fn: () => T | Promise<T>): Promise<T> => { const e = console.error, w = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = log; console.error = e; console.warn = w; } };
   let fails = 0;
@@ -70,8 +70,8 @@ export async function replayfogCheck(): Promise<boolean> {
   Math.random = seeded(11);
   const W: any = await quiet(() => standUp({ level: lvl })); const g = W.game, world = g.engine.world, FW = g.fogOfWar; g.godMode = true;
   await quiet(() => startFromQuery(g, new URLSearchParams('roomclear&squad4')));
-  // (the team's lasers put off, IR.teamOff, is settled on and no longer written: until 2026-11-07 this check held it off to read the squad's infrared lines in the drawn list)
-  FOG.cone = true; FOG.own = false;   // (the fog's things, doors and squad doors are settled on and no longer written. Until 2026-11-07 this staging held FOG.squadDoors off so that the door the squad works was a leaf the fog drew where it was last seen: the squad's own door is now drawn as it stands, so 'held a leaf where it was last seen' is asked of whatever leaf the run leaves out of the eyes)
+  if ('teamOff' in IR) (IR as { teamOff: boolean }).teamOff = false;   // (the team's lasers put off, a later default-on switch of the page's: this check reads the squad's infrared lines in the drawn list — held off on either stand)
+  FOG.cone = true; FOG.own = false; FOG.things = true; FOG.doors = true; FOG.squadDoors = false;   // (squadDoors off on either stand: the door the squad works is then a leaf the fog draws where it was last seen — the case the lift must put right)
 
   async function arm(lift: boolean, viewer: boolean, tube: boolean | null = null, goggles = false, thin = false): Promise<Arm> {
     const A: Arm = { digests: [], lifted: 0, hiddenMax: 0, more: 0, doors: 0, bad: [], ir: 0, irMax: 0, thin: 0, thinMax: 0, fat: 0 };

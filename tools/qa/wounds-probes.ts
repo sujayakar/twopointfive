@@ -229,6 +229,7 @@ export async function woundsSave(): Promise<boolean> {
 
 export async function woundsPlay(): Promise<boolean> {
   const F = family('wounds-play: the reticle on a wounded man, the card when Sam finishes another\'s wounded man, and no turning once down');
+  const turn0 = CH.TURN.on;
   try {
     // ---- the reticle: Sam wounds a staff man, walks round in front of him, puts the cursor on him and clicks — the round goes at him, where he is
     { const W: any = await quiet(() => standUp({ uploadEvery: 4 })); WM.WOUND.on = true; WM.resetWoundStats(); const g = W.game; g.godMode = true; g.playerInvisible = true; g.aiEnabled = false; g.infiniteAmmo = true;
@@ -256,12 +257,12 @@ export async function woundsPlay(): Promise<boolean> {
       const st = g.mission.stats;
       F.verdict(first && done && mid0.kills === k0.kills && mid0.knockouts === k0.knockouts && st.kills - k0.kills === 1 && st.knockouts === k0.knockouts && v.downBy === 'player' && v.downKind === 'shot',
         'wounded by a teammate\'s round (nothing on Sam\'s card), finished by Sam\'s: one kill, no knockout, his', `${describe(v)} · after the wound: kills +${mid0.kills - k0.kills} knockouts +${mid0.knockouts - k0.knockouts} · after Sam: kills +${st.kills - k0.kills} knockouts +${st.knockouts - k0.knockouts} · downBy ${v.downBy}`); }
-    // ---- the turn weight is on (settled): a man hit in mid-turn stops turning as he goes down — the body that sinks is the one that was drawn
-    { const S = await staged(); WM.WOUND.on = true; const v = S.foes()[0], sh = S.ops()[0], c = v.char;
+    // ---- the turn weight on (the page's default): a man hit in mid-turn stops turning as he goes down — the body that sinks is the one that was drawn
+    { CH.TURN.on = 1; const S = await staged(); CH.TURN.on = 1; WM.WOUND.on = true; const v = S.foes()[0], sh = S.ops()[0], c = v.char;
       S.step(2); c.turn.on = true; c.bodyYaw += 1.3; c.aimYaw += 1.3; c.update(DT);   // (his AI's wish is 1.3 rad round from where he is drawn: mid-turn)
       const fired = await quiet(() => S.shoot(sh, v, 'wounding')); const y0 = c.bodyYaw, a0 = c.aimYaw; let worst = 0;
       for (let i = 0; i < 180; i++) { S.step(1); worst = Math.max(worst, Math.abs(c.bodyYaw - y0), Math.abs(c.aimYaw - a0)); }
       F.verdict(fired && !!v.wound && worst < 1e-9, 'three seconds on his facing has not moved', `${describe(v)} · most his yaws moved: ${(worst * 180 / Math.PI).toFixed(3)}°`); }
-  } catch (e) { F.verdict(false, 'the probe ran', String((e as Error)?.stack ?? e)); } finally { restore(); }
+  } catch (e) { F.verdict(false, 'the probe ran', String((e as Error)?.stack ?? e)); } finally { CH.TURN.on = turn0; restore(); }
   return F.done();
 }

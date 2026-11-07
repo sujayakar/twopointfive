@@ -123,10 +123,10 @@ export const quietStart = guarded(async () => {
   { const k0 = dealKey(g), same: string[] = []; for (let i = 0; i < 3; i++) { await hushed(() => g.restartEncounter()); same.push(dealKey(g)); }
     const starts = new Set<number>(), spots = new Set<number>(), sets = new Set<number>();
     for (let pin = 0; pin < 24; pin++) { await hushed(() => quitScenario(g)); await start(W, `?quiet=${pin}`); starts.add(g.quiet.deal.start); spots.add(g.quiet.deal.spot); sets.add(g.quiet.deal.patrol); }
-    // (until 2026-11-07 the line also asked that unpinned restarts deal afresh, with 'every mission starts the same way' written off: that rule is settled on,
-    // an unpinned run is the first of each list on every restart, and samestart-check.ts holds it)
-    F.verdict(same.every(k => k === k0) && starts.size === Q.starts.length && spots.size === Q.spots.length && sets.size >= 2, 'a pinned deal is the same on every restart; over 24 pins every start and every spot comes up',
-      `pin 7 → ${k0}, restarted ${same.join(' ')} · 24 pins: ${starts.size} starts, ${spots.size} spots, ${sets.size} patrol sets`); }
+    (await import(`${ROOT}/src/game/samestart.ts`)).SAMESTART.on = false;   // (the deal BEHIND 'every mission starts the same way': with that switch on — the shipped stand — an unpinned run is the first of each list on every restart, samestart-check.ts; the runner puts the table back)
+    await hushed(() => quitScenario(g)); await start(W, '?quiet'); const free = new Set<string>(); for (let i = 0; i < 12; i++) { await hushed(() => g.restartEncounter()); free.add(dealKey(g)); }
+    F.verdict(same.every(k => k === k0) && starts.size === Q.starts.length && spots.size === Q.spots.length && sets.size >= 2 && free.size >= 3, 'a pinned deal is the same on every restart; over 24 pins every start and every spot comes up; unpinned, restarts deal afresh off the run\'s die',
+      `pin 7 → ${k0}, restarted ${same.join(' ')} · 24 pins: ${starts.size} starts, ${spots.size} spots, ${sets.size} patrol sets · 12 unpinned restarts: ${free.size} different deals`); }
   { await hushed(() => quitScenario(g));
     const flags1 = [PAIRUP.on, PAIR.on, SNEAK.on, SPOTTED.on, SILENT.on, SILENT.start, HOSTILE.guard.operative];
     F.verdict(!g.quiet.active && activeScenario(g) === null && JSON.stringify({ spawn: L.playerSpawn, mission: L.mission }) === authored && g.guards.length === L.routes.length && g.guards.every((x: any, i: number) => x.routeI === i && g.engine.lights.lights.includes(x.flashlight)) && flags1.join() === flags0.join(),
@@ -229,16 +229,15 @@ export const quietCheckpoint = guarded(async () => {
   const k0 = dealKey(g), S = await hushed(() => W.snapshot('probe', true)), men0 = g.guards.map((x: any) => ({ n: x.callsign, r: x.routeI, p: [...x.char.pos] })), sam0 = [...g.player.char.pos], t0 = g.time;
   F.verdict(gate === null && !!S.quiet && `${S.quiet.deal.start}/${S.quiet.deal.spot}/${S.quiet.deal.patrol}` === k0 && S.guards.length === g.guards.length, 'on a calm quiet run the autosave\'s own gate passes (the manned roster IS the roster), and the file carries the deal',
     `canSave: ${gate ?? 'ok'} · deal ${k0} in the file: ${JSON.stringify(S.quiet)} · ${S.guards.length} men filed of ${g.level.routes.length} routes`);
-  // a restart, some play, then the load
-  // (WRITTEN BEFORE 'every mission starts the same way': until 2026-11-07 the run was restarted until it stood on ANOTHER deal, with that rule written off,
-  // and the line asked that the load came over another deal. The rule is settled on: every unpinned restart is the same deal, so that half is out)
-  await hushed(() => g.restartEncounter());
+  // restarts until the run stands on ANOTHER deal, then some play, then the load
+  (await import(`${ROOT}/src/game/samestart.ts`)).SAMESTART.on = false;   // (so a restart CAN deal another: with the switch on every unpinned restart is the same deal — the runner puts the table back)
+  let tries = 0; do { await hushed(() => g.restartEncounter()); tries++; } while (dealKey(g) === k0 && tries < 40);
   const other = dealKey(g); steps(W, 3);
   const why = SAVE.canLoad(g, S); await hushed(() => W.restore(S));
   const men1 = g.guards.map((x: any) => ({ n: x.callsign, r: x.routeI, p: [...x.char.pos] }));
   const same = men1.length === men0.length && men1.every((a: any, i: number) => a.r === men0[i].r && flat(a.p, men0[i].p) < 0.05);
-  F.verdict(why === null && dealKey(g) === k0 && same && flat(g.player.char.pos, sam0) < 0.05 && Math.abs(g.time - t0) < 1e-6 && g.quiet.active && JSON.stringify(g.level.mission.rack.front) === JSON.stringify(g.level.scenarios.quiet.spots[S.quiet.deal.spot].front),
-    'loaded over a restarted run: the file\'s start, spot and patrol set are in force again, every man and Sam where they were filed', `the run stood on ${other} · canLoad: ${why ?? 'ok'} · after the load ${dealKey(g)} · men ${men1.map((x: any) => `${x.n}@${at(x.p)}`).join(' ')} · Sam ${at(g.player.char.pos)}`);
+  F.verdict(other !== k0 && why === null && dealKey(g) === k0 && same && flat(g.player.char.pos, sam0) < 0.05 && Math.abs(g.time - t0) < 1e-6 && g.quiet.active && JSON.stringify(g.level.mission.rack.front) === JSON.stringify(g.level.scenarios.quiet.spots[S.quiet.deal.spot].front),
+    'loaded over a run standing on another deal: the file\'s start, spot and patrol set are in force again, every man and Sam where they were filed', `the run stood on ${other} · canLoad: ${why ?? 'ok'} · after the load ${dealKey(g)} · men ${men1.map((x: any) => `${x.n}@${at(x.p)}`).join(' ')} · Sam ${at(g.player.char.pos)}`);
   { await hushed(() => quitScenario(g)); const plain = SAVE.canLoad(g, S), P = await hushed(() => W.snapshot('plain', true));
     await start(W, '?quiet'); const cross = SAVE.canLoad(g, P);
     await hushed(() => quitScenario(g)); await start(W, '?quiet&squad=1'); steps(W, 0.5);
