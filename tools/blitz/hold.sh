@@ -43,7 +43,7 @@ for f in $( [ -d "$1" ] && find "$1" -name '*.tar.zst' | sort || echo "$1" ); do
   D=$(mktemp -d) || exit 3; tar --zstd -xf "$f" -C "$D" || { echo "hold.sh: cannot read $f"; rm -rf "$D"; exit 3; }
   HOW=; if [ "$(cat "$D/layout.txt" 2>/dev/null)" != "$LAY" ]; then fresh "$D" || { echo "$(basename "$f" .tar.zst): NOT HELD: its start is of another layout of the wire and cannot be made again: $WHY (exit 3)"; [ 3 -gt $W ] && W=3; rm -rf "$D"; continue; }; fi
   "$R" "$D" "$(cat "$D/ticks.txt")" > "$D/rust.log" 2>&1; r=$?
-  echo "$(basename "$f" .tar.zst): $( [ $r = 0 ] && echo "the same over $(cat "$D/ticks.txt") ticks" || grep -a 'FIRST PARTED\|^PANIC' "$D/rust.log" | head -1 | cut -c1-160 ) (exit $r; $(sed -n 1p "$D/command.txt" 2>/dev/null)${HOW:+; $HOW})"
+  echo "$(basename "$f" .tar.zst): $( [ $r = 0 ] && echo "the same over $(cat "$D/ticks.txt") ticks" || grep -a 'FIRST PARTED\|^PANIC' "$D/rust.log" | head -1 | cut -c1-160 ) (exit $r; $(sed -n 1p "$D/command.txt" 2>/dev/null)${HOW:+; $HOW})$(grep -a -m1 '^VERDICT' "$D/rust.log" | sed 's/^/ · /')"
   [ $r -gt $W ] && W=$r; rm -rf "$D"
 done
 exit $W
