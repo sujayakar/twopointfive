@@ -1219,6 +1219,34 @@ impl<'ast, 'a> Visit<'ast> for Pass<'a> {
             _ => None,
         };
         let mut alias_init = false;
+        if let (Pat::Tuple(pt), Some(init)) = (&l.pat, &l.init) {
+            if let (Expr::Tuple(et), true, true) = (&*init.expr, init.diverge.is_none(), l.attrs.is_empty()) {
+                let plain = |p: &Pat| matches!(p, Pat::Ident(i) if i.subpat.is_none() && i.by_ref.is_none());
+                if pt.elems.len() == et.elems.len() && pt.elems.len() > 1 && pt.elems.iter().all(plain) {
+                    let settled: Vec<usize> = (0..pt.elems.len()).filter(|&i| self.marked_bool(&et.elems[i]).is_some() && matches!(&pt.elems[i], Pat::Ident(p) if p.mutability.is_none())).collect();
+                    if !settled.is_empty() {
+                        let ind = self.indent_of(self.r(l).start).to_string();
+                        let mut out = String::new();
+                        for &i in &settled {
+                            out.push_str(&format!("let {} = {};\n{ind}", self.text(self.r(&pt.elems[i])), self.text(self.full(self.r(&et.elems[i])))));
+                        }
+                        let rest: Vec<usize> = (0..pt.elems.len()).filter(|i| !settled.contains(i)).collect();
+                        let pats: Vec<&str> = rest.iter().map(|&i| self.text(self.r(&pt.elems[i]))).collect();
+                        let vals: Vec<&str> = rest.iter().map(|&i| self.text(self.full(self.r(&et.elems[i])))).collect();
+                        match rest.len() {
+                            0 => out = out.trim_end().to_string(),
+                            1 => out.push_str(&format!("let {} = {};", pats[0], vals[0])),
+                            _ => out.push_str(&format!("let ({}) = ({});", pats.join(", "), vals.join(", "))),
+                        }
+                        // (only where the statement stands alone on its line: the new lines take its indent)
+                        let r = self.r(l);
+                        if self.src[self.line_start(r.start)..r.start].trim().is_empty() {
+                            self.edit(r, out, "a tuple let: the settled name on its own");
+                        }
+                    }
+                }
+            }
+        }
         if let Some(init) = &l.init {
             self.delim.insert(self.key(&*init.expr));
             if pat_has_ref_mut(&l.pat) && !self.knob_write(&init.expr, "taken by `ref mut`") {
@@ -1311,7 +1339,14 @@ impl<'ast, 'a> Visit<'ast> for Pass<'a> {
     fn visit_arm(&mut self, a: &'ast syn::Arm) {
         self.push();
         self.bind_pat(&a.pat);
-        if let Some((_, g)) = &a.guard {
+        if let Some((if_tok, g)) = &a.guard {
+            // `pattern if true =>`: the guard says nothing (one that is settled no is left: its arm never matches)
+            if self.marked_bool(g) == Some(true) && a.attrs.is_empty() {
+                let from = self.r(&a.pat).end;
+                let to = self.full(self.r(&**g)).end;
+                let _ = if_tok;
+                self.edit(from..to, String::new(), "a match guard that is always yes");
+            }
             self.visit_expr(g);
         }
         self.delim.insert(self.key(&*a.body));
@@ -1625,6 +1660,17 @@ impl<'ast, 'a> Visit<'ast> for Pass<'a> {
             }
             Expr::If(ifx) => {
                 // an `if` standing as a value
+                if !self.claimed.contains(&self.key(ifx)) && ifx.attrs.is_empty() && self.marked_bool(&ifx.cond).is_none() {
+                    // `if c { true } else { true }`: the test decides nothing, and goes where it plainly has no effects
+                    let one = |b: &Block| -> Option<bool> { match b.stmts.as_slice() { [Stmt::Expr(x, None)] => self.marked_bool(x), _ => None } };
+                    if let (Some(a), Some((_, els))) = (one(&ifx.then_branch), &ifx.else_branch) {
+                        if let Expr::Block(eb) = &**els {
+                            if one(&eb.block) == Some(a) && eb.label.is_none() && self.pure(&ifx.cond) {
+                                self.edit(self.r(e), Self::lit(a), "if: both sides the same yes or no");
+                            }
+                        }
+                    }
+                }
                 if !self.claimed.contains(&self.key(ifx)) && ifx.attrs.is_empty() {
                     if let Some(on) = self.marked_bool(&ifx.cond) {
                         let whole = self.r(e);
