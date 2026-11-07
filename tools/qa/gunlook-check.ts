@@ -9,8 +9,6 @@
 //   bare    a teammate whose card has the suppressor off carries the issue guns' bare rows (weapons.ts mk18bare, g19bare): with the switch on the long gun
 //           is drawn with a bare barrel where its can was, to the same muzzle, and the pistol — in his hand or on his thigh — with nothing ahead of its
 //           slide; with the can on, and with the switch off, each is drawn as it always was
-//   off     the switch off, or on with nobody carrying one of the guns, is the same run by digest; the two stands' row, the registry, the page's flag, a
-//           recording from before it
 // Run it on both stands (plain, and TPS_PROFILE=shipped): it raises the switch, the gun slots and the big slot itself. Nothing here looks at a picture or
 // hears a sound (tools/qa/gunlook-sheet.ts and gunlook-plates.ts draw the pictures; the listening page plays the voices).
 import { ROOT } from './headless.ts';
@@ -29,10 +27,6 @@ const { buildOne, HEARD } = await import(`${ROOT}/src/audio/sfx.ts`);
 const { fireWeapon, handProps, killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 const { modelGrip, modelMuzzleAhead, sc20kMuzzleAhead, RIG, BARE_BARREL } = await import(`${ROOT}/src/game/rigProps.ts`);
 const { spawnUnit } = await import(`${ROOT}/src/game/guards.ts`);
-const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
-const { knobRegistry } = await import(`${ROOT}/src/game/knobs.ts`);
-const { applyKnobs, knobsSnapshot } = await import(`${ROOT}/src/game/journal.ts`);
-const { FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`);
 
 type Verdict = (ok: boolean, label: string, detail: string) => void;
 function family(title: string): { verdict: Verdict; done: () => boolean } {
@@ -236,29 +230,9 @@ export async function gunlookBare(): Promise<boolean> {
   return F.done();
 }
 
-// ───────────────────────────────────────────────────────────── off
-export async function gunlookOff(): Promise<boolean> {
-  const F = family('gunlook-off: the switch off, or on and nobody carrying one of the guns, is the same run');
-  await kept(async () => {
-    const run = async (on: boolean) => {
-      const R: any = await hushed(() => rig(17, { stage: false })); raise(on); const g = R.game; R.RC.start(17); const hashes: string[] = [];
-      for (let i = 0; i < 600; i++) { R.step(); if (i % 150 === 149) hashes.push(hashDigest(digestGame(g, true))); }
-      return { hashes, told: g.guards.filter((gd: any) => gd.char.gunLook).length + (g.player.char.gunLook ? 1 : 0), own: g.guards.filter((gd: any) => gd.char.gunLook?.hand).length };
-    };
-    const off = await run(false), on = await run(true);
-    F.verdict(J(off.hashes) === J(on.hashes) && off.told === 0 && on.told > 0 && on.own === 0, 'ten seconds of the staged room clear on the cards as issued: off, no figure is told a model; on, every figure is asked and none carries one of the guns — the run digests the same',
-      `off: ${off.hashes.join(' ')} (${off.told} figures told)\n    on:  ${on.hashes.join(' ')} (${on.told} figures told, ${on.own} with a model in hand)`);
-    const reg = knobRegistry(), page = /GUNLOOK\.on = !q\.has\('nogunlook'\)/.test(await Bun.file(`${ROOT}/src/host/profile.ts`).text());
-    F.verdict('GUNLOOK.on' in FROZEN_HOLDS && reg.GUNLOOK === GUNLOOK && page, 'the switch is one of the two stands\' rows, in the knob registry, and the page writes it on unless ?nogunlook', `frozen hold: ${FROZEN_HOLDS['GUNLOOK.on']} · registered ${reg.GUNLOOK === GUNLOOK} · the page writes it: ${page}`);
-    const R: any = await hushed(() => rig(17, { stage: false })); GUNLOOK.on = true; const snap = knobsSnapshot(R.game); const has = !!snap.tables.GUNLOOK; delete snap.tables.GUNLOOK; applyKnobs(R.game, snap);
-    F.verdict(has && GUNLOOK.on === false, 'a recording carries the table, and one from before it replays with the switch off', `carried ${has} · after a file without it: on = ${GUNLOOK.on}`);
-  });
-  return F.done();
-}
-
 if (import.meta.main) {
-  const want = process.argv.slice(2); const all: [string, () => Promise<boolean>][] = [['own', gunlookOwn], ['hands', gunlookHands], ['bare', gunlookBare], ['off', gunlookOff]];
-  const bad = want.filter(w => !all.some(([n]) => n === w)); if (bad.length) { console.error(`unknown: ${bad.join(' ')} (own hands bare off)`); process.exit(2); }
+  const want = process.argv.slice(2); const all: [string, () => Promise<boolean>][] = [['own', gunlookOwn], ['hands', gunlookHands], ['bare', gunlookBare]];
+  const bad = want.filter(w => !all.some(([n]) => n === w)); if (bad.length) { console.error(`unknown: ${bad.join(' ')} (own hands bare)`); process.exit(2); }
   let ok = true; for (const [n, fn] of all) if (!want.length || want.includes(n)) { try { ok = (await fn()) && ok; } catch (e) { ok = false; console.log(`- FAIL — gunlook-${n} threw\n    ${(e as Error).stack ?? (e as Error).message}`); } }
   console.log(`\n=== gunlook-check: ${ok ? 'ALL PASS' : 'FAILED'} ===`); process.exit(ok ? 0 : 1);
 }

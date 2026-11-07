@@ -5,7 +5,6 @@
 //           in less time than the reload, the long gun hangs on its sling; with nobody in front of him it goes back and the primary comes up full
 //           (no checkpoint slice: a floor with a spawned unit on it — every teammate is one — takes no checkpoint, savestate.ts canSave)
 //   fight   two teammates with a round each and three men five metres in front of them: the third is shot with a sidearm well inside the reload
-//   off     the switch off = the run of the build before, by digest; the two stands' row, the registry, the page's flag, a recording from before it
 // Run it on both stands (plain, and TPS_PROFILE=shipped): it raises the switch itself. Nothing here looks at a picture.
 import { ROOT } from './headless.ts';
 import { rig } from './doortools-probes.ts';
@@ -21,10 +20,6 @@ const LOAD = await import(`${ROOT}/src/game/kitload.ts`);
 const { GUNLOOK } = await import(`${ROOT}/src/game/gunlook.ts`);
 const GR = await import(`${ROOT}/src/game/gunreload.ts`);
 const { spawnUnit } = await import(`${ROOT}/src/game/guards.ts`);
-const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
-const { knobRegistry } = await import(`${ROOT}/src/game/knobs.ts`);
-const { applyKnobs, knobsSnapshot } = await import(`${ROOT}/src/game/journal.ts`);
-const { FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`);
 
 type Verdict = (ok: boolean, label: string, detail: string) => void;
 function family(title: string): { verdict: Verdict; done: () => boolean } {
@@ -142,27 +137,6 @@ export async function gunslotsFight(): Promise<boolean> {
     const gapOn = on.lastDown - on.dryAt, gapOff = off.lastDown < 0 ? Infinity : off.lastDown - off.dryAt;
     F.verdict(on.out >= 1 && on.side >= 1 && on.lastDown > 0 && gapOn < WEAPONS[K.kitGun(K.kitDefault(1))].reload.dur && gapOn < gapOff, 'with the switch on the last man is down to a sidearm round sooner after the guns ran dry than a magazine change takes; with it off no sidearm is fired and he stands longer', `on: dry at ${f2(on.dryAt)} s, last man down ${f2(on.lastDown)} s (${f2(gapOn)} s after), ${on.out} sidearms out, ${on.side} sidearm rounds\n    off: dry at ${f2(off.dryAt)} s, last man down ${off.lastDown < 0 ? 'never in twelve seconds' : f2(off.lastDown) + ' s (' + f2(gapOff) + ' s after)'}, ${off.side} sidearm rounds`);
     F.verdict(on.up && on.back === on.out && on.end.every((e: string) => !/fiveseven|guard9mm/.test(e) && !/ 0\+0$/.test(e)), 'the floor quiet again, every sidearm is back in its holster and the primaries are in their hands, loaded', `back ${on.back} of ${on.out} · in hand: ${on.end.join(' · ')}`);
-  });
-  return F.done();
-}
-
-// ───────────────────────────────────────────────────────────── off
-export async function gunslotsOff(): Promise<boolean> {
-  const F = family('gunslots-off: the switch off, or on and nobody dry, is the same run');
-  await kept(async () => {
-    const run = async (on: boolean) => {
-      const R: any = await hushed(() => rig(17, { stage: false })); raise(on); const g = R.game; R.RC.start(17); const hashes: string[] = [];   // (the big slot's card on in both: the slots ride on it)
-      for (let i = 0; i < 600; i++) { R.step(); if (i % 150 === 149) hashes.push(hashDigest(digestGame(g, true))); }
-      return { hashes, second: g.guards.filter((gd: any) => gd.second).length };
-    };
-    const off = await run(false), on = await run(!BREAK);
-    F.verdict(J(off.hashes) === J(on.hashes) && off.second === 0 && on.second > 0, 'ten seconds of the staged room clear: nobody has a second gun with the switch off; on, the teammates carry one each and (no card changed, nobody dry) the run digests the same', `off: ${off.hashes.join(' ')} (${off.second} second guns)\n    on:  ${on.hashes.join(' ')} (${on.second} second guns)`);
-    const reg = knobRegistry(), page = /GUNSLOTS\.on = !q\.has\('nogunslots'\)/.test(await Bun.file(`${ROOT}/src/host/profile.ts`).text());
-    F.verdict('GUNSLOTS.on' in FROZEN_HOLDS && reg.GUNSLOTS === GUNSLOTS && page, 'the switch is one of the two stands\' rows, in the knob registry, and the page writes it on unless ?nogunslots', `frozen hold: ${FROZEN_HOLDS['GUNSLOTS.on']} · registered ${reg.GUNSLOTS === GUNSLOTS} · pageSwitches writes it: ${page}`);
-    const R: any = await hushed(() => rig(17, { stage: false })); GUNSLOTS.on = true; const snap = knobsSnapshot(R.game); const has = !!snap.tables.GUNSLOTS; delete snap.tables.GUNSLOTS; applyKnobs(R.game, snap);
-    F.verdict(has && GUNSLOTS.on === false, 'a recording carries the table, and one from before it replays with the switch off', `carried ${has} · after a file without it: on = ${GUNSLOTS.on}`);
-    GUNSLOTS.on = true; GUNSLOTS.heard = true; GUNSLOTS.bare = true; const snap2 = knobsSnapshot(R.game); delete (snap2.tables.GUNSLOTS as any).heard; delete (snap2.tables.GUNSLOTS as any).bare; applyKnobs(R.game, snap2);
-    F.verdict(GUNSLOTS.on === true && GUNSLOTS.heard === false && GUNSLOTS.bare === false, 'a recording from before a key replays without it: a teammate\'s quiet round unheard, a bare carbine the AKS-74U row', `on ${GUNSLOTS.on} · heard ${GUNSLOTS.heard} · bare ${GUNSLOTS.bare}`); GUNSLOTS.heard = true; GUNSLOTS.bare = true;
   });
   return F.done();
 }
@@ -285,8 +259,8 @@ export async function gunslotsGuns(): Promise<boolean> {
 }
 
 if (import.meta.main) {
-  const want = process.argv.slice(2); const all: [string, () => Promise<boolean>][] = [['card', gunslotsCard], ['mate', gunslotsMate], ['fight', gunslotsFight], ['guns', gunslotsGuns], ['off', gunslotsOff]];
-  const bad = want.filter(w => !all.some(([n]) => n === w)); if (bad.length) { console.error(`unknown: ${bad.join(' ')} (card mate fight guns off)`); process.exit(2); }
+  const want = process.argv.slice(2); const all: [string, () => Promise<boolean>][] = [['card', gunslotsCard], ['mate', gunslotsMate], ['fight', gunslotsFight], ['guns', gunslotsGuns]];
+  const bad = want.filter(w => !all.some(([n]) => n === w)); if (bad.length) { console.error(`unknown: ${bad.join(' ')} (card mate fight guns)`); process.exit(2); }
   let ok = true; for (const [n, fn] of all) if (!want.length || want.includes(n)) { try { ok = (await fn()) && ok; } catch (e) { ok = false; console.log(`- FAIL — gunslots-${n} threw\n    ${(e as Error).stack ?? (e as Error).message}`); } }
   console.log(`\n=== gunslots-check: ${ok ? 'ALL PASS' : 'FAILED'} ===`); process.exit(ok ? 0 : 1);
 }

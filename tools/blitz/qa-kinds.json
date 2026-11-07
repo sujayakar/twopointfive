@@ -142,12 +142,6 @@
 "CLOSE.noKnife=false",
 "CLOSE.rmbHold=false"
 ],
-"close-off": [
-"STALK.on=false",
-"CLOSE.noKnife=false",
-"CLOSE.rmbHold=false",
-"CLOSE.on=false"
-],
 "close-offer": [
 "STALK.on=false",
 "CLOSE.noKnife=false",
@@ -207,9 +201,6 @@
 "SAMESTART.on=false",
 "ROOMCLEAR.fresh=false"
 ],
-"glasspen-off": [
-"GLASSPEN.on=false"
-],
 "guidewords": [
 "WORDS.guide=false",
 "WORDS.on=false"
@@ -220,11 +211,6 @@
 "GUNLOOK.on=false"
 ],
 "gunlook-hands": [
-"OWNBLOW.on=false",
-"KITDEAL.on=false",
-"GUNLOOK.on=false"
-],
-"gunlook-off": [
 "OWNBLOW.on=false",
 "KITDEAL.on=false",
 "GUNLOOK.on=false"
@@ -251,11 +237,6 @@
 "GUNROLES.on=false",
 "GUNROLES.post=false"
 ],
-"gunroles-off": [
-"OWNBLOW.on=false",
-"GUNROLES.on=false",
-"GUNROLES.deal=false"
-],
 "gunshells": [
 "KITDEAL.on=false",
 "OWNBLOW.on=false",
@@ -279,12 +260,6 @@
 "KITDEAL.on=false",
 "GUNLOOK.on=false"
 ],
-"gunslots-off": [
-"OWNBLOW.on=false",
-"KITTREE.on=false",
-"KITDEAL.on=false",
-"GUNSLOTS.on=false"
-],
 "hands-body": [
 "HANDS.carry=false",
 "HANDS.on=false"
@@ -292,9 +267,6 @@
 "hands-door": [
 "HANDS.on=false",
 "DOORWAY.oneWay=false"
-],
-"hands-off": [
-"HANDS.on=false"
 ],
 "hands-team": [
 "OWNBLOW.on=false",
@@ -305,9 +277,6 @@
 "CLOSE.noKnife=false",
 "CLOSE.rmbHold=false",
 "CLOSE.handsLow=false"
-],
-"handwork-off": [
-"HANDWORK.on=false"
 ],
 "handwork-swap": [
 "HANDWORK.on=false",
@@ -380,11 +349,6 @@
 "RELOAD.auto=false",
 "QUICKTHROW.on=true",
 "KITANIM.nv=false",
-"KITANIM.on=false"
-],
-"kitanim-off": [
-"RELOAD.auto=false",
-"QUICKTHROW.on=true",
 "KITANIM.on=false"
 ],
 "kitanim-reload": [
@@ -473,11 +437,6 @@
 "OWNBLOW.on=false",
 "OWNCHARGE.on=false"
 ],
-"owncharge-off": [
-"OWNBLOW.on=false",
-"OWNCHARGE.on=false",
-"KITLOAD.on=false"
-],
 "owncharge-save": [
 "OWNBLOW.on=false"
 ],
@@ -549,10 +508,6 @@
 ],
 "roomclear-rooms": [
 "NIGHTBREACH.blindFire=false"
-],
-"roomfit-off": [
-"NIGHTBREACH.blindFire=false",
-"ROOMFIT.on=false"
 ],
 "roomfit-walk": [
 "NIGHTBREACH.blindFire=false"
@@ -654,15 +609,6 @@
 "SQUADNET.clear=false",
 "SQUADNET.on=false"
 ],
-"squadnet-off": [
-"AUTOPILOT.plain=false",
-"AUTOPILOT.restack=false",
-"SQUADNET.on=false",
-"SQUADNET.why=false",
-"SQUADNET.clear=false",
-"SQUADNET.endCall=false",
-"SQUADNET.edge=false"
-],
 "squadnet-why": [
 "AUTOPILOT.plain=false",
 "AUTOPILOT.restack=false",
@@ -689,14 +635,6 @@
 "CLOSE.noKnife=false",
 "CLOSE.rmbHold=false",
 "STEALTHPOSE.on=false"
-],
-"stealthpose-off": [
-"STEALTHPOSE.on=false",
-"STEALTHPOSE.idle=false",
-"STEALTHPOSE.walk=false",
-"STEALTHPOSE.rise=false",
-"STEALTHPOSE.creep=false",
-"STEALTHPOSE.cable=false"
 ],
 "stealthpose-standdown": [
 "STEALTHPOSE.on=false"
@@ -729,12 +667,6 @@
 "SLOTSETUP.pop=false",
 "GUNSLOTS.on=false",
 "STICKY.mark=false"
-],
-"sticky-off": [
-"SLOTSETUP.on=false",
-"SLOTSETUP.pop=false",
-"GUNSLOTS.on=false",
-"STICKY.on=false"
 ],
 "sticky-save": [
 "SLOTSETUP.on=false",
@@ -855,10 +787,6 @@
 "RESCUE.seedRoamers=false",
 "WORDS.on=false"
 ],
-"words-off": [
-"WORDS.on=false",
-"RESCUE.seedRoamers=false"
-],
 "words-overheard": [
 "CUES.overheard=false"
 ],
@@ -867,9 +795,6 @@
 ],
 "work-held": [
 "WORK.heldPass=false"
-],
-"work-off": [
-"WORK.on=false"
 ],
 "work-posted": [
 "POWEROUT.on=false",
@@ -880,12 +805,6 @@
 ],
 "workstow-mate": [
 "OWNBLOW.on=false"
-],
-"workstow-off": [
-"OWNBLOW.on=false",
-"KITANIM.on=false",
-"WORKSTOW.on=false",
-"HANDWORK.on=false"
 ],
 "workstow-sam": [
 "OWNBLOW.on=false",
@@ -1328,7 +1247,6 @@
 "close-marks": "iii",
 "close-melee": "iii",
 "close-mode": "iii",
-"close-off": "iii",
 "close-offer": "iii",
 "close-rows": "iii",
 "close-seat": "iii",
@@ -1440,7 +1358,6 @@
 "doormenu-rows": "iii",
 "doorpath-file": "0",
 "doorpath-gun": "0",
-"doorpath-off": "0",
 "doorpath-paths": "0",
 "doorshot": "iii",
 "doorsolid": "iv-a",
@@ -1574,7 +1491,6 @@
 "glasspen-ai": "iv-a",
 "glasspen-lines": "iv-a",
 "glasspen-near": "iv-a",
-"glasspen-off": "iv-a",
 "glasspen-player": "iv-a",
 "glasspen-rule": "iv-a",
 "glassreal": "iv-a",
@@ -1606,20 +1522,17 @@
 "gunhold-whip": "iii",
 "gunlook-bare": "iii",
 "gunlook-hands": "iii",
-"gunlook-off": "iii",
 "gunlook-own": "iv-b",
 "gunreload": "iii",
 "gunroles-deal": "iii",
 "gunroles-entry": "iii",
 "gunroles-fight": "iii",
 "gunroles-lanes": "iii",
-"gunroles-off": "iii",
 "gunshells": "iii",
 "gunslots-card": "iv-b",
 "gunslots-fight": "iii",
 "gunslots-guns": "iii",
 "gunslots-mate": "iii",
-"gunslots-off": "iii",
 "gunwall": "iii",
 "halftwice": "iii",
 "handleside-men": "iii",
@@ -1630,12 +1543,10 @@
 "hands-body": "iii",
 "hands-door": "iii",
 "hands-harness": "iii",
-"hands-off": "iii",
 "hands-team": "iii",
 "handslot": "iii",
 "handslow": "iii",
 "handwork-harness": "iii",
-"handwork-off": "iii",
 "handwork-radio": "iii",
 "handwork-swap": "iii",
 "handwork-work": "iii",
@@ -1660,7 +1571,6 @@
 "holddrop": "iii",
 "holdfire": "iv-a",
 "holdglass-loud": "iv-a",
-"holdglass-off": "iv-a",
 "holdglass-open": "iv-a",
 "holdglass-other": "iv-a",
 "holdglass-quiet": "iv-a",
@@ -1729,7 +1639,6 @@
 "kitanim-joints": "iii",
 "kitanim-midswap": "iii",
 "kitanim-nv": "iii",
-"kitanim-off": "iii",
 "kitanim-reload": "iii",
 "kitanim-sling": "iii",
 "kitcan-tiles": "0",
@@ -1869,7 +1778,6 @@
 "off-hinges-blast": "iii",
 "off-hinges-charge": "iv-a",
 "off-hinges-hung": "iii",
-"off-hinges-off": "iii",
 "off-hinges-restart": "iii",
 "off-hinges-sweep": "iii",
 "off-hinges-walk": "iii",
@@ -1909,7 +1817,6 @@
 "ownblow": "iii",
 "owncharge-door": "iii",
 "owncharge-kit": "ii",
-"owncharge-off": "iv-a",
 "owncharge-save": "iii",
 "owncharge-squad": "iv-a",
 "ownroofs": "iii",
@@ -2075,7 +1982,6 @@
 "roomfight-sight": "iii",
 "roomfit-cleared": "iii",
 "roomfit-hall": "iii",
-"roomfit-off": "iii",
 "roomfit-rooms": "iii",
 "roomfit-walk": "iii",
 "round": "iii",
@@ -2199,7 +2105,6 @@
 "squadnet-clear": "iv-a",
 "squadnet-end": "iv-a",
 "squadnet-net": "iv-a",
-"squadnet-off": "iv-a",
 "squadnet-why": "iv-a",
 "squadplay-go": "iii",
 "squadplay-key": "iii",
@@ -2254,7 +2159,6 @@
 "stealthpose-creep": "ii",
 "stealthpose-harness": "ii",
 "stealthpose-idle": "ii",
-"stealthpose-off": "ii",
 "stealthpose-rise": "ii",
 "stealthpose-standdown": "ii",
 "stealthpose-walk": "ii",
@@ -2263,7 +2167,6 @@
 "sticky-fog": "iii",
 "sticky-kit": "ii",
 "sticky-mark": "ii",
-"sticky-off": "ii",
 "sticky-save": "ii",
 "sticky-take": "iv-a",
 "sticky-wand": "iii",
@@ -2428,7 +2331,6 @@
 "words-hostage": "iii",
 "words-lint": "iii",
 "words-log": "iii",
-"words-off": "iii",
 "words-overheard": "iii",
 "words-routes": "iii",
 "wordsmall": "iii",
@@ -2440,11 +2342,9 @@
 "work-harness": "ii",
 "work-held": "iii",
 "work-objective": "iii",
-"work-off": "iii",
 "work-posted": "iii",
 "work-walk": "iii",
 "workstow-mate": "iii",
-"workstow-off": "iii",
 "workstow-sam": "iii",
 "workstow-wall": "iv-b",
 "world-edge": "iii",

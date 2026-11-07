@@ -355,6 +355,7 @@ async function main() {
   chP.catch(() => { /* awaited below */ });
   void chP.then(setFigureCast, () => { /* the menus' figure of a man stays undrawn */ });
   urlFlagsOnEngine(engine);
+  if (rustGame) rustGame.rustSettledHold();   // (?rust=1: the switch rows that are constants of the Rust game are held at their page values from here, before the level is dressed and the kept rows are read: host/rustgame.ts)
   let level = await bootLevel(q, engine, tick);
 
   await tick();
@@ -384,7 +385,7 @@ async function main() {
     ({ game, cam } = await standGame(engine, { level, ch, smoke, populate: false, seed }));
   }
   boot.span('gameCtor', tGame); boot.mark('game');
-  if (rustGame) { rustGame.rustAttach(game); (window as any).__rust = Object.assign(rustGame.RUST_GAME, { hashes: rustGame.rustHashes, means: rustGame.rustMeans, resync: rustGame.rustResync, whole: rustGame.rustWhole, file: rustGame.rustFile, fileIn: rustGame.rustFileIn, poke: rustGame.rustPoke, state: rustGame.rustState, warmUp: (n?: number) => rustGame.rustWarm({ input, cam, canvas }, n) }); }   // (?rust=1: from here the game's tick is the Rust game's and this Game its puppet)
+  if (rustGame) { rustGame.rustAttach(game); (window as any).__rust = Object.assign(rustGame.RUST_GAME, { hashes: rustGame.rustHashes, settled: rustGame.RUST_SETTLED, means: rustGame.rustMeans, resync: rustGame.rustResync, whole: rustGame.rustWhole, file: rustGame.rustFile, fileIn: rustGame.rustFileIn, poke: rustGame.rustPoke, state: rustGame.rustState, warmUp: (n?: number) => rustGame.rustWarm({ input, cam, canvas }, n) }); }   // (?rust=1: from here the game's tick is the Rust game's and this Game its puppet)
   if (LOOK.on) lookDoors(game.doors.list, engine.world.statics, LOOK_DOORS[(q.get('levelFile') ?? '').replace(/-gwot(?=\.json$)/, '')]);   // (picture only: under the default look a level that wears it has its door leaves in its own paint and weathered wood, not the office's veneer — scene/lookTidy.ts)
   // … and the maps of what the level stands up with are made before its first frame (render/gbuffer.ts needLook, awaited with the pipelines below): every static,
   // door's leaf and loose prop's part is asked its word, by the one rule (whatever a paint is told by: its colour, or a name) and after the leaves have their paint
@@ -493,6 +494,7 @@ async function main() {
   resolveGlassFlagsAndHooks(engine, gpu);
   if (smokeLook.on) putSmokeLook(engine);   // (HOW SMOKE IS DRAWN ON THE LOOK PAGE, render/smokeLook.ts: the lab's tuned numbers; ?smokelook=0 = as the build draws it. Before the panels are built: the smoke lab's "as the page opened" is these)
   const panel = new Panel();
+  if (rustGame) { const set = panel.setStatus.bind(panel); panel.setStatus = (f: () => string) => set(() => { const w = rustGame.rustSettledLine(); return w ? `${w} \u00b7 ${f()}` : f(); }); }   // (?rust=1: what the hold of the settled rows turned away, on the panel's first line: host/rustgame.ts)
   buildPanel(panel, engine, game, smoke, cam, overlay, audio, quality, () => ({ fps: fpsSm, union: unionSm }));   // (the status strip reads the frame loop's own smoothed numbers — only ever called from the panel's refresh, long after they exist)
   if (sneakLabAsked(new URLSearchParams(location.search))) sneakLabBoot(game, panel);   // ?sneaklab: the lab's own system in the panel, open (host/sneaklab.ts) — without the word nothing of it is made
   if (fireLabAsked(new URLSearchParams(location.search))) fireLabBoot(game, panel);   // ?firelab: the fire's numbers live in the panel (host/firelab.ts), nothing of it made without the word
@@ -1835,4 +1837,5 @@ FATAL.tell = (r, card) => {
   try { setTimeout(once, 1500); void fetch('/qa/commit', { cache: 'no-store' }).then(x => x.ok ? x.text() : '').then(t => once(t.trim()), () => once()); } catch { once(); }
 };
 
-main().catch(e => { console.error(e); if (kitViewOn) kitViewFatal(); if (e instanceof NoWasmError) showFatal(NO_WASM_WORDS, { report: { message: e.message.slice(0, 400), stage: 'wasm' } }); else showFatalError(e); readyReject(e); });
+main().catch(e => { console.error(e); if (kitViewOn) kitViewFatal(); if (e instanceof NoWasmError) showFatal(NO_WASM_WORDS, { report: { message: e.message.slice(0, 400), stage: 'wasm' } }); else if ((e as Error)?.name === 'RustGameError') showFatal((e as Error).message, { report: { message: (e as Error).message.slice(0, 400), stage: 'rust game' } });   // (?rust=1: the Rust game's own failure, in its plain words: host/rustgame.ts)
+  else showFatalError(e); readyReject(e); });

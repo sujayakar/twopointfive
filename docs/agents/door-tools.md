@@ -480,7 +480,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   402 → 451 of 576 teammates up (+49, 95 % +13 to +85), the depot 408 → 441 (+33, −6 to +73); a man in a door leaf 443 → 2 and 681 → 0 spells. QA `probes.ts doorpath`
   (paths / gun / file / off; `DOORPATH_OLD=1` = the old entry, must fail paths and gun; `DOORPATH_FILE_BREAK=1` = file with every entry let go back to front (`tools/qa/doorpath-backward.ts` preloaded),
   must fail (file reads the entry's own queue, not who stood nearer the frame: from an uneven split stack the deal sends the far jamb's man second — listed, not failed; on the SHIPPED stand file is red on one crossing,
-  the barracks' first door: the go comes with Blue One still 4.5 m off, he is dealt third and crosses ahead of Red Two who stood a metre nearer — the deal's, there since at least 10-13); `doorpath-off` = each run against ITSELF with the walk taken out of the
+  the barracks' first door: the go comes with Blue One still 4.5 m off, he is dealt third and crosses ahead of Red Two who stood a metre nearer — the deal's, there since at least 10-13); `doorpath-off` (deleted 2026-11-06 with the off side: qa.md) = each run against ITSELF with the walk taken out of the
   process (`tools/qa/doorpath-inert.ts` preloaded: the walk's entries emptied, its calls throwing), three runs on the frozen stand and three on shipped, the walk pinned off on
   both — no frozen digests since 10-13, ordinary merges kept moving them; `DOORPATH_ALL=1` = six runs a stand; its red paths, each must fail: `DOORPATH_OFF_BREAK=1` the walk on in both
   runs · `=2` the walk switched on behind the pin in the preloaded run alone · `=3` the walk on in both and only its knobs set to nonsense in the second — each with a 'red

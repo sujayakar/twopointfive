@@ -384,7 +384,7 @@ pub extern "C" fn face_kept_n() -> usize {
 }
 #[no_mangle]
 pub extern "C" fn face_back(h: u32, k: u32) -> u32 {
-    let slot = super::with(h, |x| x.g.sim);
+    let (slot, serial_next) = super::with(h, |x| (x.g.sim, x.g.serial_next));
     let made: Option<Box<game::game::Game>> = KEPT.with(|v| match v.borrow().get((k as usize).wrapping_sub(1)).and_then(|x| x.as_ref()) {
         Some(Kept::Own(g, block)) => {
             unsafe { core::ptr::copy_nonoverlapping(block.as_ptr(), sim::state::addr(slot) as *mut u8, block.len().min(block_len())); }
@@ -398,7 +398,9 @@ pub extern "C" fn face_back(h: u32, k: u32) -> u32 {
         Some(Kept::Bytes(state, block)) => Some(game_run::start(state, block, slot).0),
         None => None,
     });
-    let Some(g) = made else { return 0 };
+    let Some(mut g) = made else { return 0 };
+    // (the serial counter never goes back in a game: what was dealt after the save is still held on the host's side, and a number means one thing)
+    g.serial_next = g.serial_next.max(serial_next);
     super::with(h, |x| { x.g = g; x.cmd = None; x.cmds = None; x.after.clear(); });
     crate::memo::forget(h);
     1

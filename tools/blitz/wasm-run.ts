@@ -43,7 +43,7 @@ const bytes = readFileSync(WASM);
 const t0 = performance.now(), mod = new WebAssembly.Module(bytes), tC = performance.now();
 const imports = WebAssembly.Module.imports(mod);
 if (imports.length) { say(`wasm-run: the module imports ${imports.length} things (${imports.slice(0, 4).map(i => i.module + '.' + i.name).join(', ')}): a module of the game imports nothing`); process.exit(3); }
-const X: any = new WebAssembly.Instance(mod, {}).exports, mem: WebAssembly.Memory = X.memory;
+const X: any = new WebAssembly.Instance(mod, { env: { face_roll: () => 0 } }).exports, mem: WebAssembly.Memory = X.memory;
 say(`wasm-run: ${WASM.split('/').slice(-3).join('/')}: ${bytes.length} bytes, compiled in ${(tC - t0).toFixed(0)} ms, imports 0, exports ${WebAssembly.Module.exports(mod).length}; memory at the start ${(mem.buffer.byteLength / 1048576).toFixed(1)} MB`);
 
 if (has('--exports')) {

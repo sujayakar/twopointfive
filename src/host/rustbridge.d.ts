@@ -28,9 +28,20 @@ declare module 'tps-bridge/puppet-lists.json' {
   const lists: { step: string[]; start: string[] };
   export default lists;
 }
+declare module 'tps-bridge/scan' {
+  export function makeScan(g: unknown, knobs: Record<string, unknown>, send: (b: Uint8Array) => void, count: (q: string) => void, settingsOnly?: boolean): { flush(): void; rebase(): void; stats(): { settledLeft: number } & Record<string, unknown> };
+}
 declare module 'tps-bridge/poke' {
   export function makePoke(g: any, knobs: Record<string, unknown>, send: (b: Uint8Array) => void): (obj: unknown, path: string | (string | number)[], value: unknown) => void;
 }
 declare module 'tps-bridge/ask' {
   export function installAsks(g: any, knobs: Record<string, unknown>, ask: (kind: number, row: number, seat: number, bytes: Uint8Array) => Uint8Array, reapply: () => void): { after(): void };
+}
+declare module 'tps-bridge/switches.json' {
+  const list: { rows: { row: string; page: unknown; kind: string }[] };
+  export default list;
+}
+declare module 'tps-bridge/surface' {
+  export function surfaceHost(H: { g: any; knobs: Record<string, unknown>; surfaceOpen(): boolean; surfaceDispatching(): boolean; surfaceCall(row: number, bytes: Uint8Array): Uint8Array } | null, gone?: unknown): void;
+  export function crossing(key: string, self: unknown, args: unknown[]): unknown;
 }
