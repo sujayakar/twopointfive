@@ -30,24 +30,16 @@ const GLOSS_GLINT_MAX: f32 = 160.0;  // …and on the analytic glints, which are
 
 // (light / card staging, the RNG and directAtPoint live in gather_common.wgsl — shared with reflect.wgsl — and are prepended by passes.ts)
 
-fn cosineDir(N: vec3f) -> vec3f {
-  let up = select(vec3f(0.0, 1.0, 0.0), vec3f(1.0, 0.0, 0.0), abs(N.y) > 0.9);
-  let T = normalize(cross(up, N)); let B = cross(N, T);
-  let r = sqrt(rnd()); let a = rnd() * 6.2831853;
-  return normalize(T * (cos(a) * r) + B * (sin(a) * r) + N * sqrt(max(1.0 - r * r, 0.0)));
-}
-// STRATIFIED GATHER DIRECTIONS (settings.gatherStrata; ported from exp/trace-perf E8, docs/internal/trace-perf.md §2.10): the gather's k-th ray of K drawn from STRATUM (k + frame) mod K
-// of the cosine hemisphere — for the main gather's four rays (azimuth half) × (cos²θ half), each pixel jittering inside its stratum with its own two rnd() as before — instead of iid.
+// STRATIFIED GATHER DIRECTIONS (docs/internal/trace-perf.md §2.10): the gather's k-th ray of K is drawn from STRATUM (k + frame) mod K of the cosine hemisphere —
+// for the main gather's four rays (azimuth half) × (cos²θ half), each pixel jittering inside its stratum with its own two rnd().
 // Every pixel still covers all K strata every frame (a stratified estimate: the same expectation, never more variance than iid), the rng draws the same COUNT of numbers, but the k-th
 // rays of a whole 8×8 tile now share a stratum, i.e. a quarter of direction space: the lanes of a SIMD group walk more of the same grid cells (the trace lab measured 1.25× on such
-// rays; −13‥16 % of the gather pass at high). `const GATHER_STRATA: bool` is prepended by passes.ts (false / true → the pFGX / pFGXs `trace` pipelines, picked each frame by
-// passes.gatherStrata); false = cosineDir exactly as it was — the branch below folds away and the module compiles to the program it always was.
+// rays; −13‥16 % of the gather pass at high). The plain pattern (one cosine draw a ray, no strata) was a second `trace` program until 2026-11-07.
 fn cosineDirK(N: vec3f, k: u32, K: u32) -> vec3f {
-  if (!GATHER_STRATA) { return cosineDir(N); }
   let up = select(vec3f(0.0, 1.0, 0.0), vec3f(1.0, 0.0, 0.0), abs(N.y) > 0.9);
   let T = normalize(cross(up, N)); let B = cross(N, T);
   let s = (k + frame.frameIdx) % K;
-  var u = rnd(); var v = rnd();                                              // u = r² (cos²θ = 1 − u), v = azimuth ÷ 2π — the same two draws as cosineDir
+  var u = rnd(); var v = rnd();                                              // u = r² (cos²θ = 1 − u), v = azimuth ÷ 2π
   if (K == 4u) { u = (f32(s & 1u) + u) * 0.5; v = (f32(s >> 1u) + v) * 0.5; }   // four rays: (azimuth half) × (cos²θ half)
   else if (K == 2u) {                                                          // two rays over the same four cells as a Latin square: ray k takes cos²θ half (k + frame/2) and azimuth half (k + frame) —
     let f = frame.frameIdx;                                                    // every frame still covers both azimuth halves and both θ bands, the pairing alternates

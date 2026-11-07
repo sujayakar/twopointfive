@@ -81,7 +81,7 @@ async function arm(name: Arm, dump: string | null) {
   const particles = new Particles(S.device as never, engine.sceneLayout);   // (the page makes it beside the engine and waits for both: src/main.ts)
   let ready = false; const init = Promise.all([engine.init({ sharp: true, gbaa: true }), particles.init()]).then(() => { ready = true; });
   // THE LATER SET, by name: what the start may leave out with the row on (render/passes.ts traceJobs and init, render/froxels.ts). The dust twin only where it is drawn.
-  const LATER = ['restirM', 'gatherTrace', 'composite', 'compositeR', 'compositeS', 'froxelCull', 'froxelInject', 'froxelInjectJ', 'froxelTemporal', 'froxelIntegrate',
+  const LATER = ['restirM', 'composite', 'compositeR', 'compositeS', 'froxelCull', 'froxelInject', 'froxelInjectJ', 'froxelTemporal', 'froxelIntegrate',
     ...(DUST_DRAW.on ? ['volDust'] : []), 'volFroxel'];
   const later = new Set(wantFirst ? LATER : []);
   for (let turn = 0; turn < 400 && !ready; turn++) { for (const a of S.asked) if (!a.done && !later.has(a.label)) a.let(); await tick(); }
@@ -117,7 +117,6 @@ async function arm(name: Arm, dump: string | null) {
     return { err: '', by, none, flags: new Uint32Array(engine.frameData)[62], restirSent: S.wrote.includes(restirU), cfgY: new Uint32Array(restirU)[1] };
   };
   const VIEWS: { name: string; set: (s: Record<string, unknown>) => void; pass: string; own: string; meanwhile: string }[] = [
-    { name: 'the gather without strata', set: s => { s.gatherStrata = false; }, pass: 'gather', own: 'gatherTrace', meanwhile: 'gatherTraceS' },
     { name: 'the fragment composite (scale 1, nothing to decouple)', set: s => { s.renderScale = 1; s.sharpDirect = false; s.glassRefract = false; }, pass: 'composite', own: 'composite', meanwhile: '' },
   ];
   const shot = (when: string, landed: boolean) => {
@@ -276,7 +275,7 @@ if (argOf('--dump') !== null) {   // this tree, the environment's row
   console.log('\n=== across the arms ===');
   const same = (x?: string[], y?: string[]) => !!x && !!y && JSON.stringify(x) === JSON.stringify(y);
   check(same(boots.off, boots.first), 'Start on first frame shaders asks for the same pipelines as the build without it, by name');
-  check(!!boots.off && ['gatherTrace', 'gatherTraceS', 'gatherLight', 'vol', 'volFroxel'].every(l => boots.off!.includes(l)) && !boots.off.some(l => /^fgather/.test(l)), 'the gather is its two programs and the volumetric pass its two, and no one-kernel gather is asked for', (boots.off ?? []).filter(l => /gather|^vol/.test(l)).join(', '));
+  check(!!boots.off && ['gatherTrace', 'gatherLight', 'vol', 'volFroxel'].every(l => boots.off!.includes(l)) && !boots.off.some(l => /^fgather/.test(l)), 'the gather is its two programs and the volumetric pass its two, and no one-kernel gather is asked for', (boots.off ?? []).filter(l => /gather|^vol/.test(l)).join(', '));
   // the page's wiring, read as text: a player's start does not wait for the later set, a script's `__ready` does
   { const main = readFileSync(`${ROOT}/src/main.ts`, 'utf8');
     check(/\n  window\.__started = true;\n  void laterIdle\(\)\.then\(\(\) => \{ [^\n]*readyResolve\(\); \}\);/.test(main) && !/\n\s*readyResolve\(\);/.test(main),

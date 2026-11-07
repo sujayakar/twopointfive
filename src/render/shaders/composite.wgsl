@@ -53,29 +53,6 @@ fn geoN(p: vec2i) -> vec3f {
 fn upsampleIndirect(pix: vec2i, pin: vec2f, z: f32, N: vec3f) -> vec3f {   // pin = the pixel's position on the INTERNAL raster (= pixf; under SHARP pixf × in∕out)
   let hdims = vec2i(textureDimensions(indirectTex));
   var ip = pix; if (SHARP) { ip = vec2i(floor(pin)); }           // the internal pixel this pixel falls in
-  // GI IN MOTION (settings.giFullRes, docs/internal/gi-motion.md): the diffuse chain ran at the INTERNAL resolution this frame — the bound texture IS internal-sized (denoise.wgsl giUpsample did this
-  // function's joint-bilateral 3×3 before the temporal step; the à-trous chain ends in it) — so the internal pixel takes its own texel; under SHARP an output pixel takes the depth / normal-guided
-  // bilinear of the four internal texels round its position (guides at the output texel each internal pixel's centre falls in — gpx — as every other internal-grid term here)
-  if (all(hdims == inHi() + 1)) {
-    if (!SHARP) { return textureLoad(indirectTex, clamp(ip, vec2i(0), hdims - 1), 0).xyz; }
-    let b = floor(pin - 0.5); let t = pin - 0.5 - b; let base = vec2i(b);
-    var acc = vec3f(0.0); var wsum = 0.0;
-    for (var dy = 0; dy <= 1; dy++) {
-      for (var dx = 0; dx <= 1; dx++) {
-        let src = clamp(base + vec2i(dx, dy), vec2i(0), hdims - 1);
-        let d = textureLoad(gDepth, gpx(src), 0);
-        if (d >= 1.0) { continue; }
-        let zs = linearDepth(d, ipos(vec2f(src) + 0.5));
-        let ns = geoN(gpx(src));
-        var w = select(1.0 - t.x, t.x, dx == 1) * select(1.0 - t.y, t.y, dy == 1) + 1e-4;
-        w *= exp(-abs(zs - z) / max(z * 0.02, 0.02));
-        w *= pow(max(dot(ns, N), 0.0), 8.0) + 0.001;
-        acc += textureLoad(indirectTex, src, 0).xyz * w; wsum += w;
-      }
-    }
-    if (wsum < 1e-5) { return textureLoad(indirectTex, clamp(vec2i(floor(pin)), vec2i(0), hdims - 1), 0).xyz; }
-    return acc / wsum;
-  }
   let gdiv = i32(frame.lossyCfg.x); let goff = (gdiv - 1) / 2;   // gather divisor (2, or 3 with the lossy option) and the full-res offset each texel was computed at (fgather)
   let base = ip / gdiv;                                           // the texel whose sample pixel (gdiv·h + goff) is nearest: floor(p / gdiv) for both divisors
   var acc = vec3f(0.0); var wsum = 0.0;

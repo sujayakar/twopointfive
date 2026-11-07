@@ -53,7 +53,7 @@
     c4: { gbaa: true }, c4s: { gbaa: true, sharpDirect: true },
     // D: ReSTIR dim-penumbra grain — the estimator's existing levers first
     d_r5: { restirRays: 5 }, d_r6: { restirRays: 6 }, d_m8: { restirHistory: 8 }, d_m30: { restirHistory: 30 }, d_spAll: { restirSpatialAll: true }, d_sp5: { restirSpatial: 5, restirSpatialAll: true },
-    d_noKD: { restirKnownDark: false }, d_aud1: { restirAudit: 1.0 }, d_gradOff: { restirGradient: false }, d_coh: { restirCoherent: true },
+    d_noKD: { restirKnownDark: false }, d_aud1: { restirAudit: 1.0 }, d_gradOff: { restirGradient: false },
     // E: motion identity off (= main's index rule) for the churn scene
     e_nomv: { motionIds: false },
     // the finalists (docs/internal/image-quality.md §3): C2 = the history de-blur; C3jh = sharp direct + GBAA + decoupled jitter + de-blur; c3u = GBAA + jitter off at scale 1.0 (ultra: no internal / output split to decouple)

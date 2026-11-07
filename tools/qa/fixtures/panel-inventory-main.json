@@ -331,25 +331,6 @@
  },
  {
   "path": "Frame ▸ Sharp direct + GBAA",
-  "kind": "toggle",
-  "label": "sharp: EXPERIMENT output-res edge rays",
-  "title": "where a HARD shadow edge lies between an output pixel's internal taps, one deterministic ray to the strongest emitter's centre decides that light at the output resolution (a keyboard's contact shadow: 4.9 → 1.6 px); off by default — a binary ray cannot draw a soft penumbra that overlaps a hard one, and the fired region's rim shows the estimator's own bias as a faint line (docs/internal/sharp-direct.md §2 E)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Frame ▸ Sharp direct + GBAA",
-  "kind": "slider",
-  "label": "sharp: edge spread",
-  "min": 0.05,
-  "max": 1,
-  "step": 0.05,
-  "title": "the visibility-ratio range within ±2 internal px that flags an edge (0.3)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Frame ▸ Sharp direct + GBAA",
   "kind": "select",
   "label": "sharp: SLIVER rule",
   "title": "an output pixel none of whose 4×4 internal texels lies on its own surface (a door reveal, a chair leg, a limb's edge — 0.01–0.02 % of a frame at the follow camera) has no measured visibility: rule 0 borrowed the neighbours' ratio whatever surface they show (a lit floor lent lit to an occluded sliver: thin bright lines), per channel (their hue with it); rule 1 borrows nothing across surfaces — one deterministic ray per class to the strongest live emitter from the output pixel, the remainder on the neighbours' luminance ratio, both classes alike (docs/internal/direct-quality.md)",
@@ -380,17 +361,6 @@
   "kind": "toggle",
   "label": "GBAA: same-surface clamp",
   "title": "blend an edge pixel toward the neighbour across its edge only when that neighbour is at or behind it — never toward a NEARER third surface standing over the edge (a man before a partition's top edge lent half his colour to every edge pixel his outline crossed). Off = Persson's blend as it was",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Frame ▸ Sharp direct + GBAA",
-  "kind": "slider",
-  "label": "sharp: hard-hint px",
-  "min": 0.5,
-  "max": 12,
-  "step": 0.5,
-  "title": "an edge counts as hard while every shadowed pixel near holds a blocker-distance hint under this many internal px (2.5)",
   "def": false,
   "extra": ""
  },
@@ -652,14 +622,6 @@
  {
   "path": "Direct light ▸ Estimator — ReSTIR DI",
   "kind": "toggle",
-  "label": "restir: tile-coherent fresh draws",
-  "title": "the fresh candidate (which light, which point on its emitter) comes from a random stream shared by the 8×8 tile instead of one per pixel — each pixel's draw is still distributed by its OWN weights (unbiased per pixel), but the tile ends up tracing near-parallel rays, which the GPU walks about a third cheaper; the price is one-frame sampling noise correlated in 8×8 blocks where two lights of a class cast different shadows (the history decorrelates it over frames). A/B it on penumbrae",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Direct light ▸ Estimator — ReSTIR DI",
-  "kind": "toggle",
   "label": "restir: known-dark lights leave the draw",
   "title": "the lights an 8×8 tile's own shadow rays found dark EVERYWHERE last frame (a street lamp behind the outer wall, the next room's panel behind a shut door — in the unshadowed total, reach level > 0, never visible) leave that tile's fresh candidate draw: known dark like a reach-masked light — no ray, and none of the one-sample all-or-nothing noise that made the dim end of the break-room lino crawl (restir.wgsl BELIEFS). Off = A/B the first cut: every live light in the draw (unbiased; the auditors below then have nothing to do)",
   "def": false,
@@ -706,30 +668,6 @@
  {
   "path": "Direct light ▸ Estimator — ReSTIR DI",
   "kind": "toggle",
-  "label": "restir: D4 permutation sampling (whiter temporal noise)",
-  "title": "each frame a pixel inherits the reservoir of a neighbour within a 2×2-ish block chosen by a per-frame XOR pattern (RTXDI's permutation sampling): the slow random walk of one reservoir per pixel becomes noise the shadow filter and the TAA can average, for a little reuse bias inside penumbrae",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Direct light ▸ Estimator — ReSTIR DI",
-  "kind": "toggle",
-  "label": "restir: A/B raw target-ratio cut (flicker drops history)",
-  "title": "the temporal reservoir's confidence is cut by how much its own light's target changed at the pixel since last frame. ON = the 08-11 rule, the RAW ratio: a light that merely dimmed or brightened (the cubicles' flickering tube goes 15 % ↔ 100 % every other frame, a restrike, the lightning's decay) dropped every reservoir under it to a sample or three each stroke — 1–3-spp penumbrae the shadow filter smeared into blotches that pumped with the tube. OFF (the default) = each side of the ratio ÷ its light's power then and now: intensity / hue changes keep the visibility history (MIS weighs the two frames' targets either way), a cone that swept off the pixel or a lamp that moved still lets go (docs/internal/tjank.md)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Direct light ▸ Estimator — ReSTIR DI",
-  "kind": "toggle",
-  "label": "restir: A/B per-sample hue (the mosaic)",
-  "title": "shade every traced sample in its OWN light's colour (the estimator's first cut: unbiased per channel, but under two overlapping lights of different colours each pixel wears the colour of the light its reservoir happens to hold — a per-pixel mosaic crawling at the reservoir's rate; the break room's vending fronts show it). Off (the default) = the luminance estimate coloured by the believed-visible unshadowed mix at the pixel: per-tile lit / dark verdicts from the tile's own rays plus the pixel's own dark memory (restir.wgsl BELIEFS)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Direct light ▸ Estimator — ReSTIR DI",
-  "kind": "toggle",
   "label": "restir: spatial everywhere (biased)",
   "title": "spatial reuse at every pixel even without the final visibility ray: contact shadows soften by up to the radius. ON by default through Frame ▸ Quality & resolution ▸ motion-calm rows; off = only where the visibility ray runs",
   "def": false,
@@ -740,14 +678,6 @@
   "kind": "toggle",
   "label": "restir: motion — stochastic-bilinear reprojection",
   "title": "under a camera pan the temporal reservoir used to come from the NEAREST texel to the reprojected point: at 2.4 px a frame every pixel inherits from 2 px back while the picture moved 2.4, so the reservoir pattern slides across the floor the TAA holds still and neighbouring pixels share one verdict — 2–7-px blotches crawling under a panning floor. On: the texel is one of the four round the reprojected point, drawn by its bilinear weight per pixel per frame and validated by depth as ever, so a lineage follows the surface (diffusing ± ½ px) instead. Inert at rest by construction (docs/internal/direct-motion.md)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Direct light ▸ Estimator — ReSTIR DI",
-  "kind": "toggle",
-  "label": "restir: motion — reprojection dither is GLOBAL (bijective shift)",
-  "title": "how the stochastic reprojection above picks its texel: OFF = a per-pixel bilinear draw among the four round the reprojected point (lineages diffuse ± ½ px a frame; two neighbours can adopt one parent, so lineages coalesce into patches that grow with the memory); ON = one sub-pixel offset for the whole raster each frame (an R2 sequence) — a bijective shift, nothing duplicated or dropped, whose average over frames is the true flow, so the pattern stays registered to the surface within ± ½ px",
   "def": false,
   "extra": ""
  },
@@ -1159,14 +1089,6 @@
  {
   "path": "Indirect light ▸ Final gather",
   "kind": "toggle",
-  "label": "stratified gather directions (−13 % gather)",
-  "title": "the final gather's k-th ray of four drawn from STRATUM (k + frame) mod 4 of the cosine hemisphere — (azimuth half) × (cos²θ half), each pixel jittering inside it with its own two random numbers as before — instead of independently (the resampling gather's two fresh rays: a Latin square over the same four cells). Every pixel still covers all four strata every frame, so it is plain stratified sampling: the same expectation, temporal noise equal or lower; but the k-th rays of a whole 8×8 tile now share a quarter of direction space and walk the trace grid coherently — the gather pass −13‥16 % at high, −0.8 ms at ultra (exp/trace-perf E8, docs/internal/trace-perf.md §2.10). A different sample pattern, so NOT hash-identical to off. ON by default; off (?nogatherstrata, __gs.on = false) = the gather module exactly as it was. A second pipeline pair compiled at boot; flips live",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Indirect light ▸ Final gather",
-  "kind": "toggle",
   "label": "LOSSY: gather at 1/3 res (not 1/2)",
   "title": "final gather, its temporal accumulation and the à-trous run at a third of the internal resolution (4/9 of the pixels of half res); fgather / temporal / giblur / the composite upsample read the divisor from frame.lossyCfg.x and the targets are recreated when it changes. Off = the half-res path untouched",
   "def": false,
@@ -1185,25 +1107,6 @@
   "kind": "toggle",
   "label": "glossy floors (RT reflections off)",
   "title": "Does nothing while Materials ▸ RT reflections is on (ultra / high / medium): that pass replaces it. Traced glossy reflections on the polished floors (lobby stone, corridor + break-room lino — BoxFlag.Gloss): the final gather spends ONE extra mirror ray per gloss texel (view direction reflected about the floor, jittered over a 2.5° cone), shades what it hits like a gather hit plus the fixture's own glow (lit panels, screens, beacon domes, windows onto the sky, a torch spot on the wall), weights it by Schlick Fresnel on the view angle (F0 0.04 → ~0.045 from up here) × 0.85, runs it through its own half-res history + one blur pass and adds it in composite AFTER the diffuse terms (never × albedo). Costs about one trace + one shadow ray per gloss texel at gather res (shows in \"gather\") and two half-res filter dispatches (in \"temporal\"). Off = nothing stored, filtered or read: bit-identical (frame flag 2097152; debug view \"specular\" shows the term alone)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Indirect light ▸ GI in motion",
-  "kind": "toggle",
-  "label": "GI denoised at INTERNAL res",
-  "title": "GI in motion (B): the raw ⅓ / ½-res gather is upsampled (depth + normal guided, the composite's own 3×3) to the INTERNAL resolution first and the diffuse denoiser — history, clamp, moments, à-trous — runs there, composite reading it 1 : 1: a panning camera's reprojection error becomes an internal pixel instead of a gather texel and what residual survives is pixel-sized instead of texel-sized. Its statistics still come from the raw texels (5×5 of them). Costs an internal-res history set (≈ 8 × internal rgba16f) and the à-trous over the internal grid; the v3 denoiser only. Off = the gather-grid chain exactly as it was",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Indirect light ▸ GI in motion",
-  "kind": "slider",
-  "label": "· internal-res à-trous iterations",
-  "min": 1,
-  "max": 5,
-  "step": 1,
-  "title": "iterations of the diffuse à-trous at internal res under the row above, at strides divisor × 1, 2, 4, 8, 16 (the same reach on the ground as the gather-grid chain's 1, 2, 4, 8): fewer = cheaper, more residual noise between the texel samples",
   "def": false,
   "extra": ""
  },

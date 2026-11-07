@@ -194,10 +194,8 @@ export interface FroxelTier { h: number; d: number; k: number; hist: number; top
  *  of each output pixel), the looser the clip (fewer samples per output pixel per frame to judge history by) and the firmer the sharpen */
 type Taau = { phases: number; clipGamma: number; sharpen: number };
 /** per-preset v3 DENOISER tiers (engine settings dnShadowIters / dnShadowCap / dnGiIters / dnGiCap / dnSpecIters — render/denoise.ts): the same core scaled — à-trous iterations and the
- *  history cap per client. The shadow chain's strides are 1, 2, 4, 8, 16, so 3 iterations already travel 7 px = the 10-px penumbra cap's worth; a 4th only matters with the cap raised.
- *  + GI IN MOTION (docs/internal/gi-motion.md; settings.giFullRes / giFullIters): giFull = the diffuse client accumulated + filtered at the INTERNAL resolution (its history's
- *  reprojection error an internal pixel, not a gather texel), giFullIters à-trous iterations there. */
-type Dn = { shIters: number; shCap: number; giIters: number; giCap: number; spIters: number; giFull?: boolean; giFullIters?: number };
+ *  history cap per client. The shadow chain's strides are 1, 2, 4, 8, 16, so 3 iterations already travel 7 px = the 10-px penumbra cap's worth; a 4th only matters with the cap raised. */
+type Dn = { shIters: number; shCap: number; giIters: number; giCap: number; spIters: number };
 /** RAY-TRACED REFLECTIONS per tier (renderer v3 phase 4 — settings.rtReflect / rtReflectDiv / rtRays / rtMaxRough / rtAtrous; docs/internal/p4-materials.md): the reflection target's divisor, traced
  *  rays per pixel, the roughness cutoff, the reflection chain's à-trous iterations — ultra ÷2 · 2 · ≤ 0.55 · 4, high ÷2 · 1 · ≤ 0.45 · 3, medium ÷3 · 1 · ≤ 0.35 · 3, low / verylow off (the one BRDF's finish
  *  table and the detail layer stay on at every tier: they live in the g-buffer and cost nothing measurable). ?nortreflect vetoes `on` for the visit (rtVeto). */
@@ -315,8 +313,6 @@ export const sharpForce: { v: boolean | null } = { v: null };
 export const iqForce = { off: false };
 /** ?gbaa: GBAA + the TAA's jitter off forced for the visit whatever the presets place (main.ts sets it, apply() honours it after the tier's own taau rows) */
 export const gbaaForce = { on: false };
-/** ?nogim: GI-in-motion's two renderer switches (the internal-res diffuse chain, the young-history gather rays) vetoed for the visit whatever the presets place — the identity A/B against main */
-export const gimVeto = { on: false };
 /** ?nofroxel: the per-pixel volumetric march at every tier for the visit; ?froxel: the froxel path even at ultra / high (the A/B against the classic smoke those tiers ship) */
 export const froxelVeto = { on: false }; export const froxelForce = { on: false };
 /** the render scale a preset starts at on THIS engine: its TAAU scale with the resolve on, 1.0 without it (the old behaviour, ?notaau) */
@@ -606,7 +602,6 @@ export class Quality {
     const iq = iqForce.off ? IQ_OFF : p.iq; const sharpOn = sharpForce.v ?? (iq.sharp && !this.shed);   // the tier's resolve configuration (IqTier; ?noiq / ?sharp / ?nosharp force it; SHARP SHED keeps sharp direct off across auto's hops; the Tab ▸ Frame rows move each by hand until the next preset)
     this.putSharp(iq, sharpOn); S.taauHistSharp = iq.histSharp;
     S.dnShadowIters = p.dn.shIters; S.dnShadowCap = p.dn.shCap; S.dnGiIters = p.dn.giIters; S.dnGiCap = p.dn.giCap; S.dnSpecIters = p.dn.spIters;   // the v3 denoiser's tiers (render/denoise.ts; Tab ▸ Denoiser rows likewise)
-    S.giFullRes = !!p.dn.giFull && !gimVeto.on; S.giFullIters = p.dn.giFullIters ?? 4;   // GI in motion per tier (Dn above; ?nogim vetoes it for the visit; Tab ▸ Indirect light rows move them by hand until the next preset)
     S.restirRays = p.restir.rays; S.restirSpatial = p.restir.spatial; S.restirHistory = p.restir.history; S.heldRays = p.restir.held; S.restirMotionMin = p.restir.motionMin; S.restirMotionTaps = p.restir.motionTaps;   // ReSTIR DI's tier (the estimator itself is not a preset's business: ?norestir / the Tab row own it)
     const L = p.lossy; S.gatherThird = L.gatherThird; S.rcHalfRate = L.rcHalfRate; S.rcPeriods = [...L.rcPeriods];   // plain settings writes = exactly what the pause-menu rows do (engine.render mirrors them into setDivisors / rc.halfRate / the frame flag / lossyCfg each frame); a row flipped by hand afterwards sticks until the next preset is applied — by hand or by auto's ladder
     S.giFireflyK = L.fireflyK;   // the gather's relative firefly bound, the same way (lossyCfg.w; the Tab ▸ Indirect light slider is the by-hand row)

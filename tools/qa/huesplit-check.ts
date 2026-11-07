@@ -3,7 +3,7 @@
 //   bun run tools/qa/probes.ts huesplit        (family `render`)        HUESPLIT_BREAK=1 = the memory is moved before the shade, as it was: must FAIL
 // The maintainer on his GPU, 11-04, the depot at midday: "red rim on shadow also looks odd". Every shadow the sun threw was edged in red. The red was the mast's
 // obstruction lamp, which sends that ground under a ten-thousandth of the sun's light: with the lamp's colour set to black the edge was neutral, and with every
-// sample shaded in its own lamp's hue (settings.restirSampleHue) it was neutral too. THE FAULT: the estimator shades a class's light in the hue of the lamps the
+// sample shaded in its own lamp's hue (a debugger row, gone since) it was neutral too. THE FAULT: the estimator shades a class's light in the hue of the lamps the
 // pixel BELIEVES visible (Uv), and a pixel leaves out the lamp its own ray last found dark (darkSlot). The HUE SPLIT then lets a sample of a lamp that is not
 // believed keep its own hue. But Uv was summed by the memory as the frame found it, and the split asked it after this frame's rays had moved it. In a half
 // shadow a pixel's ray is blocked one frame and through the next: Uv had left the sun out, the ray came through and cleared the memory, the split called the

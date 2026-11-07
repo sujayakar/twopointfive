@@ -40,7 +40,7 @@ const { wgslDecls } = await import(`${ROOT}/src/gpu/wgslTrim.ts`) as typeof impo
 
 /** KB of pasted WGSL a kernel may not pass, by `module / entry` (a cut-set module's `Cut` off its label), the first row that matches; the last is everyone else's */
 const BUDGET: [RegExp, number][] = [
-  [/^gatherSplitS? \/ trace$/, 252],   // (the gather is two programs, render/gatherSplit.ts: its rays, then the light at what they hit)
+  [/^gatherSplit \/ trace$/, 252],   // (the gather is two programs, render/gatherSplit.ts: its rays, then the light at what they hit)
   [/^gatherSplit \/ light$/, 58],   // (113 before the gather took the reflections' one-loop writing of the light loop, 2026-11-07)
   [/^composite(R|S|SR)? \/ (fs|cs)$/, 403],
   [/^volumetricsDust \/ main$/, 433],
@@ -143,7 +143,7 @@ const list = [...rows.values()].sort((a, b) => b.pasted - a.pasted || (`${a.modu
 check(lost.length === 0, `every pipeline's module and entry point were found in the recorded texts${lost.length ? ` — not so: ${lost.slice(0, 6).join(', ')}` : ''}`);
 { // (a part of the page that fell out of this boot would leave the budget green on the rest: the card's own count is 104 pipelines, the cut set's 23)
   const nBoot = asked.filter(a => a.set === 'boot').length, nCut = asked.length - nBoot;
-  check(mods.length >= 58 && nBoot >= 104 && nCut >= 23, `the recording is a whole boot: ${mods.length} modules (58 at least), ${nBoot} pipelines of the boot's set (104 at least), ${nCut} of the cut set's (23 at least)`); }
+  check(mods.length >= 56 && nBoot >= 103 && nCut >= 22, `the recording is a whole boot: ${mods.length} modules (56 at least), ${nBoot} pipelines of the boot's set (103 at least), ${nCut} of the cut set's (22 at least)`); }
 
 const kb = (n: number) => (n / 1024).toFixed(n < 10240 ? 1 : 0);
 /** the functions pasted more than once into a kernel, by the text their copies come to */

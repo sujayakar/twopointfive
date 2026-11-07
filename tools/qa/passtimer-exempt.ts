@@ -8,7 +8,6 @@ export const PASS_EXEMPT: readonly PassExempt[] = [
   { at: 'render/outline.ts', label: 'outline', why: 'a render pass, as gdown: 0.04 ms on a rented card, 11-05' },
   { at: 'render/passes.ts', label: 'targets', why: "an encoder of its own, submitted when the targets are made again (a resize): not a frame's work, and the timer resolves on the frame's encoder alone" },
   { at: 'render/passes.ts', label: 'restartHistories', why: "an encoder of its own, submitted once when the histories are started over: not a frame's work" },
-  { at: 'render/passes.ts', label: 'giFullSwitch', why: 'clears the full-size indirect histories on the one frame that grid is switched' },
   { at: 'render/passes.ts', label: 'rtRestart', why: 'clears the reflection histories on the one frame reflections are switched back on' },
   { at: 'render/fogofwar.ts', label: 'fogofwarQa', why: "a check's readback of the fog pass, on an encoder of its own (qaRun): no frame runs it" },
   { at: 'render/savepic.ts', label: '', why: "the saved picture's one draw, on an encoder of its own, when a picture is asked for" },

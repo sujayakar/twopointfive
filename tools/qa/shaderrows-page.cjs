@@ -109,7 +109,7 @@ const DRAW = async (n) => { const dev = window.__engine.device; const yieldMacro
   }
   if (WALKS.includes('starts')) {   // where the row starts: on, in a person's browser with nothing kept and no word
     const BUILT = () => { const P = window.__engine.passes, B = window.__boot, labels = (window.__shaderCount?.pipes ?? []).map(p => p.label);
-      return { rows: window.__bench.deps.rows(), split: !!P.lFGX, splitPipes: !!(P.pFGXs || P.pFGX), mega: !!(P.pFG || P.pFGs || P.pFGR || P.pFGRs), volF: P.volFReady, labels: labels.filter(l => /gather/i.test(l)), pipes: B.pipelines, kept: localStorage.getItem('twopointsix.shaderrows'), fatal: (document.querySelector('#fatal') || {}).textContent || '' }; };
+      return { rows: window.__bench.deps.rows(), split: !!P.lFGX, splitPipes: !!P.pFGX, mega: !!(P.pFG || P.pFGs || P.pFGR || P.pFGRs), volF: P.volFReady, labels: labels.filter(l => /gather/i.test(l)), pipes: B.pipelines, kept: localStorage.getItem('twopointsix.shaderrows'), fatal: (document.querySelector('#fatal') || {}).textContent || '' }; };
     for (const [name, words, want] of [['starts', '', true], ['plain', '&compactshaders=0&splitrays=0&firstframe=0', false]]) {
       const { ctx, page, errs } = await fresh(true);
       const url = `http://localhost:${PORT}/?paused&quality=medium&mute&gpuretry=0${words}${QUEUE}`; log(url);
