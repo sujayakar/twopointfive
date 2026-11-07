@@ -68,7 +68,8 @@ The save controller (`src/game/savestate.ts`) runs on the puppet with its slots,
 - **The player's restart** (a card's button, the panel's, Shift+Enter): the game kept as the first step opened stands again. This is NOT the TypeScript's
   restart: that one keeps the clock and the die's place and deals a quiet mission afresh; this one is the same deal again. Both the TypeScript's
   `restartEncounter` and the Rust game's `game_restart` make the player's man anew, and a man made on the Rust side has no object the page can draw yet.
-- **The records only the page writes** (`verdict`, `par`: the dress step's) are copied with every kept game and written back with it.
+- **The record only the page writes** (`verdict`: the dress step's) is copied with every kept game and written back with it. The par clock was one
+  until the Rust tick took it (`rust/game_rules/src/par`): a kept game holds its clock like the rest of its state.
 - **`Game.saves` is not on the bridge.** The Rust tick reads it (Enter once down asks for this run's newest save), so the host hands the shelf's rows over
   whenever they change (`face_saves_in`) and reads back what the tick asked (`face_saves_asked`).
 - **A run alone saves in memory too** under the word (the TypeScript writes a file there). A file of the TypeScript's fields is refused: it would be poured
