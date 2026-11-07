@@ -855,6 +855,20 @@ row on his machine is the answer, and the word puts the count back on any machin
   "1 of 4 up", once on each build). With the driver's cache OFF and medium (`shader-count-page.cjs`, 8 cores, two boxes that may not be one kind): the
   boot's pipelines 41.8 s before, 49.8 s after, and `particlesUpdate` is the last of the boot's programs in where it was the sixth (31.6 to 42.9 s): the particle
   kernel is the next text to cut. The kept page on that card: the title 152 pipelines, 30 missions none.
+  **ONE OF THE NINE IS NOT A BRANCH: the snow's surface in the boxes' shading is a second text of the g-buffer's module (`render/gbuffer.ts`, `const
+  GBUF_SNOW`; the same day).** As a branch it put `snowBox` and, on the look's page, `lookSnow` into every level's box program: 181 to 294 KB of pasted
+  text on the plain page, 269 to 469 on the look's (its cut twin 539), for two levels' sake, and about 0.1 ms of every frame's g-buffer pass on the cloud
+  card. On another machine the look's page then lost its device at its first drawn frame on the software adapter (`?paused&quality=high&mute&look&
+  firstframe=1`; here the same page drew two frames equal to the tree before, pixel for pixel, at twice the seconds a frame: read it as a routine near
+  what that adapter can build, not as a rule). So `gbuffer` and `gbufferCut` are each made twice, with the snow's surface and without (`gbufferSnow`,
+  `gbufferCutSnow`: word for word what a snow level and any other level compiled before), and `gbuffer.wgsl`, `gbuffer_cut.wgsl`, `look.wgsl
+  lookSurface` and `snow.wgsl` ask the module's own `GBUF_SNOW`. A page draws with its level's own (`GBuffer.init`: `snowLookConfig.surface` picks) and
+  asks for the other through the later lane without keeping it: a page is one level for its whole life, and the ask is for the visit's next one. So the
+  kept page still compiles nothing at any level, the program a level draws with is the size it was, and a visit's first page compiles three programs
+  more (`gbufBoxesSnow`, `gbufBoxesCutSnow`, and `gbufSnow`, the hills, which is of the snow's module). The men's `cold` (look.wgsl lookMan) stays a
+  read of the level word. THE RULE IT LEAVES: a level's switch is a branch where the code is small, and a second program asked for on every page where
+  it is heavy; never a constant of a text a level's start would compile again. The card's numbers above are the branch form's: the second and third
+  level's load stands (the texts a level asks for are still the visit's), the 0.1 ms is gone with the branch.
   **Checks:** `bun run tools/qa/levelset-check.ts` (the page's boot recorded under the title's switches and a snow level's, rows as written and as the
   page opens: the same module texts and pipelines; the level word 0 and 511; the mesh shadows' one text for both casts with each cast's numbers in
   its list; `LEVELSET_BREAK=1` fails three) and `PORT=… JOBS=levels node tools/qa/keeppage-page.cjs` (EVERY mission of the list picked in turn on the
@@ -865,14 +879,40 @@ row on his machine is the answer, and the word puts the count back on any machin
   main.ts after the boot's freeze; `render/fogofwar.ts FogPass.warm`, `FogSight.warm`).** The fog's sight table and its pass made their programs the
   first frame a mission drew the fog. The title draws none, so on the kept page the first squad mission of a visit compiled `fogSight`, `fogofwar` and
   `fogofwarPre` under play, and their cut twins after them (the maintainer, 10-27: "i think we shouldn't do truly lazy compilation where then have
-  stutters during gameplay"). They are asked for once the boot's own are in, behind the start like the background set: not on the start card's count,
-  nothing waits for them, and the load's record (`made`, frozen at the boot's end) does not count them. 104 KB pasted for the three, 143 for the cut
+  stutters during gameplay"). They are asked for once the boot's own are in, behind the start: not on the start card's count, and the load's record (`made`, frozen at the
+  boot's end) does not count them. While one compiles it is one of the LATER set's (`gpu/device.ts laterHold`, taken in `FogPass.program` and
+  `FogSight.program`): a brief's Start, `__ready` and auto quality's measure wait for it, where a program made at first use was counted by nobody. 104 KB pasted for the three, 143 for the cut
   twins. `tools/qa/pageboot.ts` asks for them as the page does, so the size and compile tools read them. A pass that gains a program of its own asks
   for it in `warmFirstUse`. Still made at first use: whatever a `?word` trial builds, the save picture's, the debug views'.
   **A trap for `draw-equal.cjs`:** against a tree from before this, the squad view DIFFERS at both checkpoints (a quarter of the pixels, at the men's
   and the shadows' edges), because the older tree's fog programs are still compiling at drawn frames 3 and 7 and this one's are in. It is the compile
   and nothing else: equal with `&nofow` on both sides, and equal with the fog on once both pages are given the time (`DRAW_EQUAL_AFTER_READY` = a module
   that draws one frame and waits 150 s). The tree with the picture's lease alone is equal to the one before with no help. Never seen on a GPU.
+- **The composite is one program a form, the glass's bend its own statements (2026-11-07; `render/passes.ts compText(sharp, pre)`, `shaders/composite.wgsl`).**
+  The composite was compiled twice for each of its two forms (the fragment one and the sharp path's compute one), behind `const GLASS_REFRACT: bool`: a
+  refracting twin with the glass test ahead of the reads, and one with it after them. A frame drew one of the four, the encode picking by
+  `passes.glassRefract`. The refracting text already kept the older tint rule in an `else` for a frame with the setting off (`frame.glassCfg.w` = 0), and
+  with no pane crossed the two computed the same picture (the page had drawn `compositeSR` on every visit's first frames until `compositeS` was in). So
+  that text is the one kept and the second glass block is deleted: `compositeR`, `compositeSR`, `pCompR`, `pCompSR`, `passes.glassRefract` and the LATER
+  twin of the compute composite are gone, `compositeS` is the boot's own, and the fragment `composite` stays a LATER program under the first-frame row.
+  `settings.glassRefract`, `?norefract` and the panel's row are as they were. Two programs fewer at the boot and two fewer of the cut set: about 0.8 MB
+  of pasted text in each (`shaderinline-check`). **Picture** (`tools/qa/draw-equal.cjs`, the tree before against this one, software adapter, 640 by
+  360, high): the glass view, the squad view and the office at night EQUAL at both checkpoints, and the glass view under `&norefract` EQUAL at both (its
+  frames are not the default's, so the setting still does something). What those frames did not hold: a broken or cracked pane (the rig's staging broke
+  none on this build: its `unmet` says so), so the cracks' statements were moved by reading, not by a picture. Never seen on a GPU.
+- **What each program costs to compile, ALONE (2026-11-07; `tools/qa/shader-serial-page.cjs`).** The boot asks for its hundred programs side by side, so
+  `window.__boot.slowest` and the count tool's times "since asked" say which came in last, not which is dear. The tool boots the real page with every
+  `create…PipelineAsync` held in one line: a program goes to the browser when the one before it is back, and its time is its own. **On a cloud NVIDIA
+  card (A10G, Chrome on Vulkan, the driver's cache off, high, `?firstframe=1`, this tree with the cleanup's deletes to the one direct-light program):**
+  128 programs, 140.9 s of one compiler thread: the first-frame set 97 programs and 41.7 s, the later set 8 and 27.3 s, THE CUT-BOX SET 23 and 72.0 s
+  (the split is mine, by label, off `shaderrows-check`'s LATER list and a label's second program as its cut twin: the tool itself cannot name a
+  program's set, every one of them is asked before the page calls itself ready). The same page booted the usual way on that box: 93 pipelines in 15.5 s (25 to
+  28 s for 119 on the benchmark's first load that morning, before the deletes). So the browser draws under three threads' worth from the box, and a load's wait is the SUM of its
+  programs, not their number: 82 of the first-frame programs are under half a second each and 5.5 s together. Dearest, seconds alone (boot form | cut
+  twin): volDust 10.0 | 10.9 · volFroxel 8.3 | 9.8 · vol 5.9 | 6.9 · particlesUpdate 5.9 | 8.1 · restir 4.8 | 4.9 · compositeS 3.9 | 4.4 · composite
+  3.7 | 4.3 · gatherTrace 3.7 | 4.1 · froxelInjectJ 3.6 | 4.0 · reflect 2.9 | 3.4. A brief's Start waits for every program (`docs/agents/menus.md`),
+  so for a player the whole sum is the wait. What follows from the table: one set of ray programs is half of it; then the march, three writings of one
+  kernel (vol, volFroxel, volDust) and over a third of what is left. On the software adapter the tool's milliseconds are that adapter's and say nothing.
 - **Windows: why the shader wait came back on every load, and the compile queue (2026-10-26, measured on a Windows machine: RTX 3080, a 16-thread desktop CPU,
   Chrome 155, a 4K 240 Hz display at 150 %).** Chrome on Windows runs WebGPU on D3D12 and compiles with DXC (`use_dxc` is on; FXC, `--disable-dawn-features=use_dxc`,
   had not finished the boot after 16 minutes). DXC inlines every call, so the big kernels are 5–25 s each (fgather's `main` grows from 95 KB of WGSL to ~680 KB inlined:

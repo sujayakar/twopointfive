@@ -167,7 +167,7 @@ fn cubeNormal(vi: u32) -> vec3f {
     let mk = markSurfaceGB(v.mark, bi, v.wp, n, dwx, dwy, albedo, rough, lookMarkSoft(), lookTrod());
     albedo = mk.albedo; rough = mk.rough;
   }
-  if (lv(SNOW_SURF) && !cap && snowCfg.p[1].z > 0.5 && f32(bi) < snowCfg.p[1].w) {   // THE SNOW'S SURFACE (snow.wgsl; a snow level with its look on — dead code on every other page): the ground and every snow-painted box of the level file are shaded off the level's snow field, after the markings, before the encounter's marks
+  if (GBUF_SNOW && !cap && snowCfg.p[1].z > 0.5 && f32(bi) < snowCfg.p[1].w) {   // THE SNOW'S SURFACE (snow.wgsl; a snow level with its look on — dead code on every other page): the ground and every snow-painted box of the level file are shaded off the level's snow field, after the markings, before the encounter's marks
     let snowPaint = snowIsPaint(v.albedo);
     let snowGround = select(n.y, gn.y, LOOK) > 0.9 && v.wp.y < 0.03 && v.wp.y > -0.01 && (boxGeo[bi].flags & BOX_EMISSIVE) == 0u;
     if (snowGround || snowPaint || (v.hf.y < 0.016 && v.wp.y < 0.035)) {
@@ -178,7 +178,7 @@ fn cubeNormal(vi: u32) -> vec3f {
       if (lv(SNOW_GLOW) || lv(SNOW_SPARKLE)) { o.normal.a = sb.amt * 0.6667; }   // SNOW GLOW, SNOW SPARKLE (composite.wgsl snowGlow): how much of this pixel is snow, held in `o` (zero until here) for the output line below
     }
   }
-  if (LOOK && lv(SNOW_SURF) && !cap && snowCfg.p[1].z > 0.5 && f32(bi) < snowCfg.p[1].w) { let ls = lookSnow(v.look, v.wp, gn, bi, v.lc, v.hf, v.albedo, albedo, rough, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y); if (ls.amt > 0.0) { albedo = ls.albedo; rough = ls.rough; metal = metal * (1.0 - ls.amt); if (ls.bank) { n = ls.n; lookTilt = false; if (lv(SNOW_GLOW) || lv(SNOW_SPARKLE)) { o.normal.a = ls.amt * 0.6667; } } } }   // THE LOOK PROTOTYPE on a snow level (look.wgsl lookSnow; a box of the level file, as the snow above): snow against the foot of what stands in the open and on what was left out. A BANK is snow to the glow and the sparkle and keeps none of the wall's relief; a grain stuck higher up is paint and finish only
+  if (LOOK && GBUF_SNOW && !cap && snowCfg.p[1].z > 0.5 && f32(bi) < snowCfg.p[1].w) { let ls = lookSnow(v.look, v.wp, gn, bi, v.lc, v.hf, v.albedo, albedo, rough, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y); if (ls.amt > 0.0) { albedo = ls.albedo; rough = ls.rough; metal = metal * (1.0 - ls.amt); if (ls.bank) { n = ls.n; lookTilt = false; if (lv(SNOW_GLOW) || lv(SNOW_SPARKLE)) { o.normal.a = ls.amt * 0.6667; } } } }   // THE LOOK PROTOTYPE on a snow level (look.wgsl lookSnow; a box of the level file, as the snow above): snow against the foot of what stands in the open and on what was left out. A BANK is snow to the glow and the sparkle and keeps none of the wall's relief; a grain stuck higher up is paint and finish only
   if ((frame.flags & FLAG_DECALS) != 0u) {                              // decals (experiment E1, decals.wgsl): the marks registered in this pixel's 1 m cell edit what is stored — so every light that reads the g-buffer answers to them
     let fp = distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y;   // this pixel's footprint on the surface (m): edges are softened over it, sub-pixel texture fades under it
     let nl = n; if (lookTilt) { n = gn; }                              // (THE LOOK PROTOTYPE: a mark is laid on the FACE, and the relief put back under it below)

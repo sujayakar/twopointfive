@@ -1,5 +1,5 @@
 // G-buffer targets + raster pipelines (boxes, skinned characters).
-import { makeShader, makeBuffer, renderPipelineAsync, renderPipelineOrNull } from '../gpu/device';
+import { makeShader, makeBuffer, renderPipelineAsync, renderPipelineOrNull, laterRenderPipelineAsync } from '../gpu/device';
 import { KEPT } from '../gpu/keep';   // (the kept page's lease: the look's maps are worked out once a visit — makeLayers)
 import { EXACT } from '../math/exact';
 import { scenePrelude, snowLookConfig, lookConfig } from './frame';
@@ -135,11 +135,17 @@ export class GBuffer {
   private objLayout: GPUBindGroupLayout; private mod: GPUShaderModule; private pipeLayout: GPUPipelineLayout;
   private targets: GPUColorTargetState[]; private depthStencil: GPUDepthStencilState;
   private objBG: GPUBindGroup | null = null; private objBGKey = '';
-  private cutMod: GPUShaderModule | null = null; private cutPipe: GPURenderPipeline | null = null;
+  private cutMod: GPUShaderModule | null = null; private cutModSnow: GPUShaderModule | null = null; private cutPipe: GPURenderPipeline | null = null;
 
   constructor(private device: GPUDevice, private sceneLayout: GPUBindGroupLayout, readonly pool: TexturePool = new TexturePool(device), maxBoxes = 4096) {
     this.geoBytes = maxBoxes * GEO_STRIDE * 4;
-    const mod = makeShader(device, scenePrelude() + `const PREV_MAT_BASE: u32 = ${maxBoxes * GEO_STRIDE / 4}u;   // prevBoxes: vec4 index where the mat rows start (after maxBoxes geo rows of 2 vec4 each)\n` + decalWgslConsts(3) + decalsSrc + detailSrc + lookWgsl() + snowSrc + markingsSrc + gbufSrc, 'gbuffer');   // decals.wgsl: the experiment's per-pixel marks (group 1 binding 3), read by fsBox under FrameFlags.Decals
+    // THE SNOW'S SURFACE IS A TEXT OF ITS OWN (2026-11-07). The boxes' fragment stage shades the snow paint off the level's snow field (snow.wgsl snowBox, and
+    // under the look look.wgsl lookSnow): 113 KB of pasted text on the plain page and 200 on the look's, read by two levels. As a branch of the one text
+    // (frame.ts LevelSw, tried the same day) it stood in every level's program, and the look's page lost its device at the first drawn frame on the software
+    // adapter. So the module is written twice, `GBUF_SNOW` false and true, word for word the texts a level without snow and a snow level always compiled. A
+    // page draws with its level's own and asks for the other behind it (init below): a visit builds each once, and no level's start compiles either again.
+    const text = (cut: boolean, snow: boolean) => scenePrelude() + `const PREV_MAT_BASE: u32 = ${maxBoxes * GEO_STRIDE / 4}u;   // prevBoxes: vec4 index where the mat rows start (after maxBoxes geo rows of 2 vec4 each)\nconst GBUF_SNOW: bool = ${snow};   // the snow's surface in the boxes' shading (gbuffer.ts: the module's two writings)\n` + decalWgslConsts(3) + decalsSrc + detailSrc + lookWgsl() + snowSrc + markingsSrc + gbufSrc + (cut ? gbufCutSrc : '');   // decals.wgsl: the experiment's per-pixel marks (group 1 binding 3), read by fsBox under FrameFlags.Decals
+    const mod = makeShader(device, text(false, false), 'gbuffer'); this.modSnow = makeShader(device, text(false, true), 'gbufferSnow');
     this.objLayout = device.createBindGroupLayout({ label: 'gbufObj', entries: [
       { binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
       { binding: 1, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
@@ -163,8 +169,8 @@ export class GBuffer {
     this.targets = [{ format: 'rgba8unorm' }, { format: 'rgb10a2unorm' }, { format: 'r32uint' }, { format: 'rg16float' }, { format: 'rg8unorm' }, { format: 'rg8unorm' }];   // (+ the material and GBAA edge targets: 8 + 8 + 4 + 4 + 2 + 2 = 28 bytes per sample of the 32 the default limits allow, by WebGPU's attachment accounting — rgba8 / rgb10a2 count 8 each)
     this.depthStencil = { format: 'depth32float', depthWriteEnabled: true, depthCompare: 'less' };
     this.mod = mod;   // (the box pipeline: init(), awaited by the engine before the first frame)
-    // CUT BOXES: the same text + gbuffer_cut.wgsl as a second module, made only in a build with the switch
-    if (cutConfig.on) this.cutMod = makeShader(device, scenePrelude() + `const PREV_MAT_BASE: u32 = ${maxBoxes * GEO_STRIDE / 4}u;\n` + decalWgslConsts(3) + decalsSrc + detailSrc + lookWgsl() + snowSrc + markingsSrc + gbufSrc + gbufCutSrc, 'gbufferCut');
+    // CUT BOXES: the same text + gbuffer_cut.wgsl as a second module, made only in a build with the switch — the module above and its pipelines are the build's without it
+    if (cutConfig.on) { this.cutMod = makeShader(device, text(true, false), 'gbufferCut'); this.cutModSnow = makeShader(device, text(true, true), 'gbufferCutSnow'); }
     const S = GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST;
     this.prevBoxes = makeBuffer(device, maxBoxes * (GEO_STRIDE + MAT_STRIDE) * 4, S, 'prevBoxes');
     this.prevJoints = makeBuffer(device, 256, S, 'prevJointsDummy');   // (replaced by one the size of the skin's palette the first time a skin is drawn)
@@ -287,7 +293,7 @@ export class GBuffer {
   private lookMen: [number, number] = [1, 0];
   // ---- THE SNOW'S SURFACE (render/snowField.ts, shaders/snow.wgsl): the field's texture, its uniform block, and the hills' mesh — one (tx, tz) per lattice quad, six corners each
   private snowTex: GPUTexture; private snowView: GPUTextureView; private readonly snowCfg: GPUBuffer;
-  private snowQuads: GPUBuffer | null = null; private snowQuadCount = 0; private snowPipe: GPURenderPipeline | null = null;
+  private snowQuads: GPUBuffer | null = null; private snowQuadCount = 0; private snowPipe: GPURenderPipeline | null = null; private modSnow!: GPUShaderModule;
   /** hand over a level's snow field (null = none: a 1×1 zero and no mesh) with its uniform block (snowField.ts snowCfgRows) */
   setSnowField(f: { data: Uint16Array; w: number; h: number; quads: Uint32Array } | null, cfg: Float32Array) {
     this.snowTex.destroy(); this.snowQuads?.destroy(); this.snowQuads = null; this.snowQuadCount = 0;
@@ -335,28 +341,24 @@ export class GBuffer {
   /** The box pipeline (every frame's raster), compiled off the GPU process's main thread (gpu/device.ts renderPipelineAsync). `opts.sharp`: also the sharp-direct down pass
    *  (gdown), which is otherwise made synchronously on the first sharp frame — main.ts asks for it whenever a preset may switch sharp direct on. Engine.init awaits it. */
   async init(opts: { sharp?: boolean } = {}): Promise<void> {
-    const jobs: Promise<unknown>[] = [renderPipelineAsync(this.device, {
-      label: 'gbufBoxes', layout: this.pipeLayout,
-      vertex: { module: this.mod, entryPoint: 'vsBox' },
-      fragment: { module: this.mod, entryPoint: 'fsBox', targets: this.targets },
-      primitive: { topology: 'triangle-list', cullMode: 'back' },
-      depthStencil: this.depthStencil,
-    }).then(p => { this.boxPipe = p; })];
+    // The boxes' program and the cut boxes', each in its two writings (the constructor's note). The level's own is the boot's: awaited here, drawn every
+    // frame. The other is asked for behind the boot and not kept: a page is one level for its whole life, and the ask is for the visit's next one.
+    const snow = snowLookConfig.surface, jobs: Promise<unknown>[] = [];
+    const boxes = (m: GPUShaderModule, label: string, cut: boolean): GPURenderPipelineDescriptor => ({ label, layout: this.pipeLayout,
+      vertex: { module: m, entryPoint: cut ? 'vsBoxCut' : 'vsBox' }, fragment: { module: m, entryPoint: cut ? 'fsBoxCut' : 'fsBox', targets: this.targets },
+      primitive: { topology: 'triangle-list', cullMode: 'back' }, depthStencil: this.depthStencil });
+    for (const s of [false, true]) { const d = boxes(s ? this.modSnow : this.mod, s ? 'gbufBoxesSnow' : 'gbufBoxes', false);
+      if (s === snow) jobs.push(renderPipelineAsync(this.device, d).then(p => { this.boxPipe = p; })); else void laterRenderPipelineAsync(this.device, d); }
     if (opts.sharp) jobs.push(this.prepareDown());
-    jobs.push(renderPipelineOrNull(this.device, {   // THE SNOW'S HILLS (snow.wgsl vsSnow / fsSnow): same targets, same depth rule; drawn before the boxes. Made on every level, drawn where a level has drifts (draw below): a snow level asks for no program the visit has not built. One that fails to compile is left null: the level's own snow boxes show, as they are drawn under it anyway
-      label: 'gbufSnow', layout: this.pipeLayout,
-      vertex: { module: this.mod, entryPoint: 'vsSnow', buffers: [{ arrayStride: 8, stepMode: 'instance', attributes: [{ shaderLocation: 0, offset: 0, format: 'uint32x2' }] }] },
-      fragment: { module: this.mod, entryPoint: 'fsSnow', targets: this.targets },
-      primitive: { topology: 'triangle-list', cullMode: 'none' },
-      depthStencil: this.depthStencil,
-    }, 'the snow\'s drifts are drawn as the level\'s boxes').then(p => { this.snowPipe = p; }));
-    if (this.cutMod) jobs.push(renderPipelineOrNull(this.device, {   // CUT BOXES: the cut solids' pipeline (same targets, same depth rule; its fragment stage discards). One that fails to compile is left null: encode() then draws cut boxes whole (the rays still meet the cut shapes: wrong at the cut, never missing)
-      label: 'gbufBoxesCut', layout: this.pipeLayout,
-      vertex: { module: this.cutMod, entryPoint: 'vsBoxCut' },
-      fragment: { module: this.cutMod, entryPoint: 'fsBoxCut', targets: this.targets },
-      primitive: { topology: 'triangle-list', cullMode: 'back' },
-      depthStencil: this.depthStencil,
-    }, 'cut pieces are DRAWN as whole boxes; rays still meet their cut shape').then(p => { this.cutPipe = p; }));
+    { const hills: GPURenderPipelineDescriptor = {   // THE SNOW'S HILLS (snow.wgsl vsSnow / fsSnow): same targets, same depth rule; drawn before the boxes, where a level has drifts. Of the snow's writing, so a snow level's own and every other level's ask for later. One that fails to compile is left null: the level's own snow boxes show, as they are drawn under it anyway
+        label: 'gbufSnow', layout: this.pipeLayout,
+        vertex: { module: this.modSnow, entryPoint: 'vsSnow', buffers: [{ arrayStride: 8, stepMode: 'instance', attributes: [{ shaderLocation: 0, offset: 0, format: 'uint32x2' }] }] },
+        fragment: { module: this.modSnow, entryPoint: 'fsSnow', targets: this.targets },
+        primitive: { topology: 'triangle-list', cullMode: 'none' }, depthStencil: this.depthStencil };
+      if (snow) jobs.push(renderPipelineOrNull(this.device, hills, 'the snow\'s drifts are drawn as the level\'s boxes').then(p => { this.snowPipe = p; })); else void laterRenderPipelineAsync(this.device, hills); }
+    // CUT BOXES: the cut solids' pipeline (same targets, same depth rule; its fragment stage discards). One that fails to compile is left null: encode() then draws cut boxes whole (the rays still meet the cut shapes: wrong at the cut, never missing)
+    if (this.cutMod && this.cutModSnow) for (const s of [false, true]) { const d = boxes(s ? this.cutModSnow : this.cutMod, s ? 'gbufBoxesCutSnow' : 'gbufBoxesCut', true);
+      if (s === snow) jobs.push(renderPipelineOrNull(this.device, d, 'cut pieces are DRAWN as whole boxes; rays still meet their cut shape').then(p => { this.cutPipe = p; })); else void laterRenderPipelineAsync(this.device, d); }
     await Promise.all(jobs);
   }
   /** Compile the skinned-mesh pipeline for this joint-index format ahead of the first frame that draws a skin (main.ts / the viewer, once the glTF says which format) — the same
@@ -500,7 +502,7 @@ export class GBuffer {
     });
     const obg = this.objectBindGroup(visibleBuf, skin, dummy, decalBuf);
     pass.setBindGroup(0, sceneBG); pass.setBindGroup(1, obg);
-    if (this.snowPipe && snowLookConfig.surface && this.snowQuads && this.snowQuadCount > 0) {   // (…on a page whose level raised the snow's surface, as when the pipeline was made only there: the fragment's own shading asks lv(SNOW_SURF))
+    if (this.snowPipe && snowLookConfig.surface && this.snowQuads && this.snowQuadCount > 0) {   // (…on a page whose level raised the snow's surface: only there is the pipeline kept)
       pass.setPipeline(this.snowPipe); pass.setVertexBuffer(0, this.snowQuads); pass.draw(6, this.snowQuadCount); }   // THE SNOW'S HILLS, first: the ground and the boxes under them then fail the depth test instead of being shaded twice
     pass.setPipeline(this.boxPipe);
     const cutWhole = this.cutPipe ? 0 : cutCount;   // (a build whose cut pipeline failed to compile draws the cut boxes WHOLE with this one — wrong at the cut, never missing: the rays still meet the cut shape)
