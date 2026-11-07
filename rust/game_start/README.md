@@ -262,3 +262,41 @@ each the game they are alone.
 
 What this does NOT hold: that a game started this way can be PLAYED through a puppet. It cannot yet: item 13 of the list above. A host with
 no puppet (a game server) needs nothing more than this.
+
+## Hold: is this build the same game as that one (`src/bin/hold.rs`)
+
+For a change that is meant to change nothing of play. It needs no page, no TypeScript, no module build and no file of the wire, so a
+change of the wire does not strand it.
+(`tools/blitz/hold.sh` is another thing: it holds the Rust game to a run that was kept beside the TypeScript
+game, whose start is the TypeScript's. This one's start is this crate's.)
+
+```
+cd rust/game_start
+cargo run --release --bin hold -- keep /tmp/held        # on the tree BEFORE the change: play, and keep what the game was after every frame
+cargo run --release --bin hold -- check /tmp/held       # on the tree AFTER it: play the same again, and compare
+```
+
+`keep` stands each level by this crate's start, plays it for 90 s under each hand of `hands/`, and writes, for every frame, the
+state's words (`game::state_words`: a hash of every part of the game that a host does not hand in) folded to one number and one
+byte of each part. `check` reads the folder's own list of runs and its copies of the hands, plays them on the build it is, and says
+of each run `the same after every frame`, or the first frame that differs and the names of the parts that differ in it
+(`FIRST DIFFERS AT FRAME 2181 (36.35 s) in guards, chars, dice`). It exits 0 only if every run is the same. Levels, hands, seeds and
+the length are arguments (`keep DIR --hand push --seed 1 --seed 2 --secs 60 depot:clear office`); with none it is 24 levels (14 as
+room clears) by every hand by seed 1, about 1.7 MB a run.
+
+A hand is a few lines of what is done to the game from outside (`hands/*.hand`; the file's head in `src/bin/hold.rs` is its
+grammar). Three stand here, and each file says what it reaches and what it does not:
+
+| hand | what it does | reaches |
+|---|---|---|
+| `push` | Sam unhurtable; every 6 s the squad is ordered to move to the nearest man who is not theirs; every 10 s Sam fires a round at him | the move order, doors, contact, the room fight on both sides, hunting, reloads, deaths |
+| `bangs` | Sam unhurtable; a frag and a flash land by the nearest such man, again every 9 s; the squad falls in | the body rules (running from a grenade, shaken by a blast), flashed men, blasts on doors and glass |
+| `rest` | nothing | a floor at rest: patrols, sentries, lights, the level's own script |
+
+What a green check proves: on these floors, under these hands, the two builds played the same game part for part. What it does
+not: anything no hand reaches (the other orders, the door tools, a startled man, a player walking, a second seat), and anything that is not in the
+state's words (what a host hands in: the cameras, the input). One part is left out for now: the box mirror's own record, which keeps
+addresses of rust/sim's tables (another in every native process); what it mirrors is compared as rust/sim's block, and the
+carve-out goes when the mirror keeps offsets. A change that is MEANT to change play is not judged here: that is the
+mission tallies' job. If a part of the game was added or taken away between the two trees, `check` says so and compares nothing:
+keep again on the last tree before that change.
