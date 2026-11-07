@@ -185,7 +185,7 @@ pub fn breach_drill_start(g: &mut crate::game::Game) {
         g.gd[gd].speed = 0.0;
         crate::mind::set_state(g, gd, crate::game::GuardState::Patrol, "breach");
         crate::mind::set(g, gd, 0.0, "breach");
-        if g.gd[gd].last_known.is_some() { g.gd[gd].last_known = None; g.gd[gd].fix_stamp = g.gd[gd].fix_stamp.wrapping_add(1); }
+        if g.gd[gd].last_known.is_some() { crate::mind::fix(g, gd, None, "breach"); }
         crate::control::set_hold(g, gd, false, "breach");
         crate::control::set_pinned(g, gd, false, "breach");
         g.gd[gd].react_t = 0.0;

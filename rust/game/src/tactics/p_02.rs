@@ -1072,8 +1072,7 @@ pub fn gate_call(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::tactic
     let marks = plan_for(g, door_id, g_2.side, g_2.near_a);
     let spot = stack_spot(g, door_id, g_2.side, g_2.near_a, 1.0, marks.as_ref()).pos;
     {
-        g.gd[best].last_known = Some(v3::copy(spot));
-        g.gd[best].fix_stamp = g.gd[best].fix_stamp.wrapping_add(1);
+        crate::mind::fix(g, best, Some(v3::copy(spot)), "tactics");
         crate::mind::raise(g, best, 0.5, "tactics");
         g.gd[best].search_t = 0.0;
         g.gd[best].path = Vec::new();

@@ -23,11 +23,6 @@ fn way_open(g: &mut Game, y: &crate::scene_scenarios::ResponseWay) -> bool {
 fn marks_door(g: &mut Game, mk: &crate::qrf::Marks) -> Option<DoorId> {
     match word(&mk.door) { None => None, Some(d) => crate::doors::doors_by_name(g, d) }
 }
-/// a whole write of a man's fix (Guard.fix_stamp counts them)
-fn set_last_known(g: &mut Game, x: GuardId, at: V3) {
-    g.gd[x].last_known = Some(at);
-    g.gd[x].fix_stamp = g.gd[x].fix_stamp.wrapping_add(1);
-}
 /// `st[0] = want[0]; st[1] = 0; st[2] = want[2]` on his station. In the TypeScript the station IS his script's goal once he has been ordered onto it, so the
 /// goal creeps with it and no new leg starts. Returns the station and whether his goal was that very point (by value: the Vec3 is no object here).
 fn write_station(g: &mut Game, x: GuardId, want: V3) -> (V3, bool) {
@@ -504,7 +499,7 @@ pub fn perceive_scripted(g: &mut crate::game::Game, m: GuardId, dt: f64) -> bool
             let t = g.time;
             let pp = player_pos(g);
             { let to = v3::clamp(g.gd[m].awareness + rate * dt, 0.0, 1.0); crate::mind::set(g, m, to, "qrf"); }
-            set_last_known(g, m, v3::copy(pp));
+            crate::mind::fix(g, m, Some(v3::copy(pp)), "qrf");
             g.gd[m].sight_pos = v3::copy(pp);
             g.gd[m].sight_t = t;
             if rate > 0.25 { g.gd[m].last_seen_t = t; }
@@ -515,7 +510,7 @@ pub fn perceive_scripted(g: &mut crate::game::Game, m: GuardId, dt: f64) -> bool
     let gp = pos_of(g, m);
     if !g.pl[g.player].down && !g.player_invisible && crate::m::hyp2(pp[0] - gp[0], pp[2] - gp[2]) < 0.62 {
         crate::mind::set(g, m, 1.0, "qrf");
-        set_last_known(g, m, v3::copy(pp));
+        crate::mind::fix(g, m, Some(v3::copy(pp)), "qrf");
         g.gd[m].last_seen_t = g.time;
         seen = true;
     }
@@ -539,7 +534,7 @@ pub fn perceive_scripted(g: &mut crate::game::Game, m: GuardId, dt: f64) -> bool
             let t = g.time;
             let op = g.ch[oc].pos;
             { let to = v3::clamp(g.gd[m].awareness + rate * dt, 0.0, 1.0); crate::mind::set(g, m, to, "qrf"); }
-            set_last_known(g, m, v3::copy(op));
+            crate::mind::fix(g, m, Some(v3::copy(op)), "qrf");
             g.gd[m].sight_pos = v3::copy(op);
             g.gd[m].sight_t = t;
             if rate > 0.25 { g.gd[m].last_seen_t = t; }
