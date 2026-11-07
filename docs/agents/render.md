@@ -1353,7 +1353,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   board 1.4 → 0.3; the indirect view is the same to the digit at every point (the diffuse is not touched). What stays, the same with the switch either way, is a warm
   streak on the front edges of the top two boards: read as the desk lamp's own highlight (inferred, not traced). No step or dark patch showed in that one view. Never
   seen on a GPU: the picture in motion, the cost, and steel anywhere but this unit.
-- **The flame's sample count is a number** (`FIRE.look.steps`, 40; the look row's fifteenth float, `K.d.z`; `?firesteps=N`, 4 to 64; a row in `/firelab`;
+- **The flame's sample count is a number** (`FIRE.look.steps`, 40; the look row's fifteenth float, `K.d.z`; `?firesteps=N`, 4 to 64;
   `LOOK='steps=12'` in `tools/qa/fire-lab.cjs`). No rule and no switch: 40 is the count the shader had, and a recording from before the key gets 40. It is
   there for a TIMING: the flame's price is the count × the pixels it covers, at sigma 2.5 no ray goes opaque so none stops early, and a model (nobody's
   timing) puts the flame over its bar at the closest zoom at High. On a real GPU, compare the page as it opens with `&firesteps=18` and `&firesteps=24`
@@ -1406,9 +1406,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   is marched (2.3 × its height) so a kicked tongue is not cut flat; THE DRAWN SMOKE AND THE FLAME ARE PICTURE ONLY (no sight line or sensor knows of them:
   a man behind the column is hidden from the player a little and from nobody else, which bends "one model for picture and AI"; the flame as gas in the smoke
   solver, the maintainer's pick and the next step, is what makes the smoke real; until then `plume` is a slider and `?fireplume=0` a word).
-  A recording from before `FIRE.look` replays with no shimmer, no drawn smoke and no embers. THE FIRE LAB: `/firelab` on the dev server
-  (`?levelFile=pass.json&roomclear&squad4&nofow&firelab`, `src/host/firelab.ts`, on the sneak lab's pattern): you beside the brazier, nobody able to notice or
-  hurt you, every number of the look, the embers, the light and the drifting smoke as a live slider, the build's back by a button, the lot copied out as one line.
+  A recording from before `FIRE.look` replays with no shimmer, no drawn smoke and no embers.
   NEVER SEEN ON A GPU: the look was set on the software adapter's stills (`tools/qa/fire-lab.cjs`, which now emulates the bloom and the tone curve: `LOOK='k=v,…'`).
   THE FLAME AS GAS (`FIRE.gas`, OFF in the page until it has been seen: `?firegas=1`, and a row in the fire lab; 2026-10-23, the maintainer on a card asking
   how much of the flame should be real fluid sim: "Drive it from our 3D smoke solver", then "i'm curious how far we can push our existing smoke solver.
@@ -1515,9 +1513,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   guards. Its own box blown away (`breakFixtureBox`) still takes it, and so does a level's own switch or script. Driven through the real `bang` beside the
   pass's brazier on the shipped stand: out with the rule off, burning and stirred once with it on.
   THIS REMOVES A WAY TO MAKE DARK: a brazier cannot be shot out any more, which is the maintainer's to weigh for the quiet missions. A recording from before any
-  of these keys replays with the level's lamp, no reactive flame, the 0.07 lean and a fire a round puts out (`journal.ts`). The lab (`/firelab`) has a slider for
-  each: how fresh each frame of the flame is, how far the wind leans it, how orange / strong / far-carrying / high the light is, how far it shifts, and a
-  section for the sound. NOT MEASURED: tallies on the shipped stand with the brighter lamp (guards by a fire are better lit and see further into its pool);
+  of these keys replays with the level's lamp, no reactive flame, the 0.07 lean and a fire a round puts out (`journal.ts`). NOT MEASURED: tallies on the shipped stand with the brighter lamp (guards by a fire are better lit and see further into its pool);
   no soak or tour run. NEVER SEEN ON A GPU: the reactive flame (the whole point of it), the lamp's colour, the lean, the shifting shadows.
   THE MAINTAINER'S OWN NUMBERS (2026-10-24, from the fire lab's "copy them" line on his GPU, taken as sent and made the table's defaults): `look` gain 3, core 4
   (both the top of their sliders, which now go to 8 and 10), sigma 2.5 (a thin veil where it was 12), speed 0.7, tall 0.95, torn 1.1, shimmer 0.019, soot 0.5;
@@ -1737,7 +1733,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   (`ui/benchrun.ts flags`, `ui/pricerun.ts priceSearch`), and the first scene's notes say so.
   THE PICTURE ONLY. The look's own page did more than draw, and each of those things changes what the page's game PLAYS, which a co-op server, a
   headless run and every check do not have. They stay with THE LOOK LAB (`scene/look.ts lookLabOn` → `LOOK_LAB.on`, read once at boot): a page
-  that asks for the look BY NAME, exactly the pages that were the look's before (`/look`, `/smokelab`, `?look`, `?look=key:value`, a one-file
+  that asks for the look BY NAME, exactly the pages that were the look's before (`/look`, `?look`, `?look=key:value`, a one-file
   build's tag). The lab's alone: the debugger opened on the look's rows (`buildLookPanel`'s `open`; on every other page the rows are a system of the
   debugger, shut until asked for, and the Team & kit picture's window builds none), the kit and the fog put down (`?lookkit=0`), the two trials that
   rewrite the level as it loads (`geo`: a bite out of a yard wall's top, the kit's octagons as prisms; `lorry`), the hills that rays see (`hills`,
@@ -3591,19 +3587,6 @@ row on his machine is the answer, and the word puts the count back on any machin
   the two trees draw the same picture. NEVER SEEN ON A GPU. Cost not measured: the smoke march works a place's three gains (about fifteen `pow`) once a cell
   of the place field a ray, not once a step (`airShow` keeps the last cell's answer). STILL OPEN from the same notes:
   blotches on a room's floor in overcast, and a room with its doors open at midday (pale floor with the eyes in it, sun patches at the shoulder's white).
-- **THE SMOKE LAB** (11-01; `/smokelab` on the dev server = the look page on the lab's own floor with `&smokelab`; `src/host/smokelab.ts`, on the fire lab's
-  pattern; the floor is `docs/agents/levels.md`, THE SMOKE LAB'S FLOOR). The
-  maintainer: "could we make a separate smoke lab that's more suited to playing with it? would love to be able to visualize the bricks, the curls (could we turn
-  these on and off in the debug panel?), tweak the parameters etc." Its system in the panel: what the pool holds, a can at your feet or at the cursor, all of it
-  cleared, the field held still; TWO PICTURES of the solver, both the composite's (`smokeLabOver`) off one word the solver hands the readers (`SmokeSystem.show` →
-  `SP.show` → `smoke[0].show`): the BRICKS as wire (a walk of the page texture along the pixel's ray, the coarse lattice's bricks blue, the fine one's amber,
-  hidden behind what is solid) and the SPIN (while it is up `publish` leaves density × |curl| ÷ the row's full-colour number in a coarse texel's tint channel, and
-  the smoke is drawn again blue to red by it; the dust twin is held off meanwhile, since that channel is the dust's); each kind of curl on a box of its own
-  (vorticity confinement, the source's gusts, the look row `stir`); every number of `smoke.params` and of the pool as sliders with the build's numbers back by a
-  button and the numbers copied out as a line. It writes the tables the solver already reads; nothing is made without the word, and the two pictures are in the
-  composite only on a page opened with it (`render/frame.ts smokeLabConfig` → the prelude's `const SMOKE_LAB`, read in `main.ts` before the engine is made): every
-  other page's composite is the program it was. Fine-lattice gas is not coloured by spin. `/smokelab?levelFile=pass.json&roomclear&squad4` is the lab on
-  another level (a `levelFile` on the address wins). Seen on the software adapter only: never on a GPU.
 - **A ROUND THROUGH SMOKE IS ONE LINE** (11-02; the maintainer in the smoke lab: "also still can't see bullets leaving trails through the somke"). A round
   used to be a row of soft shoves along its path (`combat.ts`: every 0.28 m, 7 cm across = a cell and a bit of the 5.5 cm lattice, a blend of 0.4 toward 5.5 m/s
   for ONE step, at most twenty a frame with the bodies' shoves counted in), which moved nothing anyone could see. Now the solver has a LINE emitter
@@ -3997,18 +3980,6 @@ row on his machine is the answer, and the word puts the count back on any machin
   post's grows 4 mm in x and z when the level loads, and rises 4 mm where the two tops are level. A post that only stands AGAINST a wall is not matched.
   Over every level file: 12 posts (pass 2, gwot-yard 2, police-post 2, tut-sky 2, snatch 2, depot 1, depot-gwot 1); the console says how many. The level
   file is not touched: the right mend is in the level's own numbers, found by `tools/qa/zfight-check.ts` (`levels.md`). Never seen on a GPU.
-- **THE CHARACTER LAB** (`host/charlab.ts`, opened from the look panel; the maintainer, 10-25: "men up close look pretty good, but not perfect. IMO we
-  should just iterate on the characters in a character lab or the workbench"). Not a page of its own: on the running look page the camera is pinned on
-  YOU at a man's height (`FollowCamera.setPin` every frame; Angle, Height, Distance, Looks at, or turning slowly), you wear any variant of the cast
-  (`cast.ts castWear`, two arrows) and are painted as the SIDE of that outfit (`charLook.ts`), except in a mission that has you in the sneaking suit,
-  where every outfit is the suit. Nobody notices or hurts you while it is open: `playerInvisible` and `godMode` are raised once on Open, only where they
-  were down, and Leave puts down only what the lab raised, with your own outfit and the free camera back. You walk the mannequin into the light you want
-  to judge him in. THE EYE STAYS ON YOUR SIDE OF A WALL (`charLabFrame`: `col.segmentBlocked` from the look point to the eye and to a point 0.25 m to
-  either side of it, the distance bisected and 0.25 m kept off the wall); where that leaves it nearer than three quarters of the distance asked (3.8 m by default: the lens is a long one, 28°, and shows a man whole from about 3.6 m) it looks from the roomiest of the twelve
-  angles a twelfth of a turn apart, a nearer one preferred. Coming in is at once, going back out is eased. `quietUtility` is raised with the two
-  flags, as a show has it, so NO CHECKPOINT is written while the lab is open (`savestate.ts runNo`): a file with the lab's unseen player in it could
-  be loaded later with nothing to put the flag down. `window.__charlab` = `{ state, open, leave, wear, worn, outfits }`. Sam keeps his own
-  weapon in any outfit. Never seen on a GPU.
 - **A HOUSE FRONT DRESSED BY HAND: WAS A TRIAL, IS THE KIT'S** (the maintainer, 10-23, of the pass's tea house seen from over its yard: "this looks a
   bit too "regular" -- especially the face of the building we're looking at", and a minute before "the art style just needs a lot of iteration. right
   now it does look a bit procedural"). The answer tried was AUTHORING, not another layer of noise: one wall gone over piece by piece on the look page
