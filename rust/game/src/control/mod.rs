@@ -22,6 +22,7 @@
 //! A rule asked at one stage answers with that stage's intent. Dead and held men are recorded from update_guard's `incapable`.
 //!
 //! TO ADD A RULE: one file here (its `Row` and four functions) and one line in `rules!` at its rank. Nothing else in the game names it.
+//! `reload_in_cover.rs` is the worked example.
 //!
 //! A body has three channels (`Channel`): legs, aim, hands. Every intent here takes all three; the record is kept by channel so that a rule
 //! which wants only one (the fight wants aim while an order has his legs) can be granted it without a change of shape.
@@ -122,6 +123,7 @@ rules! {
     morale: "shaken by a blast", Body;
     startle: "startled", Body;
     duck: "head down under fire", Cover;
+    reload_in_cover: "changing magazine in cover", Cover;
 }
 
 /// who can have a man, strongest first. The rules stand between `Held` and `Script` in the list's own order, but for the rules of
