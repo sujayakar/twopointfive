@@ -107,6 +107,32 @@ has not got.
 - The page's bundle carries the call table for this (about half a megabyte). `tools/blitz/page-plugin.ts` names the bridge's files: after a pull that
   adds one, a running dev server must be started again.
 
+## A panic does not end the session
+
+The module aborts on a panic (an index past a table, an `unwrap` on nothing, a `todo!()` body) and the page sees a trap. It used to be the red card and a
+stopped frame loop. Now (`src/host/rustgame.ts`, "a panic"; `rust/game_face/src/page.rs`, "after a panic"):
+
+- **What is lost is the game of that call alone.** The face takes a game out of its table for the length of a call, so a panic leaves no borrow behind,
+  and every game KEPT in the module (the start, each checkpoint) is whole. The page goes on in the same instance of the module.
+- **The game is stopped and a card says so**, in the menu's colours: the panic's own words, the call and the tick, what Enter does and how many seconds
+  of play are lost by it. The console gets ONE line a person can paste: the words, the call, the tick, the mission's clock and stage, the address, and
+  the last second of input (the tick's own records, runs folded). While it is stopped nothing calls into the module: a step is no step, the HUD's
+  questions answer "nothing", an order from a tool answers `the game is stopped`. The puppet stands as the last apply left it and is still drawn.
+- **Enter** (read from the tick's own record of the keys) puts the run's newest checkpoint back through the save controller's own load; with none kept,
+  or with Shift, the mission from its start. The pause card's Restart does the same as Shift+Enter. The game that stands is a new game of the module
+  made from the kept start (`face_stand`), and the load or the restart puts the kept game back over it as ever (`face_back`: the clone, nothing of it
+  lost) and applies it whole.
+- **No loop.** Nothing is put back without a key. A kept game that leads straight back to a panic (inside two seconds of play, nothing newer kept) is
+  not tried twice: the card then offers the mission's start, and after that the page loaded again. A panic that comes later offers the same
+  checkpoint again.
+- **A throw of the apply** (JavaScript, outside the module) is not a panic, the Rust game is whole: the puppet takes the whole state once and play goes
+  on; the fault is named in the console and counted (`__rust.panic.applyThrew`). Three steps running: stopped, as by a panic.
+- **For a check:** `?rustpanic=<tick>[,<tick>…]` plants a panic in the step that would be that tick (`x` after the number: outside any game), and
+  `window.__rust.panic.plant(tick, how)` does it from the console (`face_debug_panic`). `window.__rust.panic`: `dead`, `n`, `recovered`, `lines`, `plan`.
+
+What it does not cover: a panic while a game is being kept or put back (the kept games' own table would be left borrowed: the card then offers the page
+again); a save asked from a panel while the card is up (it throws to the page's red card); a fault that leaves the Rust game wrong without a panic.
+
 ## What a step costs, and what stands in the way
 
 Measured on the built page, software adapter, undrawn frames, 1,800 frames with no input after 600 to settle. The box was never quiet (the load average

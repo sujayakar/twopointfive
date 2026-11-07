@@ -342,7 +342,7 @@ pub unsafe extern "C" fn face_checkpoint(h: u32, p: *const u8, n: usize) {
 // ---- reading back
 #[no_mangle]
 pub extern "C" fn face_export(h: u32) {
-    let b = with(h, |x| game::io::export(&x.g));
+    let b = with(h, |x| { page::serial_seen(x.g.serial_next); game::io::export(&x.g) });
     out(b);
 }
 /// how many out events the game holds (`g.out`: what the rules of the steps since the last clear told the host)
