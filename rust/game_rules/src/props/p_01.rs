@@ -443,7 +443,7 @@ pub fn prop_system_settle(g: &mut crate::game::Game) {
 /// the box world's copy standing for the passes; in Rust the module always takes them   (props.ts PropSystem.settleWorld)
 pub fn prop_system_settle_world(g: &mut crate::game::Game) {
     crate::scene_collision::rules_statics(g);
-    debug_assert!(g.col.mirror.live, "the furniture settled as a level stood up, with no copy of the box world standing");
+    debug_assert!(crate::scene_collision::standing(g), "the furniture settled as a level stood up, with no copy of the box world standing");
 }
 
 /// the passes taken in the module: the level's facts by row, the call, and how often a thing was pushed out of a static   (props.ts PropSystem.settleThere)

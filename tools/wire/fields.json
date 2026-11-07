@@ -8783,7 +8783,6 @@
 "scene_collision::StaticCollision.cs",
 "scene_collision::StaticCollision.glass_walkable",
 "scene_collision::StaticCollision.h",
-"scene_collision::StaticCollision.mirror",
 "scene_collision::StaticCollision.nav",
 "scene_collision::StaticCollision.sound",
 "scene_collision::StaticCollision.tilted_at",
