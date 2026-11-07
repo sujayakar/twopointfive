@@ -17,23 +17,6 @@ fn cols(g: &Game) -> &'static mut sim::props::Props {
 fn row(s: &sim::props::Props, id: PropId) -> usize {
     s.row[id.0 as usize] as usize
 }
-/// the double column at offset `o`, in doubles from the part's start, as the TypeScript's `O` has it (props.rs COLS / 8)
-fn col_f(s: &mut sim::props::Props, o: f64) -> &mut [f64; sim::props::CAP] {
-    let at = o as usize * 8;
-    let c = &sim::props::COLS;
-    if at == c[0] { &mut s.x }
-    else if at == c[1] { &mut s.z }
-    else if at == c[2] { &mut s.yaw }
-    else if at == c[3] { &mut s.vx }
-    else if at == c[4] { &mut s.vz }
-    else if at == c[5] { &mut s.w }
-    else if at == c[6] { &mut s.cs }
-    else if at == c[7] { &mut s.sn }
-    else if at == c[8] { &mut s.idle }
-    else if at == c[9] { &mut s.push_t }
-    else if at == c[10] { &mut s.noise_t }
-    else { panic!("no double column of the furniture at that offset") }
-}
 /// a truth of a row written   (props.ts Prop.setBit)
 #[inline]
 fn set_flag(s: &mut sim::props::Props, r: usize, mask: u32, v: bool) {
@@ -49,9 +32,6 @@ fn io() -> &'static mut sim::props::Io {
 fn emit(g: &mut Game, e: PropEvent) {
     crate::game::game_on_prop_event(g, e);
 }
-/// In Rust there is one maths (`crate::m`, whatever `maths_epoch` says), so the kept cos and sin are never out of date   (props.ts freshTrig)
-pub fn fresh_trig(g: &mut crate::game::Game) {}
-
 /// the speed caps, on a row of the columns   (props.ts clampRow)
 fn clamp_row(c: &mut sim::props::Props, r: usize) {
     let s = m::hyp2(c.vx[r], c.vz[r]);
@@ -73,33 +53,6 @@ fn turn_row(c: &mut sim::props::Props, r: usize, y: f64) {
 
 /// A box's row (`Box.c`, `Box.yaw`, scene/boxes.ts:66). Skeleton 5 has `g.col.boxes: Vec<BoxId>` and no table of Box rows: once the table is back the body is that row
 fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
-
-/// a double column of this thing, by the column's offset   (props.ts Prop.f)
-pub fn prop_f(g: &mut crate::game::Game, id: PropId, o: f64) -> f64 {
-    let s = cols(g);
-    let r = row(s, id);
-    col_f(s, o)[r]
-}
-
-/// …written   (props.ts Prop.pf)
-pub fn prop_pf(g: &mut crate::game::Game, id: PropId, o: f64, v: f64) {
-    let s = cols(g);
-    let r = row(s, id);
-    col_f(s, o)[r] = v;
-}
-
-/// a truth of this thing   (props.ts Prop.bit)
-pub fn prop_bit(g: &mut crate::game::Game, id: PropId, m: f64) -> bool {
-    let s = cols(g);
-    s.flags[row(s, id)] & (m as u32) != 0
-}
-
-/// …written   (props.ts Prop.setBit)
-pub fn prop_set_bit(g: &mut crate::game::Game, id: PropId, m: f64, v: bool) {
-    let s = cols(g);
-    let r = row(s, id);
-    set_flag(s, r, m as u32, v);
-}
 
 /// (props.ts Prop.x)
 pub fn prop_x(g: &mut crate::game::Game, id: PropId) -> f64 {
@@ -196,22 +149,10 @@ pub fn prop_set_asleep(g: &mut crate::game::Game, id: PropId, v: bool) {
 }
 
 /// (props.ts Prop.idle)
-pub fn prop_idle(g: &mut crate::game::Game, id: PropId) -> f64 {
-    let s = cols(g);
-    s.idle[row(s, id)]
-}
-
-/// (props.ts Prop.idle)
 pub fn prop_set_idle(g: &mut crate::game::Game, id: PropId, v: f64) {
     let s = cols(g);
     let r = row(s, id);
     s.idle[r] = v;
-}
-
-/// (props.ts Prop.dirty)
-pub fn prop_dirty(g: &mut crate::game::Game, id: PropId) -> bool {
-    let s = cols(g);
-    s.flags[row(s, id)] & sim::props::F_DIRTY != 0
 }
 
 /// (props.ts Prop.dirty)
@@ -273,62 +214,6 @@ pub fn prop_set_push_t(g: &mut crate::game::Game, id: PropId, v: f64) {
     s.push_t[r] = v;
 }
 
-/// a thing of furniture made: its row written, its facts, its part boxes, placed   (props.ts Prop.constructor)
-pub fn prop_new(g: &mut crate::game::Game, def: &crate::scene_level::PropDef, id_2: f64) -> PropId {
-    let id = PropId(id_2 as u32);
-    prop_set_x(g, id, def.x);
-    prop_set_z(g, id, def.z);
-    prop_set_yaw(g, id, def.yaw);
-    let home = [def.x, def.z, def.yaw];
-    {
-        // (of the yaw it is made at, whatever that is: a yaw of −0 equals 0 and would keep the cos and sin of +0)
-        let c = cols(g);
-        let r = row(c, id);
-        c.cs[r] = m::cos(def.yaw);
-        c.sn[r] = m::sin(def.yaw);
-    }
-    let (hx, hz) = (def.half[0], def.half[1]);
-    let radius = m::hyp2(hx, hz);
-    let inv_i = 1.0 / (def.mass * (hx * hx + hz * hz) / 3.0 * 1.5);
-    let mut boxes: Vec<BoxId> = Vec::with_capacity(def.parts.len());
-    for (j, p) in def.parts.iter().enumerate() {
-        let marks = match &p.marks {
-            Some(k) if !k.is_empty() => Some(k.clone()),
-            _ => None,
-        };
-        boxes.push(crate::scene_boxes::make_box(g, &crate::scene_boxes::MakeBoxP {
-            c: [0.0, 0.0, 0.0],
-            h: [p.h[0], p.h[1], p.h[2]],
-            yaw: Some(0.0),
-            albedo: Some(p.albedo),
-            flags: Some(crate::scene_boxes::box_flag().dynamic),
-            name: Some(def.name.clone()),
-            mkey: Some(crate::scene_boxes::mkey().prop + id_2 * 16.0 + j as f64),
-            marks,
-            stuff: p.stuff.clone(),
-            does: p.does.clone(),
-            ..Default::default()
-        }));
-    }
-    let got = g.tab.props_prop.push(Prop {
-        hx,
-        hz,
-        radius,
-        height: def.height,
-        mass: def.mass,
-        inv_mass: 1.0 / def.mass,
-        inv_i,
-        tune: *kind().get(String::from(def.kind.as_str())).expect("a kind of furniture KIND has no row for"),
-        home,
-        boxes,
-        def: def.clone(),
-        id: id_2,
-    });
-    debug_assert!(got == id, "a thing's id is its row of the table: one PropSystem a game");
-    prop_place(g, id);
-    id
-}
-
 /// (props.ts Prop.cs)
 pub fn prop_cs(g: &mut crate::game::Game, id: PropId) -> f64 {
     let s = cols(g);
@@ -369,20 +254,9 @@ pub fn prop_wake(g: &mut crate::game::Game, id: PropId) {
     prop_set_idle(g, id, 0.0);
 }
 
-/// (props.ts Prop.speed)
-pub fn prop_speed(g: &mut crate::game::Game, id: PropId) -> f64 {
-    let (vx, vz) = (prop_vx(g, id), prop_vz(g, id));
-    m::hyp2(vx, vz)
-}
-
 /// the system's clock, a number of the block   (props.ts PropSystem.time)
 pub fn prop_system_time(g: &mut crate::game::Game) -> f64 {
     cols(g).time
-}
-
-/// (props.ts PropSystem.time)
-pub fn prop_system_set_time(g: &mut crate::game::Game, v: f64) {
-    cols(g).time = v;
 }
 
 /// a noise: held while a step is being taken, heard at once otherwise   (props.ts PropSystem.say)
@@ -392,31 +266,6 @@ pub fn prop_system_say(g: &mut crate::game::Game, e: crate::props::PropEvent) {
     } else {
         emit(g, e);
     }
-}
-
-/// the furniture of a level made and settled. RETURNS the system; for the settle, which reaches it by `g.props` as every method does, it stands in
-/// `g.props` and the old value is put back, so the caller's `g.props = …` is what keeps it   (props.ts PropSystem.constructor)
-pub fn prop_system_new(g: &mut crate::game::Game, defs: &[crate::scene_level::PropDef], st: Option<crate::Opaque>) -> crate::props::PropSystem {
-    let mut sys = PropSystem::blank();
-    sys.store = crate::sim_propshome::prop_store_new(g, st.unwrap_or(crate::Opaque), defs.len() as f64);
-    for (i, d) in defs.iter().enumerate() {
-        let id = prop_new(g, d, i as f64);
-        sys.all.push(id);
-    }
-    sys.props = sys.all.clone();
-    for &p in &sys.props {
-        for &b in &g.tab.props_prop[p].boxes {
-            sys.by_box.set(b, p);
-        }
-    }
-    let old = core::mem::replace(&mut g.props, sys);
-    prop_system_settle(g);
-    core::mem::replace(&mut g.props, old)
-}
-
-/// the thing that owns a part's box, or none   (props.ts PropSystem.propOf)
-pub fn prop_system_prop_of(g: &mut crate::game::Game, b: BoxId) -> Option<PropId> {
-    g.props.by_box.get(b).copied()
 }
 
 /// every part box of what is in the level, in its order   (props.ts PropSystem.boxes)
@@ -478,54 +327,6 @@ pub fn prop_system_scatter(g: &mut crate::game::Game, strength: Option<f64>) {
         prop_set_w(g, p, w);
         prop_wake(g, p);
     }
-}
-
-/// authoring overlaps resolved once, silently; the settled pose becomes home   (props.ts PropSystem.settle)
-pub fn prop_system_settle(g: &mut crate::game::Game) {
-    g.props.muted = true;
-    for i in 0..g.props.props.len() {
-        let p = g.props.props[i];
-        prop_set_dirty(g, p, true);
-    }
-    if !g.props.props.is_empty() {
-        crate::scene_collision::window(g, &mut |g: &mut Game| {
-            prop_system_settle_world(g);
-            prop_system_settle_there(g);
-        });
-    }
-    for i in 0..g.props.props.len() {
-        let p = g.props.props[i];
-        prop_set_w(g, p, 0.0);
-        prop_set_vz(g, p, 0.0);
-        prop_set_vx(g, p, 0.0);
-        prop_set_asleep(g, p, true);
-        let home = [prop_x(g, p), prop_z(g, p), prop_yaw(g, p)];
-        g.tab.props_prop[p].home = home;
-        prop_place(g, p);
-    }
-    g.props.muted = false;
-}
-
-/// TWIN   (props.ts PropSystem.settleHere)
-pub fn prop_system_settle_here(g: &mut crate::game::Game) {
-    sim::props::settle(g.sim, g.col.mirror.slot as usize);
-}
-
-/// the box world's copy standing for the passes; in Rust the module always takes them   (props.ts PropSystem.settleWorld)
-pub fn prop_system_settle_world(g: &mut crate::game::Game) {
-    crate::scene_collision::rules_statics(g);
-    debug_assert!(g.col.mirror.live, "the furniture settled as a level stood up, with no copy of the box world standing");
-}
-
-/// the passes taken in the module: the level's facts by row, the call, and how often a thing was pushed out of a static   (props.ts PropSystem.settleThere)
-pub fn prop_system_settle_there(g: &mut crate::game::Game) {
-    prop_system_facts(g);
-    io().par[sim::props::P_PROPS] = g.props.props.len() as f64;
-    let walls = sim::props::settle(g.sim, g.col.mirror.slot as usize);
-    assert!(!js::truthy(io().par[sim::props::P_WRONG]), "the furniture's settle in the Rust module could not be what it was handed (another count of things than its rows)");
-    let c = &mut g.m.sim_propshome.props_stepped;
-    c.settled += 1.0;
-    c.settle_walls += walls as f64;
 }
 
 /// closest part of any thing along the ray (t < tmax): the module's ray, over the copy of the furniture   (props.ts PropSystem.raycast)

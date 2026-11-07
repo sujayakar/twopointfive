@@ -534,11 +534,6 @@ pub fn set_daylight(g: &mut crate::game::Game, on: bool) {
     }
 }
 
-/// A wall switch's or the panel's flip of one fixture.   (lighting.ts toggleTarget)
-pub fn toggle_target(g: &mut crate::game::Game, t: FixtureId) {
-    light_in(g, ::sim::lights::IN_TOGGLE, Some(t), 0.0, 0.0, 0.0, 0.0);
-}
-
 /// All fixtures repaired, OCP timers cleared, mains back.   (lighting.ts repairLights)
 pub fn repair_lights(g: &mut crate::game::Game) {
     let mut i = 0;

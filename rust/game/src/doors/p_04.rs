@@ -315,11 +315,6 @@ pub fn doors_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
     }
 }
 
-/// Leaf boxes, for registering as dynamic occluders with the collision layer.   (doors.ts Doors.leafBoxes)
-pub fn doors_leaf_boxes(g: &mut crate::game::Game) -> Vec<BoxId> {
-    g.doors.list.iter().map(|d| g.dr[*d].box_).collect()
-}
-
 /// `fn_` asked aside of every door here.   (doors.ts Doors.posAside)
 pub fn doors_pos_aside<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
     let mut list = g.doors.list.clone();

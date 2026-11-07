@@ -75,11 +75,6 @@ fn memo_made(g: &mut Game, ch: RigId) -> bool {
     g.m.packside.memo.set(ch, memo);
     true
 }
-/// (packside.ts memoOf) a copy of the row: the callers here read the row itself
-pub fn memo_of(g: &mut Game, ch: RigId) -> Option<Memo> {
-    if !memo_made(g, ch) { return None; }
-    g.m.packside.memo.get(ch).cloned()
-}
 /// The pack a man drawn with this part mask wears on his back; None with the switch off, no cast, or none worn.   (packside.ts packOf)
 pub fn pack_of(g: &mut Game, ch: RigId, mask: f64) -> Option<PackExt> {
     if !memo_made(g, ch) { return None; }

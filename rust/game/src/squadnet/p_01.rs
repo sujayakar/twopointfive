@@ -12,11 +12,6 @@ pub fn new_stats() -> crate::squadnet::SquadNetStats {
     crate::squadnet::SquadNetStats { lines: 0.0, downs: 0.0, whys: 0.0, quiets: 0.0, clears: 0.0, ends: 0.0 }
 }
 
-/// The net as a game starts it; the class's constructor adds nothing to its initialisers. (squadnet.ts SquadNet.constructor)
-pub fn squad_net_new(g: &mut crate::game::Game) -> crate::squadnet::SquadNet {
-    crate::squadnet::SquadNet::blank()
-}
-
 /// A fresh encounter: everything but `last_t`, which the TypeScript leaves standing. (squadnet.ts SquadNet.reset)
 pub fn squad_net_reset(g: &mut crate::game::Game) {
     let n = &mut g.squad_net;
@@ -135,52 +130,6 @@ pub fn in_flood(g: &mut crate::game::Game, r: &crate::squadnet::InFloodR, p: V3)
     }
 }
 
-/// Where a far line is drawn, in the view's pixels; None: he is where it would be drawn from. `SQUADNET.edge` is settled on. (squadnet.ts netPlace)
-pub fn net_place(g: &mut crate::game::Game, w: f64, h: f64, px: f64, py: f64, mx: f64, my: f64, bw: f64, bh: f64, hits: &mut dyn FnMut(&mut crate::game::Game, f64, f64) -> bool) -> Option<[f64; 2]> {
-    let clamp = crate::v3::clamp;
-    let l = m::hyp2(mx - px, my - py);
-    if !(l > 1.0) { return None; }
-    let (x0, y0) = (bw / 2.0 + 6.0, bh + 12.0);
-    let (x1, y1) = (m::max(x0, w - bw / 2.0 - 6.0), m::max(y0, h - 12.0));
-    let short = m::min(w, h);
-    let pad = m::min_n(&[g.k.squadnet.edge_in * short, (x1 - x0) / 2.0, (y1 - y0) / 2.0]);
-    let (bx0, bx1, by0, by1) = (x0 + pad, x1 - pad, y0 + pad, y1 - pad);
-    let (cx, cy) = ((bx0 + bx1) / 2.0, (by0 + by1) / 2.0);
-    let (mut x, mut y, mut side) = (clamp(mx, bx0, bx1), clamp(my, by0, by1), true);
-    if x != mx || y != my {
-        let ins = NET_INSET * short;
-        let ax = clamp(px, m::min(bx0 + ins, cx), m::max(bx1 - ins, cx));
-        let ay = clamp(py, m::min(by0 + ins, cy), m::max(by1 - ins, cy));
-        let (dx, dy) = (mx - ax, my - ay);
-        let tx = if dx > 0.0 { (bx1 - ax) / dx } else if dx < 0.0 { (bx0 - ax) / dx } else { f64::INFINITY };
-        let ty = if dy > 0.0 { (by1 - ay) / dy } else if dy < 0.0 { (by0 - ay) / dy } else { f64::INFINITY };
-        let t = m::min(tx, ty);
-        x = clamp(ax + dx * t, bx0, bx1);
-        y = clamp(ay + dy * t, by0, by1);
-        side = tx <= ty;
-    }
-    if !hits(g, x, y) { return Some([x, y]); }
-    if !side {
-        for k in 1..=2 {
-            let yi = y + (if y > cy { -1.0 } else { 1.0 }) * NET_ROW * k as f64;
-            if yi >= by0 && yi <= by1 && !hits(g, x, yi) { return Some([x, yi]); }
-        }
-    }
-    let (v, lo, hi) = if side { (y, by0, by1) } else { (x, bx0, bx1) };
-    let first = if v > (lo + hi) / 2.0 { -1.0 } else { 1.0 };
-    let mut k = 1;
-    while k as f64 * NET_ROW <= hi - lo {
-        for s in [first, -first] {
-            let u = v + s * NET_ROW * k as f64;
-            if u >= lo && u <= hi && !hits(g, if side { x } else { u }, if side { u } else { y }) {
-                return Some(if side { [x, u] } else { [u, y] });
-            }
-        }
-        k += 1;
-    }
-    Some([x, y])
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -253,31 +202,6 @@ mod tests {
             let mut floor = pick("bangClear", AutoPickWhy::Contact, None);
             floor.t = OrderTarget::Floor(Default::default());
             assert_eq!(ack(g, &floor), None);
-        });
-    }
-
-    #[test]
-    fn net_place_has_the_typescripts_bits() {
-        on_big_stack(|| {
-            let g = &mut Box::new(Game::blank());
-            // (w, h, px, py, mx, my, bw, bh), how many first asks hit, the TypeScript's answer (SQUADNET.edge on, under bun, EXACT on)
-            let cases: [([f64; 8], i32, Option<[u64; 2]>); 9] = [
-                ([1600.0, 900.0, 800.0, 450.0, 1000.0, 500.0, 120.0, 20.0], 0, Some([0x408f400000000000, 0x407f400000000000])),
-                ([1600.0, 900.0, 800.0, 450.0, 800.5, 450.5, 120.0, 20.0], 0, None),
-                ([1600.0, 900.0, 800.0, 450.0, 3333.3, 611.7, 137.5, 22.0], 0, Some([0x4097450000000000, 0x407edfea3677d46d])),
-                ([1600.0, 900.0, 800.0, 450.0, -901.1, 123.4, 137.5, 22.0], 2, Some([0x405bb00000000000, 0x40723ab254e82d63])),
-                ([1600.0, 900.0, 812.7, 450.0, 901.9, -777.7, 137.5, 22.0], 1, Some([0x408a42798cec0728, 0x4058000000000000])),
-                ([1600.0, 900.0, 812.7, 450.0, 901.9, -777.7, 137.5, 22.0], 3, Some([0x408972798cec0728, 0x4051800000000000])),
-                ([1280.0, 720.0, 30.25, 700.5, 99.5, 5000.125, 90.0, 18.0], 5, Some([0x406db4b28397e8c8, 0x408539999999999a])),
-                ([640.0, 360.0, 320.0, 180.0, 4000.0, 180.0, 90.0, 18.0], 100000, Some([0x4081f4cccccccccd, 0x4066800000000000])),
-                ([100.0, 60.0, 50.0, 30.0, 900.0, -900.0, 300.0, 50.0], 0, Some([0x4063800000000000, 0x404f000000000000])),
-            ];
-            for (a, n, want) in cases {
-                let mut asked = 0;
-                let mut hits = |_: &mut Game, _: f64, _: f64| { asked += 1; asked <= n };
-                let got = net_place(g, a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7], &mut hits);
-                assert_eq!(got.map(|r| [r[0].to_bits(), r[1].to_bits()]), want, "{a:?} {n}");
-            }
         });
     }
 

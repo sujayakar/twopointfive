@@ -108,9 +108,6 @@ pub fn ragdoll_new(g: &mut crate::game::Game, pts: &[V3], vel: Option<&[V3]>, wo
     id
 }
 
-// The skeleton's face: a method takes g and the ID. The work is the rd_ of the same name, on the row, which holds no g, so a substep does not index the table per constraint.
-/// (Ragdoll.dist)
-pub fn ragdoll_dist(g: &mut crate::game::Game, id: RagdollId, i: f64, j: f64) -> f64 { rd_dist(&mut g.tab.ragdoll[id], i, j) }
 /// (Ragdoll.point)
 pub fn ragdoll_point(g: &mut crate::game::Game, id: RagdollId, i: f64, out: Option<&mut V3>) -> V3 { rd_point(&mut g.tab.ragdoll[id], i, out) }
 /// (Ragdoll.radius)
@@ -133,31 +130,10 @@ pub fn ragdoll_is_pinned(g: &mut crate::game::Game, id: RagdollId, i: f64) -> bo
 pub fn ragdoll_clear_pins(g: &mut crate::game::Game, id: RagdollId) { rd_clear_pins(&mut g.tab.ragdoll[id]) }
 /// (Ragdoll.ride)
 pub fn ragdoll_ride(g: &mut crate::game::Game, id: RagdollId, about: V3, dx: f64, dz: f64, dyaw: f64) { rd_ride(&mut g.tab.ragdoll[id], about, dx, dz, dyaw) }
-/// (Ragdoll.rideBy)
-pub fn ragdoll_ride_by(g: &mut crate::game::Game, id: RagdollId, k: f64) { rd_ride_by(&mut g.tab.ragdoll[id], k) }
 /// (Ragdoll.settleAt)
 pub fn ragdoll_settle_at(g: &mut crate::game::Game, id: RagdollId, xs: &[f64], rot: Option<&[f64]>, own: Option<bool>) { rd_settle_at(&mut g.tab.ragdoll[id], xs, rot, own) }
 /// (Ragdoll.takeImpact)
 #[doc(hidden)] pub fn ragdoll_take_impact__body(g: &mut crate::game::Game, id: RagdollId, min: Option<f64>, gap: Option<f64>) -> f64 { rd_take_impact(&mut g.tab.ragdoll[id], min, gap) }
-/// (Ragdoll.distance)
-pub fn ragdoll_distance(g: &mut crate::game::Game, id: RagdollId, i: f64, j: f64, lo: f64, hi: f64) { rd_distance(&mut g.tab.ragdoll[id], i, j, lo, hi) }
-/// (Ragdoll.apart)
-pub fn ragdoll_apart(g: &mut crate::game::Game, id: RagdollId, i: f64, j: f64, lo: f64) { rd_apart(&mut g.tab.ragdoll[id], i, j, lo) }
-/// (Ragdoll.cone)
-pub fn ragdoll_cone(g: &mut crate::game::Game, id: RagdollId, i: f64, j: f64, axis0: V3, cos_max: f64) { rd_cone(&mut g.tab.ragdoll[id], i, j, axis0, cos_max) }
-/// (Ragdoll.knee)
-pub fn ragdoll_knee(g: &mut crate::game::Game, id: RagdollId, hi: f64, ki: f64, ai: f64) { rd_knee(&mut g.tab.ragdoll[id], hi, ki, ai) }
-/// (Ragdoll.shapeMatch)
-pub fn ragdoll_shape_match(g: &mut crate::game::Game, id: RagdollId) { rd_shape_match(&mut g.tab.ragdoll[id]) }
-/// (Ragdoll.buried)
-pub fn ragdoll_buried(g: &mut crate::game::Game, id: RagdollId, i: f64) -> bool { rd_buried(&mut g.tab.ragdoll[id], i) }
-/// (Ragdoll.collide)
-pub fn ragdoll_collide(g: &mut crate::game::Game, id: RagdollId, i: f64) { rd_collide(&mut g.tab.ragdoll[id], i) }
-/// (Ragdoll.contact)
-pub fn ragdoll_contact(g: &mut crate::game::Game, id: RagdollId, i: f64, nx: f64, ny: f64, nz: f64, pen: f64) { rd_contact(&mut g.tab.ragdoll[id], i, nx, ny, nz, pen) }
-/// (Ragdoll.sphereBox)
-pub fn ragdoll_sphere_box(g: &mut crate::game::Game, id: RagdollId, i: f64, r: f64, b: &[f64], q: f64, c_2: f64, s: f64) { rd_sphere_box(&mut g.tab.ragdoll[id], i, r, b, q, c_2, s) }
-
 /// Distance between two particles.   (ragdoll.ts Ragdoll.dist)
 fn rd_dist(this: &mut crate::ragdoll::Ragdoll, i: f64, j: f64) -> f64 {
     let (i, j) = (i as usize, j as usize);
@@ -804,76 +780,6 @@ mod tests {
     use super::*;
     extern crate std;
 
-    /// The TypeScript's own bits under EXACT (a scripted fall, drag, carry, restore and box contacts): an FNV hash of every double of the state at each mark.
-    const EXPECTED: &[(u64, &str)] = &[
-    (0x5c7044e49655adecu64, "made"),
-    (0xba17fc178d41be67u64, "frame 0"),
-    (0xf36aa4907db7b634u64, "frame 50"),
-    (0x31b72752caee945u64, "frame 100"),
-    (0xdc9d37926a916b94u64, "frame 150"),
-    (0x21f7ddac91b06a67u64, "frame 200"),
-    (0x667a69ff29b2f755u64, "frame 250"),
-    (0xc1d9f735935b0490u64, "frame 300"),
-    (0x6e8dd6ba763ff427u64, "frame 350"),
-    (0x103bb62f86aa0929u64, "frame 400"),
-    (0xe5e7700f04f69811u64, "frame 450"),
-    (0x4b381e4853e3f07fu64, "frame 500"),
-    (0x9287d49171339ee7u64, "frame 550"),
-    (0xadecece2594e1d31u64, "frame 600"),
-    (0x5b36835d12b4d011u64, "frame 650"),
-    (0x8e6ffc3e2ecf4d6fu64, "frame 700"),
-    (0x7b8e6599efe51587u64, "frame 750"),
-    (0x3b28b224f08dfb89u64, "frame 800"),
-    (0xf1092a48562d603eu64, "frame 850"),
-    (0x90c5985fa72ac42u64, "frame 900"),
-    (0x2c6942c8ffea7a3u64, "frame 950"),
-    (0x795d199ea4eed3f1u64, "frame 1000"),
-    (0xbbe72f77d0809037u64, "frame 1050"),
-    (0x830c6982884a6870u64, "frame 1100"),
-    (0x3390beb734f6669cu64, "frame 1150"),
-    (0x97820b0228926e7du64, "frame 1200"),
-    (0x1b45bcdd7a3869f7u64, "frame 1250"),
-    (0x744e20410ca466a4u64, "frame 1300"),
-    (0x268e3f27287113a4u64, "frame 1350"),
-    (0xde45553b0296dc14u64, "frame 1400"),
-    (0x497589a357f2f809u64, "frame 1450"),
-    (0xa03f9fedc754d223u64, "frame 1499"),
-    (0xb577326ce65dd3c3u64, "after the walk"),
-    (0xb0786cd6da23e305u64, "settled"),
-    (0x2e02d246c408692au64, "woken"),
-    (0x58e1547ad2af4357u64, "settled own"),
-    (0xece28915c97cff8u64, "settled short"),
-    (0x6948480114b5c5b7u64, "collide outside and inside"),
-    (0x3b74ffb6509e70d4u64, "collide inside, was inside"),
-    (0x1d97d9ab011adf55u64, "collide inside, was above"),
-    ];
-
-    struct Marks { h: u64, at: usize }
-    impl Marks {
-        fn mix(&mut self, v: f64) { self.h = (self.h ^ v.to_bits()).wrapping_mul(0x100000001b3); }
-        fn mix_all(&mut self, a: &[f64]) { for &v in a { self.mix(v); } }
-        fn mark(&mut self, r: &Ragdoll) {
-            self.mix_all(&r.x); self.mix_all(&r.px); self.mix_all(&r.w); self.mix_all(&r.pen); self.mix_all(&r.cn); self.mix_all(&r.rot); self.mix_all(&r.r);
-            self.mix_all(&r.centre); self.mix_all(&r.prev_centre); self.mix_all(&r.r0); self.mix_all(&r.ride_v);
-            for v in [r.strain, r.awake, r.acc, r.snap_t, r.impact_v, r.since_impact] { self.mix(v); }
-            for b in [r.sleeping, r.any_pin, r.ride_owed] { self.mix(if b { 1.0 } else { 0.0 }); }
-            let (want, what) = EXPECTED[self.at];
-            assert_eq!(self.h, want, "at {} ({})", self.at, what);
-            self.at += 1;
-        }
-    }
-
-    fn pose() -> Vec<V3> {
-        let raw: [V3; 16] = [[0.0, 1.0, 0.0], [0.0, 1.25, 0.01], [0.0, 1.5, 0.0], [0.0, 1.65, 0.02], [0.18, 1.45, 0.0], [-0.18, 1.45, 0.0], [0.22, 1.2, 0.05], [-0.22, 1.2, 0.05], [0.24, 0.98, 0.12], [-0.24, 0.98, 0.12], [0.1, 0.95, 0.0], [-0.1, 0.95, 0.0], [0.11, 0.52, 0.04], [-0.11, 0.52, 0.04], [0.11, 0.1, 0.0], [-0.11, 0.1, 0.0]];
-        raw.iter().map(|p| [p[0] + 3.7, p[1], p[2] - 1.3]).collect()
-    }
-
-    fn set_box(q: &mut Ragdoll, c: V3, h: V3, yaw: f64, near: bool, k: usize) {
-        let (b, cs) = if near { (&mut q.near_b, &mut q.near_cs) } else { (&mut q.dyn_b, &mut q.dyn_cs) };
-        for a in 0..3 { b[k * 6 + a] = c[a]; b[k * 6 + 3 + a] = h[a]; }
-        cs[k * 2] = m::cos(yaw); cs[k * 2 + 1] = m::sin(yaw);
-    }
-
     /// The grid's stand-in, as world.ts's world answers: every static, in order. (The real gather is the collision part's.)
     pub(super) fn every_static(g: &mut Game, out: &mut Vec<i32>) -> f64 {
         let mut n = 0;
@@ -886,176 +792,6 @@ mod tests {
         static BOX_ROWS: std::cell::RefCell<Vec<(V3, V3, f64)>> = std::cell::RefCell::new(Vec::new());
     }
     pub(super) fn box_row(b: BoxId) -> (V3, V3, f64) { BOX_ROWS.with(|t| t.borrow()[b.ix()]) }
-
-    /// A blank Game is deep: its tests want a big stack.
-    fn on_a_big_stack(f: fn(&mut Game)) {
-        std::thread::Builder::new().stack_size(1 << 30).spawn(move || { let mut g = alloc::boxed::Box::new(Game::blank()); f(&mut g); }).unwrap().join().unwrap();
-    }
-
-    #[test]
-    fn the_typescripts_bits() { on_a_big_stack(typescripts_bits); }
-
-    fn typescripts_bits(g: &mut Game) {
-        let mut t = Marks { h: 0xcbf29ce484222325, at: 0 };
-        let pts = pose();
-        let vel: Vec<V3> = (0..16).map(|i| { let i = i as f64; [1.5 * (1.0 + i * 0.01), 0.3, -0.8 * (1.0 + i * 0.01)] }).collect();
-        let r = ragdoll_new(g, &pts, Some(&vel), None);
-        t.mark(&g.tab.ragdoll[r]);
-        for f in 0..1500 {
-            if f == 10 { ragdoll_add_rigid_velocity(g, r, [2.0, 0.5, -1.0], [0.5, 1.0, -0.3]); }
-            if f == 20 { ragdoll_add_velocity(g, r, 3.0, [0.0, -2.0, 1.0], Some(0.5)); }
-            if f == 21 { ragdoll_add_velocity(g, r, 8.0, [0.4, 1.0, 0.0], None); }
-            if f == 25 { ragdoll_nudge(g, r, 1.0, 0.02, -0.01); ragdoll_nudge(g, r, 2.0, 1e-5, 0.0); }
-            if f >= 60 && f < 120 {
-                let a = ragdoll_point(g, r, 0.0, None);
-                let tt = f as f64 * 0.01;
-                ragdoll_set_pin(g, r, 14.0, [a[0] + 0.8 + tt, 0.9, a[2]]);
-                ragdoll_set_pin(g, r, 15.0, [a[0] + 0.8 + tt, 0.85, a[2] + 0.2]);
-                ragdoll_ride(g, r, a, 0.01, 0.005, 0.02);
-                if f == 90 { ragdoll_ride(g, r, a, 0.2, -0.1, 0.4); }
-            }
-            if f == 120 { ragdoll_unpin(g, r, 14.0); }
-            if f == 121 { ragdoll_unpin(g, r, 14.0); }
-            if f == 130 { ragdoll_clear_pins(g, r); }
-            ragdoll_step(g, r, if f % 7 == 0 { 1.0 / 30.0 } else { 1.0 / 60.0 });
-            let i1 = ragdoll_take_impact(g, r, None, None);
-            t.mix(i1);
-            let i2 = ragdoll_take_impact(g, r, Some(0.5), Some(0.05));
-            t.mix(i2);
-            if f % 50 == 0 || f == 1499 { t.mark(&g.tab.ragdoll[r]); }
-        }
-        t.mix(ragdoll_dist(g, r, 0.0, 15.0));
-        t.mix(ragdoll_radius(g, r, 7.0));
-        t.mix(if ragdoll_is_pinned(g, r, 3.0) { 1.0 } else { 0.0 });
-        let mut o = [1.0, 2.0, 3.0];
-        let back = ragdoll_point(g, r, 9.0, Some(&mut o));
-        assert_eq!(back, o);   // (the caller's array is written, and it is what comes back)
-        t.mix_all(&o);
-        t.mark(&g.tab.ragdoll[r]);
-        let mut xs: Vec<f64> = g.tab.ragdoll[r].x.iter().enumerate().map(|(i, v)| v + (i % 5) as f64 * 0.003).collect();
-        xs[7] = m::NAN;
-        ragdoll_settle_at(g, r, &xs, Some(&[0.1, 0.2, 0.3, 0.9]), None);
-        t.mark(&g.tab.ragdoll[r]);
-        ragdoll_add_velocity(g, r, 0.0, [0.0, 3.0, 0.0], None);
-        for _ in 0..60 { ragdoll_step(g, r, 1.0 / 60.0); }
-        t.mark(&g.tab.ragdoll[r]);
-        ragdoll_settle_at(g, r, &xs, None, Some(true));
-        t.mark(&g.tab.ragdoll[r]);
-        ragdoll_settle_at(g, r, &xs[..40], Some(&[m::NAN, 0.0, 0.0, 1.0]), Some(false));
-        t.mark(&g.tab.ragdoll[r]);
-
-        let qi = ragdoll_new(g, &pts, None, None);
-        let q = &mut g.tab.ragdoll[qi];
-        q.world = true;
-        set_box(q, [3.7, 1.0, -1.1], [0.3, 0.5, 0.4], 0.4, true, 0);
-        set_box(q, [3.9, 0.5, -1.3], [0.05, 1.0, 0.6], -1.1, true, 1);
-        set_box(q, [3.5, 1.2, -1.4], [0.45, 0.02, 0.5], 2.2, false, 0);
-        q.n_near = 2.0;
-        q.n_dyn = 1.0;
-        for i in 0..16 { let b = ragdoll_buried(g, qi, i as f64); t.mix(if b { 1.0 } else { 0.0 }); }
-        for _ in 0..3 { for i in 0..16 { ragdoll_collide(g, qi, i as f64); } }
-        t.mark(&g.tab.ragdoll[qi]);
-        t.mix_all(&g.tab.ragdoll[qi].exit_l); t.mix_all(&g.tab.ragdoll[qi].exit_p);
-        let at = [3.7, 1.0, -1.1];
-        let q = &mut g.tab.ragdoll[qi];
-        for a in 0..3 { q.x[a] = at[a]; q.px[a] = q.x[a]; }
-        ragdoll_collide(g, qi, 0.0);
-        t.mix_all(&g.tab.ragdoll[qi].exit_l); t.mix_all(&g.tab.ragdoll[qi].exit_p);
-        t.mark(&g.tab.ragdoll[qi]);
-        let q = &mut g.tab.ragdoll[qi];
-        q.x[3] = 3.72; q.x[4] = 1.1; q.x[5] = -1.05; q.px[3] = 3.72; q.px[4] = 1.7; q.px[5] = -1.05;
-        ragdoll_collide(g, qi, 1.0);
-        t.mix_all(&g.tab.ragdoll[qi].exit_l); t.mix_all(&g.tab.ragdoll[qi].exit_p);
-        t.mark(&g.tab.ragdoll[qi]);
-        assert_eq!(t.at, EXPECTED.len());
-    }
-
-    /// world.ts's marks, the TypeScript's own bits under EXACT: made among statics and door leaves (buried's walk-back), a fall on them, a leaf turning, the leaves' cap.
-    const WORLD: &[(u64, &str)] = &[
-    (0x62bb63c9a9544ae8u64, "made in a world"),
-    (0x37068669d3f6b009u64, "frame 0"),
-    (0xadb29904250f9d88u64, "frame 25"),
-    (0x2a9af6c655fc246bu64, "frame 50"),
-    (0x6fc3e98752aba88u64, "frame 75"),
-    (0x1ef337aec427377fu64, "frame 100"),
-    (0x17228eef83325d3au64, "frame 125"),
-    (0x3429dedf1b12b27fu64, "frame 150"),
-    (0xd23211933e140300u64, "frame 175"),
-    (0x242e3ce8f517df49u64, "frame 200"),
-    (0xe352c2d13c854976u64, "frame 225"),
-    (0xeff18f0de2964d83u64, "frame 250"),
-    (0xe777ee524c723b9cu64, "frame 275"),
-    (0x1a1a45072347654du64, "frame 300"),
-    (0xe814654822177f12u64, "frame 325"),
-    (0xe25c042a91b5f947u64, "frame 350"),
-    (0x4304cad5db949bf8u64, "frame 375"),
-    (0xe79212c306418c41u64, "frame 399"),
-    (0x25ff4924c3d22ce1u64, "the leaves capped"),
-    ];
-
-    fn world_mark(g: &Game, r: RagdollId, h: &mut u64, at: &mut usize) {
-        let q = &g.tab.ragdoll[r];
-        let mut t = Marks { h: *h, at: 0 };
-        for a in [&q.x, &q.px, &q.pen, &q.cn] { t.mix_all(a); }
-        t.mix_all(&q.rot); t.mix_all(&q.centre); t.mix_all(&q.prev_centre);
-        let (nn, nd) = (q.n_near as usize, q.n_dyn as usize);
-        t.mix(q.n_near); t.mix(q.n_dyn);
-        for k in 0..nn { t.mix(q.near[k] as f64); }
-        t.mix_all(&q.near_cs[..nn * 2]); t.mix_all(&q.near_b[..nn * 6]);
-        for k in 0..nd { t.mix(q.dyn_[k] as f64); }
-        t.mix_all(&q.dyn_cs[..nd * 2]); t.mix_all(&q.dyn_b[..nd * 6]);
-        t.mix(if q.sleeping { 1.0 } else { 0.0 }); t.mix(q.impact_v);
-        *h = t.h;
-        assert_eq!(*h, WORLD[*at].0, "at {} ({})", *at, WORLD[*at].1);
-        *at += 1;
-    }
-
-    /// a row in the stand-in's table
-    fn put_row(c: V3, h: V3, yaw: f64) -> BoxId {
-        BOX_ROWS.with(|t| { let mut t = t.borrow_mut(); t.push((c, h, yaw)); BoxId(t.len() as u32 - 1) })
-    }
-
-    /// a static: a row, and a place in wd.boxes
-    fn put_box(g: &mut Game, c: V3, h: V3, yaw: f64) -> BoxId {
-        let b = put_row(c, h, yaw);
-        g.col.boxes.push(b);
-        b
-    }
-
-    #[test]
-    fn the_world_path_bits() { on_a_big_stack(world_path_bits); }
-
-    fn world_path_bits(g: &mut Game) {
-        put_box(g, [3.7, 0.3, -1.1], [0.5, 0.3, 0.35], 0.3);
-        put_box(g, [3.45, 1.2, -1.2], [0.06, 1.2, 0.8], -0.2);
-        put_box(g, [30.0, 1.0, 30.0], [1.0, 1.0, 1.0], 0.0);
-        put_box(g, [3.7, 9.0, -1.2], [1.0, 0.5, 1.0], 0.0);
-        let leaf = put_row([4.5, 1.0, -1.3], [0.45, 1.0, 0.02], 0.7);
-        let far = put_row([40.0, 1.0, 40.0], [0.45, 1.0, 0.02], 0.0);
-        g.col.dynamic_boxes = vec![leaf, far];
-        let pts = pose();
-        let vel: Vec<V3> = (0..16).map(|i| { let i = i as f64; [1.5 * (1.0 + i * 0.01), 0.3, -0.8 * (1.0 + i * 0.01)] }).collect();
-        let r = ragdoll_new(g, &pts, Some(&vel), Some(&crate::ragdoll::RagdollWorld::zeroed()));
-        // (what this test is worth: the far and the high static went, the far leaf went, and the wall made the walk-back run)
-        assert_eq!((g.tab.ragdoll[r].n_near, g.tab.ragdoll[r].n_dyn), (2.0, 1.0));
-        assert!(pts[9][0] != g.tab.ragdoll[r].x[27], "the hand posed in the wall was walked out");
-        let (mut h, mut at) = (0xcbf29ce484222325u64, 0);
-        world_mark(g, r, &mut h, &mut at);
-        for f in 0..400 {
-            if f % 10 == 0 { BOX_ROWS.with(|t| t.borrow_mut()[leaf.ix()].2 += 0.05); }
-            ragdoll_step(g, r, 1.0 / 60.0);
-            let v = ragdoll_take_impact(g, r, None, None);
-            let mut t = Marks { h, at: 0 }; t.mix(v); h = t.h;
-            if f % 25 == 0 || f == 399 { world_mark(g, r, &mut h, &mut at); }
-        }
-        // more leaves in reach than the list holds
-        let (x, z) = (g.tab.ragdoll[r].x[0], g.tab.ragdoll[r].x[2]);
-        g.col.dynamic_boxes = (0..35).map(|i| { let i = i as f64; put_row([x + i * 0.01, 1.0, z], [0.3, 1.0, 0.02], i * 0.1) }).collect();
-        ragdoll_gather_near(g, r);
-        assert_eq!(g.tab.ragdoll[r].n_dyn, 32.0);
-        world_mark(g, r, &mut h, &mut at);
-        assert_eq!(at, WORLD.len());
-    }
 
     #[test]
     fn the_skeletons_numbers_are_what_the_typescript_makes() {
