@@ -41,10 +41,10 @@ function shape(i: number): number { if (SHAPE === null) { const x = sim(); SHAPE
 /** The lane's knobs (Tab ▸ Weather ▸ wind rows; persisted with tune.wind). */
 export const WIND = {
   def: 1,                                        // tune.wind's default: the master 0‥1 (× every source's speed; 0 = still air, nothing packed anywhere)
-  vents: true, ventK: 1,                         // the level's diffusers, × their authored speed
-  storm: true, stormK: 1,                        // the weather's wind outdoors as a source, × its speed
-  doors: true, doorK: 1, doorReach: 2.2, doorSpreadDeg: 22, doorOpenRad: 1.2,   // gusts through open exterior doors: reach (m), cone half-angle, the leaf angle that counts as fully open
-  gusts: true, gustAmp: 0.25, gustPeriod: 3.5, stormGustAmp: 0.35, stormGustPeriod: 2.5,   // × (1 ± amp) on a value noise of the clock, per source
+  ventK: 1,                         // the level's diffusers, × their authored speed
+  stormK: 1,                        // the weather's wind outdoors as a source, × its speed
+  doorK: 1, doorReach: 2.2, doorSpreadDeg: 22, doorOpenRad: 1.2,   // gusts through open exterior doors: reach (m), cone half-angle, the leaf angle that counts as fully open
+  gustAmp: 0.25, gustPeriod: 3.5, stormGustAmp: 0.35, stormGustPeriod: 2.5,   // × (1 ± amp) on a value noise of the clock, per source
   rampUp: 3, rampDown: 4,                        // s: a vent spinning up (cycle on / mains back) and down (cycle off / blackout)
   smokeRelax: 3,                                 // 1/s at a jet's core: how hard the solver's air is pulled toward the field (× the jet's own profile off the core)
   sheetWake: 0.35, sheetKick: 2.0, debrisK: 0.15,   // the particle kernel's three (particles.wgsl windKnobs): air speed over a resting leaf that may pick it up, × that = its hop, a chip's coupling

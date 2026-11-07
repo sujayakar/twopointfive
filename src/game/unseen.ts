@@ -58,24 +58,20 @@ export const UNSEEN = {
   on: true,
   /** the wheel's pace at or under this share of his walk is sneaking (the notches: 1 · 0.87 · 0.74 · 0.61 · 0.48 · 0.35) · sneaking lasts this long after he stops (s) */
   paceAt: 0.5, linger: 1.5,
-  /** low while Sam is low */
-  crouch: true,
   /** following at Sam's pace plus what closes the gap (off: the file's own pace, capped) · the least his legs are asked for · the most while low · the gap's gain (1/s) */
-  pace: true, minPace: 0.5, lowPace: 1.45, gain: 1.5,
+  minPace: 0.5, lowPace: 1.45, gain: 1.5,
   /** nobody's legs for more than this on any walk while unseen (m/s; 0 = no cap — the silent order's own is 1.6) */
   cap: 1.6,
-  /** sent to a mark (a move, a cover) while Sam is low: he goes there low, at no more than `lowPace` */
-  post: true,
   /** a follower's place is along the wall Sam is on · how far off the face a body stands (m) · and how much further he may be stood where that floor is shut ·
    *  how far past Sam along the face a man may be and still be dealt a place on Sam's other side (further: he would walk across Sam's front) · Sam nearer than this
    *  to one end of the face: the file stacks away from that end */
-  wall: true, wallOff: 0.42, wallOut: 0.4, wallCross: 0.5, wallEnd: 1.6,
+  wallOff: 0.42, wallOut: 0.4, wallCross: 0.5, wallEnd: 1.6,
   /** quiet footfalls · a crouched one's level · an upright walking one's (the walk's is 0.33; the silent order's 0.2; Sam's crouch 0.125) */
-  step: true, lowStep: 0.14, walkStep: 0.2,
+  lowStep: 0.14, walkStep: 0.2,
   /** weapon lights and torches off while Sam's own is off · lines over the net · doors eased */
   lights: false, hush: true, doors: true,
   /** fire held on a defender who has not noticed anybody · and through standing glass until he is alert */
-  hold: true, glass: true,
+  hold: true, 
   /** said once as it starts · not again inside this many seconds */
   cue: true, cueGap: 30,
   /** A WALL HOLD COUNTS ONCE HIS BACK HAS BEEN ON IT A BEAT. Since a move key held into a wall takes the hold with no key of its own (wallsnap.ts `press`), a man

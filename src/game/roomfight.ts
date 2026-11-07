@@ -103,15 +103,11 @@ export const ROOMFIGHT = {
    *  The warehouse's dock man fell back through dock_s, was planted in the lot and held the building from outside it. False = as it was. No structure: no rule. */
   fallBackIn: true,
   /** operatives step out of an open doorway they have stopped in / to the side when a friend stands in their line */
-  doorway: true, sideStep: true,
-  /** a man he has seen, or a point a call / a shot / a footfall turns him to, behind his shoulder while he WALKS: his chest comes round to it and he walks on
-   *  backwards / sideways with his gun there (false = as it was: only a man stood still turned; walking, his gun went to its twist limit over one shoulder,
-   *  flipped to the other as the point passed behind his back, and he walked on away from the man shooting him) */
-  turnWalk: true,
+  
   /** who he shoots first: a man he sees inside `closeM` with his muzzle ON him comes before the man he is already on, and a man he has had no clear round at
    *  for `noShot` s (furniture, a jamb, a leaf in the line) has no hold on him — the next man he sees is his (false = as it was: once on a man he stayed on him
    *  while he could see him, whoever else walked up) */
-  nearest: true, closeM: 2.5, noShot: 0.4,
+  closeM: 2.5, noShot: 0.4,
   /** the line of fire at arm's length: a friend's clearance is never more than 0.3 m + a quarter of how far along the line he stands, and one BEYOND a man who
    *  is inside `pointBlank` m counts only if the line itself passes through him (false = as it was: 0.45 m, up to 0.95 for a man on the move, a metre past the
    *  target at any range — in a doorway scrum every gun on the team was down for the mate beside the man they were all on, and he shot them one by one) */
@@ -134,16 +130,9 @@ export const ROOMFIGHT = {
    *  him (that is what he is there for), and the moment there IS a round at the man he is his again. 0 = as it was: he walked on backwards with his muzzle (and, once
    *  the lights were free, his light) on a man behind a pane for as long as he could see him — with night vision, the whole length of a corridor */
   noShotGo: 1.5, noShotPass: 4,
-  /** a man he was on, out of his sight for under a second and a half (a door leaf swung across, a jamb passed) and back in it: his track is where it was
-   *  less what the gap cost, not zero, and the beat to take him up again is as short as the gap was. false = as it was: any break in sight, however short, and he lined the same man up from nothing — a man he had
-   *  followed through a pane to the room's door walked out of it and shot him first */
-  keepTrack: true,
   /** how readily a defender goes to a fight next door (`rally`): × his side's chance to go each time he weighs it (FIGHT_SKILL rallyChance, 0.75 a roll). 1 = as it
    *  was; under 1 more of them are still in their own rooms when the team gets there; 0 = nobody leaves (the `rally` switch off). The dice are drawn either way */
   rallyK: 1,
-  /** a teammate hears an ENEMY's footfall (open air, the hearing model's rule for a step) — and the nearest man to it with a line looks that way (off = steps
-   *  reach nobody's ears on the team, as it was: a man coming up a corridor behind a stack was seen only by whoever happened to face him) */
-  stepEars: true,
   /** a man HOLDING an arc he was given (orders.ts holdArcs: a watch point, on his mark) answers a mate's call or a footfall only inside this many degrees of it
    *  — the other half is the other man's; 180 = as it was (he turned to any call he had a line to, and the two of them ended facing one way) */
   arcHalfDeg: 100,
@@ -159,9 +148,6 @@ export const ROOMFIGHT = {
    *  reads at the roused rate. 10 = as it was — a quarter of a minute after a room was taken the team looked as calm men look, and a defender walking in through
    *  a connecting door two metres off had three tenths of a second on the man watching it */
   teamHot: 45,
-  /** a teammate already coming round to look for a man (a mate's call, a round, a footfall: cue) is not SURPRISED by him when his eyes find him, wherever his
-   *  muzzle had got to (off = as it was: the surprise beat whenever his gun was not yet within the sector) */
-  cued: true,
   /** s a teammate holds off a man for a friend in his line, with nowhere to step, before a hostile's round from somewhere else takes his eyes: he lets the
    *  masked man go for a couple of seconds and turns to the one shooting (0 = never, as it was: he stood on the masked man until he was shot from behind) */
   letGo: 0.8,
@@ -169,7 +155,7 @@ export const ROOMFIGHT = {
    *  spot through a leaf, the doorway or corner it comes round otherwise — and holds it there while the steps keep coming, `stepLookSecs` at most a look; a shot or a mate's call takes
    *  the look over, and a man on his way to a door's mark or through it keeps his corner (off = as it was: he looked only for a man he already had a line
    *  to, and boots running up to a shut door two metres behind him turned nobody) */
-  stepLook: true, stepLookSecs: 5,
+  stepLookSecs: 5,
   /** a door an ENEMY's hand opens (unlatched and swung: never a rattle, a pick, a leaf slammed to): its noise within 9 m — by path and loudness as a footfall is
    *  heard, at a lower bar: a leaf moving in his sight is seen as much as heard — turns EVERY teammate with a line to that doorway onto it for `doorLookSecs`
    *  (the steps' look is one man's; a door coming open onto the floor they stand on is every man's who can see it), each after his own beat, once per opening.
@@ -188,9 +174,6 @@ export const ROOMFIGHT = {
    *  answers only inside it; a gun an order has on another door keeps that door. Nothing is fired at a noise: whether
    *  there is a man to shoot stays his eyes'. ON in the page (?doorshots=0), off here and on the frozen stand (TPS_DOORSHOTS=1) */
   doorShots: false, doorShotM: 8,
-  /** a teammate in the fight whose line to his man (or to what he is looking for) runs through SAM lowers his muzzle until Sam is out of it — he was already
-   *  holding his fire; now he also takes the gun off him (off = as it was: held, with the gun up on Sam's back) */
-  samLine: true,
   /** the feet half of guards.ts LIGHTS.litMan (that switch is this rule's too — see there): a teammate WALKING on an order who stands in the dark on a man
    *  standing in the place's light, with SAM in his line to him — his gun is down for it (samLine) — stops where he is until the line is clear, this many
    *  seconds at most a hold (0 = his feet are never held). Only a walk that closes on the man (the leg he is on ends nearer the man than he stands: a word that pulls
@@ -206,19 +189,7 @@ export const ROOMFIGHT = {
   lamp: 0.7,
   /** a man who shows within this many degrees of where a raised gun already points is shot at from that side's `preaim` track, not from nothing */
   preaimDeg: 12,
-  /** EYES ON THE SIGHTS (rebuild/four-man-entries/fix.md, found tracing the fours' men shot by a man they were facing and never saw): a man's eye is 58° either
-   *  side of where chest and head point BETWEEN them (guards.ts canSeeChar) — and with a long gun in the shoulder the chest is bladed some 80° off the bore and
-   *  the head laid 45° down on the stock, so that mean looks 42‥63° off the gun (measured, both sides): what his sights are on sits at the very edge of what he
-   *  sees or outside it, past the near field anything to the gun side of it is invisible, and the door a man covers is the door he is blindest to. On: while his
-   *  long gun is in the shoulder and level along his aim (the bore inside 30° of it in plan), an AI man ALSO sees other AI men through the same eye laid along
-   *  his aim — a cone of `sightsDeg` either side of it, and the 100° near field inside 3.5 m: `sights` the teammates (ON), `sightsFoe` every other side's men
-   *  (off: measured, it costs the team more men than `sights` finds). `sightsDeg` 45 keeps that cone INSIDE the 50° sector his gun is taken to watch
-   *  (FIGHT_SKILL.operative.sectorDeg): at the eye's own 58° a man who showed in the 50‥58° band while the gun was still swinging round to him was a SURPRISE
-   *  (the whole beat owed) where two frames later he would have been a man in his sector — seen sooner, shot later; that lost one office rescue of 48 and one registry rescue of 48 from the threshold,
-   *  and 45 has them back. What he saw before he still sees; Sam's reading by anybody's eye is untouched (the stealth game as it was); only while the room fight is live
-   *  (operative or hostile units on the floor: every scenario, never the night game, a tour or a showcase). A gun lowered for a friend in the line is not in
-   *  the shoulder: his eye is the old one until it is back up. The numbers are in fix.md. */
-  sights: true, sightsFoe: false, sightsDeg: 45,
+  
 };
 
 /** One side's skill. The same keys both rows; what a key does is the same thing for both. */

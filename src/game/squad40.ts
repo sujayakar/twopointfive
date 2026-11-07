@@ -66,8 +66,6 @@ export const SQUAD40 = {
   aimSecs: 2, raiseSecs: 0.35, afterSecs: 0.4,
   /** the squad block names the shot this long (s) */
   shownSecs: 2.5,
-  /** the picture on the overlay (ui/squadthrowviz.ts): who fires, the arc, where it goes off and the burst's two radii */
-  draw: true,
 };
 /** `SQUAD40_BREAK=1` (the check's): the order is not there — no row, no round — whatever the switch says */
 const BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.SQUAD40_BREAK ?? '') === '1'; } catch { return false; } })();

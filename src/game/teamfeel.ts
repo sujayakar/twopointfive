@@ -29,38 +29,37 @@ const KEPT: Record<FeelName, Record<string, [number, number, number] | null>> = 
   FLASH: { on: null, 'secs.0': [1, 12, 0.5], 'secs.1': [0.5, 12, 0.5], 'stagger.0': [0, 6, 0.25], 'stagger.1': [0, 6, 0.25], concussM: [0, 12, 0.5], concussK: [0, 1, 0.05], ownM: [0, 6, 0.25], fuse: [0.2, 2.5, 0.1] },
   PACE: { on: null, max: [1.2, 4.7, 0.1], accel: [1, 12, 0.2], turn: [0, 30, 1], swing: [0, 60, 2] },
   LIGHTS: { on: null, litOff: null, litAt: [0.05, 0.9, 0.05], lookDark: null, afterSecs: [0, 10, 0.5], hotSecs: [0, 15, 0.5], stepSecs: [0, 15, 0.5], onM: [0.2, 5, 0.1], aloneM: [2, 20, 0.5] },
-  NVG: { on: null, lead: null, own: null, quietSecs: [0, 90, 5], darkAt: [0.05, 0.9, 0.05], blackAt: [0, 0.6, 0.05] },
+  NVG: { on: null, quietSecs: [0, 90, 5], darkAt: [0.05, 0.9, 0.05], blackAt: [0, 0.6, 0.05] },
   IR: { on: null, sam: null, carry: null, teamOff: null },
   IRLIGHT: { on: null, team: null, auto: null, meter: null, near: null, nearM: [1, 12, 0.5], show: [0.02, 0.4, 0.01], power: [1, 100, 1], cone: [30, 85, 5], reach: [8, 30, 1] },   // the infrared light on the goggles (irlight.ts)
   FOG: { own: null, calls: null, doors: null, lasers: null },
   LASER: { enemy: null },
   FRAG: {},
-  SILENT: { on: null, start: null, pace: [0, 2.2, 0.1], hotPace: null, step: [0, 0.8, 0.05], lights: null, hush: null, doors: null, kicks: null, picks: null, bootWedged: null, cans: null, holdFire: null, noticed: [0.1, 1, 0.05], toolsLoud: null },   // the squad's posture on Sam's word (silent.ts) — up here, not at the table's foot where the other parts add theirs
-  DOORTOOLS: { secondThrows: null, lastOut: null, slicePace: [0, 2.2, 0.1], corners: null, sectors: null, search: null, scanRate: [0.4, 4, 0.1], charges: [0, 6, 1], bangs: [0, 9, 1], wordOnKey: null, thrSlice: null, thrLight: [0, 2, 1], thrMin: [0, 15, 0.5], thrQuiet: [0, 10, 0.5], thrBangs: [0, 4, 1], thrIn: [1, 4, 1] },
-  ROOMFIGHT: { stepEars: null, arcHalfDeg: [30, 180, 5], teamHot: [5, 120, 5], cued: null, letGo: [0, 3, 0.1], stepLook: null, samLine: null, turnWalk: null, nearest: null, closeLane: null, samBehind: null, doorway: null, sideStep: null, fallBack: null, rally: null },
+  SILENT: { on: null, start: null, pace: [0, 2.2, 0.1], step: [0, 0.8, 0.05], lights: null, hush: null, doors: null, kicks: null, picks: null, bootWedged: null, cans: null, holdFire: null, noticed: [0.1, 1, 0.05], toolsLoud: null },   // the squad's posture on Sam's word (silent.ts) — up here, not at the table's foot where the other parts add theirs
+  DOORTOOLS: { lastOut: null, slicePace: [0, 2.2, 0.1], search: null, scanRate: [0.4, 4, 0.1], charges: [0, 6, 1], bangs: [0, 9, 1], wordOnKey: null, thrSlice: null, thrLight: [0, 2, 1], thrMin: [0, 15, 0.5], thrQuiet: [0, 10, 0.5], thrBangs: [0, 4, 1], thrIn: [1, 4, 1] },
+  ROOMFIGHT: { arcHalfDeg: [30, 180, 5], teamHot: [5, 120, 5], letGo: [0, 3, 0.1], closeLane: null, samBehind: null, fallBack: null, rally: null },
   ORDERS: { run: [1.2, 4.7, 0.1], brisk: [1.2, 4.7, 0.1], entry: [1.2, 4.7, 0.1], asideHold: [0, 4, 0.25], offDoor: [0, 1.5, 0.1], clickGives: null, wheelElement: null, doorRay: null },
-  COVER: { on: null, stacked: null, rearWalkM: [0, 30, 0.5], inRoom: null, edge: null, laneWalk: null },
+  COVER: { on: null, stacked: null, rearWalkM: [0, 30, 0.5], inRoom: null, edge: null },
   ENTRY: { offOpenings: null, watch: null, nearM: [0, 6, 0.5], gaps: null },
-  REAR: { settle: null, secs: [0, 3, 0.25], file: null },
-  PAIR: { on: null, steady: null, markOnHands: null, watched: null, quietFirst: null, stageM: [1.2, 4, 0.1], secs: [0.2, 2, 0.1], pace: [0.6, 2.2, 0.1], goPace: [0.6, 2.2, 0.1], coneM: [0, 16, 1], crouch: null, darkVis: [0.05, 0.9, 0.05], darkM: [0, 3, 0.5], darkRefuse: null, darkCrouch: null },   // quiet orders for one partner (pairorders.ts)
-  DOORMANNERS: { on: null, pass: null, stand: null, swing: null, lane: null, laneMove: null, laneLeaf: null, laneWalk: null, watch: null, fight: null, gap: [0.8, 2, 0.05], patience: [0.5, 1.2, 0.1] },   // doorway manners, both sides (doorway.ts): its one switch, and the rules under it for an A/B
+  REAR: { settle: null, secs: [0, 3, 0.25] },
+  PAIR: { on: null, steady: null, markOnHands: null, watched: null, stageM: [1.2, 4, 0.1], secs: [0.2, 2, 0.1], pace: [0.6, 2.2, 0.1], goPace: [0.6, 2.2, 0.1], coneM: [0, 16, 1], darkVis: [0.05, 0.9, 0.05], darkM: [0, 3, 0.5] },   // quiet orders for one partner (pairorders.ts)
+  DOORMANNERS: { on: null, stand: null, lane: null, laneLeaf: null, laneWalk: null, watch: null, fight: null, gap: [0.8, 2, 0.05], patience: [0.5, 1.2, 0.1] },   // doorway manners, both sides (doorway.ts): its one switch, and the rules under it for an A/B
 };
 // (the rescue-with-goggles rows, added down here so the tables above stay line for line what the other parts of the build merge against)
-Object.assign(KEPT.NVG, { huntFrees: null });
 // (a silent squad and standing glass, silent.ts roundHeldGlass)
 Object.assign(KEPT.SILENT, { glass: null });
 // (frag grenades, frag.ts: the defenders' own, and the numbers of the item itself)
 Object.assign(KEPT.FRAG, { defenders: null, defMax: [0, 6, 1], defShare: [1, 11, 1], defFuse: [2, 6, 0.25], defWind: [0, 3, 0.1], defGap: [0, 60, 1], fuse: [1.5, 6, 0.25], lethalM: [1, 8, 0.5], woundM: [2, 14, 0.5] });
 // (a burst and glass, frag.ts: the size of the blast the panes round it take, and what a fragment has for a pane that stands — its own statement, as above)
 Object.assign(KEPT.FRAG, { glassM: [0.5, 8, 0.25], glassPower: [0, 3, 0.1], paneEnergy: [0, 1, 0.05] });
-Object.assign(KEPT.DOORMANNERS, { restClear: null, markClear: null, podClear: null, shortClear: null });   // (a follower's place, stack marks and the points after an entry keep off frames and swings: their own rows)
+Object.assign(KEPT.DOORMANNERS, { markClear: null, podClear: null });   // (a follower's place, stack marks and the points after an entry keep off frames and swings: their own rows)
 Object.assign(KEPT.DOORMANNERS, { stepCover: null, planeDeg: [0, 60, 5] });   // (a defender's step off a doorway: never to a spot a rifle reaches through glass; cover on either face with them along the wall)
 Object.assign(KEPT.DOORMANNERS, { ownPlace: null });   // (a teammate on his own mark by a door is walked round, never walked into)
 Object.assign(KEPT.DOORMANNERS, { leafRound: null });   // (a leaf standing open across a teammate's walk is gone round, not turned shut under him)
 Object.assign(KEPT.DOORMANNERS, { leafStall: null });   // (a teammate walking on the spot against a leaf with no way round it has it out of his way at once)
-Object.assign(KEPT.ROOMFIGHT, { samTravel: null, samBeside: null, noShotGo: [0, 5, 0.25], keepTrack: null });
+Object.assign(KEPT.ROOMFIGHT, { samTravel: null, samBeside: null, noShotGo: [0, 5, 0.25] });
 // (the threshold's later rows — the far gun's set, the goggles, the room's other doors held — as their own statement: other parts add rows to the table's lines)
-Object.assign(KEPT.DOORTOOLS, { thrSet: null, thrTube: null, thrDark: null, thrDoors: null, thrDoorsM: [0, 12, 0.5], thrDoorsLit: null });
+Object.assign(KEPT.DOORTOOLS, { thrDark: null, thrDoors: null, thrDoorsM: [0, 12, 0.5] });
 // (… and the can that goes in before anybody shows in a hot door's opening)
 Object.assign(KEPT.DOORTOOLS, { thrFirst: [0, 2, 1], thrFirstMin: [0, 15, 0.5], thrFirstStale: [0, 15, 0.5], thrFirstIn: [0, 4, 0.2], thrFirstOnly: null });
 // (the captor's last warning heard at the door: its own statement, as above)
@@ -147,9 +146,7 @@ Object.assign(KEPT.COVER, COVER_STEP);
 /** cover.ts COVER.backKeep — a man walking backwards on his opening keeps to it until his body has come round to the way he goes (off = he could change his mind every frame)  */
 Object.assign(KEPT.COVER, { backKeep: null });
 // the entry: a shot does not cost a man his corner, and the man who has seen most of the room goes in first (doortools.ts DOORTOOLS.cornerOwed / collapse / cornerTurn / leadSeen)
-Object.assign(KEPT.DOORTOOLS, { cornerOwed: null, collapse: null, cornerTurn: null, leadSeen: null, leadSeenMin: [0, 80, 2], leadSeenSecs: [5, 120, 5] });
-// eyes on the sights: a man with his long gun in the shoulder also sees along his aim (roomfight.ts ROOMFIGHT.sights / sightsFoe — rebuild/four-man-entries/fix.md)
-Object.assign(KEPT.ROOMFIGHT, { sights: null, sightsFoe: null, sightsDeg: [20, 58, 1] });
+Object.assign(KEPT.DOORTOOLS, { cornerOwed: null, leadSeen: null, leadSeenMin: [0, 80, 2], leadSeenSecs: [5, 120, 5] });
 // (a door face with no floor at either jamb: the men work their own marks out — orders.ts workedMarks)
 Object.assign(KEPT.ORDERS, { workOut: null });
 // (a door across a passage: three or four file up behind the jamb men, back down the passage — orders.ts ORDERS.hallFile)
@@ -161,7 +158,7 @@ Object.assign(KEPT.ENTRY, { offMouth: null });
 // the way an order walks a man (cleared.ts): round rooms nobody has been in · the stack on the known face · the entry through the ordered door
 Object.assign(KEPT.ORDERS, { cleared: null, knownFace: null, ownDoor: null, clearedDear: [1, 40, 1] });
 // nobody is sent off alone: a walk away from everybody is taken by a pair or not at all (doortools.ts DOORTOOLS.buddy)
-Object.assign(KEPT.DOORTOOLS, { buddy: null, buddyDoors: null, buddyM: [2, 12, 0.5], buddyPairM: [5, 30, 1], buddyLeftM: [4, 20, 1] });
+Object.assign(KEPT.DOORTOOLS, { buddy: null, buddyM: [2, 12, 0.5], buddyPairM: [5, 30, 1], buddyLeftM: [4, 20, 1] });
 // the whole room: a part of it nobody has seen is gone into, not looked at from its mouth (doortools.ts DOORTOOLS.flowOn)
 Object.assign(KEPT.DOORTOOLS, { flowOn: null, flowCells: [8, 120, 4], openAir: null, flowMax: [0, 900, 20] });
 // a known threat first: the first man in has his gun on where the team knows an enemy to be beyond the door (doortools.ts DOORTOOLS.threatFirst)

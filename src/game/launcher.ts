@@ -42,7 +42,7 @@ export const RING = {
    *  made its noise at, where the men who heard it will look, rather than skating off down the corridor */
   propJ: 3, restitution: 0.2, keepTangent: 0.25, spentSpeedMax: 5,
   /** aim: lead the man under the reticle by his ground velocity (one iteration), and solve the launch elevation so the arc passes through the aim point (two) */
-  lead: true, solveIters: 2,
+  solveIters: 2,
 };
 /** the yelp of a man a ring has just doubled over (placeholder lines — the writing pass is the maintainer's) */
 const STAGGER_LINES = ['agh — what the—', 'AH! son of a—', 'ow! what— who\'s there?!', 'nngh— something hit me!', 'jesus— my ribs—'];
