@@ -6,7 +6,7 @@ fn word(b: &[u8]) -> u32 { let mut h: u64 = 0xcbf29ce484222325 ^ (b.len() as u64
 /// `o` and `out` are kept by the caller, so that a call grows nothing once they have reached their size
 /// With the first seat standing on Game, as inside a tick: which seat a machine shows then moves no word
 pub fn state_words(g: &mut crate::game::Game, o: &mut W, out: &mut Vec<u32>) { out.clear(); crate::seats::on_first_bare(g, &mut |g: &mut crate::game::Game| {
-    o.b.clear(); { g.col.cells.w(o); g.col.w.w(o); g.col.h.w(o); g.col.cs.w(o); g.col.nav.w(o); g.col.sound.w(o); g.col.boxes.w(o); g.col.windowed.w(o); g.col.stamp_id.w(o); g.col.cell_stamp.w(o); g.col.seg_cells.w(o); g.col.tilted_at.w(o); g.col.trig_yaw.w(o); g.col.trig_cos.w(o); g.col.trig_sin.w(o); g.col.pane_rule.w(o); g.col.pane_rows.w(o); g.col.glass_walkable.w(o); g.col.dynamic_boxes.w(o); g.col.lamp_q.w(o); g.col.fire_pass.w(o); } out.push(word(&o.b));
+    o.b.clear(); g.col.w(o); out.push(word(&o.b));
     o.b.clear(); g.snow_field.w(o); out.push(word(&o.b));
     o.b.clear(); g.snow_tracks.w(o); out.push(word(&o.b));
     o.b.clear(); g.snow_look_was.w(o); out.push(word(&o.b));
