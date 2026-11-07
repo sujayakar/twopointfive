@@ -11,14 +11,15 @@ export interface Surface {
   /** a tool's replacement of this function is calling through to the original: answer from the record */
   tapFiring(key: string): boolean; tapAnswer(): unknown;
   /** a new game is standing: nothing crosses to the last game's host */
-  newGame(): void;
+  newGame(): void;  /** a function with no body was called on a game that stands and has never started: start that game. True if the call may now cross */
+  startFor?(self: unknown, args: unknown[]): boolean;
 }
 export let RUST_SURFACE: Surface | null = null;
 export function setSurface(s: Surface | null): void { RUST_SURFACE = s; }
 /** the body of a rule only the Rust game has */
 export function crossToRust(key: string, self: unknown, args: unknown[]): unknown {
   if (!RUST_SURFACE) throw new Error(`${key}: a rule that has no TypeScript body was called where no call surface is installed (the page, or a tool run without the bridge's preload): only the Rust game has it. If a start or a menu needs it as TypeScript, the cure is a row in tools/blitz/delete-keep.json and the deletion run again (tools/blitz/DELETION.md)`);
-  const r = RUST_SURFACE.call(key, self, args);
+  let r = RUST_SURFACE.call(key, self, args); if (r === RUST_PASS && RUST_SURFACE.startFor?.(self, args)) r = RUST_SURFACE.call(key, self, args);
   if (r === RUST_PASS) throw new Error(`${key}: a start called a rule that has no TypeScript body. Only the Rust game has it, and this call did not cross: no host of a Rust game stands for it yet (a start), or it was made inside the host's own lines (an apply, the dress step), or on a row the Rust game has not got. The census of starts never saw this call (tools/blitz/starts.json); the cure is to add the start that makes it to that table, or a row in tools/blitz/delete-keep.json, and run the deletion again (tools/blitz/DELETION.md)`);
   return r; }
 /** the body of a function that went with the tick and has no row on the call surface */
