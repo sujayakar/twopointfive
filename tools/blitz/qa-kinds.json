@@ -168,7 +168,6 @@
 "kitanim-nv": [
 "RELOAD.auto=false",
 "QUICKTHROW.on=true",
-"KITANIM.nv=false",
 "KITANIM.on=false"
 ],
 "kitanim-reload": [

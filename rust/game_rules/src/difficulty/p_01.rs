@@ -179,12 +179,12 @@ macro_rules! rows_same {
 
 /// `same` of two PRESSURE tables. (difficulty.ts:163)
 fn pressure_same(a: &crate::knobs::PressureK, b: &crate::knobs::PressureK) -> bool {
-    rows_same!(a, b, crate::knobs::PressureK; on, press, flank, fall_back, squad_drill, second, second_keeps, second_set, max_men, keep_room, memory_secs, organise_k, warned, stand_press, keeper_left, report_secs, stand_secs, stand_grace, again_secs, stuns, stun_known, stun_know_secs, stun_moved_secs, last_holds, picket, by_way, rescue_crew, drilled, flank_max_m, flank_k, flank_slack_m, last_man_secs, out_early, loud_secs, out_secs, gather, gather_secs, flank_secs, siege_secs, listen, converge, word_secs, way_out, way_out_m, way_out_secs, sweep, sweep_secs, sweep_men, sweep_beat, sweep_pair_m)
+    rows_same!(a, b, crate::knobs::PressureK; on, press, flank, squad_drill, second, max_men, memory_secs, organise_k, warned, stand_press, report_secs, stand_secs, stand_grace, again_secs, stuns, stun_know_secs, stun_moved_secs, last_holds, picket, by_way, rescue_crew, drilled, flank_max_m, flank_k, flank_slack_m, last_man_secs, loud_secs, out_secs, gather_secs, flank_secs, siege_secs, word_secs, way_out, way_out_m, way_out_secs, sweep, sweep_secs, sweep_men, sweep_beat, sweep_pair_m)
 }
 
 /// `same` of two DIGIN tables. (difficulty.ts:163)
 fn digin_same(a: &crate::knobs::DiginK, b: &crate::knobs::DiginK) -> bool {
-    rows_same!(a, b, crate::knobs::DiginK; on, stay, reach_m, hold_set, keeper, refuge, cover, brace, brace_in_room, doors, radio, noticed, noticed_secs, shut_open, shut_secs, shut_home_rad, shut_doors, deep, far, learn, gather, gather_m, gather_shy_m, steady, think, wedge_secs, wedges, caught, try_secs, pace, close_m, prop_m, haul_speed, scrape_level, scrape_every, shout_m, alt_m, better, fear, hold_secs, redig_secs, lanes, lane_secs)
+    rows_same!(a, b, crate::knobs::DiginK; on, stay, reach_m, keeper, cover, brace_in_room, noticed_secs, shut_open, shut_secs, shut_home_rad, shut_doors, gather, gather_m, gather_shy_m, think, wedge_secs, wedges, caught, try_secs, pace, close_m, prop_m, haul_speed, scrape_level, scrape_every, shout_m, alt_m, better, fear, hold_secs, redig_secs, lane_secs)
 }
 
 // ---------------------------------------------------------------- the levers' words

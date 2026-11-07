@@ -48,10 +48,6 @@ export const HOLDFIRE = {
   on: false,
   /** how long his shot or his order keeps the hold off after the last of them (s; ROOMFIGHT.teamHot's 45) */
   liftSecs: 45,
-  /** … and through standing glass the round is held until the man is alert or searching, as the sneak holds it */
-  glass: true,
-  /** a quiet gun is held too (off: only a gun the floor would hear, as the sneak's hold has it) */
-  quiet: true,
   /** 'go loud' told to a SILENT squad is an order that means fire (off: it ends the silent posture and this hold takes over, until his shot or a door order) */
   loud: true,
   /** a man on his stack mark with his round held on a man counts as arrived, and the lead keeps his hand off the handle while his own is (off: 'stacking' until his gun is the door's, and the handle tried, as it was) */

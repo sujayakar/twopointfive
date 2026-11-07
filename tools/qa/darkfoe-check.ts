@@ -59,7 +59,7 @@ export async function darkfoeCheck(): Promise<boolean> {
         `${men.length} defenders · ${blind} with a dark view by the check's own reading · know ${knows} · lamps ${lit} · sent ${walked}`); }
 
     // (c) the lamps are the word
-    { const W = await stand(33), g = W.game; Object.assign(DARKFOE, was, { on: true, carry: 1, byLamp: true }); const men = foes(g);
+    { const W = await stand(33), g = W.game; Object.assign(DARKFOE, was, { on: true, carry: 1 }); const men = foes(g);
       const los = (a: any, b: any) => flat(a.char.pos, b.char.pos) <= DARKFOE.lampM + 0.5 && !g.col.segmentBlocked([a.char.pos[0], 1.5, a.char.pos[2]], [b.char.pos[0], 1.5, b.char.pos[2]]);
       const inCone = (a: any, b: any) => { let d = Math.atan2(b.char.pos[0] - a.char.pos[0], b.char.pos[2] - a.char.pos[2]) - a.char.aimYaw; d = Math.atan2(Math.sin(d), Math.cos(d)); return Math.abs(d) <= (GUARD_EYE.halfDeg + 8) * Math.PI / 180; };
       const first = men.filter(gd => ownBlind(g, gd)).sort((a, b) => men.filter(o => o !== b && los(o, b) && inCone(o, b)).length - men.filter(o => o !== a && los(o, a) && inCone(o, a)).length)[0];

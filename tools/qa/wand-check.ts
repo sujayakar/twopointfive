@@ -183,7 +183,7 @@ export async function wandLook(): Promise<boolean> {
 
     const before = fog.hidden(T);
     const started = begin(W);
-    let hidFeed = true; const FEED = STEALTHPOSE.on && STEALTHPOSE.cable ? STEALTHPOSE.cableIn : WAND.quickSecs, half = Math.floor(FEED / DT * 0.5);   // (the wait as the keys stand: the 1.5 s on his knee, or with `quick` — the page — the animation's time from the start of the look)
+    let hidFeed = true; const FEED = STEALTHPOSE.on ? STEALTHPOSE.cableIn : WAND.quickSecs, half = Math.floor(FEED / DT * 0.5);   // (the wait as the keys stand: the 1.5 s on his knee, or with `quick` — the page — the animation's time from the start of the look)
     steps(W, half, () => { W.cursorAt(T.char.pos); }); hidFeed &&= fog.hidden(T) && !fog.eyes[0]?.wand;
     const n = feed(W, T.char.pos), took = !pl.wanding ? -1 : WAND.quick ? (half + n) * DT : pl.wanding.t, crouched = pl.crouch, hands = pl.char.anim.lockpick;
     steps(W, 60, () => { W.cursorAt(T.char.pos); });
