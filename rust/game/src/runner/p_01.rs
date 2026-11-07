@@ -481,9 +481,8 @@ pub fn drop(g: &mut crate::game::Game, gd: GuardId) {
         o.search_plan = None;
         o.standoff = None;
         o.muzzle_down = false;
-        o.hold = true;
-        o.pinned = true;
     }
+    crate::control::set_hold(g, gd, true, "runner"); crate::control::set_pinned(g, gd, true, "runner");
     let e = known(g, gd);
     let mate = pick_mate(g, gd);
     if let Some(ma) = mate {

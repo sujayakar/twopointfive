@@ -259,9 +259,9 @@ pub fn arriving(g: &mut crate::game::Game, quiet: bool) {
             Err(e) => { let short: String = e.chars().take(40).collect(); let what = format!("spawn-failed:{}:{}", i, short); note(g, &what); break; }
         };
         let seq = g.event_seq;
+        crate::control::set_hold(g, gd, false, "qrf");
         let x = &mut g.gd[gd];
         x.trained = true;
-        x.hold = false;
         x.state = crate::game::GuardState::Search;
         x.awareness = HUNT_AWARENESS;
         x.foe = Some(crate::game::Foe::Player);
