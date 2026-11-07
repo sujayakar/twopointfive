@@ -692,7 +692,9 @@ fn alert(g: &mut Game, gd: GuardId, dt: f64, f: &mut Frame) {
             };
             aim_at = Some([threat[0], 1.1, threat[2]]);
             crouch = want.crouch;
-            let outcome = match want.to {
+            // (A MAN WHO CANNOT SEE GOES NOWHERE: whatever spot a rule names, a dazzled or staggered man gets down where he is. Said here once, for
+            //  every rule of the cover stage; the rule keeps its spot and he goes when he can see)
+            let outcome = match want.to.filter(|_| !dazzled && !staggered) {
                 None => {
                     brake(g, gd, 8.0, dt);
                     g.ch[c].vel = [0.0, 0.0, 0.0];
