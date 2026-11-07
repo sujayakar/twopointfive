@@ -103,7 +103,7 @@ async function bridge(): Promise<any> {
   O.OUT_HOST.tap = SU.fireTap; BR = { ...E, pageDress: PD.dressStep, surfaceHost: SU.surfaceHost, readRecord: SU.readRecord, makeTaps: SU.makeTaps, makeScan: SC.makeScan, installAsks: AK.installAsks, applyGame: I.applyGame, hooks: { classes: C.classTable(), values: C.valueTable(), made: Object.fromEntries(MEN.map(c => [c, (o: object) => { MADE_MEN.add(o); MADE.n++; }])) }, puppetRows: P.puppetRows, SLOW: P.SLOW, VALS: P.VALS, OUT: O.OUT, A, reg: K.knobRegistry(), newDice: D.newDice, dressAll: DR.dressAll, DRESS: DR.DRESS,
     lists: { step: new Set<string>(LJ.step), start: new Set<string>(LJ.start) } };
   BR.PUT_BACKS = (await import('../../src/math/side.ts')).PUT_BACKS;
-  { const SS = await import('../../src/game/savestate.ts'); snaps(SS); BR.SNAPS = SS.SNAPS; }
+  { const SS = await import('../../src/game/savestate.ts'); snaps(SS); BR.SNAPS = SS.SNAPS; BR.SAVETIMELINE = SS.SAVETIMELINE; }
   return BR; }
 
 // ---- A GAME KEPT IS THE RUST GAME'S OWN, one path with the page (src/host/rustgame.ts; rust/game_face/src/page.rs `face_keep` / `face_back` / `face_loaded`).
@@ -337,7 +337,7 @@ export class RustHost {
   keeps(): boolean { return !this.audit && typeof this.F.X.face_keep === 'function' && !OFF.has('keep'); }
   private keep(): number { const X = this.F.X, t = now(), k = X.face_keep(this.h, 0); if (!k) throw new Error('rust-host: the face kept no game'); this.keepsN++; if (this.rec) this.rec.keeps = this.keepsN; this.T.calls += now() - t; return k; }
   unkeep(k: number): void { if (this.keptShelf.delete(k)) this.F.X.face_kept_drop(k); else { const i = this.keptTool.indexOf(k); if (i >= 0) { this.keptTool.splice(i, 1); this.F.X.face_kept_drop(k); } } }
-  private unkeepAll(): void { for (const k of this.keptShelf) this.F.X.face_kept_drop(k); this.keptShelf.clear(); for (const k of this.keptTool) this.F.X.face_kept_drop(k); this.keptTool.length = 0; this.backDue = null; this.tookRow = false; }
+  private unkeepAll(): void { for (const k of this.keptShelf) this.F.X.face_kept_drop(k); this.keptShelf.clear(); for (const k of this.keptTool) this.F.X.face_kept_drop(k); this.keptTool.length = 0; if (this.startKept) { this.F.X.face_kept_drop(this.startKept); this.startKept = 0; } this.backDue = null; this.tookRow = false; }
   /** THE KEPT GAME STANDS AGAIN and the puppet takes its whole state: one whole apply; what the filtered export last sent is the whole state */
   private backTo(k: number, why: string): void { const X = this.F.X;
     if (!this.h || !X.face_back(this.h, k)) throw new Error(`rust-host: that kept game is gone (it was of a game that has been stood again since); asked by ${toolLine()}`);
@@ -353,6 +353,13 @@ export class RustHost {
    *  whose server's clock runs from the first record. Left to the first step it is paid there: the whole export, the Rust start and the puppet's
    *  first apply, over a second on a small box. A start that is not owed is not made */
   startNow(): void { const why = this.startWhy(); if (why === 'back') this.restep(); else if (why !== null) this.start(why); }
+  /** THE PAGE'S RESTART (src/host/rustgame.ts toStart): the game kept as its first step opened stands again, clock and die and all, and what the player and
+   *  this machine have set since (the sandbox flags, the tune) stays as it is now. Kept only where a tool asks for it, before the first step: a walk of a page's tape
+   *  (tools/qa/rerun.ts). With none kept, a restart asked inside a tick is the Rust game's own */
+  startKept = 0;
+  keepStart(): void { if (!this.keeps()) return; this.startNow(); if (!OFF.has('backcam')) this.handHalf(); this.startKept = this.keep(); }
+  toStart(): void { const g = this.g, flags = { godMode: g.godMode, aiEnabled: g.aiEnabled, infiniteAmmo: g.infiniteAmmo, playerInvisible: g.playerInvisible }, tune = { ...g.tune };
+    this.backTo(this.startKept, 'the start put back'); this.backDue = null; this.tookRow = false; g.saves?.startedAgain(); Object.assign(g, flags); Object.assign(g.tune, tune); this.count('a restart: the kept start stands again (face_back), one whole apply'); }
   snapTake(): KeptGame { const g = this.g, X = this.F.X;
     { const why = this.startWhy(); if (why === 'back') this.restep(); else if (why !== null) this.start(why); }
     // (the row the controller has just written on the puppet is held out of the walk: carried by name AND made by `face_checkpoint` it stood twice in
@@ -376,9 +383,9 @@ export class RustHost {
     const back = { label: String(e?.info?.label ?? ''), loads: C?.loads | 0, saves: C?.saves | 0 };
     this.backTo(K.rustKept, 'a checkpoint put back'); this.backDue = back; this.count('a load: the kept game stands again (face_back), one whole apply'); }
   /** what follows a save or a load on the Rust side, once the controller's own lines have run on the puppet. NOT TAKEN ACROSS (as on the page): the
-   *  host's switches and the tune's rows as they stand now, which the controller lays over the saved moment's on the puppet (savestate.ts:1129). */
+   *  tune's rows as they stand now, which the controller lays over the saved moment's on the puppet (savestate.ts:1129); its three sandbox flags are. */
   private settle(): boolean { const X = this.F.X; if (!this.h) return false;
-    if (this.backDue) { const b = this.backDue; this.backDue = null; this.tookRow = false; this.F.hand(enc.encode(b.label), (p, n) => X.face_loaded(this.h, p, n, b.loads, b.saves)); this.applyStep(); this.refs(); return true; }
+    if (this.backDue) { const b = this.backDue; this.backDue = null; this.tookRow = false; { const g = this.g; X.face_poke(this.h, 0, g.godMode ? 1 : 0); X.face_poke(this.h, 1, g.aiEnabled ? 1 : 0); X.face_poke(this.h, 2, g.infiniteAmmo ? 1 : 0); } this.F.hand(enc.encode(b.label), (p, n) => X.face_loaded(this.h, p, n, b.loads, b.saves)); this.applyStep(); this.refs(); return true; }
     if (this.tookRow) { this.tookRow = false; this.applyStep(); this.savesRef = this.g.chronicle?.counts?.saves ?? 0; return true; }
     return false; }
   private cutDue = false; private shelfSig = '';
@@ -761,7 +768,7 @@ export class RustHost {
     // the host's: its `due` is set on the puppet and its tick, in the dress step, puts the kept game back. (The page's path: src/host/rustgame.ts.)
     if (this.keeps() && X.face_saves_asked) { const asked = X.face_saves_asked(this.h); if ((asked & 1) && g.saves) { g.saves.due = this.F.outText(); this.count('the tick asked for a save in memory to be put back (Enter once down)'); }
       // (the same call puts the Rust game's flag of a restart's camera cut down; the puppet's own update takes the cut on its next frame, as the TypeScript's does)
-      if (asked & 2) this.cutDue = true; }
+      if (asked & 2) { if (this.startKept) { this.toStart(); this.refs(); this.inStep = false; this.dieRef = g.dice?.n; return; } this.cutDue = true; } }
     if (TICKS_DIR && DUMP_AT.has(k)) { X.face_export(this.h); writeFileSync(`${TICKS_DIR}/rust-t${k}.bin`, this.F.outView()); }
     this.o.afterStep?.(this);
     // (RH_HALF=<ticks, comma>: the host's half of those ticks, a line a field's value, for two runs to be held to each other by `diff`)
@@ -807,6 +814,8 @@ export class RustHost {
     t = now(); const nest0 = this.nest;
     if (this.o.dress !== false) {
       const S = g.saves;
+      // (F5, the save by hand: off the tick's own record, as the page's host reads it, src/host/rustgame.ts)
+      if (this.B.SAVETIMELINE.on && this.lastCmds?.[g.seats.indexOf(g.hostSeat())]?.pressed.includes('F5') && !g.player.down) S?.askSave();
       // (a take is due this tick: an authored checkpoint a rule asked for, a save by hand, a load. The puppet takes the whole state first. An autosave
       // the controller decides on inside its tick takes the whole state as the take starts: `taps`. Its gate and its triggers read the puppet as the
       // filtered apply left it.)

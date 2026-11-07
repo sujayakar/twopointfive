@@ -880,10 +880,12 @@ class MemShelf extends HostOwned {
   last: Snapshot | null = null;
   /** how many times the take's code was run for warmth alone (`Checkpoints.warm`; a page check reads it) */
   warmed = 0;
+  /** how many times a slot was written or the shelf emptied (runtape.ts: one that moved between two steps is a panel's hand, which no tape follows) */
+  changes = 0;
   get(key: string): MemSave | null { return this.m.get(key) ?? null; }
-  set(key: string, e: MemSave): void { this.m.set(key, e); }
+  set(key: string, e: MemSave): void { this.m.set(key, e); this.changes++; }
   all(): MemSave[] { return [...this.m.values()]; }
-  clear(): void { this.m.clear(); this.last = null; }
+  clear(): void { this.m.clear(); this.last = null; this.changes++; }
 }
 interface SlotIndex { v: number; next: number; slots: Record<string, SlotInfo>; }
 export interface SaveResult { ok: boolean; why?: string; info?: SlotInfo; bytes?: number; state?: SaveState; }
@@ -915,7 +917,9 @@ export class Checkpoints {
   flash: { text: string; t: number } | null = null;
   /** the last few things that happened (panel / probes): saves, refusals, drops, loads */
   log: { t: number; what: string }[] = [];
-  stats = { requests: 0, autosaves: 0, manual: 0, harness: 0, loads: 0, dropped: 0, refused: 0, deferredFrames: 0, regretted: 0 };
+  stats = { requests: 0, autosaves: 0, manual: 0, harness: 0, loads: 0, restarts: 0, dropped: 0, refused: 0, deferredFrames: 0, regretted: 0 };
+  /** the slot the last load put back, where it was a save in memory (null: a file, or no load yet): what a run's tape can do again (runtape.ts) */
+  loadedKey: string | null = null;
   /** QA hook: every state written (autosave or not) is also handed here — the soak keeps them to reload from */
   onSaved: ((s: SaveState | null, info: SlotInfo | null) => void) | null = null;   // (s null: a save kept in memory has no file)
   private missionRef: object | null = null; private stageRef: MissionStage = 'infiltrate'; private roomRef = ''; private dragRef: object | null = null;
@@ -1143,7 +1147,7 @@ export class Checkpoints {
     g.chronicle.counts.loads = loads; g.chronicle.counts.saves = saves;
     this.pending = null; this.lastAuto = null; this.hand = false; this.due = null; this.lastSaveT = g.time;   // (a load counts as a save for the gap, as a file's does)
     chronCheckpoint(g, 'load', e.info.label); g.messages.push({ text: `checkpoint loaded${e.info.label ? ` — ${e.info.label}` : ''}`, t: g.time }); if (g.messages.length > 5) g.messages.shift();
-    this.stats.loads++; this.flash = { text: 'CHECKPOINT LOADED', t: g.time }; this.note(g, `loaded ${key.replace(KEY_PREFIX, '')}: ${e.info.label || '—'} (from memory)`);
+    this.stats.loads++; this.loadedKey = key; this.flash = { text: 'CHECKPOINT LOADED', t: g.time }; this.note(g, `loaded ${key.replace(KEY_PREFIX, '')}: ${e.info.label || '—'} (from memory)`);
     g.rails?.putBack();   // (a tutorial mission's program is functions half run, which no snapshot holds: rails.ts starts it again and sends the step's cue again)
     this.onPutBack?.(e.info);
     return null;
@@ -1188,9 +1192,13 @@ export class Checkpoints {
     const why = canLoad(g, s); if (why) { this.note(g, `load refused: ${why}`); return why; }
     g.journal.cut('a checkpoint was loaded');   // (a load off a card or the panel is between frames and on no tape: an F10 recording ends whole before it and a new one is asked for — journal.ts cut; Enter once down is inside an update and on the tape)
     try { loadState(g, s); } catch (e) { const w = (e as Error).message; this.note(g, `load failed: ${w}`); return w; }
-    this.stats.loads++; this.flash = { text: 'CHECKPOINT LOADED', t: g.time }; this.note(g, `loaded ${typeof from === 'string' ? from.replace(KEY_PREFIX, '') : 'a state'}: ${s.label || '—'}`);
+    this.stats.loads++; this.loadedKey = null; this.flash = { text: 'CHECKPOINT LOADED', t: g.time }; this.note(g, `loaded ${typeof from === 'string' ? from.replace(KEY_PREFIX, '') : 'a state'}: ${s.label || '—'}`);
     return null;
   }
+  /** THE HOST PUT THE RUN BACK TO ITS START (host/rustgame.ts toStart: the game kept as the first step opened stands again): a run of its own name, its shelf
+   *  empty and its triggers from nothing as the next tick ends, and counted: a restart moves the clock back as a load does, and is no load */
+  startedAgain(): void { this.missionRef = null; this.stats.restarts++; }
+  get shelfChanges(): number { return this.shelf.changes; }
   /** wipe every stored slot */
   clear() { const idx = this.index(); for (const k of Object.keys(idx.slots)) { this.store.remove(k); this.store.remove(KEY_PIC(k)); } for (let i = 0; i < Math.max(CKPT.autoSlots, SAVETIMELINE.auto); i++) { this.store.remove(KEY_AUTO(i)); this.store.remove(KEY_PIC(KEY_AUTO(i))); } for (let i = 0; i < Math.max(1, SAVETIMELINE.manual); i++) { this.store.remove(KEY_HAND(i)); this.store.remove(KEY_PIC(KEY_HAND(i))); } this.store.remove(KEY_INDEX); this.shelf.clear(); }   // (both rings at their full size whatever the switch says now, with or without an index that names them)
   /** the words for the cards: 'N s ago' off the mission clock for a checkpoint of this run, wall-clock age otherwise */
