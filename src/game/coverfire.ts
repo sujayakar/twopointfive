@@ -96,7 +96,12 @@ function live(g: Game): boolean {
   if (!COVERFIRE.on || !g.aiEnabled || g.touring) return false;
   return chewLive(g) || wallMenLive(g);   // (wallpen.ts: rounds go THROUGH thin things — a man who knows somebody is behind one has a round for it whether or not walls break)
 }
+function manOf(S: State, gd: Guard): Man { let M = S.men.get(gd); if (!M) { M = { know: [], chew: null, gave: new Map(), no: null, saidT: -100 }; S.men.set(gd, M); } return M; }
+function log(g: Game, s: string) { COVERFIRE_LOG.push(`${g.time.toFixed(2)} ${s}`); if (COVERFIRE_LOG.length > 400) COVERFIRE_LOG.splice(0, 200); }
 
+/** a mate's call he is acting on becomes a place HE knows (as old as the mate's own sighting: it goes stale like one of his) — and stays a CALL: the place
+ *  alone, good for a crate and not for a wall, until his own eyes have the man */
+function heard(S: State, gd: Guard, K: Know) { const M = manOf(S, gd); const mine = M.know.find(k => k.who === K.who); if (mine) { if (mine.t < K.t) { mine.at = K.at; mine.y0 = K.y0; mine.v = [0, 0]; mine.t = K.t; mine.call = true; } } else M.know.push({ ...K, v: [0, 0], call: true }); }
 
 
 

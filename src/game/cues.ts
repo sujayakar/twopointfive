@@ -204,6 +204,13 @@ export class Cues {
   /** laststand.ts, enemysquads.ts's radio check: a defender's line on his side's net that is TELLING only — the strip's row under his callsign (a squad's
    *  word is already under the squad's name) and this file's own bubble over him, never Guard.bubble (the bark clocks and the digest read that) */
   net(gd: Guard, text: string, cls: number): void { if (RUST_SURFACE?.tapFiring('Cues.net')) return RUST_SURFACE.tapAnswer() as any; return goneWithTick('Cues.net') as any; }
+  /** fogofwar.ts: a TEAMMATE calls what the fog's cone hides ('contact left!') — this file's own bubble over him (never Guard.bubble) and a row on the strip
+   *  under his callsign, in the first class (men coming), logged under a kind of its own ('call': a tally of the defenders' 'heard' lines never counts the team's).
+   *  Returns whether the strip drew it */
+  call(gd: Guard, text: string): boolean {
+    this.bubbles.set(gd, { text, t: this.g.time, dur: bubbleSecs(text), radio: false });
+    return CUES.on && this.file(`${gd.callsign}: ${text}`, 1, gd.callsign, 'call');
+  }
   /** every ear of the team's a shout could reach: each player's who is up (one today), each living teammate's */
   private ears(): Vec3[] {
     const g = this.g, out: Vec3[] = []; const at = (p: Vec3): Vec3 => [p[0], p[1] + 1.6, p[2]];

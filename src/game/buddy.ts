@@ -29,9 +29,9 @@ import { SideMap } from '../math/side';
 import { Vec3 } from '../math/vec';
 import type { Game } from './game';
 import type { RoomFight } from './roomfight';
-import './pressure';
-import './digin';
-import { releaseMan, ownerWitness, OWN } from './owner';
+import { pressKeepsHome } from './pressure';
+import { DIGIN, digInSet } from './digin';
+import { releaseMan, hasHim, ownerWitness, OWN } from './owner';
 
 export const BUDDY = {
   /** the switch: off = none of this file runs. SHIPPED OFF, the maintainer's call: on, a scripted team keeps clearly MORE men on the compound and the barracks
@@ -77,7 +77,23 @@ const alive = (D: Def) => D.gd.state !== 'dead';
 /** his own wits about him, and nobody else's man: alive, holding a post, not in Sam's arm, not blinded or reeling, not pinned to his room by a stager (the
  *  rescue's men with the hostages: their rally clock is parked at Infinity) */
 const own = (g: Game, D: Def) => alive(D) && D.mode === 'hold' && !D.gd.held && g.time >= D.gd.dazzledUntil && g.time >= D.gd.staggerUntil && D.rallyAt !== Infinity;
+/** the men of his side holding the room he holds, himself not counted (a man off on the fight AI's hunt has left it) */
+const mates = (F: RoomFight, D: Def) => F.defs.filter(X => X !== D && alive(X) && X.mode !== 'free' && !!D.room && X.room === D.room);
 
+/** may this man answer a call: his own man, nobody in his sight, on nobody else's errand (`mine` = the errand he is on his beat for), and not the one who
+ *  would leave a mate alone — a room keeps two men FIRMLY holding it (not walking a leg, not about to go to somebody themselves) behind the one who goes */
+function free(g: Game, F: RoomFight, st: State, X: Def, mine: Errand | null = null): boolean {
+  const gd = X.gd;
+  if (!own(g, X) || g.time - gd.lastSeenT < BUDDY.quiet || st.errands.some(e => e !== mine && (e.buddy === X || e.caller === X))) return false;
+  if (g.time - (st.men.get(X)?.doneT ?? -100) < BUDDY.again) return false;   // (he has only just come to somebody: not off again on the next call)
+  if (hasHim(X.gd, OWN.press) || pressKeepsHome(g, X) || gd.staysInRooms || hasHim(gd, OWN.squadWord) || hasHim(gd, OWN.stand)) return false;   // (laststand.ts, default off: a man of the last stand answers nobody's call)
+  const set = digInSet(g, gd);
+  if (set && (DIGIN.stay || DIGIN.reachM > 0)) return false;                  // (digin.ts's own rules for who holds his room, when they are on, keep him)
+  const all = mates(F, X), firm = all.filter(m => m.mode === 'hold' && !st.errands.some(e => e.buddy === m)).length;
+  if (firm >= 2) return true;
+  if (all.length) return BUDDY.fromPair && firm >= 1;
+  return BUDDY.loners && (BUDDY.emptyRoom || (!hasHim(gd, OWN.squad) && !set));   // (alone himself: the two pair up in the caller's room; with `emptyRoom` off a squad's last man in a room does not leave it empty, nor does a man set on a wedged door)
+}
 
 
 

@@ -45,6 +45,7 @@ import type { Game } from '../game/game';
 import { Character } from '../game/character';
 import { Firearm } from '../game/weapons';
 import { loneMen } from '../sim/men/store';
+import { useDice } from '../math/dice';
 import { sampleCmd, stillCmd, type PlayerCmd } from '../game/cmd';
 import { dressStep, DRESS_MS } from './rustdress';
 import { wallFeelPicture } from '../game/blastFeel';
@@ -368,13 +369,18 @@ function madeHooks(): Record<string, (row: any, g: any) => void> {
   const own: Record<string, (row: any, g: any) => void> = {
     // (the SAME constructor the start calls for every man: character.ts. His columns row, `S` and `r`, is the game's own and stays)
     Character: guard('Character', (row, g) => {
-      const twin = new Character(row.ch ?? g.ch, { id: row.id, tint: row.tint, tint2: row.tint2, pos: row.pos, yaw: row.bodyYaw ?? 0, men: loneMen() }) as any;
+      // THE GAME'S DIE IS PARKED WHILE A TWIN IS BUILT. The animator's constructor draws a phase off the simulation's die (character.ts), which on this
+      // page is the game's own, in its block: with the die in place every man made at run time cost the game one draw its tick never made, and the page
+      // played another deal than the same seed plays anywhere else from the first made man on. The hazard is general: ANY object the page builds for
+      // the picture while a game is live must not draw the game's die or write its state, and a constructor shared with the start does both.
+      const die = useDice(null); let twin: any;
+      try { twin = new Character(row.ch ?? g.ch, { id: row.id, tint: row.tint, tint2: row.tint2, pos: row.pos, yaw: row.bodyYaw ?? 0, men: loneMen() }); } finally { useDice(die); }
       const n = completeFrom(row, twin, ['S', 'r']);
       // (what a posing layer is handed with the rig, character.ts `cast`: the constructor's own record, naming THIS man's node table and poses)
       if (row.anim && twin.anim?.cast) row.anim.cast = { ...twin.anim.cast, nodes: row.anim.nodes, poses: row.anim.poses };
       return n;
     }),
-    Firearm: guard('Firearm', row => row.def ? completeFrom(row, new Firearm(row.def), NO_SKIP) : 0),
+    Firearm: guard('Firearm', row => { if (!row.def) return 0; const die = useDice(null); try { return completeFrom(row, new Firearm(row.def), NO_SKIP); } finally { useDice(die); } }),
   };
   // (every class the apply makes a row of is told here, whether or not it has a twin: the last made row of each is kept for a reader, and which rows were
   //  made at run time can be asked: `__rust.madeLast`, `__rust.madeAtRunTime(row)`)

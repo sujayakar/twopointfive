@@ -472,6 +472,8 @@ export class Director {
   get running(): string | null { const R = this.run; return R && !R.ended ? R.name : null; }
   /** a tutorial mission's own program is running (roomfight.ts, lanes.ts: a man of the floor's roster that it has in hand is left to it until it lets him go) */
   get lessonRuns(): boolean { const R = this.run; return !!R && !R.ended && !!this.g.rails?.live; }
+  /** frag.ts: the level's script put the defenders' own grenades off (`D.systems.theirFrags(false)`): for the level, whatever program is or is not running */
+  get theirFragsOff(): boolean { return this.armed && this.manifest?.systems.theirFrags === false; }
   get objective(): { text: string; pos: Vec3 | null } | null { return this.run && !this.run.ended ? this.run.objective : null; }
   /** a signal from OUTSIDE a beat (rails.ts: a lesson step's cue, 'lesson:<cue>'): the running program's onSignal triggers and c.on('signal', name) meet it on its next tick. Nothing with no program running. */
   signal(name: string, data?: Json): void { return crossToRust('Director.signal', this, [name, data]) as any; }

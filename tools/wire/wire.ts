@@ -15,7 +15,7 @@ const rustFile = (name: string): string => { const hits = readdirSync(join(ROOT,
 const read = (p: string) => readFileSync(p, 'utf8'), readJ = (p: string) => JSON.parse(read(p));
 const fnv = (s: string) => { let h = 0x811c9dc5; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 0x01000193) >>> 0; return h >>> 0; };
 // THE STATE WORDS: a hash of the whole game, a word a part, for two machines of one networked game to compare. What a host hands in and differs by machine is left out, and so is what is only a step's output
-const HOSTS_OWN = new Set(['out', 'cmd_buf', 'local_seat', 'view_proj', 'puppet', 'm_per_px', 'taps', 'seat', 'tab.camera', 'tab.input', 'tab.cmd_seat', 'engine.settings', 'engine.view_focus', 'engine.effective_scale', 'engine.sharp_on']);
+const HOSTS_OWN = new Set(['m.owner', 'out', 'cmd_buf', 'local_seat', 'view_proj', 'puppet', 'm_per_px', 'taps', 'seat', 'tab.camera', 'tab.input', 'tab.cmd_seat', 'engine.settings', 'engine.view_focus', 'engine.effective_scale', 'engine.sharp_on']);
 function stateWords(io: string): string { const fieldsOf = (path: string): string[] => { const l = io.split('\n').find(x => x.startsWith(`impl Io for ${path} {`)) ?? die(`no line for ${path}`) as never, w = l.slice(0, l.indexOf(' fn r(')); return [...w.matchAll(/self\.([a-z_0-9]+)\.w\(o\)/g)].map(m => m[1]); };
   const P: [string, string][] = []; const push = (name: string, ex: string) => { if (!HOSTS_OWN.has(name)) P.push([name, ex]); };
   for (const f of fieldsOf('crate::game::Game')) { if (f === 'm') for (const x of fieldsOf('crate::game::Mods')) push(`m.${x}`, `g.m.${x}`); else if (f === 'engine') for (const x of fieldsOf('crate::host_api::HostApi')) push(`engine.${x}`, `g.engine.${x}`); else push(f, `g.${f}`); }
@@ -25,15 +25,17 @@ function stateWords(io: string): string { const fieldsOf = (path: string): strin
   for (const k of setKeys) P.push([`seats.${k}`, `{ for s in g.tab.cmd_seat.ids() { if s == g.seat { g.${k}.w(o); } else if let Some(x) = &g.tab.cmd_seat[s].own { x.${k}.w(o); } } }`]);
   const L = ['//! A hash of the whole game, a word a part, for two machines of one networked game to compare. Written by tools/wire/wire.ts from the lines of the wire. Left out: what a host hands in and differs by machine, and what is only a step\'s output.', 'use crate::io::{Io, W};', 'use alloc::vec::Vec;', `pub const STATE_NAMES: [&str; ${P.length}] = [${P.map(p => JSON.stringify(p[0])).join(', ')}];`,
     'fn word(b: &[u8]) -> u32 { let mut h: u64 = 0xcbf29ce484222325 ^ (b.len() as u64); let mut c = b.chunks_exact(8); for x in &mut c { let mut a = [0u8; 8]; a.copy_from_slice(x); h = (h ^ u64::from_le_bytes(a)).wrapping_mul(0x100000001b3); h ^= h >> 29; } for x in c.remainder() { h = (h ^ *x as u64).wrapping_mul(0x100000001b3); } (h ^ (h >> 32)) as u32 }',
-    '/// `o` and `out` are kept by the caller, so that a call grows nothing once they have reached their size', 'pub fn state_words(g: &crate::game::Game, o: &mut W, out: &mut Vec<u32>) { out.clear();', ...P.map(p => `    o.b.clear(); ${p[1].startsWith('{') ? p[1] : `${p[1]}.w(o);`} out.push(word(&o.b));`), '    o.b.clear(); }', ''];
+    '/// `o` and `out` are kept by the caller, so that a call grows nothing once they have reached their size', '/// With the first seat standing on Game, as inside a tick: which seat a machine shows then moves no word', 'pub fn state_words(g: &mut crate::game::Game, o: &mut W, out: &mut Vec<u32>) { out.clear(); crate::seats::on_first_bare(g, &mut |g: &mut crate::game::Game| {', ...P.map(p => `    o.b.clear(); ${p[1].startsWith('{') ? p[1] : `${p[1]}.w(o);`} out.push(word(&o.b));`), '    o.b.clear(); }); }', ''];
   return L.join('\n'); }
 /** every generated file, and the stamp both halves carry */
 function gen(check: boolean): void { const T = mkdtempSync(join(tmpdir(), 'wire-')); mkdirSync(join(T, 'bridge'));
   const S0 = read(SCHEMA); writeFileSync(join(T, 'bridge/schema.json'), S0);
   execFileSync(process.execPath, ['run', join(HERE, 'puppetgen.cjs'), T, FIELDS, ROOT], { stdio: ['ignore', 'pipe', 'inherit'] });
   const S = readJ(join(T, 'bridge/schema.json')); delete S.layout;
+  // (the stamp is of what the two halves read of each other's bytes. `knobSettled` is no part of that: which settings a page's walk leaves out)
+  const settled = S.knobSettled; delete S.knobSettled;
   const O = { 'bridge/puppet-apply.ts': join(BLITZ, 'puppet-apply.ts'), 'bridge/puppet-lists.json': join(BLITZ, 'puppet-lists.json'), 'bridge/out-dispatch.ts': join(BLITZ, 'out-dispatch.ts'), 'puppet.rs': rustFile('puppet.rs') } as Record<string, string>;
-  const words = JSON.stringify(S) + Object.keys(O).map(k => read(join(T, k))).join(''); const layout = fnv(words); S.layout = layout;
+  const words = JSON.stringify(S) + Object.keys(O).map(k => read(join(T, k))).join(''); const layout = fnv(words); S.layout = layout; S.knobSettled = settled;
   const ioP = rustFile('io.rs'), io0 = read(ioP), io1 = io0.replace(/\npub const LAYOUT: u32 = \d+;\n?/, '').trimEnd() + `\npub const LAYOUT: u32 = ${layout};\n`;
   const swP = join(ROOT, 'rust/game/src/state_words.rs'); const out: [string, string][] = [[SCHEMA, JSON.stringify(S)], [ioP, io1], [swP, stateWords(io1)], ...Object.entries(O).map(([k, p]) => [p, read(join(T, k))] as [string, string])];
   let moved = 0; for (const [p, t] of out) { const was = existsSync(p) ? read(p) : ''; if (was === t) continue; moved++; if (check) console.log(`wire: ${p.slice(ROOT.length + 1)} would change`); else writeFileSync(p, t); }

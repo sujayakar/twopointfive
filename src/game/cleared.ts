@@ -24,7 +24,7 @@ import type { Game } from './game';
 import type { Door } from './doors';
 import { doorCells } from './guards';
 import { seenReset } from './seenwalk';
-import { RUST_PASS, RUST_SURFACE, crossToRust, goneWithTick } from './crossing';
+import { RUST_PASS, RUST_SURFACE, goneWithTick } from './crossing';
 
 const ROOM_MAX_CELLS = 2400;   // roomfight.ts's own cap: past this a flood is open floor
 
@@ -105,5 +105,5 @@ export class ClearedRooms {
       a = b; }
     return m;
   }
-  summary(): string { return crossToRust('ClearedRooms.summary', this, []) as any; }
+  summary(): string { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('ClearedRooms.summary', this, []); if (__r !== RUST_PASS) return __r as any; } } this.build(); const k = this.known, S = this.stats; return `cleared rooms: ${k} of ${this.sizes.length - 1} known · routes ${S.round} round, ${S.through} through for want of a way · ${S.face} stacks on the known face · ${S.mouth} walked to the ordered door`; }
 }

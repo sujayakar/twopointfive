@@ -96,6 +96,8 @@ export class SnatchOut {
   /** the debugger panel's switch thrown mid-run: with the rule off nobody is led and nobody planted (what is on the floor is the old snatch's from there) */
   switched() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('SnatchOut.switched', this, []); if (__r !== RUST_PASS) return __r as any; } } if (SNATCHOUT.on) return; const gd = this.S.man; if (gd && this.lead) hostageLead(this.g, gd, null, SNATCHOUT.gapM); this.lead = null; this.sent = false; this.letGo(); }
 
+  // ---------------------------------------------------------------- the squad, by bounds
+  private fighting(gd: Guard): boolean { return (!gd.script && gd.state === 'alert') || !!this.g.fight?.engaged(gd); }
   /** an order of this module's, and the object it is from then on (what `last` and `jobs` know him by) */
   private mine(gd: Guard, spec: Parameters<Game['orders']['assign']>[1]): Assignment { const O = this.g.orders; O.assign(gd, spec); const A = O.of(gd)!; this.last.set(gd, A); return A; }
   private drop(gd: Guard) { const A = this.jobs.get(gd), was = this.turned.get(gd); if (A && was) { A.watch = was.watch; A.face = was.face; } this.jobs.delete(gd); this.turned.delete(gd); }
@@ -105,6 +107,20 @@ export class SnatchOut {
   }
   /** it is over, or nobody is moving him: every man still ours goes back to the file (snatch.ts calls this at either end: nothing here ticks after it) */
   letGo() { for (const gd of [...this.jobs.keys()]) this.rejoin(gd); this.coming = null; this.hot = null; this.moving = false; }
+  /** a pair looks after itself: while one planted man fights, or one has just gone down, the others' guns go to where that is — and back to their own
+   *  openings `turnSecs` after the last of it (a man in his own fight is the fight's) */
+  private turn() {
+    const g = this.g, K = SNATCHOUT;
+    for (const gd of this.jobs.keys()) { const t = g.fight?.opOf(gd)?.tgt; if (t && t.state !== 'dead') this.hot = { at: v3.copy(t.char.pos), until: g.time + K.turnSecs }; }
+    if (this.hot && g.time >= this.hot.until) this.hot = null;
+    const at = this.hot?.at ?? null;
+    for (const [gd, A] of this.jobs) {
+      if (this.fighting(gd)) continue;
+      const was = this.turned.get(gd);
+      if (at) { if (!was) this.turned.set(gd, { watch: A.watch, face: A.face }); A.watch = [at[0], 1.1, at[2]]; A.face = v3.yawTo(A.post ?? gd.char.pos, at); }
+      else if (was) { A.watch = was.watch; A.face = was.face; this.turned.delete(gd); }
+    }
+  }
 
   /** snatch.ts objective(): the row once he is in hand — where to take him (null: not this rule's to say) */
   objective(): { text: string; pos: Vec3 | null } | null {
