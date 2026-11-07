@@ -21,7 +21,7 @@
 import '../qa/stand.ts';
 import { writeFileSync, mkdirSync, appendFileSync, readFileSync } from 'node:fs';
 const { exportGame, bookOf } = await import('./host.ts');
-const { hostHalf, bookOf } = await import('./export.ts');
+const { hostHalf, hostRowsText } = await import('./export.ts');
 const argv = process.argv.slice(2), arg = (n: string, d: string) => { const i = argv.indexOf(n); return i < 0 ? d : argv[i + 1]; };
 const say = (s = '') => process.stdout.write(s + '\n');
 const START_ONLY = argv.includes('--start-only'), EXIT = process.exit.bind(process);
@@ -346,7 +346,7 @@ Game.prototype.update = function (this: any, ...a: any[]) {
     writeFileSync(`${outDir}/h${k}.bin`, hostHalf(g, reg, cmds as any[]));
     // (`--start-only`: the start alone, for a kept run whose start is of an older layout of the wire, tools/blitz/hold.sh: the state and the block as tick 1
     //  opens, tick 1's host half, the knob table; no tick is run, so this needs no TypeScript tick and no Rust module. Stand it with TPS_GAME=none)
-    if (START_ONLY) { { const bk: any = bookOf(g); writeFileSync(`${outDir}/hostrows.txt`, `cam ${bk.listOf('CameraId').indexOf(g.hostCam)}\ninput ${bk.listOf('InputId').indexOf(g.hostInput)}\n`); }   /* (which rows of the half are the HOST's own, handed at the stand: half-grow.ts gives them to a half kept before a host had them) */ const x: any = sim(), at = x.knob_addr(0), len = x.knob_len(0) * 8; writeFileSync(`${outDir}/knobs.bin`, new Uint8Array(x.memory.buffer).slice(at, at + len)); EXIT(0); }
+    if (START_ONLY) { writeFileSync(`${outDir}/hostrows.txt`, hostRowsText(g));   /* (which rows of the half are the HOST's own, handed at the stand: half-grow.ts gives them to a half kept before a host had them) */ const x: any = sim(), at = x.knob_addr(0), len = x.knob_len(0) * 8; writeFileSync(`${outDir}/knobs.bin`, new Uint8Array(x.memory.buffer).slice(at, at + len)); EXIT(0); }
     row('meter.txt', meterL, `${g.player.visibility}`);   // (a mission's scripted player writes the meter before every tick too, playthrough.ts:779: the same number every tick, until a restart makes the player anew)
     row('host.txt', hostL, `${dt} ${g.probe?.pending?.length ?? 0} ${g.time} ${g.dice?.n ?? -1} ${k === 1 ? 0 : uploads}`); uploads = 0;
     const chron0 = g.chronicle, saves0 = chron0.counts.saves, loads0 = chron0.counts.loads;
