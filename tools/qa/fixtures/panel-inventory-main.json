@@ -123,7 +123,7 @@
   "label": "debug view",
   "title": "the renderer's buffers, one at a time, in place of the final picture (this list is the only way to them: no key steps through them). 16 = the gather's resampling reservoirs (ultra, phase 5): red = confidence M ÷ cap, green = the temporal history was found and taken, blue = spatial taps accepted ÷ k — the plain indirect with resampling off; 17 = the reflection pass's output as composite fetches it, before the cutoff fade (mesh hits / hit-lighting reuse are judged here). 14 = the ray-traced reflections' term by itself (renderer v3 phase 4; black with the pass off); 15 = the g-buffer's material: red = roughness (bright = matte), green = metalness — the finish table plus the detail layer's wear. 11 / 12 = the ReSTIR estimator per pixel: history M ÷ cap per class (r / g) + tile gradient resets (b), then rays ÷ 6 (r) / spatial taps (g) / classes shaded from a neighbour (b). 13 = the v3 shadow client per pixel: red / green = σ of the sharp / broad class (the filtered sample variance — lit only in penumbrae), blue = the sharp class's history length (dark = fresh / moving light, bright = long still history). specular = the glossy-floor reflection term and / or what the glass panes add (mirror + glints + dust), alone — whichever is on; black elsewhere. The albedo view washes pixels behind glass faintly teal so the panes can be found",
   "def": false,
-  "extra": "final / albedo / normals / direct light / indirect light / volumetrics / depth / cache irradiance (dice) / lighting only / denoiser blur hints / specular (gloss + glass + RT) / restir: history / gradient / restir: rays / taps / denoiser state (v3 shadow client) / RT reflections alone / material (rough / metal) / gi reservoirs (phase 5) / RT raw (phase 5)"
+  "extra": "final / albedo / normals / direct light / indirect light / volumetrics / depth / cache irradiance (dice) / lighting only / denoiser blur hints / specular (gloss + glass + RT) / restir: history / gradient / restir: rays / taps / denoiser state (v3 shadow client) / RT reflections alone / material (rough / metal) / (16: free) / RT raw (phase 5)"
  },
  {
   "path": "Frame ▸ Debug view & output",
@@ -826,17 +826,6 @@
   "title": "",
   "def": false,
   "extra": "restir: 4 rays · k 3 · M ≤ 20 · reservoirs 0 MB · 0 lights ("
- },
- {
-  "path": "Direct light ▸ Shadow rays & penumbra filter",
-  "kind": "slider",
-  "label": "temporal reuse",
-  "min": 0,
-  "max": 0.95,
-  "step": 0.05,
-  "title": "0 = history-free. Otherwise the per-class estimate is blended with reprojected, depth-validated, variance-clipped history (0.7 ≈ 3 frames). Transient lights change the estimate abruptly, which the clip follows — no lingering flashes",
-  "def": false,
-  "extra": ""
  },
  {
   "path": "Direct light ▸ Shadow rays & penumbra filter",

@@ -31,6 +31,7 @@
     v3:       {},
     noFroxel: { froxelVol: false },
     noTaau:   { taau: false, scale1: true },
+    // (SINCE 2026-11-07 allOff keeps ReSTIR and the shared denoiser: it is no longer the pre-v3 chain, and its numbers do not compare with earlier takes)
     allOff:   { froxelVol: false, taau: false, scale1: true },
   };
   let scale0 = null;
