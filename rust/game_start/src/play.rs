@@ -345,3 +345,13 @@ pub fn nudge(seed: u32, k: u32) -> f64 {
 
 /// metres between two places in plan
 pub fn dist(a: [f64; 2], b: [f64; 2]) -> f64 { ((a[0] - b[0]).powi(2) + (a[1] - b[1]).powi(2)).sqrt() }
+
+/// every part of the game's state, a word a part (game::state_words), but for the box mirror's own record, which holds addresses
+pub fn words(g: &mut Game) -> Vec<u32> {
+    let (mut w, mut out) = (game::io::W::new(), Vec::new());
+    let mirror = core::mem::take(&mut g.col.mirror);
+    game::state_words::state_words(g, &mut w, &mut out);
+    g.col.mirror = mirror;
+    out.extend(crate::block::part_hashes(0));
+    out
+}

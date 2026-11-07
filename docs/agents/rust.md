@@ -58,6 +58,21 @@ they end, each mission started from its row's link as the page starts it, with o
 frames. Not checked: what the page reads off its address before the stand-up (the weather and the hour at boot, the kit, the words); a hand on
 the controls in those frames; a page starting a level this way (the page still starts in TypeScript); nothing of it on a GPU.
 
+**WHAT THE PICTURE IS TOLD, AND A PAGE THAT HOLDS NO GAME (2026-11-07).** `rust/game_draw` (above `game`, below nothing; it takes `&Game`, so drawing cannot change one) says
+what is drawn as SECTIONS: runs of flat rows in the module's memory. A section is declared once (`section!` a row, `sections!` in `lib.rs` its place) and `bun run
+tools/draw/gen.ts` makes the page's offsets from the same text (`src/draw/sections.ts`, `const enum`s and a stamp the module must say too). `face_draw(h, want)` makes them once a
+tick; `face_frame(h, alpha, focus)` puts what moves between the last two ticks, once a drawn frame, and makes the visible list, the motion words and the rays' grid. A row only the
+GPU reads is written as it reads it (boxes, materials, cut planes, marks, the grid, a man's instance and bones) and `src/draw/drawn.ts` `send` hands it over as it lies; the rest is
+read by `f[D.at[Section.x] + X.field]`, with no object a row. What is drawn once is an `event!`: a row behind its id (tick, kind, serial), played once by it (`src/draw/events.ts`); what
+the air and the smoke are asked for is one `AirPush` and one `SmokeSource`, whoever asks. Nothing that is still there a moment later is an event: the other sections alone make
+the picture right. `draw.html` (`?draw=1`; `src/host/drawpage.ts`) starts the game by `face_start`, hands it a hand (`face_hand`), steps it and draws it: its bundle holds none of
+the game's TypeScript, and `tools/draw/ban.ts` (the first step of `bun run build`) is red on an import of it. The page he plays takes the fog of war alone from a section; the rest
+of it is as it was. Not on the new page yet: marks, snow and rain, sounds, fires, the traffic map, a look's paint on door leaves (`lookDoors`), the particles' own look table, the
+HUD, every command that is not input (restart, saves, kit, panels). To add a section: a file, a line in `sections!`, the generator, a line in `hold draw`'s parts.
+Checks: `tools/draw/rows-check.ts` runs both packers on one tick of one game and compares every word (462 ticks of six levels, all equal; `ROWS_BREAK=1` fails; it goes when the
+TypeScript copy does); `rust/game_start/tests/draw.rs` and `fog.rs`; `hold draw` draws every frame of a set of plays, holds the game's words to what they were and prints what each
+part cost. Seen only in software: stills of the office beside the old page's. Never seen on a GPU.
+
 **The rows and the maths are NOT SWITCHES any more** (the bullet "Not switches", near the end, 2026-11-05). Every `TPS_RUST`, `TPS_RUST<ROW>`, `TPS_EXACT`,
 `?rust`, `?rust<row>` and `?noexact` in the bullets below is how that step was measured on its day. None of them is a word now: in a tool's environment
 one stops the tool by name, on an address one does nothing and says so in the console. What a check still needs of them is its own arm, `QA_HOLD`.
