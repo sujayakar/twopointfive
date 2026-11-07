@@ -108,6 +108,8 @@ export interface RenderSettings {
   /** what the preset on says of an open fire's smoke (written by ui/quality.ts when a preset is applied; game/fire.ts reads it beside the solver's `drawing`): false = this
    *  preset draws the fire without its smoke. Picture only, and never the game's own table (FIRE.smoke.on, the page's ?firesmoke=0, puts it off at every preset). */
   fireSmoke: boolean;
+  /** unread since 2026-11-07: the froxel path and SMOKE KEEP are gone (ui/quality.ts, ONE MARCH ON EVERY TIER). The field leaves with the Rust side's copy of this table */
+  smokeKeep: number;
   dnSpecIters: number; dnSpecCap: number; dnSpecClampK: number; dnSpecSigmaL: number; dnSpecRough: number;
   dnDepthK: number; dnNormalPow: number; dnMotionVectors: boolean;
   keepHistories: boolean;   // a change of internal size (a scale step, a preset's cap, the window) RESAMPLES the screen-space temporal histories (direct light per class + its depth, the indirect, the
@@ -189,7 +191,10 @@ export interface RenderSettings {
   smokeMultiScatter: number;   // the smoke march's MULTIPLE-SCATTERING octave gain (0 = single scattering as it was; 1.0 default): a second lobe that sees the lights through half the extinction with a
                                // more isotropic phase and reaches the eye through half the extinction too (Wrenninge's art-directable approximation) — the coloured glow of the lit side comes THROUGH an opaque
                                // plume instead of stopping at its shell; frame.volCfg.w bits 12‥15 = round(× 10); Tab ▸ Volumetrics ▸ Smoke solver
+  smokeMarchLights: number;    // unread since 2026-11-07: the froxel path and SMOKE KEEP are gone (ui/quality.ts, ONE MARCH ON EVERY TIER). The field leaves with the Rust side's copy of this table
   smokeShadowSteps: number;    // samples those rays take across the hull of the boxes they cross: 8 = as ever (0 also = 8); 3‥15 (frame.volCfg.w; 6 saves ~0.2 ms of direct with three plumes up, 4 ~0.4 but blotches the plume's floor shadow — §4 there)
+  // ---- Unread since 2026-11-07: the froxel path and SMOKE KEEP are gone (ui/quality.ts, ONE MARCH ON EVERY TIER). The field leaves with the Rust side's copy of this table.
+  froxelVol: boolean; froxelH: number; froxelD: number; froxelK: number; froxelHistory: number; froxelNear: number; froxelFar: number; froxelCurve: number; froxelTopRays: number; froxelSharp: boolean; froxelBias: number;
   particleBirths: number;      // GPU particle births a frame (render/particles.ts maxBirthsPerFrame — Phase 0 cap; the emit queue carries the rest into the next frames, long-lived kinds first, stale sparks shed): presets 512 / 384 / 256 / 192 / 128
   debrisCap: number;           // the destruction lane's rigid-debris pool (game/debris.ts: ceiling tiles, monitor housings, desk clutter as tumbling shadow-casting boxes): presets 64 / 64 / 32 / 32 / 32 — the image-quality program's chaos budget (docs/internal/image-quality.md §4)
   torchBounceCards: boolean;   // final gather: every carried spot light's footprint (torches, weapon lights, Sam's rail light — RtLight.card) on the surface its beam hits is rebuilt each frame as a one-sided analytic emitter (render/shaders/cards.wgsl: axis ray + 64 cone samples → claim disc, flux-weighted centroid / radius, radiance × area from the flux that actually landed there × the albedo it landed on) and the gather takes that patch's bounce analytically with ONE shadow ray instead of finding the hotspot with its cosine rays — which drop that light's direct term wherever they land inside the footprint, so nothing is counted twice (fgather.wgsl). The boil round a torch near a wall goes by construction, and the firefly bound stops eating the bounce there. FrameFlags.BounceCards; off = no card pass, nothing sampled or excluded: bit-identical (docs/internal/perf-2026-08-10.md)
@@ -283,7 +288,7 @@ export const defaultSettings = (): RenderSettings => ({
   dnShadowIters: 3, dnShadowCap: 12, dnShadowClampK: 1.25, dnShadowSigmaL: 4, dnShadowPrior: true, dnShadowLitAlike: true, dnShadowOccl: true, dnShadowMoveCap: 3, dnShadowMoveThresh: 0.04, dnShadowJump: 0.5,
   dnGiIters: 4, dnGiCap: 24, dnGiClampK: 1.0, dnGiSigmaL: 4, dnGiFast: 3, dnGiFirefly: 0,   // (k 1.0 / fast 3: the sweep in docs/internal/p3-denoise.md §3 — 10 % of a lights-off in 16 frames vs legacy's 14, at half its torch-hotspot boil)
   dnGiClampCut: 0, dnGiYoungWiden: 0,                                                     // (D): off until measured (Tab ▸ Denoiser rows)
-  ladderClimb: true, capClimb: false, ladderAim: 60, ladderPaced: true, ladderHeld: true, ladderShed: true, oneCacheGrid: true, oneSmokeSolve: true, fireSmokeShed: true, fireSmoke: true,   // the ladder spends measured headroom on scale + divisors by default (it only ever acts on presented frames with GPU timings that show the room); the output-cap climb is opt-in (Tab ▸ Frame)
+  ladderClimb: true, capClimb: false, ladderAim: 60, ladderPaced: true, ladderHeld: true, ladderShed: true, oneCacheGrid: true, oneSmokeSolve: true, fireSmokeShed: true, fireSmoke: true, smokeKeep: 1,   // the ladder spends measured headroom on scale + divisors by default (it only ever acts on presented frames with GPU timings that show the room); the output-cap climb is opt-in (Tab ▸ Frame)
   dnSpecIters: 1, dnSpecCap: 16, dnSpecClampK: 1.0, dnSpecSigmaL: 2, dnSpecRough: 0.08,
   dnDepthK: 0.004, dnNormalPow: 12, dnMotionVectors: true,
   flags: FrameFlags.Direct | FrameFlags.Indirect | FrameFlags.Volumetrics | FrameFlags.Smoke | FrameFlags.RcVisWeight | FrameFlags.SmokeShadows | FrameFlags.Bounce | FrameFlags.Dither | FrameFlags.SoftShadow | FrameFlags.Temporal,
@@ -302,7 +307,9 @@ export const defaultSettings = (): RenderSettings => ({
   volLightCap: 0, volShadowEvery: 2, volStepVoxels: 1.5,   // a preset places the cap (quality.ts: every preset does; until one has, the engine reads this 0 as high's 4); Tab ▸ Volume ▸ CAP rows
   smokeMultiScatter: 0, smokeTaaReact: 0.3, smokeDiffuseStart: 0.35, smokeUpsampleRelax: true, smokeDiffuseWeight: 'bilinear',   // (taareact 0.6 → 0.3 08-14: 'some pixelation in motion' — a fully reactive plume shows the march's own dither before anything averages it)   // (08-14 SHIP SET = the S1 blind-pairs winner 'combo': density 1.3 (smoke.ts) · MS off · upsample relax · TAAU smoke-reactive 0.6 · diffusion on — every part beat the 08-12 defaults pairwise; docs/internal/smoke-look2.md §5)   // (bilinear since the battery's first still: the four-texel max stippled the plume's edge over a bright front — docs/shots/sbx_base vs sbx_wbilin)
   wxAirSteps: 0,
+  smokeMarchLights: 0,                                       // (unread: see the field)
   smokeShadowSteps: 8,                                       // shadow rays take eight samples through the smoke they cross — the estimator as it always was (docs/internal/smoke-perf.md §4 has 6 / 4's cost and look); Tab ▸ Smoke
+  froxelVol: true, froxelH: 135, froxelD: 64, froxelK: 4, froxelHistory: 0.93, froxelNear: 0.5, froxelFar: 56, froxelCurve: 2.0, froxelBias: 0.0, froxelSharp: false, froxelTopRays: 2,   // (unread: see the fields)
   particleBirths: 6144,        // = MAX_NEW_PER_FRAME, i.e. uncapped, until a preset places it; Tab ▸ Renderer — particles
   debrisCap: 64,               // the chaos budget's upper figure until a preset places it; Tab ▸ Sandbox ▸ chaos rows
   torchBounceCards: false,     // default off until the presets place it (quality.ts); Tab ▸ Indirect light

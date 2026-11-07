@@ -189,8 +189,9 @@ row on his machine is the answer, and the word puts the count back on any machin
   `prevCam.w` and `volCfg.w` bits 8‥11 are free), the composite's binding 11 and the particles' binding 4 (the three after it renumbered), `Caps.vol`,
   `Caps.marchLights`, `FroxelTier`, SMOKE KEEP with `?smokekeep`, `withSmoke`, `Quality.resmoke` and its Tab row, `?froxel`, `?nofroxel`, `__froxel`,
   `__hotFroxel`, the debugger's Froxels section and 'plume: lights lit per step' row, the sweep's `froxel` and `marchLights` rows,
-  tools/qa/froxel-ab.js and froxel-scenes.js, the froxel ghost proof in rfix-proofs.ts, and the settings `smokeKeep`, `smokeMarchLights` and every
-  `froxel*`, on both sides of the wire. The smoke lab's 'lamps that light each
+  tools/qa/froxel-ab.js and froxel-scenes.js, the froxel ghost proof in rfix-proofs.ts. UNREAD, LEFT FOR THE RUST SIDE TO DROP WITH ITS COPY of the
+  settings table (a field leaves both sides in one Rust batch): `smokeKeep`, `smokeMarchLights`, `froxelVol`, `froxelH`, `froxelD`, `froxelK`,
+  `froxelHistory`, `froxelNear`, `froxelFar`, `froxelCurve`, `froxelTopRays`, `froxelSharp`, `froxelBias`. The smoke lab's 'lamps that light each
   step' row moves `volLightCap` now (it moved `smokeMarchLights`, which high never read).
   WHAT MOVES FOR A PLAYER. HIGH: nothing. Its smoke march is the same text line for line, and the haze's `volK > 0` wrappers are unwrapped with K
   never under 1. MEDIUM AND LOW: beams and smoke are marched per pixel, as high's are, with two lights a step: a beam's edge is the pixel's own (no
@@ -520,7 +521,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   `fullRateDomains` went with the boxes. Measure with `tools/qa/stress-scene.js` (`await import('/qa/stress-scene.js')`
   → `__stress.setup()` / `.record(n)` / `.ab(applyA, applyB)` / `.caps(on)` / `.table(r)`, serialized frames, orbiting camera) and `__hotVol(src?)` (recompile
   volumetrics.wgsl from disk — the dev server serves src/render/shaders under /qa/shader/ — and swap the pipeline in without rebooting a staged scene).
-- **Froxel volumetrics** (GONE SINCE 2026-11-07, deleted whole: ONE FOG MARCH ON EVERY TIER above, the settings too) (renderer v3 Phase 2b) — `settings.froxelVol` per tier (`quality.ts Caps.vol`: ultra / high 'classic', medium and below 'froxel'), `?nofroxel` / `?froxel` force either; `settings.smokeMarchLights`; `__froxel`, `__hotFroxel` — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
+- **Froxel volumetrics** (GONE SINCE 2026-11-07, deleted whole: ONE FOG MARCH ON EVERY TIER above. The `settings.froxel*` fields and `smokeMarchLights` are unread and leave with the Rust side's copy of the table) (renderer v3 Phase 2b) — `settings.froxelVol` per tier (`quality.ts Caps.vol`: ultra / high 'classic', medium and below 'froxel'), `?nofroxel` / `?froxel` force either; `settings.smokeMarchLights`; `__froxel`, `__hotFroxel` — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
 - **Lossy options** (engine settings, default OFF in `defaultSettings`, switched ON by the presets as above; `LOSSY:` rows in the
   Tab panel for A/B; `checkerDirect` and `dimRays`, which only the old estimator read, went with it 2026-11-07): `gatherThird` / `volQuarter` (gather at 1/3, volumetrics at 1/4 res: `passes.setDivisors`, divisors
   in `frame.lossyCfg.xy`), `rcHalfRate` (`rc.halfRate`: uppers even frames, c0 + bake odd). `engine.render` mirrors the booleans every
