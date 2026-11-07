@@ -55,7 +55,7 @@ fn state_key(g: &mut Game) -> PlayerId {
 /// This view's state, the row itself, made if it is not there. (squadthrow.ts state)
 pub fn state<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::squadthrow::State {
     let k = crate::seats::view_key(g, &crate::seats::here(g));
-    g.m.squadthrow.states.get_or_insert_with(k, || State { last: JsMap::new(), noted: false, shown: None, warn: None, warn_frag: None, caught: None, asked: JsMap::new(), walks: JsMap::new(), kept: JsMap::new(), scratch: None })
+    g.m.squadthrow.states.get_or_insert_with(k, || State::zeroed())
 }
 
 /// The thing leaves his hand; the count is taken already. (squadthrow.ts throwIt)
@@ -68,8 +68,7 @@ pub fn throw_it(g: &mut crate::game::Game, gd: GuardId, arc: &crate::squadthrow:
     {
         let s = g.m.squadthrow.states.get_mut(key).unwrap();
         s.last.set(gd, now);
-        s.warn = None;
-        s.warn_frag = None;
+        s.plans.clear();   // (one fewer in the bag, and his hands are taken: what the menu shows is worked out again)
     }
     let it = if kind == SquadThrowKind::Frag {
         let fuse = g.k.frag.order_fuse;
@@ -164,7 +163,7 @@ pub fn start_walk(g: &mut crate::game::Game, th: &mut crate::squadthrow::SquadTh
     {
         let s = g.m.squadthrow.states.get_mut(key).unwrap();
         s.walks.set(gd, w);
-        s.warn = None;
+        s.plans.clear();
     }
     crate::game::game_say(g, gd, "moving to throw.", None, None, None);
     squad_log_row(g, gd, row_of(kind).as_str(), at);
@@ -471,40 +470,8 @@ pub fn walk_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) 
     g.stats.squadthrow.walked += 1;
 }
 
-/// What the picture draws of the highlighted row, asked aside. (the closure of squadThrowPlans)
-fn preview_plan(g: &mut Game, men: &[GuardId], at: V3, kind: SquadThrowKind) -> Option<SquadThrowPlan> {
-    let th = if left(g, kind) > 0.0 { squad_throw_plan(g, men, at, kind, Some(false), Some(true)) } else { None };
-    let th = th?;
-    let pos = g.ch[g.gd[th.gd].ch].pos;
-    if kind == SquadThrowKind::Frag {
-        if squad_frag_catches(g, th.rest, at, Some(SquadFragCatchesMoved { gd: th.gd, at: th.post.unwrap_or(pos) }), Some(false), Some(true), None).is_some() {
-            return None;
-        }
-    }
-    let mut walk = None;
-    if let Some(post) = th.post {
-        // (`c.th === th` of the TypeScript always holds here: an answer with a `post` came out of this very slot: see notes)
-        let slot = format!("v{}{}", kind.as_str(), if men.len() == 1 { "1" } else { "" });
-        let key = crate::seats::view_key(g, &crate::seats::here(g));
-        let kept = g.m.squadthrow.states.get(key).and_then(|s| s.kept.get(slot.clone())).map(|c| c.line.clone());
-        walk = Some(match kept {
-            Some(Some(line)) => line,
-            Some(None) => {
-                let line = walk_line(g, th.gd, post);
-                if let Some(c) = g.m.squadthrow.states.get_mut(key).and_then(|s| s.kept.get_mut(slot)) {
-                    c.line = Some(line.clone());
-                }
-                line
-            }
-            None => walk_line(g, th.gd, post),
-        });
-    }
-    let from = th.post.unwrap_or([pos[0], 0.0, pos[2]]);
-    Some(SquadThrowPlan { gd: th.gd, from, points: th.sol.points, land: th.rest, kind, preview: Some(true), walk })
-}
-
 /// WHAT THE PICTURE DRAWS, and what a module drawing the squad's plan may read: one entry per throw on its way, and the highlighted row's preview. (squadthrow.ts squadThrowPlans)
-pub fn squad_throw_plans(g: &mut crate::game::Game, v: Option<&mut crate::squadthrow::SquadThrowKept>) -> Vec<crate::squadthrow::SquadThrowPlan> {
+pub fn squad_throw_plans(g: &mut crate::game::Game, _v: Option<&mut crate::squadthrow::SquadThrowKept>) -> Vec<crate::squadthrow::SquadThrowPlan> {
     let mut out = Vec::new();
     let key = crate::seats::view_key(g, &crate::seats::here(g));
     if !g.m.squadthrow.states.has(key) || !g.k.squadthrow.on {
@@ -539,149 +506,16 @@ pub fn squad_throw_plans(g: &mut crate::game::Game, v: Option<&mut crate::squadt
         };
         out.push(SquadThrowPlan { gd: w_gd, from: w.post, points: w.arc.sol.points.clone(), land: w.arc.rest, kind: w.kind, preview: None, walk });
     }
-    let asked = match &g.orders.menu {
-        Some(mn) => {
-            // (`rows[sel]` of a selection off the list, or of none, is no row)
-            let row = if mn.sel >= 0.0 { mn.rows.get(mn.sel as usize).copied() } else { None };
-            let id = row.map(|d| g.tab.orders_order_def[d].id.clone());
-            let id_is = |want: &str| id.as_deref() == Some(want);
-            let on_page = mn.page.as_deref() == Some(THROW_PAGE) || mn.flat == Some(true);
-            match &mn.target {
-                crate::orders::OrderTarget::Floor(t) if on_page && (id_is(FRAG_THERE) || id_is(STUN_THERE)) => {
-                    Some((mn.men.clone(), t.at, if id_is(STUN_THERE) { SquadThrowKind::Stun } else { SquadThrowKind::Frag }))
-                }
-                _ => None,
+    let asked = lit(g).map(|(_, at, kind)| (at, kind));
+    if let Some((at, kind)) = asked {
+        // (the highlighted row's own plan, as the menu last had it: the picture works nothing out)
+        if let Some(p) = g.m.squadthrow.states.get(key).and_then(|s| s.plans.get(kind)) {
+            if let (Some(th), None, true) = (&p.thrower, &p.refuse, v3::dist_xz(p.at, at) < 1e-6) {
+                out.push(SquadThrowPlan { gd: th.gd, from: th.post.unwrap_or(g.ch[g.gd[th.gd].ch].pos), points: th.sol.points.clone(), land: th.rest, kind, preview: Some(true), walk: p.walk.clone() });
             }
-        }
-        None => None,
-    };
-    if let Some((men, at, kind)) = asked {
-        // (with no store handed in, nothing is kept past the one ask)
-        let mut own = None;
-        let store: &mut SquadThrowKept = match v {
-            Some(v) => v,
-            None => own.insert(squad_throw_kept()),
-        };
-        let got = aside(g, key, store, &mut |g: &mut Game| preview_plan(g, &men, at, kind));
-        if let Some(p) = got {
-            out.push(p);
         }
     }
     out
-}
-
-/// who it would catch, in the row's words (the row's `caught`)
-fn row_caught(g: &mut Game, th: &SquadThrower, at: V3, kind: SquadThrowKind, fresh: bool) -> Option<String> {
-    if kind != SquadThrowKind::Frag {
-        return None;
-    }
-    let pos = g.ch[g.gd[th.gd].ch].pos;
-    squad_frag_catches(g, th.rest, at, Some(SquadFragCatchesMoved { gd: th.gd, at: th.post.unwrap_or(pos) }), Some(false), Some(!fresh), None)
-}
-
-/// Why not (Err), or the throw (Ok; with `post`: after a walk). (the rows' `ask`)
-fn ask(g: &mut Game, men: &[GuardId], at: V3, kind: SquadThrowKind, fresh: bool) -> Result<SquadThrower, String> {
-    if left(g, kind) <= 0.0 {
-        return Err(String::from(none(g, kind).as_str()));
-    }
-    let asked = if men.len() == 1 {
-        let key = state_key(g);
-        g.m.squadthrow.states.get(key).unwrap().asked.get(kind).cloned()
-    } else {
-        None
-    };
-    if let Some(a) = asked {
-        if a.key == key_of(at) && a.men.len() > 1 && a.men.contains(&men[0]) {
-            if let Some(th) = squad_throw_plan(g, &a.men, at, kind, Some(fresh), None) {
-                if th.gd == men[0] && row_caught(g, &th, at, kind, fresh).is_none() {
-                    return Ok(th);
-                }
-            }
-        }
-    }
-    let Some(th) = squad_throw_plan(g, men, at, kind, Some(fresh), None) else {
-        return Err(String::from("no throw from here."));
-    };
-    if let Some(who) = row_caught(g, &th, at, kind, fresh) {
-        return Err(who);
-    }
-    Ok(th)
-}
-
-/// The row's words, with any warning `valid` left for this spot: the arm OrderLabel::ThrowRow. (squadthrow.ts:554 one.label)
-pub fn row_label(g: &mut crate::game::Game, kind: crate::squadthrow::SquadThrowKind, at: V3) -> String {
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
-    let want = key_of(at);
-    let x = g.m.squadthrow.states.get(key).and_then(|s| {
-        if kind == SquadThrowKind::Stun {
-            s.warn.as_ref().map(|x| (x.key.clone(), x.text.clone()))
-        } else {
-            s.warn_frag.as_ref().map(|x| (x.key.clone(), x.text.clone()))
-        }
-    });
-    let w = match x {
-        Some((k, text)) if k == want => text,
-        _ => String::new(),
-    };
-    let n = left(g, kind);
-    format!("{} there · {} left{}", word(kind).as_str(), n, w)
-}
-
-/// The order is one man's, the thrower's: the arm OrderOnly::ThrowRow. (squadthrow.ts:556 one.only)
-pub fn row_only(g: &mut crate::game::Game, men: &[GuardId], at: V3, kind: crate::squadthrow::SquadThrowKind) -> Vec<GuardId> {
-    let key = state_key(g);
-    let k = key_of(at);
-    g.m.squadthrow.states.get_mut(key).unwrap().asked.set(kind, StateAskedValue { key: k, men: men.to_vec() });
-    match squad_throw_plan(g, men, at, kind, None, None) {
-        Some(th) => vec![th.gd],
-        None => Vec::new(),
-    }
-}
-
-/// Err: why not. Also sets the row's warning: the arm OrderValid::ThrowRow. (squadthrow.ts:557 one.valid)
-pub fn row_valid(g: &mut crate::game::Game, men: &[GuardId], at: V3, kind: crate::squadthrow::SquadThrowKind) -> Result<(), String> {
-    let a = ask(g, men, at, kind, false);
-    if kind == SquadThrowKind::Stun {
-        let who = match &a {
-            Ok(th) => squad_stun_catches(g, th.rest, at),
-            Err(_) => Vec::new(),
-        };
-        let warn = if who.is_empty() { None } else { Some(StateWarn { key: key_of(at), text: format!(" · too close: {}", who.join(", ")) }) };
-        let key = state_key(g);
-        g.m.squadthrow.states.get_mut(key).unwrap().warn = warn;
-    } else {
-        let on = match &a {
-            Ok(th) => squad_frag_on_sam(g, th.rest, at),
-            Err(_) => false,
-        };
-        let warn = if on { Some(StateWarnFrag { key: key_of(at), text: String::from(" · too close: you") }) } else { None };
-        let key = state_key(g);
-        g.m.squadthrow.states.get_mut(key).unwrap().warn_frag = warn;
-    }
-    a.map(|_| ())
-}
-
-/// Some: the refusal: the arm OrderIssue::ThrowRow. (squadthrow.ts:563 one.issue)
-pub fn row_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget, kind: crate::squadthrow::SquadThrowKind) -> Option<String> {
-    let at = target_at(t);
-    let mut a = match ask(g, men, at, kind, true) {
-        Ok(a) => a,
-        Err(why) => {
-            g.stats.squadthrow.refused += 1;
-            return Some(why);
-        }
-    };
-    if a.post.is_some() {
-        start_walk(g, &mut a, t, kind);
-        return None;
-    }
-    let what = if kind == SquadThrowKind::Frag { crate::doortools::DoorToolsTakeWhat::Frag } else { crate::doortools::DoorToolsTakeWhat::Bang };
-    if !crate::doortools::door_tools_take(g, what) {
-        return Some(String::from(none(g, kind).as_str()));
-    }
-    throw_it(g, a.gd, &arc_of(&a), kind, at);
-    squad_log_row(g, a.gd, row_of(kind).as_str(), at);
-    None
 }
 
 /// The row that opens the page and the page's two: made, not yet on the menu. (squadthrow.ts rows)
@@ -784,6 +618,9 @@ pub fn squad_throw_key(g: &mut crate::game::Game, input: InputId) -> bool {
         }
     }
     sync(g);
+    // (no menu up, nothing is shown: what was worked out for one, or for the order it gave, goes)
+    if g.orders.menu.is_none() { if let Some(s) = g.m.squadthrow.states.get_mut(key) { if s.plans.len() > 0 { s.plans.clear(); } } }
+    else { follow(g); }
     let hit_key = g.k.frag.order_key.clone();
     if g.orders.menu.is_none() || !crate::input::input_hit(g, input, &hit_key) {
         return false;
