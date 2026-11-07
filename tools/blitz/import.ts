@@ -219,7 +219,9 @@ function applyGameNow(g: any, blob: Uint8Array, knobs: Record<string, unknown>, 
     const A = T.vars[a]; if (!A.ty) return A.str ?? (cur && typeof cur === 'object' && (cur.kind ?? cur.type) === A.kw ? cur : A.kw !== undefined ? { kind: A.kw } : cur);
     const AT = SCHEMA.types[A.ty]; const same = (() => { if (cur === null || cur === undefined || typeof cur !== 'object') return false; if (AT?.k === 'struct') { if (A.kw !== undefined) return (cur.kind ?? cur.type) === A.kw; if (A.sn && classWord(cur) === A.sn) return true; return AT.fields.filter((f: any) => f.ts).every((f: any) => f.ts in cur); } return true; })();
     if (A.sn && !AT && same && classWord(cur) !== A.sn) return read(parse(A.ty), FRESH);
-    return read(parse(A.ty), same ? cur : FRESH); }
+    const made = read(parse(A.ty), same ? cur : FRESH);
+    if (A.kw !== undefined && made !== null && typeof made === 'object' && (made.kind ?? made.type) !== A.kw) made.kind = A.kw;   // (an arm's keyword is no field of its struct: an object the apply made carries the word as the TypeScript's own does, or a reader that asks `t.kind` reads the last arm's answer)
+    return made; }
   let curQ = '';
   /** one field of a struct, its bytes next */
   function readField(T: any, P: Plan, o: any) { const { f, q, N } = P; curQ = q;

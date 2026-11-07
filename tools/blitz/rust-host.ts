@@ -16,6 +16,7 @@
 //                        to the bytes last applied: what differs outside the host's half is something TypeScript wrote into the game between two
 //                        ticks. It is named, counted and handed to the Rust game whole (`face_import_into`). Slow (two walks of the state a tick):
 //                        the way to find a write the fast way has no call for.
+import { faceHere, FACE_WASM } from './face-build.ts';
 import { readFileSync, existsSync, writeFileSync, appendFileSync } from 'node:fs';
 
 export interface HostOpts {
@@ -64,10 +65,12 @@ export interface HostOpts {
 // ---- the module: one instance a process, as many games as rust/sim has slots
 export interface Face { X: any; mem: WebAssembly.Memory; NAMES: string[]; u8(): Uint8Array; u32(): Uint32Array; outText(): string; outView(): Uint8Array; panicText(): string; hand<T>(b: Uint8Array, f: (p: number, n: number) => T): T; partHashes(slot: number): number[] }
 const FACES = new Map<string, Face>();
-export const DEFAULT_WASM = new URL('../../rust/game_face/target/wasm32-unknown-unknown/release/game_face.wasm', import.meta.url).pathname;
+/** the module a tool plays with no `--wasm`: the page's own choice (face-build.ts: a build of this machine that is up to date, else the checked-in module of these
+ *  sources), so a machine with no cargo plays the same bytes the page serves; with neither, the release build's path, which `loadFace` then says is missing or which is stale by the builder's word */
+export const DEFAULT_WASM = faceHere() ?? FACE_WASM;
 export function loadFace(wasm = DEFAULT_WASM, fresh = false): Face {
   let F = fresh ? undefined : FACES.get(wasm); if (F) return F;
-  if (!existsSync(wasm)) throw new Error(`rust-host: no module at ${wasm} (cd rust/game_face && cargo build --target wasm32-unknown-unknown --release)`);
+  if (!existsSync(wasm)) throw new Error(`rust-host: no module at ${wasm} (cd rust/game_face && cargo build --target wasm32-unknown-unknown --release; or the checked-in one, which is taken only where it is of this checkout's sources: bun run tools/blitz/face-build.ts --where)`);
   const X: any = new WebAssembly.Instance(new WebAssembly.Module(new Uint8Array(readFileSync(wasm))), { env: { face_roll: () => (globalThis as any).__tpsRoll() } }).exports, mem: WebAssembly.Memory = X.memory, dec = new TextDecoder();
   const u8 = () => new Uint8Array(mem.buffer), u32 = () => new Uint32Array(mem.buffer);
   // (an address past 2 GB comes back from the module as a negative number: `>>> 0`)

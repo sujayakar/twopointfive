@@ -62,6 +62,8 @@ export function faceStale(profile: FaceProfile = 'release'): string {
 }
 /** a module that is up to date, the asked profile's first: its path, or null */
 function fresh(profile: FaceProfile): string | null { for (const p of [profile, profile === 'play' ? 'release' : 'play'] as FaceProfile[]) if (!faceStale(p)) return faceFile(p); return process.env.FACE_BUILD === '1' ? null : prebuilt(); }
+/** the module a headless tool plays: a build of this machine that is up to date (release first, then play), else the checked-in one where it is of these sources; null = none */
+export const faceHere = (): string | null => fresh('release');
 /** the compiler rust/rust-toolchain.toml picks: rustup's cargo (the system's own cannot link wasm where it has no lld) */
 function cargo(): string | null {
   const own = join(homedir(), '.cargo/bin/cargo'); if (existsSync(own)) return own;
