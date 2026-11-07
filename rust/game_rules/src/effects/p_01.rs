@@ -26,6 +26,7 @@ pub fn track_at(g: &Game, track: &Track) -> Option<(V3, V3)> {
             let s = g.sparks.pool[slot];
             if s.alive && s.gen_ == gen_ { Some((s.pos, [0.0, 1.0, 0.0])) } else { None }
         }
+        Track::Cigarette { by } => crate::smokebreak::tip_of(g, by).map(|p| (p, [0.0, 1.0, 0.0])),
     }
 }
 

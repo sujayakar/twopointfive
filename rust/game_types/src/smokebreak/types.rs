@@ -7,18 +7,14 @@ use alloc::{string::String, vec::Vec};
 #[derive(Clone, Debug)]
 pub struct SmokeShown {
     pub men: JsMap<crate::Num, crate::smokebreak::SmokeShownMenValue>,
-    pub frame: f64,
     pub threads: f64,
-    pub records: f64,
 }
 impl SmokeShown {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         SmokeShown {
             men: JsMap::new(),
-            frame: 0.0,
             threads: 0.0,
-            records: 0.0,
         }
     }
 }
@@ -28,20 +24,12 @@ impl Default for SmokeShown { fn default() -> Self { Self::zeroed() } }
 #[derive(Clone, Copy, Debug)]
 pub struct SmokeShownMenValue {
     pub thread: bool,
-    pub gen_: f64,
-    pub beat: f64,
-    pub left: f64,
-    pub gap: f64,
 }
 impl SmokeShownMenValue {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         SmokeShownMenValue {
             thread: false,
-            gen_: 0.0,
-            beat: 0.0,
-            left: 0.0,
-            gap: 0.0,
         }
     }
 }

@@ -12,6 +12,7 @@ import { smokeGrid, smokeSolverConsts, SmokeGrid } from './smokeGrid';
 import { byGpuCount } from './dispatch';
 import { sysRandom } from '../math/dice';   // the mixer / the solver draw the SYSTEM die, never the simulation's seeded one under a session recording (math/dice.ts)
 import { DUST_DRAW } from './dustTint';
+import { lookConfig } from '../render/frame';
 import smokeSrc from './smoke.wgsl' with { type: 'text' };
 // WIND (game/wind.ts): the field's one WGSL text + the solver's block / forcing term, prepended to the module; the records come in through setWind() once a frame
 import windFieldSrc from '../render/shaders/wind_field.wgsl' with { type: 'text' };
@@ -226,7 +227,7 @@ export class SmokeSystem implements SmokeSystemLike {
    *  The line stands two radii inside each end of the round's leg, so its round ends do not shove the air behind what the round hit or came out of. */
   readonly wake = { speed: 9, radius: 0.12, push: 4 };
   round(from: Vec3, dir: Vec3, len: number): boolean {
-    const W = this.wake; if (!(W.speed > 0)) return false;
+    const W = this.wake; if (!(W.speed > 0) || !lookConfig.on || !(lookConfig.stir > 0)) return false;   // (the look's Stirred smoke row; ?look=old: no line)
     const half = len / 2 - 2 * W.radius;
     if (half > 0.025) this.push({ pos: v3.mad(from, dir, len / 2), dir, speed: W.speed, radius: W.radius, line: half, push: W.push });
     return true;
