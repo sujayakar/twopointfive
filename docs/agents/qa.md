@@ -339,8 +339,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   THE RUNNER SAYS WHICH SIDE A RED PROBE'S LINES ASKED (2026-11-07; `fold.ts foldOtherSide`, `probes.ts sideTag`). A refused write leaves a settled
   row at its page value, so a check's "with the rule off" arm runs with the rule on and its line means nothing either way. The fold now keeps what a
   check WANTED: the rows written off their page value and not written back, and the rows refused since the last verdict line. As each `- PASS` /
-  `- FAIL` line is printed the runner asks it; a line with a row there was made with the other side of a settled switch wanted. After a probe, one
-  line `{"sides":{"probe","fail","failOtherSide","passOtherSide","rows"[,"threw"]}}`; in the closing table a red carries a tag: `[OTHER SIDE ONLY:
+  `- FAIL` line is printed the runner asks it; a line with a row there was made with the other side of a settled switch wanted, and the runner prints
+  one indented line under it naming each row and the value wanted (`    (made with the other side of a settled switch wanted: CLOSE.on=false, …)`).
+  After a probe, one line `{"sides":{"probe","fail","failOtherSide","pass","passOtherSide","rows":{row:{fail,pass}}[,"threw"]}}`: a row that is
+  under nearly every line of the probe is its STAGING (a pin), one under a few is an ARM; in the closing table a red carries a tag: `[OTHER SIDE ONLY:
   …]` (every failing line was such a line. Where the rows are an ARM of the question, "with the rule off …", the line or its off half is to DELETE;
   where they are the check's STAGING, a pin written before the rule, every line of the probe is such a line and the probe is to restage or delete), `[n of its m failing lines …]` (the rest are of the page's
   own side: read those), or `[THREW: …]` (the first line of what it threw, the runner's catch or the check's own; 'went with the tick' = it calls a
