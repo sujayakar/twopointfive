@@ -52,9 +52,15 @@ struct Frame {
   lampCfg: vec4f,                           // THE LOOK PROTOTYPE, light keeps to its room by day (the look panel's row `rooms`; zeros anywhere else = off): x = × the night's lamp strength a fixture is drawn at this hour, y = × a glowing face's drawn strength as a ray takes it (lampFloorK, boxEmissiveRay below), z = 1 while the Steady bounce row is up (lighting_common.wgsl dayBoundK) · w = the Room brightness row (composite.wgsl lookExpoGain; 0 = not set)
   sideCfg: vec4u,                           // THE LOOK PROTOTYPE, which side of a wall (the look panel's row `walls`; render/wallSides.ts; zeros anywhere else = every cache read as it was): x = 1 `sides` is this frame's level · y, z = THE SMOKE LAB's drawing rows (vol_common.wgsl HOW SMOKE IS DRAWN, AS ROWS; zeros = the picture as it was)
   placeCfg: vec4f,                          // THE LOOK PROTOTYPE, light keeps its order across places (the look panel's row `order`; composite.wgsl lookExpoGain; zeros anywhere else = off): x = how far a pixel's own light caps its place's gain · y = the slot of the light list's first portal + 1, 0 with none (skyKeep below) · z, w = THE EYES' WIDEST (place_common.wgsl lookExpoFor; set whenever the model is on): z = the dim level in the night's units, w = the most a place under it is shown by over the night's exposure
+  levelCfg: vec4u,                          // WHAT THE LEVEL RAISES (render/frame.ts LevelSw, written by writeFrame from the page's own switches): x = a bit a switch — the weather kinds' reads, the snow, the rows of the snow's look. Asked as lv(NAME) below. Data and not constants, so the office, a level with its own roofs and a snow level are ONE shader text
   sides: array<vec4u, 1750>,                // … its words, a u32 a cell of the floor plan (sideAt below)
   sideCols: array<vec4u, 140>,              // … and the place of each probe column of the cache's first cascade, a nibble a column (index z × dims.x + x; lighting_common.wgsl diceTapsBy)
 };
+
+/// Is this level's switch up? `bit` = one of the scene prelude's level words (WX_KINDS, WX_SNOW, SNOW_SURF, SNOW_WISPS, SNOW_TRACKS, SNOW_GLOW, SNOW_SPARKLE,
+/// SNOW_GRAINS, SNOW_UNDER: render/frame.ts LevelSw). The same answer on every pixel of a frame and on every frame of a page: a branch a level does not raise
+/// is never taken.
+fn lv(bit: u32) -> bool { return (frame.levelCfg.x & bit) != 0u; }
 
 const FLAG_DIRECT: u32 = 1u;
 const FLAG_INDIRECT: u32 = 2u;
@@ -247,7 +253,7 @@ fn wxRoofed(p: vec2f) -> bool {
 const WX_WALL_IN: f32 = 0.2;   // m
 fn wxUnderRoof(p: vec2f) -> bool {
   if (!wxRoofed(p)) { return false; }
-  if (!WX_KINDS) { return true; }
+  if (!lv(WX_KINDS)) { return true; }
   if (frame.cardCfg.y == 0u) { return true; }
   let d = WX_WALL_IN;
   return wxRoofed(p + vec2f(d, d)) && wxRoofed(p + vec2f(-d, d)) && wxRoofed(p + vec2f(d, -d)) && wxRoofed(p - vec2f(d, d));
@@ -432,10 +438,10 @@ fn isectCut(lo: vec3f, ld: vec3f, tmn: vec3f, tN0: f32, tF0: f32, tmax: f32, bi:
 // closest-hit walks after boxNormalFromCode. boxes.ts rayBoxRound is this on the CPU (rayBox, and collision.ts lineBox).
 // (docs/agents/levels.md, the round things' bullet, has the whole of it and what was run.)
 const ROUND_SIDE: f32 = -9.0;
-// THE CUT SET TRACES A ROUND AS ITS PICTURE'S PRISM (the prelude's ROUND_AS_CUT: a module compiled with the cut rule, unless `?roundexact=1`). The software adapter
-// writes a copy of isectBox for every place a box walk stands, and the cut set's copies already hold isectCut: with isectRound on top a newer adapter lost its
+// A RAY MEETS A ROUND AS ITS PICTURE'S PRISM (the prelude's ROUND_AS_CUT: a module compiled with the cut rule, which is every one where cut boxes are on, unless
+// `?roundexact=1`). The software adapter writes a copy of isectBox for every place a box walk stands, and those copies already hold isectCut: with isectRound on top a newer adapter lost its
 // device on the first frame a cut piece was alive (docs/agents/levels.md). A round's eight rows of the cut table are the prism the cut pass draws, in isectCut's own
-// form, so there the walk hands a round to isectCut and the cylinder's test is not written: the cut set's walks are the size they were before round things. A ray
+// form, so the walk hands a round to isectCut and the cylinder's test is not written: the walks are the size they were before round things. A ray
 // meets the round up to 3.5 % of its radius further out at the prism's twelve corners; the side's normal still turns smoothly (roundSideHit, roundNormalAt).
 const ROUND_RAY: bool = ROUND_BOXES && !ROUND_AS_CUT;
 const CUT_BITS: u32 = GEO_CUT | select(0u, GEO_ROUND, ROUND_AS_CUT);
@@ -477,7 +483,7 @@ fn isectBox(ro: vec3f, rd: vec3f, b: BoxGeo, tmax: f32, bi: u32, invRd: vec3f) -
   let tN = max(max(tmn.x, tmn.y), tmn.z);
   let tF = min(min(tmx.x, tmx.y), tmx.z);
   if (tN > tF || tF < 0.0 || tN > tmax) { return vec2f(-1.0, 0.0); }
-  if (ROUND_RAY) { if ((b.flags & GEO_ROUND) != 0u) { return isectRound(lo, ld, b.h.x, tmn.y, tmx.y, tN, tmax); } }   // ROUND THINGS: the cylinder inside the box (above); dead code without the switch, and in the cut set (ROUND_AS_CUT, above)
+  if (ROUND_RAY) { if ((b.flags & GEO_ROUND) != 0u) { return isectRound(lo, ld, b.h.x, tmn.y, tmx.y, tN, tmax); } }   // ROUND THINGS: the cylinder inside the box (above); dead code without the switch, and wherever the cut rule is in (ROUND_AS_CUT, above)
   if (CUT_BOXES) { if ((b.flags & CUT_BITS) != 0u) { return isectCut(lo, ld, tmn, tN, tF, tmax, bi); } }   // CUT BOXES: the slab interval cut down by the box's planes (below), and a round's by its prism's; dead code without the switch
   if (tN < 0.0) { return vec2f(0.0, 7.0); }
   var code = 4.0 + select(0.0, 1.0, ld.z > 0.0);

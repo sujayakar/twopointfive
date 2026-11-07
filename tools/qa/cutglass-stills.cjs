@@ -82,7 +82,7 @@ const COUNT = () => { const g = window.__game, L = g.destr.debris.list, G = L.fi
     try {
       const url = `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&nocivilians&glassbreak${job.query ? '&' + job.query : ''}`;
       log(job.name, 'goto', url); await page.goto(url);
-      const fatal = await page.evaluate(async () => { await window.__ready; window.__testVisible = true; if (window.__cut && window.__cut.programs && window.__cut.programs.swap) await window.__cut.programs.ready;   /* the second set of ray programs (render/cutSwap.ts) compiles after boot: a cut piece is traced whole until it is in */ return document.getElementById('fatal')?.textContent || ''; }); if (fatal) R.errors.push('fatal: ' + fatal);
+      const fatal = await page.evaluate(async () => { await window.__ready; window.__testVisible = true; return document.getElementById('fatal')?.textContent || ''; }); if (fatal) R.errors.push('fatal: ' + fatal);
       R.setup = await page.evaluate(SETUP, { seed: SEED, knobs: KNOBS }); log(job.name, 'setup', JSON.stringify(R.setup));
       let threw = await page.evaluate(SETTLE, 30); if (threw) R.errors.push('settle threw: ' + threw);
       await page.evaluate(DRAW, 1);   // (one drawn frame first: the world's glass list is packed by the upload a render makes)

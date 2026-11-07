@@ -466,11 +466,9 @@ export class BoxWorld {
   private cutLo = 1 << 30; private cutHi = -1; private cutLoD = 1 << 30; private cutHiD = -1; private cutSplit = 0;   // the rows packed this frame, as two index ranges: the statics' (below cutSplit) and the dynamics'
   /** how many of this frame's visible boxes are cut (they follow the plain ones in `visible`) */
   visibleCutCount = 0;
-  /** how many of those — the FIRST ones of the cut list — a ray can meet (not NoShadow). The g-buffer draws exactly these whole on a frame whose ray programs carry
-   *  no cut rule (render/cutSwap.ts drawsCut), so picture and rays agree; the picture-only ones behind them (glass plates) are drawn cut always */
+  /** how many of those — the FIRST ones of the cut list — a ray can meet (not NoShadow); the picture-only ones behind them are glass plates */
   visibleCutTraced = 0;
-  /** how many boxes of the last upload carry a record AND can be met by a ray (not NoShadow: a glass plate is picture only) — what render/cutSwap.ts takes the cut
-   *  programs by: 0 = the frame runs the boot's programs, which have no cut rule */
+  /** how many boxes of the last upload carry a record AND can be met by a ray (not NoShadow: a glass plate is picture only) */
   cutTraced = 0;
   private cutVisible = new Uint32Array(0);
   private statShadowCut: (CutPlane[] | undefined)[] = [];

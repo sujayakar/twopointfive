@@ -79,9 +79,6 @@ const PLAY = (secs) => { const e = window.__engine, real = e.render; let threw =
     await page.goto(url);
     const ready = await page.evaluate(async () => { await window.__ready; window.__testVisible = true; return { fatal: document.getElementById('fatal')?.textContent || '', pipelines: window.__boot?.pipelines }; });
     log('ready', JSON.stringify(ready)); if (ready.fatal) errors.push('fatal: ' + ready.fatal);
-    const cutSet = await page.evaluate(async (secs) => { const P = window.__cut?.programs, r = P?.swap ? P.ready : null; if (!r) return 'none';
-      return await Promise.race([Promise.resolve(r).then(ok => ok ? 'ready' : 'failed', () => 'failed'), new Promise(done => setTimeout(() => done('timed out'), secs * 1000))]); }, 300).catch(e => 'threw: ' + e.message);
-    log('cut programs', cutSet);
     const staged = await page.evaluate(({ room, door, yard, vault }) => {
       window.__menu.close(); window.__smoke.params.enabled = false;
       const g = window.__game, K = window.__knobs.registry().IRLIGHT; g.godMode = true; g.aiEnabled = false;

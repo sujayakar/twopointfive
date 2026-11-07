@@ -21,7 +21,7 @@ import { missionsBusy, reopenMissionsAfterLoad, openMissionsIfAsked, OFFLIST_UI 
 import { START_PAGE, startPage, startPageWanted, openStartPage, openList } from './ui/startpage';
 import { setFigureCast } from './ui/kitFigure';
 import { PICKS, PICKS_UI, pickRedirect, pickQuitSearch, pickOfQuery, pickHref } from './scene/picks';
-import { initGpu, showFatal, showFatalError, pipelineProgress, gpuStory, pipeQueue, laterIdle, laterHold, laterProgress, PIPE_QUEUE, FATAL } from './gpu/device';
+import { initGpu, showFatal, showFatalError, pipelineProgress, gpuStory, pipeQueue, laterIdle, laterProgress, PIPE_QUEUE, FATAL } from './gpu/device';
 import { shaderRowsOn } from './ui/shaderrows';
 import * as boot from './ui/boot';
 import { rigTable } from './render/sdfrig';
@@ -68,7 +68,6 @@ import { dressLorry, kitLorry } from './scene/lorryTry';
 import { charLookSides } from './render/charMaterials';
 import { groundRayConfig } from './scene/groundField';
 import { ROUND, ROUND_STATS, roundConfig } from './scene/round';
-import { cutSwap } from './render/cutSwap';
 import { makeBox, BoxFlag, MKEY, BoxWorld } from './scene/boxes';
 import { MESH_MAX_CHARS } from './render/meshbvh';
 import { GLASSBREAK, GB_STATS, glassBreakPersisted, glassBreakLive, saveGlassBreak } from './game/glassbreak';
@@ -227,7 +226,7 @@ async function main() {
   const q = new URLSearchParams(location.search);
   // THE KEPT PAGE (gpu/keep.ts, host/keeppage.ts): the tab's own page keeps the GPU device and shows the game in a frame of this address, so a mission start —
   // a load of that frame — compiles no shader this visit has compiled already. A shell boots nothing more; ?keeppage=0 = every load a whole page, as it was
-  const keep = keepPageBoot(q, ownPage(q) || kitViewOn);   // (a run of any kind keeps its own page: host/runpage.ts)
+  const keep = keepPageBoot(q, ownPage(q), kitViewOn);   // (a run of any kind keeps its own page: host/runpage.ts; the Team & kit picture draws with its page's device, on a lease beside it)
   if (keep.role === 'shell') { boot.stopRafProbe(); readyResolve(); return; }
   if (keep.role === 'leave') return;
   // NO MODULE, NO GAME (sim/sim.ts): the simulation is the Rust module's and nothing else works it out, so a page that cannot run it stops here, before
@@ -323,7 +322,7 @@ async function main() {
   await tick();
   const tGpu = performance.now();
   const rigPage = q.has('bench') || runPage(q) || navigator.webdriver === true;   // a measurement or a driven page: it keeps its own page and its own timings
-  const gpu = await initGpu(canvas, { retry: !kitViewOn && !rigPage, canvasRead: SAVEPIC.on && saveMod.SAVETIMELINE.on && !kitViewOn, keeper: keep.keeper });   // (a real loss of the device loads this page again — gpu/device.ts GPU_LOST; never the kit picture's window: the start page is told below and draws its standing man; never a benchmark or a driven page, which must see the card)
+  const gpu = await initGpu(canvas, { retry: !kitViewOn && !rigPage, canvasRead: SAVEPIC.on && saveMod.SAVETIMELINE.on && !kitViewOn, keeper: keep.keeper, seat: keep.seat });   // (a real loss of the device loads this page again — gpu/device.ts GPU_LOST; never the kit picture's window: the start page is told below and draws its standing man; never a benchmark or a driven page, which must see the card)
   startCallClock(gpu.device);   // (the load's clock on its buffer, texture and submit calls, to the boot's freeze: gpu/keep.ts)
   if (kitViewOn) void gpu.device.lost.then(() => kitViewFatal());   // (?kitview: the device's own card — gpu/device.ts — is seen by nobody in there: the start page is told there is no picture)
   boot.span('gpu', tGpu); boot.mark('gpu');
@@ -406,7 +405,7 @@ async function main() {
   boot.span('pipelines', tPipe); boot.mark('pipelines');
   pipelineProgress.onChange = null; boot.freezePipelines(); keptFreeze(); gpuStory.stage = 'while setting up';
   pipeQueue.settle();   // THE COMPILE QUEUE (gpu/device.ts PIPE_QUEUE): from here the background set compiles two at a time, leaving the browser's GPU workers free to draw the page
-  cutSwap.start();   // CUT BOXES (render/cutSwap.ts): the second set of the tracing pipelines — the ones with the cut rule — compiled in the background from here, AFTER the boot's count is frozen (they are not the boot's); nothing waits on it, and a calm frame never dispatches it
+  engine.warmFirstUse();   // (…and the programs a pass used to make at its first use are asked for now, behind the start: engine.ts warmFirstUse)
   card.status(`${pipelineProgress.done} shaders ready — setting up`);
   gpu.device.queue.onSubmittedWorkDone().then(() => gpu.device.removeEventListener('uncapturederror', gpuErr)).catch(() => { /* device lost: its own card */ });   // (errors from work queued so far still arrive; later ones are the frame's, not the boot's)
   weatherHourHooks(game, smoke);
@@ -843,8 +842,8 @@ async function main() {
     cpu: out => { if (brief?.held || overlay.cardUp || tabUp || perfsweep.active || bench.freezing) { out[2] = NaN; return; } out[0] = perfrec.cpuUpdate; out[1] = perfrec.cpuRender; out[2] = performance.now() - perfrec.cpuFrameStart; out[3] = loop.ticks ?? 0; if (CALLS.play) out[4] = CALLS.play.ms - cloudCallsAt; },
     // (the boot's timeline, as ui/boot.ts took it: sent once the first frame's GPU work is back, or a minute after the page was interactive, or as the page goes)
     boot: last => keptRecord(bootRecord(boot.summary(), performance, last, shaderRowsOn(), location.origin, runningScenario(game, levelFileQ)?.title ?? levelFileQ ?? '')),   // (…with the kept page's words on a kept page: gpu/keep.ts)
-    // (…and what the load learnt after that: the later programs in, a mission's START live, and how long the programs with the cut rule took — render/cutSwap.ts builds them behind the boot)
-    later: have => laterRecord(boot.summary(), have, { cut: cutSwap.buildMs > 0 && cutSwap.state !== 'building' ? { ms: Math.round(cutSwap.buildMs), pipelines: cutSwap.pipelines, owners: cutSwap.built, ...(cutSwap.state === 'failed' ? { failed: true } : {}) } : undefined }) });   // (only once the build has ended with its numbers: a set that failed before it was through has none, and its failure is an error record of its own)
+    // (…and what the load learnt after that: the later programs in, a mission's START live)
+    later: have => laterRecord(boot.summary(), have) });
   // (…but what goes WRONG on a tape's page is still said: its reports go up under the records' own words, as a page's and not as a visit's — cloud.ts cloudReports)
   if (tape) void cloudReports(q, { page: 'tape', build: () => replaykey.commit ?? sessionrec.commit, machine: () => machineFacts(gpu.adapterInfo, gpu.adapterFallback, quality.displayHzPin || quality.displayHz).now });
   if (cloud) {   // a lost device is one of the visit's error records (a device let go because the page is leaving is not a loss); a GPU error is printed by gpu/device.ts's own listener and reaches the records by the tapped console
@@ -1123,15 +1122,13 @@ async function main() {
   // THE LOAD BRIEF stays up, the world held still behind it (`frozen` below), until the player starts the run — on a page a person sits at. A page a script
   // drives, a benchmark, a show, or a mission whose start was refused (the start card says why) drops it here and goes on as before.
   const briefGo = !openStartCard && !automated && !benchOn() && !demo.active && !game.director.showing;
-  // THE START WAITS FOR THE PICTURE (ui/settle.ts): the brief holds the world, its block not yet live, until every program is in (the later set and the
-  // second, cut set: nothing compiles once the run is live) and the frames behind it have been drawn with them and measured. A press kept from the boot
+  // THE START WAITS FOR THE PICTURE (ui/settle.ts): the brief holds the world, its block not yet live, until every program is in (the later set too:
+  // nothing compiles once the run is live) and the frames behind it have been drawn with them and measured. A press kept from the boot
   // starts the run then. `__boot.marks.settled` is when; a script that takes the page meanwhile drops the brief (briefHolds) and the wait with it.
   const briefSettle = (b: NonNullable<typeof brief>): void => {
     const run = (): void => { audio.start(); input.focusGame(); };
     if (!SETTLE.on) { boot.mark('settled'); b.live(run); return; }
     b.hold(); pipeQueue.rush(true);
-    // (the second set is a program that is out, for this wait and for everyone who asks the same question: auto quality's measure, `__ready`, the load's own `laterReady`)
-    if (cutSwap.state === 'building') void (cutSwap.ready ?? Promise.resolve(false)).finally(laterHold());
     const P = pipelineProgress, S = new Settle(); let laterMost = laterProgress.pending, settleLast = performance.now(), drawnAt = behind.drawn;
     const back = (): void => { settleLast = performance.now(); };   // (a tab that comes back: the time it was away is not the wait's)
     const end = (): void => { settling = false; pipeQueue.rush(false); document.removeEventListener('visibilitychange', back); };
@@ -1181,8 +1178,8 @@ function urlFlagsBeforeEngine(q: URLSearchParams) {
   { const tv = Number(q.get('trace')); if (q.has('trace') && Number.isFinite(tv) && tv >= 0) traceConfig.variant = tv | 0; }
   if (glassMod.glassFxBoot() && (q.has('glassbreak') ? q.get('glassbreak') !== '0' : glassBreakPersisted())) glassBreakConfig.on = true;   // GLASS BREAKING (game/glassbreak.ts): the renderer's half is the scene prelude's compile-time const — raised here, before the Engine builds a pipeline, from the switch kept on this machine (Tab ▸ Destruction ▸ Glass; ?glassbreak / ?glassbreak=0 force it for one boot without touching the stored switch); off = every shader is main's program   // ?trace=N: the ray-traversal lab's compile-time variant const in every scene shader (render/frame.ts traceConfig, docs/internal/trace-perf.md; only 0 = today's walk exists on main) — must be set before the Engine builds any pipeline
   groundRayConfig.on = hillRaysOn(q); if (groundRayConfig.on && q.has('roll')) { const r = Number(q.get('roll')); if (Number.isFinite(r)) groundRayConfig.roll = Math.max(0, Math.min(0.25, r)); }   // (?roll=<m>: the open ground's snow swells this deep — the trial's second half, off unless asked)
-  initCutSwitch(); if (geoTryOn(q) || lorryTryOn(q)) cutConfig.swap = false;   // (A GEOMETRY TRIAL, scene/geoTry.ts: its cut boxes stand from the first frame to the last, so the one set of ray programs with the cut rule is compiled at boot)
-  roundConfig.gpu = ROUND.on && cutConfig.on && !(lookConfig.on && !cutConfig.swap && q.get('round') !== '1');   // (ROUND THINGS, scene/round.ts: the GPU's half — the prelude's ROUND_BOXES const, the round bit, the prism's rows — set once, before the first pipeline. It needs the cut switch, whose table and pipeline draw a round: without that one a round is drawn and traced as the box round it, and the game meets the cylinder all the same. THE LOOK PROTOTYPE with a geometry trial on (the cut rule in every ray program from boot, the line above) is compiled WITHOUT the round test unless `?round=1` asks: with it on top the software adapter lost its device on the first drawn frame where the plain page drew, docs/agents/render.md. `ROUND.on` is not moved: the game still plays a round thing round)   // CUT BOXES (scene/cut.ts): on in the page unless ?nocutboxes / ?cutboxes=0 / localStorage twopointsix.cutboxes = '0' — the scene prelude's CUT_BOXES const, the cut table's rows in boxMat and the second g-buffer pipeline all follow it, so it is read before the Engine exists (a reload flips it)
+  initCutSwitch();
+  roundConfig.gpu = ROUND.on && cutConfig.on && !(lookConfig.on && (geoTryOn(q) || lorryTryOn(q)) && q.get('round') !== '1');   // (ROUND THINGS, scene/round.ts: the GPU's half — the prelude's ROUND_BOXES const, the round bit, the prism's rows — set once, before the first pipeline. It needs the cut switch, whose table and pipeline draw a round: without that one a round is drawn and traced as the box round it, and the game meets the cylinder all the same. THE LOOK PROTOTYPE with a geometry trial on (scene/geoTry.ts: its cut boxes stand from the first frame to the last) is compiled WITHOUT the round test unless `?round=1` asks: with it on top the software adapter lost its device on the first drawn frame where the plain page drew, docs/agents/render.md. `ROUND.on` is not moved: the game still plays a round thing round)   // CUT BOXES (scene/cut.ts): on in the page unless ?nocutboxes / ?cutboxes=0 / localStorage twopointsix.cutboxes = '0' — the scene prelude's CUT_BOXES const, the cut table's rows in boxMat and the second g-buffer pipeline all follow it, so it is read before the Engine exists (a reload flips it)
   { const ds = Number(q.get('decalStress')); if (ds > 1) decalDebug.repeat = Math.min(64, ds | 0); }   // measurement only (?decalStress=N): the decal lookup N× per g-buffer fragment (render/decals.ts decalDebug), so its cost can be read above the timer's noise; must be set before the Engine builds the g-buffer shader
 }
 
@@ -1353,11 +1350,7 @@ function worldHooks(engine: Engine, game: Game, audio: AudioEngine) {
   const CUT_TEST_KEY = MKEY.test + 0x8000; let cutSerial = 0;   // (clear of the moths' 0x4000s and of a broken fixture's 0x5000‥0x6FFF, game/fixtureBreak.ts: one key, one box — the fog's thing rule reads a fixture's low parts as one body)
   (window as any).__cut = {
     get on() { return cutConfig.on; }, set on(v: boolean) { try { localStorage.setItem('twopointsix.cutboxes', v ? '1' : '0'); } catch { /* no storage */ } },   // (persisted; the build follows at the next boot)
-    get stats() { return { ...engine.world.cutStats, drawn: engine.world.visibleCutCount, drawnWhole: engine.cutWhole, traced: engine.world.cutTraced }; },
-    /** A CALM ROOM PAYS NOTHING (render/cutSwap.ts): which ray programs the frame dispatches — `live` true = the set with the cut rule (taken while a cut piece a ray can meet is alive), false = the boot's;
-     *  `ready` resolves once the second set is compiled; `force` 'cut' | 'base' | null pins a set by hand (the cost lab's rows) */
-    programs: { get swap() { return cutSwap.enabled; }, get state() { return cutSwap.state; }, get live() { return cutSwap.live; }, get ready() { return cutSwap.ready ?? Promise.resolve(false); }, get force() { return cutSwap.force; }, set force(v: 'cut' | 'base' | null) { cutSwap.force = v === 'cut' || v === 'base' ? v : null; },
-      get info() { return { swap: cutSwap.enabled, state: cutSwap.state, live: cutSwap.live, force: cutSwap.force, pipelines: cutSwap.pipelines, owners: cutSwap.built, buildMs: Math.round(cutSwap.buildMs), swaps: cutSwap.swaps, traced: engine.world.cutTraced, drawnWhole: engine.cutWhole, hot: cutSwap.hotPinned, error: cutSwap.error }; } },
+    get stats() { return { ...engine.world.cutStats, drawn: engine.world.visibleCutCount, traced: engine.world.cutTraced }; },
     mod: cutMod,
     test: (at: Vec3, kind: 'wedge' | 'shard' | 'snap' | 'lump' = 'wedge', opts: { yaw?: number; scale?: number; albedo?: Vec3; core?: Vec3; rot?: [number, number, number, number] } = {}) => {
       const k = opts.scale ?? 1, yaw = opts.yaw ?? 0, albedo: Vec3 = opts.albedo ?? [0.62, 0.6, 0.56];
