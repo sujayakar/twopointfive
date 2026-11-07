@@ -1,4 +1,4 @@
-// Two rules for a room cleared from outside, each behind its own switch (on in the page, off on the frozen stand), from the maintainer's tape of 10-18
+// Three rules for a room cleared from outside (all three settled on; this file writes none of them since 2026-11-07), from the maintainer's tape of 10-18
 // (training 5, the kitchen's door: the pair held a diagonal each for three seconds, said 'holding on the door' with a defender stood square in front of
 // it — in the wedge neither diagonal shows — and both were shot stepping in; "men should try to pie from the outside as much as they can before considering
 // their job done … I think we could add some element of leaning to the AI"):
@@ -9,8 +9,11 @@
 //   DOORTOOLS.thrPieOne ONE man cuts (the maintainer, 10-19, of the two cutting and kneeling in step: "really only one guy should be doing it. one guy holds
 //                       one angle while the other pies and then does the lean? … just do the lean, not the crouch"): the lead walks the cuts square, the
 //                       far jamb's man stays on his diagonal, the lead leans once when his cuts are done, nobody kneels
-//   bun run tools/qa/thrpie-check.ts            (probes.ts thrpie; THRPIE_BREAK=1 must FAIL — both switches are left off where they are asked for;
-//                                                THRPIEONE_BREAK=1 must FAIL — thrPieOne is left off where it is asked for)
+//   bun run tools/qa/thrpie-check.ts            (probes.ts thrpie; THRPIE_BREAK=1 must FAIL — the man of the bones line is never asked to lean;
+//                                                THRPIEONE_BREAK=1 must FAIL — the order is never given, so nobody cuts)
+// OUT 2026-11-07, each the other side of a settled switch: (1) the rule off, the build as it was; (2) both jamb men cutting (thrPieOne off), and its frame
+// line and apart readings (asked now of the one-man runs); the lean on every cut and the last cut on a knee (thrPieOne off), and the word given to a man on
+// a knee; the comparisons with the slice off and with the lean off in the one-man lines; (4) the recording from before the keys and the page's off flags.
 // Headless, on the tape's own level and door, the order given as the menu's row gives it ('clear from outside' = thresholdHold). The defender is the level's
 // own man in that room, where the level stands him. Nothing here says how any of it LOOKS: the lean is measured off the bones, never seen on a GPU.
 import { ROOT } from './headless.ts';
@@ -28,13 +31,12 @@ interface Man { name: string; stations: number; lead: number; gun: number; knee:
 interface Out { why: string | null; told: number; unseen: number; cells: number; foe: string; foeSeen: boolean; foeDown: boolean; lost: number; over: number; men: Man[]; apart: number; beats: string; g: any; /** K.word: the word was given with a man mid-cut on a knee — the op's phase, and who still leaned or knelt outside, four seconds on */ word: { given: boolean; phase: string; bent: string[] } }
 
 /** the tape's door, the order given, run until the lead says the door is held (or `secs`) and a second more */
-async function held(K: { pie: boolean; lean: boolean; one?: boolean; blind?: boolean; word?: boolean; /** the word is given while a man is out on his lean */ wordLean?: boolean }, secs = 40): Promise<Out> {
+async function held(K: { blind?: boolean; /** the word is given while a man is out on his lean */ wordLean?: boolean }, secs = 40): Promise<Out> {
   const E = yardRow(LEVEL); if (!E) throw new Error(`no yard ${LEVEL}`);
   const R = await stage(E, 1), g = R.g, d = g.doors.byName(DOOR); if (!d) throw new Error(`no door ${DOOR}`);
-  DOORTOOLS.thrPie = K.pie && !BREAK; DOORTOOLS.thrLean = K.lean && !BREAK; DOORTOOLS.thrPieOne = !!K.one && !BREAK1;   // (after the stand-up: the frozen stand pins them off, the shipped one raises them)
   const on = await quiet(() => R.place(SAM, d)); if (!on) throw new Error(`X does not open on ${DOOR} from the spot`);
   const t = g.orders.targetUnder(R.input, R.W.cam, R.W.canvas), side = t.side as 1 | -1, W = d.def.width;
-  const why = await quiet(() => g.orders.give('thresholdHold', t)) as string | null;
+  const why = BREAK1 ? 'not given (THRPIEONE_BREAK)' : await quiet(() => g.orders.give('thresholdHold', t)) as string | null;
   const mid = doorPt(d, W / 2, 2.5, -side as 1 | -1);
   const foe = g.guards.filter((x: any) => x.team === 'hostile' && x.state !== 'dead').sort((a: any, b: any) => flat(a.char.pos, mid) - flat(b.char.pos, mid))[0];
   const team = () => R.team as any[], t0 = g.time;
@@ -56,7 +58,6 @@ async function held(K: { pie: boolean; lean: boolean; one?: boolean; blind?: boo
       const u = inw(m), c = m.char, h = c.bones.head, hp = c.bones.hips ?? c.pos, mz = c.muzzle;
       if (isNaN(told) && s.i > 0) { if (h) r.lead = Math.max(r.lead, (h[0] - hp[0]) * u[0] + (h[2] - hp[2]) * u[2]); if (mz) r.gun = Math.max(r.gun, (mz[0] - hp[0]) * u[0] + (mz[2] - hp[2]) * u[2]); r.knee = Math.max(r.knee, c.anim.crouch); if (m.script?.lean) r.leanAsked = true; }
       r.walked = Math.max(r.walked, s.i); }
-    if (K.word && !word.given && (T.jamb as any[]).some(m => op.slice.get(m)?.pie && !op.slice.get(m).pie.fin && m.char.anim.crouch > 0.9)) { word.given = true; R.D.go(); }
     if (K.wordLean && !word.given && (T.jamb as any[]).some(m => op.slice.get(m)?.pie && !op.slice.get(m).pie.fin && (rec.get(m)?.leanFrames ?? 0) > 20)) { word.given = true; R.D.go(); }
     if (isNaN(told)) { for (const m of team()) if (m.state !== 'dead') over = Math.min(over, offOf(d, m.char.pos, side), m.char.bones.head ? offOf(d, m.char.bones.head, side) : Infinity);
       if (foe && (op.beats ?? []).some((b: any) => String(typeof b === 'string' ? b : b.what ?? b.text ?? '').includes(`seen · ${foe.callsign}`))) foeSeen = true;
@@ -83,56 +84,32 @@ async function pose() {
 const menOf = (o: Out) => o.men.map(m => `${m.name}: ${m.stations} stations, sent to ${[...m.sent].map(i => i + 1).join(',')}, stood on ${[...m.stood].map(i => i + 1).join(',')}, done ${m.fin}, head ${f2(m.lead)} m past his hips toward the middle, knee ${f2(m.knee)}`).join(' · ');
 
 export const thrpieCheck = guarded(async () => {
-  const F = family('thrpie: the jamb men slice a doorway before they call it held · the man cutting leans, the last cut on a knee');
-  const keep = { p: DOORTOOLS.thrPie, l: DOORTOOLS.thrLean, o: DOORTOOLS.thrPieOne }, knobs0 = knobsCopy();
+  const F = family('thrpie: one jamb man slices a doorway before the door is called held, and leans once when his cuts are done');
+  const knobs0 = knobsCopy();
   try {
-    const off = await held({ pie: false, lean: false }), pie = await held({ pie: true, lean: false }), lean = await held({ pie: true, lean: true }), deep = await held({ pie: true, lean: true, blind: true }), deepSq = await held({ pie: true, lean: false, blind: true }), worded = await held({ pie: true, lean: true, blind: true, word: true });
-    const one = await held({ pie: true, lean: true, one: true }), oneDeep = await held({ pie: true, lean: true, one: true, blind: true }), oneSq = await held({ pie: true, lean: false, one: true }), oneWord = await held({ pie: true, lean: true, one: true, wordLean: true });
-    if (process.env.THRPIE_SHOW) for (const [n, o] of [['off', off], ['pie', pie], ['lean', lean], ['deep', deep], ['deepSq', deepSq], ['worded', worded], ['one', one], ['oneDeep', oneDeep], ['oneSq', oneSq], ['oneWord', oneWord]] as [string, Out][]) process.stderr.write(`${n}: why ${o.why} told ${f2(o.told)} unseen ${o.unseen}/${o.cells} foe ${o.foe} seen ${o.foeSeen} down ${o.foeDown} lost ${o.lost} over ${f2(o.over)} apart ${f2(o.apart)}\n   ${menOf(o)}\n   ${o.beats.slice(0, 600)}\n`);
-    // (1) as it was: a diagonal each, the man in the middle never seen, 'holding' said over him
-    F.verdict(off.why === null && !isNaN(off.told) && off.men.length === 2 && off.men.every(m => m.stations <= 1 && m.drift < 0.05 && m.knee === 0 && !m.leanAsked) && !off.foeSeen && !off.foeDown && !/slice/.test(off.beats),
-      'with the rule off it is the build as it was, and the tape: a diagonal each, held still, and the door called held with the man in the middle of the room never in either gun\'s sight',
-      `told at ${f2(off.told)} s · ${off.unseen} of ${off.cells} cells unseen · ${off.foe}: seen ${off.foeSeen}, down ${off.foeDown} · moved in the two seconds before: ${off.men.map(m => `${m.name} ${f2(m.drift)} m`).join(', ')}`);
-    // (2) the slice
-    const stoodAll = (o: Out) => o.men.every(m => m.sent.size >= 2 && [...m.sent].every(i => m.stood.has(i))), outside = (o: Out) => o.foeSeen && o.foeDown && o.beats.includes('down from outside');
-    F.verdict(pie.why === null && !isNaN(pie.told) && pie.told < DOORTOOLS.thrCap - 2 && pie.men.length === 2 && pie.men.every(m => m.stations >= 4 && m.fin) && stoodAll(pie) && outside(pie) && pie.lost === 0 && pie.unseen < off.unseen && pie.told > off.told,
-      'with it on both jamb men cut the opening, their hips on every station they were sent to, and both are done before the door is called held (well inside the hold\'s cap): the man in the middle is seen and dropped from outside, nobody is lost, less of the floor is left unseen',
-      `told at ${f2(pie.told)} s (off ${f2(off.told)}) · ${pie.unseen} of ${pie.cells} cells unseen (off ${off.unseen}) · seen ${pie.foeSeen}, down ${pie.foeDown} · lost ${pie.lost} · ${pie.men.map(m => `${m.name}: sent to ${[...m.sent].map(i => i + 1).join(',')} of ${m.stations}, stood on ${[...m.stood].map(i => i + 1).join(',')}, done ${m.fin}`).join(' · ')}`);
-    F.verdict(pie.over > 0.3 && lean.over > 0.3 && deep.over > 0.3 && [pie, lean, deep, deepSq].every(o => Number.isFinite(o.apart) && o.apart >= DOORTOOLS.thrPieApart - 0.05),
+    const one = await held({}), oneDeep = await held({ blind: true }), oneWord = await held({ wordLean: true });
+    if (process.env.THRPIE_SHOW) for (const [n, o] of [['one', one], ['oneDeep', oneDeep], ['oneWord', oneWord]] as [string, Out][]) process.stderr.write(`${n}: why ${o.why} told ${f2(o.told)} unseen ${o.unseen}/${o.cells} foe ${o.foe} seen ${o.foeSeen} down ${o.foeDown} lost ${o.lost} over ${f2(o.over)} apart ${f2(o.apart)}\n   ${menOf(o)}\n   ${o.beats.slice(0, 600)}\n`);
+    // (1) one man cuts, the other holds; one lean when the cuts are done; no knee
+    { const leadOf = (o: Out) => o.men.find(m => m.stations > 0), farOf = (o: Out) => o.men.find(m => m.stations === 0);
+      const L = leadOf(one), Fr = farOf(one), LD = leadOf(oneDeep), FD = farOf(oneDeep), say = (o: Out) => o.men.map(m => `${m.name}: ${m.stations ? `sent to ${[...m.sent].map(i => i + 1).join(',')} of ${m.stations}, stood on ${[...m.stood].map(i => i + 1).join(',')}` : `no cuts, strayed ${f2(m.strayed)} m`}, lowest ${f2(m.low)}, leans ${m.leans}`).join(' · ');
+      F.verdict(one.why === null && !isNaN(one.told) && one.told < DOORTOOLS.thrCap - 2 && !isNaN(oneDeep.told) && oneDeep.told < one.told + 4 && !!LD && (L?.across ?? 9) < 0.05 && LD.across < 0.05 && one.men.length === 2 && !!L && !!Fr && L.stations >= 4 && L.sent.size >= 2 && [...L.sent].every(i => L.stood.has(i)) && L.fin && Fr.strayed < 0.3 && one.lost === 0
+        && !!LD && !!FD && LD.walked + 1 === LD.stations && FD.strayed < 0.3 && [one, oneDeep].every(o => o.men.every(m => m.low < 0.1)),
+        'ONE man cuts: the lead walks the cuts, his hips on every one he is sent to and never in front of the opening, and is done before the door is called; the far jamb\'s man has no cuts and does not leave his diagonal once the cutting begins; nobody goes on a knee, not even with every cut walked; nobody is lost',
+        `told at ${f2(one.told)} s, ${f2(oneDeep.told)} s with every cut walked · ${one.unseen} of ${one.cells} cells unseen · the man in the middle: seen ${one.foeSeen}, down ${one.foeDown} · lost ${one.lost} · ${say(one)} · every cut walked: ${say(oneDeep)}`);
+      F.verdict(!!L && !!Fr && !!LD && L.leans === 1 && !L.cutAfterLean && L.leanAt === L.walked && L.leanAt > 0 && LD.leans === 1 && !LD.cutAfterLean && LD.leanAt === LD.walked && Fr.leans === 0 && !!FD && FD.leans === 0 && [one, oneDeep].every(o => o.men.every(m => m.leanAfter === 0))
+        && L.leanFrames >= 45 && L.leanHead > 0 && oneWord.word.given && oneWord.word.phase !== 'thr' && oneWord.word.bent.length === 0,
+        'the lean comes once, when his cuts are done: the lead leans one time, on the last cut he took, and takes no cut after it — held long enough to be seen, his head past his hips toward the middle; the man holding never leans; once the door is held everybody stands square; the word given while he is out on the lean: the order goes on and nobody outside is still leaned four seconds later',
+        `the lead leaned ${L?.leans} time(s), first on cut ${(L?.leanAt ?? -2) + 1}, the last he took ${(L?.walked ?? -2) + 1}, a cut after it: ${L?.cutAfterLean} · every cut walked: ${LD?.leans} time(s) on cut ${(LD?.leanAt ?? -2) + 1} of ${LD?.stations} · the man holding leaned ${Fr?.leans} / ${FD?.leans} · after: ${one.men.map(m => m.leanAfter).join(', ')} · his hips at most ${f2(L?.across ?? NaN)} m in from his jamb's edge (${f2(LD?.across ?? NaN)} with every cut walked) · the lean held ${L?.leanFrames} frames, head ${f2(L?.leanHead ?? NaN)} m past his hips · the word on the lean: given ${oneWord.word.given}, the order then ${oneWord.word.phase}, still bent ${oneWord.word.bent.join(', ') || 'nobody'}`); }
+    // (the frame line and the gap between the two: asked of both jamb men cutting until 2026-11-07, of the one-man runs since)
+    F.verdict(one.over > 0.3 && oneDeep.over > 0.3 && [one, oneDeep].every(o => Number.isFinite(o.apart) && o.apart >= DOORTOOLS.thrPieApart - 0.05),
       'nobody\'s hips or head cross the frame line (or come within 0.3 m of it) while it is worked from outside, and the two end no nearer each other than a man is wide — every cut walked too',
-      `nearest the frame line: ${f2(pie.over)} m (leaning ${f2(lean.over)}, every cut ${f2(deep.over)}) · apart at the end: ${[pie, lean, deep, deepSq].map(o => f2(o.apart)).join(', ')} m`);
-    // (3) the lean and the knee
+      `nearest the frame line: ${f2(one.over)} m (every cut ${f2(oneDeep.over)}) · apart at the end: ${[one, oneDeep].map(o => f2(o.apart)).join(', ')} m`);
+    // (2) the lean is in the bones
     const P = await pose();
     F.verdict(P.up && P.right - P.mid > 0.08 && P.mid - P.left > 0.08 && P.gunRight > P.right - 0.02 && Math.abs(P.trunk) < 0.06 && Math.abs(P.hips) < 0.08 && Math.abs(P.back - P.mid) < 0.04,
       'the lean is in the bones: a man with his gun up, leaned to a side, has his head a hand or more that way of where it was, his hips and the middle of his trunk where they were (the columns a round is tested against stay); leaned to his gun side the muzzle is out past his head; told to stand square he is back',
       `head right of his hips (a second's mean): square ${f2(P.mid)} m · leaned right ${f2(P.right)} · leaned left ${f2(P.left)} · square again ${f2(P.back)} · muzzle leaned right ${f2(P.gunRight)}, left ${f2(P.gunLeft)} · the trunk's middle moved ${f2(P.trunk)} m, the hips ${f2(P.hips)} m`);
-    F.verdict(lean.men.length === 2 && lean.men.every(m => m.leanAsked && m.fin) && [lean, deep].every(o => o.men.every(m => !m.lean0)) && !pie.men.some(m => m.leanAsked) && deep.men.length === 2 && deep.men.every(m => m.walked + 1 === m.stations && m.knee > 0.9 && m.fin) && stoodAll(deep) && deepSq.men.every(m => m.walked + 1 === m.stations && m.knee < 0.1) && pie.men.every(m => m.knee < 0.1)
-      && deep.men.every((m, i) => m.lead > (deepSq.men[i]?.lead ?? 9) + 0.05) && [lean, deep].every(o => o.men.every(m => m.leanAfter === 0 && m.kneeAfter < 0.1)) && outside(lean) && lean.lost === 0 && lean.unseen <= pie.unseen + 2 && lean.told < DOORTOOLS.thrCap - 2,
-      'with the lean on every cut is taken leaned (his first spot, the diagonal, square as ever) — over the same cuts each man\'s head gets further past his own hips toward the middle of the door than it does square — and, the floor\'s model taken away so that every cut is walked, the cuts that look down the door\'s own line are taken on a knee (square: nobody leans or kneels); once the door is held every man stands square again; the man in the middle is dropped from outside this way too, nobody lost, no more floor left unseen',
-      `leaned: ${lean.men.map(m => `${m.name} ${m.leanAsked}`).join(', ')} · head past his hips toward the middle, every cut walked: ${deep.men.map((m, i) => `${f2(m.lead)} m against ${f2(deepSq.men[i]?.lead ?? NaN)} square`).join(', ')} · every cut walked: knee ${deep.men.map(m => `${m.name} ${f2(m.knee)} at ${m.walked + 1} of ${m.stations}`).join(', ')} (square ${deepSq.men.map(m => f2(m.knee)).join(', ')}) · after: lean ${lean.men.map(m => m.leanAfter).join(', ')}, knee ${lean.men.map(m => f2(m.kneeAfter)).join(', ')} · seen ${lean.foeSeen}, down ${lean.foeDown} · lost ${lean.lost} · ${lean.unseen} of ${lean.cells} cells unseen (square ${pie.unseen}) · told at ${f2(lean.told)} s`);
-    F.verdict(worded.word.given && worded.word.phase !== 'thr' && worded.word.bent.length === 0,
-      'the word given while a man is mid-cut on a knee: the order goes on, and four seconds later nobody outside the frame is still leaned or kneeling',
-      `the word given ${worded.word.given} · the order then: ${worded.word.phase} · still bent outside: ${worded.word.bent.join(', ') || 'nobody'}`);
-    // (3b) one man cuts, the other holds; one lean when the cuts are done; no knee
-    { const leadOf = (o: Out) => o.men.find(m => m.stations > 0), farOf = (o: Out) => o.men.find(m => m.stations === 0);
-      const L = leadOf(one), Fr = farOf(one), LD = leadOf(oneDeep), FD = farOf(oneDeep), say = (o: Out) => o.men.map(m => `${m.name}: ${m.stations ? `sent to ${[...m.sent].map(i => i + 1).join(',')} of ${m.stations}, stood on ${[...m.stood].map(i => i + 1).join(',')}` : `no cuts, strayed ${f2(m.strayed)} m`}, lowest ${f2(m.low)}, leans ${m.leans}`).join(' · ');
-      F.verdict(one.why === null && !isNaN(one.told) && one.told < DOORTOOLS.thrCap - 2 && !isNaN(oneDeep.told) && oneDeep.told < one.told + 4 && !!LD && (L?.across ?? 9) < 0.05 && LD.across < 0.05 && one.men.length === 2 && !!L && !!Fr && L.stations >= 4 && L.sent.size >= 2 && [...L.sent].every(i => L.stood.has(i)) && L.fin && Fr.strayed < 0.3 && one.lost === 0 && one.unseen < off.unseen
-        && !!LD && !!FD && LD.walked + 1 === LD.stations && FD.strayed < 0.3 && [one, oneDeep, oneSq].every(o => o.men.every(m => m.low < 0.1)),
-        'ONE man cuts: the lead walks the cuts, his hips on every one he is sent to and never in front of the opening, and is done before the door is called; the far jamb\'s man has no cuts and does not leave his diagonal once the cutting begins; nobody goes on a knee, not even with every cut walked; nobody is lost and less floor is left unseen than with the slice off',
-        `told at ${f2(one.told)} s, ${f2(oneDeep.told)} s with every cut walked (both cutting ${f2(lean.told)}, off ${f2(off.told)}) · ${one.unseen} of ${one.cells} cells unseen (both cutting ${lean.unseen}, off ${off.unseen}) · the man in the middle: seen ${one.foeSeen}, down ${one.foeDown} · lost ${one.lost} · ${say(one)} · every cut walked: ${say(oneDeep)}`);
-      F.verdict(!!L && !!Fr && !!LD && L.leans === 1 && !L.cutAfterLean && L.leanAt === L.walked && L.leanAt > 0 && LD.leans === 1 && !LD.cutAfterLean && LD.leanAt === LD.walked && Fr.leans === 0 && !!FD && FD.leans === 0 && [one, oneDeep].every(o => o.men.every(m => m.leanAfter === 0)) && oneSq.men.every(m => m.leans === 0)
-        && L.leanFrames >= 45 && (leadOf(oneSq)?.lead ?? -9) > 0 && L.leanHead > (leadOf(oneSq)?.lead ?? 9) + 0.02 && one.unseen <= oneSq.unseen && oneWord.word.given && oneWord.word.phase !== 'thr' && oneWord.word.bent.length === 0,
-        'the lean comes once, when his cuts are done: the lead leans one time, on the last cut he took, and takes no cut after it — held long enough to be seen, his head further past his hips than on any square cut, and no more floor left unseen than without it; the man holding never leans; once the door is held everybody stands square; with the lean off nobody leans at all; the word given while he is out on the lean: the order goes on and nobody outside is still leaned four seconds later',
-        `the lead leaned ${L?.leans} time(s), first on cut ${(L?.leanAt ?? -2) + 1}, the last he took ${(L?.walked ?? -2) + 1}, a cut after it: ${L?.cutAfterLean} · every cut walked: ${LD?.leans} time(s) on cut ${(LD?.leanAt ?? -2) + 1} of ${LD?.stations} · the man holding leaned ${Fr?.leans} / ${FD?.leans} · after: ${one.men.map(m => m.leanAfter).join(', ')} · with the lean off: ${oneSq.men.map(m => m.leans).join(', ')} · his hips at most ${f2(L?.across ?? NaN)} m in from his jamb's edge (${f2(LD?.across ?? NaN)} with every cut walked) · the lean held ${L?.leanFrames} frames, head ${f2(L?.leanHead ?? NaN)} m past his hips (square cuts ${f2(leadOf(oneSq)?.lead ?? NaN)}) · unseen ${one.unseen} with the lean, ${oneSq.unseen} without · the word on the lean: given ${oneWord.word.given}, the order then ${oneWord.word.phase}, still bent ${oneWord.word.bent.join(', ') || 'nobody'}`); }
-    // (4) an old recording, the page's flags
-    { const JOURNAL = await import(`${ROOT}/src/game/journal.ts`) as any, { pageSwitches } = await import(`${ROOT}/src/host/profile.ts`) as any, g = lean.g, snap = () => JSON.parse(JSON.stringify(JOURNAL.knobsSnapshot(g)));
-      DOORTOOLS.thrPie = DOORTOOLS.thrLean = DOORTOOLS.thrPieOne = true; const old = snap(); delete old.tables.DOORTOOLS.thrPie; delete old.tables.DOORTOOLS.thrLean; delete old.tables.DOORTOOLS.thrPieOne; JOURNAL.applyKnobs(g, old); const without = [DOORTOOLS.thrPie, DOORTOOLS.thrLean, DOORTOOLS.thrPieOne];
-      DOORTOOLS.thrPie = DOORTOOLS.thrLean = DOORTOOLS.thrPieOne = true; const own = snap(); DOORTOOLS.thrPie = DOORTOOLS.thrLean = DOORTOOLS.thrPieOne = false; JOURNAL.applyKnobs(g, own); const withIt = [DOORTOOLS.thrPie, DOORTOOLS.thrLean, DOORTOOLS.thrPieOne];
-      let a: unknown[] = ['no pageSwitches'], b: unknown[] = a; if (typeof pageSwitches === 'function') { pageSwitches(new URLSearchParams('')); a = [DOORTOOLS.thrPie, DOORTOOLS.thrLean, DOORTOOLS.thrPieOne]; pageSwitches(new URLSearchParams('thrpie=0&thrlean=0&thrpieone=0')); b = [DOORTOOLS.thrPie, DOORTOOLS.thrLean, DOORTOOLS.thrPieOne]; }
-      F.verdict(without.every(v => v === false) && withIt.every(v => v === true) && a.every(v => v === true) && b.every(v => v === false),
-        'a recording from before the keys replays with all three off (journal.ts applyKnobs), one that carries them keeps them; the page opens with all three on and ?thrpie=0 / ?thrlean=0 / ?thrpieone=0 put them off',
-        `applyKnobs with no keys → ${without} · with them → ${withIt} · the page → ${a} · the flags → ${b}`); }
-  } finally { knobsBack(knobs0); DOORTOOLS.thrPie = keep.p; DOORTOOLS.thrLean = keep.l; DOORTOOLS.thrPieOne = keep.o; }
+  } finally { knobsBack(knobs0); }
   return F.done();
 });
 
