@@ -405,7 +405,7 @@ pub fn update_one(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
         return;
     }
     if g.cv[cv].state == CivState::Held { released(g, gd); }
-    if g.ai_enabled { see(g, gd, dt); hear(g, gd); bodies(g, gd); } else { g.gd[gd].awareness = m::max(0.0, g.gd[gd].awareness - dt * 0.5); }
+    if g.ai_enabled { see(g, gd, dt); hear(g, gd); bodies(g, gd); } else { let to = m::max(0.0, g.gd[gd].awareness - dt * 0.5); crate::mind::set(g, gd, to, "civilians"); }
     let mut move_ = 0.0;
     let mut crouch = 0.0;
     match g.cv[cv].state {
@@ -510,13 +510,13 @@ pub fn see(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     let smoke = g.gd[gd].smoke_trans;
     let vis = crate::guards::eye_contact(g, crate::guards::Eye { pos: eye, look, range: e.range, half_deg: e.half_deg, near_m: e.near_m, near_deg: e.near_deg, v_half_deg: None }, pc, true, false, smoke, None);
     let decay = if g.cv[cv].state == CivState::Work { 0.08 } else { 0.05 };
-    if !vis.visible { g.gd[gd].awareness = m::max(0.0, g.gd[gd].awareness - dt * decay); return; }
+    if !vis.visible { { let to = m::max(0.0, g.gd[gd].awareness - dt * decay); crate::mind::set(g, gd, to, "civilians"); } return; }
     let holding_other = g.pl[pl].holding.as_ref().map_or(false, |h| h.g != gd);
     let violent = crate::game::player_gun_in_hand(g, pl).is_some() || g.pl[pl].takedown.is_some() || holding_other || g.time - g.pl[pl].last_fire_t < 2.0;
     let gun = violent && vis.dist < g.k.civ.gun_m;
     let rate = crate::guards::sight_gain(g, gd, vis.dist) * g.k.civ.keen_k * (if gun { g.k.civ.gun_k } else { 1.0 });
-    if rate <= 0.05 { g.gd[gd].awareness = m::max(0.0, g.gd[gd].awareness - dt * decay); return; }
-    g.gd[gd].awareness = v3::clamp(g.gd[gd].awareness + rate * dt, 0.0, 1.0);
+    if rate <= 0.05 { { let to = m::max(0.0, g.gd[gd].awareness - dt * decay); crate::mind::set(g, gd, to, "civilians"); } return; }
+    { let to = v3::clamp(g.gd[gd].awareness + rate * dt, 0.0, 1.0); crate::mind::set(g, gd, to, "civilians"); }
     if rate > 0.25 {
         let at = g.ch[pc].pos;
         let now = g.time;
@@ -805,7 +805,7 @@ pub fn to_work(g: &mut crate::game::Game, gd: GuardId, line: bool) {
     g.ch[c].anim.act = None;
     let x = &mut g.cv[cv];
     x.look_at = None; x.target = None; x.report_to = None; x.settle_t = -1.0; x.rise_t = 0.0; x.seated = false;
-    g.gd[gd].awareness = m::min(g.gd[gd].awareness, 0.1);
+    crate::mind::cap(g, gd, 0.1, "civilians");
     if line {
         let lines = crate::dialogue::civ_lines();
         let s = pick(g, gd, &lines.settle);
@@ -929,7 +929,7 @@ pub fn to_alarmed(g: &mut crate::game::Game, gd: GuardId, cause: crate::civilian
         let pos = g.ch[c].pos;
         crate::chronicle::chronicle_n(g, ChronKind::CivilianSpotted, ChronCountKey::CivSeen, Some(&data), Some(pos));
     }
-    g.gd[gd].awareness = m::max(g.gd[gd].awareness, if saw_him { 1.0 } else { 0.5 });
+    crate::mind::raise(g, gd, if saw_him { 1.0 } else { 0.5 }, "civilians");
     set_state(g, gd, CivState::Alarmed);
     let lines = crate::dialogue::civ_lines();
     let pool = match lines.gasp.get(String::from(cause.as_str())) { Some(p) => p, None => lines.gasp.get(String::from("sam")).unwrap() };

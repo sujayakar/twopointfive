@@ -295,16 +295,15 @@ pub fn camera_alarm(g: &mut crate::game::Game, c_2: CameraRtId) {
         let id = g.guards[i];
         if g.gd[id].state != crate::game::GuardState::Dead && g.gd[id].held.is_none() && g.gd[id].unit.is_none() {
             crate::belief::word(g, id, p);
-            let gd = &mut g.gd[id];
-            gd.awareness = m::max(gd.awareness, 0.5);
-            if gd.state == crate::game::GuardState::Patrol {
-                gd.state = crate::game::GuardState::Suspicious;
-                gd.react_t = 0.8;
-                gd.search_t = 0.0;
-                gd.path = Vec::new();
-                gd.path_serial = gd.path_serial.wrapping_add(1);
-                gd.path_goal = None;
-                gd.path_goal_orbit = false;
+            crate::mind::raise(g, id, 0.5, "devices");
+            if g.gd[id].state == crate::game::GuardState::Patrol {
+                crate::mind::set_state(g, id, crate::game::GuardState::Suspicious, "devices");
+                g.gd[id].react_t = 0.8;
+                g.gd[id].search_t = 0.0;
+                g.gd[id].path = Vec::new();
+                g.gd[id].path_serial = g.gd[id].path_serial.wrapping_add(1);
+                g.gd[id].path_goal = None;
+                g.gd[id].path_goal_orbit = false;
             }
         }
     }
@@ -451,18 +450,17 @@ pub fn send_to_look(g: &mut crate::game::Game, pos: V3, what: &str) -> Option<Gu
     }
     let id = best?;
     {
-        let gd = &mut g.gd[id];
-        gd.task = Some(crate::game::GuardTask::Arm0(crate::game::GuardTaskArm0 { kind: crate::game::GuardTaskArm0Kind::Device, pos: v3::copy(goal) }));
-        gd.last_known = Some(v3::copy(goal));
-        gd.fix_stamp = gd.fix_stamp.wrapping_add(1);
-        gd.awareness = m::max(gd.awareness, errand().awareness);
-        gd.state = crate::game::GuardState::Suspicious;
-        gd.react_t = errand().react_t;
-        gd.search_t = 0.0;
-        gd.path = Vec::new();
-        gd.path_serial = gd.path_serial.wrapping_add(1);
-        gd.path_goal = None;
-        gd.path_goal_orbit = false;
+        g.gd[id].task = Some(crate::game::GuardTask::Arm0(crate::game::GuardTaskArm0 { kind: crate::game::GuardTaskArm0Kind::Device, pos: v3::copy(goal) }));
+        g.gd[id].last_known = Some(v3::copy(goal));
+        g.gd[id].fix_stamp = g.gd[id].fix_stamp.wrapping_add(1);
+        crate::mind::raise(g, id, errand().awareness, "devices");
+        crate::mind::set_state(g, id, crate::game::GuardState::Suspicious, "devices");
+        g.gd[id].react_t = errand().react_t;
+        g.gd[id].search_t = 0.0;
+        g.gd[id].path = Vec::new();
+        g.gd[id].path_serial = g.gd[id].path_serial.wrapping_add(1);
+        g.gd[id].path_goal = None;
+        g.gd[id].path_goal_orbit = false;
     }
     crate::game::game_say(g, id, "copy, control — on my way", Some(true), None, None);
     let c = g.gd[id].ch;

@@ -373,10 +373,9 @@ pub fn tick_out(g: &mut Game, cast: &[CastItem], fight: bool) {
         g.gd[gd].witness.saw_body = Some(crate::game::WitnessSawBody { victim, t: g.time, breathing });
         if g.gd[gd].script.is_some() { crate::squad::end_guard_script(g, gd, Some(crate::squad::EndGuardScriptState::Alert)); }
         {
-            let man = &mut g.gd[gd];
-            man.state = crate::game::GuardState::Alert;
-            man.awareness = 1.0;
-            man.react_t = 0.0;
+            crate::mind::set_state(g, gd, crate::game::GuardState::Alert, "rescuecheck");
+            crate::mind::set(g, gd, 1.0, "rescuecheck");
+            g.gd[gd].react_t = 0.0;
         }
         crate::control::set_hold(g, gd, false, "rescuecheck"); crate::control::set_pinned(g, gd, false, "rescuecheck");
         crate::belief::word(g, gd, [body[0], 0.0, body[2]]);

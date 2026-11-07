@@ -159,7 +159,7 @@ pub fn startle_man(g: &mut Game, gd: GuardId, s: crate::doors::DoorStrike) {
             crate::squad::end_guard_script(g, gd, Some(crate::squad::EndGuardScriptState::Suspicious));
         }
         let startle = g.k.doorthrow.startle;
-        g.gd[gd].state = crate::game::GuardState::Suspicious;
+        crate::mind::set_state(g, gd, crate::game::GuardState::Suspicious, "doorthrow");
         g.gd[gd].react_t = m::max(g.gd[gd].react_t, startle);
         g.gd[gd].search_t = 0.0;
         crate::game::guard_set_path(g, gd, Vec::new());
@@ -178,7 +178,7 @@ pub fn startle_man(g: &mut Game, gd: GuardId, s: crate::doors::DoorStrike) {
         let wary = g.k.doorthrow.wary;
         g.gd[gd].last_known = Some(door);
         g.gd[gd].fix_stamp = g.gd[gd].fix_stamp.wrapping_add(1);
-        g.gd[gd].awareness = m::max(g.gd[gd].awareness, wary);
+        crate::mind::raise(g, gd, wary, "doorthrow");
     }
 }
 
@@ -230,7 +230,7 @@ pub fn throw_man(g: &mut Game, gd: GuardId, s: crate::doors::DoorStrike) {
         let team = g.gd[gd].team;
         if crate::teams::is_hostile(g, by, team) {
             let aware = g.k.doorthrow.aware;
-            g.gd[gd].awareness = m::max(g.gd[gd].awareness, aware);
+            crate::mind::raise(g, gd, aware, "doorthrow");
             if g.gd[gd].state != crate::game::GuardState::Alert || g.gd[gd].last_known.is_none() {
                 crate::belief::word(g, gd, [at[0], 0.0, at[2]]);
             }

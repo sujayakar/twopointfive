@@ -367,15 +367,14 @@ pub fn send_check_on(g: &mut crate::game::Game, gd: GuardId, m: GuardId, line: &
     }
     let pos: V3 = if !pts.is_empty() { v3::copy(pts[i0]) } else { v3::copy(post_of(g, m)) };
     let t0 = g.time;
-    let d = &mut g.gd[gd];
-    d.task = Some(GuardTask::CheckOn(GuardTaskCheckOn { pos, who: m, wp: i0 as f64, left: m::max(1.0, pts.len() as f64), t0 }));
-    write_fix(d, v3::copy(pos));
-    d.awareness = m::max(d.awareness, 0.42);
-    if d.state == GuardState::Patrol { d.state = GuardState::Suspicious; d.react_t = 0.8; }
-    d.search_t = 0.0;
-    no_path(d);
-    d.body_duty = None;
-    d.stall_ref = None;
+    g.gd[gd].task = Some(GuardTask::CheckOn(GuardTaskCheckOn { pos, who: m, wp: i0 as f64, left: m::max(1.0, pts.len() as f64), t0 }));
+    write_fix(&mut g.gd[gd], v3::copy(pos));
+    crate::mind::raise(g, gd, 0.42, "guards");
+    if g.gd[gd].state == GuardState::Patrol { crate::mind::set_state(g, gd, GuardState::Suspicious, "guards"); g.gd[gd].react_t = 0.8; }
+    g.gd[gd].search_t = 0.0;
+    no_path(&mut g.gd[gd]);
+    g.gd[gd].body_duty = None;
+    g.gd[gd].stall_ref = None;
     crate::game::game_say(g, gd, line, Some(true), None, None);
     let at = head_or_pos(g, gd);
     play_rate(g, "radio", at, 0.5, 1.05);
@@ -390,12 +389,11 @@ pub fn check_on_tick(g: &mut crate::game::Game, gd: GuardId) {
             let t0 = g.time;
             g.gd[gd].body_duty = Some(GuardBodyDuty { body: who, role: GuardBodyDutyRole::Called, stage: GuardBodyDutyStage::To, t: 0.0, t0, spot: None });
             let body = body_pos(g, who);
-            let d = &mut g.gd[gd];
-            write_fix(d, body);
-            d.awareness = m::max(d.awareness, 0.45);
-            d.react_t = 0.5;
-            d.search_t = 0.0;
-            no_path(d);
+            write_fix(&mut g.gd[gd], body);
+            crate::mind::raise(g, gd, 0.45, "guards");
+            g.gd[gd].react_t = 0.5;
+            g.gd[gd].search_t = 0.0;
+            no_path(&mut g.gd[gd]);
         }
         return;
     }
@@ -432,10 +430,9 @@ pub fn advance_check_on(g: &mut crate::game::Game, gd: GuardId) {
 }
 /// The walk is over without him: the line, and, once per missing man, the floor goes up a step on it.   (guards.ts checkOnDone)
 pub fn check_on_done(g: &mut crate::game::Game, gd: GuardId, m: GuardId, capped: bool) {
-    let d = &mut g.gd[gd];
-    d.task = None;
-    d.search_t = 0.0;
-    d.awareness = v3::clamp(d.awareness, 0.2, 0.3);
+    g.gd[gd].task = None;
+    g.gd[gd].search_t = 0.0;
+    { let to = v3::clamp(g.gd[gd].awareness, 0.2, 0.3); crate::mind::set(g, gd, to, "guards"); }
     let line = if capped {
         format!("walked most of it — no sign of {}. he's not at his post", g.gd[m].callsign)
     } else {

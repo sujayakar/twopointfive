@@ -359,10 +359,9 @@ pub fn loose(g: &mut crate::game::Game, d: RoomfightDefId, at: V3) {
     let de = dfm(g, d);
     de.mode = crate::roomfight::DefMode::Free; de.free_at = now; de.rally_at = m::NAN;
     crate::control::set_hold(g, gd, false, "pressure"); crate::control::set_pinned(g, gd, false, "pressure");
-    let man = &mut g.gd[gd];
-    man.state = crate::game::GuardState::Alert;
-    man.awareness = m::max(man.awareness, 0.92);
-    if now - man.last_seen_t > 1.0 { crate::belief::word(g, gd, at); }
+    crate::mind::set_state(g, gd, crate::game::GuardState::Alert, "pressure");
+    crate::mind::raise(g, gd, 0.92, "pressure");
+    if now - g.gd[gd].last_seen_t > 1.0 { crate::belief::word(g, gd, at); }
     crate::game::guard_set_path(g, gd, Vec::new());
     let man = &mut g.gd[gd];
     man.path_goal = None; man.path_goal_orbit = false;

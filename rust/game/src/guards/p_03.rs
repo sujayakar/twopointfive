@@ -214,7 +214,7 @@ pub fn standoff_perceive(g: &mut crate::game::Game, gd: GuardId, dt: Option<f64>
             return false;
         }
         let was = g.gd[gd].awareness;
-        g.gd[gd].awareness = v3::clamp(was + rate * dt, 0.0, 1.0);
+        crate::mind::set(g, gd, v3::clamp(was + rate * dt, 0.0, 1.0), "guards");
         if !far_faint(g, gd, dist, was) {
             fix_on(g, gd, pp);
         }
@@ -266,7 +266,7 @@ pub fn standoff_perceive(g: &mut crate::game::Game, gd: GuardId, dt: Option<f64>
         g.tab.guards_standoff[s].seen_t = now;
     }
     crate::gunhold::gun_hold_see(g, gd, p);
-    g.gd[gd].awareness = 1.0;
+    crate::mind::set(g, gd, 1.0, "guards");
     fix_on(g, gd, pp);
     let me = &mut g.gd[gd];
     me.last_seen_t = now;
@@ -308,7 +308,7 @@ pub fn hostage_call(g: &mut crate::game::Game, gd: GuardId, p: crate::guards::Pa
         }
         let state = g.gd[o].state;
         let was_calm = state == crate::game::GuardState::Patrol || state == crate::game::GuardState::Suspicious;
-        g.gd[o].awareness = m::max(g.gd[o].awareness, 0.92);
+        crate::mind::raise(g, o, 0.92, "guards");
         crate::belief::word(g, o, p.sam);
         if was_calm {
             let d = v3::dist(g.ch[g.gd[o].ch].pos, p.sam);
