@@ -65,9 +65,9 @@ export const LOOK_SYSTEM = 'Materials prototype';
 // stood over the debugger's own corner, so on this page the debugger's rows (the debug views, the denoiser, the gather) could not be reached while the look's rows
 // were up. Now the rows are the panel's own: its sliders (a dot puts one row back, the section's ↺ puts them all back), its search finds them, its key shuts them.
 // The page still OPENS with them up (panel.show), as the box did.
-export function buildLookPanel(panel: Panel, engine: Engine, fps: () => number, open: boolean, shapes?: { on: boolean; flip: () => void }, hills?: { on: boolean; flip: () => void }, lorry?: { on: boolean; flip: () => void }): void {
+export function buildLookPanel(panel: Panel, engine: Engine, fps: () => number, open: boolean): void {
   const w = window as any;
-  const here = () => panel.system(LOOK_SYSTEM, { icon: '◍', short: 'Look', title: 'a slider a layer of the look · plain boxes to compare · the hour, sun and moon · the trials · performance takes' });
+  const here = () => panel.system(LOOK_SYSTEM, { icon: '◍', short: 'Look', title: 'a slider a layer of the look · plain boxes to compare · the hour, sun and moon · performance takes' });
   here();
   const send = () => { engine.gbuffer.setLook(); lookSync(); };
   let kept: typeof lookAmounts | null = null;   // the amounts as the sliders have them, while the boxes are shown plain
@@ -161,13 +161,6 @@ export function buildLookPanel(panel: Panel, engine: Engine, fps: () => number, 
     { text: 'small window', run: () => w.__framecap?.start({ whole: false }), title: 'a window in the middle of the picture over 8 frames, a tenth the size. Shift+F6 takes it at the cursor' },
     { text: 'at next change', run: () => w.__framecap?.arm({}), title: 'waits, then takes the whole picture from the frame the renderer next changes something: a quality step, its size, its targets made again. For a flash that comes and goes' },
   ]);
-  // THE TRIALS: each is made when the level loads (or is a const of the ray programs), so its button loads the page again
-  if (lorry || shapes || hills) {
-    const tr = panel.section('Trials', { open: true });
-    if (lorry) panel.buttons(tr, 'lorry', [{ text: lorry.on ? 'curved: on' : 'curved: off', run: lorry.flip, title: 'the lorry on the pass with a bowed tilt, an arched cab roof, a round bonnet between fenders and round wheels. The page loads again to change it' }]);   // A LORRY WITH CURVES (scene/lorryTry.ts)
-    if (shapes) panel.buttons(tr, 'shapes', [{ text: shapes.on ? 'round and broken: on' : 'round and broken: off', run: shapes.flip, title: 'round drums and tyres, a bite out of the yard wall’s top. The page loads again to change it' }]);   // A GEOMETRY TRIAL (scene/geoTry.ts)
-    if (hills) panel.buttons(tr, 'ground', [{ text: hills.on ? 'hills cast shadows: on' : 'hills cast shadows: off', run: hills.flip, title: 'the snow’s hills stand in the light’s way as their own round shape. The page loads again to change it' }]);   // GROUND THAT RAYS CAN SEE, A TRIAL (scene/groundField.ts)
-  }
   // PERFORMANCE: the F9 recorder and the F8 sweep (ui/perfrec.ts, ui/perfsweep.ts) from two buttons, with the look's layers as rows of the sweep, and the take's
   // short read in a box to copy (ui/perfsend.ts). The maintainer, 10-25:
   // "it'd be good to have a way to collect a lot of perf data so you can see how it runs on my laptop", and "i do worry that we have a few stuttering frames even
