@@ -3138,8 +3138,6 @@ if (on('selfbody', 'squadorders', 'all')) await run('selfbody', async () => (awa
 if (on('wholesquad', 'squadorders', 'all')) await run('wholesquad', async () => (await import('./wholesquad-check.ts')).wholesquadCheck());   // quick orders are the whole squad's (CMDRING.wholeSquad): outside plan mode nothing narrows who the orders go to, and a pick made in the mode does not outlive it
 // the squad's ring two rings deep, no glyph at the cursor (CMDRING.flat / plainHint) — ringflat-check.ts
 if (on('ringflat', 'squadorders', 'all')) await run('ringflat', async () => (await import('./ringflat-check.ts')).ringflatCheck());
-// X is where the plan is laid: an order picked with 'wait for my word' on is laid — nobody moves — F sends the plan, a restart puts it back (planlay-check.ts; PLANLAY.on)
-if (on('planlay', 'squadorders', 'all')) await run('planlay', async () => (await import('./planlay-check.ts')).planlayCheck());
 // ---------------------------------------------------------------- the BREACHING SHOTGUN (shotgun-probes.ts; game/shotgun.ts, weapons.ts row 'm870', doortools.ts toGun / gunStep, kit.ts 'shotgun'): 'shotgun' = the family
 if (on('shotgun-range', 'shotgun', 'all')) await run('shotgun-range', async () => (await import('./shotgun-probes.ts')).shotgunRange());
 if (on('shotgun-door', 'shotgun', 'all')) await run('shotgun-door', async () => (await import('./shotgun-probes.ts')).shotgunDoor());
