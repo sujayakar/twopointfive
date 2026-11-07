@@ -329,6 +329,7 @@ pub use game_rules::ui_missions;
 pub use game_rules::ui_shaderrows;
 pub use game_rules::unseen;
 pub use game_rules::verdict;
+pub use game_rules::view;
 pub use game_rules::walkahead;
 pub use game_rules::wallbreak;
 pub use game_rules::wallcharge;

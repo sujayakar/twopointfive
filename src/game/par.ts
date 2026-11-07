@@ -10,10 +10,10 @@
 //
 // WHOSE IT IS: THE RUST GAME'S (rust/game_rules/src/par). The tick arms the clock, starts it, stops it, files the result and says its line; `Game.par` is its
 // record, and the bridge carries all of it to the page (tools/wire: `par::Par`). Nothing here writes that record: this file is what
-// the page reads it WITH (is a par live, has the clock started, the result) and the words of the room clear's row, which the HUD still words itself
-// (mission.ts objectiveText; the Rust game words the same row in `par::par_objective`, and a check that asks the row is answered by that one).
+// the page reads it WITH (is a par live, has the clock started, the result). The room clear's row with the clock on it is the Rust game's too
+// (`par::par_objective`, through `mission::objective`, in the view).
 // A BEST TIME is the page's to keep, a machine's own (main.ts + ui/parBest.ts): it hands its words in through `best()`, and they ride the result where
-// THIS page shows it (the end row, the card, the debrief) and never the game's log, which every machine of one game reads the same.
+// THIS page shows it (the card, the debrief) and never the game's log, which every machine of one game reads the same.
 //
 // (src/game is one import cycle: nothing here is built from another game module's exports at module load.)
 import type { Game } from './game';
@@ -27,7 +27,6 @@ export const PAR_STATS = { started: 0, finished: 0 };
 export const PAR_START_M = 1.0;
 
 export type Medal = 'gold' | 'silver' | 'bronze' | 'none';
-const MEDALS: readonly Exclude<Medal, 'none'>[] = ['gold', 'silver', 'bronze'];
 /** a finished run against its par: `secs` on the clock, `lost` teammates × `lossSecs` = `penalty`, `total` = their sum, `shown` = the total in whole seconds
  *  (what the player reads, and what the medals are held against); `next` = the medal above the one earned and how many seconds faster it needed (none on gold:
  *  the bridge leaves it unset) */
@@ -68,20 +67,4 @@ export class Par {
   get bestSaid(): boolean { return this.bestRun !== null && this.bestRun === this.run; }
   /** THE PAGE's words about this machine's best time for this run (main.ts, once, when the result is there; '' = it files none for this run) */
   best(words: string) { if (!this.result()) return; this.bestWords = words; this.bestRun = this.run; }
-
-  /** the room clear's objective row with the clock on it (mission.ts objectiveText; with no par live, the row as it was handed in): the clock FIRST, then
-   *  the room clear's own words; at the end the result */
-  objective(text: string): string {
-    const R = this.result(); if (!R) return this.row() + text;
-    return `structure taken · ${this.shown!.replace(/^par ▸ /, '')} — press shift+enter to restart`;
-  }
-  /** what leads the row while the run is on ('' = nothing: no par live, or the run is over) */
-  row(): string {
-    const D = this.data; if (!D) return '';
-    const rc = this.g.roomClear;
-    if (rc.end) return '';   // (taken: objective() words it · wiped: no time)
-    if (!this.started) return `par ${clock(D.gold)} / ${clock(D.silver)} / ${clock(D.bronze)} · `;
-    const ops = this.g.nightBreach?.ops ?? [], lost = ops.filter(o => o.state === 'dead').length, total = this.secs + lost * D.lossSecs, up = MEDALS.find(m => Math.floor(total) <= D[m]);
-    return `⏱ ${clock(this.secs)}${lost ? ` +${clock(lost * D.lossSecs)}` : ''} → ${up ? `${up} ${clock(D[up])}` : 'past bronze'} · `;
-  }
 }

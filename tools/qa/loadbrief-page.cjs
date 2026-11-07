@@ -42,7 +42,7 @@ const SEEN = () => { const b = document.getElementById('brief'), t = (s) => (b &
       const cr = c.getBoundingClientRect(), want = Math.max(480, Math.round(cr.width * devicePixelRatio)); if (Math.abs(c.width - want) > 2 || Math.abs(cr.height / cr.width - 0.7) > 0.01 || cr.bottom > innerHeight + 1) return false;
       try { const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let i = 3; i < d.length; i += 4 * 101) if (d[i] > 40) n++; return n > 200; } catch (e) { return false; } })(),
     level: b && b.querySelector('.bpic canvas') ? b.querySelector('.bpic canvas').getAttribute('data-level') : null, start: t('.bgo span'), status: t('.bstatus'),
-    menu: document.getElementById('menu').classList.contains('on'), controlsList: document.querySelectorAll('#menu .controls .row').length, options: !!(document.getElementById('options') && document.getElementById('options').classList.contains('on')),
+    menu: document.getElementById('menu').classList.contains('on'), bootHead: !!document.querySelector('#menu .head') && !!document.querySelector('#menu .bootstatus'), buttons: document.querySelectorAll('#menu .actions button').length, options: !!(document.getElementById('options') && document.getElementById('options').classList.contains('on')),
     fatal: (document.getElementById('fatal') || {}).textContent || '' }; };
 // in the page: the game's clock after two drawn frames (so a clock that did not move is a held world, not a page that drew nothing)
 const CLOCK = async () => { await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))); const g = window.__game; return { t: g.time, held: [...window.__input.keys], pressed: [...window.__input.pressed] }; };
@@ -88,7 +88,7 @@ const runs = async (page, from, secs = 300) => { for (const end = Date.now() + s
     const clean = !errs.length && !(r.after && r.after.fatal);
     if (r.err) why = r.err;
     else if (!clean) why = `page errors: ${errs.slice(0, 3).join(' | ') || r.after.fatal}`;
-    else if (job.off) { ok = !r.boot.brief && r.boot.controlsList > 5 && !r.ready.brief && !!r.clock && !r.after.brief && !r.after.menu; why = JSON.stringify({ boot: r.boot.brief, rows: r.boot.controlsList, ran: !!r.clock, menu: r.after.menu }); }
+    else if (job.off) { ok = !r.boot.brief && r.boot.bootHead && r.boot.buttons === 0 && !r.ready.brief && !!r.clock && !r.after.brief && !r.after.menu; why = JSON.stringify({ boot: r.boot.brief, head: r.boot.bootHead, buttons: r.boot.buttons, ran: !!r.clock, menu: r.after.menu }); }
     else if (job.paused) { ok = !r.boot.brief && !r.ready.brief && Math.abs(r.ran - 5 / 60) < 1e-6 && !r.after.brief; why = JSON.stringify({ boot: r.boot.brief, ready: r.ready.brief, ran: r.ran }); }
     else {
       const words = r.boot.brief && r.boot.id === job.id && r.boot.title === job.title && r.boot.place.length > 8 && (job.scene ? r.boot.scene.length > 20 && r.boot.teach >= 1 && !r.boot.job : r.boot.job.length > 20 && r.boot.facts.length >= 2) && r.boot.start === 'Start' && !r.boot.menu && r.boot.controlsList === 0;
@@ -102,7 +102,7 @@ const runs = async (page, from, secs = 300) => { for (const end = Date.now() + s
       why = JSON.stringify({ words, id: r.boot.id, title: r.boot.title, map: r.still ? (r.still.picture ? r.still.level : 'NONE') : undefined, live: r.ready.cls, held: r.heldFor, mid, gone, after: { brief: r.after.brief, menu: r.after.menu }, clock: r.clock && +r.clock.t.toFixed(3), keys: r.clock && r.clock.held });
     }
     if (!ok) red++;
-    const says = job.off ? 'under ?loadbrief=0: no brief, the old card and its controls list while it boots, the run under way with nothing pressed'
+    const says = job.off ? 'under ?loadbrief=0: no brief, the title\'s head and the status line with no buttons while it boots, the run under way with nothing pressed'
       : job.paused ? 'the automation boot: no brief at any point, a script\'s frames run'
       : `${job.name}: its own brief from the first tick, held until started (${job.how}), then the run`;
     console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${says} — ${why}`);

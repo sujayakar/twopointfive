@@ -603,8 +603,8 @@ pub fn cover_blind(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3
     if crate::teams::foe_down(g, gd)
         || g.gd[gd].held.is_some()
         || g.gd[gd].script.is_some()
-        || g.time < g.gd[gd].dazzled_until
-        || g.time < g.gd[gd].stagger_until
+        || crate::control::man::blind(g, gd)
+        || crate::control::man::staggered(g, gd)
     {
         return None;
     }

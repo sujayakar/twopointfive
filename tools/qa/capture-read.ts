@@ -11,8 +11,9 @@ import { gunzipSync } from 'node:zlib';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { captureName, readCapture } from './capture-pieces';
+import { encodePng } from './png';
 import { unpackCapture, TEXEL_BYTES, type CapEntry, type CapMeta } from '../../src/render/framecap';
-import { png } from './kit-figure-sheet';
+
 
 const args = process.argv.slice(2), file = args.find(a => !a.startsWith('--'));
 if (!file) { console.error('usage: bun run tools/qa/capture-read.ts <file.tpscap.gz> [--out <dir>]'); process.exit(2); }
@@ -98,7 +99,7 @@ for (const label of labels) {
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const sx = Math.min(d.w - 1, Math.floor(x * d.w / W)), sy = Math.min(d.h - 1, Math.floor(y * d.h / H)), o = (y * SW + fi * (W + gap) + x) * 4, q = (sy * d.w + sx) * 3; strip[o] = px[q]; strip[o + 1] = px[q + 1]; strip[o + 2] = px[q + 2]; strip[o + 3] = 255; }
     rows.push({ n: m.frames[fi].n, remade: remade ? `${e.full[0]}×${e.full[1]} ${e.format}` : '', moved: prev ? moved / n : NaN, by: prev && d.v ? (base > 0 ? dif / base : 0) : NaN, zero: zero / n, mean: cnt ? sum / cnt : NaN, max, bad }); prev = d;
   });
-  const safe = label.replace(/[^\w.#-]+/g, '_'); writeFileSync(join(OUT, 'strips', safe + '.png'), png(strip, SW, H));
+  const safe = label.replace(/[^\w.#-]+/g, '_'); writeFileSync(join(OUT, 'strips', safe + '.png'), encodePng(strip, SW, H));
   // a frame that stands out: of the frames the target was WRITTEN on (one of a pair of histories is written every other frame), it changed by far more than
   // the target's other frames do, or it went to zero, or it was re-made at another size, or (with four frames or more) its level left the others', or it holds a NaN
   const wrote = rows.filter(r => r.moved > 0 && Number.isFinite(r.by)), medBy = pct(wrote.map(r => r.by), 0.5), means = rows.map(r => r.mean).filter(Number.isFinite), medMean = pct(means, 0.5);

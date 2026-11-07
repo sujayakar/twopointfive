@@ -591,20 +591,6 @@ export class Rescue {
     if (!isNaN(this.securedAt)) return 'secured';
     return isNaN(this.t0) ? 'staged' : 'running';
   }
-  /** the HUD's objective line and marker while it is up (mission.ts): the hostage room, and how far the captor's clock has got — never in seconds */
-  objective(): { text: string; pos: Vec3 | null } | null {
-    if (!this.active) return null;
-    const B = this.bounds, pos: Vec3 | null = B ? [(B.x0 + B.x1) / 2, 0, (B.z0 + B.z1) / 2] : null;
-    const R = this.result;
-    if (R) return { text: R.state === 'rescued' ? `${R.grade === 'clean' ? 'clean' : 'costly'} — ${R.why} · press shift+enter to restart` : `failed — ${R.why} · press ${this.g.player.down ? 'enter' : 'shift+enter'} to restart`, pos: null };
-    const alive = this.hostages.filter(h => h.state !== 'dead').length;
-    if (RESCUEEND.on && (!isNaN(this.securedAt) || this.ending.lead)) {   // (rescueend.ts: where to take them — and the clock, when a man of theirs has one of them again)
-      const o = this.ending.objective(); return { text: RESCUE.clock && !isNaN(this.t0) && this.step !== 'stopped' ? `${o.text} · the captor is ${this.step}` : o.text, pos: o.pos }; }
-    if (!isNaN(this.securedAt)) return { text: `objective ▸ hold the hostage room · ${Math.max(0, Math.ceil(RESCUE.holdSecs - (this.g.time - this.securedAt)))} s`, pos };
-    const clock = !RESCUE.clock || isNaN(this.t0) ? '' : this.step === 'stopped' ? ' · nobody on them' : ` · the captor is ${this.step}`;
-    const behind = RESCUE.marks && this.dynamic ? this.flow.line() : '';   // (the openings Sam has come past, and what is known of each — in place of the directions he no longer needs)
-    return { text: behind ? `objective ▸ get to the hostages (${alive} alive)${clock} · ${behind}` : `objective ▸ get to the hostages (${alive} alive) — ${this.place()}${clock}`, pos };
-  }
   /** one line for the panel / the console */
   summary(): string {
     if (!this.active) return 'hostage rescue off';

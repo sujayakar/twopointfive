@@ -222,7 +222,7 @@ export async function tracerKinematics(verbose = process.argv.includes('--verbos
     for (const imp of ['solid', 'flesh', 'none'] as const) {
       const R = await fly(S, 8, imp);
       const wantSp = imp === 'solid' ? P.emberSparks : 0, wantFl = imp === 'solid' && P.emberIntensity > 0 ? 1 : 0;
-      if (R.emberSparks !== wantSp) fails.push(`${imp}: ${R.emberSparks} sparks on arrival, want ${wantSp}`);
+      if (wantSp === 0 ? R.emberSparks > 0 : R.emberSparks !== wantSp) fails.push(`${imp}: ${R.emberSparks} sparks on arrival, want ${wantSp}`);
       if (R.emberFlash !== wantFl) fails.push(`${imp}: ${R.emberFlash} glow flash on arrival, want ${wantFl}`);
       notes.push(`${imp}: +${R.emberSparks} sparks, +${R.emberFlash} flash on the arrival frame`);
     }

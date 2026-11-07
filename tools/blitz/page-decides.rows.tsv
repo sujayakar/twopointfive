@@ -7,7 +7,7 @@ src/main.ts:main › vBooks	moving	the verdict	the verdict's books kept on the p
 src/game/director.ts:*	moving	the Director	its host fields (the camera and Input rows) are being moved to the game's own; the show's pins and key locks wait for the host's half to be redrawn	4
 # ---- decides: the records the page keeps and the lines it says
 src/game/par.ts:Par.best*	picture	the picture's feel	this machine's words about its best time, handed in by the page for the result as it shows it (the browser's store is a machine's own)	1
-src/game/par.ts:*	decides	HUD mission lines	the room clear's row with the clock on it is still worded by TypeScript from the game's record (the Rust game words the same row in par_objective, and is what a check reads)
+src/game/par.ts:*	decides	HUD mission lines	what the page reads of the clock (armed, started, the result) is asked of the copy; the row with the clock on it is the Rust game's own (par_objective, in the view)
 src/main.ts:main › {postUpdate}	decides	end card	the page takes the game's word for the end card by clearing Mission.debrief on its copy: the game should send the card as an event
 src/game/seats.ts:allDown	decides	end card	the page works out "every seat is down" on the copy (the find-me outline, the down card) where the game already knows it
 src/game/deathrecap.ts:*	decides	debrief	the dress step runs recapTick on the copy: who fell, who saw it and when the recap is due are kept in a record only TypeScript has
@@ -18,19 +18,15 @@ src/game/cues.ts:*	decides	radio and spoken lines	the radio strip's rows and who
 src/game/dialogue.ts:*	decides	radio and spoken lines	the room and place names the lines use are worked out again on the copy
 src/game/doornames.ts:*	decides	radio and spoken lines	a door's said and written name are worked out again on the copy
 src/game/squadnet.ts:*	decides	radio and spoken lines	the squad net's "why" words are worked out again on the copy
-src/game/journal.ts:hudExpireBubbles	decides	radio and spoken lines	the page ends a man's bubble by clearing it on its copy: when a line ends is the game's
-src/ui/bubbles.ts:Bubbles.update	decides	radio and spoken lines	the page ends a man's bubble by clearing it on its copy: when a line ends is the game's
-src/main.ts:main › {betweenTicks}	decides	radio and spoken lines	between two ticks the page expires bubbles on its copy
 src/game/game.ts:Game.msg	decides	radio and spoken lines	a line pushed by the page lands in the copy's log only: the Rust game never hears it and the next apply may drop it
 src/main.ts:main › {said}	decides	radio and spoken lines	the page's own notes are pushed into the copy's log as if the game had said them
 # ---- decides: the same rule worked out twice (the HUD asks TypeScript, on the copy, what the Rust game already answers)
-src/game/game.ts:Game.objective*	decides	HUD mission lines	the HUD's objective line and place are asked of TypeScript, which works them out on the copy
-src/game/mission.ts:*	decides	HUD mission lines	the objective's text and place and "is the mission live" are worked out again on the copy
-src/game/nightbreach.ts:*	decides	HUD mission lines	the plain night's objective line and state are worked out again on the copy
-src/game/roomclear.ts:*	decides	HUD mission lines	the room clear's objective line, its start and its way in are worked out again on the copy
-src/game/defuse.ts:*	decides	HUD mission lines	the defuse's objective line, time left and who is on it are worked out again on the copy
-src/game/rescue*.ts:*	decides	HUD mission lines	the rescue's objective lines and its flow's words are worked out again on the copy
-src/game/snatch*.ts:*	decides	HUD mission lines	the snatch's objective lines are worked out again on the copy
+src/game/mission.ts:*	decides	HUD mission lines	"is the mission live" and how far the rack is are worked out again on the copy
+src/game/nightbreach.ts:*	decides	HUD mission lines	the plain night's state is worked out again on the copy
+src/game/roomclear.ts:*	decides	HUD mission lines	whether the room clear is up and where it starts are worked out again on the copy
+src/game/defuse.ts:*	decides	HUD mission lines	whether the defuse is up, which charges are live and what Sam is working on are worked out again on the copy
+src/game/rescue*.ts:*	decides	HUD mission lines	who is a hostage is worked out again on the copy
+src/game/snatch*.ts:*	decides	HUD mission lines	whether the snatch is up is worked out again on the copy
 src/game/scenarioRun.ts:*	decides	HUD mission lines	which scenario is running and whose team a man is on are worked out again on the copy
 src/game/doors.ts:Doors.*	decides	HUD door and charge notes	which door is which by name, which side a man is on and whether he is locked out are worked out again on the copy
 src/game/doortools.ts:*	decides	HUD door and charge notes	the door notes (who waits, on which word, TOO CLOSE and who it names) are worked out by TypeScript on the copy each frame, and a door found shut is learnt on the copy only
@@ -89,7 +85,6 @@ src/game/sneak.ts:*	decides	squad status words	the sneak word and whether sneaki
 src/game/spotted.ts:*	decides	squad status words	the "spotted" mode is worked out again on the copy
 src/game/stalk.ts:*	decides	squad status words	whether the stalk can go and what it waits on are worked out again on the copy
 src/game/samstun.ts:*	decides	squad status words	whether Sam is blind or staggered is worked out again on the copy
-src/game/laststand.ts:*	decides	squad status words	the last stand's hint is worked out again and kept on the copy
 src/game/nvg.ts:*	decides	squad status words	whether goggles are worn is worked out again on the copy
 src/game/bigkit.ts:*	decides	squad status words	what big kit a man carries is worked out again on the copy
 src/game/weapons.ts:*	decides	squad status words	"reloading" and "ready" are worked out again on the copy
@@ -100,7 +95,7 @@ src/game/kitload.ts:*	decides	kit rows	a gun's load and its share are worked out
 src/game/gunslots.ts:*	decides	kit rows	the gun picks are worked out again on the copy
 src/game/slotsetup.ts:*	decides	kit rows	a slot's setup steps are worked out again on the copy
 # ---- the host's own
-src/host/rustgame.ts:*	host	the Rust host	the host itself: it hands the Rust game the host's half, steps it, takes the state and the out events	18
+src/host/rustgame.ts:*	host	the Rust host	the host itself: it hands the Rust game the host's half, steps it, takes the state and the out events	19
 src/host/rustdress.ts:*	host	the Rust host	the dress step hands the frame's men to the picture	1
 src/game/game.ts:Game.update	host	the Rust host	the game's update round the step: the die, the record sampled, the camera's cut	1
 src/game/game.ts:Game.host*	host	the Rust host	the host's half round the step: the Input's drag, the camera's peek and kick	3
@@ -122,7 +117,6 @@ src/game/rustknobs.ts:*	host	the bridge	the knob tables written across to the Ru
 src/math/*	host	the bridge	the die's and the side tables' own book-keeping under the bridge	13
 src/sim/sim.ts:*	host	the bridge	the module's binding	6
 src/sim/state.ts:*	host	the bridge	the block's views	11
-src/sim/men/store.ts:*	host	the bridge	the men's columns in the block	1
 src/sim/weatherhome.ts:*	host	the bridge	the weather's words in the block	2
 src/scene/boxMirror.ts:*	host	the bridge	the box world's mirror in the block	24
 src/scene/collision.ts:*	host	the bridge	the queries' own stamps and counters (a query asked from the page is answered by the block)	31

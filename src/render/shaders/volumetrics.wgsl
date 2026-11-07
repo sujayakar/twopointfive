@@ -7,8 +7,8 @@
 @group(1) @binding(1) var diceTex: texture_3d<f32>;
 @group(1) @binding(2) var outVol: texture_storage_2d<rgba16float, write>;
 @group(1) @binding(3) var outReact: texture_storage_2d<rgba16float, write>;   // .g = the SMOKE-ONLY transmittance of the pixel's ray (post.wgsl's smoke diffusion: haze must not blur what is far away);   // luminance of what (c) below added — rain streaks, splash crowns, a stroke's lit sky — attenuated as composited: the TAAU resolve's reactive input (0 = nothing this texel)
-@group(1) @binding(4) var<uniform> placeBuf: PlaceBuf;   // THE LOOK PROTOTYPE: the place field (render/placeField.ts; place_common.wgsl is pasted in front of this kernel). Zeros = none, on every other page, and never read there
-/** THE AIR'S LIGHT IS SHOWN BY ITS PLACE, AS A SURFACE'S IS (the look page by day, under the one exposure model; the maintainer on his GPU, 11-02, midday, a
+@group(1) @binding(4) var<uniform> placeBuf: PlaceBuf;   // THE LOOK PROTOTYPE: the place field (render/placeField.ts; place_common.wgsl is pasted in front of this kernel). Zeros = none
+/** THE AIR'S LIGHT IS SHOWN BY ITS PLACE, AS A SURFACE'S IS (by day, under the one exposure model; the maintainer on his GPU, 11-02, midday, a
  *  smoke grenade in a room: "weird that smoke looks black indoors but white outside"). By day a room's light is thousands of times under the yard's and
  *  the composite shows each place's SURFACES by the place's gain; what the air scatters toward the eye was added after it with no gain at all, so smoke lit
  *  by a room's own light was drawn at a thousandth of the floor beside it: black. Each step of a smoke march now passes its own light through the one rule
@@ -356,7 +356,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
               LinA += smokeAheadE(ev.E, dot(rd, ev.L), li.radius, ev.dist.x) * smokeAheadT(selfC[c]);   // (the light a lamp BEHIND the sample sends nearly straight on, vol_common.wgsl smokeAheadT: the smoke is a fifth as thick to it; nothing with the row at 0)
             }
             let stepT = exp(-sigT * dt);
-            if (LOOK) { let pk = airShow(X, luminance(Lin)); Lin *= pk; Lin2 *= pk; LinA *= pk; }   // (THE LOOK PROTOTYPE: the step's light as its place shows it, airShow above; never compiled in off the look page)
+            let pk = airShow(X, luminance(Lin)); Lin *= pk; Lin2 *= pk; LinA *= pk;   // (THE LOOK'S OWN LINE: the step's light as its place shows it, airShow above)
             inscatter += dTint * (T * Lin * sigS * (1.0 - stepT) / max(sigT, 1e-4));   // energy-conserving integration over the step
             inscatter += dTint * (msGain * sqrt(T) * Lin2 * (sigS / max(sigT, 1e-4)) * (1.0 - sqrt(stepT)));   // + the octave through half the extinction (vol_common.wgsl smokeMsGain)
             inscatter += smokeAheadW() * smokeAheadT(T) * LinA * (sigS / max(sigT, 1e-4)) * (1.0 - smokeAheadT(stepT));   // + a lamp behind the smoke, glowing through it (0 with the row at 0)

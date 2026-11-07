@@ -109,7 +109,6 @@ pub struct NightBreach {
     pub said: JsSet<String>,
     pub cut: bool,
     pub failure: Option<String>,
-    pub obj_of: Option<crate::nightbreach::NightBreachObjOf>,
 }
 impl NightBreach {
     /// what a new one holds: the TypeScript's field initialisers, before its constructor
@@ -134,7 +133,6 @@ impl NightBreach {
             said: JsSet::new(),
             cut: false,
             failure: None,
-            obj_of: None,
         }
     }
 }
@@ -156,40 +154,6 @@ impl NightBreachLogItem {
     }
 }
 impl Default for NightBreachLogItem { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/nightbreach.ts:386 NightBreach.objOf, src/game/nightbreach.ts:386)
-#[derive(Clone, Debug)]
-pub struct NightBreachObjOf {
-    pub taken: bool,
-    pub o: crate::nightbreach::NightBreachObjOfO,
-}
-impl NightBreachObjOf {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NightBreachObjOf {
-            taken: false,
-            o: crate::nightbreach::NightBreachObjOfO::zeroed(),
-        }
-    }
-}
-impl Default for NightBreachObjOf { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/nightbreach.ts:386 NightBreachObjOf.o, src/game/nightbreach.ts:386)
-#[derive(Clone, Debug)]
-pub struct NightBreachObjOfO {
-    pub text: String,
-    pub pos: Option<V3>,
-}
-impl NightBreachObjOfO {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NightBreachObjOfO {
-            text: String::new(),
-            pos: None,
-        }
-    }
-}
-impl Default for NightBreachObjOfO { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/nightbreach.ts:88 SQUAD4, src/game/nightbreach.ts:88)
 #[derive(Clone, Debug)]

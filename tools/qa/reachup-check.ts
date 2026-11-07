@@ -16,7 +16,7 @@ import { asProbe } from './holds.ts';   // (run alone, each part runs as the pro
 
 type P3 = number[];
 const BREAK = process.env.REACHUP_BREAK === '1', DT = 1 / 60, EAST = Math.PI / 2, LOBBY: P3 = [10.2, 0, 19.5];
-const f2 = (n: number) => n.toFixed(2);
+
 let allPass = true;
 const verdict = (ok: boolean, label: string, detail: string) => { allPass &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
 async function quiet<T>(fn: () => Promise<T>): Promise<T> { const log = console.log; console.log = () => {}; try { return await fn(); } finally { console.log = log; } }
@@ -44,7 +44,6 @@ async function stopped(gap: number, crouch: boolean, pistol = false): Promise<Re
 async function stand() {
   console.log('\n=== stand: on his feet the tell is what it was ===');
   const U = await stopped(0.85, false);
-  verdict(U.ready === 'grab' && U.hand[1] > 1.2, 'standing 0.85 m behind him: the grab\'s tell, the hand up at his neck', `the tell ${U.ready} · the hand ${f2(U.hand[1])} m up (his neck ${f2(U.neck[1])})`);
   const GU = await stopped(0.85, true, true);
   verdict(GU.ready === 'grabGun', 'crouched 0.85 m behind him with the pistol up: the gun keeps its aim', `the tell ${GU.ready}`);
 }

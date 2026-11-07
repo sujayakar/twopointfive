@@ -19,7 +19,7 @@
 //                  (anybody's: `killer` says whose, for the tally). The loss fails the mission the way a civilian's death can (the down card); the room
 //                  clear's own 'wiped' is Sam's, as ever.
 //
-// Seams: game.ts (the field; `tick` right after updateMission), mission.ts objectiveText / objectivePos (his line stands over the room clear's while he is
+// Seams: game.ts (the field; `tick` right after updateMission), the Rust game's `mission::objective` (his line stands over the room clear's while he is
 // loose), savestate.ts (the slice — a checkpoint is refused with a squad on the floor, so today nothing reaches it), knobs.ts, civilians.ts (civSpots, the
 // tied pose, civilianSees, no 'control will ring' call and no knockout row for him), combat.ts (whose round found him), roomclear.ts (its 'structure
 // taken' line says he is still loose). The enemies' decision code is not touched: the defenders do not know he
@@ -108,19 +108,6 @@ export class Snatch {
   private lastExit: string | null = null;
 
 
-  /** mission.ts objectiveText / objectivePos: his line and marker while he is loose (or it is over); null = the room clear's own. A live row leads with
-   *  'objective ▸ ' as the room clear's, the defuse's and the rescue's do; the two end rows do not, as the room clear's 'structure taken' does not */
-  objective(): { text: string; pos: Vec3 | null } | null {
-    const gd = this.man; if (!this.active || !gd) return null;
-    const N = this.data!, name = gd.civ!.name;
-    if (this.end === 'won') return { text: this.out.inAt >= 0 ? this.why : `${name} taken alive — the house is yours`, pos: null };
-    if (this.end === 'lost') return { text: `mission failed — ${this.why}`, pos: null };
-    if (this.g.roomClear?.end === 'wiped') return null;
-    if (this.inHand) return this.out.objective();   // (snatchout.ts: where to take him — null where the house is what is left)
-    if (this.handsUp) return { text: `objective ▸ ${name} has his hands up, so get someone to him before he runs again`, pos: v3.copy(gd.char.pos) };
-    const loud = gd.civ!.state !== 'work' && gd.civ!.state !== 'startled';
-    return { text: loud ? `objective ▸ ${name} is running — take him alive` : `objective ▸ take ${name} alive. he'll run for ${N.exits[0].name} the moment it goes loud`, pos: v3.copy(this.seen ?? N.man.pos) };
-  }
   summary(): string {
     const gd = this.man; if (!gd || !this.data) return 'snatch: none on this level';
     const st = this.end ? `${this.end}${this.why ? ` (${this.why})` : ''}` : this.tied ? 'tied' : this.handsUp ? 'hands up' : gd.civ!.state;

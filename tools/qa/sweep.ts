@@ -5,7 +5,7 @@
 //   ranAtLeast('walls driven into', runs, swept(120, 1500))
 const ALL = ((v: string | undefined): boolean => { if (v === undefined || v === '') return false; if (v === 'all') return true; throw new Error(`QA_SWEEP=${v}: want all (every case of every sweep) or nothing (a sample)`); })(process.env.QA_SWEEP);
 /** `n` of the cases, spread evenly, the first and the last among them; all of them where there are no more than `n`, or under QA_SWEEP=all */
-export function sample<T>(cases: readonly T[], n: number): T[] {
+export function sample<A extends readonly any[]>(cases: A, n: number): A[number][] {
   if (ALL || cases.length <= n) return [...cases];
   if (n === 1) return [cases[0]];
   return Array.from({ length: n }, (_, i) => cases[Math.round(i * (cases.length - 1) / (n - 1))]); }

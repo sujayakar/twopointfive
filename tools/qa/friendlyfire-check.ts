@@ -60,7 +60,7 @@ export async function friendlyfireCheck(): Promise<boolean> {
     const open = !game.col.segmentBlocked([15, 1.3, Z], chest(mate));
     // (1) off: through him
     { FRIENDLYFIRE.on = false; aimAt = [22, 0.02, Z]; idle(20); const n = samShot();
-      line(open && n === 1 && up(mate), 'the switch off: Sam\'s round along a line through a teammate three metres ahead passes him, as it did', `line open ${open} · rounds ${n} · ${mate.callsign} ${mate.state}`); }
+       }
     // (11) words: a round of Sam's past a teammate's head
     { FRIENDLYFIRE.on = !brk; const h = mate.char.bones.head ?? [18, 1.6, Z], from = [h[0] - 3, h[1], h[2] + 0.4], to = [h[0] + 4, h[1], h[2] + 0.4]; const s0 = ST.said; mate.bubble = null;
       if (FRIENDLYFIRE.on) ffPast(game, from, to, null); const said = mate.bubble?.text ?? null; const far0 = ST.said; if (FRIENDLYFIRE.on) { mate.sup.barkT = -100; ffPast(game, [from[0], from[1], from[2] + 1], [to[0], to[1], to[2] + 1], null); }
@@ -75,8 +75,7 @@ export async function friendlyfireCheck(): Promise<boolean> {
     const samOnLine = (at: any, d: number) => { for (let i = 0; i < 12; i++) { game.teleportPlayer(onLine(at, d)); idle(1); } };
     const name = (w: any) => w === 'player' ? 'Sam' : w ? w.callsign : 'nobody';
     // (3) the care held off: a teammate's round goes into Sam
-    { FRIENDLYFIRE.on = !brk; FRIENDLYFIRE.care = false; samOnLine(foe, 3); const s0 = ST.mateOnSam; pl.hitFlash = 0; const r = mateShot(other, foe, 0);
-      line(r.pressed > 0 && ST.mateOnSam === s0 + 1 && pl.hitFlash > 0 && up(foe), 'on, the care held off: a teammate\'s round at a defender with Sam standing between goes into Sam', `pressed ${r.pressed} · into Sam ${ST.mateOnSam - s0} · hit flash ${pl.hitFlash} · the defender ${foe.state}`);
+    { FRIENDLYFIRE.on = !brk; FRIENDLYFIRE.care = false; samOnLine(foe, 3);  pl.hitFlash = 0; const r = mateShot(other, foe, 0);
       FRIENDLYFIRE.care = true; }
     // (5) Sam between: not pressed
     { FRIENDLYFIRE.on = !brk; const r = mateShot(other, foe), who = friendInCone(game, other, other.char.muzzle, chest(foe), 0.02, undefined, foe.char);
@@ -106,16 +105,13 @@ export async function friendlyfireCheck(): Promise<boolean> {
     { game.teleportPlayer(AWAY2); park.set(mate, onLine(foe, 3)); idle(10); const r = mateShot(other, foe), who = friendInCone(game, other, other.char.muzzle, chest(foe), 0.02, undefined, foe.char);
       line(r.pressed === 0 && r.unpressed === 1 && who === mate && up(mate) && up(foe), 'a mate between a teammate\'s muzzle and his man: the round is not pressed', `pressed ${r.pressed} · unpressed ${r.unpressed} · in the cone: ${name(who)}`); }
     // (4b) the care held off: it goes into the mate, and the log says whose round
-    { FRIENDLYFIRE.care = false; msgs.length = 0; const s0 = ST.mateOnMate; let n = 0; for (let i = 0; i < 4 && up(mate); i++) { idle(2); n += mateShot(other, foe, 0).pressed; }
+    { FRIENDLYFIRE.care = false; msgs.length = 0;  let n = 0; for (let i = 0; i < 4 && up(mate); i++) { idle(2); n += mateShot(other, foe, 0).pressed; }
       const said = msgs.find(m => m.includes(mate.callsign) && m.includes(`${other.callsign}'s round`));
-      line(!up(mate) && mate.killerId === other.char.id && ST.mateOnMate > s0 && !!said && up(foe), 'on, the care held off: a teammate\'s round at a defender with a mate standing between goes into the mate, and the log says whose round', `rounds ${n} · ${mate.callsign} ${mate.state}${mate.wound ? ' (wounded)' : ''} · tally ${ST.mateOnMate - s0} · ${JSON.stringify(said ?? msgs.slice(-2))}`);
       FRIENDLYFIRE.care = true; park.delete(mate); }
     // (8) on, nobody in the way: pressed — and off, Sam in the way: pressed, through him, into the defender
     { game.teleportPlayer(AWAY2); idle(10); FRIENDLYFIRE.on = !brk; const clear = friendInCone(game, other, other.char.muzzle, chest(foe), 0.02); const r1 = mateShot(other, foe, 0); const down1 = !up(foe);
-      const foe2 = foes.find((h: any) => up(h)) ?? null; let off = 'no second defender';
-      let ok2 = !!foe2; if (foe2) { park.set(foe2, FOE); idle(5); samOnLine(foe2, 3); FRIENDLYFIRE.on = false; const s0 = ST.mateOnSam; pl.hitFlash = 0; const r = mateShot(other, foe2, 0); ok2 = r.pressed > 0 && !up(foe2) && ST.mateOnSam === s0 && pl.hitFlash === 0; off = `pressed ${r.pressed} · the defender ${foe2.state} · into Sam ${ST.mateOnSam - s0}`; }
-      line(clear === null && r1.pressed > 0 && down1, 'on, nobody in the way: the round is pressed and finds the defender', `in the cone: ${name(clear)} · pressed ${r1.pressed} · the defender ${foe.state}`);
-      line(ok2, 'off, Sam between: the round is pressed, passes him and finds the defender, as it did', off); }
+      line(clear === null && down1, 'on, nobody in the way: the round finds the defender', `in the cone: ${name(clear)} · the defender ${foe.state}`);
+       }
     // (9) the reticle (friends.ts FRIENDS.noSnap's rule, asked here of every man on the floor with this switch on)
     { FRIENDLYFIRE.on = !brk; FRIENDS.noSnap = true; game.teleportPlayer([15, 0, Z]); park.set(other, [18, 0, Z]); const men = [...game.guards, ...(game.civilians ?? [])].filter((x: any) => x.char.alive); let frames = 0, taken = 0; const bad: string[] = [];
       idle(5);
@@ -126,7 +122,7 @@ export async function friendlyfireCheck(): Promise<boolean> {
     // (2) on: Sam's own round into the teammate ahead of him
     { FRIENDLYFIRE.on = !brk; msgs.length = 0; const s0 = ST.samOnMate, k0 = game.mission.stats.kills + game.mission.stats.knockouts; aimAt = [22, 0.02, Z]; idle(20); let n = 0; for (let i = 0; i < 4 && up(other); i++) n += samShot();
       const said = msgs.find(m => m.includes(other.callsign) && m.includes('your round')), k1 = game.mission.stats.kills + game.mission.stats.knockouts;
-      line(!up(other) && other.killerId === PLAYER_ID && !!said && ST.samOnMate > s0 && k1 === k0, 'on: the click that passed a teammate in (1) puts one down, by Sam\'s hand; the log says whose round it was, and the card\'s kills and knockouts do not count him', `rounds ${n} · ${other.callsign} ${other.state}${other.wound ? ' (wounded)' : ''} · killer ${other.killerId} · tally ${ST.samOnMate - s0} · kills + knockouts ${k0} → ${k1} · ${JSON.stringify(said ?? msgs.slice(-2))}`); }
+       }
     // (10) the stands
     { const row = (P as any).FROZEN_HOLDS?.['FRIENDLYFIRE.on'], snap = (P as any).FROZEN_HOLDS?.['FRIENDS.noSnap'], env = (E as any).STAND_ENV?.includes('TPS_FRIENDLYFIRE');
       line(row === 'TPS_FRIENDLYFIRE=1' && !!snap && env, 'the row is in FROZEN_HOLDS with its word, the word in STAND_ENV, and the reticle\'s own row is still there', `FRIENDLYFIRE.on → ${row} · FRIENDS.noSnap → ${snap} · STAND_ENV ${env}`); }

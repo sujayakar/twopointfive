@@ -86,8 +86,8 @@ pub fn squad_hand_free(g: &crate::game::Game, gd: GuardId) -> bool {
     let c = g.gd[gd].ch;
     !(g.gd[gd].state == crate::game::GuardState::Dead
         || g.ch[c].anim.lockpick
-        || g.time < g.gd[gd].stagger_until
-        || g.time < g.gd[gd].dazzled_until)
+        || crate::control::man::staggered(g, gd)
+        || crate::control::man::blind(g, gd))
 }
 
 /// Where a throw on `s` rests, the ground under its landing shortening the run. (squadsmoke.ts squadArcTo, its `restOf`)

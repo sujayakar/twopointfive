@@ -77,7 +77,7 @@ import { PLAYER_ID } from './consts';
 import { seatsStand, seatManId, standMen, spotBeside, manById, isManId, eachSeat } from './seats';
 import { doorMan } from './doorthrow';
 import './mission';
-import { objectivePos, objectiveText } from './mission';
+import { NO_VIEW, type TickView } from '../view/seatview';
 import { Chronicle, chronInterrogated } from './chronicle';
 import { hiddenProps, irBeams } from './combat';
 import { irViewer, irMade } from './irlaser';
@@ -284,7 +284,7 @@ export const BODY_DOOR_PARTICLES = [RAG.pelvis, RAG.spine, RAG.head, RAG.kneeL, 
 
 // ---------------------------------------------------------------- player
 /** the query tables the world is asked aside with (Game.aside): scratch of the host's, in no snapshot */
-class AsideOwn extends HostOwned { s?: object; q?: object; w?: object; lens?: FollowCamera }
+export class AsideOwn extends HostOwned { s?: object; q?: object; w?: object; lens?: FollowCamera }
 export class Player extends PlayerCols {
   char: Character;
   crouch = false; aimHeld = false; lastFireT = -10; fireCd = 0; backpedal = false; sprinting = false; /** Shift held in a crouch this frame (player.ts CROUCHRUN): the fast crouch walk — set where `sprinting` is, false wherever that is not reached */ dash = false;
@@ -1078,7 +1078,7 @@ export class Game {
     loadBodyLight(this.tune);   // …and the bodies-by-light switch with its bar (guards.ts)
     // (the FN2000 is always in the kit now — no per-machine loadout memory; Game.fn2000 / setLoadout stay for the harness)
     this.col = new StaticCollision(level.boxes, levelNameOf(level));
-    if (engine.gbuffer?.setWearMap) { const wm = buildWearMap(level, this.col.nav, lookConfig.on && lookConfig.longFoot > 0, lookConfig.on && lookConfig.walked > 0); engine.gbuffer.setWearMap(wm.data, wm.w, wm.h); }   // the detail layer's traffic map (render/wear.ts: the routes over the nav grid + the thresholds, the walls' feet) — the harness's engine stand-in has no g-buffer to hand it to
+    if (engine.gbuffer?.setWearMap) { const wm = buildWearMap(level, this.col.nav, lookConfig.longFoot > 0, lookConfig.walked > 0); engine.gbuffer.setWearMap(wm.data, wm.w, wm.h); }   // the detail layer's traffic map (render/wear.ts: the routes over the nav grid + the thresholds, the walls' feet) — the harness's engine stand-in has no g-buffer to hand it to
     this.syncSnowLook();   // a snow level's lying snow as one surface (render/snowField.ts; picture only — nothing below reads it)
     this.chars = new CharacterRenderer(engine.device, ch);
     engine.skin = this.chars;
@@ -1527,7 +1527,7 @@ export class Game {
   /** men moving through smoke push it */
   private smokeWake(all: Character[]) {
     // characters wading through smoke push it around
-    const stir = lookConfig.on ? Math.max(0, lookConfig.stir) : 0;   // (THE LOOK PROTOTYPE's Stirred smoke row; 0 = the two soft shoves below, as the build has them)
+    const stir = Math.max(0, lookConfig.stir);   // (THE LOOK PROTOTYPE's Stirred smoke row; 0 = the two soft shoves below, as the build has them)
     this.smoke.setStir?.(stir);
     for (const c of all) {
       const sp = Math.hypot(c.vel[0], c.vel[2]); if (sp < 0.25 || !c.bones.hips) continue;
@@ -1665,8 +1665,12 @@ export class Game {
 
 
 
-  objectivePos() : Vec3 | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Game.objectivePos', this, []); if (__r !== RUST_PASS) return __r as any; } } return objectivePos(this); }
-  objectiveText() : string { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Game.objectiveText', this, []); if (__r !== RUST_PASS) return __r as any; } } return objectiveText(this); }
+  /** WHAT THE HUD IS TOLD (src/view/seatview.ts): the Rust game's own answer, handed over by the host that steps this game. A read */
+  get view(): TickView { return this.viewAsk?.() ?? NO_VIEW; }
+  /** the host's: asks the Rust game for its view (src/host/rustgame.ts in a page, tools/blitz/rust-host.ts in bun) */
+  viewAsk: (() => TickView) | null = null;
+  objectivePos(): Vec3 | null { return this.view.mission?.pos ?? null; }
+  objectiveText(): string { return this.view.mission?.text ?? ''; }
 
 }
 

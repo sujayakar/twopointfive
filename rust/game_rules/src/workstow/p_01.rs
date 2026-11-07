@@ -128,8 +128,8 @@ pub fn stow_fired(g: &mut crate::game::Game, gd: GuardId) {
 /// The fight has him: the job is dropped and waits, for `fightCap` at most at a stretch.   (workstow.ts stowFight)
 pub fn stow_fight(g: &crate::game::Game, gd: GuardId, a: Option<crate::workstow::StowFightA>, op: &mut crate::workstow::StowFightOp) -> bool {
     let has = a.map_or(false, |a| a.yield_t >= 0.0)
-        || g.time < g.gd[gd].dazzled_until
-        || g.time < g.gd[gd].stagger_until
+        || crate::control::man::blind(g, gd)
+        || crate::control::man::staggered(g, gd)
         || g.gd[gd].script.as_ref().map_or(false, |s| s.over.is_some());
     if !has {
         op.stow_off_t = None;
