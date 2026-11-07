@@ -453,7 +453,7 @@ const STEALTH = {
   cable: { sink: 0.05, round: 15, gap: [-0.07, 0.11] as [number, number], short: 0.1, knee: [0.07, -0.05, 0.1] as Vec3, out: 0.45, headOut: 0.18, undo: 28, ahead: 0.3, nodMax: 82 },
 };
 /** Critically damped follower (value + velocity): unlike damp() it also eases IN, so a posture change starts as softly as it ends. w ≈ 6 / settle time. */
-class Spring {
+export class Spring {
   v = 0; constructor(public x = 0) {}
   step(target: number, w: number, dt: number) { const y = this.x - target, j = this.v + y * w, e = Math.exp(-w * dt); this.x = target + (y + j * dt) * e; this.v = (this.v - j * w * dt) * e; return this.x; }
 }

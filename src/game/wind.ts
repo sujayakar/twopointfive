@@ -107,7 +107,7 @@ export interface WindSource extends WindGpuSource { why: WindWhy; base: number; 
 export const WIND_STATS = { frames: 0, active: 0, toParticles: 0, toSmoke: 0, doorGusts: 0, stormFrames: 0, atCalls: 0 };
 const DEG = Math.PI / 180;
 
-class PoolList extends HostOwned { readonly list: WindSource[] = []; }
+export class PoolList extends HostOwned { readonly list: WindSource[] = []; }
 /** `at` and `stormShare`'s working vectors: written and read inside one call, so nothing of the game's — they were fields of the Wind, where whoever asked last
  *  (the particle pool's path, the panel's probe at the cursor) left his numbers in the game's state */
 const SCRATCH_P: Vec3 = [0, 0, 0], SCRATCH_Q: Vec3 = [0, 0, 0], SCRATCH_W: Vec3 = [0, 0, 0];

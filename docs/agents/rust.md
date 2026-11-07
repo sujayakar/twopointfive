@@ -2330,3 +2330,16 @@ one stops the tool by name, on an address one does nothing and says so in the co
   the page's Game runs as TypeScript there and reaches the game only as far as the fields it wrote are carried: use `window.__rust.call(key, self,
   args)` for a row of the call table (`Game.teleportPlayer` crosses by itself); (3) a write made INSIDE a call to step (a hook that fires between
   two ticks of one `__runFrames`) is not walked. And a page with no `&seed=` deals a fresh game each visit: name the seed.
+
+## A call's game, and what no game names
+
+A call on the surface is named by the call: its receiver or an argument is the game, holds it (`o.g`), is one of its parts (`g.doors`) or is one of its rows (the book that numbered it, `gameOfRow`). There is no "game stood last". A call that names no game runs its TypeScript body, in the harness as on the page, and whatever it writes to a module's setting (kit, difficulty, the quiet rung) reaches each standing game by the scan. On a game that stands and has never started, a function with a body runs on the puppet, which the start takes across; a function with no body starts that game and crosses. Check: `tools/blitz/call-game-check.ts` (`CALL_GAME_BREAK=1` must fail), both stands read the same: it is a tool's rule and has no switch.
+
+## What comes back, and the first frame
+
+What the Rust game writes and a tool reads comes back on the tools' list: `tools/wire/back-check.ts`, red on a module's exported table that does not (`BACK_BREAK=1` must fail). A tally no Rust line writes is not on the wire: its TypeScript counts, and an apply of zeros would wipe them. The floor's mess is the host's whole: the Rust game says what happened (`MessBurst`, `MessWall`, `MessOpened`, `MessEvicted`) and the host lays the marks and counts them.
+
+The first frame of play is an ordinary one on every road to it: `rustWarm` (main.ts) starts the Rust game, runs its apply and its tick and the picture's step once before the loop's first frame, on every road straight to play: not behind the title, a show, a replay, a networked client or a page a script steps. Off: `?rustwarm=0`. Check: `tools/qa/firstframe-page.cjs` (`FIRSTFRAME_BREAK=1` must fail). Read on the software adapter only, one mission: nobody has seen this on a Mac.
+
+A row the apply makes holds what its class holds: `tools/wire/class-defaults.ts` writes `tools/blitz/class-defaults.json` from the things a start builds (typed leaves, plain fields no list carries), the class table has every class of a carried part, and `tools/blitz/made-row-check.ts` holds a made man against one the class built (`MADE_CLASS_BREAK=1` must fail). Left: his seven named poses are not yet the set's.
+
