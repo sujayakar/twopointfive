@@ -35,6 +35,14 @@ macro_rules! section {
     };
 }
 
+/// AN EVENT'S ROW, declared: a section's, behind the id that names it. The tick it happened in, its kind (which section it is in) and its place among its kind in
+/// that tick: the same id whenever that tick is run, so a host plays it once, and one that does not come again un-happened.
+macro_rules! event {
+    ($(#[$m:meta])* pub struct $name:ident { $($(#[$fm:meta])* pub $f:ident: $t:ty,)* }) => {
+        section! { $(#[$m])* pub struct $name { pub tick: u32, pub serial: u32, $($(#[$fm])* pub $f: $t,)* } }
+    };
+}
+
 /// THE SECTIONS, declared: each with its place (its bit in a host's `want`), its row and where its rows are kept
 macro_rules! sections {
     ($($i:literal $name:ident: $t:ty = $($at:ident).+;)*) => {
@@ -52,24 +60,99 @@ macro_rules! sections {
     };
 }
 
+pub mod boxes;
+pub mod doorways;
+pub mod events;
 pub mod fog;
+pub mod lights;
+pub mod men;
+pub mod sky;
+pub mod view;
 
 sections! {
     0 fog: fog::Fog = fog;
+    1 view: view::View = view;
+    2 sky: sky::Sky = sky;
+    3 head: boxes::Head = boxes.head;
+    4 geo: boxes::Geo = boxes.geo;
+    5 mat: boxes::Mat = boxes.mat;
+    6 cut: boxes::Cut = boxes.cut;
+    7 visible: boxes::Word = boxes.visible;
+    8 marks: boxes::Row4 = boxes.marks.rows;
+    9 cells: boxes::Word = boxes.grid.cells;
+    10 items: boxes::Word = boxes.grid.items;
+    11 info: boxes::Word = boxes.grid.info;
+    12 panes: boxes::Row4 = boxes.glass.cells;
+    13 leaves: boxes::Leaf = boxes.leaves;
+    14 lights: lights::Light = lights.rows;
+    15 men: men::Man = men.men;
+    16 insts: men::Inst = men.insts;
+    17 bones: men::Bones = men.bones;
+    18 caps: men::Cap = men.caps;
+    19 doorways: doorways::Doorway = doorways;
+    20 emits: events::Emit = events.emits;
+    21 kicks: events::Kick = events.kicks;
+    22 pushes: events::AirPush = events.pushes;
+    23 sources: events::SmokeSource = events.sources;
+    24 anchors: events::Anchor = events.anchors;
+    25 beams: boxes::Beam = boxes.beams;
 }
+
+/// the numbers of a page's look (src/draw/look.ts writes them in this order): the boxes', then the men's
+pub const LOOK: usize = boxes::LOOK + 4;
 
 /// what one host of one game draws it from
 #[derive(Default)]
-pub struct Drawn { pub fog: Vec<fog::Fog>, table: Vec<u32> }
+pub struct Drawn { pub fog: Vec<fog::Fog>, pub view: Vec<view::View>, pub sky: Vec<sky::Sky>, pub boxes: boxes::Boxes, pub lights: lights::Lights, pub men: men::Men, pub doorways: Vec<doorways::Doorway>, pub events: events::Events, tick: Option<u32>, had: u32, want: u32, table: Vec<u32> }
 impl Drawn {
     /// A TICK HAS RUN: the sections of `want`, made again from the game as it stands
     pub fn take(&mut self, g: &Game, want: u32) {
+        self.want = want;
+        // (the same tick asked again, or asked for other sections, is packed again and is no step between two)
+        let now = tick(g);
+        let again = self.tick == Some(now);
+        self.tick = Some(now);
         if want & want::fog != 0 { self.fog.clear(); fog::fill(g, &mut self.fog); }
+        if want & want::view != 0 { self.view.clear(); view::fill(g, &mut self.view); }
+        if want & want::sky != 0 { self.sky.clear(); sky::fill(g, &mut self.sky); }
+        if want & want::geo != 0 { let night = g.pl[game::seats::host_man(g)].nv_amount > 0.5; self.boxes.take(g, night, again && self.had & want::geo != 0); }
+        if want & want::lights != 0 { self.lights.take(g, again && self.had & want::lights != 0); }
+        if want & want::men != 0 { self.men.take(g, again && self.had & want::men != 0); }
+        if want & want::emits != 0 { self.events.take(g); }
+        self.had = if again { self.had | want } else { want };
+        if want & want::doorways != 0 && self.doorways.len() != g.level.doors.len() { self.doorways.clear(); doorways::fill(g, &mut self.doorways); }
     }
+    /// A FRAME IS DRAWN, `a` of the way from the tick before to the last (1 = the last as it is), looking at `focus`
+    pub fn frame(&mut self, g: &Game, a: f64, focus: [f64; 3]) {
+        if self.want & want::geo != 0 { self.boxes.frame(g, a, focus); }
+        if self.want & want::lights != 0 { self.lights.frame(a); }
+        if self.want & want::men != 0 { self.men.frame(a); }
+    }
+    /// the game is another than the one last drawn (a start, a game put back, another seat): nothing is drawn through it
+    pub fn cut(&mut self) { self.boxes.cut(); self.lights.cut(); self.men.cut(); self.events.cut(); self.tick = None; }
+    /// what the page says of its look
+    pub fn look(&mut self, v: &[f64]) { let (boxes, men) = v.split_at(boxes::LOOK); self.boxes.set_look(boxes::Look::read(boxes)); self.men.swaps = core::array::from_fn(|i| men[i] as u32); }
     pub fn table(&mut self) -> &[u32] {
         let mut t = core::mem::take(&mut self.table);
         table(self, &mut t);
         self.table = t;
         &self.table
     }
+}
+
+/// the tick a game is at: sixtieths of a second on its clock
+pub fn tick(g: &Game) -> u32 { game::m::round(g.time * 60.0) as u32 }
+
+/// the short way round from one angle to another
+pub fn turn(from: f64, to: f64) -> f64 {
+    let full = 2.0 * core::f64::consts::PI;
+    let d = (to - from) % full;
+    if d > full / 2.0 { d - full } else if d < -full / 2.0 { d + full } else { d }
+}
+/// between two turns, the short way round (a tick's turn is a few degrees)
+pub fn between(p: [f64; 4], q: [f64; 4], a: f64) -> [f64; 4] {
+    let s = if p[0] * q[0] + p[1] * q[1] + p[2] * q[2] + p[3] * q[3] < 0.0 { -1.0 } else { 1.0 };
+    let r: [f64; 4] = core::array::from_fn(|i| p[i] + (q[i] * s - p[i]) * a);
+    let n = game::m::sqrt(r[0] * r[0] + r[1] * r[1] + r[2] * r[2] + r[3] * r[3]);
+    if n > 1e-9 { r.map(|x| x / n) } else { q }
 }

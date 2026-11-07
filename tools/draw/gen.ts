@@ -15,9 +15,9 @@ function words(ty: string): number { if (/^(f32|u32|i32)$/.test(ty)) return 1; c
 
 const rows = new Map<string, Row>();   // (by `file::Name`)
 for (const f of (readdirSync(DIR, { recursive: true }) as string[]).filter(f => f.endsWith('.rs'))) { const mod = f.replace(/\.rs$/, '').replace(/[\\/]mod$/, '').split(/[\\/]/).join('::');
-  for (const m of readFileSync(join(DIR, f), 'utf8').matchAll(/^section! \{\n([\s\S]*?)^\}/gm)) {
-    const head = m[1].match(/^((?:\s*\/\/\/.*\n)*)\s*pub struct (\w+) \{\n([\s\S]*)\}\s*$/) ?? die(`${f}: a section! of no form this reads`);
-    const fields: Field[] = []; let doc: string[] = [];
+  for (const m of readFileSync(join(DIR, f), 'utf8').matchAll(/^(section|event)! \{\n([\s\S]*?)^\}/gm)) {
+    const head = m[2].match(/^((?:\s*\/\/\/.*\n)*)\s*pub struct (\w+) \{\n([\s\S]*)\}\s*$/) ?? die(`${f}: a section! of no form this reads`);
+    const fields: Field[] = m[1] === 'event' ? ['tick', 'serial'].map(name => ({ name, ty: 'u32', words: 1, doc: '' })) : []; let doc: string[] = [];
     for (const l of head[3].split('\n')) { const t = l.trim(); if (!t) continue;
       if (t.startsWith('///')) { doc.push(t); continue; }
       const p = t.match(/^pub (\w+): (.+),$/) ?? die(`${f}: ${t}`), ty = p[2].replace(/\s/g, ''); fields.push({ name: p[1], ty, words: words(ty), doc: docOf(doc) }); doc = []; }
@@ -39,6 +39,10 @@ for (const r of new Set(list.map(s => s.row))) { let at = 0;
   L.push('', ...(r.doc ? [`/** ${r.doc} */`] : []), `export const enum ${r.name} {`);
   for (const f of r.fields) { const kind = f.ty.replace(/^\[/, '').slice(0, 3); L.push(`  /** ${kind}${f.words > 1 ? ` × ${f.words}` : ''}${f.doc ? `: ${f.doc}` : ''} */`, `  ${camel(f.name)} = ${at},`); at += f.words; }
   L.push(`  /** words a row */`, `  row = ${at},`, '}'); }
+// (a word that crosses by its number: the Rust enum's arms, in their order, each by the word it has for itself)
+const WORDS: [string, string, string, string][] = [['STUFFS', 'scene_stuff', 'BoxStuff', 'what a box may say it is made of'], ['PKINDS', 'render_particles', 'PKind', 'what a particle is'], ['EMIT_SHAPES', 'render_particles', 'EmitShape', 'how particles are thrown'], ['SMOKE_KINDS', 'smoke_types', 'SmokeEmitterKind', 'what smoke comes from']];
+for (const [name, mod, en, doc] of WORDS) { const text = readFileSync(join(ROOT, `rust/game_types/src/${mod}/types.rs`), 'utf8'), arms = (text.match(new RegExp(`pub enum ${en} \\{\\n([\\s\\S]*?)\\n\\}`)) ?? die(`no enum ${en}`))[1].split('\n').map(l => l.trim().replace(/,$/, '')).filter(l => /^\w+$/.test(l));
+  L.push('', `/** ${doc}, by its number in Rust */`, `export const ${name} = [${arms.map(a => `'${(text.match(new RegExp(`${en}::${a} => "([^"]+)"`)) ?? [0, a[0].toLowerCase() + a.slice(1)])[1]}'`).join(', ')}] as const;`); }
 const made = L.join('\n') + '\n';
 if (process.argv.includes('--check')) { const same = existsSync(OUT) && readFileSync(OUT, 'utf8') === made; console.log(same ? `draw: src/draw/sections.ts is of these declarations (stamp ${stamp})` : 'draw: src/draw/sections.ts would change'); process.exit(same ? 0 : 1); }
 writeFileSync(OUT, made); console.log(`draw: src/draw/sections.ts written, ${list.length} sections, stamp ${stamp}`);
