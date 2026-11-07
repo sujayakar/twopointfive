@@ -155,7 +155,7 @@ fn incapable(g: &mut Game, gd: GuardId, dt: f64) -> bool {
 fn lent(g: &mut Game, gd: GuardId, dt: f64) -> bool {
     use crate::character::UpperMode;
     // WHO HAS HIS BODY (control/): the rules of the list are asked from the top; below them his own script, below that his own state
-    if let Some((rule, crate::control::Intent::Script(script))) = crate::control::grant(g, gd, dt, crate::control::Stage::Body) {
+    if let Some((rule, script)) = crate::control::grant_body(g, gd, dt) {
         crate::control::record(g, gd, crate::control::Holder::Rule(rule));
         let ran = run_lent_script(g, gd, script, dt);
         crate::control::commit(g, gd, rule, crate::control::Outcome::Script(ran));
@@ -457,9 +457,9 @@ fn alertness(g: &mut Game, gd: GuardId, dt: f64, f: &mut Frame) {
     pair = standoff_upkeep(g, gd);
     let now = g.time;
     crate::game::guard_track_fix(g, gd, now);
-    dazzled = g.time < g.gd[gd].dazzled_until;
+    dazzled = crate::control::man::blind(g, gd);
     if dazzled { g.gd[gd].react_t = m::max(g.gd[gd].react_t, g.gd[gd].dazzled_until - g.time); }
-    staggered = g.time < g.gd[gd].stagger_until;
+    staggered = crate::control::man::staggered(g, gd);
     if staggered { g.gd[gd].react_t = m::max(g.gd[gd].react_t, g.gd[gd].stagger_until - g.time); }
     { let st = crate::startle::startle_left(g, gd); if st > 0.0 { g.gd[gd].react_t = m::max(g.gd[gd].react_t, st); } }
     crate::aim::track_guard(g, gd, dt);
@@ -673,7 +673,7 @@ fn alert(g: &mut Game, gd: GuardId, dt: f64, f: &mut Frame) {
         if g.gd[gd].react_t > 0.0 || !can_shoot { g.gd[gd].shot_blocked_t = 0.0; g.gd[gd].line_in_t = 0.0; }
         if g.gd[gd].react_t > 0.0 || down || g.gd[gd].pinned { g.gd[gd].stall_ref = None; g.gd[gd].chase_t = 0.0; }
         // TAKING COVER (control/): a rule of the list's cover stage may have him before his fight does; the first is a man getting his head down
-        let cover = match crate::control::grant(g, gd, dt, crate::control::Stage::Cover) { Some((rule, crate::control::Intent::Cover(want))) => Some((rule, want)), _ => None };
+        let cover = crate::control::grant_cover(g, gd, dt);
         let in_standoff = g.gd[gd].standoff.is_some() && pair.is_some();
         if let Some((rule, want)) = cover {
             crate::control::record(g, gd, crate::control::Holder::Rule(rule));

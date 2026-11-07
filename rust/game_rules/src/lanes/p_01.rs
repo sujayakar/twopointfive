@@ -44,7 +44,7 @@ pub fn mine(g: &mut crate::game::Game, gd: GuardId) -> bool {
 
 /// One of his who is neither dazzled nor staggering.   (lanes.ts fit)
 pub fn fit(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    mine(g, gd) && g.time >= g.gd[gd].dazzled_until && g.time >= g.gd[gd].stagger_until
+    mine(g, gd) && !crate::control::man::blind(g, gd) && !crate::control::man::staggered(g, gd)
 }
 
 /// The rule runs: a room fight is live, the AI on, no tour. (LANES.on settled on.)   (lanes.ts live)
