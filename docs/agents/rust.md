@@ -1832,6 +1832,14 @@ one stops the tool by name, on an address one does nothing and says so in the co
     single line, circle or ray asked outside every window proves the copy for itself and shuts it behind the answer (`collision.ts lone`; `ANYTIME.proofs`
     counts those: code that asks many in a row opens a window). A tick's open is still a tick's: the window and the lone question stand the copy by
     a step of their own (`stand`), so a check that counts ticks by `tickOpen` counts ticks.
+    A FRAME IS ONE WINDOW (`host/loop.ts stepFrame`; the same round the out events and the dress step in `tools/blitz/rust-host.ts`). Since the swap the
+    picture's step, the out events, the camera, the sound and the HUD all ask BEHIND a step, and each line asked alone proved the copy for itself: on a
+    level of snow the fog was asked for a print a tick and the proofs were 15 of the page's 31 ms with prints on the ground, 9 of 28 headless after a
+    charge. THE STEP IS THE WINDOW'S WRITER: what puts the Rust game on the page's objects (`tools/blitz/import.ts applyGame`) runs in `col.writes(fn)`,
+    where no copy stands, and the window proves the copy again at its next question. Every other writer inside a frame says so: a static `wrote`, a leaf
+    `leafWrote`, a part of the furniture `thingWrote`, the blend between two ticks `posedWrote` (`host/tween.ts`: the leaves and the parts are among the
+    boxes it hangs elsewhere for the render). `tools/blitz/window-check.ts` plays the pass and the compound through a wall charge and compares every row
+    of every copy with its box as it shuts: none differs (`WINDOW_BREAK=1`, a step without `writes`, must be red).
     A BLOW IS ONE WINDOW (`wallcharge.ts blow`, `doortools.ts blow`, `destruction.ts blast`, `frag.ts blast`). In play each is entered inside a
     tick and the window is nothing (a wall charge there: no lone question, 3 to 31 compares of the statics, under a millisecond). Called BETWEEN
     ticks (a check, a page's hook, the debugger's button, a profile's script) a wall charge asked 587 to 946 lines alone, a bare blast 669, a

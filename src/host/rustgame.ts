@@ -464,7 +464,7 @@ function start(S: Held): void {
   if (S.h) { X!.face_drop(S.h); S.h = 0; }
   // (the bridge's book of which object has which row is a game's for as long as the Rust game it was exported into: a new Rust game, a new book)
   { const bk = bookOf(g); if (bk) { bk.ids.clear(); bk.lists.clear(); bk.first.clear(); bk.loose.clear(); } }
-  const state = exportGame(g, reg());
+  const state = g.col.writes(() => exportGame(g, reg()));   // (no copy of the box world stands as the game is handed over: a start inside a frame's window starts as one outside it)
   RUST_GAME.notCarried = [...report()].map(([k, v]) => `${k} x${v.n}`);
   const h = call('face_new_at', () => hand(state, (p, n) => X!.face_new_at(p, n, slot)));
   if (!h) throw new Error('rust=1: the face made no game (no such slot)');
@@ -536,7 +536,7 @@ function tellShown(S: Held): void { const g = S.g as unknown as { seats?: readon
   if (was >= 0 && !S.inStep) apply(S, false); }   // (the puppet's accessors answer another seat now: it takes that seat's values)
 function handHost(S: Held): void { if (S.inStep || !S.lastCmds || !S.h) return; tellShown(S); const hb = hostHalf(S.g, reg(), S.lastCmds); hand(hb, (p, n) => X!.face_host_half(S.h, p, n)); }
 /** THE FILTERED EXPORT ONTO THE PUPPET, its out events dispatched. Answers the ms of the export, the apply and the dispatch. */
-function apply(S: Held, first: boolean): { ex: number; ap: number; out: number; bytes: number } {
+function apply(S: Held, first: boolean, then?: () => void): { ex: number; ap: number; out: number; bytes: number } {
   const g = S.g, G = g as unknown as Record<string, any>;
   handHost(S);
   let t = performance.now();
@@ -548,12 +548,14 @@ function apply(S: Held, first: boolean): { ex: number; ap: number; out: number; 
   if (RUST_GAME.prof.on && !first) { const PF = RUST_GAME.prof, ph = R.phases ?? {}; PF.applyWalk += R.ms ?? 0; PF.applyRows += ph.makeRows ?? 0; PF.applyMain += ph.main ?? 0; PF.applyTables += ph.tables ?? 0; for (const k in ph) PF.phases[k] = (PF.phases[k] ?? 0) + ph[k]; }
   after(S);
   const ap = performance.now() - t; t = performance.now();
-  const ev: { arm: string; e: any }[] = R.out ?? [];
-  if (ev.length && !first) { RUST_GAME.outEvents += ev.length;
+  const ev: { arm: string; e: any }[] = R.out ?? []; let out = 0;
+  // ONE WINDOW ON THE BOX WORLD'S COPY (scene/collision.ts `window`; the frame's own, where a frame stepped: host/loop.ts) for what the host asks of it behind a step: the out events' marks, the dress step (`then`)
+  g.col.window(() => { if (ev.length && !first) { RUST_GAME.outEvents += ev.length;
     for (const x of ev) { RUST_GAME.outArms[x.arm] = (RUST_GAME.outArms[x.arm] ?? 0) + 1;
       // (one event that throws must not take the frame with it: it is named once and the rest go on)
       try { OUT[x.arm](g, x.e); } catch (e) { RUST_GAME.outThrew[x.arm] ??= String((e as Error)?.stack ?? e).slice(0, 600); } } }
-  return { ex, ap, out: performance.now() - t, bytes: blob.length };
+    out = performance.now() - t; then?.(); });
+  return { ex, ap, out, bytes: blob.length };
 }
 // ---- a game kept
 /** the game as it stands, kept in the module: its number. (`RUST_GAME.keepAs` 1 = kept as the bridge's bytes, what a file holds, for a check of that road.) */
@@ -748,9 +750,7 @@ function step(S: Held, dt: number, cmds: readonly PlayerCmd[]): void {
  *  the save controller */
 function tail(S: Held, dt: number, cmds: readonly PlayerCmd[], tHost: number, tStep: number): void {
   const g = S.g, G = g as unknown as Record<string, any>, PF = RUST_GAME.prof; let t = performance.now(), tp = 0;
-  const A = apply(S, false);
-  t = performance.now();
-  dressStep(g, dt, S.side);
+  const A = apply(S, false, () => { t = performance.now(); dressStep(g, dt, S.side); });
   if (PF.on) { tp = performance.now(); PF.dress += tp - t; PF.export += A.ex; PF.out += A.out; }
   // what the tick asked of the light probe, for the frame's GPU pass (the table is the Rust game's until the pass takes it: `face_probe_took`)
   { const P = G.sensors?.probeOf?.(); if (P && Array.isArray(P.pending)) { X!.face_probe_asks(S.h); const b = outBytes(), d = new DataView(b.buffer, b.byteOffset, b.byteLength); let at = 4; const n = d.getUint32(0, true); P.pending.length = 0;

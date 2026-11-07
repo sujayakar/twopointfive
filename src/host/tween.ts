@@ -29,6 +29,7 @@
 // Stale (`rest()`: a frame the fixed step did not run — the pause card, a script's frames, the switch off): the next tweened frame starts from a capture of its own, and
 // until two captures stand the picture is the last tick's, as ever.
 import { BoxWorld, type Box } from '../scene/boxes';
+import { posedWrote } from '../scene/boxMirror';
 import type { LightSet, RtLight } from '../render/lights';
 import type { Vec3, Quat } from '../math/vec';
 
@@ -211,6 +212,7 @@ export class Tween {
       if (drawnMoved) { const v = this.vec(), d = P.dc, j = pi * 3; v[0] = d[j] + (dc![0] - d[j]) * a; v[1] = d[j + 1] + (dc![1] - d[j + 1]) * a; v[2] = d[j + 2] + (dc![2] - d[j + 2]) * a; b.dc = v; }
       R.boxes++;
     }
+    if (R.boxes) posedWrote();
     // ---- lights
     for (let pass = 0; pass < 2; pass++) {
       const list = pass ? L.ir : L.lights, f = P.lf;
@@ -268,6 +270,7 @@ export class Tween {
   unpose(): void {
     const rb = this.rb;
     for (let i = 0; i < rb.length; i++) { const b = rb[i]; b.c = this.rc[i]; b.yaw = this.ryaw[i]; if (this.rrot[i] !== undefined) b.rot = this.rrot[i]; if (this.rdc[i] !== undefined) b.dc = this.rdc[i]; }
+    if (rb.length) posedWrote();
     rb.length = 0; this.rc.length = 0; this.ryaw.length = 0; this.rrot.length = 0; this.rdc.length = 0;
     const rl = this.rl;
     for (let i = 0; i < rl.length; i++) { rl[i].pos = this.rlp[i]; rl[i].dir = this.rld[i]; }
