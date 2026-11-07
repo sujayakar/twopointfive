@@ -18,7 +18,7 @@ const outDir = process.argv[2] || 'ways-in-look';
 const JOBS = ['plain=:card', 'solo=solo', 'loadout=loadout=solo-night',
   'kityard=levelFile=kit-yard.json', 'kityard-rc=levelFile=kit-yard.json&roomclear&squad4', 'testrooms=levelFile=test-rooms.json', 'testrooms-rc=levelFile=test-rooms.json&roomclear',
   'testrooms-rescue=levelFile=test-rooms.json&rescue', 'relief=level=relief', 'relief-file=levelFile=office-relief.json',
-  'local=level=local', 'nofile=levelFile=no-such-level.json'];
+  'nofile=levelFile=no-such-level.json'];
 const jobs = (process.argv.length > 3 ? process.argv.slice(3) : JOBS).map(a => { const i = a.indexOf('='), name = i < 0 ? a : a.slice(0, i); let query = i < 0 ? '' : a.slice(i + 1), kind = 'plain';
   const m = query.match(/:(plain|card)$/); if (m) { kind = m[1]; query = query.slice(0, -m[0].length); } return { name, query, kind }; });
 const PORT = process.env.PORT || 5199;
