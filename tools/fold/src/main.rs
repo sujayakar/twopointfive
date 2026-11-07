@@ -394,6 +394,7 @@ fn main() {
     let mut settle_file: Option<String> = None;
     let mut table_to: Option<String> = None;
     let mut knobs_to: Option<String> = None;
+    let mut drop_to: Option<String> = None;
     let mut unnamed = false;
     let mut root = PathBuf::from(".");
     let mut it = args.iter();
@@ -406,6 +407,7 @@ fn main() {
             "--settle" => settle_file = Some(val()),
             "--table" => table_to = Some(val()),
             "--knobs" => knobs_to = Some(val()),
+            "--drop" => drop_to = Some(val()),
             "--root" => root = PathBuf::from(val()),
             x => {
                 eprintln!("fold: no option {x}");
@@ -826,6 +828,22 @@ fn main() {
             }
         }
         let whole: Vec<&String> = by_table.iter().filter(|(_, (n, d))| n == d).map(|(t, _)| t).collect();
+        // the settled rows, by what still holds each in the tables
+        let (mut drop, mut s_read, mut s_handed, mut s_maybe, mut s_written) = (Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new());
+        for (path, row) in rows.by_path.iter().filter(|(_, r)| r.kind == rows::Kind::Settled) {
+            let name = row.name.clone();
+            if sc.writes.contains_key(path) {
+                s_written.push(name);
+            } else if sc.leaf_reads.get(path).copied().unwrap_or(0) > 0 {
+                s_read.push(name);
+            } else if elsewhere.contains(path) {
+                s_handed.push(name);
+            } else if escapes(path) {
+                s_maybe.push(name);
+            } else {
+                drop.push(name);
+            }
+        }
         let _ = writeln!(o, "# The knob tables' dead weight, as the bodies stand\n");
         let _ = writeln!(o, "leaves of the tables (a yes-or-no row, a number, a name, a list): {}", leaves.len());
         let _ = writeln!(o, "read by a body: {read}");
@@ -834,12 +852,21 @@ fn main() {
         let _ = writeln!(o, "READ BY NO BODY: {} ({}%) · whole tables no body reads: {} of {}", dead.len(), dead.len() * 100 / leaves.len().max(1), whole.len(), by_table.len());
         let _ = writeln!(o, "\nThe generated wire reads and writes every leaf, and the page's own code may read a table the Rust game only carries: a leaf here is dead for the RUST game.\n");
         let _ = writeln!(o, "## Whole tables no body reads ({})\n\n{}\n", whole.len(), whole.iter().map(|s| s.as_str()).collect::<Vec<_>>().join(", "));
+        let _ = writeln!(o, "## Settled rows: the drop list ({} of {} in the Rust tables)\n", drop.len(), drop.len() + s_read.len() + s_handed.len() + s_maybe.len() + s_written.len());
+        let _ = writeln!(o, "No Rust code but the wire reads or writes these: the row can leave the table and the wire.\n\n{}\n", drop.join(", "));
+        let _ = writeln!(o, "### Settled and staying: a body reads it ({})\n\nA number or a name (it stays a number in its table), or a read left for a hand.\n\n{}\n", s_read.len(), s_read.join(", "));
+        let _ = writeln!(o, "### Settled and staying: a body writes it ({})\n\n{}\n", s_written.len(), s_written.join(", "));
+        let _ = writeln!(o, "### Settled and staying: a made file beside the bodies names it ({})\n\n{}\n", s_handed.len(), s_handed.join(", "));
+        let _ = writeln!(o, "### Settled and staying: its table is handed on whole by a body ({})\n\n{}\n", s_maybe.len(), s_maybe.join(", "));
         let _ = writeln!(o, "## Leaves no body reads ({})\n", dead.len());
         for d in &dead {
             let _ = writeln!(o, "- {d}");
         }
         let _ = std::fs::write(f, &o);
-        println!("{}", o.lines().skip(2).take(4).collect::<Vec<_>>().join("\n"));
+        if let Some(d) = &drop_to {
+            let _ = std::fs::write(d, drop.join("\n") + "\n");
+        }
+        println!("{}", o.lines().skip(2).take(5).collect::<Vec<_>>().join("\n"));
         println!("fold: the tables' dead weight is {f}");
     }
 
