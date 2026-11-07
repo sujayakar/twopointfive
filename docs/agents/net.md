@@ -46,7 +46,10 @@ line).
     out no chunk and no glass plate, which are rows of the game's box table, and a storm's wind source reads nothing). The tools' stand also asks for
     `dress: true`, makes the game's START as it stands (`Stood.begin()` → the host's `startNow`: left to the first step, the export, the start and the
     first apply are paid inside the first tick, over a second on a small box, while the server's clock runs), and walks no puppet for a tool's
-    writes (`scan: false`: nothing writes a networked game between two ticks but a seat's record). THE LOOK AHEAD crosses as a call that writes
+    writes (`scan: false`: nothing writes a networked game between two ticks but a seat's record). And it DRAWS NOTHING (`draws: false`): the rows are
+    up for the game's sake, so the page's dress step (the men, the wind and the air handed to a renderer), which the harness runs for a game stood
+    with the rows up, is not run on a server's or a scripted client's copy; with it a two-seat server ran 20 and 229 of 600 ticks on the seats' own
+    records, without it 416 and 490. THE LOOK AHEAD crosses as a call that writes
     nothing, by its own contract (`tools/blitz/reads-contract.json`; held by `seats-check twin`, red path `SEATS_BREAK=look`): the host takes nothing
     back after it. Measured on the 4 core box: a look of five records 13.4 ms before, 1.6 ms now; `mpserver-check` 15 of 15 lines on a quiet box,
     twice, `ahead` among them for the first time on the Rust game (moved on the beat of his first record; 103 and 98 clean looks, all to the
@@ -60,6 +63,29 @@ line).
     `m.kit.kit_solo.stand`, `g.director.strict`). So the whole words cannot be the alarm between a page and a server until the host's-own list
     covers the first kind and the rows are numbered alike. The probe and the path list: the Library's
     `rebuild/multiplayer/coop-on-rust/page-vs-bun/`.
+  - **THE WIDER WORD, WATCHED: the road to a whole-game alarm** (`src/net/step.ts netWatch`, the list `src/net/agreed.ts`, made by
+    `tools/mp/agreed.ts`). The alarm stays the narrow state word. Beside it, on every word tick, the server sends a second word folded from the whole
+    game's words of the parts ON ONE LIST: the parts a page and a bun machine, and the machines of a game of two, had the same word for on every word
+    tick of the runs the list was made from. A client holds its own against it and only COUNTS (`NetClient.watchOk / watchOff / watchFirst`, on a
+    page `__net.state`, in a scripted client's MPBOT line): no alarm, nothing said to the player or the server. It becomes one when real pages on
+    real GPUs have held it. A PART COMES ONTO THE LIST as its picture fields leave the game's record and its rows are numbered alike on every host;
+    THE END STATE IS "THE GAME'S RECORD HOLDS NOTHING A HOST DRAWS WITH", and then the list is every part and the wider word is the alarm. The list
+    today: 237 of 310 parts, from eleven games (2026-11-07, software adapter; their whole-words files are in the Library,
+    `rebuild/multiplayer/coop-on-rust/agreed-runs/`): a page beside its server on the office (plain, twice; and with a frag thrown), on the depot in
+    a downpour (twice), a page as SECOND player beside a scripted first and their server (twice), and bun machines of games of one and of two. The 73 off
+    it are the work list (`tools/mp/agreed.ts` prints them with the
+    games they differed in): the picture's own in the record (`engine.world`, `tab.boxes`, `chars`, `mesh_shadows`, `m.anim_gltf`, `weather`, `wind`,
+    `m.scene_look` …), the rows a page and bun number differently (`m.cmd`, `seats.orders`, `tab.orders_order_def`; on the depot the BOX TABLE
+    itself, 1,389 rows in bun and 1,349 on the page, so `dyn_boxes`, `fog_of_war`, `sparks`), the second seat's machine (`pl`, `ch`, `men_all` and
+    the module tables that follow them), and the look ahead's scratch. Held: `mpserver-check` `wider word` (two scripted clients of a two-seat game,
+    every word tick) and `mpclient-page` `wider word` (a page beside its server); on the box, with the first list of 243, a page had it on 117 of 117
+    word ticks on the office and 142 of 142 on the depot in a downpour, and as second player on 0 of 84: five more parts differ there (a seat's
+    hands and aim, the falls, the debris chunks), which took the list to 238; with that list it had it on 86 of 88, `m.frag` differing on two word ticks round a thrown frag, which took it to
+    237. A LIST MADE FROM RUNS SHRINKS AS THE RUNS WIDEN: that is why it is watched and not an alarm, and why `mpclient-page --seats 2` says its
+    count and does not hold it (the second seat's machine numbers its rows differently until the Rust game's start numbers them alike). `MPSERVER_BREAK=1` / `MPCLIENT_BREAK=1` part it with the state word. MAKING THE LIST AGAIN (after a batch
+    that moves fields out of the record, or renames a part: a name the module has not got is passed over): the whole-words files of real runs, one
+    folder a game, then `bun run tools/mp/agreed.ts <folders> --write`. A cheat set on one page cannot part two machines: the page lays the recipe's
+    flags (god mode, the AI, ammunition, invisibility) over its game before every confirmed tick, so in a co-op game they are the server's.
   - **Networked machines step in QUIET RUNS** (`step.ts netQuiet`, the hosts' `quietRun(on)`): between two ticks of a run nothing is brought across to
     the host's copy of the game (no export, no apply, no out event, no dress step); as the run ends the copy takes what changed in one apply, the out
     events of every tick in their order, and the dress step over the run's whole time. The server's run is from one state word to the next (so the
