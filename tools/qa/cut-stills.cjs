@@ -126,7 +126,7 @@ async function scene(port, name) {
   const c0 = CAMS[0];
   const pinOf = c => ({ look: c.look, yaw: c.yaw * DEG, pitch: c.pitch * DEG, dist: c.dist });
   const boot = await page.evaluate(async ([seed, chaos, pin, park, exposure, lit]) => {
-    window.__testVisible = true; await window.__ready; if (window.__cut && window.__cut.programs && window.__cut.programs.swap) await window.__cut.programs.ready;   /* the second set of ray programs (render/cutSwap.ts) compiles after boot: a cut piece is traced whole until it is in */
+    window.__testVisible = true; await window.__ready;
     const g = window.__game, E = window.__engine;
     window.__menu.close();
     window.__gpuErrs = []; E.device.addEventListener('uncapturederror', e => { window.__gpuErrs.push(String(e.error && e.error.message).slice(0, 300)); });

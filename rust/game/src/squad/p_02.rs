@@ -37,12 +37,6 @@ fn rank(r: Perceive) -> i32 {
     match r { Perceive::Alert => 3, Perceive::Body => 2, Perceive::Suspicious => 1 }
 }
 
-/// `gd.lastKnown = <a new object>`: a new fix, so the stamp moves (doze.ts:244 asks by fix_stamp)
-fn new_fix(g: &mut Game, gd: GuardId, at: V3) {
-    let man = &mut g.gd[gd];
-    man.last_known = Some(at);
-    man.fix_stamp = man.fix_stamp.wrapping_add(1);
-}
 
 /// The senses updateGuard would have run for a man the runner drives: what they came to this frame. (squad.ts perceive)
 pub fn perceive(g: &mut crate::game::Game, gd: GuardId, dt: f64, before: f64) -> Option<crate::squad::Perceive> {
@@ -53,9 +47,9 @@ pub fn perceive(g: &mut crate::game::Game, gd: GuardId, dt: f64, before: f64) ->
     if vis.visible {
         let rate = crate::guards::sight_gain(g, gd, vis.dist);
         if rate > 0.05 {
-            g.gd[gd].awareness = v3::clamp(g.gd[gd].awareness + rate * dt, 0.0, 1.0);
+            { let to = v3::clamp(g.gd[gd].awareness + rate * dt, 0.0, 1.0); crate::mind::set(g, gd, to, "squad"); }
             let pp = v3::copy(g.ch[pc].pos);
-            new_fix(g, gd, pp);
+            crate::mind::fix(g, gd, Some(pp), "squad");
             seen = rate > 0.25;
             if seen { g.gd[gd].last_seen_t = g.time; }
         }
@@ -64,22 +58,22 @@ pub fn perceive(g: &mut crate::game::Game, gd: GuardId, dt: f64, before: f64) ->
     let pp = g.ch[pc].pos;
     let gp = g.ch[g.gd[gd].ch].pos;
     if !g.pl[g.player].down && !g.player_invisible && m::hyp2(pp[0] - gp[0], pp[2] - gp[2]) < 0.62 {
-        g.gd[gd].awareness = 1.0;
-        new_fix(g, gd, v3::copy(pp));
+        crate::mind::set(g, gd, 1.0, "squad");
+        crate::mind::fix(g, gd, Some(v3::copy(pp)), "squad");
         g.gd[gd].last_seen_t = g.time;
         seen = true;
     }
     if g.gd[gd].awareness > g.gd[gd].witness.peak_awareness { g.gd[gd].witness.peak_awareness = g.gd[gd].awareness; }
     if g.time - g.gd[gd].saw_body_t > 20.0 && g.gd[gd].awareness < 0.85 {
         if let Some(o) = crate::guards::body_in_view(g, gd) {
-            g.gd[gd].awareness = m::max(g.gd[gd].awareness, 0.5);
+            crate::mind::raise(g, gd, 0.5, "squad");
             let oc = g.gd[o].ch;
             let h = bone_or(g, oc, crate::character::Bone::Hips, g.ch[oc].pos);
-            new_fix(g, gd, [h[0], 0.0, h[2]]);
+            crate::mind::fix(g, gd, Some([h[0], 0.0, h[2]]), "squad");
             return Some(Perceive::Body);
         }
     }
-    if !seen { g.gd[gd].awareness = m::max(0.0, g.gd[gd].awareness - dt * 0.06); }
+    if !seen { let to = m::max(0.0, g.gd[gd].awareness - dt * 0.06); crate::mind::set(g, gd, to, "squad"); }
     let aw = g.gd[gd].awareness;
     if aw >= 0.85 { Some(Perceive::Alert) } else if aw >= SUSPECT && aw > before { Some(Perceive::Suspicious) } else { None }
 }
@@ -116,35 +110,6 @@ pub fn clearing_new(g: &mut crate::game::Game, rooms: &[Vec<crate::scene_level::
 /// Seconds the whole job may take before they are put back on the corridor. (squad.ts Clearing.cap)
 pub fn clearing_cap(g: &mut crate::game::Game) -> f64 {
     42.0 * m::max(1.0, cl!(g).rooms.len() as f64) + 15.0
-}
-
-/// A plan's name for the lines. (squad.ts Clearing.name)
-pub fn clearing_name(g: &mut crate::game::Game, p: Option<&crate::scene_level::RoomClearPlan>) -> String {
-    plan_name(p)
-}
-
-/// the summary's `who`
-fn summary_who(g: &Game, gd: GuardId) -> String {
-    match usize::try_from(g.gd[gd].route_i).ok().and_then(|i| g.level.routes.get(i)) {
-        Some(r) => g.tab.route[*r].name.clone(),
-        None => format!("guard {}", g.ch[g.gd[gd].ch].id - 10.0),
-    }
-}
-
-/// One line for the panel: which room, what stage, who, what is next. (squad.ts Clearing.summary)
-pub fn clearing_summary(g: &mut crate::game::Game) -> String {
-    let c = cl!(g).clone();
-    let r = match &c.cur { Some(r) if c.stage != ClearStage::Done => r, _ => return String::new() };
-    let next: Vec<String> = c.rooms.iter().skip(c.room_i + 1).map(|v| plan_name(v.first())).collect();
-    let next = next.join(", ");
-    let by = if c.stage != ClearStage::Muster { format!(" (by the {} door)", r.door) } else { String::new() };
-    let what = match (c.stage, c.drill) {
-        (ClearStage::Drill, Some(d)) => g.tab.squad_room_clear[d].phase.as_str(),
-        _ => c.stage.as_str(),
-    };
-    let pair = match c.b { Some(b) => format!(" + {}", summary_who(g, b)), None => String::from(" (alone)") };
-    let then = if next.is_empty() { String::new() } else { format!(" · then {}", next) };
-    format!("clearing: {}{} · {} · {}{}{} · {} s", plan_name(Some(r)), by, what, summary_who(g, c.a), pair, then, m::round(c.total))
 }
 
 /// Hand whoever of ours is still scripted back to the AI calm. (squad.ts Clearing.cancel)
@@ -185,7 +150,7 @@ pub fn clearing_tick(g: &mut crate::game::Game, dt: f64) -> bool {
             if let Some(left) = left {
                 if g.gd[left].state != crate::game::GuardState::Dead {
                     end_guard_script(g, left, Some(EndGuardScriptState::Suspicious));
-                    g.gd[left].awareness = m::max(g.gd[left].awareness, 0.6);
+                    crate::mind::raise(g, left, 0.6, "squad");
                     let at = g.ch[g.gd[dead].ch].pos;
                     crate::belief::word(g, left, at);
                     g.gd[left].react_t = 0.7;
@@ -228,7 +193,7 @@ pub fn clearing_tick(g: &mut crate::game::Game, dt: f64) -> bool {
     if worst == Some(Perceive::Body) {
         for &gd in &men {
             end_guard_script(g, gd, Some(EndGuardScriptState::Suspicious));
-            g.gd[gd].awareness = m::max(g.gd[gd].awareness, 0.5);
+            crate::mind::raise(g, gd, 0.5, "squad");
             if let Some(f) = fix { crate::belief::word(g, gd, f); }
             g.gd[gd].react_t = 0.6;
             g.gd[gd].search_t = 0.0;
@@ -241,7 +206,7 @@ pub fn clearing_tick(g: &mut crate::game::Game, dt: f64) -> bool {
         break_off(g, a, SUSPECT + 0.05, to);
         if let Some(b) = b {
             end_guard_script(g, b, Some(EndGuardScriptState::Suspicious));
-            g.gd[b].awareness = m::max(g.gd[b].awareness, SUSPECT);
+            crate::mind::raise(g, b, SUSPECT, "squad");
             if let Some(f) = fix { crate::belief::word(g, b, f); }
             g.gd[b].react_t = 1.2;
             g.gd[b].search_t = 0.0;
@@ -475,12 +440,11 @@ pub fn clearing_approach(g: &mut crate::game::Game) {
     let men = clearing_men(g);
     for (i, &gd) in men.iter().enumerate() {
         {
-            let man = &mut g.gd[gd];
-            man.state = crate::game::GuardState::Search;
-            man.react_t = 0.0;
-            man.search_t = 0.0;
-            man.body_duty = None;
-            man.awareness = m::min(man.awareness, 0.25);
+            crate::mind::set_state(g, gd, crate::game::GuardState::Search, "squad");
+            g.gd[gd].react_t = 0.0;
+            g.gd[gd].search_t = 0.0;
+            g.gd[gd].body_duty = None;
+            crate::mind::cap(g, gd, 0.25, "squad");
         }
         crate::control::set_hold(g, gd, false, "squad"); crate::control::set_pinned(g, gd, false, "squad");
         cl!(g).aw[i] = g.gd[gd].awareness;

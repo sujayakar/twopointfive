@@ -60,7 +60,7 @@ const SAM: Vec3 = [8.3, 0, 11.6];
 /** The harness Game with a Particles attached, everyone parked deaf and blind on the lot, god mode, Sam in the corridor facing the glazing, chaos + the switch as given. */
 async function stage(seed: number, chaos: number, on: boolean, at: Vec3 = SAM, yaw = Math.PI) {
   Math.random = seeded(seed);
-  const W = await standUp(); const { game, engine } = W; floatPartition(game);
+  const W = await standUp({ dress: true }); const { game, engine } = W; floatPartition(game);
   engine.particles = new Particles(fake('device'), fake('sceneLayout')); engine.settings.gpuParticles = true;
   game.godMode = true; game.player.visibility = 0.02; game.tune.chaos = chaos; game.tune.glassBreak = on; resetStats();
   for (let i = 0; i < 5; i++) W.step(DT);

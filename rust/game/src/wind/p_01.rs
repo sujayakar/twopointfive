@@ -7,9 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// STILL A GAP, wind.ts:304: `(g.smoke as { stats? }).stats`; SmokeSystemLike has no stats. None = the solver is off.
-fn seam_smoke_wind_srcs(g: &mut Game) -> Option<Option<f64>> { todo!("needs: SmokeSystemLike.stats.windSrcs (wind.ts:304)") }
-
 /// Hand back `v`, and write it to the caller's `out` where one was given: the TypeScript's every path fills all three.
 fn put(out: Option<&mut V3>, v: V3) -> V3 {
     if let Some(o) = out {
@@ -33,28 +30,9 @@ pub fn shape(g: &mut crate::game::Game, i: f64) -> f64 {
     g.m.wind.shape.as_ref().unwrap()[i as usize]
 }
 
-/// Nothing of the game's: the whole body is the host's browser storage. (wind.ts saveWind)
-pub fn save_wind(g: &mut crate::game::Game) {}
-
-/// The rows back to the shipped values; the storage's half is the host's. (wind.ts resetWindKnobs)
-pub fn reset_wind_knobs(g: &mut crate::game::Game) {
-    g.k.wind = wind_defaults();
-    g.tune.wind = g.k.wind.def;
-    g.tune.moths = true;
-}
-
 /// The master as the systems read it, clamped 0‥1. (wind.ts windOf)
 pub fn wind_of(g: &mut crate::game::Game) -> f64 {
     m::max(0.0, m::min(1.0, g.tune.wind))
-}
-
-/// The answer in the module's scratch → `out`. Nothing here calls it: the plain functions of `sim::wind` hand their answers back. (wind.ts airOut)
-pub fn air_out(out: &mut V3) -> V3 {
-    let m = unsafe { core::slice::from_raw_parts(::sim::sim_scratch() as *const f64, 3) };
-    out[0] = m[0];
-    out[1] = m[1];
-    out[2] = m[2];
-    *out
 }
 
 /// A diffuser's air at p, m/s: rust/sim's. (wind.ts jetVel)
@@ -104,11 +82,6 @@ pub fn vent_due(v: &crate::scene_level::VentDef, t: f64) -> bool {
     };
     let ph = js::rem(js::rem((t - v.phase.unwrap_or(0.0)) / period, 1.0) + 1.0, 1.0);
     !(ph > duty)
-}
-
-/// What went to the particles this frame; a copy of the list of IDs, the one reader (the panel's view) only reads it. (wind.ts Wind.forParticles)
-pub fn wind_for_particles(g: &mut crate::game::Game) -> Vec<WindWindSourceId> {
-    g.wind.to_pool.list.clone()
 }
 
 /// Every source the level can have, built once. `reroof` is reached with this Wind stood at `g.wind` for the call. (wind.ts Wind.constructor)
@@ -628,31 +601,6 @@ pub fn wind_describe(g: &mut crate::game::Game) -> Vec<String> {
             alloc::format!("{:<18} {} speed {} (base {} × on {} × gust {})", s.name, if s.speed > 0.0 { "ON " } else { "off" }, js::to_fixed(s.speed, 2), js::to_fixed(s.base, 2), js::to_fixed(s.on, 2), js::to_fixed(s.gust, 2))
         })
         .collect()
-}
-
-/// The panel's one line. (wind.ts Wind.summary)
-pub fn wind_summary(g: &mut crate::game::Game) -> String {
-    let master = wind_of(g);
-    let pool_on = crate::particle_fx::gpu_fx(g);
-    let ss = seam_smoke_wind_srcs(g);
-    let p = if pool_on { g.engine.particles.as_ref() } else { None };
-    let tab = &g.tab.wind_wind_source;
-    let w = &g.wind;
-    let vents = w.active.iter().filter(|&&s| tab[s].why == WindWhy::Vent).count();
-    let doors = w.active.iter().filter(|&&s| tab[s].why == WindWhy::Door).count();
-    let still = if master <= 0.0 { " (still air)" } else { "" };
-    let storm_speed = tab[w.storm].speed;
-    let storm = if storm_speed > 0.0 { alloc::format!(", storm {} m/s", js::to_fixed(storm_speed, 1)) } else { String::new() };
-    let gusts = if doors > 0 { alloc::format!(", {} door gust(s)", doors) } else { String::new() };
-    let parts = match p {
-        Some(p) => alloc::format!("{} records, {} leaves picked up", js::num_str(p.stats.winds), js::num_str(p.stats.wind_woken)),
-        None => String::from("off"),
-    };
-    let solver = match ss {
-        Some(n) => alloc::format!("{} sources", js::num_str(n.unwrap_or(0.0))),
-        None => String::from("off"),
-    };
-    alloc::format!("wind {}{} · {}/{} sources blowing ({} vents{}{}) · particles {} · solver {}", js::to_fixed(master, 2), still, w.active.len(), w.all.len(), vents, storm, gusts, parts, solver)
 }
 
 

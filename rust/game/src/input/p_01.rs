@@ -17,9 +17,6 @@ pub fn input_new(g: &mut Game, el: Option<crate::Opaque>) -> InputId {
     g.tab.input.push(Input::blank())
 }
 
-/// Focus is the page's: an Input here has no `el`, and the TypeScript's detached path does nothing.   (input.ts Input.focusGame)
-pub fn input_focus_game(g: &mut Game, id: InputId) {}
-
 /// Is this key held?   (input.ts Input.down)
 pub fn input_down(g: &mut Game, id: InputId, code: &str) -> bool {
     g.tab.input[id].keys.has(String::from(code))

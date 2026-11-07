@@ -55,9 +55,6 @@ pub fn pulls(g: &mut crate::game::Game) -> Vec<[f64; 2]> {
     }
     g.m.doze.pulls.clone().unwrap()
 }
-/// this game's table of records, made if absent (doze.ts mapOf). Nothing to do: the table is g.m.doze.rec, always there.
-pub fn map_of(g: &mut crate::game::Game) {}
-
 /// distance on the floor (doze.ts flat)
 pub fn flat(a: &[f64], x: f64, z: f64) -> f64 { m::hyp2(a[0] - x, a[2] - z) }
 /// which way a man in this chair faces (doze.ts chairFace)
@@ -142,12 +139,9 @@ pub fn walk_len(g: &mut crate::game::Game, from: &[f64], to: V3) -> f64 {
 /// in the chair (doze.ts seated)
 pub fn seated(d: crate::doze::Doze) -> bool { d.phase == Phase::Down || d.phase == Phase::Asleep || d.phase == Phase::Work }
 /// a number drawn from [from, to] (doze.ts span)
-pub fn span(g: &mut crate::game::Game, r: &[f64]) -> f64 {
+pub fn span(g: &mut crate::game::Game, who: crate::dice::Who, r: &[f64]) -> f64 {
     r[0] + crate::math_dice::sim_random(g) * (r[1] - r[0])
 }
-/// the lines, for the words lint (doze.ts dozeLines)
-pub fn doze_lines() -> Vec<String> { screen_lines() }
-
 /// a chair at a screen: the screen, and the place nearest the chair from which a man facing it has floor under him and it in his eye (doze.ts screenSeat)
 pub fn screen_seat(g: &mut crate::game::Game, gd: GuardId, p: PropId) -> Option<crate::doze::Seat> {
     let (px, pz) = (crate::props::prop_x(g, p), crate::props::prop_z(g, p));
@@ -340,10 +334,9 @@ pub fn wake(g: &mut crate::game::Game, gd: GuardId, why: crate::doze::WakeWhy, a
     g.stats.doze.woke[why as usize] += 1;
     if why == WakeWhy::Noise || why == WakeWhy::Light || why == WakeWhy::Bump {
         let raise = if why == WakeWhy::Bump { g.k.doze.bump_aw } else { g.k.doze.wake_aw };
-        g.gd[gd].awareness = m::max(g.gd[gd].awareness, raise);
+        crate::mind::raise(g, gd, raise, "doze");
         if let Some(at) = at {
-            g.gd[gd].last_known = Some([at[0], 0.0, at[2]]);
-            g.gd[gd].fix_stamp = g.gd[gd].fix_stamp.wrapping_add(1);
+            crate::mind::fix(g, gd, Some([at[0], 0.0, at[2]]), "doze");
         }
         d.phase = Phase::Stir;
         d.until = g.time + g.k.doze.stir_secs;
@@ -474,7 +467,7 @@ pub fn doze_tick(g: &mut crate::game::Game, dt: f64) {
                     switch(g, mon, 1.0);
                     let first = g.k.doze.say_first.clone();
                     let t = g.time;
-                    d.say = t + span(g, &first);
+                    d.say = t + span(g, crate::dice::Who::Man(gd), &first);
                     flush(g, gd, d);
                     g.stats.doze.worked += 1;
                 }
@@ -512,7 +505,7 @@ pub fn doze_tick(g: &mut crate::game::Game, dt: f64) {
                 g.m.doze.said.as_mut().unwrap().push(k as f64);
                 let every = g.k.doze.say_every.clone();
                 let t = g.time;
-                d.say = t + span(g, &every);
+                d.say = t + span(g, crate::dice::Who::Man(gd), &every);
                 flush(g, gd, d);
                 crate::game::game_say(g, gd, &lines[k], Some(false), Some(false), Some(false));
                 g.stats.doze.lines += 1;
@@ -599,63 +592,12 @@ pub fn doze_asleep(g: &mut crate::game::Game, gd: GuardId) -> bool {
 pub fn doze_dark(g: &mut crate::game::Game, gd: GuardId) -> bool {
     g.m.doze.rec.get(gd).map_or(false, |d| seated(*d))
 }
-/// what he is at in his chair (doze.ts dozeAt)
-pub fn doze_at(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::doze::DozeAt> {
-    match g.m.doze.rec.get(gd).map(|d| d.phase) {
-        Some(Phase::Asleep) => Some(DozeAt::Asleep),
-        Some(Phase::Work) => Some(DozeAt::Screen),
-        _ => None,
-    }
-}
 /// his ears this frame: [noises, foot]; headphones on at his screen, whole for everybody else (doze.ts dozeEar)
 pub fn doze_ear(g: &mut crate::game::Game, gd: GuardId) -> [f64; 2] {
     if g.m.doze.rec.get(gd).map_or(false, |d| d.phase == Phase::Work) {
         return [g.k.doze.noises, g.k.doze.ears];
     }
     whole()
-}
-/// was he woken out of a doze inside the last `secs` seconds, and by what (doze.ts dozeWoke)
-pub fn doze_woke(g: &mut crate::game::Game, gd: GuardId, secs: Option<f64>) -> Option<crate::doze::DozeWhy> {
-    let secs = secs.unwrap_or(6.0);
-    let d = g.m.doze.rec.get(gd).copied()?;
-    let why = d.why?;
-    if why != DozeWhy::Time && d.woke_at >= 0.0 && g.time - d.woke_at < secs { Some(why) } else { None }
-}
-/// where he is in his breath, 0‥1, or −1 awake (doze.ts dozeBreath)
-pub fn doze_breath(g: &mut crate::game::Game, gd: GuardId) -> f64 {
-    match g.m.doze.rec.get(gd) {
-        Some(d) if d.phase == Phase::Asleep => js::rem(d.t, g.k.doze.breath_secs) / g.k.doze.breath_secs,
-        _ => -1.0,
-    }
-}
-/// the HUD's mark over him (doze.ts dozeMark)
-pub fn doze_mark(g: &mut crate::game::Game, gd: GuardId) -> String {
-    if g.m.doze.rec.get(gd).map_or(false, |d| d.phase == Phase::Work) {
-        return String::from(if g.gd[gd].awareness > 0.05 { "" } else { "♪" });
-    }
-    let b = doze_breath(g, gd);
-    String::from(if b < 0.0 { "" } else if b < 1.0 / 3.0 { "z" } else if b < 2.0 / 3.0 { "zZ" } else { "zZz" })
-}
-/// what the rule has of a man (doze.ts dozeOf)
-pub fn doze_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::doze::DozeOf> {
-    g.m.doze.rec.get(gd).map(|d| DozeOf { phase: d.phase, why: d.why, secs: d.t, wp: d.wp })
-}
-/// the panel's line: who is at what (doze.ts dozeSummary)
-pub fn doze_summary(g: &mut crate::game::Game) -> String {
-    let mut rows: Vec<String> = Vec::new();
-    for (gd, d) in g.m.doze.rec.iter() {
-        if d.phase == Phase::No { continue; }
-        let what = match d.phase {
-            Phase::Asleep => alloc::format!("asleep {} s", js::to_fixed(d.t, 0)),
-            Phase::Work => alloc::format!("at his screen {} s", js::to_fixed(d.t, 0)),
-            Phase::Spent | Phase::Stir => alloc::format!("woken ({})", d.why.map_or("null", |w| w.as_str())),
-            Phase::Going => String::from("to his chair"),
-            Phase::Down => String::from("sitting down"),
-            _ => String::from("getting up"),
-        };
-        rows.push(alloc::format!("{} {}", g.gd[gd].callsign, what));
-    }
-    alloc::format!("dozing ▸ {}", if rows.is_empty() { String::from("nobody") } else { rows.join(" · ") })
 }
 /// everybody up, the records gone (doze.ts dozeReset)
 pub fn doze_reset(g: &mut crate::game::Game, load: Option<bool>) {

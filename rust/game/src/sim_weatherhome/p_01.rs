@@ -11,37 +11,19 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 fn block_d(slot: usize) -> &'static mut [f64] {
     unsafe { core::slice::from_raw_parts_mut(::sim::state::addr(slot) as *mut f64, ::sim::state::LEN >> 3) }
 }
+/// The same doubles, to read.
+fn block_d_read(slot: usize) -> &'static [f64] {
+    unsafe { core::slice::from_raw_parts(::sim::state::addr(slot) as *const f64, ::sim::state::LEN >> 3) }
+}
 
 /// The module's scratch, as doubles from its first: what `f64()` reads at `wxScratch()`.   (weatherhome.ts wxOut's `m[a + i]`)
 fn scratch_d() -> &'static [f64] {
     unsafe { core::slice::from_raw_parts(::sim::sim_scratch() as *const f64, ::sim::sim_scratch_len()) }
 }
 
-/// Where column `c` stands, in bytes from the block's own start.   (weatherhome.ts wxAt)
-pub fn wx_at(g: &mut crate::game::Game, c_2: f64) -> f64 {
-    crate::sim_state::sim_part(crate::sim_state::P_WEATHER) + ::sim::weather::col(c_2 as u32) as f64
-}
-
-/// A column of the weather's table, read in place in the game's block.   (weatherhome.ts wxGet)
-pub fn wx_get(g: &mut crate::game::Game, st: crate::Opaque, c_2: f64) -> f64 {
-    let i = (js::to_u32(wx_at(g, c_2)) >> 3) as usize;
-    block_d(g.sim)[i]
-}
-
-/// A column of the weather's table, written in place in the game's block.   (weatherhome.ts wxSet)
-pub fn wx_set(g: &mut crate::game::Game, st: &mut crate::Opaque, c_2: f64, v: f64) {
-    let i = (js::to_u32(wx_at(g, c_2)) >> 3) as usize;
-    block_d(g.sim)[i] = v;
-}
-
 /// The module's scratch, as an index of doubles over its memory.   (weatherhome.ts wxScratch)
 pub fn wx_scratch() -> f64 {
     (::sim::sim_scratch() as usize >> 3) as f64
-}
-
-/// Rows of the roofs' table, of the thunder list, and the plan's size.   (weatherhome.ts wxCap)
-pub fn wx_cap(i: f64) -> f64 {
-    ::sim::weather_cap(i as u32) as f64
 }
 
 /// How many of `boxes` are roofs at all, by the rule roofsOf makes the table with.   (weatherhome.ts roofsCounted)

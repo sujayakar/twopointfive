@@ -111,11 +111,6 @@ pub fn item_store_new(g: &mut crate::game::Game, st: crate::Opaque) -> crate::si
     }
 }
 
-/// Where each column starts, by its place (IC). (itemshome.ts ItemStore.places)
-pub fn item_store_places(g: &mut crate::game::Game) -> Vec<f64> {
-    places_of(&g.items.store.o)
-}
-
 /// `n` rows fit, or it is a fault. (itemshome.ts ItemStore.room)
 pub fn item_store_room(g: &mut crate::game::Game, n: f64) {
     if n > g.items.store.cap {
@@ -188,35 +183,6 @@ pub fn item_store_lay(g: &mut crate::game::Game, rows: &[Vec<f64>]) {
         for k in COLS_F..COLS_ALL { set_word_at(c, k, r, 0); }
     }
     c.n = rows.len() as u32;
-}
-
-/// Where the hand-over's tables are in the module's memory, asked once; the layout here is held to rust/sim's. (itemshome.ts itemIo)
-pub fn item_io(g: &mut crate::game::Game) -> crate::sim_itemshome::ItemIo {
-    if let Some(io) = g.m.sim_itemshome.io { return io; }
-    let x = crate::sim_sim::sim();
-    let o = item_cols();
-    let at = places_of(&o_of(o));
-    let names: Vec<String> = item_f64().into_iter().chain(item_u32()).collect();
-    let mut off: Vec<&str> = Vec::new();
-    for (i, k) in names.iter().enumerate() {
-        let here = if i < COLS_F { at[i] * 8.0 } else { at[i] * 4.0 };
-        if sim::items::cap(100 + i as u32) as f64 != here { off.push(k.as_str()); }
-    }
-    if sim::items::cap(0) as f64 != ITEM_ROWS
-        || sim::items::cap(13) as f64 != o.bytes
-        || !off.is_empty()
-        || sim::items::cap(100 + names.len() as u32) != 0
-        || sim::items::cap(1) as f64 != ITEM_PARS
-        || sim::items::cap(4) as f64 != ITEM_ROOFS
-        || sim::items::cap(3) as f64 != ITEM_EV
-        || sim::items::cap(2) as f64 != ITEM_ROWS * ITEM_ROW_EVENTS
-    {
-        let columns = if off.is_empty() { String::new() } else { format!(" (columns not where the module has them: {})", off.join(", ")) };
-        panic!("the Rust module lays the thrown things out as {} rows in {} bytes and src/sim/itemshome.ts as {} in {}{}, or the hand-over is not the same shape: bun run tools/sim/build.ts", sim::items::cap(0), sim::items::cap(13), ITEM_ROWS, o.bytes, columns);
-    }
-    let io = ItemIo { x, par: (sim::items::addr(0) / 8) as f64, ev: (sim::items::addr(1) / 8) as f64, max_events: sim::items::cap(2) as f64 };
-    g.m.sim_itemshome.io = Some(io);
-    io
 }
 
 /// A double of a take of the store's bytes, by its index into the doubles.

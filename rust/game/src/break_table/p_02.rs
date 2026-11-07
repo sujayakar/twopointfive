@@ -103,12 +103,6 @@ pub fn breaks_share(g: &mut crate::game::Game) -> crate::break_table::BreaksShar
     if look_on(g) { BreaksShare { thrown: s.thrown + s.heap, heap: 0.0, furniture: s.furniture } } else { s }
 }
 
-/// Pieces moving + particle records waiting to be born. (breakTable.ts Breaks.load)
-pub fn breaks_load(g: &mut crate::game::Game) -> f64 {
-    let waiting = if crate::particle_fx::gpu_fx(g) { g.engine.particles.as_ref().map_or(0.0, |p| p.queue.len() as f64) } else { 0.0 };
-    crate::debris::debris_moving(g) + waiting
-}
-
 // ---------------------------------------------------------------- the pool's hooks
 /// The level and puff of a thrown piece's landing. (breakTable.ts Breaks.lands)
 pub fn breaks_lands(g: &mut crate::game::Game, kind: crate::debris::ChunkKind, box_: BoxId, speed: f64) -> crate::break_table::BreaksLands {
@@ -884,13 +878,6 @@ pub fn breaks_studs(g: &mut crate::game::Game, b: &crate::break_table::CellGrid)
         k += 1.0;
     }
     out
-}
-
-/// The pool's line for the panel. (breakTable.ts Breaks.summary)
-pub fn breaks_summary(g: &mut crate::game::Game) -> String {
-    let load = breaks_load(g);
-    let s = &g.stats.break_table;
-    alloc::format!("breaks: shaped {} ({} planes, {} dropped) \u{b7} plain {} \u{b7} heap {} \u{b7} again {} \u{b7} crumbled {} \u{b7} refused {} \u{b7} mayhem {} \u{b7} ragged ends {} \u{b7} load {}", s.shaped, s.planes, s.dropped, s.plain, s.heap, s.again, s.crumbled, s.refused, s.mayhem, s.ragged, load)
 }
 
 

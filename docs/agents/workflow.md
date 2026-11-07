@@ -237,7 +237,8 @@ preferences, etc." No accounts; nothing multiplayer.
   word for it, not one seen in the tree). One that is there when the record is written rides on it; one that comes after goes in a
   `later` record with what is new (`settledAfter` = ms since the start card), each fact once a visit, so a visit may write two. The
   page adds its own late fact the same way: `cut` (`{ ms, pipelines, owners }`, and `failed` where it did not compile: the build of
-  the programs with the cut rule, `render/cutSwap.ts`, sent once the build has ended with its numbers). The report prints "START
+  the programs with the cut rule, `render/cutSwap.ts`, sent once the build has ended with its numbers). No page sends `cut` since 2026-11-07 (one
+  set of ray programs: nothing is built after the boot but the later set). The report prints "START
   live at" and "the cut programs built in" (a failed build is left out of that median). The page is asked on every beat for ten
   minutes, since it cannot say that nothing more will come. A LEAVE'S RECORDS WENT UP TWICE on that Mac (a visit's last `end` and
   `perf`, two calls 7 ms apart). The only road to that in the page's code is a leave's call that looked failed to the page, was put

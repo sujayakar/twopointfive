@@ -1,19 +1,17 @@
-// The 'cover-keep' probe: A MAN TOLD TO COVER KEEPS HIS ANGLE (roomfight.ts ROOMFIGHT.coverKeep — coverPasses). Run through probes.ts:
+// The 'cover-keep' probe: A MAN TOLD TO COVER KEEPS HIS ANGLE (roomfight.ts coverPasses). Run through probes.ts:
 //   bun run tools/qa/probes.ts cover-keep        (family: roomfight)
 // PASS / FAIL each, headless. The queueing tutorial's level (levels/tut-queue.json) stood up with its four men and ONE of its enemies, the probe's puppet: he is
 // stood where the probe wants him each frame, cannot be killed, sees nothing, and his muzzle points where the probe points it. Blue One is told to cover
 // up the lane from the back gate, as a player tells him; Red One stands beside him covering the side the puppet comes up on; the other two see nothing.
 // Then the puppet is stood a quarter turn off Blue One's way, and the probe reads where Blue One's gun goes:
-//   · with the switch off the flaw is there: his gun leaves the lane for the man Red One is already shooting at
-//   · with it on it does not, and Red One is on the man the whole time
+//   · his gun does not leave the lane for the man Red One is already shooting at, and Red One is on the man the whole time
 //   · … and the man is his again: with his muzzle on Blue One · with no mate on him · with the mate's gun behind a jamb · inside coverNearM · stood in the
 //     angle Blue One was given; and a man he was on first is not dropped for a mate who has only just seen him
 // Not shown: the hand-over of a man he is on to a mate who IS past his beat to fire (nobody fires here), a mate reloading or with a friend in his line.
-//   · off, nothing reads the rule's numbers · the stand's own word · a recording carries the key
 // Nobody's round goes in the staging (the probe holds every man's first shot off) so that the man is there to be looked at for the whole run, and the
 // floor is hot, as it was when it was played: a sighting is a man.
 // What it cannot say: what it looks like (never seen on a GPU, nobody has played it), or what it does to a fight — that is playthrough.ts's tally.
-// The probe's own red path: COVERKEEP_BREAK=1 bun run tools/qa/probes.ts cover-keep must FAIL (the rule does nothing with its switch on).
+// The probe's own red path: COVERKEEP_BREAK=1 bun run tools/qa/probes.ts cover-keep must FAIL (a staging break: in the first run the man's muzzle is put on Blue One, so he is his).
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { ROOT, standUp } from './headless.ts';
@@ -22,7 +20,6 @@ const GDM: any = await import(`${ROOT}/src/game/guards.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
-const { LESSON } = await import(`${ROOT}/src/game/lesson.ts`);
 const ROOMFIGHT = RM.ROOMFIGHT;
 
 type Verdict = (ok: boolean, label: string, detail: string) => void;
@@ -39,12 +36,11 @@ const BLUE = [22.3, 0, 10.4], WAY = [22.5, 0, -18.9], RED = [23.5, 0, 9.6], SIDE
 /** the yard's two gates (the back gate he covers through, the road gate the side man shows in): stood open, as they were when he played it */
 const GATES = [[22.3, 5.0], [35.0, 10.3]];
 
-interface Stage { on: boolean; at: number[]; muzzle: 'off' | 'blue'; red: boolean; secs?: number; /** Red One's gun is behind a jamb: the probe's hand on his count of seconds with no round at the man */ jamb?: boolean; /** s Red One sees nothing after the man shows */ late?: number }
+interface Stage { at: number[]; muzzle: 'off' | 'blue'; red: boolean; secs?: number; /** Red One's gun is behind a jamb: the probe's hand on his count of seconds with no round at the man */ jamb?: boolean; /** s Red One sees nothing after the man shows */ late?: number }
 interface Out { afterRed: number; afterRedOn: number; state: string; settled: number; maxOff: number; onHim: number; redOn: number; frames: number; seen: number; line: boolean; g: any }
 async function stage(S: Stage): Promise<Out> {
   const W: any = await quiet(() => standUp({ uploadEvery: 4, level: loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', `${LEVEL}.json`), 'utf8'))), seed: 1 })), g = W.game;
-  LESSON.on = false; const started: any = await quiet(() => startFromQuery(g, `?levelFile=${LEVEL}.json&roomclear=1&squad4`)); if (!started.spec || started.why) throw new Error(`the level did not start: ${started.why}`);
-  ROOMFIGHT.coverKeep = S.on;
+  const started: any = await quiet(() => startFromQuery(g, `?levelFile=${LEVEL}.json&roomclear=1&squad4`)); if (!started.spec || started.why) throw new Error(`the level did not start: ${started.why}`);
   for (let i = 0; i < 30; i++) W.step(DT);   // (the start deals its men in its first frames)
   const foes = g.guards.filter((h: any) => h.team !== 'operative' && h.state !== 'dead'), E = foes[0]; if (!E) throw new Error('the level has no enemy to stand up');
   const men = g.guards.filter((m: any) => m.team === 'operative' && m.unit && m.state !== 'dead'), blue = men.find((m: any) => m.callsign === 'Blue One'), red = men.find((m: any) => m.callsign === 'Red One');
@@ -77,33 +73,23 @@ async function stage(S: Stage): Promise<Out> {
 
 export async function coverKeep(): Promise<boolean> {
   const F = family('cover-keep: a man told to cover keeps his angle');
-  const keep = { ...ROOMFIGHT }, lessonWas = LESSON.on, back = () => { Object.assign(ROOMFIGHT, keep); LESSON.on = lessonWas; };
+  const keep = { ...ROOMFIGHT }, back = () => { Object.assign(ROOMFIGHT, keep); }, BREAK = process.env.COVERKEEP_BREAK === '1';
   const row = (o: Out) => `his gun at most ${o.maxOff.toFixed(0)}° off the way he was given · on the man ${o.onHim} of ${o.frames} frames · Red One on the man with a round at him ${o.redOn} frames · made out ${o.seen.toFixed(2)} · the man at the end: ${o.state}`;
   try {
-    const off = await stage({ on: false, at: SIDE, muzzle: 'off', red: true }); back();
-    F.verdict(off.settled < 12 && off.line && off.redOn > off.frames * 0.5 && off.onHim > 0 && off.maxOff > 60, 'with the switch off the flaw is there: his gun leaves the lane for a man Red One is already shooting at', `on his angle before the man shows: ${off.settled.toFixed(0)}° off · a line to the man: ${off.line} · ${row(off)}`);
-    const on = await stage({ on: true, at: SIDE, muzzle: 'off', red: true }); back();
-    F.verdict(on.settled < 12 && on.onHim === 0 && on.maxOff < 15 && on.redOn > on.frames * 0.5 && on.seen > 0, 'with it on he keeps his angle: seen, and left to the man who has him', row(on));
-    const aimed = await stage({ on: true, at: SIDE, muzzle: 'blue', red: true }); back();
+    const on = await stage({ at: SIDE, muzzle: BREAK ? 'blue' : 'off', red: true }); back();
+    F.verdict(on.settled < 12 && on.onHim === 0 && on.maxOff < 15 && on.redOn > on.frames * 0.5 && on.seen > 0, 'he keeps his angle: seen, and left to the man who has him', `on his angle before the man shows: ${on.settled.toFixed(0)}° off · a line to the man: ${on.line} · ${row(on)}`);
+    const aimed = await stage({ at: SIDE, muzzle: 'blue', red: true }); back();
     F.verdict(aimed.onHim > 0 && aimed.maxOff > 60, '… but a man whose muzzle is on him is his', row(aimed));
-    const alone = await stage({ on: true, at: SIDE, muzzle: 'off', red: false }); back();
+    const alone = await stage({ at: SIDE, muzzle: 'off', red: false }); back();
     F.verdict(alone.redOn === 0 && alone.onHim > 0 && alone.maxOff > 60, '… and so is a man no mate has', row(alone));
-    const jamb = await stage({ on: true, at: SIDE, muzzle: 'off', red: true, jamb: true }); back();
+    const jamb = await stage({ at: SIDE, muzzle: 'off', red: true, jamb: true }); back();
     F.verdict(jamb.redOn <= 2 && jamb.afterRed > 60 && jamb.onHim > 0 && jamb.maxOff > 60, '… and a man the mate has no round at (his gun behind a jamb)', `${row(jamb)} · frames Red One\'s gun was on the man: ${jamb.afterRed} (the one frame with a round is the frame he took him)`);
-    const late = await stage({ on: true, at: SIDE, muzzle: 'off', red: true, late: 1.5 }); back();
+    const late = await stage({ at: SIDE, muzzle: 'off', red: true, late: 1.5 }); back();
     F.verdict(late.afterRed > 60 && late.afterRedOn === late.afterRed, '… and a man he is already on is not dropped for a mate who has only just seen him (no mate in this staging is ever past his beat to fire)', `${row(late)} · frames Red One was on the man: ${late.afterRed}, Blue One still on him in ${late.afterRedOn} of them`);
-    const near = await stage({ on: true, at: NEAR, muzzle: 'off', red: true }); back();
+    const near = await stage({ at: NEAR, muzzle: 'off', red: true }); back();
     F.verdict(near.onHim > 0 && near.maxOff > 60, `… and a man inside ${ROOMFIGHT.coverNearM} m`, row(near));
-    const laneOff = await stage({ on: false, at: LANE, muzzle: 'off', red: true }), laneOn = await stage({ on: true, at: LANE, muzzle: 'off', red: true }); back();
-    F.verdict(laneOn.onHim > 0 && laneOn.onHim === laneOff.onHim && Math.abs(laneOn.maxOff - laneOff.maxOff) < 1e-9, 'a man in the angle he was given is his as he ever was: frame for frame the same', `off: ${row(laneOff)} · on: ${row(laneOn)}`);
-    { ROOMFIGHT.coverHalfDeg = 0; ROOMFIGHT.coverNearM = 99; const moved = await stage({ on: false, at: SIDE, muzzle: 'off', red: true }); back();
-      F.verdict(moved.onHim === off.onHim && Math.abs(moved.maxOff - off.maxOff) < 1e-9 && moved.redOn === off.redOn, 'off, nothing reads it: the same run with its numbers moved', row(moved)); }
-    { const W: any = await quiet(() => standUp({ uploadEvery: 4, seed: 1 })), g = W.game, stood = ROOMFIGHT.coverKeep; const shipped = process.env.TPS_PROFILE === 'shipped', word = process.env.TPS_COVERKEEP, want = word !== undefined ? word === '1' : shipped;
-      F.verdict(stood === want, 'the stand: on as the page opens, off on the frozen stand (TPS_COVERKEEP has the say on either)', `stood up with it ${stood ? 'on' : 'off'} · ${shipped ? 'the page\'s' : 'the frozen'} stand${word !== undefined ? `, TPS_COVERKEEP=${word}` : ''}`);
-      const J: any = await import(`${ROOT}/src/game/journal.ts`), snap = () => JSON.parse(JSON.stringify(J.knobsSnapshot(g)));
-      ROOMFIGHT.coverKeep = true; const own = snap(), old = snap(), older = snap(); delete old.tables.ROOMFIGHT.coverKeep; delete older.tables.ROOMFIGHT;
-      ROOMFIGHT.coverKeep = false; J.applyKnobs(g, own); const carried = ROOMFIGHT.coverKeep; ROOMFIGHT.coverKeep = true; J.applyKnobs(g, old); const before = ROOMFIGHT.coverKeep; ROOMFIGHT.coverKeep = true; J.applyKnobs(g, older); const none = ROOMFIGHT.coverKeep;
-      F.verdict(carried === true && before === false && none === false, 'a recording carries it: one made with it on replays with it on, one from before the key (or before the table was carried) with it off', `the key in the file, on: ${carried} · no key: ${before} · no table: ${none}`); }
+    const laneOn = await stage({ at: LANE, muzzle: 'off', red: true }); back();
+    F.verdict(laneOn.onHim > 0, 'a man in the angle he was given is his', row(laneOn));
     return F.done();
   } finally { back(); }
 }

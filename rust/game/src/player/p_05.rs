@@ -1110,19 +1110,17 @@ pub fn hand_back(g: &mut crate::game::Game, gd: GuardId, stagger: f64) {
     let time = g.time;
     let seq = g.event_seq;
     {
-        let m_ = &mut g.gd[gd];
-        m_.awareness = 1.0;
-        m_.last_known = Some(v3::copy(pp));
-        m_.fix_stamp = m_.fix_stamp.wrapping_add(1);
-        m_.last_seen_t = time;
-        m_.sight_pos = v3::copy(pp);
-        m_.sight_vel = [0.0, 0.0, 0.0];
-        m_.sight_t = time;
-        m_.led_t = time;
-        m_.react_t = m::max(m_.react_t, stagger);
-        m_.heard_up_to = seq;
-        m_.missed_at = -1.0;
-        m_.missing_raised = false;
+        crate::mind::set(g, gd, 1.0, "player");
+        crate::mind::fix(g, gd, Some(v3::copy(pp)), "player");
+        g.gd[gd].last_seen_t = time;
+        g.gd[gd].sight_pos = v3::copy(pp);
+        g.gd[gd].sight_vel = [0.0, 0.0, 0.0];
+        g.gd[gd].sight_t = time;
+        g.gd[gd].led_t = time;
+        g.gd[gd].react_t = m::max(g.gd[gd].react_t, stagger);
+        g.gd[gd].heard_up_to = seq;
+        g.gd[gd].missed_at = -1.0;
+        g.gd[gd].missing_raised = false;
     }
     crate::guards::reset_chase(g, gd);
     g.gd[gd].search_t = 0.0;

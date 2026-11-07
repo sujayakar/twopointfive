@@ -16,8 +16,6 @@ fn is_word(b: u8) -> bool { b.is_ascii_alphanumeric() || b == b'_' }
 fn boundary(b: &[u8], i: usize) -> bool { (i > 0 && is_word(b[i - 1])) != (i < b.len() && is_word(b[i])) }
 /// the literal `s` at `at`: where it ends
 fn lit(b: &[u8], at: usize, s: &str) -> Option<usize> { if b.get(at..)?.starts_with(s.as_bytes()) { Some(at + s.len()) } else { None } }
-/// the one byte `c` if it is at `at` (`c?`)
-fn opt(b: &[u8], at: usize, c: u8) -> usize { if b.get(at) == Some(&c) { at + 1 } else { at } }
 /// `String.replace` of a global pattern: `at` says whether one starts at this byte, where it ends and what it becomes
 fn replace_all(line: &str, mut at: impl FnMut(&[u8], usize) -> Option<(usize, String)>) -> String {
     let b = line.as_bytes();
@@ -35,34 +33,6 @@ fn replace_all(line: &str, mut at: impl FnMut(&[u8], usize) -> Option<(usize, St
 fn replace_words(line: &str, word: &str, with: &str) -> String {
     replace_all(line, |b, i| { if !boundary(b, i) { return None; } let end = lit(b, i, word)?; if boundary(b, end) { Some((end, String::from(with))) } else { None } })
 }
-/// `[Pp]ress \[?Space\]?` at `i`, from a \b: the first letter and where it ends
-fn press_space(b: &[u8], i: usize) -> Option<(u8, usize)> {
-    if !boundary(b, i) { return None; }
-    let p = *b.get(i)?;
-    if p != b'P' && p != b'p' { return None; }
-    let k = opt(b, lit(b, i + 1, "ress ")?, b'[');
-    Some((p, opt(b, lit(b, k, "Space")?, b']')))
-}
-/// /\b([Pp])ress \[?Space\]? behind (him|the near guard) to grab him\b/g
-fn grab_behind(b: &[u8], i: usize) -> Option<(usize, String)> {
-    let (p, k) = press_space(b, i)?;
-    let k = lit(b, k, " behind ")?;
-    let (k, who) = match lit(b, k, "him") { Some(e) => (e, "him"), None => (lit(b, k, "the near guard")?, "the near guard") };
-    let k = lit(b, k, " to grab him")?;
-    if !boundary(b, k) { return None; }
-    Some((k, format!("{}old left click on {} from behind to grab him", if p == b'P' { "H" } else { "h" }, who)))
-}
-/// /\b([Pp])ress \[?Space\]? to grab him\b/g
-fn grab_key(b: &[u8], i: usize) -> Option<(usize, String)> {
-    let (p, k) = press_space(b, i)?;
-    let k = lit(b, k, " to grab him")?;
-    if !boundary(b, k) { return None; }
-    Some((k, format!("{}old left click on him to grab him", if p == b'P' { "H" } else { "h" })))
-}
-
-/// a line that names the grab's key, while the held click is the only way to a man (lesson.ts stalkLine)
-pub fn stalk_line(line: &str) -> String { replace_all(&replace_all(line, grab_behind), grab_key) }
-
 /// a line that names the knife, while there is none: the right click's knockout is the blow (lesson.ts bareLine)
 pub fn bare_line(line: &str) -> String {
     let s = replace_words(line, "Right click to knock him out, or left click to use the knife", "Right-click to knock him out");
@@ -133,32 +103,6 @@ pub fn token_line(line: &str, held: Option<bool>, bare: Option<bool>) -> String 
         }
         Some((j + 1, said))
     })
-}
-
-/// a string's `.length` in JavaScript
-fn len16(s: &str) -> usize { s.encode_utf16().count() }
-
-/// what the check asks of a line with a brace in it: rails.ts railsFaults calls it, so the rails' part may (lesson.ts lessonTokenFaults)
-pub fn lesson_token_faults(w: &str, line: &str, cap: f64, row: Option<&str>, always: Option<bool>) -> Vec<String> {
-    let (row, always) = (row.unwrap_or("the objective row"), always.unwrap_or(false));
-    if !line.contains('{') && !line.contains('}') { return Vec::new(); }
-    let mut out: Vec<String> = Vec::new();
-    // /\{([^{}]*)\}/g
-    let rest = replace_all(line, |b, i| {
-        if b[i] != b'{' { return None; }
-        let mut j = i + 1;
-        while j < b.len() && b[j] != b'{' && b[j] != b'}' { j += 1; }
-        if b.get(j) != Some(&b'}') { return None; }
-        let name = &line[i + 1..j];
-        if !lesson_token(name) { out.push(format!("{} has {{{}}}, which is no move's token ({})", w, name, lesson_tokens().join(", "))); }
-        Some((j + 1, String::new()))
-    });
-    if rest.contains('{') || rest.contains('}') { out.push(format!("{} has a brace that closes nothing or is never closed", w)); }
-    let long = [0, 1, 2, 3].iter().map(|k| len16(&token_line(line, Some(k & 1 != 0), Some(k & 2 != 0)))).max().unwrap_or(0);
-    if out.is_empty() && (always || len16(line) as f64 <= cap) && long as f64 > cap {
-        out.push(format!("{} is {} characters with its tokens written out: {} holds about {}", w, long, row, cap));
-    }
-    out
 }
 
 /// a step's line as the HUD's row says it now; the rails' frame reads it too, so it is no picture-only code here (lesson.ts lessonLine)
@@ -473,170 +417,11 @@ fn ok_watching(g: &mut Game, a: V3, r: Option<f64>, n: Option<f64>) -> bool {
 
 /// lesson.ts num of a number
 fn finite(v: f64) -> bool { v.is_finite() }
-/// lesson.ts rect
-fn rect_ok(r: crate::scene_scenarios::Rect) -> bool { finite(r.x0) && finite(r.x1) && finite(r.z0) && finite(r.z1) && r.x0 < r.x1 && r.z0 < r.z1 }
-/// lesson.ts vec
-fn vec_ok(v: V3) -> bool { v.iter().all(|&c| finite(c)) }
-/// `t.n === undefined || (num(t.n) && t.n >= least)`
-fn count_ok(n: Option<f64>, least: f64) -> bool { n.map_or(true, |v| finite(v) && v >= least) }
-/// …and `v > 0`
-fn metres_ok(v: Option<f64>) -> bool { v.map_or(true, |v| finite(v) && v > 0.0) }
-/// /[\w.-]+/ whole
-fn is_id(s: &str) -> bool { !s.is_empty() && s.bytes().all(|c| is_word(c) || c == b'.' || c == b'-') }
-/// /[\w.'-]+/ whole
-fn is_name_word(s: &str) -> bool { !s.is_empty() && s.bytes().all(|c| is_word(c) || c == b'.' || c == b'\'' || c == b'-') }
-/// the regular expression of a `did` row's `what` (lesson.ts:188). None: no match; Some(None): no target; Some(Some(x)): x, the target after the `@`
-fn what_target(what: &str) -> Option<Option<&str>> {
-    let (verb, rest) = what.split_once(':')?;
-    if !["act", "event", "chron", "order"].contains(&verb) { return None; }
-    if is_id(rest) { return Some(None); }
-    if verb != "order" { return None; }
-    let (id, target) = rest.split_once('@')?;
-    if !is_id(id) { return None; }
-    let good = match target.strip_prefix("foe:") {
-        Some(name) => name.split(' ').all(is_name_word),
-        None => matches!(target, "thing:breaker" | "thing:objective" | "thing:device"),
-    };
-    if good { Some(Some(target)) } else { None }
-}
-
-const NO_RECT: &str = "area: a rect { x0, x1, z0, z1 }";
-const NO_FLOOR: &str = "area: no free floor inside it";
-
-/// `!rect(area) ? … : freeIn(g, area) ? null : …`
-fn check_area(g: &mut Game, area: crate::scene_scenarios::Rect) -> Option<String> {
-    if !rect_ok(area) { return Some(String::from(NO_RECT)); }
-    if free_in(g, area) { None } else { Some(String::from(NO_FLOOR)) }
-}
-/// lesson.ts:188-191
-fn check_did(g: &mut Game, what: &str, on: Option<&str>) -> Option<String> {
-    let Some(target) = what_target(what) else {
-        return Some(String::from("what: 'act:<verb>', 'event:<kind>', 'chron:<kind>', 'order:<id>', 'order:<id>@foe:<callsign>' (an order given ON that man) or 'order:<id>@thing:breaker|objective|device' (a door is `on`)"));
-    };
-    if let Some(foe) = target.and_then(|x| x.strip_prefix("foe:")) {
-        let foes = |g: &Game, x: GuardId| g.gd[x].team != crate::teams::Team::Operative;
-        let up = g.guards.iter().any(|&x| foes(g, x) && g.gd[x].state != crate::game::GuardState::Dead);
-        if up && !g.guards.iter().any(|&x| foes(g, x) && g.gd[x].callsign == foe) { return Some(format!("what: no man called '{}' on this floor", foe)); }
-    }
-    let on = on?;
-    if target.is_some() { return Some(String::from("on: not with a target in `what`")); }
-    if !what.starts_with("order:") { return Some(String::from("on: only with an order")); }
-    if on.is_empty() || crate::doors::doors_by_name(g, on).is_none() { return Some(format!("on: no door '{}'", on)); }
-    None
-}
-/// lesson.ts LESSON_TESTS, the `check` of each kind
-fn check_of(g: &mut Game, t: &LessonTest) -> Option<String> {
-    use crate::doors::doors_by_name;
-    use LessonTest as T;
-    let say = |s: &str| Some(String::from(s));
-    match t {
-        T::Unknown { .. } | T::Slot { .. } | T::Loaded | T::Reload | T::Following => None,   // (a slot is a SlotKind: all five are the check's)
-        T::In { area } | T::Body { area } => check_area(g, *area),
-        T::Near { at, r } => if !vec_ok(*at) { say("at: a Vec3") } else if r.map_or(false, |r| !finite(r)) { say("r: metres") } else { None },
-        T::Flag { flag, .. } => { let rows = flags(); if rows.has(flag.clone()) { None } else { Some(format!("flag: one of {}", rows.keys().join(", "))) } }
-        T::Pace { .. } => band_check(t),
-        T::Meter { which, .. } => if which != "light" && which != "noise" { say("which: 'light' or 'noise'") } else { band_check(t) },
-        T::Stage { stage } => if stage_index(stage) > 0 { None } else { say("stage: drive (the place reached), exfil (the thing taken) or done") },
-        T::Door { door, state } => {
-            if doors_by_name(g, door).is_none() { return Some(format!("door: no door named '{}'", door)); }
-            if ["open", "shut", "unlocked", "broken", "charged"].contains(&state.as_str()) { None } else { say("state: open, shut, unlocked, broken or charged") }
-        }
-        T::Target { name, .. } => if g.targets.iter().any(|&y| g.tab.sim_lightshome_fixture[y].name == *name) { None } else { Some(format!("name: no light or device named '{}'", name)) },
-        T::Men { down } => if count_ok(*down, 1.0) { None } else { say("down: how many, ≥ 1") },
-        T::Did { what, on, .. } => check_did(g, what, on.as_deref()),
-        T::Downed { how, n } => {
-            let hows = hows();
-            if !hows.contains(how) { return Some(format!("how: one of {}", hows.join(", "))); }
-            if count_ok(*n, 1.0) { None } else { say("n: how many, ≥ 1") }
-        }
-        T::Calm { route } => {
-            let Some(route) = route else { return None };
-            if g.level.routes.iter().any(|&r| g.tab.route[r].name == *route) { None } else { Some(format!("route: no patrol route named '{}'", route)) }
-        }
-        T::Launcher { on, fired } => {
-            if !["ring", "he40", "none"].contains(&on.as_str()) { return say("on: 'ring', 'he40' or 'none'"); }
-            if *fired && on == "none" { say("fired: nothing is fired with no attachment on") } else { None }
-        }
-        T::Burst { n } => if count_ok(*n, 2.0) { None } else { say("n: how many rounds in the one string, ≥ 2") },
-        T::Threw { kind, quick, area } => {
-            let k = kind.as_deref();
-            if area.map_or(false, |a| !rect_ok(a)) { return Some(String::from(NO_RECT)); }
-            if area.is_some() && (*quick || k == Some("he40")) { return say("area: a thrown can or frag (not the quick throw, not the 40 mm)"); }
-            if k.map_or(false, |k| !["smoke", "flash", "frag", "he40"].contains(&k)) { return say("kind: 'smoke', 'flash', 'frag' or 'he40'"); }
-            if *quick && (k == Some("frag") || k == Some("he40")) { say("quick: G throws only smoke and the stun can") } else { None }
-        }
-        T::OrderTo { who } => if matches!(who, crate::orders::Who::Num(_)) { say("who: 'all', 'red' or 'blue'") } else { None },
-        T::StackOn { door, who, .. } => {
-            use crate::orders::SquadOrdersMenSel as Sel;
-            if doors_by_name(g, door).is_none() { return Some(format!("door: no door named '{}'", door)); }
-            if matches!(who, Some(Sel::Num(_) | Sel::Guard(_))) { say("who: 'all', 'red' or 'blue'") } else { None }
-        }
-        T::PairsOn { doors } => if count_ok(*doors, 1.0) { None } else { say("doors: how many different doors, ≥ 1") },
-        T::Word { doors } => if count_ok(*doors, 1.0) { None } else { say("doors: how many doors go on it, ≥ 1") },
-        T::Taken { room } => {
-            let has = g.level.scenarios.as_ref().and_then(|s| s.room_clear.as_ref()).map_or(false, |c| c.rooms.iter().any(|r| r.id == *room));
-            if has { None } else { Some(format!("room: no room '{}' in the level's roomClear block", room)) }
-        }
-        T::Mate { area, at, r, by, away } => {
-            if area.is_none() && at.is_none() && by.is_none() && away.is_none() { return say("one of area (a rect), at (a Vec3, + r), by (metres from the player), away (metres)"); }
-            if let Some(a) = area { if let Some(why) = check_area(g, *a) { return Some(why); } }
-            if at.map_or(false, |a| !vec_ok(a)) { return say("at: a Vec3"); }
-            if metres_ok(*r) && metres_ok(*by) && metres_ok(*away) { None } else { say("r / by / away: metres, > 0") }
-        }
-        T::Pair { what, n } => {
-            let whats = pair_whats();
-            if !whats.contains(what) { return Some(format!("what: one of {}", whats.join(", "))); }
-            if count_ok(*n, 1.0) { None } else { say("n: how many, ≥ 1") }
-        }
-        T::Cue { name } => if name.is_empty() { say("name: the beat the level's script ends with c.signal('done:<name>')") } else { None },
-        T::View { turned, zoomed, panned } => {
-            if turned.is_none() && zoomed.is_none() && panned.is_none() { return say("turned (degrees), zoomed (a ratio over 1) and / or panned (metres)"); }
-            if turned.map_or(false, |v| !finite(v)) || panned.map_or(false, |v| !finite(v)) || zoomed.map_or(false, |v| !(finite(v) && v > 1.0)) { say("turned, panned: numbers · zoomed: a ratio over 1") } else { None }
-        }
-        T::Squad { area, n } => {
-            if let Some(why) = check_area(g, *area) { return Some(why); }
-            if count_ok(*n, 1.0) { None } else { say("n: how many, ≥ 1") }
-        }
-        T::Stacks { doors, n, .. } => {
-            if doors.is_empty() { return say("doors: a list of door names"); }
-            for d in doors { if doors_by_name(g, d).is_none() { return Some(format!("doors: no door named '{}'", d)); } }
-            if count_ok(*n, 1.0) { None } else { say("n: how many men a door, ≥ 1") }
-        }
-        T::Watching { at, r, n } => {
-            if !vec_ok(*at) { return say("at: a Vec3"); }
-            if !metres_ok(*r) { return say("r: metres, > 0"); }
-            if count_ok(*n, 1.0) { None } else { say("n: how many men, ≥ 1") }
-        }
-        T::All { .. } | T::Any { .. } => of_check(g, t),
-    }
-}
-
 /// a row's `below` and `above` (lesson.ts bandCheck)
 pub fn band_check(t: &crate::lesson::LessonTest) -> Option<String> {
     let (below, above) = match t { LessonTest::Pace { below, above } | LessonTest::Meter { below, above, .. } => (*below, *above), _ => (None, None) };
     let bad = |v: Option<f64>| v.map_or(false, |v| !finite(v));
     if (below.is_none() && above.is_none()) || bad(below) || bad(above) { Some(String::from("below and / or above: numbers")) } else { None }
-}
-
-/// (lesson.ts ofCheck)
-pub fn of_check(g: &mut crate::game::Game, t: &crate::lesson::LessonTest) -> Option<String> {
-    let of = match t { LessonTest::All { of } | LessonTest::Any { of } if !of.is_empty() => of, _ => return Some(String::from("of: a non-empty list of tests")) };
-    for u in of { if let Some(why) = test_fault(g, u) { return Some(why); } }
-    None
-}
-
-/// is there a free spot of floor in the rect (lesson.ts freeIn)
-pub fn free_in(g: &mut crate::game::Game, r: crate::scene_scenarios::Rect) -> bool {
-    let mut x = r.x0 + 0.2;
-    while x < r.x1 {
-        let mut z = r.z0 + 0.2;
-        while z < r.z1 {
-            if !crate::scene_collision::nav_grid_is_blocked(g, x, z) { return true; }
-            z += 0.3;
-        }
-        x += 0.3;
-    }
-    false
 }
 
 /// a kind's word (`t.is`)
@@ -650,17 +435,6 @@ fn kind_word(t: &LessonTest) -> &'static str {
         T::Following => "following", T::Mate { .. } => "mate", T::Pair { .. } => "pair", T::Cue { .. } => "cue", T::View { .. } => "view", T::Squad { .. } => "squad",
         T::Stacks { .. } => "stacks", T::Watching { .. } => "watching", T::All { .. } => "all", T::Any { .. } => "any",
     }
-}
-
-/// what is wrong with one test record on this floor; None: nothing (lesson.ts testFault)
-pub fn test_fault(g: &mut crate::game::Game, t: &crate::lesson::LessonTest) -> Option<String> {
-    if let LessonTest::Unknown { is } = t { return Some(unknown_fault(is)); }
-    check_of(g, t).map(|why| format!("{} — {}", kind_word(t), why))
-}
-/// …of a record no row of the table holds (empty: it had no `is`)
-fn unknown_fault(is: &str) -> String {
-    if is.is_empty() { return String::from("a test is a record { is: '<kind>', … }"); }
-    format!("no test kind '{}' ({})", is, lesson_tests().keys().join(", "))
 }
 
 /// lesson.ts FLAGS by the word a test names; None: no such flag
@@ -773,19 +547,6 @@ mod tests {
 
     /// the TypeScript's own answers (lesson.ts:35-78 run under bun, with the page's values)
     static LOWER: &[(&str, &str)] = &[("Grab", "grab"), ("grab", "grab"), ("", ""), ("É1", "é1"), ("𐐀x", "𐐀x")];
-    static STALK: &[(&str, &str)] = &[
-        ("V whistles the cook out. Then hide at once, at the mark", "V whistles the cook out. Then hide at once, at the mark"),
-        ("Hold Space, wheel to kick, let go", "Hold Space, wheel to kick, let go"),
-        ("xV whistles and V whistlesy but V whistles.", "xV whistles and V whistlesy but V whistles."),
-        ("Right click to knock him out, or left click to use the knife", "Right click to knock him out, or left click to use the knife"),
-        ("Stay low so he doesn't hear you, then left click to knife him", "Stay low so he doesn't hear you, then left click to knife him"),
-        ("When the guard comes through, step in and left-click to kill him with the knife", "When the guard comes through, step in and left-click to kill him with the knife"),
-        ("Press [Space] behind him to grab him, press Space behind the near guard to grab him.", "Hold left click on him from behind to grab him, hold left click on the near guard from behind to grab him."),
-        ("press [Space to grab him now; Press Space] to grab him; Express Space to grab him; press Space to grab himself", "hold left click on him to grab him now; Hold left click on him to grab him; Express Space to grab him; press Space to grab himself"),
-        ("When he lights up, creep in and {grab him from behind}. {Take him out} if he turns, or {knock him out}. {Grab him} now. {open the door}", "When he lights up, creep in and {grab him from behind}. {Take him out} if he turns, or {knock him out}. {Grab him} now. {open the door}"),
-        ("{Grab the near guard from behind}, then {grab yours}. {grab from behind} {knock out} {grab o'neil} ▸ {grab  him} {Grab him from the left} {} {1x} {grab him", "{Grab the near guard from behind}, then {grab yours}. {grab from behind} {knock out} {grab o'neil} ▸ {grab  him} {Grab him from the left} {} {1x} {grab him"),
-        ("training ▸ — {take the cook’s man out}", "training ▸ — {take the cook’s man out}"),
-    ];
     static BARE: &[(&str, &str)] = &[
         ("V whistles the cook out. Then hide at once, at the mark", "V whistles the cook out. Then hide at once, at the mark"),
         ("Hold Space, wheel to kick, let go", "Hold Space, wheel to kick, let go"),
@@ -859,23 +620,8 @@ mod tests {
         ("training ▸ — {take the cook’s man out}", "training ▸ — {take the cook’s man out}"),
     ];
     static NAMES: &[(&str, bool)] = &[("grab him", true), ("Grab him", true), ("grab him from behind", true), ("Grab The Near Guard From Behind", true), ("knock him out", true), ("take him out", true), ("Take yours out", true), ("open the door", false), ("grab from behind", false), ("grab him from the left", false), ("grab", false), ("grab ", false), ("", false), ("knock out", false), ("take o'neil out", true), ("'grab him", false), ("grab  him", false), ("hi", false), ("grab\nhim", false), ("Éa", false)];
-    static FAULTS: &[(&str, &str, f64, Option<&str>, Option<bool>, &[&str])] = &[
-        ("t", "no braces", 96.0, None, None, &[]),
-        ("t", "{grab him from behnd}", 96.0, None, None, &["t has {grab him from behnd}, which is no move's token (grab him, grab him from behind, knock him out, take him out)"]),
-        ("t", "{knock-him-out} x", 96.0, None, None, &["t has {knock-him-out}, which is no move's token (grab him, grab him from behind, knock him out, take him out)"]),
-        ("t", "{grab him", 96.0, None, None, &["t has a brace that closes nothing or is never closed"]),
-        ("t", "grab him}", 96.0, None, None, &["t has a brace that closes nothing or is never closed"]),
-        ("t", "{a{grab him}}", 96.0, None, None, &["t has a brace that closes nothing or is never closed"]),
-        ("t", "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx {grab him from behind}", 96.0, Some("a card"), None, &["t is 117 characters with its tokens written out: a card holds about 96"]),
-        ("t", "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx {grab him from behind}", 96.0, None, None, &[]),
-        ("t", "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx {grab him from behind}", 96.0, None, Some(true), &["t is 137 characters with its tokens written out: the objective row holds about 96"]),
-        ("▸ w", "▸▸▸ {take him out} éééééééééééééééééééééééééééééé", 50.0, None, None, &["▸ w is 63 characters with its tokens written out: the objective row holds about 50"]),
-    ];
-
     #[test]
     fn lower_as_the_typescript() { for (a, b) in LOWER { assert_eq!(lower(a), *b); } }
-    #[test]
-    fn stalk_line_as_the_typescript() { for (a, b) in STALK { assert_eq!(stalk_line(a), *b); } }
     #[test]
     fn bare_line_as_the_typescript() { for (a, b) in BARE { assert_eq!(bare_line(a), *b); } }
     #[test]
@@ -884,17 +630,6 @@ mod tests {
     fn the_page_line_as_the_typescript() { for (a, b) in LINE { assert_eq!(line_on_page(a, 5.0), *b); } }
     #[test]
     fn names_as_the_typescript() { for (a, b) in NAMES { assert_eq!(lesson_token(a), *b, "{}", a); } }
-    #[test]
-    fn faults_as_the_typescript() { for (w, l, c, r, al, want) in FAULTS { assert_eq!(lesson_token_faults(w, l, *c, *r, *al), want.to_vec()); } }
-    /// lesson.ts:188's regular expression run under bun: None no match, Some(None) no target, Some(Some(x)) the group
-    static WHATS: &[(&str, Option<Option<&str>>)] = &[
-        ("act:reload", Some(None)), ("event:bang", Some(None)), ("chron:ko", Some(None)), ("order:stack", Some(None)), ("order:stack.up-1", Some(None)),
-        ("order:take@foe:Big Mike", Some(Some("foe:Big Mike"))), ("order:take@foe:o'neil j.", Some(Some("foe:o'neil j."))), ("order:take@foe:a  b", None), ("order:take@foe:", None), ("order:take@foe: a", None),
-        ("order:take@thing:breaker", Some(Some("thing:breaker"))), ("order:take@thing:objective", Some(Some("thing:objective"))), ("order:take@thing:device", Some(Some("thing:device"))), ("order:take@thing:door", None),
-        ("act:x@foe:y", None), ("act:", None), ("foo:x", None), ("", None), ("act:a b", None), ("order:a@b@foe:x", None), ("order:@foe:x", None), ("order:a@foe:x:y", None), ("act:é", None), ("order:x\n", None), ("act:a:b", None), ("order:a@thing:breaker\n", None),
-    ];
-    #[test]
-    fn what_as_the_typescript() { for (w, want) in WHATS { assert_eq!(what_target(w), *want, "{}", w); } }
     #[test]
     fn after_finds_the_row_past_last() {
         assert_eq!(after(&[4, 7, 9], Some(7)), 2);
@@ -913,15 +648,6 @@ mod tests {
         assert!(band(0.5, &pace(Some(1.0), None)) && !band(1.5, &pace(Some(1.0), None)));
         assert!(band_check(&pace(None, None)).is_some() && band_check(&pace(None, Some(0.5))).is_none());
         assert!(band_check(&LessonTest::Loaded).is_some());   // (t.below and t.above are undefined on any other kind)
-    }
-    /// lesson.ts testFault run under bun
-    static UNKNOWN: &[(&str, &str)] = &[
-        ("", "a test is a record { is: '<kind>', … }"),
-        ("nope", "no test kind 'nope' (in, near, flag, slot, pace, meter, stage, door, target, men, did, downed, body, calm, loaded, reload, launcher, burst, threw, orderTo, stackOn, pairsOn, word, taken, following, mate, pair, cue, view, squad, stacks, watching, all, any)"),
-    ];
-    #[test]
-    fn a_record_no_row_holds_as_the_typescript() {
-        for (is, want) in UNKNOWN { assert_eq!(unknown_fault(is), *want); }
     }
     #[test]
     fn the_skeletons_tables_say_what_the_typescript_says() {

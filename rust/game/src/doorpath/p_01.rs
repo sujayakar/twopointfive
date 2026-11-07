@@ -43,11 +43,6 @@ pub fn pt_seg(p: V3, a: V3, b: V3) -> f64 {
     m::hyp2(p[0] - a[0] - dx * t, p[2] - a[2] - dz * t)
 }
 
-/// A new door path: the field initialisers, the constructor keeps only `g`. (doorpath.ts DoorPath.constructor)
-pub fn door_path_new(g: &mut crate::game::Game) -> crate::doorpath::DoorPath {
-    crate::doorpath::DoorPath::blank()
-}
-
 /// Forget the walks and what is lent; `lastOf` stays, as there. (doorpath.ts DoorPath.reset)
 pub fn door_path_reset(g: &mut crate::game::Game) {
     g.door_path.walks.clear();
@@ -1035,15 +1030,6 @@ fn tick_walk(g: &mut Game, gd: GuardId, w: &mut crate::doorpath::Walk, t: f64, d
             g.door_path.walks.set(gd, w);
         }
     }
-}
-
-/// The line for the log. (doorpath.ts DoorPath.summary)
-pub fn door_path_summary(g: &mut crate::game::Game) -> String {
-    let s = g.door_path.stats;
-    alloc::format!(
-        "door paths on · sent {} · walked {} · round a leaf {} (no way {}) · points moved off a leaf {} · held {} s · gave up {} · taken {}",
-        s.sent, s.walked, s.round, s.no_round, s.moved, js::to_fixed(s.held_s, 1), s.gave_up, s.taken
-    )
 }
 
 

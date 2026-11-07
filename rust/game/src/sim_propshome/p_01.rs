@@ -46,11 +46,6 @@ pub fn prop_store_new(g: &mut crate::game::Game, st: crate::Opaque, total: f64) 
     crate::sim_propshome::PropStore { epoch: -1.0, total, o, home: st, b8: (at >> 3) as f64, b4: (at >> 2) as f64, cap: PROP_CAP }
 }
 
-/// The system's clock. (propshome.ts PropStore.time)
-pub fn prop_store_time(g: &mut crate::game::Game) -> f64 {
-    sim::state::state(g.sim).props.time
-}
-
 /// Rows in the level now. (propshome.ts PropStore.n)
 pub fn prop_store_n(g: &mut crate::game::Game) -> f64 {
     sim::state::state(g.sim).props.n as f64
@@ -348,10 +343,4 @@ mod tests {
         assert_eq!(prop_diff(&mut g, &a, &b, Some(1.0)).len(), 2);
     }
 
-    #[test]
-    fn object_is_tells_zeros_apart_and_nans_together() {
-        assert!(object_is(f64::NAN, -f64::NAN));
-        assert!(!object_is(0.0, -0.0));
-        assert!(object_is(1.5, 1.5));
-    }
 }

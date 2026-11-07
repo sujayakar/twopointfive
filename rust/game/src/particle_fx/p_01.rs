@@ -19,9 +19,6 @@ pub fn gpu_fx(g: &mut crate::game::Game) -> bool {
 /// Nothing of the game's: the table is kept in the browser's storage, the host's; with no storage the TypeScript's own try does nothing. (particleFx.ts loadDust)
 pub fn load_dust(g: &mut crate::game::Game) {}
 
-/// Nothing of the game's: it only writes the browser's storage, the host's. (particleFx.ts saveDust)
-pub fn save_dust(g: &mut crate::game::Game) {}
-
 /// The shipped table back, the look onto the live system. Forgetting the kept copy is the host's. (particleFx.ts resetDust)
 pub fn reset_dust(g: &mut crate::game::Game) {
     let t = crate::particle_fx::dust_defaults();
@@ -89,13 +86,6 @@ pub fn said_surf(g: &mut crate::game::Game, b: Option<BoxId>) -> Option<crate::s
     let stuff = seam_box(g, b).stuff?;
     if is_pane(seam_box(g, b).flags) { return None; }
     surf_of_stuff(stuff)
-}
-
-/// A solid thing of glass that is not a pane, by its own word: a round cracks it and it stays. (particleFx.ts solidGlass)
-pub fn solid_glass(g: &mut crate::game::Game, b: Option<BoxId>) -> bool {
-    let Some(b) = b else { return false; };
-    let (stuff, flags) = (seam_box(g, b).stuff, seam_box(g, b).flags);
-    crate::scene_boxes::solid_glass_box(crate::scene_boxes::SolidGlassBoxB { stuff, flags })
 }
 
 /// What a hit looks like: the surface its sparks, chips and dust go by, the colour they are tinted from, and whether it is solid glass. The box's own word first,
@@ -437,21 +427,6 @@ pub fn clear_particle_fx(g: &mut crate::game::Game) {
 /// QA: the cases waiting to be heard. (particleFx.ts pendingTinks)
 pub fn pending_tinks(g: &mut crate::game::Game) -> Vec<crate::particle_fx::PendingTinksItem> {
     state_of(g).tinks.iter().map(|k| crate::particle_fx::PendingTinksItem { t: k.t, pos: k.pos }).collect()
-}
-
-/// The sink handed to the tracers. Its one method has no home on the empty SparkSink: sink_emit_cone is that method's body. (particleFx.ts sparkSink)
-pub fn spark_sink(g: &mut crate::game::Game) -> crate::tracers::SparkSink {
-    crate::tracers::SparkSink {}
-}
-
-/// Embers to the GPU while it is on, into the CPU pool otherwise, decided per ember. Nothing calls it yet (notes.md, ## Skeleton). (particleFx.ts sparkSink emitCone)
-#[allow(dead_code)]
-fn sink_emit_cone(g: &mut Game, at: V3, dir: V3, o: crate::sparks::SparksEmitConeO, seed: f64) -> Vec<f64> {
-    if gpu_fx(g) {
-        ember_fx(g, at, dir, crate::particle_fx::EmberFxO { count: o.count, speed: o.speed, cone: o.cone, life: o.life });
-        return Vec::new();
-    }
-    crate::sparks::sparks_emit_cone(g, at, dir, o, seed)
 }
 
 /// Panel: what the sites throw, without firing anything. (particleFx.ts testBurst)

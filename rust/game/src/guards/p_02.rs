@@ -48,12 +48,6 @@ fn clear_path(g: &mut Game, gd: GuardId) {
     g.gd[gd].path_goal = None;
     g.gd[gd].path_goal_orbit = false;
 }
-/// `gd.lastKnown = v3.copy(p)`: a new object, so a new fix (doze.ts:244 asks by fix_stamp)
-fn set_fix(g: &mut Game, gd: GuardId, p: V3) {
-    let man = &mut g.gd[gd];
-    man.last_known = Some(v3::copy(p));
-    man.fix_stamp = man.fix_stamp.wrapping_add(1);
-}
 /// `Box.flags` of a row. Skeleton 5 has no table of Box rows (`g.col.boxes` is `Vec<BoxId>`, ids.txt and properties.txt say otherwise)
 fn seam_box_flags(g: &mut Game, b: BoxId) -> f64 { g.tab.boxes[b].flags }
 
@@ -115,47 +109,6 @@ pub fn alert_cause(g: &mut crate::game::Game, gd: GuardId, seen: bool) -> crate:
     if g.time - g.gd[gd].sight_t < 1.0 { return crate::guards::AlertCause::Sight; }
     if g.gd[gd].body_duty.is_some() || g.time - g.gd[gd].saw_body_t < 2.0 { return crate::guards::AlertCause::Body; }
     crate::guards::AlertCause::Radio
-}
-
-/// One compact line of a man's witness record for the panel and the QA probes; empty = nothing yet. No rule reads it. (guards.ts witnessSummary)
-pub fn witness_summary(g: &mut crate::game::Game, gd: GuardId) -> String {
-    witness_line(&g.gd[gd].witness, g.time)
-}
-/// witnessSummary's words, over the record and the clock
-fn witness_line(w: &crate::game::Witness, now: f64) -> String {
-    use alloc::format;
-    let ago = |t: f64| format!("{} s ago", js::num_str(m::max(0.0, m::round(now - t))));
-    let told = |n: f64, word: &str| format!("{} {}{}", js::num_str(n), word, if n > 1.0 { "s" } else { "" });
-    let h = &w.heard;
-    let mut parts: Vec<String> = Vec::new();
-    if w.peak_awareness >= 0.05 { parts.push(format!("peak {}", js::to_fixed(w.peak_awareness, 2))); }
-    if let Some(by) = w.alerted_by { parts.push(format!("alert by {} {}", by.as_str(), ago(w.alert_t))); }
-    let mut heard: Vec<String> = Vec::new();
-    if js::truthy(h.shots) { heard.push(told(h.shots, "shot")); }
-    if js::truthy(h.kick) { heard.push(told(h.kick, "kick")); }
-    if js::truthy(h.bang) { heard.push(told(h.bang, "bang")); }
-    if js::truthy(h.small) {
-        heard.push(match h.small_where {
-            Some(at) => format!("{} small (last @{},{})", js::num_str(h.small), js::to_fixed(at[0], 0), js::to_fixed(at[2], 0)),
-            None => format!("{} small", js::num_str(h.small)),
-        });
-    }
-    if !heard.is_empty() { parts.push(format!("heard {}", heard.join(", "))); }
-    if let Some(a) = w.saw_act.as_ref() {
-        let did = match a.kind {
-            crate::game::WitnessSawActKind::Shot => "shoot",
-            crate::game::WitnessSawActKind::Struck => "drop",
-            crate::game::WitnessSawActKind::Choked => "choke out",
-            _ => "grab",
-        };
-        parts.push(format!("SAW the player {} {} {}", did, a.victim, ago(a.t)));
-    }
-    if let Some(b) = w.saw_body.as_ref() { parts.push(format!("found {} {} {}", b.victim, if b.breathing { "out cold" } else { "dead" }, ago(b.t))); }
-    if let Some(b) = w.called_to_body.as_ref() { parts.push(format!("heard {} called in {}", b.victim, if b.breathing { "out cold" } else { "dead" })); }
-    if let Some(s) = w.saw_held.as_ref() { parts.push(format!("saw {} held", s.who)); }
-    if js::truthy(w.was_held) { parts.push(format!("held \u{d7}{}", js::num_str(w.was_held))); }
-    if js::truthy(w.dazzled) { parts.push(format!("dazzled \u{d7}{}", js::num_str(w.dazzled))); }
-    parts.join(" \u{b7} ")
 }
 
 /// Floor point under a body: its pelvis once the ragdoll has it. (guards.ts bodyPos)
@@ -270,9 +223,9 @@ pub fn not_getting_anywhere(g: &mut crate::game::Game, gd: GuardId, dt: f64, sec
 
 /// The alert chase is over without him: down to 'search' from where he stands. (guards.ts dropToSearch)
 pub fn drop_to_search(g: &mut crate::game::Game, gd: GuardId, bark: Option<&str>) {
-    g.gd[gd].state = crate::game::GuardState::Search;
+    crate::mind::set_state(g, gd, crate::game::GuardState::Search, "guards");
     g.gd[gd].search_t = 0.0;
-    g.gd[gd].awareness = m::min(g.gd[gd].awareness, 0.8);
+    crate::mind::cap(g, gd, 0.8, "guards");
     g.gd[gd].search_plan = None;
     reset_chase(g, gd);
     clear_path(g, gd);
@@ -327,7 +280,7 @@ pub fn body_aftermath(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option
     let d_b = v3::dist_xz(g.ch[c].pos, bp);
     let see_body = d_b < 8.0 && !crate::scene_collision::segment_blocked(g, eye, [bp[0], 0.4, bp[2]], None, None, None);
     let on_body: V3 = [bp[0], 0.35, bp[2]];
-    g.gd[gd].awareness = m::max(g.gd[gd].awareness, if stage == Stage::Fan { 0.16 } else { 0.3 });
+    crate::mind::raise(g, gd, if stage == Stage::Fan { 0.16 } else { 0.3 }, "guards");
     let mut move_ = 0.0;
     let mut aim: Option<V3> = None;
     match stage {
@@ -336,7 +289,7 @@ pub fn body_aftermath(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option
                 let s = cover_spot(g, gd, bp, if role == Role::Finder { 1.5 } else { 2.1 });
                 spot = Some(s);
                 with_duty(g, gd, |d| d.spot = Some(s));
-                set_fix(g, gd, s);
+                crate::mind::fix(g, gd, Some(v3::copy(s)), "guards");
                 clear_path(g, gd);
                 g.gd[gd].stall_ref = None;
             }
@@ -377,7 +330,7 @@ pub fn body_aftermath(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option
                         with_duty(g, gd, |d| d.spot = s);
                         g.gd[gd].stall_ref = None;
                         g.gd[gd].search_t = 0.0;
-                        if let Some(s) = s { set_fix(g, gd, s); }
+                        if let Some(s) = s { crate::mind::fix(g, gd, Some(v3::copy(s)), "guards"); }
                     }
                 }
             }
@@ -400,12 +353,12 @@ pub fn body_aftermath(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option
                 g.gd[gd].stall_ref = None;
                 g.gd[gd].search_t = 0.0;
                 clear_path(g, gd);
-                if let Some(s) = s { set_fix(g, gd, s); }
+                if let Some(s) = s { crate::mind::fix(g, gd, Some(v3::copy(s)), "guards"); }
             }
         }
         Stage::Fan => {
             match spot {
-                None => { g.gd[gd].awareness = m::min(g.gd[gd].awareness, 0.1); }
+                None => { crate::mind::cap(g, gd, 0.1, "guards"); }
                 Some(sp) => {
                     let mut arrived = g.gd[gd].search_t > 0.0;
                     if !arrived {
@@ -424,7 +377,7 @@ pub fn body_aftermath(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option
                         g.gd[gd].sweep = m::sin(g.gd[gd].look_phase * 1.1) * 1.1;
                         g.ch[c].anim.look_yaw_extra = m::sin(g.gd[gd].look_phase * 1.9) * 0.4;
                         g.ch[c].aim_yaw = g.ch[c].body_yaw + g.gd[gd].sweep;
-                        if g.gd[gd].search_t > 4.0 { g.gd[gd].awareness = m::min(g.gd[gd].awareness, 0.1); }
+                        if g.gd[gd].search_t > 4.0 { crate::mind::cap(g, gd, 0.1, "guards"); }
                     }
                 }
             }
@@ -773,28 +726,6 @@ mod tests {
     fn aim_ahead_is_the_typescripts_bits() {
         assert_eq!(bits(&aim_ahead_of([0.2, 1.45, -0.3], -0.4, 0.77)), [0x40046fa613722776, 0x3f947ae147ae1480, 0x4001067c11618aec]);
         assert_eq!(bits(&aim_ahead_of([1.1, 0.1 + 1.4, 2.2], 0.05, -2.3)), [0xc0136ec85ce57064, 0x3ffe65b7a8bfd90f, 0xc008fd061a86f980]);
-    }
-
-    // Expected strings are the TypeScript's own: witnessSummary's source run under bun.
-    #[test]
-    fn witness_line_is_the_typescripts() {
-        use crate::game::*;
-        let none = Witness::zeroed();
-        assert_eq!(witness_line(&none, 10.0), "");
-        let mut full = Witness::zeroed();
-        full.heard.shots = 3.0; full.heard.kick = 1.0; full.heard.bang = 2.0; full.heard.small = 1.0; full.heard.small_where = Some([2.5, 0.0, -0.2]);
-        full.peak_awareness = 0.125;
-        full.alerted_by = Some(WitnessAlertedBy::Sound); full.alert_t = 7.4;
-        full.saw_act = Some(WitnessSawAct { kind: WitnessSawActKind::Choked, victim: "Rook".into(), t: 9.6 });
-        full.saw_body = Some(WitnessSawBody { victim: "Ash".into(), breathing: true, t: 3.0 });
-        full.called_to_body = Some(WitnessCalledToBody { victim: "Bay".into(), breathing: false, t: 3.0 });
-        full.saw_held = Some(WitnessSawHeld { who: "Cole".into(), t: 1.0 });
-        full.was_held = 2.0; full.dazzled = 1.0;
-        assert_eq!(witness_line(&full, 10.0), "peak 0.13 \u{b7} alert by sound 3 s ago \u{b7} heard 3 shots, 1 kick, 2 bangs, 1 small (last @3,-0) \u{b7} SAW the player choke out Rook 0 s ago \u{b7} found Ash out cold 7 s ago \u{b7} heard Bay called in dead \u{b7} saw Cole held \u{b7} held \u{d7}2 \u{b7} dazzled \u{d7}1");
-        let mut two = Witness::zeroed();
-        two.heard.shots = 1.0; two.heard.small = 2.0; two.peak_awareness = 0.049;
-        two.saw_act = Some(WitnessSawAct { kind: WitnessSawActKind::Wounded, victim: "Dex".into(), t: 20.0 });
-        assert_eq!(witness_line(&two, 10.0), "heard 1 shot, 2 small \u{b7} SAW the player grab Dex 0 s ago");
     }
 
     /// a game with one man and his body; nothing below reaches another part

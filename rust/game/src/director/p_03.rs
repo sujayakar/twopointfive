@@ -94,16 +94,6 @@ pub fn director_beat_start(g: &mut crate::game::Game, r: DirectorRunId, b: Direc
     push(g, b, DirectorPushRowKind::Trigger, format!("start {}", name), None);
     director_start_beat(g, r, name);
 }
-/// c.cancel. R.byName is gone: a name's row in R.beats is the one record startBeat keeps for it.
-fn ctx_cancel(g: &mut Game, r: DirectorRunId, b: DirectorLiveBeatId, name: &str) {
-    let row = g.tab.director_run[r].beats.iter().copied().find(|x| g.tab.director_live_beat[*x].name == name);
-    let lb = match row { Some(x) if g.tab.director_live_beat[x].state == BeatState::Running => x, _ => return };
-    g.tab.director_live_beat[lb].state = BeatState::Cancelled;
-    if lb != b { g.tab.director_live_beat[lb].it = BeatFrame::Spent; } // (a beat cancelling ITSELF is mid-resume: resume() closes it)
-    let by = g.tab.director_live_beat[b].name.clone();
-    let step = g.tab.director_live_beat[lb].step;
-    director_push(g, &DirectorPushRow { kind: DirectorPushRowKind::Beat, what: String::from("cancelled"), data: Some(obj(vec![("by", text(&by)), ("step", Some(Json::Num(step)))])), beat: String::from(name), t: None });
-}
 /// c.signal (director.ts:898)
 pub fn director_beat_signal(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, name: &str, data: Option<crate::director::Json>) {
     let t = g.tab.director_run[r].t;
@@ -112,7 +102,6 @@ pub fn director_beat_signal(g: &mut crate::game::Game, r: DirectorRunId, b: Dire
 }
 /// c.note (director.ts:900)
 pub fn director_beat_note(g: &mut crate::game::Game, b: DirectorLiveBeatId, what: &str, data: Option<crate::director::Json>) { push(g, b, DirectorPushRowKind::Note, String::from(what), data); }
-fn ctx_finish(g: &mut Game, b: DirectorLiveBeatId) { g.tab.director_live_beat[b].flow.finish = true; }
 /// c.rand: a draw of the run's own die (director.ts:902)
 pub fn director_beat_rand(g: &mut crate::game::Game, r: DirectorRunId) -> f64 { run_rand(&mut g.tab.director_run[r]) }
 fn run_rand(run: &mut Run) -> f64 { run.dice.roll() }
@@ -148,12 +137,6 @@ pub fn director_beat_spawn(g: &mut crate::game::Game, r: DirectorRunId, b: Direc
     ])));
     Ok(ref_)
 }
-fn ctx_despawn(g: &mut Game, r: DirectorRunId, b: DirectorLiveBeatId, u: &UnitRef) {
-    let gd = match g.tab.director_run[r].units.get(crate::Num(u.id)) { Some(rec) => rec.gd, None => return };
-    crate::guards::despawn_unit(g, gd);
-    g.tab.director_run[r].units.delete(crate::Num(u.id));
-    push(g, b, DirectorPushRowKind::Spawn, format!("despawn {}", u.callsign), None);
-}
 /// c.unit (director.ts:917)
 pub fn director_beat_unit(g: &mut crate::game::Game, r: DirectorRunId, callsign: &str) -> Option<crate::director::UnitRef> {
     let mut found = g.guards.iter().copied().find(|x| g.gd[*x].callsign == callsign);
@@ -161,10 +144,6 @@ pub fn director_beat_unit(g: &mut crate::game::Game, r: DirectorRunId, callsign:
         if let Some(benched) = g.tab.director_run[r].show.as_ref().and_then(|s| s.benched.as_ref()) { found = benched.iter().copied().find(|x| g.gd[*x].callsign == callsign); }
     }
     found.map(|gd| unit_ref_of(g, gd))
-}
-fn ctx_arrived(g: &mut Game, r: DirectorRunId, u: &UnitRef) -> Result<bool, String> {
-    let gd = director_guard_of(g, r, u)?;
-    Ok(g.gd[gd].script.as_ref().and_then(|s| s.arrived).unwrap_or(false))
 }
 /// c.show (director.ts:921)
 pub fn director_beat_show(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, u: &crate::director::UnitRef, on: Option<bool>) -> Result<(), String> {
@@ -212,14 +191,6 @@ pub fn director_beat_say(g: &mut crate::game::Game, r: DirectorRunId, b: Directo
     }
     Ok(())
 }
-fn ctx_learn_code(g: &mut Game, r: DirectorRunId, b: DirectorLiveBeatId, dev: &DeviceRef, from: Option<&UnitRef>) -> Result<bool, String> {
-    if !g.devices.keypads.iter().any(|k| k.def.name == dev.id) { return Err(format!("device '{}' is not a keypad", dev.id)); }
-    let gd = match from { Some(u) => Some(director_guard_of(g, r, u)?), None => None };
-    let news = crate::devices::learn_code(g, &dev.id, crate::devices::LearnCodeHow::Told, gd);
-    let from_name = match gd { Some(x) => text(&g.gd[x].callsign), None => None };
-    push(g, b, DirectorPushRowKind::Note, format!("code {}", dev.id), Some(obj(vec![("from", from_name), ("news", Some(Json::Bool(news)))])));
-    Ok(news)
-}
 /// c.radio: a line on the net under a name, said by that man if he stands in the world, else by the voice alone (director.ts:971)
 pub fn director_beat_radio(g: &mut crate::game::Game, b: DirectorLiveBeatId, callsign: &str, line: &str) {
     let gd = g.guards.iter().copied().find(|x| g.gd[*x].callsign == callsign && g.gd[*x].state != crate::game::GuardState::Dead);
@@ -234,26 +205,6 @@ pub fn director_beat_radio(g: &mut crate::game::Game, b: DirectorLiveBeatId, cal
     crate::audio_iface::game_audio_like_play(g, "radio", at, Some(if gd.is_some() { 0.7 } else { 0.55 }), None);
     push(g, b, DirectorPushRowKind::Radio, format!("{}: {}", callsign, line), None);
 }
-fn ctx_control(g: &mut Game, b: DirectorLiveBeatId, line: &str) {
-    crate::game::game_msg(g, &format!("radio: CONTROL — {}", line));
-    crate::audio_iface::game_audio_like_play(g, "radio", None, Some(0.55), None);
-    push(g, b, DirectorPushRowKind::Radio, format!("CONTROL: {}", line), None);
-}
-
-// ---- world: lights (ts 979)
-fn ctx_lights_group(g: &mut Game, b: DirectorLiveBeatId, gr: &GroupRef, on: bool) {
-    crate::lighting::set_group(g, &gr.id, on);
-    push(g, b, DirectorPushRowKind::Stimulus, format!("group {} {}", gr.id, if on { "on" } else { "off" }), None);
-}
-fn ctx_lights_mains(g: &mut Game, b: DirectorLiveBeatId, on: bool) {
-    if on { crate::game::game_end_blackout(g); } else { crate::game::game_set_blackout(g, 1e6, crate::game::GameSetBlackoutCause::Hand); }
-    push(g, b, DirectorPushRowKind::Stimulus, format!("mains {}", if on { "on" } else { "off" }), None);
-}
-fn ctx_lights_blackout(g: &mut Game, b: DirectorLiveBeatId, secs: f64) {
-    crate::game::game_set_blackout(g, secs, crate::game::GameSetBlackoutCause::Hand);
-    push(g, b, DirectorPushRowKind::Stimulus, format!("blackout {}s", js::num_str(secs)), None);
-}
-
 // ---- world: doors (ts 985)
 /// c.doors.lock (director.ts:985)
 pub fn director_beat_door_lock(g: &mut crate::game::Game, d: &crate::director::DoorRef, on: bool) -> Result<(), String> {
@@ -277,26 +228,6 @@ pub fn director_beat_door_open(g: &mut crate::game::Game, d: &crate::director::D
     if hold == Some(true) { crate::doors::door_set_quiet_t(g, door, -3600.0); } // (an hour of quiet is a leaf on its stay; Door.reset puts it back)
     Ok(())
 }
-/// c.doors.fling (qrf.ts flingOpen: the crash-bar side, the bolt as it was)
-fn ctx_doors_fling(g: &mut Game, r: DirectorRunId, b: DirectorLiveBeatId, d: &DoorRef, by: &UnitRef) -> Result<(), String> {
-    let door = director_door_of(g, d)?;
-    let gd = director_guard_of(g, r, by)?;
-    if m::abs(crate::doors::door_angle(g, door)) > 1.0 { return Ok(()); }
-    let c = g.gd[gd].ch;
-    let side = crate::doors::doors_side(g, door, g.ch[c].pos);
-    crate::doors::door_set_latched(g, door, false);
-    crate::doors::door_set_closing(g, door, false);
-    crate::doors::door_set_vel(g, door, -side * 7.5);
-    crate::doors::door_set_since_bash(g, door, 0.0);
-    crate::doors::door_set_quiet_t(g, door, -0.5);
-    crate::doors::door_set_creak_armed(g, door, false);
-    let who = g.ch[c].id;
-    crate::doors::door_set_last_who(g, door, who);
-    let at = crate::doors::door_pos(g, door);
-    crate::audio_iface::game_audio_like_play(g, "doorBash", Some(at), Some(0.9), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.85 }));
-    push(g, b, DirectorPushRowKind::Stimulus, format!("fling {}", d.id), Some(obj(vec![("by", text(&by.callsign))])));
-    Ok(())
-}
 /// c.doors.shut (director.ts:988)
 pub fn director_beat_door_shut(g: &mut crate::game::Game, d: &crate::director::DoorRef) -> Result<(), String> {
     let door = director_door_of(g, d)?;
@@ -307,39 +238,6 @@ pub fn director_beat_door_shut(g: &mut crate::game::Game, d: &crate::director::D
     }
     Ok(())
 }
-fn ctx_doors_latch(g: &mut Game, d: &DoorRef) -> Result<(), String> {
-    let door = director_door_of(g, d)?;
-    crate::doors::door_reset(g, door);
-    crate::doors::door_set_angle(g, door, 0.0);
-    crate::doors::door_set_vel(g, door, 0.0);
-    crate::doors::door_set_latched(g, door, true);
-    crate::doors::door_set_closing(g, door, false);
-    crate::doors::door_place(g, door);
-    Ok(())
-}
-/// c.doors.kick: a CAUSE: the animator's kick now, doors.ts kickIn on its impact frame (tickKicks)
-fn ctx_doors_kick(g: &mut Game, r: DirectorRunId, b: DirectorLiveBeatId, d: &DoorRef, by: &UnitRef, leg: Option<crate::character::AnimKickDoorOptsLeg>) -> Result<(), String> {
-    let door = director_door_of(g, d)?;
-    let gd = director_guard_of(g, r, by)?;
-    touch(g, b, by);
-    if g.gd[gd].state == crate::game::GuardState::Dead || g.tab.director_run[r].kicks.iter().any(|k| k.gd == gd) { return Ok(()); }
-    let leg = leg.unwrap_or(crate::character::AnimKickDoorOptsLeg::Right);
-    crate::squad::order(g, gd, crate::squad::OrderPatch { goal: Some(None), aim_at: Some(None), ..Default::default() });
-    let c = g.gd[gd].ch;
-    crate::character::anim_kick_door(g, c, Some(crate::character::AnimKickDoorOpts { leg: Some(leg) }));
-    let beat = g.tab.director_live_beat[b].name.clone();
-    g.tab.director_run[r].kicks.push(RunKicksItem { door, gd, by: by.callsign.clone(), beat });
-    push(g, b, DirectorPushRowKind::Stimulus, format!("kick:start {}", d.id), Some(obj(vec![("by", text(&by.callsign)), ("leg", text(leg.as_str()))])));
-    Ok(())
-}
-fn ctx_doors_kick_spot(g: &mut Game, r: DirectorRunId, d: &DoorRef, by: &UnitRef) -> Result<crate::doors::DoorsKickSpot, String> {
-    let door = director_door_of(g, d)?;
-    let gd = director_guard_of(g, r, by)?;
-    let c = g.gd[gd].ch;
-    let s = crate::doors::doors_kick_spot(g, door, g.ch[c].pos);
-    Ok(crate::doors::DoorsKickSpot { pos: v3::copy(s.pos), yaw: s.yaw })
-}
-
 // ---- world: stimulus (ts 999)
 /// c.stimulus.charge: a CAUSE, never a result: the item's own fuse detonates it (director.ts:1000)
 pub fn director_beat_charge(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, at: &crate::director::Place, by: &crate::director::UnitRef, kind: Option<crate::throwables::ItemKind>, fuse: Option<f64>, toss: Option<bool>) -> Result<(), String> {
@@ -387,34 +285,7 @@ pub fn director_beat_burst(g: &mut crate::game::Game, r: DirectorRunId, b: Direc
     Ok(Cond::Arm2(CondArm2 { k: CondArm2K::Pred, test: CondTest::Burst { serial }, label }))
 }
 
-// ---- objective (ts 1016). `markAt` comes resolved: a place or a door
-fn ctx_objective(g: &mut Game, r: DirectorRunId, b: DirectorLiveBeatId, text_: Option<&str>, mark_place: Option<&Place>, mark_door: Option<&DoorRef>) -> Result<(), String> {
-    let t = match text_ { Some(t) => t, None => { g.tab.director_run[r].objective = None; return Ok(()); } };
-    let pos = if let Some(d) = mark_door {
-        let door = director_door_of(g, d)?;
-        Some(v3::copy(g.dr[door].frame_centre))
-    } else if let Some(p) = mark_place {
-        Some(v3::copy(director_place_of(g, p)?))
-    } else { None };
-    g.tab.director_run[r].objective = Some(RunObjective { text: String::from(t), pos });
-    crate::chronicle::chron_objective(g, t, pos);
-    crate::game::game_msg(g, t);
-    push(g, b, DirectorPushRowKind::Note, format!("objective: {}", t), None);
-    Ok(())
-}
-/// c.chronicle('objective', text)
-fn ctx_chronicle(g: &mut Game, text_: &str) {
-    let mut data = JsMap::new();
-    data.set(String::from("text"), Some(crate::chronicle::ChronicleDataValue::Text(String::from(text_))));
-    crate::chronicle::chronicle(g, crate::chronicle::ChronKind::Objective, Some(&data), None);
-}
-
 // ---------------------------------------------------------------- the part's functions
-
-/// The context a beat is handed. Nothing of it is data now: a verb is `director_beat_*`, c.flag is g.tab.director_run[r].flags, c.query the `director_query_*`. (director.ts Director.ctxOf)
-pub fn director_ctx_of(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId) -> crate::director::BeatCtx {
-    BeatCtx {}
-}
 
 /// What the log says a beat waits on; empty = nothing worth a row. (director.ts condLabel)
 pub fn cond_label(c_2: &crate::director::Cond) -> String {
@@ -432,77 +303,6 @@ pub fn cond_label(c_2: &crate::director::Cond) -> String {
             for x in c.of.iter() { let l = cond_label(x); if !l.is_empty() { parts.push(l); } }
             if parts.is_empty() { String::new() } else { format!("{}({})", c.k.as_str(), parts.join(", ")) }
         }
-    }
-}
-
-/// `near(what, within)` of an event at `pos`: within metres of a door's frame (a door that does not resolve: false) or a place. A mark that does not resolve throws, and nothing above holds catches it. (ts 1093)
-fn near_test(g: &mut Game, pos: V3, what: &NearWhat, within: f64) -> bool {
-    let p = match what {
-        NearWhat::Door { d } => crate::doors::doors_by_name(g, &d.id).map(|x| g.dr[x].frame_centre),
-        NearWhat::Place { p } => Some(director_place_of(g, p).unwrap_or_else(|e| panic!("{}", e))),
-    };
-    match p { Some(p) => m::hyp2(p[0] - pos[0], p[2] - pos[2]) <= within, None => false }
-}
-/// The event view's `near`: is what within metres of the event. (director.ts nearOf)
-pub fn near_of(g: &mut crate::game::Game, pos: V3, what: &crate::director::NearWhat, within: f64) -> bool { near_test(g, pos, what, within) }
-
-fn who_of(g: &Game, r: Option<&crate::game::Interactable>) -> Option<String> {
-    let r = r?;
-    if let Some(x) = r.guard { return Some(g.gd[x].callsign.clone()); }
-    if let Some(x) = r.door { return Some(g.dr[x].def.name.clone()); }
-    if let Some(x) = r.target { return Some(g.tab.sim_lightshome_fixture[x].name.clone()); }
-    None
-}
-fn door_name(g: &Game, d: Option<DoorId>) -> Option<String> { d.map(|x| g.dr[x].def.name.clone()) }
-
-/// The read model of Sam (c.view): a fresh snapshot of what his own HUD shows. (director.ts samViewOf)
-pub fn sam_view_of(g: &mut crate::game::Game) -> crate::director::SamView {
-    let pl = g.player;
-    let c = g.pl[pl].ch;
-    let hover = g.hover.as_ref().map(|hv| SamViewHover {
-        kind: String::from(hv.kind.as_str()),
-        verb: hv.verb.map(|v| String::from(v.as_str())),
-        in_reach: hv.in_reach,
-        who: who_of(g, Some(hv)),
-        running: hv.running.unwrap_or(false),
-    });
-    let mut rows = Vec::new();
-    for x in g.nearby.iter() {
-        rows.push(format!("{}:{}{}", x.kind.as_str(), x.verb.map(|v| v.as_str()).unwrap_or(""), if x.in_reach { "" } else { "(far)" }));
-    }
-    let holding = g.pl[pl].holding.as_ref().map(|h| SamViewHolding {
-        who: g.gd[h.g].callsign.clone(),
-        phase: String::from(h.phase.as_str()),
-        variant: String::from(h.variant.as_str()),
-        t: h.t,
-    });
-    SamView {
-        pos: v3::copy(g.ch[c].pos),
-        yaw: g.ch[c].body_yaw,
-        speed: m::hyp2(g.ch[c].vel[0], g.ch[c].vel[2]),
-        crouch: g.pl[pl].crouch,
-        holstered: g.pl[pl].holstered,
-        slot: String::from(g.pl[pl].slot.as_str()),
-        nv: g.pl[pl].nv,
-        hover,
-        rows,
-        holding,
-        dragging: g.pl[pl].dragging.map(|x| g.gd[x].callsign.clone()),
-        takedown: g.pl[pl].takedown.is_some(),
-        easing: door_name(g, g.pl[pl].easing),
-        picking: door_name(g, g.pl[pl].picking),
-        coding: door_name(g, g.pl[pl].coding),
-        drive_t: g.mission.drive_t,
-        pulled: g.mission.pulled,
-        stage: String::from(g.mission.stage.as_str()),
-        codes: g.pl[pl].codes.keys(),
-        keys: g.pl[pl].keys.keys(),
-        aim_target: g.aim_target.map(|x| g.tab.sim_lightshome_fixture[x].name.clone()),
-        aim_guard: g.aim_guard.map(|x| g.gd[x].callsign.clone()),
-        ocp: g.pl[pl].ocp.charge,
-        canisters: g.pl[pl].canisters,
-        flashbangs: g.pl[pl].flashbangs,
-        door_push: match &g.ch[c].anim.door_push { Some(p) if p.w > 0.0 => Some(String::from("leaf")), _ => None },
     }
 }
 

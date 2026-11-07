@@ -33,16 +33,16 @@ pub fn state_of<'g>(g: &'g mut Game) -> &'g mut crate::digin::St {
 pub fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 
 /// A draw from [min, max]. (digin.ts pick)
-pub fn pick(g: &mut Game, r: [f64; 2]) -> f64 { r[0] + crate::math_dice::sim_random(g) * (r[1] - r[0]) }
+pub fn pick(g: &mut Game, who: crate::dice::Who, r: [f64; 2]) -> f64 { r[0] + crate::math_dice::sim_random(g) * (r[1] - r[0]) }
 
 /// A draw from [min, max] at the table's pace. (digin.ts paced)
-pub fn paced(g: &mut Game, r: [f64; 2]) -> f64 {
-    let p = pick(g, r);
+pub fn paced(g: &mut Game, who: crate::dice::Who, r: [f64; 2]) -> f64 {
+    let p = pick(g, who, r);
     p * m::max(0.1, g.k.digin.pace)
 }
 
 /// One of these, by the die. (digin.ts oneOf)
-pub fn one_of<T: Clone + core::fmt::Debug>(g: &mut Game, a: &[T]) -> T {
+pub fn one_of<T: Clone + core::fmt::Debug>(g: &mut Game, who: crate::dice::Who, a: &[T]) -> T {
     let i = m::floor(crate::math_dice::sim_random(g) * a.len() as f64);
     match a.get(i as usize) {
         Some(x) => x.clone(),
@@ -444,14 +444,6 @@ pub fn cover_spot(g: &mut Game, d: RoomfightDefId, m: crate::digin::Man, r: &cra
     crate::digin::CoverSpot { spot: None, here: here > -5.0, look }
 }
 
-/// His side has met a stun canister: his own ears, or the word on the net. (digin.ts knowsBangs)
-pub fn knows_bangs(g: &mut Game, d: RoomfightDefId) -> bool {
-    let gd = g.tab.roomfight_def[d].gd;
-    if g.gd[gd].witness.heard.bang > 0.0 { return true; }
-    let bang_call = state_of(g).bang_call;
-    !bang_call.is_nan() && g.time - bang_call > 1.0
-}
-
 /// Off the door's line: every second living man of the room. (digin.ts wantsDeep)
 pub fn wants_deep(g: &mut Game, d: RoomfightDefId, r: &crate::digin::RoomSt) -> bool {
     let me = g.tab.roomfight_def[d].gd;
@@ -562,7 +554,7 @@ pub fn scrape(g: &mut Game, gd: GuardId, m: crate::digin::Man, r: Option<&mut cr
         if !rm.callout {
             rm.callout = true;
             g.stats.digin.callouts += 1;
-            let line = one_of(g, &["movement inside. they're blocking the door.", "furniture moving in there. they know we're coming."]);
+            let line = one_of(g, crate::dice::Who::Man(gd), &["movement inside. they're blocking the door.", "furniture moving in there. they know we're coming."]);
             crate::game::game_say(g, by, line, Some(true), None, None);
             log(g, Some(by), "calls the furniture he hears");
         }
@@ -612,9 +604,6 @@ pub fn heard_at(g: &mut Game, d: RoomfightDefId, m: crate::digin::Man) -> V3 {
 
 // ---------------------------------------------------------------- doors (DIGIN.shutOpen is settled off on the page: the rule folds away)
 
-/// The rule of the doors that stay as left: off on the page. (digin.ts shutsOpen)
-pub fn shuts_open(g: &mut Game) -> bool { false }
-
 /// The entry his hands are on or he is on his way to. (digin.ts doorOf)
 pub fn door_of(g: &mut Game, m: crate::digin::Man) -> f64 {
     if m.brace >= 0.0 { m.brace } else { m.entry }
@@ -644,16 +633,6 @@ pub fn hand_on(g: &mut Game, d: RoomfightDefId, m: &mut crate::digin::Man, d_2: 
 pub fn hand_waits(g: &mut Game, d: RoomfightDefId, m: &mut crate::digin::Man, d_2: DoorId) -> bool {
     !(crate::doors::door_latched(g, d_2) || g.time > m.until)
 }
-
-/// They are at a door of his room by the sound of it. (digin.ts atADoor)
-pub fn at_a_door(g: &mut Game, d: RoomfightDefId, m: crate::digin::Man, r: &crate::digin::RoomSt) -> bool {
-    let heard = heard_at(g, d, m);
-    let close = g.k.digin.close_m;
-    g.tab.roomfight_room[r.room].entries.iter().any(|e| flat(heard, e.at) <= close)
-}
-
-/// The nearest other open door of his room: never, with the rule off on the page. (digin.ts shutMore)
-pub fn shut_more(g: &mut Game, d: RoomfightDefId, m: &mut crate::digin::Man, r: &crate::digin::RoomSt, not: f64) -> bool { false }
 
 #[cfg(test)]
 mod tests {

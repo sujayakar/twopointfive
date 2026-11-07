@@ -3,15 +3,14 @@
 // PASS / FAIL each, all headless (the Game of headless.ts; nothing is drawn or heard).
 //   stay-open-wait   every door of every level, opened four ways (a hand from either face, stood ajar, flung to its stop), nobody touching it: three minutes of
 //                    game time on, the leaf stands exactly where it came to rest, unlatched — and no leaf anywhere latched in the meantime
-//   stay-open-off    DOORSTAY.on false, the same hand on the same doors: the closer takes them back to their latch (the old game; the control that says the
-//                    wait probe can see a door close)
+//   stay-open-off    no leaf has a closer of its own — but while a showcase has the stage
 //   stay-open-lock   a keyed door opened with the key: it stands open behind him with its bolt still thrown — a doorway to anyone, no springing locked — until a
 //                    hand pulls it to, and then the lock bites again for a man with no key. The same for a staff man who walks through it
 //   stay-open-seal   sight, shots and sound through a doorway follow where the leaf really stands: open a minute on, still open; pulled to, blocked and sealed
 //   stay-open-save   a checkpoint keeps every leaf's angle: stood at three angles, saved, the level put back as authored, loaded — the same angles, and still
 //                    the same angles a minute on
 //   stay-open-pass   a staff man whose way is past a leaf on its stop (the four leaf-wedge cases of the office) gets there, and the leaf has not been pulled
-//                    to: it stands where it stood (the old game's `yank` shut every one of them behind him — shown beside, with the switch off)
+//                    to: it stands where it stood
 //   stay-open-after  what a reading of the code found afterwards: the response's stair door is pulled to by its last man (no closer does it now), a lockdown
 //                    tidy shuts a door to the outside, a save keeps who a standing leaf is letting past, a keyless man with a high id never borrows Sam's
 //                    pass, a drill's 'is it open enough' reads a one-way leaf by how wide it stands, a man in Sam's arm waits on no hand of his own
@@ -20,7 +19,6 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
-const { DOORSTAY } = await import(`${ROOT}/src/game/doors.ts`);
 const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
 const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
 const { doorPt } = await import(`${ROOT}/src/game/doortools.ts`);
@@ -37,17 +35,16 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
   console.log(`\n=== ${title} ===`); let all = true;
   return { verdict: (ok, label, detail) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); }, done: () => { console.log(`=== ${title.split(':')[0]}: ${all ? 'ALL PASS' : 'FAILURES above'} ===`); return all; } };
 }
-const guarded = (fn: () => Promise<boolean>) => async () => { try { return await fn(); } catch (e) { console.log(`- FAIL — the probe threw\n    ${e instanceof Error ? e.stack : String(e)}`); return false; } finally { DOORSTAY.on = true; } };
+const guarded = (fn: () => Promise<boolean>) => async () => { try { return await fn(); } catch (e) { console.log(`- FAIL — the probe threw\n    ${e instanceof Error ? e.stack : String(e)}`); return false; } };
 const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return loadLevel(data); };
 /** every level a mission is played on, and the two yards (undefined = the office the harness stands by default) */
 const ALL_LEVELS: (string | undefined)[] = [undefined, 'records.json', 'depot.json', 'block.json', 'block-squads.json', 'barracks.json', 'compound.json', 'warehouse.json', 'registry.json', 'kit-yard.json', 'test-rooms.json'];
 /** STAY_LEVELS=office,depot (env): the wait over those levels only */
 const LEVELS = process.env.STAY_LEVELS ? ALL_LEVELS.filter(f => process.env.STAY_LEVELS!.split(',').includes((f ?? 'office.json').replace('.json', ''))) : ALL_LEVELS;
 
-/** (the harness stands every game up with the closers of old — src/host/standup.ts: the switch is put where the probe wants it AFTER the stand-up) */
-async function rig(seed = 7, level?: string, stay = true) {
+async function rig(seed = 7, level?: string) {
   Math.random = seeded(seed);
-  const W: any = await standUp(level ? { level: levelOfFile(level) } : {}); DOORSTAY.on = stay;
+  const W: any = await standUp(level ? { level: levelOfFile(level) } : {});
   const g = W.game; g.godMode = true; g.aiEnabled = false; g.playerInvisible = true;
   const R = { W, g,
     step(n = 1) { for (let i = 0; i < n; i++) { g.player.visibility = 0.05; W.step(DT); } },
@@ -122,20 +119,12 @@ export const stayOpenWait = waitOver(LEVELS, ['hand+', 'hand-', 'ajar', 'flung']
 /** the gate's: the office and the biggest squad map, a hand and a boot (in `doors`, hence all-quick) */
 export const stayOpenWaitQuick = waitOver([undefined, 'block-squads.json'], ['hand+', 'flung'], 'stay-open-wait-quick');
 
-// ---------------------------------------------------------------- the switch off
+// ---------------------------------------------------------------- no leaf has a closer (the off run and its lines are gone: the closer taking a leaf back to its latch, hasCloser with the switch off)
 export const stayOpenOff = guarded(async () => {
-  const { verdict, done } = family('stay-open-off: DOORSTAY.on false — the closer takes an opened door back to its latch, as it did');
-  const R = await rig(11, undefined, false), g = R.g, list: any[] = g.doors.list; still(g); parkSam(g); R.step(30);
-  openAll(g, 'hand+'); R.secs(1.5);
-  const had = list.filter(d => !d.latched && d.def.closer !== false && !manAt(g, d)); const stays = list.filter(d => !d.latched && d.def.closer === false);
-  R.secs(60);
-  const back = had.filter(d => d.latched), left = stays.filter(d => !d.latched && Math.abs(d.angle) > 0.25);
-  verdict(had.length > 0 && back.length === had.length, 'every opened leaf with a closer is latched again inside a minute', `${back.length} of ${had.length} latched${back.length < had.length ? ` · still open: ${had.filter(d => !d.latched).map(d => `${d.def.name} ${f2(d.angle)}`).join(', ')}` : ''}`);
-  verdict(left.length === stays.length, 'the leaves the level authored with no closer stand open, as they always did', `${left.length} of ${stays.length} (${stays.map(d => d.def.name).join(', ') || 'none'})`);
+  const { verdict, done } = family('stay-open-off: no leaf has a closer of its own — but while a showcase has the stage');
+  const R = await rig(11), g = R.g, list: any[] = g.doors.list; still(g); parkSam(g); R.step(30);
   const has = (d: any) => g.doors.hasCloser(d);
-  verdict(list.every(d => has(d) === (d.def.closer !== false)), 'hasCloser reads the def with the switch off', list.map(d => `${d.def.name}:${has(d) ? 'y' : 'n'}`).join(' '));
-  DOORSTAY.on = true;
-  verdict(list.every(d => !has(d)), '…and no leaf has one with it on', `${list.filter(d => has(d)).length} with a closer`);
+  verdict(list.every(d => !has(d)), 'no leaf has a closer', `${list.filter(d => has(d)).length} with a closer`);
   g.touring = true; R.step(2); const staged = list.every(d => has(d) === (d.def.closer !== false)); g.touring = false; R.step(2);
   verdict(staged && list.every(d => !has(d)), '…except while a showcase has the stage (Game.touring): its choreography keeps the closers it was written for, and they are gone again when it ends', `staged: ${staged ? 'closers as authored' : 'NOT as authored'} · after: ${list.filter(d => has(d)).length} with a closer`);
   return done();
@@ -220,9 +209,9 @@ const WEDGE: { door: string; angle: number; guardAt: V3; goal: V3; note: string 
   { door: 'breakroom_n', angle: -1.7, guardAt: [30.5, 0, 11.8], goal: [28.6, 0, 11.7], note: 'the break-room corridor door swung out into the corridor, the man walking the corridor west' },
   { door: 'conference', angle: -1.92, guardAt: [10.6, 0, 9.3], goal: [8.0, 0, 9.4], note: 'the conference door at its stop inside the room, the man going west along the south glass' },
 ];
-async function wedge(c: typeof WEDGE[number], stay: boolean) {
+async function wedge(c: typeof WEDGE[number]) {
   Math.random = seeded(7);
-  const W: any = await standUp(); const g = W.game; DOORSTAY.on = stay;
+  const W: any = await standUp(); const g = W.game;
   g.playerInvisible = true; g.godMode = true; g.teleportPlayer([4.9, 0, 23.2]);
   for (let i = 0; i < 30; i++) W.step(DT);
   const d = g.doors.byName(c.door); const lim = (a: number) => Math.max(d.minA, Math.min(d.maxA, a)); d.latched = false; d.angle = Math.abs(lim(c.angle)) > 0.6 ? lim(c.angle) : lim(-c.angle); d.vel = 0; d.closing = false; d.quietT = 0; d.place(); const a0 = d.angle;
@@ -260,8 +249,6 @@ export const stayOpenEdge = guarded(async () => {
     }
     verdict(ok && rows.length === 4, `${d.def.name} on its ${name} stop (${f2(a)}): ids 12, 31, 32 and 33 each end up beyond it, and it has not turned`, rows.join(' · ') || 'no face pressed it into the stop');
   }
-  { const far = Math.abs(d.maxA) >= Math.abs(d.minA) ? d.maxA : d.minA; stand(far); const wasOn = DOORSTAY.on; DOORSTAY.on = false; const r = walkAt(g, d, 33, 1), r2 = (stand(far), walkAt(g, d, 33, -1)); DOORSTAY.on = wasOn;
-    verdict(true, '(the switch off, for the record: the same walk by id 33)', `from +: ${r.through ? 'through' : 'held'}, leaf ${f2(r.a0)} → ${f2(r.a1)} · from −: ${r2.through ? 'through' : 'held'}, leaf ${f2(r2.a0)} → ${f2(r2.a1)}`); }
   // a leaf whose stop IS its frame (a one-way door, shut): nobody steps through that
   { const keepMin = d.minA, keepMax = d.maxA; const rows: string[] = [], seen: string[] = []; let ok = true;
     const settable = !!Object.getOwnPropertyDescriptor(d, 'minA')?.writable && !!Object.getOwnPropertyDescriptor(d, 'maxA')?.writable;
@@ -280,10 +267,10 @@ export const stayOpenEdge = guarded(async () => {
 export const stayOpenPass = guarded(async () => {
   const { verdict, done } = family('stay-open-pass: a staff man whose way is past a leaf on its stop gets there, and does not pull it shut behind him');
   for (const c of WEDGE) {
-    const on = await wedge(c, true), was = await wedge(c, false);
-    verdict(on.arrived >= 0 && on.arrived <= Math.max(was.arrived >= 0 ? was.arrived + 2.5 : 25, 6) && !on.latched && !on.pulled,
+    const on = await wedge(c);
+    verdict(on.arrived >= 0 && on.arrived <= 25 && !on.latched && !on.pulled,
       `${c.door} at ${f2(c.angle)}: he is past it, and nobody pulled it to`,
-      `${c.note}\n    now: ${on.arrived >= 0 ? `there in ${f2(on.arrived)} s` : `NEVER got past (at ${on.at})`} · leaf ${f2(on.a0)} → ${f2(on.a1)} (least ${f2(on.minA)})${on.latched ? ' · LATCHED' : ''}${on.pulled ? ' · PULLED' : ''}\n    with the switch off (the old game): ${was.arrived >= 0 ? `there in ${f2(was.arrived)} s` : 'never'} · leaf ${f2(was.a0)} → ${f2(was.a1)}${was.latched ? ' · latched behind him' : ''}${was.pulled ? ' · pulled to' : ''}`);
+      `${c.note}\n    now: ${on.arrived >= 0 ? `there in ${f2(on.arrived)} s` : `NEVER got past (at ${on.at})`} · leaf ${f2(on.a0)} → ${f2(on.a1)} (least ${f2(on.minA)})${on.latched ? ' · LATCHED' : ''}${on.pulled ? ' · PULLED' : ''}`);
   }
   // THE SWEEP (Door.swept): a body against the back of a leaf standing open sends it round to its frame (a man walking the wall behind it herds it shut ahead of
   // him). A keyed man's body doing that has shut nothing — the leaf rests to, unlatched; the player leaning it shut the same way still gets his latch; and a
@@ -318,9 +305,9 @@ export const stayOpenPass = guarded(async () => {
 // ---------------------------------------------------------------- the floor at night, nobody asking
 export const stayOpenFloor = guarded(async () => {
   const { verdict, done } = family('stay-open-floor: five minutes of the office\'s night with the AI running — every latch was a pull somebody asked for');
-  const run = async (stay: boolean) => {
+  const run = async () => {
     Math.random = seeded(23);
-    const W: any = await standUp(); const g = W.game; DOORSTAY.on = stay; g.godMode = true; g.playerInvisible = true; g.teleportPlayer([4.9, 0, 23.2]);
+    const W: any = await standUp(); const g = W.game; g.godMode = true; g.playerInvisible = true; g.teleportPlayer([4.9, 0, 23.2]);
     const list: any[] = g.doors.list; const asked = new Set<any>(); const pull = g.doors.pullTo.bind(g.doors);
     const keyedPulls: string[] = [];
     g.doors.pullTo = (d: any, who: number) => { if (!d.latched) { asked.add(d); if (d.def.locked || d.def.exterior) keyedPulls.push(`${g.time.toFixed(1)}s ${d.def.name} by ${g.guards.find((x: any) => x.char.id === who)?.callsign ?? who}`); } return pull(d, who); };
@@ -340,26 +327,23 @@ export const stayOpenFloor = guarded(async () => {
     const keyedOpen = list.filter(d => (d.def.locked || d.def.exterior) && d.def.closer !== false && !d.latched && !g.guards.some((x: any) => x.state !== 'dead' && Math.hypot(x.char.pos[0] - d.frameCentre[0], x.char.pos[2] - d.frameCentre[2]) < 2.5)).map(d => `${d.def.name} ${f2(d.angle)}`);
     return { latches, unasked, pushes, open, stuck, n: list.length, keyedPulls, keyedOpen };
   };
-  const on = await run(true), was = await run(false);
+  const on = await run();
   verdict(on.unasked.length === 0, 'no leaf latched, or began a sprung close, that nobody pulled to', on.unasked.length ? on.unasked.slice(0, 12).join('\n    ') : `${on.pushes} times a leaf came off its latch (a man walking through it), ${on.latches} latches, all asked for · standing open at the end: ${on.open.join(', ') || 'none'}`);
   verdict(on.keyedPulls.length > 0 && on.keyedOpen.length === 0, 'the staff shut their own keyed doors, and the doors to the outside, behind them (guards.ts lockdownDoors, calm): none the level gave a closer stands open at the end with nobody at it', `pulled to: ${on.keyedPulls.slice(0, 8).join(' · ') || 'never'}${on.keyedPulls.length > 8 ? ` … ${on.keyedPulls.length} in all` : ''} · keyed and open at the end: ${on.keyedOpen.join(', ') || 'none'}`);
   verdict(on.stuck.length === 0, 'nobody is left pushing at a leaf', on.stuck.join(' · ') || `no man with stuckT over 4 s at the end`);
-  verdict(was.unasked.length > 0, 'the same night with the switch off: leaves do come to by themselves (the watcher can see it)', `${was.unasked.length} unasked closes or latches of ${was.latches} latches, ${was.pushes} openings · standing open at the end: ${was.open.join(', ') || 'none'}`);
   return done();
 });
 
 // ---------------------------------------------------------------- what a reading of the code found (each line fails on the build before its fix)
 export const stayOpenAfter = guarded(async () => {
   const { verdict, done } = family('stay-open-after: the stair door behind the response, a lockdown\'s outside doors, who a leaf lets past, a wide-open one-way leaf');
-  const { DOORWAY } = await import(`${ROOT}/src/game/doors.ts`);
   const { requestQrf, QRF_MARKS } = await import(`${ROOT}/src/game/qrf.ts`);
   const { raiseEscalation } = await import(`${ROOT}/src/game/guards.ts`);
-  const { HANDLE, handPress } = await import(`${ROOT}/src/game/handleside.ts`);
-  const oneWas = DOORWAY.oneWay, stayWas = DOORSTAY.on;
-  try {
+  const { handPress } = await import(`${ROOT}/src/game/handleside.ts`);
+  {
     // (1) the response comes in through the stair door: with no closer, its last man pulls it to and the bolt bites again
-    for (const stay of [true, false]) {
-      Math.random = seeded(41); const W: any = await standUp(); DOORSTAY.on = stay; const g = W.game;
+    {
+      Math.random = seeded(41); const W: any = await standUp(); const g = W.game;
       g.godMode = true; g.aiEnabled = true; g.playerInvisible = true; g.tune.qrf = true; g.tune.qrfEta = 14; g.tune.qrfSize = 4; g.tune.perimeter = false; g.tune.civilians = false;
       for (let i = 0; i < 20; i++) W.step(DT);
       const d = g.doors.byName(QRF_MARKS.door), Q = g.qrf; requestQrf(g, 'panel');
@@ -367,12 +351,11 @@ export const stayOpenAfter = guarded(async () => {
       let opened = !d.latched, latchAt = -1; const t0 = g.time;
       for (let i = 0; i < 60 * 45 && latchAt < 0; i++) { W.step(DT); if (!d.latched) opened = true; else if (opened) latchAt = g.time - t0; }
       const pulled = Q.log.some((l: any) => l.what === 'door-to');
-      if (stay) verdict(Q.state === 'deployed' && opened && latchAt >= 0 && d.locked && pulled, 'doors stay: the response is in, and the last man through pulls the stair door to behind them — latched, bolt thrown', `state ${Q.state} · opened ${opened} · latched ${latchAt >= 0 ? `+${f2(latchAt)} s` : 'never in 45 s'} · locked ${d.locked} · pulled by a hand ${pulled}`);
-      else verdict(Q.state === 'deployed' && opened && latchAt >= 0 && !pulled, 'closers on: the stair door comes to by itself as it always did, no hand asked', `latched ${latchAt >= 0 ? `+${f2(latchAt)} s` : 'never in 45 s'} · pulled by a hand ${pulled}`);
+      verdict(Q.state === 'deployed' && opened && latchAt >= 0 && d.locked && pulled, 'the response is in, and the last man through pulls the stair door to behind them — latched, bolt thrown', `state ${Q.state} · opened ${opened} · latched ${latchAt >= 0 ? `+${f2(latchAt)} s` : 'never in 45 s'} · locked ${d.locked} · pulled by a hand ${pulled}`);
     }
     // (2) a lockdown: a staff man passing a door to the outside that stands open shuts it (it had a closer; nothing else will)
-    for (const stay of [true, false]) {
-      const R = await rig(43, undefined, stay), g = R.g; g.aiEnabled = true; g.tune.civilians = false;
+    for (const _ of [0]) {
+      const R = await rig(43), g = R.g; g.aiEnabled = true; g.tune.civilians = false;
       const d = g.doors.list.find((x: any) => x.def.exterior && x.def.closer !== false && !x.def.steel);
       if (!d) { verdict(false, 'a door to the outside with a closer', 'the level has none'); break; }
       raiseEscalation(g, 2); R.step(2);
@@ -384,11 +367,10 @@ export const stayOpenAfter = guarded(async () => {
       const a0 = d.angle; let stamped = false;
       for (let i = 0; i < 90 && !stamped; i++) { gd.hold = false; gd.state = 'patrol'; gd.script = null; gd.awareness = 0; gd.char.pos = [spot[0], 0, spot[2]]; gd.char.bodyYaw = yaw; d.quietT = 5; R.step(1); stamped = d.guardT > -1e8; }
       const apart = g.guards.every((o: any) => o === gd || o.state === 'dead' || Math.hypot(o.char.pos[0] - fc[0], o.char.pos[2] - fc[2]) >= 2);
-      if (stay) { gd.hold = true; R.secs(9); verdict(stamped && d.latched, `doors stay, lockdown: a man passing ${d.def.name} standing open pulls it to`, `asked ${stamped} · ${f2(a0)} → ${f2(d.angle)} · latched ${d.latched} · nobody else at it ${apart}`); }
-      else verdict(!stamped, 'closers on, lockdown: he leaves the outside door to its closer, as before', `asked ${stamped}`);
+      { gd.hold = true; R.secs(9); verdict(stamped && d.latched, `lockdown: a man passing ${d.def.name} standing open pulls it to`, `asked ${stamped} · ${f2(a0)} → ${f2(d.angle)} · latched ${d.latched} · nobody else at it ${apart}`); }
     }
     // (3) who a standing leaf is letting past rides a checkpoint; (4) a keyless man with a high id is never let past on Sam's bit
-    { const R = await rig(47), g = R.g; still(g); parkSam(g); R.step(10); DOORWAY.oneWay = true;
+    { const R = await rig(47), g = R.g; still(g); parkSam(g); R.step(10);
       const d = g.doors.list.find((x: any) => !x.def.locked && !x.def.exterior), s = d.swing || 1; shut(d); d.latched = false; d.angle = s * 1.2; d.passers = 1 << 12; d.place();
       const snap = JSON.parse(JSON.stringify(R.W.snapshot('passers', true))), row = snap.doors.find((x: any) => x.name === d.def.name);
       d.passers = 0; R.W.restore(snap); const d2 = g.doors.byName(d.def.name);
@@ -398,13 +380,12 @@ export const stayOpenAfter = guarded(async () => {
       verdict(bit(PLAYER_ID + 32, false) === 0 && bit(42, false) === 0 && high.every(b => b !== 0 && b !== sam && !staff.includes(b)), 'a keyless man with an id past 31 has no pass bit at all; a keyed one\'s never lands on Sam\'s or the shift\'s', `Sam ${sam} · shift ${staff.join(' ')} · keyed 33 40 41 42 → ${high.join(' ')} · keyless 33 → ${bit(33, false)}`);
       // (5) 'is it open enough to walk through' asked of a one-way leaf from either face
       d2.angle = s * 1.45; d2.place();
-      const both = [g.doors.openFor(d2, 1), g.doors.openFor(d2, -1)]; DOORWAY.oneWay = false; const old = [g.doors.openFor(d2, 1), g.doors.openFor(d2, -1)]; DOORWAY.oneWay = true;
-      verdict(both.every(x => Math.abs(x - 1.45) < 1e-9) && Math.min(...old) < 0, 'a one-way leaf standing wide open reads open from both faces (the drills shoved it again from one of them)', `one-way ${both.map(f2).join(' / ')} · two-way ${old.map(f2).join(' / ')}`);
+      const both = [g.doors.openFor(d2, 1), g.doors.openFor(d2, -1)];
+      verdict(both.every(x => Math.abs(x - 1.45) < 1e-9), 'a one-way leaf standing wide open reads open from both faces (the drills shoved it again from one of them)', `one-way ${both.map(f2).join(' / ')}`);
       // (6) a man in Sam's arm
-      const onWas = HANDLE.on; HANDLE.on = true;
-      const man: any = { team: 'guard', speed: 1, held: false }, free = handPress(g, man); man.held = true; const held = handPress(g, man); HANDLE.on = onWas;
+      const man: any = { team: 'guard', speed: 1, held: false }, free = handPress(g, man); man.held = true; const held = handPress(g, man);
       verdict(free !== undefined && held === undefined, 'a man walked at a pull face in Sam\'s arm presses it as Sam does: he waits on no hand of his own', `free ${free} · held ${held}`);
     }
-  } finally { DOORWAY.oneWay = oneWas; DOORSTAY.on = stayWas; }
+  }
   return done();
 });

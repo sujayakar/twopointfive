@@ -179,22 +179,6 @@ pub fn wall_break_index(g: &mut crate::game::Game) {
     }
 }
 
-/// Counts for the panel and the probes. (WallBreak.inventory)
-pub fn wall_break_inventory(g: &mut crate::game::Game) -> crate::wallbreak::WallBreakInventory {
-    let (mut walls, mut cover, mut wall_m) = (0.0, 0.0, 0.0);
-    for i in 0..g.destr.walls.list.len() {
-        let x = g.destr.walls.list[i];
-        if g.tab.wallbreak_breakable[x].kind == BKind::Wall {
-            walls += 1.0;
-            let h = own_box(g, x).h;
-            wall_m += m::max(h[0], h[2]) * 2.0;
-        } else { cover += 1.0; }
-    }
-    let pieces = pieces_up(g);
-    let w = &*g.destr.walls;
-    WallBreakInventory { walls, cover, wall_m, pieces, hidden: w.hidden.len() as f64, touched: w.list.iter().filter(|&&x| g.tab.wallbreak_breakable[x].n_open > 0.0).count() as f64 }
-}
-
 /// The breakable a static index belongs to, an authored box or one of its pieces: what a round met. (WallBreak.breakableAt)
 pub fn wall_break_breakable_at(g: &mut crate::game::Game, index: f64) -> Option<crate::wallbreak::WallBreakBreakableAt> {
     let b = &g.tab.wallbreak_breakable[owner_of(g, index)?];

@@ -596,69 +596,6 @@ pub fn door_tools_corner_notes(g: &mut crate::game::Game) -> Vec<crate::doortool
     out
 }
 
-/// The word, while somebody is waiting on it: the key that gives it, to whom. (doortools.ts DoorTools.wordNote)
-pub fn door_tools_word_note(g: &mut crate::game::Game) -> Vec<crate::orders::OrderNote> {
-    let key_note = |key: &String, text: String| crate::orders::OrderNote::Arm1(crate::orders::OrderNoteArm1 { key: key.clone(), text });
-    let f = blow_letter(g);
-    if !crate::orders::squad_orders_big(g) {
-        // (the small squad's: its plain stacks, under wordSmall: the key is always the word's there)
-        let men = door_tools_word_men(g);
-        let mine = door_tools_stack_words(g, &men);
-        if !mine.is_empty() {
-            return vec![key_note(&f, format!("go · {} waiting", mine))];
-        }
-        let all = crate::orders::squad_orders_men(g, None, None);
-        let rest = door_tools_stack_words(g, &all);
-        return if rest.is_empty() { Vec::new() } else { vec![crate::orders::OrderNote::Text(format!("{} waiting", rest))] };
-    }
-    let men = door_tools_word_men(g);
-    let mine = door_tools_waiting_words(g, &men);
-    if !mine.is_empty() {
-        return vec![key_note(&f, format!("go · {} waiting", mine))];
-    }
-    let all = crate::orders::squad_orders_men(g, None, None);
-    let mut words: Vec<String> = Vec::new();
-    for x in door_tools_waiting_any(g, &all) {
-        let men = match x {
-            DoorToolsWaitingAnyItem::Arm1(a) => a.men,
-            DoorToolsWaitingAnyItem::DoorOp(o) => {
-                let door = g.tab.doortools_door_op[o].door;
-                if door_tools_charge_on(g, door).is_some() {
-                    continue;
-                }
-                g.tab.doortools_door_op[o].men.clone()
-            }
-        };
-        let men = alive(g, &men);
-        words.push(crate::orders::squad_orders_who_words(g, Some(&men)));
-    }
-    let rest = uniq_plus(words);
-    if rest.is_empty() { Vec::new() } else { vec![crate::orders::OrderNote::Text(format!("{} waiting", rest))] }
-}
-
-/// The console's one line. (doortools.ts DoorTools.summary)
-pub fn door_tools_summary(g: &mut crate::game::Game) -> String {
-    let set: Vec<String> = g.door_tools.set.iter().map(|&c| g.dr[g.tab.doortools_set_charge[c].door].def.name.clone()).collect();
-    let set = set.join(",");
-    let ops: Vec<String> = g
-        .door_tools
-        .ops
-        .iter()
-        .map(|&op| {
-            let o = &g.tab.doortools_door_op[op];
-            format!("{} {}: {} ({})", o.kind.as_str(), g.dr[o.door].def.name, o.phase.as_str(), calls(g, &o.men))
-        })
-        .collect();
-    let ops = ops.join(" · ");
-    format!(
-        "charges {} · bangs {} · set {} · {}",
-        g.door_tools.charges,
-        g.door_tools.bangs,
-        if set.is_empty() { "none" } else { &set },
-        if ops.is_empty() { "nothing under way" } else { &ops }
-    )
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

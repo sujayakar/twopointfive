@@ -76,9 +76,9 @@ ok(!!tray && tray.c[1] < 1.3 && lb.every((b: any) => b.c[1] < 1.4), `the fixture
 A.step(60 * 45);
 ok(lookBoxes(A.game).every((b: any) => b.emissive[0] + b.emissive[1] + b.emissive[2] === 0), 'the glow is out for good within a minute');
 ok(lookBoxes(A.game).length === st.boxes, 'the box count holds');
-// ---------------------------------------------------------------- off / restart / found
-DESTRUCTION.on = false; A.step(2); ok(lookBoxes(A.game).length === 0 && fixtureLookState(A.game).recs === 0, 'the destruction switch down: nothing drawn, nothing kept'); DESTRUCTION.on = true;
-A.step(2); ok(fixtureLookState(A.game).hanging === 1 && lookBoxes(A.game).every((b: any) => b.c[1] < 1.4) && FIXLOOK_STATS.beats === 1, 'switch back up: the broken panel is found broken and drawn fallen, with no second beat');
+// ---------------------------------------------------------------- restart / found
+// (until 2026-11-07 two lines stood here: the destruction switch put down, 'nothing drawn, nothing kept', and put up again, 'found broken, no second beat'.
+// The destruction lane is a settled rule: the switch cannot be put down any more. 'Found broken' is still asked two lines on, after the clock's jump.)
 A.game.restartEncounter(); A.step(3); ok(!A.t.broken && lookBoxes(A.game).length === 0 && fixtureLookState(A.game).recs === 0, 'restartEncounter: the light is whole and the look is gone');
 A.game.lightHome.stage(A.t, null, true); A.game.time += 5; A.step(2); ok(fixtureLookState(A.game).hanging === 1 && fixtureLookState(A.game).moving === 0 && lookBoxes(A.game).every((b: any) => b.c[1] < 1.4) && FIXLOOK_STATS.beats === 1, 'a panel found broken after the clock jumped (a load): fallen, at rest, no beat');
 // ---------------------------------------------------------------- every panel of every level, found broken: where it lies

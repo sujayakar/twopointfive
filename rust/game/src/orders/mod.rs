@@ -1,5 +1,7 @@
 pub mod types;
 pub use types::*;
+pub mod rows;
+pub use rows::Row;
 pub mod missing;
 pub use missing::*;
 pub mod b_01;

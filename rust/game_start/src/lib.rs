@@ -8,6 +8,7 @@ pub mod level;
 pub mod passes;
 pub mod settings;
 pub mod stand;
+pub mod handed;
 #[cfg(feature = "std")]
 pub mod files;
 pub mod scene;

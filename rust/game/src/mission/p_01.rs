@@ -300,17 +300,15 @@ pub fn send_rack_check(g: &mut crate::game::Game) {
     }
     let Some(best) = best else { return };
     {
-        let b = &mut g.gd[best];
-        b.task = Some(GuardTask::Arm0(GuardTaskArm0 { kind: GuardTaskArm0Kind::Rack, pos: goal }));
-        b.last_known = Some(v3::copy(goal));
-        b.fix_stamp = b.fix_stamp.wrapping_add(1);
-        b.awareness = m::max(b.awareness, 0.42);
-        b.state = GuardState::Suspicious;
-        b.react_t = 1.2;
-        b.search_t = 0.0;
-        b.path = Vec::new();
-        b.path_serial = b.path_serial.wrapping_add(1);
-        b.path_goal = None; b.path_goal_orbit = false;   // (guard_set_path_goal's rule, for the row in hand)
+        g.gd[best].task = Some(GuardTask::Arm0(GuardTaskArm0 { kind: GuardTaskArm0Kind::Rack, pos: goal }));
+        crate::mind::fix(g, best, Some(v3::copy(goal)), "mission");
+        crate::mind::raise(g, best, 0.42, "mission");
+        crate::mind::set_state(g, best, GuardState::Suspicious, "mission");
+        g.gd[best].react_t = 1.2;
+        g.gd[best].search_t = 0.0;
+        g.gd[best].path = Vec::new();
+        g.gd[best].path_serial = g.gd[best].path_serial.wrapping_add(1);
+        g.gd[best].path_goal = None; g.gd[best].path_goal_orbit = false;   // (guard_set_path_goal's rule, for the row in hand)
     }
     if let Some(w) = &w {
         crate::game::game_say(g, best, &format!("something's tripped in {} — going to take a look", w.place), Some(true), None, None);
@@ -323,33 +321,6 @@ pub fn send_rack_check(g: &mut crate::game::Game) {
     let at = g.ch[g.gd[best].ch].pos;
     crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.6), None);
     crate::dialogue::handler_beat(g, crate::dialogue::HandlerBeat::Rack, Some(2.6));
-}
-
-/// The run in numbers as plain rows, for the card and the QA probes. (mission.ts debriefRows)
-pub fn debrief_rows(s: &crate::game::MissionStats) -> Vec<[String; 2]> {
-    use crate::game::fmt_clock;
-    let row = |a: &str, b: String| [String::from(a), b];
-    let mut rows = vec![
-        row("time", fmt_clock(s.elapsed)),
-        row("alerts raised", js::num_str(s.alerts)),
-        row("times spotted", js::num_str(s.spotted)),
-        row("bodies found", js::num_str(s.bodies)),
-        row("shots fired", js::num_str(s.shots)),
-        row("knocked out (breathing) · killed", format!("{} · {}", js::num_str(s.knockouts), js::num_str(s.kills))),
-        row("blackout", String::from(if s.blackout { "used" } else { "no" })),
-    ];
-    if s.keys > 0.0 {
-        rows.push(row("keys taken off them", js::num_str(s.keys)));
-    }
-    if s.qrf >= 1.0 {
-        let at = fmt_clock(s.qrf_at);
-        let text = match s.qrf_who.as_deref().filter(|w| !w.is_empty()) {
-            Some(who) => format!("{} came in at {}{}", who, at, if s.qrf >= 2.0 { " · out under a lockdown" } else { "" }),
-            None => format!("QRF on the floor at {}{}", at, if s.qrf >= 2.0 { " · exfil under perimeter lockdown" } else { "" }),
-        };
-        rows.push(row("response team", text));
-    }
-    rows
 }
 
 /// Where the HUD's objective marker points; None: nothing to point at, or the tour is running. (mission.ts objectivePos)
