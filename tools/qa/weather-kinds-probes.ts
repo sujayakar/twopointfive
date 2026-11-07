@@ -1,5 +1,5 @@
 // The 'wxkinds' family (game/weatherKinds.ts + game/weather.ts — the weather a level can be STARTED in: ?weather=<kind>), run through probes.ts:
-//   bun run tools/qa/probes.ts wxkinds | wxkinds-default | wxkinds-roofs | wxkinds-sight | wxkinds-hearing | wxkinds-save | wxkinds-journal | wxkinds-url
+//   bun run tools/qa/probes.ts wxkinds | wxkinds-default | wxkinds-roofs | wxkinds-sight | wxkinds-hearing | wxkinds-save | wxkinds-url
 // PASS / FAIL each, all headless:
 //   wxkinds-default   no kind picked = the game as it was: the office's two footprints, the frame's three weather words 0, hearPath() hands back propagate()'s own
 //                     object, airTrans() is exactly 1 — and a seeded 20 s of the office digests the same after a kind was put on and taken off again
@@ -11,9 +11,6 @@
 //                     downpour, does again under a roof (a third of the bed); a gunshot is heard in anything; a thunderclap drowns more for WX_SIM.thunderSecs
 //   wxkinds-save      the kind rides in the checkpoint: a fog run's file loaded into a game born in the level's own weather puts it in fog (roofs, fog, wind),
 //                     and the other way about; a file from before kinds (no field) = none
-//   wxkinds-journal   … and so in a session journal's frame 0: the scripted session (journal-probes.ts recordScripted: walk, crouch, whistle, canister, a light shot
-//                     out, sprint) recorded in a DOWNPOUR replays identically into a fresh game born in the level's own weather — and the same recording's
-//                     digests differ from one made with no kind picked (the weather really was in the simulation it journals)
 //   wxkinds-url       ?weather= reads back, an unknown name is none, the mission list's links carry the pick and lose it to the character when it is taken off
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
@@ -177,24 +174,6 @@ export async function wxSave() {
   { const old = JSON.parse(JSON.stringify(sa)); delete old.weather.kind; delete old.weather.thunderUntil; old.weather.storm = 0.7; old.weather.rainRate = 0.55; old.weather.wind = [1.1, 0.45];
     const C = await born('dust', 'compound'); C.game.aiEnabled = false; C.step(DT); C.restore(old); C.step(DT);
     F.verdict(C.game.weather.kind === null && JSON.stringify(C.game.weather.roofs) === JSON.stringify(JSON.parse(b0).roofs) && C.game.engine.weather.fog === 0, 'a file from before kinds (no field) loads as the level as it was, whatever the page was booted in', `kind ${C.game.weather.kind} · rain ${C.game.weather.rainRate} · fog word ${C.game.engine.weather.fog} · ${C.game.weather.roofs.length} roofs, the plain game's ${JSON.stringify(C.game.weather.roofs) === JSON.stringify([WX.INTERIOR, WX.ANNEX]) ? "(the office's two)" : '(the level\'s own: WX_OWN.roofs)'}`); }   // (the roofs of a game born on this level with no kind: the office's two rectangles on the frozen stand, the level's own under WX_OWN.roofs — the shipped stand)
-  return F.done();
-}
-
-// ---------------------------------------------------------------- wxkinds-journal
-export async function wxJournal() {
-  const F = family("wxkinds-journal: a session recorded in a picked weather replays identically into a game born without it (the kind is in frame 0's checkpoint)");
-  const { recordScripted, undone } = await import('./journal-probes.ts'); const { replaySession } = await import('./replay.ts');
-  const log = console.log; const rec = async (kind: string | null) => { K.WEATHER_BOOT.kind = kind; console.log = () => {}; try { return await recordScripted(6011, false, 45); } finally { K.WEATHER_BOOT.kind = null; console.log = log; } };
-  const A = await rec('downpour'), B = await rec(null);
-  const kindIn = A.file.save?.weather?.kind ?? null;
-  // (staging: the line below reads the weather off what the script's canister does in it; a script that threw nothing says nothing of the weather)
-  const left = [...new Set([...undone(A.deeds), ...undone(B.deeds)])];
-  F.verdict(!left.length, 'staging: the scripted session did its deeds in both recordings (a whistle, a canister thrown, a round fired)', left.join(', ') || 'both did');
-  if (left.length) return F.done();
-  console.log = () => {}; let R: any; try { R = await replaySession(JSON.parse(JSON.stringify(A.file)), 'downpour', { invariants: true, quiet: true }); } finally { console.log = log; }
-  const same = JSON.stringify(A.file.digests.map((d: any) => d[1])) === JSON.stringify(B.file.digests.map((d: any) => d[1]));
-  F.verdict(kindIn === 'downpour' && R.ok && R.lastDigestOk && R.digestsChecked > 0, "45 s recorded in a downpour: the file's frame 0 says so, and it replays identically into a fresh game born in the level's own weather", `frame 0 kind ${kindIn} · ${R.replayed}/${R.frames} frames replayed, ${R.digestsChecked} digests checked${R.ok ? '' : ' · ' + (R.bad || (R.digestMismatch ? `digest mismatch after frame ${R.digestMismatch.f}: ${R.digestMismatch.diffs.slice(0, 3).join(' · ')}` : R.sensor.first ? `sensor ${R.sensor.first.kind} '${R.sensor.first.key}'` : 'violations'))}`);
-  F.verdict(!same, 'the same script with no kind picked digests differently (the weather was in the simulation the journal carries, not beside it)', same ? 'every digest equal: the downpour changed nothing the digest sees' : `first differing digest: #${A.file.digests.findIndex((d: any, i: number) => JSON.stringify(d[1]) !== JSON.stringify(B.file.digests[i]?.[1]))} of ${A.file.digests.length}`);
   return F.done();
 }
 

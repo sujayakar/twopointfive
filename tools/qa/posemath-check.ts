@@ -17,7 +17,7 @@
 //   rule     …and with the rule off the word is another: the switch reaches the game
 //   late     a game stood with the rule on and put off before its first tick (pose-fold's POSEMATH_LATE=0) is the game stood with it off, and one stood
 //            with it off and put on (POSEMATH_LATE=1) is the game stood with it on: nothing kept from the build stands on the other arithmetic. That is
-//            what lets a recording's rule be written by journal.ts applyKnobs alone, after the game is stood (tools/qa/replay.ts says no word for it)
+//            what lets a recording's rule be written by journal.ts applyKnobs alone, after the game is stood
 // exit 0 = every line · 1 = a line failed. Nothing here has been seen on a GPU: it is arithmetic, and the picture's skinning reads the same poses.
 import './stand.ts';   // (the stand's word, written down before this file reads it)
 import { spawnSync } from 'node:child_process';

@@ -264,7 +264,7 @@ fn write(g: &mut Game, slot: SlotInfoSlot, label: &str, authored: bool) -> Optio
     let saved_at = g.saves.shelf.m.values().map(|e| e.info.saved_at).fold(0.0, crate::m::max) + 1.0;
     let kind = if slot == SlotInfoSlot::Auto { SlotInfoKind::Auto } else { SlotInfoKind::Manual };
     let info = SlotInfo { key: key.clone(), slot, n: n as f64, label: String::from(label), kind, saved_at, mission_t: g.mission.stats.elapsed, stage: String::from(g.mission.stage.as_str()), run_id: g.saves.run_id.clone(), bytes: 0.0, regret: None, mem: Some(true) };
-    g.saves.shelf.m.set(key.clone(), MemSave { info, pic: None, take: 0.0 });
+    g.saves.shelf.m.set(key.clone(), MemSave { info, pic: None });
     g.saves.last_save_t = g.time;
     g.saves.quiet_t = 0.0;
     let t = g.time;

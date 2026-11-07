@@ -208,7 +208,6 @@ export async function shapesCheck(): Promise<boolean> {
       SHAPES.on = true; const old = snap(); delete old.tables.SHAPES; shapesTape(old.tables); const tapeOff = SHAPES.on === false;
       SHAPES.on = true; const rec = snap(); shapesTape(rec.tables); const tapeOn = SHAPES.on === true && rec.tables.SHAPES?.on === true;
       const called = ['src/replay/recipestand.ts', 'tools/qa/rerun.ts'].filter(f => !/shapesTape\(/.test(readFileSync(`${ROOT}/${f}`, 'utf8')));
-      if (!/TPS_SHAPES = .*SHAPES\?\.on/.test(readFileSync(`${ROOT}/tools/qa/replay.ts`, 'utf8'))) called.push('tools/qa/replay.ts (the stand\'s word)');
       const fpOn = levelFingerprint(on.game), fpOff = levelFingerprint(off.game), fpPlain = levelFingerprint(plain.game);
       SHAPES.on = true; J.applyKnobs(on.game, old); const before = SHAPES.on;
       SHAPES.on = false; J.applyKnobs(on.game, rec); const kept = SHAPES.on;
