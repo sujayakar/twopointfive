@@ -132,7 +132,7 @@ pub fn marks_of(g: &mut crate::game::Game) -> Option<crate::qrf::Marks> {
 
 /// How many more men the floor can be given.   (qrf.ts roomFor)
 pub fn room_for(g: &mut crate::game::Game) -> f64 {
-    let n = (crate::guards::MAX_SKINNED - g.civilians.len() as f64) - 1.0 - g.guards.len() as f64;
+    let n = (crate::guards::MAX_SKINNED - g.civilians.len() as f64) - crate::seats::seat_count(g) - g.guards.len() as f64;
     if raid(g) {
         m::min(n, crate::scene_scenarios::SQUAD_MAX_MEN - g.night_breach.hostiles.len() as f64 - g.qrf.men.len() as f64)
     } else {

@@ -489,17 +489,17 @@ fn stage_tried(g: &mut Game) -> Result<(), String> {
         let row = if squad > 2.0 { crate::nightbreach::squad4().get(i).cloned() } else { None };
         let opts = match row {
             Some(r) => {
-                let n = 2.0 + g.guards.len() as f64;
+                let n = crate::seats::seat_count(g) + 1.0 + g.guards.len() as f64;   // (a man a seat, this new teammate, everyone standing)
                 crate::guards::UnitOpts {
                     team: crate::teams::Team::Operative, pos: at[i], yaw: Some(yaw), name: Some(r.name), light: Some(false),
                     pair: Some(r.pair), tint: Some(r.tint), tint2: Some(r.tint2),
-                    budget: Some(m::max(crate::nightbreach::SQUAD4_BUDGET, n)), ..crate::guards::UnitOpts::zeroed()
+                    budget: Some(m::max(crate::nightbreach::p_01::squad4_budget(g), n)), ..crate::guards::UnitOpts::zeroed()
                 }
             }
             None => crate::guards::UnitOpts {
                 team: crate::teams::Team::Operative, pos: at[i], yaw: Some(yaw),
                 name: Some(String::from(if i == 0 { "Blue One" } else { "Blue Two" })), light: Some(false),
-                budget: Some(2.0 + g.guards.len() as f64), ..crate::guards::UnitOpts::zeroed()
+                budget: Some(crate::seats::seat_count(g) + 1.0 + g.guards.len() as f64), ..crate::guards::UnitOpts::zeroed()
             },
         };
         let gd = crate::guards::spawn_unit(g, &opts)?;
