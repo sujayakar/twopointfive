@@ -434,9 +434,9 @@ export class RustHost {
    *  the same record). Blank while no Rust game of this host stands: before the first tick, with a new start due, after this game's slot was given up */
   view(): any { if (!this.h || this.startDue || this.audit) return { mission: null }; if (!this.inApply && !this.inStep && !this.quietOn && this.busy === 0) this.scanFlush(); this.tellShown();
     try { this.F.X.face_tick_view(this.h); } catch (e) { throw new Error(`the Rust game's view panicked: ${this.F.panicText() || String(e)}`); } return this.B.readRecord(this.g, 'crate::view::TickView', this.F.outView().slice()); }
-  /** how the mission ended, asked of the Rust game itself (`face_verdict`, a read with nothing kept: null while it is played). For a host with no puppet;
-   *  on the page the puppet's own `g.verdict.result` is the latched one, with the card's rows. Hung on the game as `verdictNow` */
-  verdict(): { won: boolean; word: string; why: string } | null { const r = this.F.X.face_verdict(this.h); if (!r) return null; const s = this.F.outText(), i = s.indexOf('\n'); return { won: r === 2, word: s.slice(0, i), why: s.slice(i + 1) }; }
+  /** how the mission ended, off the record the Rust game's own tick latches (`face_verdict`: null while it is played). For a host with no puppet, and
+   *  for holding the puppet's own verdict to it. `lines` is the whole record as the module writes it (game::verdict::verdict_lines). Hung as `verdictNow` */
+  verdict(): { won: boolean; word: string; why: string; lines: string[] } | null { const r = this.F.X.face_verdict(this.h); if (!r) return null; const L = this.F.outText().split('\n'); return { won: r === 2, word: L[0], why: L[1], lines: L }; }
   /** THE GAME'S OWN DIE PUT AT THE START OF `seed`'S STREAM, ON THE RUST SIDE (tools/qa/headless.ts `seedGame`, which has put the puppet's: a tool that wants a
    *  given stream after the game is stood seeds the game's die; nothing lets the Rust tick draw a tool's `Math.random`). The die is the `dice` part of the
    *  game's block (rust/sim/src/dice.rs: the count of draws as a double, then the mulberry32 word), written in place.
@@ -806,9 +806,6 @@ export class RustHost {
     // replay loop makes them, and the puppet takes the state again.)
     t = now(); const nest0 = this.nest;
     if (this.o.dress !== false) {
-      // (the verdict is the debrief's: a throw of its on the puppet is counted and is not the play's end; the par clock is the Rust tick's)
-      // (with the rows down nothing reads the picture's lists and only the verdict is run)
-      if (!picture) for (const n of ['verdict'] as const) try { g[n]?.tick(); } catch (e) { this.count(`${n}.tick THREW on the puppet (first at tick ${this.threw[n] ??= k}): ${String((e as any)?.message ?? e).slice(0, 100)}`); }
       const S = g.saves;
       // (a take is due this tick: an authored checkpoint a rule asked for, a save by hand, a load. The puppet takes the whole state first. An autosave
       // the controller decides on inside its tick takes the whole state as the take starts: `taps`. Its gate and its triggers read the puppet as the
