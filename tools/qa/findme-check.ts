@@ -163,7 +163,7 @@ export async function findmeCheck(): Promise<boolean> {
       const inBox = hx > r[0] && hx < r[2] && hy > r[1] && hy < r[3], share = Math.max(0, Math.min(1, r[2]) - Math.max(0, r[0])) * Math.max(0, Math.min(1, r[3]) - Math.max(0, r[1]));
       
       pl.visibility = 0.9; const lit = fill(120); pl.visibility = 0.04; pl.nvAmount = 1; const nv = fill(120); pl.nvAmount = 0; fill(120);
-      pl.down = true; fill(1);  pl.down = was.down; fill(1, DT, false);  const held = fill(1, 0) === 1;   // (a frame with no time in it takes the meter's word whole)
+      g.recap.allDown = true; fill(1);  g.recap.allDown = false; fill(1, DT, false);  const held = fill(1, 0) === 1;   // (a frame with no time in it takes the meter's word whole)
       const back = { ...Fm, at: [...Fm.at] as [number, number, number], rect: [9, 9, 9, 9] as [number, number, number, number] }; { const f = cam.planarBasis().fwd; back.at[0] -= f[0] * 400; back.at[2] -= f[2] * 400; outlineBox(back, proj); }
       const behindLens = back.rect.every(v => v === 0);
       const edges = outlineWant(FINDME_START.dark) === 1 && outlineWant(FINDME_START.lit) === 0 && outlineWant(0) === 1 && outlineWant(1) === 0 && outlineWant(0, 1) === 0 && Math.abs(outlineWant(0.21) - 0.5) < 1e-9;

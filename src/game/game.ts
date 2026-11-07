@@ -270,7 +270,6 @@ export interface Mission {
   alarmOn: boolean;                  // somebody is at 'alert' right now (edge → an alarm episode)
   sweepAt: number;                   // game time at which somebody gets sent to look at the dead rack (-1 = nobody pending)
   spottedT: number;                  // last time an alert guard had eyes on you (episode debounce for stats.spotted)
-  debrief: boolean;                  // one-shot for the page: open the end card (mission complete) — or, once `stage` is 'failed', the down card
   downCardAt: number;                // game time the down card comes up (mission.ts DOWN_CARD_SECS after he dropped; -1 = not pending)
   handsOn: boolean;                  // the drive has been touched at least once (the chronicle notes the first time only)
   stats: MissionStats;
@@ -279,7 +278,7 @@ export type MissionRating = 'ghost' | 'panther' | 'assault';
 /** Chaos Theory's own words: ghost = never spotted, no kills, no alarms; panther = lethal or loud but never actually seen; assault = they had eyes on you. */
 export function missionRating(s: MissionStats): MissionRating { return s.spotted > 0 ? 'assault' : s.kills === 0 && s.alerts === 0 && s.bodies === 0 ? 'ghost' : 'panther'; }   // ghost: never seen, no alarm, nobody shot, nothing found (a silent takedown nobody finds keeps it — a man out cold is not a kill); panther: they know someone was there but never saw who
 export function fmtClock(sec: number): string { const s = Math.max(0, Math.floor(sec)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; }
-const newMission = (t0: number): Mission => ({ stage: 'infiltrate', t0, driveT: -1, pulled: false, alarmOn: false, sweepAt: -1, spottedT: -100, debrief: false, downCardAt: -1, handsOn: false, stats: { elapsed: 0, alerts: 0, spotted: 0, bodies: 0, shots: 0, kills: 0, knockouts: 0, keys: 0, blackout: false, sandbox: false, qrf: 0, qrfAt: -1 } });
+const newMission = (t0: number): Mission => ({ stage: 'infiltrate', t0, driveT: -1, pulled: false, alarmOn: false, sweepAt: -1, spottedT: -100, downCardAt: -1, handsOn: false, stats: { elapsed: 0, alerts: 0, spotted: 0, bodies: 0, shots: 0, kills: 0, knockouts: 0, keys: 0, blackout: false, sandbox: false, qrf: 0, qrfAt: -1 } });
 
 /** the ragdoll particles a door leaf feels (Game.updateDoors): enough of the body that a leaf cannot close through it */
 export const BODY_DOOR_PARTICLES = [RAG.pelvis, RAG.spine, RAG.head, RAG.kneeL, RAG.kneeR, RAG.ankL, RAG.ankR];   // (how many of them there are is in the arithmetic of what a doors' step is handed: levelfit.ts handOverMost)
@@ -980,7 +979,7 @@ export class Game {
   /** a room clear against a clock: the Rust game's record, written by the bridge (par.ts is how the page reads it); blank on a level without a scenarios.par block */
   par!: Par;
   /** the squad's men lost, as the squad knows them: the game's record (rust/game_rules/src/deathrecap), read by the HUD */
-  recap: { lostLive: LostMan[] } = { lostLive: [] };
+  recap: { lostLive: LostMan[]; allDown: boolean } = { lostLive: [], allDown: false };
   /** how the run went, said once it is over (verdict.ts): reads only — the end card's record */
   verdict!: Verdict;
   /** the man a snatch level's team must take alive (snatch.ts): inert without the level's scenarios.snatch block */
