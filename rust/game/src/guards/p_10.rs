@@ -299,12 +299,13 @@ pub fn spawn_unit(g: &mut crate::game::Game, o: &crate::guards::UnitOpts) -> Res
     if o.team == crate::teams::Team::Player { return Err(String::from("spawnUnit: the 'player' side is the player alone — spawn an 'operative' for a man on his side")); }
     if o.team == crate::teams::Team::Civilian { return Err(String::from("spawnUnit: civilians are not units — civilians.ts stands them up from the level's civilians block (Game.civilians)")); }
     let chars = crate::seats::seat_count(g) + g.guards.len() as f64;   // (a man a seat, and everybody else who stands)
-    let cap = m::max(MAX_CHARACTERS, m::min(o.budget.unwrap_or(0.0), crate::guards::MAX_SKINNED));
+    let eight = crate::seats::budget_with_seats(g, MAX_CHARACTERS);   // (the eight is written for one player: a seat more, a man more)
+    let cap = m::min(crate::guards::MAX_SKINNED, m::max(eight, o.budget.unwrap_or(0.0)));
     if chars + 1.0 > cap {
-        if cap > MAX_CHARACTERS {
+        if cap > eight {
             return Err(format!("spawnUnit: {} characters already stand (the player + {} guards/units) and this caller's budget is {} — despawn a unit or reset the guards first", chars, g.guards.len(), cap));
         }
-        return Err(format!("spawnUnit: {} characters already stand (the player + {} guards/units) and the shadow-capsule budget is {} (scene/boxes.ts BoxWorld.addCharacterCapsules) — despawn a unit or reset the guards first", chars, g.guards.len(), MAX_CHARACTERS));
+        return Err(format!("spawnUnit: {} characters already stand (the player + {} guards/units) and the shadow-capsule budget is {} (scene/boxes.ts BoxWorld.addCharacterCapsules) — despawn a unit or reset the guards first", chars, g.guards.len(), eight));
     }
     let steady = g.engine.lights.lights.iter().filter(|&&l| g.tab.light[l].ttl < 0.0).count() as f64;
     if steady + 1.0 > crate::render_lights::MAX_LIGHTS {
