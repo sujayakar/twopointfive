@@ -519,7 +519,7 @@ plus a clean typecheck — the harness cannot see rendering, the light meter, sm
 (+ since the rebuild, the squad game's: `__orders __roomclear __nightbreach __rescue __scenarios __picks __doortools __doors __doorblast __fight __wallcharge __glassbreak __director __pair __wounds __hour __fow __extra`)
 (+ the hot-swap hooks `__hotVol __hotRestir __hotFroxel __hotDenoise __hotReflect __hotGather`: recompile a pass from source WITH its real preludes — prefer them to `__wgsl` for the big kernels;
 `__hotCommon(src?, variant?)` swaps an edited common.wgsl / `TRACE_VARIANT` into EVERY tracing pipeline at once — the ray-traversal lab's hook, see the *Stratified gather directions + the trace lab* bullet)
-(+ URL flags `?sharp` / `?nosharp` / `?noiq` / `?gbaa` / `?nomv` from the image-quality program, `?sdfsmooth` / `?charsoft` / `?charsoftmarch` + `__rigTrace(rays)` from the SDF character rig),
+(+ URL flags `?sharp` / `?nosharp` / `?noiq` / `?gbaa` / `?nomv` from the image-quality program),
 `__runFrames(n, dt=1/60, keys=[], draw=true)` (fixed-step frames with synthetic keys held; `draw` false = only the burst's last step is drawn, the others pack the world as a draw would and go on — what a script on the software adapter wants, and NOT a check of the drawn-every-step path: the GPU's senses then answer once a burst), `__mouse(x, y, buttons?)`,
 `__click`, `__pauseLoop` (stop the rAF loop; step only via `__runFrames`), `__resetClock()`, `__shot(name, q, scale)`
 (JPEG to the shot server), `__panelShot(name, {frame?, quality?, scale?})` (the tweak PANEL (the debugger, on the backslash key: `player.md`, empty hands are a slot) is HTML, outside the frame `__shot` reads back: `#panel` rasterised through
@@ -1197,7 +1197,9 @@ but synthetic writes still work.
   by a note, by `?plainair=1`, or by the adapter row `amd rdna-4`), their notes in localStorage (`twopointsix.gentle`, `twopointsix.plainAir`: a browser that holds
   one is no longer read), `?gentle`, `?plainair`, the warning records `gpu.gentle` and `gpu.plainair`, the bench report's plain-air line, `plainair-check`,
   `plainair-page.cjs`, `gentle-page.cjs` and their break words. **KEPT**: the lost device's one fresh load and its card (the bullet above: any machine can lose a
-  device), what the report names as in hand at the loss (`flying`, `gpulost-check` holds it), and the compile queue on Windows (`PIPE_QUEUE`: measured there). A
+  device), what the report names as in hand at the loss (`gpu/device.ts lostFlying`: every pipeline the browser was handed and had not answered, by label, kept
+  through the burst of rejections a lost device sends first; the record's `flying`, `flying2`, `flying3` hold as many whole labels as three strings of 80 take and
+  `flyingOf` the count; `gpulost-check` and `pipequeue-check` hold it), and the compile queue on Windows (`PIPE_QUEUE`: measured there). A
   machine of that kind now gets every program as any other does. Not seen on any GPU.
 - **A start with no GPU says what the machine said, and asks twice (2026-10-27; the maintainer: a friend's AMD machine "is still crashing with failed to create WebGPU context
   provider / no webgpu adapter available", "anything we can collect from his computer?").** `src/gpu/adapter.ts GPU_ASK` (ON; `?gpuask=0` = one ask and the one line "No WebGPU
