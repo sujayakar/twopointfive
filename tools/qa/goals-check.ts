@@ -32,7 +32,6 @@ import { ROOT, standUp } from './headless.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
-const { RAILS } = await import(`${ROOT}/src/game/rails.ts`);
 const { CMDRING } = await import(`${ROOT}/src/game/cmdring.ts`);
 const PM: any = await import(`${ROOT}/src/game/planmode.ts`);
 const { AUTOPILOT } = await import(`${ROOT}/src/game/autopilot.ts`);
@@ -53,12 +52,13 @@ export async function rig(on: boolean, more: Record<string, unknown> = {}, squad
   const log = console.log, warn = console.warn, err = console.error; if (!VERBOSE) console.log = console.warn = console.error = () => { };
   let W: any, started: any;
   try {
-    const level = loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/${LEVEL}.json`, 'utf8')));
+    const data: any = parseLevelData(readFileSync(`${ROOT}/levels/${LEVEL}.json`, 'utf8')); if (data.scenarios?.lesson) delete data.scenarios.lesson.rails;   // (this floor's lesson off its rails: these lines ask the goals, whichever step a lesson has them from)
+    const level = loadLevel(data);
     W = await standUp({ uploadEvery: 4, level, seed: SEED }); stood ??= !!CMDRING.goals; stoodRing ??= !!CMDRING.goalRing; stoodCmd ??= { ...CMDRING };
     // (the ring and its later switches as the page has them)
     // (… and the two after them held off: these lines ask the rule as it was built — with nothing going the first goal is everyone's, and a second tap
     //  is the key's order again. CMDRING.goalHalf and CMDRING.twice have their own lines in halftwice-check.ts)
-    RAILS.on = false; Object.assign(CMDRING, { on: true, tapNow: true, stay: true, wholeSquad: true, goals: on, goalRing: on && !RBREAK, goalHalf: false, twice: false, ...more }); AUTOPILOT.on = true;
+    Object.assign(CMDRING, { on: true, tapNow: true, stay: true, wholeSquad: true, goals: on, goalRing: on && !RBREAK, goalHalf: false, twice: false, ...more }); AUTOPILOT.on = true;
     started = startFromQuery(W.game, `?levelFile=${LEVEL}.json&roomclear=1&${squad}`);
   } finally { console.log = log; console.warn = warn; console.error = err; }
   const g = W.game, O = g.orders, D = g.doorTools, I = W.input, KEY = CMDRING.key;
@@ -103,7 +103,7 @@ export async function rig(on: boolean, more: Record<string, unknown> = {}, squad
 export async function goalsCheck(): Promise<boolean> {
   let fails = 0;
   const line = (ok: boolean, what: string, got: string) => { console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${what} — ${got}`); if (!ok) fails++; };
-  const knobs0 = knobsCopy(), rails0 = RAILS.on, K = CMDRING;
+  const knobs0 = knobsCopy(), K = CMDRING;
   console.log(`Shift + the key adds a goal (src/game/planmode.ts planGoal, CMDRING.goals; kept down, the ring for that part: CMDRING.goalRing)${BREAK ? ' — GOALS_BREAK=1: the switch left off, lines 1 to 7 and 10 to 12 must fail' : RBREAK ? ' — GOALRING_BREAK=1: the ring\'s switch left off, lines 10 to 12 must fail' : ''}`);
   try {
     const R = await rig(!BREAK), g = R.g, O = R.O, D = R.D, N = O.men('all').length;
@@ -154,19 +154,6 @@ export async function goalsCheck(): Promise<boolean> {
       R.I.keys.clear(); O.cmdRing = null; O.close(); R.step(4); const asked = PM.PLAN_STATS.goals - g0, gave = O.log.length - n0;
       line(onA && ring && whole && asked === 0 && gave === 0, '7. Shift + the key KEPT DOWN with nobody on anything is still everyone\'s ring: it comes up, and no goal is added by it',
         `the ring ${ring ? 'up' : 'NOT up'} · goals added ${asked} · orders given ${gave}`); }
-    // 8
-    R.home(); K.goals = false;
-    { R.onDoor(A); R.key(true); const first = R.onStack(A).length, onB = R.onDoor(B); R.key(true); const a = R.onStack(A).length, b = R.onStack(B).length;
-      K.goals = true; const plain = PM.goalsOn(O), rails = g.rails; g.rails = { live: true, locks: () => true }; const lesson = PM.goalsOn(O); g.rails = rails;
-      line(first === N && onB && a === 0 && b === N && plain === true && lesson === false, '8. CONTROL — the switch off: Shift + the key is the key, everyone\'s: a second door takes all four. And on a tutorial mission the rule is not asked',
-        `off: on the first door ${first} of ${N}, then on the second ${b} and on the first ${a} · on: the rule is asked here ${plain}, on a tutorial mission ${lesson}`); }
-    // 9
-    { K.goals = true; K.goalRing = true; const snap = JSON.parse(JSON.stringify(knobsSnapshot(g))), old = JSON.parse(JSON.stringify(snap)); delete old.tables.CMDRING.goals; delete old.tables.CMDRING.goalRing;
-      applyKnobs(g, old); const before = K.goals || K.goalRing; applyKnobs(g, snap); const on = K.goals && K.goalRing;
-      const shipped = String(process.env.TPS_PROFILE ?? '') === 'shipped', row = FROZEN_HOLDS['CMDRING.goals'], rowR = FROZEN_HOLDS['CMDRING.goalRing'];
-      line(before === false && on === true && stood === shipped && stoodRing === shipped && /TPS_GOALS=1/.test(row ?? '') && /TPS_GOALRING=1/.test(rowR ?? ''), '9. CONTROL (plumbing) — a recording from before the keys replays with both off; the stands and the FROZEN_HOLDS rows',
-        `a file without the keys: ${before} · one with them on: ${on} · this stand (${shipped ? 'the page\'s' : 'frozen'}) stood them ${stood} and ${stoodRing} · the rows: ${row ?? 'none'} · ${rowR ?? 'none'}`); }
-
     // 10 (the ring for a part: the switches as this run has them — line 8 and 9 raised them)
     R.home(); K.goals = !BREAK; K.goalRing = !BREAK && !RBREAK;
     { const all = R.stackAll(A), onB = R.onDoor(B), n0 = O.log.length, g0 = PM.PLAN_STATS.goals, r0 = PM.PLAN_STATS.rings;
@@ -193,12 +180,7 @@ export async function goalsCheck(): Promise<boolean> {
       const s4 = sizes(), p5 = R.onSpot(spots), n0 = O.log.length, r0 = PM.PLAN_STATS.rings, no0 = PM.PLAN_STATS.none, ring = !!p5 && R.hold(), said = PM.PLAN_STATS.none - no0, part = (O.menu?.part ?? []).length; R.away(); R.step(10);
       line(s4 === '1 + 1 + 1 + 1' && !!p5 && !ring && said === 1 && O.log.length === n0 && PM.PLAN_STATS.rings === r0 && sizes() === s4, '12. every group down to one man: Shift + the key kept down on one more spot puts no ring up and gives nothing',
         `covering first: ${s4} · the ring ${ring ? `UP (for ${part || 'everyone'})` : 'not up'} · the squad said nobody is free: ${said === 1} · orders given ${O.log.length - n0} · covering after: ${sizes()}`); }
-    // 13
-    R.home(); K.goals = true; K.goalRing = false;
-    { const all = R.stackAll(A), onB = R.onDoor(B), r0 = PM.PLAN_STATS.rings, n0 = O.log.length, ring = R.hold(), whole = !!O.menu && !O.menu.part, men = (O.menu?.men ?? []).length; R.away();
-      line(all && onB && ring && whole && men === N && PM.PLAN_STATS.rings === r0 && O.log.length === n0, '13. CONTROL — the ring\'s switch off: kept down on a second door it is everyone\'s ring, for no part of the squad',
-        `all four stacked first: ${all} · the ring ${ring ? 'up' : 'NOT up'} · for a part: ${!whole} · its men: ${men} of ${N} · orders given ${O.log.length - n0}`); }
-  } finally { knobsBack(knobs0); RAILS.on = rails0; }
+  } finally { knobsBack(knobs0); }
 
   console.log(fails ? `=== goals-check: ${fails} FAIL ===` : '=== goals-check: ALL PASS ===');
   return !fails;

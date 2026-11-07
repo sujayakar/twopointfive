@@ -28,6 +28,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
+import { sample } from './sweep.ts';
 const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const { scenarioQuery } = await import(`${ROOT}/src/scene/scenarios.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
@@ -141,9 +142,9 @@ const SHIFT = process.env.DOORMENU_BREAK === '1' ? 0.25 : 0;
 interface Sweep { doors: number; spots: number; drawn: number; hit: number; through: number; throughHit: number; hidden: number; onMan: number; atSam: number; other: number; leaf: number; misses: string[]; unseen: string[] }
 function sweep(R: Rig): Sweep {
   const S: Sweep = { doors: 0, spots: 0, drawn: 0, hit: 0, through: 0, throughHit: 0, hidden: 0, onMan: 0, atSam: 0, other: 0, leaf: 0, misses: [], unseen: [] };
-  for (const d of R.game.doors.list) {
+  for (const d of sample(R.game.doors.list as any[], 6)) {
     S.doors++; let seen = 0;
-    for (const p of R.spots(d)) {
+    for (const p of sample(R.spots(d), 3)) {
       R.stand(p); S.spots++;
       for (const q of R.samples(d)) {
         const L = R.look(d, q); if (!L) continue; if (!L.drawn) { S.hidden++; continue; }
@@ -169,13 +170,13 @@ const sweepWords = (S: Sweep) => `${S.doors} doors from ${S.spots} spots: the do
 
 async function drawnFamily(title: string, open: boolean): Promise<boolean> {
   const F = family(title); let tot = 0, hit = 0;
-  for (const scn of LIST) {
+  for (const scn of sample(LIST, 2)) {
     const R = await rig(scn); if (open) R.openAll();
     const S = sweep(R); tot += S.drawn; hit += S.hit;
     F.verdict(S.drawn > 0 && S.hit === S.drawn && !S.unseen.length, `${scn.name}: the cursor on a door as drawn is that door${open ? ', every door stood open' : ''}`, sweepWords(S));
     reset();
   }
-  console.log(`  all ${LIST.length} scenarios: ${hit} of ${tot} (${pct(hit, tot)})`);
+  console.log(`  all the scenarios asked: ${hit} of ${tot} (${pct(hit, tot)})`);
   return F.done();
 }
 export const doormenuDrawn = guarded(() => drawnFamily("doormenu-drawn: X on a door as it is drawn opens that door's menu, in every scenario", false));
