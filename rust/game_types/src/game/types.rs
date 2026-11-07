@@ -762,6 +762,11 @@ pub struct Game {
     pub glass_break: crate::glassbreak::GlassBreak,
     pub shards: crate::shards::GlassShards,
     pub director: crate::director::Director,
+    /// THE HOST'S OWN CAMERA AND KEYS, handed to the game once, at its stand, by every host alike (game.ts hostCam; the native start: game_start `host_new`).
+    /// The host's: on the wire's hosts-own list, in no state word. Named here for what reaches for them: a level script's show, a rails level's first
+    /// view, the view's matrix between two ticks.
+    pub host_cam: Option<CameraId>,
+    pub host_input: Option<InputId>,
     pub night_breach: crate::nightbreach::NightBreach,
     pub quiet: crate::quiet::QuietMission,
     pub lesson: crate::lesson::Lesson,
@@ -773,6 +778,7 @@ pub struct Game {
     pub room_clear: crate::roomclear::RoomClearScenario,
     pub orders: crate::orders::SquadOrders,
     pub fog_of_war: crate::fogofwar::FogOfWar,
+    pub fog_picture: crate::fogofwar::FogPicture,
     pub fight: crate::roomfight::RoomFight,
     pub cues: crate::cues::Cues,
     pub squad_net: crate::squadnet::SquadNet,
@@ -806,10 +812,6 @@ pub struct Game {
     pub ticking: bool,
     pub alone_own: crate::game::AsideOwn,
     pub cmd_buf: Option<crate::cmd::PlayerCmd>,
-    pub men_all: Vec<CharId>,
-    pub men_statured: bool,
-    pub men_bare: bool,
-    pub fog_held: Option<crate::game::GameFogHeld>,
     pub door_owns: Vec<Option<usize>>,
     pub door_was: Vec<f64>,
     pub door_hand_recs: JsMap<CharId, crate::game::GameDoorHandRecsValue>,
@@ -951,6 +953,8 @@ impl Game {
             glass_break: crate::glassbreak::GlassBreak::blank(),
             shards: crate::shards::GlassShards::blank(),
             director: crate::director::Director::blank(),
+            host_cam: None,
+            host_input: None,
             night_breach: crate::nightbreach::NightBreach::blank(),
             quiet: crate::quiet::QuietMission::blank(),
             lesson: crate::lesson::Lesson::blank(),
@@ -962,6 +966,7 @@ impl Game {
             room_clear: crate::roomclear::RoomClearScenario::blank(),
             orders: crate::orders::SquadOrders::blank(),
             fog_of_war: crate::fogofwar::FogOfWar::blank(),
+            fog_picture: crate::fogofwar::FogPicture::blank(),
             fight: crate::roomfight::RoomFight::blank(),
             cues: crate::cues::Cues::blank(),
             squad_net: crate::squadnet::SquadNet::blank(),
@@ -995,10 +1000,6 @@ impl Game {
             ticking: false,
             alone_own: crate::game::AsideOwn::blank(),
             cmd_buf: None,
-            men_all: Vec::new(),
-            men_statured: false,
-            men_bare: false,
-            fog_held: None,
             door_owns: Vec::new(),
             door_was: Vec::new(),
             door_hand_recs: JsMap::new(),
@@ -1404,23 +1405,6 @@ impl AsideOwn {
     }
 }
 impl Default for AsideOwn { fn default() -> Self { Self::blank() } }
-
-/// (TypeScript: inline at src/game/game.ts:1865 Game.fogHeld, src/game/game.ts:1865)
-#[derive(Clone, Debug)]
-pub struct GameFogHeld {
-    pub dyn_: Vec<BoxId>,
-    pub on: bool,
-}
-impl GameFogHeld {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GameFogHeld {
-            dyn_: Vec::new(),
-            on: false,
-        }
-    }
-}
-impl Default for GameFogHeld { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/game.ts:2127 Game.doorHandRecs, src/game/game.ts:2127)
 #[derive(Clone, Copy, Debug)]

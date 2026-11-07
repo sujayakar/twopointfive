@@ -1,17 +1,11 @@
 //! AN ORDER WRITTEN AS A MODULE (rust/game/src/orders/rows/): tests that stand a scene, give the order by the menu's own call and hold what
 //! the squad does. README.md beside this crate says how such a test is written; each holds a rule over three seeds, each seed another scene.
 use game::orders::Who;
-use game_start::play::{dist, Opts, Play};
+use game_start::play::{dist, nudge, Opts, Play};
 use game_start::scene::{Axis, Scene};
 
 const SEEDS: [u32; 3] = [1, 2, 3];
 fn seed(seed: u32) -> Opts { Opts { seed, ..Default::default() } }
-/// a number in -1..1 that is a fixed function of the seed and of `k`
-fn nudge(seed: u32, k: u32) -> f64 {
-    let mut x = seed.wrapping_mul(0x9E37_79B9) ^ k.wrapping_mul(0x85EB_CA6B);
-    x ^= x >> 16; x = x.wrapping_mul(0x7FEB_352D); x ^= x >> 15; x = x.wrapping_mul(0x846C_A68B); x ^= x >> 16;
-    x as f64 / 2_147_483_648.0 - 1.0
-}
 const NORTH: f64 = std::f64::consts::PI;   // (a yaw: 0 looks south, along +z)
 
 /// Two rooms side by side, each with a door to the yard south of them and one door between them; a defender posted in each; the team in the
@@ -28,8 +22,8 @@ fn yard() -> Scene {
 }
 fn spot(seed: u32) -> [f64; 2] { [28.0 + nudge(seed, 0), 24.0 + nudge(seed, 1)] }
 
-fn left(p: &mut Play) -> f64 { game::squad40::squad40_left(&mut p.g) }
-fn on_the_menu(p: &Play) -> bool { p.g.orders.defs.iter().any(|&d| p.g.tab.orders_order_def[d].id == "shellThere") }
+fn left(p: &mut Play) -> f64 { game::squad40::squad40_left(&p.g, &game::seats::here(&p.g)) }
+fn on_the_menu(p: &Play) -> bool { p.on_menu("shellThere") }
 
 /// THE RULE: with one man of the squad carrying 40 mm shells, "put a shell there" is on the menu; given, that man turns to the spot and
 /// fires one shell onto it within a few seconds, and nobody else leaves his place.

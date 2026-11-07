@@ -12,7 +12,7 @@ pub fn live(g: &mut crate::game::Game) -> bool { true }
 
 /// A charge is going on by your own hands.   (workstow.ts samJob)
 pub fn sam_job(g: &mut crate::game::Game) -> bool {
-    crate::doortools::door_tools_sam_job(g).is_some() || crate::wallcharge::wall_charge_sam_job(g).is_some()
+    crate::doortools::door_tools_sam_job(g, &crate::seats::here(g)).is_some() || crate::wallcharge::wall_charge_sam_job(g).is_some()
 }
 
 /// Head of the player's frame: a job begun puts away what is in his hand, a job over brings it back.   (workstow.ts samStowTick)
@@ -61,8 +61,8 @@ pub fn sam_stow_tick(g: &mut crate::game::Game, holster: &mut dyn FnMut(&mut cra
 }
 
 /// The thing is still on its way out of his hand: the job's clock has not started.   (workstow.ts samStowing)
-pub fn sam_stowing(g: &crate::game::Game) -> bool {
-    let pl = g.player;
+pub fn sam_stowing(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
+    let pl = seat.player;
     match g.pl[pl].work_stow { Some(s) => !s.down, None => false }
 }
 

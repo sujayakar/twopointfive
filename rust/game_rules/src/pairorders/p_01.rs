@@ -24,13 +24,8 @@ pub fn name_of(g: &Game, h: GuardId) -> String {
 
 /// where a man is LOOKING on the floor plane: his chest and his head, halved   (pairorders.ts lookOf)
 pub fn look_of(g: &Game, h: GuardId) -> [f64; 2] {
-    let c = g.gd[h].ch;
-    let a = g.ch[c].chest_dir;
-    let b = crate::character::character_head_dir(g, c);
-    let x = a[0] + b[0];
-    let z = a[2] + b[2];
-    let l = m::hyp2(x, z);
-    if l > 1e-4 { [x / l, z / l] } else { let y = g.ch[c].body_yaw; [m::sin(y), m::cos(y)] }
+    let l = crate::guards::look_of(g, g.gd[h].ch);
+    [l[0], l[2]]
 }
 
 /// The quiet orders for one partner; the squad orders' people and note are hung here   (PairOrders.constructor)
@@ -43,16 +38,16 @@ pub fn pair_orders_new(g: &mut Game) -> crate::pairorders::PairOrders {
 
 // ------------------------------------------------------------ who, what
 /// the rows are on the menu: the switch, a squad on the floor, and not more of it than a pair's orders are for   (PairOrders.up)
-pub fn pair_orders_up(g: &Game) -> bool {
+pub fn pair_orders_up(g: &Game, seat: &crate::seats::SeatRef) -> bool {
     if !g.k.pair.on { return false; }
-    if !crate::orders::squad_orders_active(g) { return false; }
-    let n = crate::orders::squad_orders_squad(g).len() as f64;
+    if !crate::orders::squad_orders_active(g, seat) { return false; }
+    let n = crate::orders::squad_orders_squad(g, seat).len() as f64;
     n >= 1.0 && n <= g.k.pair.max_squad
 }
 
 /// the squad is quiet enough for hands   (PairOrders.quiet)
-pub fn pair_orders_quiet(g: &Game) -> bool {
-    !g.k.silent.on || crate::silent::squad_silent(g)
+pub fn pair_orders_quiet(g: &Game, seat: &crate::seats::SeatRef) -> bool {
+    !g.k.silent.on || crate::silent::squad_silent(g, seat)
 }
 
 /// a man an order can be about: standing, on the other side from Sam, not in Sam's arm, and seen   (PairOrders.isFoe)
@@ -102,7 +97,7 @@ pub fn pair_orders_gripped(g: &Game, h: GuardId) -> bool {
 /// spotted.ts says the pair is CAUGHT   (PairOrders.caught)
 pub fn pair_orders_caught(g: &mut Game) -> bool {
     if !g.k.spotted.on { return false; }
-    for gd in crate::orders::squad_orders_squad(g) {
+    for gd in crate::orders::squad_orders_squad(g, &crate::seats::here(g)) {
         if g.gd[gd].state != crate::game::GuardState::Dead && crate::spotted::spotted_mode(g, gd) == crate::spotted::SpottedMode::Caught { return true; }
     }
     false
@@ -165,7 +160,7 @@ pub(crate) fn take_issue(g: &mut Game, mode: crate::pairorders::JobMode, men: &[
         let was = g.pair.jobs.get(gd).map(|j| j.was_following);
         let was_following = match was {
             Some(w) => w,
-            None => match crate::orders::squad_orders_of(g, gd) { Some(a) => asg!(g, a).post.is_none(), None => false },
+            None => match crate::orders::squad_orders_of(g, &crate::seats::here(g), gd) { Some(a) => asg!(g, a).post.is_none(), None => false },
         };
         let now = g.time;
         g.pair.jobs.set(gd, crate::pairorders::Job {
@@ -242,7 +237,7 @@ fn take_row(g: &mut Game, id: &str, mode: crate::pairorders::JobMode, key: f64, 
         only: Some(OrderOnly::PairTake), can: Some(OrderCan::PairTake), valid: Some(OrderValid::PairTake),
         issue: OrderIssue::PairTake { mode }, tick: Some(OrderTick::PairTake), ..Default::default()
     };
-    g.tab.orders_order_def.push(def)
+    crate::orders::squad_orders_row(g, def)
 }
 
 /// mark, watch, now, dark: new rows each time they are seated   (PairOrders.rows)
@@ -250,14 +245,14 @@ pub fn pair_orders_rows(g: &mut Game) -> Vec<OrdersOrderDefId> {
     use crate::orders::{OrderCan, OrderIssue, OrderLabel, OrderTick, OrderValid, OrderWhen};
     use crate::pairorders::JobMode;
     let mark = take_row(g, "pairMark", JobMode::Mark, 1.0, "take him · on your mark", ["moving up on him.", "on him. your mark."]);
-    let watch = g.tab.orders_order_def.push(crate::orders::OrderDef {
+    let watch = crate::orders::squad_orders_row(g, crate::orders::OrderDef {
         id: String::from("pairWatch"), key: Some(2.0), label: OrderLabel::Text { text: String::from("watch him") }, targets: vec![crate::orders::TargetKind::Foe],
         ack: Some(vec![String::from("eyes on him."), String::from("i've got him.")]),
         can: Some(OrderCan::PairWatch), valid: Some(OrderValid::PairWatch), issue: OrderIssue::PairWatch, tick: Some(OrderTick::PairWatch),
         ..Default::default()
     });
     let now = take_row(g, "pairTake", JobMode::Now, 5.0, "take him now", ["on him.", "moving up on him."]);
-    let dark = g.tab.orders_order_def.push(crate::orders::OrderDef {
+    let dark = crate::orders::squad_orders_row(g, crate::orders::OrderDef {
         id: String::from("pairDark"), key: Some(1.0), label: OrderLabel::Text { text: String::from("move there · hold in the dark") }, targets: vec![crate::orders::TargetKind::Floor],
         ack: Some(vec![String::from("moving."), String::from("on it.")]),
         stands_in: Some(crate::orders::OrderDefStandsIn { for_: String::from("move"), when: OrderWhen::PairDark }),
@@ -270,7 +265,7 @@ pub fn pair_orders_rows(g: &mut Game) -> Vec<OrdersOrderDefId> {
 /// the mark's own row: 'go' under the word's header   (PairOrders.goRow)
 pub fn pair_orders_go_row(g: &mut Game) -> OrdersOrderDefId {
     use crate::orders::{OrderIssue, OrderLabel, OrderOnly, OrderValid};
-    g.tab.orders_order_def.push(crate::orders::OrderDef {
+    crate::orders::squad_orders_row(g, crate::orders::OrderDef {
         id: String::from("pairGo"), head: Some(String::from(crate::orders::WORD_HEAD)), hot_key: Some(String::from("KeyF")), free: Some(true),
         targets: vec![crate::orders::TargetKind::Floor, crate::orders::TargetKind::Door, crate::orders::TargetKind::None, crate::orders::TargetKind::Foe],
         label: OrderLabel::PairGo, only: Some(OrderOnly::PairGo), valid: Some(OrderValid::PairGo), issue: OrderIssue::PairGo,
@@ -280,14 +275,14 @@ pub fn pair_orders_go_row(g: &mut Game) -> OrdersOrderDefId {
 
 /// a row here given while the squad is loud: silent first, with the squad's own line for it   (PairOrders.quietFirst)
 pub fn pair_orders_quiet_first(g: &mut Game) {
-    if pair_orders_quiet(g) { return; }
+    if pair_orders_quiet(g, &crate::seats::here(g)) { return; }
     crate::silent::set_silent(g, true, Some(crate::silent::By::Order));
     crate::game::game_msg(g, "squad: going silent on that order.");
 }
 
 /// The rows on the menu while `up` and off it otherwise; asked every frame, work only when something changes   (PairOrders.seat)
 pub fn pair_orders_seat(g: &mut Game) {
-    let up = pair_orders_up(g);
+    let up = pair_orders_up(g, &crate::seats::here(g));
     if up != g.pair.seated {
         g.pair.seated = up;
         for id in crate::pairorders::rows().iter() { crate::orders::squad_orders_unregister(g, id); }
@@ -319,8 +314,8 @@ pub fn pair_orders_seat(g: &mut Game) {
 
 /// the rows are off the menu: nobody is left on one of them   (PairOrders.reset)
 pub fn pair_orders_reset(g: &mut Game) {
-    for gd in crate::orders::squad_orders_squad(g) {
-        if let Some(a) = crate::orders::squad_orders_of(g, gd) {
+    for gd in crate::orders::squad_orders_squad(g, &crate::seats::here(g)) {
+        if let Some(a) = crate::orders::squad_orders_of(g, &crate::seats::here(g), gd) {
             if crate::pairorders::rows().contains(&asg!(g, a).order) { pair_orders_stand(g, gd, "holding", None); }
         }
     }
@@ -388,7 +383,7 @@ pub fn pair_orders_tick(g: &mut Game, dt: f64) {
     let mut at = 0;
     while let Some(gd) = g.pair.jobs.next_key(&mut at) {
         let foe = g.pair.jobs.get(gd).unwrap().foe;
-        let a = crate::orders::squad_orders_of(g, gd);
+        let a = crate::orders::squad_orders_of(g, &crate::seats::here(g), gd);
         if g.gd[gd].state == crate::game::GuardState::Dead { g.pair.jobs.delete(gd); continue; }
         let kept = match a { Some(a) => crate::pairorders::takes().contains(&asg!(g, a).order) && asg!(g, a).foe == Some(foe), None => false };
         if !kept {
@@ -428,7 +423,7 @@ pub fn pair_orders_mark(g: &mut Game, by: Option<crate::pairorders::PairOrdersMa
         r.going = true;
         r.born = now;
         r.check_t = -1.0;
-        if let Some(a) = crate::orders::squad_orders_of(g, gd) { asg!(g, a).pace = Some(g.k.pair.go_pace); }
+        if let Some(a) = crate::orders::squad_orders_of(g, &crate::seats::here(g), gd) { asg!(g, a).pace = Some(g.k.pair.go_pace); }
     }
     g.stats.pairorders.marks += 1;
     let line = format!("go:{}", by.as_str());
@@ -656,7 +651,7 @@ pub fn pair_orders_take_tick(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) {
         take_off(g, gd, foe, &name, "blown", Some(if seen_me { "he's seen me!" } else { "he's onto us." }), true);
         return;
     }
-    if !on && !pair_orders_quiet(g) { take_off(g, gd, foe, &name, "loud", Some("going loud."), true); return; }
+    if !on && !pair_orders_quiet(g, &crate::seats::here(g)) { take_off(g, gd, foe, &name, "loud", Some("going loud."), true); return; }
     let d = v3::dist_xz(p, g.ch[fc].pos);
     let behind_him = pair_orders_rear(g, foe, p, None);
     let live = *job!(g, gd);
@@ -793,7 +788,7 @@ pub fn pair_orders_take_tick(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) {
     let t = g.time;
     job!(g, gd).check_t = t;
     let want = if staging { pair_orders_stage(g, foe) } else { pair_orders_behind(g, foe) };
-    let spot = crate::orders::squad_orders_free_spot(g, want).unwrap_or(want);
+    let spot = crate::orders::squad_orders_free_spot(g, &crate::seats::here(g), want).unwrap_or(want);
     if staging && job!(g, gd).set && behind_him && v3::dist_xz(p, spot) < 0.7 && pair_orders_clear_of(g, here, spot) {
         let c = g.ch[fc].pos;
         park_on(g, a, here, p, c);

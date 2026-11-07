@@ -462,13 +462,13 @@ pub fn step_is_threat(g: &crate::game::Game, gd: GuardId, e: crate::guards::Step
 
 /// A restart: the fresh man's start is not a step from where the last one fell. (guards.ts groundFresh)
 pub fn ground_fresh(g: &mut crate::game::Game) {
-    let view = crate::seats::view_key(g);
+    let view = crate::seats::view_key(g, &crate::seats::here(g));
     g.m.guards.ground_track.delete(view);
 }
 
 /// Sam's velocity over the ground this frame, as anybody watching sees it: his root's displacement since the frame before, capped. (guards.ts playerGroundVel)
 pub fn player_ground_vel(g: &mut crate::game::Game) -> V3 {
-    let view = crate::seats::view_key(g);
+    let view = crate::seats::view_key(g, &crate::seats::here(g));
     let p = g.ch[g.pl[g.player].ch].pos;
     let now = g.time;
     let Some(row) = g.m.guards.ground_track.get_mut(view) else {
@@ -549,7 +549,7 @@ pub fn sight_gain(g: &mut crate::game::Game, gd: GuardId, dist: f64) -> f64 {
     let mut rate = detect * m::pow(light, 1.5) * dist_f * (if crouch { 0.75 } else { 1.0 }) * moving * v3::clamp((smoke - 0.3) / 0.5, 0.0, 1.0) * keen;
     let pp = g.ch[g.pl[g.player].ch].pos;
     let side = crate::attention::attention_side_k(g, gd, pp);
-    rate *= side * crate::kitload::load_seen(g, crate::kitload::LoadSeenWho::Player);
+    rate *= side * crate::kitload::load_seen(g, &crate::seats::here(g), crate::kitload::LoadSeenWho::Player);
     if dist < 1.8 {
         rate = m::max(rate, 3.5 * crate::close::close_near_k(g, gd, dist));
     }
@@ -584,7 +584,7 @@ pub fn sight_gain_on(g: &mut crate::game::Game, gd: GuardId, o: GuardId, dist: f
         * keen;
     let op = g.ch[oc].pos;
     let side = crate::attention::attention_side_k(g, gd, op);
-    rate *= side * crate::kitload::load_seen(g, crate::kitload::LoadSeenWho::Guard(o));
+    rate *= side * crate::kitload::load_seen(g, &crate::seats::here(g), crate::kitload::LoadSeenWho::Guard(o));
     if dist < 1.8 {
         rate = m::max(rate, 3.5);
     }
@@ -619,7 +619,7 @@ pub fn body_seen(g: &mut crate::game::Game, gd: GuardId, o: GuardId, around: Opt
     let oc = g.gd[o].ch;
     let pos = g.ch[c].pos;
     let eye = bone_or(g, c, crate::character::Bone::Head, v3::add(pos, [0.0, 1.65, 0.0]));
-    let look = g.ch[c].chest_dir;
+    let look = crate::guards::look_of(g, c);
     let body = bone_or(g, oc, crate::character::Bone::Hips, g.ch[oc].pos);
     let to = v3::sub(body, eye);
     let dist = v3::len(to);

@@ -3,6 +3,8 @@
 //   bun run tools/wire/wire.ts add <mod::Type.field> --ty <type> [--ts <name>] [--expr <e>] [--start-only]    a field the page reads; refused if nothing the page runs reads that name
 //   bun run tools/wire/wire.ts add-struct <mod::Type> <field:type,...>              a struct of the table, new: its line on the wire and its write by path
 //   bun run tools/wire/wire.ts drop <mod::Type.field>...                            fields off the wire · --file <list> takes the names one a line
+//   bun run tools/wire/wire.ts add-hand-arm <mod::Enum> <Arm[(Type)]>                 an arm on a hand-written enum of the table (the out events), last
+//   bun run tools/wire/wire.ts add-word-arm <mod::Enum> <Tag> <word> <f:ty,...>       an arm on a word enum of the table (a track)
 //   bun run tools/wire/wire.ts add-enum <mod::Type> <word[:Tag],...>                a plain enum of the table, new: its line on the wire
 //   bun run tools/wire/wire.ts drop-type <mod::Type>...                             a type off the table once no field names it
 //   tools/blitz/rust.sh rust bun run tools/wire/cost.ts [address]                   what a tick's export and apply cost now, on the page's list
@@ -19,7 +21,7 @@ const read = (p: string) => readFileSync(p, 'utf8'), readJ = (p: string) => JSON
 const writeFields = (L: unknown) => writeFileSync(FIELDS, JSON.stringify(L, null, 1).replace(/^ +/gm, ''));
 const fnv = (s: string) => { let h = 0x811c9dc5; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 0x01000193) >>> 0; return h >>> 0; };
 // THE STATE WORDS: a hash of the whole game, a word a part, for two machines of one networked game to compare. What a host hands in and differs by machine is left out, and so is what is only a step's output
-const HOSTS_OWN = new Set(['m.owner', 'out', 'cmd_buf', 'local_seat', 'view_proj', 'puppet', 'm_per_px', 'taps', 'seat', 'tab.camera', 'tab.input', 'tab.cmd_seat', 'engine.settings', 'engine.view_focus', 'engine.effective_scale', 'engine.sharp_on']);
+const HOSTS_OWN = new Set(['fog_picture', 'm.owner', 'out', 'cmd_buf', 'local_seat', 'host_cam', 'host_input', 'view_proj', 'puppet', 'm_per_px', 'taps', 'seat', 'tab.camera', 'tab.input', 'tab.cmd_seat', 'engine.settings', 'engine.view_focus', 'engine.effective_scale', 'engine.sharp_on']);
 function stateWords(io: string): string { const fieldsOf = (path: string): string[] => { const l = io.split('\n').find(x => x.startsWith(`impl Io for ${path} {`)) ?? die(`no line for ${path}`) as never, w = l.slice(0, l.indexOf(' fn r(')); return [...w.matchAll(/self\.([a-z_0-9]+)\.w\(o\)/g)].map(m => m[1]); };
   // SCRATCH IS NO STATE (schema.json `scratch`, the ONE list: the rows the path diff does not compare). A part named there has no word, and a field of a
   // part named there is left out of that part's word. A row names a part as the field of the type that holds it: `game::Game.alone_own`,
@@ -93,6 +95,15 @@ function addEnum(path0: string, list: string): void { const m = path0.match(/^([
   const ioP = rustFile('io.rs'), t = read(ioP).replace(/\npub const LAYOUT: u32 = \d+;\n?/, '').trimEnd();
   const w = rows.map((r, i) => `Self::${r.tag} => ${i}u16,`).join(' '), rr = rows.map((r, i) => `${i} => Self::${r.tag},`).join(' ');
   writeFileSync(ioP, `${t}\nimpl Io for ${path} { fn w(&self, o: &mut W) { { let t: u16 = match self { ${w} #[allow(unreachable_patterns)] _ => 0xffff, }; t.w(o) } } fn r(i: &mut R) -> Self { match u16::r(i) { ${rr} _ => panic!("bridge: no such word of ${m![2]}") } } }\nimpl Poke for ${path} {}\n`); gen(false); console.log(`wire: ${path} is in the table, with ${rows.length} words`); }
+/** an arm on a hand-written enum of the table (`out_events::OutEvent`): `Arm` or `Arm(the type it carries)`, last, with the next number */
+function addHandArm(path0: string, arm: string): void { const path = `crate::${path0}`, S = readJ(SCHEMA), T = S.types[path]; if (T?.k !== 'handEnum') die(`${path} is no hand-written enum of the table`); const tag = T.arms.length, m = arm.match(/^([A-Za-z_0-9]+)(\(.*\))?$/); if (!m) die(`${arm}: write it Arm or Arm(Type)`); T.arms.push(arm);
+  const ioP = rustFile('io.rs'), io = read(ioP).split('\n'), k = io.findIndex(l => l.startsWith(`impl Io for ${path} {`)); if (k < 0) die(`${path} has no Io line on the wire`); const [w, r] = m![2] ? [`Self::${m![1]}(x) => { (${tag} as u16).w(o); x.w(o) } `, `${tag} => Self::${m![1]}(Io::r(i)), `] : [`Self::${m![1]} => (${tag} as u16).w(o), `, `${tag} => Self::${m![1]}, `];
+  io[k] = edit(io[k], /(#\[allow\(unreachable_patterns\)\] )?_ => /, `${w}$&`, `${path} write`); io[k] = edit(io[k], /_ => panic!/, `${r}$&`, `${path} read`); writeFileSync(ioP, io.join('\n')); writeFileSync(SCHEMA, JSON.stringify(S)); gen(false); console.log(`wire: ${path} has ${m![1]}, number ${tag}`); }
+/** an arm on a word enum of the table (`effects::Track`): its Rust tag, its word on the page, its fields as `add-struct` has them */
+function addWordArm(path0: string, tag: string, word: string, fields: string): void { const path = `crate::${path0}`, S = readJ(SCHEMA), T = S.types[path]; if (T?.k !== 'wordEnum') die(`${path} is no word enum of the table`); const n = T.arms.length;
+  const F = fields.split(',').map(x => x.trim()).filter(Boolean).map(x => { const i = x.indexOf(':'); return { rust: x.slice(0, i).trim(), ty: x.slice(i + 1).trim(), ts: camel(x.slice(0, i).trim()) }; }); T.arms.push({ tag, word, fields: F });
+  const ioP = rustFile('io.rs'), io = read(ioP).split('\n'), k = io.findIndex(l => l.startsWith(`impl Io for ${path} {`)); if (k < 0) die(`${path} has no Io line on the wire`); const names = F.map(f => f.rust).join(', '), wr = F.map(f => `${f.rust}.w(o);`).join(' '), rd = F.map(f => `${f.rust}: Io::r(i)`).join(', ');
+  io[k] = edit(io[k], '#[allow(unreachable_patterns)] _ =>', `Self::${tag} { ${names} } => { (${n} as u16).w(o); ${wr} } #[allow(unreachable_patterns)] _ =>`, `${path} write`); io[k] = edit(io[k], '_ => panic!', `${n} => Self::${tag} { ${rd} }, _ => panic!`, `${path} read`); writeFileSync(ioP, io.join('\n')); writeFileSync(SCHEMA, JSON.stringify(S)); gen(false); console.log(`wire: ${path} has ${tag}, number ${n}`); }
 /** a type off the table, once no field names it: its lines on the wire go with it. The Rust type itself is a person's to delete */
 function dropType(Q: string[]): void { const S = readJ(SCHEMA), ioP = rustFile('io.rs'); let io = read(ioP).split('\n');
   for (const q of Q) { const path = q.startsWith('crate::') ? q : `crate::${q}`, T = S.types[path]; if (!T) die(`${path} is no type of the table`); const named = new RegExp(`\\b${path.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`);
@@ -104,6 +115,8 @@ switch (A[0]) { case 'gen': gen(A.includes('--check')); break;
   case 'add': add(A[1], opt('--ty') ?? die('add: --ty') as never, opt('--ts'), opt('--expr'), A.includes('--start-only')); break;
   case 'add-struct': addStruct(A[1], A[2]); break;
   case 'add-enum': addEnum(A[1], A[2]); break;
+  case 'add-hand-arm': addHandArm(A[1], A[2]); break;
+  case 'add-word-arm': addWordArm(A[1], A[2], A[3], A[4]); break;
   case 'drop-type': dropType(A.slice(1)); break;
   case 'drop': { const f = opt('--file'); drop(f ? read(f).split('\n').map(x => x.trim()).filter(Boolean) : A.slice(1)); break; }
   default: console.error(read(import.meta.path).split('\n').slice(0, 7).join('\n')); process.exit(64); }

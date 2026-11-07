@@ -18,15 +18,15 @@ fn target_at(t: &crate::orders::OrderTarget) -> V3 {
 }
 
 /// The squad's smoke canisters left this run. (squadsmoke.ts squadSmokeLeft)
-pub fn squad_smoke_left(g: &crate::game::Game) -> f64 {
-    let key = crate::seats::view_key(g);
+pub fn squad_smoke_left(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> f64 {
+    let key = crate::seats::view_key(g, seat);
     match g.m.squadsmoke.states.get(key) { Some(s) => s.cans, None => 0.0 }
 }
 
 /// A scenario has just staged its team: the squad's smoke is `cans`, and the row is on the menu only if that is one or more. (squadsmoke.ts squadSmokeStage)
 pub fn squad_smoke_stage(g: &mut crate::game::Game, cans: f64) {
     let n = m::max(0.0, js::or(m::floor(cans), 0.0));
-    let key = crate::seats::view_key(g);
+    let key = crate::seats::view_key(g, &crate::seats::here(g));
     if !g.m.squadsmoke.states.has(key) {
         if !js::truthy(n) { return; }
         g.m.squadsmoke.states.set(key, State { brought: 0.0, cans: 0.0, noted: false, last: JsMap::new() });
@@ -128,7 +128,7 @@ pub fn squad_arc_to(g: &mut crate::game::Game, gd: GuardId, at: V3, roll_k: Opti
 /// The man of `men` who would throw it, with his throw: the nearest to the spot with an arc to rest on it. (squadsmoke.ts squadSmokeThrower)
 pub fn squad_smoke_thrower(g: &mut crate::game::Game, men: &[GuardId], at: V3) -> Option<crate::squadsmoke::SquadSmokeThrower> {
     let again = squadsmoke().again_secs;
-    let key = crate::seats::view_key(g);
+    let key = crate::seats::view_key(g, &crate::seats::here(g));
     let mut order: Vec<GuardId> = men.to_vec();
     js::sort_by(&mut order, |a, b| {
         v3::dist_xz(g.ch[g.gd[*a].ch].pos, at) - v3::dist_xz(g.ch[g.gd[*b].ch].pos, at)
@@ -159,12 +159,12 @@ pub fn row(g: &mut crate::game::Game) -> OrdersOrderDefId {
         issue: crate::orders::OrderIssue::Smoke,
         ..crate::orders::OrderDef::zeroed()
     };
-    g.tab.orders_order_def.push(def)
+    crate::orders::squad_orders_row(g, def)
 }
 
 /// The throw: one can off the count, on its arc from the nearest man's hand, and a row in the squad's log. None: given. The arm `OrderIssue::Smoke`. (squadsmoke.ts:135 issue)
 pub fn row_smoke_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget, o: Option<&crate::orders::GiveOpts>) -> Option<String> {
-    let key = crate::seats::view_key(g);
+    let key = crate::seats::view_key(g, &crate::seats::here(g));
     let at = target_at(t);
     let has_cans = match g.m.squadsmoke.states.get(key) { Some(s) => s.cans > 0.0, None => false };
     let th = if has_cans { squad_smoke_thrower(g, men, at) } else { None };
@@ -206,7 +206,7 @@ pub fn row_smoke_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTa
 
 /// The squad's HUD block: what is left, while this staging brought any. (squadsmoke.ts notes)
 pub fn notes(g: &mut crate::game::Game) -> Vec<crate::orders::OrderNote> {
-    let key = crate::seats::view_key(g);
+    let key = crate::seats::view_key(g, &crate::seats::here(g));
     match g.m.squadsmoke.states.get(key) {
         Some(s) if s.brought > 0.0 => vec![crate::orders::OrderNote::Text(format!("smoke {}", js::num_str(s.cans)))],
         _ => Vec::new(),
@@ -216,7 +216,7 @@ pub fn notes(g: &mut crate::game::Game) -> Vec<crate::orders::OrderNote> {
 /// The row's key with a menu up that lists it: the press is that row's. True: the press was the row's. (squadsmoke.ts squadSmokeKey)
 pub fn squad_smoke_key(g: &mut crate::game::Game, input: InputId) -> bool {
     let key = squadsmoke().order_key;
-    let view = crate::seats::view_key(g);
+    let view = crate::seats::view_key(g, &crate::seats::here(g));
     if g.orders.menu.is_none() || !g.m.squadsmoke.states.has(view) || !crate::input::input_hit(g, input, &key) { return false; }
     let id = SMOKE_ORDER;
     let i = match &g.orders.menu {

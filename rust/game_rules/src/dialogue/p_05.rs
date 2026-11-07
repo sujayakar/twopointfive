@@ -44,34 +44,34 @@ pub fn radio_state<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::dialogue:
 }
 
 /// The run is really the player's and still going, Sam is on his feet, and it is the night she talks him through.   (dialogue.ts radioLive)
-pub fn radio_live(g: &crate::game::Game) -> bool {
+pub fn radio_live(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     let s = g.mission.stage;
     !g.quiet_utility && g.puppet.is_none() && !g.touring && g.ai_enabled
         && s != crate::game::MissionStage::Done && s != crate::game::MissionStage::Failed
-        && !g.pl[g.player].down
+        && !g.pl[seat.player].down
         && !(g.night_breach.active || g.rescue.active)
         && crate::dialogue::is_office(g)
 }
 
 /// Nobody is fighting, and Sam's mouth and hands are free.   (dialogue.ts radioClear)
-pub fn radio_clear(g: &crate::game::Game) -> bool {
+pub fn radio_clear(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     !g.guards.iter().any(|&x| g.gd[x].state == crate::game::GuardState::Alert)
-        && g.pl[g.player].holding.is_none()
-        && g.pl[g.player].takedown.is_none()
+        && g.pl[seat.player].holding.is_none()
+        && g.pl[seat.player].takedown.is_none()
 }
 
 /// Sound a beat now (no delay) or queue it `delay` seconds out. False if it will never sound. The variant is dealt off the beat and the run's start.   (dialogue.ts handlerBeat)
 pub fn handler_beat(g: &mut crate::game::Game, beat: crate::dialogue::HandlerBeat, delay: Option<f64>) -> bool {
     let delay = delay.unwrap_or(0.0);
     radio_state(g);
-    if !radio_live(g) || row(g).done.has(beat) { return false; }
+    if !radio_live(g, &crate::seats::here(g)) || row(g).done.has(beat) { return false; }
     if delay > 0.0 {
         let at = g.time + delay;
         let r = row(g);
         if !r.queue.iter().any(|q| q.beat == beat) { r.queue.push(crate::dialogue::RadioStateQueueItem { at, beat }); }
         return true;
     }
-    if !radio_clear(g) { return false; }
+    if !radio_clear(g, &crate::seats::here(g)) { return false; }
     let now = g.time;
     let r = row(g);
     if now - r.last_at < 5.0 || r.reply.is_some() { return false; }
@@ -128,7 +128,7 @@ pub fn tick_radio(g: &mut crate::game::Game) {
         i -= 1;
         let q = row(g).queue[i];
         if g.time < q.at { continue; }
-        if !radio_live(g) || row(g).done.has(q.beat) {
+        if !radio_live(g, &crate::seats::here(g)) || row(g).done.has(q.beat) {
             row(g).queue.remove(i);
             continue;
         }
@@ -142,7 +142,7 @@ pub fn tick_radio(g: &mut crate::game::Game) {
     let due = match &row(g).reply { Some(p) => now >= p.at, None => false };
     if due {
         let p = row(g).reply.take().unwrap();
-        if radio_live(g) && radio_clear(g) {
+        if radio_live(g, &crate::seats::here(g)) && radio_clear(g, &crate::seats::here(g)) {
             let now = g.time;
             let pl = g.player;
             let talking = match &g.pl[pl].bubble { Some(b) => now - b.t < b.dur, None => false };

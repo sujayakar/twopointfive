@@ -57,7 +57,6 @@ impl Default for FogEye { fn default() -> Self { Self::zeroed() } }
 #[derive(Clone, Debug)]
 pub struct FogOfWar {
     pub on: bool,
-    pub frame: crate::render_fogofwar::FogFrame,
     pub eyes: Vec<crate::fogofwar::FogEye>,
     pub mates: Vec<CharId>,
     pub hidden_chars: JsSet<CharId>,
@@ -69,11 +68,7 @@ pub struct FogOfWar {
     pub recs: JsMap<GuardId, crate::fogofwar::Rec>,
     pub door_recs: JsMap<DoorId, crate::fogofwar::FogOfWarDoorRecsValue>,
     pub doors_held: f64,
-    pub face_recs: JsMap<FixtureId, Vec<V3>>,
     pub lamp_recs: JsMap<FixtureId, bool>,
-    pub lamp_pick: Vec<crate::fogofwar::FogOfWarLampPickItem>,
-    pub lamp_n: f64,
-    pub lit_stats: crate::fogofwar::FogOfWarLitStats,
     pub thing_recs: JsMap<crate::Num, crate::fogofwar::ThingRec>,
     pub props_loaded: bool,
     pub loaded: bool,
@@ -89,11 +84,6 @@ pub struct FogOfWar {
     pub asked: JsMap<String, f64>,
     pub pending: Vec<crate::fogofwar::FogOfWarPendingItem>,
     pub turn: f64,
-    pub viewer: bool,
-    pub bared: bool,
-    pub look_frames: f64,
-    pub raw_list: Vec<BoxId>,
-    pub raw_at: f64,
     pub door_from: f64,
     pub door_n: f64,
     pub call_log: Vec<crate::fogofwar::FogOfWarCallLogItem>,
@@ -104,8 +94,8 @@ pub struct FogOfWar {
     pub known_t: JsMap<GuardId, f64>,
     pub told_step: JsMap<GuardId, f64>,
     pub call_n: f64,
-    pub full_stats: crate::fogofwar::FogOfWarFullStats,
-    pub full_on: bool,
+    /// the fog is on and the pass has run: the team's rule is live (`ours_on`)
+    pub live: bool,
     pub our_chunks: JsSet<crate::Num>,
     pub our_landed: JsSet<crate::Num>,
 }
@@ -114,7 +104,6 @@ impl FogOfWar {
     pub fn blank() -> Self {
         FogOfWar {
             on: false,
-            frame: crate::render_fogofwar::FogFrame { eyes: alloc::vec![0.0; (crate::render_fogofwar::FOG_EYES * 4.0) as usize], looks: alloc::vec![0.0; (crate::render_fogofwar::FOG_EYES * 4.0) as usize], dim: 0.4, desat: 0.75, top_pad: 0.3, lights: alloc::vec![0.0; (crate::render_fogofwar::FOG_LIGHTS * 16.0) as usize], lights_u: alloc::vec![0; (crate::render_fogofwar::FOG_LIGHTS * 16.0) as usize], thin_bits: alloc::vec![0; crate::render_fogofwar::FOG_THIN_WORDS as usize], thin_serial: -1.0, thin_count: -1.0, ..crate::render_fogofwar::FogFrame::zeroed() },
             eyes: Vec::new(),
             mates: Vec::new(),
             hidden_chars: JsSet::new(),
@@ -126,11 +115,7 @@ impl FogOfWar {
             recs: JsMap::new(),
             door_recs: JsMap::new(),
             doors_held: 0.0,
-            face_recs: JsMap::new(),
             lamp_recs: JsMap::new(),
-            lamp_pick: Vec::new(),
-            lamp_n: 0.0,
-            lit_stats: crate::fogofwar::FogOfWarLitStats { lamps: 0.0, lights: 0.0, held: 0.0 },
             thing_recs: JsMap::new(),
             props_loaded: false,
             loaded: false,
@@ -146,11 +131,6 @@ impl FogOfWar {
             asked: JsMap::new(),
             pending: Vec::new(),
             turn: 0.0,
-            viewer: false,
-            bared: false,
-            look_frames: 0.0,
-            raw_list: Vec::new(),
-            raw_at: -1.0,
             door_from: 0.0,
             door_n: 0.0,
             call_log: Vec::new(),
@@ -161,14 +141,46 @@ impl FogOfWar {
             known_t: JsMap::new(),
             told_step: JsMap::new(),
             call_n: 0.0,
-            full_stats: crate::fogofwar::FogOfWarFullStats { hidden: 0.0, ghosts: 0.0, held: 0.0 },
-            full_on: false,
+            live: false,
             our_chunks: JsSet::new(),
             our_landed: JsSet::new(),
         }
     }
 }
 impl Default for FogOfWar { fn default() -> Self { Self::blank() } }
+
+/// THE PICTURE'S BLOCK OF THE FOG OF WAR: one machine's, made from the game's state every tick and read by nothing in it (fogofwar/picture.rs).
+/// The game lists it among the host's own, so it has no word of the state: two machines that show different seats need not agree on it.
+#[derive(Clone, Debug)]
+pub struct FogPicture {
+    pub frame: crate::render_fogofwar::FogFrame,
+    pub lamp_pick: Vec<crate::fogofwar::FogOfWarLampPickItem>,
+    pub lamp_n: f64,
+    pub lit_stats: crate::fogofwar::FogOfWarLitStats,
+    pub face_recs: JsMap<FixtureId, Vec<V3>>,
+    pub full_stats: crate::fogofwar::FogOfWarFullStats,
+    pub viewer: bool,
+    pub look_frames: f64,
+    pub raw_list: Vec<BoxId>,
+    pub raw_at: f64,
+}
+impl FogPicture {
+    pub fn blank() -> Self {
+        FogPicture {
+            frame: crate::render_fogofwar::FogFrame { eyes: alloc::vec![0.0; (crate::render_fogofwar::FOG_EYES * 4.0) as usize], looks: alloc::vec![0.0; (crate::render_fogofwar::FOG_EYES * 4.0) as usize], dim: 0.4, desat: 0.75, top_pad: 0.3, lights: alloc::vec![0.0; (crate::render_fogofwar::FOG_LIGHTS * 16.0) as usize], lights_u: alloc::vec![0; (crate::render_fogofwar::FOG_LIGHTS * 16.0) as usize], thin_bits: alloc::vec![0; crate::render_fogofwar::FOG_THIN_WORDS as usize], thin_serial: -1.0, thin_count: -1.0, ..crate::render_fogofwar::FogFrame::zeroed() },
+            lamp_pick: Vec::new(),
+            lamp_n: 0.0,
+            lit_stats: crate::fogofwar::FogOfWarLitStats { lamps: 0.0, lights: 0.0, held: 0.0 },
+            face_recs: JsMap::new(),
+            full_stats: crate::fogofwar::FogOfWarFullStats { hidden: 0.0, ghosts: 0.0, held: 0.0 },
+            viewer: false,
+            look_frames: 0.0,
+            raw_list: Vec::new(),
+            raw_at: -1.0,
+        }
+    }
+}
+impl Default for FogPicture { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: inline at src/game/fogofwar.ts:436 FogOfWar.stats, src/game/fogofwar.ts:436)
 #[derive(Clone, Copy, Debug)]

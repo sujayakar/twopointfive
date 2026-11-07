@@ -44,7 +44,7 @@ pub fn stack_line_pace(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignme
     let d = shy;
     let c = g.gd[gd].ch;
     let p = g.ch[c].pos;
-    if !stack_line_open(g, d) || crate::silent::squad_silent(g) { return None; }
+    if !stack_line_open(g, d) || crate::silent::squad_silent(g, &crate::seats::here(g)) { return None; }
     let f = crate::guards::frame_of(g, d);
     let face = if (post[0] - f.hx) * f.nx + (post[2] - f.hz) * f.nz >= 0.0 { 1.0 } else { -1.0 };
     if ((p[0] - f.hx) * f.nx + (p[2] - f.hz) * f.nz) * face < 0.05 || !stack_line_sees(g, d, p, face) { return None; }

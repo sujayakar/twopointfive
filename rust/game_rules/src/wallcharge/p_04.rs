@@ -134,10 +134,10 @@ pub fn wall_charge_draw(g: &mut crate::game::Game, c_2: WallChargeId) {
 }
 
 /// Is this set charge the squad's key's to blow: one the squad set, or his own while an order of theirs is on that wall (wallcharge.ts WallCharge.keyIs)
-pub fn wall_charge_key_is(g: &crate::game::Game, c_2: WallChargeId) -> bool {
+pub fn wall_charge_key_is(g: &crate::game::Game, seat: &crate::seats::SeatRef, c_2: WallChargeId) -> bool {
     let c = &g.tab.wallcharge_set_wall_charge[c_2];
     c.by != crate::ownblow::SAM_BY
-        || g.wall_charge.ops.iter().any(|&o| same_wall(&g.tab.wallcharge_wall_op[o].wall, &c.wall))
+        || seat.wall_charge.ops.iter().any(|&o| same_wall(&g.tab.wallcharge_wall_op[o].wall, &c.wall))
 }
 
 /// The nearest charge his own hands set (wallcharge.ts WallCharge.samSet)
@@ -189,12 +189,12 @@ pub fn wall_charge_sam_rows(g: &mut crate::game::Game, p: V3, busy: bool, row: &
         }
     };
     let w = match wall { Some(w) if w.ok => w, _ => return };
-    let c = wall_charge_charge_on(g, &w);
+    let c = wall_charge_charge_on(g, &crate::seats::here(g), &w);
     let set_off = g.k.wallcharge.set_off;
     let foot = wall_pt(g, &w, 0.0, set_off, None);
     let d = v3::dist_xz(p, foot);
     if d > g.k.wallcharge.sam_marker_m || (c.is_none() && g.wall_charge.sam.is_none() && wall_charge_open_at(g, &w)) { return; }
-    if c.is_none() && g.wall_charge.sam.is_none() && !wall_charge_affordable(g) { return; }
+    if c.is_none() && g.wall_charge.sam.is_none() && !wall_charge_affordable(g, &crate::seats::here(g)) { return; }
     let near = d < g.k.wallcharge.sam_reach && wall_off(g, &w, p) > 0.0 && {
         let to = wall_pt(g, &w, 0.0, 0.1, Some(0.9));
         !crate::scene_collision::solid_blocked(g, [p[0], 0.9, p[2]], to, None)
@@ -221,7 +221,7 @@ pub fn wall_charge_sam_rows(g: &mut crate::game::Game, p: V3, busy: bool, row: &
         return;
     }
     if let Some(c) = c {
-        let key_is = wall_charge_key_is(g, c);
+        let key_is = wall_charge_key_is(g, &crate::seats::here(g), c);
         let word = crate::ownblow::blow_key_word(key_is, &f);
         let close = wall_charge_close_words(g, Some(c), None);
         it.line2 = alloc::format!("{}  blow the charge{}", word, close);
@@ -236,7 +236,7 @@ pub fn wall_charge_sam_rows(g: &mut crate::game::Game, p: V3, busy: bool, row: &
     if going_on {
         it.line2 = String::from("a charge is going on it");
     } else if reach && !busy {
-        let words = wall_charge_row_words(g);
+        let words = wall_charge_row_words(g, &crate::seats::here(g));
         let v = row(g, it.clone(), crate::game::Verb::Charge, words, Some(alloc::format!("{}  blows it once set", key)), None);
         verbs.push(v);
         g.wall_charge.offered = Some(w);
@@ -269,7 +269,7 @@ pub fn wall_charge_sam_tick(g: &mut crate::game::Game) {
         wall_charge_cancel(g);
         return;
     }
-    if crate::workstow::sam_stowing(g) {
+    if crate::workstow::sam_stowing(g, &crate::seats::here(g)) {
         let now = g.time;
         if let Some(sam) = g.wall_charge.sam.as_mut() { sam.t0 = now; }
         return;
@@ -281,10 +281,10 @@ pub fn wall_charge_sam_tick(g: &mut crate::game::Game) {
     crate::handwork::charge_hands(g, ch, at, wall_n(&s.wall), el, set_secs, hand);
     if g.time - s.t0 < set_secs { return; }
     g.wall_charge.sam = None;
-    if wall_charge_open_at(g, &s.wall) || wall_charge_charge_on(g, &s.wall).is_some() { return; }
+    if wall_charge_open_at(g, &s.wall) || wall_charge_charge_on(g, &crate::seats::here(g), &s.wall).is_some() { return; }
     let paid = wall_charge_take(g);
     if paid < 0.0 {
-        let words = wall_charge_none_words(g);
+        let words = wall_charge_none_words(g, &crate::seats::here(g));
         crate::game::game_msg(g, words.strip_suffix('.').unwrap_or(&words));
         return;
     }
@@ -303,8 +303,8 @@ pub fn wall_charge_sam_tick(g: &mut crate::game::Game) {
 }
 
 /// Is Sam setting one right now (wallcharge.ts WallCharge.setting)
-pub fn wall_charge_setting(g: &crate::game::Game) -> bool {
-    g.wall_charge.sam.is_some()
+pub fn wall_charge_setting(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
+    seat.wall_charge.sam.is_some()
 }
 
 /// The charge Sam is setting by hand, for whoever stands him at it. `at` is a copy: see notes, player.ts:2145 (wallcharge.ts WallCharge.samJob)

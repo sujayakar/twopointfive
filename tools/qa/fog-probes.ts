@@ -803,7 +803,7 @@ function edgeReplica(HMAX: number, JLO: number, JHI: number, SLANT: number, RUN:
 }
 /** the shader text the replica above mirrors (fogofwar.wgsl from the soft edge's constants to the end of fowSeen), white space squeezed: a change there without
  *  the replica, and this number, changed with it is red */
-const EDGE_TEXT_HASH = 2493228448;
+const EDGE_TEXT_HASH = 1049378601;
 export async function fogEdge(): Promise<boolean> {
   const { verdict, done } = family('fog-edge: the fog comes in over a band across a sight edge, not on a hard line, and keeps its colour');
   const brk = process.env.FOGEDGE_BREAK === '1';

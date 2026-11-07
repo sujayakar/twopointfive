@@ -60,7 +60,7 @@ pub fn point_in_view(g: &mut crate::game::Game, gd: GuardId, p: V3, range: Optio
     if crate::doze::doze_asleep(g, gd) { return false; }
     let c = g.gd[gd].ch;
     let eye = bone_or(g, c, crate::character::Bone::Head, 1.65);
-    let look = g.ch[c].chest_dir;
+    let look = crate::guards::look_of(g, c);
     let to = v3::sub(p, eye);
     let l = v3::len(to);
     if l > range { return false; }

@@ -22,7 +22,6 @@
 import { standUp, ROOT } from './headless.ts';
 import { swept } from './sweep.ts';
 import { readFileSync } from 'node:fs';
-import { hudExpireBubbles } from '../../src/game/journal.ts';
 import { resolve } from 'node:path';
 
 export async function replayfogCheck(): Promise<boolean> {
@@ -86,10 +85,9 @@ export async function replayfogCheck(): Promise<boolean> {
       const at = (b: any) => JSON.stringify([b.center, b.half, b.yaw ?? 0]);
       for (let f = 0; f < 60 * secs; f++) {
         W.step(DT);
-        if (!lift && tube === null) hudExpireBubbles(g);   // (the HUD's one write to the game, made after every step on a page: here in every arm, in the lift arm inside the lifted draw as the player makes it)
         if (thin) {   // (the picture's own pixel: the same draw twice, at the step's pixel and at another — only the thin lines' width and glow may differ, and only in the drawn list)
           const dyn = world.dynamics, before = dyn.slice(), was = before.map((b: any) => `${b.h}|${b.emissive}`), px = BREAK ? 0 : g.mPerPx * (f % 2 ? 6 : 1 / 8);
-          g.fogLift(false, tube, 0); world.upload(); const LA = world.dynamics.slice(); hudExpireBubbles(g); g.fogBack();
+          g.fogLift(false, tube, 0); world.upload(); const LA = world.dynamics.slice(); g.fogBack();
           g.fogLift(false, tube, px); world.upload(); const LB = world.dynamics; let n = 0;
           if (LB.length !== LA.length) note(f, `the fitted list holds ${LB.length} boxes, the unfitted ${LA.length}`);
           else for (let i = 0; i < LA.length; i++) { const a: any = LA[i], b: any = LB[i], want = thinWant(a, px), same = a.h[0] === b.h[0] && a.h[1] === b.h[1];
@@ -113,7 +111,7 @@ export async function replayfogCheck(): Promise<boolean> {
           const irNow = world.dynamics.filter(irMade).length;
           if (tube) { if (irStep) note(f, 'the step made infrared boxes with the run\'s goggles up'); if (irNow) { A.ir++; A.irMax = Math.max(A.irMax, irNow); if (world.dynamics === dyn) note(f, 'infrared boxes written into the step\'s own list'); } }
           else { if (irStep) { A.ir++; A.irMax = Math.max(A.irMax, irStep); } if (irNow) note(f, 'an infrared box drawn with the viewer\'s tube off'); if (world.dynamics.length !== before.length - irStep) note(f, 'more than the infrared boxes left out'); }
-          hudExpireBubbles(g); g.fogBack();
+          g.fogBack();
           if (world.dynamics !== dyn) note(f, 'the step\'s list not handed back');
           if (dyn.length !== before.length || dyn.some((b: any, i: number) => b !== before[i])) note(f, 'the step\'s list was written to');
           if (g.player.nv !== nv || g.player.nvAmount !== k) note(f, 'the player\'s goggles were touched');
@@ -138,7 +136,6 @@ export async function replayfogCheck(): Promise<boolean> {
               if (FW.doorN !== T.length || T.some((b, i) => at(before[k0 + i]) !== at(b))) A.doors++; }
             if (hid.length && world.dynamics.length < before.length) note(f, `fewer boxes lifted (${world.dynamics.length}) than fogged (${before.length})`);
           } else if (world.dynamics !== dyn || FW.bared) note(f, 'a lift with no viewer raised changed the picture');
-          hudExpireBubbles(g);
           if (!BREAK) g.fogBack(); else { g.fogBack = function () { }; FW.bared = false; FW.frame.on = on; world.dynamics = dyn; g.fogHeld = null; }   // (BREAK: everything put back but the pack)
           if (world.dynamics !== dyn) note(f, 'the step\'s list not handed back');
           if (dyn.length !== before.length || dyn.some((b: any, i: number) => b !== before[i])) note(f, 'the step\'s list was written to');

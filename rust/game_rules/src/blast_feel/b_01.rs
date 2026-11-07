@@ -25,7 +25,7 @@ pub fn load_feel(g: &mut crate::game::Game) { g.m.blast_feel.loaded = true; }
 
 /// this view's state, made on first ask (src/game/blastFeel.ts:93 stateOf)
 fn state_mut(g: &mut Game) -> &mut State {
-    let key = crate::seats::view_key(g);
+    let key = crate::seats::view_key(g, &crate::seats::here(g));
     g.m.blast_feel.state.get_or_insert_with(key, || State { seen: Vec::new(), queue: Vec::new(), kicks: Vec::new(), serial: 1.0, last: -1.0, list: None })
 }
 
@@ -68,7 +68,7 @@ pub fn wall_report(g: &mut crate::game::Game, at: V3) -> bool {
 /// (src/game/blastFeel.ts:110 wallReportOf)
 pub fn wall_report_of(g: &mut crate::game::Game, at: V3) -> bool {
     if !live(g) { return false; }
-    let key = crate::seats::view_key(g);
+    let key = crate::seats::view_key(g, &crate::seats::here(g));
     let Some(seen) = g.m.blast_feel.state.get(key).map(|s| s.seen.clone()) else { return false; };
     let set = g.wall_charge.set.clone();
     let mut found: Option<usize> = None;
@@ -102,7 +102,7 @@ pub fn blast_feel_tick(g: &mut crate::game::Game, cam: CameraId) {
 
 /// (src/game/blastFeel.ts:130 blastFeelTickRaw)
 pub fn blast_feel_tick_raw(g: &mut crate::game::Game, cam: CameraId) {
-    let key = crate::seats::view_key(g);
+    let key = crate::seats::view_key(g, &crate::seats::here(g));
     // (`g.wallCharge` is always there in the Rust game)
     if !live(g) {
         if let Some(s) = g.m.blast_feel.state.get_mut(key) { s.seen.clear(); s.queue.clear(); s.kicks.clear(); }

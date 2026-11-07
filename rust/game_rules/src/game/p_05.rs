@@ -237,13 +237,13 @@ pub fn game_free_held(g: &mut crate::game::Game, why: crate::game::GameFreeHeldW
 }
 
 /// The living man nearest Sam within `reach` metres; `foe`: only men hostile to the player. (game.ts Game.nearestLivingGuard)
-pub fn game_nearest_living_guard(g: &crate::game::Game, reach: Option<f64>, foe: Option<bool>) -> Option<GuardId> {
+pub fn game_nearest_living_guard(g: &crate::game::Game, seat: &crate::seats::SeatRef, reach: Option<f64>, foe: Option<bool>) -> Option<GuardId> {
     let foe = foe.unwrap_or(false);
     let mut best: Option<GuardId> = None;
     let mut bd = reach.unwrap_or(m::INF);
     for gd in g.guards.clone() {
         if g.gd[gd].state == crate::game::GuardState::Dead || (foe && !crate::teams::hostile_to(g, gd, crate::teams::HostileToO::Player)) { continue; }
-        let d = v3::dist_xz(g.ch[g.gd[gd].ch].pos, g.ch[g.pl[g.player].ch].pos);
+        let d = v3::dist_xz(g.ch[g.gd[gd].ch].pos, g.ch[g.pl[seat.player].ch].pos);
         if d <= bd { bd = d; best = Some(gd); }
     }
     best
@@ -252,7 +252,7 @@ pub fn game_nearest_living_guard(g: &crate::game::Game, reach: Option<f64>, foe:
 /// Sandbox: lean on whoever is within reach; a note if nobody is. (game.ts Game.interrogateNearest)
 pub fn game_interrogate_nearest(g: &mut crate::game::Game, rnd: Option<&mut dyn FnMut(&mut crate::game::Game) -> f64>) -> Option<crate::dialogue::DialoguePick> {
     if g.pl[g.player].down { game_note(g, "you're down \u{2014} nobody answers to a man on the floor"); return None; }
-    let Some(gd) = game_nearest_living_guard(g, Some(crate::dialogue::INTERROGATE_REACH), Some(true)) else {
+    let Some(gd) = game_nearest_living_guard(g, &crate::seats::here(g), Some(crate::dialogue::INTERROGATE_REACH), Some(true)) else {
         game_note(g, &format!("nobody hostile within {} m to lean on \u{2014} walk up to a living guard", js::num_str(crate::dialogue::INTERROGATE_REACH)));
         return None;
     };
@@ -266,7 +266,7 @@ pub fn game_interrogate_nearest(g: &mut crate::game::Game, rnd: Option<&mut dyn 
 
 /// Panel: the interrogation engine's read of the man nearest Sam, at any distance. (game.ts Game.dialogueSummary)
 pub fn game_dialogue_summary(g: &mut crate::game::Game) -> String {
-    let Some(gd) = game_nearest_living_guard(g, Some(m::INF), Some(true)) else { return String::from("dialogue: nobody left standing"); };
+    let Some(gd) = game_nearest_living_guard(g, &crate::seats::here(g), Some(m::INF), Some(true)) else { return String::from("dialogue: nobody left standing"); };
     let d = v3::dist_xz(g.ch[g.gd[gd].ch].pos, g.ch[g.pl[g.player].ch].pos);
     let s = crate::dialogue::dialogue_summary(g, gd);
     if d <= crate::dialogue::INTERROGATE_REACH { format!("dialogue \u{25B8} {} \u{B7} in reach", s) } else { format!("dialogue \u{25B8} {} \u{B7} {} m off", s, js::to_fixed(d, 1)) }
@@ -546,7 +546,6 @@ pub fn game_update(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Came
     }
     crate::director::director_inject_input(g, input);
     game_host_before(g, input);
-    crate::director::director_attach(g, crate::director::DirectorAttachO { cam: Some(cam), input: Some(input) });
     let into = g.cmd_buf.take();
     let c = crate::seats::with_seat(g, me, &mut |g| crate::cmd::sample_cmd(g, input, cam, canvas, into.as_ref()));
     g.cmd_buf = Some(c.clone());

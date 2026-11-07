@@ -212,7 +212,6 @@ export const ROLLBACK_EXEMPT: Record<string, string> = {
   'src/game/netquietfeed.ts NETFEED': 'CACHE · NETFEED.live = NETQUIET.on && MORALE.on, written at the top of every netQuietTick (netquiet.ts:324) and on a load (508): two switches\' AND, the same value every tick of a run',
   'src/game/opening.ts urlRead': 'CONFIG · once-only latch of readUrl (?fairstart=0, opening.ts:32): the page\'s URL read once per process',
   'src/game/pairup.ts PAIR_HELD': 'CONFIG · written by a quiet mission\'s start / release / current() (quiet.ts:126/158/166/167): a scenario started or stopped, or another Game taking the frame; within one Game\'s ticks it does not move. Read by the pair\'s save (pairup.ts:74)',
-  'src/game/par.ts PAR_STATS': 'TALLY · counted in par.ts; no read in src/game, src/scene or src/anim',
   'src/game/particleFx.ts DUST': 'CONFIG · written by loadDust/resetDust and the panel\'s sliders (ui/bindings.ts:822-827)',
   'src/game/particleFx.ts DUST_LOOK': 'CONFIG · written by loadDust/resetDust and the panel\'s sliders (ui/bindings.ts:828-833)',
   'src/game/peeksight.ts PEEK_STATS': 'TALLY · counted in peeksight.ts; read in the simulation\'s folders only by a summary / reset / max-of-itself (game/peeksight.ts:61)',
