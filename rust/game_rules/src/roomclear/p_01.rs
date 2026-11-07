@@ -323,12 +323,9 @@ pub fn prop_gap(p: crate::roomclear::PropGapP, at: V3) -> f64 {
     m::hyp2(m::max(0.0, m::abs(c * dx - s * dz) - p.hx), m::max(0.0, m::abs(s * dx + c * dz) - p.hz))
 }
 
-/// the sight line a→b against the level's STATICS alone: the door leaves out for the one call   (roomclear.ts wallBetween)
+/// the sight line a→b against the level's STATICS alone   (roomclear.ts wallBetween)
 pub fn wall_between(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
-    let leaves = core::mem::take(&mut g.col.dynamic_boxes);
-    let hit = crate::scene_collision::segment_blocked(g, a, b, None, None, None);
-    g.col.dynamic_boxes = leaves;
-    hit
+    crate::scene_collision::segment_blocked_over(g, &crate::ask::Over::statics(), a, b, None, None)
 }
 
 /// the level's own stack-and-enter plan for a door, where it has one   (roomclear.ts doorPlan)

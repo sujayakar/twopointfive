@@ -1,5 +1,6 @@
 //! src/game/frag.ts lines 297 to 680
 use super::*;                      // your own module: its types, its other parts' functions
+use crate::ask::Over;
 use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
@@ -40,10 +41,10 @@ enum Shows<'a> {
     Man { feet: V3, head: V3 },
     Lying(&'a [V3]),
 }
-fn shows_now(g: &mut Game, from: V3, s: Shows) -> f64 {
+fn shows_now(g: &mut Game, over: &Over, from: V3, s: Shows) -> f64 {
     match s {
-        Shows::Man { feet, head } => exposure(g, from, feet, head, Some(GlassView::Blown)),
-        Shows::Lying(pts) => lying_shows(g, from, pts, GlassView::Blown),
+        Shows::Man { feet, head } => exposure_over(g, over, from, feet, head, Some(GlassView::Blown)),
+        Shows::Lying(pts) => lying_shows_over(g, over, from, pts, GlassView::Blown),
     }
 }
 struct Judged {
@@ -56,12 +57,12 @@ struct Judged {
 fn judge_at(g: &mut Game, b: &Burst, id: f64, d: f64, shows: Shows) -> Judged {
     if d > b.wound { return Judged { d, e: 0.0, r: None, behind: None }; }
     let was = match &b.before { Some(m) => m.get(crate::Num(id)).copied(), None => None };
-    let now = match was { Some(w) if !(w <= 0.0) => w, _ => shows_now(g, b.from, shows) };
+    let now = match was { Some(w) if !(w <= 0.0) => w, _ => shows_now(g, &Over::OWN, b.from, shows) };
     let e = was.unwrap_or(now);
     if e <= 0.0 {
         if now > 0.0 { return Judged { d, e: now, r: Some(BlastResult::Stunned), behind: Some(BlastHitBehind::Cover) }; }
         let from = b.from;
-        let through = if !b.torn.is_empty() { without_leaves(g, &b.torn, &mut |g: &mut Game| shows_now(g, from, shows)) } else { 0.0 };
+        let through = if !b.torn.is_empty() { shows_now(g, &Over::but(&b.torn), from, shows) } else { 0.0 };
         return if through > 0.0 { Judged { d, e: through, r: Some(BlastResult::Stunned), behind: Some(BlastHitBehind::Door) } } else { Judged { d, e, r: Some(BlastResult::Shielded), behind: None } };
     }
     if d <= b.lethal { return Judged { d, e, r: Some(if e >= 0.5 { BlastResult::Killed } else { BlastResult::Wounded }), behind: None }; }
@@ -327,20 +328,19 @@ pub fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::BlastSpe
     for &e in &eyes { if v3::dist(e, from) < 30.0 && !crate::scene_collision::segment_blocked(g, e, from, None, None, None) { seen = true; break; } }
     let folded_men: Vec<GuardId> = if !seen || !js::truthy(rep.stunned) { Vec::new() } else {
         let (hits, eyes_) = (&rep.hits, &eyes);
-        without_leaves(g, &b.torn, &mut |g: &mut Game| {
-            let mut out: Vec<GuardId> = Vec::new();
-            for o in g.guards.clone() {
-                let c = g.gd[o].ch;
-                let id = g.ch[c].id;
-                if g.gd[o].civ.is_none() && g.gd[o].state != crate::game::GuardState::Dead && hits.iter().any(|h| h.id == id && h.result == BlastResult::Stunned) {
-                    let chest = bone_or(g, c, crate::character::Bone::Chest, 1.2);
-                    let mut any = false;
-                    for &e in eyes_ { if !crate::scene_collision::segment_blocked(g, e, chest, None, None, None) { any = true; break; } }
-                    if any { out.push(o); }
-                }
+        let torn = Over::but(&b.torn);
+        let mut out: Vec<GuardId> = Vec::new();
+        for o in g.guards.clone() {
+            let c = g.gd[o].ch;
+            let id = g.ch[c].id;
+            if g.gd[o].civ.is_none() && g.gd[o].state != crate::game::GuardState::Dead && hits.iter().any(|h| h.id == id && h.result == BlastResult::Stunned) {
+                let chest = bone_or(g, c, crate::character::Bone::Chest, 1.2);
+                let mut any = false;
+                for &e in eyes_ { if !crate::scene_collision::segment_blocked_over(g, &torn, e, chest, None, None) { any = true; break; } }
+                if any { out.push(o); }
             }
-            out
-        })
+        }
+        out
     };
     let folded = folded_men.len();
     let by_cover = folded_men.iter().any(|&o| { let id = g.ch[g.gd[o].ch].id; rep.hits.iter().any(|h| h.id == id && h.behind == Some(BlastHitBehind::Cover)) });

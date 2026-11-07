@@ -91,8 +91,8 @@ fn all_but_last(path: &[V3]) -> Vec<V3> {
 fn worked_at(c: V3, n: [f64; 2], u: [f64; 2], b: f64, l: f64, y: f64) -> V3 {
     [c[0] + n[0] * b + u[0] * l, y, c[2] + n[1] * b + u[1] * l]
 }
-fn worked_walk(g: &mut Game, front: V3, p: V3) -> bool {
-    !is_blocked(g, p[0], p[2]) && !crate::scene_collision::solid_blocked(g, front, [p[0], 0.45, p[2]], None)
+fn worked_walk(g: &mut Game, over: &crate::ask::Over, front: V3, p: V3) -> bool {
+    !is_blocked(g, p[0], p[2]) && !crate::scene_collision::solid_blocked_over(g, over, front, [p[0], 0.45, p[2]], None)
 }
 fn worked_out(v: &SquadOrdersWorkedValueItem) -> SquadOrdersWorkedMarks {
     SquadOrdersWorkedMarks {
@@ -114,8 +114,8 @@ pub fn squad_orders_worked_marks(g: &mut crate::game::Game, d: DoorId, side: f64
     let (jamb_out, jamb_past) = (g.k.orders.jamb_out, g.k.orders.jamb_past);
     let front = worked_at(c, n, u, jamb_out, 0.0, 0.45);
     let mut res = SquadOrdersWorkedValueItem { jambless: false, marks: Vec::new() };
-    let leaves = core::mem::take(&mut g.col.dynamic_boxes);   // (statics alone: a leaf standing open across the floor is not the level's shape)
-    res.jambless = !worked_walk(g, front, worked_at(c, n, u, jamb_out, h + jamb_past, 0.0)) && !worked_walk(g, front, worked_at(c, n, u, jamb_out, -h - jamb_past, 0.0));
+    let walls = crate::ask::Over::statics();   // (a leaf standing open across the floor is not the level's shape)
+    res.jambless = !worked_walk(g, &walls, front, worked_at(c, n, u, jamb_out, h + jamb_past, 0.0)) && !worked_walk(g, &walls, front, worked_at(c, n, u, jamb_out, -h - jamb_past, 0.0));
     if res.jambless {
         let mut eyes: Vec<[f64; 2]> = Vec::new();   // the floor beyond the door that looks at the opening
         let mut b = 0.75;
@@ -123,7 +123,7 @@ pub fn squad_orders_worked_marks(g: &mut crate::game::Game, d: DoorId, side: f64
             let mut l = -6.0;
             while l <= 6.0 {
                 let q = worked_at(c, n, u, -b, l, 1.3);
-                if !is_blocked(g, q[0], q[2]) && !crate::scene_collision::segment_blocked(g, q, [c[0], 1.3, c[2]], None, None, None) { eyes.push([b, l]); }
+                if !is_blocked(g, q[0], q[2]) && !crate::scene_collision::segment_blocked_over(g, &walls, q, [c[0], 1.3, c[2]], None, None) { eyes.push([b, l]); }
                 l += 0.75;
             }
             b += 0.75;
@@ -134,7 +134,7 @@ pub fn squad_orders_worked_marks(g: &mut crate::game::Game, d: DoorId, side: f64
                 for sg in [1.0, -1.0] {
                     let l = sg * (h + 0.25 + (k as f64) * 0.3);
                     let pos = worked_at(c, n, u, b, l, 0.0);
-                    if !worked_walk(g, front, pos) { continue; }
+                    if !worked_walk(g, &walls, front, pos) { continue; }
                     let mut near_prop = false;
                     for i in 0..g.props.props.len() {
                         let pr = &g.tab.props_prop[g.props.props[i]];
@@ -143,7 +143,7 @@ pub fn squad_orders_worked_marks(g: &mut crate::game::Game, d: DoorId, side: f64
                     if near_prop { continue; }
                     let mut saw = 0.0;
                     for &[eb, el] in &eyes {   // (a line that crosses the wall's plane inside this doorway, and nothing else in it)
-                        if m::abs(el + (l - el) * eb / (eb + b)) < h && !crate::scene_collision::segment_blocked(g, worked_at(c, n, u, -eb, el, 1.3), [pos[0], 1.3, pos[2]], None, None, None) { saw += 1.0; }
+                        if m::abs(el + (l - el) * eb / (eb + b)) < h && !crate::scene_collision::segment_blocked_over(g, &walls, worked_at(c, n, u, -eb, el, 1.3), [pos[0], 1.3, pos[2]], None, None) { saw += 1.0; }
                     }
                     res.marks.push(SquadOrdersWorkedValueItemMarksItem { pos, walk: flat(front, pos), seen: if !eyes.is_empty() { saw / (eyes.len() as f64) } else { 0.0 } });
                 }
@@ -151,7 +151,6 @@ pub fn squad_orders_worked_marks(g: &mut crate::game::Game, d: DoorId, side: f64
             b += 0.3;
         }
     }
-    g.col.dynamic_boxes = leaves;
     let out = worked_out(&res);
     if let Some(both) = g.orders.worked.get_mut(d) { both[key] = Some(res); }
     out
@@ -238,7 +237,9 @@ pub fn squad_orders_on_furniture(g: &mut crate::game::Game, p: V3) -> bool {
 }
 
 /// `k` marks back from a door on face `side` for men its walls have no room for; as many as there are.   (orders.ts SquadOrders.rearPosts)
-pub fn squad_orders_rear_posts(g: &mut crate::game::Game, d: DoorId, side: f64, k: f64, taken: &[V3]) -> Vec<crate::orders::StackPost> {
+pub fn squad_orders_rear_posts(g: &mut crate::game::Game, d: DoorId, side: f64, k: f64, taken: &[V3]) -> Vec<crate::orders::StackPost> { squad_orders_rear_posts_over(g, &crate::ask::Over::OWN, d, side, k, taken) }
+/// …of the world as the question takes it
+pub fn squad_orders_rear_posts_over(g: &mut crate::game::Game, over: &crate::ask::Over, d: DoorId, side: f64, k: f64, taken: &[V3]) -> Vec<crate::orders::StackPost> {
     let th = g.dr[d].def.closed_dir;
     let u = [m::cos(th), m::sin(th)];
     let n = [-u[1] * side, u[0] * side];
@@ -255,7 +256,7 @@ pub fn squad_orders_rear_posts(g: &mut crate::game::Game, d: DoorId, side: f64, 
             for lat in [h + 1.3, -h - 1.3, h + 0.8, -h - 0.8, h + 1.9, -h - 1.9] {
                 if (out.len() as f64) >= k { return out; }   // (never in front of the opening)
                 let pos: V3 = [c[0] + n[0] * back + u[0] * lat, 0.0, c[2] + n[1] * back + u[1] * lat];
-                if is_blocked(g, pos[0], pos[2]) || crate::scene_collision::solid_blocked(g, front, [pos[0], 0.45, pos[2]], None) || flat(sam, pos) < 0.7 || (!any && squad_orders_on_furniture(g, pos))
+                if is_blocked(g, pos[0], pos[2]) || crate::scene_collision::solid_blocked_over(g, over, front, [pos[0], 0.45, pos[2]], None) || flat(sam, pos) < 0.7 || (!any && squad_orders_on_furniture(g, pos))
                     || taken.iter().chain(out.iter().map(|o| &o.pos)).any(|&q| flat(q, pos) < 0.85) { continue; }
                 out.push(StackPost { pos, face: v3::yaw_to(pos, c), stack_side: 1.0, lead: false, group: Some(2.0) });
             }

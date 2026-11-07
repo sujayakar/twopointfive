@@ -1,5 +1,6 @@
 //! src/game/enemysquads.ts lines 310 to 738
 use super::*;                      // your own module: its types, its other parts' functions
+use crate::ask::Over;
 use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
@@ -391,15 +392,13 @@ pub fn team_known_how(g: &mut crate::game::Game) -> Vec<crate::enemysquads::Know
 }
 
 // RoundCtx's closures (`fire`, `hot`, `hotCell`, `lane`): private fns over what they captured
-fn ctx_line(g: &mut Game, a: V3, b: V3, y: f64) -> bool { !crate::scene_collision::shot_blocked(g, [a[0], y, a[2]], [b[0], y, b[2]], None, None) }
+fn ctx_line(g: &mut Game, a: V3, b: V3, y: f64) -> bool { ctx_line_over(g, &Over::OWN, a, b, y) }
+fn ctx_line_over(g: &mut Game, over: &Over, a: V3, b: V3, y: f64) -> bool { !crate::scene_collision::shot_blocked_over(g, over, [a[0], y, a[2]], [b[0], y, b[2]], None, None) }
 /// a head or a chest in the line
 fn ctx_fire(g: &mut Game, a: V3, b: V3) -> bool { ctx_line(g, a, b, 1.5) || ctx_line(g, a, b, 1.0) }
 /// the line with every leaf out of it
 fn ctx_open(g: &mut Game, a: V3, b: V3) -> bool {
-    let dyn_boxes = core::mem::take(&mut g.col.dynamic_boxes);
-    let r = ctx_line(g, a, b, 1.5);
-    g.col.dynamic_boxes = dyn_boxes;
-    r
+    ctx_line_over(g, &Over::statics(), a, b, 1.5)
 }
 /// a man standing there is in front of one of the guns the side knows of
 fn ctx_hot(g: &mut Game, known: &[Known], rear: &[V3], ajar: &[V3], p: V3) -> bool {
