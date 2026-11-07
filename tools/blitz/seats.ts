@@ -100,7 +100,7 @@ for (let i = 0; i < TICKS && !threw; i++) {
     if (CALL[2] === 'start' && k === +CALL[0] && k > 1) { appendFileSync(`${outDir}/hostwrites.txt`, `${k} chron_load\n`); writeFileSync(`${outDir}/L${k}.bin`, exportGame(g, reg)); writeFileSync(`${outDir}/Ls${k}.bin`, block(g)); }
     writeFileSync(`${outDir}/h${k}.bin`, hostHalf(g, reg, cmds));
     // (`--start-only`, as mission.ts: the start alone for a kept run of an older layout of the wire; no tick is run)
-    if (argv.includes('--start-only')) { const x: any = sim(), at = x.knob_addr(0), len = x.knob_len(0) * 8; writeFileSync(`${outDir}/knobs.bin`, new Uint8Array(x.memory.buffer).slice(at, at + len)); process.exit(0); }
+    if (argv.includes('--start-only')) { { const bk: any = bookOf(g); writeFileSync(`${outDir}/hostrows.txt`, `cam ${bk.listOf('CameraId').indexOf(g.hostCam)}\ninput ${bk.listOf('InputId').indexOf(g.hostInput)}\n`); }   /* (which rows of the half are the HOST's own, handed at the stand: half-grow.ts gives them to a half kept before a host had them) */ const x: any = sim(), at = x.knob_addr(0), len = x.knob_len(0) * 8; writeFileSync(`${outDir}/knobs.bin`, new Uint8Array(x.memory.buffer).slice(at, at + len)); process.exit(0); }
     appendFileSync(`${outDir}/host.txt`, `${dt} ${g.probe?.pending?.length ?? 0} ${g.time} ${g.dice?.n ?? -1} ${k === 1 ? 0 : 1}\n`);
     try { return step.call(this, dt, c); } finally {
       appendFileSync(`${outDir}/post.txt`, `${k} ${g.dice?.n ?? -1} ${g.dice?.s ?? -1} ${g.time} ${hashes(words(g)).join(' ')}\n`);

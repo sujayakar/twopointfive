@@ -377,13 +377,14 @@ async function main() {
   // as __game.dice.seed), ?seed=off = the game on Math.random as before. A script that puts its own die in Math.random's place still gets the game's dice, as ever.
   const seed = ((): number | null => { const v = q.get('seed'); if (v === 'off') return null; const n = v === null || v === '' ? NaN : Number(v); return Number.isFinite(n) ? n >>> 0 : (crypto.getRandomValues(new Uint32Array(1))[0] >>> 0); })();
   recipeTables(); recipe?.env(engine.settings as never);
-  try { ({ game, cam } = await standGame(engine, { level, ch, smoke, populate: false, seed })); }   // the ONE stand-up (src/host/standup.ts) — the world / lights were populated above; the harness and the native entry come through the same call
+  const input = new Input(canvas);   // (made BEFORE the stand: standGame hands the game its host's camera and keys, once — game.ts hostCam)
+  try { ({ game, cam } = await standGame(engine, { level, ch, smoke, populate: false, seed, input })); }   // the ONE stand-up (src/host/standup.ts) — the world / lights were populated above; the harness and the native entry come through the same call
   catch (e) {   // ?level=local: an editor stash the file validator passed but the game cannot stand on (level.ts bootedLocalLevel) — say so, and boot the bundled office instead of dying on every reload
     if (!bootedLocalLevel) throw e;
     console.error('?level=local: the game could not be built on the editor level — falling back to the bundled office —', e);
     level = buildBundledLevel(); engine.world.statics.length = 0; engine.lights.lights.length = 0;
     hostLevel(engine, level, q);
-    ({ game, cam } = await standGame(engine, { level, ch, smoke, populate: false, seed }));
+    ({ game, cam } = await standGame(engine, { level, ch, smoke, populate: false, seed, input }));
   }
   boot.span('gameCtor', tGame); boot.mark('game');
   if (rustGame) { rustGame.rustAttach(game); (window as any).__rust = Object.assign(rustGame.RUST_GAME, { hashes: rustGame.rustHashes, settled: rustGame.RUST_SETTLED, means: rustGame.rustMeans, resync: rustGame.rustResync, whole: rustGame.rustWhole, file: rustGame.rustFile, fileIn: rustGame.rustFileIn, poke: rustGame.rustPoke, call: rustGame.rustCall, state: rustGame.rustState, warmUp: (n?: number) => rustGame.rustWarm({ input, cam, canvas }, n) }); }   // (?rust=1: from here the game's tick is the Rust game's and this Game its puppet)
@@ -412,7 +413,6 @@ async function main() {
 
   const { audio, testMute } = pageAudio(game);
   worldHooks(engine, game, audio);
-  const input = new Input(canvas);
   (window as any).__findme = { table: FINDME, set: setFindMe };   // (host/findme.ts: the Options rows for finding your own man, for a page check to move without the screen)
   bindFindMe(cam); const ctrlTwice = watchCtrlTaps(window, () => !!input.lockExcept, keymap.camKey);   // (host/findme.ts: the player's kept aim pan onto the follow camera; the camera key tapped twice)
   window.__cam = cam;   // (the follow camera standGame put on the spawn)
@@ -421,8 +421,8 @@ async function main() {
   const bubbles = new Bubbles(document.getElementById('overlay')!);
   const demo = new Demo(game, cam, smoke, input); window.__demo = demo;
   // THE DIRECTOR (game/director.ts): level scripting. No shipped level has a script today — the office's two showcases, its only programs, were removed — so it idles, which
-  // is the game exactly. It is handed the camera and the input a program would pin and lock; __director is the Director itself (log, run, manifest, problems, start(name), stop(), summary()).
-  game.director.attach({ cam, input }); (window as any).__director = game.director;
+  // is the game exactly. The camera and the input a program would pin and lock are the game's hostCam / hostInput, handed at the stand; __director is the Director itself (log, run, manifest, problems, start(name), stop(), summary()).
+  (window as any).__director = game.director;
   squadFlagsAndHooks(q, engine, game);
   // game/demo.ts (the old 13-stop tour) stays in the tree for tools/qa/tour.ts's regression lap: __demo.start() by console, reachable from no button.
   /** END whatever hands-off programme has the floor — the old tour, or a level-script program should a level ever carry one — back to the start card (Esc / P while it runs) */

@@ -31,7 +31,7 @@ const differs = (a: unknown, b: unknown) => !Object.is(a, b) && !(a == null && b
 
 // ---- reading past a value
 type Keep = { field: (q: string, ty: string) => boolean; desc: (ty: string | N) => boolean };
-function skipper(b: Uint8Array, I: { p: number; K?: Keep | null }) { const dv = new DataView(b.buffer, b.byteOffset, b.byteLength); I.p = 0;
+export function skipper(b: Uint8Array, I: { p: number; K?: Keep | null }) { const dv = new DataView(b.buffer, b.byteOffset, b.byteLength); I.p = 0;
   const sk = (n: N): void => { switch (n.k) {
     case 'f64': case 'u64': case 'i64': I.p += 8; return; case 'f32': case 'u32': case 'i32': case 'usize': case 'id': I.p += 4; return; case 'bool': case 'u8': case 'i8': I.p += 1; return; case 'u16': case 'i16': I.p += 2; return; case 'unit': return;
     case 'str': I.p += 4 + dv.getUint32(I.p, true); return;

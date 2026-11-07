@@ -103,6 +103,9 @@ pub fn host_new(g: &mut Game) -> Host {
     g.tab.camera[cam].aspect = canvas.width / canvas.height;
     game::camera::follow_camera_rebuild(g, cam);
     game::host_api::b_01::host_world_upload(g);
+    // (the host's camera and keys are handed to the game here, once, as standGame hands a TypeScript host's: game.ts hostCam)
+    g.host_cam = Some(cam);
+    g.host_input = Some(input);
     Host { input, cam, canvas }
 }
 

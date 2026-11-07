@@ -762,6 +762,11 @@ pub struct Game {
     pub glass_break: crate::glassbreak::GlassBreak,
     pub shards: crate::shards::GlassShards,
     pub director: crate::director::Director,
+    /// THE HOST'S OWN CAMERA AND KEYS, handed to the game once, at its stand, by every host alike (game.ts hostCam; the native start: game_start `host_new`).
+    /// The host's: on the wire's hosts-own list, in no state word. Named here for what reaches for them: a level script's show, a rails level's first
+    /// view, the view's matrix between two ticks.
+    pub host_cam: Option<CameraId>,
+    pub host_input: Option<InputId>,
     pub night_breach: crate::nightbreach::NightBreach,
     pub quiet: crate::quiet::QuietMission,
     pub lesson: crate::lesson::Lesson,
@@ -951,6 +956,8 @@ impl Game {
             glass_break: crate::glassbreak::GlassBreak::blank(),
             shards: crate::shards::GlassShards::blank(),
             director: crate::director::Director::blank(),
+            host_cam: None,
+            host_input: None,
             night_breach: crate::nightbreach::NightBreach::blank(),
             quiet: crate::quiet::QuietMission::blank(),
             lesson: crate::lesson::Lesson::blank(),
