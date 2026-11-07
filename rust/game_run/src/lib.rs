@@ -241,6 +241,15 @@ pub fn call(g: &mut game::game::Game, k: usize, rule: &str) -> String {
         }
         // (PT_NV=1 with the mains cut: the scripted player puts Sam's goggles down, `g.player.nv = true`)
         "nv_on" => { let p = g.player; g.pl[p].nv = true; format!("  the driver's write before tick {}: the player's goggles down", k) }
+        // (the response team staged with the alarm at a place the TypeScript side chose: mission.ts `qrf_stage_rack` → `call qrf_stage_at x y z`)
+        "qrf_stage_at" => {
+            let n: Vec<f64> = all[1..].iter().filter_map(|x| x.parse::<f64>().ok()).collect();
+            if n.len() != 3 { return format!("  NOTE tick {}: qrf_stage_at takes three numbers: {:?}", k, all); }
+            g.tune.qrf = true; g.tune.qrf_eta = 14.0; g.tune.qrf_size = 4.0; g.tune.perimeter = false; g.tune.qrf_squad = true;
+            g.alarm.placed = true; g.alarm.pos = [n[0], n[1], n[2]]; g.alarm.raised_at = g.time;
+            let r = game::qrf::request_qrf(g, game::qrf::QrfReason::Panel);
+            format!("  the rule called before tick {}: the response team staged with the alarm at {:?}, request_qrf(panel) -> {}", k, n, r)
+        }
         "restart" => { game::game::game_restart(g, None); format!("  the rule called before tick {}: restart (the player's own); {} guards, time {}", k, g.guards.len(), g.time) }
         _ => format!("  NOTE tick {}: a rule the driver called that this runner does not know: {}", k, rule),
     }
