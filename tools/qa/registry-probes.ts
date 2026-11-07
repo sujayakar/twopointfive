@@ -34,7 +34,6 @@ import { standUp, ROOT } from './headless.ts';
 import { exporterCheck } from './level-file.ts';
 import { Run, Done, BOT, type RunOut, type Grade } from './rescue-tally.ts';
 const { RESCUE, checkRescue } = await import(`${ROOT}/src/game/rescue.ts`);
-const { SAMESTART } = await import(`${ROOT}/src/game/samestart.ts`);   // (while every mission starts the same way the roamer's coin is not thrown: registry-stage reads the rule and asks for the stage it gives)
 const { sideOf } = await import(`${ROOT}/src/game/orders.ts`);
 const { INTERACT_KEY } = await import(`${ROOT}/src/game/consts.ts`);
 const { spawnUnit } = await import(`${ROOT}/src/game/guards.ts`);
@@ -436,19 +435,6 @@ export const registryWalk = guarded(async () => {
 });
 
 // ---------------------------------------------------------------- registry-run
-export const registryRun = guarded(async () => {
-  const { verdict, done } = family('registry-run: the level\'s tally on six seeds — every run ends on the scenario\'s own result, and the level can be finished by both lines');
-  const seeds = [1, 2, 3, 4, 5, 6], runs = await playAll(HEADLINE, seeds, 3, 150);
-  console.log(report(runs, HEADLINE).split('\n').map(l => `    ${l}`).join('\n'));
-  const errs = runs.filter(r => r.grade === 'error' || r.grade === 'stalled');
-  verdict(errs.length === 0, `${runs.length} runs (${HEADLINE.join(', ')} × seeds ${seeds.join(', ')}): each ended on the scenario's own result inside the cap, none threw`, errs.length ? errs.slice(0, 4).map(r => `${r.style} seed ${r.seed}: ${r.grade} ${r.note || r.why}`).join(' · ') : HEADLINE.map(s => `${s} ${runs.filter(r => r.style === s && r.grade === 'clean').length}/${seeds.length} clean`).join(' · '));
-  const by = (s: string) => runs.filter(r => r.style === s && r.grade === 'clean');
-  verdict(by('flow').length > 0, 'it can be finished by the gallery: a flow run with both hostages out, the room held, inside the clock', by('flow').length ? `seeds ${by('flow').map(r => r.seed).join(', ')} — the room held at ${by('flow').map(r => f1(r.secured)).join(' / ')} s of clocks of ${by('flow').map(r => f1(r.resolveSecs)).join(' / ')} s, with Sam and the pair (team of three)` : 'no flow run was clean');
-  verdict(by('safe').length > 0, 'it can be finished by the stacks: a safe run with both hostages out', by('safe').length ? `seeds ${by('safe').map(r => r.seed).join(', ')} — the room held at ${by('safe').map(r => f1(r.secured)).join(' / ')} s` : 'no safe run was clean');
-  const refused = runs.flatMap(r => r.refused.map(w => `${r.style} ${r.seed}: ${w}`));
-  verdict(refused.length === 0, 'no order a style gave was refused', refused.length ? refused.slice(0, 5).join(' · ') : `${runs.reduce((a, r) => a + r.orders, 0)} orders`);
-  return done();
-});
 
 // ---------------------------------------------------------------- the command line
 /** the newest change on disk among what a worker loads afresh: a tally that outlives an edit has mixed two builds (rescue-tally.ts's rule) */

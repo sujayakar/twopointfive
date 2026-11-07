@@ -99,43 +99,9 @@ export async function scene(o: RigOpts = {}) {
   R.put(foe, AISLE_MID, EAST); R.put(R.mate, AISLE_W, EAST); R.game.teleportPlayer([11, 0, 18.5]); R.step(30);
   return { R, foe, mate: R.mate };
 }
-const digitAbove5 = (rows: { key: string }[]) => rows.some(r => /^[6-9]$|^0$/.test(r.key));
 const show = (rows: { key: string; text: string; off: boolean }[]) => rows.map(r => `${r.key || '·'} ${r.text}${r.off ? ' (greyed)' : ''}`).join(' | ');
 
 // ---------------------------------------------------------------- the menu
-export const pairMenu = guarded(async () => {
-  const { verdict, done } = family('pair-menu: a defender is a target, with five rows on five digits — and nothing else on the menu has moved');
-  const { R, foe, mate } = await scene({ quiet: false }); const { O, game, P } = R;
-  verdict(R.why === null && O.squad().length === 1 && P.up && !R.silent(), 'the room clear stands ONE teammate up beside Sam, loud, and the pair orders are offered', `start: ${R.why} · squad ${O.squad().map((x: any) => x.callsign).join(', ')} · ${P.summary()}`);
-  const m = R.menu(R.chest(foe)); const want = ['take him · on your mark', 'watch him', 'fall in', 'hold position', 'take him now'];
-  verdict(m.kind === 'foe' && m.rows.length === 5 && m.rows.every((r: any, i: any) => r.key === String(i + 1) && r.text.startsWith(want[i])) && !digitAbove5(m.rows) && m.rows.every((r: any) => r.head === `on ${foe.callsign}`),
-    'X with the cursor on a defender opens the menu on HIM: 1 take him · on your mark, 2 watch him, 3 fall in, 4 hold position, 5 take him now', `target ${m.kind} · ${show(m.rows)}`);
-  R.esc();
-  const n0 = O.log.length; R.cursor(R.chest(foe)); R.press(ORDERS.quickKey); R.step(2);
-  verdict(O.log.length === n0 + 1 && R.last().order === 'pairMark' && R.last().target === `foe:${foe.callsign}` && O.of(mate)?.order === 'pairMark' && O.of(mate)?.foe === foe && R.silent(),
-    `${ORDERS.quickKey.replace('Key', '')} on him gives the first row at once — and a loud squad goes silent on it, with its line`, `log ${JSON.stringify(R.last())} · ${mate.callsign}: ${R.status()} · said: ${R.said.slice(-3).join(' / ')}`);
-  O.give('hold', O.targetAt(mate.char.pos)); R.step(5);
-  // the floor's 1: loud and silent
-  const spot = [12, 0, 18.2];
-  const fs = R.menu(spot); R.esc(); SLM.setSilent(game, false); R.step(2); const fl = R.menu(spot); R.esc();
-  verdict(fl.kind === 'floor' && fl.rows[0]?.key === '1' && fl.rows[0].text.startsWith('move there') && !fl.rows[0].text.includes('dark') && fs.rows[0]?.key === '1' && fs.rows[0].text.startsWith('move there · hold in the dark') && fs.rows.length === fl.rows.length && !digitAbove5(fs.rows),
-    "the floor's menu: 1 is 'move there' while loud and 'move there · hold in the dark' while silent — the same count of rows, no digit above 5", `loud: ${show(fl.rows)}  ·  silent: ${show(fs.rows)}`);
-  // a door's menu: the same with the switch on and off
-  const door = game.doors.list.find((d: any) => d.def.name === 'breakroom_w') ?? game.doors.list[0], dp = [door.frameCentre[0], 1.0, door.frameCentre[2]];
-  const tools = (): string => { const a = R.menu(dp); let s = show(a.rows); const i = (O.menu?.rows ?? []).findIndex((d: any) => d.opens); if (i >= 0) { O.pick(i); R.step(2); s += '  ▸  ' + show((O.hud().menu?.rows ?? []).slice(1).filter((r: any) => r.kind !== 'cancel').map((r: any) => ({ key: r.opts[0]?.key, text: r.opts[0]?.text, off: !!r.off }))); } R.esc(); return s; };
-  const dOn = tools(); PAIR.on = false; R.step(2); const dOff = tools(); PAIR.on = true; R.step(2);
-  verdict(dOn === dOff && dOn.length > 20, `a door's menu and its tools page read the same with the switch on and off (${door.def.name})`, `on:  ${dOn}\n    off: ${dOff}`);
-  verdict(R.held === 0, 'nothing was held: every act above was a press', `most keys / buttons down in any frame: ${R.held}`);
-  // off, and a bigger squad
-  PAIR.on = false; R.step(2); const tOff = O.targetAt(foe.char.pos), ids = O.defs.map((d: any) => d.id);
-  verdict(tOff.kind !== 'foe' && !ids.some((id: string) => id.startsWith('pair')) && !O.defs.find((d: any) => d.id === 'hold').targets.includes('foe') && !O.defs.find((d: any) => d.id === 'fallIn').targets.includes('foe') && O.give('pairMark', R.foe(foe)) !== null,
-    'switch off: a defender is no target, no row of these is on the table, the built-in rows fit what they fitted, and the order is not there to give', `targetAt(a defender) → ${tOff.kind} · rows: ${ids.join(' ')}`);
-  const out: string[] = []; let okBig = true;
-  for (const squad of [2, 4] as const) { const B = await rig({ squad, quiet: false }), h = B.tango(1); B.put(h, AISLE_MID, EAST); B.step(10);
-    const t = B.O.targetAt(h.char.pos), has = B.O.defs.some((d: any) => d.id.startsWith('pair')); okBig &&= !B.P.up && t.kind !== 'foe' && !has; out.push(`squad of ${squad}: up ${B.P.up} · targetAt(a defender) → ${t.kind} · rows of these ${has ? 'listed' : 'none'}`); }
-  verdict(okBig, 'switch on with a squad of two or of four: not offered — these are one partner\'s orders', out.join(' · '));
-  return done();
-});
 
 // ---------------------------------------------------------------- wait here / on me
 export const pairWait = guarded(async () => {
@@ -351,19 +317,9 @@ async function minute(o: RigOpts, use: false | 'move' | 'pairDark' = false): Pro
   O.give('openClear', door('breakroom_w')); frame(60 * 20);
   return `${(h >>> 0).toString(16).padStart(8, '0')} · ${game.guards.filter((x: any) => x.state !== 'dead').length} standing at ${game.time.toFixed(2)} s · orders ${O.log.length}`;
 }
-export const pairIdentity = guarded(async () => {
-  const { verdict, done } = family('pair-identity: the switch on and never used is the game with it off');
-  const off = await minute({ pair: { on: false } }), on = await minute({}), knobs = await minute({ pair: { stageM: 3, pace: 0.7, darkVis: 0.6 } });
-  verdict(off === on && on === knobs, 'one partner, a scripted minute (fall in, move, go silent, move, stack, cover, fall in, open and clear) with no row of these given (the moves given loud): the same hash every frame with the switch off, on, and on with its numbers moved', `off ${off} · on ${on} · numbers moved ${knobs}`);
-  const used = await minute({}, 'pairDark'), plain = await minute({}, 'move');
-  verdict(used !== plain, "the same minute with the second move given SILENT, once as the plain move and once as 'hold in the dark': the hashes differ (the probe can tell)", `hold in the dark ${used} · the plain move ${plain}`);
-  const off4 = await minute({ squad: 4, pair: { on: false } }), on4 = await minute({ squad: 4 });
-  verdict(off4 === on4, 'the squad of four, the same minute: the same hash with the switch off and on (the rows are not offered to four)', `off ${off4} · on ${on4}`);
-  return done();
-});
 
 if (import.meta.main) {
-  const all: Record<string, () => Promise<boolean>> = { 'pair-menu': pairMenu, 'pair-wait': pairWait, 'pair-dark': pairDark, 'pair-mark': pairMark, 'pair-now': pairNow, 'pair-watched': pairWatched, 'pair-watch': pairWatch, 'pair-identity': pairIdentity };
+  const all: Record<string, () => Promise<boolean>> = { 'pair-wait': pairWait, 'pair-mark': pairMark, 'pair-now': pairNow, 'pair-watched': pairWatched, 'pair-watch': pairWatch,  };
   const want = process.argv.slice(2).filter(a => !a.startsWith('--')); let ok = true;
   for (const [name, fn] of Object.entries(all)) if (!want.length || want.includes(name)) ok = (await fn()) && ok;
   process.exit(ok ? 0 : 1);

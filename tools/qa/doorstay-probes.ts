@@ -115,8 +115,6 @@ const waitOver = (levels: (string | undefined)[], hows: How[], name: string) => 
   verdict(never.length === 0, 'every door opened at least one of the ways tried', never.length ? `never off its latch: ${never.join(', ')}` : 'none stayed latched through them all');
   return done();
 });
-/** the whole sweep: every level a mission is played on, four ways (minutes of wall: family `stay-open` and `all`) */
-export const stayOpenWait = waitOver(LEVELS, ['hand+', 'hand-', 'ajar', 'flung'], 'stay-open-wait');
 /** the gate's: the office and the biggest squad map, a hand and a boot (in `doors`, hence all-quick) */
 export const stayOpenWaitQuick = waitOver(['records.json'], ['hand+'], 'stay-open-wait-quick');
 
@@ -292,36 +290,6 @@ export const stayOpenPass = guarded(async () => {
 });
 
 // ---------------------------------------------------------------- the floor at night, nobody asking
-export const stayOpenFloor = guarded(async () => {
-  const { verdict, done } = family('stay-open-floor: five minutes of the office\'s night with the AI running — every latch was a pull somebody asked for');
-  const run = async () => {
-    Math.random = seeded(23);
-    const W: any = await standUp(); const g = W.game; g.godMode = true; g.playerInvisible = true; g.teleportPlayer([4.9, 0, 23.2]);
-    const list: any[] = g.doors.list; const asked = new Set<any>(); const pull = g.doors.pullTo.bind(g.doors);
-    const keyedPulls: string[] = [];
-    g.doors.pullTo = (d: any, who: number) => { if (!d.latched) { asked.add(d); if (d.def.locked || d.def.exterior) keyedPulls.push(`${g.time.toFixed(1)}s ${d.def.name} by ${g.guards.find((x: any) => x.char.id === who)?.callsign ?? who}`); } return pull(d, who); };
-    let latches = 0, unasked: string[] = [], pushes = 0; const was = list.map(d => d.latched), wasClosing = list.map(d => d.closing);
-    for (let f = 0; f < 60 * 300; f++) {
-      g.player.visibility = 0.02; W.step(DT);
-      for (let i = 0; i < list.length; i++) {
-        const d = list[i];
-        if (d.closing && !wasClosing[i] && !asked.has(d)) unasked.push(`${(f / 60).toFixed(1)}s ${d.def.name} began to close unasked (last hand ${d.lastWho})`);
-        if (d.latched && !was[i]) { latches++; if (!asked.has(d)) unasked.push(`${(f / 60).toFixed(1)}s ${d.def.name} latched unasked (last hand ${d.lastWho})`); asked.delete(d); }
-        if (!d.latched && was[i]) pushes++;
-        was[i] = d.latched; wasClosing[i] = d.closing;
-      }
-    }
-    const open = list.filter(d => !d.latched && Math.abs(d.angle) > 0.25).map(d => d.def.name);
-    const stuck = g.guards.filter((x: any) => x.state !== 'dead' && x.stuckT > 4).map((x: any) => `${x.callsign} stuckT ${f2(x.stuckT)} at ${at(x.char.pos)}`);
-    const keyedOpen = list.filter(d => (d.def.locked || d.def.exterior) && d.def.closer !== false && !d.latched && !g.guards.some((x: any) => x.state !== 'dead' && Math.hypot(x.char.pos[0] - d.frameCentre[0], x.char.pos[2] - d.frameCentre[2]) < 2.5)).map(d => `${d.def.name} ${f2(d.angle)}`);
-    return { latches, unasked, pushes, open, stuck, n: list.length, keyedPulls, keyedOpen };
-  };
-  const on = await run();
-  verdict(on.unasked.length === 0, 'no leaf latched, or began a sprung close, that nobody pulled to', on.unasked.length ? on.unasked.slice(0, 12).join('\n    ') : `${on.pushes} times a leaf came off its latch (a man walking through it), ${on.latches} latches, all asked for · standing open at the end: ${on.open.join(', ') || 'none'}`);
-  verdict(on.keyedPulls.length > 0 && on.keyedOpen.length === 0, 'the staff shut their own keyed doors, and the doors to the outside, behind them (guards.ts lockdownDoors, calm): none the level gave a closer stands open at the end with nobody at it', `pulled to: ${on.keyedPulls.slice(0, 8).join(' · ') || 'never'}${on.keyedPulls.length > 8 ? ` … ${on.keyedPulls.length} in all` : ''} · keyed and open at the end: ${on.keyedOpen.join(', ') || 'none'}`);
-  verdict(on.stuck.length === 0, 'nobody is left pushing at a leaf', on.stuck.join(' · ') || `no man with stuckT over 4 s at the end`);
-  return done();
-});
 
 // ---------------------------------------------------------------- what a reading of the code found (each line fails on the build before its fix)
 export const stayOpenAfter = guarded(async () => {

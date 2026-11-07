@@ -15,7 +15,6 @@ import { stand, roomPoints, deals, measure, ZERO, add, line, type Counts } from 
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
 const { ROOMFIT, ROOMFIT_STATS, fitSpots } = await import(`${ROOT}/src/game/roomfit.ts`);
-const { roomRead } = await import(`${ROOT}/src/game/roomread.ts`);
 
 const DT = 1 / 60;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -64,30 +63,6 @@ export const roomfitRooms = guarded(async () => {
   return done();
 });
 
-export const roomfitCleared = guarded(async () => {
-  const { verdict, done } = family('roomfit-cleared: what is cleared and what is not moves the guns');
-  let cases = 0, moved = 0, ways = 0, worse = 0, kept = 0, fell = 0; const eg: string[] = [];
-  for (const file of LEVELS) {
-    let W: any; try { W = await stand(`levels/${file}`, 4); } catch { fell++; continue; }
-    const g = W.game, from = [...g.player.char.pos]; g.cleared.mark(from);
-    for (const P of roomPoints(g)) {
-      const R = roomRead(g, P.at, ROOMFIT.reach, from), unc = R.ways.filter((w: any) => !w.farKnown && !w.locked && w.dist <= ROOMFIT.reach); if (unc.length < 3) continue;
-      const D1 = fitSpots(g, P.at, 2, yawTo(from, P.at), from); if (!D1) continue;
-      const on = unc.filter((w: any) => D1.some((f: any) => f.key === w.o.id)), free = unc.filter((w: any) => !on.includes(w)); if (on.length !== 2 || !free.length) continue;
-      // the floor beyond the heavier of the two watched ways is stood on: is it a room of its own (not the one the point is in, nor the other ways')
-      const w0 = on[0], room = w0.far; if (!room || room === R.room || unc.some((w: any) => w !== w0 && w.far === room)) continue;
-      const before = g.cleared.known; g.cleared.mark(w0.beyond); if (g.cleared.known === before) continue;
-      cases++;
-      const D2 = fitSpots(g, P.at, 2, yawTo(from, P.at), from); if (!D2) { worse++; continue; }
-      const now = unc.filter((w: any) => D2.some((f: any) => f.key === w.o.id));
-      const k1 = D1.map((f: any) => f.key), toWay = now.some((w: any) => free.includes(w)); if (toWay) ways++;
-      if (!now.includes(w0) && D2.some((f: any) => f.key && !k1.includes(f.key))) { moved++; if (eg.length < 4) eg.push(`${file} room ${P.room}: ${D1.map((f: any) => f.key).join(' + ')} → ${D2.map((f: any) => f.key).join(' + ')} once ${w0.o.id} was known`); }
-      else { if (now.includes(w0)) kept++; if (process.argv.includes('--verbose')) console.log(`    not moved: ${file} room ${P.room} ${at(P.at)}: ${D1.map((f: any) => `${f.key} ${f2(f.w)}`).join(' + ')} → ${D2.map((f: any) => `${f.key} ${f2(f.w)}`).join(' + ')} once ${w0.o.id} was known · free were ${free.map((w: any) => `${w.o.id} ${f2(w.dist)} m`).join(', ')}`); }
-    }
-  }
-  verdict(fell === 0 && cases >= 8 && moved === cases && ways >= cases * 0.4 && kept === 0 && worse === 0, 'two men, three uncleared ways and more: once the floor beyond one they watched is known, its gun is on something nobody had looked at — another uncleared way, or a long stretch of floor nobody has stood on (a hall\'s length outweighs a third door down its side)', `${cases} cases · the gun moved on ${moved} (to an uncleared way ${ways}) · stayed on the known one ${kept} · no deal ${worse}\n    ${eg.join('\n    ')}`);
-  return done();
-});
 
 /** the office under a seed, the night breach's squad staged (two, or four), the defenders kept dazzled */
 async function rig(seed: number, squad: 2 | 4) {

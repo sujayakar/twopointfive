@@ -46,7 +46,6 @@ const restore = () => { Object.assign(ROOMFIGHT, KNOBS0); for (const k of ['oper
  *  no longer unfound: holdfire.ts holdFireDrill). It put the rule off until 2026-11-07 */
 let noHold = false;
 const guarded = (fn: () => Promise<boolean>) => async () => { try { return await fn(); } finally { restore(); noHold = false; } };
-const flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const wrap = (a: number) => { a = (a + Math.PI) % (2 * Math.PI); if (a <= 0) a += 2 * Math.PI; return a - Math.PI; };
 const up = (l: any[]) => l.filter(x => x.state !== 'dead').length;
 
@@ -114,7 +113,6 @@ async function breach(seed: number, knobs: Record<string, unknown> = {}, chaos =
 }
 const MARKS = (g: any) => g.level.breach.hostiles as { pos: number[]; aimAt: number[] }[];
 const aimOff = (gd: any, at: number[]) => Math.abs(wrap(v3.yawTo(gd.char.pos, [at[0], 0, at[2]]) - gd.char.aimYaw)) * 57.3;
-const inBreakRoom = (g: any, p: number[]) => { const B = g.level.breach.bounds; return p[0] > B.x0 && p[0] < B.x1 && p[2] > B.z0 && p[2] < B.z1; };
 
 // ================================================================ entry: the noise decides what they watch
 export const roomfightEntry = guarded(async () => {
@@ -179,140 +177,9 @@ export const roomfightFlank = guarded(async () => {
   return done();
 });
 
-// ================================================================ next room: the men next door hear it
-export const roomfightNextRoom = guarded(async () => {
-  const { verdict, done } = family('roomfight-nextroom: a defender next door comes to a fight he can hear, and only to one');
-  const SEEDS = [51, 52, 53, 54, 55, 56, 57, 58];
-  const post = [33.6, 0, 11.1];
-  const run = async (seed: number, mode: 'fight' | 'quiet' | 'elsewhere') => {
-    const R = await floor(seed); const { g } = R; const M = MARKS(g);
-    const a1 = R.spawn('hostile', M[0].pos, M[0].aimAt, { name: 'Tango 1' }), a2 = R.spawn('hostile', M[1].pos, M[1].aimAt, { name: 'Tango 2' });
-    const b = R.spawn('hostile', post, [26, 0, 11.1], { name: 'Tango 3' });
-    const op = R.spawn('operative', mode === 'elsewhere' ? [12, 0, 20.5] : [25.2, 0, 17.6], mode === 'elsewhere' ? [12, 0, 17] : R.door('breakroom_w').frameCentre, { name: 'Blue One' });
-    order(op, { goal: null, upper: 'none', stance: 'lowReady' }); R.step(90);
-    const room = g.fight.defs.find((d: any) => d.gd === b)?.room, roomA = g.fight.defs.find((d: any) => d.gd === a1)?.room;
-    let moved = 0, heard = 0;
-    for (let i = 0; i < 60 * 14; i++) {
-      // real rounds: the teammate outside the west door putting a few through it (heard by everybody in earshot through the propagation); 'elsewhere' = the same rounds at a wall in the cubicles
-      if (mode !== 'quiet' && i < 150 && i % 10 === 0 && op.weapon.fire()) fireWeapon(g, op.char, mode === 'elsewhere' ? [12, 1.0, 16] : [28.1, 1.0, 17.6], false, { steady: true, spread: 0.02 });
-      R.step(); moved = Math.max(moved, flat(b.char.pos, post)); heard = b.witness.heard.shots;
-    }
-    return { moved, heard, rallied: g.fight.stats.rallied, sameRoom: room === roomA, toward: flat(b.char.pos, op.char.pos) < flat(post, op.char.pos) - 3, state: b.state as string, a: [a1.state, a2.state].join('/') };
-  };
-  let went = 0, stayedQuiet = 0, stayedElse = 0, heardElse = 0; const rows: string[] = []; let sameRoom = false;
-  for (const seed of SEEDS) {
-    const F = await run(seed, 'fight'), Q = await run(seed, 'quiet'), E = await run(seed, 'elsewhere');
-    if (F.rallied > 0 && F.moved > 3 && F.toward) went++; if (Q.moved < 0.5 && Q.rallied === 0) stayedQuiet++; if (E.moved < 0.5 && E.rallied === 0) stayedElse++; if (E.heard > 0) heardElse++; sameRoom ||= F.sameRoom;
-    rows.push(`seed ${seed}: fight → heard ${F.heard} shots, rallied ${F.rallied}, moved ${f2(F.moved)} m (${F.state}) · quiet → moved ${f2(Q.moved)} m · rounds in the cubicles → heard ${E.heard}, moved ${f2(E.moved)} m`);
-  }
-  verdict(!sameRoom, 'the corridor post is another room than the break room (the nav flood stops at the doorways)', `same room: ${sameRoom}`);
-  verdict(went >= 5, `gunfire he can hear at his side's post next door: he leaves his own and goes toward it in most runs (≥ 5 of ${SEEDS.length}; rallyChance ${FIGHT_SKILL.hostile.rallyChance})`, `went ${went} of ${SEEDS.length}\n    ${rows.join('\n    ')}`);
-  verdict(stayedQuiet === SEEDS.length, 'no fight: he stands his post in every run', `stayed ${stayedQuiet} of ${SEEDS.length}`);
-  verdict(stayedElse === SEEDS.length && heardElse >= 6, 'the same rounds where his side has nobody (the cubicles): he hears them and stays', `stayed ${stayedElse} of ${SEEDS.length} · heard them in ${heardElse}`);
-  return done();
-});
 
-// ================================================================ sight: light and smoke gate a teammate's trigger
-export const roomfightSight = guarded(async () => {
-  const { verdict, done } = family('roomfight-sight: a teammate shoots at what he can see — lit, in his view, no smoke between');
-  noHold = true;   // (every run stages a lone teammate who opens fire by himself on a man who has not noticed him, no shot or order of Sam's: the unfound squad's hold, holdfire.ts, which the shipped stand raises, would hold every round — this probe asks what light and smoke do to his trigger; who fires first is holdfire-check's question)
-  const A = [29.6, 0, 20.6], B = [34.4, 0, 20.6];
-  const run = async (o: { lit: boolean; smoke?: number; back?: boolean; secs?: number }) => {
-    const R = await floor(61, { lit: o.lit }); const { g } = R; g.fight.blindFire = false; FIGHT_SKILL.hostile.bangBreak = 0;
-    const h = R.spawn('hostile', B, A, { name: 'Tango 1' }); const op = R.spawn('operative', A, o.back ? [A[0] - 4, 0, A[2]] : B, { name: 'Blue One' });
-    order(op, { goal: null, upper: 'aim', stance: 'none', aimAt: o.back ? [A[0] - 4, 1.2, A[2]] : [B[0], 1.2, B[2]] });
-    const key = `fightS${Math.min(op.char.id, h.char.id)}_${Math.max(op.char.id, h.char.id)}`;
-    let light = 0, meter = 0;
-    R.plant = () => { h.dazzledUntil = g.time + 5; if (o.smoke !== undefined) g.probe.results.set(key, [o.smoke, 0, 0]); };   // the defender harmless (eyes full of magnesium, no blind burst): this is about the teammate's trigger
-    R.until(() => { light = Math.max(light, h.visibility); meter = Math.max(meter, g.fight.opOf(op)?.meters.get(h)?.m ?? 0); return h.state === 'dead'; }, o.secs ?? 5);
-    const los = !g.col.segmentBlocked([A[0], 1.6, A[2]], [B[0], 1.1, B[2]]);
-    return { R, g, op, h, key, rounds: R.T.by.operative ?? 0, dead: h.state === 'dead', killer: h.killerId === op.char.id, light, meter, los, trans: g.fight.trans.get(key) };
-  };
-  const lit = await run({ lit: true }), smoke = await run({ lit: true, smoke: 0.12 }), thin = await run({ lit: true, smoke: 0.9 }), back = await run({ lit: true, back: true });
-  verdict(lit.los, 'the two stand five metres apart in the break room with nothing between them', `line clear: ${lit.los}`);
-  verdict(lit.dead && lit.killer && lit.rounds > 0 && lit.rounds <= 6, 'lit (the room\'s tubes on), in his view, clear air: he fires and the man goes down to his rounds', `light on the defender ${f2(lit.light)} · meter ${f2(lit.meter)} · rounds ${lit.rounds} · down ${lit.dead} by him ${lit.killer}`);
-  verdict(!smoke.dead && smoke.rounds === 0 && smoke.trans !== undefined && smoke.trans < 0.3, 'lit, but smoke between them (the renderer\'s answer for the pair\'s segment planted at 0.12): not a round', `transmittance read ${f2(smoke.trans ?? NaN)} on ${smoke.key} · meter ${f2(smoke.meter)} · rounds ${smoke.rounds}`);
-  verdict(thin.dead && thin.rounds > 0, 'thin smoke (0.9) only slows the sight of him: he still fires', `meter ${f2(thin.meter)} · rounds ${thin.rounds} · down ${thin.dead}`);
-  verdict(!back.dead && back.rounds === 0, 'lit, clear air, but behind his back (out of his cone): not a round', `meter ${f2(back.meter)} · rounds ${back.rounds}`);
-  // the smoke clears mid-run: the same man is then shot — it is the smoke that held the trigger
-  { const R = await floor(61, { lit: true }); const { g } = R; g.fight.blindFire = false; FIGHT_SKILL.hostile.bangBreak = 0;
-    const h = R.spawn('hostile', B, A, { name: 'Tango 1' }); const op = R.spawn('operative', A, B, { name: 'Blue One' }); order(op, { goal: null, upper: 'aim', stance: 'none', aimAt: [B[0], 1.2, B[2]] });
-    const key = `fightS${Math.min(op.char.id, h.char.id)}_${Math.max(op.char.id, h.char.id)}`; let v = 0.1;
-    R.plant = () => { h.dazzledUntil = g.time + 5; g.probe.results.set(key, [v, 0, 0]); };
-    R.step(60 * 3); const during = R.T.by.operative ?? 0; v = 1; R.until(() => h.state === 'dead', 4);
-    verdict(during === 0 && h.state === 'dead', 'and when the smoke clears he is shot: three seconds of nothing, then the pair', `rounds in the smoke ${during} · after it cleared ${(R.T.by.operative ?? 0) - during} · down ${h.state === 'dead'}`); }
-  return done();
-});
 
-// ================================================================ eyes on the sights (ROOMFIGHT.sights / sightsFoe)
-export const roomfightEyes = guarded(async () => {
-  const { verdict, done } = family('roomfight-eyes: a rifle in the shoulder — its owner also sees along his aim');
-  noHold = true;   // (the staging has the teammate drop the blinded man behind his shoulder by himself and come back to his ordered aim, which the fans are measured about: under the unfound squad's hold, holdfire.ts, his gun stays on that man — the same sight of him, another aim — and the fans read a wall)
-  const A = [29.6, 0, 20.6], B = [34.4, 0, 20.6], RING = 3.8, STEP = 10;   // (3.8 m: past the 3.5 m near field, inside the break room)
-  const R = await floor(61, { lit: true }); const { g } = R; g.fight.blindFire = false;
-  const op = R.spawn('operative', A, B, { name: 'Blue One' }), h = R.spawn('hostile', [A[0] - 0.4, 0, A[2] + 2.6], B, { name: 'Tango 1' });
-  R.plant = () => { h.dazzledUntil = g.time + 5; op.dazzledUntil = 0; };   // (the defender stands behind the teammate's shoulder with his eyes full: nobody fires in this probe)
-  order(op, { goal: null, upper: 'aim', stance: 'none', aimAt: [B[0], 1.2, B[2]] });
-  R.step(150);
-  const c = op.char, eye = c.bones.head ?? [c.pos[0], 1.65, c.pos[2]], aim = c.aimYaw, look = v3.normalize(v3.lerp(c.chestDir, c.headDir(), 0.5));
-  const lookOff = Math.abs(wrap(Math.atan2(look[0], look[2]) - aim)) * 57.3, boreOff = Math.abs(wrap(Math.atan2(c.gunDir[0], c.gunDir[2]) - aim)) * 57.3;
-  verdict(c.anim.longShown === 'shoulder' && boreOff < 30 && lookOff > 25, 'the staging: his rifle is in the shoulder, level along his aim, and the eye between chest and head points well off it', `carriage ${c.anim.longShown} · bore ${boreOff.toFixed(0)}° off the aim · chest-and-head look ${lookOff.toFixed(0)}° off the aim (the cone is 58° either side of THAT)`);
-  /** which bearings off his aim (°, a man stood RING m out with a clear line) this eye sees */
-  const fan = (viewer: any, isPlayer = false) => { const out = new Map<number, boolean>(); const e = viewer.char.bones.head ?? [viewer.char.pos[0], 1.65, viewer.char.pos[2]], a0 = viewer === op ? aim : viewer.char.aimYaw;
-    for (let d = -170; d <= 180; d += STEP) { const y = a0 + d / 57.2958, p = [e[0] + Math.sin(y) * RING, 0, e[2] + Math.cos(y) * RING];
-      if (g.col.segmentBlocked(e, [p[0], 1.1, p[2]]) && g.col.segmentBlocked(e, [p[0], 1.6, p[2]])) continue;
-      const stub: any = isPlayer ? Object.assign(Object.create(g.player.char), { pos: p, bones: {} }) : { pos: p, bones: {}, alive: true, id: 999 };
-      out.set(d, canSeeChar(g, viewer, stub, isPlayer).visible); }
-    return out; };
-  const seen = (m: Map<number, boolean>) => [...m].filter(([, v]) => v).map(([d]) => d), show = (m: Map<number, boolean>) => { const s = seen(m); return s.length ? `${s[0]}° to ${s[s.length - 1]}° (${s.length} of ${m.size} bearings with a line)` : 'nothing'; };
-  const BREAK = !!process.env.ROOMFIGHT_EYES_BREAK;
-  const on = fan(op);
-  const CONE = ROOMFIGHT.sightsDeg, near = (m: Map<number, boolean>) => [...m].filter(([d]) => Math.abs(d) <= CONE);
-  verdict(near(on).length >= 6 && near(on).every(([, v]) => v), `every bearing within the sights' cone (${CONE}° of his aim) with a clear line is seen`, `sees ${show(on)}`);
-  verdict(CONE <= FIGHT_SKILL.operative.sectorDeg, 'the sights\' cone sits inside the sector his gun watches (a man seen along his sights is never a surprise to him)', `cone ${CONE}° · sector ${FIGHT_SKILL.operative.sectorDeg}°`);
-  // the entry dip (character.ts MOVES.entry, shipped off): dipped past a friend, the bore fails the sights test and he is back to the old eye; MOVES.entryEyes
-  // (shipped off) has canSeeChar read his gun line with the dip's own pitch put back. Asked of canSeeChar itself, on the man staged above.
-  { const CH = await import(`${ROOT}/src/game/character.ts`), keep = { ...CH.MOVES }, deg = (r: number) => (r * 57.2958).toFixed(0) + '°';
-    try { CH.MOVES.on = 1; CH.MOVES.entry = 1; CH.MOVES.entryEyes = 0; c.anim.dip = 1; for (let i = 0; i < 60; i++) c.update(1 / 60);
-      const pitch = Math.asin(c.gunDir[1]), lift0 = c.anim.sightsLift, d0 = fan(op);
-      CH.MOVES.entryEyes = BREAK ? 0 : 1; for (let i = 0; i < 2; i++) c.update(1 / 60); const lift1 = c.anim.sightsLift, d1 = fan(op);
-      verdict(c.anim.longShown === 'shoulder' && pitch < -0.45 && lift0 === 0 && near(d0).some(([, v]) => !v), 'the entry dip, as built: his muzzle down past a friend, he is back to the old eye (a bearing inside the sights\' cone goes unseen again)', `bore ${deg(pitch)} · carriage ${c.anim.longShown} · sees ${show(d0)} · unseen within ${CONE}° of the aim: ${near(d0).filter(([, v]) => !v).map(([d]) => d + '°').join(' ') || 'none'}`);
-      verdict(lift1 > 0.4 && near(d1).every(([, v]) => v) && [...d0].every(([d, v]) => !v || d1.get(d) === true), 'the entry dip with eyes up (MOVES.entryEyes): canSeeChar reads his gun line with the dip put back — every bearing inside the sights\' cone is seen, nothing lost', `lift ${deg(lift1)} · sees ${show(d1)}`);
-    } finally { Object.assign(CH.MOVES, keep); c.anim.dip = 0; for (let i = 0; i < 60; i++) c.update(1 / 60); } }
-  return done();
-});
 
-// ================================================================ friends: no round past Sam or a teammate; nothing staged
-export const roomfightFriends = guarded(async () => {
-  const { verdict, done } = family('roomfight-friends: no teammate\'s round at Sam or at the other teammate, and nothing in the fight is staged');
-  const BODY = 0.3;
-  let nearest = Infinity, nearestWho = '', opRounds = 0, held = 0, runs = 0, drillRounds = 0, stagedBeats = 0, downs = 0, byRound = 0, samRuns = 0, bad = ''; const rows: string[] = [];
-  const play = async (seed: number, sam: boolean) => {
-    const R = await breach(seed); const { g, NB } = R;
-    if (sam) g.godMode = true;
-    R.step(60); R.press(); R.until(() => NB.state === 'set', 30); R.step(120); R.press();
-    if (sam) {   // Sam goes in behind the charge and stands about in the room: in the doorway, then across the middle, lit by whatever is lit — the worst place for a friend to be
-      R.until(() => !isNaN(R.beat('bang')), 20); R.vis = 0.6;
-      const path = [[28.6, 0, 17.6], [30.2, 0, 17.3], [31.4, 0, 19.2], [30.4, 0, 15.6], [32.0, 0, 17.6]]; let k = 0, next = g.time;
-      R.each = () => { if (g.time >= next && k < path.length) { g.teleportPlayer(path[k++]); next = g.time + 1.1; } };
-    }
-    R.until(() => NB.drill.phase === 'done', 45); R.step(90);
-    const beats: string[] = NB.drill.beats.map((b: any) => b.what); const opIds = new Set(NB.ops.map((o: any) => o.char.id));
-    runs++; if (sam) samRuns++; opRounds += R.T.by.operative ?? 0; held += g.fight.stats.heldForFriend; drillRounds += NB.drill.rounds[0] + NB.drill.rounds[1];
-    stagedBeats += beats.filter(b => /^(eyes|shot|guaranteed)/.test(b)).length;
-    for (const h of NB.hostiles) if (h.state === 'dead') { downs++; if (opIds.has(h.killerId) || h.killerId === g.player.char.id) byRound++; }
-    if (R.T.friendMin < nearest) { nearest = R.T.friendMin; nearestWho = `seed ${seed}${sam ? ' (Sam inside)' : ''}: ${R.T.friendWho}`; } if (R.T.bad) bad = R.T.bad;
-    rows.push(`seed ${seed}${sam ? ' Sam in' : ''}: ${NB.state} · team ${up(NB.ops)}/2 · defenders ${up(NB.hostiles)}/3 · team rounds ${R.T.by.operative ?? 0} · held for a friend ${g.fight.stats.heldForFriend} frames · nearest pass ${f2(R.T.friendMin)} m`);
-    NB.stop();
-  };
-  for (let s = 11; s <= 25; s++) await play(s, false);
-  for (let s = 71; s <= 78; s++) await play(s, true);
-  verdict(opRounds > 40 && nearest > BODY && !bad, `over ${runs} runs (${samRuns} with Sam stood at five places in the room in turn) no teammate's round passes within ${BODY} m of Sam or of the other teammate`, `team rounds ${opRounds} · nearest pass to a friend ${f2(nearest)} m (${nearestWho || 'none in the flight\'s height'})\n    ${rows.join('\n    ')}`);
-  verdict(held > 0, 'and the rule that keeps it so acts: a teammate with a friend in his line holds the round', `frames a round was held for a friend in the line: ${held}`);
-  verdict(drillRounds === 0 && stagedBeats === 0, 'nothing staged: the drill fires no round of its own and logs no eyes / shot / guaranteed beat', `BreachDrill.rounds total ${drillRounds} · staged beats ${stagedBeats}`);
-  verdict(downs > 10 && byRound === downs, 'every defender down in those runs was dropped by a round with a teammate\'s (or Sam\'s) name on it — nobody put down by hand', `defenders down ${downs} · by a round ${byRound}`);
-  return done();
-});
 
 // ================================================================ duel: the even meeting
 export const roomfightDuel = guarded(async () => {

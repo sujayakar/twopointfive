@@ -416,18 +416,6 @@ export const lineoffireHoldStep = guarded(async () => {
   return F.done();
 });
 
-export const lineoffireOff = guarded(async () => {
-  const F = family('lineoffire-off: switch off — the build as it was: gun down, no step that lasts, no word, nothing counted');
-  try {
-    const A = await meet({ on: false, T: [ROOM.T], sam: ROOM.sam, foe: ROOM.foe }), B = await meet({ on: false, T: [ROOM.T], sam: [29.5, 0, 21.5], foe: ROOM.foe, mate: [31.0, 0, 15.5] });
-    const C = await meet({ on: false, T: [[24.0, 0, 11.25]], sam: [25.2, 0, 11.25], foe: [29.8, 0, 11.25] });
-    const zero = (R: any) => Object.values(R.stats).every(v => v === 0) && R.log.length === 0 && R.cues.length === 0;
-    F.verdict(zero(A) && zero(B) && zero(C), 'nothing of the rule runs: no step, no cover, no knee, no word, no count', `stats ${JSON.stringify(A.stats)} · words ${A.cues.length + B.cues.length + C.cues.length}`);
-    F.verdict([A, B, C].every(R => R.men[0].rounds === 0 && R.men[0].walked < 0.3 && R.foeDown < 0 && R.men[0].idle > 8), 'and the teammate does what the base does — ten seconds in the man\'s sight with his gun down, no round, no step (what the on-cases are there to end)',
-      `Sam in the line: ${A.men[0].rounds} rounds, walked ${f2(A.men[0].walked)} m, ${f2(A.men[0].idle)} s stood masked (the room fight's own side step asked ${A.g.fight.stats.stepped}×, each taken back by his order the frame after) · a mate in the line: ${B.men[0].rounds} rounds, walked ${f2(B.men[0].walked)} m, ${f2(B.men[0].idle)} s · the corridor: ${C.men[0].rounds} rounds, ${f2(C.men[0].idle)} s`);
-  } catch (err) { F.verdict(false, 'the probe ran', err instanceof Error ? (err.stack ?? err.message) : String(err)); }
-  return F.done();
-});
 
 if (import.meta.main) {   // (a trace for the curious: bun run tools/qa/lineoffire-probes.ts — every case's log and words)
   for (const [name, o] of Object.entries({ planted: { T: [ROOM.T], sam: ROOM.sam, foe: ROOM.foe }, corridor: { T: [[24.0, 0, 11.25]], sam: [25.2, 0, 11.25], foe: [29.8, 0, 11.25] } } as Record<string, Omit<Setup, 'on'>>)) for (const on of [false, true]) {

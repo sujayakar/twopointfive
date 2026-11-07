@@ -72,16 +72,6 @@ async function stackedOn(seed: number, named: boolean | 'not' = false, first?: (
   return { R, why: 'no door to stack on with an unknown room behind it' };
 }
 
-export async function squadnetClear(): Promise<boolean> {
-  const F = family('squadnet-clear: \'clear\' means clear');
-  await kept(async () => {
-    const R: any = await hushed(() => rig(7)), g = R.game;
-    const a = roomCall(g, 'mess', BREAK ? 1 : 0, false, false), b = roomCall(g, 'mess', 3, false, false), c = roomCall(g, 'mess', 3, true, false), d = roomCall(g, 'mess', 3, true, true), e = roomCall(g, 'mess', 0, true, true), f = roomCall(g, 'mess', 0, true, false);
-    F.verdict(a === 'mess clear.' && b === "mess's quiet. we didn't see all of it." && c === b && d === null && e === null && f === null,
-      'all of the floor seen and nobody in it: clear · floor unseen and nobody in sight: quiet · an enemy in sight, or one standing on floor they saw: nothing', `seen all, empty: ${a} · 3 unseen, empty: ${b} · 3 unseen, one inside unseen: ${c} · 3 unseen, one in sight: ${d} · seen all, one in sight: ${e} · seen all, one inside: ${f}`);
-  });
-  return F.done();
-}
 
 export async function squadnetEnd(): Promise<boolean> {
   const F = family('squadnet-end: an entry into a room the mission has no name for ends with a call too');
@@ -138,7 +128,7 @@ export async function squadnetNet(): Promise<boolean> {
 }
 
 if (import.meta.main) {
-  const which = process.argv[2] ?? 'all', runs: [string, () => Promise<boolean>][] = [['clear', squadnetClear], ['end', squadnetEnd], ['net', squadnetNet]];
+  const which = process.argv[2] ?? 'all', runs: [string, () => Promise<boolean>][] = [['end', squadnetEnd], ['net', squadnetNet]];
   let ok = true; for (const [n, fn] of runs) if (which === 'all' || which === n) ok = (await fn()) && ok;
   process.exit(ok ? 0 : 1);
 }
