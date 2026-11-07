@@ -58,8 +58,7 @@ Surface: a WebGPU canvas app (GUI). Verification = load it in a WebGPU-capable b
 
 - Long soaks: kick off an `async` IIFE that loops `__runFrames(60)` + MessageChannel yields and stores its result on
   `window.__res`, return immediately, then poll `window.__res` in a second call (a `setTimeout` poll is fine there).
-- `__demo` (the OLD showcase tour, no longer on any card: `.start()/.stop()`, jump with `__demo.shotI = k-1; __demo.shotT = 999`),
-  `__quality`
+- `__quality`
   (`.apply('verylow'|'low'|'medium'|'high')`, `.sample(dt)`), `__audio` (`.stats`).
 - Squad hooks: `__orders` (`.open(target?)`, `.pick(i?)`, `.give(id, target?, who?)`, `.close()`, `.menu`, `.who`, `.cycleWho()`,
   `.log`), `__roomclear` / `__nightbreach` / `__rescue` (`.start()`, `.stop()`, `.restage()`, `.state`,
@@ -86,8 +85,7 @@ Surface: a WebGPU canvas app (GUI). Verification = load it in a WebGPU-capable b
   `PORT=<port> node tools/qa/panel-keys.cjs` (headless Chromium on the software adapter, ~3 min).
 - `Space` at a door / walk or sprint into it (`__game.doors.byName('server')` → `.angle`, events via `onDoorEvent`);
   `__game.setBlackout(30,'debug')` / `.endBlackout()` (watch `targets.filter(t=>t.factor>0).length` restrike);
-  `__demo.start()` tour end-to-end must leave `__demo.active === false` with camera yaw/dist restored and no `#fatal` text
-  (`P` starts nothing from the page: the night and day showcases were removed — it only stops a tour that is running).
+  (`P` starts nothing from the page: the night and day showcases were removed).
 - Console: filter for `error:` / `Invalid` — WGSL reserved words and storage-texture aliasing show up there, not as exceptions.
 
 ## Squad flows (the game as it is played now)
