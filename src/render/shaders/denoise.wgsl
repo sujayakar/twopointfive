@@ -64,7 +64,7 @@ struct DnParams {
 @group(1) @binding(4) var nearSamp: sampler;             // non-filtering: textureGather on the uint geometry history
 @group(1) @binding(5) var gMatR: texture_2d<f32>;        // the g-buffer's material target (roughness, metalness) — the radiance clients read its roughness in per-pixel mode (sp2.w > 0)
 
-const SOFT_HINT_BAND: f32 = 0.015;   // |hint| under this = the drawn-character-shadow FLAG (direct_common.wgsl SOFT_HINT_FLAG 0.01), never a measurement: real hints are ≥ 0.75 px ∕ MAX_BLUR_PX = 0.023
+const SOFT_HINT_BAND: f32 = 0.015;   // |hint| under this is no measurement of a pixel's own (real hints are ≥ 0.75 px ∕ MAX_BLUR_PX = 0.023): such a pixel inherits its neighbours'
 const JUMP_REL_FLOOR: f32 = 0.2;   // shTemporal: the jump's yardstick is the believed-visible luminance, but never under this share of the exact U (deep umbra stays calm under drifting light)
 const JUMP_CAP: f32 = 1.0;    // shTemporal, a light-jump frame: the current ratio's bright outliers capped at the 5×5 mean + this many σ …
 const JUMP_LEAN_SHARP: f32 = 0.25;   // … and the value leant this far onto that mean, per class (0 = the capped sample as it is, 1 = the box mean): the SHARP class's shadows are hard-edged (torches, the
@@ -377,12 +377,7 @@ fn shTemporal(@builtin(global_invocation_id) gid: vec3u, @builtin(workgroup_id) 
   let movCap = f32(dn.flags.z); let thr = dn.sh.w;
   var cap0 = cap; var cap1 = cap;
   let du0 = abs(lu0 - h0.a) / max(max(lu0, h0.a), 1e-4); let du1 = abs(lu1 - h1.a) / max(max(lu1, h1.a), 1e-4);
-  // A DRAWN character shadow (SDF rig, use iii — direct_common.wgsl SOFT_HINT_FLAG in the class's hint slot: no box penumbra measured or remembered at the pixel, a man's analytic
-  // term on it): the incoming ratio carries no visibility noise, so where it MOVES (the occluder cue below) the history is not shortened to movCap but dropped — this frame's
-  // ratio whole, nothing to trail a walking man's penumbra by — while at rest it accumulates as ever (the estimator's own weight noise still wants the average).
-  var mc0 = movCap; var mc1 = movCap;
-  let det0 = hs.x < 0.0 && hs.x > -SOFT_HINT_BAND; let det1 = hs.y < 0.0 && hs.y > -SOFT_HINT_BAND;
-  if (det0) { mc0 = 1.0; } if (det1) { mc1 = 1.0; }
+  let mc0 = movCap; let mc1 = movCap;
   if (have && movCap >= 1.0) {
     let gr0 = abs(luminance(h0.xyz) - sA.lmean) / (sA.lsig + 0.03); let gr1 = abs(luminance(h1.xyz) - sB.lmean) / (sB.lsig + 0.03);
     cap0 = mix(cap, min(cap, mc0), max(smoothstep(thr, 3.0 * thr, du0), smoothstep(0.6, 1.6, gr0)));
@@ -412,8 +407,6 @@ fn shTemporal(@builtin(global_invocation_id) gid: vec3u, @builtin(workgroup_id) 
   // swallows that cue and left four fifths of the stale edge in place: the drawn penumbra trailed MORE than the sampled one until this line).
   // — but only where the pixel's own sample history says the term IS steady (EW variance of the incoming luminance ≈ 0): under ReSTIR a pixel lit by two sharp lights the man
   // shadows differently alternates its ratio with the reservoir's pick, and reading that as motion would replay the pick noise at full amplitude every frame.
-  if (det0 && have && hm.y < pow(0.06 * max(l0, hm.x) + 0.01, 2.0)) { let lh = luminance(h0.xyz); a0 = max(a0, smoothstep(0.06, 0.16, abs(l0 - lh) / (max(l0, lh) + 0.05))); }
-  if (det1 && have && hm.w < pow(0.06 * max(l1, hm.z) + 0.01, 2.0)) { let lh = luminance(h1.xyz); a1 = max(a1, smoothstep(0.06, 0.16, abs(l1 - lh) / (max(l1, lh) + 0.05))); }
   // ---- clamp the history into this frame's neighbourhood (per channel, k·σ; σ floored so a converged flat region does not reject a history that differs by a hair) ----
   let k = dn.sh.x;
   var hv0 = h0.xyz; var hv1 = h1.xyz;
@@ -501,7 +494,7 @@ fn shAtrous(@builtin(global_invocation_id) gid: vec3u, @builtin(workgroup_id) wi
   if (d0 >= 1.0 || (!liveA && !liveB)) { shEmit(pc, 1u, cB.xyz, cB.a, sh.y); shEmit(pc, 0u, cA.xyz, cA.a, sh.x); textureStore(saShOut, pc, sh); return; }
   // pass 1 over the taps: the widest hint within this iteration's reach (dilation, as softblur: the lit half of a penumbra learns how wide it is from
   // the dark half, stride by stride) — the SHARED texel of every tap is wanted below for the lit-alike weight anyway
-  let ownA = sh.x < -SOFT_HINT_BAND; let ownB = sh.y < -SOFT_HINT_BAND; let ownRA = abs(sh.x); let ownRB = abs(sh.y);   // (a drawn character shadow's flag — direct_common SOFT_HINT_FLAG, inside the band — is NOT an own measurement here: such a pixel inherits and is blurred by a neighbouring box penumbra's hint like any lit pixel, and lets that hint dilate across it; alone, its ⅓ px asks for nothing)
+  let ownA = sh.x < -SOFT_HINT_BAND; let ownB = sh.y < -SOFT_HINT_BAND; let ownRA = abs(sh.x); let ownRB = abs(sh.y);
   var inhA = 0.0; var inhB = 0.0;
   for (var t = 0; t < 9; t++) {
     let q = clamp(pc + vec2i(t % 3 - 1, t / 3 - 1) * STRIDE, vec2i(0), hi);
