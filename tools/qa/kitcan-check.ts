@@ -3,7 +3,7 @@
 //   bun run tools/qa/kitcan-check.ts          (KITCAN_BREAK=1 = the switch put off under the check: every 'the can is drawn' line must fail)
 //
 // The quiet set's guns tile read 'Glock 19 only' beside a bare pistol, though the gun you deploy with wears its suppressor (weapons.ts: both of yours do).
-// This check opens the loadout screen on a headless DOM (as kitlent-check does) and reads the guns tile and the roster's card: your pistol alone reads
+// This check opens the loadout screen on a headless DOM and reads the guns tile and the roster's card: your pistol alone reads
 // 'Suppressed Glock 19' and is drawn with the can; your rifle keeps its words and gains the can; a teammate's drawing follows his Suppressor row; no can is
 // ever drawn on the shotgun; none of it writes the card or the words the rest of the game reads (kitWords); and with the switch off the tile and the roster
 // are the build before. It sets the switches it needs itself, so it asks the same on either stand. Looks at no picture: never seen on a GPU.
