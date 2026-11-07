@@ -12,6 +12,8 @@ publish = false
 [dependencies]
 game = { path = "../game" }
 sim = { path = "../sim" }
+# (hold draws what it plays)
+game_draw = { path = "../game_draw", optional = true }
 
 [profile.dev]
 opt-level = 0
@@ -24,4 +26,4 @@ debug = false
 [features]
 # `std`: the readers of this repository's own files (the character, a level) for a native host and the tests. The start itself reads no file.
 default = ["std"]
-std = []
+std = ["dep:game_draw"]

@@ -571,7 +571,7 @@ export async function fogFlat(): Promise<boolean> {
   if (brk) FW.on = false;
   { // the block
     R.step(30); const onLvl = FW.frame.flat, onFog = FW.frame.on && FW.frame.count > 0;
-    verdict(onFog && onLvl === FOG.flat && FOG.flat > 0, 'under the fog the renderer\'s block carries the level',
+    verdict(onFog && onLvl === Math.fround(FOG.flat) && FOG.flat > 0, 'under the fog the renderer\'s block carries the level',
       `fog on ${FW.frame.on}, ${FW.frame.count} eyes · the level ${FOG.flat} · handed: ${onLvl}`);
   }
   { // the shader: under a level, the unseen pixel is built from the paint alone
@@ -608,7 +608,7 @@ export async function fogLit(): Promise<boolean> {
   { // the block
     R.step(30); const g1 = F.lit, n1 = F.lightCount, fogOn = F.on && F.count > 0;
     const fill = F.litFill, wantFill = FOG.flat * FOG.litFill;
-    verdict(fogOn && g1 === 1 && n1 > 0 && Math.abs(fill - wantFill) < 1e-9 && fill < FOG.flat, 'under the fog the renderer\'s block carries the gain, the level\'s lamps and a fill under the own light\'s level',
+    verdict(fogOn && g1 === 1 && n1 > 0 && fill === fr(wantFill) && fill < FOG.flat, 'under the fog the renderer\'s block carries the gain, the level\'s lamps and a fill under the own light\'s level',
       `fog on ${F.on}, ${F.count} eyes · gain ${g1}, ${n1} lamps of ${fixtures.length} fixtures that carry light, fill ${fill.toFixed(3)} of own light ${FOG.flat}`);
   }
   { // only the level's own lamps: every row is a fixture's light or the sun / moon, at its own full strength; nothing carried, nothing transient
@@ -628,10 +628,10 @@ export async function fogLit(): Promise<boolean> {
     const far = litOnes.find((t: any) => !seenAt(t)), near = litOnes.find((t: any) => seenAt(t));
     let kept = false, held = 0, gone = false, nearGone = !near, back = false;
     if (far) {
-      game.lightHome.stage(far, false, null); R.step(3); kept = lightsOf(far).some(has); held = FW.litStats.held;
+      game.lightHome.stage(far, false, null); R.step(3); kept = lightsOf(far).some(has); held = FW.fullStats.held;
       const real = FW.spotSeen.bind(FW); FW.spotSeen = (x: number, z: number) => (Math.abs(x - far.pos[0]) < 1e-6 && Math.abs(z - far.pos[2]) < 1e-6) || real(x, z);   // (an eye on that one spot of floor: lampSeen's first way)
       R.step(2); gone = !lightsOf(far).some(has); FW.spotSeen = real;
-      game.lightHome.stage(far, true, null); R.step(3); back = !lightsOf(far).some(has) && FW.litStats.held >= 1;   // (switched back on unseen: the fog keeps it dark, as last seen)
+      game.lightHome.stage(far, true, null); R.step(3); back = !lightsOf(far).some(has) && FW.fullStats.held >= 1;   // (switched back on unseen: the fog keeps it dark, as last seen)
       FW.reset(); R.step(3);
     }
     if (near) { game.lightHome.stage(near, false, null); R.step(2); nearGone = !lightsOf(near).some(has); game.lightHome.stage(near, true, null); R.step(2); }
@@ -695,7 +695,7 @@ export async function fogFull(): Promise<boolean> {
     FOG.fullFill = 0.5; R.step(3); const fillHalf = F.fullFlat; FOG.fullFill = 0;
     R.step(5);
     const picks = /const full = F\.full && F\.sight, flat = full \? F\.fullFlat : F\.flat;/.test(up) && /U\[o \+ 14\] = full \? 1 : 0;/.test(up) && /this\.fogFrame\.sight = this\.fogSight\.live;/.test(eng);
-    verdict(fogOn && on1 === true && team1 === true && fill1 === 0 && Math.abs(fillHalf - FOG.flat * 0.5) < 1e-9 && flat1 === FOG.flat && lit1 > 0 && n1 > 0 && picks,
+    verdict(fogOn && on1 === true && team1 === true && fill1 === 0 && fillHalf === Math.fround(FOG.flat * 0.5) && flat1 === Math.fround(FOG.flat) && lit1 > 0 && n1 > 0 && picks,
       'under the fog the block asks for the full picture, with its fill as a share of the own light (none unless asked), and still carries the lit fog\'s rows — which the pass draws for as long as the renderer\'s sight table is not live (so nothing live shows while it compiles, or if it never does)',
       `fog on ${F.on}, ${F.count} eyes · row on: full ${on1}, the team handed to the upload ${team1}, fill ${fill1}, at share 0.5 → ${fillHalf.toFixed(3)} of ${FOG.flat}, the lit fog's rows kept: own light ${flat1}, gain ${lit1}, ${n1} lamps · the pass picks by F.full && F.sight, which the engine writes from the table: ${picks}`);
   }
@@ -803,7 +803,7 @@ export async function fogCone(): Promise<boolean> {
       const b = { cos: FW.frame.looks[2], near: FW.frame.looks[3], si: FW.frame.softIn, so: FW.frame.softOut, ns: FW.frame.nearSoft, eyes: FW.eyes.length };
       FOG.own = true; R.step(2); const eyesOwn = FW.eyes.length, countOwn = FW.frame.count; FOG.own = false; R.step(2);
       const half = FOG.coneDeg / 2;
-      verdict(a.cos <= -1.5 && a.si === 0 && a.so === 0 && a.ns === 0 && Math.abs(b.cos - Math.cos(half * DEGR)) < 1e-5 && b.near === FOG.coneNearM && b.si > b.cos && b.cos > b.so && Math.abs(b.si - Math.cos((half - FOG.coneSoftDeg / 2) * DEGR)) < 1e-5 && b.ns === FOG.coneNearSoftM && a.eyes === 3 && b.eyes === 3 && eyesOwn === 1 && countOwn === 1,
+      verdict(a.cos <= -1.5 && a.si === 0 && a.so === 0 && a.ns === 0 && Math.abs(b.cos - Math.cos(half * DEGR)) < 1e-5 && b.near === Math.fround(FOG.coneNearM) && b.si > b.cos && b.cos > b.so && Math.abs(b.si - Math.cos((half - FOG.coneSoftDeg / 2) * DEGR)) < 1e-5 && b.ns === Math.fround(FOG.coneNearSoftM) && a.eyes === 3 && b.eyes === 3 && eyesOwn === 1 && countOwn === 1,
         'the block: all round and no soft edge without the cone; with it the wedge\'s cosine, the near field and a soft band either side of the edge; FOG.own leaves one eye',
         `without: cos ${a.cos}, soft ${a.si}/${a.so}/${a.ns} · with: cos ${b.cos.toFixed(3)} (${FOG.coneDeg}°), near ${b.near} m, soft ${b.si.toFixed(3)} > ${b.cos.toFixed(3)} > ${b.so.toFixed(3)}, rim ${b.ns} m · eyes ${a.eyes} → own ${eyesOwn}`);
     }
