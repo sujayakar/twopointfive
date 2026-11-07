@@ -65,9 +65,9 @@
 //          kit message, the card and the stored kit still at none); a child that still says `dip` / `undip` changes nothing (the
 //          iframe is never faded: the page has no black); leaving the step says `pause` on, coming back off; `?stillkit` opens the child
 //          `&stillkit` and says no `sel`; a child that says `none` AFTER `ready` is dropped like one that never came up; the foot bar is over it and takes the click; the Mission step and a mission with no block (the office) are the
-//          page as it was; Deploy loads a URL without `kitview` and the iframe is gone first; `?oldfigure` never makes one.
+//          page as it was; Deploy loads a URL without `kitview` and the iframe is gone first;
 //   node tools/qa/kitview-page.cjs      env: PORT (the dev server's, default 5199) · QUALITY (verylow) · WARM (frames to `ready` / the still picture's warm window, 6; the page's own are 12 / 90)
-//          · SCALE (the game's clock in the inner half, 2) · ONLY=inner|outer · WAY=1|2 (one way in of the inner half, and no still page) · REAL=1 · KITVIEW_BREAK=1 (the outer half opened `?oldfigure` and still held to the view: it must FAIL) · STANDIN_BREAK=1 (a canvas put into the column while the slow child is waited for, as a stand-in's would be: that row must FAIL, on the canvas alone)
+//          · SCALE (the game's clock in the inner half, 2) · ONLY=inner|outer · WAY=1|2 (one way in of the inner half, and no still page) · REAL=1 · KITVIEW_BREAK=1 (the outer half in a window too narrow for the picture and still held to the view: it must FAIL) · STANDIN_BREAK=1 (a canvas put into the column while the slow child is waited for, as a stand-in's would be: that row must FAIL, on the canvas alone)
 //          · KITMOMENT_BREAK=1 (the inner half, one way in, the page opened `&stillkit` — the director never plays — and still held to the loop: it must FAIL)
 //          · KITPACE_BREAK=1 (the inner half, one way in, up to the pacer rows, fed a pacer that draws every frame and never moves: it must FAIL)
 //          · KITLEAF_BREAK=1 (the inner half, the SECOND way in — where every round of a burst through the doorway meets the leaf: the picture told not to mend a leaf under fire, `__kitview.leafMend` false — the two rows of THE LEAF UNDER FIRE must FAIL)
@@ -106,7 +106,7 @@ const WAYS = JSON.parse(require('fs').readFileSync(require('path').join(__dirnam
 // as text) whose file carries no `scenarios.kitView`. When every one carries a block the case is PLANTED: the first of them that is not this tool's own mission, its level file answered to the
 // PARENT with the block taken out (the outer half's own route; no level file is edited) — so a level given a block later never turns that row red.
 const NOBLOCK = (() => { const fs = require('fs'), path = require('path'), root = path.join(__dirname, '../..');
-  const list = fs.readFileSync(path.join(root, 'src/scene/scenarioList.ts'), 'utf8').split('\n').filter(l => !/\boffList: true/.test(l)).map(l => /^\s*\{ id: '([^']+)'.*\bkind: 'roomclear'.*\blevel: '([^']+\.json)'/.exec(l)).filter(m => m).map(m => ({ id: m[1], level: m[2] }));   // (the whole line is asked for the cut: a row may say it after its level)
+  const list = fs.readFileSync(path.join(root, 'src/scene/scenarioList.ts'), 'utf8').split('\n').filter(l => !/\boffList: true|\blevel: 'tut-/.test(l)).map(l => /^\s*\{ id: '([^']+)'.*\bkind: 'roomclear'.*\blevel: '([^']+\.json)'/.exec(l)).filter(m => m).map(m => ({ id: m[1], level: m[2] }));   // (the whole line is asked for the cut: a row may say it after its level)
   const has = f => { try { return !!(JSON.parse(fs.readFileSync(path.join(root, 'levels', f), 'utf8')).scenarios || {}).kitView; } catch { return true; } };
   const forced = process.env.KITNOBLOCK === 'plant', free = forced ? undefined : list.find(m => !has(m.level)), last = list.find(m => m.id !== 'records-pair');   // (the first that is not this tool's own mission: a row the list shows)
   return free ? { ...free, planted: false } : last ? { ...last, planted: true } : null; })();
@@ -1213,7 +1213,7 @@ async function outer(browser) {
     const R = document.getElementById('missions'), f = R.querySelector('iframe'), c = R.querySelector('.onefig canvas'), dep = R.querySelector('#loadout [data-act="deploy"]'), bar = R.querySelector('#loadout .lo-actions');
     const vis = e => !!e && e.getClientRects().length > 0 && getComputedStyle(e).display !== 'none', fr = f && f.getBoundingClientRect(), br = bar && bar.getBoundingClientRect(), dr = dep && dep.getBoundingClientRect();
     return { pane: R.classList.contains('pane-loadout') ? 'loadout' : 'list', kvOn: R.classList.contains('kv-on'), frames: R.querySelectorAll('iframe').length, src: f ? f.getAttribute('src') : null, frameShown: vis(f) && R.classList.contains('kv-on') && getComputedStyle(f).opacity !== '0', frameOn: !!f && R.classList.contains('kv-on'), hist: history.length, dip: R.classList.contains('kv-dip'), opacity: f ? +getComputedStyle(f).opacity : -1,
-      inBody: !!f && f.parentElement.classList.contains('mbody'), events: f ? getComputedStyle(f).pointerEvents : null, tab: f ? f.tabIndex : null, canvas: !!c, canvasShown: vis(c), wait: R.hasAttribute('data-kv-wait'), none: R.hasAttribute('data-kv-none'), fig: c ? c.getAttribute('data-fig') : null,
+      inBody: !!f && f.parentElement.classList.contains('mbody'), events: f ? getComputedStyle(f).pointerEvents : null, tab: f ? f.tabIndex : null, canvas: !!c, wait: R.hasAttribute('data-kv-wait'), none: R.hasAttribute('data-kv-none'), fig: c ? c.getAttribute('data-fig') : null,
       deployTop: dr && document.elementFromPoint(dr.left + dr.width / 2, dr.top + dr.height / 2) === dep, barIn: !!br && br.bottom <= innerHeight + 0.5 && br.top >= 0, barOver: !!br && !!fr && (fr.right <= br.left || getComputedStyle(bar).backgroundColor !== 'rgba(0, 0, 0, 0)'),
       got: f && f.contentWindow && f.contentWindow.__got ? f.contentWindow.__got.map(m => ({ kv: m.kv, squad: m.squad, n: m.members ? m.members.length : undefined, cards: m.members, who: m.who, field: m.field, on: m.on, keys: Object.keys(m).sort().join(','), frame: m.kv === 'frame' ? m : undefined })) : null,
       geo: (() => { const c = R.querySelector('.onefig'), cr = c && c.getBoundingClientRect(), t = R.querySelector('#loadout .lo-kit'), tr = t && t.getBoundingClientRect(); if (!cr || !fr) return null;
@@ -1234,8 +1234,8 @@ async function outer(browser) {
     return { steps, hit: null }; };
   const flags = u => [...new URLSearchParams(String(u || '').replace(/^[^?]*\?/, ''))].map(([k, v]) => v ? `${k}=${v}` : k);
 
-  console.log(BREAK ? 'the start page, KITVIEW_BREAK=1: opened ?oldfigure and still held to the view (this run must FAIL)' : 'the start page as it ships');
-  await open(BREAK ? '&oldfigure' : '');
+  console.log(BREAK ? 'the start page, KITVIEW_BREAK=1: a window too narrow for the picture and still held to the view (this run must FAIL)' : 'the start page as it ships');
+  await open(''); if (BREAK) await page.setViewportSize({ width: 700, height: 800 });
   await goRow('records-pair'); const m0 = await state();
   check(!m0.kvOn && !m0.frameShown && m0.frames === 0, 'the Mission step: no kv-on, no iframe', `pane ${m0.pane} · kv-on ${m0.kvOn} · ${m0.frames} iframe(s)`);
   await kit(); await page.waitForFunction(() => !!document.querySelector('#missions.kv-on iframe.kv'), null, { timeout: 15000 }).catch(() => {});
@@ -1321,7 +1321,7 @@ async function outer(browser) {
   { await goRow('room-clear-pair').catch(() => {}); await kit(); await page.waitForFunction(() => !!document.querySelector('#missions.kv-on iframe.kv'), null, { timeout: 300000 }).catch(() => {}); const f0 = await state();
     check(f0.pane === 'loadout' && f0.kvOn && f0.frames === 1 && !/levelFile=/.test(f0.src || '') && /[?&]roomclear\b/.test(f0.src || ''), 'the bundled office (room-clear-pair: no level file): its picture is up, asked for with the mission\'s own query and no levelFile', `kv-on ${f0.kvOn} · ${f0.frames} iframe(s) · ${String(f0.src || '').replace(/^[^?]*/, '').slice(0, 120)}`);
     await page.keyboard.press('Escape'); await page.waitForTimeout(400); }
-  // a mission with no block: the column is EMPTY (the standing man is off the page since 10-20: he is `?oldfigure`'s alone)
+  // a mission with no block: the column is EMPTY (the standing man is gone)
   // (WHICH mission is found as the tool starts — NOBLOCK: the first room clear whose level file has no block, or, when every one has, one whose file the parent is answered without its block)
   const wantO = NOBLOCK ? NOBLOCK.id : ''; if (NOBLOCK) await goRow(NOBLOCK.id).catch(() => {}); const idO = await page.evaluate(() => { const r = document.querySelector('#missions .mrow.sel'); return r ? r.getAttribute('data-mission') : null; });
   await kit(); await page.waitForFunction(() => !document.getElementById('missions').hasAttribute('data-kv-wait'), null, { timeout: 15000 }).catch(() => {}); const o0 = await state();
@@ -1336,9 +1336,6 @@ async function outer(browser) {
   check(!!deploy && tail && !dq.includes('kitview') && left === '0' && dq.join('&') === fq.join('&'), 'Deploy loads the query the iframe stood on, without kitview, and the iframe is gone before the load', `deploy ?${dq.join('&')} · iframe was on ?${fq.join('&')} (+ kitview, mute, noreplay) · iframes in the page as it was left: ${deploy ? left : 'no load seen'}`);
 
   if (!BREAK) {
-    console.log('?oldfigure');
-    framesAsked = []; await open('&oldfigure'); await goRow('records-pair'); await kit(); const x = await state();
-    check(x.pane === 'loadout' && !x.kvOn && x.frames === 0 && framesAsked.length === 0 && x.canvas && x.canvasShown, '?oldfigure: never an iframe; the standing man as before', `kv-on ${x.kvOn} · ${x.frames} iframe(s), ${framesAsked.length} load(s) · canvas ${x.canvasShown ? 'shown' : 'HIDDEN'}`);
     console.log('?stillkit');
     { framesAsked = []; await open('&stillkit'); await goRow('records-pair'); await kit(); await page.waitForFunction(() => !!document.querySelector('#missions.kv-on iframe.kv'), null, { timeout: 15000 }).catch(() => {});
       const field = await tile(); await page.waitForTimeout(600); const y = await state(), kits = (y.got || []).filter(m => m.kv === 'kit'), sels = (y.got || []).filter(m => m.kv === 'sel');
