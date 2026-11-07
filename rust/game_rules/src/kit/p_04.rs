@@ -323,7 +323,7 @@ pub fn kit_alone(g: &mut crate::game::Game) {
     crate::wallcharge::wall_charge_raise_carried(g, 0.0);
     let n = if charge_row(g, 0.0) { g.m.kit.kit.members[0].charges } else { 0.0 };
     crate::doortools::door_tools_alone(g, n);
-    if g.k.slots.on && wall_here() {
+    if g.k.slots.on {
         let w = kit_walls(g, 0.0);
         crate::wallcharge::wall_charge_set_carried(g, Some(w));
     }
@@ -459,7 +459,7 @@ pub fn kit_stage(g: &mut crate::game::Game, ops: &[GuardId]) {
             v.door_tools.frags = crate::seats::seat_share(v, pool.frags);
         });
     }
-    if js::truthy(n) && g.k.slots.on && wall_here() {
+    if js::truthy(n) && g.k.slots.on {
         let walls = kit_walls(g, n);
         crate::seats::each_seat(g, &mut |v| {
             let share = crate::seats::seat_share(v, walls);

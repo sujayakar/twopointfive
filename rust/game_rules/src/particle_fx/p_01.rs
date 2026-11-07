@@ -345,7 +345,7 @@ pub fn ember_fx(g: &mut crate::game::Game, at: V3, dir: V3, o: crate::particle_f
 /// The empty a row's gun throws, or None. (particleFx.ts casingOf)
 pub fn casing_of(g: &crate::game::Game, def: &crate::weapons::WeaponDef) -> Option<crate::particle_fx::CasingSpec> {
     let c = casing_row(def.id)?;
-    if def.id == crate::weapons::WeaponId::M1014 && !crate::gunlook::gun_look_on(g) { None } else { Some(c) }
+    Some(c)
 }
 
 /// CASINGS[id]

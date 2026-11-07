@@ -95,7 +95,7 @@ pub fn kit_nv_eye(g: &mut crate::game::Game) -> bool {
 fn hands_off_c(g: &crate::game::Game, c: CharId) -> bool {
     let b = g.ch[c].anim.big_tool.as_ref().map(big_off_of);
     match b {
-        Some(b) if crate::bigkit::big_weighed(g) => crate::character::big_off(b),
+        Some(b) => crate::character::big_off(b),
         _ => g.ch[c].anim.hide_held_item,
     }
 }

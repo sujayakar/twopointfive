@@ -205,11 +205,6 @@ pub fn feed_deal(g: &mut crate::game::Game, ch: CharId, gun: Option<FirearmId>, 
     an.feed_port = port;
 }
 
-/// the switch is up (gunreload.ts feedLive)
-pub fn feed_live(g: &crate::game::Game) -> bool {
-    crate::gunlook::gun_look_on(g)
-}
-
 /// what the player's reload of `gun` on `row` is to sound like and to drop, asked before startReload (gunreload.ts feedPlan)
 pub fn feed_plan(g: &mut crate::game::Game, gun: FirearmId, row: crate::weapons::WeaponDefReload, shells: Option<crate::gunreload::FeedPlanShells>) -> Option<crate::gunreload::FeedPlan> {
     let def = gun_def(g, gun);

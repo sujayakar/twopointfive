@@ -110,7 +110,7 @@ pub fn guns_on(g: &crate::game::Game) -> bool {
 
 /// The card is laid out as a tree.   (kit.ts treeUp)
 pub fn tree_up(g: &crate::game::Game) -> bool {
-    guns_on(g) && crate::kittree::tree_on(g)
+    guns_on(g)
 }
 
 /// A slot's pick comes with its suppressor on or off.   (kit.ts canChoice)
@@ -177,16 +177,11 @@ pub fn guns_home(g: &crate::game::Game, m: &mut crate::kit::MemberKit) -> crate:
     m.clone()
 }
 
-/// The wall charge is a row only in a build that has it: this one does.   (kit.ts wallHere)
-pub fn wall_here() -> bool {
-    true
-}
-
 /// A loadout's tools this build cannot put on.   (kit.ts loadoutMissing)
 pub fn loadout_missing(g: &crate::game::Game, l: &crate::kit::SlotLoadout) -> Vec<String> {
     let walls = l.counts.iter().any(|c| c.get(String::from("walls")).copied().unwrap_or(0.0) > 0.0);
     let mut missing = l.missing.clone();
-    if walls && !(g.k.slots.on && wall_here()) {
+    if walls && !g.k.slots.on {
         missing.push(String::from("wallCharge"));
     }
     missing
@@ -283,7 +278,7 @@ pub fn tubed(g: &crate::game::Game, m: &crate::kit::MemberKit) -> bool {
 
 /// A teammate's card has the 40 mm row.   (kit.ts mateShells)
 pub fn mate_shells(g: &crate::game::Game) -> bool {
-    tree_up(g) && crate::squad40::squad40_here(g)
+    tree_up(g)
 }
 
 /// A suppressor's flag holds a value only while its gun has the choice. Writes `m` and returns a copy of it.   (kit.ts homeCans)

@@ -364,7 +364,7 @@ pub fn anim_mv_arms(g: &mut crate::game::Game, c: CharId, dt: f64, gate: f64) {
         let pist = an.rl_b.hand && !long_gun && an.reload_t >= 0.0;
         let (throw_t, strike_t, no_tool) = (an.throw_t, an.strike_t, an.big_tool.is_none());
         let want = if live
-            && (pist || (mv_on(g, MvOnK::Reload) && long_gun && (reload_mag || (has_feed && crate::gunreload::feed_live(g)))))
+            && (pist || (mv_on(g, MvOnK::Reload) && long_gun && (reload_mag || has_feed)))
             && !busy && throw_t < 0.0 && strike_t < 0.0 && no_tool { 1.0 } else { 0.0 };
         if want > 0.0 || g.ch[c].anim.mv2.rw.x != 0.0 {
             let rate = mv2().reload.rate;
