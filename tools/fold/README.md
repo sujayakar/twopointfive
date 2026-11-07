@@ -8,7 +8,7 @@ and deletes the side that can never run.
 cargo run --release --manifest-path tools/fold/Cargo.toml -- --report fold-report.md            # dry: says what it would do
 cargo run --release --manifest-path tools/fold/Cargo.toml -- --write --report fold-report.md    # and does it
 cargo run --release --manifest-path tools/fold/Cargo.toml -- --table rows.tsv                   # every row that stays a switch, tried alone
-cargo run --release --manifest-path tools/fold/Cargo.toml -- --knobs knobs-dead.md               # every leaf of the tables no body reads
+cargo run --release --manifest-path tools/fold/Cargo.toml -- --knobs knobs-dead.md --drop drop.txt   # every leaf of the tables no body reads; the settled rows among them, one a line
 ```
 
 Run it from the repository's root (or `--root DIR`). It reads `tools/qa/switches.json`, `rust/game/src/knobs.rs` (the tables at page
