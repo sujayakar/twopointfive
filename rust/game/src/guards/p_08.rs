@@ -290,7 +290,7 @@ pub fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
         if g.gd[cur].state == GuardState::Dead || !g.guards.contains(&cur) || g.gd[cur].fled || knee {
             let cur_pos = g.ch[g.gd[cur].ch].pos;
             if let Some(lk) = g.gd[gd].last_known {
-                if v3::dist_xz(lk, cur_pos) < 1.5 { g.gd[gd].last_known = None; g.gd[gd].fix_stamp = g.gd[gd].fix_stamp.wrapping_add(1); }
+                if v3::dist_xz(lk, cur_pos) < 1.5 { crate::mind::fix(g, gd, None, "guards"); }
             }
             mine = g.gd[cur].state == GuardState::Dead && g.gd[cur].killer_id == g.ch[g.gd[gd].ch].id && g.gd[gd].state == GuardState::Alert;
             g.gd[gd].foe = None;
@@ -339,8 +339,8 @@ pub fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
         if mine { crate::game::game_say(g, gd, "got him!", None, None, None); }
     } else if lost_man && best.is_none() && (g.gd[gd].state == GuardState::Alert || g.gd[gd].state == GuardState::Search) {
         // the man he was fighting is down and no other enemy is in his sight: he comes off the alert to a wary look round
-        g.gd[gd].state = GuardState::Suspicious;
-        g.gd[gd].awareness = 0.45;
+        crate::mind::set_state(g, gd, GuardState::Suspicious, "guards");
+        crate::mind::set(g, gd, 0.45, "guards");
         g.gd[gd].react_t = 1.2;
         g.gd[gd].search_t = 0.0;
         crate::game::guard_set_path(g, gd, Vec::new());

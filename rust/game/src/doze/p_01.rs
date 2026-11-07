@@ -139,7 +139,7 @@ pub fn walk_len(g: &mut crate::game::Game, from: &[f64], to: V3) -> f64 {
 /// in the chair (doze.ts seated)
 pub fn seated(d: crate::doze::Doze) -> bool { d.phase == Phase::Down || d.phase == Phase::Asleep || d.phase == Phase::Work }
 /// a number drawn from [from, to] (doze.ts span)
-pub fn span(g: &mut crate::game::Game, r: &[f64]) -> f64 {
+pub fn span(g: &mut crate::game::Game, who: crate::dice::Who, r: &[f64]) -> f64 {
     r[0] + crate::math_dice::sim_random(g) * (r[1] - r[0])
 }
 /// a chair at a screen: the screen, and the place nearest the chair from which a man facing it has floor under him and it in his eye (doze.ts screenSeat)
@@ -334,10 +334,9 @@ pub fn wake(g: &mut crate::game::Game, gd: GuardId, why: crate::doze::WakeWhy, a
     g.stats.doze.woke[why as usize] += 1;
     if why == WakeWhy::Noise || why == WakeWhy::Light || why == WakeWhy::Bump {
         let raise = if why == WakeWhy::Bump { g.k.doze.bump_aw } else { g.k.doze.wake_aw };
-        g.gd[gd].awareness = m::max(g.gd[gd].awareness, raise);
+        crate::mind::raise(g, gd, raise, "doze");
         if let Some(at) = at {
-            g.gd[gd].last_known = Some([at[0], 0.0, at[2]]);
-            g.gd[gd].fix_stamp = g.gd[gd].fix_stamp.wrapping_add(1);
+            crate::mind::fix(g, gd, Some([at[0], 0.0, at[2]]), "doze");
         }
         d.phase = Phase::Stir;
         d.until = g.time + g.k.doze.stir_secs;
@@ -468,7 +467,7 @@ pub fn doze_tick(g: &mut crate::game::Game, dt: f64) {
                     switch(g, mon, 1.0);
                     let first = g.k.doze.say_first.clone();
                     let t = g.time;
-                    d.say = t + span(g, &first);
+                    d.say = t + span(g, crate::dice::Who::Man(gd), &first);
                     flush(g, gd, d);
                     g.stats.doze.worked += 1;
                 }
@@ -506,7 +505,7 @@ pub fn doze_tick(g: &mut crate::game::Game, dt: f64) {
                 g.m.doze.said.as_mut().unwrap().push(k as f64);
                 let every = g.k.doze.say_every.clone();
                 let t = g.time;
-                d.say = t + span(g, &every);
+                d.say = t + span(g, crate::dice::Who::Man(gd), &every);
                 flush(g, gd, d);
                 crate::game::game_say(g, gd, &lines[k], Some(false), Some(false), Some(false));
                 g.stats.doze.lines += 1;

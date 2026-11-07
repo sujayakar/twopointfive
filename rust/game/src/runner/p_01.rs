@@ -455,15 +455,14 @@ pub fn drop(g: &mut crate::game::Game, gd: GuardId) {
     crate::owner::claim_man(g, gd, rule, now, Some(1.0));
     g.stats.runner.dropped += 1;
     {
-        let o = &mut g.gd[gd];
-        o.state = crate::game::GuardState::Patrol;
-        o.awareness = 0.0;
-        o.foe = None;
-        crate::aim::aim_state_clear(&mut o.aim);
-        o.pieing = None;
-        o.search_plan = None;
-        o.standoff = None;
-        o.muzzle_down = false;
+        crate::mind::set_state(g, gd, crate::game::GuardState::Patrol, "runner");
+        crate::mind::set(g, gd, 0.0, "runner");
+        g.gd[gd].foe = None;
+        crate::aim::aim_state_clear(&mut g.gd[gd].aim);
+        g.gd[gd].pieing = None;
+        g.gd[gd].search_plan = None;
+        g.gd[gd].standoff = None;
+        g.gd[gd].muzzle_down = false;
     }
     crate::control::set_hold(g, gd, true, "runner"); crate::control::set_pinned(g, gd, true, "runner");
     let e = known(g, gd);
@@ -568,7 +567,7 @@ pub fn tell(g: &mut crate::game::Game, gd: GuardId) {
             crate::digin::dig_in_order(g, d.unwrap(), from, tell_beat);
         } else {
             crate::belief::word(g, o, from);
-            g.gd[o].awareness = m::max(g.gd[o].awareness, tell_aware);
+            crate::mind::raise(g, o, tell_aware, "runner");
         }
         run!(g, gd).told += 1.0;
         g.stats.runner.told += 1;
@@ -645,8 +644,8 @@ pub fn step(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     g.fa[w].burst = None;
     crate::control::set_hold(g, gd, true, "runner");
     crate::control::set_pinned(g, gd, true, "runner");
-    if g.gd[gd].state != crate::game::GuardState::Patrol { g.gd[gd].state = crate::game::GuardState::Patrol; }
-    g.gd[gd].awareness = 0.0;
+    if g.gd[gd].state != crate::game::GuardState::Patrol { crate::mind::set_state(g, gd, crate::game::GuardState::Patrol, "runner"); }
+    crate::mind::set(g, gd, 0.0, "runner");
     g.gd[gd].foe = None;
     if g.gd[gd].held.is_some() { return; }
     let e = known(g, gd);

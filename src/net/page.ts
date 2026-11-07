@@ -37,7 +37,7 @@ import type { Recipe } from './wire';
 import { NET, recipeWhy } from './wire';
 import { FORESEE, Foresee } from './foresee';
 import { onWay, wayOff, type Way } from './delay';
-import { netStep, netSeats, netWord, netQuiet, NET_WORD_SEED, type StepHost } from './step';
+import { netStep, netSeats, netWord, netQuiet, netWhole, wordTick, NET_WORD_SEED, type StepHost } from './step';
 import { myName, setSeatNames } from '../host/names';
 
 /** the address's words: the server's WebSocket address, the game's id, the seat's key (read once, then kept for the tab under KEEP) */
@@ -143,6 +143,8 @@ export class NetPlay {
   refuse = '';
   readonly client: NetClient;
   private ws: WebSocket | null = null; private rs: RecipeStand | null = null; private host: NetHost | null = null;
+  /** the whole game's words after the last word tick, with the ticks walked by then, kept while a check asks for them (`__net.keepWhole(true)`, read as `__net.whole`: which part parted, step.ts netWhole) */
+  private whole: { t: number; names: string[]; words: number[] } | null = null; private keepWhole = false;
   private word: number = NET_WORD_SEED; private first = true; private walkMs = 0; private line: HTMLElement | null = null; private said = '';
   /** catching up (NETPAGE.far): the mixer's own switch as it was, null = not catching up */
   private audioWas: boolean | null = null;
@@ -199,7 +201,7 @@ export class NetPlay {
     g.saves.load = (...a: Parameters<typeof load>) => this.stepping ? load(...a) : 'You can’t load a checkpoint in a co-op game.';
     if (c.seat >= 0) c.ready();
     document.addEventListener('visibilitychange', () => { if (document.hidden) c.rest(performance.now()); });
-    const me = this; (window as unknown as { __net: unknown }).__net = { get state() { return me.state(); }, client: c, ahead: h.ahead ?? null, way: NETWAY, get tried() { return netTried(); }, try: netTry, stall: netStall };
+    const me = this; (window as unknown as { __net: unknown }).__net = { get state() { return me.state(); }, client: c, ahead: h.ahead ?? null, way: NETWAY, get whole() { return me.whole; }, keepWhole: (on: boolean) => { me.keepWhole = on; }, get tried() { return netTried(); }, try: netTry, stall: netStall };
   }
 
   /** ONE TICK OF THE PAGE (the loop's `tick`): the player's record sent, the confirmed ticks walked, the host's half of a tick round them (Game.update's) */
@@ -233,7 +235,7 @@ export class NetPlay {
       this.rs?.env(h.engine.settings); this.rs?.flags(g);
       { const d = h.ahead?.draws ?? 0; if (d !== this.drawsAt) { this.drawsAt = d; h.engine.world.relist(); } }   // (THE LIST A TICK READS IS THE LAST TICK'S, as on the server: a draw since then listed the boxes as it DREW them — between two ticks, his own man ahead — and the world's ray reads that list. So the first tick after a draw lists them again as the game has them)
       this.stepping = true; try { netStep(g, h.engine, cmds); } finally { this.stepping = false; }
-      this.word = netWord(g, this.word);
+      this.word = netWord(g, this.word); if (this.keepWhole && wordTick(c.confirmed)) { const A = netWhole(g); if (A) this.whole = { t: c.confirmed + 1, ...A }; }   // (inside the client's walk: `confirmed` is still the tick this step ran)
       if (far) { h.smoke?.update(1 / NET.hz); const tw = h.loop.tween; if (tw && !tw.stale) tw.rest(); }   // (unseen ticks: the smoke keeps the game's time, and nothing is drawn between two of them — as under a replay's seek)
     };
     // (ONE QUIET RUN A WALK, step.ts netQuiet: nothing of this page reads the game between two ticks of a walk, so what the picture reads is brought up

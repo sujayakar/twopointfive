@@ -138,9 +138,7 @@ pub fn attention_step(g: &mut crate::game::Game, gd: GuardId, at: V3) {
     end(g, gd, "step");
     if g.gd[gd].state == crate::game::GuardState::Suspicious {
         if !crate::belief::word_now(g, gd) {
-            let man = &mut g.gd[gd];
-            man.last_known = Some(v3::copy(at));
-            man.fix_stamp = man.fix_stamp.wrapping_add(1);
+            crate::mind::fix(g, gd, Some(v3::copy(at)), "attention");
         }
         let man = &mut g.gd[gd];
         man.path = Vec::new();
@@ -175,7 +173,7 @@ pub fn attention_heard(g: &mut crate::game::Game, gd: GuardId, e: crate::game::G
         crate::director::EventKind::LightOut => DrawKind::Light,
         _ => DrawKind::Noise,
     };
-    if e.lure == Some(true) && g.gd[gd].awareness < g.k.attention.draw_aw && able(g, gd) { g.gd[gd].awareness = g.k.attention.draw_aw; }
+    if e.lure == Some(true) && g.gd[gd].awareness < g.k.attention.draw_aw && able(g, gd) { let to = g.k.attention.draw_aw; crate::mind::set(g, gd, to, "attention"); }
     let t = g.time;
     mem(g, gd).cand = Some(MemCand { at: [where_[0], 0.0, where_[2]], kind, t });
 }
@@ -276,14 +274,14 @@ pub fn attention_tick(g: &mut crate::game::Game, gd: GuardId) {
                     h = None;
                 } else if now >= hh.until {
                     if suspicious {
-                        g.gd[gd].awareness = m::min(g.gd[gd].awareness, 0.1 + hh.glimpse);
+                        crate::mind::cap(g, gd, 0.1 + hh.glimpse, "attention");
                         end(g, gd, "done");
                     } else {
                         end(g, gd, "over");
                     }
                     h = None;
                 } else if suspicious {
-                    g.gd[gd].awareness = m::max(g.gd[gd].awareness, g.k.attention.floor);
+                    { let to = g.k.attention.floor; crate::mind::raise(g, gd, to, "attention"); }
                     tell(g, gd, &mut hh);
                     h = Some(hh);
                 }
@@ -338,16 +336,15 @@ pub fn attention_tick(g: &mut crate::game::Game, gd: GuardId) {
             row.series = true;
             let foe_lines = g.gd[gd].team != crate::teams::Team::Guard;
             if nth as f64 >= g.k.attention.spent && cand.kind != DrawKind::Whistle {
-                let man = &mut g.gd[gd];
-                man.state = crate::game::GuardState::Search;
-                man.search_t = 0.0;
-                man.search_plan = None;
-                man.pieing = None;
-                man.react_t = 0.0;
-                man.path = Vec::new();
-                man.path_serial = man.path_serial.wrapping_add(1);
-                man.path_goal = None; man.path_goal_orbit = false;   // (guard_set_path_goal's rule, for the row in hand)
-                man.stall_ref = None;
+                crate::mind::set_state(g, gd, crate::game::GuardState::Search, "attention");
+                g.gd[gd].search_t = 0.0;
+                g.gd[gd].search_plan = None;
+                g.gd[gd].pieing = None;
+                g.gd[gd].react_t = 0.0;
+                g.gd[gd].path = Vec::new();
+                g.gd[gd].path_serial = g.gd[gd].path_serial.wrapping_add(1);
+                g.gd[gd].path_goal = None; g.gd[gd].path_goal_orbit = false;   // (guard_set_path_goal's rule, for the row in hand)
+                g.gd[gd].stall_ref = None;
                 g.stats.attention.spent += 1;
                 log(g, gd, "spent", LogH { kind: cand.kind, secs: 0.0, nth });
                 line(g, gd, &if foe_lines { spent_foe() } else { spent() });
@@ -423,7 +420,7 @@ pub fn attention_walk(g: &mut crate::game::Game, gd: GuardId) {
         end(g, gd, "far");
         return;
     }
-    g.gd[gd].awareness = m::max(g.gd[gd].awareness, g.k.attention.floor);
+    { let to = g.k.attention.floor; crate::mind::raise(g, gd, to, "attention"); }
 }
 
 /// Arrived at his fix: true = his attention is on the thing and his suspicion stands. (attention.ts attentionDwell)
@@ -436,11 +433,11 @@ pub fn attention_dwell(g: &mut crate::game::Game, gd: GuardId) -> bool {
         set_hold(g, gd, Some(h));
     }
     if g.time >= h.until {
-        g.gd[gd].awareness = m::min(g.gd[gd].awareness, 0.1 + h.glimpse);
+        crate::mind::cap(g, gd, 0.1 + h.glimpse, "attention");
         end(g, gd, "done");
         return false;
     }
-    g.gd[gd].awareness = m::max(g.gd[gd].awareness, g.k.attention.floor);
+    { let to = g.k.attention.floor; crate::mind::raise(g, gd, to, "attention"); }
     tell(g, gd, &mut h);
     true
 }

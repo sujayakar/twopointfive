@@ -53,29 +53,6 @@ fn geoN(p: vec2i) -> vec3f {
 fn upsampleIndirect(pix: vec2i, pin: vec2f, z: f32, N: vec3f) -> vec3f {   // pin = the pixel's position on the INTERNAL raster (= pixf; under SHARP pixf × in∕out)
   let hdims = vec2i(textureDimensions(indirectTex));
   var ip = pix; if (SHARP) { ip = vec2i(floor(pin)); }           // the internal pixel this pixel falls in
-  // GI IN MOTION (settings.giFullRes, docs/internal/gi-motion.md): the diffuse chain ran at the INTERNAL resolution this frame — the bound texture IS internal-sized (denoise.wgsl giUpsample did this
-  // function's joint-bilateral 3×3 before the temporal step; the à-trous chain ends in it) — so the internal pixel takes its own texel; under SHARP an output pixel takes the depth / normal-guided
-  // bilinear of the four internal texels round its position (guides at the output texel each internal pixel's centre falls in — gpx — as every other internal-grid term here)
-  if (all(hdims == inHi() + 1)) {
-    if (!SHARP) { return textureLoad(indirectTex, clamp(ip, vec2i(0), hdims - 1), 0).xyz; }
-    let b = floor(pin - 0.5); let t = pin - 0.5 - b; let base = vec2i(b);
-    var acc = vec3f(0.0); var wsum = 0.0;
-    for (var dy = 0; dy <= 1; dy++) {
-      for (var dx = 0; dx <= 1; dx++) {
-        let src = clamp(base + vec2i(dx, dy), vec2i(0), hdims - 1);
-        let d = textureLoad(gDepth, gpx(src), 0);
-        if (d >= 1.0) { continue; }
-        let zs = linearDepth(d, ipos(vec2f(src) + 0.5));
-        let ns = geoN(gpx(src));
-        var w = select(1.0 - t.x, t.x, dx == 1) * select(1.0 - t.y, t.y, dy == 1) + 1e-4;
-        w *= exp(-abs(zs - z) / max(z * 0.02, 0.02));
-        w *= pow(max(dot(ns, N), 0.0), 8.0) + 0.001;
-        acc += textureLoad(indirectTex, src, 0).xyz * w; wsum += w;
-      }
-    }
-    if (wsum < 1e-5) { return textureLoad(indirectTex, clamp(vec2i(floor(pin)), vec2i(0), hdims - 1), 0).xyz; }
-    return acc / wsum;
-  }
   let gdiv = i32(frame.lossyCfg.x); let goff = (gdiv - 1) / 2;   // gather divisor (2, or 3 with the lossy option) and the full-res offset each texel was computed at (fgather)
   let base = ip / gdiv;                                           // the texel whose sample pixel (gdiv·h + goff) is nearest: floor(p / gdiv) for both divisors
   var acc = vec3f(0.0); var wsum = 0.0;
@@ -303,10 +280,6 @@ fn gbEdge(k: u32, fl: u32, n: u32, uv: vec2f, P: vec2f, N: vec2f, w: f32, wt: f3
   if ((fl & 1u) != 0u && dd < 0.012 + 2.0 * w && gbOpenUV(k, fl, n, uv - N * (sd + select(-0.004, 0.004, sd >= 0.0)))) { o.y = min(o.y, dd); }
   return o;
 }
-fn gbChordEdge(k: u32, fl: u32, n: u32, uv: vec2f, S: GbSite, s: i32, cb: u32, w: f32, wt: f32, acc: vec2f) -> vec2f {
-  let A = gpChordPt(S, s, cb); let e = gpChordPt(S, s + 1, cb) - A; let L = max(1e-6, length(e));
-  return gbEdge(k, fl, n, uv, A, vec2f(-e.y, e.x) / L, w, wt, acc);
-}
 fn gbCracks(k: u32, X: vec3f, fp: f32) -> vec2f {
   let h = gbHeader(k); let fl = u32(h.y + 0.5); let n = min(u32(h.x + 0.5), 8u);
   let uv = gbUV(k, gbLocal(k, X));
@@ -323,18 +296,22 @@ fn gbCracks(k: u32, X: vec3f, fp: f32) -> vec2f {
   let d = uv - S.c; let r = length(d);
   let heavy = 0.55 + 0.35 * clamp(h.w, 0.15, 1.0);   // the lines thicken a little as the pane's damage climbs
   var acc = vec2f(0.0, 1e9); var frost = 0.0;   // (coverage, distance to the nearest hole's rim)
+  // the crack lines this point is tested against are LISTED below and drawn by ONE gbEdge call after (the compile: DXC — Chrome's compiler on Windows — inlines each call
+  // it meets, and the nine calls this made were nine copies of the hole test). gbEdge only takes the max of the coverage and the min of the rim distance, so the order
+  // the lines are met in does not change a bit of the answer. Per line: a point and its normal, or (kind 1) chord cb of sector s; its weight; its flags.
+  var eP: array<vec2f, 8>; var eN: array<vec2f, 8>; var eW: array<f32, 8>; var eF: array<u32, 8>; var eS: array<i32, 8>; var eC: array<u32, 8>; var eK: array<u32, 8>; var ne = 0u;
   for (var q = 0; q < 2; q++) {   // the radials either side: perpendicular distance, while the crack has run this far (tapering over its last third)
     let kk = s + q; let a = gpAngle(S, kk); let dir = vec2f(cos(a), sin(a)); let N = vec2f(-dir.y, dir.x);
-    if (full) { acc = gbEdge(k, fl, n, uv, S.c, N, w, heavy, acc); continue; }
+    if (full) { eK[ne] = 0u; eP[ne] = S.c; eN[ne] = N; eW[ne] = heavy; eF[ne] = fl; ne++; continue; }
     let along = dot(d, dir); let perp = abs(dot(d, N));
     let reach = gpRho(S, kk, 2u) * (1.25 + 2.0 * gpJit(S.seed, gpWrap(kk, S.n), 9u)) * min(1.6, 0.6 + 0.4 * S.e);
-    if (along <= reach) { acc = gbEdge(k, fl, n, uv, S.c, N, w, min(1.0, (reach - along) / (0.33 * reach) + 0.25) * heavy, acc); }
+    if (along <= reach) { eK[ne] = 0u; eP[ne] = S.c; eN[ne] = N; eW[ne] = min(1.0, (reach - along) / (0.33 * reach) + 0.25) * heavy; eF[ne] = fl; ne++; }
     else { acc.x = max(acc.x, gbLine(length(vec2f(along - reach, perp)), w, 0.25 * heavy)); }
   }
   if (web) {   // laminated: the three chords, an outer ring in most sectors, a sub-chord inside each band — a tight web that never opens
     var wb = 0u; for (; wb < 4u; wb++) { if (!gpBeyond(S, s, wb, uv)) { break; } }
-    for (var cb = u32(max(0, i32(wb) - 1)); cb <= min(2u, wb); cb++) { acc = gbChordEdge(k, 0u, n, uv, S, s, cb, w, select(0.8, 1.0, cb == 0u) * heavy, acc); }
-    if (wb >= 3u && gpJit(S.seed, sb.x, 33u) < GP_WEB_RING) { acc = gbChordEdge(k, 0u, n, uv, S, s, 3u, w, 0.6 * heavy, acc); }
+    for (var cb = u32(max(0, i32(wb) - 1)); cb <= min(2u, wb); cb++) { eK[ne] = 1u; eS[ne] = s; eC[ne] = cb; eW[ne] = select(0.8, 1.0, cb == 0u) * heavy; eF[ne] = 0u; ne++; }
+    if (wb >= 3u && gpJit(S.seed, sb.x, 33u) < GP_WEB_RING) { eK[ne] = 1u; eS[ne] = s; eC[ne] = 3u; eW[ne] = 0.6 * heavy; eF[ne] = 0u; ne++; }
     if (wb >= 1u && wb <= 3u && gpJit(S.seed, sb.x, 11u + wb) > 0.35) {
       let f0 = 0.3 + 0.4 * gpJit(S.seed, sb.x, 15u + wb); let f1 = 0.3 + 0.4 * gpJit(S.seed, gpWrap(s + 1, S.n), 15u + wb);
       let A = mix(gpChordPt(S, s, wb - 1u), gpChordPt(S, s, wb), f0); let B = mix(gpChordPt(S, s + 1, wb - 1u), gpChordPt(S, s + 1, wb), f1); let e = B - A;
@@ -346,15 +323,20 @@ fn gbCracks(k: u32, X: vec3f, fp: f32) -> vec2f {
     let inner = select(select(select(0, 1, b == 2u), 2, b >= 3u), -1, b == 0u);
     let outer = select(select(select(-1, 2, b == 2u), select(1, 2, merged), b == 1u), 0, b == 0u);
     let c2 = select(0.0, 0.8, full || gpJit(S.seed, sb.x, 31u) < GP_C2_DRAWN);
-    if (inner >= 0) { acc = gbChordEdge(k, fl, n, uv, S, s, u32(inner), w, select(select(0.8, c2, inner == 2), 1.0, inner == 0) * heavy, acc); }
-    if (outer >= 0) { acc = gbChordEdge(k, fl, n, uv, S, s, u32(outer), w, select(select(0.8, c2, outer == 2), 1.0, outer == 0) * heavy, acc); }
+    if (inner >= 0) { eK[ne] = 1u; eS[ne] = s; eC[ne] = u32(inner); eW[ne] = select(select(0.8, c2, inner == 2), 1.0, inner == 0) * heavy; eF[ne] = fl; ne++; }
+    if (outer >= 0) { eK[ne] = 1u; eS[ne] = s; eC[ne] = u32(outer); eW[ne] = select(select(0.8, c2, outer == 2), 1.0, outer == 0) * heavy; eF[ne] = fl; ne++; }
     if (b == 0u) { acc.x = max(acc.x, 0.5); frost = max(frost, 0.75); }   // a crater still in (a blow too soft to punch it): crushed white
   }
   if (full && b >= 3u) {   // past the rings of a run pane: the sector's branch crack and this half's snap
     let sp = gpSplit(S, s); let asp = S.rot + GP_TAU * sp / f32(S.n);
-    acc = gbEdge(k, fl, n, uv, S.c, vec2f(-sin(asp), cos(asp)), w, 0.9 * heavy, acc);
+    eK[ne] = 0u; eP[ne] = S.c; eN[ne] = vec2f(-sin(asp), cos(asp)); eW[ne] = 0.9 * heavy; eF[ne] = fl; ne++;
     let c = gpCut(S, s, select(0u, 1u, st.y >= sp));
-    if (c.on) { acc = gbEdge(k, fl, n, uv, c.p, c.n, w, 0.8 * heavy, acc); }
+    if (c.on) { eK[ne] = 0u; eP[ne] = c.p; eN[ne] = c.n; eW[ne] = 0.8 * heavy; eF[ne] = fl; ne++; }
+  }
+  for (var i = 0u; i < ne; i++) {
+    var P = eP[i]; var Nl = eN[i];
+    if (eK[i] == 1u) { let A = gpChordPt(S, eS[i], eC[i]); let e = gpChordPt(S, eS[i] + 1, eC[i]) - A; let L = max(1e-6, length(e)); P = A; Nl = vec2f(-e.y, e.x) / L; }   // (gbChordEdge's line)
+    acc = gbEdge(k, eF[i], n, uv, P, Nl, w, eW[i], acc);
   }
   if (full && n >= 2u) {   // where this blow's cracks met the next one's
     var j2 = 0u; var d2 = 1e30; let d1 = dot(d, d) - S.rz * S.rz;
@@ -982,6 +964,10 @@ fn compositePixel(pix0: vec2f) -> vec3f {
   let depth = textureLoad(gDepth, pix, 0);
   var color: vec3f;
   let dbg = frame.debugView;
+  // the tail both branches end with (beams, fire, the volumetrics, the weather's veil), run ONCE below on the branch's ray: the compile — DXC, Chrome's compiler on Windows,
+  // inlines every call, and the two copies of the fire's look alone were ~160 KB of inlined text. rdT / tT = the view ray and how far it goes (the sky: 1e4); dirS = the
+  // pixel's own ray to its surface (the veil's); zg / Ng / id / moved = the surface's keys (unset on the sky)
+  var rdT = vec3f(0.0); var tT = 1e4; var dirS = vec3f(0.0); var zg = 0.0; var Ng = vec3f(0.0); var id = 0u; var moved = false;
   if (depth >= 1.0) {
     // background: sky through the view ray
     let Pfar = worldFromDepth(pixf, 1.0);
@@ -990,22 +976,13 @@ fn compositePixel(pix0: vec2f) -> vec3f {
     // a grey floor by day. To the eye there is nothing there (a ray of the bounce still takes the under-horizon as the ground beyond: skyRadiance is unchanged)
     let rdSky = normalize(Pfar - frame.camPos);
     color = skyRadiance(rdSky) * (1.0 - clamp(-rdSky.y * 8.0, 0.0, 1.0));
-    if (dbg == 0u && beams.n > 0u && (beams.p0 & 2u) != 0u) { color += beamAir(frame.camPos, normalize(Pfar - frame.camPos), 1e4, beamPix()); }
-    if (dbg == 0u && beams.fireN.x > 0u) { color = fireOver(color, pixf, normalize(Pfar - frame.camPos), 1e4); }
-    if (dbg == 0u || dbg == 5u) {
-      if ((frame.flags & FLAG_FROXEL_VOL) != 0u) { let vol = froxelVol(pixf, pix, pin, 1e4); color = color * vol.a + vol.rgb; }   // (view 5 keeps the sky under the volumetrics here, as the old path always did)
-      else {
-      let vol = upsampleVol(pix, pin, 1e4);
-      color = color * vol.a + vol.rgb;
-      }
-    }
-    if (WX_KINDS && !WX_VOL) { if (frame.cardCfg.w != 0u && dbg == 0u) { color = wxFogApply(color, normalize(Pfar - frame.camPos), 0.0, true); } }   // WEATHER FOG (a kind picked, game/weatherKinds.ts): over the void past the lot as over the ground beside it
+    rdT = normalize(Pfar - frame.camPos);
   } else {
     // Where the surface this pixel shows is READ: under the pixel — or, through REFRACTING glass (GLASS_REFRACT: passes.ts compiles this module a second time with it true, taken while
     // settings.glassRefract; false = every statement below exactly as it was, the frame hash for hash), where the ray the glass bent comes out behind it. So the glass test runs FIRST there:
     // the pixel's own ray (P0 / z0 / V) meets the nearest pane, glassRefractPath bends it through that box, refractedRead finds the pixel it lands on (sPix), and the tint, the cracks and the
     // pane's own terms are settled before anything is read; the tail then keys the panes' reflection field and the fog on the PIXEL (zg / Ng), the shading on what is read.
-    var sPix = pix; var sPixf = pixf; var sPin = pin; var sDepth = depth; var moved = false; var N0 = vec3f(0.0); var z0 = 0.0;
+    var sPix = pix; var sPixf = pixf; var sPin = pin; var sDepth = depth; var N0 = vec3f(0.0); var z0 = 0.0;
     var glassT = vec3f(1.0); var glassPix = false;
     var specK = 1.0; var crackL = vec3f(0.0);   // the cracks' share (FLAG_DECALS × FLAG_GLASS): × the pane's reflection along crack lines, + what the crack star and its collar scatter toward the eye
     if (GLASS_REFRACT) {
@@ -1050,7 +1027,7 @@ fn compositePixel(pix0: vec2f) -> vec3f {
     }
     let albedo4 = textureLoad(gAlbedo, sPix, 0);
     let albedo = albedo4.rgb;                   // (.a = the decals' gloss-keep: exactly 1 unless a mark's soot lies on this pixel — gbuffer.wgsl fsBox)
-    let id = textureLoad(gId, sPix, 0).x;
+    id = textureLoad(gId, sPix, 0).x;
     var N = normalize(textureLoad(gNormal, sPix, 0).xyz * 2.0 - 1.0);
     let Nl = N; if (LOOK && textureLoad(gNormal, sPix, 0).a < 0.17) { N = lookGeoN(Nl, id); }   // (Nl: the stored normal. THE LOOK PROTOTYPE, look.wgsl: where the look tilted it, N below is the box's own face — the guides' and the cache's normal, as ever — and Nl only leans the bounce)
     let boxIdx = id & 0xFFFFFu;
@@ -1113,7 +1090,7 @@ fn compositePixel(pix0: vec2f) -> vec3f {
         }
       }
     }
-    var zg = z; var Ng = N;                     // the panes' reflection field and the fog key on the PIXEL — its own distance, the normal AT it — not on what a bend read (≡ z / N unless GLASS_REFRACT moved the read)
+    zg = z; Ng = N;                             // the panes' reflection field and the fog key on the PIXEL — its own distance, the normal AT it — not on what a bend read (≡ z / N unless GLASS_REFRACT moved the read)
     if (GLASS_REFRACT) { zg = z0; Ng = select(N, N0, moved); }
     var dif = albedo * (Ed + Ei) * (1.0 / PI);   // (the old product, untouched: the pass-off frame hashes identical to main — docs/internal/p4-materials.md §5)
     var sparkle = vec3f(0.0);                    // SNOW SPARKLE (snowSparkleFacet above): the facets' flashes at this pixel — zero unless SNOW_SPARKLE, on lit fresh snow
@@ -1173,25 +1150,29 @@ fn compositePixel(pix0: vec2f) -> vec3f {
     else if (dbg == 14u) { color = refl; }                          // the ray-traced reflections alone (black with the pass off)
     else if (dbg == 15u) { let mt = textureLoad(gMat, pix, 0); color = vec3f(mt.x, mt.y, 0.0); }   // the material the g-buffer wrote: r = roughness (bright = matte), g = metalness — the finish table + the detail layer's wear, as the reflections read them
     else if (dbg == 13u) { color = textureLoad(directTex, pix, 0).rgb; }   // the v3 denoiser's shadow-client state, written raw into the sharp class's texture by its last iteration (denoise.wgsl DN_DEBUG_VIEW): r/g = σ per class, b = history length
-    else if (dbg == 16u) { color = Ei; }                            // phase 5: the resampling gather's reservoir state (fgather.wgsl mainGi writes it into the indirect, through the diffuse denoiser): r = confidence M ÷ cap, g = temporal history taken, b = spatial taps accepted ÷ k — the plain indirect with resampling off
     else if (dbg == 17u) { color = select(vec3f(0.0), upsampleRefl(sPixf, z, Nl) + hi4.xyz, frame.rtCfg.w >= 1.0); }   // phase 5: the reflection pass's raw output as the composite fetches it (no cutoff fade / gloss-keep) — the mesh hits and the hit-lighting reuse are judged here
-    if (dbg == 0u && beams.n > 0u && (beams.p0 & 2u) != 0u) { color += beamAir(frame.camPos, normalize(worldFromDepth(pixf, 0.5) - frame.camPos), zg, beamPix()); }
-    if (dbg == 0u && beams.fireN.x > 0u) { color = fireOver(color, pixf, normalize(worldFromDepth(pixf, 0.5) - frame.camPos), zg); }
-    if (dbg == 0u || dbg == 5u) {
-      if (WX_VOL) { if (WX_KINDS) { if (frame.cardCfg.w != 0u) { wxAirT = wxAirTEst(pixf, zg); } } }
-      if ((frame.flags & FLAG_FROXEL_VOL) != 0u) { let vol = froxelVol(pixf, pix, pin, zg); color = select(color * vol.a + vol.rgb, vol.rgb, dbg == 5u); }   // (the fog along the PIXEL's ray to its own surface — zg — whatever a bend read)
-      else {
-      let vol = upsampleVol(pix, pin, zg);
-      color = select(color * vol.a + vol.rgb, vol.rgb, dbg == 5u);
-      }
-    }
-    if (WX_KINDS && !WX_VOL) { if (frame.cardCfg.w != 0u && dbg == 0u) {   // (the flat veil — under WX_VOL the weather's air is a volume the volumetric pass marched: it is in `vol` above)
-      if (WX_EDGE) {   // (the veil at the building's shell — common.wgsl wxFogApplySurf: an outside wall's face is asked where its normal points; a man's pixel and a box he carries — bit 28 / the owner byte of the PIXEL's own id — where he stands)
-        var idg = id; if (GLASS_REFRACT) { if (moved) { idg = textureLoad(gId, pix, 0).x; } }
-        color = wxFogApplySurf(color, normalize(worldFromDepth(pixf, depth) - frame.camPos), zg, select(Ng.xz, vec2f(0.0), ((idg >> 20u) & 0x1FFu) != 0u));
-      } else { color = wxFogApply(color, normalize(worldFromDepth(pixf, depth) - frame.camPos), zg, false); }
-    } }   // WEATHER FOG along the pixel's ray to its surface: the field the men's eyes are cut by (weather.ts airTrans)
+    rdT = normalize(worldFromDepth(pixf, 0.5) - frame.camPos); tT = zg; dirS = normalize(worldFromDepth(pixf, depth) - frame.camPos);
+
   }
+  // ---- the tail both branches end with, on the branch's ray (see rdT above)
+  let sky = depth >= 1.0;
+  if (dbg == 0u && beams.n > 0u && (beams.p0 & 2u) != 0u) { color += beamAir(frame.camPos, rdT, tT, beamPix()); }
+  if (dbg == 0u && beams.fireN.x > 0u) { color = fireOver(color, pixf, rdT, tT); }
+  if (dbg == 0u || dbg == 5u) {
+    if (!sky) { if (WX_VOL) { if (WX_KINDS) { if (frame.cardCfg.w != 0u) { wxAirT = wxAirTEst(pixf, zg); } } } }
+    // (on a surface the fog along the PIXEL's ray to its own surface — zg — whatever a bend read; view 5 keeps the sky under the volumetrics, as the old path always did)
+    if ((frame.flags & FLAG_FROXEL_VOL) != 0u) { let vol = froxelVol(pixf, pix, pin, tT); color = select(color * vol.a + vol.rgb, vol.rgb, dbg == 5u && !sky); }
+    else {
+    let vol = upsampleVol(pix, pin, tT);
+    color = select(color * vol.a + vol.rgb, vol.rgb, dbg == 5u && !sky);
+    }
+  }
+  if (WX_KINDS && !WX_VOL) { if (frame.cardCfg.w != 0u && dbg == 0u) {   // WEATHER FOG (a kind picked, game/weatherKinds.ts) along the pixel's ray to its surface: the field the men's eyes are cut by (weather.ts airTrans); over the void past the lot as over the ground beside it. (The flat veil — under WX_VOL the weather's air is a volume the volumetric pass marched: it is in `vol` above)
+    if (WX_EDGE && !sky) {   // (the veil at the building's shell — common.wgsl wxFogApplySurf: an outside wall's face is asked where its normal points; a man's pixel and a box he carries — bit 28 / the owner byte of the PIXEL's own id — where he stands)
+      var idg = id; if (GLASS_REFRACT) { if (moved) { idg = textureLoad(gId, pix, 0).x; } }
+      color = wxFogApplySurf(color, dirS, zg, select(Ng.xz, vec2f(0.0), ((idg >> 20u) & 0x1FFu) != 0u));
+    } else { color = wxFogApply(color, select(dirS, rdT, sky), select(zg, 0.0, sky), sky); }
+  } }
   if (SMOKE_LAB && frame.numSmoke > 0u && smoke[0].show != 0.0) { let dl = worldFromDepth(pixf, min(depth, 1.0)) - frame.camPos; let far = length(dl); color = smokeLabOver(color, frame.camPos, dl / max(far, 1e-6), select(far, 1e4, depth >= 1.0), ign(pixf + f32(frame.frameIdx & 63u) * 5.588238)); }   // (THE SMOKE LAB's pictures, over everything: smokeLabOver above; one read of a uniform on every other page)
   return max(color, vec3f(0.0));
 }

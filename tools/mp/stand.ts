@@ -9,6 +9,7 @@
 //   buildName()          the build this checkout is: its commit, or '' with uncommitted changes (as tools/build.ts names a build)
 // The server stands its own game from the recipe too, never from the fresh one: every machine comes to its game by the same door.
 import { resolve } from 'node:path';
+import { appendFileSync } from 'node:fs';
 import type { Recipe, Outcome } from '../../src/net/wire.ts';
 import type { Headless } from '../qa/headless.ts';
 import type { PlayerCmd } from '../../src/game/cmd.ts';
@@ -90,12 +91,17 @@ export async function standRecipe(recipe: Recipe): Promise<Stood> {
   if (R.refuse || !R.W) throw new Error(`the game could not be stood from its recipe: ${R.refuse}`);
   const W = R.W, g = W.game;
   { const S = g.sensors as object; if (Object.hasOwn(S, 'read')) delete (S as { read?: unknown }).read; }   // (the re-run serves the sensors off its tape; this game answers its own, SENSE.cpu)
-  const { netStep, netSeats, netWord, netQuiet, NET_WORD_SEED } = await import(`${ROOT}/src/net/step.ts`), { activeScenario } = await import(`${ROOT}/src/game/scenarioRun.ts`);
+  const { netStep, netSeats, netWord, netQuiet, netWhole, wordTick, NET_WORD_SEED } = await import(`${ROOT}/src/net/step.ts`), { activeScenario } = await import(`${ROOT}/src/game/scenarioRun.ts`);
   if (activeScenario(g) !== recipe.scenario) throw new Error(`the recipe's mission (${recipe.scenario}) did not come up here (${activeScenario(g) ?? 'none'} is up): ${(R.report?.warnings ?? []).find((w: string) => w.includes('did not start')) ?? 'another build or level than the recipe\'s'}`);
   netSeats(g);
+  // (MP_WORDS=<a file's path up to its last dot>: this process writes the whole game's words after every word tick to `<that>.<pid>.words`, a line a tick
+  //  with the parts' names first, for two machines' files to be held to each other: tools/mp/words-diff.ts)
+  const WORDS = process.env.MP_WORDS ? `${process.env.MP_WORDS}.${process.pid}.words` : ''; let named = false;
+  const keep = (): void => { const A = netWhole(g); if (!A) return; if (!named) { named = true; appendFileSync(WORDS, `names ${A.names.join(' ')}\n`); } appendFileSync(WORDS, `${out.ticks} ${A.words.map((x: number) => x.toString(36)).join(' ')}\n`); };
   let word: number = NET_WORD_SEED;
   const out: Stood = { W, warnings: R.report?.warnings ?? [], ticks: 0,
-    step(cmds) { netStep(g, W.engine, cmds); word = netWord(g, word); out.ticks++; }, quiet: on => netQuiet(g, on),
+    step(cmds) { netStep(g, W.engine, cmds); word = netWord(g, word); out.ticks++; if (WORDS && wordTick(out.ticks - 1)) keep(); },
+    quiet: on => netQuiet(g, on),
     word: () => word.toString(36), ended: () => { const V = g.verdict.result; return V ? { won: V.won, end: V.word, why: V.why } : null; } };
   return out;
 }

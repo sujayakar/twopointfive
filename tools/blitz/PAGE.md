@@ -117,12 +117,22 @@ has not got.
 
 ## A tool that writes the game by name
 
-A check that sets a field of `window.__game` between two frames (a lesson's step set back, a man moved) writes the PUPPET. Where the field is one the
-page's own switches (`watched` in `src/host/rustgame.ts`) or the settings' walk carry, it reaches the Rust game; any other field does not, and the puppet
-then shows what the game does not hold until an apply writes the game's value back over it. Seen: `tools/qa/tut-squad-page.cjs` set
-`game.lesson.i = 0` by hand, the line on the screen went back to step 1, and the Rust game stayed on the later step (its ring unlocked). Such a write
-goes through `window.__rust.poke(game, ['lesson', 'i'], 0)`: the puppet and the Rust game at once, or the reason it cannot. (The headless harness walks
-every field its tools write; the page walks the settings only: a walk of them all would cost every frame.)
+A check that sets a field of `window.__game` between two frames (a lesson's step set back, a door unlocked, a man put down) writes the PUPPET. THE
+RULE: what a script writes on the puppet BETWEEN its calls to step is carried into the game. On a page a tool drives (its address says `paused`:
+the frames are a script's, `window.__runFrames`) the host walks every carried field of the puppet with the scan the headless tools' host uses
+(`tools/blitz/scan.ts`): as a run of frames opens, or a call crosses, what differs from the last hold goes to the Rust game by the write by path
+(`rustToolsWrote`); as the run closes the puppet is held again (`rustToolsHold`). Nothing is walked between the frames of a run, where the page's
+own lines write the puppet (the frame's camera and HUD, the host's half, the picture's tables): those are no tool's. `window.__rust.scan` counts
+the flushes, the holds, their milliseconds, and each field sent by the schema's name; with nobody writing by hand it sends nothing.
+
+- Measured, the first tutorial seeded, 1,320 runs of one frame each on the software adapter's box: about 32 ms a walk, two a run; nothing sent;
+  the block equal to the TypeScript game's at every mark. A PLAYER'S PAGE (no `paused`) pays nothing: its walk is the settings', every sixteenth
+  tick, and `__rust.scan.flushes` stays 0.
+- What a walk cannot carry stays on the puppet alone, as on the headless host: a field the bridge does not carry, a leaf too big to walk.
+- A METHOD is not a write. `Game.teleportPlayer` called between ticks crosses to the Rust function by the call table (`GAME_CROSSES` in
+  `src/host/rustgame.ts`), like the orders menu's calls; any other row of the table goes by `window.__rust.call(key, self, args)`. A method with
+  no row, run on the puppet, reaches the game only as far as the fields it wrote are carried.
+- A page with no seed deals a fresh one each visit (`src/main.ts`): a check that is to read the same twice names its own (`&seed=`).
 
 ## A panic does not end the session
 

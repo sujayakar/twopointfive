@@ -207,8 +207,8 @@ fn stage_checked(g: &mut Game) -> Result<(), String> {
     }
     let standing: Vec<GuardId> = g.night_breach.ops.iter().skip(if drilled { 2 } else { 0 }).copied().collect();
     for gd in standing {
-        g.gd[gd].state = crate::game::GuardState::Patrol;
-        g.gd[gd].awareness = 0.0;
+        crate::mind::set_state(g, gd, crate::game::GuardState::Patrol, "nightbreach");
+        crate::mind::set(g, gd, 0.0, "nightbreach");
         crate::control::set_hold(g, gd, false, "nightbreach");
         crate::control::set_pinned(g, gd, false, "nightbreach");
         let c = g.gd[gd].ch;

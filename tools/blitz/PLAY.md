@@ -51,6 +51,11 @@ tools/blitz/rust.sh rust bun run tools/qa/playthrough.ts --scn depot-four --seed
 `start()` THROWS, naming the tool's line, for a new start from a puppet that holds a man the apply made (a man the Rust game made has no store row or
 pose store on the TypeScript side).
 
+**A game the tool has let go is freed.** Nothing in the host keeps a game alive: what a host holds in the module (its game's handle, the clone kept as
+its slot went, the games kept for saves and snapshots) is in a cell of its own, and the host's lists hold hosts weakly. As the next game is attached, and
+before a slot is taken from a game still held, every host the collector has taken gives back what it held (`reap`). A tool that wants a game kept holds
+the game. (Before this the call surface listed every host that ever stood: 25 games stood back to back grew the heap 276 MB.)
+
 **A slot given up** (rust/sim has four; a tool that stands a fifth game takes the slot of the game stepped longest ago) keeps a clone of its game in
 the module; stepped again, the game stands again from it (`restep`). Only the last six games that gave a slot up keep theirs: an older one's re-step
 THROWS and names the tool's line. `tools/blitz/keep-check.ts` holds all of this under either word.
@@ -136,6 +141,23 @@ tables the Rust game keeps otherwise. `fuzz-dumps.ts` holds a pair with these ru
 **The panes after a load are the reference's own.** The TypeScript's put-back leaves a pane a round broke in the abandoned future broken; the Rust
 game's kept clone has the saved moment's. A run that parts in the block's `panes` alone after a load is held again with the panes left out
 (`fuzz-diff.ts --but-panes`; exit 4).
+
+### Kept runs: the three games of two seats
+
+`tools/blitz/kept/two-lock0-9.tar.zst`, `two-lock1-9.tar.zst` and `two-full-3.tar.zst` are the games of two players that the co-op check plays
+(`coop-check.ts`: each seat's pair sent through a locked door; the barracks with every seat counted). Their records (the host's half of every tick and
+the orders given) were written by the TypeScript tick while it stood, and nothing can write them again, so they are kept whole: the records, the
+Rust game's own series (the die's count and a hash of each part of the block after every tick) and the run's `coop.json`. No start is kept: the
+start's bytes are bound to the wire, and `hold.sh` stands it again from this tree (`seats.ts --start-only`).
+
+```sh
+tools/blitz/hold.sh tools/blitz/kept                              # each: "the same over N ticks", exit 0
+HOLD_DIRS=DIR tools/blitz/hold.sh tools/blitz/kept                # … and leaves each run's folder in DIR, start and all
+rust/game_run/target/debug/mission DIR/two-lock0-9 1800 --keep 960,990,1020   # the Rust game's whole states at those ticks: DIR/two-lock0-9/n<k>.bin
+```
+
+The lock games' series is the Rust game's alone: the TypeScript's was another from ticks 1082 and 1056 on purpose, where a seat's door tools first
+kept to their own men. The barracks' is both games', in step for 7200 ticks.
 
 ### Kept runs: the fuzz with no TypeScript tick
 

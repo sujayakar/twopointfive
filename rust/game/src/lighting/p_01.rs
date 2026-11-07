@@ -180,7 +180,7 @@ pub fn set_blackout(g: &mut crate::game::Game, seconds: f64, cause: crate::light
             continue;
         }
         if g.gd[gd].state == crate::game::GuardState::Patrol {
-            g.gd[gd].awareness = m::max(g.gd[gd].awareness, 0.34);
+            crate::mind::raise(g, gd, 0.34, "lighting");
             g.gd[gd].react_t = 1.0 + crate::math_dice::sim_random(g);
         }
         let d = v3::dist(g.ch[g.gd[gd].ch].pos, g.level.breaker.pos);
@@ -208,11 +208,10 @@ pub fn set_blackout(g: &mut crate::game::Game, seconds: f64, cause: crate::light
                 kind: crate::game::GuardTaskArm0Kind::Breaker,
                 pos: goal,
             }));
-            g.gd[best].last_known = Some(goal);
-            g.gd[best].fix_stamp = g.gd[best].fix_stamp.wrapping_add(1);
-            g.gd[best].awareness = m::max(g.gd[best].awareness, 0.42);
+            crate::mind::fix(g, best, Some(goal), "lighting");
+            crate::mind::raise(g, best, 0.42, "lighting");
             if g.gd[best].state == crate::game::GuardState::Patrol {
-                g.gd[best].state = crate::game::GuardState::Suspicious;
+                crate::mind::set_state(g, best, crate::game::GuardState::Suspicious, "lighting");
                 g.gd[best].react_t = 1.2;
                 g.gd[best].search_t = 0.0;
             }
@@ -328,11 +327,10 @@ pub fn ocp(g: &mut crate::game::Game, t: Option<FixtureId>) {
                     let pos = g.ch[c].pos;
                     crate::chronicle::chron_ocp(g, &what, pos);
                     if g.gd[gd].state == crate::game::GuardState::Patrol {
-                        g.gd[gd].awareness = m::max(g.gd[gd].awareness, 0.32);
+                        crate::mind::raise(g, gd, 0.32, "lighting");
                         let pos = g.ch[c].pos;
                         let fwd = crate::character::character_forward(g, c);
-                        g.gd[gd].last_known = Some(v3::add(pos, v3::scale(fwd, 2.0)));
-                        g.gd[gd].fix_stamp = g.gd[gd].fix_stamp.wrapping_add(1);
+                        crate::mind::fix(g, gd, Some(v3::add(pos, v3::scale(fwd, 2.0))), "lighting");
                     }
                     let pos = g.ch[c].pos;
                     crate::audio_iface::game_audio_like_play(g, "lightOff", Some(pos), Some(0.6), None);

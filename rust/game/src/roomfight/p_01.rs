@@ -23,7 +23,7 @@ pub fn flat(a: V3, b: V3) -> f64 {
 }
 
 /// A draw of the simulation's die in a range.   (roomfight.ts pick)
-pub fn pick(g: &mut crate::game::Game, r: [f64; 2]) -> f64 {
+pub fn pick(g: &mut crate::game::Game, who: crate::dice::Who, r: [f64; 2]) -> f64 {
     r[0] + crate::math_dice::sim_random(g) * (r[1] - r[0])
 }
 

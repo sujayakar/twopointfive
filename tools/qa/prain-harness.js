@@ -142,7 +142,7 @@
     return { view, preset: window.__quality?.current, copy: window.__rain?.sceneCopy, today: agg('today'), v1: agg('v1'), v2: agg('v2') };
   };
   /** the cost table over the five presets at one view: apply the preset (auto off), warm, interleaved today / hybrid blocks — fire and forget into window.__prTiers */
-  P.tiers = async (view = 'lot', names = ['ultra', 'high', 'medium', 'low', 'verylow'], reps = 2, n = 30) => {
+  P.tiers = async (view = 'lot', names = ['high', 'medium', 'low', 'verylow'], reps = 2, n = 30) => {
     const Q = window.__quality; const out = { view, rows: [] }; window.__prTiers = out;
     for (const nm of names) { Q.auto = false; Q.apply(nm); await P.settle(30); const r = await P.costAB(view, reps, n, { warm: 40 }); r.preset = nm; out.rows.push(r); out.done = out.rows.length; }
     out.finished = true; return out;

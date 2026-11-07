@@ -1,5 +1,5 @@
 // THE LEVELS TABLE (rust/game_start/LEVELS.md): every row of the mission list, started by the Rust start and held to the TypeScript start.
-//   bun run tools/blitz/start-levels.ts [--seats 2] [--frames N] [--only id,id] [--write] [--keep DIR] [--at-once N]
+//   bun run tools/blitz/start-levels.ts [--seats 2] [--frames N] [--only id,id] [--write] [--keep DIR] [--at-once N] [--again]
 // For each mission (scene/scenarioList.ts ALL_MISSIONS, read through `start.ts --missions`):
 //   1. does the Rust start carry the file the page loads for it whole (`start --lacks`)? If not, the row says what it lacks;
 //   2. if it does, `start.sh --mission <id> --frames N`: the two starts' states path by path, then both stepped in Rust for N frames with an idle
@@ -9,6 +9,12 @@
 // The table is printed; `--write` also writes it to rust/game_start/LEVELS.md, between the two marks of that count of seats. Each mission's state
 // files are kept under rust/game_start/target/start-levels/<seats>/<id>/ (`--keep DIR` = elsewhere). A row is GREEN when no path is unknown at
 // the start or as the frames end and the two games never part. Exit 0 no row red · 1 a row is · 3 the tool could not run · 64 a wrong word.
+// `--again`: ANOTHER TABLE, of the TypeScript start alone: is a SECOND start in one process the first? Each mission is stood, stepped `--frames`
+// frames with an idle hand (by the Rust game: the module must be built, tools/blitz/face-build.ts --profile play), then the mission before it on
+// the list is stood and stepped as long in the same process, then the mission is stood again, and the two starts are held to each other: rust/sim's
+// block byte for byte, the state path for path, but for what is the process's on purpose (tools/blitz/known-again.txt, each with its reason). A
+// game's state lives on the Game and a start writes all of it: what a module of src/ kept from a game is put back by tools/qa/fresh.ts, and a row
+// here is red when something is not. `--frames 0` = no game is stepped (no module needed): only what a START leaves behind is seen.
 // Three missions at once (`--at-once N`): each start is a process of its own with its own folder, about ten seconds of one core a row.
 import { spawn, spawnSync } from 'node:child_process';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
@@ -16,15 +22,16 @@ import { resolve } from 'node:path';
 const ROOT = resolve(import.meta.dir, '../..');
 const say = (s = '') => process.stdout.write(s + '\n');
 const argv = process.argv.slice(2), arg = (n: string, d: string) => { const i = argv.indexOf(n); return i < 0 ? d : argv[i + 1]; };
-const FRAMES = +arg('--frames', '300'), SEATS = +arg('--seats', '1'), AT_ONCE = Math.max(1, +arg('--at-once', '3')), ONLY = arg('--only', '').split(',').filter(Boolean), WRITE = argv.includes('--write');
-const KEEP = resolve(arg('--keep', resolve(ROOT, 'rust/game_start/target/start-levels')), `seats${SEATS}`);   // (this checkout's own: two checkouts' runs never share a state file)
+const FRAMES = +arg('--frames', '300'), SEATS = +arg('--seats', '1'), AT_ONCE = Math.max(1, +arg('--at-once', '3')), ONLY = arg('--only', '').split(',').filter(Boolean), WRITE = argv.includes('--write'), AGAIN = argv.includes('--again');
+const KEEP = resolve(arg('--keep', resolve(ROOT, 'rust/game_start/target/start-levels')), `${AGAIN ? 'again-' : ''}seats${SEATS}`);   // (this checkout's own: two checkouts' runs never share a state file)
+if (WRITE && AGAIN) { say('start-levels: --again prints its table and writes none'); process.exit(64); }
 if (WRITE && ONLY.length) { say('start-levels: --write with --only would write a table of some rows'); process.exit(64); }
 if (SEATS !== 1 && SEATS !== 2) { say('start-levels: --seats 1 or 2'); process.exit(64); }
 const ENV = { ...process.env, BUN_OPTIONS: '' };
 const run = (cmd: string, args: string[], cwd = ROOT) => { const r = spawnSync(cmd, args, { cwd, encoding: 'utf8', maxBuffer: 1 << 26, env: ENV }); return { out: (r.stdout ?? '') + (r.stderr ?? ''), code: r.status ?? -1 }; };
-const runLater = (cmd: string, args: string[]) => new Promise<{ out: string; code: number }>(done => { let out = ''; const p = spawn(cmd, args, { cwd: ROOT, env: ENV }); p.stdout.on('data', d => { out += d; }); p.stderr.on('data', d => { out += d; }); p.on('close', code => done({ out, code: code ?? -1 })); });
+const runLater = (cmd: string, args: string[], env: Record<string, string | undefined> = ENV) => new Promise<{ out: string; code: number }>(done => { let out = ''; const p = spawn(cmd, args, { cwd: ROOT, env }); p.stdout.on('data', d => { out += d; }); p.stderr.on('data', d => { out += d; }); p.on('close', code => done({ out, code: code ?? -1 })); });
 
-{ const b = run('cargo', ['build', '--bin', 'start'], resolve(ROOT, 'rust/game_start')); if (b.code !== 0) { say(b.out.split('\n').filter(l => /^error/.test(l)).slice(0, 20).join('\n')); say('start-levels: the Rust start does not build'); process.exit(3); } }
+if (!AGAIN) { const b = run('cargo', ['build', '--bin', 'start'], resolve(ROOT, 'rust/game_start')); if (b.code !== 0) { say(b.out.split('\n').filter(l => /^error/.test(l)).slice(0, 20).join('\n')); say('start-levels: the Rust start does not build'); process.exit(3); } }
 const listed = run('bun', ['run', '--preload', './tools/blitz/expose.ts', 'tools/blitz/start.ts', '--missions']);
 const missions = listed.out.split('\n').map(l => l.split('\t')).filter(c => c.length === 4).map(([id, file, link, on]) => ({ id, file, link, listed: on === 'listed' }));
 if (!missions.length) { say(listed.out.slice(-2000)); say('start-levels: start.ts --missions listed nothing'); process.exit(3); }
@@ -56,6 +63,38 @@ async function rowOf(m: typeof missions[number]): Promise<Row> {
   const ran = ![row.start, row.beside, row.end].includes('did not run');
   row.ended = !ran ? 'DID NOT RUN' : r.code === 0 && row.start === '0' && row.end === '0' && row.beside.endsWith('in step') ? 'yes' : 'NOT EQUAL';
   return row;
+}
+/** --again: the mission stood, played, the one before it on the list stood and played, the mission stood again: the second start held to the first */
+async function againOf(m: typeof missions[number]): Promise<Row> {
+  const row: Row = { ...m, ended: 'DID NOT RUN', lacks: '', start: '', beside: '', end: '' };
+  const out = resolve(KEEP, m.id); mkdirSync(out, { recursive: true });
+  const before = missions[(missions.indexOf(m) + missions.length - 1) % missions.length].id;
+  const r = await runLater('bun', ['run', '--preload', './tools/blitz/expose.ts', 'tools/blitz/start.ts', '--mission', m.id, '--out', out, ...(SEATS > 1 ? ['--seats', String(SEATS)] : []), '--again', '--played', String(FRAMES), '--between', before], FRAMES > 0 ? { ...ENV, TPS_GAME: 'rust' } : ENV);
+  const refusal = r.out.split('\n').find(l => /^start\.ts: the game refused/.test(l));
+  if (refusal) { row.ended = 'refused'; row.lacks = `the game refuses it for ${SEATS} players`; return row; }
+  const said = r.out.split('\n').find(l => /^start\.ts: stood again/.test(l));
+  if (r.code !== 0 || !said) { row.lacks = r.out.trim().split('\n').filter(l => !/^the call surface/.test(l)).slice(-3).join(' · ').slice(0, 300); return row; }
+  row.beside = /then (\S+) (stood|asked for and refused)/.exec(said)?.[2] === 'stood' ? `after ${before}` : `${before} refused`;
+  // OPEN, AND FORGIVEN BY NAME HERE: a mission's start writes its team's numbers into the process's knob tables, each kind into its own (a room
+  // clear is staged by the night breach's code, so into that table and its own), and no start puts back a table it does not write: a mission
+  // stood after one of another kind finds that kind's numbers as left. So for each row, the tables its own start does NOT write are let differ;
+  // the ones it does write are held like any path. (The mend is a mission's numbers on the Game: rust/game_start/README.md, the team's start.)
+  const kind = /[?&](roomclear|nightbreach|rescue|quiet)\b/.exec(m.link)?.[1] ?? 'nightbreach', writes = kind === 'roomclear' ? ['roomclear', 'nightbreach'] : [kind];
+  const others = ['roomclear', 'nightbreach', 'rescue'].filter(k => !writes.includes(k));
+  const known = resolve(out, 'known-row.txt'); writeFileSync(known, others.map(k => `^g\\.(k\\.${k}\\.|m\\.${k}\\.applied)\tthe ${k} missions' team numbers in the process's knob table, as the last mission that wrote them left them: this mission's start does not write that table (OPEN: start-levels.ts againOf)\n`).join(''));
+  const d = await runLater('bun', ['run', 'tools/blitz/diff.ts', resolve(out, 'c1.bin'), resolve(out, 'again.bin'), '--blocks', resolve(out, 's0.bin'), resolve(out, 'again-s.bin'), '--out', resolve(out, 'diff-again.tsv'), '--canon-file', 'tools/blitz/canon.txt', '--known', `tools/blitz/known-again.txt,${known}`, '--live', '--show', '4']);
+  row.start = unknownOf(d.out.split('\n').find(l => /^\d+ paths differ/.test(l))); row.end = /(\d+) known/.exec(d.out)?.[1] ?? '';
+  row.ended = row.start === 'did not run' ? 'DID NOT RUN' : row.start === '0' ? 'yes' : 'NOT EQUAL';
+  return row;
+}
+if (AGAIN) {
+  const todo = missions.filter(m => !ONLY.length || ONLY.includes(m.id)), rows: Row[] = new Array(todo.length); let next = 0;
+  const worker = async () => { for (;;) { const i = next++; if (i >= todo.length) return; const row = rows[i] = await againOf(todo[i]);
+    say(`${row.id}\t${row.file}\t${row.ended === 'yes' ? 'EQUAL' : row.ended === 'refused' ? 'refused by the game' : 'RED'}\t${row.ended === 'refused' ? '' : `${row.beside}\tnot known ${row.start}\tthe process's ${row.end}`}${row.ended === 'yes' || row.ended === 'refused' ? '' : `\t${row.lacks}`}`); } };
+  await Promise.all(Array.from({ length: Math.min(AT_ONCE, todo.length) }, worker));
+  const equal = rows.filter(r => r.ended === 'yes').length, refused = rows.filter(r => r.ended === 'refused').length, red = rows.length - equal - refused;
+  say(); say(`${equal} of ${rows.length - refused} missions start a second time in one process as they did the first${FRAMES > 0 ? ` (after ${FRAMES} frames of the first game and of the mission before it on the list` : ' (no game stepped'}, die seed 20942${SEATS > 1 ? `, ${SEATS} seats` : ''})${refused ? `; ${refused} the game refuses` : ''}${red ? `; ${red} RED` : ''}.`);
+  process.exit(red === 0 ? 0 : 1);
 }
 const todo = missions.filter(m => !ONLY.length || ONLY.includes(m.id)), rows: Row[] = new Array(todo.length);
 { let next = 0;

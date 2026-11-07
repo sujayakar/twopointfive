@@ -1,7 +1,7 @@
 // EVERY SHADER TEXT THE PAGE'S BOOT MAKES, AS A FILE (the first half of tools/qa/wgsl-compile.cjs, which hands each to a browser's WGSL compiler). The page's
 // boot is run over a recording stand-in (tools/qa/pageboot.ts: the Engine, the smoke solver, the Game's own modules and the cut-box set, with the switches
-// main.ts raises) under ONE setting of the switches, on the shipped stand, and the distinct texts are written as JSON: [{ label, code }]. The shader rows (the
-// compact writings, the split gather: ui/shaderrows.ts) are read once at import and the switches are module state, so one run dumps one setting of each: the
+// main.ts raises) under ONE setting of the switches, on the shipped stand, and the distinct texts are written as JSON: [{ label, code }]. The shader row
+// (the first-frame start: ui/shaderrows.ts) is read once at import and the switches are module state, so one run dumps one setting of each: the
 // compile tool runs this once for every pair (`label` = what to call that run's texts).
 //   bun run tools/qa/wgsl-dump.ts <out.json> --setting title|snow|look [label]
 export {};

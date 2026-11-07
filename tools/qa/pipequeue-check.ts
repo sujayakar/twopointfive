@@ -4,8 +4,7 @@
 // What a queue does to a real load is a measurement on a Windows machine (docs/agents/render.md), not a check.
 //   bun run tools/qa/pipequeue-check.ts                    exit 0 = every check passed, 1 = one failed
 //   PIPEQUEUE_BREAK=1 bun run tools/qa/pipequeue-check.ts  the device is left as the browser made it (?pipequeue=0): must FAIL
-//   GENTLE_BREAK=1 bun run tools/qa/pipequeue-check.ts     the gentle load's queue is left as any load's (?gentle=0): must FAIL
-import { PIPE_QUEUE, GENTLE, gpuStory, gentleQueue, lostFlying, pipeQueue, pipeQueueFor, installPipeQueue, computePipelineAsync, laterPipelineAsync, laterProgress, pipelineProgress } from '../../src/gpu/device';
+import { PIPE_QUEUE, lostFlying, pipeQueue, pipeQueueFor, installPipeQueue, computePipelineAsync, laterPipelineAsync, laterProgress, pipelineProgress } from '../../src/gpu/device';
 
 let red = 0; const check = (ok: boolean, what: string) => { console.log(`${ok ? '- PASS' : '- FAIL'} — ${what}`); if (!ok) red++; };
 const tick = () => new Promise<void>(r => setTimeout(r, 0));
@@ -160,26 +159,6 @@ pipeQueue.settle();
   check(lostFlying().join(' ') === 'alone', `… and once a loss has read it, what fails afterwards changes nothing (${lostFlying().join(' ') || 'none'})`);
   performance.now = realNow;
   check(pipeQueue.inflight === 0 && pipeQueue.waiting.length === 0, 'and the queue is empty'); }
-// ---- A GENTLE LOAD (GENTLE: a browser that lost its device while shaders compiled): one at a time at the boot, after it, and under the rush
-{ if (process.env.GENTLE_BREAK !== '1') gentleQueue('the check asked');
-  check(GENTLE.on === true && GENTLE.flight === 1, 'the switch ships on, one compile at a time');
-  check(PIPE_QUEUE.on === true && gpuStory.gentle !== '', `a gentle load has the queue on wherever it is, and says why (${gpuStory.gentle || 'nothing said'})`);
-  pipeQueue.phase = 'boot';
-  for (const [l, b] of [['g1', 10], ['gBig', 900], ['g2', 20]] as const) void ask(l, b);
-  await tick();
-  check(labels() === 'gBig', `gentle boot: three asked, ONE handed to the browser, the biggest (${labels()})`);
-  await finish('gBig');
-  check(labels() === 'g2', `… and the next only when it is in (${labels()})`);
-  await drain();
-  pipeQueue.settle(); pipeQueue.rush(true);
-  for (let i = 0; i < 3; i++) void ask(`gr${i}`, 500, true);
-  await tick();
-  check(labels() === 'gr0', `gentle and rushed (a mission's start): still one at a time (${labels()})`);
-  pipeQueue.rush(false); await drain();
-  for (let i = 0; i < 2; i++) void ask(`gc${i}`, 500, true); void ask('gf', 10); await tick();
-  check(started.length === 1, `gentle after the boot: one in flight, foreground and background together (${labels()})`);
-  await drain();
-  check(pipeQueue.inflight === 0 && pipeQueue.inflightLow === 0 && pipeQueue.waiting.length === 0, 'everything asked for on the gentle load was made'); }
 
 console.log(red ? `${red} FAILED` : 'all passed');
 process.exit(red ? 1 : 0);

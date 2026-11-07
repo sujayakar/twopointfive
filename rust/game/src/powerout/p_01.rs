@@ -360,7 +360,7 @@ pub fn calm_back(g: &mut crate::game::Game, d: RoomfightDefId, c_2: &crate::powe
         let state = if wary { crate::squad::EndGuardScriptState::Suspicious } else { crate::squad::EndGuardScriptState::Patrol };
         crate::squad::end_guard_script(g, gd, Some(state));
     }
-    g.gd[gd].awareness = if wary { m::min(0.45, m::max(c_2.awareness, 0.35)) } else { c_2.awareness };
+    crate::mind::set(g, gd, if wary { m::min(0.45, m::max(c_2.awareness, 0.35)) } else { c_2.awareness }, "powerout");
     crate::control::set_hold(g, gd, c_2.hold, "powerout");
     crate::control::set_pinned(g, gd, c_2.pinned, "powerout");
     let state: String = g.gd[gd].state.as_str().into();

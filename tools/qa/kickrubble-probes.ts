@@ -39,7 +39,7 @@ async function quiet<T>(fn: () => Promise<T> | T): Promise<T> { if (VERBOSE) ret
 interface Stage { W: any; game: any; D: any; gd: any; p0: Vec3; dir: [number, number]; free: number; events: any[]; seen: Set<any>; kicked: number; landedHook: number }
 async function stage(on: boolean, seed = 7107): Promise<Stage> {
   Math.random = seeded(seed); RUBBLE.on = on;
-  const W: any = await quiet(() => standUp({ uploadEvery: 1 })); const game = W.game; game.godMode = true; game.playerInvisible = true; game.aiEnabled = true;
+  const W: any = await quiet(() => standUp({ uploadEvery: 1, dress: true })); const game = W.game; game.godMode = true; game.playerInvisible = true; game.aiEnabled = true;
   const gd = game.guards[0]; gd.hold = true; const p0: Vec3 = [gd.char.pos[0], 0, gd.char.pos[2]];
   let dir: [number, number] = [1, 0], free = 0; for (const d of [[1, 0], [-1, 0], [0, 1], [0, -1]] as [number, number][]) { const h = game.col.raycast([p0[0], 0.5, p0[2]], [d[0], 0, d[1]], 12); const t = h ? h.t : 12; if (t > free) { free = t; dir = d; } }
   const D = game.destr.debris; const S: Stage = { W, game, D, gd, p0, dir, free, events: [], seen: new Set(game.events), kicked: 0, landedHook: 0 };
