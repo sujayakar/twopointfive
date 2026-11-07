@@ -32,7 +32,7 @@ const MIN = 0.01;
 /** how far off the plane a covering box is looked for, and the grid the patch is asked on (a point every STEP, no more than GRID a side) */
 const OUT = 0.002, STEP = 0.1, GRID = 32;
 
-interface FileBox { id?: string; group?: string; c: number[]; h: number[]; yaw?: number; rot?: unknown; flags?: string[]; material?: string; albedo?: number[]; emissive?: unknown; metal?: number; rough?: number; markings?: unknown }
+interface FileBox { round?: boolean; id?: string; group?: string; c: number[]; h: number[]; yaw?: number; rot?: unknown; flags?: string[]; material?: string; albedo?: number[]; emissive?: unknown; metal?: number; rough?: number; markings?: unknown }
 export interface Pair { a: string; b: string; /** the angle the two stand at, in degrees (0 = square to the world: `axis` and `plane` are then the world's) */ turn: number; groupA: string; groupB: string; axis: 'x' | 'y' | 'z'; sign: '+' | '-'; plane: number; at: [number, number, number]; size: [number, number]; verdict: 'seen' | 'same' | 'covered' }
 export interface ZRead { boxes: number; turned: number; pairs: Pair[] }
 
@@ -40,7 +40,9 @@ export interface ZRead { boxes: number; turned: number; pairs: Pair[] }
  *  square: two boxes at one angle share a frame, and a quarter turn swaps a box's x and z) */
 interface Asked { b: FileBox; i: number; c: number[]; h: number[]; cs: number; sn: number; f: number; fc: number[]; fh: number[] }
 const QUARTER = Math.PI / 2;
-function asked(b: FileBox, i: number): Asked {
+function asked(b0: FileBox, i: number): Asked {
+  // (a round thing is asked by the square inside its circle: the corners of the square round it are no faces of it, and two drums side by side share no top)
+  const b = b0.round ? { ...b0, h: [b0.h[0] * Math.SQRT1_2, b0.h[1], b0.h[2] * Math.SQRT1_2] } : b0;
   const yaw = b.yaw ?? 0, q = Math.round(yaw / QUARTER); let f = yaw - q * QUARTER, r = q; if (f < -1e-4) { f += QUARTER; r--; } if (Math.abs(f) < 1e-4) f = 0;
   const cf = Math.cos(f), sf = Math.sin(f);
   return { b, i, c: b.c, h: b.h, cs: Math.cos(yaw), sn: Math.sin(yaw), f, fc: [cf * b.c[0] - sf * b.c[2], b.c[1], sf * b.c[0] + cf * b.c[2]], fh: r % 2 ? [b.h[2], b.h[1], b.h[0]] : b.h };

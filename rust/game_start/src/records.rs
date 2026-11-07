@@ -80,7 +80,7 @@ json_struct!(game::scene_markings::MarkingDef { face: "face", res: "res", at: "a
 json_struct!(game::scene_shapes::ShapeFormArc { axis: "axis", rise: "rise" });
 json_struct!(game::scene_level_data::ShapePieceData { off: "off", h: "h", yaw: "yaw", material: "material", albedo: "albedo", rough: "rough", metal: "metal", does: "does", stuff: "stuff", round: "round", arc: "arc", cut: "cut", old: "old" });
 json_struct!(game::scene_level_data::ShapeData { with: "with", round: "round", arc: "arc", cut: "cut", old: "old" });
-json_struct!(game::scene_level_data::BoxData { id: "id", floor: "floor", group: "group", name: "name", c: "c", h: "h", yaw: "yaw", rot: "rot", material: "material", albedo: "albedo", emissive: "emissive", rough: "rough", metal: "metal", stuff: "stuff", does: "does", flags: "flags", cut_height: "cutHeight", markings: "markings", shape: "shape" });
+json_struct!(game::scene_level_data::BoxData { id: "id", floor: "floor", group: "group", name: "name", c: "c", h: "h", yaw: "yaw", rot: "rot", round: "round", material: "material", albedo: "albedo", emissive: "emissive", rough: "rough", metal: "metal", stuff: "stuff", does: "does", flags: "flags", cut_height: "cutHeight", markings: "markings", shape: "shape" });
 json_words!(game::scene_level_data::LightDataKind { Spot: "spot", Dir: "dir", Point: "point" });
 json_struct!(game::scene_level_data::LightData { id: "id", kind: "kind", pos: "pos", dir: "dir", color: "color", intensity: "intensity", range: "range", inner_deg: "innerDeg", outer_deg: "outerDeg", group: "group", enabled: "enabled", volumetric: "volumetric", radius: "radius", mains: "mains", broad: "broad", fixture: "fixture" });
 json_struct!(game::scene_scenarios::KitViewWayAdd { boxes: "boxes", lamps: "lamps", laid: "laid" });

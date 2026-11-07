@@ -386,7 +386,7 @@ pub fn wall_skin_recut(g: &mut crate::game::Game, j: f64) {
             }
         }
         // (a plain box of the sheet's paint: what the level's stand-up keeps on the authored one is not its)
-        p.was = None; p.shape = None; p.shaped = None; p.piece = None; p.of = None;
+        p.shape = None; p.shaped = None; p.piece = None; p.of = None;
         pieces.push(p); kept.push(*x);
     }
     if !bit && area >= 4.0 * hu * hv - EPS { uncut(g, j); return; }   // (split at a ragged piece's bounds, and no plane of it bites the sheet: the authored box, whole)

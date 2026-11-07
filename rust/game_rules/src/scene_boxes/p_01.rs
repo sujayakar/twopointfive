@@ -92,7 +92,6 @@ pub fn make_box_value(p: &crate::scene_boxes::MakeBoxP) -> crate::scene_boxes::B
     b.cut_old = p.cut_old;
     b.cut_core_stuff = p.cut_core_stuff;
     b.round = p.round;
-    b.was = p.was.clone();
     b.shape = p.shape.clone();
     b.shaped = p.shaped;
     b.piece = p.piece;
@@ -153,7 +152,6 @@ pub fn box_world_new(g: &crate::game::Game, device: crate::Opaque, max_boxes: Op
     let s = USAGE_STORAGE + USAGE_COPY_DST;
     w.geo_buf = crate::gpu_device::make_buffer(device, max_boxes * GEO_STRIDE * 4.0, s + USAGE_COPY_SRC, Some("boxGeo"));
     w.cut_on = true;
-    w.round_on = g.m.scene_round.round_config.gpu;
     w.ground_on = g.m.scene_ground_field.ground_ray_config.on;
     w.cut_data = vec![0.0; n * crate::scene_cut::CUT_STRIDE as usize * 4];
     let mat_bytes = max_boxes * MAT_STRIDE * 4.0 + crate::scene_markings::MARK_TABLE_ROWS * 16.0 + GB_ROWS * 16.0 + crate::scene_air_grid::air_rows() * 16.0 + max_boxes * crate::scene_cut::CUT_STRIDE * 16.0 + (if w.ground_on { crate::scene_ground_field::gh_rows() * 16.0 } else { 0.0 });

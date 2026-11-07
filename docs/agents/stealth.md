@@ -929,7 +929,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   and the picture's ray (`occludedTBoxes`). So a stovepipe 10 cm across, a window's bar or a lone post each threw a sliver of "not seen" across the room
   behind it, and with men outside looking in through barred windows the floor, rug and back wall were fans of seen and unseen (on The Pass, 3 to 5
   slivers from one eye by a window of the long room, by the game's own sight test). THE RULE (`src/scene/thin.ts thinLevel`, run by
-  `host/standup.ts populateHost` after `roundLevel`, on both stands): a static is marked `BoxFlag.Thin` when it is NARROW (under `THIN_WIDTH` 0.25 m
+  `host/standup.ts populateHost`, on both stands): a static is marked `BoxFlag.Thin` when it is NARROW (under `THIN_WIDTH` 0.25 m
   across in plan both ways), FREE (no solid box beside it over a quarter of its height, counted over all its neighbours; what it stands on or under,
   a pane of glass and the other slabs of the same round thing are not beside it) and NOT A DOOR'S (nothing within `DOOR_NEAR` 0.3 m of a door's shut
   leaf: a jamb or a stop passed would open every shut door — the first version of this did exactly that, by size alone, and a review caught it). A

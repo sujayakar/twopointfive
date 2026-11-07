@@ -32,11 +32,10 @@ export async function pageBoot(setting: string): Promise<Booted> {
   const { SmokeSystem } = await import(`${ROOT}/src/smoke/smoke.ts`);
   const { standGame } = await import(`${ROOT}/src/host/standup.ts`);
   const { cutConfig } = await import(`${ROOT}/src/scene/cut.ts`);
-  const { roundConfig, ROUND } = await import(`${ROOT}/src/scene/round.ts`);
   const { glassFxBoot } = await import(`${ROOT}/src/game/glass.ts`);
   const FR = await import(`${ROOT}/src/render/frame.ts`) as Record<string, any>;
   const { DUST_DRAW } = await import(`${ROOT}/src/smoke/dustTint.ts`);
-  cutConfig.on = true; roundConfig.gpu = ROUND.on && cutConfig.on; if (glassFxBoot()) FR.glassBreakConfig.on = true; DUST_DRAW.on = true;
+  cutConfig.on = true; if (glassFxBoot()) FR.glassBreakConfig.on = true; DUST_DRAW.on = true;
   if (setting === 'snow') { FR.weatherKindConfig.on = true; FR.snowConfig.on = true; for (const k of Object.keys(FR.snowLookConfig)) FR.snowLookConfig[k] = true; }
   if (setting === 'look') { if (!FR.lookConfig) throw new Error('pageBoot: this tree has no look page'); for (const c of [FR.lookConfig, FR.wallSidesConfig, FR.smokeLabConfig]) if (c) c.on = true; }
   const mods: Mod[] = [], asked: Asked[] = [], faults: string[] = [];

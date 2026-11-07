@@ -15,7 +15,6 @@ import { SENSE } from '../game/sense';
 import { envAsBuilt } from '../game/env';
 import { CMDCHECK } from '../game/cmd';
 import { carLampsTape } from '../game/carlamps';
-import { roundTape } from '../scene/round';
 import { shapesTape } from '../scene/shapes';
 import { rowsetTape } from '../game/rowset';
 import { memoryStore } from '../game/savestate';
@@ -44,7 +43,6 @@ export class RecipeStand {
     if (!plain(src.CMDCHECK)) CMDCHECK.on = false;
     rowsetTape(src);   // (… and one from before a row had an hour and weather of its own: main.ts lays them on its query before the game exists — game/rowset.ts)
     shapesTape(src);   // (… and one from before a box could say its shape: read as the level is stood up, too — scene/shapes.ts)
-    roundTape(src);   // (… and one from before round things were round: the level's boxes are read as it is stood up — scene/round.ts)
     carLampsTape(src);   // (… and one from before a vehicle's lamps were light targets: the Game reads that switch as it is built — game/carlamps.ts)
     this.kit(rc.kit);
   }

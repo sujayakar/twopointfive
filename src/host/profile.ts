@@ -174,7 +174,6 @@ import { LOOK, lookOfQuery, suitOfQuery } from '../scene/look';
 import { MUSIC } from '../audio/pieces';
 import { LIVED, livedOfQuery } from '../scene/lived';
 import { UNDERFOOT } from '../scene/collision';
-import { ROUND } from '../scene/round';
 import { SHAPES } from '../scene/shapes';
 import { ROOMCLEAR } from '../game/roomclear';
 import { FIXEDSTEP } from './loop';
@@ -251,7 +250,6 @@ export function pageSwitches(q: URLSearchParams): void {
   PAIR.steady = q.get('pairsteady') !== '0';   // a partner on his way to a man's back does not turn about: never back to a corner he has passed, and a short wait on a watched way does not square him to the man (game/pairorders.ts takeTick): ?pairsteady=0 = as it was
   COVER.rearRead = q.get('rearread') !== '0';   // a rear man on a mark with no door (a wall charge's stand-off, the mate covering a man at work) watches what the ground round him offers — a way in, a long run of floor — not the spot he stood on when the order came (game/cover.ts readRear over roomfit.ts watchablesAt): ON in the page; ?rearread=0 = 'the way he came', as it was
   COVER.backTurn = q.get('backturn') !== '0';   // a man walking backwards whose opening the deal lets go of comes out of it on his feet: the path kept, his body turning to the way he goes (game/cover.ts turnOut): ?backturn=0 = he walks forward along a body still turned to the rear, a quarter of a metre the wrong way, as he did
-  ROUND.on = q.get('round') !== '0';   // round things are round (scene/round.ts): a level's drums, tyres, stoves and ovens are stood up as one round shape each — to the picture, every ray, sight and what walks against them — in place of the kit's octagon of four slabs: ON in the page; ?round=0 = the octagons, as they were (main.ts puts it down too when the cut switch, whose pipeline draws a round, is off)
   SHAPES.on = q.get('shapes') !== '0';   // a box says its shape (scene/shapes.ts): a level's boxes that say one — a vehicle's rounded corners, crowned bonnet, bowed roof, leaning glass and round wheels — stand as it to the picture and to every ray, and their pieces of trim (hubs, arches, window posts: drawn only) are added; what walks meets the plain level: ON in the page; ?shapes=0 = the plain boxes, as they were (the game's own rays meet a shape whatever the cut-pieces switch says: boxes.ts cutMet)
   COATFINISH.on = q.get('coatfinish') !== '0';   // a named coat's finish goes wherever its word goes (scene/stuff.ts COATFINISH; a picture only): a box that says car paint is as smooth as a clear coat, so a vehicle shows what stands round it — ON in the page; ?coatfinish=0 = the finish its file gives it, as it was
   SOLIDGLASS.on = q.get('solidglass') !== '0';   // a thing of solid glass is dark and smooth (scene/stuff.ts SOLIDGLASS; a picture only): a box that says glass and is no pane — a vehicle's window, a mirror's face — is sent near black and polished: ON in the page; ?solidglass=0 = the grey its file gives it, as it was
@@ -860,7 +858,6 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'COVER.rearRead': 'TPS_REARREAD=1',
   'COVER.backTurn': 'TPS_BACKTURN=1',
   'UNDERFOOT.on': 'TPS_UNDERFOOT=1',
-  'ROUND.on': 'TPS_ROUND=1',
   'SHAPES.on': 'TPS_SHAPES=1',
   'COATFINISH.on': 'TPS_COATFINISH=1 (a picture only)',
   'SOLIDGLASS.on': 'TPS_SOLIDGLASS=1 (a picture only)',

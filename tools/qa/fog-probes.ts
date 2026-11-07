@@ -1133,7 +1133,7 @@ export async function fogThin(): Promise<boolean> {
   const { verdict, done } = family('fog-thin: thin things that stand free do not cut the fog of war\'s sight');
   const brk = process.env.FOGTHIN_BREAK === '1';
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`); const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
-  const { BoxFlag, makeBox } = await import(`${ROOT}/src/scene/boxes.ts`); const { thinLevel, THIN_WIDTH } = await import(`${ROOT}/src/scene/thin.ts`); const { StaticCollision } = await import(`${ROOT}/src/scene/collision.ts`); const { levelToData } = await import(`${ROOT}/src/scene/levelLoad.ts`); const { roundLevel } = await import(`${ROOT}/src/scene/round.ts`);
+  const { BoxFlag, makeBox } = await import(`${ROOT}/src/scene/boxes.ts`); const { thinLevel, THIN_WIDTH } = await import(`${ROOT}/src/scene/thin.ts`); const { StaticCollision } = await import(`${ROOT}/src/scene/collision.ts`); const { levelToData } = await import(`${ROOT}/src/scene/levelLoad.ts`);
   const { makeFogFrame, FOG_THIN_WORDS, FOG_SIGHT_BYTES, FOG_BINS, FOG_EYES } = await import(`${ROOT}/src/render/fogofwar.ts`); const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
   const fsrc = await import('node:fs'); const rd = (f: string): string => fsrc.readFileSync(`${ROOT}/src/render/${f}`, 'utf8');
   const strip = (t: string) => t.split('\n').map(l => l.replace(/\/\/.*$/, '')).join('\n');
@@ -1144,10 +1144,10 @@ export async function fogThin(): Promise<boolean> {
     let levels = 0, marked = 0, withMarks = 0, atDoors = 0, wide = 0, beside = 0, doors = 0, doorLines = 0, doorLeaks = 0, bySize = 0, exported = 0; const bad: string[] = []; let pass = '';
     for (const f of files) { let L: any; try { L = await levelOf(f); } catch { continue; }
       if (!L?.boxes?.length) continue; levels++;
-      for (const on of [true, false]) {   // (a level's round things as one box each, and as the kit's slabs: the marks are made after either)
-        roundLevel(L.boxes, on, L.markTexel); const n = brk ? 0 : thinLevel(L.boxes, L.doors ?? []); if (brk) for (const b of L.boxes) b.flags &= ~BoxFlag.Thin;
+      {
+        const n = brk ? 0 : thinLevel(L.boxes, L.doors ?? []); if (brk) for (const b of L.boxes) b.flags &= ~BoxFlag.Thin;
         const th = L.boxes.filter((b: any) => b.flags & BoxFlag.Thin);
-        if (on) {   // the level's own collision with every door's leaf stood in it SHUT (a plain box, hinge to latch), and short lines ACROSS each door's plane inside its frame's span (30 cm past either end), from either side, at three heights: none may be stopped without the marks and pass with them — that is a shut door leaking. The same lines with every narrow solid box marked BY SIZE ALONE (the first version's rule) do leak: the count's teeth.
+        {   // the level's own collision with every door's leaf stood in it SHUT (a plain box, hinge to latch), and short lines ACROSS each door's plane inside its frame's span (30 cm past either end), from either side, at three heights: none may be stopped without the marks and pass with them — that is a shut door leaking. The same lines with every narrow solid box marked BY SIZE ALONE (the first version's rule) do leak: the count's teeth.
           const leaves = (L.doors ?? []).map((d: any) => makeBox({ c: [d.hinge[0] + Math.cos(d.closedDir) * d.width / 2, 1.02, d.hinge[1] + Math.sin(d.closedDir) * d.width / 2], h: [d.width / 2, 1.02, 0.022], yaw: -d.closedDir }));
           const C = new StaticCollision([...L.boxes, ...leaves]);
           const across = (): number => { let n = 0;
@@ -1162,7 +1162,7 @@ export async function fogThin(): Promise<boolean> {
           bySize += across(); L.boxes.forEach((b: any, k: number) => { b.flags = keep[k]; });
           try { await quiet(() => levelToData(L, {})); exported++; } catch (e: any) { if (bad.length < 4) bad.push(`${f}: the marked level does not export (${String(e?.message ?? e).slice(0, 60)})`); }   // (the mark is derived: the level's file never carries it)
         }
-        if (on) { marked += th.length; if (th.length) withMarks++; if (f === 'pass.json') pass = `${n}: ` + th.map((b: any) => `${(2 * b.h[0]).toFixed(2)} × ${(2 * b.h[2]).toFixed(2)} at (${b.c[0].toFixed(1)}, ${b.c[2].toFixed(1)})`).join(', '); }
+        { marked += th.length; if (th.length) withMarks++; if (f === 'pass.json') pass = `${n}: ` + th.map((b: any) => `${(2 * b.h[0]).toFixed(2)} × ${(2 * b.h[2]).toFixed(2)} at (${b.c[0].toFixed(1)}, ${b.c[2].toFixed(1)})`).join(', '); }
         for (const b of th) {
           if (2 * Math.max(b.h[0], b.h[2]) >= THIN_WIDTH || b.rot || (b.flags & (BoxFlag.Glass | BoxFlag.NoShadow))) wide++;
           // nothing solid beside it, asked again here in the plainest way: no other solid box's plan AABB (as boxes.ts takes it) within 3 cm of its own over a quarter of its height — bar a box as narrow that shares its middle (a round thing's slabs)
@@ -1177,10 +1177,9 @@ export async function fogThin(): Promise<boolean> {
             if (Math.hypot(px - ux * t, pz - uz * t) < 0.3 && a0 <= 2.2) { atDoors++; if (bad.length < 4) bad.push(`${f}: a marked box at door ${d.name}`); } }
         }
       }
-      roundLevel(L.boxes, false, L.markTexel);
     }
     verdict(levels >= 20 && marked >= 6 && withMarks >= 3 && atDoors === 0 && wide === 0 && beside === 0 && doors >= 100 && doorLines > 100000 && doorLeaks === 0 && bySize > 100 && exported === levels && /0\.10 × 0\.10/.test(pass) && /0\.08 × 0\.19|0\.19 × 0\.08/.test(pass),
-      'every level file, its round things as one box each and as slabs: what is marked thin and free is narrow, unrotated and solid, has nothing solid beside it (asked again here, plainly), and none stands at a door\'s shut leaf; through each level\'s own collision, its doors shut, no line across a door\'s frame passes with the marks that was stopped without (marked by size alone, the first version\'s way, they do); a marked level still exports — and The Pass\'s marks are its stovepipes and its windows\' bars',
+      'every level file: what is marked thin and free is narrow, unrotated and solid, has nothing solid beside it (asked again here, plainly), and none stands at a door\'s shut leaf; through each level\'s own collision, its doors shut, no line across a door\'s frame passes with the marks that was stopped without (marked by size alone, the first version\'s way, they do); a marked level still exports — and The Pass\'s marks are its stovepipes and its windows\' bars',
       `levels read: ${levels} · marked in all: ${marked}, on ${withMarks} levels · marked at a door: ${atDoors} · lines across ${doors} shut doors' frames: ${doorLines / 2} each way of marking, let through by the marks: ${doorLeaks}, by size alone: ${bySize} · levels that export marked: ${exported} · not narrow / rotated / not solid: ${wide} · with something beside: ${beside}${bad.length ? ' — ' + bad.join('; ') : ''} · The Pass: ${pass || 'none'}`);
   }
   // The Pass stood up: the game's own collision world and the fog's own test

@@ -174,13 +174,13 @@ export function plainLevel(boxes: Box[]): void {
   for (const b of boxes) if (b.shaped === true) { b.cut = undefined; b.shaped = undefined; b.cutRound = undefined; b.cutArc = undefined; b.cutOld = undefined; }   // (set, never deleted: a box keeps its one layout — boxes.ts boxOf)
 }
 /** A LEVEL'S SHAPES, as it is stood up: the level is put back as its file has it (plainLevel) and, with `on`, each box that says a shape is given its record
- *  and its pieces follow the level's last box. Never a tilted box, a box cut already, a round thing's slab (scene/round.ts keeps those) or a window's bar
+ *  and its pieces follow the level's last box. Never a tilted box, a box cut already or a window's bar
  *  (the head). Returns how many boxes are shaped now. */
 export function shapeLevel(boxes: Box[], on: boolean): number {
   plainLevel(boxes);
   let made = 0; const tail: Box[] = [];
   if (on) boxes.forEach((b, i) => {
-    const s = b.shape; if (!s || b.rot || b.was || b.cut !== undefined || (b.flags & BoxFlag.Bar)) return;
+    const s = b.shape; if (!s || b.rot || b.cut !== undefined || (b.flags & BoxFlag.Bar)) return;
     formBox(b, s); b.shaped = true;
     for (const w of s.with ?? []) {
       const o = cutToWorld(w.off, b.yaw);   // (the box's own frame: cut.ts)
