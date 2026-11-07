@@ -140,7 +140,8 @@ export function mountKitView(root: HTMLElement, body: HTMLElement, column: HTMLE
       top: 1 - ((c.top - f.top) / f.height) * 2, bottom: 1 - ((c.bottom - f.top) / f.height) * 2 });   // (…and the column's own top and foot: the quiet picture is framed down it — host/kitView.ts KIT_VIEW_QUIET.frame)
   };
   const hide = () => { if (shown) { shown = false; root.classList.remove(ROOT_CLASS); } };
-  const drop = () => { if (due) clearTimeout(due); due = 0; want = ''; if (!frame) return; frame.remove(); frame = null; key = ''; live = false; up = false; sent = born = ''; selSent = ''; pauseSent = false; };
+  // (the picture's hold on the kept page's device ends here, by name: its buffers and textures are freed now, not when the browser gets round to its window — gpu/keep.ts)
+  const drop = () => { if (due) clearTimeout(due); due = 0; want = ''; if (!frame) return; try { (frame.contentWindow as unknown as { __keptPage?: { lease?: { release(): void } | null } } | null)?.__keptPage?.lease?.release(); } catch { /* */ } frame.remove(); frame = null; key = ''; live = false; up = false; sent = born = ''; selSent = ''; pauseSent = false; };
   /** this query's instance is no picture: gone, and not tried again on this page */
   const fail = (k: string) => { if (!k || k !== key) return; failed.add(k); hide(); drop(); again(); };
   const onMsg = (e: MessageEvent) => {
