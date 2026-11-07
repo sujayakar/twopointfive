@@ -423,7 +423,7 @@ export class RustHost {
   private copyBlock(): void { const t = now(), mine = this.tsBlock(), theirs = this.rustBlock(); mine.set(theirs.subarray(0, mine.length)); if (this.audit) this.lastBlock = mine.slice(); this.T.block += now() - t; }
   /** THE FILTERED APPLY: the listed fields of what changed since the last one, and the step's out events */
   applyStep(): void {
-    const g = this.g, X = this.F.X, B = this.B, t0 = now(), made0 = MADE.n; let t = t0;
+    const g = this.g, X = this.F.X, B = this.B, t0 = now(), made0 = MADE.n; let t = t0; this.mBefore = g.mission;
     X.face_puppet(this.h, 0); const blob = this.F.outView(); this.stepBytes += blob.length; this.T.exportStep += now() - t;
     t = now(); const R = B.applyGame(g, blob, B.reg, { hooks: B.hooks, puppet: { ...this.pup, start: false } }); const el = now() - t; this.T.applyStep += el; if (el > this.worstApply) this.worstApply = el;
     if (R.out?.length) for (const e of R.out) this.outQ.push(e);
@@ -447,11 +447,16 @@ export class RustHost {
   // inside the tick, Enter once down or Shift+Enter; a `restartEncounter` that crossed). The TypeScript's restart makes a new mission RECORD, and that
   // identity is how everything outside the tick knows a run began (the save controller's `missionRef`: a fresh run, an empty shelf; a driver's own
   // `game.mission !== before`). The apply wrote the fields into the record that stood, so the puppet is given a new one here.
-  private newRun(): void { const g = this.g, m = g.mission; if (!m || m !== this.missionRef || m.t0 === this.t0Ref || OFF.has('newrun')) return;
+  // (since the importer makes a new record itself where the Rust game dealt a new serial, this only fires for a bridge that did not; and a record the
+  // APPLY replaced is the Rust game's own doing, not a game the TypeScript put in the puppet's place: the host's reference follows it)
+  private mBefore: any = null;
+  private newRun(): void { const g = this.g, m = g.mission;
+    if (m !== this.mBefore) { if (this.missionRef === this.mBefore) { this.missionRef = m; this.t0Ref = m?.t0; } this.mBefore = m; return; }
+    if (!m || m !== this.missionRef || m.t0 === this.t0Ref || OFF.has('newrun')) return;
     g.mission = { ...m, stats: { ...m.stats } }; this.missionRef = g.mission; this.t0Ref = m.t0; this.count('the Rust game began its mission again: the puppet\'s mission record made anew'); }
   /** THE WHOLE APPLY: every field the bridge carries (a field the Rust game owns and TypeScript cannot hold, the box mirror among them, is kept beside the
    *  object as an echo: tools/blitz/IMPORT.md) */
-  applyWhole(why: string): Uint8Array { const r = this.applyWholeNow(why); this.scanRebase(); return r; }
+  applyWhole(why: string): Uint8Array { const r = this.applyWholeNow(why); this.newRun(); this.newClear(); this.scanRebase(); return r; }
   private applyWholeNow(why: string): Uint8Array {
     const g = this.g, X = this.F.X, B = this.B, t0 = now(); let t = t0;
     // (BETWEEN TWO TICKS the host has moved its own camera and Input on since the Rust game was last handed them (headless.ts `cam.update` after
@@ -460,7 +465,7 @@ export class RustHost {
     if (!this.inStep && this.lastCmds) { const hb: Uint8Array = B.hostHalf(g, B.reg, this.lastCmds); this.F.hand(hb, (p, n) => X.face_host_half(this.h, p, n)); this.viewLive(); }
     // (a copy out of the module: a whole apply keeps the bytes of the fields the Rust game owns beside their objects, as places in this very blob (the
     // bridge's echo), and the module's memory is written again by the next call)
-    X.face_export(this.h); const blob = this.F.outView().slice(); this.wholeBytes = blob.length; this.T.exportWhole += now() - t;
+    this.mBefore = g.mission; X.face_export(this.h); const blob = this.F.outView().slice(); this.wholeBytes = blob.length; this.T.exportWhole += now() - t;
     t = now(); const R = B.applyGame(g, blob, B.reg, { hooks: B.hooks }); const el = now() - t; this.T.applyWhole += el; if (el > this.worstApply) this.worstApply = el;
     this.after(R); this.copyBlock();
     this.wholes.set(why, (this.wholes.get(why) ?? 0) + 1); this.wholeNow = true; if (this.audit) this.lastRust = blob; this.nest += now() - t0;
