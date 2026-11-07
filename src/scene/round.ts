@@ -7,7 +7,7 @@
 //   · the picture: the g-buffer's cut pass draws it (a twelve-sided prism standing round the cylinder; its sides shaded with one turning normal, its marks run
 //     round it, a rolled rim on its lid — gbuffer_cut.wgsl ROUND);
 //   · GPU rays: common.wgsl isectBox behind the scene prelude's `const ROUND_BOXES` (shadows, bounce, reflections, the light meter, smoke sight lines, particles);
-//     the programs compiled with the cut rule (render/cutSwap.ts: the set drawn while a cut piece a ray can meet is alive) trace it as the picture's own prism,
+//     the programs compiled with the cut rule (every ray program, wherever the cut switch is on) trace it as the picture's own prism,
 //     through the cut test and the eight rows boxes.ts wrote for the picture: up to 3.5 % of the radius further out at the twelve corners, the side's normal
 //     still the cylinder's. The cylinder's test on top of the cut test in every box walk was more than a newer software adapter ran (`?roundexact=1` = as it was);
 //   · CPU rays and segments: boxes.ts rayBox, collision.ts lineBox (rounds, aim, sight, sound, throw arcs, the cursor);

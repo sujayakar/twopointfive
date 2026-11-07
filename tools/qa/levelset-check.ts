@@ -31,7 +31,7 @@ if (childOf >= 0) {
   const FR = await import(`${ROOT}/src/render/frame.ts`) as Record<string, any>;
   if (BREAK && setting === 'snow') FR.rainScaleConfig.on = !FR.rainScaleConfig.on;   // (the red path: a level that still raises a constant of the text)
   const B = await pageBoot(setting);
-  const rec: Rec = { mods: B.mods.map(m => ({ label: m.label, h: sha(m.code), n: m.code.length })), asked: B.asked.map(a => `${a.set} ${a.label} ${a.stages.map(s => `${s.stage}:${B.mods[s.mod]?.label ?? '?'}#${sha(B.mods[s.mod]?.code ?? '')}/${s.entry ?? ''}`).join(' ')}`),
+  const rec: Rec = { mods: B.mods.map(m => ({ label: m.label, h: sha(m.code), n: m.code.length })), asked: B.asked.map(a => `${a.label} ${a.stages.map(s => `${s.stage}:${B.mods[s.mod]?.label ?? '?'}#${sha(B.mods[s.mod]?.code ?? '')}/${s.entry ?? ''}`).join(' ')}`),
     word: FR.levelSwitches(), bits: { ...FR.LevelSw }, prelude: sha(FR.scenePrelude()), faults: B.faults };
   console.log('LEVELSET ' + JSON.stringify(rec)); process.exit(0);
 }
@@ -51,7 +51,7 @@ for (const [rows, env] of [['the shader rows as written', {}], ['the shader rows
   if (!T || !S) { check(false, `texts — the two boots ran (${rows})`); continue; }
   const faults = [...T.faults, ...S.faults];
   const other = T.mods.map((m, i) => S.mods[i] && S.mods[i].label === m.label && S.mods[i].h === m.h ? null : m.label).filter(Boolean), pipes = T.asked.filter((a, i) => S.asked[i] !== a);
-  check(faults.length === 0 && T.mods.length > 40 && T.asked.length > 100 && T.mods.length === S.mods.length && other.length === 0 && T.asked.length === S.asked.length && pipes.length === 0 && T.prelude === S.prelude,
+  check(faults.length === 0 && T.mods.length > 30 && T.asked.length > 100 && T.mods.length === S.mods.length && other.length === 0 && T.asked.length === S.asked.length && pipes.length === 0 && T.prelude === S.prelude,
     `texts — the title and a snow level in its weather are the same ${T.mods.length} module texts and the same ${T.asked.length} pipelines (${rows})`,
     faults.length ? faults.join(' · ') : other.length || pipes.length || T.mods.length !== S.mods.length ? `${other.length} of ${T.mods.length} modules differ (${other.slice(0, 8).join(', ')}) · ${pipes.length} of ${T.asked.length} pipelines differ · the snow level's boot: ${S.mods.length} modules, ${S.asked.length} pipelines` : `${Math.round(T.mods.reduce((n, m) => n + m.n, 0) / 1024)} KB of text either way`);
   const all = Object.values(S.bits).reduce((a, b) => a | b, 0), single = Object.values(S.bits).every(v => v > 0 && (v & (v - 1)) === 0) && new Set(Object.values(S.bits)).size === Object.keys(S.bits).length;

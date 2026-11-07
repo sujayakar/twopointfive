@@ -31,14 +31,13 @@ async function visit(sc, k) {
     await page.evaluate(() => { try { window.__menu.close(); } catch { } });
     if (sc.stay === 'full') {
       await Promise.race([page.evaluate(() => window.__ready.then(() => true)), sleep(LIMIT)]);
-      for (let i = 0, none = 0; i < LIMIT / 250; i++) { const st = await page.evaluate(() => { try { return window.__cut.programs.state; } catch { return 'unread'; } }); if (st === 'ready' || st === 'failed' || st === 'unread') break; if (st === 'none' && ++none > 32) break; await sleep(250); }
+      for (let i = 0; i < LIMIT / 250; i++) { if (await page.evaluate(() => { try { return !!window.__boot.marks.laterReady; } catch { return true; } })) break; await sleep(250); }   // (the programs compiled behind the start: the later set's own mark)
       await sleep(2000);
     } else await sleep(sc.stay * 1000);
     Object.assign(r, await page.evaluate(() => {
       const B = window.__boot, sp = {}, big = {}; for (const k in B.spans) { sp[k] = Math.round(B.spans[k]); if (k.startsWith('pipelines_') && sp[k] > 1000) big[k.slice(10)] = sp[k]; }
-      let cut = null; try { const i = window.__cut.programs.info; cut = { state: i.state, buildMs: i.buildMs, pipelines: i.pipelines }; } catch { }
       const nav = performance.getEntriesByType('navigation')[0], slowFetch = performance.getEntriesByType('resource').filter(e => e.responseEnd - e.startTime > 400).map(e => [e.name.split('/').pop().slice(0, 28), Math.round(e.startTime), Math.round(e.responseEnd)]).slice(0, 4);
-      return { interactive: Math.round(B.marks.interactive), scriptAt: sp.beforeScript, pipelines: sp.pipelines, slowest: (B.slowest || []).slice(0, 3).map(t => [t.label, Math.round(t.ms)]), groups: big, laterReady: B.marks.laterReady ? Math.round(B.marks.laterReady) : null, cut,
+      return { interactive: Math.round(B.marks.interactive), scriptAt: sp.beforeScript, pipelines: sp.pipelines, slowest: (B.slowest || []).slice(0, 3).map(t => [t.label, Math.round(t.ms)]), groups: big, laterReady: B.marks.laterReady ? Math.round(B.marks.laterReady) : null,
         lookFillMs: window.__engine && window.__engine.gbuffer ? Math.round(window.__engine.gbuffer.lookFillMs) : null, navResponseEnd: nav ? Math.round(nav.responseEnd) : null, slowFetch, gpuErrors: B.gpuInitErrors, at: Math.round(performance.now()) };
     }));
   } catch (e) { r.error = String(e).slice(0, 240); }
@@ -58,7 +57,7 @@ async function visit(sc, k) {
     for (let k = 0; k < sc.visits; k++) {
       if (sc.restart && k) { await stop(); await sleep(1500); await open(); }
       const r = await visit(sc, k); rows.push(r);
-      log(r.error ? `  visit ${k}: ${r.error}` : `  visit ${k}${k ? '' : ' (cold)'}: interactive ${r.interactive} ms · script at ${r.scriptAt} · pipelines ${r.pipelines} · slowest ${r.slowest.map(s => s.join(' ')).join(', ')} · groups over 1 s ${JSON.stringify(r.groups)} · second set ${r.cut ? `${r.cut.state} ${r.cut.buildMs} ms` : '?'} · stayed ${(r.stayed / 1000).toFixed(1)} s${r.slowFetch && r.slowFetch.length ? ` · slow fetches ${JSON.stringify(r.slowFetch)}` : ''}${r.gpuErrors && r.gpuErrors.length ? ` · GPU ERRORS ${r.gpuErrors.length}` : ''}`);
+      log(r.error ? `  visit ${k}: ${r.error}` : `  visit ${k}${k ? '' : ' (cold)'}: interactive ${r.interactive} ms · script at ${r.scriptAt} · pipelines ${r.pipelines} · slowest ${r.slowest.map(s => s.join(' ')).join(', ')} · groups over 1 s ${JSON.stringify(r.groups)} · stayed ${(r.stayed / 1000).toFixed(1)} s${r.slowFetch && r.slowFetch.length ? ` · slow fetches ${JSON.stringify(r.slowFetch)}` : ''}${r.gpuErrors && r.gpuErrors.length ? ` · GPU ERRORS ${r.gpuErrors.length}` : ''}`);
     }
     await stop(); try { fs.rmSync(dir, { recursive: true, force: true }); } catch { }
     all.scenarios.push({ ...sc, rows });
