@@ -25,16 +25,18 @@ for (const f of (readdirSync(DIR, { recursive: true }) as string[]).filter(f => 
   }
 }
 const list = (readFileSync(join(DIR, 'lib.rs'), 'utf8').match(/^sections! \{\n([\s\S]*?)^\}/m) ?? die('no sections! in lib.rs'))[1].split('\n').map(l => l.replace(/\/\/.*/, '').trim()).filter(Boolean)
-  .map((l, i) => { const m = l.match(/^(\d+) (\w+): ([\w:]+) = [\w.]+;$/) ?? die(`sections!: ${l}`); if (Number(m[1]) !== i) die(`sections!: ${m[2]} is line ${i} and says ${m[1]}`); return { name: m[2], row: rows.get(m[3]) ?? die(`sections!: no section! ${m[3]}`) }; });
+  .map(l => { const m = l.match(/^(\w+): ([\w:]+) = [\w.]+;$/) ?? die(`sections!: ${l}`); return { name: m[1], row: rows.get(m[2]) ?? die(`sections!: no section! ${m[2]}`) }; });
+const groups = (readFileSync(join(DIR, 'lib.rs'), 'utf8').match(/^groups! \{([\s\S]*?)\}/m) ?? die('no groups! in lib.rs'))[1].trim().split(/\s+/); if (groups.length > 32) die('a want has 32 bits, and there are more groups than that');
 
 // the layout as the module says it (lib.rs `layout`), and its stamp
-const text = list.map(s => `${s.name}${s.row.fields.map(f => ` ${f.name}:${f.ty}`).join('')}\n`).join('');
+const text = `want ${groups.join(' ')}\n` + list.map(s => `${s.name}${s.row.fields.map(f => ` ${f.name}:${f.ty}`).join('')}\n`).join('');
 let stamp = 0x811c9dc5; for (let i = 0; i < text.length; i++) stamp = Math.imul(stamp ^ text.charCodeAt(i), 0x01000193) >>> 0;
 
 const camel = (s: string) => s.replace(/_([a-z0-9])/g, (_, c) => c.toUpperCase());
 const L: string[] = ['// Written by tools/draw/gen.ts from rust/game_draw. To change a section, change it there.', '',
   '/** the stamp of the sections this was made from: a module of another stamp is refused (drawn.ts) */', `export const LAYOUT = ${stamp};`,
-  '/** each section\'s place: in the table the module answers with, and its bit in what a host asks for */', `export const enum Section { ${list.map((s, i) => `${camel(s.name)} = ${i}`).join(', ')}, count = ${list.length} }`];
+  '/** what a host may ask for: what is made together is asked for together */', `export const enum Want { ${groups.map((g, i) => `${camel(g)} = ${2 ** i}`).join(', ')}, all = ${2 ** groups.length - 1} }`,
+  '/** each section\'s place in the table the module answers with */', `export const enum Section { ${list.map((s, i) => `${camel(s.name)} = ${i}`).join(', ')}, count = ${list.length} }`];
 for (const r of new Set(list.map(s => s.row))) { let at = 0;
   L.push('', ...(r.doc ? [`/** ${r.doc} */`] : []), `export const enum ${r.name} {`);
   for (const f of r.fields) { const kind = f.ty.replace(/^\[/, '').slice(0, 3); L.push(`  /** ${kind}${f.words > 1 ? ` × ${f.words}` : ''}${f.doc ? `: ${f.doc}` : ''} */`, `  ${camel(f.name)} = ${at},`); at += f.words; }
