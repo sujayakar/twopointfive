@@ -6,7 +6,7 @@ use alloc::{string::String, vec::Vec};
 /// a throw search's test: a frag thrown so catches nobody of ours; a stun always passes (squadthrow.ts Lob.clean)
 #[derive(Clone, Debug)]
 pub enum LobClean {
-    Plan { kind: crate::squadthrow::SquadThrowKind, at: V3, fresh: bool },
+    Plan { kind: crate::squadthrow::SquadThrowKind, at: V3 },
     LookAgain { kind: crate::squadthrow::SquadThrowKind, at: V3, gd: GuardId },
 }
 
@@ -394,12 +394,9 @@ pub struct State {
     pub last: JsMap<GuardId, f64>,
     pub noted: bool,
     pub shown: Option<crate::squadthrow::StateShown>,
-    pub warn: Option<crate::squadthrow::StateWarn>,
-    pub warn_frag: Option<crate::squadthrow::StateWarnFrag>,
-    pub caught: Option<crate::squadthrow::StateCaught>,
-    pub asked: JsMap<crate::squadthrow::SquadThrowKind, crate::squadthrow::StateAskedValue>,
     pub walks: JsMap<GuardId, crate::squadthrow::Walk>,
-    pub kept: JsMap<String, crate::squadthrow::StateKeptValue>,
+    /// the throws the menu shows, one a kind, as they were last worked out (Rust's own: not on the wire)
+    pub plans: JsMap<crate::squadthrow::SquadThrowKind, crate::squadthrow::ThrowPlan>,
     pub scratch: Option<crate::squadthrow::Scratch>,
 }
 impl State {
@@ -409,17 +406,34 @@ impl State {
             last: JsMap::new(),
             noted: false,
             shown: None,
-            warn: None,
-            warn_frag: None,
-            caught: None,
-            asked: JsMap::new(),
             walks: JsMap::new(),
-            kept: JsMap::new(),
+            plans: JsMap::new(),
             scratch: None,
         }
     }
 }
 impl Default for State { fn default() -> Self { Self::zeroed() } }
+
+/// THE SQUAD'S THROW AT A SPOT, and everything anybody is shown or told of it: the menu's row, its refusal, its warning, the picture, and the order
+/// given are all read off one of these (squadthrow/plan.rs).
+#[derive(Clone, Debug)]
+pub struct ThrowPlan {
+    pub at: V3,
+    /// the men it was asked of
+    pub men: Vec<GuardId>,
+    /// the game's clock when it was worked out
+    pub t: f64,
+    /// where everybody of ours stood then, to half a metre, and what is left: while it stands, so does the plan on the menu
+    pub read: String,
+    /// the man, his throw, and the spot he walks to for it; none: nobody has a throw
+    pub thrower: Option<crate::squadthrow::SquadThrower>,
+    /// why it may not be given, in the row's words
+    pub refuse: Option<String>,
+    /// what the row says after its words of a throw that may be given
+    pub warn: Option<String>,
+    /// his way to that spot, as the orders would walk him
+    pub walk: Option<Vec<V3>>,
+}
 
 /// (TypeScript: inline at src/game/squadthrow.ts:130 State.shown, src/game/squadthrow.ts:130)
 #[derive(Clone, Debug)]
@@ -437,40 +451,6 @@ impl StateShown {
     }
 }
 impl Default for StateShown { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/squadthrow.ts:130 State.warn, src/game/squadthrow.ts:130)
-#[derive(Clone, Debug)]
-pub struct StateWarn {
-    pub key: String,
-    pub text: String,
-}
-impl StateWarn {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StateWarn {
-            key: String::new(),
-            text: String::new(),
-        }
-    }
-}
-impl Default for StateWarn { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/squadthrow.ts:130 State.warnFrag, src/game/squadthrow.ts:130)
-#[derive(Clone, Debug)]
-pub struct StateWarnFrag {
-    pub key: String,
-    pub text: String,
-}
-impl StateWarnFrag {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StateWarnFrag {
-            key: String::new(),
-            text: String::new(),
-        }
-    }
-}
-impl Default for StateWarnFrag { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/squadthrow.ts:130 State.caught, src/game/squadthrow.ts:130)
 #[derive(Clone, Debug)]
@@ -490,23 +470,6 @@ impl StateCaught {
     }
 }
 impl Default for StateCaught { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/squadthrow.ts:131 State.asked, src/game/squadthrow.ts:131)
-#[derive(Clone, Debug)]
-pub struct StateAskedValue {
-    pub key: String,
-    pub men: Vec<GuardId>,
-}
-impl StateAskedValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StateAskedValue {
-            key: String::new(),
-            men: Vec::new(),
-        }
-    }
-}
-impl Default for StateAskedValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/squadthrow.ts:132 State.kept, src/game/squadthrow.ts:132)
 #[derive(Clone, Debug)]
@@ -681,7 +644,7 @@ impl Lob {
         Lob {
             walls: Vec::new(),
             lim: crate::squadthrow::LobLim::zeroed(),
-            clean: crate::squadthrow::LobClean::Plan { kind: crate::squadthrow::SquadThrowKind::Frag, at: [0.0; 3], fresh: false },
+            clean: crate::squadthrow::LobClean::Plan { kind: crate::squadthrow::SquadThrowKind::Frag, at: [0.0; 3] },
             dirty: None,
         }
     }
