@@ -32,6 +32,11 @@ macro_rules! commands {
     };
 }
 
+fn lever(key: &str) -> Option<game::difficulty::LeverKey> {
+    use game::difficulty::LeverKey as K;
+    [K::Fog, K::Told, K::Ai, K::Kit].into_iter().find(|k| k.as_str() == key)
+}
+
 commands! {
     /// the player cannot be hurt
     0 God { on: u32 } = |g, on| g.god_mode = on != 0;
@@ -57,4 +62,13 @@ commands! {
     10 LetGo {} = |g| { let pl = g.player; g.pl[pl].launch_held = None; };
     /// whatever is up is backed out of
     11 Escape {} = |g| { let _ = game::game::game_escape(g); };
+    /// how hard the defenders are, every lever back on it (before a game is made: what it is staged by)
+    12 Difficulty { hard: u32 } = |g, hard| game::difficulty::set_difficulty(g, if hard != 0 { game::difficulty::Difficulty::Hard } else { game::difficulty::Difficulty::Standard }, Some(false));
+    /// one lever over that, by its key and its rung (an empty rung: back to the level's own)
+    13 Lever { key: &str, rung: &str } = |g, key, rung| if let Some(k) = lever(key) { game::difficulty::set_lever(g, k, if rung.is_empty() { None } else { Some(rung) }, Some(false), None); };
+    /// one of the two tables under the difficulty, by itself
+    14 Pressure { on: u32 } = |g, on| g.k.pressure.on = on != 0;
+    15 DigIn { on: u32 } = |g, on| g.k.digin.on = on != 0;
+    /// the fog of war's cone, whatever the level says, for a visit
+    16 FogCone { on: u32 } = |g, on| game::difficulty::set_cone_visit(g, Some(on != 0));
 }
