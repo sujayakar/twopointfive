@@ -296,7 +296,7 @@ export async function portalCheck(): Promise<boolean> {
   { const f = new Float32Array(16), u = new Uint32Array(f.buffer), l: any = { pos: [1, 2, 3], dir: [1, 0, 0], color: [1, 1, 1], range: 9, innerDeg: 0, outerDeg: 90, radius: 1.2, portal: { halfWide: 0.47, share: 0.25 } };
     packLight(f, u, 0, l, 2, 3 | LIGHT_PORTAL, 0, 0); const plain = new Float32Array(16); packLight(plain, new Uint32Array(plain.buffer), 0, { ...l, portal: undefined }, 2, 3, 0, 0);
     const common = text('src/render/shaders/common.wgsl'), dc = text('src/render/shaders/direct_common.wgsl'), fg = text('src/render/shaders/fgather.wgsl'), gs = text('src/render/shaders/gather_split.wgsl'), rc = text('src/render/shaders/rc.wgsl');
-    const count = (s: string, w: string) => s.split(w).length - 1, gc = text('src/render/shaders/gather_common.wgsl') + text('src/render/shaders/gather_split_common.wgsl');   // (the reflection passes' writing and the gather's own: render/gatherSplit.ts)
+    const count = (s: string, w: string) => s.split(w).length - 1, gc = text('src/render/shaders/gather_common.wgsl');   // (the gather's and the reflection pass's one writing)
     const pins: [string, boolean][] = [
       ['the record holds the rectangle and the share of it that is open where a cone was', Math.abs(f[11] - 0.47) < 1e-6 && Math.abs(f[12] - 0.25) < 1e-6 && (u[3] >>> 0) === ((3 | LIGHT_PORTAL) >>> 0) && Math.abs(plain[11] - Math.cos(Math.PI / 2)) < 1e-6],
       ['the bit is the shader\'s', LIGHT_PORTAL === 0x10000000 && common.includes('const LIGHT_PORTAL: u32 = 0x10000000u;')],
