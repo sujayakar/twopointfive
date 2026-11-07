@@ -8,7 +8,7 @@ import { Quality } from '../ui/quality';
 import { glassBreakConfig, lookConfig, snowConfig, snowLookConfig, wallSidesConfig, weatherKindConfig } from '../render/frame';
 import { lookAmounts, lookParts, lookSync } from '../render/gbuffer';
 import { hourExposure } from '../render/photometry';
-import { charLookSides, charSlots, meshAuthored } from '../render/charMaterials';
+import { charSlots, meshAuthored } from '../render/charMaterials';
 import { MeshShadows } from '../render/meshShadows';
 import { fitRig, fitRigCast } from '../render/sdfrig';
 import { cutConfig, initCutSwitch } from '../scene/cut';
@@ -17,7 +17,7 @@ import { CAST_FILE, CAST_FILE_LOOK, castUrlFor, loadCharacterSet } from '../anim
 import { CharacterRenderer } from '../anim/characters';
 import { COATFINISH, SOLIDGLASS } from '../scene/stuff';
 import { MARKING_TEXEL } from '../scene/markings';
-import { LOOK, lookLevelFile, lookKeptOf, lookOfQuery, lookPageOn, placeOfQuery, setLookPlace } from '../scene/look';
+import { LOOK, lookLevelFile, lookKeptOf, lookOfQuery, placeOfQuery, setLookPlace } from '../scene/look';
 import { Input } from '../game/input';
 import { FollowCamera } from '../game/camera';
 import { FIXEDSTEP, planTicks } from './fixedstep';
@@ -65,7 +65,7 @@ async function main(): Promise<void> {
   const D = game.drawn, sky = () => D.at[Section.sky], view = () => D.at[Section.view];
 
   // ---- the picture's constants: what the shaders are compiled with is said before any of them is
-  lookConfig.on = lookPageOn(q); charLookSides.on = lookConfig.on; wallSidesConfig.on = lookConfig.on && lookAmounts.walls > 0;
+  wallSidesConfig.on = lookAmounts.walls > 0;
   lookConfig.kept = lookKeptOf(D.f[sky() + Sky.kept] < 0 ? undefined : D.f[sky() + Sky.kept], q.get('kept'));
   weatherKindConfig.on = true; snowConfig.on = D.u[sky() + Sky.snowLevel] !== 0;
   if (snowConfig.on) { snowLookConfig.surface = true; snowLookConfig.glow = true; snowLookConfig.sparkle = true; snowLookConfig.under = true; }
@@ -81,7 +81,7 @@ async function main(): Promise<void> {
   // the men: the mesh and its skinning, the tree that shadows him, the cones the rays meet of him
   const ch = await chP, chars = new CharacterRenderer(engine.device, ch), shadows = new MeshShadows(engine.device, ch, chars.jointMats, chars.charInsts);
   engine.skin = chars; engine.setMeshShadows(shadows);
-  if (lookConfig.on && ch.cast) { lookParts.suit = ch.cast.parts.indexOf('op_suit') + 1; lookParts.rig = ch.cast.parts.indexOf('chest_rig') + 1; engine.gbuffer.setLook(); }
+  if (ch.cast) { lookParts.suit = ch.cast.parts.indexOf('op_suit') + 1; lookParts.rig = ch.cast.parts.indexOf('chest_rig') + 1; engine.gbuffer.setLook(); }
   if (meshAuthored(ch.mesh)) { engine.settings.charMats = true; charSlots(ch); }
   const men = new DrawMen(ch, chars, engine.world, D, () => engine.settings.charMats);
   { const fit = fitRig(ch); engine.setRigFit(ch.cast ? { ...fit, byOwner: men.fits } : fit); if (ch.cast) fitRigCast(ch); }
