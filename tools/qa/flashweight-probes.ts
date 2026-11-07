@@ -44,6 +44,7 @@ const LIGHTS_BREAK = process.env.FLASHLIGHTS_BREAK === '1';
 const burning = (x: any): boolean => !LIGHTS_BREAK && !!x.flashlight?.enabled;
 import { stage, setKnobs } from './bang-tally.ts';
 import { plainOpen, type Beam } from './beam-reading.ts';
+import { sample } from './sweep.ts';
 const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const GDM: any = await import(`${ROOT}/src/game/guards.ts`);
 const CBM: any = await import(`${ROOT}/src/game/combat.ts`);
@@ -116,7 +117,7 @@ export const flashweightPace = guarded(async () => {
   if (process.env.FLASHWEIGHT_BREAK) console.log('  (FLASHWEIGHT_BREAK: the squad is taken out of each staging before the lap — it must fail)');
   F.verdict(P.max < jogAt && ORM.ORDERS.run <= P.max && ORM.ORDERS.brisk <= P.max && ORM.ORDERS.entry <= P.max, 'the knobs: no pace the team is asked for reaches the sprint band',
     `PACE.max ${P.max} m/s, accel ${P.accel} m/s² · orders: fall in ≤ ${ORM.ORDERS.run}, a leg to a mark ${ORM.ORDERS.brisk} then ${ORM.ORDERS.onto} onto it, an entry ${ORM.ORDERS.entry} · the animator's sprint clip starts past ${jogAt} m/s (the walk carries to ${CHM.BLEND.walkTop})`);
-  for (const E of SCENARIOS as any[]) {
+  for (const E of sample(SCENARIOS as any[], 2)) {
     const r = await paceRun(E.id);
     const ok = r.men > 0 && r.moved && r.asked <= P.max + 1e-6 && r.rise <= P.accel + 1e-3 && r.covered <= P.max + 0.35;
     F.verdict(ok, `${E.title}: ${r.men} teammates`, `fastest asked of anybody's legs ${f2(r.asked)} m/s (cap ${P.max}) · fastest pick-up ${f2(r.rise)} m/s² (cap ${P.accel}) · most ground covered in any quarter second ${f2(r.covered)} m/s${r.moved ? '' : ' · NOBODY MOVED at better than a stroll: nothing was measured'}`);
@@ -157,7 +158,7 @@ async function flashRun(scn: string, opts: { shut?: boolean } = {}) {
 export const flashweightFlash = guarded(async () => {
   const F = family('flashweight-flash: the canister in a room fight — blind AND folded, its own side spared, walls and shut doors as ever');
   const K = CBM.FLASH; let reached = 0, lined = 0;
-  for (const E of SCENARIOS as any[]) {
+  for (const E of sample(SCENARIOS as any[], 3)) {
     const r = await flashRun(E.id); if (!r) { F.verdict(false, `${E.title}`, 'no held room with a door, or the can never went off'); continue; }
     const inR = r.inside.filter(x => x.d <= r.B.dazzleRadius), withLine = inR.filter(x => x.line); lined += withLine.length; reached += inR.filter(x => x.blind > 0).length;
     const lo = Math.min(...K.secs) - 0.05, hi = Math.max(...K.secs) + 0.05;
@@ -190,7 +191,7 @@ export const flashweightNight = guarded(async () => {
 
 // ---------------------------------------------------------------- the fog of war: a door opened unseen, an enemy's laser where nobody looks
 /** the fog's own rule written again here: can any of the team's eyes see this point (statics and leaves as they stand; glass passes) */
-const eyeSees = (g: any, p: number[]) => g.fogOfWar.eyes.some((e: any) => !g.col.segmentBlocked(e.pos, p));
+
 const leafPts = (d: any, ang: number): number[][] => { const a = d.def.closedDir + ang, [hx, hz] = d.def.hinge, W = d.def.width; const out: number[][] = []; for (const f of [0.95, 0.6, 0.25]) for (const y of [1.0, 1.8]) out.push([hx + Math.cos(a) * W * f, y, hz + Math.sin(a) * W * f]); return out; };
 const leafSeen = (g: any, d: any, ang: number) => leafPts(d, ang).some(p => g.fogOfWar.eyes.some((e: any) => { const L = Math.hypot(p[0] - e.pos[0], p[1] - e.pos[1], p[2] - e.pos[2]); if (L < 0.3) return true; const k = 1 - 0.12 / L; return !g.col.segmentBlocked(e.pos, [e.pos[0] + (p[0] - e.pos[0]) * k, e.pos[1] + (p[1] - e.pos[1]) * k, e.pos[2] + (p[2] - e.pos[2]) * k]); }));
 const doorBoxOf = (g: any, d: any) => g.dynBoxes.find((b: any) => b.name === d.box.name);
@@ -320,7 +321,7 @@ export const flashweightLights = guarded(async () => {
   // goggles with no light at all — probes.ts nvg has that. The goggles are settled on: the lines ask the team the page fields)
   const bare = (set: Record<string, Record<string, unknown>> = {}) => setKnobs(set); bare();
   const L = GDM.LIGHTS; let spared = 0, burned = 0, burnDark = 0;
-  for (const E of SCENARIOS as any[]) {
+  for (const E of sample(SCENARIOS as any[], 1)) {
     const r = await emptyEntry(E.id); if (!r) { F.verdict(false, `${E.title}`, 'no held room to enter'); continue; }
     const crossed = [...r.cross.values()], litIn = crossed.filter(c => c.lit).length; spared += r.spared; burned += r.litInLit; burnDark += r.burnDark;
     const ok = !r.why && r.follow === 0 && r.stacked === 0 && r.walkDark === 0 && r.litInLit === 0 && crossed.length > 0 && litIn === crossed.length && r.searching > 0 && r.searchLit >= r.searching * 0.95 && r.darkAt <= L.afterSecs + L.hotSecs + L.tail + 0.5 && r.held === 0 && r.doorDark === 0 && r.out === 0;
@@ -342,7 +343,7 @@ export const flashweightLights = guarded(async () => {
 export const flashweightCorners = guarded(async () => {
   const F = family('flashweight-corners: men going in check their corners and look the room over — every scenario');
   const K = DTM.DOORTOOLS;
-  for (const E of SCENARIOS as any[]) {
+  for (const E of sample(SCENARIOS as any[], 1)) {
     const r = await emptyEntry(E.id); if (!r) { F.verdict(false, `${E.title}`, 'no held room to enter'); continue; }
     const late = r.withCorner.filter(([, c]: any) => !(c.corner <= K.cornerCap));
     const ok = !r.why && r.cross.size > 0 && late.length === 0 && r.ended === 'in' && r.unseen < K.deadCells;

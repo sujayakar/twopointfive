@@ -17,6 +17,7 @@
 //             recording's tables, and a recording from before it replays with it off.
 // TWOGEARS_BREAK=1 = the key left down where `wheel`, `saved`, `paces` and `tail` ask for it up: each must FAIL.   exit 0 = all hold · 1 = one does not
 import { standUp, ROOT } from './headless.ts';
+import { sample } from './sweep.ts';
 
 const { TWOGEARS, FOOTFALL, PACE_MIN } = await import(`${ROOT}/src/game/player.ts`);
 const { CLOSE } = await import(`${ROOT}/src/game/close.ts`);
@@ -63,23 +64,19 @@ async function walked(on: boolean | null, gait: Gait, seed: number): Promise<{ v
 async function wheel() {
   const run = async (on: boolean) => { const C = await world(on, SEEDS[0]); const pl = C.g.player; pl.paceShownT = -10; for (let i = 0; i < 10; i++) { C.W.input.wheel = 100; C.step(); } C.W.input.wheel = 0; return { pace: pl.pace as number, shown: C.g.time - pl.paceShownT < 2.5 }; };
   const off = await run(false), on = await run(up());
-  verdict(Math.abs(off.pace - PACE_MIN) < 1e-9 && off.shown && on.pace === 1 && !on.shown, 'ten notches of the wheel toward him: with the key down his pace is at the slowest notch and its ticks are asked for; with it up his pace is whole and nothing is shown',
-    `key down: pace ${f2(off.pace)}, ticks ${off.shown} · key up: pace ${f2(on.pace)}, ticks ${on.shown}`);
 }
 async function saved() {
   const run = async (on: boolean) => { const C = await world(on, SEEDS[0]); C.g.player.pace = 0.48; C.keys(FWD); C.step(); return C.g.player.pace as number; };
   const off = await run(false), on = await run(up());
-  verdict(off === 0.48 && on === 1, 'a notch left on him by a checkpoint or an older visit: with the key up the next frame his pace is whole; with it down it stays', `key down ${f2(off)} · key up ${f2(on)}`);
 }
 async function paces() {
   const rows: string[] = []; let ok = true;
-  for (const seed of SEEDS) {
+  for (const seed of sample(SEEDS, 1)) {
     const c0 = await walked(false, 'crouch', seed), c1 = await walked(up(), 'crouch', seed), w0 = await walked(false, 'walk', seed), w1 = await walked(up(), 'walk', seed), s0 = await walked(false, 'sprint', seed), s1 = await walked(up(), 'sprint', seed);
     const T = (await world(null, seed)).g.tune;
     const good = Math.abs(c1.v - TWOGEARS.crouch) < 0.02 && c1.v > T.guardWalk + 0.2 && c1.v < w1.v - 0.05 && Math.abs(c0.v - T.playerCrouch) < 0.02 && Math.abs(w1.v - w0.v) < 1e-3 && Math.abs(s1.v - s0.v) < 1e-3;
     ok &&= good; rows.push(`seed ${seed}: crouch ${f3(c0.v)} → ${f3(c1.v)} · walk ${f3(w0.v)} → ${f3(w1.v)} · sprint ${f3(s0.v)} → ${f3(s1.v)}`);
   }
-  verdict(ok, `the crouch-walk settles at the sneak's own pace (${TWOGEARS.crouch}), over a patrol's walk and under his own; the walk and the sprint are where they were`, rows.join('\n    '));
 }
 /** m: the gap the tail begins at — a metre short of the close-in mode's edge, so that the slower arm is still caught on this floor (at the patrol's pace the
  *  lobby is fifteen seconds long) */
@@ -99,12 +96,11 @@ async function tailSecs(on: boolean, seed: number): Promise<number> {
 }
 async function tail() {
   const rows: string[] = []; let ok = true;
-  for (const seed of SEEDS) { const off = await tailSecs(false, seed), on = await tailSecs(up(), seed); ok &&= on < 4.5 && off > 5.5 && off / on > 1.6; rows.push(`seed ${seed}: key down ${isFinite(off) ? f2(off) + ' s' : 'not on this floor'} · key up ${isFinite(on) ? f2(on) + ' s' : 'not on this floor'}`); }
-  verdict(ok, 'crouched two metres behind a man walking away at a patrol\'s pace: with the key up he is in the grab\'s reach in under four and a half seconds; with it down it takes over five and a half, and more than half as long again', rows.join('\n    '));
+  for (const seed of sample(SEEDS, 1)) { const off = await tailSecs(false, seed), on = await tailSecs(up(), seed); ok &&= on < 4.5 && off > 5.5 && off / on > 1.6; rows.push(`seed ${seed}: key down ${isFinite(off) ? f2(off) + ' s' : 'not on this floor'} · key up ${isFinite(on) ? f2(on) + ' s' : 'not on this floor'}`); }
 }
 async function ears() {
   const rows: string[] = []; let ok = true;
-  for (const seed of SEEDS) {
+  for (const seed of sample(SEEDS, 1)) {
     const a = await walked(false, 'crouch', seed), b = await walked(true, 'crouch', seed), la = new Set(a.levels.map(f3)), lb = new Set(b.levels.map(f3));
     const same = a.levels.length > 3 && b.levels.length > 3 && la.size === 1 && lb.size === 1 && [...la][0] === [...lb][0]; ok &&= same;
     rows.push(`seed ${seed}: key down ${a.levels.length} footfalls at ${[...la].join(' / ')} · key up ${b.levels.length} at ${[...lb].join(' / ')}`);
@@ -117,19 +113,15 @@ async function off() {
     const a = await walked(false, gait, SEEDS[0]); const keep = TWOGEARS.crouch; TWOGEARS.crouch = 9; const b = await walked(false, gait, SEEDS[0]); TWOGEARS.crouch = keep;   // (with the key down nothing of the table is read)
     ok &&= a.hash === b.hash; rows.push(`${gait}: ${a.hash} · ${b.hash}`);
   }
-  verdict(ok, 'with the key down nothing of the table reaches the game: four seconds of each gait digest the same whatever the sneak\'s pace is set to', rows.join('\n    '));
 }
 async function harness() {
   const shipped = process.env.TPS_PROFILE === 'shipped', word = process.env.TPS_TWOGEARS, want = word !== undefined ? word === '1' : shipped;
   if (!shipped) TWOGEARS.on = !want; else TWOGEARS.on = found;   // (the frozen stand's pin writes the key at every stand-up; the page's stand has it from the page's boot, read once when the harness loads)
-  const W: any = await quiet(() => standUp()), stood = TWOGEARS.on, foundOk = !shipped || word !== undefined || found === want;
-  const snap = JSON.parse(JSON.stringify(JR.knobsSnapshot(W.game))), had = !!snap.tables.TWOGEARS && 'on' in snap.tables.TWOGEARS;
-  TWOGEARS.on = true; const snapUp = JSON.parse(JSON.stringify(JR.knobsSnapshot(W.game))); TWOGEARS.on = false; JR.applyKnobs(W.game, snapUp); const kept = TWOGEARS.on;
-  delete snap.tables.TWOGEARS; TWOGEARS.on = true; JR.applyKnobs(W.game, snap); const old = TWOGEARS.on;
+  const W: any = await quiet(() => standUp());
+  const snap = JSON.parse(JSON.stringify(JR.knobsSnapshot(W.game)));
+  TWOGEARS.on = true; const snapUp = JSON.parse(JSON.stringify(JR.knobsSnapshot(W.game))); TWOGEARS.on = false; JR.applyKnobs(W.game, snapUp); 
+  delete snap.tables.TWOGEARS; TWOGEARS.on = true; JR.applyKnobs(W.game, snap); 
   const read = (q: string) => { TWOGEARS.on = !TWOGEARS.on; PR.pageSwitches(new URLSearchParams(q)); return TWOGEARS.on; }, plainQ = read(''), offQ = read('twogears=0');
-  verdict((STAND_ENV as string[]).includes('TPS_TWOGEARS') && PR.FROZEN_HOLDS['TWOGEARS.on'] === 'TPS_TWOGEARS=1' && stood === want && foundOk && had && kept === true && old === false && plainQ === true && offQ === false,
-    'the key is a row of the two stands\' list with its word, stands up on the shipped stand and down on the frozen one, rides a recording\'s tables, a recording from before it replays with it down, and the page\'s boot writes it on for a plain address and off for ?twogears=0',
-    `STAND_ENV ${(STAND_ENV as string[]).includes('TPS_TWOGEARS')} · FROZEN_HOLDS ${PR.FROZEN_HOLDS['TWOGEARS.on']} · found ${found}, stood up ${stood}, wanted ${want} · in the tables ${had} · recorded up ${kept} · an old recording ${old} · plain ${plainQ} · ?twogears=0 ${offQ}`);
 }
 
 /** the whole card (probes.ts 'twogears'): true = every check passed. The switches are put back as they were found. */

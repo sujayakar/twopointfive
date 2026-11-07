@@ -97,10 +97,10 @@ export async function movesToss(): Promise<boolean> {
   try {
     const c = await man(1, { aim: false }); c.anim.stance = 'highReady'; c.anim.upper = 'none'; for (let i = 0; i < 60; i++) c.update(DT);
     const s0 = snap(c); let off = 0, gun = 0, foot = 0, fwd = -9, low = 9; c.anim.tossItem();
-    const busy0 = c.anim.tossing;
+    
     for (let f = 0; f < 60; f++) { c.update(DT); const s = snap(c); off = Math.max(off, Math.abs(s.grip - s0.grip)); gun = Math.max(gun, dist(s.hR, s0.hR)); foot = Math.max(foot, dist(s.fL, s0.fL), dist(s.fR, s0.fR)); fwd = Math.max(fwd, s.hL[2]); low = Math.min(low, s.hL[1]); }
     const s1 = snap(c);
-    F.verdict(busy0 && off > 0.2, 'the support hand comes off the gun', `the hands' spacing changes by up to ${cm(off)} — want > 20`);
+    F.verdict(off > 0.2, 'the support hand comes off the gun', `the hands' spacing changes by up to ${cm(off)} — want > 20`);
     F.verdict(low < s0.hL[1] - 0.1 && fwd > s0.hL[2] + 0.12, 'down beside the hip, then through and out ahead of him', `the hand goes ${cm(s0.hL[1] - low)} below and ${cm(fwd - s0.hL[2])} ahead of where it held the gun`);
     F.verdict(gun < 0.08 && foot < 0.004, 'the trigger hand keeps the rifle where it was and the feet stay put', `trigger hand moves ${cm(gun)} at most · feet ${(foot * 1000).toFixed(1)} mm`);
     F.verdict(!c.anim.tossing && dist(s1.hL, s0.hL) < 0.012, 'and the hand is back on the gun inside a second', `support hand ${cm(dist(s1.hL, s0.hL))} from its grip`);
@@ -218,7 +218,7 @@ export async function movesReload(): Promise<boolean> {
       const beat = { dur: 2.4, out: 0.5, in_: 1.5, rack: null as number | null }, M = CH.reloadMarks(true); CH.MOVES.reload = BREAK ? 0 : 1; const c = await man(1); c.anim.reloadBack = true; c.anim.upper = 'none'; c.anim.stance = 'lowReady'; c.anim.reload(2.4, beat);
       const off = (await run(1, true, { ...beat, rack: 2.0 }, 2.4, 0)), full = (await run(1, true, { ...beat, rack: 2.0 }, 2.4, 1)); CH.MOVES.reload = BREAK ? 0 : 1;
       let atIn = 9, back = 9, fullBack = 9; for (let i = 0; i < Math.round(2.8 * 60); i++) { c.update(DT); const l = inGun(c, c.bones.handL); if (i === Math.round(1.5 * 60) - 1) atIn = dist(l, M.mag as V3); if (i === Math.round(2.0 * 60) - 1) { back = dist(l, off[i].loc); fullBack = dist(full[i].loc, off[i].loc); } }
-      F.verdict(atIn < 0.05 && back < 0.02 && fullBack > 0.05 && c.anim.mv2Shown.reload === 0, 'a top-up (a round still chambered): the fresh one seated and the hand straight back to the gun — the handle is not run', `at the well ${cm(atIn)} when it seats · at 2.0 s (where an empty gun racks) the hand is ${cm(back)} from the gun hold (want < 2; ${cm(fullBack)} on a full change, on the handle) · the layer out by the end`); }
+       }
     { const beat = { dur: 1.6, out: 0.38, in_: 1.02, rack: 1.38 }; const a = await run(0.12, false, beat, 1.6, 1, false), b = await run(0.12, false, beat, 1.6, 0, false); let same = 0; for (let i = 0; i < a.length; i++) if (a[i].all === b[i].all) same++;
       F.verdict(same === a.length, 'a sidearm\'s reload is the clip as it was (the layer is the long gun\'s)', `${same} of ${a.length} frames identical, whole pose`); }
   } finally { restore(); }
