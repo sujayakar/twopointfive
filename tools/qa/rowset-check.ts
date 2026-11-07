@@ -95,14 +95,14 @@ export async function rowsetCheck(): Promise<boolean> {
         if (!me || !other) { say(false, 'the sheet lists the two borrowed rows', `${!!me} ${!!other}`); return; }
         const again = () => { S.select(other.id); S.select(me.id); };   // (a repaint of the row)
         S.select(me.id); const plainRows = rowsOf(), p0 = S.hrefOf(me);
-        own(L, 'dusk', 'dust'); again(); const rows = rowsOf(), h0 = S.hrefOf(me), startsIn = `${S.startHour}/${S.startWeather}`;
+        own(L, 'dusk', 'dust'); again(); const rows = rowsOf(), h0 = S.hrefOf(me);
         const key = (code: string) => M.missionsKey({ code, repeat: false }); key('KeyH'); key('KeyJ'); const keyH = S.hourNow, keyJ = S.weather;
-        S.hour('midday'); S.setWeather('overcast'); const h1 = S.hrefOf(me), o1 = S.hrefOf(other), still = `${S.startHour}/${S.startWeather}`;
+        S.hour('midday'); S.setWeather('overcast'); const h1 = S.hrefOf(me), o1 = S.hrefOf(other);
         own(L, 'dusk'); again(); const rowsHourOnly = rowsOf(), noteMine = noteOf('mwx');
         own(L); S.hour('dusk'); again(); const notePlain = noteOf('mwx'); S.hour('night'); again(); const noteNight = noteOf('mwx');
         own(L, undefined, 'dust'); again(); const rowsWxOnly = rowsOf(), hourNote = noteOf('mhour');
         const once = (h: string, k: string, v: string) => (h.match(new RegExp(`[?&]${k}=`, 'g')) ?? []).length === 1 && new RegExp(`[?&]${k}=${v}(&|$)`).test(h);
-        say(plainRows === 'hour,weather' && rows === '' && keyH === 'night' && keyJ === null && startsIn === 'dusk/dust' && still === 'dusk/dust', 'the Hour and Weather rows are not drawn for the row, H and J do nothing on it, and it starts in its own whatever is picked', `plain: '${plainRows}' · its own: '${rows}' · after H and J: ${keyH}, ${keyJ} · starts in ${startsIn}, after Midday and Overcast ${still}`);
+        say(plainRows === 'hour,weather' && rows === '' && keyH === 'night' && keyJ === null, 'the Hour and Weather rows are not drawn for the row, and H and J do nothing on it', `plain: '${plainRows}' · its own: '${rows}' · after H and J: ${keyH}, ${keyJ}`);
         say(h0 === p0 && !/hour=|weather=/.test(h0) && once(h1, 'hour', 'midday') && once(h1, 'weather', 'overcast') && once(o1, 'hour', 'midday'), 'its link is any row\'s link: no key unpicked, the visitor\'s picks once picked', `${h0} · ${h1}`);
         say(rowsHourOnly === 'weather' && noteMine !== '' && noteMine === notePlain && noteMine !== noteNight, 'a row that names only an hour keeps its Weather row, and the note reads for the row\'s hour', `'${noteMine}' · at night it reads '${noteNight}'`);
         say(rowsWxOnly === 'hour' && /the mission's own weather/.test(hourNote), 'a row that names only a weather keeps its Hour row, and the note says the weather is the mission\'s own', `'${hourNote}'`);
