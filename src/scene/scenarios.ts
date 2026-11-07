@@ -248,7 +248,7 @@ export interface LessonStep {
   /** the line while a page UNDER the ring's first is showing (the first page's key pressed: what is left to press — absent: `menuLine`) */
   pageLine?: string;
   /** the line while the squad's ring is up as ONE ring of every order of the thing (a mission whose `rails.flatRing` is set, game/rails.ts RAILS.flatRing:
-   *  what to press in it — absent: `menuLine`). The digit it names is the wedge the row is on with this level's `rails.orders` (tools/qa/rails-check.ts asks) */
+   *  what to press in it — absent: `menuLine`). The digit it names is the wedge the row is on with this level's `rails.orders` */
   flatLine?: string;
   done: LessonTest;
   /** seconds the test must stay true before the step counts (absent: the frame it turns true) */
@@ -576,7 +576,7 @@ export interface ScenarioEntry {
    *  squadChoices). A design call, not an inability: the level still stages any size from a URL or a harness tool (loadout-probes.ts knows the difference) */
   only?: string;
   /** a lesson THE PLAYER PACKS FOR (kit.ts ISSUE.picked): its Team & kit step shows the cards and its page stages what this machine keeps, not the plain issue
-   *  every other lesson is played with. A row that carries it has a plan written for it (ui/kitPlan.ts). `frags` = the least of them he carries there whatever
+   *  every other lesson is played with. `frags` = the least of them he carries there whatever
    *  he packs (kit.ts kitLessonPage: a step of that mission asks for one of his own) */
   packs?: { frags?: number };
   /** a file under levels/ (absent = the bundled office) */

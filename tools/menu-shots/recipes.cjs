@@ -177,17 +177,6 @@ R['vault-quiet'] = {       // outside the strongroom's back door, round by the n
          ms.must(ms.sim(8, () => d() > 2.2 && Math.abs(back.angle) > 0.5), 'he steps out by the back door, past him');
          const n = ms.shots(); ms.aim([B()[0], 1.3, B()[2]]); ms.sim(0.5); ms.aim([B()[0], 1.3, B()[2]]); ms.fire(); await ms.lead(1); return { hit: ms.shots() > n, d: d(), who: b.callsign };`,
   cam: `ms.frameOn([ms.sam(), ms.came() ?? ms.nearest(ms.foes(true))], { yaw: 0.25, pitch: 0.95, min: 5.5 });` };
-R['quiet-yard-alone'] = {  // dusk; the yard's man shot from behind on his round, and Sam walking his body out of the open over his shoulder
-  query: 'levelFile=quiet-yard.json&quiet&hour=dusk' + Q, quality: 'medium', frames: 8,
-  play: `ms.tap('KeyC'); ms.sim(0.2); const k = ms.man('Kowalski'), K = () => k.char.pos;
-         ms.go([20.3, 0, 21.2]); ms.sim(8, () => ms.arrived()); ms.tap('Digit1'); ms.sim(0.9);
-         ms.must(ms.sim(60, () => K()[0] < 19.5 && K()[0] > 15 && K()[2] < 14.5), 'his back'); ms.go([20.6, 0, 15.0]); ms.sim(10, () => ms.arrived());
-         for (let i = 0; i < 4 && k.state !== 'dead'; i++) { ms.aim([K()[0], 1.55, K()[2]]); ms.sim(0.5); ms.aim([K()[0], 1.55, K()[2]]); ms.fire(); ms.sim(0.15); }
-         ms.must({ hit: k.state === 'dead' }, 'the man in the yard down'); ms.sim(0.6);
-         ms.go([K()[0] + 1.0, 0, K()[2] + 0.1]); ms.sim(12, () => ms.arrived()); ms.sim(0.3); ms.must({ hit: ms.verb('body', 'drag') }, 'the body'); ms.sim(6.3);
-         ms.go([13.6, 0, 19.6]); ms.sim(2.6); return { hit: !!(g.player.haul && g.player.haul.carry) };`,
-  cam: `const s = ms.sam(); ms.cam({ look: [s[0] + 0.3, 1.0, s[2]], yaw: 0.75, pitch: 0.13, dist: 5.2 });` };
-
 // ── Quiet, as two ── (the pair is the subject)
 R['quiet-crossing-two'] = { // the group's tile. In by the south gate, the partner sent up on the checkpoint's man 'on your mark', the mark given: his blow lands under the lamp, Sam low behind the crates
   query: 'levelFile=crossing.json&quiet&squad=1' + Q, quality: 'medium', frames: 8,
@@ -215,14 +204,4 @@ R['quiet-relay-two'] = {    // night; the picket marked for the partner and put 
          const r = ms.sim(1.5), cam = g.devices.cameras.find(c => c.def.name === 'cam_door');
          return { hit: !!g.player.picking && k.downKind === 'struck' && cam.target.factor === 0 && g.guards.every(x => x.unit || x.state === 'dead' || (x.state === 'patrol' && x.awareness < 0.3)), r };`,
   cam: { look: [18.3, 0.9, 16.3], yaw: -1.55, pitch: 0.12, dist: 6.5 } };
-R['quiet-yard-two'] = {     // dusk; the yard's man taken from behind on his round just inside the south gate and turned in off the gateway, Sam's arm round his neck; the partner in the gateway behind, covering the way in
-  query: 'levelFile=quiet-yard.json&quiet&squad=1&hour=dusk' + Q, quality: 'medium', frames: 8,
-  play: `ms.tap('KeyC'); ms.sim(0.2); const k = ms.man('Kowalski'), K = () => k.char.pos;
-         ms.must(ms.sim(80, () => K()[2] > 19.6 && K()[0] > 14.5 && K()[0] < 17), 'his round'); ms.stalk(k, { near: 0.9, off: 0, secs: 25 });
-         let held = false; for (let i = 0; i < 30 && !held; i++) { held = ms.verb('guard', 'grab'); ms.sim(0.15); } ms.must({ hit: held }, 'the grab'); ms.sim(1.5);
-         ms.verb('held', 'question'); ms.sim(5); ms.aim([19.6, 0, 15]); ms.sim(1.2);
-         const m = ms.ops()[0]; return { hit: !!m && m.char.pos[2] > 22.4 && (g.nearby || []).some(r => r.kind === 'held'), at: ms.sam() };`,
-  cam: { look: [19.45, 1.1, 20.9], yaw: Math.PI - 0.42, pitch: 0.27, dist: 4.1 } };
-
-
 module.exports = R;
