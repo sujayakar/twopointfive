@@ -66,6 +66,7 @@ pub mod events;
 pub mod fog;
 pub mod lights;
 pub mod men;
+pub mod rims;
 pub mod sky;
 pub mod view;
 
@@ -100,6 +101,7 @@ sections! {
     27 footfalls: events::Footfall = events.footfalls;
     28 rolls: events::Roll = events.rolls;
     29 heard: events::Heard = events.heard;
+    30 rims: rims::Rim = rims;
 }
 
 /// the numbers of a page's look (src/draw/look.ts writes them in this order): the boxes', then the men's
@@ -107,7 +109,7 @@ pub const LOOK: usize = boxes::LOOK + 4;
 
 /// what one host of one game draws it from
 #[derive(Default)]
-pub struct Drawn { pub fog: Vec<fog::Fog>, pub view: Vec<view::View>, pub sky: Vec<sky::Sky>, pub boxes: boxes::Boxes, pub lights: lights::Lights, pub men: men::Men, pub doorways: Vec<doorways::Doorway>, pub events: events::Events, tick: Option<u32>, stood: u32,
+pub struct Drawn { pub fog: Vec<fog::Fog>, pub view: Vec<view::View>, pub sky: Vec<sky::Sky>, pub boxes: boxes::Boxes, pub lights: lights::Lights, pub men: men::Men, pub doorways: Vec<doorways::Doorway>, pub events: events::Events, pub rims: Vec<rims::Rim>, tick: Option<u32>, stood: u32,
     /// the distance the host's camera was on its way to as the step was handed it
     pub desired: f64, had: u32, want: u32, table: Vec<u32> }
 impl Drawn {
@@ -124,6 +126,7 @@ impl Drawn {
         if want & want::geo != 0 { let night = g.pl[game::seats::host_man(g)].nv_amount > 0.5; self.boxes.take(g, night, again && self.had & want::geo != 0); }
         if want & want::lights != 0 { self.lights.take(g, again && self.had & want::lights != 0); }
         if want & want::men != 0 { self.men.take(g, again && self.had & want::men != 0); }
+        if want & want::rims != 0 { self.rims.clear(); rims::fill(g, &mut self.rims); }
         if want & want::emits != 0 { self.events.take(g); }
         self.had = if again { self.had | want } else { want };
         if want & want::doorways != 0 && self.doorways.len() != g.level.doors.len() { self.doorways.clear(); doorways::fill(g, &mut self.doorways); }
