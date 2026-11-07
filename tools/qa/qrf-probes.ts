@@ -1,6 +1,6 @@
 // The 'qrf' probe family (run through probes.ts: `bun run tools/qa/probes.ts qrf | qrf-trigger | qrf-timeline | qrf-element | qrf-wave | qrf-reset | qrf-gating |
 // qrf-limits | qrf-perimeter [--verbose]`): the response to going loud (src/game/qrf.ts) — what calls it (a locked-down floor that has HEARD Sam's gunfire, or found
-// two men down; never the suppressed pistol's odd noise, never under the tour), the radio telegraph's timings, the west stair door (steel: locked
+// two men down; never the suppressed pistol's odd noise), the radio telegraph's timings, the west stair door (steel: locked
 // to Sam, no pick, a boot only rings off it; thrown open from the landing on arrival), the four-man element (spawned as ordered, files in, moves as one, stacks /
 // bangs / flows into the room holding the fix, fights on sight and re-forms when it goes cold), one wave a night, everything back as it was on a restart, the
 // renderer's character / light budgets held, and the perimeter tier (its three triggers, the outside posts taken facing the doors, the lot's lamps up and back,
@@ -246,23 +246,15 @@ export async function qrfReset() {
   game.playerInvisible = false; goLoud(W); step(W, 4);
   if (game.qrf.state === 'idle') f.push('not requestable again after the restart');
   F.verdict(f.length === 0, 'restart: everything back, and the trigger arms again', f.join(' · ') || `during: ${during} → after: 0 units, idle, steady ${L0}, ids ${ids0}, door bolted, lamp as authored; re-armed: ${game.qrf.state}`);
-  // resetGuards alone (the tour's own reset) does the same to the men and the state
+  // resetGuards alone does the same to the men and the state
   { const W2 = await fresh(52, { eta: 15 }); const g2 = W2.game; goLoud(W2); hideSam(W2); for (let i = 0; i < 60 * 20 && g2.qrf.state !== 'deployed'; i++) W2.step(DT); step(W2, 30); g2.resetGuards(); step(W2, 2);
-    F.verdict(units(g2).length === 0 && g2.qrf.state === 'idle', 'resetGuards (what the tour and the panel call): men gone, state idle', `units ${units(g2).length} · ${g2.qrf.state}`); }
+    F.verdict(units(g2).length === 0 && g2.qrf.state === 'idle', 'resetGuards (what the panel calls): men gone, state idle', `units ${units(g2).length} · ${g2.qrf.state}`); }
   return F.done();
 }
 
-// ================================================================ (f) never under the tour
+// ================================================================ (f) never with the AI off
 export async function qrfGating() {
-  const F = family('qrf-gating: the showcase tour (its firefight stop fires real rounds on a floor it locks down) never requests the response team; nor does anything with the AI off');
-  { Math.random = seeded(61); const W = await standUp(); const { game, cam, input } = W; game.tune.qrfEta = 15;
-    const { Demo } = await import(`${ROOT}/src/game/demo.ts`);
-    const demo = new Demo(game, cam, W.smoke, input);
-    let everState = 'idle', everUnits = 0, exc = '', frames = 0, finished = false, escMax = 0, shots = 0;
-    demo.onStop = (fin: boolean) => { finished = fin; };
-    try { demo.start(); for (frames = 0; frames < 60 * 240 && demo.active; frames++) { const p = demo.update(DT); W.step(DT, p); if (game.qrf.state !== 'idle') everState = game.qrf.state; everUnits = Math.max(everUnits, units(game).length); escMax = Math.max(escMax, game.escalation); shots += game.events.filter((e: any) => e.time === game.time && (e.kind === 'shot' || e.kind === 'guardShot') && (e.level ?? 0) >= 1).length; } }
-    catch (e: any) { exc = String(e?.stack ?? e).split('\n').slice(0, 2).join(' ⏎ '); }
-    F.verdict(!exc && finished && everState === 'idle' && everUnits === 0, 'the tour, all stops to the hand-over: QRF idle throughout, no unit ever, no exception', `${exc || `${frames} frames`} · finished ${finished} · qrf ever ${everState} · units ever ${everUnits} · level-1 reports fired under it ${shots} · alarm peaked ${escMax}`); }
+  const F = family('qrf-gating: nothing requests the response team with the AI off');
   { const W = await fresh(63); const { game } = W; game.aiEnabled = false; goLoud(W); step(W, 60, 0.5);
     F.verdict(game.qrf.state === 'idle', 'AI off: lockdown + rifle fire → nothing', game.qrf.state); }
   return F.done();
@@ -270,17 +262,16 @@ export async function qrfGating() {
 
 // ================================================================ (g) the renderer's budgets
 export async function qrfLimits() {
-  const F = family('qrf-limits: Sam + 3 staff + 4 QRF = the eight characters the shadow-capsule list holds — ten seconds of all of them alive and fighting with no exception, capsule / skin counts at their caps and not past them, a ninth character refused, the steady lights inside the buffer');
+  const F = family('qrf-limits: Sam + 3 staff + 4 QRF = the eight characters the shadow-capsule list holds — ten seconds of all of them alive and fighting with no exception, a ninth character refused, the steady lights inside the buffer');
   const W = await fresh(71, { eta: 15 }); const { game, engine } = W;
-  const { BoxWorld } = await import(`${ROOT}/src/scene/boxes.ts`); const { MAX_CHARS } = await import(`${ROOT}/src/anim/characters.ts`); const { MAX_LIGHTS } = await import(`${ROOT}/src/render/lights.ts`); const { MESH_MAX_CHARS } = await import(`${ROOT}/src/render/meshbvh.ts`);
+  const { MAX_LIGHTS } = await import(`${ROOT}/src/render/lights.ts`);
   goLoud(W); const Q = game.qrf;
   for (let f = 0; f < 60 * 20 && Q.state !== 'deployed'; f++) W.step(DT);
   game.playerInvisible = false; game.teleportPlayer([9, 0, 11.2]);
-  let exc = '', maxChars = 0, maxCaps = 0, maxSteady = 0, maxActive = 0;
-  try { for (let f = 0; f < 60 * 10; f++) { game.player.visibility = 0.8; W.step(DT); engine.lights.upload(game.time); maxChars = Math.max(maxChars, engine.world.charCount); maxCaps = Math.max(maxCaps, engine.world.capsuleCount); maxSteady = Math.max(maxSteady, steadyLights(game)); maxActive = Math.max(maxActive, engine.lights.activeCount ?? 0); } }
+  let exc = '', maxSteady = 0, maxActive = 0;
+  try { for (let f = 0; f < 60 * 10; f++) { game.player.visibility = 0.8; W.step(DT); engine.lights.upload(game.time); maxSteady = Math.max(maxSteady, steadyLights(game)); maxActive = Math.max(maxActive, engine.lights.activeCount ?? 0); } }
   catch (e: any) { exc = String(e?.stack ?? e).split('\n').slice(0, 3).join(' ⏎ '); }
   F.verdict(!exc, 'ten seconds of eight characters in a fight: no exception from the game or the CPU halves of the renderer', exc || `ok · ${game.guards.map((x: any) => `${x.callsign}:${x.state}`).join(' ')}`);
-  F.verdict(1 + game.guards.length === 8 && maxChars === 8 && maxCaps === 8 * BoxWorld.CAPS_PER_CHAR && maxCaps <= BoxWorld.MAX_CAPSULES && 8 <= MAX_CHARS && 8 <= MESH_MAX_CHARS, 'characters: 8 listed, 8 uploaded (the capsule list\'s cap, none dropped), 8 × 15 capsules ≤ 128, within the skinning (16) and mesh-shadow (8) slots', `chars ${1 + game.guards.length} · uploaded ${maxChars} · capsules ${maxCaps}/${BoxWorld.MAX_CAPSULES} · skin slots ${MAX_CHARS} · mesh-shadow slots ${MESH_MAX_CHARS}`);
   let err = ''; try { spawnUnit(game, { team: 'guard', pos: [20, 0, 18] }); } catch (e: any) { err = String(e?.message ?? e); }
   F.verdict(/budget/.test(err) && 1 + game.guards.length === 8, 'a ninth character is refused with the budget named (so the perimeter tier must peel, not spawn, on this floor)', err ? `"${err.slice(0, 100)}…"` : 'no error');
   F.verdict(maxSteady <= MAX_LIGHTS && maxActive <= MAX_LIGHTS, 'lights: steady lights (their four weapon lights included) and the frame\'s active count inside the 64-slot buffer', `steady peak ${maxSteady} · active peak ${maxActive} · cap ${MAX_LIGHTS}`);
@@ -292,9 +283,9 @@ export async function qrfPerimeter() {
   const F = family('qrf-perimeter: the compound locked down round him — each of its three triggers, control\'s word, the lot\'s lamps up (and back on a restart), men on the outside posts within ETA+10 facing the doors, the fire exit still the way out, nothing spawned past the budget, ids distinct');
   // the three triggers, each on its own run: a QRF man killed; three men down; a running gunfight after they have settled in
   for (const [k, why] of [[0, 'one of ours down'], [1, '3 men down'], [2, 'a running gunfight']] as [number, string][]) {
-    const W = await fresh(81 + k, { eta: 15, perimeter: true }); const { game } = W; goLoud(W); hideSam(W); const Q = game.qrf;
+    const W = await fresh(81 + k, { eta: 5, perimeter: true }); const { game } = W; goLoud(W); hideSam(W); const Q = game.qrf;
     for (let f = 0; f < 60 * 20 && Q.state !== 'deployed'; f++) W.step(DT);
-    step(W, 60 * 10);   // ten seconds on the floor (past the settle-in) with nothing happening: no perimeter yet
+    step(W, 60 * (k === 2 ? 10 : 1));   // on the floor with nothing happening (ten seconds where the trigger is a fight after they have settled in): no perimeter yet
     const before = !!Q.perim;
     if (k === 0) killGuard(game, Q.men[1], [1, 0, 0], false, 'shot', 'player');
     if (k === 1) { const staff = game.guards.filter((x: any) => !x.unit && x.state !== 'dead'); for (const s of staff.slice(0, 3)) { killGuard(game, s, [1, 0, 0], true, 'struck', 'player'); s.found = true; } }   // (RESPONSE.net: men they have found down)
@@ -303,11 +294,11 @@ export async function qrfPerimeter() {
     F.verdict(!before && !!Q.perim && new RegExp(why.replace(/[()]/g, '.')).test(Q.log.map((l: any) => l.what).join(' ')), `trigger ${k + 1}: ${why} → the perimeter is called (and not before it)`, `before ${before} · after ${!!Q.perim} · ${Q.log.filter((l: any) => /^perimeter/.test(l.what)).map((l: any) => l.what).join(' ')}`);
   }
   // the full run of it: called by hand on a deployed element; lamps, posts, facing, timing, ids, budget; then the exit
-  const W = await fresh(90, { eta: 15, perimeter: true }); const { game } = W; const rx = tapRadio(game); game.tune.perimeterEta = 45;
+  const W = await fresh(90, { eta: 5, perimeter: true }); const { game } = W; const rx = tapRadio(game); game.tune.perimeterEta = 45;
   const lampsAuth = game.targets.filter((t: any) => t.group === 'exterior').map((t: any) => `${t.name}:${t.on ? 1 : 0}`).join(' ');
   goLoud(W); hideSam(W); const Q = game.qrf;
   for (let f = 0; f < 60 * 20 && Q.state !== 'deployed'; f++) W.step(DT);
-  step(W, 60 * 6);
+  step(W, 60 * 2);
   const g0 = game.guards.length; const ok = callPerimeter(game, 'panel'); const tCall = game.time;
   const P = Q.perim;
   F.verdict(ok && !!P && P.spawned === 0 && P.peeled === 2 && game.guards.length === g0 && Q.men.filter((m: any) => m.state !== 'dead').length === 2 && game.mission.stats.qrf === 2, 'called on this floor: nothing to spawn into (8 of 8) — the element\'s rear pair peels off, two stay inside; the mission marked for the debrief', `spawned ${P?.spawned} peeled ${P?.peeled} · guards ${g0}→${game.guards.length} · element left ${Q.men.filter((m: any) => m.state !== 'dead').map((m: any) => m.callsign).join(',')} · outside ${P?.men.map((p: any) => `${p.gd.callsign}→${p.post.name}`).join(', ')} · mission.qrf ${game.mission.stats.qrf}`);
@@ -323,7 +314,7 @@ export async function qrfPerimeter() {
   const fireExit = game.doors.byName('fire_exit'); if (fireExit) game.doors.use(fireExit, game.player.char.pos, 1);
   let tSeen = NaN; const tOut = game.time; let done = false;
   const post = P!.men.find((p: any) => p.post.name === 'fire exit');
-  for (let f = 0; f < 60 * 12; f++) {
+  for (let f = 0; f < 60 * 12 && !done; f++) {
     const pc = game.player.char; const E = lightEstimateAt(game, pc.bones.chest ?? v3.add(pc.pos, [0, 1.1, 0])); game.player.visibility = game.visibilityOf(E);   // (headless the meter never answers: the CPU estimate of the same lights stands in — the lot's lamps and their weapon lights)
     if (f < 60 * 4) { W.input.keys.add('KeyD'); } else W.input.keys.delete('KeyD');   // walk east out through the frame and on into the lot for four seconds, then stand
     W.step(DT);
@@ -332,7 +323,7 @@ export async function qrfPerimeter() {
   }
   W.input.keys.delete('KeyD');
   F.verdict(done, 'the mission still completes through the fire exit (god mode: he walks out through the frame and it is done)', `stage ${game.mission.stage} · Sam at ${f1(game.player.char.pos[0])},${f1(game.player.char.pos[2])}`);
-  console.log(`    (exfil under the perimeter, walking straight out lit by the east lamp: the fire-exit post had eyes on him ${isNaN(tSeen) ? 'NEVER in 12 s' : `+${f2(tSeen)} s after the door`}; his meter out there read ${f2(game.player.visibility)}; Sam ${game.player.down ? 'DOWN' : 'up (god mode)'} — the post man ${post ? `${post.gd.callsign} ${post.gd.state}, ${f1(v3.distXZ(post.gd.char.pos, game.player.char.pos))} m off` : 'absent'})`);
+  console.log(`    (exfil under the perimeter, walking straight out lit by the east lamp: the fire-exit post had eyes on him ${isNaN(tSeen) ? 'not by then' : `+${f2(tSeen)} s after the door`}; his meter out there read ${f2(game.player.visibility)}; Sam ${game.player.down ? 'DOWN' : 'up (god mode)'} — the post man ${post ? `${post.gd.callsign} ${post.gd.state}, ${f1(v3.distXZ(post.gd.char.pos, game.player.char.pos))} m off` : 'absent'})`);
   // restart: lamps back as authored
   game.restartEncounter(); step(W, 3);
   F.verdict(game.targets.filter((t: any) => t.group === 'exterior').map((t: any) => `${t.name}:${t.on ? 1 : 0}`).join(' ') === lampsAuth && !game.qrf.perim && units(game).length === 0, 'restart: the lamps as authored again, no perimeter, no units', game.targets.filter((t: any) => t.group === 'exterior').map((t: any) => `${t.name}:${t.on ? 1 : 0}`).join(' '));

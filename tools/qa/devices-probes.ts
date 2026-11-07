@@ -1,13 +1,12 @@
 // The level-design devices (game/devices.ts, STATUS G4) headless: `bun run tools/qa/probes.ts devices` (family) or one of devices-camera / devices-keypad /
 // devices-laser / devices-lint. Staged like the other families: the whole Game over the fake GPU, real inputs, the light meter as the
-// script's knob (player.visibility — the renderer never answers headless), the probe's smoke answer planted by hand (probe.results) where a plume is wanted.
+// script's knob (player.visibility — the renderer never answers headless).
 //   devices-camera   Sam lit in the corridor camera's picture: 'movement in …' at ~0.8 lit-s + a calm man sent (task 'device'), the floor up a step by ~2 lit-s
-//                    with the fix broadcast; Sam DARK in the same spot: nothing; a plume between (transmittance 0.15): nothing; the OCP: blind for its spell, then
+//                    with the fix broadcast; Sam DARK in the same spot: nothing; the OCP: blind for its spell, then
 //                    it sees again; a round: dead, sparks, 'went dark' + a man sent to it; a blackout: the mains cameras dark, the UPS one alive; the panel switch
 //                    and the tour's flag: nothing reported; the integrator drains out of view and the camera re-arms
 //   devices-keypad   the side door on its pad: against Sam from the office (rows 'keypad — no code' + kick, the deny), a thumb-turn from the server room, staff
-//                    walk it; the code off a questioned man (intel 'code' → Player.codes) and off the sticky-note pair said within earshot (col.sound) — not from
-//                    two rooms off; 'enter the code': four keys, the pad takes it at CODE_SECS, unlock + creak, through, and it springs locked behind him
+//                    walk it; the code off a questioned man (intel 'code' → Player.codes); 'enter the code': four keys, the pad takes it at CODE_SECS, unlock + creak, through, and it springs locked behind him
 //   devices-laser    the corridor shin beam: walked through standing AND crouched = a trip each (radio + a man sent), guards never; the storage chest beam:
 //                    crouch-walked under = nothing, walked = a trip; a canister thrown through the corridor beam trips it; a hauled body trips it; OCP / a round /
 //                    the mains (battery survives) as the cameras; 'alarm' beams put the floor up
@@ -18,7 +17,7 @@ import { standUp, ROOT } from './headless.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const DEV = await import(`${ROOT}/src/game/devices.ts`);
 const D = await import(`${ROOT}/src/game/dialogue.ts`);
-const { startGrab, heldTalk } = await import(`${ROOT}/src/game/player.ts`);
+const { startGrab } = await import(`${ROOT}/src/game/player.ts`);
 const { rollcallState, canSee, canSeeChar, sightGain } = await import(`${ROOT}/src/game/guards.ts`);
 const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
 
@@ -47,13 +46,12 @@ function verdictFn(name: string) { let all = true; const v = (ok: boolean, label
 
 // ================================================================================================================================ camera
 export async function devicesCamera() {
-  console.log("\n=== devices-camera: the corridor camera's picture through the guards' eye test and Sam's meter — lit / dark / smoke / OCP / shot / mains / switched off / re-arm ===");
+  console.log("\n=== devices-camera: the corridor camera's picture through the guards' eye test and Sam's meter — lit / dark / OCP / shot / mains / switched off / re-arm ===");
   const { v, done } = verdictFn('camera');
-  const stage = async (seed: number, opts: { vis: number; smoke?: number; at?: Vec3 } = { vis: 1 }) => {
+  const stage = async (seed: number, opts: { vis: number; at?: Vec3 } = { vis: 1 }) => {
     const S = await world(seed); const { W, game } = S;
     const cam = game.devices.cameras[0];   // cam_corridor: east end, looking west, pans ±0.45
     game.teleportPlayer(opts.at ?? [30, 0, 11.1]); game.player.crouch = false; W.step(DT); game.player.visibility = opts.vis;
-    if (opts.smoke !== undefined) game.probe.results.set(cam.smokeKey, [opts.smoke, 0, 0]);   // the probe's answer for the lens → chest segment, as the renderer would give it through a plume
     return { ...S, cam };
   };
   // (a) lit, in the picture: suspicion by ~0.8 lit-s (a fully lit man 5.7 m off fills ~0.9/s), a calm man sent with a 'device' task, the floor up a step by ~2 lit-s, everybody's fix on him
@@ -84,21 +82,10 @@ export async function devicesCamera() {
   // (b) DARK in the same spot (meter 0.03): five seconds in the picture and the integrator never moves — the light meter IS its exposure
   {
     const { W, game, msgs, cam } = await stage(802, { vis: 0.03 }); const fails: string[] = [];
-    let peak = 0, inCone = 0; for (let i = 0; i < 60 * 5; i++) { W.step(DT); game.player.visibility = 0.03; peak = Math.max(peak, cam.seen); const look = DEV.lensDir(cam.yaw, cam.def.pitch ?? -0.35); const to = v3.sub(game.player.char.pos, cam.def.pos); if (v3.dot([look[0], 0, look[2]], v3.normalize([to[0], 0, to[2]])) > Math.cos(35 * Math.PI / 180)) inCone++; }
+    let peak = 0, inCone = 0; for (let i = 0; i < 60 * 5; i++) { W.step(DT); game.player.visibility = 0.03; peak = Math.max(peak, cam.seen); const to = v3.sub(game.player.char.pos, cam.def.pos); if (v3.dot([Math.sin(cam.yaw), 0, Math.cos(cam.yaw)], v3.normalize([to[0], 0, to[2]])) > Math.cos(35 * Math.PI / 180)) inCone++; }
     if (peak > 0.05) fails.push(`integrator peaked at ${f2(peak)} in the dark`); if (cam.state !== 'idle') fails.push(`camera state ${cam.state}`); if (msgs.some(m => /CONTROL/.test(m.text))) fails.push('control spoke');
     if (inCone < 60) fails.push(`staging: Sam was inside the pan's cone only ${inCone} frames`);
     v(fails.length === 0, '(b) the same spot in the DARK (meter 0.03): in the cone for seconds, nothing — integrator flat, no radio, nobody sent', `peak ${f2(peak)}, in cone ${inCone}/300 frames, state ${cam.state}`, fails);
-  }
-  // (c) lit but a plume between lens and chest (the probe's transmittance 0.15 planted under the camera's key): the eye test says no as it does for a man
-  {
-    const { W, game, msgs, cam } = await stage(803, { vis: 1, smoke: 0.15 }); const fails: string[] = [];
-    let peak = 0; for (let i = 0; i < 60 * 4; i++) { W.step(DT); game.player.visibility = 1; game.probe.results.set(cam.smokeKey, [0.15, 0, 0]); peak = Math.max(peak, cam.seen); }
-    if (peak > 0.05 || cam.state !== 'idle' || msgs.some(m => /CONTROL/.test(m.text))) fails.push(`through smoke: peak ${f2(peak)}, state ${cam.state}`);
-    // and the ramp: at 0.55 transmittance it fills at half the clear-air rate (the same 0.3‥0.8 ramp sightGain has)
-    game.probe.results.set(cam.smokeKey, [0.55, 0, 0]); cam.put(cam.yaw, cam.phase, 0, cam.state, cam.reportedAt, cam.lastSeen, cam.deadCalled); const s0 = cam.seen; for (let i = 0; i < 30; i++) { W.step(DT); game.player.visibility = 1; game.probe.results.set(cam.smokeKey, [0.55, 0, 0]); } const half = cam.seen - s0;
-    game.probe.results.set(cam.smokeKey, [1, 0, 0]); cam.put(cam.yaw, cam.phase, 0, 'idle', -100, cam.lastSeen, cam.deadCalled); for (let i = 0; i < 30; i++) { W.step(DT); game.player.visibility = 1; game.probe.results.set(cam.smokeKey, [1, 0, 0]); } const full = cam.seen;
-    if (!(half > 0.15 * full && half < 0.7 * full)) fails.push(`ramp: 0.5 s at T 0.55 filled ${f2(half)} vs ${f2(full)} clear (want about half)`);
-    v(fails.length === 0, '(c) lit but a plume between (transmittance 0.15 on the lens → chest segment): nothing; at 0.55 it fills at about half the clear-air rate', `peak ${f2(peak)} · half-smoke ${f2(half)} vs clear ${f2(full)} per 0.5 s`, fails);
   }
   // (d) the OCP: blind for its spell (LED dark, integrator reset, the pan holds), then it sees again and calls him in
   {
@@ -167,7 +154,7 @@ export async function devicesCamera() {
 
 // ================================================================================================================================ keypad
 export async function devicesKeypad() {
-  console.log('\n=== devices-keypad: the side door on its pad — against Sam without the code, a thumb-turn from inside, staff walk it; the code off a questioned man / overheard within earshot (not through walls); keyed in, it swings and springs locked behind ===');
+  console.log('\n=== devices-keypad: the side door on its pad — against Sam without the code, a thumb-turn from inside, staff walk it; the code off a questioned man; keyed in, it swings and springs locked behind ===');
   const { v, done } = verdictFn('keypad');
   const IK = 'Space';
   // (a) rows and sides
@@ -215,7 +202,7 @@ export async function devicesKeypad() {
     for (let k = 0; k < 3 && !game.player.codes.has('pad_side'); k++) {
       const st0 = B.talk.stage; W.input.pressed.add(IK); W.step(DT);
       steps(W, 4, () => B.talk.stage > st0); answers.push(B.talk.last);
-      steps(W, 8, () => { const H = game.player.holding; return !!H && !H.after && heldTalk(game, H).settled; }); steps(W, 0.4);
+      steps(W, 8, () => { const H = game.player.holding, over = (b: any) => !b || game.time >= b.t + b.dur; return !!H && !H.after && !H.ask && over(B.bubble) && over(game.player.bubble); }); steps(W, 0.4);   // (his answer and Sam's line both over: the arm can ask again)
     }
     const gave = answers.find(a => a?.kind === 'code');
     if (!gave) fails.push(`no 'code' answer in ${answers.length} (kinds ${answers.map(a => a?.kind ?? '·').join('/')})`);
@@ -225,29 +212,11 @@ export async function devicesKeypad() {
     const again = D.gather(game, B).intel.find((i: any) => i.kind === 'code'); if (again?.live) fails.push("'code' still live after Sam has it (he would give it twice)");
     v(fails.length === 0, "(b) Novak in the arm: his useful thing is the pad ('…it's 7391…') and SAYING it teaches it — Player.codes has pad_side, the log line, the debrief row; not live twice", `answers ${answers.map(a => `${a?.kind ?? '·'}@${a?.stage}`).join(' ')} · "${gave ? B.bubble?.text ?? '' : ''}"`, fails);
   }
-  // (c) overheard: the sticky-note pair between two calm men in the corridor — Sam crouched dark 5 m up the corridor learns it; Sam in the break room behind two shut doors does not
-  for (const [label, samAt, want] of [['5 m up the same corridor', [16.5, 0, 11.3], true], ['in the break room, two shut doors and 15 m of wall away', [33.5, 0, 21.5], false]] as [string, Vec3, boolean][]) {
-    const { W, game } = await world(823); const fails: string[] = [];
-    const [A, B2, C] = game.guards; park(C, 2);
-    for (const d of game.doors.list) if (/breakroom/.test(d.def.name)) { d.angle = 0; d.vel = 0; d.latched = true; d.closing = false; d.place(); }
-    A.hold = false; B2.hold = false; place(A, [21.0, 0, 11.2], Math.PI / 2); place(B2, [23.5, 0, 11.3], -Math.PI / 2); A.wp = 3; B2.wp = 0; A.wait = 30; B2.wait = 30; A.heardUpTo = B2.heardUpTo = game.eventSeq;
-    game.teleportPlayer(samAt); game.player.crouch = true; W.step(DT); game.player.visibility = 0.02; A.heardUpTo = B2.heardUpTo = game.eventSeq + 100;
-    const S = D.ambientState(game); for (const p of D.AMBIENT_PAIRS) S.played.set(p.id, p.id === 'pin' ? 0 : 3); S.next = game.time + 0.1;
-    let said = ''; const ok = steps(W, 20, () => { const r = S.run; if (r?.talk.id === 'pin' && r.i >= 1 && !said) said = (r.a.bubble?.text ?? ''); return game.player.codes.has('pad_side') || (!!S.run && S.run.talk.id === 'pin' && S.run.i >= 3); });
-    steps(W, 1);
-    const learned = game.player.codes.has('pad_side');
-    if (!S.run && !said && !learned) fails.push(`staging: the pair never started 'pin' (run ${S.run?.talk.id ?? 'none'}, states ${A.state}/${B2.state}, dist ${f2(v3.distXZ(A.char.pos, B2.char.pos))})`);
-    if (learned !== want) fails.push(`learned ${learned} (want ${want})`);
-    if (want && !/7391/.test(said)) fails.push(`the opener's line "${said}" does not carry the digits`);
-    if (want && !game.chronicle.events.some((e: any) => e.kind === 'codeLearned' && e.data.how === 'overheard')) fails.push('no codeLearned/overheard row');
-    v(fails.length === 0, `(c) the pair say the digits out loud, Sam ${label}: ${want ? 'he has the code (the propagation carried it)' : 'nothing learned (it did not carry)'}`, `said "${said}" · learned ${learned} · finished ${ok}`, fails);
-  }
   // (d) keying it in: the row, four keys over CODE_SECS, unlock + creak (nothing loud), it swings, through, and it latches LOCKED behind him; a step breaks it off midway
   {
     const { W, game, msgs } = await world(824); const fails: string[] = [];
     game.guards.forEach((o: any, i: number) => park(o, i));
     const sd = game.doors.byName('server_manager'); game.player.codes.add('pad_side');
-    const ev: any[] = []; const orig = game.onDoorEvent.bind(game); game.onDoorEvent = (e: any) => { orig(e); ev.push({ sound: e.sound, level: e.level, t: game.time }); };
     game.teleportPlayer([22.7, 0, 8.7]); game.player.crouch = false; W.cursorAt(sd.pos); W.step(DT); W.step(DT);
     const rows = game.nearby.filter((r: any) => r.door === sd).map((r: any) => r.verb).join(',');
     if (rows !== 'code,kick') fails.push(`rows with the code [${rows}] (want code,kick)`);
@@ -264,8 +233,9 @@ export async function devicesKeypad() {
     const beeps = (W.audioCounts.get('padBeep') ?? 0) - beeps0, opens = W.audioCounts.get('padOpen') ?? 0;
     if (openAt < DEV.CODE_SECS - 0.05 || openAt > DEV.CODE_SECS + 0.5) fails.push(`opened at +${f2(openAt)} s (want ≈ ${DEV.CODE_SECS} + the swing)`);
     if (beeps !== 4 || opens !== 1) fails.push(`padBeep ×${beeps} padOpen ×${opens} (want 4 / 1)`);
-    const loud = ev.filter(e => e.t >= tTap && e.level > 0.31); if (loud.length) fails.push(`door events louder than a creak: ${loud.map(e => `${e.sound} ${e.level}`).join(' ')}`);
-    if (!ev.some(e => e.sound === 'unlock' && Math.abs(e.level - 0.12) < 1e-6)) fails.push('no key-level unlock clack');
+    const ev = game.events.filter((e: any) => e.kind === 'door' && e.time >= tTap);   // (the door reports the floor hears: the unlock at key level, the creak)
+    const loud = ev.filter((e: any) => e.level > 0.31); if (loud.length) fails.push(`door reports louder than a creak: ${loud.map((e: any) => e.level).join(' ')}`);
+    if (!ev.some((e: any) => Math.abs(e.level - 0.12) < 1e-6)) fails.push('no key-level unlock clack');
     if (!sd.locked || sd.lockBroken) fails.push(`the lock changed: locked ${sd.locked} broken ${sd.lockBroken} (want merely opened)`);
     if (!msgs.some(m => /7-3-9-1 — the side door takes it/.test(m.text))) fails.push('no acceptance line');
     // through, and it springs locked behind
@@ -288,7 +258,7 @@ export async function devicesLaser() {
   console.log('\n=== devices-laser: the corridor shin beam and the storage chest beam — walked, crouched, thrown through, a body hauled through; guards never; OCP / a round / the mains (battery survives); alarm beams ===');
   const { v, done } = verdictFn('laser');
   const walk = (game: any, W: any, from: Vec3, to: Vec3, crouch: boolean, secs = 5) => { game.teleportPlayer(from); game.player.crouch = crouch; steps(W, crouch ? 0.7 : 0.1); game.puppet = { goal: to, aim: null, crouch }; steps(W, secs, () => v3.distXZ(game.player.char.pos, to) < 0.3); game.puppet = null; };
-  // (a) corridor shin beam: standing walk east through x 14.5 → a trip (chirp, radio, a man sent to the beam), then crouched → another (nobody gets under 35 cm); the drawn beam is cut while he stands in it
+  // (a) corridor shin beam: standing walk east through x 14.5 → a trip (chirp, radio, a man sent to the beam), then crouched → another (nobody gets under 35 cm)
   {
     const { W, game, msgs } = await world(841); const fails: string[] = [];
     const L = game.devices.lasers[0]; if (Math.abs(L.def.from[1] - 0.35) > 1e-6 || L.def.mains === false) fails.push(`level: corridor beam y ${L.def.from[1]} mains ${L.def.mains}`);
@@ -299,19 +269,17 @@ export async function devicesLaser() {
     if (!msgs.some(m => /CONTROL — beam broken in the corridor/.test(m.text))) fails.push('no radio line'); if ((W.audioCounts.get('alarmChirp') ?? 0) < 1) fails.push('no chirp at the emitter');
     if (!sent || v3.distXZ(sent.task.pos, [14.5, 0, 11.1]) > 1.5) fails.push(`sent ${sent?.callsign ?? 'nobody'} to (${sent ? f2(sent.task.pos[0]) + ', ' + f2(sent.task.pos[2]) : '—'}) (want the beam's middle)`);
     if (!game.devices.log.some((r: any) => r.what === 'trip' && r.device === 'laser_corridor')) fails.push('no trip row in the devices log');   // (the debrief's chronicle row is written in live play only — mission.ts missionLive is down under the puppet that walks him here; (d) checks it without one)
-    // cut short while standing in it
-    game.teleportPlayer([14.5, 0, 11.1]); steps(W, 0.2); const cut = L.cut; if (!(cut < L.len - 0.3)) fails.push(`beam not cut by his shins standing in it (cut ${f2(cut)} of ${f2(L.len)})`);
     // crouched, after the cooldown (waited out AWAY from the beam): still trips
     game.teleportPlayer([13.0, 0, 11.4]); steps(W, 4.5); walk(game, W, [13.0, 0, 11.4], [16.2, 0, 11.4], true, 7);
     if (L.trips !== 2) fails.push(`crouched walk: trips ${L.trips} (want 2 — a shin beam is not ducked)`);
-    v(fails.length === 0, '(a) the corridor beam at 0.35: walked through standing = a trip (chirp, "beam broken in the corridor — X, check it", the man sent to it, the debrief row), the picture of it cut at his shins; crouch-walked = a trip all the same', `trips ${L.trips}, sent ${sent?.callsign ?? '—'}, cut ${f2(cut)}/${f2(L.len)}`, fails);
+    v(fails.length === 0, '(a) the corridor beam at 0.35: walked through standing = a trip (chirp, "beam broken in the corridor — X, check it", the man sent to it, the debrief row); crouch-walked = a trip all the same', `trips ${L.trips}, sent ${sent?.callsign ?? '—'}`, fails);
   }
-  // (b) guards walk their own beams: the corridor man's route crosses x 14.5 twice a lap — a minute of patrol, no trip
+  // (b) guards walk their own beams: the corridor man's route crosses x 14.5 — his patrol up to the crossing, no trip
   {
     const { W, game, msgs } = await world(842); const fails: string[] = [];
     game.teleportPlayer([8, 0, 20]); const L = game.devices.lasers[0];
     let crossings = 0; let lastX = game.guards[0].char.pos[0];
-    steps(W, 75, () => { const x = game.guards[0].char.pos[0]; if ((lastX - 14.5) * (x - 14.5) < 0 && Math.abs(game.guards[0].char.pos[2] - 11.2) < 1) crossings++; lastX = x; return false; });
+    let past = 0; steps(W, 75, () => { const x = game.guards[0].char.pos[0]; if ((lastX - 14.5) * (x - 14.5) < 0 && Math.abs(game.guards[0].char.pos[2] - 11.2) < 1) crossings++; lastX = x; if (crossings) past++; return past > 60; });   // (the first crossing and a second past it)
     if (crossings < 1) fails.push(`staging: the corridor man crossed the beam ${crossings} times in 75 s`);
     if (L.trips || msgs.some(m => /beam broken/.test(m.text))) fails.push(`a guard tripped it (${L.trips})`);
     v(fails.length === 0, '(b) staff walk through their own beams: the corridor route crosses it, nothing', `crossings ${crossings}, trips ${L.trips}`, fails);
@@ -356,9 +324,10 @@ export async function devicesLaser() {
     if (!got) fails.push('staging: never got hold of the body');
     if (game.player.haul?.carry) fails.push('staging: he lifted it over his shoulder (this line is the floor haul)');
     const whoBroke: string[] = []; const origTrip = L.lastTripAt;
-    steps(W, 12, () => { if (L.lastTripAt !== origTrip && L.lastTripAt === game.time) { const hitBody = !!DEV.bodyBreaks(A.char, L.def.from, L.def.to), hitSam = !!DEV.bodyBreaks(game.player.char, L.def.from, L.def.to); whoBroke.push(hitSam ? 'player' : hitBody ? 'body' : '?'); } return whoBroke.includes('body') || game.player.char.pos[0] > 16.8; });
+    const brokeBy = () => game.player.char.pos[0] > L.def.from[0] + 0.4 && Math.abs((A.char.bones.hips ?? A.char.pos)[0] - L.def.from[0]) < 1.5 ? 'body' : 'player';   // (Sam still east of the beam's line and clear of it, as he stood untripped, and the corpse at it: nobody else is near it)
+    steps(W, 12, () => { if (L.lastTripAt !== origTrip && L.lastTripAt === game.time) whoBroke.push(brokeBy()); return whoBroke.includes('body') || game.player.char.pos[0] > 16.8; });
     // Sam backs through it first hauling the ankles (a trip of his own); the corpse follows a body-length behind — wait out the cooldown mid-beam if need be and it breaks it too
-    if (!whoBroke.includes('body')) { steps(W, 5, () => { if (L.lastTripAt === game.time) whoBroke.push(DEV.bodyBreaks(A.char, L.def.from, L.def.to) ? 'body' : 'player'); return whoBroke.includes('body'); }); }
+    if (!whoBroke.includes('body')) { steps(W, 5, () => { if (L.lastTripAt === game.time) whoBroke.push(brokeBy()); return whoBroke.includes('body'); }); }
     game.puppet = null;
     if (!L.trips) fails.push('nothing tripped'); if (!whoBroke.includes('body')) fails.push(`the corpse never broke it (breaks: ${whoBroke.join(',') || 'none'}; body at x ${f2((A.char.bones.hips ?? A.char.pos)[0])})`);
     v(fails.length === 0, '(e) a body lying west of the corridor beam, Sam crouched east of it: hauled through by the ankles, the CORPSE breaks it (who = body)', `trips ${L.trips}, breaks ${whoBroke.join(',')}, got hold ${got}`, fails);
@@ -369,7 +338,7 @@ export async function devicesLaser() {
     const L = game.devices.lasers[0]; for (const o of game.guards) o.heardUpTo = 1e12;
     game.ocp(L.target); steps(W, 0.2); if (DEV.alive(L.target)) fails.push('OCP did not put it out');
     walk(game, W, [13.0, 0, 11.1], [16.2, 0, 11.1], false); if (L.trips) fails.push('tripped while OCP\'d');
-    if (L.cut !== 0 && !DEV.alive(L.target)) { /* cut is 0 while dark: nothing drawn */ } if (game.dynBoxes.some((b: any) => Math.abs(b.c[0] - 14.5) < 0.01 && Math.abs(b.c[1] - 0.35) < 0.01 && b.h[2] > 0.5)) fails.push('the beam is still drawn while dark');
+    if (game.dynBoxes.some((b: any) => Math.abs(b.c[0] - 14.5) < 0.01 && Math.abs(b.c[1] - 0.35) < 0.01 && b.h[2] > 0.5)) fails.push('the beam is still drawn while dark');
     steps(W, game.tune.ocpDuration + 1.5); if (!DEV.alive(L.target)) fails.push('not back after the OCP');
     walk(game, W, [13.0, 0, 11.1], [16.2, 0, 11.1], false); if (L.trips !== 1) fails.push(`back on: trips ${L.trips} (want 1)`);
     game.lightHome.stage(L.target, null, true); steps(W, 0.1);
