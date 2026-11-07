@@ -41,3 +41,7 @@ declare module 'tps-bridge/switches.json' {
   const list: { rows: { row: string; page: unknown; kind: string }[] };
   export default list;
 }
+declare module 'tps-bridge/surface' {
+  export function surfaceHost(H: { g: any; knobs: Record<string, unknown>; surfaceOpen(): boolean; surfaceDispatching(): boolean; surfaceCall(row: number, bytes: Uint8Array): Uint8Array } | null, gone?: unknown): void;
+  export function crossing(key: string, self: unknown, args: unknown[]): unknown;
+}

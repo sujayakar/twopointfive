@@ -222,6 +222,7 @@ pub extern "C" fn face_debug(h: u32) {
 /// A tap (tools/blitz/taps.json): where set, the function reports its call as an out event
 #[no_mangle]
 pub extern "C" fn face_tap(h: u32, id: u32, on: u32) {
+    if id >= 64 { return; }   // (no such tap: a shift past the word's width is a panic in a build that checks it)
     with(h, |x| { if on != 0 { x.g.taps |= 1u64 << id; } else { x.g.taps &= !(1u64 << id); } });
 }
 #[cfg(target_arch = "wasm32")]
@@ -250,10 +251,25 @@ pub unsafe extern "C" fn face_write(h: u32, p: *const u8, n: usize) {
 /// # Safety
 /// `p`, `n` name bytes the host wrote into memory from face_alloc.
 #[no_mangle]
-pub unsafe extern "C" fn face_ask(h: u32, kind: u32, row: u32, seat: u32, p: *const u8, n: usize) {
+/// Answers 0 and the answer's bytes; or, with no bytes and nothing asked: 1 = the game has no such order row, 2 = no such seat (or one that keeps no
+/// set of its own to stand on), 3 = no such kind of question. The page can hold a row this game has not got (a row made on the page since the last start,
+/// an ID from before a restart): an index past a table's end is a panic, and a panic is the game lost, so the numbers are measured here and never taken.
+pub unsafe extern "C" fn face_ask(h: u32, kind: u32, row: u32, seat: u32, p: *const u8, n: usize) -> u32 {
+    use game::ids::Id;
     let b = bytes(p, n);
-    let a = with(h, |x| game::io::ask(&mut x.g, kind, row, seat, b));
+    let (r, a) = with(h, |x| {
+        let g = &mut x.g;
+        if kind > 10 { return (3, Vec::new()); }
+        let s = seat as usize;
+        if s >= g.tab.cmd_seat.len() { return (2, Vec::new()); }
+        let sid = <game::ids::SeatId as Id>::from_ix(s);
+        if g.seat != sid && g.tab.cmd_seat[sid].own.is_none() { return (2, Vec::new()); }
+        // (the posture's word and an order by its id string name no row)
+        if kind != 6 && kind != 10 && (row as usize) >= g.tab.orders_order_def.len() { return (1, Vec::new()); }
+        (0, game::io::ask(g, kind, row, seat, b))
+    });
     out(a);
+    r
 }
 /// # Safety
 /// `p`, `n` name bytes the host wrote into memory from face_alloc.

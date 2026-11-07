@@ -53,6 +53,7 @@ import { OUT, OUT_HOST } from 'tps-bridge/out-dispatch';
 import { makePoke } from 'tps-bridge/poke';
 import { makeScan } from 'tps-bridge/scan';
 import { installAsks } from 'tps-bridge/ask';
+import { crossing, surfaceHost } from 'tps-bridge/surface';
 import LISTS from 'tps-bridge/puppet-lists.json';
 import SWITCHES from 'tps-bridge/switches.json';
 
@@ -73,6 +74,29 @@ const outBytes = (): Uint8Array => { const p = X!.face_out_ptr() >>> 0, n = X!.f
 const outText = (): string => dec.decode(outBytes());
 const panicText = (): string => { try { const p = X!.face_panic_ptr() >>> 0, n = X!.face_panic_len() >>> 0; return dec.decode(u8().subarray(p, p + n)); } catch { return ''; } };
 function hand<T>(b: Uint8Array, f: (p: number, n: number) => T): T { const p = X!.face_alloc(b.length) >>> 0; u8().set(b, p); try { return f(p, b.length); } finally { X!.face_free(p, b.length); } }
+/** AN ASK THE RUST GAME REFUSED (`face_ask` answered 1: it has no such order row; 2: no such seat; 3: no such question): the page holds a row the Rust
+ *  game has not got. No index was taken there. The row's closure (tools/blitz/ask.ts) reads these bytes as "nothing": the label is the row's own name, no
+ *  man can, none fit, the row is not offered and is gone, an order through it is refused. One console line a row. */
+const ASKS = ['label', 'can', 'only', 'valid', 'when', 'gone', 'word', 'mark', 'given', 'issue', 'give'], askSaid = new Set<string>();
+function askNone(g: Game, kind: number, row: number, seat: number, why: number): Uint8Array {
+  const d = why === 1 ? (bookOf(g)?.listOf('OrdersOrderDefId') as Record<string, any>[] | undefined)?.[row] : undefined, name = String(d?.name ?? d?.id ?? '');
+  const key = `${why}/${why === 2 ? seat : row}`; RUST_GAME.asksRefused++;
+  if (!askSaid.has(key)) { askSaid.add(key); RUST_GAME.askRefused[key] = `${ASKS[kind] ?? kind}${name ? ` of '${name}'` : ''}`;
+    console.warn(`rust=1: the page asked '${ASKS[kind] ?? kind}' of ${why === 2 ? `seat ${seat}` : why === 3 ? `a question ${kind}` : `order row ${row}${name ? ` ('${name}')` : ''}`}, which the Rust game has not got: answered as nothing (the row is not offered)`); }
+  const str = (s: string) => { const u = enc.encode(s), o = new Uint8Array(4 + u.length); new DataView(o.buffer).setUint32(0, u.length, true); o.set(u, 4); return o; };
+  const some = (s: string) => { const t = str(s), o = new Uint8Array(1 + t.length); o[0] = 1; o.set(t, 1); return o; };
+  switch (kind) {
+    case 0: return str(name);                    // label: the row's own name
+    case 1: return some('not available');        // can: no, with the reason
+    case 2: return new Uint8Array(4);            // only: no man
+    case 3: return Uint8Array.of(1);             // valid: no, no words
+    case 4: return Uint8Array.of(0);             // when: not offered
+    case 5: return Uint8Array.of(1);             // gone
+    case 6: return Uint8Array.of(0);             // the posture's word: none
+    case 7: return str('');                      // the posture's mark: none
+    case 8: return new Uint8Array(0);            // given: nothing to answer
+    default: return some('not available');       // issue, give: refused
+  } }
 /** a call into the face: a trap is the module's abort on a panic, whose words it kept */
 function call<T>(what: string, f: () => T): T { try { return f(); } catch (e) { const w = panicText(); throw new Error(w ? `the Rust game panicked in ${what}: ${w}` : `${what}: ${String((e as Error)?.message ?? e)}`); } }
 
@@ -81,7 +105,7 @@ export const RUST_GAME = {
   on: false, bytes: 0, fetchMs: 0, compileMs: 0, startMs: 0, startBytes: 0, handle: 0, slot: -1, ticks: 0, starts: 0, grew: 0, memory: 0,
   /** ms of the last step and summed over every step: the host's half, the tick, the filtered export, the apply, the out events, the dress step */
   last: { host: 0, step: 0, export: 0, apply: 0, out: 0, dress: 0, bytes: 0 }, sum: { host: 0, step: 0, export: 0, apply: 0, out: 0, dress: 0, bytes: 0 }, worst: { step: 0, apply: 0, at: 0 },
-  hostHas: 0, wind: [0, 0], probeForgot: 0, oursMissed: 0, smokeMissed: 0, wallFeels: 0, pictureWritten: 0, notes: 0, pokes: 0, poked: {} as Record<string, number>, pokeRefused: {} as Record<string, string>, named: 0, lightsMade: 0, wholes: 0, wholeMs: 0, rowsKept: 0, nulls: 0, lightsWritten: 0,
+  hostHas: 0, wind: [0, 0], probeForgot: 0, oursMissed: 0, smokeMissed: 0, wallFeels: 0, pictureWritten: 0, notes: 0, pokes: 0, poked: {} as Record<string, number>, pokeRefused: {} as Record<string, string>, asksRefused: 0, askRefused: {} as Record<string, string>, asksTwin: 0, crossed: {} as Record<string, number>, named: 0, lightsMade: 0, wholes: 0, wholeMs: 0, rowsKept: 0, nulls: 0, lightsWritten: 0,
   /** games kept (a save, the start) and their cost: how many were taken, ms of the last take and the worst, how many the module holds now; games put back,
    *  ms of the last (the kept game stood again, the whole apply, the hand-over of the controller's lines) */
   /** the warm-up behind a start card (`rustWarm`): ms of the Rust game's start, of the applies and of the ticks stepped and thrown away, and how many */
@@ -258,6 +282,14 @@ export function rustAttach(g: Game): void {
       RUST_GAME.gives.push(`${line} ${said.trim().split('->').pop()}`); if (RUST_GAME.gives.length > 64) RUST_GAME.gives.shift();
       grown(g); apply(held, false);
       return m && m[1] !== 'None' ? JSON.parse(`"${m[2]}"`) : null; }; }
+  // THE MENU'S OWN CALLS FROM OUTSIDE A TICK (a tool's `__orders.open()`, `.pick()`, `.close()`, a panel): the same road as the key. The key's press is in
+  // the record and the Rust tick opens the menu; a call from outside ran the TypeScript on the puppet, which built rows of its own that the Rust game had
+  // never seen (and asked it about them). Each now crosses by the call table's row (tools/blitz/surface.ts) to the Rust function the tick itself runs, and
+  // the puppet takes the state again. Inside a tick, and while the puppet IS the game (before a start, while one is due), the method runs as it was.
+  { const O = G.orders; surfaceHost({ g, knobs: reg(), surfaceOpen: () => !!held.h && !held.inStep && !held.stale, surfaceDispatching: () => false,
+      surfaceCall: (row: number, bytes: Uint8Array) => { settle(held); pokes(held); held.settings?.flush(); handHost(held); call('face_call', () => hand(bytes, (p, n) => X!.face_call(held.h, row, p, n))); const out = outBytes().slice(); grown(g); apply(held, false); return out; } });
+    for (const m of ['open', 'close', 'turn', 'pageBack', 'pick', 'cycleWho', 'address']) { const was = O[m]; if (typeof was !== 'function') continue;
+      O[m] = function (this: any, ...a: unknown[]) { if (held.inStep || held.stale || !held.h) return was.apply(this, a); RUST_GAME.crossed[m] = (RUST_GAME.crossed[m] ?? 0) + 1; return crossing(`SquadOrders.${m}`, this, a); }; } }
 }
 
 /** THE RUST GAME STARTED FROM THE PUPPET AS IT STANDS: the whole state across once, over the block that already stands in the puppet's slot */
@@ -283,7 +315,10 @@ function start(S: Held): void {
   for (const k of S.kept) X!.face_kept_drop(k); S.kept.clear();
   S.startKept = keep(S); S.startOwn = ownKeep(g);
   // (the menu's questions: asked of this Rust game by its rows' IDs in this book, so installed anew at every start)
-  S.asks = installAsks(g, reg(), (kind, row, seat, b) => { call('face_ask', () => hand(b, (p, n) => X!.face_ask(S.h, kind, row, seat, p, n))); return outBytes().slice(); }, () => { grown(g); if (!S.inStep) apply(S, false); });
+  S.asks = installAsks(g, reg(), (kind, row, seat, b) => { const one = (r: number) => call('face_ask', () => hand(b, (p, n) => X!.face_ask(S.h, kind, r, seat, p, n))) | 0; let no = one(row);
+    // (a row object the page made itself — the menu opened by a tool's call builds its own — asks by the Rust game's row of the same id, where it has one)
+    if (no === 1) { const L = bookOf(g)?.listOf('OrdersOrderDefId') as Record<string, any>[] | undefined, id = L?.[row]?.id, twin = id === undefined || !L ? -1 : L.findIndex((x, i) => i !== row && x?.id === id); if (twin >= 0 && one(twin) === 0) { RUST_GAME.asksTwin++; return outBytes().slice(); } no = 1; }
+    return no ? askNone(g, kind, row, seat, no) : outBytes().slice(); }, () => { grown(g); if (!S.inStep) apply(S, false); });
   // (the write by path: by the rows' IDs in this book too)
   S.poke = makePoke(g, reg(), b => { call('face_write', () => hand(b, (p, n) => X!.face_write(S.h, p, n))); });
   // THE SETTINGS, written here by whatever writes them (a panel's row, a lever, a difficulty, an address word) and read by the Rust game: held to what the last walk saw, as a tick opens. A settled row is no setting and is not walked
