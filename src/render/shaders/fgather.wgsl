@@ -40,7 +40,7 @@ fn cosineDir(N: vec3f) -> vec3f {
 // of the cosine hemisphere — for the main gather's four rays (azimuth half) × (cos²θ half), each pixel jittering inside its stratum with its own two rnd() as before — instead of iid.
 // Every pixel still covers all K strata every frame (a stratified estimate: the same expectation, never more variance than iid), the rng draws the same COUNT of numbers, but the k-th
 // rays of a whole 8×8 tile now share a stratum, i.e. a quarter of direction space: the lanes of a SIMD group walk more of the same grid cells (the trace lab measured 1.25× on such
-// rays; −13‥16 % of the gather pass at high). `const GATHER_STRATA: bool` is prepended by passes.ts (false / true → the pFG·pFGR / pFGs·pFGRs pipeline pairs, picked each frame by
+// rays; −13‥16 % of the gather pass at high). `const GATHER_STRATA: bool` is prepended by passes.ts (false / true → the pFGX / pFGXs `trace` pipelines, picked each frame by
 // passes.gatherStrata); false = cosineDir exactly as it was — the branch below folds away and the module compiles to the program it always was.
 fn cosineDirK(N: vec3f, k: u32, K: u32) -> vec3f {
   if (!GATHER_STRATA) { return cosineDir(N); }

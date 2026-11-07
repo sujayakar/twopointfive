@@ -125,7 +125,6 @@ export class Engine {
   camMovedAny = false;
   private taauWas = false; private debugWas = 0;
   /** GI in motion: frames left in which the young-history extra gather rays stand down after a cut / a wholesale history restart, and the denoiser core last frame ran with */
-  private giCutHold = 0; private dnWas: 'v3' | 'legacy' = 'v3';
   /** why the TAAU history was last dropped, and how many times (the Tab panel words it; QA counts it) */
   taaResets = 0; lastTaaReset = '';
   /** CUT BOXES: how many traceable cut boxes this frame's g-buffer draws WHOLE (its ray programs have no cut rule yet — render/cutSwap.ts), and how many were on screen last frame */
@@ -666,7 +665,6 @@ export class Engine {
     this.passes.setFireLook(this.fireLook);
     this.passes.setFires(this.settings.debugView === 0 ? this.fires : null);   // the open fires' flames (game/fire.ts), behind the beams in the same uniform
     this.passes.setRt(this.settings.rtReflect, this.settings.rtReflectDiv);   // (likewise before resize: the reflection targets' divisor — pooled + re-made on change like the gather's — and the switch that first allocates them at all)
-    this.passes.setGi(this.settings.giResample !== 'off');   // (phase 5, likewise: the gather's reservoir pair exists from the first frame resampling is asked for — an off machine pays no memory)
     this.passes.setGiFull(!!this.settings.giFullRes && this.settings.denoiser !== 'legacy', this.settings.giFullIters);   // (GI in motion, likewise before resize: the diffuse client's INTERNAL-res set exists from the first frame it is asked for; the v3 core only)
     this.passes.setHitReuse(this.settings.rtHitReuse);      // (phase 5: the reflection pass's hit-record pair, made on first use the same way)
     this.resize();
@@ -687,24 +685,20 @@ export class Engine {
     m4.copy(this.vpJ, cam.viewProj);
     if (jx !== 0 || jy !== 0) { const ax = 2 * jx / this.width, ay = -2 * jy / this.height; for (let c = 0; c < 4; c++) { const w = this.vpJ[c * 4 + 3]; this.vpJ[c * 4] += ax * w; this.vpJ[c * 4 + 1] += ay * w; } m4.invert(this.invVpJ, this.vpJ); }
     else m4.copy(this.invVpJ, cam.invViewProj);
-    let cutNow = false;   // (a cut this frame: the young-history extra gather rays stand down for it — every texel is young on a cut and the picture is being cut anyway; giCfg below)
+    let cutNow = false;   // (a cut this frame: nothing reprojects across it)
     if (!this.havePrev) { m4.copy(this.prevVpJ, this.vpJ); m4.copy(this.prevVpU, cam.viewProj); this.prevCamPos = v3.copy(cam.pos); this.prevCamFwd = v3.copy(cam.forward); this.havePrev = true; cutNow = true; if (taauOn) this.resetTaa('first frame'); }
     else {   // a cut nobody can reproject across: the eye jumped rooms (> 2.5 m between two renders — 150 m/s; the follow camera is damped, the tour / breach / attract cut) or swung > 30° at once
       const jump = v3.dist(cam.pos, this.prevCamPos), turn = v3.dot(cam.forward, this.prevCamFwd);
       if (jump > 2.5 || turn < 0.866) { cutNow = true; if (taauOn) this.resetTaa(jump > 2.5 ? `cut (${jump.toFixed(1)} m)` : 'cut (turn)'); else this.passes.dropRestirBeliefs(); }   // (resetTaa drops the ReSTIR tiles' light beliefs too; without TAAU that is all a cut needs from here)
     }
-    if (cutNow) this.giCutHold = Math.max(1, Math.round(this.settings.giYoungLen)) + 1; else if (this.giCutHold > 0) this.giCutHold--;   // (held until the histories a cut restarted are no longer 'young' by the gather's own test — else the whole grid asks on the frame the hold ends)
     { // INFRARED LIGHTS (lights.ts LightSet.ir, game/irlight.ts): in the list only while this frame's picture is the tube's — post.wgsl's own swap. The frame the
       // tube comes off, every screen history still holds rooms lit by them (the resolve's, the direct light's, the bounce's, the reflections', the reservoirs' —
       // in a tube frame they are steady lights like any torch): 'wrong wholesale', the case passes.restartHistories names — so no bare-eyed frame shows what only a tube saw.
-      // (Here, ahead of the young-history fold just below, so the hold that restart asks for is in THIS frame's giCfg.)
       const tube = this.settings.nvAmount > 0.5;
       if (!tube && this.lights.tube && this.lights.irSpell) this.passes.restartHistories('the goggles came off infrared light');
       if (!tube) this.lights.irSpell = false;
       this.lights.tube = tube;
     }
-    { const dn = this.settings.denoiser === 'legacy' ? 'legacy' : 'v3'; if (dn !== this.dnWas) { this.dnWas = dn; this.passes.youngHold = 6; } }   // (the denoiser switch this frame zeroes the diffuse moments in the encode below: fold it in now, not a frame late)
-    if (this.passes.youngHold > 0) { this.giCutHold = Math.max(this.giCutHold, Math.max(this.passes.youngHold, Math.round(this.settings.giYoungLen) + 1)); this.passes.youngHold = 0; }   // the same for a wholesale history restart the passes did (restartHistories, the denoiser switch, a keepHistories-off resize)
     const matSame = this.prevVpU.every((v, i) => v === cam.viewProj[i]);
     const camStill = taauOn && matSame;
     // the CAMERA's own motion this frame in output px (the look-at point and four points 3 m round it through the previous / current unjittered view-projection — an orbit leaves the
@@ -774,7 +768,6 @@ export class Engine {
     const decalsOn = this.decalsOn;      // FrameFlags.Decals this frame (setting ∧ a list attached ∧ something in it)
     const partOn = this.particlesOn;     // FrameFlags.Particles this frame (setting ∧ a Particles attached): its emits are dealt slots and uploaded now, stepped after the cascades, drawn after the composite
     const rtOn = s.rtReflect;            // RT reflections this frame (frame.rtCfg.w = the divisor, 0 while off) — and Gloss is then held DOWN whatever settings.gloss says (the reflection pass covers the polished floors: rtReflect ⊃ gloss)
-    const giMode = s.giResample === 'full' ? 2 : s.giResample === 'temporal' ? 1 : 0;   // phase 5: the gather's reservoir resampling this frame (frame.p5Cfg.x; passes.setGi — mirrored above, before resize — makes / keeps its reservoir pair)
     const rtP5Bits = (s.rtMeshHits && meshOn ? 1 : 0) | (s.rtHitReuse ? 2 : 0);   // phase 5: the reflection pass's bits (frame.p5Cfg.z) — any of them up dispatches the reflect_p5.wgsl variant, none = main's reflect.wgsl, the same program as before the phase
     const rigBits = (s.sdfRigSmooth ? 2 : 0) | (s.charSoftShadow ? 4 : 0) | (s.charSoftShadow && s.charSoftAnalytic ? 8 : 0) | (s.charSoftSmooth ? 16 : 0) | (s.charSoftBroad ? 32 : 0) | (s.charSelfShadow ? 64 : 0) | (s.meshShadowsNear ? 128 : 0);   // the SDF character rig's EXTRAS this frame (frame.rigCfg.x: 2 smooth-union closest hit · 4/8/16/32 the soft character query · 64 character self-shadow · 128 mesh shadows near-only; bit 1 retired — the round cones themselves are unconditional)
     this.passes.rtP5 = rtP5Bits !== 0 || (rigBits & 2) !== 0;   // (the rig's smooth closest hit rides in the same variant's tracer tail — reflect.wgsl stays main's program)
@@ -860,7 +853,7 @@ export class Engine {
       matCfg: [Math.max(0, s.rtGlints), Math.max(0, s.rtStrength), 60, Math.max(0, Math.min(1, s.detail))],   // .w = the g-buffer's detail-layer amount (0 = fsBox as it was)
       // phase 5 (ultra extras): the gather's resampling mode + its packed numbers, the reflection pass's mesh / hit-reuse bits — every field 0 = the passes as they were. The mesh bit rides only while
       // the mesh-shadow trees are actually skinned this frame (meshOn): with meshShadows off / unavailable the reflections keep the capsules, as asked
-      p5Cfg: [giMode | (giMode && s.giResampleRevalidate ? 16 : 0), (Math.max(1, Math.min(4, Math.round(s.giResampleRays))) & 15) | ((Math.max(2, Math.min(64, Math.round(s.giResampleCap))) & 255) << 8) | ((Math.max(1, Math.min(8, Math.round(s.giResampleTaps))) & 15) << 16) | ((Math.max(2, Math.min(32, Math.round(s.giResampleRadius))) & 255) << 24),
+      p5Cfg: [0, 0,   // (.x and .y were the resampling gather's mode and numbers: free since that gather went, 2026-11-07)
         rtP5Bits, firstTransientNow],
       jitter: [this.jitter[0], this.jitter[1], this.prevJitter[0], this.prevJitter[1]],
       markCfg: [s.markings ? this.world.markingTexel : 0, Math.max(0, Math.min(1, s.markingContrast)), Math.max(0, s.markingEmissive), s.markingReflect ? (s.markingReflPattern === false ? -1 : 1) * (1 + Math.max(0, Math.min(4, s.markingReflCone))) : 0],   // markings: .x 0 = off everywhere; .w 0 = not at reflection hits, else ±(1 + the traced-hit cone's lobe share) — negative = the analytic highlight left uniform (markings.wgsl markConeK / reflect.wgsl)
@@ -871,9 +864,6 @@ export class Engine {
         s.gbaaClamp ? 1 : 0],   // .w = GBAA's same-surface clamp (gbaa.wgsl; 0 = the blend as it was)
       rigCfg: [rigBits, Math.max(4, Math.min(64, Math.round(s.charSoftSteps ?? 20))), Math.max(0.05, s.charSoftK ?? 1), Math.tan(Math.max(0.02, Math.min(5, s.charSoftMinDeg ?? 0.35)) * Math.PI / 180)],   // the SDF character rig: the extras' bits (0 = the plain round-cone loops) + the soft query's numbers
       rigCfgB: [Math.max(0, Math.min(3, s.sdfRigK ?? 1)), Math.max(4, Math.min(64, Math.round(s.sdfRigSteps ?? 24))), 0.0015, 0.012],   // × the joint blend radii, closest-hit steps, its epsilon, the soft march's smallest step,
-      // GI in motion: the young-history ray multiplier (0 = off — the gather as it was: giYoungRays ≤ 1, the legacy denoiser (no history length to read), phase 5's resampling gather (its reservoirs
-      // carry their own confidence), or a cut this frame / the two after), the texel cap (fraction × the gather grid), the 'young' length
-      giCfg: (() => { const k = Math.max(1, Math.min(4, Math.round(s.giYoungRays))); const on = k > 1 && s.denoiser !== 'legacy' && giMode === 0 && this.giCutHold === 0 && (s.flags & FrameFlags.Temporal) !== 0 && s.dnGiCap >= 1; return on ? [k, Math.ceil(Math.max(0, Math.min(1, s.giYoungCap)) * this.passes.gw * this.passes.gh), Math.max(1, Math.min(s.giYoungLen, s.dnGiCap)), 0] : [0, 0, 0, 0]; })() as [number, number, number, number],   // (dnGiCap < 1 = the diffuse client keeps no history: every texel would read young every frame; and 'young' can never be more than the cap the stored length saturates at)
     };
     this.froxelPrevNear = froxNear;
     this.passes.smokeSlots = fp.numSmoke;   // (what the shaders are told: 0 = no smoke march anywhere this frame, so the smoke diffusion's blur chain has no reader — passes.ts)
@@ -939,7 +929,6 @@ export class Engine {
       K.depthK = s.dnDepthK; K.normalPow = s.dnNormalPow; K.motionVectors = s.dnMotionVectors;   // (the g-buffer writes gVel on both the TAAU and the FXAA path: prev − now through frame.prevViewProj, jittered or not — consistent with the reprojection either way)
       K.ratioHi = (fp.flags & (FrameFlags.TailChroma | FrameFlags.Restir)) ? 4 : 1;   // the ratio clamp's upper bound: shadowed ≤ unshadowed per channel, except the chroma-exact tail's single samples and the ReSTIR estimator's per-light hues (one warm light under a mixed U tops U's red channel legitimately)
       if (this.passes.dnMode === 'v3' || rtOn) this.passes.den.writeParams({ gatherDiv: this.passes.gatherDiv, reflDiv: rtOn ? this.passes.rtDiv : 0, temporalFlag: (fp.flags & FrameFlags.Temporal) !== 0, shadowTemporal: s.directHistory > 0, historyScale: this.passes.directHistoryScale < 1 ? 0.5 : 1, cueUv: s.restir && (fp.flags & FrameFlags.Restir) !== 0, fullRes: this.passes.giFullOn });   // (the reflection chain is the v3 specular client under either core; + the internal-res diffuse chain's block while that path is wanted)
-      this.passes.youngOn = (fp.giCfg?.[0] ?? 0) > 1;   // (GI in motion: the gather's young-texel counter is zeroed each frame the multiplier is up)
     }
     // the particles' splat goes INTO the HDR target between the composite and the bloom (so hot sparks bloom and nothing has a history to smear); debug views keep the screen theirs.
     // Not timestamped: render-pass timings on Metal read as a frame (see CLAUDE.md) and would poison the HUD total and auto quality's calibration — particles.timeDraw opts in for a look

@@ -1212,8 +1212,8 @@ function urlFlagsOnEngine(engine: Engine) {
     summary: () => `sharp direct ${engine.settings.sharpDirect ? 'ON' : 'off'}${engine.sharpOn ? ` — live: g-buffer / U / composite / TAA at ${engine.outWidth}×${engine.outHeight}, stochastic terms at ${engine.width}×${engine.height} (+${((engine.passes.sharpBytes + engine.gbuffer.sharpBytes) / 1048576).toFixed(0)} MB: the output-size raster, the direct pair, the larger HDR target, the edge mask)` : engine.settings.sharpDirect ? ` — idle (${!engine.settings.taau ? 'TAAU off' : engine.settings.debugView ? 'debug view' : 'render scale 1.0: nothing to decouple'})` : ''}`,
   };
   if (new URLSearchParams(location.search).has('nortreflect')) { rtVeto.on = true; engine.settings.rtReflect = false; }
-  if (new URLSearchParams(location.search).has('nogim')) { gimVeto.on = true; engine.settings.giFullRes = false; engine.settings.giYoungRays = 1; engine.settings.ladderClimb = false; engine.settings.capClimb = false; }   // ?nogim: GI-in-motion's switches off from boot AND its two renderer switches vetoed for the presets — the frame as it was before the lane (the identity hashes, A/B); the Tab rows still flip them by hand
-  if (new URLSearchParams(location.search).has('nop5')) { p5Veto.on = true; engine.settings.giResample = 'off'; engine.settings.rtMeshHits = false; engine.settings.rtHitReuse = false; }   // ?nop5: renderer v3 phase 5's ultra extras off from boot AND vetoed for the presets — ultra's frame as it was before the phase (the identity hashes, A/B); the Tab rows still flip them by hand   // ?nortreflect: renderer v3 phase 4's reflection pass off from boot AND vetoed for the presets (auto's ladder re-applies them) — with ?detail=0 the untouched frame for A/B; the Tab row still flips it by hand
+  if (new URLSearchParams(location.search).has('nogim')) { gimVeto.on = true; engine.settings.giFullRes = false; engine.settings.ladderClimb = false; engine.settings.capClimb = false; }   // ?nogim: GI-in-motion's switches off from boot AND its two renderer switches vetoed for the presets — the frame as it was before the lane (the identity hashes, A/B); the Tab rows still flip them by hand
+  if (new URLSearchParams(location.search).has('nop5')) { p5Veto.on = true; engine.settings.rtMeshHits = false; engine.settings.rtHitReuse = false; }   // ?nop5: renderer v3 phase 5's ultra extras off from boot AND vetoed for the presets — ultra's frame as it was before the phase (the identity hashes, A/B); the Tab rows still flip them by hand   // ?nortreflect: renderer v3 phase 4's reflection pass off from boot AND vetoed for the presets (auto's ladder re-applies them) — with ?detail=0 the untouched frame for A/B; the Tab row still flips it by hand
   { const dv = new URLSearchParams(location.search).get('detail'); if (dv !== null && isFinite(parseFloat(dv))) engine.settings.detail = Math.max(0, Math.min(1, parseFloat(dv))); }
   if (new URLSearchParams(location.search).has('nomarkings')) engine.settings.markings = false;   // ?nomarkings: the markings lane's pixel-art signifiers off from boot — nothing evaluated, no marking lights registered (with ?level=relief the frame main draws)
 }
@@ -1502,7 +1502,7 @@ function rendererFlagsAndHotSwaps(engine: Engine) {
   { const q = new URLSearchParams(location.search); if (q.has('gatherStrata')) engine.settings.gatherStrata = true; if (q.has('nogatherstrata')) engine.settings.gatherStrata = false; }   // (default ON since 08-12; ?nogatherstrata = the iid gather, hash-identical to the pre-port frame)
   (window as any).__gs = {
     get on() { return engine.settings.gatherStrata; }, set on(v: boolean) { engine.settings.gatherStrata = !!v; },
-    summary: () => `gather strata ${engine.settings.gatherStrata ? 'ON (stratified, tile-coherent directions: pFGs / pFGRs)' : 'off (iid cosine directions, the gather as it was)'} · gather ${engine.passes.gw}×${engine.passes.gh}${engine.settings.giResample !== 'off' ? ' · resampling ' + engine.settings.giResample : ''}`,
+    summary: () => `gather strata ${engine.settings.gatherStrata ? 'ON (stratified, tile-coherent directions)' : 'off (iid cosine directions, the gather as it was)'} · gather ${engine.passes.gw}×${engine.passes.gh}`,
   };
 }
 
@@ -1541,23 +1541,15 @@ function traceLabHooks(engine: Engine, game: Game) {
   };
 }
 
-/** __gi, __gimo, __dmo */
+/** __gimo, __dmo */
 function giMotionHooks(engine: Engine) {
-  // __gi: the gather's reservoir resampling (renderer v3 phase 5, ultra) for the console / automation — mode + knobs in one object
-  (window as any).__gi = {
-    get mode() { return engine.settings.giResample; }, set mode(v: 'off' | 'temporal' | 'full') { engine.settings.giResample = v === 'full' ? 'full' : v === 'temporal' ? 'temporal' : 'off'; },
-    knobs: () => { const S = engine.settings; return { mode: S.giResample, rays: S.giResampleRays, cap: S.giResampleCap, taps: S.giResampleTaps, radius: S.giResampleRadius, revalidate: S.giResampleRevalidate }; },
-    set: (k: Partial<{ mode: 'off' | 'temporal' | 'full'; rays: number; cap: number; taps: number; radius: number; revalidate: boolean }>) => { const S = engine.settings; if (k.mode !== undefined) S.giResample = k.mode; if (k.rays !== undefined) S.giResampleRays = k.rays; if (k.cap !== undefined) S.giResampleCap = k.cap; if (k.taps !== undefined) S.giResampleTaps = k.taps; if (k.radius !== undefined) S.giResampleRadius = k.radius; if (k.revalidate !== undefined) S.giResampleRevalidate = k.revalidate; return (window as any).__gi.knobs(); },
-    summary: () => { const S = engine.settings, P = engine.passes; return `gi resampling ${S.giResample}${S.giResample !== 'off' ? ` · ${S.giResampleRays} fresh · M ≤ ${S.giResampleCap}${S.giResampleRevalidate ? ' · revalidate' : ''}${S.giResample === 'full' ? ` · ${S.giResampleTaps} taps r ${S.giResampleRadius}` : ''} · ${P.gw}×${P.gh} · ${(P.p5Bytes / 1048576).toFixed(0)} MB` : ''}`; },
-  };
-  // __gimo: GI IN MOTION (docs/internal/gi-motion.md) — the internal-res diffuse chain, the young-history gather rays, the ladder's climb, in one object for the console / automation
+  // __gimo: GI IN MOTION (docs/internal/gi-motion.md) — the internal-res diffuse chain and the ladder's climb, in one object for the console / automation
   (window as any).__gimo = {
-    knobs: () => { const S = engine.settings; return { fullRes: S.giFullRes, fullIters: S.giFullIters, youngRays: S.giYoungRays, youngCap: S.giYoungCap, youngLen: S.giYoungLen, ladderClimb: S.ladderClimb, capClimb: S.capClimb }; },
-    set: (k: Partial<{ fullRes: boolean; fullIters: number; youngRays: number; youngCap: number; youngLen: number; ladderClimb: boolean; capClimb: boolean }>) => { const S = engine.settings; if (k.fullRes !== undefined) S.giFullRes = !!k.fullRes; if (k.fullIters !== undefined) S.giFullIters = k.fullIters; if (k.youngRays !== undefined) S.giYoungRays = k.youngRays; if (k.youngCap !== undefined) S.giYoungCap = k.youngCap; if (k.youngLen !== undefined) S.giYoungLen = k.youngLen; if (k.ladderClimb !== undefined) S.ladderClimb = !!k.ladderClimb; if (k.capClimb !== undefined) S.capClimb = !!k.capClimb; return (window as any).__gimo.knobs(); },
+    knobs: () => { const S = engine.settings; return { fullRes: S.giFullRes, fullIters: S.giFullIters, ladderClimb: S.ladderClimb, capClimb: S.capClimb }; },
+    set: (k: Partial<{ fullRes: boolean; fullIters: number; ladderClimb: boolean; capClimb: boolean }>) => { const S = engine.settings; if (k.fullRes !== undefined) S.giFullRes = !!k.fullRes; if (k.fullIters !== undefined) S.giFullIters = k.fullIters; if (k.ladderClimb !== undefined) S.ladderClimb = !!k.ladderClimb; if (k.capClimb !== undefined) S.capClimb = !!k.capClimb; return (window as any).__gimo.knobs(); },
     get live() { return engine.passes.giFullLive; },
-    young: () => engine.passes.readYoungCount(),
     calm: (on?: boolean) => { if (on !== undefined) (window.__quality as any)?.applyMotionCalm(!!on); return !!(window.__quality as any)?.motionCalm; },   // the motion-calm rows on / off (quality.ts MOTION_CALM)
-    summary: () => { const S = engine.settings, P = engine.passes; return `gi in motion: full-res ${S.giFullRes ? (P.giFullLive ? `LIVE ${P.width}×${P.height} · ${S.giFullIters} à-trous · ${(P.giFullBytes / 1048576).toFixed(0)} MB` : 'wanted (not live)') : 'off'} · young rays ${S.giYoungRays > 1 ? `×${S.giYoungRays} (cap ${(S.giYoungCap * 100).toFixed(0)} % · len < ${S.giYoungLen})` : 'off'} · climb ${S.ladderClimb ? 'on' : 'off'}${S.capClimb ? ' + cap' : ''} · motion-calm rows ${(window.__quality as any)?.motionCalm ? 'ON' : 'off'}`; },
+    summary: () => { const S = engine.settings, P = engine.passes; return `gi in motion: full-res ${S.giFullRes ? (P.giFullLive ? `LIVE ${P.width}×${P.height} · ${S.giFullIters} à-trous · ${(P.giFullBytes / 1048576).toFixed(0)} MB` : 'wanted (not live)') : 'off'} · climb ${S.ladderClimb ? 'on' : 'off'}${S.capClimb ? ' + cap' : ''} · motion-calm rows ${(window.__quality as any)?.motionCalm ? 'ON' : 'off'}`; },
   };
   // __dmo: DIRECT LIGHT IN MOTION (docs/internal/direct-motion.md) — ReSTIR's temporal reuse under a moving camera: settings.restirMotion (bitmask 1 = stochastic-bilinear reprojection, 2 = motion-scaled
   // confidence, 4 = spatial reuse under motion; 0 = the estimator as it was) and its three knobs, for the console / the harnesses (`__gim.run(tag, {extra: {restirMotion: 3}})` measures it)

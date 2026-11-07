@@ -125,7 +125,7 @@ row on his machine is the answer, and the word puts the count back on any machin
 <!-- was CLAUDE.md lines 2403–2406 -->
 - **Markings = object legibility** — palette-indexed bitmaps on box faces, packed in the tail of `boxMat` (no texture); `settings.markings` default ON, `?nomarkings` (+ `?level=relief` = main's frame), `__mark`; emissive markings are LIGHTS; the art rules (flat colour per cell, ≤ 3 entries, no gradients, no baked lighting) — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
 - **Materials, RT reflections, the detail layer** (renderer v3 phase 4) — every box carries a finish (`Box.rough / metal / aniso`), `reflect.wgsl` traces under `settings.rtReflect` (`?nortreflect`, `frame.rtCfg.w` 0 = off), the detail layer under `settings.detail` (`?detail=0‥1`; art rule: variation from geometry, never a painted texture); `__rt`, `__hotReflect` — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
-- **The ultra-only extras** (renderer v3 phase 5) — `settings.giResample` / `rtMeshHits` / `rtHitReuse`, only the ultra preset raises them, `?nop5` vetoes; `__gi`, `__hotGather`; TRAP kept here: `reflect_p5.wgsl` is a separate program from `reflect.wgsl` on purpose (main's text) — keep the two files in step — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
+- **The ultra-only extras** (renderer v3 phase 5) — `settings.rtMeshHits` / `rtHitReuse` (the third, `giResample`, and the `__gi` hook went 2026-11-07), only the ultra preset raises them, `?nop5` vetoes; `__hotGather`; TRAP kept here: `reflect_p5.wgsl` is a separate program from `reflect.wgsl` on purpose (main's text) — keep the two files in step — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
 - **Character proxies = the SDF character rig** — every mannequin's 15 shadow / reflection proxies are round cones fitted at load (`render/sdfrig.ts`, `shaders/sdfrig.wgsl`), no switch; extras in `frame.rigCfg` (`settings.charSelfShadow` default ON, `?noselfshadow`; `?sdfsmooth` / `?charsoft` / `?charsoftmarch` experiments); `__sdfrig`, `__rigTrace` — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
 
 <!-- was CLAUDE.md lines 2658–2728 -->
@@ -785,8 +785,10 @@ row on his machine is the answer, and the word puts the count back on any machin
   folded the writing no player ran. **The gather**: `shaders/fgather.wgsl` is the gather's helpers, constants and bindings and has no entry point (843 lines to
   190: `main`, `mainGi`, the resampling gather's helpers, the young-history rays, and glossReflection / glassShade, which `gather_split.wgsl` writes as
   glossReflectionX / glassShadeX); `render/gatherSplit.ts` builds `trace` and `light` from it. Ultra's resampling gather was never built beside the two programs
-  (the maintainer, 10-27: "we pretty much have no one using ultra, so i think it's fine?"); its plumbing in passes.ts / engine.ts / settings.ts is inert and goes
-  next. **ONE KERNEL IS STILL IN TWO WRITINGS**: `shaders/gather_split_common.wgsl` (the gather's: directAtPoint as `light` calls it) beside
+  (the maintainer, 10-27: "we pretty much have no one using ultra, so i think it's fine?"); its plumbing went the same day: the reservoir textures and
+  their layouts, `setGi`, the young-rays counter and its hold, settings `giResample*` and `giYoungRays / giYoungCap / giYoungLen`, their debugger rows, the `__gi`
+  hook, `P5Tier.gi / giRays` and `Dn.giYoungK`. Frame words `giCfg` (four) and `p5Cfg.x, .y` are FREE: still in the layout, read by no shader. The same module
+  hashes held after it. **ONE KERNEL IS STILL IN TWO WRITINGS**: `shaders/gather_split_common.wgsl` (the gather's: directAtPoint as `light` calls it) beside
   `shaders/gather_common.wgsl` (the reflection passes': one call site a heavy function). Making them one changes the gather's text, so it waits for a same-frame
   comparison. **What was measured**: `tools/qa/shaderinline-check.ts --json` before the change with the two rows' words in front and after it with none, on the
   title, a snow level and the look's page: all 66, 66 and 67 module texts the boot hands the browser are the same by their hashes, in both sets, and the same

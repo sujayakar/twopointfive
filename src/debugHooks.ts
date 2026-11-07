@@ -30,7 +30,7 @@ import type { Ui as ViewerUi } from './viewer/ui';
 
 /** One WGSL compiler message as __wgsl reports it (line numbers relative to the submitted source, prelude subtracted). */
 export interface WgslLintMessage { type: GPUCompilationMessageType; line: number; col: number; msg: string; src: string; }
-/** The shape the knob-panel hooks share (`__wet`, `__glass`, `__froxel`, `__rt`, `__gi`, `__dn`, `__taa`, `__sharp`, `__sdfrig`, `__mark`, `__destr` …): a one-line summary,
+/** The shape the knob-panel hooks share (`__wet`, `__glass`, `__froxel`, `__rt`, `__dn`, `__taa`, `__sharp`, `__sdfrig`, `__mark`, `__destr` …): a one-line summary,
  *  usually the knob table and a setter taking a partial of it, plus the module's own verbs and read-outs (indexed loosely — each is documented in CLAUDE.md's bullet). */
 export interface KnobHook { summary(): string; knobs?(): Record<string, unknown>; set?(patch: Record<string, unknown>): unknown; [verb: string]: unknown; }
 /** a shader hot-swap hook: recompile the pass from `src` (or the file the dev server serves under /qa/shader/) into the live page — resolves to the compiler's verdict */
@@ -119,7 +119,7 @@ declare global {
     /** the SDF character rig's ray queries on the live scene group vs a disc integral (render/rigDebug.ts) */
     __rigTrace?: (rays: number[][]) => Promise<unknown>;
     /** knob panels of the renderer's systems and the game's presentation modules — see KnobHook and each system's CLAUDE.md bullet */
-    __wet?: KnobHook; __weather?: KnobHook; __glass?: KnobHook; __froxel?: KnobHook; __particles?: KnobHook; __taa?: KnobHook; __sharp?: KnobHook; __sdfrig?: KnobHook; __mark?: KnobHook; __dn?: KnobHook; __gi?: KnobHook;
+    __wet?: KnobHook; __weather?: KnobHook; __glass?: KnobHook; __froxel?: KnobHook; __particles?: KnobHook; __taa?: KnobHook; __sharp?: KnobHook; __sdfrig?: KnobHook; __mark?: KnobHook; __dn?: KnobHook;
     /** the RT-reflection + material knobs (renderer v3 phase 4) on the GAME page — the workbench's viewer Runtime is __vrt, not this */
     __rt?: KnobHook;
     /** shader hot-swap: volumetrics / restir / direct / reflect / gather / froxel / denoise from disk into the live page */

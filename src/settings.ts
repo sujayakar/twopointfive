@@ -78,10 +78,8 @@ export interface RenderSettings {
   dnGiIters: number; dnGiCap: number; dnGiClampK: number; dnGiSigmaL: number; dnGiFast: number; dnGiFirefly: number;
   // ---- GI IN MOTION (docs/internal/gi-motion.md; the v3 diffuse client only): giFullRes = the diffuse GI is upsampled (guided) to the INTERNAL resolution first and accumulated / clamped / à-trous
   // filtered there (history at internal res: reprojection error one internal pixel instead of one gather texel, blotch size likewise), composite reading it 1 : 1 — false = the gather-grid chain
-  // exactly as it was; giFullIters = its à-trous iterations at internal res (strides gdiv·1, 2, 4, 8: the same ground reach as the gather-grid chain's); giYoungRays = the final gather's ray
-  // multiplier for texels whose diffuse history is YOUNG (disoccluded: Sam's wake, a walking man's outline, the screen edge under a pan; ≤ 1 = off, the gather byte for byte as it was),
-  // giYoungCap = the fraction of the gather grid that may take it in one frame (the rest first-come), giYoungLen = 'young' = history length under this (frames)
-  giFullRes: boolean; giFullIters: number; giYoungRays: number; giYoungCap: number; giYoungLen: number;
+  // exactly as it was; giFullIters = its à-trous iterations at internal res (strides gdiv·1, 2, 4, 8: the same ground reach as the gather-grid chain's)
+  giFullRes: boolean; giFullIters: number;
   // (D) two follow-ups on the diffuse client (both 0 = off, the client as it was): dnGiClampCut = a valid pixel whose long history the clamp had to DRAG (its bounce changed) has its length cut by how far,
   // relative to the box (the reflection chain's rule) — the next frames weigh the fresh estimate more and the young-history rays fire there; dnGiYoungWiden = the à-trous luminance edge-stop × (1 + it) on
   // texels whose history is young (steadier while one or two frames stand behind the estimate)
@@ -320,16 +318,6 @@ export interface RenderSettings {
                                // as it was; default 0.35 ('lived-in'); Tab ▸ Materials
   // ---- RENDERER V3 PHASE 5 — the ULTRA-only extras (docs/internal/p5-ultra.md). Each behind its own switch; every switch off = every pass byte for byte as it was (frame.p5Cfg all zero); the ultra
   // preset turns them on, every other preset leaves them off (quality.ts Preset.p5). ----
-  giResample: 'off' | 'temporal' | 'full';   // the final gather's screen-space RESERVOIR RESAMPLING (ReSTIR-GI-lite, fgather.wgsl mainGi): each gather texel keeps ONE secondary sample {hit point, its normal, its outgoing
-                               // radiance} in a reservoir; 'temporal' = fresh cosine rays (giResampleRays, fewer than the plain gather's 4) RIS-combined with the texel's own reprojected reservoir (M capped
-                               // at giResampleCap); 'full' = + one spatial pass over giResampleTaps neighbours' reservoirs (pairwise MIS, Jacobian-reweighted, no extra visibility ray — the biased-but-bounded
-                               // variant); the estimate is Σ_j f(y_j)·w_j (every sample shaded) → the same outIndirect the diffuse denoiser client consumes. 'off' = the 4-ray gather exactly as it was
-  giResampleRays: number;      // fresh candidate rays per gather texel per frame under resampling (1‥4; ultra 2)
-  giResampleCap: number;       // temporal confidence cap M (2‥64; 20 ≈ ten frames of 2-ray history at 60 Hz)
-  giResampleTaps: number;      // spatial neighbours combined per texel in 'full' (1‥8; ultra 3)
-  giResampleRadius: number;    // spatial radius in gather texels (2‥32; ultra 10 ≈ 20 internal px)
-  giResampleRevalidate: boolean; // the temporal sample's outgoing radiance is RE-SHADED at its stored point every frame (one directAtPoint + a cache read: a switched light or a swept torch reaches the reused
-                               // history at once instead of over M frames); off = the stored radiance is reused as found (plain ReSTIR GI: cheaper, lags a moving light by the confidence cap)
   // ---- MARKINGS (scene/markings.ts, shaders/markings.wgsl; docs/review/legibility.html): pixel-art signifiers ON box faces — key caps, packing tape + glyphs on cartons, drawer seams, the vending
   // product window, text bars, LEDs — flat colour per world-space texel from a ≤ 3-colour palette, AA only at texel edges, minified to their mean under a pixel a texel; written into the g-buffer's
   // albedo / roughness, their emission added in composite and at reflection hits, their area average folded into the secondary rays' albedo, an emissive marking registered as a real area light ----
@@ -376,7 +364,7 @@ export const defaultSettings = (): RenderSettings => ({
   denoiser: 'v3',   // the v3 core by default (?legacydenoise boots the three old chains); iterations / caps below are 'high's until a preset places them
   dnShadowIters: 3, dnShadowCap: 12, dnShadowClampK: 1.25, dnShadowSigmaL: 4, dnShadowPrior: true, dnShadowLitAlike: true, dnShadowOccl: true, dnShadowMoveCap: 3, dnShadowMoveThresh: 0.04, dnShadowJump: 0.5,
   dnGiIters: 4, dnGiCap: 24, dnGiClampK: 1.0, dnGiSigmaL: 4, dnGiFast: 3, dnGiFirefly: 0,   // (k 1.0 / fast 3: the sweep in docs/internal/p3-denoise.md §3 — 10 % of a lights-off in 16 frames vs legacy's 14, at half its torch-hotspot boil)
-  giFullRes: false, giFullIters: 4, giYoungRays: 1, giYoungCap: 0.08, giYoungLen: 4,   // GI in motion: both OFF by default until a preset places them (ui/quality.ts Preset.dn.giFull / giYoungK); Tab ▸ Indirect light rows
+  giFullRes: false, giFullIters: 4,   // GI in motion: both OFF by default until a preset places them (ui/quality.ts Preset.dn.giFull); Tab ▸ Indirect light rows
   dnGiClampCut: 0, dnGiYoungWiden: 0,                                                     // (D): off until measured (Tab ▸ Denoiser rows)
   ladderClimb: true, capClimb: false, ladderAim: 60, ladderPaced: true, ladderHeld: true, ladderShed: true, oneCacheGrid: true, oneSmokeSolve: true, fireSmokeShed: true, fireSmoke: true, smokeKeep: 1,   // the ladder spends measured headroom on scale + divisors by default (it only ever acts on presented frames with GPU timings that show the room); the output-cap climb is opt-in (Tab ▸ Frame)
   dnSpecIters: 1, dnSpecCap: 16, dnSpecClampK: 1.0, dnSpecSigmaL: 2, dnSpecRough: 0.08,
@@ -427,7 +415,7 @@ export const defaultSettings = (): RenderSettings => ({
   glassRefract: true, glassIor: 1.5,   // refraction through the glass boxes: ON (?norefract boots without it; Tab ▸ Renderer — glass; __glass.refract / .ior)
   rtReflect: false, rtReflectDiv: 2, rtRays: 1, rtMaxRough: 0.45, rtAniso: 0.7, wetBreakup: 1, beamReflect: true, beamAir: true, wetMirror: true, beamAirK: 1, rtStrength: 1, rtGlints: 1, rtAtrous: 3, rtHistory: 32,   // RT reflections: OFF here — the presets switch it on with their own divisor / rays / cutoff (quality.ts); Tab ▸ Materials
   detail: 0.35,                // the detail layer: 'lived-in' (Tab ▸ Materials; ?detail=0 boots without it — with ?nortreflect the untouched frame)
-  giResample: 'off', giResampleRays: 2, giResampleCap: 20, giResampleTaps: 3, giResampleRadius: 10, giResampleRevalidate: true,   // phase 5: OFF here — the ultra preset switches the three on (quality.ts Preset.p5); Tab ▸ Indirect light / Materials rows
+     // phase 5: OFF here — the ultra preset switches the three on (quality.ts Preset.p5); Tab ▸ Indirect light / Materials rows
   rtMeshHits: false, rtHitReuse: false,
   markings: true, markingTexel: 0.025, markingContrast: 1, markingEmissive: 1, markingReflect: true, markingReflPattern: true, markingReflCone: 0.25,   // markings ON (?nomarkings boots without them; Tab ▸ Renderer — markings)
   sdfRigSmooth: false, sdfRigK: 1, sdfRigSteps: 24, charSoftShadow: false, charSoftAnalytic: true, charSoftSteps: 20, charSoftK: 1, charSoftMinDeg: 0.35, charSoftSmooth: false, charSoftBroad: false, charSelfShadow: true,   // the SDF character rig's two extras: OFF (self-shadow: ON, all tiers) (rows on Tab ▸ Renderer — SDF character rig; ?sdfsmooth / ?charsoft from boot; no preset touches them) — the round cones themselves have no switch
