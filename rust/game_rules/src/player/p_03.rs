@@ -12,8 +12,8 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 fn seam_box_c_h_yaw(g: &Game, b: BoxId) -> (V3, V3, f64) { let x = &g.tab.boxes[b]; (x.c, x.h, x.yaw) }
 
 // ---- the body keepOffGuards keeps off: the player's own (None) or a look ahead's copy (Some)
-fn legs_pos(g: &Game, m: &Option<&mut Legs>) -> V3 {
-    match m { Some(l) => l.char.pos, None => g.ch[g.pl[g.player].ch].pos }
+fn legs_pos(g: &Game, seat: &crate::seats::SeatRef, m: &Option<&mut Legs>) -> V3 {
+    match m { Some(l) => l.char.pos, None => g.ch[g.pl[seat.player].ch].pos }
 }
 fn legs_set_xz(g: &mut Game, m: &mut Option<&mut Legs>, x: f64, z: f64) {
     match m {
@@ -42,8 +42,8 @@ fn legs_collide(g: &mut Game, m: &mut Option<&mut Legs>, y1: f64) {
 }
 
 /// The cone Sam's next rifle round is drawn with for how he stands. (player.ts rifleSpread)
-pub fn rifle_spread(g: &crate::game::Game, speed: f64) -> f64 {
-    let pl = g.player;
+pub fn rifle_spread(g: &crate::game::Game, seat: &crate::seats::SeatRef, speed: f64) -> f64 {
+    let pl = seat.player;
     let gun = g.pl[pl].rifle;
     let def = g.fa[gun].def;
     let h = g.m.weapons.weapons.get(def).and_then(|d| d.hands);
@@ -72,19 +72,19 @@ pub fn keep_off_guards(g: &mut crate::game::Game, dt: f64, y1: f64, m: Option<&m
         let gd = g.guards[i];
         i += 1;
         if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].held.is_some() { continue; }
-        let p = legs_pos(g, &m);
+        let p = legs_pos(g, &crate::seats::here(g), &m);
         let gc = g.gd[gd].ch;
         let (gp, gv) = (g.ch[gc].pos, g.ch[gc].vel);
         let (dx, dz) = (p[0] - gp[0], p[2] - gp[2]);
         let l = m::hyp2(dx, dz);
         if l >= KEEP_OFF { continue; }
-        if crate::noshove::falling_in_yields(g, gd) {
-            let back = if l > 1e-4 { crate::noshove::no_shove_back(g, gp[0], gp[2], l, m.as_deref()) } else { 0.0 };
+        if crate::noshove::falling_in_yields(g, &crate::seats::here(g), gd) {
+            let back = if l > 1e-4 { crate::noshove::no_shove_back(g, &crate::seats::here(g), gp[0], gp[2], l, m.as_deref()) } else { 0.0 };
             if back > 0.0 {
                 let (bx, bz) = (p[0], p[2]);
                 legs_set_xz(g, &mut m, p[0] + dx / l * back, p[2] + dz / l * back);
                 legs_collide(g, &mut m, y1);
-                let q = legs_pos(g, &m);
+                let q = legs_pos(g, &crate::seats::here(g), &m);
                 crate::noshove::no_shove_note(g, q[0] - bx, q[2] - bz, m.as_deref_mut());
             }
             continue;
@@ -124,12 +124,12 @@ pub fn keep_off_guards(g: &mut crate::game::Game, dt: f64, y1: f64, m: Option<&m
         }
         legs_set_xz(g, &mut m, qx, qz);
         legs_collide(g, &mut m, y1);
-        let q = legs_pos(g, &m);
+        let q = legs_pos(g, &crate::seats::here(g), &m);
         if walking && (q[0] - bx) * nx + (q[2] - bz) * nz < 0.5 * push {
             legs_set_xz(g, &mut m, bx, bz);
             legs_set_safe_xz(g, &mut m, bx, bz);
         }
-        let q = legs_pos(g, &m);
+        let q = legs_pos(g, &crate::seats::here(g), &m);
         crate::noshove::no_shove_note(g, q[0] - bx, q[2] - bz, m.as_deref_mut());
     }
 }

@@ -282,6 +282,7 @@ pub fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Option<crate::game::
     crate::game::game_stand_lights(g);   // the lamps the fixtures feed, as rows in the list's order (rust/sim/src/lights.rs); a fixture's authored bit is said by its `add` now
     crate::civilians::spawn_civilians(g);   // after the shift, whose construction and dice they must not disturb
     g.fog_of_war = crate::fogofwar::fog_of_war_new(g);
+    g.fog_picture = crate::fogofwar::FogPicture::blank();
     g.quiet = crate::quiet::quiet_mission_new(g);
     g.rails = crate::rails::rails_new(g);
     g.lesson = crate::lesson::lesson_new(g);
@@ -306,7 +307,7 @@ pub fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Option<crate::game::
     crate::seats::stand_men(g);   // a second seat's man and his light, made last
     g.director = crate::director::director_new(g, level.script.clone());   // the level's script: its define pass run and linted here, programs start on demand
     crate::glassbreak::glass_break_stood(g);   // which glass each pane is, settled as the level stands
-    let stood = stood_of(g, &level);
+    let stood = stood_of(g, &crate::seats::here(g), &level);
     let tables = crate::scene_box_mirror::box_mirror_tables(g);
     if let Some(over) = crate::levelfit::stood_over(g, &stood, &tables) { panic!("{}", over); }
 }
@@ -378,7 +379,7 @@ fn stood_level_devices(level: &crate::scene_level::Level) -> Option<Vec<crate::l
 }
 
 /// (game.ts stoodOver(this, ...)) What levelfit reads of the game as it stands.
-fn stood_of(g: &Game, level: &crate::scene_level::Level) -> crate::levelfit::Stood {
+fn stood_of(g: &Game, seat: &crate::seats::SeatRef, level: &crate::scene_level::Level) -> crate::levelfit::Stood {
     crate::levelfit::Stood {
         level: crate::levelfit::StoodLevel {
             doors: vec![crate::Opaque; level.doors.len()],
@@ -396,7 +397,7 @@ fn stood_of(g: &Game, level: &crate::scene_level::Level) -> crate::levelfit::Sto
         }),
         engine: Some(crate::Opaque),   // (a whole Game has both: levelfit.ts Stood)
         beacons: Some(crate::Opaque),
-        player: Some(g.player),
+        player: Some(seat.player),
         guards: Some(g.guards.clone()),
         civilians: Some(g.civilians.clone()),
         seats: Some(g.seats.clone()),

@@ -216,7 +216,7 @@ pub fn cancel_reloads(g: &mut crate::game::Game, pl: PlayerId) {
 }
 
 /// where the round and the gun's pitch go on a man: `h` over his feet, brought down onto him when his head is low (player.ts manAim; AIM.player.low settled)
-pub fn man_aim(g: &crate::game::Game, gd: GuardId, h: f64) -> V3 {
+pub fn man_aim(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, h: f64) -> V3 {
     use crate::character::Bone;
     let c = g.gd[gd].ch;
     let pos = g.ch[c].pos;
@@ -227,7 +227,7 @@ pub fn man_aim(g: &crate::game::Game, gd: GuardId, h: f64) -> V3 {
     if pos[1] + LOW_AT <= top - LOW_UNDER { return p; }
     let y = m::max(pos[1] + 0.15, m::min(p[1], top - LOW_TOP));
     let at: V3 = [chest[0], y, chest[2]];
-    let from = g.ch[g.pl[g.player].ch].muzzle;
+    let from = g.ch[g.pl[seat.player].ch].muzzle;
     let d = v3::sub(at, from);
     let l = v3::len(d);
     if l > 1e-3 && crate::character::character_ray_hit(g, c, from, v3::scale(d, 1.0 / l), l + 1.0) >= 0.0 { return at; }
@@ -242,10 +242,10 @@ pub fn level_on(g: &crate::game::Game) -> bool {
 }
 
 /// the point his fire sites send a round at with nothing under the reticle (player.ts freeAim)
-pub fn free_aim(g: &crate::game::Game, keep: Option<f64>) -> V3 {
+pub fn free_aim(g: &crate::game::Game, seat: &crate::seats::SeatRef, keep: Option<f64>) -> V3 {
     let keep = keep.unwrap_or(0.25);
-    let c = g.pl[g.player].ch;
-    let ap = g.aim_point;
+    let c = g.pl[seat.player].ch;
+    let ap = seat.aim_point;
     if !level_on(g) { return [ap[0], ap[1] + 0.03, ap[2]]; }
     let (pos, muzzle, aim_yaw) = (g.ch[c].pos, g.ch[c].muzzle, g.ch[c].aim_yaw);
     let dx = ap[0] - pos[0];
@@ -264,7 +264,7 @@ pub fn pose_gun_light(g: &mut crate::game::Game) {
     let pistol_up = crate::game::player_pistol_up(g, pl);
     let rifle_up = crate::game::player_rifle_up(g, pl);
     let enabled = ((pistol_up && g.fa[pistol].light_on) || (rifle_up && g.fa[rifle].light_on))
-        && !g.pl[pl].sprinting && !g.ch[c].anim.hide_held_item && !g.pl[pl].down && crate::kitanim::kit_gun_up(g);
+        && !g.pl[pl].sprinting && !g.ch[c].anim.hide_held_item && !g.pl[pl].down && crate::kitanim::kit_gun_up(g, &crate::seats::here(g));
     g.tab.light[l].enabled = enabled;
     if enabled {
         let (lens, dir) = if rifle_up {

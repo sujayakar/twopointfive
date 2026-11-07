@@ -73,9 +73,9 @@ fn man_marks(g: &Game, m: Man) -> (bool, f64, f64, f64) {
 }
 
 /// The panel's line: every man in anything but good order.   (condition.ts conditionSummary)
-pub fn condition_summary(g: &crate::game::Game) -> String {
+pub fn condition_summary(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> String {
     let mut parts: Vec<String> = Vec::new();
-    let me = g.player;
+    let me = seat.player;
     let mine = word(condition_of(g, Man::Player(me)));
     if !mine.is_empty() && !g.pl[me].down {
         let mut part = String::from("you ");
@@ -216,13 +216,13 @@ mod tests {
     #[test]
     fn the_panel_line() {
         let (mut g, gd, pl) = game();
-        assert_eq!(condition_summary(&mut g), "condition \u{25b8} all sound");
+        assert_eq!(condition_summary(&g, &crate::seats::here(&g)), "condition \u{25b8} all sound");
         g.gd[gd].hurt_at = 9.0;
         g.gd[gd].stagger_until = 11.0;
         g.pl[pl].hurt_at = 9.0;
-        assert_eq!(condition_summary(&mut g), "condition \u{25b8} you hurt \u{b7} Reyes folded hurt");
+        assert_eq!(condition_summary(&g, &crate::seats::here(&g)), "condition \u{25b8} you hurt \u{b7} Reyes folded hurt");
         g.pl[pl].down = true;
-        assert_eq!(condition_summary(&mut g), "condition \u{25b8} Reyes folded hurt");
+        assert_eq!(condition_summary(&g, &crate::seats::here(&g)), "condition \u{25b8} Reyes folded hurt");
         assert!(condition_of(&mut g, Man::Player(pl)).down);
         assert!(!condition_of(&mut g, Man::Player(pl)).hurt);
     }

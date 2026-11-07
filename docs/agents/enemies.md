@@ -921,10 +921,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   7, team standing 24 → 23 of 64, 8 of 16 the same. Standard, seeds 1‥8 (squads dig in there too): the compound's wedges 36 → 39, won 4 → 3, team standing
   8 → 4 of 32; the warehouse won 5 and 5. So it gives the compound back wedges its placement was tallied without, and the compound is a little steeper for
   it: a claim to the compound's owner, `?nohaulhome` is the way back.
-  NOT mended, and not this rule's: (1) with the furniture AT the door and the leaf not yet latched, his hand waits `latchSecs` (2.5 s) and then he lets
+  NOT mended, and not this rule's: (1) with the furniture AT the door and the leaf not yet latched, his hand waited `latchSecs` (2.5 s) and then he let
   the brace go without a word — a closing leaf a few frames from home (deal 2: 0.02 rad), or a mate still standing in the doorway (the probe's stay-open
-  arm on deals 4, 7, 8: a mate 0.5 m from the door). That wait is `DIGIN.shutOpen`'s ground (7 s, pushes home, pulls again), which ships off because it
-  overshot the barracks; (2) nothing about which furniture he picks or where he pushes from. Never seen on a GPU, never played by a person.
+  arm on deals 4, 7, 8: a mate 0.5 m from the door). MENDED 2026-11-07 for the closing leaf: `digin hand_waits` holds a man with furniture while `doors_coming_home` says the leaf is still on its
+  way (a pulled leaf from wide open takes about five seconds, and doors stay where they are left, so many doors he brings furniture to are open); he still lets go of a leaf a body has stopped on the clock, and a man who
+  only came to shut it leaves on the clock as before (the pull finishes without him). No switch. Native: `rust/game_start/tests/offers.rs` (red before on the compound's bunk room: 'to cover', no wedge).
+  `DIGIN.shutOpen` (7 s, pushes home, pulls again, other doors) stays off: it overshot the barracks. Not measured: what this does to a tally of wedges or wins on any level. Never seen on a GPU, never played by a person;
+  (2) nothing about which furniture he picks or where he pushes from.
 - **A calm guard with a long wait in the dark sits down and dozes (10-13)** (`src/game/doze.ts`, `DOZE.on`; page on, `?nodoze`; frozen stand off, `TPS_DOZE=1`;
   on the shipped stand `TPS_DOZE=0` puts it off; a `FROZEN_HOLDS` row; table in `knobs.ts` + `JOURNAL_KNOBS`, a recording from before the key replays with it
   off; Tab ▸ Sandbox ▸ Detection & movement 'calm guards doze in the dark' + a read-only line). The maintainer's ask (2026-10-13): 'guards sleeping in dark

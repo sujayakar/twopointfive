@@ -39,7 +39,7 @@ pub fn squad_net_tick(g: &mut crate::game::Game) {
     let t = g.time;
     if t < g.squad_net.last_t { squad_net_reset(g); }
     g.squad_net.last_t = t;
-    let squad = crate::seats::team_squad(g);
+    let squad = crate::seats::team_squad(g, &crate::seats::here(g));
     if !g.squad_net.down.is_empty() {
         let kept: Vec<String> = g.squad_net.down.iter()
             .filter(|c| squad.iter().any(|&gd| g.gd[gd].callsign == **c && g.gd[gd].state == crate::game::GuardState::Dead))

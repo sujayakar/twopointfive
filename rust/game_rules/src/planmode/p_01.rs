@@ -8,16 +8,16 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// Shift + the key adds a goal: on Sam's own squad, and on a lesson only from the step that teaches it. (planmode.ts goalsOn)
-pub fn goals_on(g: &crate::game::Game) -> bool {
-    crate::orders::squad_orders_sams(g) && !crate::rails::rails_locks(g, "goal")
+pub fn goals_on(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
+    crate::orders::squad_orders_sams(g, seat) && !crate::rails::rails_locks(g, "goal")
 }
 
 /// The squad as the goals it is on now: the men with nothing to do, and the rest by what they were sent to. (planmode.ts goalParts)
-pub fn goal_parts(g: &crate::game::Game) -> crate::planmode::GoalParts {
+pub fn goal_parts(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> crate::planmode::GoalParts {
     let mut idle: Vec<GuardId> = Vec::new();
     let mut by: JsMap<String, Vec<GuardId>> = JsMap::new();
-    for m in crate::orders::squad_orders_men(g, Some(crate::orders::SquadOrdersMenSel::All), None) {
-        let a = match crate::orders::squad_orders_of(g, m) {
+    for m in crate::orders::squad_orders_men(g, seat, Some(crate::orders::SquadOrdersMenSel::All), None) {
+        let a = match crate::orders::squad_orders_of(g, seat, m) {
             Some(a) if g.tab.orders_assignment[a].post.is_some() => a,
             _ => {
                 idle.push(m);
@@ -44,12 +44,12 @@ pub fn goal_men(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) -> Op
     use crate::orders::OrderTarget;
     use crate::planmode::{GoalMen, GoalMenHow};
 
-    let all = crate::orders::squad_orders_men(g, Some(crate::orders::SquadOrdersMenSel::All), None);
-    let crate::planmode::GoalParts { idle, groups } = goal_parts(g);
+    let all = crate::orders::squad_orders_men(g, &crate::seats::here(g), Some(crate::orders::SquadOrdersMenSel::All), None);
+    let crate::planmode::GoalParts { idle, groups } = goal_parts(g, &crate::seats::here(g));
     let spot = is_spot(t);
     if let OrderTarget::None(n) = t {
         if n.man.is_some() {
-            return Some(GoalMen { men: crate::orders::squad_orders_recipients(g, Some(t), None), how: GoalMenHow::His });
+            return Some(GoalMen { men: crate::orders::squad_orders_recipients(g, &crate::seats::here(g), Some(t), None), how: GoalMenHow::His });
         }
     }
     let half = groups.is_empty() && g.k.cmdring.goal_half && all.len() > 1;
@@ -58,7 +58,7 @@ pub fn goal_men(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) -> Op
     }
     if let OrderTarget::Door(d) = t {
         for men in &groups {
-            if every_on_door(g, men, d.door) {
+            if every_on_door(g, &crate::seats::here(g), men, d.door) {
                 return Some(GoalMen { men: men.clone(), how: GoalMenHow::Same });
             }
         }
@@ -74,7 +74,7 @@ pub fn goal_men(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) -> Op
     let biggest: Vec<Vec<GuardId>> = pool.into_iter().filter(|x| x.len() == size).collect();
     let group = best(g, &biggest, t, spot).clone();
     let mut parts: Vec<Vec<GuardId>> = Vec::new();
-    for id in crate::orders::squad_orders_pairs(g) {
+    for id in crate::orders::squad_orders_pairs(g, &crate::seats::here(g)) {
         let mut l: Vec<GuardId> = Vec::new();
         for &m in &group {
             if crate::orders::squad_orders_pair_of(g, m) == Some(id) {
@@ -100,15 +100,15 @@ pub fn goal_men(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) -> Op
 }
 
 /// Shift + the key kept down is the ring for those men. (planmode.ts goalRingOn)
-pub fn goal_ring_on(g: &crate::game::Game) -> bool {
-    goals_on(g)
+pub fn goal_ring_on(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
+    goals_on(g, seat)
 }
 
 /// Shift + the key on `t`: a part of the squad takes it through the order book and the rest go on as they were. (planmode.ts planGoal)
 pub fn plan_goal(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) {
     use crate::planmode::GoalMenHow;
 
-    if crate::orders::squad_orders_men(g, Some(crate::orders::SquadOrdersMenSel::All), None).is_empty() {
+    if crate::orders::squad_orders_men(g, &crate::seats::here(g), Some(crate::orders::SquadOrdersMenSel::All), None).is_empty() {
         return;
     }
     g.stats.planmode.goals += 1;
@@ -133,13 +133,13 @@ pub fn plan_goal(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) {
 }
 
 /// Shift + the ring's key is the goal's own this frame, only where the ring has no hold to wait out. (planmode.ts goalShift)
-pub fn goal_shift(g: &crate::game::Game, input: InputId) -> bool {
-    (crate::input::input_down(g, input, "ShiftLeft") || crate::input::input_down(g, input, "ShiftRight")) && goals_on(g) && !(g.k.cmdring.hold_secs > 0.0)
+pub fn goal_shift(g: &crate::game::Game, seat: &crate::seats::SeatRef, input: InputId) -> bool {
+    (crate::input::input_down(g, input, "ShiftLeft") || crate::input::input_down(g, input, "ShiftRight")) && goals_on(g, seat) && !(g.k.cmdring.hold_secs > 0.0)
 }
 
 /// Once a tick with a squad on the floor and Sam up: where the ring has no hold, the pair adds the goal as the key goes down. (planmode.ts goalInput)
 pub fn goal_input(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) {
-    if !(goal_shift(g, input) && g.orders.cmd_ring.is_none() && crate::orders::squad_orders_back_free(g)) {
+    if !(goal_shift(g, &crate::seats::here(g), input) && g.orders.cmd_ring.is_none() && crate::orders::squad_orders_back_free(g, &crate::seats::here(g))) {
         return;
     }
     let key = g.k.cmdring.key.clone();
@@ -166,9 +166,9 @@ fn target_at(t: &crate::orders::OrderTarget) -> V3 {
 }
 
 /// `G.every(m => S.of(m)?.door === door)`. (planmode.ts:45)
-fn every_on_door(g: &Game, men: &[GuardId], door: DoorId) -> bool {
+fn every_on_door(g: &Game, seat: &crate::seats::SeatRef, men: &[GuardId], door: DoorId) -> bool {
     for &m in men {
-        let on = match crate::orders::squad_orders_of(g, m) {
+        let on = match crate::orders::squad_orders_of(g, seat, m) {
             Some(a) => g.tab.orders_assignment[a].door == Some(door),
             None => false,
         };

@@ -484,7 +484,7 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 484 => {  crate::squadnet::squad_net_reset(g);  }
 485 => {  crate::squadnet::squad_net_line(g);  }
 486 => {  crate::squadnet::squad_net_tick(g);  }
-487 => { let a1: crate::orders::OrderTargetDoor = Io::r(&mut i); let a2: Option<bool> = Io::r(&mut i); let r = crate::autopilot::auto_entries(g, a1, a2); r.w(&mut o);  }
+487 => { let a1: crate::orders::OrderTargetDoor = Io::r(&mut i); let a2: Option<bool> = Io::r(&mut i); let r = crate::autopilot::auto_entries(g, &crate::seats::here(g), a1, a2); r.w(&mut o);  }
 488 => { let a1: crate::orders::OrderTarget = Io::r(&mut i); let a2: Option<bool> = Io::r(&mut i); let a3: Option<Vec<GuardId>> = Io::r(&mut i); let r = crate::autopilot::auto_pick(g, &a1, a2, a3.as_deref()); r.w(&mut o);  }
 489 => { let a1: crate::orders::OrderTarget = Io::r(&mut i); let r = crate::autopilot::auto_quick(g, &a1); r.w(&mut o);  }
 490 => { let a1: crate::orders::OrderTarget = Io::r(&mut i); let a2: Option<crate::autopilot::AutoPick> = Io::r(&mut i); let r = crate::autopilot::auto_hint(g, &a1, a2.as_ref()); r.w(&mut o);  }
@@ -699,7 +699,6 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 700 => {  crate::breach::breach_drill_end(g);  }
 701 => { let a1: f64 = Io::r(&mut i); crate::breach::breach_drill_tick(g, a1);  }
 702 => { let a1: InputId = Io::r(&mut i); crate::director::director_inject_input(g, a1);  }
-703 => { let a1: crate::director::DirectorAttachO = Io::r(&mut i); crate::director::director_attach(g, a1);  }
 704 => { let a1: String = Io::r(&mut i); let a2: Option<crate::director::DirectorSignalData> = Io::r(&mut i); crate::director::director_signal(g, &a1, a2.as_ref());  }
 705 => { let a1: String = Io::r(&mut i); let a2: Option<crate::director::DirectorStartOpts> = Io::r(&mut i); let r = crate::director::director_start(g, &a1, a2); r.w(&mut o);  }
 706 => { let a1: Option<bool> = Io::r(&mut i); crate::director::director_stop(g, a1);  }
@@ -1073,8 +1072,6 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 1076 => { let a1: Option<GuardId> = Io::r(&mut i); crate::game::game_toggle_drag(g, a1);  }
 1077 => { let a1: InputId = Io::r(&mut i); crate::game::game_host_before(g, a1);  }
 1078 => { let a1: InputId = Io::r(&mut i); let a2: CameraId = Io::r(&mut i); let a3: crate::host_hud::View = Io::r(&mut i); crate::game::game_host_after(g, a1, a2, a3);  }
-1079 => { let a1: bool = Io::r(&mut i); let a2: Option<bool> = Io::r(&mut i); let a3: Option<f64> = Io::r(&mut i); crate::game::game_fog_lift(g, a1, a2, a3);  }
-1080 => {  crate::game::game_fog_back(g);  }
 1081 => { let a1: crate::game::InteractableKind = Io::r(&mut i); let a2: Option<crate::game::Verb> = Io::r(&mut i); let r = crate::game::game_select_verb(g, a1, a2); r.w(&mut o);  }
 1082 => {  let r = crate::game::game_escape(g); r.w(&mut o);  }
 1083 => { let a1: crate::game::ThrowKind = Io::r(&mut i); let a2: V3 = Io::r(&mut i); crate::game::game_drop_throwable(g, a1, a2);  }

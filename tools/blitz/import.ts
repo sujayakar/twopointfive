@@ -31,7 +31,7 @@ const differs = (a: unknown, b: unknown) => !Object.is(a, b) && !(a == null && b
 
 // ---- reading past a value
 type Keep = { field: (q: string, ty: string) => boolean; desc: (ty: string | N) => boolean };
-function skipper(b: Uint8Array, I: { p: number; K?: Keep | null }) { const dv = new DataView(b.buffer, b.byteOffset, b.byteLength); I.p = 0;
+export function skipper(b: Uint8Array, I: { p: number; K?: Keep | null }) { const dv = new DataView(b.buffer, b.byteOffset, b.byteLength); I.p = 0;
   const sk = (n: N): void => { switch (n.k) {
     case 'f64': case 'u64': case 'i64': I.p += 8; return; case 'f32': case 'u32': case 'i32': case 'usize': case 'id': I.p += 4; return; case 'bool': case 'u8': case 'i8': I.p += 1; return; case 'u16': case 'i16': I.p += 2; return; case 'unit': return;
     case 'str': I.p += 4 + dv.getUint32(I.p, true); return;
@@ -137,7 +137,7 @@ function keepOf(only: Set<string>): Keep { let K = keepMemo.get(only); if (K) re
   K = { field: (q, ty) => { let v = memoF.get(q); if (v === undefined) memoF.set(q, v = only.has(q) || deep(ty)); return v; }, desc }; keepMemo.set(only, K); return K; }
 
 // ---- the walk
-export function applyGame(g: any, blob: Uint8Array, knobs: Record<string, unknown>, opts: ApplyOpts = {}): Report { return forGame(g, () => applyGameNow(g, blob, knobs, opts)); }
+export function applyGame(g: any, blob: Uint8Array, knobs: Record<string, unknown>, opts: ApplyOpts = {}): Report { return forGame(g, () => g.col.writes(() => applyGameNow(g, blob, knobs, opts))); }
 function applyGameNow(g: any, blob: Uint8Array, knobs: Record<string, unknown>, opts: ApplyOpts = {}): Report {
   const t0 = performance.now(); const hooks = opts.hooks ?? {}; const BK = bookOf(g); if (!BK) throw new Error('import: this game has never been exported, so no row has an ID: export it once first');
   seedBook(g, knobs); for (const [k, v] of Object.entries(hooks.classes ?? {})) if (v?.prototype) CLASSES.set(k, v.prototype);

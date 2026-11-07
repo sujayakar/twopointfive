@@ -49,12 +49,12 @@ fn arc_of(th: &SquadThrower) -> Arc {
 /// The state's row, made if it is not there; its key, for a write that outlives a call taking `g`. (squadthrow.ts state)
 fn state_key(g: &mut Game) -> PlayerId {
     state(g);
-    crate::seats::view_key(g)
+    crate::seats::view_key(g, &crate::seats::here(g))
 }
 
 /// This view's state, the row itself, made if it is not there. (squadthrow.ts state)
 pub fn state<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::squadthrow::State {
-    let k = crate::seats::view_key(g);
+    let k = crate::seats::view_key(g, &crate::seats::here(g));
     g.m.squadthrow.states.get_or_insert_with(k, || State { last: JsMap::new(), noted: false, shown: None, warn: None, warn_frag: None, caught: None, asked: JsMap::new(), walks: JsMap::new(), kept: JsMap::new(), scratch: None })
 }
 
@@ -125,7 +125,7 @@ pub fn walk_to(g: &mut crate::game::Game, gd: GuardId, kind: crate::squadthrow::
         set_line: None,
         ..Default::default()
     });
-    crate::orders::squad_orders_of(g, gd)
+    crate::orders::squad_orders_of(g, &crate::seats::here(g), gd)
 }
 
 /// The order's walking case: he is sent to the floor he has a throw from; the can stays in the bag. (squadthrow.ts startWalk)
@@ -135,7 +135,7 @@ pub fn start_walk(g: &mut crate::game::Game, th: &mut crate::squadthrow::SquadTh
     let post = th.post.unwrap();
     let at = target_at(t);
     let line = walk_line(g, gd, post);
-    let lent = squad_lend(g, gd, t);
+    let lent = squad_lend(g, &crate::seats::here(g), gd, t);
     let last_t = g.time;
     let arc = arc_of(th);
     let mut w = Walk {
@@ -172,10 +172,10 @@ pub fn start_walk(g: &mut crate::game::Game, th: &mut crate::squadthrow::SquadTh
 }
 
 /// What a man is doing NOW, kept so that he can be handed back to it. (squadthrow.ts squadLend)
-pub fn squad_lend(g: &crate::game::Game, gd: GuardId, t: &crate::orders::OrderTarget) -> crate::squadthrow::Lent {
+pub fn squad_lend(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, t: &crate::orders::OrderTarget) -> crate::squadthrow::Lent {
     let c = g.gd[gd].ch;
     let p = g.ch[c].pos;
-    let was = crate::orders::squad_orders_of(g, gd);
+    let was = crate::orders::squad_orders_of(g, seat, gd);
     let back = match was {
         Some(a) if resumed().iter().any(|r| *r == g.tab.orders_assignment[a].order) => {
             let w = g.tab.orders_assignment[a].clone();
@@ -212,7 +212,7 @@ pub fn squad_lend(g: &crate::game::Game, gd: GuardId, t: &crate::orders::OrderTa
             if m == gd {
                 continue;
             }
-            if let Some(o) = crate::orders::squad_orders_of(g, m) {
+            if let Some(o) = crate::orders::squad_orders_of(g, seat, m) {
                 let row = &g.tab.orders_assignment[o];
                 if row.group == group && row.order == order {
                     mates.push(m);
@@ -230,7 +230,7 @@ pub fn squad_hand_back(g: &mut crate::game::Game, w: &mut crate::squadthrow::Len
     let c = g.gd[gd].ch;
     let p = g.ch[c].pos;
     let b = if back { w.back.clone() } else { None };
-    if g.gd[gd].state == crate::game::GuardState::Dead || crate::orders::squad_orders_of(g, gd) != w.a {
+    if g.gd[gd].state == crate::game::GuardState::Dead || crate::orders::squad_orders_of(g, &crate::seats::here(g), gd) != w.a {
         return;
     }
     crate::orders::squad_orders_new_group(g);
@@ -247,7 +247,7 @@ pub fn squad_hand_back(g: &mut crate::game::Game, w: &mut crate::squadthrow::Len
             let mut any = false;
             for m in w.mates.iter().copied() {
                 if g.gd[m].state != crate::game::GuardState::Dead {
-                    if let Some(o) = crate::orders::squad_orders_of(g, m) {
+                    if let Some(o) = crate::orders::squad_orders_of(g, &crate::seats::here(g), m) {
                         if g.tab.orders_assignment[o].order == b.order {
                             any = true;
                             break;
@@ -485,7 +485,7 @@ fn preview_plan(g: &mut Game, men: &[GuardId], at: V3, kind: SquadThrowKind) -> 
     if let Some(post) = th.post {
         // (`c.th === th` of the TypeScript always holds here: an answer with a `post` came out of this very slot: see notes)
         let slot = format!("v{}{}", kind.as_str(), if men.len() == 1 { "1" } else { "" });
-        let key = crate::seats::view_key(g);
+        let key = crate::seats::view_key(g, &crate::seats::here(g));
         let kept = g.m.squadthrow.states.get(key).and_then(|s| s.kept.get(slot.clone())).map(|c| c.line.clone());
         walk = Some(match kept {
             Some(Some(line)) => line,
@@ -506,14 +506,14 @@ fn preview_plan(g: &mut Game, men: &[GuardId], at: V3, kind: SquadThrowKind) -> 
 /// WHAT THE PICTURE DRAWS, and what a module drawing the squad's plan may read: one entry per throw on its way, and the highlighted row's preview. (squadthrow.ts squadThrowPlans)
 pub fn squad_throw_plans(g: &mut crate::game::Game, v: Option<&mut crate::squadthrow::SquadThrowKept>) -> Vec<crate::squadthrow::SquadThrowPlan> {
     let mut out = Vec::new();
-    let key = crate::seats::view_key(g);
+    let key = crate::seats::view_key(g, &crate::seats::here(g));
     if !g.m.squadthrow.states.has(key) || !g.k.squadthrow.on {
         return out;
     }
     for gd in g.m.squadthrow.states.get(key).unwrap().walks.keys() {
         let w = g.m.squadthrow.states.get(key).unwrap().walks.get(gd).unwrap();
         let (thrown_t, w_gd, w_a) = (w.thrown_t, w.gd, w.a);
-        if thrown_t >= 0.0 || g.gd[w_gd].state == crate::game::GuardState::Dead || crate::orders::squad_orders_of(g, w_gd) != w_a || !g.guards.contains(&w_gd) {
+        if thrown_t >= 0.0 || g.gd[w_gd].state == crate::game::GuardState::Dead || crate::orders::squad_orders_of(g, &crate::seats::here(g), w_gd) != w_a || !g.guards.contains(&w_gd) {
             continue;
         }
         let p = g.ch[g.gd[w_gd].ch].pos;
@@ -610,7 +610,7 @@ fn ask(g: &mut Game, men: &[GuardId], at: V3, kind: SquadThrowKind, fresh: bool)
 
 /// The row's words, with any warning `valid` left for this spot: the arm OrderLabel::ThrowRow. (squadthrow.ts:554 one.label)
 pub fn row_label(g: &mut crate::game::Game, kind: crate::squadthrow::SquadThrowKind, at: V3) -> String {
-    let key = crate::seats::view_key(g);
+    let key = crate::seats::view_key(g, &crate::seats::here(g));
     let want = key_of(at);
     let x = g.m.squadthrow.states.get(key).and_then(|s| {
         if kind == SquadThrowKind::Stun {
@@ -696,7 +696,7 @@ pub fn rows(g: &mut crate::game::Game) -> Vec<OrdersOrderDefId> {
         issue: crate::orders::OrderIssue::Nothing,
         ..crate::orders::OrderDef::zeroed()
     };
-    let open = g.tab.orders_order_def.push(open);
+    let open = crate::orders::squad_orders_row(g, open);
     let mut out = vec![open];
     for kind in [SquadThrowKind::Frag, SquadThrowKind::Stun] {
         let one = crate::orders::OrderDef {
@@ -711,14 +711,14 @@ pub fn rows(g: &mut crate::game::Game) -> Vec<OrdersOrderDefId> {
             tick: Some(crate::orders::OrderTick::ThrowRow),
             ..crate::orders::OrderDef::zeroed()
         };
-        out.push(g.tab.orders_order_def.push(one));
+        out.push(crate::orders::squad_orders_row(g, one));
     }
     out
 }
 
 /// The squad's HUD block: the throw just made. (squadthrow.ts notes)
 pub fn notes(g: &mut crate::game::Game) -> Vec<crate::orders::OrderNote> {
-    let key = crate::seats::view_key(g);
+    let key = crate::seats::view_key(g, &crate::seats::here(g));
     if let Some(w) = g.m.squadthrow.states.get(key).and_then(|s| s.shown.as_ref()) {
         if g.time >= w.t && g.time - w.t < g.k.squadthrow.shown_secs {
             return vec![crate::orders::OrderNote::Text(w.text.clone())];
@@ -762,7 +762,7 @@ pub fn sync(g: &mut crate::game::Game) {
 
 /// Once a frame after the menu's own input: the rows in step with the switch, and G with a floor menu's first page up turns it to the throws. True: the press was the row's. (squadthrow.ts squadThrowKey)
 pub fn squad_throw_key(g: &mut crate::game::Game, input: InputId) -> bool {
-    let key = crate::seats::view_key(g);
+    let key = crate::seats::view_key(g, &crate::seats::here(g));
     if !g.k.squadthrow.on && !g.m.squadthrow.states.has(key) {
         return false;
     }
@@ -773,7 +773,7 @@ pub fn squad_throw_key(g: &mut crate::game::Game, input: InputId) -> bool {
                 Some(w) => w.a,
                 None => continue,
             };
-            if g.gd[gd].state == crate::game::GuardState::Dead || crate::orders::squad_orders_of(g, gd) != w_a {
+            if g.gd[gd].state == crate::game::GuardState::Dead || crate::orders::squad_orders_of(g, &crate::seats::here(g), gd) != w_a {
                 g.m.squadthrow.states.get_mut(key).unwrap().walks.delete(gd);
             } else if !g.k.squadthrow.on {
                 let w = g.m.squadthrow.states.get_mut(key).unwrap().walks.delete(gd);

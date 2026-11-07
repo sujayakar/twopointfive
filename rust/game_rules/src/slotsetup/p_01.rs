@@ -86,8 +86,8 @@ pub fn setup_rows(g: &crate::game::Game, pl: PlayerId, gun: crate::slotsetup::Se
 }
 
 /// is the setup of the gun in his hands up; nothing touched (slotsetup.ts slotSetupOpen)
-pub fn slot_setup_open(g: &crate::game::Game) -> bool {
-    let pl = g.player;
+pub fn slot_setup_open(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
+    let pl = seat.player;
     let s = match g.pl[pl].setup {
         Some(s) => s,
         None => return false,
@@ -96,9 +96,9 @@ pub fn slot_setup_open(g: &crate::game::Game) -> bool {
 }
 
 /// how much of its time the open setup has left: 1 with no clock on it, 0 = not up (slotsetup.ts slotSetupLeft)
-pub fn slot_setup_left(g: &crate::game::Game) -> f64 {
-    let pl = g.player;
-    if g.pl[pl].setup.is_none() || !slot_setup_open(g) {
+pub fn slot_setup_left(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> f64 {
+    let pl = seat.player;
+    if g.pl[pl].setup.is_none() || !slot_setup_open(g, seat) {
         return 0.0;
     }
     1.0
@@ -106,7 +106,7 @@ pub fn slot_setup_left(g: &crate::game::Game) -> f64 {
 
 /// Esc with the back key's rule off: shut it, and say whether there was one to shut (slotsetup.ts slotSetupShut)
 pub fn slot_setup_shut(g: &mut crate::game::Game) -> bool {
-    if !slot_setup_open(g) {
+    if !slot_setup_open(g, &crate::seats::here(g)) {
         return false;
     }
     let pl = g.player;
@@ -195,7 +195,7 @@ pub fn slot_setup_keys(g: &mut crate::game::Game, input: InputId) {
             || crate::handwork::sam_work(g).is_some()
             || crate::samstun::sam_staggered(g, None)
             || g.orders.menu.is_some()
-            || crate::interact::backable_interact(g);
+            || crate::interact::backable_interact(g, &crate::seats::here(g));
         if shut {
             up = None;
             g.pl[pl].setup = None;

@@ -221,7 +221,7 @@ pub fn cleared_rooms_tick(g: &mut crate::game::Game) {
     if !crate::seats::team_active(g) { return; }
     if g.cleared.last >= 0.0 && m::abs(g.time - g.cleared.last) < 0.25 { return; }
     g.cleared.last = g.time;
-    for gd in crate::seats::team_squad(g) {
+    for gd in crate::seats::team_squad(g, &crate::seats::here(g)) {
         if g.gd[gd].state != crate::game::GuardState::Dead {
             let p = g.ch[g.gd[gd].ch].pos;
             cleared_rooms_mark(g, p);

@@ -336,7 +336,7 @@ pub fn wall_charge_rows(g: &mut crate::game::Game, p: V3, busy: bool, row: &mut 
 pub fn wall_charge_new(g: &mut crate::game::Game) -> crate::wallcharge::WallCharge {
     let mut wc = crate::wallcharge::WallCharge::blank();
     wc.knobs = g.k.wallcharge.clone();
-    wc.opener = g.tab.orders_order_def.push(crate::orders::OrderDef {
+    wc.opener = crate::orders::squad_orders_row(g, crate::orders::OrderDef {
         id: String::from(WALL_PAGE),
         label: crate::orders::OrderLabel::Text { text: String::from("wall tools") },
         targets: vec![crate::orders::TargetKind::Floor],
@@ -346,7 +346,7 @@ pub fn wall_charge_new(g: &mut crate::game::Game) -> crate::wallcharge::WallChar
         issue: crate::orders::OrderIssue::Nothing,
         ..crate::orders::OrderDef::zeroed()
     });
-    wc.row = g.tab.orders_order_def.push(crate::orders::OrderDef {
+    wc.row = crate::orders::squad_orders_row(g, crate::orders::OrderDef {
         id: String::from(WALL_ORDER),
         label: crate::orders::OrderLabel::WallRow,
         targets: vec![crate::orders::TargetKind::Floor],

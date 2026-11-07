@@ -38,7 +38,7 @@ pub fn stealth_feed(g: &mut crate::game::Game) {
     // kit_in_hand only when the tests before it pass, and after the row above is written, as the TypeScript's && has it
     let free = !taken
         && !wanding
-        && crate::kitanim::kit_in_hand(g).is_none()
+        && crate::kitanim::kit_in_hand(g, &crate::seats::here(g)).is_none()
         && g.pl[pl].throw_preview.is_none()
         && !g.pl[pl].throw_held;
     g.ch[c].anim.stealth.as_mut().unwrap().free = free;

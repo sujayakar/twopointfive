@@ -429,6 +429,15 @@ pub fn room_clear_scenario_structure(g: &crate::game::Game) -> Option<crate::sce
     g.level.scenarios.as_ref().and_then(|c| c.room_clear.clone())
 }
 
+/// where the staging stood the first player: the start of the way taken, else the team's (None: not up)   (roomclear.ts RoomClearScenario.startAt)
+pub fn room_clear_scenario_start_at(g: &crate::game::Game) -> Option<V3> {
+    if !room_clear_scenario_active(g) { return None; }
+    let s = room_clear_scenario_structure(g)?;
+    let way = g.room_clear.way;
+    let by_way = if way > 0.0 { s.starts.as_ref().and_then(|v| v.get(way as usize - 1)).cloned() } else { None };
+    by_way.or(s.team).map(|t| t.sam)
+}
+
 /// the way in a staging made now would take   (roomclear.ts RoomClearScenario.wayNow)
 pub fn room_clear_scenario_way_now(g: &mut crate::game::Game) -> f64 {
     let way = g.k.roomclear.way;
