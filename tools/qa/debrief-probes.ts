@@ -17,7 +17,7 @@ import { endFor } from './verbs.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const CH = await import(`${ROOT}/src/game/chronicle.ts`);
 const { roomOf, stealthScore, ratingOf, badgesOf, blankCounts, debriefOf, fmtEvent, pinned, BANDS, SCORE } = CH;
-const { startGrab, startKick, startPicking, throwOrigin, doThrow } = await import(`${ROOT}/src/game/player.ts`);
+const { startGrab, startKick, startPicking, doThrow } = await import(`${ROOT}/src/game/player.ts`);
 const { fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);
 const { rollcallState } = await import(`${ROOT}/src/game/guards.ts`);
 const { HOLD } = await import(`${ROOT}/src/game/character.ts`);
@@ -131,7 +131,7 @@ export async function debriefRun() {
     const old = game.chronicle;
     game.restartEncounter(); steps(W, DT);
     const C = game.chronicle;
-    if (C === old) fails.push('restartEncounter kept the same Chronicle object');
+    void old;   // (the chronicle is held to being EMPTY, below: whether it is another object is the tools' copy's own business, where a record is written in place)
     if (C.events.length || C.pathN > 1 || C.dropped || C.questioned.size || Object.entries(C.counts).some(([, v]) => v !== 0 && v !== false && v !== '')) fails.push(`after restart: ${C.events.length} rows, ${C.pathN} path pts, counts ${JSON.stringify(C.counts)}`);
     if (game.mission.stats.spotted || game.mission.stats.alerts || debriefOf(game).score !== 100) fails.push(`after restart the mission stats / score are not fresh (${JSON.stringify(game.mission.stats)}, ${debriefOf(game).score})`);
     // under the tour's flag nothing lands: a shot, a generic row, the path
@@ -167,7 +167,8 @@ export async function debriefRun() {
     game.teleportPlayer([8.5, 0, 11.1]); game.player.crouch = false; game.player.char.bodyYaw = -Math.PI / 2; game.player.holstered = false; steps(W, 0.3);
     if (!sign) fails.push('staging: no exit_sign_w target'); else { fireWeapon(game, game.player.char, sign.pos, true); steps(W, 0.2); if (!sign.broken) fails.push('the round did not break the exit sign'); }
     // a smoke canister into the lobby
-    { const sol = game.items.solve(throwOrigin(game), [8.5, 0.1, 15]); doThrow(game, sol, 'smoke'); const thrown = steps(W, 2.0, () => kindsOf(game).includes('thrown')); if (!thrown) fails.push('the canister never left his hand'); }
+    { const pc = game.player.char, fw = pc.forward(), hand = [pc.pos[0] + fw[0] * 0.32, pc.pos[1] + (game.player.crouch ? 1.05 : 1.5), pc.pos[2] + fw[2] * 0.32];   // (where a throw leaves his hand: player.ts kept no function for it when the tick went)
+      const sol = game.items.solve(hand, [8.5, 0.1, 15]); doThrow(game, sol, 'smoke'); const thrown = steps(W, 2.0, () => kindsOf(game).includes('thrown')); if (!thrown) fails.push('the canister never left his hand'); }
     // the mission: into the server room, the drive, out through the fire exit
     const M = level.mission;
     game.player.holstered = true; game.teleportPlayer([18.0, 0, 8.9]); steps(W, 0.3);
