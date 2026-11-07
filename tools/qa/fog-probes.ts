@@ -482,7 +482,7 @@ export async function fogLit(): Promise<boolean> {
   { // the block
     R.step(30); const g1 = F.lit, n1 = F.lightCount, fogOn = F.on && F.count > 0;
     const fill = F.litFill, wantFill = FOG.flat * FOG.litFill;
-    verdict(fogOn && g1 === 1 && n1 > 0 && fill === fr(wantFill) && fill < FOG.flat, 'under the fog the renderer\'s block carries the gain, the level\'s lamps and a fill under the own light\'s level',
+    verdict(fogOn && g1 === 1 && n1 > 0 && fill === Math.fround(wantFill) && fill < FOG.flat, 'under the fog the renderer\'s block carries the gain, the level\'s lamps and a fill under the own light\'s level',
       `fog on ${F.on}, ${F.count} eyes · gain ${g1}, ${n1} lamps of ${fixtures.length} fixtures that carry light, fill ${fill.toFixed(3)} of own light ${FOG.flat}`);
   }
   // (until 2026-11-07 the block's rows were read here, a lamp by its place, and a torch and a flash looked for among them: the copy is not given the rows, only their count.
