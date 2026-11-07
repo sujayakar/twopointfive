@@ -14,5 +14,6 @@ pub mod scene;
 #[cfg(feature = "std")]
 pub mod play;
 pub mod block;
+pub mod query;
 pub mod read;
 pub mod records;
